@@ -174,9 +174,12 @@ Pages.
 **Deliverables:**
 
 1. `.github/workflows/site.yml` with the three jobs of the spec's "The
-   workflow". Check: on the branch of the plan pushed to GitHub, the
-   `check` and `e2e` jobs pass; `deploy` does not run, since the branch is
-   not `main`.
+   workflow". Check: on the push of `main` after the merge, the `check`
+   and `e2e` jobs pass, Firefox among the engines of `e2e`. The owner
+   decided on 24 September 2026 that the branches of the work stay on
+   their machine, so the branch of the plan is not pushed and the first
+   run of the workflow is the one on `main`; `deploy` needs both jobs, so
+   a failure there publishes nothing.
 2. The site deployed. Check: after the push to `main`, the `deploy` job
    passes, and `https://joseblanca.github.io/popnei_web/probe.html`
    answers 200.
@@ -194,8 +197,9 @@ to `main` (`CLAUDE.md`).
 
 **Tasks:**
 
-- [ ] 3.1 `.github/workflows/site.yml`, and the branch of the plan pushed
-  to GitHub, which the owner orders. Serves 1.
+- [x] 3.1 `.github/workflows/site.yml`; the branch of the plan stays
+  local, by the owner's decision, and `main` was pushed first, so that it
+  is the default branch of the repository on GitHub. Serves 1.
 - [ ] 3.2 The owner sets Pages to GitHub Actions, merges the branch into
   `main` and orders the push. Serves 2.
 - [ ] 3.3 The probe run against the deployed site, the `curl`, and the

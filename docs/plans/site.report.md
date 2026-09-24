@@ -214,3 +214,19 @@ The owner can stop reading here.
   264,000 for the 19 fixes and 316,000 for the seven of the second pass;
   task 2.1 used 58,000 and task 2.3 112,000; the seven reviewers used
   between 51,000 and 104,000 each, 565,000 together.
+
+## 3. The workflow and the deployed site
+
+Under way. The workflow, `.github/workflows/site.yml`, commit 908f95e,
+has the three jobs of the spec: `check` and `e2e` on every push and pull
+request, `e2e` in Chromium, Firefox and WebKit on GitHub's Ubuntu
+runners, and `deploy` on a push to `main` once both passed. It could not
+be run here; its commands pass on this machine: format, types, lint, 68
+unit tests, the build, and 40 browser tests in Chromium and WebKit.
+
+On 24 September 2026 the owner ordered `main` pushed, and the branches of
+the work kept local. `main`, at 8fcb75b, the approved documents without
+code or workflow, is on GitHub and is the repository's default branch; no
+workflow ran. So the first run of the workflow, and the first automated
+run of Firefox, is the push of `main` after the merge (task 3.2); the
+plan's check of deliverable 1 was moved there.
