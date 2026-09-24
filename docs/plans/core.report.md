@@ -117,3 +117,15 @@ gives "Tests 217 passed (217)":
    | 59 skipped (76)", of at least 11.
 3. `npx vitest run src/core/keys.test.ts -t "WP2 D3"`: "Tests 22 passed
    | 54 skipped (76)", of at least 4.
+
+## 3. Undo and the cache
+
+Under way.
+
+- Task 3.1, 14ef5b7, after the spec in fde6340: `history.ts`, with
+  `MAX_UNDO_STEPS` of 200, the meanwhile of the history spec's Open 1.
+  `npx vitest run src/core/history.test.ts -t "WP3 D1"` gives "Tests 21
+  passed (21)", of at least 10. The spec did not say which bounds
+  `startHistory` takes; the writer chose a whole number of at least 1,
+  any other a defect, and wrote it into the spec first. Thirteen breaks,
+  each failing a test.
