@@ -1641,6 +1641,73 @@ describe("WP1 D4 the records and the needs", () => {
     });
   });
 
+  describe("an empty name, and an empty message", () => {
+    test("an empty name not in the variants", () => {
+      expect(
+        projectNeeds(withLists([{ kind: "keep", individuals: ["i1", ""] }])),
+      ).toBe(
+        "The list of individuals to keep names 1 individual that is not in panel.nei: an empty name. Change the list, or remove the filter, in the Variants step.",
+      );
+    });
+
+    test("an empty name repeated", () => {
+      expect(
+        projectNeeds(withLists([{ kind: "remove", individuals: ["", ""] }])),
+      ).toBe(
+        "The list of individuals to remove names an empty name more than once. Change the list, or remove the filter, in the Variants step.",
+      );
+    });
+
+    test("an empty name of the variants missing from the individuals file", () => {
+      expect(individualsNeeds(withVariantIndividuals(["i1", ""]))).toBe(
+        "1 individual of panel.nei is not in pops.csv: an empty name. Add it to the file and load the file again in the Individuals step.",
+      );
+    });
+
+    test.each([
+      [{ kind: "duplicateColumn", name: "" }, "two columns have an empty name"],
+      [
+        { kind: "duplicateIndividual", name: "" },
+        "two rows have an empty name",
+      ],
+    ] as const)("the reader refused the file, %o", (error, found) => {
+      expect(
+        individualsNeeds(withIndividualsRead({ kind: "failed", error })),
+      ).toBe(
+        `pops.csv could not be read: ${found}. Load an individuals file in the Individuals step.`,
+      );
+    });
+
+    test.each(["", "  ", "."])(
+      "a message of popnei %o is left out with its colon",
+      (message) => {
+        expect(
+          projectNeeds(
+            withVariantsRead({
+              kind: "failed",
+              error: { kind: "popnei", message },
+            }),
+          ),
+        ).toBe(
+          "popnei could not read panel.nei. Load a variants file in the Variants step.",
+        );
+      },
+    );
+
+    test("an empty message of the files wasm is left out with its colon", () => {
+      expect(
+        individualsNeeds(
+          withIndividualsRead({
+            kind: "failed",
+            error: { kind: "files", message: "" },
+          }),
+        ),
+      ).toBe(
+        "pops.csv could not be read. Load an individuals file in the Individuals step.",
+      );
+    });
+  });
+
   describe("individualsNeeds", () => {
     test("no individuals file", () => {
       expect(individualsNeeds(withoutIndividuals())).toBe(

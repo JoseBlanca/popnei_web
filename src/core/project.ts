@@ -1194,9 +1194,9 @@ const LIST_KINDS = ["keep", "remove"] as const;
  * The reason no analysis can run on this project, in the words the screen
  * shows beside the Run button, or `null` when every analysis can: the
  * first of a variants file missing, being read or refused, then a list of
- * individuals that is empty, names one more than once, or names individuals not in
- * the variants file (the project spec, "What an analysis needs of every
- * project").
+ * individuals that is empty, names one more than once, or names
+ * individuals not in the variants file (the project spec, "What an
+ * analysis needs of every project").
  */
 export function projectNeeds(p: Project): string | null {
   const variants = p.variants;
@@ -1210,7 +1210,7 @@ export function projectNeeds(p: Project): string | null {
       return `Reading ${fileName}.`;
     case "failed":
       return read.error.kind === "popnei"
-        ? `popnei could not read ${fileName}: ${withoutFullStop(read.error.message)}. ${LOAD_VARIANTS}`
+        ? `popnei could not read ${fileName}${saying(read.error.message)}. ${LOAD_VARIANTS}`
         : `${fileName} could not be read: ${WHAT_HAPPENED[read.error.error.kind]}. ${RELOAD}`;
     case "read": {
       const inVariants = new Set(read.individuals);
@@ -1293,7 +1293,7 @@ export function individualsNeeds(p: Project): string | null {
     case "failed":
       return read.error.kind === "worker"
         ? `${name} could not be read: ${WHAT_HAPPENED[read.error.error.kind]}. ${RELOAD}`
-        : `${name} could not be read: ${refusalWords(read.error)}. ${LOAD_INDIVIDUALS}`;
+        : `${name} could not be read${saying(refusalWords(read.error))}. ${LOAD_INDIVIDUALS}`;
     case "read": {
       const variants = p.variants;
       if (variants?.read.kind !== "read") {
@@ -1314,19 +1314,24 @@ export function individualsNeeds(p: Project): string | null {
 }
 
 /** What the reader of the individuals file found wrong with it (the
-    project spec, Open 5), or the message of the files wasm. */
+    project spec, Open 5), or the message of the files wasm, which may be
+    empty. */
 function refusalWords(error: IndividualsFileError): string {
   switch (error.kind) {
     case "empty":
       return "it has no row below the header";
     case "duplicateColumn":
-      return `two columns are named ${shown(error.name)}`;
+      return error.name === ""
+        ? "two columns have an empty name"
+        : `two columns are named ${shown(error.name)}`;
     case "duplicateIndividual":
-      return `the individual ${shown(error.name)} is in two rows`;
+      return error.name === ""
+        ? "two rows have an empty name"
+        : `the individual ${shown(error.name)} is in two rows`;
     case "raggedRow":
       return `line ${String(error.line)} has ${counted(error.found, "cell")} where the header has ${grouped(error.expected)}`;
     case "files":
-      return withoutFullStop(error.message);
+      return error.message;
   }
 }
 
@@ -1339,9 +1344,15 @@ const MAX_NAMED = 3;
 function namesOf(names: readonly string[]): string {
   const words =
     names.length <= MAX_NAMED
-      ? names.map(shown)
-      : [...names.slice(0, 2).map(shown), `${grouped(names.length - 2)} more`];
+      ? names.map(named)
+      : [...names.slice(0, 2).map(named), `${grouped(names.length - 2)} more`];
   return bothOf(words);
+}
+
+/** A name of an individual as a text shows it; an empty one is "an
+    empty name". */
+function named(name: string): string {
+  return name === "" ? "an empty name" : shown(name);
 }
 
 /** A list of things in words: "a, b and c". */
@@ -1363,10 +1374,14 @@ function grouped(count: number): string {
   return String(count).replace(/\B(?=(\d{3})+$)/g, ",");
 }
 
-/** A message of popnei or of the files wasm, without the full stop it may
-    end with, so that the sentence it goes into has one. */
-function withoutFullStop(message: string): string {
-  return message.endsWith(".") ? message.slice(0, -1) : message;
+/** What follows "could not read panel.nei": a colon and the message of
+    popnei, of the files wasm or of the reader, without the spaces around
+    it and the full stop it may end with, so that the sentence has one; or
+    nothing, when that leaves it empty. */
+function saying(message: string): string {
+  const trimmed = message.trim();
+  const words = trimmed.endsWith(".") ? trimmed.slice(0, -1) : trimmed;
+  return words === "" ? "" : `: ${words}`;
 }
 
 // The validation of the project part of a project file.
