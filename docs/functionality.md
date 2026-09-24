@@ -126,16 +126,16 @@ and its encoding varies with the version. So:
 - `.xlsx` is read directly, the first sheet of the file, with calamine,
   which is pure Rust, in a small Rust crate of the applications
   (`docs/architecture.md`, section 6; `docs/technology.md`).
-- CSV and TSV are read by the applications, in TypeScript, with the
-  separator detected, `,`, `;` or a tab, decimals with a comma accepted,
-  and a BOM at the start of the file removed.
-- A CSV or TSV is read as UTF-8 when it is valid UTF-8, and otherwise as
-  Windows-1252, which is what Excel on Windows writes for "CSV (comma
-  delimited)" in Spanish and the other languages of Western Europe; the
-  file then gets a notice that says how it was read, and asks nothing of
-  the user. No file is refused for its encoding. This is the
-  recommendation of the revision of `docs/architecture.md` of 24
-  September 2026, awaiting the owner's approval with it.
+- CSV and TSV are read by the applications, in TypeScript, and a BOM at
+  the start of the file is removed.
+- Their encoding, their separator and their decimal mark are detected,
+  and the user can set each one when the detection is wrong, as the owner
+  decided on 24 September 2026. The encoding is UTF-8 when the file is
+  valid UTF-8, and otherwise Windows-1252, which is what Excel on Windows
+  writes for "CSV (comma delimited)" in Spanish and the other languages of
+  Western Europe; the separator is `,`, `;` or a tab; the decimal mark is
+  a point or a comma. What was used is shown beside the file, with a way
+  to change it. No file is refused for its encoding.
 - Missing values are an empty cell, `NA` or `-`.
 - The file is written as `.xlsx` for the user and as TSV for scripts and
   the Python API.

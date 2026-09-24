@@ -416,14 +416,16 @@ both formats give the same types.
   which the lint and `tsconfig.core.json` check (`configs.md`). The type
   of the table is in `protocol.ts`, as `VariantFilter` is, so core and the
   reader name one type.
-- **The runner decodes the bytes**, first with `new TextDecoder("utf-8",
+- **The runner decodes the bytes** with the encoding of the source's
+  `csv` options. With `"auto"`, first with `new TextDecoder("utf-8",
   { fatal: true })`, and when that throws, with `new
   TextDecoder("windows-1252")`, which is what Excel on Windows writes for
   "CSV (comma delimited)" in Spanish and the other languages of Western
-  Europe. The result says which encoding was used, so that the screen can
-  give the file a notice that says how it was read. No file is refused
-  for its encoding (`docs/architecture.md`, section 6; the recommendation
-  awaiting the owner's approval with that revision).
+  Europe. The reader takes the separator and the decimal mark the same
+  way, set or detected. The result says what was used for each of the
+  three, so that the screen shows it and offers to change it; a read is
+  recorded only into the source with its load id and its options. No file
+  is refused for its encoding (`docs/architecture.md`, section 6).
 - **It does not check the individuals against the variants.** Core does,
   in the `needs` of each analysis that uses the file, since the reader
   does not know the variants (`docs/architecture.md`, section 6).

@@ -3,8 +3,7 @@
 September 2026, first draft, revised on 24 September 2026 after its
 architecture review, and approved by the owner on 24 September 2026;
 revised again on 24 September 2026 for three decisions of the owner about
-the inputs, a draft awaiting the owner's approval on the branch
-`design/inputs-without-popnei`. What was revised each time is at the end
+the inputs, and approved by the owner the same day. What was revised each time is at the end
 of section 1. The document gives the parts of the web applications of
 popnei, what each one holds, and how a change made by the user reaches the
 results on the screen. What the applications
@@ -103,9 +102,10 @@ With them, after the architecture review of this revision: the
 calculation worker is restarted whenever the load of the variant file
 changes, so that it holds one open file and gives back the memory of the
 old one (section 5); the analyses unlock once the file is open, with no
-pass over it first (section 6); and a CSV that is not UTF-8 is read as
-Windows-1252 with a notice, a recommendation awaiting the owner (section
-6).
+pass over it first (section 6); and a CSV is read with an encoding, a
+separator and a decimal mark that are detected, UTF-8 or else
+Windows-1252 among them, shown to the user and changeable, as the owner
+decided on 24 September 2026 (section 6).
 
 What each replaced, and why, is at the end of sections 3 and 6. popnei is
 no longer asked for a fingerprint nor for a reader of these files, so the
@@ -153,10 +153,19 @@ type SourceRead =
 interface IndividualsSource {
   fileId: string;                     // the id of this load, new at every pick
   name: string;
+  csv: CsvOptions | null;             // how a CSV or TSV is read; null for xlsx
   read:
     | { kind: "pending" }             // the light worker is reading it
     | { kind: "read"; table: IndividualsTable; columns: ColumnType[] }
     | { kind: "failed"; error: IndividualsFileError };
+}
+
+// How a CSV or TSV is read. Each is "auto" until the user sets it; the
+// read reports what "auto" found, which the screen shows.
+interface CsvOptions {
+  encoding: "auto" | "utf-8" | "windows-1252";
+  separator: "auto" | "," | ";" | "\t";
+  decimal: "auto" | "." | ",";
 }
 
 // The type of each column, inferred and then as the user set it. A
@@ -570,16 +579,27 @@ core and the reader describe it in one way.
   separator detected, `,`, `;` or a tab; decimals with a comma accepted;
   a BOM at the start removed; an empty cell, `NA` and `-` read as
   missing (`docs/functionality.md`, section 4). The runner decodes the
-  bytes and gives the reader the text. A file that is valid UTF-8 is read
-  as UTF-8. One that is not is read as Windows-1252, which is what Excel
-  on Windows writes for "CSV (comma delimited)" in Spanish and the other
-  languages of Western Europe, and the file gets a notice that says so,
-  "Read as Windows-1252, since it is not UTF-8", that asks nothing of the
-  user. A file is never refused for its encoding. This is the
-  recommendation of this revision, awaiting the owner's approval with it;
-  the option it replaces was to refuse such a file and ask for "CSV
-  UTF-8", which would stop most users of Excel in Spanish at their first
-  file.
+  bytes and gives the reader the text.
+- **The encoding, the separator and the decimal mark are detected, shown
+  and changeable**, as the owner decided on 24 September 2026: defaults
+  that are right for most files, and a way to set each one for a file
+  they get wrong. With "auto", a file that is valid UTF-8 is read as
+  UTF-8, and one that is not as Windows-1252, which is what Excel on
+  Windows writes for "CSV (comma delimited)" in Spanish and the other
+  languages of Western Europe; the separator is the one of `,`, `;` and
+  tab that splits the lines into the same number of fields; the decimal
+  mark is a comma when the separator is not one and the numbers are
+  written with a comma. The read reports what it found, and the screen
+  shows it beside the file, "Read as Windows-1252, separator `;`,
+  decimal comma", with a way to change each. A file is never refused for
+  its encoding. Changing one is a command that sets `csv` in the source
+  and puts its read back to pending; the light worker reads the file
+  again, and the read is recorded only into the source with that load id
+  and those options, so a read of the old options that comes back late is
+  dropped. The table that results is what enters the keys, so a change
+  that alters it changes the keys of what uses it. The option not taken
+  was to refuse a file that is not UTF-8 and ask for "CSV UTF-8", which
+  would stop most users of Excel in Spanish at their first file.
 - **The inference of the types of the columns** is in the same module. It
   takes the cells of a CSV, all text, or the cells of an xlsx, as the
   files wasm gives them, numbers, text, booleans or empty, so that the
