@@ -291,8 +291,9 @@ needs no action of the user.
   `init`; the page shows "popnei could not be loaded." with the message,
   under the label "Message:", since it is popnei's or the browser's, and
   "Reload the page. If popnei still does not load, report it at
-  https://github.com/JoseBlanca/popnei_web/issues, with the address and
-  the message above."
+  https://github.com/JoseBlanca/popnei_web/issues, with the message
+  above, and the address when the page shows one." The sentence holds
+  when no address is shown, as in the second and third failures below.
   popnei's `init()` takes no address and gives none, so the worker looks
   for it in the browser's list of what the worker fetched,
   `performance.getEntriesByType("resource")`, the entry whose path ends
