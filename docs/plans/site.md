@@ -137,8 +137,9 @@ with the browser's message.
 
 **Tasks:**
 
-- [ ] 2.1 `e2e/fixtures/make_fixtures.mjs`, the copy of popnei's
-  `panel.vcf.gz` and `bad.vcf`, and the two `panel.nei` it writes; the
+- [x] 2.1 `e2e/fixtures/make_fixtures.mjs`, the copy of popnei's
+  `panel.vcf.gz`, `bad.vcf` (written here, since popnei has none), and
+  the two `panel.nei` it writes; the
   spec's "The fixtures". Serves 1. Can run beside 2.2.
 - [ ] 2.2 `probe.html`, `src/probe/probe.tsx` and
   `src/probe/probeWorker.ts`, the spec's "The probe" and "The cases".
