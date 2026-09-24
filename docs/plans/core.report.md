@@ -60,3 +60,11 @@ Under way.
   the spec's type and its "read options only for a VCF" say. The
   commands copy the fields of the values they are given, so a field the
   type does not have cannot reach the project.
+- Task 1.4, in part, a10304a: the three records. `npx vitest run
+  src/core/project.test.ts -t "WP1 D4"` gives "Tests 15 passed" so far,
+  the cases "Two picks of files" and "A worker that could not start"
+  among them. `projectNeeds` and `individualsNeeds` wait for the owner:
+  the writer found five sentences a user reads that the spec does not
+  write (the way to fix a bad list, how many individuals are named, what
+  happened when a worker failed, the ending for a malformed individuals
+  file, and which problem is named first), asked on 24 September 2026.
