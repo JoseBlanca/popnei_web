@@ -1,26 +1,33 @@
 # The store
 
 Draft, 24 September 2026, not yet approved by the owner. There is no code
-yet. The store is the one object of core with state: it holds the history
-of the projects, the cache of the results, the version of popnei, the
-calculations in flight and the ones popnei refused, and gives the screens
-one state to read, in which each analysis is in one of the seven states
-of a screen. The screens change it with commands, and `src/ui/runs.ts`,
-which awaits the calculations, with events. This spec develops the row of
-`store.ts` in section 9 of `docs/architecture.md`, with its sections 3,
-4, 5 and 7, and declares the definition of an analysis of its section 4,
-which the store is given. It depends on `docs/specs/core/project.md`,
-`keys.md`, `history.md` and `cache.md`, and on
-`docs/specs/worker/protocol.md` for a run.
+yet. The store is the one object of core that changes: it holds the
+history of the projects, the cache of the results, the version of popnei,
+the calculations in flight with their handles, and the ones that failed.
+From them it gives the screens one state to read, in which each analysis
+is in one of the states of a screen, and the notice of what the last
+change removed or will stop. The screens change it with commands, and
+`src/ui/runs.ts`, which awaits the calculations, with events. This spec
+develops sections 3, 4, 5 and 7 of `docs/architecture.md`, declares the
+definition of an analysis of its section 4, and depends on
+`docs/specs/core/project.md`, `keys.md`, `history.md` and `cache.md`, and
+on `docs/specs/worker/protocol.md` for a request and its outcome.
 
 ## What it does
 
 Everything a user sees of a result goes through the store: whether it is
-shown, whether it is the result of the settings on screen, whether it was
-taken off by a change and can be brought back, whether a calculation is
-running for it. The store shows a result only under the key that the
-current project gives it, and so never one of other settings
-(`docs/architecture.md`, section 3).
+shown, whether it is the result of the settings on screen, whether a
+change took it off and an undo can bring it back, whether a calculation
+is running for it, and whether that calculation will be stopped. The
+store shows a result only under the key that the current project gives
+it, and so never one of other settings (`docs/architecture.md`, section
+3).
+
+A calculation runs in the calculation worker, and the page learns its
+end later, through a promise, a value that arrives when the calculation
+ends. Core never waits for one: the store starts a calculation and
+returns at once, `src/ui/runs.ts` waits for the outcome, and hands it to
+the store (`.claude/skills/coding/SKILL.md`, "The core").
 
 ### The definition of an analysis
 
@@ -32,80 +39,123 @@ calculation worker and `R` that of its results, `Job` and `JobResult` of
 `src/worker/protocol.ts` in the application (stage 2), and types of the
 tests in the tests.
 
-- `needs` gives the reason an analysis cannot run, in the words the
-  screen shows next to its Run button, or `null`; it is the state
-  `locked`.
-- `keyInputs` gives what the key holds beyond the parts every key holds
+- `needs` gives the reason the analysis cannot run beyond what every
+  analysis needs (`docs/specs/core/project.md`, `projectNeeds`), in the
+  words the screen shows next to its Run button, or `null`. Both make the
+  state `locked`.
+- `filtersRead` says which of the two lists of filters the analysis
+  reads, and `keyInputs` what else its key holds
   (`docs/specs/core/keys.md`).
 - `run` builds the request and sends it through the client it is given.
-  The store gives it a client bound to the key and to the progress of
-  this run, so an analysis cannot send a request under another key, nor
-  lose its progress. The store looks in the cache before it calls `run`,
-  so an analysis never does.
-- `warnings` gives the warnings its result raises from the data; the
-  store calls it once per key, when the result arrives.
+  The store makes that client for this one request, from the `send` of
+  the worker client of `src/worker`: it sends under the key of the
+  request, passes the progress to the store, and makes the keys of the
+  intermediate results the request needs. So an analysis cannot send a
+  request under another key, lose its progress, or make a key of its own.
+  The store looks in the cache before it calls `run`.
+- `warnings` gives the warnings a result raises from the data. The store
+  calls it once, when the result arrives, with the project the request was
+  made from, which may no longer be the current one; the warnings are kept
+  with the result in the cache, and go when it is dropped.
 - `parseOptions` checks the options of the analysis read from a project
-  file (`docs/specs/core/project.md`, "The validation"). It is a member
-  that section 4 of `docs/architecture.md` did not have, added with this
-  spec, because the options of an analysis are its module's to know.
-- `checkNumbers` and `script` are used by the project file and the report,
-  in stages 2 and 6.
+  file of a given version of its format.
+- `checkNumbers` gives the numbers kept in the project file. They are
+  numbers of popnei's result, or made from them by addition, subtraction,
+  multiplication and division alone, which give the same result in every
+  browser; `Math.log`, `Math.exp`, `Math.pow` and the like may differ in
+  the last digit between the engines of the browsers, and would make the
+  comparison below say "differs" for the same data. A NaN of popnei is
+  given as `null`.
+- `script` gives its lines of the Python script, in stage 6.
 
 ### The state of an analysis
 
-The store gives each analysis one state, the first of this table whose
-condition holds. The states are the seven of a screen spec
-(`.claude/skills/writing-specs/SKILL.md`, "The states"), and a panel shows
-the one the store gives (`.claude/skills/coding/react.md`, "The states of
-an analysis").
+The store gives each analysis the first state of this table whose
+condition holds. The states are those of a screen spec
+(`.claude/skills/writing-specs/SKILL.md`, "The states"), and the panel of
+an analysis shows the one the store gives (`.claude/skills/coding/react.md`,
+"The states of an analysis"); the state the skill calls "results removed"
+has the kind `removed` in the code.
 
 | state | when | what it holds |
 |---|---|---|
-| locked | its `needs` gives a reason | the reason |
-| empty | the calculation worker has not given the version of popnei yet, so no key can be made | nothing: the user waits, and has nothing to do |
+| locked | `projectNeeds` or its `needs` gives a reason | the reason |
 | done | the cache holds a result under its key | the result, its warnings, and the comparison with the check numbers of an opened project file |
-| running | a calculation of its key has been started and has not ended, whether it waits in the queue or runs | its progress, `null` until the worker gives one, and the run's id |
-| error | popnei refused the calculation of its key | popnei's message |
-| results removed | the last command, undo or redo took its result off the screen | its key; it can run again |
+| running | a calculation of its key is in flight and is not being stopped, whether it waits in the queue of the worker or runs | its progress, `null` until the worker gives one, and the request's id |
+| error | popnei refused the calculation of its key, or the calculation failed since the last change | popnei's message, or the failure |
+| removed | the last change took its result off the screen | its key; it can run again |
 | ready | none of the above | its key |
+| empty | cannot happen | — |
 
-`locked` comes before `empty` because the user can act on it: with no
-variants file loaded, the panel says to load one, and not to wait.
+`empty`, nothing to show and nothing the user can do, cannot happen: an
+analysis is locked until its variants file is read, and only a
+calculation worker that has started, and so has given the version of
+popnei the keys need, reads it. A file that could not be read, a worker
+that could not start, lock it with their reason
+(`docs/specs/core/project.md`, "What an analysis needs of every
+project"). So the store has no such state, and a key asked for without a
+version is a defect.
 
 ### Commands and events
 
 A command of the user goes through `apply` with its description, the
 words that finish the notice, "the MAF filter changed". `apply` commits
 the new project to the history, unless the command returned the project
-it was given, and undo and redo move in it (`docs/specs/core/history.md`).
-The description is a change to the interface that
-`.claude/skills/coding/SKILL.md` gave, `apply(command)`, which had no way
-to say why results were removed.
+it was given, in which case nothing changes, and undo and redo move in it
+(`docs/specs/core/history.md`).
 
 `open` starts a new history with an opened project, and Ctrl+Z does not
 undo it, as the owner decided on 24 September 2026
-(`docs/specs/core/history.md`). The cache, the runs and the refusals are
-kept: they are under keys, and a key names the load it was made from, so
-nothing of them is shown for the new project unless its keys give it.
+(`docs/specs/core/history.md`). The cache and the refusals are kept: they
+are under keys, and a key names the load it was made from, so nothing of
+them is shown for the new project unless its keys give it. The
+calculations in flight are stopped at once, since the screen asked before
+opening; an opening makes no notice.
 
 The events come from the workers, through `src/ui/runs.ts` and the entry
-of the page, and change what the screens show without a step of undo:
-the version of popnei, the reads of the files, recorded into every project
-of the history that holds their load, and the end of a calculation.
+of the page, and change what the screens show without a step of undo: the
+version of popnei, the reads of the files, recorded into every project of
+the history that holds their load, and the end of a calculation.
 
-### The notice of removed results
+### The notice, and the calculations it stops
 
 After a command, an undo or a redo, the store compares the analyses that
-were `done` before it with those after it. Each that was done and is not
-any more is in the notice, with the cause: the description of the
-command, of the step undone, or of the step redone. The screen writes it
-as "3 results removed because the MAF filter changed · Undo"
-(`.claude/skills/writing/SKILL.md`, "The text of the applications"). An
-analysis in the notice is in the state `results removed` if it can run,
-and `locked` if it cannot, which says what it lacks. The notice and the
-state last until the next command, undo, redo or opening; a dismissal
-closes the notice alone. An opening makes no notice: the screen asked
-before it.
+were `done` before it with those after it: each that was done and is not
+any more is removed, and is in the notice, with the cause, the
+description of the command, of the step undone or of the step redone.
+The screen writes it as "3 results removed because the MAF filter changed
+· Undo" (`.claude/skills/writing/SKILL.md`, "The text of the
+applications"). An analysis removed is in the state `removed` if it can
+run, and `locked`, with what it lacks, if it cannot.
+
+A calculation in flight whose key the project no longer gives is stopped,
+unless the change is undone, as the owner decided on 24 September 2026
+(`docs/architecture.md`, section 5). It is in the same notice, which is
+one for the user: one message and one Undo for everything the change
+did, "2 results removed because the MAF filter changed. The ongoing
+calculations will be stopped unless you undo the change. · Undo". The
+calculations it names are stopped, with the `cancel()` of their handle,
+at the first of these:
+
+- the user closes the notice, `dismissNotice`;
+- ten seconds after the notice appeared, when the shell calls
+  `stopReplacedRuns` from a timer of the screen, since core reads no clock
+  (**Open 1**, below); the notice stays, with its Undo, and says the
+  calculations were stopped;
+- the next command, undo, redo or opening replaces the notice. The
+  calculations it named whose key the new project still does not give are
+  stopped; an undo gives the keys back, and those calculations go on.
+
+A calculation that waits in the queue leaves it at no cost; one that runs
+ends the calculation worker, and a new one starts and reads the variants
+file again (`.claude/skills/coding/worker.md`, "Cancelling"). The option
+not taken was to let it finish, its result kept for a possible undo, while
+the calculation of the new settings waited behind it, minutes for a GWAS.
+
+The notice goes when it is closed or replaced; a change that removes
+nothing and stops nothing replaces it with none. An analysis in the
+notice that is done again, when a calculation of its new key ends, leaves
+the notice, and a notice left with nothing goes.
 
 ### A calculation that failed
 
@@ -114,15 +164,19 @@ key of the calculation, and the analysis is in the state `error` whenever
 the project gives that key again, by an undo or by a value set back,
 without calculating again. popnei refuses the same data with the same
 message every time, so a second calculation would take its time to say
-the same thing. The other failures, a worker that failed, one that could
-not start, a stale file after a deploy, a message that did not validate,
-and a cancel, keep nothing: the analysis is `ready`, since a second try
-can succeed. The owner decided it on 24 September 2026. The option not
-taken was to forget every failure, which would have shown the analysis
-ready after an undo and let the user wait again for popnei's refusal.
+the same thing. `startRun` does nothing for a key refused; the user
+changes the settings, which gives another key. The owner decided it on
+24 September 2026. The option not taken was to forget every failure,
+which would have shown the analysis ready after an undo and let the user
+wait again for popnei's refusal.
 
-A key refused is not run again: `startRun` does nothing for it, and the
-user changes the settings, which gives another key.
+Any other failure, a worker that crashed, one that could not start, a
+file of the site left from before a deploy, a message that did not
+validate, a variants file that could not be read again after a restart,
+is kept under its key until the next change of the project, and shown as
+the state `error` with what happened, so that the user learns it and can
+run again; after the next change, the analysis is `ready`, since a second
+try can succeed. A cancel is not a failure: the analysis is `ready`.
 
 ### The comparison with the check numbers
 
@@ -131,20 +185,26 @@ numbers for an analysis, the state `done` of that analysis holds the
 comparison of its result with them, if the fingerprint of its settings
 now is the one the reference kept (`docs/specs/core/project.md`, "The
 project of an opened project file"); otherwise it holds none, since the
-numbers belong to other settings. The numbers are compared exactly: the
-same calculation of popnei on the same data gives the same numbers, in
-every browser, since wasm computes with the floating point of IEEE 754.
+numbers belong to other settings. The numbers are compared exactly, a
+decision taken here and not by the owner: popnei gives the same numbers
+for the same data in every browser, since its calculations are those of
+its compiled Rust, whose arithmetic every browser does in the same way,
+and `checkNumbers` adds only arithmetic of the same kind. Two lists of
+different lengths differ; two `null`s are the same.
 
 - **The same numbers**: the variants file gives the results the project
   was saved with.
-- **Other numbers, the same version of popnei**: the variants file is not
-  the one the project was saved with, or it was changed since.
-- **Other numbers, another version of popnei**: the comparison names both
-  versions, and says that the difference can come from the new version as
-  well as from the file; it cannot tell which.
+- **Other numbers**: the comparison gives what could explain it. The
+  variants file always could: it is not the one the project was saved
+  with, or it was changed since. When the version of popnei is not the
+  one in the header of the project file, the comparison names both
+  versions, since the new version could explain it too. When the key
+  version of the analysis is not the one saved with its numbers, it names
+  both versions of the application, since the application has changed how
+  it calculates this analysis since. It cannot tell which of these is the
+  cause.
 
-This is decided here. The final words are those of the spec of the
-project file's screen, in stage 6.
+The final words are those of the screen of the project file, in stage 6.
 
 ## The TypeScript interface
 
@@ -156,8 +216,9 @@ export interface AnalysisDef<J, R> {
   readonly app: readonly AppId[];
   readonly defaults: JsonObject;
   readonly keyVersion: number;
-  parseOptions(options: unknown): Result<JsonObject, string>;
-  keyInputs(p: Project): JsonValue;
+  readonly filtersRead: { readonly variants: boolean; readonly individuals: boolean };
+  parseOptions(options: unknown, formatVersion: number): Result<JsonObject, string>;
+  keyInputs(p: Project): JsonValue;       // must not read p.variants; answers for any project
   needs(p: Project): string | null;
   run(p: Project, c: WorkerClient<J, R>): Run<R>;
   warnings(r: R, p: Project): readonly Warning[];
@@ -165,9 +226,11 @@ export interface AnalysisDef<J, R> {
   script(p: Project): string;
 }
 
-/** What an analysis sends its request through: bound by the store to one key. */
+/** What an analysis sends its request through, bound by the store to one key. */
 export interface WorkerClient<J, R> {
   run(job: J): Run<R>;
+  /** The key of an intermediate result of the request, "the pruned variants". */
+  intermediateKey(name: string, inputs: JsonValue): string;
 }
 
 /** A warning raised by the data; `code` is what the tests assert. */
@@ -178,16 +241,18 @@ export interface Warning {
 ```
 
 The state the screens read. It is the same object until something
-changes, and the state of an analysis that did not change keeps its
-reference, so that a screen that reads it is not drawn again.
+changes, and the state of an analysis that did not change is the same
+object after a change to another, so that a screen that reads it is not
+drawn again.
 
 ```ts
 export interface AppState<R> {
   readonly project: Project;
-  readonly undo: string | null;          // the description of what an undo would undo
+  readonly undo: string | null;           // the description of what an undo would undo
   readonly redo: string | null;
   readonly popneiVersion: string | null;
   readonly analyses: readonly AnalysisView<R>[];  // in the order of the definitions
+  readonly runs: readonly RunView[];      // the calculations in flight
   readonly notice: Notice | null;
 }
 
@@ -198,31 +263,49 @@ export interface AnalysisView<R> {
 
 export type AnalysisStatus<R> =
   | { readonly kind: "locked"; readonly reason: string }
-  | { readonly kind: "empty" }
   | { readonly kind: "done"; readonly key: Key; readonly result: R;
       readonly warnings: readonly Warning[]; readonly check: CheckVerdict | null }
   | { readonly kind: "running"; readonly key: Key; readonly runId: number;
       readonly progress: Progress | null }
-  | { readonly kind: "error"; readonly key: Key; readonly message: string }
+  | { readonly kind: "error"; readonly key: Key; readonly error: AnalysisError }
   | { readonly kind: "removed"; readonly key: Key }
   | { readonly kind: "ready"; readonly key: Key };
 
+export type AnalysisError =
+  | { readonly kind: "refused"; readonly message: string }  // popnei's; kept
+  | { readonly kind: "failed"; readonly error: RunError };  // until the next change
+
+/** A calculation in flight; `current` when the project still gives its key. */
+export interface RunView {
+  readonly runId: number;
+  readonly analysis: AnalysisId;
+  readonly key: Key;
+  readonly current: boolean;
+  readonly stopping: boolean;    // cancelled, its outcome not yet arrived
+  readonly progress: Progress | null;
+}
+
 export type CheckVerdict =
   | { readonly kind: "same" }
-  | { readonly kind: "differs"; readonly popnei: { readonly saved: string; readonly now: string } | null };
+  | { readonly kind: "differs";
+      readonly popnei: { readonly saved: string; readonly now: string } | null;
+      readonly app: { readonly saved: string; readonly now: string } | null };
 
 export interface Notice {
-  readonly removed: readonly AnalysisId[];
   readonly cause: { readonly kind: "command" | "undo" | "redo"; readonly description: string };
+  readonly removed: readonly AnalysisId[];
+  readonly stopping: readonly AnalysisId[];  // their calculations will be, or were, stopped
+  readonly stopped: boolean;
 }
 ```
 
-The store is made once per page, by its entry, with the definitions of the
-application's analyses, the function of the worker client that sends a
-request (`.claude/skills/coding/worker.md`, `Client.run`), and the
-function that finds in a result the number of variants its pass counted,
-which is recorded into the variants file of its load
-(`docs/architecture.md`, section 6, step 5).
+The store is made once per page, by its entry, with the definitions of
+the application's analyses; the function of the worker client that sends
+a request (`.claude/skills/coding/worker.md`, `Client.run`); the function
+that finds in a result the number of variants its pass counted, which is
+recorded into the variants file of the request's load
+(`docs/architecture.md`, section 6, step 5); and the version of the
+application.
 
 ```ts
 export function createStore<J, R>(config: {
@@ -230,12 +313,15 @@ export function createStore<J, R>(config: {
   readonly analyses: readonly AnalysisDef<J, R>[];
   readonly send: (key: string, job: J, onProgress: (p: Progress) => void) => Run<R>;
   readonly numVarsOf: (r: R) => number | null;
-  readonly cacheMaxBytes: number;
+  readonly appVersion: string;
+  readonly cacheMaxBytes: number;          // CACHE_MAX_BYTES
+  readonly maxUndoSteps: number;           // MAX_UNDO_STEPS
 }): Store<R>;
 
 export interface Store<R> {
   getState(): AppState<R>;
-  /** Calls `listener` after every change; returns what unsubscribes. Bound once. */
+  /** Calls `listener`, a function of a screen, after every change; returns
+      the function that stops it. A property made once, so React keeps it. */
   readonly subscribe: (listener: () => void) => () => void;
 
   apply(description: string, command: (p: Project) => Project): void;
@@ -243,10 +329,14 @@ export interface Store<R> {
   redo(): void;
   open(p: Project): void;
   dismissNotice(): void;
+  stopReplacedRuns(): void;
 
-  /** Starts the calculation of an analysis that is ready or removed;
-      null, and nothing done, in any other state. */
+  /** Starts the calculation of an analysis that is ready, removed, or in
+      error after a failure that is not popnei's; null, and nothing done,
+      in any other state. */
   startRun(id: AnalysisId): Run<R> | null;
+  /** Stops the calculation in flight of an analysis, if there is one. */
+  cancelRun(id: AnalysisId): void;
 
   popneiReady(version: string): void;
   variantsRead(fileId: string, read: SourceRead): void;
@@ -255,101 +345,132 @@ export interface Store<R> {
 }
 ```
 
-`startRun` returns the run to its caller, `src/ui/runs.ts`, which holds
-its handle, awaits its outcome and gives it to `runEnded`. The progress
-comes to the store through the client it bound, with no call of the
-screens.
+A command is passed as a function: `store.apply("the MAF filter changed",
+(p) => setVariantFilter(p, { kind: "maf", maxAllowedMaf: 0.9 }))`.
 
-What `runEnded` does with each outcome:
+`startRun` returns the handle of the request to its caller,
+`src/ui/runs.ts`, which awaits its outcome and gives it to `runEnded`; the
+store keeps the handle too, to stop it. For each request in flight the
+store keeps its analysis, its key, the project it was made from, the load
+of its variants file and its handle.
 
-- `done`: the result is put in the cache under its key, with the keys of
-  the current project kept, and its warnings made; the number of
-  variants, when `numVarsOf` gives one, is recorded into the variants file
-  of the run's load in every project of the history.
-- `failed` with a `RunError` of kind `popnei`: the message is kept under
-  the key. Any other kind: nothing is kept.
+What `runEnded` does with each outcome, after it takes the request out of
+those in flight:
+
+- `done`: the result goes into the cache under its key, with its
+  warnings, made from the request's project, and the keys of the current
+  project kept; the number of variants, when `numVarsOf` gives one, is
+  recorded into the variants file of the request's load in every project
+  of the history.
+- `failed` of kind `popnei`: the message is kept under the key for the
+  session. Any other kind: it is kept until the next change of the
+  project.
 - `cancelled`: nothing is kept.
-
-In the three, the run is no longer in flight.
 
 ## The cases
 
-- **A result that arrives after the user changed a setting.** It goes
-  into the cache under the key it was asked for, and the screen does not
-  show it, since the project gives that analysis another key; an undo
-  shows it with no calculation (`docs/architecture.md`, section 5).
-- **A calculation still running when its key is no longer asked for.** It
-  is not stopped: ending it would cost a restart of the worker, and its
-  result may be wanted after an undo. The analysis is shown in the state
-  of its new key. `src/ui/runs.ts` cancels the calculations that are
-  still waiting in the queue under a key the project no longer gives,
-  which costs nothing (`docs/architecture.md`, section 5).
+- **A result that arrives after the user changed a setting**, in the ten
+  seconds before its calculation is stopped. It goes into the cache under
+  the key it was asked for, with its warnings, and is not shown, since the
+  project gives that analysis another key; an undo shows it with no
+  calculation (`docs/architecture.md`, section 5).
 - **Run asked twice** for the same key: the second `startRun` returns
   `null`, since the analysis is `running`.
-- **A cancel, a worker that failed, a restart.** The outcome is
-  `cancelled` or a failure of the worker; nothing is kept, and the
-  analysis is `ready`.
-- **A result whose key is not the run's key**, or a `runEnded` of a run
-  the store did not start: a defect, since only the store starts runs.
-- **The first command before the version of popnei arrives.** Every
-  analysis that is not locked is `empty`; the notice compares states, so
-  a command then removes nothing.
-- **A read of the individuals file that changes the table.** A record
-  makes no notice: before it, the analyses that use the file were locked,
-  "reading the file", and had no result on screen.
+- **A cancel by the user, a crash, a restart.** The outcome is
+  `cancelled`, and the analysis `ready`; or a failure of the worker, shown
+  until the next change.
+- **A progress after the end of its request**, a message the worker had
+  sent before the end reached the page: the store no longer has the
+  request, and passes it over.
+- **A second `popneiReady`**, from the calculation worker started again
+  after a restart: with the same version, nothing changes. With another,
+  which the page and the workers, built together, do not give, the store
+  records it, every key changes, and the analyses are calculated again
+  when asked.
+- **A command that returns the project it was given**: nothing changes,
+  the notice neither; `getState` gives the same object.
+- **A result whose key is not its request's key**, or a `runEnded` of a
+  request the store did not start: a defect. The store takes the request
+  out of those in flight before it throws, so that the analysis is not
+  shown running for ever.
+- **An analysis's `run` that throws**: a defect of that analysis. The
+  store calls it before it records anything, so the state is as it was.
 - **An opened project whose settings are changed and set back.** The
   fingerprint is that of the settings, so the comparison with the check
   numbers comes back with them.
 
 ## How it runs
 
-On the page. After every change, the store makes the key of each analysis
-that is not locked, and its state; `docs/specs/core/keys.md` says what
-that costs. Then it uses in the cache the results of the current keys, so
-that the results on screen are the last to be dropped
-(`docs/specs/core/cache.md`), and calls the listeners once. The store
-never waits: `startRun` returns at once, and the outcome arrives as an
-event.
+On the page. After every change of the project or of the version of
+popnei, the store makes the key of each analysis that is not locked,
+keeping the keys of the last project and version, and a memo of the
+canonical texts of its objects (`docs/specs/core/keys.md`, `KeyMemo`), so
+that a progress message, which changes neither, makes no key. Then it
+uses in the cache the results of the current keys, so that the results on
+screen are the last to be dropped (`docs/specs/core/cache.md`), and calls
+the screens' listeners once. The store never waits: `startRun` returns at
+once, and the outcome arrives as an event.
 
 What the store keeps grows with the session: the cache, bounded in bytes;
-the history, bounded in steps; the messages of popnei's refusals, one
-short text per key refused, not bounded, since a session makes few.
+the history, bounded in steps; popnei's refusals, one short text per key
+refused, not bounded, since a session makes few.
 
 ## How it is verified
 
 With Vitest, at the functions of `Store`, with a fake `send` that returns
-runs whose outcomes the test resolves by hand, and two fake analyses: one
-that needs a variants file and uses the populations, and one that needs
-only the variants file.
+requests whose outcomes the test resolves by hand, whose `cancel()` it
+records, and which passes progress when the test asks; and two fake
+analyses: one that needs the individuals file and uses the populations,
+and one that needs only the variants file.
 
-- **A worked sequence.** Create the store, `popneiReady("0.1.0")`; both
-  analyses are locked. `apply("a variants file was loaded", loadVariants)`
-  and `variantsRead` of that load: both are `ready`. `startRun` of the
-  first; it is `running`; `runEnded` with its result: it is `done`, and
-  the cache holds one result. `apply("the missing data filter changed",
-  …)`: the first is `removed` and the second `ready`, and the notice
-  lists the first alone, which was the one done, with that cause. `undo()`: the first is `done` again with the same
-  result object, `send` was called once, and the notice is empty.
+- **A worked sequence.** Create the store; both analyses are locked,
+  "Load a variants file in the Variants step." `popneiReady("0.1.0")`,
+  `apply("a variants file was loaded", (p) => loadVariants(p, …))` and
+  `variantsRead` of that load: the second is `ready`, the first locked by
+  the individuals file. `startRun` of the second: it is `running`; a
+  progress of 3 of 10: its progress is 3 of 10; `runEnded` with its
+  result: it is `done`, with its warnings, and the cache holds one result.
+  `apply("the missing data filter changed", …)`: it is `removed`, the
+  notice lists it with that cause and stops nothing. `undo()`: it is
+  `done` again with the same result object, `send` was called once, and
+  the notice is `null`.
+- **Stopping.** With the second running, a command that changes its key:
+  the notice lists it in `stopping`, and `cancel()` was not called.
+  `stopReplacedRuns()`: `cancel()` was called, the notice stays with
+  `stopped` true. Again with an undo in place of the timer: `cancel()` is
+  not called and the analysis is `running`. Again with a second command:
+  `cancel()` is called. Again with `dismissNotice()`: `cancel()` is
+  called and the notice is `null`.
+- **A late result**: a command, then `runEnded` of the old key: the
+  analysis is `removed`, the cache holds the result with the warnings of
+  the request's project; `undo()` shows it `done`.
 - **A refusal**: `runEnded` with `{ kind: "failed", error: { kind:
-  "popnei", message: "the filters kept no variant" } }` gives `error` with
-  that message; a command, then its undo, give `error` again and `send`
-  is not called; the same with `workerFailed` gives `ready`.
+  "popnei", message: "…" } }` gives `error` of kind `refused`; a command,
+  then its undo, give it again, and `startRun` returns `null`. The same
+  with `workerFailed` gives `error` of kind `failed`, `startRun` works,
+  and after a command and its undo the analysis is `ready`.
 - **The check numbers**: a project opened with a reference whose check
-  fingerprint is that of its settings, a result whose check numbers are
-  those saved: `same`; other numbers with the version saved "0.1.0" and
-  the version now "0.1.0": `differs` with `popnei: null`; with "0.2.0"
-  now: `differs` with both; a setting changed: `check` is null; set back:
-  the comparison is there again.
+  holds the fingerprint of its settings, popnei "0.1.0", key version 1: a
+  result with the same numbers gives `same`; other numbers with popnei
+  "0.1.0" now and key version 1 give `differs` with `popnei` and `app`
+  null; with "0.2.0" now, `popnei` names both; with key version 2 now,
+  `app` names both versions of the application; a list one number
+  shorter differs; a setting changed: `check` is null; set back: the
+  comparison is there again.
+- **`popneiReady` twice** with the same version gives the same state
+  object; **`dismissNotice`** with no notice gives the same state object.
 - **`getState`** returns the same object between two changes, and the
   state of an analysis that did not change is the same object after a
   change to another.
-- **Properties, with fast-check**, over random sequences of commands,
-  undos, redos, starts and ends of runs: a result is shown only under the
-  key that `keyOf` gives for the current project, whatever the order in
-  which the outcomes arrive; an undo after a command that removed results
-  gives them back, done, when the cache still holds them; and the notice
-  of each change lists exactly the analyses that were done before it and
-  are not after it.
+- **Properties, with fast-check**, which draws random sequences of
+  commands, undos, redos, starts, progress, ends and cancels of requests,
+  in any order, and shrinks a failure to the smallest one: a result is
+  shown only under the key that `keyOf` gives for the current project; an
+  undo after a command that removed results gives them back, done, when
+  the cache still holds them; the notice of each change lists exactly the
+  analyses that were done before it and are not after it; and a request
+  whose key the project does not give when its notice goes has been
+  cancelled.
 
 The tests in the browser, of the walking skeleton, check the same through
 the screens, since core reaches them through the store
@@ -357,19 +478,28 @@ the screens, since core reaches them through the store
 
 ## Open points
 
-None of the store's own. It uses the bound of the cache
-(`docs/specs/core/cache.md`, **Open 1**) and the bound of the history
-(`docs/specs/core/history.md`, **Open 1**).
+1. **How long the calculations wait before they are stopped.** Ten
+   seconds after the notice appears, the calculations the change left
+   behind are stopped, unless the change was undone. The number is the
+   orchestrator's choice, not measured: shorter stops a calculation before
+   a user who changed a value by mistake reaches Undo; longer keeps the
+   worker busy with settings the user has left. Meanwhile, ten seconds,
+   a named constant of the shell, `STOP_REPLACED_RUNS_AFTER_MS`.
+
+It also uses the bound of the cache (`docs/specs/core/cache.md`, **Open
+1**) and the bound of the history (`docs/specs/core/history.md`, **Open
+1**).
 
 ## Not in this spec
 
-- `src/ui/runs.ts`, which awaits the runs and cancels the queued ones, and
-  the hook through which React reads the store: the specs of the shell, in
-  stage 2, and `.claude/skills/coding/react.md`.
+- `src/ui/runs.ts`, which awaits the requests, the timer of the notice,
+  and the hook, the function through which a React screen reads the
+  store: the specs of the shell, in stage 2, and
+  `.claude/skills/coding/react.md`.
 - The list of the analyses of each application, `apps.ts`, and each
   analysis: from stage 2.
-- The words of the notice, the locked reasons and the comparison: the
-  screen specs.
-- Restarting the calculation worker when the load of the variants file
-  changes: the worker client, which reads it from the project
+- The words of the notice, the locked reasons of each analysis and the
+  comparison: the screen specs.
+- Starting the calculation worker again when the load of the variants
+  file changes: the worker client, which reads it from the project
   (`docs/architecture.md`, section 5).
