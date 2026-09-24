@@ -449,16 +449,24 @@ export function settingsFingerprint(
 /**
  * The key that came back from a worker with its result, a text on the
  * wire. Throws a defect on a text that is not 64 lower case hexadecimal
- * digits, since both sides are our code.
+ * digits, since both sides are our code; its message quotes at most the
+ * first 80 characters of the text, which could be of any length.
  */
 export function keyFromWire(text: string): Key {
   if (!/^[0-9a-f]{64}$/.test(text)) {
+    const quoted =
+      text.length > MAX_QUOTED
+        ? `${JSON.stringify(text.slice(0, MAX_QUOTED))}… (${String(text.length)} characters)`
+        : JSON.stringify(text);
     throw new Error(
-      `popnei_web defect: a worker sent back the key ${JSON.stringify(text)}, which is not 64 lower case hexadecimal digits.`,
+      `popnei_web defect: a worker sent back the key ${quoted}, which is not 64 lower case hexadecimal digits.`,
     );
   }
   return asKey(text);
 }
+
+/** The most characters of a wrong key that a defect quotes. */
+const MAX_QUOTED = 80;
 
 /** A hash made here, or checked by `keyFromWire`, as a key. */
 function asKey(hash: string): Key {

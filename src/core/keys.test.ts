@@ -499,6 +499,12 @@ describe("WP2 D2 the key", () => {
     expect(() => keyFromWire(text)).toThrow(/^popnei_web defect: /);
   });
 
+  test("keyFromWire quotes at most 80 characters of a long text", () => {
+    expect(() => keyFromWire("x".repeat(100_000))).toThrow(
+      `popnei_web defect: a worker sent back the key "${"x".repeat(80)}"… (100000 characters), which is not 64 lower case hexadecimal digits.`,
+    );
+  });
+
   test("keyOf throws a defect on a project with no variants file", () => {
     const p = { ...literalProject(), variants: null };
     expect(() => keyOf(DIVERSITY, p, "0.1.0", createKeyMemo())).toThrow(
