@@ -1645,6 +1645,23 @@ describe("WP4 D2 the calculations", () => {
     ]);
     expect(store.getState().notice).toBeNull();
   });
+  test("the number of variants of a result is recorded into the file of its request, not into a file loaded since", () => {
+    const { store, sent } = storeWithVariantsRead();
+    store.startRun("vars");
+    const request = sentAt(sent, 0);
+    store.apply("a variants file was loaded", loadPanel(OTHER_VARIANTS_ID));
+    store.variantsRead(OTHER_VARIANTS_ID, VARIANTS_READ);
+    store.runEnded(request.run.id, doneWith(request, varsResult(1200)));
+    expect(store.getState().project.variants).toMatchObject({
+      fileId: OTHER_VARIANTS_ID,
+      read: VARIANTS_READ,
+    });
+    store.undo();
+    expect(store.getState().project.variants).toMatchObject({
+      fileId: VARIANTS_ID,
+      read: { ...VARIANTS_READ, numVars: 1200 },
+    });
+  });
 });
 
 /** The kinds of the states of the analyses, populations first. */
@@ -2162,6 +2179,45 @@ describe("WP4 D3 the notice", () => {
       { runId: sentAt(sent, 1).run.id, afterStop: true },
     ]);
   });
+  test("open keeps the cache and popnei's refusals, which are under keys", () => {
+    const { store, sent } = storeWithBothReady();
+    store.startRun("vars");
+    const vars = sentAt(sent, 0);
+    const result = varsResult(null);
+    store.runEnded(vars.run.id, doneWith(vars, result));
+    store.startRun("pops");
+    store.runEnded(sentAt(sent, 1).run.id, {
+      kind: "failed",
+      error: { kind: "popnei", message: "no variant left" },
+    });
+    store.open(store.getState().project);
+    const [pops, done] = statuses(store);
+    expect(pops).toMatchObject({
+      kind: "error",
+      error: { kind: "refused", message: "no variant left" },
+    });
+    expect(done?.kind === "done" && done.result).toBe(result);
+  });
+
+  test("open forgets a failure that is not popnei's", () => {
+    const { store, sent } = storeWithVariantsRead();
+    store.startRun("vars");
+    const error = { kind: "workerFailed", message: "a trap" } as const;
+    store.runEnded(sentAt(sent, 0).run.id, { kind: "failed", error });
+    expect(statuses(store)[1]?.kind).toBe("error");
+    store.open(store.getState().project);
+    expect(statuses(store)[1]?.kind).toBe("ready");
+  });
+
+  test("the analyses left behind are listed in the order of the definitions, not of their start", () => {
+    const { store } = storeWithBothReady();
+    store.startRun("vars");
+    store.startRun("pops");
+    store.apply("the MAF filter changed", maf(0.9));
+    expect(store.getState().notice).toMatchObject({
+      leftBehind: ["pops", "vars"],
+    });
+  });
 });
 
 /** The read options of the variants file the reference was saved with. */
@@ -2369,6 +2425,15 @@ describe("WP4 D4 the check numbers", () => {
       calls.given.filter((given) => given.includes("checkNumbers")),
     ).toStrictEqual(["pops checkNumbers of pops", "vars checkNumbers of vars"]);
   });
+  test("a comparison that differs keeps the state of its analysis the same object across a change that does not touch it", () => {
+    const { store } = openedAndRun({ saved: [0.5, 0.75] });
+    const before = store.getState().analyses[1];
+    expect(checkOf(store)).toMatchObject({ kind: "differs" });
+    store.apply("a filter of the individuals changed", (p) =>
+      setIndividualFilter(p, { kind: "obs_het", maxAllowedObsHet: 0.5 }),
+    );
+    expect(store.getState().analyses[1]).toBe(before);
+  });
 });
 
 // The properties of the store: random sequences of commands and events,
@@ -2468,10 +2533,67 @@ const step: fc.Arbitrary<Step> = fc.oneof(
   { arbitrary: fc.constant<Step>({ kind: "dismissNotice" }), weight: 1 },
 );
 
+/** Two commands, a calculation started, and two undos: the first leaves
+    the calculation behind, and the second, which does not give its key
+    back, stops it. */
+const twoUndos: fc.Arbitrary<readonly Step[]> = fc
+  .record({ analysis: analysisId, first: drawnCommand, second: drawnCommand })
+  .map(({ analysis, first, second }): readonly Step[] => [
+    { kind: "command", command: first },
+    { kind: "command", command: second },
+    { kind: "startRun", analysis },
+    { kind: "undo" },
+    { kind: "undo" },
+  ]);
+
+/** The options of a CSV, drawn. */
+const csvDrawn: fc.Arbitrary<CsvOptions> = fc.record(
+  {
+    encoding: fc.constantFrom("auto", "utf-8", "windows-1252"),
+    separator: fc.constantFrom("auto", ",", ";", "\t"),
+    decimal: fc.constantFrom("auto", ".", ","),
+  },
+  { noNullPrototype: true },
+);
+
+/** The populations running, the options of their CSV changed, and the
+    file read again into the same table: the read gives back the key of
+    the calculation the change left behind. */
+const csvReadAgain: fc.Arbitrary<readonly Step[]> = csvDrawn.map(
+  (csv): readonly Step[] => [
+    { kind: "startRun", analysis: "pops" },
+    {
+      kind: "command",
+      command: {
+        name: "setCsvOptions",
+        bind: (p) =>
+          (p.individuals?.csv ?? null) === null
+            ? null
+            : (q) => setCsvOptions(q, csv),
+      },
+    },
+    { kind: "read", ok: true },
+  ],
+);
+
 /** Sequences long enough to reach results removed and calculations left
     behind: with the default size, most drawn sequences had under five
-    steps, and a notice that removed a result was drawn in no run of 100. */
-const steps = fc.array(step, { maxLength: 40, size: "max" });
+    steps, and a notice that removed a result was drawn in no run of 100.
+    Two groups of steps are drawn beside the single steps: with single
+    steps alone, of 1,000 sequences 6 had an undo that stopped a
+    calculation and 7 a read that gave one back; with the groups, 169 and
+    476. So 100 runs catch a store that cancels a calculation an undo
+    gave back, which they missed before. */
+const steps: fc.Arbitrary<readonly Step[]> = fc
+  .array(
+    fc.oneof(
+      { arbitrary: step.map((s): readonly Step[] => [s]), weight: 10 },
+      { arbitrary: twoUndos, weight: 1 },
+      { arbitrary: csvReadAgain, weight: 1 },
+    ),
+    { maxLength: 30, size: "max" },
+  )
+  .map((groups) => groups.flat());
 
 /** A request the fake `send` was given, as the model follows it. */
 interface ModelRequest {
@@ -2853,10 +2975,6 @@ describe("WP4 D5 the properties of the store", () => {
           }
         });
       }),
-      // A request left behind whose key an undo gives back is a rare
-      // draw: 100 runs missed a store that cancelled it, and 1,000 runs
-      // caught it in five tries of five.
-      { numRuns: 1000 },
     );
   });
 
@@ -2876,10 +2994,6 @@ describe("WP4 D5 the properties of the store", () => {
           }
         });
       }),
-      // A request left behind whose key an undo gives back is a rare
-      // draw: 100 runs missed a store that cancelled it, and 1,000 runs
-      // caught it in five tries of five.
-      { numRuns: 1000 },
     );
   });
 });
