@@ -6,7 +6,9 @@ page, so that a result asked for again, by an undo, a value set back, or a
 step of the application visited again, is shown with no calculation. It is
 bounded in bytes, and drops first the result used longest ago
 (`docs/architecture.md`, section 3). It depends on
-`docs/specs/core/keys.md`, for the keys.
+`docs/specs/core/keys.md`, for the keys. Stage 2 of `docs/build-order.md`,
+the walking skeleton, is the smallest application that goes through every
+part once, and the first where the memory of a tab can be measured.
 
 ## What it does
 
@@ -51,10 +53,11 @@ the worker for it again, and again.
   and goes on until the cache is at or below its bound, or until only
   what the screen shows and the result just put are left. Then the cache
   stays above its bound until a later put, after the screen shows less:
-  that put drops what the screen no longer shows. A result that arrives
-  late, for settings the user has left, is kept this way until the next
-  put, and is found by an undo before it (`docs/architecture.md`, section
-  5).
+  that put drops what the screen no longer shows. So a result that
+  arrives late, for settings the user has already left, is not dropped by
+  its own put, even when it is too large for the bound: it stays until the
+  next result arrives, and an undo that comes before that shows it with no
+  calculation (`docs/architecture.md`, section 5).
 - **The cache is a value.** A put or a use gives a new cache and leaves
   the old one as it was, so that the store gives the screens a new state
   when the cache changes and the same state when it does not. The results
