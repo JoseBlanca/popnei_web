@@ -126,8 +126,10 @@ What the page says, beyond the texts of "The cases":
   be loaded.", "No file can be opened, since the probe's worker did not
   start.", or, after a defect stopped the worker, "No more files can be
   opened, since the probe's worker stopped. Reload the page." The input is
-  described by that text too, so that a user of the keyboard, who skips a
-  disabled input, still hears it. The served file's section says the same
+  described by that text too, which a screen reader reads with the input
+  while it can be used. The Tab key does not reach a disabled input, so
+  a user of the keyboard then finds the text as the paragraph under it,
+  in the order of the page. The served file's section says the same
   in its own words: "It is opened once popnei is loaded.", "Not opened,
   since popnei could not be loaded.", "Not opened, since the probe's
   worker did not start."
@@ -137,18 +139,25 @@ What the page says, beyond the texts of "The cases":
   they cover: "popnei opened it in 1.8 ms, not counting the download" for
   the served file, "not counting the reading from the disk" for the
   user's.
-- **A refused file of the user** has, after popnei's message, which
-  reader the name chose: "It was read as a VCF because its name ends in
+- **A file of the user that popnei refused** has, after popnei's
+  message, which reader the name chose: "It was read as a VCF because its name ends in
   .vcf or .vcf.gz; any other name is read as a .nei file.", or "It was
   read as a .nei file because its name does not end in .vcf or .vcf.gz."
   A `.nei` file named `.vcf` is otherwise refused as "not a VCF" with
-  nothing to say why.
+  nothing to say why. A file that failed before popnei read it, one the
+  browser could not read because it was moved after it was picked, has
+  no such sentence, since no reader was used.
+- **The defects of the probe** are a list under the heading "Defects of
+  the probe", which a screen reader announces one at a time as each is
+  added, and not the whole list again at each new one.
 - **A message that ends a sentence of the page**, popnei's, the
   browser's or the worker's, gets the full stop the sentence needs; its
   words are kept as they came, popnei's quotation of the first 16 bytes
   of a file among them.
 - **Picking the same file again** opens it again: the page empties the
-  input after it sends the file, and each result names its file.
+  input when it is clicked, before the browser's dialog opens, so that
+  the same file is a change; after the pick the input shows the name of
+  the file picked.
 
 **The worker**, when it starts, calls popnei's `init()`, which fetches and
 compiles popnei's wasm, and sends `ready` with popnei's version and how
@@ -248,7 +257,8 @@ type FromProbe =
   | { kind: "failed"; stage: "init"; address: string | null;
       message: string }
   | { kind: "failed"; stage: "open"; source: "served" | "file";
-      name: string; address: string | null; message: string }
+      name: string; address: string | null; message: string;
+      popneiRefused: boolean }
   | { kind: "failed"; stage: "message"; message: string };
 ```
 
@@ -258,7 +268,11 @@ the `name` that `opened` carries, so that the page shows each answer
 beside its own file: the served file is fetched over the network while
 the user's is read at once, so their answers can arrive in either order,
 and a user's file that fails must not take the place of the served
-result. `message` is a request the worker did not recognise, which only a
+result. It also says whether popnei refused the file, `popneiRefused`,
+true when popnei's `openVcf` or `openVars` threw and false when the file
+failed before, not found, not read, or popnei not loaded: only for a
+file popnei refused does the page say which reader its name chose.
+`message` is a request the worker did not recognise, which only a
 defect of the page can send. `init` and `open` carry the address the
 worker tried, when there was one, and the message as it came, popnei's or
 the browser's; `message` carries what was wrong with the request. The page
@@ -308,9 +322,14 @@ needs no action of the user.
   trusted (`worker.md`), so the worker does not answer the request but
   reports the error, with `reportError`, and closes itself. The page
   receives it as the worker's `error` event after `ready`, and shows "A
-  defect of the probe: its worker stopped.", with the browser's message;
-  a file that was being opened shows "the probe's worker stopped before
-  it answered", and the file input is disabled, with its text saying so.
+  defect of the probe: its worker stopped.", with the browser's message,
+  and "Reload the page. If it happens again, report it at
+  https://github.com/JoseBlanca/popnei_web/issues, with the name of the
+  file and the message above.", since a trap is a defect of popnei; a
+  file that was being opened shows "the probe's worker stopped before it
+  answered", and the file input is disabled, with its text saying so.
+  When the input had the focus, the page moves it to the heading of the
+  defects, so that a user of the keyboard is not left on nothing.
 - **A file popnei refuses**, the text in `bad.vcf`, a truncated gzip, a
   vars file of another version: `failed` with stage `open`, the source
   `file`, the name of the file and popnei's message, "the source is not a
@@ -352,7 +371,8 @@ needs no action of the user.
    - given `e2e/fixtures/panel.vcf.gz`, "200 individuals, ploidy 2
      (given: a VCF is opened as diploid)";
    - given `e2e/fixtures/bad.vcf`, popnei's message and the reader its
-     name chose, and the served result stays on the page;
+     name chose, and the served result stays on the page; a file that
+     failed before popnei read it, no sentence on the reader;
    - given `e2e/fixtures/tetraploid.nei`, "12 individuals, ploidy 4";
    - two files picked one after the other: only the second is shown;
    - the answers in either order: the served file held back until
