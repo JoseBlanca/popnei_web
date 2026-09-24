@@ -50,8 +50,11 @@ them again:
    the project of its own (section 7).
 4. **`src/core` has no DOM and no React**, so that it is tested with no
    browser (section 9).
-5. **One worker, one request at a time** (section 5).
-6. **A cancel ends the worker and starts another** (section 5).
+5. **Two workers, one request at a time in each** (architecture section
+   5): one calculation worker, the only thread that opens the variant
+   file, and one light worker for the jobs that read no genotype.
+6. **A cancel of a running request ends its worker and starts another**
+   (section 5). The new calculation worker opens the variant file again.
 
 A design is needed when a change:
 
@@ -66,16 +69,19 @@ A design is needed when a change:
 
 The cases seen so far, each of which needs a design:
 
-- **Reading the variant file by ranges**, a region of the genome, once
-  popnei can. Section 6 reads the whole file on every pass; a region
-  that the user picks becomes an input of every key, and the worker holds
-  something new.
+- **Reading the variant file by ranges.** It is the target design of
+  section 6, and a priority request to popnei, decided by the owner on 24
+  September 2026; popnei 0.1.0 reads the whole file. When popnei provides
+  the source of bytes, it is a design of its own: the calculation worker
+  holds something new, and the runner changes where it opens a file. A
+  region of the genome that the user picks would, besides, become an input
+  of every key.
 - **The lasso on the PCA**, which edits the populations from the plot.
   A plot knows nothing of the project, so the selection has to come back
   through `src/ui` as a command; the edited grouping changes the keys of
   every analysis that uses the populations; and a lasso drawn with the
   mouse needs a way for the keyboard.
-- **Threads in wasm.** They break "one worker, one request at a time",
+- **Threads in wasm.** They break "one request at a time in each worker",
   need `SharedArrayBuffer` and the two headers GitHub Pages cannot set
   (`docs/technology.md`, section 4), and may give a cancel other than
   a restart.
@@ -127,12 +133,12 @@ would see:
 - **Memory of a tab.** A tab that runs out of memory is closed by the
   browser with the user's work, and wasm32 cannot address more than 4 GB
   whatever the machine has. What a choice keeps in memory, in the page
-  and in the worker, and how it grows with the variants and the
+  and in the workers, and how it grows with the variants and the
   individuals, and whether it has a bound.
 - **The page frozen.** Work on the main thread blocks every click and
   key until it ends. A task that runs on the page and grows with the
   data, a sort of a million points, a JSON of the project with its
-  table, is measured or moved to the worker.
+  table, is measured or moved to a worker.
 - **Download size**, before anything runs and on first use: the wasm
   package of popnei is 0.63 MB gzipped and the files wasm 0.58 MB
   (`docs/technology.md`, section 2), and a new dependency is set beside
@@ -149,10 +155,12 @@ would see:
   lasso, a plot that is clicked, has a way for the keyboard (success
   criteria 2.1.1 and 2.5.7), and what it tells the user is not carried by
   colour alone (1.4.1).
-- **What is lost when the tab is closed or the worker restarts.** A
+- **What is lost when the tab is closed or a worker restarts.** A
   browser cannot open a file by itself (section 6), and a restart drops
-  what the worker held (section 5). What the user would have to do
-  again.
+  what the worker held (section 5). A restart of the calculation worker
+  reopens the variant file, and with popnei 0.1.0 reads it whole again,
+  a time that grows with the file. What the user would have to do
+  again, and wait for.
 
 ### Measuring before choosing
 

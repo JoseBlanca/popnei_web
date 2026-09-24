@@ -166,7 +166,8 @@ node. If core needs one of the web's functions that are not the language,
 architecture), that is a decision written in the spec, and it adds that
 one declaration, not the whole DOM.
 
-`tsconfig.worker.json`, the worker, with the globals of a worker:
+`tsconfig.worker.json`, the two workers, `runner.ts` and `filesRunner.ts`
+among what it includes, with the globals of a worker:
 
 ```json
 {
@@ -288,8 +289,8 @@ const worker = {
   message: "src/charts does not import src/worker.",
 };
 const runner = {
-  group: ["**/worker/runner*"],
-  message: "The runner is loaded as the worker, not imported.",
+  group: ["**/worker/runner*", "**/worker/filesRunner*"],
+  message: "A runner is loaded as a worker, not imported.",
 };
 const client = {
   group: ["**/worker/client*", "**/worker/messages*", "**/worker/start*"],

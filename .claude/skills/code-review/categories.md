@@ -89,7 +89,7 @@ does not go through the key.
 - A result that arrives from the worker after the project changed, or
   from a worker that was ended by a cancel: is it shown only when the
   current project gives its key?
-- What the worker keeps under keys of its own, the pruned variants, the
+- What the calculation worker keeps under keys of its own, the pruned variants, the
   kinship, the principal components: the same questions.
 - A screen that keeps a copy of a result in its own state, a `useMemo`
   or a chart handle that is not given the new data, a warning computed
@@ -114,7 +114,7 @@ errors.
   project file of another version, a file too large for the tab. The
   message says which file and what is wrong, and what to do, as
   `docs/functionality.md` section 4 asks for the missing individuals.
-- The worker: its `error` event, a wasm that fails to load, a request
+- Each worker: its `error` event, a wasm that fails to load, a request
   that throws, the tab out of memory. Does the page say so and stay
   usable, and does the queue go on?
 - A promise whose rejection nobody handles, a `catch` that drops the
@@ -161,11 +161,13 @@ finding: a name you would choose differently that says the same.
   value of the project, or of a result from the cache.
 - The screens hold no state of the project. What belongs to the project
   and lives in a component is lost by undo and by the project file.
-- The page never holds genotypes; the worker runs one request at a time;
+- The page never holds genotypes; each of the two workers runs one
+  request at a time, and only the calculation worker opens the variant
+  file; a job that reads no genotype goes to the light worker;
   results come back as typed arrays and are transferred, not copied,
   when they are large, unless the worker keeps them in its cache, when
   they are copied (`.claude/skills/coding/worker.md`).
-- The files wasm is loaded by the worker, when it is first needed, and
+- The files wasm is loaded by the light worker, when it is first needed, and
   from nowhere else.
 - Adding an analysis added its module and its panel and changed nothing
   else, as section 4 says; a change outside is a finding or a reason

@@ -38,8 +38,8 @@ Look for these, in both kinds of spec:
    function and check, and run the case when that is cheap. Look as hard
    for what the spec assumes popnei gives and it does not: on 24 September
    2026 popnei read a variants file from its bytes and not from a `File`
-   as it streams, and reported no progress, while the architecture counts
-   on both.
+   as it streams, and reported no progress, while the first draft of the
+   architecture counted on both.
 2. A conflict with the three documents: a behaviour that
    `docs/functionality.md` gives otherwise, a type or a flow that is not
    the one of `docs/architecture.md`, a library or a dependency that

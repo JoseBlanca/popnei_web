@@ -224,7 +224,7 @@ cases, as they appear here:
   the two can disagree.
 - **An expensive derivation** is calculated in the render as well; the
   compiler keeps it until its inputs change. What is truly expensive,
-  anything over the genotypes, runs in the worker and is never in a
+  anything over the genotypes, runs in a worker and is never in a
   component.
 - **Resetting the state of a component when what it shows changes**, the
   sort of a table when a new result arrives, is done with a `key`,
@@ -439,7 +439,7 @@ options and its results.
   working, and the project, which is in core, is untouched. Without one,
   an error in any component empties the whole page.
 - It catches errors of rendering and of effects, not of event handlers
-  or of the worker. Those are data: core puts them in the state, and the
+  or of the workers. Those are data: core puts them in the state, and the
   panel shows them in its error state.
 - The entry file passes `onUncaughtError` and `onCaughtError` to
   `createRoot`, which log to the console with the component stack; there
@@ -463,7 +463,7 @@ left:
   is made once, from the result, by a function of core that memoizes on
   it, or in the render, where the compiler keeps it.
 - **Nothing costly runs in a component.** If a calculation over the data
-  is slow enough to notice, it belongs in the worker.
+  is slow enough to notice, it belongs in a worker.
 
 ## The layout of a screen and of an analysis
 

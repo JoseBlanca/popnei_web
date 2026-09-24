@@ -35,7 +35,7 @@ the applications do is in `docs/functionality.md`.
 | 3D plot | three.js, with `@types/three` |
 | calls to the worker | a small typed message layer of our own |
 | documentation and in-app help | Markdown, rendered with markdown-it |
-| xlsx, zip | in Rust, in a second wasm module loaded when needed: calamine, rust_xlsxwriter, zip |
+| xlsx, zip | in Rust, in a second wasm module loaded when needed: calamine, rust_xlsxwriter, zip; CSV and TSV in popnei's own wasm |
 | tests | Vitest, Playwright; for development only jsdom, @axe-core/playwright and fast-check |
 | lint and format | ESLint with @eslint/js, typescript-eslint and eslint-plugin-react-hooks, Prettier |
 | types of node | @types/node, for development only |
@@ -211,9 +211,12 @@ rendered by markdown-it, which has been maintained since 2014.
 
 ### xlsx and zip in Rust
 
-The files of the individuals are read with calamine and written with
+An xlsx file of the individuals is read with calamine and written with
 rust_xlsxwriter, and the report is zipped with the `zip` crate, all pure
-Rust. The JavaScript side stays thin, and Python reads the files in the
+Rust. A CSV or TSV file of the individuals, and the inference of the types
+of the columns of either, are not in this module but in popnei's own wasm,
+asked of popnei (`docs/architecture.md`, section 6), so that what follows
+holds: a user whose file is a CSV never downloads this module. The JavaScript side stays thin, and Python reads the files in the
 same way (`docs/functionality.md`, open point 2).
 
 They were measured on 24 September 2026, in a crate of trial that read an
@@ -297,11 +300,11 @@ browser (`.claude/skills/coding/testing.md`).
 ## 3. The layout of the code
 
 ```
-src/core/      plain TypeScript: the project, the dependency graph of the
-               results, undo, the project file and its fingerprint, the
-               messages to the worker. No React, no DOM.
-src/worker/    the web worker: the wasm package of popnei and the other
-               side of the messages.
+src/core/      plain TypeScript: the project, the keys of the results,
+               undo, the project file. No React, no DOM.
+src/worker/    the web workers: the wasm package of popnei, the messages
+               to the workers and from them, in src/worker/protocol.ts
+               and src/worker/messages.ts, and the page's side of them.
 src/charts/    D3 and three.js. Each plot is a function that takes an
                element and the data and returns a handle to update or
                remove it. No React.

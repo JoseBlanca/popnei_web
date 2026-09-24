@@ -104,10 +104,11 @@ work package is usually one of these:
   or of the project, checked with Vitest over the SVG it draws, and in
   Playwright for its export, and then mounted by the panel of an
   analysis.
-- **The worker protocol**: `src/worker/`, the messages, the queue,
-  progress and cancelling. The messages and the client are checked with
-  Vitest against a fake worker; the real worker, `FileReaderSync` and a
-  cancel in the middle of a calculation in Playwright
+- **The workers and their protocol**: `src/worker/`, the messages, the
+  queue of each of the two workers, progress and cancelling. The messages
+  and the client are checked with Vitest against fake workers; the real
+  workers, `FileReaderSync` and a cancel in the middle of a calculation in
+  Playwright
   (`.claude/skills/coding/worker.md`, "What is tested where").
 - **A screen, or a step of an application**: `src/ui/steps/` or
   `src/ui/shell/`, built from its screen spec.
@@ -118,8 +119,8 @@ five analyses first and their panels last makes its first comparison in
 the browser at the end, when a misreading is in all five.
 
 Put first the work package that would change the plan if it failed.
-Loading the wasm of popnei in a worker in the three engines, and
-cancelling it, is tried before the analyses that would sit on it.
+Loading the wasm of popnei in the two workers in the three engines, and
+cancelling a calculation, is tried before the analyses that would sit on it.
 
 When the code that exists makes the new work hard, the change to that
 code is a work package of its own, before the ones that need it. It
@@ -148,7 +149,10 @@ Each work package has:
   before the work checks nothing.
 - **What it stands on**: the work packages before it, and what has to be
   in place outside the plan, a release of popnei with the function the
-  analysis calls among them.
+  analysis calls among them. The walking skeleton stands on two that
+  popnei 0.1.0 lacks, the reader of CSV and the fingerprint of a variant
+  file, which are asked of popnei and released before it is built
+  (`docs/architecture.md`, section 10).
 - **Its tasks.**
 - **What could go wrong**, when something is known: the part of the spec
   that is thinnest, the API that WebKit may lack, the file that may be
@@ -270,5 +274,5 @@ points to.
 - The plan goes to the `first-reader` subagent, as any document, read as
   the orchestrator that will run it, with questions of this kind: what is
   the first thing to do, how do I know work package 2 is done, what do I
-  do if the worker does not load in WebKit.
+  do if a worker does not load in WebKit.
 - The owner approves the plan before it is run.

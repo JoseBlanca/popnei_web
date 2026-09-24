@@ -37,7 +37,7 @@ knows:
 - `Intl.Segmenter`: Firefox 125. Its types are in `ES2022`, so the
   compiler does not refuse it, and this rule is what keeps it out.
 - A top-level `await` in a module: Safari before 27 fails when two
-  modules import one that has it (WebKit bug 242740). The worker awaits
+  modules import one that has it (WebKit bug 242740). Each worker awaits
   a promise it keeps, as `worker.md` shows.
 
 The versions are those of MDN's browser compatibility data, 8.1.2, read

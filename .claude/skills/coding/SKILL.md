@@ -1,14 +1,14 @@
 ---
 name: coding
-description: How code is written in popnei_web, the static web applications of popnei, in TypeScript with React, D3, three.js and a web worker that runs the wasm package of popnei. Use it before writing or changing any code or test of popnei_web. It covers the layers and what each may import, the order of the work, the core layer, dependencies and the checks to run before the work is called done, and it points to typescript.md, the rules of the language and of errors that every session reads with it, and to the topic file of each layer, react.md, css.md, charts.md, worker.md and testing.md, beside it.
+description: How code is written in popnei_web, the static web applications of popnei, in TypeScript with React, D3, three.js and two web workers that run the wasm package of popnei. Use it before writing or changing any code or test of popnei_web. It covers the layers and what each may import, the order of the work, the core layer, dependencies and the checks to run before the work is called done, and it points to typescript.md, the rules of the language and of errors that every session reads with it, and to the topic file of each layer, react.md, css.md, charts.md, worker.md and testing.md, beside it.
 ---
 
 # Coding
 
 popnei_web has four layers, and `docs/architecture.md` describes them:
 `src/core`, plain TypeScript, where the project, its commands, the keys of
-the results, the cache, undo and the analyses live; `src/worker`, the web
-worker that runs popnei and the messages the page and it exchange;
+the results, the cache, undo and the analyses live; `src/worker`, the two
+web workers that run popnei and the messages the page and they exchange;
 `src/charts`, the plots, functions over D3 and three.js; and `src/ui`, the
 React screens. What the applications do is in `docs/functionality.md`, and
 what they are built with, and why, in `docs/technology.md`.
@@ -33,7 +33,7 @@ the topic file of the layer the change is in:
 | layer | topic file |
 |---|---|
 | `src/core` | none more: the core layer is in this file, below |
-| `src/worker` | `worker.md`: the protocol, the runner, popnei and the wasm |
+| `src/worker` | `worker.md`: the protocol, the two runners, popnei and the wasm |
 | `src/charts` | `charts.md`: D3, three.js, the handle of a plot, export |
 | `src/ui` | `react.md` and `css.md`: React, React Aria, the styles, accessibility |
 | any test, or running the app | `testing.md`: Vitest, Playwright, the dev server |
@@ -48,17 +48,17 @@ import:
 
 | layer | may import | must not import |
 |---|---|---|
-| `src/core` | itself; the types of `src/worker/protocol.ts`; the types of `popnei` | `src/ui`, `src/charts`, `src/worker/client.ts`, `src/worker/messages.ts`, `src/worker/start.ts`, `src/worker/runner.ts`, React, D3, three.js, a value of `popnei` |
-| `src/worker` | itself; `popnei`; the files wasm; the types of `src/core/result.ts` | `src/core`, `src/ui`, `src/charts`, React, D3, three.js |
+| `src/core` | itself; the types of `src/worker/protocol.ts`; the types of `popnei` | `src/ui`, `src/charts`, `src/worker/client.ts`, `src/worker/messages.ts`, `src/worker/start.ts`, `src/worker/runner.ts`, `src/worker/filesRunner.ts`, React, D3, three.js, a value of `popnei` |
+| `src/worker` | itself; `popnei`; the files wasm; the types of `src/core/result.ts` | anything else of `src/core`, `src/ui`, `src/charts`, React, D3, three.js |
 | `src/charts` | itself; D3; three.js | `src/core`, `src/ui`, `src/worker`, React, a value of `popnei` |
-| `src/ui` | everything above; React; React Aria | `src/worker/runner.ts`, D3, three.js, a value of `popnei` |
+| `src/ui` | everything above; React; React Aria | `src/worker/runner.ts`, `src/worker/filesRunner.ts`, D3, three.js, a value of `popnei` |
 
 The reasons:
 
 - **core imports no screen and no plot**, so that it runs in a test with
   no browser, and so that the framework could be replaced without
   touching it (`docs/technology.md`, section 2).
-- **core does not create the worker.** It is given an object that sends a
+- **core does not create the workers.** It is given an object that sends a
   request and reports progress and the result, of an interface that core
   itself declares, `WorkerClient` (`docs/architecture.md`, section 4),
   and `src/ui` hands it the real client from `src/worker/client.ts` when
@@ -67,14 +67,14 @@ The reasons:
   wasm.
 - **core imports only the types of popnei**, `import type`, never a
   value, because a function of popnei needs its wasm loaded, and the wasm
-  lives in the worker. The version of popnei, which goes into every key,
-  comes to core as data, in a message of the worker.
+  lives in the workers. The version of popnei, which goes into every key,
+  comes to core as data, in a message of the calculation worker.
 - **`src/worker/protocol.ts` and `src/worker/messages.ts` import nothing
   of ours** but the types of popnei and of `src/core/result.ts`, so that
   both sides can import them and no cycle forms. `protocol.ts` holds no
   type of the DOM either, since core imports it and is checked with none;
   the messages, which carry a `File`, are in `messages.ts`, which only the
-  client and the runner import (`worker.md`).
+  client and the runners import (`worker.md`).
 - **charts know nothing of the project nor of React** (section 7 of the
   architecture): a plot takes an element and data and returns a handle.
   Only `src/ui` joins a plot to the project.
@@ -85,7 +85,7 @@ The ESLint configuration of `configs.md` turns each row into a
 `no-restricted-imports` rule, so a wrong import fails the lint. The
 TypeScript configuration checks `src/core` with no DOM library at all, so
 a `document` or a `window` in core fails the type check, and checks the
-runner with the library of a worker, where `FileReaderSync` exists and
+runners with the library of a worker, where `FileReaderSync` exists and
 `document` does not.
 
 Imports are relative, with the `.ts` extension, `import { applyFilter }

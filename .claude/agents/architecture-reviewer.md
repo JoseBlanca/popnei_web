@@ -54,12 +54,12 @@ Look for these:
      screen, or that holds something that changes between two runs of the
      same inputs, a time, an order of iteration, a `File` object, so that
      undo never brings a result back;
-   - state held in a screen, or in the worker, that belongs in the
+   - state held in a screen, or in a worker, that belongs in the
      project, so that undo or the project file loses it;
    - the page frozen by work that grows with the data on the main thread;
-   - memory that grows without bound in the page or the worker, over a
+   - memory that grows without bound in the page or a worker, over a
      long session or with a large file;
-   - a restart of the worker, after a cancel or a crash, that loses
+   - a restart of a worker, after a cancel or a crash, that loses
      something the user needs and cannot get back;
    - a type of the DOM, a `File`, a `Worker`, an element, reaching
      `src/core`;

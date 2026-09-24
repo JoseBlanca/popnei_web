@@ -28,7 +28,7 @@ timing, and when it fails says only that something on the path broke.
 | part | tool | environment | what it checks |
 |---|---|---|---|
 | `src/core` | Vitest | node | the project and its commands, the keys, undo, the cache, the project file, the script; examples and properties |
-| `src/worker` | Vitest | node | the protocol, and the client's queue, progress, cancelling and restart against a fake worker |
+| `src/worker` | Vitest | node | the protocol, and the client's queues, progress, cancelling and restart against fake workers |
 | `src/charts`, 2D | Vitest | jsdom | the SVG each plot function builds, its update and its removal |
 | `src/charts/pca3d.ts`, the PNG export | Playwright | browser | what needs WebGL or a canvas, which jsdom does not have |
 | `src/ui` | Playwright | browser | the screens, as part of the flows |
@@ -82,19 +82,21 @@ are over small values, and a slower suite is run less often.
 
 ### src/worker: in node where it can be
 
-The page's side of the worker, `client.ts`, is tested in node against a
-fake worker, an object with the same `postMessage`, `terminate` and
+The page's side of the two workers, `client.ts`, is tested in node
+against fake workers, objects with the same `postMessage`, `terminate` and
 handlers, which the test drives by hand. That is where the queue, the progress, the
 cancelling and the restart are checked: a request sent while another runs
-waits; a cancel ends the fake worker and the client makes a new one and
-gives it the files again; a result whose key the project no longer gives
+waits; a queued request whose key the project no longer gives is dropped;
+a cancel ends the fake worker and the client makes a new one and gives it
+the files again; a result whose key the project no longer gives
 goes into the cache and not onto the screen. The fake worker also counts
 the requests, which is how a test shows that undo brought a result back
 with no calculation. `worker.md`, beside this file, lists every case of
-the client and of the runner that is tested in node, and the ones left to
-the browser.
+the client and of the runners that is tested in node, and the ones left
+to the browser.
 
-The worker's side, `runner.ts`, calls the wasm package of popnei, which
+The workers' side, `runner.ts` and `filesRunner.ts`, calls the wasm
+package of popnei, which
 has an entry for node, so the handling of a request can be tested in node
 over the bytes of a reference file. What node does not have is the
 browser's `FileReaderSync`, so the reading of a user's `File` and the real

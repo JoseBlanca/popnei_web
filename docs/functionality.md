@@ -367,11 +367,15 @@ has not decided:
 - The distance at which the LD decays to half.
 - The filters of individuals by missing data and by observed
   heterozygosity.
-- The reader of the files of the individuals, xlsx, CSV and TSV, with the
-  types of their columns, if it belongs in popnei (open point 2). The
-  script of section 9 needs it in Python.
+- The reader of CSV and TSV and the inference of the types of the
+  columns, in popnei's core and its wasm, as `docs/architecture.md`
+  section 6 asks; the script of section 9 needs it in Python, and the
+  walking skeleton needs it first. An xlsx is read by calamine in the
+  files wasm, and its cells go through the same inference (open point 2).
 - The fingerprint of a variant file, the hash of its individuals and
-  positions, if it belongs in popnei, so that Python gives the same one.
+  positions, computed in popnei so that Python gives the same one, as
+  `docs/architecture.md` section 6 asks; which hash is its open point 1.
+  The walking skeleton needs it first.
 - The GWAS with covariates, the λ, the pseudo heritability; the GWAS spec
   of popnei is not written yet.
 
@@ -380,9 +384,12 @@ has not decided:
 1. Whether calamine reads right the xlsx files that users make. That it
    builds for both wasm targets, and what it weighs, was measured on 24
    September 2026 (`docs/technology.md`).
-2. Whether the reader of the files of the individuals lives in popnei, so
-   that Python users read them the same way, or in the applications
-   alone. The script of section 9 argues for popnei.
+2. Where the reader of the files of the individuals lives. Settled by
+   `docs/architecture.md`, section 6, on 24 September 2026, awaiting the
+   owner's approval with that revision: CSV and TSV, and the inference of
+   the types of the columns, are in popnei, so that Python users read
+   them the same way; xlsx is read in the files wasm of the
+   applications.
 3. Whether the unfolded SFS, with the ancestral allele given by the user,
    is in the 95%.
 4. The default thresholds of the missing data filter, of LD pruning, and

@@ -132,8 +132,8 @@ against, instead:
    of popnei, a case it refuses, something the architecture assumes and
    popnei does not give yet. On 24 September 2026, for instance, `openVars`
    took the bytes of a whole file and not a `File` read as it streams, and
-   no function of popnei reported its progress, while section 5 of the
-   architecture counts on both. These are what the spec is most needed
+   no function of popnei reported its progress, while the first draft of
+   the architecture counted on both. These are what the spec is most needed
    for.
 5. Make the sketch the writing skill asks for.
 6. Ask the owner, in a reply in chat, what would rewrite the spec if it
