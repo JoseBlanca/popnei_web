@@ -931,6 +931,24 @@ describe("WP4 D1 the state with no calculation", () => {
     expect(store.getState()).toBe(before);
     expect(sentAt(sent, 0).cancels()).toBe(0);
   });
+  test("a listener that throws does not keep the others from being called, and the first error is thrown once all were", () => {
+    const { store } = storeWithVariantsRead();
+    const { listener, count } = counter();
+    store.subscribe(() => {
+      throw new Error("the first listener");
+    });
+    store.subscribe(listener);
+    store.subscribe(() => {
+      throw new Error("the third listener");
+    });
+    expect(() => {
+      store.apply("the MAF filter changed", maf(0.9));
+    }).toThrow("the first listener");
+    expect(count()).toBe(1);
+    expect(store.getState().project.filters).toStrictEqual([
+      { kind: "maf", maxAllowedMaf: 0.9 },
+    ]);
+  });
 });
 
 /** The request `index` the fake `send` was given, or a defect. */
@@ -973,6 +991,56 @@ function doneWith(
 /** The command that sets the MAF filter to `threshold`. */
 function maf(threshold: number): (p: Project) => Project {
   return (p) => setVariantFilter(p, { kind: "maf", maxAllowedMaf: threshold });
+}
+
+/** Which function of the analysis of the variants throws a defect when a
+    result is taken in. */
+type Faulty = "warnings" | "checkNumbers" | "numVarsOf" | "none";
+
+/** A store with the variants file read, whose analysis of the variants
+    throws in `faulty.part` when a result is taken in. */
+function storeWithFaultyIntake(): ReturnType<typeof newStore> & {
+  readonly faulty: { part: Faulty };
+} {
+  const { analyses, calls } = fakeAnalyses();
+  const [pops, vars] = analyses;
+  if (pops === undefined || vars === undefined) {
+    throw new Error("popnei_web defect: no fake analyses");
+  }
+  const faulty: { part: Faulty } = { part: "none" };
+  const fail = (part: Faulty): void => {
+    if (faulty.part === part) {
+      throw new Error(`popnei_web defect: ${part} threw`);
+    }
+  };
+  const fragile: AnalysisDef<TestJob, TestResult> = {
+    ...vars,
+    warnings: (r, p) => {
+      fail("warnings");
+      return vars.warnings(r, p);
+    },
+    checkNumbers: (r) => {
+      fail("checkNumbers");
+      return vars.checkNumbers(r);
+    },
+  };
+  const { send, sent, log } = fakeSend();
+  const store = createStore({
+    first: emptyProject("popgen"),
+    analyses: [pops, fragile],
+    send,
+    numVarsOf: (r) => {
+      fail("numVarsOf");
+      return r.kind === "vars" ? r.numVars : null;
+    },
+    appVersion: "0.1.0",
+    cacheMaxBytes: 1024 * 1024,
+    maxUndoSteps: 200,
+  });
+  store.popneiReady("0.1.0");
+  store.apply("a variants file was loaded", loadPanel(VARIANTS_ID));
+  store.variantsRead(VARIANTS_ID, VARIANTS_READ);
+  return { store, analyses: [pops, fragile], calls, sent, log, faulty };
 }
 
 describe("WP4 D2 the calculations", () => {
@@ -1244,7 +1312,7 @@ describe("WP4 D2 the calculations", () => {
     expect(store.getState()).toBe(ended);
   });
 
-  test("a result under another key than its request's is a defect, and the request is no longer in flight", () => {
+  test("a result under another key than its request's is a defect, kept as the failure of its key, and the request is no longer in flight", () => {
     const { store, sent } = storeWithVariantsRead();
     store.startRun("vars");
     const request = sentAt(sent, 0);
@@ -1259,7 +1327,10 @@ describe("WP4 D2 the calculations", () => {
     }).toThrow(
       /^popnei_web defect: the request 1 of the analysis "vars" was sent under the key/,
     );
-    expect(statuses(store)[1]?.kind).toBe("ready");
+    expect(statuses(store)[1]).toMatchObject({
+      kind: "error",
+      error: { kind: "failed", error: { kind: "defect" } },
+    });
     expect(store.getState().runs).toStrictEqual([]);
     expect(count()).toBe(1);
     store.startRun("vars");
@@ -1271,7 +1342,10 @@ describe("WP4 D2 the calculations", () => {
         result: varsResult(null),
       });
     }).toThrow(/^popnei_web defect: a worker sent back the key "not a key"/);
-    expect(statuses(store)[1]?.kind).toBe("ready");
+    expect(statuses(store)[1]).toMatchObject({
+      kind: "error",
+      error: { kind: "failed", error: { kind: "defect" } },
+    });
     expect(store.getState().runs).toStrictEqual([]);
   });
 
@@ -1456,6 +1530,120 @@ describe("WP4 D2 the calculations", () => {
     expect(store.getState().project).toBe(shown.project);
     const done = statuses(store)[1];
     expect(done?.kind === "done" && done.result).toBe(result);
+  });
+  test("a startRun whose listener throws takes its request out and cancels it, so that the analysis is not running for ever", () => {
+    const { store, sent } = storeWithVariantsRead();
+    const stop = store.subscribe(() => {
+      throw new Error("a screen that throws");
+    });
+    expect(() => store.startRun("vars")).toThrow("a screen that throws");
+    const lost = sentAt(sent, 0);
+    expect(lost.cancels()).toBe(1);
+    expect(statuses(store)[1]?.kind).toBe("ready");
+    expect(store.getState().runs).toStrictEqual([]);
+    stop();
+    expect(store.startRun("vars")).toBe(sentAt(sent, 1).run);
+    expect(statuses(store)[1]?.kind).toBe("running");
+  });
+
+  test.each(["warnings", "checkNumbers", "numVarsOf"] as const)(
+    "a %s that throws while a result is taken in keeps a failure of kind defect under its key, and nothing of the result",
+    (part) => {
+      const { store, sent, faulty } = storeWithFaultyIntake();
+      store.startRun("vars");
+      const request = sentAt(sent, 0);
+      const key = keyAt(store, 1);
+      faulty.part = part;
+      expect(() => {
+        store.runEnded(request.run.id, doneWith(request, varsResult(1200)));
+      }).toThrow(`${part} threw`);
+      expect(statuses(store)[1]).toStrictEqual({
+        kind: "error",
+        key,
+        error: {
+          kind: "failed",
+          error: {
+            kind: "defect",
+            message: `popnei_web defect: ${part} threw`,
+          },
+        },
+      });
+      expect(store.getState().runs).toStrictEqual([]);
+      expect(store.getState().project.variants?.read).toStrictEqual(
+        VARIANTS_READ,
+      );
+      faulty.part = "none";
+      store.apply("the MAF filter changed", maf(0.9));
+      store.undo();
+      expect(statuses(store)[1]).toStrictEqual({ kind: "ready", key });
+    },
+  );
+
+  test("the first error while a result is taken in is the one thrown, also when a listener throws after it", () => {
+    const { store, sent, faulty } = storeWithFaultyIntake();
+    store.startRun("vars");
+    const request = sentAt(sent, 0);
+    store.subscribe(() => {
+      throw new Error("a screen that throws");
+    });
+    faulty.part = "warnings";
+    expect(() => {
+      store.runEnded(request.run.id, doneWith(request, varsResult(null)));
+    }).toThrow("warnings threw");
+    expect(statuses(store)[1]?.kind).toBe("error");
+  });
+
+  test("an analysis's run that throws before sending stops no calculation left behind; one that throws after sending leaves stopped what it stopped", () => {
+    const { analyses } = fakeAnalyses();
+    const [pops, vars] = analyses;
+    if (pops === undefined || vars === undefined) {
+      throw new Error("popnei_web defect: no fake analyses");
+    }
+    const { send, sent } = fakeSend();
+    const behaviour: { now: "fine" | "throw" | "send, then throw" } = {
+      now: "fine",
+    };
+    const faulty: AnalysisDef<TestJob, TestResult> = {
+      ...vars,
+      run: (_p, c) => {
+        if (behaviour.now === "throw") {
+          throw new Error("a mistake of the analysis");
+        }
+        const handle = c.run({ analysis: "vars", pruned: "" });
+        if (behaviour.now === "send, then throw") {
+          throw new Error("a mistake of the analysis");
+        }
+        return handle;
+      },
+    };
+    const store = createStore({
+      first: emptyProject("popgen"),
+      analyses: [pops, faulty],
+      send,
+      numVarsOf: () => null,
+      appVersion: "0.1.0",
+      cacheMaxBytes: 1024 * 1024,
+      maxUndoSteps: 200,
+    });
+    store.popneiReady("0.1.0");
+    store.apply("a variants file was loaded", loadPanel(VARIANTS_ID));
+    store.variantsRead(VARIANTS_ID, VARIANTS_READ);
+    store.startRun("vars");
+    const behind = sentAt(sent, 0);
+    store.apply("the MAF filter changed", maf(0.9));
+    const before = store.getState();
+    behaviour.now = "throw";
+    expect(() => store.startRun("vars")).toThrow("a mistake of the analysis");
+    expect(behind.cancels()).toBe(0);
+    expect(store.getState()).toBe(before);
+    behaviour.now = "send, then throw";
+    expect(() => store.startRun("vars")).toThrow("a mistake of the analysis");
+    expect(behind.cancels()).toBe(1);
+    expect(sentAt(sent, 1).cancels()).toBe(1);
+    expect(store.getState().runs).toMatchObject([
+      { runId: behind.run.id, stopping: true },
+    ]);
+    expect(store.getState().notice).toBeNull();
   });
 });
 

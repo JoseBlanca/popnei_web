@@ -722,7 +722,8 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
 
   let state = stateOf(null);
 
-  /** Makes the state again and, when it changed, calls each listener. */
+  /** Makes the state again and, when it changed, calls each listener,
+      all of them also when one throws; then throws the first error. */
   const changed = (): void => {
     settle();
     const next = stateOf(state);
@@ -730,9 +731,30 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       return;
     }
     state = next;
+    const thrown: unknown[] = [];
     for (const listener of [...listeners]) {
-      listener();
+      try {
+        listener();
+      } catch (error) {
+        // Kept and thrown after the loop, so that every screen is told.
+        thrown.push(error);
+      }
     }
+    if (thrown.length > 0) {
+      throw thrown[0];
+    }
+  };
+
+  /** Calls `changed` after `error` was thrown, and throws `error`, not
+      what a listener may throw then. */
+  const changedAfter = (error: unknown): never => {
+    try {
+      changed();
+    } catch {
+      // The first error is the one the caller needs; a listener's error
+      // after it would hide it.
+    }
+    throw error;
   };
 
   /** Takes `next`, the history after a read was recorded, and tells the
@@ -992,14 +1014,14 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
         // that no calculation runs that the store does not know.
         sending.handle?.cancel();
         // The calculations it stopped before sending stay stopped.
-        changed();
-        throw error;
+        return changedAfter(error);
       }
       if (handle !== sending.handle || requests.has(handle.id)) {
         sending.handle?.cancel();
-        changed();
-        throw defect(
-          `the run of the analysis ${JSON.stringify(id)} gave a handle its client did not give, or of a request already in flight.`,
+        return changedAfter(
+          defect(
+            `the run of the analysis ${JSON.stringify(id)} gave a handle its client did not give, or of a request already in flight.`,
+          ),
         );
       }
       failures.delete(key);
@@ -1015,7 +1037,15 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
         stopping: false,
         afterStop: sending.afterStop,
       });
-      changed();
+      try {
+        changed();
+      } catch (error) {
+        // src/ui/runs.ts will never receive the handle, nor give its
+        // outcome: the request is taken out and stopped.
+        requests.delete(handle.id);
+        handle.cancel();
+        return changedAfter(error);
+      }
       return handle;
     },
     cancelRun: (id) => {
@@ -1078,9 +1108,19 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       requests.delete(runId);
       try {
         ended(request, outcome);
-      } finally {
-        changed();
+      } catch (error) {
+        // A defect of our code, which the analysis shows until the next
+        // change, rather than ready with nothing said.
+        failures.set(request.key, {
+          kind: "failed",
+          error: {
+            kind: "defect",
+            message: error instanceof Error ? error.message : String(error),
+          },
+        });
+        changedAfter(error);
       }
+      changed();
     },
   };
 }
