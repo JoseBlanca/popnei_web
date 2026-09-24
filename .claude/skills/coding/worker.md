@@ -88,8 +88,14 @@ export type ToWorker =
   | { kind: "files"; files: { fileId: string; file: File }[] }
   | { kind: "run"; id: number; key: string; job: Job };
 
-export type FromWorker =
-  | { kind: "ready"; protocol: number; popneiVersion: string | null } // null from the light worker
+// One type per worker: they differ in their `ready`.
+export type FromRunner =        // the calculation worker
+  | { kind: "ready"; protocol: number; popneiVersion: string }
+  | Answer;
+export type FromFilesRunner =   // the light worker, which holds no popnei
+  | { kind: "ready"; protocol: number }
+  | Answer;
+type Answer =
   | { kind: "progress"; id: number; done: number; total: number }
   | { kind: "result"; id: number; key: string; result: JobResult }
   | { kind: "error"; id: number; message: string; fatal: boolean };
@@ -133,15 +139,17 @@ export type FromWorker =
 - **`popneiVersion` is in the `ready` message too**, from popnei's
   `version()`, because the version of popnei is part of every key
   (`docs/architecture.md`, section 3), and the page learns it there, from
-  the calculation worker. The light worker, which holds no popnei, sends
-  `null`.
+  the calculation worker. Its validator requires it, a string. The light
+  worker's `ready` has no such field, since it holds no popnei, and each
+  worker's messages have their own type and their own validator, so the
+  client never has to ask which worker a version came from.
 
 ### Validation at the boundary
 
 `MessageEvent.data` is typed `any` by the DOM, and it is read as `unknown`
 on both sides, then narrowed by a validator of `messages.ts`,
-`parseFromWorker(data: unknown): Result<FromWorker, ProtocolError>` and
-`parseToWorker`, with the `Result` of `src/core/result.ts`.
+`parseFromRunner(data: unknown): Result<FromRunner, ProtocolError>`,
+`parseFromFilesRunner`, and `parseToWorker`, with the `Result` of `src/core/result.ts`.
 `typescript.md`, beside this file, has the general rule of `unknown` at
 the boundaries.
 
@@ -302,10 +310,15 @@ section 4). So:
   is a choice of the user, and the next PCA after it may take longer.
 - **Restarting is also how the memory of the wasm is given back.** That
   memory grows and never shrinks (`js/popnei/README.md`), and ending the
-  worker is the only way to free it. When the client does it on its own
-  is open point 2 of `docs/architecture.md`; the recommendation there is to
-  restart the calculation worker when the variant file changes, a new pick
-  or the undo of one, and between two requests as well if the walking
+  worker is the only way to free it. So the client restarts the
+  calculation worker when the load id of the variant file changes, a new
+  pick, an undo or a redo of one, before the first request on the new
+  load (`docs/architecture.md`, section 5): the worker then holds one
+  open file, one `Variants`, and never the room of an old one. An undo to
+  the previous load reopens its file, which costs time, with popnei 0.1.0
+  the reading of the whole file, and no calculation whose result is still
+  in the cache of the page. Whether it also restarts between two requests
+  is open point 2 of `docs/architecture.md`, to be settled if the walking
   skeleton shows a tab running out of memory.
 
 ### Timeouts
@@ -403,11 +416,14 @@ both formats give the same types.
   which the lint and `tsconfig.core.json` check (`configs.md`). The type
   of the table is in `protocol.ts`, as `VariantFilter` is, so core and the
   reader name one type.
-- **The runner decodes the bytes**, with `new TextDecoder("utf-8", {
-  fatal: true })`, and gives the reader the text. A file that is not
-  valid UTF-8 is refused with a message that says to save it as "CSV
-  UTF-8" or as xlsx: read otherwise, an accented name would come out
-  replaced and then match no individual of the variants.
+- **The runner decodes the bytes**, first with `new TextDecoder("utf-8",
+  { fatal: true })`, and when that throws, with `new
+  TextDecoder("windows-1252")`, which is what Excel on Windows writes for
+  "CSV (comma delimited)" in Spanish and the other languages of Western
+  Europe. The result says which encoding was used, so that the screen can
+  give the file a notice that says how it was read. No file is refused
+  for its encoding (`docs/architecture.md`, section 6; the recommendation
+  awaiting the owner's approval with that revision).
 - **It does not check the individuals against the variants.** Core does,
   in the `needs` of each analysis that uses the file, since the reader
   does not know the variants (`docs/architecture.md`, section 6).
@@ -438,11 +454,16 @@ both formats give the same types.
   the 4 GB that wasm32 addresses and not measured in a browser; and a
   restart reads the whole file again (`docs/architecture.md`, section 6).
   This is the one place the runner changes when the source arrives.
-- **The file is opened once per worker, not per request.** The runner
-  keeps the `Variants` of each file id, and each request copies the
-  filters onto a pass. Opening reads the header of a VCF or the index of
-  a `.nei` file, and with popnei 0.1.0 the whole file, which would
-  otherwise be read again for every analysis.
+- **The file is opened once per worker, not per request, and a worker
+  opens one load only.** The runner keeps the one `Variants` of the load
+  it was started for, and each request copies the filters onto a pass.
+  Opening reads the header of a VCF or the index of a `.nei` file, and
+  with popnei 0.1.0 the whole file, which would otherwise be read again
+  for every analysis. A new load is a new worker (section "Cancelling"),
+  so no worker holds two `Variants`. On opening, the runner sends the
+  individuals and the ploidy at once; the number of variants comes with
+  the pass statistics of the first pass (`docs/architecture.md`, section
+  6).
 - **The files written**, a filtered vars file in the calculation worker,
   an xlsx and the zip of the report in the light worker, are made as a
   `Uint8Array` and sent to the page, transferred, where they become a

@@ -321,6 +321,10 @@ const runner = {
   group: ["**/worker/runner*", "**/worker/filesRunner*"],
   message: "A runner is loaded as a worker, not imported.",
 };
+const individualsReader = {
+  group: ["**/worker/individuals/**"],
+  message: "src/core does not import the reader; the light worker runs it.",
+};
 const filesWasm = {
   group: ["**/crates/files/**"],
   message: "Only src/worker/filesRunner.ts calls the files wasm.",
@@ -392,7 +396,9 @@ export default defineConfig(
     rules: {
       "@typescript-eslint/no-restricted-imports": [
         "error",
-        { patterns: [ui, charts, runner, client, react, drawing, popneiValues, filesWasm] },
+        {
+          patterns: [ui, charts, runner, client, react, drawing, popneiValues, filesWasm, individualsReader],
+        },
       ],
       "@typescript-eslint/consistent-type-assertions": [
         "error",
@@ -504,6 +510,9 @@ export default defineConfig(
   first swaps `filesWasm` for `popneiValues`, since it is the one file
   that calls the files wasm and the light worker holds no popnei, and the
   second keeps both out, since the reader is pure.
+- Core's block adds `individualsReader`: the reader is TypeScript with no
+  DOM, which core could import and run on the page, where a file of
+  10,000 rows would freeze it; it belongs to the light worker.
 - `crates/` is ignored because what is JavaScript there is what
   wasm-bindgen generated into `crates/files/pkg/`.
 - `react.md` adds the rules of React and of hooks to the block of
@@ -640,6 +649,8 @@ export default defineConfig({
   // A module worker, so that the files wasm is a chunk of its own;
   // not the default, "iife" (worker.md).
   worker: { format: "es" },
+  // What cargo writes while it builds the files crate is not watched.
+  server: { watch: { ignored: ["**/crates/files/target/**"] } },
   // test: { ... }, as testing.md gives it
 });
 ```
@@ -661,6 +672,12 @@ export default defineConfig({
   version of Firefox below it; written out, the floor is here and not in
   a default that changes with Vite.
 - `worker.format` and the way the worker is imported are `worker.md`'s.
+- `server.watch.ignored` keeps the development server from watching
+  `crates/files/target/`, where cargo writes thousands of files on every
+  build of the crate. `crates/files/pkg/` stays watched: a `npm run
+  build:files` run while the server is up rewrites it, and the server
+  then reloads the light worker with the new wasm, which is what a change
+  to the crate should do.
 - With the pages in `pages/`, as section 9 of the architecture has them,
   the build writes them to `dist/pages/`, and they are served at
   `/popnei_web/pages/popgen.html`. Whether they move to the root of the

@@ -86,8 +86,11 @@ owner approves it.
   variant file, the same one again included, it gets a new id, and that
   id with the read options is the file's part of every key, in place of
   its name, size, date of last change and hash (section 3). The name,
-  size, individuals, number of variants and ploidy stay in the project,
-  only to warn when a reopened project is given another file (section 8).
+  size, individuals, ploidy and, once a pass has counted it, number of
+  variants stay in the project, only to warn when a reopened project is
+  given another file (section 8). The individuals file gets a load id in
+  the same way, so that a late read of an earlier pick is never recorded
+  (section 6).
 - **The individuals file is read by popnei_web.** CSV and TSV, and the
   inference of the types of the columns, are TypeScript of ours in the
   light worker, which no longer loads popnei; the Python script reads the
@@ -95,6 +98,14 @@ owner approves it.
 - **The files wasm is a crate of this repository**, `crates/files/`, built
   by the site's own build, and not a module released by popnei (section
   6).
+
+With them, after the architecture review of this revision: the
+calculation worker is restarted whenever the load of the variant file
+changes, so that it holds one open file and gives back the memory of the
+old one (section 5); the analyses unlock once the file is open, with no
+pass over it first (section 6); and a CSV that is not UTF-8 is read as
+Windows-1252 with a notice, a recommendation awaiting the owner (section
+6).
 
 What each replaced, and why, is at the end of sections 3 and 6. popnei is
 no longer asked for a fingerprint nor for a reader of these files, so the
@@ -115,9 +126,7 @@ interface Project {
   variants: VariantSource | null;     // the load of the file and its identity
   filters: VariantFilter[];           // in their order, with parameters
   individualFilters: IndividualFilter[];
-  individuals: IndividualsSource | null; // the metadata or traits file:
-  //   its name, and pending, the table whole once read, with the types
-  //   of its columns, or failed
+  individuals: IndividualsSource | null; // the metadata or traits file
   // popgen: the column that defines the populations, and later the
   //         edits made with the lasso; gwas: the roles of the columns
   grouping: Grouping;
@@ -136,14 +145,37 @@ interface VariantSource {
 }
 
 type SourceRead =
-  | { kind: "pending" }               // the worker is reading the file
-  | { kind: "read"; individuals: string[]; numVars: number; ploidy: number }
+  | { kind: "pending" }               // the worker is opening the file
+  | { kind: "read"; individuals: string[]; ploidy: number;
+      numVars: number | null }        // null until a pass has counted them
   | { kind: "failed"; message: string }; // popnei's message
+
+interface IndividualsSource {
+  fileId: string;                     // the id of this load, new at every pick
+  name: string;
+  read:
+    | { kind: "pending" }             // the light worker is reading it
+    | { kind: "read"; table: IndividualsTable; columns: ColumnType[] }
+    | { kind: "failed"; error: IndividualsFileError };
+}
+
+// The type of each column, inferred and then as the user set it. A
+// binary column holds its two values and which of them is coded 1,
+// { kind: "binary"; one: "case"; zero: "control" }, which the GWAS and
+// the Python script use (section 8).
+type ColumnType =
+  | { kind: "identifier" }
+  | { kind: "binary"; one: string | number; zero: string | number }
+  | { kind: "continuous" }
+  | { kind: "categorical" };
 
 interface Reference {
   variants: VariantSource;            // the file the project was made with;
                                       // its fileId names no File
-  checks: Partial<Record<AnalysisId, { key: string; numbers: number[] }>>;
+  checks: Partial<Record<AnalysisId, {
+    numbers: number[];                // saved in the project file
+    key: string | null;               // never saved: computed from the reference's
+  }>>;                                // settings once the popnei version is known
 }
 ```
 
@@ -158,9 +190,9 @@ interface Reference {
   identity, never the `File`.** A `File` is not JSON, and core, which has
   no DOM, cannot name its type. The page keeps the `File` objects in a map
   from file id to `File` (section 6). The identity, the name, the size,
-  the individuals, the number of variants and the ploidy, goes into no
-  key: it is saved in the project file so that a reopened project can say
-  which file it was made with (section 8).
+  the individuals, the ploidy and the number of variants once it is
+  known, goes into no key: it is saved in the project file so that a
+  reopened project can say which file it was made with (section 8).
 - **The read options of a VCF**, the ploidy and whether only the variants
   that passed its filters are kept, are the two options popnei's `openVcf`
   takes. They change which genotypes every analysis reads, so they are in
@@ -203,18 +235,20 @@ compared to decide that two loads are the same. Undo of a load brings back
 the previous project, with the previous load's id, whose results are
 still in the cache unless its bound has dropped them.
 
-The page makes the id when the user picks the file, with
-`crypto.randomUUID()`, so no id is ever given twice, in this session or
-in another, and the id of the file of a project file that is opened (its
-`reference`, section 8) can never name a load of this session. A counter
-of the session would start again at 1 each time and give that id again.
-`crypto.randomUUID()` is in the floor of the applications, from Chrome
-92, Firefox 95 and Safari 15.4, and only in a secure context, which the
-site on GitHub Pages, served over HTTPS, and the development server on
-`localhost` both are; the development server opened from another machine,
-a phone, by its address on the local network over HTTP is not, and there
-the function does not exist. Core stays pure: the id is made on the page
-and handed to the command that puts the source in the project.
+The page makes the id when the user picks the file: 16 random bytes from
+`crypto.getRandomValues`, written as hex, so that an id is not given
+twice, in this session or in another. A counter of the session would
+start again at 1 each time, and the id of an earlier session, kept in the
+`reference` of a project file that is opened (section 8), could then name
+a load of this one. A reference can still hold an id of this session,
+when a project is saved and opened again in the same session; that does
+no harm, since the reference is in no key and its id names no `File` the
+current project uses. `crypto.getRandomValues` is in every browser of the
+floor and, unlike `crypto.randomUUID()`, also on a page not served over
+HTTPS, as the development server is when a phone opens it by its address
+on the local network. Core stays pure: the id is made on the page and
+handed to the command that puts the source in the project. The
+individuals file gets its id in the same way (section 6).
 
 What the screen shows for an analysis is the result stored under the key
 that the current project gives it. So:
@@ -364,6 +398,19 @@ The page and each worker talk through typed messages
   reads the whole file into memory again before the next request starts,
   a time that grows with the file and has not been measured (section 6).
   A crash, a trap of the wasm, restarts the worker in the same way.
+- **A change of the load of the variant file restarts the calculation
+  worker**, a new pick, an undo or a redo of one, before the first request
+  on the new load. The memory of wasm grows and never shrinks, so a
+  worker that kept the old load open, or had freed it, would still hold
+  the room of that file; restarted, it gives that memory back, and it
+  only ever holds one open file, one `Variants` of popnei. What it costs:
+  an undo to the previous load reopens that file, which with popnei 0.1.0
+  reads it whole again, a time that grows with the file; the results of
+  the previous load are still found in the cache of the page, with no
+  calculation, and only a new calculation on it waits for the reopening.
+  The intermediate results of the old load, the pruned variants, the
+  kinship, are lost with the worker, and they belong to a load no longer
+  asked for.
 
 The calculation worker keeps, under keys as the results are, what several
 analyses reuse: the variants kept by the LD pruning of the PCA, the
@@ -472,18 +519,24 @@ runner's opening of a file is the one place that changes.
    project a `VariantSource` with them and its `read` pending.
 2. **The calculation worker opens the file** and sends back the
    individuals and the ploidy, which popnei gives once the file is open,
-   and the number of variants, which takes a pass over it.
+   with no pass over the variants.
 3. **The store records them into that same `VariantSource`**, the one
-   with that file id, as an event that is not a step of undo, in the
-   current project and in every project of the history that holds that
-   source, so that a redo of the pick brings it back read. The event
-   completes the pick: undo of the pick removes the whole source. A file
-   that popnei refuses leaves the source `failed`, with popnei's message.
+   with that file id and no other, as an event that is not a step of
+   undo, in the current project and in every project of the history that
+   holds that source, so that a redo of the pick brings it back read. The
+   event completes the pick: undo of the pick removes the whole source. A
+   file that popnei refuses leaves the source `failed`, with popnei's
+   message.
 4. **Until then every analysis is locked** with the reason "reading the
-   file", through its `needs`. Its key could be made already, from the id
-   and the read options, but whether popnei can read the file is not yet
-   known, nor the individuals, which the individuals file is checked
-   against (below).
+   file", through its `needs`, and the record of step 3 unlocks them. Their
+   keys could be made already, from the id and the read options, but
+   whether popnei can open the file is not yet known, nor the individuals,
+   which the individuals file is checked against (below).
+5. **The number of variants comes from the first pass that counts it**,
+   the pass statistics popnei gives with the first analysis or filter run
+   on that load, and is recorded into the same source in the same way;
+   the screen shows it when it is known. Nothing waits for it, so no
+   analysis waits for a whole pass over the file before it starts.
 
 What the worker sends is information about the input, read from it, not a
 result: it depends on the file alone and no option of an analysis changes
@@ -499,11 +552,16 @@ the user for its variant file again (`docs/functionality.md`, section 9).
 
 It is read once, in the light worker, into a table that goes into the
 project, and the types of its columns are inferred there too. Loading it
-goes as the variant file does (section 6): one command puts its name in
-the project, pending, which locks what needs it with the reason "reading
-the file"; the light worker reads it, and the store records the table, or
-the error, into that same source as an event that is not a step of undo;
-an undo of the load removes the source. The type of the table is declared
+goes as the variant file does (section 6). The page makes a new file id
+for the load, as for the variant file (section 3), and one command puts
+an `IndividualsSource` with that id and the name in the project, pending,
+which locks what needs it with the reason "reading the file". The light
+worker reads it, and the store records the table and the types, or the
+error, into the source with that id and no other, as an event that is not
+a step of undo; an undo of the load removes the source. So when the user
+picks a file, then picks another of the same name before the first read
+has come back, the late read of the first pick finds no source with its
+id and is dropped: the name would not tell the two apart. The type of the table is declared
 in `src/worker/protocol.ts`, as the filters are, so that the project of
 core and the reader describe it in one way.
 
@@ -512,10 +570,16 @@ core and the reader describe it in one way.
   separator detected, `,`, `;` or a tab; decimals with a comma accepted;
   a BOM at the start removed; an empty cell, `NA` and `-` read as
   missing (`docs/functionality.md`, section 4). The runner decodes the
-  bytes as UTF-8 and gives the reader the text; a file that is not valid
-  UTF-8 is refused with a message that says to save it as "CSV UTF-8" or
-  as xlsx, rather than read with its accented names replaced, which would
-  then not match the names of the variants.
+  bytes and gives the reader the text. A file that is valid UTF-8 is read
+  as UTF-8. One that is not is read as Windows-1252, which is what Excel
+  on Windows writes for "CSV (comma delimited)" in Spanish and the other
+  languages of Western Europe, and the file gets a notice that says so,
+  "Read as Windows-1252, since it is not UTF-8", that asks nothing of the
+  user. A file is never refused for its encoding. This is the
+  recommendation of this revision, awaiting the owner's approval with it;
+  the option it replaces was to refuse such a file and ask for "CSV
+  UTF-8", which would stop most users of Excel in Spanish at their first
+  file.
 - **The inference of the types of the columns** is in the same module. It
   takes the cells of a CSV, all text, or the cells of an xlsx, as the
   files wasm gives them, numbers, text, booleans or empty, so that the
@@ -646,12 +710,16 @@ for the smallest part of it.
   refuses a file it cannot read with a message that says why, and gives a
   `Project` whose `variants` is null, since the file has to be picked
   again, and whose `reference` holds the source the project was made with
-  and, for each analysis, its check numbers and the key its settings gave
-  in the file, computed when it is opened.
+  and, for each analysis, its check numbers. The key of each reference,
+  the key its settings in the file give with the reference's source, is
+  not saved in the file: it is computed once the calculation worker's
+  `ready` has given the version of popnei, which is part of every key, and
+  is null until then.
 - **The identity of the file is compared, and never decides anything.**
   When the user gives the variant file of an opened project, the
-  application compares the name, the size, the individuals, the number of
-  variants and the ploidy of the new load with those of the reference,
+  application compares the name, the size, the individuals and the ploidy
+  of the new load with those of the reference as soon as the file is
+  open, and the number of variants once the first pass has counted it,
   and warns when they differ, saying in what (`docs/functionality.md`,
   section 9). It never refuses the file, and it calculates every analysis
   again in any case, since the load has a new id. Two files with the same
@@ -666,7 +734,10 @@ for the smallest part of it.
   none, those of the reference, if the key its settings give now, with
   the reference's source in place of the current one, is the key of the
   reference, so that an analysis whose options changed does not carry
-  numbers of other options; otherwise none. After a run, the numbers of
+  numbers of other options; otherwise none. And none when the variant
+  file the user gave differs from the reference's in its identity: the
+  numbers belong to the old file, and saved beside the new one they would
+  read as the numbers of a run on it. After a run, the numbers of
   the result are compared with those of the reference, and the screen
   says whether they are the same, and what changed that could explain a
   difference, the variant file or the version of popnei. The reference is
@@ -689,7 +760,12 @@ for the smallest part of it.
   as text, `dtype=str`, with the missing values of the application and no
   others, `keep_default_na=False, na_values=["", "NA", "-"]`, and the
   script converts to numbers the columns whose type in the project is
-  continuous or binary. Otherwise pandas' own inference would stand in for
+  continuous, with `pandas.to_numeric`. A binary column is written out
+  with the application's coding of it, which value is 1, from the type of
+  the column kept in the project (`ColumnType`, section 2),
+  `df["status"].map({"case": 1, "control": 0})`, and not converted with
+  `to_numeric`, which fails on text such as yes and no and would not say
+  which value is the case. Otherwise pandas' own inference would stand in for
   the application's: it reads an individual named `001` as the number 1,
   which matches no name of the variants, and `N/A` or `null` as missing.
   The `.xlsx` it reads is the one the application wrote, of plain text and
@@ -798,7 +874,9 @@ code, version 0.1.0.
   after.
 - **The memory of wasm grows and never shrinks** (`js/popnei/README.md`
   of popnei), so the only way to give it back is to restart the worker.
-  When the application does so is open point 2.
+  The calculation worker is restarted when the load of the variant file
+  changes (section 5); whether it is also restarted between requests is
+  open point 2.
 - **The downloads**: the wasm package of popnei, 0.63 MB gzipped, before
   anything runs, loaded by the calculation worker alone; the files wasm,
   0.58 MB gzipped, by the light worker the first time an xlsx is read or a
@@ -827,8 +905,9 @@ code, version 0.1.0.
   (section 8), so a change to the format is a new version, and the
   application keeps reading the versions before it.
 - **The canonical form of the keys.** A change to it changes every key,
-  so no result in any cache is found again, and the keys stored in the
-  reference of a project stop matching. It is versioned as the key version
+  so no result in any cache is found again, and the keys of the
+  reference of an opened project, computed with the new form, no longer
+  match those of results saved with the old one. It is versioned as the key version
   of each analysis is, and changed only with that version raised.
 
 ## 13. Open points
@@ -839,10 +918,10 @@ code, version 0.1.0.
    The recommendation is a published algorithm with its test vectors,
    SHA-256 among them, so that a collision is not a concern. Nothing is
    hashed from the variant file (section 3).
-2. When the calculation worker is restarted to give back the memory of
-   wasm, which never shrinks, and which the bound of its cache, counted in
-   the bytes of its typed arrays, does not see. The recommendation is to
-   restart it when the variant file changes, a new pick or the undo of
-   one, since what the old worker holds belongs to a file no longer asked
-   for; and, if the walking skeleton shows a tab running out of memory, to
-   restart it between two requests as well.
+2. Whether the calculation worker is also restarted between two requests
+   to give back the memory of wasm, which never shrinks, and which the
+   bound of its cache, counted in the bytes of its typed arrays, does not
+   see. Its restart when the load id of the variant file changes is
+   settled (section 5). The recommendation is to restart it between two
+   requests only if the walking skeleton shows a tab running out of
+   memory.

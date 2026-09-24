@@ -129,6 +129,13 @@ and its encoding varies with the version. So:
 - CSV and TSV are read by the applications, in TypeScript, with the
   separator detected, `,`, `;` or a tab, decimals with a comma accepted,
   and a BOM at the start of the file removed.
+- A CSV or TSV is read as UTF-8 when it is valid UTF-8, and otherwise as
+  Windows-1252, which is what Excel on Windows writes for "CSV (comma
+  delimited)" in Spanish and the other languages of Western Europe; the
+  file then gets a notice that says how it was read, and asks nothing of
+  the user. No file is refused for its encoding. This is the
+  recommendation of the revision of `docs/architecture.md` of 24
+  September 2026, awaiting the owner's approval with it.
 - Missing values are an empty cell, `NA` or `-`.
 - The file is written as `.xlsx` for the user and as TSV for scripts and
   the Python API.
@@ -146,6 +153,11 @@ of types in a sheet edited in Excel would be broken or misunderstood.
 | binary | the column has two distinct values, numbers such as 0/1 and 1/2, or text such as yes/no, case/control | a binary trait, a covariate, populations |
 | continuous | the column holds numbers with more than two distinct values; a column of a few integer levels, such as a score from 1 to 5, is continuous with a warning | a continuous trait, a covariate |
 | categorical | anything else | populations, a covariate, the colour of the PCA |
+
+A binary column also has its coding, which of its two values is 1, the
+case, and which 0, kept in the project with its type: the application
+proposes one and the user can change it. The GWAS and the Python script
+use it.
 
 In the traits file each column also has a role: trait, covariate, or
 ignored. A continuous or binary column is a trait by default, the others
@@ -299,8 +311,9 @@ Opening a project:
 1. The application asks for the variant file, and names the one the
    project was made with.
 2. It compares the identity of the file given with the one in the
-   project, the name, the size, the individuals, the number of variants
-   and the ploidy. When they differ it warns, and says in what: "The
+   project, the name, the size, the individuals and the ploidy as soon as
+   the file is open, and the number of variants once the first pass has
+   counted it. When they differ it warns, and says in what: "The
    project was made with panel_2026.nei, 342 individuals and 1,203,554
    variants; this file has 360 individuals". It does not refuse, because
    running the settings of one analysis on a new batch of the same
