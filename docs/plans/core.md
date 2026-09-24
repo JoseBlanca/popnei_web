@@ -205,7 +205,7 @@ file's JSON becomes, or is refused with a text the user reads.
   `keys.ts`, from the keys spec's "The canonical form" and the `KeyMemo`
   of its interface; the generator of JSON values in `testSupport.ts`.
   Serves 2. Needs 1.1.
-- [ ] 1.3 The commands, `emptyProject` and `analysisOptions` in
+- [x] 1.3 The commands, `emptyProject` and `analysisOptions` in
   `project.ts`, from the project spec's "What it does" and "The
   commands", with the one check of each value that `parseProject` will
   share; the deep freeze, and the generator of commands, which starts from

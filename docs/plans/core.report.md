@@ -48,3 +48,15 @@ Under way.
   defect; the writer chose a JSON list, the form of `ProjectError.path`,
   and the keys spec says so since 0c84dca, a commit of its own after the
   code rather than before it.
+- Task 1.3, b8a8853: the twelve commands, `emptyProject`,
+  `analysisOptions` and the check of each value that `parseProject` will
+  share, in `project.ts`; the deep freeze, a project written by hand and
+  the generator of commands in `testSupport.ts`. `npx vitest run
+  src/core/project.test.ts -t "WP1 D3"` gives "Tests 58 passed (58)", of
+  at least 50; `npm test` gives 147. Eighteen breaks of the code, one per
+  group of tests, each failed its group; one showed that two cases of a
+  binary column passed on the error of another column, and they were
+  pinned to their own. A VCF load with no read options is refused, as
+  the spec's type and its "read options only for a VCF" say. The
+  commands copy the fields of the values they are given, so a field the
+  type does not have cannot reach the project.
