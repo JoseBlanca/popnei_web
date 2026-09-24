@@ -22,9 +22,11 @@ workers read would show "reading the file" again after a redo of a pick
 whose file was read long ago.
 
 - **A step is a command of the user.** Each entry holds the project the
-  command made and the description of the command, the words that finish
-  the notice, "the MAF filter changed" (`docs/specs/core/store.md`), so
-  that an undo or a redo can say what it undid.
+  command made and the description of the command: a few words that say
+  what the command changed, "the MAF filter changed", which the notice
+  puts after "because" in "3 results removed because the MAF filter
+  changed" (`docs/specs/core/store.md`), so that an undo or a redo can
+  also say what it undid or redid.
 - **A command that changes nothing makes no step**: the command returns
   the project it was given (`docs/specs/core/project.md`), and `commit`
   returns the history it was given.
@@ -169,4 +171,5 @@ With Vitest, at `commit`, `undo`, `redo`, `startHistory` and
 - When the store commits, and what it does with the description:
   `docs/specs/core/store.md`.
 - Keeping the history across a reload of the page: nothing is kept, and
-  the warning before the tab closes is for the screens of the shell.
+  the warning before the tab closes is for the shell, the header and the
+  frame of the page, in its own spec.
