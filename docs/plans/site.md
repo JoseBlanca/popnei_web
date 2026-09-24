@@ -46,10 +46,15 @@ named `configs.md` and `testing.md` below.
 
 ## 0. The release of popnei
 
-- [ ] 0.1 The orchestrator checks that the release exists: `npm view <the
-  URL of the .tgz> version` prints `0.1.0`. When it does not, it stops and
-  asks the owner to make it, or to order a session in popnei's repository
-  to, and starts nothing else until it exists.
+- [ ] 0.1 The orchestrator checks that the release exists: in a scratch
+  folder, `npm install
+  https://github.com/JoseBlanca/popnei/releases/download/js-v0.1.0-dev.1/popnei-0.1.0.tgz`
+  installs it, and `node -p 'require("./node_modules/popnei/package.json").version'`
+  prints `0.1.0` (`npm view` does not take the URL of a tarball). When it
+  does not, it stops and asks the owner, and starts nothing else until it
+  exists. The release was made on 24 September 2026 from popnei's commit
+  3bc33f9, with the 270 tests of the package passing, and this check
+  passed then.
 
 ## 1. The repository and its checks
 
