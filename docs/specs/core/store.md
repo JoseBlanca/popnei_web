@@ -72,6 +72,25 @@ tests in the tests.
   given as `null`.
 - `script` gives its lines of the Python script, in stage 6.
 
+The store keeps each result to its own definition: it calls `warnings`
+and `checkNumbers` of a definition only with a result of a request that
+the `run` of that same definition made, found through that request in
+flight, or in the cache under a key of that definition, since a key
+holds the id of its analysis. The types do not ensure it. The functions
+of the definition are methods, whose arguments TypeScript checks
+loosely, so a definition whose `warnings` takes the result of one
+analysis alone goes into the list of the store, whose `R` is the union
+of the results of all, with no error of the compiler; the store holds
+the rule instead, and a test with two analyses whose results differ in
+shape checks it. The option not taken was to write the functions as
+fields, which TypeScript checks strictly: it would refuse such a
+definition, and make every analysis take the union of all the results
+and pick its own out of it at run time, for a mistake the store rules
+out in one place. For the same reason two definitions of one id are a
+defect, and `createStore` throws on them: the key, the state and the
+requests of an analysis are found by its id. Both decided here, not by
+the owner, on 24 September 2026.
+
 ### The state of an analysis
 
 The store gives each analysis the first state of this table whose
@@ -468,6 +487,15 @@ and the memo of the keys, which trusts only frozen objects, is used for
 every project. Freezing stops at the parts already frozen, so it costs
 only what the command made.
 
+A read recorded into the history makes one new source of the file for
+each source it changes, shared by every project that shared the old
+one, as the projects of the history share every part a command did not
+change. So an undo after a read gives a project whose source is the
+very object of the present one, and a screen that compares the source
+is not drawn again. The option not taken, a record applied to each
+project alone, would have given each project a copy of its own. Decided
+here, not by the owner, on 24 September 2026.
+
 After every change of the project or of the version of
 popnei, the store makes the key of each analysis that is not locked. It
 keeps the keys of the last project and version, so that a progress
@@ -537,6 +565,12 @@ and one that needs only the variants file.
 - **`getState`** returns the same object between two changes, and the
   state of an analysis that did not change is the same object after a
   change to another.
+- **A read recorded**: two projects of the history that shared the
+  source of the file share the new one after the read.
+- **A result kept to its definition**: the two fake analyses give
+  results of different shapes, and the `warnings` and `checkNumbers` of
+  each are called only with results of its own requests; two definitions
+  of one id make `createStore` throw.
 - **Properties, with fast-check**, which draws random sequences of
   commands, undos, redos, starts, progress, ends and cancels of requests,
   in any order, and shrinks a failure to the smallest one: a result is
