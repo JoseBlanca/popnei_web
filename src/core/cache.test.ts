@@ -184,6 +184,11 @@ describe("WP3 D2 the cache", () => {
       expect(resultBytes({ view })).toBe(100);
     });
 
+    test("counts neither a key of a Map nor an element of a Set", () => {
+      expect(resultBytes(new Map([[new Float64Array(2), 1]]))).toBe(0);
+      expect(resultBytes(new Set([new Float64Array(2)]))).toBe(0);
+    });
+
     test("counts neither a text outside a list nor a number, and ends on a cycle", () => {
       const cyclic: { self: unknown; label: string; count: number } = {
         self: null,
@@ -219,6 +224,21 @@ describe("WP3 D2 the cache", () => {
     const withF = put(withE, F, resultOf(10), new Set([F]));
     expect(keysOf(withF)).toEqual([F]);
     expect(withF.totalBytes).toBe(10);
+  });
+
+  test("a put that leaves the cache exactly at its bound drops nothing more", () => {
+    const atBound = put(
+      put(emptyCache<Uint8Array>(100), A, resultOf(60), new Set()),
+      B,
+      resultOf(40),
+      new Set(),
+    );
+    expect(keysOf(atBound)).toEqual([A, B]);
+    expect(atBound.totalBytes).toBe(100);
+
+    const backAtBound = put(atBound, C, resultOf(60), new Set());
+    expect(keysOf(backAtBound)).toEqual([B, C]);
+    expect(backAtBound.totalBytes).toBe(100);
   });
 
   test("get gives the value under a key, or null, and is not a use", () => {
@@ -273,6 +293,7 @@ describe("WP3 D2 the cache", () => {
     expect(used.entries.get(A)?.lastUse).toBe(6);
     expect(used.entries.get(C)?.lastUse).toBe(3);
     expect(used.totalBytes).toBe(90);
+    expect(get(used, A)).toBe(get(c, A));
     expect(snapshot(c)).toEqual(before);
 
     const withD = put(used, D, resultOf(30), new Set());
