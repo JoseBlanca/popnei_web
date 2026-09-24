@@ -267,7 +267,7 @@ are still those its check numbers were made with.
 
 - [x] 2.1 `sha256Hex` in `keys.ts`, with its encoder of UTF-8, from the
   keys spec's "The hash". Serves 1. Can run beside 1.3 to 1.5.
-- [ ] 2.2 `keyOf`, `intermediateKeyOf`, `settingsFingerprint`,
+- [x] 2.2 `keyOf`, `intermediateKeyOf`, `settingsFingerprint`,
   `keyFromWire` and `KeyedDef`, from the keys spec's "What it does", "The
   key of an intermediate result", "The fingerprint of the settings" and
   "The TypeScript interface". Serves 2. Needs 2.1 and work package 1.

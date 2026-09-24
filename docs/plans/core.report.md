@@ -84,3 +84,13 @@ and 1.5 end, a change of the order of the tasks.
   whole of Unicode almost never draws a character of two bytes and
   missed the break of those, so a second property draws characters of
   one to four bytes equally.
+- Task 2.2, 3a6f7f9, after the spec in 316b948: `keyOf`,
+  `intermediateKeyOf`, `settingsFingerprint`, `keyFromWire` and
+  `KeyedDef`. `npx vitest run src/core/keys.test.ts -t "WP2 D2"` gives
+  "Tests 17 passed", of at least 11; the literal key and the literal
+  fingerprint of the spec are reached. The spec named the five parts of
+  the key of an intermediate result and not the fields they are written
+  under; the writer chose six, with no `analysis` field, so that such a
+  key is never that of an analysis, and wrote them into the spec first.
+  Fifteen breaks, each failing its tests. The memo of the canonical form
+  cannot be seen from the tests, so no break reached it.
