@@ -281,6 +281,11 @@ describe("WP2 D1 the hash", () => {
     );
   });
 
+  test("gives node's hash of the characters at each edge of one, two, three and four bytes", () => {
+    const text = "\u007f\u0080߿ࠀ￿\u{10000}\u{10ffff}";
+    expect(sha256Hex(text)).toBe(nodeSha256Hex(text));
+  });
+
   test.each([
     ["a first half alone", "\ud800"],
     ["a first half at the end", "ab\ud800"],
