@@ -846,7 +846,8 @@ docs/
 
 `core` has no DOM and no React, and is tested with Vitest alone. Nothing
 in `core` imports from `ui` or `charts`, and nothing in `charts` imports
-from `core` or `ui`. Only `src/worker/runner.ts` calls popnei, and only
+from `core` or `ui`. Only `src/worker/runner.ts` calls popnei, apart
+from the probe's worker, `src/probe/probeWorker.ts`, and only
 `src/worker/filesRunner.ts` calls the files wasm.
 
 The pages are HTML files at the root and not in a folder of their own,
