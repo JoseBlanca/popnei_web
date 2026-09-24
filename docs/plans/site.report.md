@@ -246,3 +246,36 @@ The repository's Pages are served at the owner's domain,
 leads there, and `https://jblanca.net/popnei_web/probe.html` answers
 200. The base path `/popnei_web/` is the same, so nothing of the site
 changes.
+
+The probe on the deployed site, 24 September 2026, checked from the
+owner's Mac:
+
+- `BASE_URL=https://jblanca.net/popnei_web/ npx playwright test
+  --project=chromium --project=webkit` gives "40 passed", run by the
+  subagent and again by the orchestrator. Firefox cannot run here; the
+  owner opened the deployed probe in Firefox by hand (below).
+- `curl -sI` on `assets/popnei_bg-p-HjtWao.wasm` gives `HTTP/2 200` and
+  `content-type: application/wasm`, 1,771,106 bytes, or 564,966 bytes
+  when the browser accepts gzip. The worker's script is served as
+  `application/javascript`, `probe/panel.nei` as
+  `application/octet-stream`. GitHub Pages sends `cache-control:
+  max-age=600` for all three, so a browser keeps even the files whose
+  names change with their content for 10 minutes only.
+
+The times, measured on an Apple M5 Pro, macOS 27.0, Playwright's
+browsers without a window, over the owner's Wi-Fi, five loads per engine,
+each in a new browser context so that nothing came from the cache.
+"Loaded" is what the page shows as popnei loaded: the worker's `await
+init()`, which includes fetching and compiling the wasm. "Opened" is
+popnei reading the served `panel.nei`, 200 individuals, not counting its
+download. "To ready" is from the start of the page's navigation to popnei
+loaded.
+
+| engine | loaded, median (5 runs) | opened, median | to ready, median |
+|---|---|---|---|
+| Chromium 153.0.8010.12 | 59.8 ms (58.0 to 199.2) | 2.2 ms | 210 ms (189 to 755) |
+| WebKit 26.6 | 80 ms (71 to 235) | 2.0 ms | 252 ms (215 to 396) |
+
+The slowest Chromium load was the first, when the wasm was not yet in
+the cache of GitHub's servers (`x-cache: MISS`). WebKit gives whole
+milliseconds. Firefox's numbers are the owner's (below).
