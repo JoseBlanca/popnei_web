@@ -15,46 +15,110 @@ const OPENED = {
   ploidyAssumed: true,
   openMs: 3,
 };
-const FAILED = {
+const FAILED_OPEN = {
   kind: "failed",
   stage: "open",
-  address: "/popnei_web/probe/panel.nei",
+  source: "served",
+  name: "panel.nei",
+  address: "http://localhost:4173/popnei_web/probe/panel.nei",
   message: "404 Not Found",
+};
+const FAILED_INIT = {
+  kind: "failed",
+  stage: "init",
+  address: null,
+  message: "WebAssembly.instantiate(): expected magic word",
+};
+const FAILED_MESSAGE = {
+  kind: "failed",
+  stage: "message",
+  message: "The message openFile lacks the fields file.",
 };
 
 describe("validateFromProbe", () => {
   test.each([
     ["ready", READY],
     ["opened", OPENED],
-    ["failed with an address", FAILED],
-    ["failed with no address", { ...FAILED, stage: "init", address: null }],
+    ["failed to open the served file", FAILED_OPEN],
+    [
+      "failed to open a file of the user, with no address",
+      { ...FAILED_OPEN, source: "file", name: "bad.vcf", address: null },
+    ],
+    ["failed to load popnei, with no address", FAILED_INIT],
+    [
+      "failed to load popnei, with the address of the wasm",
+      { ...FAILED_INIT, address: "http://localhost/popnei_bg-1a2b.wasm" },
+    ],
+    ["failed on a request the worker does not know", FAILED_MESSAGE],
   ])("accepts %s", (_name, message) => {
     expect(validateFromProbe(message)).toEqual({ ok: true, value: message });
   });
 
   test.each([
-    ["popneiVersion", { ...READY, popneiVersion: 1 }, "number"],
-    ["initMs", { ...READY, initMs: "42" }, "string"],
-    ["source", { ...OPENED, source: "url" }, "string"],
-    ["name", { ...OPENED, name: 1 }, "number"],
-    ["numIndividuals", { ...OPENED, numIndividuals: "200" }, "string"],
-    ["ploidy", { ...OPENED, ploidy: null }, "null"],
-    ["ploidyAssumed", { ...OPENED, ploidyAssumed: "yes" }, "string"],
-    ["openMs", { ...OPENED, openMs: [3] }, "array"],
-    ["stage", { ...FAILED, stage: "load" }, "string"],
-    ["address", { ...FAILED, address: 3 }, "number"],
-    ["message", { ...FAILED, message: null }, "null"],
-  ])("refuses the field %s of the wrong type", (field, message, found) => {
-    expect(validateFromProbe(message)).toMatchObject({
-      ok: false,
-      error: { kind: "wrongType", messageKind: message.kind, field, found },
-    });
-  });
+    ["popneiVersion", { ...READY, popneiVersion: 1 }, "ready", "number"],
+    ["initMs", { ...READY, initMs: "42" }, "ready", "string"],
+    ["source", { ...OPENED, source: "url" }, "opened", "string"],
+    ["name", { ...OPENED, name: 1 }, "opened", "number"],
+    [
+      "numIndividuals",
+      { ...OPENED, numIndividuals: "200" },
+      "opened",
+      "string",
+    ],
+    ["ploidy", { ...OPENED, ploidy: null }, "opened", "null"],
+    ["ploidyAssumed", { ...OPENED, ploidyAssumed: "yes" }, "opened", "string"],
+    ["openMs", { ...OPENED, openMs: [3] }, "opened", "array"],
+    ["stage", { ...FAILED_OPEN, stage: "load" }, "failed", "string"],
+    ["stage", { ...FAILED_OPEN, stage: 1 }, "failed", "number"],
+    [
+      "source",
+      { ...FAILED_OPEN, source: "url" },
+      "failed of stage open",
+      "string",
+    ],
+    ["name", { ...FAILED_OPEN, name: null }, "failed of stage open", "null"],
+    [
+      "address",
+      { ...FAILED_OPEN, address: 3 },
+      "failed of stage open",
+      "number",
+    ],
+    [
+      "message",
+      { ...FAILED_OPEN, message: null },
+      "failed of stage open",
+      "null",
+    ],
+    [
+      "address",
+      { ...FAILED_INIT, address: false },
+      "failed of stage init",
+      "boolean",
+    ],
+    [
+      "message",
+      { ...FAILED_MESSAGE, message: {} },
+      "failed of stage message",
+      "object",
+    ],
+  ])(
+    "refuses the field %s of the wrong type",
+    (field, message, messageKind, found) => {
+      expect(validateFromProbe(message)).toMatchObject({
+        ok: false,
+        error: { kind: "wrongType", messageKind, field, found },
+      });
+    },
+  );
 
   test.each([
     ["ready", READY, "initMs"],
     ["opened", OPENED, "ploidy"],
-    ["failed", FAILED, "address"],
+    ["failed", FAILED_OPEN, "stage"],
+    ["failed of stage open", FAILED_OPEN, "source"],
+    ["failed of stage open", FAILED_OPEN, "name"],
+    ["failed of stage init", FAILED_INIT, "address"],
+    ["failed of stage message", FAILED_MESSAGE, "message"],
   ])("refuses %s without the field %s", (messageKind, message, field) => {
     const lacking = Object.fromEntries(
       Object.entries(message).filter(([name]) => name !== field),
@@ -66,9 +130,26 @@ describe("validateFromProbe", () => {
   });
 
   test.each([
+    ["failed of stage init", { ...FAILED_INIT, source: "served" }, "source"],
+    [
+      "failed of stage message",
+      { ...FAILED_MESSAGE, address: null },
+      "address",
+    ],
+  ])(
+    "refuses %s with the field %s of another stage",
+    (messageKind, message, field) => {
+      expect(validateFromProbe(message)).toEqual({
+        ok: false,
+        error: { kind: "extraFields", messageKind, fields: [field] },
+      });
+    },
+  );
+
+  test.each([
     ["ready", READY],
     ["opened", OPENED],
-    ["failed", FAILED],
+    ["failed of stage open", FAILED_OPEN],
   ])("refuses %s with a field it does not have", (messageKind, message) => {
     expect(validateFromProbe({ ...message, numVars: 1200 })).toEqual({
       ok: false,

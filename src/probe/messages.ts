@@ -57,17 +57,63 @@ export type FromProbe =
       /** How long the opening took, in milliseconds. */
       readonly openMs: number;
     }
-  /** popnei could not be loaded, or a file could not be opened. */
+  /** popnei could not be loaded. */
   | {
       /** Which message this is. */
       readonly kind: "failed";
-      /** `init` when popnei could not be loaded, `open` for a file. */
-      readonly stage: "init" | "open";
-      /** The address the worker tried, or null when there was none. */
+      /** What failed: loading popnei. */
+      readonly stage: "init";
+      /**
+       * The address of popnei's wasm, as the worker's list of what it
+       * fetched has it, or null when the list has none.
+       */
       readonly address: string | null;
       /** popnei's message or the browser's, as it came. */
       readonly message: string;
+    }
+  /** A file could not be opened. */
+  | {
+      /** Which message this is. */
+      readonly kind: "failed";
+      /** What failed: opening a file. */
+      readonly stage: "open";
+      /**
+       * The file the site serves, or a file the user picked, as in
+       * `opened`: the two answers can arrive in either order, and this is
+       * what tells the page which file failed.
+       */
+      readonly source: "served" | "file";
+      /** The name of the file, without its folder. */
+      readonly name: string;
+      /**
+       * The address the worker fetched the served file from, or null for
+       * a file of the user, which has none.
+       */
+      readonly address: string | null;
+      /** popnei's message or the browser's, as it came. */
+      readonly message: string;
+    }
+  /**
+   * The worker received a request that is not a `ToProbe`, which only a
+   * defect of the page can send.
+   */
+  | {
+      /** Which message this is. */
+      readonly kind: "failed";
+      /** What failed: a request the worker does not know. */
+      readonly stage: "message";
+      /** What was wrong with the request, from `describeMessageError`. */
+      readonly message: string;
     };
+
+/** The stages of a `failed`, tied to the type so a new one is not missed. */
+const FAILED_STAGES: Readonly<
+  Record<Extract<FromProbe, { kind: "failed" }>["stage"], true>
+> = {
+  init: true,
+  open: true,
+  message: true,
+};
 
 /**
  * The outcome of a validator: the typed message, or the way it was wrong.
@@ -284,8 +330,33 @@ export function validateFromProbe(message: unknown): Checked<FromProbe> {
         },
       };
     }
-    case "failed": {
-      const wrong = wrongFields(record, kind, [
+    case "failed":
+      return validateFailed(record);
+  }
+}
+
+/**
+ * Checks a `failed` whose kind is known: its stage first, then the fields
+ * of that stage, which differ from one stage to another. The errors of the
+ * fields name the message as "failed of stage <stage>".
+ */
+function validateFailed(record: object): Checked<FromProbe> {
+  if (!Object.hasOwn(record, "stage")) {
+    return refused({
+      kind: "missingFields",
+      messageKind: "failed",
+      fields: ["stage"],
+    });
+  }
+  const stage = ownField(record, "stage");
+  if (typeof stage !== "string" || !isKind(stage, FAILED_STAGES)) {
+    return wrongType("failed", "stage", '"init", "open" or "message"', stage);
+  }
+  const messageKind = `failed of stage ${stage}`;
+  const text = ownField(record, "message");
+  switch (stage) {
+    case "init": {
+      const wrong = wrongFields(record, messageKind, [
         "kind",
         "stage",
         "address",
@@ -294,19 +365,63 @@ export function validateFromProbe(message: unknown): Checked<FromProbe> {
       if (wrong !== null) {
         return wrong;
       }
-      const stage = ownField(record, "stage");
       const address = ownField(record, "address");
-      const text = ownField(record, "message");
-      if (stage !== "init" && stage !== "open") {
-        return wrongType(kind, "stage", '"init" or "open"', stage);
-      }
       if (address !== null && typeof address !== "string") {
-        return wrongType(kind, "address", "a string or null", address);
+        return wrongType(messageKind, "address", "a string or null", address);
       }
       if (typeof text !== "string") {
-        return wrongType(kind, "message", "a string", text);
+        return wrongType(messageKind, "message", "a string", text);
       }
-      return { ok: true, value: { kind, stage, address, message: text } };
+      return {
+        ok: true,
+        value: { kind: "failed", stage, address, message: text },
+      };
+    }
+    case "open": {
+      const wrong = wrongFields(record, messageKind, [
+        "kind",
+        "stage",
+        "source",
+        "name",
+        "address",
+        "message",
+      ]);
+      if (wrong !== null) {
+        return wrong;
+      }
+      const source = ownField(record, "source");
+      const name = ownField(record, "name");
+      const address = ownField(record, "address");
+      if (source !== "served" && source !== "file") {
+        return wrongType(messageKind, "source", '"served" or "file"', source);
+      }
+      if (typeof name !== "string") {
+        return wrongType(messageKind, "name", "a string", name);
+      }
+      if (address !== null && typeof address !== "string") {
+        return wrongType(messageKind, "address", "a string or null", address);
+      }
+      if (typeof text !== "string") {
+        return wrongType(messageKind, "message", "a string", text);
+      }
+      return {
+        ok: true,
+        value: { kind: "failed", stage, source, name, address, message: text },
+      };
+    }
+    case "message": {
+      const wrong = wrongFields(record, messageKind, [
+        "kind",
+        "stage",
+        "message",
+      ]);
+      if (wrong !== null) {
+        return wrong;
+      }
+      if (typeof text !== "string") {
+        return wrongType(messageKind, "message", "a string", text);
+      }
+      return { ok: true, value: { kind: "failed", stage, message: text } };
     }
   }
 }
