@@ -1,6 +1,7 @@
 # Plan: the site stands up, and popnei runs in it
 
-24 September 2026, approved by the owner on 24 September 2026. It builds stage 0 of
+24 September 2026, approved by the owner on 24 September 2026, under way on
+the branch `plan/site` since 24 September 2026. It builds stage 0 of
 `docs/build-order.md` from one spec, `docs/specs/site.md`, approved by the
 owner on 24 September 2026. It is carried out as the `following-plans`
 skill says, on the branch `plan/site`, with its report in
@@ -46,7 +47,7 @@ named `configs.md` and `testing.md` below.
 
 ## 0. The release of popnei
 
-- [ ] 0.1 The orchestrator checks that the release exists: in a scratch
+- [x] 0.1 The orchestrator checks that the release exists: in a scratch
   folder, `npm install
   https://github.com/JoseBlanca/popnei/releases/download/js-v0.1.0-dev.1/popnei-0.1.0.tgz`
   installs it, and `node -p 'require("./node_modules/popnei/package.json").version'`
