@@ -232,7 +232,13 @@ needs no action of the user.
   error status, so the page does not count on the message for it: the
   worker takes the address from the browser's list of what the worker
   fetched, `performance.getEntriesByType("resource")`, the entry whose
-  path ends in `.wasm`, and sends null when there is none.
+  path ends in `.wasm`, and sends null when there is none. In Chromium
+  and WebKit, on 24 September 2026, the list had the wasm when it arrived
+  and did not compile, and did not have it when the server answered 404,
+  which is the case where popnei's message names it; a file is likely
+  listed only once its body has been read, and popnei's loader stops at
+  the status. The page shows the address when it has one, and the
+  message always.
 - **The served file is not found**, a wrong address: the status is not
   200, and the worker sends `failed` with stage `open`, the source
   `served` and the address, instead of giving popnei an HTML page to
