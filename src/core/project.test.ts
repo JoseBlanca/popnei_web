@@ -1230,7 +1230,7 @@ describe("WP1 D4 the records and the needs", () => {
     );
   });
 
-  test("a worker that could not start: the read is recorded as failed with its error", () => {
+  test("a worker that could not start: the read is recorded as failed with its error, and a read after the restart replaces it", () => {
     const p = pendingProject();
     const read: SourceRead = {
       kind: "failed",
@@ -1239,9 +1239,137 @@ describe("WP1 D4 the records and the needs", () => {
         error: { kind: "couldNotStart", reason: "no ready message, twice" },
       },
     };
-    const q = recordVariantsRead(p, NEW_ID, read);
+    const q = deepFreeze(recordVariantsRead(p, NEW_ID, read));
     expect(q.variants?.read).toBe(read);
-    expect(recordVariantsRead(deepFreeze(q), NEW_ID, VARIANTS_READ)).toBe(q);
+    const r = recordVariantsRead(q, NEW_ID, VARIANTS_READ);
+    expect(r.variants?.read).toBe(VARIANTS_READ);
+    expectKept(q, r, ["variants"]);
+  });
+
+  describe("a read after a failure of the worker", () => {
+    const WORKER_ERRORS = [
+      { kind: "workerFailed", message: "out of memory" },
+      { kind: "defect", message: "a message that did not validate" },
+      { kind: "protocolMismatch" },
+      { kind: "couldNotStart", reason: "no ready message, twice" },
+    ] as const;
+
+    /** The pending project with the variants file failed with `error`. */
+    function variantsFailed(error: SourceError): Project {
+      return deepFreeze(
+        recordVariantsRead(pendingProject(), NEW_ID, { kind: "failed", error }),
+      );
+    }
+
+    /** The pending project with the individuals file failed with
+        `error`, read with the options CSV. */
+    function individualsFailed(
+      error: Extract<IndividualsRead, { kind: "failed" }>["error"],
+    ): Project {
+      return deepFreeze(
+        recordIndividualsRead(pendingProject(), NEW_ID, CSV, {
+          kind: "failed",
+          error,
+        }),
+      );
+    }
+
+    test.each(WORKER_ERRORS)(
+      "a read of the variants file replaces a failure %o",
+      (error) => {
+        const p = variantsFailed({ kind: "worker", error });
+        expect(p.variants?.read.kind).toBe("failed");
+        expect(
+          recordVariantsRead(p, NEW_ID, VARIANTS_READ).variants?.read,
+        ).toBe(VARIANTS_READ);
+      },
+    );
+
+    test("a failure of the worker replaces one of the variants file", () => {
+      const p = variantsFailed({
+        kind: "worker",
+        error: { kind: "workerFailed", message: "out of memory" },
+      });
+      const read: SourceRead = {
+        kind: "failed",
+        error: { kind: "worker", error: { kind: "protocolMismatch" } },
+      };
+      expect(recordVariantsRead(p, NEW_ID, read).variants?.read).toBe(read);
+    });
+
+    test("a refusal of popnei is not replaced", () => {
+      const p = variantsFailed({ kind: "popnei", message: "no header line" });
+      expect(recordVariantsRead(p, NEW_ID, VARIANTS_READ)).toBe(p);
+    });
+
+    test("a failure of the variants file of another load is not replaced", () => {
+      const p = variantsFailed({
+        kind: "worker",
+        error: { kind: "workerFailed", message: "out of memory" },
+      });
+      expect(recordVariantsRead(p, OTHER_ID, VARIANTS_READ)).toBe(p);
+    });
+
+    test.each(WORKER_ERRORS)(
+      "a read of the individuals file with the same options replaces a failure %o",
+      (error) => {
+        const p = individualsFailed({ kind: "worker", error });
+        expect(p.individuals?.read.kind).toBe("failed");
+        expect(
+          recordIndividualsRead(p, NEW_ID, CSV, INDIVIDUALS_READ).individuals
+            ?.read,
+        ).toBe(INDIVIDUALS_READ);
+      },
+    );
+
+    test("a read of the individuals file with other options does not replace a failure", () => {
+      const p = individualsFailed({
+        kind: "worker",
+        error: { kind: "workerFailed", message: "out of memory" },
+      });
+      expect(
+        recordIndividualsRead(
+          p,
+          NEW_ID,
+          { ...CSV, separator: ";" },
+          INDIVIDUALS_READ,
+        ),
+      ).toBe(p);
+      expect(recordIndividualsRead(p, OTHER_ID, CSV, INDIVIDUALS_READ)).toBe(p);
+    });
+
+    test.each([
+      { kind: "empty" },
+      { kind: "raggedRow", line: 7, expected: 4, found: 3 },
+      { kind: "files", message: "not an xlsx file" },
+    ] as const)("a refusal of the reader, %o, is not replaced", (error) => {
+      const p = individualsFailed(error);
+      expect(recordIndividualsRead(p, NEW_ID, CSV, INDIVIDUALS_READ)).toBe(p);
+    });
+
+    test("options A, then B, then A: the read of A that succeeds after one that failed is recorded", () => {
+      const p = deepFreeze(
+        setCsvOptions(
+          deepFreeze(
+            setCsvOptions(pendingProject(), { ...CSV, separator: ";" }),
+          ),
+          CSV,
+        ),
+      );
+      const failed = deepFreeze(
+        recordIndividualsRead(p, NEW_ID, CSV, {
+          kind: "failed",
+          error: {
+            kind: "worker",
+            error: { kind: "workerFailed", message: "the worker crashed" },
+          },
+        }),
+      );
+      expect(individualsNeeds(failed)).toMatch(/could not be read/);
+      const read = recordIndividualsRead(failed, NEW_ID, CSV, INDIVIDUALS_READ);
+      expect(read.individuals?.read).toBe(INDIVIDUALS_READ);
+      expectKept(failed, read, ["individuals"]);
+    });
   });
 
   test("recordIndividualsRead records a read whose options have a field more", () => {

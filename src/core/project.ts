@@ -1078,19 +1078,33 @@ export function analysisOptions(
 }
 
 // The records: what the workers read of the files, put into the source of
-// its load and no other. Each gives the project it was given when there is
-// nothing to record, so a read that comes back for a load the user has
-// replaced, or again after a restart of a worker, changes nothing.
+// its load and no other, while its read is pending or failed because its
+// worker failed. Each gives the project it was given when there is nothing
+// to record, so a read that comes back for a load the user has replaced
+// changes nothing, and a read that succeeds after a failure of the worker,
+// once it restarted, replaces the failure.
+
+/** Whether a read can still be replaced: it is pending, or failed because
+    its worker failed, which a second try after a restart can mend. A read
+    that succeeded, or that popnei or the reader refused, which the same
+    file gives again, stays. */
+function awaitsRead(read: SourceRead | IndividualsRead): boolean {
+  return (
+    read.kind === "pending" ||
+    (read.kind === "failed" && read.error.kind === "worker")
+  );
+}
 
 /** What the calculation worker read of the variants file of the load
-    `fileId`; recorded only while that source's read is pending. */
+    `fileId`; recorded only while that source's read is pending or failed
+    because its worker failed. */
 export function recordVariantsRead(
   p: Project,
   fileId: string,
   read: SourceRead,
 ): Project {
   const variants = p.variants;
-  if (variants?.fileId !== fileId || variants.read.kind !== "pending") {
+  if (variants?.fileId !== fileId || !awaitsRead(variants.read)) {
     return p;
   }
   return { ...p, variants: { ...variants, read } };
@@ -1116,8 +1130,9 @@ export function recordVariantsCounted(
 
 /** What the light worker read of the individuals file of the load
     `fileId`, with the options `csv` it was read with; recorded only while
-    that source's read is pending and its options are those, so a read of
-    options since changed is dropped. The types of the columns are those
+    that source's read is pending, or failed because its worker failed,
+    and its options are those, so a read of options since changed is
+    dropped. The types of the columns are those
     of the read: a type the user set before is lost (the project spec,
     Open 1). */
 export function recordIndividualsRead(
@@ -1129,7 +1144,7 @@ export function recordIndividualsRead(
   const individuals = p.individuals;
   if (
     individuals?.fileId !== fileId ||
-    individuals.read.kind !== "pending" ||
+    !awaitsRead(individuals.read) ||
     !same(individuals.csv, csv === null ? null : copyCsvOptions(csv))
   ) {
     return p;
