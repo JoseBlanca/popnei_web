@@ -706,6 +706,19 @@ export default defineConfig(
     },
   },
   {
+    // The code of the screens, as against their tests.
+    files: ["src/ui/**/*.{ts,tsx}"],
+    ignores: ["src/ui/**/*.test.ts"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          patterns: [runner, drawing, popneiValues, filesWasm, probe, testOnly],
+        },
+      ],
+    },
+  },
+  {
     // The probe, a page of its own (docs/specs/site.md): popnei and React,
     // nothing of src/. Its messages are checked on arrival, so no
     // assertion either, as in the worker.
@@ -804,6 +817,11 @@ export default defineConfig(
   TypeScript does not refuse it, since `tsconfig.core.json` checks
   `testSupport.ts` with the core; the lint does. Added on 24 September
   2026, when the review of the core found that nothing refused it.
+- The block after the screens' does the same for every file of
+  `src/ui` but its tests, which stage 2 begins to write: a screen that
+  imported the generators of the tests would bring fast-check into the
+  site. Added on 24 September 2026, when the review of the store found
+  that only core was held to it.
 - The last block covers the JavaScript, this file and the scripts of
   node such as `e2e/fixtures/make_fixtures.mjs`, with `.mjs` named, since
   a block of `**/*.js` alone left that script parsed and checked by no

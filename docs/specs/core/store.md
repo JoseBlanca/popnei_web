@@ -1,7 +1,7 @@
 # The store
 
-24 September 2026, approved by the owner on 24 September 2026. There is no code
-yet. The store is the one object of core that changes: it holds the
+24 September 2026, approved by the owner on 24 September 2026; built in
+`src/core/store.ts` on the branch `plan/core`. The store is the one object of core that changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.
 From them it gives the screens one state to read, in which each analysis
@@ -213,9 +213,19 @@ How the store does it, decided here, not by the owner, on 24 September
 2026: `startRun` stops the calculations left behind at the moment the
 analysis sends its request, just before `send`, so that an analysis
 whose `run` throws before sending stops nothing. The request is
-`afterStop` when, at that moment, any calculation in flight is being
-stopped, those this `startRun` has just stopped among them, since the
-new request may then wait for a worker that starts again. The analyses
+`afterStop` when a stop of a calculation has been issued since the
+calculation worker last announced itself ready, with `popneiReady`,
+which it does again after every restart (the cases below), and no
+calculation has ended done or failed since the stop: a stop of a
+calculation that runs ends the worker, and the new request then waits
+for the worker to start again and read the variants file, also when the
+calculation stopped has already ended `cancelled`, as it has when the
+user closed the notice or pressed Stop before pressing Run. A
+calculation that ends done or failed after the stop was answered by a
+worker already past it, so the next request does not wait for a
+restart; without that, a stop of a calculation that only waited in the
+queue, which starts no worker again, would mark every later request
+until the next restart. The analyses
 of `removed` and `leftBehind` are listed in the order of the
 definitions, each once. A calculation that was being stopped and ends
 `done` all the same puts its result into the cache under its key, as
@@ -231,9 +241,18 @@ ends by itself, done, failed or cancelled, leaves `leftBehind`, and so
 does one whose key the project gives again through a read of a file,
 which is not a change of the user; when `leftBehind` is empty, the
 notice no longer says that calculations will be stopped, and a notice
-left with nothing goes. Every calculation left behind is named by the
-current notice, since only a change leaves one behind, and each change
-makes the notice; so closing or replacing it reaches them all.
+left with nothing goes.
+
+A change of the user leaves calculations behind, and its notice names
+them. A read of a file, the number of variants of a result among them,
+can leave one behind too, when it changes the key of an analysis whose
+calculation is in flight or locks it: no notice names that one, and no
+undo gives its key back, since the read is recorded into every project
+of the history. So the store stops it at once, when the read is
+recorded. And `startRun` stops every calculation left behind, those the
+notice names and any other, so that the new request never waits behind
+one. Decided here, not by the owner, on 24 September 2026, after the
+review of the store.
 
 An analysis that was running, and not done, before a change is not in
 the notice's results removed: it had no result on the screen. After the
@@ -374,7 +393,8 @@ export type AnalysisStatus<R> =
 
 export type AnalysisError =
   | { readonly kind: "refused"; readonly message: string }  // popnei's; kept
-  | { readonly kind: "failed"; readonly error: RunError };  // until the next change
+  | { readonly kind: "failed";
+      readonly error: Exclude<RunError, { readonly kind: "popnei" }> };  // until the next change
 
 /** A calculation in flight; `current` when the project still gives its key. */
 export interface RunView {
@@ -516,9 +536,19 @@ the owner, on 24 September 2026:
 - **A result whose key is not its request's key**, or a `runEnded` of a
   request the store did not start: a defect. The store takes the request
   out of those in flight before it throws, so that the analysis is not
-  shown running for ever.
+  shown running for ever. A defect while a result is taken in, a key
+  from the worker that is not a key, a `warnings`, `checkNumbers` or
+  `numVarsOf` that throws, also keeps the failure `{ kind: "failed",
+  error: { kind: "defect", message } }` under the request's key, shown
+  until the next change as other failures are, so that a calculation of
+  minutes that ends in a defect does not end in `ready` with nothing
+  said; nothing of the result is kept.
 - **An analysis's `run` that throws**: a defect of that analysis. The
-  store calls it before it records anything, so the state is as it was.
+  store calls it before it records anything, so when it throws before
+  sending, the state is as it was and no calculation is stopped. When it
+  throws after sending, the store cancels what it sent; the calculations
+  left behind that it stopped just before the send stay stopped, since
+  their cancel was sent to the worker.
 - **An opened project whose settings are changed and set back.** The
   fingerprint is that of the settings, so the comparison with the check
   numbers comes back with them.
@@ -553,7 +583,18 @@ threshold (`docs/specs/core/keys.md`, `KeyMemo`). Then it uses in the
 cache the results of the current keys, so that the results on screen are
 the last to be dropped (`docs/specs/core/cache.md`), and calls once each
 listener, the function each screen gave `subscribe` to be told of a
-change. The store never waits: `startRun` returns at
+change.
+
+The keys and the reasons of the new project, or of the new version, are
+made before anything of the store changes, so that a defect while they
+are made, a `keyInputs` or a `needs` that throws, leaves the store as it
+was: the history, the version, the failures kept and the notice. A
+listener that throws does not keep the others from being called; the
+store calls them all and then throws the first error. When that happens
+in `startRun`, the store takes the new request out of those in flight
+and cancels it before it throws, since `src/ui/runs.ts` never receives
+its handle and would never give its outcome. Decided here, not by the
+owner, on 24 September 2026, after the review of the store. The store never waits: `startRun` returns at
 once, and the outcome arrives as an event.
 
 What the store keeps grows with the session: the cache, bounded in bytes;

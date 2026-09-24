@@ -335,6 +335,19 @@ export default defineConfig(
     },
   },
   {
+    // The code of the screens, as against their tests.
+    files: ["src/ui/**/*.{ts,tsx}"],
+    ignores: ["src/ui/**/*.test.ts"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          patterns: [runner, drawing, popneiValues, filesWasm, probe, testOnly],
+        },
+      ],
+    },
+  },
+  {
     // The probe, a page of its own (docs/specs/site.md): popnei and React,
     // nothing of src/. Its messages are checked on arrival, so no
     // assertion either, as in the worker.
