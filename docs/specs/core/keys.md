@@ -1,7 +1,7 @@
 # The keys of the results
 
-24 September 2026, approved by the owner on 24 September 2026. There is no code
-yet. A key is the name a result is stored under in the cache: a SHA-256
+24 September 2026, approved by the owner on 24 September 2026. The code
+is in `src/core/keys.ts`. A key is the name a result is stored under in the cache: a SHA-256
 hash of everything the result was calculated from, so that a result whose
 inputs changed is never shown, and a result whose inputs came back, by an
 undo or by a value set back, is found again with no calculation

@@ -1,7 +1,7 @@
 # Undo and redo
 
-24 September 2026, approved by the owner on 24 September 2026. There is no code
-yet. The history keeps the projects the user has had, so that an undo
+24 September 2026, approved by the owner on 24 September 2026. The code
+is in `src/core/history.ts`. The history keeps the projects the user has had, so that an undo
 gives back the previous one and a redo the one after it. Because a result
 is found by the key that a project gives it (`docs/architecture.md`,
 section 3), an undo also brings back the results of the previous project,
