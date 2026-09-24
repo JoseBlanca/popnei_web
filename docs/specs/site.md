@@ -29,7 +29,10 @@ popnei's version and what popnei read from a small variant file that the
 site serves: "200 individuals, ploidy 2". They can also pick a variant file
 of their own, `.nei` or VCF, and see the same for it. If popnei's wasm
 cannot be fetched or started, the likeliest way this stage fails, the page
-says so, with the address it tried, and does not stay blank.
+says so, with the browser's or popnei's message, and does not stay blank.
+The address of the wasm it tried is on the page in some of these failures
+and not in others, as "The cases" says: popnei's `init()` neither takes
+the address nor gives it.
 
 The probe is kept after stage 0, linked from no other page, as the check
 that a deploy still loads popnei: its end-to-end test keeps running on
@@ -290,17 +293,24 @@ needs no action of the user.
   "Reload the page. If popnei still does not load, report it at
   https://github.com/JoseBlanca/popnei_web/issues, with the address and
   the message above."
-  popnei's loader names the address only when the server answered with an
-  error status, so the page does not count on the message for it: the
-  worker takes the address from the browser's list of what the worker
-  fetched, `performance.getEntriesByType("resource")`, the entry whose
-  path ends in `.wasm`, and sends null when there is none. In Chromium
-  and WebKit, on 24 September 2026, the list had the wasm when it arrived
-  and did not compile, and did not have it when the server answered 404,
-  which is the case where popnei's message names it; a file is likely
-  listed only once its body has been read, and popnei's loader stops at
-  the status. The page shows the address when it has one, and the
-  message always.
+  popnei's `init()` takes no address and gives none, so the worker looks
+  for it in the browser's list of what the worker fetched,
+  `performance.getEntriesByType("resource")`, the entry whose path ends
+  in `.wasm`, and sends null when there is none; the page then shows the
+  address under the label "Address tried:" when it has one, and the
+  message always. What the user sees of the address, in Chromium 153 and
+  WebKit 26.6 on 24 September 2026:
+  - the wasm arrives and does not compile: "Address tried:" with the
+    address, in both engines;
+  - the server answers 404: no "Address tried:", since the list does not
+    have the wasm; the address is only inside popnei's message, "failed
+    to fetch Wasm: 404 Not Found fetching '…'", in both engines;
+  - the network fails: Chromium shows "Address tried:" with the address;
+    WebKit shows no address, only its message "Load failed".
+
+  Firefox was not seen in these three failures. A later popnei whose
+  `init()` took the address, or gave it with the error, would let the
+  page show the address in every case.
 - **The served file is not found**, a wrong address: the status is not
   200, and the worker sends `failed` with stage `open`, the source
   `served`, the address and "the server answered 404 Not Found", instead
