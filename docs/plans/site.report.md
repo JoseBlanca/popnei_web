@@ -279,3 +279,33 @@ loaded.
 The slowest Chromium load was the first, when the wasm was not yet in
 the cache of GitHub's servers (`x-cache: MISS`). WebKit gives whole
 milliseconds. Firefox's numbers are the owner's (below).
+
+The review of the workflow ran spec, tests, errors and browser, with
+stale, on the file and on the log of run 36023880445. Fixed, in 07effbc,
+which is on the branch and not yet on GitHub:
+
+- On GitHub a test that failed once and passed on its retry let the run
+  pass, published the site, and kept no trace of the failure, where
+  `testing.md` says such a test is a defect to find. It now fails the
+  run, and the report and traces are kept after every run that was not
+  cancelled, 14 days.
+- Two pushes to `main` close together could publish the older one, if
+  its browser tests ended later; the runs of a branch now go one after
+  the other.
+- The jobs have time limits: 20 minutes for the browser tests, whose
+  first run took 1 minute 39 seconds, and 10 for the others.
+
+Not taken: a branch filter on the pushes, since only `main` is pushed;
+and moving `input` in `vite.config.ts`, which is Vite 8's option at the
+top level, as the review of work package 1 checked.
+
+Found right: the three jobs built the same files from the same commit,
+so the site published is the one the tests ran on; each job has only
+the permissions it needs, and only `main` may publish; the actions exist
+at the versions pinned. GitHub's runners move to Ubuntu 26 on 19 October
+2026, which Playwright 1.63 lists among its hosts.
+
+For the stages that come: each deploy removes the files of the one
+before, and Pages lets a browser keep a file 10 minutes, so a tab opened
+before a deploy that later loads a part of the application only when it
+is needed would get "not found". The probe loads nothing that way.
