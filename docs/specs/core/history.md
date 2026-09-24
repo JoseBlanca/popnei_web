@@ -6,18 +6,18 @@ gives back the previous one and a redo the one after it. Because a result
 is found by the key that a project gives it (`docs/architecture.md`,
 section 3), an undo also brings back the results of the previous project,
 with no calculation, as long as the cache still holds them. This spec
-develops the row of `history.ts` in section 9 of `docs/architecture.md`,
-with its sections 2 and 6, and starts from the example of the
-`writing-specs` skill. It depends on `docs/specs/core/project.md`.
+develops sections 2 and 6 of `docs/architecture.md` and depends on
+`docs/specs/core/project.md`.
 
 ## What it does
 
 The user sees the history as Undo and Redo, in the header, on Ctrl+Z and
 Ctrl+Shift+Z, and as the Undo of the notice "3 results removed because
 the MAF filter changed · Undo" (`.claude/skills/coding/react.md`). An undo
-that gave back a project close to the previous one but not the same
-object would bring back no result, since the screens and the cache
-compare by reference and by key; and a history that forgot what the
+that gave back a project equal to the previous one but not the very same
+object in memory would make every screen draw itself again, since the
+screens tell what changed by whether an object is the same one, compared
+with `===`; and a history that forgot what the
 workers read would show "reading the file" again after a redo of a pick
 whose file was read long ago.
 
@@ -63,6 +63,7 @@ export interface History {
   readonly past: readonly Entry[];   // oldest first
   readonly present: Entry;
   readonly future: readonly Entry[]; // the next redo first
+  readonly maxSteps: number;         // the steps of undo kept, which every function keeps
 }
 
 /** The steps of undo kept; the oldest beyond them is dropped. */
@@ -70,10 +71,11 @@ export const MAX_UNDO_STEPS = 200;
 ```
 
 A history with one project and nothing to undo: the first project of a
-page, and an opened project file.
+page, and an opened project file. It keeps at most `maxSteps` steps of
+undo, `MAX_UNDO_STEPS` in the application, and a smaller number in a test.
 
 ```ts
-export function startHistory(p: Project): History;
+export function startHistory(p: Project, maxSteps: number): History;
 ```
 
 A command of the user gives a new project, which becomes the present with
@@ -136,19 +138,23 @@ With Vitest, at `commit`, `undo`, `redo`, `startHistory` and
   [p2]; commit p3: the future is empty, and a redo returns the same
   history.
 - `commit(h, h.present.project, "d")` is `h`.
-- 201 commits from `startHistory(p0)` leave 200 entries in the past, the
-  first of them the project of the first commit.
+- 201 commits from `startHistory(p0, 200)` leave 200 entries in the
+  past, the first of them the project of the first commit; the bound is
+  kept by `undo`, `redo` and `mapProjects`.
 - `mapProjects` with `recordVariantsRead` of the load `a` on a history
   whose past holds a project without a variants file and two with the
   load `a`, pending: the first entry is the same object, the two others
   are read, the descriptions are kept; the same with the load `b` returns
   `h`.
-- **Properties, with fast-check**, over sequences of commands of
-  `docs/specs/core/project.md` with valid arguments. Undoing every step
-  gives back the first project, the same object; redoing them all then
-  gives back the last one, the same object; a command after an undo
-  empties the future; and the past never holds more than
-  `MAX_UNDO_STEPS` entries.
+- **Properties, with fast-check**, which draws random sequences of
+  commands of `docs/specs/core/project.md` with valid arguments, and a
+  bound from 1 to 10, so that sequences longer than the bound are drawn
+  often. With a sequence no longer than the bound, undoing every step
+  gives back the first project, the same object, and redoing them all
+  then gives back the last one, the same object; with a longer one,
+  undoing all it can gives back the project of the step the bound left
+  first. A command after an undo empties the future, and the past never
+  holds more entries than the bound.
 
 ## Open points
 
