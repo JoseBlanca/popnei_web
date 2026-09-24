@@ -1,6 +1,7 @@
 # The site stands up, and popnei runs in it
 
-24 September 2026, a draft for the owner; there is no code yet. This spec
+24 September 2026, approved by the owner on 24 September 2026; there is
+no code yet. This spec
 is stage 0 of `docs/build-order.md`: the repository of the site set up, a
 workflow that checks it and publishes it on GitHub Pages, and one page,
 the probe, whose worker loads popnei's wasm package and opens a variant
@@ -129,11 +130,15 @@ It opens the bytes with popnei's `openVcf` when the name ends in `.vcf` or
 `opened` with the number of individuals, the ploidy and how long it took;
 and frees the `Variants`. The individuals come from the file in both cases
 (`Variants.individuals`, popnei `js/popnei/src/variant.ts`). The ploidy is
-read from the file for a `.nei` file, but not for a VCF: `openVcf` takes
-it as an option, 2 by default, and a tetraploid VCF opened with the
-default opens with no error and gives 2 (`io_vcf.ts`, run under node on 24
-September 2026). So the probe opens a VCF as diploid, and says so: "200
-individuals, ploidy 2 (assumed: a VCF is opened as diploid)".
+in a `.nei` file, but a VCF cannot tell it: it is an argument of
+`openVcf`, 2 by default (`io_vcf.ts`). Opening reads only the header, so a
+tetraploid VCF opened as diploid opens with no error; popnei refuses it at
+the first pass that reads its genotypes, with a message that names the
+line, the individual and both ploidies (run under node on 24 September
+2026). The probe makes no such pass, so it opens a VCF with the default
+and says the ploidy was given, not read: "200 individuals, ploidy 2
+(given: a VCF is opened as diploid)". The applications ask the user for
+it (`docs/architecture.md`, section 2).
 
 The `initMs` and `openMs` it sends are the first measurements of the cost
 of starting popnei in a worker, which the walking skeleton needs
@@ -220,7 +225,8 @@ the user.
   vars file of another version: `failed` with stage `open` and popnei's
   message, "the source is not a VCF: it starts with …" for the first (run
   under node, 24 September 2026); the page stays usable for another file.
-- **A VCF of another ploidy** opens as diploid, as above.
+- **A VCF of another ploidy** opens, as above, and would be refused at
+  the first pass, which the probe does not make.
 - **A file of a gigabyte** is read whole into memory, as the architecture
   says for popnei 0.1.0 (section 6); the probe does not guard against it.
 
@@ -238,7 +244,7 @@ the user.
      individuals, ploidy 2";
    - the file input given `e2e/fixtures/panel.nei` shows the same;
    - given `e2e/fixtures/panel.vcf.gz`, "200 individuals, ploidy 2
-     (assumed: a VCF is opened as diploid)";
+     (given: a VCF is opened as diploid)";
    - given `e2e/fixtures/bad.vcf`, popnei's message, and the served
      result stays on the page;
    - axe, the checker of accessibility that `testing.md` runs from
@@ -264,16 +270,11 @@ syntax for them, and by the compatibility tables of MDN
 
 ## Open points
 
-1. **The repository of the site.** Its name sets the base path, and
-   GitHub Pages serves a site from a free account only when its
-   repository is public. Options: `JoseBlanca/popnei_web`, public, which
-   gives `/popnei_web/` and matches every document; another name, which
-   changes `base` in `vite.config.ts` and the addresses in the documents;
-   a private repository, which needs a paid plan for Pages.
-   Recommendation: `JoseBlanca/popnei_web`, public, as popnei is. Either
-   way the owner creates it and sets, in its settings, the source of Pages
-   to GitHub Actions, which the deploy job needs. Meanwhile, the plan is
-   written for `JoseBlanca/popnei_web`.
+1. **The repository of the site.** Settled: the owner created
+   `https://github.com/JoseBlanca/popnei_web` on 24 September 2026, which
+   gives the base path `/popnei_web/`. The owner also sets, in its
+   settings, the source of Pages to GitHub Actions, which the deploy job
+   needs.
 2. **The first release of popnei's wasm package.** `npm ci` installs
    popnei from the URL of a `.tgz`, the packed package, on a GitHub
    Release of popnei, which does not exist yet; popnei has no workflow
