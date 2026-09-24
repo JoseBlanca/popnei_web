@@ -385,9 +385,15 @@ const core = {
   group: ["**/core/**"],
   message: "src/worker and src/charts do not import src/core.",
 };
-// The worker may take the type of a Result from core, and nothing else.
+// The worker may take the type of a Result from core, and nothing else:
+// no file of core but result.ts, and of result.ts only its types.
 const coreButResult = {
   group: ["**/core/**", "!**/core/result.ts"],
+  message: "src/worker imports only the types of src/core/result.ts.",
+};
+const resultValues = {
+  group: ["**/core/result.ts"],
+  allowTypeImports: true,
   message: "src/worker imports only the types of src/core/result.ts.",
 };
 const worker = {
@@ -421,7 +427,8 @@ const drawing = {
 const popneiValues = {
   group: ["popnei"],
   allowTypeImports: true,
-  message: "Only src/worker calls popnei; elsewhere import its types.",
+  message:
+    "Only src/worker/runner.ts calls popnei; elsewhere import its types.",
 };
 // The probe is a page of its own, outside the layers: nothing imports it.
 const probe = {
@@ -492,7 +499,7 @@ export default defineConfig(
     },
   },
   {
-    files: ["src/core/**/*.ts"],
+    files: ["src/core/**/*.{ts,tsx}"],
     rules: {
       "@typescript-eslint/no-restricted-imports": [
         "error",
@@ -518,7 +525,8 @@ export default defineConfig(
     },
   },
   {
-    files: ["src/worker/**/*.ts"],
+    // Only runner.ts calls popnei, in the block after this one.
+    files: ["src/worker/**/*.{ts,tsx}"],
     rules: {
       "@typescript-eslint/no-restricted-imports": [
         "error",
@@ -527,8 +535,10 @@ export default defineConfig(
             ui,
             charts,
             coreButResult,
+            resultValues,
             react,
             drawing,
+            popneiValues,
             filesWasm,
             probe,
           ],
@@ -537,6 +547,27 @@ export default defineConfig(
       "@typescript-eslint/consistent-type-assertions": [
         "error",
         { assertionStyle: "never" },
+      ],
+    },
+  },
+  {
+    // The calculation worker, the one file of the worker that calls popnei.
+    files: ["src/worker/runner.ts"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            ui,
+            charts,
+            coreButResult,
+            resultValues,
+            react,
+            drawing,
+            filesWasm,
+            probe,
+          ],
+        },
       ],
     },
   },
@@ -552,6 +583,7 @@ export default defineConfig(
             ui,
             charts,
             coreButResult,
+            resultValues,
             react,
             drawing,
             popneiValues,
@@ -562,7 +594,7 @@ export default defineConfig(
     },
   },
   {
-    files: ["src/worker/individuals/**/*.ts"],
+    files: ["src/worker/individuals/**/*.{ts,tsx}"],
     rules: {
       "@typescript-eslint/no-restricted-imports": [
         "error",
@@ -571,6 +603,7 @@ export default defineConfig(
             ui,
             charts,
             coreButResult,
+            resultValues,
             react,
             drawing,
             popneiValues,
@@ -582,7 +615,7 @@ export default defineConfig(
     },
   },
   {
-    files: ["src/charts/**/*.ts"],
+    files: ["src/charts/**/*.{ts,tsx}"],
     rules: {
       "@typescript-eslint/no-restricted-imports": [
         "error",
@@ -601,6 +634,7 @@ export default defineConfig(
             ui,
             charts,
             coreButResult,
+            resultValues,
             react,
             drawing,
             popneiValues,
@@ -672,14 +706,22 @@ export default defineConfig(
   `typescript.md` says; `as const` is allowed by it.
 - `no-restricted-imports` is typescript-eslint's version of the rule,
   which has `allowTypeImports`, so `import type` from popnei passes where
-  its values do not.
-- `no-restricted-imports` of the protocol's block replaces that of the
-  worker's for that one file, since a later block wins for a rule; so it
-  repeats the worker's patterns and adds `popneiValues`. The blocks of
-  `filesRunner.ts` and of `src/worker/individuals/` do the same: the
-  first swaps `filesWasm` for `popneiValues`, since it is the one file
-  that calls the files wasm and the light worker holds no popnei, and the
-  second keeps both out, since the reader is pure.
+  its values do not. The same option makes `resultValues` refuse a value
+  of `src/core/result.ts` to the worker and let its types through;
+  `coreButResult` refuses every other file of core, types included. One
+  pattern with both groups and `allowTypeImports` would have let the
+  types of all of core through.
+- The worker's block has `popneiValues`, since only `runner.ts` calls
+  popnei, and the block of `runner.ts` after it replaces that rule for
+  that one file, since a later block wins for a rule, with the same
+  patterns less `popneiValues`. The blocks of `protocol.ts`,
+  `filesRunner.ts` and `src/worker/individuals/` replace it the same
+  way: the first repeats the worker's patterns, the second swaps
+  `filesWasm` out, since it is the one file that calls the files wasm,
+  and the third keeps both out, since the reader is pure.
+- The blocks of the layers match `.tsx` as well as `.ts`, so that a
+  component written by mistake in `src/core` or `src/charts` is held to
+  the rules of its layer and not only to the first block's.
 - Core's block adds `individualsReader`: the reader is TypeScript with no
   DOM, which core could import and run on the page, where a file of
   10,000 rows would freeze it; it belongs to the light worker.
