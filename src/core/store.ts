@@ -415,7 +415,10 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
     return reasons;
   };
 
-  const keysOf = (p: Project): readonly AnalysisKey[] => {
+  const keysOf = (
+    p: Project,
+    version: string | null,
+  ): readonly AnalysisKey[] => {
     const reasons = reasonsOf(p);
     return defs.map((def, index): AnalysisKey => {
       const reason = reasons[index];
@@ -427,7 +430,7 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       if (reason !== null) {
         return { kind: "locked", reason };
       }
-      if (popneiVersion === null) {
+      if (version === null) {
         throw defect(
           `the analysis ${JSON.stringify(def.id)} can run before the calculation worker gave the version of popnei, which its key needs.`,
         );
@@ -443,28 +446,37 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
           : null;
       return {
         kind: "keyed",
-        key: keyOf(def, p, popneiVersion, memo),
+        key: keyOf(def, p, version, memo),
         check,
       };
     });
   };
 
-  /** The keys of the current project and version, made again only when
-      one of the two changed; the results of the new keys are used in the
-      cache, so that those on screen are the last dropped. */
-  const currentKeys = (): readonly AnalysisKey[] => {
-    const project = history.present.project;
-    if (keyed?.project === project && keyed.popneiVersion === popneiVersion) {
+  /** The keys of `project` under `version`, made again only when one of
+      the two changed since the last keys made; the results of the new
+      keys are used in the cache, so that those on screen are the last
+      dropped. A change makes the keys of its new project and version
+      with this before it changes anything, so that a defect while they
+      are made leaves the store as it was. */
+  const keysFor = (
+    project: Project,
+    version: string | null,
+  ): readonly AnalysisKey[] => {
+    if (keyed?.project === project && keyed.popneiVersion === version) {
       return keyed.keys;
     }
-    const keys = keysOf(project);
-    keyed = { project, popneiVersion, keys };
+    const keys = keysOf(project, version);
+    keyed = { project, popneiVersion: version, keys };
     cache = use(
       cache,
       keys.flatMap((k) => (k.kind === "keyed" ? [k.key] : [])),
     );
     return keys;
   };
+
+  /** The keys of the current project and version. */
+  const currentKeys = (): readonly AnalysisKey[] =>
+    keysFor(history.present.project, popneiVersion);
 
   /** The comparison of the numbers of a result of `def` with the check
       numbers `check` saved for its settings, or `null` when there are
@@ -723,13 +735,25 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
     }
   };
 
-  /** Takes `next` as the history, and tells the screens when it is not
-      the one there was. */
+  /** Takes `next`, the history after a read was recorded, and tells the
+      screens when it is not the one there was. */
   const moved = (next: History): void => {
     if (next !== history) {
+      keysFor(next.present.project, popneiVersion);
       history = next;
+      stopOrphans();
       changed();
     }
+  };
+
+  /** Stops at once every request in flight whose key the project no
+      longer gives and that no notice names: a read left it behind, and
+      no undo gives its key back. */
+  const stopOrphans = (): void => {
+    const named = notice?.runs ?? new Set<number>();
+    stopAll(
+      [...leftBehindNow(currentKeys())].filter((runId) => !named.has(runId)),
+    );
   };
 
   /**
@@ -747,6 +771,7 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
     if (next === history) {
       return;
     }
+    const keys = keysFor(next.present.project, popneiVersion);
     const before = history;
     const doneBefore = new Set(
       state.analyses
@@ -755,7 +780,6 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
     );
     failures.clear();
     history = next;
-    const keys = currentKeys();
     if (notice !== null) {
       const behind = leftBehindNow(keys);
       stopAll([...notice.runs].filter((runId) => behind.has(runId)));
@@ -815,25 +839,32 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
             `the request ${String(request.runId)} of the analysis ${JSON.stringify(request.def.id)} was sent under the key ${request.key} and came back under ${key}.`,
           );
         }
+        // Everything that can throw comes before anything is kept.
         const warnings = request.def.warnings(outcome.result, request.project);
+        const numbers = request.def.checkNumbers(outcome.result);
+        const numVars = config.numVarsOf(outcome.result);
+        const next =
+          numVars === null
+            ? history
+            : recordShared<VariantSource>(
+                history,
+                (p) => p.variants,
+                (p, variants) => ({ ...p, variants }),
+                (p) => recordVariantsCounted(p, request.fileId, numVars),
+              );
+        keysFor(next.present.project, popneiVersion);
         const shown = new Set(
           currentKeys().flatMap((k) => (k.kind === "keyed" ? [k.key] : [])),
         );
-        const numbers = request.def.checkNumbers(outcome.result);
         cache = put(
           cache,
           key,
           { result: outcome.result, warnings, numbers },
           shown,
         );
-        const numVars = config.numVarsOf(outcome.result);
-        if (numVars !== null) {
-          history = recordShared<VariantSource>(
-            history,
-            (p) => p.variants,
-            (p, variants) => ({ ...p, variants }),
-            (p) => recordVariantsCounted(p, request.fileId, numVars),
-          );
+        if (next !== history) {
+          history = next;
+          stopOrphans();
         }
         return;
       }
@@ -885,9 +916,11 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
     },
     open: (p) => {
       const opened = startHistory(freezeProject(p), history.maxSteps);
+      keysFor(opened.present.project, popneiVersion);
       stopEverything();
       failures.clear();
-      moved(opened);
+      history = opened;
+      changed();
     },
     dismissNotice: () => {
       if (notice === null) {
@@ -899,7 +932,9 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
     },
     startRun: (id) => {
       const { def, index } = defOf(id, "startRun");
-      const status = state.analyses[index]?.status;
+      const current = currentKeys()[index];
+      const status =
+        current?.kind === "keyed" ? statusOf(def, current) : undefined;
       if (
         status === undefined ||
         !(
@@ -932,9 +967,7 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
           }
           // The calculations left behind are stopped before the new
           // request is sent, so that it does not wait behind them.
-          if (notice !== null) {
-            stopAll(notice.runs);
-          }
+          stopAll(leftBehindNow(currentKeys()));
           sending.afterStop = [...requests.values()].some(
             (request) => request.stopping,
           );
@@ -1003,6 +1036,7 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
     },
     popneiReady: (version) => {
       if (version !== popneiVersion) {
+        keysFor(history.present.project, version);
         // Another version changes every key, and no undo gives the old
         // one back.
         if (popneiVersion !== null) {

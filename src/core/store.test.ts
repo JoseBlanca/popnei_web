@@ -372,6 +372,46 @@ function counter(): {
   };
 }
 
+/** A store whose analysis of the variants throws a defect in its
+    `keyInputs` for a MAF filter at 0.42, or whenever `boom.on` is set:
+    popnei 0.1.0, the variants file loaded and read. */
+function storeWithTouchyKeys(): ReturnType<typeof newStore> & {
+  readonly boom: { on: boolean };
+} {
+  const { analyses, calls } = fakeAnalyses();
+  const [pops, vars] = analyses;
+  if (pops === undefined || vars === undefined) {
+    throw new Error("popnei_web defect: no fake analyses");
+  }
+  const boom = { on: false };
+  const touchy: AnalysisDef<TestJob, TestResult> = {
+    ...vars,
+    keyInputs: (p) => {
+      const at042 = p.filters.some(
+        (filter) => filter.kind === "maf" && filter.maxAllowedMaf === 0.42,
+      );
+      if (boom.on || at042) {
+        throw new Error("popnei_web defect: a keyInputs that throws");
+      }
+      return vars.keyInputs(p);
+    },
+  };
+  const { send, sent, log } = fakeSend();
+  const store = createStore({
+    first: emptyProject("popgen"),
+    analyses: [pops, touchy],
+    send,
+    numVarsOf: () => null,
+    appVersion: "0.1.0",
+    cacheMaxBytes: 1024 * 1024,
+    maxUndoSteps: 200,
+  });
+  store.popneiReady("0.1.0");
+  store.apply("a variants file was loaded", loadPanel(VARIANTS_ID));
+  store.variantsRead(VARIANTS_ID, VARIANTS_READ);
+  return { store, analyses: [pops, touchy], calls, sent, log, boom };
+}
+
 describe("WP4 D1 the state with no calculation", () => {
   test("both analyses are locked until a variants file is loaded, with the reason every analysis shares", () => {
     const { store, sent } = newStore();
@@ -838,6 +878,58 @@ describe("WP4 D1 the state with no calculation", () => {
     expect(() => {
       store.variantsRead(VARIANTS_ID, VARIANTS_READ);
     }).toThrow(/^popnei_web defect: the analysis "vars" can run before/);
+  });
+  test("a defect while the keys of a change are made leaves the store as it was: apply, undo, redo and popneiReady", () => {
+    const { store, sent, boom } = storeWithTouchyKeys();
+    store.apply("the MAF filter changed", maf(0.9));
+    store.apply("the MAF filter changed again", maf(0.8));
+    store.undo();
+    store.startRun("vars");
+    const error = { kind: "workerFailed", message: "a trap" } as const;
+    store.runEnded(sentAt(sent, 0).run.id, { kind: "failed", error });
+    boom.on = true;
+    const before = store.getState();
+    expect(before.analyses[1]?.status.kind).toBe("error");
+    expect(() => {
+      store.apply("the MAF filter changed", maf(0.5));
+    }).toThrow("a keyInputs that throws");
+    expect(store.getState()).toBe(before);
+    expect(() => {
+      store.undo();
+    }).toThrow("a keyInputs that throws");
+    expect(store.getState()).toBe(before);
+    expect(() => {
+      store.redo();
+    }).toThrow("a keyInputs that throws");
+    expect(store.getState()).toBe(before);
+    expect(() => {
+      store.popneiReady("0.2.0");
+    }).toThrow("a keyInputs that throws");
+    expect(store.getState()).toBe(before);
+    boom.on = false;
+    // Nothing moved: the failure is kept, the undo goes back to the load
+    // and the redo is the one of before.
+    store.undo();
+    expect(store.getState().project.filters).toStrictEqual([]);
+    store.redo();
+    expect(statuses(store)[1]).toMatchObject({ kind: "ready" });
+    store.redo();
+    expect(store.getState().project.filters).toStrictEqual([
+      { kind: "maf", maxAllowedMaf: 0.8 },
+    ]);
+    expect(store.getState().popneiVersion).toBe("0.1.0");
+  });
+
+  test("a defect while the keys of another version are made stops no calculation", () => {
+    const { store, sent, boom } = storeWithTouchyKeys();
+    store.startRun("vars");
+    boom.on = true;
+    const before = store.getState();
+    expect(() => {
+      store.popneiReady("0.2.0");
+    }).toThrow("a keyInputs that throws");
+    expect(store.getState()).toBe(before);
+    expect(sentAt(sent, 0).cancels()).toBe(0);
   });
 });
 
@@ -1328,6 +1420,43 @@ describe("WP4 D2 the calculations", () => {
     const shown = statuses(store)[1];
     expect(shown?.kind === "done" && shown.result).toBe(varsDone);
   });
+  test("a command whose keys throw moves nothing: a startRun after it sends the job of the settings on screen under their key, and its result is shown for them alone", () => {
+    const { store, analyses, sent } = storeWithTouchyKeys();
+    const [, touchy] = analyses;
+    if (touchy === undefined) {
+      throw new Error("popnei_web defect: no analysis of the variants");
+    }
+    store.apply("the MAF filter changed", maf(0.3));
+    const shown = store.getState();
+    expect(() => {
+      store.apply("the MAF filter changed", maf(0.42));
+    }).toThrow("a keyInputs that throws");
+    expect(store.getState()).toBe(shown);
+    store.startRun("vars");
+    const request = sentAt(sent, 0);
+    expect(request.key).toBe(
+      keyOf(touchy, shown.project, "0.1.0", createKeyMemo()),
+    );
+    expect(request.job.pruned).toBe(
+      intermediateKeyOf(
+        touchy,
+        shown.project,
+        "0.1.0",
+        "pruned",
+        { maxR2: 0.5 },
+        createKeyMemo(),
+      ),
+    );
+    store.undo();
+    expect(store.getState().project.filters).toStrictEqual([]);
+    const result = varsResult(null);
+    store.runEnded(request.run.id, doneWith(request, result));
+    expect(statuses(store)[1]?.kind).toBe("ready");
+    store.redo();
+    expect(store.getState().project).toBe(shown.project);
+    const done = statuses(store)[1];
+    expect(done?.kind === "done" && done.result).toBe(result);
+  });
 });
 
 /** The kinds of the states of the analyses, populations first. */
@@ -1721,6 +1850,94 @@ describe("WP4 D3 the notice", () => {
     expect(store.getState().notice).toBe(notice);
     store.dismissNotice();
     expect(request.cancels()).toBe(1);
+  });
+  test("a read that locks an analysis whose calculation is in flight stops that calculation at once, with no notice", () => {
+    const { analyses } = fakeAnalyses();
+    const [pops, vars] = analyses;
+    if (pops === undefined || vars === undefined) {
+      throw new Error("popnei_web defect: no fake analyses");
+    }
+    // Locked once the variants are counted at 3.
+    const counted: AnalysisDef<TestJob, TestResult> = {
+      ...pops,
+      keyInputs: () => null,
+      needs: (p) =>
+        p.variants?.read.kind === "read" && p.variants.read.numVars === 3
+          ? "Three variants are too few."
+          : null,
+    };
+    const { send, sent } = fakeSend();
+    const store = createStore({
+      first: emptyProject("popgen"),
+      analyses: [counted, vars],
+      send,
+      numVarsOf: (r) => (r.kind === "vars" ? r.numVars : null),
+      appVersion: "0.1.0",
+      cacheMaxBytes: 1024 * 1024,
+      maxUndoSteps: 200,
+    });
+    store.popneiReady("0.1.0");
+    store.apply("a variants file was loaded", loadPanel(VARIANTS_ID));
+    store.variantsRead(VARIANTS_ID, VARIANTS_READ);
+    store.startRun("pops");
+    store.startRun("vars");
+    const first = sentAt(sent, 0);
+    const second = sentAt(sent, 1);
+    store.runEnded(second.run.id, doneWith(second, varsResult(3)));
+    expect(statuses(store)[0]).toStrictEqual({
+      kind: "locked",
+      reason: "Three variants are too few.",
+    });
+    expect(first.cancels()).toBe(1);
+    expect(store.getState().notice).toBeNull();
+    expect(store.getState().runs).toMatchObject([
+      { runId: first.run.id, stopping: true },
+    ]);
+  });
+
+  test("a read that changes the key of a calculation in flight stops it at once, and the next startRun is afterStop", () => {
+    const { analyses } = fakeAnalyses();
+    const [pops, vars] = analyses;
+    if (pops === undefined || vars === undefined) {
+      throw new Error("popnei_web defect: no fake analyses");
+    }
+    // Its key holds the individuals table, and it runs while the file
+    // is read.
+    const tabled: AnalysisDef<TestJob, TestResult> = {
+      ...pops,
+      keyInputs: (p) => {
+        const read = p.individuals?.read;
+        return read?.kind === "read"
+          ? { columns: read.table.columns, rows: read.table.rows }
+          : null;
+      },
+      needs: () => null,
+    };
+    const { send, sent } = fakeSend();
+    const store = createStore({
+      first: emptyProject("popgen"),
+      analyses: [tabled, vars],
+      send,
+      numVarsOf: () => null,
+      appVersion: "0.1.0",
+      cacheMaxBytes: 1024 * 1024,
+      maxUndoSteps: 200,
+    });
+    store.popneiReady("0.1.0");
+    store.apply("a variants file was loaded", loadPanel(VARIANTS_ID));
+    store.variantsRead(VARIANTS_ID, VARIANTS_READ);
+    store.apply("an individuals file was loaded", loadPops);
+    store.startRun("pops");
+    const first = sentAt(sent, 0);
+    store.individualsRead(INDIVIDUALS_ID, CSV, INDIVIDUALS_READ);
+    expect(first.cancels()).toBe(1);
+    expect(store.getState().notice).toBeNull();
+    store.startRun("pops");
+    expect(first.cancels()).toBe(1);
+    expect(store.getState().runs).toMatchObject([
+      { runId: first.run.id, stopping: true },
+      { runId: sentAt(sent, 1).run.id, afterStop: true },
+    ]);
   });
 });
 
@@ -2133,6 +2350,7 @@ function modelledStore(): {
 
   const run = (s: Step): void => {
     const before = store.getState();
+    const cancelsBefore = new Map(model.map((r) => [r, r.sent.cancels()]));
     switch (s.kind) {
       case "command": {
         const command = s.command.bind(before.project);
@@ -2256,6 +2474,15 @@ function modelledStore(): {
       after.project !== before.project
     ) {
       userChanged();
+    }
+    // A read, of a file or of the number of variants of a result, stops
+    // at once what it leaves behind that no notice names.
+    if (s.kind === "read" || s.kind === "end") {
+      for (const r of inFlight()) {
+        if (!r.named && !isCurrent(r) && cancelsBefore.get(r) === 0) {
+          r.mustCancel = true;
+        }
+      }
     }
     // A request leaves the notice when it ends or its key comes back.
     for (const r of model) {
