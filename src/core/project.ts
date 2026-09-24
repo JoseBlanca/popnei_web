@@ -2645,8 +2645,10 @@ const APP_WORDS: Readonly<Record<AppId, string>> = {
   gwas: "association",
 };
 
-/** The end of the text of an error of a field: what the user can do. */
-const DAMAGED = "The file was changed outside the application, or is damaged.";
+/** The end of the text of an error of a field: what happened to the file,
+    and what the user can do. */
+const DAMAGED =
+  "The file was changed outside the application, or is damaged. Open a copy saved before the change, or make the project again.";
 
 /**
  * The text the user reads of what is wrong with a project file. A field is

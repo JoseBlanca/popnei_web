@@ -2211,7 +2211,7 @@ describe("WP1 D5 the validation", () => {
         throw new Error("popnei_web defect: the test expected an error.");
       }
       expect(projectErrorText(result.error)).toBe(
-        'The project file cannot be opened: the first filter of the variants has a field "minAllowedMaf", which the application does not write. The file was changed outside the application, or is damaged.',
+        'The project file cannot be opened: the first filter of the variants has a field "minAllowedMaf", which the application does not write. The file was changed outside the application, or is damaged. Open a copy saved before the change, or make the project again.',
       );
     });
 
@@ -2222,7 +2222,7 @@ describe("WP1 D5 the validation", () => {
         expected: "a number from 0 to 1",
       });
       expect(text).toBe(
-        "The project file cannot be opened: the threshold of the second filter of the variants should be a number from 0 to 1. The file was changed outside the application, or is damaged.",
+        "The project file cannot be opened: the threshold of the second filter of the variants should be a number from 0 to 1. The file was changed outside the application, or is damaged. Open a copy saved before the change, or make the project again.",
       );
       expect(text).not.toContain("filters");
     });
@@ -2521,7 +2521,7 @@ describe("WP1 D5 the validation", () => {
     const textOf = (data: unknown, app: AppId = "popgen"): string =>
       projectErrorText(errorOf(parseProject(data, app, 1, TEST_ANALYSES)));
     const opened = (words: string): string =>
-      `The project file cannot be opened: ${words}. The file was changed outside the application, or is damaged.`;
+      `The project file cannot be opened: ${words}. The file was changed outside the application, or is damaged. Open a copy saved before the change, or make the project again.`;
 
     test("of a field the type does not have", () => {
       const filters = [
