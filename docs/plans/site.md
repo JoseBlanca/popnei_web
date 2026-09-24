@@ -122,7 +122,12 @@ with the browser's message.
    test:e2e` exits 0, and `npx playwright test --list` shows the probe's
    tests in each of the three projects; `npm run build` exits 0, and
    `dist/index.html` and `dist/probe.html` exist after it (moved here
-   from work package 1 on 24 September 2026).
+   from work package 1 on 24 September 2026). Firefox does not start
+   without a window on the owner's Mac, macOS 27.0, so, as the owner
+   decided on 24 September 2026, the three engines run on GitHub's
+   runners in the `e2e` job of work package 3, deliverable 1, and here
+   Chromium and WebKit run; the owner saw the probe working in Firefox
+   by hand meanwhile.
 3. The probe's failure cases show on the page. Check: two tests of
    `e2e/probe.spec.ts`, besides those of deliverable 2: one in which
    Playwright answers the request of popnei's `.wasm` file with 404, with
@@ -148,7 +153,7 @@ with the browser's message.
   `e2e/screens.spec.ts`, as `testing.md` gives them, with the checks of the
   spec's "How it is verified" item 2 and the two failure tests. Serves 2,
   3 and 4. Needs 2.1 and 2.2.
-- [ ] 2.4 The owner looks at the four screenshots; one round, since the
+- [x] 2.4 The owner looks at the four screenshots; one round, since the
   probe is a technical page and not a screen of the applications. A change
   asked for goes into the spec's "The probe" first.
 

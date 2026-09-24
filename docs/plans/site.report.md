@@ -108,10 +108,15 @@ The owner can stop reading here.
 
 ## 2. The probe in the browser
 
-Built and reviewed on 24 September 2026; waiting for the owner's look at
-the screenshots (task 2.4), and for two decisions: where Firefox is
-tested, and what the spec says of the address shown when popnei cannot
-be loaded. Commits 04fd165 to af19d73.
+Done on 24 September 2026. Commits 04fd165 to af19d73, and the spec of
+the address after them.
+
+The owner accepted the probe on its seven screenshots with no change, so
+task 2.4 took no round. They decided the same day that Firefox's
+automated tests run on GitHub's runners, in work package 3, since
+Firefox does not start here; that the spec says what the page does with
+the address of the wasm (below); and kept the refinement that a failure
+to open says whether popnei refused the file.
 
 The deliverables, checked by the orchestrator in the worktree on
 af19d73:
@@ -124,7 +129,8 @@ af19d73:
 2. `npx playwright test --project=chromium --project=webkit` gives "40
    passed", 20 tests in each engine, Chromium 153 and WebKit 26.6;
    `--list` shows 20 tests in each of the three projects. Firefox was not
-   run: it exits at launch on this machine (below). `npm run build` exits
+   run: it exits at launch on this machine (below), and runs on GitHub
+   instead, by the owner's decision. `npm run build` exits
    0, and `dist/index.html` and `dist/probe.html` exist.
 3. Among the 20: the wasm answered 404 shows "popnei could not be
    loaded", and `probe/panel.nei` answered 404 shows its address.
