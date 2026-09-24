@@ -677,9 +677,17 @@ export default defineConfig(
     rules: { "no-restricted-exports": "off" },
   },
   {
-    // This file and any other JavaScript is not in a tsconfig.
-    files: ["**/*.js"],
-    extends: [tseslint.configs.disableTypeChecked],
+    // This file and any other JavaScript, the scripts of node among it, is
+    // not in a tsconfig: the rules that need no types, and the globals of
+    // node the scripts use.
+    files: ["**/*.{js,mjs}"],
+    extends: [js.configs.recommended, tseslint.configs.disableTypeChecked],
+    languageOptions: { globals: { console: "readonly" } },
+    rules: {
+      eqeqeq: "error",
+      "prefer-const": "error",
+      "no-param-reassign": ["error", { props: true }],
+    },
   },
 );
 ```
@@ -725,6 +733,12 @@ export default defineConfig(
 - Core's block adds `individualsReader`: the reader is TypeScript with no
   DOM, which core could import and run on the page, where a file of
   10,000 rows would freeze it; it belongs to the light worker.
+- The last block covers the JavaScript, this file and the scripts of
+  node such as `e2e/fixtures/make_fixtures.mjs`, with `.mjs` named, since
+  a block of `**/*.js` alone left that script parsed and checked by no
+  rule. It is in no tsconfig, so it has the rules of `@eslint/js` and the
+  few of ours that need no types, and `console` as a global; `no-console`
+  is left out, since what a script prints is its output.
 - `crates/` is ignored because what is JavaScript there is what
   wasm-bindgen generated into `crates/files/pkg/`.
 - `react.md` adds the rules of React and of hooks to the block of

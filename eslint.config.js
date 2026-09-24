@@ -306,8 +306,16 @@ export default defineConfig(
     rules: { "no-restricted-exports": "off" },
   },
   {
-    // This file and any other JavaScript is not in a tsconfig.
-    files: ["**/*.js"],
-    extends: [tseslint.configs.disableTypeChecked],
+    // This file and any other JavaScript, the scripts of node among it, is
+    // not in a tsconfig: the rules that need no types, and the globals of
+    // node the scripts use.
+    files: ["**/*.{js,mjs}"],
+    extends: [js.configs.recommended, tseslint.configs.disableTypeChecked],
+    languageOptions: { globals: { console: "readonly" } },
+    rules: {
+      eqeqeq: "error",
+      "prefer-const": "error",
+      "no-param-reassign": ["error", { props: true }],
+    },
   },
 );
