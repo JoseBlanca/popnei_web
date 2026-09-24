@@ -10,7 +10,16 @@ needs of it before it can run, and the validation that turns a project
 file into a project. It develops sections 2, 6 and 8 of
 `docs/architecture.md`, and depends on `docs/specs/worker/protocol.md`,
 for the filters and the table, and on `docs/specs/core/keys.md`, for the
-fingerprint of the settings.
+fingerprint of the settings. The stages it names are the steps in which
+the applications are built, in `docs/build-order.md`: stage 2 the walking
+skeleton, the smallest application that goes through every part once,
+stage 3 the variants step, stage 7 the association application.
+
+Each time the user picks a file, the page gives that pick a load id, a
+random name of its own, new at every pick, the same file picked again
+included (`docs/architecture.md`, section 3). The project names a file by
+its load id, and the page keeps the file itself under that id, since a
+file of the disk cannot be written into a project.
 
 ## What it does
 
@@ -332,9 +341,16 @@ What each does where a reader could doubt it:
 
 `loadVariants` keeps the user's settings, which do not belong to one
 file; `projectNeeds` and `individualsNeeds` then lock what the new file
-does not allow, with their reasons. It keeps the reference, which is how
-the identity of the new file is compared with the one the project was
-made with (`docs/architecture.md`, section 8).
+does not allow, with their reasons. It also keeps the reference of an
+opened project, what the project file said of the file it was made with:
+the screen compares the name, the size, the individuals and the ploidy of
+the new file with the reference's as soon as the file is read, and the
+number of variants once a first calculation has counted it, and warns
+when they differ, saying in what, "The project was made with
+panel_2026.nei, 342 individuals and 1,203,554 variants; this file has 360
+individuals", without refusing the file (`docs/functionality.md`, section
+9, step 2; `docs/architecture.md`, section 8). The words and the place of
+that warning are the screen spec's, with the project file, in stage 2.
 
 `loadIndividuals` and `setCsvOptions` bring, with the new read, the types
 inferred from the new table, and a type the user had changed is lost
@@ -434,11 +450,17 @@ and a fingerprint of 64 lower case hexadecimal digits.
   the analysis ‹id›, which this version of the application does not know:
   it was saved by another version of the application." The option not
   taken was to open it without that analysis.
-- **A field the type does not have** is refused, as a wrong value whose
-  expectation is "no field of this name", so that a file written by a
-  newer version is not read as if it said less than it does. This was
-  decided here, not by the owner; the version of the format in the header
-  is what lets a newer file say so first, in stage 2.
+- **A file saved by a newer version of the application** never reaches
+  `parseProject`: the header of every project file holds the version of
+  its format, and `projectFile.ts`, in stage 2, refuses a version newer
+  than the ones it knows before it reads the rest, with "This project file
+  was saved by a newer version of the application. Open it there, or save
+  it again from it in an earlier format." (the words are that spec's).
+- **A field the type does not have**, in a file whose version this
+  application knows, is refused, as a wrong value whose expectation is
+  "no field of this name", with the text of the next item: such a file was
+  changed by hand or damaged, since this version would not have written
+  the field. This was decided here, not by the owner.
 - **The text of any other error names the field in words**, from a table
   in `project.ts` of every field of the project, with a position as an
   ordinal, and ends with what the user can do: "The project file cannot be
