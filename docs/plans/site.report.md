@@ -105,3 +105,105 @@ The owner can stop reading here.
 - The subagent of work package 1 used about 159,000 tokens for the two
   tasks and 202,000 for the ten fixes; the five reviewers used between
   40,000 and 81,000 each, 282,000 together.
+
+## 2. The probe in the browser
+
+Built and reviewed on 24 September 2026; waiting for the owner's look at
+the screenshots (task 2.4), and for two decisions: where Firefox is
+tested, and what the spec says of the address shown when popnei cannot
+be loaded. Commits 04fd165 to af19d73.
+
+The deliverables, checked by the orchestrator in the worktree on
+af19d73:
+
+1. `node e2e/fixtures/make_fixtures.mjs` writes `e2e/fixtures/panel.nei`
+   and `public/probe/panel.nei`, 261,490 bytes each, read back as 1,200
+   variants, 200 individuals, ploidy 2, and `e2e/fixtures/tetraploid.nei`,
+   16,194 bytes, 200 variants, 12 individuals, ploidy 4; a second run
+   leaves `git status` clean.
+2. `npx playwright test --project=chromium --project=webkit` gives "40
+   passed", 20 tests in each engine, Chromium 153 and WebKit 26.6;
+   `--list` shows 20 tests in each of the three projects. Firefox was not
+   run: it exits at launch on this machine (below). `npm run build` exits
+   0, and `dist/index.html` and `dist/probe.html` exist.
+3. Among the 20: the wasm answered 404 shows "popnei could not be
+   loaded", and `probe/panel.nei` answered 404 shows its address.
+4. `npm run screens` gives "7 passed", seven PNGs in `screens/`: the
+   served file shown, a file of the user shown, a file refused, popnei
+   loading, popnei not loaded, the worker not started, the worker stopped
+   by a crash of the wasm. The plan asked for four; the review asked for
+   the other three.
+
+Changed in the plan: `bad.vcf` is written in popnei_web, since popnei has
+none to copy (task 2.1).
+
+Changed in the spec, in commits of their own before the code:
+
+- by the owner's decisions of 24 September 2026: a failure of its own
+  for a request the worker does not know; the source and the name of the
+  file in a failure to open it; popnei refused to the page's files by the
+  lint, so that only the worker runs it;
+- by the review, each a text of the page or a case the spec had not
+  foreseen: the texts after popnei fails; "The probe's worker did not
+  start."; what the worker does on a crash of the wasm; whether popnei
+  itself refused a file, so that the sentence on which reader the name
+  chose is shown only then (a refinement of the owner's decision on the
+  source and name, told to the owner); the tetraploid fixture.
+
+The review ran eleven categories through six reviewers, then a second
+pass on accessibility, React and the texts. What mattered, all fixed,
+each with a test that failed first:
+
+- When the worker did not start, the page showed "The browser said:"
+  with nothing after it, in Chromium and WebKit: the event a module
+  worker fires then has no message.
+- After popnei failed, two texts still said the files would open once
+  popnei loaded.
+- One unanswered request of a file left every later file on "Opening…"
+  for the rest of the session; the worker now answers every request, and
+  stops on a crash of the wasm, as `worker.md` says.
+- A file whose name chose the wrong reader was refused with no word on
+  the name; the refusal now says it.
+- Four decisions of the spec could break with every test passing, each
+  shown by a reviewer who broke the code: answers in either order, the
+  defect messages, the ploidy shown (every fixture had ploidy 2), the
+  address of a wasm that does not compile.
+- After a crash, a keyboard user was left on nothing; the focus now
+  moves to the defects.
+- The lint did not catch `import("popnei")` written as a call, on the
+  probe's page and in `src/ui`, `src/core` and `src/charts`.
+
+Not taken: counting the individuals with popnei's `numIndividuals`, since
+the spec names `individuals`.
+
+What the owner should know:
+
+- Firefox does not start without a window on this machine, macOS 27.0:
+  Playwright's Firefox 1543 and the installed Firefox 156.0.1 both exit
+  with "Could not find profile folder", also after a reinstall and
+  outside the sandbox. Playwright 1.63.0 is its newest release.
+- popnei's loader takes no address for its wasm and gives none, so the
+  page finds it in the browser's list of fetched files: shown in both
+  engines when the wasm does not compile, only inside popnei's message on
+  a 404, and missing in WebKit on a network failure.
+- popnei's message for a file that is not a VCF quotes its first 16 bytes
+  and cuts mid-word, "`This is a line o`"; that is popnei's to change.
+- Seen by the orchestrator: the seven screenshots, taken in Chromium.
+  Not seen in any browser: Firefox.
+
+### How the work went, for whoever revises a skill or a plan
+
+The owner can stop reading here.
+
+- The first review of work package 2 found 19 findings, the second 7;
+  most were cases of failure that the spec named and no test reached. A
+  plan that lists, for each case of the spec, the test that reaches it
+  would have caught them at the task.
+- A test written to show a defect passed on the defective code twice,
+  because an earlier failure hid it; the writer found it only by running
+  each new test against the old code. The code-review skill could ask
+  for that run.
+- The subagent of task 2.2 used about 190,000 tokens for the task,
+  264,000 for the 19 fixes and 316,000 for the seven of the second pass;
+  task 2.1 used 58,000 and task 2.3 112,000; the seven reviewers used
+  between 51,000 and 104,000 each, 565,000 together.
