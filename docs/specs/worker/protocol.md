@@ -255,6 +255,14 @@ core; core makes its own type of key of it with `keyFromWire`
   them and is started again (`.claude/skills/coding/worker.md`), and the
   store does not keep them, since a second try, after other analyses have
   given back their memory, can succeed.
+- **One refusal of popnei depends on more than the data**: a block of
+  variants that the memory of popnei's code could not hold, which popnei
+  refuses with a plain `Error` rather than a crash (`js/popnei/README.md`,
+  on traps). It can succeed after a restart, which gives the memory back,
+  and the runner cannot tell it from a refusal of the data by its type.
+  Until popnei gives it a kind of its own, which is asked of popnei, it is
+  kept as a refusal, and a new load of the file, which restarts the
+  worker, gives it another key.
 - **A mistake of our runner outside a call to popnei**, a `TypeError` of
   ours, reaches the worker's error handler and is `workerFailed` too
   (`.claude/skills/coding/typescript.md`, "Errors").
