@@ -25,3 +25,16 @@ Checked on 24 September 2026 in the worktree
   gives "Tests 68 passed (68)" in one file; `npm run build` exits 0;
   `npx playwright test --project=chromium --project=webkit` gives "40
   passed".
+
+## 1. The project and its commands
+
+Under way.
+
+- Task 1.1, 67df68a: the types of `src/worker/protocol.ts`,
+  `src/core/result.ts`, and of `project.ts`, `keys.ts` and `store.ts`,
+  with no function; fast-check 4.10.2 added, which brought `pure-rand`
+  and nothing else (`npm ls fast-check` prints `fast-check@4.10.2`). A
+  scratch line naming `File` in `protocol.ts` failed `npm run typecheck`
+  with "error TS2304: Cannot find name 'File'", and was removed. The
+  checks exit 0, "Tests 68 passed (68)". `KeyedDef` was left for task
+  2.2, which names it.

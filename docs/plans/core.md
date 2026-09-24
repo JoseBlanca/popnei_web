@@ -196,7 +196,7 @@ file's JSON becomes, or is refused with a text the user reads.
 
 **Tasks:**
 
-- [ ] 1.1 The types: `src/worker/protocol.ts`, `src/core/result.ts`, and
+- [x] 1.1 The types: `src/worker/protocol.ts`, `src/core/result.ts`, and
   the types, with no function, of `project.ts`, of `keys.ts` (`JsonValue`,
   `JsonObject`, `Key`, `KeyMemo`) and of `store.ts` (`AnalysisDef`,
   `WorkerClient`, `Warning`), from the interfaces of the protocol,
