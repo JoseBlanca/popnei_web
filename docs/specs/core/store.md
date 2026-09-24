@@ -11,7 +11,11 @@ change removed or will stop. The screens change it with commands, and
 develops sections 3, 4, 5 and 7 of `docs/architecture.md`, declares the
 definition of an analysis of its section 4, and depends on
 `docs/specs/core/project.md`, `keys.md`, `history.md` and `cache.md`, and
-on `docs/specs/worker/protocol.md` for a request and its outcome.
+on `docs/specs/worker/protocol.md` for a request and its outcome. The
+stages it names are the steps in which the applications are built, in
+`docs/build-order.md`: stage 2 is the walking skeleton, the smallest
+application that goes through every part once, and stage 6 the project
+file and the report.
 
 ## What it does
 
@@ -41,8 +45,8 @@ tests in the tests.
 
 - `needs` gives the reason the analysis cannot run beyond what every
   analysis needs (`docs/specs/core/project.md`, `projectNeeds`), in the
-  words the screen shows next to its Run button, or `null`. Both make the
-  state `locked`.
+  words the screen shows next to its Run button, or `null`. A reason from
+  either of the two locks the analysis; `projectNeeds` is asked first.
 - `filtersRead` says which of the two lists of filters the analysis
   reads, and `keyInputs` what else its key holds
   (`docs/specs/core/keys.md`).
@@ -113,7 +117,9 @@ calculations in flight are stopped at once, since the screen asked before
 opening; an opening makes no notice.
 
 The events come from the workers, through `src/ui/runs.ts` and the entry
-of the page, and change what the screens show without a step of undo: the
+of the page, the code that starts when the page opens, makes the store and
+the workers and joins them, and change what the screens show without a
+step of undo: the
 version of popnei, the reads of the files, recorded into every project of
 the history that holds their load, and the end of a calculation.
 
@@ -128,34 +134,66 @@ The screen writes it as "3 results removed because the MAF filter changed
 applications"). An analysis removed is in the state `removed` if it can
 run, and `locked`, with what it lacks, if it cannot.
 
-A calculation in flight whose key the project no longer gives is stopped,
-unless the change is undone, as the owner decided on 24 September 2026
-(`docs/architecture.md`, section 5). It is in the same notice, which is
-one for the user: one message and one Undo for everything the change
-did, "2 results removed because the MAF filter changed. The ongoing
-calculations will be stopped unless you undo the change. · Undo". The
-calculations it names are stopped, with the `cancel()` of their handle,
-at the first of these:
+A calculation in flight whose key the project no longer gives, one the
+change left behind, is stopped unless the change is undone, as the owner
+decided on 24 September 2026 (`docs/architecture.md`, section 5). It is in
+the same notice as the results removed, which is one for the user: one
+message and one Undo for everything the change did, "2 results removed
+because the MAF filter changed. The ongoing calculations will be stopped
+unless you undo the change. · Undo". The store stops a calculation left
+behind, with the `cancel()` of its handle, only when keeping it would
+cost the user something, at the first of these:
 
-- the user closes the notice, `dismissNotice`;
-- ten seconds after the notice appeared, when the shell calls
-  `stopReplacedRuns` from a timer of the screen, since core reads no clock
-  (**Open 1**, below); the notice stays, with its Undo, and says the
-  calculations were stopped;
-- the next command, undo, redo or opening replaces the notice. The
+- **the user closes the notice**, `dismissNotice`: they have seen it and
+  not undone; every calculation it named is stopped;
+- **the next command, undo, redo or opening replaces the notice**: the
   calculations it named whose key the new project still does not give are
-  stopped; an undo gives the keys back, and those calculations go on.
+  stopped; an undo gives the keys back, and those calculations go on;
+- **a new calculation would wait behind it**: `startRun`, when the user
+  presses Run, stops first every calculation left behind, since the one
+  calculation worker runs one request at a time and the new one would
+  otherwise wait for it, minutes for a GWAS. The notice then loses its
+  sentence on stopping and keeps the results removed and the Undo, or goes
+  if nothing is left in it.
+
+There is no deadline. Until one of the three, Undo keeps the calculation
+running, however late the user reaches it: a user who moves through the
+page with the keyboard or a screen reader can take long to reach the
+Undo, and a deadline would cost them the minutes the calculation had
+already run, which is the kind of time limit WCAG 2.2, the accessibility
+standard the applications follow, asks to avoid (success criterion
+2.2.1). The option not taken, a stop ten seconds after the notice
+appeared, had been proposed with no measurement and is not in the owner's
+words.
 
 A calculation that waits in the queue leaves it at no cost; one that runs
 ends the calculation worker, and a new one starts and reads the variants
-file again (`.claude/skills/coding/worker.md`, "Cancelling"). The option
-not taken was to let it finish, its result kept for a possible undo, while
-the calculation of the new settings waited behind it, minutes for a GWAS.
+file again, with popnei 0.1.0 the whole file (`.claude/skills/coding/worker.md`,
+"Cancelling"). The calculation of the new settings does not start by
+itself: it starts when the user presses Run, as every calculation does.
+The request started by a `startRun` that stopped a calculation is marked,
+`afterStop`, so that its panel says that it may first wait for the
+variants file to be read again, which with a large file is most of the
+wait; the store does not know whether the calculation stopped was running
+or waiting in the queue, which only the worker client knows. The option not taken for the whole of this was to let a calculation
+left behind finish, its result kept for a possible undo, while the
+calculation of the new settings waited behind it.
+
+When the notice changes after `startRun` stopped calculations, the
+screen's words change without the user's focus on them; the shell, the
+header and the frame of the page, announces the change through its status
+region, the part of the page a screen reader reads out when its text
+changes, "The earlier calculation of Diversity was stopped", as
+`.claude/skills/coding/react.md` says of announcements (WCAG 2.2, success
+criterion 4.1.3).
 
 The notice goes when it is closed or replaced; a change that removes
-nothing and stops nothing replaces it with none. An analysis in the
-notice that is done again, when a calculation of its new key ends, leaves
-the notice, and a notice left with nothing goes.
+nothing and leaves nothing behind replaces it with none. An analysis in
+the notice that is done again, when a calculation of its new key ends,
+leaves the notice, and a notice left with nothing goes. Every calculation
+left behind is named by the current notice, since only a change leaves
+one behind, and each change makes the notice; so closing or replacing it
+reaches them all.
 
 ### A calculation that failed
 
@@ -282,6 +320,7 @@ export interface RunView {
   readonly key: Key;
   readonly current: boolean;
   readonly stopping: boolean;    // cancelled, its outcome not yet arrived
+  readonly afterStop: boolean;   // started by a startRun that stopped a calculation
   readonly progress: Progress | null;
 }
 
@@ -294,8 +333,7 @@ export type CheckVerdict =
 export interface Notice {
   readonly cause: { readonly kind: "command" | "undo" | "redo"; readonly description: string };
   readonly removed: readonly AnalysisId[];
-  readonly stopping: readonly AnalysisId[];  // their calculations will be, or were, stopped
-  readonly stopped: boolean;
+  readonly leftBehind: readonly AnalysisId[];  // their calculations will be stopped unless undone
 }
 ```
 
@@ -328,12 +366,12 @@ export interface Store<R> {
   undo(): void;
   redo(): void;
   open(p: Project): void;
+  /** Closes the notice, and stops the calculations it left behind. */
   dismissNotice(): void;
-  stopReplacedRuns(): void;
 
   /** Starts the calculation of an analysis that is ready, removed, or in
-      error after a failure that is not popnei's; null, and nothing done,
-      in any other state. */
+      error after a failure that is not popnei's, after stopping every
+      calculation left behind; null, and nothing done, in any other state. */
   startRun(id: AnalysisId): Run<R> | null;
   /** Stops the calculation in flight of an analysis, if there is one. */
   cancelRun(id: AnalysisId): void;
@@ -358,8 +396,9 @@ What `runEnded` does with each outcome, after it takes the request out of
 those in flight:
 
 - `done`: the result goes into the cache under its key, with its
-  warnings, made from the request's project, and the keys of the current
-  project kept; the number of variants, when `numVarsOf` gives one, is
+  warnings, made from the request's project; if the cache is then above
+  its bound, it drops results the current project does not show, never
+  one it shows (`docs/specs/core/cache.md`); the number of variants, when `numVarsOf` gives one, is
   recorded into the variants file of the request's load in every project
   of the history.
 - `failed` of kind `popnei`: the message is kept under the key for the
@@ -369,8 +408,8 @@ those in flight:
 
 ## The cases
 
-- **A result that arrives after the user changed a setting**, in the ten
-  seconds before its calculation is stopped. It goes into the cache under
+- **A result that arrives after the user changed a setting**, before its
+  calculation was stopped. It goes into the cache under
   the key it was asked for, with its warnings, and is not shown, since the
   project gives that analysis another key; an undo shows it with no
   calculation (`docs/architecture.md`, section 5).
@@ -385,8 +424,9 @@ those in flight:
 - **A second `popneiReady`**, from the calculation worker started again
   after a restart: with the same version, nothing changes. With another,
   which the page and the workers, built together, do not give, the store
-  records it, every key changes, and the analyses are calculated again
-  when asked.
+  records it, every key changes, the calculations in flight, all left
+  behind, are stopped at once, since no undo gives the old version back,
+  and the analyses are calculated again when asked.
 - **A command that returns the project it was given**: nothing changes,
   the notice neither; `getState` gives the same object.
 - **A result whose key is not its request's key**, or a `runEnded` of a
@@ -402,13 +442,16 @@ those in flight:
 ## How it runs
 
 On the page. After every change of the project or of the version of
-popnei, the store makes the key of each analysis that is not locked,
-keeping the keys of the last project and version, and a memo of the
-canonical texts of its objects (`docs/specs/core/keys.md`, `KeyMemo`), so
-that a progress message, which changes neither, makes no key. Then it
-uses in the cache the results of the current keys, so that the results on
-screen are the last to be dropped (`docs/specs/core/cache.md`), and calls
-the screens' listeners once. The store never waits: `startRun` returns at
+popnei, the store makes the key of each analysis that is not locked. It
+keeps the keys of the last project and version, so that a progress
+message, which changes neither, makes no key; and a memo, a table of the
+text already written for each object of the project, so that the
+individuals table is not written again for a command that changed a
+threshold (`docs/specs/core/keys.md`, `KeyMemo`). Then it uses in the
+cache the results of the current keys, so that the results on screen are
+the last to be dropped (`docs/specs/core/cache.md`), and calls once each
+listener, the function each screen gave `subscribe` to be told of a
+change. The store never waits: `startRun` returns at
 once, and the outcome arrives as an event.
 
 What the store keeps grows with the session: the cache, bounded in bytes;
@@ -435,12 +478,14 @@ and one that needs only the variants file.
   `done` again with the same result object, `send` was called once, and
   the notice is `null`.
 - **Stopping.** With the second running, a command that changes its key:
-  the notice lists it in `stopping`, and `cancel()` was not called.
-  `stopReplacedRuns()`: `cancel()` was called, the notice stays with
-  `stopped` true. Again with an undo in place of the timer: `cancel()` is
-  not called and the analysis is `running`. Again with a second command:
-  `cancel()` is called. Again with `dismissNotice()`: `cancel()` is
-  called and the notice is `null`.
+  the notice lists it in `leftBehind`, and `cancel()` was not called.
+  Then an undo: `cancel()` is not called and the analysis is `running`.
+  Again, then a second command: `cancel()` is called. Again, then
+  `dismissNotice()`: `cancel()` is called and the notice is `null`. Again,
+  then `startRun` of the second for its new key: `cancel()` of the old
+  request is called before `send`, the new request is `afterStop`, and the
+  notice keeps its removed results and has no `leftBehind`, or is `null`
+  if it had none. No test waits for a time: the store has no clock.
 - **A late result**: a command, then `runEnded` of the old key: the
   analysis is `removed`, the cache holds the result with the warnings of
   the request's project; `undo()` shows it `done`.
@@ -468,8 +513,10 @@ and one that needs only the variants file.
   shown only under the key that `keyOf` gives for the current project; an
   undo after a command that removed results gives them back, done, when
   the cache still holds them; the notice of each change lists exactly the
-  analyses that were done before it and are not after it; and a request
-  whose key the project does not give when its notice goes has been
+  analyses that were done before it and are not after it; every request
+  in flight whose key the project does not give is named by the notice or
+  stopping; and a request left behind whose notice was closed or replaced
+  without its key coming back, or that a `startRun` met, has been
   cancelled.
 
 The tests in the browser, of the walking skeleton, check the same through
@@ -478,23 +525,15 @@ the screens, since core reaches them through the store
 
 ## Open points
 
-1. **How long the calculations wait before they are stopped.** Ten
-   seconds after the notice appears, the calculations the change left
-   behind are stopped, unless the change was undone. The number is the
-   orchestrator's choice, not measured: shorter stops a calculation before
-   a user who changed a value by mistake reaches Undo; longer keeps the
-   worker busy with settings the user has left. Meanwhile, ten seconds,
-   a named constant of the shell, `STOP_REPLACED_RUNS_AFTER_MS`.
-
-It also uses the bound of the cache (`docs/specs/core/cache.md`, **Open
-1**) and the bound of the history (`docs/specs/core/history.md`, **Open
-1**).
+None of the store's own. It uses the bound of the cache
+(`docs/specs/core/cache.md`, **Open 1**) and the bound of the history
+(`docs/specs/core/history.md`, **Open 1**).
 
 ## Not in this spec
 
-- `src/ui/runs.ts`, which awaits the requests, the timer of the notice,
-  and the hook, the function through which a React screen reads the
-  store: the specs of the shell, in stage 2, and
+- `src/ui/runs.ts`, which awaits the requests, and the hook, the function
+  through which a React screen reads the store: the specs of the shell,
+  the header, the stepper and the notices of the page, in stage 2, and
   `.claude/skills/coding/react.md`.
 - The list of the analyses of each application, `apps.ts`, and each
   analysis: from stage 2.
