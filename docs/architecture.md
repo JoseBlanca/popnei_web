@@ -107,13 +107,26 @@ Windows-1252 among them, shown to the user and changeable, as the owner
 decided on 24 September 2026 (section 6).
 
 What was revised for the specs of stage 1, on 24 September 2026, not yet
-approved by the owner: the reference of an opened project keeps a
-fingerprint of the settings of each analysis in place of a key, as the
-owner decided (sections 2 and 8); the definition of an analysis gains
-`parseOptions`, and its `run` is given a client bound to its key by the
-store, which looks in the cache (section 4); a read of the individuals
-file says what "auto" found (section 2); and section 12 no longer counts
-the canonical form of the keys as hard to undo, since no key is saved.
+approved by the owner:
+
+- The reference of an opened project keeps a fingerprint of the settings
+  of each analysis in place of a key, as the owner decided, and the
+  project file saves the key version of each analysis with its check
+  numbers, and the application's version in its header, so that a changed
+  calculation is not blamed on the file (sections 2 and 8).
+- The definition of an analysis gains `parseOptions`, given the version
+  of the project file, and `filtersRead`, the filters it reads; its `run`
+  is given a client bound to its key, which also makes the keys of the
+  intermediate results, and the store looks in the cache (sections 3 and
+  4). `src/ui/runs.ts` hands the store the outcome of a run, and the
+  progress reaches the store through the bound client (section 9).
+- `keys.ts` adds the load of the variants file and the filters to every
+  key itself, and `keyInputs` gives the rest (section 3).
+- The options of the analyses are pairs in the project, not a record, and
+  part of the format of the project file (sections 2 and 12).
+- A read of the individuals file says what "auto" found (section 2).
+- Section 12 no longer counts the canonical form of the keys as hard to
+  undo, since no key is saved.
 
 What each replaced, and why, is at the end of sections 3 and 6. popnei is
 no longer asked for a fingerprint nor for a reader of these files, so the
@@ -139,7 +152,9 @@ interface Project {
   // popgen: the column that defines the populations, and later the
   //         edits made with the lasso; gwas: the roles of the columns
   grouping: Grouping;
-  analyses: Record<AnalysisId, AnalysisOptions>; // the options of each
+  analyses: { analysis: AnalysisId; options: AnalysisOptions }[];
+                                      // the options of each, as pairs, since
+                                      // a project file can hold any key
   reference: Reference | null;        // from an opened project file (section 8)
 }
 
@@ -192,9 +207,11 @@ interface Reference {
   variants: VariantSource;            // the file the project was made with;
                                       // its fileId names no File
   popneiVersion: string;              // from the header of the project file
+  appVersion: string;                 // the same
   checks: {
     analysis: AnalysisId;
     numbers: (number | null)[];       // saved in the project file
+    keyVersion: number;               // saved: the analysis's, when it was run
     settings: string;                 // never saved: the fingerprint of the
   }[];                                // analysis's settings in the file,
 }                                     // made when it is opened (section 8)
@@ -232,8 +249,12 @@ every key are:
   picked again included, and its read options (section 2). Nothing else
   of the file goes in: not its name, size or date of last change, and no
   hash of what it holds;
-- the filters of variants and the filters of individuals that come before
-  the analysis, in their order, with their parameters;
+- the filters of variants and the filters of individuals that the
+  analysis reads, in their order, with their parameters: all of them for
+  every analysis of sections 5 to 8 of `docs/functionality.md`, and not
+  the filters that the checks per variant and per individual of its
+  section 3 serve to set, whose histograms would otherwise be removed at
+  every move of a threshold (section 4, `filtersRead`);
 - the parts of the individuals table and of the grouping that the analysis
   uses;
 - its own options;
@@ -347,30 +368,38 @@ where the id of a load of an earlier session names nothing.
 Each analysis is one module, with the same shape, in both applications:
 
 ```ts
-interface AnalysisDef<Opts, Result> {
+interface AnalysisDef<Opts, R> {
   id: AnalysisId;                        // "pca", "diversity", "fst", "gwas"...
   app: ("popgen" | "gwas")[];
   defaults: Opts;
   keyVersion: number;                    // raised when the meaning of its result changes
-  parseOptions(o: unknown): Result<Opts, string>; // its options read from a project file
+  filtersRead: { variants: boolean; individuals: boolean }; // which filters it reads
+  parseOptions(o: unknown, formatVersion: number): Result<Opts, string>;
+                                         // its options read from a project file
   keyInputs(p: Project): unknown;        // the parts of the project it depends on,
                                          // beyond the load and the filters (section 3)
   needs(p: Project): string | null;      // why it cannot run yet, or null
-  run(p: Project, c: WorkerClient): Run<Result>; // the request to the worker
-  warnings(r: Result, p: Project): Warning[]; // raised by the data only
-  checkNumbers(r: Result): number[];     // kept in the project file (section 8)
+  run(p: Project, c: WorkerClient): Run<R>; // the request to the worker
+  warnings(r: R, p: Project): Warning[]; // raised by the data only
+  checkNumbers(r: R): (number | null)[]; // kept in the project file (section 8)
   script(p: Project): string;            // its lines of the Python script
 }
 ```
 
 and its panel of options and its results in `src/ui`. `WorkerClient` is
-an interface that core declares and the client of `src/worker` fulfils,
-since core has no DOM and cannot name the browser's `Worker`. The store
-gives `run` a client bound to the key of the request, and looks in the
-cache before it calls `run`, so that an analysis neither makes a key nor
-reads the cache (`docs/specs/core/store.md`). `parseOptions` was added
-with that spec, on 24 September 2026, because the options of an analysis
-are its module's to check when a project file is opened. Adding an
+an interface that core declares, since core has no DOM and cannot name
+the browser's `Worker`; the store makes one for each request from the
+`run` of the client of `src/worker`, bound to the key of that request,
+and looks in the cache before it calls `run`, so that an analysis neither
+makes the key of its result nor reads the cache. The bound client also
+makes the keys of the intermediate results the request needs, the pruned
+variants, the kinship, with the load, the filters and the version of
+popnei that every key holds (`docs/specs/core/store.md`). `parseOptions`
+and `filtersRead` were added with that spec, on 24 September 2026:
+the options of an analysis are its module's to check when a project file
+is opened, and the checks per variant and per individual, from which the
+thresholds of the filters are chosen, do not read the filters they are
+used to set. Adding an
 analysis is adding its module and its panel; nothing else changes. This is the
 piece the work is split into, and what lets an analysis be tried, changed
 or dropped without touching the others.
@@ -783,8 +812,10 @@ for the smallest part of it.
   the fingerprint of the settings is still the file's, the numbers of the
   result are compared with those of the reference, and the screen says
   whether they are the same, and what changed that could explain a
-  difference: the variant file, or, when the version of popnei is not the
-  one in the file's header, the version as well
+  difference: the variant file; the version of popnei, when it is not the
+  one in the file's header; and the application's calculation of that
+  analysis, when its key version is not the one saved with its numbers, so
+  that a calculation the application changed is not blamed on the file
   (`docs/specs/core/store.md`). The reference is in no key: it is not an
   input of any result.
 - **The report** is made in three parts, each in the layer that can do
@@ -853,7 +884,8 @@ src/charts/
 src/ui/
   shell/            the header, the stepper, the summary line, the notices
   runs.ts           awaits the outcome of each run core starts, and hands
-                    progress and results to the store as events
+                    it to the store; cancels the queued runs no longer
+                    asked for
   steps/            one folder per step: variants, individuals, analyses, export
   analyses/         the panel of options and the results of each analysis
   report/           renders the report model into its HTML page, with the plots
@@ -960,7 +992,11 @@ code, version 0.1.0.
   version of its format in its header (`docs/functionality.md`, section
   9), and opening one validates it against the schema of that version
   (section 8), so a change to the format is a new version, and the
-  application keeps reading the versions before it.
+  application keeps reading the versions before it. The options of each
+  analysis are part of that format: each analysis reads its options of
+  every earlier version, through its `parseOptions`, which is given the
+  version of the file (section 4).
+
 The canonical form of the keys is not among these, although an earlier
 version of this section said it was. No key and no fingerprint of
 settings is saved in a file: the cache lives in the tab, the calculation

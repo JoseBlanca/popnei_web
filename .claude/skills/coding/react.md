@@ -85,11 +85,13 @@ read it through one hook, in `src/ui/store.tsx`:
 ```tsx
 import { createContext, useContext, useSyncExternalStore } from "react";
 import type { AppState, Store } from "../core/store.ts";
+import type { JobResult } from "../worker/protocol.ts";
 
-const StoreContext = createContext<Store | null>(null);
+// The store of the application holds the results of its workers, JobResult.
+const StoreContext = createContext<Store<JobResult> | null>(null);
 export const StoreProvider = StoreContext.Provider;
 
-export function useStore(): Store {
+export function useStore(): Store<JobResult> {
   const store = useContext(StoreContext);
   if (store === null) {
     throw new Error("popnei_web defect: useStore outside a StoreProvider");
@@ -97,7 +99,7 @@ export function useStore(): Store {
   return store;
 }
 
-export function useAppState<T>(select: (state: AppState) => T): T {
+export function useAppState<T>(select: (state: AppState<JobResult>) => T): T {
   const store = useStore();
   return useSyncExternalStore(store.subscribe, () => select(store.getState()));
 }
@@ -148,17 +150,17 @@ here is our wrapper of `src/ui/widgets/`, below:
 
 ```tsx
 const store = useStore();
-const threshold = useAppState(selectMaxMissingRate); // a selector of core, a number
+const threshold = useAppState(selectMaxMissingRate); // a selector of core, popnei's number
 
 <NumberField
-  label="Minimum proportion of called genotypes"
+  label="Maximum proportion of missing genotypes"
   value={threshold}
   minValue={0}
   maxValue={1}
   step={0.01}
   onChange={(value) =>
     store.apply("the missing data filter changed", (p) =>
-      setVariantFilter(p, { kind: "missing_data", maxAllowedMissingRate: 1 - value }),
+      setVariantFilter(p, { kind: "missing_data", maxAllowedMissingRate: value }),
     )
   }
 />

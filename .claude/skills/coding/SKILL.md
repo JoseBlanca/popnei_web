@@ -183,7 +183,7 @@ is what the core layer adds to them.
   no `Date`, no class, no typed array, no `File`. That is what makes
   saving it `JSON.stringify` and opening it a validation.
 - **A command is a function `(project, ...arguments) => Project`**, named
-  by what it does, `setMaxMissingRate(project, 0.1)`, in `project.ts`. It
+  by what it does, `setVariantFilter(project, { kind: "maf", maxAllowedMaf: 0.95 })`, in `project.ts`. It
   builds the new project with spread, `{ ...project, filters: [...] }`,
   and keeps the same reference for every part it did not change: the
   screens and the notice of removed results tell what changed by comparing
