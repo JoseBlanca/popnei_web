@@ -477,6 +477,7 @@ describe("WP2 D2 the key", () => {
 
   test.each([
     ["63 digits", LITERAL_KEY.slice(1)],
+    ["65 digits", `${LITERAL_KEY}0`],
     ["an upper case digit", `F${LITERAL_KEY.slice(1)}`],
     ["a g", `g${LITERAL_KEY.slice(1)}`],
   ])("keyFromWire throws a defect on %s", (_what, text) => {
