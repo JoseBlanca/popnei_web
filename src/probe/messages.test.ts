@@ -23,6 +23,7 @@ const FAILED_OPEN = {
   name: "panel.nei",
   address: "http://localhost:4173/popnei_web/probe/panel.nei",
   message: "404 Not Found",
+  popneiRefused: false,
 };
 const FAILED_INIT = {
   kind: "failed",
@@ -90,6 +91,12 @@ describe("validateFromProbe", () => {
       "null",
     ],
     [
+      "popneiRefused",
+      { ...FAILED_OPEN, popneiRefused: "yes" },
+      "failed of stage open",
+      "string",
+    ],
+    [
       "address",
       { ...FAILED_INIT, address: false },
       "failed of stage init",
@@ -117,6 +124,7 @@ describe("validateFromProbe", () => {
     ["failed", FAILED_OPEN, "stage"],
     ["failed of stage open", FAILED_OPEN, "source"],
     ["failed of stage open", FAILED_OPEN, "name"],
+    ["failed of stage open", FAILED_OPEN, "popneiRefused"],
     ["failed of stage init", FAILED_INIT, "address"],
     ["failed of stage message", FAILED_MESSAGE, "message"],
   ])("refuses %s without the field %s", (messageKind, message, field) => {

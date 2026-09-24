@@ -81,7 +81,7 @@ async function answer(data: unknown): Promise<void> {
   const target = targetOf(request);
   try {
     if (!(await popneiLoaded)) {
-      post(failed(target, POPNEI_NOT_LOADED));
+      post(failed(target, POPNEI_NOT_LOADED, false));
       return;
     }
     const bytes = await bytesOf(request);
@@ -91,7 +91,7 @@ async function answer(data: unknown): Promise<void> {
       stop(error);
       return;
     }
-    post(failed(target, messageOf(error)));
+    post(failed(target, messageOf(error), false));
   }
 }
 
@@ -139,12 +139,22 @@ async function bytesOf(request: ToProbe): Promise<Uint8Array> {
  * vars file otherwise, and frees what popnei gave. A VCF is opened with
  * popnei's default ploidy, 2, which is then given and not read. `openMs`
  * is the time of popnei's call alone, not of the fetch or the read. What
- * popnei throws is the caller's to catch.
+ * popnei's call throws is a refusal of the file, but for a trap, which is
+ * thrown on for the caller to stop the worker; what throws after it is the
+ * caller's to catch.
  */
 function open(bytes: Uint8Array, target: Target): FromProbe {
   const isVcf = readsAsVcf(target.name);
   const started = performance.now();
-  const variants: Variants = isVcf ? openVcf(bytes) : openVars(bytes);
+  let variants: Variants;
+  try {
+    variants = isVcf ? openVcf(bytes) : openVars(bytes);
+  } catch (error) {
+    if (error instanceof WebAssembly.RuntimeError) {
+      throw error;
+    }
+    return failed(target, messageOf(error), true);
+  }
   try {
     const openMs = performance.now() - started;
     return {
@@ -169,8 +179,12 @@ function servedAddress(): string {
   ).href;
 }
 
-function failed(target: Target, message: string): FromProbe {
-  return { kind: "failed", stage: "open", ...target, message };
+function failed(
+  target: Target,
+  message: string,
+  popneiRefused: boolean,
+): FromProbe {
+  return { kind: "failed", stage: "open", ...target, message, popneiRefused };
 }
 
 /**

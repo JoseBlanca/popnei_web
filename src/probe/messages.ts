@@ -116,6 +116,12 @@ export type FromProbe =
       readonly address: string | null;
       /** popnei's message or the browser's, as it came. */
       readonly message: string;
+      /**
+       * True when popnei's `openVcf` or `openVars` threw, so that the page
+       * says which reader the name chose; false when the file failed before
+       * popnei read it, not found, not read, or popnei not loaded.
+       */
+      readonly popneiRefused: boolean;
     }
   /**
    * The worker received a request that is not a `ToProbe`, which only a
@@ -429,6 +435,7 @@ function validateFailed(record: object): Checked<FromProbe> {
         "name",
         "address",
         "message",
+        "popneiRefused",
       ]);
       if (wrong !== null) {
         return wrong;
@@ -455,9 +462,26 @@ function validateFailed(record: object): Checked<FromProbe> {
       if (typeof text !== "string") {
         return wrongType(messageKind, "message", "a string", text);
       }
+      const popneiRefused = ownField(record, "popneiRefused");
+      if (typeof popneiRefused !== "boolean") {
+        return wrongType(
+          messageKind,
+          "popneiRefused",
+          "a boolean",
+          popneiRefused,
+        );
+      }
       return {
         ok: true,
-        value: { kind: "failed", stage, source, name, address, message: text },
+        value: {
+          kind: "failed",
+          stage,
+          source,
+          name,
+          address,
+          message: text,
+          popneiRefused,
+        },
       };
     }
     case "message": {
