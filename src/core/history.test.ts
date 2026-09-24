@@ -212,6 +212,8 @@ describe("WP3 D1 the history", () => {
     expect(bottom.maxSteps).toBe(200);
     expect(bottom.present.project).toBe(projects[1]);
     expect(bottom.future).toHaveLength(200);
+    const small = deepFreeze(undo(historyOf([0.1, 0.2, 0.3], 10)));
+    expect(small.maxSteps).toBe(10);
   });
 
   test("redo keeps the bound of the history", () => {
@@ -224,6 +226,10 @@ describe("WP3 D1 the history", () => {
     expect(top.past).toHaveLength(200);
     expect(top.past[0]?.project).toBe(projects[1]);
     expect(top.present.project).toBe(projects[201]);
+    const small = deepFreeze(
+      redo(deepFreeze(undo(historyOf([0.1, 0.2, 0.3], 10)))),
+    );
+    expect(small.maxSteps).toBe(10);
   });
 
   test("mapProjects keeps the bound of the history", () => {
@@ -279,6 +285,7 @@ describe("WP3 D1 the history", () => {
     );
     expect(mapped.present.description).toBe(h.present.description);
     expect(loaded?.project.filters).toBe(h.past[1]?.project.filters);
+    expect(mapped.maxSteps).toBe(10);
   });
 
   test("mapProjects records a read in the projects of the future too", () => {
