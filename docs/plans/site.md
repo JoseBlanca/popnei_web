@@ -144,7 +144,7 @@ with the browser's message.
 - [x] 2.2 `probe.html`, `src/probe/probe.tsx` and
   `src/probe/probeWorker.ts`, the spec's "The probe" and "The cases".
   Serves 2 and 3. Needs 1.2.
-- [ ] 2.3 `playwright.config.ts`, `e2e/axe.ts`, `e2e/probe.spec.ts` and
+- [x] 2.3 `playwright.config.ts`, `e2e/axe.ts`, `e2e/probe.spec.ts` and
   `e2e/screens.spec.ts`, as `testing.md` gives them, with the checks of the
   spec's "How it is verified" item 2 and the two failure tests. Serves 2,
   3 and 4. Needs 2.1 and 2.2.
