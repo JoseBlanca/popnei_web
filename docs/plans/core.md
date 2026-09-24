@@ -213,7 +213,7 @@ file's JSON becomes, or is refused with a text the user reads.
   and a CSV table read, since `setColumnType` and `setCsvOptions` need
   one. Serves 3. Needs 1.2, since a command compares values by their
   canonical form.
-- [ ] 1.4 The records, `projectNeeds` and `individualsNeeds`, from the
+- [x] 1.4 The records, `projectNeeds` and `individualsNeeds`, from the
   project spec's "The records", "What an analysis needs of every project"
   and "What every analysis needs". Serves 4. Needs 1.3.
 - [x] 1.5 `parseProject` and `projectErrorText`, with the table of the

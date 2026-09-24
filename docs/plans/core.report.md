@@ -137,10 +137,41 @@ given to another's function with no error of the compiler; that is the
 store's, task 4.1. `recordVariantsCounted` records any number popnei
 gives; a count that is negative or not whole would come from popnei.
 
-Asked of the owner on 24 September 2026: whether the texts of a
-project file that cannot be opened end with what the user can do, since
-the spec's sentence "The file was changed outside the application, or is
-damaged." says only what happened.
+The owner's decisions of 24 September 2026, written into the project
+spec in d2bb7f9 before the code:
+
+- The five sentences of the reasons an analysis cannot run are taken as
+  provisional: they are the meanwhile of the project spec's Open 2 to
+  Open 6, to be judged on the screens of stage 2.
+- The texts of a project file that cannot be opened end with what the
+  user can do: "The file was changed outside the application, or is
+  damaged. Open a copy saved before the change, or make the project
+  again." (a5907e3).
+
+- Task 1.4, finished in bc60361: `projectNeeds` and `individualsNeeds`,
+  with 48 tests. Forty-five breaks, each failing 1 to 10 tests, among
+  them three names shown where four should give "and 2 more", the
+  singular lost, and the list to remove checked before the list to keep.
+  The writer made seven smaller choices and wrote them into the spec: a
+  name written three times is said "twice"; the full stop of popnei's
+  message is dropped so the sentence has one; names of individuals cut
+  at 40 characters; counts with a comma between thousands; and the
+  singulars of "Add it to the file" and "1 cell".
+
+The deliverables, checked by the orchestrator on a5907e3, where the
+checks exit 0 and `npm test` gives "Tests 479 passed (479)":
+
+1. `npm run typecheck` and `npm run lint` exit 0; a scratch line
+   `export type Scratch = File;` in `protocol.ts` fails the typecheck
+   with "error TS2304: Cannot find name 'File'", and was removed.
+2. `npx vitest run src/core/keys.test.ts -t "WP1 D2"`: "Tests 27 passed",
+   of at least 17.
+3. `npx vitest run src/core/project.test.ts -t "WP1 D3"`: "Tests 89
+   passed", of at least 50.
+4. `npx vitest run src/core/project.test.ts -t "WP1 D4"`: "Tests 70
+   passed", of at least 22.
+5. `npx vitest run src/core/project.test.ts -t "WP1 D5"`: "Tests 111
+   passed", of at least 25.
 
 ## 2. The keys
 
