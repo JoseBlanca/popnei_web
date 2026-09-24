@@ -69,11 +69,12 @@ run and pass, on which the probe is built.
    Check: `npm ci` exits 0, and `npm pkg get dependencies.popnei` prints
    that URL.
 2. The checks pass: `npm run format:check`, `npm run typecheck`, `npm run
-   lint`, `npm test`, `npm run build`. Check: each exits 0; `npx vitest
+   lint`, `npm test`. Check: each exits 0; `npx vitest
    list` lists the tests of `src/probe/messages.test.ts`, at least eight
    (three messages accepted and three refused for `FromProbe`, two
-   accepted and three refused for `ToProbe`); `dist/index.html` and
-   `dist/probe.html` exist after the build.
+   accepted and three refused for `ToProbe`). `npm run build` is checked
+   in work package 2, deliverable 2, because Vite refuses to build while
+   `probe.html`, an entry of its config written by task 2.2, is missing.
 3. The configs refuse what the spec says they refuse. Check: a scratch
    file, not committed, that imports `src/probe/` from `src/core/` fails
    `npm run lint`; one in `src/probe/` that imports `src/core/` fails it
@@ -83,7 +84,7 @@ run and pass, on which the probe is built.
 
 **Tasks:**
 
-- [ ] 1.1 The files of `configs.md` with the differences of the spec's
+- [x] 1.1 The files of `configs.md` with the differences of the spec's
   "The repository": `package.json`, `.npmrc`, the TypeScript configs with
   the two of the probe, `eslint.config.js` with its probe patterns,
   `.prettierrc.json`, `vite.config.ts` with `input: { index, probe }` and
@@ -91,7 +92,7 @@ run and pass, on which the probe is built.
   dependencies installed. The changes to section 9 of
   `docs/architecture.md` and to `configs.md` that the spec asks for, pages
   at the root, go in the same task. Serves 1, 2 and 3.
-- [ ] 1.2 `src/probe/messages.ts`, the types and the two validators of
+- [x] 1.2 `src/probe/messages.ts`, the types and the two validators of
   the spec's "The messages of the probe", and `src/probe/messages.test.ts`.
   Serves 2. Needs 1.1.
 
@@ -119,7 +120,9 @@ with the browser's message.
 2. `e2e/probe.spec.ts` passes in Chromium, Firefox and WebKit with every
    check of the spec's "How it is verified", item 2. Check: `npm run
    test:e2e` exits 0, and `npx playwright test --list` shows the probe's
-   tests in each of the three projects.
+   tests in each of the three projects; `npm run build` exits 0, and
+   `dist/index.html` and `dist/probe.html` exist after it (moved here
+   from work package 1 on 24 September 2026).
 3. The probe's failure cases show on the page. Check: two tests of
    `e2e/probe.spec.ts`, besides those of deliverable 2: one in which
    Playwright answers the request of popnei's `.wasm` file with 404, with
