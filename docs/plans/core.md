@@ -271,7 +271,7 @@ are still those its check numbers were made with.
   `keyFromWire` and `KeyedDef`, from the keys spec's "What it does", "The
   key of an intermediate result", "The fingerprint of the settings" and
   "The TypeScript interface". Serves 2. Needs 2.1 and work package 1.
-- [ ] 2.3 The property tests of the keys, from the keys spec's
+- [x] 2.3 The property tests of the keys, from the keys spec's
   "Properties" and the table of the parts, in a commit of their own: a key
   that misses an input shows a stale result and no other test would fail.
   Deliverable 3 guards it; a property is shown to fail, once, on a

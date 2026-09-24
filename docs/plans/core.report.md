@@ -94,3 +94,26 @@ and 1.5 end, a change of the order of the tasks.
   key is never that of an analysis, and wrote them into the spec first.
   Fifteen breaks, each failing its tests. The memo of the canonical form
   cannot be seen from the tests, so no break reached it.
+- Task 2.3, 9e6aa0f: the property tests of the keys, and the generators
+  of projects with a variants file and filters in `testSupport.ts`.
+  `npx vitest run src/core/keys.test.ts -t "WP2 D3"` gives "Tests 22
+  passed", of at least 4. On a scratch `keyOf` that left out the filters
+  of the individuals, the property "a change of individualFilters changes
+  the key" failed after 1 test, shrunk 78 times to a definition that
+  reads no filter, a project with no filter of the individuals, and the
+  other list drawn as `[{"kind":"obs_het","maxAllowedObsHet":0}]`; the
+  file was restored. Every key of these tests is made with a memo shared
+  across the two projects and compared with one of a fresh memo, so a
+  memo that gave one text for every list fails 17 tests. Thirteen more
+  breaks, each failing its property.
+
+The deliverables, checked by the orchestrator on 9e6aa0f, where
+`format:check`, `typecheck`, `lint` and `build` exit 0 and `npm test`
+gives "Tests 217 passed (217)":
+
+1. `npx vitest run src/core/keys.test.ts -t "WP2 D1"`: "Tests 16 passed
+   | 60 skipped (76)", of at least 12.
+2. `npx vitest run src/core/keys.test.ts -t "WP2 D2"`: "Tests 17 passed
+   | 59 skipped (76)", of at least 11.
+3. `npx vitest run src/core/keys.test.ts -t "WP2 D3"`: "Tests 22 passed
+   | 54 skipped (76)", of at least 4.
