@@ -11,6 +11,9 @@ export default defineConfig({
   testDir: "e2e",
   forbidOnly: ci,
   retries: ci ? 1 : 0,
+  // A test that passed only on its retry is a defect to find (testing.md),
+  // so on CI it fails the run, and the site is not deployed.
+  failOnFlakyTests: ci,
   reporter: ci ? [["html", { open: "never" }], ["github"]] : "list",
   use: {
     baseURL: running ?? preview,

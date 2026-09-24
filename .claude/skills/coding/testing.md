@@ -269,6 +269,7 @@ export default defineConfig({
   testDir: "e2e",
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
+  failOnFlakyTests: !!process.env.CI,
   reporter: process.env.CI ? [["html", { open: "never" }], ["github"]] : "list",
   use: {
     baseURL: running ?? preview,
@@ -351,7 +352,8 @@ diploid variants of 200 individuals in three populations of 48, 68 and
   which count the requests; the flow checks that the numbers come back
   and the notice is right.
 - A test that failed and passed on its retry is reported by Playwright as
-  flaky. That is a defect to find, not a pass.
+  flaky. That is a defect to find, not a pass, and on CI
+  `failOnFlakyTests` makes it fail the run.
 
 When a flow fails, Playwright keeps a trace, a recording of the test with
 the page at every step, its console and its network, and a screenshot.
@@ -479,8 +481,9 @@ the walking skeleton. On every push and pull request:
 - **e2e**: the Rust setup, `npm ci`, `npx playwright install --with-deps`,
   which also installs the libraries the browsers need on Linux, and `npm
   run test:e2e`, whose build builds the crate; the HTML report and
-  `test-results/` uploaded as an artifact when it fails, so the traces can
-  be read.
+  `test-results/` uploaded as an artifact after every run not cancelled,
+  kept 14 days, so the traces can be read, those of a test that passed
+  only on its retry included.
 
 On a push to `main`, when both passed:
 
@@ -489,6 +492,14 @@ On a push to `main`, when both passed:
   and `actions/deploy-pages`, with the permissions `contents: read`,
   `pages: write` and `id-token: write`, as Vite's guide to GitHub Pages
   gives them.
+
+The workflow has one `concurrency` group for each branch, with
+`cancel-in-progress: false`, as GitHub's starter workflow for Pages: the
+runs of a branch go one at a time in the order of the pushes, so an older
+run whose e2e finishes later cannot publish over a newer one. Each job
+has a `timeout-minutes`, 20 for e2e and 10 for the others, so that a
+browser that hangs stops the run instead of holding a runner for six
+hours.
 
 The Rust setup, in each job that builds the files crate: the toolchain of
 `rust-toolchain.toml`, with its target `wasm32-unknown-unknown`, which

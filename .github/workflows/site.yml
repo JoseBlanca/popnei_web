@@ -16,9 +16,18 @@ on:
 permissions:
   contents: read
 
+# One run at a time for each branch, in the order of the pushes, and none
+# cancelled halfway. On the deploy job alone, an older run whose e2e
+# finished later could publish over a newer one; here it waits for it, as
+# in GitHub's starter workflow for Pages.
+concurrency:
+  group: site-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -33,6 +42,8 @@ jobs:
 
   e2e:
     runs-on: ubuntu-latest
+    # Its first run took 1 min 39 s.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -47,9 +58,11 @@ jobs:
       # not start without a window on the owner's Mac, so this is where it
       # runs (docs/plans/site.md, work package 2).
       - run: npm run test:e2e
-      # The report and the traces of a failed run, to read what the browser
-      # did.
-      - if: failure()
+      # The report and the traces, to read what the browser did: kept
+      # after every run that was not cancelled, since a test that passed
+      # only on its retry fails the run but leaves its trace from the first
+      # attempt.
+      - if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
           name: playwright-report
@@ -62,6 +75,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [check, e2e]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       pages: write
@@ -69,11 +83,6 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    # Two pushes to main close together deploy one after the other, and a
-    # deploy that started is not cancelled halfway.
-    concurrency:
-      group: pages
-      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
