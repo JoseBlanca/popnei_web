@@ -1,7 +1,7 @@
 # The cache of results
 
-24 September 2026, approved by the owner on 24 September 2026. There is no code
-yet. The cache keeps the results of the analyses under their keys, on the
+24 September 2026, approved by the owner on 24 September 2026. The code
+is in `src/core/cache.ts`. The cache keeps the results of the analyses under their keys, on the
 page, so that a result asked for again, by an undo, a value set back, or a
 step of the application visited again, is shown with no calculation. It is
 bounded in bytes, and drops first the result used longest ago
@@ -92,7 +92,17 @@ export const CACHE_MAX_BYTES = 256 * 1024 * 1024;
 export function emptyCache<V>(maxBytes: number): Cache<V>;
 ```
 
-The size of a value, as above.
+`maxBytes` is a whole number of at least 0, and any other value is a
+defect, thrown: a bound below 0 would drop every result not shown at
+each put, and one of NaN none, with nothing to say why. A bound of 0 is
+allowed, and keeps only what the screen shows and the result just put.
+
+The size of a value, as above. An object met twice in a value, a list
+held in two fields or a cycle, is walked once, as its memory is there
+once; so a cycle ends. The texts counted are the elements of a list, at 2
+bytes per unit of their `length`, the unit of UTF-16 in which JavaScript
+holds them. The keys of a `Map` are not counted, nor the elements of a
+`Set`, which popnei's results do not have.
 
 ```ts
 export function resultBytes(value: unknown): number;
@@ -108,8 +118,9 @@ export function put<V>(c: Cache<V>, key: Key, value: V, keep: ReadonlySet<Key>):
 ```
 
 The values of `keys` that the cache holds, used now, one after the other
-in the order given, each with the next number of the counter. When the
-cache holds none of them, `use` returns `c`.
+in the order given, each with the next number of the counter; a key
+given twice is used twice, and keeps the later number. When the cache
+holds none of them, `use` returns `c`.
 
 ```ts
 export function use<V>(c: Cache<V>, keys: readonly Key[]): Cache<V>;
