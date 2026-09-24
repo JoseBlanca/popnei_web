@@ -87,7 +87,7 @@ has the kind `removed` in the code.
 | done | the cache holds a result under its key | the result, its warnings, and the comparison with the check numbers of an opened project file |
 | running | a calculation of its key is in flight and is not being stopped, whether it waits in the queue of the worker or runs | its progress, `null` until the worker gives one, and the request's id |
 | error | popnei refused the calculation of its key, or the calculation failed since the last change | popnei's message, or the failure |
-| removed | the last change took its result off the screen | its key; it can run again |
+| removed | the current notice lists it among the results removed | its key; it can run again |
 | ready | none of the above | its key |
 | empty | cannot happen | — |
 
@@ -114,7 +114,7 @@ undo it, as the owner decided on 24 September 2026
 are under keys, and a key names the load it was made from, so nothing of
 them is shown for the new project unless its keys give it. The
 calculations in flight are stopped at once, since the screen asked before
-opening; an opening makes no notice.
+opening; an opening makes no notice, and clears the one there was.
 
 The events come from the workers, through `src/ui/runs.ts` and the entry
 of the page, the code that starts when the page opens, makes the store and
@@ -187,13 +187,27 @@ changes, "The earlier calculation of Diversity was stopped", as
 `.claude/skills/coding/react.md` says of announcements (WCAG 2.2, success
 criterion 4.1.3).
 
+A request is `afterStop` when a stop was issued for its `startRun`,
+also when the calculation stopped was already being stopped.
+
 The notice goes when it is closed or replaced; a change that removes
-nothing and leaves nothing behind replaces it with none. An analysis in
-the notice that is done again, when a calculation of its new key ends,
-leaves the notice, and a notice left with nothing goes. Every calculation
-left behind is named by the current notice, since only a change leaves
-one behind, and each change makes the notice; so closing or replacing it
-reaches them all.
+nothing and leaves nothing behind replaces it with none. An analysis is
+`removed` while the current notice lists it, or `locked` if it cannot
+run; when the notice is closed or replaced without it, the analysis is
+`ready`. An analysis in the notice that is done again, when a calculation
+of its new key ends, leaves the notice. A calculation left behind that
+ends by itself, done, failed or cancelled, leaves `leftBehind`, and so
+does one whose key the project gives again through a read of a file,
+which is not a change of the user; when `leftBehind` is empty, the
+notice no longer says that calculations will be stopped, and a notice
+left with nothing goes. Every calculation left behind is named by the
+current notice, since only a change leaves one behind, and each change
+makes the notice; so closing or replacing it reaches them all.
+
+An analysis that was running, and not done, before a change is not in
+the notice's results removed: it had no result on the screen. After the
+change it is `ready`, its calculation in `leftBehind`, and the result
+that arrives late goes into the cache for an undo.
 
 ### A calculation that failed
 
@@ -409,10 +423,12 @@ those in flight:
 ## The cases
 
 - **A result that arrives after the user changed a setting**, before its
-  calculation was stopped. It goes into the cache under
-  the key it was asked for, with its warnings, and is not shown, since the
-  project gives that analysis another key; an undo shows it with no
-  calculation (`docs/architecture.md`, section 5).
+  calculation was stopped. The analysis was running and not done, so the
+  notice does not list it among the results removed, and it is `ready`.
+  The result goes into the cache under the key it was asked for, with its
+  warnings, and is not shown, since the project gives that analysis
+  another key; an undo shows it with no calculation
+  (`docs/architecture.md`, section 5).
 - **Run asked twice** for the same key: the second `startRun` returns
   `null`, since the analysis is `running`.
 - **A cancel by the user, a crash, a restart.** The outcome is
@@ -424,9 +440,11 @@ those in flight:
 - **A second `popneiReady`**, from the calculation worker started again
   after a restart: with the same version, nothing changes. With another,
   which the page and the workers, built together, do not give, the store
-  records it, every key changes, the calculations in flight, all left
-  behind, are stopped at once, since no undo gives the old version back,
-  and the analyses are calculated again when asked.
+  records it, every key changes, every calculation in flight is stopped at
+  once, since no undo gives the old version back, the notice is dropped
+  and no notice is made, since this is not a change of the user; the
+  analyses that were done are `ready`, and are calculated again when
+  asked.
 - **A command that returns the project it was given**: nothing changes,
   the notice neither; `getState` gives the same object.
 - **A result whose key is not its request's key**, or a `runEnded` of a
@@ -477,7 +495,8 @@ and one that needs only the variants file.
   notice lists it with that cause and stops nothing. `undo()`: it is
   `done` again with the same result object, `send` was called once, and
   the notice is `null`.
-- **Stopping.** With the second running, a command that changes its key:
+- **Stopping**, each case from a new store. With the second running, a
+  command that changes its key:
   the notice lists it in `leftBehind`, and `cancel()` was not called.
   Then an undo: `cancel()` is not called and the analysis is `running`.
   Again, then a second command: `cancel()` is called. Again, then
@@ -486,9 +505,11 @@ and one that needs only the variants file.
   request is called before `send`, the new request is `afterStop`, and the
   notice keeps its removed results and has no `leftBehind`, or is `null`
   if it had none. No test waits for a time: the store has no clock.
-- **A late result**: a command, then `runEnded` of the old key: the
-  analysis is `removed`, the cache holds the result with the warnings of
-  the request's project; `undo()` shows it `done`.
+- **A late result**: with the second running, a command, then `runEnded`
+  of the old key: the analysis is `ready`, the notice does not list it
+  among the results removed and its `leftBehind` is empty, the cache holds
+  the result with the warnings of the request's project; `undo()` shows
+  it `done`.
 - **A refusal**: `runEnded` with `{ kind: "failed", error: { kind:
   "popnei", message: "…" } }` gives `error` of kind `refused`; a command,
   then its undo, give it again, and `startRun` returns `null`. The same
