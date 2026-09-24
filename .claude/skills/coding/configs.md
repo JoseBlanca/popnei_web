@@ -430,6 +430,16 @@ const popneiValues = {
   message:
     "Only src/worker/runner.ts calls popnei; elsewhere import its types.",
 };
+// A call of import() is not an import declaration, and
+// no-restricted-imports does not see it: this refuses `import("popnei")`,
+// which would load popnei's wasm where only a worker may.
+const noPopneiImportCall = [
+  "error",
+  {
+    selector: "ImportExpression[source.value='popnei']",
+    message: "Only a worker calls popnei; import() of popnei is refused here.",
+  },
+];
 // The probe is a page of its own, outside the layers: nothing imports it.
 const probe = {
   group: ["**/probe/**"],
@@ -526,6 +536,7 @@ export default defineConfig(
           ],
         },
       ],
+      "no-restricted-syntax": noPopneiImportCall,
       "@typescript-eslint/consistent-type-assertions": [
         "error",
         { assertionStyle: "never" },
@@ -629,6 +640,7 @@ export default defineConfig(
         "error",
         { patterns: [ui, core, worker, react, popneiValues, filesWasm, probe] },
       ],
+      "no-restricted-syntax": noPopneiImportCall,
     },
   },
   {
@@ -660,6 +672,7 @@ export default defineConfig(
         "error",
         { patterns: [runner, drawing, popneiValues, filesWasm, probe] },
       ],
+      "no-restricted-syntax": noPopneiImportCall,
     },
   },
   {
@@ -689,6 +702,7 @@ export default defineConfig(
         "error",
         { patterns: [outOfProbe, drawing, filesWasm, probePopneiValues] },
       ],
+      "no-restricted-syntax": noPopneiImportCall,
     },
   },
   {
@@ -783,6 +797,13 @@ export default defineConfig(
   popnei failed the lint on that day, and the worker's imports passed.
   The probe's messages are checked when they arrive, as the worker's
   are, so it has no type assertion either.
+- `noPopneiImportCall` refuses `import("popnei")` in `src/core`,
+  `src/charts`, `src/ui` and the probe's page. `no-restricted-imports`
+  sees import declarations only, and on 24 September 2026 a scratch file
+  in each of the four that loaded popnei with `await import("popnei")`
+  passed the lint; with the rule each failed. A rule of syntax matches
+  the text of the call, so an `import()` of a variable is not caught;
+  none of ours needs one.
 
 ## `.prettierrc.json`
 
