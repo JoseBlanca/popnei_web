@@ -453,6 +453,25 @@ describe("WP2 D2 the key", () => {
     },
   );
 
+  test.each([
+    ["filters", { variants: false, individuals: true }],
+    ["individualFilters", { variants: true, individuals: false }],
+  ] as const)(
+    "keeps the key of an intermediate result and the fingerprint with a threshold of the %s the analysis does not read",
+    (list, filtersRead) => {
+      const def = { ...DIVERSITY, filtersRead };
+      const memo = createKeyMemo();
+      const p = literalProject();
+      const q = withMissingRate(p, list, 0.3);
+      const pruned = (r: Project): string =>
+        intermediateKeyOf(def, r, "0.1.0", "the pruned variants", 0.2, memo);
+      expect(pruned(q)).toBe(pruned(p));
+      expect(settingsFingerprint(def, q, null, memo)).toBe(
+        settingsFingerprint(def, p, null, memo),
+      );
+    },
+  );
+
   test("keyFromWire gives a key of 64 lower case hexadecimal digits", () => {
     expect(keyFromWire(LITERAL_KEY)).toBe(LITERAL_KEY);
   });
