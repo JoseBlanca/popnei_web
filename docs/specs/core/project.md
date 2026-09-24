@@ -239,10 +239,11 @@ export type SourceRead =
   | { kind: "failed"; error: SourceError };
 
 /** popnei refused the file, or the worker failed before popnei answered:
-    it could not start, it crashed, or the file could not be read again. */
+    it could not start, it crashed, or the file could not be read again.
+    A refusal of popnei is the first kind, never the second. */
 export type SourceError =
   | { kind: "popnei"; message: string }
-  | { kind: "worker"; error: RunError };
+  | { kind: "worker"; error: Exclude<RunError, { kind: "popnei" }> };
 ```
 
 The individuals file. A read of a CSV reports what the options that were
@@ -259,8 +260,11 @@ export interface IndividualsSource {
 export type IndividualsRead =
   | { kind: "pending" }
   | { kind: "read"; table: IndividualsTable; columns: ColumnType[]; found: CsvFound | null }
-  | { kind: "failed"; error: IndividualsFileError | { kind: "worker"; error: RunError } };
+  | { kind: "failed"; error: IndividualsFileError | { kind: "worker"; error: Exclude<RunError, { kind: "files" }> } };
 ```
+
+A refusal of the reader of xlsx files is the `files` kind of
+`IndividualsFileError`, never a failure of the worker.
 
 The grouping: in population genetics, the column that defines the
 populations, `null` when every individual is in one population, as it is
@@ -330,14 +334,46 @@ costs only the parts that command made. Gives `p` itself.
 export function freezeProject(p: Project): Project;
 ```
 
+The constants and the types the other modules and the tests use:
+
+```ts
+/** The order the filters of the individuals are kept in. */
+export const INDIVIDUAL_FILTER_ORDER: readonly IndividualFilterKind[]; // keep, remove, missing_data, obs_het
+/** The largest ploidy of a VCF, which popnei's openVcf accepts. */
+export const MAX_PLOIDY = 255;
+/** The largest maxDist of the LD filter, 2^53 − 1, which popnei accepts. */
+export const MAX_LD_DIST = Number.MAX_SAFE_INTEGER;
+/** The version of the format of the project file this application
+    writes; projectFile.ts writes it in the header, and a command checks
+    the options of an analysis as of this version. */
+export const FORMAT_VERSION = 1;
+/** The deepest the options of an analysis are nested, in levels of lists
+    and objects; deeper ones are refused, so that no check of them runs
+    out of the stack of the browser. */
+export const MAX_OPTIONS_DEPTH = 64;
+
+/** A load of the variants file, as the page gives it before it is read. */
+export type VariantLoad = Omit<VariantSource, "read">;
+
+/** An analysis as the commands and the validation know it: its id, and
+    the function of its module that checks its options. */
+export interface ParsedAnalysis {
+  id: AnalysisId;
+  parseOptions(o: unknown, formatVersion: number): Result<JsonObject, string>;
+}
+
+/** The place of a field in the project, ["filters", 1, "maxAllowedMaf"]. */
+export type FieldPath = readonly (string | number)[];
+```
+
+The checks of each value that the commands and `parseProject` share are
+functions of `project.ts` that no other module imports.
+
 ### The commands
 
 ```ts
 /** Puts a new load of the variants file, pending. Everything else is kept. */
-export function loadVariants(p: Project, source: {
-  fileId: string; name: string; size: number; format: "vcf" | "nei";
-  readOptions: { ploidy: number; onlyPassed: boolean } | null;
-}): Project;
+export function loadVariants(p: Project, source: VariantLoad): Project;
 
 /** Sets the filter of its kind: in its place when there is one, last otherwise. */
 export function setVariantFilter(p: Project, filter: VariantFilter): Project;
@@ -360,7 +396,8 @@ export function setColumnType(p: Project, column: string, type: ColumnType): Pro
 export function removeIndividuals(p: Project): Project;
 
 export function setGrouping(p: Project, grouping: Grouping): Project;
-export function setAnalysisOptions(p: Project, analysis: AnalysisId, options: JsonObject): Project;
+/** Sets the options of an analysis, as its parseOptions gives them back. */
+export function setAnalysisOptions(p: Project, analysis: ParsedAnalysis, options: JsonObject): Project;
 
 /** The options of an analysis: its entry, or the defaults it is given. */
 export function analysisOptions(p: Project, analysis: AnalysisId, defaults: JsonObject): JsonObject;
@@ -370,7 +407,7 @@ What each does where a reader could doubt it:
 
 | command | when | gives |
 |---|---|---|
-| any, every row below included | the value equals the one there: the same filter, the same position, the same options of the CSV, the same type, the same grouping, the same options of an analysis, a load with the load id already there | `p` itself |
+| any, every row below included | the value equals the one there: the same filter, the same position, the same options of the CSV, the same type, the same grouping, the same options of an analysis, a load with the load id already there and the same other fields | `p` itself |
 | any | a value `parseProject` would refuse in its place | a defect |
 | `removeVariantFilter`, `removeIndividualFilter` | no filter of that kind | `p` itself |
 | `removeIndividuals` | no individuals file | `p` itself |
@@ -378,9 +415,22 @@ What each does where a reader could doubt it:
 | `setCsvOptions` | no individuals file, or an xlsx | a defect |
 | `setColumnType` | the file not read, a column not in the table, `identifier` for another column than the first, another type for the first, a `binary` type whose two values are not the two values of the column | a defect |
 | `setGrouping` | a grouping of the other application | a defect |
+| `setAnalysisOptions` | options its `parseOptions` refuses, of `FORMAT_VERSION`, or nested deeper than `MAX_OPTIONS_DEPTH` levels | a defect |
 | `setAnalysisOptions` | no entry for the analysis | a new entry, last, also when the options are the defaults |
+| `loadVariants`, `loadIndividuals` | the load id already there, with another field different | a defect: a new read of a file is a new load, with a new load id |
 | `loadVariants` | a new load id | the filters, the individuals file, the grouping, the options and the reference kept |
 | `loadIndividuals`, `setCsvOptions` | a new load id, or other options | the read pending; the grouping kept by the name of its column |
+
+Two values are compared as the command keeps them, the fields its type
+does not have left out, so an object of the caller with a field more is
+the value already there when its other fields are.
+
+`setAnalysisOptions` keeps the options its `parseOptions` gives back,
+whole, the defaults filled in, as `parseProject` does, so that a project
+reads back from its file equal to itself.
+
+How the ploidy of a VCF already loaded is changed, which a new load with
+the same load id cannot do, is the screen spec's, in stage 3.
 
 `loadVariants` keeps the user's settings, which do not belong to one
 file; `projectNeeds` and `individualsNeeds` then lock what the new file
@@ -433,6 +483,13 @@ export function recordIndividualsRead(
 ): Project;
 ```
 
+A read whose table `parseProject` would refuse, a column named twice, an
+individual in two rows, is not recorded as it is: the reader is our code,
+so the read is recorded as failed, `{ kind: "worker", error: { kind:
+"defect", message } }`, the message saying what the validation refused.
+Recorded as read, it would make a project whose file cannot be opened
+again, and a command on another column of it would throw.
+
 ### What every analysis needs
 
 ```ts
@@ -461,18 +518,22 @@ export function parseProject(
   data: unknown,
   app: AppId,
   formatVersion: number,
-  analyses: readonly {
-    id: AnalysisId;
-    parseOptions(o: unknown, formatVersion: number): Result<JsonObject, string>;
-  }[],
+  analyses: readonly ParsedAnalysis[],
 ): Result<Project, ProjectError>;
 
 export type ProjectError =
   | { kind: "otherApp"; found: AppId }
   | { kind: "unknownAnalysis"; id: string }
-  | { kind: "wrongValue"; path: readonly (string | number)[]; expected: string }
-  | { kind: "twoFiltersOfAKind"; path: readonly (string | number)[]; filter: string }
-  | { kind: "inconsistentTable"; path: readonly (string | number)[]; expected: string };
+  // a field the type does not have; `path` is that of the object that has it
+  | { kind: "unknownField"; path: FieldPath; name: string }
+  | { kind: "missingField"; path: FieldPath }
+  | { kind: "wrongValue"; path: FieldPath; expected: string }
+  | { kind: "twoFiltersOfAKind"; path: FieldPath; filter: VariantFilterKind | IndividualFilterKind }
+  | { kind: "filterOutOfOrder"; path: FieldPath }
+  // the value of `path` repeats one before it in its list
+  | { kind: "repeated"; path: FieldPath; what: "analysis" | "column" | "individual"; value: string }
+  // `problem` ends a sentence whose subject is the field of `path`
+  | { kind: "inconsistentTable"; path: FieldPath; problem: string };
 
 /** The text the user reads. */
 export function projectErrorText(error: ProjectError): string;
@@ -480,16 +541,23 @@ export function projectErrorText(error: ProjectError): string;
 
 What it checks, beyond the shape of every field: every number finite; the
 thresholds from 0 to 1, `maxDist` a whole number from 1 to 2^53 − 1, the
-ploidy a whole number from 1 to 255, as popnei accepts; a load id of 32
-lower case hexadecimal digits; at most one filter of each kind in each
-list, and the individuals' in their order; every row of the table as long
-as its header, one type per column, the first `identifier` and no other;
-a binary type whose `one` and `zero` are the two distinct values of its
-column that are not missing, `one` not `zero`; each analysis id
-one of those given, once, with options its `parseOptions` accepts; the
-application and the grouping of the application given; the reference with
-its versions, and each check with a key version that is a whole number
-and a fingerprint of 64 lower case hexadecimal digits.
+ploidy a whole number from 1 to 255, as popnei accepts; the size of a
+variants file and its number of variants whole numbers of at least 0; a
+load id of 32 lower case hexadecimal digits; at most one filter of each
+kind in each list, and the individuals' in their order; the table as the
+reader gives it: at least one column and one row, no name of the header
+twice, every row as long as its header, the first cell of each row the
+name of an individual, a text that is not empty, and no individual in two
+rows; one type per column, the first `identifier` and no other; a binary
+type whose `one` and `zero` are the two distinct values of its column
+that are not missing, `one` not `zero`; nothing found of the options of
+a CSV for an xlsx, whose `csv` is `null`; each analysis id one of those
+given, once, with options nested at most `MAX_OPTIONS_DEPTH` levels, which
+its `parseOptions` accepts; the application and the grouping of the
+application given, with no column named twice in the roles; the reference
+with its versions, and each check of an analysis among those given, once,
+with a key version that is a whole number of at least 0 and a fingerprint
+of 64 lower case hexadecimal digits.
 
 - **A file of the other application** is refused: "This project file is
   of the association application. Open it there."
@@ -505,16 +573,44 @@ and a fingerprint of 64 lower case hexadecimal digits.
   was saved by a newer version of the application. Open it there, or save
   it again from it in an earlier format." (the words are that spec's).
 - **A field the type does not have**, in a file whose version this
-  application knows, is refused, as a wrong value whose expectation is
-  "no field of this name", with the text of the next item: such a file was
+  application knows, is refused, as `unknownField`: such a file was
   changed by hand or damaged, since this version would not have written
-  the field. This was decided here, not by the owner.
+  the field. This was decided here, not by the owner. Its text: "The
+  project file cannot be opened: the second filter of the variants has a
+  field "minRate", which the application does not write. The file was
+  changed outside the application, or is damaged."
 - **The text of any other error names the field in words**, from a table
   in `project.ts` of every field of the project, with a position as an
-  ordinal, and ends with what the user can do: "The project file cannot be
-  opened: the threshold of the second filter of the variants should be a
-  number from 0 to 1. The file was changed outside the application, or is
-  damaged." A path such as `filters[1].maxAllowedMaf` is never shown.
+  ordinal, in the pattern "The project file cannot be opened: ‹the field
+  in words› ‹what is wrong›. The file was changed outside the
+  application, or is damaged.":
+  - a wrong value: "the threshold of the second filter of the variants
+    should be a number from 0 to 1";
+  - a field missing: "the threshold of the second filter of the variants
+    is missing";
+  - two filters of one kind: "it has two filters of the variants by
+    missing genotypes, and a project has at most one of each kind";
+  - the filters of the individuals out of their order: "the filters of the
+    individuals should be in the order individuals to keep, individuals to
+    remove, missing genotypes, observed heterozygosity, and the second one
+    is out of that order";
+  - a value repeated: "the second analysis repeats the analysis
+    diversity";
+  - a table that does not agree with its types: "the type of the second
+    column of the individuals file cannot be identifier: only the first
+    column can have that type".
+
+  A path such as `filters[1].maxAllowedMaf` is never shown, nor any value
+  of the code: a kind of filter is named by what it filters on, in the
+  words of `docs/functionality.md`, the kinds of the individuals' filters
+  "individuals to keep", "individuals to remove", "missing genotypes" and
+  "observed heterozygosity", and the options of a CSV by their names, "a
+  comma, a semicolon or a tab". A limit that is the largest number a
+  program can hold is not written: "a whole number, 1 or more".
+- **A value of the file shown in a text**, the id of an unknown analysis,
+  the name of a field the type does not have, a repeated value, is shown
+  with its control characters escaped, as JSON writes them, and cut at 40
+  characters, with "…" after it.
 
 ## The cases
 
