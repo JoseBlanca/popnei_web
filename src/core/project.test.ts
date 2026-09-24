@@ -301,10 +301,10 @@ describe("WP1 D3 the commands", () => {
       (p) =>
         loadVariants(p, {
           fileId: SAMPLE_VARIANTS_ID,
-          name: "other.vcf",
-          size: 1,
-          format: "vcf",
-          readOptions: { ploidy: 2, onlyPassed: false },
+          name: "panel.nei",
+          size: 1024,
+          format: "nei",
+          readOptions: null,
         }),
     ],
     [
@@ -756,6 +756,83 @@ describe("WP1 D3 the commands", () => {
     expect(Object.isFrozen(p)).toBe(true);
     expect(Object.isFrozen(options)).toBe(false);
   });
+
+  describe("a value with a field more is the value already there", () => {
+    test("setCsvOptions of the same options with a field more gives the project itself", () => {
+      const p = sampleProject();
+      const csv = {
+        encoding: "auto",
+        separator: "auto",
+        decimal: "auto",
+        comment: "#",
+      } as const;
+      expect(setCsvOptions(p, csv)).toBe(p);
+    });
+
+    test("setColumnType of the same type with a field more gives the project itself", () => {
+      const p = sampleProject();
+      const type = {
+        kind: "binary",
+        one: "2",
+        zero: "1",
+        note: "sex",
+      } as const;
+      expect(setColumnType(p, "sex", type)).toBe(p);
+    });
+
+    test("setGrouping of the same grouping with a field more gives the project itself", () => {
+      const p = sampleProject();
+      const grouping = {
+        kind: "populations",
+        column: "pop",
+        colour: "red",
+      } as const;
+      expect(setGrouping(p, grouping)).toBe(p);
+    });
+  });
+
+  describe("a load with the load id already there", () => {
+    const vcf = {
+      fileId: NEW_ID,
+      name: "panel.vcf",
+      size: 4096,
+      format: "vcf",
+      readOptions: { ploidy: 2, onlyPassed: true },
+    } as const;
+
+    test("loadVariants with the same fields gives the project itself", () => {
+      const p = deepFreeze(loadVariants(sampleProject(), vcf));
+      expect(
+        loadVariants(p, {
+          ...vcf,
+          readOptions: { ploidy: 2, onlyPassed: true },
+        }),
+      ).toBe(p);
+    });
+
+    test.each([
+      ["another ploidy", { readOptions: { ploidy: 4, onlyPassed: true } }],
+      [
+        "another choice of the variants that passed",
+        { readOptions: { ploidy: 2, onlyPassed: false } },
+      ],
+      ["another name", { name: "panel2.vcf" }],
+      ["another size", { size: 4097 }],
+    ])("loadVariants with %s is a defect", (_what, change) => {
+      const p = deepFreeze(loadVariants(sampleProject(), vcf));
+      expect(() => loadVariants(p, { ...vcf, ...change })).toThrow(DEFECT);
+    });
+
+    test("loadIndividuals with other options is a defect", () => {
+      expect(() =>
+        loadIndividuals(sampleProject(), {
+          fileId: SAMPLE_INDIVIDUALS_ID,
+          name: "pops.csv",
+          csv: { encoding: "auto", separator: ";", decimal: "auto" },
+        }),
+      ).toThrow(DEFECT);
+    });
+  });
 });
 
 /** The sample project with a new load of each file, both pending. */
@@ -955,6 +1032,14 @@ describe("WP1 D4 the records and the needs", () => {
     const q = recordVariantsRead(p, NEW_ID, read);
     expect(q.variants?.read).toBe(read);
     expect(recordVariantsRead(deepFreeze(q), NEW_ID, VARIANTS_READ)).toBe(q);
+  });
+
+  test("recordIndividualsRead records a read whose options have a field more", () => {
+    const p = pendingProject();
+    const csv = { ...CSV, comment: "#" };
+    expect(
+      recordIndividualsRead(p, NEW_ID, csv, INDIVIDUALS_READ).individuals?.read,
+    ).toBe(INDIVIDUALS_READ);
   });
 });
 

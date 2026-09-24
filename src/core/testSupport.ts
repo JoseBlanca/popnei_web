@@ -24,6 +24,7 @@ import {
 import type {
   AppId,
   Grouping,
+  VariantLoad,
   IndividualsRead,
   IndividualsSource,
   ParsedAnalysis,
@@ -311,17 +312,22 @@ export const drawnCommand: fc.Arbitrary<DrawnCommand> = fc.oneof(
       onlyPassed: fc.boolean(),
     })
     .map(({ fileId, vcf, ploidy, onlyPassed }) =>
-      command(
-        "loadVariants",
-        () => (p) =>
-          loadVariants(p, {
-            fileId,
-            name: vcf ? "panel.vcf" : "panel.nei",
-            size: 2048,
-            format: vcf ? "vcf" : "nei",
-            readOptions: vcf ? { ploidy, onlyPassed } : null,
-          }),
-      ),
+      command("loadVariants", (p) => {
+        // A load id already there comes with the fields it has: another
+        // field with it is a defect.
+        const there = p.variants;
+        const load: VariantLoad =
+          there?.fileId === fileId
+            ? there
+            : {
+                fileId,
+                name: vcf ? "panel.vcf" : "panel.nei",
+                size: 2048,
+                format: vcf ? "vcf" : "nei",
+                readOptions: vcf ? { ploidy, onlyPassed } : null,
+              };
+        return (q) => loadVariants(q, load);
+      }),
     ),
   variantFilter.map((filter) =>
     command("setVariantFilter", () => (p) => setVariantFilter(p, filter)),
@@ -351,15 +357,14 @@ export const drawnCommand: fc.Arbitrary<DrawnCommand> = fc.oneof(
   fc
     .record({ fileId: loadId, csv: fc.option(csvOptions) })
     .map(({ fileId, csv }) =>
-      command(
-        "loadIndividuals",
-        () => (p) =>
-          loadIndividuals(p, {
-            fileId,
-            name: csv === null ? "pops.xlsx" : "pops.csv",
-            csv,
-          }),
-      ),
+      command("loadIndividuals", (p) => {
+        const there = p.individuals;
+        const load =
+          there?.fileId === fileId
+            ? there
+            : { fileId, name: csv === null ? "pops.xlsx" : "pops.csv", csv };
+        return (q) => loadIndividuals(q, load);
+      }),
     ),
   csvOptions.map((csv) =>
     command("setCsvOptions", (p) =>

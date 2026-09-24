@@ -532,28 +532,37 @@ function same(a: unknown, b: unknown): boolean {
 
 /** Puts a new load of the variants file, pending. Everything else is
     kept, the reference of an opened project file among it. A load whose
-    id is already there gives `p` itself. */
+    id and fields are already there gives `p` itself; a load whose id is
+    there with another field is a defect, since a new read of a file is a
+    new load, with a new load id. */
 export function loadVariants(p: Project, source: VariantLoad): Project {
-  if (p.variants !== null && p.variants.fileId === source.fileId) {
-    return p;
+  const load = copyVariantLoad(source);
+  const variants = p.variants;
+  if (variants?.fileId === load.fileId) {
+    if (same(copyVariantLoad(variants), load)) {
+      return p;
+    }
+    throw defect(
+      `loadVariants was given the load id ${load.fileId}, already there, with other fields.`,
+    );
   }
-  refuse("loadVariants", variantLoadError(source, ["variants"]));
+  refuse("loadVariants", variantLoadError(load, ["variants"]));
+  return { ...p, variants: { ...load, read: { kind: "pending" } } };
+}
+
+function copyVariantLoad(source: VariantLoad): VariantLoad {
   return {
-    ...p,
-    variants: {
-      fileId: source.fileId,
-      name: source.name,
-      size: source.size,
-      format: source.format,
-      readOptions:
-        source.readOptions === null
-          ? null
-          : {
-              ploidy: source.readOptions.ploidy,
-              onlyPassed: source.readOptions.onlyPassed,
-            },
-      read: { kind: "pending" },
-    },
+    fileId: source.fileId,
+    name: source.name,
+    size: source.size,
+    format: source.format,
+    readOptions:
+      source.readOptions === null
+        ? null
+        : {
+            ploidy: source.readOptions.ploidy,
+            onlyPassed: source.readOptions.onlyPassed,
+          },
   };
 }
 
@@ -715,22 +724,30 @@ export function loadIndividuals(
     readonly csv: CsvOptions | null;
   },
 ): Project {
-  if (p.individuals !== null && p.individuals.fileId === source.fileId) {
-    return p;
+  const load = {
+    fileId: source.fileId,
+    name: source.name,
+    csv: source.csv === null ? null : copyCsvOptions(source.csv),
+  };
+  const individuals = p.individuals;
+  if (individuals?.fileId === load.fileId) {
+    const there = {
+      fileId: individuals.fileId,
+      name: individuals.name,
+      csv: individuals.csv,
+    };
+    if (same(there, load)) {
+      return p;
+    }
+    throw defect(
+      `loadIndividuals was given the load id ${load.fileId}, already there, with other fields.`,
+    );
   }
   refuse(
     "loadIndividuals",
-    loadIdError(source.fileId, ["individuals", "fileId"]),
+    loadIdError(load.fileId, ["individuals", "fileId"]),
   );
-  return {
-    ...p,
-    individuals: {
-      fileId: source.fileId,
-      name: source.name,
-      csv: source.csv === null ? null : copyCsvOptions(source.csv),
-      read: { kind: "pending" },
-    },
-  };
+  return { ...p, individuals: { ...load, read: { kind: "pending" } } };
 }
 
 /** Sets how the CSV is read, and puts its read back to pending, so the
@@ -742,16 +759,13 @@ export function setCsvOptions(p: Project, csv: CsvOptions): Project {
   if (individuals === null || current === null) {
     throw defect("setCsvOptions was given a project with no CSV file.");
   }
-  if (same(current, csv)) {
+  const copy = copyCsvOptions(csv);
+  if (same(current, copy)) {
     return p;
   }
   return {
     ...p,
-    individuals: {
-      ...individuals,
-      csv: copyCsvOptions(csv),
-      read: { kind: "pending" },
-    },
+    individuals: { ...individuals, csv: copy, read: { kind: "pending" } },
   };
 }
 
@@ -785,10 +799,11 @@ export function setColumnType(
       `setColumnType was given ${column}, not a column of the table.`,
     );
   }
-  if (same(read.columns[index], type)) {
+  const copy = copyColumnType(type);
+  if (same(read.columns[index], copy)) {
     return p;
   }
-  const columns = read.columns.with(index, copyColumnType(type));
+  const columns = read.columns.with(index, copy);
   refuse(
     "setColumnType",
     tableError(read.table, columns, ["individuals", "read"]),
@@ -820,10 +835,9 @@ function copyGrouping(grouping: Grouping): Grouping {
 /** Sets the grouping. Throws a defect for a grouping of the other
     application. */
 export function setGrouping(p: Project, grouping: Grouping): Project {
-  refuse("setGrouping", groupingError(grouping, p.app, ["grouping"]));
-  return same(p.grouping, grouping)
-    ? p
-    : { ...p, grouping: copyGrouping(grouping) };
+  const copy = copyGrouping(grouping);
+  refuse("setGrouping", groupingError(copy, p.app, ["grouping"]));
+  return same(p.grouping, copy) ? p : { ...p, grouping: copy };
 }
 
 /** Sets the options of an analysis, whole: in the place of its entry, or
@@ -928,7 +942,7 @@ export function recordIndividualsRead(
   if (
     individuals?.fileId !== fileId ||
     individuals.read.kind !== "pending" ||
-    !same(individuals.csv, csv)
+    !same(individuals.csv, csv === null ? null : copyCsvOptions(csv))
   ) {
     return p;
   }
