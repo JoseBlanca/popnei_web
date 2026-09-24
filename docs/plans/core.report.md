@@ -71,7 +71,8 @@ Under way.
 
 ## 2. The keys
 
-Under way. Started while task 1.4 waits for the owner: the keys stand on
+Done on 24 September 2026, and reviewed; the fixes are 9a567f5 to
+5351c25. Started while task 1.4 waits for the owner: the keys stand on
 the commands and the records, not on the reasons an analysis cannot run
 nor on the validation of task 1.5, so tasks 2.2 and 2.3 run before 1.4
 and 1.5 end, a change of the order of the tasks.
@@ -117,6 +118,70 @@ gives "Tests 217 passed (217)":
    | 59 skipped (76)", of at least 11.
 3. `npx vitest run src/core/keys.test.ts -t "WP2 D3"`: "Tests 22 passed
    | 54 skipped (76)", of at least 4.
+
+After the fixes of the review, on 5351c25, where the checks exit 0 and
+`npm test` gives "Tests 272 passed (272)": WP2 D1 18, D2 24 and D3 31
+tests passed.
+
+The review ran five categories through four reviewers: spec, tests,
+stale, and errors with api. What mattered, all fixed, each with a test
+that failed first:
+
+- `setAnalysisOptions` kept the object the screen gave it, where every
+  other command copies its argument. A screen that later changed that
+  object would have changed the project in place, and the memo of the
+  keys, which keeps the text of each object already written, would have
+  given the old text: the result of the old options shown as current,
+  and undo broken. The command now copies it.
+- Nothing kept the project from being changed in place at run time; the
+  tests freeze it, the application did not. The memo now keeps the text
+  only of an object frozen with all it holds, which it learns while it
+  writes the text, at no extra cost; `freezeProject`, new in
+  `project.ts`, freezes a project and stops at the parts already frozen;
+  and the store, in work package 4, freezes every project it takes. The
+  keys, project and store specs say so since ccec5d0. It changes nothing
+  a user sees; it makes a mistake of a later screen show as an error
+  instead of a stale result.
+- Seven tests could not fail: the key and the fingerprint could have
+  ignored the ploidy or "only PASS" of a VCF, or the order of the
+  filters, and the intermediate key and the fingerprint could have held
+  a list of filters the analysis does not read, with every test passing.
+  Each was shown with a break, and now fails.
+- A value that holds itself overflowed the stack instead of throwing a
+  defect with its path; three messages of defects quoted whole texts,
+  counted in bytes, or did not name the analysis.
+
+Not taken:
+
+- That `keyFromWire` throws on a bad key from a worker rather than
+  returning a failure: the spec asks for it, since both sides are our
+  code; that the store takes the request out of those in flight before
+  anything throws, so that an analysis is not left running, is already
+  in the store spec, and task 4.2 is told.
+- Types of their own for the fingerprint and the key of an intermediate
+  result: the spec gives them as text, the fingerprint is compared in
+  one place, tested by work package 4, and the other goes only to the
+  worker.
+- The order of the lists of individuals in the key: a list in another
+  order costs one calculation, never a stale result.
+
+### How the work went, for whoever revises a skill or a plan
+
+The owner can skip to the next section.
+
+- Every test of the plan's deliverables passed, and the reviewers still
+  found seven changes of the code that no test caught. Each writer broke
+  its own code once per group, but chose breaks its tests caught. A
+  deliverable that lists "a change to each part changes the key" should
+  list the changes inside a part too: another ploidy, not only another
+  format.
+- The memo's rule, "right because the project is never changed in
+  place", held only in the tests, which freeze every project. A rule of
+  the architecture that the tests make true should be asked of the code
+  by the spec.
+- The subagent of work package 2 used about 167,000 tokens for its three
+  tasks and 142,000 more for the eighteen fixes; the four reviewers used
+  between 56,000 and 80,000 each, 285,000 together.
 
 ## 3. Undo and the cache
 
