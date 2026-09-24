@@ -249,6 +249,15 @@ Under way.
   then waits for a worker that starts again in each case. The mark only
   lets the panel say that it may first wait for the file to be read
   again.
+- Task 4.4, e8378da, after the spec in 1c99c5f: the comparison with the
+  check numbers of an opened project file, in the state `done`. `npx
+  vitest run src/core/store.test.ts -t "WP4 D4"` gives "Tests 12
+  passed", of at least 7: the six results of the spec, the settings
+  changed and set back, other read options giving no comparison, a
+  filter the analysis does not read keeping it, and a difference in the
+  last digit found. Twelve breaks, each failing 1 to 10 tests. The
+  numbers of a result are computed once, when it arrives, and kept with
+  it in the cache.
 
 ## 2. The keys
 

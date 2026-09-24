@@ -393,7 +393,7 @@ order.
   `locked` and `removed` of the table of "The state of an analysis",
   what `open` does in "Commands and events", and "The cases". Serves 3.
   Needs 4.2.
-- [ ] 4.4 The comparison with the check numbers in the state `done`, from
+- [x] 4.4 The comparison with the check numbers in the state `done`, from
   the store spec's "The comparison with the check numbers". Serves 4.
   Needs 4.2.
 - [ ] 4.5 The property tests of the store, in a commit of their own: a
