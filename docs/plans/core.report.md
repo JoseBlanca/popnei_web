@@ -68,3 +68,19 @@ Under way.
   write (the way to fix a bad list, how many individuals are named, what
   happened when a worker failed, the ending for a malformed individuals
   file, and which problem is named first), asked on 24 September 2026.
+
+## 2. The keys
+
+Under way. Started while task 1.4 waits for the owner: the keys stand on
+the commands and the records, not on the reasons an analysis cannot run
+nor on the validation of task 1.5, so tasks 2.2 and 2.3 run before 1.4
+and 1.5 end, a change of the order of the tasks.
+
+- Task 2.1, c2d8f49: `sha256Hex` in `keys.ts`, with its encoder of
+  UTF-8, from FIPS 180-4. `npx vitest run src/core/keys.test.ts -t "WP2
+  D1"` gives "Tests 16 passed", of at least 12, and the hash of the
+  example of `canonical` is the spec's literal. Eight breaks of the code,
+  one at a time, each failed its tests. A property that draws from the
+  whole of Unicode almost never draws a character of two bytes and
+  missed the break of those, so a second property draws characters of
+  one to four bytes equally.

@@ -265,7 +265,7 @@ are still those its check numbers were made with.
 
 **Tasks:**
 
-- [ ] 2.1 `sha256Hex` in `keys.ts`, with its encoder of UTF-8, from the
+- [x] 2.1 `sha256Hex` in `keys.ts`, with its encoder of UTF-8, from the
   keys spec's "The hash". Serves 1. Can run beside 1.3 to 1.5.
 - [ ] 2.2 `keyOf`, `intermediateKeyOf`, `settingsFingerprint`,
   `keyFromWire` and `KeyedDef`, from the keys spec's "What it does", "The
