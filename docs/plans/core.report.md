@@ -1,13 +1,115 @@
 # Report: the core, with no screen
 
 The work report of the plan `docs/plans/core.md`, stage 1 of
-`docs/build-order.md`, carried out from 24 September 2026 on the branch
-`plan/core`. It says what was built, how each deliverable was checked,
-what changed on the way and why, and what is asked of the owner.
+`docs/build-order.md`, carried out on 24 September 2026 on the branch
+`plan/core`.
 
 ## Where the plan stands
 
-Under way.
+The plan is done: every task is ticked and every deliverable checked, on
+the branch `plan/core`, which is not merged and not pushed. Nothing that
+is open blocks the merge: each open point belongs to a later stage, or
+changes one sentence that can be changed before the merge or after it.
+
+This stage has no screen, so nothing of it was seen in a browser. The
+probe, the technical page of stage 0 that loads popnei in the browser,
+still passes its 40 automated tests in Chromium and WebKit, the engines
+of Chrome and of Safari.
+
+What exists now that did not, in the folder `src/core`, with 555 tests:
+
+- The project: everything the user sets, changed only by commands that
+  make a new project and keep the old one whole, so that undo gives back
+  the very same one; what the application read of the user's files; the
+  reason, for each analysis, that it cannot run yet; and the reading of
+  a saved project file, which refuses a file changed by hand or damaged
+  with a sentence that names the field in words.
+- The keys: the name under which each result is kept, a hash of
+  everything the result was calculated from, so that a result of other
+  settings is never shown and one whose settings come back, by an undo,
+  is found again with no calculation.
+- Undo and redo, 200 steps, and the cache of results, 256 MB, which never
+  drops a result the screen shows.
+- The store, the one object the screens of stage 2 will read: for each
+  analysis whether it is locked and why, ready, running, done, removed
+  by a change, or failed; the notice "3 results removed because the MAF
+  filter changed · Undo", with the calculations it will stop unless the
+  change is undone; the files popnei refused to calculate on, kept so
+  that the user is not made to wait for the same refusal twice; and,
+  for an opened project, whether a result gives the numbers it was saved
+  with.
+
+The reviews found three ways to show a result of other settings, and
+all three are fixed: a screen changing an analysis's options in place,
+and two mistakes in the code of an analysis leaving the store half
+changed (sections 2 and 4).
+
+### What is asked of the owner
+
+1. **The advice after a crash of the calculation.** popnei runs in a
+   worker, a second thread of the browser tab, so that the page does not
+   freeze. If that worker crashes while it opens a file, the reason
+   beside the Run button of every analysis says, today, "panel.nei could
+   not be read: the calculation stopped unexpectedly. Reload the page
+   and load it again." Reloading the page starts the application afresh
+   and loses the whole project: the filters, the lists of individuals,
+   the individuals file and the options of every analysis. Loading the
+   variants file again in the Variants step, or the individuals file in
+   the Individuals step, starts a new worker and keeps everything else.
+   A crash is a defect of popnei or of the application, rare, and each
+   one is a reason to fix the code.
+   - **A (recommended):** after a crash, "Load it again in the Variants
+     step." (or "…in the Individuals step."); "Reload the page" stays
+     only where a reload is what helps: the calculations could not
+     start, or the page is from before an update of the site.
+   - **B:** keep "Reload the page and load it again." everywhere, and
+     judge it on the screens of stage 2.
+
+   Either is one sentence of the project spec and of its code, before
+   the merge or in stage 2.
+2. **The order to merge `plan/core` into `main`, and to push `main`.**
+
+### What is open, and where it goes
+
+- The texts of the reasons an analysis cannot run are the owner's
+  provisional words of 24 September 2026, open points 2 to 6 of the
+  project spec, to be judged on the screens of stage 2. The meanwhiles
+  of the plan stay too: 200 steps of undo and a cache of 256 MB (the
+  history and cache specs), and the column types the user set lost when
+  the individuals file is read again (the project spec's open point 1).
+- How the user changes the ploidy of a VCF already loaded: the spec of
+  the screen of stage 3 decides it. Until then a new ploidy needs the
+  file picked again; the code refuses any other way, so that the results
+  of the old ploidy can never be kept by mistake.
+- Four points for the specs of stage 2, listed at the end of section 4.
+
+### The words of this report
+
+- **Worker**: a second thread of the browser tab. The calculation worker
+  runs popnei; the light worker reads the individuals file.
+- **Load id**: a random name the page gives each pick of a file, new at
+  every pick, that enters the key instead of the file's contents.
+- **Defect**: a mistake of our own code, which stops what it was doing
+  and is shown as an error of the application, as against a failure a
+  user can meet, such as a damaged file.
+- **Canonical form**, **memo**, **fingerprint**: the one text written
+  of the inputs of a result before it is hashed into its key; a table
+  that keeps that text for parts of the project already written; and a
+  hash of the settings alone, saved in a project file so that, once it
+  is opened, the application can tell whether the settings are still
+  those its saved numbers were made with.
+- **Lint**, **typecheck**: the programs that check the code without
+  running it, for the rules of the project and for the types.
+- **WP1 D2** and the like: work package 1, deliverable 2 of the plan;
+  every test of a deliverable carries its tag.
+- **A break**: a change made on purpose to the code, to see that a test
+  fails; a test that still passes on a break cannot find that mistake.
+- **Review categories**: spec, tests, stale (a result of old settings
+  shown), errors, api (the names and types others will use),
+  architecture, ux (what the user reads), browser.
+
+Times in this report were measured with node 26.8.2 on the owner's Mac,
+an Apple M5 Pro, outside a browser; they give orders of size only.
 
 ## Before the first task
 
@@ -28,7 +130,8 @@ Checked on 24 September 2026 in the worktree
 
 ## 1. The project and its commands
 
-Under way.
+Done on 24 September 2026, and reviewed twice: once without the reasons
+an analysis cannot run, which waited for the owner, and once with them.
 
 - Task 1.1, 67df68a: the types of `src/worker/protocol.ts`,
   `src/core/result.ts`, and of `project.ts`, `keys.ts` and `store.ts`,
@@ -169,7 +272,8 @@ checks exit 0 and `npm test` gives "Tests 479 passed (479)":
 3. `npx vitest run src/core/project.test.ts -t "WP1 D3"`: "Tests 89
    passed", of at least 50.
 4. `npx vitest run src/core/project.test.ts -t "WP1 D4"`: "Tests 70
-   passed", of at least 22.
+   passed", of at least 22; 120 after the review below, the count on the
+   last commit.
 5. `npx vitest run src/core/project.test.ts -t "WP1 D5"`: "Tests 111
    passed", of at least 25.
 
@@ -202,148 +306,32 @@ Asked of the owner on 24 September 2026: a crash of the calculation ends
 its text with "Reload the page and load it again.", and a reload loses
 the whole project; loading the file again in its step is enough.
 
-## 4. The store
+### How the work went, for whoever revises a skill or a plan
 
-Done on 24 September 2026, and reviewed.
+The owner can skip to the next section.
 
-- Task 4.1, after the spec in 1a6d1db: the state, `createStore`,
-  `apply`, `undo`, `redo`, `open`, `popneiReady` and the two records,
-  and the states `locked` and `ready`. Its code is in d2851f8, a commit
-  of the fixes of the reasons of task 1.4: two subagents worked in the
-  one tree at once, and the second's commit took in the first's staged
-  files; it was not split. `npx vitest run
-  src/core/store.test.ts -t "WP4 D1"` gives "Tests 19 passed (19)", of
-  at least 7, with the two things the reviews left for the store: every
-  project it takes is frozen, and a read recorded into the history
-  leaves two projects that shared a source sharing the new one.
-  Twenty-seven breaks, each failing 1 to 18 tests. The reasons an
-  analysis cannot run are computed once per project, 8 ms at 100,000
-  individuals in node, rather than once per analysis. That one
-  analysis's result reaches only its own definition's functions is kept
-  by a rule of the spec, and two definitions of one id make
-  `createStore` throw, rather than by the types.
-- Task 4.2, 3b1fa65, after the spec in 805fe86: `startRun`, `cancelRun`
-  and `runEnded`, the cache, the warnings, the refusals and failures,
-  and the states `running`, `done` and `error`. `npx vitest run
-  src/core/store.test.ts -t "WP4 D2"` gives "Tests 16 passed", of at
-  least 10, with the test that a result reaches only its own analysis's
-  warnings, and a key from a worker that is not a key: the request is
-  out of those in flight, and the screens told, before the defect is
-  thrown. Twenty-eight breaks, each failing 1 to 8 tests; one passed
-  at first, and its test was made stronger. The smaller choices written
-  into the spec: a failure other than popnei's refusal is forgotten at
-  a command, an undo, a redo or an opening, not at a read of a file; a
-  run asked again forgets the failure it retries; a client that sends
-  twice is a defect, and what it sent is cancelled.
-- Task 4.3, 3fa2b7c, after the spec in 6692f0e: the notice of results
-  removed, `dismissNotice`, the three moments a calculation left behind
-  is stopped, `afterStop`, the stops at an opening and at another
-  version of popnei, and the state `removed`. `npx vitest run
-  src/core/store.test.ts -t "WP4 D3"` gives "Tests 20 passed", of at
-  least 16; `npm test` gives 584. Twenty-one breaks, each failing 1 to
-  21 tests; "an opening keeps the notice" passed at first, and the test
-  of `open` now holds a removed result. The spec said a request is
-  marked as coming after a stop when its run stopped a calculation, or
-  one already being stopped; the writer marks it whenever any
-  calculation is being stopped at that moment, since the new request
-  then waits for a worker that starts again in each case. The mark only
-  lets the panel say that it may first wait for the file to be read
-  again.
-- Task 4.4, e8378da, after the spec in 1c99c5f: the comparison with the
-  check numbers of an opened project file, in the state `done`. `npx
-  vitest run src/core/store.test.ts -t "WP4 D4"` gives "Tests 12
-  passed", of at least 7: the six results of the spec, the settings
-  changed and set back, other read options giving no comparison, a
-  filter the analysis does not read keeping it, and a difference in the
-  last digit found. Twelve breaks, each failing 1 to 10 tests. The
-  numbers of a result are computed once, when it arrives, and kept with
-  it in the cache.
-- Task 4.5, c6e3df8: the five properties of the store, over sequences
-  of up to 40 commands and events drawn by fast-check, with a model of
-  the requests in flight beside the store. On a scratch store that
-  showed the result of the last key an analysis had, the first property
-  failed after 1 run and shrank 12 times to: run the populations, the
-  run ends, the column of the populations changed; the populations
-  were shown done with the result of the old column. The store was
-  restored. A store that cancelled nothing at `dismissNotice`, or at a
-  run, failed properties 4 and 5; one that cancelled a calculation
-  whose key an undo gave back passed 100 runs, so properties 4 and 5
-  run 1,000 times, where it failed 5 tries in 5. The sequences are drawn
-  at their full length, since at the default most had under 5 steps and
-  no notice. All five held at 2,000 runs, in 2.5 s.
-
-The deliverables, checked by the orchestrator on c6e3df8, where the
-checks exit 0 and `npm test` gives "Tests 601 passed (601)":
-
-1. `npx vitest run src/core/store.test.ts -t "WP4 D1"`: "Tests 19
-   passed", of at least 7.
-2. `npx vitest run src/core/store.test.ts -t "WP4 D2"`: "Tests 16
-   passed", of at least 10.
-3. `npx vitest run src/core/store.test.ts -t "WP4 D3"`: "Tests 20
-   passed", of at least 16.
-4. `npx vitest run src/core/store.test.ts -t "WP4 D4"`: "Tests 12
-   passed", of at least 7.
-5. `npx vitest run src/core/store.test.ts -t "WP4 D5"`: "Tests 5
-   passed", the five properties.
-
-The review ran seven categories through four reviewers: spec, tests,
-stale, and errors with api, architecture and browser, the last over the
-whole of the core since the plan ends here. The specs changed first, in
-e6b3123; the fixes are 1de0fc6 to 867278b, each with tests that failed
-first. On them the checks exit 0 and `npm test` gives "Tests 621 passed
-(621)"; WP4 D1 gives 22 tests, D2 25, D3 27, D4 13, D5 5, the five
-properties holding at 2,000 runs. What mattered:
-
-- A mistake in the code of an analysis, thrown while the store made the
-  keys of a change, left the store half changed: its history moved, its
-  state did not. A user who went on could then see the result of a MAF
-  of 0.42 shown done for a MAF of 0.3, and kept in the cache under that
-  key. The store now makes the keys of the new project before it
-  changes anything, so such a mistake leaves it as it was.
-- A read of a file could change the key of a calculation running, or
-  lock its analysis, with no notice naming it: nothing stopped it, and
-  the next calculation waited behind it, minutes for an association.
-  Since a read is recorded into every project of the history, no undo
-  can give that key back, so a read now stops such a calculation at
-  once, and a run stops every calculation left behind.
-- An error in any function that listens to the store left the others
-  unwarned, and in a run left the analysis "running" for ever with Run
-  doing nothing. Every listener is now called, and the run is taken out
-  and cancelled.
-- A mistake while a result was taken in made a calculation of minutes
-  end as "ready", with nothing said; it is now kept as a failure, shown
-  until the next change.
-- A user who closed the notice, or pressed Stop, and then Run was not
-  told that the calculation might first wait for the variants file to be
-  read again. The mark now holds from a stop until popnei says it is
-  ready again, or a calculation ends, which shows the worker was not
-  restarting.
-- Six tests could not fail, among them the number of variants of a
-  result recorded into the file loaded since, and an opening that lost
-  the results and popnei's refusals. The property tests reached a stop
-  by an undo in 6 sequences of 1,000; they now reach it in 169.
-- The lint kept the helpers of the tests out of the core but not out of
-  the screens, which stage 2 writes; it keeps them out of both now.
-
-Found right, and not changed: nothing of the core needs a browser newer
-than the site's floor, Chrome 111, Firefox 115 and Safari 16.4, by the
-tables of `@mdn/browser-compat-data` 8.1.2; the core built for those
-targets ran on a page in Chromium 153 and WebKit 26.6.
-
-For stage 2, where each belongs:
-
-- Who asks the light worker to read the individuals file again after an
-  undo gives back a project whose read is pending, under options never
-  read: the page's entry, whose spec should say it.
-- What happens to a calculation left behind when the user loads a new
-  variants file, which restarts the calculation worker, while the
-  notice says it will be stopped only unless the change is undone: the
-  spec of the worker's client.
-- A notice caused by an undo should offer Redo, not Undo: the screen's
-  spec.
-- An error thrown in a click, or in a promise the page awaits, reaches
-  no error boundary of React: the page needs a handler of the window's
-  errors that shows it.
+- The spec of the project left five sentences a user reads unwritten,
+  "and the same place to fix it" among them; the writer stopped at task
+  1.4, as it should, and the plan waited for the owner. A spec whose
+  tables give the words of a screen should give every word of them, or
+  mark the gap as an open point before the plan is written.
+- The writer of the validation read "the table of the fields in words,
+  in `project.ts`" as texts it could not write, and wrote them as a
+  draft; the spec had delegated them within a pattern. A spec that
+  delegates words should say so in those terms.
+- Half the findings of the first review were cases of a damaged or
+  hand-edited project file, which the spec's list of checks did not
+  reach: two columns of one name, an individual twice, options nested
+  100,000 deep. The spec of a validation should list what a file changed
+  by hand can hold, not only what the application writes.
+- The ux reviewer, told to print every text rather than read the code,
+  found what the others did not: 118 texts, 14 with names of the code.
+  A review of texts should always print them.
+- The subagent of work package 1 used about 340,000 tokens for tasks 1.1
+  to 1.5 and 210,000 for the 36 fixes of the first review; a second
+  subagent used 150,000 for the reasons and 50,000 for their fixes. The
+  four reviewers of the first review used between 116,000 and 163,000
+  each, 545,000 together; the two of the second, 58,000 and 95,000.
 
 ## 2. The keys
 
@@ -537,3 +525,211 @@ The owner can skip to the next section.
 - The subagent of task 3.1 used about 99,000 tokens and that of task 3.2
   95,000, and 13,000 more for the four tests of the review; the two
   reviewers used 77,000 and 99,000.
+
+## 4. The store
+
+Done on 24 September 2026, and reviewed.
+
+- Task 4.1, after the spec in 1a6d1db: the state, `createStore`,
+  `apply`, `undo`, `redo`, `open`, `popneiReady` and the two records,
+  and the states `locked` and `ready`. Its code is in d2851f8, a commit
+  of the fixes of the reasons of task 1.4: two subagents worked in the
+  one tree at once, and the second's commit took in the first's staged
+  files; it was not split. `npx vitest run
+  src/core/store.test.ts -t "WP4 D1"` gives "Tests 19 passed (19)", of
+  at least 7, with the two things the reviews left for the store: every
+  project it takes is frozen, and a read recorded into the history
+  leaves two projects that shared a source sharing the new one.
+  Twenty-seven breaks, each failing 1 to 18 tests. The reasons an
+  analysis cannot run are computed once per project, 8 ms at 100,000
+  individuals in node, rather than once per analysis. That one
+  analysis's result reaches only its own definition's functions is kept
+  by a rule of the spec, and two definitions of one id make
+  `createStore` throw, rather than by the types.
+- Task 4.2, 3b1fa65, after the spec in 805fe86: `startRun`, `cancelRun`
+  and `runEnded`, the cache, the warnings, the refusals and failures,
+  and the states `running`, `done` and `error`. `npx vitest run
+  src/core/store.test.ts -t "WP4 D2"` gives "Tests 16 passed", of at
+  least 10, with the test that a result reaches only its own analysis's
+  warnings, and a key from a worker that is not a key: the request is
+  out of those in flight, and the screens told, before the defect is
+  thrown. Twenty-eight breaks, each failing 1 to 8 tests; one passed
+  at first, and its test was made stronger. The smaller choices written
+  into the spec: a failure other than popnei's refusal is forgotten at
+  a command, an undo, a redo or an opening, not at a read of a file; a
+  run asked again forgets the failure it retries; a client that sends
+  twice is a defect, and what it sent is cancelled.
+- Task 4.3, 3fa2b7c, after the spec in 6692f0e: the notice of results
+  removed, `dismissNotice`, the three moments a calculation left behind
+  is stopped, `afterStop`, the stops at an opening and at another
+  version of popnei, and the state `removed`. `npx vitest run
+  src/core/store.test.ts -t "WP4 D3"` gives "Tests 20 passed", of at
+  least 16; `npm test` gives 584. Twenty-one breaks, each failing 1 to
+  21 tests; "an opening keeps the notice" passed at first, and the test
+  of `open` now holds a removed result. The spec said a request is
+  marked as coming after a stop when its run stopped a calculation, or
+  one already being stopped; the writer marks it whenever any
+  calculation is being stopped at that moment, since the new request
+  then waits for a worker that starts again in each case. The mark only
+  lets the panel say that it may first wait for the file to be read
+  again.
+- Task 4.4, e8378da, after the spec in 1c99c5f: the comparison with the
+  check numbers of an opened project file, in the state `done`. `npx
+  vitest run src/core/store.test.ts -t "WP4 D4"` gives "Tests 12
+  passed", of at least 7: the six results of the spec, the settings
+  changed and set back, other read options giving no comparison, a
+  filter the analysis does not read keeping it, and a difference in the
+  last digit found. Twelve breaks, each failing 1 to 10 tests. The
+  numbers of a result are computed once, when it arrives, and kept with
+  it in the cache.
+- Task 4.5, c6e3df8: the five properties of the store, over sequences
+  of up to 40 commands and events drawn by fast-check, with a model of
+  the requests in flight beside the store. On a scratch store that
+  showed the result of the last key an analysis had, the first property
+  failed after 1 run and shrank 12 times to: run the populations, the
+  run ends, the column of the populations changed; the populations
+  were shown done with the result of the old column. The store was
+  restored. A store that cancelled nothing at `dismissNotice`, or at a
+  run, failed properties 4 and 5; one that cancelled a calculation
+  whose key an undo gave back passed 100 runs, so properties 4 and 5
+  run 1,000 times, where it failed 5 tries in 5. The sequences are drawn
+  at their full length, since at the default most had under 5 steps and
+  no notice. All five held at 2,000 runs, in 2.5 s.
+
+The deliverables, checked by the orchestrator on c6e3df8, where the
+checks exit 0 and `npm test` gives "Tests 601 passed (601)":
+
+1. `npx vitest run src/core/store.test.ts -t "WP4 D1"`: "Tests 19
+   passed", of at least 7.
+2. `npx vitest run src/core/store.test.ts -t "WP4 D2"`: "Tests 16
+   passed", of at least 10.
+3. `npx vitest run src/core/store.test.ts -t "WP4 D3"`: "Tests 20
+   passed", of at least 16.
+4. `npx vitest run src/core/store.test.ts -t "WP4 D4"`: "Tests 12
+   passed", of at least 7.
+5. `npx vitest run src/core/store.test.ts -t "WP4 D5"`: "Tests 5
+   passed", the five properties.
+
+The review ran seven categories through four reviewers: spec, tests,
+stale, and errors with api, architecture and browser, the last over the
+whole of the core since the plan ends here. The specs changed first, in
+e6b3123; the fixes are 1de0fc6 to 867278b, each with tests that failed
+first. On them the checks exit 0 and `npm test` gives "Tests 621 passed
+(621)"; WP4 D1 gives 22 tests, D2 25, D3 27, D4 13, D5 5, the five
+properties holding at 2,000 runs. What mattered:
+
+- A mistake in the code of an analysis, thrown while the store made the
+  keys of a change, left the store half changed: its history moved, its
+  state did not. A user who went on could then see the result of a MAF
+  of 0.42 shown done for a MAF of 0.3, and kept in the cache under that
+  key. The store now makes the keys of the new project before it
+  changes anything, so such a mistake leaves it as it was.
+- A read of a file could change the key of a calculation running, or
+  lock its analysis, with no notice naming it: nothing stopped it, and
+  the next calculation waited behind it, minutes for an association.
+  Since a read is recorded into every project of the history, no undo
+  can give that key back, so a read now stops such a calculation at
+  once, and a run stops every calculation left behind.
+- An error in any function that listens to the store left the others
+  unwarned, and in a run left the analysis "running" for ever with Run
+  doing nothing. Every listener is now called, and the run is taken out
+  and cancelled.
+- A mistake while a result was taken in made a calculation of minutes
+  end as "ready", with nothing said; it is now kept as a failure, shown
+  until the next change.
+- A user who closed the notice, or pressed Stop, and then Run was not
+  told that the calculation might first wait for the variants file to be
+  read again. The mark now holds from a stop until popnei says it is
+  ready again, or a calculation ends, which shows the worker was not
+  restarting.
+- Six tests could not fail, among them the number of variants of a
+  result recorded into the file loaded since, and an opening that lost
+  the results and popnei's refusals. The property tests reached a stop
+  by an undo in 6 sequences of 1,000; they now reach it in 169.
+- The lint kept the helpers of the tests out of the core but not out of
+  the screens, which stage 2 writes; it keeps them out of both now.
+
+Found right, and not changed: nothing of the core needs a browser newer
+than the site's floor, Chrome 111, Firefox 115 and Safari 16.4, by the
+tables of `@mdn/browser-compat-data` 8.1.2; the core built for those
+targets ran on a page in Chromium 153 and WebKit 26.6.
+
+For stage 2, where each belongs:
+
+- Who asks the light worker to read the individuals file again after an
+  undo gives back a project whose read is pending, under options never
+  read: the page's entry, whose spec should say it.
+- What happens to a calculation left behind when the user loads a new
+  variants file, which restarts the calculation worker, while the
+  notice says it will be stopped only unless the change is undone: the
+  spec of the worker's client.
+- A notice caused by an undo should offer Redo, not Undo: the screen's
+  spec.
+- An error thrown in a click, or in a promise the page awaits, reaches
+  no error boundary of React: the page needs a handler of the window's
+  errors that shows it.
+
+### How the work went, for whoever revises a skill or a plan
+
+The owner can skip to the next section.
+
+- Two subagents in one tree share its index: while one fixed the
+  reasons of task 1.4 and the other wrote task 4.1, the first's commit
+  took in the second's staged files. From then on every commit named its
+  paths (`git commit -- <paths>`). The `following-plans` skill says one
+  writer per file; it should say one index per tree, and ask for commits
+  by path when two subagents share one.
+- Every one of the five deliverables of the store passed above its
+  minimum, and the review still found two ways to show a result of other
+  settings and two ways to leave an analysis running for ever. All four
+  came from a defect thrown in the middle of a change, which no
+  deliverable asked about; a spec of a module that calls code of others
+  should say what state a throw of that code leaves.
+- The property tests at their default size drew sequences of under 5
+  steps and reached a stop by an undo in 6 of 1,000; measuring how often
+  each state is reached, as the tests reviewer did, is what showed it.
+  `testing.md` could ask a property's writer to measure it.
+- The subagent of work package 4 used about 380,000 tokens for its five
+  tasks and 95,000 for the 22 fixes; the four reviewers used between
+  124,000 and 152,000 each, 556,000 together.
+
+## At the end
+
+Checked by the orchestrator on 24 September 2026, on 4ba6e87:
+
+- `npm run format:check`, `typecheck`, `lint` and `build` exit 0. `npm
+  test` gives "Tests 623 passed (623)" in 6 files, with no test skipped:
+  the 68 of the probe, and 555 of the core, 100 in `keys.test.ts`, 320
+  in `project.test.ts`, 21 in `history.test.ts`, 20 in `cache.test.ts`
+  and 94 in `store.test.ts`, every one under a tag of a deliverable.
+- `npx playwright test --project=chromium --project=webkit` gives "40
+  passed", the probe unchanged.
+- `npm pkg get dependencies.popnei` prints the release,
+  `https://github.com/JoseBlanca/popnei/releases/download/js-v0.1.0-dev.1/popnei-0.1.0.tgz`.
+- The plan's search of `src/core` for a clock, a random number, an
+  `await` or an import of popnei finds nothing.
+
+Every item of "The cases" and "How it is verified" of the six specs was
+mapped to the tests that reach it: 62 items, 57 reached by a test of a
+deliverable. The five that are not, each for a later stage or another
+check:
+
+- Two items of the protocol spec belong to the runner of the calculation
+  worker, in stage 2: that a mistake of the runner is `workerFailed`,
+  and that the requests hold popnei's arguments. Two more of its cases,
+  that only popnei's refusal is of the kind `popnei` and that a refusal
+  for lack of memory depends on more than the data, are reached in their
+  part of the core, and their part in the runner is stage 2's too.
+- That `protocol.ts` names nothing of the browser is checked by the
+  typecheck, not by a test, as the spec says of types; it was shown in
+  task 1.1, and again at the end of work package 1, with a scratch line
+  naming `File`.
+- That every analysis has its table of the parts of its key is a test of
+  each analysis, in the spec of each, from stage 2; this stage has only
+  the two fake analyses of the store's tests.
+- The browser tests of the store spec are those of the walking skeleton,
+  stage 2.
+
+Two cases were reached only in part, and a test was added for each: that
+an undo past the first project tells no screen, and a result dropped by
+the bound of the cache and then asked for again by an undo.

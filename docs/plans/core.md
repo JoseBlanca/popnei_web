@@ -1,6 +1,6 @@
 # Plan: the core, with no screen
 
-24 September 2026, approved by the owner on 24 September 2026, under way on the branch `plan/core` since 24 September 2026. It builds stage 1 of `docs/build-order.md`
+24 September 2026, approved by the owner on 24 September 2026, done on the branch `plan/core` on 24 September 2026. It builds stage 1 of `docs/build-order.md`
 from six specs approved by the owner on 24 September 2026, called below
 the protocol spec, `docs/specs/worker/protocol.md`, and the project,
 keys, history, cache and store specs, `docs/specs/core/project.md`,
