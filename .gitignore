@@ -1,10 +1,13 @@
 node_modules/
 dist/
+playwright-report/
+test-results/
+screens/
+e2e/scratch.spec.ts
+crates/files/target/
+crates/files/pkg/
 .claude/worktrees/
 .DS_Store
 tmp/
-screens/
-playwright-report/
-test-results/
 .vitest/
 coverage/

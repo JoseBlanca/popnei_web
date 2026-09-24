@@ -834,8 +834,11 @@ src/ui/
   report/           renders the report model into its HTML page, with the plots
   widgets/          React Aria components with our styles
   tokens.css        the design tokens
-pages/
-  index.html popgen.html gwas.html
+src/probe/          the probe of stage 0, a page of its own outside the
+                    layers, that checks a deploy still loads popnei
+index.html popgen.html gwas.html probe.html
+                    the pages, at the root of the repository, so that the
+                    build writes them to the root of dist/
 crates/files/       the files wasm, in Rust: xlsx read and written, the zip;
                     built into crates/files/pkg/, which git ignores
 docs/
@@ -845,6 +848,14 @@ docs/
 in `core` imports from `ui` or `charts`, and nothing in `charts` imports
 from `core` or `ui`. Only `src/worker/runner.ts` calls popnei, and only
 `src/worker/filesRunner.ts` calls the files wasm.
+
+The pages are HTML files at the root and not in a folder of their own,
+because the build writes each page where it finds it: in `pages/`, the
+application would be served at `/popnei_web/pages/popgen.html`, and not
+at `/popnei_web/popgen.html` as section 4 of `docs/technology.md` has it
+(`docs/specs/site.md`). The probe, `src/probe/` with `probe.html`, is
+linked from no other page; nothing of `src/` imports it, and it imports
+popnei and React and nothing of `src/`.
 
 ## 10. The walking skeleton
 

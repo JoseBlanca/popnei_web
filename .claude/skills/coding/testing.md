@@ -182,6 +182,7 @@ test: {
           "src/core/**/*.test.ts",
           "src/worker/**/*.test.ts",
           "src/ui/**/*.test.ts",
+          "src/probe/**/*.test.ts",
         ],
         environment: "node",
       },
@@ -197,6 +198,11 @@ test: {
   ],
 },
 ```
+
+The project `charts` is added with jsdom, in the stage of the first
+plot; until then `vite.config.ts` has the project `node` alone, whose
+`include` also takes the test of the probe's messages
+(`docs/specs/site.md`).
 
 The tests of `src/ui` in node are those that need no page, such as the
 test of `tokens.css` that `css.md` asks for. How the tests are type

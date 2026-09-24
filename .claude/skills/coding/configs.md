@@ -19,6 +19,22 @@ run either: the scripts `build:files` and `test:files`, the Rust files of
 the crate, the patterns `filesWasm` and the blocks of the light worker in
 ESLint, and `src/worker/individuals` in `tsconfig.core.json`.
 
+The files were then made in the repository for stage 0
+(`docs/specs/site.md`), with typescript 6.0.3, typescript-eslint 8.70.1,
+eslint 10.11.0, vite 8.3.0, vitest 5.0.1 and prettier 3.9.9, and the
+format, the type check, the lint and the unit tests passed on them on 24
+September 2026, and the build with a scratch page in place of the
+probe's, which is written after them. That stage added what the
+probe needs, a page of its own in `src/probe/` outside the layers: its
+two TypeScript files, `tsconfig.probe.json` and
+`tsconfig.probeworker.json`, and its ESLint block, which refused, in a
+scratch file, an import of `src/probe/` from `src/core/` and one of
+`src/core/` from `src/probe/`. It also moved the pages to the root of the
+repository, added `appType: "mpa"` to Vite, `"files": []` to the
+TypeScript files of the layers not yet written, and `.prettierignore`,
+each with its reason below. Not run yet: the rules of the layers
+themselves, on code of the layers, and the files crate.
+
 The configuration of Vitest and of Playwright is in `testing.md`.
 
 ## `.npmrc`
@@ -93,9 +109,10 @@ install on a Node older than `engines` fail instead of warn.
 
 ## TypeScript
 
-Seven files: one with the options every part shares, one for each of the
+Nine files: one with the options every part shares, one for each of the
 four environments the code runs in, the core, the worker, the page and
-node, one for the tests that run in node, and one that lists them. Each environment
+node, one for the tests that run in node, two for the probe, its page and
+its worker, and one that lists them. Each environment
 gets only the library of globals that exists there, so the compiler
 refuses a global of the wrong one: `document` in `src/core` or in the
 worker, `FileReaderSync` on the page.
@@ -174,6 +191,7 @@ worker, `FileReaderSync` on the page.
 ```json
 {
   "extends": "./tsconfig.base.json",
+  "files": [],
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.core.tsbuildinfo",
     "lib": ["ES2022", "ES2023.Array"],
@@ -183,6 +201,12 @@ worker, `FileReaderSync` on the page.
   "exclude": ["**/*.test.ts"]
 }
 ```
+
+`"files": []`, here and in the files of the worker and of the page, is
+there for the stages before a layer has code: `tsc -b` fails with "No
+inputs were found in config file" on a file whose `include` finds
+nothing, and an empty `files` list, to which `include` adds, silences
+that and nothing else.
 
 The reader of the individuals file, `src/worker/individuals/`, is here
 as well as in the worker's file: it is pure, and checking it with no
@@ -201,6 +225,7 @@ among what it includes, with the globals of a worker:
 ```json
 {
   "extends": "./tsconfig.base.json",
+  "files": [],
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.worker.tsbuildinfo",
     "lib": ["ES2022", "ES2023.Array", "WebWorker"],
@@ -220,13 +245,20 @@ since both sides import it.
 ```json
 {
   "extends": "./tsconfig.base.json",
+  "files": [],
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "lib": ["ES2022", "ES2023.Array", "DOM", "DOM.Iterable"],
     "types": ["vite/client"],
     "jsx": "react-jsx"
   },
-  "include": ["src/ui", "src/charts", "src/worker/client.ts", "src/worker/start.ts", "src/worker/messages.ts"],
+  "include": [
+    "src/ui",
+    "src/charts",
+    "src/worker/client.ts",
+    "src/worker/start.ts",
+    "src/worker/messages.ts"
+  ],
   "exclude": ["src/ui/**/*.test.ts"]
 }
 ```
@@ -263,7 +295,12 @@ browser, which run in node:
     "lib": ["ES2022", "ES2023.Array", "DOM", "DOM.Iterable"],
     "types": ["node"]
   },
-  "include": ["src/core/**/*.test.ts", "src/worker/**/*.test.ts", "src/ui/**/*.test.ts"]
+  "include": [
+    "src/core/**/*.test.ts",
+    "src/worker/**/*.test.ts",
+    "src/ui/**/*.test.ts",
+    "src/probe/**/*.test.ts"
+  ]
 }
 ```
 
@@ -275,6 +312,43 @@ not type check here; the handlers of the runner that the tests call take
 bytes, not a `File` (`worker.md`). The tests of `src/charts` run under
 jsdom and are checked with the page, in `tsconfig.app.json`.
 
+The probe of stage 0 (`docs/specs/site.md`), a page with its own worker,
+is checked as the page and the worker are. `tsconfig.probe.json`, its
+page:
+
+```json
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.probe.tsbuildinfo",
+    "lib": ["ES2022", "ES2023.Array", "DOM", "DOM.Iterable"],
+    "types": ["vite/client"],
+    "jsx": "react-jsx"
+  },
+  "include": ["src/probe"],
+  "exclude": ["src/probe/probeWorker.ts", "src/probe/**/*.test.ts"]
+}
+```
+
+`tsconfig.probeworker.json`, its worker, with `vite/client` for
+`import.meta.env.BASE_URL`, the base path the worker fetches the served
+file under:
+
+```json
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.probeworker.tsbuildinfo",
+    "lib": ["ES2022", "ES2023.Array", "WebWorker"],
+    "types": ["vite/client"]
+  },
+  "include": ["src/probe/probeWorker.ts", "src/probe/messages.ts"]
+}
+```
+
+`src/probe/messages.ts` is in both, since both sides import it, as
+`src/worker/messages.ts` is for the applications.
+
 `tsconfig.json`, which lists them, and which `tsc -b` and the editor read:
 
 ```json
@@ -285,7 +359,9 @@ jsdom and are checked with the page, in `tsconfig.app.json`.
     { "path": "./tsconfig.worker.json" },
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" },
-    { "path": "./tsconfig.test.json" }
+    { "path": "./tsconfig.test.json" },
+    { "path": "./tsconfig.probe.json" },
+    { "path": "./tsconfig.probeworker.json" }
   ]
 }
 ```
@@ -296,6 +372,7 @@ jsdom and are checked with the page, in `tsconfig.app.json`.
 // @ts-check
 import js from "@eslint/js";
 import { defineConfig, globalIgnores } from "eslint/config";
+import reactHooks from "eslint-plugin-react-hooks";
 import tseslint from "typescript-eslint";
 
 // What a layer must not import, from the table of SKILL.md.
@@ -346,9 +423,26 @@ const popneiValues = {
   allowTypeImports: true,
   message: "Only src/worker calls popnei; elsewhere import its types.",
 };
+// The probe is a page of its own, outside the layers: nothing imports it.
+const probe = {
+  group: ["**/probe/**"],
+  message: "Nothing outside src/probe imports the probe.",
+};
+// The probe imports nothing of src/: its files import each other as
+// "./x.ts", and any path that leaves src/probe goes through "../".
+const outOfProbe = {
+  group: ["../**"],
+  message: "src/probe imports popnei and React, and nothing of src/.",
+};
 
 export default defineConfig(
-  globalIgnores(["dist/", "playwright-report/", "test-results/", "screens/", "crates/"]),
+  globalIgnores([
+    "dist/",
+    "playwright-report/",
+    "test-results/",
+    "screens/",
+    "crates/",
+  ]),
   {
     files: ["**/*.{ts,tsx}"],
     extends: [
@@ -389,6 +483,11 @@ export default defineConfig(
         "error",
         { allowString: false, allowNumber: false, allowNullableObject: true },
       ],
+      // The layers' blocks below replace this for their files.
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        { patterns: [probe] },
+      ],
     },
   },
   {
@@ -397,7 +496,18 @@ export default defineConfig(
       "@typescript-eslint/no-restricted-imports": [
         "error",
         {
-          patterns: [ui, charts, runner, client, react, drawing, popneiValues, filesWasm, individualsReader],
+          patterns: [
+            ui,
+            charts,
+            runner,
+            client,
+            react,
+            drawing,
+            popneiValues,
+            filesWasm,
+            individualsReader,
+            probe,
+          ],
         },
       ],
       "@typescript-eslint/consistent-type-assertions": [
@@ -411,7 +521,17 @@ export default defineConfig(
     rules: {
       "@typescript-eslint/no-restricted-imports": [
         "error",
-        { patterns: [ui, charts, coreButResult, react, drawing, filesWasm] },
+        {
+          patterns: [
+            ui,
+            charts,
+            coreButResult,
+            react,
+            drawing,
+            filesWasm,
+            probe,
+          ],
+        },
       ],
       "@typescript-eslint/consistent-type-assertions": [
         "error",
@@ -426,7 +546,17 @@ export default defineConfig(
     rules: {
       "@typescript-eslint/no-restricted-imports": [
         "error",
-        { patterns: [ui, charts, coreButResult, react, drawing, popneiValues] },
+        {
+          patterns: [
+            ui,
+            charts,
+            coreButResult,
+            react,
+            drawing,
+            popneiValues,
+            probe,
+          ],
+        },
       ],
     },
   },
@@ -435,7 +565,18 @@ export default defineConfig(
     rules: {
       "@typescript-eslint/no-restricted-imports": [
         "error",
-        { patterns: [ui, charts, coreButResult, react, drawing, popneiValues, filesWasm] },
+        {
+          patterns: [
+            ui,
+            charts,
+            coreButResult,
+            react,
+            drawing,
+            popneiValues,
+            filesWasm,
+            probe,
+          ],
+        },
       ],
     },
   },
@@ -444,7 +585,7 @@ export default defineConfig(
     rules: {
       "@typescript-eslint/no-restricted-imports": [
         "error",
-        { patterns: [ui, core, worker, react, popneiValues, filesWasm] },
+        { patterns: [ui, core, worker, react, popneiValues, filesWasm, probe] },
       ],
     },
   },
@@ -454,7 +595,18 @@ export default defineConfig(
     rules: {
       "@typescript-eslint/no-restricted-imports": [
         "error",
-        { patterns: [ui, charts, coreButResult, react, drawing, popneiValues, filesWasm] },
+        {
+          patterns: [
+            ui,
+            charts,
+            coreButResult,
+            react,
+            drawing,
+            popneiValues,
+            filesWasm,
+            probe,
+          ],
+        },
       ],
     },
   },
@@ -463,7 +615,24 @@ export default defineConfig(
     rules: {
       "@typescript-eslint/no-restricted-imports": [
         "error",
-        { patterns: [runner, drawing, popneiValues, filesWasm] },
+        { patterns: [runner, drawing, popneiValues, filesWasm, probe] },
+      ],
+    },
+  },
+  {
+    // The probe, a page of its own (docs/specs/site.md): popnei and React,
+    // nothing of src/. Its messages are checked on arrival, so no
+    // assertion either, as in the worker.
+    files: ["src/probe/**/*.{ts,tsx}"],
+    extends: [reactHooks.configs.flat.recommended],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        { patterns: [outOfProbe, drawing, filesWasm] },
+      ],
+      "@typescript-eslint/consistent-type-assertions": [
+        "error",
+        { assertionStyle: "never" },
       ],
     },
   },
@@ -517,7 +686,18 @@ export default defineConfig(
   wasm-bindgen generated into `crates/files/pkg/`.
 - `react.md` adds the rules of React and of hooks to the block of
   `src/ui`, from `eslint-plugin-react-hooks`, which the owner took on 24
-  September 2026 (`docs/technology.md`, section 2).
+  September 2026 (`docs/technology.md`, section 2). The probe's block has
+  them already, since `src/probe/probe.tsx` is React.
+- The probe of stage 0 (`docs/specs/site.md`) is a page of its own, not
+  one of the layers, and two patterns keep it apart. `probe`, in the
+  first block and in each block of a layer, which replaces the first
+  block's rule for its files, forbids every file outside `src/probe/` to
+  import it. `outOfProbe`, in the probe's block, forbids the probe any
+  path that starts with `../`, which is every path out of `src/probe/`,
+  so it imports popnei, React and its own files and nothing of `src/`;
+  it takes values of popnei, since its worker calls popnei as
+  `src/worker/runner.ts` does. The probe's messages are checked when they
+  arrive, as the worker's are, so it has no type assertion either.
 
 ## `.prettierrc.json`
 
@@ -528,8 +708,18 @@ export default defineConfig(
 Prettier's defaults: 80 columns, double quotes, semicolons, trailing
 commas, which are what popnei's TypeScript package is written in. An
 empty file and not no file, so that the editor knows the project uses
-Prettier. Prettier 3 skips what `.gitignore` lists, so it needs no ignore
-file of its own while `.gitignore` lists what it must skip. Nothing is
+Prettier. Prettier 3 skips what `.gitignore` lists, and what
+`.prettierignore` lists besides:
+
+```
+# The documents are prose wrapped by hand (the writing skill).
+*.md
+```
+
+Prettier formats Markdown too, and `prettier --check` on 24 September
+2026 would have rewritten 21 of the documents of `docs/` and the skills,
+whose tables and lists the writing skill lays out by hand; a document is
+not code whose layout a tool should own. Nothing is
 formatted by hand and no lint rule is about formatting, so no
 `eslint-config-prettier` is needed: neither `@eslint/js` nor
 typescript-eslint 8 have formatting rules in the configurations used.
@@ -545,13 +735,20 @@ screens/
 e2e/scratch.spec.ts
 crates/files/target/
 crates/files/pkg/
+.claude/worktrees/
+.DS_Store
+tmp/
+.vitest/
+coverage/
 ```
 
 What the tools write, the build, the reports and traces of the tests, the
 pictures of `npm run screens`, the scratch test of `testing.md`, which is
 never committed, and what cargo and wasm-bindgen write for the files
-crate, which `build:files` makes again. Prettier reads this file too, so
-it skips them. `crates/files/Cargo.lock` is committed, as
+crate, which `build:files` makes again; and what the repository ignored
+before it had code, the worktrees of the sessions (`CLAUDE.md`), the
+files macOS writes into every folder, scratch folders and what Vitest
+would write. Prettier reads this file too, so it skips them. `crates/files/Cargo.lock` is committed, as
 `package-lock.json` is, so that every build of the crate uses the same
 versions of calamine, rust_xlsxwriter, zip and what they pull in.
 
@@ -633,14 +830,23 @@ import { resolve } from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
+// The pages are at the root, so the build writes them to the root of dist/
+// and they are served at /popnei_web/<name>.html (docs/technology.md,
+// section 4).
 const page = (name: string): string =>
-  resolve(import.meta.dirname, "pages", `${name}.html`);
+  resolve(import.meta.dirname, `${name}.html`);
 
 export default defineConfig({
   base: "/popnei_web/",
+  // Several pages and no single-page fallback: a missing file is a 404,
+  // as on GitHub Pages, and not index.html with status 200.
+  appType: "mpa",
   plugins: [react()],
+  // A page is added here with its stage: the build fails on a page that
+  // does not exist.
   input: {
     index: page("index"),
+    probe: page("probe"),
     popgen: page("popgen"),
     gwas: page("gwas"),
   },
@@ -658,8 +864,21 @@ export default defineConfig({
 - `base` is the path GitHub Pages serves a project site at,
   `https://<user>.github.io/popnei_web/`; `worker.md` says why no address
   in the code starts with `/`.
-- `input` lists the three pages, one entry each, as section 4 of
-  `docs/technology.md` has them. Vite 8 takes it at the top of the
+- `appType: "mpa"` tells Vite the site has several pages and no fallback
+  to one. Without it, the development server and `vite preview` answer a
+  missing file with `index.html` and status 200, so a wrong address for a
+  wasm or a served file gives a wrong error, a failed compile or "not a
+  vars file", instead of "not found"; GitHub Pages answers 404, and the
+  local servers then behave as it does.
+- `input` lists the pages, one entry each, as section 4 of
+  `docs/technology.md` has them, with the probe of stage 0
+  (`docs/specs/site.md`). The pages are HTML files at the root of the
+  repository, as section 9 of the architecture has them, because the
+  build writes a page where it finds it: in `pages/`, it would be served
+  at `/popnei_web/pages/popgen.html`. Vite fails the build with
+  "Cannot resolve entry module" when `input` names a page that does not
+  exist, so a page is added to it with its stage: at stage 0 the entries
+  are `index` and `probe`. Vite 8 takes `input` at the top of the
   configuration; `build.rollupOptions.input` is its name before Rolldown,
   and deprecated.
 - `build.target` is the browser floor, and applies to the worker's bundle
@@ -678,11 +897,6 @@ export default defineConfig({
   build:files` run while the server is up rewrites it, and the server
   then reloads the light worker with the new wasm, which is what a change
   to the crate should do.
-- With the pages in `pages/`, as section 9 of the architecture has them,
-  the build writes them to `dist/pages/`, and they are served at
-  `/popnei_web/pages/popgen.html`. Whether they move to the root of the
-  repository, or Vite is given `pages/` as its root, is decided on the
-  walking skeleton.
 - No React Compiler in `plugins`: the owner decided on 24 September 2026
   to leave it off for the walking skeleton (`react.md`).
 
