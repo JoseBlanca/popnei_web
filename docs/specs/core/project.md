@@ -115,7 +115,8 @@ individuals file, the first thing missing, or `null`. Every individual of
 the variants must be in the file, and the reason names the ones missing
 (`docs/functionality.md`, section 4). These words were added on 24
 September 2026, after the owner approved this spec, on the pattern of the
-table above, and wait for the owner's approval; the step is named by its
+table above, and approved by the owner with the plan of stage 1 the
+same day; the step is named by its
 folder in `docs/architecture.md`, section 9, `individuals`, since
 `docs/functionality.md` names no step.
 

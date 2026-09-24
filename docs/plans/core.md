@@ -1,13 +1,13 @@
 # Plan: the core, with no screen
 
-24 September 2026, a draft. It builds stage 1 of `docs/build-order.md`
+24 September 2026, approved by the owner on 24 September 2026. It builds stage 1 of `docs/build-order.md`
 from six specs approved by the owner on 24 September 2026, called below
 the protocol spec, `docs/specs/worker/protocol.md`, and the project,
 keys, history, cache and store specs, `docs/specs/core/project.md`,
 `keys.md`, `history.md`, `cache.md` and `store.md`. The project and store
 specs were completed on the same day with details that readers of this
-plan found open, the words of `individualsNeeds` among them, which wait
-for the owner's approval with the plan. It is carried out as the
+plan found open, the words of `individualsNeeds` among them, which the
+owner approved with the plan. It is carried out as the
 `following-plans` skill says, on the branch `plan/core`, with its report
 in `docs/plans/core.report.md`.
 
