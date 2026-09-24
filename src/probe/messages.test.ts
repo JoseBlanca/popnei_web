@@ -1,115 +1,104 @@
 import { describe, expect, test } from "vitest";
-import { validateFromProbe, validateToProbe } from "./messages.ts";
+import {
+  describeMessageError,
+  validateFromProbe,
+  validateToProbe,
+} from "./messages.ts";
+
+const READY = { kind: "ready", popneiVersion: "0.1.0", initMs: 42.5 };
+const OPENED = {
+  kind: "opened",
+  source: "file",
+  name: "panel.vcf.gz",
+  numIndividuals: 200,
+  ploidy: 2,
+  ploidyAssumed: true,
+  openMs: 3,
+};
+const FAILED = {
+  kind: "failed",
+  stage: "open",
+  address: "/popnei_web/probe/panel.nei",
+  message: "404 Not Found",
+};
 
 describe("validateFromProbe", () => {
-  test("accepts ready with the version of popnei and the time of init", () => {
-    const message = { kind: "ready", popneiVersion: "0.1.0", initMs: 42.5 };
+  test.each([
+    ["ready", READY],
+    ["opened", OPENED],
+    ["failed with an address", FAILED],
+    ["failed with no address", { ...FAILED, stage: "init", address: null }],
+  ])("accepts %s", (_name, message) => {
     expect(validateFromProbe(message)).toEqual({ ok: true, value: message });
   });
 
-  test("accepts opened with the individuals, the ploidy and the time", () => {
-    const message = {
-      kind: "opened",
-      source: "file",
-      name: "panel.vcf.gz",
-      numIndividuals: 200,
-      ploidy: 2,
-      ploidyAssumed: true,
-      openMs: 3,
-    };
-    expect(validateFromProbe(message)).toEqual({ ok: true, value: message });
-  });
-
-  test("accepts failed with an address and with none", () => {
-    const withAddress = {
-      kind: "failed",
-      stage: "open",
-      address: "/popnei_web/probe/panel.nei",
-      message: "404 Not Found",
-    };
-    const withoutAddress = {
-      kind: "failed",
-      stage: "init",
-      address: null,
-      message: "WebAssembly.instantiate failed",
-    };
-    expect(validateFromProbe(withAddress)).toEqual({
-      ok: true,
-      value: withAddress,
-    });
-    expect(validateFromProbe(withoutAddress)).toEqual({
-      ok: true,
-      value: withoutAddress,
-    });
-  });
-
-  test("refuses a message of another kind", () => {
-    const checked = validateFromProbe({ kind: "openServed" });
-    expect(checked).toEqual({
+  test.each([
+    ["popneiVersion", { ...READY, popneiVersion: 1 }, "number"],
+    ["initMs", { ...READY, initMs: "42" }, "string"],
+    ["source", { ...OPENED, source: "url" }, "string"],
+    ["name", { ...OPENED, name: 1 }, "number"],
+    ["numIndividuals", { ...OPENED, numIndividuals: "200" }, "string"],
+    ["ploidy", { ...OPENED, ploidy: null }, "null"],
+    ["ploidyAssumed", { ...OPENED, ploidyAssumed: "yes" }, "string"],
+    ["openMs", { ...OPENED, openMs: [3] }, "array"],
+    ["stage", { ...FAILED, stage: "load" }, "string"],
+    ["address", { ...FAILED, address: 3 }, "number"],
+    ["message", { ...FAILED, message: null }, "null"],
+  ])("refuses the field %s of the wrong type", (field, message, found) => {
+    expect(validateFromProbe(message)).toMatchObject({
       ok: false,
-      error:
-        'a message from the probe\'s worker has the kind "openServed", not ready, opened or failed',
+      error: { kind: "wrongType", messageKind: message.kind, field, found },
     });
   });
 
-  test("refuses opened without its ploidy", () => {
-    const checked = validateFromProbe({
-      kind: "opened",
-      source: "served",
-      name: "panel.nei",
-      numIndividuals: 200,
-      ploidyAssumed: false,
-      openMs: 3,
-    });
-    expect(checked).toEqual({
+  test.each([
+    ["ready", READY, "initMs"],
+    ["opened", OPENED, "ploidy"],
+    ["failed", FAILED, "address"],
+  ])("refuses %s without the field %s", (messageKind, message, field) => {
+    const lacking = Object.fromEntries(
+      Object.entries(message).filter(([name]) => name !== field),
+    );
+    expect(validateFromProbe(lacking)).toEqual({
       ok: false,
-      error: "the message opened lacks the field ploidy",
+      error: { kind: "missingFields", messageKind, fields: [field] },
     });
   });
 
-  test("refuses ready whose initMs is text", () => {
-    const checked = validateFromProbe({
-      kind: "ready",
-      popneiVersion: "0.1.0",
-      initMs: "42",
-    });
-    expect(checked).toEqual({
+  test.each([
+    ["ready", READY],
+    ["opened", OPENED],
+    ["failed", FAILED],
+  ])("refuses %s with a field it does not have", (messageKind, message) => {
+    expect(validateFromProbe({ ...message, numVars: 1200 })).toEqual({
       ok: false,
-      error: "the field initMs of ready is not a finite number of 0 or more",
+      error: { kind: "extraFields", messageKind, fields: ["numVars"] },
     });
   });
 
-  test("refuses opened with a field it does not have", () => {
-    const checked = validateFromProbe({
-      kind: "opened",
-      source: "served",
-      name: "panel.nei",
-      numIndividuals: 200,
-      ploidy: 2,
-      ploidyAssumed: false,
-      openMs: 3,
-      numVars: 1200,
-    });
-    expect(checked).toEqual({
+  test("refuses a message of the other side", () => {
+    expect(validateFromProbe({ kind: "openServed" })).toEqual({
       ok: false,
-      error: "the message opened has the unexpected field numVars",
+      error: {
+        kind: "unknownKind",
+        found: "openServed",
+        expected: ["ready", "opened", "failed"],
+      },
     });
   });
 
-  test("refuses opened whose number of individuals is not an integer", () => {
-    const checked = validateFromProbe({
-      kind: "opened",
-      source: "served",
-      name: "panel.nei",
-      numIndividuals: 200.5,
-      ploidy: 2,
-      ploidyAssumed: false,
-      openMs: 3,
-    });
-    expect(checked).toEqual({
+  test("refuses null", () => {
+    expect(validateFromProbe(null)).toEqual({
       ok: false,
-      error:
-        "the field numIndividuals of opened is not an integer of 0 or more",
+      error: { kind: "notObject", found: "null" },
+    });
+  });
+
+  test("refuses a message whose only kind is inherited", () => {
+    const inherited: unknown = Object.create({ kind: "ready" });
+    expect(validateFromProbe(inherited)).toEqual({
+      ok: false,
+      error: { kind: "noKind" },
     });
   });
 });
@@ -130,37 +119,96 @@ describe("validateToProbe", () => {
     ).toBe(file);
   });
 
-  test("refuses a message of another kind", () => {
-    const checked = validateToProbe({ kind: "ready" });
-    expect(checked).toEqual({
+  test("refuses a message of the other side", () => {
+    expect(validateToProbe({ kind: "ready" })).toEqual({
       ok: false,
-      error:
-        'a message to the probe\'s worker has the kind "ready", not openServed or openFile',
+      error: {
+        kind: "unknownKind",
+        found: "ready",
+        expected: ["openServed", "openFile"],
+      },
     });
   });
 
   test("refuses openFile without its file", () => {
-    const checked = validateToProbe({ kind: "openFile" });
-    expect(checked).toEqual({
+    expect(validateToProbe({ kind: "openFile" })).toEqual({
       ok: false,
-      error: "the message openFile lacks the field file",
+      error: {
+        kind: "missingFields",
+        messageKind: "openFile",
+        fields: ["file"],
+      },
     });
   });
 
   test("refuses openFile whose file is the name of a file", () => {
-    const checked = validateToProbe({ kind: "openFile", file: "mine.vcf" });
-    expect(checked).toEqual({
+    expect(validateToProbe({ kind: "openFile", file: "mine.vcf" })).toEqual({
       ok: false,
-      error: "the field file of openFile is not a File",
+      error: {
+        kind: "wrongType",
+        messageKind: "openFile",
+        field: "file",
+        expected: "a File",
+        found: "string",
+      },
     });
   });
 
-  test("refuses what is not an object", () => {
-    const refusal = {
+  test.each([
+    ["openServed", { kind: "openServed" }],
+    ["openFile", { kind: "openFile", file: new File([], "mine.vcf") }],
+  ])("refuses %s with a field it does not have", (messageKind, message) => {
+    expect(validateToProbe({ ...message, name: "mine.vcf" })).toEqual({
       ok: false,
-      error: "a message to the probe's worker is not an object",
-    };
-    expect(validateToProbe(null)).toEqual(refusal);
-    expect(validateToProbe("openServed")).toEqual(refusal);
+      error: { kind: "extraFields", messageKind, fields: ["name"] },
+    });
+  });
+
+  test.each([
+    [
+      "what is not an object",
+      "openServed",
+      { kind: "notObject", found: "string" },
+    ],
+    ["an array", [], { kind: "notObject", found: "array" }],
+    ["a message with no kind", {}, { kind: "noKind" }],
+    [
+      "a kind that is null",
+      { kind: null },
+      { kind: "kindNotText", found: "null" },
+    ],
+    [
+      "a kind that is a number",
+      { kind: 1 },
+      { kind: "kindNotText", found: "number" },
+    ],
+  ])("refuses %s", (_name, message, error) => {
+    expect(validateToProbe(message)).toEqual({ ok: false, error });
+  });
+});
+
+describe("describeMessageError", () => {
+  test("names a missing kind without the word undefined", () => {
+    expect(describeMessageError({ kind: "noKind" })).toBe(
+      "A message between the probe's page and its worker has no kind.",
+    );
+  });
+
+  test("names a kind that is not text by its type", () => {
+    expect(describeMessageError({ kind: "kindNotText", found: "null" })).toBe(
+      "A message between the probe's page and its worker has a kind that is null, not text.",
+    );
+  });
+
+  test("names the field, the message, what it holds and what it should", () => {
+    expect(
+      describeMessageError({
+        kind: "wrongType",
+        messageKind: "opened",
+        field: "ploidy",
+        expected: "a number",
+        found: "string",
+      }),
+    ).toBe("The field ploidy of the message opened is string, not a number.");
   });
 });
