@@ -79,7 +79,7 @@ What it would ask:
 ## Reading core
 
 `src/core/store.ts` gives `getState()`, `subscribe(listener)` and
-`apply(command)`, as `SKILL.md`, "The core", describes them. The screens
+`apply(description, command)`, as `SKILL.md`, "The core", describes them. The screens
 read it through one hook, in `src/ui/store.tsx`:
 
 ```tsx
@@ -156,7 +156,11 @@ const threshold = useAppState(selectMaxMissingRate); // a selector of core, a nu
   minValue={0}
   maxValue={1}
   step={0.01}
-  onChange={(value) => store.apply((p) => setMaxMissingRate(p, value))}
+  onChange={(value) =>
+    store.apply("the missing data filter changed", (p) =>
+      setVariantFilter(p, { kind: "missing_data", maxAllowedMissingRate: 1 - value }),
+    )
+  }
 />
 ```
 
@@ -377,8 +381,10 @@ What each one is for here:
 | load a file | `DropZone` holding a `FileTrigger` | dragging is not possible with a keyboard, so the zone always holds a button that opens the file picker |
 | progress of a run | `ProgressBar` with a label | announced through the status region, below |
 
-A `File` the user picked or dropped goes to core as it is, in a command;
-the screen does not read it.
+A `File` the user picked or dropped goes into the worker client's map
+under a new load id, and core is given the id, the name and the size, in
+a command; core never holds the `File`, and the screen does not read it
+(`docs/architecture.md`, section 6).
 
 ### Announcements
 

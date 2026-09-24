@@ -219,8 +219,8 @@ export function createClient(make: {
   waiting ones to the new worker; a queue inside the worker would die
   with it.
 - **A request whose key has a result in the cache is not sent.** The
-  analysis looks in the cache first; the client does not keep a second
-  one.
+  store looks in the cache before it calls the `run` of an analysis
+  (`docs/specs/core/store.md`); the client does not keep a second one.
 - **A queued request whose key the current project no longer asks for
   is dropped**, when a command gives its analysis another key before it
   starts, with its `cancel()`, at no cost; its outcome is `cancelled`. An

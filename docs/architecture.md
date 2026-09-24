@@ -78,8 +78,7 @@ web and what is hard to undo, are new.
 
 What was revised again. On 24 September 2026, after that approval, the
 owner took three decisions about the inputs, and this revision takes them
-in; it is a draft on the branch `design/inputs-without-popnei` until the
-owner approves it.
+in; the owner approved it the same day.
 
 - **The variant file has no fingerprint.** Each time the user loads a
   variant file, the same one again included, it gets a new id, and that
@@ -107,6 +106,15 @@ separator and a decimal mark that are detected, UTF-8 or else
 Windows-1252 among them, shown to the user and changeable, as the owner
 decided on 24 September 2026 (section 6).
 
+What was revised for the specs of stage 1, on 24 September 2026, not yet
+approved by the owner: the reference of an opened project keeps a
+fingerprint of the settings of each analysis in place of a key, as the
+owner decided (sections 2 and 8); the definition of an analysis gains
+`parseOptions`, and its `run` is given a client bound to its key by the
+store, which looks in the cache (section 4); a read of the individuals
+file says what "auto" found (section 2); and section 12 no longer counts
+the canonical form of the keys as hard to undo, since no key is saved.
+
 What each replaced, and why, is at the end of sections 3 and 6. popnei is
 no longer asked for a fingerprint nor for a reader of these files, so the
 walking skeleton needs nothing from popnei beyond 0.1.0 (section 10).
@@ -116,8 +124,9 @@ walking skeleton needs nothing from popnei beyond 0.1.0 (section 10).
 The project is everything the user has set, and nothing that was
 calculated, with two exceptions that are information read from the inputs
 and not results: the identity of the variant file, which serves only to
-compare the file of a reopened project (section 8), and the check numbers
-of a project file that was opened. It is one plain, immutable value, and
+compare the file of a reopened project (section 8), and what a project
+file that was opened says of the results it had, their check numbers
+with a fingerprint of the settings they were made with. It is one plain, immutable value, and
 every change the user makes is a command that gives a new one.
 
 ```ts
@@ -156,7 +165,8 @@ interface IndividualsSource {
   csv: CsvOptions | null;             // how a CSV or TSV is read; null for xlsx
   read:
     | { kind: "pending" }             // the light worker is reading it
-    | { kind: "read"; table: IndividualsTable; columns: ColumnType[] }
+    | { kind: "read"; table: IndividualsTable; columns: ColumnType[];
+        found: CsvFound | null }      // what "auto" found; null for xlsx
     | { kind: "failed"; error: IndividualsFileError };
 }
 
@@ -181,11 +191,13 @@ type ColumnType =
 interface Reference {
   variants: VariantSource;            // the file the project was made with;
                                       // its fileId names no File
-  checks: Partial<Record<AnalysisId, {
-    numbers: number[];                // saved in the project file
-    key: string | null;               // never saved: computed from the reference's
-  }>>;                                // settings once the popnei version is known
-}
+  popneiVersion: string;              // from the header of the project file
+  checks: {
+    analysis: AnalysisId;
+    numbers: (number | null)[];       // saved in the project file
+    settings: string;                 // never saved: the fingerprint of the
+  }[];                                // analysis's settings in the file,
+}                                     // made when it is opened (section 8)
 ```
 
 - **Immutable**, so that undo is keeping the previous values, and so
@@ -340,7 +352,9 @@ interface AnalysisDef<Opts, Result> {
   app: ("popgen" | "gwas")[];
   defaults: Opts;
   keyVersion: number;                    // raised when the meaning of its result changes
-  keyInputs(p: Project): unknown;        // the parts of the project it depends on
+  parseOptions(o: unknown): Result<Opts, string>; // its options read from a project file
+  keyInputs(p: Project): unknown;        // the parts of the project it depends on,
+                                         // beyond the load and the filters (section 3)
   needs(p: Project): string | null;      // why it cannot run yet, or null
   run(p: Project, c: WorkerClient): Run<Result>; // the request to the worker
   warnings(r: Result, p: Project): Warning[]; // raised by the data only
@@ -351,7 +365,12 @@ interface AnalysisDef<Opts, Result> {
 
 and its panel of options and its results in `src/ui`. `WorkerClient` is
 an interface that core declares and the client of `src/worker` fulfils,
-since core has no DOM and cannot name the browser's `Worker`. Adding an
+since core has no DOM and cannot name the browser's `Worker`. The store
+gives `run` a client bound to the key of the request, and looks in the
+cache before it calls `run`, so that an analysis neither makes a key nor
+reads the cache (`docs/specs/core/store.md`). `parseOptions` was added
+with that spec, on 24 September 2026, because the options of an analysis
+are its module's to check when a project file is opened. Adding an
 analysis is adding its module and its panel; nothing else changes. This is the
 piece the work is split into, and what lets an analysis be tried, changed
 or dropped without touching the others.
@@ -730,11 +749,15 @@ for the smallest part of it.
   refuses a file it cannot read with a message that says why, and gives a
   `Project` whose `variants` is null, since the file has to be picked
   again, and whose `reference` holds the source the project was made with
-  and, for each analysis, its check numbers. The key of each reference,
-  the key its settings in the file give with the reference's source, is
-  not saved in the file: it is computed once the calculation worker's
-  `ready` has given the version of popnei, which is part of every key, and
-  is null until then.
+  and, for each analysis, its check numbers with the fingerprint of its
+  settings as the file had them: a hash of everything its key holds but
+  the load id and the version of popnei (`docs/specs/core/keys.md`). The
+  fingerprint is not saved in the file; it is made when the file is
+  opened, with nothing to wait for. The owner decided it on 24 September
+  2026, in place of a key of the reference made once the calculation
+  worker had given the version of popnei, which left a moment after the
+  opening in which a changed setting would have been taken for the
+  file's own.
 - **The identity of the file is compared, and never decides anything.**
   When the user gives the variant file of an opened project, the
   application compares the name, the size, the individuals and the ploidy
@@ -751,17 +774,19 @@ for the smallest part of it.
 - **The check numbers of an opened file are kept** when the project is
   saved again before a run. For each analysis, the numbers saved are
   those of its result in the cache under its current key; when there is
-  none, those of the reference, if the key its settings give now, with
-  the reference's source in place of the current one, is the key of the
-  reference, so that an analysis whose options changed does not carry
-  numbers of other options; otherwise none. And none when the variant
-  file the user gave differs from the reference's in its identity: the
-  numbers belong to the old file, and saved beside the new one they would
-  read as the numbers of a run on it. After a run, the numbers of
-  the result are compared with those of the reference, and the screen
-  says whether they are the same, and what changed that could explain a
-  difference, the variant file or the version of popnei. The reference is
-  in no key: it is not an input of any result.
+  none, those of the reference, if the fingerprint of its settings now is
+  the one the reference kept, so that an analysis whose options changed
+  does not carry numbers of other options; otherwise none. And none when
+  the variant file the user gave differs from the reference's in its
+  identity: the numbers belong to the old file, and saved beside the new
+  one they would read as the numbers of a run on it. After a run, while
+  the fingerprint of the settings is still the file's, the numbers of the
+  result are compared with those of the reference, and the screen says
+  whether they are the same, and what changed that could explain a
+  difference: the variant file, or, when the version of popnei is not the
+  one in the file's header, the version as well
+  (`docs/specs/core/store.md`). The reference is in no key: it is not an
+  input of any result.
 - **The report** is made in three parts, each in the layer that can do
   it. Core builds its content as data, from the project, the cache and
   the warnings: the sections, the tables, the warnings, and which plots
@@ -936,19 +961,20 @@ code, version 0.1.0.
   9), and opening one validates it against the schema of that version
   (section 8), so a change to the format is a new version, and the
   application keeps reading the versions before it.
-- **The canonical form of the keys.** A change to it changes every key,
-  so no result in any cache is found again, and the keys of the
-  reference of an opened project, computed with the new form, no longer
-  match those of results saved with the old one. It is versioned as the key version
-  of each analysis is, and changed only with that version raised.
+The canonical form of the keys is not among these, although an earlier
+version of this section said it was. No key and no fingerprint of
+settings is saved in a file: the cache lives in the tab, the calculation
+worker's keys are made by the same page, and the fingerprints of an
+opened project are made from its settings when it is opened (section 8).
+A change to the canonical form, in a new version of the site, costs a
+user nothing but the results of a tab left open across the deploy.
 
 ## 13. Open points
 
-1. The hash of the keys: which function. It has to be synchronous,
-   because core is, and `crypto.subtle.digest`, the hash the browser
-   gives, returns a promise; so it is a function of ours in TypeScript.
-   The recommendation is a published algorithm with its test vectors,
-   SHA-256 among them, so that a collision is not a concern. Nothing is
+1. The hash of the keys. Settled by the owner on 24 September 2026:
+   SHA-256, written in TypeScript in core, synchronous, and tested on the
+   test vectors NIST publishes; not `crypto.subtle.digest`, which returns
+   a promise, nor a library (`docs/specs/core/keys.md`). Nothing is
    hashed from the variant file (section 3).
 2. Whether the calculation worker is also restarted between two requests
    to give back the memory of wasm, which never shrinks, and which the

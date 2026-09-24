@@ -161,13 +161,15 @@ is what the core layer adds to them.
   with state. It gives `getState()`, the current `AppState`, the same
   object until something changes; `subscribe(listener)`, a property bound
   once, which calls the listener after every change and returns the
-  function that unsubscribes; `apply(command)`, where a command is
-  `(project) => Project`, which makes a step of undo, and makes none when
-  the command returns the project it was given; `undo()` and `redo()`;
-  and the events of a run, `runStarted`, `runProgress`,
-  `resultArrived(key, result)` and `runEnded`, which change what the
-  screens show and not the project, so they make no step of undo.
-  `react.md` has how the screens read it.
+  function that unsubscribes; `apply(description, command)`, where a
+  command is `(project) => Project` and the description the words that
+  finish the notice of removed results, "the MAF filter changed", which
+  makes a step of undo, and makes none when the command returns the
+  project it was given; `undo()`, `redo()`, and `open(project)`, which
+  starts a new history; `startRun(analysis)`; and the events, the version
+  of popnei, the reads of the files and `runEnded`, which change what the
+  screens show and make no step of undo. `docs/specs/core/store.md` has
+  them whole, and `react.md` how the screens read it.
 - **A run is started by core and awaited by `src/ui`.** The `run` of an
   analysis builds its request, hands it to the client that core was given,
   and returns the `Run` handle of `src/worker/protocol.ts` without waiting
@@ -200,13 +202,15 @@ The key of a result is what makes undo, staleness and the cache work
 (section 3 of the architecture), so its rules are strict.
 
 - **`keyInputs` returns the parts of the project the result depends on,
-  and all of them.** A part left out gives a stale result shown as
+  beyond the load and the filters, and all of them.** A part left out gives a stale result shown as
   current, the worst error the application can make; a part put in that
   the result does not depend on only costs a calculation. When in doubt,
   it goes in.
 - **The key is made in one place**, `keys.ts`, from the canonical form of
   the inputs: the analysis id, a version of that analysis's key, the
-  version of popnei, and `keyInputs`. The canonical form writes the keys
+  version of popnei, the load of the variants file, the filters, which
+  every analysis depends on and `keys.ts` adds itself, and `keyInputs`,
+  the rest (`docs/specs/core/keys.md`). The canonical form writes the keys
   of every object in sorted order and arrays in their order, so two equal
   values give the same text, whatever order their fields were set in.
 - **Only JSON values go into a key**, and the canonical form throws a

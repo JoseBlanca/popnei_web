@@ -59,9 +59,10 @@ the properties to write first:
   used longest ago.
 
 A property does not replace the literals. The key of one fixed project is
-also asserted as a literal hash, so that a change of the canonical form,
-which would make every saved project file ask for its results again, is a
-failing test and not a silent change.
+also asserted as a literal hash, so that a change of the canonical form is
+a failing test and a decision, and not a silent change. Such a change
+breaks nothing a user keeps, since no key is saved in a file
+(`docs/architecture.md`, section 12).
 
 The properties are written with fast-check, the property-based testing
 library of JavaScript, the one Hypothesis is to pytest. It draws the

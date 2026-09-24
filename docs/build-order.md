@@ -123,7 +123,10 @@ order does not wait for what exists:
 - **What:** the modules of `src/core` that everything else reads: the
   project and its commands, the keys and their hash, undo and redo, the
   cache of results, the store (`docs/architecture.md`, sections 2 to 4 and
-  9); `result.ts`.
+  9); `result.ts`; and the types of `src/worker/protocol.ts` that core
+  names, the filters, the individuals table and a run, without the jobs
+  and their results, which come with the workers in stage 2
+  (`docs/specs/worker/protocol.md`).
 - **Why here:** they carry the invariant the applications are least
   allowed to break, that no result is shown stale, and they are pure
   TypeScript, tested fully with Vitest and fast-check before a screen
