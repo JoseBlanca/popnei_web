@@ -204,7 +204,7 @@ the whole project; loading the file again in its step is enough.
 
 ## 4. The store
 
-Under way.
+Done on 24 September 2026, and reviewed.
 
 - Task 4.1, after the spec in 1a6d1db: the state, `createStore`,
   `apply`, `undo`, `redo`, `open`, `popneiReady` and the two records,
@@ -285,6 +285,65 @@ checks exit 0 and `npm test` gives "Tests 601 passed (601)":
    passed", of at least 7.
 5. `npx vitest run src/core/store.test.ts -t "WP4 D5"`: "Tests 5
    passed", the five properties.
+
+The review ran seven categories through four reviewers: spec, tests,
+stale, and errors with api, architecture and browser, the last over the
+whole of the core since the plan ends here. The specs changed first, in
+e6b3123; the fixes are 1de0fc6 to 867278b, each with tests that failed
+first. On them the checks exit 0 and `npm test` gives "Tests 621 passed
+(621)"; WP4 D1 gives 22 tests, D2 25, D3 27, D4 13, D5 5, the five
+properties holding at 2,000 runs. What mattered:
+
+- A mistake in the code of an analysis, thrown while the store made the
+  keys of a change, left the store half changed: its history moved, its
+  state did not. A user who went on could then see the result of a MAF
+  of 0.42 shown done for a MAF of 0.3, and kept in the cache under that
+  key. The store now makes the keys of the new project before it
+  changes anything, so such a mistake leaves it as it was.
+- A read of a file could change the key of a calculation running, or
+  lock its analysis, with no notice naming it: nothing stopped it, and
+  the next calculation waited behind it, minutes for an association.
+  Since a read is recorded into every project of the history, no undo
+  can give that key back, so a read now stops such a calculation at
+  once, and a run stops every calculation left behind.
+- An error in any function that listens to the store left the others
+  unwarned, and in a run left the analysis "running" for ever with Run
+  doing nothing. Every listener is now called, and the run is taken out
+  and cancelled.
+- A mistake while a result was taken in made a calculation of minutes
+  end as "ready", with nothing said; it is now kept as a failure, shown
+  until the next change.
+- A user who closed the notice, or pressed Stop, and then Run was not
+  told that the calculation might first wait for the variants file to be
+  read again. The mark now holds from a stop until popnei says it is
+  ready again, or a calculation ends, which shows the worker was not
+  restarting.
+- Six tests could not fail, among them the number of variants of a
+  result recorded into the file loaded since, and an opening that lost
+  the results and popnei's refusals. The property tests reached a stop
+  by an undo in 6 sequences of 1,000; they now reach it in 169.
+- The lint kept the helpers of the tests out of the core but not out of
+  the screens, which stage 2 writes; it keeps them out of both now.
+
+Found right, and not changed: nothing of the core needs a browser newer
+than the site's floor, Chrome 111, Firefox 115 and Safari 16.4, by the
+tables of `@mdn/browser-compat-data` 8.1.2; the core built for those
+targets ran on a page in Chromium 153 and WebKit 26.6.
+
+For stage 2, where each belongs:
+
+- Who asks the light worker to read the individuals file again after an
+  undo gives back a project whose read is pending, under options never
+  read: the page's entry, whose spec should say it.
+- What happens to a calculation left behind when the user loads a new
+  variants file, which restarts the calculation worker, while the
+  notice says it will be stopped only unless the change is undone: the
+  spec of the worker's client.
+- A notice caused by an undo should offer Redo, not Undo: the screen's
+  spec.
+- An error thrown in a click, or in a promise the page awaits, reaches
+  no error boundary of React: the page needs a handler of the window's
+  errors that shows it.
 
 ## 2. The keys
 
