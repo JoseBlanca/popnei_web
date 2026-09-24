@@ -1,6 +1,6 @@
 # The project and its commands
 
-Draft, 24 September 2026, not yet approved by the owner. There is no code
+24 September 2026, approved by the owner on 24 September 2026. There is no code
 yet. The project is everything the user has set in one application: the
 variants file they loaded, the filters, the individuals file with the
 types of its columns, the populations, and the options of each analysis.

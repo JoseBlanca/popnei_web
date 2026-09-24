@@ -1,6 +1,6 @@
 # The store
 
-Draft, 24 September 2026, not yet approved by the owner. There is no code
+24 September 2026, approved by the owner on 24 September 2026. There is no code
 yet. The store is the one object of core that changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.

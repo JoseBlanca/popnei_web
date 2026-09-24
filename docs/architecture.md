@@ -3,7 +3,8 @@
 September 2026, first draft, revised on 24 September 2026 after its
 architecture review, and approved by the owner on 24 September 2026;
 revised again on 24 September 2026 for three decisions of the owner about
-the inputs, and approved by the owner the same day. What was revised each time is at the end
+the inputs, and approved by the owner the same day; revised a third time
+for the specs of stage 1, and approved with them the same day. What was revised each time is at the end
 of section 1. The document gives the parts of the web applications of
 popnei, what each one holds, and how a change made by the user reaches the
 results on the screen. What the applications
@@ -106,8 +107,8 @@ separator and a decimal mark that are detected, UTF-8 or else
 Windows-1252 among them, shown to the user and changeable, as the owner
 decided on 24 September 2026 (section 6).
 
-What was revised for the specs of stage 1, on 24 September 2026, not yet
-approved by the owner:
+What was revised for the specs of stage 1, on 24 September 2026, and
+approved by the owner with those specs the same day:
 
 - The reference of an opened project keeps a fingerprint of the settings
   of each analysis in place of a key, as the owner decided, and the

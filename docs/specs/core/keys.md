@@ -1,6 +1,6 @@
 # The keys of the results
 
-Draft, 24 September 2026, not yet approved by the owner. There is no code
+24 September 2026, approved by the owner on 24 September 2026. There is no code
 yet. A key is the name a result is stored under in the cache: a SHA-256
 hash of everything the result was calculated from, so that a result whose
 inputs changed is never shown, and a result whose inputs came back, by an

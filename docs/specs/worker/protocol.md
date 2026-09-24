@@ -1,6 +1,6 @@
 # The types the page, the workers and core share
 
-Draft, 24 September 2026, not yet approved by the owner. There is no code
+24 September 2026, approved by the owner on 24 September 2026. There is no code
 yet. This spec gives the part of `src/worker/protocol.ts` that core
 names: the filters of the variants and of the individuals, the table of
 the individuals file and the types of its columns, and a request to a
@@ -260,7 +260,8 @@ core; core makes its own type of key of it with `keyFromWire`
   refuses with a plain `Error` rather than a crash (`js/popnei/README.md`,
   on traps). It can succeed after a restart, which gives the memory back,
   and the runner cannot tell it from a refusal of the data by its type.
-  Until popnei gives it a kind of its own, which is asked of popnei, it is
+  Until popnei gives it a kind of its own, asked of popnei in its issue
+  #3 on 24 September 2026, it is
   kept as a refusal, and a new load of the file, which restarts the
   worker, gives it another key.
 - **A mistake of our runner outside a call to popnei**, a `TypeError` of

@@ -1,6 +1,6 @@
 # The cache of results
 
-Draft, 24 September 2026, not yet approved by the owner. There is no code
+24 September 2026, approved by the owner on 24 September 2026. There is no code
 yet. The cache keeps the results of the analyses under their keys, on the
 page, so that a result asked for again, by an undo, a value set back, or a
 step of the application visited again, is shown with no calculation. It is
