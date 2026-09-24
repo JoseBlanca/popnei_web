@@ -249,6 +249,15 @@ the state `error` with what happened, so that the user learns it and can
 run again; after the next change, the analysis is `ready`, since a second
 try can succeed. A cancel is not a failure: the analysis is `ready`.
 
+The next change of the project, for a failure that is not popnei's, is
+a command that changed the project, an undo, a redo or an opening; a
+read recorded, a number of variants among them, is not, since it comes
+from the workers and would clear the failure of one analysis when the
+result of another arrives. `startRun` of an analysis in error after
+such a failure forgets the failure, so that a cancel of the new
+calculation leaves the analysis `ready`. Decided here, not by the
+owner, on 24 September 2026.
+
 ### The comparison with the check numbers
 
 When the project comes from a project file whose reference holds check
@@ -438,6 +447,23 @@ those in flight:
   session. Any other kind: it is kept until the next change of the
   project.
 - `cancelled`: nothing is kept.
+
+What the store does with the client it binds, and with the calls it is
+given, where the rest of this spec does not say; decided here, not by
+the owner, on 24 September 2026:
+
+- The client of a request sends once: a second call of its `run`, or a
+  `run` of the analysis that returns a handle the client did not give,
+  or none at all, is a defect of that analysis. If the analysis sent
+  and then threw, the store cancels what it sent before it throws, so
+  that no calculation runs that the store does not know.
+- `startRun` and `cancelRun` of an id that no definition has are a
+  defect.
+- `cancelRun` stops the request of the analysis's current key that is
+  not already being stopped; a calculation left behind is stopped by
+  the notice, as above.
+- The results the cache keeps when it drops some are those under the
+  keys the current project gives, which hold every result on screen.
 
 ## The cases
 
