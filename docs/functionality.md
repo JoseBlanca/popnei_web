@@ -312,7 +312,8 @@ by Python. It holds:
   pruning of the PCA.
 - **A few numbers of each result that was run**: the mean expected
   heterozygosity of each population, the Fst matrix, the λ and the top
-  hit of a GWAS. They are there to check a new run against, never shown
+  hit of a GWAS, with the version of the application's calculation of
+  each analysis. They are there to check a new run against, never shown
   as results.
 
 Opening a project:
@@ -333,8 +334,11 @@ Opening a project:
    ready to run, and one action runs them all.
 4. After a run, it compares the numbers of the result with those of the
    project, and says whether they are the same or differ, and what
-   changed that could explain it, the variant file or the version of
-   popnei. This is what catches a file with the same individuals and
+   changed that could explain it: the variant file; the version of
+   popnei; or the application's calculation of that analysis, when a
+   later version of the application calculates it in another way, which
+   the project file records with the numbers of each analysis. This is
+   what catches a file with the same individuals and
    number of variants as the project's and other genotypes, which the
    comparison of step 2 lets pass: the numbers come from the genotypes.
 
