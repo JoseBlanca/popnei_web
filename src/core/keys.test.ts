@@ -575,6 +575,8 @@ type Part =
   | "popneiVersion"
   | "fileId"
   | "readOptions"
+  | "ploidy"
+  | "onlyPassed"
   | "filters"
   | "individualFilters"
   | "inputs"
@@ -632,6 +634,18 @@ function changeOf(
             })
           : withVariants({ format: "nei", readOptions: null }),
       ];
+    case "ploidy":
+    case "onlyPassed": {
+      const vcf = variants.readOptions ?? { ploidy: 2, onlyPassed: false };
+      const changed =
+        part === "ploidy"
+          ? { ...vcf, ploidy: (vcf.ploidy % 255) + 1 }
+          : { ...vcf, onlyPassed: !vcf.onlyPassed };
+      return [
+        withVariants({ format: "vcf", readOptions: vcf }),
+        withVariants({ format: "vcf", readOptions: changed }),
+      ];
+    }
     case "filters": {
       if (sameJson(other.filters, s.p.filters)) {
         return null;
@@ -707,6 +721,8 @@ describe("WP2 D3 the properties of the keys", () => {
     "popneiVersion",
     "fileId",
     "readOptions",
+    "ploidy",
+    "onlyPassed",
     "filters",
     "individualFilters",
     "inputs",
@@ -767,29 +783,35 @@ describe("WP2 D3 the properties of the keys", () => {
     );
   });
 
-  test.each<Part>(["filters", "individualFilters", "readOptions", "inputs"])(
-    "a change of %s changes the fingerprint",
-    (part) => {
-      fc.assert(
-        fc.property(setting, others, (s, other) => {
-          const change = changeOf(part, s, other);
-          fc.pre(change !== null);
-          const [before, after] = change;
-          const memo = createKeyMemo();
-          expect(fingerprintOf(after, memo)).not.toBe(
-            fingerprintOf(before, memo),
-          );
-          expect(fingerprintOf(before, null)).toBe(fingerprintOf(before, memo));
-        }),
-      );
-    },
-  );
+  test.each<Part>([
+    "filters",
+    "individualFilters",
+    "readOptions",
+    "ploidy",
+    "onlyPassed",
+    "inputs",
+  ])("a change of %s changes the fingerprint", (part) => {
+    fc.assert(
+      fc.property(setting, others, (s, other) => {
+        const change = changeOf(part, s, other);
+        fc.pre(change !== null);
+        const [before, after] = change;
+        const memo = createKeyMemo();
+        expect(fingerprintOf(after, memo)).not.toBe(
+          fingerprintOf(before, memo),
+        );
+        expect(fingerprintOf(before, null)).toBe(fingerprintOf(before, memo));
+      }),
+    );
+  });
 
   test.each<Part>([
     "name",
     "intermediateInputs",
     "fileId",
     "readOptions",
+    "ploidy",
+    "onlyPassed",
     "filters",
     "individualFilters",
     "popneiVersion",
