@@ -13,11 +13,22 @@ import { StrictMode, useSyncExternalStore } from "react";
 import type { ChangeEvent, JSX } from "react";
 import { createRoot } from "react-dom/client";
 
-import { describeMessageError, validateFromProbe } from "./messages.ts";
-import type { FromProbe, ToProbe } from "./messages.ts";
+import {
+  SERVED_NAME,
+  describeMessageError,
+  readsAsVcf,
+  validateFromProbe,
+} from "./messages.ts";
+import type { FileSource, FromProbe, ToProbe } from "./messages.ts";
 import ProbeWorker from "./probeWorker.ts?worker";
 
-/** Where popnei is: loading, loaded, refused, or a worker that never ran. */
+/** Where the probe's issues are reported. */
+const ISSUES = "https://github.com/JoseBlanca/popnei_web/issues";
+
+/**
+ * Where popnei is: loading, loaded, refused, a worker that never ran, or a
+ * worker that ran and stopped on a defect.
+ */
 type PopneiState =
   | { readonly kind: "loading" }
   | {
@@ -30,7 +41,12 @@ type PopneiState =
       readonly address: string | null;
       readonly message: string;
     }
-  | { readonly kind: "notStarted"; readonly message: string | null };
+  | { readonly kind: "notStarted"; readonly message: string | null }
+  | {
+      readonly kind: "stopped";
+      readonly popneiVersion: string;
+      readonly initMs: number;
+    };
 
 /** Where one of the two files is. */
 type FileState =
@@ -49,6 +65,8 @@ type FileState =
       readonly name: string;
       readonly address: string | null;
       readonly message: string;
+      /** Whether popnei read the file, so that the reader its name chose is said. */
+      readonly read: boolean;
     };
 
 /** A defect of the probe: what went wrong, and the details when known. */
@@ -126,15 +144,60 @@ worker.addEventListener("messageerror", () => {
   );
 });
 
-// A module worker that fails to load often gives an event with no message.
-worker.addEventListener("error", (event: ErrorEvent) => {
-  const message = event.message === "" ? null : event.message;
-  if (state.popnei.kind === "loading") {
-    update({ popnei: { kind: "notStarted", message } });
-  } else {
-    addDefect("A defect of the probe: the worker failed.", message);
+// A worker whose script does not load fires a plain Event, with no
+// message; one that stops on an error nothing caught, an ErrorEvent.
+worker.addEventListener("error", (event: Event) => {
+  const message =
+    event instanceof ErrorEvent && event.message !== "" ? event.message : null;
+  const popnei = state.popnei;
+  switch (popnei.kind) {
+    case "loading":
+      update({ popnei: { kind: "notStarted", message } });
+      return;
+    case "ready":
+      stopped(popnei, message);
+      return;
+    case "failed":
+    case "notStarted":
+    case "stopped":
+      addDefect("A defect of the probe: its worker failed.", message);
+      return;
   }
 });
+
+/**
+ * The worker stopped after popnei was loaded, on a trap of popnei's wasm or
+ * a defect: no file can be opened any more, and a file that was being
+ * opened is shown as not answered.
+ */
+function stopped(
+  popnei: Extract<PopneiState, { kind: "ready" }>,
+  message: string | null,
+): void {
+  const unanswered = (file: FileState): FileState =>
+    file.kind === "opening"
+      ? {
+          kind: "failed",
+          name: file.name,
+          address: null,
+          message: "the probe's worker stopped before it answered",
+          read: false,
+        }
+      : file;
+  pendingFiles = 0;
+  update({
+    popnei: { ...popnei, kind: "stopped" },
+    served: unanswered(state.served),
+    file: unanswered(state.file),
+    defects: [
+      ...state.defects,
+      {
+        summary: "A defect of the probe: its worker stopped.",
+        details: message,
+      },
+    ],
+  });
+}
 
 function receive(message: FromProbe): void {
   switch (message.kind) {
@@ -145,7 +208,7 @@ function receive(message: FromProbe): void {
           popneiVersion: message.popneiVersion,
           initMs: message.initMs,
         },
-        served: { kind: "opening", name: "panel.nei" },
+        served: { kind: "opening", name: SERVED_NAME },
       });
       send({ kind: "openServed" });
       return;
@@ -176,6 +239,7 @@ function receive(message: FromProbe): void {
             name: message.name,
             address: message.address,
             message: message.message,
+            read: true,
           });
           return;
         case "message":
@@ -188,13 +252,13 @@ function receive(message: FromProbe): void {
   }
 }
 
-function showFile(source: "served" | "file", file: FileState): void {
+function showFile(source: FileSource, file: FileState): void {
   switch (source) {
     case "served":
       update({ served: file });
       return;
     case "file":
-      pendingFiles -= 1;
+      pendingFiles = Math.max(0, pendingFiles - 1);
       if (pendingFiles === 0) {
         update({ file });
       }
@@ -203,13 +267,53 @@ function showFile(source: "served" | "file", file: FileState): void {
 }
 
 function pickFile(event: ChangeEvent<HTMLInputElement>): void {
-  const file = event.currentTarget.files?.item(0) ?? null;
+  const input = event.currentTarget;
+  const file = input.files?.item(0) ?? null;
   if (file === null) {
+    // An emptied input shows no result of a file it no longer holds.
+    if (pendingFiles === 0) {
+      update({ file: { kind: "none" } });
+    }
     return;
   }
   pendingFiles += 1;
   update({ file: { kind: "opening", name: file.name } });
   send({ kind: "openFile", file });
+  // Emptied, so that picking the same file again is a change, and opens it.
+  input.value = "";
+}
+
+/** What the served file's section says while it has no result. */
+function servedWaiting(popnei: PopneiState): string {
+  switch (popnei.kind) {
+    case "loading":
+    case "ready":
+    case "stopped":
+      return "It is opened once popnei is loaded.";
+    case "failed":
+      return "Not opened, since popnei could not be loaded.";
+    case "notStarted":
+      return "Not opened, since the probe's worker did not start.";
+  }
+}
+
+/**
+ * What the file input's section says of the input, or null when the input
+ * can be used and a result is shown.
+ */
+function inputNote(popnei: PopneiState, file: FileState): string | null {
+  switch (popnei.kind) {
+    case "loading":
+      return "A file can be picked once popnei is loaded.";
+    case "ready":
+      return file.kind === "none" ? "No file picked yet." : null;
+    case "failed":
+      return "No file can be opened, since popnei could not be loaded.";
+    case "notStarted":
+      return "No file can be opened, since the probe's worker did not start.";
+    case "stopped":
+      return "No more files can be opened, since the probe's worker stopped. Reload the page.";
+  }
 }
 
 function Probe(): JSX.Element {
@@ -217,6 +321,7 @@ function Probe(): JSX.Element {
     subscribe,
     getState,
   );
+  const note = inputNote(popnei, file);
   return (
     <main>
       <h1>popnei probe</h1>
@@ -234,35 +339,33 @@ function Probe(): JSX.Element {
 
       <section aria-labelledby="served-heading">
         <h2 id="served-heading">The variant file of the site</h2>
+        {served.kind === "none" && <p>{servedWaiting(popnei)}</p>}
         <div aria-live="polite">
-          <FileStatus
-            file={served}
-            waiting="It is opened once popnei is loaded."
-          />
+          <FileStatus file={served} source="served" />
         </div>
       </section>
 
       <section aria-labelledby="file-heading">
         <h2 id="file-heading">A variant file of your own</h2>
         <p>
-          <label>
-            Variant file, .nei or VCF{" "}
-            <input
-              type="file"
-              disabled={popnei.kind !== "ready"}
-              onChange={pickFile}
-            />
-          </label>
-        </p>
-        <div aria-live="polite">
-          <FileStatus
-            file={file}
-            waiting={
-              popnei.kind === "ready"
-                ? "No file picked yet."
-                : "A file can be picked once popnei is loaded."
+          <label htmlFor="file-input">Variant file</label>{" "}
+          <input
+            id="file-input"
+            type="file"
+            disabled={popnei.kind !== "ready"}
+            aria-describedby={
+              note === null ? "file-rule" : "file-rule file-note"
             }
+            onChange={pickFile}
           />
+        </p>
+        <p id="file-rule">
+          A .nei file, or a VCF whose name ends in .vcf or .vcf.gz. A file with
+          any other name is read as a .nei file.
+        </p>
+        {note !== null && <p id="file-note">{note}</p>}
+        <div aria-live="polite">
+          <FileStatus file={file} source="file" />
         </div>
       </section>
 
@@ -274,7 +377,7 @@ function Probe(): JSX.Element {
               // The list only grows, so the position is the defect's identity.
               <div key={index}>
                 <p>{defect.summary}</p>
-                {defect.details !== null && <p>{defect.details}</p>}
+                {defect.details !== null && <p>{sentence(defect.details)}</p>}
               </div>
             ))}
           </section>
@@ -289,6 +392,7 @@ function PopneiStatus({ popnei }: { popnei: PopneiState }): JSX.Element {
     case "loading":
       return <p>Loading popnei…</p>;
     case "ready":
+    case "stopped":
       return (
         <p>
           popnei {popnei.popneiVersion}, loaded in {formatMs(popnei.initMs)}.
@@ -299,14 +403,26 @@ function PopneiStatus({ popnei }: { popnei: PopneiState }): JSX.Element {
         <>
           <p>popnei could not be loaded.</p>
           {popnei.address !== null && <p>Address tried: {popnei.address}</p>}
-          <p>The browser said: {popnei.message}</p>
+          <p>Message: {sentence(popnei.message)}</p>
+          <p>
+            Reload the page. If popnei still does not load, report it at{" "}
+            <a href={ISSUES}>{ISSUES}</a>, with the address and the message
+            above.
+          </p>
         </>
       );
     case "notStarted":
       return (
         <>
-          <p>The calculation worker did not start.</p>
-          {popnei.message !== null && <p>The browser said: {popnei.message}</p>}
+          <p>The probe&apos;s worker did not start.</p>
+          {popnei.message !== null && (
+            <p>Message: {sentence(popnei.message)}</p>
+          )}
+          <p>
+            Reload the page. If the worker still does not start, report it at{" "}
+            <a href={ISSUES}>{ISSUES}</a>, with the name and version of your
+            browser.
+          </p>
         </>
       );
   }
@@ -314,14 +430,14 @@ function PopneiStatus({ popnei }: { popnei: PopneiState }): JSX.Element {
 
 function FileStatus({
   file,
-  waiting,
+  source,
 }: {
   file: FileState;
-  waiting: string;
-}): JSX.Element {
+  source: FileSource;
+}): JSX.Element | null {
   switch (file.kind) {
     case "none":
-      return <p>{waiting}</p>;
+      return null;
     case "opening":
       return <p>Opening {file.name}…</p>;
     case "opened":
@@ -329,22 +445,42 @@ function FileStatus({
         <p>
           {file.name}: {file.numIndividuals} individuals, ploidy {file.ploidy}
           {file.ploidyAssumed ? " (given: a VCF is opened as diploid)" : ""}.
-          Opened in {formatMs(file.openMs)}.
+          popnei opened it in {formatMs(file.openMs)}, not counting{" "}
+          {source === "served" ? "the download" : "the reading from the disk"}.
         </p>
       );
     case "failed":
       return (
-        <p>
-          {file.address === null
-            ? `${file.name} could not be opened: ${file.message}`
-            : `${file.name} could not be opened from ${file.address}: ${file.message}`}
-        </p>
+        <>
+          <p>
+            {file.address === null
+              ? `${file.name} could not be opened: ${sentence(file.message)}`
+              : `${file.name} could not be opened from ${file.address}: ${sentence(file.message)}`}
+          </p>
+          {source === "file" && file.read && <p>{readerOf(file.name)}</p>}
+        </>
       );
   }
 }
 
+/** Which reader the name of a file chose, as the worker chooses it. */
+function readerOf(name: string): string {
+  return readsAsVcf(name)
+    ? "It was read as a VCF because its name ends in .vcf or .vcf.gz; any other name is read as a .nei file."
+    : "It was read as a .nei file because its name does not end in .vcf or .vcf.gz.";
+}
+
+/**
+ * A message of popnei, the browser or the worker, as the end of a sentence
+ * of the page: its words as they came, with a full stop when it has none.
+ */
+function sentence(message: string): string {
+  return /[.!?]$/.test(message) ? message : `${message}.`;
+}
+
+/** A time in milliseconds, with one decimal. */
 function formatMs(ms: number): string {
-  return `${String(Math.round(ms))} ms`;
+  return ms < 0.1 ? "under 0.1 ms" : `${ms.toFixed(1)} ms`;
 }
 
 const root = document.getElementById("root");

@@ -17,7 +17,7 @@ async function save(page: Page, name: string): Promise<void> {
 }
 
 async function pick(page: Page, fixture: string): Promise<void> {
-  const input = page.getByLabel("Variant file, .nei or VCF");
+  const input = page.getByLabel("Variant file", { exact: true });
   await expect(input).toBeEnabled();
   await input.setInputFiles(join(FIXTURES, fixture));
 }
@@ -47,6 +47,19 @@ test("a file refused", async ({ page }) => {
 test("popnei not loaded", async ({ page }) => {
   await page.route("**/*.wasm", (route) => route.fulfill({ status: 404 }));
   await page.goto("probe.html");
-  await expect(page.getByText("popnei could not be loaded.")).toBeVisible();
+  await expect(
+    page.getByText("popnei could not be loaded.", { exact: true }),
+  ).toBeVisible();
   await save(page, "probe-popnei-not-loaded-light");
+});
+
+test("the probe's worker not started", async ({ page }) => {
+  await page.route("**/probeWorker-*.js", (route) =>
+    route.fulfill({ status: 404 }),
+  );
+  await page.goto("probe.html");
+  await expect(
+    page.getByText("The probe's worker did not start.", { exact: true }),
+  ).toBeVisible();
+  await save(page, "probe-worker-not-started-light");
 });
