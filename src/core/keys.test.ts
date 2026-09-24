@@ -225,6 +225,10 @@ describe("WP1 D2 the canonical form", () => {
       }),
     );
   });
+
+  test("orders the fields by the numbers of their characters, upper case first", () => {
+    expect(canonical({ a: 2, B: 1 }, null)).toBe('{"B":1,"a":2}');
+  });
 });
 
 /** The SHA-256 of a text as node's `crypto` computes it, to compare with

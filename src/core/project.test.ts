@@ -989,6 +989,26 @@ describe("WP1 D3 the commands", () => {
     ).toThrow(DEFECT);
     expect(reads).toBeLessThan(10);
   });
+
+  test.each([
+    ["encoding", { encoding: "utf-8" }],
+    ["separator", { separator: ";" }],
+    ["decimal", { decimal: "," }],
+  ] as const)(
+    "setCsvOptions with another %s puts the read to pending",
+    (_field, change) => {
+      const p = sampleProject();
+      const csv = {
+        encoding: "auto",
+        separator: "auto",
+        decimal: "auto",
+        ...change,
+      } as const;
+      expect(individualsOf(setCsvOptions(p, csv)).read).toEqual({
+        kind: "pending",
+      });
+    },
+  );
 });
 
 /** The sample project with a new load of each file, both pending. */
@@ -1237,6 +1257,25 @@ describe("WP1 D4 the records and the needs", () => {
         kind: "failed",
         error: { kind: "worker", error: { kind: "defect" } },
       });
+    },
+  );
+
+  test.each([
+    ["encoding", { encoding: "utf-8" }],
+    ["separator", { separator: ";" }],
+    ["decimal", { decimal: "," }],
+  ] as const)(
+    "recordIndividualsRead drops a read of another %s",
+    (_field, change) => {
+      const p = pendingProject();
+      expect(
+        recordIndividualsRead(
+          p,
+          NEW_ID,
+          { ...CSV, ...change },
+          INDIVIDUALS_READ,
+        ),
+      ).toBe(p);
     },
   );
 });
@@ -1964,5 +2003,44 @@ describe("WP1 D5 the validation", () => {
         expect(names).toContain(name);
       }
     });
+  });
+
+  describe("the bounds of every threshold are accepted", () => {
+    const variantFilters = [
+      ["missing_data", "maxAllowedMissingRate"],
+      ["maf", "maxAllowedMaf"],
+      ["obs_het", "maxAllowedObsHet"],
+      ["ld", "maxAllowedR2"],
+    ] as const;
+    const individualFilters = [
+      ["missing_data", "maxAllowedMissingRate"],
+      ["obs_het", "maxAllowedObsHet"],
+    ] as const;
+
+    test.each(
+      variantFilters.flatMap(([kind, field]) =>
+        [0, 1].map((threshold) => [kind, field, threshold] as const),
+      ),
+    )("a filter of the variants %s with %s of %d", (kind, field, threshold) => {
+      const filter =
+        kind === "ld"
+          ? { kind, maxAllowedR2: threshold, maxDist: 1 }
+          : { kind, [field]: threshold };
+      expect(parse(fileWith({ filters: [filter] })).ok).toBe(true);
+    });
+
+    test.each(
+      individualFilters.flatMap(([kind, field]) =>
+        [0, 1].map((threshold) => [kind, field, threshold] as const),
+      ),
+    )(
+      "a filter of the individuals %s with %s of %d",
+      (kind, field, threshold) => {
+        const data = fileWith({
+          individualFilters: [{ kind, [field]: threshold }],
+        });
+        expect(parse(data).ok).toBe(true);
+      },
+    );
   });
 });
