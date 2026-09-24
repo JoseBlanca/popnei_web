@@ -165,8 +165,8 @@ library, was not taken because it has neither.
 ### Markdown for the documentation and the help
 
 The documentation pages and the help drawer of the applications
-(`docs/interface.md`) come from the same Markdown files, rendered by
-markdown-it, which has been maintained since 2014.
+(`docs/interface.md`, to be written) come from the same Markdown files,
+rendered by markdown-it, which has been maintained since 2014.
 
 ### xlsx and zip in Rust
 

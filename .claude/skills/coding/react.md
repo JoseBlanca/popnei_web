@@ -22,17 +22,23 @@ default and not an extra.
   `react-aria-components`, not the separate `@react-aria/*` hooks. The
   components are the stable part of React Aria; the hooks under them are
   for building new widgets, which we do not do.
-- The React Compiler, `babel-plugin-react-compiler` 1.0, on (below).
+- The React Compiler, `babel-plugin-react-compiler` 1.0, proposed and off
+  until the owner decides (below).
 - `eslint-plugin-react-hooks` with its `recommended` config, which in
   version 7 holds the Rules of Hooks, the dependency check of effects and
-  the rules the compiler needs.
+  the rules the compiler needs. It is not in `docs/technology.md`, so it
+  is open for the owner (point 2 of "Open for the owner" in `SKILL.md`).
 
 Components are functions. The one class is the error boundary, because
 React has no function form of it.
 
-## The React Compiler: on
+## The React Compiler: proposed
 
-Decided for the first version. The compiler, stable since October 2025,
+Open for the owner (point 4 of "Open for the owner" in `SKILL.md`), and
+off until the owner decides. While it is off, a `useMemo` or a
+`useCallback` is written only where a slowness was measured, and the
+rest of this file reads "the compiler keeps it" as "it is made again on
+each render". The compiler, stable since October 2025,
 memoizes components and values at build time, which is what `useMemo`,
 `useCallback` and `memo` do by hand. react.dev recommends it for new
 applications, and Vite's template offers it.
@@ -41,10 +47,15 @@ Why yes: when to memoize by hand is a judgement that takes experience of
 React to make, it is the most common source of both slow screens and
 stale values, and the owner would have to review it. With the compiler
 the code is plain, and the question does not come up. It is a
-development dependency only, two packages, `babel-plugin-react-compiler`
-and `@rolldown/plugin-babel`, which `@vitejs/plugin-react` 6 needs to
-run Babel. And it can be removed: the code stays ordinary React, and
-without the compiler it renders the same, only more often.
+development dependency only, but not a small one:
+`babel-plugin-react-compiler` 1.0.0; `@rolldown/plugin-babel` 0.2.4, first published in February 2026,
+which `@vitejs/plugin-react` 6 needs to run Babel; and `@babel/core`, a
+required peer of that plugin, which create-vite's template of the
+compiler installs with `@types/babel__core`. `@vitejs/plugin-react`
+6.1.1 also offers `compiler: true` through an optional Rust port,
+`oxc-transform-react`, which was not assessed. And it can be removed: the
+code stays ordinary React, and without the compiler it renders the same,
+only more often.
 
 What it asks:
 
@@ -64,16 +75,13 @@ What it asks:
 
 ## Reading core
 
-`src/core/store.ts` holds the current project, the history and the
-cache, and gives two things: `getState()`, which returns the current
-state, an immutable value, the same object until something changes; and
-`subscribe(listener)`, which calls the listener after every change and
-returns the function that unsubscribes. The screens read it through one
-hook, in `src/ui/store.tsx`:
+`src/core/store.ts` gives `getState()`, `subscribe(listener)` and
+`apply(command)`, as `SKILL.md`, "The core", describes them. The screens
+read it through one hook, in `src/ui/store.tsx`:
 
 ```tsx
 import { createContext, useContext, useSyncExternalStore } from "react";
-import type { AppState, Store } from "../core/store";
+import type { AppState, Store } from "../core/store.ts";
 
 const StoreContext = createContext<Store | null>(null);
 export const StoreProvider = StoreContext.Provider;
@@ -223,8 +231,9 @@ cases, as they appear here:
   an effect that watches the state it changed.
 - **A subscription to something outside React**, the store, the hash, a
   media query, is `useSyncExternalStore`.
-- **Fetching**: nothing is fetched from a component. The worker is
-  reached through core.
+- **Fetching**: nothing is fetched from a component. A run is started by
+  core, and its outcome is awaited by `src/ui/runs.ts`, not by a
+  component (`SKILL.md`, "The core").
 
 What is left are the imperative things that React does not draw: a plot
 of `src/charts`, the three.js view, moving focus to a heading.
@@ -283,7 +292,9 @@ export function PcaPlot({ data, onHover }: PcaPlotProps) {
 - **The effect lists what it reads**, `[data, onHover]`, and the lint
   checks it. The data of the plot are made from a result, in the render,
   and the compiler keeps the same object until the result changes, so the
-  plot is not updated on renders that changed nothing else. The events
+  plot is not updated on renders that changed nothing else. While the
+  compiler is off, the data are made with `useMemo` on the result, since
+  a plot updated on every render is the measured slowness this case is. The events
   are given once, when the plot is created, as `charts.md` has it, so the
   handler must not depend on values that change: a setter of `useState`
   qualifies.
@@ -399,9 +410,9 @@ key that some screen reader or browser also wants.
 
 ## The states of an analysis
 
-The panel of every analysis shows one of the states of
-`docs/functionality.md`: locked with its reason, ready, running with its
-progress, done, results removed with the notice, error. Core gives the
+The panel of every analysis shows one of the seven states of a screen
+spec (`writing-specs` skill): empty, locked with its reason, ready,
+running with its progress, done, results removed with the notice, error. Core gives the
 status as a discriminated union, and a shared component,
 `src/ui/analyses/AnalysisPanel.tsx`, draws the frame of each state and
 switches over it with every case named, so that a new state is a type
@@ -433,7 +444,8 @@ options and its results.
 
 ## Performance
 
-The compiler removes most of the traps. What is left:
+The compiler, if the owner takes it, removes most of the traps. What is
+left:
 
 - **State that changes fast lives low.** The point under the mouse is
   state of the plot, inside `src/charts`, or of the smallest component
@@ -487,44 +499,14 @@ src/ui/
 
 ## Accessibility review
 
-A reviewer applies this to every change of `src/ui`, against WCAG 2.2 at
-level AA. What the rules above make automatic is still checked, because
-the check is quick and a slip is not seen by anyone who uses a mouse.
-
-1. **Keyboard.** Everything done with the mouse can be done with Tab,
-   Shift+Tab, Enter, Space, the arrows and Escape; the order of Tab
-   follows the order of reading; nothing traps focus except an open
-   dialog, which Escape closes.
-2. **Focus visible.** Every focusable thing shows a ring when reached by
-   the keyboard, in both themes, and is not hidden under a sticky header
-   or a toast (`css.md`).
-3. **Names.** Every field has a visible label, every button says what it
-   does, an icon button has an `aria-label`, every table and plot has a
-   name.
-4. **Roles from React Aria.** No `role=`, `tabIndex` or `onKeyDown` added
-   to a `<div>` to make a widget; a widget is from `src/ui/widgets/`.
-5. **Contrast.** Text 4.5:1, large text, controls, their borders and the
-   marks of a plot 3:1, in the light and the dark theme (`css.md`).
-6. **Not colour alone.** A state, an error, a warning, a selected item, a
-   population in a plot, is also told by text, a symbol, a shape or a
-   position, and a plot's populations are named in its legend and in the
-   table beside it.
-7. **Announcements.** The start and end of a run, and the removed
-   results with their Undo, reach the status region or the toast region.
-8. **Headings and landmarks.** One `<h1>` per step, headings in order,
-   `<main>`, `<nav>`, and focus on the `<h1>` after a change of step.
-9. **Zoom and reflow.** At 200% zoom, and at 320 px wide, nothing is cut
-   and nothing but a table or a plot scrolls sideways.
-10. **Motion.** With the system's reduced motion on, nothing animates
-    that is not needed to understand it (`css.md`).
-
-A screen reader is tried on each new widget and each new step, VoiceOver
-on macOS with Safari at least, since that is where most bugs of ARIA
-show. The automatic checks, axe in the Playwright tests and the lint of
-JSX for accessibility, are in `testing.md` and `SKILL.md`; they find
-find what a machine can see, a missing name, a low contrast, and not
-whether the order, the names and the announcements make sense, which is
-what this list is for.
+What a reviewer checks on every change of `src/ui` is the `accessibility`
+section of `.claude/skills/code-review/categories.md`. The writer of a
+screen does one thing more: a screen reader is tried on each new widget
+and each new step, VoiceOver on macOS with Safari at least, since that is
+where most bugs of ARIA show. The automatic check, axe in the Playwright
+tests, is in `testing.md`; it finds what a machine can see, a missing
+name, a low contrast, and not whether the order, the names and the
+announcements make sense.
 
 ## When this file is wrong
 

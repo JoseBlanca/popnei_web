@@ -104,17 +104,20 @@ D3 is imported as its modules, not as the `d3` package:
 | `d3-scale` | 4.0.2 | linear, log, band and ordinal scales |
 | `d3-axis` | 3.0.0 | axes |
 | `d3-shape` | 3.2.0 | lines, areas, symbols |
+| `d3-path` | 3.1.0 | the paths the symbols of the points are drawn into |
 | `d3-array` | 3.2.4 | `extent`, `ticks`, `bisect` |
 | `d3-format` | 3.1.2 | the numbers of the ticks and the tooltips |
 | `d3-zoom` | 3.0.0 | zoom and pan of the Manhattan and the scatter |
-| `d3-brush` | 3.0.0 | selecting a region, when a plot needs it |
 | `d3-delaunay` | 6.0.4 | the nearest point under the pointer |
 | `d3-scale-chromatic` | 3.1.0 | viridis, for continuous colours |
-| `d3-polygon` | 3.0.1 | the lasso, later: which points a polygon holds |
 
-Each with its `@types/d3-*`. The versions are those of `npm view` on 24
+Each with its `@types/d3-*`, and three.js with `@types/three`, since it
+ships no types of its own. The versions are those of `npm view` on 24
 September 2026; D3 moves slowly, and a new major version of a module is
-read in its changelog before it is taken.
+read in its changelog before it is taken. `d3-brush`, to select a region,
+and `d3-polygon`, for the lasso, are added when a plot first needs them.
+Taking D3 as these modules, and `@types/three`, is open for the owner
+(point 2 of "Open for the owner" in `SKILL.md`).
 
 The reason is the bundle and the list of dependencies. The `d3` package,
 7.9.0, brings every module, geography, forces, CSV parsing, and while a
@@ -257,10 +260,12 @@ A plot is an image to a screen reader, and has to say what it shows:
   value, a trait on the PCA, the heatmap of Fst, is coloured with
   viridis, which is uniform to the eye, readable without colour and
   printable in grey.
-- **Contrast**: the text of the axes at 4.5:1 against the background,
-  and the marks and the lines at 3:1 (WCAG 1.4.3 and 1.4.11), in both
-  themes. The tokens are checked for it once, in `css.md`, not in each
-  plot.
+- **Contrast**: the ratios are those of `css.md`, "Contrast and colour",
+  and the tokens of the plots are checked there, not in each plot. Three
+  of the colours of Okabe and Ito are below 3:1 on the light background,
+  orange 2.25:1, sky blue 2.31:1 and yellow 1.32:1, so every mark of a
+  group has a 1 px outline in `--chart-axis`, which gives its edge the
+  contrast the fill does not.
 
 ## Colours, themes and the exported file
 
@@ -269,7 +274,7 @@ the classes their colours from the tokens:
 
 ```css
 .chart-axis { color: var(--chart-axis); }          /* d3-axis draws in currentColor */
-.chart-group-0 { fill: var(--chart-cat-1); }
+.chart-group-0 { fill: var(--chart-cat-1); stroke: var(--chart-axis); stroke-width: 1px; }
 .chart-threshold { stroke: var(--chart-threshold); stroke-dasharray: 4 3; }
 ```
 
@@ -301,15 +306,20 @@ on `:root, [data-theme="light"]` and not on `:root` alone.
 
 ### Fonts
 
-The exported SVG names the font of the application first and then a
-generic stack, `"<the font>", "Helvetica", "Arial", sans-serif`, and
-embeds the font itself, as a `@font-face` with a `data:` URL of the WOFF2
-file, in a `<style>` of the SVG. The reason is the PNG: an SVG drawn as an
-image loads nothing from outside, fonts included, only what is inlined as
-`data:`, and without it the PNG would fall back to another font and the
-labels would no longer fit. The font is a subset to Latin, some tens of
-kilobytes (`css.md`). Programs that ignore an embedded font, Illustrator
-among them, fall back to Helvetica, which fits closely enough.
+While the application uses the fonts of the system (`css.md`, "Fonts"),
+the exported SVG names a generic stack, `system-ui, "Helvetica",
+"Arial", sans-serif`, and embeds nothing: an SVG drawn as an image, as
+the PNG is made, may use the fonts installed on the machine, and only
+cannot fetch a file.
+
+When the owner chooses a typeface, the SVG names it first, before the
+same stack, and embeds it, as a `@font-face` with a `data:` URL of its
+WOFF2 file, subset to Latin, in a `<style>` of the SVG. The reason is the
+PNG: an SVG drawn as an image loads nothing from outside, fonts included,
+and without the font inlined the PNG would fall back to another one and
+the labels would no longer fit. Programs that ignore an embedded font,
+Illustrator among them, fall back to Helvetica, which fits closely
+enough.
 
 Text is measured and exported only after `document.fonts.ready`.
 
@@ -473,6 +483,12 @@ elements placed at the projected ends of the axes after each render.
   wheel to zoom, right drag to pan. It keeps one axis up, which is less
   free than `TrackballControls` and much less disorienting. No damping,
   so that the scene can be drawn only when something changes.
+- **Turning without dragging.** A user who cannot drag turns the view
+  with buttons beside the plot, and WCAG 2.5.7 asks for them. The handle
+  of `pca3d` has two more functions, `rotate(axis, degrees)`, which turns
+  by a fixed step, and `viewAlong(axis)`, which looks down one component
+  and so shows the 2D plot of the other two. The screen spec lists the
+  buttons.
 - **Render on demand.** There is no animation loop: the plot renders
   after `update`, after a resize and on the `change` event of the
   controls. A loop at 60 frames a second for a still scene spends the
@@ -547,6 +563,14 @@ the GPU. `destroy` therefore:
 new geometries and disposes of the old ones; it never makes a new
 renderer.
 
+### A change of theme
+
+The 2D plots follow the tokens with no redraw, but the 3D plot draws its
+symbols into textures and gives colours to its materials, which do not
+read CSS. So `pca3d` watches `prefers-color-scheme` and the `data-theme`
+attribute of `<html>`, and on a change draws its textures again from the
+tokens and renders.
+
 ### Losing the WebGL context
 
 The browser can take the context away, when the GPU resets, when the
@@ -579,8 +603,7 @@ The code of a plot is split so that most of it needs no browser:
   (lengths, group indices, the budget), the layout of the chromosomes of
   the Manhattan plot. Most of the logic of a plot is here, and here is
   where the numbers are asserted.
-- **The SVG, in Vitest with a DOM (jsdom or happy-dom, as `testing.md`
-  chooses)**: the skeleton is there with its classes, `role="img"`, the
+- **The SVG, in Vitest with a DOM, jsdom (`testing.md`)**: the skeleton is there with its classes, `role="img"`, the
   `<title>` and `<desc>` with unique ids, one path per group, one legend
   entry per group after an `update` that removed one, a name with markup
   in it shown as text, `destroy` leaving the element empty and working
@@ -588,18 +611,17 @@ The code of a plot is split so that most of it needs no browser:
   no canvas and no WebGL, so the test gives the size and stubs the
   observer; and they resolve custom properties only partly, so the
   inlining of the export is not tested there.
-- **Playwright, in Chromium, Firefox and WebKit**: a screenshot of each
-  plot in both themes; the exported SVG with no `var(` and no
-  dependency on the page, and its PNG at the right size in pixels; the
-  hover and the tooltip; a resize; the 3D plot rendering, turning, and
-  surviving a forced loss of context; and, after `destroy`, no canvas left
-  and `renderer.info.memory` back to zero geometries and textures, read
-  through a hook the test build exposes.
+- **Playwright, in Chromium, Firefox and WebKit**: the exported SVG with
+  no `var(` and no dependency on the page, and its PNG at the right size
+  in pixels; the hover and the tooltip; a resize; the 3D plot rendering,
+  turning with the mouse and with its buttons, following a change of
+  theme, and surviving a forced loss of context; and, after `destroy`, no
+  canvas left.
 
-A screenshot compares pixels, and fonts are rendered differently from one
-engine and one system to another, so the screenshots are kept per engine
-and made on the continuous integration, not on a laptop. `testing.md` has
-how.
+The states of each plot, in both themes, go into `e2e/screens.spec.ts`
+and are looked at, as `testing.md` says. Comparing screenshots pixel by
+pixel is not adopted in the first version; `testing.md`, "Visual
+regression: later", has why.
 
 ## Sources
 
@@ -607,9 +629,9 @@ how.
   https://d3js.org/d3-zoom, https://d3js.org/d3-delaunay/delaunay,
   https://d3js.org/d3-shape/symbol, and the margin convention,
   https://observablehq.com/@d3/margin-convention
-- three.js: the manual, https://threejs.org/manual/en/how-to-dispose-of-objects.html,
-  https://threejs.org/manual/en/responsive.html,
-  https://threejs.org/manual/en/picking.html; the docs of `Raycaster`,
+- three.js: the manual, https://threejs.org/manual/#en/how-to-dispose-of-objects,
+  https://threejs.org/manual/#en/responsive,
+  https://threejs.org/manual/#en/picking; the docs of `Raycaster`,
   `WebGLRenderer`, `OrbitControls`, `PointsMaterial`; the source of
   `WebGLRenderer` in r186 for the handling of the context loss.
 - MDN: `ResizeObserver`, `XMLSerializer`, `HTMLCanvasElement.toBlob`, the

@@ -18,18 +18,19 @@ floor is older than much of what is called modern CSS, and a feature a
 browser lacks does not fail loudly: the rule, or the whole block, is
 ignored, and the page looks broken only in that browser. The Playwright
 tests run current engines, so nothing tests the floor; this table is the
-check.
+check. The floor is open for the owner (point 1 of "Open for the owner"
+in `SKILL.md`), and the table follows the floor that is decided.
 
 | feature | Chrome, Firefox, Safari | here |
 |---|---|---|
 | custom properties, grid, flex with `gap`, `clamp()`, `min()`, `max()`, `:is()`, `:where()`, `:focus-visible`, `aspect-ratio`, logical properties (`margin-inline`, `inset`), `prefers-color-scheme`, `prefers-reduced-motion`, `forced-colors`, `@supports selector()` | all at the floor | allowed |
-| nesting, `&` | 120, 117, 17.2 | **not used**. The build could flatten it, but only if its target is set to the floor, and a mistake there would break the styles of old browsers alone, where nobody looks. The selectors of a CSS Module are short enough flat |
+| nesting, `&` | 120, 117, 17.2 | **not used**. The build does flatten it for the floor, since `build.target` is the floor (`configs.md`) and Vite's minifier of CSS, Lightning CSS, lowers nesting for that target; but the flattened styles are seen only in the old browsers, which no test opens, so a mistake in them would go unseen. The selectors of a CSS Module are short enough flat |
 | `@layer` | 99, 97, 15.4 | **not used**. A browser without it ignores everything inside the block, so the styles vanish |
 | `:has()` | 105, 121, 15.4 | **not used** for anything that must work. A selector list that holds it is dropped whole where it is unknown. Where its absence is harmless it goes inside `@supports selector(:has(*))` |
 | container queries, `@container`, `cqi` | 105, 110, 16 | only as an improvement over a layout that works without them |
 | `subgrid` | 117, 71, 16 | only as an improvement |
 | `color-mix()`, `oklch()`, `light-dark()`, relative colours | 111 to 123 | **not used**. The tokens hold every colour written out |
-| media range syntax, `(width >= 40em)` | 104, 102, 16.4 | **not used**; `(min-width: 40em)` |
+| media range syntax, `(width >= 40em)` | 104, 63, 16.4 | **not used**; `(min-width: 40em)` |
 | `dvh` and the other dynamic viewport units | 108, 101, 15.4 | **not used** |
 | `@property` | 85, 128, 16.4 | **not used** |
 | `text-wrap: balance` | 114, 121, 17.5 | allowed: where it is missing the text wraps as usual |
@@ -45,7 +46,8 @@ Every other file uses the tokens, so that a change of the look is a change
 there, and the dark theme is the same tokens with other values.
 
 ```css
-:root {
+:root,
+[data-theme="light"] {
   color-scheme: light dark;
 
   /* colours: named by their role, never by their hue */
@@ -59,6 +61,18 @@ there, and the dark theme is the same tokens with other values.
   --color-danger: #b3261e;
   --color-warning: #8a5a00;
   --color-focus: #1f5fbf;
+
+  /* the plots (charts.md): the seven colours of Okabe and Ito without
+     black, the axes and their text, the lines of the thresholds */
+  --chart-cat-1: #e69f00;
+  --chart-cat-2: #56b4e9;
+  --chart-cat-3: #009e73;
+  --chart-cat-4: #f0e442;
+  --chart-cat-5: #0072b2;
+  --chart-cat-6: #d55e00;
+  --chart-cat-7: #cc79a7;
+  --chart-axis: #555d68;
+  --chart-threshold: #b3261e;
 
   /* spacing: a scale of 0.25rem */
   --space-1: 0.25rem;
@@ -129,6 +143,8 @@ same tokens redefined:
     --color-danger: #ff8a80;
     --color-warning: #f2c14e;
     --color-focus: #7fb0ff;
+    --chart-axis: #a3abb5;
+    --chart-threshold: #ff8a80;
   }
 }
 
@@ -142,6 +158,12 @@ same tokens redefined:
 }
 ```
 
+- **The light values are on `:root` and on `[data-theme="light"]`**, so
+  that an element with that attribute inside a dark page gets the light
+  values: `charts.md` resolves the colours of an exported plot, which is
+  always light, in such a hidden element.
+- **The colours of the groups of a plot are the same in both themes**;
+  the dark block redefines only the axes and the thresholds.
 - **The dark values are written twice**, in the media query and under
   `[data-theme="dark"]`, because the floor lacks `light-dark()`, the one
   way to write them once. A test reads `tokens.css` and checks that the two
@@ -179,10 +201,13 @@ style can be changed while knowing every place it applies.
   `.tab[data-selected]`, or a class inside a class of the same module.
   Specificity stays low and equal, so that the order in the file decides,
   and no `!important`, which would win over the user's own styles.
-- **Global CSS is two files**: `tokens.css`, and `src/ui/base.css`, which
-  holds the `@font-face`, a small reset, the styles of `body` and of the
-  text that comes from Markdown in the help, and the default focus ring.
-  Both are imported once, in the entry file of each page.
+- **Global CSS is three files**: `tokens.css`; `src/ui/base.css`, which
+  holds a small reset, the styles of `body` and of the text that comes
+  from Markdown in the help, the default focus ring, and the `@font-face`
+  if a typeface is chosen; and `src/charts/charts.css`, the classes of the
+  plots, which all start with `chart-` because D3 writes them as strings
+  (`charts.md`). The first two are imported once, in the entry file of
+  each page, and `charts.css` by the plots that use it.
 
 ## Layout
 
@@ -201,6 +226,10 @@ style can be changed while knowing every place it applies.
 - **No fixed heights on anything that holds text.** A user who enlarges
   the spacing of text, or a translation longer than the English, would
   see the text cut (WCAG 1.4.12).
+- **The element of a plot** gets its size from CSS, a width from its
+  container and a height or an `aspect-ratio`, and is `position:
+  relative`, so that the tooltip of `charts.md` is placed inside it. The
+  plot reads the size and never sets it.
 - **Logical properties**, `margin-inline`, `padding-block`, `inset`,
   where the direction is not physical, which costs nothing and is ready
   for a language written right to left.
@@ -292,8 +321,14 @@ The values of WCAG 2.2 at level AA, in both themes:
 
 - **A test computes the ratios** of the pairs of tokens that are used
   together, text on background, text on surface, border on surface,
-  in both themes, with the formula of WCAG, and fails below the limit.
-  A pair is added to the test when a component starts to use it.
+  `--chart-axis` and `--chart-threshold` on background, in both themes,
+  with the formula of WCAG, and fails below the limit. A pair is added to
+  the test when a component starts to use it. It is a Vitest test in
+  node, `src/ui/tokens.test.ts` (`testing.md`).
+- **The fill of the groups of a plot is not what carries the 3:1**, since
+  three of the seven colours are below it on white; each mark has an
+  outline in `--chart-axis`, which carries it and is the pair tested
+  (`charts.md`).
 - **Colour is never the only sign** (WCAG 1.4.1). An error has a message
   and a symbol, a warning its "⚠" and its words, a selected tab a bar
   and not only a colour, a disabled control its muted text and its state
@@ -303,7 +338,7 @@ The values of WCAG 2.2 at level AA, in both themes:
   sign: the legend with their names, the name on hover, a highlight of
   one population from the legend, and the table beside the plot. The
   palette is chosen to be told apart by the common kinds of colour
-  blindness, and it has a limit, about eight colours, beyond which no
+  blindness, and it has a limit, seven colours here, beyond which no
   palette separates them; `charts.md` says what a plot does past it.
 - **The disabled state is exempt** from contrast in WCAG, but its text
   still uses `--color-text-muted`, which passes, so that a user can read

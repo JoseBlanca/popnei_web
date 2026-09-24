@@ -110,9 +110,11 @@ tree of elements a browser builds from a page, emulated in node without a
 browser. The test makes a `div`, calls the function, and checks the SVG it
 built: the number of bars of a histogram, the labels of the axis, the
 position of a point computed from the scale and a literal. Then it calls
-`update` with other data and checks the SVG again, and `remove`, and
-checks that the `div` is empty. The SVG export is serialised and parsed
-back, and checked to be a standalone file.
+`update` with other data and checks the SVG again, and `destroy`, and
+checks that the `div` is empty. The structure of the exported SVG is
+checked here too; that its styles are inlined, with no `var(` left and
+nothing that depends on the page, is checked in Playwright, because
+jsdom resolves custom properties only in part (`charts.md`).
 
 jsdom and not happy-dom, the other emulator Vitest supports. Vitest's own
 documentation says happy-dom is faster and lacks some APIs, and a test
@@ -159,35 +161,42 @@ Its configuration is in `vite.config.ts`, in a `test` section, and not in
 a file of its own. One file means the tests see the same plugins and the
 same paths as the build, and the owner has one file to open. It has two
 projects, as Vitest calls a group of tests with its own environment: one
-in node and one in jsdom.
+in node and one in jsdom. A project written inline in the configuration
+does not take the plugins and the options of the file unless it says
+`extends: true`, so both say it.
 
 ```ts
-// vite.config.ts, the test section; the build section is react.md's
-import { defineConfig } from "vitest/config";
-
-export default defineConfig({
-  base: "/popnei_web/",
-  test: {
-    projects: [
-      {
-        test: {
-          name: "core",
-          include: ["src/core/**/*.test.ts", "src/worker/**/*.test.ts"],
-          environment: "node",
-        },
+// the `test` field of the defineConfig of vite.config.ts, in configs.md
+test: {
+  projects: [
+    {
+      extends: true,
+      test: {
+        name: "node",
+        include: [
+          "src/core/**/*.test.ts",
+          "src/worker/**/*.test.ts",
+          "src/ui/**/*.test.ts",
+        ],
+        environment: "node",
       },
-      {
-        test: {
-          name: "charts",
-          include: ["src/charts/**/*.test.ts"],
-          environment: "jsdom",
-        },
+    },
+    {
+      extends: true,
+      test: {
+        name: "charts",
+        include: ["src/charts/**/*.test.ts"],
+        environment: "jsdom",
       },
-    ],
-    coverage: { provider: "v8", include: ["src/core/**", "src/worker/**"] },
-  },
-});
+    },
+  ],
+  coverage: { provider: "v8", include: ["src/core/**", "src/worker/**"] },
+},
 ```
+
+The tests of `src/ui` in node are those that need no page, such as the
+test of `tokens.css` that `css.md` asks for. How the tests are type
+checked is `tsconfig.test.json` of `configs.md`.
 
 - A test file is beside the file it tests and ends in `.test.ts`:
   `src/core/keys.test.ts`. Playwright's files end in `.spec.ts` and live in
@@ -479,10 +488,12 @@ All are development dependencies, none reaches the site:
 |---|---|---|
 | `vitest` | the tests without a browser | taken, `docs/technology.md` |
 | `@playwright/test` | the tests in the three browsers | taken, `docs/technology.md` |
-| `jsdom` | the DOM of the tests of the plots | proposed |
-| `@vitest/coverage-v8` | coverage, same maintainers as Vitest | proposed |
-| `@axe-core/playwright` | the checks of accessibility, by Deque | proposed |
-| `fast-check` | the property tests of `src/core` | proposed |
+| `jsdom` | the DOM of the tests of the plots | open for the owner |
+| `@vitest/coverage-v8` | coverage, same maintainers as Vitest | open for the owner |
+| `@axe-core/playwright` | the checks of accessibility, by Deque | open for the owner |
+| `fast-check` | the property tests of `src/core` | open for the owner |
+
+The four open ones are point 2 of "Open for the owner" in `SKILL.md`.
 
 Not taken: happy-dom, `@testing-library/react` with `user-event` and
 `jest-dom`, `@fast-check/vitest`, and tools of visual regression for now,
@@ -498,7 +509,9 @@ for the reasons above.
    on GitHub; if the repository is named otherwise, or the site gets a
    domain of its own, the base changes here and in `vite.config.ts`.
 3. The extension of popnei's vars file: `docs/functionality.md` calls it
-   `.nei`, and popnei's reference file is `zstd.vars`.
+   `.nei`, and popnei's reference file is `zstd.vars`. That file cannot be
+   the fixture in any case, since popnei refuses a vars file compressed
+   with zstd; `make_fixtures.mjs` writes the panel with `writeVars`.
 4. Whether axe runs in all three engines or in Chromium alone, once its
    cost on the flows is measured.
 

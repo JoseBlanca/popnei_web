@@ -6,13 +6,20 @@ it only through messages. `docs/architecture.md`, sections 1, 5 and 6,
 has the design; this file has the rules for the code of `src/worker/`:
 
 ```
-src/worker/protocol.ts   the messages, their types and their validation,
-                         imported by both sides
+src/worker/protocol.ts   the jobs, their results, a run and its outcome:
+                         the types core names too, with no type of the DOM
+src/worker/messages.ts   the messages in both directions and their
+                         validation, imported by the client and the runner
 src/worker/client.ts     the page's side: the queue, progress, cancelling,
                          restarting, the files of the user
+src/worker/start.ts      the one line that makes the worker, `?worker`
 src/worker/runner.ts     the worker's side: popnei, the files wasm, the
                          files of the user, the intermediate caches
 ```
+
+`protocol.ts` and `messages.ts` are apart because core imports the types
+of the first and is checked with no DOM (`configs.md`), while a message
+carries a `File`, a type of the DOM.
 
 What the TypeScript package of popnei offers the worker is in
 `js/popnei/README.md` of popnei and section 11 of its
@@ -31,20 +38,27 @@ design here assumes and the package does not have yet.
   of wasm, and of the caches. With files of a large part of the memory of
   the tab, two copies do not fit. A pool can be reconsidered once the
   `File` source of popnei streams and a file no longer sits in memory.
-- **Our own layer of about 150 lines, not Comlink.** Comlink makes a call
-  look like a local function and has no progress and no cancelling, the
-  two things this layer is for (`docs/technology.md`). Ours is small
-  enough to be read whole.
+- **Our own layer, not Comlink**, as `docs/technology.md` decided.
 
 ## The protocol module
 
-`protocol.ts` holds the types of every message in both directions, the
-functions that validate them, and nothing else: no DOM, no popnei, so that
-it runs under Vitest and is imported by the page and by the worker.
+`protocol.ts` holds the types of the jobs, of their results and of a run,
+and nothing else: no type of the DOM and no value of popnei, only its
+types, so that core can import them. `messages.ts` holds the messages
+and the functions that validate them.
 
 ```ts
+// src/worker/protocol.ts
 export const PROTOCOL_VERSION = 1;
 
+export type Job =
+  | { analysis: "diversity"; fileId: string; filters: VariantFilter[]; pops: Pops }
+  | { analysis: "pca"; fileId: string; filters: VariantFilter[]; numPrinComps: number };
+
+/** The populations, as pairs in the order of the file. */
+export type Pops = readonly (readonly [pop: string, individuals: readonly string[]])[];
+
+// src/worker/messages.ts
 export type ToWorker =
   | { kind: "files"; files: { fileId: string; file: File }[] }
   | { kind: "run"; id: number; key: string; job: Job };
@@ -54,16 +68,23 @@ export type FromWorker =
   | { kind: "progress"; id: number; done: number; total: number }
   | { kind: "result"; id: number; key: string; result: JobResult }
   | { kind: "error"; id: number; message: string; fatal: boolean };
-
-export type Job =
-  | { analysis: "diversity"; fileId: string; filters: VariantFilter[]; pops: Pops }
-  | { analysis: "pca"; fileId: string; filters: VariantFilter[]; numPrinComps: number };
 ```
 
 - **Every message is a discriminated union on `kind`**, and every job on
-  `analysis`. A `switch` over it names every case, and the check of
-  exhaustiveness, a `never` in the `default`, makes a new kind a compile
-  error everywhere it is not handled yet, as a `match` does in Rust.
+  `analysis`. A `switch` over it has no `default`, and
+  `switch-exhaustiveness-check` fails the lint wherever a new kind is not
+  handled yet, as a `match` does in Rust.
+- **`VariantFilter` is declared in `protocol.ts`**, as the filters are
+  given to the worker, and the `Project` of core takes its type from
+  there, so that the page and the worker cannot describe a filter two
+  ways. popnei has no such type: its filters are methods of `Variants`,
+  which the runner calls in the order of the list.
+- **The populations are pairs, not a record keyed by their names**, as the
+  hub asks of every name from the user's files. popnei takes them as
+  `Record<string, readonly string[]>`, `pops` of `PerVarDistribsOptions`,
+  so the runner builds that record with `Object.fromEntries(pops)`, which
+  makes a population named `__proto__` an ordinary key, and never with an
+  assignment `record[name] = ...`.
 - **`JobResult` is a union with the same tags as `Job`**, and a result
   holds typed arrays, `Float64Array`, `Uint32Array`, never arrays of
   numbers: a typed array crosses as one block of memory, and an array of a
@@ -76,7 +97,9 @@ export type Job =
 - **The key travels with the request and comes back with the result**, so
   that the page puts the result in the cache under the key it was asked
   for, and not under the key of the current project, which may have
-  changed while it ran (`docs/architecture.md`, section 5).
+  changed while it ran (`docs/architecture.md`, section 5). On the wire a
+  key is a `string`, and it enters the cache through `keyFromWire` of
+  `keys.ts` (`SKILL.md`, "Keys").
 - **`PROTOCOL_VERSION` is in the `ready` message**, and the client refuses
   a worker whose number is not its own. The page and the worker are built
   together, so a mismatch means a stale file from a cache after a deploy;
@@ -89,8 +112,9 @@ export type Job =
 ### Validation at the boundary
 
 `MessageEvent.data` is typed `any` by the DOM, and it is read as `unknown`
-on both sides, then narrowed by a validator of `protocol.ts`,
-`parseFromWorker(data: unknown): FromWorker` and `parseToWorker`. The hub,
+on both sides, then narrowed by a validator of `messages.ts`,
+`parseFromWorker(data: unknown): Result<FromWorker, ProtocolError>` and
+`parseToWorker`, with the `Result` of `src/core/result.ts`. The hub,
 `.claude/skills/coding/SKILL.md`, has the general rule of `unknown` at the
 boundaries.
 
@@ -100,30 +124,47 @@ boundaries.
   has no dependency, and each check is one line to read.
 - **A message that does not validate is a defect of ours**, since both
   sides are our code. The client treats it as the worker failing: it logs
-  the message, fails the request with a message that says it is a defect
-  of the application, and restarts the worker. It is never passed on half read.
+  the message, fails the request with `{ kind: "defect" }`, and restarts
+  the worker. It is never passed on half read.
 - The validator checks the shape, not the numbers. That a frequency is
   between 0 and 1 is popnei's to promise and the tests' to check.
 
 ## The client, the page's side
 
-`client.ts` owns the worker. Nothing else on the page calls `postMessage`
-or `new Worker`; the analyses of `src/core/analyses/` go through the
-client's `run`.
+`client.ts` owns the worker. Nothing else on the page calls `postMessage`,
+and nothing but `start.ts` calls `new Worker`; the analyses of
+`src/core/analyses/` go through the client's `run`.
 
 ```ts
-interface Run<R> {
+// in protocol.ts, so that core can name them
+export interface Progress { done: number; total: number }
+export interface Run<R> {
   id: number;
   outcome: Promise<Outcome<R>>;
   cancel(): void;
 }
-type Outcome<R> =
-  | { status: "done"; key: string; result: R }
-  | { status: "failed"; message: string }
-  | { status: "cancelled" };
+export type Outcome<R> =
+  | { kind: "done"; key: string; result: R }
+  | { kind: "failed"; error: RunError }
+  | { kind: "cancelled" };
+export type RunError =
+  | { kind: "popnei"; message: string }       // popnei refused the input
+  | { kind: "workerFailed"; message: string } // a trap, an error event
+  | { kind: "couldNotStart"; reason: string } // no `ready`, twice
+  | { kind: "protocolMismatch" }              // a stale file after a deploy
+  | { kind: "defect"; message: string };      // a message that did not validate
 
-run(key: string, job: Job, onProgress?: (p: Progress) => void): Run<JobResult>;
+// in client.ts; its `run` is what core's `WorkerClient` asks for
+export function createClient(makeWorker: () => WorkerLike): Client;
+// Client: run(key: string, job: Job, onProgress?: (p: Progress) => void): Run<JobResult>;
 ```
+
+- **The client is given how to make its worker.** `WorkerLike` is the part
+  of `Worker` the client uses: `postMessage`, `terminate`, and the
+  handlers of `message`, `error` and `messageerror`. The entry of each
+  page passes `makeRunnerWorker` of `start.ts` (section "How Vite builds
+  the worker"), and a test passes a fake. So the client runs under Vitest
+  in node, where there is no `Worker`.
 
 ### The queue
 
@@ -145,11 +186,12 @@ run(key: string, job: Job, onProgress?: (p: Progress) => void): Run<JobResult>;
 
 - **`outcome` never rejects.** A calculation that fails is an outcome the
   screen shows, not an exception that a forgotten `catch` loses: the
-  screen switches on `status` and has to say something in each case.
+  screen switches on `kind` and has to say something in each case.
 - **An error of popnei keeps the message it has in Rust.** popnei throws a
   JavaScript `Error` with that message for a wrong input and for a file it
   cannot read, a wrong line of a VCF with its number among them. The
-  runner sends `error.message` as it is, and the screen shows it; a
+  runner sends `error.message` as it is, it reaches the screen as the
+  `message` of `{ kind: "popnei" }`, and the screen shows it; a
   message of our own around it may say what was being done, "Reading
   panel.vcf.gz:", and never replaces it, because it is the one that says
   what is wrong with the file.
@@ -166,8 +208,8 @@ run(key: string, job: Job, onProgress?: (p: Progress) => void): Run<JobResult>;
 - **Restarting has a limit.** A worker that fails before it sends `ready`,
   twice in a row, is not started a third time: the wasm did not load, the
   network or the browser is the cause, and a loop of restarts would hide
-  it. The client then fails every request with a message that says the
-  calculations could not start and why.
+  it. The client then fails every request with `{ kind: "couldNotStart" }`
+  and the reason.
 
 ### Progress
 
@@ -224,7 +266,7 @@ section 4). So:
 
 ## The runner, the worker's side
 
-`runner.ts` answers the messages of `protocol.ts` and calls popnei. It
+`runner.ts` answers the messages of `messages.ts` and calls popnei. It
 holds the `File` objects it was sent, the handles popnei gave for them and
 the intermediate caches.
 
@@ -385,6 +427,8 @@ section 5).
 
 The browser floor is popnei's: Chrome 91, Firefox 89, Safari 16.4, set by
 the vector instructions of wasm (`js/popnei/README.md`, "Where it runs").
+It is open for the owner (point 1 of "Open for the owner" in `SKILL.md`);
+with a floor of Firefox 114 or later, a module worker would do.
 A module worker, `new Worker(url, { type: "module" })`, which runs a
 script with `import` in it, arrived in Chrome 80 and Safari 15, and in
 Firefox only in 114, of June 2023. So the worker of the built site is a
@@ -394,9 +438,14 @@ floor runs.
 - **The worker is imported with `?worker`**:
 
   ```ts
+  // src/worker/start.ts, the whole file
   import RunnerWorker from "./runner.ts?worker";
-  const worker = new RunnerWorker();
+  export const makeRunnerWorker = (): Worker => new RunnerWorker();
   ```
+
+  It is a file of its own so that the client, which the tests import, has
+  no `?worker` in it; `start.ts` is checked with the page, whose types
+  declare `?worker` (`configs.md`).
 
   With this import Vite builds the worker as a module worker for the
   development server, which does not bundle and needs `import`, and, in
@@ -415,7 +464,7 @@ floor runs.
 - **`build.target` names the floor**, `["chrome91", "firefox89",
   "safari16.4"]`, and it applies to the worker bundle as well. The default
   of Vite is newer than Firefox 89, and syntax it leaves in would fail in
-  the worker as in the page. The hub owns `vite.config.ts`; this is the
+  the worker as in the page. `configs.md` owns `vite.config.ts`; this is the
   line the worker needs from it.
 - **The development server needs a browser with module workers**, a
   Firefox of 114 or later. The floor is tested on the build.
@@ -466,12 +515,15 @@ skill warns against.
 6. **What `iterBlocks` gives is the caller's own memory**, which the
    README says for the arrays of a block; the runner relies on it to
    transfer them.
+7. **The thinning of the points of the Manhattan and the QQ plots**, in
+   Rust beside the GWAS, with the number of variants and the number kept
+   (`charts.md`; `docs/technology.md`, open point 3).
 
 ## What is tested where
 
 `.claude/skills/coding/testing.md` has the tools; for this code:
 
-- **Under Vitest, in node**: the validators of `protocol.ts`, with every
+- **Under Vitest, in node**: the validators of `messages.ts`, with every
   kind and with the malformed messages, a missing `id`, an array of
   numbers where a `Float64Array` is expected, an unknown `kind`; the
   client, against a fake worker, an object with `postMessage`,

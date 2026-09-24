@@ -22,7 +22,8 @@ popnei_web existed, and to be revised after the walking skeleton.
 
 ## Before the first task
 
-1. The plan is approved by the owner, and its specs are settled. If not,
+1. The plan is approved by the owner, and its specs are settled: approved
+   by the owner, with every open point answered or given a meanwhile. If not,
    say so and stop.
 2. The worktree and the branch, named after the plan:
 
@@ -115,7 +116,8 @@ Then tick the task in the plan, note it in the report, and commit both.
    pass is not done, whatever the tasks said.
 2. Have the work package reviewed, as the `code-review` skill says, over
    its commits, with the screenshots of its screens. The review follows
-   the size of the work, but `spec`, `tests` and `stale` always run, and
+   the size of the work, but `spec`, `tests`, `stale` and `errors` always
+   run, as the table of that skill has them, and
    for a screen `accessibility` and `ux` too, since those are what the
    owner cannot check.
 3. Evaluate the findings yourself, as that skill says: this is a

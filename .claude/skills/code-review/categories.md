@@ -82,11 +82,10 @@ does not go through the key.
   variant file, the filters before it, the individuals and the grouping
   it uses, its options and the version of popnei are in every key the
   architecture describes.
-- The canonical form of `keys.ts`: two projects that differ in an input
-  give two keys, and two that are the same give one. Watch the order of
-  the fields of an object, `undefined` against a missing field, `0.05`
-  against `"0.05"`, `-0` and `NaN`, and the order of a list, which
-  matters for the filters and does not for a set of individuals.
+- The canonical form of `keys.ts`, against the rules of "Keys" in
+  `.claude/skills/coding/SKILL.md`: two projects that differ in an input
+  give two keys, and two that are the same give one. Try `0.05` against
+  `"0.05"` and `-0` against `0`, which those rules do not name.
 - A result that arrives from the worker after the project changed, or
   from a worker that was ended by a cancel: is it shown only when the
   current project gives its key?
@@ -162,7 +161,8 @@ finding: a name you would choose differently that says the same.
   and lives in a component is lost by undo and by the project file.
 - The page never holds genotypes; the worker runs one request at a time;
   results come back as typed arrays and are transferred, not copied,
-  when they are large.
+  when they are large, unless the worker keeps them in its cache, when
+  they are copied (`.claude/skills/coding/worker.md`).
 - The files wasm is loaded by the worker, when it is first needed, and
   from nowhere else.
 - Adding an analysis added its module and its panel and changed nothing
@@ -226,10 +226,9 @@ widgets, and what is left to check is what we add around them.
   taking the focus, through a live region or the toast of React Aria.
 - Time (2.2.1): a notice with its Undo that closes by itself before the
   user can reach it.
-- Contrast (1.4.3, 1.4.11): text 4.5:1, large text 3:1, and the parts of
-  a control, the focus ring and the lines and points of a plot that are
-  needed to read it, 3:1 against what is next to them, in the light and
-  in the dark theme. Compute it from the tokens of `tokens.css`.
+- Contrast (1.4.3, 1.4.11): the ratios of "Contrast and colour" in
+  `.claude/skills/coding/css.md`, in the light and in the dark theme,
+  computed from the tokens of `tokens.css`.
 - Colour alone (1.4.1): the populations of a plot or the cells of a
   heatmap told apart only by colour, with no legend, shape or table.
 - Plots: an SVG plot has a name, and its numbers are in a table the user
@@ -242,6 +241,11 @@ widgets, and what is left to check is what we add around them.
 - Zoom and reflow (1.4.4, 1.4.10): the page at 200% zoom and at 320 CSS
   pixels of width, where the criterion's exception for tables and plots
   applies to them only.
+- Headings and landmarks (1.3.1, 2.4.6): one `<h1>` per step, headings in
+  order, `<main>` and `<nav>`, and the focus on the `<h1>` after a change
+  of step, as `react.md` lays them out.
+- Motion: with the system's reduced motion on, nothing animates that is
+  not needed to understand it (`css.md`, "Motion").
 - The page: `lang` on `html` (3.1.1), a title for each page (2.4.2), the
   help in the same place on every step (3.2.6), a change of a select
   that starts no run and moves to no other step by itself (3.2.2).
@@ -286,10 +290,12 @@ the spec.
 
 ## browser
 
-The browsers are those of `/Users/jose/devel/popnei/docs/objectives.md`,
-section 3: Chrome and Edge from 91, Firefox from 89, Safari from 16.4 on
-macOS and iOS, the floor that `.claude/skills/coding/worker.md` takes
-for the applications. Playwright's WebKit is a recent WebKit, not Safari
+The browsers are those of goal 3 of
+`/Users/jose/devel/popnei/docs/objectives.md`: Chrome and Edge from 91,
+Firefox from 89, Safari from 16.4 on macOS and iOS, the floor that
+`.claude/skills/coding/worker.md` takes for the applications. The floor
+is open for the owner (point 1 of "Open for the owner" in
+`.claude/skills/coding/SKILL.md`); the review uses the one in force. Playwright's WebKit is a recent WebKit, not Safari
 16.4, so a test that passes there does not show that the floor works:
 what the floor has is read in the compatibility table of MDN.
 
@@ -299,8 +305,8 @@ what the floor has is read in the compatibility table of MDN.
   Those that are easy to miss: module workers, `new Worker(url, {type:
   "module"})`, Firefox 114; `Promise.withResolvers` and `Object.groupBy`,
   Safari 17.4; the new methods of `Set`, Safari 17; the popover
-  attribute, Safari 17; CSS nesting, Chrome 120, Firefox 117 and Safari
-  17.2; `:has()`, Chrome 105 and Firefox 121; the File System Access
+  attribute, Safari 17; `Array.prototype.findLast`, Chrome 97 and
+  Firefox 104, which React Aria's table calls; the File System Access
   API, Chromium only. Those versions are MDN's of 24 September 2026. The
   CSS allowed at the floor is the table of `.claude/skills/coding/css.md`,
   and the worker's build is in `worker.md`.
@@ -333,7 +339,7 @@ and `worker.md` where they say what is loaded when.
 - What is loaded when: the files wasm is fetched only when an xlsx is
   read or the report is written, so a run with a CSV makes no request
   for it; check it with the requests logged by Playwright. The same for
-  three.js and for any chunk the `coding` skill says is loaded lazily.
+  any chunk the `coding` skill says is loaded lazily.
 - An import that pulls a whole library where a part is used, when the
   build shows it in the size.
 - Every wasm and data file served with the name that changes with its

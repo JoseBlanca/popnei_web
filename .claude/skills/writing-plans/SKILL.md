@@ -5,7 +5,8 @@ description: How an implementation plan is written in popnei_web. Use it when wr
 
 # Writing implementation plans
 
-A plan turns specs that are settled into the order of the work. It says
+A plan turns specs that are settled, approved by the owner with every
+open point answered or given a meanwhile, into the order of the work. It says
 what is built first and what after, in which pieces, and how we will know
 that each piece is done. It is carried out by the `following-plans`
 skill: an orchestrator that sends each piece to a subagent, checks what
@@ -42,8 +43,8 @@ there because the shape below has a place for it.
 
 ## Before writing
 
-- The specs the plan builds from exist and have been through their
-  review. Everything a task builds has a spec behind it: a core module, an
+- The specs the plan builds from exist, have been through their review,
+  and are approved by the owner, as the `writing-specs` skill ends. Everything a task builds has a spec behind it: a core module, an
   analysis, the worker protocol, a chart have a module spec; a screen has
   a screen spec. When a task would sit on something with no spec, or a
   spec too thin to build from, the session tells the owner what is
@@ -96,11 +97,14 @@ work package is usually one of these:
   architecture rests on: a change to each input of `keyInputs` removes
   the result, a change to something outside it leaves it.
 - **A chart**: a function of `src/charts/`, which knows nothing of React
-  or of the project, checked with Vitest over the SVG it draws and its
-  export, and then mounted by the panel of an analysis.
+  or of the project, checked with Vitest over the SVG it draws, and in
+  Playwright for its export, and then mounted by the panel of an
+  analysis.
 - **The worker protocol**: `src/worker/`, the messages, the queue,
-  progress and cancelling. Checked in a browser, because a worker and a
-  wasm module do not run under Vitest the same way.
+  progress and cancelling. The messages and the client are checked with
+  Vitest against a fake worker; the real worker, `FileReaderSync` and a
+  cancel in the middle of a calculation in Playwright
+  (`.claude/skills/coding/worker.md`, "What is tested where").
 - **A screen, or a step of an application**: `src/ui/steps/` or
   `src/ui/shell/`, built from its screen spec.
 
@@ -128,9 +132,9 @@ Each work package has:
   part; a Playwright test with what it does and what it reads on the
   screen; a build that produces a file. "The panel works" is not a
   deliverable. "The Playwright test `diversity shows He` loads
-  `tests/data/small.nei` with `small_pops.csv`, runs the diversity with
-  its defaults and reads the He of the three populations of the spec's
-  'How it is verified', in Chromium, Firefox and WebKit" is. The numbers
+  `e2e/fixtures/panel.nei` with `e2e/fixtures/panel_pops.csv`, runs the
+  diversity with its defaults and reads the He of the three populations
+  of the spec's 'How it is verified', in Chromium, Firefox and WebKit" is. The numbers
   stay in the spec.
   A check fails on the commit the work starts from, because the thing is
   not there yet. A test runner that selects nothing can still exit with

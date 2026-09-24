@@ -47,8 +47,8 @@ import:
 
 | layer | may import | must not import |
 |---|---|---|
-| `src/core` | itself; the types of `src/worker/protocol.ts`; the types of `popnei` | `src/ui`, `src/charts`, `src/worker/client.ts`, `src/worker/runner.ts`, React, D3, three.js, a value of `popnei` |
-| `src/worker` | itself; `popnei`; the files wasm | `src/core`, `src/ui`, `src/charts`, React, D3, three.js |
+| `src/core` | itself; the types of `src/worker/protocol.ts`; the types of `popnei` | `src/ui`, `src/charts`, `src/worker/client.ts`, `src/worker/messages.ts`, `src/worker/start.ts`, `src/worker/runner.ts`, React, D3, three.js, a value of `popnei` |
+| `src/worker` | itself; `popnei`; the files wasm; the types of `src/core/result.ts` | `src/core`, `src/ui`, `src/charts`, React, D3, three.js |
 | `src/charts` | itself; D3; three.js | `src/core`, `src/ui`, `src/worker`, React, a value of `popnei` |
 | `src/ui` | everything above; React; React Aria | `src/worker/runner.ts`, D3, three.js, a value of `popnei` |
 
@@ -59,16 +59,21 @@ The reasons:
   touching it (`docs/technology.md`, section 2).
 - **core does not create the worker.** It is given an object that sends a
   request and reports progress and the result, of an interface that core
-  itself declares, and `src/ui` hands it the real client from
-  `src/worker/client.ts` when the application starts. A test hands it a
+  itself declares, `WorkerClient` (`docs/architecture.md`, section 4),
+  and `src/ui` hands it the real client from `src/worker/client.ts` when
+  the application starts. A test hands it a
   fake that answers at once. So a test of undo or of the cache runs no
   wasm.
 - **core imports only the types of popnei**, `import type`, never a
   value, because a function of popnei needs its wasm loaded, and the wasm
   lives in the worker. The version of popnei, which goes into every key,
   comes to core as data, in a message of the worker.
-- **`src/worker/protocol.ts` imports nothing of ours** but the types of
-  popnei, so that both sides can import it and no cycle forms.
+- **`src/worker/protocol.ts` and `src/worker/messages.ts` import nothing
+  of ours** but the types of popnei and of `src/core/result.ts`, so that
+  both sides can import them and no cycle forms. `protocol.ts` holds no
+  type of the DOM either, since core imports it and is checked with none;
+  the messages, which carry a `File`, are in `messages.ts`, which only the
+  client and the runner import (`worker.md`).
 - **charts know nothing of the project nor of React** (section 7 of the
   architecture): a plot takes an element and data and returns a handle.
   Only `src/ui` joins a plot to the project.
@@ -92,7 +97,8 @@ easy and hide which module a name comes from.
 
 ## Before the code
 
-Code is written from a spec, `docs/specs/<module>.md`, as the
+Code is written from a spec, `docs/specs/<layer>/<module>.md`,
+`docs/specs/analyses/<id>.md` or `docs/specs/steps/<step>.md`, as the
 `writing-specs` skill describes, and usually from a step of a plan, as the
 `writing-plans` and `following-plans` skills do. Read the item of the
 spec, the part of `docs/architecture.md` it stands on, and, when it calls
@@ -125,11 +131,14 @@ code.
 
 ## TypeScript
 
-The compiler is TypeScript 6.0, with the options of `configs.md`. The
+The compiler is TypeScript 6.0, with the options of `configs.md`; 6 or
+7 is open for the owner (point 3 of "Open for the owner", below). The
 language is that of ES2021, because the site runs in the browsers popnei
 runs in, back to Firefox 89 and Safari 16.4, and a function added to
 JavaScript after 2021, `Array.prototype.at`, `Object.hasOwn`,
 `toSorted`, would fail there and only there; the compiler refuses them.
+The floor itself is open for the owner (point 1 of "Open for the
+owner", below).
 Two of the options go beyond `strict` and change how code is written:
 
 - **`noUncheckedIndexedAccess`**: `array[i]` and `record[key]` have the
@@ -297,13 +306,30 @@ does not rethrow.
   arguments and changes none of them. It reads no clock, no random
   number, no global, no DOM, sets no timer and does no I/O: the date of a
   project file, an id, the text of a file, are passed in by the caller.
-  The only state is the store, `store.ts`, and it changes only by
-  applying a command. So a test is a call and an assertion, and the same
-  call always gives the same answer.
+  The only state is the store, `store.ts`, below. So a test is a call and
+  an assertion, and the same call always gives the same answer.
 - **Synchronous.** Nothing in core is `async`. What waits, a file being
   read, the worker answering, is in `src/ui` and `src/worker`, and hands
   core a finished value; a result from the worker enters the store by a
   plain call.
+- **The store**, `store.ts`, holds the current project, the history and
+  the cache (`docs/architecture.md`, section 9), and is the one object
+  with state. It gives `getState()`, the current `AppState`, the same
+  object until something changes; `subscribe(listener)`, a property bound
+  once, which calls the listener after every change and returns the
+  function that unsubscribes; `apply(command)`, where a command is
+  `(project) => Project`, which makes a step of undo, and makes none when
+  the command returns the project it was given; `undo()` and `redo()`;
+  and the events of a run, `runStarted`, `runProgress`,
+  `resultArrived(key, result)` and `runEnded`, which change what the
+  screens show and not the project, so they make no step of undo.
+  `react.md` has how the screens read it.
+- **A run is started by core and awaited by `src/ui`.** The `run` of an
+  analysis builds its request, hands it to the client that core was given,
+  and returns the `Run` handle of `src/worker/protocol.ts` without waiting
+  on it. `src/ui/runs.ts` awaits its `outcome` and calls the events of the
+  store. So nothing in core waits, and the promise is in the layer that
+  already does.
 - **The project is immutable and plain.** Every field of `Project`, and of
   what it holds, is `readonly`, and every array `readonly T[]`, so the
   compiler refuses a write. It holds only what JSON holds, strings, finite
@@ -362,6 +388,10 @@ The key of a result is what makes undo, staleness and the cache work
   screen, which changes with the language or the wording; what belongs to
   the screen, a tab, a zoom, a colour, unless the result depends on it,
   and a result never should.
+- **A key on the wire is a `string`.** The messages of the worker cannot
+  import `keys.ts`, so `keys.ts` also gives `keyFromWire(text: string):
+  Key`, the other place a `Key` is made, and a key that comes back with a
+  result enters the cache through it.
 - **The version of the key** of an analysis, a number in its module, is
   raised when what its result means changes for the same inputs, a new
   default of popnei, a bug fixed in how it is called, so that the results
@@ -413,11 +443,10 @@ possible break and a possible abandonment.
   not, its user base, its maintainer, its size, and what it pulls in
   (`npm view <name> dependencies`), and wait. The decisions go into
   `docs/technology.md`.
-- The dependencies `docs/technology.md` names: `react`, `react-dom`,
-  `react-aria-components`, D3, `three`, `markdown-it` and `popnei`; and for
-  development `typescript`, `vite`, `@vitejs/plugin-react`, `vitest`,
-  `@playwright/test`, `eslint` with `@eslint/js`, `typescript-eslint`,
-  `prettier`, and the `@types/` packages of those that need them.
+- The dependencies decided are those of section 2 of
+  `docs/technology.md`, with `@vitejs/plugin-react` and `@eslint/js`,
+  which are parts of Vite and of ESLint. Those proposed and not yet
+  decided are point 2 of "Open for the owner", below.
 - **Versions are exact** in `package.json`, `"vite": "8.3.0"`, by
   `save-exact=true` in `.npmrc`: an upgrade is then a change someone made
   and a commit can name, not what the day of the install gave.
@@ -440,27 +469,11 @@ possible break and a possible abandonment.
 
 ## Tools
 
-- **Vite** serves the pages while developing, `npm run dev`, and builds
-  the site into `dist/`, `npm run build`. It removes the types of each
-  file and does not check them: a page that runs in the dev server can
-  still have type errors, so the type check is a command of its own.
-- **TypeScript 6.0**, `tsc -b`, checks the types and writes nothing. It is
-  6.0 and not 7.0, the current release, because typescript-eslint, whose
-  rules that read types catch most of the mistakes listed here, reads them
-  through the programmatic API of the compiler, and 7.0, rewritten in Go,
-  has none yet; typescript-eslint 8.70 takes TypeScript up to 6.0, and
-  Vite's own template stays on 6.0. The language of the two is the same,
-  so moving to 7 is a change of version when typescript-eslint supports
-  it, expected with TypeScript 7.1.
-- **ESLint** with typescript-eslint's `strictTypeChecked` and
-  `stylisticTypeChecked` and the rules of `configs.md`, over every
-  TypeScript file, the tests included.
-- **Prettier** formats everything, with its defaults, which are those
-  popnei's TypeScript package follows. Nothing is formatted by hand and no
-  lint rule is about formatting, so no `eslint-config-prettier` is
-  needed: neither `@eslint/js` nor typescript-eslint 8 have formatting
-  rules in the configurations used.
-- **Vitest and Playwright**: `testing.md`.
+Vite, TypeScript, ESLint and Prettier, their scripts and their
+configuration are in `configs.md`; Vitest and Playwright in `testing.md`.
+Vite removes the types of each file and does not check them, so a page
+that runs in the dev server can still have type errors, and the type
+check is a command of its own.
 
 ## Before the work is called done
 
@@ -476,13 +489,13 @@ npm pkg get dependencies.popnei
 
 The scripts are those of `configs.md`: `prettier --check .`, `tsc -b`,
 `eslint --max-warnings=0 .`, `vitest run`, `vite build`, and the build
-followed by `playwright test` in the three engines. The first five run
-for every change. The build is in the list
-because it is what finds a worker, a wasm file or a page that the
-bundler cannot resolve, which neither the type check nor the unit tests
-load. The tests in a browser, `test:e2e`, run for every change to
-`src/ui`, `src/worker` or `src/charts`, and for one to `src/core` that
-changes what a screen shows; `testing.md` says how.
+followed by `playwright test` in the three engines. All of them run for
+every change to the code; a change to documents alone needs none. The
+build is in the list because it is what finds a worker, a wasm file or a
+page that the bundler cannot resolve, which neither the type check nor
+the unit tests load. The tests in a browser, `test:e2e`, run for a change
+to `src/core` too, because core reaches the screens through the store;
+`testing.md` says how.
 
 The last one prints the dependency on popnei, which has to be a URL of
 `https://github.com/JoseBlanca/popnei/releases/download/`. A `file:` path
@@ -492,6 +505,37 @@ A layer or a script that does not exist yet is reported as not there, not
 as passed. Report what each command printed when it failed and that it
 passed when it passed. `--fix` of ESLint and `--write` of Prettier change
 files; their changes are looked at before they are committed.
+
+## Open for the owner
+
+Four points of this skill and of its topic files are not decided. A file
+that depends on one says that it is open for the owner and points here.
+Until the owner decides, the work follows the meanwhile of each, and the
+answers go into `docs/technology.md`.
+
+1. **The browser floor.** popnei runs from Chrome 91, Firefox 89 and
+   Safari 16.4. React Aria 1.21.1 calls `findLast` in its table rows and
+   `at` in the layout of its virtualized table, which need Chrome 97 and
+   Firefox 104; a module worker needs Firefox 114; and Vite's default
+   target is Chrome 111, Firefox 114 and Safari 16.4. The alternative is
+   a floor of the applications' own, such as Chrome 111, Firefox 115 and
+   Safari 16.4. Meanwhile: popnei's floor, as `configs.md`, `worker.md`
+   and `css.md` write it.
+2. **The dependencies that `docs/technology.md` does not name.** Proposed
+   in `testing.md` (`jsdom`, `@vitest/coverage-v8`,
+   `@axe-core/playwright`, `fast-check`), in `react.md`
+   (`eslint-plugin-react-hooks`, and the compiler of point 4), in
+   `charts.md` (the D3 modules one by one with their `@types/d3-*`, and
+   `@types/three`) and in `configs.md` (`@types/node`). Meanwhile: none is
+   installed, and what needs one waits.
+3. **TypeScript 6.0 or 7.0.** typescript-eslint 8.70.1, whose rules that
+   read types catch most of the mistakes listed here, takes TypeScript
+   `>=4.8.4 <6.1.0`: it reads the types through the programmatic API of
+   the compiler, and 7.0, rewritten in Go, has only `unstable/` ones.
+   Vite's React template pins `~6.0.2`. The language of the two is the
+   same, so moving to 7 is a change of version once typescript-eslint
+   supports it. Meanwhile: 6.0.3.
+4. **The React Compiler**, proposed in `react.md`. Meanwhile: off.
 
 ## When this skill is wrong
 

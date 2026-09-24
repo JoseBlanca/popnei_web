@@ -31,12 +31,11 @@ How to work:
   application in Playwright and press the keys, log its requests, build
   it and read the sizes, break a line and run the tests, compute the
   contrast of two tokens, look a feature up in MDN's compatibility
-  table. Scratch files go under `tmp/` in the repository. If you change
-  the code to try something, put it back.
-- Report only what you can show. The place is a file and a line you have
-  read, or a screenshot and the state it shows. The output of a command
-  is pasted, not described. What you could not check is said to be a
-  suspicion, with what would settle it.
+  table. Scratch files go in the session's scratchpad directory, never in
+  the repository. If you change the code to try something, put it back.
+- Report only what you can show, with the place and the evidence that
+  the top of `categories.md` asks of every finding. The output of a
+  command is pasted, not described.
 - Do not assume in silence. When a finding depends on something the code
   does not say, whether a list can be empty, whether the worker can
   answer after a cancel, say the assumption in the finding.
@@ -45,9 +44,8 @@ How to work:
   WCAG 2.1.2", not the number alone.
 - Stay in your category. What belongs to another goes in one line at the
   end, for the orchestrator to pass on.
-- Review what changed, and what it calls and is called by. A defect
-  elsewhere goes at the end as seen outside the scope, unless it shows a
-  wrong or stale result.
+- The scope is step 1 of `.claude/skills/code-review/SKILL.md`: what
+  changed, and what it calls and is called by.
 - You may be wrong, and the writer may know something you do not. Give
   the evidence that lets them tell.
 

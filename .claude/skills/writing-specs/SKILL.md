@@ -381,6 +381,11 @@ Evaluate each finding before acting on it, since the reviewer can be
 wrong, and when the spec is handed to the owner, say which findings were
 not taken and why, a line for each.
 
+The owner approves the spec. Its opening then says that it is approved,
+with the date, and only then can a plan be written from it: the
+`writing-plans` and `following-plans` skills call such a spec settled,
+once each of its open points is answered or has a meanwhile.
+
 A change made after the review is checked against every other place that
 speaks of the same thing: search the spec for the name and the number.
 

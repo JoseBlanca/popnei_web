@@ -107,15 +107,17 @@ interface AnalysisDef<Opts, Result> {
   defaults: Opts;
   keyInputs(p: Project): unknown;        // the parts of the project it depends on
   needs(p: Project): string | null;      // why it cannot run yet, or null
-  run(p: Project, w: Worker): Run<Result>; // the request to the worker
+  run(p: Project, c: WorkerClient): Run<Result>; // the request to the worker
   warnings(r: Result, p: Project): Warning[]; // raised by the data only
   checkNumbers(r: Result): number[];     // kept in the project file (section 8)
   script(p: Project): string;            // its lines of the Python script
 }
 ```
 
-and its panel of options and its results in `src/ui`. Adding an analysis
-is adding its module and its panel; nothing else changes. This is the
+and its panel of options and its results in `src/ui`. `WorkerClient` is
+an interface that core declares and the client of `src/worker` fulfils,
+since core has no DOM and cannot name the browser's `Worker`. Adding an
+analysis is adding its module and its panel; nothing else changes. This is the
 piece the work is split into, and what lets an analysis be tried, changed
 or dropped without touching the others.
 
@@ -216,14 +218,20 @@ src/core/
   report.ts         the report
   script.ts         the Python script
 src/worker/
-  protocol.ts       the messages, shared by the page and the worker
+  protocol.ts       the jobs, their results and a run, shared by the page,
+                    the worker and core, with no type of the DOM
+  messages.ts       the messages, which carry the File objects, shared by
+                    the client and the runner
   client.ts         the page's side: the queue, progress, cancelling, restart
+  start.ts          the one line that makes the worker
   runner.ts         the worker's side: popnei, the files wasm, the files of the user
 src/charts/
   histogram.ts scatter.ts line.ts qq.ts heatmap.ts manhattan.ts pca3d.ts
   export.ts         SVG and PNG
 src/ui/
   shell/            the header, the stepper, the summary line, the notices
+  runs.ts           awaits the outcome of each run core starts, and hands
+                    progress and results to the store as events
   steps/            one folder per step: variants, individuals, analyses, export
   analyses/         the panel of options and the results of each analysis
   widgets/          React Aria components with our styles
