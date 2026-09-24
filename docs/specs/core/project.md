@@ -104,10 +104,30 @@ words the screen shows beside the Run button, or `null`:
 | no variants file | "Load a variants file in the Variants step." |
 | the variants file being read | "Reading panel.nei." |
 | popnei refused the file | "popnei could not read panel.nei: ‹popnei's message›. Load a variants file in the Variants step." |
-| the file could not be read for another reason | "panel.nei could not be read: ‹what happened›. Reload the page and load it again." |
+| the file could not be read for another reason | "panel.nei could not be read: ‹what happened› (**Open 4**). Reload the page and load it again." |
 | a list of individuals that is empty | "The list of individuals to keep is empty. Add individuals to it, or remove the filter, in the Variants step." |
-| a list that names an individual twice | "The list of individuals to remove names ind_031 twice." and the same place to fix it |
-| a list that names individuals not in the variants | "The list of individuals to keep names 2 individuals that are not in panel.nei: ind_900, ind_901." and the same place |
+| a list that names an individual twice | "The list of individuals to remove names ind_031 twice. Change the list, or remove the filter, in the Variants step." (**Open 2**) |
+| a list that names individuals not in the variants | "The list of individuals to keep names 2 individuals that are not in panel.nei: ind_900 and ind_901. Change the list, or remove the filter, in the Variants step." (**Open 2**) |
+
+The owner decided on 24 September 2026 that the words the first draft of
+these tables lacked, the end of the last two rows, how many individuals
+a text names, "‹what happened›", the end of a refusal of the reader of
+the individuals file and which problem is named first, are provisional,
+to be judged when the owner sees them on the screens of stage 2: each is
+an open point below, **Open 2** to **Open 6**, and the code uses its
+meanwhile.
+
+The individuals are named as **Open 3** says, and the lists are checked
+in the order of **Open 6**. A list that names several individuals twice
+names each of them, in the order of the list, "names ind_031 and ind_044
+twice", and says "twice" also of a name written three times. A message of
+popnei or of the files wasm that ends with a full stop is shown without
+it, so that the sentence has one. A name of an individual or of a column
+is shown as the validation shows a value of the file, below, its control
+characters escaped and cut at 40 characters; the name of a file is shown
+as the browser gives it. A count is written with a comma between groups
+of three digits, "1,203 more", as the numbers of this spec are. These
+five are decided here, not by the owner.
 
 popnei refuses these lists too, with messages that name its arguments,
 `individuals`, and that the store would keep as popnei's refusals of those
@@ -132,14 +152,15 @@ folder in `docs/architecture.md`, section 9, `individuals`, since
 | no individuals file | "Load an individuals file in the Individuals step." |
 | the individuals file being read | "Reading pops.csv." |
 | the files wasm refused the file | "pops.csv could not be read: ‹its message›. Load an individuals file in the Individuals step." |
-| the file could not be read for another reason | "pops.csv could not be read: ‹what happened›. Reload the page and load it again." |
+| the reader of CSV and TSV refused the file | "pops.csv could not be read: line 7 has 3 cells where the header has 4. Load an individuals file in the Individuals step." (**Open 5**) |
+| the file could not be read for another reason | "pops.csv could not be read: ‹what happened› (**Open 4**). Reload the page and load it again." |
 | individuals of the variants missing from it | "12 individuals of panel.nei are not in pops.csv: ind_031, ind_044 and 10 more. Add them to the file and load it again in the Individuals step." |
 
-A refusal of the reader of CSV and TSV, an empty file or a row of the
-wrong length, has the words of the reader's spec, in stage 2, in the
-place of "‹what happened›". When the variants file is not read,
-`individualsNeeds` does not look at the individuals of the variants:
-`projectNeeds` has already given its reason.
+The individuals missing are named as **Open 3** says; one alone is "1
+individual of panel.nei is not in pops.csv: ind_031. Add it to the file
+and load the file again in the Individuals step." When the variants file
+is not read, `individualsNeeds` does not look at the individuals of the
+variants: `projectNeeds` has already given its reason.
 
 ### The project of an opened project file
 
@@ -578,12 +599,14 @@ of 64 lower case hexadecimal digits.
   the field. This was decided here, not by the owner. Its text: "The
   project file cannot be opened: the second filter of the variants has a
   field "minRate", which the application does not write. The file was
-  changed outside the application, or is damaged."
+  changed outside the application, or is damaged. Open a copy saved
+  before the change, or make the project again."
 - **The text of any other error names the field in words**, from a table
   in `project.ts` of every field of the project, with a position as an
   ordinal, in the pattern "The project file cannot be opened: ‹the field
   in words› ‹what is wrong›. The file was changed outside the
-  application, or is damaged.":
+  application, or is damaged. Open a copy saved before the change, or
+  make the project again.":
   - a wrong value: "the threshold of the second filter of the variants
     should be a number from 0 to 1";
   - a field missing: "the threshold of the second filter of the variants
@@ -599,6 +622,10 @@ of 64 lower case hexadecimal digits.
   - a table that does not agree with its types: "the type of the second
     column of the individuals file cannot be identifier: only the first
     column can have that type".
+
+  The last sentence of these texts and of the one above, what the user
+  can do, the owner decided on 24 September 2026; the option not taken
+  was to end with what happened alone.
 
   A path such as `filters[1].maxAllowedMaf` is never shown, nor any value
   of the code: a kind of filter is named by what it filters on, in the
@@ -671,6 +698,53 @@ project frozen deeply with `Object.freeze`, so that a write into it throws
    new values allow it, would spare the user setting it again after
    changing the separator. Meanwhile, they are lost, and the screen of the
    individuals step says so when it reads the file again.
+
+The five that follow are the words of `projectNeeds` and
+`individualsNeeds` that the owner took as provisional on 24 September
+2026, to be judged on the screens of stage 2. A different answer to any
+of them changes those texts and their tests, and nothing else.
+
+2. **How the user is told to fix a list of individuals that names one
+   twice, or names individuals not in the variants file.** Meanwhile,
+   both reasons end "Change the list, or remove the filter, in the
+   Variants step.", the place and the words of the reason of an empty
+   list.
+3. **How many individuals a text names.** A reason can name hundreds of
+   individuals, and a line beside the Run button holds a few. Meanwhile,
+   three or fewer are all named, "ind_031, ind_044 and ind_050"; of more
+   than three, the first two and how many more, "ind_031, ind_044 and 10
+   more"; one alone has a sentence in the singular, "1 individual of
+   panel.nei is not in pops.csv: ind_031." and "The list of individuals
+   to keep names 1 individual that is not in panel.nei: ind_900."; they
+   are named in the order of the variants file, or of the list. The
+   singular of the second sentence of the individuals missing, "Add it to
+   the file and load the file again in the Individuals step.", is the
+   writer's.
+4. **What happened, when a file could not be read for another reason
+   than a refusal of its reader.** Meanwhile, by the kind of the
+   worker's failure (`RunError`, `docs/specs/worker/protocol.md`): it
+   could not start, "the application could not start its calculations";
+   it crashed, or the message was a defect of our code, "the calculation
+   stopped unexpectedly"; it is of another version of the page, "the page
+   is out of date". Each is followed by "Reload the page and load it
+   again." A refusal of the files wasm in the calculation worker, or of
+   popnei in the light worker, which neither worker gives, is taken as a
+   defect of our code, with its words; this is the writer's.
+5. **The end, and the words, of a refusal of the reader of the
+   individuals file**, the reader of CSV and TSV. "Reload the page and
+   load it again." is wrong advice for a file whose rows are wrong, so,
+   meanwhile, such a refusal ends "Load an individuals file in the
+   Individuals step.", and says what the reader found: a file with no row
+   below the header, "it has no row below the header"; two columns of one
+   name, "two columns are named pop"; an individual in two rows, "the
+   individual ind_031 is in two rows"; a row of the wrong length, "line 7
+   has 3 cells where the header has 4", and "1 cell" for one. The spec of
+   the reader, in stage 2, owns these words and may add refusals; the
+   refusal of the files wasm keeps its row of the table.
+6. **Which problem of the filters of individuals is named first, when
+   there are several.** Meanwhile, the list of individuals to keep before
+   the list to remove; within one list, an empty list first, then names
+   repeated, then names not in the variants file.
 
 ## Not in this spec
 
