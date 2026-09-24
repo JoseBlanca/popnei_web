@@ -265,10 +265,12 @@ not there.
   population." A warning with no action says so: nothing to do, read the
   result with this in mind.
 - **An error** says what happened and how to put it right, in plain words
-  and with the names from the user's own files: "12 individuals of the
-  variants are not in the metadata file: ind_031, ind_044 and 10 more. Add
-  them to the file, or remove them from the variants with a filter of
-  individuals." No "invalid", no "oops", no apology, nothing of the code:
+  and with the names from the user's own files: "12 individuals of
+  panel.nei are not in pops.csv: ind_031, ind_044 and 10 more. Add them
+  to the file and load it again in the Individuals step." The way to put
+  it right has to be one that works: a filter of individuals would not
+  help here, since every individual of the variants file must be in the
+  individuals file, filtered or not. No "invalid", no "oops", no apology, nothing of the code:
   a stack trace, NaN, a key, the cache, wasm, the worker.
 - **A notice** of a change says what the change did and how to undo it:
   "3 results removed because the MAF filter changed · Undo".
