@@ -86,6 +86,10 @@ Anything that is not a JSON value throws an `Error` whose message starts
 with `popnei_web defect:` and gives the path of the value: `undefined`,
 `NaN`, an infinity, a function, a `Map`, a `Set`, an array of numbers of
 the kind popnei gives results in, a `Date`, an object of a class, a file.
+The path is written as a JSON list of the fields and the positions from
+the top of the value, the form of `ProjectError.path`, as in
+`popnei_web defect: the canonical form was given NaN at
+["options","list",1], which is not a JSON value.`
 `JSON.stringify` would write `NaN` as `null` and a `Map` as `{}`, so a
 threshold of `NaN` and one of `null`, or two different maps, would share a
 key. An object is plain when its prototype is `Object.prototype` or
