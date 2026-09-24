@@ -95,8 +95,13 @@ large rewrites; and Radix Primitives, whose maintenance slowed.
 
 ### CSS
 
-Plain CSS, which is never deprecated, and which now has nesting,
-`:has()`, container queries and custom properties. The design tokens,
+Plain CSS, which is never deprecated, and whose custom properties, grid
+and flex cover what Sass was used for. Which of the newer features of CSS
+can be used, nesting, `:has()`, container queries, depends on the oldest
+browsers the applications support: nesting, for one, needs Chrome 120,
+Firefox 117 and Safari 17.2, newer than popnei's floor of Chrome 91,
+Firefox 89 and Safari 16.4. The table of what is allowed is in
+`.claude/skills/coding/css.md`. The design tokens,
 colours, spacing, type, radii, are custom properties on `:root`, which
 gives a dark theme by redefining them. The styles of a component are a
 CSS Module, which Vite supports without a dependency.

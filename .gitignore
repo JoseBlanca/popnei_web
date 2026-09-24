@@ -2,3 +2,9 @@ node_modules/
 dist/
 .claude/worktrees/
 .DS_Store
+tmp/
+screens/
+playwright-report/
+test-results/
+.vitest/
+coverage/
