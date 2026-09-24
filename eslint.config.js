@@ -58,9 +58,10 @@ const probe = {
   message: "Nothing outside src/probe imports the probe.",
 };
 // The probe imports nothing of src/: its files import each other as
-// "./x.ts", and any path that leaves src/probe goes through "../".
+// "./x.ts", and any path that leaves src/probe has a ".." in it, at the
+// start, "../x", or after a "./", "./../x".
 const outOfProbe = {
-  group: ["../**"],
+  regex: "(^|/)\\.\\.(/|$)",
   message: "src/probe imports popnei and React, and nothing of src/.",
 };
 

@@ -429,9 +429,10 @@ const probe = {
   message: "Nothing outside src/probe imports the probe.",
 };
 // The probe imports nothing of src/: its files import each other as
-// "./x.ts", and any path that leaves src/probe goes through "../".
+// "./x.ts", and any path that leaves src/probe has a ".." in it, at the
+// start, "../x", or after a "./", "./../x".
 const outOfProbe = {
-  group: ["../**"],
+  regex: "(^|/)\\.\\.(/|$)",
   message: "src/probe imports popnei and React, and nothing of src/.",
 };
 
@@ -693,8 +694,9 @@ export default defineConfig(
   first block and in each block of a layer, which replaces the first
   block's rule for its files, forbids every file outside `src/probe/` to
   import it. `outOfProbe`, in the probe's block, forbids the probe any
-  path that starts with `../`, which is every path out of `src/probe/`,
-  so it imports popnei, React and its own files and nothing of `src/`;
+  path with a `..` segment in it, which is every path out of
+  `src/probe/`: a regular expression and not a glob, since the glob
+  `../**` let `./../core/result.ts` through. So the probe imports popnei, React and its own files and nothing of `src/`;
   it takes values of popnei, since its worker calls popnei as
   `src/worker/runner.ts` does. The probe's messages are checked when they
   arrive, as the worker's are, so it has no type assertion either.
