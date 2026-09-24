@@ -145,6 +145,21 @@ describe("WP1 D2 the canonical form", () => {
     );
   });
 
+  test("throws a defect with its path on a cycle", () => {
+    const options: { list: unknown[] } = { list: [1] };
+    options.list.push({ back: options });
+    expect(() => canonical({ options }, null)).toThrow(
+      'popnei_web defect: the canonical form was given a cycle at ["options","list",1,"back"]',
+    );
+  });
+
+  test("writes twice an object held in two places that do not hold each other", () => {
+    const table = { rows: [["i1", "P1"]] };
+    expect(canonical({ a: table, b: [table] }, null)).toBe(
+      '{"a":{"rows":[["i1","P1"]]},"b":[{"rows":[["i1","P1"]]}]}',
+    );
+  });
+
   test("gives the same text with a memo, empty or filled, as without", () => {
     const table = deepFreeze({ columns: ["id", "pop"], rows: [["i1", "P1"]] });
     const value = deepFreeze({ a: table, b: [table, { c: -0 }] });

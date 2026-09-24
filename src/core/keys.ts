@@ -62,14 +62,22 @@ export function createKeyMemo(): KeyMemo {
  * Throws a defect, with the path of the value, on anything that is not a
  * JSON value: `undefined`, `NaN`, an infinity, a function, a `Map`, a
  * `Set`, a typed array, a `Date`, an object of a class, a file, a bigint,
- * a symbol, and a hole in a list. An object is plain when its prototype is
- * `Object.prototype` or `null`.
+ * a symbol, a hole in a list, and a cycle; an object held in two places
+ * that do not hold each other is written twice. An object is plain when
+ * its prototype is `Object.prototype` or `null`.
  */
 export function canonical(value: unknown, memo: KeyMemo | null): string {
-  return writeValue(value, [], memo).text;
+  return writeValue(value, [], { memo, onPath: new Set() }).text;
 }
 
 type Path = readonly (string | number)[];
+
+/** What the writing of one value carries: the memo, and the objects on
+    the path to the value being written, to find a cycle. */
+interface Writer {
+  readonly memo: KeyMemo | null;
+  readonly onPath: Set<object>;
+}
 
 /** The text of a value, and whether the value is frozen with all it
     holds, so that the memo may keep it. */
@@ -78,7 +86,7 @@ interface Written {
   readonly frozen: boolean;
 }
 
-function writeValue(value: unknown, path: Path, memo: KeyMemo | null): Written {
+function writeValue(value: unknown, path: Path, writer: Writer): Written {
   switch (typeof value) {
     case "string":
       return { text: JSON.stringify(value), frozen: true };
@@ -92,7 +100,7 @@ function writeValue(value: unknown, path: Path, memo: KeyMemo | null): Written {
     case "object":
       return value === null
         ? { text: "null", frozen: true }
-        : writeObject(value, path, memo);
+        : writeObject(value, path, writer);
     case "undefined":
       throw notJson("undefined", path);
     case "function":
@@ -104,20 +112,25 @@ function writeValue(value: unknown, path: Path, memo: KeyMemo | null): Written {
   }
 }
 
-function writeObject(value: object, path: Path, memo: KeyMemo | null): Written {
-  const known = memo?.texts.get(value);
+function writeObject(value: object, path: Path, writer: Writer): Written {
+  const known = writer.memo?.texts.get(value);
   if (known !== undefined) {
     return { text: known, frozen: true };
   }
+  if (writer.onPath.has(value)) {
+    throw notJson("a cycle", path);
+  }
+  writer.onPath.add(value);
   const parts = isList(value)
-    ? writeList(value, path, memo)
-    : writeFields(value, path, memo);
+    ? writeList(value, path, writer)
+    : writeFields(value, path, writer);
+  writer.onPath.delete(value);
   const frozen = Object.isFrozen(value) && parts.every((part) => part.frozen);
   const text = isList(value)
     ? `[${parts.map((part) => part.text).join(",")}]`
     : `{${parts.map((part) => part.text).join(",")}}`;
   if (frozen) {
-    memo?.texts.set(value, text);
+    writer.memo?.texts.set(value, text);
   }
   return { text, frozen };
 }
@@ -129,7 +142,7 @@ function isList(value: object): value is readonly unknown[] {
 function writeList(
   list: readonly unknown[],
   path: Path,
-  memo: KeyMemo | null,
+  writer: Writer,
 ): Written[] {
   if (Object.getPrototypeOf(list) !== Array.prototype) {
     throw notJson("a list of a class", path);
@@ -139,18 +152,14 @@ function writeList(
     if (!Object.hasOwn(list, index)) {
       throw notJson("a hole in a list", [...path, index]);
     }
-    items.push(writeValue(list[index], [...path, index], memo));
+    items.push(writeValue(list[index], [...path, index], writer));
   }
   return items;
 }
 
 /** The fields of an object, each written as its name, a colon and its
     value, sorted by name. */
-function writeFields(
-  value: object,
-  path: Path,
-  memo: KeyMemo | null,
-): Written[] {
+function writeFields(value: object, path: Path, writer: Writer): Written[] {
   const prototype: unknown = Object.getPrototypeOf(value);
   if (prototype !== Object.prototype && prototype !== null) {
     throw notJson(
@@ -161,7 +170,7 @@ function writeFields(
   const names = Object.keys(value).toSorted(compareCodeUnits);
   return names.map((name) => {
     const field: unknown = Reflect.get(value, name);
-    const written = writeValue(field, [...path, name], memo);
+    const written = writeValue(field, [...path, name], writer);
     return {
       text: `${JSON.stringify(name)}:${written.text}`,
       frozen: written.frozen,
