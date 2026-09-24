@@ -1155,6 +1155,221 @@ export function recordIndividualsRead(
   };
 }
 
+// What every analysis needs: the reasons shown beside the Run button. The
+// words the owner took as provisional on 24 September 2026 are the
+// meanwhiles of the project spec's Open 2 to Open 6.
+
+/** What happened when a worker failed, by the kind of its failure (the
+    project spec, Open 4). A refusal of the files wasm in the calculation
+    worker, or of popnei in the light worker, which neither gives, is a
+    defect of our code, and has its words. */
+const WHAT_HAPPENED: Readonly<Record<RunError["kind"], string>> = {
+  couldNotStart: "the application could not start its calculations",
+  workerFailed: "the calculation stopped unexpectedly",
+  defect: "the calculation stopped unexpectedly",
+  popnei: "the calculation stopped unexpectedly",
+  files: "the calculation stopped unexpectedly",
+  protocolMismatch: "the page is out of date",
+};
+
+/** The end of a reason a new load of the page may fix. */
+const RELOAD = "Reload the page and load it again.";
+
+/** The end of a reason of the variants file. */
+const LOAD_VARIANTS = "Load a variants file in the Variants step.";
+
+/** The end of a reason of the individuals file. */
+const LOAD_INDIVIDUALS = "Load an individuals file in the Individuals step.";
+
+/** The end of a reason of a list of individuals that names the wrong ones
+    (the project spec, Open 2). */
+const CHANGE_LIST =
+  "Change the list, or remove the filter, in the Variants step.";
+
+/** The kinds of the lists of individuals, in the order they are checked
+    (the project spec, Open 6). */
+const LIST_KINDS = ["keep", "remove"] as const;
+
+/**
+ * The reason no analysis can run on this project, in the words the screen
+ * shows beside the Run button, or `null` when every analysis can: the
+ * first of a variants file missing, being read or refused, then a list of
+ * individuals that is empty, names one twice, or names individuals not in
+ * the variants file (the project spec, "What an analysis needs of every
+ * project").
+ */
+export function projectNeeds(p: Project): string | null {
+  const variants = p.variants;
+  if (variants === null) {
+    return LOAD_VARIANTS;
+  }
+  const read = variants.read;
+  switch (read.kind) {
+    case "pending":
+      return `Reading ${variants.name}.`;
+    case "failed":
+      return read.error.kind === "popnei"
+        ? `popnei could not read ${variants.name}: ${withoutFullStop(read.error.message)}. ${LOAD_VARIANTS}`
+        : `${variants.name} could not be read: ${WHAT_HAPPENED[read.error.error.kind]}. ${RELOAD}`;
+    case "read": {
+      const inVariants = new Set(read.individuals);
+      for (const kind of LIST_KINDS) {
+        const list = listOf(p.individualFilters, kind);
+        const reason =
+          list === null
+            ? null
+            : listNeeds(kind, list, variants.name, inVariants);
+        if (reason !== null) {
+          return reason;
+        }
+      }
+      return null;
+    }
+  }
+}
+
+/** The individuals of the list of that kind, or `null` when there is no
+    such filter. */
+function listOf(
+  filters: readonly IndividualFilter[],
+  kind: (typeof LIST_KINDS)[number],
+): readonly string[] | null {
+  for (const filter of filters) {
+    if (
+      (filter.kind === "keep" || filter.kind === "remove") &&
+      filter.kind === kind
+    ) {
+      return filter.individuals;
+    }
+  }
+  return null;
+}
+
+/** What is wrong with one list of individuals, or `null`: empty, then
+    names repeated, then names not in the variants file. */
+function listNeeds(
+  kind: (typeof LIST_KINDS)[number],
+  list: readonly string[],
+  fileName: string,
+  inVariants: ReadonlySet<string>,
+): string | null {
+  const theList = `The list of ${FILTER_KIND_WORDS[kind]}`;
+  if (list.length === 0) {
+    return `${theList} is empty. Add individuals to it, or remove the filter, in the Variants step.`;
+  }
+  const times = new Map<string, number>();
+  for (const name of list) {
+    times.set(name, (times.get(name) ?? 0) + 1);
+  }
+  const repeated = [...times].filter(([, n]) => n > 1).map(([name]) => name);
+  if (repeated.length > 0) {
+    return `${theList} names ${namesOf(repeated)} twice. ${CHANGE_LIST}`;
+  }
+  const unknown = list.filter((name) => !inVariants.has(name));
+  if (unknown.length > 0) {
+    const one = unknown.length === 1;
+    return `${theList} names ${counted(unknown.length, "individual")} that ${one ? "is" : "are"} not in ${fileName}: ${namesOf(unknown)}. ${CHANGE_LIST}`;
+  }
+  return null;
+}
+
+/**
+ * The reason an analysis that uses the individuals file cannot run, or
+ * `null`: the first of an individuals file missing, being read or
+ * refused, then individuals of the variants file missing from it. The
+ * individuals of the variants are looked at only when the variants file
+ * is read; until then `projectNeeds` gives its reason (the project spec,
+ * "What an analysis needs of every project").
+ */
+export function individualsNeeds(p: Project): string | null {
+  const individuals = p.individuals;
+  if (individuals === null) {
+    return LOAD_INDIVIDUALS;
+  }
+  const name = individuals.name;
+  const read = individuals.read;
+  switch (read.kind) {
+    case "pending":
+      return `Reading ${name}.`;
+    case "failed":
+      return read.error.kind === "worker"
+        ? `${name} could not be read: ${WHAT_HAPPENED[read.error.error.kind]}. ${RELOAD}`
+        : `${name} could not be read: ${refusalWords(read.error)}. ${LOAD_INDIVIDUALS}`;
+    case "read": {
+      const variants = p.variants;
+      if (variants?.read.kind !== "read") {
+        return null;
+      }
+      const inFile = new Set(read.table.rows.map((row) => row[0]));
+      const missing = variants.read.individuals.filter(
+        (individual) => !inFile.has(individual),
+      );
+      if (missing.length === 0) {
+        return null;
+      }
+      return missing.length === 1
+        ? `1 individual of ${variants.name} is not in ${name}: ${namesOf(missing)}. Add it to the file and load the file again in the Individuals step.`
+        : `${counted(missing.length, "individual")} of ${variants.name} are not in ${name}: ${namesOf(missing)}. Add them to the file and load it again in the Individuals step.`;
+    }
+  }
+}
+
+/** What the reader of the individuals file found wrong with it (the
+    project spec, Open 5), or the message of the files wasm. */
+function refusalWords(error: IndividualsFileError): string {
+  switch (error.kind) {
+    case "empty":
+      return "it has no row below the header";
+    case "duplicateColumn":
+      return `two columns are named ${shown(error.name)}`;
+    case "duplicateIndividual":
+      return `the individual ${shown(error.name)} is in two rows`;
+    case "raggedRow":
+      return `line ${String(error.line)} has ${counted(error.found, "cell")} where the header has ${grouped(error.expected)}`;
+    case "files":
+      return withoutFullStop(error.message);
+  }
+}
+
+/** The most individuals a text names all of (the project spec, Open 3). */
+const MAX_NAMED = 3;
+
+/** Names in words, in their order: all of them when there are at most
+    MAX_NAMED, "a, b and c"; otherwise the first two and how many more,
+    "a, b and 10 more". */
+function namesOf(names: readonly string[]): string {
+  const words =
+    names.length <= MAX_NAMED
+      ? names.map(shown)
+      : [...names.slice(0, 2).map(shown), `${grouped(names.length - 2)} more`];
+  return bothOf(words);
+}
+
+/** A list of things in words: "a, b and c". */
+function bothOf(words: readonly string[]): string {
+  const last = words.at(-1) ?? "";
+  return words.length < 2
+    ? last
+    : `${words.slice(0, -1).join(", ")} and ${last}`;
+}
+
+/** A count with its noun: "1 individual", "1,203 individuals". */
+function counted(count: number, noun: string): string {
+  return count === 1 ? `1 ${noun}` : `${grouped(count)} ${noun}s`;
+}
+
+/** A whole number with a comma between groups of three digits, the same
+    in every browser: "1,203,554". */
+function grouped(count: number): string {
+  return String(count).replace(/\B(?=(\d{3})+$)/g, ",");
+}
+
+/** A message of popnei or of the files wasm, without the full stop it may
+    end with, so that the sentence it goes into has one. */
+function withoutFullStop(message: string): string {
+  return message.endsWith(".") ? message.slice(0, -1) : message;
+}
+
 // The validation of the project part of a project file.
 
 /** What an analysis of the application gives `parseProject`: its id, and

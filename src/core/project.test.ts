@@ -8,12 +8,14 @@ import {
   analysisOptions,
   emptyProject,
   freezeProject,
+  individualsNeeds,
   loadIndividuals,
   loadVariants,
   moveVariantFilter,
   ordinal,
   parseProject,
   projectErrorText,
+  projectNeeds,
   recordIndividualsRead,
   recordVariantsCounted,
   recordVariantsRead,
@@ -1049,6 +1051,37 @@ const INDIVIDUALS_READ: IndividualsRead = {
 
 const OTHER_ID = "abcdefabcdefabcdefabcdefabcdefab";
 
+/** The sample project with the read of its variants file replaced. */
+function withVariantsRead(read: SourceRead): Project {
+  const p = sampleProject();
+  if (p.variants === null) {
+    throw new Error("popnei_web defect: the test expected a variants file.");
+  }
+  return deepFreeze({ ...p, variants: { ...p.variants, read } });
+}
+
+/** The sample project with the variants file read with these
+    individuals, in this order. */
+function withVariantIndividuals(individuals: readonly string[]): Project {
+  return withVariantsRead({
+    kind: "read",
+    individuals,
+    ploidy: 2,
+    numVars: null,
+  });
+}
+
+/** The sample project with these filters of the individuals. */
+function withLists(individualFilters: Project["individualFilters"]): Project {
+  return deepFreeze({ ...sampleProject(), individualFilters });
+}
+
+/** The sample project with the read of its individuals file replaced. */
+function withIndividualsRead(read: IndividualsRead): Project {
+  const p = sampleProject();
+  return deepFreeze({ ...p, individuals: { ...individualsOf(p), read } });
+}
+
 describe("WP1 D4 the records and the needs", () => {
   describe("recordVariantsRead", () => {
     test("records the read into the variants file of its load", () => {
@@ -1279,6 +1312,404 @@ describe("WP1 D4 the records and the needs", () => {
       ).toBe(p);
     },
   );
+
+  describe("projectNeeds", () => {
+    test("an empty project: load a variants file", () => {
+      expect(projectNeeds(deepFreeze(emptyProject("popgen")))).toBe(
+        "Load a variants file in the Variants step.",
+      );
+    });
+
+    test("a project whose variants file is read and whose lists are right needs nothing", () => {
+      expect(projectNeeds(sampleProject())).toBeNull();
+      expect(
+        projectNeeds(
+          withLists([
+            { kind: "keep", individuals: ["i1", "i2", "i3"] },
+            { kind: "remove", individuals: ["i3"] },
+          ]),
+        ),
+      ).toBeNull();
+    });
+
+    test("the variants file being read", () => {
+      expect(projectNeeds(pendingProject())).toBe("Reading panel.vcf.");
+    });
+
+    test("popnei refused the file: its message, and load a variants file", () => {
+      expect(
+        projectNeeds(
+          withVariantsRead({
+            kind: "failed",
+            error: { kind: "popnei", message: "the file has no header line" },
+          }),
+        ),
+      ).toBe(
+        "popnei could not read panel.nei: the file has no header line. Load a variants file in the Variants step.",
+      );
+    });
+
+    test("a message of popnei that ends with a full stop is shown without it", () => {
+      expect(
+        projectNeeds(
+          withVariantsRead({
+            kind: "failed",
+            error: { kind: "popnei", message: "ploidy 0 is not valid." },
+          }),
+        ),
+      ).toBe(
+        "popnei could not read panel.nei: ploidy 0 is not valid. Load a variants file in the Variants step.",
+      );
+    });
+
+    test("a worker that could not start: the reason says so, not that the file is being read", () => {
+      const read: SourceRead = {
+        kind: "failed",
+        error: {
+          kind: "worker",
+          error: { kind: "couldNotStart", reason: "no ready message, twice" },
+        },
+      };
+      const p = deepFreeze(recordVariantsRead(pendingProject(), NEW_ID, read));
+      expect(projectNeeds(p)).toBe(
+        "panel.vcf could not be read: the application could not start its calculations. Reload the page and load it again.",
+      );
+    });
+
+    test.each([
+      [
+        { kind: "workerFailed", message: "out of memory" },
+        "the calculation stopped unexpectedly",
+      ],
+      [
+        { kind: "defect", message: "a message that did not validate" },
+        "the calculation stopped unexpectedly",
+      ],
+      [
+        { kind: "files", message: "not an xlsx file" },
+        "the calculation stopped unexpectedly",
+      ],
+      [{ kind: "protocolMismatch" }, "the page is out of date"],
+    ] as const)(
+      "the worker failed with %o: what happened, and reload the page",
+      (error, happened) => {
+        expect(
+          projectNeeds(
+            withVariantsRead({
+              kind: "failed",
+              error: { kind: "worker", error },
+            }),
+          ),
+        ).toBe(
+          `panel.nei could not be read: ${happened}. Reload the page and load it again.`,
+        );
+      },
+    );
+
+    test.each(["keep", "remove"] as const)(
+      "an empty list of individuals to %s",
+      (kind) => {
+        expect(projectNeeds(withLists([{ kind, individuals: [] }]))).toBe(
+          `The list of individuals to ${kind} is empty. Add individuals to it, or remove the filter, in the Variants step.`,
+        );
+      },
+    );
+
+    test("a list that names an individual twice", () => {
+      expect(
+        projectNeeds(
+          withLists([{ kind: "remove", individuals: ["i1", "i3", "i1"] }]),
+        ),
+      ).toBe(
+        "The list of individuals to remove names i1 twice. Change the list, or remove the filter, in the Variants step.",
+      );
+    });
+
+    test("a list that names several individuals twice names each, in the order of the list", () => {
+      expect(
+        projectNeeds(
+          withLists([
+            { kind: "keep", individuals: ["i3", "i1", "i2", "i1", "i3"] },
+          ]),
+        ),
+      ).toBe(
+        "The list of individuals to keep names i3 and i1 twice. Change the list, or remove the filter, in the Variants step.",
+      );
+    });
+
+    test("a name written three times is said twice", () => {
+      expect(
+        projectNeeds(
+          withLists([{ kind: "keep", individuals: ["i2", "i2", "i2"] }]),
+        ),
+      ).toBe(
+        "The list of individuals to keep names i2 twice. Change the list, or remove the filter, in the Variants step.",
+      );
+    });
+
+    test("a list that names 1 individual not in the variants: the singular", () => {
+      expect(
+        projectNeeds(withLists([{ kind: "keep", individuals: ["i1", "x9"] }])),
+      ).toBe(
+        "The list of individuals to keep names 1 individual that is not in panel.nei: x9. Change the list, or remove the filter, in the Variants step.",
+      );
+    });
+
+    test.each([
+      [["x1", "x2"], "2 individuals that are not in panel.nei: x1 and x2"],
+      [
+        ["x1", "x2", "x3"],
+        "3 individuals that are not in panel.nei: x1, x2 and x3",
+      ],
+      [
+        ["x1", "x2", "x3", "x4"],
+        "4 individuals that are not in panel.nei: x1, x2 and 2 more",
+      ],
+    ] as const)(
+      "a list that names individuals not in the variants: %o",
+      (names, words) => {
+        expect(
+          projectNeeds(withLists([{ kind: "remove", individuals: names }])),
+        ).toBe(
+          `The list of individuals to remove names ${words}. Change the list, or remove the filter, in the Variants step.`,
+        );
+      },
+    );
+
+    test("the individuals not in the variants are named in the order of the list, and a large count has commas", () => {
+      const names = Array.from(
+        { length: 1205 },
+        (_, i) => `x${String(1205 - i)}`,
+      );
+      expect(
+        projectNeeds(
+          withLists([{ kind: "keep", individuals: ["i1", ...names] }]),
+        ),
+      ).toBe(
+        "The list of individuals to keep names 1,205 individuals that are not in panel.nei: x1205, x1204 and 1,203 more. Change the list, or remove the filter, in the Variants step.",
+      );
+    });
+
+    test("a name is shown with its control characters escaped and cut at 40 characters", () => {
+      expect(
+        projectNeeds(
+          withLists([
+            { kind: "keep", individuals: ["i1", "x\n1", "a".repeat(45)] },
+          ]),
+        ),
+      ).toContain(`: x\\n1 and ${"a".repeat(40)}…. Change`);
+    });
+
+    test("the list to keep is named before the list to remove", () => {
+      expect(
+        projectNeeds(
+          withLists([
+            { kind: "keep", individuals: ["i1", "x9"] },
+            { kind: "remove", individuals: [] },
+          ]),
+        ),
+      ).toMatch(/^The list of individuals to keep names 1 individual/);
+    });
+
+    test("the list to remove is named when the list to keep is right", () => {
+      expect(
+        projectNeeds(
+          withLists([
+            { kind: "keep", individuals: ["i1", "i2"] },
+            { kind: "remove", individuals: ["x9"] },
+          ]),
+        ),
+      ).toMatch(/^The list of individuals to remove names 1 individual/);
+    });
+
+    test("names repeated are named before names not in the variants", () => {
+      expect(
+        projectNeeds(
+          withLists([{ kind: "keep", individuals: ["x8", "i1", "i1"] }]),
+        ),
+      ).toBe(
+        "The list of individuals to keep names i1 twice. Change the list, or remove the filter, in the Variants step.",
+      );
+    });
+
+    test("the filters by thresholds are not looked at", () => {
+      expect(
+        projectNeeds(
+          withLists([
+            { kind: "missing_data", maxAllowedMissingRate: 0 },
+            { kind: "obs_het", maxAllowedObsHet: 0 },
+          ]),
+        ),
+      ).toBeNull();
+    });
+
+    test("the variants file is named before the lists", () => {
+      const p = deepFreeze({
+        ...pendingProject(),
+        individualFilters: [{ kind: "keep" as const, individuals: [] }],
+      });
+      expect(projectNeeds(p)).toBe("Reading panel.vcf.");
+    });
+  });
+
+  describe("individualsNeeds", () => {
+    test("no individuals file", () => {
+      expect(individualsNeeds(withoutIndividuals())).toBe(
+        "Load an individuals file in the Individuals step.",
+      );
+    });
+
+    test("a file with every individual of the variants, and one more, needs nothing", () => {
+      expect(individualsNeeds(sampleProject())).toBeNull();
+      expect(individualsNeeds(withVariantIndividuals(["i3", "i1"]))).toBeNull();
+    });
+
+    test("the individuals file being read", () => {
+      expect(individualsNeeds(pendingProject())).toBe("Reading pops.csv.");
+    });
+
+    test("the files wasm refused the file: its message, and load an individuals file", () => {
+      expect(
+        individualsNeeds(
+          withIndividualsRead({
+            kind: "failed",
+            error: { kind: "files", message: "the file is not an xlsx file." },
+          }),
+        ),
+      ).toBe(
+        "pops.csv could not be read: the file is not an xlsx file. Load an individuals file in the Individuals step.",
+      );
+    });
+
+    test.each([
+      [{ kind: "empty" }, "it has no row below the header"],
+      [{ kind: "duplicateColumn", name: "pop" }, "two columns are named pop"],
+      [
+        { kind: "duplicateIndividual", name: "ind_031" },
+        "the individual ind_031 is in two rows",
+      ],
+      [
+        { kind: "raggedRow", line: 7, expected: 4, found: 3 },
+        "line 7 has 3 cells where the header has 4",
+      ],
+      [
+        { kind: "raggedRow", line: 12, expected: 4, found: 1 },
+        "line 12 has 1 cell where the header has 4",
+      ],
+    ] as const)(
+      "the reader refused the file, %o: what it found, and load an individuals file",
+      (error, found) => {
+        expect(
+          individualsNeeds(withIndividualsRead({ kind: "failed", error })),
+        ).toBe(
+          `pops.csv could not be read: ${found}. Load an individuals file in the Individuals step.`,
+        );
+      },
+    );
+
+    test.each([
+      [
+        { kind: "couldNotStart", reason: "no ready message, twice" },
+        "the application could not start its calculations",
+      ],
+      [
+        { kind: "workerFailed", message: "out of memory" },
+        "the calculation stopped unexpectedly",
+      ],
+      [
+        { kind: "defect", message: "a read the project cannot hold" },
+        "the calculation stopped unexpectedly",
+      ],
+      [
+        { kind: "popnei", message: "a message of popnei" },
+        "the calculation stopped unexpectedly",
+      ],
+      [{ kind: "protocolMismatch" }, "the page is out of date"],
+    ] as const)(
+      "the worker failed with %o: what happened, and reload the page",
+      (error, happened) => {
+        expect(
+          individualsNeeds(
+            withIndividualsRead({
+              kind: "failed",
+              error: { kind: "worker", error },
+            }),
+          ),
+        ).toBe(
+          `pops.csv could not be read: ${happened}. Reload the page and load it again.`,
+        );
+      },
+    );
+
+    test("1 individual of the variants missing from the file: the singular", () => {
+      expect(individualsNeeds(withVariantIndividuals(["i1", "ind_031"]))).toBe(
+        "1 individual of panel.nei is not in pops.csv: ind_031. Add it to the file and load the file again in the Individuals step.",
+      );
+    });
+
+    test.each([
+      [
+        ["x1", "x2"],
+        "2 individuals of panel.nei are not in pops.csv: x1 and x2",
+      ],
+      [
+        ["x1", "x2", "x3"],
+        "3 individuals of panel.nei are not in pops.csv: x1, x2 and x3",
+      ],
+      [
+        ["x1", "x2", "x3", "x4"],
+        "4 individuals of panel.nei are not in pops.csv: x1, x2 and 2 more",
+      ],
+    ] as const)(
+      "individuals of the variants missing from the file: %o",
+      (names, words) => {
+        expect(individualsNeeds(withVariantIndividuals(["i2", ...names]))).toBe(
+          `${words}. Add them to the file and load it again in the Individuals step.`,
+        );
+      },
+    );
+
+    test("12 individuals missing, named in the order of the variants file", () => {
+      const missing = [
+        "ind_031",
+        "ind_044",
+        ...Array.from({ length: 10 }, (_, i) => `ind_${String(100 + i)}`),
+      ];
+      expect(
+        individualsNeeds(withVariantIndividuals(["i1", ...missing, "i2"])),
+      ).toBe(
+        "12 individuals of panel.nei are not in pops.csv: ind_031, ind_044 and 10 more. Add them to the file and load it again in the Individuals step.",
+      );
+    });
+
+    test.each([
+      ["no variants file", null],
+      ["the variants file being read", { kind: "pending" }],
+      [
+        "the variants file refused",
+        { kind: "failed", error: { kind: "popnei", message: "no header" } },
+      ],
+    ] as const)(
+      "with %s, the individuals of the variants are not looked at",
+      (_what, read) => {
+        const p = sampleProject();
+        const variants =
+          read === null || p.variants === null ? null : { ...p.variants, read };
+        const missingAll = {
+          ...individualsOf(p),
+          read: {
+            ...INDIVIDUALS_READ,
+            table: { columns: ["id", "pop"], rows: [["x1", "P1"]] },
+          },
+        };
+        expect(
+          individualsNeeds(
+            deepFreeze({ ...p, variants, individuals: missingAll }),
+          ),
+        ).toBeNull();
+      },
+    );
+  });
 });
 
 /** The sample project with some of its parts replaced, as the data a
