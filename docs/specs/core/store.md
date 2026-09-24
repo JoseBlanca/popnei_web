@@ -298,6 +298,15 @@ different lengths differ; two `null`s are the same.
 
 The final words are those of the screen of the project file, in stage 6.
 
+How the store does it, decided here, not by the owner, on 24 September
+2026: it asks `checkNumbers` once for each result, when the result
+arrives, with the result of that same definition, and keeps the numbers
+with it in the cache, whether or not the project has a reference, so
+that the comparison costs nothing when the state is made again. The
+fingerprint of the settings now is made when the keys are, with the read
+options of the current variants file, and compared with the one the
+reference kept for the analysis.
+
 ## The TypeScript interface
 
 The definition of an analysis, and the client it is given.
