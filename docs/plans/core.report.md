@@ -173,6 +173,27 @@ checks exit 0 and `npm test` gives "Tests 479 passed (479)":
 5. `npx vitest run src/core/project.test.ts -t "WP1 D5"`: "Tests 111
    passed", of at least 25.
 
+## 4. The store
+
+Under way.
+
+- Task 4.1, after the spec in 1a6d1db: the state, `createStore`,
+  `apply`, `undo`, `redo`, `open`, `popneiReady` and the two records,
+  and the states `locked` and `ready`. Its code is in 2099e5d, a commit
+  of the fixes of the reasons of task 1.4: two subagents worked in the
+  one tree at once, and the second's commit took in the first's staged
+  files; history was not rewritten. `npx vitest run
+  src/core/store.test.ts -t "WP4 D1"` gives "Tests 19 passed (19)", of
+  at least 7, with the two things the reviews left for the store: every
+  project it takes is frozen, and a read recorded into the history
+  leaves two projects that shared a source sharing the new one.
+  Twenty-seven breaks, each failing 1 to 18 tests. The reasons an
+  analysis cannot run are computed once per project, 8 ms at 100,000
+  individuals in node, rather than once per analysis. That one
+  analysis's result reaches only its own definition's functions is kept
+  by a rule of the spec, and two definitions of one id make
+  `createStore` throw, rather than by the types.
+
 ## 2. The keys
 
 Done on 24 September 2026, and reviewed; the fixes are 9a567f5 to

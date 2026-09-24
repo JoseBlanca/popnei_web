@@ -373,7 +373,7 @@ spec's "How it is verified".
 **Tasks:** all touch `store.ts` and `store.test.ts`, so they run in
 order.
 
-- [ ] 4.1 The types of the state, `createStore`, `getState`, `subscribe`,
+- [x] 4.1 The types of the state, `createStore`, `getState`, `subscribe`,
   `apply`, `undo`, `redo`, `open`, `popneiReady`, `variantsRead` and
   `individualsRead`, the keys of the analyses made again only when the
   project or the version changes, with the memo, and the states `locked`
