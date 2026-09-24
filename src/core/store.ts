@@ -16,6 +16,7 @@ import {
   intermediateKeyOf,
   keyFromWire,
   keyOf,
+  settingsFingerprint,
 } from "./keys.ts";
 import type { JsonObject, JsonValue, Key } from "./keys.ts";
 import {
@@ -28,6 +29,7 @@ import {
 import type {
   AnalysisId,
   AppId,
+  Check,
   IndividualsRead,
   IndividualsSource,
   Project,
@@ -307,16 +309,22 @@ export interface Store<R> {
 }
 
 /** What the cache keeps under a key: a result with the warnings it
-    raised. */
+    raised and the numbers its definition's `checkNumbers` gave. */
 interface CachedResult<R> {
   readonly result: R;
   readonly warnings: readonly Warning[];
+  readonly numbers: readonly (number | null)[];
 }
 
-/** An analysis that cannot run, with its reason, or its key. */
+/** An analysis that cannot run, with its reason, or its key, with the
+    check numbers of the reference whose fingerprint is that of its
+    settings now, or `null`. */
 type AnalysisKey =
   | { readonly kind: "locked"; readonly reason: string }
-  | { readonly kind: "keyed"; readonly key: Key };
+  | { readonly kind: "keyed"; readonly key: Key; readonly check: Check | null };
+
+/** The verdict of the same numbers, one object for every state. */
+const SAME: CheckVerdict = { kind: "same" };
 
 /** The notice as the store keeps it: the requests it names are kept by
     their ids, since an analysis may have more than one in flight. */
@@ -424,7 +432,20 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
           `the analysis ${JSON.stringify(def.id)} can run before the calculation worker gave the version of popnei, which its key needs.`,
         );
       }
-      return { kind: "keyed", key: keyOf(def, p, popneiVersion, memo) };
+      const saved =
+        p.reference?.checks.find((c) => c.analysis === def.id) ?? null;
+      const check =
+        saved !== null &&
+        p.variants !== null &&
+        settingsFingerprint(def, p, p.variants.readOptions, memo) ===
+          saved.settings
+          ? saved
+          : null;
+      return {
+        kind: "keyed",
+        key: keyOf(def, p, popneiVersion, memo),
+        check,
+      };
     });
   };
 
@@ -445,10 +466,47 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
     return keys;
   };
 
+  /** The comparison of the numbers of a result of `def` with the check
+      numbers `check` saved for its settings, or `null` when there are
+      none: exact, a list of another length differing. */
+  const verdictOf = (
+    def: AnalysisDef<J, R>,
+    check: Check | null,
+    numbers: readonly (number | null)[],
+  ): CheckVerdict | null => {
+    const reference = history.present.project.reference;
+    if (check === null || reference === null) {
+      return null;
+    }
+    if (
+      numbers.length === check.numbers.length &&
+      numbers.every((n, index) => n === check.numbers[index])
+    ) {
+      return SAME;
+    }
+    const now = popneiVersion ?? "";
+    return {
+      kind: "differs",
+      popnei:
+        reference.popneiVersion === now
+          ? null
+          : { saved: reference.popneiVersion, now },
+      app:
+        check.keyVersion === def.keyVersion
+          ? null
+          : { saved: reference.appVersion, now: config.appVersion },
+    };
+  };
+
   /** The state of an analysis that can run, under its key `key`: the
       first of done, running, error and ready. A result in the cache
       under `key` is of this analysis, since the key holds its id. */
-  const statusOf = (id: AnalysisId, key: Key): AnalysisStatus<R> => {
+  const statusOf = (
+    def: AnalysisDef<J, R>,
+    keyed: { readonly key: Key; readonly check: Check | null },
+  ): AnalysisStatus<R> => {
+    const id = def.id;
+    const key = keyed.key;
     const cached = get(cache, key);
     if (cached !== null) {
       return {
@@ -456,7 +514,7 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
         key,
         result: cached.result,
         warnings: cached.warnings,
-        check: null,
+        check: verdictOf(def, keyed.check, cached.numbers),
       };
     }
     let running: InFlight<J, R> | null = null;
@@ -611,7 +669,7 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       const status: AnalysisStatus<R> =
         key.kind === "locked"
           ? { kind: "locked", reason: key.reason }
-          : statusOf(def.id, key.key);
+          : statusOf(def, key);
       const before = previous?.analyses[index];
       return before !== undefined && sameStatus(before.status, status)
         ? before
@@ -761,7 +819,13 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
         const shown = new Set(
           currentKeys().flatMap((k) => (k.kind === "keyed" ? [k.key] : [])),
         );
-        cache = put(cache, key, { result: outcome.result, warnings }, shown);
+        const numbers = request.def.checkNumbers(outcome.result);
+        cache = put(
+          cache,
+          key,
+          { result: outcome.result, warnings, numbers },
+          shown,
+        );
         const numVars = config.numVarsOf(outcome.result);
         if (numVars !== null) {
           history = recordShared<VariantSource>(
@@ -1046,7 +1110,7 @@ function sameStatus<R>(a: AnalysisStatus<R>, b: AnalysisStatus<R>): boolean {
         a.key === b.key &&
         a.result === b.result &&
         a.warnings === b.warnings &&
-        a.check === b.check
+        sameVerdict(a.check, b.check)
       );
     case "running":
       return (
@@ -1066,6 +1130,20 @@ function sameStatus<R>(a: AnalysisStatus<R>, b: AnalysisStatus<R>): boolean {
 
 function defect(message: string): Error {
   return new Error(`popnei_web defect: ${message}`);
+}
+
+/** Whether two comparisons with the check numbers say the same. */
+function sameVerdict(a: CheckVerdict | null, b: CheckVerdict | null): boolean {
+  if (a === null || b === null || a.kind === "same" || b.kind === "same") {
+    return a === b || (a?.kind === "same" && b?.kind === "same");
+  }
+  const sameVersions = (
+    x: { readonly saved: string; readonly now: string } | null,
+    y: { readonly saved: string; readonly now: string } | null,
+  ): boolean =>
+    x === y ||
+    (x !== null && y !== null && x.saved === y.saved && x.now === y.now);
+  return sameVersions(a.popnei, b.popnei) && sameVersions(a.app, b.app);
 }
 
 /** Whether two lists of analyses are the same, in the same order. */

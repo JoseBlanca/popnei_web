@@ -1,5 +1,10 @@
 import { describe, expect, test } from "vitest";
-import { createKeyMemo, intermediateKeyOf, keyOf } from "./keys.ts";
+import {
+  createKeyMemo,
+  intermediateKeyOf,
+  keyOf,
+  settingsFingerprint,
+} from "./keys.ts";
 import type { JsonValue } from "./keys.ts";
 import {
   analysisOptions,
@@ -10,9 +15,15 @@ import {
   removeIndividuals,
   setCsvOptions,
   setGrouping,
+  setIndividualFilter,
   setVariantFilter,
 } from "./project.ts";
-import type { IndividualsRead, Project, SourceRead } from "./project.ts";
+import type {
+  IndividualsRead,
+  Project,
+  SourceRead,
+  VariantSource,
+} from "./project.ts";
 import { createStore } from "./store.ts";
 import type { AnalysisDef, AnalysisStatus, Store } from "./store.ts";
 import { jsonObjectOf } from "./testSupport.ts";
@@ -205,7 +216,9 @@ function fakeAnalyses(): {
     },
     checkNumbers: (r) => {
       calls.given.push(`vars checkNumbers of ${r.kind}`);
-      return r.kind === "vars" ? [...r.values] : [];
+      return r.kind === "vars"
+        ? [...r.values].map((value) => (Number.isNaN(value) ? null : value))
+        : [];
     },
     script: () => "",
   };
@@ -1261,7 +1274,7 @@ describe("WP4 D2 the calculations", () => {
     expect(statuses(store)[1]).toMatchObject({ kind: "done", warnings: [] });
   });
 
-  test("each result reaches only the warnings of its own analysis", () => {
+  test("each result reaches only the warnings and the checkNumbers of its own analysis", () => {
     const { store, sent, calls } = storeWithBothReady();
     store.startRun("pops");
     store.startRun("vars");
@@ -1271,7 +1284,9 @@ describe("WP4 D2 the calculations", () => {
     store.runEnded(pops.run.id, doneWith(pops, popsResult()));
     expect(calls.given).toStrictEqual([
       "vars warnings of vars",
+      "vars checkNumbers of vars",
       "pops warnings of pops",
+      "pops checkNumbers of pops",
     ]);
     expect(statuses(store).map((s) => s.kind)).toStrictEqual(["done", "done"]);
   });
@@ -1697,5 +1712,212 @@ describe("WP4 D3 the notice", () => {
     expect(store.getState().notice).toBe(notice);
     store.dismissNotice();
     expect(request.cancels()).toBe(1);
+  });
+});
+
+/** The read options of the variants file the reference was saved with. */
+const SAVED_READ_OPTIONS = { ploidy: 2, onlyPassed: false };
+
+/** The variants file of the reference, a load of another session. */
+const SAVED_VARIANTS: VariantSource = {
+  fileId: "11111111111111111111111111111111",
+  name: "panel.vcf",
+  size: 2048,
+  format: "vcf",
+  readOptions: SAVED_READ_OPTIONS,
+  read: { ...VARIANTS_READ, numVars: 1200 },
+};
+
+/** The numbers of the result the fake analysis of the variants gives in
+    these tests. */
+const NUMBERS: readonly number[] = [0.5, 0.25];
+
+/** A store opened from a project file saved with the MAF filter at 0.9,
+    popnei 0.1.0 and the application 0.0.9, whose check numbers of the
+    variants are `saved`, with key version 1; the calculation worker gives
+    `popnei`, the analysis of the variants has `keyVersion` now, the
+    variants file is loaded again with `ploidy`, and the analysis runs
+    and gives `numbers`. */
+function openedAndRun(options: {
+  readonly saved: readonly (number | null)[];
+  readonly popnei?: string;
+  readonly keyVersion?: number;
+  readonly ploidy?: number;
+  readonly numbers?: readonly number[];
+}): ReturnType<typeof newStore> {
+  const { analyses, calls } = fakeAnalyses();
+  const [pops, vars] = analyses;
+  if (pops === undefined || vars === undefined) {
+    throw new Error("popnei_web defect: no fake analyses");
+  }
+  const varsNow = { ...vars, keyVersion: options.keyVersion ?? 1 };
+  const settings = maf(0.9)(emptyProject("popgen"));
+  const opened: Project = {
+    ...settings,
+    reference: {
+      variants: SAVED_VARIANTS,
+      popneiVersion: "0.1.0",
+      appVersion: "0.0.9",
+      checks: [
+        {
+          analysis: "vars",
+          numbers: options.saved,
+          keyVersion: 1,
+          settings: settingsFingerprint(
+            vars,
+            settings,
+            SAVED_READ_OPTIONS,
+            null,
+          ),
+        },
+      ],
+    },
+  };
+  const { send, sent, log } = fakeSend();
+  const store = createStore({
+    first: emptyProject("popgen"),
+    analyses: [pops, varsNow],
+    send,
+    numVarsOf: () => null,
+    appVersion: "0.1.0",
+    cacheMaxBytes: 1024 * 1024,
+    maxUndoSteps: 200,
+  });
+  store.open(opened);
+  store.popneiReady(options.popnei ?? "0.1.0");
+  store.apply("a variants file was loaded", (p) =>
+    loadVariants(p, {
+      fileId: VARIANTS_ID,
+      name: "panel.vcf",
+      size: 2048,
+      format: "vcf",
+      readOptions: { ploidy: options.ploidy ?? 2, onlyPassed: false },
+    }),
+  );
+  store.variantsRead(VARIANTS_ID, VARIANTS_READ);
+  store.startRun("vars");
+  const request = sentAt(sent, 0);
+  store.runEnded(request.run.id, {
+    kind: "done",
+    key: request.key,
+    result: {
+      kind: "vars",
+      numVars: null,
+      values: new Float64Array(options.numbers ?? NUMBERS),
+    },
+  });
+  return { store, analyses: [pops, varsNow], calls, sent, log };
+}
+
+/** The comparison in the state of the analysis of the variants, which
+    must be done. */
+function checkOf(store: Store<TestResult>): unknown {
+  const status = statuses(store)[1];
+  if (status?.kind !== "done") {
+    throw new Error(
+      "popnei_web defect: the analysis of the variants is not done",
+    );
+  }
+  return status.check;
+}
+
+describe("WP4 D4 the check numbers", () => {
+  test("a result with the numbers saved gives same", () => {
+    const { store } = openedAndRun({ saved: NUMBERS });
+    expect(checkOf(store)).toStrictEqual({ kind: "same" });
+  });
+
+  test("two nulls, NaN of popnei, are the same", () => {
+    const { store } = openedAndRun({
+      saved: [null, 0.25],
+      numbers: [Number.NaN, 0.25],
+    });
+    expect(checkOf(store)).toStrictEqual({ kind: "same" });
+  });
+
+  test("other numbers with the same popnei and key version differ, with neither version named", () => {
+    const { store } = openedAndRun({ saved: [0.5, 0.75] });
+    expect(checkOf(store)).toStrictEqual({
+      kind: "differs",
+      popnei: null,
+      app: null,
+    });
+  });
+
+  test("numbers that differ in the last digit differ: the comparison is exact", () => {
+    const { store } = openedAndRun({ saved: [0.5, 0.25 + 1e-15] });
+    expect(0.25 + 1e-15).not.toBe(0.25);
+    expect(checkOf(store)).toMatchObject({ kind: "differs" });
+  });
+
+  test("with another popnei now, the comparison names both versions of popnei", () => {
+    const { store } = openedAndRun({ saved: [0.5, 0.75], popnei: "0.2.0" });
+    expect(checkOf(store)).toStrictEqual({
+      kind: "differs",
+      popnei: { saved: "0.1.0", now: "0.2.0" },
+      app: null,
+    });
+  });
+
+  test("with another key version of the analysis now, the comparison names both versions of the application", () => {
+    const { store } = openedAndRun({ saved: [0.5, 0.75], keyVersion: 2 });
+    expect(checkOf(store)).toStrictEqual({
+      kind: "differs",
+      popnei: null,
+      app: { saved: "0.0.9", now: "0.1.0" },
+    });
+  });
+
+  test("a list one number shorter differs", () => {
+    expect(checkOf(openedAndRun({ saved: [0.5] }).store)).toMatchObject({
+      kind: "differs",
+    });
+    expect(
+      checkOf(openedAndRun({ saved: [0.5, 0.25, 0] }).store),
+    ).toMatchObject({ kind: "differs" });
+  });
+
+  test("a setting changed takes the comparison off, and its undo brings it back", () => {
+    const { store, sent } = openedAndRun({ saved: NUMBERS });
+    store.apply("the MAF filter changed", maf(0.8));
+    store.startRun("vars");
+    const request = sentAt(sent, 1);
+    store.runEnded(request.run.id, doneWith(request, varsResult(null)));
+    expect(checkOf(store)).toBeNull();
+    store.undo();
+    expect(checkOf(store)).toStrictEqual({ kind: "same" });
+  });
+
+  test("an opened project whose settings are changed and set back by another command has its comparison again", () => {
+    const { store, sent } = openedAndRun({ saved: NUMBERS });
+    store.apply("the MAF filter changed", maf(0.8));
+    store.startRun("vars");
+    const request = sentAt(sent, 1);
+    store.runEnded(request.run.id, doneWith(request, varsResult(null)));
+    store.apply("the MAF filter changed", maf(0.9));
+    expect(store.getState().undo).toBe("the MAF filter changed");
+    expect(checkOf(store)).toStrictEqual({ kind: "same" });
+  });
+
+  test("a variants file loaded with other read options than the saved ones gives no comparison", () => {
+    const { store } = openedAndRun({ saved: NUMBERS, ploidy: 4 });
+    expect(checkOf(store)).toBeNull();
+  });
+
+  test("a change of the filters the analysis does not read keeps its comparison, and its state the same object", () => {
+    const { store } = openedAndRun({ saved: NUMBERS });
+    const before = store.getState().analyses[1];
+    store.apply("a filter of the individuals changed", (p) =>
+      setIndividualFilter(p, { kind: "obs_het", maxAllowedObsHet: 0.5 }),
+    );
+    expect(checkOf(store)).toStrictEqual({ kind: "same" });
+    expect(store.getState().analyses[1]).toBe(before);
+  });
+
+  test("checkNumbers is given only results of its own analysis", () => {
+    const { calls } = storeWithBothDone();
+    expect(
+      calls.given.filter((given) => given.includes("checkNumbers")),
+    ).toStrictEqual(["pops checkNumbers of pops", "vars checkNumbers of vars"]);
   });
 });
