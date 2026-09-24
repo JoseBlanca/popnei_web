@@ -1,7 +1,7 @@
 # The store
 
 24 September 2026, approved by the owner on 24 September 2026; built in
-`src/core/store.ts` on the branch `plan/core`. The store is the one object of core that changes: it holds the
+`src/core/store.ts`. The store is the one object of core that changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.
 From them it gives the screens one state to read, in which each analysis

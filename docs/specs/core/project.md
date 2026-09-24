@@ -1,7 +1,7 @@
 # The project and its commands
 
 24 September 2026, approved by the owner on 24 September 2026; built in
-`src/core/project.ts` on the branch `plan/core`. The project is everything the user has set in one application: the
+`src/core/project.ts`. The project is everything the user has set in one application: the
 variants file they loaded, the filters, the individuals file with the
 types of its columns, the populations, and the options of each analysis.
 This spec gives its type, the commands that change it, the records that

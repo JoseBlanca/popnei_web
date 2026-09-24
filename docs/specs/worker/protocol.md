@@ -1,7 +1,7 @@
 # The types the page, the workers and core share
 
 24 September 2026, approved by the owner on 24 September 2026; built in
-`src/worker/protocol.ts` on the branch `plan/core`. This spec gives the part of `src/worker/protocol.ts` that core
+`src/worker/protocol.ts`. This spec gives the part of `src/worker/protocol.ts` that core
 names: the filters of the variants and of the individuals, the table of
 the individuals file and the types of its columns, and a request to a
 worker with its progress and its outcome. The stages are the steps in
