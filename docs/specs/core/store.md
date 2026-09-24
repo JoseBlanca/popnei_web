@@ -209,6 +209,18 @@ criterion 4.1.3).
 A request is `afterStop` when a stop was issued for its `startRun`,
 also when the calculation stopped was already being stopped.
 
+How the store does it, decided here, not by the owner, on 24 September
+2026: `startRun` stops the calculations left behind at the moment the
+analysis sends its request, just before `send`, so that an analysis
+whose `run` throws before sending stops nothing. The request is
+`afterStop` when, at that moment, any calculation in flight is being
+stopped, those this `startRun` has just stopped among them, since the
+new request may then wait for a worker that starts again. The analyses
+of `removed` and `leftBehind` are listed in the order of the
+definitions, each once. A calculation that was being stopped and ends
+`done` all the same puts its result into the cache under its key, as
+any other.
+
 The notice goes when it is closed or replaced; a change that removes
 nothing and leaves nothing behind replaces it with none. An analysis is
 `removed` while the current notice lists it, or `locked` if it cannot
