@@ -1500,6 +1500,24 @@ describe("WP1 D4 the records and the needs", () => {
       ).toContain(`: x\\n1 and ${"a".repeat(40)}…. Change`);
     });
 
+    test("of 4 names, the first is shown escaped", () => {
+      expect(
+        projectNeeds(
+          withLists([
+            { kind: "keep", individuals: ["x\u00071", "x2", "x3", "x4"] },
+          ]),
+        ),
+      ).toContain(": x\\u00071, x2 and 2 more. Change");
+    });
+
+    test("the individuals not in the variants are named in the order of the list, not sorted", () => {
+      expect(
+        projectNeeds(
+          withLists([{ kind: "remove", individuals: ["x9", "x1", "x5"] }]),
+        ),
+      ).toContain(": x9, x1 and x5. Change");
+    });
+
     test("the list to keep is named before the list to remove", () => {
       expect(
         projectNeeds(
@@ -1596,6 +1614,18 @@ describe("WP1 D4 the records and the needs", () => {
         { kind: "raggedRow", line: 12, expected: 4, found: 1 },
         "line 12 has 1 cell where the header has 4",
       ],
+      [
+        { kind: "raggedRow", line: 12045, expected: 1204, found: 1203 },
+        "line 12045 has 1,203 cells where the header has 1,204",
+      ],
+      [
+        { kind: "duplicateColumn", name: "po\np" },
+        "two columns are named po\\np",
+      ],
+      [
+        { kind: "duplicateIndividual", name: "i".repeat(45) },
+        `the individual ${"i".repeat(40)}… is in two rows`,
+      ],
     ] as const)(
       "the reader refused the file, %o: what it found, and load an individuals file",
       (error, found) => {
@@ -1671,14 +1701,22 @@ describe("WP1 D4 the records and the needs", () => {
 
     test("12 individuals missing, named in the order of the variants file", () => {
       const missing = [
-        "ind_031",
         "ind_044",
-        ...Array.from({ length: 10 }, (_, i) => `ind_${String(100 + i)}`),
+        "ind_031",
+        ...Array.from({ length: 10 }, (_, i) => `ind_${String(109 - i)}`),
       ];
       expect(
         individualsNeeds(withVariantIndividuals(["i1", ...missing, "i2"])),
       ).toBe(
-        "12 individuals of panel.nei are not in pops.csv: ind_031, ind_044 and 10 more. Add them to the file and load it again in the Individuals step.",
+        "12 individuals of panel.nei are not in pops.csv: ind_044, ind_031 and 10 more. Add them to the file and load it again in the Individuals step.",
+      );
+    });
+
+    test("3 individuals missing, named in the order of the variants file", () => {
+      expect(
+        individualsNeeds(withVariantIndividuals(["z9", "i1", "b2", "m5"])),
+      ).toBe(
+        "3 individuals of panel.nei are not in pops.csv: z9, b2 and m5. Add them to the file and load it again in the Individuals step.",
       );
     });
 
