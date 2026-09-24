@@ -10,7 +10,7 @@
  */
 
 import { canonical } from "./keys.ts";
-import type { JsonObject } from "./keys.ts";
+import type { JsonObject, JsonValue } from "./keys.ts";
 import type {
   Cell,
   ColumnType,
@@ -810,15 +810,34 @@ export function setAnalysisOptions(
   options: JsonObject,
 ): Project {
   const index = p.analyses.findIndex((a) => a.analysis === analysis);
-  const entry = { analysis, options };
-  if (index === -1) {
-    canonical(options, null);
-    return { ...p, analyses: [...p.analyses, entry] };
-  }
-  if (same(p.analyses[index], entry)) {
+  canonical(options, null);
+  if (index !== -1 && same(p.analyses[index], { analysis, options })) {
     return p;
   }
-  return { ...p, analyses: p.analyses.with(index, entry) };
+  const entry = { analysis, options: copyJsonObject(options) };
+  return index === -1
+    ? { ...p, analyses: [...p.analyses, entry] }
+    : { ...p, analyses: p.analyses.with(index, entry) };
+}
+
+/** A copy of a JSON object and of everything it holds, so that the caller
+    that changes its own object later does not change the project. A field
+    named `__proto__` is copied as a field. */
+function copyJsonObject(value: JsonObject): JsonObject {
+  return Object.fromEntries(
+    Object.entries(value).map(([name, field]) => [name, copyJson(field)]),
+  );
+}
+
+function copyJson(value: JsonValue): JsonValue {
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+  return isJsonList(value) ? value.map(copyJson) : copyJsonObject(value);
+}
+
+function isJsonList(value: object): value is readonly JsonValue[] {
+  return Array.isArray(value);
 }
 
 /** The options of an analysis: its entry, or `defaults` when it has

@@ -1,5 +1,6 @@
 import * as fc from "fast-check";
 import { describe, expect, test } from "vitest";
+import { canonical } from "./keys.ts";
 import {
   INDIVIDUAL_FILTER_ORDER,
   analysisOptions,
@@ -614,6 +615,110 @@ describe("WP1 D3 the commands", () => {
         }
       }),
     );
+  });
+
+  test.each<[string, () => { q: Project; change: () => void }]>([
+    [
+      "setAnalysisOptions",
+      () => {
+        const options = { minNumInds: 10, pops: ["P1"] };
+        const q = setAnalysisOptions(sampleProject(), "pca", options);
+        return {
+          q,
+          change: () => {
+            options.minNumInds = 99;
+            options.pops.push("P2");
+          },
+        };
+      },
+    ],
+    [
+      "setAnalysisOptions over an entry",
+      () => {
+        const options = { minNumInds: 10 };
+        const q = setAnalysisOptions(sampleProject(), "diversity", options);
+        return { q, change: () => (options.minNumInds = 99) };
+      },
+    ],
+    [
+      "setVariantFilter",
+      () => {
+        const filter = { kind: "maf" as const, maxAllowedMaf: 0.5 };
+        const q = setVariantFilter(sampleProject(), filter);
+        return { q, change: () => (filter.maxAllowedMaf = 0.7) };
+      },
+    ],
+    [
+      "setIndividualFilter",
+      () => {
+        const filter = { kind: "keep" as const, individuals: ["i1"] };
+        const q = setIndividualFilter(sampleProject(), filter);
+        return { q, change: () => filter.individuals.push("i2") };
+      },
+    ],
+    [
+      "loadVariants",
+      () => {
+        const readOptions = { ploidy: 2, onlyPassed: true };
+        const q = loadVariants(sampleProject(), {
+          fileId: NEW_ID,
+          name: "panel.vcf",
+          size: 1,
+          format: "vcf",
+          readOptions,
+        });
+        return { q, change: () => (readOptions.ploidy = 4) };
+      },
+    ],
+    [
+      "loadIndividuals",
+      () => {
+        const csv = {
+          encoding: "auto" as const,
+          separator: "auto" as const,
+          decimal: "auto" as const,
+        };
+        const q = loadIndividuals(sampleProject(), {
+          fileId: NEW_ID,
+          name: "pops.csv",
+          csv,
+        });
+        return { q, change: () => Object.assign(csv, { separator: ";" }) };
+      },
+    ],
+    [
+      "setCsvOptions",
+      () => {
+        const csv = {
+          encoding: "utf-8" as const,
+          separator: "," as const,
+          decimal: "." as const,
+        };
+        const q = setCsvOptions(sampleProject(), csv);
+        return { q, change: () => Object.assign(csv, { separator: ";" }) };
+      },
+    ],
+    [
+      "setColumnType",
+      () => {
+        const type = { kind: "binary" as const, one: "1", zero: "2" };
+        const q = setColumnType(sampleProject(), "sex", type);
+        return { q, change: () => (type.one = "3") };
+      },
+    ],
+    [
+      "setGrouping",
+      () => {
+        const grouping = { kind: "populations" as const, column: "sex" };
+        const q = setGrouping(sampleProject(), grouping);
+        return { q, change: () => (grouping.column = "height") };
+      },
+    ],
+  ])("%s keeps its own copy of what it was given", (_command, run) => {
+    const { q, change } = run();
+    const before = canonical(q, null);
+    change();
+    expect(canonical(q, null)).toBe(before);
   });
 });
 
