@@ -75,6 +75,9 @@ export const MAX_UNDO_STEPS = 200;
 A history with one project and nothing to undo: the first project of a
 page, and an opened project file. It keeps at most `maxSteps` steps of
 undo, `MAX_UNDO_STEPS` in the application, and a smaller number in a test.
+`maxSteps` is a whole number of at least 1, and any other value is a
+defect, thrown: a bound of 0 or less would drop every step as it is made,
+so that Undo never did anything, and nothing asks for it.
 
 ```ts
 export function startHistory(p: Project, maxSteps: number): History;
