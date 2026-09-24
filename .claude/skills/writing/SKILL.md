@@ -256,7 +256,7 @@ warning. The applications neither hide a problem nor raise one that is
 not there.
 
 - **A label** names the thing in the words of the field and of
-  `docs/functionality.md`: "Minimum proportion of called genotypes", not
+  `docs/functionality.md`: "Maximum proportion of missing genotypes", not
   "missing threshold". A number field says its unit or its range.
 - **A warning** comes from the data, and says what was found in it, what
   it does to the result, and what the user can do: "Population P3 has 12

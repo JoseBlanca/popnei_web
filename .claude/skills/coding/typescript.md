@@ -161,7 +161,8 @@ Two of the options go beyond `strict` and change how code is written:
   `src/charts` are `camelCase.ts`, as section 9 of the architecture names
   them; `react.md` says how the files of components are named.
 - A default that changes a result is a named constant with a doc comment
-  that says where it comes from, `DEFAULT_MAF = 0.05`, never a literal in
+  that says where it comes from, `DEFAULT_MAX_MAF = 0.95`, the major allele frequency popnei filters on,
+never a literal in
   the middle of the code.
 
 ## Errors
