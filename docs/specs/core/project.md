@@ -106,7 +106,7 @@ words the screen shows beside the Run button, or `null`:
 | popnei refused the file | "popnei could not read panel.nei: ‹popnei's message›. Load a variants file in the Variants step." |
 | the file could not be read for another reason | "panel.nei could not be read: ‹what happened› (**Open 4**). Reload the page and load it again." |
 | a list of individuals that is empty | "The list of individuals to keep is empty. Add individuals to it, or remove the filter, in the Variants step." |
-| a list that names an individual twice | "The list of individuals to remove names ind_031 twice. Change the list, or remove the filter, in the Variants step." (**Open 2**) |
+| a list that names an individual more than once | "The list of individuals to remove names ind_031 more than once. Change the list, or remove the filter, in the Variants step." (**Open 2**) |
 | a list that names individuals not in the variants | "The list of individuals to keep names 2 individuals that are not in panel.nei: ind_900 and ind_901. Change the list, or remove the filter, in the Variants step." (**Open 2**) |
 
 The owner decided on 24 September 2026 that the words the first draft of
@@ -118,16 +118,23 @@ an open point below, **Open 2** to **Open 6**, and the code uses its
 meanwhile.
 
 The individuals are named as **Open 3** says, and the lists are checked
-in the order of **Open 6**. A list that names several individuals twice
-names each of them, in the order of the list, "names ind_031 and ind_044
-twice", and says "twice" also of a name written three times. A message of
-popnei or of the files wasm that ends with a full stop is shown without
-it, so that the sentence has one. A name of an individual or of a column
-is shown as the validation shows a value of the file, below, its control
-characters escaped and cut at 40 characters; the name of a file is shown
-as the browser gives it. A count is written with a comma between groups
-of three digits, "1,203 more", as the numbers of this spec are. These
-five are decided here, not by the owner.
+in the order of **Open 6**. A list that repeats several names names each
+of them once, in the order of the list, "names ind_031 and ind_044 more
+than once". These are decided here, not by the owner:
+
+- A message of popnei or of the files wasm that ends with a full stop is
+  shown without it, so that the sentence has one. An empty message, or
+  one of spaces, is left out with its colon: "popnei could not read
+  panel.nei. Load a variants file in the Variants step."
+- A name of an individual or of a column is shown as the validation shows
+  a value of the file, below: its control and format characters escaped,
+  and cut after 40 characters. An empty name is "an empty name", "names
+  an empty name more than once"; a refusal of the reader says "two
+  columns have an empty name" and "two rows have an empty name".
+- The name of a file is escaped in the same way, and not cut.
+- A count is written with a comma between groups of three digits, "1,203
+  more", "where the header has 1,204", as the numbers of this spec are. A
+  line number is not a count, and has no comma: "line 12045".
 
 popnei refuses these lists too, with messages that name its arguments,
 `individuals`, and that the store would keep as popnei's refusals of those
@@ -482,10 +489,18 @@ cannot be binary. The same rule holds in `setColumnType` and in
 
 ### The records
 
-Each returns the project it was given when there is nothing to record: no
-source with that load id, or a source whose read is not pending. A read
-that comes back for a load the user has replaced, or again after a
-restart of a worker, changes nothing.
+Each records a read into the source with that load id, and, for the
+individuals file, with those options, while its read is pending or
+failed because its worker failed, `{ kind: "worker" }`. Otherwise it
+returns the project it was given: for no source with that load id, for a
+source read, and for one whose read failed because popnei or the reader
+refused the file, which the same file would give again. So a read that
+comes back for a load the user has replaced changes nothing, and a read
+that succeeds after a failure of the worker replaces the failure: with
+the options of a CSV set to A, then B, then back to A, a first read of A
+that failed when the worker crashed would otherwise stay, "could not be
+read", after the second read of A, once the worker restarted, had
+succeeded.
 
 ```ts
 /** What the calculation worker read of the variants file of the load `fileId`. */
@@ -636,8 +651,18 @@ of 64 lower case hexadecimal digits.
   program can hold is not written: "a whole number, 1 or more".
 - **A value of the file shown in a text**, the id of an unknown analysis,
   the name of a field the type does not have, a repeated value, is shown
-  with its control characters escaped, as JSON writes them, and cut at 40
-  characters, with "…" after it.
+  with its control and format characters escaped, those of the Unicode
+  categories Cc and Cf, so that neither a new line nor a mark that
+  reverses the direction of the text, U+202E, changes the text around it:
+  a new line, a tab and a carriage return as `\n`, `\t` and `\r`, any
+  other as `\u` and its four hexadecimal digits, `\u202e`, or `\u{e0001}`
+  beyond them. Half of a pair that encodes one character, alone, is
+  escaped in the same way. A quote and a backslash are shown as they are,
+  since they are in the user's file. The value is cut after 40 of its
+  characters, an escaped character counting as one and never cut inside
+  its escape, with "…" after it. Two values that differ only after their
+  40th character look the same in a text; that is taken, for a text of a
+  line or two.
 
 ## The cases
 
@@ -649,7 +674,8 @@ of 64 lower case hexadecimal digits.
 - **A worker that could not start**, or crashed while it opened the file:
   the page records the read as failed with the worker's error, and every
   analysis is locked with the reason of the table above, instead of
-  "Reading panel.nei." for ever.
+  "Reading panel.nei." for ever. A read of the same load that succeeds
+  after the worker restarts replaces the failure.
 - **An opened project file.** `projectFile.ts` gives `parseProject` the
   project part, then makes a project with `variants: null` and the
   reference built from the file (`docs/architecture.md`, section 8). A
@@ -705,10 +731,12 @@ The five that follow are the words of `projectNeeds` and
 of them changes those texts and their tests, and nothing else.
 
 2. **How the user is told to fix a list of individuals that names one
-   twice, or names individuals not in the variants file.** Meanwhile,
-   both reasons end "Change the list, or remove the filter, in the
-   Variants step.", the place and the words of the reason of an empty
-   list.
+   more than once, or names individuals not in the variants file.**
+   Meanwhile, both reasons end "Change the list, or remove the filter, in
+   the Variants step.", the place and the words of the reason of an empty
+   list. The review of the code changed, on 24 September 2026, the
+   wording of the first reason, "names ind_031 twice", to "names ind_031
+   more than once", which holds also of a name written three times.
 3. **How many individuals a text names.** A reason can name hundreds of
    individuals, and a line beside the Run button holds a few. Meanwhile,
    three or fewer are all named, "ind_031, ind_044 and ind_050"; of more
