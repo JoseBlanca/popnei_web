@@ -187,16 +187,32 @@ test("only the last of two files picked in a row is shown", async ({
   await expect(own(page)).not.toContainText("panel.nei");
 });
 
-test("the input is emptied after a file is sent, so the same file can be picked again", async ({
+test("the same file picked again through the dialog is opened again, and the input shows its name", async ({
   page,
 }) => {
-  await openProbe(page);
-  await pick(page, "panel.nei");
-  await expect(own(page)).toContainText(`panel.nei: ${PANEL}.`);
-  await expect(fileInput(page)).toHaveValue("");
+  const worker = await openProbeWorker(page);
+  await worker.evaluate(() => {
+    const counted = globalThis as unknown as { requests: number };
+    counted.requests = 0;
+    addEventListener("message", () => {
+      counted.requests += 1;
+    });
+  });
+  const input = fileInput(page);
+  await expect(input).toBeEnabled();
+  for (let times = 0; times < 2; times += 1) {
+    const dialog = page.waitForEvent("filechooser");
+    await input.click();
+    await (await dialog).setFiles(join(FIXTURES, "panel.nei"));
+    await expect(own(page)).toContainText(`panel.nei: ${PANEL}.`);
+  }
 
-  await pick(page, "panel.nei");
-  await expect(own(page)).toContainText(`panel.nei: ${PANEL}.`);
+  await expect(input).toHaveValue(/panel\.nei$/);
+  expect(
+    await worker.evaluate(
+      () => (globalThis as unknown as { requests: number }).requests,
+    ),
+  ).toBe(2);
 });
 
 test("every request of the page and its worker is to the site's origin", async ({
@@ -348,7 +364,66 @@ test("a throw in the worker while it opens a file is answered as a failure of th
   await expect(own(page)).toContainText(
     "panel.nei could not be opened: a defect planted by the test.",
   );
+  // popnei was never called, so no reader was chosen.
+  await expect(own(page)).not.toContainText("It was read as");
   await expect(fileInput(page)).toBeEnabled();
+});
+
+test("a file the browser could not read is not said to have been read as a .nei", async ({
+  page,
+}) => {
+  const worker = await openProbeWorker(page);
+  await worker.evaluate(() => {
+    // FileReaderSync exists only in a worker, whose types the tests do not
+    // have.
+    const reader = (
+      globalThis as unknown as {
+        FileReaderSync: { prototype: { readAsArrayBuffer: () => never } };
+      }
+    ).FileReaderSync;
+    reader.prototype.readAsArrayBuffer = () => {
+      throw new DOMException("the file was moved", "NotReadableError");
+    };
+  });
+  await pick(page, "panel.nei");
+
+  await expect(own(page)).toContainText(
+    "panel.nei could not be opened: the file was moved.",
+  );
+  await expect(own(page)).not.toContainText("It was read as");
+});
+
+test("a request the worker did not recognise leaves the next file free to be shown", async ({
+  page,
+}) => {
+  const worker = await openProbeWorker(page);
+  // The worker's first answer to a file is replaced by the answer to a
+  // request it does not know, as if the page had sent a wrong one.
+  await worker.evaluate(() => {
+    const send = globalThis.postMessage.bind(globalThis);
+    let replaced = false;
+    globalThis.postMessage = (message: unknown) => {
+      if (!replaced) {
+        replaced = true;
+        send({
+          kind: "failed",
+          stage: "message",
+          message: "planted by the test",
+        });
+        return;
+      }
+      send(message);
+    };
+  });
+  await pick(page, "panel.nei");
+  await expect(page.getByRole("alert")).toContainText(
+    "the worker received a request it does not know",
+  );
+
+  await pick(page, "tetraploid.nei");
+  await expect(own(page)).toContainText(
+    "tetraploid.nei: 12 individuals, ploidy 4.",
+  );
 });
 
 test("a trap of popnei's wasm stops the worker and is shown as a defect", async ({
@@ -360,11 +435,21 @@ test("a trap of popnei's wasm stops the worker and is shown as a defect", async 
       throw new WebAssembly.RuntimeError("unreachable");
     };
   });
+  await fileInput(page).focus();
   await pick(page, "panel.nei");
 
-  await expect(page.getByRole("alert")).toContainText(
+  const alert = page.getByRole("alert");
+  await expect(alert).toContainText(
     "A defect of the probe: its worker stopped.",
   );
+  await expect(alert).toContainText(
+    "Reload the page. If it happens again, report it at https://github.com/JoseBlanca/popnei_web/issues, with the name of the file and the message above.",
+  );
+  // The input had the focus and is now disabled: the focus is on the
+  // heading of the defects, not on nothing.
+  await expect(
+    page.getByRole("heading", { name: "Defects of the probe" }),
+  ).toBeFocused();
   await expect(own(page)).toContainText(
     "panel.nei could not be opened: the probe's worker stopped before it answered.",
   );

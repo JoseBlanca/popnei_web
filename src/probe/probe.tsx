@@ -9,8 +9,8 @@
  * React's double mounting in development starts no second worker. The page
  * calls no function of popnei: the worker does.
  */
-import { StrictMode, useSyncExternalStore } from "react";
-import type { ChangeEvent, JSX } from "react";
+import { StrictMode, useEffect, useRef, useSyncExternalStore } from "react";
+import type { ChangeEvent, JSX, MouseEvent } from "react";
 import { createRoot } from "react-dom/client";
 
 import {
@@ -21,6 +21,9 @@ import {
 } from "./messages.ts";
 import type { FileSource, FromProbe, ToProbe } from "./messages.ts";
 import ProbeWorker from "./probeWorker.ts?worker";
+
+/** The id of the file input, which the page asks whether it has the focus. */
+const FILE_INPUT_ID = "file-input";
 
 /** Where the probe's issues are reported. */
 const ISSUES = "https://github.com/JoseBlanca/popnei_web/issues";
@@ -65,14 +68,18 @@ type FileState =
       readonly name: string;
       readonly address: string | null;
       readonly message: string;
-      /** Whether popnei read the file, so that the reader its name chose is said. */
-      readonly read: boolean;
+      /** Whether popnei refused the file, so that the reader its name chose is said. */
+      readonly popneiRefused: boolean;
     };
 
-/** A defect of the probe: what went wrong, and the details when known. */
+/**
+ * A defect of the probe: what went wrong, the details when known, and
+ * whether the page asks the user to reload and report it.
+ */
 interface Defect {
   readonly summary: string;
   readonly details: string | null;
+  readonly report: boolean;
 }
 
 interface ProbeState {
@@ -80,6 +87,11 @@ interface ProbeState {
   readonly served: FileState;
   readonly file: FileState;
   readonly defects: readonly Defect[];
+  /**
+   * How many times the focus was asked to move to the heading of the
+   * defects: the screen moves it each time the count grows.
+   */
+  readonly focusDefects: number;
 }
 
 let state: ProbeState = {
@@ -87,6 +99,7 @@ let state: ProbeState = {
   served: { kind: "none" },
   file: { kind: "none" },
   defects: [],
+  focusDefects: 0,
 };
 const listeners = new Set<() => void>();
 
@@ -116,7 +129,22 @@ function getState(): ProbeState {
 }
 
 function addDefect(summary: string, details: string | null): void {
-  update({ defects: [...state.defects, { summary, details }] });
+  update({
+    defects: [...state.defects, { summary, details, report: false }],
+  });
+}
+
+/** The file of a section, shown as not answered when it was being opened. */
+function unanswered(file: FileState, message: string): FileState {
+  return file.kind === "opening"
+    ? {
+        kind: "failed",
+        name: file.name,
+        address: null,
+        message,
+        popneiRefused: false,
+      }
+    : file;
 }
 
 const worker = new ProbeWorker();
@@ -174,28 +202,24 @@ function stopped(
   popnei: Extract<PopneiState, { kind: "ready" }>,
   message: string | null,
 ): void {
-  const unanswered = (file: FileState): FileState =>
-    file.kind === "opening"
-      ? {
-          kind: "failed",
-          name: file.name,
-          address: null,
-          message: "the probe's worker stopped before it answered",
-          read: false,
-        }
-      : file;
+  const notAnswered = "the probe's worker stopped before it answered";
+  // The input is about to be disabled, and a disabled element loses the
+  // focus to nothing; the screen moves it to the heading of the defects.
+  const inputHadFocus = document.activeElement?.id === FILE_INPUT_ID;
   pendingFiles = 0;
   update({
     popnei: { ...popnei, kind: "stopped" },
-    served: unanswered(state.served),
-    file: unanswered(state.file),
+    served: unanswered(state.served, notAnswered),
+    file: unanswered(state.file, notAnswered),
     defects: [
       ...state.defects,
       {
         summary: "A defect of the probe: its worker stopped.",
         details: message,
+        report: true,
       },
     ],
+    focusDefects: state.focusDefects + (inputHadFocus ? 1 : 0),
   });
 }
 
@@ -239,15 +263,26 @@ function receive(message: FromProbe): void {
             name: message.name,
             address: message.address,
             message: message.message,
-            read: true,
+            popneiRefused: message.popneiRefused,
           });
           return;
-        case "message":
+        case "message": {
+          // The request it answers was not answered otherwise, and a file
+          // that waited on it is shown as not answered, so that the next
+          // file is shown.
+          const notAnswered =
+            "the probe's worker did not recognise the request for it";
+          pendingFiles = 0;
+          update({
+            served: unanswered(state.served, notAnswered),
+            file: unanswered(state.file, notAnswered),
+          });
           addDefect(
             "A defect of the probe: the worker received a request it does not know.",
             message.message,
           );
           return;
+        }
       }
   }
 }
@@ -279,7 +314,15 @@ function pickFile(event: ChangeEvent<HTMLInputElement>): void {
   pendingFiles += 1;
   update({ file: { kind: "opening", name: file.name } });
   send({ kind: "openFile", file });
-  // Emptied, so that picking the same file again is a change, and opens it.
+}
+
+/**
+ * Empties the input before the browser's dialog opens, so that picking the
+ * same file again is a change, and opens it; after the pick the input
+ * shows the name of the file picked.
+ */
+function emptyInput(event: MouseEvent<HTMLInputElement>): void {
+  const input = event.currentTarget;
   input.value = "";
 }
 
@@ -317,11 +360,17 @@ function inputNote(popnei: PopneiState, file: FileState): string | null {
 }
 
 function Probe(): JSX.Element {
-  const { popnei, served, file, defects } = useSyncExternalStore(
+  const { popnei, served, file, defects, focusDefects } = useSyncExternalStore(
     subscribe,
     getState,
   );
   const note = inputNote(popnei, file);
+  const defectsHeading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (focusDefects > 0) {
+      defectsHeading.current?.focus();
+    }
+  }, [focusDefects]);
   return (
     <main>
       <h1>popnei probe</h1>
@@ -348,14 +397,15 @@ function Probe(): JSX.Element {
       <section aria-labelledby="file-heading">
         <h2 id="file-heading">A variant file of your own</h2>
         <p>
-          <label htmlFor="file-input">Variant file</label>{" "}
+          <label htmlFor={FILE_INPUT_ID}>Variant file</label>{" "}
           <input
-            id="file-input"
+            id={FILE_INPUT_ID}
             type="file"
             disabled={popnei.kind !== "ready"}
             aria-describedby={
               note === null ? "file-rule" : "file-rule file-note"
             }
+            onClick={emptyInput}
             onChange={pickFile}
           />
         </p>
@@ -369,20 +419,29 @@ function Probe(): JSX.Element {
         </div>
       </section>
 
-      <div role="alert">
-        {defects.length > 0 && (
-          <section aria-labelledby="defects-heading">
-            <h2 id="defects-heading">Defects of the probe</h2>
-            {defects.map((defect, index) => (
-              // The list only grows, so the position is the defect's identity.
-              <div key={index}>
-                <p>{defect.summary}</p>
-                {defect.details !== null && <p>{sentence(defect.details)}</p>}
-              </div>
-            ))}
-          </section>
-        )}
-      </div>
+      {defects.length > 0 && (
+        <section aria-labelledby="defects-heading">
+          <h2 id="defects-heading" tabIndex={-1} ref={defectsHeading}>
+            Defects of the probe
+          </h2>
+          {defects.map((defect, index) => (
+            // The list only grows, so the position is the defect's identity.
+            // Each is an alert of its own, so that a screen reader announces
+            // the new one and not the list again.
+            <div key={index} role="alert">
+              <p>{defect.summary}</p>
+              {defect.details !== null && <p>{sentence(defect.details)}</p>}
+              {defect.report && (
+                <p>
+                  Reload the page. If it happens again, report it at{" "}
+                  <a href={ISSUES}>{ISSUES}</a>, with the name of the file and
+                  the message above.
+                </p>
+              )}
+            </div>
+          ))}
+        </section>
+      )}
     </main>
   );
 }
@@ -457,7 +516,9 @@ function FileStatus({
               ? `${file.name} could not be opened: ${sentence(file.message)}`
               : `${file.name} could not be opened from ${file.address}: ${sentence(file.message)}`}
           </p>
-          {source === "file" && file.read && <p>{readerOf(file.name)}</p>}
+          {source === "file" && file.popneiRefused && (
+            <p>{readerOf(file.name)}</p>
+          )}
         </>
       );
   }

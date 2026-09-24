@@ -63,3 +63,29 @@ test("the probe's worker not started", async ({ page }) => {
   ).toBeVisible();
   await save(page, "probe-worker-not-started-light");
 });
+
+test("popnei loading", async ({ page }) => {
+  // The wasm is held back, and not answered while the picture is taken.
+  await page.route("**/*.wasm", () => undefined);
+  await page.goto("probe.html");
+  await expect(page.getByText("Loading popnei…")).toBeVisible();
+  await save(page, "probe-popnei-loading-light");
+});
+
+test("the probe's worker stopped by a trap of popnei", async ({ page }) => {
+  const started = page.waitForEvent("worker");
+  await page.goto("probe.html");
+  const worker = await started;
+  await expect(page.getByText("panel.nei: 200 individuals")).toBeVisible();
+  await worker.evaluate(() => {
+    performance.now = () => {
+      throw new WebAssembly.RuntimeError("unreachable");
+    };
+  });
+  await page.getByLabel("Variant file", { exact: true }).focus();
+  await pick(page, "panel.nei");
+  await expect(
+    page.getByText("A defect of the probe: its worker stopped."),
+  ).toBeVisible();
+  await save(page, "probe-worker-stopped-light");
+});
