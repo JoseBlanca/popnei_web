@@ -1,8 +1,7 @@
 # The architecture: how a project flows through the applications
 
 September 2026, first draft, revised on 24 September 2026 after its
-architecture review. The revision is a draft that awaits the owner's
-approval; until then it lives on the branch `skills/first-version`, and
+architecture review, and approved by the owner on 24 September 2026;
 what was revised is at the end of section 1. The document gives the parts
 of the web applications of popnei, what each one holds, and how a change
 made by the user reaches the results on the screen. What the applications

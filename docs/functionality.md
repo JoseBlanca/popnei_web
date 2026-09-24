@@ -385,8 +385,8 @@ has not decided:
    builds for both wasm targets, and what it weighs, was measured on 24
    September 2026 (`docs/technology.md`).
 2. Where the reader of the files of the individuals lives. Settled by
-   `docs/architecture.md`, section 6, on 24 September 2026, awaiting the
-   owner's approval with that revision: CSV and TSV, and the inference of
+   `docs/architecture.md`, section 6, approved by the owner on 24
+   September 2026: CSV and TSV, and the inference of
    the types of the columns, are in popnei, so that Python users read
    them the same way; xlsx is read in the files wasm of the
    applications.
