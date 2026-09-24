@@ -1,13 +1,56 @@
 # Report: the site stands up, and popnei runs in it
 
 The work report of the plan `docs/plans/site.md`, stage 0 of
-`docs/build-order.md`, carried out on the branch `plan/site` from 24
-September 2026. It is written while the work goes, one section per work
-package. The plan is under way.
+`docs/build-order.md`, carried out on 24 September 2026 on the branch
+`plan/site`. It says what was built, how each deliverable was checked,
+what changed on the way and why, and what is asked of the owner.
 
-The `following-plans` skill puts a report under `docs/reports/`; this
-one is at `docs/plans/site.report.md` because the plan and the owner's
-order name that path.
+## Where the plan stands
+
+The plan is done: every task is ticked and every deliverable checked.
+What exists now that did not:
+
+- A repository that installs popnei 0.1.0 from its GitHub release, with
+  its checks: formatting, types, a lint that keeps each part of the code
+  to what it may import, 68 unit tests, and 20 browser tests in each of
+  Chromium, Firefox and WebKit.
+- The probe, a technical page that loads popnei's wasm in a worker, the
+  second thread of the tab where popnei runs so that the page does not
+  freeze, and opens the site's variant file or one the user picks. It
+  says what went wrong in each case of failure the spec lists.
+- A workflow on GitHub that checks and tests every push, in the three
+  browsers, and publishes `main` on GitHub Pages.
+- The published probe, at `https://jblanca.net/popnei_web/probe.html`:
+  it loads popnei and reads "200 individuals, ploidy 2" in Chromium,
+  WebKit and Firefox. popnei loaded in a median of 60 ms in Chromium and
+  80 ms in WebKit, and in 228 ms in one load of Firefox by hand; the file
+  opened in about 2 ms in each (section 3).
+
+What was learned that changes nothing now, but matters later:
+
+- Firefox does not start without a window on the owner's Mac, macOS
+  27.0, so its automated tests run only on GitHub's machines.
+- popnei's loader takes no address for its wasm and gives none, so the
+  page cannot always show which address failed; a later popnei that took
+  or gave it would close that.
+- GitHub Pages lets a browser keep every file 10 minutes, the 1.77 MB
+  wasm included, and the site cannot change that.
+
+What is open: nothing of the plan. For popnei, its message for a file
+that is not a VCF cuts its quote mid-word; the owner has not asked for
+an issue.
+
+What is asked of the owner: the order to merge `plan/site` into `main`
+and push it. `main` on GitHub has the plan up to task 3.1; the merge
+brings the fixes of the workflow's review and this report. After it, the
+worktree and the branch of the plan are removed.
+
+Changed from the plan by the owner's decisions of 24 September 2026:
+Firefox tested on GitHub rather than on the Mac; the branches of the
+work kept local, so the first run of the workflow was on `main`; three
+changes to the messages of the probe and one to the lint, after the
+first review; and the spec's account of the address of the wasm. Each is
+in its section below.
 
 ## 0. The release of popnei
 
@@ -278,7 +321,14 @@ loaded.
 
 The slowest Chromium load was the first, when the wasm was not yet in
 the cache of GitHub's servers (`x-cache: MISS`). WebKit gives whole
-milliseconds. Firefox's numbers are the owner's (below).
+milliseconds.
+
+Firefox, one load by hand, by the owner, of the deployed probe, on the
+same Mac and network, 24 September 2026: popnei loaded in 228.0 ms, and
+`panel.nei` opened in 2.0 ms. The Firefox installed on the Mac was
+156.0.1 when it was checked that day. One load against five, with a
+window, and possibly with the wasm in the browser's cache, so it is not
+comparable with the medians above beyond its order of size.
 
 The review of the workflow ran spec, tests, errors and browser, with
 stale, on the file and on the log of run 36023880445. Fixed, in 07effbc,

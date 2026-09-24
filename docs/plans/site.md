@@ -1,7 +1,7 @@
 # Plan: the site stands up, and popnei runs in it
 
-24 September 2026, approved by the owner on 24 September 2026, under way on
-the branch `plan/site` since 24 September 2026. It builds stage 0 of
+24 September 2026, approved by the owner on 24 September 2026, carried
+out on the branch `plan/site` and done on 24 September 2026. It builds stage 0 of
 `docs/build-order.md` from one spec, `docs/specs/site.md`, approved by the
 owner on 24 September 2026. It is carried out as the `following-plans`
 skill says, on the branch `plan/site`, with its report in
@@ -202,7 +202,7 @@ to `main` (`CLAUDE.md`).
   is the default branch of the repository on GitHub. Serves 1.
 - [x] 3.2 The owner sets Pages to GitHub Actions, merges the branch into
   `main` and orders the push. Serves 2.
-- [ ] 3.3 The probe run against the deployed site, the `curl`, and the
+- [x] 3.3 The probe run against the deployed site, the `curl`, and the
   measurements into the report. Serves 3 and 4. Needs 3.2.
 
 **What could go wrong:** the first run of the workflow is where a
