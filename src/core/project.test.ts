@@ -7,6 +7,9 @@ import {
   loadIndividuals,
   loadVariants,
   moveVariantFilter,
+  recordIndividualsRead,
+  recordVariantsCounted,
+  recordVariantsRead,
   removeIndividualFilter,
   removeIndividuals,
   removeVariantFilter,
@@ -17,7 +20,7 @@ import {
   setIndividualFilter,
   setVariantFilter,
 } from "./project.ts";
-import type { Project } from "./project.ts";
+import type { IndividualsRead, Project, SourceRead } from "./project.ts";
 import {
   SAMPLE_INDIVIDUALS_ID,
   SAMPLE_VARIANTS_ID,
@@ -611,5 +614,205 @@ describe("WP1 D3 the commands", () => {
         }
       }),
     );
+  });
+});
+
+/** The sample project with a new load of each file, both pending. */
+function pendingProject(): Project {
+  let p = loadVariants(sampleProject(), {
+    fileId: NEW_ID,
+    name: "panel.vcf",
+    size: 4096,
+    format: "vcf",
+    readOptions: { ploidy: 2, onlyPassed: true },
+  });
+  p = loadIndividuals(p, { fileId: NEW_ID, name: "pops.csv", csv: CSV });
+  return deepFreeze(p);
+}
+
+const CSV = { encoding: "auto", separator: "auto", decimal: "auto" } as const;
+
+const VARIANTS_READ: SourceRead = {
+  kind: "read",
+  individuals: ["i1", "i2"],
+  ploidy: 2,
+  numVars: null,
+};
+
+const INDIVIDUALS_READ: IndividualsRead = {
+  kind: "read",
+  table: {
+    columns: ["id", "pop"],
+    rows: [
+      ["i1", "P1"],
+      ["i2", "P2"],
+    ],
+  },
+  columns: [{ kind: "identifier" }, { kind: "categorical" }],
+  found: { encoding: "utf-8", separator: ",", decimal: "." },
+};
+
+const OTHER_ID = "abcdefabcdefabcdefabcdefabcdefab";
+
+describe("WP1 D4 the records and the needs", () => {
+  describe("recordVariantsRead", () => {
+    test("records the read into the variants file of its load", () => {
+      const p = pendingProject();
+      const q = recordVariantsRead(p, NEW_ID, VARIANTS_READ);
+      expect(q.variants).toEqual({ ...p.variants, read: VARIANTS_READ });
+      expectKept(p, q, ["variants"]);
+    });
+
+    test("gives the project itself for another load", () => {
+      const p = pendingProject();
+      expect(recordVariantsRead(p, OTHER_ID, VARIANTS_READ)).toBe(p);
+    });
+
+    test("gives the project itself for a read already recorded", () => {
+      const p = deepFreeze(
+        recordVariantsRead(pendingProject(), NEW_ID, VARIANTS_READ),
+      );
+      expect(
+        recordVariantsRead(p, NEW_ID, { ...VARIANTS_READ, ploidy: 4 }),
+      ).toBe(p);
+    });
+  });
+
+  describe("recordVariantsCounted", () => {
+    test("records the number of variants into the file of its load", () => {
+      const p = deepFreeze(
+        recordVariantsRead(pendingProject(), NEW_ID, VARIANTS_READ),
+      );
+      const q = recordVariantsCounted(p, NEW_ID, 1203554);
+      expect(q.variants?.read).toEqual({ ...VARIANTS_READ, numVars: 1203554 });
+      expect(q.variants?.fileId).toBe(NEW_ID);
+      expectKept(p, q, ["variants"]);
+    });
+
+    test("gives the project itself for another load", () => {
+      const p = deepFreeze(
+        recordVariantsRead(pendingProject(), NEW_ID, VARIANTS_READ),
+      );
+      expect(recordVariantsCounted(p, OTHER_ID, 10)).toBe(p);
+    });
+
+    test("gives the project itself for a file not read yet", () => {
+      const p = pendingProject();
+      expect(recordVariantsCounted(p, NEW_ID, 10)).toBe(p);
+    });
+
+    test("gives the project itself when the number is set already", () => {
+      const p = deepFreeze(
+        recordVariantsCounted(
+          recordVariantsRead(pendingProject(), NEW_ID, VARIANTS_READ),
+          NEW_ID,
+          10,
+        ),
+      );
+      expect(recordVariantsCounted(p, NEW_ID, 11)).toBe(p);
+    });
+  });
+
+  describe("recordIndividualsRead", () => {
+    test("records the read into the individuals file of its load", () => {
+      const p = pendingProject();
+      const q = recordIndividualsRead(p, NEW_ID, CSV, INDIVIDUALS_READ);
+      expect(q.individuals).toEqual({
+        ...p.individuals,
+        read: INDIVIDUALS_READ,
+      });
+      expectKept(p, q, ["individuals"]);
+    });
+
+    test("records the read of an xlsx, read with no options", () => {
+      const p = deepFreeze(
+        loadIndividuals(sampleProject(), {
+          fileId: NEW_ID,
+          name: "pops.xlsx",
+          csv: null,
+        }),
+      );
+      const read = { ...INDIVIDUALS_READ, found: null };
+      expect(
+        recordIndividualsRead(p, NEW_ID, null, read).individuals?.read,
+      ).toBe(read);
+    });
+
+    test("gives the project itself for another load", () => {
+      const p = pendingProject();
+      expect(recordIndividualsRead(p, OTHER_ID, CSV, INDIVIDUALS_READ)).toBe(p);
+    });
+
+    test("gives the project itself for a read already recorded", () => {
+      const p = deepFreeze(
+        recordIndividualsRead(pendingProject(), NEW_ID, CSV, INDIVIDUALS_READ),
+      );
+      expect(
+        recordIndividualsRead(p, NEW_ID, CSV, {
+          kind: "failed",
+          error: { kind: "empty" },
+        }),
+      ).toBe(p);
+    });
+
+    test("gives the project itself for a read of other options", () => {
+      const p = pendingProject();
+      expect(
+        recordIndividualsRead(
+          p,
+          NEW_ID,
+          { ...CSV, separator: ";" },
+          INDIVIDUALS_READ,
+        ),
+      ).toBe(p);
+    });
+
+    test("records the read of the options set since, and drops the earlier one", () => {
+      const p = deepFreeze(
+        setCsvOptions(pendingProject(), { ...CSV, separator: ";" }),
+      );
+      expect(recordIndividualsRead(p, NEW_ID, CSV, INDIVIDUALS_READ)).toBe(p);
+      const q = recordIndividualsRead(
+        p,
+        NEW_ID,
+        { ...CSV, separator: ";" },
+        INDIVIDUALS_READ,
+      );
+      expect(q.individuals?.read).toBe(INDIVIDUALS_READ);
+    });
+  });
+
+  test("two picks of files before the first read comes back: the first read changes nothing", () => {
+    const first = "11111111111111111111111111111111";
+    const second = "22222222222222222222222222222222";
+    const load = (p: Project, fileId: string): Project =>
+      deepFreeze(
+        loadVariants(p, {
+          fileId,
+          name: "panel.nei",
+          size: 1024,
+          format: "nei",
+          readOptions: null,
+        }),
+      );
+    const p = load(load(deepFreeze(emptyProject("popgen")), first), second);
+    expect(recordVariantsRead(p, first, VARIANTS_READ)).toBe(p);
+    expect(recordVariantsRead(p, second, VARIANTS_READ).variants?.read).toBe(
+      VARIANTS_READ,
+    );
+  });
+
+  test("a worker that could not start: the read is recorded as failed with its error", () => {
+    const p = pendingProject();
+    const read: SourceRead = {
+      kind: "failed",
+      error: {
+        kind: "worker",
+        error: { kind: "couldNotStart", reason: "no ready message, twice" },
+      },
+    };
+    const q = recordVariantsRead(p, NEW_ID, read);
+    expect(q.variants?.read).toBe(read);
+    expect(recordVariantsRead(deepFreeze(q), NEW_ID, VARIANTS_READ)).toBe(q);
   });
 });

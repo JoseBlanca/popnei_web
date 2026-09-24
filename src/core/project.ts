@@ -830,3 +830,63 @@ export function analysisOptions(
 ): JsonObject {
   return p.analyses.find((a) => a.analysis === analysis)?.options ?? defaults;
 }
+
+// The records: what the workers read of the files, put into the source of
+// its load and no other. Each gives the project it was given when there is
+// nothing to record, so a read that comes back for a load the user has
+// replaced, or again after a restart of a worker, changes nothing.
+
+/** What the calculation worker read of the variants file of the load
+    `fileId`; recorded only while that source's read is pending. */
+export function recordVariantsRead(
+  p: Project,
+  fileId: string,
+  read: SourceRead,
+): Project {
+  const variants = p.variants;
+  if (variants?.fileId !== fileId || variants.read.kind !== "pending") {
+    return p;
+  }
+  return { ...p, variants: { ...variants, read } };
+}
+
+/** The number of variants, from the first pass over the load `fileId`;
+    recorded when the source is read and its `numVars` is still null. */
+export function recordVariantsCounted(
+  p: Project,
+  fileId: string,
+  numVars: number,
+): Project {
+  const variants = p.variants;
+  if (variants?.fileId !== fileId) {
+    return p;
+  }
+  const read = variants.read;
+  if (read.kind !== "read" || read.numVars !== null) {
+    return p;
+  }
+  return { ...p, variants: { ...variants, read: { ...read, numVars } } };
+}
+
+/** What the light worker read of the individuals file of the load
+    `fileId`, with the options `csv` it was read with; recorded only while
+    that source's read is pending and its options are those, so a read of
+    options since changed is dropped. The types of the columns are those
+    of the read: a type the user set before is lost (the project spec,
+    Open 1). */
+export function recordIndividualsRead(
+  p: Project,
+  fileId: string,
+  csv: CsvOptions | null,
+  read: IndividualsRead,
+): Project {
+  const individuals = p.individuals;
+  if (
+    individuals?.fileId !== fileId ||
+    individuals.read.kind !== "pending" ||
+    !same(individuals.csv, csv)
+  ) {
+    return p;
+  }
+  return { ...p, individuals: { ...individuals, read } };
+}
