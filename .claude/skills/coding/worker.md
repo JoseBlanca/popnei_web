@@ -223,8 +223,10 @@ export function createClient(make: {
   (`docs/specs/core/store.md`); the client does not keep a second one.
 - **A request whose key the current project no longer asks for is
   stopped, unless the change is undone** (`docs/architecture.md`, section
-  5): the store names it in the notice of the change and, when the notice
-  goes, calls its `cancel()`. A request still in the queue leaves it at no
+  5): the store names it in the notice of the change and calls its
+  `cancel()` when the notice is closed, when the next change replaces it
+  without giving its key back, or when a new request would wait behind
+  it. A request still in the queue leaves it at no
   cost, and one that runs ends its worker, as below; either way its
   outcome is `cancelled`. An undo that asks for that key again later sends
   it again, which costs its time and never its correctness.

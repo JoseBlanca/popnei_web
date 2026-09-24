@@ -125,10 +125,11 @@ approved by the owner:
 - The options of the analyses are pairs in the project, not a record, and
   part of the format of the project file (sections 2 and 12).
 - A read of the individuals file says what "auto" found (section 2).
-- A request that the project no longer asks for is stopped when the
-  notice of the change goes, unless the change is undone, as the owner
-  decided; the store holds the handles of the runs and cancels them
-  (sections 5 and 9).
+- A request that the project no longer asks for is stopped unless the
+  change is undone, as the owner decided: when the notice of the change is
+  closed or replaced, or when a new calculation would wait behind it, and
+  with no deadline; the store holds the handles of the runs and cancels
+  them (sections 5 and 9).
 - A project file that names an analysis this version of the application
   does not know is refused, as the owner decided (section 8).
 - Section 12 no longer counts the canonical form of the keys as hard to
@@ -158,9 +159,9 @@ interface Project {
   // popgen: the column that defines the populations, and later the
   //         edits made with the lasso; gwas: the roles of the columns
   grouping: Grouping;
-  analyses: { analysis: AnalysisId; options: AnalysisOptions }[];
-                                      // the options of each, as pairs, since
-                                      // a project file can hold any key
+  analyses: AnalysisOptions[];        // the options of each, as pairs
+                                      // { analysis, options }, since a
+                                      // project file can hold any key
   reference: Reference | null;        // from an opened project file (section 8)
 }
 
@@ -374,18 +375,18 @@ where the id of a load of an earlier session names nothing.
 Each analysis is one module, with the same shape, in both applications:
 
 ```ts
-interface AnalysisDef<Opts, R> {
+interface AnalysisDef<J, R> {           // J: its request; R: its result
   id: AnalysisId;                        // "pca", "diversity", "fst", "gwas"...
   app: ("popgen" | "gwas")[];
-  defaults: Opts;
+  defaults: JsonObject;                  // its options, as the project holds them
   keyVersion: number;                    // raised when the meaning of its result changes
   filtersRead: { variants: boolean; individuals: boolean }; // which filters it reads
-  parseOptions(o: unknown, formatVersion: number): Result<Opts, string>;
+  parseOptions(o: unknown, formatVersion: number): Result<JsonObject, string>;
                                          // its options read from a project file
   keyInputs(p: Project): unknown;        // the parts of the project it depends on,
                                          // beyond the load and the filters (section 3)
   needs(p: Project): string | null;      // why it cannot run yet, or null
-  run(p: Project, c: WorkerClient): Run<R>; // the request to the worker
+  run(p: Project, c: WorkerClient<J, R>): Run<R>; // the request to the worker
   warnings(r: R, p: Project): Warning[]; // raised by the data only
   checkNumbers(r: R): (number | null)[]; // kept in the project file (section 8)
   script(p: Project): string;            // its lines of the Python script
@@ -433,16 +434,17 @@ The page and each worker talk through typed messages
   2026. A change that gives an analysis another key while its request
   waits or runs is told to the user in the notice of that change, with its
   Undo: "The ongoing calculations will be stopped unless you undo the
-  change." When the notice is closed, when the next change replaces it,
-  or ten seconds after it appeared, whichever comes first, the store
-  cancels the requests it named whose key the project then still does not
-  give; the notice itself stays with its Undo until it is closed or
-  replaced, as every notice with an action does
-  (`.claude/skills/coding/react.md`), and says the calculations were
-  stopped: one that waits leaves the queue at no cost, and one that
-  runs ends its worker, a restart (below) that reads the variants file
-  again. An undo while the notice is up gives the keys back, and the
-  requests go on. The store holds the handle of every run and cancels
+  change." The store stops such a request only when keeping it would cost
+  the user something: when the notice is closed, when the next change
+  replaces it and does not give the request's key back, or when the user
+  asks for a new calculation, which would otherwise wait behind it. There
+  is no deadline, so a user who reaches Undo late, with the keyboard or a
+  screen reader, does not lose the minutes the calculation had run (WCAG
+  2.2, success criterion 2.2.1). A request that waits leaves the queue at
+  no cost, and one that runs ends its worker, a restart (below) that reads
+  the variants file again; the calculation of the new settings starts when
+  the user asks for it, as every calculation does. An undo while the
+  notice is up gives the keys back, and the requests go on. The store holds the handle of every run and cancels
   them (`docs/specs/core/store.md`); `src/ui/runs.ts` only awaits their
   outcomes. The option not taken was to let a running request finish, its
   result kept for a possible undo, while the request of the new settings
