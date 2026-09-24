@@ -13,7 +13,6 @@ import {
 import type { JsonObject, JsonValue, KeyMemo, KeyedDef } from "./keys.ts";
 import type { Project, VariantSource } from "./project.ts";
 import {
-  SAMPLE_VARIANTS_ID,
   anyLoadId,
   deepFreeze,
   individualFilters,
@@ -408,19 +407,14 @@ describe("WP2 D2 the key", () => {
   });
 
   test("writes the key of an intermediate result from the six fields of the keys spec", () => {
-    const expected = sha256Hex(
-      canonical(
-        {
-          intermediate: "the pruned variants",
-          inputs: { r2: 0.2 },
-          load: { fileId: SAMPLE_VARIANTS_ID, readOptions: null },
-          filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.1 }],
-          individualFilters: [],
-          popneiVersion: "0.1.0",
-        },
-        null,
-      ),
-    );
+    // The SHA-256 of {"filters":[{"kind":"missing_data",
+    // "maxAllowedMissingRate":0.1}],"individualFilters":[],"inputs":
+    // {"r2":0.2},"intermediate":"the pruned variants","load":{"fileId":
+    // "00112233445566778899aabbccddeeff","readOptions":null},
+    // "popneiVersion":"0.1.0"}, computed with node's crypto.createHash on
+    // 24 September 2026.
+    const expected =
+      "221b9cf2aa9cbc41e6326d11305a659608b185eeb298ba017dd17be4309dae6c";
     const key = intermediateKeyOf(
       DIVERSITY,
       literalProject(),
