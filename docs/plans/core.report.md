@@ -38,3 +38,13 @@ Under way.
   with "error TS2304: Cannot find name 'File'", and was removed. The
   checks exit 0, "Tests 68 passed (68)". `KeyedDef` was left for task
   2.2, which names it.
+- Task 1.2, e008c22: `canonical` and `createKeyMemo` in `keys.ts`, and
+  the generator of JSON values in `testSupport.ts`. `npx vitest run
+  src/core/keys.test.ts -t "WP1 D2"` gives "Tests 21 passed (21)", of at
+  least 17: twelve values that are not JSON, where the spec lists ten,
+  since a bigint and a symbol are refused too, and a hole in a list and a
+  subclass of `Array`. Each group of tests was seen to fail on the code
+  broken for it. The spec gave no form for the path in the message of a
+  defect; the writer chose a JSON list, the form of `ProjectError.path`,
+  and the keys spec says so since 0c84dca, a commit of its own after the
+  code rather than before it.

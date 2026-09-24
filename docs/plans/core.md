@@ -201,7 +201,7 @@ file's JSON becomes, or is refused with a text the user reads.
   `JsonObject`, `Key`, `KeyMemo`) and of `store.ts` (`AnalysisDef`,
   `WorkerClient`, `Warning`), from the interfaces of the protocol,
   project, keys and store specs; fast-check added. Serves 1.
-- [ ] 1.2 The canonical form, `canonical` and `createKeyMemo` in
+- [x] 1.2 The canonical form, `canonical` and `createKeyMemo` in
   `keys.ts`, from the keys spec's "The canonical form" and the `KeyMemo`
   of its interface; the generator of JSON values in `testSupport.ts`.
   Serves 2. Needs 1.1.
