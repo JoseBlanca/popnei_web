@@ -1,0 +1,306 @@
+# The site stands up, and popnei runs in it
+
+24 September 2026, a draft for the owner; there is no code yet. This spec
+is stage 0 of `docs/build-order.md`: the repository of the site set up, a
+workflow that checks it and publishes it on GitHub Pages, and one page,
+the probe, whose worker loads popnei's wasm package and opens a variant
+file. It develops sections 4 and 5 of `docs/technology.md`, and depends on
+`.claude/skills/coding/configs.md`, `worker.md` and `testing.md`, which
+give the configurations and the patterns it uses. The words of the web it
+uses are explained at the start of `docs/build-order.md`; the few that are
+not are explained where they first come.
+
+## What it does
+
+It tries the one thing no document can settle: that popnei's wasm, loaded
+the way popnei's package loads it, works inside a web worker built by Vite,
+served from GitHub Pages under the site's base path, in the three browser
+engines, Chromium (Chrome and Edge), Firefox and WebKit (Safari). A
+**module worker** is a worker whose code is loaded as a JavaScript module,
+which can import other modules; it is the kind the applications use
+(`worker.md`).
+
+A user who opens `https://<owner>.github.io/popnei_web/probe.html` sees
+popnei's version and what popnei read from a small variant file that the
+site serves: "200 individuals, ploidy 2". They can also pick a variant file
+of their own, `.nei` or VCF, and see the same for it. If popnei's wasm
+cannot be fetched or started, the likeliest way this stage fails, the page
+says so, with the address it tried, and does not stay blank.
+
+The probe is kept after stage 0, linked from no other page, as the check
+that a deploy still loads popnei: its end-to-end test keeps running on
+every push.
+
+### The repository
+
+The files of `.claude/skills/coding/configs.md`, as that file has them,
+with these differences at this stage:
+
+- **No files crate yet.** The files crate is the small Rust crate that
+  will read and write xlsx (`docs/architecture.md`, section 6); it comes
+  with stage 4. Until then `dev` is `vite` and `build` is `vite build`, as
+  `configs.md` says.
+- **The pages are HTML files at the root of the repository**, not in
+  `pages/`, so that the build writes them to the root of `dist/` and they
+  are served at `/popnei_web/probe.html`, the addresses of
+  `docs/technology.md` section 4; in `pages/` they would be served at
+  `/popnei_web/pages/probe.html`. At this stage they are `index.html`, a
+  placeholder of one line, "popnei web, under construction", until stage
+  8, and `probe.html`; `popgen.html` and `gwas.html` come with their
+  stages. So the `input` of `vite.config.ts` is `{ index, probe }`, each
+  resolved at the root: Vite fails the build when `input` names a page
+  that does not exist, so the pages are added to it with their stages. The
+  plan changes section 9 of the architecture and `configs.md` to match.
+- **`appType: "mpa"` in `vite.config.ts`**, which tells Vite the site has
+  several pages and no single-page fallback. Without it, the development
+  server and `vite preview` answer a missing file with `index.html` and
+  status 200, so a wrong address for the wasm or for the served file gives
+  a wrong error, "not a vars file" or a failed compile, instead of "not
+  found"; GitHub Pages answers 404, and the local servers then behave as it
+  does.
+- **The configs cover `src/probe/`**, which `configs.md` does not name,
+  since the probe is not one of the layers of `docs/architecture.md`
+  section 9, the parts of the code and what each may import:
+  - a tsconfig for the page, `tsconfig.probe.json`, with the libraries of
+    the DOM and JSX, over `src/probe/` without its worker and its tests;
+  - a tsconfig for its worker, `tsconfig.probeworker.json`, with the
+    library of a worker, over `src/probe/probeWorker.ts` and
+    `src/probe/messages.ts`;
+  - both in the `references` of `tsconfig.json`, and
+    `src/probe/**/*.test.ts` in `tsconfig.test.json` and in the `include`
+    of the Vitest project that runs in node;
+  - in `eslint.config.js`, a pattern that forbids every file outside
+    `src/probe/` to import from it, and a block that lets `src/probe/`
+    import popnei and React and nothing of `src/`.
+- **The dependencies**, each at an exact version:
+  - `popnei`, from the URL of its GitHub Release (`docs/technology.md`,
+    section 5; **Open 2**);
+  - `react` and `react-dom`, so that the build of React is tried now;
+  - for development only: `vite`, `@vitejs/plugin-react`, `typescript`
+    6.0.3, `@types/react`, `@types/react-dom`, `@types/node`, `eslint`,
+    `@eslint/js`, `typescript-eslint`, `eslint-plugin-react-hooks`,
+    `prettier`, `vitest`, `@playwright/test`, `@axe-core/playwright`.
+
+  All are in `docs/technology.md` section 2, except the types of React,
+  which React does not ship and which the choice of React with TypeScript
+  brings, as `@vitejs/plugin-react` comes with Vite. The rest of that
+  section, jsdom, fast-check, D3 and three.js, comes with the stage that
+  first uses it.
+
+### The probe
+
+Its files, all in `src/probe/` but the page and the fixtures:
+
+| file | what it holds |
+|---|---|
+| `probe.html` | the page, at the root, which loads `src/probe/probe.tsx` |
+| `src/probe/probe.tsx` | a React root, the element a React application draws into, with one screen |
+| `src/probe/probeWorker.ts` | the worker |
+| `src/probe/messages.ts` | the types of the messages and their two validators |
+| `src/probe/messages.test.ts` | the Vitest test of the validators |
+
+**The page** shows popnei's version, the result of the file the site
+serves, and a file input for the user's own. It starts the worker with
+Vite's `?worker` import, `import ProbeWorker from "./probeWorker.ts?worker"`,
+the way `worker.md` says the applications will start theirs in
+`src/worker/start.ts`, a file of stage 2 that is not created here: trying
+that way of starting a worker is the point of the stage. The page listens
+to the worker's `error` event, which fires when the worker cannot start.
+
+**The worker**, when it starts, calls popnei's `init()`, which fetches and
+compiles popnei's wasm, and sends `ready` with popnei's version and how
+long `init()` took. Then it answers two requests:
+
+- `openServed`: it fetches the file the site serves, at
+  `import.meta.env.BASE_URL + "probe/panel.nei"`, the base path of the
+  site followed by the file's path, never an address that starts with `/`,
+  which on GitHub Pages would leave out `/popnei_web/` (`worker.md`). It
+  checks that the answer has status 200 before it gives the bytes to
+  popnei.
+- `openFile`: it reads the `File` the page posted, the handle the browser
+  gives to a file the user picked, with `FileReaderSync.readAsArrayBuffer`,
+  which reads a whole file and waits until it has it, and exists only in a
+  worker. It is how the calculation worker will read the user's files
+  until popnei can read a file by ranges, a piece at a time
+  (`docs/architecture.md`, section 6; popnei issue #1).
+
+It opens the bytes with popnei's `openVcf` when the name ends in `.vcf` or
+`.vcf.gz`, compared without case, and with `openVars` otherwise; sends
+`opened` with the number of individuals, the ploidy and how long it took;
+and frees the `Variants`. The individuals come from the file in both cases
+(`Variants.individuals`, popnei `js/popnei/src/variant.ts`). The ploidy is
+read from the file for a `.nei` file, but not for a VCF: `openVcf` takes
+it as an option, 2 by default, and a tetraploid VCF opened with the
+default opens with no error and gives 2 (`io_vcf.ts`, run under node on 24
+September 2026). So the probe opens a VCF as diploid, and says so: "200
+individuals, ploidy 2 (assumed: a VCF is opened as diploid)".
+
+The `initMs` and `openMs` it sends are the first measurements of the cost
+of starting popnei in a worker, which the walking skeleton needs
+(`docs/build-order.md`, stage 2).
+
+The probe is not the calculation worker of the architecture: its messages
+are its own, and the real protocol, client and runner are specified for
+stage 2.
+
+### The fixtures
+
+`e2e/fixtures/make_fixtures.mjs`, a script written in this stage, which
+`testing.md` names, reads `e2e/fixtures/panel.vcf.gz`, a copy of the panel
+of popnei's `tests/reference/stats/panel.vcf.gz`, with the node entry of
+the popnei package installed, and writes it with `writeVars` as one vars
+file, `e2e/fixtures/panel.nei`: 1200 variants, 200 individuals, ploidy 2,
+261,490 bytes (popnei 0.1.0 under node, 24 September 2026). The build
+serves it at `probe/panel.nei` through a copy, `public/probe/panel.nei`,
+which the script writes as well, since Vite serves what is in `public/`.
+All three files are committed, so neither the site nor its tests need a
+checkout of popnei, and the script is run again only when popnei's format
+of vars files changes. `e2e/fixtures/bad.vcf` is a line of plain text, for
+the case of a file popnei refuses.
+
+### The workflow
+
+`.github/workflows/site.yml`, the continuous integration of `testing.md`,
+without its Rust setup, which comes with the files crate:
+
+- **check**, on every push and pull request: `npm ci`, `npm run
+  format:check`, `npm run typecheck`, `npm run lint`, `npm test`;
+- **e2e**, on every push and pull request: `npm ci`, `npx playwright
+  install --with-deps`, `npm run test:e2e`, the report kept when it fails;
+- **deploy**, on a push to `main`, with `needs: [check, e2e]` so that it
+  runs only when both passed: `actions/configure-pages`, the build,
+  `actions/upload-pages-artifact` with `dist/`, `actions/deploy-pages`,
+  with the permissions `contents: read`, `pages: write` and `id-token:
+  write`, as `testing.md` gives them.
+
+## The messages of the probe
+
+Both directions are checked when they arrive, by a validator of each in
+`messages.ts`, as every message between threads is
+(`.claude/skills/coding/typescript.md`): a message that is not one of
+these is a defect, shown as an error on the page.
+
+```ts
+type ToProbe =
+  | { kind: "openServed" }                  // the served panel.nei
+  | { kind: "openFile"; file: File };       // a file the user picked
+
+type FromProbe =
+  | { kind: "ready"; popneiVersion: string; initMs: number }
+  | { kind: "opened"; source: "served" | "file"; name: string;
+      numIndividuals: number; ploidy: number; ploidyAssumed: boolean;
+      openMs: number }
+  | { kind: "failed"; stage: "init" | "open"; address: string | null;
+      message: string };
+```
+
+`failed` carries the address the worker tried, when there was one, and the
+message as it came, popnei's or the browser's. The page asks for the served
+file as soon as `ready` arrives, so the first result needs no action of
+the user.
+
+## The cases
+
+- **The wasm is not found or does not compile.** popnei's loader fetches
+  `new URL("popnei_bg.wasm", import.meta.url)`, and a wrong base path or a
+  worker built in the wrong way gives an address with nothing there. The
+  worker catches what `init()` throws and sends `failed` with stage
+  `init`; the page shows "popnei could not be loaded" with the message.
+  popnei's loader names the address only when the server answered with an
+  error status, so the page does not count on the message for it.
+- **The served file is not found**, a wrong address: the status is not
+  200, and the worker sends `failed` with stage `open` and the address,
+  instead of giving popnei an HTML page to read.
+- **The worker does not start**, a module worker in a browser that has
+  none, or a syntax error in its bundle: the worker's `error` event. A
+  module worker that fails to load often gives an event with no message,
+  so the page shows "The calculation worker did not start", and the
+  browser's message after it only when there is one.
+- **A file popnei refuses**, the text in `bad.vcf`, a truncated gzip, a
+  vars file of another version: `failed` with stage `open` and popnei's
+  message, "the source is not a VCF: it starts with …" for the first (run
+  under node, 24 September 2026); the page stays usable for another file.
+- **A VCF of another ploidy** opens as diploid, as above.
+- **A file of a gigabyte** is read whole into memory, as the architecture
+  says for popnei 0.1.0 (section 6); the probe does not guard against it.
+
+## How it is verified
+
+1. **The checks of the coding skill** pass locally and in the workflow:
+   format, types, lint, and `npm test`, which runs
+   `src/probe/messages.test.ts`: the validator of `FromProbe` accepts each
+   of its three messages, and refuses a message of another kind, one with
+   a missing field and one with a field of the wrong type; the validator
+   of `ToProbe` accepts its two, and refuses the same three wrong ones.
+2. **`e2e/probe.spec.ts`**, with Playwright, against the built site under
+   its base path, in Chromium, Firefox and WebKit:
+   - the page shows the version `0.1.0` and, for the served file, "200
+     individuals, ploidy 2";
+   - the file input given `e2e/fixtures/panel.nei` shows the same;
+   - given `e2e/fixtures/panel.vcf.gz`, "200 individuals, ploidy 2
+     (assumed: a VCF is opened as diploid)";
+   - given `e2e/fixtures/bad.vcf`, popnei's message, and the served
+     result stays on the page;
+   - axe, the checker of accessibility that `testing.md` runs from
+     Playwright, finds no violation of WCAG 2.2 at level AA, the standard
+     of accessibility the applications keep to;
+   - every request the page makes is to the origin of the site: no font,
+     script or file from another domain (`docs/technology.md`, section 4).
+3. **The deployed site.** After the first deploy, the same test run
+   against the address on GitHub Pages, with `BASE_URL` set as
+   `testing.md` says, passes in the three engines; and `curl -sI` on the
+   `.wasm` file shows `Content-Type: application/wasm`, without which
+   popnei's loader falls back to a slower way of compiling and says so in
+   the console (`worker.md`).
+4. **The measurements**, the `initMs` and `openMs` of each engine on the
+   deployed site, on the owner's machine, are written in the work report
+   of the plan (`following-plans`).
+
+What cannot be checked: Playwright runs the current version of each
+engine, not Firefox 115 or Safari 16.4, the oldest the applications
+support; those are held by Vite's `build.target`, which rewrites newer
+syntax for them, and by the compatibility tables of MDN
+(`.claude/skills/coding/css.md`, `categories.md`).
+
+## Open points
+
+1. **The repository of the site.** Its name sets the base path, and
+   GitHub Pages serves a site from a free account only when its
+   repository is public. Options: `JoseBlanca/popnei_web`, public, which
+   gives `/popnei_web/` and matches every document; another name, which
+   changes `base` in `vite.config.ts` and the addresses in the documents;
+   a private repository, which needs a paid plan for Pages.
+   Recommendation: `JoseBlanca/popnei_web`, public, as popnei is. Either
+   way the owner creates it and sets, in its settings, the source of Pages
+   to GitHub Actions, which the deploy job needs. Meanwhile, the plan is
+   written for `JoseBlanca/popnei_web`.
+2. **The first release of popnei's wasm package.** `npm ci` installs
+   popnei from the URL of a `.tgz`, the packed package, on a GitHub
+   Release of popnei, which does not exist yet; popnei has no workflow
+   that makes one (`docs/technology.md`, section 5). It is made in popnei's
+   repository, by the owner or by a session there, not by the implementer
+   of this stage. Options:
+   - by hand, now: `npm run build` and `npm pack` in `js/popnei`, and the
+     `.tgz` attached to a pre-release of popnei; about ten minutes, and it
+     does not wait for anything;
+   - the workflow in popnei first, a file of GitHub Actions of some forty
+     lines that builds the wasm with Rust and wasm-bindgen, packs it and
+     makes the release from a tag; not estimated, but hours, since it has
+     to be tried on a tag, and it makes every later release the same.
+
+   Recommendation: by hand now, the workflow before stage 2, when popnei
+   changes more often. The tag follows `docs/technology.md` section 5,
+   `js-v0.1.0-dev.1` for the first. Meanwhile, the implementer works with
+   a local link to popnei's build, which is never committed, and the
+   first push waits for the release.
+
+## Not in this spec
+
+- The protocol, the client, the runners and the queue of the two workers,
+  and `src/worker/start.ts`: their specs, for stage 2.
+- The files crate and the Rust in the workflow: with stage 4.
+- The design tokens, the widgets and the shell of the applications: with
+  the walking skeleton. The probe uses plain elements and the browser's
+  default look.
+- jsdom, fast-check, D3 and three.js: with the stages that first use them
+  (`docs/build-order.md`).
