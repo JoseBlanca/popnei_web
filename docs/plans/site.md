@@ -141,7 +141,7 @@ with the browser's message.
   `panel.vcf.gz`, `bad.vcf` (written here, since popnei has none), and
   the two `panel.nei` it writes; the
   spec's "The fixtures". Serves 1. Can run beside 2.2.
-- [ ] 2.2 `probe.html`, `src/probe/probe.tsx` and
+- [x] 2.2 `probe.html`, `src/probe/probe.tsx` and
   `src/probe/probeWorker.ts`, the spec's "The probe" and "The cases".
   Serves 2 and 3. Needs 1.2.
 - [ ] 2.3 `playwright.config.ts`, `e2e/axe.ts`, `e2e/probe.spec.ts` and
