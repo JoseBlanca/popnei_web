@@ -125,6 +125,12 @@ approved by the owner:
 - The options of the analyses are pairs in the project, not a record, and
   part of the format of the project file (sections 2 and 12).
 - A read of the individuals file says what "auto" found (section 2).
+- A request that the project no longer asks for is stopped when the
+  notice of the change goes, unless the change is undone, as the owner
+  decided; the store holds the handles of the runs and cancels them
+  (sections 5 and 9).
+- A project file that names an analysis this version of the application
+  does not know is refused, as the owner decided (section 8).
 - Section 12 no longer counts the canonical form of the keys as hard to
   undo, since no key is saved.
 
@@ -422,20 +428,30 @@ The page and each worker talk through typed messages
   one request at a time, because the wasm of popnei and the files wasm
   have one thread each, and the client keeps the others in the queue of
   that worker.
-- **A queued request that the current project no longer asks for is
-  dropped**, when a command gives its analysis another key before it
-  starts. An undo can ask for that key again, and it is then run again,
-  which costs its time and never its correctness. A request that is
-  running is not dropped this way: ending it costs a restart (below), and
-  its result may still be wanted after an undo. `src/ui/runs.ts`, which
-  holds the handle of every run, does it: after each command it cancels
-  the queued runs whose key the new project no longer gives, with the
-  `cancel()` of their `Run`, which for a request still in the queue takes
-  it out and ends no worker.
+- **A request that the current project no longer asks for is stopped,
+  unless the change is undone**, as the owner decided on 24 September
+  2026. A change that gives an analysis another key while its request
+  waits or runs is told to the user in the notice of that change, with its
+  Undo: "The ongoing calculations will be stopped unless you undo the
+  change." When the notice is closed, when the next change replaces it,
+  or ten seconds after it appeared, whichever comes first, the store
+  cancels the requests it named whose key the project then still does not
+  give; the notice itself stays with its Undo until it is closed or
+  replaced, as every notice with an action does
+  (`.claude/skills/coding/react.md`), and says the calculations were
+  stopped: one that waits leaves the queue at no cost, and one that
+  runs ends its worker, a restart (below) that reads the variants file
+  again. An undo while the notice is up gives the keys back, and the
+  requests go on. The store holds the handle of every run and cancels
+  them (`docs/specs/core/store.md`); `src/ui/runs.ts` only awaits their
+  outcomes. The option not taken was to let a running request finish, its
+  result kept for a possible undo, while the request of the new settings
+  waited behind it in the queue of the one calculation worker, for minutes
+  in the case of a GWAS.
 - **The result** comes back as typed arrays, with its key, and goes into
   the cache. It is shown only if the current project still gives that
-  key; if the user changed something meanwhile, it waits in the cache for
-  an undo.
+  key; if the user changed something meanwhile and the request finished
+  before it was stopped, it waits in the cache for an undo.
 - **Progress**, in the target design, is the bytes of the variant file
   that the current pass has read, against the size of the file, reported
   by the source that reads the file for popnei (section 6). popnei 0.1.0
@@ -775,7 +791,11 @@ for the smallest part of it.
   `docs/functionality.md` section 9 and, for each analysis, the numbers
   its `checkNumbers` gives, to check a new run against. It is made in
   core. Opening one validates the JSON against the schema of its version,
-  refuses a file it cannot read with a message that says why, and gives a
+  refuses a file it cannot read with a message that says why, a file that
+  names an analysis this version of the application does not know among
+  them, with a message that names the analysis and says the file was saved
+  by another version of the application, as the owner decided on 24
+  September 2026 in place of opening the file without that analysis; and gives a
   `Project` whose `variants` is null, since the file has to be picked
   again, and whose `reference` holds the source the project was made with
   and, for each analysis, its check numbers with the fingerprint of its
@@ -884,8 +904,8 @@ src/charts/
 src/ui/
   shell/            the header, the stepper, the summary line, the notices
   runs.ts           awaits the outcome of each run core starts, and hands
-                    it to the store; cancels the queued runs no longer
-                    asked for
+                    it to the store, which cancels the runs no longer
+                    asked for (section 5)
   steps/            one folder per step: variants, individuals, analyses, export
   analyses/         the panel of options and the results of each analysis
   report/           renders the report model into its HTML page, with the plots

@@ -69,11 +69,20 @@ gives already.
 
 | filter | keeps a variant when | default |
 |---|---|---|
-| missing data | its proportion of called genotypes is at least a threshold | on, threshold to decide |
-| minor allele frequency (MAF) | the frequency of its minor allele is at least a threshold | on for the PCA and the GWAS, 0.05; off otherwise |
+| missing data | its proportion of missing genotypes is at most a threshold | on, threshold to decide |
+| major allele frequency (MAF) | the frequency of its commonest allele is at most a threshold | on for the PCA and the GWAS, 0.95; off otherwise |
 | observed heterozygosity | its observed heterozygosity is at most a threshold | off |
 | genomic regions | it falls inside a region of a BED file | off |
 | linkage disequilibrium (LD pruning) | it is not in LD above a threshold with a variant already kept | off as a filter of the dataset, where it serves to thin a large one; on inside the PCA (section 5) |
+
+The thresholds are popnei's, and each filter keeps what is at most its
+threshold, as popnei's filters do; the number the user types is the one
+popnei is given (`docs/specs/worker/protocol.md`). The MAF is the major
+allele frequency, popnei's, as the owner decided on 24 September 2026, and
+not the minor allele frequency: for a variant with two alleles, a major
+allele frequency of at most 0.95 is a minor one of at least 0.05, but for
+a variant with three or more alleles it is not, since the other alleles
+share the rest, and a variant with alleles at 0.90, 0.06 and 0.04 is kept.
 
 ### The filters of individuals
 
@@ -170,7 +179,7 @@ of the dataset, check the populations against it, and, in association,
 give the principal components that go into the GWAS as covariates.
 
 - The default is a PCA of the genotypes as 0, 1, 2 counts, after the MAF
-  filter at 0.05 and LD pruning, both applied for the PCA alone. The
+  filter at 0.95 and LD pruning, both applied for the PCA alone. The
   pruning is on by default and can be turned off, with a warning on the
   result that linked regions can dominate the components. When the
   filters of the dataset have pruned already, the PCA does not prune

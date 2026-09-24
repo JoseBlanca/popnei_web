@@ -407,7 +407,12 @@ ends, results removed, is heard only through a live region.
   is closed: it has an action, and a notice with an action that
   disappears on a timer fails a user who is slow to reach it (WCAG 2.2.1).
   Undo is also always in the header and on Ctrl+Z, so the notice is never
-  the only way.
+  the only way. When the change also stops calculations, the same notice
+  says so, "The ongoing calculations will be stopped unless you undo the
+  change", and the shell tells the store ten seconds after it appeared,
+  with a timer of the screen, since core reads no clock; the calculations
+  stop then, the notice stays, and its words say they were stopped
+  (`docs/specs/core/store.md`).
 - **Errors of a run** are shown in the panel of the analysis with the
   message and are announced as the end of the run is; `role="alert"` is
   kept for what interrupts, which here is nothing.

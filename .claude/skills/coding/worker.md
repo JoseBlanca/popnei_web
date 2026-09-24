@@ -221,13 +221,13 @@ export function createClient(make: {
 - **A request whose key has a result in the cache is not sent.** The
   store looks in the cache before it calls the `run` of an analysis
   (`docs/specs/core/store.md`); the client does not keep a second one.
-- **A queued request whose key the current project no longer asks for
-  is dropped**, when a command gives its analysis another key before it
-  starts, with its `cancel()`, at no cost; its outcome is `cancelled`. An
-  undo that asks for that key again sends it again, which costs its time
-  and never its correctness. A request that is running is not dropped
-  this way: ending it costs a restart, and its result may still be wanted
-  after an undo (`docs/architecture.md`, section 5).
+- **A request whose key the current project no longer asks for is
+  stopped, unless the change is undone** (`docs/architecture.md`, section
+  5): the store names it in the notice of the change and, when the notice
+  goes, calls its `cancel()`. A request still in the queue leaves it at no
+  cost, and one that runs ends its worker, as below; either way its
+  outcome is `cancelled`. An undo that asks for that key again later sends
+  it again, which costs its time and never its correctness.
 
 ### Errors are values
 
