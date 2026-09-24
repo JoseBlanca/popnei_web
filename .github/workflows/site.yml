@@ -1,0 +1,90 @@
+# The continuous integration of the site, as .claude/skills/coding/testing.md
+# gives it, without the Rust setup, which comes with the files crate:
+# every push and pull request is checked and tested in the three engines,
+# and a push to main that passed both is published on GitHub Pages.
+#
+# The actions are pinned to their major version, the latest released on
+# 24 September 2026. npm ci installs popnei from its public GitHub Release,
+# by the URL and hash of the lockfile, so no token is needed.
+
+name: site
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # The browsers of the installed Playwright, and the system libraries
+      # they need on Ubuntu.
+      - run: npx playwright install --with-deps
+      # Builds the site and runs Chromium, Firefox and WebKit. Firefox does
+      # not start without a window on the owner's Mac, so this is where it
+      # runs (docs/plans/site.md, work package 2).
+      - run: npm run test:e2e
+      # The report and the traces of a failed run, to read what the browser
+      # did.
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [check, e2e]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    # Two pushes to main close together deploy one after the other, and a
+    # deploy that started is not cancelled halfway.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - uses: actions/configure-pages@v6
+      - run: npm run build
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+      - id: deployment
+        uses: actions/deploy-pages@v5
