@@ -9,16 +9,20 @@
  * page gives each pick of a file, new at every pick.
  */
 
+import { canonical } from "./keys.ts";
 import type { JsonObject } from "./keys.ts";
 import type {
+  Cell,
   ColumnType,
   CsvFound,
   CsvOptions,
   IndividualFilter,
+  IndividualFilterKind,
   IndividualsFileError,
   IndividualsTable,
   RunError,
   VariantFilter,
+  VariantFilterKind,
 } from "../worker/protocol.ts";
 
 /** The two applications, population genetics and association. */
@@ -226,3 +230,603 @@ export type ProjectError =
       readonly path: readonly (string | number)[];
       readonly expected: string;
     };
+
+/** The place of a field in the project, `["filters", 1, "maxAllowedMaf"]`. */
+export type FieldPath = readonly (string | number)[];
+
+/** The order the filters of the individuals are kept in. */
+export const INDIVIDUAL_FILTER_ORDER: readonly IndividualFilterKind[] = [
+  "keep",
+  "remove",
+  "missing_data",
+  "obs_het",
+];
+
+/** The largest ploidy of a VCF that popnei's `openVcf` accepts. */
+export const MAX_PLOIDY = 255;
+
+/** The largest `maxDist` of the LD filter, 2^53 − 1, which popnei's
+    `filterByLd` accepts. */
+export const MAX_LD_DIST = Number.MAX_SAFE_INTEGER;
+
+/** A new, empty project of the application `app`. */
+export function emptyProject(app: AppId): Project {
+  return {
+    app,
+    variants: null,
+    filters: [],
+    individualFilters: [],
+    individuals: null,
+    grouping:
+      app === "popgen"
+        ? { kind: "populations", column: null }
+        : { kind: "roles", roles: [] },
+    analyses: [],
+    reference: null,
+  };
+}
+
+// The checks of each value, which the commands and parseProject share, so
+// that a project a command made always opens again from its project file.
+// Each gives the first thing wrong, or null.
+
+function wrongValue(path: FieldPath, expected: string): ProjectError {
+  return { kind: "wrongValue", path, expected };
+}
+
+function inconsistentTable(path: FieldPath, expected: string): ProjectError {
+  return { kind: "inconsistentTable", path, expected };
+}
+
+function thresholdError(value: number, path: FieldPath): ProjectError | null {
+  return Number.isFinite(value) && value >= 0 && value <= 1
+    ? null
+    : wrongValue(path, "a number from 0 to 1");
+}
+
+function wholeNumberError(
+  value: number,
+  min: number,
+  max: number,
+  path: FieldPath,
+): ProjectError | null {
+  return Number.isInteger(value) && value >= min && value <= max
+    ? null
+    : wrongValue(path, `a whole number from ${String(min)} to ${String(max)}`);
+}
+
+/** Checks the thresholds of a filter of the variants, from 0 to 1, and
+    its `maxDist`, a whole number from 1 to 2^53 − 1. */
+export function variantFilterError(
+  filter: VariantFilter,
+  path: FieldPath,
+): ProjectError | null {
+  switch (filter.kind) {
+    case "missing_data":
+      return thresholdError(filter.maxAllowedMissingRate, [
+        ...path,
+        "maxAllowedMissingRate",
+      ]);
+    case "maf":
+      return thresholdError(filter.maxAllowedMaf, [...path, "maxAllowedMaf"]);
+    case "obs_het":
+      return thresholdError(filter.maxAllowedObsHet, [
+        ...path,
+        "maxAllowedObsHet",
+      ]);
+    case "ld":
+      return (
+        thresholdError(filter.maxAllowedR2, [...path, "maxAllowedR2"]) ??
+        wholeNumberError(filter.maxDist, 1, MAX_LD_DIST, [...path, "maxDist"])
+      );
+  }
+}
+
+/** Checks the threshold of a filter of the individuals, from 0 to 1. A
+    list of individuals is checked by `projectNeeds`, not here. */
+export function individualFilterError(
+  filter: IndividualFilter,
+  path: FieldPath,
+): ProjectError | null {
+  switch (filter.kind) {
+    case "keep":
+    case "remove":
+      return null;
+    case "missing_data":
+      return thresholdError(filter.maxAllowedMissingRate, [
+        ...path,
+        "maxAllowedMissingRate",
+      ]);
+    case "obs_het":
+      return thresholdError(filter.maxAllowedObsHet, [
+        ...path,
+        "maxAllowedObsHet",
+      ]);
+  }
+}
+
+const LOAD_ID = /^[0-9a-f]{32}$/;
+
+/** Checks a load id: 32 lower case hexadecimal digits. */
+export function loadIdError(
+  fileId: string,
+  path: FieldPath,
+): ProjectError | null {
+  return LOAD_ID.test(fileId)
+    ? null
+    : wrongValue(path, "32 lower case hexadecimal digits");
+}
+
+/** A load of the variants file, what the page gives before it is read. */
+export type VariantLoad = Omit<VariantSource, "read">;
+
+/** Checks a load of the variants file: its load id, a finite size, and
+    read options for a VCF, with a ploidy from 1 to 255, and none for a
+    `.nei`. */
+export function variantLoadError(
+  load: VariantLoad,
+  path: FieldPath,
+): ProjectError | null {
+  const idError = loadIdError(load.fileId, [...path, "fileId"]);
+  if (idError !== null) {
+    return idError;
+  }
+  if (!Number.isFinite(load.size)) {
+    return wrongValue([...path, "size"], "a number");
+  }
+  const optionsPath = [...path, "readOptions"];
+  if (load.format === "nei") {
+    return load.readOptions === null
+      ? null
+      : wrongValue(optionsPath, "none, as a .nei file has no read options");
+  }
+  if (load.readOptions === null) {
+    return wrongValue(optionsPath, "the read options of a VCF");
+  }
+  return wholeNumberError(load.readOptions.ploidy, 1, MAX_PLOIDY, [
+    ...optionsPath,
+    "ploidy",
+  ]);
+}
+
+/** Checks that a grouping is of the application `app`: the populations
+    in population genetics, the roles of the columns in association. */
+export function groupingError(
+  grouping: Grouping,
+  app: AppId,
+  path: FieldPath,
+): ProjectError | null {
+  if (app === "popgen") {
+    return grouping.kind === "populations"
+      ? null
+      : wrongValue([...path, "kind"], "the column of the populations");
+  }
+  return grouping.kind === "roles"
+    ? null
+    : wrongValue([...path, "kind"], "the roles of the columns");
+}
+
+/**
+ * Checks that the table of the individuals file and the types of its
+ * columns agree: every row as long as the header, one type per column,
+ * the first `identifier` and no other, and a binary type whose `one` and
+ * `zero` are the two distinct values of its column that are not missing.
+ * `path` is that of the read that holds them.
+ */
+export function tableError(
+  table: IndividualsTable,
+  columns: readonly ColumnType[],
+  path: FieldPath,
+): ProjectError | null {
+  for (const [row, cells] of table.rows.entries()) {
+    if (cells.length !== table.columns.length) {
+      return inconsistentTable(
+        [...path, "table", "rows", row],
+        "a row with one cell per column of the header",
+      );
+    }
+  }
+  if (columns.length !== table.columns.length) {
+    return inconsistentTable(
+      [...path, "columns"],
+      "one type per column of the table",
+    );
+  }
+  for (const [index, type] of columns.entries()) {
+    const typePath = [...path, "columns", index];
+    if ((index === 0) !== (type.kind === "identifier")) {
+      return inconsistentTable(
+        typePath,
+        "the type identifier for the first column and for no other",
+      );
+    }
+    if (
+      type.kind === "binary" &&
+      !isBinaryOf(type, valuesOfColumn(table, index))
+    ) {
+      return inconsistentTable(
+        typePath,
+        "a binary type whose two values are the two values of its column",
+      );
+    }
+  }
+  return null;
+}
+
+/** The distinct cells of a column that are not missing, compared
+    exactly. */
+function valuesOfColumn(
+  table: IndividualsTable,
+  index: number,
+): (string | number | boolean)[] {
+  const values: (string | number | boolean)[] = [];
+  for (const row of table.rows) {
+    const cell: Cell | undefined = row[index];
+    if (cell !== undefined && cell !== null && !values.includes(cell)) {
+      values.push(cell);
+    }
+  }
+  return values;
+}
+
+function isBinaryOf(
+  type: {
+    readonly one: string | number | boolean;
+    readonly zero: string | number | boolean;
+  },
+  values: readonly (string | number | boolean)[],
+): boolean {
+  return (
+    values.length === 2 &&
+    type.one !== type.zero &&
+    values.includes(type.one) &&
+    values.includes(type.zero)
+  );
+}
+
+// The commands.
+
+function defect(message: string): Error {
+  return new Error(`popnei_web defect: ${message}`);
+}
+
+/** Throws a defect when a command is given a value parseProject would
+    refuse in its place. */
+function refuse(command: string, error: ProjectError | null): void {
+  if (error !== null) {
+    throw defect(
+      `${command} was given a value a project file could not hold: ${JSON.stringify(error)}.`,
+    );
+  }
+}
+
+/** Whether two values are equal, as the canonical form writes them. */
+function same(a: unknown, b: unknown): boolean {
+  return canonical(a, null) === canonical(b, null);
+}
+
+/** Puts a new load of the variants file, pending. Everything else is
+    kept, the reference of an opened project file among it. A load whose
+    id is already there gives `p` itself. */
+export function loadVariants(p: Project, source: VariantLoad): Project {
+  if (p.variants !== null && p.variants.fileId === source.fileId) {
+    return p;
+  }
+  refuse("loadVariants", variantLoadError(source, ["variants"]));
+  return {
+    ...p,
+    variants: {
+      fileId: source.fileId,
+      name: source.name,
+      size: source.size,
+      format: source.format,
+      readOptions:
+        source.readOptions === null
+          ? null
+          : {
+              ploidy: source.readOptions.ploidy,
+              onlyPassed: source.readOptions.onlyPassed,
+            },
+      read: { kind: "pending" },
+    },
+  };
+}
+
+function copyVariantFilter(filter: VariantFilter): VariantFilter {
+  switch (filter.kind) {
+    case "missing_data":
+      return {
+        kind: filter.kind,
+        maxAllowedMissingRate: filter.maxAllowedMissingRate,
+      };
+    case "maf":
+      return { kind: filter.kind, maxAllowedMaf: filter.maxAllowedMaf };
+    case "obs_het":
+      return { kind: filter.kind, maxAllowedObsHet: filter.maxAllowedObsHet };
+    case "ld":
+      return {
+        kind: filter.kind,
+        maxAllowedR2: filter.maxAllowedR2,
+        maxDist: filter.maxDist,
+      };
+  }
+}
+
+/** Sets the filter of its kind: in its place when there is one, last
+    otherwise. */
+export function setVariantFilter(p: Project, filter: VariantFilter): Project {
+  const index = p.filters.findIndex((f) => f.kind === filter.kind);
+  const at = index === -1 ? p.filters.length : index;
+  refuse("setVariantFilter", variantFilterError(filter, ["filters", at]));
+  const copy = copyVariantFilter(filter);
+  if (index === -1) {
+    return { ...p, filters: [...p.filters, copy] };
+  }
+  if (same(p.filters[index], copy)) {
+    return p;
+  }
+  return { ...p, filters: p.filters.with(index, copy) };
+}
+
+/** Removes the filter of the variants of that kind; `p` itself when there
+    is none. */
+export function removeVariantFilter(
+  p: Project,
+  kind: VariantFilterKind,
+): Project {
+  if (!p.filters.some((f) => f.kind === kind)) {
+    return p;
+  }
+  return { ...p, filters: p.filters.filter((f) => f.kind !== kind) };
+}
+
+/** Moves the filter of that kind to a position of the list, 0 the first.
+    Throws a defect when there is no filter of that kind, or `to` is not a
+    whole number from 0 to the length of the list − 1. */
+export function moveVariantFilter(
+  p: Project,
+  kind: VariantFilterKind,
+  to: number,
+): Project {
+  const index = p.filters.findIndex((f) => f.kind === kind);
+  const filter = p.filters[index];
+  if (filter === undefined) {
+    throw defect(`moveVariantFilter was given ${kind}, not in the filters.`);
+  }
+  if (!Number.isInteger(to) || to < 0 || to >= p.filters.length) {
+    throw defect(
+      `moveVariantFilter was given the position ${String(to)}, not one of the ${String(p.filters.length)} filters.`,
+    );
+  }
+  if (to === index) {
+    return p;
+  }
+  return {
+    ...p,
+    filters: p.filters.toSpliced(index, 1).toSpliced(to, 0, filter),
+  };
+}
+
+function copyIndividualFilter(filter: IndividualFilter): IndividualFilter {
+  switch (filter.kind) {
+    case "keep":
+    case "remove":
+      return { kind: filter.kind, individuals: [...filter.individuals] };
+    case "missing_data":
+      return {
+        kind: filter.kind,
+        maxAllowedMissingRate: filter.maxAllowedMissingRate,
+      };
+    case "obs_het":
+      return { kind: filter.kind, maxAllowedObsHet: filter.maxAllowedObsHet };
+  }
+}
+
+/** Sets the filter of its kind, in the fixed order of the kinds, keep,
+    remove, missing_data, obs_het. */
+export function setIndividualFilter(
+  p: Project,
+  filter: IndividualFilter,
+): Project {
+  const rank = INDIVIDUAL_FILTER_ORDER.indexOf(filter.kind);
+  const index = p.individualFilters.findIndex((f) => f.kind === filter.kind);
+  const after = p.individualFilters.findIndex(
+    (f) => INDIVIDUAL_FILTER_ORDER.indexOf(f.kind) > rank,
+  );
+  let at = index;
+  if (at === -1) {
+    at = after === -1 ? p.individualFilters.length : after;
+  }
+  refuse(
+    "setIndividualFilter",
+    individualFilterError(filter, ["individualFilters", at]),
+  );
+  const copy = copyIndividualFilter(filter);
+  if (index === -1) {
+    return {
+      ...p,
+      individualFilters: p.individualFilters.toSpliced(at, 0, copy),
+    };
+  }
+  if (same(p.individualFilters[index], copy)) {
+    return p;
+  }
+  return { ...p, individualFilters: p.individualFilters.with(index, copy) };
+}
+
+/** Removes the filter of the individuals of that kind; `p` itself when
+    there is none. */
+export function removeIndividualFilter(
+  p: Project,
+  kind: IndividualFilterKind,
+): Project {
+  if (!p.individualFilters.some((f) => f.kind === kind)) {
+    return p;
+  }
+  return {
+    ...p,
+    individualFilters: p.individualFilters.filter((f) => f.kind !== kind),
+  };
+}
+
+function copyCsvOptions(csv: CsvOptions): CsvOptions {
+  return {
+    encoding: csv.encoding,
+    separator: csv.separator,
+    decimal: csv.decimal,
+  };
+}
+
+/** Puts a new load of the individuals file, pending; `csv` is null for an
+    xlsx. The grouping is kept, by the name of its column; the types of
+    the columns come with the new read, and those the user set are lost
+    (the project spec, Open 1). A load whose id is already there gives `p`
+    itself. */
+export function loadIndividuals(
+  p: Project,
+  source: {
+    readonly fileId: string;
+    readonly name: string;
+    readonly csv: CsvOptions | null;
+  },
+): Project {
+  if (p.individuals !== null && p.individuals.fileId === source.fileId) {
+    return p;
+  }
+  refuse(
+    "loadIndividuals",
+    loadIdError(source.fileId, ["individuals", "fileId"]),
+  );
+  return {
+    ...p,
+    individuals: {
+      fileId: source.fileId,
+      name: source.name,
+      csv: source.csv === null ? null : copyCsvOptions(source.csv),
+      read: { kind: "pending" },
+    },
+  };
+}
+
+/** Sets how the CSV is read, and puts its read back to pending, so the
+    types of the columns the user set are lost. Throws a defect when there
+    is no individuals file, or it is an xlsx. */
+export function setCsvOptions(p: Project, csv: CsvOptions): Project {
+  const individuals = p.individuals;
+  const current = individuals?.csv ?? null;
+  if (individuals === null || current === null) {
+    throw defect("setCsvOptions was given a project with no CSV file.");
+  }
+  if (same(current, csv)) {
+    return p;
+  }
+  return {
+    ...p,
+    individuals: {
+      ...individuals,
+      csv: copyCsvOptions(csv),
+      read: { kind: "pending" },
+    },
+  };
+}
+
+function copyColumnType(type: ColumnType): ColumnType {
+  switch (type.kind) {
+    case "binary":
+      return { kind: type.kind, one: type.one, zero: type.zero };
+    case "identifier":
+    case "continuous":
+    case "categorical":
+      return { kind: type.kind };
+  }
+}
+
+/** Sets the type of a column of the table read. Throws a defect when the
+    file is not read, the column is not in the table, or the type is not
+    one `tableError` accepts for that column. */
+export function setColumnType(
+  p: Project,
+  column: string,
+  type: ColumnType,
+): Project {
+  const individuals = p.individuals;
+  if (individuals?.read.kind !== "read") {
+    throw defect("setColumnType was given a project with no table read.");
+  }
+  const read = individuals.read;
+  const index = read.table.columns.indexOf(column);
+  if (index === -1) {
+    throw defect(
+      `setColumnType was given ${column}, not a column of the table.`,
+    );
+  }
+  if (same(read.columns[index], type)) {
+    return p;
+  }
+  const columns = read.columns.with(index, copyColumnType(type));
+  refuse(
+    "setColumnType",
+    tableError(read.table, columns, ["individuals", "read"]),
+  );
+  return {
+    ...p,
+    individuals: { ...individuals, read: { ...read, columns } },
+  };
+}
+
+/** Removes the individuals file; `p` itself when there is none. The
+    grouping is kept. */
+export function removeIndividuals(p: Project): Project {
+  return p.individuals === null ? p : { ...p, individuals: null };
+}
+
+function copyGrouping(grouping: Grouping): Grouping {
+  switch (grouping.kind) {
+    case "populations":
+      return { kind: grouping.kind, column: grouping.column };
+    case "roles":
+      return {
+        kind: grouping.kind,
+        roles: grouping.roles.map(([column, role]) => [column, role] as const),
+      };
+  }
+}
+
+/** Sets the grouping. Throws a defect for a grouping of the other
+    application. */
+export function setGrouping(p: Project, grouping: Grouping): Project {
+  refuse("setGrouping", groupingError(grouping, p.app, ["grouping"]));
+  return same(p.grouping, grouping)
+    ? p
+    : { ...p, grouping: copyGrouping(grouping) };
+}
+
+/** Sets the options of an analysis, whole: in the place of its entry, or
+    as a new entry, last, also when the options are the defaults. Throws a
+    defect on options that are not JSON. */
+export function setAnalysisOptions(
+  p: Project,
+  analysis: AnalysisId,
+  options: JsonObject,
+): Project {
+  const index = p.analyses.findIndex((a) => a.analysis === analysis);
+  const entry = { analysis, options };
+  if (index === -1) {
+    canonical(options, null);
+    return { ...p, analyses: [...p.analyses, entry] };
+  }
+  if (same(p.analyses[index], entry)) {
+    return p;
+  }
+  return { ...p, analyses: p.analyses.with(index, entry) };
+}
+
+/** The options of an analysis: its entry, or `defaults` when it has
+    none. */
+export function analysisOptions(
+  p: Project,
+  analysis: AnalysisId,
+  defaults: JsonObject,
+): JsonObject {
+  return p.analyses.find((a) => a.analysis === analysis)?.options ?? defaults;
+}
