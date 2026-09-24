@@ -309,6 +309,12 @@ describe("WP2 D1 the hash", () => {
     expect(() => sha256Hex(text)).toThrow(/^popnei_web defect: /);
   });
 
+  test("gives the position in the text of a broken character", () => {
+    expect(() => sha256Hex("é中𝄞\ud800")).toThrow(
+      "popnei_web defect: sha256Hex was given a text with half of a pair that encodes one character, \\ud800, alone at position 4 of the text; the canonical form never gives one.",
+    );
+  });
+
   test("gives node's hash of any text of the whole of Unicode", () => {
     fc.assert(
       fc.property(fc.string({ unit: "binary", maxLength: 200 }), (text) => {

@@ -332,13 +332,17 @@ function paddedUtf8(text: string): Uint8Array {
  */
 function utf8Length(text: string): number {
   let numBytes = 0;
+  // The index in the text, in units of JavaScript's strings, as
+  // `text[position]` reads it.
+  let position = 0;
   for (const char of text) {
     const code = char.codePointAt(0) ?? 0;
     if (code >= 0xd800 && code <= 0xdfff) {
       throw new Error(
-        `popnei_web defect: sha256Hex was given a text with half of a pair that encodes one character, \\u${code.toString(16)}, alone at position ${String(numBytes)} of its UTF-8; the canonical form never gives one.`,
+        `popnei_web defect: sha256Hex was given a text with half of a pair that encodes one character, \\u${code.toString(16)}, alone at position ${String(position)} of the text; the canonical form never gives one.`,
       );
     }
+    position += char.length;
     if (code < 0x80) {
       numBytes += 1;
     } else if (code < 0x800) {
