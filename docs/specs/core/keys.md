@@ -12,7 +12,11 @@ that an opened project file keeps. It develops sections 3, 11 and 12 of
 `docs/architecture.md` and the section "Keys" of
 `.claude/skills/coding/SKILL.md`, and depends on
 `docs/specs/core/project.md` and on `docs/specs/core/store.md`, for the
-definition of an analysis.
+definition of an analysis. The load id it names is the random name the
+page gives each pick of a file, new at every pick
+(`docs/architecture.md`, section 3). Stage 2 of `docs/build-order.md` is
+the walking skeleton, the smallest application that goes through every
+part once, the first where the time of a key is measured.
 
 ## What it does
 
@@ -118,9 +122,13 @@ The calculation worker keeps what several analyses reuse, the variants
 kept by the LD pruning of the PCA, the kinship, under keys made as the
 keys of the results are (`.claude/skills/coding/worker.md`, "The
 intermediate caches"). The worker does not make keys, so the page sends
-them inside the request. `intermediateKeyOf` makes one from a name, "the
-pruned variants", the inputs the analysis gives, and the load, the
-filters it reads and the version of popnei, which it adds as `keyOf` does.
+them inside the request. The key of an intermediate result is made from
+five parts: its name, "the pruned variants"; what it was made from beyond
+the file and the filters, which the analysis gives, the threshold of the
+pruning; and the three parts that `keyOf` puts in every key itself, the
+load of the variants file, the filters the analysis reads, and the
+version of popnei. `intermediateKeyOf` makes it, so that the analysis
+cannot leave out those three.
 The store gives the analysis a function that calls it
 (`docs/specs/core/store.md`).
 
