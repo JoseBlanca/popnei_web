@@ -27,7 +27,13 @@ import type {
   VariantSource,
 } from "./project.ts";
 import { createStore } from "./store.ts";
-import type { AnalysisDef, AnalysisStatus, AppState, Store } from "./store.ts";
+import type {
+  AnalysisDef,
+  AnalysisError,
+  AnalysisStatus,
+  AppState,
+  Store,
+} from "./store.ts";
 import { drawnCommand, jsonObjectOf, sampleProject } from "./testSupport.ts";
 import type { DrawnCommand } from "./testSupport.ts";
 import type {
@@ -1661,6 +1667,14 @@ describe("WP4 D2 the calculations", () => {
       fileId: VARIANTS_ID,
       read: { ...VARIANTS_READ, numVars: 1200 },
     });
+  });
+  test("a failure kept until the next change is never popnei's refusal, in its type", () => {
+    const wrong: AnalysisError = {
+      kind: "failed",
+      // @ts-expect-error -- popnei's refusal is kept as refused, never as a failure.
+      error: { kind: "popnei", message: "no variant left" },
+    };
+    expect(wrong.kind).toBe("failed");
   });
 });
 

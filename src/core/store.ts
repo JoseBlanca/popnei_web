@@ -182,8 +182,12 @@ export type AnalysisStatus<R> =
 export type AnalysisError =
   /** popnei refused it, with its message; kept for the session. */
   | { readonly kind: "refused"; readonly message: string }
-  /** It failed otherwise; kept until the next change of the project. */
-  | { readonly kind: "failed"; readonly error: RunError };
+  /** It failed otherwise, never popnei's refusal, which is `refused`;
+      kept until the next change of the project. */
+  | {
+      readonly kind: "failed";
+      readonly error: Exclude<RunError, { readonly kind: "popnei" }>;
+    };
 
 /** A calculation in flight. */
 export interface RunView {
