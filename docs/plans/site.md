@@ -1,6 +1,6 @@
 # Plan: the site stands up, and popnei runs in it
 
-24 September 2026, a draft for the owner. It builds stage 0 of
+24 September 2026, approved by the owner on 24 September 2026. It builds stage 0 of
 `docs/build-order.md` from one spec, `docs/specs/site.md`, approved by the
 owner on 24 September 2026. It is carried out as the `following-plans`
 skill says, on the branch `plan/site`, with its report in
