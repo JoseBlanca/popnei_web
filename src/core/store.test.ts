@@ -7,6 +7,8 @@ import {
   individualsNeeds,
   loadIndividuals,
   loadVariants,
+  removeIndividuals,
+  setCsvOptions,
   setGrouping,
   setVariantFilter,
 } from "./project.ts";
@@ -66,8 +68,11 @@ function fakeSend(): {
     onProgress: (p: Progress) => void,
   ) => Run<TestResult>;
   readonly sent: SentRequest[];
+  /** What was sent and cancelled, in order: "send 2", "cancel 1". */
+  readonly log: string[];
 } {
   const sent: SentRequest[] = [];
+  const log: string[] = [];
   const send = (
     key: string,
     job: TestJob,
@@ -78,11 +83,14 @@ function fakeSend(): {
       end = resolve;
     });
     let cancels = 0;
+    const id = sent.length + 1;
+    log.push(`send ${String(id)}`);
     const run: Run<TestResult> = {
-      id: sent.length + 1,
+      id,
       outcome,
       cancel: () => {
         cancels += 1;
+        log.push(`cancel ${String(id)}`);
       },
     };
     sent.push({
@@ -95,7 +103,7 @@ function fakeSend(): {
     });
     return run;
   };
-  return { send, sent };
+  return { send, sent, log };
 }
 
 /** How many times the fake analyses were asked for their keys and their
@@ -262,9 +270,10 @@ function newStore(cacheMaxBytes: number = 1024 * 1024): {
   readonly analyses: readonly AnalysisDef<TestJob, TestResult>[];
   readonly calls: Calls;
   readonly sent: SentRequest[];
+  readonly log: string[];
 } {
   const { analyses, calls } = fakeAnalyses();
-  const { send, sent } = fakeSend();
+  const { send, sent, log } = fakeSend();
   const store = createStore({
     first: emptyProject("popgen"),
     analyses,
@@ -274,7 +283,7 @@ function newStore(cacheMaxBytes: number = 1024 * 1024): {
     cacheMaxBytes,
     maxUndoSteps: 200,
   });
-  return { store, analyses, calls, sent };
+  return { store, analyses, calls, sent, log };
 }
 
 /** A store at the point of "A worked sequence" where the variants file is
@@ -920,7 +929,7 @@ describe("WP4 D2 the calculations", () => {
     expect(store.getState().runs).toStrictEqual([]);
     // Another threshold and back: the result comes from the cache.
     store.apply("the MAF filter changed", maf(0.8));
-    expect(statuses(store)[1]?.kind).toBe("ready");
+    expect(statuses(store)[1]?.kind).toBe("removed");
     store.undo();
     const again = statuses(store)[1];
     expect(again?.kind === "done" && again.result).toBe(result);
@@ -1286,9 +1295,407 @@ describe("WP4 D2 the calculations", () => {
     const second = sentAt(sent, 2);
     store.runEnded(second.run.id, doneWith(second, popsResult()));
     expect(statuses(store).map((s) => s.kind)).toStrictEqual(["done", "done"]);
+    // The result of the first column was dropped: the undo removes it.
     store.undo();
-    expect(statuses(store).map((s) => s.kind)).toStrictEqual(["ready", "done"]);
+    expect(statuses(store).map((s) => s.kind)).toStrictEqual([
+      "removed",
+      "done",
+    ]);
     const shown = statuses(store)[1];
     expect(shown?.kind === "done" && shown.result).toBe(varsDone);
+  });
+});
+
+/** The kinds of the states of the analyses, populations first. */
+function kinds(store: Store<TestResult>): string[] {
+  return statuses(store).map((status) => status.kind);
+}
+
+/** A store with the variants file read and the analysis of the variants
+    running, its request the first sent. */
+function storeWithVarsRunning(): ReturnType<typeof newStore> & {
+  readonly request: SentRequest;
+} {
+  const made = storeWithVariantsRead();
+  made.store.startRun("vars");
+  return { ...made, request: sentAt(made.sent, 0) };
+}
+
+/** A store with both analyses done, the populations sent first. */
+function storeWithBothDone(): ReturnType<typeof newStore> {
+  const made = storeWithBothReady();
+  made.store.startRun("pops");
+  made.store.startRun("vars");
+  const pops = sentAt(made.sent, 0);
+  const vars = sentAt(made.sent, 1);
+  made.store.runEnded(pops.run.id, doneWith(pops, popsResult()));
+  made.store.runEnded(vars.run.id, doneWith(vars, varsResult(null)));
+  return made;
+}
+
+describe("WP4 D3 the notice", () => {
+  test("a worked sequence: locked, ready, running, done, removed by a command, and done again by its undo with no calculation", () => {
+    const { store, sent } = newStore();
+    expect(statuses(store)).toStrictEqual([
+      { kind: "locked", reason: "Load a variants file in the Variants step." },
+      { kind: "locked", reason: "Load a variants file in the Variants step." },
+    ]);
+    store.popneiReady("0.1.0");
+    store.apply("a variants file was loaded", loadPanel(VARIANTS_ID));
+    store.variantsRead(VARIANTS_ID, VARIANTS_READ);
+    expect(statuses(store)[0]).toStrictEqual({
+      kind: "locked",
+      reason: "Load an individuals file in the Individuals step.",
+    });
+    const key = keyAt(store, 1);
+    expect(statuses(store)[1]).toStrictEqual({ kind: "ready", key });
+    store.startRun("vars");
+    const request = sentAt(sent, 0);
+    expect(statuses(store)[1]?.kind).toBe("running");
+    request.progress({ done: 3, total: 10 });
+    expect(statuses(store)[1]).toMatchObject({
+      progress: { done: 3, total: 10 },
+    });
+    const result = varsResult(null);
+    store.runEnded(request.run.id, doneWith(request, result));
+    expect(statuses(store)[1]).toStrictEqual({
+      kind: "done",
+      key,
+      result,
+      warnings: [],
+      check: null,
+    });
+    store.apply("the missing data filter changed", (p) =>
+      setVariantFilter(p, { kind: "missing_data", maxAllowedMissingRate: 0.1 }),
+    );
+    expect(statuses(store)[1]).toStrictEqual({
+      kind: "removed",
+      key: keyAt(store, 1),
+    });
+    expect(store.getState().notice).toStrictEqual({
+      cause: {
+        kind: "command",
+        description: "the missing data filter changed",
+      },
+      removed: ["vars"],
+      leftBehind: [],
+    });
+    store.undo();
+    const again = statuses(store)[1];
+    expect(again?.kind === "done" && again.result).toBe(result);
+    expect(sent).toHaveLength(1);
+    expect(request.cancels()).toBe(0);
+    expect(store.getState().notice).toBeNull();
+  });
+
+  test("stopping, a command that changes the key of a calculation in flight: the notice leaves it behind, and it is not cancelled", () => {
+    const { store, request } = storeWithVarsRunning();
+    store.apply("the MAF filter changed", maf(0.9));
+    expect(store.getState().notice).toStrictEqual({
+      cause: { kind: "command", description: "the MAF filter changed" },
+      removed: [],
+      leftBehind: ["vars"],
+    });
+    expect(request.cancels()).toBe(0);
+    expect(kinds(store)).toStrictEqual(["locked", "ready"]);
+    expect(store.getState().runs).toMatchObject([
+      { runId: request.run.id, current: false, stopping: false },
+    ]);
+  });
+
+  test("stopping, then an undo: the calculation goes on, running, and is not cancelled", () => {
+    const { store, request } = storeWithVarsRunning();
+    store.apply("the MAF filter changed", maf(0.9));
+    store.undo();
+    expect(request.cancels()).toBe(0);
+    expect(statuses(store)[1]).toMatchObject({
+      kind: "running",
+      runId: request.run.id,
+    });
+    expect(store.getState().notice).toBeNull();
+  });
+
+  test("stopping, then a second command: the calculation left behind is cancelled, and the new notice does not name it", () => {
+    const { store, request } = storeWithVarsRunning();
+    store.apply("the MAF filter changed", maf(0.9));
+    store.apply("the MAF filter changed again", maf(0.8));
+    expect(request.cancels()).toBe(1);
+    expect(store.getState().notice).toBeNull();
+    expect(store.getState().runs).toMatchObject([
+      { runId: request.run.id, stopping: true },
+    ]);
+  });
+
+  test("stopping, then dismissNotice: the calculation is cancelled and the notice is gone", () => {
+    const { store, request } = storeWithVarsRunning();
+    store.apply("the MAF filter changed", maf(0.9));
+    store.dismissNotice();
+    expect(request.cancels()).toBe(1);
+    expect(store.getState().notice).toBeNull();
+    expect(kinds(store)).toStrictEqual(["locked", "ready"]);
+  });
+
+  test("stopping, then startRun for the new key: the old request is cancelled before the new one is sent, which is afterStop, and a notice with nothing removed goes", () => {
+    const { store, request, sent, log } = storeWithVarsRunning();
+    store.apply("the MAF filter changed", maf(0.9));
+    const run = store.startRun("vars");
+    expect(run).toBe(sentAt(sent, 1).run);
+    expect(log).toStrictEqual(["send 1", "cancel 1", "send 2"]);
+    expect(request.cancels()).toBe(1);
+    expect(store.getState().runs).toMatchObject([
+      { runId: 1, stopping: true, current: false, afterStop: false },
+      { runId: 2, stopping: false, current: true, afterStop: true },
+    ]);
+    expect(store.getState().notice).toBeNull();
+  });
+
+  test("stopping, then startRun with results removed: the notice keeps them and no longer leaves anything behind", () => {
+    const { store, sent } = storeWithBothReady();
+    store.startRun("pops");
+    const pops = sentAt(sent, 0);
+    store.runEnded(pops.run.id, doneWith(pops, popsResult()));
+    store.startRun("vars");
+    store.apply("the MAF filter changed", maf(0.9));
+    expect(store.getState().notice).toStrictEqual({
+      cause: { kind: "command", description: "the MAF filter changed" },
+      removed: ["pops"],
+      leftBehind: ["vars"],
+    });
+    store.startRun("vars");
+    expect(sentAt(sent, 1).cancels()).toBe(1);
+    expect(store.getState().runs[1]?.afterStop).toBe(true);
+    expect(store.getState().notice).toStrictEqual({
+      cause: { kind: "command", description: "the MAF filter changed" },
+      removed: ["pops"],
+      leftBehind: [],
+    });
+    expect(kinds(store)).toStrictEqual(["removed", "running"]);
+  });
+
+  test("a late result: after a command, the result of the old key goes into the cache with the warnings of its request's project, and an undo shows it", () => {
+    const { store, request } = storeWithVarsRunning();
+    store.apply("the MAF filter changed", maf(0.9));
+    const result = varsResult(null);
+    store.runEnded(request.run.id, doneWith(request, result));
+    expect(kinds(store)).toStrictEqual(["locked", "ready"]);
+    expect(store.getState().notice).toBeNull();
+    store.undo();
+    const shown = statuses(store)[1];
+    expect(shown).toMatchObject({ kind: "done", warnings: [] });
+    expect(shown?.kind === "done" && shown.result).toBe(result);
+  });
+
+  test("the result of a calculation stopped by closing the notice is cached under its key when it arrives all the same", () => {
+    const { store, request } = storeWithVarsRunning();
+    store.apply("the MAF filter changed", maf(0.9));
+    store.dismissNotice();
+    const result = varsResult(null);
+    store.runEnded(request.run.id, doneWith(request, result));
+    store.undo();
+    const shown = statuses(store)[1];
+    expect(shown?.kind === "done" && shown.result).toBe(result);
+  });
+
+  test("dismissNotice with no notice gives the same state object and tells no screen", () => {
+    const { store } = storeWithVarsRunning();
+    const before = store.getState();
+    const { listener, count } = counter();
+    store.subscribe(listener);
+    store.dismissNotice();
+    expect(store.getState()).toBe(before);
+    expect(count()).toBe(0);
+  });
+
+  test("a second popneiReady of another version stops every calculation at once and drops the notice, making none", () => {
+    const { store, sent } = storeWithBothDone();
+    store.apply("the populations changed", (p) =>
+      setGrouping(p, { kind: "populations", column: "id" }),
+    );
+    store.startRun("pops");
+    const pops = sentAt(sent, 2);
+    expect(store.getState().notice).toMatchObject({ removed: ["pops"] });
+    expect(kinds(store)).toStrictEqual(["running", "done"]);
+    store.popneiReady("0.2.0");
+    expect(pops.cancels()).toBe(1);
+    expect(store.getState().notice).toBeNull();
+    expect(kinds(store)).toStrictEqual(["ready", "ready"]);
+    expect(store.getState().runs).toMatchObject([
+      { runId: pops.run.id, stopping: true },
+    ]);
+  });
+
+  test("open stops the calculations in flight at once and clears the notice, making none", () => {
+    const { store, sent } = storeWithBothDone();
+    store.apply("the populations changed", (p) =>
+      setGrouping(p, { kind: "populations", column: "id" }),
+    );
+    store.startRun("pops");
+    const current = sentAt(sent, 2);
+    store.apply("the MAF filter changed", maf(0.9));
+    expect(store.getState().notice).toStrictEqual({
+      cause: { kind: "command", description: "the MAF filter changed" },
+      removed: ["vars"],
+      leftBehind: ["pops"],
+    });
+    const { listener, count } = counter();
+    store.subscribe(listener);
+    store.open(store.getState().project);
+    expect(current.cancels()).toBe(1);
+    expect(store.getState().notice).toBeNull();
+    expect(kinds(store)).toStrictEqual(["ready", "ready"]);
+    expect(store.getState().undo).toBeNull();
+    expect(count()).toBe(1);
+  });
+
+  test("an analysis removed that cannot run is shown locked, with what it lacks, and listed in the notice", () => {
+    const { store } = storeWithBothDone();
+    store.apply("the individuals file was removed", removeIndividuals);
+    expect(statuses(store)[0]).toStrictEqual({
+      kind: "locked",
+      reason: "Load an individuals file in the Individuals step.",
+    });
+    expect(store.getState().notice).toMatchObject({ removed: ["pops"] });
+    expect(statuses(store)[1]?.kind).toBe("done");
+  });
+
+  test("an analysis in the notice that is done again under its new key leaves the notice", () => {
+    const { store, sent } = storeWithBothDone();
+    store.apply("the MAF filter changed", maf(0.9));
+    expect(store.getState().notice).toMatchObject({
+      removed: ["pops", "vars"],
+    });
+    store.startRun("vars");
+    const vars = sentAt(sent, 2);
+    expect(store.getState().notice).toMatchObject({
+      removed: ["pops", "vars"],
+    });
+    store.runEnded(vars.run.id, doneWith(vars, varsResult(null)));
+    expect(store.getState().notice).toStrictEqual({
+      cause: { kind: "command", description: "the MAF filter changed" },
+      removed: ["pops"],
+      leftBehind: [],
+    });
+    store.startRun("pops");
+    const pops = sentAt(sent, 3);
+    store.runEnded(pops.run.id, doneWith(pops, popsResult()));
+    expect(store.getState().notice).toBeNull();
+  });
+
+  test("an analysis removed is ready once the notice is closed, or replaced by one without it", () => {
+    const closed = storeWithBothDone().store;
+    closed.apply("the MAF filter changed", maf(0.9));
+    expect(kinds(closed)).toStrictEqual(["removed", "removed"]);
+    closed.dismissNotice();
+    expect(kinds(closed)).toStrictEqual(["ready", "ready"]);
+    const replaced = storeWithBothDone().store;
+    replaced.apply("the MAF filter changed", maf(0.9));
+    replaced.apply("the MAF filter changed again", maf(0.8));
+    expect(replaced.getState().notice).toBeNull();
+    expect(kinds(replaced)).toStrictEqual(["ready", "ready"]);
+  });
+
+  test("a calculation left behind that ends by itself, failed or cancelled, leaves leftBehind, and a notice left with nothing goes", () => {
+    const { store, sent } = storeWithBothReady();
+    store.startRun("pops");
+    store.startRun("vars");
+    store.apply("the MAF filter changed", maf(0.9));
+    expect(store.getState().notice).toMatchObject({
+      leftBehind: ["pops", "vars"],
+    });
+    const error = { kind: "workerFailed", message: "a trap" } as const;
+    store.runEnded(sentAt(sent, 1).run.id, { kind: "failed", error });
+    expect(store.getState().notice).toMatchObject({ leftBehind: ["pops"] });
+    store.runEnded(sentAt(sent, 0).run.id, { kind: "cancelled" });
+    expect(store.getState().notice).toBeNull();
+    expect(sentAt(sent, 0).cancels()).toBe(0);
+  });
+
+  test("a calculation left behind whose key a read gives back leaves leftBehind, and runs again", () => {
+    const { store, sent } = storeWithBothReady();
+    store.startRun("pops");
+    const pops = sentAt(sent, 0);
+    const commas: CsvOptions = { ...CSV, separator: "," };
+    store.apply("the separator changed", (p) => setCsvOptions(p, commas));
+    expect(statuses(store)[0]).toStrictEqual({
+      kind: "locked",
+      reason: "Reading pops.csv.",
+    });
+    expect(store.getState().notice).toMatchObject({ leftBehind: ["pops"] });
+    store.individualsRead(INDIVIDUALS_ID, commas, INDIVIDUALS_READ);
+    expect(store.getState().notice).toBeNull();
+    expect(statuses(store)[0]).toMatchObject({
+      kind: "running",
+      runId: pops.run.id,
+    });
+    expect(pops.cancels()).toBe(0);
+  });
+
+  test("a request is afterStop when the calculation it would wait behind was already being stopped, and not otherwise", () => {
+    const { store, request, sent } = storeWithVarsRunning();
+    expect(store.getState().runs[0]?.afterStop).toBe(false);
+    store.cancelRun("vars");
+    store.startRun("vars");
+    expect(request.cancels()).toBe(1);
+    expect(store.getState().runs).toMatchObject([
+      { runId: 1, stopping: true },
+      { runId: 2, stopping: false, afterStop: true },
+    ]);
+    store.runEnded(request.run.id, { kind: "cancelled" });
+    store.cancelRun("vars");
+    store.runEnded(sentAt(sent, 1).run.id, { kind: "cancelled" });
+    store.startRun("vars");
+    expect(store.getState().runs).toMatchObject([
+      { runId: 3, afterStop: false },
+    ]);
+  });
+
+  test("the notice of an undo names the step undone, and that of a redo the step redone", () => {
+    const { store, sent } = storeWithVariantsRead();
+    store.apply("the MAF filter changed", maf(0.9));
+    store.startRun("vars");
+    const vars = sentAt(sent, 0);
+    store.runEnded(vars.run.id, doneWith(vars, varsResult(null)));
+    store.undo();
+    expect(store.getState().notice).toStrictEqual({
+      cause: { kind: "undo", description: "the MAF filter changed" },
+      removed: ["vars"],
+      leftBehind: [],
+    });
+    // Another sequence: the redo goes to settings never calculated.
+    const other = storeWithVariantsRead();
+    other.store.apply("the MAF filter changed", maf(0.9));
+    other.store.undo();
+    other.store.startRun("vars");
+    const first = sentAt(other.sent, 0);
+    other.store.runEnded(first.run.id, doneWith(first, varsResult(null)));
+    other.store.redo();
+    expect(other.store.getState().notice).toStrictEqual({
+      cause: { kind: "redo", description: "the MAF filter changed" },
+      removed: ["vars"],
+      leftBehind: [],
+    });
+  });
+
+  test("a notice names only the calculations of its own change: one an undo gave back, left behind again by another command, is named by the new notice and stopped when it is closed", () => {
+    const { store, request } = storeWithVarsRunning();
+    store.apply("the MAF filter changed", maf(0.9));
+    store.undo();
+    store.apply("the missing data filter changed", (p) =>
+      setVariantFilter(p, { kind: "missing_data", maxAllowedMissingRate: 0.1 }),
+    );
+    expect(request.cancels()).toBe(0);
+    expect(store.getState().notice).toStrictEqual({
+      cause: {
+        kind: "command",
+        description: "the missing data filter changed",
+      },
+      removed: [],
+      leftBehind: ["vars"],
+    });
+    const notice = store.getState().notice;
+    request.progress({ done: 5, total: 10 });
+    expect(store.getState().notice).toBe(notice);
+    store.dismissNotice();
+    expect(request.cancels()).toBe(1);
   });
 });

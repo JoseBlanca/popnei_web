@@ -318,6 +318,16 @@ type AnalysisKey =
   | { readonly kind: "locked"; readonly reason: string }
   | { readonly kind: "keyed"; readonly key: Key };
 
+/** The notice as the store keeps it: the requests it names are kept by
+    their ids, since an analysis may have more than one in flight. */
+interface NoticeKept {
+  readonly cause: Notice["cause"];
+  /** The analyses removed, in the order of the definitions. */
+  readonly removed: readonly AnalysisId[];
+  /** The ids of the requests it left behind. */
+  readonly runs: ReadonlySet<number>;
+}
+
 /** The keys of the analyses, and the project and version they were made
     for. */
 interface Keyed {
@@ -376,6 +386,8 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
   const refusals = new Map<Key, AnalysisError>();
   /** The other failures, kept until the next change of the user. */
   const failures = new Map<Key, AnalysisError>();
+  /** What the last change removed and left behind, or `null`. */
+  let notice: NoticeKept | null = null;
 
   let locks: {
     readonly project: Project;
@@ -462,9 +474,103 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       };
     }
     const error = refusals.get(key) ?? failures.get(key);
-    return error === undefined
-      ? { kind: "ready", key }
-      : { kind: "error", key, error };
+    if (error !== undefined) {
+      return { kind: "error", key, error };
+    }
+    return notice?.removed.includes(id) === true
+      ? { kind: "removed", key }
+      : { kind: "ready", key };
+  };
+
+  /** Whether the current project gives the request its key. */
+  const isCurrent = (
+    request: InFlight<J, R>,
+    keys: readonly AnalysisKey[],
+  ): boolean => {
+    const current = keys[request.index];
+    return current?.kind === "keyed" && current.key === request.key;
+  };
+
+  /** Whether the analysis at `index` is done under the current keys. */
+  const isDone = (index: number, keys: readonly AnalysisKey[]): boolean => {
+    const current = keys[index];
+    return current?.kind === "keyed" && get(cache, current.key) !== null;
+  };
+
+  /** The requests in flight, not being stopped, whose key the current
+      project does not give: the calculations left behind. */
+  const leftBehindNow = (keys: readonly AnalysisKey[]): Set<number> =>
+    new Set(
+      [...requests.values()]
+        .filter((request) => !request.stopping && !isCurrent(request, keys))
+        .map((request) => request.runId),
+    );
+
+  /** Stops a request: marks it and calls the `cancel()` of its handle. */
+  const stop = (request: InFlight<J, R>): void => {
+    requests.set(request.runId, { ...request, stopping: true });
+    request.handle.cancel();
+  };
+
+  /** Stops each request of `runIds` still in flight and not being
+      stopped; whether it stopped any. */
+  const stopAll = (runIds: Iterable<number>): boolean => {
+    let stopped = false;
+    for (const runId of [...runIds]) {
+      const request = requests.get(runId);
+      if (request !== undefined && !request.stopping) {
+        stop(request);
+        stopped = true;
+      }
+    }
+    return stopped;
+  };
+
+  /** Takes out of the notice an analysis done again, and a request that
+      ended, is being stopped, or whose key the project gives again; drops
+      the notice when nothing is left in it. */
+  const settle = (): void => {
+    if (notice === null) {
+      return;
+    }
+    const keys = currentKeys();
+    const removed = notice.removed.filter(
+      (id) =>
+        !isDone(
+          defs.findIndex((def) => def.id === id),
+          keys,
+        ),
+    );
+    const behind = leftBehindNow(keys);
+    const runs = new Set([...notice.runs].filter((runId) => behind.has(runId)));
+    if (removed.length === 0 && runs.size === 0) {
+      notice = null;
+    } else if (
+      removed.length !== notice.removed.length ||
+      runs.size !== notice.runs.size
+    ) {
+      notice = { cause: notice.cause, removed, runs };
+    }
+  };
+
+  /** The notice the screens read, `previous` itself when it did not
+      change. */
+  const noticeOf = (previous: Notice | null): Notice | null => {
+    if (notice === null) {
+      return null;
+    }
+    const named = new Set(
+      [...notice.runs].flatMap((runId) => {
+        const request = requests.get(runId);
+        return request === undefined ? [] : [request.def.id];
+      }),
+    );
+    const leftBehind = defs.map((def) => def.id).filter((id) => named.has(id));
+    return previous?.cause === notice.cause &&
+      sameIds(previous.removed, notice.removed) &&
+      sameIds(previous.leftBehind, leftBehind)
+      ? previous
+      : { cause: notice.cause, removed: notice.removed, leftBehind };
   };
 
   /** The calculations in flight, reusing each view of `previous` that did
@@ -517,6 +623,7 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
         ? previous.analyses
         : views;
     const runs = runsOf(keys, previous?.runs ?? null);
+    const shownNotice = noticeOf(previous?.notice ?? null);
     const project = history.present.project;
     const undoText =
       history.past.length > 0 ? history.present.description : null;
@@ -527,7 +634,8 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       previous.redo === redoText &&
       previous.popneiVersion === popneiVersion &&
       previous.analyses === analyses &&
-      previous.runs === runs
+      previous.runs === runs &&
+      previous.notice === shownNotice
     ) {
       return previous;
     }
@@ -538,7 +646,7 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       popneiVersion,
       analyses,
       runs,
-      notice: null,
+      notice: shownNotice,
     };
   };
 
@@ -546,6 +654,7 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
 
   /** Makes the state again and, when it changed, calls each listener. */
   const changed = (): void => {
+    settle();
     const next = stateOf(state);
     if (next === state) {
       return;
@@ -565,14 +674,50 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
     }
   };
 
-  /** Takes `next`, the history after a change of the user, and forgets
-      the failures that are not popnei's when it is not the one there
-      was. */
-  const changedByUser = (next: History): void => {
-    if (next !== history) {
-      failures.clear();
-      moved(next);
+  /**
+   * Takes `next`, the history after a command, an undo or a redo, when it
+   * is not the one there was: forgets the failures that are not popnei's,
+   * stops the calculations the notice named whose key the new project
+   * still does not give, and makes the notice of this change, `cause`,
+   * with the analyses that were done and are not, and the calculations it
+   * leaves behind; none when it has neither.
+   */
+  const changedByUser = (
+    next: History,
+    cause: (before: History, after: History) => Notice["cause"],
+  ): void => {
+    if (next === history) {
+      return;
     }
+    const before = history;
+    const doneBefore = new Set(
+      state.analyses
+        .filter((view) => view.status.kind === "done")
+        .map((view) => view.id),
+    );
+    failures.clear();
+    history = next;
+    const keys = currentKeys();
+    if (notice !== null) {
+      const behind = leftBehindNow(keys);
+      stopAll([...notice.runs].filter((runId) => behind.has(runId)));
+    }
+    const removed = defs
+      .filter((def, index) => doneBefore.has(def.id) && !isDone(index, keys))
+      .map((def) => def.id);
+    const runs = leftBehindNow(keys);
+    notice =
+      removed.length === 0 && runs.size === 0
+        ? null
+        : { cause: cause(before, next), removed, runs };
+    changed();
+  };
+
+  /** Stops every calculation in flight and drops the notice, for a
+      change after which no undo gives their keys back. */
+  const stopEverything = (): void => {
+    stopAll(requests.keys());
+    notice = null;
   };
 
   /** The definition of `id` and its place, or a defect. */
@@ -657,19 +802,36 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       if (next === present) {
         return;
       }
-      changedByUser(commit(history, freezeProject(next), description));
+      changedByUser(commit(history, freezeProject(next), description), () => ({
+        kind: "command",
+        description,
+      }));
     },
     undo: () => {
-      changedByUser(undo(history));
+      changedByUser(undo(history), (before) => ({
+        kind: "undo",
+        description: before.present.description,
+      }));
     },
     redo: () => {
-      changedByUser(redo(history));
+      changedByUser(redo(history), (_before, after) => ({
+        kind: "redo",
+        description: after.present.description,
+      }));
     },
     open: (p) => {
-      changedByUser(startHistory(freezeProject(p), history.maxSteps));
+      const opened = startHistory(freezeProject(p), history.maxSteps);
+      stopEverything();
+      failures.clear();
+      moved(opened);
     },
     dismissNotice: () => {
-      throw notBuilt("dismissNotice");
+      if (notice === null) {
+        return;
+      }
+      stopAll(notice.runs);
+      notice = null;
+      changed();
     },
     startRun: (id) => {
       const { def, index } = defOf(id, "startRun");
@@ -693,7 +855,10 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
           `the analysis ${JSON.stringify(id)} has a key with no version of popnei or no variants file.`,
         );
       }
-      const sending: { handle: Run<R> | null } = { handle: null };
+      const sending: { handle: Run<R> | null; afterStop: boolean } = {
+        handle: null,
+        afterStop: false,
+      };
       const client: WorkerClient<J, R> = {
         run: (job) => {
           if (sending.handle !== null) {
@@ -701,6 +866,14 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
               `the analysis ${JSON.stringify(id)} sent a second request from one run.`,
             );
           }
+          // The calculations left behind are stopped before the new
+          // request is sent, so that it does not wait behind them.
+          if (notice !== null) {
+            stopAll(notice.runs);
+          }
+          sending.afterStop = [...requests.values()].some(
+            (request) => request.stopping,
+          );
           // A progress given before `send` returns has no request to go
           // to, and is passed over.
           const sent = config.send(key, job, (progress) => {
@@ -721,10 +894,13 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
         // Nothing is recorded yet; what the analysis sent is stopped, so
         // that no calculation runs that the store does not know.
         sending.handle?.cancel();
+        // The calculations it stopped before sending stay stopped.
+        changed();
         throw error;
       }
       if (handle !== sending.handle || requests.has(handle.id)) {
         sending.handle?.cancel();
+        changed();
         throw defect(
           `the run of the analysis ${JSON.stringify(id)} gave a handle its client did not give, or of a request already in flight.`,
         );
@@ -740,7 +916,7 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
         handle,
         progress: null,
         stopping: false,
-        afterStop: false,
+        afterStop: sending.afterStop,
       });
       changed();
       return handle;
@@ -755,8 +931,7 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
           request.key === current.key &&
           !request.stopping
         ) {
-          requests.set(request.runId, { ...request, stopping: true });
-          request.handle.cancel();
+          stop(request);
           changed();
           return;
         }
@@ -764,6 +939,11 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
     },
     popneiReady: (version) => {
       if (version !== popneiVersion) {
+        // Another version changes every key, and no undo gives the old
+        // one back.
+        if (popneiVersion !== null) {
+          stopEverything();
+        }
         popneiVersion = version;
         changed();
       }
@@ -888,7 +1068,7 @@ function defect(message: string): Error {
   return new Error(`popnei_web defect: ${message}`);
 }
 
-/** A function of the store a later task of the plan builds. */
-function notBuilt(name: string): Error {
-  return defect(`${name} of the store is not built yet.`);
+/** Whether two lists of analyses are the same, in the same order. */
+function sameIds(a: readonly AnalysisId[], b: readonly AnalysisId[]): boolean {
+  return a.length === b.length && a.every((id, index) => id === b[index]);
 }
