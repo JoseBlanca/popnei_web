@@ -380,7 +380,7 @@ order.
   and `ready`; from the store spec's "The state of an analysis",
   "Commands and events", "How it runs" and "The TypeScript interface".
   Serves 1.
-- [ ] 4.2 `startRun`, `cancelRun` and `runEnded`, the client bound to one
+- [x] 4.2 `startRun`, `cancelRun` and `runEnded`, the client bound to one
   key, the cache and its uses, the warnings, the refusals kept and the
   other failures kept until the next change, and the states `running`,
   `done` and `error`; from the store spec's "The definition of an

@@ -222,6 +222,19 @@ Under way.
   analysis's result reaches only its own definition's functions is kept
   by a rule of the spec, and two definitions of one id make
   `createStore` throw, rather than by the types.
+- Task 4.2, 3b1fa65, after the spec in 805fe86: `startRun`, `cancelRun`
+  and `runEnded`, the cache, the warnings, the refusals and failures,
+  and the states `running`, `done` and `error`. `npx vitest run
+  src/core/store.test.ts -t "WP4 D2"` gives "Tests 16 passed", of at
+  least 10, with the test that a result reaches only its own analysis's
+  warnings, and a key from a worker that is not a key: the request is
+  out of those in flight, and the screens told, before the defect is
+  thrown. Twenty-eight breaks, each failing 1 to 8 tests; one passed
+  at first, and its test was made stronger. The smaller choices written
+  into the spec: a failure other than popnei's refusal is forgotten at
+  a command, an undo, a redo or an opening, not at a read of a file; a
+  run asked again forgets the failure it retries; a client that sends
+  twice is a defect, and what it sent is cancelled.
 
 ## 2. The keys
 
