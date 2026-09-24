@@ -12,31 +12,32 @@ JavaScript.
 
 ## Which CSS the browsers have
 
-The applications run where popnei's wasm runs: Chrome and Edge from 91,
-Firefox from 89, Safari from 16.4 (`docs/objectives.md` of popnei). That
-floor is older than much of what is called modern CSS, and a feature a
-browser lacks does not fail loudly: the rule, or the whole block, is
-ignored, and the page looks broken only in that browser. The Playwright
-tests run current engines, so nothing tests the floor; this table is the
-check. The floor is open for the owner (point 1 of "Open for the owner"
-in `SKILL.md`), and the table follows the floor that is decided.
+The applications run from Chrome and Edge 111, Firefox 115 and Safari
+16.4, the floor the owner set for them on 24 September 2026
+(`docs/technology.md`, section 6). That floor is older than some of what
+is called modern CSS, and a feature a browser lacks does not fail
+loudly: the rule, or the whole block, is ignored, and the page looks
+broken only in that browser. The Playwright tests run current engines,
+so nothing tests the floor; this table is the check.
 
 | feature | Chrome, Firefox, Safari | here |
 |---|---|---|
 | custom properties, grid, flex with `gap`, `clamp()`, `min()`, `max()`, `:is()`, `:where()`, `:focus-visible`, `aspect-ratio`, logical properties (`margin-inline`, `inset`), `prefers-color-scheme`, `prefers-reduced-motion`, `forced-colors`, `@supports selector()` | all at the floor | allowed |
-| nesting, `&` | 120, 117, 17.2 | **not used**. The build does flatten it for the floor, since `build.target` is the floor (`configs.md`) and Vite's minifier of CSS, Lightning CSS, lowers nesting for that target; but the flattened styles are seen only in the old browsers, which no test opens, so a mistake in them would go unseen. The selectors of a CSS Module are short enough flat |
-| `@layer` | 99, 97, 15.4 | **not used**. A browser without it ignores everything inside the block, so the styles vanish |
+| container queries, `@container`, `cqi` | 105, 110, 16 | allowed |
+| media range syntax, `(width >= 40em)` | 104, 102, 16.4 | allowed |
+| `dvh` and the other dynamic viewport units | 108, 101, 15.4 | allowed |
+| `@layer` | 99, 97, 15.4 | allowed, and not needed while every style is a CSS Module of low and equal specificity; a style outside a layer wins over every layer, so if one is used, all the global CSS goes in layers |
+| `color-mix()`, `oklch()` | `color-mix()` 111, 113, 16.2; `oklch()` 111, 113, 15.4 | allowed by the floor, and not used: a colour is written only in `tokens.css`, and written out, since the test of contrast reads the values as they are written (below) |
+| nesting, `&` | 120, 117, 17.2 | **not used**. The build does flatten it for the floor, since `build.cssTarget` is the floor (`configs.md`) and Vite's minifier of CSS, Lightning CSS, lowers nesting for that target; but the flattened styles are seen only in the old browsers, which no test opens, so a mistake in them would go unseen. The selectors of a CSS Module are short enough flat |
 | `:has()` | 105, 121, 15.4 | **not used** for anything that must work. A selector list that holds it is dropped whole where it is unknown. Where its absence is harmless it goes inside `@supports selector(:has(*))` |
-| container queries, `@container`, `cqi` | 105, 110, 16 | only as an improvement over a layout that works without them |
-| `subgrid` | 117, 71, 16 | only as an improvement |
-| `color-mix()`, `oklch()`, `light-dark()`, relative colours | 111 to 123 | **not used**. The tokens hold every colour written out |
-| media range syntax, `(width >= 40em)` | 104, 63, 16.4 | **not used**; `(min-width: 40em)` |
-| `dvh` and the other dynamic viewport units | 108, 101, 15.4 | **not used** |
+| `subgrid` | 117, 71, 16 | only as an improvement over a layout that works without it |
+| `light-dark()` | 123, 120, 17.5 | **not used**. The tokens hold every colour written out |
+| relative colours, `rgb(from …)` | 122, 128, 18 | **not used** |
 | `@property` | 85, 128, 16.4 | **not used** |
+| `@scope`; `@starting-style`; `transition-behavior` | 118, 146, 26.4; 117, 129, 17.5; 117, 129, 17.4 | **not used** |
 | `text-wrap: balance` | 114, 121, 17.5 | allowed: where it is missing the text wraps as usual |
 
-When popnei raises its floor, or the applications set one of their own,
-this table is revised first.
+When the floor rises, this table is revised first.
 
 ## The tokens
 
@@ -403,8 +404,8 @@ floor of the browsers changes.
 ## Sources
 
 - MDN Web Docs and its browser compatibility data (the package
-  `@mdn/browser-compat-data`, read on 24 September 2026) for the versions
-  of the table of features; caniuse.com agrees with it.
+  `@mdn/browser-compat-data` 8.1.2, read on 24 September 2026) for the versions
+  of the table of features.
 - React Aria, react-aria.adobe.com, "Styling": the data attributes, the
   `className` function, the variables of the popover.
 - WCAG 2.2, w3.org/TR/WCAG22, and its Understanding documents for 1.4.1,

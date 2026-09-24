@@ -74,9 +74,8 @@ forty commands is hard to read. fast-check has been maintained since
 package of its own author, pure-rand. It is a development dependency, so
 nothing of it reaches the site. It is used plainly, `fc.assert(fc.property(...))`
 inside a Vitest `test`; the adapter `@fast-check/vitest` is at version 0.5
-and is not needed. It is a new dependency, so it waits for the owner's
-yes (see the end of this file); until then the properties are not
-written, and the examples are.
+and is not needed. The owner took it on 24 September 2026 (see the end
+of this file).
 
 A property test runs 100 cases by default. That is kept: the properties
 are over small values, and a slower suite is run less often.
@@ -190,7 +189,6 @@ test: {
       },
     },
   ],
-  coverage: { provider: "v8", include: ["src/core/**", "src/worker/**"] },
 },
 ```
 
@@ -217,16 +215,16 @@ The scripts in `package.json`:
 |---|---|---|
 | `test` | `vitest run` | every Vitest test, once; the check before done |
 | `test:watch` | `vitest` | for the owner at a terminal: reruns the tests of what changed on every save |
-| `test:coverage` | `vitest run --coverage` | which lines of `src/core` and `src/worker` no test runs |
 
 A session always runs `npm test`, never `npx vitest` alone, because in a
 terminal plain `vitest` does not end: it waits for changes.
 
-Coverage, with `@vitest/coverage-v8`, is a tool for finding a branch that
-no test reaches, and has no threshold that fails the build. A percentage
-rewards a test that runs a line without asserting anything about it, and
-the rule that matters, that each test can fail, is not one a percentage
-sees.
+Coverage is not measured for now: `@vitest/coverage-v8`, which would
+measure it, is optional, and the owner left it out on 24 September 2026.
+If it is taken later, it is a tool for finding a branch that no test
+reaches, with no threshold that fails the build. A percentage rewards a
+test that runs a line without asserting anything about it, and the rule
+that matters, that each test can fail, is not one a percentage sees.
 
 ## Playwright
 
@@ -480,20 +478,20 @@ On a push to `main`, when both passed:
 the URL and the hash of the lockfile (`docs/technology.md`, section 5), so
 the workflow needs no token and no Rust.
 
-## New dependencies this file proposes
+## The dependencies of the tests
 
-All are development dependencies, none reaches the site:
+All are development dependencies, none reaches the site. The owner
+decided them on 24 September 2026, and `docs/technology.md`, section 2,
+records them:
 
 | package | for | owner's decision |
 |---|---|---|
-| `vitest` | the tests without a browser | taken, `docs/technology.md` |
-| `@playwright/test` | the tests in the three browsers | taken, `docs/technology.md` |
-| `jsdom` | the DOM of the tests of the plots | open for the owner |
-| `@vitest/coverage-v8` | coverage, same maintainers as Vitest | open for the owner |
-| `@axe-core/playwright` | the checks of accessibility, by Deque | open for the owner |
-| `fast-check` | the property tests of `src/core` | open for the owner |
-
-The four open ones are point 2 of "Open for the owner" in `SKILL.md`.
+| `vitest` | the tests without a browser | taken |
+| `@playwright/test` | the tests in the three browsers | taken |
+| `jsdom` | the DOM of the tests of the plots | taken |
+| `@axe-core/playwright` | the checks of accessibility, by Deque | taken |
+| `fast-check` | the property tests of `src/core` | taken |
+| `@vitest/coverage-v8` | coverage, same maintainers as Vitest | not taken for now; coverage is not measured |
 
 Not taken: happy-dom, `@testing-library/react` with `user-event` and
 `jest-dom`, `@fast-check/vitest`, and tools of visual regression for now,

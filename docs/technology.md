@@ -26,18 +26,19 @@ the applications do is in `docs/functionality.md`.
 
 | layer | choice |
 |---|---|
-| language | TypeScript |
-| build | Vite |
+| language | TypeScript 6.0, and 7 when typescript-eslint supports it |
+| build | Vite, with @vitejs/plugin-react |
 | UI framework | React, as a client application, with no server framework |
 | accessible widgets | React Aria Components |
 | CSS | plain modern CSS, custom properties as design tokens, CSS Modules |
-| 2D plots | D3 |
-| 3D plot | three.js |
+| 2D plots | D3, as its modules, `d3-selection`, `d3-scale`, `d3-path` and the others, with their `@types/d3-*` |
+| 3D plot | three.js, with `@types/three` |
 | calls to the worker | a small typed message layer of our own |
 | documentation and in-app help | Markdown, rendered with markdown-it |
 | xlsx, zip | in Rust, in a second wasm module loaded when needed: calamine, rust_xlsxwriter, zip |
-| tests | Vitest, Playwright |
-| lint and format | ESLint with typescript-eslint, Prettier |
+| tests | Vitest, Playwright; for development only jsdom, @axe-core/playwright and fast-check |
+| lint and format | ESLint with @eslint/js, typescript-eslint and eslint-plugin-react-hooks, Prettier |
+| types of node | @types/node, for development only |
 | package manager | npm |
 | host | GitHub Pages |
 | popnei itself | its wasm package, from a GitHub Release of popnei (section 5) |
@@ -48,11 +49,24 @@ The wasm package of popnei ships TypeScript declarations of its functions
 and its results, so the application is typed from the core to the
 screen.
 
+The compiler is TypeScript 6.0, 6.0.3, and the move to 7 is made when
+typescript-eslint supports it, as the owner decided on 24 September 2026.
+typescript-eslint, whose rules that read types catch most of the
+mistakes the `coding` skill lists, reads the types through the
+programmatic API of the compiler, and 7.0, rewritten in Go, has only
+unstable ones: typescript-eslint 8.70.1 takes TypeScript `>=4.8.4
+<6.1.0`. 6.0 is the release that leads to 7, with the same language and
+the defaults of 7, so the move is expected to be a change of version
+and no change of code. Vite's React template pins `~6.0.2` too.
+
 ### Vite
 
 The standard bundler, the one the templates of most frameworks use. It
 writes plain static files, and it handles WebAssembly and web workers
-without plugins of our own.
+without plugins of our own. `@vitejs/plugin-react`, which Vite's team
+maintains, is part of it for a React application: it compiles the JSX
+and refreshes a component in the development server without losing its
+state.
 
 ### React
 
@@ -81,6 +95,20 @@ Because the logic is in `src/core` and the plots are plain functions
 (section 3), the framework only draws the screens. Replacing it would
 rewrite the screens and nothing else.
 
+**eslint-plugin-react-hooks**, a development dependency, taken on 24
+September 2026. It is the React team's own lint of the Rules of Hooks and
+of what each effect depends on, the mistakes of React that compile and
+run and show a stale value; version 7 also holds the rules the compiler
+would need.
+
+**The React Compiler is off** for the walking skeleton, as the owner
+decided on 24 September 2026. It memoizes the components at build time,
+which spares the question of when to memoize by hand, but it is three
+development packages more, one of them first published in February 2026
+(`.claude/skills/coding/react.md`). The decision is taken again after the
+walking skeleton, with a measurement of what the renders of its screens
+cost without it.
+
 ### React Aria Components
 
 Unstyled, accessible components from Adobe, which builds its own design
@@ -99,8 +127,9 @@ Plain CSS, which is never deprecated, and whose custom properties, grid
 and flex cover what Sass was used for. Which of the newer features of CSS
 can be used, nesting, `:has()`, container queries, depends on the oldest
 browsers the applications support: nesting, for one, needs Chrome 120,
-Firefox 117 and Safari 17.2, newer than popnei's floor of Chrome 91,
-Firefox 89 and Safari 16.4. The table of what is allowed is in
+Firefox 117 and Safari 17.2, newer than the floor of the applications,
+Chrome 111, Firefox 115 and Safari 16.4 (section 6). The table of what
+is allowed is in
 `.claude/skills/coding/css.md`. The design tokens,
 colours, spacing, type, radii, are custom properties on `:root`, which
 gives a dark theme by redefining them. The styles of a component are a
@@ -121,6 +150,16 @@ canvas at two or three times its size.
 The applications have about ten kinds of plot: histograms, scatter plots,
 the QQ plot, line plots, the heatmap, the Manhattan plot. Each is written
 once.
+
+D3 is taken as its modules, not as the `d3` package, as the owner
+decided on 24 September 2026: `d3-selection`, `d3-scale`, `d3-axis`,
+`d3-shape`, `d3-path`, `d3-array`, `d3-format`, `d3-zoom`, `d3-delaunay`
+and `d3-scale-chromatic`, each with its `@types/d3-*` for development,
+since D3 ships no types. The `d3` package brings every module, geography
+and forces among them, and a list of the modules says in `package.json`
+what the plots use. The list and its versions are in
+`.claude/skills/coding/charts.md`; a module added later, `d3-brush` or
+`d3-polygon`, is a new dependency like any other.
 
 No 2D plot needs WebGL, because the points are reduced before they are
 drawn. Only the Manhattan plot has many, up to a million; every variant
@@ -152,7 +191,9 @@ Considered and not taken:
 The established library of WebGL, since 2010. The 3D scatter of the PCA
 is drawn with it, with a thin layer of ours for the axes, the rotation,
 the hover and, later, the lasso, which would be our code with any library.
-Every browser that popnei runs in has WebGL.
+Every browser that popnei runs in has WebGL. three.js ships no types of
+its own, so `@types/three`, from DefinitelyTyped, is taken with it for
+development.
 
 ### The calls to the worker
 
@@ -228,8 +269,30 @@ Considered and not taken:
   browser; **Playwright** for the tests in a browser, Chromium, Firefox
   and WebKit, which are the three engines popnei supports.
 - **ESLint** with typescript-eslint, and **Prettier**, the established
-  pair. Biome, one faster tool for both, is younger.
+  pair. Biome, one faster tool for both, is younger. `@eslint/js`, the
+  rules ESLint recommends, is part of ESLint, published by its team.
 - **npm**, which comes with node.
+
+For development only, taken by the owner on 24 September 2026:
+
+- **jsdom**, the DOM in node that the tests of the plots run in. It has
+  been maintained since 2010 and is what most DOM tests run on; happy-dom,
+  faster, lacks some of what the plots use.
+- **@axe-core/playwright**, by Deque, which runs axe, the usual
+  automatic checker of accessibility, inside the Playwright tests.
+- **fast-check**, the property-based testing of JavaScript, as
+  Hypothesis is for Python: it draws random projects and sequences of
+  commands and shrinks a failure to the smallest one. It depends on one
+  small package of its author.
+- **@types/node**, the types of node, for the configuration files and
+  the tests that read files.
+
+Not taken: `@vitest/coverage-v8`, which is optional, so coverage is not
+measured for now (`.claude/skills/coding/testing.md`); and
+`eslint-plugin-jsx-a11y`, a lint of accessibility in the markup, not
+proposed for now: the widgets come from React Aria, which gives them their
+roles and labels, and axe checks every state of the screens in the
+browser (`.claude/skills/coding/testing.md`).
 
 ## 3. The layout of the code
 
@@ -314,7 +377,22 @@ uses the local build of popnei, with `npm link` or
 `"popnei": "file:../popnei/js/popnei"`, which is never committed. What is
 committed, and what the site is built from, is always a release.
 
-## 6. Open points
+## 6. The browsers
+
+The applications run from Chrome and Edge 111, Firefox 115 and Safari
+16.4, on macOS and iOS, as the owner decided on 24 September 2026. That
+is higher than popnei's own floor for the library, Chrome 91, Firefox 89
+and Safari 16.4, which stays as it is. The reasons: React Aria calls
+`Array.prototype.findLast`, Chrome 97 and Firefox 104, and `at`, Firefox
+90; a module worker, which lets the files wasm be loaded apart, needs
+Firefox 114; and what is lost is Chrome and Firefox of 2021 to 2023,
+while Safari, and so every browser of iOS, stays at 16.4. The versions
+are those of MDN's compatibility data. What follows from it, the
+language the compiler accepts, the CSS allowed and the build of the
+worker, is in `.claude/skills/coding/typescript.md`, `css.md` and
+`worker.md`.
+
+## 7. Open points
 
 1. Whether calamine reads right the xlsx files that users make, dates,
    sparse rows and Excel in other languages included, on a set of

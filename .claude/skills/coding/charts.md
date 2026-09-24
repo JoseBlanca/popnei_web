@@ -115,9 +115,10 @@ Each with its `@types/d3-*`, and three.js with `@types/three`, since it
 ships no types of its own. The versions are those of `npm view` on 24
 September 2026; D3 moves slowly, and a new major version of a module is
 read in its changelog before it is taken. `d3-brush`, to select a region,
-and `d3-polygon`, for the lasso, are added when a plot first needs them.
-Taking D3 as these modules, and `@types/three`, is open for the owner
-(point 2 of "Open for the owner" in `SKILL.md`).
+and `d3-polygon`, for the lasso, are added when a plot first needs them,
+each a new dependency for the owner to take. The owner took D3 as these
+modules, `d3-path` among them, with their `@types/d3-*`, and
+`@types/three`, on 24 September 2026 (`docs/technology.md`, section 2).
 
 The reason is the bundle and the list of dependencies. The `d3` package,
 7.9.0, brings every module, geography, forces, CSV parsing, and while a

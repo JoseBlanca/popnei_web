@@ -2,16 +2,18 @@
 
 The files that set up the compiler, the linter, the formatter, npm and
 Vite, as the walking skeleton is to create them, with the reason of each
-setting that is not the default. `SKILL.md`, beside this file, gives the
-rules they enforce. The ESLint and TypeScript files below were run on 24
-September 2026 against a scratch project with typescript 6.0.3,
-typescript-eslint 8.70.1, eslint 10.11.0 and vite 8.3.0, and caught what
+setting that is not the default. `SKILL.md` and `typescript.md`, beside
+this file, give the rules they enforce. The ESLint and TypeScript files
+below were run on 24 September 2026 against a scratch project with
+typescript 6.0.3, typescript-eslint 8.70.1, eslint 10.11.0 and vite 8.3.0, and caught what
 they are meant to: a `document` in `src/core`, an import of `src/ui` from
 `src/core`, a type assertion, a `switch` that misses a case, a number used
 as a condition, a default export. Added after that run, on the same day,
 and not yet run: the patterns `coreButResult` and `worker` and the block
 of `protocol.ts` in ESLint, `tsconfig.test.json`, the `include` of
-`tsconfig.node.json`, and `.gitignore`.
+`tsconfig.node.json`, `.gitignore`, and the `target` and `lib` of
+ES2022 and `ES2023.Array`, with the browser floor of `vite.config.ts`
+and its `worker.format`, which the owner's floor of that day brought.
 
 The configuration of Vitest and of Playwright is in `testing.md`.
 
@@ -44,7 +46,6 @@ install on a Node older than `engines` fail instead of warn.
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
     "test:e2e": "npm run build && playwright test --project=chromium --project=firefox --project=webkit",
     "screens": "npm run build && playwright test --project=screens"
   }
@@ -58,9 +59,10 @@ install on a Node older than `engines` fail instead of warn.
 - `build` does not run `tsc` first, as Vite's template does, because the
   checks of `SKILL.md` run it on their own and a build that also type
   checks hides which of the two failed.
-- `test:watch`, `test:coverage`, `test:e2e` and `screens` are
-  `testing.md`'s, which says what each is for and why the last two build
-  first.
+- `test:watch`, `test:e2e` and `screens` are `testing.md`'s, which says
+  what each is for and why the last two build first. There is no
+  `test:coverage`: coverage is not measured for now, as the owner decided
+  (`testing.md`).
 - `--max-warnings=0`: a warning that is allowed to stay is one nobody
   reads. Every rule is an error or off.
 
@@ -78,7 +80,7 @@ worker, `FileReaderSync` on the page.
 ```json
 {
   "compilerOptions": {
-    "target": "ES2021",
+    "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
     "moduleDetection": "force",
@@ -104,15 +106,21 @@ worker, `FileReaderSync` on the page.
 }
 ```
 
-- `target` and `lib` ES2021, the language of the oldest browsers the site
-  supports, popnei's floor: Chrome 91, Firefox 89, Safari 16.4
-  (`worker.md`). Vite rewrites newer syntax for `build.target`, but it
-  adds no missing function, so `lib` is what keeps the code from calling
-  one those browsers lack: `Array.prototype.at` and `Object.hasOwn`, of
-  ES2022, and `toSorted` and `findLast`, of ES2023, are not there in
-  Firefox 89, and a call to one would fail only in that browser. When the
-  floor rises, `lib` rises with it. The floor is open for the owner
-  (point 1 of "Open for the owner" in `SKILL.md`).
+- `target` ES2022 and `lib` ES2022 with `ES2023.Array`, the language of
+  the oldest browsers the applications support, the floor the owner set
+  on 24 September 2026: Chrome and Edge 111, Firefox 115, Safari 16.4
+  (`docs/technology.md`, section 6). Every piece of syntax of ES2022, the
+  class fields and their static blocks among them, is in those browsers,
+  Safari 16.4 being the last to take the static blocks. Vite rewrites
+  newer syntax for `build.target`, but it adds no missing function, so
+  `lib` is what keeps the code from calling one those browsers lack. It
+  is not the whole of ES2023: `findLast`, `toSorted` and the other
+  methods of `ES2023.Array` are there from Chrome 110, Firefox 115 and
+  Safari 16, but `ES2023.Collection`, a symbol as the key of a
+  `WeakMap`, needs Firefox 146, and `ES2023.Intl`, the rounding options of
+  `Intl.NumberFormat`, Firefox 116. What `lib` lets through and the
+  floor lacks, `Intl.Segmenter` of ES2022, is listed in `typescript.md`.
+  When the floor rises, `lib` rises with it.
 - `moduleResolution: "bundler"`, the one for code that Vite resolves;
   `allowImportingTsExtensions` and `noEmit`, so imports name the `.ts`
   file and `tsc` only checks.
@@ -127,7 +135,7 @@ worker, `FileReaderSync` on the page.
 - `strict`, which TypeScript 6.0 has on by default and is written anyway
   so nobody has to know the default. The rest are the checks that
   `strict` leaves out: `noUncheckedIndexedAccess` and
-  `exactOptionalPropertyTypes`, whose reasons are in `SKILL.md`;
+  `exactOptionalPropertyTypes`, whose reasons are in `typescript.md`;
   `noImplicitReturns`, a function whose branches do not all return;
   `noFallthroughCasesInSwitch`; `noImplicitOverride`;
   `noPropertyAccessFromIndexSignature`, so that `record["name"]`, which may
@@ -143,7 +151,7 @@ worker, `FileReaderSync` on the page.
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.core.tsbuildinfo",
-    "lib": ["ES2021"],
+    "lib": ["ES2022", "ES2023.Array"],
     "types": []
   },
   "include": ["src/core", "src/worker/protocol.ts"],
@@ -165,7 +173,7 @@ one declaration, not the whole DOM.
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.worker.tsbuildinfo",
-    "lib": ["ES2021", "WebWorker"],
+    "lib": ["ES2022", "ES2023.Array", "WebWorker"],
     "types": []
   },
   "include": ["src/worker"],
@@ -184,7 +192,7 @@ since both sides import it.
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
-    "lib": ["ES2021", "DOM", "DOM.Iterable"],
+    "lib": ["ES2022", "ES2023.Array", "DOM", "DOM.Iterable"],
     "types": ["vite/client"],
     "jsx": "react-jsx"
   },
@@ -204,7 +212,7 @@ browser, which run in node:
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
-    "lib": ["ES2021", "DOM"],
+    "lib": ["ES2022", "ES2023.Array", "DOM"],
     "types": ["node"]
   },
   "include": ["vite.config.ts", "playwright.config.ts", "e2e"]
@@ -222,7 +230,7 @@ browser, which run in node:
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo",
-    "lib": ["ES2021", "DOM", "DOM.Iterable"],
+    "lib": ["ES2022", "ES2023.Array", "DOM", "DOM.Iterable"],
     "types": ["node"]
   },
   "include": ["src/core/**/*.test.ts", "src/worker/**/*.test.ts", "src/ui/**/*.test.ts"]
@@ -302,7 +310,7 @@ const popneiValues = {
 };
 
 export default defineConfig(
-  globalIgnores(["dist/", "coverage/", "playwright-report/", "test-results/", "screens/"]),
+  globalIgnores(["dist/", "playwright-report/", "test-results/", "screens/"]),
   {
     files: ["**/*.{ts,tsx}"],
     extends: [
@@ -431,7 +439,7 @@ export default defineConfig(
   `no-restricted-exports`, no default export; `no-console` but for
   warnings and errors, so no debugging line is committed.
 - `consistent-type-assertions` with `never` in core and in the worker, as
-  `SKILL.md` says; `as const` is allowed by it.
+  `typescript.md` says; `as const` is allowed by it.
 - `no-restricted-imports` is typescript-eslint's version of the rule,
   which has `allowTypeImports`, so `import type` from popnei passes where
   its values do not.
@@ -439,9 +447,8 @@ export default defineConfig(
   worker's for that one file, since a later block wins for a rule; so it
   repeats the worker's patterns and adds `popneiValues`.
 - `react.md` adds the rules of React and of hooks to the block of
-  `src/ui`, if the owner takes `eslint-plugin-react-hooks`, which
-  `docs/technology.md` does not name: open for the owner (point 2 of
-  "Open for the owner" in `SKILL.md`).
+  `src/ui`, from `eslint-plugin-react-hooks`, which the owner took on 24
+  September 2026 (`docs/technology.md`, section 2).
 
 ## `.prettierrc.json`
 
@@ -463,7 +470,6 @@ typescript-eslint 8 have formatting rules in the configurations used.
 ```
 node_modules/
 dist/
-coverage/
 playwright-report/
 test-results/
 screens/
@@ -496,11 +502,11 @@ export default defineConfig({
     popgen: page("popgen"),
     gwas: page("gwas"),
   },
-  // The floor, open for the owner (SKILL.md, "Open for the owner").
-  build: { target: ["chrome91", "firefox89", "safari16.4"] },
-  // A classic worker, which Firefox 89 runs and a module worker it does
-  // not; the default, written so that nobody changes it (worker.md).
-  worker: { format: "iife" },
+  // The floor of the applications (docs/technology.md, section 6).
+  build: { target: ["chrome111", "edge111", "firefox115", "safari16.4"] },
+  // A module worker, so that the files wasm is a chunk of its own;
+  // not the default, "iife" (worker.md).
+  worker: { format: "es" },
   // test: { ... }, as testing.md gives it
 });
 ```
@@ -515,15 +521,20 @@ export default defineConfig({
 - `build.target` is the browser floor, and applies to the worker's bundle
   as well: Vite rewrites any newer syntax, of our code and of the
   dependencies, for those browsers. It is the syntax half of the floor;
-  `lib` in the TypeScript files is the other.
+  `lib` in the TypeScript files is the other. `build.cssTarget`, the
+  browsers Lightning CSS writes the styles for, is not written because
+  its default is `build.target`, so the CSS has the same floor. Vite's
+  own default target, Chrome 111, Firefox 114 and Safari 16.4, is one
+  version of Firefox below it; written out, the floor is here and not in
+  a default that changes with Vite.
 - `worker.format` and the way the worker is imported are `worker.md`'s.
 - With the pages in `pages/`, as section 9 of the architecture has them,
   the build writes them to `dist/pages/`, and they are served at
   `/popnei_web/pages/popgen.html`. Whether they move to the root of the
   repository, or Vite is given `pages/` as its root, is decided on the
   walking skeleton.
-- `react.md` adds the React Compiler to `plugins`, if the owner takes it:
-  open for the owner (point 4 of "Open for the owner" in `SKILL.md`).
+- No React Compiler in `plugins`: the owner decided on 24 September 2026
+  to leave it off for the walking skeleton (`react.md`).
 
 ## Sources
 

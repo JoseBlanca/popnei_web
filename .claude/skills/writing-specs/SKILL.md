@@ -115,21 +115,28 @@ against, instead:
 
 ## Before writing
 
-1. Read the sections of the three documents the part develops, and, for a
+1. Check that the part fits a slot of `docs/architecture.md` with its
+   interfaces and invariants as they are, by the test of the `designing`
+   skill. When it does not, or it needed a design, the approved design
+   comes first, since a spec written against an architecture that is
+   about to change is written twice. A spec that finds, while it is
+   written, that the architecture does not fit stops and asks the owner
+   for a design, and does not work around it.
+2. Read the sections of the three documents the part develops, and, for a
    screen, the specs of the modules it reads.
-2. Read the popnei functions it calls, their doc comments and their
+3. Read the popnei functions it calls, their doc comments and their
    tests. When the package is built, in
    `/Users/jose/devel/popnei/js/popnei/dist`, a case can be run under node
    to see what comes out.
-3. Write down what a reader of the documents would not expect: a default
+4. Write down what a reader of the documents would not expect: a default
    of popnei, a case it refuses, something the architecture assumes and
    popnei does not give yet. On 24 September 2026, for instance, `openVars`
    took the bytes of a whole file and not a `File` read as it streams, and
    no function of popnei reported its progress, while section 5 of the
    architecture counts on both. These are what the spec is most needed
    for.
-4. Make the sketch the writing skill asks for.
-5. Ask the owner, in a reply in chat, what would rewrite the spec if it
+5. Make the sketch the writing skill asks for.
+6. Ask the owner, in a reply in chat, what would rewrite the spec if it
    were answered after the writing: what the part offers that other parts
    will call, a line each, and any open point whose other answer would
    change more than a sentence. Each is asked as the writing skill asks for

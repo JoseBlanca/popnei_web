@@ -50,6 +50,10 @@ there because the shape below has a place for it.
   spec too thin to build from, the session tells the owner what is
   missing, and the plan has it as something that has to be in place. A
   plan does not stand in for a spec.
+- Where the change needed a design, as the `designing` skill says, the
+  design is approved by the owner too, and the plan builds on it. A plan
+  never settles the architecture: when writing it shows that the
+  architecture does not hold, the question goes back to a design.
 - The open points of those specs are answered by the owner, or each has a
   "meanwhile" that the work can follow. For each one that is not answered
   the plan says which task the answer would change.

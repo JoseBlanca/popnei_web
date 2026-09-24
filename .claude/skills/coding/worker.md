@@ -79,8 +79,8 @@ export type FromWorker =
   there, so that the page and the worker cannot describe a filter two
   ways. popnei has no such type: its filters are methods of `Variants`,
   which the runner calls in the order of the list.
-- **The populations are pairs, not a record keyed by their names**, as the
-  hub asks of every name from the user's files. popnei takes them as
+- **The populations are pairs, not a record keyed by their names**, as
+  `typescript.md` asks of every name from the user's files. popnei takes them as
   `Record<string, readonly string[]>`, `pops` of `PerVarDistribsOptions`,
   so the runner builds that record with `Object.fromEntries(pops)`, which
   makes a population named `__proto__` an ordinary key, and never with an
@@ -114,9 +114,9 @@ export type FromWorker =
 `MessageEvent.data` is typed `any` by the DOM, and it is read as `unknown`
 on both sides, then narrowed by a validator of `messages.ts`,
 `parseFromWorker(data: unknown): Result<FromWorker, ProtocolError>` and
-`parseToWorker`, with the `Result` of `src/core/result.ts`. The hub,
-`.claude/skills/coding/SKILL.md`, has the general rule of `unknown` at the
-boundaries.
+`parseToWorker`, with the `Result` of `src/core/result.ts`.
+`typescript.md`, beside this file, has the general rule of `unknown` at
+the boundaries.
 
 - **The validator is written by hand**, a function per kind that checks
   `kind`, the type of every field, `Number.isInteger(id)`, and
@@ -287,16 +287,17 @@ const ready = init().then(() => {
 - **The worker imports `popnei`, which resolves to `dist/web.js`** through
   the `exports` of popnei's `package.json`, and its loader fetches
   `popnei_bg.wasm` from `new URL("popnei_bg.wasm", import.meta.url)`.
-  Vite copies that file into the build and rewrites the address; inside a
-  classic worker it writes `import.meta.url` as `self.location.href`. That
-  popnei's loader works so inside our worker is the first thing the
-  walking skeleton checks: the README of popnei saw it work with Vite on a
-  page, not in a worker.
+  Vite copies that file into the build and rewrites the address; in a
+  module worker `import.meta.url` is the address of the worker's own
+  file, as it is on a page. That popnei's loader works so inside our
+  worker is the first thing the walking skeleton checks: the README of
+  popnei saw it work with Vite on a page, not in a worker.
 - **A handle of popnei is freed.** `openVcf` and `openVars` give a
   `Variants` that holds memory of wasm the garbage collector does not see,
   so the runner calls `free()` in a `finally`, or keeps it under its file
   id and frees it when the file is replaced. `using` is not used: it needs
-  `Symbol.dispose`, which the browsers of the floor do not all have.
+  `Symbol.dispose`, which Chrome has from 125, Firefox from 141 and
+  Safari not at all.
 
 ### The files wasm, on first need
 
@@ -304,16 +305,19 @@ The second wasm module, xlsx and zip (`docs/technology.md`), is loaded the
 first time a request needs it, so that a user of CSV files never downloads
 it.
 
-- **Its JavaScript is imported statically; its wasm is fetched lazily.**
-  The worker is built as a classic script (section "How Vite builds the
-  worker"), and a classic bundle cannot be split: Vite inlines every
-  dynamic `import()` into it. So an `await import("popnei-files")` would
-  give nothing over a static import. What weighs is the `.wasm`, about
-  0.5 MB gzipped, and it is fetched only when its `init()` is called. The
-  JavaScript that wasm-bindgen generates is a few tens of KB.
-- The runner keeps one promise, `filesReady ??= initFiles()`, and awaits
-  it in the handlers that read an individuals file or write a report, as
-  popnei's own `init` does.
+- **Both its JavaScript and its wasm are loaded on first need.** The
+  worker is built as a module worker (section "How Vite builds the
+  worker"), whose bundle Vite splits, so the runner imports the files
+  package with a dynamic `await import("popnei-files")`, which Vite makes
+  a chunk of its own, and calls its `init()`, which fetches the `.wasm`.
+  What weighs is the `.wasm`, about 0.5 MB gzipped; the JavaScript that
+  wasm-bindgen generates is a few tens of KB, and it no longer rides in
+  the worker's first file. A static `import` of it would put that
+  JavaScript back into the first file.
+- The runner keeps one promise, `filesReady ??= loadFiles()`, where
+  `loadFiles` does the import and the `init()`, and awaits it in the
+  handlers that read an individuals file or write a report, as popnei's
+  own `init` does.
 
 ### Reading the files of the user
 
@@ -425,15 +429,16 @@ section 5).
 
 ## How Vite builds the worker
 
-The browser floor is popnei's: Chrome 91, Firefox 89, Safari 16.4, set by
-the vector instructions of wasm (`js/popnei/README.md`, "Where it runs").
-It is open for the owner (point 1 of "Open for the owner" in `SKILL.md`);
-with a floor of Firefox 114 or later, a module worker would do.
-A module worker, `new Worker(url, { type: "module" })`, which runs a
-script with `import` in it, arrived in Chrome 80 and Safari 15, and in
-Firefox only in 114, of June 2023. So the worker of the built site is a
-classic script, one file with no `import`, which every browser of the
-floor runs.
+The browsers are the floor the owner set for the applications on 24
+September 2026, Chrome and Edge 111, Firefox 115, Safari 16.4
+(`docs/technology.md`, section 6), above popnei's own floor for the
+library, Chrome 91, Firefox 89, Safari 16.4, which the vector
+instructions of wasm set (`js/popnei/README.md`, "Where it runs"). A
+module worker, `new Worker(url, { type: "module" })`, which runs a script
+with `import` in it, is there from Chrome 80, Firefox 114 and Safari 15,
+and so is a dynamic `import()` inside a worker, in the same versions; all
+are within the floor. So the worker of the built site is a module worker,
+as it already is in the development server.
 
 - **The worker is imported with `?worker`**:
 
@@ -447,27 +452,26 @@ floor runs.
   no `?worker` in it; `start.ts` is checked with the page, whose types
   declare `?worker` (`configs.md`).
 
-  With this import Vite builds the worker as a module worker for the
-  development server, which does not bundle and needs `import`, and, in
-  the build, in the format of `worker.format`: a classic worker for
-  `"iife"`, with no `type: "module"` passed to the browser. The other
-  form, `new Worker(new URL("./runner.ts", import.meta.url), { type:
-  "module" })`, passes the `type` it was written with to the browser in
-  the build too, so it would ask Firefox 89 for a module worker it does
-  not have; and Vite refuses options that are not written literally, so
-  the type cannot be chosen by the mode. This was read in the source of
-  Vite 7.3, `webWorkerPlugin` and `workerImportMetaUrlPlugin`; it is to
-  be checked again on the version the site uses.
-- **`worker.format` is `"iife"`**, written in `vite.config.ts` although it
-  is the default, so that the reason is next to it and nobody switches it
-  to `"es"` for a nicer bundle.
-- **`build.target` names the floor**, `["chrome91", "firefox89",
-  "safari16.4"]`, and it applies to the worker bundle as well. The default
-  of Vite is newer than Firefox 89, and syntax it leaves in would fail in
-  the worker as in the page. `configs.md` owns `vite.config.ts`; this is the
-  line the worker needs from it.
-- **The development server needs a browser with module workers**, a
-  Firefox of 114 or later. The floor is tested on the build.
+  With this import Vite builds the worker in the format of
+  `worker.format`, and with `"es"` it creates it with `type: "module"`
+  in the build as in the development server. The other form, `new
+  Worker(new URL("./runner.ts", import.meta.url), { type: "module" })`,
+  would work too now; `?worker` is kept because `start.ts` and the
+  architecture name it and the tests need no change. This was read in
+  the source of Vite 8.3.0, `dist/node/chunks/node.js`, the plugin
+  `vite:worker`, which gives the worker the type `"module"` when the
+  format is `"es"` and `"classic"` otherwise.
+- **`worker.format` is `"es"`**, written in `vite.config.ts` because the
+  default is `"iife"`, a classic script. Vite builds an `"iife"` bundle
+  with no splitting, `codeSplitting: false` in the same source, so a
+  dynamic `import()` in the worker would be inlined into its one file;
+  with `"es"` it is a chunk of its own, which is what lets the files wasm
+  be loaded on first need, JavaScript and all (above).
+- **`build.target` names the floor**, `["chrome111", "edge111",
+  "firefox115", "safari16.4"]`, and it applies to the worker bundle as
+  well: syntax newer than the floor would fail in the worker as in the
+  page. `configs.md` owns `vite.config.ts`; these are the lines the worker
+  needs from it.
 
 ### The wasm files on GitHub Pages
 
@@ -536,13 +540,16 @@ skill warns against.
   copies an array that does not own its buffer, and transfers one that
   does, is a test too.
 - **Only in a browser, with Playwright**: the real worker, `FileReaderSync`,
-  the fetch of the wasm by Vite's rewritten address inside a classic
+  the fetch of the wasm by Vite's rewritten address inside a module
   worker, transfer, a cancel that ends a calculation in the middle, and
-  the files wasm loaded on first need, seen as one request for it in the
-  network log and none before.
+  the files wasm loaded on first need, seen in the network log as one
+  request for its chunk of JavaScript and one for its `.wasm`, and none
+  for either before.
 - **The floor is not tested by Playwright**, which runs recent browsers.
-  What stands for it is a check on the build: the worker file of `dist/`
-  has no top level `import` or `export`, which a module worker would have.
+  What stands for it is `build.target`, for the syntax, and, for every
+  API the worker uses, its first version in MDN's compatibility data
+  against the floor, which the `browser` category of the code review
+  checks.
 
 ## Sources
 
@@ -556,17 +563,20 @@ skill warns against.
   https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferable_objects
 - MDN, Worker.terminate():
   https://developer.mozilla.org/en-US/docs/Web/API/Worker/terminate
-- caniuse, ECMAScript modules in workers (Chrome 80, Safari 15,
-  Firefox 114): https://caniuse.com/mdn-api_worker_worker_ecmascript_modules
+- MDN's browser compatibility data, `@mdn/browser-compat-data` 8.1.2,
+  read on 24 September 2026: `api.Worker.Worker.ecmascript_modules` and
+  `javascript.operators.import.worker_support`, Chrome 80, Firefox 114,
+  Safari 15; `javascript.statements.using`, Firefox 141 and not in
+  Safari.
 - Vite, Features, Web Workers and WebAssembly:
   https://vite.dev/guide/features
 - Vite, Worker options, `worker.format` (default `"iife"`):
   https://vite.dev/config/worker-options
 - Vite, Deploying a static site, GitHub Pages and `base`:
   https://vite.dev/guide/static-deploy
-- The source of Vite 7.3, `dist/node/chunks/config.js`,
-  `webWorkerPlugin` and `workerImportMetaUrlPlugin`, for the type of the
-  worker in development and in the build.
+- The source of Vite 8.3.0, `dist/node/chunks/node.js`, the plugin
+  `vite:worker` and the output options, for the type of the worker in
+  the build and for `codeSplitting: false` of an `"iife"` bundle.
 - wasm-bindgen guide, `--target web` and the loader:
   https://wasm-bindgen.github.io/wasm-bindgen/reference/deployment.html
 - github/pages-gem issue 695, `.wasm` served as `application/wasm` on the
@@ -577,7 +587,8 @@ skill warns against.
 
 It was written before any code of the applications, from the docs and
 from popnei 0.1.0. The walking skeleton checks, in this order: that
-popnei's loader finds its wasm inside a classic worker built by Vite;
+popnei's loader finds its wasm inside a module worker built by Vite;
+that the files package is a chunk of its own, fetched on first need;
 that a `File` posted to the worker is read there; that a cancel ends a
 calculation and the next request runs on the new worker; and the value of
 `WORKER_READY_TIMEOUT_MS`. What it finds is corrected here.

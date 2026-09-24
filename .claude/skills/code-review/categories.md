@@ -106,7 +106,8 @@ is `spec`.
 
 ## errors
 
-`.claude/skills/coding/SKILL.md` and `worker.md` on errors.
+`.claude/skills/coding/typescript.md`, "Errors", and `worker.md` on
+errors.
 
 - For each way the input can be wrong, what does the user see? A VCF
   that is not one, an individuals file with a missing individual, a
@@ -128,7 +129,8 @@ cannot.
 
 ## api
 
-The TypeScript rules of `.claude/skills/coding/SKILL.md`, and comments as
+The TypeScript rules and the names of
+`.claude/skills/coding/typescript.md`, and comments as
 `.claude/skills/writing/SKILL.md` asks for them.
 
 - Names: does each say what the value is, and is the same thing called
@@ -290,26 +292,28 @@ the spec.
 
 ## browser
 
-The browsers are those of goal 3 of
-`/Users/jose/devel/popnei/docs/objectives.md`: Chrome and Edge from 91,
-Firefox from 89, Safari from 16.4 on macOS and iOS, the floor that
-`.claude/skills/coding/worker.md` takes for the applications. The floor
-is open for the owner (point 1 of "Open for the owner" in
-`.claude/skills/coding/SKILL.md`); the review uses the one in force. Playwright's WebKit is a recent WebKit, not Safari
-16.4, so a test that passes there does not show that the floor works:
-what the floor has is read in the compatibility table of MDN.
+The browsers are the floor the owner set for the applications on 24
+September 2026, `docs/technology.md` section 6: Chrome and Edge from 111,
+Firefox from 115, Safari from 16.4 on macOS and iOS. It is higher than
+popnei's own floor for the library, Chrome 91, Firefox 89, Safari 16.4,
+in goal 3 of `/Users/jose/devel/popnei/docs/objectives.md`, which the
+review does not apply to the applications. Playwright's WebKit is a
+recent WebKit, not Safari 16.4, so a test that passes there does not
+show that the floor works: what the floor has is read in the
+compatibility table of MDN.
 
 - Every browser API, CSS feature and syntax that the change uses: its
   first version in the three engines, against the floor. Vite lowers
   syntax to its `build.target` and does not add what an API lacks.
-  Those that are easy to miss: module workers, `new Worker(url, {type:
-  "module"})`, Firefox 114; `Promise.withResolvers` and `Object.groupBy`,
-  Safari 17.4; the new methods of `Set`, Safari 17; the popover
-  attribute, Safari 17; `Array.prototype.findLast`, Chrome 97 and
-  Firefox 104, which React Aria's table calls; the File System Access
-  API, Chromium only. Those versions are MDN's of 24 September 2026. The
-  CSS allowed at the floor is the table of `.claude/skills/coding/css.md`,
-  and the worker's build is in `worker.md`.
+  Those that are easy to miss: `Promise.withResolvers` and
+  `Object.groupBy`, Safari 17.4; the new methods of `Set`, Safari 17 and
+  Firefox 127; `Intl.Segmenter`, Firefox 125, whose types the compiler
+  lets through; `using`, not in Safari; the popover attribute, Safari
+  17; the File System Access API, Chromium only. The rest of the list is
+  in `.claude/skills/coding/typescript.md`, "The compiler and the
+  language". Those versions are MDN's of 24 September 2026. The CSS
+  allowed at the floor is the table of `.claude/skills/coding/css.md`,
+  and the worker's build, a module worker, is in `worker.md`.
 - The Playwright tests of the change pass in Chromium, Firefox and
   WebKit.
 - Every file the site loads is served by the site
@@ -364,3 +368,6 @@ decided, at the size it was decided at.
 - Vite, "Build Options", vite.dev/config/build-options, read on 24
   September 2026: the default `build.target` is Baseline widely
   available, Chrome 111, Firefox 114, Safari 16.4.
+- MDN's browser compatibility data, `@mdn/browser-compat-data` 8.1.2,
+  read on 24 September 2026, for the versions of the `browser`
+  category.

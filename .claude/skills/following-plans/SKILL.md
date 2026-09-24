@@ -23,8 +23,9 @@ popnei_web existed, and to be revised after the walking skeleton.
 ## Before the first task
 
 1. The plan is approved by the owner, and its specs are settled: approved
-   by the owner, with every open point answered or given a meanwhile. If not,
-   say so and stop.
+   by the owner, with every open point answered or given a meanwhile. So
+   is the design the change needed, if it needed one (the `designing`
+   skill). If not, say so and stop.
 2. The worktree and the branch, named after the plan:
 
        git worktree add .claude/worktrees/<plan> -b plan/<plan> main
@@ -72,7 +73,9 @@ subagent knows nothing of the session:
 - what to send back, in under 300 words: what it built, the commit, the
   last line of each check, the paths of the screenshots, what it did
   differently from the task and why, and any question it could not
-  settle.
+  settle;
+- to stop and report, not work around it, when the task finds that the
+  architecture does not hold, as "Changing the plan" says.
 
 Tasks that the plan marks as able to run side by side go to several
 subagents at once only if they touch different files, and only one of
@@ -184,6 +187,11 @@ It stops for the owner when the change is not small:
   owner, it follows its "meanwhile";
 - a spec and the code, or a spec and what popnei gives, contradicting
   each other so that a task's approach is wrong;
+- a task that finds the architecture does not hold: an invariant of the
+  `designing` skill it would have to break, an interface between layers
+  that does not carry what it needs. The subagent reports it and does not
+  work around it, because a workaround leaves the invariant broken where
+  nobody will look; it goes back to a design;
 - a dependency that the plan and `docs/technology.md` do not name;
 - a finding of a review whose fix is the owner's, when the rest of the
   plan rests on it;

@@ -1,9 +1,10 @@
 # React
 
 How the screens of `src/ui` are written. Read it before writing or
-changing a component. The TypeScript rules, the layers and the checks are
-in `SKILL.md`, beside this file; the styles are in `css.md`; how a plot is
-drawn is in `charts.md`; the tests are in `testing.md`.
+changing a component. The TypeScript rules are in `typescript.md`, and
+the layers and the checks in `SKILL.md`, beside this file; the styles
+are in `css.md`; how a plot is drawn is in `charts.md`; the tests are in
+`testing.md`.
 
 React here only draws the screens. What a project is, what a result is,
 undo, the cache, the worker, all of it is in `src/core`, plain TypeScript
@@ -22,23 +23,25 @@ default and not an extra.
   `react-aria-components`, not the separate `@react-aria/*` hooks. The
   components are the stable part of React Aria; the hooks under them are
   for building new widgets, which we do not do.
-- The React Compiler, `babel-plugin-react-compiler` 1.0, proposed and off
-  until the owner decides (below).
+- No React Compiler for the walking skeleton, as the owner decided on 24
+  September 2026 (below).
 - `eslint-plugin-react-hooks` with its `recommended` config, which in
   version 7 holds the Rules of Hooks, the dependency check of effects and
-  the rules the compiler needs. It is not in `docs/technology.md`, so it
-  is open for the owner (point 2 of "Open for the owner" in `SKILL.md`).
+  the rules the compiler needs. The owner took it on 24 September 2026
+  (`docs/technology.md`, section 2).
 
 Components are functions. The one class is the error boundary, because
 React has no function form of it.
 
-## The React Compiler: proposed
+## The React Compiler: off for the walking skeleton
 
-Open for the owner (point 4 of "Open for the owner" in `SKILL.md`), and
-off until the owner decides. While it is off, a `useMemo` or a
-`useCallback` is written only where a slowness was measured, and the
-rest of this file reads "the compiler keeps it" as "it is made again on
-each render". The compiler, stable since October 2025,
+The owner decided on 24 September 2026 to leave it off for the walking
+skeleton, and to decide again after it, with a measurement of what the
+renders cost (`docs/technology.md`, section 2). While it is off, a
+`useMemo` or a `useCallback` is written only where a slowness was
+measured, and the rest of this file reads "the compiler keeps it" as "it
+is made again on each render". What follows is the case for it, kept for
+that second decision. The compiler, stable since October 2025,
 memoizes components and values at build time, which is what `useMemo`,
 `useCallback` and `memo` do by hand. react.dev recommends it for new
 applications, and Vite's template offers it.
@@ -57,7 +60,7 @@ compiler installs with `@types/babel__core`. `@vitejs/plugin-react`
 code stays ordinary React, and without the compiler it renders the same,
 only more often.
 
-What it asks:
+What it would ask:
 
 - The Rules of React, which we follow anyway: rendering is pure, props,
   state and values from the store are never mutated, hooks are called at
@@ -444,7 +447,8 @@ options and its results.
 
 ## Performance
 
-The compiler, if the owner takes it, removes most of the traps. What is
+The compiler, if the owner takes it after the walking skeleton, would
+remove most of the traps. What is
 left:
 
 - **State that changes fast lives low.** The point under the mouse is

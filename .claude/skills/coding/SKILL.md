@@ -1,6 +1,6 @@
 ---
 name: coding
-description: How code is written in popnei_web, the static web applications of popnei, in TypeScript with React, D3, three.js and a web worker that runs the wasm package of popnei. Use it before writing or changing any code or test of popnei_web. It covers the layers and what each may import, the order of the work, the TypeScript rules, the core layer, errors, dependencies and the checks to run before the work is called done, and it points to the topic file of each layer, react.md, css.md, charts.md, worker.md and testing.md, beside it.
+description: How code is written in popnei_web, the static web applications of popnei, in TypeScript with React, D3, three.js and a web worker that runs the wasm package of popnei. Use it before writing or changing any code or test of popnei_web. It covers the layers and what each may import, the order of the work, the core layer, dependencies and the checks to run before the work is called done, and it points to typescript.md, the rules of the language and of errors that every session reads with it, and to the topic file of each layer, react.md, css.md, charts.md, worker.md and testing.md, beside it.
 ---
 
 # Coding
@@ -26,12 +26,13 @@ prose is for what no tool catches.
 
 ## What to read
 
-Read this file for every change, and the file of the layer the change is
-in:
+Every session reads this file and `typescript.md`, the rules of the
+language, the names and the errors, which hold in every layer; and then
+the topic file of the layer the change is in:
 
 | layer | topic file |
 |---|---|
-| `src/core` | this file alone |
+| `src/core` | none more: the core layer is in this file, below |
 | `src/worker` | `worker.md`: the protocol, the runner, popnei and the wasm |
 | `src/charts` | `charts.md`: D3, three.js, the handle of a plot, export |
 | `src/ui` | `react.md` and `css.md`: React, React Aria, the styles, accessibility |
@@ -129,178 +130,10 @@ code.
    output. A check that could not be run is reported as not run.
 5. **The commit**, with the message the `writing` skill describes.
 
-## TypeScript
-
-The compiler is TypeScript 6.0, with the options of `configs.md`; 6 or
-7 is open for the owner (point 3 of "Open for the owner", below). The
-language is that of ES2021, because the site runs in the browsers popnei
-runs in, back to Firefox 89 and Safari 16.4, and a function added to
-JavaScript after 2021, `Array.prototype.at`, `Object.hasOwn`,
-`toSorted`, would fail there and only there; the compiler refuses them.
-The floor itself is open for the owner (point 1 of "Open for the
-owner", below).
-Two of the options go beyond `strict` and change how code is written:
-
-- **`noUncheckedIndexedAccess`**: `array[i]` and `record[key]` have the
-  type `T | undefined`, because an index can be out of range and nothing
-  else in TypeScript says so. Walk arrays with `for...of`, `map`,
-  `entries()`; when an index is needed, check the value, and a missing one
-  that the code makes impossible is a defect (below). Not `array[i]!` and
-  not `array[i] ?? 0`: the first silences the check and the second turns
-  a bug into a zero that looks like a result.
-- **`exactOptionalPropertyTypes`**: an optional field, `ploidy?: number`,
-  may be absent but not `undefined`. It matters because `JSON.stringify`
-  drops a field that is `undefined`, so a value in memory and the same
-  value written to a project file or a key would differ.
-
-And the rules of the code:
-
-- **No `any`.** A value whose type is not known is `unknown`, and is
-  narrowed with `typeof`, `in`, `Array.isArray` before it is used. The
-  lint denies `any` and every use of a value typed `any` that comes from a
-  library.
-- **`unknown` at every boundary, then validated.** What comes from
-  outside the program has no type until it is checked: the JSON of a
-  project file, a message from the worker or to it, the rows of a file of
-  individuals, anything read from `localStorage` or the URL. Each has one
-  function that takes `unknown` and gives a `Result` of the typed value
-  (below), checking every field, and nothing reads the value before it.
-  `JSON.parse(text) as Project` is the bug this rule prevents: it compiles
-  and checks nothing.
-- **No type assertions**, `x as T`, in `src/core` and `src/worker`, which
-  the lint denies there; `as const` is allowed. An assertion is a claim
-  the compiler takes on trust. The one allowed place is where a branded
-  type is made (below), with an `eslint-disable-next-line` that gives the
-  reason. In `src/ui` and `src/charts` an assertion is sometimes the only
-  way to type the DOM, and `react.md` and `charts.md` say when.
-- **Discriminated unions for states and results.** A thing that can be in
-  several states is a union whose members share a literal field, `kind`,
-  and each carries only what that state has:
-
-  ```ts
-  type RunState =
-    | { readonly kind: "idle" }
-    | { readonly kind: "running"; readonly done: number; readonly total: number }
-    | { readonly kind: "done"; readonly key: Key }
-    | { readonly kind: "failed"; readonly error: RunError };
-  ```
-
-  not an object with `isRunning`, `result?` and `error?`, which allows
-  combinations that mean nothing. A `switch` on `kind` has no `default`,
-  and the lint `switch-exhaustiveness-check` fails when a member is not
-  handled, so adding a state shows every place that has to learn it.
-- **No enums**, which `erasableSyntaxOnly` forbids, nor namespaces nor
-  parameter properties: Vite strips the types of a file without compiling
-  it, and these three are TypeScript that emits code. A finite set is a
-  union of string literals; when the list is needed at run time, it is an
-  `as const` array and the type is taken from it, as popnei does with
-  `THE_MEASURES` and `PopDistMeasure`.
-- **Branded types for values of the same primitive that must not mix.**
-  A key and the name of an individual are both strings; a key is
-  `type Key = string & { readonly __brand: "Key" }`, and only `keys.ts`
-  makes one, so a name passed where a key goes does not compile. This is
-  the newtype of Rust, and costs nothing at run time.
-- **`interface` for the shape of an object, `type` for a union**, which the
-  lint's stylistic rules ask for.
-- **Exported functions declare their return type**, which the lint
-  enforces. The signature is the contract, and an inferred one changes
-  when the body does, silently.
-- **`null` for "not set", `undefined` only where a library or an optional
-  argument gives it.** The project and every message use `null`, because
-  JSON has `null` and has no `undefined`.
-- **Conditions are booleans.** `if (count)` is false for 0, a real count,
-  and `if (name)` for the empty string; the lint `strict-boolean-expressions`
-  asks for `count > 0`, `name !== ""`, `value !== null`.
-- **No classes of our own** unless a library asks for one. A module of
-  functions over plain data is easier to test, serialise and compare. A
-  thing with state and a lifetime, the handle of a plot, the worker client,
-  is an object of functions returned by a function that holds the state in
-  its closure. popnei gives classes, `Variants`, `Distances`, and they are
-  used as they are, in the worker.
-- **Named exports only, no `export default`**, which the lint denies
-  outside the configuration files of the tools, which need one. A named
-  export has the same name at every import, so a search finds every use
-  and a rename in the editor reaches them all; a default export is named
-  anew at each import.
-- **ES modules**, as the package is `"type": "module"`; no `require`.
-- **Every exported function, type and field has a doc comment**, `/** */`,
-  in the style of the `writing` skill and of popnei's TypeScript package:
-  what it is, what it gives, and, for a function that can fail, the cases.
-- **A lint is silenced on one line**, `// eslint-disable-next-line <rule>
-  -- <reason>`, never for a file, and never `@ts-ignore`: a
-  `@ts-expect-error` with a reason where the compiler is wrong, which
-  fails when it no longer is.
-
-### Names
-
-- A name says what the value is, `numIndividuals`, `maxMissingRate`,
-  never `n`, `data`, `tmp`, `val`.
-- The things of the domain have the names of popnei, from its
-  `docs/glossary.md` and its TypeScript package: a block, `pops`, `gts`,
-  `numVars`, `passStats`, `maf`. The same thing has the same name in the
-  project, in the messages and on the screen's code.
-- `camelCase` for values, functions and fields, `PascalCase` for types
-  and React components, `UPPER_SNAKE_CASE` for a constant of a module
-  that is a default or a fixed list. Files in `src/core`, `src/worker` and
-  `src/charts` are `camelCase.ts`, as section 9 of the architecture names
-  them; `react.md` says how the files of components are named.
-- A default that changes a result is a named constant with a doc comment
-  that says where it comes from, `DEFAULT_MAF = 0.05`, never a literal in
-  the middle of the code.
-
-## Errors
-
-Two kinds of failure, handled in two ways.
-
-**What can go wrong with good code is a value.** A project file that is
-not JSON or is of an unknown version, a file of individuals that lacks an
-individual of the variants, a calculation that popnei refused: these are
-expected, the user has to be told, and the screen shows them. A function
-that can fail this way returns a `Result`, defined once in
-`src/core/result.ts`:
-
-```ts
-export type Result<T, E> =
-  | { readonly ok: true; readonly value: T }
-  | { readonly ok: false; readonly error: E };
-```
-
-and `E` is a discriminated union of the ways that function fails, each
-with the facts that explain it, the field, the value found, the
-individuals missing: `{ kind: "missingIndividuals"; names: readonly
-string[] }`. The text the user reads is written from it in one function
-beside the type, so the tests assert the `kind` and the facts, not the
-wording.
-
-The reason, against throwing: a TypeScript function says nothing of what
-it throws, `catch` gives an `unknown`, and nothing makes a caller handle
-it. A `Result` is in the signature, and the compiler makes the caller look
-at `ok` before it reaches `value`. No library for it, neverthrow or
-Effect: the type above is all of it.
-
-**A defect is thrown.** A state the code makes impossible, an index that
-cannot be out of range, a key missing from a cache that was just filled,
-throws an `Error` whose message starts with `popnei_web defect:` and says
-what was expected. Nothing catches it but the outermost layer: the error
-boundary of React, which shows that the application failed, and the
-`error` handler of the worker, which reports it to the page. A defect
-that were caught and passed over would hide a bug in a result.
-
-popnei throws an `Error` for everything it refuses, as its TypeScript
-package does, and that is an expected failure for us, not a defect: a
-VCF popnei cannot read is the user's file, not our bug. So the runner
-catches what a call to popnei throws, at that call, and turns it into a
-failed result of the protocol, with popnei's message; `worker.md` has it.
-That catch, around a call to popnei, is the one `try` of the code that
-does not rethrow.
-
-- Only `Error` objects are thrown, which the lint enforces.
-- A promise is awaited or returned, never left floating, which the lint
-  enforces: a promise nobody awaits loses its error.
-- `catch (error)` gives an `unknown`; it is narrowed with `error
-  instanceof Error` before its message is read.
-
 ## The core
+
+The rules of `typescript.md` hold here as in every layer; what follows
+is what the core layer adds to them.
 
 - **Pure functions.** A function of core computes its result from its
   arguments and changes none of them. It reads no clock, no random
@@ -349,19 +182,6 @@ does not rethrow.
   frozen deeply with `Object.freeze`, so a command that writes into it
   throws in the test, since ES modules run in strict mode. The `readonly`
   types catch most writes; this catches the rest, a copy that was shallow.
-- **No plain object is indexed by a string from the user's files.** The
-  name of an individual or of a population can be `constructor` or
-  `__proto__`, which a plain object already has or treats specially. In
-  memory such data is a `Map`; in the project it is an array of rows or of
-  pairs, which JSON holds and which keeps the order of the file.
-- **Arrays are sorted with a comparator**, on a copy, `[...values].sort((a,
-  b) => a - b)`, since `sort` changes the array it is called on and
-  `toSorted`, which does not, is missing in Firefox 89, one of the
-  browsers the site supports (`configs.md`). `sort()` with no comparator
-  compares numbers as text, `[10, 9, 1]` becomes `[1, 10, 9]`. Text is compared with `<` for
-  anything that has to be the same everywhere, a key, an order in a file;
-  `localeCompare` depends on the language of the browser, and is for what
-  the screen shows alone.
 
 ### Keys
 
@@ -444,9 +264,10 @@ possible break and a possible abandonment.
   (`npm view <name> dependencies`), and wait. The decisions go into
   `docs/technology.md`.
 - The dependencies decided are those of section 2 of
-  `docs/technology.md`, with `@vitejs/plugin-react` and `@eslint/js`,
-  which are parts of Vite and of ESLint. Those proposed and not yet
-  decided are point 2 of "Open for the owner", below.
+  `docs/technology.md`, where `@vitejs/plugin-react` and `@eslint/js` are
+  recorded as parts of Vite and of ESLint. Not taken, as the owner
+  decided on 24 September 2026: `@vitest/coverage-v8`, for now, so
+  coverage is not measured, and `eslint-plugin-jsx-a11y`.
 - **Versions are exact** in `package.json`, `"vite": "8.3.0"`, by
   `save-exact=true` in `.npmrc`: an upgrade is then a change someone made
   and a commit can name, not what the day of the install gave.
@@ -506,37 +327,6 @@ as passed. Report what each command printed when it failed and that it
 passed when it passed. `--fix` of ESLint and `--write` of Prettier change
 files; their changes are looked at before they are committed.
 
-## Open for the owner
-
-Four points of this skill and of its topic files are not decided. A file
-that depends on one says that it is open for the owner and points here.
-Until the owner decides, the work follows the meanwhile of each, and the
-answers go into `docs/technology.md`.
-
-1. **The browser floor.** popnei runs from Chrome 91, Firefox 89 and
-   Safari 16.4. React Aria 1.21.1 calls `findLast` in its table rows and
-   `at` in the layout of its virtualized table, which need Chrome 97 and
-   Firefox 104; a module worker needs Firefox 114; and Vite's default
-   target is Chrome 111, Firefox 114 and Safari 16.4. The alternative is
-   a floor of the applications' own, such as Chrome 111, Firefox 115 and
-   Safari 16.4. Meanwhile: popnei's floor, as `configs.md`, `worker.md`
-   and `css.md` write it.
-2. **The dependencies that `docs/technology.md` does not name.** Proposed
-   in `testing.md` (`jsdom`, `@vitest/coverage-v8`,
-   `@axe-core/playwright`, `fast-check`), in `react.md`
-   (`eslint-plugin-react-hooks`, and the compiler of point 4), in
-   `charts.md` (the D3 modules one by one with their `@types/d3-*`, and
-   `@types/three`) and in `configs.md` (`@types/node`). Meanwhile: none is
-   installed, and what needs one waits.
-3. **TypeScript 6.0 or 7.0.** typescript-eslint 8.70.1, whose rules that
-   read types catch most of the mistakes listed here, takes TypeScript
-   `>=4.8.4 <6.1.0`: it reads the types through the programmatic API of
-   the compiler, and 7.0, rewritten in Go, has only `unstable/` ones.
-   Vite's React template pins `~6.0.2`. The language of the two is the
-   same, so moving to 7 is a change of version once typescript-eslint
-   supports it. Meanwhile: 6.0.3.
-4. **The React Compiler**, proposed in `react.md`. Meanwhile: off.
-
 ## When this skill is wrong
 
 No code existed when this was written, in September 2026. The layers, the
@@ -548,10 +338,6 @@ corrected here.
 
 ## Sources
 
-- TypeScript 7.0 announcement, the defaults, the removed options, no
-  programmatic API and the advice for typescript-eslint:
-  https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/
-- The options of `tsconfig.json`: https://www.typescriptlang.org/tsconfig/
 - typed linting and the shared configurations of typescript-eslint:
   https://typescript-eslint.io/getting-started/typed-linting/ and
   https://typescript-eslint.io/users/configs/
