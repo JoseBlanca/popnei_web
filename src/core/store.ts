@@ -7,16 +7,22 @@
  * events of the workers; it never waits.
  */
 
-import { emptyCache, use } from "./cache.ts";
+import { emptyCache, get, put, use } from "./cache.ts";
 import type { Cache } from "./cache.ts";
 import { commit, mapProjects, redo, startHistory, undo } from "./history.ts";
 import type { History } from "./history.ts";
-import { createKeyMemo, keyOf } from "./keys.ts";
+import {
+  createKeyMemo,
+  intermediateKeyOf,
+  keyFromWire,
+  keyOf,
+} from "./keys.ts";
 import type { JsonObject, JsonValue, Key } from "./keys.ts";
 import {
   freezeProject,
   projectNeeds,
   recordIndividualsRead,
+  recordVariantsCounted,
   recordVariantsRead,
 } from "./project.ts";
 import type {
@@ -320,8 +326,26 @@ interface Keyed {
   readonly keys: readonly AnalysisKey[];
 }
 
-/** No calculation in flight, one list for every state that has none. */
-const NO_RUNS: readonly RunView[] = [];
+/** A request in flight, as the store keeps it. */
+interface InFlight<J, R> {
+  /** The id of the request. */
+  readonly runId: number;
+  /** The definition whose `run` made it, and its place in the list. */
+  readonly def: AnalysisDef<J, R>;
+  readonly index: number;
+  /** The key it was sent under. */
+  readonly key: Key;
+  /** The project it was made from, which its warnings are made from. */
+  readonly project: Project;
+  /** The load id of the variants file of that project, which the number
+      of variants its pass counted is recorded into. */
+  readonly fileId: string;
+  /** Its handle, to stop it. */
+  readonly handle: Run<R>;
+  readonly progress: Progress | null;
+  readonly stopping: boolean;
+  readonly afterStop: boolean;
+}
 
 /**
  * The store of a page, made once by its entry, with the first project,
@@ -346,6 +370,12 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
   let cache: Cache<CachedResult<R>> = emptyCache(config.cacheMaxBytes);
   let keyed: Keyed | null = null;
   const listeners = new Set<() => void>();
+  /** The requests in flight by their id, in the order they started. */
+  const requests = new Map<number, InFlight<J, R>>();
+  /** popnei's refusals, kept for the session. */
+  const refusals = new Map<Key, AnalysisError>();
+  /** The other failures, kept until the next change of the user. */
+  const failures = new Map<Key, AnalysisError>();
 
   let locks: {
     readonly project: Project;
@@ -403,6 +433,66 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
     return keys;
   };
 
+  /** The state of an analysis that can run, under its key `key`: the
+      first of done, running, error and ready. A result in the cache
+      under `key` is of this analysis, since the key holds its id. */
+  const statusOf = (id: AnalysisId, key: Key): AnalysisStatus<R> => {
+    const cached = get(cache, key);
+    if (cached !== null) {
+      return {
+        kind: "done",
+        key,
+        result: cached.result,
+        warnings: cached.warnings,
+        check: null,
+      };
+    }
+    let running: InFlight<J, R> | null = null;
+    for (const request of requests.values()) {
+      if (request.def.id === id && request.key === key && !request.stopping) {
+        running = request;
+      }
+    }
+    if (running !== null) {
+      return {
+        kind: "running",
+        key,
+        runId: running.runId,
+        progress: running.progress,
+      };
+    }
+    const error = refusals.get(key) ?? failures.get(key);
+    return error === undefined
+      ? { kind: "ready", key }
+      : { kind: "error", key, error };
+  };
+
+  /** The calculations in flight, reusing each view of `previous` that did
+      not change, and `previous` itself when none did. */
+  const runsOf = (
+    keys: readonly AnalysisKey[],
+    previous: readonly RunView[] | null,
+  ): readonly RunView[] => {
+    const views = [...requests.values()].map((request, index): RunView => {
+      const current = keys[request.index];
+      const view: RunView = {
+        runId: request.runId,
+        analysis: request.def.id,
+        key: request.key,
+        current: current?.kind === "keyed" && current.key === request.key,
+        stopping: request.stopping,
+        afterStop: request.afterStop,
+        progress: request.progress,
+      };
+      const before = previous?.[index];
+      return before !== undefined && sameRun(before, view) ? before : view;
+    });
+    return previous?.length === views.length &&
+      views.every((view, index) => view === previous[index])
+      ? previous
+      : views;
+  };
+
   /** The state of the store now, reusing every part of `previous` that
       did not change, and `previous` itself when nothing did. */
   const stateOf = (previous: AppState<R> | null): AppState<R> => {
@@ -415,7 +505,7 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       const status: AnalysisStatus<R> =
         key.kind === "locked"
           ? { kind: "locked", reason: key.reason }
-          : { kind: "ready", key: key.key };
+          : statusOf(def.id, key.key);
       const before = previous?.analyses[index];
       return before !== undefined && sameStatus(before.status, status)
         ? before
@@ -426,6 +516,7 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       views.every((view, index) => view === previous.analyses[index])
         ? previous.analyses
         : views;
+    const runs = runsOf(keys, previous?.runs ?? null);
     const project = history.present.project;
     const undoText =
       history.past.length > 0 ? history.present.description : null;
@@ -435,7 +526,8 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       previous.undo === undoText &&
       previous.redo === redoText &&
       previous.popneiVersion === popneiVersion &&
-      previous.analyses === analyses
+      previous.analyses === analyses &&
+      previous.runs === runs
     ) {
       return previous;
     }
@@ -445,7 +537,7 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       redo: redoText,
       popneiVersion,
       analyses,
-      runs: NO_RUNS,
+      runs,
       notice: null,
     };
   };
@@ -473,6 +565,84 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
     }
   };
 
+  /** Takes `next`, the history after a change of the user, and forgets
+      the failures that are not popnei's when it is not the one there
+      was. */
+  const changedByUser = (next: History): void => {
+    if (next !== history) {
+      failures.clear();
+      moved(next);
+    }
+  };
+
+  /** The definition of `id` and its place, or a defect. */
+  const defOf = (
+    id: AnalysisId,
+    caller: string,
+  ): { readonly def: AnalysisDef<J, R>; readonly index: number } => {
+    const index = defs.findIndex((def) => def.id === id);
+    const def = defs[index];
+    if (def === undefined) {
+      throw defect(
+        `${caller} was given the analysis ${JSON.stringify(id)}, which no definition has.`,
+      );
+    }
+    return { def, index };
+  };
+
+  /** The progress of the request `runId`, passed over when the request
+      is no longer in flight. */
+  const progressed = (runId: number, progress: Progress): void => {
+    const request = requests.get(runId);
+    if (request !== undefined) {
+      requests.set(runId, { ...request, progress });
+      changed();
+    }
+  };
+
+  /** What an outcome leaves in the store: the result in the cache with
+      its warnings and its number of variants recorded, or the failure
+      kept. */
+  const ended = (request: InFlight<J, R>, outcome: Outcome<R>): void => {
+    switch (outcome.kind) {
+      case "done": {
+        const key = keyFromWire(outcome.key);
+        if (key !== request.key) {
+          throw defect(
+            `the request ${String(request.runId)} of the analysis ${JSON.stringify(request.def.id)} was sent under the key ${request.key} and came back under ${key}.`,
+          );
+        }
+        const warnings = request.def.warnings(outcome.result, request.project);
+        const shown = new Set(
+          currentKeys().flatMap((k) => (k.kind === "keyed" ? [k.key] : [])),
+        );
+        cache = put(cache, key, { result: outcome.result, warnings }, shown);
+        const numVars = config.numVarsOf(outcome.result);
+        if (numVars !== null) {
+          history = recordShared<VariantSource>(
+            history,
+            (p) => p.variants,
+            (p, variants) => ({ ...p, variants }),
+            (p) => recordVariantsCounted(p, request.fileId, numVars),
+          );
+        }
+        return;
+      }
+      case "failed":
+        if (outcome.error.kind === "popnei") {
+          refusals.set(request.key, {
+            kind: "refused",
+            message: outcome.error.message,
+          });
+        } else {
+          failures.set(request.key, { kind: "failed", error: outcome.error });
+        }
+        return;
+      case "cancelled":
+        return;
+    }
+  };
+
   return {
     getState: () => state,
     subscribe: (listener) => {
@@ -487,25 +657,110 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       if (next === present) {
         return;
       }
-      moved(commit(history, freezeProject(next), description));
+      changedByUser(commit(history, freezeProject(next), description));
     },
     undo: () => {
-      moved(undo(history));
+      changedByUser(undo(history));
     },
     redo: () => {
-      moved(redo(history));
+      changedByUser(redo(history));
     },
     open: (p) => {
-      moved(startHistory(freezeProject(p), history.maxSteps));
+      changedByUser(startHistory(freezeProject(p), history.maxSteps));
     },
     dismissNotice: () => {
       throw notBuilt("dismissNotice");
     },
-    startRun: () => {
-      throw notBuilt("startRun");
+    startRun: (id) => {
+      const { def, index } = defOf(id, "startRun");
+      const status = state.analyses[index]?.status;
+      if (
+        status === undefined ||
+        !(
+          status.kind === "ready" ||
+          status.kind === "removed" ||
+          (status.kind === "error" && status.error.kind === "failed")
+        )
+      ) {
+        return null;
+      }
+      const key = status.key;
+      const project = history.present.project;
+      const version = popneiVersion;
+      const fileId = project.variants?.fileId;
+      if (version === null || fileId === undefined) {
+        throw defect(
+          `the analysis ${JSON.stringify(id)} has a key with no version of popnei or no variants file.`,
+        );
+      }
+      const sending: { handle: Run<R> | null } = { handle: null };
+      const client: WorkerClient<J, R> = {
+        run: (job) => {
+          if (sending.handle !== null) {
+            throw defect(
+              `the analysis ${JSON.stringify(id)} sent a second request from one run.`,
+            );
+          }
+          // A progress given before `send` returns has no request to go
+          // to, and is passed over.
+          const sent = config.send(key, job, (progress) => {
+            if (sending.handle !== null) {
+              progressed(sending.handle.id, progress);
+            }
+          });
+          sending.handle = sent;
+          return sent;
+        },
+        intermediateKey: (name, inputs) =>
+          intermediateKeyOf(def, project, version, name, inputs, memo),
+      };
+      let handle: Run<R>;
+      try {
+        handle = def.run(project, client);
+      } catch (error) {
+        // Nothing is recorded yet; what the analysis sent is stopped, so
+        // that no calculation runs that the store does not know.
+        sending.handle?.cancel();
+        throw error;
+      }
+      if (handle !== sending.handle || requests.has(handle.id)) {
+        sending.handle?.cancel();
+        throw defect(
+          `the run of the analysis ${JSON.stringify(id)} gave a handle its client did not give, or of a request already in flight.`,
+        );
+      }
+      failures.delete(key);
+      requests.set(handle.id, {
+        runId: handle.id,
+        def,
+        index,
+        key,
+        project,
+        fileId,
+        handle,
+        progress: null,
+        stopping: false,
+        afterStop: false,
+      });
+      changed();
+      return handle;
     },
-    cancelRun: () => {
-      throw notBuilt("cancelRun");
+    cancelRun: (id) => {
+      const { index } = defOf(id, "cancelRun");
+      const current = currentKeys()[index];
+      for (const request of requests.values()) {
+        if (
+          request.index === index &&
+          current?.kind === "keyed" &&
+          request.key === current.key &&
+          !request.stopping
+        ) {
+          requests.set(request.runId, { ...request, stopping: true });
+          request.handle.cancel();
+          changed();
+          return;
+        }
+      }
     },
     popneiReady: (version) => {
       if (version !== popneiVersion) {
@@ -533,8 +788,21 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
         ),
       );
     },
-    runEnded: () => {
-      throw notBuilt("runEnded");
+    runEnded: (runId, outcome) => {
+      const request = requests.get(runId);
+      if (request === undefined) {
+        throw defect(
+          `runEnded was given the request ${String(runId)}, which is not in flight.`,
+        );
+      }
+      // Out of those in flight before anything can throw, so that a
+      // defect does not leave the analysis shown running for ever.
+      requests.delete(runId);
+      try {
+        ended(request, outcome);
+      } finally {
+        changed();
+      }
     },
   };
 }
@@ -571,6 +839,19 @@ function recordShared<S extends object>(
     made.set(old, source);
     return next === p ? p : freezeProject(next);
   });
+}
+
+/** Whether two views of a calculation in flight show the same. */
+function sameRun(a: RunView, b: RunView): boolean {
+  return (
+    a.runId === b.runId &&
+    a.analysis === b.analysis &&
+    a.key === b.key &&
+    a.current === b.current &&
+    a.stopping === b.stopping &&
+    a.afterStop === b.afterStop &&
+    a.progress === b.progress
+  );
 }
 
 /** Whether two states of an analysis show the same, so that the screen

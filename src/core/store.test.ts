@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { createKeyMemo, keyOf } from "./keys.ts";
+import { createKeyMemo, intermediateKeyOf, keyOf } from "./keys.ts";
 import type { JsonValue } from "./keys.ts";
 import {
   analysisOptions,
@@ -25,6 +25,8 @@ import type { CsvOptions, Outcome, Progress, Run } from "../worker/protocol.ts";
 /** A request of the fake analyses. */
 interface TestJob {
   readonly analysis: "pops" | "vars";
+  /** The key of an intermediate result, made by the client. */
+  readonly pruned: string;
 }
 
 /** The result of the analysis of the populations. */
@@ -36,7 +38,9 @@ interface PopsResult {
 /** The result of the analysis of the variants. */
 interface VarsResult {
   readonly kind: "vars";
-  readonly numVars: number;
+  /** The number of variants the pass counted, or `null`. */
+  readonly numVars: number | null;
+  readonly values: Float64Array;
 }
 
 type TestResult = PopsResult | VarsResult;
@@ -103,7 +107,21 @@ interface Calls {
   vars: number;
   /** The calls of the `needs` of the analysis of the populations. */
   needs: number;
+  /** What each `warnings` and `checkNumbers` was given, in order:
+      "pops warnings of vars" when the populations were given a result of
+      the variants. */
+  readonly given: string[];
 }
+
+/** The intermediate result both fake analyses ask the client for. */
+const PRUNED: readonly [string, JsonValue] = ["pruned", { maxR2: 0.5 }];
+
+/** The warning of the analysis of the variants when its request's
+    project filters by MAF. */
+const MAF_WARNING = {
+  code: "mafFiltered",
+  text: "Rare variants were removed.",
+};
 
 /** The reason of the analysis of the populations when no column of the
     individuals file defines them. */
@@ -116,7 +134,7 @@ function fakeAnalyses(): {
   readonly analyses: readonly AnalysisDef<TestJob, TestResult>[];
   readonly calls: Calls;
 } {
-  const calls: Calls = { pops: 0, vars: 0, needs: 0 };
+  const calls: Calls = { pops: 0, vars: 0, needs: 0, given: [] };
   const pops: AnalysisDef<TestJob, TestResult> = {
     id: "pops",
     app: ["popgen"],
@@ -145,9 +163,16 @@ function fakeAnalyses(): {
           : null)
       );
     },
-    run: (_p, c) => c.run({ analysis: "pops" }),
-    warnings: () => [],
-    checkNumbers: (r) => (r.kind === "pops" ? [...r.fst] : []),
+    run: (_p, c) =>
+      c.run({ analysis: "pops", pruned: c.intermediateKey(...PRUNED) }),
+    warnings: (r) => {
+      calls.given.push(`pops warnings of ${r.kind}`);
+      return [];
+    },
+    checkNumbers: (r) => {
+      calls.given.push(`pops checkNumbers of ${r.kind}`);
+      return r.kind === "pops" ? [...r.fst] : [];
+    },
     script: () => "",
   };
   const vars: AnalysisDef<TestJob, TestResult> = {
@@ -162,9 +187,18 @@ function fakeAnalyses(): {
       return analysisOptions(p, "vars", { minMaf: 0 });
     },
     needs: () => null,
-    run: (_p, c) => c.run({ analysis: "vars" }),
-    warnings: () => [],
-    checkNumbers: (r) => (r.kind === "vars" ? [r.numVars] : []),
+    run: (_p, c) =>
+      c.run({ analysis: "vars", pruned: c.intermediateKey(...PRUNED) }),
+    warnings: (r, p) => {
+      calls.given.push(`vars warnings of ${r.kind}`);
+      return p.filters.some((filter) => filter.kind === "maf")
+        ? [MAF_WARNING]
+        : [];
+    },
+    checkNumbers: (r) => {
+      calls.given.push(`vars checkNumbers of ${r.kind}`);
+      return r.kind === "vars" ? [...r.values] : [];
+    },
     script: () => "",
   };
   return { analyses: [pops, vars], calls };
@@ -222,8 +256,8 @@ function loadPops(p: Project): Project {
 }
 
 /** A store of population genetics from an empty project, with the fake
-    analyses and send. */
-function newStore(): {
+    analyses and send, and a cache of `cacheMaxBytes`. */
+function newStore(cacheMaxBytes: number = 1024 * 1024): {
   readonly store: Store<TestResult>;
   readonly analyses: readonly AnalysisDef<TestJob, TestResult>[];
   readonly calls: Calls;
@@ -237,7 +271,7 @@ function newStore(): {
     send,
     numVarsOf: (r) => (r.kind === "vars" ? r.numVars : null),
     appVersion: "0.1.0",
-    cacheMaxBytes: 1024 * 1024,
+    cacheMaxBytes,
     maxUndoSteps: 200,
   });
   return { store, analyses, calls, sent };
@@ -245,8 +279,10 @@ function newStore(): {
 
 /** A store at the point of "A worked sequence" where the variants file is
     read: popnei 0.1.0, the variants file loaded and read. */
-function storeWithVariantsRead(): ReturnType<typeof newStore> {
-  const made = newStore();
+function storeWithVariantsRead(
+  cacheMaxBytes?: number,
+): ReturnType<typeof newStore> {
+  const made = newStore(cacheMaxBytes);
   made.store.popneiReady("0.1.0");
   made.store.apply("a variants file was loaded", loadPanel(VARIANTS_ID));
   made.store.variantsRead(VARIANTS_ID, VARIANTS_READ);
@@ -255,8 +291,10 @@ function storeWithVariantsRead(): ReturnType<typeof newStore> {
 
 /** A store where both analyses are ready: the variants file and the
     individuals file read, the populations in the column `pop`. */
-function storeWithBothReady(): ReturnType<typeof newStore> {
-  const made = storeWithVariantsRead();
+function storeWithBothReady(
+  cacheMaxBytes?: number,
+): ReturnType<typeof newStore> {
+  const made = storeWithVariantsRead(cacheMaxBytes);
   made.store.apply("an individuals file was loaded", loadPops);
   made.store.individualsRead(INDIVIDUALS_ID, CSV, INDIVIDUALS_READ);
   made.store.apply("the populations changed", (p) =>
@@ -493,6 +531,7 @@ describe("WP4 D1 the state with no calculation", () => {
       pops: made.pops,
       vars: made.vars + vars,
       needs: made.needs + needs,
+      given: [],
     });
     store.getState();
     store.getState();
@@ -768,5 +807,488 @@ describe("WP4 D1 the state with no calculation", () => {
     expect(() => {
       store.variantsRead(VARIANTS_ID, VARIANTS_READ);
     }).toThrow(/^popnei_web defect: the analysis "vars" can run before/);
+  });
+});
+
+/** The request `index` the fake `send` was given, or a defect. */
+function sentAt(sent: readonly SentRequest[], index: number): SentRequest {
+  const request = sent[index];
+  if (request === undefined) {
+    throw new Error(`popnei_web defect: no request ${String(index)} sent`);
+  }
+  return request;
+}
+
+/** The key the store gives the analysis at `index`, which must not be
+    locked. */
+function keyAt(store: Store<TestResult>, index: number): string {
+  const status = statuses(store)[index];
+  if (status === undefined || status.kind === "locked") {
+    throw new Error(`popnei_web defect: analysis ${String(index)} is locked`);
+  }
+  return status.key;
+}
+
+/** A result of the analysis of the variants, of 100 numbers, 800 bytes. */
+function varsResult(numVars: number | null): VarsResult {
+  return { kind: "vars", numVars, values: new Float64Array(100) };
+}
+
+/** A result of the analysis of the populations, of 100 numbers. */
+function popsResult(): PopsResult {
+  return { kind: "pops", fst: new Float64Array(100) };
+}
+
+/** The outcome of a request done with `result`, under its own key. */
+function doneWith(
+  request: SentRequest,
+  result: TestResult,
+): Outcome<TestResult> {
+  return { kind: "done", key: request.key, result };
+}
+
+/** The command that sets the MAF filter to `threshold`. */
+function maf(threshold: number): (p: Project) => Project {
+  return (p) => setVariantFilter(p, { kind: "maf", maxAllowedMaf: threshold });
+}
+
+describe("WP4 D2 the calculations", () => {
+  test("from startRun to done: running with no progress, then its progress, then done with the result and its warnings, kept in the cache", () => {
+    const { store, analyses, sent } = storeWithVariantsRead();
+    store.apply("the MAF filter changed", maf(0.9));
+    const key = keyAt(store, 1);
+    const project = store.getState().project;
+    const run = store.startRun("vars");
+    expect(sent).toHaveLength(1);
+    const request = sentAt(sent, 0);
+    expect(run).toBe(request.run);
+    expect(request.key).toBe(key);
+    const [, vars] = analyses;
+    if (vars === undefined) {
+      throw new Error("popnei_web defect: no analysis of the variants");
+    }
+    expect(request.job).toStrictEqual({
+      analysis: "vars",
+      pruned: intermediateKeyOf(
+        vars,
+        project,
+        "0.1.0",
+        "pruned",
+        { maxR2: 0.5 },
+        createKeyMemo(),
+      ),
+    });
+    expect(statuses(store)[1]).toStrictEqual({
+      kind: "running",
+      key,
+      runId: request.run.id,
+      progress: null,
+    });
+    expect(store.getState().runs).toStrictEqual([
+      {
+        runId: request.run.id,
+        analysis: "vars",
+        key,
+        current: true,
+        stopping: false,
+        afterStop: false,
+        progress: null,
+      },
+    ]);
+    request.progress({ done: 3, total: 10 });
+    expect(statuses(store)[1]).toStrictEqual({
+      kind: "running",
+      key,
+      runId: request.run.id,
+      progress: { done: 3, total: 10 },
+    });
+    expect(store.getState().runs[0]?.progress).toStrictEqual({
+      done: 3,
+      total: 10,
+    });
+    const result = varsResult(null);
+    store.runEnded(request.run.id, doneWith(request, result));
+    const done = statuses(store)[1];
+    expect(done).toStrictEqual({
+      kind: "done",
+      key,
+      result,
+      warnings: [MAF_WARNING],
+      check: null,
+    });
+    expect(done?.kind === "done" && done.result).toBe(result);
+    expect(store.getState().runs).toStrictEqual([]);
+    // Another threshold and back: the result comes from the cache.
+    store.apply("the MAF filter changed", maf(0.8));
+    expect(statuses(store)[1]?.kind).toBe("ready");
+    store.undo();
+    const again = statuses(store)[1];
+    expect(again?.kind === "done" && again.result).toBe(result);
+    expect(sent).toHaveLength(1);
+  });
+
+  test("run asked twice for one key: the second startRun returns null and sends nothing, as it does once the result is there", () => {
+    const { store, sent } = storeWithVariantsRead();
+    const run = store.startRun("vars");
+    const before = store.getState();
+    expect(store.startRun("vars")).toBeNull();
+    expect(store.getState()).toBe(before);
+    expect(sent).toHaveLength(1);
+    const request = sentAt(sent, 0);
+    expect(run).toBe(request.run);
+    store.runEnded(request.run.id, doneWith(request, varsResult(null)));
+    expect(store.startRun("vars")).toBeNull();
+    expect(sent).toHaveLength(1);
+  });
+
+  test("a locked analysis does not start, and an unknown analysis is a defect", () => {
+    const { store, sent } = storeWithVariantsRead();
+    expect(store.startRun("pops")).toBeNull();
+    expect(sent).toHaveLength(0);
+    expect(() => store.startRun("nothing")).toThrow(
+      /^popnei_web defect: startRun was given the analysis "nothing"/,
+    );
+    expect(() => {
+      store.cancelRun("nothing");
+    }).toThrow(
+      /^popnei_web defect: cancelRun was given the analysis "nothing"/,
+    );
+  });
+
+  test("popnei's refusal is kept under its key: error refused, again after a command and its undo, and startRun returns null", () => {
+    const { store, sent } = storeWithVariantsRead();
+    store.startRun("vars");
+    const request = sentAt(sent, 0);
+    const key = keyAt(store, 1);
+    store.runEnded(request.run.id, {
+      kind: "failed",
+      error: { kind: "popnei", message: "no variant left" },
+    });
+    const refused = {
+      kind: "error",
+      key,
+      error: { kind: "refused", message: "no variant left" },
+    };
+    expect(statuses(store)[1]).toStrictEqual(refused);
+    expect(store.startRun("vars")).toBeNull();
+    store.apply("the MAF filter changed", maf(0.9));
+    expect(statuses(store)[1]?.kind).toBe("ready");
+    store.undo();
+    expect(statuses(store)[1]).toStrictEqual(refused);
+    expect(store.startRun("vars")).toBeNull();
+    expect(sent).toHaveLength(1);
+  });
+
+  test("another failure is kept until the next change: error failed, startRun works, and after a command and its undo the analysis is ready", () => {
+    const { store, sent } = storeWithVariantsRead();
+    store.startRun("vars");
+    const key = keyAt(store, 1);
+    const error = { kind: "workerFailed", message: "out of memory" } as const;
+    store.runEnded(sentAt(sent, 0).run.id, { kind: "failed", error });
+    expect(statuses(store)[1]).toStrictEqual({
+      kind: "error",
+      key,
+      error: { kind: "failed", error },
+    });
+    // A second try, cancelled: the failure it retried is forgotten.
+    const retry = store.startRun("vars");
+    expect(retry).toBe(sentAt(sent, 1).run);
+    expect(statuses(store)[1]?.kind).toBe("running");
+    store.cancelRun("vars");
+    store.runEnded(sentAt(sent, 1).run.id, { kind: "cancelled" });
+    expect(statuses(store)[1]).toStrictEqual({ kind: "ready", key });
+    // A third, failed, then a command and its undo.
+    store.startRun("vars");
+    store.runEnded(sentAt(sent, 2).run.id, { kind: "failed", error });
+    expect(statuses(store)[1]?.kind).toBe("error");
+    store.apply("the MAF filter changed", maf(0.9));
+    store.undo();
+    expect(statuses(store)[1]).toStrictEqual({ kind: "ready", key });
+  });
+
+  test("a failure is not forgotten when a read is recorded, the number of variants of another result among them", () => {
+    const { store, sent } = storeWithBothReady();
+    // A load of another variants file undone, pending in the future.
+    store.apply("a variants file was loaded", loadPanel(OTHER_VARIANTS_ID));
+    store.undo();
+    store.startRun("pops");
+    store.startRun("vars");
+    const error = { kind: "couldNotStart", reason: "no ready" } as const;
+    store.runEnded(sentAt(sent, 0).run.id, { kind: "failed", error });
+    const vars = sentAt(sent, 1);
+    store.runEnded(vars.run.id, doneWith(vars, varsResult(1200)));
+    expect(store.getState().project.variants?.read).toMatchObject({
+      numVars: 1200,
+    });
+    store.variantsRead(OTHER_VARIANTS_ID, VARIANTS_READ);
+    expect(statuses(store)[0]).toStrictEqual({
+      kind: "error",
+      key: keyAt(store, 0),
+      error: { kind: "failed", error },
+    });
+    store.redo();
+    expect(store.getState().project.variants).toMatchObject({
+      fileId: OTHER_VARIANTS_ID,
+      read: VARIANTS_READ,
+    });
+  });
+
+  test("a cancel by the user stops the request, and the analysis is ready at once; a restart's cancel leaves it ready too", () => {
+    const { store, sent } = storeWithVariantsRead();
+    const key = keyAt(store, 1);
+    const before = store.getState();
+    store.cancelRun("vars");
+    expect(store.getState()).toBe(before);
+    store.startRun("vars");
+    const request = sentAt(sent, 0);
+    store.cancelRun("vars");
+    expect(request.cancels()).toBe(1);
+    expect(statuses(store)[1]).toStrictEqual({ kind: "ready", key });
+    expect(store.getState().runs).toMatchObject([
+      { runId: request.run.id, stopping: true, current: true },
+    ]);
+    store.cancelRun("vars");
+    expect(request.cancels()).toBe(1);
+    store.runEnded(request.run.id, { kind: "cancelled" });
+    expect(statuses(store)[1]).toStrictEqual({ kind: "ready", key });
+    expect(store.getState().runs).toStrictEqual([]);
+    // A restart of the worker ends a request cancelled with no cancelRun.
+    store.startRun("vars");
+    store.runEnded(sentAt(sent, 1).run.id, { kind: "cancelled" });
+    expect(statuses(store)[1]).toStrictEqual({ kind: "ready", key });
+  });
+
+  test("a crash of the worker shows the failure, and the analysis can run again", () => {
+    const { store, sent } = storeWithVariantsRead();
+    store.startRun("vars");
+    const error = { kind: "workerFailed", message: "a trap" } as const;
+    store.runEnded(sentAt(sent, 0).run.id, { kind: "failed", error });
+    expect(statuses(store)[1]).toMatchObject({
+      kind: "error",
+      error: { kind: "failed", error },
+    });
+    expect(store.startRun("vars")).toBe(sentAt(sent, 1).run);
+  });
+
+  test("a progress after the end of its request, or before send returns, is passed over, and a progress changes only its own request", () => {
+    const { analyses } = fakeAnalyses();
+    const { send, sent } = fakeSend();
+    const early = (
+      key: string,
+      job: TestJob,
+      onProgress: (p: Progress) => void,
+    ): Run<TestResult> => {
+      onProgress({ done: 1, total: 10 });
+      return send(key, job, onProgress);
+    };
+    const store = createStore({
+      first: emptyProject("popgen"),
+      analyses,
+      send: early,
+      numVarsOf: () => null,
+      appVersion: "0.1.0",
+      cacheMaxBytes: 1024 * 1024,
+      maxUndoSteps: 200,
+    });
+    store.popneiReady("0.1.0");
+    store.apply("a variants file was loaded", loadPanel(VARIANTS_ID));
+    store.variantsRead(VARIANTS_ID, VARIANTS_READ);
+    store.apply("an individuals file was loaded", loadPops);
+    store.individualsRead(INDIVIDUALS_ID, CSV, INDIVIDUALS_READ);
+    store.apply("the populations changed", (p) =>
+      setGrouping(p, { kind: "populations", column: "pop" }),
+    );
+    store.startRun("pops");
+    store.startRun("vars");
+    expect(statuses(store)).toMatchObject([
+      { kind: "running", progress: null },
+      { kind: "running", progress: null },
+    ]);
+    const pops = sentAt(sent, 0);
+    const vars = sentAt(sent, 1);
+    const before = store.getState();
+    vars.progress({ done: 4, total: 10 });
+    const after = store.getState();
+    expect(after.analyses[0]).toBe(before.analyses[0]);
+    expect(after.runs[0]).toBe(before.runs[0]);
+    expect(after.analyses[1]?.status).toMatchObject({
+      progress: { done: 4, total: 10 },
+    });
+    expect(after.runs[1]?.progress).toStrictEqual({ done: 4, total: 10 });
+    store.runEnded(pops.run.id, doneWith(pops, popsResult()));
+    const ended = store.getState();
+    pops.progress({ done: 9, total: 10 });
+    expect(store.getState()).toBe(ended);
+  });
+
+  test("a result under another key than its request's is a defect, and the request is no longer in flight", () => {
+    const { store, sent } = storeWithVariantsRead();
+    store.startRun("vars");
+    const request = sentAt(sent, 0);
+    const { listener, count } = counter();
+    store.subscribe(listener);
+    expect(() => {
+      store.runEnded(request.run.id, {
+        kind: "done",
+        key: "f".repeat(64),
+        result: varsResult(null),
+      });
+    }).toThrow(
+      /^popnei_web defect: the request 1 of the analysis "vars" was sent under the key/,
+    );
+    expect(statuses(store)[1]?.kind).toBe("ready");
+    expect(store.getState().runs).toStrictEqual([]);
+    expect(count()).toBe(1);
+    store.startRun("vars");
+    const second = sentAt(sent, 1);
+    expect(() => {
+      store.runEnded(second.run.id, {
+        kind: "done",
+        key: "not a key",
+        result: varsResult(null),
+      });
+    }).toThrow(/^popnei_web defect: a worker sent back the key "not a key"/);
+    expect(statuses(store)[1]?.kind).toBe("ready");
+    expect(store.getState().runs).toStrictEqual([]);
+  });
+
+  test("a runEnded of a request the store did not start is a defect, and changes nothing", () => {
+    const { store } = storeWithVariantsRead();
+    const before = store.getState();
+    expect(() => {
+      store.runEnded(7, { kind: "cancelled" });
+    }).toThrow(/^popnei_web defect: runEnded was given the request 7/);
+    expect(store.getState()).toBe(before);
+  });
+
+  test("an analysis's run that throws leaves the state as it was, and what it sent is stopped", () => {
+    const { analyses } = fakeAnalyses();
+    const [pops, vars] = analyses;
+    if (pops === undefined || vars === undefined) {
+      throw new Error("popnei_web defect: no fake analyses");
+    }
+    const { send, sent } = fakeSend();
+    const job: TestJob = { analysis: "vars", pruned: "" };
+    let behaviour: "throw" | "send, then throw" | "send twice" | "other" =
+      "throw";
+    const faulty: AnalysisDef<TestJob, TestResult> = {
+      ...vars,
+      run: (_p, c) => {
+        switch (behaviour) {
+          case "throw":
+            throw new Error("a mistake of the analysis");
+          case "send, then throw":
+            c.run(job);
+            throw new Error("a mistake of the analysis");
+          case "send twice":
+            c.run(job);
+            return c.run(job);
+          case "other":
+            c.run(job);
+            return send("x", job, () => undefined);
+        }
+      },
+    };
+    const store = createStore({
+      first: emptyProject("popgen"),
+      analyses: [pops, faulty],
+      send,
+      numVarsOf: () => null,
+      appVersion: "0.1.0",
+      cacheMaxBytes: 1024,
+      maxUndoSteps: 200,
+    });
+    store.popneiReady("0.1.0");
+    store.apply("a variants file was loaded", loadPanel(VARIANTS_ID));
+    store.variantsRead(VARIANTS_ID, VARIANTS_READ);
+    const before = store.getState();
+    expect(() => store.startRun("vars")).toThrow("a mistake of the analysis");
+    expect(sent).toHaveLength(0);
+    behaviour = "send, then throw";
+    expect(() => store.startRun("vars")).toThrow("a mistake of the analysis");
+    expect(sentAt(sent, 0).cancels()).toBe(1);
+    behaviour = "send twice";
+    expect(() => store.startRun("vars")).toThrow(
+      /^popnei_web defect: the analysis "vars" sent a second request/,
+    );
+    expect(sentAt(sent, 1).cancels()).toBe(1);
+    behaviour = "other";
+    expect(() => store.startRun("vars")).toThrow(
+      /^popnei_web defect: the run of the analysis "vars" gave a handle its client did not give/,
+    );
+    expect(sentAt(sent, 2).cancels()).toBe(1);
+    expect(store.getState()).toBe(before);
+  });
+
+  test("the number of variants of a result is recorded into every project of the history that holds its load, with no step of undo", () => {
+    const { store, sent } = storeWithVariantsRead();
+    store.apply("the MAF filter changed", maf(0.9));
+    store.startRun("vars");
+    const request = sentAt(sent, 0);
+    store.runEnded(request.run.id, doneWith(request, varsResult(1200)));
+    const last = store.getState().project;
+    expect(last.variants?.read).toStrictEqual({
+      ...VARIANTS_READ,
+      numVars: 1200,
+    });
+    expect(store.getState().undo).toBe("the MAF filter changed");
+    store.undo();
+    expect(store.getState().project.variants).toBe(last.variants);
+    expect(store.getState().undo).toBe("a variants file was loaded");
+  });
+
+  test("the warnings of a result are made from the project its request was made from", () => {
+    const { store, sent } = storeWithVariantsRead();
+    store.startRun("vars");
+    const request = sentAt(sent, 0);
+    store.apply("the MAF filter changed", maf(0.9));
+    expect(statuses(store)[1]?.kind).toBe("ready");
+    expect(store.getState().runs).toMatchObject([
+      { runId: request.run.id, current: false },
+    ]);
+    store.runEnded(request.run.id, doneWith(request, varsResult(null)));
+    expect(statuses(store)[1]?.kind).toBe("ready");
+    store.undo();
+    expect(statuses(store)[1]).toMatchObject({ kind: "done", warnings: [] });
+  });
+
+  test("each result reaches only the warnings of its own analysis", () => {
+    const { store, sent, calls } = storeWithBothReady();
+    store.startRun("pops");
+    store.startRun("vars");
+    const pops = sentAt(sent, 0);
+    const vars = sentAt(sent, 1);
+    store.runEnded(vars.run.id, doneWith(vars, varsResult(null)));
+    store.runEnded(pops.run.id, doneWith(pops, popsResult()));
+    expect(calls.given).toStrictEqual([
+      "vars warnings of vars",
+      "pops warnings of pops",
+    ]);
+    expect(statuses(store).map((s) => s.kind)).toStrictEqual(["done", "done"]);
+  });
+
+  test("above its bound, the cache drops a result the project no longer gives, never one it gives", () => {
+    // Results of 800 bytes in a cache of 1,000.
+    const { store, sent } = storeWithBothReady(1000);
+    store.startRun("vars");
+    const vars = sentAt(sent, 0);
+    const varsDone = varsResult(null);
+    store.runEnded(vars.run.id, doneWith(vars, varsDone));
+    store.startRun("pops");
+    const first = sentAt(sent, 1);
+    store.runEnded(first.run.id, doneWith(first, popsResult()));
+    // Both shown, above the bound: neither is dropped.
+    expect(statuses(store).map((s) => s.kind)).toStrictEqual(["done", "done"]);
+    store.apply("the populations changed", (p) =>
+      setGrouping(p, { kind: "populations", column: "id" }),
+    );
+    store.startRun("pops");
+    const second = sentAt(sent, 2);
+    store.runEnded(second.run.id, doneWith(second, popsResult()));
+    expect(statuses(store).map((s) => s.kind)).toStrictEqual(["done", "done"]);
+    store.undo();
+    expect(statuses(store).map((s) => s.kind)).toStrictEqual(["ready", "done"]);
+    const shown = statuses(store)[1];
+    expect(shown?.kind === "done" && shown.result).toBe(varsDone);
   });
 });
