@@ -132,7 +132,12 @@ the file and the filters, which the analysis gives, the threshold of the
 pruning; and the three parts that `keyOf` puts in every key itself, the
 load of the variants file, the filters the analysis reads, and the
 version of popnei. `intermediateKeyOf` makes it, so that the analysis
-cannot leave out those three.
+cannot leave out those three. It hashes an object of six fields:
+`intermediate`, the name; `inputs`; `load`, `filters` and
+`individualFilters`, written as in the key of an analysis; and
+`popneiVersion`. It has no field `analysis`, so it never coincides with
+the key of an analysis, and it does not hold the id of the analysis that
+asks for it, so two analyses that read the same filters share it.
 The store gives the analysis a function that calls it
 (`docs/specs/core/store.md`).
 
