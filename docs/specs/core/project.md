@@ -37,6 +37,13 @@ The rules, which every function below keeps:
   format of the project file, holds: text, finite numbers, booleans,
   `null`, lists and objects of named fields. Saving it is writing it as
   JSON, and `parseProject` of what that wrote gives an equal project.
+  The rule is kept by freezing: the store freezes every project it takes
+  with `freezeProject` (`docs/specs/core/store.md`), so that a write into
+  it throws, and the memo of the keys trusts the text of an object only
+  when it is frozen (`docs/specs/core/keys.md`, "The memo"). A command
+  copies what it is given, a filter, the options of an analysis, so that
+  a caller that changes its own object later does not change the
+  project.
 - **A command is a function from a project to a new project**, which
   builds the new one from the parts of the old, keeps the very same
   object for every part it did not change, and changes nothing in the old
@@ -312,6 +319,15 @@ export function emptyProject(app: AppId): Project;
 //   grouping: app === "popgen" ? { kind: "populations", column: null }
 //                              : { kind: "roles", roles: [] },
 //   analyses: [], reference: null }
+```
+
+The project frozen deeply, with `Object.freeze`, so that a write into it
+throws. A part already frozen is taken as frozen with everything it
+holds, and is not walked again, so freezing the project a command gave
+costs only the parts that command made. Gives `p` itself.
+
+```ts
+export function freezeProject(p: Project): Project;
 ```
 
 ### The commands

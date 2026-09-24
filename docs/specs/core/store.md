@@ -459,7 +459,16 @@ those in flight:
 
 ## How it runs
 
-On the page. After every change of the project or of the version of
+On the page. The store freezes every project it takes, with
+`freezeProject` of `docs/specs/core/project.md`, before it holds it: the
+project a command gave to `apply`, the one opened, and each project of
+the history that a record changed. A project that undo or redo gives back
+was frozen when it was taken. So a write into a project it holds throws,
+and the memo of the keys, which trusts only frozen objects, is used for
+every project. Freezing stops at the parts already frozen, so it costs
+only what the command made.
+
+After every change of the project or of the version of
 popnei, the store makes the key of each analysis that is not locked. It
 keeps the keys of the last project and version, so that a progress
 message, which changes neither, makes no key; and a memo, a table of the

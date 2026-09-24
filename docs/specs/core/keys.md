@@ -85,11 +85,17 @@ options of an analysis.
 Anything that is not a JSON value throws an `Error` whose message starts
 with `popnei_web defect:` and gives the path of the value: `undefined`,
 `NaN`, an infinity, a function, a `Map`, a `Set`, an array of numbers of
-the kind popnei gives results in, a `Date`, an object of a class, a file.
+the kind popnei gives results in, a `Date`, an object of a class, a file,
+and a cycle, an object that holds itself, which would otherwise overflow
+the stack; an object held in two places that do not hold each other is
+JSON and is written twice.
 The path is written as a JSON list of the fields and the positions from
 the top of the value, the form of `ProjectError.path`, as in
 `popnei_web defect: the canonical form was given NaN at
 ["options","list",1], which is not a JSON value.`
+`keyOf`, `intermediateKeyOf` and `settingsFingerprint` add the id of the
+analysis, `... at ["inputs","t"] in the key of the analysis "diversity",
+...`, since the path alone does not say whose `keyInputs` gave it.
 `JSON.stringify` would write `NaN` as `null` and a `Map` as `{}`, so a
 threshold of `NaN` and one of `null`, or two different maps, would share a
 key. An object is plain when its prototype is `Object.prototype` or
@@ -111,8 +117,8 @@ considered, which a hash of 32 or 64 bits would not.
 Core is checked with nothing of the browser and nothing of node
 (`tsconfig.core.json`), so the encoder of UTF-8 the browser gives,
 `TextEncoder`, is not there: the encoding is ours too, a few lines. Given
-a text with a broken character, `sha256Hex` throws a defect, since the
-canonical form never gives one.
+a text with a broken character, `sha256Hex` throws a defect that gives
+its position in the text, since the canonical form never gives one.
 
 The canonical form is hashed rather than used as the key itself because
 the individuals table goes into the key of every analysis that uses the
@@ -215,7 +221,8 @@ those of the current source when the settings now are compared with them.
 A key that comes back from a worker with its result, a text on the wire,
 enters the cache through `keyFromWire`, the other place a `Key` is made. A
 text that is not 64 lower case hexadecimal digits throws a defect, since
-both sides are our code.
+both sides are our code; its message quotes at most the first 80
+characters of the text, which could be of any length.
 
 ```ts
 export function keyFromWire(text: string): Key;
@@ -228,7 +235,11 @@ text that lets go of the object when nothing else holds it, made by the
 store and held by it, so that core has no state outside the store
 (`.claude/skills/coding/SKILL.md`, "The core"). It is right because the
 project is never changed in place: an object seen once always has the
-same text.
+same text. The memo keeps and gives back the text of an object only
+when the object is frozen, `Object.isFrozen`, as every project the store
+holds is (`docs/specs/core/project.md`, `freezeProject`). An object
+that is not frozen is written again each time, so a value that a bug
+changed in place gives its new text and not the one it had.
 
 ```ts
 export interface KeyMemo { readonly texts: WeakMap<object, string> }
