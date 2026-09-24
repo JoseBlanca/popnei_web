@@ -200,7 +200,7 @@ to `main` (`CLAUDE.md`).
 - [x] 3.1 `.github/workflows/site.yml`; the branch of the plan stays
   local, by the owner's decision, and `main` was pushed first, so that it
   is the default branch of the repository on GitHub. Serves 1.
-- [ ] 3.2 The owner sets Pages to GitHub Actions, merges the branch into
+- [x] 3.2 The owner sets Pages to GitHub Actions, merges the branch into
   `main` and orders the push. Serves 2.
 - [ ] 3.3 The probe run against the deployed site, the `curl`, and the
   measurements into the report. Serves 3 and 4. Needs 3.2.

@@ -230,3 +230,19 @@ code or workflow, is on GitHub and is the repository's default branch; no
 workflow ran. So the first run of the workflow, and the first automated
 run of Firefox, is the push of `main` after the merge (task 3.2); the
 plan's check of deliverable 1 was moved there.
+
+On 24 September 2026 the owner set Pages to GitHub Actions and ordered
+the merge and the push. `main` was fast-forwarded to 0f9376a in the main
+checkout, where `npm ci`, the format, types, lint, 68 unit tests, the
+build and 40 browser tests in Chromium and WebKit passed, and pushed.
+The first run of the workflow, 36023880445, passed its three jobs:
+`check`; `e2e`, "60 passed (34.9s)", 20 tests in each of Chromium,
+Firefox 155.0 (Playwright's build 1543 on Ubuntu 24.04) and WebKit, the
+first automated run of Firefox; and `deploy`.
+
+The repository's Pages are served at the owner's domain,
+`https://jblanca.net/popnei_web/`, and not at the address of the plan:
+`https://joseblanca.github.io/popnei_web/probe.html` answers 301 and
+leads there, and `https://jblanca.net/popnei_web/probe.html` answers
+200. The base path `/popnei_web/` is the same, so nothing of the site
+changes.
