@@ -465,8 +465,8 @@ function PopneiStatus({ popnei }: { popnei: PopneiState }): JSX.Element {
           <p>Message: {sentence(popnei.message)}</p>
           <p>
             Reload the page. If popnei still does not load, report it at{" "}
-            <a href={ISSUES}>{ISSUES}</a>, with the address and the message
-            above.
+            <a href={ISSUES}>{ISSUES}</a>, with the message above, and the
+            address when the page shows one.
           </p>
         </>
       );

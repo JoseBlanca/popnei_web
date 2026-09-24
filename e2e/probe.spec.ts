@@ -254,7 +254,7 @@ test("the page says popnei could not be loaded when its wasm is not found", asyn
     /Message: .*assets\/popnei_bg-[^/]*\.wasm/,
   );
   await expect(popnei(page)).toContainText(
-    "Reload the page. If popnei still does not load, report it at https://github.com/JoseBlanca/popnei_web/issues, with the address and the message above.",
+    "Reload the page. If popnei still does not load, report it at https://github.com/JoseBlanca/popnei_web/issues, with the message above, and the address when the page shows one.",
   );
   await expect(served(page)).toContainText(
     "Not opened, since popnei could not be loaded.",
