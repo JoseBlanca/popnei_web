@@ -235,6 +235,20 @@ Under way.
   a command, an undo, a redo or an opening, not at a read of a file; a
   run asked again forgets the failure it retries; a client that sends
   twice is a defect, and what it sent is cancelled.
+- Task 4.3, 3fa2b7c, after the spec in 6692f0e: the notice of results
+  removed, `dismissNotice`, the three moments a calculation left behind
+  is stopped, `afterStop`, the stops at an opening and at another
+  version of popnei, and the state `removed`. `npx vitest run
+  src/core/store.test.ts -t "WP4 D3"` gives "Tests 20 passed", of at
+  least 16; `npm test` gives 584. Twenty-one breaks, each failing 1 to
+  21 tests; "an opening keeps the notice" passed at first, and the test
+  of `open` now holds a removed result. The spec said a request is
+  marked as coming after a stop when its run stopped a calculation, or
+  one already being stopped; the writer marks it whenever any
+  calculation is being stopped at that moment, since the new request
+  then waits for a worker that starts again in each case. The mark only
+  lets the panel say that it may first wait for the file to be read
+  again.
 
 ## 2. The keys
 

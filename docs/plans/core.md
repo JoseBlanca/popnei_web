@@ -386,7 +386,7 @@ order.
   `done` and `error`; from the store spec's "The definition of an
   analysis", "A calculation that failed", what `runEnded` does with each
   outcome, and "The cases". Serves 2. Needs 4.1.
-- [ ] 4.3 The notice, `dismissNotice`, the three moments a calculation
+- [x] 4.3 The notice, `dismissNotice`, the three moments a calculation
   left behind is stopped, `afterStop`, the stopping at `open` and at a
   second `popneiReady` of another version, and the state `removed`; from
   the store spec's "The notice, and the calculations it stops", the rows
