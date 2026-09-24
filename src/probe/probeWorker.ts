@@ -5,22 +5,24 @@
  *
  * It is the one file of the probe that calls popnei. Every message it sends
  * is a `FromProbe`, and every request it receives is checked by
- * `validateToProbe` before it is read.
+ * `validateToProbe` before it is read. Every request of a file is
+ * answered, whatever is thrown while it is opened, but for a trap of
+ * popnei's wasm, after which the worker stops (docs/specs/site.md, "The
+ * cases").
  */
 import { init, openVars, openVcf, version } from "popnei";
 import type { Variants } from "popnei";
 
-import { describeMessageError, validateToProbe } from "./messages.ts";
-import type { FromProbe } from "./messages.ts";
-
-/** The path of the file the site serves, under the base path of the site. */
-const SERVED_PATH = "probe/panel.nei";
+import {
+  SERVED_NAME,
+  describeMessageError,
+  readsAsVcf,
+  validateToProbe,
+} from "./messages.ts";
+import type { FileSource, FromProbe, ToProbe } from "./messages.ts";
 
 /** What the worker says when a file is asked for and popnei is not loaded. */
-const POPNEI_NOT_LOADED = "popnei is not loaded, so no file can be opened.";
-
-/** A name that ends in `.vcf` or `.vcf.gz`, compared without case. */
-const VCF_NAME = /\.vcf(\.gz)?$/i;
+const POPNEI_NOT_LOADED = "popnei is not loaded, so no file can be opened";
 
 /**
  * True once popnei can be called, false when it could not be loaded. It is
@@ -58,6 +60,13 @@ async function loadPopnei(): Promise<boolean> {
   return true;
 }
 
+/** The file a request asks for: where it comes from, its name, its address. */
+interface Target {
+  readonly source: FileSource;
+  readonly name: string;
+  readonly address: string | null;
+}
+
 async function answer(data: unknown): Promise<void> {
   const checked = validateToProbe(data);
   if (!checked.ok) {
@@ -69,115 +78,79 @@ async function answer(data: unknown): Promise<void> {
     return;
   }
   const request = checked.value;
+  const target = targetOf(request);
+  try {
+    if (!(await popneiLoaded)) {
+      post(failed(target, POPNEI_NOT_LOADED));
+      return;
+    }
+    const bytes = await bytesOf(request);
+    post(open(bytes, target));
+  } catch (error) {
+    if (error instanceof WebAssembly.RuntimeError) {
+      stop(error);
+      return;
+    }
+    post(failed(target, messageOf(error)));
+  }
+}
+
+function targetOf(request: ToProbe): Target {
   switch (request.kind) {
     case "openServed":
-      post(await openServed());
-      return;
+      return {
+        source: "served",
+        name: SERVED_NAME,
+        address: servedAddress(),
+      };
     case "openFile":
-      post(await openFile(request.file));
-      return;
+      return { source: "file", name: request.file.name, address: null };
   }
 }
 
 /**
- * Fetches the file the site serves and opens it. A status other than 200
- * is a failure with the address, so that popnei is never given the page of
- * an error to read.
+ * The bytes of the file a request asks for. The served file is fetched
+ * with `cache: "no-cache"`, since it keeps its name from one build to the
+ * next, and a status other than 200 is thrown, so that popnei is never
+ * given the page of an error to read. A file of the user is read whole with
+ * `FileReaderSync`, which exists only in a worker and returns the bytes at
+ * once.
  */
-async function openServed(): Promise<FromProbe> {
-  const name = SERVED_PATH.slice(SERVED_PATH.lastIndexOf("/") + 1);
-  const address = new URL(import.meta.env.BASE_URL + SERVED_PATH, location.href)
-    .href;
-  const failed = (message: string): FromProbe => ({
-    kind: "failed",
-    stage: "open",
-    source: "served",
-    name,
-    address,
-    message,
-  });
-  if (!(await popneiLoaded)) {
-    return failed(POPNEI_NOT_LOADED);
-  }
-  let bytes: Uint8Array;
-  try {
-    const response = await fetch(address);
-    if (response.status !== 200) {
-      return failed(
-        `The server answered ${String(response.status)} ${response.statusText}`.trim(),
-      );
+async function bytesOf(request: ToProbe): Promise<Uint8Array> {
+  switch (request.kind) {
+    case "openServed": {
+      const response = await fetch(servedAddress(), { cache: "no-cache" });
+      if (response.status !== 200) {
+        throw new Error(
+          `the server answered ${String(response.status)} ${response.statusText}`.trim(),
+        );
+      }
+      return new Uint8Array(await response.arrayBuffer());
     }
-    bytes = new Uint8Array(await response.arrayBuffer());
-  } catch (error) {
-    return failed(messageOf(error));
+    case "openFile":
+      return new Uint8Array(
+        new FileReaderSync().readAsArrayBuffer(request.file),
+      );
   }
-  return open(bytes, "served", name, address);
-}
-
-/**
- * Reads a file the user picked, whole, with `FileReaderSync`, which exists
- * only in a worker and returns the bytes at once, and opens it.
- */
-async function openFile(file: File): Promise<FromProbe> {
-  if (!(await popneiLoaded)) {
-    return {
-      kind: "failed",
-      stage: "open",
-      source: "file",
-      name: file.name,
-      address: null,
-      message: POPNEI_NOT_LOADED,
-    };
-  }
-  let bytes: Uint8Array;
-  try {
-    bytes = new Uint8Array(new FileReaderSync().readAsArrayBuffer(file));
-  } catch (error) {
-    return {
-      kind: "failed",
-      stage: "open",
-      source: "file",
-      name: file.name,
-      address: null,
-      message: messageOf(error),
-    };
-  }
-  return open(bytes, "file", file.name, null);
 }
 
 /**
  * Opens the bytes with popnei, as a VCF when the name says so and as a
  * vars file otherwise, and frees what popnei gave. A VCF is opened with
  * popnei's default ploidy, 2, which is then given and not read. `openMs`
- * is the time of popnei's call alone, not of the fetch or the read.
+ * is the time of popnei's call alone, not of the fetch or the read. What
+ * popnei throws is the caller's to catch.
  */
-function open(
-  bytes: Uint8Array,
-  source: "served" | "file",
-  name: string,
-  address: string | null,
-): FromProbe {
-  const isVcf = VCF_NAME.test(name);
+function open(bytes: Uint8Array, target: Target): FromProbe {
+  const isVcf = readsAsVcf(target.name);
   const started = performance.now();
-  let variants: Variants;
+  const variants: Variants = isVcf ? openVcf(bytes) : openVars(bytes);
   try {
-    variants = isVcf ? openVcf(bytes) : openVars(bytes);
-  } catch (error) {
-    return {
-      kind: "failed",
-      stage: "open",
-      source,
-      name,
-      address,
-      message: messageOf(error),
-    };
-  }
-  const openMs = performance.now() - started;
-  try {
+    const openMs = performance.now() - started;
     return {
       kind: "opened",
-      source,
-      name,
+      source: target.source,
+      name: target.name,
       numIndividuals: variants.individuals.length,
       ploidy: variants.ploidy,
       ploidyAssumed: isVcf,
@@ -186,6 +159,29 @@ function open(
   } finally {
     variants.free();
   }
+}
+
+/** The address of the served file, under the base path of the site. */
+function servedAddress(): string {
+  return new URL(
+    `${import.meta.env.BASE_URL}probe/${SERVED_NAME}`,
+    location.href,
+  ).href;
+}
+
+function failed(target: Target, message: string): FromProbe {
+  return { kind: "failed", stage: "open", ...target, message };
+}
+
+/**
+ * Stops the worker after a trap of popnei's wasm, whose memory is then not
+ * to be trusted (worker.md). The error is reported as one nothing caught,
+ * which reaches the page as the worker's `error` event, and the worker
+ * closes, so that no later request runs on that memory.
+ */
+function stop(error: WebAssembly.RuntimeError): void {
+  reportError(error);
+  close();
 }
 
 /**
