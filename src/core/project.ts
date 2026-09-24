@@ -219,13 +219,24 @@ export type ProjectError =
   | { readonly kind: "otherApp"; readonly found: AppId }
   /** The file names an analysis this version does not know. */
   | { readonly kind: "unknownAnalysis"; readonly id: string }
-  /** A field whose value is not what `expected` says, or that the type
-      does not have. */
+  /** A field the type does not have: `path` is that of the object that
+      has it, `name` the name of the field. */
+  | {
+      readonly kind: "unknownField";
+      readonly path: FieldPath;
+      readonly name: string;
+    }
+  /** A field the type has and the file does not. */
+  | { readonly kind: "missingField"; readonly path: FieldPath }
+  /** A field whose value is not what `expected` says, the end of a
+      sentence "‹the field› should be ‹expected›". */
   | {
       readonly kind: "wrongValue";
       readonly path: FieldPath;
       readonly expected: string;
     }
+  /** A filter of the individuals out of the order of the kinds. */
+  | { readonly kind: "filterOutOfOrder"; readonly path: FieldPath }
   /** A second filter of the kind `filter` in one list. */
   | {
       readonly kind: "twoFiltersOfAKind";
@@ -240,13 +251,13 @@ export type ProjectError =
       readonly what: "analysis" | "column" | "individual";
       readonly value: string;
     }
-  /** A table and the types of its columns that do not agree: a row not as
-      long as the header, a type per column, a binary type whose values
-      are not those of its column. */
+  /** A table the reader does not give, or that does not agree with the
+      types of its columns; `problem` ends a sentence whose subject is the
+      field of `path`, "‹the field› has 3 cells where the header has 4". */
   | {
       readonly kind: "inconsistentTable";
       readonly path: FieldPath;
-      readonly expected: string;
+      readonly problem: string;
     };
 
 /** The place of a field in the project, `["filters", 1, "maxAllowedMaf"]`;
@@ -350,8 +361,8 @@ function wrongValue(path: FieldPath, expected: string): ProjectError {
   return { kind: "wrongValue", path, expected };
 }
 
-function inconsistentTable(path: FieldPath, expected: string): ProjectError {
-  return { kind: "inconsistentTable", path, expected };
+function inconsistentTable(path: FieldPath, problem: string): ProjectError {
+  return { kind: "inconsistentTable", path, problem };
 }
 
 function repeated(
@@ -397,7 +408,12 @@ function wholeNumberError(
 ): ProjectError | null {
   return Number.isInteger(value) && value >= min && value <= max
     ? null
-    : wrongValue(path, `a whole number from ${String(min)} to ${String(max)}`);
+    : wrongValue(
+        path,
+        max === Number.MAX_SAFE_INTEGER
+          ? `a whole number, ${String(min)} or more`
+          : `a whole number from ${String(min)} to ${String(max)}`,
+      );
 }
 
 /** Checks the thresholds of a filter of the variants, from 0 to 1, and
@@ -484,10 +500,13 @@ function variantLoadError(
   if (load.format === "nei") {
     return load.readOptions === null
       ? null
-      : wrongValue(optionsPath, "none, as a .nei file has no read options");
+      : wrongValue(optionsPath, "none, since a .nei file is read with none");
   }
   if (load.readOptions === null) {
-    return wrongValue(optionsPath, "the read options of a VCF");
+    return wrongValue(
+      optionsPath,
+      "given, since a VCF file is read with a ploidy",
+    );
   }
   return wholeNumberError(load.readOptions.ploidy, 1, MAX_PLOIDY, [
     ...optionsPath,
@@ -534,7 +553,10 @@ function individualsReadError(
     return null;
   }
   if (csv === null && read.found !== null) {
-    return wrongValue([...path, "found"], "none, as the file is an xlsx");
+    return wrongValue(
+      [...path, "found"],
+      "none, since the individuals file is an xlsx file",
+    );
   }
   return tableError(read.table, read.columns, path);
 }
@@ -556,13 +578,10 @@ function tableError(
 ): ProjectError | null {
   const tablePath = [...path, "table"];
   if (table.columns.length === 0) {
-    return inconsistentTable([...tablePath, "columns"], "at least one column");
+    return inconsistentTable([...tablePath, "columns"], "has no column");
   }
   if (table.rows.length === 0) {
-    return inconsistentTable(
-      [...tablePath, "rows"],
-      "at least one row below the header",
-    );
+    return inconsistentTable(tablePath, "has no row below its header");
   }
   const header = new Set<string>();
   for (const [index, name] of table.columns.entries()) {
@@ -576,14 +595,14 @@ function tableError(
     if (cells.length !== table.columns.length) {
       return inconsistentTable(
         [...tablePath, "rows", row],
-        "a row with one cell per column of the header",
+        `has ${String(cells.length)} cells where the header has ${String(table.columns.length)}`,
       );
     }
     const name = cells[0];
     if (typeof name !== "string" || name === "") {
       return inconsistentTable(
         [...tablePath, "rows", row, 0],
-        "the name of an individual, a text that is not empty",
+        "should be a text that is not empty",
       );
     }
     if (individuals.has(name)) {
@@ -594,15 +613,21 @@ function tableError(
   if (columns.length !== table.columns.length) {
     return inconsistentTable(
       [...path, "columns"],
-      "one type per column of the table",
+      `are ${String(columns.length)}, where the header has ${String(table.columns.length)} columns`,
     );
   }
   for (const [index, type] of columns.entries()) {
     const typePath = [...path, "columns", index];
-    if ((index === 0) !== (type.kind === "identifier")) {
+    if (index === 0 && type.kind !== "identifier") {
       return inconsistentTable(
         typePath,
-        "the type identifier for the first column and for no other",
+        "should be identifier, since the first column names the individuals",
+      );
+    }
+    if (index !== 0 && type.kind === "identifier") {
+      return inconsistentTable(
+        typePath,
+        "cannot be identifier: only the first column can have that type",
       );
     }
     if (
@@ -611,7 +636,7 @@ function tableError(
     ) {
       return inconsistentTable(
         typePath,
-        "a binary type whose two values are the two values of its column",
+        "should be binary, with the two values found in the column coded 1 and 0",
       );
     }
   }
@@ -1251,11 +1276,8 @@ function failure(error: ProjectError): Failure {
   return { ok: false, error };
 }
 
-/** What the text says a field should be when it is not there, or is of
-    the wrong shape. */
-const OBJECT = "a group of named fields";
-const PRESENT = "present";
-const NO_SUCH_FIELD = "no field of this name";
+/** What the text says an object of the wrong shape should be. */
+const OBJECT = "in the form the application writes";
 
 const PROJECT_FIELDS = [
   "app",
@@ -1287,12 +1309,12 @@ function readObject(
   }
   for (const name of Object.keys(value)) {
     if (!names.includes(name)) {
-      return failure(wrongValue([...path, name], NO_SUCH_FIELD));
+      return failure({ kind: "unknownField", path, name });
     }
   }
   for (const name of names) {
     if (!Object.hasOwn(value, name)) {
-      return failure(wrongValue([...path, name], PRESENT));
+      return failure({ kind: "missingField", path: [...path, name] });
     }
   }
   return success(value);
@@ -1403,6 +1425,27 @@ function parseNullable<T>(
   parse: Parser<T>,
 ): Parsed<T | null> {
   return value === null ? success(null) : parse(value, path);
+}
+
+/** A value `parse` reads, or `null`, which the text calls nothing. */
+function parseOrNothing<T>(
+  value: unknown,
+  path: FieldPath,
+  parse: Parser<T>,
+): Parsed<T | null> {
+  const parsed = parseNullable(value, path, parse);
+  if (parsed.ok || parsed.error.kind !== "wrongValue") {
+    return parsed;
+  }
+  const expected = parsed.error.expected;
+  return failure(
+    wrongValue(
+      parsed.error.path,
+      expected.includes(",")
+        ? `${expected}, or nothing`
+        : `${expected} or nothing`,
+    ),
+  );
 }
 
 function parseList<T>(
@@ -1680,10 +1723,6 @@ function parseIndividualFilter(
   return orFailure(filter, individualFilterError(filter, path));
 }
 
-/** What the text says of filters of the individuals out of their order. */
-const INDIVIDUAL_ORDER =
-  "after the filters of the kinds before it, in the order keep, remove, missing data, observed heterozygosity";
-
 function parseIndividualFilters(
   value: unknown,
   path: FieldPath,
@@ -1700,7 +1739,7 @@ function parseIndividualFilters(
   for (const [index, filter] of filters.value.entries()) {
     const rank = INDIVIDUAL_FILTER_ORDER.indexOf(filter.kind);
     if (rank < rankBefore) {
-      return failure(wrongValue([...path, index], INDIVIDUAL_ORDER));
+      return failure({ kind: "filterOutOfOrder", path: [...path, index] });
     }
     rankBefore = rank;
   }
@@ -1816,7 +1855,7 @@ function parseSourceRead(value: unknown, path: FieldPath): Parsed<SourceRead> {
       if (ploidyWrong !== null) {
         return failure(ploidyWrong);
       }
-      const numVars = parseNullable(
+      const numVars = parseOrNothing(
         fields["numVars"],
         [...path, "numVars"],
         parseCount,
@@ -2149,20 +2188,21 @@ function parseCell(value: unknown, path: FieldPath): Parsed<Cell> {
   }
   return typeof value === "number" && Number.isFinite(value)
     ? success(value)
-    : failure(wrongValue(path, "a text, a number, true, false or nothing"));
+    : failure(wrongValue(path, "a text, a number, true, false, or empty"));
 }
 
 function parseValue(
   value: unknown,
   path: FieldPath,
 ): Parsed<string | number | boolean> {
-  const cell = parseCell(value, path);
-  if (!cell.ok) {
-    return cell;
+  if (
+    typeof value === "string" ||
+    typeof value === "boolean" ||
+    (typeof value === "number" && Number.isFinite(value))
+  ) {
+    return success(value);
   }
-  return cell.value === null
-    ? failure(wrongValue(path, "a text, a number, true or false"))
-    : success(cell.value);
+  return failure(wrongValue(path, "a text, a number, true or false"));
 }
 
 function parseColumnType(value: unknown, path: FieldPath): Parsed<ColumnType> {
@@ -2217,7 +2257,7 @@ function parseRole(
   path: FieldPath,
 ): Parsed<Extract<Grouping, { kind: "roles" }>["roles"][number]> {
   if (!isList(value) || value.length !== 2) {
-    return failure(wrongValue(path, "a column and its role"));
+    return failure(wrongValue(path, "a name and a role"));
   }
   const column = parseText(value[0], [...path, 0]);
   if (!column.ok) {
@@ -2347,7 +2387,7 @@ function parseCheck(value: unknown, path: FieldPath): Parsed<Check> {
     return analysis;
   }
   const numbers = parseList(f["numbers"], [...path, "numbers"], (n, at) =>
-    parseNullable(n, at, parseNumber),
+    parseOrNothing(n, at, parseNumber),
   );
   if (!numbers.ok) {
     return numbers;
@@ -2403,15 +2443,73 @@ export function projectErrorText(error: ProjectError): string {
     case "otherApp":
       return `This project file is of the ${APP_WORDS[error.found]} application. Open it there.`;
     case "unknownAnalysis":
-      return `This project file has the analysis ${error.id}, which this version of the application does not know: it was saved by another version of the application.`;
+      return `This project file has the analysis ${shown(error.id)}, which this version of the application does not know: it was saved by another version of the application.`;
+    case "unknownField": {
+      const words = fieldWords(error.path);
+      return opened(
+        `${words} ${isPlural(words) ? "have" : "has"} a field "${shown(error.name)}", which the application does not write`,
+      );
+    }
+    case "missingField": {
+      const words = fieldWords(error.path);
+      return opened(`${words} ${isPlural(words) ? "are" : "is"} missing`);
+    }
     case "wrongValue":
+      return opened(`${fieldWords(error.path)} should be ${error.expected}`);
     case "inconsistentTable":
-      return `The project file cannot be opened: ${fieldWords(error.path)} should be ${error.expected}. ${DAMAGED}`;
+      return opened(`${fieldWords(error.path)} ${error.problem}`);
     case "repeated":
-      return `The project file cannot be opened: ${fieldWords(error.path)} repeats the ${error.what} ${shown(error.value)}. ${DAMAGED}`;
+      return opened(
+        `${fieldWords(error.path)} repeats the ${error.what} ${shown(error.value)}`,
+      );
     case "twoFiltersOfAKind":
-      return `The project file cannot be opened: ${fieldWords(error.path.slice(0, -1))} have two filters of ${FILTER_KIND_WORDS[error.filter]}. ${DAMAGED}`;
+      return opened(
+        `it has ${twoOfAKind(error.path, error.filter)}, and a project has at most one of each kind`,
+      );
+    case "filterOutOfOrder":
+      return opened(
+        `the filters of the individuals should be in the order ${INDIVIDUAL_FILTER_ORDER.map((kind) => FILTER_KIND_WORDS[kind]).join(", ")}, and the ${ordinal(positionOf(error.path))} one is out of that order`,
+      );
   }
+}
+
+/** Whether the words of a field name several things, "the filters of the
+    variants", and so take a verb in the plural. */
+function isPlural(words: string): boolean {
+  return /^the (filters|rows|types|roles|numbers|check numbers|analyses|individuals found|options|encoding, separator)\b/.test(
+    words,
+  );
+}
+
+/** The position a path ends in, the filter out of its order. */
+function positionOf(path: FieldPath): number {
+  const last = path.at(-1);
+  if (typeof last !== "number") {
+    throw defect(
+      `a path of a filter out of its order ends in ${String(last)}.`,
+    );
+  }
+  return last;
+}
+
+/** The text of an error of the content of a file, in the pattern of the
+    project spec, around the words of what is wrong. */
+function opened(what: string): string {
+  return `The project file cannot be opened: ${what}. ${DAMAGED}`;
+}
+
+/** Two filters of one kind, in words: "two filters of the variants by
+    missing genotypes", "two lists of individuals to keep". */
+function twoOfAKind(
+  path: FieldPath,
+  kind: VariantFilterKind | IndividualFilterKind,
+): string {
+  if (path[0] === "filters") {
+    return `two filters of the variants by ${FILTER_KIND_WORDS[kind]}`;
+  }
+  return kind === "keep" || kind === "remove"
+    ? `two lists of ${FILTER_KIND_WORDS[kind]}`
+    : `two filters of the individuals by ${FILTER_KIND_WORDS[kind]}`;
 }
 
 /** The longest a value of the file is shown, in characters. */
@@ -2455,51 +2553,66 @@ export function ordinal(index: number): string {
   return `${String(n)}${suffix}`;
 }
 
-/** A part of a pattern of the table of the fields: a field by its name,
-    or `N`, any position of a list, whose ordinal the words are given. */
+/** A part of a pattern of the table of the fields: a field by its name, a
+    position by its number, `N`, any position of a list, whose ordinal the
+    words are given, or `REST`, last, any fields below, named by the words
+    of the pattern alone. */
 const N: unique symbol = Symbol("any position");
-type PatternPart = string | number | typeof N;
+const REST: unique symbol = Symbol("any fields below");
+type PatternPart = string | number | typeof N | typeof REST;
 
 /** The words of a field, from the ordinals of the positions its pattern
     matched, in order. */
 type Words = (ordinals: readonly string[]) => string;
 
+type FieldWords = readonly [readonly PatternPart[], Words];
+
 /** The words of the fields of a variants file, below its words `file`. */
 function sourceFields(
   base: readonly PatternPart[],
   file: string,
-): (readonly [readonly PatternPart[], Words])[] {
+): FieldWords[] {
   return [
     [base, () => file],
     [[...base, "fileId"], () => `the identifier of ${file}`],
     [[...base, "name"], () => `the name of ${file}`],
     [[...base, "size"], () => `the size of ${file}`],
     [[...base, "format"], () => `the format of ${file}`],
-    [[...base, "readOptions"], () => `the read options of ${file}`],
-    [[...base, "readOptions", "ploidy"], () => `the ploidy of ${file}`],
+    [[...base, "readOptions"], () => `the options set to read ${file}`],
+    [
+      [...base, "readOptions", "ploidy"],
+      () => `the ploidy set to read ${file}`,
+    ],
     [
       [...base, "readOptions", "onlyPassed"],
-      () => `the option of ${file} that keeps only the variants that passed`,
+      () => `the option set to read only the variants that passed from ${file}`,
     ],
     [[...base, "read"], () => `what was read of ${file}`],
     [[...base, "read", "kind"], () => `what was read of ${file}`],
-    [[...base, "read", "individuals"], () => `the individuals read of ${file}`],
+    [
+      [...base, "read", "individuals"],
+      () => `the individuals found in ${file}`,
+    ],
     [
       [...base, "read", "individuals", N],
-      (o) => `the ${nth(o, 0)} individual read of ${file}`,
+      (o) => `the ${nth(o, 0)} individual found in ${file}`,
     ],
-    [[...base, "read", "ploidy"], () => `the ploidy read of ${file}`],
+    [[...base, "read", "ploidy"], () => `the ploidy found in ${file}`],
     [[...base, "read", "numVars"], () => `the number of variants of ${file}`],
-    [[...base, "read", "error"], () => `the reason ${file} could not be read`],
+    [
+      [...base, "read", "error", REST],
+      () => `the reason ${file} could not be read`,
+    ],
   ];
 }
 
 /**
  * The table of the fields of the project in words. A field is found by
- * the longest pattern that matches the start of its path; the rest of the
- * path, a field this version does not write, is named after it.
+ * the longest pattern that matches its path. Every field a project has is
+ * in it, which the tests check on random projects; the fallback of
+ * `fieldWords` is for a path no project has.
  */
-const FIELD_WORDS: readonly (readonly [readonly PatternPart[], Words])[] = [
+const FIELD_WORDS: readonly FieldWords[] = [
   [["app"], () => "the application"],
   ...sourceFields(["variants"], "the variants file"),
   [["filters"], () => "the filters of the variants"],
@@ -2513,7 +2626,7 @@ const FIELD_WORDS: readonly (readonly [readonly PatternPart[], Words])[] = [
     "maxAllowedMaf",
     "maxAllowedObsHet",
     "maxAllowedR2",
-  ].map((name): readonly [readonly PatternPart[], Words] => [
+  ].map((name): FieldWords => [
     ["filters", N, name],
     (o) => `the threshold of the ${nth(o, 0)} filter of the variants`,
   ]),
@@ -2539,27 +2652,28 @@ const FIELD_WORDS: readonly (readonly [readonly PatternPart[], Words])[] = [
     (o) =>
       `the ${nth(o, 1)} individual of the list of the ${nth(o, 0)} filter of the individuals`,
   ],
-  ...["maxAllowedMissingRate", "maxAllowedObsHet"].map(
-    (name): readonly [readonly PatternPart[], Words] => [
-      ["individualFilters", N, name],
-      (o) => `the threshold of the ${nth(o, 0)} filter of the individuals`,
-    ],
-  ),
+  ...["maxAllowedMissingRate", "maxAllowedObsHet"].map((name): FieldWords => [
+    ["individualFilters", N, name],
+    (o) => `the threshold of the ${nth(o, 0)} filter of the individuals`,
+  ]),
   [["individuals"], () => "the individuals file"],
   [["individuals", "fileId"], () => "the identifier of the individuals file"],
   [["individuals", "name"], () => "the name of the individuals file"],
-  [["individuals", "csv"], () => "the options of the individuals file"],
+  [
+    ["individuals", "csv"],
+    () => "the options set to read the individuals file",
+  ],
   [
     ["individuals", "csv", "encoding"],
-    () => "the encoding of the individuals file",
+    () => "the encoding set to read the individuals file",
   ],
   [
     ["individuals", "csv", "separator"],
-    () => "the separator of the individuals file",
+    () => "the separator set to read the individuals file",
   ],
   [
     ["individuals", "csv", "decimal"],
-    () => "the decimal mark of the individuals file",
+    () => "the decimal mark set to read the individuals file",
   ],
   [["individuals", "read"], () => "what was read of the individuals file"],
   [
@@ -2582,6 +2696,11 @@ const FIELD_WORDS: readonly (readonly [readonly PatternPart[], Words])[] = [
   [
     ["individuals", "read", "table", "rows", N],
     (o) => `the ${nth(o, 0)} row of the individuals file`,
+  ],
+  [
+    ["individuals", "read", "table", "rows", N, 0],
+    (o) =>
+      `the name of the individual of the ${nth(o, 0)} row of the individuals file`,
   ],
   [
     ["individuals", "read", "table", "rows", N, N],
@@ -2612,24 +2731,43 @@ const FIELD_WORDS: readonly (readonly [readonly PatternPart[], Words])[] = [
   ],
   [
     ["individuals", "read", "found"],
-    () => "what was found of how the individuals file is written",
+    () =>
+      "the encoding, separator and decimal mark found in the individuals file",
   ],
   [
-    ["individuals", "read", "error"],
+    ["individuals", "read", "found", "encoding"],
+    () => "the encoding found in the individuals file",
+  ],
+  [
+    ["individuals", "read", "found", "separator"],
+    () => "the separator found in the individuals file",
+  ],
+  [
+    ["individuals", "read", "found", "decimal"],
+    () => "the decimal mark found in the individuals file",
+  ],
+  [
+    ["individuals", "read", "error", REST],
     () => "the reason the individuals file could not be read",
   ],
   [["grouping"], () => "the grouping of the individuals"],
   [["grouping", "kind"], () => "the grouping of the individuals"],
   [["grouping", "column"], () => "the column of the populations"],
   [["grouping", "roles"], () => "the roles of the columns"],
-  [["grouping", "roles", N], (o) => `the ${nth(o, 0)} role of the columns`],
+  [
+    ["grouping", "roles", N],
+    (o) => `the ${nth(o, 0)} column in the roles of the columns`,
+  ],
   [
     ["grouping", "roles", N, 0],
-    (o) => `the column of the ${nth(o, 0)} role of the columns`,
+    (o) => `the name of the ${nth(o, 0)} column in the roles of the columns`,
   ],
-  [["grouping", "roles", N, 1], (o) => `the ${nth(o, 0)} role of the columns`],
-  [["analyses"], () => "the options of the analyses"],
-  [["analyses", N], (o) => `the options of the ${nth(o, 0)} analysis`],
+  [
+    ["grouping", "roles", N, 1],
+    (o) => `the role of the ${nth(o, 0)} column in the roles of the columns`,
+  ],
+  [["analyses"], () => "the analyses and their options"],
+  [["analyses", N], (o) => `the ${nth(o, 0)} analysis`],
   [["analyses", N, "analysis"], (o) => `the name of the ${nth(o, 0)} analysis`],
   [
     ["analyses", N, "options"],
@@ -2654,27 +2792,30 @@ const FIELD_WORDS: readonly (readonly [readonly PatternPart[], Words])[] = [
   [["reference", "checks"], () => "the check numbers"],
   [
     ["reference", "checks", N],
-    (o) => `the check numbers of the ${nth(o, 0)} analysis`,
+    (o) => `the ${nth(o, 0)} analysis with check numbers`,
   ],
   [
     ["reference", "checks", N, "analysis"],
-    (o) => `the name of the ${nth(o, 0)} analysis of the check numbers`,
+    (o) => `the name of the ${nth(o, 0)} analysis with check numbers`,
   ],
   [
     ["reference", "checks", N, "numbers"],
-    (o) => `the check numbers of the ${nth(o, 0)} analysis`,
+    (o) => `the numbers of the ${nth(o, 0)} analysis with check numbers`,
   ],
   [
     ["reference", "checks", N, "numbers", N],
-    (o) => `the ${nth(o, 1)} check number of the ${nth(o, 0)} analysis`,
+    (o) =>
+      `the ${nth(o, 1)} number of the ${nth(o, 0)} analysis with check numbers`,
   ],
   [
     ["reference", "checks", N, "keyVersion"],
-    (o) => `the version of the calculation of the ${nth(o, 0)} analysis`,
+    (o) =>
+      `the version of the calculation of the ${nth(o, 0)} analysis with check numbers`,
   ],
   [
     ["reference", "checks", N, "settings"],
-    (o) => `the settings of the ${nth(o, 0)} analysis`,
+    (o) =>
+      `the record of the settings the ${nth(o, 0)} analysis with check numbers was calculated with`,
   ],
 ];
 
@@ -2689,38 +2830,47 @@ function nth(ordinals: readonly string[], index: number): string {
   return found;
 }
 
-/** A field of the project in words, from the table of the fields. */
-function fieldWords(path: FieldPath): string {
-  let best: { length: number; words: string } = {
-    length: 0,
-    words: "the project",
-  };
-  for (const [pattern, words] of FIELD_WORDS) {
-    if (pattern.length <= best.length || pattern.length > path.length) {
-      continue;
+/** The ordinals of the positions of `path` a pattern matches, or `null`
+    when it does not match. */
+function matchOf(
+  pattern: readonly PatternPart[],
+  path: FieldPath,
+): string[] | null {
+  const ordinals: string[] = [];
+  for (const [at, part] of pattern.entries()) {
+    if (part === REST) {
+      return ordinals;
     }
-    const ordinals: string[] = [];
-    const matches = pattern.every((part, at) => {
-      const segment = path[at];
-      if (part === N) {
-        if (typeof segment !== "number") {
-          return false;
-        }
-        ordinals.push(ordinal(segment));
-        return true;
+    const segment = path[at];
+    if (part === N) {
+      if (typeof segment !== "number") {
+        return null;
       }
-      return segment === part;
-    });
-    if (matches) {
-      best = { length: pattern.length, words: words(ordinals) };
+      ordinals.push(ordinal(segment));
+    } else if (segment !== part) {
+      return null;
     }
   }
-  let words = best.words;
-  for (const segment of path.slice(best.length)) {
-    words =
-      typeof segment === "number"
-        ? `the ${ordinal(segment)} item of ${words}`
-        : `the field ${JSON.stringify(segment)} of ${words}`;
+  return pattern.length === path.length ? ordinals : null;
+}
+
+/** A field of the project in words, from the table of the fields: the
+    pattern that matches the most of its path. */
+function fieldWords(path: FieldPath): string {
+  let best: { length: number; words: string } | null = null;
+  for (const [pattern, words] of FIELD_WORDS) {
+    const ordinals = matchOf(pattern, path);
+    const length = pattern.length;
+    if (ordinals !== null && (best === null || length > best.length)) {
+      best = { length, words: words(ordinals) };
+    }
   }
-  return words;
+  if (best !== null) {
+    return best.words;
+  }
+  // No project has such a path; it is named after the nearest field that
+  // has words.
+  return path.length === 0
+    ? "the project"
+    : `a part of ${fieldWords(path.slice(0, -1))}`;
 }

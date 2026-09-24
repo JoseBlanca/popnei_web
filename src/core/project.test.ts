@@ -28,6 +28,7 @@ import {
   setVariantFilter,
 } from "./project.ts";
 import type {
+  AppId,
   FieldPath,
   IndividualsRead,
   ParsedAnalysis,
@@ -1360,6 +1361,40 @@ function errorOf(result: Result<Project, ProjectError>): ProjectError {
 
 const READ_PATH = ["individuals", "read"] as const;
 
+/** Every path of a project read from its JSON, the options of an analysis
+    as one field, since parseProject names no field inside them. */
+function pathsOf(value: unknown, path: FieldPath): FieldPath[] {
+  const paths: FieldPath[] = path.length === 0 ? [] : [path];
+  if (typeof value !== "object" || value === null) {
+    return paths;
+  }
+  if (path.length === 3 && path[0] === "analyses" && path[2] === "options") {
+    return paths;
+  }
+  const entries: [string | number, unknown][] = Array.isArray(value)
+    ? Array.from(value.entries())
+    : Object.entries(value);
+  for (const [name, field] of entries) {
+    paths.push(...pathsOf(field, [...path, name]));
+  }
+  return paths;
+}
+
+/** Asserts a text the user reads shows no value of the code: no name of
+    a field of the code, no underscore, no id of an application, no number
+    of seven digits or more, and no field named for want of words, which the
+    fallback of fieldWords calls "a part of". A value of the file, in
+    quotes, is left out of the check. */
+function expectWords(text: string): void {
+  expect(text).not.toContain('the field "');
+  expect(text).not.toContain("a part of");
+  const words = text.replaceAll(/"[^"]*"/g, "");
+  expect(words).not.toMatch(/_/);
+  expect(words).not.toMatch(/[a-z][A-Z]/);
+  expect(words).not.toMatch(/\b(popgen|gwas)\b/);
+  expect(words).not.toMatch(/\d{7,}/);
+}
+
 describe("WP1 D5 the validation", () => {
   test("reads the sample project back equal to itself", () => {
     const p = sampleProject();
@@ -1521,8 +1556,8 @@ describe("WP1 D5 the validation", () => {
           { kind: "keep", individuals: ["i1"] },
         ],
       });
-      expect(errorOf(parse(data))).toMatchObject({
-        kind: "wrongValue",
+      expect(errorOf(parse(data))).toEqual({
+        kind: "filterOutOfOrder",
         path: ["individualFilters", 1],
       });
     });
@@ -1643,9 +1678,10 @@ describe("WP1 D5 the validation", () => {
           checks: [],
         },
       });
-      expect(parse(data)).toEqual(
-        wrong(["reference", "popneiVersion"], "present"),
-      );
+      expect(errorOf(parse(data))).toEqual({
+        kind: "missingField",
+        path: ["reference", "popneiVersion"],
+      });
     });
 
     test("a reference whose version of the application is not a text", () => {
@@ -1679,9 +1715,11 @@ describe("WP1 D5 the validation", () => {
       const data = fileWith({
         filters: [{ kind: "maf", maxAllowedMaf: 0.95, minAllowedMaf: 0.05 }],
       });
-      expect(parse(data)).toEqual(
-        wrong(["filters", 0, "minAllowedMaf"], "no field of this name"),
-      );
+      expect(errorOf(parse(data))).toEqual({
+        kind: "unknownField",
+        path: ["filters", 0],
+        name: "minAllowedMaf",
+      });
     });
 
     test("a field named __proto__ the type does not have", () => {
@@ -1691,9 +1729,11 @@ describe("WP1 D5 the validation", () => {
           '"app":"popgen","__proto__":{}',
         ),
       );
-      expect(parse(data)).toEqual(
-        wrong(["__proto__"], "no field of this name"),
-      );
+      expect(errorOf(parse(data))).toEqual({
+        kind: "unknownField",
+        path: [],
+        name: "__proto__",
+      });
     });
 
     test("a field that is missing", () => {
@@ -1702,9 +1742,10 @@ describe("WP1 D5 the validation", () => {
           ([name]) => name !== "name",
         ),
       );
-      expect(parse(fileWith({ variants }))).toEqual(
-        wrong(["variants", "name"], "present"),
-      );
+      expect(errorOf(parse(fileWith({ variants })))).toEqual({
+        kind: "missingField",
+        path: ["variants", "name"],
+      });
     });
 
     test("a field of the wrong shape", () => {
@@ -1739,7 +1780,7 @@ describe("WP1 D5 the validation", () => {
         throw new Error("popnei_web defect: the test expected an error.");
       }
       expect(projectErrorText(result.error)).toBe(
-        'The project file cannot be opened: the field "minAllowedMaf" of the first filter of the variants should be no field of this name. The file was changed outside the application, or is damaged.',
+        'The project file cannot be opened: the first filter of the variants has a field "minAllowedMaf", which the application does not write. The file was changed outside the application, or is damaged.',
       );
     });
 
@@ -1823,7 +1864,7 @@ describe("WP1 D5 the validation", () => {
         errorOf(parse(readWith({ table: { ...SAMPLE_TABLE, rows: [] } }))),
       ).toMatchObject({
         kind: "inconsistentTable",
-        path: [...READ_PATH, "table", "rows"],
+        path: [...READ_PATH, "table"],
       });
     });
 
@@ -2042,5 +2083,272 @@ describe("WP1 D5 the validation", () => {
         expect(parse(data).ok).toBe(true);
       },
     );
+  });
+
+  describe("the texts of the review", () => {
+    /** The text of the error `parse` gives for `data`. */
+    const textOf = (data: unknown, app: AppId = "popgen"): string =>
+      projectErrorText(errorOf(parseProject(data, app, 1, TEST_ANALYSES)));
+    const opened = (words: string): string =>
+      `The project file cannot be opened: ${words}. The file was changed outside the application, or is damaged.`;
+
+    test("of a field the type does not have", () => {
+      const filters = [
+        { kind: "maf", maxAllowedMaf: 0.95 },
+        { kind: "missing_data", maxAllowedMissingRate: 0.1, minRate: 0.1 },
+      ];
+      expect(textOf(fileWith({ filters }))).toBe(
+        opened(
+          'the second filter of the variants has a field "minRate", which the application does not write',
+        ),
+      );
+    });
+
+    test("of a field missing", () => {
+      const filters = [{ kind: "maf", maxAllowedMaf: 0.95 }, { kind: "maf" }];
+      expect(textOf(fileWith({ filters }))).toBe(
+        opened("the threshold of the second filter of the variants is missing"),
+      );
+    });
+
+    test("of two filters of one kind", () => {
+      const filters = [
+        { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+        { kind: "missing_data", maxAllowedMissingRate: 0.2 },
+      ];
+      expect(textOf(fileWith({ filters }))).toBe(
+        opened(
+          "it has two filters of the variants by missing genotypes, and a project has at most one of each kind",
+        ),
+      );
+    });
+
+    test("of two lists of individuals to keep", () => {
+      const individualFilters = [
+        { kind: "keep", individuals: ["i1"] },
+        { kind: "keep", individuals: ["i2"] },
+      ];
+      expect(textOf(fileWith({ individualFilters }))).toBe(
+        opened(
+          "it has two lists of individuals to keep, and a project has at most one of each kind",
+        ),
+      );
+    });
+
+    test("of the filters of the individuals out of their order", () => {
+      const individualFilters = [
+        { kind: "missing_data", maxAllowedMissingRate: 0.2 },
+        { kind: "remove", individuals: ["i4"] },
+      ];
+      expect(textOf(fileWith({ individualFilters }))).toBe(
+        opened(
+          "the filters of the individuals should be in the order individuals to keep, individuals to remove, missing genotypes, observed heterozygosity, and the second one is out of that order",
+        ),
+      );
+    });
+
+    test("of an analysis named twice", () => {
+      const analyses = [
+        { analysis: "diversity", options: {} },
+        { analysis: "diversity", options: {} },
+      ];
+      expect(textOf(fileWith({ analyses }))).toBe(
+        opened("the second analysis repeats the analysis diversity"),
+      );
+    });
+
+    test("of the identifier given to another column", () => {
+      const columns = SAMPLE_TYPES.with(1, { kind: "identifier" });
+      expect(textOf(readWith({ columns }))).toBe(
+        opened(
+          "the type of the second column of the individuals file cannot be identifier: only the first column can have that type",
+        ),
+      );
+    });
+
+    test("of a binary type whose values are not those of its column", () => {
+      const columns = SAMPLE_TYPES.with(2, {
+        kind: "binary",
+        one: "3",
+        zero: "1",
+      });
+      expect(textOf(readWith({ columns }))).toBe(
+        opened(
+          "the type of the third column of the individuals file should be binary, with the two values found in the column coded 1 and 0",
+        ),
+      );
+    });
+
+    test("of a limit that is the largest number a program holds", () => {
+      const filters = [{ kind: "ld", maxAllowedR2: 0.5, maxDist: 0.5 }];
+      expect(textOf(fileWith({ filters }))).toBe(
+        opened(
+          "the distance of the first filter of the variants should be a whole number, 1 or more",
+        ),
+      );
+    });
+
+    test("of a value coded 0 that is not a value of a cell", () => {
+      // A value of the file no type allows: an object for a value.
+      const columns = [
+        ...SAMPLE_TYPES.slice(0, 2),
+        { kind: "binary", one: "2", zero: {} },
+        ...SAMPLE_TYPES.slice(3),
+      ];
+      expect(textOf(readWith({ columns }))).toBe(
+        opened(
+          "the value coded 0 of the third column of the individuals file should be a text, a number, true or false",
+        ),
+      );
+    });
+
+    test("of a check number that is not a number", () => {
+      expect(textOf(checkWith({ numbers: [0.5, "NaN"] }))).toBe(
+        opened(
+          "the second number of the first analysis with check numbers should be a number or nothing",
+        ),
+      );
+    });
+
+    test("of the role of a column", () => {
+      const data = fileWith({
+        app: "gwas",
+        grouping: {
+          kind: "roles",
+          roles: [
+            ["height", "trait"],
+            ["sex", "phenotype"],
+          ],
+        },
+      });
+      expect(textOf(data, "gwas")).toBe(
+        opened(
+          "the role of the second column in the roles of the columns should be trait, covariate or ignored",
+        ),
+      );
+    });
+
+    test("of the ploidy set to read a VCF", () => {
+      const data = variantsWith({
+        format: "vcf",
+        readOptions: { ploidy: 0, onlyPassed: true },
+      });
+      expect(textOf(data)).toBe(
+        opened(
+          "the ploidy set to read the variants file should be a whole number from 1 to 255",
+        ),
+      );
+    });
+
+    test("of the separator set to read a CSV", () => {
+      const individuals = individualsOf(sampleProject());
+      const data = fileWith({
+        individuals: {
+          ...individuals,
+          csv: { encoding: "auto", separator: "|", decimal: "auto" },
+        },
+      });
+      expect(textOf(data)).toBe(
+        opened(
+          "the separator set to read the individuals file should be a comma, a semicolon, a tab or found by the application",
+        ),
+      );
+    });
+
+    test("of the reason a variants file could not be read", () => {
+      const read = {
+        kind: "failed",
+        error: { kind: "worker", error: { kind: "couldNotStart", reason: 3 } },
+      };
+      expect(textOf(variantsWith({ read }))).toBe(
+        opened(
+          "the reason the variants file could not be read should be a text",
+        ),
+      );
+    });
+
+    test("of the encoding found in the individuals file", () => {
+      expect(
+        textOf(
+          readWith({
+            found: { encoding: "auto", separator: ",", decimal: "." },
+          }),
+        ),
+      ).toBe(
+        opened(
+          "the encoding found in the individuals file should be UTF-8 or Windows-1252",
+        ),
+      );
+    });
+
+    test("of an analysis that is not in the form the application writes", () => {
+      expect(textOf(fileWith({ analyses: ["diversity"] }))).toBe(
+        opened(
+          "the first analysis should be in the form the application writes",
+        ),
+      );
+    });
+
+    test("of an unknown analysis whose id is long and holds a new line", () => {
+      const id = "x".repeat(20) + "\n" + "y".repeat(280);
+      const text = projectErrorText({ kind: "unknownAnalysis", id });
+      expect(text).toBe(
+        `This project file has the analysis ${"x".repeat(20)}\\n${"y".repeat(18)}…, which this version of the application does not know: it was saved by another version of the application.`,
+      );
+    });
+
+    test("every field of every project is named in words, with no value of the code", () => {
+      fc.assert(
+        fc.property(wholeProject, (p) => {
+          for (const path of pathsOf(JSON.parse(JSON.stringify(p)), [])) {
+            expectWords(projectErrorText({ kind: "missingField", path }));
+          }
+        }),
+      );
+    });
+
+    test("every kind of error is written in words, with no value of the code", () => {
+      const errors: ProjectError[] = [
+        { kind: "otherApp", found: "popgen" },
+        { kind: "otherApp", found: "gwas" },
+        { kind: "unknownAnalysis", id: "admixture" },
+        { kind: "unknownField", path: ["filters", 1], name: "minRate" },
+        { kind: "missingField", path: ["filters", 1, "maxAllowedMaf"] },
+        {
+          kind: "wrongValue",
+          path: ["variants", "size"],
+          expected: "a number",
+        },
+        ...(["missing_data", "maf", "obs_het", "ld"] as const).map(
+          (filter): ProjectError => ({
+            kind: "twoFiltersOfAKind",
+            path: ["filters", 1],
+            filter,
+          }),
+        ),
+        ...(["keep", "remove", "missing_data", "obs_het"] as const).map(
+          (filter): ProjectError => ({
+            kind: "twoFiltersOfAKind",
+            path: ["individualFilters", 1],
+            filter,
+          }),
+        ),
+        { kind: "filterOutOfOrder", path: ["individualFilters", 1] },
+        {
+          kind: "repeated",
+          path: ["analyses", 1],
+          what: "analysis",
+          value: "pca",
+        },
+        {
+          kind: "inconsistentTable",
+          path: ["individuals", "read", "table", "rows", 1],
+          problem: "has 3 cells where the header has 4",
+        },
+      ];
+      for (const error of errors) {
+        expectWords(projectErrorText(error));
+      }
+    });
   });
 });

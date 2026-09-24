@@ -785,7 +785,7 @@ export function jsonObjectOf(value: unknown): Result<JsonObject, string> {
     typeof json === "object" &&
     !Array.isArray(json)
     ? { ok: true, value: jsonObjectFrom(json) }
-    : { ok: false, error: "a group of named fields" };
+    : { ok: false, error: "in the form the application writes" };
 }
 
 function jsonObjectFrom(value: JsonObject | readonly JsonValue[]): JsonObject {
