@@ -190,10 +190,13 @@ order does not wait for what exists:
   at which r² falls to half; the folded site frequency spectrum.
 - **Why in this order:** first what popnei computes today, then what it
   is asked for (section 4), so that the stage never waits on popnei.
-- **Needs of popnei:** the private alleles, the rarefaction, the folded
-  SFS with its projection, and the distance at which the LD decays to
-  half, if they belong in popnei rather than in the application (section
-  4).
+- **Needs of popnei:** the private alleles, the rarefaction and the folded
+  SFS with its projection, if they belong in popnei rather than in the
+  application (section 4); none of them was found on popnei's `main` on
+  24 September 2026. The fall of r² with distance, with the distance at
+  which it falls to half, is on `main` since that day, `LdDecay` in
+  `js/popnei/src/ld.ts`, and reaches the application with the first
+  release of popnei that has it.
 
 ### Stage 6. Taking the work out
 
@@ -251,7 +254,8 @@ until then the applications read a file whole, with the limits of
 | a release of the wasm package by a workflow | technology.md, section 5 | stage 0 |
 | a source of bytes over a `File`, read by ranges, with progress | popnei issue #1 | after stage 2, as soon as it can |
 | a VCF writer, if there is none | functionality.md, section 3 | stage 3 |
-| the private alleles, the rarefaction, the folded SFS, the half-decay distance of LD | functionality.md, section 11 | stage 5 |
+| the private alleles, the rarefaction, the folded SFS | functionality.md, section 11 | stage 5 |
+| the fall of r² with distance and the distance at which it falls to half: on popnei's `main` since 24 September 2026, `LdDecay` in `js/popnei/src/ld.ts`, not yet in a release | functionality.md, section 11 | stage 5, from a release that has it |
 | the logistic models of the GWAS | popnei, being written | stage 7 |
 | the thinning of the Manhattan and QQ points, and λ | technology.md; worker.md | stage 7 |
 
