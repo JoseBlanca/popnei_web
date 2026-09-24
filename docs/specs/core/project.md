@@ -5,61 +5,108 @@ yet. The project is everything the user has set in one application: the
 variants file they loaded, the filters, the individuals file with the
 types of its columns, the populations, and the options of each analysis.
 This spec gives its type, the commands that change it, the records that
-the workers' reads put into it, and the validation that turns the JSON of
-a project file into a project. It develops the row of `project.ts` in
-section 9 of `docs/architecture.md`, with its sections 2, 6 and 8, and
-`result.ts`, which `.claude/skills/coding/typescript.md` gives whole
-("Errors") and which has no spec of its own. It depends on
-`docs/specs/worker/protocol.md`, for the filters and the table, and on
-`docs/specs/core/keys.md`, for the type of a JSON value.
+put into it what the workers read from the files, what every analysis
+needs of it before it can run, and the validation that turns a project
+file into a project. It develops sections 2, 6 and 8 of
+`docs/architecture.md`, and depends on `docs/specs/worker/protocol.md`,
+for the filters and the table, and on `docs/specs/core/keys.md`, for the
+fingerprint of the settings.
 
 ## What it does
 
 A user never sees the project, and sees everything that follows from it.
 A command that changed a part it should not have would show a result for
-settings the user did not choose; one that returned a new object when
+settings the user did not choose; one that gave a new project when
 nothing changed would add a step to undo that does nothing; a validation
 that let a wrong field through would open a project file whose analyses
 fail later with a message about something else.
 
 The rules, which every function below keeps:
 
-- **The project is one plain, immutable value** (`docs/architecture.md`,
-  section 2): strings, finite numbers, booleans, `null`, arrays and plain
-  objects, every field `readonly`. Saving it is `JSON.stringify`, and
-  `parseProject` of what that wrote gives an equal project.
-- **A command is a pure function from a project to a project**, which
-  builds the new one with spread and keeps the same reference for every
-  part it did not change. A command that changes nothing returns the
+- **The project is one plain value that is never changed in place**
+  (`docs/architecture.md`, section 2). It holds only what JSON, the text
+  format of the project file, holds: text, finite numbers, booleans,
+  `null`, lists and objects of named fields. Saving it is writing it as
+  JSON, and `parseProject` of what that wrote gives an equal project.
+- **A command is a function from a project to a new project**, which
+  builds the new one from the parts of the old, keeps the very same
+  object for every part it did not change, and changes nothing in the old
+  one. A command given a value equal to the one already there returns the
   project it was given, the same object, so that the store makes no step
-  of undo for it (`docs/specs/core/store.md`).
-- **A command is given valid values.** The screens build them from widgets
-  that allow only valid ones, a number field from 0 to 1, a list of the
-  columns of the file. A value out of its range reaching a command is a
-  defect of the screen, and the command throws `popnei_web defect:`, as
-  `.claude/skills/coding/typescript.md` says of defects. What comes from
-  outside the program, the JSON of a project file, goes through
-  `parseProject`, which returns a `Result` instead.
-- **One filter of each kind**, in the variants' list and in the
-  individuals' list, because popnei refuses a second filter of a kind on
-  one `Variants` (`docs/specs/worker/protocol.md`). Setting a filter of a
-  kind that is there replaces it in its place; the order of the list is
-  the order the user gave, and it changes the result, so no command sorts
-  it.
+  of undo for it (`docs/specs/core/store.md`). Equal means equal by value,
+  compared as the canonical form of `docs/specs/core/keys.md` writes them,
+  so a filter with the same kind and threshold is the one already there.
+- **A command is given valid values.** The screens build them from
+  controls that allow only valid ones, a number field from 0 to 1, a list
+  of the columns of the file. A value that is not valid reaching a command
+  is a mistake of the screen's code, and the command throws an `Error`
+  whose message starts with `popnei_web defect:`, which the application
+  reports as its own failure (`.claude/skills/coding/typescript.md`,
+  "Errors"). What comes from outside the program, the JSON of a project
+  file, goes through `parseProject`, which returns what is wrong instead.
+- **One filter of each kind**, in the list of the variants' filters and
+  in that of the individuals'. For the variants, because popnei refuses a
+  second filter of a kind (`docs/specs/worker/protocol.md`); setting a
+  filter of a kind that is there replaces it in its place, and the order
+  of the list is the one the user gave, since it changes the result. For
+  the individuals, because a second list of one kind would say what one
+  list says; and since the individuals kept are those every filter keeps,
+  in any order, that list is kept in a fixed order, keep, remove, missing
+  data, observed heterozygosity, and has no command to reorder it.
 - **A record is not a command.** When the calculation worker has opened
-  the variants file, or the light worker has read the individuals file,
-  what they read goes into the source with that load id and no other, as
-  section 6 of `docs/architecture.md` has it. The functions that do it are
-  here, pure as the commands are; the store applies them to every project
-  of the history and makes no step of undo (`docs/specs/core/history.md`).
+  the variants file, or the light worker, the second thread that reads
+  the individuals file, has read it, what they read goes into the source
+  with that load id and no other (`docs/architecture.md`, section 6). The
+  functions that do it are here, pure as the commands are; the store
+  applies them to every project of the history and makes no step of undo
+  (`docs/specs/core/history.md`).
+
+Three things are so by decisions taken before this spec, and a user meets
+them: loading the same variants file again calculates every analysis
+again, since each load has an id of its own and nothing of the file is
+compared (the owner, 24 September 2026, `docs/architecture.md`, section
+3); loading the same individuals file again finds the results of the
+first load, since its table, and not its load, goes into the keys; and a
+project file with a field this version does not know is refused, decided
+here, below.
+
+### What an analysis needs of every project
+
+Before an analysis looks at what it needs of its own, every one of them
+needs a variants file that was read, and filters of individuals that
+popnei will accept. `projectNeeds` gives the first thing missing, in the
+words the screen shows beside the Run button, or `null`:
+
+| the project | the reason |
+|---|---|
+| no variants file | "Load a variants file in the Variants step." |
+| the variants file being read | "Reading panel.nei." |
+| popnei refused the file | "popnei could not read panel.nei: ‹popnei's message›. Load a variants file in the Variants step." |
+| the file could not be read for another reason | "panel.nei could not be read: ‹what happened›. Reload the page and load it again." |
+| a list of individuals that is empty | "The list of individuals to keep is empty. Add individuals to it, or remove the filter, in the Variants step." |
+| a list that names an individual twice | "The list of individuals to remove names ind_031 twice." and the same place to fix it |
+| a list that names individuals not in the variants | "The list of individuals to keep names 2 individuals that are not in panel.nei: ind_900, ind_901." and the same place |
+
+popnei refuses these lists too, with messages that name its arguments,
+`individuals`, and that the store would keep as popnei's refusals of those
+settings (`docs/specs/core/store.md`); checked here, the user is told what
+to fix before anything runs. A threshold of individuals that keeps none of
+them cannot be known before the statistics of each individual are
+calculated; the spec of the filters of individuals, in stage 3, says how
+it is checked, and until then popnei's refusal is shown.
+
+`individualsNeeds` gives the same for the analyses that use the
+individuals file: its read pending, its read failed, and every individual
+of the variants in the file, which names the ones missing
+(`docs/functionality.md`, section 4).
 
 ### The project of an opened project file
 
 A project file restores the settings and none of the results: the user
-gives the variants file again, and every analysis is calculated again. The
-variants file is the user's, and nothing tells the application that the
-file given is the one the project was saved with; it may be another, or
-the same one changed. The check numbers, a few numbers of each result
+gives the variants file again, and every analysis is calculated again.
+The variants file is the user's, and nothing tells the application that
+the file given is the one the project was saved with; it may be another,
+or the same one changed. The check numbers, a few numbers of each result
 kept in the project file, are what tells: after a run, the numbers of the
 new result are compared with those saved (`docs/functionality.md`,
 section 9).
@@ -67,66 +114,78 @@ section 9).
 That comparison means something only while the settings of the analysis
 are those the file had. So, when a project file is opened, a fingerprint
 of the settings of each analysis as the file had them is made and kept in
-the project, beside the numbers: a hash of everything the analysis's key
-holds but the load of the variants file and the version of popnei
+the project, beside its numbers: a hash of the filters, the read options
+of the variants file, and what the analysis's own key holds
 (`docs/specs/core/keys.md`, "The fingerprint of the settings"). After a
-run, the numbers are compared only when the fingerprint of the settings
+run, the numbers are compared only while the fingerprint of the settings
 now is that one. The owner decided it on 24 September 2026. The option
-not taken was the architecture as approved that day: the key of the
-reference, made once the calculation worker had given the version of
-popnei, which left a moment after opening in which a change to the
-settings would have been taken for the file's own, and put a value in the
-project that was calculated and never saved. The fingerprint needs no
-version, since the version of popnei cannot differ between the two sides
-of the comparison, is made at the opening with nothing to wait for, and
-is data read from the file, as the identity of the variants file is.
+not taken was to compare with a key of the file's settings, which could
+be made only once the calculation worker had given the version of popnei,
+a few seconds after the page opens; a setting the user changed in those
+seconds would have been taken for one of the file's.
 
-What the comparison says when the versions of popnei differ is in
-`docs/specs/core/store.md`.
+The project file also saves, with the numbers of each analysis, the
+number its module raises when its calculation changes, its key version,
+and, in its header, the version of the application. So a result that
+differs because the application calculates it in another way since, with
+the same popnei, is told as that, and not blamed on the variants file
+(`docs/specs/core/store.md`, "The comparison with the check numbers").
 
 ## The TypeScript interface
 
-The fields are `readonly` in the code, and left out below to keep the
-types short.
+The fields are `readonly` in the code, and every list `readonly T[]`;
+`readonly` is left out below to keep the types short. A `JsonObject` is
+an object whose fields are JSON values, of `docs/specs/core/keys.md`. A
+`Result` is what a function that can fail with good code returns, one of
+two shapes, given whole in `.claude/skills/coding/typescript.md`
+("Errors"):
+
+```ts
+export type Result<T, E> =
+  | { readonly ok: true; readonly value: T }
+  | { readonly ok: false; readonly error: E };
+```
 
 ```ts
 import type { JsonObject } from "./keys.ts";
 import type { Result } from "./result.ts";
 import type {
-  VariantFilter, VariantFilterKind, IndividualFilter, IndividualsTable,
-  ColumnType, CsvOptions, CsvFound, IndividualsFileError,
+  VariantFilter, VariantFilterKind, IndividualFilter, IndividualFilterKind,
+  IndividualsTable, ColumnType, CsvOptions, CsvFound, IndividualsFileError, RunError,
 } from "../worker/protocol.ts";
 
 /** The two applications. */
 export type AppId = "popgen" | "gwas";
 
 /**
- * The id of an analysis, a literal of its module, "diversity", "pca". It
- * is a string and not a union of the ids, so that adding an analysis adds
- * its module and nothing here (docs/architecture.md, section 4).
+ * The id of an analysis, a literal of its module, "diversity", "pca". A
+ * string and not a union of the ids, so that adding an analysis adds its
+ * module and nothing here (docs/architecture.md, section 4).
  */
 export type AnalysisId = string;
 
 export interface Project {
   app: AppId;
   variants: VariantSource | null;
-  filters: readonly VariantFilter[];                 // in their order
-  individualFilters: readonly IndividualFilter[];    // in their order
+  filters: VariantFilter[];                 // in the order the user gave
+  individualFilters: IndividualFilter[];    // keep, remove, missing_data, obs_het
   individuals: IndividualsSource | null;
   grouping: Grouping;
-  analyses: readonly AnalysisOptions[];              // one per analysis the user set
-  reference: Reference | null;                       // from an opened project file
+  analyses: AnalysisOptions[];              // one per analysis the user set
+  reference: Reference | null;              // from an opened project file
 }
 ```
 
-The variants file, as section 2 of `docs/architecture.md` gives it. The
-load id is 16 random bytes written as 32 lower case hexadecimal digits,
-made by the page (`docs/architecture.md`, section 3).
+The variants file. The load id is 16 random bytes written as 32 lower
+case hexadecimal digits, made by the page when the user picks the file
+(`docs/architecture.md`, section 3). The ploidy of a VCF is a whole
+number from 1 to 255, which popnei's `openVcf` accepts
+(`js/popnei/src/io_vcf.ts`).
 
 ```ts
 export interface VariantSource {
   fileId: string;
-  name: string;          // as the File gives it; in no key
+  name: string;          // as the browser gives it; in no key
   size: number;          // bytes; in no key
   format: "vcf" | "nei";
   readOptions: { ploidy: number; onlyPassed: boolean } | null; // a VCF's; null for .nei
@@ -135,8 +194,14 @@ export interface VariantSource {
 
 export type SourceRead =
   | { kind: "pending" }
-  | { kind: "read"; individuals: readonly string[]; ploidy: number; numVars: number | null }
-  | { kind: "failed"; message: string };   // popnei's message
+  | { kind: "read"; individuals: string[]; ploidy: number; numVars: number | null }
+  | { kind: "failed"; error: SourceError };
+
+/** popnei refused the file, or the worker failed before popnei answered:
+    it could not start, it crashed, or the file could not be read again. */
+export type SourceError =
+  | { kind: "popnei"; message: string }
+  | { kind: "worker"; error: RunError };
 ```
 
 The individuals file. A read of a CSV reports what the options that were
@@ -152,32 +217,31 @@ export interface IndividualsSource {
 
 export type IndividualsRead =
   | { kind: "pending" }
-  | { kind: "read"; table: IndividualsTable; columns: readonly ColumnType[]; found: CsvFound | null }
-  | { kind: "failed"; error: IndividualsFileError };
+  | { kind: "read"; table: IndividualsTable; columns: ColumnType[]; found: CsvFound | null }
+  | { kind: "failed"; error: IndividualsFileError | { kind: "worker"; error: RunError } };
 ```
 
 The grouping: in population genetics, the column that defines the
 populations, `null` when every individual is in one population, as it is
 without an individuals file (`docs/functionality.md`, section 4); in
-association, the role of each column. A column is named by its name in the
-header, which the reader keeps unique (`IndividualsFileError`
-`duplicateColumn`), so that it is found again when the file is loaded
-again with its columns in another order. The edits of the populations
-made with the lasso come in a design of their own
-(`.claude/skills/designing/SKILL.md`), and the roles are revised with the
-association application, in stage 7.
+association, the role of each column. A column is named by its name in
+the header, which the reader keeps unique, so that it is found again when
+the file is loaded again with its columns in another order. The edits of
+the populations drawn on the PCA with the mouse, which functionality
+names for later, come with a design of their own, and the roles are
+revised with the association application, in stage 7.
 
 ```ts
 export type Grouping =
   | { kind: "populations"; column: string | null }
-  | { kind: "roles"; roles: readonly (readonly [column: string, role: "trait" | "covariate" | "ignored"])[] };
+  | { kind: "roles"; roles: (readonly [column: string, role: "trait" | "covariate" | "ignored"])[] };
 ```
 
-The options of an analysis the user has set. An analysis that has no
-entry runs with its defaults. They are pairs and not a record keyed by the
-id, because the JSON of a project file can hold any key, `__proto__`
-among them (`.claude/skills/coding/typescript.md`, "The rules of the
-code").
+The options of an analysis the user has set; an analysis with no entry
+runs with its defaults. They are a list of pairs and not an object with a
+field per analysis, because the JSON of a project file can hold a field of
+any name, `__proto__`, which JavaScript treats in a special way, among
+them (`.claude/skills/coding/typescript.md`, "The rules of the code").
 
 ```ts
 export interface AnalysisOptions {
@@ -188,23 +252,25 @@ export interface AnalysisOptions {
 
 The reference: what an opened project file says of the variants file it
 was made with and of the results it had. Its `variants.fileId` is the id
-of a load of another session, and names no `File` of this one.
+of a load of another session, and names no file of this one.
 
 ```ts
 export interface Reference {
   variants: VariantSource;   // its identity: name, size, format, individuals, ploidy, numVars
   popneiVersion: string;     // from the header of the project file
-  checks: readonly Check[];
+  appVersion: string;        // from the header
+  checks: Check[];
 }
 
 export interface Check {
   analysis: AnalysisId;
-  numbers: readonly (number | null)[];   // the check numbers saved; null where popnei gave NaN
-  settings: string;          // the fingerprint of its settings in the file (keys.md)
+  numbers: (number | null)[];  // the check numbers saved; null where popnei gave NaN
+  keyVersion: number;          // the analysis's key version when it was run
+  settings: string;            // the fingerprint of its settings in the file; never saved
 }
 ```
 
-A new project, empty, of one application.
+A new, empty project of one application.
 
 ```ts
 export function emptyProject(app: AppId): Project;
@@ -215,9 +281,6 @@ export function emptyProject(app: AppId): Project;
 ```
 
 ### The commands
-
-Each returns the project it was given when the value is the one already
-there.
 
 ```ts
 /** Puts a new load of the variants file, pending. Everything else is kept. */
@@ -232,9 +295,9 @@ export function removeVariantFilter(p: Project, kind: VariantFilterKind): Projec
 /** Moves the filter of that kind to a position of the list, 0 the first. */
 export function moveVariantFilter(p: Project, kind: VariantFilterKind, to: number): Project;
 
+/** Sets the filter of its kind, in the fixed order of the kinds. */
 export function setIndividualFilter(p: Project, filter: IndividualFilter): Project;
-export function removeIndividualFilter(p: Project, kind: IndividualFilter["kind"]): Project;
-export function moveIndividualFilter(p: Project, kind: IndividualFilter["kind"], to: number): Project;
+export function removeIndividualFilter(p: Project, kind: IndividualFilterKind): Project;
 
 /** Puts a new load of the individuals file, pending; `csv` is null for an xlsx. */
 export function loadIndividuals(p: Project, source: {
@@ -248,35 +311,47 @@ export function removeIndividuals(p: Project): Project;
 
 export function setGrouping(p: Project, grouping: Grouping): Project;
 export function setAnalysisOptions(p: Project, analysis: AnalysisId, options: JsonObject): Project;
+
 /** The options of an analysis: its entry, or the defaults it is given. */
 export function analysisOptions(p: Project, analysis: AnalysisId, defaults: JsonObject): JsonObject;
 ```
 
-What each keeps, where a reader could doubt it:
+What each does where a reader could doubt it:
 
-- `loadVariants` keeps the filters, the individuals file, the grouping and
-  the options, which are the user's and do not belong to one file; the
-  analyses whose individuals are not all in the individuals file lock
-  with their reason (`docs/architecture.md`, section 6). It keeps the
-  reference, which is how the identity of the new file is compared with
-  the one the project was made with (section 8).
-- `loadIndividuals` and `setCsvOptions` put the read to pending, and the
-  types of the columns that the user had set go with the old read: the
-  new read brings the types inferred from the new table (**Open 1**,
-  below). The grouping is kept, by the name of its column, and when the
-  new table has no column of that name, the analyses that use the
-  populations lock and say so; it is not changed in silence.
-- `setColumnType` throws a defect when the source is not read, when the
-  column is not in the table, when the type is `identifier` for another
-  column than the first, and when a `binary` type names values that are
-  not the two values of the column.
+| command | when | gives |
+|---|---|---|
+| any | the value equals the one there | `p` itself |
+| `removeVariantFilter`, `removeIndividualFilter` | no filter of that kind | `p` itself |
+| `removeIndividuals` | no individuals file | `p` itself |
+| `moveVariantFilter` | no filter of that kind, or `to` outside the list | a defect |
+| `setCsvOptions` | no individuals file, or an xlsx | a defect |
+| `setColumnType` | the file not read, a column not in the table, `identifier` for another column than the first, another type for the first, a `binary` type whose two values are not the two values of the column | a defect |
+| `setGrouping` | a grouping of the other application | a defect |
+| `loadVariants` | always | the filters, the individuals file, the grouping, the options and the reference kept |
+| `loadIndividuals`, `setCsvOptions` | always | the read pending; the grouping kept by the name of its column |
+
+`loadVariants` keeps the user's settings, which do not belong to one
+file; `projectNeeds` and `individualsNeeds` then lock what the new file
+does not allow, with their reasons. It keeps the reference, which is how
+the identity of the new file is compared with the one the project was
+made with (`docs/architecture.md`, section 8).
+
+`loadIndividuals` and `setCsvOptions` bring, with the new read, the types
+inferred from the new table, and a type the user had changed is lost
+(**Open 1**, below). When the new table has no column of the grouping's
+name, the analyses that use the populations lock and say so; the grouping
+is not changed in silence.
+
+A `binary` type's two values are cells of its column as the table holds
+them, compared exactly (`docs/specs/worker/protocol.md`): in a CSV the
+text `"1"` and `"2"`, in an xlsx the numbers or the booleans.
 
 ### The records
 
-Each returns the project it was given when there is nothing to record:
-no source with that load id, or a source whose read is not pending. A
-read that comes back for a load the user has replaced, or after a
-restart of a worker has read the file again, changes nothing.
+Each returns the project it was given when there is nothing to record: no
+source with that load id, or a source whose read is not pending. A read
+that comes back for a load the user has replaced, or again after a
+restart of a worker, changes nothing.
 
 ```ts
 /** What the calculation worker read of the variants file of the load `fileId`. */
@@ -295,97 +370,138 @@ export function recordIndividualsRead(
 ): Project;
 ```
 
+### What every analysis needs
+
+```ts
+/** The reason no analysis can run on this project, or null; the table above. */
+export function projectNeeds(p: Project): string | null;
+
+/** The reason an analysis that uses the individuals file cannot run, or null. */
+export function individualsNeeds(p: Project): string | null;
+```
+
 ### The validation
 
-`parseProject` takes what `JSON.parse` gave from the project part of a
-project file and returns the project, or the first thing that is wrong
-with it. It is given the analyses of the application, each with the
-function that checks its options, since the options of each analysis are
-its module's (`docs/specs/core/store.md`, `AnalysisDef.parseOptions`).
-The header of the file, its version and the check numbers are read by
-`projectFile.ts`, in stage 2, which calls this.
+`parseProject` takes what `JSON.parse` gave of the project part of a
+project file, and returns the project, or the first thing that is wrong
+with it. It is given the application the file is opened in, the version
+of the format of the file, from its header, and the analyses of the
+application, each with the function that checks its options, since the
+options of each analysis are its module's
+(`docs/specs/core/store.md`, `AnalysisDef.parseOptions`). The header, its
+versions and the check numbers are read by `projectFile.ts`, in stage 2,
+which calls this; it makes the fingerprints, and they are validated here
+when a project is read back in a test.
 
 ```ts
 export function parseProject(
   data: unknown,
-  analyses: readonly { id: AnalysisId; parseOptions(o: unknown): Result<JsonObject, string> }[],
+  app: AppId,
+  formatVersion: number,
+  analyses: readonly {
+    id: AnalysisId;
+    parseOptions(o: unknown, formatVersion: number): Result<JsonObject, string>;
+  }[],
 ): Result<Project, ProjectError>;
 
 export type ProjectError =
-  | { kind: "wrongValue"; path: string; expected: string }  // "filters[1].maxAllowedMaf", "a number from 0 to 1"
-  | { kind: "unknownAnalysis"; path: string; id: string }
-  | { kind: "twoFiltersOfAKind"; path: string; kind: string }
-  | { kind: "inconsistentTable"; path: string; expected: string };
+  | { kind: "otherApp"; found: AppId }
+  | { kind: "unknownAnalysis"; id: string }
+  | { kind: "wrongValue"; path: readonly (string | number)[]; expected: string }
+  | { kind: "twoFiltersOfAKind"; path: readonly (string | number)[]; filter: string }
+  | { kind: "inconsistentTable"; path: readonly (string | number)[]; expected: string };
 
-/** The text the user reads: "The project file is damaged: filters[1].maxAllowedMaf
-    should be a number from 0 to 1." */
+/** The text the user reads. */
 export function projectErrorText(error: ProjectError): string;
 ```
 
 What it checks, beyond the shape of every field: every number finite; the
-thresholds of the filters from 0 to 1, `maxDist` a whole number from 1 to
-2^53 − 1, the ploidy a whole number from 1 to 255, as popnei's methods
-accept (`js/popnei/src/variant.ts`); a load id of 32 lower case
-hexadecimal digits; at most one filter of each kind in each list; every
-row of the table as long as its header, and one type per column, the
-first `identifier`; a binary type whose two values are the values of its
-column; each analysis id one of those given, once, with options that its
-`parseOptions` accepts; the grouping of the application's kind. A field
-that the type does not have is refused, `wrongValue` with the expectation
-"no field of this name", so that a file written by a newer version is not
-read as if it said less than it does.
+thresholds from 0 to 1, `maxDist` a whole number from 1 to 2^53 − 1, the
+ploidy a whole number from 1 to 255, as popnei accepts; a load id of 32
+lower case hexadecimal digits; at most one filter of each kind in each
+list, and the individuals' in their order; every row of the table as long
+as its header, one type per column, the first `identifier` and no other;
+a binary type whose two values are values of its column; each analysis id
+one of those given, once, with options its `parseOptions` accepts; the
+application and the grouping of the application given; the reference with
+its versions, and each check with a key version that is a whole number
+and a fingerprint of 64 lower case hexadecimal digits.
+
+- **A file of the other application** is refused: "This project file is
+  of the association application. Open it there."
+- **A file that names an analysis this version does not know** is refused
+  whole, as the owner decided on 24 September 2026: "This project file has
+  the analysis ‹id›, which this version of the application does not know:
+  it was saved by another version of the application." The option not
+  taken was to open it without that analysis.
+- **A field the type does not have** is refused, as a wrong value whose
+  expectation is "no field of this name", so that a file written by a
+  newer version is not read as if it said less than it does. This was
+  decided here, not by the owner; the version of the format in the header
+  is what lets a newer file say so first, in stage 2.
+- **The text of any other error names the field in words**, from a table
+  in `project.ts` of every field of the project, with a position as an
+  ordinal, and ends with what the user can do: "The project file cannot be
+  opened: the threshold of the second filter of the variants should be a
+  number from 0 to 1. The file was changed outside the application, or is
+  damaged." A path such as `filters[1].maxAllowedMaf` is never shown.
 
 ## The cases
 
-- **An empty project.** Every analysis is locked by its `needs` with "Load
-  a variants file in the Variants step" (`docs/specs/core/store.md`).
+- **An empty project.** `projectNeeds` gives "Load a variants file in the
+  Variants step."
 - **Two picks of files before the first read comes back.** Each pick has
   its own load id; the read of the first finds no source with its id, and
   `recordVariantsRead` returns the project unchanged.
-- **The same individuals file picked twice.** Two loads, two ids, and the
-  same table. The table, not the id, goes into the keys
-  (`docs/specs/core/keys.md`), so the results of the first load are found
-  for the second, where for the variants file they are not
-  (`docs/architecture.md`, sections 3 and 6).
+- **A worker that could not start**, or crashed while it opened the file:
+  the page records the read as failed with the worker's error, and every
+  analysis is locked with the reason of the table above, instead of
+  "Reading panel.nei." for ever.
 - **An opened project file.** `projectFile.ts` gives `parseProject` the
   project part, then makes a project with `variants: null` and the
   reference built from the file (`docs/architecture.md`, section 8). A
-  project with a pending read in it is valid here; what the project file
+  pending read in a saved project is valid here; what the project file
   writes of a pending read is decided with the project file, in stage 2.
 
 ## How it is verified
 
 With Vitest, at the functions above. Every test gives the function a
-project frozen deeply, so that a write into it throws
+project frozen deeply with `Object.freeze`, so that a write into it throws
 (`.claude/skills/coding/SKILL.md`, "The core").
 
-- **Each command**, on a small project: the part that changed, and `toBe`
-  on every part that did not. A worked case: from `emptyProject("popgen")`,
-  `setVariantFilter` of `{ kind: "maf", maxAllowedMaf: 0.95 }`, then of
-  `{ kind: "missing_data", maxAllowedMissingRate: 0.1 }`, then of
-  `{ kind: "maf", maxAllowedMaf: 0.9 }`: the filters are
-  `[maf 0.9, missing_data 0.1]`, the MAF filter replaced in its place;
-  `setVariantFilter` of `missing_data 0.1` again returns the project
-  itself.
+- **Each command**, on a small project: the part that changed, and `toBe`,
+  the same object, on every part that did not. A worked case: from
+  `emptyProject("popgen")`, `setVariantFilter` of `{ kind: "maf",
+  maxAllowedMaf: 0.95 }`, then of `{ kind: "missing_data",
+  maxAllowedMissingRate: 0.1 }`, then of `{ kind: "maf", maxAllowedMaf:
+  0.9 }`: the filters are `[maf 0.9, missing_data 0.1]`, the MAF filter
+  replaced in its place; `setVariantFilter` of a new object `{ kind:
+  "missing_data", maxAllowedMissingRate: 0.1 }` returns the project
+  itself. Each row of the table of the commands, with its defect or its
+  `p`.
 - **Each record**: recorded into the source of its id; the project itself
   for another id, for a read already recorded, and, for the individuals
   file, for other `csv` options.
-- **`parseProject`**, a case for each check above, with its `kind` and
-  its `path`, and not its wording.
-- **Properties, with fast-check.** A generator of projects of a few
-  individuals, filters and analyses, and one of sequences of commands with
-  valid arguments. For every project, `parseProject(JSON.parse(
-  JSON.stringify(p)), analyses)` is ok and deeply equal to `p`. For every
-  sequence of commands, the result has at most one filter of each kind in
-  each list, and a command applied twice with the same arguments returns
-  at the second time the project it was given.
+- **`projectNeeds`**, a case for each row of its table, the individuals
+  named.
+- **`parseProject`**, a case for each check above, with its `kind` and its
+  `path`; `projectErrorText` of `wrongValue` at `["filters", 1,
+  "maxAllowedMaf"]` holds "the threshold of the second filter of the
+  variants" and not `filters`.
+- **Properties, with fast-check**, which draws random projects and
+  sequences of commands, and shrinks a failure to the smallest one. For
+  every project, `parseProject(JSON.parse(JSON.stringify(p)), …)` is ok
+  and deeply equal to `p`. For every sequence of commands, each list has
+  at most one filter of each kind and the individuals' filters are in
+  their order; and a command applied twice with the same arguments
+  returns, the second time, the project it was given.
 
 ## Open points
 
 1. **The types the user set when the individuals file is read again.**
    `loadIndividuals` and `setCsvOptions` bring the types inferred from the
    new read, and a type the user had changed, a column of 1 and 2 made
-   categorical, is lost. Keeping each by the name of its column, when the
+   categorical, is lost. Keeping each by the name of its column, where the
    new values allow it, would spare the user setting it again after
    changing the separator. Meanwhile, they are lost, and the screen of the
    individuals step says so when it reads the file again.
@@ -394,7 +510,7 @@ project frozen deeply, so that a write into it throws
 
 - The project file, its header, its versions and the check numbers it
   writes: `docs/specs/core/projectFile.md`, stage 2.
-- The keys, and the fingerprint of the settings: `docs/specs/core/keys.md`.
+- The keys, and how the fingerprint is made: `docs/specs/core/keys.md`.
 - Undo and redo: `docs/specs/core/history.md`.
 - The ids of the analyses and their options: the spec of each analysis,
   from stage 2.
