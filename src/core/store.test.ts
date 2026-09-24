@@ -1984,6 +1984,41 @@ describe("WP4 D3 the notice", () => {
     store.runEnded(request.run.id, { kind: "cancelled" });
     store.cancelRun("vars");
     store.runEnded(sentAt(sent, 1).run.id, { kind: "cancelled" });
+    // The worker, started again, announces itself ready.
+    store.popneiReady("0.1.0");
+    store.startRun("vars");
+    expect(store.getState().runs).toMatchObject([
+      { runId: 3, afterStop: false },
+    ]);
+  });
+
+  test("a request is afterStop when a stop was issued since the worker was last ready, also when the calculation stopped has ended: after closing the notice, and after Stop", () => {
+    const closed = storeWithVarsRunning();
+    closed.store.apply("the MAF filter changed", maf(0.9));
+    closed.store.dismissNotice();
+    closed.store.runEnded(closed.request.run.id, { kind: "cancelled" });
+    expect(closed.store.getState().runs).toStrictEqual([]);
+    closed.store.startRun("vars");
+    expect(closed.store.getState().runs).toMatchObject([
+      { runId: 2, afterStop: true },
+    ]);
+    const stopped = storeWithVarsRunning();
+    stopped.store.cancelRun("vars");
+    stopped.store.runEnded(stopped.request.run.id, { kind: "cancelled" });
+    stopped.store.startRun("vars");
+    expect(stopped.store.getState().runs).toMatchObject([
+      { runId: 2, afterStop: true },
+    ]);
+  });
+
+  test("a request is not afterStop once a calculation ended done or failed after the stop, since the worker was already past it", () => {
+    const { store, sent } = storeWithBothReady();
+    store.startRun("pops");
+    store.startRun("vars");
+    store.cancelRun("vars");
+    store.runEnded(sentAt(sent, 1).run.id, { kind: "cancelled" });
+    const pops = sentAt(sent, 0);
+    store.runEnded(pops.run.id, doneWith(pops, popsResult()));
     store.startRun("vars");
     expect(store.getState().runs).toMatchObject([
       { runId: 3, afterStop: false },

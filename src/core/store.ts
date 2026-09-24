@@ -396,6 +396,10 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
   const failures = new Map<Key, AnalysisError>();
   /** What the last change removed and left behind, or `null`. */
   let notice: NoticeKept | null = null;
+  /** Whether a calculation was stopped since the calculation worker was
+      last ready and nothing ended done or failed since: the next request
+      may wait for the worker to start again. */
+  let stopIssued = false;
 
   let locks: {
     readonly project: Project;
@@ -579,6 +583,7 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
   /** Stops a request: marks it and calls the `cancel()` of its handle. */
   const stop = (request: InFlight<J, R>): void => {
     requests.set(request.runId, { ...request, stopping: true });
+    stopIssued = true;
     request.handle.cancel();
   };
 
@@ -990,9 +995,7 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
           // The calculations left behind are stopped before the new
           // request is sent, so that it does not wait behind them.
           stopAll(leftBehindNow(currentKeys()));
-          sending.afterStop = [...requests.values()].some(
-            (request) => request.stopping,
-          );
+          sending.afterStop = stopIssued;
           // A progress given before `send` returns has no request to go
           // to, and is passed over.
           const sent = config.send(key, job, (progress) => {
@@ -1065,16 +1068,20 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       }
     },
     popneiReady: (version) => {
-      if (version !== popneiVersion) {
-        keysFor(history.present.project, version);
-        // Another version changes every key, and no undo gives the old
-        // one back.
-        if (popneiVersion !== null) {
-          stopEverything();
-        }
-        popneiVersion = version;
-        changed();
+      if (version === popneiVersion) {
+        // The worker started again, after a stop or a crash.
+        stopIssued = false;
+        return;
       }
+      keysFor(history.present.project, version);
+      stopIssued = false;
+      // Another version changes every key, and no undo gives the old one
+      // back.
+      if (popneiVersion !== null) {
+        stopEverything();
+      }
+      popneiVersion = version;
+      changed();
     },
     variantsRead: (fileId, read) => {
       moved(
@@ -1106,6 +1113,10 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       // Out of those in flight before anything can throw, so that a
       // defect does not leave the analysis shown running for ever.
       requests.delete(runId);
+      if (outcome.kind !== "cancelled") {
+        // Answered by a worker past any stop issued before.
+        stopIssued = false;
+      }
       try {
         ended(request, outcome);
       } catch (error) {
