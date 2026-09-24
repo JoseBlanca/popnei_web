@@ -194,3 +194,21 @@ Under way.
   `startHistory` takes; the writer chose a whole number of at least 1,
   any other a defect, and wrote it into the spec first. Thirteen breaks,
   each failing a test.
+- Task 3.2, c38b3fa, after the spec in 1e6b387: `cache.ts`, with
+  `CACHE_MAX_BYTES` of 256 MB, the meanwhile of the cache spec's Open 1.
+  `npx vitest run src/core/cache.test.ts -t "WP3 D2"` gives "Tests 18
+  passed (18)", of at least 12. The writer wrote four choices the spec
+  left open into it first: the bound a whole number of at least 0; an
+  object met twice in a result counted once, which ends a cycle; the
+  texts of a list counted at 2 bytes per unit, and the keys of a `Map`
+  not counted; a key given twice to `use` keeping the later number.
+  Seventeen breaks, each failing a test; one passed at first because the
+  keys of its test read the same backwards, and the test was changed.
+
+The deliverables, checked by the orchestrator on c38b3fa, where the
+checks exit 0 and `npm test` gives "Tests 290 passed (290)":
+
+1. `npx vitest run src/core/history.test.ts -t "WP3 D1"`: "Tests 21
+   passed (21)", of at least 10.
+2. `npx vitest run src/core/cache.test.ts -t "WP3 D2"`: "Tests 18 passed
+   (18)", of at least 12.

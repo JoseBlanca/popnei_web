@@ -314,7 +314,7 @@ its tests.
 - [x] 3.1 `history.ts`, from the history spec's "What it does" and "The
   TypeScript interface", with `MAX_UNDO_STEPS` (Open 1). Serves 1. Can
   run beside work package 2 and beside 3.2.
-- [ ] 3.2 `cache.ts`, from the cache spec's "What it does" and "The
+- [x] 3.2 `cache.ts`, from the cache spec's "What it does" and "The
   TypeScript interface", with `CACHE_MAX_BYTES` (Open 1). Serves 2. Can
   run beside 3.1.
 
