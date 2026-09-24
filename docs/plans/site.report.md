@@ -189,7 +189,8 @@ What the owner should know:
 - popnei's message for a file that is not a VCF quotes its first 16 bytes
   and cuts mid-word, "`This is a line o`"; that is popnei's to change.
 - Seen by the orchestrator: the seven screenshots, taken in Chromium.
-  Not seen in any browser: Firefox.
+  Seen by the owner: the probe in Firefox, on this Mac, on 24 September
+  2026, working. No automated test has run in Firefox yet.
 
 ### How the work went, for whoever revises a skill or a plan
 
