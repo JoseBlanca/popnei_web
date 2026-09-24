@@ -408,6 +408,11 @@ const individualsReader = {
   group: ["**/worker/individuals/**"],
   message: "src/core does not import the reader; the light worker runs it.",
 };
+// What the tests of core share, fast-check and Vitest belong to the tests.
+const testOnly = {
+  group: ["**/testSupport*", "fast-check", "vitest", "vitest/*"],
+  message: "Only the tests import testSupport.ts, fast-check and Vitest.",
+};
 const filesWasm = {
   group: ["**/crates/files/**"],
   message: "Only src/worker/filesRunner.ts calls the files wasm.",
@@ -540,6 +545,31 @@ export default defineConfig(
       "@typescript-eslint/consistent-type-assertions": [
         "error",
         { assertionStyle: "never" },
+      ],
+    },
+  },
+  {
+    // The code of core, as against its tests and what they share.
+    files: ["src/core/**/*.{ts,tsx}"],
+    ignores: ["src/core/**/*.test.ts", "src/core/testSupport.ts"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            ui,
+            charts,
+            runner,
+            client,
+            react,
+            drawing,
+            popneiValues,
+            filesWasm,
+            individualsReader,
+            probe,
+            testOnly,
+          ],
+        },
       ],
     },
   },
@@ -767,6 +797,13 @@ export default defineConfig(
 - Core's block adds `individualsReader`: the reader is TypeScript with no
   DOM, which core could import and run on the page, where a file of
   10,000 rows would freeze it; it belongs to the light worker.
+- The block after core's repeats its patterns and adds `testOnly` for
+  every file of core but the tests and `testSupport.ts`: the generators
+  of the tests, fast-check and Vitest are development dependencies, and
+  code of core that imported one would put it in the site, or fail there.
+  TypeScript does not refuse it, since `tsconfig.core.json` checks
+  `testSupport.ts` with the core; the lint does. Added on 24 September
+  2026, when the review of the core found that nothing refused it.
 - The last block covers the JavaScript, this file and the scripts of
   node such as `e2e/fixtures/make_fixtures.mjs`, with `.mjs` named, since
   a block of `**/*.js` alone left that script parsed and checked by no

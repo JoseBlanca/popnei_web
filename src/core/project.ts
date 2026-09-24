@@ -103,8 +103,12 @@ export type SourceRead =
 export type SourceError =
   /** popnei refused the file, with its message. */
   | { readonly kind: "popnei"; readonly message: string }
-  /** The worker failed. */
-  | { readonly kind: "worker"; readonly error: RunError };
+  /** The worker failed; a refusal of popnei is the kind above, never
+      this one. */
+  | {
+      readonly kind: "worker";
+      readonly error: Exclude<RunError, { readonly kind: "popnei" }>;
+    };
 
 /** The individuals file of one load. */
 export interface IndividualsSource {
@@ -136,7 +140,12 @@ export type IndividualsRead =
       readonly kind: "failed";
       readonly error:
         | IndividualsFileError
-        | { readonly kind: "worker"; readonly error: RunError };
+        | {
+            readonly kind: "worker";
+            /** A refusal of the xlsx reader is the kind files of
+                IndividualsFileError, never a failure of the worker. */
+            readonly error: Exclude<RunError, { readonly kind: "files" }>;
+          };
     };
 
 /**
@@ -214,14 +223,14 @@ export type ProjectError =
       does not have. */
   | {
       readonly kind: "wrongValue";
-      readonly path: readonly (string | number)[];
+      readonly path: FieldPath;
       readonly expected: string;
     }
   /** A second filter of the kind `filter` in one list. */
   | {
       readonly kind: "twoFiltersOfAKind";
-      readonly path: readonly (string | number)[];
-      readonly filter: string;
+      readonly path: FieldPath;
+      readonly filter: VariantFilterKind | IndividualFilterKind;
     }
   /** The value at `path` repeats one before it in its list: an analysis,
       a column of the header or of the roles, an individual. */
@@ -236,20 +245,44 @@ export type ProjectError =
       are not those of its column. */
   | {
       readonly kind: "inconsistentTable";
-      readonly path: readonly (string | number)[];
+      readonly path: FieldPath;
       readonly expected: string;
     };
 
-/** The place of a field in the project, `["filters", 1, "maxAllowedMaf"]`. */
+/** The place of a field in the project, `["filters", 1, "maxAllowedMaf"]`;
+    exported for the errors of `parseProject` and for the tests. */
 export type FieldPath = readonly (string | number)[];
 
-/** The order the filters of the individuals are kept in. */
-export const INDIVIDUAL_FILTER_ORDER: readonly IndividualFilterKind[] = [
-  "keep",
-  "remove",
-  "missing_data",
-  "obs_het",
-];
+/** What a text calls each kind of filter, of the variants and of the
+    individuals, in the words of docs/functionality.md. */
+const FILTER_KIND_WORDS: Readonly<
+  Record<VariantFilterKind | IndividualFilterKind, string>
+> = {
+  missing_data: "missing genotypes",
+  maf: "major allele frequency",
+  obs_het: "observed heterozygosity",
+  ld: "linkage disequilibrium",
+  keep: "individuals to keep",
+  remove: "individuals to remove",
+};
+
+/** The kinds of filter of the individuals, in the order a project keeps
+    them. */
+const INDIVIDUAL_FILTER_KINDS: Kinds<IndividualFilterKind> = {
+  keep: { fields: ["individuals"], words: FILTER_KIND_WORDS.keep },
+  remove: { fields: ["individuals"], words: FILTER_KIND_WORDS.remove },
+  missing_data: {
+    fields: ["maxAllowedMissingRate"],
+    words: FILTER_KIND_WORDS.missing_data,
+  },
+  obs_het: { fields: ["maxAllowedObsHet"], words: FILTER_KIND_WORDS.obs_het },
+};
+
+/** The order the filters of the individuals are kept in: keep, remove,
+    missing_data, obs_het. */
+export const INDIVIDUAL_FILTER_ORDER: readonly IndividualFilterKind[] = keysOf(
+  INDIVIDUAL_FILTER_KINDS,
+);
 
 /** The largest ploidy of a VCF that popnei's `openVcf` accepts. */
 export const MAX_PLOIDY = 255;
@@ -369,7 +402,7 @@ function wholeNumberError(
 
 /** Checks the thresholds of a filter of the variants, from 0 to 1, and
     its `maxDist`, a whole number from 1 to 2^53 − 1. */
-export function variantFilterError(
+function variantFilterError(
   filter: VariantFilter,
   path: FieldPath,
 ): ProjectError | null {
@@ -396,7 +429,7 @@ export function variantFilterError(
 
 /** Checks the threshold of a filter of the individuals, from 0 to 1. A
     list of individuals is checked by `projectNeeds`, not here. */
-export function individualFilterError(
+function individualFilterError(
   filter: IndividualFilter,
   path: FieldPath,
 ): ProjectError | null {
@@ -420,10 +453,7 @@ export function individualFilterError(
 const LOAD_ID = /^[0-9a-f]{32}$/;
 
 /** Checks a load id: 32 lower case hexadecimal digits. */
-export function loadIdError(
-  fileId: string,
-  path: FieldPath,
-): ProjectError | null {
+function loadIdError(fileId: string, path: FieldPath): ProjectError | null {
   return LOAD_ID.test(fileId)
     ? null
     : wrongValue(path, "32 lower case hexadecimal digits");
@@ -435,7 +465,7 @@ export type VariantLoad = Omit<VariantSource, "read">;
 /** Checks a load of the variants file: its load id, a finite size, and
     read options for a VCF, with a ploidy from 1 to 255, and none for a
     `.nei`. */
-export function variantLoadError(
+function variantLoadError(
   load: VariantLoad,
   path: FieldPath,
 ): ProjectError | null {
@@ -467,7 +497,7 @@ export function variantLoadError(
 
 /** Checks that a grouping is of the application `app`: the populations
     in population genetics, the roles of the columns in association. */
-export function groupingError(
+function groupingError(
   grouping: Grouping,
   app: AppId,
   path: FieldPath,
@@ -495,7 +525,7 @@ export function groupingError(
  * a CSV for an xlsx, whose `csv` is null, and the table as `tableError`
  * checks it. `path` is that of the read.
  */
-export function individualsReadError(
+function individualsReadError(
   csv: CsvOptions | null,
   read: IndividualsRead,
   path: FieldPath,
@@ -519,7 +549,7 @@ export function individualsReadError(
  * the two distinct values of its column that are not missing. `path` is
  * that of the read that holds them.
  */
-export function tableError(
+function tableError(
   table: IndividualsTable,
   columns: readonly ColumnType[],
   path: FieldPath,
@@ -1132,7 +1162,7 @@ export function parseProject(
   if (!isFields(data)) {
     return failure(wrongValue([], OBJECT));
   }
-  const found = parseLiteral(data["app"], ["app"], APPS);
+  const found = parseOneOf(data["app"], ["app"], APP_WORDS);
   if (!found.ok) {
     return found;
   }
@@ -1227,8 +1257,6 @@ const OBJECT = "a group of named fields";
 const PRESENT = "present";
 const NO_SUCH_FIELD = "no field of this name";
 
-const APPS: readonly AppId[] = ["popgen", "gwas"];
-
 const PROJECT_FIELDS = [
   "app",
   "variants",
@@ -1270,26 +1298,59 @@ function readObject(
   return success(value);
 }
 
-/** An object whose `kind` is one of `kinds`, with the fields each kind
-    has besides it. */
+/** A kind of a union: the fields it has besides `kind`, and what a text
+    calls it. */
+interface KindShape {
+  readonly fields: readonly string[];
+  readonly words: string;
+}
+
+/** The kinds of a union, each with its shape. A table of this type names
+    every kind of the union, so that a kind added to the union and not to
+    its table fails the compile, instead of making the application refuse
+    its own project files. */
+type Kinds<K extends string> = Readonly<Record<K, KindShape>>;
+
+/** The keys of a table, typed as the table's. */
+function keysOf<K extends string>(table: Readonly<Record<K, unknown>>): K[] {
+  return Object.keys(table).filter((key): key is K =>
+    Object.hasOwn(table, key),
+  );
+}
+
+/** A list of alternatives in words: "a, b or c". */
+function eitherOf(words: readonly string[]): string {
+  const last = words.at(-1) ?? "";
+  return words.length < 2
+    ? last
+    : `${words.slice(0, -1).join(", ")} or ${last}`;
+}
+
+/** An object whose `kind` is one of the kinds of `kinds`, with the fields
+    that kind has besides it. */
 function readKind<K extends string>(
   value: unknown,
   path: FieldPath,
-  fieldsOf: Readonly<Record<K, readonly string[]>>,
-  kinds: readonly K[],
+  kinds: Kinds<K>,
 ): Parsed<{ readonly kind: K; readonly fields: Fields }> {
   if (!isFields(value)) {
     return failure(wrongValue(path, OBJECT));
   }
-  const kind = parseLiteral(value["kind"], [...path, "kind"], kinds);
-  if (!kind.ok) {
-    return kind;
+  const names = keysOf(kinds);
+  const kind = names.find((name) => name === value["kind"]);
+  if (kind === undefined) {
+    return failure(
+      wrongValue(
+        [...path, "kind"],
+        eitherOf(names.map((name) => kinds[name].words)),
+      ),
+    );
   }
-  const fields = readObject(value, path, ["kind", ...fieldsOf[kind.value]]);
+  const fields = readObject(value, path, ["kind", ...kinds[kind].fields]);
   if (!fields.ok) {
     return fields;
   }
-  return success({ kind: kind.value, fields: fields.value });
+  return success({ kind, fields: fields.value });
 }
 
 function parseText(value: unknown, path: FieldPath): Parsed<string> {
@@ -1322,14 +1383,17 @@ function parseBoolean(value: unknown, path: FieldPath): Parsed<boolean> {
     : failure(wrongValue(path, "true or false"));
 }
 
-function parseLiteral<T extends string>(
+/** One of the texts of `words`, a table of each text that is valid and
+    what a text of the application calls it. */
+function parseOneOf<T extends string>(
   value: unknown,
   path: FieldPath,
-  options: readonly T[],
+  words: Readonly<Record<T, string>>,
 ): Parsed<T> {
+  const options = keysOf(words);
   const found = options.find((option) => option === value);
   return found === undefined
-    ? failure(wrongValue(path, `one of ${options.join(", ")}`))
+    ? failure(wrongValue(path, eitherOf(options.map((o) => words[o]))))
     : success(found);
 }
 
@@ -1373,31 +1437,128 @@ function orFailure<T>(value: T, error: ProjectError | null): Parsed<T> {
   return error === null ? success(value) : failure(error);
 }
 
-const VARIANT_FILTER_FIELDS: Readonly<
-  Record<VariantFilterKind, readonly string[]>
-> = {
-  missing_data: ["maxAllowedMissingRate"],
-  maf: ["maxAllowedMaf"],
-  obs_het: ["maxAllowedObsHet"],
-  ld: ["maxAllowedR2", "maxDist"],
+const VARIANT_FILTER_KINDS: Kinds<VariantFilterKind> = {
+  missing_data: {
+    fields: ["maxAllowedMissingRate"],
+    words: FILTER_KIND_WORDS.missing_data,
+  },
+  maf: { fields: ["maxAllowedMaf"], words: FILTER_KIND_WORDS.maf },
+  obs_het: { fields: ["maxAllowedObsHet"], words: FILTER_KIND_WORDS.obs_het },
+  ld: { fields: ["maxAllowedR2", "maxDist"], words: FILTER_KIND_WORDS.ld },
 };
-const VARIANT_FILTER_KINDS: readonly VariantFilterKind[] = [
-  "missing_data",
-  "maf",
-  "obs_het",
-  "ld",
-];
+
+const SOURCE_READ_KINDS: Kinds<SourceRead["kind"]> = {
+  pending: { fields: [], words: "not yet read" },
+  read: { fields: ["individuals", "ploidy", "numVars"], words: "read" },
+  failed: { fields: ["error"], words: "not readable" },
+};
+
+const SOURCE_ERROR_KINDS: Kinds<SourceError["kind"]> = {
+  popnei: { fields: ["message"], words: "a refusal of popnei" },
+  worker: { fields: ["error"], words: "a failure of the application" },
+};
+
+const RUN_ERROR_KINDS: Kinds<RunError["kind"]> = {
+  popnei: { fields: ["message"], words: "a refusal of popnei" },
+  files: {
+    fields: ["message"],
+    words: "a refusal of the reader of xlsx files",
+  },
+  workerFailed: { fields: ["message"], words: "a calculation that stopped" },
+  couldNotStart: {
+    fields: ["reason"],
+    words: "calculations that could not start",
+  },
+  protocolMismatch: { fields: [], words: "a page out of date" },
+  defect: { fields: ["message"], words: "a mistake of the application" },
+};
+
+const INDIVIDUALS_READ_KINDS: Kinds<IndividualsRead["kind"]> = {
+  pending: { fields: [], words: "not yet read" },
+  read: { fields: ["table", "columns", "found"], words: "read" },
+  failed: { fields: ["error"], words: "not readable" },
+};
+
+const INDIVIDUALS_ERROR_KINDS: Kinds<IndividualsFileError["kind"] | "worker"> =
+  {
+    empty: { fields: [], words: "an empty file" },
+    duplicateColumn: { fields: ["name"], words: "two columns of one name" },
+    duplicateIndividual: {
+      fields: ["name"],
+      words: "one individual in two rows",
+    },
+    raggedRow: {
+      fields: ["line", "expected", "found"],
+      words: "a row of the wrong length",
+    },
+    files: {
+      fields: ["message"],
+      words: "a refusal of the reader of xlsx files",
+    },
+    worker: { fields: ["error"], words: "a failure of the application" },
+  };
+
+const COLUMN_TYPE_KINDS: Kinds<ColumnType["kind"]> = {
+  identifier: { fields: [], words: "identifier" },
+  binary: { fields: ["one", "zero"], words: "binary" },
+  continuous: { fields: [], words: "continuous" },
+  categorical: { fields: [], words: "categorical" },
+};
+
+const GROUPING_KINDS: Kinds<Grouping["kind"]> = {
+  populations: { fields: ["column"], words: "the column of the populations" },
+  roles: { fields: ["roles"], words: "the roles of the columns" },
+};
+
+const FORMAT_WORDS: Readonly<Record<VariantSource["format"], string>> = {
+  vcf: "a VCF file",
+  nei: "a .nei file",
+};
+
+const ROLE_WORDS: Readonly<
+  Record<Extract<Grouping, { kind: "roles" }>["roles"][number][1], string>
+> = { trait: "trait", covariate: "covariate", ignored: "ignored" };
+
+const ENCODING_WORDS: Readonly<Record<CsvOptions["encoding"], string>> = {
+  "utf-8": "UTF-8",
+  "windows-1252": "Windows-1252",
+  auto: "found by the application",
+};
+
+const SEPARATOR_WORDS: Readonly<Record<CsvOptions["separator"], string>> = {
+  ",": "a comma",
+  ";": "a semicolon",
+  "\t": "a tab",
+  auto: "found by the application",
+};
+
+const DECIMAL_WORDS: Readonly<Record<CsvOptions["decimal"], string>> = {
+  ".": "a point",
+  ",": "a comma",
+  auto: "found by the application",
+};
+
+const FOUND_ENCODING_WORDS: Readonly<Record<CsvFound["encoding"], string>> = {
+  "utf-8": ENCODING_WORDS["utf-8"],
+  "windows-1252": ENCODING_WORDS["windows-1252"],
+};
+
+const FOUND_SEPARATOR_WORDS: Readonly<Record<CsvFound["separator"], string>> = {
+  ",": SEPARATOR_WORDS[","],
+  ";": SEPARATOR_WORDS[";"],
+  "\t": SEPARATOR_WORDS["\t"],
+};
+
+const FOUND_DECIMAL_WORDS: Readonly<Record<CsvFound["decimal"], string>> = {
+  ".": DECIMAL_WORDS["."],
+  ",": DECIMAL_WORDS[","],
+};
 
 function parseVariantFilter(
   value: unknown,
   path: FieldPath,
 ): Parsed<VariantFilter> {
-  const read = readKind(
-    value,
-    path,
-    VARIANT_FILTER_FIELDS,
-    VARIANT_FILTER_KINDS,
-  );
+  const read = readKind(value, path, VARIANT_FILTER_KINDS);
   if (!read.ok) {
     return read;
   }
@@ -1458,7 +1619,9 @@ function parseVariantFilters(
 
 /** A second filter of a kind already in the list. */
 function secondOfAKind(
-  filters: readonly { readonly kind: string }[],
+  filters: readonly {
+    readonly kind: VariantFilterKind | IndividualFilterKind;
+  }[],
   path: FieldPath,
 ): ProjectError | null {
   for (const [index, filter] of filters.entries()) {
@@ -1473,25 +1636,11 @@ function secondOfAKind(
   return null;
 }
 
-const INDIVIDUAL_FILTER_FIELDS: Readonly<
-  Record<IndividualFilterKind, readonly string[]>
-> = {
-  keep: ["individuals"],
-  remove: ["individuals"],
-  missing_data: ["maxAllowedMissingRate"],
-  obs_het: ["maxAllowedObsHet"],
-};
-
 function parseIndividualFilter(
   value: unknown,
   path: FieldPath,
 ): Parsed<IndividualFilter> {
-  const read = readKind(
-    value,
-    path,
-    INDIVIDUAL_FILTER_FIELDS,
-    INDIVIDUAL_FILTER_ORDER,
-  );
+  const read = readKind(value, path, INDIVIDUAL_FILTER_KINDS);
   if (!read.ok) {
     return read;
   }
@@ -1586,10 +1735,7 @@ function parseVariantSource(
   if (!size.ok) {
     return size;
   }
-  const format = parseLiteral(f["format"], [...path, "format"], [
-    "vcf",
-    "nei",
-  ] as const);
+  const format = parseOneOf(f["format"], [...path, "format"], FORMAT_WORDS);
   if (!format.ok) {
     return format;
   }
@@ -1642,16 +1788,7 @@ function parseReadOptions(
 }
 
 function parseSourceRead(value: unknown, path: FieldPath): Parsed<SourceRead> {
-  const read = readKind(
-    value,
-    path,
-    {
-      pending: [],
-      read: ["individuals", "ploidy", "numVars"],
-      failed: ["error"],
-    },
-    ["pending", "read", "failed"] as const,
-  );
+  const read = readKind(value, path, SOURCE_READ_KINDS);
   if (!read.ok) {
     return read;
   }
@@ -1708,12 +1845,7 @@ function parseSourceError(
   value: unknown,
   path: FieldPath,
 ): Parsed<SourceError> {
-  const read = readKind(
-    value,
-    path,
-    { popnei: ["message"], worker: ["error"] },
-    ["popnei", "worker"] as const,
-  );
+  const read = readKind(value, path, SOURCE_ERROR_KINDS);
   if (!read.ok) {
     return read;
   }
@@ -1725,32 +1857,33 @@ function parseSourceError(
     }
     case "worker": {
       const error = parseRunError(fields["error"], [...path, "error"]);
-      return error.ok ? success({ kind, error: error.value }) : error;
+      if (!error.ok) {
+        return error;
+      }
+      // A refusal of popnei is the kind popnei of the read, not this one.
+      if (error.value.kind === "popnei") {
+        return failure(runErrorKindError([...path, "error"], "popnei"));
+      }
+      return success({ kind, error: error.value });
     }
   }
 }
 
-function parseRunError(value: unknown, path: FieldPath): Parsed<RunError> {
-  const read = readKind(
-    value,
-    path,
-    {
-      popnei: ["message"],
-      files: ["message"],
-      workerFailed: ["message"],
-      couldNotStart: ["reason"],
-      protocolMismatch: [],
-      defect: ["message"],
-    },
-    [
-      "popnei",
-      "files",
-      "workerFailed",
-      "couldNotStart",
-      "protocolMismatch",
-      "defect",
-    ] as const,
+/** The kind of a failure of the worker that cannot be there, the kinds it
+    can be in words. */
+function runErrorKindError(
+  path: FieldPath,
+  excluded: RunError["kind"],
+): ProjectError {
+  const kinds = keysOf(RUN_ERROR_KINDS).filter((kind) => kind !== excluded);
+  return wrongValue(
+    [...path, "kind"],
+    eitherOf(kinds.map((kind) => RUN_ERROR_KINDS[kind].words)),
   );
+}
+
+function parseRunError(value: unknown, path: FieldPath): Parsed<RunError> {
+  const read = readKind(value, path, RUN_ERROR_KINDS);
   if (!read.ok) {
     return read;
   }
@@ -1818,28 +1951,23 @@ function parseCsvOptions(value: unknown, path: FieldPath): Parsed<CsvOptions> {
     return fields;
   }
   const f = fields.value;
-  const encoding = parseLiteral(f["encoding"], [...path, "encoding"], [
-    "auto",
-    "utf-8",
-    "windows-1252",
-  ] as const);
+  const encoding = parseOneOf(
+    f["encoding"],
+    [...path, "encoding"],
+    ENCODING_WORDS,
+  );
   if (!encoding.ok) {
     return encoding;
   }
-  const separator = parseLiteral(f["separator"], [...path, "separator"], [
-    "auto",
-    ",",
-    ";",
-    "\t",
-  ] as const);
+  const separator = parseOneOf(
+    f["separator"],
+    [...path, "separator"],
+    SEPARATOR_WORDS,
+  );
   if (!separator.ok) {
     return separator;
   }
-  const decimal = parseLiteral(f["decimal"], [...path, "decimal"], [
-    "auto",
-    ".",
-    ",",
-  ] as const);
+  const decimal = parseOneOf(f["decimal"], [...path, "decimal"], DECIMAL_WORDS);
   if (!decimal.ok) {
     return decimal;
   }
@@ -1856,25 +1984,27 @@ function parseCsvFound(value: unknown, path: FieldPath): Parsed<CsvFound> {
     return fields;
   }
   const f = fields.value;
-  const encoding = parseLiteral(f["encoding"], [...path, "encoding"], [
-    "utf-8",
-    "windows-1252",
-  ] as const);
+  const encoding = parseOneOf(
+    f["encoding"],
+    [...path, "encoding"],
+    FOUND_ENCODING_WORDS,
+  );
   if (!encoding.ok) {
     return encoding;
   }
-  const separator = parseLiteral(f["separator"], [...path, "separator"], [
-    ",",
-    ";",
-    "\t",
-  ] as const);
+  const separator = parseOneOf(
+    f["separator"],
+    [...path, "separator"],
+    FOUND_SEPARATOR_WORDS,
+  );
   if (!separator.ok) {
     return separator;
   }
-  const decimal = parseLiteral(f["decimal"], [...path, "decimal"], [
-    ".",
-    ",",
-  ] as const);
+  const decimal = parseOneOf(
+    f["decimal"],
+    [...path, "decimal"],
+    FOUND_DECIMAL_WORDS,
+  );
   if (!decimal.ok) {
     return decimal;
   }
@@ -1889,12 +2019,7 @@ function parseIndividualsRead(
   value: unknown,
   path: FieldPath,
 ): Parsed<IndividualsRead> {
-  const read = readKind(
-    value,
-    path,
-    { pending: [], read: ["table", "columns", "found"], failed: ["error"] },
-    ["pending", "read", "failed"] as const,
-  );
+  const read = readKind(value, path, INDIVIDUALS_READ_KINDS);
   if (!read.ok) {
     return read;
   }
@@ -1940,29 +2065,8 @@ function parseIndividualsRead(
 function parseIndividualsError(
   value: unknown,
   path: FieldPath,
-): Parsed<
-  IndividualsFileError | { readonly kind: "worker"; readonly error: RunError }
-> {
-  const read = readKind(
-    value,
-    path,
-    {
-      empty: [],
-      duplicateColumn: ["name"],
-      duplicateIndividual: ["name"],
-      raggedRow: ["line", "expected", "found"],
-      files: ["message"],
-      worker: ["error"],
-    },
-    [
-      "empty",
-      "duplicateColumn",
-      "duplicateIndividual",
-      "raggedRow",
-      "files",
-      "worker",
-    ] as const,
-  );
+): Parsed<Extract<IndividualsRead, { kind: "failed" }>["error"]> {
+  const read = readKind(value, path, INDIVIDUALS_ERROR_KINDS);
   if (!read.ok) {
     return read;
   }
@@ -2001,7 +2105,14 @@ function parseIndividualsError(
     }
     case "worker": {
       const error = parseRunError(fields["error"], [...path, "error"]);
-      return error.ok ? success({ kind, error: error.value }) : error;
+      if (!error.ok) {
+        return error;
+      }
+      // A refusal of the xlsx reader is the kind files of the read.
+      if (error.value.kind === "files") {
+        return failure(runErrorKindError([...path, "error"], "files"));
+      }
+      return success({ kind, error: error.value });
     }
   }
 }
@@ -2055,17 +2166,7 @@ function parseValue(
 }
 
 function parseColumnType(value: unknown, path: FieldPath): Parsed<ColumnType> {
-  const read = readKind(
-    value,
-    path,
-    {
-      identifier: [],
-      binary: ["one", "zero"],
-      continuous: [],
-      categorical: [],
-    },
-    ["identifier", "binary", "continuous", "categorical"] as const,
-  );
+  const read = readKind(value, path, COLUMN_TYPE_KINDS);
   if (!read.ok) {
     return read;
   }
@@ -2089,15 +2190,8 @@ function parseColumnType(value: unknown, path: FieldPath): Parsed<ColumnType> {
   }
 }
 
-const ROLES = ["trait", "covariate", "ignored"] as const;
-
 function parseGrouping(value: unknown, path: FieldPath): Parsed<Grouping> {
-  const read = readKind(
-    value,
-    path,
-    { populations: ["column"], roles: ["roles"] },
-    ["populations", "roles"] as const,
-  );
+  const read = readKind(value, path, GROUPING_KINDS);
   if (!read.ok) {
     return read;
   }
@@ -2121,7 +2215,7 @@ function parseGrouping(value: unknown, path: FieldPath): Parsed<Grouping> {
 function parseRole(
   value: unknown,
   path: FieldPath,
-): Parsed<readonly [string, (typeof ROLES)[number]]> {
+): Parsed<Extract<Grouping, { kind: "roles" }>["roles"][number]> {
   if (!isList(value) || value.length !== 2) {
     return failure(wrongValue(path, "a column and its role"));
   }
@@ -2129,7 +2223,7 @@ function parseRole(
   if (!column.ok) {
     return column;
   }
-  const role = parseLiteral(value[1], [...path, 1], ROLES);
+  const role = parseOneOf(value[1], [...path, 1], ROLE_WORDS);
   if (!role.ok) {
     return role;
   }
@@ -2316,7 +2410,7 @@ export function projectErrorText(error: ProjectError): string {
     case "repeated":
       return `The project file cannot be opened: ${fieldWords(error.path)} repeats the ${error.what} ${shown(error.value)}. ${DAMAGED}`;
     case "twoFiltersOfAKind":
-      return `The project file cannot be opened: ${fieldWords(error.path.slice(0, -1))} have two filters of ${filterKindWords(error.filter)}. ${DAMAGED}`;
+      return `The project file cannot be opened: ${fieldWords(error.path.slice(0, -1))} have two filters of ${FILTER_KIND_WORDS[error.filter]}. ${DAMAGED}`;
   }
 }
 
@@ -2332,27 +2426,8 @@ function shown(value: string): string {
     : characters.join("");
 }
 
-/** What a filter of each kind filters on, in words. */
-function filterKindWords(kind: string): string {
-  switch (kind) {
-    case "missing_data":
-      return "missing genotypes";
-    case "maf":
-      return "major allele frequency";
-    case "obs_het":
-      return "observed heterozygosity";
-    case "ld":
-      return "linkage disequilibrium";
-    case "keep":
-      return "individuals to keep";
-    case "remove":
-      return "individuals to remove";
-    default:
-      return `the kind ${kind}`;
-  }
-}
-
-/** A position of a list, 0 the first, as an ordinal: "first", "11th". */
+/** A position of a list, 0 the first, as an ordinal: "first", "11th".
+    Exported for its tests alone. */
 export function ordinal(index: number): string {
   const words = [
     "first",

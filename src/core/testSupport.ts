@@ -567,18 +567,35 @@ const fileOptions: fc.Arbitrary<JsonObject> = jsonObject({
 }).filter((options) => !hasNegativeZero(options));
 
 /** Any failure of a worker. */
-const runError: fc.Arbitrary<RunError> = fc.oneof(
-  fc.string().map((message): RunError => ({ kind: "popnei", message })),
-  fc.string().map((message): RunError => ({ kind: "files", message })),
-  fc.string().map((message): RunError => ({ kind: "workerFailed", message })),
-  fc.string().map((reason): RunError => ({ kind: "couldNotStart", reason })),
-  fc.constant<RunError>({ kind: "protocolMismatch" }),
-  fc.string().map((message): RunError => ({ kind: "defect", message })),
-);
+/** Any failure of a worker, one generator per kind, in a table that names
+    every kind of RunError, so that a kind added to it fails the compile
+    here too. */
+const RUN_ERRORS: Readonly<Record<RunError["kind"], fc.Arbitrary<RunError>>> = {
+  popnei: fc.string().map((message) => ({ kind: "popnei", message })),
+  files: fc.string().map((message) => ({ kind: "files", message })),
+  workerFailed: fc
+    .string()
+    .map((message) => ({ kind: "workerFailed", message })),
+  couldNotStart: fc
+    .string()
+    .map((reason) => ({ kind: "couldNotStart", reason })),
+  protocolMismatch: fc.constant({ kind: "protocolMismatch" }),
+  defect: fc.string().map((message) => ({ kind: "defect", message })),
+};
+
+const runError: fc.Arbitrary<RunError> = fc.oneof(...Object.values(RUN_ERRORS));
 
 /** Any variants file, its read failed by a worker among the reads. */
 const anyVariantSource: fc.Arbitrary<VariantSource> = fc
-  .tuple(variantSource, fc.option(runError))
+  .tuple(
+    variantSource,
+    fc.option(
+      runError.filter(
+        (error): error is Exclude<RunError, { kind: "popnei" }> =>
+          error.kind !== "popnei",
+      ),
+    ),
+  )
   .map(([source, error]) =>
     error === null
       ? source
@@ -714,10 +731,15 @@ const individualsRead: fc.Arbitrary<IndividualsRead> = fc.oneof(
     kind: "failed",
     error,
   })),
-  runError.map((error): IndividualsRead => ({
-    kind: "failed",
-    error: { kind: "worker", error },
-  })),
+  runError
+    .filter(
+      (error): error is Exclude<RunError, { kind: "files" }> =>
+        error.kind !== "files",
+    )
+    .map((error): IndividualsRead => ({
+      kind: "failed",
+      error: { kind: "worker", error },
+    })),
 );
 
 /** Any individuals file. */

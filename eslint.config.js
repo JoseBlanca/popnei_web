@@ -37,6 +37,11 @@ const individualsReader = {
   group: ["**/worker/individuals/**"],
   message: "src/core does not import the reader; the light worker runs it.",
 };
+// What the tests of core share, fast-check and Vitest belong to the tests.
+const testOnly = {
+  group: ["**/testSupport*", "fast-check", "vitest", "vitest/*"],
+  message: "Only the tests import testSupport.ts, fast-check and Vitest.",
+};
 const filesWasm = {
   group: ["**/crates/files/**"],
   message: "Only src/worker/filesRunner.ts calls the files wasm.",
@@ -169,6 +174,31 @@ export default defineConfig(
       "@typescript-eslint/consistent-type-assertions": [
         "error",
         { assertionStyle: "never" },
+      ],
+    },
+  },
+  {
+    // The code of core, as against its tests and what they share.
+    files: ["src/core/**/*.{ts,tsx}"],
+    ignores: ["src/core/**/*.test.ts", "src/core/testSupport.ts"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            ui,
+            charts,
+            runner,
+            client,
+            react,
+            drawing,
+            popneiValues,
+            filesWasm,
+            individualsReader,
+            probe,
+            testOnly,
+          ],
+        },
       ],
     },
   },

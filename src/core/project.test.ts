@@ -33,6 +33,7 @@ import type {
   ParsedAnalysis,
   Project,
   ProjectError,
+  SourceError,
   SourceRead,
 } from "./project.ts";
 import type { Result } from "./result.ts";
@@ -1907,6 +1908,61 @@ describe("WP1 D5 the validation", () => {
         kind: "wrongValue",
         path: ["analyses", 0, "options"],
       });
+    });
+  });
+
+  describe("the types and what the module gives", () => {
+    test("a refusal of popnei is never a failure of the worker, nor one of the files reader", () => {
+      const popnei: SourceError = {
+        kind: "worker",
+        // @ts-expect-error -- a refusal of popnei is the kind popnei of SourceError
+        error: { kind: "popnei", message: "no variants" },
+      };
+      const files: IndividualsRead = {
+        kind: "failed",
+        error: {
+          kind: "worker",
+          // @ts-expect-error -- a refusal of the xlsx reader is the kind files of IndividualsFileError
+          error: { kind: "files", message: "no sheet" },
+        },
+      };
+      expect([popnei.kind, files.kind]).toEqual(["worker", "failed"]);
+    });
+
+    test("two filters of one kind name a kind of filter", () => {
+      const error: ProjectError = {
+        kind: "twoFiltersOfAKind",
+        path: ["filters", 1],
+        // @ts-expect-error -- hwe is not a kind of filter
+        filter: "hwe",
+      };
+      expect(error.kind).toBe("twoFiltersOfAKind");
+    });
+
+    test("the checks of each value are not given to other modules", async () => {
+      const module: object = await import("./project.ts");
+      const names = Object.keys(module);
+      for (const name of [
+        "variantFilterError",
+        "individualFilterError",
+        "loadIdError",
+        "variantLoadError",
+        "groupingError",
+        "tableError",
+        "individualsReadError",
+      ]) {
+        expect(names).not.toContain(name);
+      }
+      for (const name of [
+        "MAX_PLOIDY",
+        "MAX_LD_DIST",
+        "INDIVIDUAL_FILTER_ORDER",
+        "FORMAT_VERSION",
+        "MAX_OPTIONS_DEPTH",
+        "freezeProject",
+      ]) {
+        expect(names).toContain(name);
+      }
     });
   });
 });
