@@ -1415,17 +1415,17 @@ describe("WP1 D4 the records and the needs", () => {
       },
     );
 
-    test("a list that names an individual twice", () => {
+    test("a list that names an individual more than once", () => {
       expect(
         projectNeeds(
           withLists([{ kind: "remove", individuals: ["i1", "i3", "i1"] }]),
         ),
       ).toBe(
-        "The list of individuals to remove names i1 twice. Change the list, or remove the filter, in the Variants step.",
+        "The list of individuals to remove names i1 more than once. Change the list, or remove the filter, in the Variants step.",
       );
     });
 
-    test("a list that names several individuals twice names each, in the order of the list", () => {
+    test("a list that repeats several individuals names each once, in the order of the list", () => {
       expect(
         projectNeeds(
           withLists([
@@ -1433,17 +1433,17 @@ describe("WP1 D4 the records and the needs", () => {
           ]),
         ),
       ).toBe(
-        "The list of individuals to keep names i3 and i1 twice. Change the list, or remove the filter, in the Variants step.",
+        "The list of individuals to keep names i3 and i1 more than once. Change the list, or remove the filter, in the Variants step.",
       );
     });
 
-    test("a name written three times is said twice", () => {
+    test("a name written three times is said more than once", () => {
       expect(
         projectNeeds(
           withLists([{ kind: "keep", individuals: ["i2", "i2", "i2"] }]),
         ),
       ).toBe(
-        "The list of individuals to keep names i2 twice. Change the list, or remove the filter, in the Variants step.",
+        "The list of individuals to keep names i2 more than once. Change the list, or remove the filter, in the Variants step.",
       );
     });
 
@@ -1546,7 +1546,7 @@ describe("WP1 D4 the records and the needs", () => {
           withLists([{ kind: "keep", individuals: ["x8", "i1", "i1"] }]),
         ),
       ).toBe(
-        "The list of individuals to keep names i1 twice. Change the list, or remove the filter, in the Variants step.",
+        "The list of individuals to keep names i1 more than once. Change the list, or remove the filter, in the Variants step.",
       );
     });
 

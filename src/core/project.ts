@@ -1194,7 +1194,7 @@ const LIST_KINDS = ["keep", "remove"] as const;
  * The reason no analysis can run on this project, in the words the screen
  * shows beside the Run button, or `null` when every analysis can: the
  * first of a variants file missing, being read or refused, then a list of
- * individuals that is empty, names one twice, or names individuals not in
+ * individuals that is empty, names one more than once, or names individuals not in
  * the variants file (the project spec, "What an analysis needs of every
  * project").
  */
@@ -1262,7 +1262,7 @@ function listNeeds(
   }
   const repeated = [...times].filter(([, n]) => n > 1).map(([name]) => name);
   if (repeated.length > 0) {
-    return `${theList} names ${namesOf(repeated)} twice. ${CHANGE_LIST}`;
+    return `${theList} names ${namesOf(repeated)} more than once. ${CHANGE_LIST}`;
   }
   const unknown = list.filter((name) => !inVariants.has(name));
   if (unknown.length > 0) {
