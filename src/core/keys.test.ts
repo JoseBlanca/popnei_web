@@ -839,6 +839,7 @@ describe("WP2 D3 the properties of the keys", () => {
           fingerprintOf(before, memo),
         );
         expect(fingerprintOf(before, null)).toBe(fingerprintOf(before, memo));
+        expect(fingerprintOf(before, memo)).not.toBe(keyWith(before, memo));
       }),
     );
   });
