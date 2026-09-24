@@ -22,9 +22,12 @@ What exists now that did not:
   browsers, and publishes `main` on GitHub Pages.
 - The published probe, at `https://jblanca.net/popnei_web/probe.html`:
   it loads popnei and reads "200 individuals, ploidy 2" in Chromium,
-  WebKit and Firefox. popnei loaded in a median of 60 ms in Chromium and
-  80 ms in WebKit, and in 228 ms in one load of Firefox by hand; the file
-  opened in about 2 ms in each (section 3).
+  WebKit and Firefox: Chromium and WebKit by 40 automated tests run
+  against it, Firefox by the owner by hand, and all three by the 60 tests
+  of the workflow before it was published. popnei loaded in a median of
+  60 ms in Chromium and 80 ms in WebKit, over five loads each; the
+  owner's one load in Firefox, 228 ms, was measured differently and is
+  not comparable. The file opened in about 2 ms in each (section 3).
 
 What was learned that changes nothing now, but matters later:
 
@@ -41,15 +44,18 @@ that is not a VCF cuts its quote mid-word; the owner has not asked for
 an issue.
 
 What is asked of the owner: the order to merge `plan/site` into `main`
-and push it. `main` on GitHub has the plan up to task 3.1; the merge
-brings the fixes of the workflow's review and this report. After it, the
-worktree and the branch of the plan are removed.
+and push it, given on 24 September 2026. `main` on GitHub is at 0f9376a,
+the site as published after task 3.2; what is left to merge is 07effbc,
+the fixes of the workflow's review, and the plan and this report as
+finished. After the push, the worktree and the branch of the plan are
+removed.
 
 Changed from the plan by the owner's decisions of 24 September 2026:
 Firefox tested on GitHub rather than on the Mac; the branches of the
-work kept local, so the first run of the workflow was on `main`; three
-changes to the messages of the probe and one to the lint, after the
-first review; and the spec's account of the address of the wasm. Each is
+work kept local, so the first run of the workflow was on `main`; after the
+first review, a failure of its own for a request the probe's worker does
+not know, the source and the name of the file in a failure to open it,
+and popnei refused by the lint to the page's own files; and the spec's account of the address of the wasm. Each is
 in its section below.
 
 ## 0. The release of popnei
@@ -72,7 +78,8 @@ Built on 24 September 2026, and reviewed; the three findings that would
 change the spec wait for the owner (below). Commits 140b57a and 4c45dd6,
 and the fixes of the review, 43bce3f to a1acff4.
 
-The deliverables, each checked by the orchestrator in the worktree on
+The deliverables, each checked by the orchestrator, the session that
+ran the plan and sent each task to a subagent, in the worktree on
 a1acff4:
 
 1. `npm ci` exits 0, and `npm pkg get dependencies.popnei` prints
@@ -122,7 +129,8 @@ stale, errors, api, architecture and bundle. Fixed:
 Not taken: the line of `configs.md` recording that the build passed on a
 scratch probe page stays, since it records a trial.
 
-Waiting for the owner, since each changes the spec's messages or rules:
+Brought to the owner, since each changes the spec's messages or rules,
+and decided by them later that day (section 2):
 a kind of failure for a request the worker does not know; the source and
 the name of the file in a failure to open it, since the two files can be
 answered out of order; and popnei refused to the page's own file of the
@@ -136,7 +144,7 @@ were not installed then.
 
 ### How the work went, for whoever revises a skill or a plan
 
-The owner can stop reading here.
+The owner can skip to the next section.
 
 - The plan checked the build in work package 1, though its entry,
   `probe.html`, is written in work package 2; a plan should put a check
@@ -243,7 +251,7 @@ What the owner should know:
 
 ### How the work went, for whoever revises a skill or a plan
 
-The owner can stop reading here.
+The owner can skip to the next section.
 
 - The first review of work package 2 found 19 findings, the second 7;
   most were cases of failure that the spec named and no test reached. A
@@ -260,7 +268,7 @@ The owner can stop reading here.
 
 ## 3. The workflow and the deployed site
 
-Under way. The workflow, `.github/workflows/site.yml`, commit 908f95e,
+Done on 24 September 2026. The workflow, `.github/workflows/site.yml`, commit 908f95e,
 has the three jobs of the spec: `check` and `e2e` on every push and pull
 request, `e2e` in Chromium, Firefox and WebKit on GitHub's Ubuntu
 runners, and `deploy` on a push to `main` once both passed. It could not
