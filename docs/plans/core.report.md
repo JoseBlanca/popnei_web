@@ -68,6 +68,17 @@ Under way.
   write (the way to fix a bad list, how many individuals are named, what
   happened when a worker failed, the ending for a malformed individuals
   file, and which problem is named first), asked on 24 September 2026.
+- Task 1.5, 45ac949: `parseProject`, `projectErrorText` and the table of
+  the fields in words in `project.ts`, and the generator of whole
+  projects in `testSupport.ts`. `npx vitest run src/core/project.test.ts
+  -t "WP1 D5"` gives "Tests 58 passed", of at least 25; the round trip
+  of every drawn project through its JSON held on seven runs. Thirty-one
+  breaks, each failing its tests. The spec gives the pattern of the
+  texts and one worked example, and asks for the table in the code; the
+  words of each field are the writer's within that pattern, to be read
+  in the review of this work package. `fc.record` draws objects with no
+  prototype, which `toStrictEqual` tells from what `JSON.parse` gives,
+  so the generators ask for plain objects.
 
 ## 2. The keys
 
@@ -185,7 +196,7 @@ The owner can skip to the next section.
 
 ## 3. Undo and the cache
 
-Under way.
+Done on 24 September 2026, and reviewed.
 
 - Task 3.1, 14ef5b7, after the spec in fde6340: `history.ts`, with
   `MAX_UNDO_STEPS` of 200, the meanwhile of the history spec's Open 1.
@@ -212,3 +223,52 @@ checks exit 0 and `npm test` gives "Tests 290 passed (290)":
    passed (21)", of at least 10.
 2. `npx vitest run src/core/cache.test.ts -t "WP3 D2"`: "Tests 18 passed
    (18)", of at least 12.
+
+The review ran five categories through two reviewers: spec with tests,
+and stale, errors and api. They found no stale result and no error a
+user could meet. What mattered, all fixed in 66a100c and 46db3ea, each
+new test seen to fail on the break it guards:
+
+- Four changes of the code passed every test: a cache exactly at its
+  bound dropping a result it did not need to, caught only by the draw of
+  a property, two runs in six; `mapProjects` losing a bound other than
+  200; `use` copying the results it holds, which would redraw every
+  screen after each change and double the memory; and the keys of a
+  `Map` or the elements of a `Set` counted. WP3 D1 gives 21 tests and
+  WP3 D2 20.
+
+Kept for work package 4, where the fix belongs:
+
+- When the store records a read into every project of the history, two
+  projects that shared the source of a file each get a copy of their
+  own. Undo still gives back the very same project, so nothing is stale,
+  but a screen that compares the source would draw itself again. The
+  function the store hands to `mapProjects` will make one new source for
+  each old one (task 4.1).
+- An undo to a project whose individuals file waits for a read that was
+  never asked for, or was replaced, stays "Reading pops.csv." unless the
+  store asks for the read of the present project after an undo or a
+  redo (task 4.1).
+
+Not taken: that a bound of `Infinity` is refused, since the meanwhile of
+the history spec's Open 1 is 200; if the owner chooses no bound, the
+check changes with the spec.
+
+What the owner should know: if the page ever transfers a result the
+cache holds to a worker, rather than copying it, the result goes empty
+on the screen; `worker.md` says to copy only for the worker's own cache.
+It concerns stage 2.
+
+### How the work went, for whoever revises a skill or a plan
+
+The owner can skip to the next section.
+
+- Told what the review of the keys had found, that a writer chooses
+  the breaks its tests catch, the writers of the history and the cache
+  still missed four; three were changes at a boundary or of a single
+  number (a bound of 200 where the test's bound was 200 too). A test
+  whose values equal the defaults of the code cannot see the code
+  ignore them; `testing.md` could say so.
+- The subagent of task 3.1 used about 99,000 tokens and that of task 3.2
+  95,000, and 13,000 more for the four tests of the review; the two
+  reviewers used 77,000 and 99,000.
