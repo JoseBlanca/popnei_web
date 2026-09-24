@@ -223,6 +223,14 @@ export type ProjectError =
       readonly path: readonly (string | number)[];
       readonly filter: string;
     }
+  /** The value at `path` repeats one before it in its list: an analysis,
+      a column of the header or of the roles, an individual. */
+  | {
+      readonly kind: "repeated";
+      readonly path: FieldPath;
+      readonly what: "analysis" | "column" | "individual";
+      readonly value: string;
+    }
   /** A table and the types of its columns that do not agree: a row not as
       long as the header, a type per column, a binary type whose values
       are not those of its column. */
@@ -249,6 +257,16 @@ export const MAX_PLOIDY = 255;
 /** The largest `maxDist` of the LD filter, 2^53 − 1, which popnei's
     `filterByLd` accepts. */
 export const MAX_LD_DIST = Number.MAX_SAFE_INTEGER;
+
+/** The version of the format of the project file this application
+    writes; `projectFile.ts` writes it in the header, and a command checks
+    the options of an analysis as of this version. */
+export const FORMAT_VERSION = 1;
+
+/** The deepest the options of an analysis are nested, in levels of lists
+    and objects, the options themselves the first; deeper ones are refused,
+    so that no check of them runs out of the stack of the browser. */
+export const MAX_OPTIONS_DEPTH = 64;
 
 /** A new, empty project of the application `app`. */
 export function emptyProject(app: AppId): Project {
@@ -301,6 +319,35 @@ function wrongValue(path: FieldPath, expected: string): ProjectError {
 
 function inconsistentTable(path: FieldPath, expected: string): ProjectError {
   return { kind: "inconsistentTable", path, expected };
+}
+
+function repeated(
+  path: FieldPath,
+  what: "analysis" | "column" | "individual",
+  value: string,
+): ProjectError {
+  return { kind: "repeated", path, what, value };
+}
+
+/** Whether a value holds lists and objects nested deeper than `levels`,
+    itself the first. Walked with a stack of its own, so that a value
+    nested 100,000 levels does not run out of the stack of the browser. */
+function deeperThan(value: unknown, levels: number): boolean {
+  const stack: [unknown, number][] = [[value, 1]];
+  for (let top = stack.pop(); top !== undefined; top = stack.pop()) {
+    const [item, level] = top;
+    if (typeof item !== "object" || item === null) {
+      continue;
+    }
+    if (level > levels) {
+      return true;
+    }
+    const fields: readonly unknown[] = Object.values(item);
+    for (const field of fields) {
+      stack.push([field, level + 1]);
+    }
+  }
+  return false;
 }
 
 function thresholdError(value: number, path: FieldPath): ProjectError | null {
@@ -396,8 +443,12 @@ export function variantLoadError(
   if (idError !== null) {
     return idError;
   }
-  if (!Number.isFinite(load.size)) {
-    return wrongValue([...path, "size"], "a number");
+  const sizeError = wholeNumberError(load.size, 0, Number.MAX_SAFE_INTEGER, [
+    ...path,
+    "size",
+  ]);
+  if (sizeError !== null) {
+    return sizeError;
   }
   const optionsPath = [...path, "readOptions"];
   if (load.format === "nei") {
@@ -426,30 +477,89 @@ export function groupingError(
       ? null
       : wrongValue([...path, "kind"], "the column of the populations");
   }
-  return grouping.kind === "roles"
-    ? null
-    : wrongValue([...path, "kind"], "the roles of the columns");
+  if (grouping.kind !== "roles") {
+    return wrongValue([...path, "kind"], "the roles of the columns");
+  }
+  const columns = new Set<string>();
+  for (const [index, [column]] of grouping.roles.entries()) {
+    if (columns.has(column)) {
+      return repeated([...path, "roles", index, 0], "column", column);
+    }
+    columns.add(column);
+  }
+  return null;
 }
 
 /**
- * Checks that the table of the individuals file and the types of its
- * columns agree: every row as long as the header, one type per column,
- * the first `identifier` and no other, and a binary type whose `one` and
- * `zero` are the two distinct values of its column that are not missing.
- * `path` is that of the read that holds them.
+ * Checks a read of the individuals file: nothing found of the options of
+ * a CSV for an xlsx, whose `csv` is null, and the table as `tableError`
+ * checks it. `path` is that of the read.
+ */
+export function individualsReadError(
+  csv: CsvOptions | null,
+  read: IndividualsRead,
+  path: FieldPath,
+): ProjectError | null {
+  if (read.kind !== "read") {
+    return null;
+  }
+  if (csv === null && read.found !== null) {
+    return wrongValue([...path, "found"], "none, as the file is an xlsx");
+  }
+  return tableError(read.table, read.columns, path);
+}
+
+/**
+ * Checks that the table of the individuals file is one the reader gives,
+ * and that the types of its columns agree with it: at least one column and
+ * one row, no name of the header twice, every row as long as the header,
+ * the first cell of each row the name of an individual, a text that is not
+ * empty, no individual in two rows; one type per column, the first
+ * `identifier` and no other, and a binary type whose `one` and `zero` are
+ * the two distinct values of its column that are not missing. `path` is
+ * that of the read that holds them.
  */
 export function tableError(
   table: IndividualsTable,
   columns: readonly ColumnType[],
   path: FieldPath,
 ): ProjectError | null {
+  const tablePath = [...path, "table"];
+  if (table.columns.length === 0) {
+    return inconsistentTable([...tablePath, "columns"], "at least one column");
+  }
+  if (table.rows.length === 0) {
+    return inconsistentTable(
+      [...tablePath, "rows"],
+      "at least one row below the header",
+    );
+  }
+  const header = new Set<string>();
+  for (const [index, name] of table.columns.entries()) {
+    if (header.has(name)) {
+      return repeated([...tablePath, "columns", index], "column", name);
+    }
+    header.add(name);
+  }
+  const individuals = new Set<string>();
   for (const [row, cells] of table.rows.entries()) {
     if (cells.length !== table.columns.length) {
       return inconsistentTable(
-        [...path, "table", "rows", row],
+        [...tablePath, "rows", row],
         "a row with one cell per column of the header",
       );
     }
+    const name = cells[0];
+    if (typeof name !== "string" || name === "") {
+      return inconsistentTable(
+        [...tablePath, "rows", row, 0],
+        "the name of an individual, a text that is not empty",
+      );
+    }
+    if (individuals.has(name)) {
+      return repeated([...tablePath, "rows", row, 0], "individual", name);
+    }
+    individuals.add(name);
   }
   if (columns.length !== table.columns.length) {
     return inconsistentTable(
@@ -479,7 +589,8 @@ export function tableError(
 }
 
 /** The distinct cells of a column that are not missing, compared
-    exactly. */
+    exactly, up to three: a binary column has two, so a third is enough to
+    refuse it, and the rows after it are not read. */
 function valuesOfColumn(
   table: IndividualsTable,
   index: number,
@@ -489,6 +600,9 @@ function valuesOfColumn(
     const cell: Cell | undefined = row[index];
     if (cell !== undefined && cell !== null && !values.includes(cell)) {
       values.push(cell);
+      if (values.length > 2) {
+        return values;
+      }
     }
   }
   return values;
@@ -840,20 +954,39 @@ export function setGrouping(p: Project, grouping: Grouping): Project {
   return same(p.grouping, copy) ? p : { ...p, grouping: copy };
 }
 
-/** Sets the options of an analysis, whole: in the place of its entry, or
-    as a new entry, last, also when the options are the defaults. Throws a
-    defect on options that are not JSON. */
+/**
+ * Sets the options of an analysis, as its `parseOptions` gives them back of
+ * `FORMAT_VERSION`, whole, the defaults filled in: in the place of its
+ * entry, or as a new entry, last, also when the options are the defaults.
+ * Throws a defect on options nested deeper than `MAX_OPTIONS_DEPTH`, that
+ * its `parseOptions` refuses, or that are not JSON.
+ */
 export function setAnalysisOptions(
   p: Project,
-  analysis: AnalysisId,
+  analysis: ParsedAnalysis,
   options: JsonObject,
 ): Project {
-  const index = p.analyses.findIndex((a) => a.analysis === analysis);
-  canonical(options, null);
-  if (index !== -1 && same(p.analyses[index], { analysis, options })) {
+  if (deeperThan(options, MAX_OPTIONS_DEPTH)) {
+    throw defect(
+      `setAnalysisOptions was given options of ${analysis.id} nested deeper than ${String(MAX_OPTIONS_DEPTH)} levels.`,
+    );
+  }
+  const parsed = analysis.parseOptions(options, FORMAT_VERSION);
+  if (!parsed.ok) {
+    throw defect(
+      `setAnalysisOptions was given options of ${analysis.id} that its parseOptions refuses: ${parsed.error}.`,
+    );
+  }
+  // Throws a defect on a value that is not JSON.
+  canonical(parsed.value, null);
+  const entry = {
+    analysis: analysis.id,
+    options: copyJsonObject(parsed.value),
+  };
+  const index = p.analyses.findIndex((a) => a.analysis === analysis.id);
+  if (index !== -1 && same(p.analyses[index], entry)) {
     return p;
   }
-  const entry = { analysis, options: copyJsonObject(options) };
   return index === -1
     ? { ...p, analyses: [...p.analyses, entry] }
     : { ...p, analyses: p.analyses.with(index, entry) };
@@ -946,7 +1079,25 @@ export function recordIndividualsRead(
   ) {
     return p;
   }
-  return { ...p, individuals: { ...individuals, read } };
+  const error = individualsReadError(individuals.csv, read, [
+    "individuals",
+    "read",
+  ]);
+  if (error === null) {
+    return { ...p, individuals: { ...individuals, read } };
+  }
+  // The reader is our code: a table the project cannot hold is its defect.
+  const message = `the reader gave a read the project cannot hold: ${JSON.stringify(error)}`;
+  return {
+    ...p,
+    individuals: {
+      ...individuals,
+      read: {
+        kind: "failed",
+        error: { kind: "worker", error: { kind: "defect", message } },
+      },
+    },
+  };
 }
 
 // The validation of the project part of a project file.
@@ -1036,10 +1187,8 @@ export function parseProject(
   if (!options.ok) {
     return options;
   }
-  const reference = parseNullable(
-    f["reference"],
-    ["reference"],
-    parseReference,
+  const reference = parseNullable(f["reference"], ["reference"], (v, at) =>
+    parseReference(v, at, analyses),
   );
   if (!reference.ok) {
     return reference;
@@ -1153,6 +1302,18 @@ function parseNumber(value: unknown, path: FieldPath): Parsed<number> {
   return typeof value === "number" && Number.isFinite(value)
     ? success(value)
     : failure(wrongValue(path, "a number"));
+}
+
+/** A whole number of at least 0. */
+function parseCount(value: unknown, path: FieldPath): Parsed<number> {
+  const count = parseNumber(value, path);
+  if (!count.ok) {
+    return count;
+  }
+  return orFailure(
+    count.value,
+    wholeNumberError(count.value, 0, Number.MAX_SAFE_INTEGER, path),
+  );
 }
 
 function parseBoolean(value: unknown, path: FieldPath): Parsed<boolean> {
@@ -1521,7 +1682,7 @@ function parseSourceRead(value: unknown, path: FieldPath): Parsed<SourceRead> {
       const numVars = parseNullable(
         fields["numVars"],
         [...path, "numVars"],
-        parseNumber,
+        parseCount,
       );
       if (!numVars.ok) {
         return numVars;
@@ -1640,12 +1801,15 @@ function parseIndividualsSource(
   if (!read.ok) {
     return read;
   }
-  return success({
-    fileId: fileId.value,
-    name: name.value,
-    csv: csv.value,
-    read: read.value,
-  });
+  return orFailure(
+    {
+      fileId: fileId.value,
+      name: name.value,
+      csv: csv.value,
+      read: read.value,
+    },
+    individualsReadError(csv.value, read.value, [...path, "read"]),
+  );
 }
 
 function parseCsvOptions(value: unknown, path: FieldPath): Parsed<CsvOptions> {
@@ -1759,15 +1923,12 @@ function parseIndividualsRead(
       if (!found.ok) {
         return found;
       }
-      return orFailure(
-        {
-          kind,
-          table: table.value,
-          columns: columns.value,
-          found: found.value,
-        },
-        tableError(table.value, columns.value, path),
-      );
+      return success({
+        kind,
+        table: table.value,
+        columns: columns.value,
+        found: found.value,
+      });
     }
     case "failed": {
       const error = parseIndividualsError(fields["error"], [...path, "error"]);
@@ -2000,14 +2161,18 @@ function parseAnalyses(
       return failure({ kind: "unknownAnalysis", id: id.value });
     }
     if (entries.some((entry) => entry.analysis === id.value)) {
+      return failure(repeated(at, "analysis", id.value));
+    }
+    const given = fields.value["options"];
+    if (deeperThan(given, MAX_OPTIONS_DEPTH)) {
       return failure(
-        wrongValue([...at, "analysis"], "an analysis not named before"),
+        wrongValue(
+          [...at, "options"],
+          `nested at most ${String(MAX_OPTIONS_DEPTH)} levels deep`,
+        ),
       );
     }
-    const options = analysis.parseOptions(
-      fields.value["options"],
-      formatVersion,
-    );
+    const options = analysis.parseOptions(given, formatVersion);
     if (!options.ok) {
       return failure(wrongValue([...at, "options"], options.error));
     }
@@ -2018,7 +2183,11 @@ function parseAnalyses(
 
 const FINGERPRINT = /^[0-9a-f]{64}$/;
 
-function parseReference(value: unknown, path: FieldPath): Parsed<Reference> {
+function parseReference(
+  value: unknown,
+  path: FieldPath,
+  analyses: readonly ParsedAnalysis[],
+): Parsed<Reference> {
   const fields = readObject(value, path, [
     "variants",
     "popneiVersion",
@@ -2047,6 +2216,18 @@ function parseReference(value: unknown, path: FieldPath): Parsed<Reference> {
   const checks = parseList(f["checks"], [...path, "checks"], parseCheck);
   if (!checks.ok) {
     return checks;
+  }
+  for (const [index, check] of checks.value.entries()) {
+    if (!analyses.some((a) => a.id === check.analysis)) {
+      return failure({ kind: "unknownAnalysis", id: check.analysis });
+    }
+    if (
+      checks.value.findIndex((c) => c.analysis === check.analysis) !== index
+    ) {
+      return failure(
+        repeated([...path, "checks", index], "analysis", check.analysis),
+      );
+    }
   }
   return success({
     variants: variants.value,
@@ -2132,9 +2313,23 @@ export function projectErrorText(error: ProjectError): string {
     case "wrongValue":
     case "inconsistentTable":
       return `The project file cannot be opened: ${fieldWords(error.path)} should be ${error.expected}. ${DAMAGED}`;
+    case "repeated":
+      return `The project file cannot be opened: ${fieldWords(error.path)} repeats the ${error.what} ${shown(error.value)}. ${DAMAGED}`;
     case "twoFiltersOfAKind":
       return `The project file cannot be opened: ${fieldWords(error.path.slice(0, -1))} have two filters of ${filterKindWords(error.filter)}. ${DAMAGED}`;
   }
+}
+
+/** The longest a value of the file is shown, in characters. */
+const SHOWN_LENGTH = 40;
+
+/** A value of the file as a text shows it: its control characters
+    escaped, as JSON writes them, and cut at SHOWN_LENGTH characters. */
+function shown(value: string): string {
+  const characters = Array.from(JSON.stringify(value).slice(1, -1));
+  return characters.length > SHOWN_LENGTH
+    ? `${characters.slice(0, SHOWN_LENGTH).join("")}…`
+    : characters.join("");
 }
 
 /** What a filter of each kind filters on, in words. */

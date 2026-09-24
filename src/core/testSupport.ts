@@ -407,7 +407,7 @@ export const drawnCommand: fc.Arbitrary<DrawnCommand> = fc.oneof(
     .map(([analysis, options]) =>
       command(
         "setAnalysisOptions",
-        () => (p) => setAnalysisOptions(p, analysis, options),
+        () => (p) => setAnalysisOptions(p, testAnalysis(analysis), options),
       ),
     ),
 );
@@ -606,10 +606,13 @@ function column(
     fc.array(from, { minLength: length, maxLength: length });
   switch (kind) {
     case "identifier":
-      return cells(fc.string(), numRows).map((c) => ({
-        type: { kind },
-        cells: c,
-      }));
+      // The names of the individuals: texts, none empty, none twice.
+      return fc
+        .uniqueArray(fc.string({ minLength: 1 }), {
+          minLength: numRows,
+          maxLength: numRows,
+        })
+        .map((c) => ({ type: { kind }, cells: c }));
     case "continuous":
     case "categorical":
       return cells(cell, numRows).map((c) => ({ type: { kind }, cells: c }));
@@ -718,15 +721,22 @@ const individualsRead: fc.Arbitrary<IndividualsRead> = fc.oneof(
 );
 
 /** Any individuals file. */
-const individualsSource: fc.Arbitrary<IndividualsSource> = fc.record(
-  {
-    fileId: anyLoadId,
-    name: fc.string(),
-    csv: fc.option(csvOptions),
-    read: individualsRead,
-  },
-  PLAIN,
-);
+const individualsSource: fc.Arbitrary<IndividualsSource> = fc
+  .record(
+    {
+      fileId: anyLoadId,
+      name: fc.string(),
+      csv: fc.option(csvOptions),
+      read: individualsRead,
+    },
+    PLAIN,
+  )
+  // An xlsx, whose csv is null, has nothing found of the options of a CSV.
+  .map((source) =>
+    source.csv === null && source.read.kind === "read"
+      ? { ...source, read: { ...source.read, found: null } }
+      : source,
+  );
 
 /** The analyses the generator of whole projects draws from, with a check
     of their options that takes any JSON object. */
@@ -735,6 +745,15 @@ export const TEST_ANALYSES: readonly ParsedAnalysis[] = [
   "pca",
   "gwas_lm",
 ].map((id) => ({ id, parseOptions: jsonObjectOf }));
+
+/** The analysis of TEST_ANALYSES of the id `id`. */
+export function testAnalysis(id: string): ParsedAnalysis {
+  const found = TEST_ANALYSES.find((a) => a.id === id);
+  if (found === undefined) {
+    throw new Error(`popnei_web defect: no test analysis ${id}.`);
+  }
+  return found;
+}
 
 /** The JSON object `value` is, rebuilt, or what it should be. */
 export function jsonObjectOf(value: unknown): Result<JsonObject, string> {
@@ -804,7 +823,9 @@ export const wholeProject: fc.Arbitrary<Project> = fc
                 .option(fc.string())
                 .map((column): Grouping => ({ kind: "populations", column }))
             : fc
-                .array(fc.tuple(fc.string(), role))
+                .uniqueArray(fc.tuple(fc.string(), role), {
+                  selector: ([column]) => column,
+                })
                 .map((roles): Grouping => ({ kind: "roles", roles })),
         analyses: fc.uniqueArray(
           fc.record(
@@ -822,17 +843,19 @@ export const wholeProject: fc.Arbitrary<Project> = fc
               variants: anyVariantSource,
               popneiVersion: fc.string(),
               appVersion: fc.string(),
-              checks: fc.array(
+              checks: fc.uniqueArray(
                 fc.record(
                   {
-                    analysis: fc.string(),
+                    analysis: fc.constantFrom(
+                      ...TEST_ANALYSES.map((a) => a.id),
+                    ),
                     numbers: fc.array(fc.option(fileNumber)),
                     keyVersion: fc.nat(),
                     settings: fc.stringMatching(/^[0-9a-f]{64}$/),
                   },
                   PLAIN,
                 ),
-                { maxLength: 3 },
+                { selector: (check) => check.analysis },
               ),
             },
             PLAIN,

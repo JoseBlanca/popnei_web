@@ -1,8 +1,9 @@
 import * as fc from "fast-check";
 import { describe, expect, test } from "vitest";
 import { canonical } from "./keys.ts";
-import type { JsonObject } from "./keys.ts";
+import type { JsonObject, JsonValue } from "./keys.ts";
 import {
+  FORMAT_VERSION,
   INDIVIDUAL_FILTER_ORDER,
   analysisOptions,
   emptyProject,
@@ -29,17 +30,19 @@ import {
 import type {
   FieldPath,
   IndividualsRead,
+  ParsedAnalysis,
   Project,
   ProjectError,
   SourceRead,
 } from "./project.ts";
 import type { Result } from "./result.ts";
-import type { ColumnType } from "../worker/protocol.ts";
+import type { ColumnType, IndividualsTable } from "../worker/protocol.ts";
 import {
   SAMPLE_INDIVIDUALS_ID,
   SAMPLE_VARIANTS_ID,
   TEST_ANALYSES,
   deepFreeze,
+  testAnalysis,
   drawnCommand,
   jsonObjectOf,
   sampleProject,
@@ -100,6 +103,16 @@ function withoutIndividuals(): Project {
 }
 
 const DEFECT = /^popnei_web defect: /;
+
+/** An object whose lists are nested so that it is `levels` levels deep,
+    itself the first. */
+function nested(levels: number): JsonObject {
+  let value: JsonValue = [];
+  for (let level = 2; level < levels; level++) {
+    value = [value];
+  }
+  return levels === 1 ? {} : { x: value };
+}
 
 describe("WP1 D3 the commands", () => {
   test("the worked case: a MAF filter set again is replaced in its place", () => {
@@ -259,7 +272,9 @@ describe("WP1 D3 the commands", () => {
 
     test("setAnalysisOptions replaces the options of an analysis", () => {
       const p = sampleProject();
-      const q = setAnalysisOptions(p, "diversity", { minNumInds: 10 });
+      const q = setAnalysisOptions(p, testAnalysis("diversity"), {
+        minNumInds: 10,
+      });
       expect(q.analyses).toEqual([
         { analysis: "diversity", options: { minNumInds: 10 } },
       ]);
@@ -347,7 +362,8 @@ describe("WP1 D3 the commands", () => {
     ],
     [
       "setAnalysisOptions",
-      (p) => setAnalysisOptions(p, "diversity", { minNumInds: 20 }),
+      (p) =>
+        setAnalysisOptions(p, testAnalysis("diversity"), { minNumInds: 20 }),
     ],
   ])(
     "%s given the value already there gives the project itself",
@@ -535,7 +551,9 @@ describe("WP1 D3 the commands", () => {
 
     test("setAnalysisOptions with no entry adds one last, also of the defaults", () => {
       const p = sampleProject();
-      const q = setAnalysisOptions(p, "pca", { numPrinComps: 10 });
+      const q = setAnalysisOptions(p, testAnalysis("pca"), {
+        numPrinComps: 10,
+      });
       expect(q.analyses).toEqual([
         ...p.analyses,
         { analysis: "pca", options: { numPrinComps: 10 } },
@@ -638,7 +656,11 @@ describe("WP1 D3 the commands", () => {
       "setAnalysisOptions",
       () => {
         const options = { minNumInds: 10, pops: ["P1"] };
-        const q = setAnalysisOptions(sampleProject(), "pca", options);
+        const q = setAnalysisOptions(
+          sampleProject(),
+          testAnalysis("pca"),
+          options,
+        );
         return {
           q,
           change: () => {
@@ -652,7 +674,11 @@ describe("WP1 D3 the commands", () => {
       "setAnalysisOptions over an entry",
       () => {
         const options = { minNumInds: 10 };
-        const q = setAnalysisOptions(sampleProject(), "diversity", options);
+        const q = setAnalysisOptions(
+          sampleProject(),
+          testAnalysis("diversity"),
+          options,
+        );
         return { q, change: () => (options.minNumInds = 99) };
       },
     ],
@@ -832,6 +858,135 @@ describe("WP1 D3 the commands", () => {
         }),
       ).toThrow(DEFECT);
     });
+  });
+
+  describe("setAnalysisOptions checks its analysis and its options", () => {
+    const refusing = {
+      id: "pca",
+      parseOptions: (): Result<JsonObject, string> => ({
+        ok: false,
+        error: "a number of components from 1 to 10",
+      }),
+    };
+    /** An analysis whose parseOptions accepts `options` as they are. */
+    const accepting = (options: JsonObject): ParsedAnalysis => ({
+      id: "pca",
+      parseOptions: () => ({ ok: true, value: options }),
+    });
+
+    test("options its parseOptions refuses are a defect", () => {
+      expect(() =>
+        setAnalysisOptions(sampleProject(), refusing, { numPrinComps: 0 }),
+      ).toThrow(DEFECT);
+    });
+
+    test("options that are not JSON are a defect, whatever its parseOptions says", () => {
+      expect(() =>
+        setAnalysisOptions(sampleProject(), accepting({ x: Number.NaN }), {
+          x: Number.NaN,
+        }),
+      ).toThrow(DEFECT);
+    });
+
+    test("options nested deeper than 64 levels are a defect", () => {
+      expect(() =>
+        setAnalysisOptions(sampleProject(), accepting(nested(65)), nested(65)),
+      ).toThrow(DEFECT);
+    });
+
+    test("options are checked as of the format this version writes", () => {
+      const versions: number[] = [];
+      const analysis = {
+        id: "pca",
+        parseOptions: (o: unknown, version: number) => {
+          versions.push(version);
+          return jsonObjectOf(o);
+        },
+      };
+      setAnalysisOptions(sampleProject(), analysis, {});
+      expect(versions).toEqual([FORMAT_VERSION]);
+    });
+
+    test("keeps the options its parseOptions gives back, the defaults filled in", () => {
+      const filling = {
+        id: "pca",
+        parseOptions: (): Result<JsonObject, string> => ({
+          ok: true,
+          value: { numPrinComps: 10, scale: true },
+        }),
+      };
+      const q = setAnalysisOptions(sampleProject(), filling, {
+        numPrinComps: 10,
+      });
+      expect(q.analyses.at(-1)).toEqual({
+        analysis: "pca",
+        options: { numPrinComps: 10, scale: true },
+      });
+    });
+  });
+
+  test("loadVariants of a size below 0 is a defect", () => {
+    expect(() =>
+      loadVariants(sampleProject(), {
+        fileId: NEW_ID,
+        name: "panel.nei",
+        size: -1,
+        format: "nei",
+        readOptions: null,
+      }),
+    ).toThrow(DEFECT);
+  });
+
+  test("setGrouping of roles that name a column twice is a defect", () => {
+    const p = deepFreeze({ ...emptyProject("gwas") });
+    expect(() =>
+      setGrouping(p, {
+        kind: "roles",
+        roles: [
+          ["height", "trait"],
+          ["height", "covariate"],
+        ],
+      }),
+    ).toThrow(DEFECT);
+  });
+
+  test("setColumnType reads a few cells of a binary column of many values, not all", () => {
+    let reads = 0;
+    const rows = Array.from(
+      { length: 1000 },
+      (_, row) =>
+        new Proxy(["i" + String(row), "P1", String(row), null], {
+          get(target, key, receiver): unknown {
+            if (key === "2") {
+              reads += 1;
+            }
+            return Reflect.get(target, key, receiver);
+          },
+        }),
+    );
+    const sample = sampleProject();
+    const individuals = individualsOf(sample);
+    const p: Project = {
+      ...sample,
+      individuals: {
+        ...individuals,
+        read: {
+          kind: "read",
+          table: { columns: ["id", "pop", "sex", "height"], rows },
+          columns: [
+            { kind: "identifier" },
+            { kind: "categorical" },
+            { kind: "categorical" },
+            { kind: "continuous" },
+          ],
+          found: null,
+        },
+      },
+    };
+    expect(() =>
+      setColumnType(p, "sex", { kind: "binary", one: "1", zero: "0" }),
+    ).toThrow(DEFECT);
+    expect(reads).toBeLessThan(10);
   });
 });
 
@@ -1041,6 +1196,48 @@ describe("WP1 D4 the records and the needs", () => {
       recordIndividualsRead(p, NEW_ID, csv, INDIVIDUALS_READ).individuals?.read,
     ).toBe(INDIVIDUALS_READ);
   });
+
+  test.each([
+    [
+      "a column named twice",
+      {
+        ...INDIVIDUALS_READ,
+        table: { columns: ["id", "id"], rows: [["i1", "P1"]] },
+      },
+    ],
+    [
+      "an individual in two rows",
+      {
+        ...INDIVIDUALS_READ,
+        table: {
+          columns: ["id", "pop"],
+          rows: [
+            ["i1", "P1"],
+            ["i1", "P2"],
+          ],
+        },
+      },
+    ],
+    ["what was found of a CSV, for an xlsx", INDIVIDUALS_READ],
+  ] as const)(
+    "recordIndividualsRead records a read with %s as a defect of the reader",
+    (what, read) => {
+      const xlsx = what.includes("xlsx");
+      const p = deepFreeze(
+        loadIndividuals(sampleProject(), {
+          fileId: NEW_ID,
+          name: xlsx ? "pops.xlsx" : "pops.csv",
+          csv: xlsx ? null : CSV,
+        }),
+      );
+      const recorded = recordIndividualsRead(p, NEW_ID, xlsx ? null : CSV, read)
+        .individuals?.read;
+      expect(recorded).toMatchObject({
+        kind: "failed",
+        error: { kind: "worker", error: { kind: "defect" } },
+      });
+    },
+  );
 });
 
 /** The sample project with some of its parts replaced, as the data a
@@ -1062,7 +1259,7 @@ function readWith(fields: Readonly<Record<string, unknown>>): unknown {
   });
 }
 
-const SAMPLE_TABLE = {
+const SAMPLE_TABLE: IndividualsTable = {
   columns: ["id", "pop", "sex", "height"],
   rows: [
     ["i1", "P1", "1", "1.52"],
@@ -1338,19 +1535,6 @@ describe("WP1 D5 the validation", () => {
       });
     });
 
-    test("an analysis named twice", () => {
-      const data = fileWith({
-        analyses: [
-          { analysis: "pca", options: {} },
-          { analysis: "pca", options: {} },
-        ],
-      });
-      expect(errorOf(parse(data))).toMatchObject({
-        kind: "wrongValue",
-        path: ["analyses", 1, "analysis"],
-      });
-    });
-
     test("options the analysis refuses", () => {
       const analyses = [
         {
@@ -1566,5 +1750,163 @@ describe("WP1 D5 the validation", () => {
         expect(read).toStrictEqual({ ok: true, value: p });
       }),
     );
+  });
+
+  describe("the checks found by the review", () => {
+    test("a header that names a column twice", () => {
+      const table = {
+        ...SAMPLE_TABLE,
+        columns: ["id", "pop", "pop", "height"],
+      };
+      expect(errorOf(parse(readWith({ table })))).toEqual({
+        kind: "repeated",
+        path: [...READ_PATH, "table", "columns", 2],
+        what: "column",
+        value: "pop",
+      });
+    });
+
+    test("an individual in two rows", () => {
+      const rows = SAMPLE_TABLE.rows.with(3, ["i1", "P2", "2", "1.70"]);
+      expect(
+        errorOf(parse(readWith({ table: { ...SAMPLE_TABLE, rows } }))),
+      ).toEqual({
+        kind: "repeated",
+        path: [...READ_PATH, "table", "rows", 3, 0],
+        what: "individual",
+        value: "i1",
+      });
+    });
+
+    test("a table with no row", () => {
+      expect(
+        errorOf(parse(readWith({ table: { ...SAMPLE_TABLE, rows: [] } }))),
+      ).toMatchObject({
+        kind: "inconsistentTable",
+        path: [...READ_PATH, "table", "rows"],
+      });
+    });
+
+    test("a table with no column", () => {
+      const data = readWith({
+        table: { columns: [], rows: [[]] },
+        columns: [],
+      });
+      expect(errorOf(parse(data))).toMatchObject({
+        kind: "inconsistentTable",
+        path: [...READ_PATH, "table", "columns"],
+      });
+    });
+
+    test.each([
+      ["empty", ""],
+      ["a number", 7],
+      ["missing", null],
+    ])("an individual whose name is %s", (_what, name) => {
+      const rows = SAMPLE_TABLE.rows.with(1, [name, "P1", "2", null]);
+      expect(
+        errorOf(parse(readWith({ table: { ...SAMPLE_TABLE, rows } }))),
+      ).toMatchObject({
+        kind: "inconsistentTable",
+        path: [...READ_PATH, "table", "rows", 1, 0],
+      });
+    });
+
+    test("what was found of a CSV, for an xlsx", () => {
+      const individuals = individualsOf(sampleProject());
+      const data = fileWith({ individuals: { ...individuals, csv: null } });
+      expect(errorOf(parse(data))).toMatchObject({
+        kind: "wrongValue",
+        path: ["individuals", "read", "found"],
+      });
+    });
+
+    test("roles that name a column twice", () => {
+      const data = fileWith({
+        app: "gwas",
+        grouping: {
+          kind: "roles",
+          roles: [
+            ["height", "trait"],
+            ["height", "covariate"],
+          ],
+        },
+      });
+      expect(errorOf(parseProject(data, "gwas", 1, TEST_ANALYSES))).toEqual({
+        kind: "repeated",
+        path: ["grouping", "roles", 1, 0],
+        what: "column",
+        value: "height",
+      });
+    });
+
+    test("a check of an analysis not among those given", () => {
+      expect(errorOf(parse(checkWith({ analysis: "admixture" })))).toEqual({
+        kind: "unknownAnalysis",
+        id: "admixture",
+      });
+    });
+
+    test("two checks of one analysis", () => {
+      const check = REFERENCE.checks[0];
+      expect(errorOf(parse(referenceWith({ checks: [check, check] })))).toEqual(
+        {
+          kind: "repeated",
+          path: ["reference", "checks", 1],
+          what: "analysis",
+          value: "diversity",
+        },
+      );
+    });
+
+    test("an analysis named twice", () => {
+      const data = fileWith({
+        analyses: [
+          { analysis: "pca", options: {} },
+          { analysis: "pca", options: {} },
+        ],
+      });
+      expect(errorOf(parse(data))).toEqual({
+        kind: "repeated",
+        path: ["analyses", 1],
+        what: "analysis",
+        value: "pca",
+      });
+    });
+
+    test.each([-1, 2.5])("a size of %d", (size) => {
+      expect(errorOf(parse(variantsWith({ size })))).toMatchObject({
+        kind: "wrongValue",
+        path: ["variants", "size"],
+      });
+    });
+
+    test.each([-2.5, -1, 0.5])("a number of variants of %d", (numVars) => {
+      const read = { ...VARIANTS_READ, numVars };
+      expect(errorOf(parse(variantsWith({ read })))).toMatchObject({
+        kind: "wrongValue",
+        path: ["variants", "read", "numVars"],
+      });
+    });
+
+    test("options nested 64 levels are accepted, 65 refused", () => {
+      const at = (depth: number) =>
+        fileWith({ analyses: [{ analysis: "pca", options: nested(depth) }] });
+      expect(parse(at(64)).ok).toBe(true);
+      expect(errorOf(parse(at(65)))).toMatchObject({
+        kind: "wrongValue",
+        path: ["analyses", 0, "options"],
+      });
+    });
+
+    test("options nested 100,000 levels are refused, not a crash", () => {
+      const data = fileWith({
+        analyses: [{ analysis: "pca", options: nested(100_000) }],
+      });
+      expect(errorOf(parse(data))).toMatchObject({
+        kind: "wrongValue",
+        path: ["analyses", 0, "options"],
+      });
+    });
   });
 });
