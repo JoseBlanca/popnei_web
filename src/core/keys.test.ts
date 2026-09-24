@@ -511,6 +511,40 @@ describe("WP2 D2 the key", () => {
     );
   });
 
+  test.each<[string, (def: KeyedDef, p: Project) => unknown]>([
+    [
+      "the key of the analysis",
+      (def, p) => keyOf(def, p, "0.1.0", createKeyMemo()),
+    ],
+    [
+      "the key of an intermediate result of the analysis",
+      (def, p) =>
+        intermediateKeyOf(
+          def,
+          p,
+          "0.1.0",
+          "the pruned variants",
+          { t: Number.NaN },
+          createKeyMemo(),
+        ),
+    ],
+    [
+      "the fingerprint of the analysis",
+      (def, p) => settingsFingerprint(def, p, null, null),
+    ],
+  ])(
+    "names the analysis whose inputs held a value that is not JSON, in %s",
+    (whose, make) => {
+      const def: KeyedDef = {
+        ...DIVERSITY,
+        keyInputs: () => ({ t: Number.NaN }),
+      };
+      expect(() => make(def, literalProject())).toThrow(
+        `popnei_web defect: the canonical form was given NaN at ["inputs","t"] in ${whose} "diversity", which is not a JSON value.`,
+      );
+    },
+  );
+
   test("keyOf throws a defect on a project with no variants file", () => {
     const p = { ...literalProject(), variants: null };
     expect(() => keyOf(DIVERSITY, p, "0.1.0", createKeyMemo())).toThrow(

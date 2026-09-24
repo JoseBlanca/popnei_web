@@ -67,16 +67,28 @@ export function createKeyMemo(): KeyMemo {
  * its prototype is `Object.prototype` or `null`.
  */
 export function canonical(value: unknown, memo: KeyMemo | null): string {
-  return writeValue(value, [], { memo, onPath: new Set() }).text;
+  return canonicalOf(value, memo, null);
+}
+
+/** The canonical text of a value that is written for `whose`, "the key of
+    the analysis \"diversity\"", which a defect names. */
+function canonicalOf(
+  value: unknown,
+  memo: KeyMemo | null,
+  whose: string | null,
+): string {
+  return writeValue(value, [], { memo, onPath: new Set(), whose }).text;
 }
 
 type Path = readonly (string | number)[];
 
-/** What the writing of one value carries: the memo, and the objects on
-    the path to the value being written, to find a cycle. */
+/** What the writing of one value carries: the memo, the objects on the
+    path to the value being written, to find a cycle, and what the text
+    is written for, for a defect, or `null`. */
 interface Writer {
   readonly memo: KeyMemo | null;
   readonly onPath: Set<object>;
+  readonly whose: string | null;
 }
 
 /** The text of a value, and whether the value is frozen with all it
@@ -92,7 +104,7 @@ function writeValue(value: unknown, path: Path, writer: Writer): Written {
       return { text: JSON.stringify(value), frozen: true };
     case "number":
       if (!Number.isFinite(value)) {
-        throw notJson(String(value), path);
+        throw notJson(String(value), path, writer);
       }
       return { text: JSON.stringify(value), frozen: true };
     case "boolean":
@@ -102,13 +114,13 @@ function writeValue(value: unknown, path: Path, writer: Writer): Written {
         ? { text: "null", frozen: true }
         : writeObject(value, path, writer);
     case "undefined":
-      throw notJson("undefined", path);
+      throw notJson("undefined", path, writer);
     case "function":
-      throw notJson("a function", path);
+      throw notJson("a function", path, writer);
     case "bigint":
-      throw notJson("a bigint", path);
+      throw notJson("a bigint", path, writer);
     case "symbol":
-      throw notJson("a symbol", path);
+      throw notJson("a symbol", path, writer);
   }
 }
 
@@ -118,7 +130,7 @@ function writeObject(value: object, path: Path, writer: Writer): Written {
     return { text: known, frozen: true };
   }
   if (writer.onPath.has(value)) {
-    throw notJson("a cycle", path);
+    throw notJson("a cycle", path, writer);
   }
   writer.onPath.add(value);
   const parts = isList(value)
@@ -145,12 +157,12 @@ function writeList(
   writer: Writer,
 ): Written[] {
   if (Object.getPrototypeOf(list) !== Array.prototype) {
-    throw notJson("a list of a class", path);
+    throw notJson("a list of a class", path, writer);
   }
   const items: Written[] = [];
   for (let index = 0; index < list.length; index++) {
     if (!Object.hasOwn(list, index)) {
-      throw notJson("a hole in a list", [...path, index]);
+      throw notJson("a hole in a list", [...path, index], writer);
     }
     items.push(writeValue(list[index], [...path, index], writer));
   }
@@ -165,6 +177,7 @@ function writeFields(value: object, path: Path, writer: Writer): Written[] {
     throw notJson(
       `an object that is not plain, ${Object.prototype.toString.call(value)}`,
       path,
+      writer,
     );
   }
   const names = Object.keys(value).toSorted(compareCodeUnits);
@@ -187,9 +200,10 @@ function compareCodeUnits(a: string, b: string): number {
   return a > b ? 1 : 0;
 }
 
-function notJson(what: string, path: Path): Error {
+function notJson(what: string, path: Path, writer: Writer): Error {
+  const whose = writer.whose === null ? "" : ` in ${writer.whose}`;
   return new Error(
-    `popnei_web defect: the canonical form was given ${what} at ${JSON.stringify(path)}, which is not a JSON value.`,
+    `popnei_web defect: the canonical form was given ${what} at ${JSON.stringify(path)}${whose}, which is not a JSON value.`,
   );
 }
 
@@ -378,7 +392,7 @@ export function keyOf(
   popneiVersion: string,
   memo: KeyMemo,
 ): Key {
-  const text = canonical(
+  const text = canonicalOf(
     {
       analysis: def.id,
       keyVersion: def.keyVersion,
@@ -388,6 +402,7 @@ export function keyOf(
       inputs: def.keyInputs(p),
     },
     memo,
+    `the key of the analysis ${JSON.stringify(def.id)}`,
   );
   return asKey(sha256Hex(text));
 }
@@ -409,7 +424,7 @@ export function intermediateKeyOf(
   inputs: JsonValue,
   memo: KeyMemo,
 ): string {
-  const text = canonical(
+  const text = canonicalOf(
     {
       intermediate: name,
       inputs,
@@ -418,6 +433,7 @@ export function intermediateKeyOf(
       popneiVersion,
     },
     memo,
+    `the key of an intermediate result of the analysis ${JSON.stringify(def.id)}`,
   );
   return sha256Hex(text);
 }
@@ -438,7 +454,7 @@ export function settingsFingerprint(
   readOptions: VariantSource["readOptions"],
   memo: KeyMemo | null,
 ): string {
-  const text = canonical(
+  const text = canonicalOf(
     {
       analysis: def.id,
       ...filtersReadBy(def, p),
@@ -446,6 +462,7 @@ export function settingsFingerprint(
       readOptions,
     },
     memo,
+    `the fingerprint of the analysis ${JSON.stringify(def.id)}`,
   );
   return sha256Hex(text);
 }
