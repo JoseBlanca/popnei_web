@@ -578,6 +578,7 @@ type Part =
   | "ploidy"
   | "onlyPassed"
   | "filters"
+  | "filterOrder"
   | "individualFilters"
   | "inputs"
   | "name"
@@ -659,6 +660,22 @@ function changeOf(
       };
       return [reading, { ...reading, p: { ...s.p, filters: other.filters } }];
     }
+    case "filterOrder": {
+      if (s.p.filters.length < 2) {
+        return null;
+      }
+      const reading: Setting = {
+        ...s,
+        def: {
+          ...s.def,
+          filtersRead: { ...s.def.filtersRead, variants: true },
+        },
+      };
+      return [
+        reading,
+        { ...reading, p: { ...s.p, filters: s.p.filters.toReversed() } },
+      ];
+    }
     case "individualFilters": {
       if (sameJson(other.individualFilters, s.p.individualFilters)) {
         return null;
@@ -724,6 +741,7 @@ describe("WP2 D3 the properties of the keys", () => {
     "ploidy",
     "onlyPassed",
     "filters",
+    "filterOrder",
     "individualFilters",
     "inputs",
   ])("a change of %s changes the key", (part) => {
@@ -785,6 +803,7 @@ describe("WP2 D3 the properties of the keys", () => {
 
   test.each<Part>([
     "filters",
+    "filterOrder",
     "individualFilters",
     "readOptions",
     "ploidy",
@@ -813,6 +832,7 @@ describe("WP2 D3 the properties of the keys", () => {
     "ploidy",
     "onlyPassed",
     "filters",
+    "filterOrder",
     "individualFilters",
     "popneiVersion",
   ])("a change of %s changes the key of an intermediate result", (part) => {
