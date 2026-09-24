@@ -1,3 +1,4 @@
+import * as fc from "fast-check";
 import { describe, expect, test } from "vitest";
 import {
   createKeyMemo,
@@ -12,6 +13,7 @@ import {
   individualsNeeds,
   loadIndividuals,
   loadVariants,
+  projectNeeds,
   removeIndividuals,
   setCsvOptions,
   setGrouping,
@@ -25,9 +27,16 @@ import type {
   VariantSource,
 } from "./project.ts";
 import { createStore } from "./store.ts";
-import type { AnalysisDef, AnalysisStatus, Store } from "./store.ts";
-import { jsonObjectOf } from "./testSupport.ts";
-import type { CsvOptions, Outcome, Progress, Run } from "../worker/protocol.ts";
+import type { AnalysisDef, AnalysisStatus, AppState, Store } from "./store.ts";
+import { drawnCommand, jsonObjectOf, sampleProject } from "./testSupport.ts";
+import type { DrawnCommand } from "./testSupport.ts";
+import type {
+  CsvOptions,
+  Outcome,
+  Progress,
+  Run,
+  RunError,
+} from "../worker/protocol.ts";
 
 // The fakes of the store spec's "How it is verified": a `send` whose
 // requests the test ends by hand, and two analyses, one that needs the
@@ -1919,5 +1928,508 @@ describe("WP4 D4 the check numbers", () => {
     expect(
       calls.given.filter((given) => given.includes("checkNumbers")),
     ).toStrictEqual(["pops checkNumbers of pops", "vars checkNumbers of vars"]);
+  });
+});
+
+// The properties of the store: random sequences of commands and events,
+// drawn by fast-check, with a model of the requests in flight beside the
+// store that says which must have been cancelled.
+
+/** One step of a drawn sequence. */
+type Step =
+  | { readonly kind: "command"; readonly command: DrawnCommand }
+  | { readonly kind: "undo" }
+  | { readonly kind: "redo" }
+  | { readonly kind: "open"; readonly empty: boolean }
+  | { readonly kind: "popneiReady"; readonly version: string }
+  | { readonly kind: "read"; readonly ok: boolean }
+  | { readonly kind: "startRun"; readonly analysis: "pops" | "vars" }
+  | { readonly kind: "cancelRun"; readonly analysis: "pops" | "vars" }
+  | {
+      readonly kind: "end";
+      readonly which: number;
+      readonly outcome: OutcomeKind;
+      readonly numVars: number | null;
+    }
+  | { readonly kind: "progress"; readonly which: number }
+  | { readonly kind: "dismissNotice" };
+
+/** How a drawn request ends: done, cancelled, or failed of a kind. */
+type OutcomeKind = "done" | "cancelled" | RunError["kind"];
+
+const analysisId = fc.constantFrom<"pops" | "vars">("pops", "vars");
+
+const step: fc.Arbitrary<Step> = fc.oneof(
+  {
+    arbitrary: drawnCommand.map((command): Step => ({
+      kind: "command",
+      command,
+    })),
+    weight: 4,
+  },
+  { arbitrary: fc.constant<Step>({ kind: "undo" }), weight: 2 },
+  { arbitrary: fc.constant<Step>({ kind: "redo" }), weight: 1 },
+  {
+    arbitrary: fc.boolean().map((empty): Step => ({ kind: "open", empty })),
+    weight: 1,
+  },
+  {
+    arbitrary: fc
+      .constantFrom("0.1.0", "0.2.0")
+      .map((version): Step => ({ kind: "popneiReady", version })),
+    weight: 1,
+  },
+  {
+    arbitrary: fc.boolean().map((ok): Step => ({ kind: "read", ok })),
+    weight: 3,
+  },
+  {
+    arbitrary: analysisId.map((analysis): Step => ({
+      kind: "startRun",
+      analysis,
+    })),
+    weight: 5,
+  },
+  {
+    arbitrary: analysisId.map((analysis): Step => ({
+      kind: "cancelRun",
+      analysis,
+    })),
+    weight: 1,
+  },
+  {
+    arbitrary: fc
+      .record({
+        which: fc.nat(),
+        outcome: fc.constantFrom<OutcomeKind>(
+          "done",
+          "done",
+          "done",
+          "done",
+          "done",
+          "done",
+          "cancelled",
+          "popnei",
+          "files",
+          "workerFailed",
+          "couldNotStart",
+          "protocolMismatch",
+          "defect",
+        ),
+        numVars: fc.option(fc.nat({ max: 5000 })),
+      })
+      .map((end): Step => ({ kind: "end", ...end })),
+    weight: 4,
+  },
+  {
+    arbitrary: fc.nat().map((which): Step => ({ kind: "progress", which })),
+    weight: 2,
+  },
+  { arbitrary: fc.constant<Step>({ kind: "dismissNotice" }), weight: 1 },
+);
+
+/** Sequences long enough to reach results removed and calculations left
+    behind: with the default size, most drawn sequences had under five
+    steps, and a notice that removed a result was drawn in no run of 100. */
+const steps = fc.array(step, { maxLength: 40, size: "max" });
+
+/** A request the fake `send` was given, as the model follows it. */
+interface ModelRequest {
+  readonly sent: SentRequest;
+  readonly analysis: "pops" | "vars";
+  /** Whether its outcome was given to `runEnded`. */
+  ended: boolean;
+  /** Whether the current notice leaves it behind, by the model. */
+  named: boolean;
+  /** Whether the rules require it to have been cancelled. */
+  mustCancel: boolean;
+  /** Whether a `cancelRun` of the user may have cancelled it. */
+  mayCancel: boolean;
+}
+
+/** The outcome of a failure of the kind `kind`. */
+function failure(kind: RunError["kind"]): Outcome<TestResult> {
+  switch (kind) {
+    case "popnei":
+      return { kind: "failed", error: { kind, message: "no variant left" } };
+    case "files":
+    case "workerFailed":
+    case "defect":
+      return { kind: "failed", error: { kind, message: "a trap" } };
+    case "couldNotStart":
+      return { kind: "failed", error: { kind, reason: "no ready" } };
+    case "protocolMismatch":
+      return { kind: "failed", error: { kind } };
+  }
+}
+
+/** A store of population genetics started as the page does, popnei
+    0.1.0, and the sample project opened, with the model of its
+    requests. */
+function modelledStore(): {
+  readonly store: Store<TestResult>;
+  readonly analyses: readonly AnalysisDef<TestJob, TestResult>[];
+  readonly model: ModelRequest[];
+  /** The result put under each key, the last one. */
+  readonly results: Map<string, TestResult>;
+  /** Carries out one step, and updates the model. */
+  readonly run: (s: Step) => void;
+} {
+  const { analyses } = fakeAnalyses();
+  const { send, sent } = fakeSend();
+  const store = createStore({
+    first: emptyProject("popgen"),
+    analyses,
+    send,
+    numVarsOf: (r) => (r.kind === "vars" ? r.numVars : null),
+    appVersion: "0.1.0",
+    cacheMaxBytes: 1024 * 1024 * 1024,
+    maxUndoSteps: 200,
+  });
+  store.popneiReady("0.1.0");
+  store.open(sampleProject());
+  const model: ModelRequest[] = [];
+  const results = new Map<string, TestResult>();
+  const inFlight = (): ModelRequest[] => model.filter((r) => !r.ended);
+  const currentKey = (analysis: "pops" | "vars"): string | null => {
+    const status = statuses(store)[analysis === "pops" ? 0 : 1];
+    return status === undefined || status.kind === "locked" ? null : status.key;
+  };
+  const isCurrent = (r: ModelRequest): boolean =>
+    currentKey(r.analysis) === r.sent.key;
+  /** The rules of a change that no undo can take back: every request in
+      flight is stopped, and no notice names any. */
+  const stopEverything = (): void => {
+    for (const r of inFlight()) {
+      if (r.sent.cancels() === 0) {
+        r.mustCancel = true;
+      }
+      r.named = false;
+    }
+  };
+  /** The rules of a change of the user: the requests the old notice
+      named whose key the new project does not give are stopped, and the
+      new notice names those left behind now. */
+  const userChanged = (): void => {
+    for (const r of inFlight()) {
+      if (r.named && !isCurrent(r)) {
+        r.mustCancel = true;
+      }
+    }
+    for (const r of inFlight()) {
+      r.named = !r.mustCancel && r.sent.cancels() === 0 && !isCurrent(r);
+    }
+  };
+  /** The rule of closing the notice, and of a startRun that sent: every
+      request named is stopped. */
+  const stopNamed = (): void => {
+    for (const r of inFlight()) {
+      if (r.named) {
+        r.mustCancel = true;
+        r.named = false;
+      }
+    }
+  };
+
+  const run = (s: Step): void => {
+    const before = store.getState();
+    switch (s.kind) {
+      case "command": {
+        const command = s.command.bind(before.project);
+        if (command !== null) {
+          store.apply(s.command.name, command);
+        }
+        break;
+      }
+      case "undo":
+        store.undo();
+        break;
+      case "redo":
+        store.redo();
+        break;
+      case "open":
+        stopEverything();
+        store.open(s.empty ? emptyProject("popgen") : sampleProject());
+        break;
+      case "popneiReady":
+        if (s.version !== before.popneiVersion) {
+          stopEverything();
+        }
+        store.popneiReady(s.version);
+        break;
+      case "read": {
+        const variants = before.project.variants;
+        const individuals = before.project.individuals;
+        if (variants?.read.kind === "pending") {
+          store.variantsRead(
+            variants.fileId,
+            s.ok
+              ? {
+                  kind: "read",
+                  individuals: ["i1", "i2", "i3", "i4"],
+                  ploidy: variants.readOptions?.ploidy ?? 2,
+                  numVars: null,
+                }
+              : {
+                  kind: "failed",
+                  error: { kind: "popnei", message: "not a VCF" },
+                },
+          );
+        } else if (individuals?.read.kind === "pending") {
+          const sample = sampleProject().individuals?.read;
+          if (sample?.kind !== "read") {
+            throw new Error("popnei_web defect: the sample has no table");
+          }
+          store.individualsRead(
+            individuals.fileId,
+            individuals.csv,
+            s.ok
+              ? {
+                  ...sample,
+                  found: individuals.csv === null ? null : sample.found,
+                }
+              : { kind: "failed", error: { kind: "empty" } },
+          );
+        }
+        break;
+      }
+      case "startRun": {
+        const count = sent.length;
+        const handle = store.startRun(s.analysis);
+        if (handle !== null) {
+          stopNamed();
+          const request = sentAt(sent, count);
+          model.push({
+            sent: request,
+            analysis: s.analysis,
+            ended: false,
+            named: false,
+            mustCancel: false,
+            mayCancel: false,
+          });
+        }
+        break;
+      }
+      case "cancelRun":
+        for (const r of inFlight()) {
+          if (r.analysis === s.analysis && isCurrent(r)) {
+            r.mayCancel = true;
+          }
+        }
+        store.cancelRun(s.analysis);
+        break;
+      case "end": {
+        const open = inFlight();
+        const r = open[s.which % Math.max(open.length, 1)];
+        if (r === undefined) {
+          break;
+        }
+        r.ended = true;
+        r.named = false;
+        let outcome: Outcome<TestResult>;
+        if (s.outcome === "done") {
+          const result =
+            r.analysis === "pops" ? popsResult() : varsResult(s.numVars);
+          results.set(r.sent.key, result);
+          outcome = { kind: "done", key: r.sent.key, result };
+        } else if (s.outcome === "cancelled") {
+          outcome = { kind: "cancelled" };
+        } else {
+          outcome = failure(s.outcome);
+        }
+        store.runEnded(r.sent.run.id, outcome);
+        break;
+      }
+      case "progress": {
+        const request = sent[s.which % Math.max(sent.length, 1)];
+        request?.progress({ done: 1, total: 2 });
+        break;
+      }
+      case "dismissNotice":
+        stopNamed();
+        store.dismissNotice();
+        break;
+    }
+    const after = store.getState();
+    if (
+      (s.kind === "command" || s.kind === "undo" || s.kind === "redo") &&
+      after.project !== before.project
+    ) {
+      userChanged();
+    }
+    // A request leaves the notice when it ends or its key comes back.
+    for (const r of model) {
+      if (r.ended || isCurrent(r)) {
+        r.named = false;
+      }
+    }
+  };
+  return { store, analyses, model, results, run };
+}
+
+/** Runs `drawn` on a new modelled store, checking `holds` after each
+    step with the state before it. */
+function eachStep(
+  drawn: readonly Step[],
+  holds: (
+    made: ReturnType<typeof modelledStore>,
+    s: Step,
+    before: AppState<TestResult>,
+  ) => void,
+): void {
+  const made = modelledStore();
+  for (const s of drawn) {
+    const before = made.store.getState();
+    made.run(s);
+    holds(made, s, before);
+  }
+}
+
+describe("WP4 D5 the properties of the store", () => {
+  test("a result is shown only under the key keyOf gives for the current project, and is the result calculated under that key", () => {
+    fc.assert(
+      fc.property(steps, (drawn) => {
+        eachStep(drawn, ({ store, analyses, results }) => {
+          const state = store.getState();
+          const project = state.project;
+          const common = projectNeeds(project);
+          analyses.forEach((def, index) => {
+            const status = state.analyses[index]?.status;
+            const reason = common ?? def.needs(project);
+            if (reason !== null) {
+              expect(status).toStrictEqual({ kind: "locked", reason });
+              return;
+            }
+            const version = state.popneiVersion ?? "";
+            const key = keyOf(def, project, version, createKeyMemo());
+            expect(status).toMatchObject({ key });
+            if (status?.kind === "done") {
+              expect(status.result).toBe(results.get(key));
+            }
+          });
+        });
+      }),
+    );
+  });
+
+  test("an undo after a command that removed results gives them back, done, with the same results", () => {
+    fc.assert(
+      fc.property(steps, drawnCommand, (drawn, command) => {
+        const { store, run } = modelledStore();
+        for (const s of drawn) {
+          run(s);
+        }
+        const before = store.getState();
+        run({ kind: "command", command });
+        const removed = store.getState().notice?.removed ?? [];
+        if (store.getState().project === before.project) {
+          return;
+        }
+        run({ kind: "undo" });
+        const after = store.getState();
+        for (const id of removed) {
+          const index = after.analyses.findIndex((view) => view.id === id);
+          const was = before.analyses[index]?.status;
+          const now = after.analyses[index]?.status;
+          expect(was?.kind).toBe("done");
+          expect(now?.kind).toBe("done");
+          expect(now?.kind === "done" && now.result).toBe(
+            was?.kind === "done" && was.result,
+          );
+        }
+      }),
+    );
+  });
+
+  test("the notice of each change lists exactly the analyses done before it and not after it, with its cause", () => {
+    fc.assert(
+      fc.property(steps, (drawn) => {
+        eachStep(drawn, ({ store }, s, before) => {
+          const after = store.getState();
+          if (
+            s.kind === "open" ||
+            (s.kind === "popneiReady" && s.version !== before.popneiVersion)
+          ) {
+            expect(after.notice).toBeNull();
+            return;
+          }
+          const changed =
+            (s.kind === "command" || s.kind === "undo" || s.kind === "redo") &&
+            after.project !== before.project;
+          if (!changed) {
+            return;
+          }
+          const doneIn = (state: AppState<TestResult>): Set<string> =>
+            new Set(
+              state.analyses
+                .filter((view) => view.status.kind === "done")
+                .map((view) => view.id),
+            );
+          const wasDone = doneIn(before);
+          const isDone = doneIn(after);
+          const expected = after.analyses
+            .map((view) => view.id)
+            .filter((id) => wasDone.has(id) && !isDone.has(id));
+          expect(after.notice?.removed ?? []).toStrictEqual(expected);
+          if (after.notice !== null) {
+            expect(after.notice.cause.kind).toBe(
+              s.kind === "command" ? "command" : s.kind,
+            );
+          }
+        });
+      }),
+    );
+  });
+
+  test("every request in flight whose key the project does not give is named by the notice or being stopped", () => {
+    fc.assert(
+      fc.property(steps, (drawn) => {
+        eachStep(drawn, ({ store, model }) => {
+          const state = store.getState();
+          for (const r of model) {
+            if (r.ended) {
+              continue;
+            }
+            const index = r.analysis === "pops" ? 0 : 1;
+            const status = state.analyses[index]?.status;
+            const current =
+              status !== undefined &&
+              status.kind !== "locked" &&
+              status.key === r.sent.key;
+            if (!current && r.sent.cancels() === 0) {
+              expect(state.notice?.leftBehind ?? []).toContain(r.analysis);
+              expect(r.named).toBe(true);
+            }
+          }
+        });
+      }),
+      // A request left behind whose key an undo gives back is a rare
+      // draw: 100 runs missed a store that cancelled it, and 1,000 runs
+      // caught it in five tries of five.
+      { numRuns: 1000 },
+    );
+  });
+
+  test("a request left behind is cancelled once its notice is closed or replaced without its key coming back, or a startRun met it; and no other is", () => {
+    fc.assert(
+      fc.property(steps, (drawn) => {
+        eachStep(drawn, ({ model }) => {
+          for (const r of model) {
+            const cancels = r.sent.cancels();
+            expect(cancels).toBeLessThanOrEqual(1);
+            if (r.mustCancel) {
+              expect(cancels).toBe(1);
+            }
+            if (cancels > 0) {
+              expect(r.mustCancel || r.mayCancel).toBe(true);
+            }
+          }
+        });
+      }),
+      // A request left behind whose key an undo gives back is a rare
+      // draw: 100 runs missed a store that cancelled it, and 1,000 runs
+      // caught it in five tries of five.
+      { numRuns: 1000 },
+    );
   });
 });
