@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   describeMessageError,
+  readsAsVcf,
   validateFromProbe,
   validateToProbe,
 } from "./messages.ts";
@@ -57,7 +58,7 @@ describe("validateFromProbe", () => {
   test.each([
     ["popneiVersion", { ...READY, popneiVersion: 1 }, "ready", "number"],
     ["initMs", { ...READY, initMs: "42" }, "ready", "string"],
-    ["source", { ...OPENED, source: "url" }, "opened", "string"],
+    ["source", { ...OPENED, source: 1 }, "opened", "number"],
     ["name", { ...OPENED, name: 1 }, "opened", "number"],
     [
       "numIndividuals",
@@ -68,13 +69,12 @@ describe("validateFromProbe", () => {
     ["ploidy", { ...OPENED, ploidy: null }, "opened", "null"],
     ["ploidyAssumed", { ...OPENED, ploidyAssumed: "yes" }, "opened", "string"],
     ["openMs", { ...OPENED, openMs: [3] }, "opened", "array"],
-    ["stage", { ...FAILED_OPEN, stage: "load" }, "failed", "string"],
     ["stage", { ...FAILED_OPEN, stage: 1 }, "failed", "number"],
     [
       "source",
-      { ...FAILED_OPEN, source: "url" },
+      { ...FAILED_OPEN, source: null },
       "failed of stage open",
-      "string",
+      "null",
     ],
     ["name", { ...FAILED_OPEN, name: null }, "failed of stage open", "null"],
     [
@@ -268,7 +268,96 @@ describe("validateToProbe", () => {
   });
 });
 
+describe("a text field with a value of its own", () => {
+  test.each([
+    [
+      "the source of opened",
+      { ...OPENED, source: "url" },
+      "opened",
+      "source",
+      "url",
+      ["served", "file"],
+    ],
+    [
+      "the stage of failed",
+      { ...FAILED_OPEN, stage: "load" },
+      "failed",
+      "stage",
+      "load",
+      ["init", "open", "message"],
+    ],
+    [
+      "the source of a failed open",
+      { ...FAILED_OPEN, source: "disk" },
+      "failed of stage open",
+      "source",
+      "disk",
+      ["served", "file"],
+    ],
+  ])(
+    "refuses %s when it is not one of its values",
+    (_name, message, messageKind, field, found, expected) => {
+      expect(validateFromProbe(message)).toEqual({
+        ok: false,
+        error: { kind: "unknownValue", messageKind, field, found, expected },
+      });
+    },
+  );
+});
+
+describe("readsAsVcf", () => {
+  test.each([
+    ["panel.vcf", true],
+    ["panel.vcf.gz", true],
+    ["PANEL.VCF.GZ", true],
+    ["panel.nei", false],
+    ["panel.vcf.txt", false],
+    ["panel.gz", false],
+  ])("%s is read as a VCF: %s", (name, isVcf) => {
+    expect(readsAsVcf(name)).toBe(isVcf);
+  });
+});
+
 describe("describeMessageError", () => {
+  test.each([
+    [
+      { kind: "notObject", found: "string" },
+      "A message between the probe's page and its worker is not an object but string.",
+    ],
+    [
+      {
+        kind: "unknownKind",
+        found: "ready",
+        expected: ["openServed", "openFile"],
+      },
+      'A message between the probe\'s page and its worker has the kind "ready", which is not one of openServed, openFile.',
+    ],
+    [
+      {
+        kind: "missingFields",
+        messageKind: "opened",
+        fields: ["ploidy", "name"],
+      },
+      "The message opened lacks the fields ploidy, name.",
+    ],
+    [
+      { kind: "extraFields", messageKind: "ready", fields: ["numVars"] },
+      "The message ready has fields it should not have: numVars.",
+    ],
+    [
+      {
+        kind: "unknownValue",
+        messageKind: "failed",
+        field: "stage",
+        found: "load",
+        expected: ["init", "open", "message"],
+      },
+      'The field stage of the message failed is "load", which is not one of init, open, message.',
+    ],
+  ] as const)("writes %j", (error, text) => {
+    expect(describeMessageError(error)).toBe(text);
+  });
+
   test("names a missing kind without the word undefined", () => {
     expect(describeMessageError({ kind: "noKind" })).toBe(
       "A message between the probe's page and its worker has no kind.",

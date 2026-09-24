@@ -8,6 +8,30 @@
  * nothing.
  */
 
+/** Where a file comes from: the site, which serves one, or the user. */
+export type FileSource = "served" | "file";
+
+/** The sources of a file, tied to the type so a new one is not missed. */
+const FILE_SOURCES: Readonly<Record<FileSource, true>> = {
+  served: true,
+  file: true,
+};
+
+/**
+ * The name of the file the site serves, at `probe/<name>` under the base
+ * path; the worker fetches it and the page names it while it waits.
+ */
+export const SERVED_NAME = "panel.nei";
+
+/**
+ * Whether the worker reads a file of this name as a VCF: when the name
+ * ends in `.vcf` or `.vcf.gz`, compared without case. Any other name is
+ * read as a vars file, a `.nei`. The page says the same to the user.
+ */
+export function readsAsVcf(name: string): boolean {
+  return /\.vcf(\.gz)?$/i.test(name);
+}
+
 /** A request of the page to the worker. */
 export type ToProbe =
   /** Open the file the site serves, `probe/panel.nei`. */
@@ -42,7 +66,7 @@ export type FromProbe =
       /** Which message this is. */
       readonly kind: "opened";
       /** The file the site serves, or a file the user picked. */
-      readonly source: "served" | "file";
+      readonly source: FileSource;
       /** The name of the file, without its folder. */
       readonly name: string;
       /** The number of individuals popnei read from the file. */
@@ -82,7 +106,7 @@ export type FromProbe =
        * `opened`: the two answers can arrive in either order, and this is
        * what tells the page which file failed.
        */
-      readonly source: "served" | "file";
+      readonly source: FileSource;
       /** The name of the file, without its folder. */
       readonly name: string;
       /**
@@ -192,6 +216,18 @@ export type MessageError =
       /** The fields it should not have. */
       readonly fields: readonly string[];
     }
+  /** A field of text holds a text that is not one of its values. */
+  | {
+      readonly kind: "unknownValue";
+      /** The kind of the message. */
+      readonly messageKind: string;
+      /** The field. */
+      readonly field: string;
+      /** The text it holds. */
+      readonly found: string;
+      /** The values it may hold. */
+      readonly expected: readonly string[];
+    }
   /** A field is there, with a value of the wrong type. */
   | {
       readonly kind: "wrongType";
@@ -293,15 +329,17 @@ export function validateFromProbe(message: unknown): Checked<FromProbe> {
       if (wrong !== null) {
         return wrong;
       }
-      const source = ownField(record, "source");
+      const sourceField = ownField(record, "source");
       const name = ownField(record, "name");
       const numIndividuals = ownField(record, "numIndividuals");
       const ploidy = ownField(record, "ploidy");
       const ploidyAssumed = ownField(record, "ploidyAssumed");
       const openMs = ownField(record, "openMs");
-      if (source !== "served" && source !== "file") {
-        return wrongType(kind, "source", '"served" or "file"', source);
+      const checkedSource = oneOf(kind, "source", sourceField, FILE_SOURCES);
+      if (!checkedSource.ok) {
+        return checkedSource;
       }
+      const source = checkedSource.value;
       if (typeof name !== "string") {
         return wrongType(kind, "name", "a string", name);
       }
@@ -348,10 +386,16 @@ function validateFailed(record: object): Checked<FromProbe> {
       fields: ["stage"],
     });
   }
-  const stage = ownField(record, "stage");
-  if (typeof stage !== "string" || !isKind(stage, FAILED_STAGES)) {
-    return wrongType("failed", "stage", '"init", "open" or "message"', stage);
+  const checkedStage = oneOf(
+    "failed",
+    "stage",
+    ownField(record, "stage"),
+    FAILED_STAGES,
+  );
+  if (!checkedStage.ok) {
+    return checkedStage;
   }
+  const stage = checkedStage.value;
   const messageKind = `failed of stage ${stage}`;
   const text = ownField(record, "message");
   switch (stage) {
@@ -389,12 +433,19 @@ function validateFailed(record: object): Checked<FromProbe> {
       if (wrong !== null) {
         return wrong;
       }
-      const source = ownField(record, "source");
+      const sourceField = ownField(record, "source");
       const name = ownField(record, "name");
       const address = ownField(record, "address");
-      if (source !== "served" && source !== "file") {
-        return wrongType(messageKind, "source", '"served" or "file"', source);
+      const checkedSource = oneOf(
+        messageKind,
+        "source",
+        sourceField,
+        FILE_SOURCES,
+      );
+      if (!checkedSource.ok) {
+        return checkedSource;
       }
+      const source = checkedSource.value;
       if (typeof name !== "string") {
         return wrongType(messageKind, "name", "a string", name);
       }
@@ -441,6 +492,8 @@ export function describeMessageError(error: MessageError): string {
       return `The message ${error.messageKind} lacks the fields ${error.fields.join(", ")}.`;
     case "extraFields":
       return `The message ${error.messageKind} has fields it should not have: ${error.fields.join(", ")}.`;
+    case "unknownValue":
+      return `The field ${error.field} of the message ${error.messageKind} is "${error.found}", which is not one of ${error.expected.join(", ")}.`;
     case "wrongType":
       return `The field ${error.field} of the message ${error.messageKind} is ${error.found}, not ${error.expected}.`;
   }
@@ -472,6 +525,37 @@ function knownKind<K extends string>(
     });
   }
   return { ok: true, value: { record: message, kind } };
+}
+
+/**
+ * The value of a field of text that holds one of `values`, or the way it
+ * is wrong: not text, or a text that is not one of them.
+ */
+function oneOf<K extends string>(
+  messageKind: string,
+  field: string,
+  value: unknown,
+  values: Readonly<Record<K, true>>,
+): Checked<K> {
+  const expected = Object.keys(values);
+  if (typeof value !== "string") {
+    return wrongType(
+      messageKind,
+      field,
+      `one of ${expected.join(", ")}`,
+      value,
+    );
+  }
+  if (!isKind(value, values)) {
+    return refused({
+      kind: "unknownValue",
+      messageKind,
+      field,
+      found: value,
+      expected,
+    });
+  }
+  return { ok: true, value };
 }
 
 function isKind<K extends string>(
