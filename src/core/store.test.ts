@@ -955,6 +955,17 @@ describe("WP4 D1 the state with no calculation", () => {
       { kind: "maf", maxAllowedMaf: 0.9 },
     ]);
   });
+  test("an undo past the first project, and a redo with nothing to redo, change nothing and tell no screen", () => {
+    const { store } = storeWithVariantsRead();
+    store.open(store.getState().project);
+    const before = store.getState();
+    const { listener, count } = counter();
+    store.subscribe(listener);
+    store.undo();
+    store.redo();
+    expect(store.getState()).toBe(before);
+    expect(count()).toBe(0);
+  });
 });
 
 /** The request `index` the fake `send` was given, or a defect. */
@@ -1675,6 +1686,31 @@ describe("WP4 D2 the calculations", () => {
       error: { kind: "popnei", message: "no variant left" },
     };
     expect(wrong.kind).toBe("failed");
+  });
+  test("a result dropped by the bound, then asked for again by an undo, is removed, then ready, and is made again by a new run, never an error", () => {
+    // Results of 800 bytes in a cache of 1,000.
+    const { store, sent } = storeWithBothReady(1000);
+    store.startRun("pops");
+    const first = sentAt(sent, 0);
+    store.runEnded(first.run.id, doneWith(first, popsResult()));
+    store.apply("the populations changed", (p) =>
+      setGrouping(p, { kind: "populations", column: "id" }),
+    );
+    store.startRun("pops");
+    const second = sentAt(sent, 1);
+    store.runEnded(second.run.id, doneWith(second, popsResult()));
+    store.undo();
+    const key = keyAt(store, 0);
+    expect(statuses(store)[0]).toStrictEqual({ kind: "removed", key });
+    store.dismissNotice();
+    expect(statuses(store)[0]).toStrictEqual({ kind: "ready", key });
+    const again = store.startRun("pops");
+    expect(again).toBe(sentAt(sent, 2).run);
+    expect(sentAt(sent, 2).key).toBe(key);
+    const result = popsResult();
+    store.runEnded(sentAt(sent, 2).run.id, doneWith(sentAt(sent, 2), result));
+    const done = statuses(store)[0];
+    expect(done?.kind === "done" && done.result).toBe(result);
   });
 });
 
