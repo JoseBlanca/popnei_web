@@ -147,8 +147,8 @@ describe("WP1 D2 the canonical form", () => {
   });
 
   test("gives the same text with a memo, empty or filled, as without", () => {
-    const table = { columns: ["id", "pop"], rows: [["i1", "P1"]] };
-    const value = { a: table, b: [table, { c: -0 }] };
+    const table = deepFreeze({ columns: ["id", "pop"], rows: [["i1", "P1"]] });
+    const value = deepFreeze({ a: table, b: [table, { c: -0 }] });
     const without = canonical(value, null);
     const memo = createKeyMemo();
     expect(canonical(value, memo)).toBe(without);
@@ -156,6 +156,37 @@ describe("WP1 D2 the canonical form", () => {
       '{"columns":["id","pop"],"rows":[["i1","P1"]]}',
     );
     expect(canonical(value, memo)).toBe(without);
+  });
+
+  test("writes again an object that is not frozen, changed after it was written with a memo", () => {
+    const options = { minNumInds: 20, pops: ["P1"] };
+    const memo = createKeyMemo();
+    expect(canonical({ options }, memo)).toBe(
+      '{"options":{"minNumInds":20,"pops":["P1"]}}',
+    );
+    options.minNumInds = 10;
+    options.pops.push("P2");
+    expect(canonical({ options }, memo)).toBe(
+      '{"options":{"minNumInds":10,"pops":["P1","P2"]}}',
+    );
+    expect(memo.texts.get(options)).toBeUndefined();
+  });
+
+  test("writes again a frozen object that holds one not frozen", () => {
+    const pops = ["P1"];
+    const options = Object.freeze({ pops });
+    const memo = createKeyMemo();
+    expect(canonical(options, memo)).toBe('{"pops":["P1"]}');
+    pops.push("P2");
+    expect(canonical(options, memo)).toBe('{"pops":["P1","P2"]}');
+  });
+
+  test("keeps the text of an object frozen with all it holds", () => {
+    const options = deepFreeze({ pops: ["P1"] });
+    const memo = createKeyMemo();
+    canonical({ options }, memo);
+    expect(memo.texts.get(options)).toBe('{"pops":["P1"]}');
+    expect(memo.texts.get(options.pops)).toBe('["P1"]');
   });
 
   test("does not depend on the order in which the fields were set", () => {

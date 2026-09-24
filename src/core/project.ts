@@ -266,6 +266,30 @@ export function emptyProject(app: AppId): Project {
   };
 }
 
+/**
+ * Freezes a project deeply, so that a write into it throws, and gives it
+ * back. A part already frozen is taken as frozen with everything it
+ * holds and is not walked again, so freezing the project a command gave
+ * costs only the parts the command made. The store freezes every project
+ * it takes, and the memo of the keys trusts only frozen objects.
+ */
+export function freezeProject(p: Project): Project {
+  freezeDeeply(p);
+  return p;
+}
+
+function freezeDeeply(value: unknown): void {
+  if (typeof value !== "object" || value === null || Object.isFrozen(value)) {
+    return;
+  }
+  const fields: readonly unknown[] = Object.values(value);
+  for (const field of fields) {
+    freezeDeeply(field);
+  }
+  // Frozen last, so that a frozen part always holds only frozen parts.
+  Object.freeze(value);
+}
+
 // The checks of each value, which the commands and parseProject share, so
 // that a project a command made always opens again from its project file.
 // Each gives the first thing wrong, or null.

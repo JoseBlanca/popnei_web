@@ -5,6 +5,7 @@ import {
   INDIVIDUAL_FILTER_ORDER,
   analysisOptions,
   emptyProject,
+  freezeProject,
   loadIndividuals,
   loadVariants,
   moveVariantFilter,
@@ -719,6 +720,26 @@ describe("WP1 D3 the commands", () => {
     const before = canonical(q, null);
     change();
     expect(canonical(q, null)).toBe(before);
+  });
+
+  test("freezeProject freezes every part of a project and gives it back", () => {
+    const p = setVariantFilter(emptyProject("popgen"), {
+      kind: "maf",
+      maxAllowedMaf: 0.9,
+    });
+    expect(freezeProject(p)).toBe(p);
+    expect(Object.isFrozen(p)).toBe(true);
+    expect(Object.isFrozen(p.filters)).toBe(true);
+    expect(Object.isFrozen(p.filters[0])).toBe(true);
+    expect(Object.isFrozen(p.grouping)).toBe(true);
+  });
+
+  test("freezeProject does not walk a part already frozen", () => {
+    const options = { list: [1] };
+    const analyses = Object.freeze([{ analysis: "pca", options }]);
+    const p = freezeProject({ ...emptyProject("popgen"), analyses });
+    expect(Object.isFrozen(p)).toBe(true);
+    expect(Object.isFrozen(options)).toBe(false);
   });
 });
 

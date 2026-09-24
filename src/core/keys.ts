@@ -30,7 +30,9 @@ export type Key = string & { readonly __brand: "Key" };
  * that a command that changes a threshold does not write the individuals
  * table again. The store makes it and holds it. It is right because the
  * project is never changed in place: an object seen once always has the
- * same text.
+ * same text. It keeps only objects frozen with all they hold, as the store
+ * freezes every project, so that a value changed in place by a bug is
+ * written again rather than given its old text.
  */
 export interface KeyMemo {
   /** The text of each object written, let go of when nothing else holds
@@ -52,8 +54,10 @@ export function createKeyMemo(): KeyMemo {
  * encodes one character is the escape `\ud800`. A field named `__proto__`
  * is written as any other.
  *
- * `memo`, when given, keeps the text of each object and list written, and
- * gives it back when the same object comes again.
+ * `memo`, when given, keeps the text of each object and list written that
+ * is frozen with all it holds, and gives it back when the same object
+ * comes again. An object not frozen is written each time, so a value
+ * changed in place gives its new text.
  *
  * Throws a defect, with the path of the value, on anything that is not a
  * JSON value: `undefined`, `NaN`, an infinity, a function, a `Map`, a
@@ -62,24 +66,33 @@ export function createKeyMemo(): KeyMemo {
  * `Object.prototype` or `null`.
  */
 export function canonical(value: unknown, memo: KeyMemo | null): string {
-  return writeValue(value, [], memo);
+  return writeValue(value, [], memo).text;
 }
 
 type Path = readonly (string | number)[];
 
-function writeValue(value: unknown, path: Path, memo: KeyMemo | null): string {
+/** The text of a value, and whether the value is frozen with all it
+    holds, so that the memo may keep it. */
+interface Written {
+  readonly text: string;
+  readonly frozen: boolean;
+}
+
+function writeValue(value: unknown, path: Path, memo: KeyMemo | null): Written {
   switch (typeof value) {
     case "string":
-      return JSON.stringify(value);
+      return { text: JSON.stringify(value), frozen: true };
     case "number":
       if (!Number.isFinite(value)) {
         throw notJson(String(value), path);
       }
-      return JSON.stringify(value);
+      return { text: JSON.stringify(value), frozen: true };
     case "boolean":
-      return value ? "true" : "false";
+      return { text: value ? "true" : "false", frozen: true };
     case "object":
-      return value === null ? "null" : writeObject(value, path, memo);
+      return value === null
+        ? { text: "null", frozen: true }
+        : writeObject(value, path, memo);
     case "undefined":
       throw notJson("undefined", path);
     case "function":
@@ -91,16 +104,22 @@ function writeValue(value: unknown, path: Path, memo: KeyMemo | null): string {
   }
 }
 
-function writeObject(value: object, path: Path, memo: KeyMemo | null): string {
+function writeObject(value: object, path: Path, memo: KeyMemo | null): Written {
   const known = memo?.texts.get(value);
   if (known !== undefined) {
-    return known;
+    return { text: known, frozen: true };
   }
-  const text = isList(value)
+  const parts = isList(value)
     ? writeList(value, path, memo)
     : writeFields(value, path, memo);
-  memo?.texts.set(value, text);
-  return text;
+  const frozen = Object.isFrozen(value) && parts.every((part) => part.frozen);
+  const text = isList(value)
+    ? `[${parts.map((part) => part.text).join(",")}]`
+    : `{${parts.map((part) => part.text).join(",")}}`;
+  if (frozen) {
+    memo?.texts.set(value, text);
+  }
+  return { text, frozen };
 }
 
 function isList(value: object): value is readonly unknown[] {
@@ -111,21 +130,27 @@ function writeList(
   list: readonly unknown[],
   path: Path,
   memo: KeyMemo | null,
-): string {
+): Written[] {
   if (Object.getPrototypeOf(list) !== Array.prototype) {
     throw notJson("a list of a class", path);
   }
-  const items: string[] = [];
+  const items: Written[] = [];
   for (let index = 0; index < list.length; index++) {
     if (!Object.hasOwn(list, index)) {
       throw notJson("a hole in a list", [...path, index]);
     }
     items.push(writeValue(list[index], [...path, index], memo));
   }
-  return `[${items.join(",")}]`;
+  return items;
 }
 
-function writeFields(value: object, path: Path, memo: KeyMemo | null): string {
+/** The fields of an object, each written as its name, a colon and its
+    value, sorted by name. */
+function writeFields(
+  value: object,
+  path: Path,
+  memo: KeyMemo | null,
+): Written[] {
   const prototype: unknown = Object.getPrototypeOf(value);
   if (prototype !== Object.prototype && prototype !== null) {
     throw notJson(
@@ -134,11 +159,14 @@ function writeFields(value: object, path: Path, memo: KeyMemo | null): string {
     );
   }
   const names = Object.keys(value).toSorted(compareCodeUnits);
-  const fields = names.map((name) => {
+  return names.map((name) => {
     const field: unknown = Reflect.get(value, name);
-    return `${JSON.stringify(name)}:${writeValue(field, [...path, name], memo)}`;
+    const written = writeValue(field, [...path, name], memo);
+    return {
+      text: `${JSON.stringify(name)}:${written.text}`,
+      frozen: written.frozen,
+    };
   });
-  return `{${fields.join(",")}}`;
 }
 
 /** Orders two texts by the numbers of their characters, as `<` does, and
