@@ -442,6 +442,14 @@ const outOfProbe = {
   regex: "(^|/)\\.\\.(/|$)",
   message: "src/probe imports popnei and React, and nothing of src/.",
 };
+// Only the probe's worker calls popnei; its page imports popnei's types at
+// most, as the pages of the applications do.
+const probePopneiValues = {
+  group: ["popnei"],
+  allowTypeImports: true,
+  message:
+    "Only src/probe/probeWorker.ts calls popnei; the page imports its types.",
+};
 
 export default defineConfig(
   globalIgnores([
@@ -672,6 +680,18 @@ export default defineConfig(
     },
   },
   {
+    // The probe's page and its tests: every file of the probe but its
+    // worker, which the block above leaves to call popnei.
+    files: ["src/probe/**/*.{ts,tsx}"],
+    ignores: ["src/probe/probeWorker.ts"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        { patterns: [outOfProbe, drawing, filesWasm, probePopneiValues] },
+      ],
+    },
+  },
+  {
     // The tools read their configuration from a default export.
     files: ["*.config.ts", "*.config.js"],
     rules: { "no-restricted-exports": "off" },
@@ -752,10 +772,17 @@ export default defineConfig(
   import it. `outOfProbe`, in the probe's block, forbids the probe any
   path with a `..` segment in it, which is every path out of
   `src/probe/`: a regular expression and not a glob, since the glob
-  `../**` let `./../core/result.ts` through. So the probe imports popnei, React and its own files and nothing of `src/`;
-  it takes values of popnei, since its worker calls popnei as
-  `src/worker/runner.ts` does. The probe's messages are checked when they
-  arrive, as the worker's are, so it has no type assertion either.
+  `../**` let `./../core/result.ts` through. So the probe imports
+  popnei, React and its own files and nothing of `src/`. Only its worker,
+  `src/probe/probeWorker.ts`, takes values of popnei, as
+  `src/worker/runner.ts` does; the block after it gives the page's files
+  `probePopneiValues`, which lets them import popnei's types and nothing
+  else, as the owner decided on 24 September 2026, so that the probe's
+  page does not load popnei's wasm any more than the applications' pages
+  do. A scratch line in `src/probe/probe.tsx` that imported `version` from
+  popnei failed the lint on that day, and the worker's imports passed.
+  The probe's messages are checked when they arrive, as the worker's
+  are, so it has no type assertion either.
 
 ## `.prettierrc.json`
 

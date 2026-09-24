@@ -71,6 +71,14 @@ const outOfProbe = {
   regex: "(^|/)\\.\\.(/|$)",
   message: "src/probe imports popnei and React, and nothing of src/.",
 };
+// Only the probe's worker calls popnei; its page imports popnei's types at
+// most, as the pages of the applications do.
+const probePopneiValues = {
+  group: ["popnei"],
+  allowTypeImports: true,
+  message:
+    "Only src/probe/probeWorker.ts calls popnei; the page imports its types.",
+};
 
 export default defineConfig(
   globalIgnores([
@@ -297,6 +305,18 @@ export default defineConfig(
       "@typescript-eslint/consistent-type-assertions": [
         "error",
         { assertionStyle: "never" },
+      ],
+    },
+  },
+  {
+    // The probe's page and its tests: every file of the probe but its
+    // worker, which the block above leaves to call popnei.
+    files: ["src/probe/**/*.{ts,tsx}"],
+    ignores: ["src/probe/probeWorker.ts"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        { patterns: [outOfProbe, drawing, filesWasm, probePopneiValues] },
       ],
     },
   },
