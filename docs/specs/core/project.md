@@ -48,11 +48,17 @@ The rules, which every function below keeps:
 - **A command is given valid values.** The screens build them from
   controls that allow only valid ones, a number field from 0 to 1, a list
   of the columns of the file. A value that is not valid reaching a command
-  is a mistake of the screen's code, and the command throws an `Error`
-  whose message starts with `popnei_web defect:`, which the application
-  reports as its own failure (`.claude/skills/coding/typescript.md`,
-  "Errors"). What comes from outside the program, the JSON of a project
-  file, goes through `parseProject`, which returns what is wrong instead.
+  is a defect, a mistake of our code and not of the user's data, here of
+  the screen's code: the command throws an `Error` whose message starts
+  with `popnei_web defect:`, which the application reports as its own
+  failure (`.claude/skills/coding/typescript.md`, "Errors"). A value is
+  valid when `parseProject` would accept it in its place: the commands
+  and `parseProject` share one check of each value, the ranges of the
+  thresholds, of `maxDist` and of the ploidy, read options only for a VCF,
+  and the rest of "The validation" below, so that a project a command
+  made always opens again from its project file. What comes from outside
+  the program, the JSON of a project file, goes through `parseProject`,
+  which returns what is wrong instead.
 - **One filter of each kind**, in the list of the variants' filters and
   in that of the individuals'. For the variants, because popnei refuses a
   second filter of a kind (`docs/specs/worker/protocol.md`); setting a
@@ -105,9 +111,27 @@ calculated; the spec of the filters of individuals, in stage 3, says how
 it is checked, and until then popnei's refusal is shown.
 
 `individualsNeeds` gives the same for the analyses that use the
-individuals file: its read pending, its read failed, and every individual
-of the variants in the file, which names the ones missing
-(`docs/functionality.md`, section 4).
+individuals file, the first thing missing, or `null`. Every individual of
+the variants must be in the file, and the reason names the ones missing
+(`docs/functionality.md`, section 4). These words were added on 24
+September 2026, after the owner approved this spec, on the pattern of the
+table above, and wait for the owner's approval; the step is named by its
+folder in `docs/architecture.md`, section 9, `individuals`, since
+`docs/functionality.md` names no step.
+
+| the project | the reason |
+|---|---|
+| no individuals file | "Load an individuals file in the Individuals step." |
+| the individuals file being read | "Reading pops.csv." |
+| the files wasm refused the file | "pops.csv could not be read: ‹its message›. Load an individuals file in the Individuals step." |
+| the file could not be read for another reason | "pops.csv could not be read: ‹what happened›. Reload the page and load it again." |
+| individuals of the variants missing from it | "12 individuals of panel.nei are not in pops.csv: ind_031, ind_044 and 10 more. Add them to the file and load it again in the Individuals step." |
+
+A refusal of the reader of CSV and TSV, an empty file or a row of the
+wrong length, has the words of the reader's spec, in stage 2, in the
+place of "‹what happened›". When the variants file is not read,
+`individualsNeeds` does not look at the individuals of the variants:
+`projectNeeds` has already given its reason.
 
 ### The project of an opened project file
 
@@ -329,15 +353,17 @@ What each does where a reader could doubt it:
 
 | command | when | gives |
 |---|---|---|
-| any | the value equals the one there | `p` itself |
+| any, every row below included | the value equals the one there: the same filter, the same position, the same options of the CSV, the same type, the same grouping, the same options of an analysis, a load with the load id already there | `p` itself |
+| any | a value `parseProject` would refuse in its place | a defect |
 | `removeVariantFilter`, `removeIndividualFilter` | no filter of that kind | `p` itself |
 | `removeIndividuals` | no individuals file | `p` itself |
-| `moveVariantFilter` | no filter of that kind, or `to` outside the list | a defect |
+| `moveVariantFilter` | no filter of that kind, or `to` not a whole number from 0 to the length of the list − 1 | a defect |
 | `setCsvOptions` | no individuals file, or an xlsx | a defect |
 | `setColumnType` | the file not read, a column not in the table, `identifier` for another column than the first, another type for the first, a `binary` type whose two values are not the two values of the column | a defect |
 | `setGrouping` | a grouping of the other application | a defect |
-| `loadVariants` | always | the filters, the individuals file, the grouping, the options and the reference kept |
-| `loadIndividuals`, `setCsvOptions` | always | the read pending; the grouping kept by the name of its column |
+| `setAnalysisOptions` | no entry for the analysis | a new entry, last, also when the options are the defaults |
+| `loadVariants` | a new load id | the filters, the individuals file, the grouping, the options and the reference kept |
+| `loadIndividuals`, `setCsvOptions` | a new load id, or other options | the read pending; the grouping kept by the name of its column |
 
 `loadVariants` keeps the user's settings, which do not belong to one
 file; `projectNeeds` and `individualsNeeds` then lock what the new file
@@ -360,7 +386,11 @@ is not changed in silence.
 
 A `binary` type's two values are cells of its column as the table holds
 them, compared exactly (`docs/specs/worker/protocol.md`): in a CSV the
-text `"1"` and `"2"`, in an xlsx the numbers or the booleans.
+text `"1"` and `"2"`, in an xlsx the numbers or the booleans. `one` and
+`zero` are the two distinct values of the column that are not missing,
+and `one` is not `zero`; a column with more or fewer than two such values
+cannot be binary. The same rule holds in `setColumnType` and in
+`parseProject`.
 
 ### The records
 
@@ -437,7 +467,8 @@ ploidy a whole number from 1 to 255, as popnei accepts; a load id of 32
 lower case hexadecimal digits; at most one filter of each kind in each
 list, and the individuals' in their order; every row of the table as long
 as its header, one type per column, the first `identifier` and no other;
-a binary type whose two values are values of its column; each analysis id
+a binary type whose `one` and `zero` are the two distinct values of its
+column that are not missing, `one` not `zero`; each analysis id
 one of those given, once, with options its `parseOptions` accepts; the
 application and the grouping of the application given; the reference with
 its versions, and each check with a key version that is a whole number
@@ -504,8 +535,8 @@ project frozen deeply with `Object.freeze`, so that a write into it throws
 - **Each record**: recorded into the source of its id; the project itself
   for another id, for a read already recorded, and, for the individuals
   file, for other `csv` options.
-- **`projectNeeds`**, a case for each row of its table, the individuals
-  named.
+- **`projectNeeds`** and **`individualsNeeds`**, a case for each row of
+  their tables, the individuals named.
 - **`parseProject`**, a case for each check above, with its `kind` and its
   `path`; `projectErrorText` of `wrongValue` at `["filters", 1,
   "maxAllowedMaf"]` holds "the threshold of the second filter of the
