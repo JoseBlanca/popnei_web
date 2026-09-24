@@ -1,15 +1,18 @@
 # The site stands up, and popnei runs in it
 
-24 September 2026, approved by the owner on 24 September 2026; there is
-no code yet. This spec
-is stage 0 of `docs/build-order.md`: the repository of the site set up, a
-workflow that checks it and publishes it on GitHub Pages, and one page,
-the probe, whose worker loads popnei's wasm package and opens a variant
-file. It develops sections 4 and 5 of `docs/technology.md`, and depends on
-`.claude/skills/coding/configs.md`, `worker.md` and `testing.md`, which
-give the configurations and the patterns it uses. The words of the web it
-uses are explained at the start of `docs/build-order.md`; the few that are
-not are explained where they first come.
+24 September 2026, approved by the owner on 24 September 2026. The owner
+changed it the same day, after the review of work package 1 of the plan:
+a request the worker does not know has a failure of its own, a failure
+to open a file names the file, and only the probe's worker calls popnei.
+This spec is stage 0 of `docs/build-order.md`: the repository of the site
+set up, a workflow that checks it and publishes it on GitHub Pages, and
+one page, the probe, whose worker loads popnei's wasm package and opens a
+variant file. It develops sections 4 and 5 of `docs/technology.md`, and
+depends on `.claude/skills/coding/configs.md`, `worker.md` and
+`testing.md`, which give the configurations and the patterns it uses. The
+words of the web it uses are explained at the start of
+`docs/build-order.md`; the few that are not are explained where they
+first come.
 
 ## What it does
 
@@ -72,7 +75,10 @@ with these differences at this stage:
     of the Vitest project that runs in node;
   - in `eslint.config.js`, a pattern that forbids every file outside
     `src/probe/` to import from it, and a block that lets `src/probe/`
-    import popnei and React and nothing of `src/`.
+    import popnei and React and nothing of `src/`, and a block that lets
+    only the worker, `src/probe/probeWorker.ts`, import popnei's
+    functions: the page's files may import its types and nothing else, as
+    in the applications, where the page never loads popnei's wasm.
 - **The dependencies**, each at an exact version:
   - `popnei`, from the URL of its GitHub Release (`docs/technology.md`,
     section 5; **Open 2**);
@@ -195,14 +201,25 @@ type FromProbe =
   | { kind: "opened"; source: "served" | "file"; name: string;
       numIndividuals: number; ploidy: number; ploidyAssumed: boolean;
       openMs: number }
-  | { kind: "failed"; stage: "init" | "open"; address: string | null;
-      message: string };
+  | { kind: "failed"; stage: "init"; address: string | null;
+      message: string }
+  | { kind: "failed"; stage: "open"; source: "served" | "file";
+      name: string; address: string | null; message: string }
+  | { kind: "failed"; stage: "message"; message: string };
 ```
 
-`failed` carries the address the worker tried, when there was one, and the
-message as it came, popnei's or the browser's. The page asks for the served
-file as soon as `ready` arrives, so the first result needs no action of
-the user.
+`failed` has three stages. `init` is popnei that could not be loaded.
+`open` is a file that could not be opened, and it carries the `source` and
+the `name` that `opened` carries, so that the page shows each answer
+beside its own file: the served file is fetched over the network while
+the user's is read at once, so their answers can arrive in either order,
+and a user's file that fails must not take the place of the served
+result. `message` is a request the worker did not recognise, which only a
+defect of the page can send. `init` and `open` carry the address the
+worker tried, when there was one, and the message as it came, popnei's or
+the browser's; `message` carries what was wrong with the request. The page
+asks for the served file as soon as `ready` arrives, so the first result
+needs no action of the user.
 
 ## The cases
 
@@ -212,19 +229,34 @@ the user.
   worker catches what `init()` throws and sends `failed` with stage
   `init`; the page shows "popnei could not be loaded" with the message.
   popnei's loader names the address only when the server answered with an
-  error status, so the page does not count on the message for it.
+  error status, so the page does not count on the message for it: the
+  worker takes the address from the browser's list of what the worker
+  fetched, `performance.getEntriesByType("resource")`, the entry whose
+  path ends in `.wasm`, and sends null when there is none.
 - **The served file is not found**, a wrong address: the status is not
-  200, and the worker sends `failed` with stage `open` and the address,
-  instead of giving popnei an HTML page to read.
+  200, and the worker sends `failed` with stage `open`, the source
+  `served` and the address, instead of giving popnei an HTML page to
+  read.
 - **The worker does not start**, a module worker in a browser that has
   none, or a syntax error in its bundle: the worker's `error` event. A
   module worker that fails to load often gives an event with no message,
   so the page shows "The calculation worker did not start", and the
   browser's message after it only when there is one.
 - **A file popnei refuses**, the text in `bad.vcf`, a truncated gzip, a
-  vars file of another version: `failed` with stage `open` and popnei's
-  message, "the source is not a VCF: it starts with …" for the first (run
-  under node, 24 September 2026); the page stays usable for another file.
+  vars file of another version: `failed` with stage `open`, the source
+  `file`, the name of the file and popnei's message, "the source is not a
+  VCF: it starts with …" for the first (run under node, 24 September
+  2026). The page shows it beside the file input, the served result stays
+  where it was, and the page stays usable for another file.
+- **A request the worker does not recognise**, a `ToProbe` that fails its
+  validator, which only a defect of the page can send: `failed` with stage
+  `message` and what was wrong with the request. The page shows "A defect
+  of the probe: the worker received a request it does not know", with
+  those details. It is neither a file that could not be opened nor a
+  worker that did not start, and the page does not call it either.
+- **A message the page does not recognise**, a `FromProbe` that fails its
+  validator: a defect as well, shown as "A defect of the probe: the page
+  received a message it does not know", with what was wrong with it.
 - **A VCF of another ploidy** opens, as above, and would be refused at
   the first pass, which the probe does not make.
 - **A file of a gigabyte** is read whole into memory, as the architecture
@@ -235,9 +267,13 @@ the user.
 1. **The checks of the coding skill** pass locally and in the workflow:
    format, types, lint, and `npm test`, which runs
    `src/probe/messages.test.ts`: the validator of `FromProbe` accepts each
-   of its three messages, and refuses a message of another kind, one with
-   a missing field and one with a field of the wrong type; the validator
-   of `ToProbe` accepts its two, and refuses the same three wrong ones.
+   of its messages, `failed` in each of its three stages, and refuses a
+   message of another kind, one with a missing field and one with a field
+   of the wrong type, and a `failed` with the fields of another stage, an
+   `open` without its `source` and an `init` with one; the validator of
+   `ToProbe` accepts its two, and refuses the same three wrong ones. The
+   lint fails on a file of the probe's page that imports a function of
+   popnei.
 2. **`e2e/probe.spec.ts`**, with Playwright, against the built site under
    its base path, in Chromium, Firefox and WebKit:
    - the page shows the version `0.1.0` and, for the served file, "200
