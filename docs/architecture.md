@@ -2,9 +2,12 @@
 
 September 2026, first draft, revised on 24 September 2026 after its
 architecture review, and approved by the owner on 24 September 2026;
-what was revised is at the end of section 1. The document gives the parts
-of the web applications of popnei, what each one holds, and how a change
-made by the user reaches the results on the screen. What the applications
+revised again on 24 September 2026 for three decisions of the owner about
+the inputs, a draft awaiting the owner's approval on the branch
+`design/inputs-without-popnei`. What was revised each time is at the end
+of section 1. The document gives the parts of the web applications of
+popnei, what each one holds, and how a change made by the user reaches the
+results on the screen. What the applications
 do is in `docs/functionality.md`, and what they are built with in
 `docs/technology.md`. There is no code yet.
 
@@ -24,8 +27,8 @@ it only through messages.
 │         results, undo, the cache    │    └──────────────────────────────┘
 │   ▼                                 │     light worker
 │ charts  D3 and three.js             │    ┌──────────────────────────────┐
-│                                     │◀──▶│ the popnei wasm package, with│
-│ the File objects, by file id        │    │   no variant file opened     │
+│                                     │◀──▶│ no popnei: our reader of CSV │
+│ the File objects, by file id        │    │   and TSV, in TypeScript     │
 └─────────────────────────────────────┘    │ the files wasm, on first need│
                                            │ the individuals file, xlsx,  │
                                            │   the zip of the report      │
@@ -42,11 +45,13 @@ it only through messages.
   costly to make and are used by several analyses. A calculation of
   seconds or minutes there does not freeze the page.
 - **The light worker** does the jobs that read no genotype: reading the
-  individuals file, writing an xlsx, zipping the report. It holds popnei's
-  wasm with no variant file in it, for CSV and TSV, and the second wasm
-  module, for xlsx and zip, which it loads the first time it needs it
-  (`docs/technology.md`). It exists so that these jobs of a second do not
-  wait behind a GWAS of minutes (section 5).
+  individuals file, writing an xlsx, zipping the report. It holds no
+  popnei. It reads a CSV or a TSV with a reader of ours in TypeScript, and
+  an xlsx, or writes one and the zip, with the files wasm, a second wasm
+  module built from a small Rust crate of this repository, which it loads
+  the first time it needs it (section 6, `docs/technology.md`). It exists
+  so that these jobs of a second do not wait behind a GWAS of minutes
+  (section 5).
 
 What was revised. The first draft of this document, earlier on 24
 September 2026, had one worker, and described reading the variant file by
@@ -59,33 +64,60 @@ popnei, because the variant files of the users tend to be huge and a tab's
 memory is limited; the whole-file reading of 0.1.0 is described as the
 temporary state the walking skeleton starts on, with its limits (section
 6). The key of every result now holds the identity of the file, its name,
-size, date of last change and fingerprint, and its read options, and
-section 3 lists every input of a key. The report is built as data in core
-and rendered on the page, where the plots can be drawn (section 8). The
-check numbers of an opened project file are now data of the project
-(section 2). CSV and TSV, and the inference of the types of the columns,
-move out of the files wasm into popnei's own, so that a user with a CSV
-never downloads the files wasm (section 6). Queued requests that the
-project no longer asks for are dropped, and a second, light worker takes
-the jobs that need no genotypes (section 5). Sections 11 and 12, the
-limits and costs of the web and what is hard to undo, are new.
+size, date of last change and a hash of its individuals and positions, and
+its read options, and section 3 lists every input of a key; the revision
+below replaced that identity with the id of the load. The report is built
+as data in core and rendered on the page, where the plots can be drawn
+(section 8). The check numbers of an opened project file are now data of
+the project (section 2). CSV and TSV, and the inference of the types of
+the columns, move out of the files wasm into popnei's own, so that a user
+with a CSV never downloads the files wasm (section 6); the revision below
+moved them into popnei_web. Queued requests that the project no longer
+asks for are dropped, and a second, light worker takes the jobs that need
+no genotypes (section 5). Sections 11 and 12, the limits and costs of the
+web and what is hard to undo, are new.
+
+What was revised again. On 24 September 2026, after that approval, the
+owner took three decisions about the inputs, and this revision takes them
+in; it is a draft on the branch `design/inputs-without-popnei` until the
+owner approves it.
+
+- **The variant file has no fingerprint.** Each time the user loads a
+  variant file, the same one again included, it gets a new id, and that
+  id with the read options is the file's part of every key, in place of
+  its name, size, date of last change and hash (section 3). The name,
+  size, individuals, number of variants and ploidy stay in the project,
+  only to warn when a reopened project is given another file (section 8).
+- **The individuals file is read by popnei_web.** CSV and TSV, and the
+  inference of the types of the columns, are TypeScript of ours in the
+  light worker, which no longer loads popnei; the Python script reads the
+  file with pandas (sections 6 and 8).
+- **The files wasm is a crate of this repository**, `crates/files/`, built
+  by the site's own build, and not a module released by popnei (section
+  6).
+
+What each replaced, and why, is at the end of sections 3 and 6. popnei is
+no longer asked for a fingerprint nor for a reader of these files, so the
+walking skeleton needs nothing from popnei beyond 0.1.0 (section 10).
 
 ## 2. The project
 
 The project is everything the user has set, and nothing that was
 calculated, with two exceptions that are information read from the inputs
-and not results: the identity of the variant file, and the check numbers
+and not results: the identity of the variant file, which serves only to
+compare the file of a reopened project (section 8), and the check numbers
 of a project file that was opened. It is one plain, immutable value, and
 every change the user makes is a command that gives a new one.
 
 ```ts
 interface Project {
   app: "popgen" | "gwas";
-  variants: VariantSource | null;     // the file picked and its identity
+  variants: VariantSource | null;     // the load of the file and its identity
   filters: VariantFilter[];           // in their order, with parameters
   individualFilters: IndividualFilter[];
   individuals: IndividualsSource | null; // the metadata or traits file:
-  //   its name, and pending, the table whole once read, or failed
+  //   its name, and pending, the table whole once read, with the types
+  //   of its columns, or failed
   // popgen: the column that defines the populations, and later the
   //         edits made with the lasso; gwas: the roles of the columns
   grouping: Grouping;
@@ -94,10 +126,10 @@ interface Project {
 }
 
 interface VariantSource {
-  fileId: string;                     // the File, in the page's map (section 6)
-  name: string;                       // as File gives them
+  fileId: string;                     // the id of this load, new at every pick;
+                                      // the File, in the page's map (section 6)
+  name: string;                       // as File gives them; never in a key
   size: number;
-  lastModified: number;
   format: "vcf" | "nei";
   readOptions: { ploidy: number; onlyPassed: boolean } | null; // a VCF's; null for .nei
   read: SourceRead;                   // what the worker read from the file
@@ -105,8 +137,7 @@ interface VariantSource {
 
 type SourceRead =
   | { kind: "pending" }               // the worker is reading the file
-  | { kind: "read"; fingerprint: string; individuals: string[];
-      numVars: number; ploidy: number }
+  | { kind: "read"; individuals: string[]; numVars: number; ploidy: number }
   | { kind: "failed"; message: string }; // popnei's message
 
 interface Reference {
@@ -123,10 +154,13 @@ interface Reference {
   into a `Project` (section 8).
 - **The individuals table is in the project, whole.** It is small, and
   the populations edited in the application exist in no file of the user.
-- **The project holds the id of the variant file and its identity, never
-  the `File`.** A `File` is not JSON, and core, which has no DOM, cannot
-  name its type. The page keeps the `File` objects in a map from file id
-  to `File` (section 6).
+- **The project holds the id of the load of the variant file and its
+  identity, never the `File`.** A `File` is not JSON, and core, which has
+  no DOM, cannot name its type. The page keeps the `File` objects in a map
+  from file id to `File` (section 6). The identity, the name, the size,
+  the individuals, the number of variants and the ploidy, goes into no
+  key: it is saved in the project file so that a reopened project can say
+  which file it was made with (section 8).
 - **The read options of a VCF**, the ploidy and whether only the variants
   that passed its filters are kept, are the two options popnei's `openVcf`
   takes. They change which genotypes every analysis reads, so they are in
@@ -140,9 +174,11 @@ A result is never stored in the project. It is stored in a cache, under
 a key that is a hash of everything it was calculated from. The inputs of
 every key are:
 
-- the identity of the variant file, its name, size, `lastModified` and
-  fingerprint, and its read options (below), and not its file id, which
-  is a number of the session and differs for the same file picked again;
+- the load of the variant file: its file id, which the page gives each
+  load and which is new every time the user picks a file, the same file
+  picked again included, and its read options (section 2). Nothing else
+  of the file goes in: not its name, size or date of last change, and no
+  hash of what it holds;
 - the filters of variants and the filters of individuals that come before
   the analysis, in their order, with their parameters;
 - the parts of the individuals table and of the grouping that the analysis
@@ -157,17 +193,28 @@ every key are:
 
 Two requests with the same inputs have the same key.
 
-**The file's part of the key identifies the file, not only its
-individuals and positions.** The fingerprint is a hash of the list of
-individuals and of the chromosome and position of every variant
-(`docs/functionality.md`, section 9): two files with the same individuals
-and positions and different genotypes, a panel called again with another
-caller, have the same fingerprint, and a key made of it alone would show
-the result of one file for the other. So the name, the size and the date
-of last change, as the browser's `File` gives them, go into the key with
-the fingerprint. This is conservative on purpose: a copy of the same file
-with another date is calculated again, which costs the time of a
-calculation, where the opposite error would show a wrong result.
+**The file's part of the key is the load, not the file.** Picking a file
+again gives it a new id, so every analysis is calculated again for it.
+That costs the time of the calculations after each pick, and never shows
+the result of one file for another: it covers a file changed on the disk
+since it was last picked, a copy with the same name, size and date, and
+the cases nobody foresaw, because nothing about the file has to be
+compared to decide that two loads are the same. Undo of a load brings back
+the previous project, with the previous load's id, whose results are
+still in the cache unless its bound has dropped them.
+
+The page makes the id when the user picks the file, with
+`crypto.randomUUID()`, so no id is ever given twice, in this session or
+in another, and the id of the file of a project file that is opened (its
+`reference`, section 8) can never name a load of this session. A counter
+of the session would start again at 1 each time and give that id again.
+`crypto.randomUUID()` is in the floor of the applications, from Chrome
+92, Firefox 95 and Safari 15.4, and only in a secure context, which the
+site on GitHub Pages, served over HTTPS, and the development server on
+`localhost` both are; the development server opened from another machine,
+a phone, by its address on the local network over HTTP is not, and there
+the function does not exist. Core stays pure: the id is made on the page
+and handed to the command that puts the source in the project.
 
 What the screen shows for an analysis is the result stored under the key
 that the current project gives it. So:
@@ -215,6 +262,31 @@ kept; and because undo would have to restore the marks of the graph,
 where with keys the previous project gives the previous results by
 itself.
 
+What was revised. The version approved on 24 September 2026 made the
+file's part of the key its identity: the name, the size and the date of
+last change that the browser's `File` gives, and a fingerprint, a hash of
+the individuals and of the chromosome and position of every variant, which
+popnei was to compute so that Python would give the same one. The owner
+replaced it with the id of the load on the same day. The fingerprint
+alone would have given one key to two files with the same individuals and
+positions and other genotypes, a panel called again with another caller,
+which is why the name, the size and the date went in beside it; and even
+with them, a file rewritten with the same size by a tool that keeps the
+date of the original, as `cp -p` and `rsync -t` do, would have shared a
+key with it. It also needed a function of popnei, and a pass over the
+file before any analysis could run, since no key could be made without it.
+What the load id gives up is the one case the fingerprint served: picking
+again the file that is already loaded, or giving a reopened project the
+same file, calculates every analysis again where the fingerprint would
+have found its results in the cache. Considered and not taken as well:
+**a hash of the whole file**, which would catch any change of its bytes;
+it reads every byte of a file of gigabytes in the tab before anything
+runs, a time that has not been measured and that grows with the file.
+Another option would win if users often picked the same large file again
+in a session and waited for calculations of minutes each time, or if
+results were kept across sessions, in a cache that outlives the tab,
+where the id of a load of an earlier session names nothing.
+
 ## 4. An analysis is a module
 
 Each analysis is one module, with the same shape, in both applications:
@@ -242,8 +314,8 @@ piece the work is split into, and what lets an analysis be tried, changed
 or dropped without touching the others.
 
 `needs` is what locks an analysis with its reason: "reading the file"
-while the fingerprint of the variant file is pending (section 6), "the
-individuals file lacks 12 individuals of the variants", a trait not
+while the variant file or the individuals file is being read (section 6),
+"the individuals file lacks 12 individuals of the variants", a trait not
 chosen.
 
 An application is a list of steps and a list of analyses. The two
@@ -256,8 +328,9 @@ The page and each worker talk through typed messages
 `src/worker/client.ts`, which keeps a queue for each worker.
 
 - **A request** names the job, the key and the inputs. Each worker runs
-  one request at a time, because the wasm of popnei has one thread, and
-  the client keeps the others in the queue of that worker.
+  one request at a time, because the wasm of popnei and the files wasm
+  have one thread each, and the client keeps the others in the queue of
+  that worker.
 - **A queued request that the current project no longer asks for is
   dropped**, when a command gives its analysis another key before it
   starts. An undo can ask for that key again, and it is then run again,
@@ -308,11 +381,9 @@ The option not taken was one worker for everything. With it, a user who
 starts a GWAS of minutes and then loads a new traits file, or asks for the
 report of the results already there, waits the rest of the GWAS for a job
 of a second, or cancels the GWAS and loses it. The second worker costs
-little memory, since it holds no genotypes: popnei's wasm with no file
-opened in it, and the files wasm when it is loaded. It does not cost a
-second download, because both workers load popnei's wasm from the same
-address, which the browser caches; each compiles it, a time not yet
-measured.
+little memory, since it holds no genotypes and no popnei: our code, the
+table it is reading, and the files wasm once it is loaded. It downloads
+and compiles nothing of popnei's wasm.
 
 Considered and not taken: **a pool of calculation workers**, which would
 run two analyses at once on two cores. Each worker would hold its own
@@ -327,8 +398,9 @@ independent analyses whose intermediate results are small.
 
 The page keeps every `File` the user picked in a map from file id to
 `File`, in the worker client, and sends it to a worker that needs it, and
-again to a worker that was restarted. The project holds only the id and
-the identity (section 2).
+again to a worker that was restarted. A `File` stays in the map after
+another is loaded in its place, so that an undo of the load finds it. The
+project holds only the id and the identity (section 2).
 
 ### The variant file, read by ranges: the target
 
@@ -392,30 +464,33 @@ reads every pass from that copy.
 This state is removed when popnei provides the source by ranges; the
 runner's opening of a file is the one place that changes.
 
-### How the identity of the variant file reaches the project
+### How a load of the variant file reaches the project
 
-1. **Picking a file is one command.** It puts into the project a
-   `VariantSource` with the name, the size, `lastModified`, the format and
-   the read options, and its `read` pending. The page puts the `File` in
-   its map under a new file id.
-2. **The calculation worker opens the file** and makes one pass over it,
-   and sends back the individuals, the ploidy, the number of variants and
-   the fingerprint, the hash of the individuals and of the chromosome and
-   position of every variant.
-3. **The store records them into that same `VariantSource`** as an event
-   that is not a step of undo, in the current project and in every project
-   of the history that holds that source, so that a redo of the pick
-   brings it back read. The event completes the pick: undo of the pick
-   removes the whole source. A file that popnei refuses leaves the source
-   `failed`, with popnei's message.
+1. **Picking a file is one command.** The page makes a new file id, puts
+   the `File` in its map under it, and gives the command the id, the name,
+   the size, the format and the read options; the command puts into the
+   project a `VariantSource` with them and its `read` pending.
+2. **The calculation worker opens the file** and sends back the
+   individuals and the ploidy, which popnei gives once the file is open,
+   and the number of variants, which takes a pass over it.
+3. **The store records them into that same `VariantSource`**, the one
+   with that file id, as an event that is not a step of undo, in the
+   current project and in every project of the history that holds that
+   source, so that a redo of the pick brings it back read. The event
+   completes the pick: undo of the pick removes the whole source. A file
+   that popnei refuses leaves the source `failed`, with popnei's message.
 4. **Until then every analysis is locked** with the reason "reading the
-   file", through its `needs`, since its key cannot be made without the
-   fingerprint.
+   file", through its `needs`. Its key could be made already, from the id
+   and the read options, but whether popnei can read the file is not yet
+   known, nor the individuals, which the individuals file is checked
+   against (below).
 
 What the worker sends is information about the input, read from it, not a
 result: it depends on the file alone and no option of an analysis changes
 it, so it belongs in the project with the file and is saved in the
-project file.
+project file. It goes into no key; its use is to tell a reopened project
+which file it was made with (section 8), and to check the individuals
+file against the individuals of the variants.
 
 A browser cannot open a file by itself, so a project that is opened asks
 the user for its variant file again (`docs/functionality.md`, section 9).
@@ -428,21 +503,77 @@ goes as the variant file does (section 6): one command puts its name in
 the project, pending, which locks what needs it with the reason "reading
 the file"; the light worker reads it, and the store records the table, or
 the error, into that same source as an event that is not a step of undo;
-an undo of the load removes the source. An xlsx uses both wasm modules in
-the light worker, the files wasm for its cells and popnei's for the types;
-neither holds genotypes, so together they cost the two downloads and
-little memory.
+an undo of the load removes the source. The type of the table is declared
+in `src/worker/protocol.ts`, as the filters are, so that the project of
+core and the reader describe it in one way.
 
-- **CSV and TSV, and the inference of the types of the columns, are in
-  popnei's own wasm**, not in the files wasm, which holds only xlsx and
-  zip. They are small Rust code, with no dependency of the size of
-  calamine or rust_xlsxwriter, so they add little to popnei's download,
-  an amount not yet measured; and in popnei's core Python reads
-  the files with the same code (`docs/functionality.md`, open point 2);
-  and a user with a CSV never downloads the files wasm, 0.58 MB gzipped
-  (`docs/technology.md`). This is a request to popnei beside the others.
-- **An xlsx** is read by calamine in the files wasm, loaded on first need,
-  and its cells go through the same inference of popnei.
+- **CSV and TSV are read by popnei_web, in TypeScript**, by the module
+  `src/worker/individuals/`, which the light worker's runner calls: the
+  separator detected, `,`, `;` or a tab; decimals with a comma accepted;
+  a BOM at the start removed; an empty cell, `NA` and `-` read as
+  missing (`docs/functionality.md`, section 4). The runner decodes the
+  bytes as UTF-8 and gives the reader the text; a file that is not valid
+  UTF-8 is refused with a message that says to save it as "CSV UTF-8" or
+  as xlsx, rather than read with its accented names replaced, which would
+  then not match the names of the variants.
+- **The inference of the types of the columns** is in the same module. It
+  takes the cells of a CSV, all text, or the cells of an xlsx, as the
+  files wasm gives them, numbers, text, booleans or empty, so that the
+  same table gives the same types in both formats. The types are kept in
+  the project, where the user can change them (`docs/functionality.md`,
+  section 4).
+- **The module is pure**: it takes text or cells and gives a `Result` of
+  the table, with no DOM, no global of a worker and no popnei. So it is
+  tested with Vitest in node, on files of the cases that Excel writes in
+  English and in Spanish, and it is checked by the compiler with no
+  globals, as core is (`.claude/skills/coding/configs.md`).
+- **An xlsx** is read by calamine in the files wasm, loaded on first need
+  (below), and its cells go through the same inference.
+- **Every individual of the variants must be in the file.** Core checks
+  it, in the `needs` of each analysis that uses the file, against the
+  individuals the calculation worker read from the variant file, and the
+  screen names the missing ones (`docs/functionality.md`, section 4). The
+  reader does not check it, since it does not know the variants.
+
+With a CSV, the light worker loads no wasm at all.
+
+### The files wasm, a crate of this repository
+
+The xlsx and the zip are made by a small Rust crate of popnei_web,
+`crates/files/`: a `cdylib` with wasm-bindgen, calamine to read an xlsx,
+rust_xlsxwriter to write one and zip for the report, the three that
+`docs/technology.md` measured, 0.58 MB gzipped together. It exports three
+functions, reading the first sheet of an xlsx into cells, writing a table
+as an xlsx, and zipping files, and only the light worker's runner calls
+them. It is not part of popnei and nothing of popnei is in it.
+
+- **It is built by the site's own build**: `cargo build --target
+  wasm32-unknown-unknown --release`, then `wasm-bindgen --target web` into
+  `crates/files/pkg/`, which the light worker imports with a dynamic
+  `import()` that Vite makes a chunk of its own
+  (`.claude/skills/coding/configs.md` has the script, `build:files`, which
+  runs before `vite build` and `vite dev`).
+- **Its output is not committed**: `crates/files/pkg/` is ignored by git
+  and built by the continuous integration, as the site is. A wasm file in
+  git is a binary that a review cannot tell was built from the source
+  beside it, and that changes in every commit that touches the crate. The
+  option not taken, committing it, would let a machine without Rust build
+  the site.
+- **What it costs**: every machine that builds the site or runs its
+  development server needs a Rust toolchain with the target
+  `wasm32-unknown-unknown`, and `wasm-bindgen-cli` at the exact version of
+  the `wasm-bindgen` crate, which the crate pins with `=`, since the two
+  refuse to work together when their versions differ; 0.2.128, the one
+  popnei pins, so that one command line installed builds both. The GitHub
+  Actions workflow of the site installs them, and builds the crate before
+  the site, times that have not been measured. The owner programs in Rust
+  and has the toolchain. And the crate is ours to keep, a few hundred
+  lines around the three libraries, an estimate.
+- **Considered and not taken: a JavaScript library of xlsx.** SheetJS
+  left npm in 2023, and the version there, 0.18.5, has known
+  vulnerabilities; ExcelJS has had few releases since 2023; and a reader
+  of our own over fflate would be ours to write with its hard cases
+  (`docs/technology.md`, section 2).
 
 ### The files written
 
@@ -453,7 +584,8 @@ little memory.
   beside the source; which is why the report leaves the filtered variants
   out by default (`docs/functionality.md`, section 9). This holds with the
   source by ranges too.
-- **The xlsx and the zip of the report** are made in the light worker.
+- **The xlsx and the zip of the report** are made in the light worker, by
+  the files wasm.
 - Each is made as bytes and offered by the page as a download.
 
 ### What this asks of popnei
@@ -466,10 +598,31 @@ full list:
    `FileReaderSync`, for `openVcf` and `openVars`; the priority.
 2. The number of passes an analysis makes, or a signal to the source when
    a pass starts, for the progress bar.
-3. The reader of CSV and TSV and the inference of the types of the
-   columns, in popnei's core and its wasm.
-4. The fingerprint of a variant file, so that Python gives the same one
-   (open point 1).
+
+Nothing is asked of popnei for the individuals file, nor for the identity
+of the variant file.
+
+What was revised. The version approved on 24 September 2026 put the
+reader of CSV and TSV, and the inference of the types of the columns, in
+popnei's core and its wasm, as a request to popnei, so that Python would
+read the files with the same code; the light worker loaded popnei's wasm
+for them; and the files wasm was to be built and released beside popnei's
+package (`docs/technology.md`, open point 2 of that version). The owner
+decided on the same day that reading these files is not popnei's
+business: CSV and TSV are read here in TypeScript, the xlsx by a crate of
+this repository, and the Python script reads the file with pandas
+(section 8). What it gives: the light worker no longer compiles popnei's
+wasm a second time, beside the calculation worker, a time that was never
+measured; the walking skeleton waits for no release of popnei; and a change to how the applications read a file waits
+for no tag of popnei. What it costs: the reader, its separators and its
+inference are ours to write and test, a few hundred lines of TypeScript,
+an estimate; Python reads the file with other code than the application,
+which the script bridges (section 8); and building the site needs Rust.
+Considered and not taken: **Papa Parse**, the established parser of CSV
+in JavaScript, which detects the separator and reads quoted fields; the
+decimal commas, the missing values and the inference of the types, which
+are most of the work, would still be ours, and it would be a dependency
+for the smallest part of it.
 
 ## 7. The screens
 
@@ -495,6 +648,18 @@ full list:
   again, and whose `reference` holds the source the project was made with
   and, for each analysis, its check numbers and the key its settings gave
   in the file, computed when it is opened.
+- **The identity of the file is compared, and never decides anything.**
+  When the user gives the variant file of an opened project, the
+  application compares the name, the size, the individuals, the number of
+  variants and the ploidy of the new load with those of the reference,
+  and warns when they differ, saying in what (`docs/functionality.md`,
+  section 9). It never refuses the file, and it calculates every analysis
+  again in any case, since the load has a new id. Two files with the same
+  individuals and number of variants and other genotypes pass this
+  comparison; what catches them is the comparison of the check numbers
+  after the run, below, which is computed from the genotypes and so is a
+  stronger check than a hash of the positions would have been. It catches
+  them for every analysis whose numbers the project holds.
 - **The check numbers of an opened file are kept** when the project is
   saved again before a run. For each analysis, the numbers saved are
   those of its result in the cache under its current key; when there is
@@ -517,10 +682,19 @@ full list:
 - **The Python script** is the `script` lines of every analysis that was
   run, after the lines that open the variants, filter them and read the
   individuals file. It is made in core. It reads the individuals file
-  from the `.xlsx` of the report with popnei's reader in Python, which,
-  compiled natively, has the xlsx reader built in: the split into two wasm
-  modules is a matter of what a browser downloads, and Python has no such
-  cost.
+  from the `.xlsx` of the report with pandas, `pandas.read_excel`, which
+  needs openpyxl, and builds the dict of the populations itself, in plain
+  Python, from the column the project chose, named in the script by its
+  name; it uses no reader of popnei, which has none. Every column is read
+  as text, `dtype=str`, with the missing values of the application and no
+  others, `keep_default_na=False, na_values=["", "NA", "-"]`, and the
+  script converts to numbers the columns whose type in the project is
+  continuous or binary. Otherwise pandas' own inference would stand in for
+  the application's: it reads an individual named `001` as the number 1,
+  which matches no name of the variants, and `N/A` or `null` as missing.
+  The `.xlsx` it reads is the one the application wrote, of plain text and
+  number cells, so calamine and openpyxl are not asked to agree on the
+  hard cases of a user's own file.
 
 ## 9. The modules
 
@@ -548,8 +722,10 @@ src/worker/
   start.ts          the lines that make the two workers
   runner.ts         the calculation worker: popnei, the variant file, the
                     intermediate results
-  filesRunner.ts    the light worker: popnei with no variant file, the files
-                    wasm, the individuals file, xlsx and zip
+  filesRunner.ts    the light worker, with no popnei: the individuals file,
+                    the files wasm, xlsx and zip
+  individuals/      the reader of CSV and TSV and the inference of the types
+                    of the columns, pure, called by filesRunner.ts
 src/charts/
   histogram.ts scatter.ts line.ts qq.ts heatmap.ts manhattan.ts pca3d.ts
   export.ts         SVG and PNG
@@ -564,12 +740,15 @@ src/ui/
   tokens.css        the design tokens
 pages/
   index.html popgen.html gwas.html
+crates/files/       the files wasm, in Rust: xlsx read and written, the zip;
+                    built into crates/files/pkg/, which git ignores
 docs/
 ```
 
 `core` has no DOM and no React, and is tested with Vitest alone. Nothing
 in `core` imports from `ui` or `charts`, and nothing in `charts` imports
-from `core` or `ui`.
+from `core` or `ui`. Only `src/worker/runner.ts` calls popnei, and only
+`src/worker/filesRunner.ts` calls the files wasm.
 
 ## 10. The walking skeleton
 
@@ -584,8 +763,11 @@ be saved and opened again. The xlsx, the plots, the report and the other
 analyses come after it, each as a module of its own.
 
 It reads the variant file whole, as popnei 0.1.0 does (section 6), and it
-needs two things popnei does not have yet, the reader of CSV and the
-fingerprint, which are asked of popnei before it is built.
+needs nothing from popnei that 0.1.0 does not have. Its individuals file
+is a CSV, read by our reader in the light worker, so it does not need the
+files crate either: the crate, its build and the Rust of the continuous
+integration come after it, with the first work package that reads an
+xlsx, and the light worker of the skeleton loads no wasm.
 
 ## 11. The limits and the costs of the web
 
@@ -602,7 +784,8 @@ code, version 0.1.0.
   ranges every pass reads the disk again, so a file overwritten while the
   application is open fails at the next pass, and the user picks it
   again. This is from the specification and has not been seen in a
-  browser yet.
+  browser yet. The new pick is a new load with a new id, so every result
+  is calculated again from what the file holds now (section 3).
 - **The PCA refuses more than 9381 individuals.** The matrix of the
   individuals, its eigenvectors and the workspace of the
   eigendecomposition take about 6 times 8 bytes per pair of individuals,
@@ -617,9 +800,14 @@ code, version 0.1.0.
   of popnei), so the only way to give it back is to restart the worker.
   When the application does so is open point 2.
 - **The downloads**: the wasm package of popnei, 0.63 MB gzipped, before
-  anything runs, loaded by both workers from one address and downloaded
-  once; the files wasm, 0.58 MB gzipped, the first time an xlsx is read or
-  a report is written (`docs/technology.md`, section 2).
+  anything runs, loaded by the calculation worker alone; the files wasm,
+  0.58 MB gzipped, by the light worker the first time an xlsx is read or a
+  report is written (`docs/technology.md`, section 2).
+- **Picking a file again calculates everything again.** Each load of the
+  variant file has a new id, so the results of an earlier load of the same
+  file are not found (section 3): the user waits the time of each analysis
+  again, and, with popnei 0.1.0, the time of reading the whole file, which
+  a pick takes anyway.
 - **The browsers**: Chrome and Edge 111, Firefox 115 and Safari 16.4, the
   floor the owner set on 24 September 2026 (`docs/technology.md`, section
   6).
@@ -645,15 +833,12 @@ code, version 0.1.0.
 
 ## 13. Open points
 
-1. The hash of the keys and of the fingerprint: which function, and
-   whether the fingerprint is computed by popnei, so that Python gives the
-   same one. The hash of the keys has to be synchronous, because core is,
-   and `crypto.subtle.digest`, the hash the browser gives, returns a
-   promise; so it is a function of ours in TypeScript, or one of popnei,
-   which core would reach only through a worker, and so not synchronously.
-   The recommendation is a function of ours, of a published algorithm
-   with its test vectors, SHA-256 among them, so that a collision is not a
-   concern; and the fingerprint computed by popnei.
+1. The hash of the keys: which function. It has to be synchronous,
+   because core is, and `crypto.subtle.digest`, the hash the browser
+   gives, returns a promise; so it is a function of ours in TypeScript.
+   The recommendation is a published algorithm with its test vectors,
+   SHA-256 among them, so that a collision is not a concern. Nothing is
+   hashed from the variant file (section 3).
 2. When the calculation worker is restarted to give back the memory of
    wasm, which never shrinks, and which the bound of its cache, counted in
    the bytes of its typed arrays, does not see. The recommendation is to

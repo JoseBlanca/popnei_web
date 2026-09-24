@@ -149,9 +149,10 @@ Each work package has:
   before the work checks nothing.
 - **What it stands on**: the work packages before it, and what has to be
   in place outside the plan, a release of popnei with the function the
-  analysis calls among them. The walking skeleton stands on two that
-  popnei 0.1.0 lacks, the reader of CSV and the fingerprint of a variant
-  file, which are asked of popnei and released before it is built
+  analysis calls among them. The walking skeleton stands on nothing that
+  popnei 0.1.0 lacks, and it reads its individuals file as a CSV, so it
+  does not need the files crate either; the crate, and the Rust of its
+  build, come with the first work package that reads an xlsx
   (`docs/architecture.md`, section 10).
 - **Its tasks.**
 - **What could go wrong**, when something is known: the part of the spec

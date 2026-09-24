@@ -1,6 +1,6 @@
 ---
 name: coding
-description: How code is written in popnei_web, the static web applications of popnei, in TypeScript with React, D3, three.js and two web workers that run the wasm package of popnei. Use it before writing or changing any code or test of popnei_web. It covers the layers and what each may import, the order of the work, the core layer, dependencies and the checks to run before the work is called done, and it points to typescript.md, the rules of the language and of errors that every session reads with it, and to the topic file of each layer, react.md, css.md, charts.md, worker.md and testing.md, beside it.
+description: How code is written in popnei_web, the static web applications of popnei, in TypeScript with React, D3, three.js and two web workers, one that runs the wasm package of popnei and a light one for the files of the user, and in Rust for the small crate of xlsx and zip. Use it before writing or changing any code or test of popnei_web. It covers the layers and what each may import, the order of the work, the core layer, dependencies and the checks to run before the work is called done, and it points to typescript.md, the rules of the language and of errors that every session reads with it, and to the topic file of each layer, react.md, css.md, charts.md, worker.md and testing.md, beside it.
 ---
 
 # Coding
@@ -8,9 +8,12 @@ description: How code is written in popnei_web, the static web applications of p
 popnei_web has four layers, and `docs/architecture.md` describes them:
 `src/core`, plain TypeScript, where the project, its commands, the keys of
 the results, the cache, undo and the analyses live; `src/worker`, the two
-web workers that run popnei and the messages the page and they exchange;
-`src/charts`, the plots, functions over D3 and three.js; and `src/ui`, the
-React screens. What the applications do is in `docs/functionality.md`, and
+web workers, the calculation worker that runs popnei and the light worker
+that reads the individuals file and writes the xlsx and the zip, and the
+messages the page and they exchange; `src/charts`, the plots, functions
+over D3 and three.js; and `src/ui`, the React screens. Beside them,
+`crates/files/` is a small Rust crate, built to the files wasm, that reads
+and writes xlsx and makes the zip for the light worker. What the applications do is in `docs/functionality.md`, and
 what they are built with, and why, in `docs/technology.md`.
 
 `src/core` is where a mistake gives a wrong result: a stale number shown
@@ -33,7 +36,8 @@ the topic file of the layer the change is in:
 | layer | topic file |
 |---|---|
 | `src/core` | none more: the core layer is in this file, below |
-| `src/worker` | `worker.md`: the protocol, the two runners, popnei and the wasm |
+| `src/worker` | `worker.md`: the protocol, the two runners, popnei and the wasm, the reader of the individuals file |
+| `crates/files/` | the section "The files crate" below, and popnei's Rust coding skill it points to |
 | `src/charts` | `charts.md`: D3, three.js, the handle of a plot, export |
 | `src/ui` | `react.md` and `css.md`: React, React Aria, the styles, accessibility |
 | any test, or running the app | `testing.md`: Vitest, Playwright, the dev server |
@@ -49,7 +53,8 @@ import:
 | layer | may import | must not import |
 |---|---|---|
 | `src/core` | itself; the types of `src/worker/protocol.ts`; the types of `popnei` | `src/ui`, `src/charts`, `src/worker/client.ts`, `src/worker/messages.ts`, `src/worker/start.ts`, `src/worker/runner.ts`, `src/worker/filesRunner.ts`, React, D3, three.js, a value of `popnei` |
-| `src/worker` | itself; `popnei`; the files wasm; the types of `src/core/result.ts` | anything else of `src/core`, `src/ui`, `src/charts`, React, D3, three.js |
+| `src/worker` | itself; `popnei`, in `runner.ts` only; the files wasm, in `filesRunner.ts` only; the types of `src/core/result.ts` | anything else of `src/core`, `src/ui`, `src/charts`, React, D3, three.js |
+| `crates/files/` (Rust) | its crates, wasm-bindgen, calamine, rust_xlsxwriter and zip | popnei; it is called only by `src/worker/filesRunner.ts` |
 | `src/charts` | itself; D3; three.js | `src/core`, `src/ui`, `src/worker`, React, a value of `popnei` |
 | `src/ui` | everything above; React; React Aria | `src/worker/runner.ts`, `src/worker/filesRunner.ts`, D3, three.js, a value of `popnei` |
 
@@ -80,6 +85,12 @@ The reasons:
   Only `src/ui` joins a plot to the project.
 - **Only `src/ui` joins the layers.** The entry of each page builds the
   store, gives it the worker client, and mounts the screens.
+- **The light worker holds no popnei, and only its runner calls the files
+  wasm.** Reading the files of the user is not popnei's business, as the
+  owner decided on 24 September 2026 (`docs/architecture.md`, section 6),
+  and a light worker that imported popnei would download and compile its
+  wasm for nothing. The reader of `src/worker/individuals/` is pure, so it
+  imports neither.
 
 The ESLint configuration of `configs.md` turns each row into a
 `no-restricted-imports` rule, so a wrong import fails the lint. The
@@ -204,10 +215,17 @@ The key of a result is what makes undo, staleness and the cache work
   null would share a key; a function; a `Map` or a `Set`, which it writes
   as `{}`; a typed array; a `File`; a `Date`.
 - **Never in a key:** a reference or anything that depends on identity; a
-  time, a random number, a counter of the session; a text made for the
+  time, a random number, a counter of the session, but for the one below;
+  a text made for the
   screen, which changes with the language or the wording; what belongs to
   the screen, a tab, a zoom, a colour, unless the result depends on it,
   and a result never should.
+- **The variant file is in a key as its load**, the file id the page
+  made when the user picked it and its read options, and nothing else of
+  the file: no name, size, date or hash (`docs/architecture.md`, section
+  3). The id is random, but it is part of the project, made once per
+  load and not when the key is made, so the same load always gives the
+  same key and a new load a new one.
 - **A key on the wire is a `string`.** The messages of the worker cannot
   import `keys.ts`, so `keys.ts` also gives `keyFromWire(text: string):
   Key`, the other place a `Key` is made, and a key that comes back with a
@@ -249,6 +267,36 @@ The key of a result is what makes undo, staleness and the cache work
   individual with no called genotype, is tested with `Number.isNaN` before
   any arithmetic, and becomes `null` before it goes into JSON, which
   would write it as `null` anyway, and back as `null`, not as NaN.
+
+## The files crate
+
+`crates/files/` is Rust, and is written by the rules of popnei's coding
+skill, `/Users/jose/devel/popnei/.claude/skills/coding/SKILL.md`, as the
+model: its sections on errors without panics, integers, and the lints of
+its `lints.toml`, which `configs.md` takes into the crate's `Cargo.toml`.
+What matters most here:
+
+- **`#![forbid(unsafe_code)]`** in `lib.rs`: the crate reads files and
+  has no reason for `unsafe`.
+- **No panic crosses the boundary.** A panic in wasm is a trap, which is
+  fatal for the light worker, restarted as after a cancel (`worker.md`).
+  So no `unwrap`, `expect`, `panic!` or indexing with `[]`, which the lints
+  deny outside the tests, and every function the crate exports returns
+  `Result<T, JsError>`: wasm-bindgen turns the error into a JavaScript
+  `Error` with its message, which the runner catches at the call and
+  sends to the page (`worker.md`, "Errors are values").
+- **The exported functions are thin.** Each one converts its arguments,
+  calls a plain Rust function that does the work and returns a `Result`
+  of the crate's own error type, and maps that error to `JsError`. The
+  functions wasm-bindgen generates are stubs that panic when called
+  natively, so the plain functions are what `cargo test` calls.
+- **Its tests**: `cargo test`, natively, over xlsx files kept in the
+  crate, written by Excel and LibreOffice, with dates, sparse rows and a
+  sheet in Spanish among them (`docs/technology.md`, open point 1); and
+  the light worker's tests in Playwright, which read an xlsx and write a
+  report through the real wasm (`testing.md`).
+- **Its dependencies** are the owner's decision as npm's are, with exact
+  versions, and `crates/files/Cargo.lock` is committed.
 
 ## Dependencies
 
@@ -300,6 +348,8 @@ check is a command of its own.
 
 ```
 npm run format:check
+npm run test:files
+npm run build:files
 npm run typecheck
 npm run lint
 npm test
@@ -308,10 +358,15 @@ npm run test:e2e
 npm pkg get dependencies.popnei
 ```
 
-The scripts are those of `configs.md`: `prettier --check .`, `tsc -b`,
-`eslint --max-warnings=0 .`, `vitest run`, `vite build`, and the build
-followed by `playwright test` in the three engines. All of them run for
-every change to the code; a change to documents alone needs none. The
+The scripts are those of `configs.md`: `prettier --check .`; for the
+files crate, `cargo fmt --check`, clippy and `cargo test`, then its build
+to wasm; `tsc -b`, `eslint --max-warnings=0 .`, `vitest run`, `vite
+build`, and the build followed by `playwright test` in the three engines.
+All of them run for every change to the code; a change to documents alone
+needs none. `build:files` comes before the type check and the lint
+because they read the declarations it generates for the files wasm, which
+git does not hold. Until the crate exists, after the walking skeleton,
+the two scripts of the crate are reported as not there. The
 build is in the list because it is what finds a worker, a wasm file or a
 page that the bundler cannot resolve, which neither the type check nor
 the unit tests load. The tests in a browser, `test:e2e`, run for a change

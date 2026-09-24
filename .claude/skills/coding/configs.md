@@ -14,6 +14,10 @@ of `protocol.ts` in ESLint, `tsconfig.test.json`, the `include` of
 `tsconfig.node.json`, `.gitignore`, and the `target` and `lib` of
 ES2022 and `ES2023.Array`, with the browser floor of `vite.config.ts`
 and its `worker.format`, which the owner's floor of that day brought.
+Added later that day for the owner's decisions on the inputs, and not
+run either: the scripts `build:files` and `test:files`, the Rust files of
+the crate, the patterns `filesWasm` and the blocks of the light worker in
+ESLint, and `src/worker/individuals` in `tsconfig.core.json`.
 
 The configuration of Vitest and of Playwright is in `testing.md`.
 
@@ -37,8 +41,10 @@ install on a Node older than `engines` fail instead of warn.
   "type": "module",
   "engines": { "node": ">=24" },
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "build:files": "cargo build --manifest-path crates/files/Cargo.toml --release --target wasm32-unknown-unknown && wasm-bindgen --target web --remove-name-section --out-dir crates/files/pkg --out-name files crates/files/target/wasm32-unknown-unknown/release/files.wasm",
+    "test:files": "cargo fmt --manifest-path crates/files/Cargo.toml --check && cargo clippy --manifest-path crates/files/Cargo.toml --all-targets -- -D warnings && cargo test --manifest-path crates/files/Cargo.toml",
+    "dev": "npm run build:files && vite",
+    "build": "npm run build:files && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "lint": "eslint --max-warnings=0 .",
@@ -52,6 +58,25 @@ install on a Node older than `engines` fail instead of warn.
 }
 ```
 
+- `build:files` builds the files wasm from `crates/files/`
+  (`docs/architecture.md`, section 6): cargo builds the crate for
+  `wasm32-unknown-unknown`, and `wasm-bindgen` writes the JavaScript
+  loader, its declarations and `files_bg.wasm` into `crates/files/pkg/`,
+  which `filesRunner.ts` imports and git ignores. `dev` and `build` run it
+  first, so the development server and the build never use a wasm older
+  than the crate; cargo rebuilds nothing when nothing changed, so a second
+  run costs a second or two, not measured. The output is not committed,
+  and the continuous integration builds it (`testing.md`), because a
+  wasm file in git is a binary that a review cannot tell was built from
+  the source beside it. It is the line popnei's `js/popnei/package.json`
+  builds its own wasm with, with our paths.
+- `test:files` is the check of the crate: `cargo fmt --check`, clippy
+  with the lints of the crate's `Cargo.toml` as errors, and `cargo test`,
+  natively.
+- The two scripts, and the `npm run build:files &&` of `dev` and `build`,
+  are added with the crate, after the walking skeleton, which reads no
+  xlsx (`docs/architecture.md`, section 10). Until then `dev` is `vite`
+  and `build` is `vite build`.
 - `private` keeps it from being published to npm by mistake.
 - `engines` is Node 24, the long term support release of September 2026;
   Vite 8 needs 20.19 or 22.12 at least. The continuous integration uses
@@ -154,10 +179,14 @@ worker, `FileReaderSync` on the page.
     "lib": ["ES2022", "ES2023.Array"],
     "types": []
   },
-  "include": ["src/core", "src/worker/protocol.ts"],
+  "include": ["src/core", "src/worker/protocol.ts", "src/worker/individuals"],
   "exclude": ["**/*.test.ts"]
 }
 ```
+
+The reader of the individuals file, `src/worker/individuals/`, is here
+as well as in the worker's file: it is pure, and checking it with no
+globals is what keeps it so, so that its tests need nothing but node.
 
 `lib` is the language alone and `types` is empty, so core sees no
 `window`, no `document`, no `setTimeout`, no `crypto` and no types of
@@ -292,6 +321,10 @@ const runner = {
   group: ["**/worker/runner*", "**/worker/filesRunner*"],
   message: "A runner is loaded as a worker, not imported.",
 };
+const filesWasm = {
+  group: ["**/crates/files/**"],
+  message: "Only src/worker/filesRunner.ts calls the files wasm.",
+};
 const client = {
   group: ["**/worker/client*", "**/worker/messages*", "**/worker/start*"],
   message: "src/core is given the client by src/ui; it does not import it.",
@@ -311,7 +344,7 @@ const popneiValues = {
 };
 
 export default defineConfig(
-  globalIgnores(["dist/", "playwright-report/", "test-results/", "screens/"]),
+  globalIgnores(["dist/", "playwright-report/", "test-results/", "screens/", "crates/"]),
   {
     files: ["**/*.{ts,tsx}"],
     extends: [
@@ -359,7 +392,7 @@ export default defineConfig(
     rules: {
       "@typescript-eslint/no-restricted-imports": [
         "error",
-        { patterns: [ui, charts, runner, client, react, drawing, popneiValues] },
+        { patterns: [ui, charts, runner, client, react, drawing, popneiValues, filesWasm] },
       ],
       "@typescript-eslint/consistent-type-assertions": [
         "error",
@@ -372,7 +405,7 @@ export default defineConfig(
     rules: {
       "@typescript-eslint/no-restricted-imports": [
         "error",
-        { patterns: [ui, charts, coreButResult, react, drawing] },
+        { patterns: [ui, charts, coreButResult, react, drawing, filesWasm] },
       ],
       "@typescript-eslint/consistent-type-assertions": [
         "error",
@@ -381,11 +414,31 @@ export default defineConfig(
     },
   },
   {
+    // The light worker holds no popnei (docs/architecture.md, section 6),
+    // and only its runner calls the files wasm.
+    files: ["src/worker/filesRunner.ts"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        { patterns: [ui, charts, coreButResult, react, drawing, popneiValues] },
+      ],
+    },
+  },
+  {
+    files: ["src/worker/individuals/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        { patterns: [ui, charts, coreButResult, react, drawing, popneiValues, filesWasm] },
+      ],
+    },
+  },
+  {
     files: ["src/charts/**/*.ts"],
     rules: {
       "@typescript-eslint/no-restricted-imports": [
         "error",
-        { patterns: [ui, core, worker, react, popneiValues] },
+        { patterns: [ui, core, worker, react, popneiValues, filesWasm] },
       ],
     },
   },
@@ -395,7 +448,7 @@ export default defineConfig(
     rules: {
       "@typescript-eslint/no-restricted-imports": [
         "error",
-        { patterns: [ui, charts, coreButResult, react, drawing, popneiValues] },
+        { patterns: [ui, charts, coreButResult, react, drawing, popneiValues, filesWasm] },
       ],
     },
   },
@@ -404,7 +457,7 @@ export default defineConfig(
     rules: {
       "@typescript-eslint/no-restricted-imports": [
         "error",
-        { patterns: [runner, drawing, popneiValues] },
+        { patterns: [runner, drawing, popneiValues, filesWasm] },
       ],
     },
   },
@@ -446,7 +499,13 @@ export default defineConfig(
   its values do not.
 - `no-restricted-imports` of the protocol's block replaces that of the
   worker's for that one file, since a later block wins for a rule; so it
-  repeats the worker's patterns and adds `popneiValues`.
+  repeats the worker's patterns and adds `popneiValues`. The blocks of
+  `filesRunner.ts` and of `src/worker/individuals/` do the same: the
+  first swaps `filesWasm` for `popneiValues`, since it is the one file
+  that calls the files wasm and the light worker holds no popnei, and the
+  second keeps both out, since the reader is pure.
+- `crates/` is ignored because what is JavaScript there is what
+  wasm-bindgen generated into `crates/files/pkg/`.
 - `react.md` adds the rules of React and of hooks to the block of
   `src/ui`, from `eslint-plugin-react-hooks`, which the owner took on 24
   September 2026 (`docs/technology.md`, section 2).
@@ -475,11 +534,84 @@ playwright-report/
 test-results/
 screens/
 e2e/scratch.spec.ts
+crates/files/target/
+crates/files/pkg/
 ```
 
 What the tools write, the build, the reports and traces of the tests, the
-pictures of `npm run screens`, and the scratch test of `testing.md`,
-which is never committed. Prettier reads this file too, so it skips them.
+pictures of `npm run screens`, the scratch test of `testing.md`, which is
+never committed, and what cargo and wasm-bindgen write for the files
+crate, which `build:files` makes again. Prettier reads this file too, so
+it skips them. `crates/files/Cargo.lock` is committed, as
+`package-lock.json` is, so that every build of the crate uses the same
+versions of calamine, rust_xlsxwriter, zip and what they pull in.
+
+## The files crate: `rust-toolchain.toml` and `crates/files/Cargo.toml`
+
+`rust-toolchain.toml`, at the root, which rustup reads from any command
+run in the repository and installs what it names:
+
+```toml
+[toolchain]
+channel = "1.xx.0" # the stable release current when the crate is made
+targets = ["wasm32-unknown-unknown"]
+components = ["rustfmt", "clippy"]
+```
+
+A pinned version and not `stable`, so that a new release of Rust, with
+new lints of clippy, is a commit someone made and not what the day of the
+build gave, as `save-exact` does for npm.
+
+`crates/files/Cargo.toml`, the parts that are not the list of
+dependencies:
+
+```toml
+[package]
+name = "files"
+edition = "2024"
+publish = false
+
+[lib]
+# cdylib is the wasm file wasm-bindgen reads; rlib lets cargo test the
+# plain Rust functions natively.
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# Pinned to the command line, which refuses a crate of another version;
+# the version popnei pins, so one command line builds both.
+wasm-bindgen = "=0.2.128"
+# calamine, rust_xlsxwriter and zip, at the versions measured in
+# docs/technology.md, section 2, with exact versions.
+
+[profile.release]
+# As measured in docs/technology.md, section 2.
+opt-level = 3
+lto = true
+codegen-units = 1
+
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "deny"
+
+[lints.clippy]
+# No panics: a panic in wasm is a trap, fatal for the light worker.
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+indexing_slicing = "deny"
+arithmetic_side_effects = "deny"
+cast_possible_truncation = "deny"
+allow_attributes_without_reason = "deny"
+```
+
+The lints are those of popnei's
+`/Users/jose/devel/popnei/.claude/skills/coding/lints.toml` that apply to
+code that reads and writes files, with its `clippy.toml` beside the
+crate, `allow-unwrap-in-tests = true` and `allow-expect-in-tests = true`;
+`SKILL.md`, "The files crate", has the rules. `lib.rs` also carries
+`#![forbid(unsafe_code)]`.
 
 ## `vite.config.ts`
 

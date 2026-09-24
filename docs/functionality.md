@@ -124,11 +124,11 @@ French it separates the fields with `;` and writes decimals with a comma,
 and its encoding varies with the version. So:
 
 - `.xlsx` is read directly, the first sheet of the file, with calamine,
-  which is pure Rust and builds for both wasm targets of popnei
-  (`docs/technology.md`).
-- CSV and TSV are read with the separator detected, `,`, `;` or a tab,
-  decimals with a comma accepted, and a BOM at the start of the file
-  removed.
+  which is pure Rust, in a small Rust crate of the applications
+  (`docs/architecture.md`, section 6; `docs/technology.md`).
+- CSV and TSV are read by the applications, in TypeScript, with the
+  separator detected, `,`, `;` or a tab, decimals with a comma accepted,
+  and a BOM at the start of the file removed.
 - Missing values are an empty cell, `NA` or `-`.
 - The file is written as `.xlsx` for the user and as TSV for scripts and
   the Python API.
@@ -272,11 +272,12 @@ by Python. It holds:
   to, population genetics or association, the versions of popnei and of
   the application, and the date.
 - **The identity of the variant file**: its name, its size, its number of
-  variants, its ploidy, the list of its individuals, and a fingerprint:
-  a hash of the list of individuals and of the chromosome and position of
-  every variant. Hashing the whole file would take too long in a tab for
-  files of gigabytes; the positions are read by a pass anyway, and cheaply
-  from a `.nei` file.
+  variants, its ploidy and the list of its individuals. It serves only to
+  say, when the project is opened again, whether the file given is the one
+  the project was made with. Nothing is hashed from the file: every
+  analysis is calculated again whenever a variant file is given, the same
+  one included, so the identity never decides whether a result is
+  reused.
 - **The file of the individuals, whole**: its rows, the types of its
   columns and, in the traits file, their roles; in population genetics,
   the column that defines the populations and the population of each
@@ -297,18 +298,23 @@ Opening a project:
 
 1. The application asks for the variant file, and names the one the
    project was made with.
-2. It compares the fingerprint. When they differ it warns, and says in
-   what: "The project was made with panel_2026.nei, 342 individuals and
-   1,203,554 variants; this file has 360 individuals". It does not refuse,
-   because running the settings of one analysis on a new batch of the
-   same collection is a use of the project.
+2. It compares the identity of the file given with the one in the
+   project, the name, the size, the individuals, the number of variants
+   and the ploidy. When they differ it warns, and says in what: "The
+   project was made with panel_2026.nei, 342 individuals and 1,203,554
+   variants; this file has 360 individuals". It does not refuse, because
+   running the settings of one analysis on a new batch of the same
+   collection is a use of the project, and it calculates everything again
+   in any case.
 3. It restores the filters, the file of the individuals, the populations
    and the options of the analyses. No result is loaded: every analysis is
    ready to run, and one action runs them all.
 4. After a run, it compares the numbers of the result with those of the
    project, and says whether they are the same or differ, and what
    changed that could explain it, the variant file or the version of
-   popnei.
+   popnei. This is what catches a file with the same individuals and
+   number of variants as the project's and other genotypes, which the
+   comparison of step 2 lets pass: the numbers come from the genotypes.
 
 ### The report
 
@@ -335,7 +341,9 @@ One zip, with:
 A script that does the same analyses with the Python API of popnei,
 written out call by call: the files read, the filters with their
 thresholds, the file of the individuals, which the script reads from the
-`.xlsx` of the report, the populations, the analyses with their options,
+`.xlsx` of the report with pandas, the populations, which it builds in
+plain Python from the column chosen, named by its name, with the types of
+the columns kept in the project, the analyses with their options,
 and the warnings of the application as comments. It is written out, and
 does not read the project file, because it is meant to be read: it is
 what a user who outgrows the application learns the API from.
@@ -367,15 +375,6 @@ has not decided:
 - The distance at which the LD decays to half.
 - The filters of individuals by missing data and by observed
   heterozygosity.
-- The reader of CSV and TSV and the inference of the types of the
-  columns, in popnei's core and its wasm, as `docs/architecture.md`
-  section 6 asks; the script of section 9 needs it in Python, and the
-  walking skeleton needs it first. An xlsx is read by calamine in the
-  files wasm, and its cells go through the same inference (open point 2).
-- The fingerprint of a variant file, the hash of its individuals and
-  positions, computed in popnei so that Python gives the same one, as
-  `docs/architecture.md` section 6 asks; which hash is its open point 1.
-  The walking skeleton needs it first.
 - The GWAS with covariates, the λ, the pseudo heritability; the GWAS spec
   of popnei is not written yet.
 
@@ -385,11 +384,12 @@ has not decided:
    builds for both wasm targets, and what it weighs, was measured on 24
    September 2026 (`docs/technology.md`).
 2. Where the reader of the files of the individuals lives. Settled by
-   `docs/architecture.md`, section 6, approved by the owner on 24
-   September 2026: CSV and TSV, and the inference of
-   the types of the columns, are in popnei, so that Python users read
-   them the same way; xlsx is read in the files wasm of the
-   applications.
+   the owner on 24 September 2026, because reading these files is not
+   popnei's business: CSV and TSV, and the inference of the types of the
+   columns, are read by the applications in TypeScript, and xlsx by a
+   small Rust crate of the applications (`docs/architecture.md`, section
+   6). Nothing of it is asked of popnei. The Python script reads the file
+   with pandas (section 9).
 3. Whether the unfolded SFS, with the ancestral allele given by the user,
    is in the 95%.
 4. The default thresholds of the missing data filter, of LD pruning, and

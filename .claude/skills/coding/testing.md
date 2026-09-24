@@ -28,7 +28,9 @@ timing, and when it fails says only that something on the path broke.
 | part | tool | environment | what it checks |
 |---|---|---|---|
 | `src/core` | Vitest | node | the project and its commands, the keys, undo, the cache, the project file, the script; examples and properties |
-| `src/worker` | Vitest | node | the protocol, and the client's queues, progress, cancelling and restart against fake workers |
+| `src/worker` | Vitest | node | the protocol, the client's queues, progress, cancelling and restart against fake workers, and the reader of CSV and TSV with the inference of the types of the columns |
+| `crates/files` | `cargo test` | native | reading and writing an xlsx, and the zip, through the plain Rust functions under the exported ones |
+| the light worker with the files wasm | Playwright | browser | an xlsx read and a report written through the real wasm, loaded on first need |
 | `src/charts`, 2D | Vitest | jsdom | the SVG each plot function builds, its update and its removal |
 | `src/charts/pca3d.ts`, the PNG export | Playwright | browser | what needs WebGL or a canvas, which jsdom does not have |
 | `src/ui` | Playwright | browser | the screens, as part of the flows |
@@ -59,9 +61,7 @@ the properties to write first:
 A property does not replace the literals. The key of one fixed project is
 also asserted as a literal hash, so that a change of the canonical form,
 which would make every saved project file ask for its results again, is a
-failing test and not a silent change. If popnei computes the fingerprint
-(`docs/architecture.md`, open point 1), its literal comes from popnei and
-is the one Python gives.
+failing test and not a silent change.
 
 The properties are written with fast-check, the property-based testing
 library of JavaScript, the one Hypothesis is to pytest. It draws the
@@ -95,10 +95,14 @@ with no calculation. `worker.md`, beside this file, lists every case of
 the client and of the runners that is tested in node, and the ones left
 to the browser.
 
-The workers' side, `runner.ts` and `filesRunner.ts`, calls the wasm
-package of popnei, which
-has an entry for node, so the handling of a request can be tested in node
-over the bytes of a reference file. What node does not have is the
+The calculation worker's side, `runner.ts`, calls the wasm package of
+popnei, which has an entry for node, so the handling of a request can be
+tested in node over the bytes of a reference file. The reader of the
+individuals file, `src/worker/individuals/`, is pure TypeScript and is
+tested in node over the text of CSV and TSV files, as `worker.md` lists.
+What the light worker does with the files wasm, an xlsx and the zip, is
+tested twice: the Rust by `cargo test` in the crate, natively, and the
+wasm in the worker by Playwright. What node does not have is the
 browser's `FileReaderSync`, so the reading of a user's `File` and the real
 passing of messages between two threads are tested only by Playwright, in
 the flows.
@@ -463,22 +467,39 @@ For the testing part of the hub's list:
 A sketch, to be written as a workflow in `.github/workflows/site.yml` with
 the walking skeleton. On every push and pull request:
 
-- **check**: `npm ci`, the lint and the types of the hub, `npm test`.
-- **e2e**: `npm ci`, `npx playwright install --with-deps`, which also
-  installs the libraries the browsers need on Linux, and `npm run
-  test:e2e`; the HTML report and `test-results/` uploaded as an artifact
-  when it fails, so the traces can be read.
+- **check**: the Rust setup below, `npm ci`, `npm run test:files`, `npm
+  run build:files`, then the lint and the types of the hub, which read the
+  declarations `build:files` generates, and `npm test`.
+- **e2e**: the Rust setup, `npm ci`, `npx playwright install --with-deps`,
+  which also installs the libraries the browsers need on Linux, and `npm
+  run test:e2e`, whose build builds the crate; the HTML report and
+  `test-results/` uploaded as an artifact when it fails, so the traces can
+  be read.
 
 On a push to `main`, when both passed:
 
-- **deploy**: `npm run build`, then `actions/configure-pages`,
-  `actions/upload-pages-artifact` with `dist/`, and `actions/deploy-pages`,
-  with the permissions `contents: read`, `pages: write` and `id-token:
-  write`, as Vite's guide to GitHub Pages gives them.
+- **deploy**: the Rust setup, `npm run build`, then
+  `actions/configure-pages`, `actions/upload-pages-artifact` with `dist/`,
+  and `actions/deploy-pages`, with the permissions `contents: read`,
+  `pages: write` and `id-token: write`, as Vite's guide to GitHub Pages
+  gives them.
+
+The Rust setup, in each job that builds the files crate: the toolchain of
+`rust-toolchain.toml`, with its target `wasm32-unknown-unknown`, which
+rustup, already on GitHub's Ubuntu runners, installs at the first cargo
+command; `wasm-bindgen-cli` at the version the crate pins, `cargo install
+wasm-bindgen-cli --version 0.2.128 --locked`, which compiles it; and
+`actions/cache` over `~/.cargo/bin`, `~/.cargo/registry` and
+`crates/files/target`, keyed by `rust-toolchain.toml` and
+`crates/files/Cargo.lock`, so that the command line and the dependencies
+are built once and not on every run. How long a run takes with and
+without the cache has not been measured. The Rust setup and
+`build:files` come with the crate, after the walking skeleton
+(`configs.md`); the workflow of the skeleton needs no Rust.
 
 `npm ci` installs the wasm package of popnei from its GitHub Release, by
 the URL and the hash of the lockfile (`docs/technology.md`, section 5), so
-the workflow needs no token and no Rust.
+the workflow needs no token and no checkout of popnei.
 
 ## The dependencies of the tests
 

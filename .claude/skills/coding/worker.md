@@ -19,15 +19,19 @@ src/worker/client.ts       the page's side: a queue per worker, progress,
 src/worker/start.ts        the lines that make the two workers, `?worker`
 src/worker/runner.ts       the calculation worker: popnei, the variant file,
                            the intermediate caches
-src/worker/filesRunner.ts  the light worker: popnei with no variant file,
-                           the files wasm, the individuals file, xlsx and zip
+src/worker/filesRunner.ts  the light worker, with no popnei: the individuals
+                           file, the files wasm, xlsx and zip
+src/worker/individuals/    the reader of CSV and TSV and the inference of the
+                           types of the columns, pure, called by filesRunner.ts
+crates/files/              the files wasm, in Rust, which only filesRunner.ts
+                           calls
 ```
 
 `protocol.ts` and `messages.ts` are apart because core imports the types
 of the first and is checked with no DOM (`configs.md`), while a message
 carries a `File`, a type of the DOM.
 
-What the TypeScript package of popnei offers the workers is in
+What the TypeScript package of popnei offers the calculation worker is in
 `js/popnei/README.md` of popnei and section 11 of its
 `docs/architecture.md`. It was read for this file in September 2026, at
 version 0.1.0, and the section "What popnei has to provide" lists what the
@@ -45,12 +49,12 @@ design here assumes and the package does not have yet.
   to the light worker, so that a traits file loaded, or a report asked
   for, while a GWAS of minutes runs does not wait the rest of the GWAS for
   a job of a second (`docs/architecture.md`, section 5).
-- **The light worker loads popnei's wasm too**, with no variant file
-  opened in it, because CSV and TSV and the inference of the types of the
-  columns are in popnei's wasm (section 6 of the architecture). It is not
-  a second download: both workers load it from the same address, which
-  the browser caches. Each worker compiles it, and the time of the second
-  compile has not been measured.
+- **The light worker holds no popnei.** CSV and TSV, and the inference of
+  the types of the columns, are TypeScript of ours, and xlsx and zip are
+  the files wasm, a crate of this repository, as the owner decided on 24
+  September 2026 (`docs/architecture.md`, section 6). So it neither
+  imports popnei nor compiles its wasm, and the lint keeps popnei out of
+  it (`configs.md`).
 - **Not a pool of calculation workers**, which would run two analyses at
   once on two cores. Each worker would hold its own intermediate results,
   a kinship of 10,000 individuals is 800 MB in each one that uses it, and
@@ -85,7 +89,7 @@ export type ToWorker =
   | { kind: "run"; id: number; key: string; job: Job };
 
 export type FromWorker =
-  | { kind: "ready"; protocol: number; popneiVersion: string }
+  | { kind: "ready"; protocol: number; popneiVersion: string | null } // null from the light worker
   | { kind: "progress"; id: number; done: number; total: number }
   | { kind: "result"; id: number; key: string; result: JobResult }
   | { kind: "error"; id: number; message: string; fatal: boolean };
@@ -129,7 +133,8 @@ export type FromWorker =
 - **`popneiVersion` is in the `ready` message too**, from popnei's
   `version()`, because the version of popnei is part of every key
   (`docs/architecture.md`, section 3), and the page learns it there, from
-  the calculation worker.
+  the calculation worker. The light worker, which holds no popnei, sends
+  `null`.
 
 ### Validation at the boundary
 
@@ -173,6 +178,7 @@ export type Outcome<R> =
   | { kind: "cancelled" };
 export type RunError =
   | { kind: "popnei"; message: string }       // popnei refused the input
+  | { kind: "files"; message: string }        // the files wasm refused a file
   | { kind: "workerFailed"; message: string } // a trap, an error event
   | { kind: "couldNotStart"; reason: string } // no `ready`, twice
   | { kind: "protocolMismatch" }              // a stale file after a deploy
@@ -228,6 +234,14 @@ export function createClient(make: {
   message of our own around it may say what was being done, "Reading
   panel.vcf.gz:", and never replaces it, because it is the one that says
   what is wrong with the file.
+- **An error of the files wasm is handled the same way.** Every function
+  the crate exports returns a `Result` whose error wasm-bindgen turns into
+  a JavaScript `Error` with its message, "not an xlsx file", a sheet that
+  calamine cannot read; `filesRunner.ts` catches it at the call and sends
+  it as `{ kind: "files" }` with that message. A file that the reader of
+  CSV and TSV refuses is not an error of the run: the reader returns a
+  `Result`, and the job gives it back as its result, the table or the
+  ways the file is wrong, which the module spec of the reader lists.
 - **A trap of the wasm is fatal for the worker.** A panic of Rust in wasm
   is a `WebAssembly.RuntimeError`, and after one the memory of the wasm
   keeps what it held and an object that was borrowed stays borrowed
@@ -312,9 +326,10 @@ section 4). So:
 `messages.ts` and calls popnei. It holds the `File` objects it was sent,
 the handles popnei gave for them and the intermediate caches.
 `filesRunner.ts`, the light worker, answers the jobs that read no
-genotype: it reads the individuals file, a CSV or TSV with popnei's wasm
-and an xlsx with the files wasm, and writes the xlsx and the zip of the
-report. It opens no variant file.
+genotype: it reads the individuals file, a CSV or TSV with the reader of
+`src/worker/individuals/` and an xlsx with the files wasm, and writes the
+xlsx and the zip of the report. It opens no variant file and loads no
+popnei.
 
 ### Loading popnei, once
 
@@ -326,11 +341,12 @@ const ready = init().then(() => {
 });
 ```
 
-- **`init()` is called once, when each worker starts**, and every handler
-  awaits the same promise before it calls popnei. popnei's `init` already
-  returns the same promise on a second call; calling it at the start
-  means the wasm downloads while the user is still picking a file.
-- **Both runners import `popnei`, which resolves to `dist/web.js`** through
+- **`init()` is called once, when the calculation worker starts**, and
+  every handler awaits the same promise before it calls popnei. popnei's
+  `init` already returns the same promise on a second call; calling it at
+  the start means the wasm downloads while the user is still picking a
+  file. The light worker posts its `ready` as soon as it starts.
+- **`runner.ts` imports `popnei`, which resolves to `dist/web.js`** through
   the `exports` of popnei's `package.json`, and its loader fetches
   `popnei_bg.wasm` from `new URL("popnei_bg.wasm", import.meta.url)`.
   Vite copies that file into the build and rewrites the address; in a
@@ -347,16 +363,20 @@ const ready = init().then(() => {
 
 ### The files wasm, on first need
 
-The second wasm module, xlsx and zip (`docs/technology.md`), is loaded the
-first time a request needs it, so that a user of CSV files never downloads
-it.
+The second wasm module, xlsx and zip, is built from the crate
+`crates/files/` of this repository into `crates/files/pkg/` by `npm run
+build:files` (`configs.md`; `docs/architecture.md`, section 6). It is
+loaded the first time a request needs it, so that a user of CSV files
+never downloads it.
 
 - **Both its JavaScript and its wasm are loaded on first need**, in the
   light worker only. The worker is built as a module worker (section "How
   Vite builds the workers"), whose bundle Vite splits, so `filesRunner.ts`
-  imports the files
-  package with a dynamic `await import("popnei-files")`, which Vite makes
-  a chunk of its own, and calls its `init()`, which fetches the `.wasm`.
+  imports what wasm-bindgen generated with a dynamic `await
+  import("../../crates/files/pkg/files.js")`, which Vite makes a chunk of
+  its own, and calls its default export, the `init` that `--target web`
+  generates, which fetches the `.wasm` from `new URL("files_bg.wasm",
+  import.meta.url)` as popnei's loader does.
   What weighs is the `.wasm`, about 0.5 MB gzipped; the JavaScript that
   wasm-bindgen generates is a few tens of KB, and it no longer rides in
   the worker's first file. A static `import` of it would put that
@@ -365,8 +385,32 @@ it.
   `loadFiles` does the import and the `init()`, and awaits it in the
   handlers that read an xlsx or write a report, as popnei's own `init`
   does. A CSV or TSV of the individuals, and the inference of the types of
-  its columns, are read by popnei's own wasm and never load the files
-  package (`docs/architecture.md`, section 6).
+  its columns, are read by the TypeScript of `src/worker/individuals/`
+  and never load the files wasm (`docs/architecture.md`, section 6).
+
+### The reader of the individuals file
+
+`src/worker/individuals/` reads a CSV or TSV into the table of the
+project and infers the types of its columns, as section 4 of
+`docs/functionality.md` lists: the separator detected, `,`, `;` or a tab;
+decimals with a comma; a BOM removed; an empty cell, `NA` and `-` as
+missing. The inference takes the cells of a CSV, all text, or those of an
+xlsx as the files wasm gives them, numbers, text, booleans or empty, so
+both formats give the same types.
+
+- **It is pure.** It takes text, or cells, and returns a `Result` of the
+  table, with no DOM, no global of a worker, no popnei and no files wasm,
+  which the lint and `tsconfig.core.json` check (`configs.md`). The type
+  of the table is in `protocol.ts`, as `VariantFilter` is, so core and the
+  reader name one type.
+- **The runner decodes the bytes**, with `new TextDecoder("utf-8", {
+  fatal: true })`, and gives the reader the text. A file that is not
+  valid UTF-8 is refused with a message that says to save it as "CSV
+  UTF-8" or as xlsx: read otherwise, an accented name would come out
+  replaced and then match no individual of the variants.
+- **It does not check the individuals against the variants.** Core does,
+  in the `needs` of each analysis that uses the file, since the reader
+  does not know the variants (`docs/architecture.md`, section 6).
 
 ### Reading the files of the user
 
@@ -561,7 +605,10 @@ workers, as they already are in the development server.
 What the design above assumes and the TypeScript package of popnei 0.1.0
 does not have. Each one is asked of popnei, not built around here: a
 workaround in a runner is the binding duplication that popnei's coding
-skill warns against.
+skill warns against. Nothing is asked of popnei for the individuals file
+nor for the identity of the variant file, which popnei_web reads and keeps
+itself, as the owner decided on 24 September 2026
+(`docs/architecture.md`, sections 3 and 6).
 
 1. **A source of bytes over a JavaScript `File`**, read by ranges with
    `FileReaderSync`, in popnei's wasm binding, for `openVcf` and
@@ -573,24 +620,14 @@ skill warns against.
 2. **The number of passes an analysis makes, or a signal to the source
    when a pass starts**, so that the progress bar the source drives does
    not go from full to empty between the two passes of a PCA.
-3. **The reader of CSV and TSV and the inference of the types of the
-   columns**, in popnei's core, so that Python reads the files with the
-   same code, and in its wasm, where the light worker calls them
-   (`docs/architecture.md`, section 6). The walking skeleton needs it.
-4. **The fingerprint of a variant file**, the hash of its individuals and
-   positions, computed in popnei so that Python gives the same one
-   (`docs/functionality.md`, section 11; `docs/architecture.md`, open
-   point 1). The walking skeleton needs it too.
-5. **A way to tell a trap from an error**, stated in popnei's docs:
+3. **A way to tell a trap from an error**, stated in popnei's docs:
    whether every refusal of the core is a plain `Error` and every trap a
    `WebAssembly.RuntimeError`, so that the runner's choice of `fatal` rests
    on a promise and not on what was seen.
-6. **The files wasm as a package**, built and released beside popnei's,
-   with an `init` like popnei's (`docs/technology.md`, open point 2).
-7. **What `iterBlocks` gives is the caller's own memory**, which the
+4. **What `iterBlocks` gives is the caller's own memory**, which the
    README says for the arrays of a block; the runner relies on it to
    transfer them.
-8. **The thinning of the points of the Manhattan and the QQ plots**, in
+5. **The thinning of the points of the Manhattan and the QQ plots**, in
    Rust beside the GWAS, with the number of variants and the number kept
    (`charts.md`; `docs/technology.md`, open point 3).
 
@@ -607,17 +644,27 @@ skill warns against.
   queued request, a queued request dropped when its key is no longer
   asked for, the `files` message sent again after a restart, a message of
   an old worker ignored, a trap, the restart limit and the timeout of
-  `ready`, with fake timers; and the handlers of the runners as plain
-  functions over bytes, since
-  popnei loads under node from its `node` entry. That the result helper
-  copies an array that does not own its buffer, and transfers one that
-  does, is a test too.
+  `ready`, with fake timers; the handlers of the calculation runner as
+  plain functions over bytes, since popnei loads under node from its
+  `node` entry; and the reader of `src/worker/individuals/`, over the
+  text of CSV and TSV files written as Excel writes them in English and
+  in Spanish, `,` and `;`, decimal points and commas, a BOM, the three
+  missing values, quoted fields, and over cells as the files wasm gives
+  them, for the inference. That the result helper copies an array that
+  does not own its buffer, and transfers one that does, is a test too.
+- **With `cargo test`, natively**: the Rust of `crates/files/`, reading
+  and writing an xlsx and zipping, over files kept in the crate. The
+  functions that wasm-bindgen exports are stubs that panic when called
+  natively, so they are thin wrappers over plain Rust functions, and the
+  tests call those (`SKILL.md`, "The files crate").
 - **Only in a browser, with Playwright**: the real workers, `FileReaderSync`,
   the fetch of the wasm by Vite's rewritten address inside a module
   worker, transfer, a cancel that ends a calculation in the middle, and
   the files wasm loaded on first need, seen in the network log as one
   request for its chunk of JavaScript and one for its `.wasm`, and none
-  for either before.
+  for either before; an xlsx read and a report written through it, which
+  are the tests of the crate's exported functions; and, with a CSV, no
+  request from the light worker for any wasm.
 - **The floor is not tested by Playwright**, which runs recent browsers.
   What stands for it is `build.target`, for the syntax, and, for every
   API the workers use, its first version in MDN's compatibility data
@@ -661,8 +708,9 @@ skill warns against.
 It was written before any code of the applications, from the docs and
 from popnei 0.1.0. The walking skeleton checks, in this order: that
 popnei's loader finds its wasm inside a module worker built by Vite;
-that the files package is a chunk of its own, fetched on first need;
 that a `File` posted to a worker is read there; that a cancel ends a
-calculation and the next request runs on the new worker; the time the
-light worker takes to compile popnei's wasm a second time; and the value
-of `WORKER_READY_TIMEOUT_MS`. What it finds is corrected here.
+calculation and the next request runs on the new worker; and the value
+of `WORKER_READY_TIMEOUT_MS`. The first work package that reads an xlsx
+checks that the files wasm is a chunk of its own, fetched on first need,
+and that its loader finds its `.wasm` in the worker as popnei's does.
+What they find is corrected here.

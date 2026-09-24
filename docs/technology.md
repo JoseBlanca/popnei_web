@@ -35,8 +35,10 @@ the applications do is in `docs/functionality.md`.
 | 3D plot | three.js, with `@types/three` |
 | calls to the worker | a small typed message layer of our own |
 | documentation and in-app help | Markdown, rendered with markdown-it |
-| xlsx, zip | in Rust, in a second wasm module loaded when needed: calamine, rust_xlsxwriter, zip; CSV and TSV in popnei's own wasm |
-| tests | Vitest, Playwright; for development only jsdom, @axe-core/playwright and fast-check |
+| xlsx, zip | in Rust, in `crates/files/`, a crate of this repository built to a second wasm module loaded when needed: calamine, rust_xlsxwriter, zip |
+| CSV and TSV of the individuals | read in TypeScript, by code of ours, with the inference of the types of the columns |
+| building the files crate | a Rust toolchain with the target `wasm32-unknown-unknown`, and `wasm-bindgen-cli` at the version the crate pins |
+| tests | Vitest, Playwright, `cargo test` for the files crate; for development only jsdom, @axe-core/playwright and fast-check |
 | lint and format | ESLint with @eslint/js, typescript-eslint and eslint-plugin-react-hooks, Prettier |
 | types of node | @types/node, for development only |
 | package manager | npm |
@@ -213,11 +215,11 @@ rendered by markdown-it, which has been maintained since 2014.
 
 An xlsx file of the individuals is read with calamine and written with
 rust_xlsxwriter, and the report is zipped with the `zip` crate, all pure
-Rust. A CSV or TSV file of the individuals, and the inference of the types
-of the columns of either, are not in this module but in popnei's own wasm,
-asked of popnei (`docs/architecture.md`, section 6), so that what follows
-holds: a user whose file is a CSV never downloads this module. The JavaScript side stays thin, and Python reads the files in the
-same way (`docs/functionality.md`, open point 2).
+Rust, in a small crate of this repository, `crates/files/`, which is not
+part of popnei (`docs/architecture.md`, section 6). A CSV or TSV file of
+the individuals, and the inference of the types of the columns of either,
+are not in this module but in TypeScript of ours (below), so that a user
+whose file is a CSV never downloads it.
 
 They were measured on 24 September 2026, in a crate of trial that read an
 xlsx with calamine 0.36.1, wrote one with rust_xlsxwriter 0.99.1 and
@@ -246,8 +248,35 @@ runs. So they are a second wasm module, apart from the wasm package of
 popnei, which the application loads the first time it is asked to read an
 xlsx or to write the report, and which the browser keeps after that. A
 user whose file is a CSV never downloads it. The owner decided it on 24
-September 2026. It is a change to how popnei builds its wasm, which
-popnei's `architecture.md` has to take in.
+September 2026, and decided the same day that the module is popnei_web's
+own crate and not a module built and released beside popnei, because
+reading and writing these files is not popnei's business.
+
+The crate is built by the site's own build: `cargo build --target
+wasm32-unknown-unknown --release`, then `wasm-bindgen --target web` into
+`crates/files/pkg/`, which the light worker imports and git ignores
+(`.claude/skills/coding/configs.md`, the script `build:files`). What that
+costs:
+
+- **Rust on every machine that builds the site**, the owner's, a
+  contributor's and the continuous integration's: a toolchain with the
+  target `wasm32-unknown-unknown`, named in `rust-toolchain.toml` at the
+  root of the repository, and `wasm-bindgen-cli` at the exact version of
+  the `wasm-bindgen` crate, since the two refuse to work together when
+  their versions differ. The crate pins `wasm-bindgen = "=0.2.128"`, the
+  version popnei pins, so that one command line installed builds both.
+- **Time in the continuous integration**: installing the toolchain and
+  `wasm-bindgen-cli`, which `cargo install` compiles, and a release build
+  of the crate with LTO before every build of the site. Neither has been
+  measured; both are cached between runs (`.claude/skills/coding/testing.md`).
+- **A crate to keep**: a few hundred lines around the three libraries, an
+  estimate, with its own tests, `cargo test`, and upgrades of calamine,
+  rust_xlsxwriter and zip as commits of their own.
+
+Its output is not committed. A wasm file in git is a binary that a review
+cannot tell was built from the source beside it, and it changes with
+every commit that touches the crate; the option not taken, committing it,
+would have let a machine without Rust build the site.
 
 Considered and not taken:
 
@@ -259,12 +288,44 @@ Considered and not taken:
   of about 10 KB, and the XML parser of the browser. Small, but the reader
   of xlsx would be ours to write and keep, with its hard cases, shared
   strings, the cells that a sparse row leaves out, dates kept as numbers
-  with a format, the date system of 1904; and Python, reading with pandas
-  and openpyxl, could read a file differently.
+  with a format, the date system of 1904, which calamine already handles.
 - **SheetJS**, for years the library of JavaScript for xlsx. Its
   maintainers left npm in 2023: the npm version stays at 0.18.5, with
   known vulnerabilities, and the newer ones come only from their own
   server. **ExcelJS**, the other one, has had few releases since 2023.
+- **The module in popnei's workspace, released beside popnei's package**,
+  which the approved architecture had until 24 September 2026. The site
+  would have needed no Rust, since it would have installed the module
+  from a release as it does popnei (section 5); but a release of popnei
+  would carry a package of the applications, and a change to how they
+  read an xlsx would wait for a tag of popnei. The owner decided against
+  it that day.
+
+### CSV and TSV in TypeScript
+
+A CSV or TSV file of the individuals is read by code of ours in
+TypeScript, in the light worker, and the types of its columns, and of an
+xlsx's, are inferred by the same code, as the owner decided on 24
+September 2026 (`docs/architecture.md`, section 6): reading these files is
+not popnei's business, so nothing of it is asked of popnei. What the
+reader has to do is in section 4 of `docs/functionality.md`: detect the
+separator, `,`, `;` or a tab, accept decimals with a comma, remove a BOM,
+read an empty cell, `NA` and `-` as missing. It is pure code with no
+dependency, a few hundred lines with the inference, an estimate, and it is
+tested with Vitest in node.
+
+Considered and not taken:
+
+- **The reader in popnei's core and its wasm**, which the approved
+  architecture had until that day, so that Python would read the files
+  with the same code. The Python script of the report reads the file with
+  pandas instead, every column as text and converted as the types of the
+  project say (`docs/architecture.md`, section 8).
+- **Papa Parse**, the established parser of CSV in JavaScript, which
+  detects the separator and reads quoted fields. The decimal commas, the
+  missing values and the inference of the types, which are most of the
+  work, would still be ours, and it would be a dependency for the
+  smallest part of it.
 
 ### Tests, lint, format, packages
 
@@ -302,13 +363,16 @@ browser (`.claude/skills/coding/testing.md`).
 ```
 src/core/      plain TypeScript: the project, the keys of the results,
                undo, the project file. No React, no DOM.
-src/worker/    the web workers: the wasm package of popnei, the messages
+src/worker/    the web workers: the wasm package of popnei in the
+               calculation worker, the reader of CSV and TSV, the messages
                to the workers and from them, in src/worker/protocol.ts
                and src/worker/messages.ts, and the page's side of them.
 src/charts/    D3 and three.js. Each plot is a function that takes an
                element and the data and returns a handle to update or
                remove it. No React.
 src/ui/        React: the screens and the widgets, reading src/core.
+crates/files/  Rust: the files wasm, xlsx read and written and the zip,
+               called only by the light worker.
 docs/          these documents, and the Markdown of the help.
 ```
 
@@ -325,8 +389,8 @@ tested most.
 - **The step of an application is in the URL hash**, `popgen.html#analyses`,
   so that the back button of the browser moves between steps.
 - **The host is GitHub Pages**, decided by the owner on 24 September
-  2026, deployed by a GitHub Actions workflow that builds the site with
-  Vite and publishes the `dist/` folder. Its limits, 1 GB for a site and a
+  2026, deployed by a GitHub Actions workflow that builds the files crate
+  with Rust, then the site with Vite, and publishes the `dist/` folder. Its limits, 1 GB for a site and a
   soft 100 GB a month of traffic, are far above what the applications,
   the wasm package and the example datasets need.
 - **GitHub Pages cannot set HTTP headers, and threads in wasm need two.**
@@ -356,8 +420,11 @@ directly. It is in a folder of the repository, `js/popnei`, and npm
 installs from git only a package at the root of a repository; and its
 built files, `dist/` from TypeScript and `wasm/` from cargo and
 wasm-bindgen, are not in git, so an install from git would have to build
-them, with Rust, the wasm target and wasm-bindgen on every machine,
-the continuous integration of the site included.
+them. The site needs Rust anyway, for its own files crate (section 2), so
+the toolchain is no longer what a release spares; what it spares is a
+checkout and a release build of the whole of popnei in every build of the
+site, and it means that what the site runs is a popnei that was tagged
+and built by popnei's own workflow, with its hash in the lockfile.
 
 So the package is taken from a GitHub Release of popnei:
 
@@ -400,8 +467,8 @@ worker, is in `.claude/skills/coding/typescript.md`, `css.md` and
 1. Whether calamine reads right the xlsx files that users make, dates,
    sparse rows and Excel in other languages included, on a set of
    test files kept in the repository.
-2. How the second wasm module is built and published beside the wasm
-   package of popnei: a crate of its own in the workspace of popnei, and
-   whether it goes in the same release.
+2. How the second wasm module is built and published. Settled by the
+   owner on 24 September 2026: it is a crate of this repository,
+   `crates/files/`, built by the site's own build (section 2).
 3. The threshold and the method of thinning the points of the Manhattan
    plot.

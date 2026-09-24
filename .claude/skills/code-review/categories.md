@@ -78,10 +78,13 @@ does not go through the key.
 - For each analysis, list what its `run`, `needs`, `warnings` and
   `script` read from the project, and compare with what `keyInputs`
   returns. An input that is read and is not in the key is a finding: the
-  result of before the change stays on screen. The identity of the
-  variant file, the filters before it, the individuals and the grouping
-  it uses, its options and the version of popnei are in every key the
-  architecture describes.
+  result of before the change stays on screen. The load of the variant
+  file, its file id and its read options, the filters before it, the
+  individuals and the grouping it uses, its options and the version of
+  popnei are in every key the architecture describes; the name, the size
+  or anything else read from the file in place of the file id is a
+  finding, since a file picked again would show the results of the
+  earlier load.
 - The canonical form of `keys.ts`, against the rules of "Keys" in
   `.claude/skills/coding/SKILL.md`: two projects that differ in an input
   give two keys, and two that are the same give one. Try `0.05` against
@@ -168,7 +171,13 @@ finding: a name you would choose differently that says the same.
   when they are large, unless the worker keeps them in its cache, when
   they are copied (`.claude/skills/coding/worker.md`).
 - The files wasm is loaded by the light worker, when it is first needed, and
-  from nowhere else.
+  from nowhere else; popnei is imported by the calculation worker's runner
+  alone, never by the light worker or the reader of
+  `src/worker/individuals/`.
+- `crates/files/`: no `unsafe`, no `unwrap`, `expect` or indexing outside
+  the tests, and every exported function returns a `Result` whose error
+  becomes a JavaScript `Error`, as "The files crate" of the `coding`
+  skill says. A panic there is a trap that ends the light worker.
 - Adding an analysis added its module and its panel and changed nothing
   else, as section 4 says; a change outside is a finding or a reason
   the plan gave.
@@ -344,7 +353,8 @@ and `worker.md` where they say what is loaded when.
   for the file that each page loads first and for each lazy chunk.
 - What is loaded when: the files wasm is fetched only when an xlsx is
   read or the report is written, so a run with a CSV makes no request
-  for it; check it with the requests logged by Playwright. The same for
+  for it, and the light worker never requests popnei's wasm; check it
+  with the requests logged by Playwright. The same for
   any chunk the `coding` skill says is loaded lazily.
 - An import that pulls a whole library where a part is used, when the
   build shows it in the size.
