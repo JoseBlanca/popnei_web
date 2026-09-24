@@ -258,6 +258,33 @@ Under way.
   last digit found. Twelve breaks, each failing 1 to 10 tests. The
   numbers of a result are computed once, when it arrives, and kept with
   it in the cache.
+- Task 4.5, c6e3df8: the five properties of the store, over sequences
+  of up to 40 commands and events drawn by fast-check, with a model of
+  the requests in flight beside the store. On a scratch store that
+  showed the result of the last key an analysis had, the first property
+  failed after 1 run and shrank 12 times to: run the populations, the
+  run ends, the column of the populations changed; the populations
+  were shown done with the result of the old column. The store was
+  restored. A store that cancelled nothing at `dismissNotice`, or at a
+  run, failed properties 4 and 5; one that cancelled a calculation
+  whose key an undo gave back passed 100 runs, so properties 4 and 5
+  run 1,000 times, where it failed 5 tries in 5. The sequences are drawn
+  at their full length, since at the default most had under 5 steps and
+  no notice. All five held at 2,000 runs, in 2.5 s.
+
+The deliverables, checked by the orchestrator on c6e3df8, where the
+checks exit 0 and `npm test` gives "Tests 601 passed (601)":
+
+1. `npx vitest run src/core/store.test.ts -t "WP4 D1"`: "Tests 19
+   passed", of at least 7.
+2. `npx vitest run src/core/store.test.ts -t "WP4 D2"`: "Tests 16
+   passed", of at least 10.
+3. `npx vitest run src/core/store.test.ts -t "WP4 D3"`: "Tests 20
+   passed", of at least 16.
+4. `npx vitest run src/core/store.test.ts -t "WP4 D4"`: "Tests 12
+   passed", of at least 7.
+5. `npx vitest run src/core/store.test.ts -t "WP4 D5"`: "Tests 5
+   passed", the five properties.
 
 ## 2. The keys
 

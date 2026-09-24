@@ -396,7 +396,7 @@ order.
 - [x] 4.4 The comparison with the check numbers in the state `done`, from
   the store spec's "The comparison with the check numbers". Serves 4.
   Needs 4.2.
-- [ ] 4.5 The property tests of the store, in a commit of their own: a
+- [x] 4.5 The property tests of the store, in a commit of their own: a
   result shown under a key the project does not give, or a calculation
   left behind that is never stopped, would show on no screen. Deliverable
   5 guards it; the first property is shown to fail, once, on a scratch
