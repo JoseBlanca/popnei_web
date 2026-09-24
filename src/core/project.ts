@@ -1203,22 +1203,21 @@ export function projectNeeds(p: Project): string | null {
   if (variants === null) {
     return LOAD_VARIANTS;
   }
+  const fileName = escaped(variants.name);
   const read = variants.read;
   switch (read.kind) {
     case "pending":
-      return `Reading ${variants.name}.`;
+      return `Reading ${fileName}.`;
     case "failed":
       return read.error.kind === "popnei"
-        ? `popnei could not read ${variants.name}: ${withoutFullStop(read.error.message)}. ${LOAD_VARIANTS}`
-        : `${variants.name} could not be read: ${WHAT_HAPPENED[read.error.error.kind]}. ${RELOAD}`;
+        ? `popnei could not read ${fileName}: ${withoutFullStop(read.error.message)}. ${LOAD_VARIANTS}`
+        : `${fileName} could not be read: ${WHAT_HAPPENED[read.error.error.kind]}. ${RELOAD}`;
     case "read": {
       const inVariants = new Set(read.individuals);
       for (const kind of LIST_KINDS) {
         const list = listOf(p.individualFilters, kind);
         const reason =
-          list === null
-            ? null
-            : listNeeds(kind, list, variants.name, inVariants);
+          list === null ? null : listNeeds(kind, list, fileName, inVariants);
         if (reason !== null) {
           return reason;
         }
@@ -1286,7 +1285,7 @@ export function individualsNeeds(p: Project): string | null {
   if (individuals === null) {
     return LOAD_INDIVIDUALS;
   }
-  const name = individuals.name;
+  const name = escaped(individuals.name);
   const read = individuals.read;
   switch (read.kind) {
     case "pending":
@@ -1308,8 +1307,8 @@ export function individualsNeeds(p: Project): string | null {
         return null;
       }
       return missing.length === 1
-        ? `1 individual of ${variants.name} is not in ${name}: ${namesOf(missing)}. Add it to the file and load the file again in the Individuals step.`
-        : `${counted(missing.length, "individual")} of ${variants.name} are not in ${name}: ${namesOf(missing)}. Add them to the file and load it again in the Individuals step.`;
+        ? `1 individual of ${escaped(variants.name)} is not in ${name}: ${namesOf(missing)}. Add it to the file and load the file again in the Individuals step.`
+        : `${counted(missing.length, "individual")} of ${escaped(variants.name)} are not in ${name}: ${namesOf(missing)}. Add them to the file and load it again in the Individuals step.`;
     }
   }
 }
@@ -2732,13 +2731,52 @@ function twoOfAKind(
 /** The longest a value of the file is shown, in characters. */
 const SHOWN_LENGTH = 40;
 
-/** A value of the file as a text shows it: its control characters
-    escaped, as JSON writes them, and cut at SHOWN_LENGTH characters. */
+/** A value of the file as a text shows it: escaped, and cut after
+    SHOWN_LENGTH of its characters, never inside an escape. */
 function shown(value: string): string {
-  const characters = Array.from(JSON.stringify(value).slice(1, -1));
+  const characters = escapedCharacters(value);
   return characters.length > SHOWN_LENGTH
     ? `${characters.slice(0, SHOWN_LENGTH).join("")}…`
     : characters.join("");
+}
+
+/** A value of the user's files, the name of a file among them, escaped
+    and not cut. */
+function escaped(value: string): string {
+  return escapedCharacters(value).join("");
+}
+
+/** The characters that could change the text around them: the control
+    and format characters, U+202E that reverses the direction of the text
+    among them, and half of a pair that encodes one character, alone. */
+const HIDDEN = /^[\p{Cc}\p{Cf}\p{Cs}]$/u;
+
+/** The escapes of the commonest control characters. */
+const NAMED_ESCAPES: ReadonlyMap<string, string> = new Map([
+  ["\n", "\\n"],
+  ["\t", "\\t"],
+  ["\r", "\\r"],
+]);
+
+/** The characters of a value, each as a text shows it: a hidden one
+    escaped, `\n`, `‮`, `\u{e0001}`, and any other as it is, a
+    quote and a backslash among them. */
+function escapedCharacters(value: string): string[] {
+  return Array.from(value, (character) => {
+    if (!HIDDEN.test(character)) {
+      return character;
+    }
+    const named = NAMED_ESCAPES.get(character);
+    if (named !== undefined) {
+      return named;
+    }
+    const code = character.codePointAt(0);
+    if (code === undefined) {
+      throw defect("a character of a value has no code.");
+    }
+    const hex = code.toString(16);
+    return code > 0xffff ? `\\u{${hex}}` : `\\u${hex.padStart(4, "0")}`;
+  });
 }
 
 /** A position of a list, 0 the first, as an ordinal: "first", "11th".

@@ -1570,6 +1570,77 @@ describe("WP1 D4 the records and the needs", () => {
     });
   });
 
+  describe("how names are shown", () => {
+    /** The names of a list of individuals to keep, none in the variants,
+        as the reason of projectNeeds shows them. */
+    function namesShown(...names: readonly string[]): string {
+      const reason =
+        projectNeeds(withLists([{ kind: "keep", individuals: names }])) ?? "";
+      return reason.slice(reason.indexOf(": ") + 2, reason.indexOf(". Change"));
+    }
+
+    test.each([
+      ["a quote", 'ind "7"', 'ind "7"'],
+      ["a backslash", "ind\\7", "ind\\7"],
+      ["a new line", "ind\n7", "ind\\n7"],
+      ["a tab", "ind\t7", "ind\\t7"],
+      ["a carriage return", "ind\r7", "ind\\r7"],
+      ["a character of code 0", "ind\u00007", "ind\\u00007"],
+      ["a bell", "ind\u00077", "ind\\u00077"],
+      ["the delete character", "ind\u007f7", "ind\\u007f7"],
+      ["a mark that reverses the text, U+202E", "ind\u202e7", "ind\\u202e7"],
+      ["a mark of left to right, U+200E", "ind\u200e7", "ind\\u200e7"],
+      ["an isolate of the direction, U+2066", "ind\u20667", "ind\\u20667"],
+      ["a tag beyond four digits, U+E0001", "ind\u{e0001}7", "ind\\u{e0001}7"],
+      ["half of a pair, alone", "ind\ud8007", "ind\\ud8007"],
+      ["a letter beyond four digits", "ind\u{1d49c}7", "ind\u{1d49c}7"],
+      ["an accented letter", "índ_7", "índ_7"],
+    ])("a name with %s", (_what, name, text) => {
+      expect(namesShown(name)).toBe(text);
+    });
+
+    test("a name is cut after 40 of its characters, an escape counting as one", () => {
+      expect(namesShown(`${"a".repeat(39)}\nbbb`)).toBe(
+        `${"a".repeat(39)}\\n…`,
+      );
+      expect(namesShown(`${"a".repeat(38)}\u202ebbb`)).toBe(
+        `${"a".repeat(38)}\\u202eb…`,
+      );
+      expect(namesShown("a".repeat(40))).toBe("a".repeat(40));
+    });
+
+    test("the name of the variants file is escaped, and not cut", () => {
+      const p = pendingProject();
+      const name = `pa\nnel\u0007${"x".repeat(50)}.nei`;
+      if (p.variants === null) {
+        throw new Error(
+          "popnei_web defect: the test expected a variants file.",
+        );
+      }
+      expect(
+        projectNeeds(deepFreeze({ ...p, variants: { ...p.variants, name } })),
+      ).toBe(`Reading pa\\nnel\\u0007${"x".repeat(50)}.nei.`);
+    });
+
+    test("the name of the individuals file is escaped", () => {
+      const p = pendingProject();
+      expect(
+        individualsNeeds(
+          deepFreeze({
+            ...p,
+            individuals: { ...individualsOf(p), name: 'pops "\u202e".csv' },
+          }),
+        ),
+      ).toBe('Reading pops "\\u202e".csv.');
+    });
+
+    test("the id of an unknown analysis shows its quotes as they are", () => {
+      expect(
+        projectErrorText({ kind: "unknownAnalysis", id: 'div"x' }),
+      ).toContain('the analysis div"x, which');
+    });
+  });
+
   describe("individualsNeeds", () => {
     test("no individuals file", () => {
       expect(individualsNeeds(withoutIndividuals())).toBe(
@@ -2762,7 +2833,7 @@ describe("WP1 D5 the validation", () => {
       const id = "x".repeat(20) + "\n" + "y".repeat(280);
       const text = projectErrorText({ kind: "unknownAnalysis", id });
       expect(text).toBe(
-        `This project file has the analysis ${"x".repeat(20)}\\n${"y".repeat(18)}…, which this version of the application does not know: it was saved by another version of the application.`,
+        `This project file has the analysis ${"x".repeat(20)}\\n${"y".repeat(19)}…, which this version of the application does not know: it was saved by another version of the application.`,
       );
     });
 
