@@ -80,6 +80,68 @@ Under way.
   prototype, which `toStrictEqual` tells from what `JSON.parse` gives,
   so the generators ask for plain objects.
 
+The review of what was built of work package 1, all but `projectNeeds`
+and `individualsNeeds`, ran seven categories through four reviewers:
+spec with tests, stale with errors, api with architecture, and ux on the
+texts a user reads when a project file cannot be opened, 118 of them
+printed. The spec changed first, in 5982778; the fixes are 7160be3 to
+41ca214, each with tests that failed first. On 41ca214 the checks exit
+0 and `npm test` gives "Tests 431 passed (431)"; WP1 D2 gives 27, D3 89,
+D4 22 (the records alone), D5 111. What mattered:
+
+- A project file changed by hand with two columns of one name, or an
+  individual in two rows, was opened, and the application then crashed
+  when the user set the type of a column. `parseProject` now refuses
+  such tables, a table with no row or no column, an identifier that is
+  not a text, and roles that name a column twice; and a read of the
+  individuals file whose table fails these checks is recorded as failed,
+  so that a project never holds what its own saved file would refuse.
+- Four commands compared the value they were given, not their copy of
+  it, so a value with one field more looked different from the same
+  value: an undo step that did nothing, or a read of the individuals
+  file dropped and the file shown "Reading pops.csv." for ever.
+- `setAnalysisOptions` checked neither the analysis nor its options; it
+  now takes the analysis with the function that checks its options, as
+  `parseProject` does, and a typing mistake in the name of an analysis
+  is a defect at once instead of a file that later says it was saved by
+  another version.
+- A new kind of failure added to the protocol, as the reader of stage 2
+  may add, would have made the application refuse its own saved files,
+  with every check passing; the lists of kinds are now tied to the
+  types, and a new kind fails the compile.
+- Options nested 100,000 deep made the reading of a file overflow the
+  stack, and a binary column of 80,000 rows took 3.8 s to check; both
+  are bounded now.
+- The texts showed names of the code ("one of missing_data, maf,
+  obs_het, ld"), fields in no words (`the field "reason"`), and a limit
+  as 9007199254740991; one set of words now names each kind of filter,
+  and a property over every path `parseProject` can give refuses a text
+  with a name of the code, an underscore or a number above a million.
+- Nothing kept the code of the site from importing the helpers of the
+  tests, which would have brought fast-check into the page; the lint
+  refuses it now, in `eslint.config.js` and `configs.md`.
+- Tests that could not fail: a threshold of exactly 1 refused, the
+  options of a CSV compared on the separator alone, the order of the
+  fields of the canonical form by the language of the browser.
+
+Decided by the orchestrator, in the spec, since none changes what a
+user can do: `loadVariants` and `loadIndividuals` given the load id
+already there with other options throw a defect, where they returned
+the project unchanged and so kept the results of the old ploidy; a new
+read of a file needs a new load id. How the user changes the ploidy of
+a VCF already loaded is for the screen of stage 3 to say.
+
+Not taken: the parameters of the functions of an analysis's definition
+are checked loosely by TypeScript, so one analysis's result could be
+given to another's function with no error of the compiler; that is the
+store's, task 4.1. `recordVariantsCounted` records any number popnei
+gives; a count that is negative or not whole would come from popnei.
+
+Asked of the owner on 24 September 2026: whether the texts of a
+project file that cannot be opened end with what the user can do, since
+the spec's sentence "The file was changed outside the application, or is
+damaged." says only what happened.
+
 ## 2. The keys
 
 Done on 24 September 2026, and reviewed; the fixes are 9a567f5 to
