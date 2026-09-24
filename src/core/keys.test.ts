@@ -10,13 +10,19 @@ import {
   settingsFingerprint,
   sha256Hex,
 } from "./keys.ts";
-import type { JsonObject, JsonValue, KeyedDef } from "./keys.ts";
-import type { Project } from "./project.ts";
+import type { JsonObject, JsonValue, KeyMemo, KeyedDef } from "./keys.ts";
+import type { Project, VariantSource } from "./project.ts";
 import {
   SAMPLE_VARIANTS_ID,
+  anyLoadId,
   deepFreeze,
+  individualFilters,
   jsonValue,
+  keyedDef,
+  projectWithVariants,
   sampleProject,
+  variantFilters,
+  variantSource,
 } from "./testSupport.ts";
 
 /** The same value with the fields of every object set in another order,
@@ -491,5 +497,298 @@ describe("WP2 D2 the key", () => {
     expect(keyOf(DIVERSITY, p, "0.1.0", memo)).toBe(LITERAL_KEY);
     expect(keyOf(DIVERSITY, p, "0.1.0", memo)).toBe(LITERAL_KEY);
     expect(keyOf(DIVERSITY, p, "0.1.0", createKeyMemo())).toBe(LITERAL_KEY);
+  });
+});
+
+/** Everything a key, an intermediate key and a fingerprint are made from. */
+interface Setting {
+  readonly def: KeyedDef;
+  readonly p: Project;
+  readonly popneiVersion: string;
+  /** The name of the intermediate result. */
+  readonly name: string;
+  /** What the intermediate result was made from beyond the file and the
+      filters. */
+  readonly intermediateInputs: JsonValue;
+}
+
+const setting: fc.Arbitrary<Setting> = fc.record({
+  def: keyedDef,
+  p: projectWithVariants,
+  popneiVersion: fc.string(),
+  name: fc.string(),
+  intermediateInputs: jsonValue({ withProto: true }),
+});
+
+/** Values to change a part of a setting to, drawn beside it. */
+interface Others {
+  readonly fileId: string;
+  readonly filters: Project["filters"];
+  readonly individualFilters: Project["individualFilters"];
+  readonly inputs: JsonValue;
+  /** An id of an analysis, a version of popnei or a name. */
+  readonly text: string;
+}
+
+const others: fc.Arbitrary<Others> = fc.record({
+  fileId: anyLoadId,
+  filters: variantFilters,
+  individualFilters,
+  inputs: jsonValue({ withProto: true }),
+  text: fc.string(),
+});
+
+type Part =
+  | "analysis"
+  | "keyVersion"
+  | "popneiVersion"
+  | "fileId"
+  | "readOptions"
+  | "filters"
+  | "individualFilters"
+  | "inputs"
+  | "name"
+  | "intermediateInputs";
+
+function variantsOf(p: Project): VariantSource {
+  if (p.variants === null) {
+    throw new Error("popnei_web defect: the generator draws a variants file.");
+  }
+  return p.variants;
+}
+
+function sameJson(a: unknown, b: unknown): boolean {
+  return canonical(a, null) === canonical(b, null);
+}
+
+/**
+ * The setting before and after a change of one part, the lists of filters
+ * read by the analysis when the part is one of them; or `null` when the
+ * value drawn to change it to is the one there.
+ */
+function changeOf(
+  part: Part,
+  s: Setting,
+  other: Others,
+): readonly [Setting, Setting] | null {
+  const variants = variantsOf(s.p);
+  const withVariants = (change: Partial<VariantSource>): Setting => ({
+    ...s,
+    p: { ...s.p, variants: { ...variants, ...change } },
+  });
+  switch (part) {
+    case "analysis":
+      return other.text === s.def.id
+        ? null
+        : [s, { ...s, def: { ...s.def, id: other.text } }];
+    case "keyVersion":
+      return [s, { ...s, def: { ...s.def, keyVersion: s.def.keyVersion + 1 } }];
+    case "popneiVersion":
+      return other.text === s.popneiVersion
+        ? null
+        : [s, { ...s, popneiVersion: other.text }];
+    case "fileId":
+      return other.fileId === variants.fileId
+        ? null
+        : [s, withVariants({ fileId: other.fileId })];
+    case "readOptions":
+      return [
+        s,
+        variants.readOptions === null
+          ? withVariants({
+              format: "vcf",
+              readOptions: { ploidy: 2, onlyPassed: false },
+            })
+          : withVariants({ format: "nei", readOptions: null }),
+      ];
+    case "filters": {
+      if (sameJson(other.filters, s.p.filters)) {
+        return null;
+      }
+      const reading: Setting = {
+        ...s,
+        def: {
+          ...s.def,
+          filtersRead: { ...s.def.filtersRead, variants: true },
+        },
+      };
+      return [reading, { ...reading, p: { ...s.p, filters: other.filters } }];
+    }
+    case "individualFilters": {
+      if (sameJson(other.individualFilters, s.p.individualFilters)) {
+        return null;
+      }
+      const reading: Setting = {
+        ...s,
+        def: {
+          ...s.def,
+          filtersRead: { ...s.def.filtersRead, individuals: true },
+        },
+      };
+      return [
+        reading,
+        {
+          ...reading,
+          p: { ...s.p, individualFilters: other.individualFilters },
+        },
+      ];
+    }
+    case "inputs":
+      return sameJson(other.inputs, s.def.keyInputs(s.p))
+        ? null
+        : [s, { ...s, def: { ...s.def, keyInputs: () => other.inputs } }];
+    case "name":
+      return other.text === s.name ? null : [s, { ...s, name: other.text }];
+    case "intermediateInputs":
+      return sameJson(other.inputs, s.intermediateInputs)
+        ? null
+        : [s, { ...s, intermediateInputs: other.inputs }];
+  }
+}
+
+/** The key of a setting with `memo`, checked equal to the key with a new
+    memo, so that a memo that has seen other projects changes nothing. */
+function keyWith(s: Setting, memo: KeyMemo): string {
+  const key = keyOf(s.def, s.p, s.popneiVersion, memo);
+  expect(keyOf(s.def, s.p, s.popneiVersion, createKeyMemo())).toBe(key);
+  return key;
+}
+
+function intermediateKeyWith(s: Setting, memo: KeyMemo): string {
+  return intermediateKeyOf(
+    s.def,
+    s.p,
+    s.popneiVersion,
+    s.name,
+    s.intermediateInputs,
+    memo,
+  );
+}
+
+function fingerprintOf(s: Setting, memo: KeyMemo | null): string {
+  return settingsFingerprint(s.def, s.p, variantsOf(s.p).readOptions, memo);
+}
+
+describe("WP2 D3 the properties of the keys", () => {
+  test.each<Part>([
+    "analysis",
+    "keyVersion",
+    "popneiVersion",
+    "fileId",
+    "readOptions",
+    "filters",
+    "individualFilters",
+    "inputs",
+  ])("a change of %s changes the key", (part) => {
+    fc.assert(
+      fc.property(setting, others, (s, other) => {
+        const change = changeOf(part, s, other);
+        fc.pre(change !== null);
+        const [before, after] = change;
+        const memo = createKeyMemo();
+        expect(keyWith(after, memo)).not.toBe(keyWith(before, memo));
+      }),
+    );
+  });
+
+  test("a change of the name, the size or the read of the variants file keeps the key", () => {
+    fc.assert(
+      fc.property(setting, variantSource, (s, source) => {
+        const variants = variantsOf(s.p);
+        const renamed: Setting = {
+          ...s,
+          p: {
+            ...s.p,
+            variants: {
+              ...variants,
+              name: source.name,
+              size: source.size,
+              read: source.read,
+            },
+          },
+        };
+        const memo = createKeyMemo();
+        expect(keyWith(renamed, memo)).toBe(keyWith(s, memo));
+      }),
+    );
+  });
+
+  test("the fingerprint keeps with the load id, the key version, the version of popnei and no variants file", () => {
+    fc.assert(
+      fc.property(setting, others, (s, other) => {
+        const expected = fingerprintOf(s, null);
+        for (const part of ["fileId", "keyVersion", "popneiVersion"] as const) {
+          const change = changeOf(part, s, other);
+          if (change !== null) {
+            expect(fingerprintOf(change[1], createKeyMemo())).toBe(expected);
+          }
+        }
+        const readOptions = variantsOf(s.p).readOptions;
+        expect(
+          settingsFingerprint(
+            s.def,
+            { ...s.p, variants: null },
+            readOptions,
+            null,
+          ),
+        ).toBe(expected);
+      }),
+    );
+  });
+
+  test.each<Part>(["filters", "individualFilters", "readOptions", "inputs"])(
+    "a change of %s changes the fingerprint",
+    (part) => {
+      fc.assert(
+        fc.property(setting, others, (s, other) => {
+          const change = changeOf(part, s, other);
+          fc.pre(change !== null);
+          const [before, after] = change;
+          const memo = createKeyMemo();
+          expect(fingerprintOf(after, memo)).not.toBe(
+            fingerprintOf(before, memo),
+          );
+          expect(fingerprintOf(before, null)).toBe(fingerprintOf(before, memo));
+        }),
+      );
+    },
+  );
+
+  test.each<Part>([
+    "name",
+    "intermediateInputs",
+    "fileId",
+    "readOptions",
+    "filters",
+    "individualFilters",
+    "popneiVersion",
+  ])("a change of %s changes the key of an intermediate result", (part) => {
+    fc.assert(
+      fc.property(setting, others, (s, other) => {
+        const change = changeOf(part, s, other);
+        fc.pre(change !== null);
+        const [before, after] = change;
+        const memo = createKeyMemo();
+        expect(intermediateKeyWith(after, memo)).not.toBe(
+          intermediateKeyWith(before, memo),
+        );
+      }),
+    );
+  });
+
+  test("the key of an intermediate result keeps with the analysis, its key version and its inputs, and is never the key", () => {
+    fc.assert(
+      fc.property(setting, others, (s, other) => {
+        const memo = createKeyMemo();
+        const expected = intermediateKeyWith(s, memo);
+        for (const part of ["analysis", "keyVersion", "inputs"] as const) {
+          const change = changeOf(part, s, other);
+          if (change !== null) {
+            expect(intermediateKeyWith(change[1], memo)).toBe(expected);
+          }
+        }
+        expect(expected).not.toBe(keyWith(s, memo));
+      }),
+    );
   });
 });

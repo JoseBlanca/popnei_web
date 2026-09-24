@@ -5,8 +5,9 @@
  */
 
 import * as fc from "fast-check";
-import type { JsonObject, JsonValue } from "./keys.ts";
+import type { JsonObject, JsonValue, KeyedDef } from "./keys.ts";
 import {
+  INDIVIDUAL_FILTER_ORDER,
   loadIndividuals,
   loadVariants,
   moveVariantFilter,
@@ -20,7 +21,7 @@ import {
   setIndividualFilter,
   setVariantFilter,
 } from "./project.ts";
-import type { Project } from "./project.ts";
+import type { Project, SourceRead, VariantSource } from "./project.ts";
 import type {
   ColumnType,
   CsvOptions,
@@ -415,3 +416,96 @@ function columnTypeFor(
         : { kind: "binary", one: second, zero: first };
   }
 }
+
+/** Any load id: 32 lower case hexadecimal digits. */
+export const anyLoadId: fc.Arbitrary<string> =
+  fc.stringMatching(/^[0-9a-f]{32}$/);
+
+/** Any list of filters of the variants, at most one of each kind, in any
+    order. */
+export const variantFilters: fc.Arbitrary<readonly VariantFilter[]> =
+  fc.uniqueArray(variantFilter, { selector: (f) => f.kind, maxLength: 4 });
+
+/** Any list of filters of the individuals, at most one of each kind, in
+    the fixed order of the project. */
+export const individualFilters: fc.Arbitrary<readonly IndividualFilter[]> = fc
+  .uniqueArray(individualFilter, { selector: (f) => f.kind, maxLength: 4 })
+  .map((filters) =>
+    filters.toSorted(
+      (a, b) =>
+        INDIVIDUAL_FILTER_ORDER.indexOf(a.kind) -
+        INDIVIDUAL_FILTER_ORDER.indexOf(b.kind),
+    ),
+  );
+
+/** Any state of the read of the variants file. */
+const sourceRead: fc.Arbitrary<SourceRead> = fc.oneof(
+  fc.constant<SourceRead>({ kind: "pending" }),
+  fc
+    .record({
+      ploidy: fc.integer({ min: 1, max: 255 }),
+      numVars: fc.option(fc.nat()),
+    })
+    .map(({ ploidy, numVars }): SourceRead => ({
+      kind: "read",
+      individuals: ["i1", "i2", "i3", "i4"],
+      ploidy,
+      numVars,
+    })),
+  fc.string().map((message): SourceRead => ({
+    kind: "failed",
+    error: { kind: "popnei", message },
+  })),
+);
+
+/** Any variants file: a `.nei`, or a VCF with its read options. */
+export const variantSource: fc.Arbitrary<VariantSource> = fc
+  .record({
+    fileId: anyLoadId,
+    name: fc.string(),
+    size: fc.nat(),
+    readOptions: fc.option(
+      fc.record({
+        ploidy: fc.integer({ min: 1, max: 255 }),
+        onlyPassed: fc.boolean(),
+      }),
+    ),
+    read: sourceRead,
+  })
+  .map((source): VariantSource => ({
+    ...source,
+    format: source.readOptions === null ? "nei" : "vcf",
+  }));
+
+/**
+ * A project of population genetics with any variants file and any
+ * filters of the variants and of the individuals; the rest is that of
+ * `sampleProject`. Frozen deeply.
+ */
+export const projectWithVariants: fc.Arbitrary<Project> = fc
+  .record({
+    variants: variantSource,
+    filters: variantFilters,
+    individualFilters,
+  })
+  .map((parts) => deepFreeze<Project>({ ...sampleProject(), ...parts }));
+
+/**
+ * Any definition of an analysis as the keys read it: any id, key version
+ * and lists of filters read, and a `keyInputs` that gives a JSON value
+ * drawn once.
+ */
+export const keyedDef: fc.Arbitrary<KeyedDef> = fc
+  .record({
+    id: fc.string(),
+    keyVersion: fc.nat(),
+    filtersRead: fc.record({
+      variants: fc.boolean(),
+      individuals: fc.boolean(),
+    }),
+    inputs: jsonValue({ withProto: true }),
+  })
+  .map(({ inputs, ...def }): KeyedDef => ({
+    ...def,
+    keyInputs: () => inputs,
+  }));
