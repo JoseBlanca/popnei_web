@@ -21,12 +21,27 @@ import {
   setIndividualFilter,
   setVariantFilter,
 } from "./project.ts";
-import type { Project, SourceRead, VariantSource } from "./project.ts";
 import type {
+  AppId,
+  Grouping,
+  IndividualsRead,
+  IndividualsSource,
+  ParsedAnalysis,
+  Project,
+  SourceRead,
+  VariantSource,
+} from "./project.ts";
+import type { Result } from "./result.ts";
+import type {
+  Cell,
   ColumnType,
+  CsvFound,
   CsvOptions,
   IndividualFilter,
   IndividualFilterKind,
+  IndividualsFileError,
+  IndividualsTable,
+  RunError,
   VariantFilter,
   VariantFilterKind,
 } from "../worker/protocol.ts";
@@ -194,6 +209,11 @@ export interface DrawnCommand {
   readonly bind: (p: Project) => ((p: Project) => Project) | null;
 }
 
+/** Asks `fc.record` for objects of `Object.prototype`, as JSON.parse
+    gives, and not of a null prototype, which strict equality tells
+    apart. */
+const PLAIN = { noNullPrototype: true } as const;
+
 const threshold = fc.double({ min: 0, max: 1, noNaN: true });
 
 const variantFilter: fc.Arbitrary<VariantFilter> = fc.oneof(
@@ -250,11 +270,14 @@ const individualFilterKind = fc.constantFrom<IndividualFilterKind>(
   "obs_het",
 );
 
-const csvOptions: fc.Arbitrary<CsvOptions> = fc.record({
-  encoding: fc.constantFrom("auto", "utf-8", "windows-1252"),
-  separator: fc.constantFrom("auto", ",", ";", "\t"),
-  decimal: fc.constantFrom("auto", ".", ","),
-});
+const csvOptions: fc.Arbitrary<CsvOptions> = fc.record(
+  {
+    encoding: fc.constantFrom("auto", "utf-8", "windows-1252"),
+    separator: fc.constantFrom("auto", ",", ";", "\t"),
+    decimal: fc.constantFrom("auto", ".", ","),
+  },
+  PLAIN,
+);
 
 /** A few load ids, so that a load sometimes repeats the one there. */
 const loadId = fc.constantFrom(
@@ -465,10 +488,13 @@ export const variantSource: fc.Arbitrary<VariantSource> = fc
     name: fc.string(),
     size: fc.nat(),
     readOptions: fc.option(
-      fc.record({
-        ploidy: fc.integer({ min: 1, max: 255 }),
-        onlyPassed: fc.boolean(),
-      }),
+      fc.record(
+        {
+          ploidy: fc.integer({ min: 1, max: 255 }),
+          onlyPassed: fc.boolean(),
+        },
+        PLAIN,
+      ),
     ),
     read: sourceRead,
   })
@@ -509,3 +535,306 @@ export const keyedDef: fc.Arbitrary<KeyedDef> = fc
     ...def,
     keyInputs: () => inputs,
   }));
+
+/** Any number a project file can hold: finite, and never −0, which JSON
+    writes as 0, so that a project reads back equal to itself. */
+const fileNumber = fc
+  .double({ noNaN: true, noDefaultInfinity: true })
+  .filter((n) => !Object.is(n, -0));
+
+/** Whether a JSON value holds a −0 anywhere. */
+function hasNegativeZero(value: JsonValue): boolean {
+  if (typeof value === "number") {
+    return Object.is(value, -0);
+  }
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+  const fields: readonly JsonValue[] = Array.isArray(value)
+    ? value
+    : Object.values(value);
+  return fields.some(hasNegativeZero);
+}
+
+/** Any options of an analysis a project file can hold. */
+const fileOptions: fc.Arbitrary<JsonObject> = jsonObject({
+  withProto: true,
+}).filter((options) => !hasNegativeZero(options));
+
+/** Any failure of a worker. */
+const runError: fc.Arbitrary<RunError> = fc.oneof(
+  fc.string().map((message): RunError => ({ kind: "popnei", message })),
+  fc.string().map((message): RunError => ({ kind: "files", message })),
+  fc.string().map((message): RunError => ({ kind: "workerFailed", message })),
+  fc.string().map((reason): RunError => ({ kind: "couldNotStart", reason })),
+  fc.constant<RunError>({ kind: "protocolMismatch" }),
+  fc.string().map((message): RunError => ({ kind: "defect", message })),
+);
+
+/** Any variants file, its read failed by a worker among the reads. */
+const anyVariantSource: fc.Arbitrary<VariantSource> = fc
+  .tuple(variantSource, fc.option(runError))
+  .map(([source, error]) =>
+    error === null
+      ? source
+      : {
+          ...source,
+          read: { kind: "failed", error: { kind: "worker", error } },
+        },
+  );
+
+/** Any value of a binary column. */
+const cellValue = fc.oneof(fc.string(), fileNumber, fc.boolean());
+
+/** Any cell of a table. */
+const cell: fc.Arbitrary<Cell> = fc.oneof(fc.constant(null), cellValue);
+
+type TypeKind = "binary" | "continuous" | "categorical";
+
+/** A column of `numRows` cells and a type valid for it; a binary column
+    has exactly two distinct values that are not missing. */
+function column(
+  kind: TypeKind | "identifier",
+  numRows: number,
+): fc.Arbitrary<{ type: ColumnType; cells: readonly Cell[] }> {
+  const cells = (from: fc.Arbitrary<Cell>, length: number) =>
+    fc.array(from, { minLength: length, maxLength: length });
+  switch (kind) {
+    case "identifier":
+      return cells(fc.string(), numRows).map((c) => ({
+        type: { kind },
+        cells: c,
+      }));
+    case "continuous":
+    case "categorical":
+      return cells(cell, numRows).map((c) => ({ type: { kind }, cells: c }));
+    case "binary":
+      return fc
+        .tuple(cellValue, cellValue, fc.boolean())
+        .filter(([a, b]) => a !== b)
+        .chain(([a, b, flip]) =>
+          cells(fc.constantFrom<Cell>(a, b, null), numRows - 2).map((rest) => ({
+            type: flip ? { kind, one: a, zero: b } : { kind, one: b, zero: a },
+            cells: [a, b, ...rest],
+          })),
+        );
+  }
+}
+
+/** Any table read of an individuals file, of two to five rows, with a
+    valid type for each of its columns. */
+const tableRead: fc.Arbitrary<{
+  table: IndividualsTable;
+  columns: readonly ColumnType[];
+}> = fc
+  .record({
+    numRows: fc.integer({ min: 2, max: 5 }),
+    kinds: fc.array(
+      fc.constantFrom<TypeKind>("binary", "continuous", "categorical"),
+      { maxLength: 3 },
+    ),
+  })
+  .chain(({ numRows, kinds }) =>
+    fc.tuple(
+      fc.uniqueArray(fc.string(), {
+        minLength: kinds.length + 1,
+        maxLength: kinds.length + 1,
+      }),
+      fc.tuple(
+        ...(["identifier", ...kinds] as const).map((kind) =>
+          column(kind, numRows),
+        ),
+      ),
+      fc.constant(numRows),
+    ),
+  )
+  .map(([header, cols, numRows]) => ({
+    table: {
+      columns: header,
+      rows: Array.from({ length: numRows }, (_, row) =>
+        cols.map((c) => c.cells[row] ?? null),
+      ),
+    },
+    columns: cols.map((c) => c.type),
+  }));
+
+const csvFound: fc.Arbitrary<CsvFound> = fc.record(
+  {
+    encoding: fc.constantFrom("utf-8", "windows-1252"),
+    separator: fc.constantFrom(",", ";", "\t"),
+    decimal: fc.constantFrom(".", ","),
+  },
+  PLAIN,
+);
+
+const individualsFileError: fc.Arbitrary<IndividualsFileError> = fc.oneof(
+  fc.constant<IndividualsFileError>({ kind: "empty" }),
+  fc.string().map((name): IndividualsFileError => ({
+    kind: "duplicateColumn",
+    name,
+  })),
+  fc.string().map((name): IndividualsFileError => ({
+    kind: "duplicateIndividual",
+    name,
+  })),
+  fc
+    .tuple(fc.nat(), fc.nat(), fc.nat())
+    .map(([line, expected, found]): IndividualsFileError => ({
+      kind: "raggedRow",
+      line,
+      expected,
+      found,
+    })),
+  fc.string().map((message): IndividualsFileError => ({
+    kind: "files",
+    message,
+  })),
+);
+
+/** Any read of the individuals file. */
+const individualsRead: fc.Arbitrary<IndividualsRead> = fc.oneof(
+  fc.constant<IndividualsRead>({ kind: "pending" }),
+  fc
+    .tuple(tableRead, fc.option(csvFound))
+    .map(([{ table, columns }, found]): IndividualsRead => ({
+      kind: "read",
+      table,
+      columns,
+      found,
+    })),
+  individualsFileError.map((error): IndividualsRead => ({
+    kind: "failed",
+    error,
+  })),
+  runError.map((error): IndividualsRead => ({
+    kind: "failed",
+    error: { kind: "worker", error },
+  })),
+);
+
+/** Any individuals file. */
+const individualsSource: fc.Arbitrary<IndividualsSource> = fc.record(
+  {
+    fileId: anyLoadId,
+    name: fc.string(),
+    csv: fc.option(csvOptions),
+    read: individualsRead,
+  },
+  PLAIN,
+);
+
+/** The analyses the generator of whole projects draws from, with a check
+    of their options that takes any JSON object. */
+export const TEST_ANALYSES: readonly ParsedAnalysis[] = [
+  "diversity",
+  "pca",
+  "gwas_lm",
+].map((id) => ({ id, parseOptions: jsonObjectOf }));
+
+/** The JSON object `value` is, rebuilt, or what it should be. */
+export function jsonObjectOf(value: unknown): Result<JsonObject, string> {
+  const json = jsonValueOf(value);
+  return json !== undefined &&
+    json !== null &&
+    typeof json === "object" &&
+    !Array.isArray(json)
+    ? { ok: true, value: jsonObjectFrom(json) }
+    : { ok: false, error: "a group of named fields" };
+}
+
+function jsonObjectFrom(value: JsonObject | readonly JsonValue[]): JsonObject {
+  return Object.fromEntries(Object.entries(value));
+}
+
+function jsonValueOf(value: unknown): JsonValue | undefined {
+  if (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "boolean"
+  ) {
+    return value;
+  }
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : undefined;
+  }
+  if (typeof value !== "object") {
+    return undefined;
+  }
+  const entries: [string, JsonValue][] = [];
+  for (const name of Object.keys(value)) {
+    const field = jsonValueOf(Reflect.get(value, name));
+    if (field === undefined) {
+      return undefined;
+    }
+    entries.push([name, field]);
+  }
+  if (Array.isArray(value)) {
+    return entries.map(([, field]) => field);
+  }
+  return Object.fromEntries(entries);
+}
+
+const role = fc.constantFrom("trait", "covariate", "ignored");
+
+/**
+ * Any valid project of either application: every part drawn, the reads
+ * of both files in each of their states, tables whose rows are as long as
+ * their header and whose binary columns have two values, the options of
+ * the analyses of `TEST_ANALYSES`, and a reference with its checks. Frozen
+ * deeply. Every number is one JSON writes back as itself.
+ */
+export const wholeProject: fc.Arbitrary<Project> = fc
+  .constantFrom<AppId>("popgen", "gwas")
+  .chain((app) =>
+    fc.record(
+      {
+        app: fc.constant(app),
+        variants: fc.option(anyVariantSource),
+        filters: variantFilters,
+        individualFilters,
+        individuals: fc.option(individualsSource),
+        grouping:
+          app === "popgen"
+            ? fc
+                .option(fc.string())
+                .map((column): Grouping => ({ kind: "populations", column }))
+            : fc
+                .array(fc.tuple(fc.string(), role))
+                .map((roles): Grouping => ({ kind: "roles", roles })),
+        analyses: fc.uniqueArray(
+          fc.record(
+            {
+              analysis: fc.constantFrom(...TEST_ANALYSES.map((a) => a.id)),
+              options: fileOptions,
+            },
+            PLAIN,
+          ),
+          { selector: (entry) => entry.analysis },
+        ),
+        reference: fc.option(
+          fc.record(
+            {
+              variants: anyVariantSource,
+              popneiVersion: fc.string(),
+              appVersion: fc.string(),
+              checks: fc.array(
+                fc.record(
+                  {
+                    analysis: fc.string(),
+                    numbers: fc.array(fc.option(fileNumber)),
+                    keyVersion: fc.nat(),
+                    settings: fc.stringMatching(/^[0-9a-f]{64}$/),
+                  },
+                  PLAIN,
+                ),
+                { maxLength: 3 },
+              ),
+            },
+            PLAIN,
+          ),
+        ),
+      },
+      PLAIN,
+    ),
+  )
+  .map((p) => deepFreeze<Project>(p));

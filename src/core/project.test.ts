@@ -1,6 +1,7 @@
 import * as fc from "fast-check";
 import { describe, expect, test } from "vitest";
 import { canonical } from "./keys.ts";
+import type { JsonObject } from "./keys.ts";
 import {
   INDIVIDUAL_FILTER_ORDER,
   analysisOptions,
@@ -9,6 +10,9 @@ import {
   loadIndividuals,
   loadVariants,
   moveVariantFilter,
+  ordinal,
+  parseProject,
+  projectErrorText,
   recordIndividualsRead,
   recordVariantsCounted,
   recordVariantsRead,
@@ -22,13 +26,24 @@ import {
   setIndividualFilter,
   setVariantFilter,
 } from "./project.ts";
-import type { IndividualsRead, Project, SourceRead } from "./project.ts";
+import type {
+  FieldPath,
+  IndividualsRead,
+  Project,
+  ProjectError,
+  SourceRead,
+} from "./project.ts";
+import type { Result } from "./result.ts";
+import type { ColumnType } from "../worker/protocol.ts";
 import {
   SAMPLE_INDIVIDUALS_ID,
   SAMPLE_VARIANTS_ID,
+  TEST_ANALYSES,
   deepFreeze,
   drawnCommand,
+  jsonObjectOf,
   sampleProject,
+  wholeProject,
 } from "./testSupport.ts";
 
 const NEW_ID = "0123456789abcdef0123456789abcdef";
@@ -940,5 +955,531 @@ describe("WP1 D4 the records and the needs", () => {
     const q = recordVariantsRead(p, NEW_ID, read);
     expect(q.variants?.read).toBe(read);
     expect(recordVariantsRead(deepFreeze(q), NEW_ID, VARIANTS_READ)).toBe(q);
+  });
+});
+
+/** The sample project with some of its parts replaced, as the data a
+    project file would give. */
+function fileWith(parts: Readonly<Record<string, unknown>>): unknown {
+  return { ...sampleProject(), ...parts };
+}
+
+/** The sample project's variants file with some of its fields replaced. */
+function variantsWith(fields: Readonly<Record<string, unknown>>): unknown {
+  return fileWith({ variants: { ...sampleProject().variants, ...fields } });
+}
+
+/** The sample project's table read with some of its fields replaced. */
+function readWith(fields: Readonly<Record<string, unknown>>): unknown {
+  const individuals = individualsOf(sampleProject());
+  return fileWith({
+    individuals: { ...individuals, read: { ...individuals.read, ...fields } },
+  });
+}
+
+const SAMPLE_TABLE = {
+  columns: ["id", "pop", "sex", "height"],
+  rows: [
+    ["i1", "P1", "1", "1.52"],
+    ["i2", "P1", "2", null],
+    ["i3", "P2", "1", "1.61"],
+    ["i4", "P2", "2", "1.70"],
+  ],
+};
+
+const SAMPLE_TYPES: readonly ColumnType[] = [
+  { kind: "identifier" },
+  { kind: "categorical" },
+  { kind: "binary", one: "2", zero: "1" },
+  { kind: "continuous" },
+];
+
+const REFERENCE = {
+  variants: sampleProject().variants,
+  popneiVersion: "0.1.0",
+  appVersion: "0.1.0",
+  checks: [
+    {
+      analysis: "diversity",
+      numbers: [0.5, null],
+      keyVersion: 1,
+      settings: "0123456789abcdef".repeat(4),
+    },
+  ],
+};
+
+function referenceWith(fields: Readonly<Record<string, unknown>>): unknown {
+  return fileWith({ reference: { ...REFERENCE, ...fields } });
+}
+
+function checkWith(fields: Readonly<Record<string, unknown>>): unknown {
+  return referenceWith({ checks: [{ ...REFERENCE.checks[0], ...fields }] });
+}
+
+function parse(data: unknown): Result<Project, ProjectError> {
+  return parseProject(data, "popgen", 1, TEST_ANALYSES);
+}
+
+function wrong(path: FieldPath, expected: string): unknown {
+  return { ok: false, error: { kind: "wrongValue", path, expected } };
+}
+
+function inconsistent(path: FieldPath): Partial<ProjectError> {
+  return { kind: "inconsistentTable", path };
+}
+
+/** The error of a result that the test expects to be one. */
+function errorOf(result: Result<Project, ProjectError>): ProjectError {
+  if (result.ok) {
+    throw new Error("popnei_web defect: the test expected an error.");
+  }
+  return result.error;
+}
+
+const READ_PATH = ["individuals", "read"] as const;
+
+describe("WP1 D5 the validation", () => {
+  test("reads the sample project back equal to itself", () => {
+    const p = sampleProject();
+    expect(parse(JSON.parse(JSON.stringify(p)))).toStrictEqual({
+      ok: true,
+      value: p,
+    });
+  });
+
+  describe("each check, with its kind and its path", () => {
+    test("a number that is not finite", () => {
+      expect(parse(variantsWith({ size: Number.POSITIVE_INFINITY }))).toEqual(
+        wrong(["variants", "size"], "a number"),
+      );
+    });
+
+    test.each([-0.1, 1.5])("a threshold of %d", (threshold) => {
+      expect(
+        parse(
+          fileWith({ filters: [{ kind: "maf", maxAllowedMaf: threshold }] }),
+        ),
+      ).toEqual(wrong(["filters", 0, "maxAllowedMaf"], "a number from 0 to 1"));
+    });
+
+    test("a threshold of a filter of the individuals above 1", () => {
+      expect(
+        parse(
+          fileWith({
+            individualFilters: [{ kind: "obs_het", maxAllowedObsHet: 1.01 }],
+          }),
+        ),
+      ).toEqual(
+        wrong(
+          ["individualFilters", 0, "maxAllowedObsHet"],
+          "a number from 0 to 1",
+        ),
+      );
+    });
+
+    test.each([0, 2.5, 2 ** 53])("a maxDist of %d", (maxDist) => {
+      expect(
+        errorOf(
+          parse(
+            fileWith({
+              filters: [{ kind: "ld", maxAllowedR2: 0.2, maxDist }],
+            }),
+          ),
+        ),
+      ).toMatchObject({
+        kind: "wrongValue",
+        path: ["filters", 0, "maxDist"],
+      });
+    });
+
+    test("a maxDist of 2^53 − 1 is accepted", () => {
+      const data = fileWith({
+        filters: [{ kind: "ld", maxAllowedR2: 0.2, maxDist: 2 ** 53 - 1 }],
+      });
+      expect(parse(data).ok).toBe(true);
+    });
+
+    test.each([0, 256])("a ploidy of %d in the read options", (ploidy) => {
+      expect(
+        errorOf(
+          parse(
+            variantsWith({
+              format: "vcf",
+              readOptions: { ploidy, onlyPassed: true },
+            }),
+          ),
+        ),
+      ).toMatchObject({
+        path: ["variants", "readOptions", "ploidy"],
+      });
+    });
+
+    test("a ploidy of 255 is accepted, and of 256 in the read refused", () => {
+      const ok = variantsWith({
+        format: "vcf",
+        readOptions: { ploidy: 255, onlyPassed: true },
+      });
+      expect(parse(ok).ok).toBe(true);
+      const read = { ...VARIANTS_READ, ploidy: 256 };
+      expect(errorOf(parse(variantsWith({ read })))).toMatchObject({
+        path: ["variants", "read", "ploidy"],
+      });
+    });
+
+    test("read options for a .nei", () => {
+      expect(
+        errorOf(
+          parse(variantsWith({ readOptions: { ploidy: 2, onlyPassed: true } })),
+        ),
+      ).toMatchObject({ path: ["variants", "readOptions"] });
+    });
+
+    test("no read options for a VCF", () => {
+      expect(errorOf(parse(variantsWith({ format: "vcf" })))).toMatchObject({
+        path: ["variants", "readOptions"],
+      });
+    });
+
+    test.each([
+      ["of the variants file in upper case", ["variants", "fileId"]],
+      ["of the individuals file of 31 digits", ["individuals", "fileId"]],
+    ] as const)("a load id %s", (_what, path) => {
+      const data =
+        path[0] === "variants"
+          ? variantsWith({ fileId: SAMPLE_VARIANTS_ID.toUpperCase() })
+          : fileWith({
+              individuals: {
+                ...individualsOf(sampleProject()),
+                fileId: SAMPLE_INDIVIDUALS_ID.slice(1),
+              },
+            });
+      expect(parse(data)).toEqual(
+        wrong(path, "32 lower case hexadecimal digits"),
+      );
+    });
+
+    test("two filters of the variants of one kind", () => {
+      const data = fileWith({
+        filters: [
+          { kind: "maf", maxAllowedMaf: 0.95 },
+          { kind: "maf", maxAllowedMaf: 0.9 },
+        ],
+      });
+      expect(parse(data)).toEqual({
+        ok: false,
+        error: {
+          kind: "twoFiltersOfAKind",
+          path: ["filters", 1],
+          filter: "maf",
+        },
+      });
+    });
+
+    test("two filters of the individuals of one kind", () => {
+      const data = fileWith({
+        individualFilters: [
+          { kind: "remove", individuals: ["i4"] },
+          { kind: "remove", individuals: ["i3"] },
+        ],
+      });
+      expect(parse(data)).toEqual({
+        ok: false,
+        error: {
+          kind: "twoFiltersOfAKind",
+          path: ["individualFilters", 1],
+          filter: "remove",
+        },
+      });
+    });
+
+    test("the filters of the individuals out of their order", () => {
+      const data = fileWith({
+        individualFilters: [
+          { kind: "missing_data", maxAllowedMissingRate: 0.2 },
+          { kind: "keep", individuals: ["i1"] },
+        ],
+      });
+      expect(errorOf(parse(data))).toMatchObject({
+        kind: "wrongValue",
+        path: ["individualFilters", 1],
+      });
+    });
+
+    test("a row not as long as the header", () => {
+      const rows = SAMPLE_TABLE.rows.with(1, ["i2", "P1", "2"]);
+      expect(
+        errorOf(parse(readWith({ table: { ...SAMPLE_TABLE, rows } }))),
+      ).toMatchObject(inconsistent([...READ_PATH, "table", "rows", 1]));
+    });
+
+    test("a type fewer than the columns", () => {
+      expect(
+        errorOf(parse(readWith({ columns: SAMPLE_TYPES.slice(0, 3) }))),
+      ).toMatchObject(inconsistent([...READ_PATH, "columns"]));
+    });
+
+    test("a first column that is not the identifier", () => {
+      const columns = SAMPLE_TYPES.with(0, { kind: "categorical" });
+      expect(errorOf(parse(readWith({ columns })))).toMatchObject(
+        inconsistent([...READ_PATH, "columns", 0]),
+      );
+    });
+
+    test("another column that is the identifier", () => {
+      const columns = SAMPLE_TYPES.with(3, { kind: "identifier" });
+      expect(errorOf(parse(readWith({ columns })))).toMatchObject(
+        inconsistent([...READ_PATH, "columns", 3]),
+      );
+    });
+
+    test.each([
+      ["values not of the column", "2", "3"],
+      ["one equal to zero", "1", "1"],
+      ["the number 1 where the column holds the text", 1, "2"],
+    ])("a binary type with %s", (_what, one, zero) => {
+      const columns = SAMPLE_TYPES.with(2, { kind: "binary", one, zero });
+      expect(errorOf(parse(readWith({ columns })))).toMatchObject(
+        inconsistent([...READ_PATH, "columns", 2]),
+      );
+    });
+
+    test("an analysis not of those given", () => {
+      const data = fileWith({
+        analyses: [{ analysis: "admixture", options: {} }],
+      });
+      expect(parse(data)).toEqual({
+        ok: false,
+        error: { kind: "unknownAnalysis", id: "admixture" },
+      });
+    });
+
+    test("an analysis named twice", () => {
+      const data = fileWith({
+        analyses: [
+          { analysis: "pca", options: {} },
+          { analysis: "pca", options: {} },
+        ],
+      });
+      expect(errorOf(parse(data))).toMatchObject({
+        kind: "wrongValue",
+        path: ["analyses", 1, "analysis"],
+      });
+    });
+
+    test("options the analysis refuses", () => {
+      const analyses = [
+        {
+          id: "pca",
+          parseOptions: (): Result<JsonObject, string> => ({
+            ok: false,
+            error: "a number of components from 1 to 10",
+          }),
+        },
+      ];
+      const data = fileWith({
+        analyses: [{ analysis: "pca", options: { numPrinComps: 0 } }],
+      });
+      expect(parseProject(data, "popgen", 1, analyses)).toEqual(
+        wrong(
+          ["analyses", 0, "options"],
+          "a number of components from 1 to 10",
+        ),
+      );
+    });
+
+    test("options read with the version of the format of the file", () => {
+      const versions: number[] = [];
+      const analyses = [
+        {
+          id: "pca",
+          parseOptions: (o: unknown, version: number) => {
+            versions.push(version);
+            return jsonObjectOf(o);
+          },
+        },
+      ];
+      const data = fileWith({ analyses: [{ analysis: "pca", options: {} }] });
+      expect(parseProject(data, "popgen", 3, analyses).ok).toBe(true);
+      expect(versions).toEqual([3]);
+    });
+
+    test("a file of the other application", () => {
+      expect(parse(fileWith({ app: "gwas" }))).toEqual({
+        ok: false,
+        error: { kind: "otherApp", found: "gwas" },
+      });
+    });
+
+    test("an application that is neither", () => {
+      expect(errorOf(parse(fileWith({ app: "admixture" })))).toMatchObject({
+        kind: "wrongValue",
+        path: ["app"],
+      });
+    });
+
+    test("a grouping of the other application", () => {
+      expect(
+        errorOf(parse(fileWith({ grouping: { kind: "roles", roles: [] } }))),
+      ).toMatchObject({
+        kind: "wrongValue",
+        path: ["grouping", "kind"],
+      });
+    });
+
+    test("a reference with no version of popnei", () => {
+      const data = fileWith({
+        reference: {
+          variants: REFERENCE.variants,
+          appVersion: "0.1.0",
+          checks: [],
+        },
+      });
+      expect(parse(data)).toEqual(
+        wrong(["reference", "popneiVersion"], "present"),
+      );
+    });
+
+    test("a reference whose version of the application is not a text", () => {
+      expect(parse(referenceWith({ appVersion: 1 }))).toEqual(
+        wrong(["reference", "appVersion"], "a text"),
+      );
+    });
+
+    test.each([1.5, -1])("a check with a key version of %d", (keyVersion) => {
+      expect(errorOf(parse(checkWith({ keyVersion })))).toMatchObject({
+        path: ["reference", "checks", 0, "keyVersion"],
+      });
+    });
+
+    test("a check whose fingerprint has 63 digits", () => {
+      const settings = "0123456789abcdef".repeat(4).slice(1);
+      expect(parse(checkWith({ settings }))).toEqual(
+        wrong(
+          ["reference", "checks", 0, "settings"],
+          "64 lower case hexadecimal digits",
+        ),
+      );
+    });
+
+    test("a reference with its checks is accepted", () => {
+      const data: unknown = JSON.parse(JSON.stringify(referenceWith({})));
+      expect(parse(data).ok).toBe(true);
+    });
+
+    test("a field the type does not have", () => {
+      const data = fileWith({
+        filters: [{ kind: "maf", maxAllowedMaf: 0.95, minAllowedMaf: 0.05 }],
+      });
+      expect(parse(data)).toEqual(
+        wrong(["filters", 0, "minAllowedMaf"], "no field of this name"),
+      );
+    });
+
+    test("a field named __proto__ the type does not have", () => {
+      const data: unknown = JSON.parse(
+        JSON.stringify(sampleProject()).replace(
+          '"app":"popgen"',
+          '"app":"popgen","__proto__":{}',
+        ),
+      );
+      expect(parse(data)).toEqual(
+        wrong(["__proto__"], "no field of this name"),
+      );
+    });
+
+    test("a field that is missing", () => {
+      const variants = Object.fromEntries(
+        Object.entries(sampleProject().variants ?? {}).filter(
+          ([name]) => name !== "name",
+        ),
+      );
+      expect(parse(fileWith({ variants }))).toEqual(
+        wrong(["variants", "name"], "present"),
+      );
+    });
+
+    test("a field of the wrong shape", () => {
+      expect(parse(fileWith({ filters: {} }))).toEqual(
+        wrong(["filters"], "a list"),
+      );
+    });
+  });
+
+  describe("the texts the user reads", () => {
+    test("of a file of the other application", () => {
+      expect(projectErrorText({ kind: "otherApp", found: "gwas" })).toBe(
+        "This project file is of the association application. Open it there.",
+      );
+    });
+
+    test("of an analysis this version does not know", () => {
+      expect(
+        projectErrorText({ kind: "unknownAnalysis", id: "admixture" }),
+      ).toBe(
+        "This project file has the analysis admixture, which this version of the application does not know: it was saved by another version of the application.",
+      );
+    });
+
+    test("of a field the type does not have", () => {
+      const result = parse(
+        fileWith({
+          filters: [{ kind: "maf", maxAllowedMaf: 0.95, minAllowedMaf: 0.05 }],
+        }),
+      );
+      if (result.ok) {
+        throw new Error("popnei_web defect: the test expected an error.");
+      }
+      expect(projectErrorText(result.error)).toBe(
+        'The project file cannot be opened: the field "minAllowedMaf" of the first filter of the variants should be no field of this name. The file was changed outside the application, or is damaged.',
+      );
+    });
+
+    test("of the threshold of the second filter of the variants", () => {
+      const text = projectErrorText({
+        kind: "wrongValue",
+        path: ["filters", 1, "maxAllowedMaf"],
+        expected: "a number from 0 to 1",
+      });
+      expect(text).toBe(
+        "The project file cannot be opened: the threshold of the second filter of the variants should be a number from 0 to 1. The file was changed outside the application, or is damaged.",
+      );
+      expect(text).not.toContain("filters");
+    });
+
+    test.each([
+      [0, "first"],
+      [9, "tenth"],
+      [10, "11th"],
+      [11, "12th"],
+      [12, "13th"],
+      [20, "21st"],
+      [21, "22nd"],
+      [22, "23rd"],
+      [110, "111th"],
+    ])("the position %d as the ordinal %s", (index, words) => {
+      expect(ordinal(index)).toBe(words);
+    });
+  });
+
+  test("an opened project file with a read pending is accepted", () => {
+    const p = pendingProject();
+    expect(parse(JSON.parse(JSON.stringify(p)))).toStrictEqual({
+      ok: true,
+      value: p,
+    });
+  });
+
+  test("every project reads back from its JSON equal to itself", () => {
+    fc.assert(
+      fc.property(wholeProject, (p) => {
+        const read = parseProject(
+          JSON.parse(JSON.stringify(p)),
+          p.app,
+          1,
+          TEST_ANALYSES,
+        );
+        expect(read).toStrictEqual({ ok: true, value: p });
+      }),
+    );
   });
 });
