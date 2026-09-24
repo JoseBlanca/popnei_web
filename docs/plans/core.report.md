@@ -173,16 +173,45 @@ checks exit 0 and `npm test` gives "Tests 479 passed (479)":
 5. `npx vitest run src/core/project.test.ts -t "WP1 D5"`: "Tests 111
    passed", of at least 25.
 
+The review of task 1.4 and of the new ending ran spec with tests, and
+ux with stale and errors, on 7e967cb. The spec changed first, in
+003b9b2; the fixes are e26fae4 to a29bf15, each with tests that failed
+first, and WP1 D4 gives 120 tests. What mattered:
+
+- A read of the individuals file that failed in a crash of the worker
+  stayed on the screen after the same read, asked again, succeeded:
+  with the options changed and set back, "pops.csv could not be read"
+  would have stayed. A read now replaces a failure of the worker, for
+  either file.
+- Names were shown with backslashes they do not have (`ind \"7\"`), cut
+  inside an escape, and a character that turns text right to left was
+  shown raw, which would have turned the rest of the sentence beside the
+  Run button; now only hidden characters are escaped, in names of
+  individuals, of columns and of files. An empty name gave "names
+  twice."; it is "an empty name" now.
+- A name written three times was said "twice"; it is "more than once"
+  now, a change of wording of the owner's provisional text, which the
+  spec records.
+- The writing skill advised, in an example, a filter of individuals that
+  would not unlock the analysis; the example is corrected.
+- Two tests could not fail: the individuals named in the order of the
+  file (every fixture was alphabetical) and four cases of the escaping
+  and the thousands.
+
+Asked of the owner on 24 September 2026: a crash of the calculation ends
+its text with "Reload the page and load it again.", and a reload loses
+the whole project; loading the file again in its step is enough.
+
 ## 4. The store
 
 Under way.
 
 - Task 4.1, after the spec in 1a6d1db: the state, `createStore`,
   `apply`, `undo`, `redo`, `open`, `popneiReady` and the two records,
-  and the states `locked` and `ready`. Its code is in 2099e5d, a commit
+  and the states `locked` and `ready`. Its code is in d2851f8, a commit
   of the fixes of the reasons of task 1.4: two subagents worked in the
   one tree at once, and the second's commit took in the first's staged
-  files; history was not rewritten. `npx vitest run
+  files; it was not split. `npx vitest run
   src/core/store.test.ts -t "WP4 D1"` gives "Tests 19 passed (19)", of
   at least 7, with the two things the reviews left for the store: every
   project it takes is frozen, and a read recorded into the history
