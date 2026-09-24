@@ -112,7 +112,43 @@ Vite's `?worker` import, `import ProbeWorker from "./probeWorker.ts?worker"`,
 the way `worker.md` says the applications will start theirs in
 `src/worker/start.ts`, a file of stage 2 that is not created here: trying
 that way of starting a worker is the point of the stage. The page listens
-to the worker's `error` event, which fires when the worker cannot start.
+to the worker's `error` event, which fires when the worker cannot start,
+and when the worker stops on an error nothing in it caught.
+
+What the page says, beyond the texts of "The cases":
+
+- **The file input** is labelled "Variant file" and described as "A .nei
+  file, or a VCF whose name ends in .vcf or .vcf.gz. A file with any other
+  name is read as a .nei file.", since the name alone chooses the reader.
+  It is disabled until popnei is loaded, and the text under it says why,
+  from where popnei is: "A file can be picked once popnei is loaded.",
+  "No file picked yet.", "No file can be opened, since popnei could not
+  be loaded.", "No file can be opened, since the probe's worker did not
+  start.", or, after a defect stopped the worker, "No more files can be
+  opened, since the probe's worker stopped. Reload the page." The input is
+  described by that text too, so that a user of the keyboard, who skips a
+  disabled input, still hears it. The served file's section says the same
+  in its own words: "It is opened once popnei is loaded.", "Not opened,
+  since popnei could not be loaded.", "Not opened, since the probe's
+  worker did not start."
+- **The result** is announced to a screen reader when it arrives, and
+  the texts that wait for popnei are not, since nobody asked for them.
+- **The times** have one decimal, "under 0.1 ms" below it, and say what
+  they cover: "popnei opened it in 1.8 ms, not counting the download" for
+  the served file, "not counting the reading from the disk" for the
+  user's.
+- **A refused file of the user** has, after popnei's message, which
+  reader the name chose: "It was read as a VCF because its name ends in
+  .vcf or .vcf.gz; any other name is read as a .nei file.", or "It was
+  read as a .nei file because its name does not end in .vcf or .vcf.gz."
+  A `.nei` file named `.vcf` is otherwise refused as "not a VCF" with
+  nothing to say why.
+- **A message that ends a sentence of the page**, popnei's, the
+  browser's or the worker's, gets the full stop the sentence needs; its
+  words are kept as they came, popnei's quotation of the first 16 bytes
+  of a file among them.
+- **Picking the same file again** opens it again: the page empties the
+  input after it sends the file, and each result names its file.
 
 **The worker**, when it starts, calls popnei's `init()`, which fetches and
 compiles popnei's wasm, and sends `ready` with popnei's version and how
@@ -123,7 +159,10 @@ long `init()` took. Then it answers two requests:
   site followed by the file's path, never an address that starts with `/`,
   which on GitHub Pages would leave out `/popnei_web/` (`worker.md`). It
   checks that the answer has status 200 before it gives the bytes to
-  popnei.
+  popnei. It fetches with `cache: "no-cache"`, which asks the server
+  whether its copy is still current: the file keeps its name from one
+  build to the next, and GitHub Pages lets a browser keep a copy for ten
+  minutes.
 - `openFile`: it reads the `File` the page posted, the handle the browser
   gives to a file the user picked, with `FileReaderSync.readAsArrayBuffer`,
   which reads a whole file and waits until it has it, and exists only in a
@@ -164,7 +203,12 @@ file, `e2e/fixtures/panel.nei`: 1200 variants, 200 individuals, ploidy 2,
 261,490 bytes (popnei 0.1.0 under node, 24 September 2026). The build
 serves it at `probe/panel.nei` through a copy, `public/probe/panel.nei`,
 which the script writes as well, since Vite serves what is in `public/`.
-All three files are committed, so neither the site nor its tests need a
+It also reads `e2e/fixtures/tetraploid.vcf.gz`, a copy of popnei's
+`tests/reference/dists/tetraploid.vcf.gz`, opens it with ploidy 4 and
+writes `e2e/fixtures/tetraploid.nei`: 200 variants, 12 individuals, ploidy
+4, 16,194 bytes (popnei 0.1.0 under node, 24 September 2026). Its numbers
+differ from the panel's, so a page that always showed the panel's fails
+the test that picks it. All these files are committed, so neither the site nor its tests need a
 checkout of popnei, and the script is run again only when popnei's format
 of vars files changes. `e2e/fixtures/bad.vcf` is a line of plain text, for
 the case of a file popnei refuses.
@@ -227,7 +271,11 @@ needs no action of the user.
   `new URL("popnei_bg.wasm", import.meta.url)`, and a wrong base path or a
   worker built in the wrong way gives an address with nothing there. The
   worker catches what `init()` throws and sends `failed` with stage
-  `init`; the page shows "popnei could not be loaded" with the message.
+  `init`; the page shows "popnei could not be loaded." with the message,
+  under the label "Message:", since it is popnei's or the browser's, and
+  "Reload the page. If popnei still does not load, report it at
+  https://github.com/JoseBlanca/popnei_web/issues, with the address and
+  the message above."
   popnei's loader names the address only when the server answered with an
   error status, so the page does not count on the message for it: the
   worker takes the address from the browser's list of what the worker
@@ -241,13 +289,28 @@ needs no action of the user.
   message always.
 - **The served file is not found**, a wrong address: the status is not
   200, and the worker sends `failed` with stage `open`, the source
-  `served` and the address, instead of giving popnei an HTML page to
-  read.
+  `served`, the address and "the server answered 404 Not Found", instead
+  of giving popnei an HTML page to read.
 - **The worker does not start**, a module worker in a browser that has
   none, or a syntax error in its bundle: the worker's `error` event. A
-  module worker that fails to load often gives an event with no message,
-  so the page shows "The calculation worker did not start", and the
-  browser's message after it only when there is one.
+  module worker that fails to load gives an event with no message, in
+  Chromium and WebKit on 24 September 2026, so the page shows "The
+  probe's worker did not start.", the browser's message after it only
+  when there is one, and the advice to reload and report. It is the
+  probe's worker, not the calculation worker of the applications.
+- **Every request of a file is answered.** Whatever the worker's code
+  throws while it opens a file, and not only what popnei throws, it
+  catches and sends as `failed` with stage `open`, the source and the
+  name, so that no section of the page waits on "Opening …" for an
+  answer that will not come.
+- **popnei traps**, a `WebAssembly.RuntimeError`, which a panic of
+  popnei's Rust becomes: after one, the memory of the wasm is not to be
+  trusted (`worker.md`), so the worker does not answer the request but
+  reports the error, with `reportError`, and closes itself. The page
+  receives it as the worker's `error` event after `ready`, and shows "A
+  defect of the probe: its worker stopped.", with the browser's message;
+  a file that was being opened shows "the probe's worker stopped before
+  it answered", and the file input is disabled, with its text saying so.
 - **A file popnei refuses**, the text in `bad.vcf`, a truncated gzip, a
   vars file of another version: `failed` with stage `open`, the source
   `file`, the name of the file and popnei's message, "the source is not a
@@ -277,9 +340,10 @@ needs no action of the user.
    message of another kind, one with a missing field and one with a field
    of the wrong type, and a `failed` with the fields of another stage, an
    `open` without its `source` and an `init` with one; the validator of
-   `ToProbe` accepts its two, and refuses the same three wrong ones. The
-   lint fails on a file of the probe's page that imports a function of
-   popnei.
+   `ToProbe` accepts its two, and refuses the same three wrong ones; and
+   the text of each way a message can be wrong. The lint fails on a file
+   of the probe's page that imports a function of popnei, statically or
+   with `import()`.
 2. **`e2e/probe.spec.ts`**, with Playwright, against the built site under
    its base path, in Chromium, Firefox and WebKit:
    - the page shows the version `0.1.0` and, for the served file, "200
@@ -287,8 +351,24 @@ needs no action of the user.
    - the file input given `e2e/fixtures/panel.nei` shows the same;
    - given `e2e/fixtures/panel.vcf.gz`, "200 individuals, ploidy 2
      (given: a VCF is opened as diploid)";
-   - given `e2e/fixtures/bad.vcf`, popnei's message, and the served
-     result stays on the page;
+   - given `e2e/fixtures/bad.vcf`, popnei's message and the reader its
+     name chose, and the served result stays on the page;
+   - given `e2e/fixtures/tetraploid.nei`, "12 individuals, ploidy 4";
+   - two files picked one after the other: only the second is shown;
+   - the answers in either order: the served file held back until
+     `bad.vcf` has been refused, then released; the served result
+     appears in its section and the refusal stays with `bad.vcf`;
+   - popnei's wasm answered 404, "popnei could not be loaded." and
+     popnei's message with the address; answered 200 with bytes that are
+     not wasm, "Address tried:" with the address;
+   - the worker's script answered 404, "The probe's worker did not
+     start." and no empty line after it;
+   - a request the worker does not know, posted from inside the page, and
+     a message the page does not know, posted from inside the worker: each
+     shows its defect, in an alert;
+   - a throw in the worker while it opens a file: the file's section shows
+     the failure; a `WebAssembly.RuntimeError` thrown there: the defect
+     of a stopped worker, and the file input disabled;
    - axe, the checker of accessibility that `testing.md` runs from
      Playwright, finds no violation of WCAG 2.2 at level AA, the standard
      of accessibility the applications keep to;
