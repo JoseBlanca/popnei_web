@@ -1,9 +1,23 @@
 import { createHash } from "node:crypto";
 import * as fc from "fast-check";
 import { describe, expect, test } from "vitest";
-import { canonical, createKeyMemo, sha256Hex } from "./keys.ts";
-import type { JsonObject, JsonValue } from "./keys.ts";
-import { jsonValue } from "./testSupport.ts";
+import {
+  canonical,
+  createKeyMemo,
+  intermediateKeyOf,
+  keyFromWire,
+  keyOf,
+  settingsFingerprint,
+  sha256Hex,
+} from "./keys.ts";
+import type { JsonObject, JsonValue, KeyedDef } from "./keys.ts";
+import type { Project } from "./project.ts";
+import {
+  SAMPLE_VARIANTS_ID,
+  deepFreeze,
+  jsonValue,
+  sampleProject,
+} from "./testSupport.ts";
 
 /** The same value with the fields of every object set in another order,
     the one `rank` gives them. */
@@ -267,5 +281,215 @@ describe("WP2 D1 the hash", () => {
     expect(sha256Hex(text)).toBe(
       "028eee05401b6428f0941fd2694cc6950836d008b50bb5ee2f4d2c559a0ccca8",
     );
+  });
+});
+
+/** The fake analysis of the keys spec's "`keyOf`, a literal". */
+const DIVERSITY: KeyedDef = {
+  id: "diversity",
+  keyVersion: 1,
+  filtersRead: { variants: true, individuals: true },
+  keyInputs: () => ({ pops: [["P1", ["i1", "i2"]]] }),
+};
+
+/** The project of the keys spec's literal: the `.nei` load
+    `SAMPLE_VARIANTS_ID`, the filter `missing_data` 0.1 and no filter of
+    the individuals. */
+function literalProject(): Project {
+  return deepFreeze<Project>({
+    ...sampleProject(),
+    filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.1 }],
+    individualFilters: [],
+  });
+}
+
+/** The same project with another threshold of `missing_data` for the
+    variants or for the individuals. */
+function withMissingRate(
+  p: Project,
+  list: "filters" | "individualFilters",
+  rate: number,
+): Project {
+  const filter = { kind: "missing_data", maxAllowedMissingRate: rate } as const;
+  return list === "filters"
+    ? { ...p, filters: [filter] }
+    : { ...p, individualFilters: [filter] };
+}
+
+/** An analysis that reads the table of the individuals file, as one that
+    uses the populations does. */
+const READS_TABLE: KeyedDef = {
+  ...DIVERSITY,
+  keyInputs: (p) =>
+    p.individuals?.read.kind === "read"
+      ? { rows: p.individuals.read.table.rows }
+      : null,
+};
+
+const LITERAL_KEY =
+  "f83b2cf03da1de50384cf8531ff810a6b95b71c667b4f784d35491d6e79cc85a";
+
+const LITERAL_FINGERPRINT =
+  "64925a3dfda1679f10a451a214cf7a91901dc6321c79883e7a4da7796bfdf9eb";
+
+describe("WP2 D2 the key", () => {
+  test("gives the literal key of the keys spec", () => {
+    const key = keyOf(DIVERSITY, literalProject(), "0.1.0", createKeyMemo());
+    expect(key).toBe(LITERAL_KEY);
+    expect(
+      sha256Hex(
+        '{"analysis":"diversity","filters":[{"kind":"missing_data","maxAllowedMissingRate":0.1}],"individualFilters":[],"inputs":{"pops":[["P1",["i1","i2"]]]},"keyVersion":1,"load":{"fileId":"00112233445566778899aabbccddeeff","readOptions":null},"popneiVersion":"0.1.0"}',
+      ),
+    ).toBe(LITERAL_KEY);
+  });
+
+  test("gives the literal fingerprint of the keys spec", () => {
+    const fingerprint = settingsFingerprint(
+      DIVERSITY,
+      literalProject(),
+      null,
+      null,
+    );
+    expect(fingerprint).toBe(LITERAL_FINGERPRINT);
+    expect(
+      sha256Hex(
+        '{"analysis":"diversity","filters":[{"kind":"missing_data","maxAllowedMissingRate":0.1}],"individualFilters":[],"inputs":{"pops":[["P1",["i1","i2"]]]},"readOptions":null}',
+      ),
+    ).toBe(LITERAL_FINGERPRINT);
+  });
+
+  test("gives the literal fingerprint with no variants file loaded, as when a project file is opened", () => {
+    const opened = { ...literalProject(), variants: null };
+    expect(settingsFingerprint(DIVERSITY, opened, null, createKeyMemo())).toBe(
+      LITERAL_FINGERPRINT,
+    );
+  });
+
+  test("writes the key of an intermediate result from the six fields of the keys spec", () => {
+    const expected = sha256Hex(
+      canonical(
+        {
+          intermediate: "the pruned variants",
+          inputs: { r2: 0.2 },
+          load: { fileId: SAMPLE_VARIANTS_ID, readOptions: null },
+          filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.1 }],
+          individualFilters: [],
+          popneiVersion: "0.1.0",
+        },
+        null,
+      ),
+    );
+    const key = intermediateKeyOf(
+      DIVERSITY,
+      literalProject(),
+      "0.1.0",
+      "the pruned variants",
+      { r2: 0.2 },
+      createKeyMemo(),
+    );
+    expect(key).toBe(expected);
+  });
+
+  test.each(["filters", "individualFilters"] as const)(
+    "changes the key with a threshold of the %s the analysis reads",
+    (list) => {
+      const memo = createKeyMemo();
+      const p = literalProject();
+      expect(
+        keyOf(DIVERSITY, withMissingRate(p, list, 0.3), "0.1.0", memo),
+      ).not.toBe(keyOf(DIVERSITY, p, "0.1.0", memo));
+    },
+  );
+
+  test.each([
+    ["filters", { variants: false, individuals: true }],
+    ["individualFilters", { variants: true, individuals: false }],
+  ] as const)(
+    "keeps the key with a threshold of the %s the analysis does not read",
+    (list, filtersRead) => {
+      const def = { ...DIVERSITY, filtersRead };
+      const memo = createKeyMemo();
+      const p = literalProject();
+      expect(keyOf(def, withMissingRate(p, list, 0.3), "0.1.0", memo)).toBe(
+        keyOf(def, p, "0.1.0", memo),
+      );
+    },
+  );
+
+  test("keyFromWire gives a key of 64 lower case hexadecimal digits", () => {
+    expect(keyFromWire(LITERAL_KEY)).toBe(LITERAL_KEY);
+  });
+
+  test.each([
+    ["63 digits", LITERAL_KEY.slice(1)],
+    ["an upper case digit", `F${LITERAL_KEY.slice(1)}`],
+    ["a g", `g${LITERAL_KEY.slice(1)}`],
+  ])("keyFromWire throws a defect on %s", (_what, text) => {
+    expect(() => keyFromWire(text)).toThrow(/^popnei_web defect: /);
+  });
+
+  test("keyOf throws a defect on a project with no variants file", () => {
+    const p = { ...literalProject(), variants: null };
+    expect(() => keyOf(DIVERSITY, p, "0.1.0", createKeyMemo())).toThrow(
+      /^popnei_web defect: /,
+    );
+  });
+
+  test("intermediateKeyOf throws a defect on a project with no variants file", () => {
+    const p = { ...literalProject(), variants: null };
+    expect(() =>
+      intermediateKeyOf(
+        DIVERSITY,
+        p,
+        "0.1.0",
+        "the pruned variants",
+        0.2,
+        createKeyMemo(),
+      ),
+    ).toThrow(/^popnei_web defect: /);
+  });
+
+  test("finds the key again when the individuals file is loaded again", () => {
+    const p = sampleProject();
+    const individuals = p.individuals;
+    if (individuals === null) {
+      throw new Error("popnei_web defect: the sample has an individuals file.");
+    }
+    const loadedAgain: Project = {
+      ...p,
+      individuals: {
+        ...individuals,
+        fileId: "0123456789abcdef0123456789abcdef",
+      },
+    };
+    const memo = createKeyMemo();
+    expect(keyOf(READS_TABLE, loadedAgain, "0.1.0", memo)).toBe(
+      keyOf(READS_TABLE, p, "0.1.0", memo),
+    );
+  });
+
+  test("gives another key when the variants file is loaded again", () => {
+    const p = sampleProject();
+    const variants = p.variants;
+    if (variants === null) {
+      throw new Error("popnei_web defect: the sample has a variants file.");
+    }
+    const loadedAgain: Project = {
+      ...p,
+      variants: { ...variants, fileId: "0123456789abcdef0123456789abcdef" },
+    };
+    const memo = createKeyMemo();
+    expect(keyOf(READS_TABLE, loadedAgain, "0.1.0", memo)).not.toBe(
+      keyOf(READS_TABLE, p, "0.1.0", memo),
+    );
+  });
+
+  test("gives the same key for a keyInputs that returns a new object each time", () => {
+    const p = literalProject();
+    expect(DIVERSITY.keyInputs(p)).not.toBe(DIVERSITY.keyInputs(p));
+    const memo = createKeyMemo();
+    expect(keyOf(DIVERSITY, p, "0.1.0", memo)).toBe(LITERAL_KEY);
+    expect(keyOf(DIVERSITY, p, "0.1.0", memo)).toBe(LITERAL_KEY);
+    expect(keyOf(DIVERSITY, p, "0.1.0", createKeyMemo())).toBe(LITERAL_KEY);
   });
 });

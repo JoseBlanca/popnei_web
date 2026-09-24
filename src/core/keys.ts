@@ -1,7 +1,12 @@
 /**
  * The keys of the results: the canonical form of a JSON value, its hash,
- * and the key of an analysis for a project (docs/specs/core/keys.md).
+ * the key of an analysis for a project, the key of an intermediate result
+ * of the calculation worker, and the fingerprint of the settings of an
+ * analysis (docs/specs/core/keys.md).
  */
+
+import type { Project, VariantSource } from "./project.ts";
+import type { AnalysisDef } from "./store.ts";
 
 /** A JSON value, which every part of a key and of the project is. */
 export type JsonValue =
@@ -308,4 +313,144 @@ function utf8Length(text: string): number {
     }
   }
   return numBytes;
+}
+
+/** What of the definition of an analysis the keys read. */
+export type KeyedDef = Pick<
+  AnalysisDef<unknown, unknown>,
+  "id" | "keyVersion" | "filtersRead" | "keyInputs"
+>;
+
+/**
+ * The key of an analysis for a project: the hash of the canonical form of
+ * the id of the analysis, its key version, the version of popnei, the load
+ * of the variants file, its load id and read options, the two lists of
+ * filters, each empty when the analysis does not read it, and what its
+ * `keyInputs` gives.
+ *
+ * Throws a defect when the project has no variants file, since the store
+ * makes a key only for an analysis that can run.
+ */
+export function keyOf(
+  def: KeyedDef,
+  p: Project,
+  popneiVersion: string,
+  memo: KeyMemo,
+): Key {
+  const text = canonical(
+    {
+      analysis: def.id,
+      keyVersion: def.keyVersion,
+      popneiVersion,
+      load: loadOf(p, "keyOf"),
+      ...filtersReadBy(def, p),
+      inputs: def.keyInputs(p),
+    },
+    memo,
+  );
+  return asKey(sha256Hex(text));
+}
+
+/**
+ * The key of an intermediate result of the calculation worker, "the
+ * pruned variants": the hash of the canonical form of its name, what it
+ * was made from beyond the file and the filters, the load of the variants
+ * file, the filters `def` reads and the version of popnei. It holds no id
+ * of an analysis, so two analyses that read the same filters share it.
+ *
+ * Throws a defect when the project has no variants file.
+ */
+export function intermediateKeyOf(
+  def: KeyedDef,
+  p: Project,
+  popneiVersion: string,
+  name: string,
+  inputs: JsonValue,
+  memo: KeyMemo,
+): string {
+  const text = canonical(
+    {
+      intermediate: name,
+      inputs,
+      load: loadOf(p, "intermediateKeyOf"),
+      ...filtersReadBy(def, p),
+      popneiVersion,
+    },
+    memo,
+  );
+  return sha256Hex(text);
+}
+
+/**
+ * The fingerprint of the settings of an analysis, which an opened project
+ * file keeps for each analysis: the hash of the canonical form of the key
+ * without the version of popnei, the key version and the load id, and
+ * with `readOptions` in place of the load. It names only what the user
+ * chose, and never coincides with a key, whose object has other fields.
+ *
+ * Reads nothing of `p.variants`, so it is made also when no variants file
+ * is loaded, as when a project file is opened.
+ */
+export function settingsFingerprint(
+  def: KeyedDef,
+  p: Project,
+  readOptions: VariantSource["readOptions"],
+  memo: KeyMemo | null,
+): string {
+  const text = canonical(
+    {
+      analysis: def.id,
+      ...filtersReadBy(def, p),
+      inputs: def.keyInputs(p),
+      readOptions,
+    },
+    memo,
+  );
+  return sha256Hex(text);
+}
+
+/**
+ * The key that came back from a worker with its result, a text on the
+ * wire. Throws a defect on a text that is not 64 lower case hexadecimal
+ * digits, since both sides are our code.
+ */
+export function keyFromWire(text: string): Key {
+  if (!/^[0-9a-f]{64}$/.test(text)) {
+    throw new Error(
+      `popnei_web defect: a worker sent back the key ${JSON.stringify(text)}, which is not 64 lower case hexadecimal digits.`,
+    );
+  }
+  return asKey(text);
+}
+
+/** A hash made here, or checked by `keyFromWire`, as a key. */
+function asKey(hash: string): Key {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- the one place a Key is made, from a hash of 64 digits (typescript.md, "Branded types").
+  return hash as Key;
+}
+
+/** The load of the variants file as a key holds it, its load id and its
+    read options, and nothing else of the file. */
+function loadOf(
+  p: Project,
+  caller: string,
+): { fileId: string; readOptions: VariantSource["readOptions"] } {
+  if (p.variants === null) {
+    throw new Error(
+      `popnei_web defect: ${caller} was given a project with no variants file; the store makes a key only for an analysis that can run.`,
+    );
+  }
+  return { fileId: p.variants.fileId, readOptions: p.variants.readOptions };
+}
+
+/** The two lists of filters of the project, each empty when `def` does
+    not read it. */
+function filtersReadBy(
+  def: KeyedDef,
+  p: Project,
+): Pick<Project, "filters" | "individualFilters"> {
+  return {
+    filters: def.filtersRead.variants ? p.filters : [],
+    individualFilters: def.filtersRead.individuals ? p.individualFilters : [],
+  };
 }
