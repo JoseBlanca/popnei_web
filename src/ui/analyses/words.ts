@@ -11,6 +11,7 @@
 import { counted, escaped, saying } from "../../core/project.ts";
 import type { Notice } from "../../core/store.ts";
 import type { Progress, RunError } from "../../worker/protocol.ts";
+import { capitalized, undoneOrRedone } from "../shell/words.ts";
 
 /** The seconds of a minute, and of an hour. */
 const MINUTE = 60;
@@ -74,26 +75,6 @@ export function runningText(line: RunningLine): string {
   return `Calculating · ${clock}`;
 }
 
-/** A sentence that starts with `words`, its first letter made upper
-    case. */
-function capitalized(words: string): string {
-  return `${words.charAt(0).toUpperCase()}${words.slice(1)}`;
-}
-
-/** How an undo or a redo starts the words of what it changed, "Undone:
-    the missing data filter changed."; `null` for a command, whose
-    description is the reason itself. */
-function undoneOrRedone(cause: Notice["cause"]): string | null {
-  switch (cause.kind) {
-    case "command":
-      return null;
-    case "undo":
-      return `Undone: ${cause.description}.`;
-    case "redo":
-      return `Redone: ${cause.description}.`;
-  }
-}
-
 /**
  * The words of a result removed, from the change of the notice that lists
  * it, as the shell's notice is, and what each button gives: after a
@@ -118,7 +99,7 @@ export function removedText(
     return `${capitalized(name)} was removed because ${cause.description}. Undo ${back}; Run calculates a new one for the new settings.`;
   }
   const action = cause.kind === "undo" ? "Redo" : "Undo";
-  return `${start} ${capitalized(name)} was removed; ${action} ${back}, and Run calculates a new one for the settings as they are now.`;
+  return `${start}. ${capitalized(name)} was removed; ${action} ${back}, and Run calculates a new one for the settings as they are now.`;
 }
 
 /** The line of a calculation stopped at once by a change of the load of
@@ -132,7 +113,7 @@ export function stoppedText(name: string, notice: Notice): string {
   const start = undoneOrRedone(cause);
   return start === null
     ? `The calculation of ${name} was stopped because ${cause.description}.`
-    : `${start} The calculation of ${name} was stopped.`;
+    : `${start}. The calculation of ${name} was stopped.`;
 }
 
 /** The count of the warnings of a result, on the heading above them: "1
