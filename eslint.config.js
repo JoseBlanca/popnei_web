@@ -63,6 +63,13 @@ const individualsReader = {
   group: ["**/worker/individuals/**"],
   message: "src/core does not import the reader; the light worker runs it.",
 };
+// individualsFile.ts decodes the bytes of a File and reads it by ranges,
+// for filesRunner.ts alone; the screens may still import the reader of
+// the text, src/worker/individuals/, for columnWarnings.
+const individualsFile = {
+  group: ["**/worker/individualsFile*"],
+  message: "Only src/worker/filesRunner.ts imports individualsFile.ts.",
+};
 // What the tests of core share, fast-check and Vitest belong to the tests.
 const testOnly = {
   group: ["**/testSupport*", "fast-check", "vitest", "vitest/*"],
@@ -460,7 +467,16 @@ export default defineConfig(
     rules: {
       "@typescript-eslint/no-restricted-imports": [
         "error",
-        { patterns: [runner, drawing, popneiValues, filesWasm, probe] },
+        {
+          patterns: [
+            runner,
+            individualsFile,
+            drawing,
+            popneiValues,
+            filesWasm,
+            probe,
+          ],
+        },
       ],
       "no-restricted-syntax": noPopneiImportCall,
     },
@@ -473,7 +489,15 @@ export default defineConfig(
       "@typescript-eslint/no-restricted-imports": [
         "error",
         {
-          patterns: [runner, drawing, popneiValues, filesWasm, probe, testOnly],
+          patterns: [
+            runner,
+            individualsFile,
+            drawing,
+            popneiValues,
+            filesWasm,
+            probe,
+            testOnly,
+          ],
         },
       ],
     },

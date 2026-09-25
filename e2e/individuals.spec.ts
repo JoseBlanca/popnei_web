@@ -519,3 +519,233 @@ test("WS8 D1 the keyboard goes through the step in the order of the spec", async
   await expect(fileButton(page)).toHaveText("Choose a metadata file…");
   await expect(fileButton(page)).toBeFocused();
 });
+
+/** What the page is given to hold the reads of the metadata file. */
+interface Holding {
+  /** Whether a read asked for now is held. */
+  holding: boolean;
+  /** Sends the reads held, and holds no more. */
+  releaseReads: () => void;
+}
+
+/** From now on, every read of the metadata file the page asks for is
+    held on its way to the light worker, whose script has already
+    started, until `releaseReads`. */
+async function holdReads(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const state = window as unknown as Partial<Holding>;
+    state.holding = true;
+    if (state.releaseReads !== undefined) return;
+    const held: (() => void)[] = [];
+    // The page's Worker, which the Worker of Playwright imported above
+    // would otherwise name.
+    const pageWorker = window.Worker.prototype;
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- called below with its worker, by apply
+    const post = pageWorker.postMessage;
+    pageWorker.postMessage = function (
+      this: typeof pageWorker,
+      ...args: [message: unknown, options?: StructuredSerializeOptions]
+    ) {
+      const [message] = args;
+      if (
+        state.holding === true &&
+        typeof message === "object" &&
+        message !== null &&
+        "kind" in message &&
+        message.kind === "readIndividuals"
+      ) {
+        held.push(() => {
+          post.apply(this, args);
+        });
+        return;
+      }
+      post.apply(this, args);
+    } as typeof pageWorker.postMessage;
+    state.releaseReads = () => {
+      state.holding = false;
+      for (const send of held.splice(0)) send();
+    };
+  });
+}
+
+async function releaseReads(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    (window as unknown as Holding).releaseReads();
+  });
+}
+
+/** The words of the items of the select of that label, which is opened
+    and closed again. */
+async function itemsOf(page: Page, label: string): Promise<string[]> {
+  await select(page, label).click();
+  const items = await page.getByRole("option").allTextContents();
+  await page.keyboard.press("Escape");
+  return items;
+}
+
+test("WS8 D1 the first item of the separator names what was detected once the option is auto again and the file is read, and not while it is set", async ({
+  page,
+}) => {
+  await openIndividuals(page);
+  await pick(page, "panel_pops.csv");
+  await expect(select(page, "Separator")).toHaveText("Detected: comma");
+  await holdReads(page);
+
+  await choose(page, "Separator", "Semicolon");
+  await choose(page, "Separator", "Comma");
+  await expect(zone(page).getByText("Reading panel_pops.csv.")).toBeVisible();
+  await releaseReads(page);
+  await expect(zone(page).getByText("200 rows, 2 columns")).toBeVisible();
+  // Set by the user: the first item does not say what a read found.
+  expect(await itemsOf(page, "Separator")).toEqual([
+    "Detected",
+    "Comma",
+    "Semicolon",
+    "Tab",
+  ]);
+
+  await holdReads(page);
+  await choose(page, "Separator", "Detected");
+  await expect(zone(page).getByText("Reading panel_pops.csv.")).toBeVisible();
+  await releaseReads(page);
+  await expect(select(page, "Separator")).toHaveText("Detected: comma");
+  expect((await itemsOf(page, "Separator"))[0]).toBe("Detected: comma");
+});
+
+test("WS8 D1 a file of UTF-16 keeps its line in place of the encoding while it is read again", async ({
+  page,
+}) => {
+  await openIndividuals(page);
+  const bom = Buffer.from([0xff, 0xfe]);
+  const body = Buffer.from("IID\tpop\r\ns000\tp0\r\n", "utf16le");
+  await pick(page, { name: "unicode.txt", text: Buffer.concat([bom, body]) });
+  const line = page.getByText(
+    "Encoding: UTF-16, from the mark at the start of the file.",
+  );
+  await expect(line).toBeVisible();
+  for (const [label, option] of [
+    ["Separator", "Tab"],
+    ["Decimal mark", "Comma"],
+  ] as const) {
+    await holdReads(page);
+    await choose(page, label, option);
+    await expect(zone(page).getByText("Reading unicode.txt.")).toBeVisible();
+    await expect(line).toBeVisible();
+    await expect(select(page, "Encoding")).toHaveCount(0);
+    await releaseReads(page);
+    await expect(zone(page).getByText("1 row, 2 columns")).toBeVisible();
+    await expect(line).toBeVisible();
+  }
+});
+
+test("WS8 D1 a column whose name reverses the text is named escaped in its warning", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openIndividuals(page);
+  await pick(page, {
+    name: "codes.csv",
+    text: "IID,score\u202eevil\ns000,1\ns001,2\ns002,3\n",
+  });
+
+  const row = page
+    .getByRole("table", { name: "Columns" })
+    .getByRole("row")
+    .nth(2);
+  await expect(row.getByRole("rowheader")).toHaveText("score\\u202eevil");
+  await expect(row).toContainText(
+    "Warning: score\\u202eevil holds only 3 different whole numbers, from 1 to 3, and is taken as a measurement.",
+  );
+  await expect(row).not.toContainText("\u202e");
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("WS8 D1 several files dropped at once load none, and the step says why and announces it", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openIndividuals(page);
+  const bytes = [...(await readFile(join(FIXTURES, "panel_pops.csv")))];
+  const dataTransfer = await page.evaluateHandle((given) => {
+    // A file a script puts into a DataTransfer has no entry of the file
+    // system in Chromium, which a file dragged from the desktop has, and
+    // React Aria skips an item without one; so the item says it is a file.
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- called below with its item, by call
+    const entryOf = DataTransferItem.prototype.webkitGetAsEntry;
+    DataTransferItem.prototype.webkitGetAsEntry = function (
+      this: DataTransferItem,
+    ) {
+      return (
+        entryOf.call(this) ??
+        ({ isFile: true, isDirectory: false } as FileSystemEntry)
+      );
+    };
+    const transfer = new DataTransfer();
+    for (const name of ["a.csv", "b.csv"]) {
+      transfer.items.add(new File([new Uint8Array(given)], name));
+    }
+    return transfer;
+  }, bytes);
+  for (const type of ["dragenter", "dragover", "drop"]) {
+    await fileButton(page).dispatchEvent(type, { dataTransfer });
+  }
+
+  const message = "Drop one metadata file at a time.";
+  await expect(
+    page.getByRole("main").getByText(message, { exact: true }),
+  ).toBeVisible();
+  // Announced too, since the focus does not move to it.
+  await expect(page.getByRole("status").last()).toHaveText(message);
+  await expect(fileButton(page)).toHaveText("Choose a metadata file…");
+  await expectNoViolations(makeAxeBuilder);
+});
+
+// 320 px is a phone, and 640 px a window of 1280 px at 200% zoom.
+for (const width of [320, 640]) {
+  test(`WS8 D1 at ${String(width)} px wide no word of the table of the columns is cut, and the page does not scroll sideways`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 800 });
+    await openIndividuals(page);
+    await pick(page, {
+      name: "codes.csv",
+      text: "IID,score\ns000,1\ns001,2\ns002,3\n",
+    });
+    const table = page.getByRole("table", { name: "Columns" });
+    await expect(table).toBeVisible();
+    const cells = [
+      table.getByRole("columnheader", { name: "Column", exact: true }),
+      table.getByRole("columnheader", { name: "Type", exact: true }),
+      table.getByRole("columnheader", { name: "First values", exact: true }),
+      table.getByRole("rowheader", { name: "score", exact: true }),
+    ];
+    for (const cell of cells) {
+      // A word is cut when its letters stand on more than one line.
+      const cut = await cell.evaluate((element) => {
+        const text = element.firstChild;
+        if (text === null) return ["the cell has no text"];
+        const words: string[] = [];
+        let start = 0;
+        for (const word of (text.textContent ?? "").split(" ")) {
+          const range = document.createRange();
+          range.setStart(text, start);
+          range.setEnd(text, start + word.length);
+          const lines = new Set(
+            Array.from(range.getClientRects(), (rect) => Math.round(rect.top)),
+          );
+          if (lines.size > 1) words.push(word);
+          start += word.length + 1;
+        }
+        return words;
+      });
+      expect(cut).toEqual([]);
+    }
+    expect(
+      await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth <=
+          document.documentElement.clientWidth,
+      ),
+    ).toBe(true);
+  });
+}

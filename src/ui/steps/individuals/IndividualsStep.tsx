@@ -41,6 +41,7 @@ import { Disclosure } from "../../widgets/Disclosure.tsx";
 import { FileZone } from "../../widgets/FileZone.tsx";
 import { Problem } from "../../widgets/Problem.tsx";
 import { Select } from "../../widgets/Select.tsx";
+import { Warning } from "../../widgets/Warning.tsx";
 import type { StepCommand } from "../variants/commands.ts";
 import {
   REMOVE_COMMAND,
@@ -135,6 +136,21 @@ export function IndividualsStep(): React.JSX.Element {
   const read = individuals?.read ?? null;
   // The options of the reader, `null` with no file or with an xlsx.
   const csv = individuals?.csv ?? null;
+  const found = read?.kind === "read" ? read.found : null;
+
+  // The load whose file starts with the mark of UTF-16, as a read of it
+  // found. The mark does not change with the options, so the line that
+  // says it stays while a read of other options is under way, when there
+  // is no `found`, rather than the encoding coming back for a second. It
+  // is what an earlier drawing saw, kept as React keeps such a value: set
+  // while drawing, for the load it belongs to.
+  const [utf16Load, setUtf16Load] = useState<string | null>(null);
+  const fileId = individuals?.fileId ?? null;
+  if (found?.encoding === "utf-16" && fileId !== null && utf16Load !== fileId) {
+    setUtf16Load(fileId);
+  }
+  const isUtf16 =
+    found !== null ? found.encoding === "utf-16" : utf16Load === fileId;
 
   return (
     <div className={classOf(styles, "step")}>
@@ -194,7 +210,8 @@ export function IndividualsStep(): React.JSX.Element {
               <ReadOptions
                 name={individuals.name}
                 csv={csv}
-                found={read?.kind === "read" ? read.found : null}
+                found={found}
+                isUtf16={isUtf16}
                 send={send}
               />
             )}
@@ -273,6 +290,9 @@ interface ReadOptionsProps {
   /** What the last read used, `null` while it is under way or after a
       refusal. */
   readonly found: CsvFound | null;
+  /** Whether the file starts with the mark of UTF-16, which no encoding
+      changes. */
+  readonly isUtf16: boolean;
   /** Sends a command to the store. */
   readonly send: (step: StepCommand) => void;
 }
@@ -283,11 +303,12 @@ function ReadOptions({
   name,
   csv,
   found,
+  isUtf16,
   send,
 }: ReadOptionsProps): React.JSX.Element {
   return (
     <>
-      {found?.encoding === "utf-16" ? (
+      {isUtf16 ? (
         <p className={classOf(styles, "line")}>{UTF16_TEXT}</p>
       ) : (
         <Select
@@ -380,9 +401,13 @@ function Columns({ table, columns, decimal }: ColumnsProps): React.JSX.Element {
                 <td className={classOf(styles, "cell")}>
                   {typeText(type)}
                   {warning !== undefined && (
-                    <span className={classOf(styles, "warning")}>
-                      <WarningIcon />
-                      <span>Warning: {columnWarningText(warning)}</span>
+                    <span className={classOf(styles, "columnWarning")}>
+                      <Warning>
+                        {columnWarningText({
+                          ...warning,
+                          column: escaped(warning.column),
+                        })}
+                      </Warning>
                     </span>
                   )}
                 </td>
@@ -546,20 +571,5 @@ function PopulationList({
         </li>
       ))}
     </ul>
-  );
-}
-
-/** The mark of a warning, beside its words, which say it too. */
-function WarningIcon(): React.JSX.Element {
-  return (
-    <svg
-      className={classOf(styles, "icon")}
-      viewBox="0 0 16 16"
-      aria-hidden="true"
-    >
-      <path d="M8 1.5 15 14.5H1Z" />
-      <line x1="8" y1="6" x2="8" y2="10" />
-      <line x1="8" y1="12.2" x2="8" y2="12.5" />
-    </svg>
   );
 }

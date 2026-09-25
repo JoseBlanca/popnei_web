@@ -440,6 +440,13 @@ const individualsReader = {
   group: ["**/worker/individuals/**"],
   message: "src/core does not import the reader; the light worker runs it.",
 };
+// individualsFile.ts decodes the bytes of a File and reads it by ranges,
+// for filesRunner.ts alone; the screens may still import the reader of
+// the text, src/worker/individuals/, for columnWarnings.
+const individualsFile = {
+  group: ["**/worker/individualsFile*"],
+  message: "Only src/worker/filesRunner.ts imports individualsFile.ts.",
+};
 // What the tests of core share, fast-check and Vitest belong to the tests.
 const testOnly = {
   group: ["**/testSupport*", "fast-check", "vitest", "vitest/*"],
@@ -837,7 +844,16 @@ export default defineConfig(
     rules: {
       "@typescript-eslint/no-restricted-imports": [
         "error",
-        { patterns: [runner, drawing, popneiValues, filesWasm, probe] },
+        {
+          patterns: [
+            runner,
+            individualsFile,
+            drawing,
+            popneiValues,
+            filesWasm,
+            probe,
+          ],
+        },
       ],
       "no-restricted-syntax": noPopneiImportCall,
     },
@@ -850,7 +866,15 @@ export default defineConfig(
       "@typescript-eslint/no-restricted-imports": [
         "error",
         {
-          patterns: [runner, drawing, popneiValues, filesWasm, probe, testOnly],
+          patterns: [
+            runner,
+            individualsFile,
+            drawing,
+            popneiValues,
+            filesWasm,
+            probe,
+            testOnly,
+          ],
         },
       ],
     },
@@ -989,6 +1013,17 @@ export default defineConfig(
 - Core's block adds `individualsReader`: the reader is TypeScript with no
   DOM, which core could import and run on the page, where a file of
   10,000 rows would freeze it; it belongs to the light worker.
+- The two blocks of the screens add `individualsFile`:
+  `src/worker/individualsFile.ts` decodes the bytes of a `File` and reads
+  it, and only `filesRunner.ts`, in the light worker, imports it. The
+  screens may still import the reader of the text,
+  `src/worker/individuals/`, for `columnWarnings`, which the Individuals
+  step asks for from the table in the project. Added on 25 September
+  2026, when the review of work package 8 of the walking skeleton showed,
+  with `npx eslint --stdin --stdin-filename
+  src/ui/steps/individuals/words.ts` exiting 0, that a screen could
+  import `individualsFile.ts`; with the pattern the same command refuses
+  it and still lets `columnTypes.ts` through.
 - The block after core's repeats its patterns and adds `testOnly` for
   every file of core but the tests and `testSupport.ts`: the generators
   of the tests, fast-check and Vitest are development dependencies, and
