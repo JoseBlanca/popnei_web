@@ -1091,7 +1091,8 @@ code, the release `js-v0.1.0-dev.2`.
   The calculation worker is restarted when the load of the variant file
   changes (section 5); whether it is also restarted between requests is
   open point 2.
-- **The downloads**: the wasm package of popnei, 0.63 MB gzipped, before
+- **The downloads**: the wasm package of popnei, 0.71 MB gzipped
+  (710.6 KB, release js-v0.1.0-dev.2, as Vite measures it), before
   anything runs, loaded by the calculation worker alone; the files wasm,
   0.58 MB gzipped, by the light worker the first time an xlsx is read or a
   report is written (`docs/technology.md`, section 2).
