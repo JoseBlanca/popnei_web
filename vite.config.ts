@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import optimizeLocales from "@react-aria/optimize-locales-plugin";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
@@ -36,7 +37,10 @@ export default defineConfig({
   // Several pages and no single-page fallback: a missing file is a 404,
   // as on GitHub Pages, and not index.html with status 200.
   appType: "mpa",
-  plugins: [react()],
+  // React Aria's words in the one language of the application; those of
+  // its 33 other languages are left out of the build (docs/technology.md,
+  // "React Aria Components"). The entry sets React Aria's language to it.
+  plugins: [react(), optimizeLocales.vite({ locales: ["en-US"] })],
   // A page is added here with its stage: the build fails on a page that
   // does not exist.
   input: {
