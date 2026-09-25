@@ -431,3 +431,139 @@ The owner can stop reading here.
   for a scratch break of each rule of the spec, not of each test.
 - Tokens, roughly: the five writers 200,000 to 400,000 each with their
   fixes; the 25 reviewers 47,000 to 148,000 each.
+
+## 7. The page, its two workers, and the Variants step
+
+The tasks and the review are done. The owner's stop, task 7.5, is open.
+
+A user now opens `popgen.html` and sees the frame of the application:
+its name, the three steps and the Variants step. There they pick or
+drop a `.nei` file or a VCF, set the ploidy of a VCF and whether only
+the variants that passed are read, and see the individuals and the
+ploidy of the file, or why it could not be read. They set the missing
+data filter. An error of the page's own code shows in a bar at the
+top.
+
+| Deliverable | Command | Result |
+|---|---|---|
+| 1. `WS7 D1` | `npx vitest run src/ui -t "WS7 D1"` | 35 passed (at least 29) |
+| 2. `WS7 D2` | `npx playwright test --project=chromium --project=webkit -g "WS7 D2"` | 42 passed, 21 in each engine (at least 16) |
+| 3. `WS7 D3` | the same, `-g "WS7 D3"` | 40 passed, 20 in each engine (at least 18) |
+| 4. The build | `npm run build`; `ls dist/assets \| grep -cE "runnerWorker\|filesRunner"` | `dist/popgen.html` written; 2 |
+| 5. The screenshots | `npm run screens` | 44 passed; the orchestrator looked at the frame, the error bar and four states of the step |
+
+Seen in Chromium 153 and WebKit 26.6, through Playwright, by the
+subagents and the reviewers, with the mouse and with the keyboard
+alone. Not seen in Firefox, which the owner tries by hand. No screen
+reader was tried.
+
+The plan's risk for this work package did not happen. WebKit reads a
+`File` by ranges in the calculation worker as Chromium does: in both,
+`panel.nei` and `panel.vcf.gz` picked by the user opened with 200
+individuals and ploidy 2. The light worker, which reads the metadata
+file, read `panel_pops.csv` in a browser for the first time.
+
+One dependency was added, as the plan says: `react-aria-components`
+1.21.1, the version `npm view` gave, with 12 packages of its own.
+
+### The review
+
+Eleven reviewers, all the categories of the code-review skill. The
+accessibility and React reviewers looked a second time at the markup
+the fixes changed. What mattered, now fixed:
+
+- **The threshold and wrong numbers.** In a browser set to Spanish,
+  "0.05" typed in the threshold was read as 5 and turned into 1, a
+  filter that keeps every variant, with no word. The page now reads
+  every number as English. Text in the other decimal convention is
+  refused, and the field keeps its old value. The field also rounded
+  twice, so 0.1249 was held as 0.13. It now rounds once, to two
+  decimals, half up: 0.125 gives 0.13 as the spec says, and 0.1249
+  gives 0.12. The subagent had changed the spec's 0.13 to 0.12 to match
+  React Aria. That was reverted, since the spec's words are the
+  owner's.
+- **The ploidy.** A file dropped while a new ploidy was still being
+  typed was read with the old one. Ploidy values typed but never
+  applied came back after an Undo; a test on the real store now fails
+  if they do.
+- **Faults of the page's own code.** One such fault in a step emptied
+  the whole application. Each step now has its own boundary: the page
+  keeps its frame, and the error bar says what happened. A fault while
+  the page started left "Loading…" on the page for ever.
+- **Browsers too old.** Firefox 104 to 114 was not told that it is too
+  old. The page's first check now tests a function the code uses,
+  which Firefox has from 115, Chrome from 110 and Safari from 16.
+- **Where popnei may go.** The lint let the page or the light worker
+  import popnei if the import was written without its file ending. It
+  now refuses ten such imports, each shown refused.
+- **Also fixed.** The stepper's links moved sideways when the current
+  step changed. The error bar's box of details kept the errors of the
+  moment copying failed. Four states of the step had no screenshot.
+  The page's controls were read in the browser's language, not in
+  English.
+
+Not taken: the reviewers' wish that the Individuals step may not import
+the reader of the metadata file, since that step imports the warning of
+a column by design.
+
+### Numbers measured
+
+The page's first script grew from 21.9 KB to 76.9 KB gzipped. 50.7 KB
+of that is React Aria, and 19 KB of React Aria is its words in 34
+languages. popnei's wasm of `js-v0.1.0-dev.2` is 2.16 MB, 710.6 KB
+gzipped, where `docs/technology.md` had 0.63 MB from an earlier build;
+the documents now say 0.71 MB. The bundle reviewer measured these on
+25 September 2026 with Vite's build and its source maps.
+
+The test review found that 9 of 22 deliberate breaks of the code
+passed every test. The one that mattered most: the check box "Only the
+variants with PASS or ." never reached a read in any test. Each break
+now fails a test. After all fixes, on the last commit of the work
+package: `npm test` 1,223 passed, and 122 browser tests passed in
+Chromium and WebKit, the probe's 40 among them.
+
+### What waits for the owner at stop 7.5
+
+Each changes what the user reads, so none was done. Each comes with a
+recommendation.
+
+1. The button that reads a VCF again names only the ploidy when both
+   the ploidy and "only the variants that passed" differ, though it
+   reads again with both. Recommended: "Read tetraploid.vcf.gz again
+   with ploidy 4 and every variant".
+2. The threshold turns a value outside 0 to 1 into the nearest bound
+   without a word: "10" becomes 1, a filter that keeps every variant.
+   It also rounds 0.001 to 0 without a word. Recommended: the label
+   gives the range, "Maximum proportion of missing genotypes, from 0 to
+   1", and the ploidy "from 1 to 255". A value outside the range is
+   refused with a line under the field, "10 is more than 1; the filter
+   keeps 0.1.", instead of being changed.
+3. The words under the ploidy, "…and the file is read again with the
+   right ploidy", read as if the application does it by itself.
+   Recommended: "…set the right ploidy here and read the file again."
+   The card of a VCF also says "Ploidy 2", which is the ploidy given,
+   not one found in the file. Recommended: drop that line for a VCF
+   and keep "Read with ploidy 2".
+4. A refusal shown in the Variants step ends "Load a variants file in
+   the Variants step.", beside a button named "Replace bad.vcf…". These
+   are the provisional words of core, Open 2 to 6 of
+   `docs/specs/core/project.md`. Recommended: "Choose another file." in
+   this step.
+5. React Aria's drop zone has a hidden button that takes a pasted file.
+   It is an extra stop of the Tab key and does nothing on Enter. It is
+   now named "Paste a variants file". A paste worked in WebKit, and is
+   not verified in Chrome. Recommended: keep it and list it in the
+   spec, unless the owner's check by hand shows the paste does nothing
+   in Chrome.
+6. A folder, or a piece of text, dropped on the zone does nothing and
+   says nothing. Recommended: "Drop a VCF or a .nei file, not a
+   folder."
+7. Until task 9.4 the error bar says "save it, then reload the page",
+   and there is no Save on the page. Recommended: accept until 9.4.
+8. React Aria's words in 34 languages add 19 KB gzipped to the page's
+   first script. React Aria's plugin `@react-aria/optimize-locales-plugin`
+   would remove them; it is a new development dependency, not shipped
+   to users. Recommended: add it if it works with Vite 8.
+
+With these, the twelve points of the reviews of work packages 2 to 6,
+listed above under "What the reviews of 2 to 6 ask of the owner".
