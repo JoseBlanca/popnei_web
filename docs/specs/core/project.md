@@ -672,6 +672,13 @@ export function individualsNeeds(p: Project): string | null;
     the table of the Individuals step above. */
 export function individualsStepNeeds(p: Project): string | null;
 
+/** What follows the colon of a refusal of the reader in the Individuals
+    step, its words and its end, "it is a variants file, which the
+    Variants step takes. Load a metadata file.", so that the step says a
+    variants file told by its name, `.vcf`, `.vcf.gz`, `.bcf` or `.nei`,
+    in the same words (`docs/specs/steps/individuals.md`). */
+export function individualsStepRefusal(error: IndividualsFileError, app: AppId): string;
+
 /** The individuals of the variants file found in the table, all those
     missing in the order of the variants file, and the number of rows of
     other individuals; null when either file is not read. The same object
