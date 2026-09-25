@@ -154,6 +154,17 @@ The screen writes it as "3 results removed because the MAF filter changed
 applications"). An analysis removed is in the state `removed` if it can
 run, and `locked`, with what it lacks, if it cannot.
 
+The action the notice offers is the reverse of what caused it, as the
+owner decided on 25 September 2026: Undo after a command, Redo after an
+undo, and Undo after a redo; the words before the action are the screen
+spec's. The screen takes the action from the kind of
+the cause, `command`, `undo` or `redo`, and the store gives nothing more
+for it. Where this spec says that an undo keeps a calculation or brings a
+result back, the action of the notice is meant, which after an undo is a
+redo; the words on the calculations it will stop name that action too.
+The option not taken was Undo always: after an undo it would undo the
+step before, and take the user further from where they were.
+
 A calculation in flight whose key the project no longer gives, one the
 change left behind, is stopped unless the change is undone, as the owner
 decided on 24 September 2026 (`docs/architecture.md`, section 5), except

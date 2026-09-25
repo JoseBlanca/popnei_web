@@ -403,11 +403,12 @@ ends, results removed, is heard only through a live region.
   to whoever looks at it.
 - **The notice of removed results is a toast** of React Aria, which is a
   labelled landmark that F6 reaches and whose content is announced. It
-  holds the Undo button, and it stays until the next command or until it
+  holds the action that reverses what caused it, Undo, or Redo after an
+  undo (`docs/specs/core/store.md`), and it stays until the next command or until it
   is closed: it has an action, and a notice with an action that
   disappears on a timer fails a user who is slow to reach it (WCAG 2.2.1).
-  Undo is also always in the header and on Ctrl+Z, so the notice is never
-  the only way. When the change also stops calculations, the same notice
+  Undo and Redo are also always in the header and on Ctrl+Z and
+  Ctrl+Shift+Z, so the notice is never the only way. When the change also stops calculations, the same notice
   says so, "The ongoing calculations will be stopped unless you undo the
   change". There is no timer: the calculations stop when the notice is
   closed or replaced, or when the user runs another calculation, and then
