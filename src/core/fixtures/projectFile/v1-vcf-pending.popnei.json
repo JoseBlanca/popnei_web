@@ -1,0 +1,47 @@
+{
+  "format": "popnei_web project",
+  "formatVersion": 1,
+  "app": "popgen",
+  "appVersion": "0.1.0",
+  "popneiVersion": null,
+  "saved": "2026-09-25T16:45:02.500Z",
+  "variants": {
+    "fileId": "0123456789abcdef0123456789abcdef",
+    "name": "tetraploid.vcf.gz",
+    "size": 734003,
+    "format": "vcf",
+    "readOptions": {
+      "ploidy": 4,
+      "onlyPassed": true
+    },
+    "read": {
+      "kind": "pending"
+    }
+  },
+  "filters": [
+    {
+      "kind": "maf",
+      "maxAllowedMaf": 0.95
+    },
+    {
+      "kind": "missing_data",
+      "maxAllowedMissingRate": 0.2
+    }
+  ],
+  "individualFilters": [],
+  "individuals": null,
+  "grouping": {
+    "kind": "populations",
+    "column": "pop"
+  },
+  "analyses": [],
+  "checks": [
+    {
+      "analysis": "diversity",
+      "numbers": [8012, 0.2811, null, 0.75],
+      "keyVersion": 1,
+      "popneiVersion": "0.1.0",
+      "appVersion": "0.1.0"
+    }
+  ]
+}

@@ -1,0 +1,78 @@
+{
+  "format": "popnei_web project",
+  "formatVersion": 1,
+  "app": "popgen",
+  "appVersion": "0.1.0",
+  "popneiVersion": "0.1.0",
+  "saved": "2026-09-25T14:03:11.000Z",
+  "variants": {
+    "fileId": "00112233445566778899aabbccddeeff",
+    "name": "panel.nei",
+    "size": 52428800,
+    "format": "nei",
+    "readOptions": null,
+    "read": {
+      "kind": "read",
+      "individuals": ["ind_001", "ind_002", "ind_003", "ind_004", "ind_005", "ind_006"],
+      "ploidy": 2,
+      "numVars": 1203554
+    }
+  },
+  "filters": [
+    {
+      "kind": "missing_data",
+      "maxAllowedMissingRate": 0.1
+    }
+  ],
+  "individualFilters": [],
+  "individuals": {
+    "fileId": "ffeeddccbbaa99887766554433221100",
+    "name": "pops.csv",
+    "csv": {
+      "encoding": "auto",
+      "separator": "auto",
+      "decimal": "auto"
+    },
+    "read": {
+      "kind": "read",
+      "table": {
+        "columns": ["id", "pop"],
+        "rows": [
+          ["ind_001", "north"],
+          ["ind_002", "south"],
+          ["ind_003", "north"],
+          ["ind_004", "south"],
+          ["ind_005", "north"],
+          ["ind_006", "south"]
+        ]
+      },
+      "columns": [
+        {
+          "kind": "identifier"
+        },
+        {
+          "kind": "categorical"
+        }
+      ],
+      "found": {
+        "encoding": "utf-8",
+        "separator": ",",
+        "decimal": "."
+      }
+    }
+  },
+  "grouping": {
+    "kind": "populations",
+    "column": "pop"
+  },
+  "analyses": [],
+  "checks": [
+    {
+      "analysis": "diversity",
+      "numbers": [1150112, 0.3120051, 0.3089214, 0.9124, 0.2987112, 0.2954871, 0.8977],
+      "keyVersion": 1,
+      "popneiVersion": "0.1.0",
+      "appVersion": "0.1.0"
+    }
+  ]
+}

@@ -1,2 +1,6 @@
 # The documents are prose wrapped by hand (the writing skill).
 *.md
+
+# The project files are kept byte for byte as the application writes them
+# (docs/specs/core/projectFile.md, "Writing"), with lists on one line.
+src/core/fixtures/projectFile/

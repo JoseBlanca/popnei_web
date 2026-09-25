@@ -1,0 +1,552 @@
+/**
+ * The project file, `<name>.popnei.json`, that a user saves to take their
+ * work out of the browser and opens again later: its writing from the
+ * state of the store, its reading back into a project, and the words of
+ * the two comparisons a reopened project makes, of the variants file
+ * given with the one the project was made with, and of the numbers of a
+ * new run with the numbers saved (docs/specs/core/projectFile.md).
+ */
+
+import type { JsonValue } from "./keys.ts";
+import { FORMAT_VERSION } from "./project.ts";
+import type {
+  AnalysisOptions,
+  Check,
+  Grouping,
+  IndividualsSource,
+  Project,
+  SourceRead,
+  VariantSource,
+} from "./project.ts";
+import type { AnalysisDef, AppState } from "./store.ts";
+import { settingsFingerprint } from "./keys.ts";
+import type {
+  ColumnType,
+  IndividualFilter,
+  VariantFilter,
+} from "../worker/protocol.ts";
+
+/** The text of the field `format`, which tells a project file from any
+    other JSON file. */
+export const FORMAT_NAME = "popnei_web project";
+
+/** The largest project file the shell opens, 64 MB; a file with a table
+    of 10,000 individuals is about 3 MB. */
+export const MAX_PROJECT_FILE_BYTES = 64 * 1024 * 1024;
+
+// The writing.
+
+/**
+ * The text of the project file of the state of the store, `state`, with
+ * the definitions of the analyses of the application, `analyses`, in the
+ * order the screens show them, the version of the application,
+ * `appVersion`, and the date and time of the save, `saved`, which the page
+ * gives. The same state gives the same text, byte for byte.
+ *
+ * Throws a defect on a check number that is not finite, and on an
+ * analysis done while the state has no version of popnei.
+ */
+export function writeProjectFile<J, R>(
+  state: AppState<R>,
+  analyses: readonly AnalysisDef<J, R>[],
+  appVersion: string,
+  saved: string,
+): string {
+  const p = state.project;
+  const variants = variantsWritten(p);
+  const individuals =
+    p.individuals !== null && p.individuals.read.kind === "read"
+      ? p.individuals
+      : null;
+  const file = fields([
+    ["format", FORMAT_NAME],
+    ["formatVersion", FORMAT_VERSION],
+    ["app", p.app],
+    ["appVersion", appVersion],
+    ["popneiVersion", state.popneiVersion],
+    ["saved", saved],
+    ["variants", variants === null ? null : variantSourceOut(variants)],
+    ["filters", p.filters.map(variantFilterOut)],
+    ["individualFilters", p.individualFilters.map(individualFilterOut)],
+    ["individuals", individuals === null ? null : individualsOut(individuals)],
+    ["grouping", groupingOut(p.grouping)],
+    ["analyses", p.analyses.map(analysisOptionsOut)],
+    [
+      "checks",
+      checksWritten(state, analyses, appVersion).map((check) =>
+        checkOut(check),
+      ),
+    ],
+  ]);
+  return `${render(file, "")}\n`;
+}
+
+/**
+ * The name the dialog of Save proposes: the name of the variants file
+ * loaded, or of the reference's when none is, without its extension,
+ * `.nei`, `.vcf` or `.vcf.gz`, with `.popnei.json`; or
+ * `project.popnei.json` when there is neither.
+ */
+export function projectFileName(p: Project): string {
+  const name = (p.variants ?? p.reference?.variants)?.name;
+  if (name === undefined) {
+    return DEFAULT_FILE_NAME;
+  }
+  const stem = name.replace(/\.(nei|vcf|vcf\.gz)$/i, "");
+  return stem === "" ? DEFAULT_FILE_NAME : `${stem}${FILE_EXTENSION}`;
+}
+
+/** The end of the name of every project file. */
+const FILE_EXTENSION = ".popnei.json";
+
+/** The name of a project file with no variants file to name it after. */
+const DEFAULT_FILE_NAME = `project${FILE_EXTENSION}`;
+
+/**
+ * The variants file the file holds (the spec, "What is written of each
+ * part"): the one loaded when it is read; the reference's when the one
+ * loaded is not read and does not differ from it in its identity, or when
+ * none is loaded; the one loaded otherwise. `sourceReadOut` writes its
+ * read as pending when it failed.
+ */
+function variantsWritten(p: Project): VariantSource | null {
+  const loaded = p.variants;
+  const reference = p.reference?.variants ?? null;
+  let chosen: VariantSource | null;
+  if (loaded === null) {
+    chosen = reference;
+  } else if (loaded.read.kind === "read") {
+    chosen = loaded;
+  } else {
+    chosen =
+      reference !== null && compareIdentity(reference, loaded).length === 0
+        ? reference
+        : loaded;
+  }
+  return chosen;
+}
+
+/** A check as the file holds it, without the fingerprint of its
+    settings, which is made again when the file is opened. */
+type CheckWritten = Omit<Check, "settings">;
+
+/**
+ * The check numbers of each analysis, in the order of `analyses` (the
+ * spec, "The check numbers"): those of its result when it is done, with
+ * the versions now; otherwise the reference's, with their own versions,
+ * when the fingerprint of its settings now is the one the reference kept
+ * and the variants file loaded, if there is one, does not differ from the
+ * reference's; otherwise none.
+ */
+function checksWritten<J, R>(
+  state: AppState<R>,
+  analyses: readonly AnalysisDef<J, R>[],
+  appVersion: string,
+): CheckWritten[] {
+  const p = state.project;
+  const reference = p.reference;
+  const sameFile =
+    reference !== null &&
+    (p.variants === null ||
+      compareIdentity(reference.variants, p.variants).length === 0);
+  const checks: CheckWritten[] = [];
+  for (const def of analyses) {
+    const status = state.analyses.find((view) => view.id === def.id)?.status;
+    if (status?.kind === "done") {
+      if (state.popneiVersion === null) {
+        throw defect(
+          `the analysis ${JSON.stringify(def.id)} is done while the state has no version of popnei.`,
+        );
+      }
+      checks.push({
+        analysis: def.id,
+        numbers: finiteNumbers(def.id, def.checkNumbers(status.result)),
+        keyVersion: def.keyVersion,
+        popneiVersion: state.popneiVersion,
+        appVersion,
+      });
+      continue;
+    }
+    if (reference === null || !sameFile) {
+      continue;
+    }
+    const kept = reference.checks.find((check) => check.analysis === def.id);
+    if (kept === undefined) {
+      continue;
+    }
+    const readOptions = (p.variants ?? reference.variants).readOptions;
+    if (settingsFingerprint(def, p, readOptions, null) === kept.settings) {
+      checks.push({
+        analysis: kept.analysis,
+        numbers: finiteNumbers(def.id, kept.numbers),
+        keyVersion: kept.keyVersion,
+        popneiVersion: kept.popneiVersion,
+        appVersion: kept.appVersion,
+      });
+    }
+  }
+  return checks;
+}
+
+/** The check numbers of an analysis, after checking that each is finite
+    or `null`: a NaN or an infinity is a defect of its `checkNumbers`,
+    which JSON would write as `null`. */
+function finiteNumbers(
+  analysis: string,
+  numbers: readonly (number | null)[],
+): readonly (number | null)[] {
+  for (const n of numbers) {
+    if (n !== null && !Number.isFinite(n)) {
+      throw defect(
+        `the check numbers of the analysis ${JSON.stringify(analysis)} hold ${String(n)}, which is not finite; checkNumbers gives null for a NaN.`,
+      );
+    }
+  }
+  return numbers;
+}
+
+/**
+ * A value as the writer writes it: a JSON value whose objects are lists
+ * of their fields, in the order they are written. The file is built from
+ * these, and not by making a sorted copy of each object, which would lose
+ * a field named `__proto__`.
+ */
+type Out = null | boolean | number | string | readonly Out[] | Fields;
+
+/** An object of the file, its fields in the order they are written. */
+interface Fields {
+  readonly fields: readonly (readonly [name: string, value: Out])[];
+}
+
+function fields(entries: Fields["fields"]): Fields {
+  return { fields: entries };
+}
+
+function variantSourceOut(source: VariantSource): Fields {
+  return fields([
+    ["fileId", source.fileId],
+    ["name", source.name],
+    ["size", source.size],
+    ["format", source.format],
+    [
+      "readOptions",
+      source.readOptions === null
+        ? null
+        : fields([
+            ["ploidy", source.readOptions.ploidy],
+            ["onlyPassed", source.readOptions.onlyPassed],
+          ]),
+    ],
+    ["read", sourceReadOut(source.read)],
+  ]);
+}
+
+/** A read of the variants file; one that failed is written as pending,
+    since what failed was a read of that session, which a new load of the
+    file makes again. */
+function sourceReadOut(read: SourceRead): Fields {
+  switch (read.kind) {
+    case "pending":
+    case "failed":
+      return fields([["kind", "pending"]]);
+    case "read":
+      return fields([
+        ["kind", "read"],
+        ["individuals", read.individuals],
+        ["ploidy", read.ploidy],
+        ["numVars", read.numVars],
+      ]);
+  }
+}
+
+function variantFilterOut(filter: VariantFilter): Fields {
+  switch (filter.kind) {
+    case "missing_data":
+      return fields([
+        ["kind", filter.kind],
+        ["maxAllowedMissingRate", filter.maxAllowedMissingRate],
+      ]);
+    case "maf":
+      return fields([
+        ["kind", filter.kind],
+        ["maxAllowedMaf", filter.maxAllowedMaf],
+      ]);
+    case "obs_het":
+      return fields([
+        ["kind", filter.kind],
+        ["maxAllowedObsHet", filter.maxAllowedObsHet],
+      ]);
+    case "ld":
+      return fields([
+        ["kind", filter.kind],
+        ["maxAllowedR2", filter.maxAllowedR2],
+        ["maxDist", filter.maxDist],
+      ]);
+  }
+}
+
+function individualFilterOut(filter: IndividualFilter): Fields {
+  switch (filter.kind) {
+    case "keep":
+    case "remove":
+      return fields([
+        ["kind", filter.kind],
+        ["individuals", filter.individuals],
+      ]);
+    case "missing_data":
+      return fields([
+        ["kind", filter.kind],
+        ["maxAllowedMissingRate", filter.maxAllowedMissingRate],
+      ]);
+    case "obs_het":
+      return fields([
+        ["kind", filter.kind],
+        ["maxAllowedObsHet", filter.maxAllowedObsHet],
+      ]);
+  }
+}
+
+/** An individuals file whose read is done; the caller writes `null` for
+    any other. */
+function individualsOut(source: IndividualsSource): Fields {
+  const read = source.read;
+  if (read.kind !== "read") {
+    throw defect("an individuals file whose read is not done was written.");
+  }
+  return fields([
+    ["fileId", source.fileId],
+    ["name", source.name],
+    [
+      "csv",
+      source.csv === null
+        ? null
+        : fields([
+            ["encoding", source.csv.encoding],
+            ["separator", source.csv.separator],
+            ["decimal", source.csv.decimal],
+          ]),
+    ],
+    [
+      "read",
+      fields([
+        ["kind", "read"],
+        [
+          "table",
+          fields([
+            ["columns", read.table.columns],
+            ["rows", read.table.rows],
+          ]),
+        ],
+        ["columns", read.columns.map(columnTypeOut)],
+        [
+          "found",
+          read.found === null
+            ? null
+            : fields([
+                ["encoding", read.found.encoding],
+                ["separator", read.found.separator],
+                ["decimal", read.found.decimal],
+              ]),
+        ],
+      ]),
+    ],
+  ]);
+}
+
+function columnTypeOut(column: ColumnType): Fields {
+  switch (column.kind) {
+    case "identifier":
+    case "continuous":
+    case "categorical":
+      return fields([["kind", column.kind]]);
+    case "binary":
+      return fields([
+        ["kind", column.kind],
+        ["one", column.one],
+        ["zero", column.zero],
+      ]);
+  }
+}
+
+function groupingOut(grouping: Grouping): Fields {
+  switch (grouping.kind) {
+    case "populations":
+      return fields([
+        ["kind", grouping.kind],
+        ["column", grouping.column],
+      ]);
+    case "roles":
+      return fields([
+        ["kind", grouping.kind],
+        ["roles", grouping.roles],
+      ]);
+  }
+}
+
+function analysisOptionsOut(entry: AnalysisOptions): Fields {
+  return fields([
+    ["analysis", entry.analysis],
+    ["options", jsonOut(entry.options)],
+  ]);
+}
+
+/** A JSON value whose fields no type fixes, the options of an analysis,
+    with the fields of each object sorted by their UTF-16 code units, as
+    the canonical form of the keys sorts them. */
+function jsonOut(value: JsonValue): Out {
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value.map(jsonOut);
+  }
+  return fields(
+    Object.entries(value)
+      .toSorted(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .map(([name, field]) => [name, jsonOut(field)] as const),
+  );
+}
+
+function checkOut(check: CheckWritten): Fields {
+  return fields([
+    ["analysis", check.analysis],
+    ["numbers", check.numbers],
+    ["keyVersion", check.keyVersion],
+    ["popneiVersion", check.popneiVersion],
+    ["appVersion", check.appVersion],
+  ]);
+}
+
+/** The indentation of one level. */
+const INDENT = "  ";
+
+/**
+ * The text of a value at the indentation `indent`: one field per line; a
+ * list whose items are all texts, numbers, booleans or `null` on one line;
+ * `[]` and `{}` for empty ones; texts and numbers as `JSON.stringify`
+ * writes them, a −0 as `0`. Throws a defect on a number that is not
+ * finite.
+ */
+function render(value: Out, indent: string): string {
+  if (value === null || typeof value !== "object") {
+    return scalar(value);
+  }
+  const inner = indent + INDENT;
+  if (isList(value)) {
+    if (value.length === 0) {
+      return "[]";
+    }
+    if (value.every((item) => item === null || typeof item !== "object")) {
+      return `[${value.map((item) => render(item, inner)).join(", ")}]`;
+    }
+    const items = value.map((item) => `${inner}${render(item, inner)}`);
+    return `[\n${items.join(",\n")}\n${indent}]`;
+  }
+  if (value.fields.length === 0) {
+    return "{}";
+  }
+  const lines = value.fields.map(
+    ([name, field]) =>
+      `${inner}${JSON.stringify(name)}: ${render(field, inner)}`,
+  );
+  return `{\n${lines.join(",\n")}\n${indent}}`;
+}
+
+function isList(value: readonly Out[] | Fields): value is readonly Out[] {
+  return Array.isArray(value);
+}
+
+function scalar(value: null | boolean | number | string): string {
+  if (typeof value === "number" && !Number.isFinite(value)) {
+    throw defect(`the number ${String(value)} is not finite.`);
+  }
+  return JSON.stringify(value);
+}
+
+function defect(message: string): Error {
+  return new Error(`popnei_web defect: ${message}`);
+}
+
+// The comparisons after an opening.
+
+/** A way the variants file given differs from the one the project was
+    made with, in the order they are compared. */
+export type IdentityDifference =
+  /** Its name, `now`. */
+  | { readonly kind: "name"; readonly now: string }
+  /** Its format, `now`. */
+  | { readonly kind: "format"; readonly now: "vcf" | "nei" }
+  /** Its size in bytes. */
+  | { readonly kind: "size"; readonly saved: number; readonly now: number }
+  /** Its number of individuals, `now`; both read. */
+  | { readonly kind: "individualsCount"; readonly now: number }
+  /** The individuals of the saved file it lacks, in the order of that
+      file; both read, with the same number. */
+  | { readonly kind: "otherIndividuals"; readonly missing: readonly string[] }
+  /** The same individuals in another order; both read. */
+  | { readonly kind: "individualsOrder" }
+  /** Its ploidy; both read. */
+  | { readonly kind: "ploidy"; readonly saved: number; readonly now: number }
+  /** Its number of variants, `now`; both counted. */
+  | { readonly kind: "numVars"; readonly now: number };
+
+/**
+ * How the variants file `now` differs from `saved`, the reference's, in
+ * the order of the spec's table: the name, the format and the size
+ * always; the individuals, their number, their order and the ploidy when
+ * both are read; the number of variants when both are counted. Empty when
+ * nothing differs.
+ */
+export function compareIdentity(
+  saved: VariantSource,
+  now: VariantSource,
+): readonly IdentityDifference[] {
+  const differences: IdentityDifference[] = [];
+  if (saved.name !== now.name) {
+    differences.push({ kind: "name", now: now.name });
+  }
+  if (saved.format !== now.format) {
+    differences.push({ kind: "format", now: now.format });
+  }
+  if (saved.size !== now.size) {
+    differences.push({ kind: "size", saved: saved.size, now: now.size });
+  }
+  const savedRead = saved.read;
+  const nowRead = now.read;
+  if (savedRead.kind !== "read" || nowRead.kind !== "read") {
+    return differences;
+  }
+  if (savedRead.individuals.length !== nowRead.individuals.length) {
+    differences.push({
+      kind: "individualsCount",
+      now: nowRead.individuals.length,
+    });
+  } else {
+    const inNow = new Set(nowRead.individuals);
+    const missing = savedRead.individuals.filter((name) => !inNow.has(name));
+    if (missing.length > 0) {
+      differences.push({ kind: "otherIndividuals", missing });
+    } else if (
+      savedRead.individuals.some(
+        (name, index) => nowRead.individuals[index] !== name,
+      )
+    ) {
+      differences.push({ kind: "individualsOrder" });
+    }
+  }
+  if (savedRead.ploidy !== nowRead.ploidy) {
+    differences.push({
+      kind: "ploidy",
+      saved: savedRead.ploidy,
+      now: nowRead.ploidy,
+    });
+  }
+  if (
+    savedRead.numVars !== null &&
+    nowRead.numVars !== null &&
+    savedRead.numVars !== nowRead.numVars
+  ) {
+    differences.push({ kind: "numVars", now: nowRead.numVars });
+  }
+  return differences;
+}
