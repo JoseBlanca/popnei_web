@@ -312,6 +312,20 @@ test("WS7 D3 0.125 typed in the threshold is held as 0.13, a half rounded up", a
   await threshold.fill("0.135");
   await threshold.press("Enter");
   await expect(threshold).toHaveValue("0.14");
+  // Rounded once, from what was typed: not to three decimals first.
+  for (const [typed, held] of [
+    ["0.1249", "0.12"],
+    ["0.0049", "0"],
+    ["0.9949", "0.99"],
+    ["0.125", "0.13"],
+  ] as const) {
+    await threshold.fill(typed);
+    await threshold.press("Enter");
+    await expect(threshold).toHaveValue(held);
+  }
+  await threshold.fill("0.135");
+  await threshold.press("Enter");
+  await expect(threshold).toHaveValue("0.14");
 
   // Left empty, it shows again the value it had.
   await threshold.fill("");

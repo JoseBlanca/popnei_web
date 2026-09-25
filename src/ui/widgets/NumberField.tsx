@@ -21,9 +21,14 @@ import { classOf } from "../classOf.ts";
 import styles from "./NumberField.module.css";
 import { roundToStep } from "./roundToStep.ts";
 
-/** No separator of thousands, in every language (above). */
+/** No separator of thousands, in every language (above); and every
+    decimal typed kept, since React Aria commits the number as it formats
+    it, which by default cuts it to three decimals, and 0.1249 would
+    become 0.125 before roundToStep, then 0.13. 20 is the most that
+    Intl.NumberFormat takes in every browser of the floor. */
 const FORMAT_OPTIONS: Intl.NumberFormatOptions = Object.freeze({
   useGrouping: false,
+  maximumFractionDigits: 20,
 });
 
 /** What a number field is drawn with. */
