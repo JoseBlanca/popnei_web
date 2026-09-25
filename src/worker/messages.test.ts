@@ -739,3 +739,270 @@ const fromFilesRunnerMessage = fc.oneof(
   }),
   workerStop,
 );
+
+// The requests of the page, drawn by fast-check.
+
+const variantFilter = fc.oneof(
+  fc.record({
+    kind: fc.constant("missing_data" as const),
+    maxAllowedMissingRate: number,
+  }),
+  fc.record({ kind: fc.constant("maf" as const), maxAllowedMaf: number }),
+  fc.record({
+    kind: fc.constant("obs_het" as const),
+    maxAllowedObsHet: number,
+  }),
+  fc.record({
+    kind: fc.constant("ld" as const),
+    maxAllowedR2: number,
+    maxDist: number,
+  }),
+);
+const individualFilter = fc.oneof(
+  fc.record({
+    kind: fc.constant("keep" as const),
+    individuals: fc.array(text),
+  }),
+  fc.record({
+    kind: fc.constant("remove" as const),
+    individuals: fc.array(text),
+  }),
+  fc.record({
+    kind: fc.constant("missing_data" as const),
+    maxAllowedMissingRate: number,
+  }),
+  fc.record({
+    kind: fc.constant("obs_het" as const),
+    maxAllowedObsHet: number,
+  }),
+);
+const diversityJob = fc.record({
+  analysis: fc.constant("diversity" as const),
+  fileId: text,
+  filters: fc.array(variantFilter, { maxLength: 4 }),
+  individualFilters: fc.array(individualFilter, { maxLength: 3 }),
+  pops: fc.array(fc.tuple(text, fc.array(text, { maxLength: 3 })), {
+    maxLength: 3,
+  }),
+  minNumIndividuals: number,
+  polyThreshold: number,
+});
+const toRunnerMessage = fc.oneof(
+  fc.record({
+    kind: fc.constant("open" as const),
+    id: whole,
+    fileId: text,
+    file: fc.constant(VCF_FILE),
+    format: fc.constant("vcf" as const),
+    readOptions: fc.record({ ploidy: number, onlyPassed: fc.boolean() }),
+  }),
+  fc.record({
+    kind: fc.constant("open" as const),
+    id: whole,
+    fileId: text,
+    file: fc.constant(NEI_FILE),
+    format: fc.constant("nei" as const),
+    readOptions: fc.constant(null),
+  }),
+  fc.record({
+    kind: fc.constant("run" as const),
+    id: whole,
+    key: text,
+    job: diversityJob,
+  }),
+);
+const toFilesRunnerMessage = fc.record({
+  kind: fc.constant("readIndividuals" as const),
+  id: whole,
+  file: fc.constant(CSV_FILE),
+  csv: fc.record({
+    encoding: fc.constantFrom("auto", "utf-8", "windows-1252"),
+    separator: fc.constantFrom("auto", ",", ";", "\t"),
+    decimal: fc.constantFrom("auto", ".", ","),
+  }),
+});
+
+/** A valid message of any kind of either side, with the check of its
+    side. */
+const anyMessage: fc.Arbitrary<{
+  readonly message: unknown;
+  readonly parse: (data: unknown) => { readonly ok: boolean };
+}> = fc.oneof(
+  toRunnerMessage.map((message) => ({ message, parse: parseToRunner })),
+  fromRunnerMessage.map((message) => ({ message, parse: parseFromRunner })),
+  toFilesRunnerMessage.map((message) => ({
+    message,
+    parse: parseToFilesRunner,
+  })),
+  fromFilesRunnerMessage.map((message) => ({
+    message,
+    parse: parseFromFilesRunner,
+  })),
+);
+
+/** A leaf of a message: a value that is not a plain object nor a list,
+    with the path to it and whether it is a field of an object. */
+interface Leaf {
+  readonly path: readonly (string | number)[];
+  readonly inObject: boolean;
+}
+
+function isPlainObject(value: unknown): value is object {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    !ArrayBuffer.isView(value) &&
+    !(value instanceof File)
+  );
+}
+
+/** Every leaf of a message but its own `kind`, which names the message. */
+function leavesOf(
+  value: unknown,
+  path: readonly (string | number)[] = [],
+): Leaf[] {
+  if (isPlainObject(value)) {
+    return Object.entries(value).flatMap(([name, child]) =>
+      path.length === 0 && name === "kind"
+        ? []
+        : isPlainObject(child) || Array.isArray(child)
+          ? leavesOf(child, [...path, name])
+          : [{ path: [...path, name], inObject: true }],
+    );
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap((child: unknown, index) =>
+      isPlainObject(child) || Array.isArray(child)
+        ? leavesOf(child, [...path, index])
+        : [{ path: [...path, index], inObject: false }],
+    );
+  }
+  return [];
+}
+
+/** The ways a leaf is corrupted. */
+type Corruption = "delete" | "addBeside" | "wrongType";
+
+/** A copy of `value` with the leaf at `path` corrupted. */
+function corrupt(
+  value: unknown,
+  path: readonly (string | number)[],
+  how: Corruption,
+): unknown {
+  const [head, ...rest] = path;
+  if (Array.isArray(value)) {
+    return value.map((child: unknown, index) =>
+      index !== head
+        ? child
+        : rest.length === 0
+          ? {}
+          : corrupt(child, rest, how),
+    );
+  }
+  if (!isPlainObject(value)) {
+    return value;
+  }
+  const entries = Object.entries(value);
+  if (rest.length > 0) {
+    return Object.fromEntries(
+      entries.map(([name, child]) => [
+        name,
+        name === head ? corrupt(child, rest, how) : child,
+      ]),
+    );
+  }
+  switch (how) {
+    case "delete":
+      return Object.fromEntries(entries.filter(([name]) => name !== head));
+    case "addBeside":
+      return Object.fromEntries([...entries, ["extra", 1]]);
+    case "wrongType":
+      return Object.fromEntries(
+        entries.map(([name, child]) => [name, name === head ? {} : child]),
+      );
+  }
+}
+
+describe("WS2 D2 the messages refused: any leaf corrupted", () => {
+  test("a message with one leaf deleted, one field added beside it, or one leaf of the wrong type is refused at that leaf", () => {
+    fc.assert(
+      fc.property(
+        anyMessage,
+        fc.nat(),
+        fc.constantFrom<Corruption>("delete", "addBeside", "wrongType"),
+        ({ message, parse }, pick, drawn) => {
+          const leaves = leavesOf(message);
+          const leaf = leaves[pick % Math.max(leaves.length, 1)];
+          if (leaf === undefined) {
+            return;
+          }
+          const how = leaf.inObject ? drawn : "wrongType";
+          const parent = leaf.path.slice(0, -1).join(".");
+          const name = String(leaf.path.at(-1));
+          const expected =
+            how === "delete"
+              ? { kind: "missingFields", path: parent, fields: [name] }
+              : how === "addBeside"
+                ? { kind: "extraFields", path: parent, fields: ["extra"] }
+                : { kind: "wrongType", path: leaf.path.join(".") };
+          expect(parse(corrupt(message, leaf.path, how))).toMatchObject({
+            ok: false,
+            error: expected,
+          });
+        },
+      ),
+      // A message has tens of leaves, and each case tries one: 2,000
+      // cases reach the rarer ones, the second value of a binary column
+      // among them, in under 0.1 s on this Mac.
+      { numRuns: 2000 },
+    );
+  });
+
+  test("a Uint32Array of a result not as long as its populations", () => {
+    const result = { ...RESULT, numIndividuals: Uint32Array.from([2]) };
+    expect(
+      parseFromRunner({ kind: "result", id: 2, key: "k1", result }),
+    ).toMatchObject({
+      ok: false,
+      error: {
+        kind: "wrongLength",
+        path: "result.numIndividuals",
+        expected: 2,
+        found: 1,
+      },
+    });
+  });
+
+  test.each([
+    ["parseToRunner", parseToRunner],
+    ["parseFromRunner", parseFromRunner],
+    ["parseToFilesRunner", parseToFilesRunner],
+    ["parseFromFilesRunner", parseFromFilesRunner],
+  ])(
+    "%s refuses the kind toString, which every object inherits",
+    (_name, parse) => {
+      expect(parse({ kind: "toString" })).toMatchObject({
+        ok: false,
+        error: { kind: "unknownKind", found: "toString" },
+      });
+    },
+  );
+
+  test("a filter of the kind toString is refused", () => {
+    const job = { ...JOB, filters: [{ kind: "toString" }] };
+    expect(parseToRunner({ ...RUN, job })).toMatchObject({
+      ok: false,
+      error: { kind: "unknownValue", path: "job.filters.0.kind" },
+    });
+  });
+
+  test("a result of the id 1.5", () => {
+    expect(
+      parseFromRunner({ kind: "result", id: 1.5, key: "k1", result: RESULT }),
+    ).toMatchObject({
+      ok: false,
+      error: { kind: "wrongType", path: "id", expected: "a whole number" },
+    });
+  });
+});
