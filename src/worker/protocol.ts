@@ -235,6 +235,21 @@ export type RunError =
   /** A message that did not validate, a mistake of our code. */
   | { readonly kind: "defect"; readonly message: string };
 
+/** How a VCF is read: the two options of popnei's `openVcf`, both always
+    given, so that neither default of popnei is used. */
+export interface VcfReadOptions {
+  /** The alleles of every genotype, a whole number from 1 to 255. */
+  readonly ploidy: number;
+  /** Whether the variants that failed a filter of the VCF are left out. */
+  readonly onlyPassed: boolean;
+}
+
+/** The format of a variants file with its read options: a VCF, plain or
+    gzipped, always with them, and popnei's `.nei`, never. */
+export type LoadFormat =
+  | { readonly format: "vcf"; readonly readOptions: VcfReadOptions }
+  | { readonly format: "nei"; readonly readOptions: null };
+
 /** The populations, as pairs `[population, individuals]` in the order of
     the file; the names are the user's, and never the names of fields. */
 export type Pops = readonly (readonly [

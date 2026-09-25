@@ -712,6 +712,16 @@ describe("WS3 D2 what goes wrong: told, popnei's refusals and the defects", () =
     expect(runner.run(diversityJob([]), ignore).kind).toBe("badRequest");
   });
 
+  test("a VCF with no read options cannot be written, so no open meets it", () => {
+    // @ts-expect-error -- a VCF is always opened with its read options
+    const load: LoadToOpen = {
+      fileId: FILE_ID,
+      format: "vcf",
+      readOptions: null,
+    };
+    expect(load.format).toBe("vcf");
+  });
+
   test("a second open is badRequest", () => {
     const runner = opened("panel.nei");
     const file = { name: "panel.nei", source: bytesOf("panel.nei") };

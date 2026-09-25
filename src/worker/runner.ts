@@ -18,23 +18,15 @@ import type {
   DiversityResult,
   Job,
   JobResult,
+  LoadFormat,
   Progress,
   VariantFilter,
 } from "./protocol.ts";
 
-/** A load as the runner opens it: its id, its format and the read options
-    of a VCF, `null` for a `.nei` file. */
-export interface LoadToOpen {
-  /** The load id, new at every pick of the file. */
-  readonly fileId: string;
-  /** VCF, plain or gzipped, or popnei's `.nei`. */
-  readonly format: "vcf" | "nei";
-  /** The two options of `openVcf`, both always given; `null` for `.nei`. */
-  readonly readOptions: {
-    readonly ploidy: number;
-    readonly onlyPassed: boolean;
-  } | null;
-}
+/** A load as the runner opens it: its id, new at every pick of the file,
+    and its format with the read options of a VCF, `null` for a `.nei`
+    file. */
+export type LoadToOpen = { readonly fileId: string } & LoadFormat;
 
 /** The file of a load: its name, and what popnei opens. */
 export interface LoadFile {
@@ -76,9 +68,10 @@ export interface Opened {
 export interface Runner {
   /**
    * Opens the load, the first request of a worker and its only `open`.
-   * `refused` or `reopenFailed` when popnei refuses the file, after which
-   * every run is `badRequest`; `badRequest` for a second `open`. Throws
-   * only for a defect of ours.
+   * `refused` or `reopenFailed` when popnei refuses the file, and
+   * `crashed` when its call throws anything but a plain `Error`, a trap of
+   * the wasm among them, after each of which every run is `badRequest`;
+   * `badRequest` for a second `open`. Throws only for a defect of ours.
    */
   open(load: LoadToOpen, file: LoadFile): Answer<Opened>;
   /**
@@ -174,11 +167,12 @@ export function transferablesOf(result: JobResult): ArrayBuffer[] {
   return [...buffers];
 }
 
-/** What the runner holds: nothing before the `open`, the load of an open
-    that popnei refused, or the load it opened. */
+/** What the runner holds: nothing before the `open`; a load whose open
+    gave no `Variants`, refused by popnei, a file the browser did not give,
+    or a crash; or the load it opened. */
 type Held =
   | { readonly kind: "none" }
-  | { readonly kind: "refused" }
+  | { readonly kind: "notOpened" }
   | {
       readonly kind: "opened";
       readonly load: LoadToOpen;
@@ -189,7 +183,7 @@ type Held =
 export function createRunner(): Runner {
   let held: Held = { kind: "none" };
   /** The `Variants` of the load opened; `null` before the open, after an
-      open that popnei refused, and after an open again that it refused. */
+      open that gave none, and after an open again that popnei refused. */
   let variants: Variants | null = null;
 
   function open(load: LoadToOpen, file: LoadFile): Answer<Opened> {
@@ -203,7 +197,7 @@ export function createRunner(): Runner {
     try {
       opened = openSource(load, file);
     } catch (thrown: unknown) {
-      held = { kind: "refused" };
+      held = { kind: "notOpened" };
       return answerOfPopnei(thrown, file.name);
     }
     held = { kind: "opened", load, file };
@@ -259,10 +253,10 @@ export function createRunner(): Runner {
     switch (held.kind) {
       case "none":
         return { kind: "badRequest", message: "a run before the open" };
-      case "refused":
+      case "notOpened":
         return {
           kind: "badRequest",
-          message: "a run after an open that popnei refused",
+          message: "a run after an open that gave no variants",
         };
       case "opened":
         break;
@@ -297,11 +291,6 @@ function openSource(load: LoadToOpen, file: LoadFile): Variants {
     case "nei":
       return openVars(source);
     case "vcf":
-      if (load.readOptions === null) {
-        throw new Error(
-          "popnei_web defect: a VCF to open with no read options",
-        );
-      }
       return openVcf(source, {
         ploidy: load.readOptions.ploidy,
         onlyPassed: load.readOptions.onlyPassed,
