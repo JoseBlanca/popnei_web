@@ -1,0 +1,30 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+.empty {
+  display: contents;
+}
+
+.bar {
+  display: grid;
+  gap: var(--space-2);
+  padding-block: var(--space-3);
+  padding-inline: var(--space-4);
+  border-block-end: 2px solid var(--color-danger);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.message {
+  font-weight: bold;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.details {
+  display: grid;
+  gap: var(--space-1);
+}

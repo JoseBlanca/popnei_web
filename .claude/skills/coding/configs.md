@@ -708,6 +708,7 @@ export default defineConfig(
   },
   {
     files: ["src/ui/**/*.{ts,tsx}"],
+    extends: [reactHooks.configs.flat.recommended],
     rules: {
       "@typescript-eslint/no-restricted-imports": [
         "error",
@@ -841,9 +842,11 @@ export default defineConfig(
   is left out, since what a script prints is its output.
 - `crates/` is ignored because what is JavaScript there is what
   wasm-bindgen generated into `crates/files/pkg/`.
-- `react.md` adds the rules of React and of hooks to the block of
-  `src/ui`, from `eslint-plugin-react-hooks`, which the owner took on 24
-  September 2026 (`docs/technology.md`, section 2). The probe's block has
+- The block of `src/ui` has the rules of React and of hooks that
+  `react.md` asks for, from `eslint-plugin-react-hooks`, which the owner
+  took on 24 September 2026 (`docs/technology.md`, section 2); they came
+  with the first screen, the entry of `popgen.html`, on 25 September
+  2026. The probe's block has
   them already, since `src/probe/probe.tsx` is React.
 - The probe of stage 0 (`docs/specs/site.md`) is a page of its own, not
   one of the layers, and two patterns keep it apart. `probe`, in the

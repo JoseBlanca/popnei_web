@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Population genetics · popnei web</title>
+    <script>
+      // The start guard (docs/specs/entry.md, "The page"): plain script,
+      // which Vite leaves as it is, run before the application's code and
+      // written for a browser older than the floor: no const, no arrow
+      // function, no trailing comma in a call, no method newer than 2015.
+      // It says in #root that the browser is too old, or that the
+      // application could not be loaded or started, until the entry takes
+      // over with remove().
+      (function () {
+        "use strict";
+        var tooOld = typeof Array.prototype.findLast !== "function";
+        var TOO_OLD =
+          "The application needs Chrome or Edge 111, Firefox 115 or Safari 16.4, or a newer version, and this browser is older.";
+        var NOT_LOADED =
+          "The application could not be loaded. Reload the page.";
+
+        // Writes a sentence in place of what #root holds; #root is below
+        // this script, so before the page is parsed it waits for it.
+        function show(text) {
+          function write() {
+            var root = document.getElementById("root");
+            if (root === null) return;
+            var paragraph = document.createElement("p");
+            paragraph.textContent = text;
+            root.textContent = "";
+            root.appendChild(paragraph);
+          }
+          if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", write);
+          } else {
+            write();
+          }
+        }
+
+        // A throw while the modules of the application are first run.
+        function onError(event) {
+          if (tooOld) return;
+          var text = "The application could not start: " + event.message;
+          show(text + ". Reload the page.");
+        }
+
+        // A module script whose file was not found fires its error on the
+        // element and not on the window; it does not bubble, so it is
+        // caught on its way down to the element, in the capture phase.
+        function onScriptError(event) {
+          if (tooOld) return;
+          var target = event.target;
+          if (target !== null && target.tagName === "SCRIPT") {
+            show(NOT_LOADED);
+          }
+        }
+
+        if (tooOld) {
+          show(TOO_OLD);
+        }
+        window.addEventListener("error", onError);
+        document.addEventListener("error", onScriptError, true);
+
+        window.__popgenGuard = {
+          tooOld: tooOld,
+          remove: function () {
+            window.removeEventListener("error", onError);
+            document.removeEventListener("error", onScriptError, true);
+          },
+        };
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="defects"></div>
+    <div id="root"><p>Loading the population genetics application…</p></div>
+    <noscript
+      >The population genetics application needs JavaScript, which this browser
+      has turned off.</noscript
+    >
+    <script type="module" src="/src/ui/popgen.tsx"></script>
+  </body>
+</html>

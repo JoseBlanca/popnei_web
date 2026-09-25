@@ -337,6 +337,7 @@ export default defineConfig(
   },
   {
     files: ["src/ui/**/*.{ts,tsx}"],
+    extends: [reactHooks.configs.flat.recommended],
     rules: {
       "@typescript-eslint/no-restricted-imports": [
         "error",

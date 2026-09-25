@@ -89,3 +89,59 @@ test("the probe's worker stopped by a trap of popnei", async ({ page }) => {
   ).toBeVisible();
   await save(page, "probe-worker-stopped-light");
 });
+
+// The page of the population genetics application, in both themes, since
+// its dark theme is the same page with other colours and breaks on its own.
+for (const theme of ["light", "dark"] as const) {
+  test.describe(`popgen.html, ${theme}`, () => {
+    test.beforeEach(async ({ page }) => {
+      await page.emulateMedia({ colorScheme: theme });
+      await page.goto("popgen.html");
+      await expect(
+        page.getByRole("heading", { level: 1, name: "Variants" }),
+      ).toBeVisible();
+    });
+
+    test("the page opened", async ({ page }) => {
+      await save(page, `popgen-opened-${theme}`);
+    });
+
+    test("the error bar, with a second error", async ({ page }) => {
+      await page.evaluate(() => {
+        setTimeout(() => {
+          throw new Error("test");
+        });
+        setTimeout(() => {
+          throw new Error("another");
+        });
+      });
+      await expect(page.getByText("1 more error followed it.")).toBeVisible();
+      await save(page, `popgen-error-bar-${theme}`);
+    });
+
+    test("the error bar, the details not copied", async ({ page }) => {
+      await page.evaluate(() => {
+        Object.defineProperty(navigator, "clipboard", { value: undefined });
+        setTimeout(() => {
+          throw new Error("test");
+        });
+      });
+      await page.getByRole("button", { name: "Copy the details" }).click();
+      await expect(
+        page.getByRole("textbox", { name: "The details of the errors" }),
+      ).toBeVisible();
+      await save(page, `popgen-error-bar-details-${theme}`);
+    });
+  });
+}
+
+test("popgen.html, its code not loaded", async ({ page }) => {
+  await page.route("**/assets/popgen-*.js", (route) =>
+    route.fulfill({ status: 404, body: "" }),
+  );
+  await page.goto("popgen.html");
+  await expect(
+    page.getByText("The application could not be loaded. Reload the page."),
+  ).toBeVisible();
+  await save(page, "popgen-not-loaded-light");
+});
