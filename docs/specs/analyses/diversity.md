@@ -502,7 +502,9 @@ export function populationsToRun(p: Project): Pops | null;
 
 /** The reason about the column of the populations, the last three rows
     of "Why it cannot run", with its kind; null when the individuals file
-    is not read, or when the column gives populations. */
+    is not read, or when the column gives populations, or when a column
+    of that name is chosen and the variants file is not read, since no
+    population is looked for until it is. */
 export function populationsNeeds(p: Project):
   | { readonly kind: "noColumn" | "noSuchColumn" | "noPopulation"; readonly reason: string }
   | null;
@@ -525,10 +527,14 @@ export function diversityCsv(r: DiversityResult): string;
 export function refusalText(message: string, p: Project): string;
 ```
 
-`warnings`, `checkNumbers` and `script` take a `JobResult` and throw a
-defect, `popnei_web defect: ...`, for one that is not a
-`DiversityResult`; the store gives them only results of their own
-requests (`docs/specs/core/store.md`, "The definition of an analysis").
+`warnings` and `checkNumbers` take a `JobResult`, and the store gives
+them only results of their own requests (`docs/specs/core/store.md`,
+"The definition of an analysis"). While the diversity is the one member
+of `JobResult`, every result is a `DiversityResult`, and a check of its
+`analysis` would be a condition the lint refuses as always true; when a
+second member comes, they stop compiling, and the check, with a defect,
+`popnei_web defect: ...`, for a result of another analysis, comes with
+it. `script` takes the project, not a result.
 `diversityRows` keeps its rows by the result in a `WeakMap`, a table
 whose entries are kept by the object itself and dropped with it, so that
 the panel, which asks for them each time React draws it again, gets the

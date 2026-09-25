@@ -465,7 +465,8 @@ runner of the tests that need no browser, checks them in node. `title`
 gives the title of an analysis's panel, from `src/ui/analyses/panels.ts`:
 
 ```ts
-export type StepId = "variants" | "individuals" | "analyses";
+// StepId, "variants" | "individuals" | "analyses", is imported from
+// src/core/apps.ts, which lists the steps of the application.
 
 export type StepStatus =
   | "todo" | "reading" | "problem" | "done"                          // Variants and Individuals
