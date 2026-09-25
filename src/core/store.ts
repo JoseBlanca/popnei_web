@@ -222,7 +222,8 @@ export type CheckVerdict =
       readonly app: { readonly saved: string; readonly now: string } | null;
     };
 
-/** What the last change removed, and the calculations it left behind. */
+/** What the last change removed, the calculations it left behind, and
+    those it stopped at once. */
 export interface Notice {
   /** The change: a command with its description, or the step undone or
       redone. */
@@ -236,6 +237,10 @@ export interface Notice {
   /** The analyses whose calculations will be stopped unless the change is
       undone. */
   readonly leftBehind: readonly AnalysisId[];
+  /** The analyses whose calculations the change stopped at once, since it
+      changed the load of the variants file; it does not change until the
+      notice is closed or replaced. */
+  readonly stopped: readonly AnalysisId[];
 }
 
 /** What the entry of the page makes the store with. */
@@ -338,6 +343,9 @@ interface NoticeKept {
   readonly removed: readonly AnalysisId[];
   /** The ids of the requests it left behind. */
   readonly runs: ReadonlySet<number>;
+  /** The analyses whose calculations it stopped at once, in the order of
+      the definitions. */
+  readonly stopped: readonly AnalysisId[];
 }
 
 /** The keys of the analyses, and the project and version they were made
@@ -622,13 +630,17 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
     );
     const behind = leftBehindNow(keys);
     const runs = new Set([...notice.runs].filter((runId) => behind.has(runId)));
-    if (removed.length === 0 && runs.size === 0) {
+    if (
+      removed.length === 0 &&
+      runs.size === 0 &&
+      notice.stopped.length === 0
+    ) {
       notice = null;
     } else if (
       removed.length !== notice.removed.length ||
       runs.size !== notice.runs.size
     ) {
-      notice = { cause: notice.cause, removed, runs };
+      notice = { cause: notice.cause, removed, runs, stopped: notice.stopped };
     }
   };
 
@@ -647,9 +659,15 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
     const leftBehind = defs.map((def) => def.id).filter((id) => named.has(id));
     return previous?.cause === notice.cause &&
       sameIds(previous.removed, notice.removed) &&
-      sameIds(previous.leftBehind, leftBehind)
+      sameIds(previous.leftBehind, leftBehind) &&
+      sameIds(previous.stopped, notice.stopped)
       ? previous
-      : { cause: notice.cause, removed: notice.removed, leftBehind };
+      : {
+          cause: notice.cause,
+          removed: notice.removed,
+          leftBehind,
+          stopped: notice.stopped,
+        };
   };
 
   /** The calculations in flight, reusing each view of `previous` that did
@@ -789,11 +807,13 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
 
   /**
    * Takes `next`, the history after a command, an undo or a redo, when it
-   * is not the one there was: forgets the failures that are not popnei's,
-   * stops the calculations the notice named whose key the new project
-   * still does not give, and makes the notice of this change, `cause`,
-   * with the analyses that were done and are not, and the calculations it
-   * leaves behind; none when it has neither.
+   * is not the one there was: forgets the failures that are not popnei's;
+   * when the change changed the load of the variants file, stops every
+   * calculation in flight, and otherwise the calculations the notice
+   * named whose key the new project still does not give; and makes the
+   * notice of this change, `cause`, with the analyses that were done and
+   * are not, the calculations it leaves behind and those it stopped at
+   * once; none when it has none of the three.
    */
   const changedByUser = (
     next: History,
@@ -811,7 +831,17 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
     );
     failures.clear();
     history = next;
-    if (notice !== null) {
+    let stopped: readonly AnalysisId[] = [];
+    if (
+      !sameLoad(before.present.project.variants, next.present.project.variants)
+    ) {
+      // The calculation worker is started again for the new load, so no
+      // calculation of the old one can wait for an undo.
+      const inFlight = [...requests.values()].filter((r) => !r.stopping);
+      const named = new Set(inFlight.map((r) => r.def.id));
+      stopped = defs.map((def) => def.id).filter((id) => named.has(id));
+      stopAll(inFlight.map((r) => r.runId));
+    } else if (notice !== null) {
       const behind = leftBehindNow(keys);
       stopAll([...notice.runs].filter((runId) => behind.has(runId)));
     }
@@ -820,9 +850,9 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       .map((def) => def.id);
     const runs = leftBehindNow(keys);
     notice =
-      removed.length === 0 && runs.size === 0
+      removed.length === 0 && runs.size === 0 && stopped.length === 0
         ? null
-        : { cause: cause(before, next), removed, runs };
+        : { cause: cause(before, next), removed, runs, stopped };
     changed();
   };
 
@@ -1172,6 +1202,22 @@ function recordShared<S extends object>(
     made.set(old, source);
     return next === p ? p : freezeProject(next);
   });
+}
+
+/** Whether two variants files are the same load: the same load id and
+    the same read options, or no file in both. */
+function sameLoad(a: VariantSource | null, b: VariantSource | null): boolean {
+  if (a === null || b === null) {
+    return a === b;
+  }
+  const x = a.readOptions;
+  const y = b.readOptions;
+  return (
+    a.fileId === b.fileId &&
+    (x === null || y === null
+      ? x === y
+      : x.ploidy === y.ploidy && x.onlyPassed === y.onlyPassed)
+  );
 }
 
 /** Whether two views of a calculation in flight show the same. */

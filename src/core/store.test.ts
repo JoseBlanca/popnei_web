@@ -1787,6 +1787,7 @@ describe("WP4 D3 the notice", () => {
       },
       removed: ["vars"],
       leftBehind: [],
+      stopped: [],
     });
     store.undo();
     const again = statuses(store)[1];
@@ -1803,6 +1804,7 @@ describe("WP4 D3 the notice", () => {
       cause: { kind: "command", description: "the MAF filter changed" },
       removed: [],
       leftBehind: ["vars"],
+      stopped: [],
     });
     expect(request.cancels()).toBe(0);
     expect(kinds(store)).toStrictEqual(["locked", "ready"]);
@@ -1868,6 +1870,7 @@ describe("WP4 D3 the notice", () => {
       cause: { kind: "command", description: "the MAF filter changed" },
       removed: ["pops"],
       leftBehind: ["vars"],
+      stopped: [],
     });
     store.startRun("vars");
     expect(sentAt(sent, 1).cancels()).toBe(1);
@@ -1876,6 +1879,7 @@ describe("WP4 D3 the notice", () => {
       cause: { kind: "command", description: "the MAF filter changed" },
       removed: ["pops"],
       leftBehind: [],
+      stopped: [],
     });
     expect(kinds(store)).toStrictEqual(["removed", "running"]);
   });
@@ -1944,6 +1948,7 @@ describe("WP4 D3 the notice", () => {
       cause: { kind: "command", description: "the MAF filter changed" },
       removed: ["vars"],
       leftBehind: ["pops"],
+      stopped: [],
     });
     const { listener, count } = counter();
     store.subscribe(listener);
@@ -1982,6 +1987,7 @@ describe("WP4 D3 the notice", () => {
       cause: { kind: "command", description: "the MAF filter changed" },
       removed: ["pops"],
       leftBehind: [],
+      stopped: [],
     });
     store.startRun("pops");
     const pops = sentAt(sent, 3);
@@ -2009,6 +2015,7 @@ describe("WP4 D3 the notice", () => {
     store.apply("the MAF filter changed", maf(0.9));
     expect(store.getState().notice).toMatchObject({
       leftBehind: ["pops", "vars"],
+      stopped: [],
     });
     const error = { kind: "workerFailed", message: "a trap" } as const;
     store.runEnded(sentAt(sent, 1).run.id, { kind: "failed", error });
@@ -2103,6 +2110,7 @@ describe("WP4 D3 the notice", () => {
       cause: { kind: "undo", description: "the MAF filter changed" },
       removed: ["vars"],
       leftBehind: [],
+      stopped: [],
     });
     // Another sequence: the redo goes to settings never calculated.
     const other = storeWithVariantsRead();
@@ -2116,6 +2124,7 @@ describe("WP4 D3 the notice", () => {
       cause: { kind: "redo", description: "the MAF filter changed" },
       removed: ["vars"],
       leftBehind: [],
+      stopped: [],
     });
   });
 
@@ -2134,6 +2143,7 @@ describe("WP4 D3 the notice", () => {
       },
       removed: [],
       leftBehind: ["vars"],
+      stopped: [],
     });
     const notice = store.getState().notice;
     request.progress({ done: 5, total: 10 });
@@ -2266,6 +2276,148 @@ describe("WP4 D3 the notice", () => {
     store.apply("the MAF filter changed", maf(0.9));
     expect(store.getState().notice).toMatchObject({
       leftBehind: ["pops", "vars"],
+      stopped: [],
+    });
+  });
+
+  test("a new variants file stops every calculation in flight at once: the notice lists it in stopped, leaves nothing behind, and an undo brings back the results of the old file", () => {
+    const { store, sent } = storeWithBothReady();
+    store.startRun("pops");
+    const pops = sentAt(sent, 0);
+    const result = popsResult();
+    store.runEnded(pops.run.id, doneWith(pops, result));
+    store.startRun("vars");
+    const vars = sentAt(sent, 1);
+    store.apply("a new variants file was loaded", loadPanel(OTHER_VARIANTS_ID));
+    expect(vars.cancels()).toBe(1);
+    expect(store.getState().notice).toStrictEqual({
+      cause: { kind: "command", description: "a new variants file was loaded" },
+      removed: ["pops"],
+      leftBehind: [],
+      stopped: ["vars"],
+    });
+    expect(store.getState().runs).toMatchObject([
+      { runId: vars.run.id, stopping: true },
+    ]);
+    store.undo();
+    expect(vars.cancels()).toBe(1);
+    const [shown, stopped] = statuses(store);
+    expect(shown?.kind === "done" && shown.result).toBe(result);
+    expect(stopped?.kind).toBe("ready");
+    expect(store.getState().notice).toBeNull();
+  });
+
+  test("a new variants file stops at once the calculation the notice before left behind, and lists it in stopped", () => {
+    const { store, request } = storeWithVarsRunning();
+    store.apply("the MAF filter changed", maf(0.9));
+    expect(request.cancels()).toBe(0);
+    store.apply("a new variants file was loaded", loadPanel(OTHER_VARIANTS_ID));
+    expect(request.cancels()).toBe(1);
+    expect(store.getState().notice).toStrictEqual({
+      cause: { kind: "command", description: "a new variants file was loaded" },
+      removed: [],
+      leftBehind: [],
+      stopped: ["vars"],
+    });
+  });
+
+  test("an undo and a redo that change the load of the variants file stop every calculation in flight at once, and so does an undo that leaves no variants file", () => {
+    const { store, sent } = storeWithVariantsRead();
+    store.apply("a new variants file was loaded", loadPanel(OTHER_VARIANTS_ID));
+    store.variantsRead(OTHER_VARIANTS_ID, VARIANTS_READ);
+    store.startRun("vars");
+    const onNew = sentAt(sent, 0);
+    store.undo();
+    expect(onNew.cancels()).toBe(1);
+    expect(store.getState().notice).toStrictEqual({
+      cause: { kind: "undo", description: "a new variants file was loaded" },
+      removed: [],
+      leftBehind: [],
+      stopped: ["vars"],
+    });
+    store.startRun("vars");
+    const onOld = sentAt(sent, 1);
+    store.redo();
+    expect(onOld.cancels()).toBe(1);
+    expect(onNew.cancels()).toBe(1);
+    expect(store.getState().notice).toStrictEqual({
+      cause: { kind: "redo", description: "a new variants file was loaded" },
+      removed: [],
+      leftBehind: [],
+      stopped: ["vars"],
+    });
+    // Undo of the first pick: no variants file at all.
+    const first = storeWithVarsRunning();
+    first.store.undo();
+    expect(first.request.cancels()).toBe(1);
+    expect(first.store.getState().notice).toMatchObject({
+      cause: { kind: "undo", description: "a variants file was loaded" },
+      leftBehind: [],
+      stopped: ["vars"],
+    });
+  });
+
+  test("new read options of the same load of the variants file are a change of the load, and stop every calculation at once", () => {
+    const { store, request } = storeWithVarsRunning();
+    store.apply("the ploidy changed", (p) =>
+      p.variants === null
+        ? p
+        : {
+            ...p,
+            variants: {
+              ...p.variants,
+              readOptions: { ploidy: 4, onlyPassed: false },
+            },
+          },
+    );
+    expect(request.cancels()).toBe(1);
+    expect(store.getState().notice).toMatchObject({
+      leftBehind: [],
+      stopped: ["vars"],
+    });
+  });
+
+  test("the calculations stopped stay in the notice until it is closed or replaced, also once their outcome arrived and the new file was read", () => {
+    const closed = storeWithVarsRunning();
+    closed.store.apply(
+      "a new variants file was loaded",
+      loadPanel(OTHER_VARIANTS_ID),
+    );
+    const notice = closed.store.getState().notice;
+    closed.store.runEnded(closed.request.run.id, { kind: "cancelled" });
+    closed.store.variantsRead(OTHER_VARIANTS_ID, VARIANTS_READ);
+    expect(closed.store.getState().notice).toBe(notice);
+    expect(notice).toMatchObject({ removed: [], stopped: ["vars"] });
+    closed.store.dismissNotice();
+    expect(closed.store.getState().notice).toBeNull();
+    expect(closed.request.cancels()).toBe(1);
+    const replaced = storeWithVarsRunning();
+    replaced.store.apply(
+      "a new variants file was loaded",
+      loadPanel(OTHER_VARIANTS_ID),
+    );
+    replaced.store.apply("the MAF filter changed", maf(0.9));
+    expect(replaced.store.getState().notice).toBeNull();
+    expect(replaced.request.cancels()).toBe(1);
+  });
+
+  test("the analyses stopped are listed in the order of the definitions, not of their start", () => {
+    const { store } = storeWithBothReady();
+    store.startRun("vars");
+    store.startRun("pops");
+    store.apply("a new variants file was loaded", loadPanel(OTHER_VARIANTS_ID));
+    expect(store.getState().notice).toMatchObject({
+      stopped: ["pops", "vars"],
+    });
+  });
+
+  test("a command that keeps the load of the variants file stops nothing at once, and its notice lists nothing in stopped", () => {
+    const { store, request } = storeWithVarsRunning();
+    store.apply("the MAF filter changed", maf(0.9));
+    expect(request.cancels()).toBe(0);
+    expect(store.getState().notice).toMatchObject({
+      leftBehind: ["vars"],
+      stopped: [],
     });
   });
 });
@@ -2868,6 +3020,15 @@ function modelledStore(): {
       (s.kind === "command" || s.kind === "undo" || s.kind === "redo") &&
       after.project !== before.project
     ) {
+      // A change of the load of the variants file stops at once every
+      // request in flight not already stopped.
+      if (!sameLoadOf(before.project, after.project)) {
+        for (const r of inFlight()) {
+          if (cancelsBefore.get(r) === 0) {
+            r.mustCancel = true;
+          }
+        }
+      }
       userChanged();
     }
     // A read, of a file or of the number of variants of a result, stops
@@ -2887,6 +3048,16 @@ function modelledStore(): {
     }
   };
   return { store, analyses, model, results, run };
+}
+
+/** Whether two projects hold the same load of the variants file: the
+    same load id and read options, or no file in both. */
+function sameLoadOf(a: Project, b: Project): boolean {
+  const load = (p: Project): string =>
+    p.variants === null
+      ? "none"
+      : JSON.stringify([p.variants.fileId, p.variants.readOptions]);
+  return load(a) === load(b);
 }
 
 /** Runs `drawn` on a new modelled store, checking `holds` after each
@@ -2963,7 +3134,7 @@ describe("WP4 D5 the properties of the store", () => {
     );
   });
 
-  test("the notice of each change lists exactly the analyses done before it and not after it, with its cause", () => {
+  test("the notice of each change lists exactly the analyses done before it and not after it, with its cause, and those whose calculations a change of the load stopped", () => {
     fc.assert(
       fc.property(steps, (drawn) => {
         eachStep(drawn, ({ store }, s, before) => {
@@ -2993,6 +3164,17 @@ describe("WP4 D5 the properties of the store", () => {
             .map((view) => view.id)
             .filter((id) => wasDone.has(id) && !isDone.has(id));
           expect(after.notice?.removed ?? []).toStrictEqual(expected);
+          // A change of the load stops at once every calculation in
+          // flight not already being stopped, and the notice lists them.
+          const running = new Set(
+            before.runs.filter((r) => !r.stopping).map((r) => r.analysis),
+          );
+          const stopped = sameLoadOf(before.project, after.project)
+            ? []
+            : after.analyses
+                .map((view) => view.id)
+                .filter((id) => running.has(id));
+          expect(after.notice?.stopped ?? []).toStrictEqual(stopped);
           if (after.notice !== null) {
             expect(after.notice.cause.kind).toBe(
               s.kind === "command" ? "command" : s.kind,
