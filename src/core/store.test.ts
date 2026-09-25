@@ -2421,6 +2421,50 @@ describe("WP4 D3 the notice", () => {
     });
   });
 
+  test("after an undo back to a load already read, the next request is afterStop, also after popneiReady, until a request on that load ends done; after a new pick once read, it is not", () => {
+    const { store, sent } = storeWithVariantsRead();
+    store.apply("a new variants file was loaded", loadPanel(OTHER_VARIANTS_ID));
+    store.variantsRead(OTHER_VARIANTS_ID, VARIANTS_READ);
+    store.startRun("vars");
+    expect(store.getState().runs).toMatchObject([
+      { runId: 1, afterStop: false },
+    ]);
+    const onNew = sentAt(sent, 0);
+    store.runEnded(onNew.run.id, doneWith(onNew, varsResult(null)));
+    store.undo();
+    // The worker, started again for the old load, says it is ready before
+    // it opens the file.
+    store.popneiReady("0.1.0");
+    store.variantsRead(VARIANTS_ID, VARIANTS_READ);
+    store.startRun("vars");
+    expect(store.getState().runs).toMatchObject([
+      { runId: 2, afterStop: true },
+    ]);
+    const onOld = sentAt(sent, 1);
+    store.runEnded(onOld.run.id, doneWith(onOld, varsResult(null)));
+    store.apply("the MAF filter changed", maf(0.9));
+    store.startRun("vars");
+    expect(store.getState().runs).toMatchObject([
+      { runId: 3, afterStop: false },
+    ]);
+  });
+
+  test("a request on another load that ends done does not clear the mark of a change of the load", () => {
+    const { store, sent } = storeWithVariantsRead();
+    store.apply("a new variants file was loaded", loadPanel(OTHER_VARIANTS_ID));
+    store.variantsRead(OTHER_VARIANTS_ID, VARIANTS_READ);
+    store.undo();
+    store.redo();
+    store.startRun("vars");
+    const first = sentAt(sent, 0);
+    store.undo();
+    store.runEnded(first.run.id, doneWith(first, varsResult(null)));
+    store.startRun("vars");
+    expect(store.getState().runs).toMatchObject([
+      { runId: 2, afterStop: true },
+    ]);
+  });
+
   test("the analyses stopped are listed in the order of the definitions, not of their start", () => {
     const { store } = storeWithBothReady();
     store.startRun("vars");

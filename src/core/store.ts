@@ -412,6 +412,12 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       last ready and nothing ended done or failed since: the next request
       may wait for the worker to start again. */
   let stopIssued = false;
+  /** The load id of the variants file a change of the load gave, until a
+      read of it is recorded or a request on it ends done or failed: the
+      calculation worker opens that file before the next request, and
+      `popneiReady` does not clear it, since the worker is ready before
+      it opens the file. */
+  let reopening: string | null = null;
 
   let locks: {
     readonly project: Project;
@@ -835,6 +841,7 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
     if (
       !sameLoad(before.present.project.variants, next.present.project.variants)
     ) {
+      reopening = next.present.project.variants?.fileId ?? null;
       // The calculation worker is started again for the new load, so no
       // calculation of the old one can wait for an undo.
       const inFlight = [...requests.values()].filter((r) => !r.stopping);
@@ -1029,7 +1036,7 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
           // The calculations left behind are stopped before the new
           // request is sent, so that it does not wait behind them.
           stopAll(leftBehindNow(currentKeys()));
-          sending.afterStop = stopIssued;
+          sending.afterStop = stopIssued || reopening !== null;
           // A progress given before `send` returns has no request to go
           // to, and is passed over.
           const sent = config.send(key, job, (progress) => {
@@ -1118,14 +1125,18 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       changed();
     },
     variantsRead: (fileId, read) => {
-      moved(
-        recordShared<VariantSource>(
-          history,
-          (p) => p.variants,
-          (p, variants) => ({ ...p, variants }),
-          (p) => recordVariantsRead(p, fileId, read),
-        ),
+      const next = recordShared<VariantSource>(
+        history,
+        (p) => p.variants,
+        (p, variants) => ({ ...p, variants }),
+        (p) => recordVariantsRead(p, fileId, read),
       );
+      // A read recorded of the new load was its opening; one that records
+      // nothing, of a source read already, says nothing of the worker.
+      if (next !== history && fileId === reopening) {
+        reopening = null;
+      }
+      moved(next);
     },
     individualsRead: (fileId, csv, read) => {
       moved(
@@ -1148,8 +1159,12 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       // defect does not leave the analysis shown running for ever.
       requests.delete(runId);
       if (outcome.kind !== "cancelled") {
-        // Answered by a worker past any stop issued before.
+        // Answered by a worker past any stop issued before, and, on the
+        // load it opened, past the opening.
         stopIssued = false;
+        if (request.fileId === reopening) {
+          reopening = null;
+        }
       }
       try {
         ended(request, outcome);
