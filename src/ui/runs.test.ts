@@ -107,12 +107,18 @@ describe("WS7 D1 startAnalysis", () => {
     expect(ended).toEqual([[41, { kind: "cancelled" }]]);
   });
 
-  test("startedAt of the request is a number while it is in flight, and null after", async () => {
+  test("startedAt of the request is the time of its start while it is in flight, and null after", async () => {
     const { store, ends } = setUp(READY);
     expect(startedAt(41)).toBeNull();
 
+    const before = performance.now();
     const started = startAnalysis(store, "diversity");
-    expect(typeof startedAt(41)).toBe("number");
+    const after = performance.now();
+    // The time of the start, from the same clock, and not any number.
+    const at = startedAt(41);
+    expect(at).not.toBeNull();
+    expect(at).toBeGreaterThanOrEqual(before);
+    expect(at).toBeLessThanOrEqual(after);
     ends[0]?.({ kind: "cancelled" });
     await started;
 

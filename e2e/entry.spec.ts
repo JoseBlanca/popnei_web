@@ -414,3 +414,61 @@ test("WS7 D2 in a browser in Spanish the threshold is written the English way", 
   ).toHaveValue("0.1");
   await context.close();
 });
+
+test("WS7 D2 the noise of a ResizeObserver loop shows no error bar", async ({
+  page,
+}) => {
+  await openPopgen(page);
+  // An observer that resizes what it observes: the browser gives up on the
+  // loop and fires the window's error event with "ResizeObserver loop …".
+  const noises = await page.evaluate(async () => {
+    let count = 0;
+    window.addEventListener("error", (event) => {
+      if (event.message.startsWith("ResizeObserver loop")) count += 1;
+    });
+    const box = document.createElement("div");
+    document.body.append(box);
+    let width = 10;
+    new ResizeObserver(() => {
+      width += 1;
+      box.style.width = `${String(width)}px`;
+    }).observe(box);
+    for (let frame = 0; frame < 5; frame++) {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    }
+    return count;
+  });
+  expect(noises).toBeGreaterThan(0);
+
+  // An error after it is the first the bar shows, with none before it.
+  await throwFromHandler(page, "test");
+  await expect(bar(page)).toHaveText(BAR_TEST);
+});
+
+test("WS7 D2 an error event with no error shows its message in the bar", async ({
+  page,
+}) => {
+  await openPopgen(page);
+  await page.evaluate(() => {
+    window.dispatchEvent(
+      new ErrorEvent("error", { message: "a script of another origin failed" }),
+    );
+  });
+  await expect(bar(page)).toHaveText(
+    "The application met an error of its own: a script of another origin failed. Your project is intact: save it, then reload the page.",
+  );
+});
+
+test("WS7 D2 the details of the errors give popnei's version once the calculation worker is ready", async ({
+  page,
+}) => {
+  await openPopgen(page);
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "clipboard", { value: undefined });
+  });
+  await throwFromHandler(page, "test");
+  await page.getByRole("button", { name: "Copy the details" }).click();
+  const box = page.getByRole("textbox", { name: "The details of the errors" });
+
+  await expect(box).toHaveValue(/\npopnei: 0\.1\.0\n/);
+});

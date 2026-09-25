@@ -91,6 +91,14 @@ async function drop(page: Page, fixtures: readonly string[]): Promise<void> {
   }
 }
 
+/** Unchecks the check box of the passed variants with the mouse, on its
+    words, as a user does. */
+async function uncheckPassed(page: Page): Promise<void> {
+  const name = "Only the variants with PASS or . in the FILTER column";
+  await page.getByText(name, { exact: true }).click();
+  await expect(page.getByRole("checkbox", { name })).not.toBeChecked();
+}
+
 async function expectNoViolations(
   makeAxeBuilder: () => { analyze(): Promise<{ violations: unknown[] }> },
 ): Promise<void> {
@@ -280,8 +288,14 @@ test("WS7 D3 several files dropped at once load none", async ({
   await drop(page, ["panel.nei", "panel.vcf.gz"]);
 
   await expect(
-    page.getByText("Drop one variants file at a time.", { exact: true }),
+    page
+      .getByRole("main")
+      .getByText("Drop one variants file at a time.", { exact: true }),
   ).toBeVisible();
+  // Announced too, since the focus does not move to it.
+  await expect(page.getByRole("status").last()).toHaveText(
+    "Drop one variants file at a time.",
+  );
   await expect(fileButton(page)).toHaveText("Choose a variants file…");
   await expectNoViolations(makeAxeBuilder);
 });
@@ -474,3 +488,57 @@ for (const locale of ["en-US", "es-ES"] as const) {
     });
   });
 }
+
+test("WS7 D3 a VCF picked with the check box of the passed variants off is read with every variant", async ({
+  page,
+}) => {
+  await openVariants(page);
+  await uncheckPassed(page);
+
+  await pick(page, "panel.vcf.gz");
+
+  await expect(
+    zone(page).getByText("Read with ploidy 2, every variant", { exact: true }),
+  ).toBeVisible();
+});
+
+test("WS7 D3 a VCF read again with every variant says so on its card", async ({
+  page,
+}) => {
+  await openVariants(page);
+  await pick(page, "panel.vcf.gz");
+  await expect(
+    zone(page).getByText(
+      "Read with ploidy 2, only the variants with PASS or . in the FILTER column",
+    ),
+  ).toBeVisible();
+  await uncheckPassed(page);
+
+  await page
+    .getByRole("button", { name: "Read panel.vcf.gz again with every variant" })
+    .click();
+
+  await expect(
+    zone(page).getByText("Read with ploidy 2, every variant", { exact: true }),
+  ).toBeVisible();
+  await expect(zone(page).getByText("200 individuals")).toBeVisible();
+});
+
+test("WS7 D3 the options of a VCF start again at the defaults when the step is drawn again", async ({
+  page,
+}) => {
+  await openVariants(page);
+  const ploidy = page.getByLabel("Ploidy of the VCF");
+  await ploidy.fill("4");
+  await ploidy.press("Enter");
+  await expect(ploidy).toHaveValue("4");
+
+  const steps = page.getByRole("navigation", { name: "Steps" });
+  await steps.getByRole("link", { name: "Individuals" }).click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Individuals" }),
+  ).toBeVisible();
+  await steps.getByRole("link", { name: "Variants" }).click();
+
+  await expect(page.getByLabel("Ploidy of the VCF")).toHaveValue("2");
+});

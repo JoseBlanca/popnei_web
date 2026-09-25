@@ -362,6 +362,65 @@ describe("WS7 D1 the reads cancelled", () => {
     });
   });
 
+  test("options of a CSV that differ in the separator alone cancel the read and ask again", () => {
+    const { store, fake } = setUp();
+    pickCsv(store, A);
+
+    setCsv(store, { ...A, separator: ";" });
+
+    expect(fake.individuals[0]?.cancels()).toBe(1);
+    expect(fake.individuals.map((asked) => asked.csv)).toEqual([
+      A,
+      { ...A, separator: ";" },
+    ]);
+  });
+
+  test("options of a CSV that differ in the decimal mark alone cancel the read and ask again", () => {
+    const { store, fake } = setUp();
+    pickCsv(store, A);
+
+    setCsv(store, { ...A, decimal: "," });
+
+    expect(fake.individuals[0]?.cancels()).toBe(1);
+    expect(fake.individuals.map((asked) => asked.csv)).toEqual([
+      A,
+      { ...A, decimal: "," },
+    ]);
+  });
+
+  test("an individuals read the client ends cancelled with no cancel of the entry is asked again", async () => {
+    const { store, fake } = setUp();
+    pickCsv(store, A);
+
+    fake.individuals[0]?.end({ kind: "cancelled" });
+    await settle();
+
+    expect(readsOf(fake, A)).toHaveLength(2);
+    expect(individualsRead(store)).toEqual({ kind: "pending" });
+  });
+
+  test("pick, undo, redo, then a late cancelled of the first read leaves the second under way and asks nothing more", async () => {
+    const { store, fake } = setUp();
+    pickNei(store, PANEL_ID);
+    store.undo();
+    store.redo();
+    expect(fake.variants).toHaveLength(2);
+
+    fake.variants[0]?.end({ kind: "cancelled" });
+    await settle();
+
+    expect(fake.variants).toHaveLength(2);
+    expect(fake.variants[1]?.cancels()).toBe(0);
+    fake.variants[1]?.end(OPENED);
+    await settle();
+    expect(variantsRead(store)).toEqual({
+      kind: "read",
+      individuals: ["s000", "s001"],
+      ploidy: 2,
+      numVars: null,
+    });
+  });
+
   test("a cancelled read records nothing", async () => {
     const { store, fake } = setUp();
     pickNei(store, PANEL_ID);
