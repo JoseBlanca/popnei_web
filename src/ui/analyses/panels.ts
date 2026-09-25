@@ -39,6 +39,9 @@ export interface AnalysisUi {
   readonly title: string;
   /** The analysis in the middle of a sentence, "the diversity". */
   readonly name: string;
+  /** Its result in the middle of a sentence, "the table", which the
+      words of a result removed say Undo brings back and Run makes anew. */
+  readonly resultName: string;
   /** The line beside Run in the state ready, what it will run on, or
       `null` for none. */
   readonly readyText: (p: Project) => string | null;
@@ -54,6 +57,7 @@ export interface AnalysisUi {
 const DIVERSITY: AnalysisUi = Object.freeze({
   title: "Diversity",
   name: "the diversity",
+  resultName: "the table",
   readyText: (p: Project): string | null => {
     const pops = populationsToRun(p);
     return pops === null ? null : populationsText(pops);

@@ -96,23 +96,29 @@ function undoneOrRedone(cause: Notice["cause"]): string | null {
 
 /**
  * The words of a result removed, from the change of the notice that lists
- * it, as the shell's notice is: after a command, "The diversity was
- * removed because the missing data filter changed. Undo brings it back
- * with no calculation; Run calculates it for the new settings."; after an
- * undo, "Undone: the missing data filter changed. The diversity was
- * removed; Redo brings it back with no calculation, and Run calculates it
- * for the settings as they are now.", and after a redo the same with
+ * it, as the shell's notice is, and what each button gives: after a
+ * command, "The diversity was removed because the missing data filter
+ * changed. Undo brings back the table as it was, with no calculation; Run
+ * calculates a new one for the new settings."; after an undo, "Undone:
+ * the missing data filter changed. The diversity was removed; Redo brings
+ * back the table as it was, with no calculation, and Run calculates a new
+ * one for the settings as they are now.", and after a redo the same with
  * "Redone:" and Undo. `name` is the analysis in a sentence, "the
- * diversity".
+ * diversity", and `resultName` its result, "the table".
  */
-export function removedText(name: string, notice: Notice): string {
+export function removedText(
+  name: string,
+  resultName: string,
+  notice: Notice,
+): string {
   const cause = notice.cause;
   const start = undoneOrRedone(cause);
+  const back = `brings back ${resultName} as it was, with no calculation`;
   if (start === null) {
-    return `${capitalized(name)} was removed because ${cause.description}. Undo brings it back with no calculation; Run calculates it for the new settings.`;
+    return `${capitalized(name)} was removed because ${cause.description}. Undo ${back}; Run calculates a new one for the new settings.`;
   }
   const action = cause.kind === "undo" ? "Redo" : "Undo";
-  return `${start} ${capitalized(name)} was removed; ${action} brings it back with no calculation, and Run calculates it for the settings as they are now.`;
+  return `${start} ${capitalized(name)} was removed; ${action} ${back}, and Run calculates a new one for the settings as they are now.`;
 }
 
 /** The line of a calculation stopped at once by a change of the load of

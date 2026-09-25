@@ -324,7 +324,7 @@ test("WS8 D2 the filter moved to 1 removes the table with the words of its notic
   await goTo(page, "Analyses");
   await expect(
     panel(page).getByText(
-      "The diversity was removed because the missing data filter changed. Undo brings it back with no calculation; Run calculates it for the new settings.",
+      "The diversity was removed because the missing data filter changed. Undo brings back the table as it was, with no calculation; Run calculates a new one for the new settings.",
       { exact: true },
     ),
   ).toBeVisible();

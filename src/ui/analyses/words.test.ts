@@ -65,14 +65,14 @@ describe("the words of the frame of an analysis panel", () => {
   });
 
   test("WS8 D2 a result removed is told from the change: its cause after a command, the change undone or redone after an undo or a redo", () => {
-    expect(removedText("the diversity", notice("command"))).toBe(
-      "The diversity was removed because the missing data filter changed. Undo brings it back with no calculation; Run calculates it for the new settings.",
+    expect(removedText("the diversity", "the table", notice("command"))).toBe(
+      "The diversity was removed because the missing data filter changed. Undo brings back the table as it was, with no calculation; Run calculates a new one for the new settings.",
     );
-    expect(removedText("the diversity", notice("undo"))).toBe(
-      "Undone: the missing data filter changed. The diversity was removed; Redo brings it back with no calculation, and Run calculates it for the settings as they are now.",
+    expect(removedText("the diversity", "the table", notice("undo"))).toBe(
+      "Undone: the missing data filter changed. The diversity was removed; Redo brings back the table as it was, with no calculation, and Run calculates a new one for the settings as they are now.",
     );
-    expect(removedText("the diversity", notice("redo"))).toBe(
-      "Redone: the missing data filter changed. The diversity was removed; Undo brings it back with no calculation, and Run calculates it for the settings as they are now.",
+    expect(removedText("the diversity", "the table", notice("redo"))).toBe(
+      "Redone: the missing data filter changed. The diversity was removed; Undo brings back the table as it was, with no calculation, and Run calculates a new one for the settings as they are now.",
     );
   });
 
