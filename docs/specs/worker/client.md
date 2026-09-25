@@ -58,7 +58,8 @@ rule below rules out one of them.
 - **Each `ready` of the calculation worker gives its popnei version** to
   the function the entry gave the client, which records it in the store
   (`docs/specs/core/store.md`, `popneiReady`), before any answer of that
-  worker is given to anyone. The store makes no key without the version,
+  worker is given to anyone; for a worker started again after a cancel or
+  a crash, once it has read the file again (below). The store makes no key without the version,
   and every analysis is locked until a read of the variants file, which
   only a worker that was ready gives.
 - **A `ready` of another version of the messages**, `otherProtocol`
@@ -134,7 +135,8 @@ read yet reaches no one; calls `terminate()`, which stops the thread
 wherever it is, inside wasm included; and starts a new worker at once.
 
 A worker started again after a cancel or a crash is sent, as soon as it
-is ready, the `open` of the load the old one held, unless the first
+is ready, the `open` of the load the old one held, when the old one had
+opened it and the crash was not during that `open`, and unless the first
 request of the queue is on another load, as `.claude/skills/coding/worker.md`
 ("Cancelling", step 4) and section 5 of the architecture have it, so that
 the file is read again while the user decides what to run next. For such
@@ -143,9 +145,14 @@ not at its `ready`: the store keeps a run `afterStop` until the worker
 announces itself ready (`docs/specs/core/store.md`, "The notice, and the
 calculations it stops"), and the wait that mark tells of is the reading
 of the file, not the loading of the wasm. The version is already known
-to the store by then, from the first `ready`. A worker started for a new
-load, or the first one, calls it at its `ready`, since its first request
-is the `open` of a read, whose answer needs the version recorded first.
+to the store by then, from the first `ready`. Every other worker, the
+first one, one started for a new load, and one started again with no
+`open` to send it, calls it at its `ready`: the first `ready` of the
+page has to reach the store before any read is recorded, and after a
+change of the load the store keeps its own mark until the new file is
+read (`docs/specs/core/store.md`), which `popneiReady` does not clear.
+This corrects the assumption of `docs/specs/entry.md` that the function
+is always called at the `ready`, before any request is sent.
 
 - **Each worker receives at most one `open`, and it is its first
   request.** Before the first request on a load, a worker that holds no
@@ -296,7 +303,7 @@ export const WORKER_READY_TIMEOUT_MS = 30_000;
 export interface Client {
   /** Keeps the File of a load under its load id, for the life of the page,
       so that an undo of the load finds it; before the load goes into the
-      project. The same id twice is a defect. */
+      project. The same id twice is a defect, thrown. */
   addFile(fileId: string, file: File): void;
 
   /** Opens the variants file of a load on the calculation worker. */
@@ -347,7 +354,10 @@ both workers, is one count from 1 for the life of the page.
 `src/worker/start.ts` is the file `.claude/skills/coding/worker.md` gives
 whole, "How Vite builds the workers": `makeRunnerWorker` and
 `makeFilesWorker`, each a `new` of the worker Vite builds from
-`runner.ts?worker` and `filesRunner.ts?worker`. The entry passes them to
+`runnerWorker.ts?worker`, the worker's script that
+`docs/specs/worker/runner.md` puts apart from `runner.ts`, and
+`filesRunner.ts?worker`; `worker.md` still names `runner.ts?worker`, and
+is corrected with that spec. The entry passes them to
 `createClient`. The probe of stage 0 loaded popnei through the same
 import in Chromium, Firefox and WebKit, served from GitHub Pages
 (`docs/plans/site.report.md`).
@@ -360,9 +370,10 @@ specs meet:
 - **A pick of a file**: `addFile(fileId, file)`, then the command that
   puts the load in the project. After every change of the project, the
   entry asks for the read of each source that is pending and has no read
-  under way, `openVariants` or `readIndividuals`, and records the answer
-  into the store (`docs/architecture.md`, section 6, "Who asks for a
-  read"):
+  under way, `openVariants` or `readIndividuals`, keeps the `Read` it is
+  given, cancels it when the project no longer holds that source pending,
+  and records its outcome into the store (`docs/architecture.md`, section
+  6, "Who asks for a read"):
 
   | answer | recorded as |
   |---|---|
@@ -373,11 +384,12 @@ specs meet:
   | `read` | `individualsRead(fileId, csv, { kind: "read", table, columns, found })` |
   | `refused` | `individualsRead(fileId, csv, { kind: "failed", error })` |
   | `failed` | `individualsRead(fileId, csv, { kind: "failed", error: { kind: "worker", error } })` |
+  | `cancelled` | nothing, as for the variants file |
 
 - **The store** is given `send: (key, job, onProgress) => client.run(key,
   job, onProgress)` and `onPopneiReady: (v) => store.popneiReady(v)`
   (`docs/specs/core/store.md`, `createStore`).
-- **`src/ui/runs.ts`** takes the `Run` that `store.startRun` returns,
+- **`src/ui/runs.ts`**, its `startAnalysis`, takes the `Run` that `store.startRun` returns,
   awaits its `outcome`, and gives it to `store.runEnded(run.id, outcome)`.
   The client promises it: the outcome arrives once and never fails;
   `cancel()` can be called at any time, as often as the store likes; and
@@ -389,11 +401,16 @@ specs meet:
   load runs; the `openVariants` of the second ends it, `cancelled`,
   starts a new worker and opens the second. The entry records nothing for
   the first, whose source is no longer in the project.
-- **A function of the page that cancels while the client answers.** The
-  store's `popneiReady` can cancel runs, when the version changed
-  (`docs/specs/core/store.md`, "The cases"). The client calls
-  `onPopneiReady` once its own state is up to date, and sends the next
-  request only after the call returns, so a cancel made inside it is seen.
+- **A function of the page that cancels, or throws, while the client
+  answers.** The store's `popneiReady` can cancel runs, when the version
+  changed (`docs/specs/core/store.md`, "The cases"), and it and the
+  store's function behind `onProgress` throw again the first error of a
+  screen that listens to the store. The client calls `onPopneiReady` and
+  `onProgress`, and resolves no promise, until its own state is up to
+  date; it sends the next request after the call returns, so a cancel
+  made inside it is seen, and in a `finally`, so a throw does not leave
+  the queue stopped. The throw goes on, to the bar of the errors of the
+  page (`docs/specs/entry.md`).
 - **An undo to a load already read, then Run.** The worker holds the
   other load: it is ended, a new one opens the old load's file, from the
   `File` kept, and then runs the request (above).
@@ -411,9 +428,13 @@ specs meet:
   two tries it is given up, `couldNotStart`, and the user reloads the
   page; nothing else is needed for this case.
 - **A request of a load whose `File` the client does not hold**, which a
-  project file could name, or a run of a load never opened: a defect of
-  the page. The client answers it at once, `failed` with `defect`, so
-  that no read stays under way; `docs/specs/core/projectFile.md` says
+  project file could name, or a run of a load never opened, or of one
+  whose `open` was refused or failed: a defect of the page. The client
+  answers it at once, `failed` with `defect`, so that no read stays under
+  way. The two defects of the client's own calls, `addFile` of an id it
+  holds and `openVariants` of a known id with other read options, are
+  thrown, as `.claude/skills/coding/typescript.md` has a defect, and reach
+  the bar of the errors of the page (`docs/specs/entry.md`); `docs/specs/core/projectFile.md` says
   what the project file writes so that it is not asked for.
 - **A worker given up** answers every request at once, as above, and
   starts no worker; the other worker goes on.
@@ -440,7 +461,8 @@ Vitest for the ready timeout. The runs and the reads are those of the
 walking skeleton, a diversity `Job` and a CSV.
 
 - **A worked sequence.** `createClient`: one calculation worker is made,
-  no light one, and it is sent nothing. `openVariants` of load A: still
+  no light one, and it is sent nothing. `addFile` of A, then
+  `openVariants` of load A: still
   nothing sent. The worker posts `ready` with "0.1.0": `onPopneiReady`
   was called with "0.1.0", and the worker was sent the `open` of A with
   its `File`. `run` of key k1 on A: nothing sent. `opened` with 200
@@ -448,17 +470,31 @@ walking skeleton, a diversity `Job` and a CSV.
   worker was sent the `run` of k1. `run` of k2: nothing sent. `result`
   of k1: its outcome is `done` with k1, and the worker was sent k2.
   `cancel()` of k2: its outcome is `cancelled`, the first worker was
-  ended after its handlers were taken off, a second worker was made, and
-  once it is ready it is sent nothing, since no request waits.
-- **The load.** A second worker holding A, `run` on A: it is sent the
-  `open` of A first, then the run, and the `opened` goes to no one. Then
-  `openVariants` of B: the worker is ended, a third is made and sent the
-  `open` of B. With `open` of A running, `openVariants` of B gives A
-  `cancelled`. Of every sequence in the property below, no worker is sent
+  ended after its handlers were taken off, and a second worker was made.
+  It posts `ready`: it is sent the `open` of A, and `onPopneiReady` is not
+  called yet. `run` of k3 on A: nothing sent. `opened`: `onPopneiReady`
+  was called a second time, the `opened` goes to no one, and the worker
+  was sent k3.
+- **The load.** That worker holding A, `addFile` of B and `openVariants`
+  of B: the worker is ended, a third is made and sent the `open` of B.
+  With the `open` of B running, `openVariants` of C gives B `cancelled`
+  at once, before the third worker answers. `openVariants` of B again
+  with other read options: a defect is thrown. Of every sequence in the property below, no worker is sent
   a second `open`, nor a request of another load than its `open`'s.
 - **Cancelling.** Of a run waiting: out of the queue, no worker ended. Of
-  a run waiting for its `open`: out, and the `open` goes on. Of a run
-  ended, and twice: nothing more.
+  a run waiting for its `open`: out, and the `open` goes on. Of the read
+  of a variants file running: the worker ended. Of a read of the
+  individuals file running: `cancelled` at once, the light worker not
+  ended, its answer then to no one. Of a request ended, and twice:
+  nothing more. A `cancel()` made inside `onPopneiReady` is seen: the
+  run it cancels is not sent.
+- **The reopen that fails** (**Open 1**): a worker started again after a
+  cancel, whose `open` of A ends `refused`, fails the run waiting on it
+  with `workerFailed` and the message "panel.nei could not be opened
+  again: ‹popnei's message›"; a next file starts a new worker.
+- **A defect of the page**: `openVariants` and `run` of a load with no
+  `File` give `failed` with `defect` at once. `onPopneiReady` that throws:
+  the throw reaches the caller, and the next request is still sent.
 - **Failures**, one test for each row of the table above, with what the
   running request gets, that the waiting ones reach the new worker, and
   that a message of the old worker, posted after it was ended, changes
@@ -466,16 +502,19 @@ walking skeleton, a diversity `Job` and a CSV.
 - **Starting.** No `ready` in 30 seconds of the fake timers: a second
   worker is made; no `ready` again: every request fails with
   `couldNotStart`, a request after it too, at once, and no third worker
-  is made. A `ready` between the two failures sets the count back: a
-  failure after it starts a worker again. A `ready` of protocol 2: every
-  request fails with `protocolMismatch`, and no other worker is made.
+  is made, while the light worker still reads. An answer between the two
+  failures sets the count back: a failure after it starts a worker again.
+  A worker that crashes idle after each `ready`, twice: given up. A
+  `ready` of protocol 2: every request fails with `protocolMismatch`,
+  and no other worker is made.
 - **Properties, with fast-check**, which draws sequences of reads, runs,
   cancels, answers, crashes and timeouts in any order and shrinks a
   failure to the smallest: every request gets its answer or outcome
   exactly once; a worker is never sent a request before its `ready`, nor
   a second one before the answer to the first; a worker that was ended is
   sent nothing more; `onPopneiReady` comes before any answer of its
-  worker.
+  worker is given to a caller; no worker is sent a second `open`, nor a request of another
+  load than its `open`'s.
 
 What needs the browser is checked by the flow of the walking skeleton
 with Playwright (`.claude/skills/coding/testing.md`): the real workers
@@ -488,7 +527,9 @@ a measurement of stage 2 (`docs/build-order.md`).
 
 1. **What a run says when its variants file cannot be opened again** by
    the worker started again after a Cancel, a crash or an undo of the
-   load. `RunError` of `docs/specs/worker/protocol.md` has no kind for
+   load, and, with the same answer, when the browser cannot read the
+   file at its first open (`docs/specs/worker/runner.md`, **Open 1**
+   there). `RunError` of `docs/specs/worker/protocol.md` has no kind for
    it, so meanwhile it is `workerFailed`, with the message "panel.nei
    could not be opened again: ‹popnei's message›", and the panel of the
    analysis shows the words of a crash, "the calculation stopped
@@ -497,9 +538,11 @@ a measurement of stage 2 (`docs/build-order.md`).
    again mends it. The other option is a kind of its own, `{ kind:
    "reopenFailed"; name; message }`, whose words would say "panel.nei
    could not be read again; it may have changed on the disk since it was
-   picked. Load it again in the Variants step." It costs one kind more in
-   `protocol.ts`, approved, and one case more wherever the failures are
-   written as text. The recommendation is the kind of its own: the case
+   picked. Load it again in the Variants step." It is a change to
+   `src/worker/protocol.ts` and its spec, approved on 24 September 2026:
+   one kind more in `RunError`, which reaches `AnalysisError` of the store
+   and `SourceError` of the project by their types, and one case more
+   wherever the failures are written as text. The recommendation is the kind of its own: the case
    is rare, and when it happens the words of a crash send the user to the
    wrong fix.
 
