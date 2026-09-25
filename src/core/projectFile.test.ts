@@ -3,7 +3,13 @@ import { describe, expect, test } from "vitest";
 import { keyFromWire, settingsFingerprint } from "./keys.ts";
 import { emptyProject } from "./project.ts";
 import type { Project, Reference, VariantSource } from "./project.ts";
-import { projectFileName, writeProjectFile } from "./projectFile.ts";
+import {
+  projectFileErrorText,
+  projectFileName,
+  readProjectFile,
+  writeProjectFile,
+} from "./projectFile.ts";
+import type { ProjectFileError } from "./projectFile.ts";
 import type { AnalysisStatus, AppState } from "./store.ts";
 import {
   SAMPLE_INDIVIDUALS_ID,
@@ -768,5 +774,260 @@ describe("WS6 D2 the opening", () => {
         fixture(f.file),
       );
     });
+
+    test(`${f.file} opens into its project`, () => {
+      expect(readProjectFile(fixture(f.file), "popgen", POPGEN_DEFS)).toEqual({
+        ok: true,
+        value: opened(f.project()),
+      });
+    });
   }
+
+  /** The error of opening in population genetics the file whose JSON is
+      that of v1-nei-diversity.popnei.json changed by `change`. */
+  function refusalOf(
+    change: (file: Record<string, unknown>) => Record<string, unknown>,
+  ): ProjectFileError | null {
+    const file: unknown = JSON.parse(fixture("v1-nei-diversity.popnei.json"));
+    if (typeof file !== "object" || file === null) {
+      throw new Error("the fixture is not an object");
+    }
+    return refusalOfText(
+      JSON.stringify(change(Object.fromEntries(Object.entries(file)))),
+    );
+  }
+
+  /** The error of opening the text `text` in population genetics. */
+  function refusalOfText(text: string): ProjectFileError | null {
+    const opening = readProjectFile(text, "popgen", POPGEN_DEFS);
+    return opening.ok ? null : opening.error;
+  }
+
+  /** A check of the diversity, with `fields` added or replaced. */
+  function checkWith(fields: Record<string, unknown>): Record<string, unknown> {
+    return {
+      analysis: "diversity",
+      numbers: [1],
+      keyVersion: 1,
+      popneiVersion: "0.1.0",
+      appVersion: "0.1.0",
+      ...fields,
+    };
+  }
+
+  test("a text that is not JSON is refused as notJson", () => {
+    expect(refusalOfText("{")).toEqual({ kind: "notJson" });
+  });
+
+  test("JSON that is not an object with the format of a project file is refused as notProjectFile", () => {
+    expect(refusalOfText("[]")).toEqual({ kind: "notProjectFile" });
+  });
+
+  test("a version of the format above this one is refused as newerFormat before the rest is read", () => {
+    expect(
+      refusalOfText('{"format": "popnei_web project", "formatVersion": 2}'),
+    ).toEqual({ kind: "newerFormat", formatVersion: 2, appVersion: null });
+  });
+
+  for (const version of [0, 1.5, "1"]) {
+    test(`a version of the format ${JSON.stringify(version)} is refused as header`, () => {
+      expect(
+        refusalOf((file) => ({ ...file, formatVersion: version })),
+      ).toEqual({
+        kind: "header",
+        field: "formatVersion",
+        expected: "a whole number, 1 or more",
+      });
+    });
+  }
+
+  test("a file of association opened in population genetics is refused as otherApp", () => {
+    expect(
+      refusalOf((file) => ({
+        ...file,
+        app: "gwas",
+        grouping: { kind: "roles", roles: [] },
+        checks: [],
+      })),
+    ).toEqual({ kind: "project", error: { kind: "otherApp", found: "gwas" } });
+  });
+
+  test("a field at the top that this version does not write is refused as unknownField", () => {
+    expect(refusalOf((file) => ({ ...file, notes: "mine" }))).toEqual({
+      kind: "unknownField",
+      name: "notes",
+    });
+  });
+
+  test("a field missing at the top is refused as missingField", () => {
+    expect(
+      refusalOf((file) =>
+        Object.fromEntries(
+          Object.entries(file).filter(([name]) => name !== "appVersion"),
+        ),
+      ),
+    ).toEqual({ kind: "missingField", name: "appVersion" });
+  });
+
+  test("checks that are not a list are refused as header", () => {
+    expect(refusalOf((file) => ({ ...file, checks: {} }))).toMatchObject({
+      kind: "header",
+      field: "checks",
+    });
+  });
+
+  test("a check with a field settings is refused as header", () => {
+    expect(
+      refusalOf((file) => ({
+        ...file,
+        checks: [checkWith({ settings: "0".repeat(64) })],
+      })),
+    ).toMatchObject({ kind: "header", field: "checks" });
+  });
+
+  test("a check of an analysis this version does not know is refused as unknownAnalysis", () => {
+    expect(
+      refusalOf((file) => ({
+        ...file,
+        checks: [checkWith({ analysis: "fst" })],
+      })),
+    ).toEqual({
+      kind: "project",
+      error: { kind: "unknownAnalysis", id: "fst" },
+    });
+  });
+
+  test("checks with no variants file are refused as header", () => {
+    expect(
+      refusalOf((file) => ({
+        ...file,
+        variants: null,
+        checks: [checkWith({})],
+      })),
+    ).toMatchObject({ kind: "header", field: "checks" });
+  });
+
+  test("an individuals file whose read is pending is refused as header", () => {
+    expect(
+      refusalOf((file) => ({
+        ...file,
+        individuals: {
+          fileId: "ffeeddccbbaa99887766554433221100",
+          name: "pops.csv",
+          csv: { encoding: "auto", separator: "auto", decimal: "auto" },
+          read: { kind: "pending" },
+        },
+      })),
+    ).toMatchObject({ kind: "header", field: "individuals" });
+  });
+
+  test("a variants file whose read failed is refused as header", () => {
+    expect(
+      refusalOf((file) => ({
+        ...file,
+        variants: {
+          fileId: "00112233445566778899aabbccddeeff",
+          name: "panel.nei",
+          size: 52428800,
+          format: "nei",
+          readOptions: null,
+          read: { kind: "failed", error: { kind: "popnei", message: "bad" } },
+        },
+      })),
+    ).toMatchObject({ kind: "header", field: "variants" });
+  });
+
+  test("the text of notJson", () => {
+    expect(projectFileErrorText({ kind: "notJson" }, "notes.txt")).toBe(
+      "notes.txt cannot be opened as a project: it is not a project file, or it was cut short or changed outside the application. Open the .popnei.json file the application saved, or a copy of it.",
+    );
+  });
+
+  test("the text of newerFormat, with and without the version of the application", () => {
+    expect(
+      projectFileErrorText(
+        { kind: "newerFormat", formatVersion: 2, appVersion: "0.4.0" },
+        "p.popnei.json",
+      ),
+    ).toBe(
+      "This project file was saved by a newer version of the application, 0.4.0, in a format this version cannot read. Reload the page to get the newest version, and open the file again.",
+    );
+    expect(
+      projectFileErrorText(
+        { kind: "newerFormat", formatVersion: 2, appVersion: null },
+        "p.popnei.json",
+      ),
+    ).toBe(
+      "This project file was saved by a newer version of the application in a format this version cannot read. Reload the page to get the newest version, and open the file again.",
+    );
+  });
+
+  test("the text of a header error", () => {
+    expect(
+      projectFileErrorText(
+        {
+          kind: "header",
+          field: "formatVersion",
+          expected: "a whole number, 1 or more",
+        },
+        "p.popnei.json",
+      ),
+    ).toBe(
+      "The project file cannot be opened: the version of its format should be a whole number, 1 or more. The file was changed outside the application, or is damaged. Open a copy saved before the change, or make the project again.",
+    );
+  });
+
+  test("the texts of tooLarge, notProjectFile, unknownField, missingField and project", () => {
+    expect(
+      projectFileErrorText({ kind: "tooLarge", size: 70_000_000 }, "notes.vcf"),
+    ).toBe(
+      "notes.vcf cannot be opened as a project: it is larger than 64 MB, and a project file, which holds settings and no genotypes, is much smaller. Open the .popnei.json file the application saved.",
+    );
+    expect(projectFileErrorText({ kind: "notProjectFile" }, "data.json")).toBe(
+      "data.json cannot be opened as a project: it is not a project file of the application. Open the .popnei.json file the application saved.",
+    );
+    expect(
+      projectFileErrorText({ kind: "unknownField", name: "notes" }, "p.json"),
+    ).toBe(
+      'The project file cannot be opened: it has a field "notes", which the application does not write. The file was changed outside the application, or is damaged. Open a copy saved before the change, or make the project again.',
+    );
+    expect(
+      projectFileErrorText({ kind: "missingField", name: "checks" }, "p.json"),
+    ).toBe(
+      'The project file cannot be opened: its field "checks" is missing. The file was changed outside the application, or is damaged. Open a copy saved before the change, or make the project again.',
+    );
+    expect(
+      projectFileErrorText(
+        { kind: "project", error: { kind: "otherApp", found: "gwas" } },
+        "p.json",
+      ),
+    ).toBe(
+      "This project file is of the association application. Open it there.",
+    );
+  });
+
+  test("a byte order mark before the text of v1-empty.popnei.json: it opens", () => {
+    expect(
+      readProjectFile(
+        `\uFEFF${fixture("v1-empty.popnei.json")}`,
+        "popgen",
+        POPGEN_DEFS,
+      ),
+    ).toEqual({ ok: true, value: emptyProject("popgen") });
+  });
+
+  test("each check of an opened file holds the fingerprint of its settings", () => {
+    const opening = readProjectFile(
+      fixture("v1-vcf-pending.popnei.json"),
+      "popgen",
+      POPGEN_DEFS,
+    );
+    if (!opening.ok) {
+      throw new Error("the fixture opens");
+    }
+    const p = opening.value;
+    expect(p.reference?.checks.map((check) => check.settings)).toEqual([
+      settingsFingerprint(DIVERSITY, p, { ploidy: 4, onlyPassed: true }, null),
+    ]);
+  });
 });

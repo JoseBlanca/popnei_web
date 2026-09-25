@@ -8,8 +8,16 @@
  */
 
 import type { JsonValue } from "./keys.ts";
-import { FORMAT_VERSION } from "./project.ts";
+import {
+  escaped,
+  FORMAT_VERSION,
+  parseProject,
+  projectErrorText,
+  shown,
+} from "./project.ts";
 import type {
+  AppId,
+  ProjectError,
   AnalysisOptions,
   Check,
   Grouping,
@@ -18,6 +26,7 @@ import type {
   SourceRead,
   VariantSource,
 } from "./project.ts";
+import type { Result } from "./result.ts";
 import type { AnalysisDef, AppState } from "./store.ts";
 import { settingsFingerprint } from "./keys.ts";
 import type {
@@ -465,6 +474,339 @@ function scalar(value: null | boolean | number | string): string {
 
 function defect(message: string): Error {
   return new Error(`popnei_web defect: ${message}`);
+}
+
+// The opening.
+
+/** Why a file cannot be opened as a project. */
+export type ProjectFileError =
+  | { readonly kind: "tooLarge"; readonly size: number }
+  | { readonly kind: "notJson" }
+  | { readonly kind: "notProjectFile" }
+  | {
+      readonly kind: "newerFormat";
+      readonly formatVersion: number;
+      readonly appVersion: string | null;
+    }
+  | { readonly kind: "unknownField"; readonly name: string }
+  | { readonly kind: "missingField"; readonly name: string }
+  | {
+      readonly kind: "header";
+      readonly field: HeaderField;
+      readonly expected: string;
+    }
+  | { readonly kind: "project"; readonly error: ProjectError };
+
+/** A field of the top of the file whose value a `header` error names. */
+export type HeaderField =
+  | "formatVersion"
+  | "app"
+  | "appVersion"
+  | "popneiVersion"
+  | "saved"
+  | "checks"
+  | "variants"
+  | "individuals";
+
+/** The fields of the top of the file, in the order they are written. */
+const TOP_FIELDS = [
+  "format",
+  "formatVersion",
+  "app",
+  "appVersion",
+  "popneiVersion",
+  "saved",
+  "variants",
+  "filters",
+  "individualFilters",
+  "individuals",
+  "grouping",
+  "analyses",
+  "checks",
+] as const;
+
+/** The placeholder of the fingerprint of a check while the project is
+    validated, replaced by the real one once it is. */
+const NO_FINGERPRINT = "0".repeat(64);
+
+/**
+ * The project of the text of a project file, in the application `app`
+ * with the definitions of its analyses, `analyses`; or the first reason
+ * it cannot be opened, in the order of the spec's "Opening", so that the
+ * reason given is the one the user can act on: a text that is not JSON; a
+ * JSON value that is not a project file; a version of the format that is
+ * not a whole number of at least 1, or is newer than this one; a file of
+ * the other application; a field at the top this version does not write,
+ * or one missing; a header of the wrong value; check numbers that are not
+ * a list of objects, or hold a fingerprint, or are there with no variants
+ * file; the project, as `parseProject` checks it; and a read this version
+ * never writes.
+ *
+ * The project has no variants file, and as its reference the file's
+ * variants file and check numbers, each with the fingerprint of its
+ * settings made from the opened project. It is not frozen; the store
+ * freezes it when it takes it.
+ */
+export function readProjectFile<J, R>(
+  text: string,
+  app: AppId,
+  analyses: readonly AnalysisDef<J, R>[],
+): Result<Project, ProjectFileError> {
+  const data = parseJson(
+    text.startsWith(BYTE_ORDER_MARK) ? text.slice(1) : text,
+  );
+  if (!data.ok) {
+    return data;
+  }
+  const file = data.value;
+  if (!isFields(file) || file["format"] !== FORMAT_NAME) {
+    return refused({ kind: "notProjectFile" });
+  }
+
+  const formatVersion = file["formatVersion"];
+  if (
+    typeof formatVersion !== "number" ||
+    !Number.isInteger(formatVersion) ||
+    formatVersion < 1
+  ) {
+    return header("formatVersion", "a whole number, 1 or more");
+  }
+  if (formatVersion > FORMAT_VERSION) {
+    const appVersion = file["appVersion"];
+    return refused({
+      kind: "newerFormat",
+      formatVersion,
+      appVersion: typeof appVersion === "string" ? appVersion : null,
+    });
+  }
+
+  const fileApp = file["app"];
+  if (fileApp !== "popgen" && fileApp !== "gwas") {
+    return header("app", "population genetics or association");
+  }
+  if (fileApp !== app) {
+    return refused({
+      kind: "project",
+      error: { kind: "otherApp", found: fileApp },
+    });
+  }
+
+  for (const name of Object.keys(file)) {
+    if (!TOP_FIELDS.some((field) => field === name)) {
+      return refused({ kind: "unknownField", name });
+    }
+  }
+  for (const name of TOP_FIELDS) {
+    if (!Object.hasOwn(file, name)) {
+      return refused({ kind: "missingField", name });
+    }
+  }
+  if (typeof file["appVersion"] !== "string") {
+    return header("appVersion", "a text");
+  }
+  const popneiVersion = file["popneiVersion"];
+  if (popneiVersion !== null && typeof popneiVersion !== "string") {
+    return header("popneiVersion", "a text or nothing");
+  }
+  if (typeof file["saved"] !== "string") {
+    return header("saved", "a text");
+  }
+
+  const checks = file["checks"];
+  if (!Array.isArray(checks) || !checks.every(isFields)) {
+    return header("checks", CHECKS_EXPECTED);
+  }
+  if (checks.some((check) => Object.hasOwn(check, "settings"))) {
+    return header(
+      "checks",
+      "without a record of the settings, which the application never saves",
+    );
+  }
+  const variants = file["variants"];
+  if (variants === null && checks.length > 0) {
+    return header("checks", "empty when there is no variants file");
+  }
+
+  const parsed = parseProject(
+    {
+      app: fileApp,
+      variants: null,
+      filters: file["filters"],
+      individualFilters: file["individualFilters"],
+      individuals: file["individuals"],
+      grouping: file["grouping"],
+      analyses: file["analyses"],
+      reference:
+        variants === null
+          ? null
+          : {
+              variants,
+              checks: checks.map((check) => ({
+                ...check,
+                settings: NO_FINGERPRINT,
+              })),
+            },
+    },
+    app,
+    formatVersion,
+    analyses,
+  );
+  if (!parsed.ok) {
+    return refused({ kind: "project", error: parsed.error });
+  }
+  const project = parsed.value;
+  const reference = project.reference;
+
+  if (reference?.variants.read.kind === "failed") {
+    return header(
+      "variants",
+      "the file read, or nothing yet, as the application saves it",
+    );
+  }
+  if (
+    project.individuals !== null &&
+    project.individuals.read.kind !== "read"
+  ) {
+    return header("individuals", "the table read, as the application saves it");
+  }
+
+  if (reference === null) {
+    return { ok: true, value: project };
+  }
+  const readOptions = reference.variants.readOptions;
+  return {
+    ok: true,
+    value: {
+      ...project,
+      reference: {
+        ...reference,
+        checks: reference.checks.map((check) => ({
+          ...check,
+          settings: settingsFingerprint(
+            definitionOf(analyses, check.analysis),
+            project,
+            readOptions,
+            null,
+          ),
+        })),
+      },
+    },
+  };
+}
+
+/** The mark some editors write at the start of a text in UTF-8. */
+const BYTE_ORDER_MARK = "\uFEFF";
+
+/** What a `header` error of the check numbers says they should be. */
+const CHECKS_EXPECTED =
+  "a list of the numbers of each analysis, as the application saves them";
+
+/** The value of the JSON text `text`, or `notJson`. */
+function parseJson(text: string): Result<unknown, ProjectFileError> {
+  try {
+    const value: unknown = JSON.parse(text);
+    return { ok: true, value };
+  } catch (error) {
+    // JSON.parse refuses a text that is not JSON with a SyntaxError, the
+    // expected failure of a file cut short or of another kind; anything
+    // else is not expected, and is thrown on.
+    if (error instanceof SyntaxError) {
+      return refused({ kind: "notJson" });
+    }
+    throw error;
+  }
+}
+
+type FileFields = Readonly<Record<string, unknown>>;
+
+function isFields(value: unknown): value is FileFields {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function refused(error: ProjectFileError): {
+  readonly ok: false;
+  readonly error: ProjectFileError;
+} {
+  return { ok: false, error };
+}
+
+function header(
+  field: HeaderField,
+  expected: string,
+): { readonly ok: false; readonly error: ProjectFileError } {
+  return refused({ kind: "header", field, expected });
+}
+
+/** The definition of the analysis `id`, which `parseProject` has checked
+    is one of `analyses`. */
+function definitionOf<J, R>(
+  analyses: readonly AnalysisDef<J, R>[],
+  id: string,
+): AnalysisDef<J, R> {
+  const def = analyses.find((a) => a.id === id);
+  if (def === undefined) {
+    throw defect(
+      `the check of the analysis ${JSON.stringify(id)} passed the validation with no definition of its own.`,
+    );
+  }
+  return def;
+}
+
+/** The end of the text of an error of the content of a file: what
+    happened to the file, and what the user can do; the same as
+    `projectErrorText` of project.ts ends with. */
+const DAMAGED =
+  "The file was changed outside the application, or is damaged. Open a copy saved before the change, or make the project again.";
+
+/** A field of the top of the file in words. */
+const HEADER_WORDS: Readonly<Record<HeaderField, string>> = {
+  formatVersion: "the version of its format",
+  app: "the application",
+  appVersion: "the version of the application that saved it",
+  popneiVersion: "the version of popnei it was saved with",
+  saved: "the date it was saved",
+  checks: "the check numbers",
+  variants: "what was read of the variants file",
+  individuals: "what was read of the individuals file",
+};
+
+/** The size of a project file too large to open, in MB, as the text
+    says it. */
+const MAX_PROJECT_FILE_MB = MAX_PROJECT_FILE_BYTES / (1024 * 1024);
+
+/**
+ * The text the user reads of a file refused, `fileName` the name of the
+ * file picked: the first three name the file, since it may not be a
+ * project file at all, and the others are in the pattern of
+ * `projectErrorText`, which gives the text of the project itself (the
+ * spec, Open 1).
+ */
+export function projectFileErrorText(
+  error: ProjectFileError,
+  fileName: string,
+): string {
+  const name = escaped(fileName);
+  switch (error.kind) {
+    case "tooLarge":
+      return `${name} cannot be opened as a project: it is larger than ${String(MAX_PROJECT_FILE_MB)} MB, and a project file, which holds settings and no genotypes, is much smaller. Open the .popnei.json file the application saved.`;
+    case "notJson":
+      return `${name} cannot be opened as a project: it is not a project file, or it was cut short or changed outside the application. Open the .popnei.json file the application saved, or a copy of it.`;
+    case "notProjectFile":
+      return `${name} cannot be opened as a project: it is not a project file of the application. Open the .popnei.json file the application saved.`;
+    case "newerFormat": {
+      const version =
+        error.appVersion === null ? "" : `, ${shown(error.appVersion)},`;
+      return `This project file was saved by a newer version of the application${version} in a format this version cannot read. Reload the page to get the newest version, and open the file again.`;
+    }
+    case "unknownField":
+      return `The project file cannot be opened: it has a field "${shown(error.name)}", which the application does not write. ${DAMAGED}`;
+    case "missingField":
+      return `The project file cannot be opened: its field "${shown(error.name)}" is missing. ${DAMAGED}`;
+    case "header":
+      return `The project file cannot be opened: ${HEADER_WORDS[error.field]} should be ${error.expected}. ${DAMAGED}`;
+    case "project":
+      return projectErrorText(error.error);
+  }
 }
 
 // The comparisons after an opening.
