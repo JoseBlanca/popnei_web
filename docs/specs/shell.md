@@ -473,8 +473,8 @@ export type StepStatus =
   | "locked" | "running" | "removed" | "failed" | "ready";           // Analyses, and done
 
 /** The state of each step and its reason, by the table of the stepper. */
-export function stepStates(
-  s: AppState<JobResult>, title: (id: AnalysisId) => string,
+export function stepStates<R>(
+  s: AppState<R>, title: (id: AnalysisId) => string,
 ): readonly { readonly id: StepId; readonly status: StepStatus; readonly reason: string | null }[];
 
 /** The summary line, its parts joined by " · ". */
@@ -486,10 +486,16 @@ export function noticeText(
 ): { readonly text: string; readonly action: "Undo" | "Redo" };
 
 /** The announcements made from two states, in the order of the table; [] when none. */
-export function announcementsOf(
-  before: AppState<JobResult>, after: AppState<JobResult>, title: (id: AnalysisId) => string,
+export function announcementsOf<R>(
+  before: AppState<R>, after: AppState<R>, title: (id: AnalysisId) => string,
 ): readonly string[];
 ```
+
+`stepStates` and `announcementsOf` take a state of any type of result,
+`AppState<R>`, since they read no result, only the kind and the key of
+each analysis's state and the count of its warnings; the entry passes
+its `AppState<JobResult>`, and the tests states with the results of
+`TEST_DEFS`.
 
 The announcer, in `src/ui/shell/status.ts`, a small store that the
 status region reads with `useSyncExternalStore`, as the screens read the
