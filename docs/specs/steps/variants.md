@@ -268,6 +268,20 @@ pick. Off and on puts the filter last in the list of the
 filters, which with one filter in stage 2 changes nothing; stage 3,
 with several, decides it.
 
+**A file dropped while a ploidy is being typed.** A file dropped from
+the desktop leaves the focus in the ploidy, which has not committed
+what is typed, so the drop commits it first, as Enter would, and a VCF
+is read with the ploidy the user typed. When the field refuses that
+number, 300, or a character was thrown away as it was typed, the VCF is
+read with the ploidy kept, the one the field shows again, and the line
+under the field says so, "300 is more than 255; the ploidy stays 2.",
+as after Enter; the card then says "Read with ploidy 2, …", and no
+button to read the file again appears, since the options are those it
+was read with. The line is announced when it appears, before the read
+starts, so the status region reads it first and the end of the read
+after it, as the shell announces every read (`docs/specs/shell.md`,
+"The status region").
+
 ## The states
 
 The step is not an analysis: it runs nothing the user starts, and what
@@ -437,7 +451,9 @@ threshold, and 300, 0 and 2.5 in the ploidy, each with its line, the
 value kept and the line announced; 0,1 and 0,2 typed key by key in the
 threshold, and 2,0 in the ploidy, each with the line of the comma and
 the value kept; the value kept typed back, and an arrow key at a bound,
-each taking the line away; and the text of the status region
+each taking the line away; tetraploid.vcf.gz dropped with 300 typed
+in the ploidy and not committed, read with ploidy 2 and the line of
+300 shown and announced; and the text of the status region
 after each read. A script cannot put a folder into a drop, so the flow
 drops a file whose entry of the file system says it is a folder, which
 is what React Aria asks of each item; the function that tells what a
