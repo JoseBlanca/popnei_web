@@ -455,7 +455,7 @@ describe("WP4 D1 the state with no calculation", () => {
     expect(statuses(store)).toStrictEqual([
       {
         kind: "locked",
-        reason: "Load an individuals file in the Individuals step.",
+        reason: "Load a metadata file in the Individuals step.",
       },
       { kind: "ready", key: expectedKey(store, vars, "0.1.0") },
     ]);
@@ -1103,16 +1103,18 @@ describe("WP4 D2 the calculations", () => {
         progress: null,
       },
     ]);
-    request.progress({ done: 3, total: 10 });
+    request.progress({ bytesRead: 3, numBytes: 10, pass: 1, numPasses: 1 });
     expect(statuses(store)[1]).toStrictEqual({
       kind: "running",
       key,
       runId: request.run.id,
-      progress: { done: 3, total: 10 },
+      progress: { bytesRead: 3, numBytes: 10, pass: 1, numPasses: 1 },
     });
     expect(store.getState().runs[0]?.progress).toStrictEqual({
-      done: 3,
-      total: 10,
+      bytesRead: 3,
+      numBytes: 10,
+      pass: 1,
+      numPasses: 1,
     });
     const result = varsResult(null);
     store.runEnded(request.run.id, doneWith(request, result));
@@ -1286,7 +1288,7 @@ describe("WP4 D2 the calculations", () => {
       job: TestJob,
       onProgress: (p: Progress) => void,
     ): Run<TestResult> => {
-      onProgress({ done: 1, total: 10 });
+      onProgress({ bytesRead: 1, numBytes: 10, pass: 1, numPasses: 1 });
       return send(key, job, onProgress);
     };
     const store = createStore({
@@ -1315,17 +1317,22 @@ describe("WP4 D2 the calculations", () => {
     const pops = sentAt(sent, 0);
     const vars = sentAt(sent, 1);
     const before = store.getState();
-    vars.progress({ done: 4, total: 10 });
+    vars.progress({ bytesRead: 4, numBytes: 10, pass: 1, numPasses: 1 });
     const after = store.getState();
     expect(after.analyses[0]).toBe(before.analyses[0]);
     expect(after.runs[0]).toBe(before.runs[0]);
     expect(after.analyses[1]?.status).toMatchObject({
-      progress: { done: 4, total: 10 },
+      progress: { bytesRead: 4, numBytes: 10, pass: 1, numPasses: 1 },
     });
-    expect(after.runs[1]?.progress).toStrictEqual({ done: 4, total: 10 });
+    expect(after.runs[1]?.progress).toStrictEqual({
+      bytesRead: 4,
+      numBytes: 10,
+      pass: 1,
+      numPasses: 1,
+    });
     store.runEnded(pops.run.id, doneWith(pops, popsResult()));
     const ended = store.getState();
-    pops.progress({ done: 9, total: 10 });
+    pops.progress({ bytesRead: 9, numBytes: 10, pass: 1, numPasses: 1 });
     expect(store.getState()).toBe(ended);
   });
 
@@ -1753,16 +1760,16 @@ describe("WP4 D3 the notice", () => {
     store.variantsRead(VARIANTS_ID, VARIANTS_READ);
     expect(statuses(store)[0]).toStrictEqual({
       kind: "locked",
-      reason: "Load an individuals file in the Individuals step.",
+      reason: "Load a metadata file in the Individuals step.",
     });
     const key = keyAt(store, 1);
     expect(statuses(store)[1]).toStrictEqual({ kind: "ready", key });
     store.startRun("vars");
     const request = sentAt(sent, 0);
     expect(statuses(store)[1]?.kind).toBe("running");
-    request.progress({ done: 3, total: 10 });
+    request.progress({ bytesRead: 3, numBytes: 10, pass: 1, numPasses: 1 });
     expect(statuses(store)[1]).toMatchObject({
-      progress: { done: 3, total: 10 },
+      progress: { bytesRead: 3, numBytes: 10, pass: 1, numPasses: 1 },
     });
     const result = varsResult(null);
     store.runEnded(request.run.id, doneWith(request, result));
@@ -1965,7 +1972,7 @@ describe("WP4 D3 the notice", () => {
     store.apply("the individuals file was removed", removeIndividuals);
     expect(statuses(store)[0]).toStrictEqual({
       kind: "locked",
-      reason: "Load an individuals file in the Individuals step.",
+      reason: "Load a metadata file in the Individuals step.",
     });
     expect(store.getState().notice).toMatchObject({ removed: ["pops"] });
     expect(statuses(store)[1]?.kind).toBe("done");
@@ -2146,7 +2153,7 @@ describe("WP4 D3 the notice", () => {
       stopped: [],
     });
     const notice = store.getState().notice;
-    request.progress({ done: 5, total: 10 });
+    request.progress({ bytesRead: 5, numBytes: 10, pass: 1, numPasses: 1 });
     expect(store.getState().notice).toBe(notice);
     store.dismissNotice();
     expect(request.cancels()).toBe(1);
@@ -2504,13 +2511,16 @@ const SAVED_VARIANTS: VariantSource = {
 const NUMBERS: readonly number[] = [0.5, 0.25];
 
 /** A store opened from a project file saved with the MAF filter at 0.9,
-    popnei 0.1.0 and the application 0.0.9, whose check numbers of the
-    variants are `saved`, with key version 1; the calculation worker gives
+    whose check numbers of the variants are `saved`, with key version 1,
+    calculated with popnei `savedPopnei`, 0.1.0 unless given, and the
+    application `savedApp`, 0.0.9 unless given; the calculation worker gives
     `popnei`, the analysis of the variants has `keyVersion` now, the
     variants file is loaded again with `ploidy`, and the analysis runs
     and gives `numbers`. */
 function openedAndRun(options: {
   readonly saved: readonly (number | null)[];
+  readonly savedPopnei?: string;
+  readonly savedApp?: string;
   readonly popnei?: string;
   readonly keyVersion?: number;
   readonly ploidy?: number;
@@ -2527,13 +2537,13 @@ function openedAndRun(options: {
     ...settings,
     reference: {
       variants: SAVED_VARIANTS,
-      popneiVersion: "0.1.0",
-      appVersion: "0.0.9",
       checks: [
         {
           analysis: "vars",
           numbers: options.saved,
           keyVersion: 1,
+          popneiVersion: options.savedPopnei ?? "0.1.0",
+          appVersion: options.savedApp ?? "0.0.9",
           settings: settingsFingerprint(
             vars,
             settings,
@@ -2591,6 +2601,35 @@ function checkOf(store: Store<TestResult>): unknown {
   }
   return status.check;
 }
+
+describe("WS1 D4 the versions of a check", () => {
+  test("verdictOf compares the versions saved with the check with those now", () => {
+    const { store } = openedAndRun({
+      saved: [0.5, 0.75],
+      savedPopnei: "0.0.5",
+      savedApp: "0.0.8",
+      keyVersion: 2,
+    });
+    expect(checkOf(store)).toStrictEqual({
+      kind: "differs",
+      popnei: { saved: "0.0.5", now: "0.1.0" },
+      app: { saved: "0.0.8", now: "0.1.0" },
+    });
+  });
+
+  test("a check saved with the versions now names neither", () => {
+    const { store } = openedAndRun({
+      saved: [0.5, 0.75],
+      savedPopnei: "0.2.0",
+      popnei: "0.2.0",
+    });
+    expect(checkOf(store)).toStrictEqual({
+      kind: "differs",
+      popnei: null,
+      app: null,
+    });
+  });
+});
 
 describe("WP4 D4 the check numbers", () => {
   test("a result with the numbers saved gives same", () => {
@@ -2905,6 +2944,11 @@ function failure(kind: RunError["kind"]): Outcome<TestResult> {
       return { kind: "failed", error: { kind, message: "a trap" } };
     case "couldNotStart":
       return { kind: "failed", error: { kind, reason: "no ready" } };
+    case "reopenFailed":
+      return {
+        kind: "failed",
+        error: { kind, name: "panel.vcf", message: "a range refused" },
+      };
     case "protocolMismatch":
       return { kind: "failed", error: { kind } };
   }
@@ -3090,7 +3134,7 @@ function modelledStore(): {
       }
       case "progress": {
         const request = sent[s.which % Math.max(sent.length, 1)];
-        request?.progress({ done: 1, total: 2 });
+        request?.progress({ bytesRead: 1, numBytes: 2, pass: 1, numPasses: 1 });
         break;
       }
       case "dismissNotice":

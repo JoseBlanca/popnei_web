@@ -162,7 +162,8 @@ export type AnalysisStatus<R> =
       readonly check: CheckVerdict | null;
     }
   /** A calculation of its key is in flight and is not being stopped;
-      `progress` is `null` until the worker gives one. */
+      `progress`, popnei's four numbers of the pass as the worker gave
+      them, is `null` until the worker gives one. */
   | {
       readonly kind: "running";
       readonly key: Key;
@@ -502,14 +503,14 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
 
   /** The comparison of the numbers of a result of `def` with the check
       numbers `check` saved for its settings, or `null` when there are
-      none: exact, a list of another length differing. */
+      none: exact, a list of another length differing. The versions
+      compared are those saved with the check. */
   const verdictOf = (
     def: AnalysisDef<J, R>,
     check: Check | null,
     numbers: readonly (number | null)[],
   ): CheckVerdict | null => {
-    const reference = history.present.project.reference;
-    if (check === null || reference === null) {
+    if (check === null) {
       return null;
     }
     if (
@@ -522,13 +523,13 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
     return {
       kind: "differs",
       popnei:
-        reference.popneiVersion === now
+        check.popneiVersion === now
           ? null
-          : { saved: reference.popneiVersion, now },
+          : { saved: check.popneiVersion, now },
       app:
         check.keyVersion === def.keyVersion
           ? null
-          : { saved: reference.appVersion, now: config.appVersion },
+          : { saved: check.appVersion, now: config.appVersion },
     };
   };
 

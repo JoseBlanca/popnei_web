@@ -8,10 +8,15 @@ import {
   analysisOptions,
   emptyProject,
   freezeProject,
+  counted,
+  escaped,
+  grouped,
+  individualsCheck,
   individualsNeeds,
   loadIndividuals,
   loadVariants,
   moveVariantFilter,
+  namesOf,
   ordinal,
   parseProject,
   projectErrorText,
@@ -28,6 +33,7 @@ import {
   setGrouping,
   setIndividualFilter,
   setVariantFilter,
+  shown,
 } from "./project.ts";
 import type {
   AppId,
@@ -40,7 +46,11 @@ import type {
   SourceRead,
 } from "./project.ts";
 import type { Result } from "./result.ts";
-import type { ColumnType, IndividualsTable } from "../worker/protocol.ts";
+import type {
+  ColumnType,
+  IndividualsFileError,
+  IndividualsTable,
+} from "../worker/protocol.ts";
 import {
   SAMPLE_INDIVIDUALS_ID,
   SAMPLE_VARIANTS_ID,
@@ -577,8 +587,6 @@ describe("WP1 D3 the commands", () => {
         ...sample,
         reference: {
           variants,
-          popneiVersion: "0.1.0",
-          appVersion: "0.1.0",
           checks: [],
         },
       });
@@ -1340,7 +1348,7 @@ describe("WP1 D4 the records and the needs", () => {
 
     test.each([
       { kind: "empty" },
-      { kind: "raggedRow", line: 7, expected: 4, found: 3 },
+      { kind: "raggedRow", line: 7, expected: 4, found: 3, separator: "," },
       { kind: "files", message: "not an xlsx file" },
     ] as const)("a refusal of the reader, %o, is not replaced", (error) => {
       const p = individualsFailed(error);
@@ -1807,7 +1815,7 @@ describe("WP1 D4 the records and the needs", () => {
       expect(
         individualsNeeds(withIndividualsRead({ kind: "failed", error })),
       ).toBe(
-        `pops.csv could not be read: ${found}. Load an individuals file in the Individuals step.`,
+        `pops.csv could not be read: ${found}. Load a metadata file in the Individuals step.`,
       );
     });
 
@@ -1836,7 +1844,7 @@ describe("WP1 D4 the records and the needs", () => {
           }),
         ),
       ).toBe(
-        "pops.csv could not be read. Load an individuals file in the Individuals step.",
+        "pops.csv could not be read. Load a metadata file in the Individuals step.",
       );
     });
   });
@@ -1844,7 +1852,7 @@ describe("WP1 D4 the records and the needs", () => {
   describe("individualsNeeds", () => {
     test("no individuals file", () => {
       expect(individualsNeeds(withoutIndividuals())).toBe(
-        "Load an individuals file in the Individuals step.",
+        "Load a metadata file in the Individuals step.",
       );
     });
 
@@ -1866,28 +1874,34 @@ describe("WP1 D4 the records and the needs", () => {
           }),
         ),
       ).toBe(
-        "pops.csv could not be read: the file is not an xlsx file. Load an individuals file in the Individuals step.",
+        "pops.csv could not be read: the file is not an xlsx file. Load a metadata file in the Individuals step.",
       );
     });
 
     test.each([
-      [{ kind: "empty" }, "it has no row below the header"],
+      [{ kind: "empty" }, "it has no row of individuals"],
       [{ kind: "duplicateColumn", name: "pop" }, "two columns are named pop"],
       [
         { kind: "duplicateIndividual", name: "ind_031" },
         "the individual ind_031 is in two rows",
       ],
       [
-        { kind: "raggedRow", line: 7, expected: 4, found: 3 },
-        "line 7 has 3 cells where the header has 4",
+        { kind: "raggedRow", line: 7, expected: 4, found: 3, separator: "," },
+        "line 7 has 3 cells where the header has 4, read with the comma as the separator",
       ],
       [
-        { kind: "raggedRow", line: 12, expected: 4, found: 1 },
-        "line 12 has 1 cell where the header has 4",
+        { kind: "raggedRow", line: 12, expected: 4, found: 1, separator: "," },
+        "line 12 has 1 cell where the header has 4, read with the comma as the separator",
       ],
       [
-        { kind: "raggedRow", line: 12045, expected: 1204, found: 1203 },
-        "line 12045 has 1,203 cells where the header has 1,204",
+        {
+          kind: "raggedRow",
+          line: 12045,
+          expected: 1204,
+          found: 1203,
+          separator: ",",
+        },
+        "line 12045 has 1,203 cells where the header has 1,204, read with the comma as the separator",
       ],
       [
         { kind: "duplicateColumn", name: "po\np" },
@@ -1903,7 +1917,7 @@ describe("WP1 D4 the records and the needs", () => {
         expect(
           individualsNeeds(withIndividualsRead({ kind: "failed", error })),
         ).toBe(
-          `pops.csv could not be read: ${found}. Load an individuals file in the Individuals step.`,
+          `pops.csv could not be read: ${found}. Load a metadata file in the Individuals step.`,
         );
       },
     );
@@ -2060,13 +2074,13 @@ const SAMPLE_TYPES: readonly ColumnType[] = [
 
 const REFERENCE = {
   variants: sampleProject().variants,
-  popneiVersion: "0.1.0",
-  appVersion: "0.1.0",
   checks: [
     {
       analysis: "diversity",
       numbers: [0.5, null],
       keyVersion: 1,
+      popneiVersion: "0.1.0",
+      appVersion: "0.1.0",
       settings: "0123456789abcdef".repeat(4),
     },
   ],
@@ -2409,26 +2423,6 @@ describe("WP1 D5 the validation", () => {
         kind: "wrongValue",
         path: ["grouping", "kind"],
       });
-    });
-
-    test("a reference with no version of popnei", () => {
-      const data = fileWith({
-        reference: {
-          variants: REFERENCE.variants,
-          appVersion: "0.1.0",
-          checks: [],
-        },
-      });
-      expect(errorOf(parse(data))).toEqual({
-        kind: "missingField",
-        path: ["reference", "popneiVersion"],
-      });
-    });
-
-    test("a reference whose version of the application is not a text", () => {
-      expect(parse(referenceWith({ appVersion: 1 }))).toEqual(
-        wrong(["reference", "appVersion"], "a text"),
-      );
     });
 
     test.each([1.5, -1])("a check with a key version of %d", (keyVersion) => {
@@ -3017,7 +3011,7 @@ describe("WP1 D5 the validation", () => {
         ),
       ).toBe(
         opened(
-          "the encoding found in the individuals file should be UTF-8 or Windows-1252",
+          "the encoding found in the individuals file should be UTF-8, Windows-1252 or UTF-16",
         ),
       );
     });
@@ -3090,6 +3084,311 @@ describe("WP1 D5 the validation", () => {
       for (const error of errors) {
         expectWords(projectErrorText(error));
       }
+    });
+  });
+});
+
+/** A failed read of the individuals file with the refusal `error`, and
+    its variants file read. */
+function refusedWith(error: IndividualsFileError): Project {
+  return withIndividualsRead({ kind: "failed", error });
+}
+
+/** The sample project with its individuals file refused as `error`,
+    parsed back from its JSON. */
+function parsedRefusal(error: IndividualsFileError): unknown {
+  return parse(JSON.parse(JSON.stringify(refusedWith(error))));
+}
+
+/** The six kinds of refusal of the reader that stage 2 adds, each with
+    the words `individualsNeeds` gives after "could not be read:". */
+const NEW_REFUSALS: readonly (readonly [IndividualsFileError, string])[] = [
+  [
+    { kind: "unnamedColumn", column: 4 },
+    "column 4 has values but no name in the header",
+  ],
+  [
+    { kind: "emptyIndividual", line: 7 },
+    "line 7 has no name of an individual in its first column",
+  ],
+  [
+    { kind: "unclosedQuote", line: 7, separator: "," },
+    "the quote that opens a cell on line 7 is never closed, read with the comma as the separator",
+  ],
+  [
+    { kind: "tooLarge", size: 312_400_000, max: 20_000_000 },
+    "it is 312.4 MB, more than the 20 MB a metadata file can have; check that it is the metadata file and not the variants",
+  ],
+  [
+    { kind: "unreadable", message: "NotReadableError" },
+    "the browser could not read it; it may have been changed, moved or deleted since it was picked",
+  ],
+  [
+    { kind: "notText" },
+    "it is not a text file; in Excel, save the sheet as CSV",
+  ],
+];
+
+describe("WS1 D3 the additions to project.ts", () => {
+  describe("individualsCheck", () => {
+    test("is null when the variants file is not read", () => {
+      expect(
+        individualsCheck(withVariantsRead({ kind: "pending" })),
+      ).toBeNull();
+    });
+
+    test("is null when the individuals file is not read", () => {
+      expect(individualsCheck(pendingProject())).toBeNull();
+      expect(individualsCheck(withoutIndividuals())).toBeNull();
+    });
+
+    test("gives the individuals found, all those missing in the order of the variants file, and the rows ignored", () => {
+      // The table holds i1 to i4; the variants file i9, i2, i7, i1 and i8.
+      const p = withVariantIndividuals(["i9", "i2", "i7", "i1", "i8"]);
+      expect(individualsCheck(p)).toStrictEqual({
+        found: 2,
+        missing: ["i9", "i7", "i8"],
+        ignoredRows: 2,
+      });
+    });
+
+    test("gives the same object for the same two reads, and a new one for another read", () => {
+      const p = withVariantIndividuals(["i1", "i5"]);
+      const first = individualsCheck(p);
+      expect(individualsCheck(deepFreeze({ ...p }))).toBe(first);
+      const other = withVariantIndividuals(["i1", "i5"]);
+      expect(individualsCheck(other)).not.toBe(first);
+      expect(individualsCheck(other)).toStrictEqual(first);
+    });
+
+    test("individualsNeeds names the individuals it gives as missing", () => {
+      const p = withVariantIndividuals(["i9", "i2", "i7", "i1", "i8"]);
+      expect(individualsCheck(p)?.missing).toStrictEqual(["i9", "i7", "i8"]);
+      expect(individualsNeeds(p)).toBe(
+        "3 individuals of panel.nei are not in pops.csv: i9, i7 and i8. Add them to the file and load it again in the Individuals step.",
+      );
+    });
+  });
+
+  test("escaped escapes a name and does not cut it, where shown cuts it after 40 characters", () => {
+    const name = `${"a".repeat(45)}\n‮`;
+    expect(escaped(name)).toBe(`${"a".repeat(45)}\\n\\u202e`);
+    expect(shown(name)).toBe(`${"a".repeat(40)}…`);
+  });
+
+  test.each(NEW_REFUSALS)(
+    "individualsNeeds gives the words of %o",
+    (error, words) => {
+      expect(individualsNeeds(refusedWith(error))).toBe(
+        `pops.csv could not be read: ${words}. Load a metadata file in the Individuals step.`,
+      );
+    },
+  );
+
+  test.each(NEW_REFUSALS)(
+    "the validation of a project file accepts a failed read of %o with its fields",
+    (error) => {
+      const parsed = parsedRefusal(error);
+      expect(parsed).toMatchObject({ ok: true });
+      expect(parsed).toStrictEqual({ ok: true, value: refusedWith(error) });
+    },
+  );
+
+  test("the words of raggedRow name the separator the read used", () => {
+    expect(
+      individualsNeeds(
+        refusedWith({
+          kind: "raggedRow",
+          line: 7,
+          expected: 4,
+          found: 3,
+          separator: ";",
+        }),
+      ),
+    ).toBe(
+      "pops.csv could not be read: line 7 has 3 cells where the header has 4, read with the semicolon as the separator. Load a metadata file in the Individuals step.",
+    );
+  });
+
+  test("the words of unclosedQuote name the separator the read used", () => {
+    expect(
+      individualsNeeds(
+        refusedWith({ kind: "unclosedQuote", line: 12, separator: "\t" }),
+      ),
+    ).toBe(
+      "pops.csv could not be read: the quote that opens a cell on line 12 is never closed, read with the tab as the separator. Load a metadata file in the Individuals step.",
+    );
+  });
+
+  test("a size just above the limit is rounded up, 20.1 MB and never 20.0 MB", () => {
+    expect(
+      individualsNeeds(
+        refusedWith({ kind: "tooLarge", size: 20_000_001, max: 20_000_000 }),
+      ),
+    ).toContain("it is 20.1 MB, more than the 20 MB");
+  });
+
+  test("a separator the reader does not use is refused in a project file", () => {
+    const data = fileWith({
+      individuals: {
+        ...individualsOf(sampleProject()),
+        read: {
+          kind: "failed",
+          error: { kind: "unclosedQuote", line: 7, separator: "|" },
+        },
+      },
+    });
+    expect(errorOf(parse(data))).toMatchObject({
+      kind: "wrongValue",
+      path: ["individuals", "read", "error", "separator"],
+    });
+  });
+
+  test('"utf-16" is accepted among the encodings found', () => {
+    const data = readWith({
+      found: { encoding: "utf-16", separator: ",", decimal: "." },
+    });
+    expect(parse(data)).toMatchObject({
+      ok: true,
+      value: {
+        individuals: {
+          read: {
+            found: { encoding: "utf-16", separator: ",", decimal: "." },
+          },
+        },
+      },
+    });
+  });
+
+  test("projectNeeds gives the words of a variants file the browser can no longer read", () => {
+    expect(
+      projectNeeds(
+        withVariantsRead({
+          kind: "failed",
+          error: {
+            kind: "worker",
+            error: {
+              kind: "reopenFailed",
+              name: "panel.nei",
+              message:
+                "the source could not be read: the browser did not give popnei the bytes",
+            },
+          },
+        }),
+      ),
+    ).toBe(
+      "panel.nei could not be read; it may have changed on the disk since it was picked. Load it again in the Variants step.",
+    );
+  });
+
+  test("a read of the variants file failed with reopenFailed is read back by the validation of a project file", () => {
+    const p = withVariantsRead({
+      kind: "failed",
+      error: {
+        kind: "worker",
+        error: { kind: "reopenFailed", name: "panel.nei", message: "a range" },
+      },
+    });
+    expect(parse(JSON.parse(JSON.stringify(p)))).toStrictEqual({
+      ok: true,
+      value: p,
+    });
+    const noName = variantsWith({
+      read: {
+        kind: "failed",
+        error: {
+          kind: "worker",
+          error: { kind: "reopenFailed", message: "a range" },
+        },
+      },
+    });
+    expect(errorOf(parse(noName))).toStrictEqual({
+      kind: "missingField",
+      path: ["variants", "read", "error", "error", "name"],
+    });
+  });
+
+  test('the reasons of the association application name "a traits file"', () => {
+    const gwas = (p: Project): Project =>
+      deepFreeze({
+        ...p,
+        app: "gwas",
+        grouping: { kind: "roles", roles: [] },
+      });
+    expect(individualsNeeds(gwas(withoutIndividuals()))).toBe(
+      "Load a traits file in the Individuals step.",
+    );
+    expect(
+      individualsNeeds(
+        gwas(
+          refusedWith({ kind: "tooLarge", size: 312_400_000, max: 20_000_000 }),
+        ),
+      ),
+    ).toBe(
+      "pops.csv could not be read: it is 312.4 MB, more than the 20 MB a traits file can have; check that it is the traits file and not the variants. Load a traits file in the Individuals step.",
+    );
+  });
+
+  test("namesOf, counted and grouped are those of the reasons", () => {
+    expect(namesOf(["a", "b", "c", "d"])).toBe("a, b and 2 more");
+    expect(counted(1203, "individual")).toBe("1,203 individuals");
+    expect(grouped(1203554)).toBe("1,203,554");
+  });
+});
+
+describe("WS1 D4 the versions of a check", () => {
+  test("a check is read with its version of popnei and of the application", () => {
+    const data: unknown = JSON.parse(JSON.stringify(referenceWith({})));
+    expect(parse(data)).toMatchObject({
+      ok: true,
+      value: {
+        reference: {
+          checks: [
+            {
+              analysis: "diversity",
+              popneiVersion: "0.1.0",
+              appVersion: "0.1.0",
+            },
+          ],
+        },
+      },
+    });
+  });
+
+  test.each(["popneiVersion", "appVersion"])(
+    "a check without its %s is refused",
+    (field) => {
+      const check = Object.fromEntries(
+        Object.entries(REFERENCE.checks[0] ?? {}).filter(
+          ([name]) => name !== field,
+        ),
+      );
+      expect(errorOf(parse(referenceWith({ checks: [check] })))).toStrictEqual({
+        kind: "missingField",
+        path: ["reference", "checks", 0, field],
+      });
+    },
+  );
+
+  test("a check whose version of the application is not a text is refused", () => {
+    expect(parse(checkWith({ appVersion: 1 }))).toEqual(
+      wrong(["reference", "checks", 0, "appVersion"], "a text"),
+    );
+  });
+
+  test("a reference is read without versions of its own, and one with a version of popnei is refused", () => {
+    const parsed = parse(JSON.parse(JSON.stringify(referenceWith({}))));
+    if (!parsed.ok) {
+      throw new Error("popnei_web defect: the test expected a project.");
+    }
+    expect(Object.keys(parsed.value.reference ?? {})).toStrictEqual([
+      "variants",
+      "checks",
+    ]);
+    expect(errorOf(parse(referenceWith({ popneiVersion: "0.1.0" })))).toEqual({
+      kind: "unknownField",
+      path: ["reference"],
+      name: "popneiVersion",
     });
   });
 });

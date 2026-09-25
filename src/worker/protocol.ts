@@ -1,8 +1,9 @@
 /**
  * The types the page, the workers and core share: the filters of the
  * variants and of the individuals, the table of the individuals file and
- * the types of its columns, and a request to a worker with its progress
- * and its outcome (docs/specs/worker/protocol.md).
+ * the types of its columns, a request to a worker with its progress and
+ * its outcome, and the request and the result of each analysis
+ * (docs/specs/worker/protocol.md).
  *
  * This file holds types and nothing else, and names nothing of the
  * browser, because core imports it and is checked with no part of the
@@ -105,11 +106,14 @@ export interface CsvOptions {
   readonly decimal: "auto" | "." | ",";
 }
 
-/** What the reader found of a CSV or TSV, where an option was `"auto"`,
-    which the screen shows beside the file. */
+/** The three options a read of a CSV or TSV used, each as the user set it
+    or, where it was `"auto"`, as the reader found it, which the screen
+    shows beside the file; which were `"auto"` is in the options of the
+    source. */
 export interface CsvFound {
-  /** The encoding of the text. */
-  readonly encoding: "utf-8" | "windows-1252";
+  /** The encoding of the text; `"utf-16"` only from the mark at the start
+      of the file, and so never set. */
+  readonly encoding: "utf-8" | "windows-1252" | "utf-16";
   /** The character between the cells of a row. */
   readonly separator: "," | ";" | "\t";
   /** The decimal mark of the numbers. */
@@ -118,33 +122,66 @@ export interface CsvFound {
 
 /**
  * The ways the individuals file can be refused. The spec of the reader,
- * in stage 2, owns this union and may add to it.
+ * docs/specs/worker/individuals.md, owns this union and the words of
+ * each kind.
  */
 export type IndividualsFileError =
-  /** No row below the header. */
+  /** No row of individuals: a header alone, or nothing at all. */
   | { readonly kind: "empty" }
   /** Two columns of one name. */
   | { readonly kind: "duplicateColumn"; readonly name: string }
   /** One individual in two rows. */
   | { readonly kind: "duplicateIndividual"; readonly name: string }
   /** A row whose number of cells, `found`, is not that of the header,
-      `expected`; `line` is the line of the file. */
+      `expected`; `line` is the line of the file, and `separator` the one
+      the read used, whose mistake is the likeliest cause. */
   | {
       readonly kind: "raggedRow";
       readonly line: number;
       readonly expected: number;
       readonly found: number;
+      readonly separator: "," | ";" | "\t";
     }
   /** The reader of xlsx, the files wasm, refused the file, with its
       message. */
-  | { readonly kind: "files"; readonly message: string };
+  | { readonly kind: "files"; readonly message: string }
+  /** Values in a column with no name in the header; `column` is counted
+      from 1. */
+  | { readonly kind: "unnamedColumn"; readonly column: number }
+  /** A row with no name of an individual in its first column, on the
+      line `line` of the file. */
+  | { readonly kind: "emptyIndividual"; readonly line: number }
+  /** A quote that opens a cell on the line `line` and is never closed,
+      read with `separator`. */
+  | {
+      readonly kind: "unclosedQuote";
+      readonly line: number;
+      readonly separator: "," | ";" | "\t";
+    }
+  /** A file of `size` bytes, more than the `max` a metadata file can
+      have; its bytes are never read. */
+  | { readonly kind: "tooLarge"; readonly size: number; readonly max: number }
+  /** The browser could not read the file, with its message, for the
+      console. */
+  | { readonly kind: "unreadable"; readonly message: string }
+  /** Not a text file. */
+  | { readonly kind: "notText" };
 
-/** How far a request has gone: `done` of `total` steps. */
+/**
+ * How far a run has gone: the four numbers popnei's `Variants.onProgress`
+ * gives of each pass, under popnei's names. The run is
+ * `(pass − 1 + bytesRead / numBytes) / numPasses` done.
+ */
 export interface Progress {
-  /** The steps done. */
-  readonly done: number;
-  /** The steps of the whole request. */
-  readonly total: number;
+  /** The bytes of the file the pass has read, `numBytes` at most. */
+  readonly bytesRead: number;
+  /** The bytes of the file, counted on the disk, so a gzipped VCF
+      compressed. */
+  readonly numBytes: number;
+  /** The pass that reads, 1 for the first. */
+  readonly pass: number;
+  /** The passes of the run. */
+  readonly numPasses: number;
 }
 
 /**
@@ -178,6 +215,15 @@ export type RunError =
   | { readonly kind: "popnei"; readonly message: string }
   /** A call to the files wasm threw. */
   | { readonly kind: "files"; readonly message: string }
+  /** The browser can no longer read the variants file `name`: changed,
+      moved or deleted on the disk since it was picked. popnei's message
+      is for the console. A new load of the file mends it, a second try
+      does not. */
+  | {
+      readonly kind: "reopenFailed";
+      readonly name: string;
+      readonly message: string;
+    }
   /** The worker crashed, or threw outside a call; a second try, after a
       restart, can succeed. */
   | { readonly kind: "workerFailed"; readonly message: string }
@@ -188,3 +234,63 @@ export type RunError =
   | { readonly kind: "protocolMismatch" }
   /** A message that did not validate, a mistake of our code. */
   | { readonly kind: "defect"; readonly message: string };
+
+/** The populations, as pairs `[population, individuals]` in the order of
+    the file; the names are the user's, and never the names of fields. */
+export type Pops = readonly (readonly [
+  pop: string,
+  individuals: readonly string[],
+])[];
+
+/** The request of the diversity of each population
+    (docs/specs/analyses/diversity.md). */
+export interface DiversityJob {
+  /** The analysis the request is of. */
+  readonly analysis: "diversity";
+  /** The load id of the variants file it reads. */
+  readonly fileId: string;
+  /** The filters of the variants, in their order. */
+  readonly filters: readonly VariantFilter[];
+  /** The filters of the individuals; empty in stage 2. */
+  readonly individualFilters: readonly IndividualFilter[];
+  /** The populations, each with the individuals of the variants file it
+      holds, none empty. */
+  readonly pops: Pops;
+  /** The fewest individuals with a called genotype at a variant for a
+      population to have a value there, popnei's `minNumIndividuals`. */
+  readonly minNumIndividuals: number;
+  /** The frequency of the commonest allele below which a variant is
+      polymorphic, popnei's `polyThreshold`. */
+  readonly polyThreshold: number;
+}
+
+/** The result of the diversity, every array in the order of the
+    populations of its request. */
+export interface DiversityResult {
+  /** The analysis the result is of. */
+  readonly analysis: "diversity";
+  /** The populations popnei was given. */
+  readonly pops: readonly string[];
+  /** The individuals of each that popnei was given. */
+  readonly numIndividuals: Uint32Array;
+  /** The mean unbiased expected heterozygosity; NaN for no value. */
+  readonly unbiasedExpHet: Float64Array;
+  /** The mean observed heterozygosity; NaN for no value. */
+  readonly obsHet: Float64Array;
+  /** The proportion of polymorphic variants; NaN for no value. */
+  readonly polyRatio: Float64Array;
+  /** The variants at which each population has a value. */
+  readonly numVarsWithValue: Uint32Array;
+  /** The variants the filters kept. */
+  readonly numVars: number;
+  /** The variants of the file. */
+  readonly numVarsRead: number;
+}
+
+/** The request of a calculation, one member per analysis, tagged by
+    `analysis`. */
+export type Job = DiversityJob;
+
+/** The result of a calculation, one member per analysis, tagged by
+    `analysis` as its request. */
+export type JobResult = DiversityResult;

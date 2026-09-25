@@ -98,7 +98,8 @@ export type SourceRead =
 /**
  * Why the variants file could not be read: popnei refused the file, or
  * the worker failed before popnei answered, because it could not start,
- * it crashed, or the file could not be read again.
+ * it crashed, or the browser could no longer read the file,
+ * `reopenFailed`.
  */
 export type SourceError =
   /** popnei refused the file, with its message. */
@@ -126,8 +127,9 @@ export interface IndividualsSource {
 export type IndividualsRead =
   /** Not read yet. */
   | { readonly kind: "pending" }
-  /** Read: the table, the type of each of its columns, and what the
-      options that were `"auto"` found, `null` for an xlsx. */
+  /** Read: the table, the type of each of its columns, and the three
+      options of the CSV the read used, each as set or, where it was
+      `"auto"`, as found; `null` for an xlsx. */
   | {
       readonly kind: "read";
       readonly table: IndividualsTable;
@@ -188,11 +190,8 @@ export interface Reference {
   /** The identity of the file: name, size, format, individuals, ploidy,
       number of variants. */
   readonly variants: VariantSource;
-  /** The version of popnei, from the header of the project file. */
-  readonly popneiVersion: string;
-  /** The version of the application, from the header. */
-  readonly appVersion: string;
-  /** The check numbers of each analysis. */
+  /** The check numbers of each analysis, each with the versions it was
+      calculated with. */
   readonly checks: readonly Check[];
 }
 
@@ -204,6 +203,10 @@ export interface Check {
   readonly numbers: readonly (number | null)[];
   /** The analysis's key version when it was run, a whole number. */
   readonly keyVersion: number;
+  /** The version of popnei the numbers were calculated with. */
+  readonly popneiVersion: string;
+  /** The version of the application the numbers were calculated with. */
+  readonly appVersion: string;
   /** The fingerprint of its settings in the file, 64 lower case
       hexadecimal digits; made when the file is opened, never saved. */
   readonly settings: string;
@@ -1177,15 +1180,24 @@ export function recordIndividualsRead(
 /** What happened when a worker failed, by the kind of its failure (the
     project spec, Open 4). A refusal of the files wasm in the calculation
     worker, or of popnei in the light worker, which neither gives, is a
-    defect of our code, and has its words. */
+    defect of our code, and has its words; so is a `reopenFailed` of the
+    light worker, which it never gives. A `reopenFailed` of the variants
+    file has its own words, `REOPEN_FAILED`. */
 const WHAT_HAPPENED: Readonly<Record<RunError["kind"], string>> = {
   couldNotStart: "the application could not start its calculations",
   workerFailed: "the calculation stopped unexpectedly",
   defect: "the calculation stopped unexpectedly",
   popnei: "the calculation stopped unexpectedly",
   files: "the calculation stopped unexpectedly",
+  reopenFailed: "the calculation stopped unexpectedly",
   protocolMismatch: "the page is out of date",
 };
+
+/** What follows the name of a variants file the browser can no longer
+    read, as the owner decided on 25 September 2026 (point B of
+    docs/specs/stage-2-open-points.md). */
+const REOPEN_FAILED =
+  "could not be read; it may have changed on the disk since it was picked. Load it again in the Variants step.";
 
 /** The end of a reason a new load of the page may fix. */
 const RELOAD = "Reload the page and load it again.";
@@ -1217,8 +1229,18 @@ function workerFailedText(
 /** The end of a reason of the variants file. */
 const LOAD_VARIANTS = "Load a variants file in the Variants step.";
 
-/** The end of a reason of the individuals file. */
-const LOAD_INDIVIDUALS = "Load an individuals file in the Individuals step.";
+/** What each application calls its individuals file, as the owner
+    decided on 25 September 2026 (point P of
+    docs/specs/stage-2-open-points.md). */
+const FILE_WORDS: Readonly<Record<AppId, string>> = {
+  popgen: "metadata file",
+  gwas: "traits file",
+};
+
+/** The end of a reason of the individuals file of the application `app`. */
+function loadIndividualsText(app: AppId): string {
+  return `Load a ${FILE_WORDS[app]} in the Individuals step.`;
+}
 
 /** The end of a reason of a list of individuals that names the wrong ones
     (the project spec, Open 2). */
@@ -1248,8 +1270,11 @@ export function projectNeeds(p: Project): string | null {
     case "pending":
       return `Reading ${fileName}.`;
     case "failed":
-      return read.error.kind === "popnei"
-        ? `popnei could not read ${fileName}${saying(read.error.message)}. ${LOAD_VARIANTS}`
+      if (read.error.kind === "popnei") {
+        return `popnei could not read ${fileName}${saying(read.error.message)}. ${LOAD_VARIANTS}`;
+      }
+      return read.error.error.kind === "reopenFailed"
+        ? `${fileName} ${REOPEN_FAILED}`
         : workerFailedText(fileName, read.error.error.kind, "Variants");
     case "read": {
       const inVariants = new Set(read.individuals);
@@ -1314,15 +1339,16 @@ function listNeeds(
 /**
  * The reason an analysis that uses the individuals file cannot run, or
  * `null`: the first of an individuals file missing, being read or
- * refused, then individuals of the variants file missing from it. The
- * individuals of the variants are looked at only when the variants file
- * is read; until then `projectNeeds` gives its reason (the project spec,
- * "What an analysis needs of every project").
+ * refused, then individuals of the variants file missing from it, with
+ * the file named as the application of `p` names it, "a metadata file"
+ * or "a traits file". The individuals of the variants are looked at only
+ * when the variants file is read; until then `projectNeeds` gives its
+ * reason (the project spec, "What an analysis needs of every project").
  */
 export function individualsNeeds(p: Project): string | null {
   const individuals = p.individuals;
   if (individuals === null) {
-    return LOAD_INDIVIDUALS;
+    return loadIndividualsText(p.app);
   }
   const name = escaped(individuals.name);
   const read = individuals.read;
@@ -1332,33 +1358,108 @@ export function individualsNeeds(p: Project): string | null {
     case "failed":
       return read.error.kind === "worker"
         ? workerFailedText(name, read.error.error.kind, "Individuals")
-        : `${name} could not be read${saying(refusalWords(read.error))}. ${LOAD_INDIVIDUALS}`;
+        : `${name} could not be read${saying(refusalWords(read.error, p.app))}. ${loadIndividualsText(p.app)}`;
     case "read": {
-      const variants = p.variants;
-      if (variants?.read.kind !== "read") {
+      const check = individualsCheck(p);
+      if (check === null || p.variants === null) {
         return null;
       }
-      const inFile = new Set(read.table.rows.map((row) => row[0]));
-      const missing = variants.read.individuals.filter(
-        (individual) => !inFile.has(individual),
-      );
+      const missing = check.missing;
+      const variantsName = escaped(p.variants.name);
       if (missing.length === 0) {
         return null;
       }
       return missing.length === 1
-        ? `1 individual of ${escaped(variants.name)} is not in ${name}: ${namesOf(missing)}. Add it to the file and load the file again in the Individuals step.`
-        : `${counted(missing.length, "individual")} of ${escaped(variants.name)} are not in ${name}: ${namesOf(missing)}. Add them to the file and load it again in the Individuals step.`;
+        ? `1 individual of ${variantsName} is not in ${name}: ${namesOf(missing)}. Add it to the file and load the file again in the Individuals step.`
+        : `${counted(missing.length, "individual")} of ${variantsName} are not in ${name}: ${namesOf(missing)}. Add them to the file and load it again in the Individuals step.`;
     }
   }
 }
 
-/** What the reader of the individuals file found wrong with it (the
-    project spec, Open 5), or the message of the files wasm, which may be
-    empty. */
-function refusalWords(error: IndividualsFileError): string {
+/** Whether every individual of the variants file is in the individuals
+    file. */
+export interface IndividualsCheck {
+  /** The individuals of the variants file found in the table. */
+  readonly found: number;
+  /** The individuals of the variants file missing from the table, all of
+      them, in the order of the variants file. */
+  readonly missing: readonly string[];
+  /** The rows of the table whose individual is not in the variants file,
+      which are ignored. */
+  readonly ignoredRows: number;
+}
+
+/** The check of each pair of reads, the table's and the variants file's,
+    kept by the reads themselves and dropped with them, so that a table of
+    10,000 rows is not matched again each time a screen is drawn. */
+const CHECKS = new WeakMap<
+  IndividualsRead,
+  WeakMap<SourceRead, IndividualsCheck>
+>();
+
+/**
+ * Whether every individual of the variants file is in the individuals
+ * file: the individuals found, those missing in the order of the
+ * variants file, and the rows of other individuals; `null` when either
+ * file is not read. The same object for the same two reads.
+ * `individualsNeeds` is written on it, so that the two never disagree on
+ * who is missing.
+ */
+export function individualsCheck(p: Project): IndividualsCheck | null {
+  const tableRead = p.individuals?.read;
+  const variantsRead = p.variants?.read;
+  if (tableRead?.kind !== "read" || variantsRead?.kind !== "read") {
+    return null;
+  }
+  const byVariants =
+    CHECKS.get(tableRead) ?? new WeakMap<SourceRead, IndividualsCheck>();
+  CHECKS.set(tableRead, byVariants);
+  const kept = byVariants.get(variantsRead);
+  if (kept !== undefined) {
+    return kept;
+  }
+  const inTable = new Set<Cell | undefined>(
+    tableRead.table.rows.map((row) => row[0]),
+  );
+  const inVariants = new Set<Cell | undefined>(variantsRead.individuals);
+  const missing = variantsRead.individuals.filter(
+    (individual) => !inTable.has(individual),
+  );
+  const check: IndividualsCheck = {
+    found: variantsRead.individuals.length - missing.length,
+    missing,
+    ignoredRows: tableRead.table.rows.filter((row) => !inVariants.has(row[0]))
+      .length,
+  };
+  byVariants.set(variantsRead, check);
+  return check;
+}
+
+/** The separator a read used, as the Individuals step names it. */
+const SEPARATOR_NAMES: Readonly<Record<CsvFound["separator"], string>> = {
+  ",": "the comma",
+  ";": "the semicolon",
+  "\t": "the tab",
+};
+
+/** The bytes in an MB, as macOS counts them. */
+const BYTES_IN_MB = 1_000_000;
+
+/** A size of a file in MB, with one decimal rounded up, so that 20,000,001
+    bytes is "20.1 MB" and never "20.0 MB", more than a limit of 20 MB. */
+function megabytes(size: number): string {
+  const tenths = Math.ceil(size / (BYTES_IN_MB / 10));
+  return `${grouped(Math.floor(tenths / 10))}.${String(tenths % 10)} MB`;
+}
+
+/** What the reader of the individuals file found wrong with it, in the
+    words of docs/specs/worker/individuals.md, "The refusals and their
+    words", with the file named as the application `app` names it; or the
+    message of the files wasm, which may be empty. */
+function refusalWords(error: IndividualsFileError, app: AppId): string {
   switch (error.kind) {
     case "empty":
-      return "it has no row below the header";
+      return "it has no row of individuals";
     case "duplicateColumn":
       return error.name === ""
         ? "two columns have an empty name"
@@ -1368,7 +1469,19 @@ function refusalWords(error: IndividualsFileError): string {
         ? "two rows have an empty name"
         : `the individual ${shown(error.name)} is in two rows`;
     case "raggedRow":
-      return `line ${String(error.line)} has ${counted(error.found, "cell")} where the header has ${grouped(error.expected)}`;
+      return `line ${String(error.line)} has ${counted(error.found, "cell")} where the header has ${grouped(error.expected)}, read with ${SEPARATOR_NAMES[error.separator]} as the separator`;
+    case "unnamedColumn":
+      return `column ${grouped(error.column)} has values but no name in the header`;
+    case "emptyIndividual":
+      return `line ${String(error.line)} has no name of an individual in its first column`;
+    case "unclosedQuote":
+      return `the quote that opens a cell on line ${String(error.line)} is never closed, read with ${SEPARATOR_NAMES[error.separator]} as the separator`;
+    case "tooLarge":
+      return `it is ${megabytes(error.size)}, more than the ${grouped(error.max / BYTES_IN_MB)} MB a ${FILE_WORDS[app]} can have; check that it is the ${FILE_WORDS[app]} and not the variants`;
+    case "unreadable":
+      return "the browser could not read it; it may have been changed, moved or deleted since it was picked";
+    case "notText":
+      return "it is not a text file; in Excel, save the sheet as CSV";
     case "files":
       return error.message;
   }
@@ -1379,8 +1492,9 @@ const MAX_NAMED = 3;
 
 /** Names in words, in their order: all of them when there are at most
     MAX_NAMED, "a, b and c"; otherwise the first two and how many more,
-    "a, b and 10 more". */
-function namesOf(names: readonly string[]): string {
+    "a, b and 10 more"; each escaped and cut, an empty one "an empty
+    name". */
+export function namesOf(names: readonly string[]): string {
   const words =
     names.length <= MAX_NAMED
       ? names.map(named)
@@ -1403,13 +1517,13 @@ function bothOf(words: readonly string[]): string {
 }
 
 /** A count with its noun: "1 individual", "1,203 individuals". */
-function counted(count: number, noun: string): string {
+export function counted(count: number, noun: string): string {
   return count === 1 ? `1 ${noun}` : `${grouped(count)} ${noun}s`;
 }
 
 /** A whole number with a comma between groups of three digits, the same
     in every browser: "1,203,554". */
-function grouped(count: number): string {
+export function grouped(count: number): string {
   return String(count).replace(/\B(?=(\d{3})+$)/g, ",");
 }
 
@@ -1775,6 +1889,10 @@ const RUN_ERROR_KINDS: Kinds<RunError["kind"]> = {
     fields: ["message"],
     words: "a refusal of the reader of xlsx files",
   },
+  reopenFailed: {
+    fields: ["name", "message"],
+    words: "a file the browser could no longer read",
+  },
   workerFailed: { fields: ["message"], words: "a calculation that stopped" },
   couldNotStart: {
     fields: ["reason"],
@@ -1799,13 +1917,28 @@ const INDIVIDUALS_ERROR_KINDS: Kinds<IndividualsFileError["kind"] | "worker"> =
       words: "one individual in two rows",
     },
     raggedRow: {
-      fields: ["line", "expected", "found"],
+      fields: ["line", "expected", "found", "separator"],
       words: "a row of the wrong length",
     },
     files: {
       fields: ["message"],
       words: "a refusal of the reader of xlsx files",
     },
+    unnamedColumn: { fields: ["column"], words: "a column with no name" },
+    emptyIndividual: {
+      fields: ["line"],
+      words: "a row with no name of an individual",
+    },
+    unclosedQuote: {
+      fields: ["line", "separator"],
+      words: "a quote never closed",
+    },
+    tooLarge: { fields: ["size", "max"], words: "a file too large" },
+    unreadable: {
+      fields: ["message"],
+      words: "a file the browser could not read",
+    },
+    notText: { fields: [], words: "a file that is not text" },
     worker: { fields: ["error"], words: "a failure of the application" },
   };
 
@@ -1852,6 +1985,7 @@ const DECIMAL_WORDS: Readonly<Record<CsvOptions["decimal"], string>> = {
 const FOUND_ENCODING_WORDS: Readonly<Record<CsvFound["encoding"], string>> = {
   "utf-8": ENCODING_WORDS["utf-8"],
   "windows-1252": ENCODING_WORDS["windows-1252"],
+  "utf-16": "UTF-16",
 };
 
 const FOUND_SEPARATOR_WORDS: Readonly<Record<CsvFound["separator"], string>> = {
@@ -2202,6 +2336,16 @@ function parseRunError(value: unknown, path: FieldPath): Parsed<RunError> {
       const reason = parseText(fields["reason"], [...path, "reason"]);
       return reason.ok ? success({ kind, reason: reason.value }) : reason;
     }
+    case "reopenFailed": {
+      const name = parseText(fields["name"], [...path, "name"]);
+      if (!name.ok) {
+        return name;
+      }
+      const message = parseText(fields["message"], [...path, "message"]);
+      return message.ok
+        ? success({ kind, name: name.value, message: message.value })
+        : message;
+    }
     case "popnei":
     case "files":
     case "workerFailed":
@@ -2399,14 +2543,56 @@ function parseIndividualsError(
       if (!found.ok) {
         return found;
       }
+      const separator = parseOneOf(
+        fields["separator"],
+        [...path, "separator"],
+        FOUND_SEPARATOR_WORDS,
+      );
+      if (!separator.ok) {
+        return separator;
+      }
       return success({
         kind,
         line: line.value,
         expected: expected.value,
         found: found.value,
+        separator: separator.value,
       });
     }
-    case "files": {
+    case "unnamedColumn": {
+      const column = numberField(fields, path, "column");
+      return column.ok ? success({ kind, column: column.value }) : column;
+    }
+    case "emptyIndividual": {
+      const line = numberField(fields, path, "line");
+      return line.ok ? success({ kind, line: line.value }) : line;
+    }
+    case "unclosedQuote": {
+      const line = numberField(fields, path, "line");
+      if (!line.ok) {
+        return line;
+      }
+      const separator = parseOneOf(
+        fields["separator"],
+        [...path, "separator"],
+        FOUND_SEPARATOR_WORDS,
+      );
+      return separator.ok
+        ? success({ kind, line: line.value, separator: separator.value })
+        : separator;
+    }
+    case "tooLarge": {
+      const size = numberField(fields, path, "size");
+      if (!size.ok) {
+        return size;
+      }
+      const max = numberField(fields, path, "max");
+      return max.ok ? success({ kind, size: size.value, max: max.value }) : max;
+    }
+    case "notText":
+      return success({ kind });
+    case "files":
+    case "unreadable": {
       const message = parseText(fields["message"], [...path, "message"]);
       return message.ok ? success({ kind, message: message.value }) : message;
     }
@@ -2590,12 +2776,7 @@ function parseReference(
   path: FieldPath,
   analyses: readonly ParsedAnalysis[],
 ): Parsed<Reference> {
-  const fields = readObject(value, path, [
-    "variants",
-    "popneiVersion",
-    "appVersion",
-    "checks",
-  ]);
+  const fields = readObject(value, path, ["variants", "checks"]);
   if (!fields.ok) {
     return fields;
   }
@@ -2603,17 +2784,6 @@ function parseReference(
   const variants = parseVariantSource(f["variants"], [...path, "variants"]);
   if (!variants.ok) {
     return variants;
-  }
-  const popneiVersion = parseText(f["popneiVersion"], [
-    ...path,
-    "popneiVersion",
-  ]);
-  if (!popneiVersion.ok) {
-    return popneiVersion;
-  }
-  const appVersion = parseText(f["appVersion"], [...path, "appVersion"]);
-  if (!appVersion.ok) {
-    return appVersion;
   }
   const checks = parseList(f["checks"], [...path, "checks"], parseCheck);
   if (!checks.ok) {
@@ -2631,12 +2801,7 @@ function parseReference(
       );
     }
   }
-  return success({
-    variants: variants.value,
-    popneiVersion: popneiVersion.value,
-    appVersion: appVersion.value,
-    checks: checks.value,
-  });
+  return success({ variants: variants.value, checks: checks.value });
 }
 
 function parseCheck(value: unknown, path: FieldPath): Parsed<Check> {
@@ -2644,6 +2809,8 @@ function parseCheck(value: unknown, path: FieldPath): Parsed<Check> {
     "analysis",
     "numbers",
     "keyVersion",
+    "popneiVersion",
+    "appVersion",
     "settings",
   ]);
   if (!fields.ok) {
@@ -2673,6 +2840,17 @@ function parseCheck(value: unknown, path: FieldPath): Parsed<Check> {
   if (versionWrong !== null) {
     return failure(versionWrong);
   }
+  const popneiVersion = parseText(f["popneiVersion"], [
+    ...path,
+    "popneiVersion",
+  ]);
+  if (!popneiVersion.ok) {
+    return popneiVersion;
+  }
+  const appVersion = parseText(f["appVersion"], [...path, "appVersion"]);
+  if (!appVersion.ok) {
+    return appVersion;
+  }
   const settings = parseText(f["settings"], [...path, "settings"]);
   if (!settings.ok) {
     return settings;
@@ -2686,6 +2864,8 @@ function parseCheck(value: unknown, path: FieldPath): Parsed<Check> {
     analysis: analysis.value,
     numbers: numbers.value,
     keyVersion: keyVersion.value,
+    popneiVersion: popneiVersion.value,
+    appVersion: appVersion.value,
     settings: settings.value,
   });
 }
@@ -2786,8 +2966,8 @@ function twoOfAKind(
 const SHOWN_LENGTH = 40;
 
 /** A value of the file as a text shows it: escaped, and cut after
-    SHOWN_LENGTH of its characters, never inside an escape. */
-function shown(value: string): string {
+    SHOWN_LENGTH of its characters, never inside an escape, with "…". */
+export function shown(value: string): string {
   const characters = escapedCharacters(value);
   return characters.length > SHOWN_LENGTH
     ? `${characters.slice(0, SHOWN_LENGTH).join("")}…`
@@ -2795,8 +2975,8 @@ function shown(value: string): string {
 }
 
 /** A value of the user's files, the name of a file among them, escaped
-    and not cut. */
-function escaped(value: string): string {
+    as `shown` escapes it, and not cut. */
+export function escaped(value: string): string {
   return escapedCharacters(value).join("");
 }
 
@@ -3090,14 +3270,6 @@ const FIELD_WORDS: readonly FieldWords[] = [
     ["reference", "variants"],
     "the variants file the project was made with",
   ),
-  [
-    ["reference", "popneiVersion"],
-    () => "the version of popnei the project was made with",
-  ],
-  [
-    ["reference", "appVersion"],
-    () => "the version of the application the project was made with",
-  ],
   [["reference", "checks"], () => "the check numbers"],
   [
     ["reference", "checks", N],
@@ -3120,6 +3292,16 @@ const FIELD_WORDS: readonly FieldWords[] = [
     ["reference", "checks", N, "keyVersion"],
     (o) =>
       `the version of the calculation of the ${nth(o, 0)} analysis with check numbers`,
+  ],
+  [
+    ["reference", "checks", N, "popneiVersion"],
+    (o) =>
+      `the version of popnei of the ${nth(o, 0)} analysis with check numbers`,
+  ],
+  [
+    ["reference", "checks", N, "appVersion"],
+    (o) =>
+      `the version of the application of the ${nth(o, 0)} analysis with check numbers`,
   ],
   [
     ["reference", "checks", N, "settings"],

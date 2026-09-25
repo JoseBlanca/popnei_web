@@ -1,13 +1,14 @@
 /**
  * What the tests of core share: the generators of fast-check, which draw
- * random values for the property tests, a project written by hand, and
- * the deep freeze. Imported by tests alone.
+ * random values for the property tests, a project written by hand, the
+ * analyses of the tests, and the deep freeze. Imported by tests alone.
  */
 
 import * as fc from "fast-check";
 import type { JsonObject, JsonValue, KeyedDef } from "./keys.ts";
 import {
   INDIVIDUAL_FILTER_ORDER,
+  analysisOptions,
   loadIndividuals,
   loadVariants,
   moveVariantFilter,
@@ -22,6 +23,7 @@ import {
   setVariantFilter,
 } from "./project.ts";
 import type {
+  AnalysisId,
   AppId,
   Grouping,
   VariantLoad,
@@ -33,6 +35,7 @@ import type {
   VariantSource,
 } from "./project.ts";
 import type { Result } from "./result.ts";
+import type { AnalysisDef } from "./store.ts";
 import type {
   Cell,
   ColumnType,
@@ -579,6 +582,9 @@ const RUN_ERRORS: Readonly<Record<RunError["kind"], fc.Arbitrary<RunError>>> = {
   couldNotStart: fc
     .string()
     .map((reason) => ({ kind: "couldNotStart", reason })),
+  reopenFailed: fc
+    .tuple(fc.string(), fc.string())
+    .map(([name, message]) => ({ kind: "reopenFailed", name, message })),
   protocolMismatch: fc.constant({ kind: "protocolMismatch" }),
   defect: fc.string().map((message) => ({ kind: "defect", message })),
 };
@@ -685,11 +691,18 @@ const tableRead: fc.Arbitrary<{
 
 const csvFound: fc.Arbitrary<CsvFound> = fc.record(
   {
-    encoding: fc.constantFrom("utf-8", "windows-1252"),
+    encoding: fc.constantFrom("utf-8", "windows-1252", "utf-16"),
     separator: fc.constantFrom(",", ";", "\t"),
     decimal: fc.constantFrom(".", ","),
   },
   PLAIN,
+);
+
+/** Any separator a read of a CSV used. */
+const separator: fc.Arbitrary<CsvFound["separator"]> = fc.constantFrom(
+  ",",
+  ";",
+  "\t",
 );
 
 const individualsFileError: fc.Arbitrary<IndividualsFileError> = fc.oneof(
@@ -703,17 +716,41 @@ const individualsFileError: fc.Arbitrary<IndividualsFileError> = fc.oneof(
     name,
   })),
   fc
-    .tuple(fc.nat(), fc.nat(), fc.nat())
-    .map(([line, expected, found]): IndividualsFileError => ({
+    .tuple(fc.nat(), fc.nat(), fc.nat(), separator)
+    .map(([line, expected, found, sep]): IndividualsFileError => ({
       kind: "raggedRow",
       line,
       expected,
       found,
+      separator: sep,
     })),
   fc.string().map((message): IndividualsFileError => ({
     kind: "files",
     message,
   })),
+  fc.nat().map((column): IndividualsFileError => ({
+    kind: "unnamedColumn",
+    column,
+  })),
+  fc.nat().map((line): IndividualsFileError => ({
+    kind: "emptyIndividual",
+    line,
+  })),
+  fc.tuple(fc.nat(), separator).map(([line, sep]): IndividualsFileError => ({
+    kind: "unclosedQuote",
+    line,
+    separator: sep,
+  })),
+  fc.tuple(fc.nat(), fc.nat()).map(([size, max]): IndividualsFileError => ({
+    kind: "tooLarge",
+    size,
+    max,
+  })),
+  fc.string().map((message): IndividualsFileError => ({
+    kind: "unreadable",
+    message,
+  })),
+  fc.constant<IndividualsFileError>({ kind: "notText" }),
 );
 
 /** Any read of the individuals file. */
@@ -767,6 +804,56 @@ export const TEST_ANALYSES: readonly ParsedAnalysis[] = [
   "pca",
   "gwas_lm",
 ].map((id) => ({ id, parseOptions: jsonObjectOf }));
+
+/** The request of an analysis of `TEST_DEFS`: its id alone. */
+export interface TestDefJob {
+  /** The analysis the request is of. */
+  readonly analysis: AnalysisId;
+}
+
+/** A result of an analysis of `TEST_DEFS`: the check numbers the test
+    chooses. */
+export interface TestDefResult {
+  /** The analysis the result is of. */
+  readonly analysis: AnalysisId;
+  /** What its `checkNumbers` gives. */
+  readonly numbers: readonly (number | null)[];
+}
+
+/**
+ * The analyses of `TEST_ANALYSES` as whole definitions, for the tests of
+ * the project file and of the shell: each of key version 1, reading both
+ * lists of filters, with a `keyInputs` that gives its options and the
+ * grouping, no reason of its own not to run, no warning, and a
+ * `checkNumbers` that gives the numbers of its result. `diversity` and
+ * `pca` are of population genetics, `gwas_lm` of association.
+ */
+export const TEST_DEFS: readonly AnalysisDef<TestDefJob, TestDefResult>[] =
+  TEST_ANALYSES.map((analysis): AnalysisDef<TestDefJob, TestDefResult> => ({
+    id: analysis.id,
+    app: analysis.id === "gwas_lm" ? ["gwas"] : ["popgen"],
+    defaults: {},
+    keyVersion: 1,
+    filtersRead: { variants: true, individuals: true },
+    parseOptions: (options, formatVersion) =>
+      analysis.parseOptions(options, formatVersion),
+    keyInputs: (p) => ({
+      options: analysisOptions(p, analysis.id, {}),
+      grouping: p.grouping,
+    }),
+    needs: () => null,
+    run: (_p, c) => c.run({ analysis: analysis.id }),
+    warnings: () => [],
+    checkNumbers: (r) => {
+      if (r.analysis !== analysis.id) {
+        throw new Error(
+          `popnei_web defect: a result of ${r.analysis} given to ${analysis.id}.`,
+        );
+      }
+      return r.numbers;
+    },
+    script: () => "",
+  }));
 
 /** The analysis of TEST_ANALYSES of the id `id`. */
 export function testAnalysis(id: string): ParsedAnalysis {
@@ -863,8 +950,6 @@ export const wholeProject: fc.Arbitrary<Project> = fc
           fc.record(
             {
               variants: anyVariantSource,
-              popneiVersion: fc.string(),
-              appVersion: fc.string(),
               checks: fc.uniqueArray(
                 fc.record(
                   {
@@ -873,6 +958,8 @@ export const wholeProject: fc.Arbitrary<Project> = fc
                     ),
                     numbers: fc.array(fc.option(fileNumber)),
                     keyVersion: fc.nat(),
+                    popneiVersion: fc.string(),
+                    appVersion: fc.string(),
                     settings: fc.stringMatching(/^[0-9a-f]{64}$/),
                   },
                   PLAIN,
