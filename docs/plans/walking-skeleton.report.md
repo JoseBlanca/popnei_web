@@ -567,3 +567,50 @@ recommendation.
 
 With these, the twelve points of the reviews of work packages 2 to 6,
 listed above under "What the reviews of 2 to 6 ask of the owner".
+
+## 8. The Individuals step and the diversity panel (under way)
+
+### Point R, measured on 25 September 2026
+
+Point R asks whether a browser reads a variants file that changed on
+the disk after the user picked it, and says nothing. Measured on an
+Apple M5 Pro with 64 GB, in Chromium 153.0.8010.12 and WebKit 26.6
+under Playwright 1.63.0, with `e2e/measure.spec.ts`. A copy of
+`panel.nei` was picked and run at 0.05. It was then rewritten in place
+three ways, and after each rewrite the diversity was run at 0.05 and
+at 1. The first check deleted the file: both engines then answered
+"could not be read again", so each read the file on the disk and not
+a copy in memory.
+
+| Rewrite | Chromium | WebKit, a second later | WebKit, time of change put back |
+|---|---|---|---|
+| its first 130,000 bytes | "could not be read again" | "could not be read again" | popnei's refusal (cut short), then "could not be read again" at 1 |
+| a byte changed in the middle | "could not be read again" | "could not be read again" | popnei's refusal, "damaged", at 0.05 and at 1 |
+| 4,096 zero bytes added | "could not be read again" | "could not be read again" | the numbers of the old table, with no word |
+
+So Chromium always refuses a changed file. WebKit refuses it when its
+time of change moved, and reads the new bytes when the rewrite kept
+that time, as `rsync -t` or a tar restoring an older version does. In
+that case one rewrite gives numbers with no word. Firefox is measured
+by the owner by hand.
+
+### Other measurements of task 8.3
+
+A pass over the VCF of the Stop test, 200,000 variants and 127,600,467
+bytes gzipped: 3,739 ms in Chromium, 3,576 ms in WebKit. The VCF is
+gzipped because a plain VCF is read at about 300 MB/s here, and a
+3-second pass would need about 1 GB.
+
+The restart of the calculation worker:
+
+| File | Engine | Start to ready | Start to opened | Run at 0.05 | Run at 1, opened again | Run on a new worker |
+|---|---|---|---|---|---|---|
+| VCF, 80,692,954 bytes | Chromium | 10 ms | 19 ms | 258 ms | 253 ms | 272 ms |
+| VCF | WebKit | 28 ms | 35 ms | 269 ms | 263 ms | 255 ms |
+| `.nei`, 19,161,178 bytes | Chromium | 10 ms | 18 ms | 142 ms | 128 ms | 141 ms |
+| `.nei` | WebKit | 28 ms | 36 ms | 138 ms | 131 ms | 134 ms |
+
+A metadata file of 10,000 rows and 20 columns, 1.39 MB, in Chromium:
+111 ms from the pick to the columns shown. 33 clicks were answered
+meanwhile, none waited more than 2 ms, and no task of the page lasted
+more than 50 ms.
