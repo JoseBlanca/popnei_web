@@ -968,8 +968,9 @@ moves.
   (2.1.1, which asks that everything be done with the keyboard). The
   number of individuals is its own column, not a colour or a note. The
   owner decided on 25 September 2026 that it is not React Aria's
-  `Table`, which took 25.1 KB gzipped of the page's first script for a
-  table of a few rows that is neither sorted nor selected; React Aria's
+  `Table`, whose removal took 14.19 KB gzipped off the page's first
+  script, for a table of a few rows that is neither sorted nor
+  selected; React Aria's
   `Table` is for the sortable tables of later stages
   (`docs/technology.md`, "React Aria Components").
 - The progress bar is React Aria's `ProgressBar`, labelled "Calculating
