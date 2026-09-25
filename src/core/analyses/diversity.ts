@@ -374,6 +374,7 @@ export const diversity: AnalysisDef<Job, JobResult> = Object.freeze({
   run,
   warnings,
   checkNumbers,
+  numCheckNumbers,
   script,
 });
 
@@ -602,6 +603,23 @@ function checkNumbers(result: JobResult): readonly (number | null)[] {
     ]),
   ];
 }
+
+/** How many numbers `checkNumbers` gives for a result of `p`: 1 + 3 × the
+    populations of `populationsToRun`, since `run` sends every one of them
+    and popnei gives a row for each; `null` when `populationsToRun` is, and
+    when the project holds filters of individuals, which may leave a
+    population out of the result. */
+function numCheckNumbers(p: Project): number | null {
+  const pops = populationsToRun(p);
+  if (pops === null || p.individualFilters.length > 0) {
+    return null;
+  }
+  return 1 + NUMBERS_PER_POPULATION * pops.length;
+}
+
+/** The check numbers of each population: its expected heterozygosity, its
+    observed heterozygosity and its proportion of polymorphic variants. */
+const NUMBERS_PER_POPULATION = 3;
 
 /**
  * The lines of the Python script that calculate the same numbers with

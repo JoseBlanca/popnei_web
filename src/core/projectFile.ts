@@ -565,8 +565,9 @@ const NO_FINGERPRINT = "0".repeat(64);
  * the other application; a field at the top this version does not write,
  * or one missing; a header of the wrong value; check numbers that are not
  * a list of objects, or hold a fingerprint, or are there with no variants
- * file; the project, as `parseProject` checks it; and a read this version
- * never writes.
+ * file; the project, as `parseProject` checks it; a read this version
+ * never writes; and a check whose count of numbers is not the one
+ * `numCheckNumbers` of its analysis gives, when it gives one.
  *
  * The project has no variants file, and as its reference the file's
  * variants file and check numbers, each with the fingerprint of its
@@ -698,6 +699,20 @@ export function readProjectFile<J, R>(
 
   if (reference === null) {
     return { ok: true, value: project };
+  }
+  // The count of each check, as its analysis gives it for the project with
+  // the file's variants file, which it reads to know the populations run.
+  const withVariants: Project = { ...project, variants: reference.variants };
+  for (const check of reference.checks) {
+    const expected = definitionOf(analyses, check.analysis).numCheckNumbers(
+      withVariants,
+    );
+    if (expected !== null && check.numbers.length !== expected) {
+      return header(
+        "checks",
+        `${counted(expected, "number")} for the analysis ${shown(check.analysis)}, as many as the rest of the file gives it, and not ${grouped(check.numbers.length)}`,
+      );
+    }
   }
   const readOptions = reference.variants.readOptions;
   return {

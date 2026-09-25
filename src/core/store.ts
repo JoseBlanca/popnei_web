@@ -92,6 +92,12 @@ export interface AnalysisDef<J, R> {
       popnei's by addition, subtraction, multiplication and division
       alone; `null` where popnei gave NaN. */
   checkNumbers(r: R): readonly (number | null)[];
+  /** How many numbers `checkNumbers` gives for a result of the project
+      `p`, whose variants file is read, or `null` when the project does
+      not fix it. Unlike `keyInputs`, it reads `p.variants`. The project
+      file refuses, at the opening, a check of another count; the store
+      does not call it. */
+  numCheckNumbers(p: Project): number | null;
   /** Its lines of the Python script. */
   script(p: Project): string;
 }

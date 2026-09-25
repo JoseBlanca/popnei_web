@@ -832,8 +832,10 @@ export interface TestDefResult {
  * The analyses of `TEST_ANALYSES` as whole definitions, for the tests of
  * the project file and of the shell: each of key version 1, reading both
  * lists of filters, with a `keyInputs` that gives its options and the
- * grouping, no reason of its own not to run, no warning, and a
- * `checkNumbers` that gives the numbers of its result. `diversity` and
+ * grouping, no reason of its own not to run, no warning, a
+ * `checkNumbers` that gives the numbers of its result, and a
+ * `numCheckNumbers` that gives `null`, so that the project file checks
+ * the count of the numbers only in the tests of the count. `diversity` and
  * `pca` are of population genetics, `gwas_lm` of association.
  */
 export const TEST_DEFS: readonly AnalysisDef<TestDefJob, TestDefResult>[] =
@@ -860,6 +862,7 @@ export const TEST_DEFS: readonly AnalysisDef<TestDefJob, TestDefResult>[] =
       }
       return r.numbers;
     },
+    numCheckNumbers: () => null,
     script: () => "",
   }));
 

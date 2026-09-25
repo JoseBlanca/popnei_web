@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import * as fc from "fast-check";
 import { describe, expect, test } from "vitest";
+import { POPGEN_ANALYSES } from "./apps.ts";
 import { keyFromWire, settingsFingerprint } from "./keys.ts";
 import { emptyProject } from "./project.ts";
 import type { Project, Reference, VariantSource } from "./project.ts";
@@ -113,6 +114,16 @@ function fixture(name: string): string {
     new URL(`./fixtures/projectFile/${name}`, import.meta.url),
     "utf8",
   );
+}
+
+/** The JSON of a fixture of `src/core/fixtures/projectFile/`, as an object
+    whose fields the tests replace. */
+function fixtureJson(name: string): Readonly<Record<string, unknown>> {
+  const parsed: unknown = JSON.parse(fixture(name));
+  if (typeof parsed !== "object" || parsed === null) {
+    throw new Error(`the fixture ${name} is not an object`);
+  }
+  return Object.fromEntries(Object.entries(parsed));
 }
 
 /** The variants file of `sampleProject`, read. */
@@ -1192,6 +1203,68 @@ describe("WS6 D2 the opening", () => {
         checks: [checkWith({})],
       })),
     ).toMatchObject({ kind: "header", field: "checks" });
+  });
+
+  test("a check of the diversity with 6 numbers where its count is 7 is refused as header, with its text", () => {
+    const counted = POPGEN_DEFS.map((def) =>
+      def.id === "diversity" ? { ...def, numCheckNumbers: () => 7 } : def,
+    );
+    const file = (numbers: readonly number[]): string =>
+      JSON.stringify({
+        ...fixtureJson("v1-nei-diversity.popnei.json"),
+        checks: [checkWith({ numbers })],
+      });
+    const opening = readProjectFile(
+      file([1, 2, 3, 4, 5, 6]),
+      "popgen",
+      counted,
+    );
+    const expected: ProjectFileError = {
+      kind: "header",
+      field: "checks",
+      expected:
+        "7 numbers for the analysis diversity, as many as the rest of the file gives it, and not 6",
+    };
+    expect(opening).toEqual({ ok: false, error: expected });
+    expect(projectFileErrorText(expected, "run1.popnei.json")).toBe(
+      "The project file cannot be opened: the check numbers should be 7 numbers for the analysis diversity, as many as the rest of the file gives it, and not 6. The file was changed outside the application, or is damaged. Open a copy saved before the change, or make the project again.",
+    );
+    expect(
+      readProjectFile(file([1, 2, 3, 4, 5, 6, 7]), "popgen", counted).ok,
+    ).toBe(true);
+  });
+
+  test("a check whose count its analysis does not fix opens with any count", () => {
+    expect(
+      refusalOf((file) => ({
+        ...file,
+        checks: [checkWith({ numbers: [1, 2, 3, 4, 5, 6] })],
+      })),
+    ).toBeNull();
+  });
+
+  test("the count with the diversity's own definition: v1-nei-diversity.popnei.json opens, and is refused with one of its 7 numbers removed", () => {
+    const text = fixture("v1-nei-diversity.popnei.json");
+    expect(readProjectFile(text, "popgen", POPGEN_ANALYSES).ok).toBe(true);
+    const shortened = JSON.stringify({
+      ...fixtureJson("v1-nei-diversity.popnei.json"),
+      checks: [
+        checkWith({
+          numbers: [
+            1150112, 0.3120051, 0.3089214, 0.9124, 0.2987112, 0.2954871,
+          ],
+        }),
+      ],
+    });
+    expect(readProjectFile(shortened, "popgen", POPGEN_ANALYSES)).toEqual({
+      ok: false,
+      error: {
+        kind: "header",
+        field: "checks",
+        expected:
+          "7 numbers for the analysis diversity, as many as the rest of the file gives it, and not 6",
+      },
+    });
   });
 
   test("an individuals file whose read is pending is refused as header", () => {

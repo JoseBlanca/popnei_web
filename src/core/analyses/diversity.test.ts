@@ -1338,3 +1338,43 @@ describe("WS5 D3 the rest of the module, its words at their bounds", () => {
     expect(populationsOf(p)).toEqual([["A", ["i1", "i2"]]]);
   });
 });
+
+describe("WS5 D3 the count of the check numbers", () => {
+  test("1 + 3 x the populations run, as many as checkNumbers gives for them", () => {
+    const p = project();
+    expect(diversity.numCheckNumbers(p)).toBe(7);
+    const r = result({
+      pops: ["A", "B"],
+      numIndividuals: [2, 1],
+      numVarsWithValue: [0, 0],
+      numVars: 1000,
+    });
+    expect(diversity.checkNumbers(r)).toHaveLength(7);
+    expect(
+      diversity.numCheckNumbers(
+        project({ table: tableOf(["i1", "i2"], ["A", "A"]) }),
+      ),
+    ).toBe(4);
+  });
+
+  test("null with a filter of individuals, with no column of the populations, with no individuals file, and with the variants file not read", () => {
+    const p = project();
+    expect(
+      diversity.numCheckNumbers(
+        deepFreeze<Project>({
+          ...p,
+          individualFilters: [{ kind: "remove", individuals: ["i2"] }],
+        }),
+      ),
+    ).toBeNull();
+    expect(diversity.numCheckNumbers(project({ column: null }))).toBeNull();
+    expect(
+      diversity.numCheckNumbers(withVariants(p, { read: { kind: "pending" } })),
+    ).toBeNull();
+    expect(
+      diversity.numCheckNumbers(
+        deepFreeze<Project>({ ...p, individuals: null }),
+      ),
+    ).toBeNull();
+  });
+});

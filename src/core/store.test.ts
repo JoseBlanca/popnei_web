@@ -207,6 +207,7 @@ function fakeAnalyses(): {
       calls.given.push(`pops checkNumbers of ${r.kind}`);
       return r.kind === "pops" ? [...r.fst] : [];
     },
+    numCheckNumbers: () => null,
     script: () => "",
   };
   const vars: AnalysisDef<TestJob, TestResult> = {
@@ -235,6 +236,7 @@ function fakeAnalyses(): {
         ? [...r.values].map((value) => (Number.isNaN(value) ? null : value))
         : [];
     },
+    numCheckNumbers: () => null,
     script: () => "",
   };
   return { analyses: [pops, vars], calls };
