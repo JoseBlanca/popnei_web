@@ -215,6 +215,70 @@ describe("WS6 D1 what is written", () => {
     });
   });
 
+  test("a VCF of the reference's identity read again with ploidy 4, pending, is written with ploidy 4 and no check, and opens so", () => {
+    const savedVcf: VariantSource = {
+      fileId: "99999999999999999999999999999999",
+      name: "panel.vcf.gz",
+      size: 2048,
+      format: "vcf",
+      readOptions: { ploidy: 2, onlyPassed: true },
+      read: {
+        kind: "read",
+        individuals: ["i1", "i2", "i3", "i4"],
+        ploidy: 2,
+        numVars: 7,
+      },
+    };
+    const loaded: VariantSource = {
+      ...savedVcf,
+      fileId: SAMPLE_VARIANTS_ID,
+      readOptions: { ploidy: 4, onlyPassed: true },
+      read: { kind: "pending" },
+    };
+    const p = withFiles(loaded, null);
+    const reference: Reference = {
+      variants: savedVcf,
+      checks: [
+        {
+          ...CARRIED_CHECK,
+          settings: settingsFingerprint(
+            DIVERSITY,
+            p,
+            savedVcf.readOptions,
+            null,
+          ),
+        },
+      ],
+    };
+    const state = stateOf({ ...p, reference });
+    const json = writtenJson(state);
+    expect(json["variants"]).toEqual({
+      fileId: SAMPLE_VARIANTS_ID,
+      name: "panel.vcf.gz",
+      size: 2048,
+      format: "vcf",
+      readOptions: { ploidy: 4, onlyPassed: true },
+      read: { kind: "pending" },
+    });
+    expect(json["checks"]).toEqual([]);
+
+    const opened = readProjectFile(written(state), "popgen", POPGEN_DEFS);
+    if (!opened.ok) {
+      throw new Error(`the file did not open: ${opened.error.kind}`);
+    }
+    expect(opened.value.reference).toEqual({
+      variants: {
+        fileId: SAMPLE_VARIANTS_ID,
+        name: "panel.vcf.gz",
+        size: 2048,
+        format: "vcf",
+        readOptions: { ploidy: 4, onlyPassed: true },
+        read: { kind: "pending" },
+      },
+      checks: [],
+    });
+  });
+
   test("no variants file loaded and a reference: the reference's is written", () => {
     const p = withFiles(null, null);
     const json = writtenJson(stateOf({ ...p, reference: referenceFor(p) }));

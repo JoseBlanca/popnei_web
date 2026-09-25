@@ -120,9 +120,10 @@ const DEFAULT_FILE_NAME = `project${PROJECT_FILE_EXTENSION}`;
 /**
  * The variants file the file holds (the spec, "What is written of each
  * part"): the one loaded when it is read; the reference's when the one
- * loaded is not read and does not differ from it in its identity, or when
- * none is loaded; the one loaded otherwise. `sourceReadOut` writes its
- * read as pending when it failed.
+ * loaded is not read, does not differ from it in its identity and has its
+ * read options, or when none is loaded; the one loaded otherwise, so that
+ * a VCF read again with another ploidy is saved with the ploidy the user
+ * set. `sourceReadOut` writes its read as pending when it failed.
  */
 function variantsWritten(p: Project): VariantSource | null {
   const loaded = p.variants;
@@ -134,11 +135,28 @@ function variantsWritten(p: Project): VariantSource | null {
     chosen = loaded;
   } else {
     chosen =
-      reference !== null && compareIdentity(reference, loaded).length === 0
+      reference !== null &&
+      compareIdentity(reference, loaded).length === 0 &&
+      sameReadOptions(reference, loaded)
         ? reference
         : loaded;
   }
   return chosen;
+}
+
+/** Whether two variants files are read with the same read options: both
+    `.nei` files, or two VCFs of the same ploidy and the same choice of the
+    passed variants. */
+function sameReadOptions(a: VariantSource, b: VariantSource): boolean {
+  const optionsA = a.readOptions;
+  const optionsB = b.readOptions;
+  if (optionsA === null || optionsB === null) {
+    return optionsA === optionsB;
+  }
+  return (
+    optionsA.ploidy === optionsB.ploidy &&
+    optionsA.onlyPassed === optionsB.onlyPassed
+  );
 }
 
 /** A check as the file holds it, without the fingerprint of its
