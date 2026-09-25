@@ -1,7 +1,9 @@
 # The diversity of each population
 
-Written on 25 September 2026, and approved by the owner the same day. There is no
-code yet. This spec gives the first analysis of the population genetics
+Written on 25 September 2026, and approved by the owner the same day;
+revised the same day for `numCheckNumbers` and the line of numbers not
+compared, which the owner's decisions on the project file ask for. There
+was no code yet. This spec gives the first analysis of the population genetics
 application, in its form for the walking skeleton: the module
 `src/core/analyses/diversity.ts`, which says what the diversity of each
 population is calculated from, when it cannot run, what it asks of the
@@ -408,6 +410,18 @@ was saved with, and the fingerprint holds the populations with their
 individuals. The project file saves them with the key version
 (`docs/specs/core/projectFile.md`).
 
+`numCheckNumbers(p)` gives their count for the project `p`, 1 + 3 × the
+populations of `populationsToRun(p)`, since `run` sends every one of
+them and popnei gives a row for each; or `null` when `populationsToRun`
+is `null`, the variants file or the individuals file not read or no
+column of the populations, and when the project holds filters of
+individuals, which may leave a population out of the result in stage 3
+(`populationNotInResult`, above). The project file refuses, at the
+opening, a check of the diversity of another count, as the owner decided
+on 25 September 2026 (`docs/specs/core/projectFile.md`, "Opening"): 6
+numbers where the two populations of the project give 7 would otherwise
+be compared after a run and blamed on the variants file.
+
 ### Its lines of the Python script
 
 `script(p)` gives the lines that calculate the same numbers with the
@@ -490,7 +504,7 @@ export interface DiversityResult {
 The module exports its definition, an `AnalysisDef` of
 `docs/specs/core/store.md`, the object of functions and constants by
 which the store knows an analysis (`keyInputs`, `needs`, `run`,
-`warnings`, `checkNumbers`, `script`, `parseOptions`), which
+`warnings`, `checkNumbers`, `numCheckNumbers`, `script`, `parseOptions`), which
 `src/core/apps.ts` lists for the population genetics application, and
 what the panel reads:
 
@@ -625,7 +639,9 @@ definition, on frozen projects, as
   `populationNotInResult` naming B; `keyInputs` gives `{ pops: [["A", ["i1", "i3"]], ["B",
   ["i2"]], ["C", ["i5"]]], options: DIVERSITY_DEFAULTS }`, the populations
   of the table and not those sent; `checkNumbers` gives `[numVars, null,
-  null, null, null, null, null]`.
+  null, null, null, null, null]`, and `numCheckNumbers` 7 for the two
+  populations sent, and `null` with a filter of individuals, with no
+  column of the populations, and with the variants file pending.
 - **`needs`**, a case for each row of its table, after each reason of
   `individualsNeeds` has been checked to come through; `populationsNeeds`
   gives the same text for the last three rows, with their kinds, and
@@ -839,7 +855,12 @@ and stopped, is the shell's (`docs/specs/shell.md`).
 The comparison of an opened project file, `check` of the state done, is
 shown under the table in the words of `checkVerdictText`, which
 `docs/specs/core/projectFile.md` owns ("The comparisons after an
-opening") and every analysis shares; the panel has none of its own.
+opening") and every analysis shares; the panel has none of its own. When
+`check` is `null`, the line of `uncomparedText` of the same module is
+shown there when it gives one: the numbers are not compared because the
+VCF was read with other read options than the project file's, as the
+owner decided on 25 September 2026; it is built with the rest of the
+comparison, in task 9.4 of `docs/plans/walking-skeleton.md`.
 
 The bar is the share of the run done, from popnei's four numbers,
 `(pass − 1 + bytesRead / numBytes) / numPasses`, written as a whole
