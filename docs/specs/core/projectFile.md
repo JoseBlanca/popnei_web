@@ -837,6 +837,12 @@ the analyses `done`, `ready` or `removed`.
 - **The count with the diversity's own definition**:
   `v1-nei-diversity.popnei.json` opens with the definitions of
   `src/core/apps.ts`, and is refused with one of its 7 numbers removed.
+  And a Save cannot write a count its own opening refuses: that file
+  opened, given its variants file again, and saved with those
+  definitions, once with the diversity done over its two populations and
+  once with the check kept of the reference, opens again, each time with
+  a check of 7 numbers. The test definitions, whose `numCheckNumbers`
+  gives `null`, cannot show this.
 - **The numbers not compared**: `uncomparedText` for each of its three
   sentences, and `null` for the same read options, a reference with no check
   of the analysis, a `.nei` file, no reference, and no variants file.
