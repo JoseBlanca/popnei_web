@@ -709,3 +709,58 @@ the CSV, whose name should be `panel.diversity.csv` and whose first line
 `population,individuals,…`; the list of the column with the arrow keys
 and Enter; the list of missing individuals opened and closed; the bar
 and Stop during a large VCF.
+
+## The owner's decisions of 25 September on the open points
+
+On 25 September the owner tried the Variants step, the Individuals step
+and the diversity panel in Firefox by hand. The diversity of
+`panel.nei` with `panel_pops.csv` at 0.05 gave the row p0 of the plan.
+The result of point R in Firefox has not been sent, and stops 7.5 and
+8.4 stay open until the owner sees the screens after the changes below.
+
+The owner ordered that the 17 points of stop 7.5 and of work package 8
+take the recommendations written above. Points 1 to 11 of the reviews of
+2 to 6 had no recommendation written; the orchestrator proposed one for
+each in chat, and the owner approved them as they are here:
+
+1. A header with empty cells at its end, `id;pop;;`: those cells are
+   dropped when their columns are empty in every row, and the columns
+   are counted without them.
+2. A VCF picked as the metadata file is refused with words that say it
+   is a variants file, which the Variants step takes.
+3. A UTF-8 file with its byte order mark and a bad byte is read as UTF-8;
+   the bad byte is shown as �, and a warning names its line.
+4. A UTF-16 file cut short is refused as a file that ends in the middle
+   of a character and may have been cut short, with no line.
+5. A column with no name whose cells are all `NA` or `-` is dropped as an
+   empty column.
+6. A VCF with no variants and no filter set: the words say that the file
+   has no variants, and not "Loosen the filters".
+7. A VCF of two ploidies: the words say that the file mixes ploidies and
+   that this version reads a file of one ploidy, and advise no ploidy.
+8. A project file whose filter of individuals is wrong: the words say
+   that the filter has to be corrected in the project file, since the
+   Variants step has no control for it in stage 2.
+9. A Save while the VCF is read again with another ploidy saves the
+   ploidy the user set, 4, and not that of the last read, 2.
+10. A VCF given again with "only variants that passed" changed gets the
+    same warning as a changed ploidy; the saved numbers are not
+    compared, with a line that says why.
+11. A project file whose check has the wrong count of numbers is refused
+    at the opening as damaged.
+
+Point 12, the words of the project file (point Q), stays for stop 9.6.
+Point 7 of stop 7.5, the error bar's "save it" before the Save exists, is
+accepted until task 9.4. Point 9 of work package 8, "Calculated with
+popnei 0.1.0" for two releases, is popnei's packaging: nothing changes
+here.
+
+Two decisions add to what the plan names, by the owner's order: the
+React Aria plugin that removes its words in other languages, a
+development dependency, and the plain HTML table of the diversity, which
+changes `docs/technology.md`.
+
+Each decision is a change to a spec, in a commit of its own, and then to
+the code. They are carried in rounds of the screens, below; the points
+whose change reaches the core or the worker go with the round of the
+screen that shows their words.
