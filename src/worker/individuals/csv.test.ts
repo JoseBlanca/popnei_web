@@ -215,12 +215,16 @@ describe("WS4 D1 readCsv", () => {
     });
 
     test("the BOM of UTF-8 at the start of the text is not part of the first name", () => {
-      expect(readOk("﻿id,pop\nA,P1\n").table.columns).toEqual(["id", "pop"]);
+      expect(readOk("\uFEFFid,pop\nA,P1\n").table.columns).toEqual([
+        "id",
+        "pop",
+      ]);
     });
 
     test("when the tab and ; both fit with two cells, the tab is taken", () => {
       const read = readOk("id;n\tx\nA;1\t2\n");
       expect(read.separator).toBe("\t");
+      expect(read.decimal).toBe(".");
       expect(read.table).toEqual({
         columns: ["id;n", "x"],
         rows: [["A;1", "2"]],
@@ -352,6 +356,18 @@ describe("WS4 D1 readCsv", () => {
       });
       expect(read.decimal).toBe(",");
       expect(read.columns[1]).toEqual({ kind: "continuous" });
+    });
+
+    test("a file of whole numbers is read with the point", () => {
+      const read = readOk("id;s\nA;1\nB;2\nC;3\n");
+      expect(read.separator).toBe(";");
+      expect(read.decimal).toBe(".");
+    });
+
+    test("as many numbers with a comma as with a point is the point", () => {
+      const read = readOk("id;h\nA;1,5\nB;1.5\n");
+      expect(read.separator).toBe(";");
+      expect(read.decimal).toBe(".");
     });
 
     test("with the separator , the decimal mark auto is the point", () => {
