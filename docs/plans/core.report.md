@@ -8,15 +8,14 @@ The work report of the plan `docs/plans/core.md`, stage 1 of
 
 The plan is done: every task is ticked and every deliverable checked, on
 the branch `plan/core`, which is not merged and not pushed. Nothing that
-is open blocks the merge: each open point belongs to a later stage, or
-changes one sentence that can be changed before the merge or after it.
+is open blocks the merge: each open point belongs to a later stage.
 
 This stage has no screen, so nothing of it was seen in a browser. The
 probe, the technical page of stage 0 that loads popnei in the browser,
 still passes its 40 automated tests in Chromium and WebKit, the engines
 of Chrome and of Safari.
 
-What exists now that did not, in the folder `src/core`, with 555 tests:
+What exists now that did not, in the folder `src/core`, with 556 tests:
 
 - The project: everything the user sets, changed only by commands that
   make a new project and keep the old one whole, so that undo gives back
@@ -44,30 +43,23 @@ all three are fixed: a screen changing an analysis's options in place,
 and two mistakes in the code of an analysis leaving the store half
 changed (sections 2 and 4).
 
-### What is asked of the owner
+### What the owner decided at the end
 
-1. **The advice after a crash of the calculation.** popnei runs in a
-   worker, a second thread of the browser tab, so that the page does not
-   freeze. If that worker crashes while it opens a file, the reason
-   beside the Run button of every analysis says, today, "panel.nei could
-   not be read: the calculation stopped unexpectedly. Reload the page
-   and load it again." Reloading the page starts the application afresh
-   and loses the whole project: the filters, the lists of individuals,
-   the individuals file and the options of every analysis. Loading the
-   variants file again in the Variants step, or the individuals file in
-   the Individuals step, starts a new worker and keeps everything else.
-   A crash is a defect of popnei or of the application, rare, and each
-   one is a reason to fix the code.
-   - **A (recommended):** after a crash, "Load it again in the Variants
-     step." (or "…in the Individuals step."); "Reload the page" stays
-     only where a reload is what helps: the calculations could not
-     start, or the page is from before an update of the site.
-   - **B:** keep "Reload the page and load it again." everywhere, and
-     judge it on the screens of stage 2.
-
-   Either is one sentence of the project spec and of its code, before
-   the merge or in stage 2.
-2. **The order to merge `plan/core` into `main`, and to push `main`.**
+1. **The advice after a crash of the calculation**, 24 September 2026,
+   option A. popnei runs in a worker, a second thread of the browser
+   tab, so that the page does not freeze. If that worker crashes while
+   it opens a file, the reason beside the Run button now says
+   "panel.nei could not be read: the calculation stopped unexpectedly.
+   Load it again in the Variants step." (or the same for the individuals
+   file in the Individuals step), which starts a new worker and keeps
+   the project. "Reload the page and load it again." stays only where a
+   reload is what helps: the calculations could not start, or the page
+   is from before an update of the site. The option not taken was the
+   reload everywhere, which loses the whole project. In the spec in
+   4ed42f5, in the code in 2cb6e7e.
+2. **The merge**: the owner left it to the orchestrator on 25 September
+   2026. `plan/core` is merged into `main` and `main` pushed once the
+   checks pass on `main`.
 
 ### What is open, and where it goes
 
@@ -272,8 +264,8 @@ checks exit 0 and `npm test` gives "Tests 479 passed (479)":
 3. `npx vitest run src/core/project.test.ts -t "WP1 D3"`: "Tests 89
    passed", of at least 50.
 4. `npx vitest run src/core/project.test.ts -t "WP1 D4"`: "Tests 70
-   passed", of at least 22; 120 after the review below, the count on the
-   last commit.
+   passed", of at least 22; 121 on the last commit, after the review
+   below and the owner's last decision.
 5. `npx vitest run src/core/project.test.ts -t "WP1 D5"`: "Tests 111
    passed", of at least 25.
 
@@ -304,7 +296,9 @@ first, and WP1 D4 gives 120 tests. What mattered:
 
 Asked of the owner on 24 September 2026: a crash of the calculation ends
 its text with "Reload the page and load it again.", and a reload loses
-the whole project; loading the file again in its step is enough.
+the whole project; loading the file again in its step is enough. The
+owner chose to load the file again, with the reload kept where it helps
+(4ed42f5, 2cb6e7e; WP1 D4 gives 121 tests).
 
 ### How the work went, for whoever revises a skill or a plan
 
@@ -695,11 +689,11 @@ The owner can skip to the next section.
 
 ## At the end
 
-Checked by the orchestrator on 24 September 2026, on 4ba6e87:
+Checked by the orchestrator on 25 September 2026, on 2cb6e7e:
 
 - `npm run format:check`, `typecheck`, `lint` and `build` exit 0. `npm
-  test` gives "Tests 623 passed (623)" in 6 files, with no test skipped:
-  the 68 of the probe, and 555 of the core, 100 in `keys.test.ts`, 320
+  test` gives "Tests 624 passed (624)" in 6 files, with no test skipped:
+  the 68 of the probe, and 556 of the core, 100 in `keys.test.ts`, 321
   in `project.test.ts`, 21 in `history.test.ts`, 20 in `cache.test.ts`
   and 94 in `store.test.ts`, every one under a tag of a deliverable.
 - `npx playwright test --project=chromium --project=webkit` gives "40
