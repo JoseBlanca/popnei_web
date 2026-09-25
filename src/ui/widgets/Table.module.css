@@ -9,10 +9,45 @@
   margin: 0;
 }
 
+.scrollLine {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
 /* A table wider than the page scrolls sideways, and the page does not
-   (WCAG 1.4.10). The Tab key reaches the frame, so it shows the focus. */
+   (WCAG 1.4.10). While it does, the Tab key reaches the frame, so it
+   shows the focus. */
 .scroll {
   overflow-x: auto;
+}
+
+/* While the table is wider than its frame, a shadow on each edge the
+   table can scroll toward. The two shadows stay on the edges of the
+   frame, `scroll`; over each lies a cover of the background that moves
+   with the table, `local`, and hides the shadow when the table is
+   scrolled to its end on that side. The directions are left and right,
+   those of a table written from left to right. The cover is as wide as
+   --space-8, and the shadow as --space-3. */
+.scroll[data-scrolls] {
+  background:
+    linear-gradient(to right, var(--color-background) 30%, transparent) left
+      center / var(--space-8) 100% no-repeat local,
+    linear-gradient(to left, var(--color-background) 30%, transparent) right
+      center / var(--space-8) 100% no-repeat local,
+    radial-gradient(
+        farthest-side at 0 50%,
+        var(--color-scroll-shadow),
+        transparent
+      )
+      left center / var(--space-3) 100% no-repeat scroll,
+    radial-gradient(
+        farthest-side at 100% 50%,
+        var(--color-scroll-shadow),
+        transparent
+      )
+      right center / var(--space-3) 100% no-repeat scroll;
+  background-color: var(--color-background);
 }
 
 .scroll:focus-visible {

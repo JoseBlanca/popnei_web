@@ -280,6 +280,15 @@ test("WS8 D2 at 320 px wide the table scrolls in a frame that the Tab key reache
   expect(await frame.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(
     true,
   );
+  // A line says so, and a shadow on the edge the table scrolls toward.
+  await expect(
+    panel(page).getByText("Scroll the table sideways to see all its columns.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  expect(
+    await frame.evaluate((el) => getComputedStyle(el).backgroundImage),
+  ).toContain("radial-gradient");
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -303,6 +312,49 @@ test("WS8 D2 at 320 px wide the table scrolls in a frame that the Tab key reache
     })
     .toBeGreaterThan(0);
   await expectNoViolations(makeAxeBuilder);
+});
+
+test("WS8 D2 a table that fits its frame has no line of scrolling, and its frame is neither a region nor a stop of the Tab key, until the window narrows", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  await goTo(page, "Analyses");
+  await run(page);
+  const caption =
+    "The diversity of each population, over the 1,200 variants of panel.nei the filters kept.";
+  const frame = panel(page).getByRole("region", { name: caption });
+  const line = panel(page).getByText(
+    "Scroll the table sideways to see all its columns.",
+  );
+  await expect(panel(page).getByRole("table", { name: caption })).toBeVisible();
+  await expect(frame).toHaveCount(0);
+  await expect(line).toHaveCount(0);
+  // The Tab key goes from the heading to the download, past the table.
+  await panel(page)
+    .getByRole("heading", { level: 2, name: "Diversity" })
+    .focus();
+  await page.keyboard.press("Tab");
+  await expect(
+    panel(page).getByRole("button", { name: "Download the table as CSV" }),
+  ).toBeFocused();
+  await expectNoViolations(makeAxeBuilder);
+
+  // Narrowed, the table no longer fits: the frame becomes a region and a
+  // stop of the Tab key, and the line appears.
+  await page.setViewportSize({ width: 320, height: 800 });
+  await expect(frame).toHaveCount(1);
+  await expect(line).toBeVisible();
+  await panel(page)
+    .getByRole("heading", { level: 2, name: "Diversity" })
+    .focus();
+  await page.keyboard.press("Tab");
+  await expect(frame).toBeFocused();
+
+  // Widened again, they go.
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await expect(frame).toHaveCount(0);
+  await expect(line).toHaveCount(0);
 });
 
 test("WS8 D2 the filter moved to 1 removes the table with the words of its notice, and Run at 1 gives p0 0.3519, 0.3564, 0.9267", async ({

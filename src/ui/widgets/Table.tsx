@@ -9,10 +9,15 @@
  * column is the header of its row, so that a screen reader reads a cell
  * with its row and its column, "p2, Observed heterozygosity, 0.3512". It
  * sits in a frame that scrolls sideways on a page narrower than the
- * table; the Tab key reaches the frame, named by the caption, so that the
- * arrow keys scroll it.
+ * table. While the table is wider than its frame, and only then, a line
+ * under the caption says so, a shadow marks each edge the table can
+ * scroll toward, and the Tab key reaches the frame, a region named by the
+ * caption, so that the arrow keys scroll it; a frame that did so while
+ * the table fits would stop the Tab key on nothing and read the caption
+ * twice. Whether it fits is measured again at every change of size of
+ * the frame or of the table.
  */
-import { useId } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { classOf } from "../classOf.ts";
 import styles from "./Table.module.css";
@@ -55,18 +60,45 @@ export function Table({
   rows,
 }: TableProps): React.JSX.Element {
   const captionId = useId();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  // Whether the table is wider than its frame, which the browser measures
+  // and React does not: kept up to date by a ResizeObserver, which also
+  // reports the first size of what it observes.
+  const [scrolls, setScrolls] = useState(false);
+  useEffect(() => {
+    const frame = scrollRef.current;
+    if (frame === null) return;
+    const observer = new ResizeObserver(() => {
+      setScrolls(frame.scrollWidth > frame.clientWidth);
+    });
+    observer.observe(frame);
+    for (const child of Array.from(frame.children)) observer.observe(child);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
   return (
     <div className={classOf(styles, "frame")}>
       <p id={captionId} className={classOf(styles, "caption")}>
         {caption}
       </p>
+      {scrolls && (
+        <p className={classOf(styles, "scrollLine")}>
+          Scroll the table sideways to see all its columns.
+        </p>
+      )}
       {/* A frame that scrolls is reached by the Tab key, so that a user
           of the keyboard scrolls it with the arrow keys (WCAG 2.1.1). */}
       <div
-        role="region"
-        aria-labelledby={captionId}
-        tabIndex={0}
+        ref={scrollRef}
         className={classOf(styles, "scroll")}
+        {...(scrolls && {
+          role: "region",
+          "aria-labelledby": captionId,
+          tabIndex: 0,
+          "data-scrolls": true,
+        })}
       >
         <table aria-labelledby={captionId} className={classOf(styles, "table")}>
           <thead>
