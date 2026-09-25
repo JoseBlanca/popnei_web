@@ -279,8 +279,11 @@ and of `.claude/skills/coding/worker.md`, "Validation at the boundary":
   A NaN is a number: popnei gives one where a value is not defined.
 - **What the types tie together is checked too**: a `.nei` file has no
   read options and a VCF has them; every row of the individuals table is
-  as long as its header, and there is one type for each column; the
-  refusals of the reader are the kinds its spec gives.
+  as long as its header, and there is one type for each column; every
+  array of a `JobResult` is as long as its `pops`, so that no number is
+  put under another population; a population of a `Job` is a pair, its
+  name and its individuals; the refusals of the reader are the kinds its
+  spec gives.
 - **A message that is refused is a defect of ours**, since both sides are
   our code, and never passed on half read. What the page does with it is
   in `docs/specs/worker/client.md`; a runner answers it with

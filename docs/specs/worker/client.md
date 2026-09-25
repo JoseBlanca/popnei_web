@@ -197,7 +197,9 @@ read (`docs/specs/core/store.md`), which `popneiReady` does not clear.
   the worker then holds that load for the next request on it. When it
   fails, every run waiting on it fails with it: a `reopenFailed`, and a
   `refused` too, fail them as `reopenFailed`, with the name of the file
-  and popnei's message, and a crash as any crash. The same file opened
+  and popnei's message, and a crash as any crash; a read of that load
+  that waits on the same `open`, which the entry does not ask for but the
+  client accepts, gets the same `reopenFailed`. The same file opened
   before, so a refusal of its open now is a file changed on the disk
   that the browser still reads, and its words are those of a file that
   changed, as the owner decided on 25 September 2026 (point B of
@@ -206,8 +208,10 @@ read (`docs/specs/core/store.md`), which `popneiReady` does not clear.
   run on that load is not a defect: it goes to a new worker, after its
   `open`, which opens the file again, and fails in the same way while
   the file is as it is. What makes a run of a load a defect is a load whose
-  read, its first `open`, never ended `opened` (the cases, below): then
-  the source is failed and core sends no run on it.
+  first `open` ended failed, or was never asked for (the cases, below):
+  then the source is failed, or was never read, and core sends no run
+  on it. A load whose first read was cancelled is neither: a run on it
+  is sent, after an `open` for the run.
 
 ### Cancelling
 
@@ -456,8 +460,8 @@ here:
   two tries it is given up, `couldNotStart`, and the user reloads the
   page; nothing else is needed for this case.
 - **A request of a load whose `File` the client does not hold**, which a
-  project file could name, or a run of a load whose read, its first
-  `open`, never ended `opened`: a defect of the page. A run of a load
+  project file could name, or a run of a load whose first `open` ended
+  failed, or was never asked for: a defect of the page. A run of a load
   that was read, whose `open` for a run later failed, is not one (above,
   "An `open` that the client sent for a run is not a read"). The client
   answers it at once, `failed` with `defect`, so that no read stays under
