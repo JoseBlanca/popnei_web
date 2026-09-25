@@ -433,6 +433,93 @@ describe("WS6 D1 what is written", () => {
     expect(json["checks"]).toEqual([]);
   });
 
+  test("a result done wins over a matching check of the reference", () => {
+    const p = withFiles(PANEL, null);
+    const json = writtenJson(
+      stateOf(
+        { ...p, reference: referenceFor(p) },
+        { diversity: diversityDone([9, 9]) },
+        "0.3.0",
+      ),
+    );
+    expect(json["checks"]).toEqual([
+      {
+        analysis: "diversity",
+        numbers: [9, 9],
+        keyVersion: 1,
+        popneiVersion: "0.3.0",
+        appVersion: "0.2.0",
+      },
+    ]);
+  });
+
+  test("a result done on a file of another identity, or under other settings, is saved", () => {
+    const done = {
+      analysis: "diversity",
+      numbers: [9, 9],
+      keyVersion: 1,
+      popneiVersion: "0.3.0",
+      appVersion: "0.2.0",
+    };
+    const otherFile = withFiles({ ...PANEL, size: 1025 }, null);
+    expect(
+      writtenJson(
+        stateOf(
+          { ...otherFile, reference: referenceFor(otherFile) },
+          { diversity: diversityDone([9, 9]) },
+          "0.3.0",
+        ),
+      )["checks"],
+    ).toEqual([done]);
+    const p = withFiles(PANEL, null);
+    const before = deepFreeze<Project>({ ...p, analyses: [] });
+    expect(
+      writtenJson(
+        stateOf(
+          { ...p, reference: referenceFor(before) },
+          { diversity: diversityDone([9, 9]) },
+          "0.3.0",
+        ),
+      )["checks"],
+    ).toEqual([done]);
+  });
+
+  test("a check of the reference is carried with its own key version", () => {
+    const p = withFiles(PANEL, null);
+    const reference = referenceFor(p);
+    const json = writtenJson(
+      stateOf({
+        ...p,
+        reference: {
+          ...reference,
+          checks: reference.checks.map((check) => ({
+            ...check,
+            keyVersion: 0,
+          })),
+        },
+      }),
+    );
+    expect(json["checks"]).toEqual([{ ...CARRIED_CHECK, keyVersion: 0 }]);
+  });
+
+  test("a file loaded, pending, of another identity than the reference's is written, not the reference's", () => {
+    const loaded: VariantSource = {
+      ...PANEL,
+      name: "panel_2027.nei",
+      read: { kind: "pending" },
+    };
+    const p = withFiles(loaded, null);
+    const json = writtenJson(stateOf({ ...p, reference: referenceFor(p) }));
+    expect(json["variants"]).toEqual({
+      fileId: "00112233445566778899aabbccddeeff",
+      name: "panel_2027.nei",
+      size: 1024,
+      format: "nei",
+      readOptions: null,
+      read: { kind: "pending" },
+    });
+  });
+
   test("an analysis done with no version of popnei throws a defect", () => {
     const state = stateOf(
       withFiles(PANEL, null),
@@ -941,6 +1028,32 @@ describe("WS6 D2 the opening", () => {
     ).toEqual({ kind: "project", error: { kind: "otherApp", found: "gwas" } });
   });
 
+  test("a file of association with a field this version does not write is refused as otherApp, before the rest", () => {
+    expect(
+      refusalOf((file) => ({ ...file, app: "gwas", notes: "mine" })),
+    ).toEqual({ kind: "project", error: { kind: "otherApp", found: "gwas" } });
+  });
+
+  for (const [field, value] of [
+    ["appVersion", 3],
+    ["popneiVersion", 5],
+    ["saved", 7],
+  ] as const) {
+    test(`the field ${field} of the wrong value is refused as header`, () => {
+      expect(refusalOf((file) => ({ ...file, [field]: value }))).toMatchObject({
+        kind: "header",
+        field,
+      });
+    });
+  }
+
+  test("checks that are not objects are refused as header", () => {
+    expect(refusalOf((file) => ({ ...file, checks: [1] }))).toMatchObject({
+      kind: "header",
+      field: "checks",
+    });
+  });
+
   test("a field at the top that this version does not write is refused as unknownField", () => {
     expect(refusalOf((file) => ({ ...file, notes: "mine" }))).toEqual({
       kind: "unknownField",
@@ -1336,7 +1449,9 @@ const drawnStatus = fc.oneof(
   fc.constant<"ready" | "removed" | "locked">("ready"),
   fc.constant<"ready" | "removed" | "locked">("removed"),
   fc.constant<"ready" | "removed" | "locked">("locked"),
-  fc.array(checkNumber, { maxLength: 7 }),
+  // Done as often as the three others, so that a result done beside a
+  // matching check of the reference is drawn in most runs.
+  { arbitrary: fc.array(checkNumber, { maxLength: 7 }), weight: 3 },
 );
 
 /** Any state of the store that a project file is written from. */
@@ -1354,7 +1469,22 @@ const savedState: fc.Arbitrary<AppState<TestDefResult>> = fc
       sameFile && reference !== null && drawn.variants !== null
         ? {
             ...drawn,
-            variants: { ...reference.variants, fileId: drawn.variants.fileId },
+            // Read, so that an analysis can be done on it beside the
+            // reference's checks; a pending read of the reference is not
+            // compared, so the identity stays the same.
+            variants: {
+              ...reference.variants,
+              fileId: drawn.variants.fileId,
+              read:
+                reference.variants.read.kind === "read"
+                  ? reference.variants.read
+                  : {
+                      kind: "read",
+                      individuals: ["i1"],
+                      ploidy: 2,
+                      numVars: null,
+                    },
+            },
           }
         : drawn;
     const project: Project =
@@ -1490,6 +1620,72 @@ function unnamedFields(value: unknown): string[] {
   ]);
 }
 
+/** Whether the variants file `now` has the identity of `saved`, as the
+    spec's table of the identity compares them, written here apart from
+    compareIdentity. */
+function sameIdentity(saved: VariantSource, now: VariantSource): boolean {
+  if (
+    saved.name !== now.name ||
+    saved.format !== now.format ||
+    saved.size !== now.size
+  ) {
+    return false;
+  }
+  const a = saved.read;
+  const b = now.read;
+  if (a.kind !== "read" || b.kind !== "read") {
+    return true;
+  }
+  return (
+    a.individuals.length === b.individuals.length &&
+    a.individuals.every((name, index) => b.individuals[index] === name) &&
+    a.ploidy === b.ploidy &&
+    (a.numVars === null || b.numVars === null || a.numVars === b.numVars)
+  );
+}
+
+/** The checks the file of `state` holds, by the three rules of the spec's
+    "The check numbers", without their fingerprints: a −0 read back as 0. */
+function expectedChecks(
+  state: AppState<TestDefResult>,
+): Omit<Reference["checks"][number], "settings">[] {
+  const p = state.project;
+  const reference = p.reference;
+  const checks: Omit<Reference["checks"][number], "settings">[] = [];
+  for (const [index, def] of TEST_DEFS.entries()) {
+    const status = state.analyses[index]?.status;
+    if (status?.kind === "done") {
+      checks.push({
+        analysis: def.id,
+        numbers: status.result.numbers.map((n) => (n === 0 ? 0 : n)),
+        keyVersion: def.keyVersion,
+        popneiVersion: state.popneiVersion ?? "",
+        appVersion: "0.2.0",
+      });
+      continue;
+    }
+    const kept = reference?.checks.find((c) => c.analysis === def.id);
+    if (
+      reference === null ||
+      kept === undefined ||
+      (p.variants !== null && !sameIdentity(reference.variants, p.variants))
+    ) {
+      continue;
+    }
+    const readOptions = (p.variants ?? reference.variants).readOptions;
+    if (settingsFingerprint(def, p, readOptions, null) === kept.settings) {
+      checks.push({
+        analysis: kept.analysis,
+        numbers: kept.numbers,
+        keyVersion: kept.keyVersion,
+        popneiVersion: kept.popneiVersion,
+        appVersion: kept.appVersion,
+      });
+    }
+  }
+  return checks;
+}
+
 describe("WS6 D4 the properties of the project file", () => {
   test("a file written opens into the project the table of what is written gives", () => {
     fc.assert(
@@ -1508,6 +1704,15 @@ describe("WS6 D4 the properties of the project file", () => {
         );
         expect(got.grouping).toEqual(p.grouping);
         expect(got.analyses).toEqual(p.analyses);
+        expect(
+          (got.reference?.checks ?? []).map((check) => ({
+            analysis: check.analysis,
+            numbers: check.numbers,
+            keyVersion: check.keyVersion,
+            popneiVersion: check.popneiVersion,
+            appVersion: check.appVersion,
+          })),
+        ).toEqual(expectedChecks(state));
         const candidates = [p.variants, p.reference?.variants ?? null]
           .filter((v): v is VariantSource => v !== null)
           .map((v): VariantSource =>
