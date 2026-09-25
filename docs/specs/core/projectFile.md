@@ -1,6 +1,9 @@
 # The project file
 
-Written on 25 September 2026, and approved by the owner the same day. There is no
+Written on 25 September 2026, and approved by the owner the same day;
+its example revised the same day for the line of a character not
+decoded that the read of the metadata file gained
+(`docs/specs/worker/protocol.md`, `CsvFound`). There was no
 code yet; it will be `src/core/projectFile.ts`, the row `projectFile.ts`
 of section 9 of `docs/architecture.md`. The project file is the file
 `<name>.popnei.json` that a user saves to take their work out of the
@@ -118,7 +121,8 @@ written as below, the rows of the table shortened here to two:
       "found": {
         "encoding": "utf-8",
         "separator": ",",
-        "decimal": "."
+        "decimal": ".",
+        "undecodedLine": null
       }
     }
   },
