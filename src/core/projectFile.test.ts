@@ -13,6 +13,7 @@ import {
   projectFileErrorText,
   projectFileName,
   readProjectFile,
+  uncomparedText,
   writeProjectFile,
 } from "./projectFile.ts";
 import type { ProjectFileError } from "./projectFile.ts";
@@ -1371,6 +1372,60 @@ function openedWith(variants: VariantSource | null): Project {
   });
 }
 
+/** The read of the VCF a project was made with: 4 individuals, ploidy 2,
+    100 variants. */
+const VCF_2026_READ = {
+  kind: "read",
+  individuals: ["i1", "i2", "i3", "i4"],
+  ploidy: 2,
+  numVars: 100,
+} as const;
+
+/** The VCF a project was made with, read with ploidy 2 and only the
+    variants that passed. */
+const VCF_2026: VariantSource = {
+  fileId: "99999999999999999999999999999999",
+  name: "panel.vcf.gz",
+  size: 4096,
+  format: "vcf",
+  readOptions: { ploidy: 2, onlyPassed: true },
+  read: VCF_2026_READ,
+};
+
+/** A check of the diversity, as a reference keeps it. */
+const DIVERSITY_CHECK = {
+  analysis: "diversity",
+  numbers: [1, 2],
+  keyVersion: 1,
+  popneiVersion: "0.1.0",
+  appVersion: "0.1.0",
+  settings: "0".repeat(64),
+} as const;
+
+/** A project opened from a file made with `VCF_2026`, with the check of
+    the diversity when `withCheck`, and `VCF_2026` loaded again with the
+    read options `readOptions` and the read `read`. */
+function vcfOpenedWith(
+  readOptions: { ploidy: number; onlyPassed: boolean },
+  read: VariantSource["read"],
+  withCheck = false,
+): Project {
+  return deepFreeze<Project>({
+    ...emptyProject("popgen"),
+    variants: {
+      ...VCF_2026,
+      fileId: SAMPLE_VARIANTS_ID,
+      readOptions,
+      read:
+        read.kind === "read" ? { ...read, ploidy: readOptions.ploidy } : read,
+    },
+    reference: {
+      variants: VCF_2026,
+      checks: withCheck ? [DIVERSITY_CHECK] : [],
+    },
+  });
+}
+
 describe("WS6 D3 the comparisons", () => {
   test("a name that differs", () => {
     expect(
@@ -1431,6 +1486,144 @@ describe("WS6 D3 the comparisons", () => {
     expect(compareIdentity(PANEL_2026, givenAgain({ ploidy: 4 }))).toEqual([
       { kind: "ploidy", saved: 2, now: 4 },
     ]);
+  });
+
+  test("a choice of the passed variants that differs, before the file is read and after, after the ploidy", () => {
+    const pending: VariantSource = {
+      ...VCF_2026,
+      fileId: SAMPLE_VARIANTS_ID,
+      readOptions: { ploidy: 2, onlyPassed: false },
+      read: { kind: "pending" },
+    };
+    expect(compareIdentity(VCF_2026, pending)).toEqual([
+      { kind: "onlyPassed", now: false },
+    ]);
+    const read: VariantSource = {
+      ...VCF_2026,
+      fileId: SAMPLE_VARIANTS_ID,
+      readOptions: { ploidy: 4, onlyPassed: false },
+      read: { ...VCF_2026_READ, ploidy: 4, numVars: 90 },
+    };
+    expect(compareIdentity(VCF_2026, read)).toEqual([
+      { kind: "ploidy", saved: 2, now: 4 },
+      { kind: "onlyPassed", now: false },
+      { kind: "numVars", now: 90 },
+    ]);
+    expect(
+      compareIdentity(VCF_2026, { ...VCF_2026, fileId: SAMPLE_VARIANTS_ID }),
+    ).toEqual([]);
+  });
+
+  test("the warning of a choice of the passed variants that differs, both ways", () => {
+    const made =
+      "The project was made with panel.vcf.gz, 4 individuals and 100 variants; this file";
+    const end =
+      "Load the file the project was made with, or go on with this one.";
+    expect(
+      identityWarning(
+        vcfOpenedWith({ ploidy: 2, onlyPassed: false }, { kind: "pending" }),
+      ),
+    ).toBe(
+      `${made} is read with every variant where that one was read with only the variants with PASS or . in the FILTER column. ${end}`,
+    );
+    const everyVariant: Reference = {
+      variants: {
+        ...VCF_2026,
+        readOptions: { ploidy: 2, onlyPassed: false },
+      },
+      checks: [],
+    };
+    expect(
+      identityWarning(
+        deepFreeze<Project>({
+          ...emptyProject("popgen"),
+          variants: { ...VCF_2026, fileId: SAMPLE_VARIANTS_ID },
+          reference: everyVariant,
+        }),
+      ),
+    ).toBe(
+      `${made} is read with only the variants with PASS or . in the FILTER column where that one was read with every variant. ${end}`,
+    );
+  });
+
+  test("the line of numbers not compared, for each read option and for both", () => {
+    const start = "Not compared with the numbers of the project file:";
+    const passed = "only the variants with PASS or . in the FILTER column";
+    expect(
+      uncomparedText(
+        vcfOpenedWith({ ploidy: 2, onlyPassed: false }, VCF_2026_READ, true),
+        "diversity",
+      ),
+    ).toBe(
+      `${start} this file was read with every variant, and the project's with ${passed}. To compare them, read the file again in the Variants step with ${passed}.`,
+    );
+    expect(
+      uncomparedText(
+        vcfOpenedWith({ ploidy: 4, onlyPassed: true }, VCF_2026_READ, true),
+        "diversity",
+      ),
+    ).toBe(
+      `${start} this file was read with ploidy 4, and the project's with ploidy 2. To compare them, read the file again in the Variants step with ploidy 2.`,
+    );
+    expect(
+      uncomparedText(
+        vcfOpenedWith({ ploidy: 4, onlyPassed: false }, VCF_2026_READ, true),
+        "diversity",
+      ),
+    ).toBe(
+      `${start} this file was read with ploidy 4 and every variant, and the project's with ploidy 2 and ${passed}. To compare them, read the file again in the Variants step with ploidy 2 and ${passed}.`,
+    );
+  });
+
+  test("no line of numbers not compared with the same read options, no check of the analysis, a .nei file, or no reference", () => {
+    expect(
+      uncomparedText(
+        vcfOpenedWith({ ploidy: 2, onlyPassed: true }, VCF_2026_READ, true),
+        "diversity",
+      ),
+    ).toBeNull();
+    expect(
+      uncomparedText(
+        vcfOpenedWith({ ploidy: 4, onlyPassed: false }, VCF_2026_READ, true),
+        "pca",
+      ),
+    ).toBeNull();
+    expect(
+      uncomparedText(
+        vcfOpenedWith({ ploidy: 4, onlyPassed: false }, VCF_2026_READ, false),
+        "diversity",
+      ),
+    ).toBeNull();
+    expect(
+      uncomparedText(
+        deepFreeze<Project>({
+          ...openedWith(givenAgain({ ploidy: 4 })),
+          reference: { variants: PANEL_2026, checks: [DIVERSITY_CHECK] },
+        }),
+        "diversity",
+      ),
+    ).toBeNull();
+    expect(
+      uncomparedText(
+        deepFreeze<Project>({
+          ...emptyProject("popgen"),
+          variants: {
+            ...VCF_2026,
+            readOptions: { ploidy: 4, onlyPassed: true },
+          },
+        }),
+        "diversity",
+      ),
+    ).toBeNull();
+    expect(
+      uncomparedText(
+        deepFreeze<Project>({
+          ...emptyProject("popgen"),
+          reference: { variants: VCF_2026, checks: [DIVERSITY_CHECK] },
+        }),
+        "diversity",
+      ),
+    ).toBeNull();
   });
 
   test("a number of variants that differs, once both are counted", () => {

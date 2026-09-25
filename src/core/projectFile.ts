@@ -21,6 +21,7 @@ import {
   shown,
 } from "./project.ts";
 import type {
+  AnalysisId,
   AppId,
   ProjectError,
   AnalysisOptions,
@@ -854,6 +855,9 @@ export type IdentityDifference =
   | { readonly kind: "individualsOrder" }
   /** Its ploidy; both read. */
   | { readonly kind: "ploidy"; readonly saved: number; readonly now: number }
+  /** Its choice of the passed variants, `now`, `onlyPassed` of the read
+      options; both VCF files, read or not. */
+  | { readonly kind: "onlyPassed"; readonly now: boolean }
   /** Its number of variants, `now`; both counted. */
   | { readonly kind: "numVars"; readonly now: number };
 
@@ -861,8 +865,9 @@ export type IdentityDifference =
  * How the variants file `now` differs from `saved`, the reference's, in
  * the order of the spec's table: the name, the format and the size
  * always; the individuals, their number, their order and the ploidy when
- * both are read; the number of variants when both are counted. Empty when
- * nothing differs.
+ * both are read; the choice of the passed variants when both are VCF
+ * files, read or not; the number of variants when both are counted. Empty
+ * when nothing differs.
  */
 export function compareIdentity(
   saved: VariantSource,
@@ -878,9 +883,20 @@ export function compareIdentity(
   if (saved.size !== now.size) {
     differences.push({ kind: "size", saved: saved.size, now: now.size });
   }
+  const savedOptions = saved.readOptions;
+  const nowOptions = now.readOptions;
+  const passed: IdentityDifference | null =
+    savedOptions !== null &&
+    nowOptions !== null &&
+    savedOptions.onlyPassed !== nowOptions.onlyPassed
+      ? { kind: "onlyPassed", now: nowOptions.onlyPassed }
+      : null;
   const savedRead = saved.read;
   const nowRead = now.read;
   if (savedRead.kind !== "read" || nowRead.kind !== "read") {
+    if (passed !== null) {
+      differences.push(passed);
+    }
     return differences;
   }
   if (savedRead.individuals.length !== nowRead.individuals.length) {
@@ -907,6 +923,9 @@ export function compareIdentity(
       saved: savedRead.ploidy,
       now: nowRead.ploidy,
     });
+  }
+  if (passed !== null) {
+    differences.push(passed);
   }
   if (
     savedRead.numVars !== null &&
@@ -1008,7 +1027,63 @@ function differenceWords(difference: IdentityDifference): string {
       return "has the same individuals in another order";
     case "ploidy":
       return `has ploidy ${String(difference.now)} where that one had ${String(difference.saved)}`;
+    case "onlyPassed":
+      return difference.now
+        ? `is read with ${ONLY_PASSED_WORDS} where that one was read with ${EVERY_VARIANT_WORDS}`
+        : `is read with ${EVERY_VARIANT_WORDS} where that one was read with ${ONLY_PASSED_WORDS}`;
     case "numVars":
       return `has ${counted(difference.now, "variant")}`;
   }
+}
+
+/**
+ * Why the numbers of a result of the analysis `analysis` are not compared
+ * with the check numbers of the project file, the line its panel shows
+ * under the result in place of the comparison: the VCF loaded was read
+ * with other read options than the reference's, another ploidy or the
+ * other choice of the passed variants, which the fingerprint of the
+ * settings holds. `null` when the reference holds no check of the
+ * analysis, when either file is not a VCF, or when their read options
+ * are the same (the spec, "Numbers not compared").
+ */
+export function uncomparedText(
+  p: Project,
+  analysis: AnalysisId,
+): string | null {
+  const reference = p.reference;
+  const loaded = p.variants?.readOptions ?? null;
+  const saved = reference?.variants.readOptions ?? null;
+  if (
+    reference === null ||
+    loaded === null ||
+    saved === null ||
+    !reference.checks.some((check) => check.analysis === analysis)
+  ) {
+    return null;
+  }
+  const nowWords: string[] = [];
+  const savedWords: string[] = [];
+  if (loaded.ploidy !== saved.ploidy) {
+    nowWords.push(`ploidy ${String(loaded.ploidy)}`);
+    savedWords.push(`ploidy ${String(saved.ploidy)}`);
+  }
+  if (loaded.onlyPassed !== saved.onlyPassed) {
+    nowWords.push(passedWords(loaded.onlyPassed));
+    savedWords.push(passedWords(saved.onlyPassed));
+  }
+  if (nowWords.length === 0) {
+    return null;
+  }
+  const projects = bothOf(savedWords);
+  return `Not compared with the numbers of the project file: this file was read with ${bothOf(nowWords)}, and the project's with ${projects}. To compare them, read the file again in the Variants step with ${projects}.`;
+}
+
+/** The words of the choice of the passed variants of a VCF, as the button
+    of the Variants step that reads a VCF again says it. */
+const ONLY_PASSED_WORDS =
+  "only the variants with PASS or . in the FILTER column";
+const EVERY_VARIANT_WORDS = "every variant";
+
+function passedWords(onlyPassed: boolean): string {
+  return onlyPassed ? ONLY_PASSED_WORDS : EVERY_VARIANT_WORDS;
 }
