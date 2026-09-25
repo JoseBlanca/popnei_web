@@ -7,6 +7,7 @@
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { gunzipSync } from "node:zlib";
 
 import {
   afterAll,
@@ -279,6 +280,35 @@ describe("WS3 D1 the open and the diversity", () => {
       ignore,
     );
     expect(valueOf(next).numVarsRead).toBe(1200);
+    expect(valueOf(next).numVars).toBe(1058);
+  });
+
+  test("the same filters in another order open the file again, and are counted in their order", () => {
+    const nei = bytesOf("panel.nei");
+    let reads = 0;
+    const file: LoadFile = {
+      name: "panel.nei",
+      get source() {
+        reads += 1;
+        return nei;
+      },
+    };
+    const runner = createRunner();
+    expect(runner.open(NEI, file).kind).toBe("ok");
+    const maf: VariantFilter = { kind: "maf", maxAllowedMaf: 0.9 };
+    const first = runner.run(diversityJob([missingData(0.05), maf]), ignore);
+    expect(valueOf(first).numVars).toBe(1058);
+    expect(reads).toBe(1);
+    const again = runner.run(diversityJob([missingData(0.05), maf]), ignore);
+    expect(valueOf(again).numVars).toBe(1058);
+    expect(reads).toBe(1);
+    const swapped = runner.run(diversityJob([maf, missingData(0.05)]), ignore);
+    expect(reads).toBe(2);
+    expect(valueOf(swapped).numVarsRead).toBe(1200);
+  });
+
+  test("a second call of loadPopnei gives the same promise", () => {
+    expect(loadPopnei()).toBe(loadPopnei());
   });
 
   test("populations named 10, 2 and p1 come back in the order of the job, not in popnei's", () => {
@@ -398,6 +428,10 @@ class BytesBlob extends Blob {
     it, or give it one byte short. */
 let reading: "read" | "notReadable" | "notFound" | "short" = "read";
 
+/** While `reading` is "read", the ranges read well before the reader
+    throws as for a file changed on the disk; `null` for never. */
+let rangesBeforeFailing: number | null = null;
+
 /** The `FileReaderSync` of the tests, put in place with `vi.stubGlobal`. */
 class TestFileReaderSync {
   readAsArrayBuffer(blob: Blob): ArrayBuffer {
@@ -406,6 +440,12 @@ class TestFileReaderSync {
     }
     switch (reading) {
       case "read":
+        if (rangesBeforeFailing !== null) {
+          if (rangesBeforeFailing === 0) {
+            throw new DOMException("the file changed", "NotReadableError");
+          }
+          rangesBeforeFailing -= 1;
+        }
         return blob.content.slice().buffer;
       case "notReadable":
         throw new DOMException("the file changed", "NotReadableError");
@@ -428,6 +468,39 @@ describe("WS3 D2 what goes wrong: a file that no longer reads", () => {
   });
   afterEach(() => {
     reading = "read";
+    rangesBeforeFailing = null;
+  });
+
+  test("a range the browser refuses in the middle of a pass is reopenFailed", () => {
+    // The panel's VCF, its variants written five times over at later
+    // positions: 4,990,837 bytes, so that a pass reads a second range of
+    // the file after the first 4 MiB; panel.nei is read in one range.
+    const lines = gunzipSync(bytesOf("panel.vcf.gz"))
+      .toString("utf8")
+      .trimEnd()
+      .split("\n");
+    const header = lines.filter((line) => line.startsWith("#"));
+    const variants = lines.filter((line) => !line.startsWith("#"));
+    const copies = [0, 1, 2, 3, 4].flatMap((copy) =>
+      variants.map((line) => {
+        const [chrom, pos, ...rest] = line.split("\t");
+        return [chrom, String(Number(pos) + copy * 10000), ...rest].join("\t");
+      }),
+    );
+    const text = new TextEncoder().encode(
+      [...header, ...copies].join("\n") + "\n",
+    );
+    expect(text.length).toBe(4990837);
+    const runner = createRunner();
+    const file = { name: "big.vcf", source: new BytesBlob(text) };
+    expect(runner.open(VCF, file).kind).toBe("ok");
+    rangesBeforeFailing = 1;
+    expect(runner.run(diversityJob([missingData(0.05)]), ignore)).toEqual({
+      kind: "reopenFailed",
+      name: "big.vcf",
+      message:
+        "the source could not be read: the browser did not give popnei the 796533 bytes from 4194304 of this file, which holds 4990837 bytes, and said: the file changed",
+    });
   });
   afterAll(() => {
     vi.unstubAllGlobals();
@@ -449,6 +522,10 @@ describe("WS3 D2 what goes wrong: a file that no longer reads", () => {
     expect(reads).toBe(1);
     const first = runner.run(diversityJob([missingData(0.05)]), ignore);
     expect(valueOf(first).numVars).toBe(1152);
+    expect(reads).toBe(1);
+    // The same filters again: the Variants as it is, no read of the file.
+    const again = runner.run(diversityJob([missingData(0.05)]), ignore);
+    expect(valueOf(again).numVars).toBe(1152);
     expect(reads).toBe(1);
     const reopenFailed = {
       kind: "reopenFailed",
@@ -551,6 +628,25 @@ describe("WS3 D2 what goes wrong: told, popnei's refusals and the defects", () =
     } catch (error: unknown) {
       caught = error;
     }
+    expect(caught).toBe(thrown);
+  });
+
+  test("what told throws at popnei's last call, at the end of the run, is thrown by run too", () => {
+    const thrown = new Error("told at the end");
+    let calls = 0;
+    let caught: unknown = null;
+    try {
+      opened("panel.nei").run(diversityJob([]), () => {
+        calls += 1;
+        // The second of the two calls of a diversity over panel.nei.
+        if (calls === 2) {
+          throw thrown;
+        }
+      });
+    } catch (error: unknown) {
+      caught = error;
+    }
+    expect(calls).toBe(2);
     expect(caught).toBe(thrown);
   });
 

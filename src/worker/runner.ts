@@ -375,9 +375,10 @@ function whyNotToRun(job: DiversityJob): string | null {
 
 /**
  * Runs `calcPerVarDistribs` and makes the `DiversityResult` of it. What
- * `told` throws ends the pass, and popnei's call throws that same value
- * back, which is thrown on, a defect of ours, and not taken for popnei's
- * refusal.
+ * `told` throws is thrown on, a defect of ours, and not taken for popnei's
+ * refusal nor dropped: while a pass reads it ends the pass and popnei's
+ * call throws that same value back; at the end of the run popnei's call
+ * returns, and the runner throws it.
  */
 function runDiversity(
   variants: Variants,
@@ -413,6 +414,11 @@ function runDiversity(
       throw thrown;
     }
     return answerOfPopnei(thrown, name);
+  }
+  // popnei throws back what `told` threw while a pass reads, and drops what
+  // it threw at the calls of the end of the run, which is thrown here.
+  if (thrownByTold.length > 0) {
+    throw thrownByTold[0];
   }
   return { kind: "ok", value: diversityResultOf(distribs, job) };
 }
