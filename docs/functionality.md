@@ -139,12 +139,20 @@ and its encoding varies with the version. So:
   the start of the file is removed.
 - Their encoding, their separator and their decimal mark are detected,
   and the user can set each one when the detection is wrong, as the owner
-  decided on 24 September 2026. The encoding is UTF-8 when the file is
-  valid UTF-8, and otherwise Windows-1252, which is what Excel on Windows
-  writes for "CSV (comma delimited)" in Spanish and the other languages of
-  Western Europe; the separator is `,`, `;` or a tab; the decimal mark is
-  a point or a comma. What was used is shown beside the file, with a way
-  to change it. No file is refused for its encoding.
+  decided on 24 September 2026. The encoding is UTF-8 when the file
+  starts with the byte order mark of UTF-8, which Excel writes in "CSV
+  UTF-8", or is valid UTF-8, and otherwise Windows-1252, which is what
+  Excel on Windows writes for "CSV (comma delimited)" in Spanish and the
+  other languages of Western Europe; the separator is `,`, `;` or a tab;
+  the decimal mark is a point or a comma. A file with the mark of UTF-8
+  and a bad byte is read as UTF-8, the bad byte shown as �, with a
+  warning that names its line, as the owner decided on 25 September
+  2026: read as Windows-1252, every accented letter of it would come out
+  wrong. What was used is shown beside the file, with a way to change
+  it. No file is refused for its encoding but one: a UTF-16 file that
+  ends in the middle of a character is refused, with words that say it
+  may have been cut short, as the owner decided on 25 September 2026,
+  since a table read from it would lack its last rows without a word.
 - Missing values are an empty cell, `NA` or `-`.
 - The file is written as `.xlsx` for the user and as TSV for scripts and
   the Python API.
@@ -297,7 +305,10 @@ by Python. It holds:
   to, population genetics or association, the versions of popnei and of
   the application, and the date.
 - **The identity of the variant file**: its name, its size, its number of
-  variants, its ploidy and the list of its individuals. It serves only to
+  variants, its ploidy, the list of its individuals and, for a VCF,
+  whether only the variants with PASS or . in its FILTER column were
+  read, which the owner added on 25 September 2026, since a VCF read
+  with the other choice gives other variants. It serves only to
   say, when the project is opened again, whether the file given is the one
   the project was made with. Nothing is hashed from the file: every
   analysis is calculated again whenever a variant file is given, the same
@@ -330,9 +341,9 @@ Opening a project:
 1. The application asks for the variant file, and names the one the
    project was made with.
 2. It compares the identity of the file given with the one in the
-   project, the name, the size, the individuals and the ploidy as soon as
-   the file is open, and the number of variants once the first pass has
-   counted it. When they differ it warns, and says in what: "The
+   project, the name, the size, the individuals, the ploidy and the
+   choice of the passed variants as soon as the file is open, and the
+   number of variants once the first pass has counted it. When they differ it warns, and says in what: "The
    project was made with panel_2026.nei, 342 individuals and 1,203,554
    variants; this file has 360 individuals". It does not refuse, because
    running the settings of one analysis on a new batch of the same
@@ -346,7 +357,10 @@ Opening a project:
    changed that could explain it: the variant file; the version of
    popnei; or the application's calculation of that analysis, when a
    later version of the application calculates it in another way, which
-   the project file records with the numbers of each analysis. This is
+   the project file records with the numbers of each analysis. A VCF
+   read with another ploidy or the other choice of the passed variants
+   than the project's gives numbers that are not compared, and the
+   analysis says why and how to read the file as the project did. This is
    what catches a file with the same individuals and
    number of variants as the project's and other genotypes, which the
    comparison of step 2 lets pass: the numbers come from the genotypes.
