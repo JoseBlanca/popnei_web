@@ -494,8 +494,17 @@ export function createClient(config: {
     >,
   ): void {
     calc.opening = null;
-    calc.life.failures = 0;
     const load = opening.fileId;
+    // An answer to a request sets the count of failures back; the open of
+    // a worker started again with nothing waiting on it counts as its
+    // ready does, so that a worker that crashes idle after every reopen is
+    // given up.
+    if (
+      opening.readers.length > 0 ||
+      calc.queue.some((request) => loadOf(request) === load)
+    ) {
+      calc.life.failures = 0;
+    }
     const announce = calc.announce;
     calc.announce = null;
     const openedBefore = openedLoads.has(load);
@@ -1138,16 +1147,19 @@ function createLife(
       worker.onmessage = (event: MessageEvent<unknown>) => {
         onData(event.data);
       };
-      worker.onerror = (event) => {
+      worker.onerror = (event: Event) => {
         // The client handles it; the page's error bar is for our own
         // errors (docs/specs/entry.md).
         event.preventDefault();
+        // A worker whose script does not load fires a plain Event, with no
+        // message; one that stops on an error nothing caught, an
+        // ErrorEvent.
         onBroken({
           kind: "workerFailed",
           message:
-            event.message === ""
-              ? "the worker stopped with no message"
-              : event.message,
+            event instanceof ErrorEvent && event.message !== ""
+              ? event.message
+              : "the worker stopped with no message",
         });
       };
       worker.onmessageerror = () => {

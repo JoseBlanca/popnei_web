@@ -36,9 +36,9 @@ interface FakeWorker {
   postMessage: (message: unknown) => void;
   terminate: () => void;
   onmessage: ((event: { readonly data: unknown }) => unknown) | null;
-  onerror:
-    | ((event: { readonly message: string; preventDefault(): void }) => unknown)
-    | null;
+  /** A worker whose script does not load fires a plain Event; one that
+      stops on an error nothing caught, an ErrorEvent. */
+  onerror: ((event: Event) => unknown) | null;
   onmessageerror: ((event: { readonly data: unknown }) => unknown) | null;
 }
 
@@ -711,20 +711,15 @@ describe("WS2 D3 the client: crashes, defects, and every read answered", () => {
 
   test("an error event: the run fails as workerFailed, the event is stopped, and the worker is started again", async () => {
     const env = twoRuns();
-    let prevented = false;
-    env.first.onerror?.({
-      message: "",
-      preventDefault: () => {
-        prevented = true;
-      },
+    const event = new ErrorEvent("error", {
+      message: "unreachable executed",
+      cancelable: true,
     });
-    expect(prevented).toBe(true);
+    env.first.onerror?.(event);
+    expect(event.defaultPrevented).toBe(true);
     expect(await now(env.r1.outcome)).toEqual({
       kind: "failed",
-      error: {
-        kind: "workerFailed",
-        message: "the worker stopped with no message",
-      },
+      error: { kind: "workerFailed", message: "unreachable executed" },
     });
     expectRestartedWithR2(env);
   });
@@ -1280,10 +1275,7 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
         emit(watched.fake, { kind: "crashed", message: "trap" });
         return;
       case 1:
-        watched.fake.onerror?.({
-          message: "error",
-          preventDefault: () => undefined,
-        });
+        watched.fake.onerror?.(new ErrorEvent("error", { message: "error" }));
         return;
       case 2:
         watched.fake.onmessageerror?.({ data: null });
@@ -1453,5 +1445,228 @@ describe("WS2 D4 the properties of the client", () => {
         expect((await explore(sequence)).wrongLoad).toEqual([]);
       }),
     );
+  });
+});
+
+describe("WS2 D3 the client: what the review of work package 2 found", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  test("a worker that crashes idle after each reopen with nothing waiting, twice, is given up", () => {
+    const env = withA();
+    for (let round = 0; round < 6; round += 1) {
+      const worker = last(env.calculation);
+      if (worker.terminated) {
+        break;
+      }
+      emit(worker, { kind: "crashed", message: "trap" });
+      const next = last(env.calculation);
+      if (next.terminated || next === worker) {
+        break;
+      }
+      emit(next, READY);
+      emit(next, opened(lastSent(next).id));
+    }
+    expect(env.calculation).toHaveLength(2);
+  });
+
+  test("a calculation worker whose script does not load, a plain error Event, twice: couldNotStart with the client's words", async () => {
+    const env = setUp();
+    env.client.addFile("A", FILE_A);
+    const readA = env.client.openVariants({ fileId: "A", ...NEI });
+    const first = new Event("error", { cancelable: true });
+    last(env.calculation).onerror?.(first);
+    expect(first.defaultPrevented).toBe(true);
+    last(env.calculation).onerror?.(new Event("error", { cancelable: true }));
+    expect(await now(readA.outcome)).toEqual({
+      kind: "failed",
+      error: {
+        kind: "couldNotStart",
+        reason: "the worker stopped with no message",
+      },
+    });
+  });
+
+  test("a light worker whose script does not load, a plain error Event, twice: couldNotStart with the client's words", async () => {
+    const env = setUp();
+    env.client.addFile("ind", CSV_FILE);
+    const read = env.client.readIndividuals("ind", CSV);
+    last(env.light).onerror?.(new Event("error", { cancelable: true }));
+    last(env.light).onerror?.(new Event("error", { cancelable: true }));
+    expect(await now(read.outcome)).toEqual({
+      kind: "failed",
+      error: {
+        kind: "couldNotStart",
+        reason: "the worker stopped with no message",
+      },
+    });
+    expect(env.light).toHaveLength(2);
+  });
+
+  test("a read waiting on an open sent for a run gets reopenFailed when that open is refused", async () => {
+    const env = withA();
+    env.client.run("k1", job("A"), noProgress).cancel();
+    const second = last(env.calculation);
+    env.client.run("k2", job("A"), noProgress);
+    emit(second, READY);
+    const openId = lastSent(second).id;
+    const read = env.client.openVariants({ fileId: "A", ...NEI });
+    emit(second, { kind: "refused", id: openId, message: "not a vars file" });
+    expect(await now(read.outcome)).toEqual({
+      kind: "failed",
+      error: {
+        kind: "reopenFailed",
+        name: "panel.nei",
+        message: "not a vars file",
+      },
+    });
+  });
+});
+
+describe("WS2 D3 the client: crashes, defects, and every read answered, on the light worker", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  /** Two reads of the individuals file, the first sent to a ready light
+      worker, the second waiting. */
+  function twoReads(): ReturnType<typeof setUp> & {
+    readonly worker: FakeWorker;
+    readonly first: ReturnType<
+      ReturnType<typeof createClient>["readIndividuals"]
+    >;
+    readonly second: ReturnType<
+      ReturnType<typeof createClient>["readIndividuals"]
+    >;
+  } {
+    const env = setUp();
+    env.client.addFile("ind", CSV_FILE);
+    const first = env.client.readIndividuals("ind", CSV);
+    const second = env.client.readIndividuals("ind", CSV);
+    const worker = last(env.light);
+    emit(worker, LIGHT_READY);
+    expect(sentToLight(worker)).toHaveLength(1);
+    return { ...env, worker, first, second };
+  }
+
+  test.each([
+    [
+      "crashed",
+      (worker: FakeWorker) => {
+        emit(worker, { kind: "crashed", message: "trap" });
+      },
+      { kind: "workerFailed", message: "trap" },
+    ],
+    [
+      "badRequest",
+      (worker: FakeWorker) => {
+        emit(worker, { kind: "badRequest", message: "wrong" });
+      },
+      { kind: "defect", message: "wrong" },
+    ],
+    [
+      "an error event",
+      (worker: FakeWorker) => {
+        worker.onerror?.(new ErrorEvent("error", { message: "boom" }));
+      },
+      { kind: "workerFailed", message: "boom" },
+    ],
+    [
+      "messageerror",
+      (worker: FakeWorker) => {
+        worker.onmessageerror?.({ data: null });
+      },
+      { kind: "workerFailed" },
+    ],
+    [
+      "a message that fails its check",
+      (worker: FakeWorker) => {
+        emit(worker, { kind: "individuals", id: 1 });
+      },
+      { kind: "defect" },
+    ],
+  ])(
+    "%s: the read fails, the worker is started again and given the read that waited",
+    async (_name, fail, error) => {
+      const env = twoReads();
+      fail(env.worker);
+      expect(await now(env.first.outcome)).toMatchObject({
+        kind: "failed",
+        error,
+      });
+      expect(env.worker.terminated).toBe(true);
+      expect(env.worker.endedWithHandlers).toBe(false);
+      const next = last(env.light);
+      expect(env.light).toHaveLength(2);
+      emit(next, LIGHT_READY);
+      const sent = sentToLight(next);
+      expect(sent).toHaveLength(1);
+      emit(env.worker, { kind: "individuals", id: 1, read: TABLE_READ });
+      emit(next, { kind: "individuals", id: sent[0]?.id, read: TABLE_READ });
+      expect(await now(env.second.outcome)).toEqual(TABLE_READ);
+      expect(env.light).toHaveLength(2);
+    },
+  );
+
+  test("a postMessage that throws: the read fails as a defect with the browser's message, and the worker is started again", async () => {
+    const env = setUp();
+    env.client.addFile("ind", CSV_FILE);
+    const read = env.client.readIndividuals("ind", CSV);
+    const worker = last(env.light);
+    worker.postError = new Error("The object could not be cloned.");
+    emit(worker, LIGHT_READY);
+    expect(await now(read.outcome)).toEqual({
+      kind: "failed",
+      error: { kind: "defect", message: "The object could not be cloned." },
+    });
+    expect(worker.terminated).toBe(true);
+    expect(env.light).toHaveLength(2);
+  });
+
+  test("no ready twice gives the light worker up: every read fails, a read after it too", async () => {
+    const env = setUp();
+    env.client.addFile("ind", CSV_FILE);
+    const read = env.client.readIndividuals("ind", CSV);
+    vi.advanceTimersByTime(WORKER_READY_TIMEOUT_MS);
+    expect(env.light).toHaveLength(2);
+    vi.advanceTimersByTime(WORKER_READY_TIMEOUT_MS);
+    expect(await now(read.outcome)).toMatchObject({
+      kind: "failed",
+      error: { kind: "couldNotStart" },
+    });
+    const after = env.client.readIndividuals("ind", CSV);
+    expect(await now(after.outcome)).toMatchObject({
+      kind: "failed",
+      error: { kind: "couldNotStart" },
+    });
+    expect(env.light).toHaveLength(2);
+  });
+
+  test("a ready of protocol 2 fails every read with protocolMismatch, and no other light worker is made", async () => {
+    const env = setUp();
+    env.client.addFile("ind", CSV_FILE);
+    const read = env.client.readIndividuals("ind", CSV);
+    emit(last(env.light), { kind: "ready", protocol: 2 });
+    expect(await now(read.outcome)).toEqual({
+      kind: "failed",
+      error: { kind: "protocolMismatch" },
+    });
+    const after = env.client.readIndividuals("ind", CSV);
+    expect(await now(after.outcome)).toEqual({
+      kind: "failed",
+      error: { kind: "protocolMismatch" },
+    });
+    vi.advanceTimersByTime(3 * WORKER_READY_TIMEOUT_MS);
+    expect(env.light).toHaveLength(1);
   });
 });
