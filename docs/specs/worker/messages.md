@@ -88,9 +88,10 @@ the worker that received it is ended (below):
   the next request.
 - **`reopenFailed` is a variants file the browser can no longer read**,
   changed, moved or deleted on the disk since the user picked it: popnei
-  refused a call that read the file, and the runner found that the file
-  no longer reads (`docs/specs/worker/runner.md`, "What it answers when
-  something goes wrong"). It carries the name of the file and popnei's
+  refused a call that read the file with its message of a range the
+  browser refused or gave short, or refused to open again a file it had
+  opened (`docs/specs/worker/runner.md`, "What it answers when something
+  goes wrong"). It carries the name of the file and popnei's
   message, which the client writes to the console. The owner decided on
   25 September 2026 that it is a kind of its own, so that the user is
   told the file may have changed and to load it again, and not that the
@@ -451,7 +452,7 @@ checks expect is seen in the browser, by the flow of the walking skeleton
 ## Where this departs from worker.md
 
 `.claude/skills/coding/worker.md` was written before this spec, and
-five things change; the skill is corrected when the owner approves this
+four things change; the skill is corrected when the owner approves this
 spec (`docs/specs/stage-2-open-points.md`, "Changes to approved files").
 
 - `progress` carries popnei's four fields, `bytesRead`, `numBytes`,
@@ -459,15 +460,14 @@ spec (`docs/specs/stage-2-open-points.md`, "Changes to approved files").
   comes from popnei's `Variants.onProgress` and not from a source of
   bytes of our own, which the skill's "Progress, from the source of
   bytes" designed before popnei had it.
-- The answer `reopenFailed` is new.
-
 - The message `files`, which gave a worker the list of the `File`
   objects, is gone: the `File` goes in the request that needs it, for the
   reason above.
-- The answer `error`, with `fatal`, is three kinds, `refused`, `crashed`
-  and `badRequest`, so that the client knows popnei's refusal from a
-  worker that cannot go on without reading a flag beside it, and a defect
-  of the page from a crash.
+- The answer `error`, with `fatal`, is four kinds, `refused`,
+  `reopenFailed`, `crashed` and `badRequest`, so that the client knows
+  popnei's refusal from a worker that cannot go on without reading a flag
+  beside it, a file the browser no longer reads from a refusal of its
+  data, and a defect of the page from a crash. `reopenFailed` is new.
 - `PROTOCOL_VERSION` is in `messages.ts`, beside the messages it
   versions, and not in `protocol.ts`: core has no use for it.
 

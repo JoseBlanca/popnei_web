@@ -72,9 +72,8 @@ these.
 The runner is two files, decided here:
 
 - **`src/worker/runner.ts`** calls popnei and nothing of the worker's
-  globals. It is given the source of the file, what popnei opens, and a
-  function that tells whether the file can still be read, and returns
-  what the worker posts, so its tests run in node, where popnei loads
+  globals. It is given the source of the file, what popnei opens, and
+  returns what the worker posts, so its tests run in node, where popnei loads
   from its node entry (`.claude/skills/coding/testing.md`).
 - **`src/worker/runnerWorker.ts`** is the script the browser runs as the
   worker. It listens for the requests, checks them with `parseToRunner`
@@ -84,25 +83,18 @@ The runner is two files, decided here:
 
 At an `open`, the worker's script gives `runner.ts` the load and the
 file of the load, `LoadFile` below: its `name`, the `File`'s own, the
-name it had when the user picked it and the one the project holds; its
-`source`, the `File` itself, which popnei opens; and `unreadable()`,
-which reads the first byte of the `File` with `FileReaderSync`, the call
-that reads a piece of a file at once and exists only in workers, and
-gives the browser's message when that read throws, "NotReadableError:
-‹its message›", or `null` when it reads. The runner calls it after popnei
-refused a call that read the file, to tell a file the browser can no
-longer read from a refusal of its data (below, "What it answers when
-something goes wrong"). In the tests of node, which has no
-`FileReaderSync`, the source is the bytes of the file and `unreadable`
-a function the test sets.
+name it had when the user picked it and the one the project holds; and
+its `source`, the `File` itself, which popnei opens. In the tests of
+node the source is the bytes of the file, and, for a file that no longer
+reads, a `Blob` that popnei reads through a `FileReaderSync` the test
+puts in place (below, "How it is verified"). `FileReaderSync` is the
+call that reads a piece of a file at once, which a browser gives only
+inside a worker and node not at all.
 
-One file would not do. `FileReaderSync` is declared by TypeScript's
-library of workers and not by the library of the page, the DOM, that the
-tests are type checked with (`tsconfig.test.json`), so a test that
-imported a file naming it would not type check; popnei, given a `File`
-under node, throws that there is no `FileReaderSync` and says to give the
-bytes, so the tests give popnei the bytes; and in node a worker's script
-cannot even be imported, since the call by which it listens for the
+One file would not do. popnei, given a `File` under node, throws that
+there is no `FileReaderSync` and says to give the bytes, so the tests
+give popnei the bytes; and in node a worker's script cannot even be
+imported, since the call by which it listens for the
 page's requests, `addEventListener` of the worker, does not exist there.
 popnei stays in
 `runner.ts` alone, as section 9 of the architecture and the lint of
@@ -150,14 +142,20 @@ reads from it the ranges it needs, never the whole file
    that the walking skeleton reads both formats, a VCF with its ploidy as
    a read option, 2 unless the user sets another; the project always
    holds both options of a VCF, so neither default of popnei is used.
-2. popnei reads what says what the file holds before it returns: the
-   header of a VCF, from its start; of a `.nei` file its last ten bytes,
-   which say how long its footer is, then the footer, which holds the
-   schema and where each batch is. It reads through `FileReaderSync`, in
-   ranges of 4 MiB at most, popnei's own size, which it does not promise
-   (`Variants.onProgress` of `js/popnei/src/variant.ts`). No byte of the
-   file is copied by our code, and the memory of wasm holds the range
-   being read and not the file.
+2. popnei reads what says what the file holds before it returns. It
+   reads through `FileReaderSync`, in ranges of 4 MiB at most, popnei's
+   own size, which it does not promise (`Variants.onProgress` of
+   `js/popnei/src/variant.ts`), and an open reads the first range of the
+   file, 4 MiB or the whole file when it is smaller, which holds the
+   header of a VCF; of a `.nei` file it then reads the last ten bytes,
+   which say how long its footer is, and the footer, which holds the
+   schema and where each batch is. Seen in node on 25 September 2026,
+   with a `Blob` read through a `FileReaderSync` of the test's: the open
+   of a `.nei` file of 15,091,826 bytes asked for the 4,194,304 bytes
+   from 0, the 10 from 15,091,816 and the 2,922 from 15,088,904; the
+   open of `panel.vcf.gz` asked for its 87,304 bytes from 0. No byte of
+   the file is copied by our code, and the memory of wasm holds the
+   ranges being read and not the file.
 3. The worker posts `opened`, with the `individuals` and the `ploidy` of
    the `Variants`, which popnei gives with no pass over the variants.
 
@@ -170,14 +168,18 @@ The number of variants is not known at the open: popnei counts the
 variants of a file only by reading all of them. It comes in the result
 of each run, as the counts of the pass (below).
 
-Every pass reads the file again from its start, through the `File`, so
-the file is read from the disk at every calculation, and a file changed
+Every pass reads the file again from its start, through the `File`, its
+first range again, and of a `.nei` file its last ten bytes and its
+footer again as well (seen in node, as above: the pass over that `.nei`
+file asked for the same three ranges as its open, then for the ranges
+from byte 2,112 on), so the file is read from the disk at every
+calculation, and a file changed
 or removed on the disk after the pick fails at the next pass, as at the
 open (below, "The file changed on the disk").
 
 A worker opens one load. When popnei refuses the open, the runner
-answers `refused`, or `reopenFailed` when the browser can no longer read
-the file (below), and still holds that load, with no `Variants`, as
+answers `refused`, or `reopenFailed` when popnei's message says that the
+browser did not give it the file (below), and still holds that load, with no `Variants`, as
 `client.md` has it: the client sends that worker nothing more on the
 load, and the next file the user loads starts a new worker. A second `open`, a `run`
 before the `open`, a `run` of another load than the one opened, and a
@@ -207,21 +209,27 @@ popnei's `steps`, and:
 - **When those steps are the job's filters**, the same kinds in the same
   order, each argument of the step equal with `===` to the field of the
   same name of the filter, it runs on that `Variants` as it is.
-- **Otherwise it opens the file again**: it frees the `Variants` and
-  holds none, opens the `File` again with the same format and read
-  options, as at the open, and puts the job's filters on the new one, in
-  their order.
+- **When the `Variants` holds no step**, as it does after the open, it
+  puts the job's filters on it, in their order, and runs. Without this
+  rule the first run of every load with a filter would open the file a
+  second time, since a `Variants` just opened holds none of its filters.
+- **Otherwise, or when it holds no `Variants`**, after an open again that
+  popnei refused (below), **it opens the file again**: it frees the
+  `Variants` and holds none, opens the `File` again with the same format
+  and read options, as at the open, and puts the job's filters on the new
+  one, in their order.
 
-Opening the file again reads what the open read, the header of a VCF or
-the footer of a `.nei` file, and not the variants, which the next pass
-reads anyway. So a change of the filters costs that read and no copy of
-the file, and a user who tries ten thresholds reads the header ten times
-more. How long that read takes has not been measured in a browser; it
-is measured at the end of stage 2 (below, "What a restart costs"). The
-option not taken was to keep the old rule of the release before, which
-put only the filters missing from the end of the list and opened the
-file again for any other change, to save the reading of a whole file:
-with the header alone at stake, one rule is simpler to test.
+Opening the file again reads what the open read, the first range of 4
+MiB, and of a `.nei` file its last ten bytes and its footer, and not the
+rest of the variants. So a change of the filters costs those reads and
+no copy of the file: a user who tries ten thresholds reads ten ranges of
+4 MiB more than the ten passes read anyway. How long that takes has not
+been measured in a browser; it is measured at the end of stage 2 (below,
+"What a restart costs"). The option not taken was to keep the old rule
+of the release before, which put the filters missing from the end of the
+list whatever steps the `Variants` held, and opened the file again for
+any other change, to save the reading of a whole file: with one range at
+stake, the `Variants` just opened is the one case worth sparing it.
 
 The steps are read from popnei, and not from a list the runner keeps,
 decided here, because popnei checks each filter as it is put: a job
@@ -237,12 +245,14 @@ which that spec chose so. Seen in node on 25 September 2026, with
 args: { maxAllowedMissingRate: 0.05 } }]`.
 
 When the file is opened again and popnei refuses the new open, the
-runner answers the run `refused`, with popnei's message, or
-`reopenFailed` when the browser can no longer read the file (below), and
-holds no `Variants`; the next run opens the file again, whatever its
-filters. The same file opened well before, so a refusal of its data
-there is a file changed on the disk that the browser still reads, whose
-header popnei now refuses.
+runner answers the run `reopenFailed`, with the name of the file and
+popnei's message, whatever the message, and holds no `Variants`; the
+next run opens the file again, whatever its filters. The same file
+opened well before, so a refusal of its open now is a file changed on
+the disk, which the browser may still read, and its words are those of a
+file that changed, as the client has it for an `open` sent for a run
+(`client.md`, "An `open` that the client sent for a run is not a read";
+point B of `docs/specs/stage-2-open-points.md`).
 
 Freeing first is what keeps the memory of wasm from growing with every
 threshold tried. That memory never shrinks, but popnei's allocator takes
@@ -253,7 +263,8 @@ the release before measured it: in node 26.8.2 on the owner's Mac, on a
 thresholds when each `Variants` was freed before the next, and grew by a
 copy of the file at each without the `free()`. With a `File` the
 `Variants` holds the handle of the file and its steps, and a pass the
-range it reads and the block it builds, so what the `free()` keeps from
+range it reads, two while it moves from one to the next, and the block
+it builds, so what the `free()` keeps from
 piling up is smaller; it has not been measured with a `File`, which only
 a browser can open.
 
@@ -276,10 +287,16 @@ the diversity, `minNumIndividuals` and `polyThreshold`
    popnei takes would keep the last of them and silently give one
    population fewer; and no filter of individuals, which the runner of
    stage 2 does not apply (below). Either is `badRequest`.
-2. Sets the function that is told the progress,
-   `variants.onProgress(told)`, with the `told` of the run, which the
-   worker's script makes post each `Progress` as a `progress` of the
-   run's id (below, "Progress").
+2. Sets the function that is told the progress with
+   `variants.onProgress`: a function of the runner's that calls the
+   `told` of the run, which the worker's script makes post each
+   `Progress` as a `progress` of the run's id (below, "Progress"), and,
+   when `told` throws, keeps what it threw and throws it on. popnei
+   throws that same value back from its call, and a plain `Error` of
+   ours would otherwise be taken for popnei's refusal and answered
+   `refused`: when what `calcPerVarDistribs` threw is, with `===`, what
+   `told` threw, the runner throws it again, a defect of ours, which the
+   worker's script posts as `crashed`.
 3. Calls `calcPerVarDistribs(variants, { pops, stats, minNumIndividuals,
    polyThreshold })` of `js/popnei/src/stats.ts`. The owner decided on
    25 September 2026 that the diversity is calculated with
@@ -387,8 +404,8 @@ whose `doPcaFromVariants` makes two passes when it asks for the weights
 of the variants, is where a bar first goes over two passes.
 
 popnei tells no progress of `openVcf` and `openVars`, which read before
-there is a `Variants` to set the function on; an open reads the header
-or the footer, and the Variants step shows only that it is reading.
+there is a `Variants` to set the function on; an open reads the first range
+of the file, and of a `.nei` file its footer, and the Variants step shows only that it is reading.
 
 What the function throws ends the pass, and popnei's call throws the
 same value back, which is how popnei lets a page cancel a run without
@@ -396,9 +413,10 @@ ending its worker. The runner does not use it: the page cannot reach the
 worker while it is in wasm, since the worker reads a message only
 between two calls, and without `SharedArrayBuffer`, which GitHub Pages
 does not allow, there is no other way to tell it; so a cancel still ends
-the worker (`docs/architecture.md`, section 5). A throw of the worker's
-`postMessage` inside the function, which does not happen for four
-numbers, would end the pass the same way, and is `crashed`.
+the worker (`docs/architecture.md`, section 5). A throw of `told`, the
+worker's `postMessage` among its causes, which does not happen for four
+numbers, ends the pass the same way, and the runner throws it again, so
+it is `crashed` (above, "The diversity", step 2).
 
 ### The result, transferred
 
@@ -429,12 +447,12 @@ Which answer, by what was thrown:
 
 | what happened | answer | on the page (`RunError`) | the worker |
 |---|---|---|---|
-| a call to popnei that reads the file, an open, an open again or a calculation, threw a plain `Error`, and `unreadable()` then gives a message | `reopenFailed`, with the name of the file and popnei's message | `reopenFailed` | goes on |
-| a call to popnei threw a plain `Error`, whose prototype is `Error.prototype` itself, and the file still reads | `refused`, with the message as it is | `popnei` | goes on |
+| a call to popnei that reads the file, the open or a calculation, threw a plain `Error` whose message is one of popnei's of a range the browser refused or gave short (below) | `reopenFailed`, with the name of the file and popnei's message | `reopenFailed` | goes on |
+| a call to popnei threw any other plain `Error`, whose prototype is `Error.prototype` itself | `refused`, with the message as it is | `popnei` | goes on |
 | a call to popnei threw anything else: a `WebAssembly.RuntimeError`, a trap of the wasm, a panic of Rust among the causes; a `RangeError` of a memory that cannot grow | `crashed`, with its message | `workerFailed` | closes |
-| popnei refused the open of the file again, in a run whose filters changed | `refused` or `reopenFailed`, as the two first rows; the runner holds no `Variants`, and the next run opens the file again | `popnei` or `reopenFailed` | goes on |
+| popnei refused the open of the file again, in a run whose filters changed or after an open again that failed, whatever its message | `reopenFailed`, with the name of the file and popnei's message; the runner holds no `Variants`, and the next run opens the file again | `reopenFailed` | goes on |
 | a request that failed `parseToRunner`; a second `open`; a `run` before the `open`, of another load, or after an open that popnei refused; two populations of one name; a filter of individuals | `badRequest`, what was wrong | `defect` | closes |
-| a throw of our own code anywhere else, a `popnei_web defect:` of step 4 above among them | `crashed`, its message | `workerFailed` | closes |
+| a throw of our own code anywhere else: what `told` threw, which popnei's call throws back (step 2 above), and a `popnei_web defect:` of step 4 among them | `crashed`, its message | `workerFailed` | closes |
 
 - **The file changed on the disk.** A `File` is a handle to the file as
   it was when the user picked it, and the File API asks a browser to
@@ -442,30 +460,51 @@ Which answer, by what was thrown:
   `NotReadableError`; popnei reads the disk at every pass, so a file
   overwritten, moved or deleted while the application is open fails at
   the next open or pass (`docs/architecture.md`, section 11). popnei
-  turns what the browser threw into a plain `Error` whose message holds
-  the browser's, "the browser did not give popnei the ‹n› bytes from
-  ‹at› of this file, which holds ‹size› bytes, and said: ‹its message›"
-  (`crates/popnei-js/src/source.rs` of popnei at `b3f77c8`), which no
-  kind tells apart from a refusal of the data. So after a plain `Error`
-  of a call that reads the file, the runner calls `unreadable()`: a
-  message means that the browser no longer reads the file, and the
-  answer is `reopenFailed`, whose words send the user to load the file
-  again, as the owner decided on 25 September 2026 (point B of
-  `docs/specs/stage-2-open-points.md`). A file that still reads gives
-  `refused`, with popnei's message. The one case the first byte does not
-  catch is a browser that gives a range shorter than asked where the
-  file changed and does not refuse the read; popnei ends the pass there
-  with "… a range that comes back short inside a file of that size is a
-  file that changed after the page got its handle … Pick the file
-  again.", and the user reads it in the words of a refusal. Telling the
-  two apart by a kind of popnei's error, and not by a read of ours, is
-  asked of popnei (`docs/specs/stage-2-open-points.md`, "What is asked of
-  popnei"). None of this has been seen in a browser; the File API has
-  it.
+  gives no kind that tells this apart from a refusal of the data: every
+  failure of a read crosses as a plain `Error`, the core's `Error::Io`,
+  whose message starts "the source could not be read: "
+  (`crates/popnei/src/error.rs` of popnei at `b3f77c8`). After it come
+  the words of the binding of a `File`, `RangesOfAFile` of
+  `crates/popnei-js/src/source.rs`, one for a range the browser refused,
+  "the browser did not give popnei the ‹n› bytes from ‹at› of this file,
+  which holds ‹size› bytes, and said: ‹its message›", and one for a range
+  it gave short, "popnei asked this file for the ‹n› bytes from ‹at› and
+  the browser gave ‹m› of them, in a file of ‹size› bytes: a range that
+  comes back short inside a file of that size is a file that changed
+  after the page got its handle, … Pick the file again." So the runner
+  answers `reopenFailed` for a plain `Error` whose message starts "the
+  source could not be read: the browser did not give popnei " or "the
+  source could not be read: popnei asked this file for the ", and its
+  words send the user to load the file again, as the owner decided on 25
+  September 2026 (point B of `docs/specs/stage-2-open-points.md`). Any
+  other message is `refused`, with popnei's message. The prefix alone
+  would not do: a gzipped VCF that is damaged crosses with it too, the
+  first 60,000 bytes of `panel.vcf.gz` giving "the source could not be
+  read: incomplete deflate stream", which is a refusal of the data, and
+  a user sent to load that file again would get the same answer. The
+  draft read the first byte of the `File` after a refusal instead, which
+  missed the range given short and told nothing popnei's message does
+  not. Seen in node on 25 September 2026 with the release, a `Blob` read
+  through a `FileReaderSync` of the test's that threw a
+  `NotReadableError` or a `NotFoundError`, or gave a range one byte
+  short: at the open, at the first range of a pass, at the last ten
+  bytes and the footer of a `.nei` file and in the middle of a pass over
+  a VCF of 59.9 MB, every case crossed as a plain `Error` with one of the
+  two beginnings. The test holds them against the pinned release (below,
+  "How it is verified"), since a change of popnei's words would silently
+  turn a changed file into a refusal; a kind of popnei's error, which
+  would need no words, is asked of popnei
+  (`docs/specs/stage-2-open-points.md`, "What is asked of popnei"). An
+  engine that reads a changed file without refusing it, and without a
+  range given short, gives neither message; whether one does is found by
+  the browser flow, and what the application does then is point R of
+  `docs/specs/stage-2-open-points.md`. None of this has been seen in a
+  browser; the File API has it.
 - **popnei's refusal is caught at the call**, and only there: the open,
   each filter, `calcPerVarDistribs`. That catch is the one `try` of the
   runner that does not throw again (`.claude/skills/coding/typescript.md`,
-  "Errors"). A refusal leaves the `Variants` as it was, popnei says so of
+  "Errors"), save for what `told` threw, which it throws again (above,
+  "The diversity", step 2). A refusal leaves the `Variants` as it was, popnei says so of
   its filters and of a pass that fails, so the worker goes on; the one
   refusal after which the runner holds no `Variants` is that of an open
   again, above, and the next run opens the file.
@@ -506,9 +545,9 @@ A second call gives the same promise.
 export function loadPopnei(): Promise<Result<string, string>>;
 ```
 
-A load as the runner opens it, and its file (above, "Two files"): what
-popnei opens, the `File` in the worker and its bytes in the tests, and
-the check the runner makes after popnei refused a call that read it.
+A load as the runner opens it, and its file (above, "Two files"): its
+name, and what popnei opens, the `File` in the worker and its bytes, or
+a `Blob`, in the tests.
 
 ```ts
 export interface LoadToOpen {
@@ -520,7 +559,6 @@ export interface LoadToOpen {
 export interface LoadFile {
   readonly name: string;                 // the File's name
   readonly source: Uint8Array | Blob;    // popnei's BytesOrFile
-  unreadable(): string | null;           // the browser's message when its first byte no longer reads
 }
 ```
 
@@ -557,8 +595,9 @@ export function createRunner(): Runner; // after loadPopnei has given ok
 The answer of what a call to popnei threw, `refused` for a plain `Error`
 and `crashed` for anything else, exported so that the tests reach the
 cases popnei cannot be made to give in node, a trap among them. The
-runner turns a `refused` of a call that read the file into
-`reopenFailed` when `unreadable()` gives a message, after this function.
+runner turns a `refused` into `reopenFailed` after this function, when
+its message is one of popnei's of a range, or when it was an open
+again.
 
 ```ts
 export function answerOfThrown(thrown: unknown): Answer<never>;
@@ -609,10 +648,12 @@ export function transferablesOf(result: JobResult): ArrayBuffer[];
   popnei's message.
 - **The file changed on the disk after it was picked.** It is read at
   every pass, at every change of the filters and at every restart, and
-  the browser then refuses to read it; the File API asks it to. The
-  answer is `reopenFailed`, as in the table, and the user reads that the
-  file may have changed on the disk and to load it again in the Variants
-  step. This has not been seen in a browser.
+  the browser then refuses to read it, as the File API asks, or gives a
+  range short. The answer is `reopenFailed`, as in the table, and the
+  user reads that the file may have changed on the disk and to load it
+  again in the Variants step. A browser that reads the changed file
+  without either is point R of `docs/specs/stage-2-open-points.md`. This
+  has not been seen in a browser.
 - **A cancel** ends the worker wherever it is, inside a pass included
   (`docs/architecture.md`, section 5). The runner does nothing for it.
 - **Progress** comes at the start of each pass, every 4 MiB, and at the
@@ -630,8 +671,10 @@ worker holds, from popnei's README and its doc comments:
 
 - **The `Variants`**: the handle of the file, its name and its size, and
   its steps; nothing of the file between two ranges.
-- **A pass**: the range it is reading, 4 MiB at most; the block it is
-  building; and, over a `.nei` file, the batch it is reading, about 10 MB
+- **A pass**: the range it is reading, 4 MiB at most, and for the
+  moment it moves to the next one the two, since popnei builds the new
+  range before it frees the old (`RangesOfAFile` of
+  `crates/popnei-js/src/source.rs`); the block it is building; and, over a `.nei` file, the batch it is reading, about 10 MB
   of genotypes for 1,000 individuals at the size popnei writes.
 - **The result** of the diversity, a few arrays of one number per
   population, copied out of the memory of wasm before popnei's call
@@ -657,13 +700,16 @@ new worker pays before its first request:
   cache, popnei loaded in a median of 59.8 ms in Chromium 153 and 80 ms in
   WebKit 26.6, five loads each, on the owner's Mac (`docs/plans/site.report.md`).
 - **Opening the file again**: the client's `open`, which reads the
-  header of a VCF, or the end and the footer of a `.nei` file, and not
-  the variants. It has not been measured in a browser.
+  first range of 4 MiB of the file, and of a `.nei` file its last ten
+  bytes and its footer as well, and not the rest of the variants; the
+  first pass reads that range again, as every pass does. It has not been
+  measured in a browser.
 - **What the old worker held is lost**: its `Variants` with its filters.
   In stage 2 nothing else; the intermediate results come in stage 4.
 
 The first run after a restart puts its filters on the new `Variants`,
-which has none, and makes its pass. Stage 2 ends with the measurement of
+which holds no step, and makes its pass, with no second open (above,
+"The filters"). Stage 2 ends with the measurement of
 the restart (`docs/build-order.md`); for the runner it is the time from
 the new worker's start to its `opened`, the time of a run whose filters
 changed, which opens the file again, and the time of a pass, in the
@@ -760,9 +806,7 @@ the file is 1,200. The progress of each run was two calls, `{ bytesRead:
 numBytes: 261490, pass: 1, numPasses: 1 }` for `panel.nei`, and 0 then
 87,304 of 87,304 bytes for `panel.vcf.gz`.
 
-The tests, each at `open` and `run` of a runner made by `createRunner`,
-with a `LoadFile` whose `unreadable` gives `null` unless the test says
-otherwise:
+The tests, each at `open` and `run` of a runner made by `createRunner`:
 
 - **The open**: `panel.nei` gives 200 individuals, the first `s000`, and
   ploidy 2; `panel.vcf.gz` with `{ ploidy: 2, onlyPassed: true }` the same.
@@ -786,15 +830,35 @@ otherwise:
   0.05 and a MAF filter of 1.5 is `refused`, with popnei's message of the
   threshold; the next run, at 0.05 with a MAF filter at 0.9, is `ok`.
 - **An open again that popnei refuses**: a `LoadFile` whose `source` is
-  a getter that gives the bytes of `panel.nei` the first time and those
-  of `bad.vcf` after; after a run at 0.05, a run at 0.045 is `refused`
-  with the message of `bad.vcf` as a `.nei` file, and a third run, at
-  0.05, reads the `source` again.
-- **A file that no longer reads**: the same getter, with `unreadable`
-  giving "NotReadableError: the file changed" once the second source is
-  given: the run at 0.045 is `reopenFailed`, with the name of the file
-  and popnei's message; the same at the open, with the bytes of
-  `bad.vcf` from the start.
+  a getter that counts its reads and gives the bytes of `panel.nei` the
+  first time and those of `bad.vcf` after. The open reads it once; a run
+  at 0.05 is `ok`, with 1,152 variants, and has not read it again, which
+  is the rule of a `Variants` with no step; a run at 0.045 reads it a
+  second time and is `reopenFailed`, with the name of the file and the
+  message of `bad.vcf` as a `.nei` file; a third run, at 0.05, reads it
+  a third time and is `reopenFailed` again.
+- **A file that no longer reads**: the `source` a `Blob` of the bytes of
+  `panel.nei`, whose ranges popnei reads through a `FileReaderSync` that
+  the test puts in place with `vi.stubGlobal` and switches between
+  reading, throwing `new DOMException("the file changed",
+  "NotReadableError")`, and giving each range one byte short. Reading: the open gives 200
+  individuals and a run at 0.05 the numbers of the table, which a `Blob`
+  gives as the bytes do. Throwing: a run at 0.05, the same filters and
+  no open again, is `reopenFailed`, with the name of the file and the
+  message, as a literal, "the source could not be read: the browser did
+  not give popnei the 261490 bytes from 0 of this file, which holds
+  261490 bytes, and said: the file changed"; a run at 0.045, an open
+  again, is `reopenFailed`; the open of a new runner is `reopenFailed`.
+  Short: a run is `reopenFailed`, with a message that starts "the source
+  could not be read: popnei asked this file for the 261490 bytes from 0
+  and the browser gave 261489 of them". And the first 60,000 bytes of
+  `panel.vcf.gz`, as bytes, are `refused` at the first run with "the
+  source could not be read: incomplete deflate stream". These literals
+  are what holds the runner's reading of popnei's words to the release
+  it is pinned to.
+- **What `told` throws**: a `told` that throws `new Error("told")` at
+  its first call makes `run` throw that very value, compared with
+  `toBe`, and not answer `refused`.
 - **The order of the populations**: p0, p2 and p1 renamed "10", "2" and
   "p1" come back in that order, with the values of p0 under "10".
 - **popnei's refusals**, each `refused` with the message of "The cases"
@@ -826,11 +890,28 @@ at 1 both show their numbers, so the `File` was opened again in the
 worker; the bar of the running state reaches its last call; the result
 reaches the page as typed arrays, which the page's check of
 `messages.md` refuses otherwise; and `tetraploid.vcf.gz` read with
-ploidy 2 opens and then shows popnei's message at the diversity. A file
-changed on the disk between two runs, which Playwright can do by
-writing the file again under the same path after the pick, gives the
-words of `reopenFailed`; whether each engine refuses such a `File` is
-what the flow finds out, and it is written down with the engine.
+ploidy 2 opens and then shows popnei's message at the diversity.
+
+A file changed on the disk after the pick is what the flow finds out for
+each engine, since popnei tested its reading of a `File` in Chromium
+alone, and an engine may refuse the read, give a range short, or read
+the new bytes with no word (point R of
+`docs/specs/stage-2-open-points.md`). The flow copies `panel.nei` into
+the output folder of the test, picks the copy, runs the diversity at
+0.05, and then writes the copy again under the same path in one of
+three ways: shorter, its first 130,000 bytes; the same size, its bytes
+with the one in the middle changed; longer, its bytes and 4,096 zero
+bytes after them. After each it runs the diversity again at 0.05, a
+pass with no open again, and then at 1, an open again, and it records
+for each engine and each way what the page showed: the words of
+`reopenFailed`, popnei's message of a refusal, the numbers of the
+table, or other numbers. The numbers of the table after a rewrite are
+the case of point R. Playwright gives a local browser the path of a file
+it picks, so the `File` is on the disk; the flow checks it, in each
+engine, by deleting the copy after a pick and running the diversity,
+which a `File` on the disk cannot read. When it still reads, the engine
+was given the file in memory, and the flow fails there rather than
+record a rewrite it did not test.
 
 ## What this spec relies on in the others
 
@@ -884,7 +965,8 @@ these things change; each is corrected when the owner approves it.
   view is a mistake of ours, and a copy would hide it.
 - The filters are not copied onto a pass: popnei has no way to, in
   `js-v0.1.0-dev.2` as before, so a change of the filters frees the
-  `Variants` and opens the `File` again, which reads its header only.
+  `Variants` and opens the `File` again, which reads its first range,
+  and of a `.nei` file its footer, and not the rest of the variants.
 - The check of the PCA's MAF filter given as one filter, which
   `docs/specs/worker/protocol.md` gave to the tests of stage 2, waits for
   the job of the PCA, in stage 4.
@@ -898,7 +980,7 @@ decided by the owner on 25 September 2026, and are written above as
 decided: a file the browser can no longer read is `reopenFailed`, a kind
 of its own (point B there), and stage 2 builds on `js-v0.1.0-dev.2`,
 which reads a `File` by ranges and tells the progress of a pass (point
-C). One point is open again since, and changes one call of this spec:
+C). Two points are open since:
 
 1. **Which popnei function gives the diversity.** The owner decided
    `calcPopDiversity`, with the three columns He, Ho and the proportion
@@ -907,6 +989,11 @@ C). One point is open again since, and changes one call of this spec:
    numbers). Meanwhile, `calcPerVarDistribs` of the same release, as
    "The diversity" above has it, whose numbers are the table of "How it
    is verified".
+2. **What the application does in an engine that reads a changed file
+   with no word** (point R of `docs/specs/stage-2-open-points.md`).
+   Meanwhile, the browser flow records what each engine does with the
+   three rewrites, and the runner does nothing more than the table
+   above.
 
 ## Not in this spec
 

@@ -112,10 +112,12 @@ rule below rules out one of them.
 
 The worker is started for one load: it opens that variants file, and
 opens it again itself when a run's filters differ from those it has put
-on it, since popnei cannot take a filter off
+on it, since popnei cannot take a filter off, while the first run after
+the open puts its filters on the `Variants` it opened
 (`docs/specs/worker/runner.md`, "The filters"). It holds the `File`, which
 popnei reads by ranges at every pass, and no copy of the file: opening
-the file again reads its header, or the footer of a `.nei` file. So it holds the load it
+the file again reads its first range of 4 MiB, and of a `.nei` file its
+last ten bytes and its footer. So it holds the load it
 opened, and one only (`.claude/skills/coding/worker.md`, "Reading the
 files of the user"). The client keeps, for each load id,
 the `File` the entry gave it and the format and the read options of the
@@ -187,8 +189,8 @@ read (`docs/specs/core/store.md`), which `popneiReady` does not clear.
   undo or a redo back to a load already read, the store records nothing,
   and the entry asks for no read, since the source is read
   (`docs/specs/core/project.md`, "The records"); the first run on that
-  load then waits for its `open`, which reads the header of the file
-  again. The store marks such a run `afterStop`, so that its panel says
+  load then waits for its `open`, which reads the first range of the
+  file again. The store marks such a run `afterStop`, so that its panel says
   it may first wait for the file to be opened again
   (`docs/specs/core/store.md`). The `opened` of an `open` sent for a run
   goes to no one, also when every run that waited on it was cancelled;
@@ -232,9 +234,9 @@ pending (`docs/specs/entry.md`):
 In every case where it does something, the outcome is `cancelled`. What a
 restart costs is the loading of the wasm, from the cache of the browser
 after the first time, and opening the variants file again before the
-next request on it, which reads its header, or the end and the footer of
-a `.nei` file, and not its variants, since popnei reads the `File` by
-ranges (`docs/specs/worker/runner.md`, "What a restart costs"). Neither
+next request on it, which reads the first range of 4 MiB of the file,
+and of a `.nei` file its last ten bytes and its footer, and not the rest
+of its variants, since popnei reads the `File` by ranges (`docs/specs/worker/runner.md`, "What a restart costs"). Neither
 has been measured on a large file; the walking skeleton measures both
 (`docs/build-order.md`, stage 2). With popnei's release before
 `js-v0.1.0-dev.2`, a restart read the whole file into the memory of the
@@ -438,7 +440,9 @@ here:
 - **The variants file changed on the disk since it was picked.** The
   browser refuses to read a `File` whose file changed since the pick, by
   the specification of the File API; this has not been seen in a browser
-  (`docs/architecture.md`, section 11). popnei reads the file at every
+  (`docs/architecture.md`, section 11), and an engine that reads the
+  changed file with no word is point R of
+  `docs/specs/stage-2-open-points.md`. popnei reads the file at every
   pass, so it shows at the next pass, at the next change of the filters
   or at the `open` of a worker started again: the runner answers
   `reopenFailed` (`docs/specs/worker/runner.md`), a first `open` fails

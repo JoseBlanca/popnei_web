@@ -281,7 +281,10 @@ the variants with every genotype called and 1 keeps them all; that the
 file is read from the disk at every analysis, and not copied into the
 browser, so a file of any size opens, a large gzipped VCF is slow to
 read at each analysis, and a file changed on the disk after it was
-picked has to be loaded again; and, for those who work in Python,
+picked has to be loaded again, since the application may not notice the
+change, and results calculated after it may be of the new file
+(`docs/specs/stage-2-open-points.md`, point R); and, for those who work
+in Python,
 the code that does the same:
 `popnei.open_vcf(path, ploidy=2, only_passed=True)` or
 `popnei.open_vars(path)`, then `variants.filter_by_missing_data(0.1)`.

@@ -10,8 +10,8 @@ once, and it has eleven specs, all drafts of this day:
 open points, the decisions each spec left to the owner, with the ones
 two specs share made one. The owner answered them on 25 September 2026,
 and the eleven specs now say what was decided. This file records each
-answer, the numbers of the release of popnei stage 2 builds on, the two
-points that are open again or to confirm, what is asked of popnei, and
+answer, the numbers of the release of popnei stage 2 builds on, the three
+points that are open, open again or to confirm, what is asked of popnei, and
 every change the eleven ask of files already approved: the approved
 specs of stage 1, the code of `src/` and `package.json`,
 `docs/architecture.md`, `docs/functionality.md`, `docs/build-order.md`
@@ -19,7 +19,7 @@ and the skills.
 
 ## What is still asked of the owner
 
-Two things, each with what the plan builds meanwhile.
+Three things, each with what the plan builds meanwhile.
 
 ### D again. Which popnei function gives the three columns of the diversity
 
@@ -74,6 +74,49 @@ Meanwhile, as decided: a Save stops the question until the next change.
 The other answer is one line of `createSaving` and one test. Specs:
 `shell.md` **Open 2**, `entry.md` ("The saving").
 
+### R. A browser that reads a changed variants file with no word
+
+popnei reads the variants file from the disk at every calculation. When
+the user changes the file on the disk after picking it, the File API
+asks the browser to refuse the read, and then the user is told to load
+the file again (point B). popnei tested its reading of a file in
+Chromium only, and an engine may instead read the new bytes and say
+nothing. The user would then see numbers calculated from the new file
+shown as those of the file they picked, filed under the key of that
+load: an undo back to it, and a project saved with its check numbers,
+would treat them as the old file's. Nothing in
+the application can see the change, since a `File` keeps the size and
+the date it had at the pick. Whether any engine does this is not known;
+the Playwright flow of stage 2 rewrites `panel.nei` after the pick in
+three ways, shorter, the same size and longer, in Chromium, Firefox and
+WebKit, and records what each shows (`docs/specs/worker/runner.md`, "In
+the browser").
+
+- **(a) Measure first, and tell the user meanwhile.** The first work
+  package of stage 2 runs those rewrites in the three engines, and this
+  point comes back to the owner with what they showed. Until then the
+  help of the Variants step, which already says that a file changed on
+  the disk after it was picked has to be loaded again, adds that the
+  application may not notice the change, and that results calculated
+  after it may be of the new file. Costs a sentence, and the measurement
+  the flow makes anyway.
+- **(b) Ask popnei to check the file at every pass**, that the bytes it
+  read at the open, the first range and the footer of a `.nei` file, are
+  the same when a pass reads them again, which a pass does already; it
+  would catch a rewrite that changes the head or the size, and not one
+  that changes a byte in the middle of a VCF. Costs a change of popnei
+  and a release.
+- **(c) Accept it**, with the line of the help alone, and no
+  measurement. Costs nothing, and leaves the user unwarned of a wrong
+  number in the engine where it happens.
+
+Recommended: (a), and (b) if an engine reads silently. Meanwhile, (a):
+the flow records the rewrites, and the line of the help is added to
+`docs/specs/steps/variants.md`, "The help drawer". Needed before the
+first work package of stage 2 ends, since (b) is a request to popnei
+that the plan waits on. Specs: `runner.md` **Open 2**, `client.md` ("The
+variants file changed on the disk since it was picked").
+
 ## What the owner decided on 25 September 2026
 
 Each point with the owner's decision, as the session was given it, and
@@ -98,10 +141,13 @@ stepper's first To do of Individuals becomes "Optional". Specs:
 `reopenFailed`, with words saying the file may have changed on the disk
 and to load it again in the Variants step." `RunError` gains `{ kind:
 "reopenFailed"; name; message }`. The runner answers it when popnei
-refused a call that reads the file, the open, an open again or a pass,
-and the file's first byte no longer reads through `FileReaderSync`,
-since popnei turns the browser's refusal into a plain `Error` that no
-kind tells apart from a refusal of the data; the worker goes on. The
+refused a call that reads the file, the open or a pass, with its message
+of a range the browser refused or gave short, "the source could not be
+read: the browser did not give popnei …" or "the source could not be
+read: popnei asked this file for the …", since popnei turns the
+browser's refusal into a plain `Error` that no kind tells apart from a
+refusal of the data; and when popnei refused an open again of a file it
+had opened, whatever the message. The worker goes on. The
 client fails a run with it, and an `open` sent for a run that fails
 either way fails the runs waiting on it with it. The words: on the
 panel, "panel.nei could not be read again; it may have changed on the
@@ -363,9 +409,13 @@ of stage 2.
 2. **A kind for a source that could not be read**, apart from a refusal
    of its data, on the `Error` popnei throws when the browser refuses a
    range of a `File` or gives it short. The runner tells the two apart
-   meanwhile by reading the first byte of the `File` itself after a
-   refusal, which misses the range given short. It is of the kind that
-   popnei's issue #3 asks for other refusals.
+   meanwhile by the start of popnei's message, "the source could not be
+   read: " followed by the words of a range refused or given short,
+   which a test holds against the release; a change of those words in a
+   later release would make a changed file read as a refusal of its
+   data until the test catches it. The prefix alone is not enough, since
+   a damaged gzip crosses with it too. It is of the kind that popnei's
+   issue #3 asks for other refusals.
 3. **If D is answered (c)**: the unbiased expected and the observed
    heterozygosity, and a polymorphism threshold, in `calcPopDiversity`.
 
@@ -383,7 +433,8 @@ the runner (`runner.md`); a change of the filters always opens the file
 again, where the draft put only the filters missing from the end of the
 list (`runner.md`); a refusal of popnei when the file opens again for a
 run is `reopenFailed`, a file that changed and still reads
-(`client.md`).
+(`client.md`), and so is a refusal of an open again the runner makes
+itself when the filters change (`runner.md`).
 
 ## Changes to approved files
 
