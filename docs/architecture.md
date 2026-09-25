@@ -4,7 +4,10 @@ September 2026, first draft, revised on 24 September 2026 after its
 architecture review, and approved by the owner on 24 September 2026;
 revised again on 24 September 2026 for three decisions of the owner about
 the inputs, and approved by the owner the same day; revised a third time
-for the specs of stage 1, and approved with them the same day. What was revised each time is at the end
+for the specs of stage 1, and approved with them the same day; and, on
+25 September 2026, for the line of a character not decoded that a read
+of the individuals file reports, as the owner decided that day
+(`docs/specs/worker/protocol.md`, `CsvFound`). What was revised each time is at the end
 of section 1. The document gives the parts of the web applications of
 popnei, what each one holds, and how a change made by the user reaches the
 results on the screen. What the applications
@@ -125,7 +128,9 @@ approved by the owner with those specs the same day:
   key itself, and `keyInputs` gives the rest (section 3).
 - The options of the analyses are pairs in the project, not a record, and
   part of the format of the project file (sections 2 and 12).
-- A read of the individuals file says what "auto" found (section 2).
+- A read of the individuals file says what "auto" found (section 2),
+  and, since 25 September 2026, the line of the first character it could
+  not decode.
 - A request that the project no longer asks for is stopped unless the
   change is undone, as the owner decided: when the notice of the change is
   closed or replaced, or when a new calculation would wait behind it, and
@@ -215,7 +220,7 @@ interface IndividualsSource {
   read:
     | { kind: "pending" }             // the light worker is reading it
     | { kind: "read"; table: IndividualsTable; columns: ColumnType[];
-        found: CsvFound | null }      // what "auto" found; null for xlsx
+        found: CsvFound | null }      // how it was read; null for xlsx
     | { kind: "failed";
         error:
           | IndividualsFileError      // the reader refused the file
@@ -228,6 +233,17 @@ interface CsvOptions {
   encoding: "auto" | "utf-8" | "windows-1252";
   separator: "auto" | "," | ";" | "\t";
   decimal: "auto" | "." | ",";
+}
+
+// How a read of a CSV or TSV went: the three options it used, each as
+// set or as "auto" found it, "utf-16" only from the mark at the start of
+// the file; and the line of the first character it could not decode,
+// shown as U+FFFD, for a warning of the screen, or null.
+interface CsvFound {
+  encoding: "utf-8" | "windows-1252" | "utf-16";
+  separator: "," | ";" | "\t";
+  decimal: "." | ",";
+  undecodedLine: number | null;
 }
 
 // The type of each column, inferred and then as the user set it. A
@@ -680,7 +696,9 @@ core and the reader describe it in one way.
   written with a comma. The read reports what it found, and the screen
   shows it beside the file, "Read as Windows-1252, separator `;`,
   decimal comma", with a way to change each. A file is never refused for
-  its encoding. Changing one is a command that sets `csv` in the source
+  its encoding; a character that could not be decoded is shown as �, and
+  the read reports the line of the first, which the screen names in a
+  warning. Changing one is a command that sets `csv` in the source
   and puts its read back to pending; the light worker reads the file
   again, and the read is recorded only into the source with that load id
   and those options, so a read of the old options that comes back late is
