@@ -278,10 +278,15 @@ and, for a column whose values are one number written in several ways,
 > is taken as a measurement. If it is a code, such as a numbered
 > population, it can still be chosen as the column of the populations."
 
-The name of the column is written as it is, and the numbers as
-JavaScript writes them, `-3`, `12000`. The words are made by
+The name of the column is written as the warning holds it, and the
+numbers as JavaScript writes them, `-3`, `12000`. The words are made by
 `columnWarningText`; the "Warning: " before them is the screen's, which
-`docs/specs/steps/individuals.md` puts there.
+`docs/specs/steps/individuals.md` puts there. The screen gives
+`columnWarningText` the warning with the name of the column escaped, as
+it shows every name of the file (`docs/specs/core/project.md`, "The
+validation"), so that a character that reverses the text, U+202E, in a
+name shows as `\u202e` and does not turn the rest of the sentence
+around; the reader does not escape it, since it imports nothing of core.
 
 ### When a type is wrong, in stage 2
 
