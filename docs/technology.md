@@ -27,7 +27,7 @@ the applications do is in `docs/functionality.md`.
 | layer | choice |
 |---|---|
 | language | TypeScript 6.0, and 7 when typescript-eslint supports it |
-| build | Vite, with @vitejs/plugin-react |
+| build | Vite, with @vitejs/plugin-react and @react-aria/optimize-locales-plugin |
 | UI framework | React, as a client application, with no server framework |
 | accessible widgets | React Aria Components |
 | CSS | plain modern CSS, custom properties as design tokens, CSS Modules |
@@ -124,6 +124,24 @@ walking skeleton, 19 KB of it its translations into 34 languages,
 measured with source maps on 25 September 2026 on the Vite build.
 The application is in English, and the entry sets the language of React
 Aria to English, `en-US`, whatever the language of the browser.
+
+So the words of React Aria in its other 33 languages are left out of the
+build by **@react-aria/optimize-locales-plugin**, a development
+dependency taken by the owner on 25 September 2026: Adobe's own plugin
+for it, version 2.0.2, which answers React Aria's import of the file of
+each other language with an empty module, in `vite.config.ts`. It brings
+in `unplugin` 2.3.11, of the UnJS project, which makes one plugin work
+in Vite, Rollup, webpack and esbuild, and `webpack-virtual-modules`
+0.6.2, which unplugin requires and Vite does not use; its other
+dependencies were already installed. The first script of
+`popgen.html`, the page's own, went from 148.39 KB gzipped to 113.30 KB
+with it, as `vite build` reported them with Vite 8.3.0 on 25 September
+2026, and the script it shares with the probe page, React with its
+`jsx-runtime`, stayed at 68.78 KB. The 35.09 KB that went are more
+than the 19 KB above, which were measured on an earlier build of the
+page; where the difference comes from was not looked into. The plugin
+itself reaches no user. A second
+language, later, is a line of the plugin's list, `locales: ["en-US"]`.
 
 Not taken: component libraries with their own look, MUI, Chakra,
 Mantine, which bring a style we would fight and, for Chakra, a history of
