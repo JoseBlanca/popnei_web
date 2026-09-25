@@ -12,8 +12,7 @@
  * file pasted into it; it comes first in the order of the Tab key, and
  * `pasteLabel` names it.
  */
-import { useEffect, useRef } from "react";
-import { DropZone, FileTrigger } from "react-aria-components";
+import { DropZone, FileTrigger, Text } from "react-aria-components";
 import type { DropItem } from "react-aria-components";
 
 import { classOf } from "../classOf.ts";
@@ -50,30 +49,6 @@ export function FileZone({
   children,
   actions,
 }: FileZoneProps): React.JSX.Element {
-  const zoneRef = useRef<HTMLDivElement>(null);
-  // React Aria writes an empty aria-labelledby on its hidden button, once
-  // it finds that the zone has no label of its own in the page, in a
-  // render of its own after this component's; an empty reference names
-  // nothing, and is taken off whenever it is written.
-  useEffect(() => {
-    const zone = zoneRef.current;
-    if (zone === null) return;
-    const clean = (): void => {
-      for (const element of zone.querySelectorAll('[aria-labelledby=""]')) {
-        element.removeAttribute("aria-labelledby");
-      }
-    };
-    clean();
-    const observer = new MutationObserver(clean);
-    observer.observe(zone, {
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["aria-labelledby"],
-    });
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
   const onDrop = (event: { readonly items: readonly DropItem[] }): void => {
     const reads: Promise<File>[] = [];
     for (const item of event.items) {
@@ -86,11 +61,15 @@ export function FileZone({
   };
   return (
     <DropZone
-      ref={zoneRef}
       aria-label={pasteLabel}
       className={classOf(styles, "zone")}
       onDrop={onDrop}
     >
+      {/* The label slot of the zone, empty: React Aria names its hidden
+          button by its aria-label and this slot, and with no slot drawn
+          it writes an empty aria-labelledby, which names nothing. Empty,
+          it adds nothing to the name, "Paste a variants file". */}
+      <Text slot="label" />
       <div className={classOf(styles, "content")}>{children}</div>
       <div className={classOf(styles, "buttons")}>
         <FileTrigger

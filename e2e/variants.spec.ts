@@ -431,7 +431,14 @@ test("WS7 D3 the zone's own button, which takes a pasted file, is named for it",
     exact: true,
   });
   await expect(paste).toHaveCount(1);
-  await expect(paste).not.toHaveAttribute("aria-labelledby");
+  // Its name is its words once, and every element it is labelled by is
+  // in the page: no empty reference.
+  await expect(paste).toHaveAccessibleName("Paste a variants file");
+  const ids = (await paste.getAttribute("aria-labelledby")) ?? "";
+  expect(ids.trim()).not.toBe("");
+  for (const id of ids.trim().split(/\s+/)) {
+    await expect(page.locator(`[id="${id}"]`)).toHaveCount(1);
+  }
 });
 
 // The application is in English in every browser, whatever its language
