@@ -1508,8 +1508,9 @@ function named(name: string): string {
   return name === "" ? "an empty name" : shown(name);
 }
 
-/** A list of things in words: "a, b and c". */
-function bothOf(words: readonly string[]): string {
+/** A list of things in words: "a, b and c"; exported for the words of
+    the project file, so that the rule is written once. */
+export function bothOf(words: readonly string[]): string {
   const last = words.at(-1) ?? "";
   return words.length < 2
     ? last

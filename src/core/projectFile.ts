@@ -9,6 +9,7 @@
 
 import type { JsonValue } from "./keys.ts";
 import {
+  bothOf,
   counted,
   escaped,
   FORMAT_VERSION,
@@ -942,7 +943,7 @@ export function identityWarning(p: Project): string | null {
   if (differences.length === 0) {
     return null;
   }
-  return `The project was made with ${madeWith(reference.variants)}; this file ${allOf(differences.map(differenceWords))}. Load the file the project was made with, or go on with this one.`;
+  return `The project was made with ${madeWith(reference.variants)}; this file ${bothOf(differences.map(differenceWords))}. Load the file the project was made with, or go on with this one.`;
 }
 
 /**
@@ -968,7 +969,7 @@ function madeWith(source: VariantSource): string {
       words.push(counted(read.numVars, "variant"));
     }
   }
-  return allOf(words);
+  return bothOf(words);
 }
 
 /** A difference as the end of a sentence whose subject is "this file". */
@@ -991,12 +992,4 @@ function differenceWords(difference: IdentityDifference): string {
     case "numVars":
       return `has ${counted(difference.now, "variant")}`;
   }
-}
-
-/** A list of things in words: "a, b and c". */
-function allOf(words: readonly string[]): string {
-  const last = words.at(-1) ?? "";
-  return words.length < 2
-    ? last
-    : `${words.slice(0, -1).join(", ")} and ${last}`;
 }
