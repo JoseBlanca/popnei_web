@@ -670,10 +670,10 @@ CSV.
 
 **Tasks:**
 
-- [ ] 8.1 The Individuals step, `src/ui/steps/individuals/`, from its
+- [x] 8.1 The Individuals step, `src/ui/steps/individuals/`, from its
   spec, with `individualsCheck` of task 1.3; its states in
   `screens.spec.ts`. Serves 1 and 5.
-- [ ] 8.2 The frame of every analysis, `src/ui/analyses/AnalysisPanel.tsx`
+- [x] 8.2 The frame of every analysis, `src/ui/analyses/AnalysisPanel.tsx`
   with `panels.ts`, and the panel of the diversity,
   `src/ui/analyses/diversity/`, from the diversity spec's "The panel",
   under the `<h1>` "Analyses"; its states in `screens.spec.ts`. The
