@@ -26,7 +26,6 @@ import {
   Input,
   Label,
   NumberFieldStateContext,
-  Text,
 } from "react-aria-components";
 
 import { classOf } from "../classOf.ts";
@@ -70,7 +69,8 @@ export interface NumberFieldProps {
   /** The step an arrow key moves by; a number committed must be a
       multiple of it. */
   readonly step: number;
-  /** A line under the field, which a screen reader reads with it. */
+  /** A line under the field, which a screen reader reads with it, after
+      the line of a refusal. */
   readonly description?: string;
   /** The line under the field for a number it refused, or a character it
       threw away, from the reason and the value it keeps, the one it shows
@@ -104,6 +104,7 @@ export function NumberField({
   onChange,
 }: NumberFieldProps): React.JSX.Element {
   const refusedId = useId();
+  const descriptionId = useId();
   // The line of the last number refused, which is the screen's: it goes
   // at the next commit, and when the value changes otherwise, by an undo
   // or a new load, since it names the value kept.
@@ -137,6 +138,15 @@ export function NumberField({
     refusing.current = false;
   };
 
+  // The description of the field, the line of a refusal first and the
+  // line under the field after it (the spec, "Accessibility"). Given by
+  // the page and not by React Aria's slot of a description, which it
+  // would put before the line of the refusal.
+  const describedBy = [
+    ...(refused !== null ? [refusedId] : []),
+    ...(description !== undefined ? [descriptionId] : []),
+  ];
+
   return (
     <AriaNumberField
       className={classOf(styles, "field")}
@@ -149,7 +159,9 @@ export function NumberField({
       // as it is; checkCommitted takes it or refuses it.
       commitBehavior="validate"
       isWheelDisabled
-      {...(refused !== null && { "aria-describedby": refusedId })}
+      {...(describedBy.length > 0 && {
+        "aria-describedby": describedBy.join(" "),
+      })}
       onChange={(committed) => {
         // What the field showed was not what was typed: nothing is sent,
         // and the line of the character stays. React Aria then shows the
@@ -183,9 +195,9 @@ export function NumberField({
         onCommitReady={onCommitReady}
       />
       {description !== undefined && (
-        <Text slot="description" className={classOf(styles, "description")}>
+        <p id={descriptionId} className={classOf(styles, "description")}>
           {description}
-        </Text>
+        </p>
       )}
       {refused !== null && <Problem id={refusedId}>{refused}</Problem>}
     </AriaNumberField>

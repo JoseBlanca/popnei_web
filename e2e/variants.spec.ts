@@ -608,6 +608,9 @@ test("WS7 D3 the ploidy refuses 0, 300 and 2.5 with a line that says it stays", 
     await expect(ploidy).toHaveValue("2");
     await expect(page.getByRole("main").getByText(line)).toBeVisible();
     await expect(page.getByRole("status").last()).toHaveText(line);
+    // The line first in the description, before the line under the
+    // ploidy.
+    await expect(ploidy).toHaveAccessibleDescription(`${line} ${PLOIDY_LINE}`);
   }
   await expectNoViolations(makeAxeBuilder);
   await ploidy.fill("255");
@@ -616,6 +619,7 @@ test("WS7 D3 the ploidy refuses 0, 300 and 2.5 with a line that says it stays", 
   await expect(
     page.getByRole("main").getByText(/the ploidy stays/),
   ).toHaveCount(0);
+  await expect(ploidy).toHaveAccessibleDescription(PLOIDY_LINE);
 
   // The line names the ploidy kept, so it goes when a new load sets the
   // ploidy back: after a .nei file, the default.
