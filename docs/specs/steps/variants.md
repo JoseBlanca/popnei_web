@@ -199,22 +199,22 @@ under the field says why, and what is kept:
 
 | typed | the line under the field |
 |---|---|
-| 10 in the threshold | "10 is more than 1; the filter keeps 0.1." |
-| 0.125, or 0.001, in the threshold | "0.125 has more than two decimals; the filter keeps 0.1." |
+| 10 in the threshold | "10 is more than 1; the threshold stays 0.1." |
+| 0.125, or 0.001, in the threshold | "0.125 has more than two decimals; the threshold stays 0.1." |
 | 300 in the ploidy | "300 is more than 255; the ploidy stays 2." |
 | 0 in the ploidy | "0 is less than 1; the ploidy stays 2." |
 | 2.5 in the ploidy | "2.5 is not a whole number; the ploidy stays 2." |
 
-The number kept is the value the field had, the last one it took. A
-number below 0 cannot be typed in the threshold: React Aria refuses the
-minus sign in a field whose range starts at 0. The line is announced
-when it appears, through the function the shell gives the screens, since
-the focus is then on the field, after Enter, or on the next element,
-after the Tab key, and a screen reader would read the line in neither
-place; it is also the field's description, read with it when the focus
-comes back. It goes at the next number committed in the field, and when
-the value of the field changes otherwise, by an Undo, a new load or the
-switch.
+The number kept is the value the field had, the last one it took. The
+line is announced when it appears, through the function the shell gives
+the screens, since the focus is then on the field, after Enter, or on
+the next element, after the Tab key, and a screen reader would read the
+line in neither place; it is also the field's description, read with it
+when the focus comes back. It goes at the next commit of the field,
+Enter, the Tab key or an arrow key, whatever the number committed, the
+number kept among them, which changes nothing and which React Aria
+therefore does not report; and when the value of the field changes
+otherwise, by an Undo, a new load or the switch.
 
 A number with more decimals than the step is refused and not rounded,
 as a number outside the range is: rounded, 0.001 and 0.004 would become
@@ -228,10 +228,37 @@ not ask for. The decimals are counted on the number React Aria parsed,
 so that 0.10 and 0.1 are one number, of one decimal; an arrow key moves
 by the step and gives no number to refuse.
 
-A field left empty, or with no number in it, 0,05 in English, sends
-nothing and shows again the value it had, with no line, since nothing
-was typed that could be taken for another number; the same holds for
-the ploidy, which then keeps its value for the next pick. Off and on puts the filter last in the list of the
+**A character the field does not take.** React Aria takes into the field
+only what can start a number of its range, in English: digits and the
+decimal point, and a minus sign where the range goes below 0, which
+neither field's does. Any other character typed is thrown away, with no
+word, so that 0,1 typed key by key shows as 01 and would be committed
+as 1, and 2,0 in the ploidy as 20. So a character thrown away is caught
+as it is typed, and a line under the field says so at once, and what is
+kept:
+
+| typed | the line under the field |
+|---|---|
+| 0,1 in the threshold | "Write the decimals with a point, 0.1 and not 0,1; the threshold stays 0.1." |
+| a minus sign, or a letter, in the threshold | "‘-’ cannot be typed in the threshold, which is written with digits and a point, as 0.05; the threshold stays 0.1." |
+| 2,0 in the ploidy | "Write the ploidy as a whole number, 4 and not 4,0; the ploidy stays 2." |
+| a minus sign, or a letter, in the ploidy | "‘-’ cannot be typed in the ploidy, which is a whole number, as 4; the ploidy stays 2." |
+
+The example of the comma is always 0.1 or 4, and the number kept the
+value the field had. A comma anywhere in what was typed gives the line
+of the comma, as when 0,05 is pasted into the field; otherwise the line
+names the first character thrown away, between ‘ and ’, a space as "A space", with its
+control characters escaped. The next commit of the field sends nothing,
+whatever the field shows, since what it shows is not what was typed:
+the field shows again the value it had, and the line stays until the
+commit after it. A deletion in the field before that commit, the user
+mending what they typed, lets the commit take the number again. The line
+is announced as the line of a number refused is.
+
+A field left empty sends nothing and shows again the value it had, with
+no line, since nothing was typed that could be taken for another number;
+the same holds for the ploidy, which then keeps its value for the next
+pick. Off and on puts the filter last in the list of the
 filters, which with one filter in stage 2 changes nothing; stage 3,
 with several, decides it.
 
@@ -393,7 +420,10 @@ button's words with both options changed; `bad.vcf` and its reason,
 ending "Choose another file."; a file named `panel.txt` and its message;
 a piece of text dropped, and its message; 10 and 0.125 typed in the
 threshold, and 300, 0 and 2.5 in the ploidy, each with its line, the
-value kept and the line announced; and the text of the status region
+value kept and the line announced; 0,1 and 0,2 typed key by key in the
+threshold, and 2,0 in the ploidy, each with the line of the comma and
+the value kept; the value kept typed back, and an arrow key at a bound,
+each taking the line away; and the text of the status region
 after each read. A script cannot put a folder into a drop, so the flow
 drops a file whose entry of the file system says it is a folder, which
 is what React Aria asks of each item; the function that tells what a
