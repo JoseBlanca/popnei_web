@@ -770,14 +770,20 @@ export function createClient(config: {
         }
         light.running = null;
         light.life.failures = 0;
-        const read = message.read;
-        switch (read.kind) {
-          case "read":
-            finishIndividuals(running, read);
-            break;
-          case "failed":
-            finishIndividuals(running, { kind: "refused", error: read.error });
-            break;
+        // A read cancelled while it ran was answered at its cancel.
+        if (!running.answer.settled()) {
+          const read = message.read;
+          switch (read.kind) {
+            case "read":
+              finishIndividuals(running, read);
+              break;
+            case "failed":
+              finishIndividuals(running, {
+                kind: "refused",
+                error: read.error,
+              });
+              break;
+          }
         }
         pumpLight();
         return;
@@ -809,7 +815,7 @@ export function createClient(config: {
       }
     }
     startLight();
-    if (running !== null) {
+    if (running !== null && !running.answer.settled()) {
       finishIndividuals(running, { kind: "failed", error });
     }
   }
@@ -817,7 +823,9 @@ export function createClient(config: {
   function lightOtherBuild(): void {
     const waiting = [
       ...light.queue,
-      ...(light.running === null ? [] : [light.running]),
+      ...(light.running === null || light.running.answer.settled()
+        ? []
+        : [light.running]),
     ];
     light.queue = [];
     light.running = null;
@@ -978,7 +986,10 @@ interface Life {
   readonly stopTimer: () => void;
 }
 
-/** The answer of a request, given once: a second one is dropped. */
+/** The answer of a request, given once. A second one is a defect of the
+    client, which gives every request one answer: it is dropped, so that
+    the page sees the first, and written to the console, where the tests
+    see it. */
 interface Settler<A> {
   readonly settle: (answer: A) => void;
   readonly settled: () => boolean;
@@ -988,10 +999,14 @@ function settler<A>(resolve: (answer: A) => void): Settler<A> {
   let done = false;
   return {
     settle(answer) {
-      if (!done) {
-        done = true;
-        resolve(answer);
+      if (done) {
+        console.error(
+          "popnei_web defect: a request answered twice; the second answer is dropped.",
+        );
+        return;
       }
+      done = true;
+      resolve(answer);
     },
     settled: () => done,
   };

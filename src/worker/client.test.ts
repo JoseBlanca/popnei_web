@@ -1156,6 +1156,11 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
   };
   const calculation: Watched[] = [];
   const light: Watched[] = [];
+  // The client writes a second answer of a request to the console.
+  const consoleError = vi
+    .spyOn(console, "error")
+    .mockImplementation(() => undefined);
+  const errorsBefore = consoleError.mock.calls.length;
   /** The calculation worker whose message is being delivered, or the
       last one made, which the answers of the step are put to. */
   let stepWorker = -1;
@@ -1443,6 +1448,15 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
     answerCalculation(0);
     answerLight(0);
     await flush();
+  }
+  for (const call of consoleError.mock.calls.slice(errorsBefore)) {
+    const text: unknown = call[0];
+    if (
+      typeof text === "string" &&
+      text.startsWith("popnei_web defect: a request answered twice")
+    ) {
+      seen.notAnsweredOnce.push(text);
+    }
   }
   for (const [index, count] of counts.entries()) {
     if (count !== 1) {
@@ -1733,5 +1747,201 @@ describe("WS2 D3 the client: crashes, defects, and every read answered, on the l
     });
     vi.advanceTimersByTime(3 * WORKER_READY_TIMEOUT_MS);
     expect(env.light).toHaveLength(1);
+  });
+});
+
+describe("WS2 D3 the client: what the test review found", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  /** Load A read, then the idle worker crashes once: the count of
+      failures is 1, and the worker started again has opened A with
+      nothing waiting, which does not set the count back. */
+  function crashedOnce(): ReturnType<typeof withA> & {
+    readonly second: FakeWorker;
+  } {
+    const env = withA();
+    emit(env.first, { kind: "crashed", message: "trap" });
+    const second = last(env.calculation);
+    emit(second, READY);
+    emit(second, opened(lastSent(second).id));
+    return { ...env, second };
+  }
+
+  test("the ready stops the timer: 65 seconds after it, one worker, and its read still under way", async () => {
+    const env = setUp();
+    env.client.addFile("A", FILE_A);
+    const readA = env.client.openVariants({ fileId: "A", ...NEI });
+    emit(last(env.calculation), READY);
+    vi.advanceTimersByTime(65_000);
+    expect(env.calculation).toHaveLength(1);
+    expect(last(env.calculation).terminated).toBe(false);
+    expect(await now(readA.outcome)).toBe("pending");
+  });
+
+  test("a file the reader refused arrives as refused, with the reader's own error whole", async () => {
+    const env = setUp();
+    env.client.addFile("ind", CSV_FILE);
+    const read = env.client.readIndividuals("ind", CSV);
+    const worker = last(env.light);
+    emit(worker, LIGHT_READY);
+    const error = {
+      kind: "raggedRow",
+      line: 3,
+      expected: 4,
+      found: 3,
+      separator: ";",
+    };
+    emit(worker, {
+      kind: "individuals",
+      id: sentToLight(worker)[0]?.id,
+      read: { kind: "failed", error },
+    });
+    expect(await now(read.outcome)).toEqual({ kind: "refused", error });
+  });
+
+  test("a run refused sets the count of failures back: one more idle crash starts the worker again", () => {
+    const env = crashedOnce();
+    const run = env.client.run("k1", job("A"), noProgress);
+    emit(env.second, { kind: "refused", id: run.id, message: "no variant" });
+    emit(env.second, { kind: "crashed", message: "trap" });
+    expect(env.calculation).toHaveLength(3);
+  });
+
+  test("a run answered with its result sets the count of failures back: one more idle crash starts the worker again", () => {
+    const env = crashedOnce();
+    const run = env.client.run("k1", job("A"), noProgress);
+    emit(env.second, resultOf(run.id, "k1"));
+    emit(env.second, { kind: "crashed", message: "trap" });
+    expect(env.calculation).toHaveLength(3);
+  });
+
+  test("a read of the individuals file answered sets the count back: after one slow start, one idle crash starts the light worker again", () => {
+    const env = setUp();
+    env.client.addFile("ind", CSV_FILE);
+    env.client.readIndividuals("ind", CSV);
+    vi.advanceTimersByTime(WORKER_READY_TIMEOUT_MS);
+    const second = last(env.light);
+    emit(second, LIGHT_READY);
+    emit(second, {
+      kind: "individuals",
+      id: sentToLight(second)[0]?.id,
+      read: TABLE_READ,
+    });
+    emit(second, { kind: "crashed", message: "trap" });
+    expect(env.light).toHaveLength(3);
+  });
+
+  test("a crash during an open fails the runs waiting on it, and the new worker opens nothing", async () => {
+    const env = withA();
+    env.client.run("k1", job("A"), noProgress).cancel();
+    const second = last(env.calculation);
+    const k2 = env.client.run("k2", job("A"), noProgress);
+    emit(second, READY);
+    expect(lastSent(second)).toMatchObject({ kind: "open", fileId: "A" });
+    emit(second, { kind: "crashed", message: "trap" });
+    expect(await now(k2.outcome)).toEqual({
+      kind: "failed",
+      error: { kind: "workerFailed", message: "trap" },
+    });
+    const third = last(env.calculation);
+    emit(third, READY);
+    expect(third.posted).toEqual([]);
+  });
+
+  test("two runs that each crash while running do not give the worker up", async () => {
+    const env = withA();
+    const r1 = env.client.run("r1", job("A"), noProgress);
+    emit(env.first, { kind: "crashed", message: "out of memory" });
+    const second = last(env.calculation);
+    emit(second, READY);
+    emit(second, opened(lastSent(second).id));
+    const r2 = env.client.run("r2", job("A"), noProgress);
+    expect(lastSent(second)).toMatchObject({ kind: "run", id: r2.id });
+    emit(second, { kind: "crashed", message: "out of memory" });
+    expect(await now(r1.outcome)).toMatchObject({ kind: "failed" });
+    expect(await now(r2.outcome)).toMatchObject({
+      kind: "failed",
+      error: { kind: "workerFailed" },
+    });
+    expect(env.calculation).toHaveLength(3);
+    const r3 = env.client.run("r3", job("A"), noProgress);
+    expect(await now(r3.outcome)).toBe("pending");
+  });
+
+  test("an answer of the light worker of another id is a defect, not the answer of the read", async () => {
+    const env = setUp();
+    env.client.addFile("ind", CSV_FILE);
+    const read = env.client.readIndividuals("ind", CSV);
+    const worker = last(env.light);
+    emit(worker, LIGHT_READY);
+    emit(worker, { kind: "individuals", id: 99, read: TABLE_READ });
+    expect(await now(read.outcome)).toMatchObject({
+      kind: "failed",
+      error: { kind: "defect" },
+    });
+    expect(worker.terminated).toBe(true);
+  });
+
+  test("a second ready of the calculation worker is a defect, and ends it", () => {
+    const env = withA();
+    emit(env.first, READY);
+    expect(env.first.terminated).toBe(true);
+    expect(env.calculation).toHaveLength(2);
+  });
+
+  test("a second ready of the light worker is a defect, and ends it", () => {
+    const env = setUp();
+    env.client.addFile("ind", CSV_FILE);
+    env.client.readIndividuals("ind", CSV);
+    const worker = last(env.light);
+    emit(worker, LIGHT_READY);
+    emit(worker, LIGHT_READY);
+    expect(worker.terminated).toBe(true);
+    expect(env.light).toHaveLength(2);
+  });
+
+  test("an error event through the handler of a worker already ended changes nothing", () => {
+    const env = withA();
+    const onerror = env.first.onerror;
+    env.client.run("k1", job("A"), noProgress).cancel();
+    const second = last(env.calculation);
+    onerror?.(new ErrorEvent("error", { message: "late" }));
+    expect(second.terminated).toBe(false);
+    expect(env.calculation).toHaveLength(2);
+  });
+
+  test("a messageerror through the handler of a worker already ended changes nothing", () => {
+    const env = withA();
+    const onmessageerror = env.first.onmessageerror;
+    env.client.run("k1", job("A"), noProgress).cancel();
+    const second = last(env.calculation);
+    onmessageerror?.({ data: null });
+    expect(second.terminated).toBe(false);
+    expect(env.calculation).toHaveLength(2);
+  });
+
+  test("a crash during the first open of a load fails its read, and a run on it is then a defect", async () => {
+    const env = setUp();
+    const first = last(env.calculation);
+    env.client.addFile("A", FILE_A);
+    const readA = env.client.openVariants({ fileId: "A", ...NEI });
+    emit(first, READY);
+    emit(first, { kind: "crashed", message: "trap" });
+    expect(await now(readA.outcome)).toMatchObject({
+      kind: "failed",
+      error: { kind: "workerFailed" },
+    });
+    const run = env.client.run("k1", job("A"), noProgress);
+    expect(await now(run.outcome)).toMatchObject({
+      kind: "failed",
+      error: { kind: "defect" },
+    });
   });
 });
