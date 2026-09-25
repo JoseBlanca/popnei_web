@@ -201,16 +201,19 @@ words.
 
 A change of the load of the variants file is the exception: it stops
 every calculation in flight at once, as the owner decided on 25
-September 2026. The load is the load id and the read options of the
-variants file, and the store compares them in the project before and
-after each command, undo and redo: a new pick changes it, and so do an
-undo or a redo that gives back another load, or no variants file at all.
-The read options change only with a new load id, since `loadVariants`
-with the load id already there and other options is a defect
-(`docs/specs/core/project.md`, "The commands"); so this comparison gives
-the same changes as the load id alone, by which the worker client starts
-the calculation worker again (`.claude/skills/coding/worker.md`,
-"Cancelling").
+September 2026. The load is the load id of the variants file, and the
+store compares it in the project before and after each command, undo
+and redo: a new pick changes it, and so do an undo or a redo that gives
+back another load, or no variants file at all. Other read options are a
+new load id, since `loadVariants` with the load id already there and
+other options is a defect (`docs/specs/core/project.md`, "The
+commands"), and the worker client starts the calculation worker again
+by the load id too (`.claude/skills/coding/worker.md`, "Cancelling").
+The store compares the read options as well, which gives the same
+changes today, so that a way of changing them under the same load id,
+which the screen of stage 3 may find for the ploidy of a VCF, is still a
+change of the load; decided here, not by the owner, on 25 September
+2026.
 The calculation worker holds one file only and is started again for the
 new load (`docs/architecture.md`, section 5), so a calculation of the
 old load could not go on until an undo. The notice does not promise
@@ -227,7 +230,9 @@ calculation that will be stopped unless the change is undone: its
 until the notice is closed or replaced, since what it tells has
 happened, and a notice with nothing else in it stays until then. An
 analysis done again leaves the results removed, as below, and not
-`stopped`. The words of the notices the example above does not cover
+`stopped`. One analysis can be both among the results removed and in
+`stopped`: its result of the old settings is removed and its
+calculation of newer ones stopped (the cases, below). The words of the notices the example above does not cover
 are the screen spec's, in stage 2, with the example as their pattern:
 an undo or a redo that changes the load, whose cause is not a new file
 and whose action is Redo after an undo, and a notice with both results
@@ -308,8 +313,9 @@ review of the store.
 
 An analysis that was running, and not done, before a change is not in
 the notice's results removed: it had no result on the screen. After the
-change it is `ready`, its calculation in `leftBehind`, and the result
-that arrives late goes into the cache for an undo.
+change it is `ready`, its calculation in `leftBehind`, or in `stopped`
+after a change of the load, and the result that arrives late goes into
+the cache for an undo.
 
 ### A calculation that failed
 
@@ -609,6 +615,12 @@ the owner, on 24 September 2026:
   pick shows the results of the old file that had ended, from the cache,
   and stops nothing more, since nothing is in flight that is not already
   being stopped; the analyses whose calculation was stopped are `ready`.
+- **One analysis both removed and stopped.** The second analysis done;
+  the MAF filter changed, which removes its result; Run, which starts it
+  for the new threshold; an undo, which gives the result back and leaves
+  the calculation behind; a new variants file picked: the notice lists
+  the analysis in the results removed and in `stopped`. Its words are the
+  screen spec's, in stage 2.
 - **An opened project whose settings are changed and set back.** The
   fingerprint is that of the settings, so the comparison with the check
   numbers comes back with them.
