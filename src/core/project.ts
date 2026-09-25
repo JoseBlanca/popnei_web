@@ -1471,7 +1471,7 @@ function refusalWords(error: IndividualsFileError, app: AppId): string {
     case "raggedRow":
       return `line ${String(error.line)} has ${counted(error.found, "cell")} where the header has ${grouped(error.expected)}, read with ${SEPARATOR_NAMES[error.separator]} as the separator`;
     case "unnamedColumn":
-      return `column ${grouped(error.column)} has values but no name in the header`;
+      return `column ${String(error.column)} has values but no name in the header`;
     case "emptyIndividual":
       return `line ${String(error.line)} has no name of an individual in its first column`;
     case "unclosedQuote":

@@ -2080,7 +2080,7 @@ const REFERENCE = {
       numbers: [0.5, null],
       keyVersion: 1,
       popneiVersion: "0.1.0",
-      appVersion: "0.1.0",
+      appVersion: "0.2.0",
       settings: "0123456789abcdef".repeat(4),
     },
   ],
@@ -3161,6 +3161,30 @@ describe("WS1 D3 the additions to project.ts", () => {
       expect(individualsCheck(other)).toStrictEqual(first);
     });
 
+    test("keeps no answer of another variants file for the same table", () => {
+      const p = withVariantIndividuals(["i1", "i5"]);
+      const first = individualsCheck(p);
+      const q = deepFreeze({
+        ...p,
+        variants:
+          p.variants === null
+            ? null
+            : {
+                ...p.variants,
+                read: {
+                  kind: "read" as const,
+                  individuals: ["i6", "i1"],
+                  ploidy: 2,
+                  numVars: null,
+                },
+              },
+      });
+      expect(q.individuals).toBe(p.individuals);
+      const second = individualsCheck(q);
+      expect(second).not.toBe(first);
+      expect(second?.missing).toStrictEqual(["i6"]);
+    });
+
     test("individualsNeeds names the individuals it gives as missing", () => {
       const p = withVariantIndividuals(["i9", "i2", "i7", "i1", "i8"]);
       expect(individualsCheck(p)?.missing).toStrictEqual(["i9", "i7", "i8"]);
@@ -3193,6 +3217,80 @@ describe("WS1 D3 the additions to project.ts", () => {
       expect(parsed).toStrictEqual({ ok: true, value: refusedWith(error) });
     },
   );
+
+  test("a column number is a position, written with no comma", () => {
+    expect(
+      individualsNeeds(refusedWith({ kind: "unnamedColumn", column: 1204 })),
+    ).toBe(
+      "pops.csv could not be read: column 1204 has values but no name in the header. Load a metadata file in the Individuals step.",
+    );
+  });
+
+  test("the limit of tooLarge is written from its value", () => {
+    expect(
+      individualsNeeds(
+        refusedWith({ kind: "tooLarge", size: 12_000_001, max: 10_000_000 }),
+      ),
+    ).toBe(
+      "pops.csv could not be read: it is 12.1 MB, more than the 10 MB a metadata file can have; check that it is the metadata file and not the variants. Load a metadata file in the Individuals step.",
+    );
+  });
+
+  test("a reopenFailed of the light worker, which it never gives, is told as a defect", () => {
+    expect(
+      individualsNeeds(
+        withIndividualsRead({
+          kind: "failed",
+          error: {
+            kind: "worker",
+            error: {
+              kind: "reopenFailed",
+              name: "pops.csv",
+              message: "a range",
+            },
+          },
+        }),
+      ),
+    ).toBe(
+      "pops.csv could not be read: the calculation stopped unexpectedly. Load it again in the Individuals step.",
+    );
+  });
+
+  test.each([
+    [
+      "a raggedRow whose separator is not one a CSV can have",
+      { kind: "raggedRow", line: 7, expected: 4, found: 3, separator: "|" },
+      ["individuals", "read", "error", "separator"],
+    ],
+    [
+      "a tooLarge whose size is not a number",
+      { kind: "tooLarge", size: "big", max: 20_000_000 },
+      ["individuals", "read", "error", "size"],
+    ],
+  ] as const)("the validation refuses %s", (_what, error, path) => {
+    const data = fileWith({
+      individuals: {
+        ...individualsOf(sampleProject()),
+        read: { kind: "failed", error },
+      },
+    });
+    expect(errorOf(parse(data))).toMatchObject({ kind: "wrongValue", path });
+  });
+
+  test("the validation refuses a reopenFailed whose message is not a text", () => {
+    const data = variantsWith({
+      read: {
+        kind: "failed",
+        error: {
+          kind: "worker",
+          error: { kind: "reopenFailed", name: "panel.nei", message: 3 },
+        },
+      },
+    });
+    expect(parse(data)).toEqual(
+      wrong(["variants", "read", "error", "error", "message"], "a text"),
+    );
+  });
 
   test("the words of raggedRow name the separator the read used", () => {
     expect(
@@ -3347,7 +3445,7 @@ describe("WS1 D4 the versions of a check", () => {
             {
               analysis: "diversity",
               popneiVersion: "0.1.0",
-              appVersion: "0.1.0",
+              appVersion: "0.2.0",
             },
           ],
         },

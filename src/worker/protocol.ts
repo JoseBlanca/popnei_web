@@ -158,8 +158,8 @@ export type IndividualsFileError =
       readonly line: number;
       readonly separator: "," | ";" | "\t";
     }
-  /** A file of `size` bytes, more than the `max` a metadata file can
-      have; its bytes are never read. */
+  /** A file of `size` bytes, more than the `max` the individuals file
+      can have; its bytes are never read. */
   | { readonly kind: "tooLarge"; readonly size: number; readonly max: number }
   /** The browser could not read the file, with its message, for the
       console. */
@@ -256,8 +256,10 @@ export interface DiversityJob {
   /** The populations, each with the individuals of the variants file it
       holds, none empty. */
   readonly pops: Pops;
-  /** The fewest individuals with a called genotype at a variant for a
-      population to have a value there, popnei's `minNumIndividuals`. */
+  /** popnei's `minNumIndividuals`: the fewest called genotypes a
+      population needs at a variant to have a value there, counted as its
+      called alleles over the ploidy, so a genotype half called counts a
+      half. */
   readonly minNumIndividuals: number;
   /** The frequency of the commonest allele below which a variant is
       polymorphic, popnei's `polyThreshold`. */
