@@ -158,9 +158,14 @@ default for `--geno`, the same filter on the same proportion, as the
 owner decided on 25 September 2026 (functionality's open point 4), and
 is shown with no file loaded too, since the filters belong to the
 project and stay across loads. The field has a step of 0.01 and no
-buttons. React Aria rounds a committed value to the step, so 0.125
-typed becomes 0.13, and the field shows 0.13, the number popnei is
-given; two decimals are what a threshold of missing data is set with.
+buttons. React Aria rounds a committed value to the step, and the
+field shows the number popnei is given; two decimals are what a
+threshold of missing data is set with. A value halfway between two
+steps does not always go up: React Aria 1.21.1 takes the remainder of
+the division by the step in floating point, and 0.125 typed becomes
+0.12, while 0.135 becomes 0.14, as the flow of task 7.4 of the walking
+skeleton found on 25 September 2026 in Chromium and WebKit, where a
+draft of this spec said 0.13.
 Each press of an arrow key is a commit, and so a command and a step of
 Undo, which is what a user who presses it five times has done. A field
 left empty, or with no number in it, sends nothing and shows again the
