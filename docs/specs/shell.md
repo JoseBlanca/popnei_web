@@ -1,6 +1,6 @@
 # The shell of the population genetics application
 
-25 September 2026, a draft awaiting the owner's approval. The screen
+25 September 2026, approved by the owner on 25 September 2026. The screen
 spec of what surrounds every step of the population genetics
 application in the walking skeleton of stage 2 (`docs/build-order.md`),
 the smallest application that goes through every part once: the header,
@@ -386,9 +386,9 @@ changed since the page opened, since a project file was last opened, or
 since the last Save, the present project another object than that one,
 the page asks the browser to confirm before it is left, with the
 browser's own words, which a page cannot change. The owner decided the
-question on 25 September 2026, and is asked to confirm that a Save stops
-it (**Open 2**, below): after a Save the page does not know that the file
-was kept. A read recorded is a change too: the source of the file now
+question on 25 September 2026, and a Save stops it until the next
+change, as the owner settled with the approval of this spec, though
+after a Save the page does not know that the file was kept. A read recorded is a change too: the source of the file now
 holds what the worker read, which a file saved before it would not hold,
 so the page asks even when the user only picked a file.
 
@@ -604,7 +604,7 @@ box of the details looks.
 
 ## What this spec relies on in the other specs of stage 2
 
-Each is a draft of 25 September 2026 and says what is listed here.
+Each was approved by the owner on 25 September 2026 and says what is listed here.
 
 - `docs/specs/core/projectFile.md`: `writeProjectFile`, which refuses
   nothing; `readProjectFile`, `projectFileErrorText` and
@@ -636,8 +636,8 @@ The open points of the eleven specs of stage 2 are gathered in
 `docs/specs/stage-2-open-points.md`. Two of the three this spec had were
 decided by the owner on 25 September 2026, and are written above as
 decided: three steps, and no Export step (point J there), and Save as a
-dialog of the page (point K). One stays, and one part of K is to
-confirm:
+dialog of the page (point K), with its question before leaving as
+above. One stays:
 
 1. **How many variants the filters keep, in the summary line.** The
    owner's mockup has "48,210 of 1,203,554 variants kept (3 filters)".
@@ -649,14 +649,6 @@ confirm:
    filters, "1,200 variants · 1 filter"; in stage 3 the kept count joins
    it, as the mockup has it. The owner left it as it is on 25 September
    2026 (point L).
-2. **Whether a Save stops the question before leaving**, to confirm. The
-   owner decided that the question is asked when the project changed
-   since the page opened or since the last Save. A Save that stops it
-   spares the user a question after every save; its cost is a user who
-   cancels the browser's own dialog of the download, or whose download
-   fails, and then leaves the page with no question and loses the
-   project. Meanwhile, as decided: a Save stops it until the next change.
-   The other answer changes one line of the saving and one test.
 
 ## Not in this spec
 

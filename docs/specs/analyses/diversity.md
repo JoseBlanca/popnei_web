@@ -1,6 +1,6 @@
 # The diversity of each population
 
-A draft of 25 September 2026, awaiting the owner's approval. There is no
+Written on 25 September 2026, and approved by the owner the same day. There is no
 code yet. This spec gives the first analysis of the population genetics
 application, in its form for the walking skeleton: the module
 `src/core/analyses/diversity.ts`, which says what the diversity of each
@@ -29,7 +29,9 @@ On the same day the owner decided that stage 2 builds on popnei's
 release `js-v0.1.0-dev.2`, which reads the variants file by ranges and
 tells the progress of a pass, so the running state has a bar; that the
 diversity is calculated with `calcPopDiversity`, with the three columns
-above, which that function does not give (**Open 1**, below); and the
+above, which that function does not give, so that, as the owner settled
+with the approval of this spec, they come from `calcPerVarDistribs` of
+the same release, and `calcPopDiversity` waits for stage 5; and the
 answers to the points of `docs/specs/stage-2-open-points.md` that this
 spec had open, each written below where it applies.
 
@@ -87,8 +89,8 @@ is 0.9266666666666666, 1,112 of 1,200 (node, 25 September 2026, the
 release; the whole table is in point D of
 `docs/specs/stage-2-open-points.md`). The three columns the owner named
 come from `calcPerVarDistribs` of the same release, which gives the
-numbers of the release before to the last digit, until the owner
-confirms which is meant (**Open 1**). `calcPopDiversity` is the function
+numbers of the release before to the last digit, as the owner settled
+on 25 September 2026. `calcPopDiversity` is the function
 of stage 5, whose F, alleles, private alleles and spectrum are its
 statistics.
 
@@ -940,7 +942,7 @@ dash with that as its accessible name, are to be judged on the screen.
 
 ## What this spec relies on in the specs written beside it
 
-Each of these is a draft of 25 September 2026 and says what is listed
+Each of these was approved by the owner on 25 September 2026 and says what is listed
 here; where one of them comes to say otherwise, the two are settled
 before the plan of stage 2.
 
@@ -1001,31 +1003,10 @@ optional from stage 4 (point A there); polymorphic below 0.95, with
 value whenever any are skipped, with their number and share (H); the
 check numbers, the number of variants kept and the three numbers of each
 population (D); and the filters of individuals locked in stage 2 (F).
-One is open since, and is point D there again:
-
-1. **Which popnei function gives the three columns.** The owner decided
-   that the diversity is built on `calcPopDiversity`, with the expected
-   heterozygosity, the observed heterozygosity and the proportion of
-   polymorphic variants in stage 2. In `js-v0.1.0-dev.2`,
-   `calcPopDiversity` gives neither heterozygosity, and its nearest
-   number to the third is the share of variants with more than one
-   allele, with no threshold, 0.9775 for p0 of the panel where the
-   proportion below 0.95 is 0.9267 (above, "What it does"). The options:
-   - (a) the three columns from `calcPerVarDistribs` of the same
-     release, as this spec has them, and `calcPopDiversity` from stage 5
-     for F, the alleles, the private alleles and the spectrum, a second
-     pass then or both in one run of two calls;
-   - (b) `calcPopDiversity` now, with its own columns in place of the
-     three: the share of variable variants, and F_IS, which the owner
-     put in stage 5, and no heterozygosity;
-   - (c) ask popnei to add the two heterozygosities and a polymorphism
-     threshold to `calcPopDiversity`, and build stage 2 on (a) until the
-     release that has them.
-   Recommended: (a), since it gives the columns the owner named, verified
-   in popnei against plink2 and pyNei, and (c) only if stage 5 wants one
-   call for the whole table. Meanwhile, (a). Another answer changes the
-   call of the runner, the job, the result, the check numbers, the
-   script and the help, and is needed before the plan of stage 2.
+The one that was open again since, which popnei function gives the
+three columns (point D there again), was settled by the owner with the
+approval of this spec: `calcPerVarDistribs` of the same release, and
+`calcPopDiversity` in stage 5. No point is open.
 
 ## Not in this spec
 

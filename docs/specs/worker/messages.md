@@ -1,6 +1,6 @@
 # The messages of the two workers
 
-25 September 2026, a draft awaiting the owner's approval. This spec gives
+25 September 2026, approved by the owner on 25 September 2026. This spec gives
 `src/worker/messages.ts`: the messages the page and each of the two
 workers send each other in the walking skeleton, the smallest
 application that goes through every part once (stage 2 of

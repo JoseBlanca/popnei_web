@@ -1,6 +1,6 @@
 # The project file
 
-A draft of 25 September 2026, awaiting the owner's approval. There is no
+Written on 25 September 2026, and approved by the owner the same day. There is no
 code yet; it will be `src/core/projectFile.ts`, the row `projectFile.ts`
 of section 9 of `docs/architecture.md`. The project file is the file
 `<name>.popnei.json` that a user saves to take their work out of the

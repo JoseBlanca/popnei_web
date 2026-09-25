@@ -1,6 +1,6 @@
 # The entry of the population genetics page
 
-25 September 2026, a draft awaiting the owner's approval. This spec gives
+25 September 2026, approved by the owner on 25 September 2026. This spec gives
 the page of the population genetics application, `popgen.html`, and its
 entry, the code that runs once when the page opens and keeps working for
 the life of the page: it makes the store and the two workers and joins
@@ -13,7 +13,7 @@ develops sections 1, 5, 6 ("Who asks for a read"), 7 and 9 of
 2026, and the row `src/ui/runs.ts` of its section 9. It depends on
 `docs/specs/core/store.md` and `project.md`, which are approved, and on
 `docs/specs/core/projectFile.md`, `docs/specs/worker/messages.md` and
-`client.md`, and `docs/specs/shell.md`, which are drafts of the same day,
+`client.md`, and `docs/specs/shell.md`, which were approved the same day,
 as is every other spec of this stage. The words the application shows
 once it has started are those of the shell, of the steps and of the
 panels, each in its own spec; the few words of the page before that,
@@ -643,7 +643,7 @@ leaving is not asked after it (point K there; "The saving", above).
 
 ## What this spec relies on in the other specs of stage 2
 
-Each is a draft of 25 September 2026 and says what is listed here.
+Each was approved by the owner on 25 September 2026 and says what is listed here.
 
 - `docs/specs/worker/client.md`: `createClient` with the two functions
   that make the workers and `onPopneiReady`, called as its section "The

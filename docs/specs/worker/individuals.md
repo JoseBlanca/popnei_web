@@ -1,6 +1,6 @@
 # The reader of the individuals file
 
-25 September 2026, a draft awaiting the owner's approval; there is no
+25 September 2026, approved by the owner on 25 September 2026; there is no
 code yet. The reader turns the CSV or TSV file of the individuals, the
 metadata file of population genetics or the traits file of association,
 into the table the project holds, and infers the type of each of its

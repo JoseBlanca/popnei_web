@@ -1,6 +1,6 @@
 # The runner of the calculation worker
 
-25 September 2026, a draft awaiting the owner's approval. The calculation
+25 September 2026, approved by the owner on 25 September 2026. The calculation
 worker is the thread of the browser tab, beside the page, that runs
 popnei, so that a calculation does not freeze the page
 (`docs/architecture.md`, section 1). Its runner is the code that answers
@@ -24,7 +24,7 @@ popnei here was read in its sources or run with it in node. It builds on
 and on `docs/specs/worker/messages.md`, for the requests and the
 answers; the page's side is `docs/specs/worker/client.md`, and the
 request and the result of the diversity are in
-`docs/specs/analyses/diversity.md`. Those three are drafts written at the
+`docs/specs/analyses/diversity.md`. Those three were written at the
 same time as this one, `messages.md` and `client.md` revised after it,
 and what this spec relies on in each is listed at the end, under "What
 this spec relies on in the others".
@@ -915,7 +915,7 @@ record a rewrite it did not test.
 
 ## What this spec relies on in the others
 
-Each of these is a draft of 25 September 2026 written with this one, and
+Each of these was written with this one and approved by the owner on 25 September 2026, and
 says what is listed here.
 
 - **`docs/specs/worker/messages.md`**: the requests `open`, with the load

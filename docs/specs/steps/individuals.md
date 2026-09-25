@@ -1,6 +1,6 @@
 # The Individuals step, in the walking skeleton
 
-A draft of 25 September 2026, awaiting the owner's approval. The screen
+Written on 25 September 2026, and approved by the owner the same day. The screen
 spec of the second step of the population genetics application as the
 walking skeleton of stage 2 builds it (`docs/build-order.md`): the user
 picks the metadata file, a CSV or a TSV, sees how it was read and can
@@ -318,7 +318,7 @@ dot beside each.
 
 ## What this spec relies on in the other specs of stage 2
 
-Each is a draft of 25 September 2026, and says what is listed here.
+Each was approved by the owner on 25 September 2026, and says what is listed here.
 
 - `docs/specs/worker/individuals.md`, which this spec follows: the read
   gives `found` with the three options used, set or detected, so that

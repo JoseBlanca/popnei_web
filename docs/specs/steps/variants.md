@@ -1,6 +1,6 @@
 # The Variants step, in the walking skeleton
 
-A draft of 25 September 2026, awaiting the owner's approval. The screen
+Written on 25 September 2026, and approved by the owner the same day. The screen
 spec of the first step of the population genetics application as the
 walking skeleton of stage 2 builds it (`docs/build-order.md`): the user
 picks the variants file, a VCF or a `.nei` file, sets how a VCF is read,
@@ -335,7 +335,7 @@ and the icons.
 
 ## What this spec relies on in the other specs of stage 2
 
-Each is a draft of 25 September 2026, and says what is listed here.
+Each was approved by the owner on 25 September 2026, and says what is listed here.
 
 - `docs/specs/shell.md`: the step is drawn in its `<main>` with one
   `<h1>`, "Variants"; the shell writes the notice from the description

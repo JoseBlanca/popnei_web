@@ -2,7 +2,8 @@
 
 25 September 2026, for the owner. Stage 2 of `docs/build-order.md` is the
 walking skeleton, the smallest application that goes through every part
-once, and it has eleven specs, all drafts of this day:
+once, and it has eleven specs, approved by the owner on 25 September
+2026:
 `docs/specs/worker/messages.md`, `client.md`, `runner.md` and
 `individuals.md`; `docs/specs/core/projectFile.md`;
 `docs/specs/analyses/diversity.md`; `docs/specs/entry.md` and `shell.md`;
@@ -11,111 +12,33 @@ open points, the decisions each spec left to the owner, with the ones
 two specs share made one. The owner answered them on 25 September 2026,
 and the eleven specs now say what was decided. This file records each
 answer, the numbers of the release of popnei stage 2 builds on, the three
-points that are open, open again or to confirm, what is asked of popnei, and
+points the owner settled with the approval, what is asked of popnei, and
 every change the eleven ask of files already approved: the approved
 specs of stage 1, the code of `src/` and `package.json`,
 `docs/architecture.md`, `docs/functionality.md`, `docs/build-order.md`
 and the skills.
 
-## What is still asked of the owner
+## What the owner decided with the approval
 
-Three things, each with what the plan builds meanwhile.
+The owner approved the eleven specs on 25 September 2026. With that
+approval the three points left open are settled:
 
-### D again. Which popnei function gives the three columns of the diversity
-
-The owner decided that the diversity is calculated with
-`calcPopDiversity`, with the three columns of the walking skeleton, the
-expected heterozygosity, unbiased, the observed heterozygosity and the
-proportion of polymorphic variants, below 0.95. `calcPopDiversity` of
-`js-v0.1.0-dev.2` gives none of the three. Read in its source,
-`js/popnei/src/diversity.ts` at `b3f77c8`, and run in node, it gives for
-each population the alleles it called, the private alleles, the share of
-variable variants, the folded spectrum of a draw and F_IS. Its share of
-variable variants counts a variant that called two alleles in the
-population however rare the second, with no threshold, and it has no
-`polyThreshold`; its F_IS is 1 − Ho/He of the two heterozygosities, which
-it computes and does not return. On the panel, the numbers below, the
-share of variable variants of p0 is 0.9775 where the share below 0.95 is
-0.9266666666666666, and F_IS equals, to the last digit, 1 − Ho/He of
-the means of `calcPerVarDistribs` in all six rows.
-
-- **(a) The three columns from `calcPerVarDistribs`** of the same
-  release, which gives the numbers of the release before to the last
-  digit and whose numbers popnei verifies against plink2 and pyNei; and
-  `calcPopDiversity` from stage 5, for F, the alleles, the private
-  alleles, the rarefaction and the spectrum, which are its statistics.
-  Stage 5 then makes two calls, two passes over the file, or asks popnei
-  for one (c).
-- **(b) `calcPopDiversity` now**, with its columns in place of the
-  three: the share of variable variants and F_IS, no heterozygosity. It
-  moves F, which the owner put in stage 5, into stage 2, and drops the
-  two columns the owner named.
-- **(c) Ask popnei** to add the two heterozygosities and a polymorphism
-  threshold to `calcPopDiversity`, so that one pass gives the whole table
-  of stage 5, and build stage 2 on (a) until the release that has them.
-
-Recommended: (a), since it gives the columns the owner named; (c) when
-stage 5 wants one pass. Meanwhile, (a): the eleven specs are written on
-it, with `calcPopDiversity` described where it would enter. Needed
-before the plan of stage 2, since (b) changes the call of the runner,
-the job, the result, the check numbers, the script, the table and the
-help. Specs: `diversity.md` **Open 1**, `runner.md` **Open 1**.
-
-### K, its last part. Whether a Save stops the question before leaving
-
-The owner decided that the question the browser asks before the page is
-left is asked when the project changed since the page opened or since
-the last Save, and is being asked to confirm the second half. A Save
-that stops it spares the user a question after every save; its cost is
-a user who cancels the browser's own dialog of the download, or whose
-download fails, and then leaves the page with no question and loses the
-project, since the page never learns whether the file was kept.
-Meanwhile, as decided: a Save stops the question until the next change.
-The other answer is one line of `createSaving` and one test. Specs:
-`shell.md` **Open 2**, `entry.md` ("The saving").
-
-### R. A browser that reads a changed variants file with no word
-
-popnei reads the variants file from the disk at every calculation. When
-the user changes the file on the disk after picking it, the File API
-asks the browser to refuse the read, and then the user is told to load
-the file again (point B). popnei tested its reading of a file in
-Chromium only, and an engine may instead read the new bytes and say
-nothing. The user would then see numbers calculated from the new file
-shown as those of the file they picked, filed under the key of that
-load: an undo back to it, and a project saved with its check numbers,
-would treat them as the old file's. Nothing in
-the application can see the change, since a `File` keeps the size and
-the date it had at the pick. Whether any engine does this is not known;
-the Playwright flow of stage 2 rewrites `panel.nei` after the pick in
-three ways, shorter, the same size and longer, in Chromium, Firefox and
-WebKit, and records what each shows (`docs/specs/worker/runner.md`, "In
-the browser").
-
-- **(a) Measure first, and tell the user meanwhile.** The first work
-  package of stage 2 runs those rewrites in the three engines, and this
-  point comes back to the owner with what they showed. Until then the
-  help of the Variants step, which already says that a file changed on
-  the disk after it was picked has to be loaded again, adds that the
-  application may not notice the change, and that results calculated
-  after it may be of the new file. Costs a sentence, and the measurement
-  the flow makes anyway.
-- **(b) Ask popnei to check the file at every pass**, that the bytes it
-  read at the open, the first range and the footer of a `.nei` file, are
-  the same when a pass reads them again, which a pass does already; it
-  would catch a rewrite that changes the head or the size, and not one
-  that changes a byte in the middle of a VCF. Costs a change of popnei
-  and a release.
-- **(c) Accept it**, with the line of the help alone, and no
-  measurement. Costs nothing, and leaves the user unwarned of a wrong
-  number in the engine where it happens.
-
-Recommended: (a), and (b) if an engine reads silently. Meanwhile, (a):
-the flow records the rewrites, and the line of the help is added to
-`docs/specs/steps/variants.md`, "The help drawer". Needed before the
-first work package of stage 2 ends, since (b) is a request to popnei
-that the plan waits on. Specs: `runner.md` **Open 2**, `client.md` ("The
-variants file changed on the disk since it was picked").
+- **D again, which popnei function gives the three columns.** The owner
+  had chosen the measures, He, Ho and the polymorphic share below 0.95,
+  and `calcPopDiversity` of `js-v0.1.0-dev.2` gives none of them, so they
+  come from `calcPerVarDistribs` of the same release, option (a), as the
+  specs are written. `calcPopDiversity` comes with the rest of the
+  diversity in stage 5: F, the private alleles, the rarefaction and the
+  spectrum. On the panel, its F_IS equals 1 − Ho/He of the means of
+  `calcPerVarDistribs` to the last digit, in all six rows measured.
+- **K, the question before leaving the page.** As the specs have it: the
+  browser's own question is asked when the project changed since the page
+  opened or since the last Save. The owner can change it when trying the
+  screen.
+- **R, a browser that reads a changed file with no word.** Option (a):
+  the first work package of stage 2 measures it in the three engines and
+  brings the result back to the owner; meanwhile the help of the Variants
+  step says it.
 
 ## What the owner decided on 25 September 2026
 
@@ -207,7 +130,7 @@ share, in stage 2; F, the private alleles, the rarefaction and the
 spectrum in stage 5." The check numbers: "numVars, then He, Ho and the
 polymorphic share per population", 1 + 3 × the populations, 10 for the
 panel of three, with section 9 of `docs/functionality.md` corrected.
-Which function gives the three columns is open again, above. Specs:
+The three columns come from `calcPerVarDistribs`, above. Specs:
 `diversity.md`, `projectFile.md`, `runner.md`.
 
 ### E. The versions in the files the application writes
@@ -259,7 +182,7 @@ with the report, in stage 6. Specs: `shell.md`, `entry.md`,
 button, after which the browser downloads the file; the page never says
 the file was saved; the browser's own question before leaving is asked
 when the project changed since the page opened or since the last Save."
-The last part is to confirm, above. The dialog's field starts at
+The last part as the specs have it, above. The dialog's field starts at
 `projectFileName`; a name without `.popnei.json` gets it; the error bar's
 Save saves under the proposed name with no dialog. Specs: `shell.md`,
 `entry.md`, `projectFile.md`.

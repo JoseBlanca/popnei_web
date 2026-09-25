@@ -1,6 +1,6 @@
 # The worker client
 
-25 September 2026, a draft awaiting the owner's approval. The worker
+25 September 2026, approved by the owner on 25 September 2026. The worker
 client is the page's one door to the two workers, the threads of the tab
 beside the page where the files are read and the calculations run
 (`docs/architecture.md`, section 1): it starts them, keeps the `File` of
