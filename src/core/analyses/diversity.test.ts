@@ -1141,3 +1141,165 @@ describe("WS5 D2 the key, after its review", () => {
     expect(keyOfDiversity(p)).not.toBe(before);
   });
 });
+
+describe("WS5 D1 the example and the reasons, with options set and reasons together", () => {
+  test("options of 10 and 0.9 go into the request and the script, and a population of 15 is not too small", () => {
+    const p = deepFreeze<Project>({
+      ...projectOfSizes(["p0"], [15]),
+      analyses: [
+        {
+          analysis: "diversity",
+          options: { minNumIndividuals: 10, polyThreshold: 0.9 },
+        },
+      ],
+    });
+    const { client, jobs } = recordingClient();
+    diversity.run(p, client);
+    expect(
+      jobs.map((job) => [job.minNumIndividuals, job.polyThreshold]),
+    ).toEqual([[10, 0.9]]);
+    expect(diversity.script(p)).toContain(
+      "    variants, pops=pops, min_num_individuals=10, poly_threshold=0.9\n",
+    );
+    const r = result({ pops: ["p0"], numIndividuals: [15], numVars: 1152 });
+    expect(diversity.warnings(r, p)).toEqual([]);
+  });
+
+  test("needs gives the filters of individuals before a reason of individualsNeeds, and that before the column", () => {
+    const noFileNoColumn = deepFreeze<Project>({
+      ...project({ column: null }),
+      individuals: null,
+    });
+    expect(diversity.needs(noFileNoColumn)).toBe(
+      "Load a metadata file in the Individuals step.",
+    );
+    const filteredToo = deepFreeze<Project>({
+      ...noFileNoColumn,
+      individualFilters: [{ kind: "remove", individuals: ["i4"] }],
+    });
+    expect(diversity.needs(filteredToo)).toBe(
+      "The filters of individuals come in a later version of the application, and this project holds one of them, so the diversity cannot run in this version. To run it, open the project file in a text editor, empty the list named individualFilters in it, and open the project again.",
+    );
+    const missingAndNoColumn = project({
+      column: null,
+      individuals: ["i1", "i6"],
+    });
+    expect(diversity.needs(missingAndNoColumn)).toBe(
+      "1 individual of panel.nei is not in pops.csv: i6. Add it to the file and load the file again in the Individuals step.",
+    );
+  });
+});
+
+describe("WS5 D2 the key, on one frozen table", () => {
+  test("two columns of one frozen table that group the individuals otherwise give different keys", () => {
+    const table = deepFreeze<IndividualsTable>({
+      columns: ["name", "pop", "other", "pop2", "popcopy"],
+      rows: KEY_ROWS,
+    });
+    const byPop = project({ table, column: "pop" });
+    const byPop2 = project({ table, column: "pop2" });
+    expect(keyOfDiversity(byPop)).not.toBe(keyOfDiversity(byPop2));
+  });
+});
+
+describe("WS5 D3 the rest of the module, its words at their bounds", () => {
+  test("warnings of two populations not in the result name both, in the plural", () => {
+    const p = project({
+      table: tableOf(["i1", "i2", "i3"], ["A", "C", "D"]),
+      individuals: ["i1"],
+    });
+    const r = result({ pops: ["A"], numIndividuals: [20], numVars: 1152 });
+    expect(diversity.warnings(r, p)).toEqual([
+      {
+        code: "populationNotInResult",
+        text: "Populations C and D have no individual among the individuals of panel.nei that the filters kept, so they are not in the table.",
+      },
+    ]);
+  });
+
+  test("warnings of exactly three populations too small give their counts", () => {
+    const p = projectOfSizes(["A", "B", "C"], [1, 2, 3]);
+    const r = result({
+      pops: ["A", "B", "C"],
+      numIndividuals: [1, 2, 3],
+      numVarsWithValue: [0, 0, 0],
+      numVars: 1152,
+    });
+    expect(diversity.warnings(r, p)).toEqual([
+      {
+        code: "tooFewIndividuals",
+        text: "Populations A, B and C have fewer than 20 individuals, 1, 2 and 3, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, merge each with another population in the metadata file.",
+      },
+    ]);
+  });
+
+  test("warnings of exactly three populations with a value at fewer variants give their counts and shares", () => {
+    const p = projectOfSizes(["A", "B", "C"], [20, 20, 20]);
+    const r = result({
+      pops: ["A", "B", "C"],
+      numIndividuals: [20, 20, 20],
+      numVarsWithValue: [641, 1100, 576],
+      numVars: 1152,
+    });
+    expect(diversity.warnings(r, p)).toEqual([
+      {
+        code: "variantsWithoutValue",
+        text: "A, B and C have a value at 641, 1,100 and 576 of the 1,152 variants kept (56%, 95% and 50%); at the others fewer than 20 of their individuals have a genotype.",
+      },
+    ]);
+  });
+
+  test("warnings name no individual with no population who is not in the variants file", () => {
+    const p = project({
+      table: tableOf(["i1", "i9"], ["A", null]),
+      individuals: ["i1"],
+    });
+    const r = result({ pops: ["A"], numIndividuals: [20], numVars: 1152 });
+    expect(diversity.warnings(r, p)).toEqual([]);
+  });
+
+  test("diversityCsv quotes a population with a new line", () => {
+    const r = result({ pops: ["a\nb"], numIndividuals: [3], numVars: 10 });
+    expect(diversityCsv(r)).toBe(
+      'population,individuals,expected_heterozygosity_unbiased,observed_heterozygosity,proportion_polymorphic\n"a\nb",3,,,\n',
+    );
+  });
+
+  test("parseOptions refuses a polyThreshold of -0.1 or NaN, and options that are null, without throwing", () => {
+    const expected =
+      "the minimum of individuals, a whole number from 0 to 4,294,967,295, and the frequency below which a variant is polymorphic, a number from 0 to 1, and nothing else";
+    for (const options of [
+      { minNumIndividuals: 20, polyThreshold: -0.1 },
+      { minNumIndividuals: 20, polyThreshold: NaN },
+      null,
+    ]) {
+      expect(diversity.parseOptions(options, 1)).toEqual({
+        ok: false,
+        error: expected,
+      });
+    }
+  });
+
+  test("populationsOf follows a row changed in place in a frozen table whose rows are not frozen", () => {
+    const second: Cell[] = ["i2", "B", "y"];
+    const table: IndividualsTable = Object.freeze({
+      columns: Object.freeze(["name", "pop", "other"]),
+      rows: Object.freeze([["i1", "A", "x"], second]),
+    });
+    const base = project();
+    const individuals = base.individuals;
+    if (individuals?.read.kind !== "read") {
+      throw new Error("the project of the test has an individuals file read");
+    }
+    const p: Project = {
+      ...base,
+      individuals: { ...individuals, read: { ...individuals.read, table } },
+    };
+    expect(populationsOf(p)).toEqual([
+      ["A", ["i1"]],
+      ["B", ["i2"]],
+    ]);
+    second[1] = "A";
+    expect(populationsOf(p)).toEqual([["A", ["i1", "i2"]]]);
+  });
+});
