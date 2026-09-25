@@ -310,13 +310,24 @@ a literal.
   or an infinity is a defect of the analysis's `checkNumbers`, which gives
   `null` for a NaN: `writeProjectFile` throws it, rather than write the
   `null` that `JSON.stringify` would make of it and that would then
-  compare as different.
+  compare as different. Any other number of the file that is not finite
+  is a defect too, and throws: the project holds none
+  (`docs/specs/core/project.md`), so one would be a bug of a command.
+- An analysis `done` while the state has no version of popnei is a
+  defect, and `writeProjectFile` throws it: a result has a key only once
+  the calculation worker has given its version, so the check would have
+  no version of popnei to be saved with.
 
 `projectFileName` gives the name the dialog of Save proposes in its field, which the user can change (`docs/specs/shell.md`, "Saving"): the name of the
 variants file without its extension, `.nei`, `.vcf` or `.vcf.gz`, with
 `.popnei.json`, so `panel_2026.nei` gives `panel_2026.popnei.json`; the
 reference's variants file when none is loaded; or `project.popnei.json`
-when there is neither.
+when there is neither. The extension is removed whatever its case, since
+a file can come from a system that writes it in capitals: `PANEL.NEI`
+gives `PANEL.popnei.json` and `a.vcf.GZ` gives `a.popnei.json`. A name
+that is only an extension, `.nei`, gives `project.popnei.json`, and not a
+name that starts with a dot, which some systems hide. Any other
+extension is kept: `data.bcf` gives `data.bcf.popnei.json`.
 
 ### Opening
 
@@ -516,12 +527,15 @@ import type { AppId, Project, ProjectError, VariantSource } from "./project.ts";
 import type { Result } from "./result.ts";
 ```
 
-The text in the field `format`, and the largest file opened.
+The text in the field `format`, the largest file opened, and the end of
+the name of every project file, which `projectFileName` adds and the
+saving of the entry uses, so that the extension is written in one place.
 `FORMAT_VERSION` stays in `project.ts`, which the commands use too.
 
 ```ts
 export const FORMAT_NAME = "popnei_web project";
 export const MAX_PROJECT_FILE_BYTES = 64 * 1024 * 1024;
+export const PROJECT_FILE_EXTENSION = ".popnei.json";
 ```
 
 The project file of the state of the store, with the definitions of the
@@ -531,7 +545,8 @@ and the check numbers of each; `state.popneiVersion` goes in the header.
 `done` are its definition's `checkNumbers` of the result of its state,
 the definition found by the id of the state, which keeps the store's rule
 that a definition is given only results of its own requests. Throws a
-defect on a check number that is not finite.
+defect on a number that is not finite, and on an analysis `done` while
+`state.popneiVersion` is `null`.
 
 ```ts
 export function writeProjectFile<J, R>(
