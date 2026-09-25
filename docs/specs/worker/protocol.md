@@ -3,7 +3,10 @@
 24 September 2026, approved by the owner on 24 September 2026; built in
 `src/worker/protocol.ts`; revised on 25 September 2026 for the specs of
 stage 2 the owner approved that day, as
-`docs/specs/stage-2-open-points.md`, "Changes to approved files", lists.
+`docs/specs/stage-2-open-points.md`, "Changes to approved files", lists,
+and again that day for the owner's decisions on the metadata file
+(`docs/specs/worker/individuals.md`): `CsvFound` gains `undecodedLine`,
+and `IndividualsFileError` the kinds `variantsFile` and `cutShort`.
 This spec gives the part of `src/worker/protocol.ts` that core
 names: the filters of the variants and of the individuals, the table of
 the individuals file and the types of its columns, a request to a
@@ -187,7 +190,9 @@ the user set it or, where it was `"auto"`, as the reader found it, which
 the screen shows beside the file; which of them were `"auto"` the screen
 knows from the options of the source. `"utf-16"` is found only from the
 mark at the start of a file, and so cannot be set
-(`docs/specs/worker/individuals.md`, "The bytes and the encoding").
+(`docs/specs/worker/individuals.md`, "The bytes and the encoding"). The
+read also says where the first character that could not be decoded is,
+shown as �, for the warning of the screen.
 
 ```ts
 export interface CsvOptions {
@@ -200,6 +205,7 @@ export interface CsvFound {
   encoding: "utf-8" | "windows-1252" | "utf-16";
   separator: "," | ";" | "\t";
   decimal: "." | ",";
+  undecodedLine: number | null;   // the line of the first U+FFFD, from 1; null for none
 }
 ```
 
@@ -223,7 +229,9 @@ export type IndividualsFileError =
       separator: "," | ";" | "\t" }
   | { kind: "tooLarge"; size: number; max: number }    // in bytes
   | { kind: "unreadable"; message: string }            // the browser's, for the console
-  | { kind: "notText" };                               // not a text file
+  | { kind: "notText" }                                // not a text file
+  | { kind: "variantsFile" }                           // a VCF picked by mistake
+  | { kind: "cutShort" };                              // UTF-16 that ends in the middle of a character
 ```
 
 A request to a worker, as `.claude/skills/coding/worker.md` gives it. `id`
