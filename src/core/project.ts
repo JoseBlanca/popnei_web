@@ -21,9 +21,11 @@ import type {
   IndividualFilterKind,
   IndividualsFileError,
   IndividualsTable,
+  LoadFormat,
   RunError,
   VariantFilter,
   VariantFilterKind,
+  VcfReadOptions,
 } from "../worker/protocol.ts";
 
 /** The two applications, population genetics and association. */
@@ -69,13 +71,10 @@ export interface VariantSource {
   /** The size of the file in bytes; in no key. */
   readonly size: number;
   /** The format of the file. */
-  readonly format: "vcf" | "nei";
+  readonly format: LoadFormat["format"];
   /** How a VCF is read, its ploidy a whole number from 1 to 255; `null`
       for a `.nei`. */
-  readonly readOptions: {
-    readonly ploidy: number;
-    readonly onlyPassed: boolean;
-  } | null;
+  readonly readOptions: VcfReadOptions | null;
   /** What the calculation worker read of the file. */
   readonly read: SourceRead;
 }

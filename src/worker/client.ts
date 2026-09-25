@@ -17,17 +17,17 @@ import {
   parseFromRunner,
   type FromFilesRunner,
   type FromRunner,
+  type IndividualsFileRead,
   type ToFilesRunner,
   type ToRunner,
 } from "./messages.ts";
 import type {
-  ColumnType,
-  CsvFound,
   CsvOptions,
   IndividualsFileError,
-  IndividualsTable,
   Job,
   JobResult,
+  LoadFormat,
+  Opened,
   Outcome,
   Progress,
   Run,
@@ -56,14 +56,9 @@ export interface Client {
   /** Opens the variants file of a load on the calculation worker. An
       `openVariants` of a load id it knows with other read options is a
       defect, thrown. */
-  openVariants(load: {
-    readonly fileId: string;
-    readonly format: "vcf" | "nei";
-    readonly readOptions: {
-      readonly ploidy: number;
-      readonly onlyPassed: boolean;
-    } | null;
-  }): Read<VariantsOpened>;
+  openVariants(
+    load: { readonly fileId: string } & LoadFormat,
+  ): Read<VariantsOpened>;
 
   /** Reads the individuals file of a load on the light worker. */
   readIndividuals(fileId: string, csv: CsvOptions): Read<IndividualsAnswer>;
@@ -84,13 +79,7 @@ export interface Read<A> {
 /** The answer of a read of the variants file. */
 export type VariantsOpened =
   /** popnei opened the file. */
-  | {
-      readonly kind: "opened";
-      /** The individuals of the file, in its order. */
-      readonly individuals: readonly string[];
-      /** The ploidy popnei opened it with. */
-      readonly ploidy: number;
-    }
+  | ({ readonly kind: "opened" } & Opened)
   /** The read failed. */
   | {
       readonly kind: "failed";
@@ -103,15 +92,7 @@ export type VariantsOpened =
 /** The answer of a read of the individuals file. */
 export type IndividualsAnswer =
   /** The reader read the file. */
-  | {
-      readonly kind: "read";
-      /** The table. */
-      readonly table: IndividualsTable;
-      /** The type of each column. */
-      readonly columns: readonly ColumnType[];
-      /** The three options of the CSV the read used. */
-      readonly found: CsvFound;
-    }
+  | Extract<IndividualsFileRead, { kind: "read" }>
   /** The reader refused the file. */
   | {
       readonly kind: "refused";
@@ -141,7 +122,7 @@ export function createClient(config: {
 }): Client {
   let lastId = 0;
   const files = new Map<string, File>();
-  const loadOptions = new Map<string, LoadOptions>();
+  const loadOptions = new Map<string, LoadFormat>();
   /** The loads an `open` ended `opened` for at least once. */
   const openedLoads = new Set<string>();
   /** The loads whose read, their first `open`, ended with no `opened`. */
@@ -322,8 +303,7 @@ export function createClient(config: {
       id,
       fileId: load,
       file,
-      format: options.format,
-      readOptions: options.readOptions,
+      ...options,
     });
   }
 
@@ -789,12 +769,7 @@ export function createClient(config: {
         const read = message.read;
         switch (read.kind) {
           case "read":
-            finishIndividuals(running, {
-              kind: "read",
-              table: read.table,
-              columns: read.columns,
-              found: read.found,
-            });
+            finishIndividuals(running, read);
             break;
           case "failed":
             finishIndividuals(running, { kind: "refused", error: read.error });
@@ -891,10 +866,7 @@ export function createClient(config: {
       if (!files.has(load.fileId)) {
         finishRead(request, noFile(load.fileId));
       } else {
-        loadOptions.set(load.fileId, {
-          format: load.format,
-          readOptions: load.readOptions,
-        });
+        loadOptions.set(load.fileId, loadFormatOf(load));
         enqueueCalculation(request);
       }
       return {
@@ -968,13 +940,15 @@ export function createClient(config: {
 /** How many failures in a row with no answer between give a worker up. */
 const MAX_FAILURES = 2;
 
-/** The format and the read options of the last `openVariants` of a load. */
-interface LoadOptions {
-  readonly format: "vcf" | "nei";
-  readonly readOptions: {
-    readonly ploidy: number;
-    readonly onlyPassed: boolean;
-  } | null;
+/** The format and the read options of the last `openVariants` of a load,
+    without its load id. */
+function loadFormatOf(load: LoadFormat): LoadFormat {
+  switch (load.format) {
+    case "vcf":
+      return { format: "vcf", readOptions: load.readOptions };
+    case "nei":
+      return { format: "nei", readOptions: null };
+  }
 }
 
 /** Where a worker is in its life: made and waiting for its `ready`, ready,
@@ -1257,7 +1231,7 @@ function finishIndividuals(
   request.answer.settle(answer);
 }
 
-function sameOptions(a: LoadOptions, b: LoadOptions): boolean {
+function sameOptions(a: LoadFormat, b: LoadFormat): boolean {
   if (a.format !== b.format) {
     return false;
   }

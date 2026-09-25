@@ -96,12 +96,15 @@ export type ColumnType =
   /** Categories, the populations among them. */
   | { readonly kind: "categorical" };
 
+/** The character between the cells of a row of a CSV or TSV. */
+export type Separator = "," | ";" | "\t";
+
 /** How a CSV or TSV is read; `"auto"` lets the reader find the option. */
 export interface CsvOptions {
   /** The encoding of the text. */
   readonly encoding: "auto" | "utf-8" | "windows-1252";
   /** The character between the cells of a row. */
-  readonly separator: "auto" | "," | ";" | "\t";
+  readonly separator: "auto" | Separator;
   /** The decimal mark of the numbers. */
   readonly decimal: "auto" | "." | ",";
 }
@@ -115,7 +118,7 @@ export interface CsvFound {
       of the file, and so never set. */
   readonly encoding: "utf-8" | "windows-1252" | "utf-16";
   /** The character between the cells of a row. */
-  readonly separator: "," | ";" | "\t";
+  readonly separator: Separator;
   /** The decimal mark of the numbers. */
   readonly decimal: "." | ",";
 }
@@ -140,7 +143,7 @@ export type IndividualsFileError =
       readonly line: number;
       readonly expected: number;
       readonly found: number;
-      readonly separator: "," | ";" | "\t";
+      readonly separator: Separator;
     }
   /** The reader of xlsx, the files wasm, refused the file, with its
       message. */
@@ -156,7 +159,7 @@ export type IndividualsFileError =
   | {
       readonly kind: "unclosedQuote";
       readonly line: number;
-      readonly separator: "," | ";" | "\t";
+      readonly separator: Separator;
     }
   /** A file of `size` bytes, more than the `max` the individuals file
       can have; its bytes are never read. */
@@ -249,6 +252,15 @@ export interface VcfReadOptions {
 export type LoadFormat =
   | { readonly format: "vcf"; readonly readOptions: VcfReadOptions }
   | { readonly format: "nei"; readonly readOptions: null };
+
+/** What popnei gives once a variants file is open, with no pass over its
+    variants. */
+export interface Opened {
+  /** The individuals of the file, in its order. */
+  readonly individuals: readonly string[];
+  /** The ploidy popnei opened the file with. */
+  readonly ploidy: number;
+}
 
 /** The populations, as pairs `[population, individuals]` in the order of
     the file; the names are the user's, and never the names of fields. */

@@ -26,6 +26,9 @@ import type {
   IndividualsTable,
   Job,
   JobResult,
+  LoadFormat,
+  Opened,
+  Separator,
   VariantFilter,
 } from "./protocol.ts";
 
@@ -39,7 +42,7 @@ export const PROTOCOL_VERSION = 1;
 /** A request of the page to the calculation worker. */
 export type ToRunner =
   /** Open the variants file of a load; the worker's first request. */
-  | {
+  | ({
       /** Which request this is. */
       readonly kind: "open";
       /** The number of the request, counted up from 1 for the page. */
@@ -48,18 +51,7 @@ export type ToRunner =
       readonly fileId: string;
       /** The file the user picked. */
       readonly file: File;
-      /** How popnei reads it, `openVcf` or `openVars`. */
-      readonly format: "vcf" | "nei";
-      /** The read options of a VCF, the two of popnei's `openVcf`; null
-          for a `.nei` file, which has none. */
-      readonly readOptions: {
-        /** The ploidy popnei takes as given. */
-        readonly ploidy: number;
-        /** Whether only the variants that passed the VCF's filters are
-            kept. */
-        readonly onlyPassed: boolean;
-      } | null;
-    }
+    } & LoadFormat)
   /** Calculate the result of an analysis. */
   | {
       /** Which request this is. */
@@ -84,16 +76,12 @@ export type FromRunner =
       readonly popneiVersion: string;
     }
   /** The answer of an `open`: the variants file is open. */
-  | {
+  | ({
       /** Which message this is. */
       readonly kind: "opened";
       /** The id of the `open`. */
       readonly id: number;
-      /** The individuals of the file, in its order. */
-      readonly individuals: readonly string[];
-      /** The ploidy popnei opened the file with. */
-      readonly ploidy: number;
-    }
+    } & Opened)
   /** The answer of a `run`: its result. */
   | {
       /** Which message this is. */
@@ -367,21 +355,20 @@ export function parseToRunner(data: unknown): Result<ToRunner, MessageError> {
       if (!format.ok) {
         return format;
       }
-      const readOptions = checkReadOptions(
+      const load = checkLoadFormat(
+        format.value,
         ownField(record, "readOptions"),
         inner(place, "readOptions"),
-        format.value,
       );
-      if (!readOptions.ok) {
-        return readOptions;
+      if (!load.ok) {
+        return load;
       }
       return accepted({
         kind,
         id: id.value,
         fileId: fileId.value,
         file: file.value,
-        format: format.value,
-        readOptions: readOptions.value,
+        ...load.value,
       });
     }
     case "run": {
@@ -714,11 +701,8 @@ interface Place {
 /** A check of one value of a message, at its place. */
 type Check<T> = (value: unknown, place: Place) => Checked<T>;
 
-/** The type of the read options of an `open`. */
-type ReadOptions = Extract<ToRunner, { kind: "open" }>["readOptions"];
-
 /** The formats of an `open`. */
-type Format = Extract<ToRunner, { kind: "open" }>["format"];
+type Format = LoadFormat["format"];
 
 // The kinds of each side, and the values of each field of text, tied to
 // the types so that a new one is not missed.
@@ -785,7 +769,7 @@ const FILE_ERROR_KINDS: Readonly<Record<IndividualsFileError["kind"], true>> = {
   unreadable: true,
   notText: true,
 };
-const SEPARATORS: Readonly<Record<CsvFound["separator"], true>> = {
+const SEPARATORS: Readonly<Record<Separator, true>> = {
   ",": true,
   ";": true,
   "\t": true,
@@ -855,17 +839,17 @@ function checkWorkerStop(
   return accepted({ kind, message: message.value });
 }
 
-/** The read options of an `open`: null for a `.nei` file, the two options
-    of `openVcf` for a VCF. */
-function checkReadOptions(
+/** The format of an `open` with its read options: null for a `.nei`
+    file, the two options of `openVcf` for a VCF. */
+function checkLoadFormat(
+  format: Format,
   value: unknown,
   place: Place,
-  format: Format,
-): Checked<ReadOptions> {
+): Checked<LoadFormat> {
   switch (format) {
     case "nei":
       return value === null
-        ? accepted(null)
+        ? accepted({ format, readOptions: null })
         : wrongType(
             place,
             "null, since a .nei file has no read options",
@@ -889,7 +873,10 @@ function checkReadOptions(
       if (!onlyPassed.ok) {
         return onlyPassed;
       }
-      return accepted({ ploidy: ploidy.value, onlyPassed: onlyPassed.value });
+      return accepted({
+        format,
+        readOptions: { ploidy: ploidy.value, onlyPassed: onlyPassed.value },
+      });
     }
   }
 }
