@@ -2,8 +2,9 @@
  * A table of results that is only read: a plain HTML table, with our look
  * (docs/specs/analyses/diversity.md, "Accessibility"). It is not React
  * Aria's `Table`, which a table of a few rows, neither sorted nor
- * selected, does not need, and which took 25.1 KB gzipped of the page's
- * first script (docs/technology.md, "React Aria Components"). Its caption
+ * selected, does not need, and whose removal took 14.19 KB gzipped off
+ * the page's first script (docs/technology.md, "React Aria Components").
+ * Its caption
  * is shown above it and names it, by `aria-labelledby`; the cell of one
  * column is the header of its row, so that a screen reader reads a cell
  * with its row and its column, "p2, Observed heterozygosity, 0.3512". It
