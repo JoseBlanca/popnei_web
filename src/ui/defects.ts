@@ -3,7 +3,8 @@
  * the error bar at the top of the page reads (docs/specs/entry.md, "The
  * errors nothing else shows"; docs/specs/shell.md, "The error bar"). The
  * entry gives it what the window's `error` and `unhandledrejection`
- * events carry, and what React's `onUncaughtError` gives. A small store of
+ * events carry, and what React's `onUncaughtError` and `onCaughtError`
+ * give, the second for an error the boundary of a step caught. A small store of
  * its own, which the bar reads with `useSyncExternalStore`, as the screens
  * read the store of core.
  */
@@ -27,8 +28,9 @@ export interface DefectsState {
 }
 
 /** Where an error came from: the window's `error` event, its
-    `unhandledrejection` event, or React drawing the shell. */
-export type DefectOrigin = "event" | "rejection" | "drawing";
+    `unhandledrejection` event, React drawing the shell outside every
+    boundary, or React drawing a step, whose error boundary caught it. */
+export type DefectOrigin = "event" | "rejection" | "drawing" | "boundary";
 
 /** The log of the errors, made once by the entry of the page. */
 export interface Defects {
@@ -61,6 +63,8 @@ const ORIGIN_TEXT: Readonly<Record<DefectOrigin, string>> = {
   rejection:
     "a promise rejected with nothing to handle it, through the window's unhandledrejection event",
   drawing: "thrown while React drew the application, through onUncaughtError",
+  boundary:
+    "thrown while React drew a step, caught by the error boundary of a step, through onCaughtError",
 };
 
 const EMPTY: DefectsState = Object.freeze({ first: null, more: 0 });

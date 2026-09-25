@@ -180,7 +180,7 @@ function startApplication(
     // What the boundary of a step caught: the step shows its heading
     // alone, and the bar says what happened.
     onCaughtError: (error, errorInfo) => {
-      defects.report(error, "drawing", errorInfo.componentStack ?? null);
+      defects.report(error, "boundary", errorInfo.componentStack ?? null);
       console.error(error, errorInfo.componentStack);
     },
   });

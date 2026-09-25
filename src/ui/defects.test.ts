@@ -58,6 +58,16 @@ describe("WS7 D1 createDefects", () => {
     expect(details).toContain("the window's unhandledrejection event");
     expect(details).toContain("while drawing");
     expect(details).toContain("at Shell");
+    expect(details).toContain("through onUncaughtError");
+  });
+
+  test("an error a boundary caught says it came through onCaughtError", () => {
+    const defects = createDefects();
+    defects.report(new Error("in a step"), "boundary", "\n    at VariantsStep");
+    const details = defects.details();
+    expect(details).toContain("caught by the error boundary of a step");
+    expect(details).toContain("through onCaughtError");
+    expect(details).not.toContain("onUncaughtError");
   });
 
   test("the state is the same object until an error or a dismiss, and each change calls the listeners", () => {
