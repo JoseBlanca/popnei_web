@@ -278,8 +278,10 @@ chosen to.
   file button, which is in every state. A warning or an error sits in the order of the text
   beside what it is about, and is text, "Warning:", as well as its colour
   and its icon (WCAG 2.2, success criterion 1.4.1).
-- The drop zone is a region labelled "Variants file", and the button in
-  it is the way to pick without dragging (2.1.1).
+- The drop zone is in a region labelled "Variants file", the section of
+  the file, with that heading, which holds the zone and the message of a
+  file not loaded; the button in the zone is the way to pick without
+  dragging (2.1.1).
 - The messages of a file not loaded are announced when they appear, through the function the shell gives the
   screens (`docs/specs/shell.md`, "The status region"), since the focus stays
   on the button and a screen reader would not read them.
