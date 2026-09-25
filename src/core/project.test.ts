@@ -34,6 +34,7 @@ import {
   setIndividualFilter,
   setVariantFilter,
   shown,
+  variantsStepNeeds,
 } from "./project.ts";
 import type {
   AppId,
@@ -3377,6 +3378,86 @@ describe("WS1 D3 the additions to project.ts", () => {
     ).toBe(
       "panel.nei could not be read; it may have changed on the disk since it was picked. Load it again in the Variants step.",
     );
+  });
+
+  describe("variantsStepNeeds, the words of the Variants step", () => {
+    test("no variants file, and a file read, need nothing there", () => {
+      expect(variantsStepNeeds(deepFreeze(emptyProject("popgen")))).toBeNull();
+      expect(variantsStepNeeds(sampleProject())).toBeNull();
+      // A list of individuals that names the wrong ones is not a reason of
+      // the file.
+      expect(
+        variantsStepNeeds(withLists([{ kind: "keep", individuals: [] }])),
+      ).toBeNull();
+    });
+
+    test("the variants file being read", () => {
+      expect(variantsStepNeeds(pendingProject())).toBe("Reading panel.vcf.");
+    });
+
+    test("popnei refused the file: its message, and choose another file", () => {
+      expect(
+        variantsStepNeeds(
+          withVariantsRead({
+            kind: "failed",
+            error: { kind: "popnei", message: "the file has no header line." },
+          }),
+        ),
+      ).toBe(
+        "popnei could not read panel.nei: the file has no header line. Choose another file.",
+      );
+    });
+
+    test.each([
+      [
+        { kind: "workerFailed", message: "out of memory" },
+        "the calculation stopped unexpectedly. Choose it again.",
+      ],
+      [
+        { kind: "defect", message: "a message that did not validate" },
+        "the calculation stopped unexpectedly. Choose it again.",
+      ],
+      [
+        { kind: "couldNotStart", reason: "no ready message, twice" },
+        "the application could not start its calculations. Reload the page and choose it again.",
+      ],
+      [
+        { kind: "protocolMismatch" },
+        "the page is out of date. Reload the page and choose it again.",
+      ],
+    ] as const)(
+      "the worker failed with %o: what happened, and what to do there",
+      (error, words) => {
+        expect(
+          variantsStepNeeds(
+            withVariantsRead({
+              kind: "failed",
+              error: { kind: "worker", error },
+            }),
+          ),
+        ).toBe(`panel.nei could not be read: ${words}`);
+      },
+    );
+
+    test("a variants file the browser can no longer read: choose it again", () => {
+      expect(
+        variantsStepNeeds(
+          withVariantsRead({
+            kind: "failed",
+            error: {
+              kind: "worker",
+              error: {
+                kind: "reopenFailed",
+                name: "panel.nei",
+                message: "the browser did not give popnei the bytes",
+              },
+            },
+          }),
+        ),
+      ).toBe(
+        "panel.nei could not be read; it may have changed on the disk since it was picked. Choose it again.",
+      );
+    });
   });
 
   test("a read of the variants file failed with reopenFailed is read back by the validation of a project file", () => {

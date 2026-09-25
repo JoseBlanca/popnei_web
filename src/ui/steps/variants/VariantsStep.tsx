@@ -8,7 +8,11 @@
  */
 import { useId, useRef, useState, useSyncExternalStore } from "react";
 
-import { MAX_PLOIDY, escaped, projectNeeds } from "../../../core/project.ts";
+import {
+  MAX_PLOIDY,
+  escaped,
+  variantsStepNeeds,
+} from "../../../core/project.ts";
 import type { VariantLoad, VariantSource } from "../../../core/project.ts";
 import type {
   VariantFilter,
@@ -36,24 +40,33 @@ import { ReadingTime } from "./ReadingTime.tsx";
 import styles from "./VariantsStep.module.css";
 import { createVcfOptions } from "./vcfOptions.ts";
 import {
+  FOLDER_DROPPED,
   ONLY_PASSED_LABEL,
   PICKER_ENDINGS,
+  PLOIDY_DESCRIPTION,
+  PLOIDY_LABEL,
   SEVERAL_DROPPED,
+  TEXT_DROPPED,
+  THRESHOLD_LABEL,
   formatOfName,
   formatText,
   individualsText,
   notLoadedText,
+  ploidyRefusedText,
   ploidyText,
   readAgainLabel,
   readWithText,
   sizeText,
+  thresholdRefusedText,
   variantsText,
 } from "./words.ts";
 
-/** The line under the ploidy, which the owner asked for on 25 September
-    2026. */
-const PLOIDY_DESCRIPTION =
-  "A VCF does not say its ploidy, so it is given here. If it is wrong, the first analysis stops with a message that names the line and the individual, and the file is read again with the right ploidy.";
+/** What the step says of a drop that is not of one file. */
+const NOT_FILES_WORDS = {
+  folder: FOLDER_DROPPED,
+  text: TEXT_DROPPED,
+  several: SEVERAL_DROPPED,
+} as const;
 
 /** The missing data filter of the project, or `null` when it is off. */
 function missingDataOf(
@@ -72,7 +85,7 @@ export function VariantsStep(): React.JSX.Element {
   const announcer = useAnnouncer();
   const variants = useAppState((s) => s.project.variants);
   const filters = useAppState((s) => s.project.filters);
-  const reason = useAppState((s) => projectNeeds(s.project));
+  const reason = useAppState((s) => variantsStepNeeds(s.project));
 
   // The options the user set and has not applied by a pick or a read
   // again, held by the step while it is drawn (vcfOptions.ts); it shows
@@ -103,11 +116,14 @@ export function VariantsStep(): React.JSX.Element {
   const vcfHeading = useId();
   const filterHeading = useId();
 
+  const announce = (text: string): void => {
+    announcer.announce(text);
+  };
   const refuse = (text: string): void => {
     setMessage(text);
     // The focus stays on the button, so a screen reader would not read
     // the message by itself.
-    announcer.announce(text);
+    announce(text);
   };
 
   const onFiles = (picked: readonly File[]): void => {
@@ -186,6 +202,9 @@ export function VariantsStep(): React.JSX.Element {
             }
             accept={PICKER_ENDINGS}
             onFiles={onFiles}
+            onNotFiles={(dropped) => {
+              refuse(NOT_FILES_WORDS[dropped]);
+            }}
             buttonRef={fileButton}
           >
             {variants === null ? (
@@ -207,12 +226,14 @@ export function VariantsStep(): React.JSX.Element {
             How a VCF is read
           </h2>
           <NumberField
-            label="Ploidy of the VCF"
+            label={PLOIDY_LABEL}
             value={options.ploidy}
             minValue={1}
             maxValue={MAX_PLOIDY}
             step={1}
             description={PLOIDY_DESCRIPTION}
+            refusedText={ploidyRefusedText}
+            onRefused={announce}
             onCommitReady={(commit) => {
               commitPloidy.current = commit;
             }}
@@ -251,11 +272,13 @@ export function VariantsStep(): React.JSX.Element {
         />
         {missingData !== null && (
           <NumberField
-            label="Maximum proportion of missing genotypes"
+            label={THRESHOLD_LABEL}
             value={missingData.maxAllowedMissingRate}
             minValue={0}
             maxValue={1}
             step={0.01}
+            refusedText={thresholdRefusedText}
+            onRefused={announce}
             onChange={(maxAllowedMissingRate) => {
               send(thresholdCommand(maxAllowedMissingRate));
             }}
@@ -270,7 +293,8 @@ export function VariantsStep(): React.JSX.Element {
 interface FileCardProps {
   /** The variants file of the project. */
   readonly variants: VariantSource;
-  /** The reason `projectNeeds` gives, for a file being read or refused. */
+  /** The reason `variantsStepNeeds` gives, for a file being read or not
+      read. */
   readonly reason: string | null;
 }
 
@@ -313,7 +337,9 @@ function FileRead({
       return (
         <ul className={classOf(styles, "facts")}>
           <li>{individualsText(read.individuals.length)}</li>
-          <li>{ploidyText(read.ploidy)}</li>
+          {/* A VCF's ploidy is the one given, in the line of how it was
+              read, and not one found in the file. */}
+          {variants.readOptions === null && <li>{ploidyText(read.ploidy)}</li>}
           <li>{variantsText(read.numVars)}</li>
           {variants.readOptions !== null && (
             <li>{readWithText(variants.readOptions)}</li>
@@ -326,10 +352,10 @@ function FileRead({
   }
 }
 
-/** The defect of a file being read or refused for which `projectNeeds`
-    gave no reason, which it always gives. */
+/** The defect of a file being read or refused for which
+    `variantsStepNeeds` gave no reason, which it always gives. */
 function noReason(variants: VariantSource): Error {
   return new Error(
-    `popnei_web defect: projectNeeds gave no reason for the variants file ${variants.fileId}, ${variants.read.kind}.`,
+    `popnei_web defect: variantsStepNeeds gave no reason for the variants file ${variants.fileId}, ${variants.read.kind}.`,
   );
 }

@@ -16,7 +16,7 @@ const FIXTURES = join(import.meta.dirname, "fixtures");
 
 /** The words under the ploidy. */
 const PLOIDY_LINE =
-  "A VCF does not say its ploidy, so it is given here. If it is wrong, the first analysis stops with a message that names the line and the individual, and the file is read again with the right ploidy.";
+  "A VCF does not say its ploidy, so it is given here. If it is wrong, the first analysis stops with a message that names the line and the individual; set the right ploidy here and read the file again.";
 
 async function openVariants(page: Page): Promise<void> {
   await page.goto("popgen.html#variants");
@@ -53,6 +53,43 @@ async function pickNamed(
   await (
     await chooser
   ).setFiles({ name, mimeType: "text/plain", buffer: Buffer.from(text) });
+}
+
+/** Drops a folder on the zone. A script cannot put a folder into a
+    DataTransfer, so the item of a file says, when React Aria asks for its
+    entry of the file system, that it is a folder, as the entry of a
+    folder dragged from the desktop does. */
+async function dropFolder(page: Page): Promise<void> {
+  const dataTransfer = await page.evaluateHandle(() => {
+    DataTransferItem.prototype.webkitGetAsEntry = function () {
+      return {
+        isFile: false,
+        isDirectory: true,
+        name: "panel",
+      } as FileSystemEntry;
+    };
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([], "panel"));
+    return transfer;
+  });
+  const target = fileButton(page);
+  for (const type of ["dragenter", "dragover", "drop"]) {
+    await target.dispatchEvent(type, { dataTransfer });
+  }
+}
+
+/** Drops a piece of text on the zone, as a drag of selected text from
+    another window does. */
+async function dropText(page: Page, text: string): Promise<void> {
+  const dataTransfer = await page.evaluateHandle((given) => {
+    const transfer = new DataTransfer();
+    transfer.setData("text/plain", given);
+    return transfer;
+  }, text);
+  const target = fileButton(page);
+  for (const type of ["dragenter", "dragover", "drop"]) {
+    await target.dispatchEvent(type, { dataTransfer });
+  }
 }
 
 /** Drops the files `fixtures` on the zone, as a drag from the desktop
@@ -105,7 +142,7 @@ async function expectNoViolations(
   expect((await makeAxeBuilder().analyze()).violations).toEqual([]);
 }
 
-test("WS7 D3 panel.nei picked with the button shows 200 individuals and ploidy 2, and the focus stays on the button", async ({
+test("WS7 D3 panel.nei picked with the button shows 200 individuals and ploidy 2, the ploidy of the file, and the focus stays on the button", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -148,7 +185,7 @@ test("WS7 D3 a file dropped on the card replaces the one there, and the focus st
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("WS7 D3 panel.vcf.gz shows the line of how it was read", async ({
+test("WS7 D3 panel.vcf.gz shows the line of how it was read, and no line of its own for the ploidy", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -163,6 +200,7 @@ test("WS7 D3 panel.vcf.gz shows the line of how it was read", async ({
       "Read with ploidy 2, only the variants with PASS or . in the FILTER column",
     ),
   ).toBeVisible();
+  await expect(card.getByText(/^Ploidy /)).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
 });
 
@@ -188,15 +226,17 @@ test("WS7 D3 tetraploid.vcf.gz read with ploidy 2 shows 12 individuals and ploid
   makeAxeBuilder,
 }) => {
   await openVariants(page);
-  await expect(page.getByLabel("Ploidy of the VCF")).toHaveValue("2");
+  await expect(
+    page.getByLabel("Ploidy of the VCF, from 1 to 255", { exact: true }),
+  ).toHaveValue("2");
   await expect(page.getByText(PLOIDY_LINE)).toBeVisible();
 
   await pick(page, "tetraploid.vcf.gz");
 
   const card = zone(page);
   await expect(card.getByText("12 individuals")).toBeVisible();
-  await expect(card.getByText("Ploidy 2", { exact: true })).toBeVisible();
   await expect(card.getByText(/^Read with ploidy 2,/)).toBeVisible();
+  await expect(card.getByText(/^Ploidy /)).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: /^Read .* again/ }),
   ).toHaveCount(0);
@@ -209,7 +249,7 @@ test("WS7 D3 the ploidy set to 4 and the VCF read again show ploidy 4, and the f
 }) => {
   await openVariants(page);
   await pick(page, "tetraploid.vcf.gz");
-  await expect(zone(page).getByText("Ploidy 2", { exact: true })).toBeVisible();
+  await expect(zone(page).getByText(/^Read with ploidy 2,/)).toBeVisible();
 
   const ploidy = page.getByLabel("Ploidy of the VCF");
   await ploidy.fill("4");
@@ -230,7 +270,6 @@ test("WS7 D3 the ploidy set to 4 and the VCF read again show ploidy 4, and the f
   await page.keyboard.press("Enter");
 
   const card = zone(page);
-  await expect(card.getByText("Ploidy 4", { exact: true })).toBeVisible();
   await expect(card.getByText("12 individuals")).toBeVisible();
   await expect(
     card.getByText(
@@ -252,7 +291,7 @@ test("WS7 D3 bad.vcf shows the reason popnei refused it", async ({
 
   await expect(
     zone(page).getByText(
-      "popnei could not read bad.vcf: the source is not a VCF: it starts with `This is a line o`. Load a variants file in the Variants step.",
+      "popnei could not read bad.vcf: the source is not a VCF: it starts with `This is a line o`. Choose another file.",
     ),
   ).toBeVisible();
   await expect(fileButton(page)).toHaveText("Replace bad.vcf…");
@@ -300,7 +339,7 @@ test("WS7 D3 several files dropped at once load none", async ({
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("WS7 D3 0.125 typed in the threshold is held as 0.13, a half rounded up", async ({
+test("WS7 D3 the threshold takes a number of two decimals from 0 to 1, and refuses 10 and 0.125 with a line that says what it keeps", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -309,42 +348,65 @@ test("WS7 D3 0.125 typed in the threshold is held as 0.13, a half rounded up", a
     name: "Filter the variants by missing data",
   });
   await expect(filter).toBeChecked();
-  const threshold = page.getByLabel("Maximum proportion of missing genotypes");
+  const threshold = page.getByLabel(
+    "Maximum proportion of missing genotypes, from 0 to 1",
+    { exact: true },
+  );
   await expect(threshold).toHaveValue("0.1");
 
   // Two presses of an arrow key, a step each.
   await threshold.press("ArrowUp");
   await threshold.press("ArrowUp");
   await expect(threshold).toHaveValue("0.12");
-
-  await threshold.fill("0.125");
+  await threshold.fill("0.13");
   await threshold.press("Enter");
   await expect(threshold).toHaveValue("0.13");
-  await threshold.fill("0.145");
-  await threshold.press("Enter");
-  await expect(threshold).toHaveValue("0.15");
-  await threshold.fill("0.135");
-  await threshold.press("Enter");
-  await expect(threshold).toHaveValue("0.14");
-  // Rounded once, from what was typed: not to three decimals first.
-  for (const [typed, held] of [
-    ["0.1249", "0.12"],
-    ["0.0049", "0"],
-    ["0.9949", "0.99"],
-    ["0.125", "0.13"],
+
+  // Refused, and not moved to 1 nor rounded to 0.13 or to 0: the field
+  // shows the value it had, and the line says so, as the field's
+  // description and in the status region.
+  for (const [typed, line] of [
+    ["10", "10 is more than 1; the filter keeps 0.13."],
+    ["0.125", "0.125 has more than two decimals; the filter keeps 0.13."],
+    ["0.001", "0.001 has more than two decimals; the filter keeps 0.13."],
+    ["1.001", "1.001 is more than 1; the filter keeps 0.13."],
   ] as const) {
     await threshold.fill(typed);
     await threshold.press("Enter");
-    await expect(threshold).toHaveValue(held);
+    await expect(threshold).toHaveValue("0.13");
+    await expect(page.getByRole("main").getByText(line)).toBeVisible();
+    await expect(threshold).toHaveAccessibleDescription(line);
+    await expect(page.getByRole("status").last()).toHaveText(line);
   }
-  await threshold.fill("0.135");
-  await threshold.press("Enter");
-  await expect(threshold).toHaveValue("0.14");
+  await expectNoViolations(makeAxeBuilder);
+  // One line at a time, the last.
+  await expect(
+    page.getByRole("main").getByText(/the filter keeps/),
+  ).toHaveCount(1);
 
-  // Left empty, it shows again the value it had.
+  // Refused when the field is left with the Tab key too; the next number
+  // taken takes the line away.
+  await threshold.fill("2");
+  await threshold.press("Tab");
+  await expect(
+    page
+      .getByRole("main")
+      .getByText("2 is more than 1; the filter keeps 0.13."),
+  ).toBeVisible();
+  await threshold.fill("0.2");
+  await threshold.press("Enter");
+  await expect(threshold).toHaveValue("0.2");
+  await expect(
+    page.getByRole("main").getByText(/the filter keeps/),
+  ).toHaveCount(0);
+
+  // Left empty, it shows again the value it had, with no line.
   await threshold.fill("");
   await threshold.press("Shift+Tab");
-  await expect(threshold).toHaveValue("0.14");
+  await expect(threshold).toHaveValue("0.2");
+  await expect(
+    page.getByRole("main").getByText(/the filter keeps/),
+  ).toHaveCount(0);
   await expect(filter).toBeFocused();
   await expectNoViolations(makeAxeBuilder);
 
@@ -404,17 +466,116 @@ test("WS7 D3 the keyboard goes through the step in the order of the spec", async
   ).toBeFocused();
 });
 
-test("WS7 D3 the ploidy is kept from 1 to 255: 0 gives 1 and 300 gives 255", async ({
+test("WS7 D3 the ploidy refuses 0, 300 and 2.5 with a line that says it stays", async ({
   page,
+  makeAxeBuilder,
 }) => {
   await openVariants(page);
   const ploidy = page.getByLabel("Ploidy of the VCF");
-  await ploidy.fill("0");
-  await ploidy.press("Enter");
-  await expect(ploidy).toHaveValue("1");
-  await ploidy.fill("300");
+  for (const [typed, line] of [
+    ["0", "0 is less than 1; the ploidy stays 2."],
+    ["300", "300 is more than 255; the ploidy stays 2."],
+    ["2.5", "2.5 is not a whole number; the ploidy stays 2."],
+  ] as const) {
+    await ploidy.fill(typed);
+    await ploidy.press("Enter");
+    await expect(ploidy).toHaveValue("2");
+    await expect(page.getByRole("main").getByText(line)).toBeVisible();
+    await expect(page.getByRole("status").last()).toHaveText(line);
+  }
+  await expectNoViolations(makeAxeBuilder);
+  await ploidy.fill("255");
   await ploidy.press("Enter");
   await expect(ploidy).toHaveValue("255");
+  await expect(
+    page.getByRole("main").getByText(/the ploidy stays/),
+  ).toHaveCount(0);
+
+  // The line names the ploidy kept, so it goes when a new load sets the
+  // ploidy back: after a .nei file, the default.
+  await ploidy.fill("300");
+  await ploidy.press("Enter");
+  await expect(
+    page
+      .getByRole("main")
+      .getByText("300 is more than 255; the ploidy stays 255."),
+  ).toBeVisible();
+  await pick(page, "panel.nei");
+  await expect(ploidy).toHaveValue("2");
+  await expect(
+    page.getByRole("main").getByText(/the ploidy stays/),
+  ).toHaveCount(0);
+});
+
+test("WS7 D3 the button to read a VCF again names both options when both differ", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openVariants(page);
+  await pick(page, "tetraploid.vcf.gz");
+  await expect(zone(page).getByText("12 individuals")).toBeVisible();
+  const ploidy = page.getByLabel("Ploidy of the VCF");
+  await ploidy.fill("4");
+  await ploidy.press("Enter");
+  await uncheckPassed(page);
+
+  await page
+    .getByRole("button", {
+      name: "Read tetraploid.vcf.gz again with ploidy 4 and every variant",
+      exact: true,
+    })
+    .click();
+
+  await expect(
+    zone(page).getByText("Read with ploidy 4, every variant", { exact: true }),
+  ).toBeVisible();
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("WS7 D3 a folder dropped on the zone loads nothing, and the step says what to drop", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openVariants(page);
+  await dropFolder(page);
+
+  const message = "Drop a VCF or a .nei file, not a folder.";
+  await expect(
+    page.getByRole("main").getByText(message, { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("status").last()).toHaveText(message);
+  await expect(fileButton(page)).toHaveText("Choose a variants file…");
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("WS7 D3 the calculations that could not start are told in the words of the step", async ({
+  page,
+}) => {
+  await page.route("**/*.wasm", (route) => route.fulfill({ status: 404 }));
+  await openVariants(page);
+  await pick(page, "panel.nei");
+
+  await expect(
+    zone(page).getByText(
+      "panel.nei could not be read: the application could not start its calculations. Reload the page and choose it again.",
+    ),
+  ).toBeVisible();
+});
+
+test("WS7 D3 a piece of text dropped on the zone loads nothing, and the step says what to drop", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openVariants(page);
+  await dropText(page, "panel.nei");
+
+  const message = "Drop a VCF or a .nei file, not a piece of text.";
+  await expect(
+    page.getByRole("main").getByText(message, { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("status").last()).toHaveText(message);
+  await expect(fileButton(page)).toHaveText("Choose a variants file…");
+  await expectNoViolations(makeAxeBuilder);
 });
 
 test("WS7 D3 a file dropped while a ploidy is still being typed is read with that ploidy", async ({
@@ -428,7 +589,6 @@ test("WS7 D3 a file dropped while a ploidy is still being typed is read with tha
   await drop(page, ["tetraploid.vcf.gz"]);
 
   const card = zone(page);
-  await expect(card.getByText("Ploidy 4", { exact: true })).toBeVisible();
   await expect(card.getByText(/^Read with ploidy 4,/)).toBeVisible();
   await expect(ploidy).toHaveValue("4");
   await expect(
@@ -445,6 +605,13 @@ test("WS7 D3 the zone's own button, which takes a pasted file, is named for it",
     exact: true,
   });
   await expect(paste).toHaveCount(1);
+  // It is the first stop of the Tab key in the step, before the file
+  // button.
+  await page.getByRole("heading", { level: 1, name: "Variants" }).focus();
+  await page.keyboard.press("Tab");
+  await expect(paste).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(fileButton(page)).toBeFocused();
   // Its name is its words once, and every element it is labelled by is
   // in the page: no empty reference.
   await expect(paste).toHaveAccessibleName("Paste a variants file");
@@ -478,13 +645,26 @@ for (const locale of ["en-US", "es-ES"] as const) {
       await threshold.press("Enter");
       await expect(threshold).toHaveValue("0.05");
 
+      // No number, so no line.
+      await expect(
+        page.getByRole("main").getByText(/the filter keeps/),
+      ).toHaveCount(0);
+
       const ploidy = page.getByLabel("Ploidy of the VCF");
       await ploidy.fill("2,5");
       await ploidy.press("Enter");
       await expect(ploidy).toHaveValue("2");
+      await expect(
+        page.getByRole("main").getByText(/the ploidy stays/),
+      ).toHaveCount(0);
       await ploidy.fill("2.5");
       await ploidy.press("Enter");
-      await expect(ploidy).toHaveValue("3");
+      await expect(ploidy).toHaveValue("2");
+      await expect(
+        page
+          .getByRole("main")
+          .getByText("2.5 is not a whole number; the ploidy stays 2."),
+      ).toBeVisible();
     });
   });
 }

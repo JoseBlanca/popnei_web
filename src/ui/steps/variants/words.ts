@@ -9,6 +9,8 @@ import { DEFAULT_ONLY_PASSED, DEFAULT_PLOIDY } from "../../../core/apps.ts";
 import { counted, escaped, grouped } from "../../../core/project.ts";
 import type { Project, VariantSource } from "../../../core/project.ts";
 import type { VcfReadOptions } from "../../../worker/protocol.ts";
+import { numberText } from "../../widgets/committedNumber.ts";
+import type { NumberRefusal } from "../../widgets/committedNumber.ts";
 
 /** The options of a VCF with nothing loaded and no reference. */
 export const DEFAULT_READ_OPTIONS: VcfReadOptions = Object.freeze({
@@ -43,8 +45,68 @@ export function notLoadedText(name: string): string {
   return `${escaped(name)} was not loaded: the Variants step reads a VCF, whose name ends in .vcf, .vcf.gz or .vcf.bgz, or a .nei file. If it is one of them, rename it.`;
 }
 
-/** What the step says when several files are dropped at once. */
+/** What the step says when several files are dropped at once, or
+    several things of which one is not a file. */
 export const SEVERAL_DROPPED = "Drop one variants file at a time.";
+
+/** What the step says when a folder is dropped. */
+export const FOLDER_DROPPED = "Drop a VCF or a .nei file, not a folder.";
+
+/** What the step says when a piece of text is dropped, dragged from
+    another window. */
+export const TEXT_DROPPED = "Drop a VCF or a .nei file, not a piece of text.";
+
+/** The line under the ploidy, which the owner asked for on 25 September
+    2026 and reworded the same day. */
+export const PLOIDY_DESCRIPTION =
+  "A VCF does not say its ploidy, so it is given here. If it is wrong, the first analysis stops with a message that names the line and the individual; set the right ploidy here and read the file again.";
+
+/** The label of the ploidy, with its range. */
+export const PLOIDY_LABEL = "Ploidy of the VCF, from 1 to 255";
+
+/** The label of the threshold of missing data, with its range. */
+export const THRESHOLD_LABEL =
+  "Maximum proportion of missing genotypes, from 0 to 1";
+
+/** The number of decimals in words, as a refusal says it. */
+const DECIMAL_WORDS = ["no", "one", "two", "three"] as const;
+
+/** Why a number was refused: "10 is more than 1", "0.125 has more than
+    two decimals", "2.5 is not a whole number". */
+function refusedWhy(refusal: NumberRefusal): string {
+  const typed = numberText(refusal.typed);
+  switch (refusal.kind) {
+    case "aboveMax":
+      return `${typed} is more than ${numberText(refusal.maxValue)}`;
+    case "belowMin":
+      return `${typed} is less than ${numberText(refusal.minValue)}`;
+    case "offStep": {
+      if (refusal.decimals === 0) return `${typed} is not a whole number`;
+      const count = DECIMAL_WORDS[refusal.decimals] ?? String(refusal.decimals);
+      const noun = refusal.decimals === 1 ? "decimal" : "decimals";
+      return `${typed} has more than ${count} ${noun}`;
+    }
+  }
+}
+
+/** The line under the threshold for a number it refused, with the
+    threshold kept: "10 is more than 1; the filter keeps 0.1.", as the
+    owner decided on 25 September 2026. */
+export function thresholdRefusedText(
+  refusal: NumberRefusal,
+  kept: number,
+): string {
+  return `${refusedWhy(refusal)}; the filter keeps ${numberText(kept)}.`;
+}
+
+/** The line under the ploidy for a number it refused, with the ploidy
+    kept: "300 is more than 255; the ploidy stays 2." */
+export function ploidyRefusedText(
+  refusal: NumberRefusal,
+  kept: number,
+): string {
+  return `${refusedWhy(refusal)}; the ploidy stays ${numberText(kept)}.`;
+}
 
 /** The format of a loaded file, as the card names it. */
 export function formatText(format: VariantSource["format"]): string {
@@ -77,7 +139,7 @@ export function individualsText(numIndividuals: number): string {
   return counted(numIndividuals, "individual");
 }
 
-/** The line of the ploidy of a read file: "Ploidy 2". */
+/** The line of the ploidy of a read `.nei` file: "Ploidy 2". */
 export function ploidyText(ploidy: number): string {
   return `Ploidy ${String(ploidy)}`;
 }
@@ -110,22 +172,24 @@ export const ONLY_PASSED_LABEL =
 /**
  * The label of the button that reads the loaded VCF `name` again with the
  * options `chosen`, or `null` when they are those it was read with,
- * `loaded`: the ploidy when it differs, otherwise the choice of the
- * passed variants.
+ * `loaded`: every option that differs, the ploidy first, as the owner
+ * decided on 25 September 2026, "Read panel.vcf.gz again with ploidy 4
+ * and every variant".
  */
 export function readAgainLabel(
   name: string,
   loaded: VcfReadOptions,
   chosen: VcfReadOptions,
 ): string | null {
-  const again = `Read ${escaped(name)} again with`;
+  const changes: string[] = [];
   if (chosen.ploidy !== loaded.ploidy) {
-    return `${again} ploidy ${String(chosen.ploidy)}`;
+    changes.push(`ploidy ${String(chosen.ploidy)}`);
   }
   if (chosen.onlyPassed !== loaded.onlyPassed) {
-    return `${again} ${passedWords(chosen.onlyPassed)}`;
+    changes.push(passedWords(chosen.onlyPassed));
   }
-  return null;
+  if (changes.length === 0) return null;
+  return `Read ${escaped(name)} again with ${changes.join(" and ")}`;
 }
 
 /**

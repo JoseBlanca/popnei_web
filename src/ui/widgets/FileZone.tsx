@@ -17,6 +17,8 @@ import type { DropItem } from "react-aria-components";
 
 import { classOf } from "../classOf.ts";
 import { Button } from "./Button.tsx";
+import { droppedOf } from "./dropped.ts";
+import type { Dropped } from "./dropped.ts";
 import styles from "./FileZone.module.css";
 
 /** What a zone to load a file is drawn with. */
@@ -31,6 +33,13 @@ export interface FileZoneProps {
   /** Called with the files picked, dropped or pasted, of which there may
       be several when they are dropped. */
   readonly onFiles: (files: readonly File[]) => void;
+  /** Called, when it is given, for a drop that is not of files alone: a
+      folder, a piece of text, or several things one of which is not a
+      file; nothing is then given to `onFiles`. Without it, the files of
+      such a drop are given to `onFiles`, and the rest is left. */
+  readonly onNotFiles?: (
+    dropped: Exclude<Dropped, "files" | "nothing">,
+  ) => void;
   /** The element of the button, for a screen that moves the focus to it. */
   readonly buttonRef?: React.Ref<HTMLButtonElement>;
   /** What the zone shows of the file, before the button. */
@@ -45,11 +54,17 @@ export function FileZone({
   buttonLabel,
   accept,
   onFiles,
+  onNotFiles,
   buttonRef,
   children,
   actions,
 }: FileZoneProps): React.JSX.Element {
   const onDrop = (event: { readonly items: readonly DropItem[] }): void => {
+    const dropped = droppedOf(event.items.map((item) => item.kind));
+    if (onNotFiles !== undefined && dropped !== "files") {
+      if (dropped !== "nothing") onNotFiles(dropped);
+      return;
+    }
     const reads: Promise<File>[] = [];
     for (const item of event.items) {
       if (item.kind === "file") reads.push(item.getFile());

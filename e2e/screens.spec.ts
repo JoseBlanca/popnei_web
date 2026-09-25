@@ -443,6 +443,73 @@ for (const theme of ["light", "dark"] as const) {
       await save(page, `popgen-variants-no-longer-read-${theme}`);
     });
 
+    test("the Variants step, a VCF to read again with both options", async ({
+      page,
+    }) => {
+      await pickVariants(page, "tetraploid.vcf.gz");
+      await expect(page.getByText("12 individuals")).toBeVisible();
+      const ploidy = page.getByLabel("Ploidy of the VCF");
+      await ploidy.fill("4");
+      await ploidy.press("Enter");
+      await page
+        .getByText("Only the variants with PASS or . in the FILTER column", {
+          exact: true,
+        })
+        .click();
+      await expect(
+        page.getByRole("button", {
+          name: "Read tetraploid.vcf.gz again with ploidy 4 and every variant",
+        }),
+      ).toBeVisible();
+      await save(page, `popgen-variants-read-again-both-${theme}`);
+    });
+
+    test("the Variants step, a threshold refused", async ({ page }) => {
+      const threshold = page.getByLabel(
+        "Maximum proportion of missing genotypes",
+      );
+      await threshold.fill("10");
+      await threshold.press("Enter");
+      await expect(
+        page
+          .getByRole("main")
+          .getByText("10 is more than 1; the filter keeps 0.1."),
+      ).toBeVisible();
+      await save(page, `popgen-variants-threshold-refused-${theme}`);
+    });
+
+    test("the Variants step, a ploidy refused", async ({ page }) => {
+      const ploidy = page.getByLabel("Ploidy of the VCF");
+      await ploidy.fill("2.5");
+      await ploidy.press("Tab");
+      await expect(
+        page
+          .getByRole("main")
+          .getByText("2.5 is not a whole number; the ploidy stays 2."),
+      ).toBeVisible();
+      await save(page, `popgen-variants-ploidy-refused-${theme}`);
+    });
+
+    test("the Variants step, a piece of text dropped", async ({ page }) => {
+      const dataTransfer = await page.evaluateHandle(() => {
+        const transfer = new DataTransfer();
+        transfer.setData("text/plain", "panel.nei");
+        return transfer;
+      });
+      const target = page
+        .getByRole("region", { name: "Variants file" })
+        .getByRole("button", { name: /^(Choose|Replace) .*…$/ });
+      for (const type of ["dragenter", "dragover", "drop"]) {
+        await target.dispatchEvent(type, { dataTransfer });
+      }
+      await expect(
+        page
+          .getByRole("main")
+          .getByText("Drop a VCF or a .nei file, not a piece of text."),
+      ).toBeVisible();
+      await save(page, `popgen-variants-text-dropped-${theme}`);
+    });
+
     test("the Variants step, the missing data filter off", async ({ page }) => {
       // With the mouse, on its words, as a user does.
       await page

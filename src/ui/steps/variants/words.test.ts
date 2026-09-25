@@ -6,10 +6,12 @@ import {
   elapsedText,
   formatOfName,
   notLoadedText,
+  ploidyRefusedText,
   readAgainLabel,
   readWithText,
   sizeText,
   startingOptions,
+  thresholdRefusedText,
   variantsText,
 } from "./words.ts";
 
@@ -47,6 +49,52 @@ describe("the words of the Variants step", () => {
     expect(readWithText({ ploidy: 2, onlyPassed: false })).toBe(
       "Read with ploidy 2, every variant",
     );
+  });
+
+  test("the button to read again names both options when both differ, the ploidy first", () => {
+    expect(
+      readAgainLabel(
+        "tetraploid.vcf.gz",
+        { ploidy: 2, onlyPassed: true },
+        { ploidy: 4, onlyPassed: false },
+      ),
+    ).toBe("Read tetraploid.vcf.gz again with ploidy 4 and every variant");
+    expect(
+      readAgainLabel(
+        "panel.vcf.gz",
+        { ploidy: 4, onlyPassed: false },
+        { ploidy: 2, onlyPassed: true },
+      ),
+    ).toBe(
+      "Read panel.vcf.gz again with ploidy 2 and only the variants with PASS or . in the FILTER column",
+    );
+  });
+
+  test("a number the threshold refused: why, and the threshold kept", () => {
+    expect(
+      thresholdRefusedText({ kind: "aboveMax", typed: 10, maxValue: 1 }, 0.1),
+    ).toBe("10 is more than 1; the filter keeps 0.1.");
+    expect(
+      thresholdRefusedText({ kind: "belowMin", typed: -0.5, minValue: 0 }, 0.1),
+    ).toBe("-0.5 is less than 0; the filter keeps 0.1.");
+    expect(
+      thresholdRefusedText({ kind: "offStep", typed: 0.125, decimals: 2 }, 0.2),
+    ).toBe("0.125 has more than two decimals; the filter keeps 0.2.");
+    expect(
+      thresholdRefusedText({ kind: "offStep", typed: 1e-7, decimals: 2 }, 0.1),
+    ).toBe("0.0000001 has more than two decimals; the filter keeps 0.1.");
+  });
+
+  test("a number the ploidy refused: why, and the ploidy kept", () => {
+    expect(
+      ploidyRefusedText({ kind: "aboveMax", typed: 300, maxValue: 255 }, 2),
+    ).toBe("300 is more than 255; the ploidy stays 2.");
+    expect(
+      ploidyRefusedText({ kind: "belowMin", typed: 0, minValue: 1 }, 4),
+    ).toBe("0 is less than 1; the ploidy stays 4.");
+    expect(
+      ploidyRefusedText({ kind: "offStep", typed: 2.5, decimals: 0 }, 2),
+    ).toBe("2.5 is not a whole number; the ploidy stays 2.");
   });
 
   test("the button to read again names the ploidy when it differs, otherwise the passed variants, and is not there when nothing differs", () => {

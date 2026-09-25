@@ -1193,13 +1193,40 @@ const WHAT_HAPPENED: Readonly<Record<RunError["kind"], string>> = {
 };
 
 /** What follows the name of a variants file the browser can no longer
-    read, as the owner decided on 25 September 2026 (point B of
-    docs/specs/stage-2-open-points.md). */
+    read, before what to do, as the owner decided on 25 September 2026
+    (point B of docs/specs/stage-2-open-points.md). */
 const REOPEN_FAILED =
-  "could not be read; it may have changed on the disk since it was picked. Load it again in the Variants step.";
+  "could not be read; it may have changed on the disk since it was picked.";
 
-/** The end of a reason a new load of the page may fix. */
-const RELOAD = "Reload the page and load it again.";
+/** The ends of the reason of a file that was not read: what the user can
+    do, where the reason is shown. */
+interface ReasonEnds {
+  /** After a refusal of the file's reader. */
+  readonly refused: string;
+  /** After a failure that a new load of the file mends. */
+  readonly again: string;
+  /** After a failure that only a new page mends. */
+  readonly reload: string;
+}
+
+/** The ends of a reason of the variants file beside a Run button, and of
+    the individuals file (the project spec, Open 4). */
+function endsIn(step: "Variants" | "Individuals", refused: string): ReasonEnds {
+  return {
+    refused,
+    again: `Load it again in the ${step} step.`,
+    reload: "Reload the page and load it again.",
+  };
+}
+
+/** The ends of a reason of the variants file in the Variants step, beside
+    its button "Replace panel.nei…", as the owner decided on 25 September
+    2026 (the project spec, "What an analysis needs of every project"). */
+const VARIANTS_STEP_ENDS: ReasonEnds = {
+  refused: "Choose another file.",
+  again: "Choose it again.",
+  reload: "Reload the page and choose it again.",
+};
 
 /** The kinds of failure of a worker that only a new page mends: it could
     not start, or it is of another version than the page. After any other,
@@ -1213,20 +1240,58 @@ const MENDED_BY_RELOAD: ReadonlySet<RunError["kind"]> = new Set([
 
 /** The reason of a file that could not be read because its worker failed
     with `kind`: what happened, and what the user can do, a reload of the
-    page or a new load of the file in its step, `step`. */
+    page or a new load of the file, in the words of `ends`. */
 function workerFailedText(
   fileName: string,
   kind: RunError["kind"],
-  step: "Variants" | "Individuals",
+  ends: ReasonEnds,
 ): string {
-  const next = MENDED_BY_RELOAD.has(kind)
-    ? RELOAD
-    : `Load it again in the ${step} step.`;
+  const next = MENDED_BY_RELOAD.has(kind) ? ends.reload : ends.again;
   return `${fileName} could not be read: ${WHAT_HAPPENED[kind]}. ${next}`;
 }
 
 /** The end of a reason of the variants file. */
 const LOAD_VARIANTS = "Load a variants file in the Variants step.";
+
+/** The ends of a reason of the variants file beside a Run button. */
+const VARIANTS_ENDS = endsIn("Variants", LOAD_VARIANTS);
+
+/** The reason of a variants file being read or not read, with the ends
+    `ends`, or `null` for a file read. */
+function variantsReadNeeds(
+  variants: VariantSource,
+  ends: ReasonEnds,
+): string | null {
+  const fileName = escaped(variants.name);
+  const read = variants.read;
+  switch (read.kind) {
+    case "pending":
+      return `Reading ${fileName}.`;
+    case "failed":
+      if (read.error.kind === "popnei") {
+        return `popnei could not read ${fileName}${saying(read.error.message)}. ${ends.refused}`;
+      }
+      return read.error.error.kind === "reopenFailed"
+        ? `${fileName} ${REOPEN_FAILED} ${ends.again}`
+        : workerFailedText(fileName, read.error.error.kind, ends);
+    case "read":
+      return null;
+  }
+}
+
+/**
+ * The reason of the variants file being read or not read, in the words
+ * the Variants step shows beside its button, or `null` when the project
+ * has no variants file or its file is read (the project spec, "What an
+ * analysis needs of every project"): `projectNeeds` for such a file, with
+ * the ends of that step, "Choose another file." after a refusal of
+ * popnei.
+ */
+export function variantsStepNeeds(p: Project): string | null {
+  return p.variants === null
+    ? null
+    : variantsReadNeeds(p.variants, VARIANTS_STEP_ENDS);
+}
 
 /** What each application calls its individuals file, as the owner
     decided on 25 September 2026 (point P of
@@ -1263,31 +1328,21 @@ export function projectNeeds(p: Project): string | null {
   if (variants === null) {
     return LOAD_VARIANTS;
   }
-  const fileName = escaped(variants.name);
   const read = variants.read;
-  switch (read.kind) {
-    case "pending":
-      return `Reading ${fileName}.`;
-    case "failed":
-      if (read.error.kind === "popnei") {
-        return `popnei could not read ${fileName}${saying(read.error.message)}. ${LOAD_VARIANTS}`;
-      }
-      return read.error.error.kind === "reopenFailed"
-        ? `${fileName} ${REOPEN_FAILED}`
-        : workerFailedText(fileName, read.error.error.kind, "Variants");
-    case "read": {
-      const inVariants = new Set(read.individuals);
-      for (const kind of LIST_KINDS) {
-        const list = listOf(p.individualFilters, kind);
-        const reason =
-          list === null ? null : listNeeds(kind, list, fileName, inVariants);
-        if (reason !== null) {
-          return reason;
-        }
-      }
-      return null;
+  if (read.kind !== "read") {
+    return variantsReadNeeds(variants, VARIANTS_ENDS);
+  }
+  const fileName = escaped(variants.name);
+  const inVariants = new Set(read.individuals);
+  for (const kind of LIST_KINDS) {
+    const list = listOf(p.individualFilters, kind);
+    const reason =
+      list === null ? null : listNeeds(kind, list, fileName, inVariants);
+    if (reason !== null) {
+      return reason;
     }
   }
+  return null;
 }
 
 /** The individuals of the list of that kind, or `null` when there is no
@@ -1356,7 +1411,11 @@ export function individualsNeeds(p: Project): string | null {
       return `Reading ${name}.`;
     case "failed":
       return read.error.kind === "worker"
-        ? workerFailedText(name, read.error.error.kind, "Individuals")
+        ? workerFailedText(
+            name,
+            read.error.error.kind,
+            endsIn("Individuals", loadIndividualsText(p.app)),
+          )
         : `${name} could not be read${saying(refusalWords(read.error, p.app))}. ${loadIndividualsText(p.app)}`;
     case "read": {
       const check = individualsCheck(p);

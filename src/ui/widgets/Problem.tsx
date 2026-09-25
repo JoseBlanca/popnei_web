@@ -12,12 +12,14 @@ import styles from "./Problem.module.css";
 export interface ProblemProps {
   /** The words of the problem. */
   readonly children: React.ReactNode;
+  /** The id of the paragraph, for a field it describes. */
+  readonly id?: string;
 }
 
 /** A paragraph that says a problem, with its mark. */
-export function Problem({ children }: ProblemProps): React.JSX.Element {
+export function Problem({ children, id }: ProblemProps): React.JSX.Element {
   return (
-    <p className={classOf(styles, "problem")}>
+    <p id={id} className={classOf(styles, "problem")}>
       <ProblemIcon />
       <span className={classOf(styles, "text")}>{children}</span>
     </p>
