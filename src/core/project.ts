@@ -1219,13 +1219,20 @@ function endsIn(step: "Variants" | "Individuals", refused: string): ReasonEnds {
   };
 }
 
+/** The ends of a reason of a file that could not be read by no fault of
+    its own, in the step of the file, beside its button that opens the
+    file picker: the same in the Variants and the Individuals steps (the
+    project spec, "What an analysis needs of every project"). */
+const STEP_AGAIN = "Choose it again.";
+const STEP_RELOAD = "Reload the page and choose it again.";
+
 /** The ends of a reason of the variants file in the Variants step, beside
     its button "Replace panel.nei…", as the owner decided on 25 September
     2026 (the project spec, "What an analysis needs of every project"). */
 const VARIANTS_STEP_ENDS: ReasonEnds = {
   refused: "Choose another file.",
-  again: "Choose it again.",
-  reload: "Reload the page and choose it again.",
+  again: STEP_AGAIN,
+  reload: STEP_RELOAD,
 };
 
 /** The kinds of failure of a worker that only a new page mends: it could
@@ -1413,19 +1420,35 @@ export function individualsNeeds(p: Project): string | null {
       refusedEnd: () => load,
     });
   }
+  return missingText(p, {
+    one: "Add it to the file and load the file again in the Individuals step.",
+    several: "Add them to the file and load it again in the Individuals step.",
+  });
+}
+
+/** What to do about individuals missing, after one and after several. */
+interface MissingEnds {
+  readonly one: string;
+  readonly several: string;
+}
+
+/** The reason of individuals of the variants file missing from the
+    individuals file, with the ends `ends`, or `null` when none is
+    missing or either file is not read. */
+function missingText(p: Project, ends: MissingEnds): string | null {
   const check = individualsCheck(p);
-  if (check === null || p.variants === null) {
+  if (check === null || p.variants === null || p.individuals === null) {
     return null;
   }
   const missing = check.missing;
   if (missing.length === 0) {
     return null;
   }
-  const name = escaped(individuals.name);
+  const name = escaped(p.individuals.name);
   const variantsName = escaped(p.variants.name);
   return missing.length === 1
-    ? `1 individual of ${variantsName} is not in ${name}: ${namesOf(missing)}. Add it to the file and load the file again in the Individuals step.`
-    : `${counted(missing.length, "individual")} of ${variantsName} are not in ${name}: ${namesOf(missing)}. Add them to the file and load it again in the Individuals step.`;
+    ? `1 individual of ${variantsName} is not in ${name}: ${namesOf(missing)}. ${ends.one}`
+    : `${counted(missing.length, "individual")} of ${variantsName} are not in ${name}: ${namesOf(missing)}. ${ends.several}`;
 }
 
 /** The ends of a reason of the individuals file: after a refusal of its
@@ -1476,8 +1499,9 @@ export function individualsStepRefusal(
     the owner decided on 25 September 2026: another separator for the two
     refusals a wrong one most often causes, a corrected file for the
     others; and, the writer's, another file for a variants file, which is
-    not corrected but replaced, and a new load for a file the browser
-    could not read, by no fault of its own. */
+    not corrected but replaced, and the file chosen again, in the words of
+    the Variants step, for a file the browser could not read, by no fault
+    of its own. */
 function stepRefusedEnd(error: IndividualsFileError, app: AppId): string {
   switch (error.kind) {
     case "raggedRow":
@@ -1486,7 +1510,7 @@ function stepRefusedEnd(error: IndividualsFileError, app: AppId): string {
     case "variantsFile":
       return `Load a ${FILE_WORDS[app]}.`;
     case "unreadable":
-      return "Load it again.";
+      return STEP_AGAIN;
     case "empty":
     case "duplicateColumn":
     case "duplicateIndividual":
@@ -1508,7 +1532,8 @@ function stepRefusedEnd(error: IndividualsFileError, app: AppId): string {
  * `individualsNeeds` for such a file, with the ends of that step, "Choose
  * another separator, or load a corrected file." after a row of the
  * wrong length or a quote never closed, "Load a corrected file." after
- * most other refusals, and "Load it again." after a crash.
+ * most other refusals, and "Choose it again." after a crash, as the
+ * Variants step says it.
  */
 export function individualsStepNeeds(p: Project): string | null {
   const individuals = p.individuals;
@@ -1517,8 +1542,22 @@ export function individualsStepNeeds(p: Project): string | null {
   }
   return individualsReadNeeds(individuals, p.app, {
     refusedEnd: (error) => stepRefusedEnd(error, p.app),
-    again: "Load it again.",
-    reload: "Reload the page and load it again.",
+    again: STEP_AGAIN,
+    reload: STEP_RELOAD,
+  });
+}
+
+/**
+ * The reason of individuals of the variants file missing from the
+ * individuals file, in the words of the Individuals step, which name the
+ * file to add them to, or `null` when none is missing or either file is
+ * not read (the project spec, "What an analysis needs of every project").
+ */
+export function individualsStepMissing(p: Project): string | null {
+  const name = escaped(p.individuals?.name ?? "");
+  return missingText(p, {
+    one: `Add it to ${name} and load ${name} again.`,
+    several: `Add them to ${name} and load it again.`,
   });
 }
 

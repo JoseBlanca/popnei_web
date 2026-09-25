@@ -130,7 +130,7 @@ async function withoutTwelve(): Promise<string> {
 }
 
 const MISSING_REASON =
-  "12 individuals of panel.nei are not in pops.csv: s031, s044 and 10 more. Add them to the file and load it again in the Individuals step.";
+  "12 individuals of panel.nei are not in pops.csv: s031, s044 and 10 more. Add them to pops.csv and load it again.";
 
 test("WS8 D1 panel_pops.csv is read with the three options found, its columns and their types are shown, and the light worker fetches no wasm", async ({
   page,

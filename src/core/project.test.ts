@@ -35,6 +35,7 @@ import {
   setVariantFilter,
   shown,
   variantsStepNeeds,
+  individualsStepMissing,
   individualsStepNeeds,
 } from "./project.ts";
 import type {
@@ -3471,7 +3472,7 @@ describe("WS1 D3 the additions to project.ts", () => {
       ],
       [
         { kind: "unreadable", message: "NotReadableError" },
-        "the browser could not read it; it may have been changed, moved or deleted since it was picked. Load it again.",
+        "the browser could not read it; it may have been changed, moved or deleted since it was picked. Choose it again.",
       ],
       [
         { kind: "empty" },
@@ -3521,19 +3522,19 @@ describe("WS1 D3 the additions to project.ts", () => {
     test.each([
       [
         { kind: "workerFailed", message: "out of memory" },
-        "the calculation stopped unexpectedly. Load it again.",
+        "the calculation stopped unexpectedly. Choose it again.",
       ],
       [
         { kind: "defect", message: "a read the project cannot hold" },
-        "the calculation stopped unexpectedly. Load it again.",
+        "the calculation stopped unexpectedly. Choose it again.",
       ],
       [
         { kind: "couldNotStart", reason: "no ready message, twice" },
-        "the application could not start its calculations. Reload the page and load it again.",
+        "the application could not start its calculations. Reload the page and choose it again.",
       ],
       [
         { kind: "protocolMismatch" },
-        "the page is out of date. Reload the page and load it again.",
+        "the page is out of date. Reload the page and choose it again.",
       ],
     ] as const)(
       "the light worker failed with %o: what happened, and what to do there",
@@ -3558,6 +3559,36 @@ describe("WS1 D3 the additions to project.ts", () => {
       expect(individualsStepNeeds(gwas)).toBe(
         "pops.csv could not be read: it is a variants file, which the Variants step takes. Load a traits file.",
       );
+    });
+
+    test("individuals of the variants missing, named with the file to add them to", () => {
+      const missing = [
+        "ind_044",
+        "ind_031",
+        ...Array.from({ length: 10 }, (_, i) => `ind_${String(109 - i)}`),
+      ];
+      expect(
+        individualsStepMissing(
+          withVariantIndividuals(["i1", ...missing, "i2"]),
+        ),
+      ).toBe(
+        "12 individuals of panel.nei are not in pops.csv: ind_044, ind_031 and 10 more. Add them to pops.csv and load it again.",
+      );
+      expect(
+        individualsStepMissing(withVariantIndividuals(["i1", "ind_031"])),
+      ).toBe(
+        "1 individual of panel.nei is not in pops.csv: ind_031. Add it to pops.csv and load pops.csv again.",
+      );
+      // Beside a Run button, the words name the step.
+      expect(individualsNeeds(withVariantIndividuals(["i1", "ind_031"]))).toBe(
+        "1 individual of panel.nei is not in pops.csv: ind_031. Add it to the file and load the file again in the Individuals step.",
+      );
+    });
+
+    test("no individual missing, or a file not read, gives no words of individuals missing", () => {
+      expect(individualsStepMissing(sampleProject())).toBeNull();
+      expect(individualsStepMissing(withoutIndividuals())).toBeNull();
+      expect(individualsStepMissing(pendingProject())).toBeNull();
     });
 
     test("beside a Run button, a refusal still ends as individualsNeeds gives it", () => {

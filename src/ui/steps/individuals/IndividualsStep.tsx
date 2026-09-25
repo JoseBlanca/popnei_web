@@ -16,7 +16,7 @@ import {
 import {
   escaped,
   individualsCheck,
-  individualsNeeds,
+  individualsStepMissing,
   individualsStepNeeds,
 } from "../../../core/project.ts";
 import type {
@@ -100,7 +100,7 @@ export function IndividualsStep(): React.JSX.Element {
   const announcer = useAnnouncer();
   const individuals = useAppState((s) => s.project.individuals);
   const app = useAppState((s) => s.project.app);
-  const reason = useAppState((s) => individualsNeeds(s.project));
+  const missingReason = useAppState((s) => individualsStepMissing(s.project));
   const readReason = useAppState((s) => individualsStepNeeds(s.project));
 
   // The message of a file not loaded, until the next pick.
@@ -247,7 +247,7 @@ export function IndividualsStep(): React.JSX.Element {
             columns={read.columns}
             decimal={read.found?.decimal ?? "."}
           />
-          <CheckSection individuals={individuals} reason={reason} />
+          <CheckSection individuals={individuals} reason={missingReason} />
           <Populations table={read.table} send={send} />
         </>
       )}
@@ -296,7 +296,8 @@ function FileCard({ individuals, reason }: FileCardProps): React.JSX.Element {
 }
 
 /** The reason of a file being read or refused, or of individuals missing,
-    which `individualsStepNeeds` and `individualsNeeds` always give. */
+    which `individualsStepNeeds` and `individualsStepMissing` always
+    give. */
 function reasonOf(
   individuals: IndividualsSource,
   reason: string | null,
@@ -525,8 +526,8 @@ function unassignedLines(
 interface CheckSectionProps {
   /** The metadata file, read. */
   readonly individuals: IndividualsSource;
-  /** The reason `individualsNeeds` gives, which names the individuals
-      missing. */
+  /** The reason `individualsStepMissing` gives, which names the
+      individuals missing and the file to add them to. */
   readonly reason: string | null;
 }
 
@@ -565,7 +566,7 @@ interface CheckProps {
   readonly check: IndividualsCheck | null;
   /** The name of the variants file, `null` with none. */
   readonly variantsName: string | null;
-  /** The reason `individualsNeeds` gives. */
+  /** The reason `individualsStepMissing` gives. */
   readonly reason: string | null;
 }
 
