@@ -303,14 +303,14 @@ the wrong shape is never used.
 
 **Tasks:**
 
-- [ ] 2.1 `src/worker/messages.ts`, from the messages spec's "The
+- [x] 2.1 `src/worker/messages.ts`, from the messages spec's "The
   TypeScript interface", "The checks" and "Job and JobResult", with the
   checks of the diversity's job and result from the fields of the
   diversity spec's "The TypeScript interface". Serves 1 and 2.
-- [ ] 2.2 `src/worker/client.ts`, from the client spec's "What it does"
+- [x] 2.2 `src/worker/client.ts`, from the client spec's "What it does"
   and "The TypeScript interface", with fake workers that keep a message
   posted after `terminate`. Serves 3. Needs 2.1.
-- [ ] 2.3 The property tests of the client, in a commit of their own: a
+- [x] 2.3 The property tests of the client, in a commit of their own: a
   request answered twice, or never, would show on no screen of the
   tests of the other work packages. Serves 4. Needs 2.2.
 
@@ -350,14 +350,14 @@ fails.
 
 **Tasks:**
 
-- [ ] 3.1 `src/worker/runner.ts`: `loadPopnei`, `createRunner` with its
+- [x] 3.1 `src/worker/runner.ts`: `loadPopnei`, `createRunner` with its
   `open` and its `run`, the filters read from popnei's `steps`, the
   diversity in its five steps, the progress and `transferablesOf`, from
   the runner spec's "Opening the load", "The filters", "The diversity",
   "Progress" and "The result, transferred"; the two fixtures, written by
   `e2e/fixtures/make_fixtures.mjs`. Serves 1, 2, and the part of 3 on
   `transferablesOf`.
-- [ ] 3.2 What the runner answers when something goes wrong, from "What
+- [x] 3.2 What the runner answers when something goes wrong, from "What
   it answers when something goes wrong", in a commit of its own: a
   message of popnei read wrongly turns a file changed on the disk into a
   refusal of its data, and no other test would fail. The throwing and
@@ -400,13 +400,13 @@ decimal mark it was read with, and the type of each column.
 
 **Tasks:**
 
-- [ ] 4.1 `src/worker/individuals/columnTypes.ts`, from the reader
+- [x] 4.1 `src/worker/individuals/columnTypes.ts`, from the reader
   spec's "The decimal mark and the numbers", "The types of the columns"
   and "When a type is wrong, in stage 2". Serves 2.
-- [ ] 4.2 `src/worker/individuals/csv.ts`, from "The separator", "The
+- [x] 4.2 `src/worker/individuals/csv.ts`, from "The separator", "The
   rows and the cells" and "The refusals and their words". Serves 1.
   Needs 4.1, since the table of cases asserts the types.
-- [ ] 4.3 `src/worker/individualsFile.ts` and `src/worker/filesRunner.ts`,
+- [x] 4.3 `src/worker/individualsFile.ts` and `src/worker/filesRunner.ts`,
   from "The bytes and the encoding" and the runner's paragraph of "The
   TypeScript interface", and the properties. `filesRunner.ts` is checked
   in the browser, in work package 8. Serves 3 and 4. Needs 4.2 and 2.1.
@@ -443,10 +443,10 @@ application.
 
 **Tasks:**
 
-- [ ] 5.1 `src/core/analyses/diversity.ts`, from the diversity spec's
+- [x] 5.1 `src/core/analyses/diversity.ts`, from the diversity spec's
   "The module", and `src/core/apps.ts`, from the entry spec's
   "`src/core/apps.ts`". Serves 1, 3 and 4.
-- [ ] 5.2 The tests of the key, in a commit of their own: a key that
+- [x] 5.2 The tests of the key, in a commit of their own: a key that
   misses an input shows the table of other settings as current, and no
   other test would fail. A row is shown to fail, once, on a scratch
   `keyInputs` that sorts the rows of the table, and the report says so.
@@ -486,14 +486,14 @@ check.
 
 **Tasks:**
 
-- [ ] 6.1 `writeProjectFile` and `projectFileName`, and the three
+- [x] 6.1 `writeProjectFile` and `projectFileName`, and the three
   fixtures, from the project file spec's "What the file holds", "What is
   written of each part" and "Writing". Serves 1. The fixtures are
   written by hand from the spec's example, not by the code they check.
-- [ ] 6.2 `readProjectFile`, `ProjectFileError` and
+- [x] 6.2 `readProjectFile`, `ProjectFileError` and
   `projectFileErrorText`, from "Opening" and "The versions of the
   format". Serves 2. Needs 6.1.
-- [ ] 6.3 `compareIdentity`, `identityWarning`, `askedFileText` and
+- [x] 6.3 `compareIdentity`, `identityWarning`, `askedFileText` and
   `checkVerdictText`, from "The comparisons after an opening", and the
   properties. Serves 3 and 4. Needs 6.2.
 

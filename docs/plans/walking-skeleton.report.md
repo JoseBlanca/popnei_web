@@ -141,3 +141,293 @@ The owner can stop reading here.
 - The writer of the code wrote its tests after the code. The mutations
   of the `tests` reviewer found 7 checks no test guarded. The prompt of
   a task should ask for each new test to be seen failing.
+
+## 2 to 6, as they ran
+
+Work packages 2 to 6 build five modules that do not depend on one
+another, so they ran side by side on 25 September 2026, one subagent
+each, in the same folder and on separate files. Each was reviewed by
+five reviewers, `spec`, `stale`, `errors`, `api` and `tests`. The four
+that only read ran together. The `tests` reviewer breaks the code on
+purpose, so it ran only once its work package's fixes were in, and
+touched only its own module. The points that change what the user
+reads went to the owner, and are listed at the end of this section.
+
+## 3. The runner, in node
+
+Done as planned. The runner is the code inside the calculation worker
+that opens the variants file with popnei, puts the filters on it and
+calculates the diversity. It is tested in node with popnei
+`js-v0.1.0-dev.2`, and is first run in a browser in work package 8.
+
+| Deliverable | Command | Result |
+|---|---|---|
+| 1. The fixtures | `cmp e2e/fixtures/panel_pops.txt` with popnei's copy; `wc -l`, `head -1` of `panel_pops.csv` | same; 201 lines, `IID,popcat` |
+| 2. `WS3 D1` | `npx vitest run src/worker/runner.test.ts -t "WS3 D1"` | 23 passed (at least 11) |
+| 3. `WS3 D2` | the same, `-t "WS3 D2"` | 30 passed (at least 26) |
+
+The review found no wrong number in the runner as written. It found
+rules that no test guarded, which could have given wrong numbers after
+a later change. The code was right in each case, and a test for each
+now fails when the rule is broken:
+
+- The job's two options, the fewest individuals and the threshold of a
+  polymorphic variant, reach popnei. Every test had used popnei's own
+  defaults, so a runner that dropped them would have passed.
+- "Only variants that passed" reaches popnei. The test VCF has only
+  variants that passed; a VCF with 100 variants marked `q10` now gives
+  1,200 variants or 1,100.
+- The filters already on the open file are reused only when they are
+  the job's filters, all of them, in their order. The missing data
+  filter at 0.05 alone keeps 1,152 variants of `panel.nei`, and with a
+  MAF filter at 0.9 after it, 1,058.
+- The four columns of the result are placed by the name of the
+  population, when populations are named by numbers.
+
+Two defects of the runner were fixed. What the progress callback throws
+at popnei's last call of a run was lost, and the run answered as if
+nothing had happened. A read of a VCF with no read options, a defect of
+our own, would have been answered as popnei's refusal of the file. The
+types now make it impossible to write.
+
+Not covered: the check that a filter step has as many arguments as its
+filter has fields. popnei always gives the same number, so no test
+through popnei can break it.
+
+## 4. The reader of the metadata file
+
+Done as planned. The reader, in the light worker, reads a CSV or TSV of
+the individuals, finds its encoding, separator and decimal mark, and
+the type of each column.
+
+| Deliverable | Command | Result |
+|---|---|---|
+| 1. `WS4 D1` | `npx vitest run src/worker/individuals/csv.test.ts -t "WS4 D1"` | 56 passed (at least 23) |
+| 2. `WS4 D2` | `npx vitest run src/worker/individuals -t "WS4 D2"` | 44 passed (at least 14) |
+| 3. `WS4 D3` | `npx vitest run src/worker/individualsFile.test.ts -t "WS4 D3"` | 19 passed (at least 10) |
+| 4. `WS4 D4` | `npx vitest run src/worker/individuals -t "WS4 D4"` | 4 passed (at least 4) |
+
+What the review changed:
+
+- A cell that the code makes impossible to miss was read as empty when
+  missing. It is now an error of our own code, since the screen and
+  the xlsx reader of stage 4 will give the reader tables it did not
+  make.
+- The words of the warning of a column of few whole numbers have their
+  own function, `columnWarningText`, beside the warning, and the spec
+  lists it.
+- A file the browser cannot read keeps the browser's name for the
+  error, which tells a deleted file from a changed one.
+- The lint now refuses the text decoder in the reader of the text, as
+  the spec says.
+- 12 rules had no test that failed when they broke. The one that
+  matters most: a file saved by Excel on Windows ends each line in two
+  characters. A refusal of such a file must name line 3, where a
+  broken reader would name line 5. The others are the choice of the
+  separator, the decimal mark, the order of the refusals, a column of
+  one number, and a byte 0 far into the file.
+
+The spec now has an open point for stage 4. The number 1 and the text
+"1" of an xlsx count as two values in the code and as one in the
+spec's words.
+
+## 5. The diversity in core, and the list of the application
+
+Done as planned. `src/core/analyses/diversity.ts` gives what the store
+needs of the diversity: why it cannot run, its key, its job, its
+warnings, its check numbers, the rows and the CSV of its table.
+`src/core/apps.ts` lists the analyses and the steps of the population
+genetics application, and its first project, with the missing data
+filter on at 0.1.
+
+| Deliverable | Command | Result |
+|---|---|---|
+| 1. `WS5 D1` | `npx vitest run src/core/analyses/diversity.test.ts -t "WS5 D1"` | 13 passed (at least 11) |
+| 2. `WS5 D2` | the same, `-t "WS5 D2"` | 19 passed (at least 17) |
+| 3. `WS5 D3` | the same, `-t "WS5 D3"` | 42 passed (at least 21) |
+| 4. `WS5 D4` | `npx vitest run src/core/apps.test.ts -t "WS5 D4"` | 4 passed (at least 3) |
+
+Task 5.2 showed a row of the key failing on a scratch version that
+sorts the rows of the metadata file. The two keys came out equal, and
+exactly one test of 49 failed.
+
+What the review changed:
+
+- The populations of a table were kept for tables that were not
+  frozen. The store freezes every project, so nothing showed it. They
+  are now kept only for frozen tables, as the keys of core are.
+- The warning for one variant kept read "at none of the 1 variant
+  kept: at each". It now reads "has no value at the one variant kept:
+  fewer than 20 of its individuals have a genotype there."
+- Who has no population is worked out in one place, so the warning and
+  the populations sent to popnei cannot disagree.
+- The names of the three steps are declared once, in `apps.ts`, and the
+  shell spec now imports them from there.
+- 25 behaviours had no test that failed. Among them are the options of
+  a project file reaching the job, the script and the warnings, and
+  the key changing when another column of the same table groups the
+  individuals. Without these tests, a table of other settings could
+  have been shown as current. All now have tests.
+
+## 6. The project file
+
+Done as planned. `src/core/projectFile.ts` writes the file that Save
+project gives and reads the file that Open project… takes. After an
+opening it compares the variants file given with the one the project
+was made with, and says whether a new run gives the saved numbers. The
+three fixtures of version 1 were written by hand from the spec's
+example and are added to `.prettierignore`, since Prettier would split
+their one-line lists.
+
+| Deliverable | Command | Result |
+|---|---|---|
+| 1. `WS6 D1` | `npx vitest run src/core/projectFile.test.ts -t "WS6 D1"` | 27 passed (at least 16) |
+| 2. `WS6 D2` | the same, `-t "WS6 D2"` | 32 passed (at least 25) |
+| 3. `WS6 D3` | the same, `-t "WS6 D3"` | 14 passed (at least 12) |
+| 4. `WS6 D4` | the same, `-t "WS6 D4"` | 3 passed (3) |
+
+The review found no defect in what the file holds. It found that the
+rules which keep old check numbers out of a save had tests for only
+some of their cases. The check numbers are the numbers a project file
+keeps so that a new run can be compared with them. If any rule broke,
+a file saved after an opening would keep numbers that no longer match
+its variants file. The next opening would then say "not the same
+numbers", and the user would blame their file. Nine cases now have
+tests, and the first of the three properties now checks the check
+numbers it writes. A rule of the words of a list, copied from
+`project.ts`, is now imported, and the ending `.popnei.json` is
+exported for the Save of work package 9.
+
+## 2. The messages and the worker client
+
+Done as planned. `src/worker/messages.ts` holds the messages between
+the page and its two workers, and the checks that refuse a message of
+the wrong shape. `src/worker/client.ts` is the page's one door to the
+two workers: it starts them, sends each request, gives each answer to
+its own request, and starts a worker again after a crash.
+
+| Deliverable | Command | Result |
+|---|---|---|
+| 1. `WS2 D1` | `npx vitest run src/worker/messages.test.ts -t "WS2 D1"` | 20 passed (at least 17) |
+| 2. `WS2 D2` | the same, `-t "WS2 D2"` | 36 passed (at least 22) |
+| 3. `WS2 D3` | `npx vitest run src/worker/client.test.ts -t "WS2 D3"` | 64 passed (at least 32) |
+| 4. `WS2 D4` | the same, `-t "WS2 D4"` | 6 passed (the five properties, and a sixth from the review) |
+
+The property "no worker is sent a second `open`" was shown to fail on a
+scratch client that sends the `open` again after a restart. It failed
+after 52 sequences, shrunk to five steps: pick, ready, opened, the idle
+worker crashes, run. It first passed on that scratch client, because
+fast-check draws short sequences unless told otherwise. The properties
+now draw sequences of up to 60 steps.
+
+What the review changed in the code:
+
+- A new property, "every answer is the one its worker gave for its
+  request", found a real defect on its first run. A message that a
+  stopped worker had already sent could be taken as the answer of the
+  worker started after it. Each handler now reads only while its worker
+  is the current one.
+- A calculation worker that crashed while idle, after each time it read
+  the file again, was started again with no end. In the reviewer's
+  test, 6 crashes made 7 workers. The spec gives up after 2 failures.
+  Now an `open` counts as an answer only when a request waited on it.
+- When a worker's script fails to load, as in a tab left open while a
+  new version of the site goes up, the browser gives no message. The
+  client stored the reason as nothing. It now gives its own words,
+  "the worker stopped with no message", as the probe of stage 0
+  learned to do.
+- A request answered twice was dropped with no word, so the property
+  "answered exactly once" could not fail on "twice". A second answer
+  is now written to the console as a defect, and the property reads
+  it.
+- The separators, the answer that a file was opened, and the format and
+  read options of the variants file are declared once, in
+  `protocol.ts`. The messages, the client, the runner and the reader
+  take them from there.
+- The test review found 12 of 30 changes to the client, and 21 of 22
+  changes to the checks of the messages, that no test caught. Each now
+  has a test that fails. The checks of the messages are also tested by
+  a property that damages one field of a valid message at a time and
+  expects a refusal that names that field.
+
+Not changed: after a reopen that fails, the client tells the store that
+popnei is ready before the new worker has opened the file. The client
+spec says this comes "when that open has ended", and a failed open has
+ended. What could go wrong is the mark "waits for the file" on the next
+run, not a number. It will be seen on the screen in work package 8.
+
+## What the reviews of 2 to 6 ask of the owner
+
+Each of these changes what the user reads, or a spec, so none was done.
+None stops the work: each spec's words stay as they are until the owner
+decides. They go to the owner at the stop of task 7.5, each with a
+recommendation.
+
+The metadata file:
+
+1. A header with empty cells at its end, `id;pop;;`, is counted as four
+   columns, so a short row is refused with "the header has 4". The
+   user sees two names in Excel.
+2. A VCF picked by mistake as the metadata file, when its header lines
+   have no comma, is read as a table of one column. The user is then
+   told that every individual is missing.
+3. With the encoding on "auto", a UTF-8 file that has its byte order
+   mark and one bad byte is read whole as Windows-1252, so every
+   accented letter comes out wrong.
+4. A UTF-16 file cut short is refused at a line the user cannot see.
+5. A column with no name whose cells are all `NA` or `-` is refused as
+   a column "with values but no name".
+
+The diversity:
+
+6. A VCF with no variants, which popnei opens and then finds empty, is
+   refused with "Loosen the filters", even with no filter on.
+7. A VCF whose genotypes are of two ploidies, a haploid chromosome X
+   among diploid ones, is refused at ploidy 2 with advice to set 1, and
+   at ploidy 1 with advice to set 2.
+8. A project file whose filter of individuals names an empty or wrong
+   list is told to remove the filter in the Variants step, which has no
+   such control in stage 2.
+
+The project file:
+
+9. Suppose the user opens a project, gives the same VCF again, sets the
+   ploidy from 2 to 4, and saves before the file has been read again.
+   The saved file says ploidy 2.
+10. A VCF given again with "only variants that passed" changed gets no
+    warning, and its saved numbers are neither kept nor compared, so
+    the panel says nothing about them.
+11. A file edited by hand whose check has 6 numbers where 7 are
+    expected opens, and later blames the variants file.
+12. Point Q, the words of the project file, is judged at stop 9.6. The
+    reviews add three: a field missing at the top of the file is named
+    by its name in the code, "its field "saved" is missing"; a text
+    reads "should be the file read, or nothing yet"; and the message
+    of a newer format has no way out when the page is already the
+    newest.
+
+For popnei: its progress callback's documentation does not say that a
+throw at the last call of a run is dropped. The runner now handles it.
+popnei's messages can hold names from the user's file, and are shown
+as they come, not escaped or cut. No spec asks for either.
+
+### How the work of 2 to 6 went, for whoever revises a skill or a plan
+
+The owner can stop reading here.
+
+- Five writers in one folder worked, because each owned its files. The
+  checks of the whole tree failed while another writer was midway,
+  so each writer checked its own files and the orchestrator ran the
+  whole after.
+- Reviewers left scratch test files behind, and one cut short made the
+  typecheck of the whole tree fail. The scratch file had only "hello"
+  in it. A reviewer's prompt should say to delete its scratch files
+  even when it stops early.
+- The `tests` reviewers found the most: 12 of 22 changes to the reader,
+  12 of 30 to the client and 21 of 22 to the message checks passed
+  every test. The writers had been told to see each test fail, and
+  mostly did it for the tests they wrote first. Tests added at the end
+  of a task were rarely broken on purpose. A task's prompt should ask
+  for a scratch break of each rule of the spec, not of each test.
+- Tokens, roughly: the five writers 200,000 to 400,000 each with their
+  fixes; the 25 reviewers 47,000 to 148,000 each.
