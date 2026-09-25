@@ -197,8 +197,8 @@ asks, and so it holds the individuals of the file that are not in the
 variants file too: a change to one of them costs a calculation and shows
 nothing stale.
 
-What `run` reads beyond `keyInputs` is the list of the individuals of
-the variants file, which is a function of the load, already in the key:
+What `run` and `warnings` read beyond `keyInputs` is the list of the
+individuals of the variants file, which is a function of the load, already in the key:
 the same load gives the same individuals. What `warnings` reads beyond it
 is the name of the variants file, which is also fixed for a load. The
 warnings name no individuals file and no column, whose names are not in
@@ -339,9 +339,11 @@ the load (`docs/specs/core/store.md`, `createStore`).
 popnei refuses the call in the cases its `@throws` lists. The module rules
 out those it can see: a population that names an individual popnei does
 not have, an empty population, no population, a threshold out of its
-range. The one it cannot see is the filters keeping no variant, "the pass
-gave no variant: its source gave 1200 and the steps kept none of them,
-..."; the panel says it in the user's words (its error state, below).
+range. The two it cannot see are the filters keeping no variant, "the
+pass gave no variant: its source gave 1200 and the steps kept none of
+them, ...", and a variants file that holds none, "the pass gave no
+variant and its source holds none: ..."; the panel says each in the
+user's words (its error state, below).
 
 ### The warnings
 
@@ -356,7 +358,7 @@ first two and how many more.
 | `tooFewIndividuals` | a population has fewer individuals in `numIndividuals` than `minNumIndividuals` | "Population p3 has 12 individuals, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so p3 has no values. To have them, merge it with another population in the metadata file." With two or three: "Populations p3 and p5 have fewer than 20 individuals, 12 and 8, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, merge each with another population in the metadata file." With more than three, the counts are left out: "Populations p3, p5 and 4 more have fewer than 20 individuals, and ..." |
 | `variantsWithoutValue` | a population with enough individuals has a value at fewer variants than `numVars`, whatever the number skipped | "p0a has a value at 641 of the 1,152 variants kept (56%); at the others fewer than 20 of its individuals have a genotype." With two or three: "p0a and p0b have a value at 641 and 1,100 of the 1,152 variants kept (56% and 95%); at the others fewer than 20 of their individuals have a genotype." With more than three, the first two and how many more, with no counts: "p0a, p0b and 3 more have a value at fewer than the 1,152 variants kept; at the others fewer than 20 of their individuals have a genotype." When it is none of them: "p0a has a value at none of the 1,152 variants kept: at each, fewer than 20 of its individuals have a genotype." |
 | `individualsWithoutPopulation` | individuals of the variants file have a missing cell in the column | "5 individuals of panel.nei have no population, and are left out of the diversity: s001, s002 and 3 more. If they belong to one, fill in their population in the metadata file and load it again." |
-| `populationNotInResult` | a population of `pops` of the key is not in `r.pops` | "Population p9 has no individual among the individuals of panel.nei that the filters kept, so it is not in the table." |
+| `populationNotInResult` | a population of `populationsToRun(p)`, which has individuals in the variants file, is not in `r.pops` | "Population p9 has no individual among the individuals of panel.nei that the filters kept, so it is not in the table." |
 
 The owner decided on 25 September 2026 that `variantsWithoutValue` is
 raised whenever a population skips any variant, one or a thousand, and
@@ -367,6 +369,16 @@ is never written 100%, nor one above 0% written 0%: 1,151 of 1,152 is
 "99%", and 1 of 1,152 is "1%", "(less than 1%)" being longer than the
 fact. The warning is a fact about the means, and says no more: that the
 populations are then compared over different variants is in the help.
+
+The owner decided on 25 September 2026 that a population none of whose
+individuals is in the variants file has no warning. A metadata file may
+hold the individuals of several panels, and its rows of another panel are
+ignored (`docs/functionality.md`, section 4); a warning that said the
+filters had left such a population no individual would blame filters
+that removed nothing. `populationNotInResult` is for a population whose
+individuals are in the variants file and were all removed by the filters
+of individuals, which come in stage 3; until then `run` sends every
+population of `populationsToRun`, and the warning is not raised.
 
 A population of a text is named as `project.md` names an individual, its
 control characters escaped and cut after 40 characters. The numbers of
@@ -604,11 +616,13 @@ definition, on frozen projects, as
   job, sends `pops` `[["A", ["i1", "i3"]], ["B", ["i2"]]]`, the filters
   of the project and `minNumIndividuals` 20, `polyThreshold` 0.95. A
   result of A with 2 individuals and B with 1, their numbers NaN, gives
-  the warnings `tooFewIndividuals` naming A and B,
-  `individualsWithoutPopulation` naming i4, and `populationNotInResult`
-  naming C, in that order, with the texts of the table above for these
-  names, the first "Populations A and B have fewer than 20 individuals,
-  2 and 1, ..."; `keyInputs` gives `{ pops: [["A", ["i1", "i3"]], ["B",
+  the warnings `tooFewIndividuals` naming A and B and
+  `individualsWithoutPopulation` naming i4, in that order, with the texts
+  of the table above for these names, the first "Populations A and B have
+  fewer than 20 individuals, 2 and 1, ...", and none for C, none of whose
+  individuals is in the variants file; a result of A alone, as the
+  filters of individuals of stage 3 could give, adds
+  `populationNotInResult` naming B; `keyInputs` gives `{ pops: [["A", ["i1", "i3"]], ["B",
   ["i2"]], ["C", ["i5"]]], options: DIVERSITY_DEFAULTS }`, the populations
   of the table and not those sent; `checkNumbers` gives `[numVars, null,
   null, null, null, null, null]`.
@@ -635,8 +649,12 @@ definition, on frozen projects, as
 - **`diversityCsv`** of the result of the flow gives the text of "What it
   shows", below, as a literal; a population named `a,"b"` is quoted.
 - **`refusalText`** of each row of its table in "Its words", below, with
-  popnei's messages as literals: the empty pass of `docs/specs/worker/runner.md`,
-  the ploidy of `tetraploid.vcf.gz` read with ploidy 2, a data line
+  popnei's messages as literals: the pass over a VCF with no variant,
+  "the pass gave no variant and its source holds none: a statistic of a
+  pass is calculated over the variants it gives", which the popnei of the
+  release gave in node on 25 September 2026 for a VCF of a header alone,
+  with the missing data filter and without it; the empty pass of
+  `docs/specs/worker/runner.md`; the ploidy of `tetraploid.vcf.gz` read with ploidy 2, a data line
   of a VCF, "line 4 of the VCF, the column of a: `z` is not an allele
   number, which is a run of digits", which the popnei of the release gave
   in node on 25 September 2026 for a genotype `0/z`, and another message.
@@ -770,8 +788,13 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112
 | ready | a Run button, and the populations it will run on with their sizes, "3 populations: p0, 48 individuals; p2, 84; p1, 68", from `populationsToRun` | Run |
 | running | a progress bar, "Calculating · 35% · 0:12", from the last `progress` of its `RunView`, and the time since it started, counted every second; before the first `progress`, and while the request waits in the queue, the bar has no value and is drawn hatched over its whole length and still, since a bar that moved by itself through a long calculation would be motion the user cannot stop (WCAG 2.2.2), and the clock shows the calculation goes on, "Calculating · 0:12"; after a stop or a change of the load, when the store marks the request `afterStop`, "Waiting for panel.nei to be opened again, then calculating · 0:12" | Stop, which cancels it |
 | done | the table and its download; the warnings above the table, each as a sentence, with their count on the heading, "2 warnings"; after an opened project file, the comparison with its check numbers under the table | download |
-| results removed | "The diversity was removed because the missing data filter changed. Undo brings it back with no calculation; Run calculates it for the new settings." After an undo, whose notice offers Redo: "Redo brings it back ..." | Run; the Undo or Redo of the notice or of the header |
-| error | what happened and what to do, below; a refusal of popnei stays for these settings, and Run is not offered, since popnei would refuse them again | Run again after a failure that is not popnei's; change the settings after a refusal |
+| results removed | the words of the change that removed it, below, and, beside the Run button, the populations it will run on, as in the state ready | Run; the Undo or Redo of the notice or of the header |
+| error | what happened and what to do, below; a refusal of popnei stays for these settings, and Run is not offered, since popnei would refuse them again; nor after `reopenFailed`, a variants file the browser can no longer read, which fails again until it is loaded again | Run again after another failure; change the settings after a refusal; load the file again after `reopenFailed` |
+
+The owner decided on 25 September 2026 that the state results removed
+lists the populations Run will take, as the state ready does, and that
+Run is not offered after `reopenFailed`, since pressing it gave the same
+words again with no sign that anything had happened.
 
 The warnings are sentences above the table, where `react.md`, "The
 states of an analysis", puts a count on the heading that opens the help
@@ -786,13 +809,32 @@ few hundred bytes, the only kind of result of stage 2, so no session of
 stage 2 fills it; when the PCA and its large results come, in stage 4,
 these words are checked against the cache again.
 
-The cause in the words of "results removed" is the description of the
-notice, `notice.cause.description`. When the notice lists the analysis
-in `stopped`, its calculation stopped by a new variants file, the panel,
-ready or locked, adds "The calculation of the diversity was stopped
-because a new variants file was loaded." while that notice is up. The
-notice itself, with the words of a result both removed and stopped, is
-the shell's (`docs/specs/shell.md`).
+The words of "results removed", and the line of a calculation stopped,
+are written from the change itself, the cause of the notice,
+`notice.cause`, as the shell's notice is, so that after an undo they do
+not give the change undone as the reason, and after a new read of the
+same file they do not say that a new file was loaded; the owner decided
+so on 25 September 2026. The cause is a command, an undo or a redo, with
+the description of the command, "the missing data filter changed":
+
+| the cause | results removed |
+|---|---|
+| a command | "The diversity was removed because the missing data filter changed. Undo brings it back with no calculation; Run calculates it for the new settings." |
+| an undo | "Undone: the missing data filter changed. The diversity was removed; Redo brings it back with no calculation, and Run calculates it for the settings as they are now." |
+| a redo | "Redone: the missing data filter changed. The diversity was removed; Undo brings it back with no calculation, and Run calculates it for the settings as they are now." |
+
+When the notice lists the analysis in `stopped`, its calculation stopped
+at once by a change of the load of the variants file, the panel, ready
+or locked, adds a line while that notice is up, from the same cause:
+
+| the cause | the line |
+|---|---|
+| a command | "The calculation of the diversity was stopped because the variants file was read again with other options.", the description of the command that changed the load, which is "a new variants file was loaded" only after a new pick |
+| an undo | "Undone: a new variants file was loaded. The calculation of the diversity was stopped." |
+| a redo | "Redone: a new variants file was loaded. The calculation of the diversity was stopped." |
+
+The notice itself, the toast with the words of a result both removed
+and stopped, is the shell's (`docs/specs/shell.md`).
 
 The comparison of an opened project file, `check` of the state done, is
 shown under the table in the words of `checkVerdictText`, which
@@ -843,7 +885,8 @@ error state, by what the store gives:
 
 | the failure | the text |
 |---|---|
-| popnei refused an empty pass: its message starts with "the pass gave no variant" | "The filters kept none of the variants of panel.nei, so there is no variant to calculate the diversity over. Loosen the filters in the Variants step." |
+| popnei refused a pass over a variants file that holds no variant: its message starts with "the pass gave no variant and its source holds none" | "empty.vcf has no variants, so there is no variant to calculate the diversity over. Load another variants file in the Variants step." |
+| popnei refused an empty pass: its message starts with "the pass gave no variant:" | "The filters kept none of the variants of panel.nei, so there is no variant to calculate the diversity over. Loosen the filters in the Variants step." |
 | popnei refused a genotype of another ploidy than the one the VCF was read with: its message starts "line ‹n› of the VCF, the column of ‹individual›: its genotype is of the ploidy ‹found› and the reader was asked for the ploidy ‹given›" | "At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. Set the ploidy of the VCF to 4 in the Variants step and read the file again." |
 | popnei refused a line of the VCF it cannot read, or a gzipped file that is damaged or cut short: its message starts "line ‹n› of the VCF" or "the VCF was written by bgzip" | "popnei could not read panel.vcf.gz: ‹its message›. Correct the file, or fetch it again, and load it in the Variants step." |
 | popnei refused for another reason | "popnei could not calculate the diversity: ‹its message›. Change the settings, or load the variants file again, to run it again." |
@@ -854,14 +897,22 @@ error state, by what the store gives:
 | a stale file after a deploy, `protocolMismatch` | "The page is out of date. Save the project, reload the page, and open the project again." |
 | the files wasm refused, `files` | cannot happen: the calculation worker, which runs every job, holds no files wasm, and no answer of it becomes this kind (`docs/specs/worker/client.md`, "Crashes, defects, and every read answered") |
 
-`refusalText` of the module makes the first four, the message without
+The owner decided on 25 September 2026 that a variants file with no
+variant is told so, and not told to loosen the filters, which cannot
+help when no filter is set. popnei gives the words of the file with no
+variant whether the filters are set or not, since the file gave none
+before any filter.
+
+`refusalText` of the module makes the first five, the message without
 its full stop as `project.md` shows popnei's messages. A VCF is refused
-at the first pass and not at its open for these two causes, since popnei
+at the first pass and not at its open for its ploidy and for a line it
+cannot read, since popnei
 opens a VCF by its header and reads its lines only in a pass
 (`docs/specs/worker/runner.md`, "Opening the load"); the source is read,
 so the Variants step shows nothing wrong, and the panel's words are the
 ones that say what to do. popnei's refusals have
-no kind by which a program can tell them apart, so the empty pass, the
+no kind by which a program can tell them apart, so the file with no
+variant, the empty pass, the
 ploidy and a line of the VCF are recognised by the start of the message, and the test of the runner,
 which calls the popnei of the release, fails if a new release words it
 otherwise; a kind for it is what popnei's issue #3 asks for other
@@ -904,12 +955,23 @@ A screen reader is the program that reads the page aloud to a user who
 cannot see it; the focus is the element the keyboard acts on, which Tab
 moves.
 
-- The table is the `Table` of React Aria, named by its caption, the
-  caption's element given to the table as `aria-labelledby`, with header
-  cells for its columns, and the column Population marked `isRowHeader`,
-  so that the name of the population is the header of each row and a
-  screen reader reads "p2, Observed heterozygosity, 0.3512". The number
-  of individuals is its own column, not a colour or a note.
+- The table is a plain HTML table, `<table>`, named by its caption, the
+  caption's element given to the table as `aria-labelledby`, with a
+  header cell, `<th scope="col">`, for each column, and the cell of the
+  population of each row a header cell of its row, `<th scope="row">`,
+  so that a screen reader reads "p2, Observed heterozygosity, 0.3512".
+  A screen reader moves through it by its own keys for tables; the Tab
+  key does not stop at its cells, which hold no control. It sits in a
+  frame that scrolls sideways when the page is narrower than the table,
+  at 320 px, and the frame is reached by the Tab key and named by the
+  caption, so that a user of the keyboard scrolls it with the arrow keys
+  (2.1.1, which asks that everything be done with the keyboard). The
+  number of individuals is its own column, not a colour or a note. The
+  owner decided on 25 September 2026 that it is not React Aria's
+  `Table`, which took 25.1 KB gzipped of the page's first script for a
+  table of a few rows that is neither sorted nor selected; React Aria's
+  `Table` is for the sortable tables of later stages
+  (`docs/technology.md`, "React Aria Components").
 - The progress bar is React Aria's `ProgressBar`, labelled "Calculating
   the diversity", whose value a screen reader reads when the user reaches
   it, "35%"; it is not in a status region, so it is not read out at each
@@ -928,7 +990,8 @@ moves.
   warnings, the table, the download; the line of the versions beside it
   is text. Run and Stop are one button in one
   place, so the focus stays on it when it changes. The button goes when
-  the run ends done, or ends refused by popnei, since neither state
+  the run ends done, ends refused by popnei, or ends with a variants
+  file the browser can no longer read, since none of these states
   offers Run; then, when the focus was on the button, it moves to the
   heading of the panel, so that a user of the keyboard is not sent to the
   top of the page (2.4.3, which asks that the focus move in an order
@@ -961,7 +1024,8 @@ before the plan of stage 2.
   of the pass; a job with a filter of individuals answered as a defect,
   which the lock of a filter of individuals keeps from being sent; and its test
   asserts the numbers of the table above and popnei's messages of the
-  empty pass and of the ploidy, as literals.
+  file with no variant, of the empty pass and of the ploidy, as
+  literals.
 - `docs/specs/worker/messages.md`: the check of each member of `Job` and
   `JobResult` is written there from the fields this spec gives, the
   arrays checked with `instanceof`.
