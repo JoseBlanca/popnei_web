@@ -3,7 +3,12 @@
 Written on 25 September 2026, and approved by the owner the same day;
 its example revised the same day for the line of a character not
 decoded that the read of the metadata file gained
-(`docs/specs/worker/protocol.md`, `CsvFound`). There was no
+(`docs/specs/worker/protocol.md`, `CsvFound`), and again that day for
+three decisions of the owner on the reviews of
+`docs/plans/walking-skeleton.md`: a Save while a VCF is read again with
+other options writes the options the user set; the choice of the passed
+variants of a VCF is compared, with a line when the numbers are not; and
+check numbers of the wrong count are refused at the opening. There was no
 code yet; it will be `src/core/projectFile.ts`, the row `projectFile.ts`
 of section 9 of `docs/architecture.md`. The project file is the file
 `<name>.popnei.json` that a user saves to take their work out of the
@@ -209,13 +214,37 @@ example does.
 | part of the project | what the file holds |
 |---|---|
 | `variants`, a file loaded and read | the source as it is, its load id included |
-| `variants`, a file loaded whose read is pending or failed, and a reference whose identity it does not differ from | the reference's `variants`, which knows more of the same file |
+| `variants`, a file loaded whose read is pending or failed, and a reference whose identity it does not differ from and whose read options are its own | the reference's `variants`, which knows more of the same file |
 | `variants` null, a reference | the reference's `variants`, so that a project opened and saved again before its file is given still names the file it was made with |
 | `variants` null, no reference | `null` |
 | whichever `variants` is written, when its read is pending or failed | that source with its read `{ "kind": "pending" }`: the name, the size, the format and the read options are known, and the rest is not |
 | `individuals` read | the source as it is, its load id and its table included |
 | `individuals` pending or failed | `null`, and the grouping is kept by the name of its column |
 | `reference` | not written as such: its `variants` as above, and its check numbers under the rule below |
+
+The read options decide between the two, as the owner decided on 25
+September 2026 (point 9 of the reviews of work packages 2 to 6 of
+`docs/plans/walking-skeleton.md`): a Save writes the settings as the
+user set them. Suppose a user opens a project made with a VCF read with
+ploidy 2, gives the same VCF again, sets the ploidy to 4, presses "Read
+panel.vcf.gz again with ploidy 4", and saves before that read ends. The
+file loaded is then pending with ploidy 4, and it is the one written,
+with ploidy 4, and not the reference's with ploidy 2. Its read is
+written pending, as the next row says, and not as the reference's read:
+that read, its individuals, its ploidy and its number of variants, was
+made with the other options, and a ploidy of 2 in the read beside a
+ploidy of 4 in the options would give, once the file is given again, the
+warning that its ploidy differs. The reference's check numbers are not
+saved (rule 2 below): the fingerprint now is made with ploidy 4, the
+read options of the file loaded, and the reference's was made with
+ploidy 2. So the file holds ploidy 4, a read pending and no check
+numbers from the reads with ploidy 2; opened again, it asks for
+panel.vcf.gz, the Variants step starts at ploidy 4, and a run on the
+file gives numbers to save and none to compare. The same holds of the
+choice of the passed variants, which the identity compares (below). A
+ploidy typed in the Variants step and not yet applied with that button
+is the step's and not the project's (`docs/specs/steps/variants.md`), so
+a Save before it writes the file as it was read.
 
 The failed read of the variants file is written as pending because what
 failed was a read of that session: a new load of the file reads it again,
@@ -397,7 +426,24 @@ that the reason given is the one the user can act on:
 8. **What this version does not write**, refused as `header` with the
    field `variants` or `individuals`: a read of the variants file that is
    `failed`, and a read of the individuals file that is not `read`.
-9. **The fingerprints** of the settings of each check are made, with
+9. **The count of the check numbers**: each check holds as many numbers
+   as `numCheckNumbers` of its analysis gives for the opened project with
+   the file's variants file as its variants file, or it is refused as
+   `header` with the field `checks`, "the check numbers should be 7
+   numbers for the analysis diversity, as many as the rest of the file
+   gives it, and not 6". When `numCheckNumbers` gives `null`, the count
+   is not checked: for the diversity, when the file's variants file was
+   not read, when there is no individuals file or no column of the
+   populations, or when the project holds filters of individuals
+   (`docs/specs/analyses/diversity.md`, "The check numbers"). The owner
+   decided on 25 September 2026 that such a file is refused at the
+   opening as damaged (point 11 of the reviews of work packages 2 to 6):
+   the store compares two lists of different lengths as different, and a
+   file edited by hand to hold 6 numbers of the diversity where its two
+   populations give 7 would otherwise open, and after a run on the right
+   variants file be told that its variants file "may not be the one the
+   project was saved with".
+10. **The fingerprints** of the settings of each check are made, with
    `settingsFingerprint` of `docs/specs/core/keys.md`, from the opened
    project and the read options of the file's variants file, and put in
    place of the placeholders.
@@ -453,7 +499,17 @@ order:
 | the individuals | both read, the same number | "lacks 12 individuals of that one: ind_031, ind_044 and 10 more" |
 | the order of the individuals | both read, the same ones | "has the same individuals in another order" |
 | the ploidy | both read | "has ploidy 4 where that one had 2" |
+| the choice of the passed variants | both VCF files | "is read with every variant where that one was read with only the variants with PASS or . in the FILTER column", or the other way round |
 | the number of variants | both counted | "has 1,203,600 variants" |
+
+The choice of the passed variants, `onlyPassed` of the read options of a
+VCF, is compared as the owner decided on 25 September 2026 (point 10 of
+the reviews of work packages 2 to 6): it is set by the user and not
+found in the file, but a VCF read with the other choice gives other
+variants, as one read with another ploidy gives other genotypes, so it
+gets the same warning as the ploidy. It is compared from the read
+options, which a source holds from its pick, so the warning is there
+before the file is read.
 
 The warning is one sentence, what the reference knows first:
 "The project was made with panel_2026.nei, 342 individuals and 1,203,554
@@ -489,6 +545,39 @@ for the comparison (**Open 1**):
   popnei 0.2.0." and "The numbers were calculated by version 0.2.0 of the
   application, which calculated this analysis in another way than this
   version, 0.3.0."
+
+**Numbers not compared.** A run on a VCF read with other read options
+than the reference's, another ploidy or the other choice of the passed
+variants, gives no comparison, since the fingerprint of its settings
+holds the read options (`docs/specs/core/keys.md`), and the state
+`done` then holds no `check`. So that the panel says why, as the owner
+decided on 25 September 2026 (point 10), `uncomparedText` gives the line
+that the panel of every analysis shows under its result in place of the
+comparison, when its `check` is `null`, the reference holds check
+numbers of that analysis, and the VCF loaded and the reference's differ
+in their read options:
+
+- "Not compared with the numbers of the project file: this file was read
+  with every variant, and the project's with only the variants with PASS
+  or . in the FILTER column. To compare them, read the file again in the
+  Variants step with only the variants with PASS or . in the FILTER
+  column."
+- "Not compared with the numbers of the project file: this file was read
+  with ploidy 4, and the project's with ploidy 2. To compare them, read
+  the file again in the Variants step with ploidy 2."
+- both, "this file was read with ploidy 4 and every variant, and the
+  project's with ploidy 2 and only the variants with PASS or . in the
+  FILTER column. To compare them, read the file again in the Variants
+  step with ploidy 2 and only the variants with PASS or . in the FILTER
+  column.", in the order of the words of the button of the Variants
+  step that reads a VCF again.
+
+It is `null` otherwise. A `.nei` file has no read options, its ploidy is
+the file's, and its numbers are compared. A setting the user changed in
+another step, a filter or the column of the populations, also leaves the
+numbers uncompared and gives no line, as before; decided here, not by the
+owner, since the owner's point named the read options, and a user who
+changed a filter chose to.
 
 The check numbers are what tells apart a file with the same individuals
 and number of variants as the project's but different genotypes, which
@@ -527,7 +616,7 @@ this spec makes precise:
 
 ```ts
 import type { AppState, AnalysisDef, CheckVerdict } from "./store.ts";
-import type { AppId, Project, ProjectError, VariantSource } from "./project.ts";
+import type { AnalysisId, AppId, Project, ProjectError, VariantSource } from "./project.ts";
 import type { Result } from "./result.ts";
 ```
 
@@ -619,6 +708,7 @@ export type IdentityDifference =
   | { kind: "otherIndividuals"; missing: readonly string[] }  // of saved, in its order
   | { kind: "individualsOrder" }
   | { kind: "ploidy"; saved: number; now: number }
+  | { kind: "onlyPassed"; now: boolean }                  // both VCF files
   | { kind: "numVars"; now: number };
 
 export function compareIdentity(saved: VariantSource, now: VariantSource): readonly IdentityDifference[];
@@ -631,6 +721,10 @@ export function askedFileText(p: Project): string | null;
 
 /** The words of the comparison of the check numbers. */
 export function checkVerdictText(verdict: CheckVerdict): string;
+
+/** Why the numbers of the analysis `analysis` are not compared with the
+    reference's, the VCF loaded read with other read options; null otherwise. */
+export function uncomparedText(p: Project, analysis: AnalysisId): string | null;
 ```
 
 ## The cases
@@ -645,6 +739,11 @@ export function checkVerdictText(verdict: CheckVerdict): string;
 - **A project saved while the variants file is being read.** The file
   holds its name, size, format and read options, and a read `pending`;
   the reopened project compares only those with the file given.
+- **A project opened, its VCF given again and read again with another
+  ploidy, and saved before that read ends.** The file holds the VCF
+  loaded, with the ploidy the user set and its read `pending`, and none
+  of the reference's check numbers (above, after the table of what is
+  written).
 - **A project saved while the individuals file is being read**, or after
   the reader refused it: the file holds no individuals file, and the
   reopened project asks for one.
@@ -687,8 +786,9 @@ the smallest one. The tests use `TEST_DEFS`, added to
 `"diversity"`, `"pca"` and `"gwas_lm"`, as whole definitions of
 `AnalysisDef` of `docs/specs/core/store.md`, each with a key version, the
 filters it reads, a `keyInputs` that gives its options and the grouping,
-and a `checkNumbers` that gives the numbers of a test result, a list the
-test chooses. The states of the store are literals of `AppState`, with
+a `checkNumbers` that gives the numbers of a test result, a list the
+test chooses, and a `numCheckNumbers` that gives `null`, so that the
+count is checked only by the tests of the count. The states of the store are literals of `AppState`, with
 the analyses `done`, `ready` or `removed`.
 
 - **The fixtures of version 1**, files kept under
@@ -709,7 +809,11 @@ the analyses `done`, `ready` or `removed`.
   gives its numbers with the versions now; an analysis `removed` with a
   reference whose fingerprint matches carries the reference's check with
   its versions; another setting, or a variants file of another size,
-  carries none; a check number of `Infinity` throws a defect.
+  carries none; a check number of `Infinity` throws a defect; a VCF of
+  the reference's identity read again with ploidy 4, pending, is written
+  with ploidy 4, its read pending and no check, where the reference's
+  had ploidy 2 and a check, and the file opens into a project whose
+  reference has ploidy 4 and no check.
 - **The writing**: the same state with the fields of every object of the
   project built in the reverse order gives the same text; the options
   `{ "b": 1, "a": 2 }` are written `a` first; a row of the table is one
@@ -719,7 +823,10 @@ the analyses `done`, `ready` or `removed`.
   `formatVersion` 0, 1.5 and `"1"`, a file of `"gwas"` opened in popgen, a
   field `"notes"` at the top, `appVersion` missing, `"checks": {}`, a
   check with a field `settings`, a check of the analysis `"fst"`, a check
-  with `variants` null, a read of the individuals file `pending`. The
+  with `variants` null, a read of the individuals file `pending`, a
+  check of the diversity with 6 numbers where `numCheckNumbers` gives 7,
+  whose text is asserted whole; and a check whose count is not checked,
+  `numCheckNumbers` giving `null`, which opens. The
   texts of `notJson`, `newerFormat` and of a `header` error asserted
   whole.
 - **A byte order mark** before the text of `v1-empty.popnei.json`: it
@@ -727,6 +834,12 @@ the analyses `done`, `ready` or `removed`.
 - **The fingerprints**: each check of an opened file holds
   `settingsFingerprint` of its definition, of the opened project and of
   the read options of the file's variants file.
+- **The count with the diversity's own definition**:
+  `v1-nei-diversity.popnei.json` opens with the definitions of
+  `src/core/apps.ts`, and is refused with one of its 7 numbers removed.
+- **The numbers not compared**: `uncomparedText` for each of its three
+  sentences, and `null` for a result compared, a reference with no check
+  of the analysis, a `.nei` file, and the same read options.
 - **The identity**: a case for each row of its table, and the warning of
   `docs/functionality.md`, "The project was made with panel_2026.nei, 342
   individuals and 1,203,554 variants; this file has 360 individuals.",
@@ -765,8 +878,8 @@ decided by the owner on 25 September 2026 as this spec has them, each
 check with its own (point E there).
 
 1. **The words**: the warning of the identity, the file asked for after an
-   opening, the two verdicts of the check numbers and the refusals of this
-   module, to be judged when the owner sees them on the screens of stage
+   opening, the two verdicts of the check numbers, the line of numbers not
+   compared and the refusals of this module, to be judged when the owner sees them on the screens of stage
    2, as the reasons of `docs/specs/core/project.md` were. Meanwhile,
    those of this spec. Another answer changes those texts and their tests
    and nothing else.
@@ -775,9 +888,12 @@ check with its own (point E there).
 
 - `docs/specs/analyses/diversity.md`: the id `"diversity"`, a key version
   of 1, and `checkNumbers` giving its numbers in a fixed order, `null`
-  for a NaN, as its section "The check numbers" has them; a change to
-  them raises its key version; the panel shows `checkVerdictText` of the
-  `check` of its `done` state under its result.
+  for a NaN, and `numCheckNumbers` their count, as its section "The
+  check numbers" has them; a change to them raises its key version; the
+  panel shows `checkVerdictText` of the `check` of its `done` state under
+  its result, or, when that is `null`, `uncomparedText` when it is not.
+- `docs/specs/core/store.md`: the definition of an analysis has
+  `numCheckNumbers`.
 - `docs/specs/entry.md`: the saving, `createSaving` of `src/ui/saving.ts`,
   whose `save()` calls `writeProjectFile` with `store.getState()`, the
   analyses of `src/core/apps.ts`, the version of the application and
@@ -792,7 +908,8 @@ check with its own (point E there).
   project.
 - `docs/specs/steps/variants.md`: it shows `askedFileText` and
   `identityWarning`, and starts the read options of a VCF at the
-  reference's.
+  reference's; a ploidy typed and not applied is the step's, and not in
+  the project.
 - `docs/specs/steps/individuals.md`: it offers to load again, rather
   than to change the options of the CSV of, an individuals file whose
   load id the page holds no file for.
