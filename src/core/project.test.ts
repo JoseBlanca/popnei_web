@@ -1558,7 +1558,7 @@ describe("WP1 D4 the records and the needs", () => {
       "an empty list of individuals to %s",
       (kind) => {
         expect(projectNeeds(withLists([{ kind, individuals: [] }]))).toBe(
-          `The list of individuals to ${kind} is empty. Add individuals to it, or remove the filter, in the Variants step.`,
+          `The list of individuals to ${kind} is empty. The Variants step has no control for the filters of individuals in this version, so correct the list in the project file, in a text editor, and open the project again.`,
         );
       },
     );
@@ -1569,7 +1569,7 @@ describe("WP1 D4 the records and the needs", () => {
           withLists([{ kind: "remove", individuals: ["i1", "i3", "i1"] }]),
         ),
       ).toBe(
-        "The list of individuals to remove names i1 more than once. Change the list, or remove the filter, in the Variants step.",
+        "The list of individuals to remove names i1 more than once. The Variants step has no control for the filters of individuals in this version, so correct the list in the project file, in a text editor, and open the project again.",
       );
     });
 
@@ -1581,7 +1581,7 @@ describe("WP1 D4 the records and the needs", () => {
           ]),
         ),
       ).toBe(
-        "The list of individuals to keep names i3 and i1 more than once. Change the list, or remove the filter, in the Variants step.",
+        "The list of individuals to keep names i3 and i1 more than once. The Variants step has no control for the filters of individuals in this version, so correct the list in the project file, in a text editor, and open the project again.",
       );
     });
 
@@ -1591,7 +1591,7 @@ describe("WP1 D4 the records and the needs", () => {
           withLists([{ kind: "keep", individuals: ["i2", "i2", "i2"] }]),
         ),
       ).toBe(
-        "The list of individuals to keep names i2 more than once. Change the list, or remove the filter, in the Variants step.",
+        "The list of individuals to keep names i2 more than once. The Variants step has no control for the filters of individuals in this version, so correct the list in the project file, in a text editor, and open the project again.",
       );
     });
 
@@ -1599,7 +1599,7 @@ describe("WP1 D4 the records and the needs", () => {
       expect(
         projectNeeds(withLists([{ kind: "keep", individuals: ["i1", "x9"] }])),
       ).toBe(
-        "The list of individuals to keep names 1 individual that is not in panel.nei: x9. Change the list, or remove the filter, in the Variants step.",
+        "The list of individuals to keep names 1 individual that is not in panel.nei: x9. The Variants step has no control for the filters of individuals in this version, so correct the list in the project file, in a text editor, and open the project again.",
       );
     });
 
@@ -1619,7 +1619,7 @@ describe("WP1 D4 the records and the needs", () => {
         expect(
           projectNeeds(withLists([{ kind: "remove", individuals: names }])),
         ).toBe(
-          `The list of individuals to remove names ${words}. Change the list, or remove the filter, in the Variants step.`,
+          `The list of individuals to remove names ${words}. The Variants step has no control for the filters of individuals in this version, so correct the list in the project file, in a text editor, and open the project again.`,
         );
       },
     );
@@ -1634,7 +1634,7 @@ describe("WP1 D4 the records and the needs", () => {
           withLists([{ kind: "keep", individuals: ["i1", ...names] }]),
         ),
       ).toBe(
-        "The list of individuals to keep names 1,205 individuals that are not in panel.nei: x1205, x1204 and 1,203 more. Change the list, or remove the filter, in the Variants step.",
+        "The list of individuals to keep names 1,205 individuals that are not in panel.nei: x1205, x1204 and 1,203 more. The Variants step has no control for the filters of individuals in this version, so correct the list in the project file, in a text editor, and open the project again.",
       );
     });
 
@@ -1645,7 +1645,7 @@ describe("WP1 D4 the records and the needs", () => {
             { kind: "keep", individuals: ["i1", "x\n1", "a".repeat(45)] },
           ]),
         ),
-      ).toContain(`: x\\n1 and ${"a".repeat(40)}…. Change`);
+      ).toContain(`: x\\n1 and ${"a".repeat(40)}…. The Variants step`);
     });
 
     test("of 4 names, the first is shown escaped", () => {
@@ -1655,7 +1655,7 @@ describe("WP1 D4 the records and the needs", () => {
             { kind: "keep", individuals: ["x\u00071", "x2", "x3", "x4"] },
           ]),
         ),
-      ).toContain(": x\\u00071, x2 and 2 more. Change");
+      ).toContain(": x\\u00071, x2 and 2 more. The Variants step");
     });
 
     test("the individuals not in the variants are named in the order of the list, not sorted", () => {
@@ -1663,7 +1663,7 @@ describe("WP1 D4 the records and the needs", () => {
         projectNeeds(
           withLists([{ kind: "remove", individuals: ["x9", "x1", "x5"] }]),
         ),
-      ).toContain(": x9, x1 and x5. Change");
+      ).toContain(": x9, x1 and x5. The Variants step");
     });
 
     test("the list to keep is named before the list to remove", () => {
@@ -1694,7 +1694,7 @@ describe("WP1 D4 the records and the needs", () => {
           withLists([{ kind: "keep", individuals: ["x8", "i1", "i1"] }]),
         ),
       ).toBe(
-        "The list of individuals to keep names i1 more than once. Change the list, or remove the filter, in the Variants step.",
+        "The list of individuals to keep names i1 more than once. The Variants step has no control for the filters of individuals in this version, so correct the list in the project file, in a text editor, and open the project again.",
       );
     });
 
@@ -1724,7 +1724,10 @@ describe("WP1 D4 the records and the needs", () => {
     function namesShown(...names: readonly string[]): string {
       const reason =
         projectNeeds(withLists([{ kind: "keep", individuals: names }])) ?? "";
-      return reason.slice(reason.indexOf(": ") + 2, reason.indexOf(". Change"));
+      return reason.slice(
+        reason.indexOf(": ") + 2,
+        reason.indexOf(". The Variants step"),
+      );
     }
 
     test.each([
@@ -1794,7 +1797,7 @@ describe("WP1 D4 the records and the needs", () => {
       expect(
         projectNeeds(withLists([{ kind: "keep", individuals: ["i1", ""] }])),
       ).toBe(
-        "The list of individuals to keep names 1 individual that is not in panel.nei: an empty name. Change the list, or remove the filter, in the Variants step.",
+        "The list of individuals to keep names 1 individual that is not in panel.nei: an empty name. The Variants step has no control for the filters of individuals in this version, so correct the list in the project file, in a text editor, and open the project again.",
       );
     });
 
@@ -1802,7 +1805,7 @@ describe("WP1 D4 the records and the needs", () => {
       expect(
         projectNeeds(withLists([{ kind: "remove", individuals: ["", ""] }])),
       ).toBe(
-        "The list of individuals to remove names an empty name more than once. Change the list, or remove the filter, in the Variants step.",
+        "The list of individuals to remove names an empty name more than once. The Variants step has no control for the filters of individuals in this version, so correct the list in the project file, in a text editor, and open the project again.",
       );
     });
 

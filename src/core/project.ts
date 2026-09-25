@@ -1306,10 +1306,12 @@ function loadIndividualsText(app: AppId): string {
   return `Load a ${FILE_WORDS[app]} in the Individuals step.`;
 }
 
-/** The end of a reason of a list of individuals that names the wrong ones
-    (the project spec, Open 2). */
-const CHANGE_LIST =
-  "Change the list, or remove the filter, in the Variants step.";
+/** The end of a reason of a list of individuals, which in stage 2 comes
+    only from a project file, since the Variants step has no control for
+    it (the project spec, Open 2, settled by the owner on 25 September
+    2026). */
+const CORRECT_LIST =
+  "The Variants step has no control for the filters of individuals in this version, so correct the list in the project file, in a text editor, and open the project again.";
 
 /** The kinds of the lists of individuals, in the order they are checked
     (the project spec, Open 6). */
@@ -1372,7 +1374,7 @@ function listNeeds(
 ): string | null {
   const theList = `The list of ${FILTER_KIND_WORDS[kind]}`;
   if (list.length === 0) {
-    return `${theList} is empty. Add individuals to it, or remove the filter, in the Variants step.`;
+    return `${theList} is empty. ${CORRECT_LIST}`;
   }
   const times = new Map<string, number>();
   for (const name of list) {
@@ -1380,12 +1382,12 @@ function listNeeds(
   }
   const repeated = [...times].filter(([, n]) => n > 1).map(([name]) => name);
   if (repeated.length > 0) {
-    return `${theList} names ${namesOf(repeated)} more than once. ${CHANGE_LIST}`;
+    return `${theList} names ${namesOf(repeated)} more than once. ${CORRECT_LIST}`;
   }
   const unknown = list.filter((name) => !inVariants.has(name));
   if (unknown.length > 0) {
     const one = unknown.length === 1;
-    return `${theList} names ${counted(unknown.length, "individual")} that ${one ? "is" : "are"} not in ${fileName}: ${namesOf(unknown)}. ${CHANGE_LIST}`;
+    return `${theList} names ${counted(unknown.length, "individual")} that ${one ? "is" : "are"} not in ${fileName}: ${namesOf(unknown)}. ${CORRECT_LIST}`;
   }
   return null;
 }
