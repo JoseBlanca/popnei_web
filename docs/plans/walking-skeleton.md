@@ -576,7 +576,7 @@ the top. It is the first time the calculation worker runs in a browser.
   carry the tag `WS9 D1` and are counted there. The states of the steps, Undo and Redo,
   the summary line and the notice are work package 9's. Serves 2. Needs
   7.1.
-- [ ] 7.4 The Variants step, `src/ui/steps/variants/`, from its spec
+- [x] 7.4 The Variants step, `src/ui/steps/variants/`, from its spec
   whole but "A project file opened", which is task 9.4; its states in
   `e2e/screens.spec.ts`. Serves 3 and 5. Needs 7.2 and 7.3.
 - [ ] 7.5 The owner accepts the Variants step, with its screenshots and
