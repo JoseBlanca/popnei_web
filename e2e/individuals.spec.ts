@@ -328,7 +328,7 @@ test("WS8 D1 a file with a row one cell short gives the reason that names the se
 
   await expect(
     zone(page).getByText(
-      "short.csv could not be read: line 3 has 2 cells where the header has 3, read with the semicolon as the separator. Choose another separator above, or load a corrected file.",
+      "short.csv could not be read: line 3 has 2 cells where the header has 3, read with the semicolon as the separator. Choose another separator, or load a corrected file.",
       { exact: true },
     ),
   ).toBeVisible();
@@ -947,5 +947,20 @@ test("WS8 D1 a file of UTF-8 with its mark and a bad byte is read as UTF-8, with
   await expect(table.getByRole("row").nth(2)).toHaveText(
     "PaíscategoricalEspaña · Ita�lia · Perú",
   );
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("WS8 D1 a variants file told by its name is not loaded, and is named a variants file", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openIndividuals(page);
+  for (const name of ["panel.vcf", "panel.vcf.gz", "panel.bcf", "panel.nei"]) {
+    await pick(page, { name, text: "x" });
+    const message = `${name} was not loaded: it is a variants file, which the Variants step takes. Load a metadata file.`;
+    await expect(page.getByRole("main").getByText(message)).toBeVisible();
+    await expect(page.getByRole("status").last()).toHaveText(message);
+  }
+  await expect(fileButton(page)).toHaveText("Choose a metadata file…");
   await expectNoViolations(makeAxeBuilder);
 });

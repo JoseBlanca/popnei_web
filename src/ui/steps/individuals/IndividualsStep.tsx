@@ -76,6 +76,7 @@ import {
   sizeText,
   typeText,
   undecodedText,
+  variantsNameText,
 } from "./words.ts";
 import type { PopulationLine } from "./words.ts";
 
@@ -89,6 +90,7 @@ export function IndividualsStep(): React.JSX.Element {
   const files = useFiles();
   const announcer = useAnnouncer();
   const individuals = useAppState((s) => s.project.individuals);
+  const app = useAppState((s) => s.project.app);
   const reason = useAppState((s) => individualsNeeds(s.project));
   const readReason = useAppState((s) => individualsStepNeeds(s.project));
 
@@ -119,6 +121,9 @@ export function IndividualsStep(): React.JSX.Element {
     switch (kindOfName(file.name)) {
       case "excel":
         refuse(excelText(file.name));
+        return;
+      case "variants":
+        refuse(variantsNameText(file.name, app));
         return;
       case "other":
         refuse(otherNameText(file.name));

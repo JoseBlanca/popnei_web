@@ -7,7 +7,13 @@
  */
 
 import type { IndividualsCheck } from "../../../core/project.ts";
-import { counted, escaped, grouped } from "../../../core/project.ts";
+import type { AppId } from "../../../core/project.ts";
+import {
+  counted,
+  escaped,
+  grouped,
+  individualsStepRefusal,
+} from "../../../core/project.ts";
 import type {
   Cell,
   ColumnType,
@@ -38,14 +44,29 @@ const TEXT_ENDINGS = [".csv", ".tsv", ".txt"] as const;
 /** The endings of an Excel file, not read in this version. */
 const EXCEL_ENDINGS = [".xlsx", ".xls"] as const;
 
+/** The endings of a variants file, which the Variants step takes. */
+const VARIANTS_ENDINGS = [".vcf", ".vcf.gz", ".bcf", ".nei"] as const;
+
 /** What the end of `name` tells, compared without regard to case: a CSV
-    or a TSV, which is loaded; an Excel file, or a file of any other
-    name, which are not. */
-export function kindOfName(name: string): "text" | "excel" | "other" {
+    or a TSV, which is loaded; an Excel file, a variants file, or a file
+    of any other name, which are not. */
+export function kindOfName(
+  name: string,
+): "text" | "excel" | "variants" | "other" {
   const lower = name.toLowerCase();
   if (TEXT_ENDINGS.some((ending) => lower.endsWith(ending))) return "text";
   if (EXCEL_ENDINGS.some((ending) => lower.endsWith(ending))) return "excel";
+  if (VARIANTS_ENDINGS.some((ending) => lower.endsWith(ending))) {
+    return "variants";
+  }
   return "other";
+}
+
+/** What the step says of a variants file of the application `app`, told
+    by its name, which it did not load: the words of the reader for a VCF
+    found by its first line, as the owner decided on 25 September 2026. */
+export function variantsNameText(name: string, app: AppId): string {
+  return `${escaped(name)} was not loaded: ${individualsStepRefusal({ kind: "variantsFile" }, app)}`;
 }
 
 /** What the step says of an Excel file, which it did not load. */

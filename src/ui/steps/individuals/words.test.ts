@@ -16,6 +16,7 @@ import {
   sizeText,
   typeText,
   undecodedText,
+  variantsNameText,
 } from "./words.ts";
 
 const TABLE: IndividualsTable = {
@@ -47,6 +48,17 @@ describe("the words of the Individuals step", () => {
     expect(kindOfName("POPS.XLS")).toBe("excel");
     expect(kindOfName("pops.dat")).toBe("other");
     expect(kindOfName("pops.csv.gz")).toBe("other");
+  });
+
+  test("WS8 D1 a variants file is told by its name, .vcf, .vcf.gz, .bcf or .nei, and named as one", () => {
+    expect(kindOfName("panel.vcf")).toBe("variants");
+    expect(kindOfName("PANEL.VCF.GZ")).toBe("variants");
+    expect(kindOfName("panel.bcf")).toBe("variants");
+    expect(kindOfName("panel.nei")).toBe("variants");
+    expect(kindOfName("panel.gz")).toBe("other");
+    expect(variantsNameText("panel.vcf.gz", "popgen")).toBe(
+      "panel.vcf.gz was not loaded: it is a variants file, which the Variants step takes. Load a metadata file.",
+    );
   });
 
   test("a file not loaded is named in its message", () => {

@@ -3456,11 +3456,11 @@ describe("WS1 D3 the additions to project.ts", () => {
     test.each([
       [
         { kind: "raggedRow", line: 7, expected: 4, found: 3, separator: ";" },
-        "line 7 has 3 cells where the header has 4, read with the semicolon as the separator. Choose another separator above, or load a corrected file.",
+        "line 7 has 3 cells where the header has 4, read with the semicolon as the separator. Choose another separator, or load a corrected file.",
       ],
       [
         { kind: "unclosedQuote", line: 7, separator: "," },
-        "the quote that opens a cell on line 7 is never closed, read with the comma as the separator. Choose another separator above, or load a corrected file.",
+        "the quote that opens a cell on line 7 is never closed, read with the comma as the separator. Choose another separator, or load a corrected file.",
       ],
       [
         { kind: "variantsFile" },

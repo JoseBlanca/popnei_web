@@ -1454,6 +1454,22 @@ function individualsReadNeeds(
   }
 }
 
+/**
+ * What follows the colon of a refusal of the reader in the Individuals
+ * step of the application `app`: its words and its end, "it is a variants
+ * file, which the Variants step takes. Load a metadata file.", or the end
+ * alone after an empty message of the files wasm. The step says a
+ * variants file told by its name in these words.
+ */
+export function individualsStepRefusal(
+  error: IndividualsFileError,
+  app: AppId,
+): string {
+  const words = saying(refusalWords(error, app));
+  const end = stepRefusedEnd(error, app);
+  return words === "" ? end : `${words.slice(2)}. ${end}`;
+}
+
 /** The end of a refusal of the reader shown in the Individuals step, as
     the owner decided on 25 September 2026: another separator for the two
     refusals a wrong one most often causes, a corrected file for the
@@ -1464,7 +1480,7 @@ function stepRefusedEnd(error: IndividualsFileError, app: AppId): string {
   switch (error.kind) {
     case "raggedRow":
     case "unclosedQuote":
-      return "Choose another separator above, or load a corrected file.";
+      return "Choose another separator, or load a corrected file.";
     case "variantsFile":
       return `Load a ${FILE_WORDS[app]}.`;
     case "unreadable":
@@ -1488,7 +1504,7 @@ function stepRefusedEnd(error: IndividualsFileError, app: AppId): string {
  * when the project has no individuals file or its file is read (the
  * project spec, "What an analysis needs of every project"): the reason of
  * `individualsNeeds` for such a file, with the ends of that step, "Choose
- * another separator above, or load a corrected file." after a row of the
+ * another separator, or load a corrected file." after a row of the
  * wrong length or a quote never closed, "Load a corrected file." after
  * most other refusals, and "Load it again." after a crash.
  */

@@ -572,6 +572,17 @@ for (const theme of ["light", "dark"] as const) {
       await save(page, `popgen-individuals-variants-file-${theme}`);
     });
 
+    test("the Individuals step, a variants file told by its name", async ({
+      page,
+    }) => {
+      await goTo(page, "Individuals");
+      await pickIndividuals(page, { name: "panel.vcf.gz", text: "x" });
+      await expect(
+        page.getByRole("main").getByText(/^panel\.vcf\.gz was not loaded/),
+      ).toBeVisible();
+      await save(page, `popgen-individuals-variants-name-${theme}`);
+    });
+
     test("the Individuals step, a character not decoded", async ({ page }) => {
       await goTo(page, "Individuals");
       await pickIndividuals(page, {
