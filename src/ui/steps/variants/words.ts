@@ -45,16 +45,18 @@ export function notLoadedText(name: string): string {
   return `${escaped(name)} was not loaded: the Variants step reads a VCF, whose name ends in .vcf, .vcf.gz or .vcf.bgz, or a .nei file. If it is one of them, rename it.`;
 }
 
-/** What the step says when several files are dropped at once, or
-    several things of which one is not a file. */
-export const SEVERAL_DROPPED = "Drop one variants file at a time.";
+/** What the step says when several files are dropped or pasted at once,
+    or several things of which one is not a file. A paste is a drop to
+    the step, and a user of the keyboard pastes and cannot drop, so the
+    words say "load". */
+export const SEVERAL_DROPPED = "Load one variants file at a time.";
 
-/** What the step says when a folder is dropped. */
-export const FOLDER_DROPPED = "Drop a VCF or a .nei file, not a folder.";
+/** What the step says when a folder is dropped or pasted. */
+export const FOLDER_DROPPED = "Load a VCF or a .nei file, not a folder.";
 
 /** What the step says when a piece of text is dropped, dragged from
-    another window. */
-export const TEXT_DROPPED = "Drop a VCF or a .nei file, not a piece of text.";
+    another window, or pasted. */
+export const TEXT_DROPPED = "Load a VCF or a .nei file, not a piece of text.";
 
 /** The line under the ploidy, which the owner asked for on 25 September
     2026 and reworded the same day. */

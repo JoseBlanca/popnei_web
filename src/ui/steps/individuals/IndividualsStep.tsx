@@ -52,11 +52,13 @@ import {
 } from "./commands.ts";
 import styles from "./IndividualsStep.module.css";
 import {
+  FOLDER_DROPPED,
   NOT_CHECKED_YET,
   NO_FILE,
   OPTIONS_HELP,
   PICKER_ENDINGS,
   SEVERAL_DROPPED,
+  TEXT_DROPPED,
   TYPES_LINE,
   UTF16_TEXT,
   allFoundText,
@@ -79,6 +81,13 @@ import {
   variantsNameText,
 } from "./words.ts";
 import type { PopulationLine } from "./words.ts";
+
+/** What the step says of a drop, or a paste, that is not of one file. */
+const NOT_FILES_WORDS = {
+  folder: FOLDER_DROPPED,
+  text: TEXT_DROPPED,
+  several: SEVERAL_DROPPED,
+} as const;
 
 /** The line under the column of the populations. */
 const COLUMN_DESCRIPTION =
@@ -184,6 +193,9 @@ export function IndividualsStep(): React.JSX.Element {
             }
             accept={PICKER_ENDINGS}
             onFiles={onFiles}
+            onNotFiles={(dropped) => {
+              refuse(NOT_FILES_WORDS[dropped]);
+            }}
             buttonRef={fileButton}
             actions={
               individuals !== null && (

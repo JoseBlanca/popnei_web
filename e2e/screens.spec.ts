@@ -386,7 +386,7 @@ for (const theme of ["light", "dark"] as const) {
     test("the Variants step, several files dropped", async ({ page }) => {
       await dropVariants(page, ["panel.nei", "panel.vcf.gz"]);
       await expect(
-        page.getByRole("main").getByText("Drop one variants file at a time."),
+        page.getByRole("main").getByText("Load one variants file at a time."),
       ).toBeVisible();
       await save(page, `popgen-variants-several-dropped-${theme}`);
     });
@@ -506,7 +506,7 @@ for (const theme of ["light", "dark"] as const) {
       await expect(
         page
           .getByRole("main")
-          .getByText("Drop a VCF or a .nei file, not a piece of text."),
+          .getByText("Load a VCF or a .nei file, not a piece of text."),
       ).toBeVisible();
       await save(page, `popgen-variants-text-dropped-${theme}`);
     });

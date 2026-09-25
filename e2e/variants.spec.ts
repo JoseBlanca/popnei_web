@@ -329,11 +329,11 @@ test("WS7 D3 several files dropped at once load none", async ({
   await expect(
     page
       .getByRole("main")
-      .getByText("Drop one variants file at a time.", { exact: true }),
+      .getByText("Load one variants file at a time.", { exact: true }),
   ).toBeVisible();
   // Announced too, since the focus does not move to it.
   await expect(page.getByRole("status").last()).toHaveText(
-    "Drop one variants file at a time.",
+    "Load one variants file at a time.",
   );
   await expect(fileButton(page)).toHaveText("Choose a variants file…");
   await expectNoViolations(makeAxeBuilder);
@@ -669,7 +669,7 @@ test("WS7 D3 a folder dropped on the zone loads nothing, and the step says what 
   await openVariants(page);
   await dropFolder(page);
 
-  const message = "Drop a VCF or a .nei file, not a folder.";
+  const message = "Load a VCF or a .nei file, not a folder.";
   await expect(
     page.getByRole("main").getByText(message, { exact: true }),
   ).toBeVisible();
@@ -699,13 +699,42 @@ test("WS7 D3 a piece of text dropped on the zone loads nothing, and the step say
   await openVariants(page);
   await dropText(page, "panel.nei");
 
-  const message = "Drop a VCF or a .nei file, not a piece of text.";
+  const message = "Load a VCF or a .nei file, not a piece of text.";
   await expect(
     page.getByRole("main").getByText(message, { exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("status").last()).toHaveText(message);
   await expect(fileButton(page)).toHaveText("Choose a variants file…");
   await expectNoViolations(makeAxeBuilder);
+});
+
+test("WS7 D3 a piece of text pasted into the zone's button loads nothing, and the step says what to give in words that fit a paste", async ({
+  page,
+}) => {
+  await openVariants(page);
+  const paste = zone(page).getByRole("button", {
+    name: "Paste a variants file",
+    exact: true,
+  });
+  await paste.focus();
+  await paste.evaluate((button) => {
+    const transfer = new DataTransfer();
+    transfer.setData("text/plain", "panel.nei");
+    button.dispatchEvent(
+      new ClipboardEvent("paste", {
+        clipboardData: transfer,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+  });
+
+  const message = "Load a VCF or a .nei file, not a piece of text.";
+  await expect(
+    page.getByRole("main").getByText(message, { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("status").last()).toHaveText(message);
+  await expect(fileButton(page)).toHaveText("Choose a variants file…");
 });
 
 test("WS7 D3 a file dropped while a ploidy is still being typed is read with that ploidy", async ({

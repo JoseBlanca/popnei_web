@@ -514,6 +514,19 @@ test("WS8 D1 the keyboard goes through the step in the order of the spec", async
   await expect(page.getByText(MISSING_REASON, { exact: true })).toBeVisible();
   await expect(fileButton(page)).toBeFocused();
 
+  // From the heading: the zone's hidden button that takes a pasted file,
+  // then the file button.
+  await page.getByRole("heading", { level: 1, name: "Individuals" }).focus();
+  await page.keyboard.press("Tab");
+  await expect(
+    zone(page).getByRole("button", {
+      name: "Paste a metadata file",
+      exact: true,
+    }),
+  ).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(fileButton(page)).toBeFocused();
+
   const order = [
     zone(page).getByRole("button", { name: "Remove pops.csv" }),
     select(page, "Encoding"),
@@ -723,7 +736,7 @@ test("WS8 D1 several files dropped at once load none, and the step says why and 
     await fileButton(page).dispatchEvent(type, { dataTransfer });
   }
 
-  const message = "Drop one metadata file at a time.";
+  const message = "Load one metadata file at a time.";
   await expect(
     page.getByRole("main").getByText(message, { exact: true }),
   ).toBeVisible();
@@ -731,6 +744,88 @@ test("WS8 D1 several files dropped at once load none, and the step says why and 
   await expect(page.getByRole("status").last()).toHaveText(message);
   await expect(fileButton(page)).toHaveText("Choose a metadata file…");
   await expectNoViolations(makeAxeBuilder);
+});
+
+/** Dispatches the events of a drop of `dataTransfer` on the zone, on its
+    button, from where they reach the zone. */
+async function dropOn(page: Page, dataTransfer: unknown): Promise<void> {
+  for (const type of ["dragenter", "dragover", "drop"]) {
+    await fileButton(page).dispatchEvent(type, { dataTransfer });
+  }
+}
+
+test("WS8 D1 a folder dropped on the zone loads nothing, and the step says what to give", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openIndividuals(page);
+  // A script cannot put a folder into a DataTransfer, so the item of a
+  // file says, when React Aria asks for its entry of the file system,
+  // that it is a folder, as the entry of a folder dragged from the
+  // desktop does.
+  const dataTransfer = await page.evaluateHandle(() => {
+    DataTransferItem.prototype.webkitGetAsEntry = function () {
+      return {
+        isFile: false,
+        isDirectory: true,
+        name: "metadata",
+      } as FileSystemEntry;
+    };
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([], "metadata"));
+    return transfer;
+  });
+  await dropOn(page, dataTransfer);
+
+  const message = "Load a metadata file, a CSV or a TSV, not a folder.";
+  await expect(
+    page.getByRole("main").getByText(message, { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("status").last()).toHaveText(message);
+  await expect(fileButton(page)).toHaveText("Choose a metadata file…");
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("WS8 D1 a piece of text dropped on the zone, or pasted into its button, loads nothing, and the step says what to give", async ({
+  page,
+}) => {
+  await openIndividuals(page);
+  const message = "Load a metadata file, a CSV or a TSV, not a piece of text.";
+  const dataTransfer = await page.evaluateHandle(() => {
+    const transfer = new DataTransfer();
+    transfer.setData("text/plain", "pops.csv");
+    return transfer;
+  });
+  await dropOn(page, dataTransfer);
+  await expect(
+    page.getByRole("main").getByText(message, { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("status").last()).toHaveText(message);
+
+  // Pasted: a file picked first takes the message away, which the paste
+  // then brings back.
+  await pick(page, "panel_pops.csv");
+  await expect(page.getByRole("main").getByText(message)).toHaveCount(0);
+  const paste = zone(page).getByRole("button", {
+    name: "Paste a metadata file",
+    exact: true,
+  });
+  await paste.focus();
+  await paste.evaluate((button) => {
+    const transfer = new DataTransfer();
+    transfer.setData("text/plain", "pops.csv");
+    button.dispatchEvent(
+      new ClipboardEvent("paste", {
+        clipboardData: transfer,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+  });
+  await expect(
+    page.getByRole("main").getByText(message, { exact: true }),
+  ).toBeVisible();
+  await expect(fileButton(page)).toHaveText("Replace panel_pops.csv…");
 });
 
 /** The words of an element whose letters stand on more than one line,

@@ -31,15 +31,13 @@ export interface FileZoneProps {
   /** The endings the file picker offers first, `.vcf`. */
   readonly accept: readonly string[];
   /** Called with the files picked, dropped or pasted, of which there may
-      be several when they are dropped. */
+      be several when they are dropped or pasted. */
   readonly onFiles: (files: readonly File[]) => void;
-  /** Called, when it is given, for a drop that is not of files alone: a
-      folder, a piece of text, or several things one of which is not a
-      file; nothing is then given to `onFiles`. Without it, the files of
-      such a drop are given to `onFiles`, and the rest is left. */
-  readonly onNotFiles?: (
-    dropped: Exclude<Dropped, "files" | "nothing">,
-  ) => void;
+  /** Called for a drop or a paste that is not of files alone: a folder, a
+      piece of text, or several things one of which is not a file; nothing
+      is then given to `onFiles`. React Aria gives a paste as a drop, so
+      the two cannot be told apart. */
+  readonly onNotFiles: (dropped: Exclude<Dropped, "files" | "nothing">) => void;
   /** The element of the button, for a screen that moves the focus to it. */
   readonly buttonRef?: React.Ref<HTMLButtonElement>;
   /** What the zone shows of the file, before the button. */
@@ -61,7 +59,7 @@ export function FileZone({
 }: FileZoneProps): React.JSX.Element {
   const onDrop = (event: { readonly items: readonly DropItem[] }): void => {
     const dropped = droppedOf(event.items.map((item) => item.kind));
-    if (onNotFiles !== undefined && dropped !== "files") {
+    if (dropped !== "files") {
       if (dropped !== "nothing") onNotFiles(dropped);
       return;
     }

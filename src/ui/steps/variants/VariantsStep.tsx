@@ -61,7 +61,7 @@ import {
   variantsText,
 } from "./words.ts";
 
-/** What the step says of a drop that is not of one file. */
+/** What the step says of a drop, or a paste, that is not of one file. */
 const NOT_FILES_WORDS = {
   folder: FOLDER_DROPPED,
   text: TEXT_DROPPED,

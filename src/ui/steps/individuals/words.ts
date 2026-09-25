@@ -79,8 +79,20 @@ export function otherNameText(name: string): string {
   return `${escaped(name)} was not loaded: the Individuals step reads a CSV or a TSV, whose name ends in .csv, .tsv or .txt. If it is one of them, rename it.`;
 }
 
-/** What the step says when several files are dropped at once. */
-export const SEVERAL_DROPPED = "Drop one metadata file at a time.";
+/** What the step says when several files are dropped or pasted at
+    once, or several things of which one is not a file. A paste is a drop
+    to the step, and a user of the keyboard pastes and cannot drop, so the
+    words say "load". */
+export const SEVERAL_DROPPED = "Load one metadata file at a time.";
+
+/** What the step says when a folder is dropped or pasted. */
+export const FOLDER_DROPPED =
+  "Load a metadata file, a CSV or a TSV, not a folder.";
+
+/** What the step says when a piece of text is dropped, dragged from
+    another window, or pasted. */
+export const TEXT_DROPPED =
+  "Load a metadata file, a CSV or a TSV, not a piece of text.";
 
 /** The line of the zone with no file. */
 export const NO_FILE =
