@@ -143,6 +143,24 @@ page; where the difference comes from was not looked into. The plugin
 itself reaches no user. A second
 language, later, is a line of the plugin's list, `locales: ["en-US"]`.
 
+The table of the diversity is a plain HTML table, `<table>` with header
+cells for its columns and for its rows, and not React Aria's `Table`, as
+the owner decided on 25 September 2026. It has a few rows, one per
+population, and is neither sorted nor selected, so the grid of React
+Aria, which moves the focus from cell to cell with the arrow keys, gave
+it nothing that a table of HTML does not: a screen reader reads a
+`<table>` cell by cell with its own keys, and the frame that scrolls it
+on a narrow page is reached by the Tab key. The first script of
+`popgen.html` went from 114.64 KB gzipped to 100.45 KB with the change,
+as `vite build` reported them with Vite 8.3.0 on 25 September 2026, and
+the script it shares with the probe page stayed at 68.78 KB. The 14.19
+KB that went are less than the 25.1 KB the review of the diversity
+panel measured for the `Table` with source maps, on a build before the
+plugin of the languages; where the difference comes from was not looked
+into. React Aria's `Table` stays for the tables that are sorted or have
+thousands of rows, the individuals and the hits of a GWAS, and its
+select list stays, as the list of the column of the populations.
+
 Not taken: component libraries with their own look, MUI, Chakra,
 Mantine, which bring a style we would fight and, for Chakra, a history of
 large rewrites; and Radix Primitives, whose maintenance slowed.
