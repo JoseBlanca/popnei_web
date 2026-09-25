@@ -232,9 +232,11 @@ the first table.
 The Individuals step shows the reason of its file, being read or not
 read, with other ends, since the refusal is shown inside that step, under
 the options of the reader; the owner decided on 25 September 2026 that
-a refusal shown there ends "Choose another separator above, or load a
+a refusal shown there ends "Choose another separator, or load a
 corrected file." for a row of the wrong length and a quote never
-closed, whose likeliest cause is the separator, and "Load a corrected
+closed, whose likeliest cause is the separator, with no word of where
+the separator is, since it stands beside the refusal on a wide screen
+and under it on a phone, and "Load a corrected
 file." otherwise. `individualsStepNeeds` gives those words, the rows of
 the table above for a file being read or not read, and `null` for no
 file or a file read, which the step shows otherwise:
@@ -242,7 +244,7 @@ file or a file read, which the step shows otherwise:
 | the individuals file | the reason in the Individuals step |
 |---|---|
 | being read | "Reading pops.csv." |
-| refused by the reader, `raggedRow` or `unclosedQuote` | "pops.csv could not be read: line 7 has 3 cells where the header has 4, read with the semicolon as the separator. Choose another separator above, or load a corrected file." |
+| refused by the reader, `raggedRow` or `unclosedQuote` | "pops.csv could not be read: line 7 has 3 cells where the header has 4, read with the semicolon as the separator. Choose another separator, or load a corrected file." |
 | refused by the reader, `variantsFile` | "pops.csv could not be read: it is a variants file, which the Variants step takes. Load a metadata file." |
 | refused by the reader, `unreadable` | "pops.csv could not be read: the browser could not read it; it may have been changed, moved or deleted since it was picked. Load it again." |
 | refused by the reader, any other kind, or by the files wasm | "pops.csv could not be read: it has no row of individuals. Load a corrected file." |
@@ -956,7 +958,7 @@ of them changes those texts and their tests, and nothing else.
    wrong advice for a file whose rows are wrong, so such a refusal ends
    "Load a metadata file in the Individuals step." beside a Run button;
    in the Individuals step it ends as the owner decided on 25 September
-   2026, "Choose another separator above, or load a corrected file." or
+   2026, "Choose another separator, or load a corrected file." or
    "Load a corrected file.", which settles this point (above, "What an
    analysis needs of every project").
 6. **Which problem of the filters of individuals is named first, when
