@@ -244,21 +244,21 @@ later task builds on a file that contradicts its spec.
 
 **Tasks:**
 
-- [ ] 1.1 `package.json`: the release `js-v0.1.0-dev.2` and `"version":
+- [x] 1.1 `package.json`: the release `js-v0.1.0-dev.2` and `"version":
   "0.1.0"`, and the lock file; the open-points file, "`package.json`".
   Serves 1, and 2 for the probe.
-- [ ] 1.2 The approved specs of stage 1, in one commit before the code:
+- [x] 1.2 The approved specs of stage 1, in one commit before the code:
   `docs/specs/worker/protocol.md`, `docs/specs/core/project.md`,
   `store.md` and `history.md`, by their sections of "Changes to approved
   files". Serves 6. Needs 1.1.
-- [ ] 1.3 The code: `src/worker/protocol.ts`, `src/core/project.ts`,
+- [x] 1.3 The code: `src/worker/protocol.ts`, `src/core/project.ts`,
   `store.ts` and `testSupport.ts` (`TEST_DEFS`, and checks drawn with
   their versions), from the specs of 1.2. One task, because a new kind
   in `protocol.ts` does not compile until the lists of kinds in
   `project.ts` know it. `Grouping` and the lock on no metadata file stay
   as they are, the grouping of the individuals and the lock of the
   analyses while there is no metadata file, since both change in stage 4. Serves 2 to 5. Needs 1.2.
-- [ ] 1.4 The documents and the skills: `docs/architecture.md`,
+- [x] 1.4 The documents and the skills: `docs/architecture.md`,
   `functionality.md`, `build-order.md`, and `worker.md`, `testing.md`
   and `react.md` of `.claude/skills/coding/`, by their sections of
   "Changes to approved files". Serves 6. Can run beside 1.1 to 1.3.
