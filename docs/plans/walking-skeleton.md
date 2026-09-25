@@ -553,7 +553,7 @@ the top. It is the first time the calculation worker runs in a browser.
 
 **Tasks:**
 
-- [ ] 7.1 `popgen.html` with its start guard, the lines of plain script
+- [x] 7.1 `popgen.html` with its start guard, the lines of plain script
   in its `<head>` that tell a browser too old and a page that did not
   load (the entry spec, "The page"), its line in `input` of
   `vite.config.ts`, `APP_VERSION` written by `define`; the entry,
@@ -561,14 +561,14 @@ the top. It is the first time the calculation worker runs in a browser.
   without the saving, which is task 9.4; `src/ui/store.tsx`,
   `src/ui/defects.ts`, and the error bar of the shell spec's "The error
   bar" without its Save. Serves 1, and 2 on the errors.
-- [ ] 7.2 The workers in the page: `src/worker/start.ts`,
+- [x] 7.2 The workers in the page: `src/worker/start.ts`,
   `src/worker/runnerWorker.ts` (the runner spec's "Two files" and "The
   worker's script catches the rest"), and `src/ui/reads.ts`, `runs.ts`
   and `files.tsx`, from the entry spec's "Who asks for a read", "The
   outcome of a calculation" and the paragraph on a file the user picks;
   the rule of the lint above. Serves 1, 2 on the worker, and 4. Needs
   7.1.
-- [ ] 7.3 The frame of the shell: `react-aria-components` added, the
+- [x] 7.3 The frame of the shell: `react-aria-components` added, the
   wrappers of its widgets in `src/ui/widgets/`, `src/ui/tokens.css`; the
   header with the name, the stepper's three links with the step in the
   hash and the title, the `<main>`, and the status region with its
