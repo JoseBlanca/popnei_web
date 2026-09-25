@@ -1,7 +1,7 @@
 # Plan: the walking skeleton
 
-25 September 2026, a draft for the owner's approval; its breakdown was
-approved on the same day, with the three decisions under "In and out".
+25 September 2026, approved by the owner on the same day, with the three
+decisions under "In and out"; under way from 25 September 2026.
 It builds stage 2
 of `docs/build-order.md`, the walking skeleton of section 10 of
 `docs/architecture.md`: the smallest population genetics application
