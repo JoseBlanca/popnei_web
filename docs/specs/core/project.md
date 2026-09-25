@@ -3,8 +3,8 @@
 24 September 2026, approved by the owner on 24 September 2026; built in
 `src/core/project.ts`; revised on 25 September 2026 for the specs of
 stage 2 the owner approved that day, as
-`docs/specs/stage-2-open-points.md`, "Changes to approved files", lists.
-The project is everything the user has set in one application: the
+`docs/specs/stage-2-open-points.md`, "Changes to approved files", lists, and again that day for the words of the Variants step the owner
+decided at stop 7.5 of `docs/plans/walking-skeleton.md`. The project is everything the user has set in one application: the
 variants file they loaded, the filters, the individuals file with the
 types of its columns, the populations, and the options of each analysis.
 This spec gives its type, the commands that change it, the records that
@@ -113,6 +113,28 @@ words the screen shows beside the Run button, or `null`:
 | a list of individuals that is empty | "The list of individuals to keep is empty. Add individuals to it, or remove the filter, in the Variants step." |
 | a list that names an individual more than once | "The list of individuals to remove names ind_031 more than once. Change the list, or remove the filter, in the Variants step." (**Open 2**) |
 | a list that names individuals not in the variants | "The list of individuals to keep names 2 individuals that are not in panel.nei: ind_900 and ind_901. Change the list, or remove the filter, in the Variants step." (**Open 2**) |
+
+The Variants step shows the reason of its file, being read or not
+read, with another end, since it is where the file is chosen and its
+button reads "Replace panel.nei…"; the owner decided on 25 September
+2026 that a refusal shown there ends "Choose another file.".
+`variantsStepNeeds` gives those words, the rows of the table above for a
+file being read or not read, and `null` for no file or a file read,
+which the step shows otherwise:
+
+| the variants file | the reason in the Variants step |
+|---|---|
+| being read | "Reading panel.nei." |
+| refused by popnei | "popnei could not read panel.nei: ‹popnei's message›. Choose another file." |
+| its read stopped by a crash of the calculation | "panel.nei could not be read: ‹what happened› (**Open 4**). Choose it again." |
+| the calculations could not start, or the page is out of date | "panel.nei could not be read: ‹what happened› (**Open 4**). Reload the page and choose it again." |
+| no longer readable by the browser, `reopenFailed` | "panel.nei could not be read; it may have changed on the disk since it was picked. Choose it again." |
+
+The last three ends are the writer's, the same day: the owner's words
+fit a file that popnei refused, and a file that could not be read, by
+no fault of its own, is chosen again and not replaced. The reasons of
+the other rows of `projectNeeds`, and every reason of the individuals
+file in the Individuals step, keep their words.
 
 The owner decided on 25 September 2026 that a variants file the browser
 can no longer read, changed, moved or deleted on the disk since it was
@@ -602,6 +624,11 @@ again, and a command on another column of it would throw.
 /** The reason no analysis can run on this project, or null; the table above. */
 export function projectNeeds(p: Project): string | null;
 
+/** The reason of the variants file being read or not read, in the words
+    of the Variants step, or null for no file or a file read; the second
+    table above. */
+export function variantsStepNeeds(p: Project): string | null;
+
 /** The reason an analysis that uses the individuals file cannot run, or
     null, naming the file as the application of `p` names it. */
 export function individualsNeeds(p: Project): string | null;
@@ -808,8 +835,8 @@ project frozen deeply with `Object.freeze`, so that a write into it throws
 - **Each record**: recorded into the source of its id; the project itself
   for another id, for a read already recorded, and, for the individuals
   file, for other `csv` options.
-- **`projectNeeds`** and **`individualsNeeds`**, a case for each row of
-  their tables, the individuals named; the words of each kind of
+- **`projectNeeds`**, **`variantsStepNeeds`** and **`individualsNeeds`**,
+  a case for each row of their tables, the individuals named; the words of each kind of
   refusal of the reader; "a traits file" in the reasons of a project of
   association.
 - **`individualsCheck`**: `null` when either file is not read; the
