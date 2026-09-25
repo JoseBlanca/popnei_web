@@ -104,7 +104,8 @@ words the screen shows beside the Run button, or `null`:
 | no variants file | "Load a variants file in the Variants step." |
 | the variants file being read | "Reading panel.nei." |
 | popnei refused the file | "popnei could not read panel.nei: ‹popnei's message›. Load a variants file in the Variants step." |
-| the file could not be read for another reason | "panel.nei could not be read: ‹what happened› (**Open 4**). Reload the page and load it again." |
+| the calculation crashed while it read the file | "panel.nei could not be read: ‹what happened› (**Open 4**). Load it again in the Variants step." |
+| the calculations could not start, or the page is out of date | "panel.nei could not be read: ‹what happened› (**Open 4**). Reload the page and load it again." |
 | a list of individuals that is empty | "The list of individuals to keep is empty. Add individuals to it, or remove the filter, in the Variants step." |
 | a list that names an individual more than once | "The list of individuals to remove names ind_031 more than once. Change the list, or remove the filter, in the Variants step." (**Open 2**) |
 | a list that names individuals not in the variants | "The list of individuals to keep names 2 individuals that are not in panel.nei: ind_900 and ind_901. Change the list, or remove the filter, in the Variants step." (**Open 2**) |
@@ -160,7 +161,8 @@ folder in `docs/architecture.md`, section 9, `individuals`, since
 | the individuals file being read | "Reading pops.csv." |
 | the files wasm refused the file | "pops.csv could not be read: ‹its message›. Load an individuals file in the Individuals step." |
 | the reader of CSV and TSV refused the file | "pops.csv could not be read: line 7 has 3 cells where the header has 4. Load an individuals file in the Individuals step." (**Open 5**) |
-| the file could not be read for another reason | "pops.csv could not be read: ‹what happened› (**Open 4**). Reload the page and load it again." |
+| the worker crashed while it read the file | "pops.csv could not be read: ‹what happened› (**Open 4**). Load it again in the Individuals step." |
+| the worker could not start, or the page is out of date | "pops.csv could not be read: ‹what happened› (**Open 4**). Reload the page and load it again." |
 | individuals of the variants missing from it | "12 individuals of panel.nei are not in pops.csv: ind_031, ind_044 and 10 more. Add them to the file and load it again in the Individuals step." |
 
 The individuals missing are named as **Open 3** says; one alone is "1
@@ -754,10 +756,18 @@ of them changes those texts and their tests, and nothing else.
    could not start, "the application could not start its calculations";
    it crashed, or the message was a defect of our code, "the calculation
    stopped unexpectedly"; it is of another version of the page, "the page
-   is out of date". Each is followed by "Reload the page and load it
-   again." A refusal of the files wasm in the calculation worker, or of
-   popnei in the light worker, which neither worker gives, is taken as a
-   defect of our code, with its words; this is the writer's.
+   is out of date". A refusal of the files wasm in the calculation
+   worker, or of popnei in the light worker, which neither worker gives,
+   is taken as a defect of our code, with its words; this is the
+   writer's. The sentence that follows is decided, by the owner on 24
+   September 2026: after a crash or a defect, "Load it again in the
+   Variants step." or "Load it again in the Individuals step.", since
+   loading the file again starts a new worker and keeps the rest of the
+   project; when the worker could not start, or the page is out of date,
+   "Reload the page and load it again.", since only a new page can mend
+   those. The option not taken was "Reload the page and load it again."
+   after every failure of the worker, which after a crash would have lost
+   the whole project for what a new load of the file mends.
 5. **The end, and the words, of a refusal of the reader of the
    individuals file**, the reader of CSV and TSV. "Reload the page and
    load it again." is wrong advice for a file whose rows are wrong, so,
