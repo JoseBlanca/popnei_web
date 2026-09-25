@@ -2,7 +2,9 @@
 
 Written on 25 September 2026, approved by the owner the same day, and
 revised the same day with the owner's decisions on the screen as built
-(stop 7.5 of `docs/plans/walking-skeleton.md`). The screen spec of the first step of the population genetics application as the
+(stop 7.5 of `docs/plans/walking-skeleton.md`), and on the project file
+opened, points 9 and 10 of the reviews of work packages 2 to 6 of that
+plan. The screen spec of the first step of the population genetics application as the
 walking skeleton of stage 2 builds it (`docs/build-order.md`): the user
 picks the variants file, a VCF or a `.nei` file, sets how a VCF is read,
 sees what the file holds, and sets the missing data filter. It shows
@@ -335,9 +337,20 @@ Once a file is given, the step shows beside its card the warning
 after the word "Warning:". What it compares, and its words, are
 `docs/specs/core/projectFile.md`'s ("The comparisons after an
 opening"); it is made again at every change, so it is complete once the
-file is read. The read options are not compared
-there: they start at the reference's, and a user who changes them has
-chosen to.
+file is read. Of the read options, the choice of the passed variants is
+compared there, and the ploidy with the individuals once the file is
+read, as the owner decided on 25 September 2026: a VCF read with the
+other choice gives other variants, as another ploidy gives other
+genotypes. The numbers of a run on a VCF read with other options than
+the reference's are not compared with those of the project file, and
+the panel of each analysis says so under its result, with
+`uncomparedText` of the same module.
+
+A Save writes the options of the project, not those of the step
+(`docs/specs/core/projectFile.md`, "What is written of each part"): a
+ploidy typed and not applied is not saved, and once "Read panel.vcf.gz
+again with ploidy 4" is pressed, a Save before that read ends writes
+ploidy 4.
 
 ## Accessibility
 
