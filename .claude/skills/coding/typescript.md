@@ -199,8 +199,13 @@ Effect: the type above is all of it.
 cannot be out of range, a key missing from a cache that was just filled,
 throws an `Error` whose message starts with `popnei_web defect:` and says
 what was expected. Nothing catches it but the outermost layer: the error
-boundary of React, which shows that the application failed, and the
-`error` handler of the worker, which reports it to the page. A defect
+boundary of React, which shows that the application failed; the handler
+of the window's `error` and `unhandledrejection` events on the page, for
+a defect thrown in an event handler or in a promise the page awaits,
+which no error boundary sees, and which it shows in a bar at the top of
+the page, as the owner decided on 25 September 2026 (`react.md`,
+"Errors"); and the `error` handler of the worker, which reports it to
+the page. A defect
 that were caught and passed over would hide a bug in a result.
 
 popnei throws an `Error` for everything it refuses, as its TypeScript

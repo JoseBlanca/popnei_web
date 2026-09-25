@@ -420,7 +420,8 @@ ends, results removed, is heard only through a live region.
   as the owner decided on 25 September 2026.
 - **Errors of a run** are shown in the panel of the analysis with the
   message and are announced as the end of the run is; `role="alert"` is
-  kept for what interrupts, which here is nothing.
+  kept for what interrupts, which here is only the bar of an error of the
+  application (below, "Errors").
 
 ### Keyboard shortcuts
 
@@ -457,8 +458,28 @@ options and its results.
   working, and the project, which is in core, is untouched. Without one,
   an error in any component empties the whole page.
 - It catches errors of rendering and of effects, not of event handlers
-  or of the workers. Those are data: core puts them in the state, and the
-  panel shows them in its error state.
+  or of the workers. A failure of a worker is data: core puts it in the
+  state, and the panel shows it in its error state. A defect thrown in an
+  event handler goes to the window's handler, below.
+- **An error that nothing else shows**, one thrown in an event handler
+  of the page, a click among them, or in a promise the page awaits,
+  reaches no error boundary: React calls an event handler outside its
+  rendering, and a promise rejects after the handler has returned. The
+  browser fires the window's `error` event for the first and its
+  `unhandledrejection` event for the second, and the entry file listens
+  to both and shows the error in a bar at the top of the page: "The
+  application met an error of its own: ‹message›. Your project is intact:
+  save it, then reload the page." The project is intact because core
+  leaves itself as it was when a defect is thrown in a change
+  (`docs/specs/core/store.md`, "How it runs"). The bar has a button "Copy
+  the details", which copies the message and the stack, for a report of
+  the bug, and it stays until the user closes it. It interrupts what the
+  user was doing, so it is `role="alert"`, which a screen reader reads at
+  once. Decided by the owner on 25 September 2026. The options not taken:
+  a short "Something went wrong" without the message, which leaves the
+  user nothing to report; and leaving the error in the console, which a
+  user does not open, so that the button they pressed would seem to do
+  nothing.
 - The entry file passes `onUncaughtError` and `onCaughtError` to
   `createRoot`, which log to the console with the component stack; there
   is no server to send them to.
