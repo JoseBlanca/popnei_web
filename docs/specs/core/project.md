@@ -695,8 +695,14 @@ export function individualsStepMissing(p: Project): string | null;
     step, its words and its end, "it is a variants file, which the
     Variants step takes. Load a metadata file.", so that the step says a
     variants file told by its name, `.vcf`, `.vcf.gz`, `.bcf` or `.nei`,
-    in the same words (`docs/specs/steps/individuals.md`). */
-export function individualsStepRefusal(error: IndividualsFileError, app: AppId): string;
+    in the same words (`docs/specs/steps/individuals.md`). It takes any
+    refusal but one of the files wasm, whose message can be empty and
+    leave nothing before the end; the step's one use is the variants
+    file. */
+export function individualsStepRefusal(
+  error: Exclude<IndividualsFileError, { readonly kind: "files" }>,
+  app: AppId,
+): string;
 
 /** The individuals of the variants file found in the table, all those
     missing in the order of the variants file, and the number of rows of
