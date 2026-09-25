@@ -1190,6 +1190,30 @@ const WHAT_HAPPENED: Readonly<Record<RunError["kind"], string>> = {
 /** The end of a reason a new load of the page may fix. */
 const RELOAD = "Reload the page and load it again.";
 
+/** The kinds of failure of a worker that only a new page mends: it could
+    not start, or it is of another version than the page. After any other,
+    a crash or a defect, a new load of the file starts a new worker and
+    keeps the project, which a reload would lose (the owner, 24 September
+    2026). */
+const MENDED_BY_RELOAD: ReadonlySet<RunError["kind"]> = new Set([
+  "couldNotStart",
+  "protocolMismatch",
+]);
+
+/** The reason of a file that could not be read because its worker failed
+    with `kind`: what happened, and what the user can do, a reload of the
+    page or a new load of the file in its step, `step`. */
+function workerFailedText(
+  fileName: string,
+  kind: RunError["kind"],
+  step: "Variants" | "Individuals",
+): string {
+  const next = MENDED_BY_RELOAD.has(kind)
+    ? RELOAD
+    : `Load it again in the ${step} step.`;
+  return `${fileName} could not be read: ${WHAT_HAPPENED[kind]}. ${next}`;
+}
+
 /** The end of a reason of the variants file. */
 const LOAD_VARIANTS = "Load a variants file in the Variants step.";
 
@@ -1226,7 +1250,7 @@ export function projectNeeds(p: Project): string | null {
     case "failed":
       return read.error.kind === "popnei"
         ? `popnei could not read ${fileName}${saying(read.error.message)}. ${LOAD_VARIANTS}`
-        : `${fileName} could not be read: ${WHAT_HAPPENED[read.error.error.kind]}. ${RELOAD}`;
+        : workerFailedText(fileName, read.error.error.kind, "Variants");
     case "read": {
       const inVariants = new Set(read.individuals);
       for (const kind of LIST_KINDS) {
@@ -1307,7 +1331,7 @@ export function individualsNeeds(p: Project): string | null {
       return `Reading ${name}.`;
     case "failed":
       return read.error.kind === "worker"
-        ? `${name} could not be read: ${WHAT_HAPPENED[read.error.error.kind]}. ${RELOAD}`
+        ? workerFailedText(name, read.error.error.kind, "Individuals")
         : `${name} could not be read${saying(refusalWords(read.error))}. ${LOAD_INDIVIDUALS}`;
     case "read": {
       const variants = p.variants;

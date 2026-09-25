@@ -1507,20 +1507,27 @@ describe("WP1 D4 the records and the needs", () => {
     test.each([
       [
         { kind: "workerFailed", message: "out of memory" },
-        "the calculation stopped unexpectedly",
+        "the calculation stopped unexpectedly. Load it again in the Variants step.",
       ],
       [
         { kind: "defect", message: "a message that did not validate" },
-        "the calculation stopped unexpectedly",
+        "the calculation stopped unexpectedly. Load it again in the Variants step.",
       ],
       [
         { kind: "files", message: "not an xlsx file" },
-        "the calculation stopped unexpectedly",
+        "the calculation stopped unexpectedly. Load it again in the Variants step.",
       ],
-      [{ kind: "protocolMismatch" }, "the page is out of date"],
+      [
+        { kind: "couldNotStart", reason: "no ready message, twice" },
+        "the application could not start its calculations. Reload the page and load it again.",
+      ],
+      [
+        { kind: "protocolMismatch" },
+        "the page is out of date. Reload the page and load it again.",
+      ],
     ] as const)(
-      "the worker failed with %o: what happened, and reload the page",
-      (error, happened) => {
+      "the worker failed with %o: what happened, and what to do",
+      (error, words) => {
         expect(
           projectNeeds(
             withVariantsRead({
@@ -1528,9 +1535,7 @@ describe("WP1 D4 the records and the needs", () => {
               error: { kind: "worker", error },
             }),
           ),
-        ).toBe(
-          `panel.nei could not be read: ${happened}. Reload the page and load it again.`,
-        );
+        ).toBe(`panel.nei could not be read: ${words}`);
       },
     );
 
@@ -1906,24 +1911,27 @@ describe("WP1 D4 the records and the needs", () => {
     test.each([
       [
         { kind: "couldNotStart", reason: "no ready message, twice" },
-        "the application could not start its calculations",
+        "the application could not start its calculations. Reload the page and load it again.",
       ],
       [
         { kind: "workerFailed", message: "out of memory" },
-        "the calculation stopped unexpectedly",
+        "the calculation stopped unexpectedly. Load it again in the Individuals step.",
       ],
       [
         { kind: "defect", message: "a read the project cannot hold" },
-        "the calculation stopped unexpectedly",
+        "the calculation stopped unexpectedly. Load it again in the Individuals step.",
       ],
       [
         { kind: "popnei", message: "a message of popnei" },
-        "the calculation stopped unexpectedly",
+        "the calculation stopped unexpectedly. Load it again in the Individuals step.",
       ],
-      [{ kind: "protocolMismatch" }, "the page is out of date"],
+      [
+        { kind: "protocolMismatch" },
+        "the page is out of date. Reload the page and load it again.",
+      ],
     ] as const)(
-      "the worker failed with %o: what happened, and reload the page",
-      (error, happened) => {
+      "the worker failed with %o: what happened, and what to do",
+      (error, words) => {
         expect(
           individualsNeeds(
             withIndividualsRead({
@@ -1931,9 +1939,7 @@ describe("WP1 D4 the records and the needs", () => {
               error: { kind: "worker", error },
             }),
           ),
-        ).toBe(
-          `pops.csv could not be read: ${happened}. Reload the page and load it again.`,
-        );
+        ).toBe(`pops.csv could not be read: ${words}`);
       },
     );
 
