@@ -474,7 +474,7 @@ for (const theme of ["light", "dark"] as const) {
       await expect(
         page
           .getByRole("main")
-          .getByText("10 is more than 1; the filter keeps 0.1."),
+          .getByText("10 is more than 1; the threshold stays 0.1."),
       ).toBeVisible();
       await save(page, `popgen-variants-threshold-refused-${theme}`);
     });

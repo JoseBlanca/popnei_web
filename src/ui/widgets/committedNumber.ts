@@ -9,8 +9,8 @@
  */
 import type { Result } from "../../core/result.ts";
 
-/** Why a committed number was refused, with the number and the bound or
-    the step it failed. */
+/** Why a number was refused, with the number and the bound or the step
+    it failed, or the character thrown away as it was typed. */
 export type NumberRefusal =
   | {
       readonly kind: "aboveMax";
@@ -27,6 +27,15 @@ export type NumberRefusal =
       readonly typed: number;
       /** The decimals of the step: 0 for a step of 1, 2 for 0.01. */
       readonly decimals: number;
+    }
+  | {
+      /** A character typed that React Aria threw away, since it cannot
+          start a number of the field's range, as a comma; the next
+          commit is then refused whatever it holds. */
+      readonly kind: "notTaken";
+      /** What was typed and thrown away, a character or a text
+          pasted. */
+      readonly text: string;
     };
 
 /** The decimals of `step`: 2 for 0.01, 0 for 1. */
@@ -92,4 +101,23 @@ export function numberText(value: number): string {
     useGrouping: false,
     maximumFractionDigits: 20,
   }).format(value);
+}
+
+/** Whether the edit that made `after` of `before` took any text out, a
+    deletion or a text selected and typed over, rather than only putting
+    text in: whether the start and the end the two share leave any of
+    `before` between them. Counted in code units, which is exact for the
+    digits, the point and the comma a field is typed with. */
+export function takesTextOut(before: string, after: string): boolean {
+  const shortest = Math.min(before.length, after.length);
+  let start = 0;
+  while (start < shortest && before[start] === after[start]) start += 1;
+  let end = 0;
+  while (
+    end < shortest - start &&
+    before[before.length - 1 - end] === after[after.length - 1 - end]
+  ) {
+    end += 1;
+  }
+  return before.length - start - end > 0;
 }

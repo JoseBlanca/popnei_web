@@ -71,41 +71,85 @@ export const THRESHOLD_LABEL =
 /** The number of decimals in words, as a refusal says it. */
 const DECIMAL_WORDS = ["no", "one", "two", "three"] as const;
 
+/** What a field says of a character typed that it threw away. */
+interface NotTakenWords {
+  /** The line of a comma, before the value kept. */
+  readonly comma: string;
+  /** What follows the character named, before the value kept. */
+  readonly other: string;
+}
+
+/** What the threshold says of a character it threw away. */
+const THRESHOLD_NOT_TAKEN: NotTakenWords = Object.freeze({
+  comma: "Write the decimals with a point, 0.1 and not 0,1",
+  other:
+    "cannot be typed in the threshold, which is written with digits and a point, as 0.05",
+});
+
+/** What the ploidy says of a character it threw away. */
+const PLOIDY_NOT_TAKEN: NotTakenWords = Object.freeze({
+  comma: "Write the ploidy as a whole number, 4 and not 4,0",
+  other: "cannot be typed in the ploidy, which is a whole number, as 4",
+});
+
+/** The characters a number of the two fields is written with. */
+const NUMBER_CHARACTER = /^[0-9.]$/;
+
+/** The line of the text `text` a field threw away: the comma's, when
+    there is one in it, otherwise the first character that is not a
+    digit or a point, or the first of all, named. */
+function notTakenWhy(text: string, words: NotTakenWords): string {
+  if (text.includes(",")) return words.comma;
+  const characters = Array.from(text);
+  const named =
+    characters.find((character) => !NUMBER_CHARACTER.test(character)) ??
+    characters[0] ??
+    "";
+  const name =
+    named === " " || named === "\u00a0" ? "A space" : `‘${escaped(named)}’`;
+  return `${name} ${words.other}`;
+}
+
 /** Why a number was refused: "10 is more than 1", "0.125 has more than
-    two decimals", "2.5 is not a whole number". */
-function refusedWhy(refusal: NumberRefusal): string {
-  const typed = numberText(refusal.typed);
+    two decimals", "2.5 is not a whole number", or the words of a
+    character thrown away, `notTaken` of the field. */
+function refusedWhy(refusal: NumberRefusal, notTaken: NotTakenWords): string {
   switch (refusal.kind) {
     case "aboveMax":
-      return `${typed} is more than ${numberText(refusal.maxValue)}`;
+      return `${numberText(refusal.typed)} is more than ${numberText(refusal.maxValue)}`;
     case "belowMin":
-      return `${typed} is less than ${numberText(refusal.minValue)}`;
+      return `${numberText(refusal.typed)} is less than ${numberText(refusal.minValue)}`;
     case "offStep": {
+      const typed = numberText(refusal.typed);
       if (refusal.decimals === 0) return `${typed} is not a whole number`;
       const count = DECIMAL_WORDS[refusal.decimals] ?? String(refusal.decimals);
       const noun = refusal.decimals === 1 ? "decimal" : "decimals";
       return `${typed} has more than ${count} ${noun}`;
     }
+    case "notTaken":
+      return notTakenWhy(refusal.text, notTaken);
   }
 }
 
-/** The line under the threshold for a number it refused, with the
-    threshold kept: "10 is more than 1; the filter keeps 0.1.", as the
-    owner decided on 25 September 2026. */
+/** The line under the threshold for a number it refused, or a character
+    it threw away, with the threshold kept: "10 is more than 1; the
+    threshold stays 0.1.", "Write the decimals with a point, 0.1 and not
+    0,1; the threshold stays 0.1." */
 export function thresholdRefusedText(
   refusal: NumberRefusal,
   kept: number,
 ): string {
-  return `${refusedWhy(refusal)}; the filter keeps ${numberText(kept)}.`;
+  return `${refusedWhy(refusal, THRESHOLD_NOT_TAKEN)}; the threshold stays ${numberText(kept)}.`;
 }
 
-/** The line under the ploidy for a number it refused, with the ploidy
-    kept: "300 is more than 255; the ploidy stays 2." */
+/** The line under the ploidy for a number it refused, or a character it
+    threw away, with the ploidy kept: "300 is more than 255; the ploidy
+    stays 2." */
 export function ploidyRefusedText(
   refusal: NumberRefusal,
   kept: number,
 ): string {
-  return `${refusedWhy(refusal)}; the ploidy stays ${numberText(kept)}.`;
+  return `${refusedWhy(refusal, PLOIDY_NOT_TAKEN)}; the ploidy stays ${numberText(kept)}.`;
 }
 
 /** The format of a loaded file, as the card names it. */

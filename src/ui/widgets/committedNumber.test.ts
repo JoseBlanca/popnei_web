@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { checkCommitted, numberText } from "./committedNumber.ts";
+import { checkCommitted, numberText, takesTextOut } from "./committedNumber.ts";
 
 describe("checkCommitted", () => {
   test("a number within the bounds and on the step is taken as it is", () => {
@@ -66,5 +66,26 @@ describe("numberText", () => {
     expect(numberText(1e-7)).toBe("0.0000001");
     expect(numberText(12345)).toBe("12345");
     expect(numberText(0.125)).toBe("0.125");
+  });
+});
+
+describe("takesTextOut", () => {
+  test("a character typed takes nothing out, wherever it goes", () => {
+    expect(takesTextOut("0", "0,")).toBe(false);
+    expect(takesTextOut("01", "0,1")).toBe(false);
+    expect(takesTextOut("", "5")).toBe(false);
+    // A character repeated.
+    expect(takesTextOut("0.1", "0.11")).toBe(false);
+  });
+
+  test("a deletion, or a text typed over, takes text out", () => {
+    expect(takesTextOut("01", "0")).toBe(true);
+    expect(takesTextOut("0.11", "0.1")).toBe(true);
+    expect(takesTextOut("0.1", "0,05")).toBe(true);
+    expect(takesTextOut("0.1", "")).toBe(true);
+  });
+
+  test("the same text takes nothing out", () => {
+    expect(takesTextOut("0.1", "0.1")).toBe(false);
   });
 });

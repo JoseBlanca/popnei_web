@@ -73,16 +73,57 @@ describe("the words of the Variants step", () => {
   test("a number the threshold refused: why, and the threshold kept", () => {
     expect(
       thresholdRefusedText({ kind: "aboveMax", typed: 10, maxValue: 1 }, 0.1),
-    ).toBe("10 is more than 1; the filter keeps 0.1.");
+    ).toBe("10 is more than 1; the threshold stays 0.1.");
     expect(
       thresholdRefusedText({ kind: "belowMin", typed: -0.5, minValue: 0 }, 0.1),
-    ).toBe("-0.5 is less than 0; the filter keeps 0.1.");
+    ).toBe("-0.5 is less than 0; the threshold stays 0.1.");
     expect(
       thresholdRefusedText({ kind: "offStep", typed: 0.125, decimals: 2 }, 0.2),
-    ).toBe("0.125 has more than two decimals; the filter keeps 0.2.");
+    ).toBe("0.125 has more than two decimals; the threshold stays 0.2.");
     expect(
       thresholdRefusedText({ kind: "offStep", typed: 1e-7, decimals: 2 }, 0.1),
-    ).toBe("0.0000001 has more than two decimals; the filter keeps 0.1.");
+    ).toBe("0.0000001 has more than two decimals; the threshold stays 0.1.");
+  });
+
+  test("a character the threshold threw away: a comma as a decimal point, any other named, and the threshold kept", () => {
+    const comma =
+      "Write the decimals with a point, 0.1 and not 0,1; the threshold stays 0.13.";
+    expect(thresholdRefusedText({ kind: "notTaken", text: "," }, 0.13)).toBe(
+      comma,
+    );
+    // A comma anywhere, as in 0,05 pasted.
+    expect(thresholdRefusedText({ kind: "notTaken", text: "0,05" }, 0.13)).toBe(
+      comma,
+    );
+    expect(thresholdRefusedText({ kind: "notTaken", text: "-" }, 0.1)).toBe(
+      "‘-’ cannot be typed in the threshold, which is written with digits and a point, as 0.05; the threshold stays 0.1.",
+    );
+    // The first character that is not a digit or a point.
+    expect(thresholdRefusedText({ kind: "notTaken", text: "0.1x" }, 0.1)).toBe(
+      "‘x’ cannot be typed in the threshold, which is written with digits and a point, as 0.05; the threshold stays 0.1.",
+    );
+    expect(thresholdRefusedText({ kind: "notTaken", text: " " }, 0.1)).toBe(
+      "A space cannot be typed in the threshold, which is written with digits and a point, as 0.05; the threshold stays 0.1.",
+    );
+    // A second point is all there is to name.
+    expect(thresholdRefusedText({ kind: "notTaken", text: "." }, 0.1)).toBe(
+      "‘.’ cannot be typed in the threshold, which is written with digits and a point, as 0.05; the threshold stays 0.1.",
+    );
+    // A control character escaped.
+    expect(
+      thresholdRefusedText({ kind: "notTaken", text: "\u202e" }, 0.1),
+    ).toBe(
+      "‘\\u202e’ cannot be typed in the threshold, which is written with digits and a point, as 0.05; the threshold stays 0.1.",
+    );
+  });
+
+  test("a character the ploidy threw away: a comma as a whole number, any other named, and the ploidy kept", () => {
+    expect(ploidyRefusedText({ kind: "notTaken", text: "," }, 2)).toBe(
+      "Write the ploidy as a whole number, 4 and not 4,0; the ploidy stays 2.",
+    );
+    expect(ploidyRefusedText({ kind: "notTaken", text: "-" }, 4)).toBe(
+      "‘-’ cannot be typed in the ploidy, which is a whole number, as 4; the ploidy stays 4.",
+    );
   });
 
   test("a number the ploidy refused: why, and the ploidy kept", () => {

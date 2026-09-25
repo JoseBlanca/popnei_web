@@ -366,10 +366,10 @@ test("WS7 D3 the threshold takes a number of two decimals from 0 to 1, and refus
   // shows the value it had, and the line says so, as the field's
   // description and in the status region.
   for (const [typed, line] of [
-    ["10", "10 is more than 1; the filter keeps 0.13."],
-    ["0.125", "0.125 has more than two decimals; the filter keeps 0.13."],
-    ["0.001", "0.001 has more than two decimals; the filter keeps 0.13."],
-    ["1.001", "1.001 is more than 1; the filter keeps 0.13."],
+    ["10", "10 is more than 1; the threshold stays 0.13."],
+    ["0.125", "0.125 has more than two decimals; the threshold stays 0.13."],
+    ["0.001", "0.001 has more than two decimals; the threshold stays 0.13."],
+    ["1.001", "1.001 is more than 1; the threshold stays 0.13."],
   ] as const) {
     await threshold.fill(typed);
     await threshold.press("Enter");
@@ -381,7 +381,7 @@ test("WS7 D3 the threshold takes a number of two decimals from 0 to 1, and refus
   await expectNoViolations(makeAxeBuilder);
   // One line at a time, the last.
   await expect(
-    page.getByRole("main").getByText(/the filter keeps/),
+    page.getByRole("main").getByText(/the threshold stays/),
   ).toHaveCount(1);
 
   // Refused when the field is left with the Tab key too; the next number
@@ -391,13 +391,13 @@ test("WS7 D3 the threshold takes a number of two decimals from 0 to 1, and refus
   await expect(
     page
       .getByRole("main")
-      .getByText("2 is more than 1; the filter keeps 0.13."),
+      .getByText("2 is more than 1; the threshold stays 0.13."),
   ).toBeVisible();
   await threshold.fill("0.2");
   await threshold.press("Enter");
   await expect(threshold).toHaveValue("0.2");
   await expect(
-    page.getByRole("main").getByText(/the filter keeps/),
+    page.getByRole("main").getByText(/the threshold stays/),
   ).toHaveCount(0);
 
   // Left empty, it shows again the value it had, with no line.
@@ -405,7 +405,7 @@ test("WS7 D3 the threshold takes a number of two decimals from 0 to 1, and refus
   await threshold.press("Shift+Tab");
   await expect(threshold).toHaveValue("0.2");
   await expect(
-    page.getByRole("main").getByText(/the filter keeps/),
+    page.getByRole("main").getByText(/the threshold stays/),
   ).toHaveCount(0);
   await expect(filter).toBeFocused();
   await expectNoViolations(makeAxeBuilder);
@@ -417,6 +417,132 @@ test("WS7 D3 the threshold takes a number of two decimals from 0 to 1, and refus
   await expectNoViolations(makeAxeBuilder);
   await page.keyboard.press("Space");
   await expect(threshold).toHaveValue("0.1");
+});
+
+test("WS7 D3 a comma typed key by key in the threshold is thrown away, and the field says so and keeps its value", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openVariants(page);
+  const threshold = page.getByLabel(
+    "Maximum proportion of missing genotypes, from 0 to 1",
+    { exact: true },
+  );
+  const comma =
+    "Write the decimals with a point, 0.1 and not 0,1; the threshold stays 0.1.";
+  // React Aria throws the comma away, so 0,1 shows as 01 and 0,2 as 02:
+  // committed, they were 1, taken, and 2, refused as more than 1.
+  for (const typed of ["0,1", "0,2"]) {
+    await threshold.fill("");
+    await threshold.pressSequentially(typed);
+    // Said at once, before the commit.
+    await expect(page.getByRole("main").getByText(comma)).toBeVisible();
+    await expect(page.getByRole("status").last()).toHaveText(comma);
+    await threshold.press("Enter");
+    await expect(threshold).toHaveValue("0.1");
+    await expect(page.getByRole("main").getByText(comma)).toBeVisible();
+    await expect(threshold).toHaveAccessibleDescription(comma);
+  }
+  await expectNoViolations(makeAxeBuilder);
+
+  // A deletion mends what was typed, and the commit takes the number.
+  await threshold.fill("");
+  await threshold.pressSequentially("0,");
+  await threshold.press("Backspace");
+  await threshold.pressSequentially("0.15");
+  await threshold.press("Enter");
+  await expect(threshold).toHaveValue("0.15");
+  await expect(
+    page.getByRole("main").getByText(/the threshold stays/),
+  ).toHaveCount(0);
+
+  // Another character, named.
+  await threshold.fill("");
+  await threshold.pressSequentially("-");
+  await expect(
+    page
+      .getByRole("main")
+      .getByText(
+        "‘-’ cannot be typed in the threshold, which is written with digits and a point, as 0.05; the threshold stays 0.15.",
+      ),
+  ).toBeVisible();
+});
+
+test("WS7 D3 the line of a number refused goes at the next commit, the value kept typed back or an arrow key at a bound", async ({
+  page,
+}) => {
+  await openVariants(page);
+  const threshold = page.getByLabel(
+    "Maximum proportion of missing genotypes, from 0 to 1",
+    { exact: true },
+  );
+  const stays = page.getByRole("main").getByText(/the threshold stays/);
+
+  // The value kept typed back, which changes nothing.
+  await threshold.fill("10");
+  await threshold.press("Enter");
+  await expect(stays).toHaveText("10 is more than 1; the threshold stays 0.1.");
+  await threshold.fill("0.1");
+  await threshold.press("Enter");
+  await expect(threshold).toHaveValue("0.1");
+  await expect(stays).toHaveCount(0);
+
+  // The same after the Tab key.
+  await threshold.fill("10");
+  await threshold.press("Enter");
+  await expect(stays).toHaveCount(1);
+  await threshold.fill("0.1");
+  await threshold.press("Tab");
+  await expect(stays).toHaveCount(0);
+
+  // At the largest, an arrow key up changes nothing.
+  await threshold.fill("1");
+  await threshold.press("Enter");
+  await expect(threshold).toHaveValue("1");
+  await threshold.fill("5");
+  await threshold.press("Enter");
+  await expect(stays).toHaveText("5 is more than 1; the threshold stays 1.");
+  await threshold.press("ArrowUp");
+  await expect(threshold).toHaveValue("1");
+  await expect(stays).toHaveCount(0);
+
+  // The line of a character thrown away stays through the commit it
+  // refused, and goes at the one after.
+  await threshold.fill("");
+  await threshold.pressSequentially("0,5");
+  await threshold.press("Enter");
+  await expect(threshold).toHaveValue("1");
+  await expect(stays).toHaveCount(1);
+  await threshold.press("Enter");
+  await expect(stays).toHaveCount(0);
+});
+
+test("WS7 D3 a comma or a minus sign typed in the ploidy is thrown away, and the field says so and keeps its value", async ({
+  page,
+}) => {
+  await openVariants(page);
+  const ploidy = page.getByLabel("Ploidy of the VCF");
+  const stays = page.getByRole("main").getByText(/the ploidy stays/);
+  // 2,0 showed as 20, and was taken as a ploidy of 20.
+  await ploidy.fill("");
+  await ploidy.pressSequentially("2,0");
+  await ploidy.press("Enter");
+  await expect(ploidy).toHaveValue("2");
+  await expect(stays).toHaveText(
+    "Write the ploidy as a whole number, 4 and not 4,0; the ploidy stays 2.",
+  );
+  await expect(page.getByRole("status").last()).toHaveText(
+    "Write the ploidy as a whole number, 4 and not 4,0; the ploidy stays 2.",
+  );
+
+  // -3 showed as 3.
+  await ploidy.fill("");
+  await ploidy.pressSequentially("-3");
+  await ploidy.press("Enter");
+  await expect(ploidy).toHaveValue("2");
+  await expect(stays).toHaveText(
+    "‘-’ cannot be typed in the ploidy, which is a whole number, as 4; the ploidy stays 2.",
+  );
 });
 
 test("WS7 D3 a file picked before popnei has loaded is shown as being read", async ({
@@ -625,12 +751,12 @@ test("WS7 D3 the zone's own button, which takes a pasted file, is named for it",
 // The application is in English in every browser, whatever its language
 // (the entry's I18nProvider), and a number with a comma for its decimal
 // mark is no number: the field keeps the value it had, rather than reading
-// 0,05 as 5 and keeping every variant.
+// 0,05 as 5 and keeping every variant, and says how to write it.
 for (const locale of ["en-US", "es-ES"] as const) {
   test.describe(locale, () => {
     test.use({ locale });
 
-    test(`WS7 D3 in a browser in ${locale} the threshold takes 0.05 and keeps its value for 0,05, and the ploidy keeps its value for 2,5`, async ({
+    test(`WS7 D3 in a browser in ${locale} the threshold takes 0.05 and keeps its value for 0,05, and the ploidy keeps its value for 2,5, each with the line of the comma`, async ({
       page,
     }) => {
       await openVariants(page);
@@ -641,13 +767,18 @@ for (const locale of ["en-US", "es-ES"] as const) {
       await threshold.fill("0,05");
       await threshold.press("Enter");
       await expect(threshold).toHaveValue("0.1");
+      await expect(
+        page
+          .getByRole("main")
+          .getByText(
+            "Write the decimals with a point, 0.1 and not 0,1; the threshold stays 0.1.",
+          ),
+      ).toBeVisible();
       await threshold.fill("0.05");
       await threshold.press("Enter");
       await expect(threshold).toHaveValue("0.05");
-
-      // No number, so no line.
       await expect(
-        page.getByRole("main").getByText(/the filter keeps/),
+        page.getByRole("main").getByText(/the threshold stays/),
       ).toHaveCount(0);
 
       const ploidy = page.getByLabel("Ploidy of the VCF");
@@ -655,8 +786,12 @@ for (const locale of ["en-US", "es-ES"] as const) {
       await ploidy.press("Enter");
       await expect(ploidy).toHaveValue("2");
       await expect(
-        page.getByRole("main").getByText(/the ploidy stays/),
-      ).toHaveCount(0);
+        page
+          .getByRole("main")
+          .getByText(
+            "Write the ploidy as a whole number, 4 and not 4,0; the ploidy stays 2.",
+          ),
+      ).toBeVisible();
       await ploidy.fill("2.5");
       await ploidy.press("Enter");
       await expect(ploidy).toHaveValue("2");
