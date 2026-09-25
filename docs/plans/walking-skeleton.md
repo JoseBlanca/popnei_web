@@ -537,7 +537,7 @@ the top. It is the first time the calculation worker runs in a browser.
    `tetraploid.vcf.gz` with ploidy 2, 12 individuals and ploidy 2 (1);
    the ploidy set to 4 and "Read tetraploid.vcf.gz again with ploidy 4",
    ploidy 4 on the card (1); `bad.vcf` and its reason (1); `panel.txt`
-   and its message (1); 0.125 typed in the threshold, 0.13 held (1); and
+   and its message (1); 0.125 typed in the threshold, refused and 0.1 kept, by the owner's decision of 25 September (1); and
    axe in each state reached.
 4. The build. Check: `npm run build` writes `dist/popgen.html`, and
    `ls dist/assets | grep -cE "runnerWorker|filesRunner"` gives at least

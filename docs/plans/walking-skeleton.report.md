@@ -764,3 +764,104 @@ Each decision is a change to a spec, in a commit of its own, and then to
 the code. They are carried in rounds of the screens, below; the points
 whose change reaches the core or the worker go with the round of the
 screen that shows their words.
+
+### The rounds of 25 September
+
+Four rounds carried the decisions, each spec changed in a commit of its
+own before the code, from 337dd88 to 17949d8; the review that followed
+and its fixes run to d23b87e. On d23b87e: `format:check`, `typecheck`
+and `lint` exit 0; `npm test` 1,345 passed; the build exits 0;
+`npx playwright test --project=chromium --project=webkit` 236 passed;
+`npm run screens` 102 passed. Seen in Chromium and WebKit through
+Playwright, with the keyboard alone for the changes of focus; not in
+Firefox; no screen reader.
+
+1. The Variants step, the eight points of stop 7.5. React Aria's plugin
+   `@react-aria/optimize-locales-plugin` 2.0.2 is a development
+   dependency; with it and the plain table of round 3, the page's first
+   script went from 148.4 KB to 100.5 KB gzipped.
+2. The Individuals step and the reader, points 1 to 5 of the reviews of
+   2 to 6 and points 5 to 7 of work package 8; `docs/architecture.md`
+   shows the new field of the reader, the line of the first character
+   not decoded.
+3. The diversity panel, points 1 to 4 and 8 of work package 8 and
+   point 6 of 2 to 6.
+4. The project file, points 8 to 11 of 2 to 6, in core; what shows on a
+   screen comes with task 9.4.
+
+Where the writers went further than the decision, in the same direction:
+a threshold of more than two decimals, 0.125, is refused and 0.1 kept,
+where it was rounded to 0.13, since rounding also changes the filter
+without a word; the plan's check of `WS7 D3` says so now. The refusals
+of the steps end in three ways by their cause: "Choose another file."
+after popnei's refusal, "Choose it again." for a file the browser can no
+longer read, and "Reload the page and choose it again." for a read that
+could not start. A file named `.vcf`, `.vcf.gz`, `.bcf` or `.nei`
+picked as the metadata file is told it is a variants file.
+
+Decided by the orchestrator: a ploidy typed and not applied with "Read
+again" is saved as the old one, since it is a setting only once read; a
+file dropped while the ploidy holds a refused number is read with the
+ploidy kept, and the line says so; "Choose another separator above"
+lost its "above", which is not where the separator is.
+
+**Not done: point 7 of 2 to 6, a VCF of two ploidies.** popnei gives the
+same refusal, "line N … its genotype is of the ploidy F and the reader
+was asked for the ploidy E", for a file that mixes ploidies and for a
+file all of the other ploidy, and does not give the count of header
+lines that would tell them apart by the line. The words stay popnei's.
+The owner decides between words that cover both cases, "set the ploidy
+of the file; a file that mixes ploidies, as a haploid X among diploid
+chromosomes, cannot be read in this version", and a change to popnei
+that tells the two apart.
+
+For stop 9.6, with point Q: the warning of a changed "only variants that
+passed" says "Load the file the project was made with" to a user who
+did, as the ploidy's does; a filter or a column changed after an
+opening leaves the numbers uncompared with no line that says why; a
+project file whose population column is not in the metadata file opens
+with no word.
+
+The review of the rounds. Seven reviewers: accessibility, react and ux
+on the three screens, then spec, errors and stale on the core, and
+tests alone after the fixes. What they found that a user would have
+met, now fixed: a comma typed in the threshold, `0,1`, was thrown away
+by React Aria and became 1, a filter that keeps every variant, with no
+word; at 320 px the diversity's table showed no value and nothing said
+it scrolls; a VCF whose every variant fails its FILTER, read with the
+default of the passed variants, was called empty and the user sent to
+load another file; after "could not be read again", Run came back after
+any change and its Undo; the stopped line stayed after the user's own
+later Stop; a short row was measured against a count of columns the user
+sees nowhere; the refusal of the ploidy was read by a screen reader
+after its description of 190 characters; a text pasted by the keyboard
+was told to be dropped. `docs/functionality.md` was brought into line
+with decisions 3, 4 and 10. The ux reviewer's words replaced two of the
+recommendations for clarity: "the threshold stays 0.1" for "the filter
+keeps 0.1", and "Undo brings back the table as it was". The tests
+reviewer made 60 mutations: 54 failed a test, two more do now, one was
+dead code, removed, and three are checks covered twice over.
+
+Not taken: a metadata file that holds a real U+FFFD gets the warning of
+a character not decoded, which is rare and still true in its words; the
+project files of format v1 written before these changes are refused,
+which is harmless since none was ever released.
+
+### How the rounds went, for whoever revises a skill or a plan
+
+The `code-reviewer` subagent has no Write tool, and the worktree guard
+refuses a heredoc that holds JavaScript, so the accessibility reviewer
+could not write a script to drive the page and reviewed from the code
+alone; the fix writer, a `general-purpose` subagent, then checked the
+keyboard and the focus in both engines. A reviewer that has to open the
+page needs a way to write its script.
+
+Eleven of the 29 points, 1 to 11 of the reviews of 2 to 6, had their
+problem written and no recommendation, though the section said each
+had one; the owner's "take the recommendations" could not cover them
+until they were written and shown in chat. A point for the owner is
+written with its recommendation when it is found.
+
+The tokens of the subagents: the four rounds 310,804, 358,839, 302,018
+and 257,442; the seven reviewers 57,268 to 148,525 each; the two fixes
+420,166 and 254,401.
