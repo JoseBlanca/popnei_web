@@ -59,16 +59,42 @@ function finiteOrNull(value: number): number | null {
  * column is identifier; a column of exactly two distinct values is binary;
  * of three or more, every one a number read with `decimal`, continuous;
  * any other, one value, none, or three with one not a number, categorical.
+ * A row not as long as the columns is a defect, and throws.
  */
 export function inferColumnTypes(
   table: IndividualsTable,
   decimal: "." | ",",
 ): ColumnType[] {
+  checkRowLengths(table);
   return table.columns.map((_, index) =>
     index === 0
       ? { kind: "identifier" }
       : typeOfValues(distinctValues(table, index), decimal),
   );
+}
+
+/** Throws a defect when a row of `table` is not as long as its columns:
+    the functions of this file are called with tables the reader of CSV
+    did not make, the screen's and, from stage 4, the xlsx's. */
+function checkRowLengths(table: IndividualsTable): void {
+  for (const [index, row] of table.rows.entries()) {
+    if (row.length !== table.columns.length) {
+      throw new Error(
+        `popnei_web defect: row ${String(index + 1)} of the table has ${String(row.length)} cells and the table ${String(table.columns.length)} columns`,
+      );
+    }
+  }
+}
+
+/** The cell of `row` at `index`, which `checkRowLengths` made sure of. */
+function cellAt(row: readonly Cell[], index: number): Cell {
+  const cell = row[index];
+  if (cell === undefined) {
+    throw new Error(
+      `popnei_web defect: a row of the table has no cell ${String(index)}`,
+    );
+  }
+  return cell;
 }
 
 /** The distinct values of the column at `index`, in the order of the
@@ -79,8 +105,8 @@ function distinctValues(
 ): (string | number | boolean)[] {
   const values = new Set<string | number | boolean>();
   for (const row of table.rows) {
-    const cell = row[index];
-    if (cell !== undefined && cell !== null) values.add(cell);
+    const cell = cellAt(row, index);
+    if (cell !== null) values.add(cell);
   }
   return [...values];
 }
@@ -89,8 +115,13 @@ function typeOfValues(
   values: readonly (string | number | boolean)[],
   decimal: "." | ",",
 ): ColumnType {
-  const [first, second] = values;
-  if (values.length === 2 && first !== undefined && second !== undefined) {
+  if (values.length === 2) {
+    const [first, second] = values;
+    if (first === undefined || second === undefined) {
+      throw new Error(
+        "popnei_web defect: two values without a first and a second",
+      );
+    }
     return binaryOf(first, second, decimal);
   }
   if (
@@ -184,16 +215,29 @@ export interface ColumnWarning {
  * has at most `MAX_FEW_WHOLE_LEVELS` distinct numbers counted by value,
  * since such a column is often a code or an ordinal score. It is not
  * stored, so a table read now and one restored from a project file give
- * the same warnings.
+ * the same warnings. A row, or `columns`, not as long as the columns of
+ * the table is a defect, and throws.
  */
 export function columnWarnings(
   table: IndividualsTable,
   columns: readonly ColumnType[],
   decimal: "." | ",",
 ): ColumnWarning[] {
+  if (columns.length !== table.columns.length) {
+    throw new Error(
+      `popnei_web defect: ${String(columns.length)} types were given for a table of ${String(table.columns.length)} columns`,
+    );
+  }
+  checkRowLengths(table);
   const warnings: ColumnWarning[] = [];
-  for (const [index, name] of table.columns.entries()) {
-    if (columns[index]?.kind !== "continuous") continue;
+  for (const [index, type] of columns.entries()) {
+    if (type.kind !== "continuous") continue;
+    const name = table.columns[index];
+    if (name === undefined) {
+      throw new Error(
+        `popnei_web defect: the table has no column ${String(index)}`,
+      );
+    }
     const levels = wholeLevels(table, index, decimal);
     if (levels === null || levels.size === 0) continue;
     if (levels.size > MAX_FEW_WHOLE_LEVELS) continue;
@@ -232,8 +276,8 @@ function wholeLevels(
 ): Set<number> | null {
   const levels = new Set<number>();
   for (const row of table.rows) {
-    const cell = row[index];
-    if (cell === undefined || cell === null) continue;
+    const cell = cellAt(row, index);
+    if (cell === null) continue;
     const isWhole =
       typeof cell === "number"
         ? Number.isInteger(cell)

@@ -316,4 +316,40 @@ describe("WS4 D2 the numbers and the types", () => {
       );
     });
   });
+
+  describe("a table not as long as its columns is a defect", () => {
+    const ragged: IndividualsTable = {
+      columns: ["id", "x"],
+      rows: [["i1", "1"], ["i2"]],
+    };
+    test("inferColumnTypes throws on a row shorter than the columns", () => {
+      expect(() => inferColumnTypes(ragged, ".")).toThrow(
+        /^popnei_web defect: row 2 of the table has 1 cells and the table 2 columns$/,
+      );
+    });
+    test("inferColumnTypes throws on a row longer than the columns", () => {
+      const long: IndividualsTable = {
+        columns: ["id"],
+        rows: [["i1", "extra"]],
+      };
+      expect(() => inferColumnTypes(long, ".")).toThrow(/^popnei_web defect:/);
+    });
+    test("columnWarnings throws on a short row", () => {
+      expect(() =>
+        columnWarnings(
+          ragged,
+          [{ kind: "identifier" }, { kind: "continuous" }],
+          ".",
+        ),
+      ).toThrow(/^popnei_web defect:/);
+    });
+    test("columnWarnings throws when the types are not one per column", () => {
+      const table = tableOf(["1", "2", "3"]);
+      expect(() =>
+        columnWarnings(table, [{ kind: "identifier" }], "."),
+      ).toThrow(
+        /^popnei_web defect: 1 types were given for a table of 2 columns$/,
+      );
+    });
+  });
 });

@@ -94,7 +94,7 @@ export function readCsv(
   }
   const kept = keptColumns(header.cells, individuals);
   if (!kept.ok) return kept;
-  const columns = kept.value.map((index) => header.cells[index] ?? "");
+  const columns = kept.value.map((index) => cellAt(header.cells, index));
   const duplicate = firstRepeated(columns);
   if (duplicate !== null)
     return fail({ kind: "duplicateColumn", name: duplicate });
@@ -102,13 +102,13 @@ export function readCsv(
   const tableRows: Cell[][] = [];
   const seen = new Set<string>();
   for (const row of individuals) {
-    const name = row.cells[0] ?? "";
+    const name = cellAt(row.cells, 0);
     if (name === "") return fail({ kind: "emptyIndividual", line: row.line });
     if (seen.has(name)) return fail({ kind: "duplicateIndividual", name });
     seen.add(name);
     tableRows.push(
       kept.value.map((index, position) => {
-        const cell = row.cells[index] ?? "";
+        const cell = cellAt(row.cells, index);
         return position === 0 || !MISSING_TEXTS.includes(cell) ? cell : null;
       }),
     );
@@ -133,6 +133,19 @@ function fail(
   error: IndividualsFileError,
 ): Result<never, IndividualsFileError> {
   return { ok: false, error };
+}
+
+/** The cell at `index` of a scanned row, which the checks before made
+    sure of: every row is at least as long as the header, and a row has a
+    first cell. */
+function cellAt(cells: readonly string[], index: number): string {
+  const cell = cells[index];
+  if (cell === undefined) {
+    throw new Error(
+      `popnei_web defect: a row of ${String(cells.length)} cells has no cell ${String(index)}`,
+    );
+  }
+  return cell;
 }
 
 function isEmptyText(cell: string): boolean {
@@ -164,7 +177,7 @@ function keptColumns(
   for (const [index, name] of names.entries()) {
     if (index === 0 || name !== "") {
       kept.push(index);
-    } else if (rows.some((row) => (row.cells[index] ?? "") !== "")) {
+    } else if (rows.some((row) => cellAt(row.cells, index) !== "")) {
       return fail({ kind: "unnamedColumn", column: index + 1 });
     }
   }
