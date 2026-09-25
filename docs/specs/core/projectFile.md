@@ -838,8 +838,8 @@ the analyses `done`, `ready` or `removed`.
   `v1-nei-diversity.popnei.json` opens with the definitions of
   `src/core/apps.ts`, and is refused with one of its 7 numbers removed.
 - **The numbers not compared**: `uncomparedText` for each of its three
-  sentences, and `null` for a result compared, a reference with no check
-  of the analysis, a `.nei` file, and the same read options.
+  sentences, and `null` for the same read options, a reference with no check
+  of the analysis, a `.nei` file, no reference, and no variants file.
 - **The identity**: a case for each row of its table, and the warning of
   `docs/functionality.md`, "The project was made with panel_2026.nei, 342
   individuals and 1,203,554 variants; this file has 360 individuals.",
