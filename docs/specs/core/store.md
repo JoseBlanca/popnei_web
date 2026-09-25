@@ -205,6 +205,12 @@ September 2026. The load is the load id and the read options of the
 variants file, and the store compares them in the project before and
 after each command, undo and redo: a new pick changes it, and so do an
 undo or a redo that gives back another load, or no variants file at all.
+The read options change only with a new load id, since `loadVariants`
+with the load id already there and other options is a defect
+(`docs/specs/core/project.md`, "The commands"); so this comparison gives
+the same changes as the load id alone, by which the worker client starts
+the calculation worker again (`.claude/skills/coding/worker.md`,
+"Cancelling").
 The calculation worker holds one file only and is started again for the
 new load (`docs/architecture.md`, section 5), so a calculation of the
 old load could not go on until an undo. The notice does not promise
@@ -215,10 +221,17 @@ back the old file, and every result that had ended, from the cache; only
 the calculations stopped must be run again. `stopped` holds the analysis
 of every calculation that was in flight at the change and not already
 being stopped, those the notice before left behind among them, in the
-order of the definitions and each once; `leftBehind` is then empty.
-`stopped` does not change until the notice is closed or replaced, since
-what it tells has happened, and a notice with nothing else in it stays
-until then. The option not taken was to keep the old file in the
+order of the definitions and each once. The notice then names no
+calculation that will be stopped unless the change is undone: its
+`leftBehind`, the list of those, is empty. `stopped` does not change
+until the notice is closed or replaced, since what it tells has
+happened, and a notice with nothing else in it stays until then. An
+analysis done again leaves the results removed, as below, and not
+`stopped`. The words of the notices the example above does not cover
+are the screen spec's, in stage 2, with the example as their pattern:
+an undo or a redo that changes the load, whose cause is not a new file
+and whose action is Redo after an undo, and a notice with both results
+removed and calculations stopped. The option not taken was to keep the old file in the
 calculation worker until those calculations ended or the notice was
 closed: the new file could not be used meanwhile, minutes for an
 association, and the tab would hold the memory of both files.
@@ -273,8 +286,9 @@ The notice goes when it is closed or replaced; a change that removes
 nothing, leaves nothing behind and stops nothing replaces it with none. An analysis is
 `removed` while the current notice lists it, or `locked` if it cannot
 run; when the notice is closed or replaced without it, the analysis is
-`ready`. An analysis in the notice that is done again, when a calculation
-of its new key ends, leaves the notice. A calculation left behind that
+`ready`. An analysis among the results removed that is done again, when
+a calculation of its new key ends, leaves the results removed; it stays
+in `stopped` if it is there. A calculation left behind that
 ends by itself, done, failed or cancelled, leaves `leftBehind`, and so
 does one whose key the project gives again through a read of a file,
 which is not a change of the user; when `leftBehind` is empty, the

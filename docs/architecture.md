@@ -143,11 +143,19 @@ walking skeleton needs nothing from popnei beyond 0.1.0 (section 10).
 What was revised on 25 September 2026, for decisions of the owner of that
 day:
 
-- After every change of the project, the entry of the page asks for the
-  read of each file whose read is pending and has none under way
-  (section 6, "Who asks for a read").
+- After every change of the project, the entry of the page, the code
+  that starts when the page opens, makes the store and the workers and
+  joins them, asks for the read of each file whose read is pending and
+  has none under way (section 6, "Who asks for a read").
 - A change of the load of the variant file stops every request in flight
   at once, and its notice says they were stopped (section 5).
+- The notice offers the reverse of what caused it: Undo after a command
+  or a redo, Redo after an undo (section 5).
+- An error of our own code that no error boundary of React sees, thrown
+  in an event handler or in a promise whose rejection nothing handles, is
+  shown in a bar at the top of the page. This document does not describe
+  the errors of the page; the rule and its words are in
+  `.claude/skills/coding/react.md`, "Errors".
 
 ## 2. The project
 
@@ -443,7 +451,8 @@ The page and each worker talk through typed messages
   unless the change is undone**, as the owner decided on 24 September
   2026. A change that gives an analysis another key while its request
   waits or runs is told to the user in the notice of that change, with its
-  Undo: "The ongoing calculations will be stopped unless you undo the
+  action, Undo, or Redo when the change was an undo, as the owner decided
+  on 25 September 2026 (`docs/specs/core/store.md`): "The ongoing calculations will be stopped unless you undo the
   change." The store stops such a request only when keeping it would cost
   the user something: when the notice is closed, when the next change
   replaces it and does not give the request's key back, or when the user
@@ -710,15 +719,30 @@ With a CSV, the light worker loads no wasm at all.
 
 A source is read only when the page asks a worker to read it: the
 calculation worker opens the variants file, the light worker reads the
-individuals file. The one who asks is the entry of the page, the code
-that starts when the page opens, makes the store and the workers and
-joins them, and it asks by one rule, decided by the owner on 25 September
+individuals file. The one who asks is the entry of the page (section
+1, "What was revised on 25 September 2026"), and it asks by one rule, decided by the owner on 25 September
 2026: after every change of the project, a command, an undo, a redo or
 an opening, it looks at the present project and asks for a read of each
 source whose read is pending and has no read under way. A read is under
 way from the moment the entry asks for it until its answer comes back,
 and it is known by the load id of the file and, for the individuals file,
-by the options of its CSV.
+by the options of its CSV. Every read gets an answer, also when its
+worker crashes or is started again: the client fails the request that
+was running, which is recorded as a read that failed because its worker
+failed, sends the requests that were waiting to the new worker, and
+fails them all when the worker cannot start
+(`.claude/skills/coding/worker.md`, "The queue" and "Errors are
+values"). So no read stays under way for ever, and none keeps a pending
+source from being asked for again.
+
+The read of a variants file is asked for as that of any other file. The
+worker client opens the file on the calculation worker, which it starts
+again first when the load changed (section 5), and the worker sends back
+the individuals and the ploidy as soon as the file is open. An undo back
+to a load already read finds its source read, and so asks for nothing;
+the client opens that file again before the next request on it, and
+what the worker sends then is not recorded, since the source is already
+read (`docs/specs/core/project.md`, "The records").
 
 So a source that a change leaves pending is always read, whatever made
 it pending: a new pick, a change of the options of a CSV, an undo that
