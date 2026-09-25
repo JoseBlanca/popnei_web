@@ -4,7 +4,9 @@
 `src/core/project.ts`; revised on 25 September 2026 for the specs of
 stage 2 the owner approved that day, as
 `docs/specs/stage-2-open-points.md`, "Changes to approved files", lists, and again that day for the words of the Variants step the owner
-decided at stop 7.5 of `docs/plans/walking-skeleton.md`. The project is everything the user has set in one application: the
+decided at stop 7.5 of `docs/plans/walking-skeleton.md`, and for the
+words of the Individuals step and the reader's two new refusals the
+owner decided on the reviews of that plan. The project is everything the user has set in one application: the
 variants file they loaded, the filters, the individuals file with the
 types of its columns, the populations, and the options of each analysis.
 This spec gives its type, the commands that change it, the records that
@@ -206,7 +208,7 @@ reasons below are those of population genetics.
 
 The words after "could not be read:" of a refusal of the reader are
 those of the reader's spec, `docs/specs/worker/individuals.md`, "The
-refusals and their words", one for each of the eleven kinds of
+refusals and their words", one for each of the thirteen kinds of
 `IndividualsFileError`, which settles the words of **Open 5**: "it has
 no row of individuals"; "two columns are named pop"; "the individual ind_031 is in
 two rows"; "line 7 has 3 cells where the header has 4, read with the
@@ -217,13 +219,42 @@ as the separator"; "it is 312.4 MB, more than the 20 MB a metadata file
 can have; check that it is the metadata file and not the variants", with
 "a traits file" and "the traits file" in association; "the browser could
 not read it; it may have been changed, moved or deleted since it was
-picked"; "it is not a text file; in Excel, save the sheet as CSV"; and
-the message of the files wasm for `files`. A separator is named as the
+picked"; "it is not a text file; in Excel, save the sheet as CSV"; "it
+is a variants file, which the Variants step takes"; "it ends in the
+middle of a character and may have been cut short"; and the message of
+the files wasm for `files`. A separator is named as the
 Individuals step names it, the comma, the semicolon or the tab. A size
 is in MB of 1,000,000 bytes, with one decimal rounded up, so that a file
 of 20,000,001 bytes is "20.1 MB"; the limit, a whole number of MB, is
 written with none. The names and the counts are shown by the rules after
 the first table.
+
+The Individuals step shows the reason of its file, being read or not
+read, with other ends, since the refusal is shown inside that step, under
+the options of the reader; the owner decided on 25 September 2026 that
+a refusal shown there ends "Choose another separator above, or load a
+corrected file." for a row of the wrong length and a quote never
+closed, whose likeliest cause is the separator, and "Load a corrected
+file." otherwise. `individualsStepNeeds` gives those words, the rows of
+the table above for a file being read or not read, and `null` for no
+file or a file read, which the step shows otherwise:
+
+| the individuals file | the reason in the Individuals step |
+|---|---|
+| being read | "Reading pops.csv." |
+| refused by the reader, `raggedRow` or `unclosedQuote` | "pops.csv could not be read: line 7 has 3 cells where the header has 4, read with the semicolon as the separator. Choose another separator above, or load a corrected file." |
+| refused by the reader, `variantsFile` | "pops.csv could not be read: it is a variants file, which the Variants step takes. Load a metadata file." |
+| refused by the reader, `unreadable` | "pops.csv could not be read: the browser could not read it; it may have been changed, moved or deleted since it was picked. Load it again." |
+| refused by the reader, any other kind, or by the files wasm | "pops.csv could not be read: it has no row of individuals. Load a corrected file." |
+| its read stopped by a crash of the light worker | "pops.csv could not be read: ‹what happened› (**Open 4**). Load it again." |
+| the light worker could not start, or the page is out of date | "pops.csv could not be read: ‹what happened› (**Open 4**). Reload the page and load it again." |
+
+The ends of the rows of `variantsFile`, `unreadable` and a crash are the
+writer's, the same day, on the pattern of the Variants step: a variants
+file is not corrected but replaced, with "a traits file" in
+association; and a file that could not be read by no fault of its own
+is loaded again, not corrected. The reason of individuals missing is
+`individualsNeeds`'s in the step as beside the Run button.
 
 The individuals missing are named as **Open 3** says; one alone is "1
 individual of panel.nei is not in pops.csv: ind_031. Add it to the file
@@ -362,7 +393,8 @@ export type SourceError =
 
 The individuals file. A read of a CSV reports the three options it used,
 each as the user set it or, where it was `"auto"`, as the reader found
-it (`docs/specs/worker/protocol.md`, `CsvFound`); `found` is `null` for
+it, and the line of the first character it could not decode, or `null`
+(`docs/specs/worker/protocol.md`, `CsvFound`); `found` is `null` for
 an xlsx.
 
 ```ts
@@ -633,6 +665,11 @@ export function variantsStepNeeds(p: Project): string | null;
     null, naming the file as the application of `p` names it. */
 export function individualsNeeds(p: Project): string | null;
 
+/** The reason of the individuals file being read or not read, in the
+    words of the Individuals step, or null for no file or a file read;
+    the table of the Individuals step above. */
+export function individualsStepNeeds(p: Project): string | null;
+
 /** The individuals of the variants file found in the table, all those
     missing in the order of the variants file, and the number of rows of
     other individuals; null when either file is not read. The same object
@@ -722,7 +759,9 @@ version that is a whole number of at least 0, its version of popnei and
 of the application, two texts, and a fingerprint of 64 lower case
 hexadecimal digits; a failed read of the individuals file of any kind of
 `IndividualsFileError` with its fields, the separator among them one of
-the three a CSV can have; and `"utf-16"` among the encodings found.
+the three a CSV can have; `"utf-16"` among the encodings found; and the
+line of `undecodedLine` of what was found a whole number of at least 1,
+or `null`.
 
 - **A file of the other application** is refused: "This project file is
   of the association application. Open it there."
@@ -835,8 +874,8 @@ project frozen deeply with `Object.freeze`, so that a write into it throws
 - **Each record**: recorded into the source of its id; the project itself
   for another id, for a read already recorded, and, for the individuals
   file, for other `csv` options.
-- **`projectNeeds`**, **`variantsStepNeeds`** and **`individualsNeeds`**,
-  a case for each row of their tables, the individuals named; the words of each kind of
+- **`projectNeeds`**, **`variantsStepNeeds`**, **`individualsNeeds`**
+  and **`individualsStepNeeds`**, a case for each row of their tables, the individuals named; the words of each kind of
   refusal of the reader; "a traits file" in the reasons of a project of
   association.
 - **`individualsCheck`**: `null` when either file is not read; the
@@ -914,10 +953,12 @@ of them changes those texts and their tests, and nothing else.
    reader of CSV and TSV. Its words, after "could not be read:", are the
    reader's spec's since 25 September 2026, above, which settles what
    this point asked of them. "Reload the page and load it again." is
-   wrong advice for a file whose rows are wrong, so, meanwhile, such a
-   refusal ends "Load a metadata file in the Individuals step.", read on
-   that very step, which the owner judges on the screens of stage 2 with
-   the others (`docs/specs/steps/individuals.md`, "Its words").
+   wrong advice for a file whose rows are wrong, so such a refusal ends
+   "Load a metadata file in the Individuals step." beside a Run button;
+   in the Individuals step it ends as the owner decided on 25 September
+   2026, "Choose another separator above, or load a corrected file." or
+   "Load a corrected file.", which settles this point (above, "What an
+   analysis needs of every project").
 6. **Which problem of the filters of individuals is named first, when
    there are several.** Meanwhile, the list of individuals to keep before
    the list to remove; within one list, an empty list first, then names
