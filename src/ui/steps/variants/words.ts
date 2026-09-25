@@ -5,18 +5,10 @@
  * node checks them; the step draws them.
  */
 
+import { DEFAULT_ONLY_PASSED, DEFAULT_PLOIDY } from "../../../core/apps.ts";
 import { counted, escaped, grouped } from "../../../core/project.ts";
 import type { Project, VariantSource } from "../../../core/project.ts";
 import type { VcfReadOptions } from "../../../worker/protocol.ts";
-
-/** The ploidy a VCF is read with until the user sets another, the
-    default of popnei's `openVcf`. */
-export const DEFAULT_PLOIDY = 2;
-
-/** Whether a VCF is read with only the variants with PASS or . in the
-    FILTER column until the user sets otherwise, `onlyPassed` of popnei's
-    `openVcf`, true by default. */
-export const DEFAULT_ONLY_PASSED = true;
 
 /** The options of a VCF with nothing loaded and no reference. */
 export const DEFAULT_READ_OPTIONS: VcfReadOptions = Object.freeze({

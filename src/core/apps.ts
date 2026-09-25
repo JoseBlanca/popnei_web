@@ -20,6 +20,15 @@ import type { Job, JobResult } from "../worker/protocol.ts";
  */
 export const DEFAULT_MAX_MISSING_RATE = 0.1;
 
+/** The ploidy a VCF is read with until the user sets another in the
+    Variants step, the default of popnei's `openVcf`. */
+export const DEFAULT_PLOIDY = 2;
+
+/** Whether a VCF is read with only the variants with PASS or . in the
+    FILTER column until the user sets otherwise in the Variants step,
+    `onlyPassed` of popnei's `openVcf`, true by default. */
+export const DEFAULT_ONLY_PASSED = true;
+
 /** The analyses of the population genetics application, in the order the
     screens show them. */
 export const POPGEN_ANALYSES: readonly AnalysisDef<Job, JobResult>[] =

@@ -4,10 +4,11 @@
  * (testing.md, "The screens, as pictures"). The probe has the browser's
  * default look and no dark theme, so each state is taken once, in light.
  */
+import { readFile, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { expect, test } from "@playwright/test";
-import type { Page } from "@playwright/test";
+import type { Page, Route } from "@playwright/test";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 const SCREENS = join(import.meta.dirname, "..", "screens");
@@ -94,7 +95,7 @@ test("the probe's worker stopped by a trap of popnei", async ({ page }) => {
     of the Variants step. */
 async function pickVariants(
   page: Page,
-  file: string | { name: string; text: string },
+  file: string | { name: string; text: string } | { path: string },
 ): Promise<void> {
   const chooser = page.waitForEvent("filechooser");
   await page
@@ -106,12 +107,53 @@ async function pickVariants(
   ).setFiles(
     typeof file === "string"
       ? join(FIXTURES, file)
-      : {
-          name: file.name,
-          mimeType: "text/plain",
-          buffer: Buffer.from(file.text),
-        },
+      : "path" in file
+        ? file.path
+        : {
+            name: file.name,
+            mimeType: "text/plain",
+            buffer: Buffer.from(file.text),
+          },
   );
+}
+
+/** Drops the fixtures `names` on the zone of the Variants step, as the
+    flows of e2e/variants.spec.ts do. */
+async function dropVariants(
+  page: Page,
+  names: readonly string[],
+): Promise<void> {
+  const files = await Promise.all(
+    names.map(async (name) => ({
+      name,
+      bytes: [...(await readFile(join(FIXTURES, name)))],
+    })),
+  );
+  const dataTransfer = await page.evaluateHandle((given) => {
+    // Chromium gives a file put into a DataTransfer by a script no entry
+    // of the file system, and React Aria skips an item without one.
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- called below with its item, by call
+    const entryOf = DataTransferItem.prototype.webkitGetAsEntry;
+    DataTransferItem.prototype.webkitGetAsEntry = function (
+      this: DataTransferItem,
+    ) {
+      return (
+        entryOf.call(this) ??
+        ({ isFile: true, isDirectory: false } as FileSystemEntry)
+      );
+    };
+    const transfer = new DataTransfer();
+    for (const file of given) {
+      transfer.items.add(new File([new Uint8Array(file.bytes)], file.name));
+    }
+    return transfer;
+  }, files);
+  const target = page
+    .getByRole("region", { name: "Variants file" })
+    .getByRole("button", { name: /^(Choose|Replace) .*…$/ });
+  for (const type of ["dragenter", "dragover", "drop"]) {
+    await target.dispatchEvent(type, { dataTransfer });
+  }
 }
 
 // The page of the population genetics application, in both themes, since
@@ -217,6 +259,67 @@ for (const theme of ["light", "dark"] as const) {
         page.getByRole("main").getByText(/^panel\.txt was not loaded/),
       ).toBeVisible();
       await save(page, `popgen-variants-not-loaded-${theme}`);
+    });
+
+    test("the Variants step, several files dropped", async ({ page }) => {
+      await dropVariants(page, ["panel.nei", "panel.vcf.gz"]);
+      await expect(
+        page.getByRole("main").getByText("Drop one variants file at a time."),
+      ).toBeVisible();
+      await save(page, `popgen-variants-several-dropped-${theme}`);
+    });
+
+    test("the Variants step, a VCF to read again with every variant", async ({
+      page,
+    }) => {
+      await pickVariants(page, "panel.vcf.gz");
+      await expect(page.getByText("200 individuals")).toBeVisible();
+      await page
+        .getByText("Only the variants with PASS or . in the FILTER column", {
+          exact: true,
+        })
+        .click();
+      await expect(
+        page.getByRole("button", {
+          name: "Read panel.vcf.gz again with every variant",
+        }),
+      ).toBeVisible();
+      await save(page, `popgen-variants-read-again-passed-${theme}`);
+    });
+
+    test("the Variants step, the calculations could not start", async ({
+      page,
+    }) => {
+      await page.route("**/*.wasm", (route) => route.fulfill({ status: 404 }));
+      await page.reload();
+      await pickVariants(page, "panel.nei");
+      await expect(
+        page.getByRole("main").getByText(/Reload the page/),
+      ).toBeVisible();
+      await save(page, `popgen-variants-could-not-start-${theme}`);
+    });
+
+    test("the Variants step, a file the browser can no longer read", async ({
+      page,
+    }, testInfo) => {
+      // The wasm is held until the picked file is gone from the disk, so
+      // that the calculation worker opens it only then.
+      const held: Route[] = [];
+      await page.route("**/*.wasm", (route) => {
+        held.push(route);
+      });
+      await page.reload();
+      const path = testInfo.outputPath("panel.nei");
+      await writeFile(path, await readFile(join(FIXTURES, "panel.nei")));
+      await pickVariants(page, { path });
+      await expect(page.getByText("Reading panel.nei.")).toBeVisible();
+      await unlink(path);
+      await expect.poll(() => held.length).toBeGreaterThan(0);
+      for (const route of held) await route.continue();
+      await expect(
+        page.getByRole("main").getByText(/it may have changed on the disk/),
+      ).toBeVisible();
+      await save(page, `popgen-variants-no-longer-read-${theme}`);
     });
 
     test("the Variants step, the missing data filter off", async ({ page }) => {

@@ -33,3 +33,10 @@
 .content:empty {
   display: none;
 }
+
+/* The file button, and after it what can be done with the file. */
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

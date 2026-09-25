@@ -8,16 +8,8 @@
  */
 import { useId, useRef, useState } from "react";
 
-import { DEFAULT_MAX_MISSING_RATE } from "../../../core/apps.ts";
-import {
-  MAX_PLOIDY,
-  escaped,
-  loadVariants,
-  projectNeeds,
-  removeVariantFilter,
-  setVariantFilter,
-} from "../../../core/project.ts";
-import type { VariantSource } from "../../../core/project.ts";
+import { MAX_PLOIDY, escaped, projectNeeds } from "../../../core/project.ts";
+import type { VariantLoad, VariantSource } from "../../../core/project.ts";
 import type {
   VariantFilter,
   VcfReadOptions,
@@ -31,6 +23,14 @@ import { Checkbox } from "../../widgets/Checkbox.tsx";
 import { FileZone } from "../../widgets/FileZone.tsx";
 import { NumberField } from "../../widgets/NumberField.tsx";
 import { Switch } from "../../widgets/Switch.tsx";
+import {
+  filterSwitchCommand,
+  pickCommand,
+  readAgainCommand,
+  shownOptions,
+  thresholdCommand,
+} from "./commands.ts";
+import type { EditedOptions, StepCommand } from "./commands.ts";
 import { ReadingTime } from "./ReadingTime.tsx";
 import styles from "./VariantsStep.module.css";
 import {
@@ -45,7 +45,6 @@ import {
   readAgainLabel,
   readWithText,
   sizeText,
-  startingOptions,
   variantsText,
 } from "./words.ts";
 
@@ -53,15 +52,6 @@ import {
     2026. */
 const PLOIDY_DESCRIPTION =
   "A VCF does not say its ploidy, so it is given here. If it is wrong, the first analysis stops with a message that names the line and the individual, and the file is read again with the right ploidy.";
-
-/** The options of a VCF the user set, for the load they were set on. */
-interface EditedOptions {
-  /** The load id of the variants file when they were set; `null` with
-      none. */
-  readonly forLoad: string | null;
-  /** The options. */
-  readonly options: VcfReadOptions;
-}
 
 /** The missing data filter of the project, or `null` when it is off. */
 function missingDataOf(
@@ -80,17 +70,45 @@ export function VariantsStep(): React.JSX.Element {
   const announcer = useAnnouncer();
   const variants = useAppState((s) => s.project.variants);
   const filters = useAppState((s) => s.project.filters);
-  const starting = useAppState((s) => startingOptions(s.project));
   const reason = useAppState((s) => projectNeeds(s.project));
 
-  // The options start again at those of the load, the reference's or the
-  // defaults whenever the load changes, by a pick or an undo.
+  // The options the user set and has not applied by a pick or a read
+  // again; the step shows them while their load is there, and otherwise
+  // those it starts at, so a new load or an undo sets them back. The ref
+  // holds the same, written in the handlers, for a file dropped in the
+  // moment after an edit, before React draws again.
   const [edited, setEdited] = useState<EditedOptions | null>(null);
+  const editedRef = useRef<EditedOptions | null>(null);
+  const options = useAppState((s) => shownOptions(edited, s.project));
   const loadId = variants?.fileId ?? null;
-  const options =
-    edited !== null && edited.forLoad === loadId ? edited.options : starting;
   const setOptions = (next: VcfReadOptions): void => {
-    setEdited({ forLoad: loadId, options: next });
+    const edit = { forLoad: loadId, options: next };
+    editedRef.current = edit;
+    setEdited(edit);
+  };
+  const vcfSection = useRef<HTMLElement>(null);
+
+  /** The options as they are now, with a number still being typed in
+      the ploidy committed first: a file dropped from the desktop leaves
+      the focus in the field, which has not committed it. */
+  const optionsNow = (): VcfReadOptions => {
+    const active = document.activeElement;
+    if (
+      active instanceof HTMLElement &&
+      vcfSection.current?.contains(active) === true
+    ) {
+      // Leaving the field commits it, through its onChange, at once.
+      active.blur();
+      active.focus();
+    }
+    return shownOptions(editedRef.current, store.getState().project);
+  };
+
+  /** Applies a load, and forgets the edits it applied. */
+  const applyLoad = (step: StepCommand): void => {
+    store.apply(step.description, step.command);
+    editedRef.current = null;
+    setEdited(null);
   };
 
   // The message of a file not loaded, until the next pick.
@@ -120,16 +138,16 @@ export function VariantsStep(): React.JSX.Element {
       return;
     }
     setMessage(null);
+    const readOptions = format === "vcf" ? optionsNow() : null;
     const fileId = files.addFile(file);
-    store.apply("a new variants file was loaded", (p) =>
-      loadVariants(p, {
-        fileId,
-        name: file.name,
-        size: file.size,
-        format,
-        readOptions: format === "vcf" ? options : null,
-      }),
-    );
+    const load: VariantLoad = {
+      fileId,
+      name: file.name,
+      size: file.size,
+      format,
+      readOptions,
+    };
+    applyLoad(pickCommand(load));
   };
 
   const loadedOptions = variants?.readOptions ?? null;
@@ -141,8 +159,8 @@ export function VariantsStep(): React.JSX.Element {
   const readAgain = (): void => {
     if (variants === null || againFile === null) return;
     const fileId = files.addFile(againFile);
-    store.apply("the variants file was read again with other options", (p) =>
-      loadVariants(p, {
+    applyLoad(
+      readAgainCommand({
         fileId,
         name: variants.name,
         size: variants.size,
@@ -156,19 +174,8 @@ export function VariantsStep(): React.JSX.Element {
   };
 
   const missingData = missingDataOf(filters);
-  const setMissingData = (on: boolean): void => {
-    if (on) {
-      store.apply("the missing data filter was turned on", (p) =>
-        setVariantFilter(p, {
-          kind: "missing_data",
-          maxAllowedMissingRate: DEFAULT_MAX_MISSING_RATE,
-        }),
-      );
-    } else {
-      store.apply("the missing data filter was turned off", (p) =>
-        removeVariantFilter(p, "missing_data"),
-      );
-    }
+  const send = (step: StepCommand): void => {
+    store.apply(step.description, step.command);
   };
 
   return (
@@ -186,7 +193,7 @@ export function VariantsStep(): React.JSX.Element {
             Variants file
           </h2>
           <FileZone
-            label="Variants file"
+            pasteLabel="Paste a variants file"
             buttonLabel={
               variants === null
                 ? "Choose a variants file…"
@@ -213,6 +220,7 @@ export function VariantsStep(): React.JSX.Element {
         </section>
 
         <section
+          ref={vcfSection}
           aria-labelledby={vcfHeading}
           className={classOf(styles, "section")}
         >
@@ -255,7 +263,9 @@ export function VariantsStep(): React.JSX.Element {
         <Switch
           label="Filter the variants by missing data"
           isSelected={missingData !== null}
-          onChange={setMissingData}
+          onChange={(on) => {
+            send(filterSwitchCommand(on));
+          }}
         />
         {missingData !== null && (
           <NumberField
@@ -265,12 +275,7 @@ export function VariantsStep(): React.JSX.Element {
             maxValue={1}
             step={0.01}
             onChange={(maxAllowedMissingRate) => {
-              store.apply("the missing data filter changed", (p) =>
-                setVariantFilter(p, {
-                  kind: "missing_data",
-                  maxAllowedMissingRate,
-                }),
-              );
+              send(thresholdCommand(maxAllowedMissingRate));
             }}
           />
         )}
@@ -312,6 +317,7 @@ function FileRead({
 }): React.JSX.Element {
   switch (read.kind) {
     case "pending":
+      if (reason === null) throw noReason(variants);
       return (
         <p className={classOf(styles, "line")}>
           {reason}{" "}
@@ -333,6 +339,7 @@ function FileRead({
         </ul>
       );
     case "failed":
+      if (reason === null) throw noReason(variants);
       return (
         <p className={classOf(styles, "problem")}>
           <ProblemIcon />
@@ -340,6 +347,14 @@ function FileRead({
         </p>
       );
   }
+}
+
+/** The defect of a file being read or refused for which `projectNeeds`
+    gave no reason, which it always gives. */
+function noReason(variants: VariantSource): Error {
+  return new Error(
+    `popnei_web defect: projectNeeds gave no reason for the variants file ${variants.fileId}, ${variants.read.kind}.`,
+  );
 }
 
 /** The mark of a problem, beside its words, which say it too. */

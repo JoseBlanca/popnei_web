@@ -1,11 +1,14 @@
 /**
  * A number field: React Aria's `NumberField`, with our look and no
  * buttons (react.md, "Widgets: React Aria, wrapped once"). It parses what
- * is typed in the language of the browser, keeps it within its bounds,
- * rounds it to its step, and gives it when it is committed, on Enter, when
- * the field loses the focus, or at each press of an arrow key. A field
- * left empty, or with no number in it, gives nothing and shows again the
- * value it had.
+ * is typed in the language of the browser, and gives it when it is
+ * committed, on Enter, when the field loses the focus, or at each press
+ * of an arrow key, rounded to its step, a half up, and kept within its
+ * bounds (roundToStep.ts). A field left empty, or with no number in it,
+ * gives nothing and shows again the value it had. It takes no separator
+ * of thousands, so that a number written with the decimal mark of
+ * another language, 0,05 in English or 0.05 in Spanish, is no number,
+ * and not 5.
  */
 import {
   NumberField as AriaNumberField,
@@ -16,6 +19,12 @@ import {
 
 import { classOf } from "../classOf.ts";
 import styles from "./NumberField.module.css";
+import { roundToStep } from "./roundToStep.ts";
+
+/** No separator of thousands, in every language (above). */
+const FORMAT_OPTIONS: Intl.NumberFormatOptions = Object.freeze({
+  useGrouping: false,
+});
 
 /** What a number field is drawn with. */
 export interface NumberFieldProps {
@@ -32,7 +41,8 @@ export interface NumberFieldProps {
   readonly step: number;
   /** A line under the field, which a screen reader reads with it. */
   readonly description?: string;
-  /** Called with the number committed, never with an empty field. */
+  /** Called with the number committed, rounded and within the bounds,
+      never with an empty field. */
   readonly onChange: (value: number) => void;
 }
 
@@ -53,11 +63,16 @@ export function NumberField({
       minValue={minValue}
       maxValue={maxValue}
       step={step}
+      formatOptions={FORMAT_OPTIONS}
+      // React Aria neither rounds nor bounds what is typed; roundToStep
+      // does, a half up, where React Aria's rounding sends 0.125 to 0.12.
+      commitBehavior="validate"
       isWheelDisabled
       onChange={(committed) => {
         // An empty field gives NaN, which sends nothing; React Aria then
         // shows the value it was given again.
-        if (Number.isFinite(committed)) onChange(committed);
+        if (!Number.isFinite(committed)) return;
+        onChange(roundToStep(committed, minValue, maxValue, step));
       }}
     >
       <Label className={classOf(styles, "label")}>{label}</Label>

@@ -69,6 +69,7 @@ async function drop(page: Page, fixtures: readonly string[]): Promise<void> {
     // A file a script puts into a DataTransfer has no entry of the file
     // system in Chromium, which a file dragged from the desktop has, and
     // React Aria skips an item without one; so the item says it is a file.
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- called below with its item, by call
     const entryOf = DataTransferItem.prototype.webkitGetAsEntry;
     DataTransferItem.prototype.webkitGetAsEntry = function (
       this: DataTransferItem,
@@ -285,7 +286,7 @@ test("WS7 D3 several files dropped at once load none", async ({
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("WS7 D3 0.125 typed in the threshold is held as 0.12, and 0.135 as 0.14, rounded to the step as React Aria rounds", async ({
+test("WS7 D3 0.125 typed in the threshold is held as 0.13, a half rounded up", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -297,11 +298,17 @@ test("WS7 D3 0.125 typed in the threshold is held as 0.12, and 0.135 as 0.14, ro
   const threshold = page.getByLabel("Maximum proportion of missing genotypes");
   await expect(threshold).toHaveValue("0.1");
 
-  // React Aria takes the remainder by the step in floating point, so one
-  // half goes down and the other up (the spec, "The missing data filter").
+  // Two presses of an arrow key, a step each.
+  await threshold.press("ArrowUp");
+  await threshold.press("ArrowUp");
+  await expect(threshold).toHaveValue("0.12");
+
   await threshold.fill("0.125");
   await threshold.press("Enter");
-  await expect(threshold).toHaveValue("0.12");
+  await expect(threshold).toHaveValue("0.13");
+  await threshold.fill("0.145");
+  await threshold.press("Enter");
+  await expect(threshold).toHaveValue("0.15");
   await threshold.fill("0.135");
   await threshold.press("Enter");
   await expect(threshold).toHaveValue("0.14");
@@ -368,3 +375,81 @@ test("WS7 D3 the keyboard goes through the step in the order of the spec", async
     }),
   ).toBeFocused();
 });
+
+test("WS7 D3 the ploidy is kept from 1 to 255: 0 gives 1 and 300 gives 255", async ({
+  page,
+}) => {
+  await openVariants(page);
+  const ploidy = page.getByLabel("Ploidy of the VCF");
+  await ploidy.fill("0");
+  await ploidy.press("Enter");
+  await expect(ploidy).toHaveValue("1");
+  await ploidy.fill("300");
+  await ploidy.press("Enter");
+  await expect(ploidy).toHaveValue("255");
+});
+
+test("WS7 D3 a file dropped while a ploidy is still being typed is read with that ploidy", async ({
+  page,
+}) => {
+  await openVariants(page);
+  const ploidy = page.getByLabel("Ploidy of the VCF");
+  await ploidy.fill("4");
+  await expect(ploidy).toBeFocused();
+
+  await drop(page, ["tetraploid.vcf.gz"]);
+
+  const card = zone(page);
+  await expect(card.getByText("Ploidy 4", { exact: true })).toBeVisible();
+  await expect(card.getByText(/^Read with ploidy 4,/)).toBeVisible();
+  await expect(ploidy).toHaveValue("4");
+  await expect(
+    page.getByRole("button", { name: /^Read .* again/ }),
+  ).toHaveCount(0);
+});
+
+test("WS7 D3 the zone's own button, which takes a pasted file, is named for it", async ({
+  page,
+}) => {
+  await openVariants(page);
+  const paste = zone(page).getByRole("button", {
+    name: "Paste a variants file",
+    exact: true,
+  });
+  await expect(paste).toHaveCount(1);
+  await expect(paste).not.toHaveAttribute("aria-labelledby");
+});
+
+// The application is in English in every browser, whatever its language
+// (the entry's I18nProvider), and a number with a comma for its decimal
+// mark is no number: the field keeps the value it had, rather than reading
+// 0,05 as 5 and keeping every variant.
+for (const locale of ["en-US", "es-ES"] as const) {
+  test.describe(locale, () => {
+    test.use({ locale });
+
+    test(`WS7 D3 in a browser in ${locale} the threshold takes 0.05 and keeps its value for 0,05, and the ploidy keeps its value for 2,5`, async ({
+      page,
+    }) => {
+      await openVariants(page);
+      const threshold = page.getByLabel(
+        "Maximum proportion of missing genotypes",
+      );
+      await expect(threshold).toHaveValue("0.1");
+      await threshold.fill("0,05");
+      await threshold.press("Enter");
+      await expect(threshold).toHaveValue("0.1");
+      await threshold.fill("0.05");
+      await threshold.press("Enter");
+      await expect(threshold).toHaveValue("0.05");
+
+      const ploidy = page.getByLabel("Ploidy of the VCF");
+      await ploidy.fill("2,5");
+      await ploidy.press("Enter");
+      await expect(ploidy).toHaveValue("2");
+      await ploidy.fill("2.5");
+      await ploidy.press("Enter");
+      await expect(ploidy).toHaveValue("3");
+    });
+  });
+}
