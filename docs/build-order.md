@@ -137,14 +137,23 @@ order does not wait for what exists:
 ### Stage 2. The walking skeleton
 
 - **What:** `docs/architecture.md` section 10, whole: the two workers and
-  their messages, with the queue, cancelling and the restart; the reader of
-  CSV and TSV and the types of its columns, in the light worker; the shell
-  of the population genetics application, its stepper, its summary line
-  and its notices; the few widgets it needs; the missing data filter; the
-  diversity table per population from popnei's expected and observed
-  heterozygosity; the results removed with their notice when the filter
-  changes, and brought back by undo with no calculation; a calculation
-  cancelled; the project saved and opened.
+  their messages, with the queue, cancelling and the restart; the variants
+  file read in both formats, a VCF or a `.nei` file, by ranges, on
+  popnei's release `js-v0.1.0-dev.2`, with a progress bar for each
+  calculation; in the Variants step, a button that reads a VCF already
+  loaded again with another ploidy; the reader of CSV and TSV and the
+  types of its columns, in the light worker; the shell of the population
+  genetics application, its stepper, its summary line and its notices;
+  the few widgets it needs; the missing data filter; the diversity table
+  per population from popnei's expected and observed heterozygosity; the
+  results removed with their notice when the filter changes, and brought
+  back by undo with no calculation; a calculation cancelled; the project
+  file in its full first version, with its check numbers, saved and
+  opened, and a project opened with another variant file compared with
+  it. The owner decided on 25 September 2026 that stage 2 reads both
+  formats and holds the whole project file, which this order had left to
+  stage 6 (`docs/specs/core/projectFile.md`,
+  `docs/specs/analyses/diversity.md`).
 - **Why here:** it goes through every layer once, so the ways they fit
   badly show up while one analysis depends on them.
 - **Needs of the owner:** the screens tried, a planned stop of the plan
@@ -162,7 +171,9 @@ order does not wait for what exists:
 - **What:** every filter of `docs/functionality.md` section 3, of variants
   and of individuals, with what each kept; the histograms of the checks
   per variant and per individual, the first plot of `src/charts`; writing
-  the filtered variants as `.nei` and as VCF; the regions of a BED file.
+  the filtered variants as `.nei` and as VCF, in the Variants step, as
+  the owner decided on 25 September 2026, and not in a step of its own;
+  the regions of a BED file.
 - **Why here:** both applications share this step, and every analysis
   after it reads the variants it leaves. The histogram is the simplest
   plot, so the plot contract and its export are tried on it first.
@@ -173,8 +184,9 @@ order does not wait for what exists:
 
 - **What:** the metadata file in xlsx, which brings the Rust crate
   `crates/files/` and Rust in CI (`docs/architecture.md`, section 6); the
-  columns and their types, set by the user; the column that defines the
-  populations; the PCA and the PCoA, first as a 2D scatter plot, then in 3D
+  metadata file made optional, a project with none run as one population,
+  where stage 2 requires one; the columns and their types, set by the
+  user; the column that defines the populations; the PCA and the PCoA, first as a 2D scatter plot, then in 3D
   with three.js.
 - **Why here:** the populations are what every analysis of the next stage
   groups by, and the PCA is where the user checks them. The 3D view comes
@@ -200,15 +212,13 @@ order does not wait for what exists:
 
 ### Stage 6. Taking the work out
 
-- **What:** the project file whole, with its check numbers; opening a
-  project with another variant file, and the comparison after the new run;
-  the report built as data in core and drawn on the page, zipped by the
-  light worker; the Python script; every table as CSV and every plot as
-  SVG and PNG.
-- **Why here:** the report, the script and the check numbers have
-  something to say only once the analyses of the population genetics
-  application exist. Saving and opening the project came earlier, in the
-  walking skeleton, so the format was tried then.
+- **What:** the Export step, which comes with the report; the report
+  built as data in core and drawn on the page, zipped by the light
+  worker; the Python script; every table as CSV and every plot as SVG and
+  PNG. The project file, its check numbers and the comparison after a new
+  run came earlier, in the walking skeleton.
+- **Why here:** the report and the script have something to say only
+  once the analyses of the population genetics application exist.
 - **The population genetics application is complete at the end of this
   stage.**
 
@@ -238,21 +248,12 @@ order does not wait for what exists:
   example datasets are chosen with the owner, with a licence that allows
   hosting them.
 
-### Reading files by ranges, when popnei gives it
-
-Not a stage of its own. When popnei gives a source of bytes over a `File`
-(popnei issue #1), it is a design first, as the `designing` skill says,
-and then a change to the calculation worker. It can come after stage 2 at
-any point, and the sooner the better, since the users' files are large;
-until then the applications read a file whole, with the limits of
-`docs/architecture.md` section 11.
-
 ## 4. What is asked of popnei, and when
 
 | what | asked by | needed in |
 |---|---|---|
 | a release of the wasm package by a workflow | technology.md, section 5 | stage 0 |
-| a source of bytes over a `File`, read by ranges, with progress | popnei issue #1 | after stage 2, as soon as it can |
+| reading a `File` by ranges, with progress: given by the release `js-v0.1.0-dev.2` of 25 September 2026 | popnei issue #1 | stage 2 |
 | a VCF writer, if there is none | functionality.md, section 3 | stage 3 |
 | the private alleles, the rarefaction, the folded SFS | functionality.md, section 11 | stage 5 |
 | the fall of r² with distance and the distance at which it falls to half: on popnei's `main` since 24 September 2026, `LdDecay` in `js/popnei/src/ld.ts`, not yet in a release | functionality.md, section 11 | stage 5, from a release that has it |

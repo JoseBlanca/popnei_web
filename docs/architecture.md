@@ -231,16 +231,21 @@ type ColumnType =
 interface Reference {
   variants: VariantSource;            // the file the project was made with;
                                       // its fileId names no File
-  popneiVersion: string;              // from the header of the project file
-  appVersion: string;                 // the same
   checks: {
     analysis: AnalysisId;
     numbers: (number | null)[];       // saved in the project file
     keyVersion: number;               // saved: the analysis's, when it was run
+    popneiVersion: string;            // saved: the versions of popnei and of
+    appVersion: string;               // the application that calculated them
     settings: string;                 // never saved: the fingerprint of the
   }[];                                // analysis's settings in the file,
 }                                     // made when it is opened (section 8)
 ```
+
+The versions are kept with each check, and not once for the reference,
+as the owner decided on 25 September 2026, so that a project file that
+holds the numbers of two sessions names the right versions for each
+(`docs/specs/core/projectFile.md`).
 
 - **Immutable**, so that undo is keeping the previous values, and so
   that the screens know what changed by comparing references.
@@ -287,8 +292,13 @@ every key are:
   when what its result means changes for the same inputs, a new default of
   popnei or a bug fixed in how it is called;
 - the version of popnei, which the calculation worker reports when it
-  starts, because
-  a result calculated by another version is not the same result.
+  starts, because a result calculated by another version is not the same
+  result. It is what popnei's `version()` gives, which is only as good as
+  popnei raising it at each release: `js-v0.1.0-dev.1` and
+  `js-v0.1.0-dev.2` both give "0.1.0", so a key made with one is a key
+  made with the other. The owner agreed on 25 September 2026 that popnei
+  raises it with every release, and it is asked of popnei
+  (`docs/specs/worker/runner.md`).
 
 Two requests with the same inputs have the same key.
 
@@ -460,7 +470,7 @@ The page and each worker talk through typed messages
   is no deadline, so a user who reaches Undo late, with the keyboard or a
   screen reader, does not lose the minutes the calculation had run (WCAG
   2.2, success criterion 2.2.1). A request that waits leaves the queue at
-  no cost, and one that runs ends its worker, a restart (below) that reads
+  no cost, and one that runs ends its worker, a restart (below) that opens
   the variants file again; the calculation of the new settings starts when
   the user asks for it, as every calculation does. An undo while the
   notice is up gives the keys back, and the requests go on. A change of
@@ -474,11 +484,12 @@ The page and each worker talk through typed messages
   the cache. It is shown only if the current project still gives that
   key; if the user changed something meanwhile and the request finished
   before it was stopped, it waits in the cache for an undo.
-- **Progress**, in the target design, is the bytes of the variant file
-  that the current pass has read, against the size of the file, reported
-  by the source that reads the file for popnei (section 6). popnei 0.1.0
-  reports no progress, so until the source exists a run shows that it is
-  running and for how long, and not how far along it is.
+- **Progress** comes from popnei's `Variants.onProgress`, which gives
+  four numbers during a run: the bytes of the variant file that the
+  current pass has read, the bytes of the file, the pass, and the passes
+  of the run, which popnei's `numPassesOf` gives before the run starts, so
+  that the bar does not go from full to empty at the second pass of a PCA.
+  The worker passes them on to the page (section 6).
 - **Cancelling** a request that is running ends its worker and starts a
   new one. While a calculation runs inside wasm, the worker cannot read a
   message that asks it to stop, and without `SharedArrayBuffer`, which
@@ -488,10 +499,8 @@ The page and each worker talk through typed messages
   intermediate results the worker held, which are made again when asked
   for. The page sends the new worker the `File` objects again, which costs
   nothing, since a `File` crosses as a handle. The new calculation worker
-  then opens the variant file again: in the target design that reads its
-  header, or the index at the end of a `.nei` file; with popnei 0.1.0 it
-  reads the whole file into memory again before the next request starts,
-  a time that grows with the file and has not been measured (section 6).
+  then opens the variant file again, which reads its header, or the index
+  at the end of a `.nei` file, and not the whole file (section 6).
   A crash, a trap of the wasm, restarts the worker in the same way.
 - **A change of the load of the variant file restarts the calculation
   worker**, a new pick, an undo or a redo of one, before the first request
@@ -499,8 +508,8 @@ The page and each worker talk through typed messages
   worker that kept the old load open, or had freed it, would still hold
   the room of that file; restarted, it gives that memory back, and it
   only ever holds one open file, one `Variants` of popnei. What it costs:
-  an undo to the previous load reopens that file, which with popnei 0.1.0
-  reads it whole again, a time that grows with the file; the results of
+  an undo to the previous load opens that file again, which reads its
+  header, not the whole file; the results of
   the previous load are still found in the cache of the page, with no
   calculation, and only a new calculation on it waits for the reopening.
   The intermediate results of the old load, the pruned variants, the
@@ -539,8 +548,8 @@ Considered and not taken: **a pool of calculation workers**, which would
 run two analyses at once on two cores. Each worker would hold its own
 intermediate results, a kinship of 10,000 individuals is 800 MB in each
 one that uses it, and its own wasm memory, which never shrinks (section
-11); two workers that both needed the pruned variants would each make
-them; and with popnei 0.1.0 each would hold the whole variant file. A
+11); and two workers that both needed the pruned variants would each
+make them. A
 pool would win if the walking skeleton showed users waiting on several
 independent analyses whose intermediate results are small.
 
@@ -552,67 +561,40 @@ again to a worker that was restarted. A `File` stays in the map after
 another is loaded in its place, so that an undo of the load finds it. The
 project holds only the id and the identity (section 2).
 
-### The variant file, read by ranges: the target
+### The variant file, read by ranges
 
 The variant files of the users tend to be huge and the memory of a tab is
-limited, so the design is to read the file by ranges, as the owner decided
-on 24 September 2026:
+limited, so the file is read by ranges, as the owner decided on 24
+September 2026, with the release of popnei `js-v0.1.0-dev.2`, made on 25
+September 2026, which does it (`docs/specs/worker/runner.md`):
 
-- **The worker gives popnei a source of bytes over the `File`**, which
-  popnei's reader calls for each range it needs, and which reads that
-  range with `FileReaderSync.readAsArrayBuffer(file.slice(start, end))`,
-  a call that exists only in workers and returns the bytes at once, which
-  is what Rust's `Read` and `Seek` need. The VCF reader reads forward; the
-  reader of a `.nei` file seeks, since arrow IPC keeps its index at the
-  end of the file.
-- **Only a few blocks are in memory at a time**, so the size of a file is
-  limited by time and not by memory.
-- **Progress comes from the source itself**: it counts the bytes it has
-  read, against the size of the file, and posts them to the page, which a
-  worker can do from inside a call to wasm. No callback from popnei's loop
-  is needed. popnei still has to say how many passes an analysis makes,
-  the PCA makes two, or tell the source when a pass starts, so that the
-  bar does not go from full to empty.
-- **A restart reopens the file** instead of reading it again.
+- **The worker gives popnei's `openVcf` and `openVars` the `File`
+  itself**, which popnei reads in ranges of 4 MiB at most through
+  `FileReaderSync.readAsArrayBuffer`, a call that exists only in workers
+  and returns the bytes at once. There is no source of bytes of our own,
+  and our code copies no byte of the file. The VCF reader reads forward;
+  the reader of a `.nei` file seeks, since arrow IPC keeps its index at
+  the end of the file.
+- **Opening the file reads what says what it holds**: the first range of
+  a VCF, which holds its header, and the index at the end of a `.nei`
+  file. Every pass reads the file again from the disk.
+- **Only a few ranges are in memory at a time**, so the size of a file is
+  limited by the time of a pass and not by memory (section 11).
+- **Progress comes from popnei's `Variants.onProgress`** (section 5).
+- **A change of the filters opens the file again.** popnei puts a filter
+  on a `Variants` for good and cannot take one off, so when a request
+  asks for other filters than those the `Variants` holds, the worker
+  frees the `Variants`, opens the `File` again, which reads its header
+  and not its variants, and puts the new filters on it.
+- **A restart opens the file again** in the same way, by reading its
+  header (section 5).
 
-This needs of popnei a source of bytes over a JavaScript `File`, read by
-ranges with `FileReaderSync`, in its wasm binding, which needs `js-sys`,
-for `openVcf` and `openVars`. It is a priority request to popnei, and when
-it comes it is a design of its own (`.claude/skills/designing/SKILL.md`):
-the worker holds something new, and the runner changes where it opens a
-file. The rest of this architecture holds with either way of reading.
-
-What stays with the target: **every analysis reads the file again**, one
-pass or two, and a pass over a gzipped VCF decompresses the whole of it
-each time, which is slow. Converting the VCF to a `.nei` file once, which
-is read many times faster (`docs/functionality.md`, section 3), is what
-the application steers the user to. And the results that are large by
+What stays: **every analysis reads the file again**, one pass or two, and
+a pass over a gzipped VCF decompresses the whole of it each time, which
+is slow. Converting the VCF to a `.nei` file once, which is read many
+times faster (`docs/functionality.md`, section 3), is what the
+application steers the user to. And the results that are large by
 themselves stay large whatever the reading (section 11).
-
-### The variant file read whole: popnei 0.1.0, where the walking skeleton starts
-
-popnei 0.1.0 opens a VCF with `openVcf(source: Uint8Array, options)` and a
-`.nei` file with `openVars(source: Uint8Array)`: the bytes of the whole
-file. So until the source above exists, the calculation worker reads the
-whole `File` into memory, `FileReaderSync.readAsArrayBuffer(file)`, and
-gives the bytes to popnei, which copies them into the memory of wasm and
-reads every pass from that copy.
-
-- **The file costs about twice its size while it opens**, the worker's
-  copy and wasm's, and its size once after the worker lets go of its copy.
-- **Files above roughly 1.5 to 2 GB fail.** wasm32 addresses at most
-  4 GB, and the memory of wasm grows and never shrinks
-  (`js/popnei/README.md` of popnei), so the file has to fit there with
-  room beside it for the blocks of a pass and the matrices of the
-  analyses, and the tab holds a second copy while it opens. The figure is
-  an estimate from those sizes; no browser has been measured at it. popnei
-  refuses with its message, which the screen shows.
-- **A restart reads the whole file again** (section 5).
-- **There is no progress bar**, only that a run is running and for how
-  long.
-
-This state is removed when popnei provides the source by ranges; the
-runner's opening of a file is the one place that changes.
 
 ### How a load of the variant file reaches the project
 
@@ -803,8 +785,8 @@ them. It is not part of popnei and nothing of popnei is in it.
   of wasm and copies it out into one array of bytes. For a large file
   that doubles the memory, the file being written in wasm and its copy,
   beside the source; which is why the report leaves the filtered variants
-  out by default (`docs/functionality.md`, section 9). This holds with the
-  source by ranges too.
+  out by default (`docs/functionality.md`, section 9). Reading the
+  variant file by ranges does not change this.
 - **The xlsx and the zip of the report** are made in the light worker, by
   the files wasm.
 - Each is made as bytes and offered by the page as a download.
@@ -813,12 +795,12 @@ them. It is not part of popnei and nothing of popnei is in it.
 
 Each is asked of popnei and not built around in the applications, and
 `.claude/skills/coding/worker.md`, "What popnei has to provide", keeps the
-full list:
+full list. Both are given by `js-v0.1.0-dev.2`:
 
-1. A source of bytes over a JavaScript `File`, read by ranges with
-   `FileReaderSync`, for `openVcf` and `openVars`; the priority.
-2. The number of passes an analysis makes, or a signal to the source when
-   a pass starts, for the progress bar.
+1. Reading a JavaScript `File` by ranges with `FileReaderSync`, in
+   `openVcf` and `openVars`.
+2. The number of passes a function makes, `numPassesOf`, and the progress
+   of each pass, `Variants.onProgress`, for the progress bar.
 
 Nothing is asked of popnei for the individuals file, nor for the identity
 of the variant file.
@@ -906,10 +888,13 @@ for the smallest part of it.
   result are compared with those of the reference, and the screen says
   whether they are the same, and what changed that could explain a
   difference: the variant file; the version of popnei, when it is not the
-  one in the file's header; and the application's calculation of that
-  analysis, when its key version is not the one saved with its numbers, so
-  that a calculation the application changed is not blamed on the file
-  (`docs/specs/core/store.md`). The reference is in no key: it is not an
+  one saved with the numbers of that analysis; and the application's
+  calculation of that analysis, when its key version is not the one saved
+  with its numbers, with the version of the application saved beside them,
+  so that a calculation the application changed is not blamed on the file
+  (`docs/specs/core/store.md`). The versions are those of each check and
+  not of the file's header, since a file can hold numbers of two sessions
+  (section 2). The reference is in no key: it is not an
   input of any result.
 - **The report** is made in three parts, each in the layer that can do
   it. Core builds its content as data, from the project, the cache and
@@ -966,21 +951,41 @@ src/worker/
                     cancelling, restart, the File objects by file id
   start.ts          the lines that make the two workers
   runner.ts         the calculation worker: popnei, the variant file, the
-                    intermediate results
+                    intermediate results; tested in node
+  runnerWorker.ts   the calculation worker's script: it checks each request,
+                    calls runner.ts and posts the answers and the progress
   filesRunner.ts    the light worker, with no popnei: the individuals file,
                     the files wasm, xlsx and zip
+  individualsFile.ts
+                    the bytes of the individuals file, read and decoded,
+                    for filesRunner.ts
   individuals/      the reader of CSV and TSV and the inference of the types
                     of the columns, pure, called by filesRunner.ts
 src/charts/
   histogram.ts scatter.ts line.ts qq.ts heatmap.ts manhattan.ts pca3d.ts
   export.ts         SVG and PNG
 src/ui/
-  shell/            the header, the stepper, the summary line, the notices
+  popgen.tsx        the entry of the population genetics page: it makes the
+                    store and the workers, joins them, and draws the shell
+  reads.ts          asks for the read of each file whose read is pending
+                    (section 6, "Who asks for a read")
+  saving.ts         the project file downloaded, and whether the project
+                    changed since it was saved or opened
+  defects.ts        the log of the errors the bar at the top of the page shows
+  files.tsx         a picked file: its load id, and the File kept under it
+  store.tsx         the store of core, given to the screens
+  shell/            the header, the stepper, the summary line, the notices;
+                    status.ts, what is read to a screen reader, and
+                    words.ts, the words of the shell made from the store
   runs.ts           awaits the outcome of each run core starts, and hands
                     it to the store, which cancels the runs no longer
                     asked for (section 5)
-  steps/            one folder per step: variants, individuals, analyses, export
-  analyses/         the panel of options and the results of each analysis
+  steps/            one folder per step: variants, individuals and analyses in
+                    stage 2, and export, which joins in stage 6
+  analyses/         AnalysisPanel.tsx, the frame of the seven states that
+                    every analysis shares; panels.ts, the panel and the
+                    title of each analysis; and one folder per analysis,
+                    diversity/ first, with its options and its results
   report/           renders the report model into its HTML page, with the plots
   widgets/          React Aria components with our styles
   tokens.css        the design tokens
@@ -997,7 +1002,8 @@ docs/
 `core` has no DOM and no React, and is tested with Vitest alone. Nothing
 in `core` imports from `ui` or `charts`, and nothing in `charts` imports
 from `core` or `ui`. Only `src/worker/runner.ts` calls popnei, apart
-from the probe's worker, `src/probe/probeWorker.ts`, and only
+from the probe's worker, `src/probe/probeWorker.ts`: the calculation
+worker's script, `runnerWorker.ts`, calls `runner.ts` and not popnei. Only
 `src/worker/filesRunner.ts` calls the files wasm.
 
 The pages are HTML files at the root and not in a folder of their own,
@@ -1011,17 +1017,23 @@ popnei and React and nothing of `src/`.
 ## 10. The walking skeleton
 
 The smallest path that goes through every part once, and the first thing
-built: the population genetics application reads a `.nei` file in the
-calculation worker, filters it by missing data, and shows the diversity
-per population with the populations of an individuals file in CSV, read
-in the light worker; changing the threshold of the filter removes the
-diversity from the screen with its notice, and undo brings it back with no
-calculation; a running calculation can be cancelled; and the project can
-be saved and opened again. The xlsx, the plots, the report and the other
-analyses come after it, each as a module of its own.
+built: the population genetics application reads a VCF or a `.nei` file
+in the calculation worker, filters it by missing data, and shows the
+diversity per population with the populations of an individuals file in
+CSV, read in the light worker; changing the threshold of the filter
+removes the diversity from the screen with its notice, and undo brings it
+back with no calculation; a running calculation can be cancelled; and the
+project can be saved and opened again, in the project file's full first
+version. The owner decided on 25 September 2026 that it reads both
+formats of the variants file and writes the whole project file, which
+the build order had left to later stages
+(`docs/specs/analyses/diversity.md`, `docs/specs/core/projectFile.md`).
+The xlsx, the plots, the report and the other analyses come after it,
+each as a module of its own.
 
-It reads the variant file whole, as popnei 0.1.0 does (section 6), and it
-needs nothing from popnei that 0.1.0 does not have. Its individuals file
+It reads the variant file by ranges, with popnei's release
+`js-v0.1.0-dev.2` (section 6), and not whole, as popnei 0.1.0 did, and it
+needs nothing from popnei that this release does not have. Its individuals file
 is a CSV, read by our reader in the light worker, so it does not need the
 files crate either: the crate, its build and the Rust of the continuous
 integration come after it, with the first work package that reads an
@@ -1030,19 +1042,27 @@ xlsx, and the light worker of the skeleton loads no wasm.
 ## 11. The limits and the costs of the web
 
 What a user of the applications would meet, with the numbers from popnei's
-code, version 0.1.0.
+code, the release `js-v0.1.0-dev.2`.
 
-- **The size of the variant file.** With popnei 0.1.0, files above
-  roughly 1.5 to 2 GB fail, and a file costs about twice its size while it
-  opens (section 6). With the source by ranges the size is limited by the
-  time of a pass, not by memory.
+- **The size of the variant file** is limited by the time of a pass, and
+  not by memory, since popnei reads the file by ranges and holds only a
+  few of them (section 6). A pass over a gzipped VCF decompresses the
+  whole of it.
 - **A file changed on the disk after it was picked.** A `File` is a
   handle to the file as it was when picked, and the File API asks a
   browser to refuse to read one whose file changed since; with reading by
-  ranges every pass reads the disk again, so a file overwritten while the
-  application is open fails at the next pass, and the user picks it
-  again. This is from the specification and has not been seen in a
-  browser yet. The new pick is a new load with a new id, so every result
+  ranges every pass reads the disk again, so a file overwritten, moved or
+  deleted while the application is open fails at the next pass, or at the
+  open again that a change of the filters or a restart makes. The worker
+  answers such a failure with an error of its own kind, `reopenFailed`,
+  and the words tell the user to pick the file again: at the first open,
+  in the Variants step, "panel.nei could not be read; it may have changed
+  on the disk since it was picked. Load it again in the Variants step.",
+  and after it, on the panel of an analysis, "panel.nei could not be read
+  again; …" with the same rest (`docs/specs/worker/messages.md`,
+  `docs/specs/steps/variants.md`, `docs/specs/analyses/diversity.md`). A second try does not mend it; a new
+  pick does. That a browser refuses such a file is from the specification
+  of the File API and has not been seen in a browser yet. The new pick is a new load with a new id, so every result
   is calculated again from what the file holds now (section 3).
 - **The PCA refuses more than 9381 individuals.** The matrix of the
   individuals, its eigenvectors and the workspace of the
@@ -1066,8 +1086,7 @@ code, version 0.1.0.
 - **Picking a file again calculates everything again.** Each load of the
   variant file has a new id, so the results of an earlier load of the same
   file are not found (section 3): the user waits the time of each analysis
-  again, and, with popnei 0.1.0, the time of reading the whole file, which
-  a pick takes anyway.
+  again.
 - **The browsers**: Chrome and Edge 111, Firefox 115 and Safari 16.4, the
   floor the owner set on 24 September 2026 (`docs/technology.md`, section
   6).

@@ -69,7 +69,7 @@ gives already.
 
 | filter | keeps a variant when | default |
 |---|---|---|
-| missing data | its proportion of missing genotypes is at most a threshold | on, threshold to decide |
+| missing data | its proportion of missing genotypes is at most a threshold | on, 0.1 |
 | major allele frequency (MAF) | the frequency of its commonest allele is at most a threshold | on for the PCA and the GWAS, 0.95; off otherwise |
 | observed heterozygosity | its observed heterozygosity is at most a threshold | off |
 | genomic regions | it falls inside a region of a BED file | off |
@@ -206,7 +206,8 @@ For each population, over the variants:
 - The observed heterozygosity.
 - The inbreeding coefficient, F = 1 − Ho/He.
 - The proportion of polymorphic variants, a variant being polymorphic when
-  its commonest allele has a frequency of at most 0.95, the default.
+  its commonest allele has a frequency below 0.95, the default, as popnei
+  counts it.
 - The mean number of alleles per variant.
 - The number of private alleles, alleles found in this population and in
   no other.
@@ -282,6 +283,9 @@ application to be read.
 ### Any table or plot
 
 From where it is shown, every table as CSV and every plot as SVG or PNG.
+The file downloaded holds the table or the plot alone, and the versions
+of popnei and of the application that calculated it are shown on the
+page beside the download, as the owner decided on 25 September 2026.
 
 ### The project file
 
@@ -310,11 +314,16 @@ by Python. It holds:
 - **The options of each analysis**, those that were run and those that
   were set, with the preprocessing of the analysis itself, such as the
   pruning of the PCA.
-- **A few numbers of each result that was run**: the mean expected
-  heterozygosity of each population, the Fst matrix, the λ and the top
-  hit of a GWAS, with the version of the application's calculation of
-  each analysis. They are there to check a new run against, never shown
-  as results.
+- **A few numbers of each result that was run**: for the diversity, the
+  number of variants the filters kept, and the expected heterozygosity,
+  the observed heterozygosity and the proportion of polymorphic variants
+  of each population, as the owner decided on 25 September 2026; the Fst
+  matrix; the λ and the top hit of a GWAS. Beside the numbers of each
+  analysis are the version of the application's calculation of it and
+  the versions of popnei and of the application that calculated them, so
+  that a file that holds numbers of two sessions names the right versions
+  for each. They are there to check a new run against, never shown as
+  results.
 
 Opening a project:
 
@@ -418,8 +427,9 @@ has not decided:
    with pandas (section 9).
 3. Whether the unfolded SFS, with the ancestral allele given by the user,
    is in the 95%.
-4. The default thresholds of the missing data filter, of LD pruning, and
-   of the filters of individuals.
+4. The default thresholds of LD pruning and of the filters of
+   individuals. The missing data filter is on at 0.1 by default, plink's
+   default for `--geno`, as the owner decided on 25 September 2026.
 5. The number of principal components offered as covariates by default.
 6. The schema of the project file, field by field, and which numbers of
    each result it keeps to check a new run against.
