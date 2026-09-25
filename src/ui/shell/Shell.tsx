@@ -1,7 +1,7 @@
 /**
  * The shell of the population genetics application, what surrounds every
- * step (docs/specs/shell.md): the header, the stepper, the step the URL
- * hash names in `<main>`, and the status region. When the hash changes,
+ * step (docs/specs/shell.md): the header, the stepper, the summary line,
+ * the step the URL hash names in `<main>`, and the status region. When the hash changes,
  * the title of the page names the new step and the focus moves to its
  * `<h1>`, since a screen reader says nothing of a content replaced without
  * a new page (react.md, "Moving focus"); not when the page opens, where
@@ -18,6 +18,7 @@ import { Header } from "./Header.tsx";
 import styles from "./Shell.module.css";
 import { StatusRegion } from "./StatusRegion.tsx";
 import { Stepper } from "./Stepper.tsx";
+import { SummaryLine } from "./SummaryLine.tsx";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
 import { STEP_NAMES, stepOfHash, titleOfStep, useStepHash } from "./steps.ts";
 
@@ -45,6 +46,7 @@ export function Shell(): React.JSX.Element {
     <div className={classOf(styles, "shell")}>
       <Header />
       <Stepper current={step} />
+      <SummaryLine />
       <main ref={mainRef} className={classOf(styles, "main")}>
         {/* Keyed by the step, so that going to another step and back draws
             a step that threw again. */}

@@ -697,7 +697,9 @@ test("WS8 D2 tetraploid.vcf.gz read with ploidy 2 is refused in the panel's word
   await page
     .getByRole("button", { name: "Read tetraploid.vcf.gz again with ploidy 4" })
     .click();
-  await expect(page.getByText("12 individuals")).toBeVisible();
+  await expect(
+    page.getByRole("main").getByText("12 individuals"),
+  ).toBeVisible();
   await goTo(page, "Analyses");
   await run(page);
   await expect(
@@ -1076,7 +1078,9 @@ test("WS8 D3 a Stop in the middle of a pass leaves the panel ready with no table
   for (const route of held) await route.continue();
   await page.unroute("**/*.wasm");
   await goTo(page, "Variants");
-  await expect(page.getByText("200 individuals")).toBeVisible();
+  await expect(
+    page.getByRole("main").getByText("200 individuals"),
+  ).toBeVisible();
   await goTo(page, "Individuals");
   await pick(page, "Metadata file", "panel_pops.csv");
   await expect(page.getByText(/^All 200 individuals of /)).toBeVisible();

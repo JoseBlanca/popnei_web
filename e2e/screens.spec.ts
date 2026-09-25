@@ -229,11 +229,15 @@ async function withoutTwelve(): Promise<string> {
     stays at the Individuals step. */
 async function loadPanelWithPopulations(page: Page): Promise<void> {
   await pickVariants(page, "panel.nei");
-  await expect(page.getByText("200 individuals")).toBeVisible();
+  await expect(
+    page.getByRole("main").getByText("200 individuals"),
+  ).toBeVisible();
   await goTo(page, "Individuals");
   await pickIndividuals(page, "panel_pops.csv");
   await choose(page, "Column that defines the populations", "popcat");
-  await expect(page.getByText("p0, 48 individuals")).toBeAttached();
+  await expect(
+    page.getByRole("main").getByText("p0, 48 individuals"),
+  ).toBeAttached();
 }
 
 /** Loads tetraploid.vcf.gz, read with ploidy 2, and its twelve
@@ -241,7 +245,9 @@ async function loadPanelWithPopulations(page: Page): Promise<void> {
     step. */
 async function loadTetraploid(page: Page): Promise<void> {
   await pickVariants(page, "tetraploid.vcf.gz");
-  await expect(page.getByText("12 individuals")).toBeVisible();
+  await expect(
+    page.getByRole("main").getByText("12 individuals"),
+  ).toBeVisible();
   await goTo(page, "Individuals");
   await pickIndividuals(page, {
     name: "tetraploid_pops.csv",
@@ -251,7 +257,9 @@ async function loadTetraploid(page: Page): Promise<void> {
     ).join("")}`,
   });
   await choose(page, "Column that defines the populations", "pop");
-  await expect(page.getByText("A, 12 individuals")).toBeAttached();
+  await expect(
+    page.getByRole("main").getByText("A, 12 individuals"),
+  ).toBeAttached();
   await goTo(page, "Variants");
 }
 
@@ -332,19 +340,25 @@ for (const theme of ["light", "dark"] as const) {
       await page.route("**/*.wasm", () => undefined);
       await page.reload();
       await pickVariants(page, "panel.nei");
-      await expect(page.getByText("1 second so far.")).toBeVisible();
+      await expect(
+        page.getByRole("main").getByText("1 second so far."),
+      ).toBeVisible();
       await save(page, `popgen-variants-reading-${theme}`);
     });
 
     test("the Variants step, a .nei file read", async ({ page }) => {
       await pickVariants(page, "panel.nei");
-      await expect(page.getByText("200 individuals")).toBeVisible();
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
       await save(page, `popgen-variants-nei-read-${theme}`);
     });
 
     test("the Variants step, a VCF read", async ({ page }) => {
       await pickVariants(page, "panel.vcf.gz");
-      await expect(page.getByText("200 individuals")).toBeVisible();
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
       await save(page, `popgen-variants-vcf-read-${theme}`);
     });
 
@@ -352,7 +366,9 @@ for (const theme of ["light", "dark"] as const) {
       page,
     }) => {
       await pickVariants(page, "tetraploid.vcf.gz");
-      await expect(page.getByText("12 individuals")).toBeVisible();
+      await expect(
+        page.getByRole("main").getByText("12 individuals"),
+      ).toBeVisible();
       const ploidy = page.getByLabel("Ploidy of the VCF");
       await ploidy.fill("4");
       await ploidy.press("Tab");
@@ -368,7 +384,7 @@ for (const theme of ["light", "dark"] as const) {
     test("the Variants step, bad.vcf refused", async ({ page }) => {
       await pickVariants(page, "bad.vcf");
       await expect(
-        page.getByText(/^popnei could not read bad\.vcf/),
+        page.getByRole("main").getByText(/^popnei could not read bad\.vcf/),
       ).toBeVisible();
       await save(page, `popgen-variants-refused-${theme}`);
     });
@@ -395,7 +411,9 @@ for (const theme of ["light", "dark"] as const) {
       page,
     }) => {
       await pickVariants(page, "panel.vcf.gz");
-      await expect(page.getByText("200 individuals")).toBeVisible();
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
       await page
         .getByText("Only the variants with PASS or . in the FILTER column", {
           exact: true,
@@ -434,7 +452,9 @@ for (const theme of ["light", "dark"] as const) {
       const path = testInfo.outputPath("panel.nei");
       await writeFile(path, await readFile(join(FIXTURES, "panel.nei")));
       await pickVariants(page, { path });
-      await expect(page.getByText("Reading panel.nei.")).toBeVisible();
+      await expect(
+        page.getByRole("main").getByText("Reading panel.nei."),
+      ).toBeVisible();
       await unlink(path);
       await expect.poll(() => held.length).toBeGreaterThan(0);
       for (const route of held) await route.continue();
@@ -448,7 +468,9 @@ for (const theme of ["light", "dark"] as const) {
       page,
     }) => {
       await pickVariants(page, "tetraploid.vcf.gz");
-      await expect(page.getByText("12 individuals")).toBeVisible();
+      await expect(
+        page.getByRole("main").getByText("12 individuals"),
+      ).toBeVisible();
       const ploidy = page.getByLabel("Ploidy of the VCF");
       await ploidy.fill("4");
       await ploidy.press("Enter");
@@ -551,7 +573,9 @@ for (const theme of ["light", "dark"] as const) {
       await page.route("**/filesRunner-*.js", () => undefined);
       await goTo(page, "Individuals");
       await pickIndividuals(page, "panel_pops.csv");
-      await expect(page.getByText("Reading panel_pops.csv.")).toBeVisible();
+      await expect(
+        page.getByRole("main").getByText("Reading panel_pops.csv."),
+      ).toBeVisible();
       await save(page, `popgen-individuals-reading-${theme}`);
     });
 
@@ -559,11 +583,15 @@ for (const theme of ["light", "dark"] as const) {
       page,
     }) => {
       await pickVariants(page, "panel.nei");
-      await expect(page.getByText("200 individuals")).toBeVisible();
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
       await goTo(page, "Individuals");
       await pickIndividuals(page, "panel_pops.csv");
       await choose(page, "Column that defines the populations", "popcat");
-      await expect(page.getByText("p0, 48 individuals")).toBeAttached();
+      await expect(
+        page.getByRole("main").getByText("p0, 48 individuals"),
+      ).toBeAttached();
       await save(page, `popgen-individuals-read-${theme}`);
     });
 
@@ -574,7 +602,7 @@ for (const theme of ["light", "dark"] as const) {
         text: "IID;popcat;region\ns000;p0;north\ns001;p0\n",
       });
       await expect(
-        page.getByText(/^short\.csv could not be read/),
+        page.getByRole("main").getByText(/^short\.csv could not be read/),
       ).toBeVisible();
       await save(page, `popgen-individuals-refused-${theme}`);
     });
@@ -586,7 +614,9 @@ for (const theme of ["light", "dark"] as const) {
         text: "##fileformat=VCFv4.2\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\ti1\n",
       });
       await expect(
-        page.getByText(/^panel\.txt could not be read: it is a variants file/),
+        page
+          .getByRole("main")
+          .getByText(/^panel\.txt could not be read: it is a variants file/),
       ).toBeVisible();
       await save(page, `popgen-individuals-variants-file-${theme}`);
     });
@@ -614,14 +644,16 @@ for (const theme of ["light", "dark"] as const) {
         ]),
       });
       await expect(
-        page.getByText(/^Warning: line 3 of pops\.csv/),
+        page.getByRole("main").getByText(/^Warning: line 3 of pops\.csv/),
       ).toBeVisible();
       await save(page, `popgen-individuals-undecoded-${theme}`);
     });
 
     test("the Individuals step, individuals missing", async ({ page }) => {
       await pickVariants(page, "panel.nei");
-      await expect(page.getByText("200 individuals")).toBeVisible();
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
       await goTo(page, "Individuals");
       await pickIndividuals(page, {
         name: "pops.csv",
@@ -630,7 +662,9 @@ for (const theme of ["light", "dark"] as const) {
       await page
         .getByRole("button", { name: "The 12 individuals missing" })
         .click();
-      await expect(page.getByText("s059", { exact: true })).toBeVisible();
+      await expect(
+        page.getByRole("main").getByText("s059", { exact: true }),
+      ).toBeVisible();
       await save(page, `popgen-individuals-missing-${theme}`);
     });
 
@@ -645,7 +679,7 @@ for (const theme of ["light", "dark"] as const) {
         text: "IID,region\ns000,north\n",
       });
       await expect(
-        page.getByText(/^regions\.csv has no column popcat/),
+        page.getByRole("main").getByText(/^regions\.csv has no column popcat/),
       ).toBeVisible();
       await save(page, `popgen-individuals-no-such-column-${theme}`);
     });
@@ -661,7 +695,9 @@ for (const theme of ["light", "dark"] as const) {
           "i3;Perú;sí;;3\n" +
           "i4;España;no;1,80;5\n",
       });
-      await expect(page.getByText(/^Warning: score/)).toBeVisible();
+      await expect(
+        page.getByRole("main").getByText(/^Warning: score/),
+      ).toBeVisible();
       await save(page, `popgen-individuals-types-${theme}`);
     });
 
@@ -709,13 +745,17 @@ for (const theme of ["light", "dark"] as const) {
           "i3;Perú;sí;;3\n" +
           "i4;España;no;1,80;5\n",
       });
-      await expect(page.getByText(/^Warning: score/)).toBeVisible();
+      await expect(
+        page.getByRole("main").getByText(/^Warning: score/),
+      ).toBeVisible();
       await save(page, `popgen-individuals-types-320-${theme}`);
     });
 
     test("the diversity locked", async ({ page }) => {
       await pickVariants(page, "panel.nei");
-      await expect(page.getByText("200 individuals")).toBeVisible();
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
       await goTo(page, "Individuals");
       await pickIndividuals(page, "panel_pops.csv");
       await goTo(page, "Analyses");
@@ -728,7 +768,9 @@ for (const theme of ["light", "dark"] as const) {
     test("the diversity ready", async ({ page }) => {
       await loadPanelWithPopulations(page);
       await goTo(page, "Analyses");
-      await expect(page.getByText(/^3 populations: /)).toBeVisible();
+      await expect(
+        page.getByRole("main").getByText(/^3 populations: /),
+      ).toBeVisible();
       await save(page, `popgen-diversity-ready-${theme}`);
     });
 
@@ -737,7 +779,9 @@ for (const theme of ["light", "dark"] as const) {
       await holdResults(page);
       await goTo(page, "Analyses");
       await page.getByRole("button", { name: "Run" }).click();
-      await expect(page.getByText(/^Calculating · 99% · 0:01$/)).toBeVisible({
+      await expect(
+        page.getByRole("main").getByText(/^Calculating · 99% · 0:01$/),
+      ).toBeVisible({
         timeout: 3000,
       });
       await save(page, `popgen-diversity-running-${theme}`);
@@ -768,7 +812,9 @@ for (const theme of ["light", "dark"] as const) {
       ).toHaveCount(0);
       await goTo(page, "Analyses");
       await page.getByRole("button", { name: "Run" }).click();
-      await expect(page.getByText(/^Warning: Population A/)).toBeVisible();
+      await expect(
+        page.getByRole("main").getByText(/^Warning: Population A/),
+      ).toBeVisible();
       await save(page, `popgen-diversity-warning-${theme}`);
     });
 
@@ -777,7 +823,7 @@ for (const theme of ["light", "dark"] as const) {
       await goTo(page, "Analyses");
       await page.getByRole("button", { name: "Run" }).click();
       await expect(
-        page.getByText(/^At line 5 of tetraploid\.vcf\.gz/),
+        page.getByRole("main").getByText(/^At line 5 of tetraploid\.vcf\.gz/),
       ).toBeVisible();
       await save(page, `popgen-diversity-refused-${theme}`);
     });
@@ -794,7 +840,9 @@ for (const theme of ["light", "dark"] as const) {
       await threshold.fill("0.05");
       await threshold.press("Enter");
       await goTo(page, "Analyses");
-      await expect(page.getByText(/^The diversity was removed/)).toBeVisible();
+      await expect(
+        page.getByRole("main").getByText(/^The diversity was removed/),
+      ).toBeVisible();
       await save(page, `popgen-diversity-removed-${theme}`);
     });
 
@@ -806,7 +854,9 @@ for (const theme of ["light", "dark"] as const) {
       await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
       // The frame measured as narrower than the table, and its line shown.
       await expect(
-        page.getByText("Scroll the table sideways to see all its columns."),
+        page
+          .getByRole("main")
+          .getByText("Scroll the table sideways to see all its columns."),
       ).toBeVisible();
       // The frame of the table, reached by the Tab key, with its focus
       // ring.
@@ -821,7 +871,9 @@ for (const theme of ["light", "dark"] as const) {
           '##fileformat=VCFv4.2\n##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n' +
           "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\ta\tb\n",
       });
-      await expect(page.getByText("2 individuals")).toBeVisible();
+      await expect(
+        page.getByRole("main").getByText("2 individuals"),
+      ).toBeVisible();
       await goTo(page, "Individuals");
       await pickIndividuals(page, {
         name: "empty_pops.csv",
@@ -831,7 +883,9 @@ for (const theme of ["light", "dark"] as const) {
       await goTo(page, "Analyses");
       await page.getByRole("button", { name: "Run" }).click();
       await expect(
-        page.getByText(/^empty\.vcf has no variant with PASS/),
+        page
+          .getByRole("main")
+          .getByText(/^empty\.vcf has no variant with PASS/),
       ).toBeVisible();
       await save(page, `popgen-diversity-no-variant-${theme}`);
     });
@@ -842,7 +896,9 @@ for (const theme of ["light", "dark"] as const) {
       const path = testInfo.outputPath("panel.nei");
       await writeFile(path, await readFile(join(FIXTURES, "panel.nei")));
       await pickVariants(page, { path });
-      await expect(page.getByText("200 individuals")).toBeVisible();
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
       await goTo(page, "Individuals");
       await pickIndividuals(page, "panel_pops.csv");
       await choose(page, "Column that defines the populations", "popcat");
@@ -850,14 +906,16 @@ for (const theme of ["light", "dark"] as const) {
       await unlink(path);
       await page.getByRole("button", { name: "Run" }).click();
       await expect(
-        page.getByText(/^panel\.nei could not be read again/),
+        page.getByRole("main").getByText(/^panel\.nei could not be read again/),
       ).toBeVisible();
       await save(page, `popgen-diversity-no-longer-read-${theme}`);
     });
 
     test("the diversity stopped by a read again", async ({ page }) => {
       await pickVariants(page, "panel.vcf.gz");
-      await expect(page.getByText("200 individuals")).toBeVisible();
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
       await goTo(page, "Individuals");
       await pickIndividuals(page, "panel_pops.csv");
       await choose(page, "Column that defines the populations", "popcat");
@@ -878,9 +936,69 @@ for (const theme of ["light", "dark"] as const) {
         .click();
       await goTo(page, "Analyses");
       await expect(
-        page.getByText(/^The calculation of the diversity was stopped/),
+        page
+          .getByRole("main")
+          .getByText(/^The calculation of the diversity was stopped/),
       ).toBeVisible();
       await save(page, `popgen-diversity-stopped-${theme}`);
+    });
+
+    test("the shell empty", async ({ page }) => {
+      await save(page, `popgen-shell-empty-${theme}`);
+    });
+
+    test("the shell empty, the reason of Analyses on focus", async ({
+      page,
+    }) => {
+      // The Tab key, so that the tooltip shows at once, as for the
+      // keyboard.
+      for (let press = 0; press < 4; press++) {
+        await page.keyboard.press("Tab");
+      }
+      await expect(page.getByRole("tooltip")).toBeVisible();
+      await save(page, `popgen-shell-reason-${theme}`);
+    });
+
+    test("the shell ready", async ({ page }) => {
+      await loadPanelWithPopulations(page);
+      await expect(
+        page.getByRole("button", { name: "Undo", exact: true }),
+      ).toBeEnabled();
+      await save(page, `popgen-shell-ready-${theme}`);
+    });
+
+    test("the shell ready, Undo described on hover", async ({ page }) => {
+      await loadPanelWithPopulations(page);
+      await page.getByRole("button", { name: "Undo", exact: true }).hover();
+      await expect(page.getByRole("tooltip")).toBeVisible();
+      await save(page, `popgen-shell-undo-hover-${theme}`);
+    });
+
+    test("the shell ready, at 320 px", async ({ page }) => {
+      await page.setViewportSize({ width: 320, height: 900 });
+      await loadPanelWithPopulations(page);
+      await save(page, `popgen-shell-ready-320-${theme}`);
+    });
+
+    test("the shell running", async ({ page }) => {
+      await loadPanelWithPopulations(page);
+      await holdResults(page);
+      await goTo(page, "Analyses");
+      await page.getByRole("button", { name: "Run" }).click();
+      await expect(
+        page.getByRole("main").getByText(/^Calculating · 99% · 0:01$/),
+      ).toBeVisible({
+        timeout: 3000,
+      });
+      await save(page, `popgen-shell-running-${theme}`);
+    });
+
+    test("the shell done", async ({ page }) => {
+      await loadPanelWithPopulations(page);
+      await goTo(page, "Analyses");
+      await page.getByRole("button", { name: "Run" }).click();
+      await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
+      await save(page, `popgen-shell-done-${theme}`);
     });
 
     test("the error bar, with a second error", async ({ page }) => {

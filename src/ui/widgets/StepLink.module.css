@@ -7,16 +7,22 @@
   align-items: center;
   min-block-size: var(--target-min);
   padding-block: var(--space-2);
-  padding-inline: var(--space-3);
+  padding-inline: var(--space-2);
   border-block-end: 3px solid transparent;
   color: var(--color-text);
   text-decoration: none;
 }
 
-/* The name in bold, with no height and hidden, so that the link is as
+.name {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* The name in bold, with no height and hidden, so that the name is as
    wide in both weights and the links do not move when the step changes;
    hidden, it is not read by a screen reader nor in the text of the link. */
-.step::after {
+.name::after {
   content: attr(data-label);
   block-size: 0;
   overflow: hidden;
@@ -24,7 +30,14 @@
   visibility: hidden;
 }
 
-.step[data-hovered] {
+/* The state under the name, smaller. */
+.state {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.step[data-hovered] .name {
   text-decoration: underline;
 }
 
@@ -32,6 +45,9 @@
    not told by colour alone. */
 .step[data-current] {
   border-block-end-color: var(--color-accent);
+}
+
+.step[data-current] .name {
   font-weight: bold;
 }
 

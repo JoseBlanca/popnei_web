@@ -48,7 +48,9 @@ async function loadPanel(page: Page): Promise<void> {
     .getByRole("button", { name: /^(Choose|Replace) .*…$/ })
     .click();
   await (await chooser).setFiles(join(FIXTURES, "panel.nei"));
-  await expect(page.getByText("200 individuals")).toBeVisible();
+  await expect(
+    page.getByRole("main").getByText("200 individuals"),
+  ).toBeVisible();
   await goTo(page, "Individuals");
 }
 
@@ -441,7 +443,9 @@ test("WS8 D1 a column of the populations not in a new file is named at the selec
   await expect(column).toHaveText("Choose a column");
   const reason =
     "regions.csv has no column popcat, from which the populations were taken. Choose the column that defines the populations in the Individuals step.";
-  await expect(page.getByText(reason, { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("main").getByText(reason, { exact: true }),
+  ).toBeVisible();
   // Read with the select.
   await expect(column).toHaveAccessibleDescription(
     new RegExp(reason.replace(/\./g, "\\.")),
@@ -922,7 +926,9 @@ test("WS8 D1 a column empty for every individual of the variants file gives its 
 
   const reason =
     "No individual of panel.nei has a population in the column region of pops.csv. Fill in the column and load the file again, or choose another column, in the Individuals step.";
-  await expect(page.getByText(reason, { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("main").getByText(reason, { exact: true }),
+  ).toBeVisible();
   await expect(
     select(page, "Column that defines the populations"),
   ).toHaveAccessibleDescription(new RegExp(reason.replace(/\./g, "\\.")));
@@ -957,7 +963,7 @@ test("WS8 D1 an individual missing whose name holds a control character is liste
     mimeType: "text/plain",
     buffer: Buffer.from(vcf),
   });
-  await expect(page.getByText("2 individuals")).toBeVisible();
+  await expect(page.getByRole("main").getByText("2 individuals")).toBeVisible();
   await goTo(page, "Individuals");
   await pick(page, { name: "pops.csv", text: "IID,pop\ni1,p0\n" });
 

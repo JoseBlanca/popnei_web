@@ -15,3 +15,12 @@
   font-size: var(--text-lg);
   font-weight: bold;
 }
+
+/* Undo and Redo, at the end of the header, and under the name when there
+   is no room beside it. */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-inline-start: auto;
+}

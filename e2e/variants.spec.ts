@@ -769,7 +769,13 @@ test("WS7 D3 a file dropped while the ploidy holds a number it refuses is read w
   await expect(zone(page).getByText(/^Read with ploidy 2,/)).toBeVisible();
   await expect(ploidy).toHaveValue("2");
   await expect(page.getByRole("main").getByText(line)).toBeVisible();
-  await expect(page.getByRole("status").last()).toHaveText(line);
+  // With the end of the read after it, when the read ends within the
+  // pause of the announcer.
+  await expect(page.getByRole("status").last()).toHaveText(
+    new RegExp(
+      `^${line.replace(/\./g, "\\.")}( tetraploid\\.vcf\\.gz read: 12 individuals, ploidy 2\\.)?$`,
+    ),
+  );
   await expect(
     page.getByRole("button", { name: /^Read .* again/ }),
   ).toHaveCount(0);

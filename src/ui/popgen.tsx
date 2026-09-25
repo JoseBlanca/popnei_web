@@ -26,6 +26,7 @@ import { createClient } from "../worker/client.ts";
 import type { Client } from "../worker/client.ts";
 import type { Job, JobResult } from "../worker/protocol.ts";
 import { makeFilesWorker, makeRunnerWorker } from "../worker/start.ts";
+import { titleOf } from "./analyses/panels.ts";
 import { createDefects, isResizeObserverNoise } from "./defects.ts";
 import type { Defects } from "./defects.ts";
 import { FilesProvider, createFiles } from "./files.tsx";
@@ -34,6 +35,8 @@ import { AnnouncerProvider } from "./shell/announcer.tsx";
 import { ErrorBar } from "./shell/ErrorBar.tsx";
 import { Shell } from "./shell/Shell.tsx";
 import { createAnnouncer } from "./shell/status.ts";
+import type { Announcer } from "./shell/status.ts";
+import { announcementsOf } from "./shell/words.ts";
 import { StoreProvider } from "./store.tsx";
 
 declare global {
@@ -161,9 +164,11 @@ function startApplication(
   // 5. The error bar again, now with the store.
   drawBar(store);
 
-  // 6. The announcer of the shell's status region, and the reads the
-  // project waits for, asked after every change of it.
+  // 6. The announcer of the shell's status region, with the announcements
+  // made from two states of the store, and the reads the project waits
+  // for, asked after every change of it.
   const announcer = createAnnouncer();
+  announceChanges(store, announcer);
   const reads = createReads({ store, client: made });
   store.subscribe(() => {
     reads.sync();
@@ -197,6 +202,21 @@ function startApplication(
       </I18nProvider>
     </StrictMode>,
   );
+}
+
+/** Announces in the status region what each change of the store did
+    that the user may not be looking at, the start and the end of a
+    calculation and the end of a read, with the words of
+    `announcementsOf` of the shell (docs/specs/shell.md, "The status
+    region"). */
+function announceChanges(store: Store<JobResult>, announcer: Announcer): void {
+  let before = store.getState();
+  store.subscribe(() => {
+    const after = store.getState();
+    const texts = announcementsOf(before, after, titleOf);
+    before = after;
+    for (const text of texts) announcer.announce(text);
+  });
 }
 
 start();
