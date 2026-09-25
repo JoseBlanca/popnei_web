@@ -257,4 +257,24 @@ describe("WS4 D3 the bytes", () => {
       await readIndividualsFile(blobOf(singleBytes("id,pop\n")), AUTO),
     ).toEqual({ kind: "failed", error: { kind: "empty" } });
   });
+
+  test("a byte 0 after the first 10,000 bytes is notText", async () => {
+    const text = "id,pop\n" + "A,P1\n".repeat(2_500);
+    const bytes = [...singleBytes(text), 0x00, 0x0a];
+    expect(bytes.length).toBeGreaterThan(10_000);
+    expect(await readIndividualsFile(blobOf(bytes), AUTO)).toEqual({
+      kind: "failed",
+      error: { kind: "notText" },
+    });
+  });
+
+  test("a first byte EF that is not the BOM of UTF-8 is kept, as the ï of Windows-1252", async () => {
+    const read = await readIndividualsFile(
+      blobOf(singleBytes("ïdent,pop\nA,P1\n")),
+      AUTO,
+    );
+    if (read.kind !== "read") throw new Error("the read failed");
+    expect(read.found.encoding).toBe("windows-1252");
+    expect(read.table.columns).toEqual(["ïdent", "pop"]);
+  });
 });

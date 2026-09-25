@@ -414,4 +414,113 @@ describe("WS4 D1 readCsv", () => {
       });
     });
   });
+
+  describe("the rules the review of the tests found untested", () => {
+    test("a line break \\r\\n is one line: a ragged row after two such lines is on line 3", () => {
+      expect(readError("id,n\r\nA,1\r\nB\r\n")).toEqual({
+        kind: "raggedRow",
+        line: 3,
+        expected: 2,
+        found: 1,
+        separator: ",",
+      });
+    });
+
+    test("a line break \\r alone is one line: the ragged row is on line 3", () => {
+      expect(readError("id,n\rA,1\rB\r")).toEqual({
+        kind: "raggedRow",
+        line: 3,
+        expected: 2,
+        found: 1,
+        separator: ",",
+      });
+    });
+
+    test("a line break \\r\\n inside a quoted cell is one line: the row after it is on line 4", () => {
+      expect(readError('id,n\r\nA,"x\r\ny"\r\nB,1,2\r\n')).toEqual({
+        kind: "raggedRow",
+        line: 4,
+        expected: 2,
+        found: 3,
+        separator: ",",
+      });
+    });
+
+    test("whole numbers are not numbers written with a point: the comma is found", () => {
+      const read = readOk("id;h;n\nA;1,5;3\nB;1,7;4\nC;1,9;5");
+      expect(read.decimal).toBe(",");
+      expect(read.columns[1]).toEqual({ kind: "continuous" });
+    });
+
+    test("the first column is not counted for the decimal mark", () => {
+      expect(readOk("id;h\n1,1;1.5\n1,2;1.7\n1,3;x").decimal).toBe(".");
+    });
+
+    test("a separator with which a quote is never closed does not fit", () => {
+      // With , the header has 3 cells and the row too, but the quote of
+      // "d opens a cell that is never closed.
+      const read = readOk('id,x;y,z\nA,b;c,"d');
+      expect(read.separator).toBe(";");
+      expect(read.table).toEqual({
+        columns: ["id,x", "y,z"],
+        rows: [["A,b", 'c,"d']],
+      });
+    });
+
+    test("the blank rows are skipped when the separator is searched", () => {
+      const read = readOk("id;h, m, cm\nA;1\n\nB;2");
+      expect(read.separator).toBe(";");
+      expect(read.table).toEqual({
+        columns: ["id", "h, m, cm"],
+        rows: [
+          ["A", "1"],
+          ["B", "2"],
+        ],
+      });
+    });
+
+    test("a separator fits rows as long as the header, and longer by empty cells", () => {
+      const read = readOk("id;h, m, cm\nA;1;\nB;2");
+      expect(read.separator).toBe(";");
+      expect(read.table).toEqual({
+        columns: ["id", "h, m, cm"],
+        rows: [
+          ["A", "1"],
+          ["B", "2"],
+        ],
+      });
+    });
+
+    test("when ; and , both fit with two cells, ; is taken", () => {
+      const read = readOk("id;n,x\nA;1,2");
+      expect(read.separator).toBe(";");
+      expect(read.table).toEqual({
+        columns: ["id", "n,x"],
+        rows: [["A", "1,2"]],
+      });
+    });
+
+    test("the order of the refusals: an unclosed quote before empty", () => {
+      expect(
+        readError('id,"pop\nA,P1', { separator: ",", decimal: "auto" }),
+      ).toEqual({ kind: "unclosedQuote", line: 1, separator: "," });
+    });
+
+    test("the order of the refusals: a duplicate column before a duplicate individual", () => {
+      expect(readError("id,pop,pop\nA,P1,1\nA,P2,2")).toEqual({
+        kind: "duplicateColumn",
+        name: "pop",
+      });
+    });
+
+    test("a column of one number is categorical", () => {
+      expect(readOk("id,n\nA,5\nB,5\nC,5").columns[1]).toEqual({
+        kind: "categorical",
+      });
+    });
+
+    test("the spaces after a closing quote are removed", () => {
+      expect(readOk('id,n\nA,"x" \n').table.rows).toEqual([["A", "x"]]);
+    });
+  });
 });

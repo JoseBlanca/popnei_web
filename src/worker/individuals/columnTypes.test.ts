@@ -200,6 +200,10 @@ describe("WS4 D2 the numbers and the types", () => {
         zero: "1",
       });
     });
+    // Two rules of the code are for the cells of an xlsx, stage 4: a text
+    // and a number written alike ordered by the name of their type, and a
+    // number cell whole by Number.isInteger. The reader spec leaves the
+    // xlsx to stage 4 ("Not in this spec"), so they are tested there.
     test("the booleans of an xlsx are a known pair, true over false", () => {
       expect(typeOf([false, true])).toEqual({
         kind: "binary",
