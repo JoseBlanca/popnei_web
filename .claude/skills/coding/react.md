@@ -278,7 +278,7 @@ export function PcaPlot({ data, onHover }: PcaPlotProps) {
     };
   }, []);
 
-  return <div ref={containerRef} className={styles.plot} />;
+  return <div ref={containerRef} className={classOf(styles, "plot")} />;
 }
 ```
 

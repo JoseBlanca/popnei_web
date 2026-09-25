@@ -194,10 +194,26 @@ style can be changed while knowing every place it applies.
   no ids, no `:global`. An element selector in a module reaches the
   elements of every child component, which is the leak the modules are
   there to stop.
-- **Class names in camelCase**, `.resultHeader`, so that they read as
-  `styles.resultHeader` in TypeScript, and named by what the element is,
-  `.warningCount`, not by how it looks, `.yellowBadge`, which is false
-  after the next change of design.
+- **Class names in camelCase**, `.resultHeader`, like the other names
+  of the code, and named by what the element is, `.warningCount`, not by
+  how it looks, `.yellowBadge`, which is false after the next change of
+  design.
+- **A class is read as `classOf(styles, "resultHeader")`**, of
+  `src/ui/classOf.ts`. Vite types a module as an object of any name,
+  `{ readonly [key: string]: string }`, so the compiler cannot tell a
+  class that is in the file from a misspelt one: `styles.resultHeader`
+  is refused by `noPropertyAccessFromIndexSignature` of `configs.md`, and
+  `styles["resultHeader"]` has the type `string | undefined`, which the
+  `className` of React Aria's components does not take. `classOf` gives
+  the class, and throws a defect for a name the module does not have,
+  so a misspelt class fails the first drawing of its component, in the
+  flows and the screens, rather than leaving the element with no style.
+  Found by tasks 7.1 and 7.3 of the walking skeleton. The options not
+  taken: turning the option off for `src/ui`, which would drop it for
+  every other object indexed by name there and still leave `undefined`;
+  and a declaration written by hand beside each module, which would
+  check the names at the type check but has to be kept in step with its
+  CSS, by a test or by a generator, which is a dependency.
 - **Flat and short selectors**, a class, a class with a state,
   `.tab[data-selected]`, or a class inside a class of the same module.
   Specificity stays low and equal, so that the order in the file decides,
