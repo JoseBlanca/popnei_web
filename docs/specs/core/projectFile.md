@@ -431,18 +431,18 @@ that the reason given is the one the user can act on:
    the file's variants file as its variants file, or it is refused as
    `header` with the field `checks`, "the check numbers should be 7
    numbers for the analysis diversity, as many as the rest of the file
-   gives it, and not 6". When `numCheckNumbers` gives `null`, the count
-   is not checked: for the diversity, when the file's variants file was
-   not read, when there is no individuals file or no column of the
-   populations, or when the project holds filters of individuals
-   (`docs/specs/analyses/diversity.md`, "The check numbers"). The owner
-   decided on 25 September 2026 that such a file is refused at the
-   opening as damaged (point 11 of the reviews of work packages 2 to 6):
-   the store compares two lists of different lengths as different, and a
-   file edited by hand to hold 6 numbers of the diversity where its two
-   populations give 7 would otherwise open, and after a run on the right
-   variants file be told that its variants file "may not be the one the
-   project was saved with".
+   gives it, and not 6". The owner decided on 25 September 2026 that a
+   check of the wrong count is refused at the opening as damaged (point
+   11 of the reviews of work packages 2 to 6): the store compares two
+   lists of different lengths as different, and a file edited by hand to
+   hold 6 numbers of the diversity where its two populations give 7
+   would otherwise open, and after a run on the right variants file be
+   told that its variants file "may not be the one the project was saved
+   with". When `numCheckNumbers` gives `null`, the count is not checked:
+   for the diversity, when the file's variants file was not read, when
+   there is no individuals file or no column of the populations, or when
+   the project holds filters of individuals
+   (`docs/specs/analyses/diversity.md`, "The check numbers").
 10. **The fingerprints** of the settings of each check are made, with
    `settingsFingerprint` of `docs/specs/core/keys.md`, from the opened
    project and the read options of the file's variants file, and put in
