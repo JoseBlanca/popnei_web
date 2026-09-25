@@ -182,7 +182,34 @@ describe("WS4 D3 the bytes", () => {
     };
     expect(await readIndividualsFile(source, AUTO)).toEqual({
       kind: "failed",
-      error: { kind: "unreadable", message: "the file changed" },
+      error: {
+        kind: "unreadable",
+        message: "NotReadableError: the file changed",
+      },
+    });
+  });
+
+  test("the name of the browser's error is kept when its message is empty", async () => {
+    const source: BytesSource = {
+      size: 10,
+      arrayBuffer: () =>
+        Promise.reject(new DOMException("", "NotReadableError")),
+    };
+    expect(await readIndividualsFile(source, AUTO)).toEqual({
+      kind: "failed",
+      error: { kind: "unreadable", message: "NotReadableError" },
+    });
+  });
+
+  test("a deleted file, NotFoundError, is told from a changed one by its name", async () => {
+    const source: BytesSource = {
+      size: 10,
+      arrayBuffer: () =>
+        Promise.reject(new DOMException("gone", "NotFoundError")),
+    };
+    expect(await readIndividualsFile(source, AUTO)).toEqual({
+      kind: "failed",
+      error: { kind: "unreadable", message: "NotFoundError: gone" },
     });
   });
 

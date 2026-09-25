@@ -60,7 +60,7 @@ export async function readIndividualsFile(
       kind: "failed",
       error: {
         kind: "unreadable",
-        message: error instanceof Error ? error.message : String(error),
+        message: unreadableMessage(error),
       },
     };
   }
@@ -83,6 +83,14 @@ export async function readIndividualsFile(
       decimal: read.value.decimal,
     },
   };
+}
+
+/** The name and the message of what the browser threw, for the console:
+    the name tells a file deleted, `NotFoundError`, from one changed,
+    `NotReadableError`. */
+function unreadableMessage(error: unknown): string {
+  if (!(error instanceof Error)) return String(error);
+  return error.message === "" ? error.name : `${error.name}: ${error.message}`;
 }
 
 /** The text of the bytes and the encoding it was decoded with, or null
