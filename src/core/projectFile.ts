@@ -46,6 +46,10 @@ export const FORMAT_NAME = "popnei_web project";
     of 10,000 individuals is about 3 MB. */
 export const MAX_PROJECT_FILE_BYTES = 64 * 1024 * 1024;
 
+/** The end of the name of every project file, which `projectFileName`
+    adds and the saving of the entry uses. */
+export const PROJECT_FILE_EXTENSION = ".popnei.json";
+
 // The writing.
 
 /**
@@ -55,8 +59,8 @@ export const MAX_PROJECT_FILE_BYTES = 64 * 1024 * 1024;
  * `appVersion`, and the date and time of the save, `saved`, which the page
  * gives. The same state gives the same text, byte for byte.
  *
- * Throws a defect on a check number that is not finite, and on an
- * analysis done while the state has no version of popnei.
+ * Throws a defect on a number that is not finite, a check number among
+ * them, and on an analysis done while the state has no version of popnei.
  */
 export function writeProjectFile<J, R>(
   state: AppState<R>,
@@ -96,8 +100,9 @@ export function writeProjectFile<J, R>(
 /**
  * The name the dialog of Save proposes: the name of the variants file
  * loaded, or of the reference's when none is, without its extension,
- * `.nei`, `.vcf` or `.vcf.gz`, with `.popnei.json`; or
- * `project.popnei.json` when there is neither.
+ * `.nei`, `.vcf` or `.vcf.gz` in any case, with `.popnei.json`; any other
+ * extension kept; or `project.popnei.json` when there is neither, or
+ * when the name is only an extension.
  */
 export function projectFileName(p: Project): string {
   const name = (p.variants ?? p.reference?.variants)?.name;
@@ -105,14 +110,11 @@ export function projectFileName(p: Project): string {
     return DEFAULT_FILE_NAME;
   }
   const stem = name.replace(/\.(nei|vcf|vcf\.gz)$/i, "");
-  return stem === "" ? DEFAULT_FILE_NAME : `${stem}${FILE_EXTENSION}`;
+  return stem === "" ? DEFAULT_FILE_NAME : `${stem}${PROJECT_FILE_EXTENSION}`;
 }
 
-/** The end of the name of every project file. */
-const FILE_EXTENSION = ".popnei.json";
-
 /** The name of a project file with no variants file to name it after. */
-const DEFAULT_FILE_NAME = `project${FILE_EXTENSION}`;
+const DEFAULT_FILE_NAME = `project${PROJECT_FILE_EXTENSION}`;
 
 /**
  * The variants file the file holds (the spec, "What is written of each

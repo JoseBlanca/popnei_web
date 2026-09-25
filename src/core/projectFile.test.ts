@@ -9,6 +9,7 @@ import {
   checkVerdictText,
   compareIdentity,
   identityWarning,
+  PROJECT_FILE_EXTENSION,
   projectFileErrorText,
   projectFileName,
   readProjectFile,
@@ -377,6 +378,78 @@ describe("WS6 D1 what is written", () => {
     expect(json["checks"]).toEqual([]);
   });
 
+  test("a VCF loaded again, pending, with the reference's name and size and other read options carries no check", () => {
+    const savedVcf: VariantSource = {
+      fileId: "99999999999999999999999999999999",
+      name: "panel.vcf",
+      size: 2048,
+      format: "vcf",
+      readOptions: { ploidy: 2, onlyPassed: true },
+      read: { kind: "read", individuals: ["i1", "i2"], ploidy: 2, numVars: 7 },
+    };
+    const loaded: VariantSource = {
+      ...savedVcf,
+      fileId: SAMPLE_VARIANTS_ID,
+      readOptions: { ploidy: 2, onlyPassed: false },
+      read: { kind: "pending" },
+    };
+    const p = withFiles(loaded, null);
+    const reference: Reference = {
+      variants: savedVcf,
+      checks: [
+        {
+          analysis: "diversity",
+          numbers: [1, 2],
+          keyVersion: 1,
+          popneiVersion: "0.1.0",
+          appVersion: "0.1.0",
+          settings: settingsFingerprint(
+            DIVERSITY,
+            p,
+            savedVcf.readOptions,
+            null,
+          ),
+        },
+      ],
+    };
+    const json = writtenJson(stateOf({ ...p, reference }));
+    expect(json["checks"]).toEqual([]);
+  });
+
+  test("a variants file of the reference's name and size with other individuals carries no check", () => {
+    const p = withFiles(
+      {
+        ...PANEL,
+        read: {
+          kind: "read",
+          individuals: ["i1", "i2", "i3", "i5"],
+          ploidy: 2,
+          numVars: 1200,
+        },
+      },
+      null,
+    );
+    const json = writtenJson(stateOf({ ...p, reference: referenceFor(p) }));
+    expect(json["checks"]).toEqual([]);
+  });
+
+  test("an analysis done with no version of popnei throws a defect", () => {
+    const state = stateOf(
+      withFiles(PANEL, null),
+      { diversity: diversityDone([1]) },
+      null,
+    );
+    expect(() => written(state)).toThrow(/^popnei_web defect: /);
+  });
+
+  test("a number of the project that is not finite throws a defect", () => {
+    const p = deepFreeze<Project>({
+      ...sampleProject(),
+      filters: [{ kind: "maf", maxAllowedMaf: Infinity }],
+    });
+    expect(() => written(stateOf(p))).toThrow(/^popnei_web defect: /);
+  });
+
   test("a check number of Infinity throws a defect", () => {
     const state = stateOf(withFiles(PANEL, null), {
       diversity: diversityDone([1, Infinity]),
@@ -432,6 +505,16 @@ describe("WS6 D1 what is written", () => {
     expect(name("panel_2026.nei")).toBe("panel_2026.popnei.json");
     expect(name("panel.vcf")).toBe("panel.popnei.json");
     expect(name("panel.vcf.gz")).toBe("panel.popnei.json");
+  });
+
+  test("the name proposed: an extension in capitals removed, one alone the default, another kept", () => {
+    const name = (fileName: string): string =>
+      projectFileName(withFiles({ ...PANEL, name: fileName }, null));
+    expect(name("PANEL.NEI")).toBe("PANEL.popnei.json");
+    expect(name("a.vcf.GZ")).toBe("a.popnei.json");
+    expect(name(".nei")).toBe("project.popnei.json");
+    expect(name("data.bcf")).toBe("data.bcf.popnei.json");
+    expect(PROJECT_FILE_EXTENSION).toBe(".popnei.json");
   });
 
   test("the name proposed is the reference's variants file's when none is loaded, and project.popnei.json with neither", () => {
