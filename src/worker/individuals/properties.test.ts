@@ -1,10 +1,8 @@
 import * as fc from "fast-check";
 import { describe, expect, test } from "vitest";
-import type { Cell, IndividualsTable } from "../protocol.ts";
+import type { Cell, IndividualsTable, Separator } from "../protocol.ts";
 import { inferColumnTypes } from "./columnTypes.ts";
 import { readCsv } from "./csv.ts";
-
-type Separator = "," | ";" | "\t";
 
 const SEPARATORS: readonly Separator[] = [",", ";", "\t"];
 const LINE_ENDINGS = ["\n", "\r\n", "\r"] as const;

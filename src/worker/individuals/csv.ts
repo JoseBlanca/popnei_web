@@ -15,6 +15,7 @@ import type {
   CsvOptions,
   IndividualsFileError,
   IndividualsTable,
+  Separator,
 } from "../protocol.ts";
 import { cellNumber, inferColumnTypes } from "./columnTypes.ts";
 
@@ -29,8 +30,6 @@ export interface CsvRead {
   /** The decimal mark used, as set or as found. */
   readonly decimal: "." | ",";
 }
-
-type Separator = "," | ";" | "\t";
 
 /** The separators tried with `"auto"`, in the order that settles a tie: a
     tab is the least likely of the three to be inside a value. */
