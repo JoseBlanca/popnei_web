@@ -42,16 +42,7 @@ end of the name, compared without regard to case, `PANEL.VCF.GZ` as
 plain or compressed, which popnei's `openVcf` reads alike
 (`js/popnei/src/io_vcf.ts`). A file of any other name is not loaded,
 and the step says so (below, "Its words"); the picker offers these
-endings first, and any file under "All files". Several files dropped at
-once load none: "Drop one variants file at a time." A drop that holds no
-file loads nothing and says what to drop: a folder, "Drop a VCF or a
-.nei file, not a folder.", and a piece of text dragged from another
-window, "Drop a VCF or a .nei file, not a piece of text.". A drop of
-several things, one of them a folder, is a drop of several, and loads
-none, as above. Text that comes in a drop with a file is left out, and
-the file is loaded, so that a browser that gives a dragged file's name
-as text beside it still loads the file; whether one does was not
-checked.
+endings first, and any file under "All files".
 
 React Aria's drop zone holds a button of its own, hidden from the eye,
 "Paste a variants file", which takes a file pasted into it with Cmd+V
@@ -61,6 +52,21 @@ of the Tab key in the step, and Enter on it does nothing. A paste was
 seen to load the file in WebKit 26.6 on 25 September 2026, and was not
 tried in Chromium or Firefox. The owner decided on 25 September 2026 to
 keep it.
+
+A paste is a drop to the step, which cannot tell them apart, so the
+words of what a drop held fit a paste as well, and say "load" and not
+"drop": a user of the keyboard pastes and cannot drop. Several files
+dropped or pasted at once load none: "Load one variants file at a
+time." A drop or a paste that holds no file loads nothing and says what
+to give: a folder, "Load a VCF or a .nei file, not a folder.", and a
+piece of text, dragged from another window or copied, "Load a VCF or a
+.nei file, not a piece of text.". A drop of several things, one of them
+a folder, is a drop of several, and loads none, as above. Text that
+comes in a drop with a file is left out, and the file is loaded, so that
+a browser that gives a dragged file's name as text beside it still loads
+the file; whether one does was not checked. Whether a folder copied in
+the file manager reaches the page as a folder when it is pasted was not
+checked either; the words above fit it if it does.
 
 Once a file is picked, the zone shows the file's card: its name, its
 format, "VCF" or ".nei file", and its size, and what the file holds as
@@ -313,9 +319,10 @@ The descriptions of the commands are in the table above. The rest:
 
 - **A file of another name**: "panel.txt was not loaded: the Variants
   step reads a VCF, whose name ends in .vcf, .vcf.gz or .vcf.bgz, or a
-  .nei file. If it is one of them, rename it." It, "Drop one variants
-  file at a time." and the words of a drop that holds no file, above,
-  stay until the next pick, and are the screen's, not the project's.
+  .nei file. If it is one of them, rename it." It, "Load one variants
+  file at a time." and the words of a drop or a paste that holds no
+  file, above, stay until the next pick, and are the screen's, not the
+  project's.
 - **Reading**: "Reading panel.nei.", the reason `variantsStepNeeds`
   gives.
 - **A file popnei refused**: the reason `variantsStepNeeds` of
@@ -424,7 +431,8 @@ tetraploid.vcf.gz again with ploidy 4" pressed, the card showing "Read
 with ploidy 4, …" and no line "Ploidy 4", and the diversity run; the
 button's words with both options changed; `bad.vcf` and its reason,
 ending "Choose another file."; a file named `panel.txt` and its message;
-a piece of text dropped, and its message; 10 and 0.125 typed in the
+a piece of text dropped, and its message, and a piece of text pasted
+into the zone's button, and the same message; 10 and 0.125 typed in the
 threshold, and 300, 0 and 2.5 in the ploidy, each with its line, the
 value kept and the line announced; 0,1 and 0,2 typed key by key in the
 threshold, and 2,0 in the ploidy, each with the line of the comma and

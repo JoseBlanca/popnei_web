@@ -41,7 +41,10 @@ without regard to case, is loaded as a CSV or a TSV, the reader finding
 the separator whatever the ending; the picker offers these endings
 first, and any file under "All files". A file ending in `.xlsx` or
 `.xls`, or of any other name, is not loaded in this version, nor are
-several files dropped at once (below, "Its words"). A file whose name
+several files dropped or pasted at once, nor a folder or a piece of text
+(below, "Its words"). The zone holds React Aria's hidden button, "Paste
+a metadata file", which takes a file pasted into it, as in the Variants
+step, and a paste is a drop to the step, with the same words. A file whose name
 ends in `.vcf`, `.vcf.gz`, `.bcf` or `.nei` is a variants file, and is
 not loaded either: the step says so in the words of the reader for a
 VCF found by its first line, as the owner decided on 25 September
@@ -249,7 +252,14 @@ The descriptions of the commands are in the table above. The rest:
   CSV or a TSV, and reads .xlsx files from a later version. In Excel,
   save the sheet with File › Save As › CSV, and load that file." The
   same for `.xls`, whose files are not read in a later version either.
-- **Several files dropped**: "Drop one metadata file at a time."
+- **Several files dropped or pasted**: "Load one metadata file at a
+  time."
+- **A folder dropped or pasted**: "Load a metadata file, a CSV or a
+  TSV, not a folder."
+- **A piece of text dropped or pasted**: "Load a metadata file, a CSV
+  or a TSV, not a piece of text." A drop of several things, one of
+  them a folder, is a drop of several; text that comes in a drop with a
+  file is left out, and the file is loaded, as in the Variants step.
 - **A variants file, by its name**: "panel.vcf was not loaded: it is
   a variants file, which the Variants step takes. Load a metadata
   file.", the words after the colon those of the reader's
@@ -259,7 +269,7 @@ The descriptions of the commands are in the table above. The rest:
   step reads a CSV or a TSV, whose name ends in .csv, .tsv or .txt. If
   it is one of them, rename it."
 
-  These four stay beside the zone until the next pick, are the
+  These six stay beside the zone until the next pick, are the
   screen's and not the project's, and are announced when they appear,
   through the function the shell gives the screens, since the focus
   stays on the button.
@@ -329,8 +339,9 @@ file with pandas, `pandas.read_csv(path, sep=";", decimal=",")`
 
 ## Accessibility
 
-- The keyboard goes through the step in this order: the file button,
-  Remove, the encoding, the separator, the decimal mark, the disclosure
+- The keyboard goes through the step in this order: the zone's hidden
+  button that takes a pasted file, "Paste a metadata file", the file
+  button, Remove, the encoding, the separator, the decimal mark, the disclosure
   of the individuals missing, the column of the populations. The table
   of the columns and the list of the populations are read, not operated,
   and hold no stop of the Tab key: the table is a native `<table>`, the
