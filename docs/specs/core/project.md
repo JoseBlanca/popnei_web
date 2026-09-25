@@ -248,17 +248,29 @@ file or a file read, which the step shows otherwise:
 | being read | "Reading pops.csv." |
 | refused by the reader, `raggedRow` or `unclosedQuote` | "pops.csv could not be read: line 7 has 3 cells where the header has 4, read with the semicolon as the separator. Choose another separator, or load a corrected file." |
 | refused by the reader, `variantsFile` | "pops.csv could not be read: it is a variants file, which the Variants step takes. Load a metadata file." |
-| refused by the reader, `unreadable` | "pops.csv could not be read: the browser could not read it; it may have been changed, moved or deleted since it was picked. Load it again." |
+| refused by the reader, `unreadable` | "pops.csv could not be read: the browser could not read it; it may have been changed, moved or deleted since it was picked. Choose it again." |
 | refused by the reader, any other kind, or by the files wasm | "pops.csv could not be read: it has no row of individuals. Load a corrected file." |
-| its read stopped by a crash of the light worker | "pops.csv could not be read: ‹what happened› (**Open 4**). Load it again." |
-| the light worker could not start, or the page is out of date | "pops.csv could not be read: ‹what happened› (**Open 4**). Reload the page and load it again." |
+| its read stopped by a crash of the light worker | "pops.csv could not be read: ‹what happened› (**Open 4**). Choose it again." |
+| the light worker could not start, or the page is out of date | "pops.csv could not be read: ‹what happened› (**Open 4**). Reload the page and choose it again." |
 
 The ends of the rows of `variantsFile`, `unreadable` and a crash are the
 writer's, the same day, on the pattern of the Variants step: a variants
 file is not corrected but replaced, with "a traits file" in
 association; and a file that could not be read by no fault of its own
-is loaded again, not corrected. The reason of individuals missing is
-`individualsNeeds`'s in the step as beside the Run button.
+is chosen again, not corrected, in the words of the Variants step, "Choose it
+again." and "Reload the page and choose it again.", so that the same
+failure has the same words in the two steps, whose buttons both open the
+file picker.
+
+The reason of individuals missing, in the step, names the file in place
+of the step, since the step is where the user is: "12 individuals of
+panel.nei are not in pops.csv: ind_031, ind_044 and 10 more. Add them to
+pops.csv and load it again.", and for one, "1 individual of panel.nei is
+not in pops.csv: ind_031. Add it to pops.csv and load pops.csv again."
+`individualsStepMissing` gives those words, and `null` when no
+individual is missing or either file is not read; beside a Run button,
+`individualsNeeds` keeps the words of the table above, which name the
+step.
 
 The individuals missing are named as **Open 3** says; one alone is "1
 individual of panel.nei is not in pops.csv: ind_031. Add it to the file
@@ -673,6 +685,11 @@ export function individualsNeeds(p: Project): string | null;
     words of the Individuals step, or null for no file or a file read;
     the table of the Individuals step above. */
 export function individualsStepNeeds(p: Project): string | null;
+
+/** The reason of individuals of the variants file missing from the
+    individuals file, in the words of the Individuals step, which name the
+    file, or null when none is missing or either file is not read. */
+export function individualsStepMissing(p: Project): string | null;
 
 /** What follows the colon of a refusal of the reader in the Individuals
     step, its words and its end, "it is a variants file, which the

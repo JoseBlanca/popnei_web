@@ -196,7 +196,7 @@ some missing the list would leave them out without saying so.
 It reads `project.individuals`, `project.grouping` and
 `project.variants` of the state of the store, `individualsStepNeeds` of
 the project for the reason of a read under way or failed, and
-`individualsNeeds` for that of missing individuals.
+`individualsStepMissing` for that of missing individuals.
 It sends:
 
 | action | command | description |
@@ -303,10 +303,11 @@ The descriptions of the commands are in the table above. The rest:
   as �. Correct them in the file and load it again." A file read as
   Windows-1252 has none. The warning is the screen's, made from the
   read.
-- **Individuals missing**: the reason `individualsNeeds` gives, "12
-  individuals of panel.nei are not in pops.csv: ind_031, ind_044 and 10
-  more. Add them to the file and load it again in the Individuals
-  step.", and under it a disclosure, "The 12 individuals missing", that
+- **Individuals missing**: the reason `individualsStepMissing` of
+  `src/core/project.ts` gives, "12 individuals of panel.nei are not in
+  pops.csv: ind_031, ind_044 and 10 more. Add them to pops.csv and load
+  it again.", which names the file where `individualsNeeds`, beside a
+  Run button, names this step; and under it a disclosure, "The 12 individuals missing", that
   opens the whole list, one name a line, which the user can select and
   copy into their sheet; a disclosure is a line that opens and closes a
 part of the page under it.
