@@ -661,6 +661,17 @@ export default defineConfig(
           ],
         },
       ],
+      // The reader takes text; individualsFile.ts decodes the bytes. The
+      // compiler refuses it too, through tsconfig.core.json, with a
+      // message that does not say why.
+      "no-restricted-globals": [
+        "error",
+        {
+          name: "TextDecoder",
+          message:
+            "The reader of the text takes text: individualsFile.ts decodes the bytes.",
+        },
+      ],
     },
   },
   {
