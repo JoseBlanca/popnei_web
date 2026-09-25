@@ -98,7 +98,11 @@ to the browser.
 
 The calculation worker's side, `runner.ts`, calls the wasm package of
 popnei, which has an entry for node, so the handling of a request can be
-tested in node over the bytes of a reference file. The reader of the
+tested in node. The tests give popnei the bytes of a fixture, a
+`Uint8Array`, which its `openVcf` and `openVars` take as well as a
+`File`, since popnei reads a `File` only inside a web worker, through
+`FileReaderSync`; a `File` read by ranges is checked by the Playwright
+flow (`docs/specs/worker/runner.md`). The reader of the
 individuals file, `src/worker/individuals/`, is pure TypeScript and is
 tested in node over the text of CSV and TSV files, as `worker.md` lists.
 What the light worker does with the files wasm, an xlsx and the zip, is
@@ -219,8 +223,13 @@ checked is `tsconfig.test.json` of `configs.md`.
   from.
 - The name of a test says the behaviour and its outcome, in words:
   `test("changing the missing data threshold changes the key of the diversity and not of the PCA")`.
-- A float is compared with `toBeCloseTo` or a tolerance written with its
-  reason, never with `toBe`, as in popnei.
+- A float that our code computes is compared with `toBeCloseTo` or a
+  tolerance written with its reason, never with `toBe`, as in popnei. A
+  number of popnei that the code passes on with no arithmetic, as the
+  runner passes on the results of popnei, is compared with `toBe`,
+  exactly: a tolerance there would let a change of popnei's numbers pass
+  unseen, which the exact comparison of the check numbers of a project
+  file would then report to the user (`docs/specs/worker/runner.md`).
 
 The scripts in `package.json`:
 

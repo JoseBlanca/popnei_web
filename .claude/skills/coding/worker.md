@@ -18,7 +18,9 @@ src/worker/client.ts       the page's side: a queue per worker, progress,
                            cancelling, restarting, the File objects by file id
 src/worker/start.ts        the lines that make the two workers, `?worker`
 src/worker/runner.ts       the calculation worker: popnei, the variant file,
-                           the intermediate caches
+                           the intermediate caches; tested in node
+src/worker/runnerWorker.ts the calculation worker's script: it checks each
+                           request, calls runner.ts, posts the answers
 src/worker/filesRunner.ts  the light worker, with no popnei: the individuals
                            file, the files wasm, xlsx and zip
 src/worker/individuals/    the reader of CSV and TSV and the inference of the
@@ -34,8 +36,10 @@ carries a `File`, a type of the DOM.
 What the TypeScript package of popnei offers the calculation worker is in
 `js/popnei/README.md` of popnei and section 11 of its
 `docs/architecture.md`. It was read for this file in September 2026, at
-version 0.1.0, and the section "What popnei has to provide" lists what the
-design here assumes and the package does not have yet.
+version 0.1.0, and again on 25 September 2026 for the release
+`js-v0.1.0-dev.2`, which the walking skeleton builds on; the section "What
+popnei has to provide" lists what the design here assumes and what the
+package does not have yet.
 
 ## Why two workers, and our own messages
 
@@ -59,8 +63,7 @@ design here assumes and the package does not have yet.
   once on two cores. Each worker would hold its own intermediate results,
   a kinship of 10,000 individuals is 800 MB in each one that uses it, and
   its own memory of wasm, which never shrinks; two workers that both
-  needed the pruned variants would each make them; and with popnei 0.1.0
-  each would hold the whole variant file. A pool would win if the walking
+  needed the pruned variants would each make them. A pool would win if the walking
   skeleton showed users waiting on several independent analyses whose
   intermediate results are small (`docs/architecture.md`, section 5).
 - **Our own layer, not Comlink**, as `docs/technology.md` decided.
@@ -74,32 +77,58 @@ and the functions that validate them.
 
 ```ts
 // src/worker/protocol.ts
-export const PROTOCOL_VERSION = 1;
+export type Job = DiversityJob;        // the PCA and the others join it later
 
-export type Job =
-  | { analysis: "diversity"; fileId: string; filters: VariantFilter[]; pops: Pops }
-  | { analysis: "pca"; fileId: string; filters: VariantFilter[]; numPrinComps: number };
+export interface DiversityJob {
+  readonly analysis: "diversity";
+  readonly fileId: string;
+  readonly filters: readonly VariantFilter[];
+  readonly individualFilters: readonly IndividualFilter[];
+  readonly pops: Pops;
+  readonly minNumIndividuals: number;
+  readonly polyThreshold: number;
+}
 
 /** The populations, as pairs in the order of the file. */
 export type Pops = readonly (readonly [pop: string, individuals: readonly string[]])[];
 
 // src/worker/messages.ts
-export type ToWorker =
-  | { kind: "files"; files: { fileId: string; file: File }[] }
+export const PROTOCOL_VERSION = 1;
+
+export type ToRunner =                 // the calculation worker
+  | { kind: "open"; id: number; fileId: string; file: File;
+      format: "vcf" | "nei";
+      readOptions: { ploidy: number; onlyPassed: boolean } | null } // null for .nei
   | { kind: "run"; id: number; key: string; job: Job };
 
-// One type per worker: they differ in their `ready`.
-export type FromRunner =        // the calculation worker
+export type FromRunner =
   | { kind: "ready"; protocol: number; popneiVersion: string }
-  | Answer;
-export type FromFilesRunner =   // the light worker, which holds no popnei
-  | { kind: "ready"; protocol: number }
-  | Answer;
-type Answer =
-  | { kind: "progress"; id: number; done: number; total: number }
+  | { kind: "opened"; id: number; individuals: string[]; ploidy: number }
   | { kind: "result"; id: number; key: string; result: JobResult }
-  | { kind: "error"; id: number; message: string; fatal: boolean };
+  | { kind: "refused"; id: number; message: string }        // popnei refused the input
+  | { kind: "reopenFailed"; id: number; name: string; message: string } // the file no longer reads
+  | { kind: "progress"; id: number; bytesRead: number; numBytes: number;
+      pass: number; numPasses: number }                      // popnei's Progress, of a run
+  | WorkerStop;
+
+export type ToFilesRunner =            // the light worker, which holds no popnei
+  | { kind: "readIndividuals"; id: number; file: File; csv: CsvOptions };
+
+export type FromFilesRunner =
+  | { kind: "ready"; protocol: number }
+  | { kind: "individuals"; id: number; read: IndividualsFileRead }
+  | WorkerStop;
+
+/** The worker cannot go on; it closes itself after posting it. */
+export type WorkerStop =
+  | { kind: "crashed"; message: string }     // a trap, a throw outside popnei, the wasm not loaded
+  | { kind: "badRequest"; message: string }; // a request that failed its check
 ```
+
+The `File` travels in the request that needs it, the `open` of the
+variants file and the `readIndividuals` of the individuals file, and in
+no message of its own. The messages whole, with their checks, are in
+`docs/specs/worker/messages.md`.
 
 - **Every message is a discriminated union on `kind`**, and every job on
   `analysis`. A `switch` over it has no `default`, and
@@ -131,7 +160,9 @@ type Answer =
   changed while it ran (`docs/architecture.md`, section 5). On the wire a
   key is a `string`, and it enters the cache through `keyFromWire` of
   `keys.ts` (`SKILL.md`, "Keys").
-- **`PROTOCOL_VERSION` is in the `ready` message**, and the client refuses
+- **`PROTOCOL_VERSION` is in `messages.ts`**, not in `protocol.ts`,
+  since it is the version of the messages, **and in the `ready`
+  message**, and the client refuses
   a worker whose number is not its own. The page and the workers are built
   together, so a mismatch means a stale file from a cache after a deploy;
   refusing it with a message is better than a result read with the wrong
@@ -148,8 +179,9 @@ type Answer =
 
 `MessageEvent.data` is typed `any` by the DOM, and it is read as `unknown`
 on both sides, then narrowed by a validator of `messages.ts`,
-`parseFromRunner(data: unknown): Result<FromRunner, ProtocolError>`,
-`parseFromFilesRunner`, and `parseToWorker`, with the `Result` of `src/core/result.ts`.
+`parseFromRunner(data: unknown): Result<FromRunner, MessageError>`,
+`parseFromFilesRunner`, `parseToRunner` and `parseToFilesRunner`, with the
+`Result` of `src/core/result.ts`.
 `typescript.md`, beside this file, has the general rule of `unknown` at
 the boundaries.
 
@@ -174,7 +206,12 @@ sends each worker the ones it needs (`docs/architecture.md`, section 6).
 
 ```ts
 // in protocol.ts, so that core can name them
-export interface Progress { done: number; total: number }
+export interface Progress {  // popnei's, as Variants.onProgress gives it
+  bytesRead: number;          // the bytes of the file the pass has read
+  numBytes: number;           // the bytes of the file on the disk
+  pass: number;               // the pass that is reading, 1 for the first
+  numPasses: number;          // the passes of the run
+}
 export interface Run<R> {
   id: number;
   outcome: Promise<Outcome<R>>;
@@ -186,6 +223,7 @@ export type Outcome<R> =
   | { kind: "cancelled" };
 export type RunError =
   | { kind: "popnei"; message: string }       // popnei refused the input
+  | { kind: "reopenFailed"; name: string; message: string } // the file changed on the disk
   | { kind: "files"; message: string }        // the files wasm refused a file
   | { kind: "workerFailed"; message: string } // a trap, an error event
   | { kind: "couldNotStart"; reason: string } // no `ready`, twice
@@ -238,14 +276,29 @@ export function createClient(make: {
 - **`outcome` never rejects.** A calculation that fails is an outcome the
   screen shows, not an exception that a forgotten `catch` loses: the
   screen switches on `kind` and has to say something in each case.
+- **A worker answers a failure in one of four kinds**
+  (`docs/specs/worker/messages.md`): `refused`, popnei refused the input, and the worker goes on;
+  `reopenFailed`, the browser can no longer read the variants file,
+  changed, moved or deleted on the disk since it was picked, and the
+  worker goes on; `crashed`, a trap of the wasm or a throw outside popnei,
+  and `badRequest`, a request that failed its check, after either of which
+  the worker closes itself. Two kinds that go on and two that stop let the
+  client know from the kind alone whether to start a new worker.
 - **An error of popnei keeps the message it has in Rust.** popnei throws a
   JavaScript `Error` with that message for a wrong input and for a file it
   cannot read, a wrong line of a VCF with its number among them. The
-  runner sends `error.message` as it is, it reaches the screen as the
-  `message` of `{ kind: "popnei" }`, and the screen shows it; a
-  message of our own around it may say what was being done, "Reading
-  panel.vcf.gz:", and never replaces it, because it is the one that says
-  what is wrong with the file.
+  runner sends `error.message` as it is in a `refused`, which reaches the
+  screen as the `message` of `{ kind: "popnei" }`, and the screen shows
+  it; a message of our own around it may say what was being done,
+  "Reading panel.vcf.gz:", and never replaces it, because it is the one
+  that says what is wrong with the file.
+- **A file the browser can no longer read is `reopenFailed`**, with the
+  name of the file and popnei's message, and not `refused`: a second try
+  does not mend it, a new load of the file does, and its words say so,
+  "panel.nei could not be read; it may have changed on the disk since it
+  was picked. Load it again in the Variants step." The runner tells it
+  from a refusal of the data by popnei's message
+  (`docs/specs/worker/runner.md`).
 - **An error of the files wasm is handled the same way.** Every function
   the crate exports returns a `Result` whose error wasm-bindgen turns into
   a JavaScript `Error` with its message, "not an xlsx file", a sheet that
@@ -257,13 +310,21 @@ export function createClient(make: {
 - **A trap of the wasm is fatal for the worker.** A panic of Rust in wasm
   is a `WebAssembly.RuntimeError`, and after one the memory of the wasm
   keeps what it held and an object that was borrowed stays borrowed
-  (`js/popnei/README.md`). So the runner sends it with `fatal: true`, and
-  the client fails the request, ends that worker and starts a new one, as
-  for a cancel. What is left of an instance after a trap has not been
-  measured by popnei, and a worker that is not trusted is not reused.
+  (`js/popnei/README.md`). So the worker's script posts `crashed` and
+  closes, and the client fails the request, ends that worker and starts a
+  new one, as for a cancel. What is left of an instance after a trap has
+  not been measured by popnei, and a worker that is not trusted is not reused.
 - **A worker that fails outside a request**, an `error` event on the
   `Worker`, a `messageerror` when a message cannot be deserialised, is
   treated as a trap: the running request fails and the worker restarts.
+- **A crash of a worker does not reach the error bar of the page.** The
+  `error` handler of each worker's script, and the client's `onerror` of
+  each worker, call `event.preventDefault()`. Without it the browser
+  passes an error a worker's script did not stop on to the `Worker`
+  object and from there to the window, and the bar at the top of the page,
+  which shows the errors of our own code, would show as an error of the
+  page a crash that the client already handles by starting a new worker
+  (`docs/specs/entry.md`, "The errors nothing else shows").
 - **Restarting has a limit.** A worker that fails before it sends `ready`,
   twice in a row, is not started a third time: the wasm did not load, the
   network or the browser is the cause, and a loop of restarts would hide
@@ -273,8 +334,9 @@ export function createClient(make: {
 ### Progress
 
 - A request's `onProgress` is called with each `progress` message of its
-  id, and with none of another's. The client passes `done` and `total` on
-  and does not compute a fraction the worker did not give.
+  id, and with none of another's. The client passes popnei's four fields
+  on as they came, `bytesRead`, `numBytes`, `pass` and `numPasses`, and
+  does not compute a fraction the worker did not give.
 - Progress is for the screen only. It is never a condition of anything: a
   request that sent none is not stuck.
 
@@ -293,9 +355,10 @@ section 4). So:
    read yet reaches nobody. The ids would drop it anyway; this makes it
    certain.
 3. The request's outcome is `cancelled`.
-4. A new worker is started. The client sends it the `files` message with
-   the `File` objects the old one had, from its map, then waits for
-   `ready`, then sends the first request of that worker's queue. The new
+4. A new worker is started. The client waits for `ready`, then sends the
+   first request of that worker's queue; to the calculation worker it
+   sends first an `open` of the load, with its `File` from the client's
+   map, and a `readIndividuals` carries its own `File`. The new
    calculation worker opens the variant file again (section "Reading the
    files of the user").
 
@@ -306,11 +369,10 @@ section 4). So:
 - **What a restart costs** is the loading of the wasm, from the cache of
   the browser after the first time, and the intermediate results the
   worker held, which are made again when they are asked for; and, for the
-  calculation worker, opening the variant file again. In the target design
-  that reads its header, or the index at the end of a `.nei` file; with
-  popnei 0.1.0 it reads the whole file into memory again before the next
-  request starts, a time that grows with the file and has not been
-  measured (`docs/architecture.md`, section 5). It is not hidden: a cancel
+  calculation worker, opening the variant file again, which reads its
+  header, or the index at the end of a `.nei` file, and not the whole
+  file; how long it takes has not been measured on a large file
+  (`docs/architecture.md`, section 5). It is not hidden: a cancel
   is a choice of the user, and the next PCA after it may take longer.
 - **Restarting is also how the memory of the wasm is given back.** That
   memory grows and never shrinks (`js/popnei/README.md`), and ending the
@@ -319,9 +381,9 @@ section 4). So:
   pick, an undo or a redo of one, before the first request on the new
   load (`docs/architecture.md`, section 5): the worker then holds one
   open file, one `Variants`, and never the room of an old one. An undo to
-  the previous load reopens its file, which costs time, with popnei 0.1.0
-  the reading of the whole file, and no calculation whose result is still
-  in the cache of the page. Whether it also restarts between two requests
+  the previous load opens its file again, which costs the reading of its
+  header, and no calculation whose result is still in the cache of the
+  page. Whether it also restarts between two requests
   is open point 2 of `docs/architecture.md`, to be settled if the walking
   skeleton shows a tab running out of memory.
 
@@ -340,8 +402,12 @@ section 4). So:
 ## The runners, the workers' side
 
 `runner.ts`, the calculation worker, answers the messages of
-`messages.ts` and calls popnei. It holds the `File` objects it was sent,
-the handles popnei gave for them and the intermediate caches.
+`messages.ts` and calls popnei. It holds the `File` of the load it was
+sent, the `Variants` popnei gave for it and the intermediate caches.
+`runnerWorker.ts` is the script the browser runs as that worker: it
+checks each request with `parseToRunner`, calls `runner.ts`, and posts
+the answers and the progress, so that `runner.ts` itself runs in node
+under Vitest (`docs/specs/worker/runner.md`).
 `filesRunner.ts`, the light worker, answers the jobs that read no
 genotype: it reads the individuals file, a CSV or TSV with the reader of
 `src/worker/individuals/` and an xlsx with the files wasm, and writes the
@@ -436,69 +502,62 @@ both formats give the same types.
 
 ### Reading the files of the user
 
-- **The target is a source of bytes that popnei calls for each range.**
-  The calculation worker gives popnei a source over the `File`, which
-  popnei's reader calls for each range it needs, and which reads that
-  range with `FileReaderSync.readAsArrayBuffer(file.slice(start, end))`, a
-  call that exists only in workers and returns the bytes at once, which
-  is what Rust's `Read` and `Seek` need. The VCF reader reads forward; the
-  reader of a `.nei` file seeks, since arrow IPC keeps its index at the
-  end of the file. Only a few blocks are in memory at a time, so the size
-  of a file is limited by time and not by memory, and a restart reopens
-  the file instead of reading it again. The owner decided on 24 September
-  2026 that this is the design, and a priority request to popnei, because
-  the variant files of the users tend to be huge
-  (`docs/architecture.md`, section 6).
-- **popnei 0.1.0 reads the whole file.** It opens a VCF or a vars file
-  from a `Uint8Array` only. Until the source exists, the runner reads the
-  whole file with
-  `new Uint8Array(new FileReaderSync().readAsArrayBuffer(file))` and opens
-  that. popnei copies those bytes into the memory of wasm once and shares
-  them between passes, so a file costs its size twice while it is opened,
-  and once after the runner lets go of its copy. Files above roughly 1.5
-  to 2 GB fail there, with the message of popnei, a figure estimated from
-  the 4 GB that wasm32 addresses and not measured in a browser; and a
-  restart reads the whole file again (`docs/architecture.md`, section 6).
-  This is the one place the runner changes when the source arrives.
+- **popnei reads the `File` by ranges.** From the release
+  `js-v0.1.0-dev.2`, popnei's `openVcf` and `openVars` take the `File`
+  itself, and popnei reads the ranges it needs, 4 MiB at most, with
+  `FileReaderSync`, a call that exists only in workers and returns the
+  bytes at once. The runner gives it the `File` and copies no byte of it;
+  there is no source of bytes of our own. Only a few ranges are in memory
+  at a time, so the size of a file is limited by the time of a pass and
+  not by memory; every pass reads the file again from the disk. The owner
+  decided on 24 September 2026 that this is the design, because the
+  variant files of the users tend to be huge (`docs/architecture.md`,
+  section 6).
 - **The file is opened once per worker, not per request, and a worker
   opens one load only.** The runner keeps the one `Variants` of the load
-  it was started for, and each request copies the filters onto a pass.
-  Opening reads the header of a VCF or the index of a `.nei` file, and
-  with popnei 0.1.0 the whole file, which would otherwise be read again
-  for every analysis. A new load is a new worker (section "Cancelling"),
-  so no worker holds two `Variants`. On opening, the runner sends the
-  individuals and the ploidy at once; the number of variants comes with
-  the pass statistics of the first pass (`docs/architecture.md`, section
-  6).
+  it was started for. Opening reads the header of a VCF, its first range,
+  or the index at the end of a `.nei` file. A new load is a new worker
+  (section "Cancelling"), so no worker holds two `Variants`. On opening,
+  the runner sends the individuals and the ploidy at once; the number of
+  variants comes with the pass statistics of the first pass
+  (`docs/architecture.md`, section 6).
+- **The filters are not copied onto a pass.** popnei puts a filter on a
+  `Variants` for good and has no way to take one off or to copy a
+  `Variants`, so when a request asks for other filters than those its
+  `Variants` holds, the runner frees the `Variants`, opens the `File`
+  again, which reads its header and not its variants, and puts the
+  request's filters on the new one. The first request after the open puts
+  its filters on the `Variants` just opened. The rule, and how the runner
+  compares the filters, are in `docs/specs/worker/runner.md`, "The
+  filters".
 - **The files written**, a filtered vars file in the calculation worker,
   an xlsx and the zip of the report in the light worker, are made as a
   `Uint8Array` and sent to the page, transferred, where they become a
   `Blob` and a download.
 
-### Progress, from the source of bytes
+### Progress, from popnei's `Variants.onProgress`
 
 A calculation of popnei is one synchronous call that runs its whole pass
 inside wasm, and the worker's event loop does not turn until it returns.
 `postMessage` does not need the event loop: it can be called from inside
 that call, and the page, a different thread, receives the message at once.
-So, in the target design, progress comes from the source of bytes itself
-(section "Reading the files of the user"): it counts the bytes it has
-read, against `file.size`, and posts them. No callback from popnei's loop
-is needed (`docs/architecture.md`, section 5).
+So the runner sets a function with popnei's `Variants.onProgress`, which
+popnei calls from inside the pass, and that function posts a `progress`
+(`docs/architecture.md`, section 5).
 
-- **It is throttled in the source**, at most one message every 100 ms or
-  so, a named constant. A message per range of a large file is thousands
-  of messages, and each one is a task on the page.
-- **`done` and `total` are bytes of the file**, read in the current pass
-  and the size of the file, which is known before the pass starts, where
-  the number of variants of a VCF is not. popnei has to say how many
-  passes an analysis makes, the PCA makes two, or tell the source when a
-  pass starts, so that the bar does not go from full to empty.
-- **With popnei 0.1.0 there is no progress.** The runner posts none
-  during a call, and the page shows that a run is running and for how
-  long, not how far along it is. Blocks read with `iterBlocks` are in
-  TypeScript and could post between blocks, but the analyses do not read
-  blocks in TypeScript, and they should not start to for a bar.
+- **The four fields are popnei's**, passed on unchanged: `bytesRead`, the
+  bytes of the file the pass has read; `numBytes`, the bytes of the file
+  on the disk, compressed for a gzipped VCF; `pass`, the pass that is
+  reading; and `numPasses`, the passes of the run, which popnei's
+  `numPassesOf` gives before it runs, two for the PCA, so that the bar does
+  not go from full to empty at the second pass. The page draws the share
+  done as `(pass − 1 + bytesRead / numBytes) / numPasses`.
+- **No throttle.** popnei calls the function at the start of each pass,
+  every 4 MiB and at the end of the run, about 500 calls for a pass over
+  a file of 2 GB, a message of a few dozen bytes each
+  (`docs/specs/worker/runner.md`, "Progress").
+- **A pass over a `.nei` file ends below `numBytes`**, since popnei does
+  not read the whole file; the result ends the run, not the bar.
 
 ### Sending results back: transfer or copy
 
@@ -518,9 +577,11 @@ other side without a copy and are left empty, detached, where they were.
 - **Only an array that owns its whole buffer is transferred.** A typed
   array can be a view of part of a larger buffer, and transferring
   `view.buffer` moves the whole buffer, the parts other arrays read
-  included. The helper that builds the transfer list checks
-  `byteOffset === 0 && byteLength === buffer.byteLength` and copies with
-  `slice()` otherwise.
+  included. The helper that builds the transfer list, `transferablesOf`,
+  checks `byteOffset === 0 && byteLength === buffer.byteLength` and
+  throws a defect otherwise: every array the runner posts is one it made
+  itself, so a view is a mistake of ours, and a copy would hide it
+  (`docs/specs/worker/runner.md`).
 - **A view into the memory of wasm is never posted.** popnei's rule is
   that such a view stops being valid when that memory grows, and its
   package copies every array of a result out for that reason
@@ -577,7 +638,7 @@ workers, as they already are in the development server.
 
   ```ts
   // src/worker/start.ts, the whole file
-  import RunnerWorker from "./runner.ts?worker";
+  import RunnerWorker from "./runnerWorker.ts?worker";
   import FilesWorker from "./filesRunner.ts?worker";
   export const makeRunnerWorker = (): Worker => new RunnerWorker();
   export const makeFilesWorker = (): Worker => new FilesWorker();
@@ -590,7 +651,7 @@ workers, as they already are in the development server.
   With this import Vite builds each worker in the format of
   `worker.format`, and with `"es"` it creates it with `type: "module"`
   in the build as in the development server. The other form, `new
-  Worker(new URL("./runner.ts", import.meta.url), { type: "module" })`,
+  Worker(new URL("./runnerWorker.ts", import.meta.url), { type: "module" })`,
   would work too now; `?worker` is kept because `start.ts` and the
   architecture name it and the tests need no change. This was read in
   the source of Vite 8.3.0, `dist/node/chunks/node.js`, the plugin
@@ -629,28 +690,25 @@ workers, as they already are in the development server.
 
 ## What popnei has to provide
 
-What the design above assumes and the TypeScript package of popnei 0.1.0
-does not have. Each one is asked of popnei, not built around here: a
+What the design above assumes and the TypeScript package of popnei did
+not have. Each one is asked of popnei, not built around here: a
 workaround in a runner is the binding duplication that popnei's coding
 skill warns against. Nothing is asked of popnei for the individuals file
 nor for the identity of the variant file, which popnei_web reads and keeps
 itself, as the owner decided on 24 September 2026
-(`docs/architecture.md`, sections 3 and 6).
+(`docs/architecture.md`, sections 3 and 6). The first two are given by
+the release `js-v0.1.0-dev.2` of 25 September 2026.
 
-1. **A source of bytes over a JavaScript `File`**, read by ranges with
-   `FileReaderSync`, in popnei's wasm binding, for `openVcf` and
-   `openVars`, as section 11 of popnei's architecture describes. Today the
-   source is a `Uint8Array` of the whole file. The binding crate does not
-   depend on `js-sys` today, which a source that calls JavaScript from
-   Rust needs. It is the priority, as the owner decided on 24 September
-   2026 (`docs/architecture.md`, section 6).
-2. **The number of passes an analysis makes, or a signal to the source
-   when a pass starts**, so that the progress bar the source drives does
-   not go from full to empty between the two passes of a PCA.
+1. **Reading a JavaScript `File` by ranges** with `FileReaderSync`, in
+   `openVcf` and `openVars`. Given by `js-v0.1.0-dev.2`.
+2. **The number of passes a function makes and the progress of each
+   pass**, so that the progress bar does not go from full to empty
+   between the two passes of a PCA. Given by `js-v0.1.0-dev.2`, as
+   `numPassesOf` and `Variants.onProgress`.
 3. **A way to tell a trap from an error**, stated in popnei's docs:
    whether every refusal of the core is a plain `Error` and every trap a
-   `WebAssembly.RuntimeError`, so that the runner's choice of `fatal` rests
-   on a promise and not on what was seen.
+   `WebAssembly.RuntimeError`, so that the runner's choice between
+   `refused` and `crashed` rests on a promise and not on what was seen.
 4. **What `iterBlocks` gives is the caller's own memory**, which the
    README says for the arrays of a block; the runner relies on it to
    transfer them.
@@ -669,7 +727,8 @@ itself, as the owner decided on 24 September 2026
   and the handlers, which the test drives by hand, for the two queues, a
   job sent to the worker it belongs to, a cancel of a running and of a
   queued request, a queued request dropped when its key is no longer
-  asked for, the `files` message sent again after a restart, a message of
+  asked for, the `open` sent again with its `File` after a restart, a
+  `readIndividuals` that carries its own `File`, a message of
   an old worker ignored, a trap, the restart limit and the timeout of
   `ready`, with fake timers; the handlers of the calculation runner as
   plain functions over bytes, since popnei loads under node from its

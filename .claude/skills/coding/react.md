@@ -448,9 +448,12 @@ options and its results.
 - **Locked** shows why, the text `needs()` gives, next to the control
   that would unlock it; the run button is disabled with that text as its
   description, not hidden, so that a user knows it exists.
-- **Warnings** are a count on the header of the result, "⚠ 2", whose
-  accessible name is the words, "2 warnings", with the symbol
-  `aria-hidden`; activating it opens the help drawer at the warnings. A
+- **Warnings**, until the help drawer comes in stage 8, are sentences
+  above the result, each whole, with their count on the heading of the
+  result, "2 warnings" (`docs/specs/analyses/diversity.md`). A count that
+  opened a drawer not yet built would hide the warnings. From stage 8 the
+  count, "⚠ 2", whose accessible name is the words, "2 warnings", with
+  the symbol `aria-hidden`, opens the help drawer at the warnings. A
   warning is never colour alone (`css.md`).
 
 ## Errors
@@ -480,9 +483,12 @@ options and its results.
   the details", which copies the message and the stack, for a report of
   the bug, and it stays until the user closes it. It interrupts what the
   user was doing, so it is `role="alert"`, which a screen reader reads at
-  once. What the bar does with a second error while it is up is the
-  shell's screen spec's to settle, in stage 2. Decided by the owner on 25
-  September 2026. The options not taken:
+  once. The bar shows the text of the first error only, the likeliest
+  cause of the rest; each error that follows while it is up adds one to a
+  count after that text, "3 more errors followed it.", and Copy the
+  details copies every error kept, the first 20 whole
+  (`docs/specs/shell.md`, "The errors after the first"). Decided by the
+  owner on 25 September 2026. The options not taken:
   a short "Something went wrong" without the message, which leaves the
   user nothing to report; and leaving the error in the console, which a
   user does not open, so that the button they pressed would seem to do
