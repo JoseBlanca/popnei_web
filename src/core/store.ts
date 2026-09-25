@@ -37,6 +37,7 @@ import type {
   VariantSource,
 } from "./project.ts";
 import type { Result } from "./result.ts";
+import { messageOf } from "./thrown.ts";
 import type {
   CsvOptions,
   Outcome,
@@ -1176,7 +1177,7 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
           kind: "failed",
           error: {
             kind: "defect",
-            message: error instanceof Error ? error.message : String(error),
+            message: messageOf(error),
           },
         });
         changedAfter(error);
