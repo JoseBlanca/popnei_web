@@ -2,7 +2,8 @@
  * The entry of the population genetics page, `popgen.html`: the code that
  * runs once when the page opens (docs/specs/entry.md, "At the opening").
  * It takes over from the start guard of the page, puts on the window the
- * listeners of the errors nothing else shows, makes the store, and draws
+ * listeners of the errors nothing else shows, makes the store and the
+ * worker client, asks for the reads the project waits for, and draws
  * the error bar and the application in two roots. All of it runs in one
  * run of this code, so that nothing that listens is made after the first
  * message of a worker could arrive.
@@ -15,9 +16,14 @@ import { CACHE_MAX_BYTES } from "../core/cache.ts";
 import { MAX_UNDO_STEPS } from "../core/history.ts";
 import { createStore } from "../core/store.ts";
 import type { Store } from "../core/store.ts";
+import { createClient } from "../worker/client.ts";
+import type { Client } from "../worker/client.ts";
 import type { Job, JobResult } from "../worker/protocol.ts";
+import { makeFilesWorker, makeRunnerWorker } from "../worker/start.ts";
 import { createDefects, isResizeObserverNoise } from "./defects.ts";
 import type { Defects } from "./defects.ts";
+import { FilesProvider, createFiles } from "./files.tsx";
+import { createReads } from "./reads.ts";
 import { ErrorBar } from "./shell/ErrorBar.tsx";
 import { Shell } from "./shell/Shell.tsx";
 import { StoreProvider } from "./store.tsx";
@@ -88,16 +94,19 @@ function start(): void {
   };
   drawBar(null);
 
-  // 3. The store. It sends nothing while it is made; its first request is
-  // a Run of a panel.
+  // 3. The store. It sends nothing while it is made, so its `send` reaches
+  // the client of the next step.
+  let client: Client | null = null;
   const store = createStore<Job, JobResult>({
     first: firstProject("popgen"),
     analyses: POPGEN_ANALYSES,
-    send: () => {
-      // The worker client, made with the two workers of
-      // src/worker/start.ts, is the next step of the opening; until it is
-      // here nothing can start a calculation.
-      throw new Error("popnei_web defect: the page has no worker client yet.");
+    send: (key, job, onProgress) => {
+      if (client === null) {
+        throw new Error(
+          "popnei_web defect: the store sent a request before the worker client was made.",
+        );
+      }
+      return client.run(key, job, onProgress);
     },
     numVarsOf,
     appVersion: APP_VERSION,
@@ -105,8 +114,27 @@ function start(): void {
     maxUndoSteps: MAX_UNDO_STEPS,
   });
 
+  // 4. The worker client, which starts the calculation worker at once, so
+  // that popnei's wasm loads while the user looks for their file.
+  const made = createClient({
+    calculation: makeRunnerWorker,
+    light: makeFilesWorker,
+    onPopneiReady: (version) => {
+      store.popneiReady(version);
+    },
+  });
+  client = made;
+  const files = createFiles(made);
+
   // 5. The error bar again, now with the store.
   drawBar(store);
+
+  // 6. The reads the project waits for, asked after every change of it.
+  const reads = createReads({ store, client: made });
+  store.subscribe(() => {
+    reads.sync();
+  });
+  reads.sync();
 
   // 7. The application, in its own root.
   const root = createRoot(element("root"), {
@@ -123,7 +151,9 @@ function start(): void {
   root.render(
     <StrictMode>
       <StoreProvider value={store}>
-        <Shell />
+        <FilesProvider value={files}>
+          <Shell />
+        </FilesProvider>
       </StoreProvider>
     </StrictMode>,
   );

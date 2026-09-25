@@ -219,8 +219,9 @@ node. If core needs one of the web's functions that are not the language,
 architecture), that is a decision written in the spec, and it adds that
 one declaration, not the whole DOM.
 
-`tsconfig.worker.json`, the two workers, `runner.ts` and `filesRunner.ts`
-among what it includes, with the globals of a worker:
+`tsconfig.worker.json`, the two workers, `runnerWorker.ts` with
+`runner.ts`, and `filesRunner.ts`, among what it includes, with the
+globals of a worker:
 
 ```json
 {
@@ -293,7 +294,8 @@ browser, which run in node:
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo",
     "lib": ["ES2022", "ES2023.Array", "DOM", "DOM.Iterable"],
-    "types": ["node"]
+    "types": ["node"],
+    "jsx": "react-jsx"
   },
   "include": [
     "src/core/**/*.test.ts",
@@ -310,7 +312,11 @@ node and the DOM's. The code under test is still checked by its own file,
 without them. A test that imports code which calls `FileReaderSync` does
 not type check here; the handlers of the runner that the tests call take
 bytes, not a `File` (`worker.md`). The tests of `src/charts` run under
-jsdom and are checked with the page, in `tsconfig.app.json`.
+jsdom and are checked with the page, in `tsconfig.app.json`. `jsx` is
+there because a test of `src/ui` imports a module of React, such as the
+test of `addFile` that imports `src/ui/files.tsx`, and TypeScript refuses
+to resolve a `.tsx` file without it, whether it holds JSX or not; added
+on 25 September 2026, with the first such test.
 
 The probe of stage 0 (`docs/specs/site.md`), a page with its own worker,
 is checked as the page and the worker are. `tsconfig.probe.json`, its
@@ -400,9 +406,31 @@ const worker = {
   group: ["**/worker/**"],
   message: "src/charts does not import src/worker.",
 };
+// runner* takes in runnerWorker.ts, the calculation worker's script.
 const runner = {
   group: ["**/worker/runner*", "**/worker/filesRunner*"],
-  message: "A runner is loaded as a worker, not imported.",
+  message: "A worker's script is loaded as a worker, by src/worker/start.ts.",
+};
+// The same files as the files of src/worker import them, "./runner.ts",
+// which `runner` does not match. A worker's script is loaded as a worker
+// by start.ts, and runner.ts, which calls popnei, is imported by
+// runnerWorker.ts alone (docs/specs/worker/runner.md, "Two files").
+const workerScripts = {
+  regex: "(^|/)(runner|runnerWorker|filesRunner)\\.ts",
+  message:
+    "A worker's script is loaded as a worker, by start.ts; only runnerWorker.ts imports runner.ts.",
+};
+// start.ts loads the two scripts as workers, with ?worker, and nothing else.
+const scriptsButAsWorkers = {
+  regex: "(^|/)(runner\\.ts|(runnerWorker|filesRunner)\\.ts$)",
+  message:
+    "start.ts loads runnerWorker.ts and filesRunner.ts with ?worker, and not runner.ts.",
+};
+// runnerWorker.ts imports runner.ts as a module, and no other script.
+const scriptsButRunner = {
+  regex: "(^|/)((runnerWorker|filesRunner)\\.ts|runner\\.ts\\?)",
+  message:
+    "runnerWorker.ts imports runner.ts as a module, and no other worker's script.",
 };
 const individualsReader = {
   group: ["**/worker/individuals/**"],
@@ -590,6 +618,7 @@ export default defineConfig(
             popneiValues,
             filesWasm,
             probe,
+            workerScripts,
           ],
         },
       ],
@@ -615,6 +644,7 @@ export default defineConfig(
             drawing,
             filesWasm,
             probe,
+            workerScripts,
           ],
         },
       ],
@@ -637,6 +667,7 @@ export default defineConfig(
             drawing,
             popneiValues,
             probe,
+            workerScripts,
           ],
         },
       ],
@@ -658,6 +689,7 @@ export default defineConfig(
             popneiValues,
             filesWasm,
             probe,
+            workerScripts,
           ],
         },
       ],
@@ -687,6 +719,75 @@ export default defineConfig(
   {
     // Both sides import the protocol, so it calls no popnei.
     files: ["src/worker/protocol.ts"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            ui,
+            charts,
+            coreButResult,
+            resultValues,
+            react,
+            drawing,
+            popneiValues,
+            filesWasm,
+            probe,
+            workerScripts,
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // The calculation worker's script, which imports runner.ts.
+    files: ["src/worker/runnerWorker.ts"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            ui,
+            charts,
+            coreButResult,
+            resultValues,
+            react,
+            drawing,
+            popneiValues,
+            filesWasm,
+            probe,
+            scriptsButRunner,
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // The lines that make the two workers from their scripts.
+    files: ["src/worker/start.ts"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            ui,
+            charts,
+            coreButResult,
+            resultValues,
+            react,
+            drawing,
+            popneiValues,
+            filesWasm,
+            probe,
+            scriptsButAsWorkers,
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // The tests of the worker, which import runner.ts to run it in node.
+    files: ["src/worker/**/*.test.ts"],
     rules: {
       "@typescript-eslint/no-restricted-imports": [
         "error",
@@ -819,6 +920,30 @@ export default defineConfig(
 - The blocks of the layers match `.tsx` as well as `.ts`, so that a
   component written by mistake in `src/core` or `src/charts` is held to
   the rules of its layer and not only to the first block's.
+- **The scripts of the workers.** `runner`, in the blocks of core and
+  of the screens, refuses a path through `src/worker` to a runner or to
+  `runnerWorker.ts`, which its `runner*` takes in. The files of
+  `src/worker` import each other as `./runner.ts`, which that pattern
+  does not match, so the worker's blocks have `workerScripts`, a regular
+  expression on the name of the file, and three blocks change it for
+  three kinds of file. `runnerWorker.ts`, the calculation worker's
+  script, imports `runner.ts`, which calls popnei, as a module, and no
+  other script (`scriptsButRunner`); `start.ts` loads `runnerWorker.ts`
+  and `filesRunner.ts` with `?worker` and nothing else of them
+  (`scriptsButAsWorkers`); and the tests of `src/worker` import
+  `runner.ts`, to run it in node. So popnei reaches the calculation
+  worker through `runnerWorker.ts` alone, and cannot reach the page
+  through `client.ts`, `messages.ts` or `protocol.ts`. Changed on 25
+  September 2026, when the runner became two files
+  (`docs/specs/worker/runner.md`, "Two files"): until then no block of
+  `src/worker` refused a runner, and `client.ts` could have imported
+  `runner.ts`. On that day a scratch import in `client.ts` of
+  `./runner.ts` and of `./runnerWorker.ts`, in `messages.ts` of
+  `./filesRunner.ts`, in `start.ts` of `./runner.ts?worker` and of
+  `./runnerWorker.ts`, in `runnerWorker.ts` of `./filesRunner.ts` and of
+  `./runner.ts?worker`, in `src/worker/individuals/csv.ts` of
+  `../runner.ts`, and in `src/ui` and `src/core` of
+  `../worker/runnerWorker.ts`, each failed the lint.
 - Core's block adds `individualsReader`: the reader is TypeScript with no
   DOM, which core could import and run on the page, where a file of
   10,000 rows would freeze it; it belongs to the light worker.

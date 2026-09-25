@@ -2,10 +2,11 @@
  * The page of the population genetics application on the built site: it
  * opens with no error bar, the errors of our own code that nothing else
  * shows reach the bar, and the start guard says when the application's
- * code could not be loaded or run (docs/specs/entry.md, "How it is
- * verified"; docs/specs/shell.md, "The error bar").
+ * code could not be loaded or run, and a crash of the calculation worker
+ * is not an error of the page (docs/specs/entry.md, "How it is verified";
+ * docs/specs/shell.md, "The error bar").
  */
-import type { Locator, Page } from "@playwright/test";
+import type { Locator, Page, Worker } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
 
@@ -161,4 +162,44 @@ test("WS7 D2 the entry's file of bad syntax says the application could not start
   await expect(
     page.getByText(/^The application could not start: .+\. Reload the page\.$/),
   ).toBeVisible();
+});
+
+test("WS7 D2 a throw inside the calculation worker, outside a request, starts it again and shows no error bar", async ({
+  page,
+}) => {
+  const isCalculation = (w: Worker): boolean =>
+    w.url().includes("runnerWorker");
+  const first = page.waitForEvent("worker", isCalculation);
+  await openPopgen(page);
+  const crashed = await first;
+  // popnei's wasm fetched, so that the throw most likely reaches a worker
+  // that is ready and idle; one still starting is started again as well.
+  await expect
+    .poll(() =>
+      crashed.evaluate(() =>
+        performance
+          .getEntriesByType("resource")
+          .some((entry) => entry.name.endsWith(".wasm")),
+      ),
+    )
+    .toBe(true);
+  const closed = new Promise<void>((resolve) => {
+    crashed.on("close", () => {
+      resolve();
+    });
+  });
+  const second = page.waitForEvent("worker", isCalculation);
+
+  // A timer, as on the page: a throw directly inside evaluate would reject
+  // the call of the test and never reach the worker's own handler.
+  await crashed.evaluate(() => {
+    setTimeout(() => {
+      throw new Error("test");
+    });
+  });
+
+  await closed;
+  await second;
+  await expect(bar(page)).toHaveText("");
+  await expect(page.getByRole("button")).toHaveCount(0);
 });

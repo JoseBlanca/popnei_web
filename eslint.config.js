@@ -29,9 +29,31 @@ const worker = {
   group: ["**/worker/**"],
   message: "src/charts does not import src/worker.",
 };
+// runner* takes in runnerWorker.ts, the calculation worker's script.
 const runner = {
   group: ["**/worker/runner*", "**/worker/filesRunner*"],
-  message: "A runner is loaded as a worker, not imported.",
+  message: "A worker's script is loaded as a worker, by src/worker/start.ts.",
+};
+// The same files as the files of src/worker import them, "./runner.ts",
+// which `runner` does not match. A worker's script is loaded as a worker
+// by start.ts, and runner.ts, which calls popnei, is imported by
+// runnerWorker.ts alone (docs/specs/worker/runner.md, "Two files").
+const workerScripts = {
+  regex: "(^|/)(runner|runnerWorker|filesRunner)\\.ts",
+  message:
+    "A worker's script is loaded as a worker, by start.ts; only runnerWorker.ts imports runner.ts.",
+};
+// start.ts loads the two scripts as workers, with ?worker, and nothing else.
+const scriptsButAsWorkers = {
+  regex: "(^|/)(runner\\.ts|(runnerWorker|filesRunner)\\.ts$)",
+  message:
+    "start.ts loads runnerWorker.ts and filesRunner.ts with ?worker, and not runner.ts.",
+};
+// runnerWorker.ts imports runner.ts as a module, and no other script.
+const scriptsButRunner = {
+  regex: "(^|/)((runnerWorker|filesRunner)\\.ts|runner\\.ts\\?)",
+  message:
+    "runnerWorker.ts imports runner.ts as a module, and no other worker's script.",
 };
 const individualsReader = {
   group: ["**/worker/individuals/**"],
@@ -219,6 +241,7 @@ export default defineConfig(
             popneiValues,
             filesWasm,
             probe,
+            workerScripts,
           ],
         },
       ],
@@ -244,6 +267,7 @@ export default defineConfig(
             drawing,
             filesWasm,
             probe,
+            workerScripts,
           ],
         },
       ],
@@ -266,6 +290,7 @@ export default defineConfig(
             drawing,
             popneiValues,
             probe,
+            workerScripts,
           ],
         },
       ],
@@ -287,6 +312,7 @@ export default defineConfig(
             popneiValues,
             filesWasm,
             probe,
+            workerScripts,
           ],
         },
       ],
@@ -316,6 +342,75 @@ export default defineConfig(
   {
     // Both sides import the protocol, so it calls no popnei.
     files: ["src/worker/protocol.ts"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            ui,
+            charts,
+            coreButResult,
+            resultValues,
+            react,
+            drawing,
+            popneiValues,
+            filesWasm,
+            probe,
+            workerScripts,
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // The calculation worker's script, which imports runner.ts.
+    files: ["src/worker/runnerWorker.ts"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            ui,
+            charts,
+            coreButResult,
+            resultValues,
+            react,
+            drawing,
+            popneiValues,
+            filesWasm,
+            probe,
+            scriptsButRunner,
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // The lines that make the two workers from their scripts.
+    files: ["src/worker/start.ts"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            ui,
+            charts,
+            coreButResult,
+            resultValues,
+            react,
+            drawing,
+            popneiValues,
+            filesWasm,
+            probe,
+            scriptsButAsWorkers,
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // The tests of the worker, which import runner.ts to run it in node.
+    files: ["src/worker/**/*.test.ts"],
     rules: {
       "@typescript-eslint/no-restricted-imports": [
         "error",
