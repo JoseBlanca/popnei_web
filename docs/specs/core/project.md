@@ -6,7 +6,9 @@ stage 2 the owner approved that day, as
 `docs/specs/stage-2-open-points.md`, "Changes to approved files", lists, and again that day for the words of the Variants step the owner
 decided at stop 7.5 of `docs/plans/walking-skeleton.md`, and for the
 words of the Individuals step and the reader's two new refusals the
-owner decided on the reviews of that plan. The project is everything the user has set in one application: the
+owner decided on the reviews of that plan, and for the end of the
+reasons of a list of individuals, Open 2, which the owner settled the
+same day. The project is everything the user has set in one application: the
 variants file they loaded, the filters, the individuals file with the
 types of its columns, the populations, and the options of each analysis.
 This spec gives its type, the commands that change it, the records that
@@ -112,9 +114,9 @@ words the screen shows beside the Run button, or `null`:
 | the calculation crashed while it read the file | "panel.nei could not be read: ‹what happened› (**Open 4**). Load it again in the Variants step." |
 | the calculations could not start, or the page is out of date | "panel.nei could not be read: ‹what happened› (**Open 4**). Reload the page and load it again." |
 | the browser could no longer read the file, `reopenFailed` | "panel.nei could not be read; it may have changed on the disk since it was picked. Load it again in the Variants step." |
-| a list of individuals that is empty | "The list of individuals to keep is empty. Add individuals to it, or remove the filter, in the Variants step." |
-| a list that names an individual more than once | "The list of individuals to remove names ind_031 more than once. Change the list, or remove the filter, in the Variants step." (**Open 2**) |
-| a list that names individuals not in the variants | "The list of individuals to keep names 2 individuals that are not in panel.nei: ind_900 and ind_901. Change the list, or remove the filter, in the Variants step." (**Open 2**) |
+| a list of individuals that is empty | "The list of individuals to keep is empty. The Variants step has no control for the filters of individuals in this version, so correct the list in the project file, in a text editor, and open the project again." (**Open 2**) |
+| a list that names an individual more than once | "The list of individuals to remove names ind_031 more than once. The Variants step has no control for the filters of individuals in this version, so correct the list in the project file, in a text editor, and open the project again." (**Open 2**) |
+| a list that names individuals not in the variants | "The list of individuals to keep names 2 individuals that are not in panel.nei: ind_900 and ind_901. The Variants step has no control for the filters of individuals in this version, so correct the list in the project file, in a text editor, and open the project again." (**Open 2**) |
 
 The Variants step shows the reason of its file, being read or not
 read, with another end, since it is where the file is chosen and its
@@ -920,13 +922,21 @@ The five that follow are the words of `projectNeeds` and
 2026, to be judged on the screens of stage 2. A different answer to any
 of them changes those texts and their tests, and nothing else.
 
-2. **How the user is told to fix a list of individuals that names one
-   more than once, or names individuals not in the variants file.**
-   Meanwhile, both reasons end "Change the list, or remove the filter, in
-   the Variants step.", the place and the words of the reason of an empty
-   list. The review of the code changed, on 24 September 2026, the
-   wording of the first reason, "names ind_031 twice", to "names ind_031
-   more than once", which holds also of a name written three times.
+2. **How the user is told to fix a list of individuals that is empty,
+   names one more than once, or names individuals not in the variants
+   file.** Settled by the owner on 25 September 2026: the three reasons
+   end "The Variants step has no control for the filters of individuals
+   in this version, so correct the list in the project file, in a text
+   editor, and open the project again." In stage 2 such a list comes
+   only from a project file, and the end these reasons had, "Add
+   individuals to it, or remove the filter, in the Variants step." and
+   "Change the list, or remove the filter, in the Variants step.", sent
+   the user to a control the step does not have. When the Variants step
+   gains the filters of individuals, in stage 3, the end is written
+   again with it. The review of the code changed, on 24 September 2026,
+   the wording of the second reason, "names ind_031 twice", to "names
+   ind_031 more than once", which holds also of a name written three
+   times.
 3. **How many individuals a text names.** A reason can name hundreds of
    individuals, and a line beside the Run button holds a few. Meanwhile,
    three or fewer are all named, "ind_031, ind_044 and ind_050"; of more
