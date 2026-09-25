@@ -14,7 +14,9 @@
       // over with remove().
       (function () {
         "use strict";
-        var tooOld = typeof Array.prototype.findLast !== "function";
+        // toSorted, of Chrome 110, Firefox 115 and Safari 16, which the core
+        // calls; the closest single test of the floor (docs/specs/entry.md).
+        var tooOld = typeof Array.prototype.toSorted !== "function";
         var TOO_OLD =
           "The application needs Chrome or Edge 111, Firefox 115 or Safari 16.4, or a newer version, and this browser is older.";
         var NOT_LOADED =
@@ -38,10 +40,19 @@
           }
         }
 
-        // A throw while the modules of the application are first run.
+        // A throw while the modules of the application are first run. The
+        // message loses the "Uncaught " Chromium puts before it and its last
+        // full stop, since the sentence adds its own.
         function onError(event) {
           if (tooOld) return;
-          var text = "The application could not start: " + event.message;
+          var message = String(event.message);
+          if (message.indexOf("Uncaught ") === 0) {
+            message = message.slice("Uncaught ".length);
+          }
+          if (message.charAt(message.length - 1) === ".") {
+            message = message.slice(0, -1);
+          }
+          var text = "The application could not start: " + message;
           show(text + ". Reload the page.");
         }
 

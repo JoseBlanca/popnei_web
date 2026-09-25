@@ -45,6 +45,6 @@ function readHash(): string {
 }
 
 /** The URL hash, read again at every change of it. */
-export function useHash(): string {
+export function useStepHash(): string {
   return useSyncExternalStore(subscribeToHash, readHash);
 }

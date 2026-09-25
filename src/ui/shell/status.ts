@@ -2,8 +2,9 @@
  * The announcer of the status region of the shell (docs/specs/shell.md,
  * "The status region"): a small store of the text of the region, which
  * the region reads with `useSyncExternalStore`, as the screens read the
- * store of core. The entry makes it once, and the shell gives the screens
- * its `announce`.
+ * store of core. The entry makes it once and gives it to the screens
+ * through `AnnouncerProvider` of announcer.tsx, and a screen announces
+ * with the `announce` of `useAnnouncer`.
  */
 
 /** How long the region stays empty before a text is written into it, in

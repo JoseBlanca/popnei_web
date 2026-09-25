@@ -209,6 +209,23 @@ test("WS7 D2 Copy the details with no clipboard shows the details in a box", asy
   );
 });
 
+test("WS7 D2 the box of the details takes in an error that follows it", async ({
+  page,
+}) => {
+  await openPopgen(page);
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "clipboard", { value: undefined });
+  });
+  await throwFromHandler(page, "test");
+  await page.getByRole("button", { name: "Copy the details" }).click();
+  const box = page.getByRole("textbox", { name: "The details of the errors" });
+  await expect(box).toHaveValue(/\ntest\n/);
+
+  await throwFromHandler(page, "another");
+
+  await expect(box).toHaveValue(/Error 2, [^\n]*:\nanother\n/);
+});
+
 test("WS7 D2 the entry's file answered 404 says the application could not be loaded", async ({
   page,
 }) => {
@@ -240,6 +257,105 @@ test("WS7 D2 the entry's file of bad syntax says the application could not start
 
   await expect(
     page.getByText(/^The application could not start: .+\. Reload the page\.$/),
+  ).toBeVisible();
+  await expect(page.getByText(/Uncaught|\.\./)).toHaveCount(0);
+});
+
+test("WS7 D2 the entry's file that throws says the application could not start, with the message as it was thrown", async ({
+  page,
+}) => {
+  await page.route("**/assets/popgen-*.js", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "text/javascript",
+      body: 'throw new Error("the entry failed.");',
+    }),
+  );
+
+  await page.goto("popgen.html");
+
+  await expect(
+    page.getByText(
+      "The application could not start: Error: the entry failed. Reload the page.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+});
+
+test("WS7 D2 a browser without Array.prototype.toSorted is told it is too old, with no error bar", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    Reflect.deleteProperty(Array.prototype, "toSorted");
+  });
+
+  await page.goto("popgen.html");
+
+  await expect(
+    page.getByText(
+      "The application needs Chrome or Edge 111, Firefox 115 or Safari 16.4, or a newer version, and this browser is older.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  // The entry stopped at its first line, before it drew the bar.
+  await expect(bar(page)).toHaveCount(0);
+  await expect(steps(page)).toHaveCount(0);
+});
+
+test("WS7 D2 a defect while the entry starts shows the bar with its words for the start, and no Loading", async ({
+  page,
+}) => {
+  // createStore freezes the first project, the one object with the field
+  // app "popgen" that is frozen as the page starts.
+  await page.addInitScript(() => {
+    const freeze = Object.freeze;
+    Object.freeze = <T>(value: T): Readonly<T> => {
+      if (
+        typeof value === "object" &&
+        value !== null &&
+        "app" in value &&
+        value.app === "popgen"
+      ) {
+        throw new Error("test");
+      }
+      return freeze(value);
+    };
+  });
+
+  await page.goto("popgen.html");
+
+  await expect(bar(page)).toHaveText(
+    "The application met an error of its own as it started: test. Reload the page.",
+  );
+  await expect(page.getByText(/Loading/)).toHaveCount(0);
+});
+
+test("WS7 D2 a throw while a step is drawn shows the bar and keeps the frame and the step's heading", async ({
+  page,
+}) => {
+  // The number field of the Variants step formats its value with
+  // Intl.NumberFormat, which the header and the stepper do not call.
+  await page.addInitScript(() => {
+    Object.defineProperty(Intl, "NumberFormat", {
+      // A function, which new can call, unlike an arrow function.
+      value: function () {
+        throw new Error("test");
+      },
+    });
+  });
+
+  await page.goto("popgen.html");
+
+  await expect(bar(page)).toContainText(
+    "The application met an error of its own: test.",
+  );
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Variants" }),
+  ).toBeVisible();
+  await expect(page.getByRole("banner")).toContainText("Population genetics");
+  await steps(page).getByRole("link", { name: "Individuals" }).click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Individuals" }),
   ).toBeVisible();
 });
 
@@ -284,4 +400,17 @@ test("WS7 D2 a throw inside the calculation worker, outside a request, starts it
   await expect(
     page.getByRole("button", { name: /^(Close|Copy the details)$/ }),
   ).toHaveCount(0);
+});
+
+test("WS7 D2 in a browser in Spanish the threshold is written the English way", async ({
+  browser,
+}) => {
+  const context = await browser.newContext({ locale: "es-ES" });
+  const page = await context.newPage();
+  await openPopgen(page);
+
+  await expect(
+    page.getByLabel("Maximum proportion of missing genotypes"),
+  ).toHaveValue("0.1");
+  await context.close();
 });

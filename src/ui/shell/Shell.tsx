@@ -18,11 +18,12 @@ import { Header } from "./Header.tsx";
 import styles from "./Shell.module.css";
 import { StatusRegion } from "./StatusRegion.tsx";
 import { Stepper } from "./Stepper.tsx";
-import { stepOfHash, titleOfStep, useHash } from "./steps.ts";
+import { ErrorBoundary } from "./ErrorBoundary.tsx";
+import { STEP_NAMES, stepOfHash, titleOfStep, useStepHash } from "./steps.ts";
 
 /** The shell, drawn by the entry inside the providers of the page. */
 export function Shell(): React.JSX.Element {
-  const hash = useHash();
+  const hash = useStepHash();
   const step = stepOfHash(hash);
   const mainRef = useRef<HTMLElement>(null);
   // The hash the last effect saw; null before the first, when the page
@@ -45,7 +46,11 @@ export function Shell(): React.JSX.Element {
       <Header />
       <Stepper current={step} />
       <main ref={mainRef} className={classOf(styles, "main")}>
-        <StepBody step={step} />
+        {/* Keyed by the step, so that going to another step and back draws
+            a step that threw again. */}
+        <ErrorBoundary key={step} heading={STEP_NAMES[step]}>
+          <StepBody step={step} />
+        </ErrorBoundary>
       </main>
       <StatusRegion />
     </div>

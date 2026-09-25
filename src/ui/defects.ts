@@ -7,6 +7,7 @@
  * its own, which the bar reads with `useSyncExternalStore`, as the screens
  * read the store of core.
  */
+import { messageOf } from "../core/thrown.ts";
 
 /** One error, as the log keeps it. */
 export interface Defect {
@@ -115,7 +116,7 @@ function toDefect(
   componentStack: string | null,
   number: number,
 ): Defect {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = messageOf(error);
   const lines = [`Error ${String(number)}, ${ORIGIN_TEXT[origin]}:`, message];
   if (error instanceof Error) {
     lines.push(error.stack ?? "No stack.");

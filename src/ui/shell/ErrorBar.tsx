@@ -30,7 +30,7 @@ export interface ErrorBarProps {
 type Copying =
   | { readonly kind: "idle" }
   | { readonly kind: "copied" }
-  | { readonly kind: "failed"; readonly text: string };
+  | { readonly kind: "failed" };
 
 const IDLE: Copying = { kind: "idle" };
 
@@ -44,17 +44,24 @@ export function ErrorBar({
   const { first, more } = useSyncExternalStore(defects.subscribe, () =>
     defects.getState(),
   );
+  // Read at every change, so that the box of the details takes in the
+  // errors that follow and popnei's version once it is known.
+  const popneiVersion = useSyncExternalStore(
+    store?.subscribe ?? subscribeToNothing,
+    () => store?.getState().popneiVersion ?? null,
+  );
   const [copying, setCopying] = useState<Copying>(IDLE);
+  const details = detailsText(defects.details(), popneiVersion, appVersion);
 
   async function copyDetails(): Promise<void> {
-    const text = detailsText(defects, store, appVersion);
+    const text = details;
     try {
       // navigator.clipboard is missing on a page served over plain HTTP
       // from another machine, and the call then throws.
       await navigator.clipboard.writeText(text);
       setCopying({ kind: "copied" });
     } catch {
-      setCopying({ kind: "failed", text });
+      setCopying({ kind: "failed" });
     }
   }
 
@@ -95,7 +102,7 @@ export function ErrorBar({
       {copying.kind === "failed" && (
         <label className={classOf(styles, "details")}>
           The details of the errors
-          <textarea readOnly rows={8} value={copying.text} />
+          <textarea readOnly rows={8} value={details} />
         </label>
       )}
     </div>
@@ -133,19 +140,23 @@ function statusText(copying: Copying): string {
 /** What Copy the details copies, for a report of the bug: the page, the
     versions, the browser and every error kept; not the project. */
 function detailsText(
-  defects: Defects,
-  store: Store<JobResult> | null,
+  errors: string,
+  popneiVersion: string | null,
   appVersion: string,
 ): string {
-  const popneiVersion = store?.getState().popneiVersion ?? null;
   return [
     `Page: ${window.location.href}`,
     `popnei web: ${appVersion}`,
     `popnei: ${popneiVersion ?? "not loaded"}`,
     `Browser: ${navigator.userAgent}`,
     "",
-    defects.details(),
+    errors,
   ].join("\n");
+}
+
+/** The subscription of the bar when there is no store: nothing changes. */
+function subscribeToNothing(): () => void {
+  return () => undefined;
 }
 
 /** After Close, the focus goes to the `<h1>` of the step on screen, or,

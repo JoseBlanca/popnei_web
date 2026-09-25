@@ -14,6 +14,7 @@ import "./tokens.css";
 import "./base.css";
 
 import { StrictMode } from "react";
+import { I18nProvider } from "react-aria-components";
 import { createRoot } from "react-dom/client";
 
 import { POPGEN_ANALYSES, firstProject, numVarsOf } from "../core/apps.ts";
@@ -51,6 +52,11 @@ declare global {
     };
   }
 }
+
+/** The language of the widgets of React Aria, which would otherwise take
+    the browser's: the application is in English, and a number field in a
+    Spanish browser would show 0,1 and read its buttons in Spanish. */
+const LOCALE = "en-US";
 
 /** The element of the page with the id `id`; a defect when popgen.html
     lacks it. */
@@ -95,12 +101,31 @@ function start(): void {
   const drawBar = (store: Store<JobResult> | null): void => {
     defectsRoot.render(
       <StrictMode>
-        <ErrorBar defects={defects} store={store} appVersion={APP_VERSION} />
+        <I18nProvider locale={LOCALE}>
+          <ErrorBar defects={defects} store={store} appVersion={APP_VERSION} />
+        </I18nProvider>
       </StrictMode>,
     );
   };
   drawBar(null);
 
+  try {
+    startApplication(defects, drawBar);
+  } catch (error) {
+    // The application's root is not drawn: "Loading…" goes, and the
+    // window's listener gives the error to the bar, which says the page
+    // met it as it started.
+    element("root").replaceChildren();
+    throw error;
+  }
+}
+
+/** Steps 3 to 7 of the opening: the store, the worker client, the bar
+    with the store, the announcer and the reads, and the application. */
+function startApplication(
+  defects: Defects,
+  drawBar: (store: Store<JobResult>) => void,
+): void {
   // 3. The store. It sends nothing while it is made, so its `send` reaches
   // the client of the next step.
   let client: Client | null = null;
@@ -152,20 +177,24 @@ function start(): void {
     onUncaughtError: (error, errorInfo) => {
       defects.report(error, "drawing", errorInfo.componentStack ?? null);
     },
-    // What a boundary caught, and shows in place of what failed.
+    // What the boundary of a step caught: the step shows its heading
+    // alone, and the bar says what happened.
     onCaughtError: (error, errorInfo) => {
+      defects.report(error, "drawing", errorInfo.componentStack ?? null);
       console.error(error, errorInfo.componentStack);
     },
   });
   root.render(
     <StrictMode>
-      <StoreProvider value={store}>
-        <AnnouncerProvider value={announcer}>
-          <FilesProvider value={files}>
-            <Shell />
-          </FilesProvider>
-        </AnnouncerProvider>
-      </StoreProvider>
+      <I18nProvider locale={LOCALE}>
+        <StoreProvider value={store}>
+          <AnnouncerProvider value={announcer}>
+            <FilesProvider value={files}>
+              <Shell />
+            </FilesProvider>
+          </AnnouncerProvider>
+        </StoreProvider>
+      </I18nProvider>
     </StrictMode>,
   );
 }
