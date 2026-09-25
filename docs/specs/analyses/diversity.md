@@ -818,7 +818,7 @@ drawer at them: the drawer comes in stage 8, and a count that opened
 nothing would hide the warnings. The skill is corrected when the owner
 approves this spec.
 
-"Undo brings it back with no calculation" holds while the cache keeps
+"Undo brings back the table as it was, with no calculation" holds while the cache keeps
 the result removed. It drops a result only to stay under its bound of
 256 MB (`docs/specs/core/cache.md`), and a result of the diversity is a
 few hundred bytes, the only kind of result of stage 2, so no session of
@@ -835,9 +835,15 @@ the description of the command, "the missing data filter changed":
 
 | the cause | results removed |
 |---|---|
-| a command | "The diversity was removed because the missing data filter changed. Undo brings it back with no calculation; Run calculates it for the new settings." |
-| an undo | "Undone: the missing data filter changed. The diversity was removed; Redo brings it back with no calculation, and Run calculates it for the settings as they are now." |
-| a redo | "Redone: the missing data filter changed. The diversity was removed; Undo brings it back with no calculation, and Run calculates it for the settings as they are now." |
+| a command | "The diversity was removed because the missing data filter changed. Undo brings back the table as it was, with no calculation; Run calculates a new one for the new settings." |
+| an undo | "Undone: the missing data filter changed. The diversity was removed; Redo brings back the table as it was, with no calculation, and Run calculates a new one for the settings as they are now." |
+| a redo | "Redone: the missing data filter changed. The diversity was removed; Undo brings back the table as it was, with no calculation, and Run calculates a new one for the settings as they are now." |
+
+The words say what each button gives, the table as it was, of the
+settings before the change, or a new one, of the settings now, since
+"brings it back" and "calculates it" left the user to guess whether Run
+gave the same table again. "The table" is the diversity's word for its
+result, which each analysis gives in its panel, `resultName`.
 
 When the notice lists the analysis in `stopped`, its calculation stopped
 at once by a change of the load of the variants file, the panel, ready
