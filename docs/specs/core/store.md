@@ -239,7 +239,14 @@ order of the definitions and each once. The notice then names no
 calculation that will be stopped unless the change is undone: its
 `leftBehind`, the list of those, is empty. `stopped` does not change
 until the notice is closed or replaced, since what it tells has
-happened, and a notice with nothing else in it stays until then. An
+happened, and a notice with nothing else in it stays until then, but
+for one thing: a `startRun` of an analysis in `stopped` takes it out,
+and a notice left with nothing goes. The user has run that analysis
+again, and the line that says its calculation was stopped by the new
+file would otherwise stay beside the new run, and after a Stop of the
+user's own would tell of that Stop as if the file had caused it.
+Decided here, not by the owner, on 25 September 2026, after the review
+of the changes of that day. An
 analysis done again leaves the results removed, as below, and not
 `stopped`. One analysis can be both among the results removed and in
 `stopped`: its result of the old settings is removed and its
@@ -319,7 +326,8 @@ nothing, leaves nothing behind and stops nothing replaces it with none. An analy
 run; when the notice is closed or replaced without it, the analysis is
 `ready`. An analysis among the results removed that is done again, when
 a calculation of its new key ends, leaves the results removed; it stays
-in `stopped` if it is there. A calculation left behind that
+in `stopped` if it is there and was done again by an undo, and a
+`startRun` that calculated it has taken it out. A calculation left behind that
 ends by itself, done, failed or cancelled, leaves `leftBehind`, and so
 does one whose key the project gives again through a read of a file,
 which is not a change of the user; when `leftBehind` is empty, the
@@ -358,8 +366,7 @@ wait again for popnei's refusal.
 
 Any other failure, a worker that crashed, one that could not start, a
 file of the site left from before a deploy, a message that did not
-validate, a variants file that could not be read again after a restart,
-is kept under its key until the next change of the project, and shown as
+validate, is kept under its key until the next change of the project, and shown as
 the state `error` with what happened, so that the user learns it and can
 run again; after the next change, the analysis is `ready`, since a second
 try can succeed. A cancel is not a failure: the analysis is `ready`.
@@ -372,6 +379,21 @@ result of another arrives. `startRun` of an analysis in error after
 such a failure forgets the failure, so that a cancel of the new
 calculation leaves the analysis `ready`. Decided here, not by the
 owner, on 24 September 2026.
+
+A variants file that the browser could not read again, `reopenFailed`,
+is kept otherwise: under the load id of the file, as the mark of a load
+being opened is kept, and not under a key. While the project's variants
+file has that load id, every analysis that can run and is not done or
+running is in the state `error` with that failure, whatever its key,
+and `startRun` does nothing for it; it is forgotten when the load
+changes, a new file picked, the same file read again with other
+options, or a project opened. The file fails at every read until it is
+picked again, and a failure kept under one key and forgotten at the next
+change would give back Run after any command and its undo, for a run
+that fails the same way. A popnei refusal of the key comes before it,
+since it is the answer to those settings. Decided here, not by the
+owner, on 25 September 2026, after the review of the changes of that
+day.
 
 ### The comparison with the check numbers
 
@@ -485,7 +507,7 @@ export type AnalysisStatus<R> =
 export type AnalysisError =
   | { readonly kind: "refused"; readonly message: string }  // popnei's; kept
   | { readonly kind: "failed";
-      readonly error: Exclude<RunError, { readonly kind: "popnei" }> };  // until the next change
+      readonly error: Exclude<RunError, { readonly kind: "popnei" }> };  // until the next change; reopenFailed until the load changes
 
 /** A calculation in flight; `current` when the project still gives its key. */
 export interface RunView {
@@ -545,8 +567,10 @@ export interface Store<R> {
   dismissNotice(): void;
 
   /** Starts the calculation of an analysis that is ready, removed, or in
-      error after a failure that is not popnei's, after stopping every
-      calculation left behind; null, and nothing done, in any other state. */
+      error after a failure that is not popnei's nor a variants file that
+      could not be read again, after stopping every calculation left
+      behind, and takes the analysis out of the notice's `stopped`; null,
+      and nothing done, in any other state. */
   startRun(id: AnalysisId): Run<R> | null;
   /** Stops the calculation in flight of an analysis, if there is one. */
   cancelRun(id: AnalysisId): void;
@@ -577,8 +601,9 @@ those in flight:
   recorded into the variants file of the request's load in every project
   of the history.
 - `failed` of kind `popnei`: the message is kept under the key for the
-  session. Any other kind: it is kept until the next change of the
-  project.
+  session. `reopenFailed`: it is kept under the load id of the request,
+  until the load changes, as "A calculation that failed" says. Any
+  other kind: it is kept until the next change of the project.
 - `cancelled`: nothing is kept.
 
 What the store does with the client it binds, and with the calls it is
@@ -739,7 +764,9 @@ and one that needs only the variants file.
   file: `cancel()` is called at once, the notice lists the analysis in
   `stopped` and none in `leftBehind`, and after an undo of that load the
   old request has been cancelled once and no more. The same with an undo
-  and with a redo that change the load. No test waits for a time: the
+  and with a redo that change the load. Again, then the new file read,
+  `startRun` of the analysis and `cancelRun` of it: the notice no longer
+  lists it in `stopped`, and a notice with nothing else in it is `null`. No test waits for a time: the
   store has no clock.
 - **A late result**: with the second running, a command, then `runEnded`
   of the old key: the analysis is `ready`, the notice does not list it
@@ -750,7 +777,11 @@ and one that needs only the variants file.
   "popnei", message: "…" } }` gives `error` of kind `refused`; a command,
   then its undo, give it again, and `startRun` returns `null`. The same
   with `workerFailed` gives `error` of kind `failed`, `startRun` works,
-  and after a command and its undo the analysis is `ready`.
+  and after a command and its undo the analysis is `ready`. With
+  `reopenFailed`, the analysis is `error` with it, after a command that
+  changes its key and after that command's undo, and `startRun` returns
+  `null` and calls no `send`; a new variants file loaded and read makes
+  it `ready`.
 - **The check numbers**: a project opened with a reference whose check
   holds the fingerprint of its settings, popnei "0.1.0", the application
   "0.0.9" and key version 1: a
