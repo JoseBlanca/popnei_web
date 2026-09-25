@@ -1,0 +1,35 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+.zone {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+  padding: var(--space-4);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  transition: border-color var(--duration-fast);
+}
+
+/* A file dragged over the zone: a solid, thicker border, not colour
+   alone (WCAG 1.4.1). */
+.zone[data-drop-target] {
+  border-style: solid;
+  border-color: var(--color-accent);
+  outline: 1px solid var(--color-accent);
+}
+
+/* The zone's own button, hidden, has the focus. */
+.zone[data-focus-visible] {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+.content {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.content:empty {
+  display: none;
+}

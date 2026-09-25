@@ -14,14 +14,26 @@ export interface ButtonProps {
   /** The words on the button, which are also its name for a screen
       reader. */
   readonly label: string;
-  /** What pressing it does, with the mouse, the keyboard or a touch. */
-  readonly onPress: () => void;
+  /** What pressing it does, with the mouse, the keyboard or a touch;
+      absent only inside a widget that gives the press itself, the
+      `FileTrigger` of `FileZone`. */
+  readonly onPress?: () => void;
+  /** The element of the button, for a screen that moves the focus to it. */
+  readonly ref?: React.Ref<HTMLButtonElement>;
 }
 
 /** A button with its words. */
-export function Button({ label, onPress }: ButtonProps): React.JSX.Element {
+export function Button({
+  label,
+  onPress,
+  ref,
+}: ButtonProps): React.JSX.Element {
   return (
-    <AriaButton className={classOf(styles, "button")} onPress={onPress}>
+    <AriaButton
+      className={classOf(styles, "button")}
+      {...(onPress !== undefined && { onPress })}
+      {...(ref !== undefined && { ref })}
+    >
       {label}
     </AriaButton>
   );

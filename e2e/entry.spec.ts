@@ -64,7 +64,10 @@ test("WS7 D2 the page opens with the frame at Variants and no error bar, and axe
   // The status regions of the bar and of the shell, empty and on the page.
   await expect(page.getByRole("status")).toHaveText(["", ""]);
   await expect(bar(page)).toHaveText("");
-  await expect(page.getByRole("button")).toHaveCount(0);
+  // No button of the error bar; the Variants step has buttons of its own.
+  await expect(
+    page.getByRole("button", { name: /^(Close|Copy the details)$/ }),
+  ).toHaveCount(0);
   expect((await makeAxeBuilder().analyze()).violations).toEqual([]);
 });
 
@@ -173,7 +176,10 @@ test("WS7 D2 Close empties the bar and gives the focus to the heading of the ste
   await page.getByRole("button", { name: "Close" }).click();
 
   await expect(bar(page)).toHaveText("");
-  await expect(page.getByRole("button")).toHaveCount(0);
+  // No button of the error bar; the Variants step has buttons of its own.
+  await expect(
+    page.getByRole("button", { name: /^(Close|Copy the details)$/ }),
+  ).toHaveCount(0);
   await expect(
     page.getByRole("heading", { level: 1, name: "Variants" }),
   ).toBeFocused();
@@ -274,5 +280,8 @@ test("WS7 D2 a throw inside the calculation worker, outside a request, starts it
   await closed;
   await second;
   await expect(bar(page)).toHaveText("");
-  await expect(page.getByRole("button")).toHaveCount(0);
+  // No button of the error bar; the Variants step has buttons of its own.
+  await expect(
+    page.getByRole("button", { name: /^(Close|Copy the details)$/ }),
+  ).toHaveCount(0);
 });

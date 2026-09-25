@@ -1,0 +1,85 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+.step {
+  display: grid;
+  gap: var(--space-6);
+  /* A line of the help or of a message stays short enough to read. */
+  max-inline-size: 64rem;
+}
+
+/* The file and the options of a VCF side by side when there is room,
+   one above the other otherwise. */
+.top {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.section {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.hint {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.card {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.line {
+  margin: 0;
+}
+
+.fileName {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.muted {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.facts {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A file refused or not loaded: its words, a mark, and a line of the
+   colour of danger, not colour alone (WCAG 1.4.1). */
+.problem {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  margin: 0;
+  padding-block: var(--space-2);
+  padding-inline: var(--space-3);
+  border-inline-start: var(--space-1) solid var(--color-danger);
+  background: var(--color-background);
+  overflow-wrap: anywhere;
+}
+
+.icon {
+  flex: none;
+  inline-size: var(--space-4);
+  block-size: var(--space-4);
+  margin-block-start: var(--space-1);
+  fill: none;
+  stroke: var(--color-danger);
+  stroke-width: 1.5px;
+  stroke-linecap: round;
+}

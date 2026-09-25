@@ -1,0 +1,44 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--target-min);
+  cursor: pointer;
+}
+
+.box {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  inline-size: var(--space-4);
+  block-size: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-background);
+  transition: background-color var(--duration-fast);
+}
+
+.mark {
+  inline-size: 100%;
+  block-size: 100%;
+  fill: none;
+  stroke: var(--color-on-accent);
+  stroke-width: 2px;
+  visibility: hidden;
+}
+
+.checkbox[data-selected] .box {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+}
+
+.checkbox[data-selected] .mark {
+  visibility: visible;
+}
+
+.checkbox[data-focus-visible] .box {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}

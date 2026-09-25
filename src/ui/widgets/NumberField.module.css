@@ -1,0 +1,36 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+.field {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: start;
+}
+
+.label {
+  font-weight: 600;
+}
+
+.input {
+  /* Wide enough for a threshold of two decimals or a ploidy of three
+     digits, at any size of the text. */
+  inline-size: calc(var(--space-8) * 3);
+  min-block-size: var(--target-min);
+  padding-block: var(--space-1);
+  padding-inline: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-background);
+  color: var(--color-text);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.input[data-focus-visible] {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+.description {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}

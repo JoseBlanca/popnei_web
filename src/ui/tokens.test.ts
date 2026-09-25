@@ -98,6 +98,8 @@ const PAIRS: readonly (readonly [string, string, number])[] = [
   ["--color-focus", "--color-surface", 3],
   // The line under the error bar, on its surface.
   ["--color-danger", "--color-surface", 3],
+  // The line and the mark of a file refused in the Variants step.
+  ["--color-danger", "--color-background", 3],
   ["--chart-axis", "--color-background", 3],
   ["--chart-threshold", "--color-background", 3],
 ];

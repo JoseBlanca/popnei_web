@@ -90,12 +90,38 @@ test("the probe's worker stopped by a trap of popnei", async ({ page }) => {
   await save(page, "probe-worker-stopped-light");
 });
 
+/** Picks `file`, a fixture or a file of a name and text, with the button
+    of the Variants step. */
+async function pickVariants(
+  page: Page,
+  file: string | { name: string; text: string },
+): Promise<void> {
+  const chooser = page.waitForEvent("filechooser");
+  await page
+    .getByRole("region", { name: "Variants file" })
+    .getByRole("button", { name: /^(Choose|Replace) .*…$/ })
+    .click();
+  await (
+    await chooser
+  ).setFiles(
+    typeof file === "string"
+      ? join(FIXTURES, file)
+      : {
+          name: file.name,
+          mimeType: "text/plain",
+          buffer: Buffer.from(file.text),
+        },
+  );
+}
+
 // The page of the population genetics application, in both themes, since
 // its dark theme is the same page with other colours and breaks on its own.
 for (const theme of ["light", "dark"] as const) {
   test.describe(`popgen.html, ${theme}`, () => {
     test.beforeEach(async ({ page }) => {
-      await page.emulateMedia({ colorScheme: theme });
+      // Reduced motion, so that no picture is taken halfway through a
+      // transition of colour.
+      await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
       await page.goto("popgen.html");
       await expect(
         page.getByRole("heading", { level: 1, name: "Variants" }),
@@ -130,6 +156,78 @@ for (const theme of ["light", "dark"] as const) {
           .getByRole("link", { name: "Individuals" }),
       ).toBeFocused();
       await save(page, `popgen-focus-${theme}`);
+    });
+
+    test("the Variants step with no file", async ({ page }) => {
+      await save(page, `popgen-variants-empty-${theme}`);
+    });
+
+    test("the Variants step reading a file", async ({ page }) => {
+      // The wasm is held back, so the read waits for the calculation
+      // worker; the page was opened before, so it is fetched again here.
+      await page.route("**/*.wasm", () => undefined);
+      await page.reload();
+      await pickVariants(page, "panel.nei");
+      await expect(page.getByText("1 second so far.")).toBeVisible();
+      await save(page, `popgen-variants-reading-${theme}`);
+    });
+
+    test("the Variants step, a .nei file read", async ({ page }) => {
+      await pickVariants(page, "panel.nei");
+      await expect(page.getByText("200 individuals")).toBeVisible();
+      await save(page, `popgen-variants-nei-read-${theme}`);
+    });
+
+    test("the Variants step, a VCF read", async ({ page }) => {
+      await pickVariants(page, "panel.vcf.gz");
+      await expect(page.getByText("200 individuals")).toBeVisible();
+      await save(page, `popgen-variants-vcf-read-${theme}`);
+    });
+
+    test("the Variants step, a VCF to read again with ploidy 4", async ({
+      page,
+    }) => {
+      await pickVariants(page, "tetraploid.vcf.gz");
+      await expect(page.getByText("12 individuals")).toBeVisible();
+      const ploidy = page.getByLabel("Ploidy of the VCF");
+      await ploidy.fill("4");
+      await ploidy.press("Tab");
+      await page.keyboard.press("Tab");
+      await expect(
+        page.getByRole("button", {
+          name: "Read tetraploid.vcf.gz again with ploidy 4",
+        }),
+      ).toBeFocused();
+      await save(page, `popgen-variants-read-again-${theme}`);
+    });
+
+    test("the Variants step, bad.vcf refused", async ({ page }) => {
+      await pickVariants(page, "bad.vcf");
+      await expect(
+        page.getByText(/^popnei could not read bad\.vcf/),
+      ).toBeVisible();
+      await save(page, `popgen-variants-refused-${theme}`);
+    });
+
+    test("the Variants step, a file of another name not loaded", async ({
+      page,
+    }) => {
+      await pickVariants(page, { name: "panel.txt", text: "not variants" });
+      await expect(
+        page.getByRole("main").getByText(/^panel\.txt was not loaded/),
+      ).toBeVisible();
+      await save(page, `popgen-variants-not-loaded-${theme}`);
+    });
+
+    test("the Variants step, the missing data filter off", async ({ page }) => {
+      // With the mouse, on its words, as a user does.
+      await page
+        .getByText("Filter the variants by missing data", { exact: true })
+        .click();
+      await expect(
+        page.getByLabel("Maximum proportion of missing genotypes"),
+      ).toHaveCount(0);
+      await save(page, `popgen-variants-filter-off-${theme}`);
     });
 
     test("the error bar, with a second error", async ({ page }) => {
