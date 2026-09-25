@@ -224,6 +224,59 @@ async function withoutTwelve(): Promise<string> {
     .join("\n")}\n`;
 }
 
+/** Loads panel.nei and panel_pops.csv, chooses the column popcat, and
+    stays at the Individuals step. */
+async function loadPanelWithPopulations(page: Page): Promise<void> {
+  await pickVariants(page, "panel.nei");
+  await expect(page.getByText("200 individuals")).toBeVisible();
+  await goTo(page, "Individuals");
+  await pickIndividuals(page, "panel_pops.csv");
+  await choose(page, "Column that defines the populations", "popcat");
+  await expect(page.getByText("p0, 48 individuals")).toBeAttached();
+}
+
+/** Loads tetraploid.vcf.gz, read with ploidy 2, and its twelve
+    individuals in one population, A, and goes back to the Variants
+    step. */
+async function loadTetraploid(page: Page): Promise<void> {
+  await pickVariants(page, "tetraploid.vcf.gz");
+  await expect(page.getByText("12 individuals")).toBeVisible();
+  await goTo(page, "Individuals");
+  await pickIndividuals(page, {
+    name: "tetraploid_pops.csv",
+    text: `IID,pop\n${Array.from(
+      { length: 12 },
+      (_, i) => `t${String(i).padStart(2, "0")},A\n`,
+    ).join("")}`,
+  });
+  await choose(page, "Column that defines the populations", "pop");
+  await expect(page.getByText("A, 12 individuals")).toBeAttached();
+  await goTo(page, "Variants");
+}
+
+/** Makes the calculation worker keep its results back and pass its
+    progress on, so that a calculation stays under way. */
+async function holdResults(page: Page): Promise<void> {
+  await expect
+    .poll(() => page.workers().some((w) => w.url().includes("runnerWorker")))
+    .toBe(true);
+  const worker = page.workers().find((w) => w.url().includes("runnerWorker"));
+  if (worker === undefined) throw new Error("no calculation worker");
+  await worker.evaluate(() => {
+    const scope = globalThis as unknown as {
+      postMessage: (message: unknown, transfer?: Transferable[]) => void;
+    };
+    const post = scope.postMessage.bind(scope);
+    scope.postMessage = (message, transfer) => {
+      const kind =
+        typeof message === "object" && message !== null && "kind" in message
+          ? message.kind
+          : null;
+      if (kind !== "result") post(message, transfer);
+    };
+  });
+}
+
 // The page of the population genetics application, in both themes, since
 // its dark theme is the same page with other colours and breaks on its own.
 for (const theme of ["light", "dark"] as const) {
@@ -492,6 +545,91 @@ for (const theme of ["light", "dark"] as const) {
         page.getByRole("main").getByText(/^pops\.xlsx was not loaded/),
       ).toBeVisible();
       await save(page, `popgen-individuals-excel-${theme}`);
+    });
+
+    test("the diversity locked", async ({ page }) => {
+      await pickVariants(page, "panel.nei");
+      await expect(page.getByText("200 individuals")).toBeVisible();
+      await goTo(page, "Individuals");
+      await pickIndividuals(page, "panel_pops.csv");
+      await goTo(page, "Analyses");
+      await expect(
+        page.getByRole("button", { name: "Run" }),
+      ).toHaveAccessibleDescription(/^Choose the column/);
+      await save(page, `popgen-diversity-locked-${theme}`);
+    });
+
+    test("the diversity ready", async ({ page }) => {
+      await loadPanelWithPopulations(page);
+      await goTo(page, "Analyses");
+      await expect(page.getByText(/^3 populations: /)).toBeVisible();
+      await save(page, `popgen-diversity-ready-${theme}`);
+    });
+
+    test("the diversity running, with its bar", async ({ page }) => {
+      await loadPanelWithPopulations(page);
+      await holdResults(page);
+      await goTo(page, "Analyses");
+      await page.getByRole("button", { name: "Run" }).click();
+      await expect(page.getByText(/^Calculating · 99% · 0:01$/)).toBeVisible({
+        timeout: 3000,
+      });
+      await save(page, `popgen-diversity-running-${theme}`);
+    });
+
+    test("the diversity done", async ({ page }) => {
+      await loadPanelWithPopulations(page);
+      await goTo(page, "Analyses");
+      await page.getByRole("button", { name: "Run" }).click();
+      await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
+      await save(page, `popgen-diversity-done-${theme}`);
+    });
+
+    test("the diversity done, with a warning", async ({ page }) => {
+      await loadTetraploid(page);
+      const ploidy = page.getByLabel("Ploidy of the VCF");
+      await ploidy.fill("4");
+      await ploidy.press("Enter");
+      await page
+        .getByRole("button", {
+          name: "Read tetraploid.vcf.gz again with ploidy 4",
+        })
+        .click();
+      await expect(
+        page.getByRole("button", {
+          name: "Read tetraploid.vcf.gz again with ploidy 4",
+        }),
+      ).toHaveCount(0);
+      await goTo(page, "Analyses");
+      await page.getByRole("button", { name: "Run" }).click();
+      await expect(page.getByText(/^Warning: Population A/)).toBeVisible();
+      await save(page, `popgen-diversity-warning-${theme}`);
+    });
+
+    test("the diversity in error, the ploidy refused", async ({ page }) => {
+      await loadTetraploid(page);
+      await goTo(page, "Analyses");
+      await page.getByRole("button", { name: "Run" }).click();
+      await expect(
+        page.getByText(/^At line 5 of tetraploid\.vcf\.gz/),
+      ).toBeVisible();
+      await save(page, `popgen-diversity-refused-${theme}`);
+    });
+
+    test("the diversity removed", async ({ page }) => {
+      await loadPanelWithPopulations(page);
+      await goTo(page, "Analyses");
+      await page.getByRole("button", { name: "Run" }).click();
+      await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
+      await goTo(page, "Variants");
+      const threshold = page.getByLabel(
+        "Maximum proportion of missing genotypes",
+      );
+      await threshold.fill("0.05");
+      await threshold.press("Enter");
+      await goTo(page, "Analyses");
+      await expect(page.getByText(/^The diversity was removed/)).toBeVisible();
+      await save(page, `popgen-diversity-removed-${theme}`);
     });
 
     test("the error bar, with a second error", async ({ page }) => {

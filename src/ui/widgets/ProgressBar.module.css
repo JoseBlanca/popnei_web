@@ -1,0 +1,32 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+.bar {
+  inline-size: 100%;
+  max-inline-size: 24rem;
+}
+
+/* The track shows the whole length by its border, at 3:1 on the
+   background (WCAG 1.4.11). */
+.track {
+  block-size: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-background);
+  overflow: hidden;
+}
+
+.fill {
+  block-size: 100%;
+  background: var(--color-accent);
+  transition: inline-size var(--duration-base);
+}
+
+/* No value yet: hatched over the whole length, and still. */
+.fillUnknown {
+  block-size: 100%;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--color-accent) 0 var(--space-1),
+    transparent var(--space-1) var(--space-2)
+  );
+}

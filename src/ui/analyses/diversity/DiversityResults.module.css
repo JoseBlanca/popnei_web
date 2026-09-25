@@ -1,0 +1,20 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+.results {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.muted {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+/* The button and the line of the versions side by side, wrapping when
+   there is no room. */
+.download {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}

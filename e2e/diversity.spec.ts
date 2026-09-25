@@ -1,0 +1,397 @@
+/**
+ * The panel of the diversity on the built site
+ * (docs/specs/analyses/diversity.md, "The panel" and "How it is
+ * verified"): locked until the column of the populations is chosen; run
+ * on panel.nei and panel_pops.csv with the missing data filter at 0.05 and
+ * at 1, whose rows are popnei's numbers to four decimals; the table
+ * removed when the filter changes; its download and the line of the
+ * versions; a VCF of ploidy 4 read with ploidy 2, refused, and read again
+ * with ploidy 4, with the warning of a population of 12; axe at each state
+ * reached.
+ */
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+
+import type { Locator, Page, Worker } from "@playwright/test";
+
+import { expect, test } from "./axe.ts";
+
+const FIXTURES = join(import.meta.dirname, "fixtures");
+
+async function expectNoViolations(
+  makeAxeBuilder: () => { analyze(): Promise<{ violations: unknown[] }> },
+): Promise<void> {
+  expect((await makeAxeBuilder().analyze()).violations).toEqual([]);
+}
+
+/** Goes to a step by its link in the stepper. */
+async function goTo(page: Page, step: string): Promise<void> {
+  await page
+    .getByRole("navigation", { name: "Steps" })
+    .getByRole("link", { name: step })
+    .click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: step }),
+  ).toBeVisible();
+}
+
+/** Picks `file`, a fixture or a file of a name and text, with the button
+    of the zone `region`, through the file picker of the system. */
+async function pick(
+  page: Page,
+  region: string,
+  file: string | { readonly name: string; readonly text: string },
+): Promise<void> {
+  const chooser = page.waitForEvent("filechooser");
+  await page
+    .getByRole("region", { name: region })
+    .getByRole("button", { name: /^(Choose|Replace) .*…$/ })
+    .click();
+  await (
+    await chooser
+  ).setFiles(
+    typeof file === "string"
+      ? join(FIXTURES, file)
+      : {
+          name: file.name,
+          mimeType: "text/plain",
+          buffer: Buffer.from(file.text),
+        },
+  );
+}
+
+/** Sets the threshold of the missing data filter of the Variants step. */
+async function setThreshold(page: Page, value: string): Promise<void> {
+  await goTo(page, "Variants");
+  const threshold = page.getByLabel("Maximum proportion of missing genotypes");
+  await threshold.fill(value);
+  await threshold.press("Enter");
+  await expect(threshold).toHaveValue(value);
+}
+
+/** Opens the page, loads `variants` and the metadata file `metadata`,
+    and chooses the column `column`, when one is given. */
+async function load(
+  page: Page,
+  variants: string,
+  metadata: string | { readonly name: string; readonly text: string },
+  column: string | null,
+): Promise<void> {
+  await page.goto("popgen.html#variants");
+  await pick(page, "Variants file", variants);
+  await expect(page.getByText(/^\d+ individuals$/)).toBeVisible();
+  await goTo(page, "Individuals");
+  await pick(page, "Metadata file", metadata);
+  await expect(page.getByText(/^All \d+ individuals of /)).toBeVisible();
+  if (column !== null) {
+    await page
+      .getByRole("button", { name: "Column that defines the populations" })
+      .click();
+    await page.getByRole("option", { name: column, exact: true }).click();
+  }
+}
+
+/** The panel of the diversity. */
+function panel(page: Page): Locator {
+  return page.getByRole("region", { name: "Diversity" });
+}
+
+/** The row of the population `pop` of the table of the diversity, as the
+    text of its cells. */
+function row(page: Page, pop: string): Locator {
+  return panel(page)
+    .getByRole("row")
+    .filter({ has: page.getByRole("rowheader", { name: pop, exact: true }) })
+    .getByRole("gridcell");
+}
+
+/** Runs the diversity with the Run button, and waits for its table. */
+async function run(page: Page): Promise<void> {
+  await panel(page).getByRole("button", { name: "Run" }).click();
+  await expect(panel(page).getByRole("grid")).toBeVisible();
+}
+
+const CAPTION_005 =
+  "The diversity of each population, over the 1,152 variants of panel.nei the filters kept.";
+
+test("WS8 D2 the diversity is locked until the column of the populations is chosen, and says so beside Run", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await load(page, "panel.nei", "panel_pops.csv", null);
+  await goTo(page, "Analyses");
+  const button = panel(page).getByRole("button", { name: "Run" });
+  await expect(button).toBeDisabled();
+  await expect(button).toHaveAccessibleDescription(
+    "Choose the column that defines the populations in the Individuals step.",
+  );
+  await expect(
+    panel(page).getByText(
+      "Choose the column that defines the populations in the Individuals step.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Diversity" }),
+  ).toBeVisible();
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("WS8 D2 at 0.05 the row p0 reads 48, 0.3527, 0.3567, 0.9288, and the focus goes from Run to the heading", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  await setThreshold(page, "0.05");
+  await goTo(page, "Analyses");
+  await expect(
+    panel(page).getByText("3 populations: p0, 48 individuals; p2, 84; p1, 68", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expectNoViolations(makeAxeBuilder);
+
+  // With the keyboard: the button pressed with Enter goes when the run
+  // ends done, and the focus goes to the heading of the panel.
+  await panel(page).getByRole("button", { name: "Run" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(panel(page).getByRole("grid")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Diversity" }),
+  ).toBeFocused();
+  await expect(panel(page).getByRole("button", { name: "Run" })).toHaveCount(0);
+
+  await expect(
+    panel(page).getByRole("grid", { name: CAPTION_005 }),
+  ).toBeVisible();
+  await expect(panel(page).getByRole("columnheader")).toHaveText([
+    "Population",
+    "Individuals",
+    "Expected heterozygosity (unbiased)",
+    "Observed heterozygosity",
+    "Proportion of polymorphic variants",
+  ]);
+  await expect(panel(page).getByRole("rowheader")).toHaveText([
+    "p0",
+    "p2",
+    "p1",
+  ]);
+  await expect(row(page, "p0")).toHaveText([
+    "48",
+    "0.3527",
+    "0.3567",
+    "0.9288",
+  ]);
+  await expect(row(page, "p2")).toHaveText([
+    "84",
+    "0.3441",
+    "0.3512",
+    "0.9106",
+  ]);
+  await expect(row(page, "p1")).toHaveText([
+    "68",
+    "0.3498",
+    "0.3560",
+    "0.9158",
+  ]);
+  await expect(
+    panel(page).getByText(
+      "A variant counts in a population when at least 20 of its individuals have a called genotype there, and is polymorphic when its commonest allele is below 0.95.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(panel(page).getByText(/^Warning:/)).toHaveCount(0);
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("WS8 D2 the filter moved to 1 removes the table with the words of its notice, and Run at 1 gives p0 0.3519, 0.3564, 0.9267", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  await setThreshold(page, "0.05");
+  await goTo(page, "Analyses");
+  await run(page);
+  await expect(row(page, "p0")).toHaveText([
+    "48",
+    "0.3527",
+    "0.3567",
+    "0.9288",
+  ]);
+
+  await setThreshold(page, "1");
+  await goTo(page, "Analyses");
+  await expect(
+    panel(page).getByText(
+      "The diversity was removed because the missing data filter changed. Undo brings it back with no calculation; Run calculates it for the new settings.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(panel(page).getByRole("grid")).toHaveCount(0);
+  await expectNoViolations(makeAxeBuilder);
+
+  await run(page);
+  await expect(
+    panel(page).getByRole("grid", {
+      name: "The diversity of each population, over the 1,200 variants of panel.nei the filters kept.",
+    }),
+  ).toBeVisible();
+  await expect(row(page, "p0")).toHaveText([
+    "48",
+    "0.3519",
+    "0.3564",
+    "0.9267",
+  ]);
+  await expect(row(page, "p2")).toHaveText([
+    "84",
+    "0.3449",
+    "0.3512",
+    "0.9108",
+  ]);
+  await expect(row(page, "p1")).toHaveText([
+    "68",
+    "0.3504",
+    "0.3567",
+    "0.9175",
+  ]);
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("WS8 D2 at 0.05 the download panel.diversity.csv holds the table, and the versions are beside it", async ({
+  page,
+}) => {
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  await setThreshold(page, "0.05");
+  await goTo(page, "Analyses");
+  await run(page);
+  await expect(
+    panel(page).getByText(
+      "Calculated with popnei 0.1.0, in version 0.1.0 of the application.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+
+  const downloading = page.waitForEvent("download");
+  await panel(page)
+    .getByRole("button", { name: "Download the table as CSV" })
+    .click();
+  const download = await downloading;
+  expect(download.suggestedFilename()).toBe("panel.diversity.csv");
+  expect(await readFile(await download.path(), "utf8")).toBe(
+    "population,individuals,expected_heterozygosity_unbiased,observed_heterozygosity,proportion_polymorphic\n" +
+      "p0,48,0.35267894847982756,0.35667985874177544,0.9288194444444444\n" +
+      "p2,84,0.3440824705971255,0.3512406974637824,0.9105902777777778\n" +
+      "p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112\n",
+  );
+});
+
+/** The twelve individuals of tetraploid.vcf.gz in one population, A. */
+const TETRAPLOID_POPS = {
+  name: "tetraploid_pops.csv",
+  text: `IID,pop\n${Array.from(
+    { length: 12 },
+    (_, i) => `t${String(i).padStart(2, "0")},A\n`,
+  ).join("")}`,
+};
+
+test("WS8 D2 tetraploid.vcf.gz read with ploidy 2 is refused in the panel's words, and read again with ploidy 4 runs with its warning", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await load(page, "tetraploid.vcf.gz", TETRAPLOID_POPS, "pop");
+  await goTo(page, "Analyses");
+  await expect(
+    panel(page).getByText("1 population: A, 12 individuals", { exact: true }),
+  ).toBeVisible();
+  await panel(page).getByRole("button", { name: "Run" }).click();
+  await expect(
+    panel(page).getByText(
+      "At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. Set the ploidy of the VCF to 4 in the Variants step and read the file again.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  // popnei would refuse the same settings again, so Run is not offered.
+  await expect(panel(page).getByRole("button")).toHaveCount(0);
+  await expectNoViolations(makeAxeBuilder);
+
+  await goTo(page, "Variants");
+  const ploidy = page.getByLabel("Ploidy of the VCF");
+  await ploidy.fill("4");
+  await ploidy.press("Enter");
+  await page
+    .getByRole("button", { name: "Read tetraploid.vcf.gz again with ploidy 4" })
+    .click();
+  await expect(page.getByText("12 individuals")).toBeVisible();
+  await goTo(page, "Analyses");
+  await run(page);
+  await expect(
+    panel(page).getByRole("heading", { level: 3, name: "1 warning" }),
+  ).toBeVisible();
+  await expect(
+    panel(page).getByText(
+      "Warning: Population A has 12 individuals, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so A has no values. To have them, merge it with another population in the metadata file.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(row(page, "A")).toHaveText([
+    "12",
+    "no value",
+    "no value",
+    "no value",
+  ]);
+  await expectNoViolations(makeAxeBuilder);
+});
+
+/** The calculation worker of the page. */
+async function calculationWorker(page: Page): Promise<Worker> {
+  await expect
+    .poll(() => page.workers().some((w) => w.url().includes("runnerWorker")))
+    .toBe(true);
+  const worker = page.workers().find((w) => w.url().includes("runnerWorker"));
+  if (worker === undefined) throw new Error("no calculation worker");
+  return worker;
+}
+
+test("WS8 D2 a calculation under way shows its bar, its share and its clock, and Stop in place of Run", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  // The worker keeps the result back, and passes the progress on.
+  const worker = await calculationWorker(page);
+  await worker.evaluate(() => {
+    const scope = globalThis as unknown as {
+      postMessage: (message: unknown, transfer?: Transferable[]) => void;
+    };
+    const post = scope.postMessage.bind(scope);
+    scope.postMessage = (message, transfer) => {
+      const kind =
+        typeof message === "object" && message !== null && "kind" in message
+          ? message.kind
+          : null;
+      if (kind !== "result") post(message, transfer);
+    };
+  });
+  await goTo(page, "Analyses");
+  const button = panel(page).getByRole("button", { name: "Run" });
+  await button.focus();
+  await page.keyboard.press("Enter");
+
+  const bar = panel(page).getByRole("progressbar", {
+    name: "Calculating the diversity",
+  });
+  await expect(bar).toHaveAttribute("aria-valuetext", "99%");
+  await expect(
+    panel(page).getByText(/^Calculating · 99% · 0:0\d$/),
+  ).toBeVisible();
+  // One button, Run then Stop, and the focus stays on it.
+  await expect(panel(page).getByRole("button", { name: "Stop" })).toBeFocused();
+  await expect(panel(page).getByText(/^Calculating · 99% · 0:01$/)).toBeVisible(
+    { timeout: 3000 },
+  );
+  await expectNoViolations(makeAxeBuilder);
+
+  await page.keyboard.press("Enter");
+  await expect(panel(page).getByRole("button", { name: "Run" })).toBeFocused();
+  await expect(bar).toHaveCount(0);
+});

@@ -1,0 +1,42 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+.panel {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.line {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.running {
+  display: grid;
+  gap: var(--space-2);
+  inline-size: 100%;
+  font-variant-numeric: tabular-nums;
+}
+
+.warnings {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.warningsHeading {
+  margin: 0;
+  font-size: var(--text-base);
+}
+
+.warningList {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

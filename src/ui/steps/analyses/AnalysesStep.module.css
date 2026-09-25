@@ -1,0 +1,8 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+.step {
+  display: grid;
+  gap: var(--space-6);
+  /* A line of a message stays short enough to read. */
+  max-inline-size: 64rem;
+}
