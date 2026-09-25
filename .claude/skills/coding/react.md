@@ -413,7 +413,10 @@ ends, results removed, is heard only through a live region.
   closed or replaced, or when the user runs another calculation, and then
   the notice loses that sentence and the status region announces "The
   earlier calculation of Diversity was stopped"
-  (`docs/specs/core/store.md`).
+  (`docs/specs/core/store.md`). A change of the load of the variants
+  file stops the calculations at once, and its notice says so, "2
+  calculations stopped because a new variants file was loaded · Undo",
+  as the owner decided on 25 September 2026.
 - **Errors of a run** are shown in the panel of the analysis with the
   message and are announced as the end of the run is; `role="alert"` is
   kept for what interrupts, which here is nothing.

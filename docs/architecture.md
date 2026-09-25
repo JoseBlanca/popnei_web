@@ -140,6 +140,15 @@ What each replaced, and why, is at the end of sections 3 and 6. popnei is
 no longer asked for a fingerprint nor for a reader of these files, so the
 walking skeleton needs nothing from popnei beyond 0.1.0 (section 10).
 
+What was revised on 25 September 2026, for decisions of the owner of that
+day:
+
+- After every change of the project, the entry of the page asks for the
+  read of each file whose read is pending and has none under way
+  (section 6, "Who asks for a read").
+- A change of the load of the variant file stops every request in flight
+  at once, and its notice says they were stopped (section 5).
+
 ## 2. The project
 
 The project is everything the user has set, and nothing that was
@@ -445,7 +454,8 @@ The page and each worker talk through typed messages
   no cost, and one that runs ends its worker, a restart (below) that reads
   the variants file again; the calculation of the new settings starts when
   the user asks for it, as every calculation does. An undo while the
-  notice is up gives the keys back, and the requests go on. The store holds the handle of every run and cancels
+  notice is up gives the keys back, and the requests go on. A change of
+  the load of the variant file is the exception, below. The store holds the handle of every run and cancels
   them (`docs/specs/core/store.md`); `src/ui/runs.ts` only awaits their
   outcomes. The option not taken was to let a running request finish, its
   result kept for a possible undo, while the request of the new settings
@@ -486,7 +496,15 @@ The page and each worker talk through typed messages
   calculation, and only a new calculation on it waits for the reopening.
   The intermediate results of the old load, the pruned variants, the
   kinship, are lost with the worker, and they belong to a load no longer
-  asked for.
+  asked for. So the store stops every request in flight at the change of
+  the load, and the notice of the change says they were stopped rather
+  than that they will be stopped unless the change is undone, as the
+  owner decided on 25 September 2026: an undo brings back the old file and
+  the results that had ended, and only the requests stopped are run
+  again (`docs/specs/core/store.md`). The option not taken was to keep
+  the old file in the worker until those requests ended or the notice was
+  closed, which would leave the new file unusable meanwhile, minutes for
+  a GWAS, and hold the memory of both files.
 
 The calculation worker keeps, under keys as the results are, what several
 analyses reuse: the variants kept by the LD pruning of the PCA, the

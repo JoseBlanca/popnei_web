@@ -1,7 +1,8 @@
 # The store
 
-24 September 2026, approved by the owner on 24 September 2026; built in
-`src/core/store.ts`. The store is the one object of core that changes: it holds the
+24 September 2026, approved by the owner on 24 September 2026, and
+revised on 25 September 2026 for decisions of the owner of that day;
+built in `src/core/store.ts`. The store is the one object of core that changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.
 From them it gives the screens one state to read, in which each analysis
@@ -155,7 +156,8 @@ run, and `locked`, with what it lacks, if it cannot.
 
 A calculation in flight whose key the project no longer gives, one the
 change left behind, is stopped unless the change is undone, as the owner
-decided on 24 September 2026 (`docs/architecture.md`, section 5). It is in
+decided on 24 September 2026 (`docs/architecture.md`, section 5), except
+after a change of the load of the variants file, below. It is in
 the same notice as the results removed, which is one for the user: one
 message and one Undo for everything the change did, "2 results removed
 because the MAF filter changed. The ongoing calculations will be stopped
@@ -172,7 +174,8 @@ cost the user something, at the first of these:
   presses Run, stops first every calculation left behind, since the one
   calculation worker runs one request at a time and the new one would
   otherwise wait for it, minutes for a GWAS. The notice then loses its
-  sentence on stopping and keeps the results removed and the Undo, or goes
+  sentence on the calculations it will stop and keeps the rest, the
+  results removed, the calculations already stopped and the Undo, or goes
   if nothing is left in it.
 
 There is no deadline. Until one of the three, Undo keeps the calculation
@@ -184,6 +187,30 @@ standard the applications follow, asks to avoid (success criterion
 2.2.1). The option not taken, a stop ten seconds after the notice
 appeared, had been proposed with no measurement and is not in the owner's
 words.
+
+A change of the load of the variants file is the exception: it stops
+every calculation in flight at once, as the owner decided on 25
+September 2026. The load is the load id and the read options of the
+variants file, and the store compares them in the project before and
+after each command, undo and redo: a new pick changes it, and so do an
+undo or a redo that gives back another load, or no variants file at all.
+The calculation worker holds one file only and is started again for the
+new load (`docs/architecture.md`, section 5), so a calculation of the
+old load could not go on until an undo. The notice does not promise
+these calculations to an undo; it lists their analyses in `stopped`,
+and the screen says that they were stopped, "2 calculations stopped
+because a new variants file was loaded · Undo". An undo still brings
+back the old file, and every result that had ended, from the cache; only
+the calculations stopped must be run again. `stopped` holds the analysis
+of every calculation that was in flight at the change and not already
+being stopped, those the notice before left behind among them, in the
+order of the definitions and each once; `leftBehind` is then empty.
+`stopped` does not change until the notice is closed or replaced, since
+what it tells has happened, and a notice with nothing else in it stays
+until then. The option not taken was to keep the old file in the
+calculation worker until those calculations ended or the notice was
+closed: the new file could not be used meanwhile, minutes for an
+association, and the tab would hold the memory of both files.
 
 A calculation that waits in the queue leaves it at no cost; one that runs
 ends the calculation worker, and a new one starts and reads the variants
@@ -232,7 +259,7 @@ definitions, each once. A calculation that was being stopped and ends
 any other.
 
 The notice goes when it is closed or replaced; a change that removes
-nothing and leaves nothing behind replaces it with none. An analysis is
+nothing, leaves nothing behind and stops nothing replaces it with none. An analysis is
 `removed` while the current notice lists it, or `locked` if it cannot
 run; when the notice is closed or replaced without it, the analysis is
 `ready`. An analysis in the notice that is done again, when a calculation
@@ -417,6 +444,7 @@ export interface Notice {
   readonly cause: { readonly kind: "command" | "undo" | "redo"; readonly description: string };
   readonly removed: readonly AnalysisId[];
   readonly leftBehind: readonly AnalysisId[];  // their calculations will be stopped unless undone
+  readonly stopped: readonly AnalysisId[];     // their calculations were stopped at once by a change of the load
 }
 ```
 
@@ -549,6 +577,13 @@ the owner, on 24 September 2026:
   throws after sending, the store cancels what it sent; the calculations
   left behind that it stopped just before the send stay stopped, since
   their cancel was sent to the worker.
+- **A new variants file picked while calculations run.** Every
+  calculation in flight is stopped at the pick, those the notice before
+  left behind among them; the notice lists their analyses in `stopped`,
+  with the results removed, and leaves nothing behind. An undo of the
+  pick shows the results of the old file that had ended, from the cache,
+  and stops nothing more, since nothing is in flight that is not already
+  being stopped; the analyses whose calculation was stopped are `ready`.
 - **An opened project whose settings are changed and set back.** The
   fingerprint is that of the settings, so the comparison with the check
   numbers comes back with them.
@@ -629,7 +664,12 @@ and one that needs only the variants file.
   then `startRun` of the second for its new key: `cancel()` of the old
   request is called before `send`, the new request is `afterStop`, and the
   notice keeps its removed results and has no `leftBehind`, or is `null`
-  if it had none. No test waits for a time: the store has no clock.
+  if it had none. Again, then a command that loads another variants
+  file: `cancel()` is called at once, the notice lists the analysis in
+  `stopped` and none in `leftBehind`, and after an undo of that load the
+  old request has been cancelled once and no more. The same with an undo
+  and with a redo that change the load. No test waits for a time: the
+  store has no clock.
 - **A late result**: with the second running, a command, then `runEnded`
   of the old key: the analysis is `ready`, the notice does not list it
   among the results removed and its `leftBehind` is empty, the cache holds
@@ -667,9 +707,11 @@ and one that needs only the variants file.
   the cache still holds them; the notice of each change lists exactly the
   analyses that were done before it and are not after it; every request
   in flight whose key the project does not give is named by the notice or
-  stopping; and a request left behind whose notice was closed or replaced
+  stopping; a request left behind whose notice was closed or replaced
   without its key coming back, or that a `startRun` met, has been
-  cancelled.
+  cancelled; and a change of the load of the variants file cancels at
+  once every request in flight, and its notice lists exactly their
+  analyses in `stopped`.
 
 The tests in the browser, of the walking skeleton, check the same through
 the screens, since core reaches them through the store

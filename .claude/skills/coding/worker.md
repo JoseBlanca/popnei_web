@@ -226,7 +226,9 @@ export function createClient(make: {
   5): the store names it in the notice of the change and calls its
   `cancel()` when the notice is closed, when the next change replaces it
   without giving its key back, or when a new request would wait behind
-  it. A request still in the queue leaves it at no
+  it. A change of the load of the variant file is the exception: the
+  store cancels every request in flight at that change, as the owner
+  decided on 25 September 2026. A request still in the queue leaves it at no
   cost, and one that runs ends its worker, as below; either way its
   outcome is `cancelled`. An undo that asks for that key again later sends
   it again, which costs its time and never its correctness.
