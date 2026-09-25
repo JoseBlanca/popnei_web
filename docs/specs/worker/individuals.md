@@ -170,10 +170,14 @@ A Spanish Excel file, `Individuo;Población;Altura` over rows such as
 
 ### The rows and the cells
 
-- **A variants file picked by mistake**: a text whose first line starts
-  with `##fileformat=VCF`, as every VCF starts, or with `#CHROM`, the
-  header of its columns, is refused as `variantsFile`, whatever its
-  separator, as the owner decided on 25 September 2026. Read as a table,
+- **A variants file picked by mistake**: a text whose first line that
+  is not blank, spaces and tabs at its start left out, starts with
+  `##fileformat=VCF`, as every VCF starts, or with `#CHROM`, the header
+  of its columns, is refused as `variantsFile`, whatever its separator,
+  as the owner decided on 25 September 2026. A blank line is one of
+  spaces and tabs alone, or of nothing; a VCF saved with an empty line
+  above its first is still a VCF, and would otherwise be read as a table
+  of one column. Read as a table,
   a VCF whose first lines have no comma would be one column wide, and
   the user would be told that every individual of the variants file is
   missing from it. A compressed VCF has a byte 0 and is `notText`
@@ -212,7 +216,14 @@ A Spanish Excel file, `Individuo;Población;Altura` over rows such as
   same day, since such a column has no values any more than one of
   empty cells, which Excel adds with a trailing separator. A column with
   an empty name and some value is refused, as `unnamedColumn`, with its
-  number, counted from 1 in the file. Two
+  number, counted from 1 in the file. The run of empty cells at the end
+  of the header that is not dropped, because one of its columns has a
+  value in some row, is checked so before the lengths of the rows: the
+  user sees no name there, and a count of the header that took those
+  cells in would be a number shown nowhere. `id;pop;;` over `a;1` and
+  `b;2;3` is refused with "column 3 has values but no name in the
+  header", and not with "line 2 has 2 cells where the header has 3".
+  Two
   columns of one name are refused, as `duplicateColumn`: the populations
   are chosen by the name of their column (`docs/specs/core/project.md`,
   "The grouping").
@@ -244,9 +255,10 @@ A Spanish Excel file, `Individuo;Población;Altura` over rows such as
 
 When a file has several of these problems, the one reported is the first
 in this order: a variants file; an unclosed quote; no row below the header, `empty`, also
-for a file with no line at all; a row of the wrong length, the first by
-line; a column with no name, then two columns of one name, the first by
-position; then, row by row in the order of the file, a row with no name
+for a file with no line at all; a column with no name and a value in
+the run of empty cells at the end of the header, the first by position;
+a row of the wrong length, the first by line; a column with no name,
+then two columns of one name, the first by position; then, row by row in the order of the file, a row with no name
 or an individual already seen.
 
 ### The decimal mark and the numbers
@@ -649,9 +661,12 @@ line break:
 | `id,n\r\nA,1\r\n\r\nB,2\r\n` and the same with `\r` alone | auto | the same table as with `\n`, the blank line skipped |
 | `id;pop;;\nA;P1;;\n` | auto | columns `id`, `pop` |
 | `id;pop;;\nA;P1\nB;P2;NA\n` | auto | `;`; columns `id`, `pop`: the two empty cells of the header dropped, and the rows of two and three cells fit |
-| `id;pop;;\nA;P1\nB;P2;;x\n` | auto | `raggedRow`, line 2, expected 4, found 2, separator `;`: the fourth column has a value, so nothing is dropped |
+| `id;pop;;\nA;P1\nB;P2;;x\n` | auto | `unnamedColumn`, 4: the fourth column has a value, so the run of empty cells is not dropped, and it is checked before the short row of line 2 |
+| `id;pop;;\na;1\nb;2;3\n` | auto | `unnamedColumn`, 3, and not `raggedRow` at line 2 |
+| `id;pop;;x\nA;P1;;1\nB;P2\n` | auto | `raggedRow`, line 3, expected 4, found 2, separator `;`: the header ends in a name, so its empty cells are not a run at its end |
 | `id,,pop\nA,NA,P1\nB,-,P2\n` | auto | columns `id`, `pop` |
 | `##fileformat=VCFv4.2\n#CHROM\tPOS\n` and `#CHROM\tPOS\tID\n1\t10\tx\n` | auto | `variantsFile` |
+| `\n##fileformat=VCFv4.2\n#CHROM\tPOS\n` and ` \t\r\n#CHROM\tPOS\n` | auto | `variantsFile`, the blank first line passed over |
 | `id,pop\nA,P1\nB\n` | auto | `raggedRow`, line 3, expected 2, found 1, separator `,` |
 | `id,pop\n,P1\n` | auto | `emptyIndividual`, line 2 |
 | `id,pop\nA,P1\nA,P2\n` | auto | `duplicateIndividual`, `A` |
