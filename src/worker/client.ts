@@ -1144,13 +1144,21 @@ function createLife(
         return;
       }
       life.worker = worker;
+      // Each handler reads only while its worker is the current one: a
+      // message an ended worker posted reaches no one, also through a
+      // handler kept from before its end.
       worker.onmessage = (event: MessageEvent<unknown>) => {
-        onData(event.data);
+        if (life.worker === worker) {
+          onData(event.data);
+        }
       };
       worker.onerror = (event: Event) => {
         // The client handles it; the page's error bar is for our own
         // errors (docs/specs/entry.md).
         event.preventDefault();
+        if (life.worker !== worker) {
+          return;
+        }
         // A worker whose script does not load fires a plain Event, with no
         // message; one that stops on an error nothing caught, an
         // ErrorEvent.
@@ -1163,6 +1171,9 @@ function createLife(
         });
       };
       worker.onmessageerror = () => {
+        if (life.worker !== worker) {
+          return;
+        }
         onBroken({
           kind: "workerFailed",
           message: "a message of the worker could not be copied",

@@ -1020,6 +1020,9 @@ interface Watched {
   /** The load of its open, the first request of a calculation worker. */
   openLoad: string | null;
   numPosts: number;
+  /** The handler the client set on it, kept from its ready, through
+      which a message it posted before it was ended can still arrive. */
+  handler: ((event: { readonly data: unknown }) => unknown) | null;
 }
 
 /** What a sequence showed, one list per property of what broke it. */
@@ -1035,6 +1038,8 @@ interface Seen {
   readonly beforeReady: string[];
   /** A second open, or a request of another load than the open's. */
   readonly wrongLoad: string[];
+  /** An answer that is not the one its worker gave for its request. */
+  readonly wrongAnswer: string[];
 }
 
 function watch(role: Watched["role"], seen: Seen): Watched {
@@ -1046,6 +1051,7 @@ function watch(role: Watched["role"], seen: Seen): Watched {
     pending: null,
     openLoad: null,
     numPosts: 0,
+    handler: null,
   };
   const post = fake.postMessage;
   fake.postMessage = (message) => {
@@ -1120,6 +1126,22 @@ function fromWorker(answer: VariantsOpened | Outcome<JobResult>): boolean {
   }
 }
 
+/** A request as the properties know it, to check its answer. */
+type Asked =
+  | { readonly kind: "read"; readonly fileId: string }
+  | { readonly kind: "run"; readonly id: number; readonly key: string }
+  | { readonly kind: "light" };
+
+/** An opened whose first individual is the load of its open. */
+function stampedOpened(id: number, fileId: string): unknown {
+  return { kind: "opened", id, individuals: [fileId], ploidy: 2 };
+}
+
+/** A result whose numVars is `stamp`, the id of its run. */
+function stampedResult(id: number, key: string, stamp: number): unknown {
+  return { kind: "result", id, key, result: { ...RESULT, numVars: stamp } };
+}
+
 /** Runs a sequence on a client over watched workers, then has every
     worker answer what it is left with until nothing is left, and gives
     what each property saw. */
@@ -1130,6 +1152,7 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
     afterEnd: [],
     beforeReady: [],
     wrongLoad: [],
+    wrongAnswer: [],
   };
   const calculation: Watched[] = [];
   const light: Watched[] = [];
@@ -1159,14 +1182,34 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
 
   function track(
     outcome: Promise<VariantsOpened | Outcome<JobResult> | IndividualsAnswer>,
-    calculationRequest: boolean,
+    request: Asked,
   ): void {
     const index = counts.length;
     counts.push(0);
     void outcome.then((answer) => {
       counts[index] = (counts[index] ?? 0) + 1;
+      // The workers stamp an opened with the load of its open, and a
+      // result with the id of its run.
       if (
-        calculationRequest &&
+        answer.kind === "opened" &&
+        request.kind === "read" &&
+        answer.individuals[0] !== request.fileId
+      ) {
+        seen.wrongAnswer.push(
+          `the read of ${request.fileId} got the individuals of ${String(answer.individuals[0])}`,
+        );
+      }
+      if (
+        answer.kind === "done" &&
+        request.kind === "run" &&
+        (answer.key !== request.key || answer.result.numVars !== request.id)
+      ) {
+        seen.wrongAnswer.push(
+          `the run ${String(request.id)} of ${request.key} got the result of ${String(answer.result.numVars)} under ${answer.key}`,
+        );
+      }
+      if (
+        request.kind !== "light" &&
         answer.kind !== "read" &&
         answer.kind !== "refused" &&
         fromWorker(answer) &&
@@ -1197,6 +1240,7 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
     }
     if (!watched.readySent) {
       watched.readySent = true;
+      watched.handler = watched.fake.onmessage;
       deliver(index, READY);
       return;
     }
@@ -1231,10 +1275,10 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
     }
     switch (pending.kind) {
       case "open":
-        deliver(index, opened(pending.id));
+        deliver(index, stampedOpened(pending.id, pending.fileId));
         return;
       case "run":
-        deliver(index, resultOf(pending.id, pending.key));
+        deliver(index, stampedResult(pending.id, pending.key, pending.id));
         return;
     }
   }
@@ -1296,7 +1340,7 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
         loads.push(load);
         client.addFile(load, new File([load], `${load}.nei`));
         const read = client.openVariants({ fileId: load, ...NEI });
-        track(read.outcome, true);
+        track(read.outcome, { kind: "read", fileId: load });
         cancels.push(() => {
           read.cancel();
         });
@@ -1306,7 +1350,7 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
         const load = loads[next.load % Math.max(loads.length, 1)];
         if (load !== undefined) {
           const read = client.openVariants({ fileId: load, ...NEI });
-          track(read.outcome, true);
+          track(read.outcome, { kind: "read", fileId: load });
           cancels.push(() => {
             read.cancel();
           });
@@ -1315,12 +1359,9 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
       }
       case "run": {
         const load = loads[next.load % Math.max(loads.length, 1)] ?? "none";
-        const run = client.run(
-          `k${String(counts.length)}`,
-          job(load),
-          noProgress,
-        );
-        track(run.outcome, true);
+        const key = `k${String(counts.length)}`;
+        const run = client.run(key, job(load), noProgress);
+        track(run.outcome, { kind: "run", id: run.id, key });
         cancels.push(() => {
           run.cancel();
         });
@@ -1328,7 +1369,7 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
       }
       case "individuals": {
         const read = client.readIndividuals("ind", CSV);
-        track(read.outcome, false);
+        track(read.outcome, { kind: "light" });
         cancels.push(() => {
           read.cancel();
         });
@@ -1359,10 +1400,26 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
       case "stale": {
         const ended = calculation.filter((watched) => watched.fake.terminated);
         const watched = ended[next.worker % Math.max(ended.length, 1)];
-        if (watched !== undefined) {
-          stepWorker = calculation.indexOf(watched);
-          emit(watched.fake, resultOf(1, "k0"));
-          emit(watched.fake, opened(1));
+        const pending = calculation.at(-1)?.pending ?? null;
+        const handler = watched?.handler ?? null;
+        if (handler !== null && pending !== null) {
+          // What the ended worker posted before its end, of the id the
+          // current worker runs, through the handler the client set on it.
+          stepWorker = calculation.findIndex(
+            (other) => other.handler === handler,
+          );
+          switch (pending.kind) {
+            case "open":
+              handler({ data: stampedOpened(pending.id, "stale") });
+              break;
+            case "run":
+              handler({
+                data: stampedResult(pending.id, pending.key, -1),
+              });
+              break;
+            case "readIndividuals":
+              break;
+          }
         }
         break;
       }
@@ -1443,6 +1500,14 @@ describe("WS2 D4 the properties of the client", () => {
     await fc.assert(
       fc.asyncProperty(steps, async (sequence) => {
         expect((await explore(sequence)).wrongLoad).toEqual([]);
+      }),
+    );
+  });
+
+  test("every answer is the one its worker gave for its request", async () => {
+    await fc.assert(
+      fc.asyncProperty(steps, async (sequence) => {
+        expect((await explore(sequence)).wrongAnswer).toEqual([]);
       }),
     );
   });
