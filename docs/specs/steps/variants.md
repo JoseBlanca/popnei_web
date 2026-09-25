@@ -45,8 +45,11 @@ once load none: "Drop one variants file at a time." A drop that holds no
 file loads nothing and says what to drop: a folder, "Drop a VCF or a
 .nei file, not a folder.", and a piece of text dragged from another
 window, "Drop a VCF or a .nei file, not a piece of text.". A drop of
-several things, one of them a folder or text, is a drop of several, and
-loads none, as above.
+several things, one of them a folder, is a drop of several, and loads
+none, as above. Text that comes in a drop with a file is left out, and
+the file is loaded, so that a browser that gives a dragged file's name
+as text beside it still loads the file; whether one does was not
+checked.
 
 React Aria's drop zone holds a button of its own, hidden from the eye,
 "Paste a variants file", which takes a file pasted into it with Cmd+V
@@ -378,9 +381,10 @@ ending "Choose another file."; a file named `panel.txt` and its message;
 a piece of text dropped, and its message; 10 and 0.125 typed in the
 threshold, and 300, 0 and 2.5 in the ploidy, each with its line, the
 value kept and the line announced; and the text of the status region
-after each read. A script cannot drop a folder, so the words of a
-folder are checked in node, on the function that tells what a drop
-held. The axe check of each state.
+after each read. A script cannot put a folder into a drop, so the flow
+drops a file whose entry of the file system says it is a folder, which
+is what React Aria asks of each item; the function that tells what a
+drop held is checked in node as well. The axe check of each state.
 
 ## Left for the running application
 
