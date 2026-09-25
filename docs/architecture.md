@@ -445,6 +445,7 @@ interface AnalysisDef<J, R> {           // J: its request; R: its result
   run(p: Project, c: WorkerClient<J, R>): Run<R>; // the request to the worker
   warnings(r: R, p: Project): Warning[]; // raised by the data only
   checkNumbers(r: R): (number | null)[]; // kept in the project file (section 8)
+  numCheckNumbers(p: Project): number | null; // their count, checked at an opening
   script(p: Project): string;            // its lines of the Python script
 }
 ```
@@ -462,7 +463,10 @@ and `filtersRead` were added with that spec, on 24 September 2026:
 the options of an analysis are its module's to check when a project file
 is opened, and the checks per variant and per individual, from which the
 thresholds of the filters are chosen, do not read the filters they are
-used to set. Adding an
+used to set. `numCheckNumbers` was added on 25 September 2026, when the
+owner decided that a project file whose check numbers are not as many as
+its analysis gives is refused as damaged at the opening, since only the
+module of the analysis knows how many it gives. Adding an
 analysis is adding its module and its panel; nothing else changes. This is the
 piece the work is split into, and what lets an analysis be tried, changed
 or dropped without touching the others.
