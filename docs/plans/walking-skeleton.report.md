@@ -586,12 +586,14 @@ a copy in memory.
 |---|---|---|---|
 | its first 130,000 bytes | "could not be read again" | "could not be read again" | popnei's refusal (cut short), then "could not be read again" at 1 |
 | a byte changed in the middle | "could not be read again" | "could not be read again" | popnei's refusal, "damaged", at 0.05 and at 1 |
-| 4,096 zero bytes added | "could not be read again" | "could not be read again" | the numbers of the old table, with no word |
+| 4,096 zero bytes added | "could not be read again" | "could not be read again" | a table, with no word: the file changed, and the page said nothing |
 
 So Chromium always refuses a changed file. WebKit refuses it when its
 time of change moved, and reads the new bytes when the rewrite kept
 that time, as `rsync -t` or a tar restoring an older version does. In
-that case one rewrite gives numbers with no word. Firefox is measured
+that case the rewrite that added bytes gave a table with no word. Here
+the added zeros did not change the numbers; a rewrite that changed the
+genotypes and kept the time would give other numbers, with no word. Firefox is measured
 by the owner by hand.
 
 ### Other measurements of task 8.3
