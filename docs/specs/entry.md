@@ -95,19 +95,26 @@ Chrome and Edge 111, Firefox 115, Safari 16.4 (`docs/technology.md`,
 section 6), fails on the first function or syntax it lacks, and the page
 would show "Loading…" for ever. It does three things:
 
-- **It tests the browser** for `Array.prototype.findLast`, which React
-  Aria calls and which Chrome 97, Firefox 104 and Safari 15.4 were the
-  first to have (section 6 of `docs/technology.md`). When it is missing,
+- **It tests the browser** for `Array.prototype.toSorted`, which the
+  code of core calls, the keys, the cache and the project file, and which
+  Chrome 110, Firefox 115 and Safari 16 were the first to have (section 6
+  of `docs/technology.md`). It was `findLast`, of Chrome 97 and Firefox
+  104, until the review of 25 September 2026 found that a Firefox from
+  104 to 114 passed that test and then failed in its first calculation,
+  since a module worker needs Firefox 114 and `toSorted` Firefox 115,
+  with words that told the user to reload the page. When it is missing,
   the guard writes into `#root` "The application needs Chrome or Edge
   111, Firefox 115 or Safari 16.4, or a newer version, and this browser
   is older." and marks it, so that the entry, when it runs, stops at its
   first line and leaves the message. No single feature marks the floor
-  exactly: a Chrome from 97 to 110, or a Firefox from 104 to 114, passes
-  the test and may then fail inside the application, where the error bar
-  shows the error as one of ours. Those are browsers of 2022 and 2023.
+  exactly: a Chrome 110, or a Safari from 16.0 to 16.3, passes the test
+  and may then fail inside the application, where the error bar shows
+  the error as one of ours. Those are browsers of early 2023.
 - **It listens to the window's `error` event** until the entry takes
   over, and in that time writes into `#root` "The application could not
-  start: ‹the browser's message›. Reload the page." This covers a throw
+  start: ‹the browser's message›. Reload the page.", the message without
+  the "Uncaught " that Chromium puts before it and without its last full
+  stop, since the sentence adds its own. This covers a throw
   while the modules of the application are first run, in a browser that
   passed the test.
 - **It listens to the `error` event of the script element**, in its
@@ -152,7 +159,8 @@ message only after the code that is running has finished:
    (`docs/specs/worker/client.md`, "The calculation worker holds one
    load"); the store ignores a second announcement of the same version.
    The client starts the calculation worker at once, so that popnei's
-   wasm, 0.63 MB gzipped (`docs/technology.md`, section 2), loads while
+   wasm, 2.16 MB, 710.6 KB gzipped (`docs/technology.md`, section 2),
+   loads while
    the user looks for their file.
 5. It makes the saving, `createSaving` (below), which puts the question
    before leaving the page on the window, and draws the error bar again,
@@ -400,6 +408,14 @@ the bar reads (`docs/specs/shell.md`, "The error bar").
   client's `onerror` each call `event.preventDefault()`, which stops it
   there (`docs/specs/worker/client.md`, "Crashes, defects, and every
   read answered"; `runner.md` and `individuals.md` beside it).
+- **An error thrown while React draws a step** is caught by the error
+  boundary around the step's body, in `src/ui/shell/ErrorBoundary.tsx`
+  (`.claude/skills/coding/react.md`, "Errors"), which draws in its place
+  the step's `<h1>` alone, with no words of its own, so that the header,
+  the stepper and the other steps keep working. React then calls
+  `onCaughtError`, and the entry gives the error to the log of the bar
+  with the component stack, as below, so that the bar says what
+  happened; going to another step and back draws the step again.
 - **An error thrown while React draws the shell itself**, outside the
   boundary of every step and every analysis panel, is one React does not
   catch: React then removes everything from the application's root and
@@ -407,9 +423,9 @@ the bar reads (`docs/specs/shell.md`, "The error bar").
   the component stack, the list of the components that were being drawn,
   so that the page says what happened. The bar is in its own root, and
   its Save calls the saving directly, so the user can still save.
-  `onCaughtError`, for what a boundary caught and shows, writes the error
-  and the component stack to the console, since there is no server to
-  send them to.
+  `onCaughtError`, for what a boundary caught, gives it to the log of
+  the bar in the same way, and writes the error and the component stack
+  to the console too, since there is no server to send them to.
 
 ## The TypeScript interface
 
@@ -526,7 +542,10 @@ an error thrown in a loop does not fill the memory of the tab.
   analyses of one id: the entry's listener is already there, so the bar
   says so, with the words it has when there is no store and no Save
   (`docs/specs/shell.md`, "The error bar"), and the application's root is
-  not drawn.
+  not drawn: steps 3 to 7 of "At the opening" run in a `try` whose `catch`
+  empties `#root`, so that "Loading the population genetics
+  application…" does not stay under the bar, and throws the error again
+  for the window's listener.
 - **A browser below the floor**: the start guard's message.
 - **The page reloaded or closed**: the project is lost, since nothing of
   it is kept in the browser; the page asks first when the project has
@@ -610,10 +629,19 @@ rules of accessibility that the tests run on the page:
   loaded. Reload the page."; answered with a file of bad syntax, "The
   application could not start: …".
 
-Two cases cannot be made in the built site without a hook for the
-tests, code that exists only to let a test cause them: a throw while
-React draws the shell, and a `createStore` that throws. They are checked
-by review.
+- A throw while React draws the Variants step, made by an
+  `Intl.NumberFormat` that throws, which its number field calls, shows
+  the bar, and leaves the header, the stepper and the step's `<h1>`.
+- A defect while the entry starts, made by an `Object.freeze` that
+  throws on the first project, which `createStore` freezes, shows the
+  bar with its words for an error as the page started, and no
+  "Loading…".
+- A browser without `Array.prototype.toSorted` shows the guard's words
+  for a browser too old, and no error bar.
+
+One case cannot be made in the built site without a hook for the tests,
+code that exists only to let a test cause it: a throw while React draws
+the shell outside every boundary. It is checked by review.
 
 ## Open points
 

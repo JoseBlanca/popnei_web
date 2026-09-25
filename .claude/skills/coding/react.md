@@ -460,10 +460,12 @@ options and its results.
 
 - **An error boundary per step and per analysis panel**, a small class
   component in `src/ui/shell/ErrorBoundary.tsx`. It catches what throws
-  while rendering and shows, in place of what failed, a message and a
-  button that renders it again; the rest of the application keeps
-  working, and the project, which is in core, is untouched. Without one,
-  an error in any component empties the whole page.
+  while rendering and shows, in place of what failed, its heading alone,
+  the step's `<h1>`; the error goes to the bar at the top of the page,
+  below, through `onCaughtError`, which says what happened. The rest of
+  the application keeps working, and the project, which is in core, is
+  untouched; going to another step and back draws the step again.
+  Without one, an error in any component empties the whole page.
 - It catches errors of rendering and of effects, not of event handlers
   or of the workers. A failure of a worker is data: core puts it in the
   state, and the panel shows it in its error state. A defect thrown in an
@@ -494,8 +496,13 @@ options and its results.
   user does not open, so that the button they pressed would seem to do
   nothing.
 - The entry of the page passes `onUncaughtError` and `onCaughtError` to
-  `createRoot`, which log to the console with the component stack; there
-  is no server to send them to.
+  `createRoot`, which give the error to the bar with the component stack,
+  and `onCaughtError` writes it to the console as well; there is no
+  server to send them to.
+- **React Aria takes its language from the browser** unless it is told
+  otherwise, so the entry wraps each root in its `I18nProvider` with
+  `locale="en-US"`: in a Spanish browser a number field would otherwise
+  show 0,1 and read its buttons aloud in Spanish, in an English page.
 
 ## Performance
 

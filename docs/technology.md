@@ -119,6 +119,12 @@ by hand and that the applications need: select, switch, number field,
 checkbox, tabs, dialog, disclosure, toast, a sortable table, and a drop
 zone and a file picker for loading files. The look is ours, in CSS.
 
+What it costs: 50.7 KB gzipped of the first script of the page of the
+walking skeleton, 19 KB of it its translations into 34 languages,
+measured with source maps on 25 September 2026 on the Vite build.
+The application is in English, and the entry sets the language of React
+Aria to English, `en-US`, whatever the language of the browser.
+
 Not taken: component libraries with their own look, MUI, Chakra,
 Mantine, which bring a style we would fight and, for Chakra, a history of
 large rewrites; and Radix Primitives, whose maintenance slowed.
@@ -233,7 +239,7 @@ to a wasm module:
 
 | | raw | gzipped |
 |---|---|---|
-| the wasm package of popnei, for comparison | 1.98 MB | 0.63 MB |
+| the wasm package of popnei, for comparison, release js-v0.1.0-dev.2 as Vite builds it | 2.16 MB | 0.71 MB |
 | calamine, reading | 0.52 MB | 0.29 MB |
 | rust_xlsxwriter, writing | 0.90 MB | 0.35 MB |
 | zip | 0.29 MB | 0.12 MB |
@@ -454,7 +460,9 @@ The applications run from Chrome and Edge 111, Firefox 115 and Safari
 is higher than popnei's own floor for the library, Chrome 91, Firefox 89
 and Safari 16.4, which stays as it is. The reasons: React Aria calls
 `Array.prototype.findLast`, Chrome 97 and Firefox 104, and `at`, Firefox
-90; a module worker, which lets the files wasm be loaded apart, needs
+90; the code of the core calls `toSorted`, Chrome 110, Firefox 115 and
+Safari 16, which the start guard of each page tests for
+(`docs/specs/entry.md`, "The page"); a module worker, which lets the files wasm be loaded apart, needs
 Firefox 114; and what is lost is Chrome and Firefox of 2021 to 2023,
 while Safari, and so every browser of iOS, stays at 16.4. The versions
 are those of MDN's compatibility data. What follows from it, the
