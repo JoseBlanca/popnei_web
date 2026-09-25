@@ -743,9 +743,11 @@ reads it, so the versions of a download are shown beside it on the page
 (point E of `docs/specs/stage-2-open-points.md`).
 
 A button, "Download the table as CSV", saves `panel.diversity.csv`, the
-name of the variants file without `.nei`, `.vcf` or `.vcf.gz`, so that
-`panel.vcf.gz` gives `panel.diversity.csv` too, and `.diversity.csv`
-after it, with the text `diversityCsv` gives, in UTF-8 with no byte
+name of the variants file without `.nei`, `.vcf` or `.vcf.gz`, in any
+case, so that `panel.vcf.gz` gives `panel.diversity.csv` too, or
+`project` when the name is only one of them, `.nei`, as the name of a
+project file is made (`docs/specs/core/projectFile.md`,
+`projectFileName`), and `.diversity.csv` after it, with the text `diversityCsv` gives, in UTF-8 with no byte
 order mark (below, "Not in this spec"): a header row, one row per
 population, the numbers as `String` writes them, which reads back as the
 same number in any program, and an empty cell for no value; a field with
@@ -766,7 +768,7 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112
 | empty | cannot happen: until the variants file is read the analysis is locked with a reason (`docs/specs/core/store.md`, "The state of an analysis") | |
 | locked | the reason the store gives, as text beside a Run button that is disabled and described by it: "Choose the column that defines the populations in the Individuals step." | go to the step the reason names |
 | ready | a Run button, and the populations it will run on with their sizes, "3 populations: p0, 48 individuals; p2, 84; p1, 68", from `populationsToRun` | Run |
-| running | a progress bar, "Calculating · 35% · 0:12", from the last `progress` of its `RunView`, and the time since it started, counted every second; before the first `progress`, and while the request waits in the queue, the bar moves with no value, "Calculating · 0:12"; after a stop or a change of the load, when the store marks the request `afterStop`, "Waiting for panel.nei to be opened again, then calculating · 0:12" | Stop, which cancels it |
+| running | a progress bar, "Calculating · 35% · 0:12", from the last `progress` of its `RunView`, and the time since it started, counted every second; before the first `progress`, and while the request waits in the queue, the bar has no value and is drawn hatched over its whole length and still, since a bar that moved by itself through a long calculation would be motion the user cannot stop (WCAG 2.2.2), and the clock shows the calculation goes on, "Calculating · 0:12"; after a stop or a change of the load, when the store marks the request `afterStop`, "Waiting for panel.nei to be opened again, then calculating · 0:12" | Stop, which cancels it |
 | done | the table and its download; the warnings above the table, each as a sentence, with their count on the heading, "2 warnings"; after an opened project file, the comparison with its check numbers under the table | download |
 | results removed | "The diversity was removed because the missing data filter changed. Undo brings it back with no calculation; Run calculates it for the new settings." After an undo, whose notice offers Redo: "Redo brings it back ..." | Run; the Undo or Redo of the notice or of the header |
 | error | what happened and what to do, below; a refusal of popnei stays for these settings, and Run is not offered, since popnei would refuse them again | Run again after a failure that is not popnei's; change the settings after a refusal |
