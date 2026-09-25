@@ -41,7 +41,11 @@ without regard to case, is loaded as a CSV or a TSV, the reader finding
 the separator whatever the ending; the picker offers these endings
 first, and any file under "All files". A file ending in `.xlsx` or
 `.xls`, or of any other name, is not loaded in this version, nor are
-several files dropped at once (below, "Its words").
+several files dropped at once (below, "Its words"). A file whose name
+ends in `.vcf`, `.vcf.gz`, `.bcf` or `.nei` is a variants file, and is
+not loaded either: the step says so in the words of the reader for a
+VCF found by its first line, as the owner decided on 25 September
+2026, and not "rename it", which would lead the user to load it.
 
 Once read, the card shows the name, "360 rows, 5 columns", and a button,
 "Remove pops.csv". The first column holds the names of the individuals
@@ -246,19 +250,23 @@ The descriptions of the commands are in the table above. The rest:
   save the sheet with File › Save As › CSV, and load that file." The
   same for `.xls`, whose files are not read in a later version either.
 - **Several files dropped**: "Drop one metadata file at a time."
+- **A variants file, by its name**: "panel.vcf was not loaded: it is
+  a variants file, which the Variants step takes. Load a metadata
+  file.", the words after the colon those of the reader's
+  `variantsFile`, and "was not loaded" as for the other files the step
+  does not load, since none of it was read.
 - **A file of another name**: "pops.dat was not loaded: the Individuals
   step reads a CSV or a TSV, whose name ends in .csv, .tsv or .txt. If
   it is one of them, rename it."
 
-  These three stay beside the zone until the next pick, are the
+  These four stay beside the zone until the next pick, are the
   screen's and not the project's, and are announced when they appear,
   through the function the shell gives the screens, since the focus
   stays on the button.
 - **Reading**, **a refusal of the reader**, **a worker that failed**:
   the reason `individualsStepNeeds` gives, whole, "Reading pops.csv.",
   "pops.csv could not be read: line 7 has 3 cells where the header has
-  4, read with the semicolon as the separator. Choose another separator
-  above, or load a corrected file.", "pops.csv could not be read: it is
+  4, read with the semicolon as the separator. Choose another separator, or load a corrected file.", "pops.csv could not be read: it is
   a variants file, which the Variants step takes. Load a metadata
   file.", as the Variants step shows `variantsStepNeeds`
   (`docs/specs/steps/variants.md`, "Its words"); the words of the
