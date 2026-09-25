@@ -28,6 +28,7 @@ import {
   wholeProject,
 } from "./testSupport.ts";
 import type { TestDefResult } from "./testSupport.ts";
+import type { DiversityResult, JobResult } from "../worker/protocol.ts";
 
 // What the tests of the project file share: the definitions of the
 // application of population genetics, a state of the store built from a
@@ -1265,6 +1266,69 @@ describe("WS6 D2 the opening", () => {
           "7 numbers for the analysis diversity, as many as the rest of the file gives it, and not 6",
       },
     });
+  });
+
+  test("with the diversity's own definition, a Save writes as many check numbers as its opening asks for, from a result and from a check kept of the reference", () => {
+    const opening = readProjectFile(
+      fixture("v1-nei-diversity.popnei.json"),
+      "popgen",
+      POPGEN_ANALYSES,
+    );
+    if (!opening.ok || opening.value.reference === null) {
+      throw new Error("the fixture opens, with its reference");
+    }
+    const opened = opening.value;
+    const reference = opening.value.reference;
+    // The file the project was made with, given again.
+    const p = deepFreeze<Project>({ ...opened, variants: reference.variants });
+    const result: DiversityResult = {
+      analysis: "diversity",
+      pops: ["north", "south"],
+      numIndividuals: Uint32Array.from([3, 3]),
+      unbiasedExpHet: Float64Array.from([0.31, 0.29]),
+      obsHet: Float64Array.from([0.3, NaN]),
+      polyRatio: Float64Array.from([0.91, 0.89]),
+      numVarsWithValue: Uint32Array.from([1150112, 0]),
+      numVars: 1150112,
+      numVarsRead: 1203554,
+    };
+    const stateWith = (
+      status: AnalysisStatus<JobResult>,
+    ): AppState<JobResult> => ({
+      project: p,
+      undo: null,
+      redo: null,
+      popneiVersion: "0.1.0",
+      analyses: POPGEN_ANALYSES.map((def) => ({
+        id: def.id,
+        status: def.id === "diversity" ? status : { kind: "ready", key: A_KEY },
+      })),
+      runs: [],
+      notice: null,
+    });
+    const done = stateWith({
+      kind: "done",
+      key: A_KEY,
+      result,
+      warnings: [],
+      check: null,
+    });
+    const kept = stateWith({ kind: "ready", key: A_KEY });
+    for (const state of [done, kept]) {
+      const text = writeProjectFile(
+        state,
+        POPGEN_ANALYSES,
+        "0.2.0",
+        "2026-09-25T14:03:11.000Z",
+      );
+      const again = readProjectFile(text, "popgen", POPGEN_ANALYSES);
+      if (!again.ok) {
+        throw new Error(JSON.stringify(again.error));
+      }
+      expect(
+        again.value.reference?.checks.map((c) => c.numbers.length),
+      ).toEqual([7]);
+    }
   });
 
   test("an individuals file whose read is pending is refused as header", () => {
