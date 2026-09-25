@@ -17,8 +17,9 @@ default and not an extra.
 ## Versions
 
 - React 19 (19.3.0 in September 2026) and react-dom of the same version,
-  as a client application: `createRoot` in the entry file of each page,
-  no server rendering, no server components, no framework.
+  as a client application: `createRoot` in the entry of each page, the
+  code that starts when the page opens, makes the store and the workers
+  and joins them; no server rendering, no server components, no framework.
 - React Aria Components 1.x (1.21.1 in September 2026), the one package
   `react-aria-components`, not the separate `@react-aria/*` hooks. The
   components are the stable part of React Aria; the hooks under them are
@@ -110,7 +111,7 @@ export function useAppState<T>(select: (state: AppState<JobResult>) => T): T {
   reads the value during the render, so that two components never show
   two versions of the project in the same frame, which a subscription in
   an effect allows.
-- **The store is made once per page, in the entry file, outside any
+- **The store is made once per page, in the entry of the page, outside any
   component**, and given through `StoreProvider`. A store or a worker made
   inside a component is made again on every mount, and twice in
   development (StrictMode, below). The context lets a test give a
@@ -403,8 +404,9 @@ ends, results removed, is heard only through a live region.
   to whoever looks at it.
 - **The notice of removed results is a toast** of React Aria, which is a
   labelled landmark that F6 reaches and whose content is announced. It
-  holds the action that reverses what caused it, Undo, or Redo after an
-  undo (`docs/specs/core/store.md`), and it stays until the next command or until it
+  holds the action that reverses what caused it, Undo after a command or
+  a redo, Redo after an undo (`docs/specs/core/store.md`), and it stays
+  until the next command, undo, redo or opening replaces it, or until it
   is closed: it has an action, and a notice with an action that
   disappears on a timer fails a user who is slow to reach it (WCAG 2.2.1).
   Undo and Redo are also always in the header and on Ctrl+Z and
@@ -462,11 +464,12 @@ options and its results.
   state, and the panel shows it in its error state. A defect thrown in an
   event handler goes to the window's handler, below.
 - **An error that nothing else shows**, one thrown in an event handler
-  of the page, a click among them, or in a promise the page awaits,
-  reaches no error boundary: React calls an event handler outside its
-  rendering, and a promise rejects after the handler has returned. The
+  of the page, a click among them, or in a promise whose rejection
+  nothing handles, reaches no error boundary: React calls an event
+  handler outside its rendering, and a promise rejects after the handler
+  that made it has returned. The
   browser fires the window's `error` event for the first and its
-  `unhandledrejection` event for the second, and the entry file listens
+  `unhandledrejection` event for the second, and the entry of the page listens
   to both and shows the error in a bar at the top of the page: "The
   application met an error of its own: ‹message›. Your project is intact:
   save it, then reload the page." The project is intact because core
@@ -475,12 +478,14 @@ options and its results.
   the details", which copies the message and the stack, for a report of
   the bug, and it stays until the user closes it. It interrupts what the
   user was doing, so it is `role="alert"`, which a screen reader reads at
-  once. Decided by the owner on 25 September 2026. The options not taken:
+  once. What the bar does with a second error while it is up is the
+  shell's screen spec's to settle, in stage 2. Decided by the owner on 25
+  September 2026. The options not taken:
   a short "Something went wrong" without the message, which leaves the
   user nothing to report; and leaving the error in the console, which a
   user does not open, so that the button they pressed would seem to do
   nothing.
-- The entry file passes `onUncaughtError` and `onCaughtError` to
+- The entry of the page passes `onUncaughtError` and `onCaughtError` to
   `createRoot`, which log to the console with the component stack; there
   is no server to send them to.
 

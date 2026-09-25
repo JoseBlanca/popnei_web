@@ -207,8 +207,8 @@ style can be changed while knowing every place it applies.
   from Markdown in the help, the default focus ring, and the `@font-face`
   if a typeface is chosen; and `src/charts/charts.css`, the classes of the
   plots, which all start with `chart-` because D3 writes them as strings
-  (`charts.md`). The first two are imported once, in the entry file of
-  each page, and `charts.css` by the plots that use it.
+  (`charts.md`). The first two are imported once, in the entry of
+  each page, the code that starts when it opens, and `charts.css` by the plots that use it.
 
 ## Layout
 
