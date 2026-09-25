@@ -1,7 +1,13 @@
 # The reader of the individuals file
 
-25 September 2026, approved by the owner on 25 September 2026; there is no
-code yet. The reader turns the CSV or TSV file of the individuals, the
+25 September 2026, approved by the owner on 25 September 2026; built in
+`src/worker/individuals/` and `src/worker/individualsFile.ts`; revised
+the same day for the owner's decisions on the reviews of work packages
+2 to 6 and 8 of `docs/plans/walking-skeleton.md`, which its report lists
+at its end: the empty cells at the end of a header, a variants file
+picked by mistake, the byte order mark of UTF-8 with a bad byte, a
+UTF-16 file cut short, and a column with no name whose cells are all
+missing. The reader turns the CSV or TSV file of the individuals, the
 metadata file of population genetics or the traits file of association,
 into the table the project holds, and infers the type of each of its
 columns. It runs in the light worker, the second thread of the tab that
@@ -90,17 +96,29 @@ is shown for a table other than the one on the screen.
    whatever the encoding option says, and UTF-16 is not offered as a
    choice. No file is refused for its encoding, as the owner decided on
    24 September 2026, and the coordinator of the specs applied it to
-   these files on 25 September 2026. Any other file with a byte 0 anywhere in it, the whole file being
-   looked at, is
-   not text, an xlsx, a gzipped VCF or a `.nei` file picked by mistake,
-   and is refused as `notText`.
+   these files on 25 September 2026. A UTF-16 file whose bytes after the
+   mark are odd in number, or whose last two bytes are the first half of
+   a character written in four, ends in the middle of a character. It is
+   refused as `cutShort`, with no line, since the cut is at the end of
+   the file and not on a line the user could look at, as the owner
+   decided on 25 September 2026: such a file was most often cut short on
+   its way, and a table read from it would lack its last rows without a
+   word. Any other file with a byte 0 anywhere in it, the whole file
+   being looked at, is not text, an xlsx, a gzipped VCF or a `.nei` file
+   picked by mistake, and is refused as `notText`.
 4. The three bytes `EF BB BF` at the start, the byte order mark of UTF-8,
    the BOM, which Excel writes in "CSV UTF-8", are removed, whatever the
-   encoding.
+   encoding. With `"auto"`, the BOM decides UTF-8, as the mark of UTF-16
+   decides UTF-16: the file is decoded as with `"utf-8"`, below, and a
+   bad byte in it is the replacement character, as the owner decided on
+   25 September 2026. Read as Windows-1252 whole, as a file without the
+   mark would be, every accented letter of a "CSV UTF-8" with one
+   damaged byte would come out wrong.
 5. With `"utf-8"`, the bytes are decoded with `new TextDecoder("utf-8")`,
-   which puts the replacement character in the place of an invalid byte.
-   With `"windows-1252"`, with `new TextDecoder("windows-1252")`, which
-   gives a character for every byte and so never fails. With `"auto"`,
+   which puts the replacement character, U+FFFD, shown as �, in the place
+   of an invalid byte. With `"windows-1252"`, with `new
+   TextDecoder("windows-1252")`, which gives a character for every byte
+   and so never fails. With `"auto"` and no BOM,
    first with `new TextDecoder("utf-8", { fatal: true })`, and when that
    throws, as Windows-1252: what Excel on Windows writes for "CSV (comma
    delimited)" in Spanish and the other languages of Western Europe
@@ -110,7 +128,17 @@ is shown for a table other than the one on the screen.
    UTF-8, which needs pairs such as `Ã` followed by `±` wherever an
    accent is, and does not happen in a real text. No file is refused for its encoding, as the owner decided on
    24 September 2026.
-6. The text goes to the reader, which removes a character U+FEFF at its
+6. The line of the first replacement character of the text, counted as
+   the reader counts its lines, below, is `found.undecodedLine`, and
+   `null` when the text has none; the Individuals step shows a warning
+   that names it, as the owner decided on 25 September 2026
+   (`docs/specs/steps/individuals.md`, "Its words"). It comes from a bad
+   byte of UTF-8, set or decided by the BOM, and from half of a
+   character of UTF-16 in the middle of the file; Windows-1252 gives
+   none. A U+FFFD that the file holds itself, written by a program that
+   had already lost a character, is taken the same way, since it too
+   stands where a character was lost.
+7. The text goes to the reader, which removes a character U+FEFF at its
    start, so that a text given with its BOM, as a test may give it,
    reads the same.
 
@@ -119,8 +147,10 @@ is shown for a table other than the one on the screen.
 With a separator set, the file is read with it. With `"auto"`, the reader
 counts the cells of each row with each of the three separators, a tab,
 `;` and `,`, with the quotes of the next section, and without making the
-cells. The blank rows of the next section are skipped here too, and the
-header is the first row that is not blank. A separator fits the file
+cells. The blank rows of the next section are skipped here too, the
+header is the first row that is not blank, and its cells are counted
+without the empty ones at its end whose columns hold no value, as the
+next section says. A separator fits the file
 when it gives the header two cells or more and every row as many cells
 as the header; a row with more cells,
 whose cells past the header are all empty, fits too. A separator with
@@ -140,6 +170,14 @@ A Spanish Excel file, `Individuo;Población;Altura` over rows such as
 
 ### The rows and the cells
 
+- **A variants file picked by mistake**: a text whose first line starts
+  with `##fileformat=VCF`, as every VCF starts, or with `#CHROM`, the
+  header of its columns, is refused as `variantsFile`, whatever its
+  separator, as the owner decided on 25 September 2026. Read as a table,
+  a VCF whose first lines have no comma would be one column wide, and
+  the user would be told that every individual of the variants file is
+  missing from it. A compressed VCF has a byte 0 and is `notText`
+  before this.
 - **The lines** end with `\r\n`, `\n` or `\r`, the last being what old
   versions of Excel for Mac wrote. A line number counts every line of the file
   from 1, the header's included, blank ones and the lines inside a quoted
@@ -161,17 +199,27 @@ A Spanish Excel file, `Individuo;Población;Altura` over rows such as
 - **A blank row**, one whose cells are all empty, `;;;` among them, which
   Excel writes for rows it once formatted, is skipped, wherever it is.
 - **The header** is the first row that is not blank, and gives the names
-  of the columns, as text: `NA` in the header is a column named `NA`. A
-  column whose name is empty and whose cells are all empty is dropped,
-  which removes the columns Excel adds with a trailing separator. A
-  column with an empty name and some value is refused, as
-  `unnamedColumn`, with its number, counted from 1 in the file. Two
+  of the columns, as text: `NA` in the header is a column named `NA`.
+  The empty cells at the end of the header whose columns hold no value
+  in any row are dropped, and the header is counted without them, as
+  the owner decided on 25 September 2026: a header `id;pop;;` over rows
+  of such cells is a header of two, which is what the user sees in
+  Excel, and a short row is measured against two. The run dropped is the
+  longest at the end of the header whose every cell is empty and whose
+  columns hold, in every row, an empty cell, `NA`, `-`, or no cell at
+  all. A column with an empty name whose cells are all missing, empty,
+  `NA` or `-`, is dropped too, wherever it is, as the owner decided the
+  same day, since such a column has no values any more than one of
+  empty cells, which Excel adds with a trailing separator. A column with
+  an empty name and some value is refused, as `unnamedColumn`, with its
+  number, counted from 1 in the file. Two
   columns of one name are refused, as `duplicateColumn`: the populations
   are chosen by the name of their column (`docs/specs/core/project.md`,
   "The grouping").
 - **The rows** below the header are the individuals, in the order of the
-  file. A row with fewer cells than the header, or with more whose
-  extra cells are not all empty, is refused, as `raggedRow`, with its
+  file. A row with fewer cells than the header, counted as above, or
+  with more whose cells past the whole header are not all empty, is
+  refused, as `raggedRow`, with its
   line, the cells it has and the cells of the header. The option not
   taken was to read a short row as ending in missing cells, as pandas
   does: a cell lost in the middle of a row would then move the values
@@ -195,7 +243,7 @@ A Spanish Excel file, `Individuo;Población;Altura` over rows such as
   later by what uses the column.
 
 When a file has several of these problems, the one reported is the first
-in this order: an unclosed quote; no row below the header, `empty`, also
+in this order: a variants file; an unclosed quote; no row below the header, `empty`, also
 for a file with no line at all; a row of the wrong length, the first by
 line; a column with no name, then two columns of one name, the first by
 position; then, row by row in the order of the file, a row with no name
@@ -316,17 +364,18 @@ A refusal is a value, never an exception: the reader returns a `Result`
 (`.claude/skills/coding/typescript.md`, "Errors"), and the runner gives it
 back as the result of the read, not as a failure of the request
 (`.claude/skills/coding/worker.md`, "Errors are values"). The project
-records it, and `individualsNeeds` of `src/core/project.ts` shows it as
-"pops.csv could not be read: ‹what the reader found›. Load a metadata
-file in the Individuals step.", with the file named as each application
-names it, "a metadata file" in population genetics and "a traits file"
-in association, as the owner decided on 25 September 2026, and the
-names and counts shown as that
-spec says (`docs/specs/core/project.md`, "What every analysis needs").
-This spec owns the words after the colon, which settles **Open 5** of
-that spec; the first four are the ones its meanwhile gave, but for the
-words of `empty`, which change. Each is a kind of `IndividualsFileError`,
-and the last six are new:
+records it, and `src/core/project.ts` shows it as "pops.csv could not
+be read: ‹what the reader found›." and what to do: beside a Run button,
+`individualsNeeds` ends it "Load a metadata file in the Individuals
+step."; in the Individuals step, `individualsStepNeeds` ends it by what
+mends it there (`docs/specs/core/project.md`, "What an analysis needs of
+every project"). The file is named as each application names it, "a
+metadata file" in population genetics and "a traits file" in
+association, as the owner decided on 25 September 2026, and the names
+and counts are shown as that spec says. This spec owns the words after
+the colon, which settles **Open 5** of that spec; the first four are the
+ones its meanwhile gave, but for the words of `empty`, which change.
+Each is a kind of `IndividualsFileError`, and the last eight are new:
 
 | kind | what the user reads after "could not be read:" |
 |---|---|
@@ -340,6 +389,8 @@ and the last six are new:
 | `tooLarge` | "it is 312.4 MB, more than the 20 MB a metadata file can have; check that it is the metadata file and not the variants", with the name of the file of the application, "a traits file" in association |
 | `unreadable` | "the browser could not read it; it may have been changed, moved or deleted since it was picked" |
 | `notText` | "it is not a text file; in Excel, save the sheet as CSV" |
+| `variantsFile` | "it is a variants file, which the Variants step takes" |
+| `cutShort` | "it ends in the middle of a character and may have been cut short" |
 
 A size is in MB of 1,000,000 bytes, as macOS shows it, with one
 decimal rounded up, so that a file of 20,000,001 bytes is "20.1 MB" and
@@ -350,11 +401,11 @@ The separator of `raggedRow` and `unclosedQuote` is the one the read
 used, set or found, named as the select of the Individuals step names
 it, the comma, the semicolon or the tab, since a wrong separator is the
 likeliest cause of both and a failed read has no `found` to show it; the
-owner decided on 25 September 2026 that the refusal says it. The
-ending, "Load a metadata file in the Individuals step.", fits every
-row: each is mended by picking a file again, the same one changed or
-another, or, for the two of a separator, by setting the separator in
-that step.
+owner decided on 25 September 2026 that the refusal says it. The owner
+decided the same day that in the Individuals step these two end "Choose
+another separator above, or load a corrected file.", since a wrong
+separator is their likeliest cause and the separator is set just above
+the refusal there.
 
 ## The TypeScript interface
 
@@ -439,6 +490,15 @@ export function readIndividualsFile(file: BytesSource, csv: CsvOptions): Promise
 
 `CsvFound.encoding` gains `"utf-16"`, which only the mark of a file
 gives; `CsvOptions.encoding` does not, since the mark decides it.
+`CsvFound` gains `undecodedLine: number | null`, the line of the first
+character that could not be decoded, shown as �, counted from 1 as a
+refusal counts its lines, or `null` when every character was decoded
+("The bytes and the encoding", point 6). It is in `found` and not
+beside it because it is a fact of the decoding of a text, which an
+xlsx, whose `found` is `null`, does not have; it is saved in the
+project file with the rest of `found`, so that a project opened again
+shows the same warning. It enters no key: the table does, and the line
+changes nothing that is calculated.
 
 `found` holds the three options used, set or found, so that the screen
 shows them all; which of them were `"auto"` it knows from the `csv` of
@@ -452,8 +512,8 @@ entry the read or the refusal, and the entry records it into the store
 as the project's `IndividualsRead`, a read or a failure
 (`docs/specs/entry.md`, "Who asks for a read").
 
-The union of the refusals, in `src/worker/protocol.ts`, grows by six
-kinds:
+The union of the refusals, in `src/worker/protocol.ts`, grows by eight
+kinds, the last two with the owner's decisions of 25 September 2026:
 
 ```ts
 export type IndividualsFileError =
@@ -469,7 +529,9 @@ export type IndividualsFileError =
       separator: "," | ";" | "\t" }
   | { kind: "tooLarge"; size: number; max: number }    // in bytes
   | { kind: "unreadable"; message: string }            // the browser's, for the console
-  | { kind: "notText" };
+  | { kind: "notText" }
+  | { kind: "variantsFile" }                           // a VCF picked by mistake
+  | { kind: "cutShort" };                              // UTF-16 that ends in the middle of a character
 ```
 
 `src/core/project.ts` learns them in two places: the words above, in
@@ -497,9 +559,10 @@ errors nothing else shows").
   columns. The user sees it in the table, and the check against the
   variants names that individual as missing from the file.
 - **A VCF of less than 20 MB, not compressed**, picked by mistake: its
-  first lines, `##fileformat=VCFv4.2` and the others, are not a table,
-  so the file is refused as a row of the wrong length within its first
-  lines, which names the line.
+  first line, `##fileformat=VCFv4.2`, refuses it as `variantsFile`. A
+  VCF whose first lines were cut away, so that it starts with a line of
+  genotypes, is read as a table and refused, or reads as one column,
+  as any text that is not a table.
 - **A title line above the header**: Excel writes it as `Tabla 1;;`, a
   header of three cells of which two are empty, and the file is refused
   with "column 2 has values but no name in the header", which leads the
@@ -583,6 +646,10 @@ line break:
 | `id,n\nA,"x, y"\nB,"say ""hi"""\n` | auto | cells `x, y` and `say "hi"` |
 | `id,n\r\nA,1\r\n\r\nB,2\r\n` and the same with `\r` alone | auto | the same table as with `\n`, the blank line skipped |
 | `id;pop;;\nA;P1;;\n` | auto | columns `id`, `pop` |
+| `id;pop;;\nA;P1\nB;P2;NA\n` | auto | `;`; columns `id`, `pop`: the two empty cells of the header dropped, and the rows of two and three cells fit |
+| `id;pop;;\nA;P1\nB;P2;;x\n` | auto | `raggedRow`, line 2, expected 4, found 2, separator `;`: the fourth column has a value, so nothing is dropped |
+| `id,,pop\nA,NA,P1\nB,-,P2\n` | auto | columns `id`, `pop` |
+| `##fileformat=VCFv4.2\n#CHROM\tPOS\n` and `#CHROM\tPOS\tID\n1\t10\tx\n` | auto | `variantsFile` |
 | `id,pop\nA,P1\nB\n` | auto | `raggedRow`, line 3, expected 2, found 1, separator `,` |
 | `id,pop\n,P1\n` | auto | `emptyIndividual`, line 2 |
 | `id,pop\nA,P1\nA,P2\n` | auto | `duplicateIndividual`, `A` |
@@ -614,6 +681,13 @@ in a `Blob`:
   character, and as big endian, `FE FF`: found UTF-16 and the same
   table, also with the encoding set to Windows-1252; the bytes `PK\x03\x04` and a
   byte 0: `notText`;
+- the Spanish file as UTF-8 with its BOM and the byte `FF` in the
+  third line, with the encoding `"auto"`: found UTF-8, `undecodedLine`
+  3, and a cell with �; the same file without the bad byte:
+  `undecodedLine` `null`; the Spanish file in Windows-1252: `null`;
+- the UTF-16 little endian file with one byte more, and with its last
+  character the first half of one written in four, the bytes `3D D8`:
+  `cutShort`;
 - a source whose `size` is 20,000,001 and whose `arrayBuffer` the test
   counts: `tooLarge`, and `arrayBuffer` never called;
 - a source whose `arrayBuffer` rejects with a `DOMException` named
