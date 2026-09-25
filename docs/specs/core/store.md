@@ -3,7 +3,8 @@
 24 September 2026, approved by the owner on 24 September 2026, and
 revised on 25 September 2026 for decisions of the owner of that day and
 for the specs of stage 2 the owner approved that day, as
-`docs/specs/stage-2-open-points.md`, "Changes to approved files", lists;
+`docs/specs/stage-2-open-points.md`, "Changes to approved files", lists,
+and again that day for `numCheckNumbers`, which the project file needs;
 built in `src/core/store.ts`. The store is the one object of core that changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.
@@ -73,6 +74,14 @@ tests in the tests.
   the last digit between the engines of the browsers, and would make the
   comparison below say "differs" for the same data. A NaN of popnei is
   given as `null`.
+- `numCheckNumbers` gives how many numbers `checkNumbers` gives for a
+  result of the project it is given, whose variants file is read, or
+  `null` when the project does not fix it. Unlike `keyInputs`, it reads
+  `p.variants`. `projectFile.ts` refuses, when a project file is opened,
+  a check whose count is not this one, with the file's variants file in
+  the project, as the owner decided on 25 September 2026
+  (`docs/specs/core/projectFile.md`, "Opening"); the store does not call
+  it.
 - `script` gives its lines of the Python script, in stage 6.
 
 The store keeps each result to its own definition: it calls `warnings`
@@ -424,6 +433,7 @@ export interface AnalysisDef<J, R> {
   run(p: Project, c: WorkerClient<J, R>): Run<R>;
   warnings(r: R, p: Project): readonly Warning[];
   checkNumbers(r: R): readonly (number | null)[];
+  numCheckNumbers(p: Project): number | null;  // reads p.variants
   script(p: Project): string;
 }
 
