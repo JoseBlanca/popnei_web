@@ -661,6 +661,7 @@ line break:
 | `id,n\r\nA,1\r\n\r\nB,2\r\n` and the same with `\r` alone | auto | the same table as with `\n`, the blank line skipped |
 | `id;pop;;\nA;P1;;\n` | auto | columns `id`, `pop` |
 | `id;pop;;\nA;P1\nB;P2;NA\n` | auto | `;`; columns `id`, `pop`: the two empty cells of the header dropped, and the rows of two and three cells fit |
+| `id,x;pop;;\nA,1;P1\nB,2;P2;NA\n` | auto | `;`; columns `id,x`, `pop`: the search of the separator takes `NA` for no value, so `;` fits with the header counted as two, as `,` does, and wins the tie; were `NA` a value, `;` would not fit and `,` would be taken |
 | `id;pop;;\nA;P1\nB;P2;;x\n` | auto | `unnamedColumn`, 4: the fourth column has a value, so the run of empty cells is not dropped, and it is checked before the short row of line 2 |
 | `id;pop;;\na;1\nb;2;3\n` | auto | `unnamedColumn`, 3, and not `raggedRow` at line 2 |
 | `id;pop;;x\nA;P1;;1\nB;P2\n` | auto | `raggedRow`, line 3, expected 4, found 2, separator `;`: the header ends in a name, so its empty cells are not a run at its end |
