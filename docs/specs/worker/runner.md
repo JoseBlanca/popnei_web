@@ -636,6 +636,13 @@ export function transferablesOf(result: JobResult): ArrayBuffer[];
   calculated over the variants it gives". The missing data filter alone
   cannot be made to keep none on the fixtures: at 0, `panel.nei` keeps 2
   variants of its 1,200.
+- **A VCF with no variant.** A VCF of a header alone, with two
+  individuals, opens, and its diversity is refused with "the pass gave
+  no variant and its source holds none: a statistic of a pass is
+  calculated over the variants it gives", with no filter and with the
+  missing data filter at 0.1 alike, as the popnei of the release gave it
+  in node on 25 September 2026. The diversity tells the user that the
+  file has no variants (`diversity.md`, "Its words").
 - **A population of fewer than 20 individuals** is not refused: its
   values are NaN, since no variant has 20 called individuals in it.
   `tetraploid.vcf.gz` read with ploidy 4, as one population of 12, gives
@@ -864,8 +871,11 @@ The tests, each at `open` and `run` of a runner made by `createRunner`:
 - **popnei's refusals**, each `refused` with the message of "The cases"
   as a literal: `tetraploid.vcf.gz` with ploidy 2, at the run after an
   `opened` of 12 individuals; `bad.vcf` at the open, as a VCF and as a
-  `.nei` file; the missing data filter at 0.05 with a MAF filter at 0.
-  The same messages were given by both releases.
+  `.nei` file; the missing data filter at 0.05 with a MAF filter at 0;
+  a VCF of a header alone, with no filter and with the missing data
+  filter at 0.1. The same messages were given by both releases, but
+  that of the VCF of a header alone, looked at in `js-v0.1.0-dev.2`
+  only.
 - **The defects**: a `run` before the `open`, a `run` of another load
   id, a `run` after the `open` of `bad.vcf` that popnei refused, a second
   `open`, two populations of one name and a job with a filter of
