@@ -1,6 +1,14 @@
 # The Individuals step, in the walking skeleton
 
-Written on 25 September 2026, and approved by the owner the same day. The screen
+Written on 25 September 2026, and approved by the owner the same day;
+built in `src/ui/steps/individuals/`; revised the same day for the
+owner's decisions on the review of work package 8 of
+`docs/plans/walking-skeleton.md`, points 5 to 7 of its report: the
+first values joined by " · ", the check of the individuals under a
+heading of its own, and the ends of the refusals of the reader; and for
+the warning of a character not decoded and the refusal of a variants
+file, of the owner's decisions on the reviews of work packages 2 to 6.
+The screen
 spec of the second step of the population genetics application as the
 walking skeleton of stage 2 builds it (`docs/build-order.md`): the user
 picks the metadata file, a CSV or a TSV, sees how it was read and can
@@ -37,7 +45,10 @@ several files dropped at once (below, "Its words").
 
 Once read, the card shows the name, "360 rows, 5 columns", and a button,
 "Remove pops.csv". The first column holds the names of the individuals
-(`docs/functionality.md`, section 4).
+(`docs/functionality.md`, section 4). When the read could not decode a
+character, `found.undecodedLine` of `docs/specs/worker/individuals.md`,
+the card also shows the warning of a character not decoded, below
+("Its words"), which names the line.
 
 ### How the file was read
 
@@ -90,8 +101,10 @@ reader inferred it, which the user reads and does not change in this
 version (`docs/functionality.md`, section 4), "identifier" for the
 first, "binary" with its two values, "binary: yes, no", "continuous", or
 "categorical"; and its first three distinct values that are not
-missing, "España, Italia, Perú", so that a wrong encoding, separator or
-decimal mark shows. A line above the table: "The types are inferred
+missing, joined by " · ", "España · Italia · Perú", so that a wrong
+encoding, separator or decimal mark shows. The dot and not a comma, as
+the owner decided on 25 September 2026, because a column of the decimal
+comma would read "1,75, 1,62, 1,80". A line above the table: "The types are inferred
 from the values; changing them comes in a later version." The types
 serve the association and the colours of the PCA, which come later;
 here they only show the user how their file was read. The rows of the
@@ -128,8 +141,14 @@ screen would be a command no action of the user made
 
 Every individual of the variants file must be in the metadata file, and
 the rows of other individuals are ignored, as the owner decided on 24
-September 2026 (`docs/functionality.md`, section 4). The card shows
-where the check stands:
+September 2026 (`docs/functionality.md`, section 4). The check has a
+part of its own, with its heading, "Individuals of panel.nei", the name
+of the variants file, or "Individuals of the variants file" while the
+project has none, and it comes after the columns and before the column
+of the populations. The owner decided on 25 September 2026 that the
+individuals missing are not shown under the select of the column, where
+they read as if choosing a column would find them. The part shows where
+the check stands:
 
 - no variants file read: "The individuals are checked against the
   variants file once it is read.";
@@ -168,8 +187,9 @@ some missing the list would leave them out without saying so.
 ## What it sends and reads
 
 It reads `project.individuals`, `project.grouping` and
-`project.variants` of the state of the store, and `individualsNeeds` of
-the project for the reason of a failed read or of missing individuals.
+`project.variants` of the state of the store, `individualsStepNeeds` of
+the project for the reason of a read under way or failed, and
+`individualsNeeds` for that of missing individuals.
 It sends:
 
 | action | command | description |
@@ -235,23 +255,36 @@ The descriptions of the commands are in the table above. The rest:
   through the function the shell gives the screens, since the focus
   stays on the button.
 - **Reading**, **a refusal of the reader**, **a worker that failed**:
-  the reason `individualsNeeds` gives, whole, "Reading pops.csv.",
+  the reason `individualsStepNeeds` gives, whole, "Reading pops.csv.",
   "pops.csv could not be read: line 7 has 3 cells where the header has
-  4, read with the semicolon as the separator. Load a metadata file in
-  the Individuals step.", as the Variants step shows `projectNeeds`
+  4, read with the semicolon as the separator. Choose another separator
+  above, or load a corrected file.", "pops.csv could not be read: it is
+  a variants file, which the Variants step takes. Load a metadata
+  file.", as the Variants step shows `variantsStepNeeds`
   (`docs/specs/steps/variants.md`, "Its words"); the words of the
   refusals are the reader's (`docs/specs/worker/individuals.md`), a
   refused row naming the separator it was read with, as the owner
-  decided on 25 September 2026. The reasons of core name the file as
+  decided on 25 September 2026, and their ends are core's, "Load a
+  corrected file." after a refusal that no separator mends, as the
+  owner decided the same day (`docs/specs/core/project.md`, "What an
+  analysis needs of every project"). The reasons of core name the file as
   each application does, "a metadata file" here and "a traits file" in
   association, as the owner decided the same day (point P of
   `docs/specs/stage-2-open-points.md`): `individualsNeeds` takes the
   words from the application of the project (`docs/specs/core/project.md`,
-  "What an analysis needs of every project"). The ending, read on that very step, and
-  the advice of a crash of the light worker, "the calculation stopped
-  unexpectedly", are among the provisional words of core the owner
-  judges on these screens (`docs/specs/core/project.md`, open points 4
-  and 5).
+  "What an analysis needs of every project"). The advice of a crash of
+  the light worker, "the calculation stopped unexpectedly", is among the
+  provisional words of core the owner judges on these screens
+  (`docs/specs/core/project.md`, open point 4).
+- **A character not decoded**, on the card of a file read, "Warning:
+  line 3 of pops.csv has bytes that could not be read as UTF-8, shown as
+  �. Correct them in the file and load it again, or, if every letter
+  with an accent shows as �, choose Windows-1252 as the encoding.", and,
+  for a file read as UTF-16, whose encoding cannot be chosen, "Warning:
+  line 3 of pops.csv has bytes that could not be read as UTF-16, shown
+  as �. Correct them in the file and load it again." A file read as
+  Windows-1252 has none. The warning is the screen's, made from the
+  read.
 - **Individuals missing**: the reason `individualsNeeds` gives, "12
   individuals of panel.nei are not in pops.csv: ind_031, ind_044 and 10
   more. Add them to the file and load it again in the Individuals
@@ -289,8 +322,8 @@ file with pandas, `pandas.read_csv(path, sep=";", decimal=",")`
 ## Accessibility
 
 - The keyboard goes through the step in this order: the file button,
-  Remove, the encoding, the separator, the decimal mark, the column of
-  the populations, the disclosure of the individuals missing. The table
+  Remove, the encoding, the separator, the decimal mark, the disclosure
+  of the individuals missing, the column of the populations. The table
   of the columns and the list of the populations are read, not operated,
   and hold no stop of the Tab key: the table is a native `<table>`, the
   name of each column in a `<th scope="row">`, and not React Aria's
