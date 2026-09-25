@@ -881,3 +881,12 @@ Under way while the owner looks again at the screens of stops 7.5 and
   found." for a single individual, and "0 populations by pop" in the
   summary line for a column that gives no individual a population, a
   case the spec's table lacks.
+- 9.2, commit 3f78d05: Undo and Redo in the header, Ctrl or Cmd+Z and
+  Ctrl or Cmd+Shift+Z or Ctrl+Y, not inside a text field or a dialog
+  (not Cmd+Y, which opens the history of Safari); each step's state as a
+  word and a symbol, its reason as a tooltip and the link's
+  description, since React Aria's tooltip takes a Link; the summary
+  line; the announcements from the state. `-g "WS9 D3"` gives 14 passed,
+  7 in each engine, of the 20 that 9.3 and 9.4 complete. Seen in
+  Chromium and WebKit with the keyboard. For the review of the screen:
+  a disabled Redo looks close to an enabled one in the light theme.

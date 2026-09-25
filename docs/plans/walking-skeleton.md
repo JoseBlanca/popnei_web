@@ -762,7 +762,7 @@ same numbers.
 - [x] 9.1 `src/ui/shell/words.ts`, from the shell spec's "What it sends
   and reads", "The stepper", "The summary line", "The notice" and "The
   status region", and the tests of the announcer of task 7.3. Serves 1.
-- [ ] 9.2 Undo and Redo in the header and on the keyboard, the states
+- [x] 9.2 Undo and Redo in the header and on the keyboard, the states
   and reasons of the stepper, the summary line, and the announcements
   from the state, which the entry makes at every change of the store.
   Serves 3 and 5. Needs 9.1.
