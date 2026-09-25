@@ -208,6 +208,21 @@ export function columnWarnings(
   return warnings;
 }
 
+/**
+ * The words of a warning, which the screen shows beside its column after
+ * the "Warning: " that is its own (docs/specs/worker/individuals.md, "The
+ * types of the columns"). The numbers are written as JavaScript writes
+ * them.
+ */
+export function columnWarningText(warning: ColumnWarning): string {
+  const measurement = "and is taken as a measurement.";
+  const choice = "it can still be chosen as the column of the populations.";
+  if (warning.numLevels === 1) {
+    return `${warning.column} holds only one whole number, ${String(warning.min)}, written in different ways, ${measurement} If it is a code, such as a numbered population, ${choice}`;
+  }
+  return `${warning.column} holds only ${String(warning.numLevels)} different whole numbers, from ${String(warning.min)} to ${String(warning.max)}, ${measurement} If they are codes, such as numbered populations, ${choice}`;
+}
+
 /** The distinct numbers of the column at `index`, or null when one of its
     values is not a whole number. */
 function wholeLevels(

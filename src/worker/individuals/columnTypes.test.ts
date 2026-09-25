@@ -3,6 +3,7 @@ import type { Cell, ColumnType, IndividualsTable } from "../protocol.ts";
 import {
   MAX_FEW_WHOLE_LEVELS,
   cellNumber,
+  columnWarningText,
   columnWarnings,
   inferColumnTypes,
 } from "./columnTypes.ts";
@@ -271,6 +272,48 @@ describe("WS4 D2 the numbers and the types", () => {
         { kind: "fewWholeLevels", column: "a", numLevels: 3, min: 7, max: 9 },
         { kind: "fewWholeLevels", column: "b", numLevels: 2, min: 1, max: 4 },
       ]);
+    });
+  });
+
+  describe("columnWarningText", () => {
+    test("the words of the reader spec for 5 whole numbers from 1 to 5", () => {
+      expect(
+        columnWarningText({
+          kind: "fewWholeLevels",
+          column: "score",
+          numLevels: 5,
+          min: 1,
+          max: 5,
+        }),
+      ).toBe(
+        "score holds only 5 different whole numbers, from 1 to 5, and is taken as a measurement. If they are codes, such as numbered populations, it can still be chosen as the column of the populations.",
+      );
+    });
+    test("the words for one number written in several ways", () => {
+      expect(
+        columnWarningText({
+          kind: "fewWholeLevels",
+          column: "score",
+          numLevels: 1,
+          min: 1,
+          max: 1,
+        }),
+      ).toBe(
+        "score holds only one whole number, 1, written in different ways, and is taken as a measurement. If it is a code, such as a numbered population, it can still be chosen as the column of the populations.",
+      );
+    });
+    test("a negative and a large number are written as JavaScript writes them", () => {
+      expect(
+        columnWarningText({
+          kind: "fewWholeLevels",
+          column: "year code",
+          numLevels: 2,
+          min: -3,
+          max: 12000,
+        }),
+      ).toBe(
+        "year code holds only 2 different whole numbers, from -3 to 12000, and is taken as a measurement. If they are codes, such as numbered populations, it can still be chosen as the column of the populations.",
+      );
     });
   });
 });
