@@ -9,6 +9,9 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { gunzipSync } from "node:zlib";
 
+// eslint-disable-next-line @typescript-eslint/no-restricted-imports -- the test spies on free() of popnei's Variants, which the runner never exposes
+import { Variants } from "popnei";
+
 import {
   afterAll,
   afterEach,
@@ -324,10 +327,110 @@ describe("WS3 D1 the open and the diversity", () => {
     const result = valueOf(
       opened("panel.nei").run(diversityJob([], pops), ignore),
     );
-    expect(result.pops).toEqual(["10", "2", "p1"]);
-    expect([...result.numIndividuals]).toEqual([48, 84, 68]);
-    expect([...result.unbiasedExpHet]).toEqual(NO_FILTER.unbiasedExpHet);
-    expect([...result.obsHet]).toEqual(NO_FILTER.obsHet);
+    expect(numbersOf(result)).toEqual({
+      ...NO_FILTER,
+      pops: ["10", "2", "p1"],
+    });
+    // With 50 individuals asked for, p0, of 48, has no value at any variant,
+    // so the counts of the three differ and their order shows.
+    const fifty = { ...diversityJob([], pops), minNumIndividuals: 50 };
+    const counts = valueOf(opened("panel.nei").run(fifty, ignore));
+    expect([...counts.numVarsWithValue]).toEqual([0, 1200, 1200]);
+    expect([...counts.polyRatio]).toEqual([NaN, 0.9108333333333334, 0.9175]);
+  });
+
+  test("minNumIndividuals is given to popnei: at 50, p0 of 48 individuals has no value", () => {
+    const job = { ...diversityJob([]), minNumIndividuals: 50 };
+    const result = valueOf(opened("panel.nei").run(job, ignore));
+    expect(numbersOf(result)).toEqual({
+      ...NO_FILTER,
+      unbiasedExpHet: [NaN, 0.344856554637815, 0.35038890489752544],
+      obsHet: [NaN, 0.3512221180544642, 0.356734697819302],
+      polyRatio: [NaN, 0.9108333333333334, 0.9175],
+      numVarsWithValue: [0, 1200, 1200],
+    });
+  });
+
+  test("polyThreshold is given to popnei: at 0.9 fewer variants are polymorphic", () => {
+    // The shares popnei gave in node on 25 September 2026, js-v0.1.0-dev.2.
+    const job = { ...diversityJob([]), polyThreshold: 0.9 };
+    const result = valueOf(opened("panel.nei").run(job, ignore));
+    expect(numbersOf(result)).toEqual({
+      ...NO_FILTER,
+      polyRatio: [0.8458333333333333, 0.8266666666666667, 0.8358333333333333],
+    });
+  });
+
+  test("onlyPassed is given to popnei: of a VCF with 100 variants that failed a filter, true keeps 1100 and false 1200", () => {
+    // The panel's VCF with every twelfth variant marked q10 in its FILTER
+    // column, made here and never written to the disk.
+    let numVariant = 0;
+    const lines = gunzipSync(bytesOf("panel.vcf.gz"))
+      .toString("utf8")
+      .trimEnd()
+      .split("\n")
+      .map((line) => {
+        if (line.startsWith("#")) {
+          return line;
+        }
+        numVariant += 1;
+        if (numVariant % 12 !== 0) {
+          return line;
+        }
+        const fields = line.split("\t");
+        fields[6] = "q10";
+        return fields.join("\t");
+      });
+    const source = new TextEncoder().encode(lines.join("\n") + "\n");
+    for (const [onlyPassed, numVars] of [
+      [true, 1100],
+      [false, 1200],
+    ] as const) {
+      const runner = createRunner();
+      const load: LoadToOpen = {
+        fileId: FILE_ID,
+        format: "vcf",
+        readOptions: { ploidy: 2, onlyPassed },
+      };
+      expect(runner.open(load, { name: "q10.vcf", source }).kind).toBe("ok");
+      const result = valueOf(runner.run(diversityJob([]), ignore));
+      expect([result.numVars, result.numVarsRead]).toEqual([numVars, numVars]);
+    }
+  });
+
+  test("the observed heterozygosity filter at 0.5 keeps 1098 of the 1200 variants", () => {
+    // The counts popnei gave in node on 25 September 2026, js-v0.1.0-dev.2.
+    const filter: VariantFilter = { kind: "obs_het", maxAllowedObsHet: 0.5 };
+    const result = valueOf(
+      opened("panel.nei").run(diversityJob([filter]), ignore),
+    );
+    expect([result.numVars, result.numVarsRead]).toEqual([1098, 1200]);
+  });
+
+  test("the LD filter at an r² of 0.1 within 1000 base pairs keeps 562 of the 1200 variants", () => {
+    // The counts popnei gave in node on 25 September 2026, js-v0.1.0-dev.2.
+    const filter: VariantFilter = {
+      kind: "ld",
+      maxAllowedR2: 0.1,
+      maxDist: 1000,
+    };
+    const result = valueOf(
+      opened("panel.nei").run(diversityJob([filter]), ignore),
+    );
+    expect([result.numVars, result.numVarsRead]).toEqual([562, 1200]);
+  });
+
+  test("the Variants replaced by an open again is freed", () => {
+    const free = vi.spyOn(Variants.prototype, "free");
+    try {
+      const runner = opened("panel.nei");
+      runner.run(diversityJob([missingData(0.05)]), ignore);
+      expect(free).toHaveBeenCalledTimes(0);
+      runner.run(diversityJob([missingData(0.045)]), ignore);
+      expect(free).toHaveBeenCalledTimes(1);
+    } finally {
+      free.mockRestore();
+    }
   });
 
   test("a population named __proto__ is a population like any other", () => {
@@ -720,6 +823,14 @@ describe("WS3 D2 what goes wrong: told, popnei's refusals and the defects", () =
       readOptions: null,
     };
     expect(load.format).toBe("vcf");
+  });
+
+  test("a second open after an open that popnei refused is badRequest", () => {
+    const runner = createRunner();
+    const bad = { name: "bad.vcf", source: bytesOf("bad.vcf") };
+    expect(runner.open(VCF, bad).kind).toBe("refused");
+    const panel = { name: "panel.nei", source: bytesOf("panel.nei") };
+    expect(runner.open(NEI, panel).kind).toBe("badRequest");
   });
 
   test("a second open is badRequest", () => {
