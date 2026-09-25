@@ -568,7 +568,40 @@ recommendation.
 With these, the twelve points of the reviews of work packages 2 to 6,
 listed above under "What the reviews of 2 to 6 ask of the owner".
 
-## 8. The Individuals step and the diversity panel (under way)
+## 8. The Individuals step and the diversity panel
+
+The tasks and the review are done. The owner's stop, task 8.4, is open,
+with the result of point R in Firefox, which the owner measures by hand.
+
+| Deliverable | Command | Result |
+|---|---|---|
+| 1. `WS8 D1` | `npx playwright test --project=chromium --project=webkit -g "WS8 D1"` | 40 passed, 20 in each engine (at least 12) |
+| 2. `WS8 D2` | the same, `-g "WS8 D2"` | 26 passed, 13 in each engine (at least 10) |
+| 3. `WS8 D3` | the same, `-g "WS8 D3"` | 2 passed, 1 in each engine (2) |
+| 4. The measurements | `npx playwright test --project=measure-chromium --project=measure-webkit` | 21 passed, 1 skipped, when the large files were in place (task 8.3); the tables are below |
+| 5. The screenshots | `npm run screens` | 74 passed; the orchestrator looked at the Individuals step read and with individuals missing, and the diversity done and with a warning |
+| 6. Point R and the owner's acceptance | task 8.4 | Chromium and WebKit below; Firefox and the acceptance wait for the owner |
+
+After the review's fixes, on the last commit of the work package:
+`npm test` 1,253 passed; 190 browser tests passed in Chromium and
+WebKit. Seen in Chromium 153 and WebKit 26.6 through Playwright, with
+the mouse and with the keyboard alone; not in Firefox; no screen reader.
+
+The diversity's table gives popnei's numbers to the last digit shown:
+at 0.05, p0 reads 48 individuals, 0.3527, 0.3567 and 0.9288 over 1,152
+variants; at 1, 0.3519, 0.3564 and 0.9267 over 1,200. The spec reviewer
+recomputed every row with popnei's Python API.
+
+What the review fixed that a user would have met: when a run ended, the
+focus fell to the top of the page if the panel had been locked when the
+step was opened; at 320 px, and at 200% zoom, the table squeezed the
+names of the populations to one letter a line; two populations whose
+names differ by an invisible character showed as two rows of one name;
+on iOS the download of the CSV could fail; a column's name could reverse
+the text of its warning. The test review found 12 of 14, then 10, rules
+with no test that failed; each has one now, but the check that the focus
+stays where it is when it was elsewhere, which React makes impossible to
+break.
 
 ### Point R, measured on 25 September 2026
 

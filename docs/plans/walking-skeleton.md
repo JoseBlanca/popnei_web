@@ -679,7 +679,7 @@ CSV.
   under the `<h1>` "Analyses"; its states in `screens.spec.ts`. The
   words of its removed state come from the store's notice, which
   exists without the shell's toast. Serves 2 and 5. Needs 8.1.
-- [ ] 8.3 The Stop in the middle and the measurements: the pass over a
+- [x] 8.3 The Stop in the middle and the measurements: the pass over a
   large VCF timed in WebKit first, and the size of D3's file set from
   it; the two projects of the measurements in `playwright.config.ts`,
   with `testing.md`; point R, whose result the orchestrator gives the
