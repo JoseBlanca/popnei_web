@@ -130,7 +130,7 @@ written as below, the rows of the table shortened here to two:
   "checks": [
     {
       "analysis": "diversity",
-      "numbers": [0.3120051, 0.2987112],
+      "numbers": [1150112, 0.3120051, 0.3089214, 0.9124, 0.2987112, 0.2954871, 0.8977],
       "keyVersion": 1,
       "popneiVersion": "0.1.0",
       "appVersion": "0.2.0"
@@ -166,12 +166,22 @@ written as below, the rows of the table shortened here to two:
   that popnei gave as NaN is `null`, as `checkNumbers` gives it.
 
 Which numbers an analysis saves is its own spec's. For the walking
-skeleton that is the diversity's (`docs/specs/analyses/diversity.md`);
-this spec takes them as a list of numbers and `null`s whose length and
-order the diversity fixes, and assumes they are the mean expected
-heterozygosity of each population, which section 9 of
-`docs/functionality.md` names, in its unbiased form, popnei's
-`unbiasedExpHet`, and in the order of the populations of its result.
+skeleton that is the diversity's (`docs/specs/analyses/diversity.md`,
+"The check numbers"); this spec takes them as a list of numbers and
+`null`s whose length and order the diversity fixes. Meanwhile the owner
+decides **Open 4** of that spec, they are the number of variants the
+filters kept, then, for each population in the order of its result, the
+unbiased expected heterozygosity, the observed heterozygosity and the
+proportion of polymorphic variants: 1 + 3 × the populations, 7 numbers
+for the two populations of the example. Section 9 of
+`docs/functionality.md` names the expected heterozygosity alone, which
+that open point asks to correct.
+
+The options of the analyses are written only for an analysis whose
+options the user set. No screen of stage 2 sets one, the diversity's
+two options keep their defaults (`docs/specs/analyses/diversity.md`,
+"What it does"), so a project of stage 2 writes `"analyses": []`, as the
+example does.
 
 ### What is written of each part
 
@@ -292,10 +302,11 @@ when there is neither.
 
 ### Opening
 
-The shell asks "Open a project and lose this one?" before it opens a file,
-since an opening starts a new history, which an undo does not go back
-through (`docs/specs/core/history.md`, decided by the owner on 24
-September 2026). `readProjectFile` takes the text of the file and gives
+An opening starts a new history, which an undo does not go back through
+(`docs/specs/core/history.md`, decided by the owner on 24 September
+2026), so the shell asks before it opens a file, with the words and at
+the moments of `docs/specs/shell.md`, "Opening". `readProjectFile` takes
+the text of the file and gives
 the project, or the first reason it cannot. It checks, in this order, so
 that the reason given is the one the user can act on:
 
@@ -366,7 +377,9 @@ history with it, stops the calculations in flight and clears the notice
 every analysis is locked until the variants file is given, then ready to
 run.
 
-The shell names the file to give, with `askedFileText`: "This project was
+The Variants step, the stepper and the announcement of the opening name
+the file to give, with `askedFileText` (`docs/specs/steps/variants.md`
+and `docs/specs/shell.md`): "This project was
 made with panel_2026.nei, 342 individuals and 1,203,554 variants. Load it
 in the Variants step to run its analyses again." (**Open 2**). When that
 file is a VCF, the Variants step starts its read options at the
@@ -428,8 +441,9 @@ the application when the key version is not the one saved
 The store's spec left its words to the screen of the project file, in
 stage 6 (`docs/specs/core/store.md`, "The comparison with the check
 numbers"); since the owner moved the project file to stage 2,
-`checkVerdictText` gives them here, in place of that, and the panel of the
-analysis shows them under its result (**Open 2**):
+`checkVerdictText` gives them here, in place of that, and the panel of
+every analysis shows them under its result and has no words of its own
+for the comparison (**Open 2**):
 
 - same: "The same numbers as in the project file: this variants file
   gives the results the project was saved with."
@@ -615,7 +629,9 @@ export function checkVerdictText(verdict: CheckVerdict): string;
 
 On the page, synchronous, as every function of core is. The shell reads
 the file with `File.text()`, which decodes UTF-8, and hands the text to
-`readProjectFile`; it offers the text of `writeProjectFile` as a download.
+`readProjectFile`; the saving of the entry, `createSaving` of
+`src/ui/saving.ts` (`docs/specs/entry.md`, "The saving"), offers the
+text of `writeProjectFile` as a download.
 Reading a file holds its text, the value `JSON.parse` gives and the
 project at once, an estimate of about three times the text, not measured.
 The time to write and read a file with 10,000 individuals will be measured
@@ -639,7 +655,10 @@ the analyses `done`, `ready` or `removed`.
 - **The fixtures of version 1**, files kept under
   `src/core/fixtures/projectFile/`: `v1-empty.popnei.json`, an empty
   project; `v1-nei-diversity.popnei.json`, the example above with a table
-  of 6 rows in 2 populations and the check numbers of the diversity;
+  of 6 rows in 2 populations and the check numbers of the diversity, the
+  7 of the fuller set of its **Open 4**, written when the plan first
+  writes the fixture and, if the owner chooses the shorter set before
+  then, the 3 of it;
   `v1-vcf-pending.popnei.json`, a VCF of ploidy 4 with only the variants
   that passed, its read pending, no individuals file, and one check. Each
   opens into a project written as a literal in its test, and, while
@@ -700,6 +719,11 @@ the analyses `done`, `ready` or `removed`.
 
 ## Open points
 
+The open points of the eleven specs of stage 2 are gathered in
+`docs/specs/stage-2-open-points.md`, where the ones two specs share
+are one point, asked of the owner once; each below keeps its number
+here, and its meanwhile.
+
 1. **The versions of popnei and of the application, per check number.**
    The architecture keeps them once, in the header, and the reference as
    `popneiVersion` and `appVersion` beside its checks. But a file saved
@@ -748,27 +772,31 @@ the analyses `done`, `ready` or `removed`.
    those of this spec. Another answer changes those texts and their tests
    and nothing else.
 
-## What this spec assumes of the specs written beside it
+## What this spec relies on in the specs written beside it
 
 - `docs/specs/analyses/diversity.md`: the id `"diversity"`, a key version
-  of 1, and `checkNumbers` giving the mean unbiased expected
-  heterozygosity of each population, in a fixed order of the populations,
-  `null` for a population with no values; a change to them raises its
-  key version; the panel shows `checkVerdictText` of its `done` state
-  under its result.
-- `docs/specs/shell.md`: Save calls `writeProjectFile` with
-  `store.getState()`, the analyses of the application, the version of the
-  application and `new Date().toISOString()`, and downloads the text under
-  `projectFileName`, at any time, a pending read included; Open asks
-  "Open a project and lose this one?", refuses a file above
-  `MAX_PROJECT_FILE_BYTES`, reads it with `File.text()`, and calls
-  `store.open` with the project or shows `projectFileErrorText`.
-- The Variants step, in the shell or the entry of stage 2: it shows
-  `askedFileText` and `identityWarning`, and starts the read options of a
-  VCF at the reference's.
-- `docs/specs/entry.md`: the page's map of files holds no file under the
-  load ids of an opened project, and nothing of the opening asks for a
-  read, since an opened project has no pending source.
+  of 1, and `checkNumbers` giving its numbers in a fixed order, `null`
+  for a NaN, as its section "The check numbers" has them; a change to
+  them raises its key version; the panel shows `checkVerdictText` of the
+  `check` of its `done` state under its result.
+- `docs/specs/entry.md`: the saving, `createSaving` of `src/ui/saving.ts`,
+  whose `save()` calls `writeProjectFile` with `store.getState()`, the
+  analyses of `src/core/apps.ts`, the version of the application and
+  `new Date().toISOString()`, and downloads the text under
+  `projectFileName`, at any time, a pending read included; and the page's
+  map of files holds no file under the load ids of an opened project,
+  whose sources are read, so nothing of the opening asks for a read.
+- `docs/specs/shell.md`: Save project calls that `save()`; Open project…
+  refuses a file above `MAX_PROJECT_FILE_BYTES`, reads it with
+  `File.text()`, shows `projectFileErrorText` of a file refused, asks
+  before an opening with its own words, and calls `store.open` with the
+  project.
+- `docs/specs/steps/variants.md`: it shows `askedFileText` and
+  `identityWarning`, and starts the read options of a VCF at the
+  reference's.
+- `docs/specs/steps/individuals.md`: it offers to load again, rather
+  than to change the options of the CSV of, an individuals file whose
+  load id the page holds no file for.
 - `docs/specs/worker/*`: nothing of this module.
 
 These choices of this spec change what a user meets, and the owner may

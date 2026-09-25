@@ -138,9 +138,12 @@ where the check stands:
 
 When all three hold, the variants file read, every one of its
 individuals found in the metadata file, and a column chosen: a list of
-the populations, each with its number of individuals of the variants file, "P1 · 48". The individuals whose
-cell is empty in that column come last, "No population · 4, left out of
-the analyses per population" (`docs/functionality.md`, section 4). A
+the populations, each with its number of individuals of the variants
+file, "P1 · 48", as `populationsToRun` of the diversity gives them. The
+individuals of the variants file whose cell is empty in that column, the
+individuals found less those of the populations, come last, "No
+population · 4, left out of the analyses per population"
+(`docs/functionality.md`, section 4). A
 value is a population as it is written in the file, so "P1" and "p1"
 are two. Otherwise no list, since the sizes count the individuals
 of the variants file: before it is read they are not known, and with
@@ -172,28 +175,30 @@ It sends:
 | a column chosen | `setGrouping(p, { kind: "populations", column })` | "the column of the populations changed" |
 | Remove | `removeIndividuals(p)` | "the metadata file was removed" |
 
-Before the command of a pick, the page makes the load id and puts the
-`File` into the map of the worker client, the page's side of the two
-workers, under it, as for the variants file; the entry of the page asks the light worker for the read.
+Before the command of a pick, the step calls `addFile(file)` of
+`src/ui/files.tsx`, which makes the load id and puts the `File` into the
+map of the worker client, the page's side of the two workers, under it
+(`docs/specs/entry.md`, "At the opening"), as for the variants file; the
+entry of the page then asks the light worker for the read.
 
-It needs two functions that are not written yet, since both are made
-from the project, the diversity panel needs the second, and a screen
-writes no such cache of its own (`.claude/skills/coding/react.md`,
-"Reading core"):
+It reads two functions of core, which are made from the project, and
+which a screen does not write as a cache of its own
+(`.claude/skills/coding/react.md`, "Reading core"):
 
-- **the check**, a function of `src/core/project.ts`, to add to
-  `docs/specs/core/project.md` in the plan of stage 2, since other
-  modules may call it:
+- **the check**, a function of `src/core/project.ts` that is not written
+  yet, to add to the approved `docs/specs/core/project.md` before the
+  plan of stage 2, since the shell calls it too:
   `individualsCheck(p): { found: number; missing: string[]; ignoredRows: number } | null`,
   the individuals of the variants file found in the table, all those
   missing in the order of the variants file, and the rows of other
   individuals; `null` when either file is not read. `individualsNeeds`
   is written on it, so that the two never disagree on who is missing.
-- **the populations**, `populationsOf(p)` of the diversity module
-  (`docs/specs/analyses/diversity.md`), from the table alone, narrowed to
-  the individuals of the variants file as its `run` narrows them, by the
-  same function its panel uses for its ready state, "3 populations: p0,
-  48 individuals; …". The list follows its order.
+- **the populations**, `populationsToRun(p)` of the diversity module
+  (`docs/specs/analyses/diversity.md`): the populations of the table
+  narrowed to the individuals of the variants file, as its `run` sends
+  them and its panel lists them in its ready state. The list follows its
+  order. The reasons about the column, at the select, are
+  `populationsNeeds(p)` of the same module.
 
 Both keep their answer for the same two sources, so that a table of
 10,000 rows is not matched again each time React draws the screen again,
@@ -247,16 +252,13 @@ part of the page under it.
 - **The column of the populations not in the file**, after a new file or
   new options of the reader give a table without it; the grouping keeps
   its name and is not changed in silence (`docs/specs/core/project.md`,
-  "The commands"). At the select, the reason the diversity gives, so
-  that one fact has one text: "pops.csv has no column popcat, from which
-  the populations were taken. Choose the column that defines the
-  populations in the Individuals step." The select shows "Choose a
-  column".
+  "The commands"). At the select, the reason `populationsNeeds` gives,
+  of kind `noSuchColumn`, so that one fact has one text; its words are
+  the diversity's (`docs/specs/analyses/diversity.md`, "Why it cannot
+  run"). The select shows "Choose a column".
 - **A column that gives no population**, every individual of the
-  variants file empty in it: at the select, the diversity's reason, "No
-  individual of panel.nei has a population in the column popcat of
-  pops.csv. Fill in the column and load the file again, or choose
-  another column, in the Individuals step."
+  variants file empty in it: at the select, the reason `populationsNeeds`
+  gives, of kind `noPopulation`, in the diversity's words.
 - **Every individual of the variants file found**, and **the
   populations**: above.
 
@@ -293,9 +295,7 @@ file with pandas, `pandas.read_csv(path, sep=";", decimal=",")`
   reader reads out when its text changes, whatever has the focus, the
   element the keyboard acts on, without moving the focus (WCAG 2.2,
   success criterion 4.1.3), with the words of `docs/specs/shell.md`,
-  "pops.csv read: 360 rows, 5 columns.", then "All 342 individuals
-  found." or "12 individuals of panel.nei are not in pops.csv."; a
-  refusal with its reason. A read again after a change of an option is
+  "The status region". A read again after a change of an option is
   announced the same way, since the table under the select changes.
 - An error and the line of the check say what they are in words, and not
   by their colour alone (1.4.1).
@@ -307,32 +307,44 @@ they are right; the order of the parts; the colours of the
 populations, which the PCA assigns in stage 4, where the mockup put a
 dot beside each.
 
-## What this spec assumes of the other specs of stage 2
+## What this spec relies on in the other specs of stage 2
 
-These specs are being written at the same time as this one, on 25
-September 2026, and none is approved.
+Each is a draft of 25 September 2026, and says what is listed here.
 
-- `docs/specs/worker/individuals.md`, a draft of the same day, which
-  this spec follows: the read gives `found` with the three options used,
-  set or detected, so that the first item of each select says what was
-  detected while that option is "auto"; the column names are unique and the first column is the
+- `docs/specs/worker/individuals.md`, which this spec follows: the read
+  gives `found` with the three options used, set or detected, so that
+  the first item of each select says what was detected while that option
+  is "auto"; the column names are unique and the first column is the
   identifier; the words of its refusals are that spec's, after "could
-  not be read:", "it is 312.4 MB, more than the 20 MB an individuals
-  file can have" among them; and `columnWarnings` gives the warning of a
-  column of a few whole numbers, with its words.
-- `docs/specs/analyses/diversity.md`, a draft of the same day: it needs
-  the metadata file, by `individualsNeeds`, and a column chosen; its
-  reasons for a column not in the table and for a column that gives no
-  population are the words above; and `populationsOf` gives the
-  populations and their order.
-- `docs/specs/core/projectFile.md`, a draft of the same day: an opened
-  project keeps the metadata file read, with no `File`, and the screen
-  offers to load it again rather than change its options.
-- `docs/specs/shell.md`, `docs/specs/entry.md` and
-  `docs/specs/worker/client.md`: as the Variants step assumes
-  (`docs/specs/steps/variants.md`).
+  not be read:"; and `columnWarnings` gives the warning of a column of a
+  few whole numbers, with its words.
+- `docs/specs/analyses/diversity.md`: it needs the metadata file, by
+  `individualsNeeds`, and a column chosen; `populationsNeeds` gives its
+  reasons about the column, with their kinds; and `populationsToRun`
+  gives the populations and their order.
+- `docs/specs/core/projectFile.md`: an opened project keeps the metadata
+  file read, with no `File`, and the screen offers to load it again
+  rather than change its options.
+- `docs/specs/shell.md`: the step is drawn in its `<main>` with one
+  `<h1>`, "Individuals"; the shell writes the notice from the description
+  of a command, announces the ends of the reads from the state, and
+  gives the steps `announce` for what they announce themselves.
+- `docs/specs/entry.md`: `addFile(file)` of `src/ui/files.tsx`, called
+  before the command; after every change the entry asks for the read of
+  a pending source with its load id and the options of its CSV.
+- `docs/specs/worker/client.md`: a read of the individuals file is not
+  cancelled by a change of the variants file.
+
+`individualsCheck`, and the function that escapes a name without cutting
+it, are additions to the approved `src/core/project.ts`, listed in
+`docs/specs/stage-2-open-points.md`, "Changes to approved files".
 
 ## Open points
+
+The open points of the eleven specs of stage 2 are gathered in
+`docs/specs/stage-2-open-points.md`, where the ones two specs share
+are one point, asked of the owner once; each below keeps its number
+here, and its meanwhile.
 
 1. **Whether the metadata file, and a column of populations, are
    optional in the walking skeleton.** `docs/functionality.md` section 4
@@ -342,8 +354,8 @@ September 2026, and none is approved.
    individuals file in the Individuals step.", and the diversity locks
    when no column is chosen, "Choose the column that defines the
    populations in the Individuals step." This is the same decision as
-   open point 1 of `docs/specs/analyses/diversity.md`, and the two specs
-   are answered together.
+   open point 1 of `docs/specs/analyses/diversity.md`, asked once as
+   point A of `docs/specs/stage-2-open-points.md`.
    - Locked, the diversity's recommendation for the skeleton: the step
      says "No metadata file. The analyses per population need one." and
      has no item for one population; a user with one population makes a
@@ -369,7 +381,8 @@ September 2026, and none is approved.
    Recommended: each application's name in its reasons, which is a
    parameter of the application to `individualsNeeds`. Meanwhile, the
    reasons as core gives them. It is one of the words the owner took as
-   provisional on 24 September 2026, to be judged on these screens.
+   provisional on 24 September 2026, to be judged on these screens; point
+   P of `docs/specs/stage-2-open-points.md`.
 
 ## Not in this spec
 

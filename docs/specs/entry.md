@@ -14,9 +14,10 @@ develops sections 1, 5, 6 ("Who asks for a read"), 7 and 9 of
 `docs/specs/core/store.md` and `project.md`, which are approved, and on
 `docs/specs/core/projectFile.md`, `docs/specs/worker/messages.md` and
 `client.md`, and `docs/specs/shell.md`, which are drafts of the same day,
-as is every other spec of this stage. The shell gives every word the
-application shows once it has started; the few words of the page before
-that, below under "The page", are this spec's. The stages are those of
+as is every other spec of this stage. The words the application shows
+once it has started are those of the shell, of the steps and of the
+panels, each in its own spec; the few words of the page before that,
+below under "The page", are this spec's. The stages are those of
 `docs/build-order.md`; this one is stage 2, the walking skeleton, the
 smallest application that goes through every part once.
 
@@ -367,7 +368,8 @@ the bar reads (`docs/specs/shell.md`, "The error bar").
   where the bar would show a failure that the client already handles as
   a crash of the worker. So the worker's own `error` handler and the
   client's `onerror` each call `event.preventDefault()`, which stops it
-  there (below, "What this spec assumes").
+  there (`docs/specs/worker/client.md`, "Crashes, defects, and every
+  read answered"; `runner.md` and `individuals.md` beside it).
 - **An error thrown while React draws the shell itself**, outside the
   boundary of every step and every analysis panel, is one React does not
   catch: React then removes everything from the application's root and
@@ -582,6 +584,11 @@ by review.
 
 ## Open points
 
+The open points of the eleven specs of stage 2 are gathered in
+`docs/specs/stage-2-open-points.md`, where the ones two specs share
+are one point, asked of the owner once; each below keeps its number
+here, and its meanwhile.
+
 1. **The version of the application.** The store and the project file
    are given it (`docs/specs/core/store.md`, `appVersion`), the project
    file writes it in its header, and the words of the comparison with
@@ -604,9 +611,9 @@ by review.
 
 ## Not in this spec
 
-- Every word the application shows once it has started, the error bar's
-  among them, the stepper, the notices and the status region:
-  `docs/specs/shell.md`.
+- The words the application shows once it has started: those of the
+  error bar, the stepper, the notices and the status region in
+  `docs/specs/shell.md`, and those of each step and panel in its spec.
 - The worker client, its queue, its starts again and its map of files:
   `docs/specs/worker/client.md`.
 - The steps and the panel of the diversity: `docs/specs/steps/` and
@@ -618,7 +625,9 @@ by review.
   (`.claude/skills/coding/css.md`, "Light and dark"): the walking
   skeleton follows the theme of the system.
 
-## What this spec assumes of the other specs of stage 2
+## What this spec relies on in the other specs of stage 2
+
+Each is a draft of 25 September 2026 and says what is listed here.
 
 - `docs/specs/worker/client.md`: `createClient` with the two functions
   that make the workers and `onPopneiReady`, called as its section "The
@@ -628,10 +637,10 @@ by review.
   each with a handle whose outcome never fails, with the kinds of the
   table above, and a `cancel()`; a read whose `File` is not in its map
   fails as a defect; and its `onerror` of a worker calls
-  `event.preventDefault()`, which that spec does not say yet.
+  `event.preventDefault()`.
 - `docs/specs/worker/runner.md` and `docs/specs/worker/individuals.md`:
   the worker's own `error` handler, which posts `crashed`, calls
-  `event.preventDefault()`, which neither spec says yet.
+  `event.preventDefault()`.
 - `docs/specs/analyses/diversity.md`: its definition, exported for
   `apps.ts`, and `numVarsRead` in its result; its panel reads the time a
   run started from `startedAt` of this spec's `runs.ts`.
@@ -641,5 +650,5 @@ by review.
 - `docs/specs/shell.md`: the words of the error bar with a store and
   without one; the announcer and the announcements made from two states;
   what Save and the question before leaving show.
-- `docs/specs/steps/variants.md` and `individuals.md`: a step calls
-  `addFile` before the command of a pick.
+- `docs/specs/steps/variants.md` and `individuals.md`: a step calls the
+  `addFile` of `src/ui/files.tsx` before the command of a pick.

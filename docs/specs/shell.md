@@ -96,15 +96,15 @@ the link has the pointer or the focus.
 
 | step | state | when | its reason |
 |---|---|---|---|
-| Variants | To do | no variants file | for an opened project, the text of `askedFileText` of `projectFile.ts`, "This project was made with panel_2026.nei, 342 individuals and 1,203,554 variants. Load it in the Variants step to run its analyses again."; otherwise the reason `projectNeeds` gives, "Load a variants file in the Variants step." |
+| Variants | To do | no variants file | for an opened project, the text of `askedFileText` of `projectFile.ts` (`docs/specs/core/projectFile.md`, "Opening"); otherwise the reason `projectNeeds` gives, "Load a variants file in the Variants step." |
 | | Reading | its read is pending | the reason `projectNeeds` gives, "Reading panel.nei." |
 | | Problem | its read failed, or `projectNeeds` gives another reason | the reason `projectNeeds` gives |
 | | Done | read, and `projectNeeds` gives none | — |
 | Individuals | To do | no metadata file | the reason `individualsNeeds` gives, "Load an individuals file in the Individuals step." |
 | | Reading | its read is pending | "Reading pops.csv.", from `individualsNeeds` |
 | | Problem | its read failed, or individuals of the variants file are missing from it | the reason `individualsNeeds` gives |
-| | To do | read, and no column of the populations chosen | "Choose the column that defines the populations in the Individuals step." |
-| | Problem | the column chosen is not in the table, or no individual of the variants file has a population in it | the reason the diversity gives for it |
+| | To do | read, and no column of the populations chosen, `populationsNeeds` of kind `noColumn` | its reason, "Choose the column that defines the populations in the Individuals step." |
+| | Problem | the column chosen is not in the table, or no individual of the variants file has a population in it, `populationsNeeds` of kind `noSuchColumn` or `noPopulation` | its reason |
 | | Done | otherwise | — |
 | Analyses | Locked | every analysis is locked | the reason of the first analysis, "Load a variants file in the Variants step." |
 | | Running | an analysis is running | — |
@@ -119,14 +119,14 @@ the states the store gives each analysis (`docs/specs/core/store.md`,
 "The state of an analysis"); with the diversity alone they are its
 state. The reasons about the column of the populations are the
 diversity's words, "Why it cannot run" of
-`docs/specs/analyses/diversity.md`, given by a function that module
-exports, so that one condition has one text. The step calls the file of
-population genetics the metadata file
+`docs/specs/analyses/diversity.md`, given with their kind by
+`populationsNeeds` of that module, so that one condition has one text.
+The step calls the file of population genetics the metadata file
 (`docs/specs/steps/individuals.md`), and core's reasons call it the
-individuals file, which that spec's **Open 2** asks about. If that spec
-makes the file optional (its **Open 1**), the first To do becomes
-"Optional", with the reason "Without it, every individual is in one
-population."
+individuals file, which is point P of `docs/specs/stage-2-open-points.md`.
+If the owner makes the file optional, point A there, the first To do
+becomes "Optional", with the reason "Without it, every individual is in
+one population."
 
 **The step in the hash.** The step on screen is the one the hash names;
 an empty hash, or one that names no step, shows Variants and leaves the
@@ -158,7 +158,7 @@ not announced when it changes.
 | | being read | "reading pops.csv" |
 | | read failed, or individuals missing, or the column of the populations not in it | "pops.csv could not be read", "12 individuals missing from pops.csv", "column pop not in pops.csv" |
 | | read, no column chosen | "one population" |
-| | read, a column chosen | "3 populations by pop": the number of populations of the function of core that gives them (`docs/specs/steps/individuals.md`, "What it sends and reads"), the individuals with an empty cell not counted |
+| | read, a column chosen | "3 populations by pop": the number of populations `populationsToRun` of `docs/specs/analyses/diversity.md` gives, or `populationsOf` while the variants file is not read, the individuals with an empty cell in no population |
 
 A count is written with a comma between groups of three digits, as core
 writes them (`docs/specs/core/project.md`). A name from the user's
@@ -387,10 +387,7 @@ for a file ending in `.json`. What follows, with the texts of
 
 1. A file larger than 64 MB, `MAX_PROJECT_FILE_BYTES` of
    `projectFile.ts`, is not read, since the page would hold it whole:
-   the text of `tooLarge`, "panel.vcf cannot be opened as a project: it
-   is larger than 64 MB, and a project file, which holds settings and no
-   genotypes, is much smaller. Open the .popnei.json file the
-   application saved."
+   the text of `tooLarge"
 2. The page reads the file as text, with `File.text()`. A file the
    browser cannot read, moved or changed since it was picked, has no
    text of `projectFile.ts`, which reads only text: "panel.popnei.json
@@ -410,10 +407,8 @@ for a file ending in `.json`. What follows, with the texts of
    with; the hash goes to `#variants`, where the step asks for the
    variants file the project was made with; the focus goes to the `<h1>`
    of Variants once the dialog has closed, also when the hash was already
-   `#variants`; and the status region says "Opened panel.popnei.json.
-   This project was made with panel_2026.nei, 342 individuals and
-   1,203,554 variants. Load it in the Variants step to run its analyses
-   again.", or "Opened panel.popnei.json." when the file names no
+   `#variants`; and the status region says "Opened panel.popnei.json.",
+   followed by the text of `askedFileText` when the file names a
    variants file.
 
 The file is read and checked before the dialog, so that the user is not
@@ -444,7 +439,8 @@ It reads, from the state of the store, `project`, `undo`, `redo`,
 selector, a function that picks one part of the state so that a
 component is drawn again only when that part changes (`react.md`,
 "Reading core"); `projectNeeds`, `individualsNeeds` and `askedFileText`
-of the project; and the step from the hash, with `useStepHash` of
+of the project, and `populationsNeeds`, `populationsToRun` and
+`populationsOf` of the diversity; and the step from the hash, with `useStepHash` of
 `react.md`. It sends `store.undo()`, `store.redo()`,
 `store.dismissNotice()` and `store.open(project)`, and calls the saving
 of the entry. It holds, as state of the screen, whether a dialog is
@@ -588,14 +584,14 @@ the symbols of the states of the steps, and whether the steps are
 numbered; where on the bottom the notice sits and its width; how the
 box of the details looks.
 
-## What this spec assumes of the other specs of stage 2
+## What this spec relies on in the other specs of stage 2
+
+Each is a draft of 25 September 2026 and says what is listed here.
 
 - `docs/specs/core/projectFile.md`: `writeProjectFile`, which refuses
   nothing; `readProjectFile`, `projectFileErrorText` and
-  `MAX_PROJECT_FILE_BYTES`; `askedFileText`; `projectFileName`. Its
-  section "Opening" quotes the question before an opening as "Open a
-  project and lose this one?", asked always; the question, and when it
-  is asked, are this spec's, above.
+  `MAX_PROJECT_FILE_BYTES`; `askedFileText`; `projectFileName`; and the
+  question before an opening left to this spec.
 - `docs/specs/steps/variants.md` and `individuals.md`: the `<h1>` of
   each step is "Variants" and "Individuals"; their descriptions of the
   commands are those of their tables, "a new variants file was loaded"
@@ -603,19 +599,25 @@ box of the details looks.
   the state, with the words of this spec, and not by the steps; what
   they announce themselves goes through `announce`.
 - `docs/specs/analyses/diversity.md`: the title of its panel,
-  "Diversity", in `src/ui/analyses/panels.ts`; the `<h1>` of the
-  Analyses step, "Analyses", with each analysis an `<h2>`; the start, the
-  end and the stop of a run announced by the shell, with the words of
-  this spec; its reasons about the column of the populations given by a
-  function it exports, for the stepper.
-- `docs/specs/steps/individuals.md`: the function of core that gives the
-  populations of the column chosen, and `individualsCheck`, which gives
-  the individuals found and missing.
+  "Diversity", its `<h2>`, in `src/ui/analyses/panels.ts`, under the
+  `<h1>` "Analyses" of the Analyses step; the start, the end and the stop
+  of a run announced by the shell, with the words of this spec;
+  `populationsNeeds`, for the stepper; `populationsToRun` and
+  `populationsOf`, for the summary line.
+- `docs/specs/steps/individuals.md`: `individualsCheck` of
+  `src/core/project.ts`, which gives the individuals found and missing,
+  a function that spec adds to the approved `project.ts`
+  (`docs/specs/stage-2-open-points.md`, "Changes to approved files").
 - `docs/specs/entry.md`: it makes the announcer, calls `announcementsOf`
   at every change of the store, draws the error bar in its own root with
-  the store once it is made, and gives the saving.
+  the store once it is made, and gives the saving, `createSaving`.
 
 ## Open points
+
+The open points of the eleven specs of stage 2 are gathered in
+`docs/specs/stage-2-open-points.md`, where the ones two specs share
+are one point, asked of the owner once; each below keeps its number
+here, and its meanwhile.
 
 1. **Whether the stepper has an Export step in the walking skeleton.**
    The steps of the architecture are four, the fourth, Export, holding
@@ -670,8 +672,8 @@ box of the details looks.
   `docs/specs/steps/` and `docs/specs/analyses/diversity.md`.
 - The format of the project file, and the comparison of a reopened
   project with its variants file and its check numbers:
-  `docs/specs/core/projectFile.md`, `docs/specs/steps/variants.md`, and
-  stage 6.
+  `docs/specs/core/projectFile.md`, shown by `docs/specs/steps/variants.md`
+  and by the panel of each analysis.
 - The Export step, with the report and the Python script: stage 6.
 - The help drawer and its texts, and the setting of the theme: stage 8
   and after; the walking skeleton follows the theme of the system.

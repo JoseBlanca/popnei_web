@@ -151,15 +151,13 @@ first one, one started for a new load, and one started again with no
 page has to reach the store before any read is recorded, and after a
 change of the load the store keeps its own mark until the new file is
 read (`docs/specs/core/store.md`), which `popneiReady` does not clear.
-This corrects the assumption of `docs/specs/entry.md` that the function
-is always called at the `ready`, before any request is sent.
 
 - **Each worker receives at most one `open`, and it is its first
   request.** Before the first request on a load, a worker that holds no
   load is sent the `open` of that load, with its `File`. A worker whose
-  `open` popnei refused, or failed, still holds that load, with no file
-  open, and the memory of the read in its wasm: the next file the user
-  loads starts a new worker. So a worker
+  read, the first `open` of its load, popnei refused, or failed, still
+  holds that load, with no file open, and the memory of the read in its
+  wasm: the next file the user loads starts a new worker. So a worker
   started again after a cancel or a crash is given its `File` again in
   that `open`, from the client's map, which is how the page gives the
   files back to a new worker (`docs/architecture.md`, section 5).
@@ -196,7 +194,15 @@ is always called at the `ready`, before any request is sent.
   fails, every run waiting on it fails with it: a `refused`
   fails them as `workerFailed`, with the message "‹name› could not be
   opened again: ‹popnei's message›", and a crash as any crash (**Open
-  1**, below).
+  1**, below). A worker whose `open` for a run was refused holds no
+  open file, so the client ends it then, and the next run on that load
+  is not a defect: it goes to a new worker, after its `open`, which
+  reads the file again. If that `open` fails too, the run fails in the
+  same way, and the words of the panel send the user to load the file
+  again after a second failure (`docs/specs/analyses/diversity.md`,
+  "Its words"). What makes a run of a load a defect is a load whose
+  read, its first `open`, never ended `opened` (the cases, below): then
+  the source is failed and core sends no run on it.
 
 ### Cancelling
 
@@ -243,6 +249,13 @@ was ready:
 | a message that fails its check, an answer of another request's id or of the wrong kind for the request, a result under another key than its request's or of another analysis than its job's | fails with `defect`; the client writes what was wrong to the console of the browser | ended, and started again |
 | `postMessage` of the request throws, a `DataCloneError` of a job that holds what cannot be copied | fails with `defect`, the browser's message | ended, and started again |
 
+The client's `onerror` of each worker calls `event.preventDefault()`.
+By the HTML standard, an error inside a worker that its script does not
+stop is passed on to the `Worker` object on the page and from there to
+the window, where the error bar of the page would show as an error of
+our page a crash that the client already handles as a crash of the
+worker (`docs/specs/entry.md`, "The errors nothing else shows").
+
 The client has no timeout on a calculation, so that every request is
 answered rests on the runners too: each posts an answer or `crashed` for
 whatever breaks, a promise rejected with nothing to handle it among the
@@ -259,8 +272,10 @@ The message of `workerFailed` is the one the worker gave, or the one of
 the `error` event, or, when the event has none, as a module worker that
 does not load gives in Chromium and WebKit (`docs/plans/site.report.md`),
 the client's own words, "the worker stopped with no message". These are
-details; what the user reads is chosen by the kind of the failure
-(`docs/specs/core/project.md`, **Open 4** there).
+details; what the user reads is chosen by the kind of the failure, for a
+read of a file by `docs/specs/core/project.md` (**Open 4** there), and for
+a calculation by the panel of its analysis
+(`docs/specs/analyses/diversity.md`, "Its words").
 
 ### Progress
 
@@ -364,31 +379,23 @@ import in Chromium, Firefox and WebKit, served from GitHub Pages
 
 ### What the entry and runs.ts do with it
 
-`docs/specs/entry.md` owns these; they are written here so that the two
-specs meet:
+`docs/specs/entry.md` owns these, and this list says only what they call
+here:
 
-- **A pick of a file**: `addFile(fileId, file)`, then the command that
-  puts the load in the project. After every change of the project, the
-  entry asks for the read of each source that is pending and has no read
-  under way, `openVariants` or `readIndividuals`, keeps the `Read` it is
-  given, cancels it when the project no longer holds that source pending,
-  and records its outcome into the store (`docs/architecture.md`, section
-  6, "Who asks for a read"):
-
-  | answer | recorded as |
-  |---|---|
-  | `opened` | `variantsRead(fileId, { kind: "read", individuals, ploidy, numVars: null })` |
-  | `failed`, `popnei` | `variantsRead(fileId, { kind: "failed", error: { kind: "popnei", message } })` |
-  | `failed`, any other | `variantsRead(fileId, { kind: "failed", error: { kind: "worker", error } })` |
-  | `cancelled` | nothing; the read is no longer under way, and the entry asks again if the source is still pending |
-  | `read` | `individualsRead(fileId, csv, { kind: "read", table, columns, found })` |
-  | `refused` | `individualsRead(fileId, csv, { kind: "failed", error })` |
-  | `failed` | `individualsRead(fileId, csv, { kind: "failed", error: { kind: "worker", error } })` |
-  | `cancelled` | nothing, as for the variants file |
+- **A pick of a file**: the entry's `addFile(file)` makes the load id and
+  calls `addFile(fileId, file)` here, then the step sends the command
+  that puts the load in the project. After every change of the project,
+  the entry asks for the read of each source that is pending and has no
+  read under way, `openVariants` or `readIndividuals`, keeps the `Read` it
+  is given, cancels it when the project no longer holds that source
+  pending, and records its outcome into the store, as the table of
+  `docs/specs/entry.md`, "Who asks for a read", gives each answer of the
+  two types above. A `cancelled` records nothing, and the entry asks
+  again while the source is still pending.
 
 - **The store** is given `send: (key, job, onProgress) => client.run(key,
-  job, onProgress)` and `onPopneiReady: (v) => store.popneiReady(v)`
-  (`docs/specs/core/store.md`, `createStore`).
+  job, onProgress)` (`docs/specs/core/store.md`, `createStore`), and the
+  client is given `onPopneiReady: (v) => store.popneiReady(v)`.
 - **`src/ui/runs.ts`**, its `startAnalysis`, takes the `Run` that `store.startRun` returns,
   awaits its `outcome`, and gives it to `store.runEnded(run.id, outcome)`.
   The client promises it: the outcome arrives once and never fails;
@@ -428,8 +435,10 @@ specs meet:
   two tries it is given up, `couldNotStart`, and the user reloads the
   page; nothing else is needed for this case.
 - **A request of a load whose `File` the client does not hold**, which a
-  project file could name, or a run of a load never opened, or of one
-  whose `open` was refused or failed: a defect of the page. The client
+  project file could name, or a run of a load whose read, its first
+  `open`, never ended `opened`: a defect of the page. A run of a load
+  that was read, whose `open` for a run later failed, is not one (above,
+  "An `open` that the client sent for a run is not a read"). The client
   answers it at once, `failed` with `defect`, so that no read stays under
   way. The two defects of the client's own calls, `addFile` of an id it
   holds and `openVariants` of a known id with other read options, are
@@ -491,9 +500,12 @@ walking skeleton, a diversity `Job` and a CSV.
 - **The reopen that fails** (**Open 1**): a worker started again after a
   cancel, whose `open` of A ends `refused`, fails the run waiting on it
   with `workerFailed` and the message "panel.nei could not be opened
-  again: ‹popnei's message›"; a next file starts a new worker.
+  again: ‹popnei's message›", and that worker is ended; a next `run` on
+  A is not a defect: a new worker is made, sent the `open` of A, and then
+  the run.
 - **A defect of the page**: `openVariants` and `run` of a load with no
-  `File` give `failed` with `defect` at once. `onPopneiReady` that throws:
+  `File`, and `run` of a load whose first `open` was refused, give
+  `failed` with `defect` at once. `onPopneiReady` that throws:
   the throw reaches the caller, and the next request is still sent.
 - **Failures**, one test for each row of the table above, with what the
   running request gets, that the waiting ones reach the new worker, and
@@ -525,26 +537,26 @@ a measurement of stage 2 (`docs/build-order.md`).
 
 ## Open points
 
+The open points of the eleven specs of stage 2 are gathered in
+`docs/specs/stage-2-open-points.md`, where the ones two specs share
+are one point, asked of the owner once; each below keeps its number
+here, and its meanwhile.
+
 1. **What a run says when its variants file cannot be opened again** by
    the worker started again after a Cancel, a crash or an undo of the
    load, and, with the same answer, when the browser cannot read the
-   file at its first open (`docs/specs/worker/runner.md`, **Open 1**
-   there). `RunError` of `docs/specs/worker/protocol.md` has no kind for
-   it, so meanwhile it is `workerFailed`, with the message "panel.nei
-   could not be opened again: ‹popnei's message›", and the panel of the
-   analysis shows the words of a crash, "the calculation stopped
-   unexpectedly" (**Open 4** of `docs/specs/core/project.md`), which does
-   not tell the user that the file is the cause, nor that loading it
-   again mends it. The other option is a kind of its own, `{ kind:
-   "reopenFailed"; name; message }`, whose words would say "panel.nei
-   could not be read again; it may have changed on the disk since it was
-   picked. Load it again in the Variants step." It is a change to
-   `src/worker/protocol.ts` and its spec, approved on 24 September 2026:
-   one kind more in `RunError`, which reaches `AnalysisError` of the store
-   and `SourceError` of the project by their types, and one case more
-   wherever the failures are written as text. The recommendation is the kind of its own: the case
-   is rare, and when it happens the words of a crash send the user to the
-   wrong fix.
+   file at its first open. It is one decision with **Open 1** of
+   `docs/specs/worker/runner.md`, and is asked of the owner once, as
+   point B of `docs/specs/stage-2-open-points.md`, with its options and
+   their costs. `RunError` of `docs/specs/worker/protocol.md` has no kind
+   for it, so meanwhile it is `workerFailed`, with the message "panel.nei
+   could not be opened again: ‹popnei's message›", later runs on that
+   load go to a new worker (above), and the panel of the analysis shows
+   its words for `workerFailed`, whose second sentence, "If it stops
+   again, load panel.nei again in the Variants step.", ends the loop of
+   Run and fail (`docs/specs/analyses/diversity.md`, "Its words"). The
+   recommendation is a kind of its own, `reopenFailed`, whose words name
+   the file as the cause.
 
 ## Not in this spec
 

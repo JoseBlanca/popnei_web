@@ -87,8 +87,8 @@ effect on a `.nei` file, whose ploidy is in the file:
 
 Under the ploidy, a line that the owner asked for on 25 September 2026:
 "A VCF does not say its ploidy, so it is given here. If it is wrong, the
-first analysis stops with a message from popnei that names the line and
-the individual, and the file is picked again with the right ploidy." popnei
+first analysis stops with a message that names the line and the
+individual, and the file is picked again with the right ploidy." popnei
 opens a VCF of the wrong ploidy without complaint, and refuses it at the
 first genotype a pass reads. With popnei's local build of 25 September
 2026, `e2e/fixtures/tetraploid.vcf.gz` opened with ploidy 2 gives 12
@@ -96,13 +96,11 @@ individuals and ploidy 2, and its first pass throws "line 5 of the VCF,
 the column of t00: its genotype is of the ploidy 4 and the reader was
 asked for the ploidy 2; popnei does not read a VCF whose genotypes are
 of different ploidies, and the ploidy is an argument of the reader". The
-diversity panel shows that message as popnei's refusal
-(`docs/specs/analyses/diversity.md`).
-
-The diversity panel then says "popnei could not calculate the
-diversity: ‹its message›. Change the settings, or load the variants file
-again, to run it again." (`docs/specs/analyses/diversity.md`, "Its
-words"); the line under the ploidy says which setting.
+diversity panel tells this refusal in its own words, which name the
+line, the individual and the two ploidies and say to set the ploidy and
+pick the file again (`docs/specs/analyses/diversity.md`, "Its words",
+the row of a genotype of another ploidy); the line under the ploidy
+says where that setting is.
 
 The two options are state of the step, not of the project, until the
 pick, and are written into the source by the command of the pick; after
@@ -180,9 +178,10 @@ reason of a failed read. It sends:
 | the switch turned off | `removeVariantFilter(p, "missing_data")` | "the missing data filter was turned off" |
 | the switch turned on | `setVariantFilter(p, { kind: "missing_data", maxAllowedMissingRate: 0.1 })` | "the missing data filter was turned on" |
 
-Before the command of a pick, the page makes the load id and puts the
-`File` into the map of the worker client under it
-(`docs/specs/worker/client.md`); the entry of the page then asks the
+Before the command of a pick, the step calls `addFile(file)` of
+`src/ui/files.tsx`, which makes the load id and puts the `File` into the
+map of the worker client under it (`docs/specs/entry.md`, "At the
+opening"); the entry of the page then asks the
 calculation worker to open it, and the store records what it read
 (`docs/architecture.md`, section 6, "Who asks for a read"). The step
 does not read the file and holds nothing of the project.
@@ -219,21 +218,17 @@ browser cannot open by itself, so an opened project has no variants file
 and holds what its file said of the one it was made with, its
 `reference` (`docs/specs/core/project.md`, "The project of an opened
 project file"). The step shows, above the zone, the text of
-`askedFileText` of `src/core/projectFile.ts`, "This project was made
-with panel_2026.nei, 342 individuals and 1,203,554 variants. Load it in
-the Variants step to run its analyses again.", and the options of a VCF
+`askedFileText` of `src/core/projectFile.ts`, and the options of a VCF
 start at the reference's, above. The words, and what is left out when
 the project was saved before its file was read or counted, are
 `docs/specs/core/projectFile.md`'s.
 
 Once a file is given, the step shows beside its card the warning
 `identityWarning` of the same module gives, a warning and not a refusal,
-"Warning: The project was made with panel_2026.nei, 342 individuals and
-1,203,554 variants; this file has 360 individuals. Load the file the
-project was made with, or go on with this one." It compares the name,
-the format, the size, the individuals, the ploidy and the number of
-variants once counted, and is made again at every change, so it is
-complete once the file is read. The read options are not compared
+after the word "Warning:". What it compares, and its words, are
+`docs/specs/core/projectFile.md`'s ("The comparisons after an
+opening"); it is made again at every change, so it is complete once the
+file is read. The read options are not compared
 there: they start at the reference's, and a user who changes them has
 chosen to.
 
@@ -271,8 +266,7 @@ the code that does the same:
   not be on the screen: through its status region, the part of the page
   that a screen reader reads out when its text changes, without moving
   the focus, the element the keyboard acts on (4.1.3), with the words of
-  `docs/specs/shell.md`, "panel.nei read: 200 individuals, ploidy 2." or,
-  when it failed, the reason `projectNeeds` gives, which names the file.
+  `docs/specs/shell.md`, "The status region".
 - The warning of a reopened project that differs from its file is
   announced when it first appears, through the function of the shell.
 
@@ -282,8 +276,9 @@ In the Playwright flow of stage 2 (`.claude/skills/coding/testing.md`),
 in the three engines: `panel.nei` picked with the button, and then a
 file dropped, with the focus still on the button after each;
 `tetraploid.vcf.gz` loaded with ploidy 2, the card showing 12
-individuals and ploidy 2, the diversity panel showing popnei's refusal,
-then the file picked again with ploidy 4 and the diversity run; `bad.vcf`
+individuals and ploidy 2, the diversity panel showing its words for the
+wrong ploidy, then the file picked again with ploidy 4 and the diversity
+run; `bad.vcf`
 and its reason; a file named `panel.txt` and its message; 0.125 typed in
 the threshold and the value the project holds; and the text of the
 status region after each read. The axe check of each state.
@@ -294,45 +289,44 @@ Where the options of a VCF sit beside the zone, whether the card and the
 filter are side by side or one above the other, the format of the size,
 and the icons.
 
-## What this spec assumes of the other specs of stage 2
+## What this spec relies on in the other specs of stage 2
 
-These specs are being written at the same time as this one, on 25
-September 2026, and none is approved; each line is what this spec needs
-of one of them.
+Each is a draft of 25 September 2026, and says what is listed here.
 
 - `docs/specs/shell.md`: the step is drawn in its `<main>` with one
   `<h1>`, "Variants"; the shell writes the notice from the description
-  of a command, "‹what was removed› because ‹description› · Undo", and
-  from the pattern "2 calculations stopped because a new variants file
-  was loaded · Undo" for a new load; it announces the ends of the reads
-  from the state, and gives the steps a function for what they announce
-  themselves. `shell.md` exists as a draft and says these.
+  of a command, and the notice of a new load says the calculations it
+  stopped; it announces the ends of the reads from the state, and gives
+  the steps `announce` for what they announce themselves.
 - `docs/specs/entry.md`: the first project of the population genetics
-  application holds the missing data filter at 0.1, since `emptyProject`
-  of core holds no filter, and the entry makes the first project the
-  store is given; and after every change it asks for the read of a
-  pending source.
-- `docs/specs/worker/client.md`: a function that puts a `File` into the
-  client's map under a load id, called before the command; and the
-  calculation worker started again for a new load, which ends a read of
-  the old one still under way.
-- `docs/specs/worker/runner.md` and `messages.md`: the open of the file
-  gives the individuals and the ploidy, and a refusal of popnei at the
-  open is recorded as `{ kind: "popnei", message }`; the function the
-  store is given as `numVarsOf` gives the variants of the file before the
-  filters of the application, `varsProcessed` of the first filter of the
-  pass or its `numVars` when it has none, and not `numVars` after the
-  filters.
-- `docs/specs/analyses/diversity.md`: a refusal of popnei in the pass,
-  the wrong ploidy among them, is its error state, with popnei's message
-  whole and its sentence "Change the settings, or load the variants file
-  again, to run it again.", as its draft says.
+  application, `firstProject("popgen")` of `src/core/apps.ts`, holds the
+  missing data filter at 0.1, since `emptyProject` of core holds no
+  filter; `addFile(file)` of `src/ui/files.tsx`, called before the
+  command; and after every change the entry asks for the read of a
+  pending source, and records a refusal of popnei at the open as `{ kind:
+  "popnei", message }`.
+- `docs/specs/worker/client.md`: the calculation worker started again for
+  a new load, which ends a read of the old one still under way.
+- `docs/specs/worker/runner.md`, `docs/specs/analyses/diversity.md` and
+  `docs/specs/entry.md`: the open of the file gives the individuals and
+  the ploidy; the number of variants recorded, through `numVarsOf` of
+  `apps.ts` and `numVarsRead` of the diversity's result, is the variants
+  of the file before the filters of the application, `varsProcessed` of
+  the first filter of the pass or its `numVars` when it has none.
+- `docs/specs/analyses/diversity.md`: a refusal of popnei in the pass is
+  its error state, with a row of its own for a genotype of another
+  ploidy.
 - `docs/specs/core/projectFile.md`: an opened project has `variants:
   null` and its `reference`; `askedFileText` and `identityWarning` give
   the words shown above, and the read options of a VCF start at the
-  reference's, as its draft says.
+  reference's.
 
 ## Open points
+
+The open points of the eleven specs of stage 2 are gathered in
+`docs/specs/stage-2-open-points.md`, where the ones two specs share
+are one point, asked of the owner once; each below keeps its number
+here, and its meanwhile.
 
 1. **Reading a VCF already loaded again with another ploidy**, or with
    the other choice of the passed variants. The project spec left how to

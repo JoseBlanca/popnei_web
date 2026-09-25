@@ -304,8 +304,9 @@ records it, and `individualsNeeds` of `src/core/project.ts` shows it as
 file in the Individuals step.", with the names and counts shown as that
 spec says (`docs/specs/core/project.md`, "What every analysis needs").
 This spec owns the words after the colon, which settles **Open 5** of
-that spec; the first four are the ones its meanwhile gave. Each is a
-kind of `IndividualsFileError`, and the last six are new:
+that spec; the first four are the ones its meanwhile gave, but for the
+words of `empty`, which change. Each is a kind of `IndividualsFileError`,
+and the last six are new:
 
 | kind | what the user reads after "could not be read:" |
 |---|---|
@@ -396,9 +397,9 @@ export const MAX_INDIVIDUALS_FILE_BYTES = 20_000_000;
 export interface BytesSource { size: number; arrayBuffer(): Promise<ArrayBuffer> }
 
 // In src/worker/messages.ts (docs/specs/worker/messages.md):
-// type IndividualsFileRead = Result<
-//   { table: IndividualsTable; columns: ColumnType[]; found: CsvFound },
-//   IndividualsFileError>;
+// type IndividualsFileRead =
+//   | { kind: "read"; table: IndividualsTable; columns: ColumnType[]; found: CsvFound }
+//   | { kind: "failed"; error: IndividualsFileError };
 
 export function readIndividualsFile(file: BytesSource, csv: CsvOptions): Promise<IndividualsFileRead>;
 ```
@@ -409,11 +410,14 @@ gives; `CsvOptions.encoding` does not, since the mark decides it.
 `found` holds the three options used, set or found, so that the screen
 shows them all; which of them were `"auto"` it knows from the `csv` of
 the source. The comments of `CsvFound` in `protocol.ts` and of `found` in
-`docs/specs/core/project.md` and `docs/specs/worker/messages.md` say it
-holds only what `"auto"` found, which a `CsvFound`, whose three fields
-are all required, cannot be; they are corrected to this. The entry turns
-an `IndividualsFileRead` into the project's `IndividualsRead`, a read or
-a failure (`docs/specs/core/project.md`, "The project").
+`docs/specs/core/project.md` say it holds only what `"auto"` found,
+which a `CsvFound`, whose three fields are all required, cannot be; they
+are corrected to this when this spec is approved
+(`docs/specs/stage-2-open-points.md`, "Changes to approved files"), and
+`docs/specs/worker/messages.md` says it already. The client gives the
+entry the read or the refusal, and the entry records it into the store
+as the project's `IndividualsRead`, a read or a failure
+(`docs/specs/entry.md`, "Who asks for a read").
 
 The union of the refusals, in `src/worker/protocol.ts`, grows by six
 kinds:
@@ -443,7 +447,13 @@ calling `readIndividualsFile` with the `File` and the options the
 request carries, and posting what it gives. It holds nothing between two
 reads, and imports neither popnei nor the files wasm. The messages, and
 what the worker does with a request that fails its check, are those of
-`docs/specs/worker/messages.md`.
+`docs/specs/worker/messages.md`, "A worker that cannot go on": each
+request is handled inside one `try`, a throw posts `crashed` and the
+worker closes itself, and the worker's own `error` and
+`unhandledrejection` handlers do the same, the `error` handler calling
+`event.preventDefault()`, so that the browser does not pass the error on
+to the page's window and its error bar (`docs/specs/entry.md`, "The
+errors nothing else shows").
 
 ## The cases
 
@@ -508,8 +518,9 @@ crosses to the page as a copy, 200,000 short strings, and the page
 records it and shows it. That the page stays usable while it does, and
 how long the whole takes, is measured in the Playwright flow of stage 2
 in Chrome, over a file of 10,000 rows made by the test, and written in
-the report of the plan; the screen should not draw 10,000 rows at once,
-which `docs/specs/steps/individuals.md` decides.
+the report of the plan; the screen draws no row of the table, only its
+columns with their first values (`docs/specs/steps/individuals.md`, "The
+columns").
 
 With a CSV or TSV, the light worker loads no wasm at all
 (`docs/architecture.md`, section 6).
@@ -603,32 +614,43 @@ Chrome, Firefox and Safari, since a test cannot change a file the page
 has picked, and what each browser did is written in the report of the
 plan.
 
-## What this spec assumes of the others
+## What this spec relies on in the others
 
 - `docs/specs/worker/messages.md`: `readIndividuals` carries the `File`
-  and its `CsvOptions`, and its answer is an `IndividualsFileRead`, the
-  `Result` that spec declares.
+  and its `CsvOptions`, `{ kind: "readIndividuals", id, file, csv }`, with
+  no other message that gives the worker a file, and its answer is an
+  `IndividualsFileRead`, the union that spec declares.
 - `docs/specs/worker/client.md`: the client sends that request to the
-  light worker, and turns a crash of the worker into a failure of the
-  worker, which the project records as `{ kind: "worker" }`.
+  light worker, gives a refusal of the reader as `refused` and a crash
+  of the worker as `failed`, and the entry records the second as `{ kind:
+  "worker" }` (`docs/specs/entry.md`).
 - `docs/specs/entry.md`: the entry asks for a read of a pending source
   with its load id and the options of its `csv`, and records the answer
-  with `recordIndividualsRead` under those.
+  with `store.individualsRead` under those, which records it with
+  `recordIndividualsRead` of `project.ts`.
 - `docs/specs/steps/individuals.md`: it shows the options used, from
-  `found`, and which were `"auto"`; the table, not all 10,000 rows at
-  once; the types, read only; the warnings of `columnWarnings` with the
-  words above; and offers every column but the first as the column of the
-  populations, whatever its type; it takes `.csv`, `.tsv` and `.txt`
-  files in stage 2.
-- `src/worker/protocol.ts` and `src/core/project.ts`, approved, change
-  in these places, each to be approved with this spec: the six kinds of
-  refusal of `IndividualsFileError`, their words in `individualsNeeds`,
-  the new words of `empty`, and their fields in the validation of a
-  project file; `CsvFound.encoding`, which gains `"utf-16"`, in
-  `protocol.ts` and in the check of `found` when a project file is
-  opened; and the comment of `CsvFound`, which says all three options.
+  `found`, and which were `"auto"`; no row of the table, only its columns
+  with their first values; the types, read only; the warnings of
+  `columnWarnings` with the words above; and offers every column but the
+  first as the column of the populations, whatever its type; it takes
+  `.csv`, `.tsv` and `.txt` files in stage 2.
+
+What this spec changes in `src/worker/protocol.ts` and
+`src/core/project.ts`, which are approved, is listed in
+`docs/specs/stage-2-open-points.md`, "Changes to approved files", to be
+approved with this spec: the six kinds of refusal of
+`IndividualsFileError`, their words in `individualsNeeds`, the new words
+of `empty`, and their fields in the validation of a project file;
+`CsvFound.encoding`, which gains `"utf-16"`, in `protocol.ts` and in the
+check of `found` when a project file is opened; and the comment of
+`CsvFound`, which says all three options.
 
 ## Open points
+
+The open points of the eleven specs of stage 2 are gathered in
+`docs/specs/stage-2-open-points.md`, where the ones two specs share
+are one point, asked of the owner once; each below keeps its number
+here, and its meanwhile.
 
 1. **Whether a refusal of a row says which separator it was read with.**
    After a wrong separator, found or set, the user reads "line 7 has 3

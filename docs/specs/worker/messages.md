@@ -76,9 +76,10 @@ the worker that received it is ended (below):
   xlsx, whose source has no CSV options, joins in stage 4 with the files
   wasm. Its answer is the reader's `IndividualsFileRead`
   (`docs/specs/worker/individuals.md`): the table, the types of its
-  columns, and what the reader found for each option of the CSV the user
-  left at "auto", the encoding, the separator and the decimal mark
-  (`CsvFound`); or the ways the file is wrong, `IndividualsFileError` of
+  columns, and the three options of the CSV the reader used, the
+  encoding, the separator and the decimal mark, each as the user set it
+  or as the reader found it where it was "auto" (`CsvFound`); or the
+  ways the file is wrong, `IndividualsFileError` of
   `protocol.ts`, a file with no rows, two columns of one name, which the
   reader's spec owns and extends, a file it cannot read among them.
 - **`refused` is popnei's refusal of its input**, a plain `Error` thrown
@@ -115,7 +116,8 @@ progress of a pass does change a message: popnei's `main` reports it in
 four fields, the bytes read and the size of the file, the pass and the
 number of passes (`Progress` of `js/popnei/src/variant.ts`), where
 `progress` here has `done` and `total`; the release that brings it is a
-new version of the messages.
+new version of the messages. Which release stage 2 is built on is point
+C of `docs/specs/stage-2-open-points.md`.
 
 ### A worker that cannot go on
 
@@ -146,10 +148,14 @@ worker and no `error` event on the page. So the worker's script handles
 each request inside one `try`, and its own `error` and
 `unhandledrejection` handlers post `crashed`, and its `messageerror`
 handler, a request the browser could not copy, posts `badRequest`. The
+`error` handler calls `event.preventDefault()` as well, so that the
+browser does not pass the error on to the page's window
+(`docs/specs/entry.md`, "The errors nothing else shows"). The
 runner's spec says which throws are which (`docs/specs/worker/runner.md`);
-a `File` that `FileReaderSync` cannot read is `crashed` there, its
-**Open 1**, and `docs/specs/worker/client.md`, **Open 1**, asks for a kind
-of its own.
+a `File` that `FileReaderSync` cannot read is `crashed` there, and
+whether it gets a kind of its own is point B of
+`docs/specs/stage-2-open-points.md`, **Open 1** of both the runner's and
+the client's specs.
 
 ### The ready message, and the version of the messages
 
@@ -409,7 +415,7 @@ checks expect is seen in the browser, by the flow of the walking skeleton
 
 `.claude/skills/coding/worker.md` was written before this spec, and
 three things change; the skill is corrected when the owner approves this
-spec.
+spec (`docs/specs/stage-2-open-points.md`, "Changes to approved files").
 
 - The message `files`, which gave a worker the list of the `File`
   objects, is gone: the `File` goes in the request that needs it, for the

@@ -13,7 +13,7 @@ section 6 of `docs/functionality.md` headed "Diversity", section 4 of
 `analyses/` of its section 9. It depends on the approved specs
 `docs/specs/core/keys.md`, `store.md` and `project.md` and
 `docs/specs/worker/protocol.md`, and on specs written beside it, whose
-parts it relies on are listed at the end, in "What this spec assumes of
+parts it relies on are listed at the end, in "What this spec relies on in
 the specs written beside it".
 
 The walking skeleton is stage 2 of `docs/build-order.md`, the smallest
@@ -116,7 +116,7 @@ grouping"):
   arrays in the order of the keys of the object it is given, and
   JavaScript iterates keys that are whole numbers, `"1"`, `"10"`, `"2"`,
   first and in numeric order; the runner puts popnei's arrays back into
-  the order of the request (see the assumptions at the end), so a file
+  the order of the request (`docs/specs/worker/runner.md`, "The diversity"), so a file
   with populations named 3, 1 and 2 shows them as 3, 1, 2.
 - **Only individuals of the variants file go into the request.** An
   individual of the individuals file that is not in the variants file is
@@ -216,6 +216,14 @@ these, in the words the panel shows beside its Run button:
 | the table has no column of that name, after a new load of the file | "pops.csv has no column popcat, from which the populations were taken. Choose the column that defines the populations in the Individuals step." |
 | no individual of the variants file has a population in the column | "No individual of panel.nei has a population in the column popcat of pops.csv. Fill in the column and load the file again, or choose another column, in the Individuals step." |
 
+The last three rows, the reasons about the column of the populations,
+are given by `populationsNeeds(p)`, which the module exports with the
+kind of each, so that the stepper of the shell shows the same text for
+the same condition, "To do" for no column chosen and "Problem" for the
+two others (`docs/specs/shell.md`, "The stepper"), and the Individuals
+step shows it at its select (`docs/specs/steps/individuals.md`, "Its
+words"); `needs` gives it after the first two rows.
+
 The names of the files, of the column and of the individuals are shown
 with the helpers of `project.ts` that escape and cut them, and count with
 a comma between groups of three digits (`project.md`, the rules after the
@@ -249,7 +257,7 @@ stage 3 fills it without another shape of the request; the runner of
 stage 2 answers a job with a filter of individuals as a defect of the
 page (`docs/specs/worker/runner.md`).
 
-What the runner does with it, as this spec assumes of
+What the runner does with it, as
 `docs/specs/worker/runner.md`: it puts the filters on the open `Variants`
 in their order; it calls
 `calcPerVarDistribs(variants, { pops: Object.fromEntries(pops), stats:
@@ -434,6 +442,13 @@ export function populationsOf(p: Project): Pops | null;
     variants file is not read. */
 export function populationsToRun(p: Project): Pops | null;
 
+/** The reason about the column of the populations, the last three rows
+    of "Why it cannot run", with its kind; null when the individuals file
+    is not read, or when the column gives populations. */
+export function populationsNeeds(p: Project):
+  | { readonly kind: "noColumn" | "noSuchColumn" | "noPopulation"; readonly reason: string }
+  | null;
+
 /** One row of the table, a number null where popnei gave NaN. */
 export interface DiversityRow {
   readonly population: string;
@@ -490,7 +505,7 @@ version 1 in the same way (`docs/architecture.md`, section 12).
   calculation that failed").
 - **The column chosen is the first, the identifiers.** Every individual
   is its own population, of one, with no values. The individuals step
-  does not offer that column (see the assumptions); a project file that
+  does not offer that column (`docs/specs/steps/individuals.md`); a project file that
   names it gives a table of rows with no values and one warning.
 - **The individuals file loaded again, with the same table.** The key is
   the same, and the result is on screen at once.
@@ -534,7 +549,9 @@ definition, on frozen projects, as
   of the table and not those sent; `checkNumbers` gives `[numVars, null,
   null, null, null, null, null]`.
 - **`needs`**, a case for each row of its table, after each reason of
-  `individualsNeeds` has been checked to come through.
+  `individualsNeeds` has been checked to come through; `populationsNeeds`
+  gives the same text for the last three rows, with their kinds, and
+  `null` for a project whose individuals file is not read.
 - **The key**: for each row of the table of what changes the key, two
   projects that differ in it, and `keyOf` equal or not as the row says;
   `keyInputs` of `emptyProject("popgen")` and of a project whose reads are
@@ -593,7 +610,9 @@ numbers as literals. The Playwright flow asserts them as the screen shows
 them, to four decimals: with the filter at 0.05, the row p0 shows 48,
 0.3527, 0.3567, 0.9288; with the filter at 1, 0.3519, 0.3564, 0.9267.
 The flow loads `panel.nei` and the populations as a CSV,
-`e2e/fixtures/panel_pops.csv`, chooses the column `popcat`, sets the
+`e2e/fixtures/panel_pops.csv`, which is `panel_pops.txt` of popnei
+written as a CSV with the header `IID,popcat`, chooses the column
+`popcat`, sets the
 filter to 0.05, runs and reads the rows; sets it to 1 and sees the table
 go with its notice; runs and reads the new rows; undoes and reads the
 first rows again; and runs axe, a checker of accessibility, in each
@@ -607,7 +626,11 @@ genetics application, from the module above. It is drawn inside the
 frame that every analysis shares, `src/ui/analyses/AnalysisPanel.tsx`,
 which draws one of the seven states the store gives
 (`.claude/skills/coding/react.md`, "The states of an analysis"). Its
-heading is "Diversity".
+heading, an `<h2>`, is "Diversity", the title by which the shell names
+it in the notice and the status region, listed in
+`src/ui/analyses/panels.ts` (`docs/specs/shell.md`, "What it sends and
+reads"). The Analyses step of stage 2 is the `<h1>` "Analyses" and this
+panel under it; it has no spec of its own while it holds one panel.
 
 ### What it shows
 
@@ -684,16 +707,10 @@ because a new variants file was loaded." while that notice is up. The
 notice itself, with the words of a result both removed and stopped, is
 the shell's (`docs/specs/shell.md`).
 
-The comparison of an opened project file, `check` of the state done, in
-words the shell and the other analyses share:
-
-- same: "These are the numbers the project file was saved with."
-- differs: "These numbers differ from those the project file was saved
-  with. The variants file may not be the one the project was made with,
-  or it changed since." and, when the store names them, "popnei is 0.2.0
-  now and was 0.1.0 then." and "This version of the application, 0.3.0,
-  calculates the diversity in another way than 0.2.0, which saved the
-  file."
+The comparison of an opened project file, `check` of the state done, is
+shown under the table in the words of `checkVerdictText`, which
+`docs/specs/core/projectFile.md` owns ("The comparisons after an
+opening") and every analysis shares; the panel has none of its own.
 
 The state `running` covers a request that waits in the queue of the
 calculation worker as well as one that runs; the store does not tell
@@ -710,9 +727,12 @@ the status of `diversity` among `state.analyses`, the `RunView` of its
 run, what the store says of a calculation under way, for `afterStop`,
 the notice,
 and the project for `populationsToRun` and the name of the variants file;
-and the time the run started from `src/ui/runs.ts` (see the
-assumptions). It sends `store.startRun("diversity")` from Run and
-`store.cancelRun("diversity")` from Stop. It holds no state of the
+and the time the run started, `startedAt(runId)` of `src/ui/runs.ts`,
+with the `runId` of its running state (`docs/specs/entry.md`, "The
+outcome of a calculation"). Run calls `startAnalysis(store,
+"diversity")` of `src/ui/runs.ts`, which sends `store.startRun` and
+hands the outcome to the store (the same section), and Stop sends
+`store.cancelRun("diversity")`. It holds no state of the
 project; the one state of its own is the tick of the clock of the
 running state, which stops when the state is left.
 
@@ -727,7 +747,7 @@ error state, by what the store gives:
 | popnei refused a genotype of another ploidy than the one the VCF was read with: its message starts "line ‹n› of the VCF, the column of ‹individual›: its genotype is of the ploidy ‹found› and the reader was asked for the ploidy ‹given›" | "At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. Set the ploidy of the VCF to 4 in the Variants step and pick the file again." |
 | popnei refused a line of the VCF it cannot read, or a gzipped file that is damaged or cut short: its message starts "line ‹n› of the VCF" or "the VCF was written by bgzip" | "popnei could not read panel.vcf.gz: ‹its message›. Correct the file, or fetch it again, and load it in the Variants step." |
 | popnei refused for another reason | "popnei could not calculate the diversity: ‹its message›. Change the settings, or load the variants file again, to run it again." |
-| the worker crashed, `workerFailed` | "The calculation stopped unexpectedly. Run it again. If it stops again, load panel.nei again in the Variants step." (`docs/specs/worker/runner.md`, **Open 1** there) |
+| the worker crashed, `workerFailed`, the variants file that could not be opened again among the causes | "The calculation stopped unexpectedly. Run it again. If it stops again, load panel.nei again in the Variants step." (the meanwhile of point B of `docs/specs/stage-2-open-points.md`, **Open 1** of `docs/specs/worker/runner.md` and of `client.md`) |
 | a message of ours that did not validate, `defect` | "The application met an error of its own: ‹message›. Run it again." |
 | the worker could not start, `couldNotStart` | "The application could not start its calculations. Save the project, reload the page, and open the project again." |
 | a stale file after a deploy, `protocolMismatch` | "The page is out of date. Save the project, reload the page, and open the project again." |
@@ -791,8 +811,8 @@ moves.
   changes, without moving the focus (WCAG 2.2, success criterion 4.1.3,
   which asks that such messages reach a screen reader without taking the
   user away from where they are). The words are the shell's, and this
-  spec does not repeat them (`docs/specs/shell.md`, "The status region"),
-  "Diversity: done, 2 warnings." among them. The clock of the running
+  spec does not repeat them (`docs/specs/shell.md`, "The status region").
+  The clock of the running
   state is not in such a region, so it is not read out every second. The
   notice of results removed is the shell's toast, the small panel at the
   bottom of the page, which is read out by itself.
@@ -819,10 +839,11 @@ the width of the columns, how the ready state lists many populations. The
 four decimals, which the flow reads, and "no value", which can become a
 dash with that as its accessible name, are to be judged on the screen.
 
-## What this spec assumes of the specs written beside it
+## What this spec relies on in the specs written beside it
 
-Where one of these says otherwise, the two specs are settled before the
-plan of stage 2, and the one that is wrong changes.
+Each of these is a draft of 25 September 2026 and says what is listed
+here; where one of them comes to say otherwise, the two are settled
+before the plan of stage 2.
 
 - `docs/specs/worker/runner.md`: the runner answers the request of
   "The request" as said there: the filters in their order,
@@ -832,35 +853,34 @@ plan of stage 2, and the one that is wrong changes.
   which the lock of **Open 5** keeps from being sent; and its test
   asserts the numbers of the table above and popnei's messages of the
   empty pass and of the ploidy, as literals.
-- `docs/specs/worker/messages.md`: its validator of the result checks
-  the fields of `DiversityResult`, the arrays with `instanceof`.
+- `docs/specs/worker/messages.md`: the check of each member of `Job` and
+  `JobResult` is written there from the fields this spec gives, the
+  arrays checked with `instanceof`.
 - `docs/specs/worker/client.md`: the client opens the file of the load
   of `fileId` with its read options before the request, and the runner
   finds it open.
 - `docs/specs/core/projectFile.md`: it saves the options of the diversity
   when the project holds them, and its check numbers, with its key
-  version, and reads them back through `parseOptions`; its assumption
-  that the check numbers are the expected heterozygosity alone, and its
-  fixture `v1-nei-diversity.popnei.json`, follow **Open 4**.
-- `docs/specs/entry.md`: the entry gives `createStore` a `numVarsOf` that
-  reads `numVarsRead` of a `DiversityResult`, and lists the definition
-  through `src/core/apps.ts`.
-- `docs/specs/shell.md`: `src/ui/runs.ts` keeps the time each run
-  started and gives it by the id of the run; the status region announces
-  the start and the end of a run, in the shell's words; the notice of
-  results removed and of calculations stopped is the shell's, with its
-  words.
+  version, and reads them back through `parseOptions`; its example and
+  its fixture `v1-nei-diversity.popnei.json` hold the check numbers of
+  the meanwhile of **Open 4**; `checkVerdictText` gives the words of the
+  comparison.
+- `docs/specs/entry.md`: `numVarsOf` of `src/core/apps.ts` reads
+  `numVarsRead` of a `DiversityResult`, and `apps.ts` lists the
+  definition; `startedAt(runId)` of `src/ui/runs.ts` gives the time a
+  run started.
+- `docs/specs/shell.md`: the status region announces the start, the end
+  and the stop of a run, in the shell's words; the notice of results
+  removed and of calculations stopped is the shell's, with its words; its
+  stepper shows `populationsNeeds`.
 - `docs/specs/steps/variants.md`: the missing data filter can be set to
   0.05 and to 1, and its command is described "the missing data filter
-  changed"; a VCF refused at its first pass for its ploidy is told by
-  this panel in the words of "Its words", and no longer by "popnei could
-  not calculate the diversity".
+  changed"; the step sends the user to this panel for a VCF refused at
+  its first pass for its ploidy.
 - `docs/specs/steps/individuals.md`: the step offers as the column of
   the populations the columns other than the first, sets the grouping
-  with `setGrouping`, says the step "Individuals", and lists the
-  populations with `populationsToRun`; the flow's
-  `e2e/fixtures/panel_pops.csv` is `panel_pops.txt` of popnei written as
-  a CSV, with the header `IID,popcat`.
+  with `setGrouping`, has the `<h1>` "Individuals", lists the populations
+  with `populationsToRun`, and shows `populationsNeeds` at its select.
 - The flow of the walking skeleton covers a Cancel in the middle of a
   run (`docs/specs/worker/client.md`, "How it is verified") and the save
   and the opening of a project after a run of the diversity
@@ -868,6 +888,11 @@ plan of stage 2, and the one that is wrong changes.
   neither.
 
 ## Open points
+
+The open points of the eleven specs of stage 2 are gathered in
+`docs/specs/stage-2-open-points.md`, where the ones two specs share
+are one point, asked of the owner once; each below keeps its number
+here, and its meanwhile.
 
 1. **The diversity without an individuals file, or without a column
    chosen.** `docs/functionality.md`, section 4, says that the metadata
@@ -885,8 +910,9 @@ plan of stage 2, and the one that is wrong changes.
    the table saying so, from stage 4, when the individuals step is whole,
    and to lock it in the walking skeleton. Meanwhile, it is locked. It is
    the same decision as **Open 1** of `docs/specs/steps/individuals.md`,
-   and the two are answered together; an answer is needed before the
-   plan of stage 4, and the walking skeleton is built on the meanwhile.
+   asked once as point A of `docs/specs/stage-2-open-points.md`; an
+   answer is needed before the plan of stage 4, and the walking skeleton
+   is built on the meanwhile.
 2. **Polymorphic below 0.95, or at most 0.95.** popnei counts a variant
    as polymorphic when its commonest allele is below `polyThreshold`,
    strictly, as pyNei does; `docs/functionality.md`, section 6, says at
@@ -911,9 +937,10 @@ plan of stage 2, and the one that is wrong changes.
    heterozygosity, the observed heterozygosity and the proportion of
    polymorphic variants of each population: 1 + 3 × the populations, 10
    numbers for the panel of three. `docs/functionality.md`, section 9,
-   names the mean expected heterozygosity of each population, and
-   `docs/specs/core/projectFile.md` assumes it alone, 3 numbers, in its
-   example and in its fixture `v1-nei-diversity.popnei.json`. The fuller
+   names the mean expected heterozygosity of each population alone, 3
+   numbers for the panel; `docs/specs/core/projectFile.md` follows the
+   meanwhile below in its example and its fixture
+   `v1-nei-diversity.popnei.json`. The fuller
    set tells apart two files that give the same expected heterozygosity
    and not the same variants or genotypes: a file with other variants,
    by their number; one whose genotypes changed so that the observed
@@ -924,9 +951,10 @@ plan of stage 2, and the one that is wrong changes.
    "calculated in another way" (`docs/specs/core/projectFile.md`, "A
    change to what an analysis's checkNumbers gives"). The recommendation
    is the fuller set, with section 9 of `docs/functionality.md` corrected
-   to name it, and the example, the assumption and the fixture of
-   `projectFile.md` made to follow before the fixture is first written.
-   Meanwhile, the fuller set.
+   to name it. Meanwhile, the fuller set, which `projectFile.md` already
+   follows; the shorter set would change its example and its fixture
+   before the fixture is first written. Point D of
+   `docs/specs/stage-2-open-points.md`.
 5. **The filters of individuals in the walking skeleton.** No screen of
    stage 2 sets one, but a project file can hold one, and
    `docs/specs/core/project.md` checks their lists in `projectNeeds`.

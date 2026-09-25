@@ -21,8 +21,8 @@ answers; the page's side is `docs/specs/worker/client.md`, and the
 request and the result of the diversity are in
 `docs/specs/analyses/diversity.md`. Those three are drafts written at the
 same time as this one, `messages.md` and `client.md` revised after it,
-and what this spec assumes of each is listed at the end, under "What
-this spec assumes of the others".
+and what this spec relies on in each is listed at the end, under "What
+this spec relies on in the others".
 
 The words used here:
 
@@ -275,7 +275,8 @@ application, `varsProcessed` of the first filter of the job in the
 counts of the pass, `passStats.filtering`, or `passStats.numVars` when
 the job has no filter (`docs/specs/steps/variants.md`). The store
 records it into the load through `numVarsOf`, the function it is given
-to find that number in a result of any kind (`docs/specs/core/store.md`).
+to find that number in a result of any kind (`docs/specs/core/store.md`),
+which `src/core/apps.ts` gives (`docs/specs/entry.md`).
 For a VCF read with only the passed variants, it counts those.
 
 The filters of individuals wait for stage 3, as
@@ -347,7 +348,12 @@ Which answer, by what was thrown:
   answer is posted as `crashed`, then the worker closes. A throw outside
   a request, and a promise whose rejection nothing handles, reach the
   worker's own `error` and `unhandledrejection` handlers, which do the
-  same. So no request is left without an answer, whatever breaks.
+  same. So no request is left without an answer, whatever breaks. The
+  `error` handler also calls `event.preventDefault()`, so that the
+  browser does not pass the error on to the page, where it would reach
+  the window and the error bar as an error of the page, beside the crash
+  the client already handles (`docs/specs/entry.md`, "The errors nothing
+  else shows").
 - **A refusal of popnei of the whole-file kind is not told apart**: a
   block that the memory of wasm cannot hold is refused by popnei with a
   plain `Error` rather than a trap, and is `refused` like a refusal of
@@ -658,36 +664,33 @@ the page's check of `messages.md` refuses otherwise; and
 `tetraploid.vcf.gz` read with ploidy 2 opens and then shows popnei's
 message at the diversity.
 
-## What this spec assumes of the others
+## What this spec relies on in the others
 
-Each of these is a draft of 25 September 2026 written with this one.
+Each of these is a draft of 25 September 2026 written with this one, and
+says what is listed here.
 
 - **`docs/specs/worker/messages.md`**: the requests `open`, with the load
   id, the `File`, the format and the read options, and `run`, with the
   key and a `Job`; the answers `ready`, `opened`, `result`, `refused`,
   and `crashed` and `badRequest`, after which the worker closes itself;
-  no message `files`; `parseToRunner`, which the worker's script calls on
-  every request.
-- **`docs/specs/worker/client.md`**: a new calculation worker for every
-  load, whose first request is the `open` of that load, sent again after
-  every restart before the next `run`; one request at a time; a cancel
-  that ends the worker; a worker whose `open` popnei refused is sent
-  nothing more on that load, and the next file starts a new worker; and
-  `start.ts` making the worker from `./runnerWorker.ts?worker`, as its
-  revised draft has it.
+  `parseToRunner`, which the worker's script calls on every request.
+- **`docs/specs/worker/client.md`**: every worker receives at most one
+  `open`, as its first request, and a new worker is started for a new
+  load and after a cancel or a crash; one request at a time; a cancel
+  that ends the worker; a worker whose read popnei refused is sent
+  nothing more on that load; and `start.ts` making the worker from
+  `./runnerWorker.ts?worker`.
 - **`docs/specs/analyses/diversity.md`**: `DiversityJob` and
-  `DiversityResult` as its draft gives them, the populations of the job
-  holding only individuals of the variants, none empty; its `numVarsOf`
-  reads `numVarsRead`; and, while the owner decides its **Open 5**, the
-  diversity locked while the project holds a filter of individuals, with
-  the words of its table "Why it cannot run", so that no job with one is
-  sent.
+  `DiversityResult`, the populations of the job holding only individuals
+  of the variants, none empty (`populationsToRun`); and, while the owner
+  decides its **Open 5**, the diversity locked while the project holds a
+  filter of individuals, so that no job with one is sent.
+- **`docs/specs/entry.md`**: `numVarsOf` of `src/core/apps.ts` reads
+  `numVarsRead`; the page asks for the open of a source whose read is
+  pending, through the client.
 - **`docs/specs/steps/variants.md`**: the number of variants shown is
   the one the file gives before the filters, and the ploidy of a VCF is
   shown as the one given.
-- **`docs/specs/entry.md`**: the page asks for the open of a source whose
-  read is pending, through the client (`docs/architecture.md`, section 6,
-  "Who asks for a read").
 
 ## Where this departs from the skills
 
@@ -718,6 +721,11 @@ these things change; each is corrected when the owner approves it.
   the job of the PCA, in stage 4.
 
 ## Open points
+
+The open points of the eleven specs of stage 2 are gathered in
+`docs/specs/stage-2-open-points.md`, where the ones two specs share
+are one point, asked of the owner once; each below keeps its number
+here, and its meanwhile.
 
 1. **What the user is told when the browser can no longer read the
    variants file**, because it changed or was removed on the disk after
@@ -750,8 +758,9 @@ these things change; each is corrected when the owner approves it.
      since it was picked. Load it again in the Variants step." It names
      the cause, and changes the approved `protocol.md` and `project.md`
      and every place that writes a failure as text.
-   This is one decision with **Open 1** of `client.md`, and the two are
-   answered together. The recommendation is (b), as `client.md`'s: the
+   This is one decision with **Open 1** of `client.md`, asked of the
+   owner once as point B of `docs/specs/stage-2-open-points.md`. The
+   recommendation is (b), as `client.md`'s: the
    case is rare in stage 2, but the words of a crash send the user to the
    wrong fix, and with reading by ranges every pass reads the disk again
    and it becomes the common case (`docs/architecture.md`, section 11).
@@ -776,7 +785,9 @@ these things change; each is corrected when the owner approves it.
    counts that cost only at a restart of the worker. It is not measured
    yet ("What a restart costs" measures it at the end of stage 2), and it
    is a reason to prefer a release with reading by ranges, where it
-   becomes the reading of a header. Meanwhile, (a).
+   becomes the reading of a header. Meanwhile, (a). It is point C of
+   `docs/specs/stage-2-open-points.md`, which lists the other specs of
+   stage 2 that the answer changes.
 
 ## Not in this spec
 
