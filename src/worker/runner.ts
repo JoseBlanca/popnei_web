@@ -97,6 +97,16 @@ const DIVERSITY_STATS = [
   "poly_vars_ratio",
 ] as const;
 
+/**
+ * The beginnings of popnei's messages for a range of the file that the
+ * browser refused or gave short (`crates/popnei-js/src/source.rs` of
+ * popnei at b3f77c8): the file changed on the disk since it was picked.
+ */
+const RANGE_NOT_GIVEN = [
+  "the source could not be read: the browser did not give popnei ",
+  "the source could not be read: popnei asked this file for the ",
+] as const;
+
 let popneiLoading: Promise<Result<string, string>> | null = null;
 
 /**
@@ -194,7 +204,7 @@ export function createRunner(): Runner {
       opened = openSource(load, file);
     } catch (thrown: unknown) {
       held = { kind: "refused" };
-      return answerOfThrown(thrown);
+      return answerOfPopnei(thrown, file.name);
     }
     held = { kind: "opened", load, file };
     variants = opened;
@@ -229,14 +239,14 @@ export function createRunner(): Runner {
       try {
         variants = openSource(load, file);
       } catch (thrown: unknown) {
-        return answerOfThrown(thrown);
+        return answerOfOpenAgain(thrown, file.name);
       }
     }
     for (const filter of filters) {
       try {
         putFilter(variants, filter);
       } catch (thrown: unknown) {
-        return answerOfThrown(thrown);
+        return answerOfPopnei(thrown, file.name);
       }
     }
     return { kind: "ok", value: variants };
@@ -274,7 +284,7 @@ export function createRunner(): Runner {
     if (filtered.kind !== "ok") {
       return filtered;
     }
-    return runDiversity(filtered.value, job, told);
+    return runDiversity(filtered.value, job, file.name, told);
   }
 
   return { open, run };
@@ -372,6 +382,7 @@ function whyNotToRun(job: DiversityJob): string | null {
 function runDiversity(
   variants: Variants,
   job: DiversityJob,
+  name: string,
   told: (progress: Progress) => void,
 ): Answer<JobResult> {
   /** What `told` threw, none or one value. */
@@ -401,7 +412,7 @@ function runDiversity(
     if (thrownByTold.some((value) => value === thrown)) {
       throw thrown;
     }
-    return answerOfThrown(thrown);
+    return answerOfPopnei(thrown, name);
   }
   return { kind: "ok", value: diversityResultOf(distribs, job) };
 }
@@ -476,6 +487,30 @@ function valueAt(array: Float64Array | Uint32Array, index: number): number {
     );
   }
   return value;
+}
+
+/** The answer of what a call to popnei threw, a `refused` whose message is
+    one of popnei's of a range the browser did not give turned into a
+    `reopenFailed` of the file `name`. */
+function answerOfPopnei(thrown: unknown, name: string): Answer<never> {
+  const answer = answerOfThrown(thrown);
+  if (
+    answer.kind === "refused" &&
+    RANGE_NOT_GIVEN.some((start) => answer.message.startsWith(start))
+  ) {
+    return { kind: "reopenFailed", name, message: answer.message };
+  }
+  return answer;
+}
+
+/** The answer of what the open again of a file that opened before threw:
+    a refusal of popnei's is `reopenFailed`, whatever its message, since the
+    same file opened before and has changed on the disk. */
+function answerOfOpenAgain(thrown: unknown, name: string): Answer<never> {
+  const answer = answerOfThrown(thrown);
+  return answer.kind === "refused"
+    ? { kind: "reopenFailed", name, message: answer.message }
+    : answer;
 }
 
 /** The message of what was thrown, for a `crashed`. */
