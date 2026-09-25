@@ -13,8 +13,15 @@ import type { Page, Route } from "@playwright/test";
 const FIXTURES = join(import.meta.dirname, "fixtures");
 const SCREENS = join(import.meta.dirname, "..", "screens");
 
-async function save(page: Page, name: string): Promise<void> {
-  await page.screenshot({ path: join(SCREENS, `${name}.png`), fullPage: true });
+/** Saves the whole page as `name`, or only the window with `fullPage`
+    false, which shows a toast fixed at the bottom of the window where the
+    user sees it. */
+async function save(
+  page: Page,
+  name: string,
+  { fullPage }: { readonly fullPage: boolean } = { fullPage: true },
+): Promise<void> {
+  await page.screenshot({ path: join(SCREENS, `${name}.png`), fullPage });
 }
 
 async function pick(page: Page, fixture: string): Promise<void> {
@@ -999,6 +1006,54 @@ for (const theme of ["light", "dark"] as const) {
       await page.getByRole("button", { name: "Run" }).click();
       await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
       await save(page, `popgen-shell-done-${theme}`);
+    });
+
+    /** Calculates the diversity of the panel and sets the missing data
+        threshold to 1 at the Variants step, which removes it. */
+    async function removeTheDiversity(page: Page): Promise<void> {
+      await loadPanelWithPopulations(page);
+      await goTo(page, "Analyses");
+      await page.getByRole("button", { name: "Run" }).click();
+      await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
+      await goTo(page, "Variants");
+      const threshold = page.getByLabel(
+        "Maximum proportion of missing genotypes",
+      );
+      await threshold.fill("1");
+      await threshold.press("Enter");
+      await expect(
+        page.getByRole("region", { name: "Notice" }).getByRole("alertdialog"),
+      ).toBeVisible();
+    }
+
+    test("the shell with its notice", async ({ page }) => {
+      await removeTheDiversity(page);
+      await save(page, `popgen-shell-notice-${theme}`, { fullPage: false });
+    });
+
+    test("the shell with its notice, at 320 px", async ({ page }) => {
+      // The window of a small phone, which the page scrolls in.
+      await page.setViewportSize({ width: 320, height: 640 });
+      await removeTheDiversity(page);
+      await save(page, `popgen-shell-notice-320-${theme}`, { fullPage: false });
+    });
+
+    test("the notice reached by F6, and its Undo by the Tab key", async ({
+      page,
+    }) => {
+      await removeTheDiversity(page);
+      const notice = page.getByRole("region", { name: "Notice" });
+      await page.keyboard.press("F6");
+      await expect(notice).toBeFocused();
+      await save(page, `popgen-shell-notice-f6-${theme}`, { fullPage: false });
+      await page.keyboard.press("Tab");
+      await page.keyboard.press("Tab");
+      await expect(
+        notice.getByRole("button", { name: "Undo", exact: true }),
+      ).toBeFocused();
+      await save(page, `popgen-shell-notice-undo-focus-${theme}`, {
+        fullPage: false,
+      });
     });
 
     test("the error bar, with a second error", async ({ page }) => {

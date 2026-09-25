@@ -4,8 +4,10 @@
  * line and Undo and Redo in the states empty, ready, running and done,
  * with axe in each; Undo pressed with the mouse until nothing is left,
  * the focus on Redo; the keyboard's Undo and Redo, and a text field that
- * keeps them; and the text of the status region after each read of the
- * Variants step and of the metadata file.
+ * keeps them; the text of the status region after each read of the
+ * Variants step and of the metadata file; and the notice of results
+ * removed, with axe, which F6 reaches, and whose Undo, Redo and Close do
+ * what they say and give the focus back to where it was.
  */
 import { join } from "node:path";
 
@@ -344,4 +346,153 @@ test("WS9 D3 the status region says the end of each read of the Variants step an
   await expect(status(page)).toHaveText(
     "panel.nei read: 200 individuals, ploidy 2. All 200 individuals found.",
   );
+});
+
+/** The notice, the region of the toast at the end of the page. */
+function notice(page: Page): Locator {
+  return page.getByRole("region", { name: "Notice" });
+}
+
+/** Loads the panel, calculates its diversity, and sets the missing data
+    threshold to 1 at the Variants step, which removes the diversity;
+    gives the field of the threshold, which keeps the focus. */
+async function removeTheDiversity(page: Page): Promise<Locator> {
+  await loadPanel(page);
+  await goTo(page, "Analyses");
+  await page.getByRole("button", { name: "Run" }).click();
+  await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
+  // The end announced, before an undo is.
+  await expect(status(page)).toHaveText(/Diversity: done\.$/);
+  await goTo(page, "Variants");
+  const threshold = page.getByLabel("Maximum proportion of missing genotypes");
+  await threshold.fill("1");
+  await threshold.press("Enter");
+  await expect(notice(page)).toBeVisible();
+  return threshold;
+}
+
+test("WS9 D3 the shell with results removed: the notice with its words, Undo and Close, Analyses at Results removed, the field changed and the end of the page clear of the notice, and axe", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  // A window lower than the step, so that the page scrolls under the
+  // notice.
+  await page.setViewportSize({ width: 800, height: 400 });
+  await openPopgen(page);
+  const threshold = await removeTheDiversity(page);
+
+  await expect(
+    notice(page).getByRole("alertdialog", {
+      name: "Diversity removed because the missing data filter changed",
+    }),
+  ).toBeVisible();
+  await expect(
+    notice(page).getByRole("button", { name: "Undo", exact: true }),
+  ).toBeVisible();
+  await expect(
+    notice(page).getByRole("button", { name: "Close", exact: true }),
+  ).toBeVisible();
+  await expect(stepLink(page, "Analyses")).toHaveAccessibleName(
+    "Analyses, Results removed",
+  );
+  await expect(threshold).toBeFocused();
+
+  /** Expects the field of the threshold to be above the notice. */
+  const expectAboveTheNotice = async (): Promise<void> => {
+    const field = await threshold.boundingBox();
+    const region = await notice(page).boundingBox();
+    if (field === null || region === null) throw new Error("not laid out");
+    expect(field.y + field.height).toBeLessThanOrEqual(region.y);
+  };
+  // The field just changed, which has the focus, scrolled clear of the
+  // notice that appeared over it.
+  await expectAboveTheNotice();
+  // At the end of the page, the last field of the step is above the
+  // notice, not under it.
+  await page.evaluate(() => {
+    window.scrollTo(0, document.documentElement.scrollHeight);
+  });
+  await expectAboveTheNotice();
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("WS9 D3 F6 reaches the notice after a change that removed the diversity, and its Undo gives the table back and the focus to where it was", async ({
+  page,
+}) => {
+  await openPopgen(page);
+  const threshold = await removeTheDiversity(page);
+
+  await page.keyboard.press("F6");
+  await expect(notice(page)).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(notice(page).getByRole("alertdialog")).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(
+    notice(page).getByRole("button", { name: "Undo", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Enter");
+
+  await expect(notice(page)).toHaveCount(0);
+  await expect(threshold).toBeFocused();
+  await expect(threshold).toHaveValue("0.1");
+  await expect(status(page)).toHaveText(
+    "Undone: the missing data filter changed.",
+  );
+  await goTo(page, "Analyses");
+  await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
+});
+
+test("WS9 D3 Close of the notice leaves the change as it is and gives the focus to where it was", async ({
+  page,
+}) => {
+  await openPopgen(page);
+  const threshold = await removeTheDiversity(page);
+
+  await page.keyboard.press("F6");
+  await expect(notice(page)).toBeFocused();
+  for (let press = 0; press < 3; press++) {
+    await page.keyboard.press("Tab");
+  }
+  await expect(
+    notice(page).getByRole("button", { name: "Close", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Enter");
+
+  await expect(notice(page)).toHaveCount(0);
+  await expect(threshold).toBeFocused();
+  await expect(threshold).toHaveValue("1");
+  await expect(stepLink(page, "Analyses")).toHaveAccessibleName(
+    "Analyses, Ready",
+  );
+});
+
+test("WS9 D3 after an undo that removed the diversity the notice offers Redo, which redoes the change", async ({
+  page,
+}) => {
+  await openPopgen(page);
+  const threshold = await removeTheDiversity(page);
+  // The diversity of a new threshold, 0.5, and an undo back to 1, whose
+  // diversity was never calculated.
+  await threshold.fill("0.5");
+  await threshold.press("Enter");
+  await goTo(page, "Analyses");
+  await page.getByRole("button", { name: "Run" }).click();
+  await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
+  await expect(status(page)).toHaveText(/Diversity: done\.$/);
+  await expect(notice(page)).toHaveCount(0);
+  await page.keyboard.press("ControlOrMeta+z");
+  await expect(
+    notice(page).getByRole("alertdialog", {
+      name: "Undone: the missing data filter changed. Diversity removed",
+    }),
+  ).toBeVisible();
+
+  await notice(page).getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(notice(page)).toHaveCount(0);
+  await expect(status(page)).toHaveText(
+    "Redone: the missing data filter changed.",
+  );
+  await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
+  await goTo(page, "Variants");
+  await expect(threshold).toHaveValue("0.5");
 });

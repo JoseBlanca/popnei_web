@@ -1,0 +1,49 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+/* Fixed at the bottom of the window, over the room the page keeps for it
+   (base.css), as wide as the window less its margins, and no wider than a
+   line that reads well: forty times the largest space, about 60
+   characters of text beside the buttons. */
+.region {
+  position: fixed;
+  inset-block-end: var(--space-4);
+  inset-inline: var(--space-4);
+  max-inline-size: calc(var(--space-8) * 20);
+  margin-inline: auto;
+}
+
+/* F6 puts the focus on the region itself. */
+.region[data-focus-visible] {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+/* The words, then the buttons beside them, or under them when there is
+   no room. */
+.toast {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  padding-block: var(--space-3);
+  padding-inline: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.toast[data-focus-visible] {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+.content {
+  flex: 1 1 calc(var(--space-8) * 8);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

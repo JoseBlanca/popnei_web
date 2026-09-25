@@ -11,10 +11,7 @@
  * the last step was undone or redone, the focus moves to the other, which
  * that change has just enabled, since a disabled button cannot hold the
  * focus, which the browser would drop to the start of the page (WCAG
- * 2.4.3). An undo or a redo that makes no notice is announced in the
- * status region, "Undone: the missing data filter changed.", since
- * without it a user of a screen reader who pressed Ctrl+Z would hear
- * nothing; one that makes a notice is read out by the notice.
+ * 2.4.3). An undo or a redo is announced as undoRedo.ts says.
  */
 import { useEffect, useRef } from "react";
 import { flushSync } from "react-dom";
@@ -27,7 +24,7 @@ import { useAnnouncer } from "./announcer.tsx";
 import styles from "./Header.module.css";
 import { isForTheProject, shortcutOf } from "./shortcuts.ts";
 import type { Shortcut } from "./shortcuts.ts";
-import { undoneOrRedone } from "./words.ts";
+import { undoOrRedo } from "./undoRedo.ts";
 
 /** The header of the population genetics application. */
 export function Header(): React.JSX.Element {
@@ -40,8 +37,6 @@ export function Header(): React.JSX.Element {
 
   /** Undoes or redoes, from the button or the keyboard. */
   const change = (which: Shortcut): void => {
-    const description = store.getState()[which];
-    if (description === null) return;
     const [own, other] =
       which === "undo" ? [undoRef, redoRef] : [redoRef, undoRef];
     const hadFocus =
@@ -49,15 +44,9 @@ export function Header(): React.JSX.Element {
     // Drawn at once, so that the other button is enabled before it is
     // given the focus.
     flushSync(() => {
-      if (which === "undo") store.undo();
-      else store.redo();
+      undoOrRedo(store, announcer, which);
     });
-    const after = store.getState();
-    if (hadFocus && after[which] === null) other.current?.focus();
-    if (after.notice === null) {
-      const words = undoneOrRedone({ kind: which, description });
-      if (words !== null) announcer.announce(`${words}.`);
-    }
+    if (hadFocus && store.getState()[which] === null) other.current?.focus();
   };
 
   // The keyboard's Undo and Redo, on the whole page. The listener is put

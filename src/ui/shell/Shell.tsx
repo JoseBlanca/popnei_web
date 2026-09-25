@@ -1,7 +1,8 @@
 /**
  * The shell of the population genetics application, what surrounds every
  * step (docs/specs/shell.md): the header, the stepper, the summary line,
- * the step the URL hash names in `<main>`, and the status region. When the hash changes,
+ * the step the URL hash names in `<main>`, the status region and the
+ * notice, which React Aria draws at the end of the page. When the hash changes,
  * the title of the page names the new step and the focus moves to its
  * `<h1>`, since a screen reader says nothing of a content replaced without
  * a new page (react.md, "Moving focus"); not when the page opens, where
@@ -15,6 +16,7 @@ import { AnalysesStep } from "../steps/analyses/AnalysesStep.tsx";
 import { IndividualsStep } from "../steps/individuals/IndividualsStep.tsx";
 import { VariantsStep } from "../steps/variants/VariantsStep.tsx";
 import { Header } from "./Header.tsx";
+import { Notice } from "./Notice.tsx";
 import styles from "./Shell.module.css";
 import { StatusRegion } from "./StatusRegion.tsx";
 import { Stepper } from "./Stepper.tsx";
@@ -55,6 +57,7 @@ export function Shell(): React.JSX.Element {
         </ErrorBoundary>
       </main>
       <StatusRegion />
+      <Notice />
     </div>
   );
 }

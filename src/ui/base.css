@@ -12,7 +12,17 @@
   box-sizing: border-box;
 }
 
+/* While a toast is fixed at the bottom of the window, the page keeps room
+   under its content as tall as the toast, which the toast measures into
+   --toast-room (src/ui/widgets/Toast.tsx): the end of the page can be
+   scrolled above it, and the browser scrolls what the Tab key reaches
+   clear of it (WCAG 2.4.11). */
+html {
+  scroll-padding-block-end: var(--toast-room, 0);
+}
+
 body {
+  padding-block-end: var(--toast-room, 0);
   margin: 0;
   background: var(--color-background);
   color: var(--color-text);
