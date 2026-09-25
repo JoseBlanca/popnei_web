@@ -9,8 +9,11 @@
 
 import type { JsonValue } from "./keys.ts";
 import {
+  counted,
   escaped,
   FORMAT_VERSION,
+  grouped,
+  namesOf,
   parseProject,
   projectErrorText,
   shown,
@@ -27,7 +30,7 @@ import type {
   VariantSource,
 } from "./project.ts";
 import type { Result } from "./result.ts";
-import type { AnalysisDef, AppState } from "./store.ts";
+import type { AnalysisDef, AppState, CheckVerdict } from "./store.ts";
 import { settingsFingerprint } from "./keys.ts";
 import type {
   ColumnType,
@@ -891,4 +894,107 @@ export function compareIdentity(
     differences.push({ kind: "numVars", now: nowRead.numVars });
   }
   return differences;
+}
+
+/**
+ * The words of the comparison of a new run with the check numbers of the
+ * project file, which the panel of every analysis shows under its result:
+ * the same numbers, or other numbers followed by a sentence for each
+ * other cause the store names, another version of popnei and another
+ * calculation of the analysis by the application (the spec, Open 1).
+ */
+export function checkVerdictText(verdict: CheckVerdict): string {
+  switch (verdict.kind) {
+    case "same":
+      return "The same numbers as in the project file: this variants file gives the results the project was saved with.";
+    case "differs": {
+      const sentences = [
+        "Not the same numbers as in the project file. The variants file may not be the one the project was saved with, or it was changed since.",
+      ];
+      if (verdict.popnei !== null) {
+        sentences.push(
+          `The numbers were calculated with popnei ${shown(verdict.popnei.saved)}, and this is popnei ${shown(verdict.popnei.now)}.`,
+        );
+      }
+      if (verdict.app !== null) {
+        sentences.push(
+          `The numbers were calculated by version ${shown(verdict.app.saved)} of the application, which calculated this analysis in another way than this version, ${shown(verdict.app.now)}.`,
+        );
+      }
+      return sentences.join(" ");
+    }
+  }
+}
+/**
+ * The warning the Variants step shows beside the variants file given
+ * after an opening, one sentence that says what the reference knows of
+ * its file and how this one differs; `null` with no reference, no file,
+ * or no difference (the spec, Open 1).
+ */
+export function identityWarning(p: Project): string | null {
+  const reference = p.reference;
+  if (reference === null || p.variants === null) {
+    return null;
+  }
+  const differences = compareIdentity(reference.variants, p.variants);
+  if (differences.length === 0) {
+    return null;
+  }
+  return `The project was made with ${madeWith(reference.variants)}; this file ${allOf(differences.map(differenceWords))}. Load the file the project was made with, or go on with this one.`;
+}
+
+/**
+ * The file to give after an opening, the words of the Variants step, the
+ * stepper and the announcement of the opening; `null` when a variants
+ * file is loaded or there is no reference (the spec, Open 1).
+ */
+export function askedFileText(p: Project): string | null {
+  if (p.variants !== null || p.reference === null) {
+    return null;
+  }
+  return `This project was made with ${madeWith(p.reference.variants)}. Load it in the Variants step to run its analyses again.`;
+}
+
+/** What the reference knows of its file, the name first: "panel.nei,
+    342 individuals and 1,203,554 variants". */
+function madeWith(source: VariantSource): string {
+  const words = [escaped(source.name)];
+  const read = source.read;
+  if (read.kind === "read") {
+    words.push(counted(read.individuals.length, "individual"));
+    if (read.numVars !== null) {
+      words.push(counted(read.numVars, "variant"));
+    }
+  }
+  return allOf(words);
+}
+
+/** A difference as the end of a sentence whose subject is "this file". */
+function differenceWords(difference: IdentityDifference): string {
+  switch (difference.kind) {
+    case "name":
+      return `is called ${escaped(difference.now)}`;
+    case "format":
+      return difference.now === "vcf" ? "is a VCF file" : "is a .nei file";
+    case "size":
+      return `has ${grouped(difference.now)} bytes where that one had ${grouped(difference.saved)}`;
+    case "individualsCount":
+      return `has ${counted(difference.now, "individual")}`;
+    case "otherIndividuals":
+      return `lacks ${counted(difference.missing.length, "individual")} of that one: ${namesOf(difference.missing)}`;
+    case "individualsOrder":
+      return "has the same individuals in another order";
+    case "ploidy":
+      return `has ploidy ${String(difference.now)} where that one had ${String(difference.saved)}`;
+    case "numVars":
+      return `has ${counted(difference.now, "variant")}`;
+  }
+}
+
+/** A list of things in words: "a, b and c". */
+function allOf(words: readonly string[]): string {
+  const last = words.at(-1) ?? "";
+  return words.length < 2
+    ? last
+    : `${words.slice(0, -1).join(", ")} and ${last}`;
 }

@@ -1,9 +1,14 @@
 import { readFileSync } from "node:fs";
+import * as fc from "fast-check";
 import { describe, expect, test } from "vitest";
 import { keyFromWire, settingsFingerprint } from "./keys.ts";
 import { emptyProject } from "./project.ts";
 import type { Project, Reference, VariantSource } from "./project.ts";
 import {
+  askedFileText,
+  checkVerdictText,
+  compareIdentity,
+  identityWarning,
   projectFileErrorText,
   projectFileName,
   readProjectFile,
@@ -17,6 +22,7 @@ import {
   TEST_DEFS,
   deepFreeze,
   sampleProject,
+  wholeProject,
 } from "./testSupport.ts";
 import type { TestDefResult } from "./testSupport.ts";
 
@@ -1029,5 +1035,437 @@ describe("WS6 D2 the opening", () => {
     expect(p.reference?.checks.map((check) => check.settings)).toEqual([
       settingsFingerprint(DIVERSITY, p, { ploidy: 4, onlyPassed: true }, null),
     ]);
+  });
+});
+
+/** Names of individuals, `ind_001` to the count given. */
+function individualsNamed(count: number, first = 1): string[] {
+  return Array.from(
+    { length: count },
+    (_, index) => `ind_${String(first + index).padStart(3, "0")}`,
+  );
+}
+
+/** The variants file of the functionality's example: panel_2026.nei, 342
+    individuals and 1,203,554 variants. */
+const PANEL_2026: VariantSource = {
+  fileId: "99999999999999999999999999999999",
+  name: "panel_2026.nei",
+  size: 52428800,
+  format: "nei",
+  readOptions: null,
+  read: {
+    kind: "read",
+    individuals: individualsNamed(342),
+    ploidy: 2,
+    numVars: 1203554,
+  },
+};
+
+/** `PANEL_2026` loaded again, with its read replaced by `read`. */
+function givenAgain(
+  read: Partial<{
+    individuals: readonly string[];
+    ploidy: number;
+    numVars: number | null;
+  }>,
+): VariantSource {
+  const saved = PANEL_2026.read;
+  if (saved.kind !== "read") {
+    throw new Error("PANEL_2026 is read");
+  }
+  return {
+    ...PANEL_2026,
+    fileId: SAMPLE_VARIANTS_ID,
+    read: { ...saved, ...read },
+  };
+}
+
+/** A project opened from a file made with `PANEL_2026`, with `variants`
+    loaded. */
+function openedWith(variants: VariantSource | null): Project {
+  return deepFreeze<Project>({
+    ...emptyProject("popgen"),
+    variants,
+    reference: { variants: PANEL_2026, checks: [] },
+  });
+}
+
+describe("WS6 D3 the comparisons", () => {
+  test("a name that differs", () => {
+    expect(
+      compareIdentity(PANEL_2026, {
+        ...givenAgain({}),
+        name: "panel_2027.nei",
+      }),
+    ).toEqual([{ kind: "name", now: "panel_2027.nei" }]);
+  });
+
+  test("a format that differs", () => {
+    expect(
+      compareIdentity(PANEL_2026, {
+        ...givenAgain({}),
+        format: "vcf",
+        readOptions: { ploidy: 2, onlyPassed: false },
+      }),
+    ).toEqual([{ kind: "format", now: "vcf" }]);
+  });
+
+  test("a size that differs", () => {
+    expect(
+      compareIdentity(PANEL_2026, { ...givenAgain({}), size: 52430112 }),
+    ).toEqual([{ kind: "size", saved: 52428800, now: 52430112 }]);
+  });
+
+  test("a number of individuals that differs", () => {
+    expect(
+      compareIdentity(
+        PANEL_2026,
+        givenAgain({ individuals: individualsNamed(360) }),
+      ),
+    ).toEqual([{ kind: "individualsCount", now: 360 }]);
+  });
+
+  test("other individuals, as many", () => {
+    const now = individualsNamed(342).filter(
+      (name) => !["ind_031", "ind_044"].includes(name),
+    );
+    expect(
+      compareIdentity(
+        PANEL_2026,
+        givenAgain({ individuals: [...now, "x1", "x2"] }),
+      ),
+    ).toEqual([{ kind: "otherIndividuals", missing: ["ind_031", "ind_044"] }]);
+  });
+
+  test("the same individuals in another order", () => {
+    expect(
+      compareIdentity(
+        PANEL_2026,
+        givenAgain({ individuals: individualsNamed(342).toReversed() }),
+      ),
+    ).toEqual([{ kind: "individualsOrder" }]);
+  });
+
+  test("a ploidy that differs", () => {
+    expect(compareIdentity(PANEL_2026, givenAgain({ ploidy: 4 }))).toEqual([
+      { kind: "ploidy", saved: 2, now: 4 },
+    ]);
+  });
+
+  test("a number of variants that differs, once both are counted", () => {
+    expect(
+      compareIdentity(PANEL_2026, givenAgain({ numVars: 1203600 })),
+    ).toEqual([{ kind: "numVars", now: 1203600 }]);
+    expect(compareIdentity(PANEL_2026, givenAgain({ numVars: null }))).toEqual(
+      [],
+    );
+  });
+
+  test("the warning of docs/functionality.md, whole", () => {
+    expect(
+      identityWarning(
+        openedWith(givenAgain({ individuals: individualsNamed(360) })),
+      ),
+    ).toBe(
+      "The project was made with panel_2026.nei, 342 individuals and 1,203,554 variants; this file has 360 individuals. Load the file the project was made with, or go on with this one.",
+    );
+  });
+
+  test("the warning names every difference, and the individuals lacking as the project names them", () => {
+    const now = individualsNamed(342).filter(
+      (name) => !individualsNamed(12, 31).includes(name),
+    );
+    expect(
+      identityWarning(
+        openedWith({
+          ...givenAgain({
+            individuals: [...now, ...individualsNamed(12, 500)],
+          }),
+          name: "panel_2027.nei",
+          size: 52430112,
+        }),
+      ),
+    ).toBe(
+      "The project was made with panel_2026.nei, 342 individuals and 1,203,554 variants; this file is called panel_2027.nei, has 52,430,112 bytes where that one had 52,428,800 and lacks 12 individuals of that one: ind_031, ind_032 and 10 more. Load the file the project was made with, or go on with this one.",
+    );
+  });
+
+  test("no warning with no reference, no file, or no difference", () => {
+    expect(identityWarning(openedWith(null))).toBeNull();
+    expect(identityWarning(openedWith(givenAgain({})))).toBeNull();
+    expect(
+      identityWarning(
+        deepFreeze<Project>({
+          ...emptyProject("popgen"),
+          variants: PANEL_2026,
+        }),
+      ),
+    ).toBeNull();
+  });
+
+  test("the file asked for after an opening", () => {
+    expect(askedFileText(openedWith(null))).toBe(
+      "This project was made with panel_2026.nei, 342 individuals and 1,203,554 variants. Load it in the Variants step to run its analyses again.",
+    );
+    expect(askedFileText(openedWith(givenAgain({})))).toBeNull();
+    expect(askedFileText(emptyProject("popgen"))).toBeNull();
+  });
+
+  test("the words of the same numbers", () => {
+    expect(checkVerdictText({ kind: "same" })).toBe(
+      "The same numbers as in the project file: this variants file gives the results the project was saved with.",
+    );
+  });
+
+  test("the words of other numbers, with and without the other causes", () => {
+    const differs =
+      "Not the same numbers as in the project file. The variants file may not be the one the project was saved with, or it was changed since.";
+    expect(checkVerdictText({ kind: "differs", popnei: null, app: null })).toBe(
+      differs,
+    );
+    expect(
+      checkVerdictText({
+        kind: "differs",
+        popnei: { saved: "0.1.0", now: "0.2.0" },
+        app: { saved: "0.2.0", now: "0.3.0" },
+      }),
+    ).toBe(
+      `${differs} The numbers were calculated with popnei 0.1.0, and this is popnei 0.2.0. The numbers were calculated by version 0.2.0 of the application, which calculated this analysis in another way than this version, 0.3.0.`,
+    );
+  });
+});
+
+// The properties. `wholeProject` draws the fingerprints of the checks at
+// random, and they never match; `savedState` makes that of half of them
+// with the settings of the project drawn, gives the project the
+// reference's variants file in half of the draws that have both, so that
+// the rule of the carried check numbers is met, and draws the state of
+// each analysis.
+
+/** A check number JSON writes back as itself. */
+const checkNumber = fc.option(
+  fc.double({ noNaN: true, noDefaultInfinity: true }),
+);
+
+/** The state of an analysis, as drawn: done with its numbers, or not. */
+const drawnStatus = fc.oneof(
+  fc.constant<"ready" | "removed" | "locked">("ready"),
+  fc.constant<"ready" | "removed" | "locked">("removed"),
+  fc.constant<"ready" | "removed" | "locked">("locked"),
+  fc.array(checkNumber, { maxLength: 7 }),
+);
+
+/** Any state of the store that a project file is written from. */
+const savedState: fc.Arbitrary<AppState<TestDefResult>> = fc
+  .record({
+    drawn: wholeProject,
+    sameFile: fc.boolean(),
+    matched: fc.array(fc.boolean(), { minLength: 3, maxLength: 3 }),
+    statuses: fc.array(drawnStatus, { minLength: 3, maxLength: 3 }),
+    popneiVersion: fc.option(fc.string()),
+  })
+  .map(({ drawn, sameFile, matched, statuses, popneiVersion }) => {
+    const reference = drawn.reference;
+    const p: Project =
+      sameFile && reference !== null && drawn.variants !== null
+        ? {
+            ...drawn,
+            variants: { ...reference.variants, fileId: drawn.variants.fileId },
+          }
+        : drawn;
+    const project: Project =
+      reference === null
+        ? p
+        : {
+            ...p,
+            reference: {
+              ...reference,
+              checks: reference.checks.map((check, index) =>
+                matched[index] === true
+                  ? {
+                      ...check,
+                      settings: settingsFingerprint(
+                        defOf(check.analysis),
+                        p,
+                        (p.variants ?? reference.variants).readOptions,
+                        null,
+                      ),
+                    }
+                  : check,
+              ),
+            },
+          };
+    const canRun = project.variants?.read.kind === "read";
+    const views = TEST_DEFS.map((def, index) => {
+      const drawnOne = statuses[index] ?? "ready";
+      const status: AnalysisStatus<TestDefResult> =
+        typeof drawnOne === "string"
+          ? drawnOne === "locked"
+            ? { kind: "locked", reason: "Load a variants file." }
+            : { kind: drawnOne, key: A_KEY }
+          : canRun
+            ? {
+                kind: "done",
+                key: A_KEY,
+                result: { analysis: def.id, numbers: drawnOne },
+                warnings: [],
+                check: null,
+              }
+            : { kind: "ready", key: A_KEY };
+      return { id: def.id, status };
+    });
+    const anyDone = views.some((view) => view.status.kind === "done");
+    return deepFreeze<AppState<TestDefResult>>({
+      project,
+      undo: null,
+      redo: null,
+      popneiVersion:
+        anyDone && popneiVersion === null ? "0.1.0" : popneiVersion,
+      analyses: views,
+      runs: [],
+      notice: null,
+    });
+  });
+
+/** The file of `state`, written by version 0.2.0 on a fixed date. */
+function savedText(state: AppState<TestDefResult>): string {
+  return writeProjectFile(
+    state,
+    TEST_DEFS,
+    "0.2.0",
+    "2026-09-25T14:03:11.000Z",
+  );
+}
+
+/** Every name of a field the tables of the spec name, of the top of the
+    file and of every object inside it but the options of an analysis. */
+const NAMED_FIELDS = new Set([
+  // the top
+  "format",
+  "formatVersion",
+  "app",
+  "appVersion",
+  "popneiVersion",
+  "saved",
+  "variants",
+  "filters",
+  "individualFilters",
+  "individuals",
+  "grouping",
+  "analyses",
+  "checks",
+  // the variants file
+  "fileId",
+  "name",
+  "size",
+  "readOptions",
+  "ploidy",
+  "onlyPassed",
+  "read",
+  "kind",
+  "numVars",
+  // the filters
+  "maxAllowedMissingRate",
+  "maxAllowedMaf",
+  "maxAllowedObsHet",
+  "maxAllowedR2",
+  "maxDist",
+  // the individuals file
+  "csv",
+  "encoding",
+  "separator",
+  "decimal",
+  "table",
+  "columns",
+  "rows",
+  "one",
+  "zero",
+  "found",
+  // the grouping
+  "column",
+  "roles",
+  // the options and the checks
+  "analysis",
+  "options",
+  "numbers",
+  "keyVersion",
+]);
+
+/** The names of the fields of `value` and of what it holds that no table
+    of the spec names, the options of the analyses left out. */
+function unnamedFields(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.flatMap(unnamedFields);
+  }
+  if (typeof value !== "object" || value === null) {
+    return [];
+  }
+  return Object.entries(value).flatMap(([name, field]) => [
+    ...(NAMED_FIELDS.has(name) ? [] : [name]),
+    ...(name === "options" ? [] : unnamedFields(field)),
+  ]);
+}
+
+describe("WS6 D4 the properties of the project file", () => {
+  test("a file written opens into the project the table of what is written gives", () => {
+    fc.assert(
+      fc.property(savedState, (state) => {
+        const p = state.project;
+        const opening = readProjectFile(savedText(state), p.app, TEST_DEFS);
+        if (!opening.ok) {
+          throw new Error(JSON.stringify(opening.error));
+        }
+        const got = opening.value;
+        expect(got.variants).toBeNull();
+        expect(got.filters).toEqual(p.filters);
+        expect(got.individualFilters).toEqual(p.individualFilters);
+        expect(got.individuals).toEqual(
+          p.individuals?.read.kind === "read" ? p.individuals : null,
+        );
+        expect(got.grouping).toEqual(p.grouping);
+        expect(got.analyses).toEqual(p.analyses);
+        const candidates = [p.variants, p.reference?.variants ?? null]
+          .filter((v): v is VariantSource => v !== null)
+          .map((v): VariantSource =>
+            v.read.kind === "read" ? v : { ...v, read: { kind: "pending" } },
+          );
+        if (candidates.length === 0) {
+          expect(got.reference).toBeNull();
+        } else {
+          expect(candidates).toContainEqual(got.reference?.variants);
+        }
+      }),
+    );
+  });
+
+  test("written, opened, and written again with no result, a project gives the same text", () => {
+    fc.assert(
+      fc.property(savedState, (state) => {
+        const text = savedText(state);
+        const opening = readProjectFile(text, state.project.app, TEST_DEFS);
+        if (!opening.ok) {
+          throw new Error(JSON.stringify(opening.error));
+        }
+        const again = deepFreeze<AppState<TestDefResult>>({
+          ...state,
+          project: opening.value,
+          analyses: TEST_DEFS.map((def) => ({
+            id: def.id,
+            status: { kind: "ready", key: A_KEY },
+          })),
+        });
+        expect(savedText(again)).toBe(text);
+      }),
+    );
+  });
+
+  test("the text is JSON and holds no field the spec does not name", () => {
+    fc.assert(
+      fc.property(savedState, (state) => {
+        const parsed: unknown = JSON.parse(savedText(state));
+        expect(unnamedFields(parsed)).toEqual([]);
+      }),
+    );
   });
 });
