@@ -13,12 +13,14 @@ import { calcPerVarDistribs, init, openVars, openVcf, version } from "popnei";
 import type { PerVarDistribs, Step, Variants } from "popnei";
 
 import type { Result } from "../core/result.ts";
+import type { FromRunner, WorkerStop } from "./messages.ts";
 import type {
   DiversityJob,
   DiversityResult,
   Job,
   JobResult,
   LoadFormat,
+  Opened,
   Progress,
   VariantFilter,
 } from "./protocol.ts";
@@ -37,32 +39,26 @@ export interface LoadFile {
   readonly source: Uint8Array | Blob;
 }
 
-/** What the worker's script posts for a request. */
-export type Answer<T> =
-  /** The value of `opened` or of `result`. */
-  | { readonly kind: "ok"; readonly value: T }
-  /** popnei refused the input, with its message; the worker goes on. */
-  | { readonly kind: "refused"; readonly message: string }
-  /** The browser no longer reads the file `name`, with popnei's message;
-      the worker goes on. */
-  | {
-      readonly kind: "reopenFailed";
-      readonly name: string;
-      readonly message: string;
-    }
-  /** The worker cannot be trusted any more, and closes after posting it. */
-  | { readonly kind: "crashed"; readonly message: string }
-  /** A request only a defect of the page sends; the worker closes after
-      posting it. */
-  | { readonly kind: "badRequest"; readonly message: string };
+/** The message of the calculation worker of kind `K` with no `id`, which
+    the worker's script adds. */
+type AnswerOf<K extends FromRunner["kind"]> = Omit<
+  Extract<FromRunner, { readonly kind: K }>,
+  "id"
+>;
 
-/** What an `open` gives: the individuals of the file and their ploidy. */
-export interface Opened {
-  /** The names of the individuals, in the order of the file. */
-  readonly individuals: readonly string[];
-  /** The alleles of a genotype; for a VCF, the one it was read with. */
-  readonly ploidy: number;
-}
+/**
+ * What the worker's script posts for a request: the value of `opened` or
+ * of `result`; `refused`, popnei refused the input, and `reopenFailed`,
+ * the browser no longer reads the file, after which the worker goes on;
+ * or a `WorkerStop`, after which it closes. The failures are the messages
+ * of messages.ts with no id, so a field added to one of them is a field
+ * the runner has to give.
+ */
+export type Answer<T> =
+  | { readonly kind: "ok"; readonly value: T }
+  | AnswerOf<"refused">
+  | AnswerOf<"reopenFailed">
+  | WorkerStop;
 
 /** The runner of one worker, which holds its one load. */
 export interface Runner {
