@@ -396,6 +396,12 @@ ploidy 4.
   refused, are announced when they appear, through the function the
   shell gives the screens (`docs/specs/shell.md`, "The status region"), since the focus stays
   on the button and a screen reader would not read them.
+- The line of a number a field refused, or of a character it threw
+  away, is the first part of the field's description, which a screen
+  reader reads after the label when the focus comes to the field; the
+  line under the ploidy, 190 characters long, comes after it, so that
+  the user hears why their number was not taken before the advice on
+  the ploidy.
 - The read may take long on a slow disk, a time not yet measured, and
   the user may be on another step when it ends. So its end is announced by
   the shell, from the state of the store, and not by this step, which may
