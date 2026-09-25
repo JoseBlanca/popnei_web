@@ -106,12 +106,16 @@ asks.
 A table with one row per column of the file: its name; its type, as the
 reader inferred it, which the user reads and does not change in this
 version (`docs/functionality.md`, section 4), "identifier" for the
-first, "binary" with its two values, "binary: yes, no", "continuous", or
+first, "binary" with its two values, "binary: yes · no", "continuous", or
 "categorical"; and its first three distinct values that are not
 missing, joined by " · ", "España · Italia · Perú", so that a wrong
 encoding, separator or decimal mark shows. The dot and not a comma, as
 the owner decided on 25 September 2026, because a column of the decimal
-comma would read "1,75, 1,62, 1,80". A line above the table: "The types are inferred
+comma would read "1,75, 1,62, 1,80"; the two values of a binary column
+are joined by the same dot, since "binary: 1,5, 2,5" would read no
+better. The space before the dot does not break, so that a value keeps
+its dot on its line and a line never starts with a dot, which at 320 px
+wide, where the values wrap, would read as the mark of a list. A line above the table: "The types are inferred
 from the values; changing them comes in a later version." The types
 serve the association and the colours of the PCA, which come later;
 here they only show the user how their file was read. The rows of the
