@@ -10,10 +10,12 @@
  * another language, 0,05 in English or 0.05 in Spanish, is no number,
  * and not 5.
  */
+import { useContext, useEffect } from "react";
 import {
   NumberField as AriaNumberField,
   Input,
   Label,
+  NumberFieldStateContext,
   Text,
 } from "react-aria-components";
 
@@ -46,6 +48,11 @@ export interface NumberFieldProps {
   readonly step: number;
   /** A line under the field, which a screen reader reads with it. */
   readonly description?: string;
+  /** Given the function that commits what is typed now, as Enter would,
+      with the focus left where it is, and `null` when the field goes: for
+      a screen that needs the number before the field is left, a file
+      dropped on it while it is typed. */
+  readonly onCommitReady?: (commit: (() => void) | null) => void;
   /** Called with the number committed, rounded and within the bounds,
       never with an empty field. */
   readonly onChange: (value: number) => void;
@@ -59,6 +66,7 @@ export function NumberField({
   maxValue,
   step,
   description,
+  onCommitReady,
   onChange,
 }: NumberFieldProps): React.JSX.Element {
   return (
@@ -82,6 +90,9 @@ export function NumberField({
     >
       <Label className={classOf(styles, "label")}>{label}</Label>
       <Input className={classOf(styles, "input")} />
+      {onCommitReady !== undefined && (
+        <CommitHandle onCommitReady={onCommitReady} />
+      )}
       {description !== undefined && (
         <Text slot="description" className={classOf(styles, "description")}>
           {description}
@@ -89,4 +100,24 @@ export function NumberField({
       )}
     </AriaNumberField>
   );
+}
+
+/** Gives `onCommitReady` the commit of the field it is drawn in, from
+    React Aria's state of the field, and `null` when it goes. */
+function CommitHandle({
+  onCommitReady,
+}: {
+  readonly onCommitReady: (commit: (() => void) | null) => void;
+}): null {
+  const state = useContext(NumberFieldStateContext);
+  useEffect(() => {
+    if (state === null) return;
+    onCommitReady(() => {
+      state.commit();
+    });
+    return () => {
+      onCommitReady(null);
+    };
+  }, [state, onCommitReady]);
+  return null;
 }

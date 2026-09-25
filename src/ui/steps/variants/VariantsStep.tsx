@@ -6,7 +6,7 @@
  * is the options of the next VCF, until the pick writes them into the
  * project, and the message of a file it did not load.
  */
-import { useId, useRef, useState } from "react";
+import { useId, useRef, useState, useSyncExternalStore } from "react";
 
 import { MAX_PLOIDY, escaped, projectNeeds } from "../../../core/project.ts";
 import type { VariantLoad, VariantSource } from "../../../core/project.ts";
@@ -30,9 +30,10 @@ import {
   shownOptions,
   thresholdCommand,
 } from "./commands.ts";
-import type { EditedOptions, StepCommand } from "./commands.ts";
+import type { StepCommand } from "./commands.ts";
 import { ReadingTime } from "./ReadingTime.tsx";
 import styles from "./VariantsStep.module.css";
+import { createVcfOptions } from "./vcfOptions.ts";
 import {
   ONLY_PASSED_LABEL,
   PICKER_ENDINGS,
@@ -73,42 +74,25 @@ export function VariantsStep(): React.JSX.Element {
   const reason = useAppState((s) => projectNeeds(s.project));
 
   // The options the user set and has not applied by a pick or a read
-  // again; the step shows them while their load is there, and otherwise
-  // those it starts at, so a new load or an undo sets them back. The ref
-  // holds the same, written in the handlers, for a file dropped in the
-  // moment after an edit, before React draws again.
-  const [edited, setEdited] = useState<EditedOptions | null>(null);
-  const editedRef = useRef<EditedOptions | null>(null);
+  // again, held by the step while it is drawn (vcfOptions.ts); it shows
+  // them while their load is there, and otherwise those it starts at, so
+  // a new load or an undo sets them back.
+  const [vcfOptions] = useState(() => createVcfOptions(store));
+  const edited = useSyncExternalStore(
+    vcfOptions.subscribe,
+    vcfOptions.getEdited,
+  );
   const options = useAppState((s) => shownOptions(edited, s.project));
-  const loadId = variants?.fileId ?? null;
-  const setOptions = (next: VcfReadOptions): void => {
-    const edit = { forLoad: loadId, options: next };
-    editedRef.current = edit;
-    setEdited(edit);
-  };
-  const vcfSection = useRef<HTMLElement>(null);
+  // Commits what is typed in the ploidy, through the field's own parser
+  // and rounding, with the focus left where it is.
+  const commitPloidy = useRef<(() => void) | null>(null);
 
   /** The options as they are now, with a number still being typed in
       the ploidy committed first: a file dropped from the desktop leaves
       the focus in the field, which has not committed it. */
   const optionsNow = (): VcfReadOptions => {
-    const active = document.activeElement;
-    if (
-      active instanceof HTMLElement &&
-      vcfSection.current?.contains(active) === true
-    ) {
-      // Leaving the field commits it, through its onChange, at once.
-      active.blur();
-      active.focus();
-    }
-    return shownOptions(editedRef.current, store.getState().project);
-  };
-
-  /** Applies a load, and forgets the edits it applied. */
-  const applyLoad = (step: StepCommand): void => {
-    store.apply(step.description, step.command);
-    editedRef.current = null;
-    setEdited(null);
+    commitPloidy.current?.();
+    return vcfOptions.shown();
   };
 
   // The message of a file not loaded, until the next pick.
@@ -147,7 +131,7 @@ export function VariantsStep(): React.JSX.Element {
       format,
       readOptions,
     };
-    applyLoad(pickCommand(load));
+    vcfOptions.load(pickCommand(load));
   };
 
   const loadedOptions = variants?.readOptions ?? null;
@@ -159,7 +143,7 @@ export function VariantsStep(): React.JSX.Element {
   const readAgain = (): void => {
     if (variants === null || againFile === null) return;
     const fileId = files.addFile(againFile);
-    applyLoad(
+    vcfOptions.load(
       readAgainCommand({
         fileId,
         name: variants.name,
@@ -220,7 +204,6 @@ export function VariantsStep(): React.JSX.Element {
         </section>
 
         <section
-          ref={vcfSection}
           aria-labelledby={vcfHeading}
           className={classOf(styles, "section")}
         >
@@ -234,15 +217,18 @@ export function VariantsStep(): React.JSX.Element {
             maxValue={MAX_PLOIDY}
             step={1}
             description={PLOIDY_DESCRIPTION}
+            onCommitReady={(commit) => {
+              commitPloidy.current = commit;
+            }}
             onChange={(ploidy) => {
-              setOptions({ ...options, ploidy });
+              vcfOptions.edit({ ...vcfOptions.shown(), ploidy });
             }}
           />
           <Checkbox
             label={ONLY_PASSED_LABEL}
             isSelected={options.onlyPassed}
             onChange={(onlyPassed) => {
-              setOptions({ ...options, onlyPassed });
+              vcfOptions.edit({ ...vcfOptions.shown(), onlyPassed });
             }}
           />
           {againLabel !== null && againFile !== null && (

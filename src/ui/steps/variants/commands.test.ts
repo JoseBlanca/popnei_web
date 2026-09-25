@@ -13,10 +13,10 @@ import {
   filterSwitchCommand,
   pickCommand,
   readAgainCommand,
-  shownOptions,
   thresholdCommand,
 } from "./commands.ts";
-import type { EditedOptions, StepCommand } from "./commands.ts";
+import type { StepCommand } from "./commands.ts";
+import { createVcfOptions } from "./vcfOptions.ts";
 import { readAgainLabel } from "./words.ts";
 
 /** The store of the page, with the analyses of the application and a
@@ -88,27 +88,23 @@ describe("the commands of the Variants step", () => {
 });
 
 describe("the options of a VCF the Variants step shows", () => {
-  test("after an undo, the options of the load it goes back to, and no button to read it again", () => {
+  test("after a pick with ploidy 4 and an undo, the options of the load it goes back to, and no button to read it again", () => {
     const store = realStore();
-    apply(store, pickCommand(vcf("a", "a.vcf", 2)));
-    // Ploidy 4 set, then b.vcf picked with it: the step forgets the edit
-    // it applied.
-    let edited: EditedOptions | null = {
-      forLoad: "a".repeat(32),
-      options: { ploidy: 4, onlyPassed: true },
-    };
-    const chosen = shownOptions(edited, store.getState().project);
-    expect(chosen.ploidy).toBe(4);
-    apply(store, pickCommand({ ...vcf("b", "b.vcf", 4), readOptions: chosen }));
-    edited = null;
-    expect(shownOptions(edited, store.getState().project).ploidy).toBe(4);
+    const options = createVcfOptions(store);
+    options.load(pickCommand(vcf("a", "a.vcf", 2)));
+    options.edit({ ploidy: 4, onlyPassed: true });
+    expect(options.shown().ploidy).toBe(4);
+    options.load(
+      pickCommand({ ...vcf("b", "b.vcf", 4), readOptions: options.shown() }),
+    );
+    expect(options.getEdited()).toBeNull();
+    expect(options.shown().ploidy).toBe(4);
 
     store.undo();
 
-    const project = store.getState().project;
-    const shown = shownOptions(edited, project);
+    const shown = options.shown();
     expect(shown.ploidy).toBe(2);
-    expect(project.variants?.readOptions?.ploidy).toBe(2);
+    expect(store.getState().project.variants?.readOptions?.ploidy).toBe(2);
     expect(
       readAgainLabel("a.vcf", { ploidy: 2, onlyPassed: true }, shown),
     ).toBe(null);
@@ -116,28 +112,39 @@ describe("the options of a VCF the Variants step shows", () => {
 
   test("with no file, a ploidy set and picked is forgotten, and an undo shows the default", () => {
     const store = realStore();
-    let edited: EditedOptions | null = {
-      forLoad: null,
-      options: { ploidy: 4, onlyPassed: true },
-    };
-    expect(shownOptions(edited, store.getState().project).ploidy).toBe(4);
-    apply(store, pickCommand(vcf("a", "a.vcf", 4)));
-    edited = null;
+    const options = createVcfOptions(store);
+    options.edit({ ploidy: 4, onlyPassed: true });
+    expect(options.shown().ploidy).toBe(4);
+    options.load(pickCommand({ ...vcf("a", "a.vcf", 4) }));
     store.undo();
-    expect(shownOptions(edited, store.getState().project).ploidy).toBe(2);
+    expect(options.shown().ploidy).toBe(2);
   });
 
-  test("an edit not yet picked is kept while its load is there", () => {
+  test("an edit not yet picked is kept while its load is there, and set back when the load changes", () => {
     const store = realStore();
-    apply(store, pickCommand(vcf("a", "a.vcf", 2)));
-    const edited: EditedOptions = {
-      forLoad: "a".repeat(32),
-      options: { ploidy: 3, onlyPassed: false },
-    };
+    const options = createVcfOptions(store);
+    options.load(pickCommand(vcf("a", "a.vcf", 2)));
+    options.edit({ ploidy: 3, onlyPassed: false });
     apply(store, thresholdCommand(0.2));
-    expect(shownOptions(edited, store.getState().project)).toEqual({
-      ploidy: 3,
-      onlyPassed: false,
+    expect(options.shown()).toEqual({ ploidy: 3, onlyPassed: false });
+    apply(store, pickCommand(vcf("c", "c.vcf", 2)));
+    expect(options.shown()).toEqual({ ploidy: 2, onlyPassed: true });
+  });
+
+  test("each change of the edits calls the listeners, and getEdited keeps its object until then", () => {
+    const store = realStore();
+    const options = createVcfOptions(store);
+    let calls = 0;
+    const stop = options.subscribe(() => {
+      calls += 1;
     });
+    options.edit({ ploidy: 4, onlyPassed: true });
+    const edited = options.getEdited();
+    expect(options.getEdited()).toBe(edited);
+    options.load(pickCommand(vcf("a", "a.vcf", 4)));
+    expect(calls).toBe(2);
+    stop();
+    options.edit({ ploidy: 3, onlyPassed: true });
+    expect(calls).toBe(2);
   });
 });
