@@ -113,7 +113,11 @@ and under it: "Any column can define the populations, whatever its
 type." There is no item for "all individuals in one population" in the
 walking skeleton: the project's grouping with no column, `null`, is
 what a new project starts with, so it cannot also mean a choice, and
-the diversity locks on it (**Open 1**). Every column is offered: a column of
+the diversity locks on it. The owner decided on 25 September 2026 that
+the metadata file and a column are required in stage 2 and optional
+from stage 4, when this step gets the item "All individuals in one
+population", `Grouping` a value for it, and the words "No metadata
+file: every individual is in one population." Every column is offered: a column of
 populations written as numbers, 1 to 12, is inferred continuous, and in
 this version the user could not change its type to make it choosable.
 Nothing is chosen until the user chooses, since a column chosen by the
@@ -155,7 +159,7 @@ some missing the list would leave them out without saying so.
 |---|---|---|
 | empty | cannot happen: with no file, the step offers the pick, which is the ready state | — |
 | locked | cannot happen: the file can be loaded before the variants file, and is checked once that one is read | — |
-| ready | no file: the zone, "Choose a metadata file…", and "No metadata file." with what that means (**Open 1**) | pick a file |
+| ready | no file: the zone, "Choose a metadata file…", and "No metadata file. The analyses per population need one." | pick a file |
 | running | the card with the name, "Reading pops.csv." and the three options of the reader; the columns and the populations of an earlier read are gone, since the read replaced them; no progress, a read of a second or two | change an option; pick another file; Undo |
 | done | the card, the options of the reader, the columns, the column of the populations, the check and the populations | change an option, choose the column, replace or remove the file |
 | results removed | cannot happen here: the step shows no result. A command of this step that removes results has its notice in the shell (`docs/specs/shell.md`), with the descriptions below | — |
@@ -233,12 +237,17 @@ The descriptions of the commands are in the table above. The rest:
 - **Reading**, **a refusal of the reader**, **a worker that failed**:
   the reason `individualsNeeds` gives, whole, "Reading pops.csv.",
   "pops.csv could not be read: line 7 has 3 cells where the header has
-  4. Load an individuals file in the Individuals step.", as the Variants
-  step shows `projectNeeds` (`docs/specs/steps/variants.md`, "Its
-  words"); the words of the refusals are the reader's
-  (`docs/specs/worker/individuals.md`). The ending, "Load an individuals
-  file in the Individuals step.", read on that very step, and the advice
-  of a crash of the light worker, "the calculation stopped
+  4, read with the semicolon as the separator. Load a metadata file in
+  the Individuals step.", as the Variants step shows `projectNeeds`
+  (`docs/specs/steps/variants.md`, "Its words"); the words of the
+  refusals are the reader's (`docs/specs/worker/individuals.md`), a
+  refused row naming the separator it was read with, as the owner
+  decided on 25 September 2026. The reasons of core name the file as
+  each application does, "a metadata file" here and "a traits file" in
+  association, as the owner decided the same day (point P of
+  `docs/specs/stage-2-open-points.md`), a parameter of `individualsNeeds`
+  in the approved `project.ts`. The ending, read on that very step, and
+  the advice of a crash of the light worker, "the calculation stopped
   unexpectedly", are among the provisional words of core the owner
   judges on these screens (`docs/specs/core/project.md`, open points 4
   and 5).
@@ -342,47 +351,11 @@ it, are additions to the approved `src/core/project.ts`, listed in
 ## Open points
 
 The open points of the eleven specs of stage 2 are gathered in
-`docs/specs/stage-2-open-points.md`, where the ones two specs share
-are one point, asked of the owner once; each below keeps its number
-here, and its meanwhile.
-
-1. **Whether the metadata file, and a column of populations, are
-   optional in the walking skeleton.** `docs/functionality.md` section 4
-   has the file optional, every individual in one population without
-   it. Core's `individualsNeeds`, approved on 24 September 2026, locks
-   every analysis that uses the file when there is none, "Load an
-   individuals file in the Individuals step.", and the diversity locks
-   when no column is chosen, "Choose the column that defines the
-   populations in the Individuals step." This is the same decision as
-   open point 1 of `docs/specs/analyses/diversity.md`, asked once as
-   point A of `docs/specs/stage-2-open-points.md`.
-   - Locked, the diversity's recommendation for the skeleton: the step
-     says "No metadata file. The analyses per population need one." and
-     has no item for one population; a user with one population makes a
-     file of one column.
-   - Optional: a line of `individualsNeeds` and of the diversity's needs
-     changes; the grouping needs a value of its own for "one population
-     chosen", apart from `null`, the grouping of a new project, which is
-     a change to `Grouping` in `docs/specs/core/project.md`; the step
-     gets back an item "All individuals in one population" and the
-     words "No metadata file: every individual is in one population." A
-     column kept by `removeIndividuals` is then ignored while there is
-     no file.
-
-   Recommended: locked in the walking skeleton, as the diversity spec
-   recommends, and optional from stage 4, when the step is whole, so
-   that the two screens agree and `Grouping` changes once. Meanwhile,
-   locked.
-2. **"Individuals file" or "metadata file" in the reasons of core.** The
-   reasons of `individualsNeeds` say "Load an individuals file", shared
-   by the two applications, where functionality and this step call it
-   the metadata file in population genetics and the traits file in
-   association, so the user reads two names for one file on one screen.
-   Recommended: each application's name in its reasons, which is a
-   parameter of the application to `individualsNeeds`. Meanwhile, the
-   reasons as core gives them. It is one of the words the owner took as
-   provisional on 24 September 2026, to be judged on these screens; point
-   P of `docs/specs/stage-2-open-points.md`.
+`docs/specs/stage-2-open-points.md`. The two this spec had were decided
+by the owner on 25 September 2026, and are written above as decided:
+the metadata file and a column required in stage 2, optional from stage
+4 (point A there), and each application's name for its file in the
+reasons of core (point P).
 
 ## Not in this spec
 

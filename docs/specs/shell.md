@@ -80,7 +80,10 @@ A `<nav>` labelled "Steps", with one link per step, `#variants`,
 `#individuals` and `#analyses`, and on each its name, the one of the
 `<h1>` of its step, and its state, as a word with a symbol beside it, so
 that the state is not told by colour alone (1.4.1). Three steps, and no
-Export step yet (**Open 1**).
+Export step, as the owner decided on 25 September 2026: saving the
+project is in the header, on every step; the report and its Export step
+come in stage 6; and writing the filtered variants as a VCF or a `.nei`
+file goes in the Variants step, in stage 3.
 
 The link of the step on screen has `aria-current="step"` and a mark that
 is not colour alone. Every step can be opened in every state: a step
@@ -100,7 +103,7 @@ the link has the pointer or the focus.
 | | Reading | its read is pending | the reason `projectNeeds` gives, "Reading panel.nei." |
 | | Problem | its read failed, or `projectNeeds` gives another reason | the reason `projectNeeds` gives |
 | | Done | read, and `projectNeeds` gives none | — |
-| Individuals | To do | no metadata file | the reason `individualsNeeds` gives, "Load an individuals file in the Individuals step." |
+| Individuals | To do | no metadata file | the reason `individualsNeeds` gives, "Load a metadata file in the Individuals step." |
 | | Reading | its read is pending | "Reading pops.csv.", from `individualsNeeds` |
 | | Problem | its read failed, or individuals of the variants file are missing from it | the reason `individualsNeeds` gives |
 | | To do | read, and no column of the populations chosen, `populationsNeeds` of kind `noColumn` | its reason, "Choose the column that defines the populations in the Individuals step." |
@@ -121,12 +124,13 @@ state. The reasons about the column of the populations are the
 diversity's words, "Why it cannot run" of
 `docs/specs/analyses/diversity.md`, given with their kind by
 `populationsNeeds` of that module, so that one condition has one text.
-The step calls the file of population genetics the metadata file
-(`docs/specs/steps/individuals.md`), and core's reasons call it the
-individuals file, which is point P of `docs/specs/stage-2-open-points.md`.
-If the owner makes the file optional, point A there, the first To do
-becomes "Optional", with the reason "Without it, every individual is in
-one population."
+The reasons of core name the file as each application does, the
+metadata file here and the traits file in association, as the owner
+decided on 25 September 2026, so the stepper and the step say the same
+name. The metadata file is required in stage 2, and so the first To do
+of Individuals is not "Optional"; from stage 4, when the owner decided
+the file becomes optional, that To do becomes "Optional", with the
+reason "Without it, every individual is in one population."
 
 **The step in the hash.** The step on screen is the one the hash names;
 an empty hash, or one that names no step, shows Variants and leaves the
@@ -165,7 +169,7 @@ writes them (`docs/specs/core/project.md`). A name from the user's
 files is shown escaped as core shows it. The mockup of the owner's
 summary line said how many variants the filters kept, "48,210 of
 1,203,554 variants kept (3 filters)", which the walking skeleton does
-not know (**Open 2**).
+not know (**Open 1**).
 
 ### The notice
 
@@ -285,9 +289,9 @@ the shell gives the screens:
 | what the user did | the announcement |
 |---|---|
 | an undo or a redo that makes no notice, with the button or the keyboard | "Undone: the missing data filter changed.", "Redone: the missing data filter changed." |
-| Save project | "panel.popnei.json was handed to the browser to download." (below, "Saving") |
+| Save of the dialog of Save project | "panel.popnei.json was handed to the browser to download." (below, "Saving") |
 | a project opened | "Opened panel.popnei.json." followed by the text of `askedFileText` when it gives one (below, "Opening") |
-| a file that a step did not load, several dropped at once, a variants file above 1.5 GB, the warning of a reopened project that differs from its file | the text the step shows for it, whose words are the step's (`docs/specs/steps/variants.md` and `individuals.md`, "Its words") |
+| a file that a step did not load, several dropped at once, the warning of a reopened project that differs from its file | the text the step shows for it, whose words are the step's (`docs/specs/steps/variants.md` and `individuals.md`, "Its words") |
 
 Without the first, a user of a screen reader who pressed Ctrl+Z would
 hear nothing.
@@ -312,9 +316,10 @@ own as it started: ‹message›. Reload the page."
 
 It has three buttons:
 
-- **Save the project**, which saves as Save project of the header does,
-  through the saving of the entry, and announces it in the bar's own
-  status region. It is not there when there is no store. Decided here,
+- **Save the project**, which saves through the saving of the entry,
+  under the name `proposedName` gives and with no dialog, since the
+  dialog of the header may be what failed, and announces it in the bar's
+  own status region. It is not there when there is no store. Decided here,
   not by the owner: the words of the bar tell the user to save, and this
   keeps that possible when the header is gone.
 - **Copy the details**, which copies, for a report of the bug, the
@@ -347,37 +352,45 @@ again.
 
 ### Saving
 
-**Save project** writes the project file, `docs/functionality.md` section
-9, with `writeProjectFile` of `src/core/projectFile.ts`, from the state
-of the store, the analyses of the application, the version of the
-application and the date, which the page gives, since core reads no
-clock; it can be pressed at any time, a read under way included. The
-browser downloads it, as a file the page made, under the name
-`projectFileName` gives: the name of the variants file with its ending
-replaced, `panel.popnei.json` for `panel.nei` or `panel.vcf.gz`; for an
-opened project with no variants file yet, the name of its reference's;
-and `project.popnei.json` otherwise. The saving is the entry's, so that
-the header and the error bar share it (`docs/specs/entry.md`, "The
-saving"). `writeProjectFile` refuses no project; a check number that is
-not finite is a defect of our code, which it throws, and the error bar
-shows it.
+**Save project** opens a dialog of the page, as the owner decided on 25
+September 2026: a React Aria `Dialog` headed "Save the project", with a
+text field, "File name", that starts at the name `proposedName` of the
+saving gives, `projectFileName` of `src/core/projectFile.ts`: the name
+of the variants file with its ending replaced, `panel.popnei.json` for
+`panel.nei` or `panel.vcf.gz`; for an opened project with no variants
+file yet, the name of its reference's; and `project.popnei.json`
+otherwise. Its buttons are "Save" and "Cancel". Save calls `save(name)`
+of the saving, which writes the project file, `docs/functionality.md`
+section 9, from the state of the store, the analyses of the
+application, the version of the application and the date, and hands it
+to the browser to download under that name, `.popnei.json` added when
+it does not end so (`docs/specs/entry.md`, "The saving"); the dialog
+closes and the focus goes back to Save project. It can be used at any
+time, a read under way included. `writeProjectFile` refuses no project;
+a check number that is not finite is a defect of our code, which it
+throws, and the error bar shows it. A field left empty keeps Save
+disabled, with the description "Give the file a name."
 
 A download is handed to the browser and gives the page no sign of how
 it ended: the browser saves it with its downloads, or asks where, or the
-user cancels its dialog. So the status region says "panel.popnei.json
-was handed to the browser to download.", and not that it was saved; and
-the page cannot know that a project was saved (**Open 3**).
+user cancels its dialog. So the page never says the file was saved, as
+the owner decided: the status region says "panel.popnei.json was handed
+to the browser to download." The option not taken was the browser's own
+Save As dialog, `showSaveFilePicker`, which tells the page that the file
+was written, in Chrome and Edge only, at the cost of a second way of
+saving and a test of each.
 
 **Before the page is left.** A reload or a closed tab loses the project,
 since nothing of it is kept in the browser. So while the project has
-changed since the page opened or a project file was last opened, the
-present project another object than that one, the page asks the browser
-to confirm before it is left, with the browser's own words, which a page
-cannot change. Decided here, not by the owner. A save does not stop the
-question, since the page cannot know that it saved (**Open 3**). A read
-recorded is a change too: the source of the file now holds what the
-worker read, which a file saved before it would not hold, so the page
-asks even when the user only picked a file.
+changed since the page opened, since a project file was last opened, or
+since the last Save, the present project another object than that one,
+the page asks the browser to confirm before it is left, with the
+browser's own words, which a page cannot change. The owner decided the
+question on 25 September 2026, and is asked to confirm that a Save stops
+it (**Open 2**, below): after a Save the page does not know that the file
+was kept. A read recorded is a change too: the source of the file now
+holds what the worker read, which a file saved before it would not hold,
+so the page asks even when the user only picked a file.
 
 ### Opening
 
@@ -519,8 +532,9 @@ the walking skeleton (stage 8).
   of Variants; after Close of the error bar, to the `<h1>` of the step.
 - **Not colour alone**: a state of a step is a word and a symbol; the
   current step a mark; the error bar its words (1.4.1).
-- **The dialogs** of opening take the focus and give it back to the
-  button that opened them, and Escape closes them, as React Aria's
+- **The dialogs** of opening and of Save take the focus, the dialog of
+  Save on its field of the name with the name selected, so that typing
+  replaces it, and give it back to the button that opened them, and Escape closes them, as React Aria's
   `Dialog` does; while one is open, the keyboard's Undo and Redo do
   nothing.
 - **A screen reader**, VoiceOver with Safari at least, is tried on the
@@ -561,8 +575,12 @@ flow of the walking skeleton and beside it (`.claude/skills/coding/testing.md`):
 - A page just opened is left with no question; after a pick of a file,
   leaving it raises the browser's question, which Playwright sees as a
   `beforeunload` dialog.
-- Save project downloads `panel.popnei.json` after `panel.nei` is
-  loaded, and the text of the status region says so.
+- Save project opens the dialog with "panel.popnei.json" in its field
+  after `panel.nei` is loaded; Save downloads `panel.popnei.json`, the
+  text of the status region says so, and the focus is on Save project;
+  a name changed to "run1" downloads `run1.popnei.json`; Cancel downloads
+  nothing; leaving the page just after the Save raises no question, and
+  after a change that follows it, the question.
 - Open project… with `notes.txt`, which is not JSON, shows the text of
   `notJson` in a dialog, and the focus is back on Open project… once it
   is closed; with a file above 64 MB, the text of `tooLarge`; with the
@@ -615,22 +633,13 @@ Each is a draft of 25 September 2026 and says what is listed here.
 ## Open points
 
 The open points of the eleven specs of stage 2 are gathered in
-`docs/specs/stage-2-open-points.md`, where the ones two specs share
-are one point, asked of the owner once; each below keeps its number
-here, and its meanwhile.
+`docs/specs/stage-2-open-points.md`. Two of the three this spec had were
+decided by the owner on 25 September 2026, and are written above as
+decided: three steps, and no Export step (point J there), and Save as a
+dialog of the page (point K). One stays, and one part of K is to
+confirm:
 
-1. **Whether the stepper has an Export step in the walking skeleton.**
-   The steps of the architecture are four, the fourth, Export, holding
-   the report and the project file (`docs/architecture.md`, section 9).
-   In stage 2 the report does not exist, and saving the project is in
-   the header, on every step, since a user saves in the middle of the
-   work as much as at its end. An Export step now would hold the one
-   button the header has already. Options: three steps, and Export comes
-   with the report in stage 6; or four, with Export holding "Save
-   project" alone and a line that the report comes later, which shows
-   the user the shape of the application from the start and costs a step
-   with nothing of its own. Recommended: three. Meanwhile, three.
-2. **How many variants the filters keep, in the summary line.** The
+1. **How many variants the filters keep, in the summary line.** The
    owner's mockup has "48,210 of 1,203,554 variants kept (3 filters)".
    The walking skeleton does not know it: the variants kept are counted
    by a calculation that reads the whole file, and what each filter kept
@@ -638,33 +647,16 @@ here, and its meanwhile.
    (`docs/specs/steps/variants.md`, "Not in this spec"). Meanwhile, the
    line gives the variants of the file once counted and the number of
    filters, "1,200 variants · 1 filter"; in stage 3 the kept count joins
-   it, as the mockup has it.
-3. **Save, and a download that gives no sign it finished.** A page that
-   hands a file to the browser as a download does not learn whether it
-   was saved: the user may cancel the browser's dialog, or the download
-   may fail. So the page cannot tell a project saved from one that was
-   not, and either asks before every leaving, or risks not asking when
-   the project was lost. The options:
-   - **The browser's Save As dialog in Chrome and Edge**,
-     `showSaveFilePicker`, which lets the user choose the folder and the
-     name and tells the page when the file is written, or that the user
-     cancelled; Firefox and Safari do not have it. There, a save is
-     known: the status region says "Saved panel.popnei.json.", and the
-     page does not ask before it is left until the project changes
-     again. In Firefox and Safari, the plain download as it is above,
-     with no "saved" state, and the question before leaving whenever the
-     project has changed since the page opened or a project file was
-     opened.
-   - **The plain download everywhere**, as above: one way in every
-     browser, and a question before every leaving of a changed project,
-     also just after a save, which a user learns to click through.
-
-   Recommended: the Save As dialog in Chrome and Edge and the plain
-   download elsewhere. It costs a second way of saving, the check that
-   the browser has the function, and a test in Chromium of each. Meanwhile,
-   the plain download everywhere, with the question before leaving
-   whenever the project has changed since the page opened or a project
-   file was opened.
+   it, as the mockup has it. The owner left it as it is on 25 September
+   2026 (point L).
+2. **Whether a Save stops the question before leaving**, to confirm. The
+   owner decided that the question is asked when the project changed
+   since the page opened or since the last Save. A Save that stops it
+   spares the user a question after every save; its cost is a user who
+   cancels the browser's own dialog of the download, or whose download
+   fails, and then leaves the page with no question and loses the
+   project. Meanwhile, as decided: a Save stops it until the next change.
+   The other answer changes one line of the saving and one test.
 
 ## Not in this spec
 

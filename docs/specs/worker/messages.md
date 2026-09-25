@@ -44,8 +44,8 @@ the worker that received it is ended (below):
 
 | request | to | its answer, when it goes right | when the input is refused |
 |---|---|---|---|
-| `open`: open the variants file of a load | the calculation worker | `opened`, the individuals and the ploidy | `refused`, popnei's message |
-| `run`: calculate the result of an analysis | the calculation worker | `result`, under the key it was asked with | `refused`, popnei's message |
+| `open`: open the variants file of a load | the calculation worker | `opened`, the individuals and the ploidy | `refused`, popnei's message; `reopenFailed`, a file the browser no longer reads |
+| `run`: calculate the result of an analysis | the calculation worker | `result`, under the key it was asked with, after its `progress` | `refused`, popnei's message; `reopenFailed`, a file the browser no longer reads |
 | `readIndividuals`: read the individuals file | the light worker | `individuals`, the table, or the ways the file is wrong | none: a file the reader refuses is its answer |
 
 - **`open` carries the load**: the load id, the `File` the user picked,
@@ -86,10 +86,19 @@ the worker that received it is ended (below):
   by a call to popnei, with its message as it is
   (`docs/specs/worker/protocol.md`, "The cases"). The worker goes on to
   the next request.
-- **`progress`** reports how far a request has gone, `done` of `total`.
-  popnei 0.1.0 reports none, so no worker of the walking skeleton sends
-  it; the kind is here because the client and the store already pass it
-  on (`docs/architecture.md`, section 5).
+- **`reopenFailed` is a variants file the browser can no longer read**,
+  changed, moved or deleted on the disk since the user picked it: popnei
+  refused a call that read the file, and the runner found that the file
+  no longer reads (`docs/specs/worker/runner.md`, "What it answers when
+  something goes wrong"). It carries the name of the file and popnei's
+  message, which the client writes to the console. The owner decided on
+  25 September 2026 that it is a kind of its own, so that the user is
+  told the file may have changed and to load it again, and not that the
+  calculation crashed (point B of `docs/specs/stage-2-open-points.md`).
+  The worker goes on.
+- **`progress`** reports how far a `run` has gone, as popnei's
+  `Progress` gives it (below, "The progress"). A `run` may get any
+  number of them before its answer, and an `open` gets none.
 
 ### The File travels in the request that needs it
 
@@ -106,18 +115,42 @@ worker receives first (`docs/specs/worker/client.md`); that is how "the
 page sends the new worker the `File` objects again" of section 5 of the
 architecture is done.
 
-popnei's `main` opens a `File` by ranges since 24 September 2026, a few
-MiB at a time (`openVcf` and `openVars`, `js/popnei/src/io_vcf.ts` and
-`io_vars.ts`); the release the site takes popnei from, `js-v0.1.0-dev.1`
-of 23 September 2026, has only the whole bytes. Because the `File`
-reaches the runner in both cases, the move to reading by ranges changes
-the runner and no message (`docs/architecture.md`, section 6). The
-progress of a pass does change a message: popnei's `main` reports it in
-four fields, the bytes read and the size of the file, the pass and the
-number of passes (`Progress` of `js/popnei/src/variant.ts`), where
-`progress` here has `done` and `total`; the release that brings it is a
-new version of the messages. Which release stage 2 is built on is point
-C of `docs/specs/stage-2-open-points.md`.
+The runner gives that `File` to popnei, whose `openVcf` and `openVars`
+of the release stage 2 builds on, `js-v0.1.0-dev.2`, take it and read it
+by ranges of a few MiB (`js/popnei/src/io_vcf.ts` and `io_vars.ts`), as
+the owner decided on 25 September 2026; no message carries the bytes of
+a file.
+
+### The progress
+
+A `progress` carries the four fields of popnei's `Progress`
+(`js/popnei/src/variant.ts`), under their names, with the id of the
+`run`:
+
+- `bytesRead`: the bytes of the file the pass has read, `numBytes` at
+  most;
+- `numBytes`: the bytes the file holds, those on the disk, so a gzipped
+  VCF is counted compressed;
+- `pass`: which pass of the run is reading, 1 for the first;
+- `numPasses`: how many passes the run makes, `numPassesOf` of the popnei
+  function that makes them.
+
+They are popnei's as they came, not a fraction the worker works out, so
+that the page can say which pass is reading, "pass 2 of 2" of a PCA, and
+draw the bar with the rule of popnei's README: the run is
+`(pass − 1 + bytesRead / numBytes) / numPasses` done. A pass over a
+`.nei` file ends below `numBytes`, since popnei does not read the whole
+file, so nothing waits for the two to meet; the answer of the run ends
+it (`docs/specs/worker/runner.md`, "Progress"). The check refuses a
+`progress` whose four fields are not numbers, and not one whose numbers
+are out of order: that is popnei's to keep. `Progress` of `protocol.ts`,
+which the client passes to the store, holds the same four fields, a
+change to that approved file (`docs/specs/stage-2-open-points.md`,
+"Changes to approved files").
+
+`PROTOCOL_VERSION` stays 1: the messages of the draft before this one,
+whose `progress` had `done` and `total`, were never built nor deployed,
+so no worker of another build can send them.
 
 ### A worker that cannot go on
 
@@ -152,10 +185,8 @@ handler, a request the browser could not copy, posts `badRequest`. The
 browser does not pass the error on to the page's window
 (`docs/specs/entry.md`, "The errors nothing else shows"). The
 runner's spec says which throws are which (`docs/specs/worker/runner.md`);
-a `File` that `FileReaderSync` cannot read is `crashed` there, and
-whether it gets a kind of its own is point B of
-`docs/specs/stage-2-open-points.md`, **Open 1** of both the runner's and
-the client's specs.
+a file the browser can no longer read is not among them: it is the
+answer `reopenFailed`, above, and the worker goes on.
 
 ### The ready message, and the version of the messages
 
@@ -279,7 +310,9 @@ export type FromRunner =
   | { kind: "opened"; id: number; individuals: string[]; ploidy: number }
   | { kind: "result"; id: number; key: string; result: JobResult }
   | { kind: "refused"; id: number; message: string }        // popnei refused the input
-  | { kind: "progress"; id: number; done: number; total: number }
+  | { kind: "reopenFailed"; id: number; name: string; message: string } // the file no longer reads
+  | { kind: "progress"; id: number; bytesRead: number; numBytes: number;
+      pass: number; numPasses: number }                      // popnei's Progress, of a run
   | WorkerStop;
 
 /** The worker cannot go on; it closes itself after posting it. */
@@ -382,7 +415,9 @@ with a refusal. Node has `File`, so the requests are built with `new
 File(["…"], "panel.nei")`.
 
 - **Every kind is accepted**: a message of each kind, the `open` of a VCF
-  and of a `.nei` file, a diversity `run` and its `result`, an
+  and of a `.nei` file, a diversity `run`, its `progress`, `{ kind:
+  "progress", id: 3, bytesRead: 259376, numBytes: 261490, pass: 1,
+  numPasses: 1 }`, and its `result`, a `reopenFailed`, an
   `individuals` read and one refused, gives `ok` with a message deeply
   equal to it. A property, with fast-check drawing messages of every kind
   of the two answers: `parseFromRunner(structuredClone(m))` is `ok` and
@@ -396,7 +431,9 @@ File(["…"], "panel.nei")`.
   `Object.assign(Object.create({ id: 1 }), { kind: "run", key, job })`,
   gives `missingFields` of `id` at `""`; an array
   of numbers where a `Float64Array` is expected; a `.nei` file with read
-  options and a VCF without them; a row of the table one cell short,
+  options and a VCF without them; a `progress` with `done` and `total`,
+  the fields of the draft before, `extraFields` and `missingFields`; a
+  row of the table one cell short,
   `wrongLength`; three types for a table of four columns; a refusal of
   the reader of a kind its spec does not give; a light worker's `ready`
   with a `popneiVersion`; a calculation worker's `ready` without one.
@@ -414,8 +451,15 @@ checks expect is seen in the browser, by the flow of the walking skeleton
 ## Where this departs from worker.md
 
 `.claude/skills/coding/worker.md` was written before this spec, and
-three things change; the skill is corrected when the owner approves this
+five things change; the skill is corrected when the owner approves this
 spec (`docs/specs/stage-2-open-points.md`, "Changes to approved files").
+
+- `progress` carries popnei's four fields, `bytesRead`, `numBytes`,
+  `pass` and `numPasses`, where the skill has `done` and `total`, and
+  comes from popnei's `Variants.onProgress` and not from a source of
+  bytes of our own, which the skill's "Progress, from the source of
+  bytes" designed before popnei had it.
+- The answer `reopenFailed` is new.
 
 - The message `files`, which gave a worker the list of the `File`
   objects, is gone: the `File` goes in the request that needs it, for the

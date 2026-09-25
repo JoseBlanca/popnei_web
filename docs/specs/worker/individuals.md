@@ -300,8 +300,11 @@ A refusal is a value, never an exception: the reader returns a `Result`
 back as the result of the read, not as a failure of the request
 (`.claude/skills/coding/worker.md`, "Errors are values"). The project
 records it, and `individualsNeeds` of `src/core/project.ts` shows it as
-"pops.csv could not be read: ‹what the reader found›. Load an individuals
-file in the Individuals step.", with the names and counts shown as that
+"pops.csv could not be read: ‹what the reader found›. Load a metadata
+file in the Individuals step.", with the file named as each application
+names it, "a metadata file" in population genetics and "a traits file"
+in association, as the owner decided on 25 September 2026, and the
+names and counts shown as that
 spec says (`docs/specs/core/project.md`, "What every analysis needs").
 This spec owns the words after the colon, which settles **Open 5** of
 that spec; the first four are the ones its meanwhile gave, but for the
@@ -313,11 +316,11 @@ and the last six are new:
 | `empty` | "it has no row of individuals", for a file with a header alone and for one with nothing at all |
 | `duplicateColumn` | "two columns are named pop" |
 | `duplicateIndividual` | "the individual ind_031 is in two rows" |
-| `raggedRow` | "line 7 has 3 cells where the header has 4" (**Open 1**) |
+| `raggedRow` | "line 7 has 3 cells where the header has 4, read with the semicolon as the separator" |
 | `unnamedColumn` | "column 4 has values but no name in the header" |
 | `emptyIndividual` | "line 7 has no name of an individual in its first column" |
-| `unclosedQuote` | "the quote that opens a cell on line 7 is never closed" (**Open 1**) |
-| `tooLarge` | "it is 312.4 MB, more than the 20 MB an individuals file can have; check that it is the individuals file and not the variants" |
+| `unclosedQuote` | "the quote that opens a cell on line 7 is never closed, read with the comma as the separator" |
+| `tooLarge` | "it is 312.4 MB, more than the 20 MB a metadata file can have; check that it is the metadata file and not the variants", with the name of the file of the application, "a traits file" in association |
 | `unreadable` | "the browser could not read it; it may have been changed, moved or deleted since it was picked" |
 | `notText` | "it is not a text file; in Excel, save the sheet as CSV" |
 
@@ -325,9 +328,16 @@ A size is in MB of 1,000,000 bytes, as macOS shows it, with one
 decimal rounded up, so that a file of 20,000,001 bytes is "20.1 MB" and
 never "20.0 MB, more than the 20 MB"; the limit, a whole number of MB, is
 written with none.
-The ending, "Load an individuals file in the Individuals step.", fits
-every row: each is mended by picking a file again, the same one changed
-or another.
+
+The separator of `raggedRow` and `unclosedQuote` is the one the read
+used, set or found, named as the select of the Individuals step names
+it, the comma, the semicolon or the tab, since a wrong separator is the
+likeliest cause of both and a failed read has no `found` to show it; the
+owner decided on 25 September 2026 that the refusal says it. The
+ending, "Load a metadata file in the Individuals step.", fits every
+row: each is mended by picking a file again, the same one changed or
+another, or, for the two of a separator, by setting the separator in
+that step.
 
 ## The TypeScript interface
 
@@ -427,11 +437,13 @@ export type IndividualsFileError =
   | { kind: "empty" }
   | { kind: "duplicateColumn"; name: string }
   | { kind: "duplicateIndividual"; name: string }
-  | { kind: "raggedRow"; line: number; expected: number; found: number }
+  | { kind: "raggedRow"; line: number; expected: number; found: number;
+      separator: "," | ";" | "\t" }                   // the one the read used
   | { kind: "files"; message: string }                 // the reader of xlsx, stage 4
   | { kind: "unnamedColumn"; column: number }          // counted from 1
   | { kind: "emptyIndividual"; line: number }
-  | { kind: "unclosedQuote"; line: number }            // where the cell starts
+  | { kind: "unclosedQuote"; line: number;             // where the cell starts
+      separator: "," | ";" | "\t" }
   | { kind: "tooLarge"; size: number; max: number }    // in bytes
   | { kind: "unreadable"; message: string }            // the browser's, for the console
   | { kind: "notText" };
@@ -548,16 +560,16 @@ line break:
 | `id,n\nA,"x, y"\nB,"say ""hi"""\n` | auto | cells `x, y` and `say "hi"` |
 | `id,n\r\nA,1\r\n\r\nB,2\r\n` and the same with `\r` alone | auto | the same table as with `\n`, the blank line skipped |
 | `id;pop;;\nA;P1;;\n` | auto | columns `id`, `pop` |
-| `id,pop\nA,P1\nB\n` | auto | `raggedRow`, line 3, expected 2, found 1 |
+| `id,pop\nA,P1\nB\n` | auto | `raggedRow`, line 3, expected 2, found 1, separator `,` |
 | `id,pop\n,P1\n` | auto | `emptyIndividual`, line 2 |
 | `id,pop\nA,P1\nA,P2\n` | auto | `duplicateIndividual`, `A` |
 | `id,pop,pop\nA,1,2\n` | auto | `duplicateColumn`, `pop` |
 | `id,,pop\nA,1,P1\n` | auto | `unnamedColumn`, 2 |
-| `id,pop\nA,"P1\nB,P2\n` | `,` | `unclosedQuote`, line 2 |
+| `id,pop\nA,"P1\nB,P2\n` | `,` | `unclosedQuote`, line 2, separator `,` |
 | `id,pop\n` and the empty text | auto | `empty` |
 | `\uFEFFid,pop\nA,P1\n` | auto | column `id`, not `\uFEFFid` |
 | `id;n\tx\nA;1\t2\n` | auto | both fit with two cells: the tab, by the order of a tie |
-| `id,pop\nA,P1\nB,P2,P3\n` | auto | none fits; `,` gives the header the most cells, and the read is `raggedRow`, line 3, expected 2, found 3 |
+| `id,pop\nA,P1\nB,P2,P3\n` | auto | none fits; `,` gives the header the most cells, and the read is `raggedRow`, line 3, expected 2, found 3, separator `,` |
 | `id,n\nA,"x\ny"\nB,1,2\n` | auto | `raggedRow` at line 4, the line of `B`, since the quoted cell spans lines 2 and 3 |
 | `only\nA\nB\n` | auto | `,`, one column, types identifier |
 
@@ -640,7 +652,9 @@ What this spec changes in `src/worker/protocol.ts` and
 `docs/specs/stage-2-open-points.md`, "Changes to approved files", to be
 approved with this spec: the six kinds of refusal of
 `IndividualsFileError`, their words in `individualsNeeds`, the new words
-of `empty`, and their fields in the validation of a project file;
+of `empty`, and their fields in the validation of a project file; the
+field `separator` of `raggedRow` and `unclosedQuote`, with its words and
+its check; the name of the file of each application in the reasons;
 `CsvFound.encoding`, which gains `"utf-16"`, in `protocol.ts` and in the
 check of `found` when a project file is opened; and the comment of
 `CsvFound`, which says all three options.
@@ -648,18 +662,12 @@ check of `found` when a project file is opened; and the comment of
 ## Open points
 
 The open points of the eleven specs of stage 2 are gathered in
-`docs/specs/stage-2-open-points.md`, where the ones two specs share
-are one point, asked of the owner once; each below keeps its number
-here, and its meanwhile.
-
-1. **Whether a refusal of a row says which separator it was read with.**
-   After a wrong separator, found or set, the user reads "line 7 has 3
-   cells where the header has 4" and does not know which separator made
-   it, because a failed read has no `found`. With a field `separator` on
-   `raggedRow` and `unclosedQuote`, the words would end ", read with the
-   separator `;`", and the user would know to change it; it changes those
-   two kinds and their check in a project file. The recommendation is to
-   add it. Meanwhile the words are those of the table.
+`docs/specs/stage-2-open-points.md`. The one this spec had was decided
+by the owner on 25 September 2026, and is written above as decided: a
+refused row names the separator it was read with (point O there), a
+field `separator` on `raggedRow` and `unclosedQuote`, which changes
+those two kinds in the approved `protocol.ts` and their check in a
+project file in the approved `project.ts`.
 
 ## Not in this spec
 

@@ -140,8 +140,9 @@ message only after the code that is running has finished:
    same file; `send`, the function `(key, job, onProgress) =>
    client.run(key, job, onProgress)`, which reaches the client made in
    the next step, since the store sends nothing while it is made;
-   `numVarsOf`, from `apps.ts`; the version of the application
-   (**Open 1**); `CACHE_MAX_BYTES` and `MAX_UNDO_STEPS`.
+   `numVarsOf`, from `apps.ts`; the version of the application,
+   `APP_VERSION` (below, "The version of the application");
+   `CACHE_MAX_BYTES` and `MAX_UNDO_STEPS`.
 4. It makes the worker client, with `makeRunnerWorker` and
    `makeFilesWorker` of `src/worker/start.ts`, and with `onPopneiReady:
    (v) => store.popneiReady(v)`. The client calls it with popnei's
@@ -180,10 +181,30 @@ function `addFile(file: File): string`, through a provider of
 `src/ui/files.tsx`, which makes a new load id, 16 random bytes of
 `crypto.getRandomValues` written as 32 hexadecimal digits
 (`docs/architecture.md`, section 3), calls the client's `addFile(fileId,
-file)`, and returns the id; the step then sends the command that puts
-the source in the project (`docs/specs/steps/variants.md` and
-`individuals.md`). The `File` is in the client's map before the command,
-so the read that the command makes the entry ask for always finds it.
+file)`, keeps the `File` under the id in a map of its own, and returns
+the id; the step then sends the command that puts the source in the
+project (`docs/specs/steps/variants.md` and `individuals.md`). The
+`File` is in the client's map before the command, so the read that the
+command makes the entry ask for always finds it. The same provider gives
+`fileOf(fileId): File | null`, the `File` of a load of this page, which
+the Variants step reads to read a VCF again with other options, as a new
+load of the same `File` (`docs/specs/steps/variants.md`, "Reading the
+VCF again"); it is `null` for a load id of an opened project file, whose
+files were picked in another session.
+
+### The version of the application
+
+The version of the application is a number in `package.json`,
+`"version": "0.1.0"` in stage 2, as the owner decided on 25 September
+2026, raised by hand at a release of the site that changes what it
+calculates or saves. `define` in `vite.config.ts` writes it into the
+code at the build as `APP_VERSION`, which the store is given, the
+saving writes into the project file, and the panels show beside a
+download (`docs/specs/analyses/diversity.md`, "What it shows"). The
+option not taken was the short hash of the git commit the site was
+built from, which needs no hand and names the exact build, but from
+which a user cannot tell which of "7d84ab1 and 3e268bd" is newer, which
+the words of the comparison with the check numbers ask them to.
 
 ### `src/core/apps.ts`
 
@@ -194,12 +215,13 @@ stage 2 it holds the population genetics application alone:
 - **the definitions of its analyses**, in the order the screens show
   them: the diversity alone (`docs/specs/analyses/diversity.md`);
 - **its steps**, by their ids, in their order: `variants`,
-  `individuals`, `analyses`. Which steps the stepper, the row of the
-  steps at the top of the page, shows is the shell's
-  (`docs/specs/shell.md`, **Open 1** there);
+  `individuals`, `analyses`, three, as the owner decided on 25 September
+  2026: no Export step until the report, in stage 6, and writing the
+  filtered variants goes in the Variants step, in stage 3
+  (`docs/specs/shell.md`, "The stepper");
 - **its first project**: `emptyProject("popgen")` with the missing data
-  filter at 0.1, which the Variants step asks for
-  (`docs/specs/steps/variants.md`, **Open 2** there), since
+  filter on at 0.1, as the owner decided on 25 September 2026
+  (`docs/specs/steps/variants.md`, "The missing data filter"), since
   `emptyProject` holds no filter;
 - **`numVarsOf`**, the store's function that gives, from the result of a
   calculation, the number of variants of the file that its reading of
@@ -245,7 +267,7 @@ outcome of a read makes it look again whatever the project, as below.
   records nothing, so its source stays pending in every project of the
   history that holds it, and an undo that gives it back makes the entry
   ask for it again. What it costs: a pick undone and redone while its
-  file is read reads the file again, with popnei 0.1.0 the whole file.
+  file is read opens the file again, which reads its header.
 
 When an outcome comes back, its read is taken out of those under way,
 by its handle, so that a late outcome of an older read of the same
@@ -261,7 +283,7 @@ it").
 |---|---|
 | `opened`: the individuals and the ploidy of the variants file | `variantsRead(fileId, { kind: "read", individuals, ploidy, numVars: null })` |
 | `failed`, with `popnei`: popnei refused the file | `variantsRead(fileId, { kind: "failed", error: { kind: "popnei", message } })` |
-| `failed`, any other kind: the calculation worker crashed, could not start, is of another version, or a message was a defect | `variantsRead(fileId, { kind: "failed", error: { kind: "worker", error } })`, the error as the client gives it |
+| `failed`, any other kind: the browser could not read the file, `reopenFailed`; the calculation worker crashed, could not start, is of another version, or a message was a defect | `variantsRead(fileId, { kind: "failed", error: { kind: "worker", error } })`, the error as the client gives it, whose words `projectNeeds` gives by its kind |
 | `read`: the individuals file read, its table, the types of its columns, and what "auto" found | `individualsRead(fileId, csv, { kind: "read", table, columns, found })` |
 | `refused`: the reader refused the file, with the way it is wrong | `individualsRead(fileId, csv, { kind: "failed", error })` |
 | `failed`: the light worker failed | `individualsRead(fileId, csv, { kind: "failed", error: { kind: "worker", error } })` |
@@ -314,27 +336,35 @@ the error bar, which is where a defect belongs. The tests await it.
 `src/ui/saving.ts` makes the text of the project file and hands it to
 the browser as a download, for Save project of the header and Save the
 project of the error bar alike, and keeps what the question before
-leaving the page needs. The shell says what the user sees of it
-(`docs/specs/shell.md`, "Saving"):
+leaving the page needs. The owner decided on 25 September 2026 that
+Save is a dialog of our own, in the page, with a field for the name of
+the file and a Save button, after which the browser downloads the file,
+and that the page never says the file was saved. The shell draws the
+dialog and says what the user sees of it (`docs/specs/shell.md`,
+"Saving"); the saving does the rest:
 
-- `save()` calls `writeProjectFile` of `src/core/projectFile.ts` with
-  `store.getState()`, the definitions of the analyses of `apps.ts`, the
-  version of the application and `new Date().toISOString()`, and
-  downloads the text under `projectFileName` of the present project, by
-  a link to a `Blob` of the text that it clicks and then releases. It
-  returns the name of the file, which the caller announces in its own
-  status region. `writeProjectFile` refuses nothing; it throws a defect
-  on a check number that is not finite, which, in the event handler of
-  the button, reaches the error bar.
-- **The base project** is the project the page started with, or the one
-  last opened from a project file, which `opened(p)` sets. The project
-  has changed when the present project is another object than the base,
-  and then the listener of the window's `beforeunload` event asks the
-  browser to confirm before the page is left, as the shell says. A save
-  does not change the base, since the page cannot know that the download
-  was saved; that is the meanwhile of **Open 3** of `docs/specs/shell.md`,
-  whose recommended answer would make a save through the browser's Save
-  As dialog set the base.
+- `save(name)` calls `writeProjectFile` of `src/core/projectFile.ts` with
+  `store.getState()`, the definitions of the analyses of `apps.ts`,
+  `APP_VERSION` and `new Date().toISOString()`, and downloads the text
+  under `name`, the name the user left in the field, which starts at
+  `projectFileName` of the present project, by a link to a `Blob` of the
+  text that it clicks and then releases. A name that does not end in
+  `.popnei.json` gets it added, so that the file opens again with Open
+  project…; `panel` gives `panel.popnei.json`. `writeProjectFile` refuses
+  nothing; it throws a defect on a check number that is not finite,
+  which, in the event handler of the button, reaches the error bar.
+- **The base project** is the project the page started with, the one
+  last opened from a project file, which `opened(p)` sets, or the one
+  last saved, which `save` sets. The project has changed when the present
+  project is another object than the base, and then the listener of the
+  window's `beforeunload` event asks the browser to confirm before the
+  page is left. A save setting the base is the owner's decision of 25
+  September 2026, to confirm with the owner: the page does not learn
+  whether the download was kept, so a user who cancels the browser's own
+  question after our Save, or whose download fails, leaves the page with
+  no question. Until it is confirmed the plan builds it so, and the other
+  answer, a save that leaves the base as it was, is one line of
+  `save` and one test.
 
 ### The errors nothing else shows
 
@@ -422,7 +452,8 @@ export function createSaving(deps: {
   readonly appVersion: string;
   readonly download: (name: string, text: string) => void;  // the browser's; a fake in the tests
 }): {
-  save(): string;                 // downloads the project file; its name
+  proposedName(): string;         // projectFileName of the present project
+  save(name: string): string;     // downloads the project file; the name used; the present project is the base
   opened(p: Project): void;       // a project file was opened: p is the base
   changed(): boolean;             // the present project is not the base
 };
@@ -533,11 +564,13 @@ hand and whose cancels it records.
   given to `runEnded` with the id of its request; `startedAt` of that id
   a number while it is in flight and `null` after; a `runEnded` that
   throws rejects the promise.
-- **`createSaving`**: `save` downloads, through the fake, the text of
-  `writeProjectFile` under `projectFileName`, and returns the name;
-  `changed` is false on the first project, true after a command, false
-  again after an undo back to it and after `opened(p)` with the present
-  project; a save leaves it true.
+- **`createSaving`**: `save("panel.popnei.json")` downloads, through the
+  fake, the text of `writeProjectFile` under that name, and returns it;
+  `save("panel")` downloads under `panel.popnei.json`; `proposedName` is
+  `projectFileName` of the present project; `changed` is false on the
+  first project, true after a command, false again after an undo back to
+  it, after `opened(p)` with the present project, and after a save, and
+  true after a command that follows the save.
 - **`addFile`** returns 32 hexadecimal digits, a new one at every call,
   and the fake client holds the `File` under it when it returns.
 - **`createDefects`**: the first error kept, the second counted in
@@ -585,29 +618,12 @@ by review.
 ## Open points
 
 The open points of the eleven specs of stage 2 are gathered in
-`docs/specs/stage-2-open-points.md`, where the ones two specs share
-are one point, asked of the owner once; each below keeps its number
-here, and its meanwhile.
-
-1. **The version of the application.** The store and the project file
-   are given it (`docs/specs/core/store.md`, `appVersion`), the project
-   file writes it in its header, and the words of the comparison with
-   the check numbers, the few numbers of each result that a project file
-   keeps to check a new run against, name it when an analysis's
-   calculation has changed; the repository has no version yet, since
-   `package.json` has none. The options:
-   - a number in `package.json`, `"version": "0.1.0"`, raised by hand
-     when a release of the site changes what it calculates or saves, and
-     written into the code at the build by `define` in `vite.config.ts`.
-     A user reads "0.1.0 and 0.2.0" and knows which is newer; it costs a
-     step of each release, which can be forgotten;
-   - the short hash of the git commit the site was built from, written
-     at the build in the same way. It never needs a hand and names the
-     exact build; a user cannot tell from "7d84ab1 and 3e268bd" which
-     is newer.
-
-   Recommended: the number in `package.json`, since the comparison is
-   read by users. Meanwhile, `"version": "0.1.0"` and `define`.
+`docs/specs/stage-2-open-points.md`. The one this spec had, the version
+of the application, was decided by the owner on 25 September 2026: a
+number in `package.json`, 0.1.0 now (point I there), as "The version of
+the application" above has it. One part of a decision is to confirm:
+whether a Save sets the base, so that the browser's question before
+leaving is not asked after it (point K there; "The saving", above).
 
 ## Not in this spec
 

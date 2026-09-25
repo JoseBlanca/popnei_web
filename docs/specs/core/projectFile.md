@@ -67,7 +67,7 @@ written as below, the rows of the table shortened here to two:
   "format": "popnei_web project",
   "formatVersion": 1,
   "app": "popgen",
-  "appVersion": "0.2.0",
+  "appVersion": "0.1.0",
   "popneiVersion": "0.1.0",
   "saved": "2026-09-25T14:03:11.000Z",
   "variants": {
@@ -133,7 +133,7 @@ written as below, the rows of the table shortened here to two:
       "numbers": [1150112, 0.3120051, 0.3089214, 0.9124, 0.2987112, 0.2954871, 0.8977],
       "keyVersion": 1,
       "popneiVersion": "0.1.0",
-      "appVersion": "0.2.0"
+      "appVersion": "0.1.0"
     }
   ]
 }
@@ -143,11 +143,18 @@ written as below, the rows of the table shortened here to two:
   `"popnei_web project"`, which tells a project file from any other JSON
   file. `formatVersion` is the version of the format, `FORMAT_VERSION` of
   `project.ts`, 1. `app` is the application, `"popgen"` or `"gwas"`.
-  `appVersion` is the version of the application that saved the file, as
-  the page gives it to the store. `popneiVersion` is the version of popnei
-  that the calculation worker gave, or `null` when it had not given one
-  yet, in the first second or so after the page opened, or because the
-  worker could not start. `saved` is the date and time of the save, in UTC,
+  `appVersion` is the version of the application that saved the file, the
+  number in `package.json` that the build writes into the page, "0.1.0"
+  in stage 2, raised by hand at a release that changes what the
+  application calculates or saves, as the owner decided on 25 September
+  2026 (`docs/specs/entry.md`). `popneiVersion` is the version of popnei
+  that the calculation worker gave, `version()` of popnei, or `null` when
+  it had not given one yet, in the first second or so after the page
+  opened, or because the worker could not start. `version()` gives
+  "0.1.0" in popnei's releases `js-v0.1.0-dev.1` and `js-v0.1.0-dev.2`
+  alike, so the file tells them apart only once popnei raises it with each
+  release, which the owner agreed popnei does and which is asked of it
+  (`docs/specs/stage-2-open-points.md`, "What is asked of popnei"). `saved` is the date and time of the save, in UTC,
   as `new Date().toISOString()` writes it on the page, since core reads no
   clock (`.claude/skills/coding/SKILL.md`, "The core").
 - **The project** is written as the project holds it, with the field
@@ -162,20 +169,30 @@ written as below, the rows of the table shortened here to two:
 - **The check numbers** are one entry per analysis that has numbers to
   save, in the order of the analyses of the application: its id, its
   numbers, its key version when it was run, and the versions of popnei and
-  of the application that calculated them (**Open 1**, below). A number
-  that popnei gave as NaN is `null`, as `checkNumbers` gives it.
+  of the application that calculated them, as the owner decided on 25
+  September 2026, so that a file that holds numbers of two sessions names
+  the right versions for each (point E of
+  `docs/specs/stage-2-open-points.md`, the option A of this spec's draft).
+  A number that popnei gave as NaN is `null`, as `checkNumbers` gives it.
+
+The owner decided the same day that every file the application writes
+records the version of popnei and the version of the application: the
+project file, with each check number as above; the report, when it comes
+in stage 6; and a CSV download stays a plain table, the two versions
+shown on the page beside the button that downloads it
+(`docs/specs/analyses/diversity.md`, "What it shows").
 
 Which numbers an analysis saves is its own spec's. For the walking
 skeleton that is the diversity's (`docs/specs/analyses/diversity.md`,
 "The check numbers"); this spec takes them as a list of numbers and
-`null`s whose length and order the diversity fixes. Meanwhile the owner
-decides **Open 4** of that spec, they are the number of variants the
-filters kept, then, for each population in the order of its result, the
+`null`s whose length and order the diversity fixes. The owner decided on
+25 September 2026 that they are the number of variants the filters
+kept, then, for each population in the order of its result, the
 unbiased expected heterozygosity, the observed heterozygosity and the
 proportion of polymorphic variants: 1 + 3 × the populations, 7 numbers
 for the two populations of the example. Section 9 of
-`docs/functionality.md` names the expected heterozygosity alone, which
-that open point asks to correct.
+`docs/functionality.md`, which named the expected heterozygosity alone,
+is corrected to name them.
 
 The options of the analyses are written only for an analysis whose
 options the user set. No screen of stage 2 sets one, the diversity's
@@ -202,8 +219,9 @@ and the reason of a crash would be noise in a file kept for years. The
 individuals file is written only when it was read, because the file keeps
 it whole, as its table, and a pending or failed read has no table; the
 opened project then asks for the individuals file as an empty project
-does, "Load an individuals file in the Individuals step."
-(`docs/specs/core/project.md`, `individualsNeeds`). What is lost is the
+does, "Load a metadata file in the Individuals step."
+(`docs/specs/core/project.md`, `individualsNeeds`, with the name of the
+file of the application). What is lost is the
 name of the file and the options of the CSV, which a new load starts from
 "auto" again. This is what `docs/specs/core/project.md`, "The cases", left
 to this spec: an opened project holds no source whose read is pending.
@@ -294,7 +312,7 @@ a literal.
   `null` that `JSON.stringify` would make of it and that would then
   compare as different.
 
-`projectFileName` gives the name the download proposes: the name of the
+`projectFileName` gives the name the dialog of Save proposes in its field, which the user can change (`docs/specs/shell.md`, "Saving"): the name of the
 variants file without its extension, `.nei`, `.vcf` or `.vcf.gz`, with
 `.popnei.json`, so `panel_2026.nei` gives `panel_2026.popnei.json`; the
 reference's variants file when none is loaded; or `project.popnei.json`
@@ -355,10 +373,12 @@ that the reason given is the one the user can act on:
    an analysis this version does not know is refused as `unknownAnalysis`,
    and each check is checked as `parseCheck` checks one, with a
    placeholder fingerprint of 64 zeros that the last step replaces. This
-   needs `Check` and `Reference` as **Open 1** A has them: with the code of
-   25 September 2026, `parseCheck` refuses the versions of a check as
-   fields it does not know, and `parseReference` asks for versions of its
-   own that the file does not hold.
+   needs `Check` and `Reference` as the owner decided them, each check
+   with its versions and the reference with none of its own: with the
+   code of 25 September 2026, `parseCheck` refuses the versions of a check
+   as fields it does not know, and `parseReference` asks for versions of
+   its own that the file does not hold, a change to the approved
+   `project.ts` listed in `docs/specs/stage-2-open-points.md`.
 8. **What this version does not write**, refused as `header` with the
    field `variants` or `individuals`: a read of the variants file that is
    `failed`, and a read of the individuals file that is not `read`.
@@ -381,7 +401,7 @@ The Variants step, the stepper and the announcement of the opening name
 the file to give, with `askedFileText` (`docs/specs/steps/variants.md`
 and `docs/specs/shell.md`): "This project was
 made with panel_2026.nei, 342 individuals and 1,203,554 variants. Load it
-in the Variants step to run its analyses again." (**Open 2**). When that
+in the Variants step to run its analyses again." (**Open 1**). When that
 file is a VCF, the Variants step starts its read options at the
 reference's, its ploidy and whether only the variants that passed are
 kept: they are settings that every fingerprint holds, and a VCF loaded
@@ -423,7 +443,7 @@ order:
 The warning is one sentence, what the reference knows first:
 "The project was made with panel_2026.nei, 342 individuals and 1,203,554
 variants; this file has 360 individuals. Load the file the project was
-made with, or go on with this one." (**Open 2**). The individuals of that
+made with, or go on with this one." (**Open 1**). The individuals of that
 file that are not in this one are named, and counts written, as
 `docs/specs/core/project.md` names them, its **Open 3**; a name is shown
 escaped and cut after 40 characters, as its validation shows a value of
@@ -443,7 +463,7 @@ stage 6 (`docs/specs/core/store.md`, "The comparison with the check
 numbers"); since the owner moved the project file to stage 2,
 `checkVerdictText` gives them here, in place of that, and the panel of
 every analysis shows them under its result and has no words of its own
-for the comparison (**Open 2**):
+for the comparison (**Open 1**):
 
 - same: "The same numbers as in the project file: this variants file
   gives the results the project was saved with."
@@ -655,10 +675,7 @@ the analyses `done`, `ready` or `removed`.
 - **The fixtures of version 1**, files kept under
   `src/core/fixtures/projectFile/`: `v1-empty.popnei.json`, an empty
   project; `v1-nei-diversity.popnei.json`, the example above with a table
-  of 6 rows in 2 populations and the check numbers of the diversity, the
-  7 of the fuller set of its **Open 4**, written when the plan first
-  writes the fixture and, if the owner chooses the shorter set before
-  then, the 3 of it;
+  of 6 rows in 2 populations and the 7 check numbers of the diversity;
   `v1-vcf-pending.popnei.json`, a VCF of ploidy 4 with only the variants
   that passed, its read pending, no individuals file, and one check. Each
   opens into a project written as a literal in its test, and, while
@@ -724,48 +741,11 @@ The open points of the eleven specs of stage 2 are gathered in
 are one point, asked of the owner once; each below keeps its number
 here, and its meanwhile.
 
-1. **The versions of popnei and of the application, per check number.**
-   The architecture keeps them once, in the header, and the reference as
-   `popneiVersion` and `appVersion` beside its checks. But a file saved
-   after an opening can hold numbers of two sessions: the check of the
-   PCA carried from a file saved with popnei 0.1.0, and that of the
-   diversity run again with popnei 0.2.0. With one version in the header,
-   one of the two is labelled wrongly, and a later difference would not
-   name popnei when popnei could explain it.
-   - **A, each check keeps its versions**, as this spec writes it: the
-     file saves them with the numbers, and the header keeps the versions
-     of the save, as information for a person reading the file, its
-     popnei version `null` when not known. It is a change to approved
-     documents and code, made before this module:
-     - `docs/architecture.md`, section 2, the type `Reference`, and
-       section 8, "when it is not the one in the file's header";
-     - `docs/specs/core/project.md` and `src/core/project.ts`: `Check`
-       gains `popneiVersion` and `appVersion`, `Reference` loses its own,
-       `parseCheck` and `parseReference` follow, and `FIELD_WORDS` gets
-       the words of the two new fields and loses those of the old; and
-       the private functions that name individuals and show a value of
-       a file are exported;
-     - `docs/specs/core/store.md` and `src/core/store.ts`: `verdictOf`
-       reads the versions of the check, not of the reference, and the
-       test of the check numbers follows;
-     - `wholeProject` in `src/core/testSupport.ts`, which draws the
-       checks.
-     About fifty lines of code and their tests, beside the documents.
-   - **B, one version per file**: the reference's checks are carried only
-     when they were made with the version of popnei of the save, and
-     Save waits until the calculation worker has given its version; the
-     application's version need not match, since what the store compares
-     for the application is the key version, which each check keeps
-     already, and only the words of a difference would name the wrong
-     version of the application. It changes no other spec, and it drops every
-     carried number of a project opened in a newer version and saved
-     before it is run again, and the ability to save when the worker could
-     not start.
-   The recommendation is A: no carried number is dropped, and a difference
-   names the right versions. The answer is needed before the plan, since
-   B rewrites the example, the steps 6 and 7 of "Opening", the checks and
-   the fixtures of the first version.
-2. **The words**: the warning of the identity, the file asked for after an
+The versions of popnei and of the application, per check number, were
+decided by the owner on 25 September 2026 as this spec has them, each
+check with its own (point E there).
+
+1. **The words**: the warning of the identity, the file asked for after an
    opening, the two verdicts of the check numbers and the refusals of this
    module, to be judged when the owner sees them on the screens of stage
    2, as the reasons of `docs/specs/core/project.md` were. Meanwhile,
@@ -782,8 +762,8 @@ here, and its meanwhile.
 - `docs/specs/entry.md`: the saving, `createSaving` of `src/ui/saving.ts`,
   whose `save()` calls `writeProjectFile` with `store.getState()`, the
   analyses of `src/core/apps.ts`, the version of the application and
-  `new Date().toISOString()`, and downloads the text under
-  `projectFileName`, at any time, a pending read included; and the page's
+  `new Date().toISOString()`, and downloads the text under the name the
+  user gave in the dialog of Save, which starts at `projectFileName`, at any time, a pending read included; and the page's
   map of files holds no file under the load ids of an opened project,
   whose sources are read, so nothing of the opening asks for a read.
 - `docs/specs/shell.md`: Save project calls that `save()`; Open project…

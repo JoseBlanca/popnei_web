@@ -112,8 +112,10 @@ rule below rules out one of them.
 
 The worker is started for one load: it opens that variants file, and
 opens it again itself when a run's filters differ from those it has put
-on it, since popnei 0.1.0 cannot take a filter off
-(`docs/specs/worker/runner.md`, "The filters"). So it holds the load it
+on it, since popnei cannot take a filter off
+(`docs/specs/worker/runner.md`, "The filters"). It holds the `File`, which
+popnei reads by ranges at every pass, and no copy of the file: opening
+the file again reads its header, or the footer of a `.nei` file. So it holds the load it
 opened, and one only (`.claude/skills/coding/worker.md`, "Reading the
 files of the user"). The client keeps, for each load id,
 the `File` the entry gave it and the format and the read options of the
@@ -172,7 +174,7 @@ read (`docs/specs/core/store.md`), which `popneiReady` does not clear.
   load changes, the store has already cancelled every run in flight
   (`docs/specs/core/store.md`), so what this cancels in practice is the
   read of a file picked and then replaced before it was open: two picks
-  in a row do not wait for the first file to be read whole.
+  in a row do not wait for the first file to be opened.
 - **An `openVariants` of the load the worker holds, or is opening, gets
   the answer of that `open`**, and sends nothing. The entry does not ask
   twice for the read of one load (`docs/architecture.md`, section 6, "Who
@@ -185,22 +187,23 @@ read (`docs/specs/core/store.md`), which `popneiReady` does not clear.
   undo or a redo back to a load already read, the store records nothing,
   and the entry asks for no read, since the source is read
   (`docs/specs/core/project.md`, "The records"); the first run on that
-  load then waits for its `open`, which with popnei 0.1.0 reads the whole
-  file again. The store marks such a run `afterStop`, so that its panel
-  says it may first wait for the file to be read again
+  load then waits for its `open`, which reads the header of the file
+  again. The store marks such a run `afterStop`, so that its panel says
+  it may first wait for the file to be opened again
   (`docs/specs/core/store.md`). The `opened` of an `open` sent for a run
   goes to no one, also when every run that waited on it was cancelled;
   the worker then holds that load for the next request on it. When it
-  fails, every run waiting on it fails with it: a `refused`
-  fails them as `workerFailed`, with the message "‹name› could not be
-  opened again: ‹popnei's message›", and a crash as any crash (**Open
-  1**, below). A worker whose `open` for a run was refused holds no
-  open file, so the client ends it then, and the next run on that load
-  is not a defect: it goes to a new worker, after its `open`, which
-  reads the file again. If that `open` fails too, the run fails in the
-  same way, and the words of the panel send the user to load the file
-  again after a second failure (`docs/specs/analyses/diversity.md`,
-  "Its words"). What makes a run of a load a defect is a load whose
+  fails, every run waiting on it fails with it: a `reopenFailed`, and a
+  `refused` too, fail them as `reopenFailed`, with the name of the file
+  and popnei's message, and a crash as any crash. The same file opened
+  before, so a refusal of its open now is a file changed on the disk
+  that the browser still reads, and its words are those of a file that
+  changed, as the owner decided on 25 September 2026 (point B of
+  `docs/specs/stage-2-open-points.md`). A worker whose `open` for a run
+  failed holds no open file, so the client ends it then, and the next
+  run on that load is not a defect: it goes to a new worker, after its
+  `open`, which opens the file again, and fails in the same way while
+  the file is as it is. What makes a run of a load a defect is a load whose
   read, its first `open`, never ended `opened` (the cases, below): then
   the source is failed and core sends no run on it.
 
@@ -228,10 +231,15 @@ pending (`docs/specs/entry.md`):
 
 In every case where it does something, the outcome is `cancelled`. What a
 restart costs is the loading of the wasm, from the cache of the browser
-after the first time, and, with popnei 0.1.0, reading the whole variants
-file again before the next request on it, a time that grows with the file
-and has not been measured; the walking skeleton measures it
-(`docs/build-order.md`, stage 2).
+after the first time, and opening the variants file again before the
+next request on it, which reads its header, or the end and the footer of
+a `.nei` file, and not its variants, since popnei reads the `File` by
+ranges (`docs/specs/worker/runner.md`, "What a restart costs"). Neither
+has been measured on a large file; the walking skeleton measures both
+(`docs/build-order.md`, stage 2). With popnei's release before
+`js-v0.1.0-dev.2`, a restart read the whole file into the memory of the
+worker again, which is why the architecture counted it as a cost that
+grows with the file.
 
 ### Crashes, defects, and every read answered
 
@@ -243,6 +251,7 @@ was ready:
 | what happens | the request it was running | the worker |
 |---|---|---|
 | `refused` | fails with `popnei`, popnei's message | goes on to the next request |
+| `reopenFailed` | fails with `reopenFailed`, the name of the file and popnei's message | goes on to the next request |
 | `crashed`, or an `error` event of the worker | fails with `workerFailed`, its message | ended, and started again |
 | `messageerror`, a message the browser could not copy | fails with `workerFailed` | ended, and started again |
 | `badRequest` | fails with `defect`, its message | ended, and started again |
@@ -280,10 +289,15 @@ a calculation by the panel of its analysis
 ### Progress
 
 `onProgress` of a run is called with each `progress` of its id, and of no
-other; the client passes `done` and `total` on as they came. It is never
-a condition of anything: a run that sent none is not stuck. popnei 0.1.0
-reports none, so in the walking skeleton it is never called
-(`docs/specs/worker/messages.md`).
+other; the client passes the four fields of popnei's `Progress` on as
+they came, `bytesRead`, `numBytes`, `pass` and `numPasses`
+(`docs/specs/worker/messages.md`, "The progress"), and the store keeps
+the last one on the run (`docs/specs/core/store.md`, `RunView`). It is
+never a condition of anything: a run that sent none is not stuck, and a
+run over a `.nei` file ends with its `result` before `bytesRead` reaches
+`numBytes`. A `progress` of a request that is not a `run`, or of an id
+that is not running, is a message of the wrong kind for the request, a
+defect, as the table above has it.
 
 ## The TypeScript interface
 
@@ -424,10 +438,13 @@ here:
 - **The variants file changed on the disk since it was picked.** The
   browser refuses to read a `File` whose file changed since the pick, by
   the specification of the File API; this has not been seen in a browser
-  (`docs/architecture.md`, section 11). A first `open` fails as popnei's
-  refusal or as a crash, as the runner classifies what `FileReaderSync`
-  throws (`docs/specs/worker/runner.md`); an `open` for a run, after a
-  restart, fails the runs waiting on it (**Open 1**).
+  (`docs/architecture.md`, section 11). popnei reads the file at every
+  pass, so it shows at the next pass, at the next change of the filters
+  or at the `open` of a worker started again: the runner answers
+  `reopenFailed` (`docs/specs/worker/runner.md`), a first `open` fails
+  the read with it, which the entry records into the source
+  (`docs/specs/entry.md`, "Who asks for a read"), a run fails with it,
+  and an `open` for a run fails every run waiting on it with it (above).
 - **A tab left open across a deploy of the site.** The names of the
   built files carry a hash of what they hold, and a deploy replaces them,
   so a worker started again after the deploy, after a Cancel or a crash,
@@ -455,11 +472,10 @@ starting, ready or given up, the count of its failures before `ready`,
 the timer of its `ready`, the load it holds, the request it runs and its
 queue; and the map of load ids to their `File`s and read options, which
 grows by one entry per pick and is never emptied: each entry is the
-handle of a file and a few fields, not its bytes. The bytes of the files
-are in the calculation worker, with popnei 0.1.0 the whole variants
-file, twice while it opens, the worker's copy and the one popnei makes
-in the memory of wasm (`docs/architecture.md`, section 6), and none on
-the page.
+handle of a file and a few fields, not its bytes. No copy of a variants
+file is held anywhere: popnei reads the `File` by ranges in the
+calculation worker, and the memory of its wasm holds a range and a block
+of a pass (`docs/specs/worker/runner.md`, "The memory").
 
 ## How it is verified
 
@@ -497,12 +513,17 @@ walking skeleton, a diversity `Job` and a CSV.
   ended, its answer then to no one. Of a request ended, and twice:
   nothing more. A `cancel()` made inside `onPopneiReady` is seen: the
   run it cancels is not sent.
-- **The reopen that fails** (**Open 1**): a worker started again after a
-  cancel, whose `open` of A ends `refused`, fails the run waiting on it
-  with `workerFailed` and the message "panel.nei could not be opened
-  again: ‹popnei's message›", and that worker is ended; a next `run` on
-  A is not a defect: a new worker is made, sent the `open` of A, and then
-  the run.
+- **The reopen that fails**: a worker started again after a cancel,
+  whose `open` of A ends `refused`, fails the run waiting on it with
+  `reopenFailed`, the name `panel.nei` and popnei's message, and that
+  worker is ended; the same with an `open` that ends `reopenFailed`; a
+  next `run` on A is not a defect: a new worker is made, sent the `open`
+  of A, and then the run. A `run` that ends `reopenFailed` fails with it,
+  and the worker is not ended.
+- **Progress**: two `progress` of a run's id, then its `result`: its
+  `onProgress` is called twice with the four fields as they came, and
+  its outcome is `done`; a `progress` of an id that is not running is a
+  defect, and the worker is ended.
 - **A defect of the page**: `openVariants` and `run` of a load with no
   `File`, and `run` of a load whose first `open` was refused, give
   `failed` with `defect` at once. `onPopneiReady` that throws:
@@ -537,26 +558,10 @@ a measurement of stage 2 (`docs/build-order.md`).
 
 ## Open points
 
-The open points of the eleven specs of stage 2 are gathered in
-`docs/specs/stage-2-open-points.md`, where the ones two specs share
-are one point, asked of the owner once; each below keeps its number
-here, and its meanwhile.
-
-1. **What a run says when its variants file cannot be opened again** by
-   the worker started again after a Cancel, a crash or an undo of the
-   load, and, with the same answer, when the browser cannot read the
-   file at its first open. It is one decision with **Open 1** of
-   `docs/specs/worker/runner.md`, and is asked of the owner once, as
-   point B of `docs/specs/stage-2-open-points.md`, with its options and
-   their costs. `RunError` of `docs/specs/worker/protocol.md` has no kind
-   for it, so meanwhile it is `workerFailed`, with the message "panel.nei
-   could not be opened again: ‹popnei's message›", later runs on that
-   load go to a new worker (above), and the panel of the analysis shows
-   its words for `workerFailed`, whose second sentence, "If it stops
-   again, load panel.nei again in the Variants step.", ends the loop of
-   Run and fail (`docs/specs/analyses/diversity.md`, "Its words"). The
-   recommendation is a kind of its own, `reopenFailed`, whose words name
-   the file as the cause.
+None. The one this spec had, what a run says when its variants file
+cannot be opened again, was decided by the owner on 25 September 2026: a
+kind of its own, `reopenFailed`, as written above (point B of
+`docs/specs/stage-2-open-points.md`).
 
 ## Not in this spec
 
