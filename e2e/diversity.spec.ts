@@ -10,11 +10,13 @@
  * reached.
  */
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { writeFile } from "node:fs/promises";
+import { isAbsolute, join } from "node:path";
 
 import type { Locator, Page, Worker } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
+import { bigVcfPopsCsv, STOP_VCF_VARIANTS, writeBigVcf } from "./bigVcf.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 
@@ -35,8 +37,9 @@ async function goTo(page: Page, step: string): Promise<void> {
   ).toBeVisible();
 }
 
-/** Picks `file`, a fixture or a file of a name and text, with the button
-    of the zone `region`, through the file picker of the system. */
+/** Picks `file`, a fixture, a file at an absolute path, or a file of a
+    name and text, with the button of the zone `region`, through the file
+    picker of the system. */
 async function pick(
   page: Page,
   region: string,
@@ -51,7 +54,9 @@ async function pick(
     await chooser
   ).setFiles(
     typeof file === "string"
-      ? join(FIXTURES, file)
+      ? isAbsolute(file)
+        ? file
+        : join(FIXTURES, file)
       : {
           name: file.name,
           mimeType: "text/plain",
@@ -79,10 +84,10 @@ async function load(
 ): Promise<void> {
   await page.goto("popgen.html#variants");
   await pick(page, "Variants file", variants);
-  await expect(page.getByText(/^\d+ individuals$/)).toBeVisible();
+  await expect(page.getByText(/^[\d,]+ individuals$/)).toBeVisible();
   await goTo(page, "Individuals");
   await pick(page, "Metadata file", metadata);
-  await expect(page.getByText(/^All \d+ individuals of /)).toBeVisible();
+  await expect(page.getByText(/^All [\d,]+ individuals of /)).toBeVisible();
   if (column !== null) {
     await page
       .getByRole("button", { name: "Column that defines the populations" })
@@ -394,4 +399,83 @@ test("WS8 D2 a calculation under way shows its bar, its share and its clock, and
   await page.keyboard.press("Enter");
   await expect(panel(page).getByRole("button", { name: "Run" })).toBeFocused();
   await expect(bar).toHaveCount(0);
+});
+
+test("WS8 D3 a Stop in the middle of a pass leaves the panel ready with no table, and panel.nei then runs at 0.05", async ({
+  page,
+  makeAxeBuilder,
+}, testInfo) => {
+  // The VCF is written for the test, a pass over it lasting 3.5 s in
+  // WebKit on the owner's Mac (measure.spec.ts), so that Stop is pressed
+  // while the pass reads.
+  test.setTimeout(120_000);
+  const vcf = testInfo.outputPath("stop.vcf.gz");
+  await writeBigVcf(vcf, STOP_VCF_VARIANTS);
+  const pops = testInfo.outputPath("stop_pops.csv");
+  await writeFile(pops, bigVcfPopsCsv());
+  await load(page, vcf, pops, "pop");
+  await goTo(page, "Analyses");
+  await panel(page).getByRole("button", { name: "Run" }).click();
+
+  // The bar below 100%, or the run ended first, which fails the test: on a
+  // machine that reads the file before the bar is seen, Stop would reach a
+  // run that has ended, and the test would check nothing.
+  const bars = panel(page).getByRole("progressbar", {
+    name: "Calculating the diversity",
+  });
+  const table = panel(page).getByRole("grid");
+  let state = "waiting";
+  await expect
+    .poll(
+      async () => {
+        const shares = await bars.evaluateAll((els) =>
+          els.map((el) => el.getAttribute("aria-valuetext")),
+        );
+        if (
+          shares.some(
+            (v) => v !== null && /^\d+%$/.test(v) && parseInt(v, 10) < 100,
+          )
+        ) {
+          state = "below";
+        } else if ((await table.count()) > 0) {
+          state = "ended";
+        }
+        return state;
+      },
+      { timeout: 60_000, intervals: [20] },
+    )
+    .not.toBe("waiting");
+  expect(state, "the bar was never seen below 100%").toBe("below");
+
+  await panel(page).getByRole("button", { name: "Stop" }).click();
+  await expect(panel(page).getByRole("button", { name: "Run" })).toBeVisible();
+  await expect(bars).toHaveCount(0);
+  await expect(table).toHaveCount(0);
+  await expect(
+    panel(page).getByText("3 populations: a, 334 individuals; b, 333; c, 333", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expectNoViolations(makeAxeBuilder);
+
+  // The page goes on: panel.nei and its populations, in the same page.
+  await goTo(page, "Variants");
+  await pick(page, "Variants file", "panel.nei");
+  await expect(page.getByText("200 individuals")).toBeVisible();
+  await goTo(page, "Individuals");
+  await pick(page, "Metadata file", "panel_pops.csv");
+  await expect(page.getByText(/^All 200 individuals of /)).toBeVisible();
+  await page
+    .getByRole("button", { name: "Column that defines the populations" })
+    .click();
+  await page.getByRole("option", { name: "popcat", exact: true }).click();
+  await setThreshold(page, "0.05");
+  await goTo(page, "Analyses");
+  await run(page);
+  await expect(row(page, "p0")).toHaveText([
+    "48",
+    "0.3527",
+    "0.3567",
+    "0.9288",
+  ]);
 });

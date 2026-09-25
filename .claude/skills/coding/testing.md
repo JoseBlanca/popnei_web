@@ -294,10 +294,12 @@ export default defineConfig({
         reuseExistingServer: !process.env.CI,
       },
   projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] }, testIgnore: /screens\.spec\.ts/ },
-    { name: "firefox", use: { ...devices["Desktop Firefox"] }, testIgnore: /screens\.spec\.ts/ },
-    { name: "webkit", use: { ...devices["Desktop Safari"] }, testIgnore: /screens\.spec\.ts/ },
+    { name: "chromium", use: { ...devices["Desktop Chrome"] }, testIgnore: /(screens|measure)\.spec\.ts/ },
+    { name: "firefox", use: { ...devices["Desktop Firefox"] }, testIgnore: /(screens|measure)\.spec\.ts/ },
+    { name: "webkit", use: { ...devices["Desktop Safari"] }, testIgnore: /(screens|measure)\.spec\.ts/ },
     { name: "screens", use: { ...devices["Desktop Chrome"] }, testMatch: /screens\.spec\.ts/ },
+    { name: "measure-chromium", use: { ...devices["Desktop Chrome"] }, testMatch: /measure\.spec\.ts/ },
+    { name: "measure-webkit", use: { ...devices["Desktop Safari"] }, testMatch: /measure\.spec\.ts/ },
   ],
 });
 ```
@@ -318,7 +320,37 @@ The scripts:
 | `screens` | `npm run build && playwright test --project=screens` |
 
 `test:e2e` builds first, so it checks the build as well, and names the
-three engines so that it does not also write the screens.
+three engines so that it does not also write the screens or run the
+measurements.
+
+### The measurements
+
+`e2e/measure.spec.ts` holds the measurements of stage 2 that need a
+browser, and prints a table of each, with the engine, its version and
+the machine, for the report of a plan: point R, whether an engine reads a
+variants file changed on the disk after the pick
+(`docs/specs/worker/runner.md`, "In the browser"); the restart, on the
+VCF of 80,692,954 bytes and the `.nei` file of 19,161,178 bytes (the
+same spec, "What a restart costs"); the metadata file of 10,000 rows, in
+Chromium alone (`docs/specs/worker/individuals.md`, "How it runs"); and
+a pass over the VCF of the Stop in the middle, which sets its size. Two
+projects run it, `measure-chromium` and `measure-webkit`, and no other
+project does, so that `test:e2e` and CI do not:
+
+```sh
+npm run build
+MEASURE_DIR=<a folder outside the repository> npx playwright test --project=measure-chromium --project=measure-webkit
+```
+
+Its two large files are made in `MEASURE_DIR`, a folder of the system's
+temporary one when it is not given, when they are not there: the VCF by
+popnei's `crates/popnei/benches/make_big_vcf.py` with `uv run
+--no-project --with numpy python make_big_vcf.py <out.vcf> 20000`, from
+popnei's checkout at `POPNEI` or beside this repository, and the `.nei`
+file by `writeVars` of popnei in node. The test fails when either is not
+of its size. The measurements have no bound to pass: a test fails only
+when it cannot measure, as when the check by deletion of point R finds a
+`File` given in memory.
 
 ### The files of the flows
 
@@ -380,7 +412,17 @@ literals; change the threshold and see the diversity go with its notice;
 undo and see it come back; start a calculation and cancel it, and see the
 application still work; save the project, open it again, give the file,
 and see the settings restored. Cancelling needs a calculation that lasts
-long enough to be cancelled, which the panel does not (open points).
+long enough to be cancelled: the flow `WS8 D3` of `e2e/diversity.spec.ts`
+writes, into its output folder when it runs, a VCF compressed with gzip
+of 200,000 variants of 1,000 individuals, 127.6 MB, made in node by
+`e2e/bigVcf.ts` and never committed, over which a pass took 3.5 s in
+WebKit 26.6 and 3.7 s in Chromium 153 on the owner's Mac, an Apple M5
+Pro, on 25 September 2026. It presses Stop while the bar shows less than
+100%, and fails, rather than passes, when the run ends before the bar is
+seen below 100%, as on a machine much faster than this one; the answer
+there is a larger file. Compressed, because popnei reads a plain VCF at
+about 300 MB a second here, so that 3 s of it would be a file of about a
+gigabyte.
 
 ### Accessibility, with axe
 
@@ -549,10 +591,10 @@ for the reasons above.
 
 ## Open points
 
-1. How the cancel of the walking skeleton is tested in a browser: a
-   dataset large enough to take several seconds, made by the fixtures
-   script, or a flow that only checks the application works after a
-   cancel, with the cancelling itself left to the tests of the client.
+1. How the cancel of the walking skeleton is tested in a browser:
+   decided by the owner on 25 September 2026, a VCF the flow writes when
+   it runs, of a size that makes a pass last at least 3 s in WebKit on
+   the owner's Mac (above, "The walking skeleton, as a flow").
 2. The base path, `/popnei_web/`, follows from a repository of that name
    on GitHub; if the repository is named otherwise, or the site gets a
    domain of its own, the base changes here and in `vite.config.ts`.

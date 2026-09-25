@@ -33,22 +33,34 @@ export default defineConfig({
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
-      testIgnore: /screens\.spec\.ts/,
+      testIgnore: /(screens|measure)\.spec\.ts/,
     },
     {
       name: "firefox",
       use: { ...devices["Desktop Firefox"] },
-      testIgnore: /screens\.spec\.ts/,
+      testIgnore: /(screens|measure)\.spec\.ts/,
     },
     {
       name: "webkit",
       use: { ...devices["Desktop Safari"] },
-      testIgnore: /screens\.spec\.ts/,
+      testIgnore: /(screens|measure)\.spec\.ts/,
     },
     {
       name: "screens",
       use: { ...devices["Desktop Chrome"] },
       testMatch: /screens\.spec\.ts/,
+    },
+    // The measurements of stage 2, run on their own and not by test:e2e
+    // (testing.md, "The measurements").
+    {
+      name: "measure-chromium",
+      use: { ...devices["Desktop Chrome"] },
+      testMatch: /measure\.spec\.ts/,
+    },
+    {
+      name: "measure-webkit",
+      use: { ...devices["Desktop Safari"] },
+      testMatch: /measure\.spec\.ts/,
     },
   ],
 });
