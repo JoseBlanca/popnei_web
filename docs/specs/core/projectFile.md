@@ -12,7 +12,8 @@ variants file given with the one the project was made with, and of the
 numbers of a new run with the numbers saved. It develops section 9 of
 `docs/functionality.md` and sections 2, 8 and 12 of the architecture, and
 depends on `docs/specs/core/project.md`, `keys.md`, `store.md`,
-`history.md` and `docs/specs/worker/protocol.md`. The owner decided on 25
+`history.md`, and on `docs/specs/worker/protocol.md` for the filters and
+the table it writes. The owner decided on 25
 September 2026 that stage 2 of `docs/build-order.md`, the walking
 skeleton, the smallest application that goes through every part once,
 has the project file in its full first version, where the build order
@@ -154,10 +155,10 @@ written as below, the rows of the table shortened here to two:
   of a VCF in `variants`; the filters in their order; the individuals
   table whole, with the type of each column, which the walking skeleton
   shows and does not let the user change; the grouping; the options of
-  each analysis, whole, the defaults filled in. Four parts are written
-  otherwise, below: the variants file of a project that has none but has
-  a reference, a read of either file that is pending or failed, and the
-  reference, which is not written as such.
+  each analysis, whole, the defaults filled in. Some parts are written
+  otherwise, in the table below: the variants file when none is loaded or
+  its read is not done, the individuals file when its read is not done,
+  and the reference, which is not written as such.
 - **The check numbers** are one entry per analysis that has numbers to
   save, in the order of the analyses of the application: its id, its
   numbers, its key version when it was run, and the versions of popnei and
@@ -167,18 +168,20 @@ written as below, the rows of the table shortened here to two:
 Which numbers an analysis saves is its own spec's. For the walking
 skeleton that is the diversity's (`docs/specs/analyses/diversity.md`);
 this spec takes them as a list of numbers and `null`s whose length and
-order the diversity fixes, and assumes they are the mean unbiased expected
-heterozygosity of each population, in the order of the populations of its
-result, as section 9 of `docs/functionality.md` names them.
+order the diversity fixes, and assumes they are the mean expected
+heterozygosity of each population, which section 9 of
+`docs/functionality.md` names, in its unbiased form, popnei's
+`unbiasedExpHet`, and in the order of the populations of its result.
 
 ### What is written of each part
 
 | part of the project | what the file holds |
 |---|---|
-| `variants`, a file loaded | the source as it is, its load id included; its read written as below |
+| `variants`, a file loaded and read | the source as it is, its load id included |
+| `variants`, a file loaded whose read is pending or failed, and a reference whose identity it does not differ from | the reference's `variants`, which knows more of the same file |
 | `variants` null, a reference | the reference's `variants`, so that a project opened and saved again before its file is given still names the file it was made with |
 | `variants` null, no reference | `null` |
-| a read of the variants file pending or failed | `{ "kind": "pending" }`: the name, the size, the format and the read options are known, and the rest is not |
+| whichever `variants` is written, when its read is pending or failed | that source with its read `{ "kind": "pending" }`: the name, the size, the format and the read options are known, and the rest is not |
 | `individuals` read | the source as it is, its load id and its table included |
 | `individuals` pending or failed | `null`, and the grouping is kept by the name of its column |
 | `reference` | not written as such: its `variants` as above, and its check numbers under the rule below |
@@ -193,10 +196,12 @@ does, "Load an individuals file in the Individuals step."
 (`docs/specs/core/project.md`, `individualsNeeds`). What is lost is the
 name of the file and the options of the CSV, which a new load starts from
 "auto" again. This is what `docs/specs/core/project.md`, "The cases", left
-to this spec: an opened project holds no source whose read is pending, so
-the entry of the page, which asks for the read of every pending source
-after each change (`docs/architecture.md`, section 6, "Who asks for a
-read"), never asks for the read of a file the page does not hold.
+to this spec: an opened project holds no source whose read is pending.
+So the entry of the page, the code that starts when the page opens, makes
+the store and the workers and joins them, and asks for the read of every
+pending source after each change (`docs/architecture.md`, section 6, "Who
+asks for a read"), never asks for the read of a file the page does not
+hold.
 
 **The check numbers**, for each analysis of the application, decided by
 the owner with the architecture on 24 September 2026
@@ -209,11 +214,19 @@ the owner with the architecture on 24 September 2026
 2. Otherwise, the check of the reference for that analysis, with the
    versions it holds, when the fingerprint of its settings now is the one
    the reference kept, and the variants file loaded, if there is one, does
-   not differ from the reference's in its identity (below). An analysis
-   whose options changed does not carry the numbers of other options, and
-   numbers of the old file are not saved beside a new one, where they
-   would read as the numbers of a run on it.
+   not differ from the reference's in its identity (below). So an
+   analysis whose options changed does not carry the numbers of other
+   options, and the numbers of the old file are not saved beside a new
+   file, where they would read as the numbers of a run on the new file.
 3. Otherwise, none.
+
+The architecture's "none when the variant file the user gave differs"
+is read as holding of the carried numbers alone: numbers of rule 1 were
+made from the file loaded, and are saved with it. Decided here, not by
+the owner. A file whose name alone differs, `panel (1).nei`, which a
+browser makes of a second download, differs in its identity, so a save
+before a run drops the reference's numbers; the name is kept in the
+comparison, since section 9 of `docs/functionality.md` names it.
 
 The fingerprint now is made with the read options of the variants file
 loaded, or with the reference's when none is.
@@ -249,7 +262,10 @@ a literal.
   different orders. The fields of the options of an analysis, a JSON
   object whose fields no type fixes, are written sorted by their UTF-16
   code units, as the canonical form of the keys sorts them
-  (`docs/specs/core/keys.md`).
+  (`docs/specs/core/keys.md`). The writer builds the text from the
+  fields and their values, and not by making a sorted copy of the object,
+  which would lose a field named `__proto__`, a name the JSON of a file
+  can hold.
 - Two spaces of indentation and one field per line; a list whose items
   are all texts, numbers, booleans or `null` on one line, with a comma and
   a space between items, so that each row of the individuals table is a
@@ -270,8 +286,9 @@ a literal.
 
 `projectFileName` gives the name the download proposes: the name of the
 variants file without its extension, `.nei`, `.vcf` or `.vcf.gz`, with
-`.popnei.json`, so `panel_2026.nei` gives `panel_2026.popnei.json`; or
-`project.popnei.json` when the project has no variants file.
+`.popnei.json`, so `panel_2026.nei` gives `panel_2026.popnei.json`; the
+reference's variants file when none is loaded; or `project.popnei.json`
+when there is neither.
 
 ### Opening
 
@@ -282,40 +299,62 @@ September 2026). `readProjectFile` takes the text of the file and gives
 the project, or the first reason it cannot. It checks, in this order, so
 that the reason given is the one the user can act on:
 
-1. **A byte order mark** at the start, which an editor of Windows may add,
-   is removed. A text that `JSON.parse` refuses, a file cut short among
-   them, is refused as `notJson`.
+1. **A byte order mark** at the start is removed. `File.text()`, with
+   which the shell reads the file, already removes it; the step is for
+   any other caller, since core takes any text and `JSON.parse` refuses a
+   text that starts with one. A text that `JSON.parse` refuses, a file cut
+   short among them, is refused as `notJson`.
 2. **A JSON value that is not an object with `format` equal to
    `"popnei_web project"`** is refused as `notProjectFile`.
-3. **The version of the format** must be a whole number of at least 1. A
-   version above `FORMAT_VERSION` is refused as `newerFormat` before
-   anything else is read, since the rest of a newer file may be anything.
-4. **The application**: a file of the other one is refused with the
-   `otherApp` error of `parseProject`, before the rest, so that a user who
-   opened a file in the wrong application is told to open it there and
-   not that it is damaged.
+3. **The version of the format** must be a whole number of at least 1, or
+   it is refused as `header`. A version above `FORMAT_VERSION` is refused
+   as `newerFormat` before anything else is read, since the rest of a
+   newer file may be anything.
+4. **The application**, read here by `readProjectFile`: a value other than
+   `"popgen"` or `"gwas"` is refused as `header`; a file of the other
+   application as `{ kind: "project", error: { kind: "otherApp" } }`, with
+   the text of `parseProject`, before the rest, so that a user who opened
+   a file in the wrong application is told to open it there and not that
+   it is damaged.
 5. **The fields of the top**: exactly those of the example. A field this
    version does not write is refused as `unknownField`, as
-   `docs/specs/core/project.md` refuses one inside the project, since this
-   version would not have written it; a field missing is refused too.
-   `appVersion` and `saved` must be texts, `popneiVersion` a text or
-   `null`.
-6. **The project**, through `parseProject` of `docs/specs/core/project.md`,
-   with the application, the version of the format of the file and the
-   analyses of the application: every check of its section "The
+   `docs/specs/core/project.md` refuses one inside the project, and a
+   field missing as `missingField`, both with the name of the field.
+   `appVersion` and `saved` must be texts, and `popneiVersion` a text or
+   `null`, or they are refused as `header`.
+6. **The checks, before the project**: `checks` must be a list of
+   objects, none with a field `settings`, which this version never writes;
+   and it must be empty when `variants` is `null`, since no result is made
+   without a variants file. Each is refused as `header`, with the field
+   `checks`. This comes first because the next step adds a `settings` to
+   each check, which would hide one the file had.
+7. **The project**, through `parseProject` of `docs/specs/core/project.md`,
+   once, with the application, the version of the format of the file and
+   the analyses of the application: every check of its section "The
    validation", with its errors and their texts. `readProjectFile` gives
-   it the project with `variants` null and a reference made of the file's
-   `variants` and `checks`, so that the file's variants file is checked
-   as the reference's and each check of an analysis this version does not
-   know is refused as `unknownAnalysis`, with its text.
-7. **What this version does not write**, refused as the texts of
-   `parseProject` refuse a wrong value: a read of the variants file that
-   is `failed`, a read of the individuals file that is not `read`, and a
-   check when `variants` is `null`, since no result is made without a
-   variants file.
-8. **The fingerprints** of the settings of each check are made, with
+   it this object, built from the fields of the file:
+
+   ```ts
+   { app, variants: null, filters, individualFilters, individuals, grouping, analyses,
+     reference: variants === null ? null
+       : { variants, checks: checks.map((c) => ({ ...c, settings: "0".repeat(64) })) } }
+   ```
+
+   So the file's variants file is checked as the reference's, a check of
+   an analysis this version does not know is refused as `unknownAnalysis`,
+   and each check is checked as `parseCheck` checks one, with a
+   placeholder fingerprint of 64 zeros that the last step replaces. This
+   needs `Check` and `Reference` as **Open 1** A has them: with the code of
+   25 September 2026, `parseCheck` refuses the versions of a check as
+   fields it does not know, and `parseReference` asks for versions of its
+   own that the file does not hold.
+8. **What this version does not write**, refused as `header` with the
+   field `variants` or `individuals`: a read of the variants file that is
+   `failed`, and a read of the individuals file that is not `read`.
+9. **The fingerprints** of the settings of each check are made, with
    `settingsFingerprint` of `docs/specs/core/keys.md`, from the opened
-   project and the read options of the file's variants file.
+   project and the read options of the file's variants file, and put in
+   place of the placeholders.
 
 The project given has `variants` null, since the user gives the variants
 file again; `individuals`, the filters, the grouping and the options of
@@ -335,13 +374,17 @@ reference's, its ploidy and whether only the variants that passed are
 kept: they are settings that every fingerprint holds, and a VCF loaded
 with another ploidy gives no comparison of its numbers.
 
-A file larger than `MAX_PROJECT_FILE_BYTES`, 256 MB, is refused by the
+A file larger than `MAX_PROJECT_FILE_BYTES`, 64 MB, is refused by the
 shell as `tooLarge` before it is read. A project file with a table of
-10,000 individuals and 20 columns is about 3 MB. A variants file picked
-by mistake would otherwise be read whole into one text, and a text of
-more than 2^29 − 24 characters, about 537 million, cannot be made in
-Chrome, the longest string of V8, its engine, on a 64-bit machine (from
-V8's source, not measured here), so the tab would fail with no message.
+10,000 individuals and 20 columns is about 3 MB, reckoned from the
+lengths of its lines and not measured, so the bound leaves room for a
+table twenty times as large. A large file picked by mistake would
+otherwise be read whole into one text and parsed on the page before its
+`format` is looked at, which freezes the tab for as long as that takes
+and needs several times its size in memory; a variants file of more than
+2^29 − 24 characters, about 537 million, cannot even be made a text in
+Chrome, whose engine has that limit on a 64-bit machine. The time of
+parsing 64 MB has not been measured.
 
 ### The comparisons after an opening
 
@@ -371,8 +414,9 @@ made with, or go on with this one." (**Open 2**). The individuals of that
 file that are not in this one are named, and counts written, as
 `docs/specs/core/project.md` names them, its **Open 3**; a name is shown
 escaped and cut after 40 characters, as its validation shows a value of
-the file. The functions of `project.ts` that do this are exported for
-this module, so that the rules are written once. The same comparison decides whether the check numbers of the
+the file. The functions of `project.ts` that do this, private on 25
+September 2026, are exported for this module, so that the rules are
+written once. The same comparison decides whether the check numbers of the
 reference are saved (rule 2 above).
 
 **The check numbers.** The comparison is the store's: after a run, while
@@ -381,8 +425,10 @@ the analysis holds `same` or `differs`, and, for `differs`, the two
 versions of popnei when they are not the same, and the two versions of
 the application when the key version is not the one saved
 (`docs/specs/core/store.md`, "The comparison with the check numbers").
-The store's spec left its words to the screen of the project file, then
-in stage 6; `checkVerdictText` gives them here, and the panel of the
+The store's spec left its words to the screen of the project file, in
+stage 6 (`docs/specs/core/store.md`, "The comparison with the check
+numbers"); since the owner moved the project file to stage 2,
+`checkVerdictText` gives them here, in place of that, and the panel of the
 analysis shows them under its result (**Open 2**):
 
 - same: "The same numbers as in the project file: this variants file
@@ -395,9 +441,9 @@ analysis shows them under its result (**Open 2**):
   application, which calculated this analysis in another way than this
   version, 0.3.0."
 
-The check numbers are what tells a file with the same individuals and
-number of variants and other genotypes, which the identity lets pass,
-since they are made from the genotypes (`docs/architecture.md`, section
+The check numbers are what tells apart a file with the same individuals
+and number of variants as the project's but different genotypes, which
+the identity lets pass, since they are made from the genotypes (`docs/architecture.md`, section
 8).
 
 ### The versions of the format
@@ -424,7 +470,8 @@ this spec makes precise:
 - **A change to what an analysis's `checkNumbers` gives**, which numbers
   or their order, raises its key version, so that the numbers of files
   saved before are told as "calculated in another way" and not blamed on
-  the variants file. When F joins the diversity in stage 5, its
+  the variants file. When F, the inbreeding coefficient, joins the
+  diversity in stage 5, its
   `checkNumbers` can stay as they are, and then neither changes.
 
 ## The TypeScript interface
@@ -440,7 +487,7 @@ The text in the field `format`, and the largest file opened.
 
 ```ts
 export const FORMAT_NAME = "popnei_web project";
-export const MAX_PROJECT_FILE_BYTES = 256 * 1024 * 1024;
+export const MAX_PROJECT_FILE_BYTES = 64 * 1024 * 1024;
 ```
 
 The project file of the state of the store, with the definitions of the
@@ -479,9 +526,13 @@ export type ProjectFileError =
   | { kind: "notJson" }
   | { kind: "notProjectFile" }
   | { kind: "newerFormat"; formatVersion: number; appVersion: string | null }
-  // a field of the header missing, expected null, or of the wrong value
-  | { kind: "header"; field: "formatVersion" | "appVersion" | "popneiVersion" | "saved";
-      expected: string | null }
+  | { kind: "unknownField"; name: string }        // at the top of the file
+  | { kind: "missingField"; name: string }        // at the top of the file
+  // a field of the top of the wrong value; `expected` ends "‹the field› should be …"
+  | { kind: "header";
+      field: "formatVersion" | "app" | "appVersion" | "popneiVersion" | "saved"
+        | "checks" | "variants" | "individuals";
+      expected: string }
   // the rest, as the validation of the project gives it, the checks among it
   | { kind: "project"; error: ProjectError };
 
@@ -495,11 +546,12 @@ file at all, and the others in the pattern of `projectErrorText` of
 
 | kind | text |
 |---|---|
-| `tooLarge` | "notes.vcf cannot be opened as a project: it is larger than 256 MB, and a project file, which holds settings and no genotypes, is much smaller. Open the .popnei.json file the application saved." |
+| `tooLarge` | "notes.vcf cannot be opened as a project: it is larger than 64 MB, and a project file, which holds settings and no genotypes, is much smaller. Open the .popnei.json file the application saved." |
 | `notJson` | "notes.txt cannot be opened as a project: it is not a project file, or it was cut short or changed outside the application. Open the .popnei.json file the application saved, or a copy of it." |
 | `notProjectFile` | "data.json cannot be opened as a project: it is not a project file of the application. Open the .popnei.json file the application saved." |
-| `newerFormat` | "This project file was saved by a newer version of the application, 0.4.0, in a format this version cannot read. Reload the page to get the newest version, and open the file again." Without ", 0.4.0" when the file's `appVersion` is not a text. |
-| `header` | "The project file cannot be opened: the version of its format should be a whole number, 1 or more. The file was changed outside the application, or is damaged. Open a copy saved before the change, or make the project again." The fields in words: the version of its format, the version of the application that saved it, the version of popnei it was saved with, the date it was saved. |
+| `newerFormat` | "This project file was saved by a newer version of the application, 0.4.0, in a format this version cannot read. Reload the page to get the newest version, and open the file again." Without ", 0.4.0" when the file's `appVersion` is not a text; the version is a value of the file, so it is shown escaped and cut after 40 characters, as `docs/specs/core/project.md` shows one. These words replace those that spec quoted for this case, which it left to this one. |
+| `header` | "The project file cannot be opened: the version of its format should be a whole number, 1 or more. The file was changed outside the application, or is damaged. Open a copy saved before the change, or make the project again." The fields in words: the version of its format, the application, the version of the application that saved it, the version of popnei it was saved with, the date it was saved, the check numbers, what was read of the variants file, what was read of the individuals file. |
+| `unknownField`, `missingField` | "The project file cannot be opened: it has a field "notes", which the application does not write." and "The project file cannot be opened: its field "checks" is missing.", each followed by the same last two sentences; the name shown escaped and cut. |
 
 The comparison of the identity, and its warning. `saved` is the
 reference's variants file and `now` the one loaded; what neither read
@@ -565,19 +617,24 @@ On the page, synchronous, as every function of core is. The shell reads
 the file with `File.text()`, which decodes UTF-8, and hands the text to
 `readProjectFile`; it offers the text of `writeProjectFile` as a download.
 Reading a file holds its text, the value `JSON.parse` gives and the
-project at once, about three times the text, 10 MB for the file of 3 MB
-above. The time to write and read a file with 10,000 individuals has not
-been measured; it is measured on the walking skeleton, with the time of
-the keys (`docs/architecture.md`, section 11).
+project at once, an estimate of about three times the text, not measured.
+The time to write and read a file with 10,000 individuals will be measured
+on the walking skeleton, with the time of the keys (`docs/architecture.md`, section 11).
 
 ## How it is verified
 
 With Vitest, at `writeProjectFile`, `readProjectFile` and the functions of
 the comparisons, since the text of the file and the opened project are
-what the user keeps and gets. The tests use definitions of test analyses
-with a key version, `filtersRead`, `keyInputs` and `checkNumbers`, and
-states of the store built as literals of `AppState`, with the analyses
-`done`, `ready` or `removed`.
+what the user keeps and gets. Vitest runs the tests of core in node, and
+fast-check draws random values for a property and shrinks a failure to
+the smallest one. The tests use `TEST_DEFS`, added to
+`src/core/testSupport.ts`: the three analyses of its `TEST_ANALYSES`,
+`"diversity"`, `"pca"` and `"gwas_lm"`, as whole definitions of
+`AnalysisDef` of `docs/specs/core/store.md`, each with a key version, the
+filters it reads, a `keyInputs` that gives its options and the grouping,
+and a `checkNumbers` that gives the numbers of a test result, a list the
+test chooses. The states of the store are literals of `AppState`, with
+the analyses `done`, `ready` or `removed`.
 
 - **The fixtures of version 1**, files kept under
   `src/core/fixtures/projectFile/`: `v1-empty.popnei.json`, an empty
@@ -605,10 +662,11 @@ states of the store built as literals of `AppState`, with the analyses
 - **Each refusal**, a case for each step of "Opening", with its `kind`:
   `"{"`, `"[]"`, `{"format": "popnei_web project", "formatVersion": 2}`,
   `formatVersion` 0, 1.5 and `"1"`, a file of `"gwas"` opened in popgen, a
-  field `"notes"` at the top, `appVersion` missing, a check with a field
-  `settings`, a check of the analysis `"fst"`, a check with `variants`
-  null, a read of the individuals file `pending`. The texts of `notJson`,
-  `newerFormat` and of a `header` error asserted whole.
+  field `"notes"` at the top, `appVersion` missing, `"checks": {}`, a
+  check with a field `settings`, a check of the analysis `"fst"`, a check
+  with `variants` null, a read of the individuals file `pending`. The
+  texts of `notJson`, `newerFormat` and of a `header` error asserted
+  whole.
 - **A byte order mark** before the text of `v1-empty.popnei.json`: it
   opens.
 - **The fingerprints**: each check of an opened file holds
@@ -619,8 +677,12 @@ states of the store built as literals of `AppState`, with the analyses
   individuals and 1,203,554 variants; this file has 360 individuals.",
   asserted whole with its last sentence.
 - **Properties, with fast-check**, which draws random projects with
-  `wholeProject` of `src/core/testSupport.ts`, its reference among them,
-  and random results among its analyses:
+  `wholeProject` of `src/core/testSupport.ts`, the generator of any valid
+  project, its reference among them, and random results among its
+  analyses. The checks `wholeProject` draws have random fingerprints,
+  which never match; so a second generator, beside it, makes the
+  fingerprint of half of them with `settingsFingerprint` of the project
+  drawn, so that rule 2 is met:
   - `readProjectFile(writeProjectFile(s, …))` is ok, and its project is
     the one the table of "What is written" gives: equal to `s.project` in
     the filters, the individuals file when it was read, the grouping and
@@ -647,23 +709,38 @@ states of the store built as literals of `AppState`, with the analyses
    one of the two is labelled wrongly, and a later difference would not
    name popnei when popnei could explain it.
    - **A, each check keeps its versions**, as this spec writes it: the
-     file saves them with the numbers, `Check` of
-     `docs/specs/core/project.md` gains `popneiVersion` and `appVersion`
-     and `Reference` loses its own, and the store's comparison reads the
-     check's. The header keeps the versions of the save, as information
-     for a person reading the file, and its popnei version can be `null`.
-     It costs a change to two approved specs and their code, about twenty
-     lines, and their tests.
+     file saves them with the numbers, and the header keeps the versions
+     of the save, as information for a person reading the file, its
+     popnei version `null` when not known. It is a change to approved
+     documents and code, made before this module:
+     - `docs/architecture.md`, section 2, the type `Reference`, and
+       section 8, "when it is not the one in the file's header";
+     - `docs/specs/core/project.md` and `src/core/project.ts`: `Check`
+       gains `popneiVersion` and `appVersion`, `Reference` loses its own,
+       `parseCheck` and `parseReference` follow, and `FIELD_WORDS` gets
+       the words of the two new fields and loses those of the old; and
+       the private functions that name individuals and show a value of
+       a file are exported;
+     - `docs/specs/core/store.md` and `src/core/store.ts`: `verdictOf`
+       reads the versions of the check, not of the reference, and the
+       test of the check numbers follows;
+     - `wholeProject` in `src/core/testSupport.ts`, which draws the
+       checks.
+     About fifty lines of code and their tests, beside the documents.
    - **B, one version per file**: the reference's checks are carried only
-     when they were made with the versions of popnei and of the
-     application of the save, and Save waits until the calculation worker
-     has given its version. It changes no other spec, and it drops every
+     when they were made with the version of popnei of the save, and
+     Save waits until the calculation worker has given its version; the
+     application's version need not match, since what the store compares
+     for the application is the key version, which each check keeps
+     already, and only the words of a difference would name the wrong
+     version of the application. It changes no other spec, and it drops every
      carried number of a project opened in a newer version and saved
      before it is run again, and the ability to save when the worker could
      not start.
-   The recommendation is A, since the file keeps its numbers correctly
-   labelled in every case. The answer is needed before the plan: B changes
-   the header, the checks and the fixtures of the first version.
+   The recommendation is A: no carried number is dropped, and a difference
+   names the right versions. The answer is needed before the plan, since
+   B rewrites the example, the steps 6 and 7 of "Opening", the checks and
+   the fixtures of the first version.
 2. **The words**: the warning of the identity, the file asked for after an
    opening, the two verdicts of the check numbers and the refusals of this
    module, to be judged when the owner sees them on the screens of stage
@@ -693,6 +770,12 @@ states of the store built as literals of `AppState`, with the analyses
   load ids of an opened project, and nothing of the opening asks for a
   read, since an opened project has no pending source.
 - `docs/specs/worker/*`: nothing of this module.
+
+These choices of this spec change what a user meets, and the owner may
+wish to overrule them on approving it: an individuals file whose read is
+pending or failed is not saved; the Variants step starts a VCF's read
+options at the reference's; a variants file whose name alone differs
+drops the carried numbers.
 
 ## Not in this spec
 
