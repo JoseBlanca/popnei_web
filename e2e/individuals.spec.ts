@@ -155,6 +155,24 @@ test("WS8 D1 panel_pops.csv is read with the three options found, its columns an
   await expect(select(page, "Encoding")).toHaveText("Detected: UTF-8");
   await expect(select(page, "Separator")).toHaveText("Detected: comma");
   await expect(select(page, "Decimal mark")).toHaveText("Detected: point");
+  await expect(
+    page.getByText(
+      'If names with accents come out garbled, "EspaÃ±a" for "España", change the encoding. If the whole file shows as a single column, change the separator. Changing one reads the file again.',
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      "The types are inferred from the values; changing them comes in a later version.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      "Any column can define the populations, whatever its type.",
+      { exact: true },
+    ),
+  ).toBeVisible();
 
   const table = page.getByRole("table", { name: "Columns" });
   await expect(table.getByRole("row")).toHaveText([
@@ -216,11 +234,24 @@ test("WS8 D1 the column popcat chosen lists the populations p0, p2 and p1 with t
     .getByRole("region", { name: "Populations" })
     .getByRole("listitem");
   await expect(populations).toHaveCount(3);
-  // Shown "p0 · 48", read "p0, 48 individuals".
-  await expect(populations.nth(0)).toContainText("p0, 48 individuals");
-  await expect(populations.nth(1)).toContainText("p2, 84 individuals");
-  await expect(populations.nth(2)).toContainText("p1, 68 individuals");
-  await expect(populations.nth(0)).toContainText("p0 · 48");
+  // Read "p0, 48 individuals", and nothing of what is shown.
+  await expect(
+    page.getByRole("region", { name: "Populations" }).getByRole("list"),
+  ).toMatchAriaSnapshot(`
+    - list:
+      - listitem: p0, 48 individuals
+      - listitem: p2, 84 individuals
+      - listitem: p1, 68 individuals
+  `);
+  // Shown "p0 · 48", and the words read not shown: a box of one pixel.
+  await expect(
+    populations.nth(0).getByText("p0 · 48", { exact: true }),
+  ).toBeVisible();
+  const read = await populations
+    .nth(0)
+    .getByText("p0, 48 individuals", { exact: true })
+    .boundingBox();
+  expect(read === null || (read.width <= 1 && read.height <= 1)).toBe(true);
   await expectNoViolations(makeAxeBuilder);
 });
 
@@ -778,3 +809,64 @@ for (const width of [320, 640]) {
     expect(await sideways()).toBe(false);
   });
 }
+
+test("WS8 D1 a column empty for every individual of the variants file gives its reason at the select", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openIndividuals(page);
+  await loadPanel(page);
+  const lines = await panelPopsLines();
+  const withEmpty = lines.map((line, index) =>
+    index === 0 ? `${line},region` : `${line},`,
+  );
+  await pick(page, { name: "pops.csv", text: `${withEmpty.join("\n")}\n` });
+  await choose(page, "Column that defines the populations", "region");
+
+  const reason =
+    "No individual of panel.nei has a population in the column region of pops.csv. Fill in the column and load the file again, or choose another column, in the Individuals step.";
+  await expect(page.getByText(reason, { exact: true })).toBeVisible();
+  await expect(
+    select(page, "Column that defines the populations"),
+  ).toHaveAccessibleDescription(new RegExp(reason.replace(/\./g, "\\.")));
+  // No population, and every individual in the line of those in none.
+  await expect(
+    page.getByRole("region", { name: "Populations" }).getByRole("list"),
+  ).toMatchAriaSnapshot(`
+    - list:
+      - listitem: No population, 200 individuals, left out of the analyses per population
+  `);
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("WS8 D1 an individual missing whose name holds a control character is listed escaped", async ({
+  page,
+}) => {
+  await openIndividuals(page);
+  await goTo(page, "Variants");
+  const vcf =
+    "##fileformat=VCFv4.2\n" +
+    "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\ti1\ti\u0001x\n" +
+    "1\t100\t.\tA\tG\t.\tPASS\t.\tGT\t0/1\t1/1\n";
+  const chooser = page.waitForEvent("filechooser");
+  await page
+    .getByRole("region", { name: "Variants file" })
+    .getByRole("button", { name: /^(Choose|Replace) .*…$/ })
+    .click();
+  await (
+    await chooser
+  ).setFiles({
+    name: "odd.vcf",
+    mimeType: "text/plain",
+    buffer: Buffer.from(vcf),
+  });
+  await expect(page.getByText("2 individuals")).toBeVisible();
+  await goTo(page, "Individuals");
+  await pick(page, { name: "pops.csv", text: "IID,pop\ni1,p0\n" });
+
+  await page.getByRole("button", { name: "The 1 individual missing" }).click();
+  const names = page
+    .getByRole("region", { name: "Populations" })
+    .getByRole("listitem");
+  await expect(names).toHaveText(["i\\u0001x"]);
+});
