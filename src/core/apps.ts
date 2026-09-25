@@ -30,6 +30,9 @@ export const POPGEN_ANALYSES: readonly AnalysisDef<Job, JobResult>[] =
 export const POPGEN_STEPS: readonly ["variants", "individuals", "analyses"] =
   Object.freeze(["variants", "individuals", "analyses"] as const);
 
+/** The id of a step of the population genetics application. */
+export type StepId = (typeof POPGEN_STEPS)[number];
+
 /** The first project of the population genetics application: an empty
     project with the missing data filter on at 0.1. */
 export function firstProject(app: "popgen"): Project {

@@ -3,8 +3,10 @@ import {
   DIVERSITY_DEFAULTS,
   diversity,
   diversityCsv,
+  diversityRows,
   populationsNeeds,
   populationsOf,
+  populationsToRun,
   refusalText,
 } from "./diversity.ts";
 import { createKeyMemo, keyOf } from "../keys.ts";
@@ -887,5 +889,255 @@ describe("WS5 D2 the key", () => {
       pops: null,
       options: DIVERSITY_DEFAULTS,
     });
+  });
+});
+
+/** A project whose populations are `sizes.length` populations named
+    `names`, each of `sizes[i]` individuals, all in the variants file. */
+function projectOfSizes(
+  names: readonly string[],
+  sizes: readonly number[],
+): Project {
+  const individuals: string[] = [];
+  const pops: string[] = [];
+  names.forEach((name, i) => {
+    for (const individual of individualsNamed(`${name}_`, sizes[i] ?? 0)) {
+      individuals.push(individual);
+      pops.push(name);
+    }
+  });
+  return project({ table: tableOf(individuals, pops), individuals });
+}
+
+describe("WS5 D3 the rest of the module, after its review", () => {
+  test("warnings of two populations with a value at fewer variants give their counts and shares", () => {
+    const p = projectOfSizes(["p0a", "p0b"], [20, 20]);
+    const r = result({
+      pops: ["p0a", "p0b"],
+      numIndividuals: [20, 20],
+      numVarsWithValue: [641, 1100],
+      numVars: 1152,
+    });
+    expect(diversity.warnings(r, p)).toEqual([
+      {
+        code: "variantsWithoutValue",
+        text: "p0a and p0b have a value at 641 and 1,100 of the 1,152 variants kept (56% and 95%); at the others fewer than 20 of their individuals have a genotype.",
+      },
+    ]);
+  });
+
+  test("warnings of five populations with a value at fewer variants name two and how many more, with no counts", () => {
+    const names = ["p0a", "p0b", "p0c", "p0d", "p0e"];
+    const p = projectOfSizes(names, [20, 20, 20, 20, 20]);
+    const r = result({
+      pops: names,
+      numIndividuals: [20, 20, 20, 20, 20],
+      numVarsWithValue: [641, 1100, 10, 11, 12],
+      numVars: 1152,
+    });
+    expect(diversity.warnings(r, p)).toEqual([
+      {
+        code: "variantsWithoutValue",
+        text: "p0a, p0b and 3 more have a value at fewer than the 1,152 variants kept; at the others fewer than 20 of their individuals have a genotype.",
+      },
+    ]);
+  });
+
+  test("warnings of a population with a value at none of the variants kept says none", () => {
+    const p = projectOfSizes(["p0a"], [20]);
+    const r = result({
+      pops: ["p0a"],
+      numIndividuals: [20],
+      numVarsWithValue: [0],
+      numVars: 1152,
+    });
+    expect(diversity.warnings(r, p)).toEqual([
+      {
+        code: "variantsWithoutValue",
+        text: "p0a has a value at none of the 1,152 variants kept: at each, fewer than 20 of its individuals have a genotype.",
+      },
+    ]);
+  });
+
+  test("warnings of a population with no value at the one variant kept says the one variant", () => {
+    const p = projectOfSizes(["A"], [20]);
+    const r = result({
+      pops: ["A"],
+      numIndividuals: [20],
+      numVarsWithValue: [0],
+      numVars: 1,
+    });
+    expect(diversity.warnings(r, p)).toEqual([
+      {
+        code: "variantsWithoutValue",
+        text: "A has no value at the one variant kept: fewer than 20 of its individuals have a genotype there.",
+      },
+    ]);
+  });
+
+  test("warnings of two populations with no value at the one variant kept says the one variant", () => {
+    const p = projectOfSizes(["A", "B"], [20, 20]);
+    const r = result({
+      pops: ["A", "B"],
+      numIndividuals: [20, 20],
+      numVarsWithValue: [0, 0],
+      numVars: 1,
+    });
+    expect(diversity.warnings(r, p)).toEqual([
+      {
+        code: "variantsWithoutValue",
+        text: "A and B have no value at the one variant kept: fewer than 20 of their individuals have a genotype there.",
+      },
+    ]);
+  });
+
+  test("warnings of one population of fewer than 20 individuals names it with its count", () => {
+    const p = projectOfSizes(["p3"], [12]);
+    const r = result({
+      pops: ["p3"],
+      numIndividuals: [12],
+      numVarsWithValue: [0],
+      numVars: 1152,
+    });
+    expect(diversity.warnings(r, p)).toEqual([
+      {
+        code: "tooFewIndividuals",
+        text: "Population p3 has 12 individuals, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so p3 has no values. To have them, merge it with another population in the metadata file.",
+      },
+    ]);
+  });
+
+  test("warnings of five individuals of the variants file with no population names two and how many more", () => {
+    const names = ["s0", "s1", "s2", "s3", "s4", ...individualsNamed("p", 20)];
+    const p = project({
+      table: tableOf(names, [
+        null,
+        null,
+        null,
+        null,
+        null,
+        ...names.slice(5).map(() => "p0"),
+      ]),
+      individuals: names,
+    });
+    const r = result({ pops: ["p0"], numIndividuals: [20], numVars: 1152 });
+    expect(diversity.warnings(r, p)).toEqual([
+      {
+        code: "individualsWithoutPopulation",
+        text: "5 individuals of panel.nei have no population, and are left out of the diversity: s0, s1 and 3 more. If they belong to one, fill in their population in the metadata file and load it again.",
+      },
+    ]);
+  });
+
+  test("warnings escape the control characters of a population's name and cut it after 40 characters", () => {
+    const long = "x".repeat(45);
+    const p = project({
+      table: tableOf(["i1", "i2"], [long, "p\n9"]),
+      individuals: ["i1"],
+    });
+    const r = result({ pops: [long], numIndividuals: [1], numVars: 1152 });
+    expect(diversity.warnings(r, p)).toEqual([
+      {
+        code: "tooFewIndividuals",
+        text: `Population ${"x".repeat(40)}… has 1 individual, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so ${"x".repeat(40)}… has no values. To have them, merge it with another population in the metadata file.`,
+      },
+      {
+        code: "populationNotInResult",
+        text: "Population p\\n9 has no individual among the individuals of panel.nei that the filters kept, so it is not in the table.",
+      },
+    ]);
+  });
+
+  test("populationsOf keeps populations named with whole numbers in the order of the file", () => {
+    const p = project({
+      table: tableOf(["i1", "i2", "i3", "i4"], ["3", "1", "2", "10"]),
+    });
+    expect(populationsOf(p)).toEqual([
+      ["3", ["i1"]],
+      ["1", ["i2"]],
+      ["2", ["i3"]],
+      ["10", ["i4"]],
+    ]);
+  });
+
+  test("diversityRows and populationsToRun give back the same array each time", () => {
+    expect(diversityRows(FLOW_RESULT)).toBe(diversityRows(FLOW_RESULT));
+    const p = project();
+    expect(populationsToRun(p)).toBe(populationsToRun(p));
+    expect(populationsToRun(p)).toEqual([
+      ["A", ["i1", "i3"]],
+      ["B", ["i2"]],
+    ]);
+  });
+
+  test("populationsToRun follows the individuals of a variants file changed in place, which it does not keep", () => {
+    const individuals = ["i1", "i2", "i3", "i4"];
+    const base = project();
+    const p: Project = {
+      ...base,
+      variants: {
+        ...variantsOf(base),
+        read: { kind: "read", individuals, ploidy: 2, numVars: null },
+      },
+    };
+    expect(populationsToRun(p)).toEqual([
+      ["A", ["i1", "i3"]],
+      ["B", ["i2"]],
+    ]);
+    individuals.splice(1, 1);
+    expect(populationsToRun(p)).toEqual([["A", ["i1", "i3"]]]);
+  });
+
+  test("refusalText of a gzipped VCF cut short tells to correct or fetch the file", () => {
+    const message =
+      "the VCF was written by bgzip and does not end with the empty member of 28 bytes that marks the end of a bgzipped file, so the file is cut short and the variants after the cut are not in it; the file has to be fetched or copied again. bcftools says of the same file `no BGZF EOF marker; file may be truncated`";
+    expect(
+      refusalText(message, project({ variantsName: "panel.vcf.gz" })),
+    ).toBe(
+      `popnei could not read panel.vcf.gz: ${message}. Correct the file, or fetch it again, and load it in the Variants step.`,
+    );
+  });
+
+  test("needs throws a defect on a project of association whose individuals file is read", () => {
+    const p = deepFreeze<Project>({
+      ...project(),
+      app: "gwas",
+      grouping: { kind: "roles", roles: [] },
+    });
+    expect(() => diversity.needs(p)).toThrow(/^popnei_web defect: /);
+  });
+
+  test("refusalText throws a defect on a project with no variants file", () => {
+    const p = deepFreeze<Project>({ ...project(), variants: null });
+    expect(() => refusalText("the pass gave no variant", p)).toThrow(
+      /^popnei_web defect: /,
+    );
+  });
+});
+
+describe("WS5 D2 the key, after its review", () => {
+  test("a cell of the column of the populations changed in place, in a table not frozen, changes the key", () => {
+    const second: Cell[] = ["i2", "B", "y"];
+    const base = project();
+    const individuals = base.individuals;
+    if (individuals?.read.kind !== "read") {
+      throw new Error("the project of the test has an individuals file read");
+    }
+    const p: Project = {
+      ...base,
+      individuals: {
+        ...individuals,
+        read: {
+          ...individuals.read,
+          table: {
+            columns: ["name", "pop", "other"],
+            rows: [["i1", "A", "x"], second, ["i3", "A", "x"]],
+          },
+        },
+      },
+    };
+    const before = keyOfDiversity(p);
+    second[1] = "A";
+    expect(keyOfDiversity(p)).not.toBe(before);
   });
 });

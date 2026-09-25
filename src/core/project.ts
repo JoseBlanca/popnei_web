@@ -1530,8 +1530,9 @@ export function grouped(count: number): string {
 /** What follows "could not read panel.nei": a colon and the message of
     popnei, of the files wasm or of the reader, without the spaces around
     it and the full stop it may end with, so that the sentence has one; or
-    nothing, when that leaves it empty. */
-function saying(message: string): string {
+    nothing, when that leaves it empty. Exported for the refusals of the
+    analyses. */
+export function saying(message: string): string {
   const trimmed = message.trim();
   const words = trimmed.endsWith(".") ? trimmed.slice(0, -1) : trimmed;
   return words === "" ? "" : `: ${words}`;

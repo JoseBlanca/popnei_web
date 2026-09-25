@@ -17,6 +17,7 @@ import {
   grouped,
   individualsNeeds,
   namesOf,
+  saying,
   shown,
 } from "../project.ts";
 import type { Project, SourceRead } from "../project.ts";
@@ -66,12 +67,23 @@ const OPTIONS_EXPECTED =
 const CHOOSE_COLUMN =
   "Choose the column that defines the populations in the Individuals step.";
 
-/** The populations of each table, by the name of its column, so that a
-    change of a threshold does not walk a table of 10,000 rows again. */
-const POPULATIONS = new WeakMap<IndividualsTable, Map<string, Pops>>();
+/** The individuals of a table grouped by one of its columns. */
+interface Grouped {
+  /** The populations, as `populationsOf` gives them. */
+  readonly pops: Pops;
+  /** The individuals whose cell in the column is missing, in the order of
+      the table. */
+  readonly unassigned: readonly string[];
+}
+
+/** The grouping of each table, by the name of its column, so that a
+    change of a threshold does not walk a table of 10,000 rows again. It
+    keeps only tables frozen with all they hold, as the memo of the keys
+    does, so that a table changed in place is walked again. */
+const GROUPED = new WeakMap<IndividualsTable, Map<string, Grouped>>();
 
 /** The populations to run of each set of populations, by the read of the
-    variants file. */
+    variants file; only reads frozen with their individuals are kept. */
 const TO_RUN = new WeakMap<Pops, WeakMap<SourceRead, Pops>>();
 
 /** The rows of each result, so that a screen drawn again gets the same
@@ -85,9 +97,15 @@ const ROWS = new WeakMap<DiversityResult, readonly DiversityRow[]>();
  * first appears in the file; an individual whose cell is missing belongs
  * to none. `null` when there is no individuals file, when it is not read,
  * when no column is chosen, or when the table has no column of that name.
- * The same frozen value for the same table and column.
+ * The same frozen value for the same frozen table and column.
  */
 export function populationsOf(p: Project): Pops | null {
+  return groupedOf(p)?.pops ?? null;
+}
+
+/** The individuals of the table grouped by the column of the populations,
+    with those that have no population; `null` when `populationsOf` is. */
+function groupedOf(p: Project): Grouped | null {
   const read = p.individuals?.read;
   if (read?.kind !== "read" || p.grouping.kind !== "populations") {
     return null;
@@ -97,9 +115,7 @@ export function populationsOf(p: Project): Pops | null {
     return null;
   }
   const table = read.table;
-  const byColumn = POPULATIONS.get(table) ?? new Map<string, Pops>();
-  POPULATIONS.set(table, byColumn);
-  const kept = byColumn.get(column);
+  const kept = GROUPED.get(table)?.get(column);
   if (kept !== undefined) {
     return kept;
   }
@@ -108,26 +124,47 @@ export function populationsOf(p: Project): Pops | null {
     return null;
   }
   const members = new Map<string, string[]>();
+  const unassigned: string[] = [];
   for (const row of table.rows) {
     const cell = row[index];
     if (cell === undefined) {
       throw defect(`a row of the individuals table has no cell ${column}.`);
     }
+    const individual = identifierOf(row[0]);
     if (cell === null) {
+      unassigned.push(individual);
       continue;
     }
     const pop = String(cell);
     const individuals = members.get(pop) ?? [];
     members.set(pop, individuals);
-    individuals.push(identifierOf(row[0]));
+    individuals.push(individual);
   }
-  const pops: Pops = Object.freeze(
-    [...members].map(([pop, individuals]) =>
-      Object.freeze([pop, Object.freeze(individuals)] as const),
+  const grouped: Grouped = Object.freeze({
+    pops: Object.freeze(
+      [...members].map(([pop, individuals]) =>
+        Object.freeze([pop, Object.freeze(individuals)] as const),
+      ),
     ),
+    unassigned: Object.freeze(unassigned),
+  });
+  if (isTableFrozen(table)) {
+    const byColumn = GROUPED.get(table) ?? new Map<string, Grouped>();
+    GROUPED.set(table, byColumn);
+    byColumn.set(column, grouped);
+  }
+  return grouped;
+}
+
+/** Whether a table is frozen with everything it holds, so that its
+    grouping can be kept: its cells are texts, numbers, booleans or null. */
+function isTableFrozen(table: IndividualsTable): boolean {
+  return (
+    Object.isFrozen(table) &&
+    Object.isFrozen(table.columns) &&
+    Object.isFrozen(table.rows) &&
+    table.rows.every((row) => Object.isFrozen(row))
   );
-  byColumn.set(column, pops);
-  return pops;
 }
 
 /**
@@ -135,7 +172,7 @@ export function populationsOf(p: Project): Pops | null {
  * populations left empty dropped: what `run` sends, what the ready state
  * of the panel and the Individuals step list. `null` when `populationsOf`
  * is `null` or the variants file is not read. The same frozen value for
- * the same table, column and read of the variants file.
+ * the same frozen table, column and read of the variants file.
  */
 export function populationsToRun(p: Project): Pops | null {
   const pops = populationsOf(p);
@@ -143,9 +180,7 @@ export function populationsToRun(p: Project): Pops | null {
   if (pops === null || variantsRead?.kind !== "read") {
     return null;
   }
-  const byRead = TO_RUN.get(pops) ?? new WeakMap<SourceRead, Pops>();
-  TO_RUN.set(pops, byRead);
-  const kept = byRead.get(variantsRead);
+  const kept = TO_RUN.get(pops)?.get(variantsRead);
   if (kept !== undefined) {
     return kept;
   }
@@ -160,7 +195,14 @@ export function populationsToRun(p: Project): Pops | null {
       )
       .filter(([, individuals]) => individuals.length > 0),
   );
-  byRead.set(variantsRead, toRun);
+  if (
+    Object.isFrozen(variantsRead) &&
+    Object.isFrozen(variantsRead.individuals)
+  ) {
+    const byRead = TO_RUN.get(pops) ?? new WeakMap<SourceRead, Pops>();
+    TO_RUN.set(pops, byRead);
+    byRead.set(variantsRead, toRun);
+  }
   return toRun;
 }
 
@@ -180,7 +222,9 @@ export interface PopulationsNeed {
  * table has no column of that name; no individual of the variants file
  * has a population in it, which is looked at only once the variants file
  * is read. `null` when the individuals file is not read, or when the
- * column gives populations. Throws a defect on a project of association.
+ * column gives populations, or when a column of that name is chosen and
+ * the variants file is not read. Throws a defect on a project of
+ * association whose individuals file is read.
  */
 export function populationsNeeds(p: Project): PopulationsNeed | null {
   const individuals = p.individuals;
@@ -278,8 +322,9 @@ const EMPTY_PASS = "the pass gave no variant";
 const OTHER_PLOIDY =
   /^line (\d+) of the VCF, the column of (.*?): its genotype is of the ploidy (\d+) and the reader was asked for the ploidy (\d+)/su;
 
-/** The starts of popnei's refusals of a VCF it cannot read. */
-const UNREADABLE_VCF = ["line ", "the VCF was written by bgzip"] as const;
+/** The start of popnei's refusals of a gzipped VCF damaged or cut
+    short. */
+const BGZIP_REFUSAL = "the VCF was written by bgzip";
 
 /**
  * The words of a refusal of popnei, for the error state of the panel of
@@ -302,8 +347,7 @@ export function refusalText(message: string, p: Project): string {
     return `At line ${line} of ${fileName}, the genotype of ${shown(individual)} has ${counted(Number(found), "allele")}, and the file was read with ploidy ${given}. Set the ploidy of the VCF to ${found} in the Variants step and read the file again.`;
   }
   const isVcfLine =
-    /^line \d+ of the VCF/u.test(message) ||
-    message.startsWith(UNREADABLE_VCF[1]);
+    /^line \d+ of the VCF/u.test(message) || message.startsWith(BGZIP_REFUSAL);
   if (isVcfLine) {
     return `popnei could not read ${fileName}${saying(message)}. Correct the file, or fetch it again, and load it in the Variants step.`;
   }
@@ -334,6 +378,12 @@ export const diversity: AnalysisDef<Job, JobResult> = Object.freeze({
  * so the version the store passes is not read.
  */
 function parseOptions(options: unknown): Result<JsonObject, string> {
+  const read = readOptions(options);
+  return read.ok ? { ok: true, value: { ...read.value } } : read;
+}
+
+/** The two options read from `options`, or what they should be. */
+function readOptions(options: unknown): Result<DiversityOptions, string> {
   const refused = { ok: false, error: OPTIONS_EXPECTED } as const;
   if (
     typeof options !== "object" ||
@@ -381,7 +431,8 @@ function keyInputs(p: Project): JsonObject {
 }
 
 /** The first reason the diversity cannot run beyond those every analysis
-    shares, or `null`. Throws a defect on a project of association. */
+    shares, or `null`. Throws a defect on a project of association whose
+    individuals file is read. */
 function needs(p: Project): string | null {
   const numFilters = p.individualFilters.length;
   if (numFilters > 0) {
@@ -446,9 +497,9 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
       text: withoutValueText(withoutValue, r.numVars, min),
     });
   }
-  const noPopulation = individualsWithoutPopulation(
-    p,
-    variants.read.individuals,
+  const unassigned = new Set(groupedOf(p)?.unassigned);
+  const noPopulation = variants.read.individuals.filter((individual) =>
+    unassigned.has(individual),
   );
   if (noPopulation.length > 0) {
     const one = noPopulation.length === 1;
@@ -494,10 +545,13 @@ function withoutValueText(
   min: number,
 ): string {
   const names = namesOf(pops.map(({ row }) => row.population));
-  const kept =
-    numVars === 1
-      ? "the 1 variant kept"
-      : `the ${grouped(numVars)} variants kept`;
+  if (numVars === 1) {
+    // Every population named has a value at none of the one variant.
+    return pops.length === 1
+      ? `${names} has no value at the one variant kept: fewer than ${grouped(min)} of its individuals have a genotype there.`
+      : `${names} have no value at the one variant kept: fewer than ${grouped(min)} of their individuals have a genotype there.`;
+  }
+  const kept = `the ${grouped(numVars)} variants kept`;
   const [first] = pops;
   if (pops.length === 1 && first !== undefined) {
     return first.withValue === 0
@@ -523,30 +577,6 @@ function share(part: number, whole: number): string {
         ? 1
         : rounded;
   return `${String(percent)}%`;
-}
-
-/** The individuals of the variants file whose cell in the column of the
-    populations is missing, in the order of the variants file. */
-function individualsWithoutPopulation(
-  p: Project,
-  inVariants: readonly string[],
-): readonly string[] {
-  const read = p.individuals?.read;
-  const column = p.grouping.kind === "populations" ? p.grouping.column : null;
-  if (read?.kind !== "read" || column === null) {
-    return [];
-  }
-  const index = read.table.columns.indexOf(column);
-  if (index === -1) {
-    return [];
-  }
-  const missing = new Set<string>();
-  for (const row of read.table.rows) {
-    if (row[index] === null) {
-      missing.add(identifierOf(row[0]));
-    }
-  }
-  return inVariants.filter((individual) => missing.has(individual));
 }
 
 /** The check numbers: the variants kept, then the expected
@@ -604,18 +634,11 @@ function script(p: Project): string {
     a defect on options its `parseOptions` would refuse, which no command
     puts into a project. */
 function optionsOf(p: Project): DiversityOptions {
-  const parsed = parseOptions(analysisOptions(p, ID, DIVERSITY_DEFAULTS));
-  if (!parsed.ok) {
+  const read = readOptions(analysisOptions(p, ID, DIVERSITY_DEFAULTS));
+  if (!read.ok) {
     throw defect("the project holds options of the diversity it refuses.");
   }
-  const { minNumIndividuals, polyThreshold } = parsed.value;
-  if (
-    typeof minNumIndividuals !== "number" ||
-    typeof polyThreshold !== "number"
-  ) {
-    throw defect("parseOptions of the diversity gave options not numbers.");
-  }
-  return { minNumIndividuals, polyThreshold };
+  return read.value;
 }
 
 /** The column of the populations the project names, or `null`. Throws a
@@ -684,15 +707,6 @@ function listed(words: readonly string[]): string {
   return words.length < 2
     ? last
     : `${words.slice(0, -1).join(", ")} and ${last}`;
-}
-
-/** What follows "could not read panel.vcf.gz": a colon and popnei's
-    message without the spaces around it and the full stop it may end
-    with; or nothing, when that leaves it empty. */
-function saying(message: string): string {
-  const trimmed = message.trim();
-  const words = trimmed.endsWith(".") ? trimmed.slice(0, -1) : trimmed;
-  return words === "" ? "" : `: ${words}`;
 }
 
 function defect(message: string): Error {
