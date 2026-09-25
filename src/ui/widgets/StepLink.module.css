@@ -2,6 +2,8 @@
 
 .step {
   display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
   align-items: center;
   min-block-size: var(--target-min);
   padding-block: var(--space-2);
@@ -9,6 +11,17 @@
   border-block-end: 3px solid transparent;
   color: var(--color-text);
   text-decoration: none;
+}
+
+/* The name in bold, with no height and hidden, so that the link is as
+   wide in both weights and the links do not move when the step changes;
+   hidden, it is not read by a screen reader nor in the text of the link. */
+.step::after {
+  content: attr(data-label);
+  block-size: 0;
+  overflow: hidden;
+  font-weight: bold;
+  visibility: hidden;
 }
 
 .step[data-hovered] {

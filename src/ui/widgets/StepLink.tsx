@@ -3,7 +3,9 @@
  * `Link`, an `<a>` to the step's hash that the browser follows and makes
  * an entry of its history (docs/specs/shell.md, "The stepper"). The link
  * of the step on screen has `aria-current="step"` and a mark that is not
- * colour alone (WCAG 1.4.1).
+ * colour alone (WCAG 1.4.1). Each link is as wide as its name in bold,
+ * whether it is in bold or not, so that the links do not move when the
+ * step changes (StepLink.module.css).
  */
 import { Link as AriaLink } from "react-aria-components";
 
@@ -31,6 +33,8 @@ export function StepLink({
       className={classOf(styles, "step")}
       href={href}
       aria-current={isCurrent ? "step" : undefined}
+      // The name in bold, drawn hidden by the CSS for its width alone.
+      data-label={label}
     >
       {label}
     </AriaLink>
