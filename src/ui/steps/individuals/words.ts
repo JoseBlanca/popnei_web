@@ -217,7 +217,18 @@ function valueText(value: string | number | boolean): string {
   return escaped(String(value));
 }
 
-/** The type of a column in words: "identifier", "binary: yes, no",
+/** The number of distinct values the table shows of each column. */
+const FIRST_VALUES = 3;
+
+/** What joins the values of a column, its first values and the two of a
+    binary column: a dot and not a comma, as the owner decided on 25
+    September 2026, since a column of the decimal comma would read "1,75,
+    1,62, 1,80". The space before the dot does not break, so that a value
+    keeps its dot on its line, and a line of a narrow page never starts
+    with a dot, which would read as the mark of a list. */
+const VALUES_JOIN = "\u00a0· ";
+
+/** The type of a column in words: "identifier", "binary: yes · no",
     "continuous", "categorical". */
 export function typeText(type: ColumnType): string {
   switch (type.kind) {
@@ -226,17 +237,9 @@ export function typeText(type: ColumnType): string {
     case "categorical":
       return type.kind;
     case "binary":
-      return `binary: ${valueText(type.one)}, ${valueText(type.zero)}`;
+      return `binary: ${valueText(type.one)}${VALUES_JOIN}${valueText(type.zero)}`;
   }
 }
-
-/** The number of distinct values the table shows of each column. */
-const FIRST_VALUES = 3;
-
-/** What joins the first values of a column: a dot and not a comma, as the
-    owner decided on 25 September 2026, since a column of the decimal
-    comma would read "1,75, 1,62, 1,80". */
-const VALUES_JOIN = " · ";
 
 /** The first three distinct values of the column at `index` that are
     not missing, in the order of the file: "España · Italia · Perú". */

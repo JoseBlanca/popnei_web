@@ -97,13 +97,14 @@ describe("the words of the Individuals step", () => {
       "1 row, 1 column",
     );
     expect(typeText({ kind: "identifier" })).toBe("identifier");
+    // The values joined by a dot, after a space that does not break.
     expect(typeText({ kind: "binary", one: "yes", zero: "no" })).toBe(
-      "binary: yes, no",
+      "binary: yes\u00a0· no",
     );
     expect(typeText({ kind: "continuous" })).toBe("continuous");
     expect(typeText({ kind: "categorical" })).toBe("categorical");
-    expect(firstValuesText(TABLE, 1)).toBe("España · Italia · Perú");
-    expect(firstValuesText(TABLE, 2)).toBe("1,75 · 1,62 · 1,80");
+    expect(firstValuesText(TABLE, 1)).toBe("España\u00a0· Italia\u00a0· Perú");
+    expect(firstValuesText(TABLE, 2)).toBe("1,75\u00a0· 1,62\u00a0· 1,80");
     expect(
       firstValuesText({ columns: ["id", "x"], rows: [["a", "b\n"]] }, 1),
     ).toBe("b\\n");
