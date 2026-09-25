@@ -147,7 +147,8 @@ than once". These are decided here, not by the owner:
 - The name of a file is escaped in the same way, and not cut.
 - A count is written with a comma between groups of three digits, "1,203
   more", "where the header has 1,204", as the numbers of this spec are. A
-  line number is not a count, and has no comma: "line 12045".
+  line number, and the number of a column, are positions and not counts,
+  and have no comma: "line 12045", "column 1204".
 
 popnei refuses these lists too, with messages that name its arguments,
 `individuals`, and that the store would keep as popnei's refusals of those
@@ -176,7 +177,7 @@ reasons below are those of population genetics.
 | no individuals file | "Load a metadata file in the Individuals step." |
 | the individuals file being read | "Reading pops.csv." |
 | the files wasm refused the file | "pops.csv could not be read: ‹its message›. Load a metadata file in the Individuals step." |
-| the reader of CSV and TSV refused the file | "pops.csv could not be read: line 7 has 3 cells where the header has 4, read with the semicolon as the separator. Load a metadata file in the Individuals step." |
+| the reader of CSV and TSV refused the file | "pops.csv could not be read: line 7 has 3 cells where the header has 4, read with the semicolon as the separator. Load a metadata file in the Individuals step." (**Open 5**) |
 | the worker crashed while it read the file | "pops.csv could not be read: ‹what happened› (**Open 4**). Load it again in the Individuals step." |
 | the worker could not start, or the page is out of date | "pops.csv could not be read: ‹what happened› (**Open 4**). Reload the page and load it again." |
 | individuals of the variants missing from it | "12 individuals of panel.nei are not in pops.csv: ind_031, ind_044 and 10 more. Add them to the file and load it again in the Individuals step." |

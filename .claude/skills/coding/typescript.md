@@ -84,7 +84,7 @@ Two of the options go beyond `strict` and change how code is written:
   ```ts
   type RunState =
     | { readonly kind: "idle" }
-    | { readonly kind: "running"; readonly done: number; readonly total: number }
+    | { readonly kind: "running"; readonly progress: Progress | null }
     | { readonly kind: "done"; readonly key: Key }
     | { readonly kind: "failed"; readonly error: RunError };
   ```

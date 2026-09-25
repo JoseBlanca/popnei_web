@@ -245,8 +245,9 @@ The descriptions of the commands are in the table above. The rest:
   decided on 25 September 2026. The reasons of core name the file as
   each application does, "a metadata file" here and "a traits file" in
   association, as the owner decided the same day (point P of
-  `docs/specs/stage-2-open-points.md`), a parameter of `individualsNeeds`
-  in the approved `project.ts`. The ending, read on that very step, and
+  `docs/specs/stage-2-open-points.md`): `individualsNeeds` takes the
+  words from the application of the project (`docs/specs/core/project.md`,
+  "What an analysis needs of every project"). The ending, read on that very step, and
   the advice of a crash of the light worker, "the calculation stopped
   unexpectedly", are among the provisional words of core the owner
   judges on these screens (`docs/specs/core/project.md`, open points 4

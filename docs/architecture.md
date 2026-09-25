@@ -197,7 +197,16 @@ type SourceRead =
   | { kind: "pending" }               // the worker is opening the file
   | { kind: "read"; individuals: string[]; ploidy: number;
       numVars: number | null }        // null until a pass has counted them
-  | { kind: "failed"; message: string }; // popnei's message
+  | { kind: "failed"; error: SourceError };
+
+// popnei refused the file, or the worker failed before popnei answered:
+// it could not start, it crashed, or the browser could no longer read
+// the file, reopenFailed. A refusal of popnei is the first kind.
+// RunError, the ways a request to a worker fails, is in
+// src/worker/protocol.ts.
+type SourceError =
+  | { kind: "popnei"; message: string }
+  | { kind: "worker"; error: Exclude<RunError, { kind: "popnei" }> };
 
 interface IndividualsSource {
   fileId: string;                     // the id of this load, new at every pick
@@ -207,7 +216,10 @@ interface IndividualsSource {
     | { kind: "pending" }             // the light worker is reading it
     | { kind: "read"; table: IndividualsTable; columns: ColumnType[];
         found: CsvFound | null }      // what "auto" found; null for xlsx
-    | { kind: "failed"; error: IndividualsFileError };
+    | { kind: "failed";
+        error:
+          | IndividualsFileError      // the reader refused the file
+          | { kind: "worker"; error: Exclude<RunError, { kind: "files" }> } };
 }
 
 // How a CSV or TSV is read. Each is "auto" until the user sets it; the
@@ -224,7 +236,7 @@ interface CsvOptions {
 // the Python script use (section 8).
 type ColumnType =
   | { kind: "identifier" }
-  | { kind: "binary"; one: string | number; zero: string | number }
+  | { kind: "binary"; one: string | number | boolean; zero: string | number | boolean }
   | { kind: "continuous" }
   | { kind: "categorical" };
 
