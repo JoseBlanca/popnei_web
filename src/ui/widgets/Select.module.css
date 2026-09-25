@@ -1,0 +1,136 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+.field {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: start;
+}
+
+.label {
+  font-weight: 600;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  /* Wide enough for "Windows-1252, as Excel writes a CSV on Windows" in
+     most languages, and never wider than its column. */
+  inline-size: min(100%, calc(var(--space-8) * 10));
+  min-block-size: var(--target-min);
+  padding-block: var(--space-1);
+  padding-inline: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-background);
+  color: var(--color-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: background-color var(--duration-fast);
+}
+
+.button[data-hovered] {
+  background: var(--color-surface);
+}
+
+.button[data-focus-visible] {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+.value {
+  overflow-wrap: anywhere;
+}
+
+.value[data-placeholder] {
+  color: var(--color-text-muted);
+}
+
+.chevron {
+  flex: none;
+  inline-size: var(--space-4);
+  block-size: var(--space-4);
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 1.5px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.description {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+/* What is wrong with the choice: its words, a mark, and a line of the
+   colour of danger, not colour alone (WCAG 1.4.1). */
+.problem {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  padding-block: var(--space-2);
+  padding-inline: var(--space-3);
+  border-inline-start: var(--space-1) solid var(--color-danger);
+  background: var(--color-background);
+  overflow-wrap: anywhere;
+}
+
+.popover {
+  /* As wide as its button, React Aria's variable (css.md). */
+  min-inline-size: var(--trigger-width);
+  max-block-size: inherit;
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-background);
+  color: var(--color-text);
+}
+
+.list {
+  display: grid;
+  padding-block: var(--space-1);
+}
+
+.item {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-block-size: var(--target-min);
+  padding-block: var(--space-1);
+  padding-inline: var(--space-2) var(--space-3);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+/* The item the keyboard or the mouse is on. */
+.item[data-focused] {
+  background: var(--color-surface);
+}
+
+.item[data-focus-visible] {
+  outline: var(--focus-ring);
+  outline-offset: calc(var(--focus-offset) * -1);
+}
+
+/* The mark of the item chosen, and its place kept on the others, so the
+   words line up. */
+.mark {
+  flex: none;
+  inline-size: var(--space-4);
+  block-size: var(--space-4);
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2px;
+  visibility: hidden;
+}
+
+.item[data-selected] .mark {
+  visibility: visible;
+}
+
+/* The button shows the words of the item chosen, not its mark. */
+.value .mark {
+  display: none;
+}

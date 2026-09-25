@@ -1,0 +1,53 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+.disclosure {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-block-size: var(--target-min);
+  padding-block: var(--space-1);
+  padding-inline: var(--space-1) var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.trigger[data-hovered] {
+  background: var(--color-surface);
+}
+
+.trigger[data-focus-visible] {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+.chevron {
+  flex: none;
+  inline-size: var(--space-4);
+  block-size: var(--space-4);
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 1.5px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform var(--duration-fast);
+}
+
+/* Open, the arrow points down: a change of shape, not of colour. */
+.disclosure[data-expanded] .chevron {
+  transform: rotate(90deg);
+}
+
+.panel {
+  padding-inline-start: var(--space-6);
+}

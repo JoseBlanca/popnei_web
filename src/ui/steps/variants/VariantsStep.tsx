@@ -22,6 +22,7 @@ import { Button } from "../../widgets/Button.tsx";
 import { Checkbox } from "../../widgets/Checkbox.tsx";
 import { FileZone } from "../../widgets/FileZone.tsx";
 import { NumberField } from "../../widgets/NumberField.tsx";
+import { Problem } from "../../widgets/Problem.tsx";
 import { Switch } from "../../widgets/Switch.tsx";
 import {
   filterSwitchCommand,
@@ -195,12 +196,7 @@ export function VariantsStep(): React.JSX.Element {
               <FileCard variants={variants} reason={reason} />
             )}
           </FileZone>
-          {message !== null && (
-            <p className={classOf(styles, "problem")}>
-              <ProblemIcon />
-              <span>{message}</span>
-            </p>
-          )}
+          {message !== null && <Problem>{message}</Problem>}
         </section>
 
         <section
@@ -326,12 +322,7 @@ function FileRead({
       );
     case "failed":
       if (reason === null) throw noReason(variants);
-      return (
-        <p className={classOf(styles, "problem")}>
-          <ProblemIcon />
-          <span>{reason}</span>
-        </p>
-      );
+      return <Problem>{reason}</Problem>;
   }
 }
 
@@ -340,20 +331,5 @@ function FileRead({
 function noReason(variants: VariantSource): Error {
   return new Error(
     `popnei_web defect: projectNeeds gave no reason for the variants file ${variants.fileId}, ${variants.read.kind}.`,
-  );
-}
-
-/** The mark of a problem, beside its words, which say it too. */
-function ProblemIcon(): React.JSX.Element {
-  return (
-    <svg
-      className={classOf(styles, "icon")}
-      viewBox="0 0 16 16"
-      aria-hidden="true"
-    >
-      <circle cx="8" cy="8" r="7" />
-      <line x1="8" y1="4" x2="8" y2="9" />
-      <line x1="8" y1="11.5" x2="8" y2="12" />
-    </svg>
   );
 }

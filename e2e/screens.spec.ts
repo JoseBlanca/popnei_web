@@ -156,6 +156,74 @@ async function dropVariants(
   }
 }
 
+/** Goes to a step of the page by its link in the stepper. */
+async function goTo(page: Page, step: string): Promise<void> {
+  await page
+    .getByRole("navigation", { name: "Steps" })
+    .getByRole("link", { name: step })
+    .click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: step }),
+  ).toBeVisible();
+}
+
+/** Picks `file`, a fixture or a file of a name and text, with the button
+    of the Individuals step. */
+async function pickIndividuals(
+  page: Page,
+  file: string | { name: string; text: string },
+): Promise<void> {
+  const chooser = page.waitForEvent("filechooser");
+  await page
+    .getByRole("region", { name: "Metadata file" })
+    .getByRole("button", { name: /^(Choose|Replace) .*…$/ })
+    .click();
+  await (
+    await chooser
+  ).setFiles(
+    typeof file === "string"
+      ? join(FIXTURES, file)
+      : {
+          name: file.name,
+          mimeType: "text/plain",
+          buffer: Buffer.from(file.text),
+        },
+  );
+}
+
+/** Chooses `option` in the select of that label, with the mouse. */
+async function choose(
+  page: Page,
+  label: string,
+  option: string,
+): Promise<void> {
+  await page.getByRole("button", { name: label }).click();
+  await page.getByRole("option", { name: option, exact: true }).click();
+}
+
+/** panel_pops.csv without twelve individuals of panel.nei. */
+async function withoutTwelve(): Promise<string> {
+  const leftOut = new Set([
+    "s031",
+    "s044",
+    "s050",
+    "s051",
+    "s052",
+    "s053",
+    "s054",
+    "s055",
+    "s056",
+    "s057",
+    "s058",
+    "s059",
+  ]);
+  const text = await readFile(join(FIXTURES, "panel_pops.csv"), "utf8");
+  return `${text
+    .split("\n")
+    .filter((line) => line !== "" && !leftOut.has(line.split(",")[0] ?? ""))
+    .join("\n")}\n`;
+}
+
 // The page of the population genetics application, in both themes, since
 // its dark theme is the same page with other colours and breaks on its own.
 for (const theme of ["light", "dark"] as const) {
@@ -331,6 +399,99 @@ for (const theme of ["light", "dark"] as const) {
         page.getByLabel("Maximum proportion of missing genotypes"),
       ).toHaveCount(0);
       await save(page, `popgen-variants-filter-off-${theme}`);
+    });
+
+    test("the Individuals step with no file", async ({ page }) => {
+      await goTo(page, "Individuals");
+      await save(page, `popgen-individuals-empty-${theme}`);
+    });
+
+    test("the Individuals step reading a file", async ({ page }) => {
+      // The script of the light worker is held back, so the read waits.
+      await page.route("**/filesRunner-*.js", () => undefined);
+      await goTo(page, "Individuals");
+      await pickIndividuals(page, "panel_pops.csv");
+      await expect(page.getByText("Reading panel_pops.csv.")).toBeVisible();
+      await save(page, `popgen-individuals-reading-${theme}`);
+    });
+
+    test("the Individuals step, a file read and a column chosen", async ({
+      page,
+    }) => {
+      await pickVariants(page, "panel.nei");
+      await expect(page.getByText("200 individuals")).toBeVisible();
+      await goTo(page, "Individuals");
+      await pickIndividuals(page, "panel_pops.csv");
+      await choose(page, "Column that defines the populations", "popcat");
+      await expect(page.getByText("p0, 48 individuals")).toBeAttached();
+      await save(page, `popgen-individuals-read-${theme}`);
+    });
+
+    test("the Individuals step, a file refused", async ({ page }) => {
+      await goTo(page, "Individuals");
+      await pickIndividuals(page, {
+        name: "short.csv",
+        text: "IID;popcat;region\ns000;p0;north\ns001;p0\n",
+      });
+      await expect(
+        page.getByText(/^short\.csv could not be read/),
+      ).toBeVisible();
+      await save(page, `popgen-individuals-refused-${theme}`);
+    });
+
+    test("the Individuals step, individuals missing", async ({ page }) => {
+      await pickVariants(page, "panel.nei");
+      await expect(page.getByText("200 individuals")).toBeVisible();
+      await goTo(page, "Individuals");
+      await pickIndividuals(page, {
+        name: "pops.csv",
+        text: await withoutTwelve(),
+      });
+      await page
+        .getByRole("button", { name: "The 12 individuals missing" })
+        .click();
+      await expect(page.getByText("s059", { exact: true })).toBeVisible();
+      await save(page, `popgen-individuals-missing-${theme}`);
+    });
+
+    test("the Individuals step, a column not in the table", async ({
+      page,
+    }) => {
+      await goTo(page, "Individuals");
+      await pickIndividuals(page, "panel_pops.csv");
+      await choose(page, "Column that defines the populations", "popcat");
+      await pickIndividuals(page, {
+        name: "regions.csv",
+        text: "IID,region\ns000,north\n",
+      });
+      await expect(
+        page.getByText(/^regions\.csv has no column popcat/),
+      ).toBeVisible();
+      await save(page, `popgen-individuals-no-such-column-${theme}`);
+    });
+
+    test("the Individuals step, the types of the columns", async ({ page }) => {
+      await goTo(page, "Individuals");
+      await pickIndividuals(page, {
+        name: "spain.csv",
+        text:
+          "Individuo;País;Sano;Altura;score\n" +
+          "i1;España;sí;1,75;1\n" +
+          "i2;Italia;no;1,62;2\n" +
+          "i3;Perú;sí;;3\n" +
+          "i4;España;no;1,80;5\n",
+      });
+      await expect(page.getByText(/^Warning: score/)).toBeVisible();
+      await save(page, `popgen-individuals-types-${theme}`);
+    });
+
+    test("the Individuals step, an Excel file not loaded", async ({ page }) => {
+      await goTo(page, "Individuals");
+      await pickIndividuals(page, { name: "pops.xlsx", text: "PK" });
+      await expect(
+        page.getByRole("main").getByText(/^pops\.xlsx was not loaded/),
+      ).toBeVisible();
+      await save(page, `popgen-individuals-excel-${theme}`);
     });
 
     test("the error bar, with a second error", async ({ page }) => {
