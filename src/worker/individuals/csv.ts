@@ -49,7 +49,9 @@ const CARRIAGE_RETURN = 0x0d;
 /**
  * Reads the text of a CSV or TSV into the table of the individuals, with
  * the separator and the decimal mark of `options`, or those it finds when
- * they are `"auto"`, and infers the type of each column. It refuses, in
+ * they are `"auto"`, and infers the type of each column. A character
+ * U+FEFF at the start of the text, the BOM of a text decoded with it, is
+ * removed. It refuses, in
  * this order: a quote never closed, `unclosedQuote`; no row below the
  * header, `empty`; a row of the wrong length, `raggedRow`, the first by
  * line; a column with values and no name, `unnamedColumn`, then two

@@ -55,7 +55,10 @@ function finiteOrNull(value: number): number | null {
 
 /**
  * The type of each column of `table`, in its order, from the values of the
- * column, its cells that are not missing, compared exactly: the first
+ * column, its cells that are not missing, compared as cells: two texts
+ * are one value when they are the same text, and a text and a number of an
+ * xlsx are two values even when written alike, which the reader spec
+ * leaves open for stage 4. The first
  * column is identifier; a column of exactly two distinct values is binary;
  * of three or more, every one a number read with `decimal`, continuous;
  * any other, one value, none, or three with one not a number, categorical.

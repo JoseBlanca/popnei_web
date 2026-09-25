@@ -78,9 +78,9 @@ export interface IndividualsTable {
 
 /**
  * The type of a column of the individuals file, as the reader inferred it
- * and the user set it. A binary column holds its two values, two cells of
- * the column compared exactly, and which of them is coded 1; a missing
- * cell is neither.
+ * and the user set it. A binary column holds its two values, two distinct
+ * cells of the column, a text and a number being distinct even when
+ * written alike, and which of them is coded 1; a missing cell is neither.
  */
 export type ColumnType =
   /** The first column, which names the individuals, and no other. */
