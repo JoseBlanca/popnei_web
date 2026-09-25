@@ -409,8 +409,8 @@ ends, results removed, is heard only through a live region.
   until the next command, undo, redo or opening replaces it, or until it
   is closed: it has an action, and a notice with an action that
   disappears on a timer fails a user who is slow to reach it (WCAG 2.2.1).
-  Undo and Redo are also always in the header and on Ctrl+Z and
-  Ctrl+Shift+Z, so the notice is never the only way. When the change also stops calculations, the same notice
+  Undo and Redo are also always in the header and on the keyboard
+  (below, "Keyboard shortcuts"), so the notice is never the only way. When the change also stops calculations, the same notice
   says so, "The ongoing calculations will be stopped unless you undo the
   change". There is no timer: the calculations stop when the notice is
   closed or replaced, or when the user runs another calculation, and then
@@ -427,9 +427,11 @@ ends, results removed, is heard only through a live region.
 
 ### Keyboard shortcuts
 
-Ctrl+Z and Ctrl+Shift+Z (Cmd on macOS) undo and redo the project, with a
-listener in the shell, except when focus is in a text field, where they
-belong to the text. No other shortcut in the first version: each one is a
+Ctrl+Z undoes the project, and Ctrl+Shift+Z or Ctrl+Y redoes it, since
+users of Windows expect Ctrl+Y; on macOS, Cmd+Z and Cmd+Shift+Z. A
+listener in the shell handles them, except when focus is in a text
+field, where they belong to the text. No other shortcut in the first
+version: each one is a
 key that some screen reader or browser also wants.
 
 ## The states of an analysis
