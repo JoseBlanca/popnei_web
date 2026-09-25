@@ -96,6 +96,23 @@ function project(
   });
 }
 
+/** The project of `project()` with its variants file a VCF named `name`,
+    read with ploidy 2 and `onlyPassed`. */
+function vcfProject(name: string, onlyPassed: boolean): Project {
+  const p = project({ variantsName: name });
+  if (p.variants === null) {
+    throw new Error("the project of project() has a variants file");
+  }
+  return deepFreeze<Project>({
+    ...p,
+    variants: {
+      ...p.variants,
+      format: "vcf",
+      readOptions: { ploidy: 2, onlyPassed },
+    },
+  });
+}
+
 /** A project whose individuals file has one population, of the
     individuals `names`, each with its population in `pops`, in a column
     `pop`. */
@@ -594,6 +611,46 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112
       ),
     ).toBe(
       "empty.vcf has no variants, so there is no variant to calculate the diversity over. Load another variants file in the Variants step.",
+    );
+  });
+
+  test("refusalText of a pass over a VCF read with every variant, whose source holds none, says the file has none", () => {
+    expect(
+      refusalText(
+        "the pass gave no variant and its source holds none: a statistic of a pass is calculated over the variants it gives",
+        vcfProject("empty.vcf", false),
+      ),
+    ).toBe(
+      "empty.vcf has no variants, so there is no variant to calculate the diversity over. Load another variants file in the Variants step.",
+    );
+  });
+
+  test("refusalText of a pass over a VCF read with only the passed variants, whose source holds none, tells to untick the box of the passed variants", () => {
+    expect(
+      refusalText(
+        "the pass gave no variant and its source holds none: a statistic of a pass is calculated over the variants it gives",
+        vcfProject("failed.vcf", true),
+      ),
+    ).toBe(
+      'failed.vcf has no variant with PASS or . in its FILTER column, and it was read with only those, so there is no variant to calculate the diversity over. Untick "Only the variants with PASS or . in the FILTER column" in the Variants step and read the file again.',
+    );
+  });
+
+  test("refusalText tells a source that holds none from an empty pass by the colon, whatever the order of the tests", () => {
+    expect(
+      refusalText(
+        "the pass gave no variant: its source gave 1200 and the steps kept none of them",
+        project(),
+      ),
+    ).toMatch(/^The filters kept none/u);
+    expect(
+      refusalText(
+        "the pass gave no variant and its source holds none",
+        project(),
+      ),
+    ).toMatch(/^panel\.nei has no variants/u);
+    expect(refusalText("the pass gave no variantx", project())).toMatch(
+      /^popnei could not calculate the diversity/u,
     );
   });
 

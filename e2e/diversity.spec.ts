@@ -472,7 +472,25 @@ test("WS8 D2 a population none of whose individuals is in the variants file gets
   await expect(panel(page).getByText(/p9/)).toHaveCount(0);
 });
 
-test("WS8 D2 a VCF with no variant is told that it has none, and Run is not offered", async ({
+/** Unticks the box of the passed variants in the Variants step and reads
+    the VCF `name` again with every variant. */
+async function readAgainWithEveryVariant(
+  page: Page,
+  name: string,
+): Promise<void> {
+  await goTo(page, "Variants");
+  await page
+    .getByText("Only the variants with PASS or . in the FILTER column", {
+      exact: true,
+    })
+    .click();
+  await page
+    .getByRole("button", { name: `Read ${name} again with every variant` })
+    .click();
+  await expect(page.getByText(/^[\d,]+ individuals$/)).toBeVisible();
+}
+
+test("WS8 D2 a VCF with no variant, read with only the passed variants, is told to untick the box, and read with every variant is told that it has none, with no Run", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -491,12 +509,55 @@ test("WS8 D2 a VCF with no variant is told that it has none, and Run is not offe
   await panel(page).getByRole("button", { name: "Run" }).click();
   await expect(
     panel(page).getByText(
+      'empty.vcf has no variant with PASS or . in its FILTER column, and it was read with only those, so there is no variant to calculate the diversity over. Untick "Only the variants with PASS or . in the FILTER column" in the Variants step and read the file again.',
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(panel(page).getByRole("button")).toHaveCount(0);
+
+  await readAgainWithEveryVariant(page, "empty.vcf");
+  await goTo(page, "Analyses");
+  await panel(page).getByRole("button", { name: "Run" }).click();
+  await expect(
+    panel(page).getByText(
       "empty.vcf has no variants, so there is no variant to calculate the diversity over. Load another variants file in the Variants step.",
       { exact: true },
     ),
   ).toBeVisible();
   await expect(panel(page).getByRole("button")).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
+});
+
+test("a VCF none of whose variants passed is told to untick the box of the passed variants, and read with every variant gives the table", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await load(
+    page,
+    {
+      name: "failed.vcf",
+      text:
+        '##fileformat=VCFv4.2\n##FILTER=<ID=q10,Description="Quality below 10">\n##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n' +
+        "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\ta\tb\n" +
+        "1\t100\t.\tA\tG\t5\tq10\t.\tGT\t0/1\t1/1\n" +
+        "1\t200\t.\tC\tT\t5\tq10\t.\tGT\t0/0\t0/1\n",
+    },
+    { name: "failed_pops.csv", text: "IID,pop\na,A\nb,A\n" },
+    "pop",
+  );
+  await goTo(page, "Analyses");
+  await panel(page).getByRole("button", { name: "Run" }).click();
+  await expect(
+    panel(page).getByText(
+      /^failed\.vcf has no variant with PASS or \. in its FILTER column/,
+    ),
+  ).toBeVisible();
+  await expectNoViolations(makeAxeBuilder);
+
+  await readAgainWithEveryVariant(page, "failed.vcf");
+  await goTo(page, "Analyses");
+  await panel(page).getByRole("button", { name: "Run" }).click();
+  await expect(panel(page).getByRole("rowheader", { name: "A" })).toBeVisible();
 });
 
 test("WS8 D2 a variants file the browser can no longer read is told so, with no Run, and the focus goes to the heading", async ({

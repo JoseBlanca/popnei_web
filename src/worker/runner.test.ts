@@ -819,6 +819,30 @@ describe("WS3 D2 what goes wrong: told, popnei's refusals and the defects", () =
     }
   });
 
+  test("a VCF whose every variant fails FILTER is refused as a source that holds none when read with only the passed variants, and gives its 2 variants when read with all", () => {
+    const vcf =
+      '##fileformat=VCFv4.2\n##FILTER=<ID=q10,Description="Quality below 10">\n##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n' +
+      "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\ta\tb\n" +
+      "1\t100\t.\tA\tG\t5\tq10\t.\tGT\t0/1\t1/1\n" +
+      "1\t200\t.\tC\tT\t5\tq10\t.\tGT\t0/0\t0/1\n";
+    const runOn = (onlyPassed: boolean): Runner => {
+      const runner = createRunner();
+      const open = runner.open(
+        { ...VCF, readOptions: { ploidy: 2, onlyPassed } },
+        { name: "failed.vcf", source: new TextEncoder().encode(vcf) },
+      );
+      expect(valueOf(open).individuals).toEqual(["a", "b"]);
+      return runner;
+    };
+    const job = diversityJob([], [["A", ["a", "b"]]]);
+    expect(runOn(true).run(job, ignore)).toEqual({
+      kind: "refused",
+      message:
+        "the pass gave no variant and its source holds none: a statistic of a pass is calculated over the variants it gives",
+    });
+    expect(valueOf(runOn(false).run(job, ignore)).numVarsRead).toBe(2);
+  });
+
   test("a run before the open is badRequest", () => {
     const answer = createRunner().run(diversityJob([]), ignore);
     expect(answer.kind).toBe("badRequest");

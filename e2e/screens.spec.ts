@@ -830,7 +830,9 @@ for (const theme of ["light", "dark"] as const) {
       await choose(page, "Column that defines the populations", "pop");
       await goTo(page, "Analyses");
       await page.getByRole("button", { name: "Run" }).click();
-      await expect(page.getByText(/^empty\.vcf has no variants/)).toBeVisible();
+      await expect(
+        page.getByText(/^empty\.vcf has no variant with PASS/),
+      ).toBeVisible();
       await save(page, `popgen-diversity-no-variant-${theme}`);
     });
 

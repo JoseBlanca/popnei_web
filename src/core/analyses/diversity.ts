@@ -317,8 +317,15 @@ export function diversityCsv(r: DiversityResult): string {
     variant, whatever the filters. */
 const EMPTY_SOURCE = "the pass gave no variant and its source holds none";
 
-/** The start of popnei's refusal of a pass that gave no variant. */
-const EMPTY_PASS = "the pass gave no variant";
+/** The start of popnei's refusal of a pass that gave no variant from a
+    source that held some: with its colon, which the refusal of a source
+    that holds none does not have at that place, so that neither is taken
+    for the other. */
+const EMPTY_PASS = "the pass gave no variant:";
+
+/** The words of the box of the Variants step that reads only the
+    variants that passed, as its label says them. */
+const ONLY_PASSED_BOX = "Only the variants with PASS or . in the FILTER column";
 
 /** popnei's refusal of a genotype of another ploidy than the one the VCF
     was read with: the line, the individual, the ploidy found and the one
@@ -333,7 +340,8 @@ const BGZIP_REFUSAL = "the VCF was written by bgzip";
 /**
  * The words of a refusal of popnei, for the error state of the panel of
  * the project `p`, by the start of popnei's message: the variants file
- * holds no variant; the filters kept none; a genotype of another ploidy than the one the VCF was read
+ * holds no variant, or, for a VCF read with only the passed variants,
+ * none that passed; the filters kept none; a genotype of another ploidy than the one the VCF was read
  * with; a line of the VCF it cannot read, or a gzipped file damaged or cut
  * short; any other. Throws a defect on a project with no variants file.
  */
@@ -343,6 +351,9 @@ export function refusalText(message: string, p: Project): string {
   }
   const fileName = escaped(p.variants.name);
   if (message.startsWith(EMPTY_SOURCE)) {
+    if (p.variants.readOptions?.onlyPassed === true) {
+      return `${fileName} has no variant with PASS or . in its FILTER column, and it was read with only those, so there is no variant to calculate the diversity over. Untick "${ONLY_PASSED_BOX}" in the Variants step and read the file again.`;
+    }
     return `${fileName} has no variants, so there is no variant to calculate the diversity over. Load another variants file in the Variants step.`;
   }
   if (message.startsWith(EMPTY_PASS)) {
