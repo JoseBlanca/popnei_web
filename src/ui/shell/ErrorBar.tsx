@@ -10,7 +10,9 @@ import { useState, useSyncExternalStore } from "react";
 
 import type { Store } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
+import { classOf } from "../classOf.ts";
 import type { Defects } from "../defects.ts";
+import { Button } from "../widgets/Button.tsx";
 import styles from "./ErrorBar.module.css";
 
 /** What the bar is drawn with. */
@@ -63,33 +65,35 @@ export function ErrorBar({
   }
 
   return (
-    <div className={first === null ? styles["empty"] : styles["bar"]}>
+    <div
+      className={
+        first === null ? classOf(styles, "empty") : classOf(styles, "bar")
+      }
+    >
       <div role="alert">
         {first !== null && (
-          <p className={styles["message"]}>
+          <p className={classOf(styles, "message")}>
             {barText(first.message, store !== null)}
           </p>
         )}
       </div>
       {first !== null && more > 0 && <p>{moreText(more)}</p>}
       {first !== null && (
-        <div className={styles["actions"]}>
-          <button
-            type="button"
-            onClick={() => {
+        <div className={classOf(styles, "actions")}>
+          <Button
+            label="Copy the details"
+            onPress={() => {
               void copyDetails();
             }}
-          >
-            Copy the details
-          </button>
-          <button type="button" onClick={close}>
-            Close
-          </button>
+          />
+          <Button label="Close" onPress={close} />
         </div>
       )}
-      <p role="status">{statusText(copying)}</p>
+      <p role="status" className={classOf(styles, "status")}>
+        {statusText(copying)}
+      </p>
       {copying.kind === "failed" && (
-        <label className={styles["details"]}>
+        <label className={classOf(styles, "details")}>
           The details of the errors
           <textarea readOnly rows={8} value={copying.text} />
         </label>

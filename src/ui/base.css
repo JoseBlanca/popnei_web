@@ -1,0 +1,39 @@
+/*
+ * The global styles of every page of the applications, after tokens.css
+ * (.claude/skills/coding/css.md, "CSS Modules"): a small reset, the page
+ * itself, and the default focus ring of the native elements, the links
+ * and the headings that take the focus. Everything else is a CSS Module
+ * beside its component.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-body);
+}
+
+h1,
+h2,
+h3 {
+  line-height: var(--leading-heading);
+}
+
+a {
+  color: var(--color-accent);
+}
+
+/* The keyboard's ring, never removed (WCAG 2.4.7); the widgets of React
+   Aria draw theirs on [data-focus-visible] in their own modules. */
+:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}

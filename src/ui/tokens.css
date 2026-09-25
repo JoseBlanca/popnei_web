@@ -1,0 +1,110 @@
+/*
+ * The design tokens: the one place where a colour, a length of the
+ * spacing, a size of type, a radius or a duration is written as a value
+ * (.claude/skills/coding/css.md, "The tokens"). The dark theme is the same
+ * tokens with other values, written twice, since the floor of the
+ * browsers lacks light-dark(); src/ui/tokens.test.ts checks that the two
+ * blocks agree, and the contrast of the pairs the screens use.
+ */
+
+:root,
+[data-theme="light"] {
+  color-scheme: light dark;
+
+  /* colours: named by their role, never by their hue */
+  --color-background: #ffffff;
+  --color-surface: #f4f5f7;
+  --color-text: #1a1d21;
+  --color-text-muted: #555d68;
+  --color-border: #7c8591;
+  --color-accent: #1f5fbf;
+  --color-on-accent: #ffffff;
+  --color-danger: #b3261e;
+  --color-warning: #8a5a00;
+  --color-focus: #1f5fbf;
+
+  /* the plots (charts.md): the seven colours of Okabe and Ito without
+     black, the axes and their text, the lines of the thresholds */
+  --chart-cat-1: #e69f00;
+  --chart-cat-2: #56b4e9;
+  --chart-cat-3: #009e73;
+  --chart-cat-4: #f0e442;
+  --chart-cat-5: #0072b2;
+  --chart-cat-6: #d55e00;
+  --chart-cat-7: #cc79a7;
+  --chart-axis: #555d68;
+  --chart-threshold: #b3261e;
+
+  /* spacing: a scale of 0.25rem */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+
+  /* type */
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+  --leading-body: 1.5;
+  --leading-heading: 1.25;
+
+  /* shape, focus, size, motion */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-full: 999rem;
+  --focus-ring: 2px solid var(--color-focus);
+  --focus-offset: 2px;
+  --target-min: 1.5rem;
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --color-background: #16181b;
+    --color-surface: #202328;
+    --color-text: #e8eaed;
+    --color-text-muted: #a3abb5;
+    --color-border: #7a838e;
+    --color-accent: #7fb0ff;
+    --color-on-accent: #0d1b2e;
+    --color-danger: #ff8a80;
+    --color-warning: #f2c14e;
+    --color-focus: #7fb0ff;
+    --chart-axis: #a3abb5;
+    --chart-threshold: #ff8a80;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-background: #16181b;
+  --color-surface: #202328;
+  --color-text: #e8eaed;
+  --color-text-muted: #a3abb5;
+  --color-border: #7a838e;
+  --color-accent: #7fb0ff;
+  --color-on-accent: #0d1b2e;
+  --color-danger: #ff8a80;
+  --color-warning: #f2c14e;
+  --color-focus: #7fb0ff;
+  --chart-axis: #a3abb5;
+  --chart-threshold: #ff8a80;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+  }
+}

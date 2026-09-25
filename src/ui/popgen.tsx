@@ -2,12 +2,17 @@
  * The entry of the population genetics page, `popgen.html`: the code that
  * runs once when the page opens (docs/specs/entry.md, "At the opening").
  * It takes over from the start guard of the page, puts on the window the
- * listeners of the errors nothing else shows, makes the store and the
- * worker client, asks for the reads the project waits for, and draws
- * the error bar and the application in two roots. All of it runs in one
+ * listeners of the errors nothing else shows, makes the store, the
+ * worker client and the announcer of the status region, asks for the
+ * reads the project waits for, and draws the error bar and the
+ * application in two roots. The global styles, the tokens and the base,
+ * come first. All of it runs in one
  * run of this code, so that nothing that listens is made after the first
  * message of a worker could arrive.
  */
+import "./tokens.css";
+import "./base.css";
+
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
@@ -24,8 +29,10 @@ import { createDefects, isResizeObserverNoise } from "./defects.ts";
 import type { Defects } from "./defects.ts";
 import { FilesProvider, createFiles } from "./files.tsx";
 import { createReads } from "./reads.ts";
+import { AnnouncerProvider } from "./shell/announcer.tsx";
 import { ErrorBar } from "./shell/ErrorBar.tsx";
 import { Shell } from "./shell/Shell.tsx";
+import { createAnnouncer } from "./shell/status.ts";
 import { StoreProvider } from "./store.tsx";
 
 declare global {
@@ -129,7 +136,9 @@ function start(): void {
   // 5. The error bar again, now with the store.
   drawBar(store);
 
-  // 6. The reads the project waits for, asked after every change of it.
+  // 6. The announcer of the shell's status region, and the reads the
+  // project waits for, asked after every change of it.
+  const announcer = createAnnouncer();
   const reads = createReads({ store, client: made });
   store.subscribe(() => {
     reads.sync();
@@ -151,9 +160,11 @@ function start(): void {
   root.render(
     <StrictMode>
       <StoreProvider value={store}>
-        <FilesProvider value={files}>
-          <Shell />
-        </FilesProvider>
+        <AnnouncerProvider value={announcer}>
+          <FilesProvider value={files}>
+            <Shell />
+          </FilesProvider>
+        </AnnouncerProvider>
       </StoreProvider>
     </StrictMode>,
   );

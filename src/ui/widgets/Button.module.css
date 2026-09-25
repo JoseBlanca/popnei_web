@@ -1,0 +1,32 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+.button {
+  min-block-size: var(--target-min);
+  padding-block: var(--space-1);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-background);
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+  transition: background-color var(--duration-fast);
+}
+
+.button[data-hovered] {
+  background: var(--color-surface);
+}
+
+.button[data-pressed] {
+  border-color: var(--color-text);
+}
+
+.button[data-focus-visible] {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+.button[data-disabled] {
+  color: var(--color-text-muted);
+  cursor: default;
+}

@@ -1,17 +1,65 @@
 /**
  * The shell of the population genetics application, what surrounds every
- * step (docs/specs/shell.md). For now the step alone, Variants, in
- * `<main>` with its `<h1>`; the header, the stepper and the status region
- * join it with the frame of the shell.
+ * step (docs/specs/shell.md): the header, the stepper, the step the URL
+ * hash names in `<main>`, and the status region. When the hash changes,
+ * the title of the page names the new step and the focus moves to its
+ * `<h1>`, since a screen reader says nothing of a content replaced without
+ * a new page (react.md, "Moving focus"); not when the page opens, where
+ * the browser puts the reader at the start.
  */
+import { useEffect, useRef } from "react";
+
+import type { StepId } from "../../core/apps.ts";
+import { classOf } from "../classOf.ts";
+import { AnalysesStep } from "../steps/analyses/AnalysesStep.tsx";
+import { IndividualsStep } from "../steps/individuals/IndividualsStep.tsx";
+import { VariantsStep } from "../steps/variants/VariantsStep.tsx";
+import { Header } from "./Header.tsx";
+import styles from "./Shell.module.css";
+import { StatusRegion } from "./StatusRegion.tsx";
+import { Stepper } from "./Stepper.tsx";
+import { stepOfHash, titleOfStep, useHash } from "./steps.ts";
 
 /** The shell, drawn by the entry inside the providers of the page. */
 export function Shell(): React.JSX.Element {
+  const hash = useHash();
+  const step = stepOfHash(hash);
+  const mainRef = useRef<HTMLElement>(null);
+  // The hash the last effect saw; null before the first, when the page
+  // opens.
+  const hashSeen = useRef<string | null>(null);
+
+  useEffect(() => {
+    document.title = titleOfStep(step);
+  }, [step]);
+
+  useEffect(() => {
+    const before = hashSeen.current;
+    hashSeen.current = hash;
+    if (before === null || before === hash) return;
+    mainRef.current?.querySelector("h1")?.focus();
+  }, [hash]);
+
   return (
-    <main>
-      {/* It takes the focus when the step changes and after Close of the
-          error bar, and is not in the order of the Tab key. */}
-      <h1 tabIndex={-1}>Variants</h1>
-    </main>
+    <div className={classOf(styles, "shell")}>
+      <Header />
+      <Stepper current={step} />
+      <main ref={mainRef} className={classOf(styles, "main")}>
+        <StepBody step={step} />
+      </main>
+      <StatusRegion />
+    </div>
   );
+}
+
+/** What the step `step` shows. */
+function StepBody({ step }: { readonly step: StepId }): React.JSX.Element {
+  switch (step) {
+    case "variants":
+      return <VariantsStep />;
+    case "individuals":
+      return <IndividualsStep />;
+    case "analyses":
+      return <AnalysesStep />;
+  }
 }

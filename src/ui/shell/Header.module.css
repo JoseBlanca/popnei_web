@@ -1,0 +1,17 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding-block: var(--space-3);
+  padding-inline: var(--space-4);
+  border-block-end: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.application {
+  font-size: var(--text-lg);
+  font-weight: bold;
+}

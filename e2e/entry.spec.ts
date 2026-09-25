@@ -27,6 +27,10 @@ function bar(page: Page): Locator {
   return page.getByRole("alert");
 }
 
+function steps(page: Page): Locator {
+  return page.getByRole("navigation", { name: "Steps" });
+}
+
 /** Throws from a handler of the page, a timer, since a throw directly
     inside page.evaluate would reject the call of the test and never reach
     the page's listener. */
@@ -38,16 +42,84 @@ async function throwFromHandler(page: Page, message: string): Promise<void> {
   }, message);
 }
 
-test("WS7 D2 the page opens with no error bar, and axe finds no violation", async ({
+test("WS7 D2 the page opens with the frame at Variants and no error bar, and axe finds no violation", async ({
   page,
   makeAxeBuilder,
 }) => {
   await openPopgen(page);
 
-  await expect(page).toHaveTitle("Population genetics · popnei web");
+  await expect(page).toHaveTitle("Variants · Population genetics · popnei web");
+  const header = page.getByRole("banner");
+  await expect(
+    header.getByRole("link", { name: "popnei web" }),
+  ).toHaveAttribute("href", "index.html");
+  await expect(header).toContainText("Population genetics");
+  const links = steps(page).getByRole("link");
+  await expect(links).toHaveText(["Variants", "Individuals", "Analyses"]);
+  await expect(links.first()).toHaveAttribute("aria-current", "step");
+  await expect(links.nth(1)).not.toHaveAttribute("aria-current");
+  await expect(
+    page.getByRole("main").getByRole("heading", { level: 1 }),
+  ).toHaveText("Variants");
+  // The status regions of the bar and of the shell, empty and on the page.
+  await expect(page.getByRole("status")).toHaveText(["", ""]);
   await expect(bar(page)).toHaveText("");
   await expect(page.getByRole("button")).toHaveCount(0);
   expect((await makeAxeBuilder().analyze()).violations).toEqual([]);
+});
+
+test("WS7 D2 the links of the stepper change the step and the title, the back button goes to the step before, and the focus is on the heading of the new step", async ({
+  page,
+}) => {
+  await openPopgen(page);
+  const link = (name: string): Locator =>
+    steps(page).getByRole("link", { name });
+  const heading = (name: string): Locator =>
+    page.getByRole("heading", { level: 1, name });
+
+  await link("Analyses").click();
+
+  await expect(page).toHaveURL(/popgen\.html#analyses$/);
+  await expect(page).toHaveTitle("Analyses · Population genetics · popnei web");
+  await expect(heading("Analyses")).toBeFocused();
+  await expect(link("Analyses")).toHaveAttribute("aria-current", "step");
+  await expect(link("Variants")).not.toHaveAttribute("aria-current");
+
+  // With the keyboard: the link reached, and Enter.
+  await link("Individuals").focus();
+  await page.keyboard.press("Enter");
+
+  await expect(page).toHaveTitle(
+    "Individuals · Population genetics · popnei web",
+  );
+  await expect(heading("Individuals")).toBeFocused();
+
+  await page.goBack();
+
+  await expect(page).toHaveURL(/popgen\.html#analyses$/);
+  await expect(page).toHaveTitle("Analyses · Population genetics · popnei web");
+  await expect(heading("Analyses")).toBeFocused();
+});
+
+test("WS7 D2 the Tab key goes through the error bar, the header and the stepper in their order", async ({
+  page,
+}) => {
+  await openPopgen(page);
+  await throwFromHandler(page, "test");
+  await expect(bar(page)).toHaveText(BAR_TEST);
+  const order = [
+    page.getByRole("button", { name: "Copy the details" }),
+    page.getByRole("button", { name: "Close" }),
+    page.getByRole("banner").getByRole("link", { name: "popnei web" }),
+    steps(page).getByRole("link", { name: "Variants" }),
+    steps(page).getByRole("link", { name: "Individuals" }),
+    steps(page).getByRole("link", { name: "Analyses" }),
+  ];
+
+  for (const next of order) {
+    await page.keyboard.press("Tab");
+    await expect(next).toBeFocused();
+  }
 });
 
 test("WS7 D2 an error thrown from a handler shows the error bar as an alert", async ({
@@ -120,7 +192,8 @@ test("WS7 D2 Copy the details with no clipboard shows the details in a box", asy
 
   await page.getByRole("button", { name: "Copy the details" }).click();
 
-  await expect(page.getByRole("status")).toHaveText(
+  // The bar's own status region, the first of the page, above the shell's.
+  await expect(page.getByRole("status").first()).toHaveText(
     "The details could not be copied. Select them in the box below and copy them.",
   );
   const box = page.getByRole("textbox", { name: "The details of the errors" });

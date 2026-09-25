@@ -1,0 +1,16 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+.link {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
+.link[data-hovered] {
+  text-decoration-thickness: 2px;
+}
+
+.link[data-focus-visible] {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+  border-radius: var(--radius-sm);
+}

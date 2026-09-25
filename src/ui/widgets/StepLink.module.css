@@ -1,0 +1,29 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+.step {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--target-min);
+  padding-block: var(--space-2);
+  padding-inline: var(--space-3);
+  border-block-end: 3px solid transparent;
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.step[data-hovered] {
+  text-decoration: underline;
+}
+
+/* The step on screen: a bar under it and its name in bold, so that it is
+   not told by colour alone. */
+.step[data-current] {
+  border-block-end-color: var(--color-accent);
+  font-weight: bold;
+}
+
+.step[data-focus-visible] {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+  border-radius: var(--radius-sm);
+}

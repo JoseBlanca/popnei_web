@@ -28,3 +28,9 @@
   display: grid;
   gap: var(--space-1);
 }
+
+/* Its own status region: no margins, so that it takes no room while it
+   is empty. */
+.status {
+  margin: 0;
+}

@@ -102,8 +102,34 @@ for (const theme of ["light", "dark"] as const) {
       ).toBeVisible();
     });
 
-    test("the page opened", async ({ page }) => {
+    test("the page opened, at Variants", async ({ page }) => {
       await save(page, `popgen-opened-${theme}`);
+    });
+
+    for (const step of ["Individuals", "Analyses"]) {
+      test(`the frame at ${step}`, async ({ page }) => {
+        await page
+          .getByRole("navigation", { name: "Steps" })
+          .getByRole("link", { name: step })
+          .click();
+        await expect(
+          page.getByRole("heading", { level: 1, name: step }),
+        ).toBeFocused();
+        await save(page, `popgen-${step.toLowerCase()}-${theme}`);
+      });
+    }
+
+    test("the focus ring on a link of the stepper", async ({ page }) => {
+      // The Tab key, so that the browser shows the ring of the keyboard.
+      for (let press = 0; press < 3; press++) {
+        await page.keyboard.press("Tab");
+      }
+      await expect(
+        page
+          .getByRole("navigation", { name: "Steps" })
+          .getByRole("link", { name: "Individuals" }),
+      ).toBeFocused();
+      await save(page, `popgen-focus-${theme}`);
     });
 
     test("the error bar, with a second error", async ({ page }) => {
