@@ -29,6 +29,12 @@ describe("the words of the panel of the diversity", () => {
     );
   });
 
+  test("the name of a population is escaped, so that a character that reverses the text shows", () => {
+    expect(populationsText([["p1\u202e", ["s0", "s1"]]])).toBe(
+      "1 population: p1\\u202e, 2 individuals",
+    );
+  });
+
   test("the caption says what the table is over", () => {
     expect(captionText(1152, "panel.nei")).toBe(
       "The diversity of each population, over the 1,152 variants of panel.nei the filters kept.",
@@ -63,6 +69,11 @@ describe("the words of the panel of the diversity", () => {
   test("the line of the versions", () => {
     expect(versionsText("0.1.0", "0.1.0")).toBe(
       "Calculated with popnei 0.1.0, in version 0.1.0 of the application.",
+    );
+    // Two versions that differ, so that one in the place of the other
+    // shows.
+    expect(versionsText("0.1.0", "0.2.0")).toBe(
+      "Calculated with popnei 0.1.0, in version 0.2.0 of the application.",
     );
   });
 

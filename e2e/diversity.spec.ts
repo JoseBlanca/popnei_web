@@ -154,6 +154,8 @@ test("WS8 D2 at 0.05 the row p0 reads 48, 0.3527, 0.3567, 0.9288, and the focus 
       exact: true,
     }),
   ).toBeVisible();
+  // No calculation was stopped, so no line says one was.
+  await expect(panel(page).getByText(/was stopped because/)).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
 
   // With the keyboard: the button pressed with Enter goes when the run
@@ -453,6 +455,223 @@ test("WS8 D2 a calculation under way shows its bar, its share and its clock, and
   await page.keyboard.press("Enter");
   await expect(panel(page).getByRole("button", { name: "Run" })).toBeFocused();
   await expect(bar).toHaveCount(0);
+});
+
+/** Makes the calculation worker keep back what it posts of `kinds`, and
+    leaves on it a function, `__release`, that posts what it kept. */
+async function holdBack(
+  worker: Worker,
+  kinds: readonly string[],
+): Promise<void> {
+  await worker.evaluate((held) => {
+    const scope = globalThis as unknown as {
+      postMessage: (message: unknown, transfer?: Transferable[]) => void;
+      __release: () => void;
+    };
+    const post = scope.postMessage.bind(scope);
+    const kept: unknown[] = [];
+    scope.postMessage = (message, transfer) => {
+      const kind =
+        typeof message === "object" && message !== null && "kind" in message
+          ? message.kind
+          : null;
+      if (typeof kind === "string" && held.includes(kind)) {
+        kept.push(message);
+      } else {
+        post(message, transfer);
+      }
+    };
+    scope.__release = () => {
+      scope.postMessage = post;
+      for (const message of kept) post(message);
+    };
+  }, kinds);
+}
+
+test("WS8 D2 before its first progress the bar has no value, the clock keeps its start across a change of step, and the focus stays where it was when the run ends", async ({
+  page,
+}) => {
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  const worker = await calculationWorker(page);
+  await holdBack(worker, ["progress", "result"]);
+  await goTo(page, "Analyses");
+  await panel(page).getByRole("button", { name: "Run" }).click();
+
+  const bar = panel(page).getByRole("progressbar", {
+    name: "Calculating the diversity",
+  });
+  await expect(bar).toBeVisible();
+  // Busy, with no value: neither 0% nor any other.
+  await expect(bar).not.toHaveAttribute("aria-valuenow", /.*/);
+  await expect(bar).not.toHaveAttribute("aria-valuetext", /.*/);
+  await expect(panel(page).getByText(/^Calculating · 0:02$/)).toBeVisible({
+    timeout: 4000,
+  });
+
+  // Another step and back: the clock goes on from the start of the run,
+  // and does not start again at 0:00.
+  await goTo(page, "Variants");
+  await goTo(page, "Analyses");
+  await expect(panel(page).getByText(/^Calculating · 0:0[2-9]$/)).toBeVisible({
+    timeout: 500,
+  });
+
+  // The focus is on the heading of the step, not on Stop, so it stays
+  // there when the button goes.
+  const stepHeading = page.getByRole("heading", { level: 1, name: "Analyses" });
+  await expect(stepHeading).toBeFocused();
+  await worker.evaluate(() => {
+    (globalThis as unknown as { __release: () => void }).__release();
+  });
+  await expect(panel(page).getByRole("grid")).toBeVisible();
+  await expect(stepHeading).toBeFocused();
+});
+
+test("WS8 D2 a calculation whose worker stopped says so and offers Run, which then gives the table", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  // The worker answers the run as if it had crashed.
+  const worker = await calculationWorker(page);
+  await worker.evaluate(() => {
+    const scope = globalThis as unknown as {
+      postMessage: (message: unknown, transfer?: Transferable[]) => void;
+    };
+    const post = scope.postMessage.bind(scope);
+    scope.postMessage = (message, transfer) => {
+      const kind =
+        typeof message === "object" && message !== null && "kind" in message
+          ? message.kind
+          : null;
+      if (kind === "result") {
+        post({ kind: "crashed", message: "a crash made by the test" });
+      } else {
+        post(message, transfer);
+      }
+    };
+  });
+  await goTo(page, "Analyses");
+  await panel(page).getByRole("button", { name: "Run" }).click();
+  await expect(
+    panel(page).getByText(
+      "The calculation stopped unexpectedly. Run it again. If it stops again, load panel.nei again in the Variants step.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  const button = panel(page).getByRole("button", { name: "Run" });
+  await expect(button).toBeEnabled();
+  await expectNoViolations(makeAxeBuilder);
+
+  // A new worker, which crashes nothing.
+  await button.click();
+  await expect(row(page, "p0")).toHaveText([
+    "48",
+    "0.3519",
+    "0.3564",
+    "0.9267",
+  ]);
+});
+
+test("WS8 D2 two warnings are counted on their heading, above the table", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  // t00 with no population, the others in A.
+  await load(
+    page,
+    "tetraploid.vcf.gz",
+    {
+      name: "tetraploid_pops.csv",
+      text: `IID,pop\nt00,\n${Array.from(
+        { length: 11 },
+        (_, i) => `t${String(i + 1).padStart(2, "0")},A\n`,
+      ).join("")}`,
+    },
+    "pop",
+  );
+  await goTo(page, "Variants");
+  const ploidy = page.getByLabel("Ploidy of the VCF");
+  await ploidy.fill("4");
+  await ploidy.press("Enter");
+  await page
+    .getByRole("button", { name: "Read tetraploid.vcf.gz again with ploidy 4" })
+    .click();
+  await expect(
+    page.getByRole("button", {
+      name: "Read tetraploid.vcf.gz again with ploidy 4",
+    }),
+  ).toHaveCount(0);
+  await goTo(page, "Analyses");
+  await run(page);
+
+  const warnings = panel(page).getByRole("region", { name: "2 warnings" });
+  await expect(
+    warnings.getByRole("heading", { level: 3, name: "2 warnings" }),
+  ).toBeVisible();
+  await expect(warnings.getByRole("listitem")).toHaveText([
+    /^Warning: Population A has 11 individuals/,
+    /^Warning: 1 individual of tetraploid\.vcf\.gz has no population/,
+  ]);
+  const warningsBox = await warnings.boundingBox();
+  const tableBox = await panel(page).getByRole("grid").boundingBox();
+  if (warningsBox === null || tableBox === null) {
+    throw new Error("the warnings or the table are not laid out");
+  }
+  expect(warningsBox.y + warningsBox.height).toBeLessThanOrEqual(tableBox.y);
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("WS8 D2 the line of the versions names popnei's version and the application's, each in its place", async ({
+  page,
+}) => {
+  // The page is told popnei is 0.9.9, so that the two versions differ.
+  await page.addInitScript(() => {
+    const property = Object.getOwnPropertyDescriptor(
+      Worker.prototype,
+      "onmessage",
+    );
+    if (property === undefined) return;
+    Object.defineProperty(Worker.prototype, "onmessage", {
+      configurable: true,
+      get(this: Worker) {
+        return property.get?.call(this) as unknown;
+      },
+      set(this: Worker, handler: ((event: MessageEvent) => void) | null) {
+        property.set?.call(
+          this,
+          handler === null
+            ? null
+            : (event: MessageEvent<unknown>) => {
+                const data = event.data;
+                const isReady =
+                  typeof data === "object" &&
+                  data !== null &&
+                  "kind" in data &&
+                  data.kind === "ready" &&
+                  "popneiVersion" in data;
+                handler.call(
+                  this,
+                  isReady
+                    ? new MessageEvent("message", {
+                        data: { ...data, popneiVersion: "0.9.9" },
+                      })
+                    : event,
+                );
+              },
+        );
+      },
+    });
+  });
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  await goTo(page, "Analyses");
+  await run(page);
+  await expect(
+    panel(page).getByText(
+      "Calculated with popnei 0.9.9, in version 0.1.0 of the application.",
+      { exact: true },
+    ),
+  ).toBeVisible();
 });
 
 test("WS8 D3 a Stop in the middle of a pass leaves the panel ready with no table, and panel.nei then runs at 0.05", async ({
