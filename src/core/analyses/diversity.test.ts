@@ -7,8 +7,10 @@ import {
   populationsOf,
   refusalText,
 } from "./diversity.ts";
-import { individualsNeeds } from "../project.ts";
-import type { Project } from "../project.ts";
+import { createKeyMemo, keyOf } from "../keys.ts";
+import type { Key, KeyedDef } from "../keys.ts";
+import { emptyProject, individualsNeeds } from "../project.ts";
+import type { Project, VariantSource } from "../project.ts";
 import type { WorkerClient } from "../store.ts";
 import { deepFreeze } from "../testSupport.ts";
 import type {
@@ -600,5 +602,290 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112
     expect(refusalText("the memory of the tab ran out.", project())).toBe(
       "popnei could not calculate the diversity: the memory of the tab ran out. Change the settings, or load the variants file again, to run it again.",
     );
+  });
+});
+
+/** The key of the diversity for `p`, with popnei 0.1.0 unless another
+    version is given. */
+function keyOfDiversity(
+  p: Project,
+  popneiVersion = "0.1.0",
+  def: KeyedDef = diversity,
+): Key {
+  return keyOf(def, p, popneiVersion, createKeyMemo());
+}
+
+/** The variants file of `p`, which the projects of these tests have. */
+function variantsOf(p: Project): VariantSource {
+  if (p.variants === null) {
+    throw new Error("the project of the test has a variants file");
+  }
+  return p.variants;
+}
+
+/** `p` with its variants file changed by `change`. */
+function withVariants(p: Project, change: Partial<VariantSource>): Project {
+  return deepFreeze<Project>({
+    ...p,
+    variants: { ...variantsOf(p), ...change },
+  });
+}
+
+/** The rows of the project of the key: the worked example, with a column
+    `pop2` that groups the individuals otherwise and a column `popcopy`
+    that makes the same populations as `pop`. */
+const KEY_ROWS: readonly (readonly Cell[])[] = [
+  ["i1", "A", "x", "X", "A"],
+  ["i2", "B", "y", "X", "B"],
+  ["i3", "A", "x", "Y", "A"],
+  ["i4", null, "z", "Y", null],
+  ["i5", "C", "y", "Y", "C"],
+];
+
+/** The project of the key, of the rows `rows` and the column of the
+    populations `column`. */
+function keyProject(
+  rows: readonly (readonly Cell[])[] = KEY_ROWS,
+  column = "pop",
+): Project {
+  return project({
+    table: { columns: ["name", "pop", "other", "pop2", "popcopy"], rows },
+    column,
+  });
+}
+
+/** `KEY_ROWS` with the cell of the row `row` and the column `column`
+    replaced by `cell`. */
+function rowsWith(row: number, column: number, cell: Cell): Cell[][] {
+  return KEY_ROWS.map((cells, r) =>
+    cells.map((value, c) => (r === row && c === column ? cell : value)),
+  );
+}
+
+/** A copy of `p` whose `variants` is a getter that throws, so that a test
+    sees any read of it. */
+function withVariantsUnreadable(p: Project): Project {
+  const copy: Project = { ...p };
+  Object.defineProperty(copy, "variants", {
+    get(): never {
+      throw new Error("keyInputs read p.variants");
+    },
+  });
+  return copy;
+}
+
+describe("WS5 D2 the key", () => {
+  const base = keyProject();
+  const baseKey = keyOfDiversity(base);
+
+  test("a new load of the variants file, the same file included, changes the key", () => {
+    const reloaded = withVariants(base, {
+      fileId: "0123456789abcdef0123456789abcdef",
+    });
+    expect(keyOfDiversity(reloaded)).not.toBe(baseKey);
+  });
+
+  test("the ploidy or onlyPassed of a VCF changes the key", () => {
+    const vcf = withVariants(base, {
+      format: "vcf",
+      readOptions: { ploidy: 2, onlyPassed: false },
+    });
+    const ploidy4 = withVariants(vcf, {
+      readOptions: { ploidy: 4, onlyPassed: false },
+    });
+    const onlyPassed = withVariants(vcf, {
+      readOptions: { ploidy: 2, onlyPassed: true },
+    });
+    expect(keyOfDiversity(ploidy4)).not.toBe(keyOfDiversity(vcf));
+    expect(keyOfDiversity(onlyPassed)).not.toBe(keyOfDiversity(vcf));
+  });
+
+  test("the name of the variants file, or its read recorded, leaves the key the same", () => {
+    const renamed = withVariants(base, { name: "other.nei" });
+    const pending = withVariants(base, { read: { kind: "pending" } });
+    const counted = withVariants(base, {
+      read: {
+        kind: "read",
+        individuals: ["i1", "i2", "i3", "i4"],
+        ploidy: 2,
+        numVars: 1200,
+      },
+    });
+    expect(keyOfDiversity(renamed)).toBe(baseKey);
+    expect(keyOfDiversity(pending)).toBe(baseKey);
+    expect(keyOfDiversity(counted)).toBe(baseKey);
+  });
+
+  test("the threshold of the missing data filter, or a filter added, removed or moved, changes the key", () => {
+    const two = deepFreeze<Project>({
+      ...base,
+      filters: [
+        { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+        { kind: "maf", maxAllowedMaf: 0.95 },
+      ],
+    });
+    const changed = [
+      deepFreeze<Project>({
+        ...base,
+        filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.05 }],
+      }),
+      two,
+      deepFreeze<Project>({ ...base, filters: [] }),
+      deepFreeze<Project>({ ...two, filters: two.filters.toReversed() }),
+    ];
+    const keys = [baseKey, ...changed.map((p) => keyOfDiversity(p))];
+    expect(new Set(keys).size).toBe(5);
+  });
+
+  test("a filter of individuals changes the key", () => {
+    const filtered = deepFreeze<Project>({
+      ...base,
+      individualFilters: [{ kind: "missing_data", maxAllowedMissingRate: 0.2 }],
+    });
+    expect(keyOfDiversity(filtered)).not.toBe(baseKey);
+  });
+
+  test("another column of the populations that groups the individuals otherwise changes the key", () => {
+    expect(keyOfDiversity(keyProject(KEY_ROWS, "pop2"))).not.toBe(baseKey);
+  });
+
+  test("another column that makes the same populations with the same names leaves the key the same", () => {
+    expect(keyOfDiversity(keyProject(KEY_ROWS, "popcopy"))).toBe(baseKey);
+  });
+
+  test("a cell of the column of the populations changes the key, one of an individual not in the variants file included", () => {
+    const inVariants = keyProject(rowsWith(1, 1, "A"));
+    const notInVariants = keyProject(rowsWith(4, 1, "D"));
+    expect(keyOfDiversity(inVariants)).not.toBe(baseKey);
+    expect(keyOfDiversity(notInVariants)).not.toBe(baseKey);
+  });
+
+  test("a cell of another column leaves the key the same", () => {
+    expect(keyOfDiversity(keyProject(rowsWith(0, 2, "w")))).toBe(baseKey);
+  });
+
+  test("the rows of the file in another order change the key, since the order of the table follows them", () => {
+    const [first, second, ...rest] = KEY_ROWS;
+    if (first === undefined || second === undefined) {
+      throw new Error("the rows of the test are more than two");
+    }
+    const swapped = keyProject([second, first, ...rest]);
+    expect(keyOfDiversity(swapped)).not.toBe(baseKey);
+  });
+
+  test("the type of a column leaves the key the same", () => {
+    const individuals = base.individuals;
+    if (individuals?.read.kind !== "read") {
+      throw new Error("the project of the test has an individuals file read");
+    }
+    const retyped = deepFreeze<Project>({
+      ...base,
+      individuals: {
+        ...individuals,
+        read: {
+          ...individuals.read,
+          columns: [
+            { kind: "identifier" },
+            { kind: "categorical" },
+            { kind: "continuous" },
+            { kind: "binary", one: "Y", zero: "X" },
+            { kind: "categorical" },
+          ],
+        },
+      },
+    });
+    expect(keyOfDiversity(retyped)).toBe(baseKey);
+  });
+
+  test("the same table from another file, or with other options of the CSV, leaves the key the same", () => {
+    const individuals = base.individuals;
+    if (individuals?.read.kind !== "read") {
+      throw new Error("the project of the test has an individuals file read");
+    }
+    const otherFile = deepFreeze<Project>({
+      ...base,
+      individuals: {
+        ...individuals,
+        fileId: "fedcba9876543210fedcba9876543210",
+        name: "populations.tsv",
+        csv: { encoding: "windows-1252", separator: "\t", decimal: "," },
+        read: {
+          ...individuals.read,
+          found: { encoding: "windows-1252", separator: "\t", decimal: "," },
+        },
+      },
+    });
+    expect(keyOfDiversity(otherFile)).toBe(baseKey);
+  });
+
+  test("minNumIndividuals or polyThreshold changes the key", () => {
+    const withOptions = (options: {
+      readonly minNumIndividuals: number;
+      readonly polyThreshold: number;
+    }): Project =>
+      deepFreeze<Project>({
+        ...base,
+        analyses: [{ analysis: "diversity", options }],
+      });
+    const fewer = withOptions({ minNumIndividuals: 10, polyThreshold: 0.95 });
+    const lower = withOptions({ minNumIndividuals: 20, polyThreshold: 0.9 });
+    expect(keyOfDiversity(fewer)).not.toBe(baseKey);
+    expect(keyOfDiversity(lower)).not.toBe(baseKey);
+  });
+
+  test("the options of another analysis, or the reference, leave the key the same", () => {
+    const otherOptions = deepFreeze<Project>({
+      ...base,
+      analyses: [{ analysis: "pca", options: { numComponents: 10 } }],
+    });
+    const referenced = deepFreeze<Project>({
+      ...base,
+      reference: {
+        variants: variantsOf(base),
+        checks: [
+          {
+            analysis: "diversity",
+            numbers: [1152, 0.35, 0.36, 0.93],
+            keyVersion: 1,
+            popneiVersion: "0.1.0",
+            appVersion: "0.1.0",
+            settings: "0".repeat(64),
+          },
+        ],
+      },
+    });
+    expect(keyOfDiversity(otherOptions)).toBe(baseKey);
+    expect(keyOfDiversity(referenced)).toBe(baseKey);
+  });
+
+  test("the key version, or the version of popnei, changes the key", () => {
+    const raised: KeyedDef = { ...diversity, keyVersion: 2 };
+    expect(keyOfDiversity(base, "0.1.0", raised)).not.toBe(baseKey);
+    expect(keyOfDiversity(base, "0.2.0")).not.toBe(baseKey);
+  });
+
+  test("keyInputs of an empty project gives no populations and the defaults, without reading p.variants", () => {
+    const p = withVariantsUnreadable(emptyProject("popgen"));
+    expect(diversity.keyInputs(p)).toEqual({
+      pops: null,
+      options: DIVERSITY_DEFAULTS,
+    });
+  });
+
+  test("keyInputs of a project whose reads are pending gives no populations and the defaults, without reading p.variants", () => {
+    const individuals = base.individuals;
+    if (individuals === null) {
+      throw new Error("the project of the test has an individuals file");
+    }
+    const pending = withVariantsUnreadable(
+      deepFreeze<Project>({
+        ...withVariants(base, { read: { kind: "pending" } }),
+        individuals: { ...individuals, read: { kind: "pending" } },
+      }),
+    );
+    expect(diversity.keyInputs(pending)).toEqual({
+      pops: null,
+      options: DIVERSITY_DEFAULTS,
+    });
   });
 });
