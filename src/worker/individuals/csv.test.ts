@@ -548,10 +548,24 @@ describe("WS4 D1 the owner's decisions of 25 September on the metadata file", ()
     });
   });
 
-  test("an empty cell of the header is kept when a column after it has a value", () => {
+  test("an empty cell of the header is kept when a column after it has a value, and that column is an unnamedColumn before the short row", () => {
     expect(readError("id;pop;;\nA;P1\nB;P2;;x\n")).toEqual({
+      kind: "unnamedColumn",
+      column: 4,
+    });
+  });
+
+  test("a value in the run of empty cells at the end of the header is an unnamedColumn, and not a short row measured against those cells", () => {
+    expect(readError("id;pop;;\na;1\nb;2;3\n")).toEqual({
+      kind: "unnamedColumn",
+      column: 3,
+    });
+  });
+
+  test("a short row is a raggedRow when the header ends in a name", () => {
+    expect(readError("id;pop;;x\nA;P1;;1\nB;P2\n")).toEqual({
       kind: "raggedRow",
-      line: 2,
+      line: 3,
       expected: 4,
       found: 2,
       separator: ";",
@@ -596,6 +610,18 @@ describe("WS4 D1 the owner's decisions of 25 September on the metadata file", ()
         decimal: "auto",
       }),
     ).toEqual({ kind: "variantsFile" });
+  });
+
+  test("a VCF with blank lines above its first is a variantsFile", () => {
+    expect(readError("\n##fileformat=VCFv4.2\n#CHROM\tPOS\n")).toEqual({
+      kind: "variantsFile",
+    });
+    expect(readError(" \t\r\n#CHROM\tPOS\n")).toEqual({
+      kind: "variantsFile",
+    });
+    expect(readError("﻿\r\n\r\n##fileformat=VCFv4.2\n")).toEqual({
+      kind: "variantsFile",
+    });
   });
 
   test("a variants file is refused before a quote never closed", () => {

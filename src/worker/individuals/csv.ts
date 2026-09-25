@@ -47,6 +47,11 @@ const LONGEST_MISSING = 2;
     of its columns, which a VCF cut at the top starts with. */
 const VCF_STARTS: readonly string[] = ["##fileformat=VCF", "#CHROM"];
 
+/** The blank lines at the start of a text, of spaces and tabs alone or of
+    nothing, and the spaces and tabs before its first line that is not
+    blank: what the test of a variants file passes over. */
+const BLANK_START = /^[ \t\r\n]*/u;
+
 const QUOTE = 0x22;
 const SPACE = 0x20;
 const TAB = 0x09;
@@ -61,8 +66,10 @@ const CARRIAGE_RETURN = 0x0d;
  * removed. The empty cells at the end of the header whose columns hold no
  * value are dropped, and so is a column with no name whose cells are all
  * missing. It refuses, in this order: a variants file, whose first line
- * starts with `##fileformat=VCF` or `#CHROM`, `variantsFile`; a quote
- * never closed, `unclosedQuote`; no row below the header, `empty`; a row
+ * that is not blank starts with `##fileformat=VCF` or `#CHROM`,
+ * `variantsFile`; a quote never closed, `unclosedQuote`; no row below the
+ * header, `empty`; a column with values in the run of empty cells at the
+ * end of the header, `unnamedColumn`; a row
  * of the wrong length, `raggedRow`, the first by line, measured against
  * the header without its empty cells at the end; a column with values and no name, `unnamedColumn`, then two
  * columns of one name, `duplicateColumn`; then, row by row, a row with no
@@ -77,7 +84,8 @@ export function readCsv(
   },
 ): Result<CsvRead, IndividualsFileError> {
   const body = text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
-  if (VCF_STARTS.some((start) => body.startsWith(start))) {
+  const firstLine = body.replace(BLANK_START, "");
+  if (VCF_STARTS.some((start) => firstLine.startsWith(start))) {
     return fail({ kind: "variantsFile" });
   }
   const separator =
@@ -101,6 +109,10 @@ export function readCsv(
     isEmptyText,
     isMissingText,
   );
+  const unnamedAtEnd = unnamedPastNames(header.cells, numColumns, individuals);
+  if (unnamedAtEnd !== null) {
+    return fail({ kind: "unnamedColumn", column: unnamedAtEnd });
+  }
   for (const row of individuals) {
     if (!fitsHeader(row.cells, numColumns, header.cells.length, isEmptyText)) {
       return fail({
@@ -202,6 +214,31 @@ function countedColumns<C>(
     count -= 1;
   }
   return count;
+}
+
+/**
+ * The number, counted from 1, of the first column of the run of empty
+ * cells at the end of the header, among the first `numColumns`, that
+ * holds a value in some row, or `null`. The run is kept by
+ * `countedColumns` only when such a column exists, and the user sees no
+ * name there, so it is refused as a column with values and no name
+ * before a row is measured against a header that counts it.
+ */
+function unnamedPastNames(
+  header: readonly string[],
+  numColumns: number,
+  rows: readonly ScannedRow<string>[],
+): number | null {
+  let named = numColumns;
+  while (named > 1 && header[named - 1] === "") named -= 1;
+  for (let index = named; index < numColumns; index += 1) {
+    const hasValue = rows.some((row) => {
+      const cell = row.cells[index];
+      return cell !== undefined && !isMissingText(cell);
+    });
+    if (hasValue) return index + 1;
+  }
+  return null;
 }
 
 /** Whether a row of these cells fits a header counted as `numColumns`
