@@ -344,7 +344,9 @@ not have, an empty population, no population, a threshold out of its
 range. The two it cannot see are the filters keeping no variant, "the
 pass gave no variant: its source gave 1200 and the steps kept none of
 them, ...", and a variants file that holds none, "the pass gave no
-variant and its source holds none: ..."; the panel says each in the
+variant and its source holds none: ...", which is also the refusal of a
+VCF read with only the passed variants of which none passed; the panel
+says each in the
 user's words (its error state, below).
 
 ### The warnings
@@ -669,7 +671,12 @@ definition, on frozen projects, as
   "the pass gave no variant and its source holds none: a statistic of a
   pass is calculated over the variants it gives", which the popnei of the
   release gave in node on 25 September 2026 for a VCF of a header alone,
-  with the missing data filter and without it; the empty pass of
+  with the missing data filter and without it, over a `.nei` file and
+  over a VCF read with every variant, and over a VCF read with only the
+  variants that passed, which the popnei of the release gave in node on
+  25 September 2026 for a VCF whose two variants have `q10` in their
+  FILTER column (`docs/specs/worker/runner.md`, "The cases"); the empty
+  pass of
   `docs/specs/worker/runner.md`; the ploidy of `tetraploid.vcf.gz` read with ploidy 2, a data line
   of a VCF, "line 4 of the VCF, the column of a: `z` is not an allele
   number, which is a run of digits", which the popnei of the release gave
@@ -912,8 +919,9 @@ error state, by what the store gives:
 
 | the failure | the text |
 |---|---|
-| popnei refused a pass over a variants file that holds no variant: its message starts with "the pass gave no variant and its source holds none" | "empty.vcf has no variants, so there is no variant to calculate the diversity over. Load another variants file in the Variants step." |
-| popnei refused an empty pass: its message starts with "the pass gave no variant:" | "The filters kept none of the variants of panel.nei, so there is no variant to calculate the diversity over. Loosen the filters in the Variants step." |
+| popnei refused a pass over a variants file that holds no variant: its message starts with "the pass gave no variant and its source holds none", and the file is a `.nei` file or a VCF read with every variant | "empty.vcf has no variants, so there is no variant to calculate the diversity over. Load another variants file in the Variants step." |
+| the same refusal, of a VCF read with only the variants that passed its filters, `onlyPassed` | "failed.vcf has no variant with PASS or . in its FILTER column, and it was read with only those, so there is no variant to calculate the diversity over. Untick "Only the variants with PASS or . in the FILTER column" in the Variants step and read the file again." |
+| popnei refused an empty pass: its message starts with "the pass gave no variant:", with the colon, which the refusal of a source that holds none does not have at that place | "The filters kept none of the variants of panel.nei, so there is no variant to calculate the diversity over. Loosen the filters in the Variants step." |
 | popnei refused a genotype of another ploidy than the one the VCF was read with: its message starts "line ‹n› of the VCF, the column of ‹individual›: its genotype is of the ploidy ‹found› and the reader was asked for the ploidy ‹given›" | "At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. Set the ploidy of the VCF to 4 in the Variants step and read the file again." |
 | popnei refused a line of the VCF it cannot read, or a gzipped file that is damaged or cut short: its message starts "line ‹n› of the VCF" or "the VCF was written by bgzip" | "popnei could not read panel.vcf.gz: ‹its message›. Correct the file, or fetch it again, and load it in the Variants step." |
 | popnei refused for another reason | "popnei could not calculate the diversity: ‹its message›. Change the settings, or load the variants file again, to run it again." |
@@ -928,9 +936,16 @@ The owner decided on 25 September 2026 that a variants file with no
 variant is told so, and not told to loosen the filters, which cannot
 help when no filter is set. popnei gives the words of the file with no
 variant whether the filters are set or not, since the file gave none
-before any filter.
+before any filter. It gives them too for a VCF read with only the
+variants that passed, the default of the Variants step, when no variant
+of the file has PASS or . in its FILTER column: the variants that failed
+are dropped as the file is read, before any filter, and popnei counts
+none in the source. Such a file does hold variants, which the same file
+read with every variant gives, so the words say which box to untick
+rather than to load another file; they hold as well for a VCF of a
+header alone read that way, which has no variant with PASS either.
 
-`refusalText` of the module makes the first five, the message without
+`refusalText` of the module makes the first six, the message without
 its full stop as `project.md` shows popnei's messages. A VCF is refused
 at the first pass and not at its open for its ploidy and for a line it
 cannot read, since popnei
@@ -940,7 +955,10 @@ so the Variants step shows nothing wrong, and the panel's words are the
 ones that say what to do. popnei's refusals have
 no kind by which a program can tell them apart, so the file with no
 variant, the empty pass, the
-ploidy and a line of the VCF are recognised by the start of the message, and the test of the runner,
+ploidy and a line of the VCF are recognised by the start of the message,
+the empty pass by "the pass gave no variant:" with its colon, so that
+neither of the first two is taken for the other whatever the order they
+are tested in; and the test of the runner,
 which calls the popnei of the release, fails if a new release words it
 otherwise; a kind for it is what popnei's issue #3 asks for other
 refusals. A refusal for memory, which a new load can mend

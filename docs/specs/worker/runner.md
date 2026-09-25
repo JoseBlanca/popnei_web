@@ -643,6 +643,17 @@ export function transferablesOf(result: JobResult): ArrayBuffer[];
   missing data filter at 0.1 alike, as the popnei of the release gave it
   in node on 25 September 2026. The diversity tells the user that the
   file has no variants (`diversity.md`, "Its words").
+- **A VCF none of whose variants passed, read with only the passed
+  ones.** A VCF of two individuals and two variants, both with `q10` in
+  their FILTER column, opens with `{ ploidy: 2, onlyPassed: true }`, and
+  its diversity is refused with the words of a VCF with no variant, "the
+  pass gave no variant and its source holds none: a statistic of a pass
+  is calculated over the variants it gives", since the variants that
+  failed are dropped as the file is read; read with `{ ploidy: 2,
+  onlyPassed: false }`, the same file gives a result over its 2
+  variants. So it was in the popnei of the release, in node on 25
+  September 2026. The diversity tells the user to untick the box of the
+  passed variants (`diversity.md`, "Its words").
 - **A population of fewer than 20 individuals** is not refused: its
   values are NaN, since no variant has 20 called individuals in it.
   `tetraploid.vcf.gz` read with ploidy 4, as one population of 12, gives
@@ -873,9 +884,11 @@ The tests, each at `open` and `run` of a runner made by `createRunner`:
   `opened` of 12 individuals; `bad.vcf` at the open, as a VCF and as a
   `.nei` file; the missing data filter at 0.05 with a MAF filter at 0;
   a VCF of a header alone, with no filter and with the missing data
-  filter at 0.1. The same messages were given by both releases, but
-  that of the VCF of a header alone, looked at in `js-v0.1.0-dev.2`
-  only.
+  filter at 0.1; the VCF whose two variants failed, read with only the
+  passed ones, whose `numVarsRead` read with every variant is 2. The
+  same messages were given by both releases, but
+  those of the VCF of a header alone and of the VCF whose variants
+  failed, looked at in `js-v0.1.0-dev.2` only.
 - **The defects**: a `run` before the `open`, a `run` of another load
   id, a `run` after the `open` of `bad.vcf` that popnei refused, a second
   `open`, two populations of one name and a job with a filter of
