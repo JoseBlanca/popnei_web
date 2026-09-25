@@ -37,21 +37,25 @@ const runner = {
 // The same files as the files of src/worker import them, "./runner.ts",
 // which `runner` does not match. A worker's script is loaded as a worker
 // by start.ts, and runner.ts, which calls popnei, is imported by
-// runnerWorker.ts alone (docs/specs/worker/runner.md, "Two files").
+// runnerWorker.ts alone (docs/specs/worker/runner.md, "Two files"). The
+// extension is optional, since TypeScript's "bundler" resolution and Vite
+// find "./runner" and "./runner.js" as well.
 const workerScripts = {
-  regex: "(^|/)(runner|runnerWorker|filesRunner)\\.ts",
+  regex: "(^|/)(runner|runnerWorker|filesRunner)(\\.[jt]s)?($|\\?)",
   message:
     "A worker's script is loaded as a worker, by start.ts; only runnerWorker.ts imports runner.ts.",
 };
 // start.ts loads the two scripts as workers, with ?worker, and nothing else.
 const scriptsButAsWorkers = {
-  regex: "(^|/)(runner\\.ts|(runnerWorker|filesRunner)\\.ts$)",
+  regex:
+    "(^|/)(runner(\\.[jt]s)?($|\\?)|(runnerWorker|filesRunner)(\\.[jt]s)?$)",
   message:
     "start.ts loads runnerWorker.ts and filesRunner.ts with ?worker, and not runner.ts.",
 };
 // runnerWorker.ts imports runner.ts as a module, and no other script.
 const scriptsButRunner = {
-  regex: "(^|/)((runnerWorker|filesRunner)\\.ts|runner\\.ts\\?)",
+  regex:
+    "(^|/)((runnerWorker|filesRunner)(\\.[jt]s)?($|\\?)|runner(\\.[jt]s)?\\?)",
   message:
     "runnerWorker.ts imports runner.ts as a module, and no other worker's script.",
 };
@@ -89,13 +93,29 @@ const popneiValues = {
 // A call of import() is not an import declaration, and
 // no-restricted-imports does not see it: this refuses `import("popnei")`,
 // which would load popnei's wasm where only a worker may.
+const popneiImportCall = {
+  selector: "ImportExpression[source.value='popnei']",
+  message: "Only runner.ts calls popnei; import() of popnei is refused here.",
+};
+// A worker is made in src/worker/start.ts alone, from a script loaded with
+// ?worker, so that no file makes one of runner.ts, or of any script, with
+// new Worker(new URL(...)). The probe's page makes its own, of its own
+// worker.
+const workerMade = {
+  selector: "NewExpression[callee.name=/^(Shared)?Worker$/]",
+  message: "Only src/worker/start.ts makes a worker.",
+};
+const workerLoaded = {
+  selector: "ImportDeclaration[source.value=/[?]worker$/]",
+  message: "Only src/worker/start.ts loads a worker's script, with ?worker.",
+};
 const noPopneiImportCall = [
   "error",
-  {
-    selector: "ImportExpression[source.value='popnei']",
-    message: "Only a worker calls popnei; import() of popnei is refused here.",
-  },
+  popneiImportCall,
+  workerMade,
+  workerLoaded,
 ];
+const noWorkerMade = ["error", workerMade, workerLoaded];
 // The probe is a page of its own, outside the layers: nothing imports it.
 const probe = {
   group: ["**/probe/**"],
@@ -135,6 +155,7 @@ export default defineConfig(
     languageOptions: { parserOptions: { projectService: true } },
     linterOptions: { reportUnusedDisableDirectives: "error" },
     rules: {
+      "no-restricted-syntax": noWorkerMade,
       eqeqeq: "error",
       "prefer-const": "error",
       "no-console": ["error", { allow: ["warn", "error"] }],
@@ -245,6 +266,7 @@ export default defineConfig(
           ],
         },
       ],
+      "no-restricted-syntax": noPopneiImportCall,
       "@typescript-eslint/consistent-type-assertions": [
         "error",
         { assertionStyle: "never" },
@@ -255,6 +277,7 @@ export default defineConfig(
     // The calculation worker, the one file of the worker that calls popnei.
     files: ["src/worker/runner.ts"],
     rules: {
+      "no-restricted-syntax": noWorkerMade,
       "@typescript-eslint/no-restricted-imports": [
         "error",
         {
@@ -389,6 +412,7 @@ export default defineConfig(
     // The lines that make the two workers from their scripts.
     files: ["src/worker/start.ts"],
     rules: {
+      "no-restricted-syntax": ["error", popneiImportCall],
       "@typescript-eslint/no-restricted-imports": [
         "error",
         {
@@ -481,7 +505,8 @@ export default defineConfig(
         "error",
         { patterns: [outOfProbe, drawing, filesWasm, probePopneiValues] },
       ],
-      "no-restricted-syntax": noPopneiImportCall,
+      // The page makes its worker from its own script, with ?worker.
+      "no-restricted-syntax": ["error", popneiImportCall, workerMade],
     },
   },
   {

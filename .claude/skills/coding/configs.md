@@ -414,21 +414,25 @@ const runner = {
 // The same files as the files of src/worker import them, "./runner.ts",
 // which `runner` does not match. A worker's script is loaded as a worker
 // by start.ts, and runner.ts, which calls popnei, is imported by
-// runnerWorker.ts alone (docs/specs/worker/runner.md, "Two files").
+// runnerWorker.ts alone (docs/specs/worker/runner.md, "Two files"). The
+// extension is optional, since TypeScript's "bundler" resolution and Vite
+// find "./runner" and "./runner.js" as well.
 const workerScripts = {
-  regex: "(^|/)(runner|runnerWorker|filesRunner)\\.ts",
+  regex: "(^|/)(runner|runnerWorker|filesRunner)(\\.[jt]s)?($|\\?)",
   message:
     "A worker's script is loaded as a worker, by start.ts; only runnerWorker.ts imports runner.ts.",
 };
 // start.ts loads the two scripts as workers, with ?worker, and nothing else.
 const scriptsButAsWorkers = {
-  regex: "(^|/)(runner\\.ts|(runnerWorker|filesRunner)\\.ts$)",
+  regex:
+    "(^|/)(runner(\\.[jt]s)?($|\\?)|(runnerWorker|filesRunner)(\\.[jt]s)?$)",
   message:
     "start.ts loads runnerWorker.ts and filesRunner.ts with ?worker, and not runner.ts.",
 };
 // runnerWorker.ts imports runner.ts as a module, and no other script.
 const scriptsButRunner = {
-  regex: "(^|/)((runnerWorker|filesRunner)\\.ts|runner\\.ts\\?)",
+  regex:
+    "(^|/)((runnerWorker|filesRunner)(\\.[jt]s)?($|\\?)|runner(\\.[jt]s)?\\?)",
   message:
     "runnerWorker.ts imports runner.ts as a module, and no other worker's script.",
 };
@@ -466,13 +470,29 @@ const popneiValues = {
 // A call of import() is not an import declaration, and
 // no-restricted-imports does not see it: this refuses `import("popnei")`,
 // which would load popnei's wasm where only a worker may.
+const popneiImportCall = {
+  selector: "ImportExpression[source.value='popnei']",
+  message: "Only runner.ts calls popnei; import() of popnei is refused here.",
+};
+// A worker is made in src/worker/start.ts alone, from a script loaded with
+// ?worker, so that no file makes one of runner.ts, or of any script, with
+// new Worker(new URL(...)). The probe's page makes its own, of its own
+// worker.
+const workerMade = {
+  selector: "NewExpression[callee.name=/^(Shared)?Worker$/]",
+  message: "Only src/worker/start.ts makes a worker.",
+};
+const workerLoaded = {
+  selector: "ImportDeclaration[source.value=/[?]worker$/]",
+  message: "Only src/worker/start.ts loads a worker's script, with ?worker.",
+};
 const noPopneiImportCall = [
   "error",
-  {
-    selector: "ImportExpression[source.value='popnei']",
-    message: "Only a worker calls popnei; import() of popnei is refused here.",
-  },
+  popneiImportCall,
+  workerMade,
+  workerLoaded,
 ];
+const noWorkerMade = ["error", workerMade, workerLoaded];
 // The probe is a page of its own, outside the layers: nothing imports it.
 const probe = {
   group: ["**/probe/**"],
@@ -512,6 +532,7 @@ export default defineConfig(
     languageOptions: { parserOptions: { projectService: true } },
     linterOptions: { reportUnusedDisableDirectives: "error" },
     rules: {
+      "no-restricted-syntax": noWorkerMade,
       eqeqeq: "error",
       "prefer-const": "error",
       "no-console": ["error", { allow: ["warn", "error"] }],
@@ -622,6 +643,7 @@ export default defineConfig(
           ],
         },
       ],
+      "no-restricted-syntax": noPopneiImportCall,
       "@typescript-eslint/consistent-type-assertions": [
         "error",
         { assertionStyle: "never" },
@@ -632,6 +654,7 @@ export default defineConfig(
     // The calculation worker, the one file of the worker that calls popnei.
     files: ["src/worker/runner.ts"],
     rules: {
+      "no-restricted-syntax": noWorkerMade,
       "@typescript-eslint/no-restricted-imports": [
         "error",
         {
@@ -766,6 +789,7 @@ export default defineConfig(
     // The lines that make the two workers from their scripts.
     files: ["src/worker/start.ts"],
     rules: {
+      "no-restricted-syntax": ["error", popneiImportCall],
       "@typescript-eslint/no-restricted-imports": [
         "error",
         {
@@ -858,7 +882,8 @@ export default defineConfig(
         "error",
         { patterns: [outOfProbe, drawing, filesWasm, probePopneiValues] },
       ],
-      "no-restricted-syntax": noPopneiImportCall,
+      // The page makes its worker from its own script, with ?worker.
+      "no-restricted-syntax": ["error", popneiImportCall, workerMade],
     },
   },
   {
@@ -925,25 +950,42 @@ export default defineConfig(
   `runnerWorker.ts`, which its `runner*` takes in. The files of
   `src/worker` import each other as `./runner.ts`, which that pattern
   does not match, so the worker's blocks have `workerScripts`, a regular
-  expression on the name of the file, and three blocks change it for
-  three kinds of file. `runnerWorker.ts`, the calculation worker's
-  script, imports `runner.ts`, which calls popnei, as a module, and no
-  other script (`scriptsButRunner`); `start.ts` loads `runnerWorker.ts`
-  and `filesRunner.ts` with `?worker` and nothing else of them
+  expression on the name of the file with its extension optional, since
+  the "bundler" resolution of TypeScript and Vite find `./runner` and
+  `./runner.js` as well as `./runner.ts`. Three blocks change it for three
+  kinds of file: `runnerWorker.ts`, the calculation worker's script,
+  imports `runner.ts`, which calls popnei, as a module, and no other
+  script (`scriptsButRunner`); `start.ts` loads `runnerWorker.ts` and
+  `filesRunner.ts` with `?worker` and nothing else of them
   (`scriptsButAsWorkers`); and the tests of `src/worker` import
-  `runner.ts`, to run it in node. So popnei reaches the calculation
-  worker through `runnerWorker.ts` alone, and cannot reach the page
-  through `client.ts`, `messages.ts` or `protocol.ts`. Changed on 25
-  September 2026, when the runner became two files
+  `runner.ts`, to run it in node. Two rules of syntax close the other two
+  ways popnei could reach the page: `popneiImportCall`, `import("popnei")`,
+  is refused in every file of `src/worker` but `runner.ts`, as in the
+  other layers; and `workerMade` and `workerLoaded`, a `new Worker` or a
+  `new SharedWorker`, and an import that ends in `?worker`, are refused in
+  every file but `start.ts`, so that no file makes a worker of
+  `runner.ts`, or of any script, with `new Worker(new URL(...))`. The
+  probe's page loads its own worker with `?worker` and makes it with
+  `new ProbeWorker()`, which `workerMade` does not match. What is not
+  caught: an `import()` or a `new` of a variable, and a worker made by
+  another name than `Worker`; none of ours needs one.
+
+  Changed on 25 September 2026, when the runner became two files
   (`docs/specs/worker/runner.md`, "Two files"): until then no block of
-  `src/worker` refused a runner, and `client.ts` could have imported
-  `runner.ts`. On that day a scratch import in `client.ts` of
-  `./runner.ts` and of `./runnerWorker.ts`, in `messages.ts` of
-  `./filesRunner.ts`, in `start.ts` of `./runner.ts?worker` and of
-  `./runnerWorker.ts`, in `runnerWorker.ts` of `./filesRunner.ts` and of
-  `./runner.ts?worker`, in `src/worker/individuals/csv.ts` of
-  `../runner.ts`, and in `src/ui` and `src/core` of
-  `../worker/runnerWorker.ts`, each failed the lint.
+  `src/worker` refused a runner. The first change matched only a path
+  that ended in `.ts`, and the review of that day showed, with `npx
+  eslint --stdin --stdin-filename <file>` exiting 0, that `client.ts`
+  could still import `./runner`, `filesRunner.ts` `./runner.js`, both
+  `import("popnei")`, and any file `new Worker(new URL(...))`. With the
+  rules above, the same day, `--stdin` refused each of these, and in
+  `runnerWorker.ts` `./runnerWorker`, in `start.ts` `./runner?worker`, in
+  `src/ui` `../worker/filesRunner.ts?worker` and `new Worker(new URL(...))`,
+  and in the probe's page `new Worker(new URL(...))`; and it let through
+  `./runner.ts` in `runnerWorker.ts` and in `runner.test.ts`,
+  `./runnerWorker.ts?worker` in `start.ts`, `import("popnei")` in
+  `runner.ts`, `./messages.ts` in `client.ts`, `makeRunnerWorker` of
+  `start.ts` in `src/ui`, and `./probeWorker.ts?worker` with `new
+  ProbeWorker()` in the probe's page.
 - Core's block adds `individualsReader`: the reader is TypeScript with no
   DOM, which core could import and run on the page, where a file of
   10,000 rows would freeze it; it belongs to the light worker.
@@ -992,7 +1034,9 @@ export default defineConfig(
   The probe's messages are checked when they arrive, as the worker's
   are, so it has no type assertion either.
 - `noPopneiImportCall` refuses `import("popnei")` in `src/core`,
-  `src/charts`, `src/ui` and the probe's page. `no-restricted-imports`
+  `src/charts`, `src/ui`, `src/worker` but `runner.ts`, and the probe's
+  page, with `workerMade` and `workerLoaded` beside it but in the probe's
+  page (above). `no-restricted-imports`
   sees import declarations only, and on 24 September 2026 a scratch file
   in each of the four that loaded popnei with `await import("popnei")`
   passed the lint; with the rule each failed. A rule of syntax matches
