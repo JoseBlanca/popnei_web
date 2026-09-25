@@ -989,11 +989,24 @@ moves.
   so that a screen reader reads "p2, Observed heterozygosity, 0.3512".
   A screen reader moves through it by its own keys for tables; the Tab
   key does not stop at its cells, which hold no control. It sits in a
-  frame that scrolls sideways when the page is narrower than the table,
-  at 320 px, and the frame is reached by the Tab key and named by the
-  caption, so that a user of the keyboard scrolls it with the arrow keys
-  (2.1.1, which asks that everything be done with the keyboard). The
-  number of individuals is its own column, not a colour or a note. The
+  frame that scrolls sideways when the page is narrower than the table:
+  at 320 px the table is 1,012 px wide in a frame of 288 px, which shows
+  the populations and their individuals and no value. While the table is
+  wider than its frame, and only then, three things say so and let it be
+  scrolled. A line under the caption, "Scroll the table sideways to see
+  all its columns."; a shadow on each edge of the frame toward which the
+  table can scroll, which goes from an edge when the table is scrolled
+  to its end there; and the frame is reached by the Tab key and is a
+  region named by the caption, so that a user of the keyboard scrolls it
+  with the arrow keys (2.1.1, which asks that everything be done with
+  the keyboard). When the table fits, the frame is neither a stop of the
+  Tab key, which would stop on nothing, nor a region, whose name a
+  screen reader would read as a second caption. Whether the table fits
+  is measured again whenever the frame or the table changes size, a
+  window resized or zoomed, a new result. The line is true at any
+  width, since it names no column, and the frame is the table's in
+  `src/ui/widgets/Table.tsx`, so every table of results later has it.
+  The number of individuals is its own column, not a colour or a note. The
   owner decided on 25 September 2026 that it is not React Aria's
   `Table`, whose removal took 14.19 KB gzipped off the page's first
   script, for a table of a few rows that is neither sorted nor
