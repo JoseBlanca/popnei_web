@@ -890,3 +890,13 @@ Under way while the owner looks again at the screens of stops 7.5 and
   7 in each engine, of the 20 that 9.3 and 9.4 complete. Seen in
   Chromium and WebKit with the keyboard. For the review of the screen:
   a disabled Redo looks close to an enabled one in the light theme.
+- 9.3, commit 09ed24a: the notice, React Aria's toast with no timer, one
+  at a time, in a region named "Notice" that F6 reaches, with Undo or
+  Redo and Close; the focus goes back where it was when the notice goes.
+  Every Undo and Redo, of the header, the keyboard and the notice, goes
+  through one function. The stopped line of the diversity was already
+  built by the rounds. React Aria 1.21.1 does not let F6 reach a region
+  made before its first toast, so the region is made again with each
+  notice. `-g "WS9 D3"` gives 22 passed, 11 in each engine. The first
+  script grew from 105.82 KB to 109.77 KB gzipped. Not seen: a notice's
+  own Undo that makes a new notice, which needs two analyses.

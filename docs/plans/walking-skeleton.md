@@ -766,7 +766,7 @@ same numbers.
   and reasons of the stepper, the summary line, and the announcements
   from the state, which the entry makes at every change of the store.
   Serves 3 and 5. Needs 9.1.
-- [ ] 9.3 The notice, React Aria's toast with its action and Close, and
+- [x] 9.3 The notice, React Aria's toast with its action and Close, and
   the line of the diversity panel on a calculation stopped by a new
   variants file. Serves 3 and 5. Needs 9.2.
 - [ ] 9.4 `src/ui/saving.ts`, the dialogs of Save project and of Open
