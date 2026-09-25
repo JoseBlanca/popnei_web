@@ -6,6 +6,8 @@
  * panel draws them.
  */
 
+import type { DiversityRow } from "../../../core/analyses/diversity.ts";
+import { variantsStem } from "../../../core/fileNames.ts";
 import { counted, escaped, grouped } from "../../../core/project.ts";
 import type { Pops } from "../../../worker/protocol.ts";
 
@@ -35,6 +37,20 @@ export function cellText(value: number | null): string {
   return value === null ? "no value" : value.toFixed(DECIMALS);
 }
 
+/** The cells of a row of the table: the population as a text shows a
+    name of the user's files, so that two names that differ by a hidden
+    character look different; its individuals with a comma between
+    groups of three digits; its three numbers. */
+export function rowCells(row: DiversityRow): readonly string[] {
+  return [
+    escaped(row.population),
+    grouped(row.individuals),
+    cellText(row.expectedHeterozygosity),
+    cellText(row.observedHeterozygosity),
+    cellText(row.polymorphic),
+  ];
+}
+
 /** The line under the table that says which options the numbers were
     calculated with. */
 export function optionsText(
@@ -53,19 +69,9 @@ export function versionsText(
   return `Calculated with popnei ${escaped(popneiVersion)}, in version ${escaped(appVersion)} of the application.`;
 }
 
-/** The endings of a variants file that its download drops, the longest
-    first, compared without regard to case. */
-const ENDINGS = [".vcf.gz", ".vcf", ".nei"] as const;
-
-/** The name of the download of the table: the name of the variants file
-    without `.nei`, `.vcf` or `.vcf.gz`, then `.diversity.csv`;
-    `panel.vcf.gz` gives `panel.diversity.csv`. */
+/** The name of the download of the table: the stem of the variants
+    file, `variantsStem`, then `.diversity.csv`; `panel.vcf.gz` gives
+    `panel.diversity.csv`. */
 export function csvName(variantsName: string): string {
-  const lower = variantsName.toLowerCase();
-  const ending = ENDINGS.find((end) => lower.endsWith(end));
-  const base =
-    ending === undefined
-      ? variantsName
-      : variantsName.slice(0, variantsName.length - ending.length);
-  return `${base}.diversity.csv`;
+  return `${variantsStem(variantsName)}.diversity.csv`;
 }

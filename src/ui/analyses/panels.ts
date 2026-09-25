@@ -26,6 +26,10 @@ import { populationsText } from "./diversity/words.ts";
 export interface ResultsProps {
   /** The result the store gives the analysis in its state done. */
   readonly result: JobResult;
+  /** The words of the comparison with the check numbers of an opened
+      project file, drawn under the table, or `null` when there is none
+      to make. */
+  readonly check: string | null;
 }
 
 /** What the frame needs of one analysis. */

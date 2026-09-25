@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import {
   captionText,
   cellText,
+  rowCells,
   csvName,
   optionsText,
   populationsText,
@@ -41,6 +42,18 @@ describe("the words of the panel of the diversity", () => {
     expect(cellText(null)).toBe("no value");
   });
 
+  test("a row: the name escaped, the individuals grouped, the numbers to four decimals", () => {
+    expect(
+      rowCells({
+        population: "p1\u200b",
+        individuals: 1000,
+        expectedHeterozygosity: 0.35267894847982756,
+        observedHeterozygosity: null,
+        polymorphic: 0.9288194444444444,
+      }),
+    ).toEqual(["p1\\u200b", "1,000", "0.3527", "no value", "0.9288"]);
+  });
+
   test("the line of the options", () => {
     expect(optionsText(20, 0.95)).toBe(
       "A variant counts in a population when at least 20 of its individuals have a called genotype there, and is polymorphic when its commonest allele is below 0.95.",
@@ -59,5 +72,6 @@ describe("the words of the panel of the diversity", () => {
     expect(csvName("panel.vcf")).toBe("panel.diversity.csv");
     expect(csvName("Panel.VCF.GZ")).toBe("Panel.diversity.csv");
     expect(csvName("panel.vcf.bgz")).toBe("panel.vcf.bgz.diversity.csv");
+    expect(csvName(".nei")).toBe("project.diversity.csv");
   });
 });

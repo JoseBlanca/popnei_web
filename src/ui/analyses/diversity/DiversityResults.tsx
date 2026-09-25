@@ -3,8 +3,8 @@
  * shows"): the table of the populations with its caption, the line of the
  * options it was calculated with, and the download of the table as CSV
  * with the line of the versions beside it. The frame of
- * `AnalysisPanel.tsx` draws the warnings above it and the comparison with
- * the check numbers under it.
+ * `AnalysisPanel.tsx` draws the warnings above it, and gives the words of
+ * the comparison with the check numbers, drawn under the table.
  */
 import {
   DIVERSITY_DEFAULTS,
@@ -23,9 +23,9 @@ import type { ResultsProps } from "../panels.ts";
 import styles from "./DiversityResults.module.css";
 import {
   captionText,
-  cellText,
   csvName,
   optionsText,
+  rowCells,
   versionsText,
 } from "./words.ts";
 
@@ -47,7 +47,10 @@ const COLUMNS: readonly TableColumn[] = Object.freeze([
 ]);
 
 /** The table of the diversity, its options and its download. */
-export function DiversityResults({ result }: ResultsProps): React.JSX.Element {
+export function DiversityResults({
+  result,
+  check,
+}: ResultsProps): React.JSX.Element {
   const variantsName = useAppState((s) => s.project.variants?.name ?? null);
   const popneiVersion = useAppState((s) => s.popneiVersion);
   const options = useAppState((s) =>
@@ -63,13 +66,7 @@ export function DiversityResults({ result }: ResultsProps): React.JSX.Element {
 
   const rows = diversityRows(result).map((row) => ({
     id: row.population,
-    cells: [
-      row.population,
-      String(row.individuals),
-      cellText(row.expectedHeterozygosity),
-      cellText(row.observedHeterozygosity),
-      cellText(row.polymorphic),
-    ],
+    cells: rowCells(row),
   }));
 
   const download = (): void => {
@@ -83,6 +80,7 @@ export function DiversityResults({ result }: ResultsProps): React.JSX.Element {
         columns={COLUMNS}
         rows={rows}
       />
+      {check !== null && <p className={classOf(styles, "line")}>{check}</p>}
       <p className={classOf(styles, "muted")}>
         {optionsText(
           numberOf(options, "minNumIndividuals"),

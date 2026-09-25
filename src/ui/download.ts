@@ -4,6 +4,9 @@
  * file under `name`, or asks where, as the user set it.
  */
 
+/** How long the link to the text is kept, in milliseconds. */
+const RELEASE_AFTER_MS = 60_000;
+
 /**
  * Downloads `text`, in UTF-8 with no byte order mark, as a file named
  * `name` of the media type `type`, "text/csv".
@@ -19,9 +22,10 @@ export function downloadText(name: string, text: string, type: string): void {
   document.body.append(link);
   link.click();
   link.remove();
-  // Released once the click has been handled: Safari reads the link
-  // after the click returns.
+  // Released a minute later, as FileSaver.js does: iOS Safari asks the
+  // user whether to download before it fetches the link, and a link
+  // released before the answer gives a failed download.
   setTimeout(() => {
     URL.revokeObjectURL(url);
-  });
+  }, RELEASE_AFTER_MS);
 }

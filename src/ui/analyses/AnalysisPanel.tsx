@@ -9,8 +9,8 @@
  * - locked: Run, disabled, with the reason beside it as its description;
  * - ready: Run, and what it will run on;
  * - running: Stop, the bar, and the line with the time since it started;
- * - done: the warnings, the result, and the comparison with the check
- *   numbers of an opened project file;
+ * - done: the warnings, and the result with, under its table, the
+ *   comparison with the check numbers of an opened project file;
  * - removed: the words of the notice that removed it, and Run;
  * - error: what happened and what to do, with Run after a failure that
  *   is not popnei's refusal.
@@ -244,12 +244,13 @@ function Below({ ui, status }: PartProps): React.JSX.Element | null {
             <Warnings warnings={status.warnings} />
           )}
           {/* A new result is drawn anew, with no state of the last. */}
-          <ui.Results key={status.key} result={status.result} />
-          {status.check !== null && (
-            <p className={classOf(styles, "line")}>
-              {checkVerdictText(status.check)}
-            </p>
-          )}
+          <ui.Results
+            key={status.key}
+            result={status.result}
+            check={
+              status.check === null ? null : checkVerdictText(status.check)
+            }
+          />
         </>
       );
     case "locked":

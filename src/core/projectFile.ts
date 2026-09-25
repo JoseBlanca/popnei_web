@@ -7,6 +7,7 @@
  * new run with the numbers saved (docs/specs/core/projectFile.md).
  */
 
+import { variantsStem } from "./fileNames.ts";
 import type { JsonValue } from "./keys.ts";
 import {
   bothOf,
@@ -110,8 +111,7 @@ export function projectFileName(p: Project): string {
   if (name === undefined) {
     return DEFAULT_FILE_NAME;
   }
-  const stem = name.replace(/\.(nei|vcf|vcf\.gz)$/i, "");
-  return stem === "" ? DEFAULT_FILE_NAME : `${stem}${PROJECT_FILE_EXTENSION}`;
+  return `${variantsStem(name)}${PROJECT_FILE_EXTENSION}`;
 }
 
 /** The name of a project file with no variants file to name it after. */

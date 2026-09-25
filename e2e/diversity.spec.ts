@@ -13,7 +13,7 @@ import { readFile } from "node:fs/promises";
 import { writeFile } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 
-import type { Locator, Page, Worker } from "@playwright/test";
+import type { Locator, Page, Route, Worker } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
 import { bigVcfPopsCsv, STOP_VCF_VARIANTS, writeBigVcf } from "./bigVcf.ts";
@@ -208,6 +208,60 @@ test("WS8 D2 at 0.05 the row p0 reads 48, 0.3527, 0.3567, 0.9288, and the focus 
   await expect(panel(page).getByText(/^Warning:/)).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
 });
+
+test("WS8 D2 a panel drawn locked that becomes ready gives the focus to its heading when the run it started ends", async ({
+  page,
+}) => {
+  // popnei's wasm held back, so that panel.nei stays being read while the
+  // Analyses step is on the screen; the metadata file needs none.
+  const held: Route[] = [];
+  await page.route("**/*.wasm", (route) => {
+    held.push(route);
+  });
+  await page.goto("popgen.html#individuals");
+  await pick(page, "Metadata file", "panel_pops.csv");
+  await page
+    .getByRole("button", { name: "Column that defines the populations" })
+    .click();
+  await page.getByRole("option", { name: "popcat", exact: true }).click();
+  await goTo(page, "Variants");
+  await pick(page, "Variants file", "panel.nei");
+  await goTo(page, "Analyses");
+  const button = panel(page).getByRole("button", { name: "Run" });
+  await expect(button).toBeDisabled();
+  await expect(button).toHaveAccessibleDescription("Reading panel.nei.");
+
+  await expect.poll(() => held.length).toBeGreaterThan(0);
+  for (const route of held) await route.continue();
+  await expect(button).toBeEnabled();
+  await button.focus();
+  await page.keyboard.press("Enter");
+  await expect(panel(page).getByRole("grid")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Diversity" }),
+  ).toBeFocused();
+});
+
+for (const width of [320, 640]) {
+  test(`WS8 D2 at ${String(width)} px wide the name of a population stays on one line`, async ({
+    page,
+  }) => {
+    // 320 px is a phone, and a desktop at 400% zoom; 640 px at 200%.
+    await page.setViewportSize({ width, height: 800 });
+    await load(page, "panel.nei", "panel_pops.csv", "popcat");
+    await goTo(page, "Analyses");
+    await run(page);
+    // The lines the text of the cell takes, one box each.
+    const lines = await panel(page)
+      .getByRole("rowheader", { name: "p0" })
+      .evaluate((cell) => {
+        const range = document.createRange();
+        range.selectNodeContents(cell);
+        return range.getClientRects().length;
+      });
+    expect(lines).toBe(1);
+  });
+}
 
 test("WS8 D2 the filter moved to 1 removes the table with the words of its notice, and Run at 1 gives p0 0.3519, 0.3564, 0.9267", async ({
   page,
@@ -447,6 +501,12 @@ test("WS8 D3 a Stop in the middle of a pass leaves the panel ready with no table
     .not.toBe("waiting");
   expect(state, "the bar was never seen below 100%").toBe("below");
 
+  // popnei's wasm held back from the worker that the stop starts, so that
+  // the next run waits for the file to be opened again.
+  const held: Route[] = [];
+  await page.route("**/*.wasm", (route) => {
+    held.push(route);
+  });
   await panel(page).getByRole("button", { name: "Stop" }).click();
   await expect(panel(page).getByRole("button", { name: "Run" })).toBeVisible();
   await expect(bars).toHaveCount(0);
@@ -458,9 +518,30 @@ test("WS8 D3 a Stop in the middle of a pass leaves the panel ready with no table
   ).toBeVisible();
   await expectNoViolations(makeAxeBuilder);
 
-  // The page goes on: panel.nei and its populations, in the same page.
+  // Run again after the stop: it waits for the file to be opened again.
+  await panel(page).getByRole("button", { name: "Run" }).click();
+  await expect(
+    panel(page).getByText(
+      /^Waiting for stop\.vcf\.gz to be opened again, then calculating · \d:\d\d$/,
+    ),
+  ).toBeVisible();
+
+  // The page goes on: panel.nei loaded during that run stops it, and the
+  // panel says so while the notice is up.
   await goTo(page, "Variants");
   await pick(page, "Variants file", "panel.nei");
+  await goTo(page, "Analyses");
+  await expect(
+    panel(page).getByText(
+      "The calculation of the diversity was stopped because a new variants file was loaded.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(bars).toHaveCount(0);
+  await expectNoViolations(makeAxeBuilder);
+  for (const route of held) await route.continue();
+  await page.unroute("**/*.wasm");
+  await goTo(page, "Variants");
   await expect(page.getByText("200 individuals")).toBeVisible();
   await goTo(page, "Individuals");
   await pick(page, "Metadata file", "panel_pops.csv");

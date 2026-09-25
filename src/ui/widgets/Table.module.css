@@ -39,9 +39,12 @@
   font-weight: 600;
 }
 
+/* A long name breaks, but a short one keeps its width: `anywhere` would
+   let a narrow page squeeze the column to one letter, since it lowers the
+   width the table gives the column. */
 .text {
   text-align: start;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .numeric {

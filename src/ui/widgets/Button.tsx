@@ -58,13 +58,17 @@ export function Button({
       {label}
     </AriaButton>
   );
-  if (description === undefined) return button;
+  // The same tree with a description and without, so that a button that
+  // gains or loses one stays the same element, and keeps the focus and
+  // the refs that hold it.
   return (
     <span className={classOf(styles, "described")}>
       {button}
-      <span id={descriptionId} className={classOf(styles, "description")}>
-        {description}
-      </span>
+      {description !== undefined && (
+        <span id={descriptionId} className={classOf(styles, "description")}>
+          {description}
+        </span>
+      )}
     </span>
   );
 }

@@ -5,6 +5,11 @@
   gap: var(--space-3);
 }
 
+.line {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
 .muted {
   margin: 0;
   color: var(--color-text-muted);
