@@ -281,8 +281,23 @@ calculation that ends done or failed after the stop was answered by a
 worker already past it, so the next request does not wait for a
 restart; without that, a stop of a calculation that only waited in the
 queue, which starts no worker again, would mark every later request
-until the next restart. The analyses
-of `removed` and `leftBehind` are listed in the order of the
+until the next restart.
+
+A change of the load of the variants file marks the requests that
+follow it as `afterStop` too, until a read of the new load is recorded
+or a request on the new load ends done or failed. The calculation worker
+is started again for the new load and opens its file before its first
+request (`docs/architecture.md`, section 5), with popnei 0.1.0 reading
+it whole. After a new pick, that opening is the read of the file, so the
+first Run after the read does not wait and is not marked. After an undo
+or a redo back to a load already read, nothing is recorded, since the
+source is read already, and the first Run waits for the opening, so it
+is marked. `popneiReady` does not clear this mark, since the worker
+announces itself ready before it opens the file. Decided on 25 September
+2026, within the owner's purpose for `afterStop`, after the review of
+the change of the load.
+
+The analyses of `removed` and `leftBehind` are listed in the order of the
 definitions, each once. A calculation that was being stopped and ends
 `done` all the same puts its result into the cache under its key, as
 any other.
