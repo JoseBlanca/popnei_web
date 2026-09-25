@@ -585,6 +585,49 @@ test("WS8 D2 a variants file the browser can no longer read is told so, with no 
     page.getByRole("heading", { level: 2, name: "Diversity" }),
   ).toBeFocused();
   await expectNoViolations(makeAxeBuilder);
+
+  // Another threshold does not bring Run back: the file is still unread.
+  await setThreshold(page, "0.05");
+  await goTo(page, "Analyses");
+  await expect(
+    panel(page).getByText(/^panel\.nei could not be read again/),
+  ).toBeVisible();
+  await expect(panel(page).getByRole("button")).toHaveCount(0);
+});
+
+test("the line of a calculation stopped by a read again goes once the user runs the analysis again, and does not come back after the user's own Stop", async ({
+  page,
+}) => {
+  await load(page, "panel.vcf.gz", "panel_pops.csv", "popcat");
+  const first = await calculationWorker(page);
+  await holdBack(first, ["result"]);
+  await goTo(page, "Analyses");
+  await panel(page).getByRole("button", { name: "Run" }).click();
+  await expect(panel(page).getByRole("button", { name: "Stop" })).toBeVisible();
+  await readAgainWithEveryVariant(page, "panel.vcf.gz");
+  await goTo(page, "Analyses");
+  const stoppedLine = panel(page).getByText(/was stopped because/);
+  await expect(stoppedLine).toBeVisible();
+
+  // The worker started for the read again keeps its result back too.
+  await expect
+    .poll(() =>
+      page
+        .workers()
+        .some((w) => w !== first && w.url().includes("runnerWorker")),
+    )
+    .toBe(true);
+  const second = page
+    .workers()
+    .find((w) => w !== first && w.url().includes("runnerWorker"));
+  if (second === undefined) throw new Error("no second calculation worker");
+  await holdBack(second, ["result"]);
+  await panel(page).getByRole("button", { name: "Run" }).click();
+  await expect(panel(page).getByRole("button", { name: "Stop" })).toBeVisible();
+  await expect(stoppedLine).toHaveCount(0);
+  await panel(page).getByRole("button", { name: "Stop" }).click();
+  await expect(panel(page).getByRole("button", { name: "Run" })).toBeVisible();
+  await expect(stoppedLine).toHaveCount(0);
 });
 
 test("WS8 D2 a calculation stopped by reading the same VCF again with other options says that, and not that a new file was loaded", async ({

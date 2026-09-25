@@ -1223,6 +1223,42 @@ describe("WP4 D2 the calculations", () => {
     expect(statuses(store)[1]).toStrictEqual({ kind: "ready", key });
   });
 
+  test("a variants file that could not be read again is kept under its load: every analysis that can run shows it, after a command and its undo too, and none can start until the load changes", () => {
+    const { store, sent } = storeWithBothReady();
+    store.startRun("vars");
+    const reopen = failure("reopenFailed");
+    if (reopen.kind !== "failed") {
+      throw new Error("failure gives a failed outcome");
+    }
+    store.runEnded(sentAt(sent, 0).run.id, reopen);
+    const shownError = { kind: "failed", error: reopen.error };
+    expect(statuses(store)).toStrictEqual([
+      { kind: "error", key: keyAt(store, 0), error: shownError },
+      { kind: "error", key: keyAt(store, 1), error: shownError },
+    ]);
+    expect(store.startRun("vars")).toBeNull();
+    expect(store.startRun("pops")).toBeNull();
+    store.apply("the MAF filter changed", maf(0.9));
+    expect(statuses(store)[1]).toStrictEqual({
+      kind: "error",
+      key: keyAt(store, 1),
+      error: shownError,
+    });
+    expect(store.startRun("vars")).toBeNull();
+    store.undo();
+    expect(statuses(store)[1]).toStrictEqual({
+      kind: "error",
+      key: keyAt(store, 1),
+      error: shownError,
+    });
+    expect(store.startRun("vars")).toBeNull();
+    expect(sent).toHaveLength(1);
+    // A new variants file, picked and read, forgets it.
+    store.apply("a new variants file was loaded", loadPanel(OTHER_VARIANTS_ID));
+    store.variantsRead(OTHER_VARIANTS_ID, VARIANTS_READ);
+    expect(kinds(store)).toStrictEqual(["ready", "ready"]);
+  });
+
   test("a failure is not forgotten when a read is recorded, the number of variants of another result among them", () => {
     const { store, sent } = storeWithBothReady();
     // A load of another variants file undone, pending in the future.
@@ -2413,6 +2449,34 @@ describe("WP4 D3 the notice", () => {
     replaced.store.apply("the MAF filter changed", maf(0.9));
     expect(replaced.store.getState().notice).toBeNull();
     expect(replaced.request.cancels()).toBe(1);
+  });
+
+  test("a startRun of an analysis in stopped takes it out, and a notice left with nothing goes, so that the user's own Stop is not told as the new file's", () => {
+    const { store, sent } = storeWithVarsRunning();
+    store.apply("a new variants file was loaded", loadPanel(OTHER_VARIANTS_ID));
+    store.variantsRead(OTHER_VARIANTS_ID, VARIANTS_READ);
+    expect(store.getState().notice).toMatchObject({ stopped: ["vars"] });
+    store.startRun("vars");
+    expect(store.getState().notice).toBeNull();
+    store.cancelRun("vars");
+    store.runEnded(sentAt(sent, 1).run.id, { kind: "cancelled" });
+    expect(store.getState().notice).toBeNull();
+    expect(kinds(store)[1]).toBe("ready");
+  });
+
+  test("a startRun of one analysis in stopped leaves the other there, and the rest of the notice", () => {
+    const { store } = storeWithBothReady();
+    store.startRun("pops");
+    store.startRun("vars");
+    store.apply("a new variants file was loaded", loadPanel(OTHER_VARIANTS_ID));
+    store.variantsRead(OTHER_VARIANTS_ID, VARIANTS_READ);
+    store.startRun("vars");
+    expect(store.getState().notice).toStrictEqual({
+      cause: { kind: "command", description: "a new variants file was loaded" },
+      removed: [],
+      leftBehind: [],
+      stopped: ["pops"],
+    });
   });
 
   test("one analysis can be both among the results removed and in stopped: its result of the old settings removed, its calculation of newer ones stopped", () => {

@@ -301,8 +301,10 @@ export interface Store<R> {
   dismissNotice(): void;
 
   /** Starts the calculation of an analysis that is ready, removed, or in
-      error after a failure that is not popnei's, after stopping every
-      calculation left behind; null, and nothing done, in any other state. */
+      error after a failure that is not popnei's nor a variants file that
+      could not be read again, after stopping every calculation left
+      behind, and takes the analysis out of the notice's `stopped`; null,
+      and nothing done, in any other state. */
   startRun(id: AnalysisId): Run<R> | null;
   /** Stops the calculation in flight of an analysis, if there is one. */
   cancelRun(id: AnalysisId): void;
@@ -426,6 +428,13 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       `popneiReady` does not clear it, since the worker is ready before
       it opens the file. */
   let reopening: string | null = null;
+  /** The variants file the browser could not read again, `reopenFailed`,
+      by its load id, until the load changes: every analysis of that load
+      that can run shows it, whatever its key, and none starts. */
+  let unreadable: {
+    readonly fileId: string;
+    readonly error: AnalysisError;
+  } | null = null;
 
   let locks: {
     readonly project: Project;
@@ -573,7 +582,13 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
         progress: running.progress,
       };
     }
-    const error = refusals.get(key) ?? failures.get(key);
+    const error =
+      refusals.get(key) ??
+      (unreadable !== null &&
+      unreadable.fileId === history.present.project.variants?.fileId
+        ? unreadable.error
+        : undefined) ??
+      failures.get(key);
     if (error !== undefined) {
       return { kind: "error", key, error };
     }
@@ -822,7 +837,8 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
   /**
    * Takes `next`, the history after a command, an undo or a redo, when it
    * is not the one there was: forgets the failures that are not popnei's;
-   * when the change changed the load of the variants file, stops every
+   * when the change changed the load of the variants file, forgets the
+   * file that could not be read again, and stops every
    * calculation in flight, and otherwise the calculations the notice
    * named whose key the new project still does not give; and makes the
    * notice of this change, `cause`, with the analyses that were done and
@@ -850,6 +866,7 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       !sameLoad(before.present.project.variants, next.present.project.variants)
     ) {
       reopening = next.present.project.variants?.fileId ?? null;
+      unreadable = null;
       // The calculation worker is started again for the new load, so no
       // calculation of the old one can wait for an undo.
       const inFlight = [...requests.values()].filter((r) => !r.stopping);
@@ -950,6 +967,11 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
             kind: "refused",
             message: outcome.error.message,
           });
+        } else if (outcome.error.kind === "reopenFailed") {
+          unreadable = {
+            fileId: request.fileId,
+            error: { kind: "failed", error: outcome.error },
+          };
         } else {
           failures.set(request.key, { kind: "failed", error: outcome.error });
         }
@@ -995,6 +1017,7 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       keysFor(opened.present.project, popneiVersion);
       stopEverything();
       failures.clear();
+      unreadable = null;
       history = opened;
       changed();
     },
@@ -1016,7 +1039,9 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
         !(
           status.kind === "ready" ||
           status.kind === "removed" ||
-          (status.kind === "error" && status.error.kind === "failed")
+          (status.kind === "error" &&
+            status.error.kind === "failed" &&
+            status.error.error.kind !== "reopenFailed")
         )
       ) {
         return null;
@@ -1089,6 +1114,14 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
         stopping: false,
         afterStop: sending.afterStop,
       });
+      // The user ran it again: the notice no longer tells that its
+      // calculation was stopped, and `settle` drops a notice left empty.
+      if (notice?.stopped.includes(id) === true) {
+        notice = {
+          ...notice,
+          stopped: notice.stopped.filter((stoppedId) => stoppedId !== id),
+        };
+      }
       try {
         changed();
       } catch (error) {
