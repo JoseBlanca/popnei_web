@@ -1,5 +1,6 @@
 {
   "name": "popnei_web",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -19,7 +20,7 @@
     "screens": "npm run build && playwright test --project=screens"
   },
   "dependencies": {
-    "popnei": "https://github.com/JoseBlanca/popnei/releases/download/js-v0.1.0-dev.1/popnei-0.1.0.tgz",
+    "popnei": "https://github.com/JoseBlanca/popnei/releases/download/js-v0.1.0-dev.2/popnei-0.1.0.tgz",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
