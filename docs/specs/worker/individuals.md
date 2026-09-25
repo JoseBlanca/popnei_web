@@ -403,9 +403,11 @@ it, the comma, the semicolon or the tab, since a wrong separator is the
 likeliest cause of both and a failed read has no `found` to show it; the
 owner decided on 25 September 2026 that the refusal says it. The owner
 decided the same day that in the Individuals step these two end "Choose
-another separator above, or load a corrected file.", since a wrong
-separator is their likeliest cause and the separator is set just above
-the refusal there.
+another separator, or load a corrected file.", since a wrong
+separator is their likeliest cause and the separator is set in that
+step; the owner took out, the same day, the "above" of the first
+wording, since the options of the reader stand beside the refusal on a
+wide screen and under it on a phone.
 
 ## The TypeScript interface
 
