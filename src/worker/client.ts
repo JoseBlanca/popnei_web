@@ -285,7 +285,7 @@ export function createClient(config: {
         `popnei_web defect: an open of the load ${load}, whose File or read options the client does not hold`,
       );
     }
-    const readers: VariantsRead[] = [];
+    const readers: VariantsRequest[] = [];
     const rest: CalculationRequest[] = [];
     for (const request of calc.queue) {
       if (request.kind === "read" && request.fileId === load) {
@@ -329,7 +329,9 @@ export function createClient(config: {
         return;
       }
       const message = describeMessageError(parsed.error);
-      console.error(`popnei_web: the calculation worker sent ${message}`);
+      console.error(
+        `popnei_web: a message of the calculation worker was refused. ${message}`,
+      );
       calculationBroken({ kind: "defect", message });
       return;
     }
@@ -683,7 +685,7 @@ export function createClient(config: {
     light.life.start();
   }
 
-  function enqueueLight(request: IndividualsRead): void {
+  function enqueueLight(request: IndividualsRequest): void {
     switch (light.life.phase) {
       case "givenUp":
         finishIndividuals(request, couldNotStart(light.life.reason));
@@ -733,7 +735,9 @@ export function createClient(config: {
         return;
       }
       const message = describeMessageError(parsed.error);
-      console.error(`popnei_web: the light worker sent ${message}`);
+      console.error(
+        `popnei_web: a message of the light worker was refused. ${message}`,
+      );
       lightBroken({ kind: "defect", message });
       return;
     }
@@ -824,7 +828,7 @@ export function createClient(config: {
     }
   }
 
-  function cancelLight(request: IndividualsRead): void {
+  function cancelLight(request: IndividualsRequest): void {
     if (request.answer.settled()) {
       return;
     }
@@ -857,7 +861,7 @@ export function createClient(config: {
         );
       }
       const { promise, resolve } = promiseWithResolver<VariantsOpened>();
-      const request: VariantsRead = {
+      const request: VariantsRequest = {
         kind: "read",
         id: nextId(),
         fileId: load.fileId,
@@ -885,7 +889,7 @@ export function createClient(config: {
         resolve(noFile(fileId));
         return { outcome: promise, cancel: () => undefined };
       }
-      const request: IndividualsRead = {
+      const request: IndividualsRequest = {
         id,
         file,
         csv,
@@ -997,7 +1001,7 @@ function settler<A>(resolve: (answer: A) => void): Settler<A> {
 type WorkerFailure = Extract<RunError, { kind: "workerFailed" | "defect" }>;
 
 /** A read of the variants file. */
-interface VariantsRead {
+interface VariantsRequest {
   readonly kind: "read";
   readonly id: number;
   readonly fileId: string;
@@ -1014,10 +1018,10 @@ interface RunRequest {
   readonly answer: Settler<Outcome<JobResult>>;
 }
 
-type CalculationRequest = VariantsRead | RunRequest;
+type CalculationRequest = VariantsRequest | RunRequest;
 
 /** A read of the individuals file. */
-interface IndividualsRead {
+interface IndividualsRequest {
   readonly id: number;
   readonly file: File;
   readonly csv: CsvOptions;
@@ -1034,7 +1038,7 @@ interface Opening {
       the open ends. */
   readonly reopen: boolean;
   /** The reads that wait for its answer. */
-  readonly readers: VariantsRead[];
+  readonly readers: VariantsRequest[];
 }
 
 /** The state of the calculation worker. */
@@ -1061,8 +1065,8 @@ interface CalculationSide {
 /** The state of the light worker. */
 interface LightSide {
   readonly life: Life;
-  running: IndividualsRead | null;
-  queue: IndividualsRead[];
+  running: IndividualsRequest | null;
+  queue: IndividualsRequest[];
 }
 
 const CANCELLED = { kind: "cancelled" } as const;
@@ -1216,7 +1220,7 @@ function finish(
   }
 }
 
-function finishRead(request: VariantsRead, answer: VariantsOpened): void {
+function finishRead(request: VariantsRequest, answer: VariantsOpened): void {
   request.answer.settle(answer);
 }
 
@@ -1225,7 +1229,7 @@ function finishRun(request: RunRequest, outcome: Outcome<JobResult>): void {
 }
 
 function finishIndividuals(
-  request: IndividualsRead,
+  request: IndividualsRequest,
   answer: IndividualsAnswer,
 ): void {
   request.answer.settle(answer);
