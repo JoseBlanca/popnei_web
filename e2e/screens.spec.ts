@@ -479,6 +479,25 @@ for (const theme of ["light", "dark"] as const) {
       await save(page, `popgen-variants-threshold-refused-${theme}`);
     });
 
+    test("the Variants step, a comma typed in the threshold", async ({
+      page,
+    }) => {
+      const threshold = page.getByLabel(
+        "Maximum proportion of missing genotypes",
+      );
+      await threshold.fill("");
+      await threshold.pressSequentially("0,2");
+      await threshold.press("Enter");
+      await expect(
+        page
+          .getByRole("main")
+          .getByText(
+            "Write the decimals with a point, 0.1 and not 0,1; the threshold stays 0.1.",
+          ),
+      ).toBeVisible();
+      await save(page, `popgen-variants-comma-${theme}`);
+    });
+
     test("the Variants step, a ploidy refused", async ({ page }) => {
       const ploidy = page.getByLabel("Ploidy of the VCF");
       await ploidy.fill("2.5");
@@ -655,6 +674,45 @@ for (const theme of ["light", "dark"] as const) {
       await save(page, `popgen-individuals-excel-${theme}`);
     });
 
+    test("the Individuals step, a piece of text dropped", async ({ page }) => {
+      await goTo(page, "Individuals");
+      const dataTransfer = await page.evaluateHandle(() => {
+        const transfer = new DataTransfer();
+        transfer.setData("text/plain", "pops.csv");
+        return transfer;
+      });
+      const target = page
+        .getByRole("region", { name: "Metadata file" })
+        .getByRole("button", { name: /^(Choose|Replace) .*…$/ });
+      for (const type of ["dragenter", "dragover", "drop"]) {
+        await target.dispatchEvent(type, { dataTransfer });
+      }
+      await expect(
+        page
+          .getByRole("main")
+          .getByText(
+            "Load a metadata file, a CSV or a TSV, not a piece of text.",
+          ),
+      ).toBeVisible();
+      await save(page, `popgen-individuals-text-dropped-${theme}`);
+    });
+
+    test("the Individuals step, the types at 320 px", async ({ page }) => {
+      await page.setViewportSize({ width: 320, height: 900 });
+      await goTo(page, "Individuals");
+      await pickIndividuals(page, {
+        name: "spain.csv",
+        text:
+          "Individuo;País;Sano;Altura;score\n" +
+          "i1;España;sí;1,75;1\n" +
+          "i2;Italia;no;1,62;2\n" +
+          "i3;Perú;sí;;3\n" +
+          "i4;España;no;1,80;5\n",
+      });
+      await expect(page.getByText(/^Warning: score/)).toBeVisible();
+      await save(page, `popgen-individuals-types-320-${theme}`);
+    });
+
     test("the diversity locked", async ({ page }) => {
       await pickVariants(page, "panel.nei");
       await expect(page.getByText("200 individuals")).toBeVisible();
@@ -746,6 +804,10 @@ for (const theme of ["light", "dark"] as const) {
       await goTo(page, "Analyses");
       await page.getByRole("button", { name: "Run" }).click();
       await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
+      // The frame measured as narrower than the table, and its line shown.
+      await expect(
+        page.getByText("Scroll the table sideways to see all its columns."),
+      ).toBeVisible();
       // The frame of the table, reached by the Tab key, with its focus
       // ring.
       await page.keyboard.press("Tab");
