@@ -6,7 +6,19 @@
   display: flex;
   gap: var(--space-2);
   align-items: flex-start;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  /* No wider than the place it is given, in a grid or a flex row, whose
+     item is otherwise as wide as its longest word: the same for the
+     words inside it, below. */
+  min-inline-size: 0;
+}
+
+/* The words may be narrower than their longest word, which a flex item
+   is not by default: a name of a file with no space is then cut to fit,
+   by break-word, rather than pushing the page sideways (WCAG 1.4.10);
+   break-word, unlike anywhere, cuts no word that fits on a line. */
+.text {
+  min-inline-size: 0;
 }
 
 .icon {

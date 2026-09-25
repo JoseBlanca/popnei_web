@@ -19,7 +19,7 @@ export function Warning({ children }: WarningProps): React.JSX.Element {
   return (
     <span className={classOf(styles, "warning")}>
       <WarningIcon />
-      <span>Warning: {children}</span>
+      <span className={classOf(styles, "text")}>Warning: {children}</span>
     </span>
   );
 }

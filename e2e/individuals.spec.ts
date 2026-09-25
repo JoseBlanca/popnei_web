@@ -700,9 +700,35 @@ test("WS8 D1 several files dropped at once load none, and the step says why and 
   await expectNoViolations(makeAxeBuilder);
 });
 
+/** The words of an element whose letters stand on more than one line,
+    which the browser cut to fit its width. */
+async function cutWords(element: Locator): Promise<string[]> {
+  return element.evaluate((root) => {
+    const cut: string[] = [];
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (
+      let node = walker.nextNode();
+      node !== null;
+      node = walker.nextNode()
+    ) {
+      const text = node.textContent ?? "";
+      for (const match of text.matchAll(/\S+/g)) {
+        const range = document.createRange();
+        range.setStart(node, match.index);
+        range.setEnd(node, match.index + match[0].length);
+        const lines = new Set(
+          Array.from(range.getClientRects(), (rect) => Math.round(rect.top)),
+        );
+        if (lines.size > 1) cut.push(match[0]);
+      }
+    }
+    return cut;
+  });
+}
+
 // 320 px is a phone, and 640 px a window of 1280 px at 200% zoom.
 for (const width of [320, 640]) {
-  test(`WS8 D1 at ${String(width)} px wide no word of the table of the columns is cut, and the page does not scroll sideways`, async ({
+  test(`WS8 D1 at ${String(width)} px wide no word of the table of the columns, of a warning or of a problem is cut, and the page does not scroll sideways`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: 800 });
@@ -713,39 +739,42 @@ for (const width of [320, 640]) {
     });
     const table = page.getByRole("table", { name: "Columns" });
     await expect(table).toBeVisible();
-    const cells = [
+    const parts = [
       table.getByRole("columnheader", { name: "Column", exact: true }),
       table.getByRole("columnheader", { name: "Type", exact: true }),
       table.getByRole("columnheader", { name: "First values", exact: true }),
       table.getByRole("rowheader", { name: "score", exact: true }),
+      // The warning, whose "measurement" was cut at 320 px.
+      table.getByText(/^Warning: score holds only 3/),
     ];
-    for (const cell of cells) {
-      // A word is cut when its letters stand on more than one line.
-      const cut = await cell.evaluate((element) => {
-        const text = element.firstChild;
-        if (text === null) return ["the cell has no text"];
-        const words: string[] = [];
-        let start = 0;
-        for (const word of (text.textContent ?? "").split(" ")) {
-          const range = document.createRange();
-          range.setStart(text, start);
-          range.setEnd(text, start + word.length);
-          const lines = new Set(
-            Array.from(range.getClientRects(), (rect) => Math.round(rect.top)),
-          );
-          if (lines.size > 1) words.push(word);
-          start += word.length + 1;
-        }
-        return words;
-      });
-      expect(cut).toEqual([]);
+    for (const part of parts) {
+      expect(await cutWords(part)).toEqual([]);
     }
-    expect(
-      await page.evaluate(
+    const sideways = (): Promise<boolean> =>
+      page.evaluate(
         () =>
-          document.documentElement.scrollWidth <=
+          document.documentElement.scrollWidth >
           document.documentElement.clientWidth,
-      ),
-    ).toBe(true);
+      );
+    expect(await sideways()).toBe(false);
+
+    // A problem: the reason of a file refused.
+    await pick(page, {
+      name: "short.csv",
+      text: "IID;popcat;region\ns000;p0;north\ns001;p0\n",
+    });
+    const reason = zone(page).getByText(/^short\.csv could not be read/);
+    await expect(reason).toBeVisible();
+    expect(await cutWords(reason)).toEqual([]);
+    expect(await sideways()).toBe(false);
+
+    // A word longer than the line, a name of a file with no space, is
+    // cut to fit rather than pushing the page sideways.
+    const longName = `${"metadata_of_the_collection_".repeat(3)}2026.xlsx`;
+    await pick(page, { name: longName, text: "PK" });
+    await expect(
+      page.getByRole("main").getByText(/was not loaded: this version/),
+    ).toBeVisible();
+    expect(await sideways()).toBe(false);
   });
 }

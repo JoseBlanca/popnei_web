@@ -19,7 +19,7 @@ export function Problem({ children }: ProblemProps): React.JSX.Element {
   return (
     <p className={classOf(styles, "problem")}>
       <ProblemIcon />
-      <span>{children}</span>
+      <span className={classOf(styles, "text")}>{children}</span>
     </p>
   );
 }
