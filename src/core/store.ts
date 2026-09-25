@@ -1204,8 +1204,12 @@ function recordShared<S extends object>(
   });
 }
 
-/** Whether two variants files are the same load: the same load id and
-    the same read options, or no file in both. */
+/** Whether two variants files are the same load: the same load id, or
+    no file in both. Other read options come today only with a new load
+    id, since `loadVariants` refuses them under the id already there;
+    they are compared as well so that a way of changing them under the
+    same id, which stage 3 may find for the ploidy, is still a change of
+    the load (the store spec). */
 function sameLoad(a: VariantSource | null, b: VariantSource | null): boolean {
   if (a === null || b === null) {
     return a === b;

@@ -2401,6 +2401,26 @@ describe("WP4 D3 the notice", () => {
     expect(replaced.request.cancels()).toBe(1);
   });
 
+  test("one analysis can be both among the results removed and in stopped: its result of the old settings removed, its calculation of newer ones stopped", () => {
+    const { store, sent } = storeWithVariantsRead();
+    store.startRun("vars");
+    const first = sentAt(sent, 0);
+    store.runEnded(first.run.id, doneWith(first, varsResult(null)));
+    store.apply("the MAF filter changed", maf(0.9));
+    store.startRun("vars");
+    const newer = sentAt(sent, 1);
+    store.undo();
+    expect(statuses(store)[1]?.kind).toBe("done");
+    store.apply("a new variants file was loaded", loadPanel(OTHER_VARIANTS_ID));
+    expect(newer.cancels()).toBe(1);
+    expect(store.getState().notice).toStrictEqual({
+      cause: { kind: "command", description: "a new variants file was loaded" },
+      removed: ["vars"],
+      leftBehind: [],
+      stopped: ["vars"],
+    });
+  });
+
   test("the analyses stopped are listed in the order of the definitions, not of their start", () => {
     const { store } = storeWithBothReady();
     store.startRun("vars");
@@ -2748,6 +2768,24 @@ const twoUndos: fc.Arbitrary<readonly Step[]> = fc
     { kind: "undo" },
   ]);
 
+/** A variants file loaded into an empty project, read and run, then the
+    load undone, back to a project with no variants file: with single
+    steps alone, such an undo was drawn so seldom that a store taking no
+    file for the same load as any file failed the properties in 2 runs of
+    10. */
+const undoToNoFile: fc.Arbitrary<readonly Step[]> = analysisId.map(
+  (analysis): readonly Step[] => [
+    { kind: "open", empty: true },
+    {
+      kind: "command",
+      command: { name: "loadVariants", bind: () => loadPanel(VARIANTS_ID) },
+    },
+    { kind: "read", ok: true },
+    { kind: "startRun", analysis },
+    { kind: "undo" },
+  ],
+);
+
 /** The options of a CSV, drawn. */
 const csvDrawn: fc.Arbitrary<CsvOptions> = fc.record(
   {
@@ -2791,6 +2829,7 @@ const steps: fc.Arbitrary<readonly Step[]> = fc
     fc.oneof(
       { arbitrary: step.map((s): readonly Step[] => [s]), weight: 10 },
       { arbitrary: twoUndos, weight: 1 },
+      { arbitrary: undoToNoFile, weight: 1 },
       { arbitrary: csvReadAgain, weight: 1 },
     ),
     { maxLength: 30, size: "max" },
