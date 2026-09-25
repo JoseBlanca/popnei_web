@@ -2,26 +2,50 @@
 
 25 September 2026, a draft awaiting the owner's approval. The screen
 spec of what surrounds every step of the population genetics
-application in the walking skeleton of stage 2 (`docs/build-order.md`):
-the header, with Undo, Redo and the saving and opening of the project
-file; the stepper, the row of the steps with the state of each; the
-summary line under it, which says what dataset is in use; the notice of
-what the last change removed or stopped, with its Undo or Redo; the
-status region, which a screen reader reads out; and the error bar. It
-shows sections 1, 2 and 9 of `docs/functionality.md`, and reads the
-store of `docs/specs/core/store.md`, the project of
-`docs/specs/core/project.md` and the project file of
-`docs/specs/core/projectFile.md`. The page and the code that starts it
-are `docs/specs/entry.md`. There is no code of it yet.
+application in the walking skeleton of stage 2 (`docs/build-order.md`),
+the smallest application that goes through every part once: the header,
+with Undo, Redo and the saving and opening of the project file; the
+stepper, the row of the steps with the state of each; the summary line
+under it, which says what dataset is in use; the notice of what the last
+change removed or stopped, with its Undo or Redo; the status region,
+which a screen reader reads out; and the error bar. It shows sections 1,
+2 and 9 of `docs/functionality.md`, and reads the store of
+`docs/specs/core/store.md`, the project of `docs/specs/core/project.md`
+and the project file of `docs/specs/core/projectFile.md`. The page, the
+code that starts it, and the saving that the header and the error bar
+share are `docs/specs/entry.md`. The shell gives the words of every
+announcement of the status region, those of the steps and of the panel
+of the diversity among them. There is no code of it yet.
 
 The words of core used here: the **project** is everything the user has
 set; a **command** is a change of it that one Undo takes back, sent with
 a **description** that ends its notice, "the missing data filter
 changed"; a **load** is one pick of a file; a **source** is what the
 project holds of a loaded file, and its **read** what a worker read of
-it, pending until the worker answers. The **URL hash** is the part of
-the address after `#`, `popgen.html#analyses`, which the browser's back
-button moves through without loading the page again.
+it, pending until the worker answers; `numVars` of a read variants file
+is its number of variants, `null` until the first calculation has read
+the whole file and counted them. `projectNeeds(p)` and
+`individualsNeeds(p)` of `src/core/project.ts` give, as a sentence, the
+reason no analysis can run because of the variants file or of the
+individuals file, or `null`. The **reference** of a project opened from
+a project file is what that file said of the variants file it was made
+with. The **notice** is the store's record of what the last change did,
+whose `cause.kind` is `command`, `undo` or `redo`
+(`docs/specs/core/store.md`).
+
+The words of the web: a **screen reader** reads the page aloud, or in
+braille, to a user who cannot see it, and reads what has the **focus**,
+the element the keyboard acts on; `<header>`, `<nav>` and `<main>` are
+the **landmarks** of the page, the parts a screen reader can jump
+between, and `<h1>` is its heading. A **toast** is a small panel at the
+bottom of the page, and a **dialog** a panel that takes the focus and
+blocks the page behind it until it is answered; both are components of
+**React Aria**, the library of accessible widgets the application uses.
+The **URL hash** is the part of the address after `#`,
+`popgen.html#analyses`, which the browser's back button moves through
+without loading the page again. The numbers such as 1.4.1 are success
+criteria of WCAG 2.2, the standard of accessibility the site follows at
+level AA.
 
 ## What it shows
 
@@ -38,11 +62,16 @@ its `<h1>`; and the notice, at the bottom.
   `store.redo()`. Each is described, for a screen reader and on hover,
   by what it would take back or bring again, "Undo: the missing data
   filter changed", from `undo` and `redo` of the state of the store, and
-  is disabled when that is `null`. The keyboard gives them too
+  is disabled when that is `null`. When Undo becomes disabled while it
+  has the focus, after the last step was undone with it, the focus moves
+  to Redo, which that undo has just enabled, and the same for Redo and
+  Undo: a disabled button cannot hold the focus, which the browser would
+  drop to the start of the page (2.4.3). The keyboard gives them too
   (`.claude/skills/coding/react.md`, "Keyboard shortcuts"): Ctrl+Z
   undoes; Ctrl+Shift+Z and Ctrl+Y redo; on macOS Cmd+Z and Cmd+Shift+Z;
   except while the focus is in a text field, where they belong to the
-  text.
+  text, and while a dialog of the shell is open, where they would change
+  the project behind the question it asks.
 - **Open project…** and **Save project**, below ("Saving", "Opening").
 
 ### The stepper
@@ -50,41 +79,54 @@ its `<h1>`; and the notice, at the bottom.
 A `<nav>` labelled "Steps", with one link per step, `#variants`,
 `#individuals` and `#analyses`, and on each its name, the one of the
 `<h1>` of its step, and its state, as a word with a symbol beside it, so
-that the state is not told by colour alone (WCAG 2.2, success criterion
-1.4.1). Three steps, and no Export step yet (**Open 1**).
+that the state is not told by colour alone (1.4.1). Three steps, and no
+Export step yet (**Open 1**).
 
 The link of the step on screen has `aria-current="step"` and a mark that
-is not colour alone. Every step can be opened in every state: a locked
-step shows why it is locked, in its own words, and a link that could not
-be followed would hide the reason from the user who needs it. The reason
-of a step that is not done is also the description of its link, read by
-a screen reader with its name, and shown on hover and on focus.
+is not colour alone. Every step can be opened in every state: a step
+that cannot go on shows why, as text on its own screen, and a link that
+could not be followed would hide the reason from the user who needs it.
+The reason of a step that is not done is also the description of its
+link, read by a screen reader with its name, and shown on hover and on
+focus. The links are React Aria's `Link`, which is an `<a>` the browser
+follows, so that React Aria's `TooltipTrigger`, which takes a trigger of
+its own components, can show the reason; if it does not take a `Link`
+when it is built, the reason is a line of text under the stepper while
+the link has the pointer or the focus.
 
 | step | state | when | its reason |
 |---|---|---|---|
-| Variants | To do | no variants file | "Load a variants file." or, for an opened project, "Load panel_2026.nei, which the project was made with." |
-| | Reading | its read is pending | "Reading panel.nei." |
+| Variants | To do | no variants file | for an opened project, the text of `askedFileText` of `projectFile.ts`, "This project was made with panel_2026.nei, 342 individuals and 1,203,554 variants. Load it in the Variants step to run its analyses again."; otherwise the reason `projectNeeds` gives, "Load a variants file in the Variants step." |
+| | Reading | its read is pending | the reason `projectNeeds` gives, "Reading panel.nei." |
 | | Problem | its read failed, or `projectNeeds` gives another reason | the reason `projectNeeds` gives |
 | | Done | read, and `projectNeeds` gives none | — |
-| Individuals | To do | no metadata file | "Load a metadata file." |
-| | Reading | its read is pending | "Reading pops.csv." |
-| | Problem | its read failed, or `individualsNeeds` gives another reason, the individuals missing among them | the reason `individualsNeeds` gives |
-| | Done | read, and `individualsNeeds` gives none | — |
+| Individuals | To do | no metadata file | the reason `individualsNeeds` gives, "Load an individuals file in the Individuals step." |
+| | Reading | its read is pending | "Reading pops.csv.", from `individualsNeeds` |
+| | Problem | its read failed, or individuals of the variants file are missing from it | the reason `individualsNeeds` gives |
+| | To do | read, and no column of the populations chosen | "Choose the column that defines the populations in the Individuals step." |
+| | Problem | the column chosen is not in the table, or no individual of the variants file has a population in it | the reason the diversity gives for it |
+| | Done | otherwise | — |
 | Analyses | Locked | every analysis is locked | the reason of the first analysis, "Load a variants file in the Variants step." |
 | | Running | an analysis is running | — |
 | | Results removed | the notice lists an analysis among the results removed | — |
-| | Failed | an analysis is in the state `error` | "Diversity failed." |
+| | Failed | an analysis is in the state `error` | "Diversity could not be calculated." |
 | | Done | every analysis that is not locked is done | — |
 | | Ready | otherwise | — |
 
-The states of the Analyses step are taken from the states the store
-gives each analysis (`docs/specs/core/store.md`, "The state of an
-analysis"), the first row that holds, in the order of the table. With
-the diversity alone they are its state. The words of the Individuals
-step follow its spec, which calls the file of population genetics the
-metadata file (`docs/specs/steps/individuals.md`); if that spec makes
-the file optional (its **Open 1**), its To do becomes "Optional", with
-the reason "Without it, every individual is in one population."
+A step's state is the first row of its step whose condition holds, in
+the order of the table. The states of the Analyses step are taken from
+the states the store gives each analysis (`docs/specs/core/store.md`,
+"The state of an analysis"); with the diversity alone they are its
+state. The reasons about the column of the populations are the
+diversity's words, "Why it cannot run" of
+`docs/specs/analyses/diversity.md`, given by a function that module
+exports, so that one condition has one text. The step calls the file of
+population genetics the metadata file
+(`docs/specs/steps/individuals.md`), and core's reasons call it the
+individuals file, which that spec's **Open 2** asks about. If that spec
+makes the file optional (its **Open 1**), the first To do becomes
+"Optional", with the reason "Without it, every individual is in one
+population."
 
 **The step in the hash.** The step on screen is the one the hash names;
 an empty hash, or one that names no step, shows Variants and leaves the
@@ -110,7 +152,7 @@ not announced when it changes.
 | the variants file | none | "No variants file", or for an opened project "No variants file: the project was made with panel_2026.nei" |
 | | being read | "Reading panel.nei" |
 | | read failed | "panel.nei could not be read" |
-| | read | "panel.nei · 200 individuals", the individuals of the file, and "· 1,200 variants" once a pass has counted them (`numVars` of the source) |
+| | read | "panel.nei · 200 individuals", the individuals of the file, and "· 1,200 variants" once a calculation has counted them (`numVars` of the source) |
 | the filters | | "no filter", "1 filter", "2 filters": the filters of the variants and of the individuals |
 | the metadata file | none | "no metadata file" |
 | | being read | "reading pops.csv" |
@@ -130,16 +172,16 @@ not know (**Open 2**).
 The notice says what the last change removed from the screen and which
 calculations it stopped or will stop, with the action that reverses the
 change (`docs/specs/core/store.md`, "The notice, and the calculations it
-stops"). It is a toast of React Aria, a small panel at the bottom of the
-page, the one the store gives, `notice` of its state, or none. It has
-two buttons: the action, **Undo** after a command or a redo, **Redo**
-after an undo, as the owner decided on 25 September 2026, taken from
-`cause.kind`; and **Close**, which calls `store.dismissNotice()`.
+stops"). It is a toast, the one the store gives, `notice` of its state,
+or none. It has two buttons: the action, **Undo** after a command or a
+redo, **Redo** after an undo, as the owner decided on 25 September 2026,
+taken from `cause.kind`; and **Close**, which calls
+`store.dismissNotice()`.
 
 **It has no timer.** It stays until the next command, undo, redo or
 opening replaces it, or until it is closed, as the store has it. A
 notice that went away by itself would take its Undo from a user who is
-slow to reach it, with the keyboard or a screen reader (WCAG 2.2.1), and
+slow to reach it, with the keyboard or a screen reader (2.2.1), and
 closing it is what stops the calculations it left behind. Undo and Redo
 stay in the header and on the keyboard, so the notice is never the only
 way.
@@ -162,103 +204,140 @@ from four parts:
 
 The removed and the stopped are joined by "and"; the sentences are
 joined by a full stop, with none after the last, which the action
-follows. A name is the title of the analysis's panel, "Diversity".
+follows. A name is the title of the analysis's panel, "Diversity". A
+command's description starts the sentence with its first letter made
+upper case when nothing comes before it.
 
 | the cause | the notice |
 |---|---|
 | a command | "Diversity removed because the missing data filter changed · Undo" |
+| a command that changes the load, with a calculation running and no result to remove | "The calculation of Diversity stopped because a new variants file was loaded · Undo" |
 | a command, with calculations stopped | "Diversity removed and the calculation of Diversity stopped because a new variants file was loaded · Undo" |
 | a command, with a calculation left behind and nothing removed | "The missing data filter changed. The ongoing calculation of Diversity will be stopped unless you undo the change · Undo" |
 | an undo | "Undone: the missing data filter changed. Diversity removed · Redo" |
 | an undo that changes the load | "Undone: a new variants file was loaded. The calculation of Diversity stopped · Redo" |
 | a redo, with a calculation left behind | "Redone: the missing data filter changed. Diversity removed. The ongoing calculation of Diversity will be stopped unless you undo the change · Undo" |
 
-The second row is the case of one analysis whose result of the old
+The third row is the case of one analysis whose result of the old
 settings is removed and whose calculation of newer ones is stopped
-(`docs/specs/core/store.md`, "The cases"). A command's description
-starts the sentence with its first letter made upper case when nothing
-comes before it. The pattern is the owner's mockup, "3 results removed
-because the MAF filter changed · Undo", and the store's, "2
-calculations stopped because a new variants file was loaded · Undo".
+(`docs/specs/core/store.md`, "The cases"). The pattern is the owner's
+mockup, "3 results removed because the MAF filter changed · Undo", and
+the store's, "2 calculations stopped because a new variants file was
+loaded · Undo".
 
-When a Run stops the calculations the notice left behind, the notice
-loses its sentence on them and keeps the rest, or goes if nothing is
-left, and the status region says "The earlier calculation of Diversity
-was stopped." (below).
+When the user starts a calculation with the Run button of an analysis
+while the notice has calculations left behind, the store stops them
+first (`docs/specs/core/store.md`, "The notice, and the calculations it
+stops"); the notice loses its sentence on them and keeps the rest, or
+goes if nothing is left, and the status region says so (below).
 
 ### The status region
 
-A `<div role="status">`, empty and present from the first drawing of the
-page, since a region added at the moment of its message is not read by
-every screen reader (`react.md`, "Announcements"). What is written into
-it is read out without moving the focus (WCAG 2.2, success criterion
-4.1.3). An announcement equal to the one before is still read: the
-region is emptied before it is written.
+A `<div role="status">` in the shell, empty and present from the first
+drawing of the page, since a region added at the moment of its message
+is not read by every screen reader (`react.md`, "Announcements"). What
+is written into it is read out without moving the focus (4.1.3).
 
-Two kinds of announcements go into it. The first are made from the
-state of the store, by one function of the shell that compares the
-state before a change with the state after it; the entry calls it at
-every change (`docs/specs/entry.md`). They are of what the user did not
-do at that moment, and may not be looking at:
+It is written by the **announcer**, `createAnnouncer()` of
+`src/ui/shell/status.ts`, which the entry makes once
+(`docs/specs/entry.md`) and the shell gives the screens. `announce(text)`
+empties the region at once and writes the text 100 ms later, with any
+other text announced in those 100 ms after it, joined by a space. The
+region is emptied first because a screen reader reads a text written
+again only if it changed, and the pause, because React draws two changes
+made in the same moment as one. 100 ms is decided here, to be checked
+with VoiceOver.
 
-| what changed | the announcement |
+Two kinds of announcements go into it.
+
+**The first are made from the state of the store**, by
+`announcementsOf(before, after)`, which the entry calls at every change
+of the store with the state before and the state after. They are of
+what the user did not do at that moment, and may not be looking at. A
+calculation is followed by the id of its request, `runId` of the
+`RunView`s in `runs`; a read by its load id, and for the individuals
+file its options of the CSV compared by their values:
+
+| what changed, from one state to the next | the announcement |
 |---|---|
-| a calculation started | "Diversity: running." |
-| a calculation ended with its result shown | "Diversity: done.", "Diversity: done, 2 warnings." |
-| a calculation ended in the state `error` | "Diversity: failed. The Analyses step says why." |
-| a calculation stopped with Stop | "Diversity: stopped." |
-| a Run stopped the calculations the notice left behind | "The earlier calculation of Diversity was stopped." |
-| the variants file read | "panel.nei read: 200 individuals, ploidy 2." (`docs/specs/steps/variants.md`) |
-| the variants file not read | "bad.vcf could not be read." and the reason `projectNeeds` gives |
-| the metadata file read | "pops.csv read: 360 rows, 5 columns." and "All 342 individuals found." or "12 individuals of panel.nei are not in pops.csv." (`docs/specs/steps/individuals.md`) |
-| the metadata file not read | the reason `individualsNeeds` gives |
+| a request is in `runs` that was not | "Diversity: calculating." |
+| in the same change, calculations left behind, which the current project no longer asks for, went to being stopped | added to it: "The earlier calculation of Diversity was stopped.", or "The 2 earlier calculations were stopped." |
+| a request that was current and not being stopped left `runs`, and its analysis is `done` under its key | "Diversity: done.", "Diversity: done, 2 warnings." |
+| the same, and its analysis is in the state `error` under its key | "Diversity could not be calculated. The Analyses step says why." |
+| a request that was current and being stopped left `runs` | "Diversity: stopped." |
+| the variants file of the same load went from pending to read | "panel.nei read: 200 individuals, ploidy 2.", and, when the metadata file is read, the sentence of the check below |
+| the same, to failed | the reason `projectNeeds` gives, which names the file: "popnei could not read bad.vcf: … Load a variants file in the Variants step." |
+| the metadata file of the same load and options went from pending to read | "pops.csv read: 360 rows, 5 columns.", and, when the variants file is read, the sentence of the check: "All 342 individuals found." or "12 individuals of panel.nei are not in pops.csv." |
+| the same, to failed | the reason `individualsNeeds` gives |
 
-A result that comes back from the cache after an undo is not announced
-as a calculation done: only a calculation that ended is. The notice is
-not written here, since the toast of React Aria is read out by itself.
+Nothing else is announced from the state. So a result that comes back
+from the cache after an undo is not announced, since no request ended;
+a calculation left behind that ends, or is stopped by Close, is not,
+since its result is not on the screen; an undo back to a load already
+read, and an opening, are not announced as reads, since no read of the
+same load went from pending. A calculation that a change of the load
+stopped is in the notice, which is not written here, since the toast of
+React Aria is read out by itself.
 
-The second are said by an event handler, through a function the shell
-gives the screens: an undo or a redo that makes no notice, "Undone: the
-missing data filter changed.", "Redone: …", since otherwise a user of a
-screen reader who pressed Ctrl+Z hears nothing; a project saved or
-opened (below); the details of an error copied. Several at once are
-joined into one message.
+**The second are said by an event handler**, through `announce`, which
+the shell gives the screens:
+
+| what the user did | the announcement |
+|---|---|
+| an undo or a redo that makes no notice, with the button or the keyboard | "Undone: the missing data filter changed.", "Redone: the missing data filter changed." |
+| Save project | "panel.popnei.json was handed to the browser to download." (below, "Saving") |
+| a project opened | "Opened panel.popnei.json." followed by the text of `askedFileText` when it gives one (below, "Opening") |
+| a file that a step did not load, several dropped at once, a variants file above 1.5 GB, the warning of a reopened project that differs from its file | the text the step shows for it, whose words are the step's (`docs/specs/steps/variants.md` and `individuals.md`, "Its words") |
+
+Without the first, a user of a screen reader who pressed Ctrl+Z would
+hear nothing.
 
 ### The error bar
 
-An error of our own code that no error boundary sees is shown in a bar
-at the top of the page, above the header, as the owner decided on 25
-September 2026 (`react.md`, "Errors"; `docs/specs/entry.md`, "The
-errors nothing else shows"). The bar says:
+An error of our own code that no error boundary sees, a component that
+catches what throws while React draws the part of the screen under it,
+is shown in a bar at the top of the page, above the header, as the owner
+decided on 25 September 2026 (`react.md`, "Errors";
+`docs/specs/entry.md`, "The errors nothing else shows"). It is drawn in
+a root of its own, outside the application's, with a status region of
+its own, so that it stays, with its Save, when an error while the shell
+was drawn has emptied the application's root. The bar says:
 
 "The application met an error of its own: ‹message›. Your project is
 intact: save it, then reload the page."
 
+or, when the error came before the store was made, as the page started,
+and there is no project to save: "The application met an error of its
+own as it started: ‹message›. Reload the page."
+
 It has three buttons:
 
-- **Save the project**, which does what Save project of the header does,
-  so that the user can save when the header is gone with the rest of the
-  application's root, after an error while it was drawn. Decided here,
+- **Save the project**, which saves as Save project of the header does,
+  through the saving of the entry, and announces it in the bar's own
+  status region. It is not there when there is no store. Decided here,
   not by the owner: the words of the bar tell the user to save, and this
-  keeps that possible in every case.
+  keeps that possible when the header is gone.
 - **Copy the details**, which copies, for a report of the bug, the
   message and the stack of every error kept, where each came from, the
   address of the page, the versions of the application and of popnei,
-  and the browser; not the project. The status region then says "The
-  details were copied." When the browser refuses the copy, which it does
-  on a page not served over HTTPS, the development server opened from
-  another machine among them, the bar says "The details could not be
-  copied. Select them in the box below and copy them." and shows them
-  in a box of text that can be selected.
-- **Close**, which empties the bar; a later error brings it back.
+  and the browser; not the project. The bar's status region then says
+  "The details were copied." When the page has no clipboard, which the
+  browser gives only to a page served over HTTPS or from the machine
+  itself, the development server opened from another machine among
+  them, or the browser refuses the copy, the bar says "The details could
+  not be copied. Select them in the box below and copy them." and shows
+  them in a box of text that can be selected.
+- **Close**, which empties the bar; a later error brings it back. The
+  focus goes to the `<h1>` of the step on screen, or, when the
+  application's root was emptied, to the start of the page.
 
-**A second error while the bar is up** does not replace the first, which
-is the likeliest cause of what follows, and is not listed after it,
-since an error thrown at every drawing would push the bar down the
-page. The bar keeps the first and counts the others after its text: "1
-more error followed it.", "3 more errors followed it.", and Copy the
-details copies them all, the first 20 whole. The owner's decision left
-this to this spec.
+**The errors after the first.** The bar shows the text of the first
+error only, since it is the likeliest cause of the rest. Each error that
+follows while the bar is up adds one to a count after the text, "1 more
+error followed it.", "3 more errors followed it.", and its own text is
+not shown, since an error thrown at every drawing would add a line at
+each and push the page down. Copy the details copies them all, the
+first 20 whole. The owner's decision left this to this spec.
 
 The bar is `role="alert"`, which a screen reader reads at once, since it
 interrupts what the user was doing (`react.md`, "Errors"); its element
@@ -269,64 +348,73 @@ again.
 ### Saving
 
 **Save project** writes the project file, `docs/functionality.md` section
-9, with the function of `src/core/projectFile.ts` that makes its text
-from the state of the store, the version of the application and the
-date, which the shell gives, since core reads no clock. The browser
-downloads it, as a file the page made, under the name of the variants
-file with its ending replaced, `panel.popnei.json` for `panel.nei` or
-`panel.vcf.gz`; for an opened project with no variants file yet, the
-name of its reference's; and `project.popnei.json` otherwise. The
-browser saves it where it saves downloads, or asks where if the user
-set it to; a page cannot choose the folder in Firefox and Safari. The
-status region says "The browser saves panel.popnei.json where it saves
-downloads."
+9, with `writeProjectFile` of `src/core/projectFile.ts`, from the state
+of the store, the analyses of the application, the version of the
+application and the date, which the page gives, since core reads no
+clock; it can be pressed at any time, a read under way included. The
+browser downloads it, as a file the page made, under the name
+`projectFileName` gives: the name of the variants file with its ending
+replaced, `panel.popnei.json` for `panel.nei` or `panel.vcf.gz`; for an
+opened project with no variants file yet, the name of its reference's;
+and `project.popnei.json` otherwise. The saving is the entry's, so that
+the header and the error bar share it (`docs/specs/entry.md`, "The
+saving"). `writeProjectFile` refuses no project; a check number that is
+not finite is a defect of our code, which it throws, and the error bar
+shows it.
 
-When `projectFile.ts` refuses to save the project as it is, a dialog
-says why, in its words, "The project cannot be saved yet: ‹its reason›",
-with a button OK. The button of the header stays enabled, so that the
-reason is reached by the keyboard and read, and not hidden behind a
-greyed button.
+A download is handed to the browser and gives the page no sign of how
+it ended: the browser saves it with its downloads, or asks where, or the
+user cancels its dialog. So the status region says "panel.popnei.json
+was handed to the browser to download.", and not that it was saved; and
+the page cannot know that a project was saved (**Open 3**).
 
-**The changes not saved.** A reload or a closed tab loses the project,
-since nothing of it is kept in the browser. So while the project on the
-page is not the empty first project and is not the one last saved or
-opened, compared by reference, the page asks the browser to confirm
-before it is left, with the browser's own words, which a page cannot
-change. Decided here, not by the owner. A read recorded makes the
-project another object, and then the page asks although the user
-changed nothing; the file saved after it would hold the number of
-variants the pass counted, so it is not the file saved before.
+**Before the page is left.** A reload or a closed tab loses the project,
+since nothing of it is kept in the browser. So while the project has
+changed since the page opened or a project file was last opened, the
+present project another object than that one, the page asks the browser
+to confirm before it is left, with the browser's own words, which a page
+cannot change. Decided here, not by the owner. A save does not stop the
+question, since the page cannot know that it saved (**Open 3**). A read
+recorded is a change too: the source of the file now holds what the
+worker read, which a file saved before it would not hold, so the page
+asks even when the user only picked a file.
 
 ### Opening
 
 **Open project…** is a button that opens the file picker of the system,
-for a file ending in `.json`. What follows:
+for a file ending in `.json`. What follows, with the texts of
+`projectFileErrorText` of `src/core/projectFile.ts`, which name the file:
 
-1. A file larger than 64 MB is not read, since the page would hold it
-   whole: "panel.vcf is 2.1 GB, and is not a project file. A project
-   file ends in .popnei.json and holds no genotypes." The bound is a
-   named constant, `MAX_PROJECT_FILE_BYTES`; the project of 10,000
-   individuals with 20 columns is a few MB, an estimate.
-2. The page reads the file as text. A file the browser cannot read,
-   moved since it was picked: "panel.popnei.json could not be read: ‹the
-   browser's message›. Choose it again."
-3. `projectFile.ts` reads the text. A file it refuses: "‹name› could not
-   be opened: ‹its reason›", with its words
-   (`docs/specs/core/projectFile.md`).
-4. When the project on the page has changes not saved, as above, a
-   dialog asks first: "Open panel.popnei.json? It replaces the project on
-   the page, whose changes are not saved. Save it first to keep them.",
-   and, when calculations are in flight, "The ongoing calculations will
-   be stopped." Its buttons: "Open panel.popnei.json" and "Keep the
-   current project". The store stops the calculations at the opening,
-   since the screen asked (`docs/specs/core/store.md`, "Commands and
-   events").
+1. A file larger than 64 MB, `MAX_PROJECT_FILE_BYTES` of
+   `projectFile.ts`, is not read, since the page would hold it whole:
+   the text of `tooLarge`, "panel.vcf cannot be opened as a project: it
+   is larger than 64 MB, and a project file, which holds settings and no
+   genotypes, is much smaller. Open the .popnei.json file the
+   application saved."
+2. The page reads the file as text, with `File.text()`. A file the
+   browser cannot read, moved or changed since it was picked, has no
+   text of `projectFile.ts`, which reads only text: "panel.popnei.json
+   could not be read: ‹the browser's message›. Choose it again."
+3. `readProjectFile` reads the text, with the application and its
+   analyses. A file it refuses: the text of its error.
+4. When the project has changed, as above, or calculations are in
+   flight, a dialog asks first: "Open panel.popnei.json? It replaces the
+   project on the page, and an opening cannot be undone. Save the project
+   first to keep it.", with, when calculations are in flight, "The
+   ongoing calculations will be stopped." Its buttons: "Open
+   panel.popnei.json" and "Keep the current project". The store stops the
+   calculations at the opening, since the screen asked
+   (`docs/specs/core/store.md`, "Commands and events").
 5. `store.open(project)`, which starts a new history and clears the
-   notice; the hash goes to `#variants`, where the step asks for the
-   variants file the project was made with; and the status region says
-   "Opened panel.popnei.json. It was made with panel_2026.nei: load that
-   file in the Variants step.", or "Opened panel.popnei.json." when the
-   file names none.
+   notice; the saving takes the opened project as the one to compare
+   with; the hash goes to `#variants`, where the step asks for the
+   variants file the project was made with; the focus goes to the `<h1>`
+   of Variants once the dialog has closed, also when the hash was already
+   `#variants`; and the status region says "Opened panel.popnei.json.
+   This project was made with panel_2026.nei, 342 individuals and
+   1,203,554 variants. Load it in the Variants step to run its analyses
+   again.", or "Opened panel.popnei.json." when the file names no
+   variants file.
 
 The file is read and checked before the dialog, so that the user is not
 asked to give up their project for a file that does not open. Choosing
@@ -342,7 +430,7 @@ of the steps and of the store. Its states:
 | state | what the user sees | what they can do |
 |---|---|---|
 | empty | the page just opened: Undo and Redo disabled; the stepper at Variants, To do, Individuals, To do, Analyses, Locked with "Load a variants file in the Variants step."; the summary "No variants file · 1 filter · no metadata file"; no notice | pick a file in the step, open a project |
-| locked | cannot happen for the shell as a whole: it waits for nothing. What cannot be done yet says why in words: a step locked, with its reason; Undo or Redo with nothing to take back, disabled with no reason needed; a save refused, in its dialog | — |
+| locked | cannot happen for the shell as a whole: it waits for nothing. What cannot be done yet says why in words: a step that cannot go on, with its reason; Undo or Redo with nothing to take back, disabled with no reason needed | — |
 | ready | files loaded: the stepper with the state of each step; the summary with the file, its individuals, the filters and the populations | move between steps, undo, redo, save, open |
 | running | a read or a calculation: Reading on its step, or Running on Analyses; the summary "Reading panel.nei"; its start and end in the status region | all of the above; opening asks and says the calculations will stop |
 | done | a result on screen: Analyses Done | all of the above |
@@ -353,32 +441,73 @@ of the steps and of the store. Its states:
 
 It reads, from the state of the store, `project`, `undo`, `redo`,
 `notice`, `analyses`, `runs` and `popneiVersion`, each with its own
-selector (`react.md`, "Reading core"), and `projectNeeds` and
-`individualsNeeds` of the project. It reads the step from the hash, with
-`useStepHash` of `react.md`. It sends `store.undo()`, `store.redo()`,
-`store.dismissNotice()` and `store.open(project)`. It holds, as state of
-the screen, whether a dialog is open, and the project last saved or
-opened, to know whether there are changes not saved; nothing of the
-project.
+selector, a function that picks one part of the state so that a
+component is drawn again only when that part changes (`react.md`,
+"Reading core"); `projectNeeds`, `individualsNeeds` and `askedFileText`
+of the project; and the step from the hash, with `useStepHash` of
+`react.md`. It sends `store.undo()`, `store.redo()`,
+`store.dismissNotice()` and `store.open(project)`, and calls the saving
+of the entry. It holds, as state of the screen, whether a dialog is
+open; nothing of the project.
 
-The words are made by pure functions of the shell, from the state of the
-store, so that Vitest checks them in node: the states of the steps, the
-summary line, the text of the notice, and the announcements made from
-two states.
+The words are made by pure functions of the shell, in
+`src/ui/shell/words.ts`, from the state of the store, so that Vitest, the
+runner of the tests that need no browser, checks them in node. `title`
+gives the title of an analysis's panel, from `src/ui/analyses/panels.ts`:
+
+```ts
+export type StepId = "variants" | "individuals" | "analyses";
+
+export type StepStatus =
+  | "todo" | "reading" | "problem" | "done"                          // Variants and Individuals
+  | "locked" | "running" | "removed" | "failed" | "ready";           // Analyses, and done
+
+/** The state of each step and its reason, by the table of the stepper. */
+export function stepStates(
+  s: AppState<JobResult>, title: (id: AnalysisId) => string,
+): readonly { readonly id: StepId; readonly status: StepStatus; readonly reason: string | null }[];
+
+/** The summary line, its parts joined by " · ". */
+export function summaryLine(p: Project): string;
+
+/** The words of the notice, without its action, and the action. */
+export function noticeText(
+  n: Notice, title: (id: AnalysisId) => string,
+): { readonly text: string; readonly action: "Undo" | "Redo" };
+
+/** The announcements made from two states, in the order of the table; [] when none. */
+export function announcementsOf(
+  before: AppState<JobResult>, after: AppState<JobResult>, title: (id: AnalysisId) => string,
+): readonly string[];
+```
+
+The announcer, in `src/ui/shell/status.ts`, a small store that the
+status region reads with `useSyncExternalStore`, as the screens read the
+store of core:
+
+```ts
+export function createAnnouncer(): {
+  announce(text: string): void;
+  getState(): string;                               // the text of the region now
+  readonly subscribe: (listener: () => void) => () => void;
+};
+```
 
 ## Its words
 
-Every text of the shell is above, in its section, final. The help
-drawer is not in the walking skeleton (stage 8).
+Every text of the shell is above, in its section, final. The words of
+the page before the application has started, the start guard's among
+them, are `docs/specs/entry.md`'s, "The page". The help drawer is not in
+the walking skeleton (stage 8).
 
 ## Accessibility
 
 - **The keyboard** goes through the page in this order: the error bar
-  and its three buttons, when it is up; the header, "popnei web", Undo,
-  Redo, Open project…, Save project; the three links of the stepper; the
-  step. The notice is last in the order of the page, and F6 reaches it
-  from anywhere, as React Aria gives its region of toasts; when it goes
-  while it had the focus, the focus goes back to where it was before.
+  and its buttons, when it is up; the header, "popnei web", Undo, Redo,
+  Open project…, Save project; the three links of the stepper; the step.
+  The notice is last in the order of the page, and F6 reaches it from
+  anywhere, as React Aria gives its region of toasts; when it goes while
+  it had the focus, the focus goes back to where it was before.
 - **The landmarks**: the header is `<header>`, the stepper `<nav>`
   labelled "Steps", the step `<main>`, the notice a region labelled
   "Notice"; they let a screen reader skip to the step, so no link to skip
@@ -387,16 +516,70 @@ drawer is not in the walking skeleton (stage 8).
   of the page, which keeps room under what the Tab key reaches
   (2.4.11, `.claude/skills/coding/css.md`, "Focus").
 - **Announced without moving the focus**, through the status region:
-  the table above (4.1.3). The notice through the toast, the error bar
-  as an alert.
+  the two tables above (4.1.3). The notice through the toast, the error
+  bar as an alert.
+- **The focus is never dropped** (2.4.3): Undo and Redo hand it to each
+  other when they are disabled; after an opening it goes to the `<h1>`
+  of Variants; after Close of the error bar, to the `<h1>` of the step.
 - **Not colour alone**: a state of a step is a word and a symbol; the
   current step a mark; the error bar its words (1.4.1).
-- **The dialogs** of saving and opening take the focus and give it back
-  to the button that opened them, and Escape closes them, as React
-  Aria's `Dialog` does.
+- **The dialogs** of opening take the focus and give it back to the
+  button that opened them, and Escape closes them, as React Aria's
+  `Dialog` does; while one is open, the keyboard's Undo and Redo do
+  nothing.
 - **A screen reader**, VoiceOver with Safari at least, is tried on the
-  stepper, the notice and the error bar, which are new widgets of this
-  stage (`react.md`, "Accessibility review").
+  stepper, the notice, the status region and the error bar, which are new
+  widgets of this stage (`react.md`, "Accessibility review").
+
+## How it is checked
+
+With Vitest, in node, at the functions of `words.ts` and at the
+announcer, the states of the store written as literals of `AppState`
+with the analyses of `TEST_DEFS` of `src/core/testSupport.ts`:
+
+- **`stepStates`**: a state for each row of the table of the stepper,
+  and for the order of its rows: an analysis running while another is
+  removed gives Running.
+- **`summaryLine`**: the empty first project gives "No variants file · 1
+  filter · no metadata file"; the example above, with 1,200 variants
+  counted, gives "panel.nei · 200 individuals · 1,200 variants · 1 filter
+  · 3 populations by pop"; a case for each row of its table.
+- **`noticeText`**: each row of the table of the notice, from a literal
+  notice, with the text asserted whole; three removed and two stopped,
+  counted.
+- **`announcementsOf`**: a pair of states for each row of the first
+  table of the status region; and none for a result back from the cache
+  after an undo, a calculation left behind that ends, an undo back to a
+  load already read, an opening, and a read of the metadata file recorded
+  for options other than those of the present project.
+- **The announcer**, with the fake timers of Vitest: the same text
+  announced twice empties the region and writes it each time; two texts
+  within 100 ms are written together.
+
+With Playwright, in the three engines, against the built site, as the
+flow of the walking skeleton and beside it (`.claude/skills/coding/testing.md`):
+
+- The links of the stepper change the step and the title; the back
+  button goes to the step before; the focus is on the `<h1>` of the new
+  step.
+- A page just opened is left with no question; after a pick of a file,
+  leaving it raises the browser's question, which Playwright sees as a
+  `beforeunload` dialog.
+- Save project downloads `panel.popnei.json` after `panel.nei` is
+  loaded, and the text of the status region says so.
+- Open project… with `notes.txt`, which is not JSON, shows the text of
+  `notJson` in a dialog, and the focus is back on Open project… once it
+  is closed; with a file above 64 MB, the text of `tooLarge`; with the
+  saved file, after a change, the question, and after it the Variants
+  step with the focus on its `<h1>`.
+- Undo pressed with the mouse until nothing is left: the focus is on
+  Redo.
+- F6 reaches the notice after a change that removed the diversity.
+- An error posted into the page, as `docs/specs/entry.md` does it, shows
+  the bar; Copy the details in Chromium without the permission of the
+  clipboard shows the box of text.
+- axe finds no violation of WCAG 2.2 at level AA in each state of the
+  table of the states.
 
 ## Left for the running application
 
@@ -407,23 +590,30 @@ box of the details looks.
 
 ## What this spec assumes of the other specs of stage 2
 
-- `docs/specs/core/projectFile.md`: a function that makes the text of
-  the project file from the state of the store, the version of the
-  application and the date, or refuses with a reason in words; a
-  function that reads the text into a project, or refuses with a reason
-  in words; the reference of an opened project names its variants file.
+- `docs/specs/core/projectFile.md`: `writeProjectFile`, which refuses
+  nothing; `readProjectFile`, `projectFileErrorText` and
+  `MAX_PROJECT_FILE_BYTES`; `askedFileText`; `projectFileName`. Its
+  section "Opening" quotes the question before an opening as "Open a
+  project and lose this one?", asked always; the question, and when it
+  is asked, are this spec's, above.
 - `docs/specs/steps/variants.md` and `individuals.md`: the `<h1>` of
   each step is "Variants" and "Individuals"; their descriptions of the
   commands are those of their tables, "a new variants file was loaded"
-  among them; they announce the ends of their reads through this spec's
-  status region with the words above, and not by themselves.
+  among them; the ends of their reads are announced by the shell from
+  the state, with the words of this spec, and not by the steps; what
+  they announce themselves goes through `announce`.
 - `docs/specs/analyses/diversity.md`: the title of its panel,
   "Diversity", in `src/ui/analyses/panels.ts`; the `<h1>` of the
-  Analyses step, "Analyses", with each analysis an `<h2>`.
+  Analyses step, "Analyses", with each analysis an `<h2>`; the start, the
+  end and the stop of a run announced by the shell, with the words of
+  this spec; its reasons about the column of the populations given by a
+  function it exports, for the stepper.
 - `docs/specs/steps/individuals.md`: the function of core that gives the
-  populations of the column chosen.
-- `docs/specs/entry.md`: it calls the announcements made from two states
-  at every change of the store, and draws the error bar in its own root.
+  populations of the column chosen, and `individualsCheck`, which gives
+  the individuals found and missing.
+- `docs/specs/entry.md`: it makes the announcer, calls `announcementsOf`
+  at every change of the store, draws the error bar in its own root with
+  the store once it is made, and gives the saving.
 
 ## Open points
 
@@ -441,11 +631,38 @@ box of the details looks.
 2. **How many variants the filters keep, in the summary line.** The
    owner's mockup has "48,210 of 1,203,554 variants kept (3 filters)".
    The walking skeleton does not know it: the variants kept are counted
-   by a pass, and what each filter kept comes with the Variants step
-   whole, in stage 3 (`docs/specs/steps/variants.md`, "Not in this
-   spec"). Meanwhile, the line gives the variants of the file once
-   counted and the number of filters, "1,200 variants · 1 filter"; in
-   stage 3 the kept count joins it, as the mockup has it.
+   by a calculation that reads the whole file, and what each filter kept
+   comes with the Variants step whole, in stage 3
+   (`docs/specs/steps/variants.md`, "Not in this spec"). Meanwhile, the
+   line gives the variants of the file once counted and the number of
+   filters, "1,200 variants · 1 filter"; in stage 3 the kept count joins
+   it, as the mockup has it.
+3. **Save, and a download that gives no sign it finished.** A page that
+   hands a file to the browser as a download does not learn whether it
+   was saved: the user may cancel the browser's dialog, or the download
+   may fail. So the page cannot tell a project saved from one that was
+   not, and either asks before every leaving, or risks not asking when
+   the project was lost. The options:
+   - **The browser's Save As dialog in Chrome and Edge**,
+     `showSaveFilePicker`, which lets the user choose the folder and the
+     name and tells the page when the file is written, or that the user
+     cancelled; Firefox and Safari do not have it. There, a save is
+     known: the status region says "Saved panel.popnei.json.", and the
+     page does not ask before it is left until the project changes
+     again. In Firefox and Safari, the plain download as it is above,
+     with no "saved" state, and the question before leaving whenever the
+     project has changed since the page opened or a project file was
+     opened.
+   - **The plain download everywhere**, as above: one way in every
+     browser, and a question before every leaving of a changed project,
+     also just after a save, which a user learns to click through.
+
+   Recommended: the Save As dialog in Chrome and Edge and the plain
+   download elsewhere. It costs a second way of saving, the check that
+   the browser has the function, and a test in Chromium of each. Meanwhile,
+   the plain download everywhere, with the question before leaving
+   whenever the project has changed since the page opened or a project
+   file was opened.
 
 ## Not in this spec
 
@@ -458,4 +675,4 @@ box of the details looks.
 - The Export step, with the report and the Python script: stage 6.
 - The help drawer and its texts, and the setting of the theme: stage 8
   and after; the walking skeleton follows the theme of the system.
-- The page, its start and its roots: `docs/specs/entry.md`.
+- The page, its start, its roots and the saving: `docs/specs/entry.md`.
