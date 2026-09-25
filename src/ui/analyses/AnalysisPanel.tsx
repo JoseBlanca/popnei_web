@@ -11,12 +11,15 @@
  * - running: Stop, the bar, and the line with the time since it started;
  * - done: the warnings, and the result with, under its table, the
  *   comparison with the check numbers of an opened project file;
- * - removed: the words of the notice that removed it, and Run;
+ * - removed: the words of the change that removed it, Run, and what it
+ *   will run on;
  * - error: what happened and what to do, with Run after a failure that
- *   is not popnei's refusal.
+ *   is neither popnei's refusal nor a variants file the browser can no
+ *   longer read, which fails again until it is loaded again.
  *
  * Run and Stop are one button in one place, so the focus stays on it when
- * it changes. The button goes when the run ends done or refused; the focus,
+ * it changes. The button goes when the run ends done, refused, or on a
+ * file that can no longer be read; the focus,
  * when it was on it, moves to the heading of the panel, so that a user of
  * the keyboard is not sent to the top of the page (WCAG 2.4.3). The one
  * state of its own is the clock of a calculation under way.
@@ -93,7 +96,10 @@ function buttonOf(status: AnalysisStatus<JobResult>): ButtonOf {
     case "done":
       return null;
     case "error":
-      return status.error.kind === "refused"
+      // popnei would refuse the same settings again, and a file the
+      // browser can no longer read fails again until it is loaded again.
+      return status.error.kind === "refused" ||
+        status.error.error.kind === "reopenFailed"
         ? null
         : { kind: "run", reason: null };
   }
@@ -104,13 +110,16 @@ export function AnalysisPanel({ id }: AnalysisPanelProps): React.JSX.Element {
   const ui = panelOf(id);
   const store = useStore();
   const status = useAppState((s) => statusOf(s, id));
-  const stopped = useAppState((s) => s.notice?.stopped.includes(id) === true);
+  const notice = useAppState((s) => s.notice);
   const headingId = useId();
   const heading = useRef<HTMLHeadingElement>(null);
 
   const button = buttonOf(status);
-  const showStopped =
-    stopped && (status.kind === "ready" || status.kind === "locked");
+  const stoppedBy =
+    notice?.stopped.includes(id) === true &&
+    (status.kind === "ready" || status.kind === "locked")
+      ? notice
+      : null;
 
   return (
     <section aria-labelledby={headingId} className={classOf(styles, "panel")}>
@@ -124,8 +133,10 @@ export function AnalysisPanel({ id }: AnalysisPanelProps): React.JSX.Element {
       >
         {ui.title}
       </h2>
-      {showStopped && (
-        <p className={classOf(styles, "line")}>{stoppedText(ui.name)}</p>
+      {stoppedBy !== null && (
+        <p className={classOf(styles, "line")}>
+          {stoppedText(ui.name, stoppedBy)}
+        </p>
       )}
       <Above ui={ui} status={status} />
       {button !== null && (
@@ -221,11 +232,12 @@ function Above({ ui, status }: PartProps): React.JSX.Element | null {
   }
 }
 
-/** What comes after the button: what a run will take, the calculation
-    under way, or the result. */
+/** What comes after the button: what a run will take, when it can run,
+    the calculation under way, or the result. */
 function Below({ ui, status }: PartProps): React.JSX.Element | null {
   switch (status.kind) {
     case "ready":
+    case "removed":
       return <Ready ui={ui} />;
     case "running":
       // A new run is a new clock.
@@ -254,7 +266,6 @@ function Below({ ui, status }: PartProps): React.JSX.Element | null {
         </>
       );
     case "locked":
-    case "removed":
     case "error":
       return null;
   }
@@ -268,7 +279,7 @@ function Ready({ ui }: { readonly ui: AnalysisUi }): React.JSX.Element | null {
   );
 }
 
-/** The words of the notice that removed the result. */
+/** The words of the change that removed the result, from its notice. */
 function Removed({ ui }: { readonly ui: AnalysisUi }): React.JSX.Element {
   const notice = useAppState((s) => s.notice);
   // The store gives the state removed only while the notice lists it.

@@ -740,6 +740,85 @@ for (const theme of ["light", "dark"] as const) {
       await save(page, `popgen-diversity-removed-${theme}`);
     });
 
+    test("the diversity done, at 320 px", async ({ page }) => {
+      await page.setViewportSize({ width: 320, height: 900 });
+      await loadPanelWithPopulations(page);
+      await goTo(page, "Analyses");
+      await page.getByRole("button", { name: "Run" }).click();
+      await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
+      // The frame of the table, reached by the Tab key, with its focus
+      // ring.
+      await page.keyboard.press("Tab");
+      await save(page, `popgen-diversity-done-320-${theme}`);
+    });
+
+    test("the diversity in error, a VCF with no variant", async ({ page }) => {
+      await pickVariants(page, {
+        name: "empty.vcf",
+        text:
+          '##fileformat=VCFv4.2\n##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n' +
+          "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\ta\tb\n",
+      });
+      await expect(page.getByText("2 individuals")).toBeVisible();
+      await goTo(page, "Individuals");
+      await pickIndividuals(page, {
+        name: "empty_pops.csv",
+        text: "IID,pop\na,A\nb,A\n",
+      });
+      await choose(page, "Column that defines the populations", "pop");
+      await goTo(page, "Analyses");
+      await page.getByRole("button", { name: "Run" }).click();
+      await expect(page.getByText(/^empty\.vcf has no variants/)).toBeVisible();
+      await save(page, `popgen-diversity-no-variant-${theme}`);
+    });
+
+    test("the diversity in error, the file no longer read", async ({
+      page,
+    }, testInfo) => {
+      const path = testInfo.outputPath("panel.nei");
+      await writeFile(path, await readFile(join(FIXTURES, "panel.nei")));
+      await pickVariants(page, { path });
+      await expect(page.getByText("200 individuals")).toBeVisible();
+      await goTo(page, "Individuals");
+      await pickIndividuals(page, "panel_pops.csv");
+      await choose(page, "Column that defines the populations", "popcat");
+      await goTo(page, "Analyses");
+      await unlink(path);
+      await page.getByRole("button", { name: "Run" }).click();
+      await expect(
+        page.getByText(/^panel\.nei could not be read again/),
+      ).toBeVisible();
+      await save(page, `popgen-diversity-no-longer-read-${theme}`);
+    });
+
+    test("the diversity stopped by a read again", async ({ page }) => {
+      await pickVariants(page, "panel.vcf.gz");
+      await expect(page.getByText("200 individuals")).toBeVisible();
+      await goTo(page, "Individuals");
+      await pickIndividuals(page, "panel_pops.csv");
+      await choose(page, "Column that defines the populations", "popcat");
+      await holdResults(page);
+      await goTo(page, "Analyses");
+      await page.getByRole("button", { name: "Run" }).click();
+      await expect(page.getByRole("button", { name: "Stop" })).toBeVisible();
+      await goTo(page, "Variants");
+      await page
+        .getByText("Only the variants with PASS or . in the FILTER column", {
+          exact: true,
+        })
+        .click();
+      await page
+        .getByRole("button", {
+          name: "Read panel.vcf.gz again with every variant",
+        })
+        .click();
+      await goTo(page, "Analyses");
+      await expect(
+        page.getByText(/^The calculation of the diversity was stopped/),
+      ).toBeVisible();
+      await save(page, `popgen-diversity-stopped-${theme}`);
+    });
+
     test("the error bar, with a second error", async ({ page }) => {
       await page.evaluate(() => {
         setTimeout(() => {

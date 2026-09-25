@@ -213,11 +213,25 @@ describe("WS5 D1 the example and the reasons", () => {
         code: "individualsWithoutPopulation",
         text: "1 individual of panel.nei has no population, and is left out of the diversity: i4. If it belongs to one, fill in its population in the metadata file and load it again.",
       },
-      {
-        code: "populationNotInResult",
-        text: "Population C has no individual among the individuals of panel.nei that the filters kept, so it is not in the table.",
-      },
     ]);
+    // A, alone, as the filters of individuals of stage 3 could leave it:
+    // B, whose individual is in the variants file, is said to be missing,
+    // and C, whose individual is not, is not.
+    const aAlone = result({
+      pops: ["A"],
+      numIndividuals: [2],
+      numVarsWithValue: [0],
+      numVars: 1000,
+    });
+    expect(diversity.warnings(aAlone, p).map((w) => w.code)).toEqual([
+      "tooFewIndividuals",
+      "individualsWithoutPopulation",
+      "populationNotInResult",
+    ]);
+    expect(diversity.warnings(aAlone, p).at(-1)).toEqual({
+      code: "populationNotInResult",
+      text: "Population B has no individual among the individuals of panel.nei that the filters kept, so it is not in the table.",
+    });
     expect(diversity.keyInputs(p)).toEqual({
       pops: [
         ["A", ["i1", "i3"]],
@@ -569,6 +583,17 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112
       `population,individuals,expected_heterozygosity_unbiased,observed_heterozygosity,proportion_polymorphic
 "a,""b""",3,,,
 `,
+    );
+  });
+
+  test("WS8 D2 refusalText of a pass over a file with no variant says the file has none", () => {
+    expect(
+      refusalText(
+        "the pass gave no variant and its source holds none: a statistic of a pass is calculated over the variants it gives",
+        project({ variantsName: "empty.vcf" }),
+      ),
+    ).toBe(
+      "empty.vcf has no variants, so there is no variant to calculate the diversity over. Load another variants file in the Variants step.",
     );
   });
 
@@ -1043,7 +1068,7 @@ describe("WS5 D3 the rest of the module, after its review", () => {
     const long = "x".repeat(45);
     const p = project({
       table: tableOf(["i1", "i2"], [long, "p\n9"]),
-      individuals: ["i1"],
+      individuals: ["i1", "i2"],
     });
     const r = result({ pops: [long], numIndividuals: [1], numVars: 1152 });
     expect(diversity.warnings(r, p)).toEqual([
@@ -1216,7 +1241,7 @@ describe("WS5 D3 the rest of the module, its words at their bounds", () => {
   test("warnings of two populations not in the result name both, in the plural", () => {
     const p = project({
       table: tableOf(["i1", "i2", "i3"], ["A", "C", "D"]),
-      individuals: ["i1"],
+      individuals: ["i1", "i2", "i3"],
     });
     const r = result({ pops: ["A"], numIndividuals: [20], numVars: 1152 });
     expect(diversity.warnings(r, p)).toEqual([

@@ -11,9 +11,12 @@ import {
   warningsHeading,
 } from "./words.ts";
 
-function notice(kind: Notice["cause"]["kind"]): Notice {
+function notice(
+  kind: Notice["cause"]["kind"],
+  description = "the missing data filter changed",
+): Notice {
   return {
-    cause: { kind, description: "the missing data filter changed" },
+    cause: { kind, description },
     removed: ["diversity"],
     leftBehind: [],
     stopped: [],
@@ -61,21 +64,53 @@ describe("the words of the frame of an analysis panel", () => {
     ).toBe("Calculating · 3% · 0:12");
   });
 
-  test("a result removed offers Undo, and Redo after an undo", () => {
+  test("WS8 D2 a result removed is told from the change: its cause after a command, the change undone or redone after an undo or a redo", () => {
     expect(removedText("the diversity", notice("command"))).toBe(
       "The diversity was removed because the missing data filter changed. Undo brings it back with no calculation; Run calculates it for the new settings.",
     );
-    expect(removedText("the diversity", notice("redo"))).toBe(
-      "The diversity was removed because the missing data filter changed. Undo brings it back with no calculation; Run calculates it for the new settings.",
-    );
     expect(removedText("the diversity", notice("undo"))).toBe(
-      "The diversity was removed because the missing data filter changed. Redo brings it back with no calculation; Run calculates it for the new settings.",
+      "Undone: the missing data filter changed. The diversity was removed; Redo brings it back with no calculation, and Run calculates it for the settings as they are now.",
+    );
+    expect(removedText("the diversity", notice("redo"))).toBe(
+      "Redone: the missing data filter changed. The diversity was removed; Undo brings it back with no calculation, and Run calculates it for the settings as they are now.",
     );
   });
 
-  test("a calculation stopped by a new variants file", () => {
-    expect(stoppedText("the diversity")).toBe(
+  test("WS8 D2 a calculation stopped is told from the change that stopped it", () => {
+    expect(
+      stoppedText(
+        "the diversity",
+        notice(
+          "command",
+          "the variants file was read again with other options",
+        ),
+      ),
+    ).toBe(
+      "The calculation of the diversity was stopped because the variants file was read again with other options.",
+    );
+    expect(
+      stoppedText(
+        "the diversity",
+        notice("command", "a new variants file was loaded"),
+      ),
+    ).toBe(
       "The calculation of the diversity was stopped because a new variants file was loaded.",
+    );
+    expect(
+      stoppedText(
+        "the diversity",
+        notice("undo", "a new variants file was loaded"),
+      ),
+    ).toBe(
+      "Undone: a new variants file was loaded. The calculation of the diversity was stopped.",
+    );
+    expect(
+      stoppedText(
+        "the diversity",
+        notice("redo", "a new variants file was loaded"),
+      ),
+    ).toBe(
+      "Redone: a new variants file was loaded. The calculation of the diversity was stopped.",
     );
   });
 

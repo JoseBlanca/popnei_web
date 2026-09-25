@@ -798,6 +798,27 @@ describe("WS3 D2 what goes wrong: told, popnei's refusals and the defects", () =
     });
   });
 
+  test("WS8 D2 a VCF of a header alone opens, and its diversity is refused as a file with no variant, with the missing data filter and without it", () => {
+    const header =
+      '##fileformat=VCFv4.2\n##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n' +
+      "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\ta\tb\n";
+    for (const filters of [[], [missingData(0.1)]]) {
+      const runner = createRunner();
+      const open = runner.open(VCF, {
+        name: "empty.vcf",
+        source: new TextEncoder().encode(header),
+      });
+      expect(valueOf(open).individuals).toEqual(["a", "b"]);
+      expect(
+        runner.run(diversityJob(filters, [["A", ["a", "b"]]]), ignore),
+      ).toEqual({
+        kind: "refused",
+        message:
+          "the pass gave no variant and its source holds none: a statistic of a pass is calculated over the variants it gives",
+      });
+    }
+  });
+
   test("a run before the open is badRequest", () => {
     const answer = createRunner().run(diversityJob([]), ignore);
     expect(answer.kind).toBe("badRequest");

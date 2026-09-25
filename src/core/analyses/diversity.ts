@@ -313,6 +313,10 @@ export function diversityCsv(r: DiversityResult): string {
   return [CSV_HEADER, ...lines].map((line) => `${line}\n`).join("");
 }
 
+/** The start of popnei's refusal of a pass over a source that holds no
+    variant, whatever the filters. */
+const EMPTY_SOURCE = "the pass gave no variant and its source holds none";
+
 /** The start of popnei's refusal of a pass that gave no variant. */
 const EMPTY_PASS = "the pass gave no variant";
 
@@ -328,8 +332,8 @@ const BGZIP_REFUSAL = "the VCF was written by bgzip";
 
 /**
  * The words of a refusal of popnei, for the error state of the panel of
- * the project `p`, by the start of popnei's message: the filters kept no
- * variant; a genotype of another ploidy than the one the VCF was read
+ * the project `p`, by the start of popnei's message: the variants file
+ * holds no variant; the filters kept none; a genotype of another ploidy than the one the VCF was read
  * with; a line of the VCF it cannot read, or a gzipped file damaged or cut
  * short; any other. Throws a defect on a project with no variants file.
  */
@@ -338,6 +342,9 @@ export function refusalText(message: string, p: Project): string {
     throw defect("refusalText was given a project with no variants file.");
   }
   const fileName = escaped(p.variants.name);
+  if (message.startsWith(EMPTY_SOURCE)) {
+    return `${fileName} has no variants, so there is no variant to calculate the diversity over. Load another variants file in the Variants step.`;
+  }
   if (message.startsWith(EMPTY_PASS)) {
     return `The filters kept none of the variants of ${fileName}, so there is no variant to calculate the diversity over. Loosen the filters in the Variants step.`;
   }
@@ -466,8 +473,8 @@ function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
  * The warnings of a result, given the project its request was made from,
  * in this order: populations of too few individuals, populations with a
  * value at fewer variants than the filters kept, individuals of the
- * variants file with no population, populations of the key not in the
- * result.
+ * variants file with no population, populations with individuals in the
+ * variants file that are not in the result.
  */
 function warnings(result: JobResult, p: Project): readonly Warning[] {
   const r = diversityResultOf(result);
@@ -508,8 +515,10 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
       text: `${counted(noPopulation.length, "individual")} of ${fileName} ${one ? "has" : "have"} no population, and ${one ? "is" : "are"} left out of the diversity: ${namesOf(noPopulation)}. If ${one ? "it belongs" : "they belong"} to one, fill in ${one ? "its" : "their"} population in the metadata file and load it again.`,
     });
   }
+  // A population none of whose individuals is in the variants file is
+  // not among these: a metadata file may serve several panels.
   const inResult = new Set(r.pops);
-  const missing = (populationsOf(p) ?? [])
+  const missing = (populationsToRun(p) ?? [])
     .map(([pop]) => pop)
     .filter((pop) => !inResult.has(pop));
   if (missing.length > 0) {

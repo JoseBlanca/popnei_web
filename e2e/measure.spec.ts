@@ -287,7 +287,7 @@ async function runAndSettle(page: Page, timeout: number): Promise<Ran> {
     .join(" / ");
   return {
     text,
-    table: (await panel(page).getByRole("grid").count()) > 0,
+    table: (await panel(page).getByRole("table").count()) > 0,
     answer: answer.kind,
     runMs: answer.t - run.t,
     afterFirstProgressMs: progress === undefined ? null : answer.t - progress.t,

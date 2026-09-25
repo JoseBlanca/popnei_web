@@ -10,19 +10,19 @@
 }
 
 /* A table wider than the page scrolls sideways, and the page does not
-   (WCAG 1.4.10). */
+   (WCAG 1.4.10). The Tab key reaches the frame, so it shows the focus. */
 .scroll {
   overflow-x: auto;
+}
+
+.scroll:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
 }
 
 .table {
   border-collapse: collapse;
   font-variant-numeric: tabular-nums;
-}
-
-.table[data-focus-visible] {
-  outline: var(--focus-ring);
-  outline-offset: var(--focus-offset);
 }
 
 .header,
@@ -50,13 +50,4 @@
 .numeric {
   text-align: end;
   white-space: nowrap;
-}
-
-/* The arrow keys move the focus from cell to cell. */
-.row[data-focus-visible],
-.header[data-focus-visible],
-.rowHeader[data-focus-visible],
-.cell[data-focus-visible] {
-  outline: var(--focus-ring);
-  outline-offset: calc(-1 * var(--focus-offset));
 }

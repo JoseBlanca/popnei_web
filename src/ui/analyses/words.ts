@@ -2,7 +2,8 @@
  * The words of the frame every analysis panel shares
  * (docs/specs/analyses/diversity.md, "The panel", its states and its
  * words): the line of a calculation under way, the words of a result
- * removed and of a calculation stopped, the count of the warnings, and a
+ * removed and of a calculation stopped, written from the change that
+ * caused them, the count of the warnings, and a
  * failure that is not popnei's refusal. Pure, so that a test in node
  * checks them; `AnalysisPanel.tsx` draws them.
  */
@@ -79,22 +80,53 @@ function capitalized(words: string): string {
   return `${words.charAt(0).toUpperCase()}${words.slice(1)}`;
 }
 
-/**
- * The words of a result removed, from the notice that lists it: "The
- * diversity was removed because the missing data filter changed. Undo
- * brings it back with no calculation; Run calculates it for the new
- * settings.", with Redo after an undo, whose notice offers it. `name` is
- * the analysis in a sentence, "the diversity".
- */
-export function removedText(name: string, notice: Notice): string {
-  const action = notice.cause.kind === "undo" ? "Redo" : "Undo";
-  return `${capitalized(name)} was removed because ${notice.cause.description}. ${action} brings it back with no calculation; Run calculates it for the new settings.`;
+/** How an undo or a redo starts the words of what it changed, "Undone:
+    the missing data filter changed."; `null` for a command, whose
+    description is the reason itself. */
+function undoneOrRedone(cause: Notice["cause"]): string | null {
+  switch (cause.kind) {
+    case "command":
+      return null;
+    case "undo":
+      return `Undone: ${cause.description}.`;
+    case "redo":
+      return `Redone: ${cause.description}.`;
+  }
 }
 
-/** The line of a calculation stopped by a new variants file, while the
-    notice that says so is up. */
-export function stoppedText(name: string): string {
-  return `The calculation of ${name} was stopped because a new variants file was loaded.`;
+/**
+ * The words of a result removed, from the change of the notice that lists
+ * it, as the shell's notice is: after a command, "The diversity was
+ * removed because the missing data filter changed. Undo brings it back
+ * with no calculation; Run calculates it for the new settings."; after an
+ * undo, "Undone: the missing data filter changed. The diversity was
+ * removed; Redo brings it back with no calculation, and Run calculates it
+ * for the settings as they are now.", and after a redo the same with
+ * "Redone:" and Undo. `name` is the analysis in a sentence, "the
+ * diversity".
+ */
+export function removedText(name: string, notice: Notice): string {
+  const cause = notice.cause;
+  const start = undoneOrRedone(cause);
+  if (start === null) {
+    return `${capitalized(name)} was removed because ${cause.description}. Undo brings it back with no calculation; Run calculates it for the new settings.`;
+  }
+  const action = cause.kind === "undo" ? "Redo" : "Undo";
+  return `${start} ${capitalized(name)} was removed; ${action} brings it back with no calculation, and Run calculates it for the settings as they are now.`;
+}
+
+/** The line of a calculation stopped at once by a change of the load of
+    the variants file, from the change of the notice that says so, while
+    it is up: "The calculation of the diversity was stopped because the
+    variants file was read again with other options."; after an undo,
+    "Undone: a new variants file was loaded. The calculation of the
+    diversity was stopped.", and "Redone:" after a redo. */
+export function stoppedText(name: string, notice: Notice): string {
+  const cause = notice.cause;
+  const start = undoneOrRedone(cause);
+  return start === null
+    ? `The calculation of ${name} was stopped because ${cause.description}.`
+    : `${start} The calculation of ${name} was stopped.`;
 }
 
 /** The count of the warnings of a result, on the heading above them: "1

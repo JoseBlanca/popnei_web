@@ -1,20 +1,17 @@
 /**
- * A table of results: React Aria's `Table`, with our look (react.md,
- * "Widgets: React Aria, wrapped once"). Its caption is shown above it and
- * names it, by `aria-labelledby`; one column is the header of each row,
- * so that a screen reader reads a cell with its row and its column, "p2,
- * Observed heterozygosity, 0.3512". The Tab key enters it once, and the
- * arrow keys move from cell to cell.
+ * A table of results that is only read: a plain HTML table, with our look
+ * (docs/specs/analyses/diversity.md, "Accessibility"). It is not React
+ * Aria's `Table`, which a table of a few rows, neither sorted nor
+ * selected, does not need, and which took 25.1 KB gzipped of the page's
+ * first script (docs/technology.md, "React Aria Components"). Its caption
+ * is shown above it and names it, by `aria-labelledby`; the cell of one
+ * column is the header of its row, so that a screen reader reads a cell
+ * with its row and its column, "p2, Observed heterozygosity, 0.3512". It
+ * sits in a frame that scrolls sideways on a page narrower than the
+ * table; the Tab key reaches the frame, named by the caption, so that the
+ * arrow keys scroll it.
  */
 import { useId } from "react";
-import {
-  Cell,
-  Column,
-  Row,
-  Table as AriaTable,
-  TableBody,
-  TableHeader,
-} from "react-aria-components";
 
 import { classOf } from "../classOf.ts";
 import styles from "./Table.module.css";
@@ -62,41 +59,50 @@ export function Table({
       <p id={captionId} className={classOf(styles, "caption")}>
         {caption}
       </p>
-      <div className={classOf(styles, "scroll")}>
-        <AriaTable
-          aria-labelledby={captionId}
-          className={classOf(styles, "table")}
-        >
-          <TableHeader>
-            {columns.map((column) => (
-              <Column
-                key={column.id}
-                id={column.id}
-                isRowHeader={column.isRowHeader === true}
-                className={cellClass(column, "header")}
-              >
-                {column.label}
-              </Column>
-            ))}
-          </TableHeader>
-          <TableBody>
+      {/* A frame that scrolls is reached by the Tab key, so that a user
+          of the keyboard scrolls it with the arrow keys (WCAG 2.1.1). */}
+      <div
+        role="region"
+        aria-labelledby={captionId}
+        tabIndex={0}
+        className={classOf(styles, "scroll")}
+      >
+        <table aria-labelledby={captionId} className={classOf(styles, "table")}>
+          <thead>
+            <tr>
+              {columns.map((column) => (
+                <th
+                  key={column.id}
+                  scope="col"
+                  className={cellClass(column, "header")}
+                >
+                  {column.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
             {rows.map((row) => (
-              <Row key={row.id} id={row.id} className={classOf(styles, "row")}>
-                {columns.map((column, index) => (
-                  <Cell
-                    key={column.id}
-                    className={cellClass(
-                      column,
-                      column.isRowHeader === true ? "rowHeader" : "cell",
-                    )}
-                  >
-                    {cellOf(row, index)}
-                  </Cell>
-                ))}
-              </Row>
+              <tr key={row.id}>
+                {columns.map((column, index) =>
+                  column.isRowHeader === true ? (
+                    <th
+                      key={column.id}
+                      scope="row"
+                      className={cellClass(column, "rowHeader")}
+                    >
+                      {cellOf(row, index)}
+                    </th>
+                  ) : (
+                    <td key={column.id} className={cellClass(column, "cell")}>
+                      {cellOf(row, index)}
+                    </td>
+                  ),
+                )}
+              </tr>
             ))}
-          </TableBody>
-        </AriaTable>
+          </tbody>
+        </table>
       </div>
     </div>
   );

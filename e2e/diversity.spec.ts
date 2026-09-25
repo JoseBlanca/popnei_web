@@ -9,8 +9,7 @@
  * with ploidy 4, with the warning of a population of 12; axe at each state
  * reached.
  */
-import { readFile } from "node:fs/promises";
-import { writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 
 import type { Locator, Page, Route, Worker } from "@playwright/test";
@@ -78,7 +77,7 @@ async function setThreshold(page: Page, value: string): Promise<void> {
     and chooses the column `column`, when one is given. */
 async function load(
   page: Page,
-  variants: string,
+  variants: string | { readonly name: string; readonly text: string },
   metadata: string | { readonly name: string; readonly text: string },
   column: string | null,
 ): Promise<void> {
@@ -107,13 +106,13 @@ function row(page: Page, pop: string): Locator {
   return panel(page)
     .getByRole("row")
     .filter({ has: page.getByRole("rowheader", { name: pop, exact: true }) })
-    .getByRole("gridcell");
+    .getByRole("cell");
 }
 
 /** Runs the diversity with the Run button, and waits for its table. */
 async function run(page: Page): Promise<void> {
   await panel(page).getByRole("button", { name: "Run" }).click();
-  await expect(panel(page).getByRole("grid")).toBeVisible();
+  await expect(panel(page).getByRole("table")).toBeVisible();
 }
 
 const CAPTION_005 =
@@ -162,14 +161,14 @@ test("WS8 D2 at 0.05 the row p0 reads 48, 0.3527, 0.3567, 0.9288, and the focus 
   // ends done, and the focus goes to the heading of the panel.
   await panel(page).getByRole("button", { name: "Run" }).focus();
   await page.keyboard.press("Enter");
-  await expect(panel(page).getByRole("grid")).toBeVisible();
+  await expect(panel(page).getByRole("table")).toBeVisible();
   await expect(
     page.getByRole("heading", { level: 2, name: "Diversity" }),
   ).toBeFocused();
   await expect(panel(page).getByRole("button", { name: "Run" })).toHaveCount(0);
 
   await expect(
-    panel(page).getByRole("grid", { name: CAPTION_005 }),
+    panel(page).getByRole("table", { name: CAPTION_005 }),
   ).toBeVisible();
   await expect(panel(page).getByRole("columnheader")).toHaveText([
     "Population",
@@ -238,7 +237,7 @@ test("WS8 D2 a panel drawn locked that becomes ready gives the focus to its head
   await expect(button).toBeEnabled();
   await button.focus();
   await page.keyboard.press("Enter");
-  await expect(panel(page).getByRole("grid")).toBeVisible();
+  await expect(panel(page).getByRole("table")).toBeVisible();
   await expect(
     page.getByRole("heading", { level: 2, name: "Diversity" }),
   ).toBeFocused();
@@ -265,6 +264,47 @@ for (const width of [320, 640]) {
   });
 }
 
+test("WS8 D2 at 320 px wide the table scrolls in a frame that the Tab key reaches and the arrow keys scroll", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await page.setViewportSize({ width: 320, height: 800 });
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  await goTo(page, "Analyses");
+  await run(page);
+  const frame = panel(page).getByRole("region", {
+    name: "The diversity of each population, over the 1,200 variants of panel.nei the filters kept.",
+  });
+  // The table is wider than its frame, and the page does not scroll
+  // sideways.
+  expect(await frame.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(
+    true,
+  );
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  // The Tab key goes from the heading, where the run left the focus, to
+  // the frame, and the arrow key scrolls it.
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Diversity" }),
+  ).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(frame).toBeFocused();
+  // The arrow key is pressed until the frame scrolls: WebKit 26.6 under
+  // Playwright let the first press after the Tab key go by, and scrolled
+  // from the second, when the presses were half a second apart; Chromium
+  // scrolled from the first.
+  await expect
+    .poll(async () => {
+      await page.keyboard.press("ArrowRight");
+      return frame.evaluate((el) => el.scrollLeft);
+    })
+    .toBeGreaterThan(0);
+  await expectNoViolations(makeAxeBuilder);
+});
+
 test("WS8 D2 the filter moved to 1 removes the table with the words of its notice, and Run at 1 gives p0 0.3519, 0.3564, 0.9267", async ({
   page,
   makeAxeBuilder,
@@ -288,12 +328,18 @@ test("WS8 D2 the filter moved to 1 removes the table with the words of its notic
       { exact: true },
     ),
   ).toBeVisible();
-  await expect(panel(page).getByRole("grid")).toHaveCount(0);
+  await expect(panel(page).getByRole("table")).toHaveCount(0);
+  // What Run will take, as in the state ready.
+  await expect(
+    panel(page).getByText("3 populations: p0, 48 individuals; p2, 84; p1, 68", {
+      exact: true,
+    }),
+  ).toBeVisible();
   await expectNoViolations(makeAxeBuilder);
 
   await run(page);
   await expect(
-    panel(page).getByRole("grid", {
+    panel(page).getByRole("table", {
       name: "The diversity of each population, over the 1,200 variants of panel.nei the filters kept.",
     }),
   ).toBeVisible();
@@ -344,6 +390,119 @@ test("WS8 D2 at 0.05 the download panel.diversity.csv holds the table, and the v
       "p2,84,0.3440824705971255,0.3512406974637824,0.9105902777777778\n" +
       "p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112\n",
   );
+});
+
+test("WS8 D2 a population none of whose individuals is in the variants file gets no warning", async ({
+  page,
+}) => {
+  // The metadata file serves another panel too: p9 and its individuals
+  // are not in panel.nei.
+  const text = await readFile(join(FIXTURES, "panel_pops.csv"), "utf8");
+  await load(
+    page,
+    "panel.nei",
+    { name: "two_panels.csv", text: `${text}x001,p9\nx002,p9\n` },
+    "popcat",
+  );
+  await goTo(page, "Analyses");
+  await expect(
+    panel(page).getByText("3 populations: p0, 48 individuals; p2, 84; p1, 68", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await run(page);
+  await expect(panel(page).getByRole("rowheader")).toHaveText([
+    "p0",
+    "p2",
+    "p1",
+  ]);
+  await expect(panel(page).getByText(/^Warning:/)).toHaveCount(0);
+  await expect(panel(page).getByText(/p9/)).toHaveCount(0);
+});
+
+test("WS8 D2 a VCF with no variant is told that it has none, and Run is not offered", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await load(
+    page,
+    {
+      name: "empty.vcf",
+      text:
+        '##fileformat=VCFv4.2\n##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n' +
+        "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\ta\tb\n",
+    },
+    { name: "empty_pops.csv", text: "IID,pop\na,A\nb,A\n" },
+    "pop",
+  );
+  await goTo(page, "Analyses");
+  await panel(page).getByRole("button", { name: "Run" }).click();
+  await expect(
+    panel(page).getByText(
+      "empty.vcf has no variants, so there is no variant to calculate the diversity over. Load another variants file in the Variants step.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(panel(page).getByRole("button")).toHaveCount(0);
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("WS8 D2 a variants file the browser can no longer read is told so, with no Run, and the focus goes to the heading", async ({
+  page,
+  makeAxeBuilder,
+}, testInfo) => {
+  const dir = testInfo.outputPath("gone");
+  await mkdir(dir, { recursive: true });
+  const copy = join(dir, "panel.nei");
+  await copyFile(join(FIXTURES, "panel.nei"), copy);
+  await load(page, copy, "panel_pops.csv", "popcat");
+  await goTo(page, "Analyses");
+  await rm(copy);
+  await panel(page).getByRole("button", { name: "Run" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(
+    panel(page).getByText(
+      "panel.nei could not be read again; it may have changed on the disk since it was picked. Load it again in the Variants step.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  // Run would fail again until the file is loaded again.
+  await expect(panel(page).getByRole("button")).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Diversity" }),
+  ).toBeFocused();
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("WS8 D2 a calculation stopped by reading the same VCF again with other options says that, and not that a new file was loaded", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await load(page, "panel.vcf.gz", "panel_pops.csv", "popcat");
+  const worker = await calculationWorker(page);
+  await holdBack(worker, ["result"]);
+  await goTo(page, "Analyses");
+  await panel(page).getByRole("button", { name: "Run" }).click();
+  await expect(panel(page).getByRole("button", { name: "Stop" })).toBeVisible();
+
+  await goTo(page, "Variants");
+  await page
+    .getByText("Only the variants with PASS or . in the FILTER column", {
+      exact: true,
+    })
+    .click();
+  await page
+    .getByRole("button", { name: "Read panel.vcf.gz again with every variant" })
+    .click();
+  await goTo(page, "Analyses");
+  await expect(
+    panel(page).getByText(
+      "The calculation of the diversity was stopped because the variants file was read again with other options.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(panel(page).getByText(/a new variants file/)).toHaveCount(0);
+  await expectNoViolations(makeAxeBuilder);
 });
 
 /** The twelve individuals of tetraploid.vcf.gz in one population, A. */
@@ -523,7 +682,7 @@ test("WS8 D2 before its first progress the bar has no value, the clock keeps its
   await worker.evaluate(() => {
     (globalThis as unknown as { __release: () => void }).__release();
   });
-  await expect(panel(page).getByRole("grid")).toBeVisible();
+  await expect(panel(page).getByRole("table")).toBeVisible();
   await expect(stepHeading).toBeFocused();
 });
 
@@ -614,7 +773,7 @@ test("WS8 D2 two warnings are counted on their heading, above the table", async 
     /^Warning: 1 individual of tetraploid\.vcf\.gz has no population/,
   ]);
   const warningsBox = await warnings.boundingBox();
-  const tableBox = await panel(page).getByRole("grid").boundingBox();
+  const tableBox = await panel(page).getByRole("table").boundingBox();
   if (warningsBox === null || tableBox === null) {
     throw new Error("the warnings or the table are not laid out");
   }
@@ -696,7 +855,7 @@ test("WS8 D3 a Stop in the middle of a pass leaves the panel ready with no table
   const bars = panel(page).getByRole("progressbar", {
     name: "Calculating the diversity",
   });
-  const table = panel(page).getByRole("grid");
+  const table = panel(page).getByRole("table");
   let state = "waiting";
   await expect
     .poll(
