@@ -255,7 +255,7 @@ the code that does the same:
 ## Accessibility
 
 - The keyboard goes through the step in this order: the file button, the
-  ploidy, the switch of the passed variants, the switch of the filter,
+  ploidy, the checkbox of the passed variants, the switch of the filter,
   its threshold. A warning or an error sits in the order of the text
   beside what it is about, and is text, "Warning:", as well as its colour
   and its icon (WCAG 2.2, success criterion 1.4.1).

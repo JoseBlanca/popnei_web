@@ -315,7 +315,7 @@ September 2026, and none is approved.
 - `docs/specs/worker/individuals.md`, a draft of the same day, which
   this spec follows: the read gives `found` with the three options used,
   set or detected, so that the first item of each select says what was
-  detected; the column names are unique and the first column is the
+  detected while that option is "auto"; the column names are unique and the first column is the
   identifier; the words of its refusals are that spec's, after "could
   not be read:", "it is 312.4 MB, more than the 20 MB an individuals
   file can have" among them; and `columnWarnings` gives the warning of a
