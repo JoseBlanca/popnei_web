@@ -271,6 +271,18 @@ column:
 > as a measurement. If they are codes, such as numbered populations, it
 > can still be chosen as the column of the populations."
 
+and, for a column whose values are one number written in several ways,
+`1`, `01` and `001`:
+
+> "score holds only one whole number, 1, written in different ways, and
+> is taken as a measurement. If it is a code, such as a numbered
+> population, it can still be chosen as the column of the populations."
+
+The name of the column is written as it is, and the numbers as
+JavaScript writes them, `-3`, `12000`. The words are made by
+`columnWarningText`; the "Warning: " before them is the screen's, which
+`docs/specs/steps/individuals.md` puts there.
+
 ### When a type is wrong, in stage 2
 
 The types are shown and not changed in stage 2, and no analysis of stage
@@ -374,6 +386,7 @@ number cell of an xlsx is a number already.
     number by the rules above, a boolean. */
 export function cellNumber(cell: Cell, decimal: "." | ","): number | null;
 
+/** Throws a defect when a row is not as long as the columns. */
 export function inferColumnTypes(table: IndividualsTable, decimal: "." | ","): ColumnType[];
 
 export const MAX_FEW_WHOLE_LEVELS = 20;
@@ -387,10 +400,15 @@ export interface ColumnWarning {
   max: number;
 }
 
-/** The warnings of the columns, in the order of the table. */
+/** The warnings of the columns, in the order of the table. Throws a
+    defect when `columns` or a row is not as long as the columns. */
 export function columnWarnings(
   table: IndividualsTable, columns: readonly ColumnType[], decimal: "." | ",",
 ): ColumnWarning[];
+
+/** The words of a warning, without the "Warning: " the screen puts
+    before them. */
+export function columnWarningText(warning: ColumnWarning): string;
 ```
 
 The read of a file, in `src/worker/individualsFile.ts`, which
@@ -668,6 +686,14 @@ refused row names the separator it was read with (point O there), a
 field `separator` on `raggedRow` and `unclosedQuote`, which changes
 those two kinds in the approved `protocol.ts` and their check in a
 project file in the approved `project.ts`.
+
+One is open, to be settled before the reader of xlsx of stage 4 is
+written. "The types of the columns" compares the values of a column as
+text, so that a number 1 of an xlsx and a text `1` in the same column
+would be one value; `inferColumnTypes` compares the cells as they are,
+and counts them as two, so that such a column of `1`, `1` as text and
+`2` is continuous and not binary. A CSV gives only text, so stage 2 is
+not touched.
 
 ## Not in this spec
 
