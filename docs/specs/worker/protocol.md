@@ -1,10 +1,14 @@
 # The types the page, the workers and core share
 
 24 September 2026, approved by the owner on 24 September 2026; built in
-`src/worker/protocol.ts`. This spec gives the part of `src/worker/protocol.ts` that core
+`src/worker/protocol.ts`; revised on 25 September 2026 for the specs of
+stage 2 the owner approved that day, as
+`docs/specs/stage-2-open-points.md`, "Changes to approved files", lists.
+This spec gives the part of `src/worker/protocol.ts` that core
 names: the filters of the variants and of the individuals, the table of
-the individuals file and the types of its columns, and a request to a
-worker with its progress and its outcome. The stages are the steps in
+the individuals file and the types of its columns, a request to a
+worker with its progress and its outcome, and the request and the result
+of each analysis, `Job` and `JobResult`. The stages are the steps in
 which the applications are built, in `docs/build-order.md`: stage 1 the
 core with no screen, stage 2 the walking skeleton, the smallest
 application that goes through every part once, stage 3 the variants step,
@@ -78,8 +82,10 @@ keep it. So the screen of the variants step names what popnei filters on,
 "Maximum proportion of missing genotypes", "Maximum major allele
 frequency", and the Python script writes the same numbers
 (`docs/functionality.md`, section 9). The spec of the runner, in stage 2,
-checks the boundary: a variant with a missing rate of exactly 0.1 is kept
-by the filter the user set to 0.1.
+checks the boundary at 0.05, since the missing rates of the panel it
+tests on stop at 0.08: the 39 variants of `panel.nei` with a missing
+rate of exactly 0.05 are kept by the filter the user set to 0.05
+(`docs/specs/worker/runner.md`, "How it is verified").
 
 The filter of the regions of a BED file, of section 3 of
 `docs/functionality.md`, is not in popnei 0.1.0, and joins the union in
@@ -176,8 +182,12 @@ export type ColumnType =
   | { kind: "categorical" };
 ```
 
-How a CSV or TSV is read, and what the reader found where an option was
-`"auto"`, which the screen shows beside the file.
+How a CSV or TSV is read, and the three options the read used, each as
+the user set it or, where it was `"auto"`, as the reader found it, which
+the screen shows beside the file; which of them were `"auto"` the screen
+knows from the options of the source. `"utf-16"` is found only from the
+mark at the start of a file, and so cannot be set
+(`docs/specs/worker/individuals.md`, "The bytes and the encoding").
 
 ```ts
 export interface CsvOptions {
@@ -187,23 +197,33 @@ export interface CsvOptions {
 }
 
 export interface CsvFound {
-  encoding: "utf-8" | "windows-1252";
+  encoding: "utf-8" | "windows-1252" | "utf-16";
   separator: "," | ";" | "\t";
   decimal: "." | ",";
 }
 ```
 
-The ways the individuals file can be refused. The reader's spec, in stage
-2, owns this union and may add to it; these are the ones the documents
-name already.
+The ways the individuals file can be refused. The reader's spec,
+`docs/specs/worker/individuals.md`, owns this union and the words of
+each kind, "The refusals and their words"; the separator of `raggedRow`
+and `unclosedQuote` is the one the read used, set or found, since a
+wrong separator is the likeliest cause of both.
 
 ```ts
 export type IndividualsFileError =
-  | { kind: "empty" }                                  // no row below the header
+  | { kind: "empty" }                                  // no row of individuals
   | { kind: "duplicateColumn"; name: string }          // two columns of one name
   | { kind: "duplicateIndividual"; name: string }      // one individual in two rows
-  | { kind: "raggedRow"; line: number; expected: number; found: number }
-  | { kind: "files"; message: string };                // the xlsx reader refused the file
+  | { kind: "raggedRow"; line: number; expected: number; found: number;
+      separator: "," | ";" | "\t" }
+  | { kind: "files"; message: string }                 // the xlsx reader refused the file, stage 4
+  | { kind: "unnamedColumn"; column: number }          // values under no name; counted from 1
+  | { kind: "emptyIndividual"; line: number }          // a row with no name of an individual
+  | { kind: "unclosedQuote"; line: number;             // the line where the cell starts
+      separator: "," | ";" | "\t" }
+  | { kind: "tooLarge"; size: number; max: number }    // in bytes
+  | { kind: "unreadable"; message: string }            // the browser's, for the console
+  | { kind: "notText" };                               // not a text file
 ```
 
 A request to a worker, as `.claude/skills/coding/worker.md` gives it. `id`
@@ -211,10 +231,17 @@ is the number of the request, counted up from 1 for the life of the page.
 `cancel()` takes a request that waits in the queue out of it, or, for one
 that runs, ends its worker and starts another (`docs/architecture.md`,
 section 5). The outcome is a promise, a value that arrives later, and it
-never fails: a failure is one of its values.
+never fails: a failure is one of its values. The progress of a run is
+the four numbers popnei's `Variants.onProgress` gives of each pass
+(`js/popnei/src/variant.ts`), under popnei's names: the bytes of the
+file the pass has read, `bytesRead`, of the bytes of the file,
+`numBytes`, counted on the disk, so a gzipped VCF compressed; the pass
+that reads, `pass`, 1 for the first; and the passes of the run,
+`numPasses`. The run is `(pass − 1 + bytesRead / numBytes) / numPasses`
+done (`docs/specs/worker/messages.md`, "The progress").
 
 ```ts
-export interface Progress { done: number; total: number }
+export interface Progress { bytesRead: number; numBytes: number; pass: number; numPasses: number }
 
 export interface Run<R> {
   id: number;
@@ -230,15 +257,70 @@ export type Outcome<R> =
 export type RunError =
   | { kind: "popnei"; message: string }       // a call to popnei threw
   | { kind: "files"; message: string }        // a call to the files wasm threw
+  | { kind: "reopenFailed"; name: string; message: string } // the variants file no longer reads
   | { kind: "workerFailed"; message: string } // the worker crashed, or threw outside a call
   | { kind: "couldNotStart"; reason: string } // no `ready` from the worker, twice
   | { kind: "protocolMismatch" }              // a stale file after a deploy
   | { kind: "defect"; message: string };      // a message that did not validate
 ```
 
+`reopenFailed` is a variants file the browser can no longer read,
+changed, moved or deleted on the disk since the user picked it, with the
+name of the file and popnei's message, which the client writes to the
+console. A second try does not mend it, a new load of the file does, so
+the user is told the file may have changed and to load it again, as the
+owner decided on 25 September 2026 (point B of
+`docs/specs/stage-2-open-points.md`); which refusals of popnei the runner
+answers so is in `docs/specs/worker/runner.md`, "What it answers when
+something goes wrong".
+
 The key travels as a `string`, since `protocol.ts` imports nothing of
 core; core makes its own type of key of it with `keyFromWire`
 (`docs/specs/core/keys.md`).
+
+The request of a calculation and its result are unions, `Job` and
+`JobResult`, since the analyses of core build a `Job` and read a
+`JobResult` and core imports no `messages.ts`
+(`docs/specs/worker/messages.md`, "Job and JobResult"). Each analysis
+adds one member to each, tagged with its id in the field `analysis`,
+and its spec gives the fields; stage 2 has the diversity alone
+(`docs/specs/analyses/diversity.md`, "The TypeScript interface"). The
+populations are pairs in the order of the file, since their names are
+the user's and never the names of fields.
+
+```ts
+export type Pops = readonly (readonly [pop: string, individuals: readonly string[]])[];
+
+export interface DiversityJob {
+  analysis: "diversity";
+  fileId: string;                          // the load id of the variants file it reads
+  filters: readonly VariantFilter[];
+  individualFilters: readonly IndividualFilter[];
+  pops: Pops;
+  minNumIndividuals: number;
+  polyThreshold: number;
+}
+
+export interface DiversityResult {
+  analysis: "diversity";
+  pops: readonly string[];                 // in the order of the job
+  numIndividuals: Uint32Array;
+  unbiasedExpHet: Float64Array;            // NaN for no value
+  obsHet: Float64Array;
+  polyRatio: Float64Array;
+  numVarsWithValue: Uint32Array;
+  numVars: number;                         // the variants the filters kept
+  numVarsRead: number;                     // the variants of the file
+}
+
+export type Job = DiversityJob;
+export type JobResult = DiversityResult;
+```
+
+The typed arrays of a result are types of the language, not of the
+browser, so `protocol.ts` still names nothing of the browser.
+`PROTOCOL_VERSION`, the version of the messages, is in `messages.ts`,
+beside the messages it versions, and not here: core has no use for it.
 
 ## The cases
 
@@ -247,7 +329,10 @@ core; core makes its own type of key of it with `keyFromWire`
   `Error` itself, with its message (`js/popnei/README.md`). The runner
   catches what a call to popnei throws, at that call, and gives the kind
   `popnei` only to such an `Error`, which the same data gives again every
-  time, so the store keeps it (`docs/specs/core/store.md`). What else a
+  time, so the store keeps it (`docs/specs/core/store.md`). A refusal
+  whose message says the browser could not read the file is the
+  exception: it is `reopenFailed`, above (`docs/specs/worker/runner.md`).
+  What else a
   call can throw is an error of the engine of the browser and not a
   judgement of the data: a `RangeError` when the memory of popnei's code
   cannot grow for a large file, a `WebAssembly.RuntimeError` when popnei's
@@ -277,8 +362,9 @@ Types have no test of their own. The compiler checks them where they are
 used: the tests of core build projects with every kind of filter, and
 `tsc -b` with `tsconfig.core.json` checks that `protocol.ts` names nothing
 of the browser. That the fields of the filters are popnei's arguments,
-the boundary of 0.1 above, and the PCA's MAF filter given as one filter,
-are checked by the tests of the runner, in stage 2.
+and the boundary above, at 0.05, are checked by the tests of the runner,
+in stage 2 (`docs/specs/worker/runner.md`); the PCA's MAF filter given
+as one filter waits for the job of the PCA, in stage 4.
 
 ## Open points
 
@@ -286,10 +372,13 @@ None.
 
 ## Not in this spec
 
-- `Job`, `JobResult`, `PROTOCOL_VERSION`, and the messages: the spec of
-  the workers, stage 2.
-- The reader of the individuals file, and how a text cell becomes a
-  number with the decimal mark found: `docs/specs/worker/individuals.md`,
-  stage 2.
+- The messages, their checks and `PROTOCOL_VERSION`:
+  `docs/specs/worker/messages.md`. What each member of `Job` and
+  `JobResult` means, and how it is checked when it arrives: the spec of
+  its analysis, `docs/specs/analyses/diversity.md` in stage 2, and
+  `messages.md`.
+- The reader of the individuals file, the words of its refusals, and how
+  a text cell becomes a number with the decimal mark found:
+  `docs/specs/worker/individuals.md`.
 - The filter of the regions of a BED file, and how the runner makes the
   list of individuals from the filters: stage 3.

@@ -1,7 +1,10 @@
 # The project and its commands
 
 24 September 2026, approved by the owner on 24 September 2026; built in
-`src/core/project.ts`. The project is everything the user has set in one application: the
+`src/core/project.ts`; revised on 25 September 2026 for the specs of
+stage 2 the owner approved that day, as
+`docs/specs/stage-2-open-points.md`, "Changes to approved files", lists.
+The project is everything the user has set in one application: the
 variants file they loaded, the filters, the individuals file with the
 types of its columns, the populations, and the options of each analysis.
 This spec gives its type, the commands that change it, the records that
@@ -106,9 +109,18 @@ words the screen shows beside the Run button, or `null`:
 | popnei refused the file | "popnei could not read panel.nei: ‹popnei's message›. Load a variants file in the Variants step." |
 | the calculation crashed while it read the file | "panel.nei could not be read: ‹what happened› (**Open 4**). Load it again in the Variants step." |
 | the calculations could not start, or the page is out of date | "panel.nei could not be read: ‹what happened› (**Open 4**). Reload the page and load it again." |
+| the browser could no longer read the file, `reopenFailed` | "panel.nei could not be read; it may have changed on the disk since it was picked. Load it again in the Variants step." |
 | a list of individuals that is empty | "The list of individuals to keep is empty. Add individuals to it, or remove the filter, in the Variants step." |
 | a list that names an individual more than once | "The list of individuals to remove names ind_031 more than once. Change the list, or remove the filter, in the Variants step." (**Open 2**) |
 | a list that names individuals not in the variants | "The list of individuals to keep names 2 individuals that are not in panel.nei: ind_900 and ind_901. Change the list, or remove the filter, in the Variants step." (**Open 2**) |
+
+The owner decided on 25 September 2026 that a variants file the browser
+can no longer read, changed, moved or deleted on the disk since it was
+picked, has a kind of its own, `reopenFailed` of `RunError`
+(`docs/specs/worker/protocol.md`), and these words, which say what a
+user can do about it (point B of `docs/specs/stage-2-open-points.md`).
+The source keeps it as a failure of the worker, so a read of the same
+load that succeeds later replaces it (below, "The records").
 
 The owner decided on 24 September 2026 that the words the first draft of
 these tables lacked, the end of the last two rows, how many individuals
@@ -153,23 +165,65 @@ September 2026, after the owner approved this spec, on the pattern of the
 table above, and approved by the owner with the plan of stage 1 the
 same day; the step is named by its
 folder in `docs/architecture.md`, section 9, `individuals`, since
-`docs/functionality.md` names no step.
+`docs/functionality.md` names no step. The file is named as the
+application of the project names it, "a metadata file" in population
+genetics and "a traits file" in association, as the owner decided on 25
+September 2026 (point P of `docs/specs/stage-2-open-points.md`); the
+reasons below are those of population genetics.
 
 | the project | the reason |
 |---|---|
-| no individuals file | "Load an individuals file in the Individuals step." |
+| no individuals file | "Load a metadata file in the Individuals step." |
 | the individuals file being read | "Reading pops.csv." |
-| the files wasm refused the file | "pops.csv could not be read: ‹its message›. Load an individuals file in the Individuals step." |
-| the reader of CSV and TSV refused the file | "pops.csv could not be read: line 7 has 3 cells where the header has 4. Load an individuals file in the Individuals step." (**Open 5**) |
+| the files wasm refused the file | "pops.csv could not be read: ‹its message›. Load a metadata file in the Individuals step." |
+| the reader of CSV and TSV refused the file | "pops.csv could not be read: line 7 has 3 cells where the header has 4, read with the semicolon as the separator. Load a metadata file in the Individuals step." |
 | the worker crashed while it read the file | "pops.csv could not be read: ‹what happened› (**Open 4**). Load it again in the Individuals step." |
 | the worker could not start, or the page is out of date | "pops.csv could not be read: ‹what happened› (**Open 4**). Reload the page and load it again." |
 | individuals of the variants missing from it | "12 individuals of panel.nei are not in pops.csv: ind_031, ind_044 and 10 more. Add them to the file and load it again in the Individuals step." |
+
+The words after "could not be read:" of a refusal of the reader are
+those of the reader's spec, `docs/specs/worker/individuals.md`, "The
+refusals and their words", one for each of the eleven kinds of
+`IndividualsFileError`, which settles the words of **Open 5**: "it has
+no row of individuals"; "two columns are named pop"; "the individual ind_031 is in
+two rows"; "line 7 has 3 cells where the header has 4, read with the
+semicolon as the separator"; "column 4 has values but no name in the
+header"; "line 7 has no name of an individual in its first column"; "the
+quote that opens a cell on line 7 is never closed, read with the comma
+as the separator"; "it is 312.4 MB, more than the 20 MB a metadata file
+can have; check that it is the metadata file and not the variants", with
+"a traits file" and "the traits file" in association; "the browser could
+not read it; it may have been changed, moved or deleted since it was
+picked"; "it is not a text file; in Excel, save the sheet as CSV"; and
+the message of the files wasm for `files`. A separator is named as the
+Individuals step names it, the comma, the semicolon or the tab. A size
+is in MB of 1,000,000 bytes, with one decimal rounded up, so that a file
+of 20,000,001 bytes is "20.1 MB"; the limit, a whole number of MB, is
+written with none. The names and the counts are shown by the rules after
+the first table.
 
 The individuals missing are named as **Open 3** says; one alone is "1
 individual of panel.nei is not in pops.csv: ind_031. Add it to the file
 and load the file again in the Individuals step." When the variants file
 is not read, `individualsNeeds` does not look at the individuals of the
 variants: `projectNeeds` has already given its reason.
+
+Who is missing is given by `individualsCheck`, which the Individuals step
+and the stepper of the shell read as well (`docs/specs/steps/individuals.md`),
+and on which `individualsNeeds` is written, so that the two never
+disagree: the individuals of the variants file found in the table, all
+those missing, in the order of the variants file, and the rows of the
+table whose individual is not in the variants file, which are ignored
+(`docs/functionality.md`, section 4). It is `null` when either file is
+not read. It keeps its answer for the same two reads, so that a table of
+10,000 rows is not matched again each time a screen is drawn.
+
+The metadata file, and a column of the populations chosen in it, are
+required in stage 2 and optional from stage 4, as the owner decided on
+25 September 2026 (point A of `docs/specs/stage-2-open-points.md`): from
+stage 4 `individualsNeeds` no longer locks on no file, and `Grouping`
+gains a value for every individual in one population. Until then both
+stay as they are.
 
 ### The project of an opened project file
 
@@ -197,10 +251,16 @@ seconds would have been taken for one of the file's.
 
 The project file also saves, with the numbers of each analysis, the
 number its module raises when its calculation changes, its key version,
-and, in its header, the version of the application. So a result that
-differs because the application calculates it in another way since, with
-the same popnei, is told as that, and not blamed on the variants file
-(`docs/specs/core/store.md`, "The comparison with the check numbers").
+and the versions of popnei and of the application the numbers were
+calculated with, as the owner decided on 25 September 2026 (point E of
+`docs/specs/stage-2-open-points.md`). The versions are kept with each
+check and not once for the file, because a project saved again carries
+the numbers of an analysis that did not run again with the versions they
+were calculated with (`docs/specs/core/projectFile.md`, "The check
+numbers"). So a result that differs because the application calculates
+it in another way since, or because popnei changed, is told as that, and
+not blamed on the variants file alone (`docs/specs/core/store.md`, "The
+comparison with the check numbers").
 
 ## The TypeScript interface
 
@@ -269,15 +329,18 @@ export type SourceRead =
   | { kind: "failed"; error: SourceError };
 
 /** popnei refused the file, or the worker failed before popnei answered:
-    it could not start, it crashed, or the file could not be read again.
-    A refusal of popnei is the first kind, never the second. */
+    it could not start, it crashed, or the browser could no longer read
+    the file, `reopenFailed`. A refusal of popnei is the first kind, never
+    the second. */
 export type SourceError =
   | { kind: "popnei"; message: string }
   | { kind: "worker"; error: Exclude<RunError, { kind: "popnei" }> };
 ```
 
-The individuals file. A read of a CSV reports what the options that were
-`"auto"` found; `found` is `null` for an xlsx.
+The individuals file. A read of a CSV reports the three options it used,
+each as the user set it or, where it was `"auto"`, as the reader found
+it (`docs/specs/worker/protocol.md`, `CsvFound`); `found` is `null` for
+an xlsx.
 
 ```ts
 export interface IndividualsSource {
@@ -332,8 +395,6 @@ of a load of another session, and names no file of this one.
 ```ts
 export interface Reference {
   variants: VariantSource;   // its identity: name, size, format, individuals, ploidy, numVars
-  popneiVersion: string;     // from the header of the project file
-  appVersion: string;        // from the header
   checks: Check[];
 }
 
@@ -341,9 +402,15 @@ export interface Check {
   analysis: AnalysisId;
   numbers: (number | null)[];  // the check numbers saved; null where popnei gave NaN
   keyVersion: number;          // the analysis's key version when it was run
+  popneiVersion: string;       // the version of popnei it was run with
+  appVersion: string;          // the version of the application it was run with
   settings: string;            // the fingerprint of its settings in the file; never saved
 }
 ```
+
+The reference holds no versions of its own: the header of the project
+file has the versions of the save, which the project does not keep, and
+each check the versions of its numbers.
 
 A new, empty project of one application.
 
@@ -534,8 +601,37 @@ again, and a command on another column of it would throw.
 /** The reason no analysis can run on this project, or null; the table above. */
 export function projectNeeds(p: Project): string | null;
 
-/** The reason an analysis that uses the individuals file cannot run, or null. */
+/** The reason an analysis that uses the individuals file cannot run, or
+    null, naming the file as the application of `p` names it. */
 export function individualsNeeds(p: Project): string | null;
+
+/** The individuals of the variants file found in the table, all those
+    missing in the order of the variants file, and the number of rows of
+    other individuals; null when either file is not read. The same object
+    for the same two reads. */
+export function individualsCheck(p: Project): {
+  found: number; missing: string[]; ignoredRows: number;
+} | null;
+```
+
+The rules by which a text names a value of a file, the individuals and
+the counts, above and in "The validation", are exported, so that the
+other modules that write for the user, the diversity, the project file
+and the Individuals step, follow them without writing them again; their
+behaviour is the one this spec gives:
+
+```ts
+/** A value of a file escaped and cut after 40 characters, with "…". */
+export function shown(value: string): string;
+/** A value of a file, the name of a file among them, escaped and not cut. */
+export function escaped(value: string): string;
+/** Names in words: all when three or fewer, "a, b and c"; otherwise the
+    first two and how many more, "a, b and 10 more". */
+export function namesOf(names: readonly string[]): string;
+/** A count with its noun, "1 individual", "1,203 individuals". */
+export function counted(count: number, noun: string): string;
+/** A whole number with a comma between groups of three digits. */
+export function grouped(count: number): string;
 ```
 
 ### The validation
@@ -592,10 +688,13 @@ that are not missing, `one` not `zero`; nothing found of the options of
 a CSV for an xlsx, whose `csv` is `null`; each analysis id one of those
 given, once, with options nested at most `MAX_OPTIONS_DEPTH` levels, which
 its `parseOptions` accepts; the application and the grouping of the
-application given, with no column named twice in the roles; the reference
-with its versions, and each check of an analysis among those given, once,
-with a key version that is a whole number of at least 0 and a fingerprint
-of 64 lower case hexadecimal digits.
+application given, with no column named twice in the roles; each check
+of the reference of an analysis among those given, once, with a key
+version that is a whole number of at least 0, its version of popnei and
+of the application, two texts, and a fingerprint of 64 lower case
+hexadecimal digits; a failed read of the individuals file of any kind of
+`IndividualsFileError` with its fields, the separator among them one of
+the three a CSV can have; and `"utf-16"` among the encodings found.
 
 - **A file of the other application** is refused: "This project file is
   of the association application. Open it there."
@@ -606,10 +705,12 @@ of 64 lower case hexadecimal digits.
   taken was to open it without that analysis.
 - **A file saved by a newer version of the application** never reaches
   `parseProject`: the header of every project file holds the version of
-  its format, and `projectFile.ts`, in stage 2, refuses a version newer
-  than the ones it knows before it reads the rest, with "This project file
-  was saved by a newer version of the application. Open it there, or save
-  it again from it in an earlier format." (the words are that spec's).
+  its format, and `projectFile.ts` refuses a version newer than the ones
+  it knows before it reads the rest, with "This project file was saved by
+  a newer version of the application, 0.4.0, in a format this version
+  cannot read. Reload the page to get the newest version, and open the
+  file again." (`docs/specs/core/projectFile.md`, `newerFormat`, whose
+  words these are).
 - **A field the type does not have**, in a file whose version this
   application knows, is refused, as `unknownField`: such a file was
   changed by hand or damaged, since this version would not have written
@@ -681,8 +782,11 @@ of 64 lower case hexadecimal digits.
 - **An opened project file.** `projectFile.ts` gives `parseProject` the
   project part, then makes a project with `variants: null` and the
   reference built from the file (`docs/architecture.md`, section 8). A
-  pending read in a saved project is valid here; what the project file
-  writes of a pending read is decided with the project file, in stage 2.
+  pending read in a project is valid here; a project file writes the read
+  of its variants file as pending, whatever it was, and writes the
+  individuals file only when it was read (`docs/specs/core/projectFile.md`,
+  "What is written of each part"), so an opened project holds no pending
+  read of the individuals file.
 
 ## How it is verified
 
@@ -704,7 +808,15 @@ project frozen deeply with `Object.freeze`, so that a write into it throws
   for another id, for a read already recorded, and, for the individuals
   file, for other `csv` options.
 - **`projectNeeds`** and **`individualsNeeds`**, a case for each row of
-  their tables, the individuals named.
+  their tables, the individuals named; the words of each kind of
+  refusal of the reader; "a traits file" in the reasons of a project of
+  association.
+- **`individualsCheck`**: `null` when either file is not read; the
+  individuals found, those missing in the order of the variants file,
+  and the rows ignored; and `individualsNeeds` naming the same
+  individuals missing.
+- **The exported rules of the words**: `escaped` escapes a name and does
+  not cut it, where `shown` cuts it after 40 characters.
 - **`parseProject`**, a case for each check above, with its `kind` and its
   `path`; `projectErrorText` of `wrongValue` at `["filters", 1,
   "maxAllowedMaf"]` holds "the threshold of the second filter of the
@@ -759,7 +871,9 @@ of them changes those texts and their tests, and nothing else.
    is out of date". A refusal of the files wasm in the calculation
    worker, or of popnei in the light worker, which neither worker gives,
    is taken as a defect of our code, with its words; this is the
-   writer's. The sentence that follows is decided, by the owner on 24
+   writer's, and so is a `reopenFailed` of the light worker, which it
+   never gives. A `reopenFailed` of the variants file has its own words,
+   decided by the owner, above. The sentence that follows is decided, by the owner on 24
    September 2026: after a crash or a defect, "Load it again in the
    Variants step." or "Load it again in the Individuals step.", since
    loading the file again starts a new worker and keeps the rest of the
@@ -768,17 +882,14 @@ of them changes those texts and their tests, and nothing else.
    those. The option not taken was "Reload the page and load it again."
    after every failure of the worker, which after a crash would have lost
    the whole project for what a new load of the file mends.
-5. **The end, and the words, of a refusal of the reader of the
-   individuals file**, the reader of CSV and TSV. "Reload the page and
-   load it again." is wrong advice for a file whose rows are wrong, so,
-   meanwhile, such a refusal ends "Load an individuals file in the
-   Individuals step.", and says what the reader found: a file with no row
-   below the header, "it has no row below the header"; two columns of one
-   name, "two columns are named pop"; an individual in two rows, "the
-   individual ind_031 is in two rows"; a row of the wrong length, "line 7
-   has 3 cells where the header has 4", and "1 cell" for one. The spec of
-   the reader, in stage 2, owns these words and may add refusals; the
-   refusal of the files wasm keeps its row of the table.
+5. **The end of a refusal of the reader of the individuals file**, the
+   reader of CSV and TSV. Its words, after "could not be read:", are the
+   reader's spec's since 25 September 2026, above, which settles what
+   this point asked of them. "Reload the page and load it again." is
+   wrong advice for a file whose rows are wrong, so, meanwhile, such a
+   refusal ends "Load a metadata file in the Individuals step.", read on
+   that very step, which the owner judges on the screens of stage 2 with
+   the others (`docs/specs/steps/individuals.md`, "Its words").
 6. **Which problem of the filters of individuals is named first, when
    there are several.** Meanwhile, the list of individuals to keep before
    the list to remove; within one list, an empty list first, then names

@@ -1,7 +1,9 @@
 # The store
 
 24 September 2026, approved by the owner on 24 September 2026, and
-revised on 25 September 2026 for decisions of the owner of that day;
+revised on 25 September 2026 for decisions of the owner of that day and
+for the specs of stage 2 the owner approved that day, as
+`docs/specs/stage-2-open-points.md`, "Changes to approved files", lists;
 built in `src/core/store.ts`. The store is the one object of core that changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.
@@ -15,8 +17,8 @@ definition of an analysis of its section 4, and depends on
 on `docs/specs/worker/protocol.md` for a request and its outcome. The
 stages it names are the steps in which the applications are built, in
 `docs/build-order.md`: stage 2 is the walking skeleton, the smallest
-application that goes through every part once, and stage 6 the project
-file and the report.
+application that goes through every part once, which writes and opens
+the project file, and stage 6 the report.
 
 ## What it does
 
@@ -105,7 +107,7 @@ has the kind `removed` in the code.
 |---|---|---|
 | locked | `projectNeeds` or its `needs` gives a reason | the reason |
 | done | the cache holds a result under its key | the result, its warnings, and the comparison with the check numbers of an opened project file |
-| running | a calculation of its key is in flight and is not being stopped, whether it waits in the queue of the worker or runs | its progress, `null` until the worker gives one, and the request's id |
+| running | a calculation of its key is in flight and is not being stopped, whether it waits in the queue of the worker or runs | its progress, the `Progress` of `docs/specs/worker/protocol.md`, popnei's four numbers of the pass as the worker gave them, passed on unchanged, `null` until the worker gives one; and the request's id |
 | error | popnei refused the calculation of its key, or the calculation failed since the last change | popnei's message, or the failure |
 | removed | the current notice lists it among the results removed | its key; it can run again |
 | ready | none of the above | its key |
@@ -381,14 +383,20 @@ different lengths differ; two `null`s are the same.
 - **Other numbers**: the comparison gives what could explain it. The
   variants file always could: it is not the one the project was saved
   with, or it was changed since. When the version of popnei is not the
-  one in the header of the project file, the comparison names both
-  versions, since the new version could explain it too. When the key
+  one saved with the numbers, the comparison names both versions, since
+  the new version could explain it too. When the key
   version of the analysis is not the one saved with its numbers, it names
-  both versions of the application, since the application has changed how
-  it calculates this analysis since. It cannot tell which of these is the
+  both versions of the application, the one saved with the numbers and
+  the one now, since the application has changed how it calculates this
+  analysis since. It cannot tell which of these is the
   cause.
 
-The final words are those of the screen of the project file, in stage 6.
+The versions compared are those saved with the check of the analysis,
+since each check keeps the versions its numbers were calculated with
+(`docs/specs/core/project.md`, `Check`), as the owner decided on 25
+September 2026. The words the user reads are `checkVerdictText` of
+`docs/specs/core/projectFile.md`, in stage 2, which the panel of every
+analysis shows under its result.
 
 How the store does it, decided here, not by the owner, on 24 September
 2026: it asks `checkNumbers` once for each result, when the result
@@ -701,7 +709,8 @@ and one that needs only the variants file.
   `apply("a variants file was loaded", (p) => loadVariants(p, …))` and
   `variantsRead` of that load: the second is `ready`, the first locked by
   the individuals file. `startRun` of the second: it is `running`; a
-  progress of 3 of 10: its progress is 3 of 10; `runEnded` with its
+  progress of `{ bytesRead: 3, numBytes: 10, pass: 1, numPasses: 1 }`:
+  its progress is that object; `runEnded` with its
   result: it is `done`, with its warnings, and the cache holds one result.
   `apply("the missing data filter changed", …)`: it is `removed`, the
   notice lists it with that cause and stops nothing. `undo()`: it is
@@ -733,11 +742,13 @@ and one that needs only the variants file.
   with `workerFailed` gives `error` of kind `failed`, `startRun` works,
   and after a command and its undo the analysis is `ready`.
 - **The check numbers**: a project opened with a reference whose check
-  holds the fingerprint of its settings, popnei "0.1.0", key version 1: a
+  holds the fingerprint of its settings, popnei "0.1.0", the application
+  "0.0.9" and key version 1: a
   result with the same numbers gives `same`; other numbers with popnei
   "0.1.0" now and key version 1 give `differs` with `popnei` and `app`
   null; with "0.2.0" now, `popnei` names both; with key version 2 now,
-  `app` names both versions of the application; a list one number
+  `app` names both versions of the application, "0.0.9" of the check and
+  the one the store was made with; a list one number
   shorter differs; a setting changed: `check` is null; set back: the
   comparison is there again.
 - **`popneiReady` twice** with the same version gives the same state
@@ -777,14 +788,15 @@ None of the store's own. It uses the bound of the cache
 
 ## Not in this spec
 
-- `src/ui/runs.ts`, which awaits the requests, and the hook, the function
-  through which a React screen reads the store: the specs of the shell,
-  the header, the stepper and the notices of the page, in stage 2, and
-  `.claude/skills/coding/react.md`.
+- `src/ui/runs.ts`, which awaits the requests: `docs/specs/entry.md`.
+  The hook, the function through which a React screen reads the store:
+  `docs/specs/entry.md` and `.claude/skills/coding/react.md`.
 - The list of the analyses of each application, `apps.ts`, and each
   analysis: from stage 2.
-- The words of the notice, the locked reasons of each analysis and the
-  comparison: the screen specs.
+- The words of the notice and the locked reasons of each analysis: the
+  screen specs, `docs/specs/shell.md` and the spec of each analysis. The
+  words of the comparison: `checkVerdictText` of
+  `docs/specs/core/projectFile.md`.
 - Starting the calculation worker again when the load of the variants
   file changes: the worker client, which reads it from the project
   (`docs/architecture.md`, section 5).

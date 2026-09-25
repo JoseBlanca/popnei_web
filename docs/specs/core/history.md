@@ -1,7 +1,9 @@
 # Undo and redo
 
-24 September 2026, approved by the owner on 24 September 2026. The code
-is in `src/core/history.ts`. The history keeps the projects the user has had, so that an undo
+24 September 2026, approved by the owner on 24 September 2026; revised
+on 25 September 2026 for the specs of stage 2 the owner approved that
+day, as `docs/specs/stage-2-open-points.md`, "Changes to approved
+files", lists. The code is in `src/core/history.ts`. The history keeps the projects the user has had, so that an undo
 gives back the previous one and a redo the one after it. Because a result
 is found by the key that a project gives it (`docs/architecture.md`,
 section 3), an undo also brings back the results of the previous project,
@@ -33,11 +35,15 @@ whose file was read long ago.
 - **A command after an undo drops the redo**, since the projects there
   followed from one the user has left.
 - **Opening a project file starts a new history.** Ctrl+Z does not undo the
-  opening, and the work before it is gone unless it was saved; the screen
-  asks before opening, "Open a project and lose this one?"
-  (`.claude/skills/coding/react.md`). The owner decided it on 24 September
-  2026. The option not taken was to make the opening a step of undo, which
-  would have brought back the work before it at no cost.
+  opening, and the work before it is gone unless it was saved; so when
+  the project has changed since the page opened or since the last save,
+  or calculations are in flight, the shell asks before opening, with the
+  dialog of `docs/specs/shell.md`, "Opening": "Open panel.popnei.json? It
+  replaces the project on the page, and an opening cannot be undone. Save
+  the project first to keep it." The owner decided on 24 September
+  2026 that an opening starts a new history. The option not taken was
+  to make the opening a step of undo, which would have brought back the
+  work before it at no cost.
 - **A record of a read changes every project of the history that holds
   that load**, and makes no step (`docs/architecture.md`, section 6, step
   3). A pick of the variants file is a step; the read of the file that
