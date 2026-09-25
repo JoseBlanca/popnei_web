@@ -616,3 +616,63 @@ A metadata file of 10,000 rows and 20 columns, 1.39 MB, in Chromium:
 111 ms from the pick to the columns shown. 33 clicks were answered
 meanwhile, none waited more than 2 ms, and no task of the page lasted
 more than 50 ms.
+
+### What the review of work package 8 asks of the owner
+
+Nine reviewers read the Individuals step and the diversity panel. The
+spec reviewer recomputed the table with popnei's Python API: every row
+matched to the last digit shown, at 0.05 and at 1, in Chromium and
+WebKit. The reviewer of results kept after their inputs change drove
+both engines through changes made during a run: another column,
+another filter, a new file, Stop. The panel never showed a number of
+other settings.
+
+These change what the user reads, or a spec, and wait for the owner,
+each with a recommendation:
+
+1. After an Undo, the panel's words give the wrong cause. The removed
+   state says "The diversity was removed because the missing data
+   filter changed … Run calculates it for the new settings", when the
+   user has just undone that change. The stopped line says "a new
+   variants file was loaded" for every stop, including after reading
+   the same file again with other options. Recommended: write both
+   from the change itself, as the shell's notice does, "Undone: the
+   missing data filter changed. The diversity was removed; Redo brings
+   it back with no calculation, and Run calculates it for the settings
+   as they are now."
+2. After "could not be read again", Run is still offered, and pressing
+   it gives the same message with no sign that anything happened.
+   Recommended: offer no Run then, as after popnei's refusal.
+3. A metadata file that also holds the individuals of another panel is
+   meant to serve several variants files, its extra rows ignored. It
+   gets the warning "Population p9 has no individual among the
+   individuals of panel.nei that the filters kept", which blames
+   filters that did nothing. Recommended: no warning for a population
+   none of whose individuals are in the variants file.
+4. The removed state does not list the populations that Run will take.
+   Recommended: list them, as the ready state does.
+5. The first values of a column are joined by ", ", so a column with
+   the decimal comma reads "1,75, 1,62, 1,80". Recommended: " · ".
+6. The message that individuals are missing sits under the list of
+   columns, and reads as if choosing a column would fix it. Recommended:
+   a subheading of its own, "Individuals of panel.nei".
+7. The refusals of the reader end "Load a metadata file in the
+   Individuals step.", shown inside that step. A short row most often
+   comes from a wrong separator. Recommended: "Choose another separator
+   above, or load a corrected file." for a short row and an unclosed
+   quote, and "Load a corrected file." otherwise.
+8. The page's first script grew from 77.6 KB to 148.3 KB gzipped in
+   this work package. React Aria's table takes 25.1 KB of the increase,
+   used for a table of 3 rows, and its select list 36.6 KB.
+   Recommended: a plain HTML table, which the keyboard and screen
+   readers handle as well, and keep React Aria's select list, with
+   `docs/technology.md` updated.
+9. "Calculated with popnei 0.1.0" cannot tell `js-v0.1.0-dev.1` from
+   `dev.2`, since both packages say 0.1.0. That is a question for
+   popnei's packaging.
+
+What the owner should try in Firefox on these screens: the download of
+the CSV, whose name should be `panel.diversity.csv` and whose first line
+`population,individuals,…`; the list of the column with the arrow keys
+and Enter; the list of missing individuals opened and closed; the bar
+and Stop during a large VCF.
