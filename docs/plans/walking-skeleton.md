@@ -759,7 +759,7 @@ same numbers.
 
 **Tasks:**
 
-- [ ] 9.1 `src/ui/shell/words.ts`, from the shell spec's "What it sends
+- [x] 9.1 `src/ui/shell/words.ts`, from the shell spec's "What it sends
   and reads", "The stepper", "The summary line", "The notice" and "The
   status region", and the tests of the announcer of task 7.3. Serves 1.
 - [ ] 9.2 Undo and Redo in the header and on the keyboard, the states

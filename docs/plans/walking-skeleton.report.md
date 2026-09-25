@@ -865,3 +865,19 @@ written with its recommendation when it is found.
 The tokens of the subagents: the four rounds 310,804, 358,839, 302,018
 and 257,442; the seven reviewers 57,268 to 148,525 each; the two fixes
 420,166 and 254,401.
+
+## 9. The shell whole, and the project saved and opened
+
+Under way while the owner looks again at the screens of stops 7.5 and
+8.4.
+
+- 9.1, commits 1ececc9 (the shell spec: `stepStates` and
+  `announcementsOf` take the state of any result) and a3596dd:
+  `src/ui/shell/words.ts`. `npx vitest run src/ui/shell -t "WS9 D1"`
+  gives "Tests 54 passed | 4 skipped", at least 52 asked; 67 of 68
+  rules broken failed a test, and the one left changes no word. The
+  "Undone: …" words are now in one place, shared with the diversity
+  panel. Two words for the review of the screen: "All 1 individual
+  found." for a single individual, and "0 populations by pop" in the
+  summary line for a column that gives no individual a population, a
+  case the spec's table lacks.
