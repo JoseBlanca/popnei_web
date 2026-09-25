@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import type { IndividualsTable } from "../../../worker/protocol.ts";
 import {
   allFoundText,
+  checkHeading,
   detectedText,
   excelText,
   firstValuesText,
@@ -14,6 +15,7 @@ import {
   populationLine,
   sizeText,
   typeText,
+  undecodedText,
 } from "./words.ts";
 
 const TABLE: IndividualsTable = {
@@ -33,6 +35,7 @@ const FOUND = {
   encoding: "windows-1252",
   separator: ";",
   decimal: ",",
+  undecodedLine: null,
 } as const;
 
 describe("the words of the Individuals step", () => {
@@ -87,8 +90,8 @@ describe("the words of the Individuals step", () => {
     );
     expect(typeText({ kind: "continuous" })).toBe("continuous");
     expect(typeText({ kind: "categorical" })).toBe("categorical");
-    expect(firstValuesText(TABLE, 1)).toBe("España, Italia, Perú");
-    expect(firstValuesText(TABLE, 2)).toBe("1,75, 1,62, 1,80");
+    expect(firstValuesText(TABLE, 1)).toBe("España · Italia · Perú");
+    expect(firstValuesText(TABLE, 2)).toBe("1,75 · 1,62 · 1,80");
     expect(
       firstValuesText({ columns: ["id", "x"], rows: [["a", "b\n"]] }, 1),
     ).toBe("b\\n");
@@ -104,6 +107,23 @@ describe("the words of the Individuals step", () => {
       allFoundText({ found: 200, missing: [], ignoredRows: 0 }, "panel.nei"),
     ).toBe("All 200 individuals of panel.nei found");
     expect(missingLabel(12)).toBe("The 12 individuals missing");
+  });
+
+  test("WS8 D1 the check has a heading that names the variants file, or says it is not there", () => {
+    expect(checkHeading("panel.nei")).toBe("Individuals of panel.nei");
+    expect(checkHeading("pa\nnel.nei")).toBe("Individuals of pa\\nnel.nei");
+    expect(checkHeading(null)).toBe("Individuals of the variants file");
+  });
+
+  test("WS8 D1 the warning of a character not decoded names its line, and the way out of each encoding", () => {
+    expect(undecodedText("pops.csv", { ...FOUND, encoding: "utf-8" }, 3)).toBe(
+      "line 3 of pops.csv has bytes that could not be read as UTF-8, shown as �. Correct them in the file and load it again, or, if every letter with an accent shows as �, choose Windows-1252 as the encoding.",
+    );
+    expect(
+      undecodedText("pops.csv", { ...FOUND, encoding: "utf-16" }, 12045),
+    ).toBe(
+      "line 12045 of pops.csv has bytes that could not be read as UTF-16, shown as �. Correct them in the file and load it again.",
+    );
   });
 
   test("a population is shown with its number and read with its individuals", () => {

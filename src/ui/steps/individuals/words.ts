@@ -200,8 +200,13 @@ export function typeText(type: ColumnType): string {
 /** The number of distinct values the table shows of each column. */
 const FIRST_VALUES = 3;
 
+/** What joins the first values of a column: a dot and not a comma, as the
+    owner decided on 25 September 2026, since a column of the decimal
+    comma would read "1,75, 1,62, 1,80". */
+const VALUES_JOIN = " · ";
+
 /** The first three distinct values of the column at `index` that are
-    not missing, in the order of the file: "España, Italia, Perú". */
+    not missing, in the order of the file: "España · Italia · Perú". */
 export function firstValuesText(
   table: IndividualsTable,
   index: number,
@@ -214,7 +219,35 @@ export function firstValuesText(
     if (!values.includes(text)) values.push(text);
     if (values.length === FIRST_VALUES) break;
   }
-  return values.join(", ");
+  return values.join(VALUES_JOIN);
+}
+
+/** The heading of the check of the individuals of the variants file
+    `variantsName`, `null` while the project has none: "Individuals of
+    panel.nei". */
+export function checkHeading(variantsName: string | null): string {
+  return variantsName === null
+    ? "Individuals of the variants file"
+    : `Individuals of ${escaped(variantsName)}`;
+}
+
+/** The warning of a character the read of the file `name` could not
+    decode, first on the line `line`, after the "Warning: " of the screen:
+    what it is, and, but for UTF-16, whose encoding cannot be chosen, the
+    encoding that may be the right one. Only UTF-8 has another to offer:
+    a file of UTF-16 is read so by its mark, and Windows-1252 decodes
+    every byte, so a read of it has such a line only in a project file
+    edited by hand. */
+export function undecodedText(
+  name: string,
+  found: CsvFound,
+  line: number,
+): string {
+  const where = `line ${String(line)} of ${escaped(name)}`;
+  const what = `${where} has bytes that could not be read as ${ENCODING_NAMES[found.encoding]}, shown as �. Correct them in the file and load it again`;
+  return found.encoding === "utf-8"
+    ? `${what}, or, if every letter with an accent shows as �, choose Windows-1252 as the encoding.`
+    : `${what}.`;
 }
 
 /** The line of the check before the variants file is read. */

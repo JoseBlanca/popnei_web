@@ -98,7 +98,12 @@ const INDIVIDUALS_READ = {
       { kind: "continuous" },
       { kind: "binary", one: "yes", zero: "no" },
     ],
-    found: { encoding: "utf-8", separator: ",", decimal: "." },
+    found: {
+      encoding: "utf-8",
+      separator: ",",
+      decimal: ".",
+      undecodedLine: null,
+    },
   },
 };
 
@@ -700,6 +705,8 @@ const fileError = fc.oneof(
   }),
   fc.record({ kind: fc.constant("unreadable" as const), message: text }),
   fc.constant({ kind: "notText" as const }),
+  fc.constant({ kind: "variantsFile" as const }),
+  fc.constant({ kind: "cutShort" as const }),
 );
 const fileRead = fc.oneof(
   fc.integer({ min: 0, max: 5 }).chain((numColumns) =>
@@ -725,6 +732,9 @@ const fileRead = fc.oneof(
         encoding: fc.constantFrom("utf-8", "windows-1252", "utf-16"),
         separator,
         decimal: fc.constantFrom(".", ","),
+        undecodedLine: fc.option(fc.integer({ min: 1, max: 100_000 }), {
+          nil: null,
+        }),
       }),
     }),
   ),

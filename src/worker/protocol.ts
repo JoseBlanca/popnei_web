@@ -112,7 +112,8 @@ export interface CsvOptions {
 /** The three options a read of a CSV or TSV used, each as the user set it
     or, where it was `"auto"`, as the reader found it, which the screen
     shows beside the file; which were `"auto"` is in the options of the
-    source. */
+    source. And where the decoding lost a character, for the warning of
+    the screen. */
 export interface CsvFound {
   /** The encoding of the text; `"utf-16"` only from the mark at the start
       of the file, and so never set. */
@@ -121,6 +122,10 @@ export interface CsvFound {
   readonly separator: Separator;
   /** The decimal mark of the numbers. */
   readonly decimal: "." | ",";
+  /** The line of the file, counted from 1, of the first character that
+      could not be decoded and is shown as U+FFFD, �; `null` when every
+      character was decoded. */
+  readonly undecodedLine: number | null;
 }
 
 /**
@@ -168,7 +173,13 @@ export type IndividualsFileError =
       console. */
   | { readonly kind: "unreadable"; readonly message: string }
   /** Not a text file. */
-  | { readonly kind: "notText" };
+  | { readonly kind: "notText" }
+  /** A variants file, a VCF, picked as the individuals file: its first
+      line starts with `##fileformat=VCF` or `#CHROM`. */
+  | { readonly kind: "variantsFile" }
+  /** A UTF-16 file that ends in the middle of a character, and may have
+      been cut short. */
+  | { readonly kind: "cutShort" };
 
 /**
  * How far a run has gone: the four numbers popnei's `Variants.onProgress`

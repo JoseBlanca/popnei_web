@@ -192,7 +192,12 @@ const TABLE_READ: IndividualsAnswer = {
   kind: "read",
   table: { columns: ["name", "pop"], rows: [["s000", "p0"]] },
   columns: [{ kind: "identifier" }, { kind: "categorical" }],
-  found: { encoding: "utf-8", separator: ",", decimal: "." },
+  found: {
+    encoding: "utf-8",
+    separator: ",",
+    decimal: ".",
+    undecodedLine: null,
+  },
 };
 
 describe("WS7 D1 the rule of the reads", () => {
@@ -358,7 +363,12 @@ describe("WS7 D1 the reads cancelled", () => {
       kind: "read",
       table: { columns: ["name", "pop"], rows: [["s000", "p0"]] },
       columns: [{ kind: "identifier" }, { kind: "categorical" }],
-      found: { encoding: "utf-8", separator: ",", decimal: "." },
+      found: {
+        encoding: "utf-8",
+        separator: ",",
+        decimal: ".",
+        undecodedLine: null,
+      },
     });
   });
 
@@ -503,7 +513,12 @@ describe("WS7 D1 the outcomes of the reads", () => {
       kind: "read",
       table: { columns: ["name", "pop"], rows: [["s000", "p0"]] },
       columns: [{ kind: "identifier" }, { kind: "categorical" }],
-      found: { encoding: "utf-8", separator: ",", decimal: "." },
+      found: {
+        encoding: "utf-8",
+        separator: ",",
+        decimal: ".",
+        undecodedLine: null,
+      },
     });
   });
 

@@ -124,7 +124,12 @@ export function sampleProject(): Project {
           { kind: "binary", one: "2", zero: "1" },
           { kind: "continuous" },
         ],
-        found: { encoding: "utf-8", separator: ",", decimal: "." },
+        found: {
+          encoding: "utf-8",
+          separator: ",",
+          decimal: ".",
+          undecodedLine: null,
+        },
       },
     },
     grouping: { kind: "populations", column: "pop" },
@@ -694,6 +699,9 @@ const csvFound: fc.Arbitrary<CsvFound> = fc.record(
     encoding: fc.constantFrom("utf-8", "windows-1252", "utf-16"),
     separator: fc.constantFrom(",", ";", "\t"),
     decimal: fc.constantFrom(".", ","),
+    undecodedLine: fc.option(fc.integer({ min: 1, max: 100_000 }), {
+      nil: null,
+    }),
   },
   PLAIN,
 );

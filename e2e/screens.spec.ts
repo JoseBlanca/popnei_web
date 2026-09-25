@@ -171,7 +171,7 @@ async function goTo(page: Page, step: string): Promise<void> {
     of the Individuals step. */
 async function pickIndividuals(
   page: Page,
-  file: string | { name: string; text: string },
+  file: string | { name: string; text: string | Buffer },
 ): Promise<void> {
   const chooser = page.waitForEvent("filechooser");
   await page
@@ -186,7 +186,8 @@ async function pickIndividuals(
       : {
           name: file.name,
           mimeType: "text/plain",
-          buffer: Buffer.from(file.text),
+          buffer:
+            typeof file.text === "string" ? Buffer.from(file.text) : file.text,
         },
   );
 }
@@ -557,6 +558,35 @@ for (const theme of ["light", "dark"] as const) {
         page.getByText(/^short\.csv could not be read/),
       ).toBeVisible();
       await save(page, `popgen-individuals-refused-${theme}`);
+    });
+
+    test("the Individuals step, a variants file refused", async ({ page }) => {
+      await goTo(page, "Individuals");
+      await pickIndividuals(page, {
+        name: "panel.txt",
+        text: "##fileformat=VCFv4.2\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\ti1\n",
+      });
+      await expect(
+        page.getByText(/^panel\.txt could not be read: it is a variants file/),
+      ).toBeVisible();
+      await save(page, `popgen-individuals-variants-file-${theme}`);
+    });
+
+    test("the Individuals step, a character not decoded", async ({ page }) => {
+      await goTo(page, "Individuals");
+      await pickIndividuals(page, {
+        name: "pops.csv",
+        text: Buffer.concat([
+          Buffer.from([0xef, 0xbb, 0xbf]),
+          Buffer.from("IID;País\r\ns000;España\r\ns001;Ita"),
+          Buffer.from([0xff]),
+          Buffer.from("lia\r\ns002;Perú\r\n"),
+        ]),
+      });
+      await expect(
+        page.getByText(/^Warning: line 3 of pops\.csv/),
+      ).toBeVisible();
+      await save(page, `popgen-individuals-undecoded-${theme}`);
     });
 
     test("the Individuals step, individuals missing", async ({ page }) => {

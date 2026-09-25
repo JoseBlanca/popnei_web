@@ -776,6 +776,8 @@ const FILE_ERROR_KINDS: Readonly<Record<IndividualsFileError["kind"], true>> = {
   tooLarge: true,
   unreadable: true,
   notText: true,
+  variantsFile: true,
+  cutShort: true,
 };
 const SEPARATORS: Readonly<Record<Separator, true>> = {
   ",": true,
@@ -1226,9 +1228,15 @@ function checkCsvOptions(value: unknown, place: Place): Checked<CsvOptions> {
   });
 }
 
-/** The three options of a CSV that a read used. */
+/** The three options of a CSV that a read used, and the line of the first
+    character it could not decode. */
 function checkCsvFound(value: unknown, place: Place): Checked<CsvFound> {
-  const record = objectWith(value, place, ["encoding", "separator", "decimal"]);
+  const record = objectWith(value, place, [
+    "encoding",
+    "separator",
+    "decimal",
+    "undecodedLine",
+  ]);
   if (!record.ok) {
     return record;
   }
@@ -1249,10 +1257,20 @@ function checkCsvFound(value: unknown, place: Place): Checked<CsvFound> {
   if (!decimal.ok) {
     return decimal;
   }
+  const undecodedLine = field(
+    record.value,
+    "undecodedLine",
+    place,
+    isWholeOrNull,
+  );
+  if (!undecodedLine.ok) {
+    return undecodedLine;
+  }
   return accepted({
     encoding: encoding.value,
     separator: separator.value,
     decimal: decimal.value,
+    undecodedLine: undecodedLine.value,
   });
 }
 
@@ -1396,6 +1414,8 @@ function checkFileError(
   switch (tag) {
     case "empty":
     case "notText":
+    case "variantsFile":
+    case "cutShort":
       return exactFields(record, place, ["kind"]) ?? accepted({ kind: tag });
     case "duplicateColumn":
     case "duplicateIndividual": {
@@ -1682,6 +1702,10 @@ const isWhole: Check<number> = (value, place) =>
   typeof value === "number" && Number.isInteger(value)
     ? accepted(value)
     : wrongType(place, "a whole number", value);
+
+/** A whole number, or null, as the line of a character not decoded. */
+const isWholeOrNull: Check<number | null> = (value, place) =>
+  value === null ? accepted(null) : isWhole(value, place);
 
 /** A boolean. */
 const isBoolean: Check<boolean> = (value, place) =>

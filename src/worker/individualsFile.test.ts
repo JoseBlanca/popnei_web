@@ -39,7 +39,12 @@ const SPANISH_READ: IndividualsFileRead = {
     { kind: "categorical" },
     { kind: "continuous" },
   ],
-  found: { encoding: "windows-1252", separator: ";", decimal: "," },
+  found: {
+    encoding: "windows-1252",
+    separator: ";",
+    decimal: ",",
+    undecodedLine: null,
+  },
 };
 
 /** The same, as found in a file of another encoding. */
@@ -103,6 +108,7 @@ describe("WS4 D3 the bytes", () => {
     expect(read.found.encoding).toBe("utf-8");
     expect(read.table.columns).toEqual(["Individuo", "Poblaci�n", "Altura"]);
     expect(read.table.rows[0]).toEqual(["ind_001", "Espa�a", "1,75"]);
+    expect(read.found.undecodedLine).toBe(1);
   });
 
   test("the file in UTF-16 little endian, FF FE, is found UTF-16, the same table", async () => {
@@ -232,7 +238,12 @@ describe("WS4 D3 the bytes", () => {
       kind: "read",
       table: { columns: ["id", "pop"], rows: [["A", "P1"]] },
       columns: [{ kind: "identifier" }, { kind: "categorical" }],
-      found: { encoding: "utf-8", separator: ",", decimal: "." },
+      found: {
+        encoding: "utf-8",
+        separator: ",",
+        decimal: ".",
+        undecodedLine: null,
+      },
     });
   });
 
@@ -249,6 +260,7 @@ describe("WS4 D3 the bytes", () => {
       encoding: "windows-1252",
       separator: ",",
       decimal: ".",
+      undecodedLine: null,
     });
   });
 
@@ -276,5 +288,85 @@ describe("WS4 D3 the bytes", () => {
     if (read.kind !== "read") throw new Error("the read failed");
     expect(read.found.encoding).toBe("windows-1252");
     expect(read.table.columns).toEqual(["ïdent", "pop"]);
+  });
+});
+
+describe("WS4 D3 the owner's decisions of 25 September on the bytes", () => {
+  const encode = (text: string): number[] => [
+    ...new TextEncoder().encode(text),
+  ];
+
+  test("with auto, the BOM of UTF-8 decides UTF-8: a bad byte on line 3 is � and its line is found", async () => {
+    const bytes = [
+      0xef,
+      0xbb,
+      0xbf,
+      ...encode(
+        "Individuo;Población;Altura\r\nind_001;España;1,75\r\nind_002;Ita",
+      ),
+      0xff,
+      ...encode("lia;1,82\r\nind_003;Perú;1,69\r\nind_004;España;1,71\r\n"),
+    ];
+    const read = await readIndividualsFile(blobOf(bytes), AUTO);
+    if (read.kind !== "read") throw new Error("the read failed");
+    expect(read.found).toEqual({
+      encoding: "utf-8",
+      separator: ";",
+      decimal: ",",
+      undecodedLine: 3,
+    });
+    expect(read.table.rows[0]).toEqual(["ind_001", "España", "1,75"]);
+    expect(read.table.rows[1]).toEqual(["ind_002", "Ita�lia", "1,82"]);
+  });
+
+  test("the line of a character not decoded counts the lines as the reader does, \\r alone among them", async () => {
+    const bytes = [
+      ...singleBytes("id,pop\rA,P1\r\n\nB,P"),
+      0xff,
+      ...singleBytes("2\n"),
+    ];
+    const read = await readIndividualsFile(blobOf(bytes), {
+      ...AUTO,
+      encoding: "utf-8",
+    });
+    if (read.kind !== "read") throw new Error("the read failed");
+    expect(read.found.undecodedLine).toBe(4);
+  });
+
+  test("half of a character of UTF-16 in the middle of the file is not decoded, on its line", async () => {
+    const bytes = [
+      0xff,
+      0xfe,
+      ...doubleBytes("id,pop\r\nA,P1\r\n", true),
+      0x3d,
+      0xd8,
+      ...doubleBytes("B,P2\r\n", true),
+    ];
+    const read = await readIndividualsFile(blobOf(bytes), AUTO);
+    if (read.kind !== "read") throw new Error("the read failed");
+    expect(read.found.encoding).toBe("utf-16");
+    expect(read.found.undecodedLine).toBe(3);
+  });
+
+  test("a UTF-16 file with one byte more is cutShort, little and big endian", async () => {
+    const little = [0xff, 0xfe, ...doubleBytes(SPANISH_TEXT, true), 0x41];
+    const big = [0xfe, 0xff, ...doubleBytes(SPANISH_TEXT, false), 0x00];
+    for (const bytes of [little, big]) {
+      expect(await readIndividualsFile(blobOf(bytes), AUTO)).toEqual({
+        kind: "failed",
+        error: { kind: "cutShort" },
+      });
+    }
+  });
+
+  test("a UTF-16 file whose last character is the first half of one written in four is cutShort", async () => {
+    const little = [0xff, 0xfe, ...doubleBytes(SPANISH_TEXT, true), 0x3d, 0xd8];
+    const big = [0xfe, 0xff, ...doubleBytes(SPANISH_TEXT, false), 0xd8, 0x3d];
+    for (const bytes of [little, big]) {
+      expect(await readIndividualsFile(blobOf(bytes), AUTO)).toEqual({
+        kind: "failed",
+        error: { kind: "cutShort" },
+      });
+    }
   });
 });

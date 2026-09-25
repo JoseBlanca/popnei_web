@@ -177,8 +177,8 @@ test("WS8 D1 panel_pops.csv is read with the three options found, its columns an
   const table = page.getByRole("table", { name: "Columns" });
   await expect(table.getByRole("row")).toHaveText([
     "ColumnTypeFirst values",
-    "IIDidentifiers000, s001, s002",
-    "popcatcategoricalp0, p2, p1",
+    "IIDidentifiers000 · s001 · s002",
+    "popcatcategoricalp0 · p2 · p1",
   ]);
   await expect(table.getByRole("rowheader")).toHaveText(["IID", "popcat"]);
   await expect(
@@ -306,7 +306,7 @@ test("WS8 D1 a metadata file without 12 individuals of panel.nei gives the reaso
 
   await expect(disclosure).toHaveAttribute("aria-expanded", "true");
   const names = page
-    .getByRole("region", { name: "Populations" })
+    .getByRole("region", { name: "Individuals of panel.nei" })
     .getByRole("listitem");
   await expect(names).toHaveText(LEFT_OUT);
   await expectNoViolations(makeAxeBuilder);
@@ -328,7 +328,7 @@ test("WS8 D1 a file with a row one cell short gives the reason that names the se
 
   await expect(
     zone(page).getByText(
-      "short.csv could not be read: line 3 has 2 cells where the header has 3, read with the semicolon as the separator. Load a metadata file in the Individuals step.",
+      "short.csv could not be read: line 3 has 2 cells where the header has 3, read with the semicolon as the separator. Choose another separator above, or load a corrected file.",
       { exact: true },
     ),
   ).toBeVisible();
@@ -469,11 +469,11 @@ test("WS8 D1 the types of the columns, the warning of a few whole numbers, and a
   const table = page.getByRole("table", { name: "Columns" });
   await expect(table.getByRole("row")).toHaveText([
     "ColumnTypeFirst values",
-    "Individuoidentifieri1, i2, i3",
-    "PaíscategoricalEspaña, Italia, Perú",
-    /^Sanobinary: (sí, no|no, sí)sí, no$/,
-    "Alturacontinuous1,75, 1,62, 1,80",
-    "scorecontinuousWarning: score holds only 4 different whole numbers, from 1 to 5, and is taken as a measurement. If they are codes, such as numbered populations, it can still be chosen as the column of the populations.1, 2, 3",
+    "Individuoidentifieri1 · i2 · i3",
+    "PaíscategoricalEspaña · Italia · Perú",
+    /^Sanobinary: (sí, no|no, sí)sí · no$/,
+    "Alturacontinuous1,75 · 1,62 · 1,80",
+    "scorecontinuousWarning: score holds only 4 different whole numbers, from 1 to 5, and is taken as a measurement. If they are codes, such as numbered populations, it can still be chosen as the column of the populations.1 · 2 · 3",
   ]);
   await expectNoViolations(makeAxeBuilder);
 
@@ -519,8 +519,8 @@ test("WS8 D1 the keyboard goes through the step in the order of the spec", async
     select(page, "Encoding"),
     select(page, "Separator"),
     select(page, "Decimal mark"),
-    select(page, "Column that defines the populations"),
     page.getByRole("button", { name: "The 12 individuals missing" }),
+    select(page, "Column that defines the populations"),
   ];
   for (const next of order) {
     await page.keyboard.press("Tab");
@@ -529,13 +529,15 @@ test("WS8 D1 the keyboard goes through the step in the order of the spec", async
 
   // The disclosure opens with the keyboard, and the column is chosen with
   // it.
+  await page.keyboard.press("Shift+Tab");
+  await expect(order[4] ?? fileButton(page)).toBeFocused();
   await page.keyboard.press("Enter");
-  await expect(order[5] ?? fileButton(page)).toHaveAttribute(
+  await expect(order[4] ?? fileButton(page)).toHaveAttribute(
     "aria-expanded",
     "true",
   );
-  await page.keyboard.press("Shift+Tab");
-  await expect(order[4] ?? fileButton(page)).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(order[5] ?? fileButton(page)).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("option", { name: "popcat" })).toBeFocused();
   await page.keyboard.press("Enter");
@@ -866,7 +868,84 @@ test("WS8 D1 an individual missing whose name holds a control character is liste
 
   await page.getByRole("button", { name: "The 1 individual missing" }).click();
   const names = page
-    .getByRole("region", { name: "Populations" })
+    .getByRole("region", { name: "Individuals of odd.vcf" })
     .getByRole("listitem");
   await expect(names).toHaveText(["i\\u0001x"]);
+});
+
+test("WS8 D1 the individuals of the variants file are checked under a heading of their own, before the column of the populations", async ({
+  page,
+}) => {
+  await openIndividuals(page);
+  await pick(page, "panel_pops.csv");
+  await expect(
+    page
+      .getByRole("region", { name: "Individuals of the variants file" })
+      .getByText(
+        "The individuals are checked against the variants file once it is read.",
+      ),
+  ).toBeVisible();
+
+  await loadPanel(page);
+  await pick(page, { name: "pops.csv", text: await withoutTwelve() });
+
+  const check = page.getByRole("region", { name: "Individuals of panel.nei" });
+  await expect(check.getByText(MISSING_REASON, { exact: true })).toBeVisible();
+  // The heading of the check comes before that of the populations.
+  await expect(
+    page.getByRole("main").getByRole("heading", { level: 2 }),
+  ).toHaveText([
+    "Metadata file",
+    "How the file is read",
+    "Columns",
+    "Individuals of panel.nei",
+    "Populations",
+  ]);
+});
+
+test("WS8 D1 a VCF picked as the metadata file is refused as a variants file", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openIndividuals(page);
+  await pick(page, {
+    name: "panel.txt",
+    text: "##fileformat=VCFv4.2\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\ti1\n",
+  });
+
+  await expect(
+    zone(page).getByText(
+      "panel.txt could not be read: it is a variants file, which the Variants step takes. Load a metadata file.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(page.getByRole("table")).toHaveCount(0);
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("WS8 D1 a file of UTF-8 with its mark and a bad byte is read as UTF-8, with a warning that names the line", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openIndividuals(page);
+  const body = Buffer.concat([
+    Buffer.from([0xef, 0xbb, 0xbf]),
+    Buffer.from("IID;País\r\ns000;España\r\ns001;Ita"),
+    Buffer.from([0xff]),
+    Buffer.from("lia\r\ns002;Perú\r\n"),
+  ]);
+  await pick(page, { name: "pops.csv", text: body });
+
+  await expect(select(page, "Encoding")).toHaveText("Detected: UTF-8");
+  await expect(
+    zone(page).getByText(
+      "Warning: line 3 of pops.csv has bytes that could not be read as UTF-8, shown as �. Correct them in the file and load it again, or, if every letter with an accent shows as �, choose Windows-1252 as the encoding.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  const table = page.getByRole("table", { name: "Columns" });
+  await expect(table.getByRole("row").nth(2)).toHaveText(
+    "PaíscategoricalEspaña · Ita�lia · Perú",
+  );
+  await expectNoViolations(makeAxeBuilder);
 });

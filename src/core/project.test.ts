@@ -35,6 +35,7 @@ import {
   setVariantFilter,
   shown,
   variantsStepNeeds,
+  individualsStepNeeds,
 } from "./project.ts";
 import type {
   AppId,
@@ -1055,7 +1056,12 @@ const INDIVIDUALS_READ: IndividualsRead = {
     ],
   },
   columns: [{ kind: "identifier" }, { kind: "categorical" }],
-  found: { encoding: "utf-8", separator: ",", decimal: "." },
+  found: {
+    encoding: "utf-8",
+    separator: ",",
+    decimal: ".",
+    undecodedLine: null,
+  },
 };
 
 const OTHER_ID = "abcdefabcdefabcdefabcdefabcdefab";
@@ -3007,7 +3013,12 @@ describe("WP1 D5 the validation", () => {
       expect(
         textOf(
           readWith({
-            found: { encoding: "auto", separator: ",", decimal: "." },
+            found: {
+              encoding: "auto",
+              separator: ",",
+              decimal: ".",
+              undecodedLine: null,
+            },
           }),
         ),
       ).toBe(
@@ -3101,8 +3112,9 @@ function parsedRefusal(error: IndividualsFileError): unknown {
   return parse(JSON.parse(JSON.stringify(refusedWith(error))));
 }
 
-/** The six kinds of refusal of the reader that stage 2 adds, each with
-    the words `individualsNeeds` gives after "could not be read:". */
+/** The eight kinds of refusal of the reader that stage 2 adds, the last
+    two by the owner's decisions of 25 September 2026, each with the words
+    `individualsNeeds` gives after "could not be read:". */
 const NEW_REFUSALS: readonly (readonly [IndividualsFileError, string])[] = [
   [
     { kind: "unnamedColumn", column: 4 },
@@ -3127,6 +3139,14 @@ const NEW_REFUSALS: readonly (readonly [IndividualsFileError, string])[] = [
   [
     { kind: "notText" },
     "it is not a text file; in Excel, save the sheet as CSV",
+  ],
+  [
+    { kind: "variantsFile" },
+    "it is a variants file, which the Variants step takes",
+  ],
+  [
+    { kind: "cutShort" },
+    "it ends in the middle of a character and may have been cut short",
   ],
 ];
 
@@ -3345,17 +3365,56 @@ describe("WS1 D3 the additions to project.ts", () => {
 
   test('"utf-16" is accepted among the encodings found', () => {
     const data = readWith({
-      found: { encoding: "utf-16", separator: ",", decimal: "." },
+      found: {
+        encoding: "utf-16",
+        separator: ",",
+        decimal: ".",
+        undecodedLine: null,
+      },
     });
     expect(parse(data)).toMatchObject({
       ok: true,
       value: {
         individuals: {
           read: {
-            found: { encoding: "utf-16", separator: ",", decimal: "." },
+            found: {
+              encoding: "utf-16",
+              separator: ",",
+              decimal: ".",
+              undecodedLine: null,
+            },
           },
         },
       },
+    });
+  });
+
+  test("the line of a character not decoded is accepted as a whole number of at least 1, and refused otherwise", () => {
+    const found = (undecodedLine: unknown): unknown =>
+      readWith({
+        found: {
+          encoding: "utf-8",
+          separator: ",",
+          decimal: ".",
+          undecodedLine,
+        },
+      });
+    expect(parse(found(3))).toMatchObject({
+      ok: true,
+      value: { individuals: { read: { found: { undecodedLine: 3 } } } },
+    });
+    for (const wrong of [0, 1.5, "3"]) {
+      expect(errorOf(parse(found(wrong)))).toMatchObject({
+        kind: "wrongValue",
+        path: ["individuals", "read", "found", "undecodedLine"],
+      });
+    }
+    const without = readWith({
+      found: { encoding: "utf-8", separator: ",", decimal: "." },
+    });
+    expect(errorOf(parse(without))).toMatchObject({
+      kind: "missingField",
+      path: ["individuals", "read", "found", "undecodedLine"],
     });
   });
 
@@ -3378,6 +3437,131 @@ describe("WS1 D3 the additions to project.ts", () => {
     ).toBe(
       "panel.nei could not be read; it may have changed on the disk since it was picked. Load it again in the Variants step.",
     );
+  });
+
+  describe("individualsStepNeeds, the words of the Individuals step", () => {
+    test("no individuals file, and a file read, need nothing there", () => {
+      expect(individualsStepNeeds(withoutIndividuals())).toBeNull();
+      expect(individualsStepNeeds(sampleProject())).toBeNull();
+      // Individuals missing are not a reason of the read of the file.
+      expect(
+        individualsStepNeeds(withVariantIndividuals(["i1", "ind_031"])),
+      ).toBeNull();
+    });
+
+    test("the individuals file being read", () => {
+      expect(individualsStepNeeds(pendingProject())).toBe("Reading pops.csv.");
+    });
+
+    test.each([
+      [
+        { kind: "raggedRow", line: 7, expected: 4, found: 3, separator: ";" },
+        "line 7 has 3 cells where the header has 4, read with the semicolon as the separator. Choose another separator above, or load a corrected file.",
+      ],
+      [
+        { kind: "unclosedQuote", line: 7, separator: "," },
+        "the quote that opens a cell on line 7 is never closed, read with the comma as the separator. Choose another separator above, or load a corrected file.",
+      ],
+      [
+        { kind: "variantsFile" },
+        "it is a variants file, which the Variants step takes. Load a metadata file.",
+      ],
+      [
+        { kind: "unreadable", message: "NotReadableError" },
+        "the browser could not read it; it may have been changed, moved or deleted since it was picked. Load it again.",
+      ],
+      [
+        { kind: "empty" },
+        "it has no row of individuals. Load a corrected file.",
+      ],
+      [
+        { kind: "duplicateColumn", name: "pop" },
+        "two columns are named pop. Load a corrected file.",
+      ],
+      [
+        { kind: "duplicateIndividual", name: "ind_031" },
+        "the individual ind_031 is in two rows. Load a corrected file.",
+      ],
+      [
+        { kind: "unnamedColumn", column: 4 },
+        "column 4 has values but no name in the header. Load a corrected file.",
+      ],
+      [
+        { kind: "emptyIndividual", line: 7 },
+        "line 7 has no name of an individual in its first column. Load a corrected file.",
+      ],
+      [
+        { kind: "tooLarge", size: 312_400_000, max: 20_000_000 },
+        "it is 312.4 MB, more than the 20 MB a metadata file can have; check that it is the metadata file and not the variants. Load a corrected file.",
+      ],
+      [
+        { kind: "notText" },
+        "it is not a text file; in Excel, save the sheet as CSV. Load a corrected file.",
+      ],
+      [
+        { kind: "cutShort" },
+        "it ends in the middle of a character and may have been cut short. Load a corrected file.",
+      ],
+      [
+        { kind: "files", message: "the file is not an xlsx file." },
+        "the file is not an xlsx file. Load a corrected file.",
+      ],
+    ] as const)(
+      "the reader refused the file, %o: what it found, and what mends it there",
+      (error, words) => {
+        expect(
+          individualsStepNeeds(withIndividualsRead({ kind: "failed", error })),
+        ).toBe(`pops.csv could not be read: ${words}`);
+      },
+    );
+
+    test.each([
+      [
+        { kind: "workerFailed", message: "out of memory" },
+        "the calculation stopped unexpectedly. Load it again.",
+      ],
+      [
+        { kind: "defect", message: "a read the project cannot hold" },
+        "the calculation stopped unexpectedly. Load it again.",
+      ],
+      [
+        { kind: "couldNotStart", reason: "no ready message, twice" },
+        "the application could not start its calculations. Reload the page and load it again.",
+      ],
+      [
+        { kind: "protocolMismatch" },
+        "the page is out of date. Reload the page and load it again.",
+      ],
+    ] as const)(
+      "the light worker failed with %o: what happened, and what to do there",
+      (error, words) => {
+        expect(
+          individualsStepNeeds(
+            withIndividualsRead({
+              kind: "failed",
+              error: { kind: "worker", error },
+            }),
+          ),
+        ).toBe(`pops.csv could not be read: ${words}`);
+      },
+    );
+
+    test('a variants file picked as a traits file ends "Load a traits file."', () => {
+      const gwas = deepFreeze({
+        ...refusedWith({ kind: "variantsFile" }),
+        app: "gwas" as const,
+        grouping: { kind: "roles" as const, roles: [] },
+      });
+      expect(individualsStepNeeds(gwas)).toBe(
+        "pops.csv could not be read: it is a variants file, which the Variants step takes. Load a traits file.",
+      );
+    });
+
+    test("beside a Run button, a refusal still ends as individualsNeeds gives it", () => {
+      expect(individualsNeeds(refusedWith({ kind: "variantsFile" }))).toBe(
+        "pops.csv could not be read: it is a variants file, which the Variants step takes. Load a metadata file in the Individuals step.",
+      );
+    });
   });
 
   describe("variantsStepNeeds, the words of the Variants step", () => {

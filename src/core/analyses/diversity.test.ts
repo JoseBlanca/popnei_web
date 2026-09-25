@@ -79,7 +79,12 @@ function project(
         columns: table.columns.map((_, i) =>
           i === 0 ? { kind: "identifier" } : { kind: "categorical" },
         ),
-        found: { encoding: "utf-8", separator: ",", decimal: "." },
+        found: {
+          encoding: "utf-8",
+          separator: ",",
+          decimal: ".",
+          undecodedLine: null,
+        },
       },
     },
     grouping: {
@@ -813,7 +818,12 @@ describe("WS5 D2 the key", () => {
         csv: { encoding: "windows-1252", separator: "\t", decimal: "," },
         read: {
           ...individuals.read,
-          found: { encoding: "windows-1252", separator: "\t", decimal: "," },
+          found: {
+            encoding: "windows-1252",
+            separator: "\t",
+            decimal: ",",
+            undecodedLine: null,
+          },
         },
       },
     });

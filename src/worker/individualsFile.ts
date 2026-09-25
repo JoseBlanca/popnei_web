@@ -31,12 +31,15 @@ export interface BytesSource {
  * Reads the individuals file `file` with the options `csv`, and never
  * rejects. It refuses a file of more than `MAX_INDIVIDUALS_FILE_BYTES`,
  * `tooLarge`, without reading it; one the browser cannot read,
- * `unreadable`; and one with a byte 0 that does not start with the mark of
- * UTF-16, `notText`. A file with the mark of UTF-16 is decoded as UTF-16
- * whatever `csv.encoding` says. The BOM of UTF-8 is removed. With
- * `"auto"`, the text is decoded as UTF-8, and as Windows-1252 when it is
- * not valid UTF-8. The text then goes to `readCsv`, whose refusals are
- * the failed read.
+ * `unreadable`; one with a byte 0 that does not start with the mark of
+ * UTF-16, `notText`; and one with that mark that ends in the middle of a
+ * character, `cutShort`. A file with the mark of UTF-16 is decoded as
+ * UTF-16 whatever `csv.encoding` says. The BOM of UTF-8 is removed, and
+ * with `"auto"` decides UTF-8. With `"auto"` and no BOM, the text is
+ * decoded as UTF-8, and as Windows-1252 when it is not valid UTF-8. The
+ * text then goes to `readCsv`, whose refusals are the failed read; the
+ * line of its first character not decoded, U+FFFD, is
+ * `found.undecodedLine`.
  */
 export async function readIndividualsFile(
   file: BytesSource,
@@ -65,8 +68,8 @@ export async function readIndividualsFile(
     };
   }
   const decoded = decode(new Uint8Array(buffer), csv.encoding);
-  if (decoded === null) {
-    return { kind: "failed", error: { kind: "notText" } };
+  if (decoded === "notText" || decoded === "cutShort") {
+    return { kind: "failed", error: { kind: decoded } };
   }
   const read = readCsv(decoded.text, {
     separator: csv.separator,
@@ -81,6 +84,7 @@ export async function readIndividualsFile(
       encoding: decoded.encoding,
       separator: read.value.separator,
       decimal: read.value.decimal,
+      undecodedLine: undecodedLine(decoded.text),
     },
   };
 }
@@ -93,26 +97,34 @@ function unreadableMessage(error: unknown): string {
   return error.message === "" ? error.name : `${error.name}: ${error.message}`;
 }
 
-/** The text of the bytes and the encoding it was decoded with, or null
-    for bytes that are not text. */
+/** The text of the bytes and the encoding it was decoded with; or
+    `notText` for bytes that are not text, and `cutShort` for UTF-16 that
+    ends in the middle of a character. */
 function decode(
   bytes: Uint8Array,
   encoding: CsvOptions["encoding"],
-): { readonly text: string; readonly encoding: CsvFound["encoding"] } | null {
+):
+  | { readonly text: string; readonly encoding: CsvFound["encoding"] }
+  | "notText"
+  | "cutShort" {
   const [first, second] = bytes;
   if (first === 0xff && second === 0xfe) {
-    return {
-      text: new TextDecoder("utf-16le").decode(bytes),
-      encoding: "utf-16",
-    };
+    return endsInCharacter(bytes, true)
+      ? {
+          text: new TextDecoder("utf-16le").decode(bytes),
+          encoding: "utf-16",
+        }
+      : "cutShort";
   }
   if (first === 0xfe && second === 0xff) {
-    return {
-      text: new TextDecoder("utf-16be").decode(bytes),
-      encoding: "utf-16",
-    };
+    return endsInCharacter(bytes, false)
+      ? {
+          text: new TextDecoder("utf-16be").decode(bytes),
+          encoding: "utf-16",
+        }
+      : "cutShort";
   }
-  if (bytes.includes(0)) return null;
+  if (bytes.includes(0)) return "notText";
   const hasBom = bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf;
   const body = hasBom ? bytes.subarray(3) : bytes;
   switch (encoding) {
@@ -121,6 +133,14 @@ function decode(
     case "windows-1252":
       return { text: new TextDecoder("windows-1252").decode(body), encoding };
     case "auto":
+      // The BOM says the encoding, as the mark of UTF-16 does: a bad byte
+      // of such a file is shown as U+FFFD, and the rest read as UTF-8.
+      if (hasBom) {
+        return {
+          text: new TextDecoder("utf-8").decode(body),
+          encoding: "utf-8",
+        };
+      }
       try {
         return {
           text: new TextDecoder("utf-8", { fatal: true }).decode(body),
@@ -133,4 +153,28 @@ function decode(
         };
       }
   }
+}
+
+/** Whether UTF-16 bytes, their mark included, end with a whole character:
+    an even number of bytes, the last two not the first half of a
+    character written in four, a high surrogate, U+D800 to U+DBFF. */
+function endsInCharacter(bytes: Uint8Array, littleEndian: boolean): boolean {
+  if (bytes.length % 2 !== 0) return false;
+  const high = bytes[bytes.length - (littleEndian ? 1 : 2)];
+  return high === undefined || high < 0xd8 || high > 0xdb;
+}
+
+/** The replacement character, which a decoder puts where it could not
+    decode a character. */
+const REPLACEMENT = "�";
+
+/** The line of the first replacement character of `text`, counted from 1
+    with the line endings of the reader, `\r\n`, `\n` and `\r`; `null` when
+    there is none. */
+function undecodedLine(text: string): number | null {
+  const index = text.indexOf(REPLACEMENT);
+  if (index === -1) return null;
+  const before = text.slice(0, index);
+  const breaks = before.match(/\r\n|\n|\r/g);
+  return (breaks?.length ?? 0) + 1;
 }

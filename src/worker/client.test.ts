@@ -135,7 +135,12 @@ const TABLE_READ = {
   kind: "read",
   table: { columns: ["id", "pop"], rows: [["i1", "p0"]] },
   columns: [{ kind: "identifier" }, { kind: "categorical" }],
-  found: { encoding: "utf-8", separator: ",", decimal: "." },
+  found: {
+    encoding: "utf-8",
+    separator: ",",
+    decimal: ".",
+    undecodedLine: null,
+  },
 } as const;
 
 function job(fileId: string): DiversityJob {

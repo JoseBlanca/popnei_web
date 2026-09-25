@@ -267,7 +267,12 @@ const INDIVIDUALS_READ: IndividualsRead = {
     ],
   },
   columns: [{ kind: "identifier" }, { kind: "categorical" }],
-  found: { encoding: "utf-8", separator: ",", decimal: "." },
+  found: {
+    encoding: "utf-8",
+    separator: ",",
+    decimal: ".",
+    undecodedLine: null,
+  },
 };
 
 /** The command that loads the variants file `panel.vcf` as `fileId`. */

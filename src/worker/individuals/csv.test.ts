@@ -524,3 +524,89 @@ describe("WS4 D1 readCsv", () => {
     });
   });
 });
+
+describe("WS4 D1 the owner's decisions of 25 September on the metadata file", () => {
+  test("the empty cells at the end of the header whose columns hold no value are dropped, and a short row fits", () => {
+    const read = readOk("id;pop;;\nA;P1\nB;P2;NA\n");
+    expect(read.separator).toBe(";");
+    expect(read.table).toEqual({
+      columns: ["id", "pop"],
+      rows: [
+        ["A", "P1"],
+        ["B", "P2"],
+      ],
+    });
+  });
+
+  test("a row of the wrong length is measured against the header without its empty cells", () => {
+    expect(readError("id;pop;;\nA;P1\nB\n")).toEqual({
+      kind: "raggedRow",
+      line: 3,
+      expected: 2,
+      found: 1,
+      separator: ";",
+    });
+  });
+
+  test("an empty cell of the header is kept when a column after it has a value", () => {
+    expect(readError("id;pop;;\nA;P1\nB;P2;;x\n")).toEqual({
+      kind: "raggedRow",
+      line: 2,
+      expected: 4,
+      found: 2,
+      separator: ";",
+    });
+  });
+
+  test("the separator is found with the header counted without its empty cells", () => {
+    // With ; the header is a, b,c and two empty cells, and the row x, y,z:
+    // counted as two, ; fits and wins the tie with the comma.
+    const read = readOk("a;b,c;;\nx;y,z\n");
+    expect(read.separator).toBe(";");
+    expect(read.table.columns).toEqual(["a", "b,c"]);
+  });
+
+  test("a column with no name whose cells are all NA or - is dropped", () => {
+    expect(readOk("id,,pop\nA,NA,P1\nB,-,P2\n").table).toEqual({
+      columns: ["id", "pop"],
+      rows: [
+        ["A", "P1"],
+        ["B", "P2"],
+      ],
+    });
+  });
+
+  test("a column with no name and one value among its missing cells is still an unnamedColumn", () => {
+    expect(readError("id,,pop\nA,NA,P1\nB,x,P2\n")).toEqual({
+      kind: "unnamedColumn",
+      column: 2,
+    });
+  });
+
+  test("a text whose first line starts with ##fileformat=VCF or #CHROM is a variantsFile", () => {
+    expect(readError("##fileformat=VCFv4.2\n#CHROM\tPOS\n")).toEqual({
+      kind: "variantsFile",
+    });
+    expect(readError("#CHROM\tPOS\tID\n1\t10\tx\n")).toEqual({
+      kind: "variantsFile",
+    });
+    expect(
+      readError("﻿##fileformat=VCFv4.3\n", {
+        separator: ";",
+        decimal: "auto",
+      }),
+    ).toEqual({ kind: "variantsFile" });
+  });
+
+  test("a variants file is refused before a quote never closed", () => {
+    expect(readError('##fileformat=VCFv4.2\n"x\n')).toEqual({
+      kind: "variantsFile",
+    });
+  });
+
+  test("a line of a VCF below the first is a cell like any other", () => {
+    expect(readOk("id,pop\n#CHROM,P1\n").table.rows).toEqual([
+      ["#CHROM", "P1"],
+    ]);
+  });
+});

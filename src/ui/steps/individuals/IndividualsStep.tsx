@@ -17,6 +17,7 @@ import {
   escaped,
   individualsCheck,
   individualsNeeds,
+  individualsStepNeeds,
 } from "../../../core/project.ts";
 import type {
   IndividualsCheck,
@@ -59,6 +60,7 @@ import {
   TYPES_LINE,
   UTF16_TEXT,
   allFoundText,
+  checkHeading,
   decimalItems,
   detectedText,
   encodingItems,
@@ -73,6 +75,7 @@ import {
   separatorItems,
   sizeText,
   typeText,
+  undecodedText,
 } from "./words.ts";
 import type { PopulationLine } from "./words.ts";
 
@@ -87,6 +90,7 @@ export function IndividualsStep(): React.JSX.Element {
   const announcer = useAnnouncer();
   const individuals = useAppState((s) => s.project.individuals);
   const reason = useAppState((s) => individualsNeeds(s.project));
+  const readReason = useAppState((s) => individualsStepNeeds(s.project));
 
   // The message of a file not loaded, until the next pick.
   const [message, setMessage] = useState<string | null>(null);
@@ -188,7 +192,7 @@ export function IndividualsStep(): React.JSX.Element {
             {individuals === null ? (
               <p className={classOf(styles, "muted")}>{NO_FILE}</p>
             ) : (
-              <FileCard individuals={individuals} reason={reason} />
+              <FileCard individuals={individuals} reason={readReason} />
             )}
           </FileZone>
           {message !== null && <Problem>{message}</Problem>}
@@ -226,12 +230,8 @@ export function IndividualsStep(): React.JSX.Element {
             columns={read.columns}
             decimal={read.found?.decimal ?? "."}
           />
-          <Populations
-            individuals={individuals}
-            table={read.table}
-            reason={reason}
-            send={send}
-          />
+          <CheckSection individuals={individuals} reason={reason} />
+          <Populations table={read.table} send={send} />
         </>
       )}
     </div>
@@ -242,20 +242,31 @@ export function IndividualsStep(): React.JSX.Element {
 interface FileCardProps {
   /** The metadata file of the project. */
   readonly individuals: IndividualsSource;
-  /** The reason `individualsNeeds` gives, for a file being read or
+  /** The reason `individualsStepNeeds` gives, for a file being read or
       refused. */
   readonly reason: string | null;
 }
 
-/** The card of the loaded file: its name, and its size once read, or
-    why it is not. */
+/** The card of the loaded file: its name, and its size once read, with
+    the warning of a character not decoded, or why it is not read. */
 function FileCard({ individuals, reason }: FileCardProps): React.JSX.Element {
   const read = individuals.read;
+  const undecodedLine =
+    read.kind === "read" ? (read.found?.undecodedLine ?? null) : null;
   return (
     <div className={classOf(styles, "card")}>
       <p className={classOf(styles, "fileName")}>{escaped(individuals.name)}</p>
       {read.kind === "read" ? (
-        <p className={classOf(styles, "muted")}>{sizeText(read.table)}</p>
+        <>
+          <p className={classOf(styles, "muted")}>{sizeText(read.table)}</p>
+          {read.found !== null && undecodedLine !== null && (
+            <p className={classOf(styles, "line")}>
+              <Warning>
+                {undecodedText(individuals.name, read.found, undecodedLine)}
+              </Warning>
+            </p>
+          )}
+        </>
       ) : read.kind === "pending" ? (
         <p className={classOf(styles, "line")}>
           {reasonOf(individuals, reason)}
@@ -267,15 +278,15 @@ function FileCard({ individuals, reason }: FileCardProps): React.JSX.Element {
   );
 }
 
-/** The reason of a file being read or refused, which `individualsNeeds`
-    always gives. */
+/** The reason of a file being read or refused, or of individuals missing,
+    which `individualsStepNeeds` and `individualsNeeds` always give. */
 function reasonOf(
   individuals: IndividualsSource,
   reason: string | null,
 ): string {
   if (reason === null) {
     throw new Error(
-      `popnei_web defect: individualsNeeds gave no reason for the metadata file ${individuals.fileId}, ${individuals.read.kind}.`,
+      `popnei_web defect: core gave no reason for the metadata file ${individuals.fileId}, ${individuals.read.kind}.`,
     );
   }
   return reason;
@@ -425,28 +436,17 @@ function Columns({ table, columns, decimal }: ColumnsProps): React.JSX.Element {
 
 /** What the part of the populations is drawn with. */
 interface PopulationsProps {
-  /** The metadata file, read. */
-  readonly individuals: IndividualsSource;
-  /** Its table. */
+  /** The table of the metadata file, read. */
   readonly table: IndividualsTable;
-  /** The reason `individualsNeeds` gives, which names the individuals
-      missing. */
-  readonly reason: string | null;
   /** Sends a command to the store. */
   readonly send: (step: StepCommand) => void;
 }
 
-/** The column that defines the populations, the check of the
-    individuals of the variants file, and the populations. */
-function Populations({
-  individuals,
-  table,
-  reason,
-  send,
-}: PopulationsProps): React.JSX.Element {
+/** The column that defines the populations, and the populations, once
+    every individual of the variants file is found. */
+function Populations({ table, send }: PopulationsProps): React.JSX.Element {
   const heading = useId();
   const grouping = useAppState((s) => s.project.grouping);
-  const variants = useAppState((s) => s.project.variants);
   const check = useAppState((s) => individualsCheck(s.project));
   const toRun = useAppState((s) => populationsToRun(s.project));
   // Two primitives, since populationsNeeds gives a new object each call.
@@ -476,12 +476,6 @@ function Populations({
           send(groupingCommand(name));
         }}
       />
-      <Check
-        individuals={individuals}
-        check={check}
-        variantsName={variants?.name ?? null}
-        reason={reason}
-      />
       {check !== null && check.missing.length === 0 && toRun !== null && (
         <PopulationList
           lines={[
@@ -508,6 +502,42 @@ function unassignedLines(
   );
   const left = check.found - inPopulations;
   return left > 0 ? [noPopulationLine(left)] : [];
+}
+
+/** What the part of the check is drawn with. */
+interface CheckSectionProps {
+  /** The metadata file, read. */
+  readonly individuals: IndividualsSource;
+  /** The reason `individualsNeeds` gives, which names the individuals
+      missing. */
+  readonly reason: string | null;
+}
+
+/** The check of the individuals of the variants file, under a heading of
+    its own, "Individuals of panel.nei", so that the individuals missing
+    do not read as a matter of the column of the populations, as the
+    owner decided on 25 September 2026. */
+function CheckSection({
+  individuals,
+  reason,
+}: CheckSectionProps): React.JSX.Element {
+  const heading = useId();
+  const variants = useAppState((s) => s.project.variants);
+  const check = useAppState((s) => individualsCheck(s.project));
+  const variantsName = variants?.name ?? null;
+  return (
+    <section aria-labelledby={heading} className={classOf(styles, "section")}>
+      <h2 id={heading} className={classOf(styles, "heading")}>
+        {checkHeading(variantsName)}
+      </h2>
+      <Check
+        individuals={individuals}
+        check={check}
+        variantsName={variantsName}
+        reason={reason}
+      />
+    </section>
+  );
 }
 
 /** What the check is drawn with. */

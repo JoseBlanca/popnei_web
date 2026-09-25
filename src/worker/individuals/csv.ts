@@ -39,6 +39,14 @@ const SEPARATORS_BY_PRECEDENCE: readonly Separator[] = ["\t", ";", ","];
     (docs/functionality.md, section 4). */
 const MISSING_TEXTS: readonly string[] = ["", "NA", "-"];
 
+/** The length of the longest of `MISSING_TEXTS`: a cell longer in the
+    text of the file, its quotes left out, is a value. */
+const LONGEST_MISSING = 2;
+
+/** The starts of a variants file, a VCF: its first line, and the header
+    of its columns, which a VCF cut at the top starts with. */
+const VCF_STARTS: readonly string[] = ["##fileformat=VCF", "#CHROM"];
+
 const QUOTE = 0x22;
 const SPACE = 0x20;
 const TAB = 0x09;
@@ -50,10 +58,13 @@ const CARRIAGE_RETURN = 0x0d;
  * the separator and the decimal mark of `options`, or those it finds when
  * they are `"auto"`, and infers the type of each column. A character
  * U+FEFF at the start of the text, the BOM of a text decoded with it, is
- * removed. It refuses, in
- * this order: a quote never closed, `unclosedQuote`; no row below the
- * header, `empty`; a row of the wrong length, `raggedRow`, the first by
- * line; a column with values and no name, `unnamedColumn`, then two
+ * removed. The empty cells at the end of the header whose columns hold no
+ * value are dropped, and so is a column with no name whose cells are all
+ * missing. It refuses, in this order: a variants file, whose first line
+ * starts with `##fileformat=VCF` or `#CHROM`, `variantsFile`; a quote
+ * never closed, `unclosedQuote`; no row below the header, `empty`; a row
+ * of the wrong length, `raggedRow`, the first by line, measured against
+ * the header without its empty cells at the end; a column with values and no name, `unnamedColumn`, then two
  * columns of one name, `duplicateColumn`; then, row by row, a row with no
  * name, `emptyIndividual`, or an individual already seen,
  * `duplicateIndividual`.
@@ -66,6 +77,9 @@ export function readCsv(
   },
 ): Result<CsvRead, IndividualsFileError> {
   const body = text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+  if (VCF_STARTS.some((start) => body.startsWith(start))) {
+    return fail({ kind: "variantsFile" });
+  }
   const separator =
     options.separator === "auto" ? findSeparator(body) : options.separator;
   const scanned = scan(body, separator, makeCell);
@@ -81,9 +95,14 @@ export function readCsv(
   if (header === undefined || individuals.length === 0) {
     return fail({ kind: "empty" });
   }
-  const numColumns = header.cells.length;
+  const numColumns = countedColumns(
+    header.cells,
+    individuals,
+    isEmptyText,
+    isMissingText,
+  );
   for (const row of individuals) {
-    if (!fitsHeader(row.cells, numColumns, isEmptyText)) {
+    if (!fitsHeader(row.cells, numColumns, header.cells.length, isEmptyText)) {
       return fail({
         kind: "raggedRow",
         line: row.line,
@@ -93,7 +112,7 @@ export function readCsv(
       });
     }
   }
-  const kept = keptColumns(header.cells, individuals);
+  const kept = keptColumns(header.cells.slice(0, numColumns), individuals);
   if (!kept.ok) return kept;
   const columns = kept.value.map((index) => cellAt(header.cells, index));
   const duplicate = firstRepeated(columns);
@@ -110,7 +129,7 @@ export function readCsv(
     tableRows.push(
       kept.value.map((index, position) => {
         const cell = cellAt(row.cells, index);
-        return position === 0 || !MISSING_TEXTS.includes(cell) ? cell : null;
+        return position === 0 || !isMissingText(cell) ? cell : null;
       }),
     );
   }
@@ -153,22 +172,59 @@ function isEmptyText(cell: string): boolean {
   return cell === "";
 }
 
-/** Whether a row of these cells fits a header of `numColumns` cells: as
-    many cells, or more whose cells past the header are all empty. */
+function isMissingText(cell: string): boolean {
+  return MISSING_TEXTS.includes(cell);
+}
+
+/**
+ * The number of cells of the header without the run of empty ones at its
+ * end whose columns hold no value in any row, as the owner decided on 25
+ * September 2026: `id;pop;;` over rows of two cells is a header of two, as
+ * Excel shows it. A column holds no value in a row when the row lacks its
+ * cell or the cell `holdsNoValue`. The first cell is always counted.
+ */
+function countedColumns<C>(
+  header: readonly C[],
+  rows: readonly ScannedRow<C>[],
+  isEmpty: (cell: C) => boolean,
+  holdsNoValue: (cell: C) => boolean,
+): number {
+  let count = header.length;
+  while (count > 1) {
+    const index = count - 1;
+    const name = header[index];
+    if (name === undefined || !isEmpty(name)) break;
+    const hasValue = rows.some((row) => {
+      const cell = row.cells[index];
+      return cell !== undefined && !holdsNoValue(cell);
+    });
+    if (hasValue) break;
+    count -= 1;
+  }
+  return count;
+}
+
+/** Whether a row of these cells fits a header counted as `numColumns`
+    cells and written with `headerLength`: at least `numColumns` cells,
+    and those past the whole header all empty. The cells between the two
+    hold no value, by the count. */
 function fitsHeader<C>(
   cells: readonly C[],
   numColumns: number,
+  headerLength: number,
   isEmpty: (cell: C) => boolean,
 ): boolean {
   if (cells.length < numColumns) return false;
-  return cells.slice(numColumns).every(isEmpty);
+  return cells.slice(headerLength).every(isEmpty);
 }
 
 /**
  * The indices of the columns kept, in the order of the file: the first
  * always, one with a name, and none with an empty name whose cells are all
- * empty, the columns Excel adds with a trailing separator. A column with
- * an empty name and a value is refused, with its number counted from 1.
+ * missing, empty, `NA` or `-`: the columns Excel adds with a trailing
+ * separator, and, as the owner decided on 25 September 2026, a column of
+ * missing markers alone, which has no values either. A column with an
+ * empty name and a value is refused, with its number counted from 1.
  */
 function keptColumns(
   names: readonly string[],
@@ -178,7 +234,7 @@ function keptColumns(
   for (const [index, name] of names.entries()) {
     if (index === 0 || name !== "") {
       kept.push(index);
-    } else if (rows.some((row) => cellAt(row.cells, index) !== "")) {
+    } else if (rows.some((row) => !isMissingText(cellAt(row.cells, index)))) {
       return fail({ kind: "unnamedColumn", column: index + 1 });
     }
   }
@@ -197,7 +253,9 @@ function firstRepeated(names: readonly string[]): string | null {
 
 /**
  * The separator of `"auto"`. Each of the three is tried by counting the
- * cells of each row, without making them. One fits when it gives the
+ * cells of each row, without making them but for the short ones that may
+ * be missing markers. The header is counted without the empty cells at its
+ * end whose columns hold no value. One fits when it gives the
  * header two cells or more, every row fits the header, and no quote is
  * left open. Of those that fit, the one that gives the header the most
  * cells, a tie going by `SEPARATORS_BY_PRECEDENCE`; when none fits, the
@@ -206,14 +264,20 @@ function firstRepeated(names: readonly string[]): string | null {
  */
 function findSeparator(text: string): Separator {
   const tries = SEPARATORS_BY_PRECEDENCE.map((separator) => {
-    const scanned = scan(text, separator, isEmptyCell);
-    const rows = scanned.rows.filter((row) => !row.cells.every(isTrue));
+    const scanned = scan(text, separator, kindOfCell);
+    const rows = scanned.rows.filter((row) => !row.cells.every(isEmptyKind));
     const [header, ...individuals] = rows;
-    const numColumns = header?.cells.length ?? 0;
+    const numColumns =
+      header === undefined
+        ? 0
+        : countedColumns(header.cells, individuals, isEmptyKind, holdsNoValue);
+    const headerLength = header?.cells.length ?? 0;
     const fits =
       scanned.unclosedQuoteLine === null &&
       numColumns >= 2 &&
-      individuals.every((row) => fitsHeader(row.cells, numColumns, isTrue));
+      individuals.every((row) =>
+        fitsHeader(row.cells, numColumns, headerLength, isEmptyKind),
+      );
     return { separator, numColumns, fits };
   });
   const mostColumns = (candidates: typeof tries): Separator | null => {
@@ -232,8 +296,16 @@ function findSeparator(text: string): Separator {
   );
 }
 
-function isTrue(value: boolean): boolean {
-  return value;
+/** What a cell holds, as the search of the separator needs it: nothing, a
+    missing marker, `NA` or `-`, or a value. */
+type CellKind = "empty" | "missing" | "value";
+
+function isEmptyKind(kind: CellKind): boolean {
+  return kind === "empty";
+}
+
+function holdsNoValue(kind: CellKind): boolean {
+  return kind !== "value";
 }
 
 /**
@@ -294,9 +366,13 @@ function makeCell(text: string, span: CellSpan): string {
   );
 }
 
-/** Whether a cell is empty, without making its text. */
-function isEmptyCell(_text: string, span: CellSpan): boolean {
-  return span.end === span.start && span.trailEnd === span.trailStart;
+/** What a cell holds, making its text only when it is short enough to be
+    a missing marker. */
+function kindOfCell(text: string, span: CellSpan): CellKind {
+  const length = span.end - span.start + (span.trailEnd - span.trailStart);
+  if (length === 0) return "empty";
+  if (length > LONGEST_MISSING) return "value";
+  return isMissingText(makeCell(text, span)) ? "missing" : "value";
 }
 
 /**

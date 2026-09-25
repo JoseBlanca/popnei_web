@@ -57,7 +57,8 @@
       "found": {
         "encoding": "utf-8",
         "separator": ",",
-        "decimal": "."
+        "decimal": ".",
+        "undecodedLine": null
       }
     }
   },

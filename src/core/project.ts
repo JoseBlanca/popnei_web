@@ -1244,7 +1244,7 @@ const MENDED_BY_RELOAD: ReadonlySet<RunError["kind"]> = new Set([
 function workerFailedText(
   fileName: string,
   kind: RunError["kind"],
-  ends: ReasonEnds,
+  ends: Pick<ReasonEnds, "again" | "reload">,
 ): string {
   const next = MENDED_BY_RELOAD.has(kind) ? ends.reload : ends.again;
   return `${fileName} could not be read: ${WHAT_HAPPENED[kind]}. ${next}`;
@@ -1404,6 +1404,42 @@ export function individualsNeeds(p: Project): string | null {
   if (individuals === null) {
     return loadIndividualsText(p.app);
   }
+  if (individuals.read.kind !== "read") {
+    const load = loadIndividualsText(p.app);
+    return individualsReadNeeds(individuals, p.app, {
+      ...endsIn("Individuals", load),
+      refusedEnd: () => load,
+    });
+  }
+  const check = individualsCheck(p);
+  if (check === null || p.variants === null) {
+    return null;
+  }
+  const missing = check.missing;
+  if (missing.length === 0) {
+    return null;
+  }
+  const name = escaped(individuals.name);
+  const variantsName = escaped(p.variants.name);
+  return missing.length === 1
+    ? `1 individual of ${variantsName} is not in ${name}: ${namesOf(missing)}. Add it to the file and load the file again in the Individuals step.`
+    : `${counted(missing.length, "individual")} of ${variantsName} are not in ${name}: ${namesOf(missing)}. Add them to the file and load it again in the Individuals step.`;
+}
+
+/** The ends of a reason of the individuals file: after a refusal of its
+    reader, by the refusal, and after a failure of the worker. */
+interface IndividualsEnds extends Pick<ReasonEnds, "again" | "reload"> {
+  /** What the user can do after the refusal `error`. */
+  readonly refusedEnd: (error: IndividualsFileError) => string;
+}
+
+/** The reason of an individuals file of the application `app` being read
+    or not read, with the ends `ends`, or `null` for a file read. */
+function individualsReadNeeds(
+  individuals: IndividualsSource,
+  app: AppId,
+  ends: IndividualsEnds,
+): string | null {
   const name = escaped(individuals.name);
   const read = individuals.read;
   switch (read.kind) {
@@ -1411,27 +1447,61 @@ export function individualsNeeds(p: Project): string | null {
       return `Reading ${name}.`;
     case "failed":
       return read.error.kind === "worker"
-        ? workerFailedText(
-            name,
-            read.error.error.kind,
-            endsIn("Individuals", loadIndividualsText(p.app)),
-          )
-        : `${name} could not be read${saying(refusalWords(read.error, p.app))}. ${loadIndividualsText(p.app)}`;
-    case "read": {
-      const check = individualsCheck(p);
-      if (check === null || p.variants === null) {
-        return null;
-      }
-      const missing = check.missing;
-      const variantsName = escaped(p.variants.name);
-      if (missing.length === 0) {
-        return null;
-      }
-      return missing.length === 1
-        ? `1 individual of ${variantsName} is not in ${name}: ${namesOf(missing)}. Add it to the file and load the file again in the Individuals step.`
-        : `${counted(missing.length, "individual")} of ${variantsName} are not in ${name}: ${namesOf(missing)}. Add them to the file and load it again in the Individuals step.`;
-    }
+        ? workerFailedText(name, read.error.error.kind, ends)
+        : `${name} could not be read${saying(refusalWords(read.error, app))}. ${ends.refusedEnd(read.error)}`;
+    case "read":
+      return null;
   }
+}
+
+/** The end of a refusal of the reader shown in the Individuals step, as
+    the owner decided on 25 September 2026: another separator for the two
+    refusals a wrong one most often causes, a corrected file for the
+    others; and, the writer's, another file for a variants file, which is
+    not corrected but replaced, and a new load for a file the browser
+    could not read, by no fault of its own. */
+function stepRefusedEnd(error: IndividualsFileError, app: AppId): string {
+  switch (error.kind) {
+    case "raggedRow":
+    case "unclosedQuote":
+      return "Choose another separator above, or load a corrected file.";
+    case "variantsFile":
+      return `Load a ${FILE_WORDS[app]}.`;
+    case "unreadable":
+      return "Load it again.";
+    case "empty":
+    case "duplicateColumn":
+    case "duplicateIndividual":
+    case "files":
+    case "unnamedColumn":
+    case "emptyIndividual":
+    case "tooLarge":
+    case "notText":
+    case "cutShort":
+      return "Load a corrected file.";
+  }
+}
+
+/**
+ * The reason of the individuals file being read or not read, in the words
+ * the Individuals step shows under the options of its reader, or `null`
+ * when the project has no individuals file or its file is read (the
+ * project spec, "What an analysis needs of every project"): the reason of
+ * `individualsNeeds` for such a file, with the ends of that step, "Choose
+ * another separator above, or load a corrected file." after a row of the
+ * wrong length or a quote never closed, "Load a corrected file." after
+ * most other refusals, and "Load it again." after a crash.
+ */
+export function individualsStepNeeds(p: Project): string | null {
+  const individuals = p.individuals;
+  if (individuals === null) {
+    return null;
+  }
+  return individualsReadNeeds(individuals, p.app, {
+    refusedEnd: (error) => stepRefusedEnd(error, p.app),
+    again: "Load it again.",
+    reload: "Reload the page and load it again.",
+  });
 }
 
 /** Whether every individual of the variants file is in the individuals
@@ -1540,6 +1610,10 @@ function refusalWords(error: IndividualsFileError, app: AppId): string {
       return "the browser could not read it; it may have been changed, moved or deleted since it was picked";
     case "notText":
       return "it is not a text file; in Excel, save the sheet as CSV";
+    case "variantsFile":
+      return "it is a variants file, which the Variants step takes";
+    case "cutShort":
+      return "it ends in the middle of a character and may have been cut short";
     case "files":
       return error.message;
   }
@@ -1999,6 +2073,8 @@ const INDIVIDUALS_ERROR_KINDS: Kinds<IndividualsFileError["kind"] | "worker"> =
       words: "a file the browser could not read",
     },
     notText: { fields: [], words: "a file that is not text" },
+    variantsFile: { fields: [], words: "a variants file" },
+    cutShort: { fields: [], words: "a file cut short" },
     worker: { fields: ["error"], words: "a failure of the application" },
   };
 
@@ -2490,7 +2566,12 @@ function parseCsvOptions(value: unknown, path: FieldPath): Parsed<CsvOptions> {
 }
 
 function parseCsvFound(value: unknown, path: FieldPath): Parsed<CsvFound> {
-  const fields = readObject(value, path, ["encoding", "separator", "decimal"]);
+  const fields = readObject(value, path, [
+    "encoding",
+    "separator",
+    "decimal",
+    "undecodedLine",
+  ]);
   if (!fields.ok) {
     return fields;
   }
@@ -2519,11 +2600,32 @@ function parseCsvFound(value: unknown, path: FieldPath): Parsed<CsvFound> {
   if (!decimal.ok) {
     return decimal;
   }
+  const undecodedLine = parseNullable(
+    f["undecodedLine"],
+    [...path, "undecodedLine"],
+    parseLine,
+  );
+  if (!undecodedLine.ok) {
+    return undecodedLine;
+  }
   return success({
     encoding: encoding.value,
     separator: separator.value,
     decimal: decimal.value,
+    undecodedLine: undecodedLine.value,
   });
+}
+
+/** A line of a file, a whole number of at least 1. */
+function parseLine(value: unknown, path: FieldPath): Parsed<number> {
+  const line = parseNumber(value, path);
+  if (!line.ok) {
+    return line;
+  }
+  return orFailure(
+    line.value,
+    wholeNumberError(line.value, 1, Number.MAX_SAFE_INTEGER, path),
+  );
 }
 
 function parseIndividualsRead(
@@ -2650,6 +2752,8 @@ function parseIndividualsError(
       return max.ok ? success({ kind, size: size.value, max: max.value }) : max;
     }
     case "notText":
+    case "variantsFile":
+    case "cutShort":
       return success({ kind });
     case "files":
     case "unreadable": {
@@ -3294,6 +3398,11 @@ const FIELD_WORDS: readonly FieldWords[] = [
   [
     ["individuals", "read", "found", "decimal"],
     () => "the decimal mark found in the individuals file",
+  ],
+  [
+    ["individuals", "read", "found", "undecodedLine"],
+    () =>
+      "the line of the first character that could not be decoded in the individuals file",
   ],
   [
     ["individuals", "read", "error", REST],

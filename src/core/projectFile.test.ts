@@ -284,7 +284,12 @@ describe("WS6 D1 what is written", () => {
           { kind: "binary", one: "2", zero: "1" },
           { kind: "continuous" },
         ],
-        found: { encoding: "utf-8", separator: ",", decimal: "." },
+        found: {
+          encoding: "utf-8",
+          separator: ",",
+          decimal: ".",
+          undecodedLine: null,
+        },
       },
     });
   });
@@ -654,7 +659,12 @@ function forwardProject(): Project {
           { kind: "identifier" },
           { kind: "binary", one: "m", zero: "f" },
         ],
-        found: { encoding: "utf-8", separator: ";", decimal: "," },
+        found: {
+          encoding: "utf-8",
+          separator: ";",
+          decimal: ",",
+          undecodedLine: null,
+        },
       },
     },
     grouping: { kind: "populations", column: "sex" },
@@ -693,7 +703,12 @@ function reversedProject(): Project {
     grouping: { column: "sex", kind: "populations" },
     individuals: {
       read: {
-        found: { decimal: ",", separator: ";", encoding: "utf-8" },
+        found: {
+          decimal: ",",
+          separator: ";",
+          encoding: "utf-8",
+          undecodedLine: null,
+        },
         columns: [
           { kind: "identifier" },
           { zero: "f", one: "m", kind: "binary" },
@@ -796,7 +811,12 @@ function neiDiversityProject(): Project {
           ],
         },
         columns: [{ kind: "identifier" }, { kind: "categorical" }],
-        found: { encoding: "utf-8", separator: ",", decimal: "." },
+        found: {
+          encoding: "utf-8",
+          separator: ",",
+          decimal: ".",
+          undecodedLine: null,
+        },
       },
     },
     grouping: { kind: "populations", column: "pop" },
@@ -1595,6 +1615,7 @@ const NAMED_FIELDS = new Set([
   "one",
   "zero",
   "found",
+  "undecodedLine",
   // the grouping
   "column",
   "roles",

@@ -361,6 +361,7 @@ function individualsOut(source: IndividualsSource): Fields {
                 ["encoding", read.found.encoding],
                 ["separator", read.found.separator],
                 ["decimal", read.found.decimal],
+                ["undecodedLine", read.found.undecodedLine],
               ]),
         ],
       ]),
