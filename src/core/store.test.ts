@@ -1257,6 +1257,11 @@ describe("WP4 D2 the calculations", () => {
     store.apply("a new variants file was loaded", loadPanel(OTHER_VARIANTS_ID));
     store.variantsRead(OTHER_VARIANTS_ID, VARIANTS_READ);
     expect(kinds(store)).toStrictEqual(["ready", "ready"]);
+    // An undo back to the old load, a change of the load too, keeps it
+    // forgotten until a run on that load fails again.
+    store.undo();
+    expect(kinds(store)).toStrictEqual(["ready", "ready"]);
+    expect(store.startRun("vars")).not.toBeNull();
   });
 
   test("a failure is not forgotten when a read is recorded, the number of variants of another result among them", () => {

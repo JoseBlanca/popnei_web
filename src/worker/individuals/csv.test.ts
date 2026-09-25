@@ -538,6 +538,12 @@ describe("WS4 D1 the owner's decisions of 25 September on the metadata file", ()
     });
   });
 
+  test("the search of the separator takes NA below an empty cell of the header for no value, so ; fits and wins the tie with the comma", () => {
+    const read = readOk("id,x;pop;;\nA,1;P1\nB,2;P2;NA\n");
+    expect(read.separator).toBe(";");
+    expect(read.table.columns).toEqual(["id,x", "pop"]);
+  });
+
   test("a row of the wrong length is measured against the header without its empty cells", () => {
     expect(readError("id;pop;;\nA;P1\nB\n")).toEqual({
       kind: "raggedRow",

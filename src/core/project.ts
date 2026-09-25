@@ -1482,17 +1482,16 @@ function individualsReadNeeds(
 /**
  * What follows the colon of a refusal of the reader in the Individuals
  * step of the application `app`: its words and its end, "it is a variants
- * file, which the Variants step takes. Load a metadata file.", or the end
- * alone after an empty message of the files wasm. The step says a
- * variants file told by its name in these words.
+ * file, which the Variants step takes. Load a metadata file.". It takes
+ * any refusal but one of the files wasm, whose message can be empty. The
+ * step says a variants file told by its name in these words.
  */
 export function individualsStepRefusal(
-  error: IndividualsFileError,
+  error: Exclude<IndividualsFileError, { readonly kind: "files" }>,
   app: AppId,
 ): string {
   const words = saying(refusalWords(error, app));
-  const end = stepRefusedEnd(error, app);
-  return words === "" ? end : `${words.slice(2)}. ${end}`;
+  return `${words.slice(2)}. ${stepRefusedEnd(error, app)}`;
 }
 
 /** The end of a refusal of the reader shown in the Individuals step, as
