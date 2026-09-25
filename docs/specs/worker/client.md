@@ -76,14 +76,19 @@ rule below rules out one of them.
   wasm, gzipped, have to arrive at 150 kbit/s or faster, with nothing
   left for compiling it; a user on a slower connection cannot start the
   calculations, and reloading the page does not mend it.
-- **A worker that fails before its `ready`, twice in a row, is given up**
-  for the life of the page: the timeout, a `crashed` before `ready`, an
-  `error` event, a `ready` that fails its check, or a `new Worker` that
-  throws. After the first such failure the client starts it once more;
-  after the second, every request of that worker, waiting or to come,
-  fails with `couldNotStart` and the reason of the last failure, as
-  `.claude/skills/coding/worker.md` says. A `ready` sets the count back to
-  zero. The words the user reads say to reload the page
+- **A worker that fails twice with no answer between is given up** for
+  the life of the page. A failure here is one before its `ready`: the
+  timeout, a `crashed`, an `error` event, a `ready` that fails its check,
+  or a `new Worker` that throws; or a crash of a worker that was ready and
+  ran no request. After the first the client starts it once more; after
+  the second, every request of that worker, waiting or to come, fails
+  with `couldNotStart` and the reason of the last failure, as
+  `.claude/skills/coding/worker.md` says. An answer to a request sets the
+  count back to zero; a `ready` alone does not, so that a worker that
+  crashes idle after every `ready` does not fetch its scripts again and
+  again. A crash while a request runs fails that request and is not
+  counted, so two large files that each run out of memory do not give up
+  the worker. The words the user reads say to reload the page
   (`docs/specs/core/project.md`, **Open 4** there).
 
 ### The queue
@@ -104,9 +109,12 @@ rule below rules out one of them.
 
 ### The calculation worker holds one load
 
-The worker opens the variants file once and reads every pass from it, so
-it holds the load it opened, and one only (`.claude/skills/coding/worker.md`,
-"Reading the files of the user"). The client keeps, for each load id,
+The worker is started for one load: it opens that variants file, and
+opens it again itself when a run's filters differ from those it has put
+on it, since popnei 0.1.0 cannot take a filter off
+(`docs/specs/worker/runner.md`, "The filters"). So it holds the load it
+opened, and one only (`.claude/skills/coding/worker.md`, "Reading the
+files of the user"). The client keeps, for each load id,
 the `File` the entry gave it and the format and the read options of the
 last `openVariants` of that load, and the load of each request: an
 `openVariants` names its load, and a `run` names it in its job, whose
@@ -115,25 +123,45 @@ the load id with its read options, as it is for the store
 (`docs/specs/core/store.md`, "The notice, and the calculations it
 stops"). In the walking skeleton other read options are always a new
 pick, with a new load id, so a job needs only the load id and the client
-finds the read options by it; if stage 3 lets the ploidy change under
-the same load id, the job carries the read options too.
+finds the read options by it, and an `openVariants` of a load id it
+knows with other read options is a defect, which the client throws; if
+stage 3 lets the ploidy change under the same load id, the job carries
+the read options too.
 
 To end a worker is always the same three steps: the client takes its
 handlers off it, so that a message it had posted and the page had not
 read yet reaches no one; calls `terminate()`, which stops the thread
-wherever it is, inside wasm included; and starts a new worker at once,
-which is sent the next request of the queue once it is ready.
+wherever it is, inside wasm included; and starts a new worker at once.
+
+A worker started again after a cancel or a crash is sent, as soon as it
+is ready, the `open` of the load the old one held, unless the first
+request of the queue is on another load, as `.claude/skills/coding/worker.md`
+("Cancelling", step 4) and section 5 of the architecture have it, so that
+the file is read again while the user decides what to run next. For such
+a worker the client calls `onPopneiReady` when that `open` has ended, and
+not at its `ready`: the store keeps a run `afterStop` until the worker
+announces itself ready (`docs/specs/core/store.md`, "The notice, and the
+calculations it stops"), and the wait that mark tells of is the reading
+of the file, not the loading of the wasm. The version is already known
+to the store by then, from the first `ready`. A worker started for a new
+load, or the first one, calls it at its `ready`, since its first request
+is the `open` of a read, whose answer needs the version recorded first.
 
 - **Each worker receives at most one `open`, and it is its first
   request.** Before the first request on a load, a worker that holds no
-  load is sent the `open` of that load, with its `File`. So a worker
+  load is sent the `open` of that load, with its `File`. A worker whose
+  `open` popnei refused, or failed, still holds that load, with no file
+  open, and the memory of the read in its wasm: the next file the user
+  loads starts a new worker. So a worker
   started again after a cancel or a crash is given its `File` again in
   that `open`, from the client's map, which is how the page gives the
   files back to a new worker (`docs/architecture.md`, section 5).
 - **A request on another load than the worker holds ends that worker.**
-  When the next request of the queue is on another load, the client ends
-  the worker, and the request goes to the new one, after its `open`. Every request still waiting or running on another
-  load than the new request's ends `cancelled` at that moment. The
+  When a request on another load is given to the client, every request
+  still waiting or running on the load the worker holds ends `cancelled`
+  at once, the client ends the worker, and the request goes to the new
+  one, after its `open`; it does not wait for the old file to finish
+  opening. The
   memory of wasm grows and never shrinks, so only a new worker gives back
   the memory of the old file (`docs/architecture.md`, section 5). When the
   load changes, the store has already cancelled every run in flight
@@ -157,25 +185,33 @@ which is sent the next request of the queue once it is ready.
   says it may first wait for the file to be read again
   (`docs/specs/core/store.md`). The `opened` of an `open` sent for a run
   goes to no one, also when every run that waited on it was cancelled;
-  the worker then holds that load for the next request on it. When it fails, every run waiting on it fails with it: a `refused`
+  the worker then holds that load for the next request on it. When it
+  fails, every run waiting on it fails with it: a `refused`
   fails them as `workerFailed`, with the message "‹name› could not be
   opened again: ‹popnei's message›", and a crash as any crash (**Open
   1**, below).
 
 ### Cancelling
 
-`cancel()` of a `Run` (`docs/specs/worker/protocol.md`):
+`cancel()` of a `Run` (`docs/specs/worker/protocol.md`), and of a read,
+which the entry cancels when the project no longer holds its source
+pending (`docs/specs/entry.md`):
 
-- **of a run that waits** takes it out of the queue, at no cost. A run
-  whose load is being opened for it waits too: it leaves the queue, and
-  the `open` goes on, for the next request on that load.
-- **of the run that is running** ends its worker, since a worker cannot
+- **of a request that waits** takes it out of the queue, at no cost. A
+  run whose load is being opened for it waits too: it leaves the queue,
+  and the `open` goes on, for the next request on that load.
+- **of a read of the individuals file that runs** gives `cancelled` at
+  once, and its answer, when it comes, goes to no one; the light worker
+  is not ended, since the reader reads at most 20 MB
+  (`docs/specs/worker/individuals.md`, `MAX_INDIVIDUALS_FILE_BYTES`).
+- **of the run, or the read of a variants file, that is running** ends
+  its worker, unless other runs wait on that `open`, since a worker cannot
   read a message while wasm runs a calculation, and without
   `SharedArrayBuffer`, which GitHub Pages does not allow, the page has no
   other way to stop it (`docs/architecture.md`, section 5). The worker is
   ended as above, and the next request of the queue goes to the new one,
   after its `open`.
-- **of a run that has ended**, or a second time, does nothing.
+- **of a request that has ended**, or a second time, does nothing.
 
 In every case where it does something, the outcome is `cancelled`. What a
 restart costs is the loading of the wasm, from the cache of the browser
@@ -198,6 +234,13 @@ was ready:
 | `messageerror`, a message the browser could not copy | fails with `workerFailed` | ended, and started again |
 | `badRequest` | fails with `defect`, its message | ended, and started again |
 | a message that fails its check, an answer of another request's id or of the wrong kind for the request, a result under another key than its request's or of another analysis than its job's | fails with `defect`; the client writes what was wrong to the console of the browser | ended, and started again |
+| `postMessage` of the request throws, a `DataCloneError` of a job that holds what cannot be copied | fails with `defect`, the browser's message | ended, and started again |
+
+The client has no timeout on a calculation, so that every request is
+answered rests on the runners too: each posts an answer or `crashed` for
+whatever breaks, a promise rejected with nothing to handle it among the
+causes, which fires no `error` event on the page
+(`docs/specs/worker/messages.md`, "A worker that cannot go on").
 
 The requests that were waiting stay in the queue and go to the new
 worker, so a crash costs the one request that was running. A crash with
@@ -261,13 +304,19 @@ export interface Client {
     fileId: string;
     format: "vcf" | "nei";
     readOptions: { ploidy: number; onlyPassed: boolean } | null;
-  }): Promise<VariantsOpened>;
+  }): Read<VariantsOpened>;
 
   /** Reads the individuals file of a load on the light worker. */
-  readIndividuals(fileId: string, csv: CsvOptions): Promise<IndividualsAnswer>;
+  readIndividuals(fileId: string, csv: CsvOptions): Read<IndividualsAnswer>;
 
   /** Sends a calculation, under its key; the store's `send`. */
   run(key: string, job: Job, onProgress: (p: Progress) => void): Run<JobResult>;
+}
+
+/** A read under way: its answer, and how to stop it (Cancelling, above). */
+export interface Read<A> {
+  outcome: Promise<A>;
+  cancel(): void;
 }
 ```
 
@@ -280,15 +329,18 @@ layers"); the entry turns each into a record of the store, as below.
 export type VariantsOpened =
   | { kind: "opened"; individuals: string[]; ploidy: number }
   | { kind: "failed"; error: Exclude<RunError, { kind: "files" }> }
-  | { kind: "cancelled" };   // a request on another load came before it opened
+  | { kind: "cancelled" };   // cancelled, or a request on another load came first
 
 export type IndividualsAnswer =
   | { kind: "read"; table: IndividualsTable; columns: ColumnType[]; found: CsvFound }
   | { kind: "refused"; error: IndividualsFileError }  // the reader refused the file
-  | { kind: "failed"; error: Exclude<RunError, { kind: "popnei" | "files" }> };
+  | { kind: "failed"; error: Exclude<RunError, { kind: "popnei" | "files" }> }
+  | { kind: "cancelled" };
 ```
 
-The promise of a read never fails, as the outcome of a run does not: a
+`refused` is the reader's `IndividualsFileRead` of `failed`
+(`docs/specs/worker/messages.md`). The outcome of a read never fails, as
+the outcome of a run does not: a
 failure is one of its values. The id of every request, reads and runs of
 both workers, is one count from 1 for the life of the page.
 

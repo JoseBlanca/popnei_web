@@ -59,8 +59,8 @@ later, and some of it is not seen at all:
 
 ### The bytes and the encoding
 
-The runner is given the `File` the user picked, and the options of the
-CSV of the source, `encoding`, `separator` and `decimal`, each `"auto"`
+The runner is given, in the request, the `File` the user picked and the
+options of the CSV of the source, `encoding`, `separator` and `decimal`, each `"auto"`
 until the user sets it (`CsvOptions`, `docs/specs/worker/protocol.md`).
 
 1. A file of more than 20 MB, `MAX_INDIVIDUALS_FILE_BYTES`, 20,000,000
@@ -77,7 +77,10 @@ until the user sets it (`CsvOptions`, `docs/specs/worker/protocol.md`).
    file changed on the disk after it was picked cannot be read, so a user
    who picks `pops.csv`, fixes it in Excel and saves it, then changes the
    separator on the screen, gets this refusal and has to pick the file
-   again. That the browsers do so has not been seen in any of them.
+   again. That the browsers do so has not been seen in any of them; one
+that reads the new bytes instead gives the table of the file as it is
+now, which is what the keys of the results are made from, so no result
+is shown for a table other than the one on the screen.
 3. A file that starts with the mark of UTF-16, the bytes `FF FE` or
    `FE FF`, is what Excel writes for "Unicode Text", tab separated. It is
    decoded as UTF-16, little endian after `FF FE` and big endian after
@@ -120,7 +123,9 @@ cells. The blank rows of the next section are skipped here too, and the
 header is the first row that is not blank. A separator fits the file
 when it gives the header two cells or more and every row as many cells
 as the header; a row with more cells,
-whose cells past the header are all empty, fits too. Of the separators
+whose cells past the header are all empty, fits too. A separator with
+which a quote is never closed does not fit, since whether a `"` opens a
+cell depends on the separator before it. Of the separators
 that fit, the one that gives the header the most cells is taken, and on a
 tie the tab, then `;`, then `,`, since a tab is the least likely of the
 three to be inside a value. When none fits, the one that gives the header
@@ -150,7 +155,9 @@ A Spanish Excel file, `Individuo;Población;Altura` over rows such as
   where the cell starts.
 - **Spaces**, U+0020, at the start and the end of a cell are removed, and
   so are tabs when the separator is not a tab; inside quotes they are
-  kept. A file typed by hand as `ind_01, pop1` then reads `pop1`.
+  kept. A file typed by hand as `ind_01, pop1` then reads `pop1`. The
+  spaces before a cell are removed first, so `A, "x, y"` is two cells,
+  `A` and `x, y`.
 - **A blank row**, one whose cells are all empty, `;;;` among them, which
   Excel writes for rows it once formatted, is skipped, wherever it is.
 - **The header** is the first row that is not blank, and gives the names
@@ -169,7 +176,10 @@ A Spanish Excel file, `Individuo;Población;Altura` over rows such as
   taken was to read a short row as ending in missing cells, as pandas
   does: a cell lost in the middle of a row would then move the values
   after it into the wrong columns, with no warning.
-- **The first column names the individuals**, whatever its header says.
+- **The first column names the individuals**, whatever its header says,
+  an empty name included, as pandas' `to_csv` and R's `write.csv` write
+  the column of the row names; it is never dropped, and `unnamedColumn`
+  is of the other columns.
   Its cells are text, as written: `001` stays `001`, and `NA` and `-` are
   the names `NA` and `-`, since an individual is never missing. A row
   whose first cell is empty is refused, as `emptyIndividual`, with its
@@ -241,8 +251,10 @@ proposed by these rules and changed by the user from stage 4:
 The case is spelled `case` or `Case` in the file, and `one` holds it as
 written.
 
-A continuous column whose values are all whole numbers, written with no
-decimal mark, and that has at most 20 distinct values,
+A continuous column whose values are all whole numbers, written as
+digits with an optional sign and no decimal mark or exponent, `12` and
+`-3` but not `12,0` or `1e3`, and that has at most 20 distinct numbers,
+counted by value, so `1`, `01` and `001` are one,
 `MAX_FEW_WHOLE_LEVELS`, is continuous with a warning: such a column is
 often a code, the populations numbered 1 to 12, or an ordinal score. 20
 covers the scores of 1 to 5, 1 to 7 and 1 to 9, and the numbers of
@@ -297,7 +309,7 @@ kind of `IndividualsFileError`, and the last six are new:
 
 | kind | what the user reads after "could not be read:" |
 |---|---|
-| `empty` | "it has no row below the header" |
+| `empty` | "it has no row of individuals", for a file with a header alone and for one with nothing at all |
 | `duplicateColumn` | "two columns are named pop" |
 | `duplicateIndividual` | "the individual ind_031 is in two rows" |
 | `raggedRow` | "line 7 has 3 cells where the header has 4" (**Open 1**) |
@@ -308,7 +320,10 @@ kind of `IndividualsFileError`, and the last six are new:
 | `unreadable` | "the browser could not read it; it may have been changed, moved or deleted since it was picked" |
 | `notText` | "it is not a text file; in Excel, save the sheet as CSV" |
 
-A size is in MB of 1,000,000 bytes with one decimal, as macOS shows it.
+A size is in MB of 1,000,000 bytes, as macOS shows it, with one
+decimal rounded up, so that a file of 20,000,001 bytes is "20.1 MB" and
+never "20.0 MB, more than the 20 MB"; the limit, a whole number of MB, is
+written with none.
 The ending, "Load an individuals file in the Individuals step.", fits
 every row: each is mended by picking a file again, the same one changed
 or another.
@@ -356,7 +371,7 @@ export const MAX_FEW_WHOLE_LEVELS = 20;
 export interface ColumnWarning {
   kind: "fewWholeLevels";
   column: string;                  // its name
-  numLevels: number;               // its distinct values, 3 to 20
+  numLevels: number;               // its distinct numbers, by value, 1 to 20
   min: number;
   max: number;
 }
@@ -380,9 +395,10 @@ export const MAX_INDIVIDUALS_FILE_BYTES = 20_000_000;
 /** What of a File the read uses; a File and a Blob are one. */
 export interface BytesSource { size: number; arrayBuffer(): Promise<ArrayBuffer> }
 
-export type IndividualsFileRead =
-  | { kind: "read"; table: IndividualsTable; columns: ColumnType[]; found: CsvFound }
-  | { kind: "failed"; error: IndividualsFileError };
+// In src/worker/messages.ts (docs/specs/worker/messages.md):
+// type IndividualsFileRead = Result<
+//   { table: IndividualsTable; columns: ColumnType[]; found: CsvFound },
+//   IndividualsFileError>;
 
 export function readIndividualsFile(file: BytesSource, csv: CsvOptions): Promise<IndividualsFileRead>;
 ```
@@ -392,9 +408,12 @@ gives; `CsvOptions.encoding` does not, since the mark decides it.
 
 `found` holds the three options used, set or found, so that the screen
 shows them all; which of them were `"auto"` it knows from the `csv` of
-the source. `IndividualsFileRead` is the `IndividualsRead` of the project
-without its pending state and without a failure of the worker, which the
-client adds (`docs/specs/core/project.md`, "The project").
+the source. The comments of `CsvFound` in `protocol.ts` and of `found` in
+`docs/specs/core/project.md` and `docs/specs/worker/messages.md` say it
+holds only what `"auto"` found, which a `CsvFound`, whose three fields
+are all required, cannot be; they are corrected to this. The entry turns
+an `IndividualsFileRead` into the project's `IndividualsRead`, a read or
+a failure (`docs/specs/core/project.md`, "The project").
 
 The union of the refusals, in `src/worker/protocol.ts`, grows by six
 kinds:
@@ -419,13 +438,12 @@ export type IndividualsFileError =
 failed read of each kind with its fields.
 
 The runner, `src/worker/filesRunner.ts`, in stage 2: it posts its
-`ready` as soon as it starts, keeps the `File` objects the page sends it
-by load id, and answers the request to read an individuals file by
-calling `readIndividualsFile` with the `File` of that id and the options
-of the request, and posting what it gives. It imports neither popnei nor
-the files wasm. A request that names a load id it was not sent is a
-defect of our code, answered as an error of the worker. The messages
-themselves are those of `docs/specs/worker/messages.md`.
+`ready` as soon as it starts, and answers each `readIndividuals` by
+calling `readIndividualsFile` with the `File` and the options the
+request carries, and posting what it gives. It holds nothing between two
+reads, and imports neither popnei nor the files wasm. The messages, and
+what the worker does with a request that fails its check, are those of
+`docs/specs/worker/messages.md`.
 
 ## The cases
 
@@ -437,15 +455,20 @@ themselves are those of `docs/specs/worker/messages.md`.
   first lines, `##fileformat=VCFv4.2` and the others, are not a table,
   so the file is refused as a row of the wrong length within its first
   lines, which names the line.
-- **A title line above the header**, such as `Tabla 1`, gives a header of
-  one cell and rows of three, and the file is refused at line 2 with 3
-  cells where the header has 1.
-- **The user sets the separator to `,` on a file of `;`**: every row is
-  one cell, the file reads as one column, the identifiers, and the whole
-  line of each individual is its name. The screen shows a table of one
-  column, and the check against the variants lacks every individual.
-  Nothing refuses it, since such a file is valid; the options beside the
-  file are where the user sees what was set.
+- **A title line above the header**: Excel writes it as `Tabla 1;;`, a
+  header of three cells of which two are empty, and the file is refused
+  with "column 2 has values but no name in the header", which leads the
+  user to the first line. A title line of one cell, `Tabla 1`, gives the
+  header one cell with every separator, so the file is read with `,`: it
+  is refused at the first row with a comma, a decimal comma among them,
+  or else reads as one column, the whole of each line a name, which the
+  table on the screen shows.
+- **The user sets the separator to `,` on a file of `;`**: a file with a
+  decimal comma is refused at its first row with one, as a row of the
+  wrong length. A file with no comma reads as one column, the whole line
+  of each individual its name; nothing refuses it, since such a file is
+  valid, and the screen shows a table of one column and the check
+  against the variants lacks every individual.
 - **A decimal comma set with the separator `,`**: the numbers can only
   be written in quotes, `"1,75"`, and they are read so.
 - **The encoding set to UTF-8 on a Windows-1252 file**: every byte
@@ -473,11 +496,11 @@ themselves are those of `docs/specs/worker/messages.md`.
 
 In the light worker, one read at a time, as the queue of the client gives
 them (`.claude/skills/coding/worker.md`, "The queue"). A read holds the
-bytes, the text, twice their size in memory since a string of JavaScript
-holds two bytes a character, and the cells; the separators are tried by
+bytes, the text, which a string of JavaScript holds in one or two bytes
+a character, and the cells; the separators are tried by
 counting, without making cells, so that the cells are made once. For a
-file of 20 MB that is about 20 + 40 MB, and the cells, a few times the
-text: an estimate, not measured.
+file of 20 MB that is 20 MB of bytes, 20 to 40 MB of text, and the
+cells, a few times the text: an estimate, not measured.
 
 A file of 10,000 rows and 20 short columns is 1 to 2 MB. Reading it in the
 worker does not freeze the page, whatever it takes; the table then
@@ -493,8 +516,8 @@ With a CSV or TSV, the light worker loads no wasm at all
 
 ## How it is verified
 
-With Vitest in node, at `readCsv`, `inferColumnTypes`, `columnWarnings`
-and `readIndividualsFile`, the highest functions that run without a
+With Vitest in node, at `readCsv`, `cellNumber`, `inferColumnTypes`,
+`columnWarnings` and `readIndividualsFile`, the highest functions that run without a
 worker, and in the browser with Playwright.
 
 A table of cases at `readCsv`, each a literal text and the literal table,
@@ -521,7 +544,16 @@ line break:
 | `id,,pop\nA,1,P1\n` | auto | `unnamedColumn`, 2 |
 | `id,pop\nA,"P1\nB,P2\n` | `,` | `unclosedQuote`, line 2 |
 | `id,pop\n` and the empty text | auto | `empty` |
-| `﻿id,pop\nA,P1\n` | auto | column `id`, not `﻿id` |
+| `\uFEFFid,pop\nA,P1\n` | auto | column `id`, not `\uFEFFid` |
+| `id;n\tx\nA;1\t2\n` | auto | both fit with two cells: the tab, by the order of a tie |
+| `id,pop\nA,P1\nB,P2,P3\n` | auto | none fits; `,` gives the header the most cells, and the read is `raggedRow`, line 3, expected 2, found 3 |
+| `id,n\nA,"x\ny"\nB,1,2\n` | auto | `raggedRow` at line 4, the line of `B`, since the quoted cell spans lines 2 and 3 |
+| `only\nA\nB\n` | auto | `,`, one column, types identifier |
+
+At `cellNumber`, with a comma: `12` is 12, `-1,75` is −1.75, `,5` is
+0.5, `5,` is 5, `1,2E-03` is 0.0012, and `1.234,5`, `1,5 `, `Inf`,
+`1e999`, `-`, `NA` and `null` give `null`, as do `1,5` with a point and
+`true`.
 
 At `readIndividualsFile`, over bytes written into the test as literals,
 in a `Blob`:
@@ -545,8 +577,10 @@ Properties, with fast-check (`.claude/skills/coding/testing.md`):
 
 - **A table written as CSV reads back as itself.** The tables made:
   header names distinct and not empty; first cells distinct and not
-  empty; other cells `null` or a text that is not `NA` or `-`; no name or
-  text with spaces at its ends. Each is written with any of the three
+  empty; other cells `null` or a text that is not empty, `NA` or `-`; no
+  name or text with a space at its ends, nor a tab when the separator is
+  not a tab; no U+FEFF at the start of the first name. Each is written
+  with any of the three
   separators and any of the three line endings, a `null` as an empty
   cell, and every cell that holds the separator, a quote or a line break
   in quotes. Read with that separator set, it gives the same table. Read
@@ -571,10 +605,9 @@ plan.
 
 ## What this spec assumes of the others
 
-- `docs/specs/worker/messages.md`: a request to the light worker to read
-  an individuals file carries its load id and its `CsvOptions`, and its
-  result is an `IndividualsFileRead`; the `File` reaches the light worker
-  in the `files` message, by load id.
+- `docs/specs/worker/messages.md`: `readIndividuals` carries the `File`
+  and its `CsvOptions`, and its answer is an `IndividualsFileRead`, the
+  `Result` that spec declares.
 - `docs/specs/worker/client.md`: the client sends that request to the
   light worker, and turns a crash of the worker into a failure of the
   worker, which the project records as `{ kind: "worker" }`.
@@ -588,11 +621,12 @@ plan.
   populations, whatever its type; it takes `.csv`, `.tsv` and `.txt`
   files in stage 2.
 - `src/worker/protocol.ts` and `src/core/project.ts`, approved, change
-  in three places, each to be approved with this spec: the six kinds of
-  refusal of `IndividualsFileError`, their words in `individualsNeeds`
-  and their fields in the validation of a project file; and
-  `CsvFound.encoding`, which gains `"utf-16"`, in `protocol.ts` and in
-  the check of `found` when a project file is opened.
+  in these places, each to be approved with this spec: the six kinds of
+  refusal of `IndividualsFileError`, their words in `individualsNeeds`,
+  the new words of `empty`, and their fields in the validation of a
+  project file; `CsvFound.encoding`, which gains `"utf-16"`, in
+  `protocol.ts` and in the check of `found` when a project file is
+  opened; and the comment of `CsvFound`, which says all three options.
 
 ## Open points
 

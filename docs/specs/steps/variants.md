@@ -27,15 +27,18 @@ makes.
 
 ### The file
 
-A drop zone that holds a button, "Choose a variants file…", which opens
-the file picker of the system, since dropping a file cannot be done with
-a keyboard (`.claude/skills/coding/react.md`, "Widgets"). The format is
-told by the end of the name, since the page does not read the file:
+A drop zone, React Aria's `DropZone`, that holds a button, a
+`FileTrigger`, "Choose a variants file…", which opens the file picker of
+the system, since dropping a file cannot be done with a keyboard
+(`.claude/skills/coding/react.md`, "Widgets"). The format is told by the
+end of the name, compared without regard to case, `PANEL.VCF.GZ` as
+`panel.vcf.gz`, since the page does not read the file:
 `.nei` is a `.nei` file; `.vcf`, `.vcf.gz` and `.vcf.bgz` are a VCF,
 plain or compressed, which popnei's `openVcf` reads alike
 (`js/popnei/src/io_vcf.ts`). A file of any other name is not loaded,
 and the step says so (below, "Its words"); the picker offers these
-endings first, and any file under "All files".
+endings first, and any file under "All files". Several files dropped at
+once load none: "Drop one variants file at a time."
 
 Once a file is picked, the zone shows the file's card: its name, its
 format, "VCF" or ".nei file", and its size, and what the file holds as
@@ -45,7 +48,7 @@ soon as it is read:
 |---|---|
 | individuals, "200 individuals" | the length of `read.individuals` of the source, the part of it that holds what the worker read, which popnei gives when the file opens, with no pass |
 | ploidy, "Ploidy 2" | `read.ploidy`: for a `.nei` file the one in the file; for a VCF the one the user gave, since popnei does not read it from a VCF |
-| variants, "1,200 variants" | `read.numVars`, once the first pass has counted them; until then "Variants: counted when the first analysis runs" |
+| variants, "1,200 variants" | `read.numVars`, once the first pass has counted them; until then "Variants: not counted yet; the first analysis that reads the whole file counts them", which stays true after an analysis that popnei refused |
 | how a VCF was read | "Read with ploidy 2, only the variants with PASS or . in the FILTER column", or "Read with ploidy 2, every variant", from `readOptions` |
 
 The number of variants counts those the file gives before the filters of
@@ -63,11 +66,14 @@ button is the same element in every state, so that the focus stays on it
 after a pick, when the card replaces the empty zone. There is no Remove:
 core has no command that takes the variants file out, and Undo does.
 
-A file larger than 1.5 GB gets a warning on its card, before it is read
-(below). popnei 0.1.0 reads a file whole into the memory of the tab, and
-files above roughly 1.5 to 2 GB fail, an estimate that no browser has
-been measured at (`docs/architecture.md`, sections 6 and 11). The size
-is known from the pick, without reading the file.
+A file larger than 1.5 GB, 1,500,000,000 bytes, gets a warning on its
+card, before it is read (below), and keeps it in every state, so that a
+read that then fails with "the calculation stopped unexpectedly", which
+is what the worker reports when the memory of the tab runs out, is read
+beside the reason. popnei 0.1.0 reads a file whole into the memory of the tab, and
+files above roughly 1.5 to 2 GB fail (`docs/architecture.md`, sections
+6 and 11). popnei's `main` reads a `File` by ranges since September
+2026; the warning goes when the site takes a release that does.
 
 ### How a VCF is read
 
@@ -77,7 +83,7 @@ effect on a `.nei` file, whose ploidy is in the file:
 | label | widget | default | from |
 |---|---|---|---|
 | Ploidy of the VCF | `NumberField`, a whole number from 1 to 255 | 2 | the default of popnei's `openVcf`, and the range it accepts (`MAX_PLOIDY` of `src/core/project.ts`) |
-| Only the variants with PASS or . in the FILTER column | `Switch` | on | `onlyPassed` of `openVcf`, true by default: a variant whose FILTER column is neither `PASS` nor `.` is left out |
+| Only the variants with PASS or . in the FILTER column | `Checkbox`, since it takes effect at the next pick and not at once, which a `Switch` would promise (`react.md`, "Widgets") | on | `onlyPassed` of `openVcf`, true by default: a variant whose FILTER column is neither `PASS` nor `.` is left out |
 
 Under the ploidy, a line that the owner asked for on 25 September 2026:
 "A VCF does not say its ploidy, so it is given here. If it is wrong, the
@@ -93,10 +99,22 @@ of different ploidies, and the ploidy is an argument of the reader". The
 diversity panel shows that message as popnei's refusal
 (`docs/specs/analyses/diversity.md`).
 
-The two options are the screen's own state until the pick, and are
-written into the source by the command of the pick; after it, the card
-says what the file was read with. To read a VCF already loaded with
-another ploidy, the user sets it and picks the file again (**Open 1**).
+The diversity panel then says "popnei could not calculate the
+diversity: ‹its message›. Change the settings, or load the variants file
+again, to run it again." (`docs/specs/analyses/diversity.md`, "Its
+words"); the line under the ploidy says which setting.
+
+The two options are state of the step, not of the project, until the
+pick, and are written into the source by the command of the pick; after
+it, the card says what the file was read with. Each time the step is
+drawn they start at the options of the VCF loaded, or, in a project
+opened from a file with no variants file yet, at those of the
+reference's VCF, as `docs/specs/core/projectFile.md` asks, since a VCF
+read with another ploidy gives no comparison of its numbers; otherwise
+at the defaults. So leaving the step, or an Undo, can set them back, and
+what they hold always matches a file the project has or had. To read a
+VCF already loaded with another ploidy, the user sets it and picks the
+file again (**Open 1**).
 
 ### The missing data filter
 
@@ -106,18 +124,27 @@ under it. The field holds the number popnei is given,
 `maxAllowedMissingRate` of `filterByMissingData`, as typed, and not
 converted from another number such as a proportion of called genotypes
 (`docs/specs/worker/protocol.md`): a variant is kept when
-its missing genotypes divided by all the individuals of the file are at
-most that number. A genotype is missing when any of its alleles is, so
+its missing genotypes divided by all the individuals of the dataset,
+every individual of the file until the filters of individuals of stage
+3, are at most that number. A genotype is missing when any of its alleles is, so
 `0/.` counts as missing (`js/popnei/src/variant.ts`). Functionality
 section 3 words the filter the same way, a proportion at most a
 threshold, so the label and popnei agree and nothing is converted.
 
 The filter is on from the start, with a threshold of 0.1 (**Open 2**),
 and is shown with no file loaded too, since the filters belong to the
-project and stay across loads. The arrow keys and the buttons of the
-field move it by 0.01; a number typed with more decimals, 0.125, is kept
-as typed. Turned off, the field goes; turned on again, it has the
-default.
+project and stay across loads. The field has a step of 0.01 and no
+buttons. React Aria rounds a committed value to the step, so 0.125
+typed becomes 0.13, and the field shows 0.13, the number popnei is
+given; two decimals are what a threshold of missing data is set with.
+Each press of an arrow key is a commit, and so a command and a step of
+Undo, which is what a user who presses it five times has done. A field
+left empty, or with no number in it, sends nothing and shows again the
+value it had; the same holds for the ploidy, which then keeps its value
+for the next pick. Turned off, the field goes; turned on again, it has
+the default. Off and on puts the filter last in the list of the
+filters, which with one filter in stage 2 changes nothing; stage 3,
+with several, decides it.
 
 ## The states
 
@@ -129,10 +156,10 @@ it waits for is the read of the file. Its states:
 | empty | cannot happen: with no file, the step offers the pick, which is the ready state | — |
 | locked | cannot happen: nothing has to be done before a file is picked. A file picked before the calculation worker has started is read once it has | — |
 | ready | no file: the zone, "Choose a variants file…", the options of a VCF, the filter. With an opened project file, the file it was made with, below | pick a file; set the options and the filter |
-| running | the card with its name, format and size, and "Reading panel.nei."; no progress bar, since popnei 0.1.0 reports none (`docs/architecture.md`, section 6) | pick another file, which replaces this one; Undo; set the filter |
+| running | the card with its name, format and size, "Reading panel.nei." and the seconds since the step saw the read start, which the step keeps and loses when it is left; no progress bar, since popnei 0.1.0 reports none (`docs/architecture.md`, section 6) | pick another file, which replaces this one; Undo; set the filter |
 | done | the card with the individuals, the ploidy, the number of variants once counted, how a VCF was read, and the warnings below | replace the file; set the filter |
 | results removed | cannot happen here: the step shows no result. A command of this step that removes results, a new file or a changed filter, has its notice in the shell (`docs/specs/shell.md`), with the descriptions below | — |
-| error | the card with the reason the file was not read, below | pick a file |
+| error | the card with the reason the file was not read, below | what the reason says: pick a file, or, when the calculations could not start or the page is out of date, reload the page |
 
 A read that takes long cannot be cancelled with a button. Picking
 another file, or Undo, replaces the load. The calculation worker is
@@ -166,8 +193,9 @@ The descriptions of the commands are in the table above. The rest:
 
 - **A file of another name**: "panel.txt was not loaded: the Variants
   step reads a VCF, whose name ends in .vcf, .vcf.gz or .vcf.bgz, or a
-  .nei file. If it is one of them, rename it." The message stays until
-  the next pick, and is the screen's, not the project's.
+  .nei file. If it is one of them, rename it." It and "Drop one variants
+  file at a time." stay until the next pick, and are the screen's, not
+  the project's.
 - **Reading**: "Reading panel.nei.", the reason `projectNeeds` gives.
 - **A file popnei refused**, a failed read of any kind: the reason
   `projectNeeds` gives, shown whole, "popnei could not read bad.vcf: the
@@ -190,20 +218,24 @@ A project file keeps the settings and not the variants file, which a
 browser cannot open by itself, so an opened project has no variants file
 and holds what its file said of the one it was made with, its
 `reference` (`docs/specs/core/project.md`, "The project of an opened
-project file"). The step shows, above the zone: "This project was made
-with panel_2026.nei: 342 individuals, ploidy 2, 1,203,554 variants. Load
-that file to run its analyses again." The number of variants is left out
-when the project file does not have it.
+project file"). The step shows, above the zone, the text of
+`askedFileText` of `src/core/projectFile.ts`, "This project was made
+with panel_2026.nei, 342 individuals and 1,203,554 variants. Load it in
+the Variants step to run its analyses again.", and the options of a VCF
+start at the reference's, above. The words, and what is left out when
+the project was saved before its file was read or counted, are
+`docs/specs/core/projectFile.md`'s.
 
-Once the file given is read, the step compares it with the reference,
-and warns when they differ, saying in what, without refusing the file:
-"Warning: the project was made with panel_2026.nei, 342 individuals and
-1,203,554 variants; this file, panel_2027.nei, has 360 individuals.
-Its results can differ from those saved." The comparison is of the name,
-the size, the ploidy, the individuals, in number and names, "this file
-has 342 individuals, 12 of them not in the project's file", and the
-number of variants once a pass has counted them. The results themselves
-are compared by the check numbers, in stage 6.
+Once a file is given, the step shows beside its card the warning
+`identityWarning` of the same module gives, a warning and not a refusal,
+"Warning: The project was made with panel_2026.nei, 342 individuals and
+1,203,554 variants; this file has 360 individuals. Load the file the
+project was made with, or go on with this one." It compares the name,
+the format, the size, the individuals, the ploidy and the number of
+variants once counted, and is made again at every change, so it is
+complete once the file is read. The read options are not compared
+there: they start at the reference's, and a user who changes them has
+chosen to.
 
 ### The help drawer
 
@@ -229,14 +261,32 @@ the code that does the same:
   and its icon (WCAG 2.2, success criterion 1.4.1).
 - The drop zone is a region labelled "Variants file", and the button in
   it is the way to pick without dragging (2.1.1).
+- The messages of a file not loaded and the warning of a large file are
+  announced when they appear, through the function the shell gives the
+  screens (`docs/specs/shell.md`, "The status region"), since the focus stays
+  on the button and a screen reader would not read them.
 - The read of a large file takes long, a time not yet measured, and the
-  user may be elsewhere on the page. Its end is announced through the
-  status region of the shell, the part of the page that a screen reader
-  reads out when its text changes, without moving the focus, the element
-  the keyboard acts on (4.1.3): "panel.nei read: 200 individuals,
-  ploidy 2." or "bad.vcf could not be read." followed by the reason.
+  user may be on another step when it ends. So its end is announced by
+  the shell, from the state of the store, and not by this step, which may
+  not be on the screen: through its status region, the part of the page
+  that a screen reader reads out when its text changes, without moving
+  the focus, the element the keyboard acts on (4.1.3), with the words of
+  `docs/specs/shell.md`, "panel.nei read: 200 individuals, ploidy 2." or,
+  when it failed, the reason `projectNeeds` gives, which names the file.
 - The warning of a reopened project that differs from its file is
-  announced the same way when it appears.
+  announced when it first appears, through the function of the shell.
+
+## How it is checked
+
+In the Playwright flow of stage 2 (`.claude/skills/coding/testing.md`),
+in the three engines: `panel.nei` picked with the button, and then a
+file dropped, with the focus still on the button after each;
+`tetraploid.vcf.gz` loaded with ploidy 2, the card showing 12
+individuals and ploidy 2, the diversity panel showing popnei's refusal,
+then the file picked again with ploidy 4 and the diversity run; `bad.vcf`
+and its reason; a file named `panel.txt` and its message; 0.125 typed in
+the threshold and the value the project holds; and the text of the
+status region after each read. The axe check of each state.
 
 ## Left for the running application
 
@@ -254,8 +304,9 @@ of one of them.
   `<h1>`, "Variants"; the shell writes the notice from the description
   of a command, "‹what was removed› because ‹description› · Undo", and
   from the pattern "2 calculations stopped because a new variants file
-  was loaded · Undo" for a new load; and it gives the steps one way to
-  write into its status region.
+  was loaded · Undo" for a new load; it announces the ends of the reads
+  from the state, and gives the steps a function for what they announce
+  themselves. `shell.md` exists as a draft and says these.
 - `docs/specs/entry.md`: the first project of the population genetics
   application holds the missing data filter at 0.1, since `emptyProject`
   of core holds no filter, and the entry makes the first project the
@@ -274,10 +325,12 @@ of one of them.
   filters.
 - `docs/specs/analyses/diversity.md`: a refusal of popnei in the pass,
   the wrong ploidy among them, is its error state, with popnei's message
-  whole.
+  whole and its sentence "Change the settings, or load the variants file
+  again, to run it again.", as its draft says.
 - `docs/specs/core/projectFile.md`: an opened project has `variants:
-  null` and its `reference`, and leaves the words of the comparison with
-  the reference to this step.
+  null` and its `reference`; `askedFileText` and `identityWarning` give
+  the words shown above, and the read options of a VCF start at the
+  reference's, as its draft says.
 
 ## Open points
 

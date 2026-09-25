@@ -74,12 +74,13 @@ the worker that received it is ended (below):
   the source holds them (`docs/specs/core/project.md`,
   `IndividualsSource`). The walking skeleton reads a CSV or a TSV only; an
   xlsx, whose source has no CSV options, joins in stage 4 with the files
-  wasm. Its answer is the reader's `Result`: the table, the types of its
+  wasm. Its answer is the reader's `IndividualsFileRead`
+  (`docs/specs/worker/individuals.md`): the table, the types of its
   columns, and what the reader found for each option of the CSV the user
   left at "auto", the encoding, the separator and the decimal mark
   (`CsvFound`); or the ways the file is wrong, `IndividualsFileError` of
   `protocol.ts`, a file with no rows, two columns of one name, which the
-  reader's spec owns.
+  reader's spec owns and extends, a file it cannot read among them.
 - **`refused` is popnei's refusal of its input**, a plain `Error` thrown
   by a call to popnei, with its message as it is
   (`docs/specs/worker/protocol.md`, "The cases"). The worker goes on to
@@ -109,7 +110,12 @@ MiB at a time (`openVcf` and `openVars`, `js/popnei/src/io_vcf.ts` and
 `io_vars.ts`); the release the site takes popnei from, `js-v0.1.0-dev.1`
 of 23 September 2026, has only the whole bytes. Because the `File`
 reaches the runner in both cases, the move to reading by ranges changes
-the runner and no message (`docs/architecture.md`, section 6).
+the runner and no message (`docs/architecture.md`, section 6). The
+progress of a pass does change a message: popnei's `main` reports it in
+four fields, the bytes read and the size of the file, the pass and the
+number of passes (`Progress` of `js/popnei/src/variant.ts`), where
+`progress` here has `done` and `total`; the release that brings it is a
+new version of the messages.
 
 ### A worker that cannot go on
 
@@ -132,7 +138,18 @@ knows which one it was:
   of what was wrong, then closes itself. The client fails the request
   with the `RunError` `defect`, a mistake of our code.
 
-The runner's spec says which throws are which (`docs/specs/worker/runner.md`).
+Every request gets its answer or one of these two, whatever breaks in
+the worker, because the client has no timeout on a calculation and a
+request with no answer would wait for ever: a promise rejected inside a
+worker with nothing to handle it fires `unhandledrejection` in the
+worker and no `error` event on the page. So the worker's script handles
+each request inside one `try`, and its own `error` and
+`unhandledrejection` handlers post `crashed`, and its `messageerror`
+handler, a request the browser could not copy, posts `badRequest`. The
+runner's spec says which throws are which (`docs/specs/worker/runner.md`);
+a `File` that `FileReaderSync` cannot read is `crashed` there, its
+**Open 1**, and `docs/specs/worker/client.md`, **Open 1**, asks for a kind
+of its own.
 
 ### The ready message, and the version of the messages
 
@@ -196,7 +213,13 @@ alone. What every member keeps, decided here:
   and the member of the result has the tag of its job.
 
 The check of each member is in `messages.ts`, written from the fields the
-analysis's spec gives, as the other checks here are.
+analysis's spec gives, as the other checks here are. So adding an
+analysis adds, beside its module and its panel, a member to `Job` and
+`JobResult`, its check here and its handler in the runner, where section
+4 of `docs/architecture.md` says nothing else changes; `worker.md`
+already put the jobs in `protocol.ts` and their handlers in the runner,
+and core, which builds the jobs, cannot import a check that names the
+`File`.
 
 ### The checks
 
@@ -272,11 +295,11 @@ export type FromFilesRunner =
   | { kind: "individuals"; id: number; read: IndividualsFileRead }
   | WorkerStop;
 
-/** What the reader made of the file: the table, or the ways it is wrong. */
-export type IndividualsFileRead = Result<
-  { table: IndividualsTable; columns: ColumnType[]; found: CsvFound },
-  IndividualsFileError
->;
+/** What the reader made of the file: the table, or the ways it is wrong;
+    the type of docs/specs/worker/individuals.md. */
+export type IndividualsFileRead =
+  | { kind: "read"; table: IndividualsTable; columns: ColumnType[]; found: CsvFound }
+  | { kind: "failed"; error: IndividualsFileError };
 ```
 
 The checks, one for each side of each worker, and the text of a refusal,
@@ -294,8 +317,8 @@ export function describeMessageError(e: MessageError): string;
 
 The ways a message is refused: the kinds of the probe's `MessageError`,
 with the place of the field given as its path in the message,
-`"job.filters.0.maxAllowedMissingRate"`, since the messages here nest;
-and two more.
+`"job.filters.0.maxAllowedMissingRate"`, since the messages here nest,
+and `""` for a field of the message itself; and two more.
 
 ```ts
 export type MessageError =
@@ -331,8 +354,9 @@ apart from `object`.
 - **An answer with a well formed id of no request** passes the check,
   which knows no requests; the client refuses it
   (`docs/specs/worker/client.md`).
-- **An empty individuals file** is an answer, `individuals` with `ok:
-  false` and `{ kind: "empty" }`, and not a failure of the worker.
+- **An empty individuals file** is an answer, `individuals` with
+  `{ kind: "failed", error: { kind: "empty" } }`, and not a failure of the
+  worker.
 
 ## How it runs
 
@@ -361,7 +385,10 @@ File(["…"], "panel.nei")`.
 - **Each refusal**, with its `kind` and its `path`: a message that is not
   an object, with no `kind`, of an unknown kind; an `id` of 1.5; a field
   missing and a field more, at the top and in `job.filters.0`; an
-  inherited field (`Object.create({ id: 1 })`) taken as missing; an array
+  inherited field taken as missing, a `run` whose own fields are `kind`,
+  `key` and `job` and whose `id` is on its prototype,
+  `Object.assign(Object.create({ id: 1 }), { kind: "run", key, job })`,
+  gives `missingFields` of `id` at `""`; an array
   of numbers where a `Float64Array` is expected; a `.nei` file with read
   options and a VCF without them; a row of the table one cell short,
   `wrongLength`; three types for a table of four columns; a refusal of

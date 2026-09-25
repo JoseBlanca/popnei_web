@@ -28,10 +28,12 @@ of the reader, means that the reader detects it.
 A drop zone that holds a button, "Choose a metadata file…", as in the
 Variants step, and the same one button in every state, "Replace
 pops.csv…" once a file is loaded, so that the focus stays on it after a
-pick. A file whose name ends in `.csv`, `.tsv` or `.txt` is loaded as a
-CSV or a TSV, the reader finding the separator whatever the ending. A
-file ending in `.xlsx` or `.xls` is not loaded in this version, and one
-of any other name neither (below, "Its words").
+pick. A file whose name ends in `.csv`, `.tsv` or `.txt`, compared
+without regard to case, is loaded as a CSV or a TSV, the reader finding
+the separator whatever the ending; the picker offers these endings
+first, and any file under "All files". A file ending in `.xlsx` or
+`.xls`, or of any other name, is not loaded in this version, nor are
+several files dropped at once (below, "Its words").
 
 Once read, the card shows the name, "360 rows, 5 columns", and a button,
 "Remove pops.csv". The first column holds the names of the individuals
@@ -43,9 +45,12 @@ The encoding, the separator and the decimal mark, each detected by the
 reader and shown with a way to change it, as the owner decided on 24
 September 2026 (`docs/architecture.md`, section 6, "The individuals
 file"). Each is a `Select`, the list that opens to show its choices,
-whose first item is "auto" with what the reader detected, from `found`,
-the part of the read that says which encoding, separator and decimal
-mark it used:
+whose first item is "auto". While that option is "auto" and the file
+is read, the item names what the reader detected, from `found`, the part
+of the read that says which encoding, separator and decimal mark it
+used; once the user sets the option, `found` holds what was set, so the
+first item says "Detected" alone, as it does while a read is under way
+or after a refusal, which has no `found`:
 
 | label | items | the first item |
 |---|---|---|
@@ -56,8 +61,27 @@ mark it used:
 Under them: "If names with accents come out garbled, "EspaÃ±a" for
 "España", change the encoding. If the whole file shows as a single
 column, change the separator. Changing one reads the file again."
-While the file is read again, the first items say "Detected" alone. The decimal mark changes which columns read as numbers, and so
-their types.
+The decimal mark changes which columns read as numbers, and so their
+types.
+
+The three are shown whenever the file is a CSV, whatever its read: a
+refusal, "line 7 has 3 cells where the header has 4", most often comes
+from a wrong separator, and the user mends it here. They can be changed
+while a read is under way; the read of the older options is then
+dropped (`docs/specs/core/project.md`, "The records").
+
+A file that starts with the mark of UTF-16, which Excel writes for
+"Unicode Text", is read as UTF-16 whatever the encoding says
+(`docs/specs/worker/individuals.md`, "The bytes and the encoding"). The
+encoding select is then replaced by a line, "Encoding: UTF-16, from the
+mark at the start of the file.", since no choice would change the read.
+
+In a project opened from a project file, the metadata file is there,
+read, but the page holds no copy of it, which was picked in another
+session. Changing an option would then leave it "Reading pops.csv." for
+ever, so the three selects are replaced by "To change how pops.csv is
+read, load it again.", as `docs/specs/core/projectFile.md`, "The cases",
+asks.
 
 ### The columns
 
@@ -84,9 +108,12 @@ populations, it can still be chosen as the column of the populations."
 ### The column that defines the populations
 
 A `Select`, "Column that defines the populations", whose items are every
-column but the first, and a first item, "None: all individuals in one
-population", and under it: "Any column can define the populations,
-whatever its type." Every column is offered: a column of
+column but the first, with "Choose a column" shown until one is chosen,
+and under it: "Any column can define the populations, whatever its
+type." There is no item for "all individuals in one population" in the
+walking skeleton: the project's grouping with no column, `null`, is
+what a new project starts with, so it cannot also mean a choice, and
+the diversity locks on it (**Open 1**). Every column is offered: a column of
 populations written as numbers, 1 to 12, is inferred continuous, and in
 this version the user could not change its type to make it choosable.
 Nothing is chosen until the user chooses, since a column chosen by the
@@ -115,8 +142,7 @@ the populations, each with its number of individuals of the variants file, "P1 �
 cell is empty in that column come last, "No population · 4, left out of
 the analyses per population" (`docs/functionality.md`, section 4). A
 value is a population as it is written in the file, so "P1" and "p1"
-are two. With the first item chosen: "All 342 individuals in one
-population." Otherwise no list, since the sizes count the individuals
+are two. Otherwise no list, since the sizes count the individuals
 of the variants file: before it is read they are not known, and with
 some missing the list would leave them out without saying so.
 
@@ -127,10 +153,10 @@ some missing the list would leave them out without saying so.
 | empty | cannot happen: with no file, the step offers the pick, which is the ready state | — |
 | locked | cannot happen: the file can be loaded before the variants file, and is checked once that one is read | — |
 | ready | no file: the zone, "Choose a metadata file…", and "No metadata file." with what that means (**Open 1**) | pick a file |
-| running | the card with the name and "Reading pops.csv."; no progress, a read of a second or two | pick another file; Undo |
+| running | the card with the name, "Reading pops.csv." and the three options of the reader; the columns and the populations of an earlier read are gone, since the read replaced them; no progress, a read of a second or two | change an option; pick another file; Undo |
 | done | the card, the options of the reader, the columns, the column of the populations, the check and the populations | change an option, choose the column, replace or remove the file |
 | results removed | cannot happen here: the step shows no result. A command of this step that removes results has its notice in the shell (`docs/specs/shell.md`), with the descriptions below | — |
-| error | the reader refused the file, its worker failed, or individuals of the variants file are missing from it, with the words below. When the file was read, the options of the reader and the columns stay, so that the user can see what was read | change an option; pick another file |
+| error | the reader refused the file, its worker failed, individuals of the variants file are missing from it, or the column chosen gives no population, with the words below. The options of the reader stay in every case; the columns only when the file was read, since a refusal has no table | change an option; choose another column; pick another file; reload the page when the reason says so |
 
 ## What it sends and reads
 
@@ -143,26 +169,31 @@ It sends:
 |---|---|---|
 | a file picked or dropped | `loadIndividuals(p, { fileId, name, csv: { encoding: "auto", separator: "auto", decimal: "auto" } })` | "a new metadata file was loaded" |
 | an option of the reader chosen | `setCsvOptions(p, csv)` with the other two as they are | "the encoding of pops.csv changed", "the separator of pops.csv changed", "the decimal mark of pops.csv changed" |
-| a column chosen | `setGrouping(p, { kind: "populations", column })`, `null` for the first item | "the column of the populations changed" |
+| a column chosen | `setGrouping(p, { kind: "populations", column })` | "the column of the populations changed" |
 | Remove | `removeIndividuals(p)` | "the metadata file was removed" |
 
 Before the command of a pick, the page makes the load id and puts the
 `File` into the map of the worker client, the page's side of the two
 workers, under it, as for the variants file; the entry of the page asks the light worker for the read.
 
-It needs of core two functions that `src/core/project.ts` does not have,
-to add in stage 2, since both are made from the project, the diversity
-panel needs the second, and a screen writes no such cache of its own
-(`.claude/skills/coding/react.md`, "Reading core"):
+It needs two functions that are not written yet, since both are made
+from the project, the diversity panel needs the second, and a screen
+writes no such cache of its own (`.claude/skills/coding/react.md`,
+"Reading core"):
 
-- the check: the individuals of the variants file found in the table,
-  the ones missing, all of them in the order of the variants file, and
-  the number of rows of other individuals; `null` when either file is
-  not read;
-- the populations: for the column of the grouping, each population with
-  its individuals of the variants file, and those with an empty cell;
-  `docs/specs/analyses/diversity.md` names it and gives its order, which
-  this list follows.
+- **the check**, a function of `src/core/project.ts`, to add to
+  `docs/specs/core/project.md` in the plan of stage 2, since other
+  modules may call it:
+  `individualsCheck(p): { found: number; missing: string[]; ignoredRows: number } | null`,
+  the individuals of the variants file found in the table, all those
+  missing in the order of the variants file, and the rows of other
+  individuals; `null` when either file is not read. `individualsNeeds`
+  is written on it, so that the two never disagree on who is missing.
+- **the populations**, `populationsOf(p)` of the diversity module
+  (`docs/specs/analyses/diversity.md`), from the table alone, narrowed to
+  the individuals of the variants file as its `run` narrows them, by the
+  same function its panel uses for its ready state, "3 populations: p0,
+  48 individuals; …". The list follows its order.
 
 Both keep their answer for the same two sources, so that a table of
 10,000 rows is not matched again each time React draws the screen again,
@@ -170,27 +201,42 @@ which it does after every change of the store.
 
 A name from the file, of a column, a population or an individual, is
 shown with its control and format characters escaped, as core shows a
-value of a file (`docs/specs/core/project.md`, "The validation"), by the
-function of core that does it, to export; in the lists and the table it
-is shown whole, not cut after 40 characters.
+value of a file (`docs/specs/core/project.md`, "The validation"); in the
+lists and the table it is shown whole, not cut after 40 characters, so
+the function to export from `project.ts` is one that escapes and does not
+cut, beside `shown`, which does both. The name of the file is escaped
+and not cut wherever it appears, the card, "Replace pops.csv…" and the
+descriptions of the commands.
 
 ## Its words
 
 The descriptions of the commands are in the table above. The rest:
 
 - **An Excel file**: "pops.xlsx was not loaded: this version reads a
-  CSV or a TSV, and reads Excel files from a later version. In Excel,
-  save the sheet with File › Save As › CSV, and load that file."
+  CSV or a TSV, and reads .xlsx files from a later version. In Excel,
+  save the sheet with File › Save As › CSV, and load that file." The
+  same for `.xls`, whose files are not read in a later version either.
+- **Several files dropped**: "Drop one metadata file at a time."
 - **A file of another name**: "pops.dat was not loaded: the Individuals
   step reads a CSV or a TSV, whose name ends in .csv, .tsv or .txt. If
   it is one of them, rename it."
+
+  These three stay beside the zone until the next pick, are the
+  screen's and not the project's, and are announced when they appear,
+  through the function the shell gives the screens, since the focus
+  stays on the button.
 - **Reading**, **a refusal of the reader**, **a worker that failed**:
   the reason `individualsNeeds` gives, whole, "Reading pops.csv.",
   "pops.csv could not be read: line 7 has 3 cells where the header has
   4. Load an individuals file in the Individuals step.", as the Variants
   step shows `projectNeeds` (`docs/specs/steps/variants.md`, "Its
   words"); the words of the refusals are the reader's
-  (`docs/specs/worker/individuals.md`).
+  (`docs/specs/worker/individuals.md`). The ending, "Load an individuals
+  file in the Individuals step.", read on that very step, and the advice
+  of a crash of the light worker, "the calculation stopped
+  unexpectedly", are among the provisional words of core the owner
+  judges on these screens (`docs/specs/core/project.md`, open points 4
+  and 5).
 - **Individuals missing**: the reason `individualsNeeds` gives, "12
   individuals of panel.nei are not in pops.csv: ind_031, ind_044 and 10
   more. Add them to the file and load it again in the Individuals
@@ -201,9 +247,16 @@ part of the page under it.
 - **The column of the populations not in the file**, after a new file or
   new options of the reader give a table without it; the grouping keeps
   its name and is not changed in silence (`docs/specs/core/project.md`,
-  "The commands"). At the select: "The column pop, chosen for the
-  populations, is not in pops.csv. Choose another column." The select
-  shows no item chosen.
+  "The commands"). At the select, the reason the diversity gives, so
+  that one fact has one text: "pops.csv has no column popcat, from which
+  the populations were taken. Choose the column that defines the
+  populations in the Individuals step." The select shows "Choose a
+  column".
+- **A column that gives no population**, every individual of the
+  variants file empty in it: at the select, the diversity's reason, "No
+  individual of panel.nei has a population in the column popcat of
+  pops.csv. Fill in the column and load the file again, or choose
+  another column, in the Individuals step."
 - **Every individual of the variants file found**, and **the
   populations**: above.
 
@@ -227,16 +280,20 @@ file with pandas, `pandas.read_csv(path, sep=";", decimal=",")`
   Remove, the encoding, the separator, the decimal mark, the column of
   the populations, the disclosure of the individuals missing. The table
   of the columns and the list of the populations are read, not operated,
-  and hold no stop of the Tab key.
+  and hold no stop of the Tab key: the table is a native `<table>`, the
+  name of each column in a `<th scope="row">`, and not React Aria's
+  `Table`, which is a grid that the Tab key enters.
 - The table of the columns has header cells, "Column", "Type" and "First values", and
   the name of each column is the header of its row. The populations are
   a list, each item its name and its number in words, "P1, 48
   individuals", and not a number alone.
-- The end of a read is announced through the status region of the shell,
-  the part of the page that a screen reader reads out when its text
-  changes, whatever has the focus, the element the keyboard acts on,
-  without moving the focus (WCAG 2.2, success criterion 4.1.3): "pops.csv
-  read: 360 rows, 5 columns.", then the check, "All 342 individuals
+- The end of a read is announced by the shell, from the state of the
+  store, and not by this step, which may not be on the screen when it
+  ends: through its status region, the part of the page that a screen
+  reader reads out when its text changes, whatever has the focus, the
+  element the keyboard acts on, without moving the focus (WCAG 2.2,
+  success criterion 4.1.3), with the words of `docs/specs/shell.md`,
+  "pops.csv read: 360 rows, 5 columns.", then "All 342 individuals
   found." or "12 individuals of panel.nei are not in pops.csv."; a
   refusal with its reason. A read again after a change of an option is
   announced the same way, since the table under the select changes.
@@ -263,28 +320,47 @@ September 2026, and none is approved.
   not be read:", "it is 312.4 MB, more than the 20 MB an individuals
   file can have" among them; and `columnWarnings` gives the warning of a
   column of a few whole numbers, with its words.
-- `docs/specs/analyses/diversity.md`: it needs the metadata file, by
-  `individualsNeeds`, and a column chosen or the first item; it locks
-  when the column of the grouping is not in the table, with the words
-  above ending "in the Individuals step."; and it names the function of
-  the populations and their order.
+- `docs/specs/analyses/diversity.md`, a draft of the same day: it needs
+  the metadata file, by `individualsNeeds`, and a column chosen; its
+  reasons for a column not in the table and for a column that gives no
+  population are the words above; and `populationsOf` gives the
+  populations and their order.
+- `docs/specs/core/projectFile.md`, a draft of the same day: an opened
+  project keeps the metadata file read, with no `File`, and the screen
+  offers to load it again rather than change its options.
 - `docs/specs/shell.md`, `docs/specs/entry.md` and
   `docs/specs/worker/client.md`: as the Variants step assumes
   (`docs/specs/steps/variants.md`).
 
 ## Open points
 
-1. **Whether the metadata file is optional in the walking skeleton.**
-   `docs/functionality.md` section 4 has it optional, every individual
-   in one population without it; `individualsNeeds` of core, approved on
-   24 September 2026, locks every analysis that uses it with "Load an
-   individuals file in the Individuals step." when there is none. The
-   diversity of one population is a result a user can want, and making
-   the file optional is one line of `individualsNeeds` and of the needs
-   of the diversity. Recommended: optional, as functionality says. The
-   words of the ready state are then "No metadata file: every individual
-   is in one population."; meanwhile, "No metadata file. The analyses
-   per population need one."
+1. **Whether the metadata file, and a column of populations, are
+   optional in the walking skeleton.** `docs/functionality.md` section 4
+   has the file optional, every individual in one population without
+   it. Core's `individualsNeeds`, approved on 24 September 2026, locks
+   every analysis that uses the file when there is none, "Load an
+   individuals file in the Individuals step.", and the diversity locks
+   when no column is chosen, "Choose the column that defines the
+   populations in the Individuals step." This is the same decision as
+   open point 1 of `docs/specs/analyses/diversity.md`, and the two specs
+   are answered together.
+   - Locked, the diversity's recommendation for the skeleton: the step
+     says "No metadata file. The analyses per population need one." and
+     has no item for one population; a user with one population makes a
+     file of one column.
+   - Optional: a line of `individualsNeeds` and of the diversity's needs
+     changes; the grouping needs a value of its own for "one population
+     chosen", apart from `null`, the grouping of a new project, which is
+     a change to `Grouping` in `docs/specs/core/project.md`; the step
+     gets back an item "All individuals in one population" and the
+     words "No metadata file: every individual is in one population." A
+     column kept by `removeIndividuals` is then ignored while there is
+     no file.
+
+   Recommended: locked in the walking skeleton, as the diversity spec
+   recommends, and optional from stage 4, when the step is whole, so
+   that the two screens agree and `Grouping` changes once. Meanwhile,
+   locked.
 2. **"Individuals file" or "metadata file" in the reasons of core.** The
    reasons of `individualsNeeds` say "Load an individuals file", shared
    by the two applications, where functionality and this step call it
