@@ -80,7 +80,8 @@ progress bar of each calculation (`docs/specs/analyses/diversity.md`,
 the running state), and not guessed from the size before any pass; the
 remedy, writing the variants as a `.nei` file once, which is read many
 times faster (`docs/functionality.md`, section 3), comes to this step in
-stage 3, and the help says so meanwhile.
+stage 3. The help drawer, which will say so, comes in stage 8 (below,
+"Not in this spec"); until then nothing on the screen says it.
 
 ### How a VCF is read
 
@@ -268,27 +269,6 @@ file is read. The read options are not compared
 there: they start at the reference's, and a user who changes them has
 chosen to.
 
-### The help drawer
-
-What the step reads, a VCF or a `.nei` file; that a VCF's ploidy is
-given and not read, with what a wrong one gives; that only the variants
-with PASS or `.` in the FILTER column are read by default, a `.` saying
-that no filter was applied to that variant; the missing data filter: a
-genotype is missing when any of its alleles is, `0/.` among them, and
-the proportion is over all the individuals of the file, so that 0.1
-keeps a variant with at most 10% of its genotypes missing, 0 keeps only
-the variants with every genotype called and 1 keeps them all; that the
-file is read from the disk at every analysis, and not copied into the
-browser, so a file of any size opens, a large gzipped VCF is slow to
-read at each analysis, and a file changed on the disk after it was
-picked has to be loaded again, since the application may not notice the
-change, and results calculated after it may be of the new file
-(`docs/specs/stage-2-open-points.md`, point R); and, for those who work
-in Python,
-the code that does the same:
-`popnei.open_vcf(path, ploidy=2, only_passed=True)` or
-`popnei.open_vars(path)`, then `variants.filter_by_missing_data(0.1)`.
-
 ## Accessibility
 
 - The keyboard goes through the step in this order: the file button, the
@@ -385,3 +365,22 @@ M there), and the missing data filter on at 0.1 (point N).
   `docs/specs/shell.md`.
 - What the worker does with the file: `docs/specs/worker/runner.md`.
 - The project file and the check numbers: `docs/specs/core/projectFile.md`.
+- The help drawer, in stage 8 (`docs/build-order.md`), with the help of
+  this step: what the step reads, a VCF or a `.nei` file; that a VCF's
+  ploidy is given and not read, with what a wrong one gives; that only
+  the variants with PASS or `.` in the FILTER column are read by
+  default, a `.` saying that no filter was applied to that variant; the
+  missing data filter: a genotype is missing when any of its alleles is,
+  `0/.` among them, and the proportion is over all the individuals of
+  the file, so that 0.1 keeps a variant with at most 10% of its
+  genotypes missing, 0 keeps only the variants with every genotype
+  called and 1 keeps them all; that the file is read from the disk at
+  every analysis, and not copied into the browser, so a file of any size
+  opens, a large gzipped VCF is slow to read at each analysis, and a
+  file changed on the disk after it was picked has to be loaded again,
+  since the application may not notice the change, and results
+  calculated after it may be of the new file
+  (`docs/specs/stage-2-open-points.md`, point R); and, for those who
+  work in Python, the code that does the same: `popnei.open_vcf(path, ploidy=2, only_passed=True)` or
+  `popnei.open_vars(path)`, then `variants.filter_by_missing_data(0.1)`.
+  Until then nothing on the screen says these things.
