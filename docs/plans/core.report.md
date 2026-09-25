@@ -663,6 +663,16 @@ For stage 2, where each belongs:
   no error boundary of React: the page needs a handler of the window's
   errors that shows it.
 
+Each of the four was decided by the owner on 25 September 2026, and is
+now written where the next stage reads it: the entry of the page asks
+for the read of every pending source after each change
+(`docs/architecture.md`, section 6, "Who asks for a read"); a change of
+the load of the variants file stops every calculation at once, and the
+notice says so (`docs/specs/core/store.md`, built in bd5b538); the
+notice offers the reverse of its cause, Redo after an undo (the same
+spec); and the bar of an error of the application
+(`.claude/skills/coding/react.md`, "Errors").
+
 ### How the work went, for whoever revises a skill or a plan
 
 The owner can skip to the next section.
