@@ -755,6 +755,26 @@ test("WS7 D3 a file dropped while a ploidy is still being typed is read with tha
   ).toHaveCount(0);
 });
 
+test("WS7 D3 a file dropped while the ploidy holds a number it refuses is read with the ploidy kept, and the line says so", async ({
+  page,
+}) => {
+  await openVariants(page);
+  const ploidy = page.getByLabel("Ploidy of the VCF");
+  await ploidy.fill("300");
+  await expect(ploidy).toBeFocused();
+
+  await drop(page, ["tetraploid.vcf.gz"]);
+
+  const line = "300 is more than 255; the ploidy stays 2.";
+  await expect(zone(page).getByText(/^Read with ploidy 2,/)).toBeVisible();
+  await expect(ploidy).toHaveValue("2");
+  await expect(page.getByRole("main").getByText(line)).toBeVisible();
+  await expect(page.getByRole("status").last()).toHaveText(line);
+  await expect(
+    page.getByRole("button", { name: /^Read .* again/ }),
+  ).toHaveCount(0);
+});
+
 test("WS7 D3 the zone's own button, which takes a pasted file, is named for it", async ({
   page,
 }) => {
