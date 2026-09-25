@@ -694,3 +694,8 @@ None of the store's own. It uses the bound of the cache
 - Starting the calculation worker again when the load of the variants
   file changes: the worker client, which reads it from the project
   (`docs/architecture.md`, section 5).
+- Asking the workers to read a file: the store records a read and asks
+  for none. After every change of the project the entry of the page asks
+  for a read of each source pending with no read under way, as the owner
+  decided on 25 September 2026 (`docs/architecture.md`, section 6, "Who
+  asks for a read").

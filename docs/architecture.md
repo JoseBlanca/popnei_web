@@ -688,6 +688,34 @@ core and the reader describe it in one way.
 
 With a CSV, the light worker loads no wasm at all.
 
+### Who asks for a read
+
+A source is read only when the page asks a worker to read it: the
+calculation worker opens the variants file, the light worker reads the
+individuals file. The one who asks is the entry of the page, the code
+that starts when the page opens, makes the store and the workers and
+joins them, and it asks by one rule, decided by the owner on 25 September
+2026: after every change of the project, a command, an undo, a redo or
+an opening, it looks at the present project and asks for a read of each
+source whose read is pending and has no read under way. A read is under
+way from the moment the entry asks for it until its answer comes back,
+and it is known by the load id of the file and, for the individuals file,
+by the options of its CSV.
+
+So a source that a change leaves pending is always read, whatever made
+it pending: a new pick, a change of the options of a CSV, an undo that
+gives back options of a CSV that were never read, a redo, an opening.
+The option not taken was to cancel no read and record every read that
+comes back into the projects of the history that hold its source, so
+that an undo would find its options already read. It would miss the
+reads an opening needs and those lost when a worker crashes, and it
+would keep the light worker reading files for options no project asks
+for any more.
+
+A source whose `File` the page does not hold, which a project file could
+name, cannot be read; what the project file writes of a pending read is
+decided with it, in stage 2 (`docs/specs/core/project.md`, "The cases").
+
 ### The files wasm, a crate of this repository
 
 The xlsx and the zip are made by a small Rust crate of popnei_web,
