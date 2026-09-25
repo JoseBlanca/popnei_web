@@ -654,6 +654,14 @@ export function parseFromFilesRunner(
   }
 }
 
+/** The text of what was thrown, which a `crashed` and a failure of a
+    worker carry: the message of an `Error`, of any of its subclasses, and
+    the text of anything else. The worker's copy of messageOf of
+    src/core/thrown.ts, since the worker imports no value of core. */
+export function messageOf(thrown: unknown): string {
+  return thrown instanceof Error ? thrown.message : String(thrown);
+}
+
 /** The text of a refusal, which the client writes to the console and a
     runner sends in `badRequest`: the kind of the message, the path of the
     field, and what was wrong with it. */

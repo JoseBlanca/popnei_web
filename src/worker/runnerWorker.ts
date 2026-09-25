@@ -15,6 +15,7 @@
 import {
   PROTOCOL_VERSION,
   describeMessageError,
+  messageOf,
   parseToRunner,
 } from "./messages.ts";
 import type { FromRunner, ToRunner, WorkerStop } from "./messages.ts";
@@ -30,10 +31,6 @@ function post(message: FromRunner, transfer: Transferable[] = []): void {
 function stop(message: WorkerStop): void {
   post(message);
   close();
-}
-
-function messageOf(thrown: unknown): string {
-  return thrown instanceof Error ? thrown.message : String(thrown);
 }
 
 /** popnei loading, which starts with the worker, so that the wasm

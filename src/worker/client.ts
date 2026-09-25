@@ -13,6 +13,7 @@
 
 import {
   describeMessageError,
+  messageOf,
   parseFromFilesRunner,
   parseFromRunner,
   type FromFilesRunner,
@@ -1278,8 +1279,4 @@ function promiseWithResolver<T>(): {
     throw new Error("popnei_web defect: a Promise did not run its executor");
   }
   return { promise, resolve };
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }

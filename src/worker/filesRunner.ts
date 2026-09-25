@@ -15,6 +15,7 @@ import { readIndividualsFile } from "./individualsFile.ts";
 import {
   PROTOCOL_VERSION,
   describeMessageError,
+  messageOf,
   parseToFilesRunner,
 } from "./messages.ts";
 import type { FromFilesRunner, WorkerStop } from "./messages.ts";
@@ -28,10 +29,6 @@ function post(message: FromFilesRunner): void {
 function stop(message: WorkerStop): void {
   post(message);
   close();
-}
-
-function messageOf(thrown: unknown): string {
-  return thrown instanceof Error ? thrown.message : String(thrown);
 }
 
 async function handle(data: unknown): Promise<void> {

@@ -13,6 +13,7 @@ import { calcPerVarDistribs, init, openVars, openVcf, version } from "popnei";
 import type { PerVarDistribs, Step, Variants } from "popnei";
 
 import type { Result } from "../core/result.ts";
+import { messageOf } from "./messages.ts";
 import type { FromRunner, WorkerStop } from "./messages.ts";
 import type {
   DiversityJob,
@@ -502,9 +503,4 @@ function answerOfOpenAgain(thrown: unknown, name: string): Answer<never> {
   return answer.kind === "refused"
     ? { kind: "reopenFailed", name, message: answer.message }
     : answer;
-}
-
-/** The message of what was thrown, for a `crashed`. */
-function messageOf(thrown: unknown): string {
-  return thrown instanceof Error ? thrown.message : String(thrown);
 }

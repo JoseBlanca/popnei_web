@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import type { DiversityJob, DiversityResult } from "./protocol.ts";
 import {
   describeMessageError,
+  messageOf,
   parseFromFilesRunner,
   parseFromRunner,
   parseToFilesRunner,
@@ -1004,5 +1005,18 @@ describe("WS2 D2 the messages refused: any leaf corrupted", () => {
       ok: false,
       error: { kind: "wrongType", path: "id", expected: "a whole number" },
     });
+  });
+});
+
+describe("messageOf", () => {
+  test("gives the message of an Error, of its subclasses too, and the text of anything else thrown", () => {
+    expect(messageOf(new Error("the source is not a VCF"))).toBe(
+      "the source is not a VCF",
+    );
+    expect(
+      messageOf(new WebAssembly.RuntimeError("unreachable executed")),
+    ).toBe("unreachable executed");
+    expect(messageOf("a text, not an Error")).toBe("a text, not an Error");
+    expect(messageOf(undefined)).toBe("undefined");
   });
 });
