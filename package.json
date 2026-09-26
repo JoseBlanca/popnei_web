@@ -20,6 +20,9 @@
     "screens": "npm run build && playwright test --project=screens"
   },
   "dependencies": {
+    "d3-axis": "3.0.0",
+    "d3-scale": "4.0.2",
+    "d3-selection": "3.0.0",
     "popnei": "https://github.com/JoseBlanca/popnei/releases/download/js-v0.1.0-dev.2/popnei-0.1.0.tgz",
     "react": "19.3.0",
     "react-aria-components": "1.21.1",
@@ -30,6 +33,9 @@
     "@eslint/js": "10.0.1",
     "@playwright/test": "1.63.0",
     "@react-aria/optimize-locales-plugin": "2.0.2",
+    "@types/d3-axis": "3.0.6",
+    "@types/d3-scale": "4.0.9",
+    "@types/d3-selection": "3.0.12",
     "@types/node": "24.13.6",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
@@ -37,6 +43,7 @@
     "eslint": "10.11.0",
     "eslint-plugin-react-hooks": "7.1.1",
     "fast-check": "4.10.2",
+    "jsdom": "30.1.1",
     "prettier": "3.9.9",
     "typescript": "6.0.3",
     "typescript-eslint": "8.70.1",
