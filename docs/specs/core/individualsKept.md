@@ -6,9 +6,12 @@ approved that day has it (its section 4, "The checks of the Variants
 step, and the individuals they keep"); approved by the owner on 26 September 2026. It was a
 section of `docs/specs/core/project.md` in the first draft of stage 3,
 and has a file of its own because the store, the diversity, the write of
-the filtered variants and the Variants step all cite it. There is no
-code of it yet; it will be `src/core/individualsKept.ts`, the row of
-section 9 of the architecture. It depends on
+the filtered variants and the Variants step all cite it. Revised on 26
+September 2026, after its approval: popnei's numbers of `panel.nei` are
+tested in core, from a fixture of popnei's statistics, and not among the
+runner's tests, since a test of the worker imports no function of core
+("How it is verified"). Built in `src/core/individualsKept.ts`, the row
+of section 9 of the architecture. It depends on
 `docs/specs/core/project.md`, for the project, its filters of
 individuals, `projectNeeds`, `individualListNeeds` and the rules by which a text names a value
 of a file, and on `docs/specs/analyses/individualChecks.md`, whose
