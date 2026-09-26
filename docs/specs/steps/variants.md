@@ -1,21 +1,34 @@
-# The Variants step, in the walking skeleton
+# The Variants step
 
-Written on 25 September 2026, approved by the owner the same day, and
-revised the same day with the owner's decisions on the screen as built
-(stop 7.5 of `docs/plans/walking-skeleton.md`), and on the project file
-opened, points 9 and 10 of the reviews of work packages 2 to 6 of that
-plan. The screen spec of the first step of the population genetics application as the
-walking skeleton of stage 2 builds it (`docs/build-order.md`): the user
-picks the variants file, a VCF or a `.nei` file, sets how a VCF is read,
-sees what the file holds, and sets the missing data filter. It shows
-section 3 of `docs/functionality.md` in part, and reads the project and
-its commands of `docs/specs/core/project.md` through the store of
-`docs/specs/core/store.md`. The rest of the step, the other filters of
-the variants, the filters of the individuals, what each filter kept, the
-histograms and writing the filtered variants as a VCF or a `.nei` file,
-comes in stage 3 and is added to this spec then, in this step and not in
-an Export step, as the owner decided on 25 September 2026. There is no
-code of it yet.
+Written on 25 September 2026 for the walking skeleton of stage 2,
+approved by the owner the same day, revised the same day with the
+owner's decisions on the screen as built (stop 7.5 of
+`docs/plans/walking-skeleton.md`) and on the project file opened (points
+9 and 10 of the reviews of its work packages 2 to 6), and built in
+`src/ui/steps/variants/`. Revised on 26 September 2026 for stage 3 of
+`docs/build-order.md`, the Variants step whole, as the revision of
+`docs/architecture.md` the owner approved that day has it; the revision
+is not yet approved, and there is no code of its parts yet.
+
+The screen spec of the first step of both applications. In stage 2 the
+user picks the variants file, a VCF or a `.nei` file, sets how a VCF is
+read, sees what the file holds, and sets the missing data filter. Stage
+3 adds, in this order down the step: the other filters of the variants,
+each with what it kept and with the histogram of the number it keeps a
+variant by; the filters of the individuals, the two lists and the two
+thresholds, with the statistics of each individual as a table and as
+histograms beside the thresholds; and the writing of the variants and
+the individuals the filters keep as a `.nei` file, in this step and not
+in an Export step, as the owner decided on 25 September 2026. It shows
+section 3 of `docs/functionality.md`, and reads the project and its
+commands of `docs/specs/core/project.md` and the state of the store of
+`docs/specs/core/store.md`. The parts that calculate have their module
+specs, whose words and states this spec does not repeat and places on
+the step: `docs/specs/analyses/variantChecks.md`, the histograms of the
+variants; `filterCounts.md`, what each filter kept; `individualChecks.md`,
+the statistics of each individual; `writeVariants.md`, the file written;
+and `docs/specs/core/individualsKept.md`, the individuals the filters
+keep, which needs no calculation.
 
 The words of core used here: the **project** is everything the user has
 set; a **command** is a change of it that one Undo takes back, sent with
@@ -26,9 +39,53 @@ one pick of a file, with an id of its own, new at every pick; the
 format, read options, and what the calculation worker, the second thread
 of the tab where popnei runs, read from it. A **pass** is one reading of
 the variants from the start of the file, which every analysis and filter
-makes.
+makes. The **checks** are the three calculations of this step, each an
+analysis of `docs/architecture.md`, section 4, with its button and the
+states of any analysis: the histograms of the variants, the counts of
+what each filter kept, and the statistics of each individual. The
+**individuals kept** are the one list that core makes from the four
+filters of individuals, with how many each filter was given and kept
+(`individualsKept`, which the store gives in its state).
 
 ## What it shows
+
+### The parts, in their order
+
+The step is one page under its `<h1>` "Variants", in four sections, each
+with its `<h2>`:
+
+1. **Variants file**: the file, how a VCF is read, what the file holds.
+2. **Filters of the variants**: the button of the histograms of the
+   variants; the four filters in their fixed order, missing data,
+   observed heterozygosity, MAF and LD pruning (`docs/architecture.md`,
+   section 2), each with the histogram of its number beside it when
+   there is one, and what it kept; the Count button, and the variants
+   that pass every filter.
+3. **Filters of the individuals**: the list to keep and the list to
+   remove; the statistics of each individual, with its button; the two
+   thresholds, of the proportion of missing genotypes and of the observed
+   heterozygosity, each beside its histogram; the table of the
+   individuals; and the individuals that pass every filter.
+4. **Writing the filtered variants**: the button, the size expected, its
+   warning, and the Save button once the file is written.
+
+The filters come in the order popnei applies them, so that what each
+kept reads down the page as a chain: each filter is given what the one
+above it kept. The filters of the individuals come after those of the
+variants for the same reason, since popnei's `filterIndividuals` comes
+after them, and the statistics of each individual are counted over the
+variants the filters above keep (`docs/architecture.md`, section 13,
+point 8).
+
+The three checks, the Count and the writing are not drawn while the
+variants file is not read, no file, a file being read or a file that
+could not be read, and the line "The histograms, the counts and the
+statistics of each individual are calculated once a variants file is
+read." stands under the heading of the filters of the variants in their
+place. Each would otherwise be locked with the same reason, "Load a
+variants file in the Variants step.", five times on the step that the
+reason names. The filters are drawn and can be set in every state, since
+they belong to the project and stay across loads.
 
 ### The file
 
@@ -83,10 +140,13 @@ The number of variants counts those the file gives before the filters of
 the application: for a VCF read with only the passed variants, those
 that passed. It is not known sooner because popnei counts the variants
 of a file only by reading all of them, a pass, and the first pass is
-that of the first analysis the user runs (`docs/architecture.md`,
-section 6, "How a load of the variant file reaches the project", step
-5). The chromosomes with their number of variants, which section 3 of
-functionality lists, come with stage 3.
+that of the first calculation the user starts, a check of this step
+among them (`docs/architecture.md`, section 6, "How a load of the
+variant file reaches the project", step 5). The chromosomes with their
+number of variants, and the density of variants along each chromosome,
+which section 3 of functionality lists, come with popnei's release that
+gives the density (`docs/architecture.md`, section 6, "What this asks of
+popnei", item 7).
 
 The button stays in the zone, labelled "Replace panel.nei…" once a file
 is loaded, and a file dropped on the card replaces the one there. The
@@ -97,17 +157,15 @@ core has no command that takes the variants file out, and Undo does.
 No size of file gets a warning. popnei's release `js-v0.1.0-dev.2`, which
 stage 2 builds on as the owner decided on 25 September 2026, reads the
 `File` by ranges of a few MiB, so the size of a file is not bounded by
-the memory of the tab (`docs/specs/worker/runner.md`, "The memory"), and
-the warning of a file above 1.5 GB, which a draft of this spec had for
-the release before, which read the file whole, is gone. What a large
-file costs is time: every analysis reads the whole file, a gzipped VCF
-decompressed whole at every pass. That is shown where it is paid, by the
-progress bar of each calculation (`docs/specs/analyses/diversity.md`,
-the running state), and not guessed from the size before any pass; the
-remedy, writing the variants as a `.nei` file once, which is read many
-times faster (`docs/functionality.md`, section 3), comes to this step in
-stage 3. The help drawer, which will say so, comes in stage 8 (below,
-"Not in this spec"); until then nothing on the screen says it.
+the memory of the tab (`docs/specs/worker/runner.md`, "The memory"). What
+a large file costs is time: every analysis reads the whole file, a
+gzipped VCF decompressed whole at every pass. That is shown where it is
+paid, by the progress bar of each calculation, and not guessed from the
+size before any pass; the remedy is to write the variants as a `.nei`
+file once, which is read many times faster (`docs/functionality.md`,
+section 3), with the section "Writing the filtered variants" of this
+step. The help drawer, which will say so, comes in stage 8 (below, "Not
+in this spec").
 
 ### How a VCF is read
 
@@ -132,14 +190,13 @@ individuals and ploidy 2, and its first pass throws "line 5 of the VCF,
 the column of t00: its genotype is of the ploidy 4 and the reader was
 asked for the ploidy 2; popnei does not read a VCF whose genotypes are
 of different ploidies, and the ploidy is an argument of the reader". The
-diversity panel tells this refusal in its own words, which name the
-line, the individual and the two ploidies; say, if every genotype of the
-file has the ploidy found, to set it and read the file again; and then
-say that a file that mixes ploidies, such as one with the X of males
-haploid among diploid autosomes, cannot be read in this version, so
-that the user of such a file is not sent to the ploidy of its first
-refused line and back (`docs/specs/analyses/diversity.md`, "Its words", the row of a genotype
-of another ploidy); the line under the ploidy
+diversity panel, and each check of this step, tells this refusal in the
+words of `docs/specs/analyses/diversity.md` ("Its words", the row of a
+genotype of another ploidy), which name the line, the individual and the
+two ploidies; say, if every genotype of the file has the ploidy found,
+to set it and read the file again; and then say that a file that mixes
+ploidies, such as one with the X of males haploid among diploid
+autosomes, cannot be read in this version. The line under the ploidy
 says where that setting is, and the button below reads it again.
 
 The two options are state of the step, not of the project, until the
@@ -160,8 +217,7 @@ differs; "Read panel.vcf.gz again with every variant" or "Read
 panel.vcf.gz again with only the variants with PASS or . in the FILTER
 column" when only the choice of the passed variants does; and both,
 "Read panel.vcf.gz again with ploidy 4 and every variant", when both
-do. It
-makes a new load of the same `File`, with a new load id, through
+do. It makes a new load of the same `File`, with a new load id, through
 `addFile` and `loadVariants`, as a pick does, with the description "the
 variants file was read again with other options"; core allows it, since
 what it refuses is a load that reuses the id of the load there with
@@ -175,42 +231,77 @@ variants file is the reference's and not a `File` of this page, there is
 no button until a file is loaded. The button goes when the options are
 set back to those of the file.
 
-### The missing data filter
+### The filters of the variants
 
-A switch, "Filter the variants by missing data", and, while it is on, a
-number field, "Maximum proportion of missing genotypes, from 0 to 1",
-under it. The field holds the number popnei is given,
-`maxAllowedMissingRate` of `filterByMissingData`, as typed, and not
-converted from another number such as a proportion of called genotypes
-(`docs/specs/worker/protocol.md`): a variant is kept when
-its missing genotypes divided by all the individuals of the dataset,
-every individual of the file until the filters of individuals of stage
-3, are at most that number. A genotype is missing when any of its alleles is, so
-`0/.` counts as missing (`js/popnei/src/variant.ts`). Functionality
-section 3 words the filter the same way, a proportion at most a
-threshold, so the label and popnei agree and nothing is converted.
+Each filter is a switch, and, while it is on, its number fields under
+it; turned off, the fields go, and turned on again, they have the value
+of the table below. A filter that is off is not in the project. Each
+field holds the number popnei is given, as typed, and not converted
+from another number (`docs/specs/worker/protocol.md`): every filter keeps
+what is at most its threshold, as popnei's do. The filters count over
+every individual of the file, whatever the filters of the individuals,
+which come after them (`docs/architecture.md`, section 2).
 
-The filter is on from the start, with a threshold of 0.1, plink's
-default for `--geno`, the same filter on the same proportion, as the
-owner decided on 25 September 2026 (functionality's open point 4), and
-is shown with no file loaded too, since the filters belong to the
-project and stay across loads. The field has a step of 0.01 and no
-buttons; two decimals are what a threshold of missing data is set with.
-Each press of an arrow key is a commit, and so a command and a step of
-Undo, which is what a user who presses it five times has done. Turned
-off, the field goes; turned on again, it has the default.
+| switch | its fields | turned on at | popnei |
+|---|---|---|---|
+| Filter the variants by missing data | Maximum proportion of missing genotypes, from 0 to 1 | 0.1, and on in a new project | `filterByMissingData(maxAllowedMissingRate)` |
+| Filter the variants by observed heterozygosity | Maximum observed heterozygosity, from 0 to 1 | 0.5 (**Open 1**) | `filterByObsHet(maxAllowedObsHet)` |
+| Filter the variants by major allele frequency (MAF) | Maximum major allele frequency, from 0 to 1 | 0.95, the default of `docs/functionality.md`, section 3 | `filterByMaf(maxAllowedMaf)` |
+| Prune the variants by linkage disequilibrium (LD) | Maximum r² with a variant kept before it, from 0 to 1; Distance within which variants are compared, in base pairs, from 1 | 0.3 and 10000 (**Open 1**) | `filterByLd(maxAllowedR2, maxDist)` |
 
-**A number the two fields do not take.** The owner decided on 25
-September 2026 that a number field of this step never turns what was
-typed into another number without a word. So a committed number outside
-the range of its label, or with more decimals than its step, is refused:
-it sends nothing, the field shows again the value it had, and a line
-under the field says why, and what is kept:
+The MAF filter is off in a new project of population genetics, and on
+at 0.95 for the PCA and the GWAS alone, inside them, from stage 4
+(`docs/functionality.md`, section 3); the other two are off. The
+threshold fields take numbers of two decimals, with a step of 0.01, as
+the owner decided for the missing data filter on 25 September 2026, and
+no buttons of their own to step them; the distance, a whole number from 1 to 9007199254740991, the range of
+`filterByLd` (`js/popnei/src/variant.ts`), shown and typed with no comma
+between thousands, so that what the field shows can be typed back.
+
+Under three of the switches, a line says what popnei filters on, since a
+label alone would mislead:
+
+- missing data: "A genotype is missing when any of its alleles is, 0/.
+  among them; the proportion is over every individual of the file." A
+  genotype is missing when any of its alleles is, so `0/.` counts as
+  missing (`js/popnei/src/variant.ts`).
+- MAF: "The frequency of the commonest allele: 0.95 removes a variant
+  whose commonest allele is above 0.95. For a variant of two alleles,
+  that is a minor allele frequency below 0.05." The MAF is the major
+  allele frequency, as the owner decided on 24 September 2026
+  (`docs/functionality.md`, section 3), and a user who reads "MAF" as
+  the minor one would set 0.05 and keep almost nothing.
+- LD pruning: "Of two variants closer than the distance whose r² is
+  above the maximum, the first is kept." popnei's `filterByLd` keeps the
+  one that comes first, and compares a variant with those already kept
+  on its chromosome within the distance.
+
+The missing data filter is on from the start, with a threshold of 0.1,
+plink's default for `--geno`, the same filter on the same proportion,
+as the owner decided on 25 September 2026 (functionality's open point
+4); `firstProject("popgen")` of `src/core/apps.ts` holds it. Each press
+of an arrow key in a field is a commit, and so a command and a step of
+Undo, which is what a user who presses it five times has done.
+
+The filter of the regions of a BED file comes first among these, with
+popnei's release that has it (`docs/architecture.md`, section 6).
+
+**A number the fields do not take.** The owner decided on 25 September
+2026 that a number field of this step never turns what was typed into
+another number without a word. So a committed number outside the range
+of its label, or with more decimals than the field takes, is refused: it
+sends nothing, the field shows again the value it had, and a line under
+the field says why, and what is kept. The noun of each field is the
+threshold, the maximum r², the distance or the ploidy:
 
 | typed | the line under the field |
 |---|---|
-| 10 in the threshold | "10 is more than 1; the threshold stays 0.1." |
-| 0.125, or 0.001, in the threshold | "0.125 has more than two decimals; the threshold stays 0.1." |
+| 10 in a threshold | "10 is more than 1; the threshold stays 0.1." |
+| 0.125, or 0.001, in a threshold of the variants | "0.125 has more than two decimals; the threshold stays 0.1." |
+| 0.12345 in a threshold of the individuals | "0.12345 has more than four decimals; the threshold stays 0.03." |
+| 1.5 in the maximum r² | "1.5 is more than 1; the maximum r² stays 0.3." |
+| 0 in the distance | "0 is less than 1; the distance stays 10000." |
+| 2.5 in the distance | "2.5 is not a whole number; the distance stays 10000." |
 | 300 in the ploidy | "300 is more than 255; the ploidy stays 2." |
 | 0 in the ploidy | "0 is less than 1; the ploidy stays 2." |
 | 2.5 in the ploidy | "2.5 is not a whole number; the ploidy stays 2." |
@@ -226,51 +317,54 @@ number kept among them, which changes nothing and which React Aria
 therefore does not report; and when the value of the field changes
 otherwise, by an Undo, a new load or the switch.
 
-A number with more decimals than the step is refused and not rounded,
-as a number outside the range is: rounded, 0.001 and 0.004 would become
-0, a filter that keeps only the variants with every genotype called,
-where the user had asked for one almost as strict and not that one.
-Refused, the filter stays as it was, and the user types the number of
-two decimals they mean. The option not taken was to round a half up,
-0.125 to 0.13, and say so under the field, which would still make a
-command, a step of Undo and a change of the results that the user did
-not ask for. The decimals are counted on the number React Aria parsed,
-so that 0.10 and 0.1 are one number, of one decimal; an arrow key moves
-by the step and gives no number to refuse.
+A number with more decimals than the field takes is refused and not
+rounded, as a number outside the range is: rounded, 0.001 and 0.004
+would become 0, a filter that keeps only the variants with every
+genotype called, where the user had asked for one almost as strict and
+not that one. Refused, the filter stays as it was, and the user types the
+number they mean. The option not taken was to round a half up, 0.125 to
+0.13, and say so under the field, which would still make a command, a
+step of Undo and a change of the results that the user did not ask for.
+The decimals are counted on the number React Aria parsed, so that 0.10
+and 0.1 are one number, of one decimal; an arrow key moves by the step
+and gives no number to refuse.
 
-**A character the field does not take.** React Aria takes into the field
+**A character the fields do not take.** React Aria takes into a field
 only what can start a number of its range, in English: digits and the
-decimal point, and a minus sign where the range goes below 0, which
-neither field's does. Any other character typed is thrown away, with no
-word, so that 0,1 typed key by key shows as 01 and would be committed
-as 1, and 2,0 in the ploidy as 20. So a character thrown away is caught
-as it is typed, and a line under the field says so at once, and what is
-kept:
+decimal point, and a minus sign where the range goes below 0, which no
+field's does. Any other character typed is thrown away, with no word, so
+that 0,1 typed key by key shows as 01 and would be committed as 1, 2,0
+in the ploidy as 20, and 10,000 in the distance as 10000 or, where the
+comma would read as a decimal mark, as another number. So a character
+thrown away is caught as it is typed, and a line under the field says so
+at once, and what is kept:
 
 | typed | the line under the field |
 |---|---|
-| 0,1 in the threshold | "Write the decimals with a point, 0.1 and not 0,1; the threshold stays 0.1." |
-| a minus sign, or a letter, in the threshold | "‘-’ cannot be typed in the threshold, which is written with digits and a point, as 0.05; the threshold stays 0.1." |
+| 0,1 in a threshold | "Write the decimals with a point, 0.1 and not 0,1; the threshold stays 0.1." |
+| a minus sign, or a letter, in a threshold | "‘-’ cannot be typed in the threshold, which is written with digits and a point, as 0.05; the threshold stays 0.1." |
+| 10,000 in the distance | "Write the distance as a whole number of base pairs, 10000 and not 10,000; the distance stays 10000." |
+| a minus sign, or a letter, in the distance | "‘-’ cannot be typed in the distance, which is a whole number of base pairs, as 10000; the distance stays 10000." |
 | 2,0 in the ploidy | "Write the ploidy as a whole number, 4 and not 4,0; the ploidy stays 2." |
 | a minus sign, or a letter, in the ploidy | "‘-’ cannot be typed in the ploidy, which is a whole number, as 4; the ploidy stays 2." |
 
-The example of the comma is always 0.1 or 4, and the number kept the
-value the field had. A comma anywhere in what was typed gives the line
-of the comma, as when 0,05 is pasted into the field; otherwise the line
-names the first character thrown away, between ‘ and ’, a space as "A space", with its
-control characters escaped. The next commit of the field sends nothing,
-whatever the field shows, since what it shows is not what was typed:
-the field shows again the value it had, and the line stays until the
-commit after it. A deletion in the field before that commit, the user
-mending what they typed, lets the commit take the number again. The line
-is announced as the line of a number refused is.
+The example of the comma is always 0.1, 10000 or 4, and the number kept
+the value the field had. A comma anywhere in what was typed gives the
+line of the comma, as when 0,05 is pasted into the field; otherwise the
+line names the first character thrown away, between ‘ and ’, a space as
+"A space", with its control characters escaped. The next commit of the
+field sends nothing, whatever the field shows, since what it shows is
+not what was typed: the field shows again the value it had, and the line
+stays until the commit after it. A deletion in the field before that
+commit, the user mending what they typed, lets the commit take the
+number again. The line is announced as the line of a number refused is.
 
 A field left empty sends nothing and shows again the value it had, with
 no line, since nothing was typed that could be taken for another number;
 the same holds for the ploidy, which then keeps its value for the next
-pick. Off and on puts the filter last in the list of the
-filters, which with one filter in stage 2 changes nothing; stage 3,
-with several, decides it.
+pick. Turned off and on, a filter goes back to its place in the fixed
+order, since nothing moves a filter (`docs/specs/core/project.md`, "One
+filter of each kind, in a fixed order").
 
 **A file dropped while a ploidy is being typed.** A file dropped from
 the desktop leaves the focus in the ploidy, which has not committed
@@ -286,54 +380,255 @@ starts, so the status region reads it first and the end of the read
 after it, as the shell announces every read (`docs/specs/shell.md`,
 "The status region").
 
+### The histograms beside the filters of the variants
+
+The histograms of the variants are one check, with one button and one
+set of states (`docs/specs/analyses/variantChecks.md`, "The panel"). Its
+block, headed "Histograms of the variants", an `<h3>`, is the first thing
+under the heading of the filters of the variants: the button "Calculate
+the histograms of the variants", its running, removed and error states,
+its warning, the caption "Over the 1,200 variants of panel.nei, before
+any filter." and the line of the versions. Once they are calculated,
+each histogram is drawn beside the filter it helps set, with that
+filter's threshold marked when the filter is on
+(`docs/specs/charts/histogram.md`):
+
+- the observed heterozygosity, beside the filter by observed
+  heterozygosity, and the expected heterozygosity, unbiased, after it,
+  beside no filter, since comparing the two is how that filter is read;
+- the major allele frequency, beside the MAF filter;
+- the missing data filter and the LD pruning have none: the histogram of
+  the proportion of missing genotypes of each variant comes with
+  popnei's release that has it (`docs/architecture.md`, section 6, "What
+  this asks of popnei", item 4), and the LD pruning keeps a variant by
+  the variants kept before it, not by a number of its own.
+
+The texts the histogram asks of the screen, beyond those of
+`variantChecks.md`, its titles and descriptions:
+
+| histogram | horizontal axis | vertical axis | the legend, with a threshold |
+|---|---|---|---|
+| major allele frequency | "Major allele frequency" | "Variants" | "Maximum 0.95"; "Kept by the MAF filter"; "Removed by the MAF filter" |
+| observed heterozygosity | "Observed heterozygosity" | "Variants" | "Maximum 0.5"; "Kept by the filter by observed heterozygosity"; "Removed by the filter by observed heterozygosity" |
+| expected heterozygosity | "Expected heterozygosity (unbiased)" | "Variants" | no threshold |
+
+The threshold on a histogram follows the number the user types, as they
+type it, while it is a number the field would take (the histogram spec,
+"What the user sees"); the counts beside the filter, and the results,
+follow the number committed. The typed number is state of the screen,
+dropped at each commit.
+
+### What each filter of the variants kept
+
+The counts are a check of their own (`docs/specs/analyses/filterCounts.md`,
+"The Count button"). Beside each filter that is on, once counted for the
+filters as they are: "Kept 1,152 of the 1,200 variants it was given."
+Under the last filter, the button "Count the variants each filter
+keeps", its running and error states, and, once counted, "1,128 of the
+1,200 variants of panel.nei pass the filters." and the warning
+`filterKeptNone` when a filter kept none. Without counts for the filters
+as they are, the line "Not counted for these filters. Count, or run an
+analysis, to see what each filter keeps." stands in place of the line of
+the total, and nothing beside the filters. A change of any filter of the
+variants takes every count off at once, and is in no notice
+(`docs/architecture.md`, section 4, "The notice leaves the counts out");
+an undo, or any calculation over the same filters, brings them back.
+With no filter on, the Count gives the variants of the file, and the
+line of the total reads "1,200 variants in panel.nei, with no filter."
+
+### The filters of the individuals
+
+In their fixed order, keep, remove, missing data, observed
+heterozygosity (`docs/specs/core/project.md`): the two lists, then the
+statistics of each individual, from which the two thresholds are set,
+then the thresholds. Each individual is kept or removed as
+`docs/specs/core/individualsKept.md` says: a threshold keeps an
+individual whose number is at most it, and the filter by observed
+heterozygosity removes an individual with no called genotype, as the
+owner decided on 26 September 2026 (`docs/architecture.md`, section 13,
+point 4).
+
+**The two lists.** Each is a text area, a React Aria `TextField` with a
+`TextArea`, and two buttons:
+
+| label of the text area | its line | buttons |
+|---|---|---|
+| Individuals to keep, one name per line | "Only the individuals of this list are kept. Leave it empty to keep every individual." | "Apply the list to keep", "Clear the list to keep" |
+| Individuals to remove, one name per line | "The individuals of this list are removed." | "Apply the list to remove", "Clear the list to remove" |
+
+Each line is a name, with the spaces and tabs at its ends taken off and
+the empty lines dropped, so that a column copied from a spreadsheet, or
+the text of a file of one name per line, can be pasted. Apply sends the
+names in the order written, with `setIndividualFilter`, or, when there
+is none, `removeIndividualFilter`; Clear empties the area and sends
+`removeIndividualFilter`. So the screen never sends an empty list, and
+the reason of an empty list of `projectNeeds` comes only from a project
+file. A list is applied with its button, and not at each key, because
+every change of it is a command, a step of Undo and a change of the key
+of every analysis that reads the filters of individuals, and a list half
+typed would lock them with the reason of a name not in the file.
+
+The text of each area is state of the step until it is applied. It
+starts, each time the step is drawn and after an Undo or a Redo, at the
+list of the project, one name per line, so that it always shows a list
+the project has or had. While it differs from the list applied, a line
+under it says so: "This list is not applied yet; Apply the list to keep
+applies it.", or "… Apply the list to remove applies it."
+
+A list with a name repeated, or a name that is not in the variants file,
+is applied as written, and `projectNeeds` gives its reason, which locks
+every analysis (`docs/specs/core/project.md`, "What an analysis needs
+of every project"): "The list of individuals to keep names 2 individuals
+that are not in panel.nei: ind_900 and ind_901. Change the list, or
+remove the filter, in the Variants step." The step shows that reason
+whole, under the two lists, and the stepper shows it too
+(`docs/specs/shell.md`, "The stepper"). Its end is point D of
+`docs/specs/stage-3-open-points.md`; "remove the filter" is Clear here.
+
+**The statistics of each individual.** Its block, headed "Statistics of
+each individual", an `<h3>`, comes after the lists
+(`docs/specs/analyses/individualChecks.md`, "The panel"): the button
+"Calculate the statistics of each individual", its running, removed and
+error states, its warning, the caption, and the line of the versions.
+Once they are calculated, its two histograms are drawn beside the two
+thresholds, below, and its table and its download after them.
+
+**The two thresholds.** As the filters of the variants, a switch and a
+number field, with the refusals above:
+
+| switch | its field | turned on at |
+|---|---|---|
+| Filter the individuals by missing data | Maximum proportion of missing genotypes of an individual, from 0 to 1 | 0.1, plink's default for `--mind` (**Open 1**) |
+| Filter the individuals by observed heterozygosity | Maximum observed heterozygosity of an individual, from 0 to 1 | 0.5 (**Open 1**) |
+
+Their fields take numbers of four decimals, with a step of 0.01 for the
+arrow keys: the proportions of missing genotypes of the individuals of
+`panel.nei` lie from 0.0165 to 0.0434 with the missing data filter at
+0.05 (`docs/specs/core/individualsKept.md`), where two decimals would
+give three thresholds, and the table shows four. Under the second: "An
+individual with no called genotype has no observed heterozygosity, and
+this filter removes it."
+
+Beside each, its histogram of `individualChecks.md`, with the threshold
+marked when the filter is on and following the number typed as above;
+its axes "Proportion of missing genotypes" or "Observed heterozygosity",
+and "Individuals"; its legend "Maximum 0.03", "Kept by this filter",
+"Removed by this filter". Before the statistics are calculated, or once
+a change of a filter of the variants has removed them, there is no
+histogram, and the line of the counts below says why.
+
+**The table of the individuals** follows the thresholds, with its
+column Kept while any filter of individuals is set, and its download
+(`individualChecks.md`, "What it shows").
+
+**What each filter of the individuals kept**, from `individualsKept`,
+with no pass. Beside each filter that is set: "Kept 125 of the 200
+individuals it was given." A threshold whose statistics are not in the
+page, and each filter after it, has instead "Known once the statistics
+of each individual are calculated for these filters of the variants."
+Under the last filter, the individuals that pass them all: "119 of the
+200 individuals of panel.nei pass the filters.", or, when they keep
+none, the reason `keptNoneReason` gives, "The filters of individuals
+keep none of the 200 individuals of panel.nei. Loosen them in the
+Variants step.", which locks every analysis that reads them and the
+writing of the file (`docs/specs/core/store.md`, "The state of an
+analysis"). With a threshold set and no statistics, a Run of an analysis
+that reads the filters of individuals calculates them first, and so
+does the writing of the file; the step says nothing more of it, since
+the panel that waits says so.
+
+### Writing the filtered variants
+
+The last section, `docs/specs/analyses/writeVariants.md`, "The step's
+part", whose states and words it shows: the button "Write the filtered
+variants as a .nei file", with the size expected, "About 18.4 MB: 20,000
+variants of 1,000 individuals.", and the warning above
+`WRITE_WARN_BYTES` above the button; its progress and Stop; the button
+"Save panel.filtered.nei, 18.4 MB" once written; and what it says once
+saved, dropped or failed. The size expected is made from the counts of
+the variants and the individuals kept that the two sections above show,
+so a user who reads it too large sees there which filter to tighten.
+
+The writing of a VCF, bgzipped, comes with popnei's release that has a
+writer of it (`docs/architecture.md`, section 6, "The files written"),
+as a second button of this section.
+
 ## The states
 
-The step is not an analysis: it runs nothing the user starts, and what
-it waits for is the read of the file. Its states:
+The step is not one analysis: it holds three checks, the writing of a
+file, and the filters, which need no calculation. Each calculating part
+is in the state the store gives it, with the table of its own spec; the
+step as a whole:
 
 | state | what the user sees | what they can do |
 |---|---|---|
-| empty | cannot happen: with no file, the step offers the pick, which is the ready state | — |
-| locked | cannot happen: nothing has to be done before a file is picked. A file picked before the calculation worker has started is read once it has | — |
-| ready | no file: the zone, "Choose a variants file…", the options of a VCF, the filter. With an opened project file, the file it was made with, below | pick a file; set the options and the filter |
-| running | the card with its name, format and size, "Reading panel.nei." and the seconds since the step saw the read start, which the step keeps and loses when it is left; no progress bar, since the read is of the header of a VCF, or the end of a `.nei` file, which popnei tells to nobody (`js/popnei/src/variant.ts`, `onProgress`) | pick another file, which replaces this one; Undo; set the filter |
-| done | the card with the individuals, the ploidy of a `.nei` file, the number of variants once counted, how a VCF was read, and the warnings below | replace the file; set the filter |
-| results removed | cannot happen here: the step shows no result. A command of this step that removes results, a new file or a changed filter, has its notice in the shell (`docs/specs/shell.md`), with the descriptions below | — |
-| error | the card with the reason the file was not read, below | what the reason says: pick a file, or, when the calculations could not start or the page is out of date, reload the page |
+| empty | cannot happen: with no file, the step offers the pick and the filters, which is the ready state | — |
+| locked | cannot happen for the step: nothing has to be done before a file is picked. A file picked before the calculation worker has started is read once it has. Its calculating parts are locked when `projectNeeds` gives a reason about a list of individuals, with the reason beside each button, and the writing too when the filters keep no individual | fix the list, or loosen the thresholds |
+| ready | no file: the zone, "Choose a variants file…", the options of a VCF, the filters, and in place of the checks the line of a file not read. With an opened project file, the file it was made with, below. With a file read: every part, each check with its button | pick a file; set the filters; calculate a check; count; write |
+| running | the read: the card with its name, format and size, "Reading panel.nei." and the seconds since the step saw the read start, which the step keeps and loses when it is left; no progress bar, since the read is of the header of a VCF, or the end of a `.nei` file, which popnei tells to nobody (`js/popnei/src/variant.ts`, `onProgress`). A check, the Count or the writing: its bar and its clock in its own part, the rest of the step as it was | during the read: pick another file, which replaces this one; Undo; set the filters. During a calculation: Stop it; set the filters, which leaves it behind, as the notice says |
+| done | the card with the individuals, the ploidy of a `.nei` file, the number of variants once counted, how a VCF was read; each check done beside its filters, the counts, the Save button | replace the file; set the filters; sort and download the table; download the histograms; save the file |
+| results removed | the words of the change in the block of the check removed; its histograms, or its table, gone. A change of a filter of the variants removes the statistics of each individual, and the notice of the shell says so; the counts are never in the notice, and show the line of no counts | Calculate again; the Undo or Redo of the notice |
+| error | the card with the reason the file was not read, below; or a check or the writing failed, with its words in its part | what the reason says: pick a file, or, when the calculations could not start or the page is out of date, reload the page; loosen the filters when they kept no variant |
 
 A read that takes long cannot be cancelled with a button. Picking
 another file, or Undo, replaces the load. The calculation worker is
 started again for the next load, and starting it again ends the read of
-the old one (`docs/architecture.md`, section 5).
+the old one, and every calculation of the step in flight
+(`docs/architecture.md`, section 5).
+
+The parts of the step do not wait for one another. Calculating the
+histograms of the variants, the counts and the statistics are three
+passes, which the one calculation worker makes one after the other when
+they are asked together; the statistics of each individual also fill the
+counts of the same filters (`filterCounts.md`, "Which results fill it"),
+so a user who calculates them needs no Count.
 
 ## What it sends and reads
 
-It reads `project.variants`, `project.filters` and `project.reference`
-of the state of the store, and `variantsStepNeeds` of the project, the
-function of core that gives, in the words of this step, the reason of a
-variants file being read or not read. It sends:
+It reads, of the state of the store, `project.variants`,
+`project.filters`, `project.individualFilters` and `project.reference`;
+`individualsKept`; `write`; the status of `variantChecks`,
+`filterCounts` and `individualChecks` among `analyses`, and their
+`RunView`s; and `variantsStepNeeds` and `projectNeeds` of the project,
+the functions of core that give, in words, the reason of a variants file
+being read or not read and of a list of individuals that popnei would
+refuse. It sends:
 
 | action | command | description |
 |---|---|---|
 | a file picked or dropped | `loadVariants(p, { fileId, name, size, format, readOptions })`, `readOptions` `{ ploidy, onlyPassed }` for a VCF and `null` for a `.nei` file | "a new variants file was loaded" |
 | Read ‹name› again | `loadVariants` of the same `File` under a new load id, with the options of the step | "the variants file was read again with other options" |
-| a threshold committed, on Enter or when the field loses the focus | `setVariantFilter(p, { kind: "missing_data", maxAllowedMissingRate })` | "the missing data filter changed" |
-| the switch turned off | `removeVariantFilter(p, "missing_data")` | "the missing data filter was turned off" |
-| the switch turned on | `setVariantFilter(p, { kind: "missing_data", maxAllowedMissingRate: 0.1 })` | "the missing data filter was turned on" |
+| a threshold of the variants committed, on Enter, an arrow key or when the field loses the focus | `setVariantFilter(p, filter)`, the filter of its kind with its fields | "the missing data filter changed", "the filter by observed heterozygosity changed", "the MAF filter changed", "the LD pruning changed" |
+| its switch turned off | `removeVariantFilter(p, kind)` | "the missing data filter was turned off", and so for each |
+| its switch turned on | `setVariantFilter(p, filter)`, with the values of the table of the filters | "the missing data filter was turned on", and so for each |
+| Apply the list to keep, or to remove | `setIndividualFilter(p, { kind: "keep", individuals })`, or `removeIndividualFilter(p, "keep")` for no name | "the list of individuals to keep changed", "the list of individuals to remove changed" |
+| Clear the list | `removeIndividualFilter(p, kind)` | "the list of individuals to keep was cleared", "… to remove was cleared" |
+| a threshold of the individuals committed, turned off, turned on | `setIndividualFilter` or `removeIndividualFilter` of `missing_data` or `obs_het` | "the filter of individuals by missing data changed", "… was turned off", "… was turned on"; "the filter of individuals by observed heterozygosity changed", and so on |
+| Calculate, of a check; Count | `startAnalysis(store, id)` of `src/ui/runs.ts`, with `variantChecks`, `individualChecks` or `filterCounts` | — |
+| Stop, of a check or the Count | `store.cancelRun(id)` | — |
+| Write the filtered variants | `startWriting(store, "nei")` of `src/ui/runs.ts` | — |
+| Stop, of the writing | `store.cancelWrite()` | — |
+| Save ‹name›, ‹size› | `saveWritten(name)` of `src/ui/saving.ts` (`docs/specs/entry.md`, "A file of the filtered variants saved") | — |
 
+The names of the filters in the descriptions are those of the words of
+`filterCounts`, so that a notice and a warning name a filter alike.
 Before the command of a pick, or of a read again, which passes the
 `File` of the load there, which `fileOf(fileId)` of `src/ui/files.tsx`
 gives from the page's map of files, the step calls `addFile(file)` of
 `src/ui/files.tsx`, which makes the load id and puts the `File` into the
 map of the worker client under it (`docs/specs/entry.md`, "At the
-opening"); the entry of the page then asks the
-calculation worker to open it, and the store records what it read
-(`docs/architecture.md`, section 6, "Who asks for a read"). The step
-does not read the file and holds nothing of the project.
+opening"); the entry of the page then asks the calculation worker to
+open it, and the store records what it read (`docs/architecture.md`,
+section 6, "Who asks for a read"). The step does not read the file and
+holds nothing of the project: the text of the two lists not yet applied,
+the numbers typed and not committed, the lines of a number refused and
+the options of a VCF not yet read are the screen's.
 
 ## Its words
 
-The descriptions of the commands are in the table above. The rest:
+The descriptions of the commands are in the table above, the words of
+each check and of the writing in their specs, and those of the filters
+in their sections. The rest:
 
 - **A file of another name**: "panel.txt was not loaded: the Variants
   step reads a VCF, whose name ends in .vcf, .vcf.gz or .vcf.bgz, or a
@@ -371,6 +666,11 @@ The descriptions of the commands are in the table above. The rest:
   is out of date, "… Reload the page and choose it again.". What
   happened is said in the words of `docs/specs/core/project.md`, Open
   4.
+- **No variants file read**, in place of the checks: "The histograms,
+  the counts and the statistics of each individual are calculated once a
+  variants file is read."
+- **The lines under the filters, the lists and the counts**: in their
+  sections, above.
 - **The line under the ploidy**, and the button that reads the VCF
   again, above.
 
@@ -384,7 +684,10 @@ project file"). The step shows, above the zone, the text of
 `askedFileText` of `src/core/projectFile.ts`, and the options of a VCF
 start at the reference's, above. The words, and what is left out when
 the project was saved before its file was read or counted, are
-`docs/specs/core/projectFile.md`'s.
+`docs/specs/core/projectFile.md`'s. The filters and the lists are those
+of the file; the results of the checks are not in it, so a threshold of
+the individuals waits for its statistics until they are calculated for
+the new load (`individualsKept.md`, "The cases").
 
 Once a file is given, the step shows beside its card the warning
 `identityWarning` of the same module gives, a warning and not a refusal,
@@ -403,56 +706,106 @@ under its result, with `uncomparedText` of the same module.
 
 A Save writes the options of the project, not those of the step
 (`docs/specs/core/projectFile.md`, "What is written of each part"): a
-ploidy typed and not applied is not saved, and once "Read panel.vcf.gz
-again with ploidy 4" is pressed, a Save before that read ends writes
-ploidy 4.
+ploidy typed and not applied is not saved, nor a list not applied; and
+once "Read panel.vcf.gz again with ploidy 4" is pressed, a Save before
+that read ends writes ploidy 4.
+
+### The help drawer
+
+In stage 8 (`docs/build-order.md`), a few lines for the step: what the
+step reads, a VCF or a `.nei` file; that a VCF's ploidy is given and not
+read, with what a wrong one gives; that only the variants with PASS or
+`.` in the FILTER column are read by default, a `.` saying that no
+filter was applied to that variant; what each filter keeps, in their
+fixed order, over every individual of the file, and that the MAF is of
+the major allele; that the histograms of the variants are over the file
+as read, and the statistics of each individual over the variants the
+filters keep; that the file is read from the disk at every analysis, and
+not copied into the browser, so a file of any size opens, a large
+gzipped VCF is slow to read at each analysis, which writing it once as a
+`.nei` file mends, and a file changed on the disk after it was picked
+has to be loaded again, since the application may not notice the change
+(`docs/specs/stage-2-open-points.md`, point R); and, for those who work
+in Python, the code that does the same: `popnei.open_vcf(path, ploidy=2,
+only_passed=True)` or `popnei.open_vars(path)`, then
+`variants.filter_by_missing_data(0.1)` and the other filters. Until then
+nothing on the screen says the things the lines above do not.
 
 ## Accessibility
 
-- The keyboard goes through the step in this order: the zone's hidden
-  button that takes a pasted file, the file button, the ploidy, the checkbox of the passed variants, the button that reads the
-  VCF again when it is there, the switch of the filter, its threshold.
-  When that button goes, after it was pressed, the focus moves to the
-  file button, which is in every state. A warning or an error sits in the order of the text
-  beside what it is about, and is text, "Warning:", as well as its colour
-  and its icon (WCAG 2.2, success criterion 1.4.1).
-- The drop zone is in a region labelled "Variants file", the section of
-  the file, with that heading, which holds the zone and the message of a
-  file not loaded; the button in the zone is the way to pick without
-  dragging (2.1.1).
-- The messages of a file not loaded, and the line of a number a field
-  refused, are announced when they appear, through the function the
-  shell gives the screens (`docs/specs/shell.md`, "The status region"), since the focus stays
-  on the button and a screen reader would not read them.
-- The line of a number a field refused, or of a character it threw
-  away, is the first part of the field's description, which a screen
-  reader reads after the label when the focus comes to the field; the
-  line under the ploidy, 190 characters long, comes after it, so that
-  the user hears why their number was not taken before the advice on
-  the ploidy.
-- The read may take long on a slow disk, a time not yet measured, and
-  the user may be on another step when it ends. So its end is announced by
-  the shell, from the state of the store, and not by this step, which may
-  not be on the screen: through its status region, the part of the page
-  that a screen reader reads out when its text changes, without moving
-  the focus, the element the keyboard acts on (4.1.3), with the words of
-  `docs/specs/shell.md`, "The status region".
-- The warning of a reopened project that differs from its file is
-  announced by the shell, from the state of the store, when it appears
-  or comes with another load, with the words of `docs/specs/shell.md`,
-  "The status region": so it is heard also when an Undo or a Redo on
-  another step brings it back, and when a second file that differs
-  replaces the first; while its load is being read, once, after the
-  end of the read, with the words the read gave it.
+- The keyboard goes through the step in the order of its parts: the
+  zone's hidden button that takes a pasted file, the file button, the
+  ploidy, the checkbox of the passed variants, the button that reads the
+  VCF again when it is there; the button of the histograms of the
+  variants; each filter of the variants, its switch, its fields, and its
+  histogram, whose table and two buttons of download are reached as the
+  histogram spec says; the Count button; each list, its text area and
+  its two buttons; the button of the statistics; each threshold, its
+  switch, its field and its histogram; the table of the individuals,
+  which the Tab key enters once, as React Aria's `Table`, a grid moved
+  through with the arrow keys; its download; the button to write, and
+  Save. When the button that reads the VCF again goes, after it was
+  pressed, the focus moves to the file button, which is in every state.
+- A warning or an error sits in the order of the text beside what it is
+  about, and is text, "Warning:", as well as its colour and its icon
+  (WCAG 2.2, success criterion 1.4.1).
+- Each section is a region named by its heading, so that a screen reader
+  jumps between the file, the filters of the variants, the filters of
+  the individuals and the writing. The drop zone is in the region
+  "Variants file", which holds the zone and the message of a file not
+  loaded; the button in the zone is the way to pick without dragging
+  (2.1.1).
+- Each field of a filter is described, `aria-describedby`, by the line of
+  a number refused when there is one, then by the count of its filter,
+  "Kept 1,152 of the 1,200 variants it was given.", then by the line
+  under its switch, so that a user who moves to a field hears what it
+  kept before the advice; the line under the ploidy, 190 characters, is
+  the last part of the ploidy's description, after the line of a number
+  refused. A text area is described by its line of not applied, then by
+  its count.
+- Announced without moving the focus, through the function the shell
+  gives the screens (`docs/specs/shell.md`, "The status region"): the
+  messages of a file not loaded, and the line of a number a field
+  refused or of a character it threw away. Announced by the shell from
+  the state of the store, and not by this step, which may not be on the
+  screen when they happen: the end of a read; the start, the end and the
+  stop of each check, of the Count and of the writing; and the warning
+  of a reopened project that differs from its file, when it appears or
+  comes with another load, so that it is heard also when an Undo or a
+  Redo on another step brings it back.
+- The counts beside a filter change without the focus on them when the
+  user commits a threshold; they are not announced, since a user who
+  moves the threshold is on its field and hears the count as its
+  description; after a Count, the shell announces the variants that
+  pass.
+- When a check ends done, its button goes; if the focus was on it, the
+  focus moves to the heading of its block, as the diversity's does
+  (`docs/specs/analyses/diversity.md`, "Accessibility"). When the Count
+  ends done with the focus on its button, the focus moves to the line of
+  the variants that pass, which takes the focus for that and is not a
+  stop of the Tab key. The Save button takes the focus when a write ends
+  with the focus on the button that asked for it (`writeVariants.md`).
+- Each histogram is an image with its title and description, and the
+  table of its bins beside it, as `docs/specs/charts/histogram.md` has
+  it; its threshold is also said in words beside it, "Threshold of the
+  MAF filter: 0.95", and what each bin keeps is a word of the table,
+  never the fill of a bar alone (1.4.1). The column Kept of the table of
+  the individuals is a word, "kept" or "removed".
+- A disabled button of a check, the Count or the writing, locked by a
+  list of individuals or by the individuals kept, is described by its
+  reason, which is text beside it, since a disabled button is not a stop
+  of the Tab key and a user of the keyboard would not learn why.
 
 ## How it is checked
 
-In the Playwright flow of stage 2 (`.claude/skills/coding/testing.md`),
-in the three engines: `panel.nei` picked with the button, and then a
-file dropped, with the focus still on the button after each;
+In the Playwright flow (`.claude/skills/coding/testing.md`), in the
+three engines.
+
+Of stage 2, kept: `panel.nei` picked with the button, and then a file
+dropped, with the focus still on the button after each;
 `tetraploid.vcf.gz` loaded with ploidy 2, the card showing 12
-individuals and "Read with ploidy 2, …", the diversity panel showing its words for the
-wrong ploidy, then the ploidy set to 4, the button "Read
+individuals and "Read with ploidy 2, …", the diversity panel showing its
+words for the wrong ploidy, then the ploidy set to 4, the button "Read
 tetraploid.vcf.gz again with ploidy 4" pressed, the card showing "Read
 with ploidy 4, …" and no line "Ploidy 4", and the diversity run; the
 button's words with both options changed; `bad.vcf` and its reason,
@@ -463,49 +816,103 @@ threshold, and 300, 0 and 2.5 in the ploidy, each with its line, the
 value kept and the line announced; 0,1 and 0,2 typed key by key in the
 threshold, and 2,0 in the ploidy, each with the line of the comma and
 the value kept; the value kept typed back, and an arrow key at a bound,
-each taking the line away; tetraploid.vcf.gz dropped with 300 typed
-in the ploidy and not committed, read with ploidy 2 and the line of
-300 shown and announced; and the text of the status region
-after each read. A script cannot put a folder into a drop, so the flow
-drops a file whose entry of the file system says it is a folder, which
-is what React Aria asks of each item; the function that tells what a
-drop held is checked in node as well. The axe check of each state.
+each taking the line away; tetraploid.vcf.gz dropped with 300 typed in
+the ploidy and not committed, read with ploidy 2 and the line of 300
+shown and announced; and the text of the status region after each read.
+A script cannot put a folder into a drop, so the flow drops a file whose
+entry of the file system says it is a folder, which is what React Aria
+asks of each item; the function that tells what a drop held is checked
+in node as well.
+
+Of stage 3, on `e2e/fixtures/panel.nei`, 1,200 variants of 200 diploid
+individuals, with the numbers of the module specs, which popnei's
+release `js-v0.1.0-dev.2` gave in node on 26 September 2026:
+
+- before a file, the line in place of the checks, and the filters
+  settable; the histograms of the variants calculated, the mean of the
+  MAF read as 0.7163, and still there after the missing data filter is
+  set to 0.05; the threshold line of the MAF histogram moving as 0.9 is
+  typed, before Enter;
+- with the missing data filter at 0.05, Count: "Kept 1,152 of the 1,200
+  variants it was given." and the field of the filter described by it;
+  the filter by heterozygosity at 0.9 and the MAF filter at 0.95, the
+  counts gone, and after Count the filter by heterozygosity keeping
+  1,152 of 1,152 and the MAF filter 1,128 of 1,152, and
+  "1,128 of the 1,200 variants of panel.nei pass the filters."; an undo
+  bringing back the counts of the filter before, with no calculation;
+- the filters back to the missing data filter at 0.05 alone, the
+  statistics of each individual calculated, `s000` read as 0.0260 and
+  0.3672; the thresholds of the individuals at 0.03 and 0.38, "Kept 125
+  of the 200 individuals it was given.", then 119 of 125, "119 of the
+  200 individuals of panel.nei pass the filters.", the column Kept, and
+  0.12345 refused with its line; the missing data filter of the variants
+  moved, the statistics removed with the notice, and the counts of the
+  thresholds "Known once …"; an undo, and the statistics back;
+- a list to keep with `ind_900` applied, and the reason of a name not in
+  the file under the lists and beside each disabled button; the list
+  cleared, and the reason gone; a list typed and not applied, with its
+  line, and an Undo putting the text back to the list applied;
+- with the thresholds at 0.03 and 0.38, Write, Save, and the download
+  read: `panel.filtered.nei`, 170,042 bytes (`writeVariants.md`).
+
+The axe check of each state of the table of the states. A screen reader,
+VoiceOver with Safari at least, is tried on a field of a filter with its
+count, a histogram and its table of bins, the table of the individuals
+and a list, which are new widgets of this stage (`react.md`,
+"Accessibility review"). The screen is seen, in the three engines, as
+`CLAUDE.md` asks, at 320 px wide and on a wide screen.
 
 ## Left for the running application
 
-Where the options of a VCF sit beside the zone, whether the card and the
-filter are side by side or one above the other, the format of the size,
-and the icons.
+Whether each histogram sits beside its filter or under it, and at what
+width they go one under the other; the size of the histograms and of the
+text areas; whether a section can be folded once it is set; the format
+of the sizes; the icons; whether the options of a VCF sit beside the
+zone. Whether the table of the individuals draws only its rows on the
+screen is set by the measurement of `individualChecks.md`.
 
-## What this spec relies on in the other specs of stage 2
+## What this spec relies on in the other specs
 
-Each was approved by the owner on 25 September 2026, and says what is listed here.
+Those of stage 2 were approved by the owner on 25 September 2026; those
+of stage 3 are revised or written beside this one, and not yet approved.
 
 - `docs/specs/shell.md`: the step is drawn in its `<main>` with one
   `<h1>`, "Variants"; the shell writes the notice from the description
   of a command, and the notice of a new load says the calculations it
-  stopped; it announces the ends of the reads from the state, and gives
-  the steps `announce` for what they announce themselves.
-- `docs/specs/entry.md`: the first project of the population genetics
-  application, `firstProject("popgen")` of `src/core/apps.ts`, holds the
-  missing data filter at 0.1, since `emptyProject` of core holds no
-  filter; `addFile(file)` of `src/ui/files.tsx`, called before the
-  command, and `fileOf(fileId)` of the same file, the `File` of a load of
-  this page or `null`, for the button that reads a VCF again; and after
-  every change the entry asks for the read of a
+  stopped; it announces the ends of the reads and of the calculations
+  from the state, and gives the steps `announce` for what they announce
+  themselves; its stepper shows the reason of a list of individuals.
+- `docs/specs/entry.md`: `firstProject("popgen")` of `src/core/apps.ts`
+  holds the missing data filter at 0.1; `addFile(file)` and
+  `fileOf(fileId)` of `src/ui/files.tsx`; `startAnalysis`, `startWriting`
+  and `saveWritten`; after every change the entry asks for the read of a
   pending source, and records a refusal of popnei at the open as `{ kind:
-  "popnei", message }`.
+  "popnei", message }`; `apps.ts` puts the three checks and the writing
+  in this step.
 - `docs/specs/worker/client.md`: the calculation worker started again for
-  a new load, which ends a read of the old one still under way.
-- `docs/specs/worker/runner.md`, `docs/specs/analyses/diversity.md` and
-  `docs/specs/entry.md`: the open of the file gives the individuals and
-  the ploidy; the number of variants recorded, through `numVarsOf` of
-  `apps.ts` and `numVarsRead` of the diversity's result, is the variants
-  of the file before the filters of the application, `varsProcessed` of
-  the first filter of the pass or its `numVars` when it has none.
+  a new load, which ends a read and every calculation of the old one
+  still under way.
+- `docs/specs/worker/runner.md`, `docs/specs/entry.md` and
+  `docs/specs/worker/protocol.md`: the open of the file gives the
+  individuals and the ploidy; the number of variants recorded, through
+  `countsOf` of `apps.ts` and `passStats` of every result, is the
+  variants of the file before the filters of the application,
+  `varsProcessed` of the first filter of the pass or its `numVars` when
+  it has none.
+- `docs/specs/core/project.md`: the four filters of the variants and of
+  the individuals in their fixed order, the commands that set and remove
+  them, and the reasons of `projectNeeds` for a list.
+- `docs/specs/core/individualsKept.md` and `docs/specs/core/store.md`:
+  `individualsKept` in the state, with the counts of each filter of
+  individuals, `null` where they need the statistics; `keptNoneReason`;
+  the lock of the writing; `write` and its states.
+- `docs/specs/analyses/variantChecks.md`, `filterCounts.md`,
+  `individualChecks.md` and `writeVariants.md`: the parts placed here,
+  with their states and words; `docs/specs/charts/histogram.md`, the
+  histogram with its threshold, its table of bins and its export.
 - `docs/specs/analyses/diversity.md`: a refusal of popnei in the pass is
   its error state, with a row of its own for a genotype of another
-  ploidy.
+  ploidy, whose words the checks of this step take.
 - `docs/specs/core/projectFile.md`: an opened project has `variants:
   null` and its `reference`; `askedFileText` and `identityWarning` give
   the words shown above, and the read options of a VCF start at the
@@ -513,38 +920,36 @@ Each was approved by the owner on 25 September 2026, and says what is listed her
 
 ## Open points
 
-The open points of the eleven specs of stage 2 are gathered in
-`docs/specs/stage-2-open-points.md`. The two this spec had were decided
-by the owner on 25 September 2026, and are written above as decided:
-the button that reads a VCF again with other options, in stage 2 (point
-M there), and the missing data filter on at 0.1 (point N).
+The open points of the specs of stage 3 are gathered in
+`docs/specs/stage-3-open-points.md`. This spec adds one, point F there:
+
+1. **The values at which a filter starts when it is turned on.** The
+   observed heterozygosity of the variants at 0.5, the LD pruning at an
+   r² of 0.3 over 10000 base pairs, and the two thresholds of the
+   individuals at 0.1 and 0.5, meanwhile. popnei gives no default for
+   any of them. Point F has the options.
+
+It meets point D there, the ends of the reasons of a list, and point C,
+the download of the histograms, whose buttons it places. The two points
+of stage 2 were decided by the owner on 25 September 2026: the button
+that reads a VCF again with other options, in stage 2 (point M of
+`docs/specs/stage-2-open-points.md`), and the missing data filter on at
+0.1 (point N).
 
 ## Not in this spec
 
-- The other filters of the variants, the filters of the individuals,
-  what each filter of a pass was given and kept, the chromosomes, the
-  histograms per variant and per individual, and writing the filtered
-  variants as a VCF or a `.nei` file: stage 3, in this spec.
+- The filter of the regions of a BED file, first among the filters, and
+  the BED file it reads; the histogram of the proportion of missing
+  genotypes of each variant, beside the missing data filter; the writer
+  of the VCF; the chromosomes of the file with the density of variants
+  along each: with popnei's releases that have them
+  (`docs/architecture.md`, section 6, "What this asks of popnei").
 - The notice, its words and its Undo; the stepper and the summary line:
   `docs/specs/shell.md`.
+- The states and the words of each check and of the writing: their
+  specs, under `docs/specs/analyses/`.
+- A list of individuals read from a file, or made from the rows of the
+  table: a list is typed or pasted in this version.
 - What the worker does with the file: `docs/specs/worker/runner.md`.
 - The project file and the check numbers: `docs/specs/core/projectFile.md`.
-- The help drawer, in stage 8 (`docs/build-order.md`), with the help of
-  this step: what the step reads, a VCF or a `.nei` file; that a VCF's
-  ploidy is given and not read, with what a wrong one gives; that only
-  the variants with PASS or `.` in the FILTER column are read by
-  default, a `.` saying that no filter was applied to that variant; the
-  missing data filter: a genotype is missing when any of its alleles is,
-  `0/.` among them, and the proportion is over all the individuals of
-  the file, so that 0.1 keeps a variant with at most 10% of its
-  genotypes missing, 0 keeps only the variants with every genotype
-  called and 1 keeps them all; that the file is read from the disk at
-  every analysis, and not copied into the browser, so a file of any size
-  opens, a large gzipped VCF is slow to read at each analysis, and a
-  file changed on the disk after it was picked has to be loaded again,
-  since the application may not notice the change, and results
-  calculated after it may be of the new file
-  (`docs/specs/stage-2-open-points.md`, point R); and, for those who
-  work in Python, the code that does the same: `popnei.open_vcf(path, ploidy=2, only_passed=True)` or
-  `popnei.open_vars(path)`, then `variants.filter_by_missing_data(0.1)`.
-  Until then nothing on the screen says these things.
+- The help drawer, in stage 8, with the lines of "The help drawer" above.

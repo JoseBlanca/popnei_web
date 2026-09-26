@@ -3,9 +3,16 @@
 25 September 2026, approved by the owner on 25 September 2026, and revised
 on 26 September 2026 with the owner's decisions at stop 9.6 of
 `docs/plans/walking-skeleton.md`, on the points of the review of its
-work package 9. The screen
+work package 9; built in `src/ui/shell/`. Revised again on 26 September
+2026 for stage 3, the Variants step whole, as the revision of
+`docs/architecture.md` the owner approved that day has it: the summary
+line gives the variants and the individuals the filters keep (Open 1,
+below); the stepper takes the checks of the Variants step, the three
+calculations that step shows, into its state; and the notice and the
+status region name those checks and the writing of the filtered
+variants as a file. This revision is not yet approved. The screen
 spec of what surrounds every step of the population genetics
-application in the walking skeleton of stage 2 (`docs/build-order.md`),
+application, first built in the walking skeleton of stage 2 (`docs/build-order.md`),
 the smallest application that goes through every part once: the header,
 with Undo, Redo and the saving and opening of the project file; the
 stepper, the row of the steps with the state of each; the summary line
@@ -34,7 +41,20 @@ individuals file, or `null`. The **reference** of a project opened from
 a project file is what that file said of the variants file it was made
 with. The **notice** is the store's record of what the last change did,
 whose `cause.kind` is `command`, `undo` or `redo`
-(`docs/specs/core/store.md`).
+(`docs/specs/core/store.md`). From stage 3, the **checks** are the three
+analyses shown in the Variants step, the histograms of the variants, the
+counts of what each filter kept and the statistics of each individual,
+whose panels are titled "Histograms of the variants", "Counts of the
+filters" and "Statistics of each individual"
+(`docs/specs/analyses/variantChecks.md`, `filterCounts.md` and
+`individualChecks.md`); the **writing** is the writing of the filtered
+variants as a `.nei` file, a request of the calculation worker that is
+not an analysis, `write` of the state of the store
+(`docs/specs/analyses/writeVariants.md`); and the **individuals kept**,
+`individualsKept` of the state, are the individuals the filters of
+individuals keep, known or waiting for the statistics of each individual
+(`docs/specs/core/individualsKept.md`). `src/core/apps.ts` gives the step
+each analysis is shown in (`docs/specs/entry.md`).
 
 The words of the web: a **screen reader** reads the page aloud, or in
 braille, to a user who cannot see it, and reads what has the **focus**,
@@ -93,8 +113,8 @@ A `<nav>` labelled "Steps", with one link per step, `#variants`,
 that the state is not told by colour alone (1.4.1). Three steps, and no
 Export step, as the owner decided on 25 September 2026: saving the
 project is in the header, on every step; the report and its Export step
-come in stage 6; and writing the filtered variants as a VCF or a `.nei`
-file goes in the Variants step, in stage 3.
+come in stage 6; and writing the filtered variants as a `.nei` file goes
+in the Variants step, from stage 3, with the VCF once popnei writes one.
 
 The link of the step on screen has `aria-current="step"` and a mark that
 is not colour alone. Every step can be opened in every state: a step
@@ -112,7 +132,10 @@ the link has the pointer or the focus.
 |---|---|---|---|
 | Variants | To do | no variants file | for an opened project, the text of `askedFileText` of `projectFile.ts` (`docs/specs/core/projectFile.md`, "Opening"); otherwise the reason `projectNeeds` gives, "Load a variants file in the Variants step." |
 | | Reading | its read is pending | the reason `projectNeeds` gives, "Reading panel.nei." |
-| | Problem | its read failed, or `projectNeeds` gives another reason | the reason `projectNeeds` gives |
+| | Problem | its read failed, or `projectNeeds` gives another reason, a list of individuals that popnei would refuse among them | the reason `projectNeeds` gives |
+| | Running | a check or the writing is running, or waits for the statistics of each individual | — |
+| | Results removed | the notice lists a check among the results removed | — |
+| | Failed | a check is in the state `error`, or the writing is | "Statistics of each individual could not be calculated.", "The file could not be written.", the first in the order of the step |
 | | Done | read, and `projectNeeds` gives none | — |
 | Individuals | To do | no metadata file | the reason `individualsNeeds` gives, "Load a metadata file in the Individuals step." |
 | | Reading | its read is pending | "Reading pops.csv.", from `individualsNeeds` |
@@ -129,9 +152,15 @@ the link has the pointer or the focus.
 
 A step's state is the first row of its step whose condition holds, in
 the order of the table. The states of the Analyses step are taken from
-the states the store gives each analysis (`docs/specs/core/store.md`,
-"The state of an analysis"); with the diversity alone they are its
-state. The reasons about the column of the populations are the
+the states the store gives each analysis shown in that step, by
+`apps.ts` (`docs/specs/core/store.md`, "The state of an analysis"); with
+the diversity alone they are its state. The checks are not among them,
+since they are shown in the Variants step, and the Analyses step would
+otherwise read Running while the user counts the variants of a filter.
+The Variants step takes the checks and the writing into its own rows,
+after those of its file, so that a file not read is told before a
+calculation of it; the counts, which are never in the notice, never
+make it Results removed. The reasons about the column of the populations are the
 diversity's words, "Why it cannot run" of
 `docs/specs/analyses/diversity.md`, given with their kind by
 `populationsNeeds` of that module, so that one condition has one text.
@@ -158,16 +187,22 @@ and the history of the browser say where the user is (2.4.2).
 ### The summary line
 
 One line under the stepper that says what the analyses would be run on,
-made of the parts below joined by " · ": "panel.nei · 200 individuals ·
-1,200 variants · 1 filter · 3 populations by pop". It is text, and is
-not announced when it changes.
+made of the parts below joined by " · ": "panel.nei · 119 of 200
+individuals kept · 1,128 of 1,200 variants kept · 5 filters · 3
+populations by pop". It is text, and is not announced when it changes.
 
 | part | the project | the words |
 |---|---|---|
 | the variants file | none | "No variants file", or for an opened project "No variants file: the project was made with panel_2026.nei" |
 | | being read | "Reading panel.nei" |
 | | read failed | "panel.nei could not be read" |
-| | read | "panel.nei · 200 individuals", the individuals of the file, and "· 1,200 variants" once a calculation has counted them (`numVars` of the source) |
+| | read | "panel.nei", then its individuals and its variants, below |
+| its individuals | no filter of individuals, or filters that remove none | "200 individuals", the individuals of the file |
+| | the individuals kept known | "119 of 200 individuals kept", from `individualsKept`; "none of 200 individuals kept" when they keep none |
+| | a threshold waiting for the statistics of each individual | "200 individuals, how many kept not yet known" |
+| its variants | not counted yet (`numVars` of the source `null`) | nothing |
+| | counted, and no counts of the filters as they are, or no filter of the variants | "1,200 variants", `numVars` of the source |
+| | the counts of the filters as they are, `filterCounts` done | "1,128 of 1,200 variants kept": `passStats.numVars` of the counts, of the `numVars` of the source |
 | the filters | | "no filter", "1 filter", "2 filters": the filters of the variants and of the individuals |
 | the metadata file | none | "no metadata file" |
 | | being read | "reading pops.csv" |
@@ -177,10 +212,16 @@ not announced when it changes.
 
 A count is written with a comma between groups of three digits, as core
 writes them (`docs/specs/core/project.md`). A name from the user's
-files is shown escaped as core shows it. The mockup of the owner's
-summary line said how many variants the filters kept, "48,210 of
-1,203,554 variants kept (3 filters)", which the walking skeleton does
-not know (**Open 1**).
+files is shown escaped as core shows it. How many the filters keep
+follows the pattern of the owner's mockup, "48,210 of 1,203,554
+variants kept (3 filters)", with the individuals kept beside it, since
+the filters of individuals come in the same stage (**Open 1**, below).
+The variants kept are known only from a pass over the filters as they
+are, so after a change of a filter the line goes back to the variants of
+the file until a Count or an analysis counts them again, while the
+Variants step says beside the filters that they are not counted; the
+individuals kept are known with no pass, except for a threshold, which
+needs the statistics of each individual.
 
 ### The notice
 
@@ -217,9 +258,26 @@ from four parts:
   then the action;
 - **the cause**, its description.
 
-The removed and the stopped are joined by "and"; the sentences are
+From stage 3 the writing of the file joins the calculations stopped and
+left behind, named apart, since it is not an analysis:
+`writeStopped` adds "the writing of the file" to the calculations
+stopped, "the calculation of Diversity and the writing of the file
+stopped", or alone "the writing of the file stopped"; `writeLeftBehind`
+adds it to the sentence of those left behind, "The ongoing calculation
+of Diversity and the writing of the file will be stopped unless you undo
+the change.", or alone "The writing of the file will be stopped unless
+you undo the change.", the words of `docs/specs/core/store.md`. A Run
+that waits for the statistics of each individual is named by its own
+analysis, "the calculation of Diversity". The counts of the filters are
+never among the results removed (`docs/specs/core/store.md`, "What each
+filter kept"), and a Count left behind is named as any calculation.
+
+The removed and the stopped are joined by "and", and, when the stopped
+hold the writing too, by ", and" with a comma after the stopped, so that
+the two "and"s are read apart. The sentences are
 joined by a full stop, with none after the last, which the action
-follows. A name is the title of the analysis's panel, "Diversity". A
+follows. A name is the title of the analysis's panel, "Diversity",
+"Statistics of each individual". A
 command's description starts the sentence with its first letter made
 upper case when nothing comes before it.
 
@@ -232,6 +290,9 @@ upper case when nothing comes before it.
 | an undo | "Undone: the missing data filter changed. Diversity removed · Redo" |
 | an undo that changes the load | "Undone: a new variants file was loaded. The calculation of Diversity stopped · Redo" |
 | a redo, with a calculation left behind | "Redone: the missing data filter changed. Diversity removed. The ongoing calculation of Diversity will be stopped unless you undo the change · Undo" |
+| a command, from stage 3, with the statistics of each individual removed | "2 results removed because the MAF filter changed · Undo", the diversity and the statistics; alone, "Statistics of each individual removed because the MAF filter changed · Undo" |
+| a command, with the writing left behind | "The MAF filter changed. The writing of the file will be stopped unless you undo the change · Undo" |
+| a command that changes the load, with the writing and a calculation in flight | "Statistics of each individual removed, and the calculation of Diversity and the writing of the file stopped, because a new variants file was loaded · Undo" |
 
 The third row is the case of one analysis whose result of the old
 settings is removed and whose calculation of newer ones is stopped
@@ -285,6 +346,11 @@ file its options of the CSV compared by their values:
 | the metadata file of the same load and options went from pending to read | "pops.csv read: 360 rows, 5 columns.", and, when the variants file is read, the sentence of the check: "All 342 individuals found." or "12 individuals of panel.nei are not in pops.csv." |
 | the same, to failed | the reason `individualsNeeds` gives |
 | the warning of a reopened project that differs from its file, `identityWarning` of `projectFile.ts`, appeared, or is there with another load of the variants file than before; while that load is being read, at the end of its read instead | "Warning: " and its words, those of the Variants step (`docs/specs/steps/variants.md`, "A project file opened"), after the read's own announcement |
+| from stage 3, a request of the Counts of the filters that was current left `runs`, and the analysis is `done` | "Counts of the filters: done. 1,128 of the 1,200 variants of panel.nei pass the filters.", the line of the total of the Variants step, or, when a filter kept none, the text of the warning `filterKeptNone` in its place |
+| a request of the writing is in `runs` that was not | "Writing panel.filtered.nei.", the name the Variants step shows |
+| a request of the writing that was current and not being stopped left `runs`, and `write` is `done` | "panel.filtered.nei is written, 18.4 MB; Save it in the Variants step." (`docs/specs/analyses/writeVariants.md`); for a file of no variant, which gets no Save, "The filters kept none of the variants of panel.nei, so there is nothing to write." |
+| the same, and `write` is in the state `error` | "The file could not be written. The Variants step says why." |
+| a request of the writing that was current and being stopped left `runs` | "Writing the file: stopped." |
 
 The comparison with the project file is part of the end of the
 calculation, as the owner decided on 26 September 2026 (point 11 of the
@@ -292,6 +358,21 @@ review of work package 9): it is the one line of the result that says
 whether the variants file given is the one the project was made with,
 and a user of a screen reader, who may be on another step, would
 otherwise not learn of it.
+
+The checks of the Variants step are announced by the rows of a
+calculation, with their titles, "Statistics of each individual:
+calculating.", "Histograms of the variants: done.", but for the end of
+the Counts, which says what they counted, since a user of a screen
+reader who pressed Count would otherwise have to find each count beside
+its field. A Run that waits for the statistics of each individual puts
+the request of the statistics into `runs`, which is announced as theirs,
+and its own request, when the statistics arrive, as its own:
+"Statistics of each individual: calculating.", later "Statistics of each
+individual: done. Diversity: calculating." A write that ends after a
+change of its filters, and is dropped, is not announced, since it was
+not current: the notice of that change named it, and the Variants step
+says why no Save came. Counts filled by the pass of another analysis are
+not announced, since no request of the Counts ended.
 
 Nothing else is announced from the state. So a result that comes back
 from the cache after an undo is not announced, since no request ended;
@@ -548,7 +629,8 @@ of the steps and of the store. Its states:
 ## What it sends and reads
 
 It reads, from the state of the store, `project`, `undo`, `redo`,
-`notice`, `analyses`, `runs` and `popneiVersion`, each with its own
+`notice`, `analyses`, `runs`, `popneiVersion`, and from stage 3
+`individualsKept` and `write`, each with its own
 selector, a function that picks one part of the state so that a
 component is drawn again only when that part changes (`react.md`,
 "Reading core"); `projectNeeds`, `individualsNeeds` and `askedFileText`
@@ -570,15 +652,31 @@ gives the title of an analysis's panel, from `src/ui/analyses/panels.ts`:
 
 export type StepStatus =
   | "todo" | "reading" | "problem" | "done"                          // Variants and Individuals
-  | "locked" | "running" | "removed" | "failed" | "ready";           // Analyses, and done
+  | "locked" | "running" | "removed" | "failed" | "ready";           // Analyses; Variants from stage 3 but "locked" and "ready"
+
+/** What the words of the shell need of the application, beyond the state:
+    the title of an analysis's panel, from src/ui/analyses/panels.ts; the
+    step it is shown in, from src/core/apps.ts; and, from stage 3, the
+    variants the filters keep, from the result of the Counts of the
+    filters when it is done, and the name of the written file. */
+export interface ShellWords<R> {
+  title(id: AnalysisId): string;
+  stepOf(id: AnalysisId): StepId;
+  variantsKept(s: AppState<R, unknown>): number | null;  // passStats.numVars of the counts done, or null
+  writtenName(p: Project): string;                       // "panel.filtered.nei" (writeVariants.md)
+}
 
 /** The state of each step and its reason, by the table of the stepper. */
 export function stepStates<R>(
-  s: AppState<R>, title: (id: AnalysisId) => string,
+  s: AppState<R, unknown>, w: ShellWords<R>,
 ): readonly { readonly id: StepId; readonly status: StepStatus; readonly reason: string | null }[];
 
-/** The summary line, its parts joined by " · ". */
-export function summaryLine(p: Project): string;
+/** The summary line, its parts joined by " · ": the project, the
+    individuals kept of the state, and the variants the filters keep, or
+    null when they are not counted for the filters as they are. */
+export function summaryLine(
+  p: Project, kept: IndividualsKept | null, variantsKept: number | null,
+): string;
 
 /** The words of the notice, without its action; the words of the action;
     and what the action does, which the button dispatches on. */
@@ -592,15 +690,21 @@ export function noticeText(
 
 /** The announcements made from two states, in the order of the table; [] when none. */
 export function announcementsOf<R>(
-  before: AppState<R>, after: AppState<R>, title: (id: AnalysisId) => string,
+  before: AppState<R, unknown>, after: AppState<R, unknown>, w: ShellWords<R>,
 ): readonly string[];
 ```
 
-`stepStates` and `announcementsOf` take a state of any type of result,
-`AppState<R>`, since they read no result, only the kind and the key of
-each analysis's state and the count of its warnings; the entry passes
-its `AppState<JobResult>`, and the tests states with the results of
-`TEST_DEFS`.
+`stepStates` and `announcementsOf` take a state of any type of result
+and of written file, `AppState<R, unknown>`, since they read no result
+and no file, only the kind and the key of each analysis's state, the
+count of its warnings, the state of `write` and the size of its file;
+the one number of a result they say, the variants that pass the filters,
+comes through `variantsKept`, and the text of the warning of a filter
+that kept none from the warnings of the state. The entry passes its
+`AppState<JobResult, Blob>` and a `ShellWords` made from `panels.ts` and
+`apps.ts`, and the tests states with the results of `TEST_DEFS`.
+`summaryLine` takes the project and not the state, as in stage 2, with
+the two numbers beside it, so that its tests need no store.
 
 The announcer, in `src/ui/shell/status.ts`, a small store that the
 status region reads with `useSyncExternalStore`, as the screens read the
@@ -677,19 +781,34 @@ with the analyses of `TEST_DEFS` of `src/core/testSupport.ts`:
 
 - **`stepStates`**: a state for each row of the table of the stepper,
   and for the order of its rows: an analysis running while another is
-  removed gives Running.
+  removed gives Running; from stage 3, a check running gives Variants
+  Running and leaves the Analyses step as it was, a write in `error`
+  gives Variants Failed with "The file could not be written.", and a
+  Variants step whose list of individuals names an individual not in the
+  file is at Problem before a check running.
 - **`summaryLine`**: the empty first project gives "No variants file · 1
   filter · no metadata file"; the example above, with 1,200 variants
   counted, gives "panel.nei · 200 individuals · 1,200 variants · 1 filter
-  · 3 populations by pop"; a case for each row of its table.
+  · 3 populations by pop"; with the thresholds of the individuals at 0.03
+  and 0.38 and the missing data filter at 0.05 on `panel.nei`, whose
+  numbers are those of `docs/specs/core/individualsKept.md` and
+  `filterCounts.md`, "panel.nei · 119 of 200 individuals kept · 1,152 of
+  1,200 variants kept · 3 filters · 3 populations by pop", and with no
+  counts and no statistics "panel.nei · 200 individuals, how many kept
+  not yet known · 1,200 variants · 3 filters · …"; a case for each row of
+  its table.
 - **`noticeText`**: each row of the table of the notice, from a literal
   notice, with the text asserted whole; three removed and two stopped,
-  counted.
+  counted; the writing left behind alone and with a calculation, and
+  stopped with a result removed, with the comma of that row.
 - **`announcementsOf`**: a pair of states for each row of the first
-  table of the status region, and for the end of a calculation with
+  table of the status region, the rows of the writing and of the Counts
+  among them, and a Run that waits for the statistics, whose end and the
+  start of its own request are said in one change; and for the end of a calculation with
   each of the lines of the comparison with the project file; and none for a result back from the cache
   after an undo, a calculation left behind that ends, an undo back to a
-  load already read, an opening, a read of the metadata file recorded
+  load already read, an opening, counts filled by a diversity, a write
+  dropped because it ended after a change, a read of the metadata file recorded
   for options other than those of the present project, and the warning
   of a reopened project while its load is being read, which the end of
   the read announces after the read.
@@ -768,6 +887,24 @@ Each was approved by the owner on 25 September 2026 and says what is listed here
   at every change of the store, draws the error bar in its own root with
   the store once it is made, and gives the saving, `createSaving`.
 
+What stage 3 asks of the specs revised or written beside this revision,
+none of them approved yet:
+
+- `docs/specs/core/store.md`: `individualsKept` and `write` in the state;
+  `writeLeftBehind` and `writeStopped` in the notice; a `RunView` of the
+  writing with `analysis` `null`; the counts never among the results
+  removed.
+- `docs/specs/entry.md`: `apps.ts` gives the step each analysis is shown
+  in, the three checks in the Variants step.
+- `docs/specs/analyses/variantChecks.md`, `filterCounts.md` and
+  `individualChecks.md`: the titles of their panels; the line of the
+  total of `filterCounts.md`, which the end of a Count announces.
+- `docs/specs/analyses/writeVariants.md`: the name of the written file,
+  from the project, and the words of its end, which the status region
+  says.
+- `docs/specs/core/individualsKept.md`: the counts of the individuals
+  kept, for the summary line.
+
 ## Open points
 
 The open points of the eleven specs of stage 2 are gathered in
@@ -775,18 +912,24 @@ The open points of the eleven specs of stage 2 are gathered in
 decided by the owner on 25 September 2026, and are written above as
 decided: three steps, and no Export step (point J there), and Save as a
 dialog of the page (point K), with its question before leaving as
-above. One stays:
+above. One stayed, and stage 3 answers it:
 
 1. **How many variants the filters keep, in the summary line.** The
    owner's mockup has "48,210 of 1,203,554 variants kept (3 filters)".
-   The walking skeleton does not know it: the variants kept are counted
-   by a calculation that reads the whole file, and what each filter kept
-   comes with the Variants step whole, in stage 3
-   (`docs/specs/steps/variants.md`, "Not in this spec"). Meanwhile, the
-   line gives the variants of the file once counted and the number of
-   filters, "1,200 variants · 1 filter"; in stage 3 the kept count joins
-   it, as the mockup has it. The owner left it as it is on 25 September
-   2026 (point L).
+   The walking skeleton did not know it, and the owner left the line as
+   it was on 25 September 2026, with the kept count to join it in stage 3
+   (point L of `docs/specs/stage-2-open-points.md`). Stage 3 writes it
+   so, "1,128 of 1,200 variants kept", with the individuals kept beside
+   it, "119 of 200 individuals kept", and the count of the filters as
+   its own part, "5 filters", as the other parts of the line are, rather
+   than in brackets (above, "The summary line"). The variants kept are
+   shown only while the counts of the filters as they are are in the
+   page, and the line goes back to "1,200 variants" otherwise; the
+   option not taken was to keep the last counts with a word that they
+   are of other filters, which the line, read at a glance, would hide.
+   This is the writer's, for the owner to judge on the screen of stage 3
+   (`docs/specs/stage-3-open-points.md`, "Choices of a spec the owner may
+   overrule").
 
 ## Not in this spec
 

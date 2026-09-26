@@ -12,12 +12,13 @@ open points. The specs of stage 3, none of them approved yet, are
 `docs/specs/analyses/individualChecks.md`, `variantChecks.md`,
 `filterCounts.md`, `writeVariants.md` and `diversity.md`;
 `docs/specs/worker/protocol.md`, `messages.md`, `runner.md` and
-`client.md`; `docs/specs/charts/histogram.md`; and `docs/specs/entry.md`.
-The screen spec of the Variants step, `docs/specs/steps/variants.md`, and
-that of the shell, `docs/specs/shell.md`, are written after them.
+`client.md`; `docs/specs/charts/histogram.md`; `docs/specs/entry.md`;
+and, written after them, the screen spec of the Variants step,
+`docs/specs/steps/variants.md`, and that of the shell,
+`docs/specs/shell.md`.
 
 This file holds their open points, the decisions each spec left to the
-owner, five, with the one three specs share made one. Each has its spec,
+owner, six, with the one three specs share made one. Each has its spec,
 what is to be decided, the options with what each gives and costs, and
 the recommendation, which is what the specs do meanwhile, so that the
 plan can be written before the answer. They are in the order of how much
@@ -165,7 +166,14 @@ written again:
 
 Recommended: (a) until the owner sees the step at the stop of the plan
 of stage 3 where the screens are tried; the words are one table of
-`project.md` and its tests, and nothing else changes with them.
+`project.md` and its tests, and nothing else changes with them. The
+Variants step, as `docs/specs/steps/variants.md` now has it, gives each
+list a text area of one name per line, with the buttons "Apply the list
+to keep" and "Clear the list to keep", and the same for the list to
+remove. An applied list with no name clears the filter, so an empty list
+reaches the project only from a project file, and "remove the filter" of
+(a) is the button Clear. The step shows the reason whole under the two
+lists, where "in the Variants step" is where the user already is.
 
 ## E. The version of the format of the project file
 
@@ -193,6 +201,47 @@ since it had the missing data filter alone.
 Recommended: (a). A user meets neither: both open every file the
 application wrote.
 
+## F. The values at which a filter starts when it is turned on
+
+Spec: `docs/specs/steps/variants.md`, open point 1.
+
+Each filter of the Variants step is a switch with its number fields; a
+filter that is off is not in the project, and turned on it starts at a
+value, which is a command, a step of Undo and a change of the results at
+once. `docs/functionality.md` gives the missing data filter 0.1 and the
+MAF filter 0.95, and popnei gives no default for any of its filters. The
+other five numbers are the step's:
+
+- **(a) The values of common practice**, the specs' meanwhile: the
+  observed heterozygosity of the variants at 0.5, the most a variant of
+  two alleles has in Hardy-Weinberg proportions, so that more points to
+  a paralogue read as one site; the LD pruning at an r² of 0.3 over 10,000 base pairs, the
+  example of popnei's doc comment of the filters
+  (`js/popnei/src/filters.ts`); the missing data of the individuals at
+  0.1, plink's default for `--mind`, as the variants' 0.1 is its
+  `--geno`; the observed heterozygosity of the individuals at 0.5. A
+  filter turned on removes something at once, as the user who turned it
+  on most likely wants, and the histogram beside it shows how much. What
+  it costs: for a selfing species, where a heterozygosity of 0.1 is
+  already high, 0.5 removes almost nothing and the user must know to
+  lower it; and 10,000 base pairs is short for the long LD of an inbred
+  crop, where plink users often give a window of variants and not of
+  base pairs, which popnei's filter does not take.
+- **(b) Values that remove nothing**: 1 for the three heterozygosities
+  and the missing data of the individuals, so that turning a filter on
+  changes no result until the user moves the threshold, reading the
+  histogram. The LD pruning has no such value, since popnei drops a
+  variant of one dosage at every r², so it keeps (a)'s. What it costs: a
+  filter that is on and removes nothing, which a user may take for a
+  filter that works, and a second command, and a second step of Undo, to
+  set it.
+- **(c) Other values**, chosen by the owner for the users of popnei, for
+  instance a heterozygosity of the variants per ploidy or per mating
+  system, which the application does not know.
+
+Recommended: (a), the specs' meanwhile, with the owner's numbers where
+they know better; each is a constant of the step and its test.
+
 ## Choices of a spec the owner may overrule
 
 Each was decided by the writer of its spec, and each changes what a user
@@ -219,6 +268,25 @@ meets:
 - **The clock of an analysis that waited for the statistics** starts
   again when its own calculation starts, with the words of its running
   state (`entry.md`).
+- **The thresholds of the individuals take four decimals**, and those of
+  the variants two, as the owner decided for the missing data filter on
+  25 September 2026: the proportions of missing genotypes of the
+  individuals of `panel.nei` lie from 0.0165 to 0.0434, where two
+  decimals would give three thresholds (`steps/variants.md`).
+- **A list of individuals is typed or pasted, one name per line, and
+  applied with a button**, not at each key, since each change is a step
+  of Undo and a list half typed would lock every analysis; a list read
+  from a file, or made from the rows of the table of the individuals, is
+  not in stage 3 (`steps/variants.md`).
+- **Before a variants file is read, the checks, the Count and the
+  writing are not drawn**, and one line says they come once a file is
+  read, where each would otherwise be locked with the same reason, five
+  times (`steps/variants.md`).
+- **Each histogram of the variants is drawn beside its filter**, the
+  expected heterozygosity beside the observed one, and the three checks
+  keep their own buttons; the summary line gives "1,128 of 1,200
+  variants kept" and "119 of 200 individuals kept" only while they are
+  known for the filters as they are (`shell.md`, open point 1).
 
 ## Set by a measurement, not by the owner
 
