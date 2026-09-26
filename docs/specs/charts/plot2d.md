@@ -263,8 +263,11 @@ export interface Margin {
 }
 ```
 
-What the base gives the plot's `draw`: the size of the frame, the groups
-where the plot draws, and the axes to draw from its scales.
+What the base gives the plot's `draw`: the size of the frame and the
+margins around it, the groups where the plot draws, and the axes to draw
+from its scales. The margins are there for a plot that draws in them, as
+the histogram places its legend from the top left of the SVG, so that it
+does not compute them again from its data.
 
 ```ts
 export interface AxesOptions {
@@ -278,6 +281,7 @@ export interface AxesOptions {
 export interface Frame {
   readonly innerWidth: number;     // above 0: draw is never called at a size of 0
   readonly innerHeight: number;
+  readonly margin: Margin;         // the definition's for these data, around the frame
   readonly marks: Selection<SVGGElement, unknown, null, undefined>;
   readonly annotations: Selection<SVGGElement, unknown, null, undefined>;
   readonly legend: Selection<SVGGElement, unknown, null, undefined>;
