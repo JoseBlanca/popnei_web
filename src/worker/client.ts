@@ -7,8 +7,10 @@
  *
  * The calculation worker holds one load, the variants file of the one
  * `open` it received first; a request on another load ends it and starts
- * another. The light worker holds nothing between two reads of the
- * individuals file.
+ * another, and so does a write of a file larger than
+ * `WRITE_RESTART_BYTES`, or one that popnei refused, since the memory of
+ * its wasm never shrinks. The light worker holds nothing between two
+ * reads of the individuals file.
  */
 
 import {
@@ -33,6 +35,8 @@ import type {
   Progress,
   Run,
   RunError,
+  WriteJob,
+  Written,
 } from "./protocol.ts";
 
 /** The part of the browser's `Worker` the client uses; a test gives fakes
@@ -46,6 +50,13 @@ export type WorkerLike = Pick<
     made, in milliseconds; the value worker.md gives until the walking
     skeleton measures a slow connection. */
 export const WORKER_READY_TIMEOUT_MS = 30_000;
+
+/** Above it, in bytes, the calculation worker is started again after a
+    write, to give back the memory of wasm the file took (client.md, "A
+    write, and the restart after a large one"). Set by the measurement of
+    stage 3; meanwhile 100 MB, the value writeVariants.md gives, about five
+    times the `.nei` file of 19,161,178 bytes of the walking skeleton. */
+export const WRITE_RESTART_BYTES = 100_000_000;
 
 /** The page's side of the two workers. */
 export interface Client {
@@ -66,6 +77,15 @@ export interface Client {
 
   /** Sends a calculation, under its key; the store's `send`. */
   run(key: string, job: Job, onProgress: (p: Progress) => void): Run<JobResult>;
+
+  /** Writes the variants the job's filters keep as a file, under its key;
+      the store's `write.send`. Its outcome is `done` with the file, a
+      `Blob` that is the store's from then on. */
+  write(
+    key: string,
+    job: WriteJob,
+    onProgress: (p: Progress) => void,
+  ): Run<Written<Blob>>;
 }
 
 /** A read under way: its answer, and how to stop it. */
@@ -273,6 +293,15 @@ export function createClient(config: {
           job: head.job,
         });
         return;
+      case "write":
+        calc.running = head;
+        postCalculation({
+          kind: "write",
+          id: head.id,
+          key: head.key,
+          job: head.job,
+        });
+        return;
     }
   }
 
@@ -366,11 +395,11 @@ export function createClient(config: {
           calc.running !== null &&
           message.id === calc.running.id
         ) {
-          const run = calc.running;
+          const running = calc.running;
           calc.running = null;
           calc.life.failures = 0;
-          finishRun(
-            run,
+          finish(
+            running,
             message.kind === "refused"
               ? {
                   kind: "failed",
@@ -385,6 +414,13 @@ export function createClient(config: {
                   },
                 },
           );
+          if (running.kind === "write" && message.kind === "refused") {
+            // popnei refuses a file the memory of the tab does not take,
+            // after its wasm grew by the part it built: the worker is
+            // started again, after the refusal was given.
+            restartCalculation(openedLoad());
+            return;
+          }
           pumpCalculation();
           return;
         }
@@ -394,7 +430,7 @@ export function createClient(config: {
         return;
       case "result": {
         const run = calc.running;
-        if (run?.id !== message.id) {
+        if (run?.kind !== "run" || run.id !== message.id) {
           wrongCalculationMessage(
             `a result of the id ${String(message.id)}, which is not a run it runs`,
           );
@@ -414,7 +450,7 @@ export function createClient(config: {
         }
         calc.running = null;
         calc.life.failures = 0;
-        finishRun(run, {
+        run.answer.settle({
           kind: "done",
           key: message.key,
           result: message.result,
@@ -422,21 +458,46 @@ export function createClient(config: {
         pumpCalculation();
         return;
       }
-      case "written":
-        // The client sends no write yet, so no written answers one.
-        wrongCalculationMessage(
-          `a written of the id ${String(message.id)}, which is not a write it runs`,
-        );
-        return;
-      case "progress": {
-        const run = calc.running;
-        if (run?.id !== message.id) {
+      case "written": {
+        const write = calc.running;
+        if (write?.kind !== "write" || write.id !== message.id) {
           wrongCalculationMessage(
-            `a progress of the id ${String(message.id)}, which is not a run it runs`,
+            `a written of the id ${String(message.id)}, which is not a write it runs`,
           );
           return;
         }
-        run.onProgress({
+        if (message.key !== write.key) {
+          wrongCalculationMessage(
+            `a written under the key ${message.key} for a write of the key ${write.key}`,
+          );
+          return;
+        }
+        calc.running = null;
+        calc.life.failures = 0;
+        // The outcome first, so that it reaches the store before anything
+        // else happens; then a large file ends the worker, whose memory of
+        // wasm grew by its size.
+        write.answer.settle({
+          kind: "done",
+          key: message.key,
+          result: message.result,
+        });
+        if (message.result.numBytes > WRITE_RESTART_BYTES) {
+          restartCalculation(openedLoad());
+          return;
+        }
+        pumpCalculation();
+        return;
+      }
+      case "progress": {
+        const running = calc.running;
+        if (running?.id !== message.id) {
+          wrongCalculationMessage(
+            `a progress of the id ${String(message.id)}, which is not a run or a write it runs`,
+          );
+          return;
+        }
+        running.onProgress({
           bytesRead: message.bytesRead,
           numBytes: message.numBytes,
           pass: message.pass,
@@ -497,7 +558,7 @@ export function createClient(config: {
     calc.announce = null;
     const openedBefore = openedLoads.has(load);
     let answer: Exclude<VariantsOpened, { kind: "cancelled" }>;
-    let failedRuns: readonly RunRequest[] = [];
+    let failedRuns: readonly JobRequest[] = [];
     switch (message.kind) {
       case "opened":
         answer = {
@@ -530,11 +591,11 @@ export function createClient(config: {
               : { kind: "popnei", message: message.message },
         };
         failedRuns = calc.queue.filter(
-          (request): request is RunRequest =>
-            request.kind === "run" && request.job.fileId === load,
+          (request): request is JobRequest =>
+            request.kind !== "read" && request.job.fileId === load,
         );
         calc.queue = calc.queue.filter(
-          (request) => request.kind !== "run" || !failedRuns.includes(request),
+          (request) => request.kind === "read" || !failedRuns.includes(request),
         );
         if (openedBefore) {
           // A worker whose open of a load read before failed holds no
@@ -559,7 +620,7 @@ export function createClient(config: {
       }
       if (answer.kind === "failed") {
         for (const run of failedRuns) {
-          finishRun(run, answer);
+          finish(run, answer);
         }
       }
       pumpCalculation();
@@ -579,7 +640,7 @@ export function createClient(config: {
     calc.running = null;
     if (running !== null) {
       restartCalculation(openedLoad());
-      finishRun(running, { kind: "failed", error });
+      finish(running, { kind: "failed", error });
       return;
     }
     if (opening !== null) {
@@ -928,22 +989,28 @@ export function createClient(config: {
         onProgress,
         answer: settler(resolve),
       };
-      if (!files.has(job.fileId)) {
-        finishRun(request, noFile(job.fileId));
-      } else if (
-        !loadOptions.has(job.fileId) ||
-        (failedReads.has(job.fileId) && !openedLoads.has(job.fileId))
-      ) {
-        finishRun(request, {
-          kind: "failed",
-          error: {
-            kind: "defect",
-            message: `a run of the load ${job.fileId}, whose file was never read`,
-          },
-        });
-      } else {
-        enqueueCalculation(request);
-      }
+      sendJob(request);
+      return {
+        id: request.id,
+        outcome: promise,
+        cancel: () => {
+          cancelCalculation(request);
+        },
+      };
+    },
+
+    write(key, job, onProgress) {
+      const { promise, resolve } =
+        promiseWithResolver<Outcome<Written<Blob>>>();
+      const request: WriteRequest = {
+        kind: "write",
+        id: nextId(),
+        key,
+        job,
+        onProgress,
+        answer: settler(resolve),
+      };
+      sendJob(request);
       return {
         id: request.id,
         outcome: promise,
@@ -953,6 +1020,29 @@ export function createClient(config: {
       };
     },
   };
+
+  /** Queues a run or a write, or fails it at once as a defect of the page
+      when the client holds no File of its load, or its file was never
+      read. */
+  function sendJob(request: JobRequest): void {
+    const fileId = request.job.fileId;
+    if (!files.has(fileId)) {
+      finish(request, noFile(fileId));
+    } else if (
+      !loadOptions.has(fileId) ||
+      (failedReads.has(fileId) && !openedLoads.has(fileId))
+    ) {
+      finish(request, {
+        kind: "failed",
+        error: {
+          kind: "defect",
+          message: `a ${request.kind} of the load ${fileId}, whose file was never read`,
+        },
+      });
+    } else {
+      enqueueCalculation(request);
+    }
+  }
 }
 
 /** How many failures in a row with no answer between give a worker up. */
@@ -1039,7 +1129,20 @@ interface RunRequest {
   readonly answer: Settler<Outcome<JobResult>>;
 }
 
-type CalculationRequest = VariantsRequest | RunRequest;
+/** A write of the filtered variants as a file. */
+interface WriteRequest {
+  readonly kind: "write";
+  readonly id: number;
+  readonly key: string;
+  readonly job: WriteJob;
+  readonly onProgress: (p: Progress) => void;
+  readonly answer: Settler<Outcome<Written<Blob>>>;
+}
+
+/** A request that names its load in its job: a run or a write. */
+type JobRequest = RunRequest | WriteRequest;
+
+type CalculationRequest = VariantsRequest | JobRequest;
 
 /** A read of the individuals file. */
 interface IndividualsRequest {
@@ -1074,7 +1177,7 @@ interface CalculationSide {
     answer: Exclude<VariantsOpened, { kind: "cancelled" }> | null;
   } | null;
   opening: Opening | null;
-  running: RunRequest | null;
+  running: JobRequest | null;
   queue: CalculationRequest[];
   /** The load a worker started again opens as soon as it is ready. */
   reopen: string | null;
@@ -1216,6 +1319,7 @@ function loadOf(request: CalculationRequest): string {
     case "read":
       return request.fileId;
     case "run":
+    case "write":
       return request.job.fileId;
   }
 }
@@ -1236,17 +1340,14 @@ function finish(
       finishRead(request, answer);
       return;
     case "run":
-      finishRun(request, answer);
+    case "write":
+      request.answer.settle(answer);
       return;
   }
 }
 
 function finishRead(request: VariantsRequest, answer: VariantsOpened): void {
   request.answer.settle(answer);
-}
-
-function finishRun(request: RunRequest, outcome: Outcome<JobResult>): void {
-  request.answer.settle(outcome);
 }
 
 function finishIndividuals(

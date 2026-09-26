@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
   createClient,
   WORKER_READY_TIMEOUT_MS,
+  WRITE_RESTART_BYTES,
   type IndividualsAnswer,
   type VariantsOpened,
 } from "./client.ts";
@@ -18,6 +19,8 @@ import type {
   JobResult,
   Outcome,
   Progress,
+  WriteJob,
+  Written,
 } from "./protocol.ts";
 
 /**
@@ -155,6 +158,35 @@ function job(fileId: string): DiversityJob {
     minNumIndividuals: 20,
     polyThreshold: 0.95,
   };
+}
+
+function writeJob(fileId: string): WriteJob {
+  return {
+    format: "nei",
+    fileId,
+    filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.05 }],
+    individuals: null,
+  };
+}
+
+/** Files as the runner makes them, real Blobs, since the check of a
+    written compares its numBytes with the size of its file: one of the
+    3,594 bytes of the smallest file of writeVariants.md, and one a byte
+    larger than WRITE_RESTART_BYTES, about 12 ms to make in node. */
+const SMALL_FILE = new Blob([new Uint8Array(3_594)]);
+const LARGE_FILE = new Blob([new Uint8Array(WRITE_RESTART_BYTES + 1)]);
+
+function writtenResult(file: Blob): Written<Blob> {
+  return {
+    format: "nei",
+    file,
+    numBytes: file.size,
+    passStats: RESULT.passStats,
+  };
+}
+
+function writtenOf(id: number, key: string, file: Blob): unknown {
+  return { kind: "written", id, key, result: writtenResult(file) };
 }
 
 function opened(id: number): unknown {
@@ -972,9 +1004,9 @@ describe("WS2 D3 the client: starting", () => {
   });
 });
 
-// The properties: fast-check draws sequences of reads, runs, cancels,
-// answers, crashes and timeouts in any order, and each property is
-// checked on what the client did with them.
+// The properties: fast-check draws sequences of reads, runs, writes,
+// cancels, answers, crashes and timeouts in any order, and each property
+// is checked on what the client did with them.
 
 /** One step of a sequence the properties draw. */
 type Step =
@@ -984,13 +1016,16 @@ type Step =
   | { readonly kind: "reread"; readonly load: number }
   /** A run on a load picked before. */
   | { readonly kind: "run"; readonly load: number }
+  /** A write on a load picked before, whose file is larger than
+      WRITE_RESTART_BYTES when `large`. */
+  | { readonly kind: "write"; readonly load: number; readonly large: boolean }
   /** A read of the individuals file. */
   | { readonly kind: "individuals" }
   /** A cancel of a request made before. */
   | { readonly kind: "cancel"; readonly request: number }
   /** The calculation worker gives its ready, or answers what it runs:
       0 and 1 the answer that goes right, 2 refused, 3 reopenFailed, and
-      1 a progress for a run. */
+      1 a progress for a run or a write. */
   | { readonly kind: "answer"; readonly how: number }
   /** The light worker gives its ready, or answers its read: 0 a table,
       1 a file refused. */
@@ -1020,6 +1055,14 @@ const step: fc.Arbitrary<Step> = fc.oneof(
   {
     weight: 4,
     arbitrary: fc.record({ kind: fc.constant("run" as const), load: fc.nat() }),
+  },
+  {
+    weight: 2,
+    arbitrary: fc.record({
+      kind: fc.constant("write" as const),
+      load: fc.nat(),
+      large: fc.boolean(),
+    }),
   },
   { weight: 1, arbitrary: fc.constant({ kind: "individuals" as const }) },
   {
@@ -1100,6 +1143,9 @@ interface Seen {
   readonly wrongLoad: string[];
   /** An answer that is not the one its worker gave for its request. */
   readonly wrongAnswer: string[];
+  /** A worker not ended after a large write or a refused one, or ended
+      after a small one. */
+  readonly wrongRestart: string[];
 }
 
 function watch(role: Watched["role"], seen: Seen): Watched {
@@ -1140,18 +1186,15 @@ function watch(role: Watched["role"], seen: Seen): Watched {
           watched.openLoad = sent.fileId;
           break;
         case "run":
+        case "write":
           if (watched.numPosts === 0) {
-            seen.wrongLoad.push("a run as the first request");
+            seen.wrongLoad.push(`a ${sent.kind} as the first request`);
           } else if (sent.job.fileId !== watched.openLoad) {
             seen.wrongLoad.push(
-              `a run of ${sent.job.fileId} to a worker that opened ${String(watched.openLoad)}`,
+              `a ${sent.kind} of ${sent.job.fileId} to a worker that opened ${String(watched.openLoad)}`,
             );
           }
           break;
-        case "write":
-          throw new Error(
-            "the client sent a write, which it sends none of yet",
-          );
       }
       watched.pending = sent;
     } else {
@@ -1176,7 +1219,9 @@ async function flush(): Promise<void> {
 
 /** Whether an answer of a calculation request came from its worker, and
     not from the client alone. */
-function fromWorker(answer: VariantsOpened | Outcome<JobResult>): boolean {
+function fromWorker(
+  answer: VariantsOpened | Outcome<JobResult> | Outcome<Written<Blob>>,
+): boolean {
   switch (answer.kind) {
     case "opened":
     case "done":
@@ -1193,7 +1238,11 @@ function fromWorker(answer: VariantsOpened | Outcome<JobResult>): boolean {
 /** A request as the properties know it, to check its answer. */
 type Asked =
   | { readonly kind: "read"; readonly fileId: string }
-  | { readonly kind: "run"; readonly id: number; readonly key: string }
+  | {
+      readonly kind: "run" | "write";
+      readonly id: number;
+      readonly key: string;
+    }
   | { readonly kind: "light" };
 
 /** An opened whose first individual is the load of its open. */
@@ -1207,6 +1256,21 @@ function stampedResult(id: number, key: string, stamp: number): unknown {
   return { kind: "result", id, key, result: { ...RESULT, passStats } };
 }
 
+/** A written whose numVars is `stamp`, the id of its write, and whose
+    file is larger than WRITE_RESTART_BYTES when the key ends in "L". */
+function stampedWritten(id: number, key: string, stamp: number): unknown {
+  const file = key.endsWith("L") ? LARGE_FILE : SMALL_FILE;
+  return {
+    kind: "written",
+    id,
+    key,
+    result: {
+      ...writtenResult(file),
+      passStats: { ...RESULT.passStats, numVars: stamp },
+    },
+  };
+}
+
 /** Runs a sequence on a client over watched workers, then has every
     worker answer what it is left with until nothing is left, and gives
     what each property saw. */
@@ -1218,6 +1282,7 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
     beforeReady: [],
     wrongLoad: [],
     wrongAnswer: [],
+    wrongRestart: [],
   };
   const calculation: Watched[] = [];
   const light: Watched[] = [];
@@ -1251,7 +1316,12 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
   client.addFile("ind", CSV_FILE);
 
   function track(
-    outcome: Promise<VariantsOpened | Outcome<JobResult> | IndividualsAnswer>,
+    outcome: Promise<
+      | VariantsOpened
+      | Outcome<JobResult>
+      | Outcome<Written<Blob>>
+      | IndividualsAnswer
+    >,
     request: Asked,
   ): void {
     const index = counts.length;
@@ -1259,7 +1329,7 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
     void outcome.then((answer) => {
       counts[index] = (counts[index] ?? 0) + 1;
       // The workers stamp an opened with the load of its open, and a
-      // result with the id of its run.
+      // result or a written with the id of its run or write.
       if (
         answer.kind === "opened" &&
         request.kind === "read" &&
@@ -1271,12 +1341,13 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
       }
       if (
         answer.kind === "done" &&
-        request.kind === "run" &&
+        (request.kind === "run" || request.kind === "write") &&
         (answer.key !== request.key ||
-          answer.result.passStats.numVars !== request.id)
+          answer.result.passStats.numVars !== request.id ||
+          "file" in answer.result !== (request.kind === "write"))
       ) {
         seen.wrongAnswer.push(
-          `the run ${String(request.id)} of ${request.key} got the result of ${String(answer.result.passStats.numVars)} under ${answer.key}`,
+          `the ${request.kind} ${String(request.id)} of ${request.key} got the answer of ${String(answer.result.passStats.numVars)} under ${answer.key}`,
         );
       }
       if (
@@ -1319,7 +1390,7 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
     if (pending === null || pending.kind === "readIndividuals") {
       return;
     }
-    if (pending.kind === "run" && how === 1) {
+    if ((pending.kind === "run" || pending.kind === "write") && how === 1) {
       deliver(index, {
         kind: "progress",
         id: pending.id,
@@ -1333,6 +1404,9 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
     watched.pending = null;
     if (how === 2) {
       deliver(index, { kind: "refused", id: pending.id, message: "refused" });
+      if (pending.kind === "write") {
+        expectEnded(watched, true, `the write ${pending.key} refused`);
+      }
       return;
     }
     if (how === 3) {
@@ -1342,6 +1416,9 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
         name: "f.nei",
         message: "short",
       });
+      if (pending.kind === "write") {
+        expectEnded(watched, false, `the write ${pending.key} reopenFailed`);
+      }
       return;
     }
     switch (pending.kind) {
@@ -1352,7 +1429,23 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
         deliver(index, stampedResult(pending.id, pending.key, pending.id));
         return;
       case "write":
-        throw new Error("the client sent a write, which it sends none of yet");
+        deliver(index, stampedWritten(pending.id, pending.key, pending.id));
+        expectEnded(
+          watched,
+          pending.key.endsWith("L"),
+          `the write ${pending.key} written`,
+        );
+        return;
+    }
+  }
+
+  /** After the answer of a write, its worker was ended or not, as `ended`
+      says it should be. */
+  function expectEnded(watched: Watched, ended: boolean, what: string): void {
+    if (watched.fake.terminated !== ended) {
+      seen.wrongRestart.push(
+        `after ${what} the worker was ${watched.fake.terminated ? "" : "not "}ended`,
+      );
     }
   }
 
@@ -1440,6 +1533,16 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
         });
         break;
       }
+      case "write": {
+        const load = loads[next.load % Math.max(loads.length, 1)] ?? "none";
+        const key = `w${String(counts.length)}${next.large ? "L" : ""}`;
+        const write = client.write(key, writeJob(load), noProgress);
+        track(write.outcome, { kind: "write", id: write.id, key });
+        cancels.push(() => {
+          write.cancel();
+        });
+        break;
+      }
       case "individuals": {
         const read = client.readIndividuals("ind", CSV);
         track(read.outcome, { kind: "light" });
@@ -1491,9 +1594,10 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
               });
               break;
             case "write":
-              throw new Error(
-                "the client sent a write, which it sends none of yet",
-              );
+              handler({
+                data: stampedWritten(pending.id, pending.key, -1),
+              });
+              break;
             case "readIndividuals":
               break;
           }
@@ -1594,6 +1698,25 @@ describe("WS2 D4 the properties of the client", () => {
     await fc.assert(
       fc.asyncProperty(steps, async (sequence) => {
         expect((await explore(sequence)).wrongAnswer).toEqual([]);
+      }),
+    );
+  });
+});
+
+describe("VS1 D5 the write of the client: the properties", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  test("the worker is ended after a write larger than WRITE_RESTART_BYTES or refused, and not after a smaller one", async () => {
+    await fc.assert(
+      fc.asyncProperty(steps, async (sequence) => {
+        expect((await explore(sequence)).wrongRestart).toEqual([]);
       }),
     );
   });
@@ -2015,5 +2138,376 @@ describe("WS2 D3 the client: what the test review found", () => {
       kind: "failed",
       error: { kind: "defect" },
     });
+  });
+});
+
+/** Load A read, a write w1 on A running on the first worker, and a run k5
+    waiting behind it. */
+function writeAndRun(): ReturnType<typeof withA> & {
+  readonly w1: ReturnType<ReturnType<typeof createClient>["write"]>;
+  readonly k5: ReturnType<ReturnType<typeof createClient>["run"]>;
+} {
+  const env = withA();
+  const w1 = env.client.write("w1", writeJob("A"), noProgress);
+  const k5 = env.client.run("k5", job("A"), noProgress);
+  expect(lastSent(env.first)).toMatchObject({ kind: "write", key: "w1" });
+  return { ...env, w1, k5 };
+}
+
+/** The worker after a restart that follows a write: once ready it is sent
+    the open of A with its File, onPopneiReady is called only when that
+    open ends, and then k5 is sent. */
+function expectReopenedThenK5(env: ReturnType<typeof writeAndRun>): void {
+  expect(env.first.terminated).toBe(true);
+  expect(env.first.endedWithHandlers).toBe(false);
+  expect(env.calculation).toHaveLength(2);
+  const second = last(env.calculation);
+  expect(env.versions).toEqual(["0.1.0"]);
+  emit(second, READY);
+  const open = lastSent(second);
+  expect(open).toMatchObject({ kind: "open", fileId: "A" });
+  expect(open.kind === "open" && open.file).toBe(FILE_A);
+  expect(env.versions).toEqual(["0.1.0"]);
+  emit(second, opened(open.id));
+  expect(env.versions).toEqual(["0.1.0", "0.1.0"]);
+  expect(lastSent(second)).toMatchObject({
+    kind: "run",
+    id: env.k5.id,
+    key: "k5",
+  });
+  expect(second.posted).toHaveLength(2);
+}
+
+/** The file of a done outcome, or null. */
+function fileOf(outcome: Outcome<Written<Blob>> | "pending"): Blob | null {
+  return outcome !== "pending" && outcome.kind === "done"
+    ? outcome.result.file
+    : null;
+}
+
+describe("VS1 D5 the write of the client: a write", () => {
+  test("a write is sent with its key and job; its progress reaches onProgress, and its outcome is done with the very Blob, the worker not ended", async () => {
+    const env = withA();
+    const progress: Progress[] = [];
+    const w1 = env.client.write("w1", writeJob("A"), (p) => {
+      progress.push(p);
+    });
+    expect(lastSent(env.first)).toEqual({
+      kind: "write",
+      id: w1.id,
+      key: "w1",
+      job: writeJob("A"),
+    });
+    const first = {
+      bytesRead: 100,
+      numBytes: 19_161_178,
+      pass: 1,
+      numPasses: 1,
+    };
+    const second = { ...first, bytesRead: 19_161_178 };
+    emit(env.first, { kind: "progress", id: w1.id, ...first });
+    emit(env.first, { kind: "progress", id: w1.id, ...second });
+    expect(progress).toEqual([first, second]);
+    emit(env.first, writtenOf(w1.id, "w1", SMALL_FILE));
+    const outcome = await now(w1.outcome);
+    expect(outcome).toEqual({
+      kind: "done",
+      key: "w1",
+      result: writtenResult(SMALL_FILE),
+    });
+    expect(fileOf(outcome)).toBe(SMALL_FILE);
+    expect(SMALL_FILE.size).toBe(3_594);
+    expect(env.first.terminated).toBe(false);
+    expect(env.calculation).toHaveLength(1);
+  });
+
+  test("a write waits behind a run, and a run behind a write, in the one queue", async () => {
+    const env = withA();
+    const k1 = env.client.run("k1", job("A"), noProgress);
+    const w1 = env.client.write("w1", writeJob("A"), noProgress);
+    const k2 = env.client.run("k2", job("A"), noProgress);
+    expect(lastSent(env.first)).toMatchObject({ kind: "run", key: "k1" });
+    emit(env.first, resultOf(k1.id, "k1"));
+    expect(lastSent(env.first)).toMatchObject({ kind: "write", key: "w1" });
+    emit(env.first, writtenOf(w1.id, "w1", SMALL_FILE));
+    expect(await now(w1.outcome)).toMatchObject({ kind: "done", key: "w1" });
+    expect(lastSent(env.first)).toMatchObject({ kind: "run", id: k2.id });
+  });
+});
+
+describe("VS1 D5 the write of the client: the wrong answers", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  test.each([
+    [
+      "a written under another key than its write's",
+      (env: ReturnType<typeof writeAndRun>) =>
+        writtenOf(env.w1.id, "w9", SMALL_FILE),
+    ],
+    [
+      "a result to a write",
+      (env: ReturnType<typeof writeAndRun>) => resultOf(env.w1.id, "w1"),
+    ],
+  ])(
+    "%s fails the write as a defect, written to the console, and ends the worker; the run waiting reaches the new one",
+    async (_name, message) => {
+      const console_ = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => undefined);
+      const env = writeAndRun();
+      emit(env.first, message(env));
+      expect(await now(env.w1.outcome)).toMatchObject({
+        kind: "failed",
+        error: { kind: "defect" },
+      });
+      expect(console_).toHaveBeenCalledOnce();
+      expectReopenedThenK5(env);
+    },
+  );
+
+  test("a written to a run fails the run as a defect, and ends the worker", async () => {
+    const console_ = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const env = withA();
+    const k1 = env.client.run("k1", job("A"), noProgress);
+    emit(env.first, writtenOf(k1.id, "k1", SMALL_FILE));
+    expect(await now(k1.outcome)).toMatchObject({
+      kind: "failed",
+      error: { kind: "defect" },
+    });
+    expect(console_).toHaveBeenCalledOnce();
+    expect(env.first.terminated).toBe(true);
+    expect(env.calculation).toHaveLength(2);
+  });
+});
+
+describe("VS1 D5 the write of the client: cancelling", () => {
+  test("a cancel of a write that waits takes it out of the queue, and no worker is ended", async () => {
+    const env = withA();
+    const k1 = env.client.run("k1", job("A"), noProgress);
+    const w1 = env.client.write("w1", writeJob("A"), noProgress);
+    w1.cancel();
+    expect(await now(w1.outcome)).toEqual({ kind: "cancelled" });
+    emit(env.first, resultOf(k1.id, "k1"));
+    expect(sentTo(env.first).map((sent) => sent.kind)).toEqual(["open", "run"]);
+    expect(env.first.terminated).toBe(false);
+  });
+
+  test("a cancel of a write that runs ends the worker, and the written it posted after goes to no one", async () => {
+    const env = writeAndRun();
+    env.w1.cancel();
+    expect(await now(env.w1.outcome)).toEqual({ kind: "cancelled" });
+    emit(env.first, writtenOf(env.w1.id, "w1", SMALL_FILE));
+    expectReopenedThenK5(env);
+  });
+
+  test("a new load while a file is written cancels the write and every request on the old load, and ends the worker", async () => {
+    const env = writeAndRun();
+    env.client.addFile("B", FILE_B);
+    const readB = env.client.openVariants({ fileId: "B", ...NEI });
+    expect(await now(env.w1.outcome)).toEqual({ kind: "cancelled" });
+    expect(await now(env.k5.outcome)).toEqual({ kind: "cancelled" });
+    expect(env.first.terminated).toBe(true);
+    const second = last(env.calculation);
+    emit(second, READY);
+    expect(sentTo(second)).toMatchObject([{ kind: "open", fileId: "B" }]);
+    expect(await now(readB.outcome)).toBe("pending");
+  });
+});
+
+describe("VS1 D5 the write of the client: the restart after a large write", () => {
+  test("a written of 100,000,001 bytes: the write is done, the worker ended, and a new one opens A again, then runs k5", async () => {
+    const env = writeAndRun();
+    emit(env.first, writtenOf(env.w1.id, "w1", LARGE_FILE));
+    const outcome = await now(env.w1.outcome);
+    expect(outcome).toMatchObject({ kind: "done", key: "w1" });
+    expect(fileOf(outcome)?.size).toBe(100_000_001);
+    expectReopenedThenK5(env);
+  });
+
+  test("a written of exactly 100,000,000 bytes ends no worker, and k5 is sent to it", async () => {
+    const env = writeAndRun();
+    const exact = new Blob([new Uint8Array(100_000_000)]);
+    emit(env.first, writtenOf(env.w1.id, "w1", exact));
+    expect(await now(env.w1.outcome)).toMatchObject({ kind: "done" });
+    expect(env.first.terminated).toBe(false);
+    expect(env.calculation).toHaveLength(1);
+    expect(lastSent(env.first)).toMatchObject({ kind: "run", id: env.k5.id });
+  });
+
+  test("a write that popnei refused fails with its message, and the worker is started again as after a large one", async () => {
+    const env = writeAndRun();
+    emit(env.first, {
+      kind: "refused",
+      id: env.w1.id,
+      message: "memory allocation failed",
+    });
+    expect(await now(env.w1.outcome)).toEqual({
+      kind: "failed",
+      error: { kind: "popnei", message: "memory allocation failed" },
+    });
+    expectReopenedThenK5(env);
+  });
+
+  test("the outcome of a large write is given before the restart: when no new worker can be made, the write is done and then k5 fails", async () => {
+    const calculation: FakeWorker[] = [];
+    const client = createClient({
+      calculation: () => {
+        if (calculation.length > 0) {
+          throw new Error("the script of the worker is not served");
+        }
+        const worker = fakeWorker();
+        calculation.push(worker);
+        return worker;
+      },
+      light: fakeWorker,
+      onPopneiReady: () => undefined,
+    });
+    const first = last(calculation);
+    client.addFile("A", FILE_A);
+    client.openVariants({ fileId: "A", ...NEI });
+    emit(first, READY);
+    emit(first, opened(lastSent(first).id));
+    const w1 = client.write("w1", writeJob("A"), noProgress);
+    const k5 = client.run("k5", job("A"), noProgress);
+    const order: string[] = [];
+    void w1.outcome.then((outcome) => order.push(`w1 ${outcome.kind}`));
+    void k5.outcome.then((outcome) => order.push(`k5 ${outcome.kind}`));
+    emit(first, writtenOf(w1.id, "w1", LARGE_FILE));
+    await now(k5.outcome);
+    expect(first.terminated).toBe(true);
+    expect(order).toEqual(["w1 done", "k5 failed"]);
+  });
+
+  test("a large write whose load is no longer the next one: the new worker opens the other load, not A", () => {
+    const env = withA();
+    const w1 = env.client.write("w1", writeJob("A"), noProgress);
+    emit(env.first, writtenOf(w1.id, "w1", LARGE_FILE));
+    expect(env.first.terminated).toBe(true);
+    env.client.addFile("B", FILE_B);
+    env.client.openVariants({ fileId: "B", ...NEI });
+    expect(env.calculation).toHaveLength(2);
+    const second = last(env.calculation);
+    emit(second, READY);
+    expect(sentTo(second)).toMatchObject([{ kind: "open", fileId: "B" }]);
+  });
+
+  test("a ready of protocol 3 of the worker started again after a large write fails every request with protocolMismatch, and no other worker is made", async () => {
+    vi.useFakeTimers();
+    const env = writeAndRun();
+    const w2 = env.client.write("w2", writeJob("A"), noProgress);
+    emit(env.first, writtenOf(env.w1.id, "w1", LARGE_FILE));
+    emit(last(env.calculation), { kind: "ready", protocol: 3 });
+    expect(await now(env.k5.outcome)).toEqual({
+      kind: "failed",
+      error: { kind: "protocolMismatch" },
+    });
+    expect(await now(w2.outcome)).toEqual({
+      kind: "failed",
+      error: { kind: "protocolMismatch" },
+    });
+    const w3 = env.client.write("w3", writeJob("A"), noProgress);
+    expect(await now(w3.outcome)).toEqual({
+      kind: "failed",
+      error: { kind: "protocolMismatch" },
+    });
+    vi.advanceTimersByTime(3 * WORKER_READY_TIMEOUT_MS);
+    expect(env.calculation).toHaveLength(2);
+    vi.useRealTimers();
+  });
+});
+
+describe("VS1 D5 the write of the client: the failures of a write", () => {
+  test("a write of a load with no File, or whose first open was refused, fails at once as a defect", async () => {
+    const env = setUp();
+    const first = last(env.calculation);
+    const noFile = env.client.write("w1", writeJob("Z"), noProgress);
+    expect(await now(noFile.outcome)).toMatchObject({
+      kind: "failed",
+      error: { kind: "defect" },
+    });
+    env.client.addFile("A", FILE_A);
+    env.client.openVariants({ fileId: "A", ...NEI });
+    emit(first, READY);
+    emit(first, {
+      kind: "refused",
+      id: lastSent(first).id,
+      message: "not nei",
+    });
+    const refused = env.client.write("w2", writeJob("A"), noProgress);
+    expect(await now(refused.outcome)).toMatchObject({
+      kind: "failed",
+      error: { kind: "defect" },
+    });
+    expect(sentTo(first).map((sent) => sent.kind)).toEqual(["open"]);
+  });
+
+  test("a write that ends reopenFailed fails with it, and the worker goes on", async () => {
+    const env = writeAndRun();
+    emit(env.first, {
+      kind: "reopenFailed",
+      id: env.w1.id,
+      name: "panel.nei",
+      message: "NotReadableError",
+    });
+    expect(await now(env.w1.outcome)).toEqual({
+      kind: "failed",
+      error: {
+        kind: "reopenFailed",
+        name: "panel.nei",
+        message: "NotReadableError",
+      },
+    });
+    expect(env.first.terminated).toBe(false);
+    expect(lastSent(env.first)).toMatchObject({ kind: "run", id: env.k5.id });
+  });
+
+  test("a write answered with its written sets the count of failures back: one more idle crash starts the worker again", () => {
+    const env = withA();
+    emit(env.first, { kind: "crashed", message: "trap" });
+    const second = last(env.calculation);
+    emit(second, READY);
+    emit(second, opened(lastSent(second).id));
+    const w1 = env.client.write("w1", writeJob("A"), noProgress);
+    emit(second, writtenOf(w1.id, "w1", SMALL_FILE));
+    emit(second, { kind: "crashed", message: "trap" });
+    expect(env.calculation).toHaveLength(3);
+  });
+
+  test("a crash while a write runs fails it as workerFailed; the run waiting reaches the new worker", async () => {
+    const env = writeAndRun();
+    emit(env.first, { kind: "crashed", message: "out of memory" });
+    expect(await now(env.w1.outcome)).toEqual({
+      kind: "failed",
+      error: { kind: "workerFailed", message: "out of memory" },
+    });
+    expectReopenedThenK5(env);
+  });
+
+  test("a write waiting on an open sent for it fails with reopenFailed when that open is refused, and that worker is ended", async () => {
+    const env = withA();
+    env.client.addFile("B", FILE_B);
+    env.client.openVariants({ fileId: "B", ...NEI });
+    const second = last(env.calculation);
+    emit(second, READY);
+    emit(second, opened(lastSent(second).id));
+    const w1 = env.client.write("w1", writeJob("A"), noProgress);
+    const third = last(env.calculation);
+    emit(third, READY);
+    const open = lastSent(third);
+    expect(open).toMatchObject({ kind: "open", fileId: "A" });
+    emit(third, { kind: "refused", id: open.id, message: "not a vars file" });
+    expect(await now(w1.outcome)).toEqual({
+      kind: "failed",
+      error: {
+        kind: "reopenFailed",
+        name: "panel.nei",
+        message: "not a vars file",
+      },
+    });
+    expect(third.terminated).toBe(true);
   });
 });
