@@ -39,6 +39,9 @@
   --chart-cat-5: #0072b2;
   --chart-cat-6: #d55e00;
   --chart-cat-7: #cc79a7;
+  /* the bars of a histogram, which name no population: the blue of Okabe
+     and Ito here, their sky blue in the dark theme */
+  --chart-bar: #0072b2;
   --chart-axis: #555d68;
   --chart-threshold: #b3261e;
 
@@ -87,6 +90,7 @@
     --color-focus: #7fb0ff;
     --color-scroll-shadow: #e8eaed40;
     --color-backdrop: #0b0c0eb3;
+    --chart-bar: #56b4e9;
     --chart-axis: #a3abb5;
     --chart-threshold: #ff8a80;
   }
@@ -107,6 +111,7 @@
   --color-focus: #7fb0ff;
   --color-scroll-shadow: #e8eaed40;
   --color-backdrop: #0b0c0eb3;
+  --chart-bar: #56b4e9;
   --chart-axis: #a3abb5;
   --chart-threshold: #ff8a80;
 }

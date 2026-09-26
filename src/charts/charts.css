@@ -34,3 +34,32 @@
   fill: var(--color-text);
   font-size: 12px;
 }
+
+/* The bars of a histogram, and the squares of its legend: a bar the
+   filter keeps, or a bar with no threshold, is filled; a bar it removes
+   is an outline, so the two differ without colour. The outline in
+   --chart-axis carries the edge of both (docs/specs/charts/histogram.md,
+   "Colours and the two themes"). */
+.chart-bar,
+.chart-legend-kept,
+.chart-legend-removed {
+  fill: var(--chart-bar);
+  stroke: var(--chart-axis);
+  stroke-width: 1px;
+}
+
+.chart-bar-removed,
+.chart-legend-removed {
+  fill: none;
+}
+
+.chart-threshold,
+.chart-legend-threshold {
+  stroke: var(--chart-threshold);
+  stroke-width: 2px;
+  stroke-dasharray: 4 3;
+}
+
+.chart-legend-text {
+  text-anchor: end;
+}

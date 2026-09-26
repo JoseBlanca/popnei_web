@@ -107,6 +107,9 @@ const PAIRS: readonly (readonly [string, string, number])[] = [
   ["--color-danger", "--color-background", 3],
   // The mark of a warning of a column in the Individuals step.
   ["--color-warning", "--color-background", 3],
+  // A filled bar of a histogram, told from an outlined one on the
+  // background (docs/specs/charts/histogram.md).
+  ["--chart-bar", "--color-background", 3],
   ["--chart-axis", "--color-background", 3],
   ["--chart-threshold", "--color-background", 3],
 ];

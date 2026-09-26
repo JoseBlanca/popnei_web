@@ -9,3 +9,11 @@
  * is refused before anything is drawn.
  */
 export const MAX_CANVAS_SIDE = 4096;
+
+/**
+ * The most bins a histogram draws. Each bar is one element, drawn by a
+ * join, which a thousand still are; more would be a histogram no one can
+ * read, so more is a defect of the caller
+ * (docs/specs/charts/histogram.md, "The TypeScript interface").
+ */
+export const MAX_HISTOGRAM_BINS = 1000;
