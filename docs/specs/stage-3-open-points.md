@@ -1,4 +1,4 @@
-# The decisions of the specs of stage 3, and the one point still open
+# The decisions of the specs of stage 3
 
 26 September 2026, for the owner. Stage 3 of `docs/build-order.md` is the
 Variants step whole: the filters of the variants and of the individuals,
@@ -6,7 +6,7 @@ the checks the user reads to choose their thresholds, the counts of what
 each filter kept, and the writing of the filtered variants as a `.nei`
 file. Its design is the revision of `docs/architecture.md` the owner
 approved on 26 September 2026, whose section 13 holds the answers to its
-open points. The specs of stage 3, none of them approved yet, are
+open points. The specs of stage 3, approved by the owner on 26 September 2026, are
 `docs/specs/core/project.md`, `individualsKept.md`, `keys.md`,
 `store.md`, `cache.md` and `projectFile.md`;
 `docs/specs/analyses/individualChecks.md`, `variantChecks.md`,
@@ -21,9 +21,10 @@ This file held their open points, ten decisions each spec left to the
 owner, with the one three specs share made one. The owner answered them
 on 26 September 2026, and the specs now say what was decided. Each point
 below has the owner's answer, what it changed in the specs, and the
-option not taken. One part of point F stays open: the values at which
-three filters start when they are turned on, which are asked of the
-owner again. After the points come the choices the writers made alone
+option not taken. The last part of point F, the values at which three
+filters start when they are turned on, the owner settled the same day
+by keeping those filters off until the user turns them on, and the
+values of (a) below stand. After the points come the choices the writers made alone
 that a user meets, which the owner may overrule, the numbers that a
 measurement sets, which are not the owner's to decide, and a note for
 stage 4.
@@ -38,14 +39,15 @@ remove it. A **threshold on the individuals** is one of those two
 filters of individuals; the two others are a list to keep and a list to
 remove.
 
-## Still open: the values at which three filters start
+## Decided: the values at which three filters start
 
 Part of point F, below. When the user turns on the filter by observed
 heterozygosity of the variants, the LD pruning, or the filter of the
 individuals by observed heterozygosity, the filter starts at a value,
 which is a command, a step of Undo and a change of the results at once.
-popnei gives no default for any of them. Meanwhile, and asked of the
-owner again:
+popnei gives no default for any of them. The owner decided on 26
+September 2026 that these filters are off in a new project, and left
+the values of (a) as the specs have them; (b) was not taken:
 
 - **(a) The values of common practice**, the specs' meanwhile: the
   observed heterozygosity of the variants at 0.5, the most a variant of

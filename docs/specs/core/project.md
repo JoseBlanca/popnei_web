@@ -19,7 +19,7 @@ the individuals kept a new module makes, `src/core/individualsKept.ts`,
 specified in `docs/specs/core/individualsKept.md`; and the reasons of
 a list of individuals given apart, by `individualListNeeds`, so that
 they lock only what reads the filters of individuals; this revision is
-not yet approved. The project is everything the user has set in one application: the
+approved by the owner on 26 September 2026. The project is everything the user has set in one application: the
 variants file they loaded, the filters, the individuals file with the
 types of its columns, the populations, and the options of each analysis.
 This spec gives its type, the commands that change it, the records that

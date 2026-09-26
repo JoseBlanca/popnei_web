@@ -1,6 +1,6 @@
 # Plan: the Variants step, whole
 
-26 September 2026, a draft for the owner. It builds stage 3 of
+26 September 2026, approved by the owner on the same day, with its new dependencies. It builds stage 3 of
 `docs/build-order.md`, the Variants step whole, as far as popnei's
 release `js-v0.1.0-dev.2` allows: every filter of the variants and of
 the individuals, what each filter kept, the histograms of the variants,
@@ -110,13 +110,10 @@ new analysis gives with its `script`, built here and called by nothing
 until then; a list of individuals read from a file; the help drawer, in
 stage 8.
 
-The open point still open, part of point F of the open-points file: the
-values at which three filters start when they are turned on. Meanwhile,
-as `variants.md` has them, the observed heterozygosity of the variants
-at 0.5, the LD pruning at an r² of 0.3 over 10000 base pairs, and the
-observed heterozygosity of the individuals at 0.5. Another answer
-changes constants of the step and their flows: task 6.1 for the first
-two, task 7.3 for the third.
+Every open point of the specs is decided. The last, part of point F,
+the owner settled on 26 September 2026: the filters by observed
+heterozygosity and the LD pruning are off in a new project, and start,
+when turned on, at the values `variants.md` gives.
 
 To be judged by the owner at a stop, each a meanwhile of its spec:
 the summary line with the variants and individuals kept (`shell.md`,
@@ -135,18 +132,12 @@ a commit of its own before the code.
 
 ## Before the first task
 
-- **The gate before task 1.1: the owner approves this plan**, and with
-  it the new dependencies below, the packages that `d3-scale` and `jsdom`
-  bring among them. The orchestrator that wrote the plan asks for it now,
-  with the plan, and no task starts before the answer.
-- **The specs approved.** `main` is at 1457d80, which holds the twenty
-  specs. Fifteen of them still say in their opening that their revision
-  for stage 3 is not yet approved; their approval by the owner is
-  written into them, in a commit of its own, on the owner's word, before
-  task 1.1. Check: `grep -rlzE "not yet[[:space:]]+(reviewed nor[[:space:]]+)?approved" docs/specs`
-  prints nothing; on 1457d80 it prints those fifteen.
-- **The branch.** `plan/variants-step` is made from `main` once the
-  owner has merged this plan and the commit of the approvals. Check:
+- **The plan and the specs approved.** The owner approved this plan,
+  with the new dependencies below, and the specs of stage 3 on 26
+  September 2026. Check: `grep -rlzE "not yet[[:space:]]+(reviewed nor[[:space:]]+)?approved" docs/specs`
+  prints nothing.
+- **The branch.** `plan/variants-step` is made from `main`, which holds
+  this plan and the approvals. Check:
   `git ls-tree -r --name-only main docs/plans/variants-step.md` prints
   the path; on 1457d80 it prints nothing. The commit the branch is made
   from is called **the start** below, and the report names it under
@@ -245,9 +236,9 @@ a commit of its own before the code.
   `d3-color`, `d3-time` and `d3-time-format`, modules of D3 outside the
   list of `docs/technology.md`, besides `d3-array` and `d3-format`, which
   are on it; `@types/d3-scale` brings `@types/d3-time`; and `jsdom`
-  brings 20 packages directly, which `npm view jsdom dependencies` lists. **The
-  owner's word on these is asked with the approval of this plan.** Any
-  other dependency is a stop for the owner.
+  brings 20 packages directly, which `npm view jsdom dependencies` lists. The
+  owner approved these on 26 September 2026, with the plan. Any other
+  dependency is a stop for the owner.
 - **What every prompt of a task carries**, from the report of the
   walking skeleton, "How the work went": each rule of the spec the task
   builds is broken once on a scratch copy of the code and seen to fail a

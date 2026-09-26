@@ -1,7 +1,7 @@
 # The histogram
 
 Written on 26 September 2026, for stage 3 of `docs/build-order.md`, the
-Variants step whole; not yet reviewed nor approved. There is no code in
+Variants step whole; approved by the owner on 26 September 2026. There is no code in
 `src/charts` yet. This spec gives the first plot of the applications: the
 function of `src/charts/histogram.ts` that draws a histogram whose bins
 are already counted, and marks which bins the threshold of a filter keeps

@@ -5,7 +5,7 @@ is in `src/core/keys.ts`. Revised on 26 September 2026 for stage 3, the
 Variants step whole, as the revision of `docs/architecture.md` the owner
 approved that day has it: the list of the individuals kept is in no key,
 and a file of the filtered variants being written has a key of its own;
-this revision is not yet approved. A key is the name a result is stored under in the cache: a SHA-256
+this revision is approved by the owner on 26 September 2026. A key is the name a result is stored under in the cache: a SHA-256
 hash of everything the result was calculated from, so that a result whose
 inputs changed is never shown, and a result whose inputs came back, by an
 undo or by a value set back, is found again with no calculation

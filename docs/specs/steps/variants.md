@@ -8,7 +8,7 @@ owner's decisions on the screen as built (stop 7.5 of
 `src/ui/steps/variants/`. Revised on 26 September 2026 for stage 3 of
 `docs/build-order.md`, the Variants step whole, as the revision of
 `docs/architecture.md` the owner approved that day has it; the revision
-is not yet approved, and there is no code of its parts yet.
+is approved by the owner on 26 September 2026, and there is no code of its parts yet.
 
 The screen spec of the first step of both applications. In stage 2 the
 user picks the variants file, a VCF or a `.nei` file, sets how a VCF is
@@ -1044,8 +1044,8 @@ which the owner answered in part on 26 September 2026:
    heterozygosity of the variants, the LD pruning and the two thresholds
    of the individuals are off until the user turns them on; and the
    missing data filter of the individuals starts at 0.1 when it is
-   turned on. Still open, and asked again of the owner: the values at
-   which the three others start, meanwhile the observed heterozygosity
+   turned on. The values at which the three others start, which the
+   owner left as they are on 26 September 2026: the observed heterozygosity
    of the variants at 0.5, the LD pruning at an r² of 0.3 over 10000
    base pairs, and the observed heterozygosity of the individuals at
    0.5. popnei gives no default for any of them. Point F has the

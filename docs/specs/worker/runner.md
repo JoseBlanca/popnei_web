@@ -5,7 +5,7 @@ in `src/worker/runner.ts` and `runnerWorker.ts` with the walking
 skeleton, the smallest application that goes through every part once
 (stage 2 of `docs/build-order.md`). Revised on 26 September 2026 for
 stage 3, the Variants step whole, as the architecture approved by the
-owner that day has it; the revision is not yet approved. The calculation
+owner that day has it; the revision is approved by the owner on 26 September 2026. The calculation
 worker is the thread of the browser tab, beside the page, that runs
 popnei, so that a calculation does not freeze the page
 (`docs/architecture.md`, section 1). Its runner is the code that answers

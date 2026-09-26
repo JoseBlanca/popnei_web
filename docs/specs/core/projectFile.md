@@ -19,7 +19,7 @@ of the variants and of the individuals, the filters of the variants in a
 fixed order that the opening checks, and the version of the format,
 which stays 1 until the first release of the application, the regions
 of a BED file included, as the owner decided on 26 September 2026;
-this revision is not yet approved. There was no
+this revision is approved by the owner on 26 September 2026. There was no
 code yet; it will be `src/core/projectFile.ts`, the row `projectFile.ts`
 of section 9 of `docs/architecture.md`. The project file is the file
 `<name>.popnei.json` that a user saves to take their work out of the

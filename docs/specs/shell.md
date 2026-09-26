@@ -10,7 +10,7 @@ line gives the variants and the individuals the filters keep (Open 1,
 below); the stepper takes the checks of the Variants step, the three
 calculations that step shows, into its state; and the notice and the
 status region name those checks and the writing of the filtered
-variants as a file. This revision is not yet approved. The screen
+variants as a file. This revision is approved by the owner on 26 September 2026. The screen
 spec of what surrounds every step of the population genetics
 application, first built in the walking skeleton of stage 2 (`docs/build-order.md`),
 the smallest application that goes through every part once: the header,

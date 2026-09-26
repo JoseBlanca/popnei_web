@@ -7,7 +7,7 @@ approved by the owner that day has it: the request `write` and its
 answer `written`, a file of the filtered variants made in the calculation
 worker; the checks of the jobs and results of the three analyses of the
 Variants step; the counts of the pass in every result; and
-`PROTOCOL_VERSION` 2. The revision is not yet approved. This spec gives
+`PROTOCOL_VERSION` 2. The revision is approved by the owner on 26 September 2026. This spec gives
 `src/worker/messages.ts`: the messages the page and each of the two
 workers send each other, from the walking skeleton, the smallest
 application that goes through every part once (stage 2), on, the

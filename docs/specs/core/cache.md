@@ -5,7 +5,7 @@ is in `src/core/cache.ts`. Revised on 26 September 2026 for stage 3, the
 Variants step whole, as the revision of `docs/architecture.md` the owner
 approved that day has it: what the store puts in the cache from stage 3,
 and what it never puts; the functions do not change, and this revision
-is not yet approved. The cache keeps the results of the analyses under their keys, on the
+is approved by the owner on 26 September 2026. The cache keeps the results of the analyses under their keys, on the
 page, so that a result asked for again, by an undo, a value set back, or a
 step of the application visited again, is shown with no calculation. It is
 bounded in bytes, and drops first the result used longest ago

@@ -8,7 +8,7 @@ Variants step whole, as the revision of `docs/architecture.md` the owner
 approved that day has it: the analyses of the Variants step in
 `apps.ts`, `countsOf` in the place of `numVarsOf`, `runs.ts` awaiting
 every handle the store gives back, and the download of a file of the
-filtered variants; this revision is not yet approved. This spec gives
+filtered variants; this revision is approved by the owner on 26 September 2026. This spec gives
 the page of the population genetics application, `popgen.html`, and its
 entry, the code that runs once when the page opens and keeps working for
 the life of the page: it makes the store and the two workers and joins

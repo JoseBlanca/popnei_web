@@ -14,7 +14,7 @@ result carries the counts of its pass; the jobs and results of the three
 analyses of the Variants step, the statistics of each individual, the
 histograms of the variants and the counts of what each filter kept, join
 `Job` and `JobResult`; and the request that writes the filtered variants
-as a `.nei` file is new. The revision is not yet approved.
+as a `.nei` file is new. The revision is approved by the owner on 26 September 2026.
 
 This spec gives the part of `src/worker/protocol.ts` that core
 names: the filters of the variants and of the individuals, the table of

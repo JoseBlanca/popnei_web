@@ -2,8 +2,7 @@
 
 Written on 26 September 2026, for stage 3 of `docs/build-order.md`, the
 Variants step whole, after the owner asked that day that stage 3 make
-one piece for what every 2D plot has in common; not yet reviewed nor
-approved. There is no code in `src/charts` yet. This spec gives
+one piece for what every 2D plot has in common; approved by the owner on 26 September 2026. There is no code in `src/charts` yet. This spec gives
 `src/charts/plot2d.ts`, the function that every plot drawn in two
 dimensions makes its handle with: the histogram of
 `docs/specs/charts/histogram.md` now, and the scatter plot of the PCA,

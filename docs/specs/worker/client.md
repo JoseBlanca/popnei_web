@@ -5,8 +5,7 @@ with the walking skeleton; revised on 26 September 2026 for stage 3 of
 `docs/build-order.md`, the Variants step whole, as the architecture
 approved by the owner that day has it: the request that writes the
 filtered variants as a `.nei` file, its cancel, and the restart of the
-calculation worker after a large file written. The revision is not yet
-approved. The worker client is the page's one door to the two workers, the threads of the tab
+calculation worker after a large file written. The revision is approved by the owner on 26 September 2026. The worker client is the page's one door to the two workers, the threads of the tab
 beside the page where the files are read and the calculations run
 (`docs/architecture.md`, section 1): it starts them, keeps the `File` of
 every file the user picked, sends each worker one request at a time and

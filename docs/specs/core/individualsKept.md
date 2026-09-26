@@ -3,7 +3,7 @@
 Written on 26 September 2026 for stage 3 of `docs/build-order.md`, the
 Variants step whole, as the revision of `docs/architecture.md` the owner
 approved that day has it (its section 4, "The checks of the Variants
-step, and the individuals they keep"); not yet approved. It was a
+step, and the individuals they keep"); approved by the owner on 26 September 2026. It was a
 section of `docs/specs/core/project.md` in the first draft of stage 3,
 and has a file of its own because the store, the diversity, the write of
 the filtered variants and the Variants step all cite it. There is no

@@ -13,7 +13,7 @@ to each request; a Run that calculates those statistics first; the lock
 of an analysis worked out from the project and the cache; the counts of
 what each filter kept, filled from every pass; and the writing of the
 filtered variants as a file, tracked as a calculation is; this revision
-is not yet approved. The store is the one object of core that changes: it holds the
+is approved by the owner on 26 September 2026. The store is the one object of core that changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.
 From them it gives the screens one state to read, in which each analysis
