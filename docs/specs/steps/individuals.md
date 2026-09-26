@@ -357,12 +357,17 @@ file with pandas, `pandas.read_csv(path, sep=";", decimal=",")`
 - The table of the columns has header cells, "Column", "Type" and "First values", and
   the name of each column is the header of its row. The populations are
   a list, each item its name and its number in words, "P1, 48
-  individuals", and not a number alone. The words are the label of the
-  item, and not text hidden beside the line shown: a user who copies the
-  list gets the lines as shown, "P1 · 48", one each, where the hidden text
-  was copied too in Firefox, "P1 · 48P1, 48 individuals", as the owner
-  found on 26 September 2026. The line shown stays readable to a screen
-  reader that does not read the label of an item of a list.
+  individuals", and not a number alone. The words are text hidden beside
+  the line shown, which is itself hidden from a screen reader, and not
+  the label of the item: NVDA and JAWS may skip the label of an item of
+  a list as they read the page, which would lose "individuals", and
+  other readers would read the label and the line both. The hidden words
+  cannot be selected, so a user who copies the list gets the lines as
+  shown, "P1 · 48", one each, where the hidden text was copied too in
+  Firefox, "P1 · 48P1, 48 individuals", as the owner found on 26
+  September 2026; the review of task 9.7 checked in Chromium and WebKit
+  that the copy then gives "p0 · 48" and "p1 · 6" and the tree of
+  accessibility the item "p0, 48 individuals" alone.
 - The end of a read is announced by the shell, from the state of the
   store, and not by this step, which may not be on the screen when it
   ends: through its status region, the part of the page that a screen
