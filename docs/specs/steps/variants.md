@@ -133,10 +133,12 @@ the column of t00: its genotype is of the ploidy 4 and the reader was
 asked for the ploidy 2; popnei does not read a VCF whose genotypes are
 of different ploidies, and the ploidy is an argument of the reader". The
 diversity panel tells this refusal in its own words, which name the
-line, the individual and the two ploidies and say to set the ploidy and
-read the file again, and that a file that mixes ploidies, as a haploid
-X among diploid chromosomes, cannot be read in this version
-(`docs/specs/analyses/diversity.md`, "Its words", the row of a genotype
+line, the individual and the two ploidies; say, if every genotype of the
+file has the ploidy found, to set it and read the file again; and then
+say that a file that mixes ploidies, such as one with the X of males
+haploid among diploid autosomes, cannot be read in this version, so
+that the user of such a file is not sent to the ploidy of its first
+refused line and back (`docs/specs/analyses/diversity.md`, "Its words", the row of a genotype
 of another ploidy); the line under the ploidy
 says where that setting is, and the button below reads it again.
 
