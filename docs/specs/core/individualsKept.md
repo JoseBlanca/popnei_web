@@ -208,10 +208,19 @@ With Vitest, at the two functions, on frozen projects:
   defect.
 - **popnei's numbers**: the same function, given the statistics that
   popnei's release gives on `panel.nei` with the missing data filter at
-  0.05, gives the 125, 48 and 119 individuals above, in the runner's
-  tests in node, which the architecture asks for (`docs/architecture.md`,
-  section 4, "What would show these choices wrong";
-  `docs/specs/worker/runner.md`).
+  0.05, gives the 125, 48 and 119 individuals above, which the
+  architecture asks for (`docs/architecture.md`, section 4, "What would
+  show these choices wrong"). The test is in core, in node, and reads
+  those statistics from `e2e/fixtures/panel_individual_stats.json`, the
+  individuals, their `missingGtRate` and their `obsHetRate` as
+  `calcPerIndividualStats` gave them, which `e2e/fixtures/make_fixtures.mjs`
+  writes with popnei beside the other fixtures, and which is written
+  again with them when popnei's release changes. It is not among the
+  runner's tests, as the first draft had it, since a test of
+  `src/worker` imports nothing of core but the types of `result.ts`
+  (`.claude/skills/coding/SKILL.md`, "The layers and what each may
+  import"); the runner's tests check the statistics themselves
+  (`docs/specs/worker/runner.md`, "How it is verified").
 - **A property, with fast-check**, which draws random projects and
   statistics: the list is in the order of the variants file and holds
   exactly the individuals that every filter keeps, and each filter's
