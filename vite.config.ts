@@ -72,6 +72,16 @@ export default defineConfig({
           environment: "node",
         },
       },
+      {
+        // The plots, under jsdom, a DOM emulated in node (testing.md,
+        // "src/charts: under jsdom").
+        extends: true,
+        test: {
+          name: "charts",
+          include: ["src/charts/**/*.test.ts"],
+          environment: "jsdom",
+        },
+      },
     ],
   },
 });

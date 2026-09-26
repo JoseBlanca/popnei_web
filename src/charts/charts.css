@@ -1,0 +1,36 @@
+/*
+ * The classes of the plots, all starting with chart-, since D3 writes
+ * them as strings (charts.md, "The SVG, its parts and their names"). No
+ * colour is written here: each comes from a token of src/ui/tokens.css,
+ * so a change of theme reaches a plot with no redraw.
+ *
+ * The text has sizes in pixels, and not in rem, because the margins of a
+ * plot are fixed numbers that its text has to fit, whatever size of text
+ * the user set in the browser; a zoom of the page enlarges the whole
+ * plot, its text with it (docs/specs/charts/plot2d.md, "The SVG and its
+ * frame").
+ */
+
+.chart {
+  display: block;
+  font-family: var(--font-body);
+}
+
+/* d3-axis draws its lines and its text in currentColor, and writes a
+   font of its own on the group, which these override. */
+.chart-axis {
+  color: var(--chart-axis);
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.chart-axis-label {
+  fill: var(--color-text);
+  font-size: 13px;
+  text-anchor: middle;
+}
+
+.chart-legend {
+  fill: var(--color-text);
+  font-size: 12px;
+}
