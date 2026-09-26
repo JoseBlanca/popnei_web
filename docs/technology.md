@@ -212,6 +212,15 @@ what the plots use. The list and its versions are in
 `.claude/skills/coding/charts.md`; a module added later, `d3-brush` or
 `d3-polygon`, is a new dependency like any other.
 
+The modules bring packages that the plots do not import: `d3-scale`
+brings `d3-interpolate`, `d3-color`, `d3-time` and `d3-time-format`,
+modules of D3 outside the list above, besides `d3-array` and
+`d3-format`, which are on it; `d3-array` brings `internmap`, a `Map`
+keyed by value, of the same author; and `@types/d3-scale` brings
+`@types/d3-time`. The owner approved these on 26 September 2026, with
+the plan of the Variants step, `docs/plans/variants-step.md`, and with
+them the 38 packages that jsdom, below, brings for development.
+
 No 2D plot needs WebGL, because the points are reduced before they are
 drawn. Only the Manhattan plot has many, up to a million; every variant
 above a threshold, p < 10⁻³ by default, is drawn, and the others, which

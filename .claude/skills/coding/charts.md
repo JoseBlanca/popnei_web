@@ -130,6 +130,22 @@ D3 is imported as its modules, not as the `d3` package:
 | `d3-delaunay` | 6.0.4 | the nearest point under the pointer |
 | `d3-scale-chromatic` | 3.1.0 | viridis, for continuous colours |
 
+The modules bring these, which no plot imports:
+
+| package | version | brought by, for |
+|---|---|---|
+| `d3-interpolate` | 3.0.1 | `d3-scale`, the values between two ends of a range |
+| `d3-color` | 3.1.0 | `d3-interpolate`, colours to interpolate |
+| `d3-time` | 3.1.0 | `d3-scale`, the scales of time |
+| `d3-time-format` | 4.1.0 | `d3-scale`, the ticks of the scales of time |
+| `internmap` | 2.0.3 | `d3-array`, a `Map` keyed by value |
+| `@types/d3-time` | 3.0.4 | `@types/d3-scale`, for development |
+
+The owner approved them on 26 September 2026, with the plan of the
+Variants step (`docs/technology.md`, "D3 for the 2D plots"); a version of
+a module that brings another package is a new dependency, as
+`SKILL.md`, "Dependencies", has it.
+
 Each with its `@types/d3-*`, and three.js with `@types/three`, since it
 ships no types of its own. The versions are those of `npm view` on 24
 September 2026; D3 moves slowly, and a new major version of a module is
@@ -314,13 +330,14 @@ in Inkscape, in a journal's system or in the report, it has none of the
 page's CSS. So `toSVG`, in `src/charts/export.ts`:
 
 1. Clones the SVG.
-2. Walks the original and the clone together, and writes on each element
-   of the clone, as a `style` attribute, the computed values of a fixed
-   list of properties: `fill`, `fill-opacity`, `stroke`, `stroke-width`,
-   `stroke-dasharray`, `stroke-opacity`, `opacity`, `color`,
-   `font-family`, `font-size`, `font-weight`, `text-anchor`,
-   `dominant-baseline`. `getComputedStyle` returns them resolved, with no
-   `var()` left. The classes stay, as names.
+2. Puts the clone inside a hidden container of the light theme (below),
+   and writes on each of its elements, as a `style` attribute, the values
+   `getComputedStyle` gives there for a fixed list of properties:
+   `fill`, `fill-opacity`, `stroke`, `stroke-width`, `stroke-dasharray`,
+   `stroke-opacity`, `opacity`, `color`, `font-size`, `font-weight`,
+   `text-anchor`, `dominant-baseline`, resolved, with no `var()` left,
+   and `font-family` as the stack of "Fonts", below. The original on the
+   screen is not read or changed. The classes stay, as names.
 3. Removes `chart-overlay`, and adds a first `<rect>` of the background
    colour, since a transparent plot on a dark slide is unreadable.
 4. Serialises it with `XMLSerializer`, which escapes the text and writes
@@ -349,7 +366,10 @@ the labels would no longer fit. Programs that ignore an embedded font,
 Illustrator among them, fall back to Helvetica, which fits closely
 enough.
 
-Text is measured and exported only after `document.fonts.ready`.
+The PNG is drawn only after `document.fonts.ready`. `toSVG` returns at
+once and waits for nothing, which holds while the applications load no
+web font and nothing measures text; the typeface, when it comes, makes
+it wait too (`docs/specs/charts/plot2d.md`, "The export").
 
 ### PNG
 
