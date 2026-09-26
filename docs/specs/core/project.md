@@ -14,9 +14,10 @@ for stage 3, the Variants step whole, as the revision of
 `docs/architecture.md` the owner approved that day has it: the filters
 of the variants in a fixed order, with no command to move one; the ends
 of the reasons of a list of individuals, now that the step has its
-controls; and the individuals the filters keep, which a new module,
-`src/core/individualsKept.ts`, makes from the statistics of each
-individual; this revision is not yet approved. The project is everything the user has set in one application: the
+controls; and the filters of individuals by a threshold, whose list of
+the individuals kept a new module makes, `src/core/individualsKept.ts`,
+specified in `docs/specs/core/individualsKept.md`; this revision is not
+yet approved. The project is everything the user has set in one application: the
 variants file they loaded, the filters, the individuals file with the
 types of its columns, the populations, and the options of each analysis.
 This spec gives its type, the commands that change it, the records that
@@ -197,8 +198,8 @@ settings (`docs/specs/core/store.md`); checked here, the user is told what
 to fix before anything runs. Whether a threshold on the individuals
 keeps any of them cannot be known from the project alone, since it
 needs the statistics of each individual; that lock is the store's, from
-the cache, below in "The individuals the filters keep", and
-`projectNeeds` does not give it.
+the cache (`docs/specs/core/individualsKept.md`), and `projectNeeds` does
+not give it.
 
 `individualsNeeds` gives the same for the analyses that use the
 individuals file, the first thing missing, or `null`. Every individual of
@@ -350,90 +351,15 @@ comparison with the check numbers").
 
 ### The individuals the filters keep
 
-popnei filters individuals only by a list, `filterIndividuals` of
-`js/popnei/src/variant.ts`, and gives, for each individual, its
-proportion of missing genotypes and its observed heterozygosity,
-`missingGtRate` and `obsHetRate` of `calcPerIndividualStats` of
-`js/popnei/src/stats.ts`. The four filters of individuals are the
-application's arithmetic on those numbers (`docs/architecture.md`,
-section 4, "The checks of the Variants step"): core makes, from the
-project and those statistics, the one list of the individuals kept,
-which every analysis that reads the filters of individuals is given and
-the calculation worker puts on the `Variants` after the filters of the
-variants. The function is `individualsKept`, in its own module,
-`src/core/individualsKept.ts`, the row of section 9 of the architecture,
-specified here because it reads nothing but the project and a result.
-
-The statistics are the result of the analysis of the statistics of each
-individual, `individualChecks` (`docs/specs/analyses/individualChecks.md`),
-under the key the project gives it, which the store finds in its cache
-(`docs/specs/core/store.md`, "The individuals kept"). Its pass has the
-filters of the variants of the project and no filter of individuals, as
-the owner decided on 26 September 2026, so every individual of the
-variants file is in it, in the order of the file, and its numbers are
-counted over the variants the analyses read.
-
-The filters are applied in their fixed order, keep, remove, missing
-data, observed heterozygosity. The first is given every individual of
-the variants file, and each one after it the individuals the one before
-it kept. Each keeps:
-
-| filter | keeps an individual when |
-|---|---|
-| `keep` | the list names it |
-| `remove` | the list does not name it |
-| `missing_data` | its `missingGtRate` is at most `maxAllowedMissingRate` |
-| `obs_het` | its `obsHetRate` is at most `maxAllowedObsHet`; an individual with no called genotype, whose `obsHetRate` is NaN, is removed, as the owner decided on 26 September 2026 |
-
-A threshold keeps what is at most it, as popnei's filters of the
-variants do, compared with `<=` against the number the user typed, with
-no arithmetic between them (`docs/specs/worker/protocol.md`). The list is
-in the order of the variants file, whatever the order of the names in a
-list to keep.
-
-What `individualsKept` gives:
-
-- **The list**, known or not. It is known when the project has no
-  threshold, since the lists and the individuals of the variants file
-  are in the project, or when it has one and the statistics are given.
-  A known list is `null` when the filters remove no individual, as when
-  there is no filter of individuals, so that the job carries nothing and the runner
-  puts no `filterIndividuals` on the `Variants`
-  (`docs/specs/worker/runner.md`); it is empty when they keep none. It is
-  not known when the project has a threshold and no statistics are
-  given: the store then calculates them before the analysis
-  (`docs/specs/core/store.md`).
-- **How many individuals each filter was given and kept**, which the
-  Variants step shows beside each filter as it is set, with no pass
-  (`docs/specs/steps/variants.md`). A number that needs the statistics
-  and has none is `null`: the kept of a threshold, and the given and
-  kept of every filter after it.
-- **The individuals the lists keep**, the two lists alone, known from
-  the project whatever the thresholds, for a module that must know
-  before a run what the lists leave, the diversity's populations with no
-  individual left (`docs/specs/analyses/diversity.md`, "Why it cannot run");
-  a threshold can only remove more.
-- **Nothing**, `null`, when `projectNeeds` gives a reason: a variants
-  file not read has no individuals, and a list that names an individual
-  twice or one not in the file has no meaning to count.
-
-When the filters keep no individual, every analysis that reads them,
-and the writing of the filtered variants, are locked by the store with
-the words of `keptNoneReason`, since popnei refuses a `filterIndividuals`
-of no name: "The filters of individuals keep none of the 200 individuals
-of panel.nei. Loosen them in the Variants step." The count is the number
-of individuals of the variants file, written as the rules above write a
-count, and the name of the file is escaped.
-
-Seen in node 26.8.2, with popnei's release `js-v0.1.0-dev.2`, on 26
-September 2026, on `e2e/fixtures/panel.nei`, 200 individuals and 1,200
-variants: with the missing data filter of the variants at 0.05,
-`calcPerIndividualStats` gave a `missingGtRate` from 0.0165 to 0.0434
-and an `obsHetRate` from 0.318 to 0.397, none NaN; a threshold of 0.03 on
-the missing rate kept 125 of the 200 individuals, and one of 0.35 on the
-heterozygosity 48 of those 125; and `filterIndividuals` of those 48 after
-the missing data filter gave 48 individuals and the counts of the
-variants the filter gives with every individual, 1,200 to 1,152.
+The four filters of individuals are the application's arithmetic on
+popnei's statistics of each individual (`docs/architecture.md`, section
+4): core makes from the project and those statistics the one list of the
+individuals kept, which every analysis that reads the filters of
+individuals is given. The function, `individualsKept` of
+`src/core/individualsKept.ts`, with the counts of each filter and
+`keptNoneReason`, the words of the lock when the filters keep no
+individual, is specified in `docs/specs/core/individualsKept.md`. This
+spec gives the filters it reads, their order and their validation.
 
 ## The TypeScript interface
 
@@ -836,52 +762,6 @@ export function counted(count: number, noun: string): string;
 export function grouped(count: number): string;
 ```
 
-### The individuals kept
-
-In `src/core/individualsKept.ts`. The statistics are taken by their
-shape, the three fields of popnei's `PerIndividualStats` that the result
-of `individualChecks` carries, so that this module names no type of an
-analysis.
-
-```ts
-/** The statistics of each individual, over the variants the filters keep. */
-export interface IndividualStats {
-  readonly individuals: readonly string[];  // every individual of the variants file, in its order
-  readonly missingGtRate: Float64Array;
-  readonly obsHetRate: Float64Array;        // NaN for an individual with no called genotype
-}
-
-export type KeptList =
-  | { readonly kind: "known"; readonly individuals: readonly string[] | null } // null: none removed
-  | { readonly kind: "needsStatistics" };
-
-export interface IndividualsKept {
-  readonly list: KeptList;
-  /** The individuals the lists to keep and to remove keep, in the order
-      of the variants file, known with no statistics; every individual
-      of the file when there is no list. */
-  readonly byLists: readonly string[];
-  /** One per filter of individuals of the project, in its order. */
-  readonly counts: readonly {
-    readonly kind: IndividualFilterKind;
-    readonly given: number | null;          // null: needs the statistics
-    readonly kept: number | null;
-  }[];
-}
-
-/** The individuals the filters keep, or null when projectNeeds gives a
-    reason. `stats` is used only when the project has a threshold. */
-export function individualsKept(p: Project, stats: IndividualStats | null): IndividualsKept | null;
-
-/** The reason of the lock when the list is known and empty, or null. */
-export function keptNoneReason(p: Project, kept: IndividualsKept | null): string | null;
-```
-
-Statistics whose `individuals` are not those of the variants file of
-`p`, in its order, or whose arrays are not as long, are a defect, thrown:
-the store gives only the result under the key of `p`, whose load is that
-file.
-
 ### The validation
 
 `parseProject` takes what `JSON.parse` gave of the project part of a
@@ -1049,19 +929,9 @@ or `null`.
   individuals file only when it was read (`docs/specs/core/projectFile.md`,
   "What is written of each part"), so an opened project holds no pending
   read of the individuals file.
-- **An opened project with a threshold on the individuals.** The
-  statistics of each individual are results, which a project file does
-  not keep, so the list is `needsStatistics` until they are calculated
-  for the new load; the first Run of an analysis that reads the filters
-  of individuals calculates them first (`docs/specs/core/store.md`).
-- **Filters that remove no individual**: a list to keep that names every
-  individual, a threshold above every value. The list is `null`, as with
-  no filter, and the counts say so, each filter given and kept the same
-  number.
-- **Every individual without a called genotype** among the variants the
-  filters keep, with a filter by heterozygosity: none is kept, whatever
-  its threshold, and `keptNoneReason` gives the lock. Without that
-  filter, they are kept.
+- **An opened project with a threshold on the individuals** opens as
+  any other; its list of individuals kept waits for the statistics of
+  the new load (`docs/specs/core/individualsKept.md`, "The cases").
 
 ## How it is verified
 
@@ -1081,26 +951,6 @@ project frozen deeply with `Object.freeze`, so that a write into it throws
   `setVariantFilter` of a new object `{ kind: "missing_data",
   maxAllowedMissingRate: 0.1 }` returns the project itself. Each row of
   the table of the commands, with its defect or its `p`.
-- **`individualsKept`**, on a project of five individuals `a` to `e` and
-  statistics given as literals, `missingGtRate` `[0.2, 0.1, 0.3, 0.05,
-  1]` and `obsHetRate` `[0.3, 0.5, 0.2, 0.4, NaN]`, `e` calling no
-  genotype: with no filter, the list `null`; with remove `[b]`, missing
-  data 0.2 and observed heterozygosity 0.4, the list `[a, d]` and the
-  counts remove 5 to 4, missing data 4 to 2, heterozygosity 2 to 2, `c`
-  and `e` dropped by their missing rate, `a` kept at 0.2 and `d` at 0.4,
-  their thresholds exactly; with keep `[e, a]`, `[a, e]`
-  in the order of the file; with observed heterozygosity 1 alone, `e`
-  removed for its NaN; with missing data 0.01, the list empty and
-  `keptNoneReason` "The filters of individuals keep none of the 5
-  individuals of panel.nei. Loosen them in the Variants step."; with a
-  threshold and no statistics, `needsStatistics`, the lists' counts
-  given and the threshold's `null`; statistics of another order of the
-  individuals, a defect. The same function, given the statistics that
-  popnei's release gives on `panel.nei` with the missing data filter at
-  0.05, gives the 125 and 48 individuals above, in the runner's tests in
-  node, which the architecture asks for (`docs/architecture.md`, section
-  4, "What would show these choices wrong";
-  `docs/specs/worker/runner.md`).
 - **Each record**: recorded into the source of its id; the project itself
   for another id, for a read already recorded, and, for the individuals
   file, for other `csv` options.
@@ -1125,9 +975,7 @@ project frozen deeply with `Object.freeze`, so that a write into it throws
   every project, `parseProject(JSON.parse(JSON.stringify(p)), …)` is ok
   and deeply equal to `p`. For every sequence of commands, each list has
   at most one filter of each kind and both lists are in their fixed
-  order; for any project and statistics, the list of `individualsKept`
-  is in the order of the variants file and holds exactly the individuals
-  that every filter keeps; and a command applied twice with the same arguments
+  order; and a command applied twice with the same arguments
   returns, the second time, the project it was given.
 
 ## Open points
@@ -1223,5 +1071,8 @@ of them changes those texts and their tests, and nothing else.
 - The regions of a BED file in the project, `RegionsSource` of
   `docs/architecture.md`, section 2, and the filter of the regions: they
   come with popnei's release that has that filter.
+- The individuals the filters keep, the counts of each filter of
+  individuals and the lock when they keep none:
+  `docs/specs/core/individualsKept.md`.
 - The bins of the statistics of each individual, `src/core/histogram.ts`:
-  the spec of `individualChecks`.
+  `docs/specs/analyses/individualChecks.md`.

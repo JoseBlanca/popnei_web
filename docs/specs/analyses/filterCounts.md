@@ -253,4 +253,4 @@ None.
 ## Not in this spec
 
 The counts of the filters of individuals, which need no pass:
-`individualsKept` of `docs/specs/core/project.md`.
+`individualsKept` of `docs/specs/core/individualsKept.md`.

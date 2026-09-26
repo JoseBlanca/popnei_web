@@ -129,7 +129,7 @@ has the kind `removed` in the code.
 | done | the cache holds a result under its key | the result, its warnings, and the comparison with the check numbers of an opened project file |
 | running | a calculation of its key is in flight and is not being stopped, whether it waits in the queue of the worker or runs; or a Run of its key waits for the statistics of each individual (below) | its progress, the `Progress` of `docs/specs/worker/protocol.md`, popnei's four numbers of the pass as the worker gave them, passed on unchanged, `null` until the worker gives one; the request's id; and whether it waits for the statistics, whose request's progress and id it then holds |
 | error | popnei refused the calculation of its key, or the calculation failed since the last change; or it reads the filters of individuals and the statistics it waits for were refused, or failed since the last change (below) | popnei's message, or the failure |
-| locked | it reads the filters of individuals, and the list they make, known from the statistics in the cache, keeps no individual | `keptNoneReason` of `docs/specs/core/project.md` |
+| locked | it reads the filters of individuals, and the list they make, known from the statistics in the cache, keeps no individual | `keptNoneReason` of `docs/specs/core/individualsKept.md` |
 | removed | the current notice lists it among the results removed | its key; it can run again |
 | ready | none of the above | its key |
 | empty | cannot happen | — |
@@ -480,8 +480,7 @@ heterozygosity, which are the result of an analysis of the Variants
 step, `individualChecks` (`docs/specs/analyses/individualChecks.md`),
 whose key holds the filters of the variants and not those of the
 individuals. Core makes the list of the individuals kept from them,
-`individualsKept` of `docs/specs/core/project.md`, "The individuals the
-filters keep". The store is given which of its analyses that is, and a
+`individualsKept` of `docs/specs/core/individualsKept.md`. The store is given which of its analyses that is, and a
 function that finds the statistics in its result (`statistics` of
 `createStore`, below).
 
@@ -719,7 +718,7 @@ export interface AppState<R, F = never> {  // F: the type of a written file, Blo
   readonly runs: readonly RunView[];      // the calculations in flight
   readonly notice: Notice | null;
   /** The individuals the filters keep, and each filter's counts; null
-      when projectNeeds gives a reason (docs/specs/core/project.md). */
+      when projectNeeds gives a reason (docs/specs/core/individualsKept.md). */
   readonly individualsKept: IndividualsKept | null;
   /** The writing of the filtered variants as a .nei file; null when the
       store was made with no `write`. */
@@ -833,8 +832,7 @@ export interface PassFound<R> {
 not the id of one of the definitions, when the definition of the
 statistics reads the filters of individuals, which would make it wait for
 itself, and when the definition of the counts reads them. `IndividualStats`
-and `IndividualsKept` are those of `docs/specs/core/project.md`, "The
-individuals kept", and `WriteFormat`, `"nei"` in stage 3, is
+and `IndividualsKept` are those of `docs/specs/core/individualsKept.md`, and `WriteFormat`, `"nei"` in stage 3, is
 `WriteJob["format"]`. The handles the store gives back are of either
 kind of request, `Run<R | Written<F>>`, and `runEnded` takes the outcome
 of either; the store knows which by the id of the request.
@@ -1132,7 +1130,7 @@ whose file is a text.
   comparison is there again.
 - **The individuals kept and a Run that waits**, on the variants file
   of the five individuals of the worked case of `individualsKept`
-  (`docs/specs/core/project.md`). With no filter of individuals, a Run
+  (`docs/specs/core/individualsKept.md`). With no filter of individuals, a Run
   of the analysis that reads them sends at once, with `individuals`
   `null` in its client. With a threshold of 0.2 on the missing rate:
   the analysis is `ready`, its key made, and `individualsKept` gives

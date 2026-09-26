@@ -13,8 +13,8 @@ short spec of its part of the Variants step. It develops section 3 of
 individuals they keep", with the row `analyses/` of its section 9. It
 depends on the approved specs of stage 2, `docs/specs/core/keys.md`,
 `store.md`, `project.md` and `docs/specs/worker/protocol.md`, revised for
-stage 3 beside this one, `individualsKept` among them in `project.md`,
-and on `docs/specs/charts/histogram.md`, the plot; what it relies on in
+stage 3 beside this one, on `docs/specs/core/individualsKept.md`, written
+with them, and on `docs/specs/charts/histogram.md`, the plot; what it relies on in
 them is listed at the end. It also gives the bins of its two histograms,
 the module `src/core/histogram.ts`, which the architecture puts in core
 (section 7) and `project.md` leaves to this spec.
@@ -61,7 +61,7 @@ are removed.
 The result has a second use besides the table and the histograms that the
 user reads: **core makes the list of the individuals kept from it**, with
 the thresholds of the filters of individuals
-(`individualsKept` of `docs/specs/core/project.md`), and every analysis that reads the
+(`individualsKept` of `docs/specs/core/individualsKept.md`), and every analysis that reads the
 filters of individuals is sent that list. So what goes wrong for a user
 if this module is wrong is larger than a table: statistics of other
 filters shown as current, when the key misses an input; and every
@@ -109,7 +109,7 @@ calls `calcPerIndividualStats(variants)`, which makes one pass,
 The individuals popnei gives are those of the source in its order, since
 the job puts no `filterIndividuals`; the runner passes them on, so that
 the result has the three fields of popnei's `PerIndividualStats` that
-`individualsKept` takes, `IndividualStats` of `project.md`, and core
+`individualsKept` takes, `IndividualStats` of `individualsKept.md`, and core
 checks them against the individuals of the load there.
 
 ```ts
@@ -460,7 +460,7 @@ individuals.
 - `docs/specs/worker/runner.md` and `messages.md`: the runner answers the
   job as "The request" says, checks that popnei's individuals are the
   source's, and answers every array checked with `instanceof`.
-- `docs/specs/core/project.md`, `individualsKept`: the list from this
+- `docs/specs/core/individualsKept.md`: the list from this
   result, taken as `IndividualStats`, and the thresholds.
 - `docs/specs/charts/histogram.md`: a histogram of the edges and counts
   of `binValues`, with a threshold marked, one outside the edges
@@ -479,5 +479,5 @@ None.
 
 - The filters of individuals, their fields, and the counts beside them:
   `docs/specs/steps/variants.md` and `individualsKept` of
-  `docs/specs/core/project.md`.
+  `docs/specs/core/individualsKept.md`.
 - The plot: `docs/specs/charts/histogram.md`.

@@ -286,7 +286,7 @@ locks are the store's and not of `needs`, since they read the cache
 (`docs/architecture.md`, section 4): a Run with a threshold whose
 statistics are not in the cache starts them first, and the filters
 keeping no individual stop the Run, in the words of `keptNoneReason` of
-`docs/specs/core/project.md`, "The filters of individuals keep none of
+`docs/specs/core/individualsKept.md`, "The filters of individuals keep none of
 the 200 individuals of panel.nei. Loosen them in the Variants step."
 
 The owner decided on 25 September 2026 that the metadata file, and a
@@ -304,15 +304,14 @@ for the two others (`docs/specs/shell.md`, "The stepper"), and the
 Individuals step shows it at its select (`docs/specs/steps/individuals.md`,
 "Its words"); `needs` gives it after the first row, and the row of the
 lists last. The individuals the lists keep are `byLists` of
-`individualsKept` (`docs/specs/core/project.md`), known with no
+`individualsKept` (`docs/specs/core/individualsKept.md`), known with no
 statistics.
 
 The names of the files, of the column and of the individuals are shown
-with the helpers of `project.ts` that escape and cut them, and count with
-a comma between groups of three digits (`project.md`, the rules after the
-first table); they are private to `project.ts` today, and the plan
-exports them from there or moves them into a module of their own, with
-no change of their behaviour. A project of the association application,
+with the helpers `project.ts` exports, `shown`, `escaped`, `namesOf`,
+`counted` and `grouped`, which escape and cut them, and count with a
+comma between groups of three digits (`project.md`, the rules after the
+first table). A project of the association application,
 whose grouping has roles, is a defect: the diversity is not among its
 analyses.
 
@@ -461,7 +460,7 @@ individuals. The project file saves them with the key version
 `numCheckNumbers(p)` gives their count for the project `p`, 1 + 3 × the
 populations of `populationsKept(p, byLists)`, with `byLists`, the
 individuals the lists to keep and to remove keep, of `individualsKept`
-(`docs/specs/core/project.md`), since `run` sends every one of them and popnei gives a row for
+(`docs/specs/core/individualsKept.md`), since `run` sends every one of them and popnei gives a row for
 each; or `null` when `populationsToRun` is `null`, the variants file or
 the individuals file not read or no column of the populations, and when
 the project holds a threshold on the individuals, whose list needs the
@@ -1249,7 +1248,7 @@ What stage 3 asks, of specs revised or written beside this revision:
   the panel reads; a Run that calculates the statistics first, with
   their progress in the running state, and a Stop of both; the lock of
   no individual kept, in its words.
-- `docs/specs/core/project.md`: `byLists` of `individualsKept`, the
+- `docs/specs/core/individualsKept.md`: `byLists` of `individualsKept`, the
   individuals the lists to keep and to remove keep, with no statistics,
   for `needs` and `numCheckNumbers`.
 - `docs/specs/entry.md`: `countsOf` in place of `numVarsOf`, reading

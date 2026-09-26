@@ -54,8 +54,7 @@ filters it reads (`docs/specs/core/store.md`), and `keyOf` puts in the key
 only those, as an empty list for one it does not read.
 
 The list of the individuals the filters keep, which core makes from the
-statistics of each individual (`docs/specs/core/project.md`, "The
-individuals the filters keep"), is in no key, as the owner approved on
+statistics of each individual (`docs/specs/core/individualsKept.md`), is in no key, as the owner approved on
 26 September 2026 (`docs/architecture.md`, section 3). It is made from
 the load, the version of popnei, the filters of the variants and those
 of the individuals, which the key holds, so a key of the thresholds

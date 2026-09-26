@@ -145,7 +145,7 @@ the size it expects before the user writes:
   `filterCounts` for the current filters, when the cache has them, and
   otherwise the variants of the file, when a pass has counted them; the
   individuals kept are those of `individualsKept` of
-  `docs/specs/core/project.md`, and
+  `docs/specs/core/individualsKept.md`, and
   every individual of the file while a threshold waits for its
   statistics. An estimate from a bound says "at most about".
 - **The warning** comes above `WRITE_WARN_BYTES`, a constant of the code
@@ -217,7 +217,7 @@ notice and the status region is "Writing the file".
 | an estimate of 4 GB or more | "A file of about 4.3 GB cannot be written in a browser tab, which gives popnei at most 4 GB. Remove variants or individuals with the filters, or write the file with popnei in Python." |
 | no counts and no number of variants | "The size of the file is known once the variants are counted: Count, above." |
 | the filters keep no variant | "The filters kept none of the variants of panel.nei, so there is nothing to write. Loosen the filters above." |
-| the filters keep no individual | the store's lock, `keptNoneReason` of `docs/specs/core/project.md`: "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them in the Variants step." |
+| the filters keep no individual | the store's lock, `keptNoneReason` of `docs/specs/core/individualsKept.md`: "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them in the Variants step." |
 | `workerFailed` | "The writing stopped unexpectedly, perhaps because the file, of about 960 MB, did not fit in the memory of this tab. Remove variants or individuals with the filters, or write the file with popnei in Python." |
 | a refusal of popnei, of a line of the VCF | the diversity's words for it, "popnei could not read panel.vcf.gz: ‹its message›. …" |
 | `reopenFailed`, `couldNotStart`, `protocolMismatch`, `defect` | the diversity's words |
@@ -276,7 +276,7 @@ before the user asks.
   own words in the notice, its wait for the statistics of each
   individual, its late answer dropped, its counts put under
   `filterCounts`, and the `Blob` held as a value it does not read.
-- `docs/specs/core/project.md`, `individualsKept`: the individuals kept, and how
+- `docs/specs/core/individualsKept.md`: the individuals kept, and how
   many.
 - `docs/specs/entry.md`: the download through a link, and the release of
   the `Blob`.
