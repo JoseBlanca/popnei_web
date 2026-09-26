@@ -18,6 +18,9 @@ export interface KeysPressed {
   /** The character of the key, by the layout of the keyboard: "z", or
       "Z" with Shift. */
   readonly key: string;
+  /** The place of the key on the keyboard, named by the key of a US
+      keyboard there: "KeyZ", whatever the layout gives. */
+  readonly code: string;
   /** Whether Ctrl is held. */
   readonly ctrlKey: boolean;
   /** Whether Cmd, on macOS, is held. */
@@ -28,6 +31,18 @@ export interface KeysPressed {
   readonly altKey: boolean;
 }
 
+/** The letter of the keys: the one the layout gives when it is a Latin
+    letter, so that AZERTY and QWERTZ keep Z and Y where their users see
+    them; otherwise, on a Russian or a Greek layout, the letter of the
+    same place on a US keyboard. In lower case, or "" for a key that is no
+    letter. */
+function letterOf(keys: KeysPressed): string {
+  const letter = keys.key.toLowerCase();
+  if (/^[a-z]$/.test(letter)) return letter;
+  const place = /^Key([A-Z])$/.exec(keys.code);
+  return place?.[1]?.toLowerCase() ?? "";
+}
+
 /**
  * The shortcut the keys give, or `null`. Z with Ctrl or Cmd undoes, and
  * with Shift as well redoes; Y with Ctrl redoes, and not with Cmd, which
@@ -36,7 +51,7 @@ export interface KeysPressed {
  */
 export function shortcutOf(keys: KeysPressed): Shortcut | null {
   if (keys.altKey) return null;
-  const letter = keys.key.toLowerCase();
+  const letter = letterOf(keys);
   if (letter === "z" && (keys.ctrlKey || keys.metaKey)) {
     return keys.shiftKey ? "redo" : "undo";
   }

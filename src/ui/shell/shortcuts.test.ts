@@ -8,10 +8,13 @@ import { describe, expect, test } from "vitest";
 import { shortcutOf } from "./shortcuts.ts";
 import type { KeysPressed } from "./shortcuts.ts";
 
-/** The key `key` with the modifiers `held`, none by default. */
+/** The key `key` with the modifiers `held`, none by default, at the
+    place `code` of the keyboard, by default that of the letter on a US
+    keyboard, KeyZ for "z". */
 function keys(key: string, held: Partial<KeysPressed> = {}): KeysPressed {
   return {
     key,
+    code: `Key${key.toUpperCase()}`,
     ctrlKey: false,
     metaKey: false,
     shiftKey: false,
@@ -47,5 +50,23 @@ describe("the shortcuts of Undo and Redo", () => {
     expect(shortcutOf(keys("Z", { shiftKey: true }))).toBeNull();
     expect(shortcutOf(keys("z", { ctrlKey: true, altKey: true }))).toBeNull();
     expect(shortcutOf(keys("x", { ctrlKey: true }))).toBeNull();
+  });
+
+  test("on a Russian or a Greek layout, the keys of Z and Y undo and redo", () => {
+    expect(shortcutOf(keys("я", { code: "KeyZ", ctrlKey: true }))).toBe("undo");
+    expect(
+      shortcutOf(keys("Я", { code: "KeyZ", ctrlKey: true, shiftKey: true })),
+    ).toBe("redo");
+    expect(shortcutOf(keys("н", { code: "KeyY", ctrlKey: true }))).toBe("redo");
+    expect(shortcutOf(keys("ζ", { code: "KeyZ", metaKey: true }))).toBe("undo");
+    expect(shortcutOf(keys("υ", { code: "KeyY", ctrlKey: true }))).toBe("redo");
+  });
+
+  test("on a layout of Latin letters, the letter decides and not the place", () => {
+    // AZERTY: Z where a US keyboard has W, and W where it has Z.
+    expect(shortcutOf(keys("z", { code: "KeyW", ctrlKey: true }))).toBe("undo");
+    expect(shortcutOf(keys("w", { code: "KeyZ", ctrlKey: true }))).toBeNull();
+    // QWERTZ: Y where a US keyboard has Z.
+    expect(shortcutOf(keys("y", { code: "KeyZ", ctrlKey: true }))).toBe("redo");
   });
 });
