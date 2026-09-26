@@ -223,7 +223,13 @@ one:
   one screen have ids of their own.
 - `src/charts/export.ts`, `toSVG` and `toPNG` of `charts.md`, "Colours,
   themes and the exported file" and "PNG", which each plot's handle calls
-  with its SVG and its size.
+  with its SVG and its size, and the error its `toPNG` rejects with:
+
+  ```ts
+  export class PngError extends Error {
+    readonly kind: "tooLarge" | "notMade"; // a side above 4,096 pixels at that scale; no canvas, or no PNG made
+  }
+  ```
 - `src/charts/charts.css`, the classes of the plots, with the colours
   from the tokens of `src/ui/tokens.css`.
 - `src/charts/limits.ts`, with `MAX_HISTOGRAM_BINS` and the canvas limit
@@ -299,9 +305,22 @@ needs the numbers behind the bars (`charts.md`, "Accessibility"):
 
 - **The SVG has `role="img"`, with `aria-labelledby` naming its `<title>`
   and its `<desc>`.** The screen writes the description as a summary,
-  in this form: "The major allele frequency of 1,200 variants, in 40 bins
-  from 0 to 1. The threshold 0.95 keeps bins up to 0.95 and removes 2
-  bins above it." The analyses' specs give its words.
+  from `histogramRows`, in this form: what is counted and how many, the
+  bins and their range, and, with a threshold, the bins it keeps, the
+  bin it splits when there is one, and the bins it removes, each with
+  the variants or the individuals in them (**Open 2**, below):
+  "The major allele frequency of 1,200 variants, in 40 bins from 0 to 1.
+  The threshold 0.95 keeps the 38 bins up to it, 1,175 variants, and
+  removes the 2 bins above it, 25 variants." With a bin split, the
+  observed heterozygosity at 0.5 of the table above: "… The threshold
+  0.5 keeps the 20 bins up to it, 1,090 variants, splits the bin from 0.5
+  to 0.525, 62 variants, and removes the 19 bins above it, 48 variants."
+  A split bin is named with its edges, since the plot cannot say how
+  many of its values the threshold keeps. The edges and the threshold
+  are written to four decimals at most, with no zero at the end, as the
+  table below rounds them; a part with no bin is left out, "keeps none
+  of the bins" when the threshold is below the first edge. The analyses'
+  specs give the words of what is counted.
 - **A table beside the plot, drawn by the screen from `histogramRows`**,
   one row per bin, in the order of the bins: the lower edge, the upper
   edge, the count, and, when there is a threshold, whether the filter
@@ -317,8 +336,10 @@ needs the numbers behind the bars (`charts.md`, "Accessibility"):
   description**, so that the state of each bin does not rest on the
   difference between a filled and an outlined bar alone.
 
-Where the table sits, a tab beside the plot or under it, is the screen's
-(`.claude/skills/coding/react.md`, the tabs of the results).
+The Variants step puts the plot and the table in two tabs of one block,
+as `.claude/skills/coding/react.md` has the results of an analysis
+(`docs/specs/steps/variants.md`, "The histograms beside the filters of
+the variants").
 
 ## The export
 
@@ -336,13 +357,21 @@ plot, "Download as SVG" and "Download as PNG" (**Open 1**, below).
   with popnei 0.1.0, in version 0.1.0 of the application."
 - **The PNG is drawn at 3 times the size on the screen**, for print at
   300 dpi, and at 2 times when 3 would make a side above 4,096 pixels,
-  which a canvas of iOS does not draw; a plot above 2,048 pixels a side,
-  which only a very wide window gives, is refused with "The plot is too
-  large to save as a PNG. Save it as SVG, or make the window narrower and
-  try again." When the browser gives no canvas or cannot make the PNG,
-  `toPNG` rejects, and the screen says "The browser could not make the
-  PNG. Save the plot as SVG." Both are said without moving the focus
-  (WCAG 2.2, 4.1.3).
+  which a canvas of iOS does not draw. `toPNG(scale)` rejects with a
+  `PngError` of `src/charts/export.ts`, whose `kind` tells the two
+  failures apart: `tooLarge`, when that scale would make a side above
+  4,096 pixels, before it draws anything; and `notMade`, when the browser
+  gives no canvas or cannot make the PNG. The screen picks the scale:
+  it asks `toPNG(3)`, and after a `tooLarge` `toPNG(2)`. A plot too
+  large at 2, above 2,048 pixels a side, is refused with "The plot is
+  too large to save as a PNG. Save it as SVG, or make the window
+  narrower and try again."; a `notMade`, with "The browser could not
+  make the PNG. Save the plot as SVG." Both are said without moving the
+  focus (WCAG 2.2, 4.1.3). A histogram is at most 40rem wide (below,
+  "The size"), 640 pixels at the browser's default size of text, 16
+  pixels, so 3 times is 1,920; it takes 2 times only above 1,365 pixels
+  a side, a size of text above 34 pixels, and is refused above 2,048, a
+  size of text above 51 pixels.
 - **The name of the file** is the stem of the variants file, as
   `variantsStem` of `src/core/fileNames.ts` makes it for the project file
   and the CSV of the diversity, then the name of the histogram, then the
@@ -454,8 +483,15 @@ where `export.ts` is first seen working:
   background rectangle, and the light colours when the page is dark: the
   fill of a kept bar is `rgb(0, 114, 178)`;
 - `toPNG(3)` of a plot of 600 by 375 pixels is a PNG of 1,800 by 1,125
-  pixels, and `toPNG(2)` of a plot above 2,048 pixels a side rejects
-  without drawing;
+  pixels; of a plot of 1,400 pixels wide, made so by the size of its
+  element in the test, it rejects with `tooLarge`, and `toPNG(2)` gives
+  2,800 pixels; `toPNG(2)` of a plot above 2,048 pixels a side rejects
+  with `tooLarge` without drawing; a canvas whose `toBlob` gives `null`,
+  stubbed, rejects with `notMade`;
+- at 320 pixels wide, the width of a phone of WCAG 2.2, 1.4.10, the
+  three rows of the legend lie inside the SVG, their boxes measured with
+  `getBBox`, with the longest words of the step, "Removed by this
+  filter";
 - the Variants step with its histograms, in both themes, in the screens
   of `e2e/screens.spec.ts`, looked at as `testing.md` says, and axe on
   each.
@@ -524,12 +560,16 @@ Written into those documents with the specs of stage 3, on 26 September
   and its pair with the background in the test of the tokens.
 - `.claude/skills/coding/charts.md`, "The SVG, its parts and their names":
   a plot with no pointer events has no `chart-overlay`.
+- `.claude/skills/coding/charts.md`, "PNG": `toPNG` rejects with a
+  `PngError` of kind `tooLarge` or `notMade`, above, where its example
+  throws a plain `Error`; not yet written there, and written with the
+  code of `export.ts`.
 
 ## Open points
 
-The one open point of this spec is point C of
+The two open points of this spec are points C and I of
 `docs/specs/stage-3-open-points.md`, where the open points of the specs
-of stage 3 are gathered; it is kept here as written.
+of stage 3 are gathered; they are kept here as written.
 
 1. **Whether the histograms of stage 3 offer their download as SVG and
    PNG.** `docs/build-order.md` gives "every plot as SVG and PNG" to
@@ -542,6 +582,15 @@ of stage 3 are gathered; it is kept here as written.
    export is tested and not offered until stage 6. Recommended: the
    buttons in stage 3, as the CSV of the diversity was offered in stage 2.
    Meanwhile: the buttons are there.
+
+2. **What the description counts.** Point I of
+   `docs/specs/stage-3-open-points.md`. The description a screen reader
+   reads could name the bins alone, "keeps bins up to 0.95 and removes 2
+   bins above it", which is short and says nothing a user of a screen
+   reader can compare with the counts beside the filter; or the
+   variants or the individuals in the bins kept, split and removed, as
+   above, which says what the plot shows a sighted user, at the cost of
+   a longer sentence. Recommended, and meanwhile: the counts.
 
 ## Not in this spec
 
