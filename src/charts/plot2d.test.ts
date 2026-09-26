@@ -122,6 +122,16 @@ function observerOf(index: number): FakeObserver {
   return observer;
 }
 
+/** The labels of the ticks of the axis `selector` in `element`, in order. */
+function tickLabels(element: HTMLElement, selector: string): (string | null)[] {
+  return [...element.querySelectorAll(`${selector} g.tick text`)].map(
+    (each) => each.textContent,
+  );
+}
+
+/** The labels of the ticks 0, 2, ... 10. */
+const EVEN_TO_10 = ["0", "2", "4", "6", "8", "10"];
+
 function svgOf(element: HTMLElement): SVGSVGElement {
   const svg = element.querySelector("svg");
   if (svg === null) throw new Error("no svg");
@@ -278,6 +288,20 @@ describe("VS4 D1 the base of the 2D plots, under jsdom", () => {
     expect(draws).toEqual([{ innerWidth: 340, innerHeight: 260 }]);
     expect(svg.querySelectorAll("rect.bar")).toHaveLength(3);
     expect(svg.getAttribute("width")).toBe("400");
+    const xAxis = svg.querySelector("g.chart-axis-x");
+    const yAxis = svg.querySelector("g.chart-axis-y");
+    expect(xAxis?.querySelectorAll("g.tick").length).toBeGreaterThan(0);
+    expect(yAxis?.querySelectorAll("g.tick").length).toBeGreaterThan(0);
+    // A resize back to 40 pixels high leaves nothing of that drawing, its
+    // two axes included.
+    observerOf(0).resize(400, 40);
+    runFrames();
+    expect(draws).toHaveLength(1);
+    expect(svg.querySelectorAll("rect.bar")).toHaveLength(0);
+    expect(xAxis?.childNodes).toHaveLength(0);
+    expect(yAxis?.childNodes).toHaveLength(0);
+    expect(svg.getAttribute("width")).toBe("0");
+    expect(() => handle.toSVG()).toThrow("frame has no area");
   });
 
   test("an element whose size becomes 0 after a draw keeps its last drawing", () => {
@@ -289,6 +313,29 @@ describe("VS4 D1 the base of the 2D plots, under jsdom", () => {
     expect(draws).toHaveLength(1);
     expect(svg.querySelectorAll("rect.bar")).toHaveLength(3);
     expect(svg.getAttribute("width")).toBe("400");
+  });
+
+  test("an element whose width or height alone becomes 0 after a draw keeps its last drawing", () => {
+    for (const [width, height] of [
+      [400, 0],
+      [0, 300],
+    ] as const) {
+      draws.length = 0;
+      const element = sizedElement(400, 300);
+      const handle = createPlot2d(element, barsOf([1, 2, 3]), bars);
+      const observer = FakeObserver.made.at(-1);
+      if (observer === undefined) throw new Error("no observer");
+      observer.resize(width, height);
+      runFrames();
+      const svg = svgOf(element);
+      const size = `${String(width)} by ${String(height)}`;
+      expect(draws, size).toHaveLength(1);
+      expect(svg.querySelectorAll("rect.bar"), size).toHaveLength(3);
+      expect(svg.getAttribute("width"), size).toBe("400");
+      expect(svg.getAttribute("height"), size).toBe("300");
+      expect(() => handle.toSVG(), size).not.toThrow();
+      handle.destroy();
+    }
   });
 
   test("an element with a padding is drawn at its content box when made, and not again when the observer gives that box", () => {
@@ -423,14 +470,20 @@ describe("VS4 D1 the base of the 2D plots, its axes and its handle", () => {
   });
 
   test("the axes have about one tick for 80 pixels of width and one for 40 of height", () => {
-    // A frame of 340 by 260: about 4 ticks over 0 to 10, which d3 makes
-    // 0, 2, ... 10, and about 7 over 0 to 10 upwards, 0, 2, ... 10 too.
+    // A frame of 340 by 260. 340 / 80 rounds to 4 ticks over 0 to 7,
+    // which d3 makes 0, 2, 4 and 6, where one tick for 60 or 50 pixels
+    // would ask for 6 or 7 and give the 8 ticks 0 to 7; 260 / 40 rounds to
+    // 7 over 0 to 10 upwards, 0, 2, ... 10, where one for 30 pixels would
+    // give the 11 ticks 0 to 10.
     const element = sizedElement(400, 300);
-    createPlot2d(element, barsOf([10, 1, 1, 1, 1, 1, 1, 1, 1, 1]), bars);
-    const ticksOf = (selector: string): number =>
-      element.querySelectorAll(`${selector} g.tick`).length;
-    expect(ticksOf("g.chart-axis-x")).toBe(6);
-    expect(ticksOf("g.chart-axis-y")).toBe(6);
+    createPlot2d(element, barsOf([10, 1, 1, 1, 1, 1, 1]), bars);
+    expect(tickLabels(element, "g.chart-axis-x")).toEqual(["0", "2", "4", "6"]);
+    expect(tickLabels(element, "g.chart-axis-y")).toEqual(EVEN_TO_10);
+    // A frame 160 high: 160 / 40 is 4 ticks over 0 to 10, 0, 2, ... 10,
+    // where one for 50 pixels would be 3 and give 0, 5 and 10.
+    const lower = sizedElement(400, 200);
+    createPlot2d(lower, barsOf([10, 1, 1, 1, 1, 1, 1]), bars);
+    expect(tickLabels(lower, "g.chart-axis-y")).toEqual(EVEN_TO_10);
   });
 
   test("the labels of the axes are those of the data, in the margins", () => {
@@ -440,9 +493,53 @@ describe("VS4 D1 the base of the 2D plots, its axes and its handle", () => {
     const y = element.querySelector(".chart-axis-label-y");
     expect(x?.textContent).toBe("Index");
     expect(y?.textContent).toBe("Count");
-    expect(Number(x?.getAttribute("y"))).toBeGreaterThan(260);
-    expect(Number(y?.getAttribute("y"))).toBeLessThan(0);
+    // From the top left of the frame of 340 by 260: the x label centred
+    // on the width, its baseline 8 pixels above the bottom of the SVG,
+    // 260 + 30 - 8; the y label turned, centred on the height, its
+    // baseline 16 pixels right of the left of the SVG, -40 + 16.
+    expect(Number(x?.getAttribute("x"))).toBe(170);
+    expect(Number(x?.getAttribute("y"))).toBe(282);
     expect(y?.getAttribute("transform")).toBe("rotate(-90)");
+    expect(Number(y?.getAttribute("x"))).toBe(-130);
+    expect(Number(y?.getAttribute("y"))).toBe(-24);
+  });
+
+  test("xFormat and yFormat label the ticks of their axes, yFormat with whole numbers too", () => {
+    const formatted = (yWholeNumbers: boolean): Plot2dDefinition<Bars> => ({
+      ...bars,
+      draw(frame, data) {
+        const x = scaleLinear()
+          .domain([0, data.values.length])
+          .range([0, frame.innerWidth]);
+        const y = scaleLinear()
+          .domain([0, Math.max(1, ...data.values)])
+          .range([frame.innerHeight, 0]);
+        frame.axes(x, y, {
+          xFormat: (value) => `x${String(value)}`,
+          yFormat: (value) => `y${String(value)}`,
+          yWholeNumbers,
+        });
+      },
+    });
+    const element = sizedElement(400, 300);
+    createPlot2d(element, barsOf([10, 1, 1, 1, 1, 1, 1]), formatted(false));
+    expect(tickLabels(element, "g.chart-axis-x")).toEqual([
+      "x0",
+      "x2",
+      "x4",
+      "x6",
+    ]);
+    expect(tickLabels(element, "g.chart-axis-y")).toEqual(
+      EVEN_TO_10.map((label) => `y${label}`),
+    );
+    const whole = sizedElement(400, 300);
+    createPlot2d(whole, barsOf([3, 1]), formatted(true));
+    expect(tickLabels(whole, "g.chart-axis-y")).toEqual([
+      "y0",
+      "y1",
+      "y2",
+      "y3",
+    ]);
   });
 
   test("a draw that a resize scheduled draws the data of a later update at the new size", () => {
