@@ -25,9 +25,13 @@ import {
 import type {
   DiversityJob,
   DiversityResult,
+  FilterCountsJob,
+  IndividualChecksJob,
+  IndividualChecksResult,
   JobResult,
   Pops,
   Progress,
+  VariantChecksJob,
   VariantFilter,
 } from "./protocol.ts";
 import {
@@ -979,5 +983,611 @@ describe("WS3 D2 what goes wrong: answerOfThrown", () => {
       kind: "crashed",
       message: "a string",
     });
+  });
+});
+
+/** The result of an answer that has to be `ok`, of the analysis given. */
+function resultOf<A extends JobResult["analysis"]>(
+  answer: Answer<JobResult>,
+  analysis: A,
+): Extract<JobResult, { readonly analysis: A }> {
+  if (answer.kind !== "ok") {
+    throw new Error(`the answer is ${answer.kind}: ${JSON.stringify(answer)}`);
+  }
+  const result = answer.value;
+  if (!isResultOf(result, analysis)) {
+    throw new Error(`the result is of ${result.analysis}, not ${analysis}`);
+  }
+  return result;
+}
+
+function isResultOf<A extends JobResult["analysis"]>(
+  result: JobResult,
+  analysis: A,
+): result is Extract<JobResult, { readonly analysis: A }> {
+  return result.analysis === analysis;
+}
+
+function individualChecksJob(
+  filters: readonly VariantFilter[],
+): IndividualChecksJob {
+  return { analysis: "individualChecks", fileId: FILE_ID, filters };
+}
+
+/** The job of the histograms, with popnei's defaults of the bins. */
+function variantChecksJob(): VariantChecksJob {
+  return {
+    analysis: "variantChecks",
+    fileId: FILE_ID,
+    filters: [],
+    minNumIndividuals: 0,
+    numBins: 40,
+    range: [0, 1],
+  };
+}
+
+function filterCountsJob(filters: readonly VariantFilter[]): FilterCountsJob {
+  return { analysis: "filterCounts", fileId: FILE_ID, filters };
+}
+
+/** The three filters of the counts: missing data at 0.05, observed
+    heterozygosity at 0.9 and MAF at 0.95, in that order. */
+const THREE_FILTERS: readonly VariantFilter[] = [
+  missingData(0.05),
+  { kind: "obs_het", maxAllowedObsHet: 0.9 },
+  { kind: "maf", maxAllowedMaf: 0.95 },
+];
+
+/** The counts of the pass of the three filters, with or without a list. */
+const THREE_COUNTS = {
+  numVars: 1128,
+  filtering: {
+    missing_data: { varsProcessed: 1200, varsKept: 1152 },
+    obs_het: { varsProcessed: 1152, varsKept: 1152 },
+    maf: { varsProcessed: 1152, varsKept: 1128 },
+  },
+};
+
+/** The counts of the pass of the missing data filter at 0.05. */
+const COUNTS_AT_0_05 = AT_0_05.passStats;
+
+/** The statistics of each individual of panel.nei at 0.05, from a run of
+    the runner, as core gets them. */
+function statsAt005(): IndividualChecksResult {
+  return resultOf(
+    opened("panel.nei").run(individualChecksJob([missingData(0.05)]), ignore),
+    "individualChecks",
+  );
+}
+
+/** The individuals, in the order of the file, whose missing rate is at
+    most 0.03 and, when `maxObsHet` is given, whose observed
+    heterozygosity is at most it: the list of 125, and of 119. */
+function listOf(
+  stats: IndividualChecksResult,
+  maxObsHet: number | null,
+): string[] {
+  return stats.individuals.filter((_, index) => {
+    const missing = stats.missingGtRate[index];
+    const obsHet = stats.obsHetRate[index];
+    if (missing === undefined || obsHet === undefined) {
+      throw new Error("a statistic missing from the result");
+    }
+    return missing <= 0.03 && (maxObsHet === null || obsHet <= maxObsHet);
+  });
+}
+
+/** The list of 125 and the list of 119. */
+function lists(): { readonly of125: string[]; readonly of119: string[] } {
+  const stats = statsAt005();
+  return { of125: listOf(stats, null), of119: listOf(stats, 0.38) };
+}
+
+/** The diversity job with the missing data filter at 0.05, or `filters`,
+    and the list, the populations holding only the individuals of it. */
+function diversityWithList(
+  list: readonly string[],
+  filters: readonly VariantFilter[] = [missingData(0.05)],
+): DiversityJob {
+  const kept = new Set(list);
+  const pops: Pops = panelPops().map(([pop, individuals]) => [
+    pop,
+    individuals.filter((individual) => kept.has(individual)),
+  ]);
+  return { ...diversityJob(filters, pops), individuals: list };
+}
+
+/** A panel.nei whose reads of the source are counted. */
+function countedPanel(): { readonly file: LoadFile; reads: () => number } {
+  const nei = bytesOf("panel.nei");
+  let numReads = 0;
+  const file: LoadFile = {
+    name: "panel.nei",
+    get source() {
+      numReads += 1;
+      return nei;
+    },
+  };
+  return { file, reads: () => numReads };
+}
+
+describe("VS1 D3 the passes of the runner: the statistics of each individual", () => {
+  test("at 0.05 panel.nei gives its 200 individuals, popnei's numbers of the first three, no NaN, and the counts of the pass", () => {
+    const result = statsAt005();
+    expect(result.individuals.length).toBe(200);
+    expect(result.individuals.slice(0, 3)).toEqual(["s000", "s001", "s002"]);
+    expect(result.missingGtRate.length).toBe(200);
+    expect(result.obsHetRate.length).toBe(200);
+    expect([...result.missingGtRate.slice(0, 3)]).toEqual([
+      0.026041666666666668, 0.036458333333333336, 0.03211805555555555,
+    ]);
+    expect([...result.obsHetRate.slice(0, 3)]).toEqual([
+      0.3672014260249554, 0.3441441441441441, 0.37309417040358744,
+    ]);
+    expect(result.obsHetRate.some((rate) => Number.isNaN(rate))).toBe(false);
+    expect(result.passStats).toEqual(COUNTS_AT_0_05);
+  });
+
+  test("a VCF of two individuals, the second missing at both variants, gives the rates 0 and 1 and the heterozygosities 0.5 and NaN", () => {
+    const vcf =
+      '##fileformat=VCFv4.2\n##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n' +
+      "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\ta\tb\n" +
+      "1\t100\t.\tA\tG\t.\tPASS\t.\tGT\t0/1\t./.\n" +
+      "1\t200\t.\tC\tT\t.\tPASS\t.\tGT\t0/0\t./.\n";
+    const runner = createRunner();
+    const open = runner.open(VCF, {
+      name: "two.vcf",
+      source: new TextEncoder().encode(vcf),
+    });
+    expect(open.kind).toBe("ok");
+    const result = resultOf(
+      runner.run(individualChecksJob([]), ignore),
+      "individualChecks",
+    );
+    expect(result.individuals).toEqual(["a", "b"]);
+    expect([...result.missingGtRate]).toEqual([0, 1]);
+    expect([...result.obsHetRate]).toEqual([0.5, NaN]);
+    expect(result.passStats).toEqual({ numVars: 2, filtering: {} });
+  });
+
+  test("filters that keep no variant are refused with popnei's message", () => {
+    const job = individualChecksJob([
+      missingData(0.05),
+      { kind: "maf", maxAllowedMaf: 0 },
+    ]);
+    const answer = opened("panel.nei").run(job, ignore);
+    expect(answer.kind).toBe("refused");
+    expect(answer.kind === "refused" ? answer.message : "").toMatch(
+      /^the pass gave no variant: its source gave 1200/,
+    );
+  });
+
+  test("names of popnei's that are not those the open gave, in their order, are a defect thrown", () => {
+    // The 200 names of panel.nei with the first two swapped, as the open
+    // gives them: popnei's statistics then give the same names in another
+    // order.
+    const [first, second, ...rest] = statsAt005().individuals;
+    if (first === undefined || second === undefined) {
+      throw new Error("panel.nei has not two individuals");
+    }
+    const names = vi
+      .spyOn(Variants.prototype, "individuals", "get")
+      .mockReturnValueOnce([second, first, ...rest]);
+    try {
+      const runner = opened("panel.nei");
+      expect(() =>
+        runner.run(individualChecksJob([missingData(0.05)]), ignore),
+      ).toThrow(
+        /^popnei_web defect: the statistics of each individual are not of the individuals the open gave/,
+      );
+    } finally {
+      names.mockRestore();
+    }
+  });
+});
+
+describe("VS1 D3 the passes of the runner: the diversity with a list of individuals", () => {
+  test("with the list of 125 after the filter at 0.05, popnei's numbers of the three populations and the counts of the filter alone", () => {
+    const { of125 } = lists();
+    expect(of125.length).toBe(125);
+    expect(of125.slice(0, 3)).toEqual(["s000", "s003", "s004"]);
+    const result = valueOf(
+      opened("panel.nei").run(diversityWithList(of125), ignore),
+    );
+    expect(result.pops).toEqual(["p0", "p2", "p1"]);
+    expect([...result.numIndividuals]).toEqual([32, 54, 39]);
+    expect([...result.unbiasedExpHet]).toEqual([
+      0.35235226528316066, 0.34398672129705354, 0.34990422931551174,
+    ]);
+    expect([...result.obsHet]).toEqual([
+      0.3565861820201193, 0.3519488909232355, 0.35589376321324523,
+    ]);
+    expect([...result.polyRatio]).toEqual([
+      0.9088541666666666, 0.9019097222222222, 0.9192708333333334,
+    ]);
+    expect(result.passStats).toEqual(COUNTS_AT_0_05);
+  });
+
+  test("with the list of 119, the numbers of the table of diversity.md", () => {
+    const { of119 } = lists();
+    expect(of119.length).toBe(119);
+    const result = valueOf(
+      opened("panel.nei").run(diversityWithList(of119), ignore),
+    );
+    expect(numbersOf(result)).toEqual({
+      pops: ["p0", "p2", "p1"],
+      numIndividuals: [32, 50, 37],
+      unbiasedExpHet: [
+        0.35235226528316066, 0.34326346030608246, 0.34948537601203733,
+      ],
+      obsHet: [0.3565861820201193, 0.34913198555512975, 0.3542306276815314],
+      polyRatio: [0.9088541666666666, 0.9053819444444444, 0.9131944444444444],
+      numVarsWithValue: [1152, 1152, 1152],
+      passStats: COUNTS_AT_0_05,
+    });
+  });
+
+  test("a list that names an individual twice is refused with popnei's message", () => {
+    const job: DiversityJob = {
+      ...diversityJob([missingData(0.05)], [["p0", ["s000"]]]),
+      individuals: ["s000", "s000"],
+    };
+    const answer = opened("panel.nei").run(job, ignore);
+    expect(answer.kind).toBe("refused");
+    expect(answer.kind === "refused" ? answer.message : "").toContain("s000");
+  });
+
+  test("an empty list of individuals is badRequest, before any filter is put", () => {
+    const put = vi.spyOn(Variants.prototype, "filterByMissingData");
+    const individuals = vi.spyOn(Variants.prototype, "filterIndividuals");
+    try {
+      const runner = opened("panel.nei");
+      const job: DiversityJob = {
+        ...diversityJob([missingData(0.05)]),
+        individuals: [],
+      };
+      expect(runner.run(job, ignore)).toEqual({
+        kind: "badRequest",
+        message: "an empty list of individuals",
+      });
+      expect(put).toHaveBeenCalledTimes(0);
+      expect(individuals).toHaveBeenCalledTimes(0);
+    } finally {
+      put.mockRestore();
+      individuals.mockRestore();
+    }
+  });
+});
+
+describe("VS1 D3 the passes of the runner: the steps with the list", () => {
+  test("after the diversity with the list, the same filter and no list opens the file again, and so does the list after that filter alone", () => {
+    const { of119 } = lists();
+    const { file, reads } = countedPanel();
+    const runner = createRunner();
+    expect(runner.open(NEI, file).kind).toBe("ok");
+    const withList = valueOf(runner.run(diversityWithList(of119), ignore));
+    expect([...withList.numIndividuals]).toEqual([32, 50, 37]);
+    expect(reads()).toBe(1);
+    const noList = valueOf(
+      runner.run(diversityJob([missingData(0.05)]), ignore),
+    );
+    expect(reads()).toBe(2);
+    expect(numbersOf(noList)).toEqual(AT_0_05);
+    const again = valueOf(runner.run(diversityWithList(of119), ignore));
+    expect(reads()).toBe(3);
+    expect([...again.numIndividuals]).toEqual([32, 50, 37]);
+  });
+
+  test("after the diversity with the list, the same list in another order opens the file again", () => {
+    const { of119 } = lists();
+    const { file, reads } = countedPanel();
+    const runner = createRunner();
+    expect(runner.open(NEI, file).kind).toBe("ok");
+    runner.run(diversityWithList(of119), ignore);
+    expect(reads()).toBe(1);
+    const reversed = valueOf(
+      runner.run(diversityWithList(of119.toReversed()), ignore),
+    );
+    expect(reads()).toBe(2);
+    expect([...reversed.numIndividuals]).toEqual([32, 50, 37]);
+  });
+
+  test("after the diversity with the list, the same filter and the same list do not open the file again", () => {
+    const { of119 } = lists();
+    const { file, reads } = countedPanel();
+    const runner = createRunner();
+    expect(runner.open(NEI, file).kind).toBe("ok");
+    runner.run(diversityWithList(of119), ignore);
+    const again = valueOf(runner.run(diversityWithList([...of119]), ignore));
+    expect(reads()).toBe(1);
+    expect([...again.unbiasedExpHet]).toEqual([
+      0.35235226528316066, 0.34326346030608246, 0.34948537601203733,
+    ]);
+  });
+});
+
+describe("VS1 D3 the passes of the runner: the histograms and the counts", () => {
+  test("the histograms of panel.nei with no filter, 40 bins from 0 to 1: popnei's edges, means and counts", () => {
+    const result = resultOf(
+      opened("panel.nei").run(variantChecksJob(), ignore),
+      "variantChecks",
+    );
+    expect(result.binEdges.length).toBe(41);
+    expect(result.binEdges[0]).toBe(0);
+    expect(result.binEdges[3]).toBe(0.07500000000000001);
+    expect(result.binEdges[38]).toBe(0.9500000000000001);
+    expect(result.binEdges[40]).toBe(1);
+    expect(result.binEdges.buffer.byteLength).toBe(41 * 8);
+    expect(result.maf.mean).toBe(0.7163445463101891);
+    expect(result.obsHet.mean).toBe(0.35429523451520484);
+    expect(result.unbiasedExpHet.mean).toBe(0.3754712450806149);
+    expect([...result.maf.counts]).toEqual([
+      ...Array<number>(20).fill(0),
+      69,
+      75,
+      62,
+      71,
+      60,
+      74,
+      72,
+      83,
+      70,
+      68,
+      64,
+      83,
+      64,
+      63,
+      67,
+      57,
+      48,
+      25,
+      22,
+      3,
+    ]);
+    expect([...result.obsHet.counts]).toEqual([
+      0,
+      4,
+      9,
+      18,
+      20,
+      25,
+      30,
+      34,
+      50,
+      61,
+      53,
+      69,
+      62,
+      84,
+      89,
+      101,
+      113,
+      102,
+      108,
+      58,
+      62,
+      27,
+      14,
+      5,
+      2,
+      ...Array<number>(15).fill(0),
+    ]);
+    expect([...result.unbiasedExpHet.counts]).toEqual([
+      0,
+      3,
+      10,
+      13,
+      12,
+      26,
+      30,
+      30,
+      39,
+      46,
+      44,
+      58,
+      45,
+      80,
+      58,
+      70,
+      88,
+      109,
+      130,
+      240,
+      69,
+      ...Array<number>(19).fill(0),
+    ]);
+    for (const distrib of [result.maf, result.obsHet, result.unbiasedExpHet]) {
+      expect(distrib.counts.reduce((sum, count) => sum + count, 0)).toBe(1200);
+    }
+    expect(result.passStats).toEqual({ numVars: 1200, filtering: {} });
+  });
+
+  test("the bins are the job's: 20 from 0 to 0.5 give 21 edges and 20 counts, the values above 0.5 in no bin and in the mean", () => {
+    const job: VariantChecksJob = {
+      ...variantChecksJob(),
+      numBins: 20,
+      range: [0, 0.5],
+    };
+    const result = resultOf(
+      opened("panel.nei").run(job, ignore),
+      "variantChecks",
+    );
+    expect(result.binEdges.length).toBe(21);
+    expect(result.binEdges[20]).toBe(0.5);
+    expect([...result.maf.counts]).toEqual([...Array<number>(19).fill(0), 3]);
+    expect(result.maf.mean).toBe(0.7163445463101891);
+    expect(result.obsHet.counts.length).toBe(20);
+    expect(result.unbiasedExpHet.counts.length).toBe(20);
+  });
+
+  test("minNumIndividuals is the job's: at 200 each histogram counts the 2 variants at which every individual is called", () => {
+    const job: VariantChecksJob = {
+      ...variantChecksJob(),
+      minNumIndividuals: 200,
+    };
+    const result = resultOf(
+      opened("panel.nei").run(job, ignore),
+      "variantChecks",
+    );
+    for (const distrib of [result.maf, result.obsHet, result.unbiasedExpHet]) {
+      expect(distrib.counts.reduce((sum, count) => sum + count, 0)).toBe(2);
+    }
+    expect(result.maf.mean).toBe(0.74375);
+  });
+
+  test("the histograms after a diversity at 0.05 are of every variant, the file opened again", () => {
+    const runner = opened("panel.nei");
+    runner.run(diversityJob([missingData(0.05)]), ignore);
+    const result = resultOf(
+      runner.run(variantChecksJob(), ignore),
+      "variantChecks",
+    );
+    expect(result.passStats).toEqual({ numVars: 1200, filtering: {} });
+    expect(result.maf.mean).toBe(0.7163445463101891);
+  });
+
+  test("the counts of the three filters, in their order, from a pass that keeps nothing of the blocks", () => {
+    const told: Progress[] = [];
+    const result = resultOf(
+      opened("panel.nei").run(filterCountsJob(THREE_FILTERS), (progress) => {
+        told.push(progress);
+      }),
+      "filterCounts",
+    );
+    expect(result.passStats).toEqual(THREE_COUNTS);
+    expect(Object.keys(result.passStats.filtering)).toEqual([
+      "missing_data",
+      "obs_het",
+      "maf",
+    ]);
+    expect(told).toEqual([
+      { bytesRead: 0, numBytes: 261490, pass: 1, numPasses: 1 },
+      { bytesRead: 259376, numBytes: 261490, pass: 1, numPasses: 1 },
+    ]);
+  });
+
+  test("a diversity with the same three filters and the list of 125 gives the same counts, the list put after the filters", () => {
+    const { of125 } = lists();
+    const job = diversityWithList(of125, THREE_FILTERS);
+    const result = valueOf(opened("panel.nei").run(job, ignore));
+    expect(result.passStats).toEqual(THREE_COUNTS);
+    expect([...result.numIndividuals]).toEqual([32, 54, 39]);
+  });
+
+  test("the counts of filters that keep no variant are a result, not a refusal", () => {
+    const job = filterCountsJob([
+      missingData(0.05),
+      { kind: "maf", maxAllowedMaf: 0 },
+    ]);
+    const result = resultOf(
+      opened("panel.nei").run(job, ignore),
+      "filterCounts",
+    );
+    expect(result.passStats).toEqual({
+      numVars: 0,
+      filtering: {
+        missing_data: { varsProcessed: 1200, varsKept: 1152 },
+        maf: { varsProcessed: 1152, varsKept: 0 },
+      },
+    });
+  });
+
+  test("what told throws in the pass of the counts is thrown by run, that very value", () => {
+    const thrown = new Error("told");
+    let caught: unknown = null;
+    try {
+      opened("panel.nei").run(filterCountsJob([missingData(0.05)]), () => {
+        throw thrown;
+      });
+    } catch (error: unknown) {
+      caught = error;
+    }
+    expect(caught).toBe(thrown);
+  });
+});
+
+describe("VS1 D3 the passes of the runner: a file that no longer reads, in the new passes", () => {
+  beforeAll(() => {
+    vi.stubGlobal("FileReaderSync", TestFileReaderSync);
+  });
+  afterEach(() => {
+    reading = "read";
+  });
+  afterAll(() => {
+    vi.unstubAllGlobals();
+  });
+
+  test("a range the browser refuses in the iteration of the counts is reopenFailed", () => {
+    const runner = createRunner();
+    expect(runner.open(NEI, panelBlob()).kind).toBe("ok");
+    reading = "notReadable";
+    expect(runner.run(filterCountsJob([]), ignore)).toEqual({
+      kind: "reopenFailed",
+      name: "panel.nei",
+      message: `${PANEL_NOT_GIVEN}the file changed`,
+    });
+  });
+
+  test("a range the browser refuses in the statistics of each individual and in the histograms is reopenFailed", () => {
+    for (const job of [individualChecksJob([]), variantChecksJob()]) {
+      const runner = createRunner();
+      expect(runner.open(NEI, panelBlob()).kind).toBe("ok");
+      reading = "notReadable";
+      expect(runner.run(job, ignore).kind).toBe("reopenFailed");
+      reading = "read";
+    }
+  });
+});
+
+describe("VS1 D3 the passes of the runner: transferablesOf", () => {
+  test("of a diversity result, the five buffers of its five arrays, each once", () => {
+    const result = valueOf(opened("panel.nei").run(diversityJob([]), ignore));
+    const buffers = transferablesOf(result);
+    expect(buffers.length).toBe(5);
+    expect(new Set(buffers).size).toBe(5);
+  });
+
+  test("of the statistics of each individual, the buffers of popnei's two arrays", () => {
+    const result = statsAt005();
+    expect(transferablesOf(result)).toEqual([
+      result.missingGtRate.buffer,
+      result.obsHetRate.buffer,
+    ]);
+  });
+
+  test("of the histograms, the buffers of the edges and of the three counts, and one buffer held by two fields once", () => {
+    const result = resultOf(
+      opened("panel.nei").run(variantChecksJob(), ignore),
+      "variantChecks",
+    );
+    const buffers = transferablesOf(result);
+    expect(buffers).toEqual([
+      result.binEdges.buffer,
+      result.maf.counts.buffer,
+      result.obsHet.counts.buffer,
+      result.unbiasedExpHet.counts.buffer,
+    ]);
+    expect(new Set(buffers).size).toBe(4);
+    const twice = {
+      ...result,
+      obsHet: { ...result.obsHet, counts: result.maf.counts },
+    };
+    expect(transferablesOf(twice).length).toBe(3);
+  });
+
+  test("of the counts of the filters, no buffer", () => {
+    const result = resultOf(
+      opened("panel.nei").run(filterCountsJob([missingData(0.05)]), ignore),
+      "filterCounts",
+    );
+    expect(transferablesOf(result)).toEqual([]);
+  });
+
+  test("an array of the statistics of each individual that is a view of part of a buffer throws a defect", () => {
+    const result = statsAt005();
+    const view = new Float64Array(new ArrayBuffer(8 * 201), 8, 200);
+    expect(() => transferablesOf({ ...result, obsHetRate: view })).toThrow(
+      /^popnei_web defect: an array of a result is a view/,
+    );
   });
 });
