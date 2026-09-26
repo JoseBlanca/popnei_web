@@ -321,7 +321,13 @@ It has three buttons:
   dialog of the header may be what failed, and announces it in the bar's
   own status region. It is not there when there is no store. Decided here,
   not by the owner: the words of the bar tell the user to save, and this
-  keeps that possible when the header is gone.
+  keeps that possible when the header is gone. When the project cannot
+  be written, because writing it throws a defect of our code, as a check
+  number that is not finite does, the bar counts that error with the
+  others and its status region says "The project could not be saved: the
+  application met an error of its own as it wrote the file. Reloading the
+  page would lose the project.", since the bar's own words tell the user
+  to reload once it is saved.
 - **Copy the details**, which copies, for a report of the bug, the
   message and the stack of every error kept, where each came from, the
   address of the page, the versions of the application and of popnei,
@@ -368,7 +374,8 @@ it does not end so (`docs/specs/entry.md`, "The saving"); the dialog
 closes and the focus goes back to Save project. It can be used at any
 time, a read under way included. `writeProjectFile` refuses no project;
 a check number that is not finite is a defect of our code, which it
-throws, and the error bar shows it. A field left empty keeps Save
+throws, and the error bar shows it. The dialog closes before the file is
+written, so that it is not left open over the bar. A field left empty keeps Save
 disabled, with the description "Give the file a name."
 
 A download is handed to the browser and gives the page no sign of how
