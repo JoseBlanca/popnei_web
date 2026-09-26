@@ -134,7 +134,9 @@ export function ErrorBar({
           </p>
         )}
       </div>
-      {first !== null && more > 0 && <p>{moreText(more)}</p>}
+      {first !== null && more > 0 && (
+        <p className={classOf(styles, "more")}>{moreText(more)}</p>
+      )}
       {first !== null && (
         <div className={classOf(styles, "actions")}>
           {saving !== null && (

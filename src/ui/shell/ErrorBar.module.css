@@ -14,8 +14,15 @@
   color: var(--color-text);
 }
 
+/* The paragraphs of the bar without the browser's margins, so that the
+   gap of the bar alone spaces them. */
 .message {
+  margin: 0;
   font-weight: bold;
+}
+
+.more {
+  margin: 0;
 }
 
 .actions {
