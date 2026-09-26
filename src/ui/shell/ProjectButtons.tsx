@@ -16,11 +16,17 @@
  * opening cannot be undone. After the opening the Variants step is on
  * screen, with the focus on its `<h1>`.
  *
- * Each dialog gives the focus back to the button that opened it, and the
- * opening to the heading of Variants, once the drawing without the dialog
- * is on the page: React Aria, which gives the focus back itself only when
- * it was lost to the page, then leaves it there, and its dialog, which
- * keeps the focus inside while it is open, is gone.
+ * React Aria gives the focus back to the button that opened a dialog when
+ * it takes the dialog off the page, if the focus is lost to the page
+ * then; after OK, Keep the current project and Cancel it has done so by
+ * the next frame. Two moves are the page's own, a frame after the dialog
+ * closes. After a Save that downloads the file, React Aria gives the focus
+ * back only 2 frames later in Chromium 153 and 4 or 5 in WebKit 26.6,
+ * with the focus on the body of the page until then, and in WebKit it was
+ * seen to land on Save project after a later dialog had closed; so the
+ * page gives it back to Save project itself. After an opening answered in
+ * the question while the Variants step is on screen, where no change of
+ * the step moves the focus, the page moves it to the heading.
  */
 import { useEffect, useRef, useState } from "react";
 import { FileTrigger } from "react-aria-components";
@@ -31,7 +37,6 @@ import { useSaving } from "../saving.ts";
 import { useAppState, useStore } from "../store.tsx";
 import { Button } from "../widgets/Button.tsx";
 import { Dialog } from "../widgets/Dialog.tsx";
-import { isInDialog } from "../widgets/dialogMark.ts";
 import { TextField } from "../widgets/TextField.tsx";
 import { useAnnouncer } from "./announcer.tsx";
 import styles from "./ProjectButtons.module.css";
@@ -47,24 +52,23 @@ import {
 import { hashOfStep, stepOfHash } from "./steps.ts";
 
 /** A function that asks for the focus to move to the element `target`
-    gives once the dialog the next drawing of the component closes is off
-    the page; `opener` is the button that opened the dialog. */
-function useFocusLater(
-  opener: React.RefObject<HTMLButtonElement | null>,
-): (target: () => Element | null) => void {
+    gives a frame after the next drawing of the component, which closes a
+    dialog. */
+function useFocusLater(): (target: () => Element | null) => void {
   const pending = useRef<(() => Element | null) | null>(null);
   useEffect(() => {
     const target = pending.current;
     if (target === null) return;
     pending.current = null;
-    // A frame later: React Aria takes its dialog off the page in a drawing
-    // of its own, after this one, and until then keeps the focus inside.
+    // The drawing took the content of the dialog, with the button that had
+    // the focus, off the page, and the browser gave the focus to the body.
     // A user quick enough to have moved the focus in that frame, into a
     // field of the step, keeps it there: Enter pressed in that field would
     // otherwise press the button that opened the dialog, and open it
     // again.
     requestAnimationFrame(() => {
-      if (isFocusPlaced(opener.current)) return;
+      const active = document.activeElement;
+      if (active !== null && active !== document.body) return;
       const element = target();
       if (element instanceof HTMLElement) element.focus();
     });
@@ -72,21 +76,6 @@ function useFocusLater(
   return (target) => {
     pending.current = target;
   };
-}
-
-/** Whether the focus is on an element of the page, put there by the user
-    after the dialog closed, rather than lost to the page, still in the
-    dialog on its way out, or given back by React Aria to `opener`, the
-    button that opened the dialog. */
-function isFocusPlaced(opener: Element | null): boolean {
-  const active = document.activeElement;
-  return (
-    active !== null &&
-    active !== document.body &&
-    active !== opener &&
-    active.isConnected &&
-    !isInDialog(active)
-  );
 }
 
 /** The `<h1>` of the step on screen. */
@@ -103,7 +92,7 @@ export function SaveProject(): React.JSX.Element {
   // closed.
   const [name, setName] = useState<string | null>(null);
   const given = name?.trim() ?? "";
-  const focusLater = useFocusLater(button);
+  const focusLater = useFocusLater();
 
   /** Closes the dialog and gives the focus back to Save project. */
   const close = (): void => {
@@ -182,16 +171,15 @@ export function OpenProject(): React.JSX.Element {
   const store = useStore();
   const saving = useSaving();
   const announcer = useAnnouncer();
-  const button = useRef<HTMLButtonElement>(null);
   const [opening, setOpening] = useState<Opening>(NONE);
-  const focusLater = useFocusLater(button);
+  const focusLater = useFocusLater();
   // The number of the last file picked: a file read after one picked
   // after it, a large one picked first, is not answered.
   const lastPick = useRef(0);
 
-  /** Closes a dialog and gives the focus back to Open project…. */
+  /** Closes a dialog; React Aria gives the focus back to Open
+      project…. */
   const back = (): void => {
-    focusLater(() => button.current);
     setOpening(NONE);
   };
 
@@ -250,7 +238,7 @@ export function OpenProject(): React.JSX.Element {
           if (file !== undefined) void onPicked(file);
         }}
       >
-        <Button label="Open project…" ref={button} />
+        <Button label="Open project…" />
       </FileTrigger>
       <Dialog
         content={opening.kind === "refused" ? opening : null}
