@@ -3,8 +3,9 @@
  * no error boundary sees (docs/specs/shell.md, "The error bar"). It is
  * drawn in a root of its own, `#defects`, outside the application's, so
  * that it stays when an error while the shell was drawn has emptied the
- * application's root. Save the project joins it with the saving of the
- * entry.
+ * application's root. Its Save the project saves through the saving of
+ * the entry, under the name it proposes and with no dialog, since the
+ * dialog of the header may be what failed.
  */
 import { useState, useSyncExternalStore } from "react";
 
@@ -12,8 +13,10 @@ import type { Store } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 import { classOf } from "../classOf.ts";
 import type { Defects } from "../defects.ts";
+import type { Saving } from "../saving.ts";
 import { Button } from "../widgets/Button.tsx";
 import styles from "./ErrorBar.module.css";
+import { handedText } from "./saveOpen.ts";
 
 /** What the bar is drawn with. */
 export interface ErrorBarProps {
@@ -22,15 +25,20 @@ export interface ErrorBarProps {
   /** The store, once the entry has made it; `null` before, when the bar
       says that the application met the error as it started. */
   readonly store: Store<JobResult> | null;
+  /** The saving of the entry, made with the store; `null` before, when
+      there is no project to save. */
+  readonly saving: Saving | null;
   /** The version of the application, for Copy the details. */
   readonly appVersion: string;
 }
 
-/** What Copy the details did last. */
+/** What the bar's buttons did last: nothing, Copy the details, or Save
+    the project with the name of the file handed to the browser. */
 type Copying =
   | { readonly kind: "idle" }
   | { readonly kind: "copied" }
-  | { readonly kind: "failed" };
+  | { readonly kind: "failed" }
+  | { readonly kind: "saved"; readonly name: string };
 
 const IDLE: Copying = { kind: "idle" };
 
@@ -39,6 +47,7 @@ const IDLE: Copying = { kind: "idle" };
 export function ErrorBar({
   defects,
   store,
+  saving,
   appVersion,
 }: ErrorBarProps): React.JSX.Element {
   const { first, more } = useSyncExternalStore(defects.subscribe, () =>
@@ -87,6 +96,15 @@ export function ErrorBar({
       {first !== null && more > 0 && <p>{moreText(more)}</p>}
       {first !== null && (
         <div className={classOf(styles, "actions")}>
+          {saving !== null && (
+            <Button
+              label="Save the project"
+              onPress={() => {
+                const name = saving.save(saving.proposedName());
+                setCopying({ kind: "saved", name });
+              }}
+            />
+          )}
           <Button
             label="Copy the details"
             onPress={() => {
@@ -134,6 +152,8 @@ function statusText(copying: Copying): string {
       return "The details were copied.";
     case "failed":
       return "The details could not be copied. Select them in the box below and copy them.";
+    case "saved":
+      return handedText(copying.name);
   }
 }
 

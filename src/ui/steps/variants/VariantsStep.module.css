@@ -41,6 +41,12 @@
   margin: 0;
 }
 
+/* The variants file an opened project was made with, above the zone. */
+.asked {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
 .fileName {
   margin: 0;
   font-weight: 600;

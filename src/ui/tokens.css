@@ -24,6 +24,8 @@
   --color-focus: #1f5fbf;
   /* the shadow on an edge of a frame that scrolls: the text at a quarter */
   --color-scroll-shadow: #1a1d2140;
+  /* the page behind a dialog: the text at a half */
+  --color-backdrop: #1a1d2180;
 
   /* the plots (charts.md): the seven colours of Okabe and Ito without
      black, the axes and their text, the lines of the thresholds */
@@ -80,6 +82,7 @@
     --color-warning: #f2c14e;
     --color-focus: #7fb0ff;
     --color-scroll-shadow: #e8eaed40;
+    --color-backdrop: #0b0c0eb3;
     --chart-axis: #a3abb5;
     --chart-threshold: #ff8a80;
   }
@@ -98,6 +101,7 @@
   --color-warning: #f2c14e;
   --color-focus: #7fb0ff;
   --color-scroll-shadow: #e8eaed40;
+  --color-backdrop: #0b0c0eb3;
   --chart-axis: #a3abb5;
   --chart-threshold: #ff8a80;
 }

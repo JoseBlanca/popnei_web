@@ -30,7 +30,10 @@ import { titleOf } from "./analyses/panels.ts";
 import { createDefects, isResizeObserverNoise } from "./defects.ts";
 import type { Defects } from "./defects.ts";
 import { FilesProvider, createFiles } from "./files.tsx";
+import { downloadText } from "./download.ts";
 import { createReads } from "./reads.ts";
+import { SavingProvider, createSaving } from "./saving.ts";
+import type { Saving } from "./saving.ts";
 import { AnnouncerProvider } from "./shell/announcer.tsx";
 import { ErrorBar } from "./shell/ErrorBar.tsx";
 import { Shell } from "./shell/Shell.tsx";
@@ -101,16 +104,24 @@ function start(): void {
 
   // 2. The error bar, in a root of its own, with no store yet.
   const defectsRoot = createRoot(element("defects"));
-  const drawBar = (store: Store<JobResult> | null): void => {
+  const drawBar = (
+    store: Store<JobResult> | null,
+    saving: Saving | null,
+  ): void => {
     defectsRoot.render(
       <StrictMode>
         <I18nProvider locale={LOCALE}>
-          <ErrorBar defects={defects} store={store} appVersion={APP_VERSION} />
+          <ErrorBar
+            defects={defects}
+            store={store}
+            saving={saving}
+            appVersion={APP_VERSION}
+          />
         </I18nProvider>
       </StrictMode>,
     );
   };
-  drawBar(null);
+  drawBar(null, null);
 
   try {
     startApplication(defects, drawBar);
@@ -123,11 +134,12 @@ function start(): void {
   }
 }
 
-/** Steps 3 to 7 of the opening: the store, the worker client, the bar
-    with the store, the announcer and the reads, and the application. */
+/** Steps 3 to 7 of the opening: the store, the worker client, the
+    saving and the question before leaving, the bar with the store, the
+    announcer and the reads, and the application. */
 function startApplication(
   defects: Defects,
-  drawBar: (store: Store<JobResult>) => void,
+  drawBar: (store: Store<JobResult>, saving: Saving) => void,
 ): void {
   // 3. The store. It sends nothing while it is made, so its `send` reaches
   // the client of the next step.
@@ -161,8 +173,19 @@ function startApplication(
   client = made;
   const files = createFiles(made);
 
-  // 5. The error bar again, now with the store.
-  drawBar(store);
+  // 5. The saving, and the question before the page is left while the
+  // project has changed; the error bar again, now with the store and its
+  // Save.
+  const saving = createSaving({
+    store,
+    analyses: POPGEN_ANALYSES,
+    appVersion: APP_VERSION,
+    download: (name, text) => {
+      downloadText(name, text, "application/json");
+    },
+  });
+  askBeforeLeaving(saving);
+  drawBar(store, saving);
 
   // 6. The announcer of the shell's status region, with the announcements
   // made from two states of the store, and the reads the project waits
@@ -195,13 +218,32 @@ function startApplication(
         <StoreProvider value={store}>
           <AnnouncerProvider value={announcer}>
             <FilesProvider value={files}>
-              <Shell />
+              <SavingProvider value={saving}>
+                <Shell />
+              </SavingProvider>
             </FilesProvider>
           </AnnouncerProvider>
         </StoreProvider>
       </I18nProvider>
     </StrictMode>,
   );
+}
+
+/** Asks the browser to confirm before the page is left, reloaded or
+    closed while the project has changed since the page opened, since a
+    project file was last opened, or since the last Save, since nothing of
+    the project is kept in the browser. The browser asks with its own
+    words, which a page cannot change. */
+function askBeforeLeaving(saving: Saving): void {
+  window.addEventListener("beforeunload", (event) => {
+    if (!saving.changed()) return;
+    event.preventDefault();
+    // Chrome and Edge before 119, above the floor of 111, ask only when
+    // the event's returnValue is set to a value that is true, a use the
+    // standard keeps for them; an empty text does not make them ask.
+    // eslint-disable-next-line no-param-reassign, @typescript-eslint/no-deprecated -- the only way those browsers ask
+    event.returnValue = true;
+  });
 }
 
 /** Announces in the status region what each change of the store did

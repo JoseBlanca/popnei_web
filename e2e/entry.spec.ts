@@ -68,7 +68,9 @@ test("WS7 D2 the page opens with the frame at Variants and no error bar, and axe
   await expect(bar(page)).toHaveText("");
   // No button of the error bar; the Variants step has buttons of its own.
   await expect(
-    page.getByRole("button", { name: /^(Close|Copy the details)$/ }),
+    page.getByRole("button", {
+      name: /^(Close|Copy the details|Save the project)$/,
+    }),
   ).toHaveCount(0);
   expect((await makeAxeBuilder().analyze()).violations).toEqual([]);
 });
@@ -112,10 +114,14 @@ test("WS7 D2 the Tab key goes through the error bar, the header and the stepper 
   await openPopgen(page);
   await throwFromHandler(page, "test");
   await expect(bar(page)).toHaveText(BAR_TEST);
+  // Undo and Redo, disabled on a page just opened, are not stops.
   const order = [
+    page.getByRole("button", { name: "Save the project" }),
     page.getByRole("button", { name: "Copy the details" }),
     page.getByRole("button", { name: "Close" }),
     page.getByRole("banner").getByRole("link", { name: "popnei web" }),
+    page.getByRole("banner").getByRole("button", { name: "Open project…" }),
+    page.getByRole("banner").getByRole("button", { name: "Save project" }),
     steps(page).getByRole("link", { name: "Variants" }),
     steps(page).getByRole("link", { name: "Individuals" }),
     steps(page).getByRole("link", { name: "Analyses" }),
@@ -180,7 +186,9 @@ test("WS7 D2 Close empties the bar and gives the focus to the heading of the ste
   await expect(bar(page)).toHaveText("");
   // No button of the error bar; the Variants step has buttons of its own.
   await expect(
-    page.getByRole("button", { name: /^(Close|Copy the details)$/ }),
+    page.getByRole("button", {
+      name: /^(Close|Copy the details|Save the project)$/,
+    }),
   ).toHaveCount(0);
   await expect(
     page.getByRole("heading", { level: 1, name: "Variants" }),
@@ -400,7 +408,9 @@ test("WS7 D2 a throw inside the calculation worker, outside a request, starts it
   await expect(bar(page)).toHaveText("");
   // No button of the error bar; the Variants step has buttons of its own.
   await expect(
-    page.getByRole("button", { name: /^(Close|Copy the details)$/ }),
+    page.getByRole("button", {
+      name: /^(Close|Copy the details|Save the project)$/,
+    }),
   ).toHaveCount(0);
 });
 

@@ -10,7 +10,8 @@
  * - ready: Run, and what it will run on;
  * - running: Stop, the bar, and the line with the time since it started;
  * - done: the warnings, and the result with, under its table, the
- *   comparison with the check numbers of an opened project file;
+ *   comparison with the check numbers of an opened project file, or why
+ *   its numbers are not compared, the VCF read with other read options;
  * - removed: the words of the change that removed it, Run, and what it
  *   will run on;
  * - error: what happened and what to do, with Run after a failure that
@@ -26,7 +27,7 @@
  */
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 
-import { checkVerdictText } from "../../core/projectFile.ts";
+import { checkVerdictText, uncomparedText } from "../../core/projectFile.ts";
 import type { AnalysisId } from "../../core/project.ts";
 import type {
   AnalysisError,
@@ -153,7 +154,7 @@ export function AnalysisPanel({ id }: AnalysisPanelProps): React.JSX.Element {
           }}
         />
       )}
-      <Below ui={ui} status={status} />
+      <Below id={id} ui={ui} status={status} />
     </section>
   );
 }
@@ -234,7 +235,14 @@ function Above({ ui, status }: PartProps): React.JSX.Element | null {
 
 /** What comes after the button: what a run will take, when it can run,
     the calculation under way, or the result. */
-function Below({ ui, status }: PartProps): React.JSX.Element | null {
+function Below({
+  id,
+  ui,
+  status,
+}: PartProps & { readonly id: AnalysisId }): React.JSX.Element | null {
+  // Why the numbers of a result are not compared with those of the
+  // project file, when its VCF was read with other read options.
+  const uncompared = useAppState((s) => uncomparedText(s.project, id));
   switch (status.kind) {
     case "ready":
     case "removed":
@@ -260,7 +268,9 @@ function Below({ ui, status }: PartProps): React.JSX.Element | null {
             key={status.key}
             result={status.result}
             check={
-              status.check === null ? null : checkVerdictText(status.check)
+              status.check === null
+                ? uncompared
+                : checkVerdictText(status.check)
             }
           />
         </>

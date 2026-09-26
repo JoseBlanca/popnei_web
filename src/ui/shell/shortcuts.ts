@@ -59,16 +59,26 @@ const INPUTS_WITHOUT_TEXT: ReadonlySet<string> = new Set([
   "submit",
 ]);
 
-/** Whether the keys pressed on `target` belong to the page and not to a
-    text field or a dialog. */
-export function isForTheProject(target: EventTarget | null): boolean {
-  if (!(target instanceof Element)) return true;
+/** Who the keys of Undo and Redo pressed on an element belong to: the
+    project; a text field, whose own undo the browser gives; or a dialog,
+    where they do nothing. */
+export type KeysOwner = "project" | "text" | "dialog";
+
+/** Who the keys pressed on `target` belong to. A text field comes first,
+    so that the field of the name in the dialog of Save keeps its own
+    undo. */
+export function ownerOfKeys(target: EventTarget | null): KeysOwner {
+  if (!(target instanceof Element)) return "project";
+  if (
+    target instanceof HTMLTextAreaElement ||
+    (target instanceof HTMLInputElement &&
+      !INPUTS_WITHOUT_TEXT.has(target.type)) ||
+    (target instanceof HTMLElement && target.isContentEditable)
+  ) {
+    return "text";
+  }
   if (target.closest('[role="dialog"], [role="alertdialog"]') !== null) {
-    return false;
+    return "dialog";
   }
-  if (target instanceof HTMLTextAreaElement) return false;
-  if (target instanceof HTMLInputElement) {
-    return INPUTS_WITHOUT_TEXT.has(target.type);
-  }
-  return !(target instanceof HTMLElement && target.isContentEditable);
+  return "project";
 }

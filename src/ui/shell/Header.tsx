@@ -2,8 +2,8 @@
  * The header of the shell (docs/specs/shell.md, "The header"): "popnei
  * web", a link to the start page of the site, and the name of the
  * application as text, not a heading, since the `<h1>` of the page is the
- * step's; and Undo and Redo, which the keyboard gives too. Open project…
- * and Save project join it with task 9.4 of the walking skeleton.
+ * step's; Undo and Redo, which the keyboard gives too; and Open project…
+ * and Save project, in ProjectButtons.tsx.
  *
  * Undo and Redo are described by what they would take back or bring
  * again, "Undo: the missing data filter changed", and are disabled when
@@ -22,7 +22,8 @@ import { Button } from "../widgets/Button.tsx";
 import { Link } from "../widgets/Link.tsx";
 import { useAnnouncer } from "./announcer.tsx";
 import styles from "./Header.module.css";
-import { isForTheProject, shortcutOf } from "./shortcuts.ts";
+import { OpenProject, SaveProject } from "./ProjectButtons.tsx";
+import { ownerOfKeys, shortcutOf } from "./shortcuts.ts";
 import type { Shortcut } from "./shortcuts.ts";
 import { undoOrRedo } from "./undoRedo.ts";
 
@@ -56,9 +57,13 @@ export function Header(): React.JSX.Element {
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.defaultPrevented) return;
       const which = shortcutOf(event);
-      if (which === null || !isForTheProject(event.target)) return;
+      if (which === null) return;
+      const owner = ownerOfKeys(event.target);
+      if (owner === "text") return;
+      // Also in a dialog, where they do nothing: WebKit would otherwise
+      // undo the typing of the last field edited behind it.
       event.preventDefault();
-      change(which);
+      if (owner === "project") change(which);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => {
@@ -91,6 +96,8 @@ export function Header(): React.JSX.Element {
             change("redo");
           }}
         />
+        <OpenProject />
+        <SaveProject />
       </span>
     </header>
   );

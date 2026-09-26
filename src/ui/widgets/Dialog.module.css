@@ -1,0 +1,47 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+/* The whole window, dimmed, with the dialog in its middle; it scrolls
+   when the dialog is taller than the window, at a large size of text. */
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  overflow-y: auto;
+  background: var(--color-backdrop);
+}
+
+/* No wider than a line that reads well, as the notice: about 60
+   characters. */
+.modal {
+  inline-size: 100%;
+  max-inline-size: calc(var(--space-8) * 20);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  color: var(--color-text);
+}
+
+.dialog {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  overflow-wrap: anywhere;
+}
+
+.dialog[data-focus-visible],
+.dialog:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-lg);
+  line-height: var(--leading-heading);
+}
+
+.text {
+  margin: 0;
+}

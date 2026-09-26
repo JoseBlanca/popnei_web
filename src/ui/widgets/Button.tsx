@@ -40,6 +40,12 @@ export interface ButtonProps {
   readonly hint?: string | null;
   /** The element of the button, for a screen that moves the focus to it. */
   readonly ref?: React.Ref<HTMLButtonElement>;
+  /** Whether it sends the form it is in, as Enter in a field of the form
+      does; false when absent. */
+  readonly isSubmit?: boolean;
+  /** Whether it takes the focus when it is drawn, as the OK of a dialog
+      that says what went wrong does; false when absent. */
+  readonly autoFocus?: boolean;
 }
 
 /** A button with its words. */
@@ -50,6 +56,8 @@ export function Button({
   description,
   hint = null,
   ref,
+  isSubmit = false,
+  autoFocus = false,
 }: ButtonProps): React.JSX.Element {
   const descriptionId = useId();
   const button = (
@@ -63,6 +71,8 @@ export function Button({
           <AriaButton
             className={classOf(styles, "button")}
             isDisabled={isDisabled}
+            type={isSubmit ? "submit" : "button"}
+            autoFocus={autoFocus}
             {...(onPress !== undefined && { onPress })}
             {...(ref !== undefined && { ref })}
             {...(describedBy.length > 0 && {

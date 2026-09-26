@@ -1,0 +1,107 @@
+/**
+ * What Save project and Open project… of the shell say and do outside
+ * React (docs/specs/shell.md, "Saving" and "Opening"): the words of the
+ * dialogs and of the status region, and the first three steps of an
+ * opening, which read and check the picked file before the page asks the
+ * user to give up their project for it.
+ */
+import { escaped } from "../../core/project.ts";
+import type { Project } from "../../core/project.ts";
+import {
+  MAX_PROJECT_FILE_BYTES,
+  askedFileText,
+  projectFileErrorText,
+  readProjectFile,
+} from "../../core/projectFile.ts";
+import type { AnalysisDef } from "../../core/store.ts";
+
+/** The description of Save while the field of the name is empty. */
+export const NAME_NEEDED = "Give the file a name.";
+
+/** What the status region says after a Save: the page does not learn
+    whether the browser kept the file, so it never says it was saved. */
+export function handedText(name: string): string {
+  return `${escaped(name)} was handed to the browser to download.`;
+}
+
+/** The question before an opening, when the project has changed or
+    calculations are in flight: its heading, the question itself, and the
+    rest of its words under it. */
+export function openQuestion(
+  name: string,
+  running: boolean,
+): { readonly title: string; readonly text: string } {
+  const text =
+    "It replaces the project on the page, and an opening cannot be undone. Save the project first to keep it.";
+  return {
+    title: `Open ${escaped(name)}?`,
+    text: running ? `${text} The ongoing calculations will be stopped.` : text,
+  };
+}
+
+/** The button of the question that keeps the project on the page. */
+export const KEEP_PROJECT = "Keep the current project";
+
+/** The heading of the dialog of a project file that does not open. */
+export const NOT_OPENED_TITLE = "The file was not opened";
+
+/** The button of the question that opens the file. */
+export function openButtonText(name: string): string {
+  return `Open ${escaped(name)}`;
+}
+
+/** What the status region says after an opening: the file opened, and
+    the variants file to give when the project file names one. */
+export function openedText(name: string, p: Project): string {
+  const asked = askedFileText(p);
+  const opened = `Opened ${escaped(name)}.`;
+  return asked === null ? opened : `${opened} ${asked}`;
+}
+
+/** A picked file the browser could not read, moved or changed since it
+    was picked; `message` is the browser's. */
+export function unreadableText(name: string, message: string): string {
+  const said = message.endsWith(".") ? message.slice(0, -1) : message;
+  return `${escaped(name)} could not be read: ${said}. Choose it again.`;
+}
+
+/** What the first three steps of an opening gave: the project, or the
+    words of why the file does not open. */
+export type Picked =
+  | { readonly kind: "project"; readonly project: Project }
+  | { readonly kind: "refused"; readonly text: string };
+
+/** The parts of a `File` an opening reads. */
+export type PickedFile = Pick<File, "name" | "size" | "text">;
+
+/**
+ * Reads and checks the picked `file`: a file above 64 MB is not read; a
+ * file the browser cannot read is told so; the text is then read by
+ * `readProjectFile` with the definitions `analyses` of the population
+ * genetics application.
+ */
+export async function readPicked<J, R>(
+  file: PickedFile,
+  analyses: readonly AnalysisDef<J, R>[],
+): Promise<Picked> {
+  if (file.size > MAX_PROJECT_FILE_BYTES) {
+    return {
+      kind: "refused",
+      text: projectFileErrorText(
+        { kind: "tooLarge", size: file.size },
+        file.name,
+      ),
+    };
+  }
+  let text: string;
+  try {
+    text = await file.text();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { kind: "refused", text: unreadableText(file.name, message) };
+  }
+  const read = readProjectFile(text, "popgen", analyses);
+  return read.ok
+    ? { kind: "project", project: read.value }
+    : { kind: "refused", text: projectFileErrorText(read.error, file.name) };
+}

@@ -5,8 +5,19 @@
  * the project from the store and sends it commands; what it holds itself
  * is the options of the next VCF, until the pick writes them into the
  * project, and the message of a file it did not load.
+ *
+ * After a project file was opened, the step says above the zone which
+ * variants file the project was made with, and, once one is given, how it
+ * differs from that one, in a warning beside its card, announced when it
+ * first appears (the spec, "A project file opened").
  */
-import { useId, useRef, useState, useSyncExternalStore } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 import {
   MAX_PLOIDY,
@@ -14,6 +25,7 @@ import {
   variantsStepNeeds,
 } from "../../../core/project.ts";
 import type { VariantLoad, VariantSource } from "../../../core/project.ts";
+import { askedFileText, identityWarning } from "../../../core/projectFile.ts";
 import type {
   VariantFilter,
   VcfReadOptions,
@@ -28,6 +40,7 @@ import { FileZone } from "../../widgets/FileZone.tsx";
 import { NumberField } from "../../widgets/NumberField.tsx";
 import { Problem } from "../../widgets/Problem.tsx";
 import { Switch } from "../../widgets/Switch.tsx";
+import { Warning } from "../../widgets/Warning.tsx";
 import {
   filterSwitchCommand,
   pickCommand,
@@ -86,6 +99,8 @@ export function VariantsStep(): React.JSX.Element {
   const variants = useAppState((s) => s.project.variants);
   const filters = useAppState((s) => s.project.filters);
   const reason = useAppState((s) => variantsStepNeeds(s.project));
+  const asked = useAppState((s) => askedFileText(s.project));
+  const identity = useAppState((s) => identityWarning(s.project));
 
   // The options the user set and has not applied by a pick or a read
   // again, held by the step while it is drawn (vcfOptions.ts); it shows
@@ -119,6 +134,18 @@ export function VariantsStep(): React.JSX.Element {
   const announce = (text: string): void => {
     announcer.announce(text);
   };
+
+  // The warning of the identity is announced when it first appears, since
+  // the focus stays on the file button; not again as the read completes
+  // it, nor when the step is drawn again with it.
+  const identitySeen = useRef(identity);
+  useEffect(() => {
+    const before = identitySeen.current;
+    identitySeen.current = identity;
+    if (before === null && identity !== null) {
+      announcer.announce(`Warning: ${identity}`);
+    }
+  }, [identity, announcer]);
   const refuse = (text: string): void => {
     setMessage(text);
     // The focus stays on the button, so a screen reader would not read
@@ -193,6 +220,9 @@ export function VariantsStep(): React.JSX.Element {
           <h2 id={fileHeading} className={classOf(styles, "heading")}>
             Variants file
           </h2>
+          {asked !== null && (
+            <p className={classOf(styles, "asked")}>{asked}</p>
+          )}
           <FileZone
             pasteLabel="Paste a variants file"
             buttonLabel={
@@ -212,7 +242,10 @@ export function VariantsStep(): React.JSX.Element {
                 Drop a VCF or a .nei file here, or choose one.
               </p>
             ) : (
-              <FileCard variants={variants} reason={reason} />
+              <>
+                <FileCard variants={variants} reason={reason} />
+                {identity !== null && <Warning>{identity}</Warning>}
+              </>
             )}
           </FileZone>
           {message !== null && <Problem>{message}</Problem>}

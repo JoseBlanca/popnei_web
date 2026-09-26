@@ -325,8 +325,10 @@ for (const theme of ["light", "dark"] as const) {
     }
 
     test("the focus ring on a link of the stepper", async ({ page }) => {
-      // The Tab key, so that the browser shows the ring of the keyboard.
-      for (let press = 0; press < 3; press++) {
+      // The Tab key, so that the browser shows the ring of the keyboard:
+      // "popnei web", Open project…, Save project, Variants, Individuals;
+      // Undo and Redo, disabled on a page just opened, are not stops.
+      for (let press = 0; press < 5; press++) {
         await page.keyboard.press("Tab");
       }
       await expect(
@@ -1067,6 +1069,160 @@ for (const theme of ["light", "dark"] as const) {
       });
       await expect(page.getByText("1 more error followed it.")).toBeVisible();
       await save(page, `popgen-error-bar-${theme}`);
+    });
+
+    /** Saves the project with Save project and keeps the file under the
+        test's output folder; gives its path. */
+    async function saveProjectFile(
+      page: Page,
+      folder: string,
+    ): Promise<string> {
+      await page.getByRole("button", { name: "Save project" }).click();
+      const download = page.waitForEvent("download");
+      await page
+        .getByRole("dialog", { name: "Save the project" })
+        .getByRole("button", { name: "Save", exact: true })
+        .click();
+      const path = join(folder, (await download).suggestedFilename());
+      await (await download).saveAs(path);
+      return path;
+    }
+
+    /** Picks `file` with Open project…. */
+    async function openProject(
+      page: Page,
+      file: string | { name: string; text: string },
+    ): Promise<void> {
+      const chooser = page.waitForEvent("filechooser");
+      await page.getByRole("button", { name: "Open project…" }).click();
+      await (
+        await chooser
+      ).setFiles(
+        typeof file === "string"
+          ? file
+          : {
+              name: file.name,
+              mimeType: "text/plain",
+              buffer: Buffer.from(file.text),
+            },
+      );
+    }
+
+    for (const width of [null, 320] as const) {
+      const suffix = width === null ? "" : `-${String(width)}`;
+      const at = width === null ? "" : `, at ${String(width)} px`;
+
+      test(`the shell with the dialog of Save${at}`, async ({ page }) => {
+        if (width !== null) await page.setViewportSize({ width, height: 640 });
+        await pickVariants(page, "panel.nei");
+        await expect(
+          page.getByRole("main").getByText("200 individuals"),
+        ).toBeVisible();
+        await page.getByRole("button", { name: "Save project" }).click();
+        await expect(
+          page.getByRole("textbox", { name: "File name" }),
+        ).toBeFocused();
+        await save(page, `popgen-shell-save-dialog${suffix}-${theme}`, {
+          fullPage: false,
+        });
+      });
+
+      test(`the shell with the question before an opening${at}`, async ({
+        page,
+      }, testInfo) => {
+        if (width !== null) await page.setViewportSize({ width, height: 640 });
+        await pickVariants(page, "panel.nei");
+        await expect(
+          page.getByRole("main").getByText("200 individuals"),
+        ).toBeVisible();
+        const saved = await saveProjectFile(page, testInfo.outputPath());
+        const threshold = page.getByLabel(
+          "Maximum proportion of missing genotypes",
+        );
+        await threshold.fill("0.05");
+        await threshold.press("Enter");
+        await openProject(page, saved);
+        await expect(
+          page.getByRole("button", { name: "Keep the current project" }),
+        ).toBeFocused();
+        await save(page, `popgen-shell-open-question${suffix}-${theme}`, {
+          fullPage: false,
+        });
+      });
+
+      test(`the shell with a project file refused${at}`, async ({ page }) => {
+        if (width !== null) await page.setViewportSize({ width, height: 640 });
+        await openProject(page, { name: "notes.txt", text: "some notes" });
+        await expect(page.getByRole("button", { name: "OK" })).toBeFocused();
+        await save(page, `popgen-shell-open-refused${suffix}-${theme}`, {
+          fullPage: false,
+        });
+      });
+    }
+
+    test("the Variants step after an opening, and with the warning of the identity", async ({
+      page,
+    }, testInfo) => {
+      await pickVariants(page, "panel.nei");
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      const saved = await saveProjectFile(page, testInfo.outputPath());
+      await openProject(page, saved);
+      await expect(
+        page.getByRole("heading", { level: 1, name: "Variants" }),
+      ).toBeFocused();
+      await save(page, `popgen-variants-opened-${theme}`);
+      await pickVariants(page, "panel.vcf.gz");
+      await expect(page.getByRole("main").getByText(/^Warning:/)).toBeVisible();
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      await save(page, `popgen-variants-identity-${theme}`);
+    });
+
+    test("the diversity with its comparison, and with its numbers not compared", async ({
+      page,
+    }, testInfo) => {
+      await pickVariants(page, "panel.vcf.gz");
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      await goTo(page, "Individuals");
+      await pickIndividuals(page, "panel_pops.csv");
+      await choose(page, "Column that defines the populations", "popcat");
+      await goTo(page, "Analyses");
+      await page.getByRole("button", { name: "Run" }).click();
+      await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
+      const saved = await saveProjectFile(page, testInfo.outputPath());
+      await openProject(page, saved);
+      await pickVariants(page, "panel.vcf.gz");
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      await goTo(page, "Analyses");
+      await page.getByRole("button", { name: "Run" }).click();
+      await expect(page.getByText(/^The same numbers as in/)).toBeVisible();
+      await save(page, `popgen-diversity-compared-${theme}`);
+
+      await goTo(page, "Variants");
+      await page
+        .getByText("Only the variants with PASS or . in the FILTER column", {
+          exact: true,
+        })
+        .click();
+      await page
+        .getByRole("button", {
+          name: "Read panel.vcf.gz again with every variant",
+        })
+        .click();
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      await goTo(page, "Analyses");
+      await page.getByRole("button", { name: "Run" }).click();
+      await expect(page.getByText(/^Not compared with/)).toBeVisible();
+      await save(page, `popgen-diversity-uncompared-${theme}`);
     });
 
     test("the error bar, the details not copied", async ({ page }) => {

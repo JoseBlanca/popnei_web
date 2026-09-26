@@ -1,0 +1,151 @@
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+
+import { POPGEN_ANALYSES, firstProject, numVarsOf } from "../core/apps.ts";
+import { CACHE_MAX_BYTES } from "../core/cache.ts";
+import { MAX_UNDO_STEPS } from "../core/history.ts";
+import { loadVariants, setVariantFilter } from "../core/project.ts";
+import type { Project } from "../core/project.ts";
+import { writeProjectFile } from "../core/projectFile.ts";
+import { createStore } from "../core/store.ts";
+import type { Store } from "../core/store.ts";
+import type { Job, JobResult } from "../worker/protocol.ts";
+import { createSaving } from "./saving.ts";
+
+// The real store of core, and a fake download that records what it was
+// given (docs/specs/entry.md, "How it is verified", createSaving).
+
+const SAVED_AT = new Date("2026-09-26T10:00:00.000Z");
+
+function makeStore(): Store<JobResult> {
+  return createStore<Job, JobResult>({
+    first: firstProject("popgen"),
+    analyses: POPGEN_ANALYSES,
+    send: () => {
+      throw new Error("the saving sends no calculation");
+    },
+    numVarsOf,
+    appVersion: "0.1.0",
+    cacheMaxBytes: CACHE_MAX_BYTES,
+    maxUndoSteps: MAX_UNDO_STEPS,
+  });
+}
+
+function setup(): {
+  readonly store: Store<JobResult>;
+  readonly downloads: { readonly name: string; readonly text: string }[];
+  readonly saving: ReturnType<typeof createSaving>;
+} {
+  const store = makeStore();
+  const downloads: { name: string; text: string }[] = [];
+  const saving = createSaving({
+    store,
+    analyses: POPGEN_ANALYSES,
+    appVersion: "0.1.0",
+    download: (name, text) => {
+      downloads.push({ name, text });
+    },
+  });
+  return { store, downloads, saving };
+}
+
+const PANEL = {
+  fileId: "0123456789abcdef0123456789abcdef",
+  name: "panel.nei",
+  size: 261_490,
+  format: "nei",
+  readOptions: null,
+} as const;
+
+function loadPanel(store: Store<JobResult>): void {
+  store.apply("a new variants file was loaded", (p) => loadVariants(p, PANEL));
+}
+
+function setThreshold(store: Store<JobResult>, threshold: number): void {
+  store.apply("the missing data filter changed", (p: Project) =>
+    setVariantFilter(p, {
+      kind: "missing_data",
+      maxAllowedMissingRate: threshold,
+    }),
+  );
+}
+
+describe("WS9 D2 the saving", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(SAVED_AT);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test("save downloads the text of writeProjectFile under the name given, and returns it", () => {
+    const { store, downloads, saving } = setup();
+    loadPanel(store);
+    const expected = writeProjectFile(
+      store.getState(),
+      POPGEN_ANALYSES,
+      "0.1.0",
+      "2026-09-26T10:00:00.000Z",
+    );
+
+    expect(saving.save("panel.popnei.json")).toBe("panel.popnei.json");
+
+    expect(downloads).toEqual([{ name: "panel.popnei.json", text: expected }]);
+  });
+
+  test("a name that does not end in .popnei.json gets it added", () => {
+    const { downloads, saving } = setup();
+
+    expect(saving.save("panel")).toBe("panel.popnei.json");
+    expect(saving.save("run1.json")).toBe("run1.json.popnei.json");
+
+    expect(downloads.map((d) => d.name)).toEqual([
+      "panel.popnei.json",
+      "run1.json.popnei.json",
+    ]);
+  });
+
+  test("proposedName is projectFileName of the present project", () => {
+    const { store, saving } = setup();
+    expect(saving.proposedName()).toBe("project.popnei.json");
+
+    loadPanel(store);
+
+    expect(saving.proposedName()).toBe("panel.popnei.json");
+  });
+
+  test("changed: false on the first project, true after a command, false after an undo back to it", () => {
+    const { store, saving } = setup();
+    expect(saving.changed()).toBe(false);
+
+    setThreshold(store, 0.05);
+    expect(saving.changed()).toBe(true);
+
+    store.undo();
+    expect(saving.changed()).toBe(false);
+  });
+
+  test("changed: false after opened with the present project, and true after a command that follows", () => {
+    const { store, saving } = setup();
+    setThreshold(store, 0.05);
+    const opened = store.getState().project;
+    store.open(opened);
+
+    saving.opened(opened);
+    expect(saving.changed()).toBe(false);
+
+    setThreshold(store, 0.2);
+    expect(saving.changed()).toBe(true);
+  });
+
+  test("changed: false after a save, and true after a command that follows it", () => {
+    const { store, saving } = setup();
+    setThreshold(store, 0.05);
+
+    saving.save("panel");
+    expect(saving.changed()).toBe(false);
+
+    setThreshold(store, 0.2);
+    expect(saving.changed()).toBe(true);
+  });
+});
