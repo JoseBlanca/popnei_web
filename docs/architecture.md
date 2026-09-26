@@ -1266,7 +1266,7 @@ them. It is not part of popnei and nothing of popnei is in it.
   the `Blob`, which crosses to the page as a handle, with no copy.
 - **The user saves the file with a Save button** that the step shows when
   the write ends, with the name and the size of the file, "Save
-  panel.filtered.nei, 18.4 MB" in an example, and that starts the
+  panel.filtered.nei, 19.2 MB" in an example, and that starts the
   download through a link that names the file, the `download` attribute
   of a link, which every browser of the floor has. A download started by the code
   minutes after the click that asked for the write, with no click of its
@@ -1533,6 +1533,10 @@ src/core/
                     counts of each filter of individuals (section 4)
   histogram.ts      the bins of the statistics of each individual (section 7)
   apps.ts           the steps and the analyses of each application
+  fileNames.ts      the names of the files the application writes, from
+                    the stem of the variants file
+  writeEstimate.ts  the size expected of a file of the filtered variants,
+                    its bounds, and the sizes in words
   projectFile.ts    the project file, written and read, and its reference
   reportModel.ts    the content of the report, as data
   script.ts         the Python script
@@ -1720,8 +1724,9 @@ code, the release `js-v0.1.0-dev.2`.
   filter of the variants**, the pass of their statistics, which a Run of
   an analysis that reads the filters of individuals starts and waits for,
   before its own: over a gzipped VCF of gigabytes, minutes before the
-  analysis starts. Their result is in the cache of the page, 16 bytes per
-  individual, so a restart of the calculation worker does not lose it, and
+  analysis starts. Their result is in the cache of the page, two numbers
+  of 8 bytes and the name of each individual, 24 bytes for `s000` as the
+  cache counts it, so a restart of the calculation worker does not lose it, and
   an undo to filters already calculated finds it.
 - **The thresholds are set in number fields**, and not by dragging a line
   on a histogram, so no drag needs a way for the keyboard (WCAG 2.2,
