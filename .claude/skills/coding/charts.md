@@ -73,7 +73,13 @@ export const createScatter: Chart<ScatterData, ScatterEvents> = ...
   gets its bins, the LD decay its binned means, the Manhattan and the QQ
   plot points already thinned (below). Binning, clustering the order of
   the heatmap and thinning are calculations, and calculations are in Rust
-  where Python gets the same ones.
+  where Python gets the same ones, with one exception: the statistics of
+  each individual come as one value per individual, a few thousand
+  numbers, and core bins them, `src/core/histogram.ts`, with the rule of
+  popnei's bins and the edges of `numpy.histogram`, which the Python
+  script uses for the same bins (`docs/architecture.md`, section 7;
+  `docs/specs/analyses/individualChecks.md`). The bins of the statistics
+  of the variants, which can be millions of values, stay popnei's.
 - **A value that cannot be drawn, NaN or an infinity, is not drawn and is
   not silently dropped either.** The plot skips it, and the screen, which
   knows what it means, says how many there were. The data of a plot say
@@ -206,6 +212,11 @@ the CSS find the same parts:
   <g class="chart-legend"/>
 </svg>
 ```
+
+- A plot that takes no pointer event has no `chart-overlay`: the
+  histogram of stage 3 has no hover and no selection, so it has none
+  (`docs/specs/charts/histogram.md`). The export removes the overlay
+  when there is one, and finds nothing to remove otherwise.
 
 - The classes start with `chart-` and are plain global classes of
   `src/charts/charts.css`, not a CSS Module: D3 writes them as strings,

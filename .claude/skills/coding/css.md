@@ -65,7 +65,8 @@ there, and the dark theme is the same tokens with other values.
   --color-focus: #1f5fbf;
 
   /* the plots (charts.md): the seven colours of Okabe and Ito without
-     black, the axes and their text, the lines of the thresholds */
+     black, the bars of a histogram, which name no group, the axes and
+     their text, the lines of the thresholds */
   --chart-cat-1: #e69f00;
   --chart-cat-2: #56b4e9;
   --chart-cat-3: #009e73;
@@ -73,6 +74,7 @@ there, and the dark theme is the same tokens with other values.
   --chart-cat-5: #0072b2;
   --chart-cat-6: #d55e00;
   --chart-cat-7: #cc79a7;
+  --chart-bar: #0072b2;
   --chart-axis: #555d68;
   --chart-threshold: #b3261e;
 
@@ -146,6 +148,7 @@ same tokens redefined:
     --color-danger: #ff8a80;
     --color-warning: #f2c14e;
     --color-focus: #7fb0ff;
+    --chart-bar: #56b4e9;
     --chart-axis: #a3abb5;
     --chart-threshold: #ff8a80;
   }
@@ -166,7 +169,11 @@ same tokens redefined:
   values: `charts.md` resolves the colours of an exported plot, which is
   always light, in such a hidden element.
 - **The colours of the groups of a plot are the same in both themes**;
-  the dark block redefines only the axes and the thresholds.
+  the dark block redefines only the bars of a histogram, the axes and
+  the thresholds. `--chart-bar` is the blue of Okabe and Ito, #0072b2,
+  in the light theme, and their sky blue, #56b4e9, in the dark one, so
+  that a filled bar is 5.19:1 on #ffffff and 7.71:1 on #16181b, above the
+  3:1 of a mark (`docs/specs/charts/histogram.md`).
 - **The dark values are written twice**, in the media query and under
   `[data-theme="dark"]`, because the floor lacks `light-dark()`, the one
   way to write them once. A test reads `tokens.css` and checks that the two
@@ -340,7 +347,8 @@ The values of WCAG 2.2 at level AA, in both themes:
 
 - **A test computes the ratios** of the pairs of tokens that are used
   together, text on background, text on surface, border on surface,
-  `--chart-axis` and `--chart-threshold` on background, in both themes,
+  `--chart-bar`, `--chart-axis` and `--chart-threshold` on background, in
+  both themes,
   with the formula of WCAG, and fails below the limit. A pair is added to
   the test when a component starts to use it. It is a Vitest test in
   node, `src/ui/tokens.test.ts` (`testing.md`).
