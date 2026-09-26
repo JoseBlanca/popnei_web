@@ -73,6 +73,10 @@ Left open:
   and Firefox refuse such a file. It is measured under "Point R".
 - The version of Firefox the owner used was not written down.
 
+On 26 September the owner took every recommendation above: the merge,
+the five settings as they stand, the reader of project files left where
+it is, and the four wordings, which are done (afde46d to a88ed44).
+
 The work packages follow, one section each.
 
 ## Before the first task
