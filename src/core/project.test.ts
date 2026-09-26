@@ -5,17 +5,18 @@ import type { JsonObject, JsonValue } from "./keys.ts";
 import {
   FORMAT_VERSION,
   INDIVIDUAL_FILTER_ORDER,
+  VARIANT_FILTER_ORDER,
   analysisOptions,
   emptyProject,
   freezeProject,
   counted,
   escaped,
   grouped,
+  individualListNeeds,
   individualsCheck,
   individualsNeeds,
   loadIndividuals,
   loadVariants,
-  moveVariantFilter,
   namesOf,
   ordinal,
   parseProject,
@@ -132,28 +133,6 @@ function nested(levels: number): JsonObject {
 }
 
 describe("WP1 D3 the commands", () => {
-  test("the worked case: a MAF filter set again is replaced in its place", () => {
-    let p = deepFreeze(emptyProject("popgen"));
-    p = deepFreeze(setVariantFilter(p, { kind: "maf", maxAllowedMaf: 0.95 }));
-    p = deepFreeze(
-      setVariantFilter(p, {
-        kind: "missing_data",
-        maxAllowedMissingRate: 0.1,
-      }),
-    );
-    p = deepFreeze(setVariantFilter(p, { kind: "maf", maxAllowedMaf: 0.9 }));
-    expect(p.filters).toEqual([
-      { kind: "maf", maxAllowedMaf: 0.9 },
-      { kind: "missing_data", maxAllowedMissingRate: 0.1 },
-    ]);
-    expect(
-      setVariantFilter(p, {
-        kind: "missing_data",
-        maxAllowedMissingRate: 0.1,
-      }),
-    ).toBe(p);
-  });
-
   describe("each command changes its part and keeps the others", () => {
     test("loadVariants puts a new load, pending", () => {
       const p = sampleProject();
@@ -175,14 +154,16 @@ describe("WP1 D3 the commands", () => {
       expectKept(p, q, ["variants"]);
     });
 
-    test("setVariantFilter of a new kind puts it last", () => {
+    test("setVariantFilter puts a new kind in the fixed order", () => {
       const p = sampleProject();
       const q = setVariantFilter(p, { kind: "obs_het", maxAllowedObsHet: 0.5 });
       expect(q.filters).toEqual([
-        ...p.filters,
+        p.filters[0],
         { kind: "obs_het", maxAllowedObsHet: 0.5 },
+        p.filters[1],
       ]);
       expect(q.filters[0]).toBe(p.filters[0]);
+      expect(q.filters[2]).toBe(p.filters[1]);
       expectKept(p, q, ["filters"]);
     });
 
@@ -192,15 +173,7 @@ describe("WP1 D3 the commands", () => {
       expect(q.filters).toEqual([
         { kind: "missing_data", maxAllowedMissingRate: 0.1 },
       ]);
-      expect(q.filters[0]).toBe(p.filters[1]);
-      expectKept(p, q, ["filters"]);
-    });
-
-    test("moveVariantFilter moves the filter to its new position", () => {
-      const p = sampleProject();
-      const q = moveVariantFilter(p, "missing_data", 0);
-      expect(q.filters).toEqual([p.filters[1], p.filters[0]]);
-      expect(q.filters[0]).toBe(p.filters[1]);
+      expect(q.filters[0]).toBe(p.filters[0]);
       expectKept(p, q, ["filters"]);
     });
 
@@ -344,7 +317,6 @@ describe("WP1 D3 the commands", () => {
       (p) => setVariantFilter(p, { kind: "maf", maxAllowedMaf: 0.95 }),
     ],
     ["removeVariantFilter", (p) => removeVariantFilter(p, "ld")],
-    ["moveVariantFilter", (p) => moveVariantFilter(p, "maf", 0)],
     [
       "setIndividualFilter",
       (p) => setIndividualFilter(p, { kind: "remove", individuals: ["i4"] }),
@@ -395,7 +367,7 @@ describe("WP1 D3 the commands", () => {
       expect(() =>
         setVariantFilter(sampleProject(), { kind: "maf", maxAllowedMaf: 1.5 }),
       ).toThrow(
-        /^popnei_web defect: setVariantFilter .*\["filters",0,"maxAllowedMaf"\]/,
+        /^popnei_web defect: setVariantFilter .*\["filters",1,"maxAllowedMaf"\]/,
       );
     });
 
@@ -478,19 +450,6 @@ describe("WP1 D3 the commands", () => {
       const p = deepFreeze(emptyProject("popgen"));
       expect(removeIndividuals(p)).toBe(p);
     });
-
-    test("moveVariantFilter of a kind not there is a defect", () => {
-      expect(() => moveVariantFilter(sampleProject(), "ld", 0)).toThrow(DEFECT);
-    });
-
-    test.each([-1, 2, 0.5])(
-      "moveVariantFilter to the position %d of two filters is a defect",
-      (to) => {
-        expect(() => moveVariantFilter(sampleProject(), "maf", to)).toThrow(
-          DEFECT,
-        );
-      },
-    );
 
     test("setCsvOptions with no individuals file is a defect", () => {
       const p = deepFreeze(emptyProject("popgen"));
@@ -1092,6 +1051,11 @@ function withLists(individualFilters: Project["individualFilters"]): Project {
   return deepFreeze({ ...sampleProject(), individualFilters });
 }
 
+/** The reason `individualListNeeds` gives, or `null`. */
+function listReason(p: Project): string | null {
+  return individualListNeeds(p)?.reason ?? null;
+}
+
 /** The sample project with the read of its individuals file replaced. */
 function withIndividualsRead(read: IndividualsRead): Project {
   const p = sampleProject();
@@ -1558,49 +1522,49 @@ describe("WP1 D4 the records and the needs", () => {
     test.each(["keep", "remove"] as const)(
       "an empty list of individuals to %s",
       (kind) => {
-        expect(projectNeeds(withLists([{ kind, individuals: [] }]))).toBe(
-          `The list of individuals to ${kind} is empty. The Variants step has no control for the filters of individuals in this version, so correct the list in the project file, in a text editor, and open the project again.`,
+        expect(listReason(withLists([{ kind, individuals: [] }]))).toBe(
+          `The list of individuals to ${kind} is empty. Add individuals to it, or remove the filter, in the Variants step.`,
         );
       },
     );
 
     test("a list that names an individual more than once", () => {
       expect(
-        projectNeeds(
+        listReason(
           withLists([{ kind: "remove", individuals: ["i1", "i3", "i1"] }]),
         ),
       ).toBe(
-        "The list of individuals to remove names i1 more than once. The Variants step has no control for the filters of individuals in this version, so correct the list in the project file, in a text editor, and open the project again.",
+        "The list of individuals to remove names i1 more than once. Change the list, or remove the filter, in the Variants step.",
       );
     });
 
     test("a list that repeats several individuals names each once, in the order of the list", () => {
       expect(
-        projectNeeds(
+        listReason(
           withLists([
             { kind: "keep", individuals: ["i3", "i1", "i2", "i1", "i3"] },
           ]),
         ),
       ).toBe(
-        "The list of individuals to keep names i3 and i1 more than once. The Variants step has no control for the filters of individuals in this version, so correct the list in the project file, in a text editor, and open the project again.",
+        "The list of individuals to keep names i3 and i1 more than once. Change the list, or remove the filter, in the Variants step.",
       );
     });
 
     test("a name written three times is said more than once", () => {
       expect(
-        projectNeeds(
+        listReason(
           withLists([{ kind: "keep", individuals: ["i2", "i2", "i2"] }]),
         ),
       ).toBe(
-        "The list of individuals to keep names i2 more than once. The Variants step has no control for the filters of individuals in this version, so correct the list in the project file, in a text editor, and open the project again.",
+        "The list of individuals to keep names i2 more than once. Change the list, or remove the filter, in the Variants step.",
       );
     });
 
     test("a list that names 1 individual not in the variants: the singular", () => {
       expect(
-        projectNeeds(withLists([{ kind: "keep", individuals: ["i1", "x9"] }])),
+        listReason(withLists([{ kind: "keep", individuals: ["i1", "x9"] }])),
       ).toBe(
-        "The list of individuals to keep names 1 individual that is not in panel.nei: x9. The Variants step has no control for the filters of individuals in this version, so correct the list in the project file, in a text editor, and open the project again.",
+        "The list of individuals to keep names 1 individual that is not in panel.nei: x9. Change the list, or remove the filter, in the Variants step.",
       );
     });
 
@@ -1618,9 +1582,9 @@ describe("WP1 D4 the records and the needs", () => {
       "a list that names individuals not in the variants: %o",
       (names, words) => {
         expect(
-          projectNeeds(withLists([{ kind: "remove", individuals: names }])),
+          listReason(withLists([{ kind: "remove", individuals: names }])),
         ).toBe(
-          `The list of individuals to remove names ${words}. The Variants step has no control for the filters of individuals in this version, so correct the list in the project file, in a text editor, and open the project again.`,
+          `The list of individuals to remove names ${words}. Change the list, or remove the filter, in the Variants step.`,
         );
       },
     );
@@ -1631,45 +1595,45 @@ describe("WP1 D4 the records and the needs", () => {
         (_, i) => `x${String(1205 - i)}`,
       );
       expect(
-        projectNeeds(
+        listReason(
           withLists([{ kind: "keep", individuals: ["i1", ...names] }]),
         ),
       ).toBe(
-        "The list of individuals to keep names 1,205 individuals that are not in panel.nei: x1205, x1204 and 1,203 more. The Variants step has no control for the filters of individuals in this version, so correct the list in the project file, in a text editor, and open the project again.",
+        "The list of individuals to keep names 1,205 individuals that are not in panel.nei: x1205, x1204 and 1,203 more. Change the list, or remove the filter, in the Variants step.",
       );
     });
 
     test("a name is shown with its control characters escaped and cut at 40 characters", () => {
       expect(
-        projectNeeds(
+        listReason(
           withLists([
             { kind: "keep", individuals: ["i1", "x\n1", "a".repeat(45)] },
           ]),
         ),
-      ).toContain(`: x\\n1 and ${"a".repeat(40)}…. The Variants step`);
+      ).toContain(`: x\\n1 and ${"a".repeat(40)}…. Change the list`);
     });
 
     test("of 4 names, the first is shown escaped", () => {
       expect(
-        projectNeeds(
+        listReason(
           withLists([
             { kind: "keep", individuals: ["x\u00071", "x2", "x3", "x4"] },
           ]),
         ),
-      ).toContain(": x\\u00071, x2 and 2 more. The Variants step");
+      ).toContain(": x\\u00071, x2 and 2 more. Change the list");
     });
 
     test("the individuals not in the variants are named in the order of the list, not sorted", () => {
       expect(
-        projectNeeds(
+        listReason(
           withLists([{ kind: "remove", individuals: ["x9", "x1", "x5"] }]),
         ),
-      ).toContain(": x9, x1 and x5. The Variants step");
+      ).toContain(": x9, x1 and x5. Change the list");
     });
 
     test("the list to keep is named before the list to remove", () => {
       expect(
-        projectNeeds(
+        listReason(
           withLists([
             { kind: "keep", individuals: ["i1", "x9"] },
             { kind: "remove", individuals: [] },
@@ -1680,7 +1644,7 @@ describe("WP1 D4 the records and the needs", () => {
 
     test("the list to remove is named when the list to keep is right", () => {
       expect(
-        projectNeeds(
+        listReason(
           withLists([
             { kind: "keep", individuals: ["i1", "i2"] },
             { kind: "remove", individuals: ["x9"] },
@@ -1691,17 +1655,17 @@ describe("WP1 D4 the records and the needs", () => {
 
     test("names repeated are named before names not in the variants", () => {
       expect(
-        projectNeeds(
+        listReason(
           withLists([{ kind: "keep", individuals: ["x8", "i1", "i1"] }]),
         ),
       ).toBe(
-        "The list of individuals to keep names i1 more than once. The Variants step has no control for the filters of individuals in this version, so correct the list in the project file, in a text editor, and open the project again.",
+        "The list of individuals to keep names i1 more than once. Change the list, or remove the filter, in the Variants step.",
       );
     });
 
     test("the filters by thresholds are not looked at", () => {
       expect(
-        projectNeeds(
+        listReason(
           withLists([
             { kind: "missing_data", maxAllowedMissingRate: 0 },
             { kind: "obs_het", maxAllowedObsHet: 0 },
@@ -1721,13 +1685,13 @@ describe("WP1 D4 the records and the needs", () => {
 
   describe("how names are shown", () => {
     /** The names of a list of individuals to keep, none in the variants,
-        as the reason of projectNeeds shows them. */
+        as the reason of individualListNeeds shows them. */
     function namesShown(...names: readonly string[]): string {
       const reason =
-        projectNeeds(withLists([{ kind: "keep", individuals: names }])) ?? "";
+        listReason(withLists([{ kind: "keep", individuals: names }])) ?? "";
       return reason.slice(
         reason.indexOf(": ") + 2,
-        reason.indexOf(". The Variants step"),
+        reason.indexOf(". Change the list"),
       );
     }
 
@@ -1796,17 +1760,17 @@ describe("WP1 D4 the records and the needs", () => {
   describe("an empty name, and an empty message", () => {
     test("an empty name not in the variants", () => {
       expect(
-        projectNeeds(withLists([{ kind: "keep", individuals: ["i1", ""] }])),
+        listReason(withLists([{ kind: "keep", individuals: ["i1", ""] }])),
       ).toBe(
-        "The list of individuals to keep names 1 individual that is not in panel.nei: an empty name. The Variants step has no control for the filters of individuals in this version, so correct the list in the project file, in a text editor, and open the project again.",
+        "The list of individuals to keep names 1 individual that is not in panel.nei: an empty name. Change the list, or remove the filter, in the Variants step.",
       );
     });
 
     test("an empty name repeated", () => {
       expect(
-        projectNeeds(withLists([{ kind: "remove", individuals: ["", ""] }])),
+        listReason(withLists([{ kind: "remove", individuals: ["", ""] }])),
       ).toBe(
-        "The list of individuals to remove names an empty name more than once. The Variants step has no control for the filters of individuals in this version, so correct the list in the project file, in a text editor, and open the project again.",
+        "The list of individuals to remove names an empty name more than once. Change the list, or remove the filter, in the Variants step.",
       );
     });
 
@@ -3786,6 +3750,245 @@ describe("WS1 D4 the versions of a check", () => {
       kind: "unknownField",
       path: ["reference"],
       name: "popneiVersion",
+    });
+  });
+});
+
+/** The sample project with its variants file, panel.nei, read with the
+    individuals ind_031 and ind_044, or with the read `read`, and the
+    filters of individuals `lists`. */
+function withListsOfPanel(
+  lists: Project["individualFilters"],
+  read: SourceRead = {
+    kind: "read",
+    individuals: ["ind_031", "ind_044"],
+    ploidy: 2,
+    numVars: null,
+  },
+): Project {
+  const p = sampleProject();
+  if (p.variants === null) {
+    throw new Error("popnei_web defect: the test expected a variants file.");
+  }
+  return deepFreeze({
+    ...p,
+    variants: { ...p.variants, read },
+    individualFilters: lists,
+  });
+}
+
+describe("VS2 D1 the filters of a project", () => {
+  describe("the fixed order of the variants' filters", () => {
+    test("VARIANT_FILTER_ORDER is missing data, observed heterozygosity, MAF, LD", () => {
+      expect(VARIANT_FILTER_ORDER).toEqual([
+        "missing_data",
+        "obs_het",
+        "maf",
+        "ld",
+      ]);
+    });
+
+    test("the worked case: each filter goes to the place of its kind, and one set again is replaced in its place", () => {
+      let p = deepFreeze(emptyProject("popgen"));
+      p = deepFreeze(setVariantFilter(p, { kind: "maf", maxAllowedMaf: 0.95 }));
+      p = deepFreeze(
+        setVariantFilter(p, {
+          kind: "missing_data",
+          maxAllowedMissingRate: 0.1,
+        }),
+      );
+      p = deepFreeze(setVariantFilter(p, { kind: "maf", maxAllowedMaf: 0.9 }));
+      expect(p.filters).toEqual([
+        { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+        { kind: "maf", maxAllowedMaf: 0.9 },
+      ]);
+      const before = p;
+      p = deepFreeze(
+        setVariantFilter(p, { kind: "ld", maxAllowedR2: 0.5, maxDist: 1000 }),
+      );
+      p = deepFreeze(
+        setVariantFilter(p, { kind: "obs_het", maxAllowedObsHet: 0.6 }),
+      );
+      expect(p.filters.map((f) => f.kind)).toEqual([
+        "missing_data",
+        "obs_het",
+        "maf",
+        "ld",
+      ]);
+      expect(p.filters[0]).toBe(before.filters[0]);
+      expect(p.filters[2]).toBe(before.filters[1]);
+      expect(
+        setVariantFilter(p, {
+          kind: "missing_data",
+          maxAllowedMissingRate: 0.1,
+        }),
+      ).toBe(p);
+    });
+
+    test("no command moves a filter: project.ts exports none whose name starts with move", async () => {
+      const module: object = await import("./project.ts");
+      expect(
+        Object.keys(module).filter((name) => name.startsWith("move")),
+      ).toEqual([]);
+    });
+
+    test("any sequence of commands keeps the filters of the variants in their fixed order, one of each kind", () => {
+      fc.assert(
+        fc.property(fc.array(drawnCommand, { maxLength: 20 }), (commands) => {
+          let p = sampleProject();
+          for (const command of commands) {
+            const bound = command.bind(p);
+            if (bound === null) {
+              continue;
+            }
+            p = deepFreeze(bound(p));
+            const ranks = p.filters.map((f) =>
+              VARIANT_FILTER_ORDER.indexOf(f.kind),
+            );
+            expect(ranks).toEqual(
+              [...new Set(ranks)].toSorted((a, b) => a - b),
+            );
+          }
+        }),
+      );
+    });
+  });
+
+  describe("individualListNeeds", () => {
+    test.each([
+      [
+        "keep",
+        [],
+        "The list of individuals to keep is empty. Add individuals to it, or remove the filter, in the Variants step.",
+      ],
+      [
+        "remove",
+        [],
+        "The list of individuals to remove is empty. Add individuals to it, or remove the filter, in the Variants step.",
+      ],
+      [
+        "keep",
+        ["ind_044", "ind_031", "ind_031"],
+        "The list of individuals to keep names ind_031 more than once. Change the list, or remove the filter, in the Variants step.",
+      ],
+      [
+        "remove",
+        ["ind_044", "ind_031", "ind_031"],
+        "The list of individuals to remove names ind_031 more than once. Change the list, or remove the filter, in the Variants step.",
+      ],
+      [
+        "keep",
+        ["ind_031", "ind_900", "ind_901"],
+        "The list of individuals to keep names 2 individuals that are not in panel.nei: ind_900 and ind_901. Change the list, or remove the filter, in the Variants step.",
+      ],
+      [
+        "remove",
+        ["ind_031", "ind_900", "ind_901"],
+        "The list of individuals to remove names 2 individuals that are not in panel.nei: ind_900 and ind_901. Change the list, or remove the filter, in the Variants step.",
+      ],
+    ] as const)(
+      "the list to %s of %o gives its list and its reason",
+      (list, individuals, reason) => {
+        expect(
+          individualListNeeds(
+            withListsOfPanel([{ kind: list, individuals: [...individuals] }]),
+          ),
+        ).toEqual({ list, reason });
+      },
+    );
+
+    test("null for a bad list while the variants file is not read", () => {
+      const lists = [{ kind: "keep" as const, individuals: [] }];
+      const reads: readonly SourceRead[] = [
+        { kind: "pending" },
+        { kind: "failed", error: { kind: "popnei", message: "not a nei" } },
+      ];
+      for (const read of reads) {
+        expect(individualListNeeds(withListsOfPanel(lists, read))).toBeNull();
+      }
+      expect(
+        individualListNeeds(
+          deepFreeze({ ...withListsOfPanel(lists), variants: null }),
+        ),
+      ).toBeNull();
+    });
+
+    test("projectNeeds gives null for a read file with a bad list", () => {
+      const p = withListsOfPanel([
+        { kind: "keep", individuals: [] },
+        { kind: "remove", individuals: ["ind_900"] },
+      ]);
+      expect(individualListNeeds(p)).not.toBeNull();
+      expect(projectNeeds(p)).toBeNull();
+    });
+
+    test("null for lists popnei accepts, and the list to keep named before the list to remove", () => {
+      expect(
+        individualListNeeds(
+          withListsOfPanel([
+            { kind: "keep", individuals: ["ind_031", "ind_044"] },
+            { kind: "remove", individuals: ["ind_044"] },
+          ]),
+        ),
+      ).toBeNull();
+      expect(
+        individualListNeeds(
+          withListsOfPanel([
+            { kind: "keep", individuals: ["ind_900"] },
+            { kind: "remove", individuals: [] },
+          ]),
+        )?.list,
+      ).toBe("keep");
+    });
+  });
+
+  describe("parseProject refuses the filters of the variants out of their order", () => {
+    test("[maf, missing_data] is filterOutOfOrder at the second filter, with its text", () => {
+      const result = parse(
+        fileWith({
+          filters: [
+            { kind: "maf", maxAllowedMaf: 0.95 },
+            { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+          ],
+        }),
+      );
+      expect(result).toEqual({
+        ok: false,
+        error: { kind: "filterOutOfOrder", path: ["filters", 1] },
+      });
+      expect(projectErrorText(errorOf(result))).toBe(
+        "The project file cannot be opened: the filters of the variants should be in the order missing genotypes, observed heterozygosity, major allele frequency, linkage disequilibrium, and the second one is out of that order. The file was changed outside the application, or is damaged. Open a copy saved before the change, or make the project again.",
+      );
+    });
+
+    test.each([
+      [["obs_het", "missing_data"], 1],
+      [["maf", "obs_het"], 1],
+      [["missing_data", "ld", "maf"], 2],
+    ] as const)("the kinds %o are refused at the filter %d", (kinds, index) => {
+      const all = {
+        missing_data: { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+        obs_het: { kind: "obs_het", maxAllowedObsHet: 0.5 },
+        maf: { kind: "maf", maxAllowedMaf: 0.95 },
+        ld: { kind: "ld", maxAllowedR2: 0.5, maxDist: 1000 },
+      };
+      expect(
+        parse(fileWith({ filters: kinds.map((kind) => all[kind]) })),
+      ).toEqual({
+        ok: false,
+        error: { kind: "filterOutOfOrder", path: ["filters", index] },
+      });
+    });
+
+    test("the four filters in their order are accepted", () => {
+      const filters = [
+        { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+        { kind: "obs_het", maxAllowedObsHet: 0.5 },
+        { kind: "maf", maxAllowedMaf: 0.95 },
+        { kind: "ld", maxAllowedR2: 0.5, maxDist: 1000 },
+      ];
+      const result = parse(fileWith({ filters }));
+      expect(result.ok && result.value.filters).toEqual(filters);
     });
   });
 });

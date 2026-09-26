@@ -8,10 +8,10 @@ import * as fc from "fast-check";
 import type { JsonObject, JsonValue, KeyedDef } from "./keys.ts";
 import {
   INDIVIDUAL_FILTER_ORDER,
+  VARIANT_FILTER_ORDER,
   analysisOptions,
   loadIndividuals,
   loadVariants,
-  moveVariantFilter,
   removeIndividualFilter,
   removeIndividuals,
   removeVariantFilter,
@@ -96,8 +96,8 @@ export function sampleProject(): Project {
       },
     },
     filters: [
-      { kind: "maf", maxAllowedMaf: 0.95 },
       { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+      { kind: "maf", maxAllowedMaf: 0.95 },
     ],
     individualFilters: [
       { kind: "remove", individuals: ["i4"] },
@@ -343,16 +343,6 @@ export const drawnCommand: fc.Arbitrary<DrawnCommand> = fc.oneof(
   variantFilterKind.map((kind) =>
     command("removeVariantFilter", () => (p) => removeVariantFilter(p, kind)),
   ),
-  fc.tuple(seed, seed).map(([which, to]) =>
-    command("moveVariantFilter", (p) => {
-      const filter = p.filters[which % Math.max(p.filters.length, 1)];
-      if (filter === undefined) {
-        return null;
-      }
-      const position = to % p.filters.length;
-      return (q) => moveVariantFilter(q, filter.kind, position);
-    }),
-  ),
   individualFilter.map((filter) =>
     command("setIndividualFilter", () => (p) => setIndividualFilter(p, filter)),
   ),
@@ -457,10 +447,17 @@ function columnTypeFor(
 export const anyLoadId: fc.Arbitrary<string> =
   fc.stringMatching(/^[0-9a-f]{32}$/);
 
-/** Any list of filters of the variants, at most one of each kind, in any
-    order. */
-export const variantFilters: fc.Arbitrary<readonly VariantFilter[]> =
-  fc.uniqueArray(variantFilter, { selector: (f) => f.kind, maxLength: 4 });
+/** Any list of filters of the variants, at most one of each kind, in the
+    fixed order of the project. */
+export const variantFilters: fc.Arbitrary<readonly VariantFilter[]> = fc
+  .uniqueArray(variantFilter, { selector: (f) => f.kind, maxLength: 4 })
+  .map((filters) =>
+    filters.toSorted(
+      (a, b) =>
+        VARIANT_FILTER_ORDER.indexOf(a.kind) -
+        VARIANT_FILTER_ORDER.indexOf(b.kind),
+    ),
+  );
 
 /** Any list of filters of the individuals, at most one of each kind, in
     the fixed order of the project. */

@@ -942,8 +942,8 @@ function vcfPendingProject(): Project {
     app: "popgen",
     variants: null,
     filters: [
-      { kind: "maf", maxAllowedMaf: 0.95 },
       { kind: "missing_data", maxAllowedMissingRate: 0.2 },
+      { kind: "maf", maxAllowedMaf: 0.95 },
     ],
     individualFilters: [],
     individuals: null,

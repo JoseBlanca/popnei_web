@@ -237,7 +237,8 @@ export type ProjectError =
       readonly path: FieldPath;
       readonly expected: string;
     }
-  /** A filter of the individuals out of the order of the kinds. */
+  /** A filter out of the fixed order of the kinds of its list, of the
+      variants or of the individuals. */
   | { readonly kind: "filterOutOfOrder"; readonly path: FieldPath }
   /** A second filter of the kind `filter` in one list. */
   | {
@@ -278,6 +279,24 @@ const FILTER_KIND_WORDS: Readonly<
   keep: "individuals to keep",
   remove: "individuals to remove",
 };
+
+/** The kinds of filter of the variants, in the order a project keeps
+    them. */
+const VARIANT_FILTER_KINDS: Kinds<VariantFilterKind> = {
+  missing_data: {
+    fields: ["maxAllowedMissingRate"],
+    words: FILTER_KIND_WORDS.missing_data,
+  },
+  obs_het: { fields: ["maxAllowedObsHet"], words: FILTER_KIND_WORDS.obs_het },
+  maf: { fields: ["maxAllowedMaf"], words: FILTER_KIND_WORDS.maf },
+  ld: { fields: ["maxAllowedR2", "maxDist"], words: FILTER_KIND_WORDS.ld },
+};
+
+/** The order the filters of the variants are kept in: missing_data,
+    obs_het, maf, ld. "regions" joins first with popnei's filter of the
+    regions of a BED file. */
+export const VARIANT_FILTER_ORDER: readonly VariantFilterKind[] =
+  keysOf(VARIANT_FILTER_KINDS);
 
 /** The kinds of filter of the individuals, in the order a project keeps
     them. */
@@ -446,7 +465,7 @@ function variantFilterError(
 }
 
 /** Checks the threshold of a filter of the individuals, from 0 to 1. A
-    list of individuals is checked by `projectNeeds`, not here. */
+    list of individuals is checked by `individualListNeeds`, not here. */
 function individualFilterError(
   filter: IndividualFilter,
   path: FieldPath,
@@ -757,15 +776,32 @@ function copyVariantFilter(filter: VariantFilter): VariantFilter {
   }
 }
 
-/** Sets the filter of its kind: in its place when there is one, last
-    otherwise. */
+/** Where a filter of the kind `kind` goes in a list kept in the order
+    `order`: `index`, that of the filter of its kind already there, or -1
+    when there is none; and `at`, its place, `index`, or before the first
+    filter of a kind after it in the order. */
+function placeOf<K extends string>(
+  filters: readonly { readonly kind: K }[],
+  order: readonly K[],
+  kind: K,
+): { readonly index: number; readonly at: number } {
+  const index = filters.findIndex((f) => f.kind === kind);
+  if (index !== -1) {
+    return { index, at: index };
+  }
+  const rank = order.indexOf(kind);
+  const after = filters.findIndex((f) => order.indexOf(f.kind) > rank);
+  return { index, at: after === -1 ? filters.length : after };
+}
+
+/** Sets the filter of its kind, in the fixed order of the kinds,
+    missing_data, obs_het, maf, ld, in place of the one of its kind. */
 export function setVariantFilter(p: Project, filter: VariantFilter): Project {
-  const index = p.filters.findIndex((f) => f.kind === filter.kind);
-  const at = index === -1 ? p.filters.length : index;
+  const { index, at } = placeOf(p.filters, VARIANT_FILTER_ORDER, filter.kind);
   refuse("setVariantFilter", variantFilterError(filter, ["filters", at]));
   const copy = copyVariantFilter(filter);
   if (index === -1) {
-    return { ...p, filters: [...p.filters, copy] };
+    return { ...p, filters: p.filters.toSpliced(at, 0, copy) };
   }
   if (same(p.filters[index], copy)) {
     return p;
@@ -783,33 +819,6 @@ export function removeVariantFilter(
     return p;
   }
   return { ...p, filters: p.filters.filter((f) => f.kind !== kind) };
-}
-
-/** Moves the filter of that kind to a position of the list, 0 the first.
-    Throws a defect when there is no filter of that kind, or `to` is not a
-    whole number from 0 to the length of the list − 1. */
-export function moveVariantFilter(
-  p: Project,
-  kind: VariantFilterKind,
-  to: number,
-): Project {
-  const index = p.filters.findIndex((f) => f.kind === kind);
-  const filter = p.filters[index];
-  if (filter === undefined) {
-    throw defect(`moveVariantFilter was given ${kind}, not in the filters.`);
-  }
-  if (!Number.isInteger(to) || to < 0 || to >= p.filters.length) {
-    throw defect(
-      `moveVariantFilter was given the position ${String(to)}, not one of the ${String(p.filters.length)} filters.`,
-    );
-  }
-  if (to === index) {
-    return p;
-  }
-  return {
-    ...p,
-    filters: p.filters.toSpliced(index, 1).toSpliced(to, 0, filter),
-  };
 }
 
 function copyIndividualFilter(filter: IndividualFilter): IndividualFilter {
@@ -833,15 +842,11 @@ export function setIndividualFilter(
   p: Project,
   filter: IndividualFilter,
 ): Project {
-  const rank = INDIVIDUAL_FILTER_ORDER.indexOf(filter.kind);
-  const index = p.individualFilters.findIndex((f) => f.kind === filter.kind);
-  const after = p.individualFilters.findIndex(
-    (f) => INDIVIDUAL_FILTER_ORDER.indexOf(f.kind) > rank,
+  const { index, at } = placeOf(
+    p.individualFilters,
+    INDIVIDUAL_FILTER_ORDER,
+    filter.kind,
   );
-  let at = index;
-  if (at === -1) {
-    at = after === -1 ? p.individualFilters.length : after;
-  }
   refuse(
     "setIndividualFilter",
     individualFilterError(filter, ["individualFilters", at]),
@@ -1313,12 +1318,13 @@ function loadIndividualsText(app: AppId): string {
   return `Load a ${FILE_WORDS[app]} in the Individuals step.`;
 }
 
-/** The end of a reason of a list of individuals, which in stage 2 comes
-    only from a project file, since the Variants step has no control for
-    it (the project spec, Open 2, settled by the owner on 25 September
-    2026). */
+/** The ends of the reasons of a list of individuals, an empty list and
+    the others (the project spec, Open 2, decided by the owner on 26
+    September 2026). */
+const FILL_LIST =
+  "Add individuals to it, or remove the filter, in the Variants step.";
 const CORRECT_LIST =
-  "The Variants step has no control for the filters of individuals in this version, so correct the list in the project file, in a text editor, and open the project again.";
+  "Change the list, or remove the filter, in the Variants step.";
 
 /** The kinds of the lists of individuals, in the order they are checked
     (the project spec, Open 6). */
@@ -1326,29 +1332,50 @@ const LIST_KINDS = ["keep", "remove"] as const;
 
 /**
  * The reason no analysis can run on this project, in the words the screen
- * shows beside the Run button, or `null` when every analysis can: the
- * first of a variants file missing, being read or refused, then a list of
- * individuals that is empty, names one more than once, or names
- * individuals not in the variants file (the project spec, "What an
- * analysis needs of every project").
+ * shows beside the Run button, or `null` when the variants file is read:
+ * a variants file missing, being read or refused (the project spec, "What
+ * an analysis needs of every project"). A list of individuals popnei
+ * would refuse is `individualListNeeds`'s.
  */
 export function projectNeeds(p: Project): string | null {
   const variants = p.variants;
   if (variants === null) {
     return LOAD_VARIANTS;
   }
-  const read = variants.read;
-  if (read.kind !== "read") {
-    return variantsReadNeeds(variants, VARIANTS_ENDS);
+  return variants.read.kind === "read"
+    ? null
+    : variantsReadNeeds(variants, VARIANTS_ENDS);
+}
+
+/** A list of individuals popnei would refuse: which of the two it is,
+    and the reason. */
+export interface ListNeeds {
+  readonly list: (typeof LIST_KINDS)[number];
+  readonly reason: string;
+}
+
+/**
+ * The first list of individuals popnei would refuse, one that is empty,
+ * names an individual more than once, or names individuals not in the
+ * variants file, the list to keep before the list to remove; or `null`,
+ * and `null` too while `projectNeeds` gives a reason, since a list is
+ * checked against the individuals of the file. The store locks with it
+ * only what reads the filters of individuals (the project spec, "What an
+ * analysis needs of every project").
+ */
+export function individualListNeeds(p: Project): ListNeeds | null {
+  const variants = p.variants;
+  if (variants?.read.kind !== "read") {
+    return null;
   }
   const fileName = escaped(variants.name);
-  const inVariants = new Set(read.individuals);
+  const inVariants = new Set(variants.read.individuals);
   for (const kind of LIST_KINDS) {
     const list = listOf(p.individualFilters, kind);
     const reason =
       list === null ? null : listNeeds(kind, list, fileName, inVariants);
     if (reason !== null) {
-      return reason;
+      return { list: kind, reason };
     }
   }
   return null;
@@ -1381,7 +1408,7 @@ function listNeeds(
 ): string | null {
   const theList = `The list of ${FILTER_KIND_WORDS[kind]}`;
   if (list.length === 0) {
-    return `${theList} is empty. ${CORRECT_LIST}`;
+    return `${theList} is empty. ${FILL_LIST}`;
   }
   const times = new Map<string, number>();
   for (const name of list) {
@@ -1745,8 +1772,9 @@ export interface ParsedAnalysis {
  * into a project of the application `app`, or gives the first thing wrong
  * with it: a file of the other application, an analysis that is not one
  * of `analyses`, a field of the wrong shape or that the type does not
- * have, a value the commands would refuse, two filters of one kind, or a
- * table that does not agree with the types of its columns. Every project
+ * have, a value the commands would refuse, two filters of one kind or
+ * filters out of their fixed order, or a table that does not agree with
+ * the types of its columns. Every project
  * written with `JSON.stringify` reads back equal to itself. The project is
  * not frozen; the store freezes it when it takes it.
  */
@@ -2052,16 +2080,6 @@ function orFailure<T>(value: T, error: ProjectError | null): Parsed<T> {
   return error === null ? success(value) : failure(error);
 }
 
-const VARIANT_FILTER_KINDS: Kinds<VariantFilterKind> = {
-  missing_data: {
-    fields: ["maxAllowedMissingRate"],
-    words: FILTER_KIND_WORDS.missing_data,
-  },
-  maf: { fields: ["maxAllowedMaf"], words: FILTER_KIND_WORDS.maf },
-  obs_het: { fields: ["maxAllowedObsHet"], words: FILTER_KIND_WORDS.obs_het },
-  ld: { fields: ["maxAllowedR2", "maxDist"], words: FILTER_KIND_WORDS.ld },
-};
-
 const SOURCE_READ_KINDS: Kinds<SourceRead["kind"]> = {
   pending: { fields: [], words: "not yet read" },
   read: { fields: ["individuals", "ploidy", "numVars"], words: "read" },
@@ -2250,8 +2268,28 @@ function parseVariantFilters(
   if (!filters.ok) {
     return filters;
   }
-  const twice = secondOfAKind(filters.value, path);
-  return twice === null ? filters : failure(twice);
+  const wrong =
+    secondOfAKind(filters.value, path) ??
+    outOfOrder(filters.value, VARIANT_FILTER_ORDER, path);
+  return wrong === null ? filters : failure(wrong);
+}
+
+/** The first filter whose kind comes before that of a filter before it,
+    in the order `order`. */
+function outOfOrder<K extends string>(
+  filters: readonly { readonly kind: K }[],
+  order: readonly K[],
+  path: FieldPath,
+): ProjectError | null {
+  let rankBefore = -1;
+  for (const [index, filter] of filters.entries()) {
+    const rank = order.indexOf(filter.kind);
+    if (rank < rankBefore) {
+      return { kind: "filterOutOfOrder", path: [...path, index] };
+    }
+    rankBefore = rank;
+  }
+  return null;
 }
 
 /** A second filter of a kind already in the list. */
@@ -2325,19 +2363,10 @@ function parseIndividualFilters(
   if (!filters.ok) {
     return filters;
   }
-  const twice = secondOfAKind(filters.value, path);
-  if (twice !== null) {
-    return failure(twice);
-  }
-  let rankBefore = -1;
-  for (const [index, filter] of filters.value.entries()) {
-    const rank = INDIVIDUAL_FILTER_ORDER.indexOf(filter.kind);
-    if (rank < rankBefore) {
-      return failure({ kind: "filterOutOfOrder", path: [...path, index] });
-    }
-    rankBefore = rank;
-  }
-  return filters;
+  const wrong =
+    secondOfAKind(filters.value, path) ??
+    outOfOrder(filters.value, INDIVIDUAL_FILTER_ORDER, path);
+  return wrong === null ? filters : failure(wrong);
 }
 
 function parseVariantSource(
@@ -3136,10 +3165,18 @@ export function projectErrorText(error: ProjectError): string {
       return opened(
         `it has ${twoOfAKind(error.path, error.filter)}, and a project has at most one of each kind`,
       );
-    case "filterOutOfOrder":
+    case "filterOutOfOrder": {
+      const [list, order]: readonly [
+        string,
+        readonly (VariantFilterKind | IndividualFilterKind)[],
+      ] =
+        error.path[0] === "filters"
+          ? ["variants", VARIANT_FILTER_ORDER]
+          : ["individuals", INDIVIDUAL_FILTER_ORDER];
       return opened(
-        `the filters of the individuals should be in the order ${INDIVIDUAL_FILTER_ORDER.map((kind) => FILTER_KIND_WORDS[kind]).join(", ")}, and the ${ordinal(positionOf(error.path))} one is out of that order`,
+        `the filters of the ${list} should be in the order ${order.map((kind) => FILTER_KIND_WORDS[kind]).join(", ")}, and the ${ordinal(positionOf(error.path))} one is out of that order`,
       );
+    }
   }
 }
 

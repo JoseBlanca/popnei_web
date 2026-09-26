@@ -333,7 +333,7 @@ describe("WS9 D1 the states of the steps", () => {
     expect(stepOf(state({ project: emptyList }), "variants")).toEqual({
       status: "problem",
       reason:
-        "The list of individuals to keep is empty. The Variants step has no control for the filters of individuals in this version, so correct the list in the project file, in a text editor, and open the project again.",
+        "The list of individuals to keep is empty. Add individuals to it, or remove the filter, in the Variants step.",
     });
   });
 

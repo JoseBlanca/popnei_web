@@ -20,6 +20,7 @@ import {
   counted,
   escaped,
   grouped,
+  individualListNeeds,
   individualsCheck,
   individualsNeeds,
   projectNeeds,
@@ -114,7 +115,7 @@ function variantsState(p: Project): Status {
   if (p.variants.read.kind === "pending") {
     return { status: "reading", reason: projectNeeds(p) };
   }
-  const reason = projectNeeds(p);
+  const reason = projectNeeds(p) ?? individualListNeeds(p)?.reason ?? null;
   return reason === null
     ? { status: "done", reason: null }
     : { status: "problem", reason };

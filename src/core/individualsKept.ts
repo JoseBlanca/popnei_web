@@ -10,7 +10,12 @@
  */
 
 import type { IndividualFilterKind } from "../worker/protocol.ts";
-import { escaped, grouped, projectNeeds } from "./project.ts";
+import {
+  escaped,
+  grouped,
+  individualListNeeds,
+  projectNeeds,
+} from "./project.ts";
 import type { Project } from "./project.ts";
 
 /** The statistics of each individual, over the variants the filters keep. */
@@ -65,9 +70,9 @@ export interface IndividualsKept {
  * heterozygosity, each to the individuals the one before it kept. A
  * threshold keeps an individual whose number is at most it, and the
  * threshold on the observed heterozygosity removes one whose number is
- * NaN, with no called genotype. Gives `null` when `projectNeeds` gives a
- * reason, a variants file not read or a list of individuals that popnei
- * would refuse. `stats` is used only when the project has a threshold;
+ * NaN, with no called genotype. Gives `null` when `projectNeeds` or
+ * `individualListNeeds` gives a reason, a variants file not read or a
+ * list of individuals that popnei would refuse. `stats` is used only when the project has a threshold;
  * then, statistics of other individuals than those of the variants file,
  * in its order, or with arrays of another length, are a defect, thrown.
  */
@@ -75,7 +80,7 @@ export function individualsKept(
   p: Project,
   stats: IndividualStats | null,
 ): IndividualsKept | null {
-  if (projectNeeds(p) !== null) {
+  if (projectNeeds(p) !== null || individualListNeeds(p) !== null) {
     return null;
   }
   const all = fileIndividuals(p);
