@@ -363,16 +363,20 @@ the second:
 /** Starts the calculation of the analysis `id`, and hands the outcome of
     every request it sends to the store when it arrives; null when the
     store starts none. */
-export function startAnalysis(store: Store<JobResult, Blob>, id: AnalysisId): Promise<void> | null;
+export function startAnalysis<R, F>(store: Store<R, F>, id: AnalysisId): Promise<void> | null;
 
 /** Starts the writing of the filtered variants in `format`, as
     startAnalysis starts a calculation. */
-export function startWriting(store: Store<JobResult, Blob>, format: WriteFormat): Promise<void> | null;
+export function startWriting<R, F>(store: Store<R, F>, format: WriteFormat): Promise<void> | null;
 
 /** When the request `runId` was started, in the milliseconds of
     performance.now(), while it is in flight; null otherwise. */
 export function startedAt(runId: number): number | null;
 ```
+
+The two are generic over the result of a request, `R`, and the file a
+write gives, `F`: the page hands them its `Store<JobResult, Blob>`, and
+the tests a store of fakes.
 
 `startAnalysis` calls `store.startRun(id)`, and `startWriting`
 `store.startWrite(format)`; each gives `null`, and nothing is done, or a
@@ -417,7 +421,11 @@ returns; it passes it over with `void`, which the lint allows. What
 rejects it is a defect of our code, a `runEnded` that throws, and a
 promise rejected with no one to handle it goes to the window's
 `unhandledrejection` event, and so to the error bar, which is where a
-defect belongs. The tests await it.
+defect belongs. The tests await it. When several `runEnded` of the
+handles of one press throw, the promise settles once every handle has
+ended, and rejects with the first defect; each other one is thrown on
+its own, outside the promise, where the window's `error` event takes it
+to the error bar too, so that no defect is lost behind the first.
 
 ### The saving
 
@@ -778,7 +786,9 @@ hand and whose cancels it records.
   individuals and no statistics gives one handle, of the statistics;
   their outcome given, `runEnded` gives the diversity's own handle, whose
   outcome is awaited and given to `runEnded` too, and the promise settles
-  after it; a Run that waits for statistics already in flight gives no
+  after it; a `runEnded` that throws for that handle rejects the promise
+  of the press; two `runEnded` that throw for two handles of one press,
+  the first rejects the promise and the second is thrown outside it; a Run that waits for statistics already in flight gives no
   handle, and its promise settles at once, while its request, sent when
   they end, is awaited all the same, and the promise of the Calculate
   that started the statistics settles after it.
