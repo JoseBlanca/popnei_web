@@ -273,6 +273,8 @@ export interface NoticeText {
   /** The action that reverses the change: Undo after a command or a
       redo, Redo after an undo. */
   readonly action: "Undo" | "Redo";
+  /** What the action does to the project, which its button does. */
+  readonly reverse: "undo" | "redo";
 }
 
 /** Some analyses in words: one named by its title, with `one`; more
@@ -302,7 +304,8 @@ export function noticeText(
   title: (id: AnalysisId) => string,
 ): NoticeText {
   const cause = n.cause;
-  const action = cause.kind === "undo" ? "Redo" : "Undo";
+  const reverse = cause.kind === "undo" ? "redo" : "undo";
+  const action = reverse === "undo" ? "Undo" : "Redo";
   const removed = namedOrCounted(
     n.removed,
     title,
@@ -316,7 +319,6 @@ export function noticeText(
     (count) => `${counted(count, "calculation")} stopped`,
   );
   const what = [removed, stopped].filter((part) => part !== null).join(" and ");
-  const reverse = action === "Undo" ? "undo" : "redo";
   const leftBehind = namedOrCounted(
     n.leftBehind,
     title,
@@ -337,7 +339,7 @@ export function noticeText(
         ]
       : [start, ...(what === "" ? [] : [capitalized(what)])];
   if (leftBehind !== null) sentences.push(leftBehind);
-  return { text: sentences.join(". "), action };
+  return { text: sentences.join(". "), action, reverse };
 }
 
 /**

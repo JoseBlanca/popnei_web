@@ -26,23 +26,18 @@ export function Notice(): React.JSX.Element {
   const store = useStore();
   const announcer = useAnnouncer();
   const notice = useAppState((s) => s.notice);
-  const words = notice === null ? null : noticeText(notice, titleOf);
+  const content =
+    notice === null
+      ? null
+      : { identity: notice.cause, ...noticeText(notice, titleOf) };
   return (
-    <Toast
-      label="Notice"
-      identity={notice?.cause ?? null}
-      text={words?.text ?? ""}
-    >
-      {words !== null && (
+    <Toast label="Notice" content={content}>
+      {(words) => (
         <>
           <Button
             label={words.action}
             onPress={() => {
-              undoOrRedo(
-                store,
-                announcer,
-                words.action === "Undo" ? "undo" : "redo",
-              );
+              undoOrRedo(store, announcer, words.reverse);
             }}
           />
           <Button

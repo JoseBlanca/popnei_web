@@ -128,30 +128,37 @@ export function SaveProject(): React.JSX.Element {
           setName(saving.proposedName());
         }}
       />
-      <Dialog title="Save the project" isOpen={name !== null} onClose={close}>
-        <form
-          className={classOf(styles, "form")}
-          onSubmit={(event) => {
-            event.preventDefault();
-            save();
-          }}
-        >
-          <TextField
-            label="File name"
-            value={name ?? ""}
-            onChange={setName}
-            autoFocus
-          />
-          <div className={classOf(styles, "buttons")}>
-            <Button
-              label="Save"
-              isSubmit
-              isDisabled={given === ""}
-              {...(given === "" && { description: NAME_NEEDED })}
+      <Dialog
+        content={
+          name === null ? null : { title: "Save the project", text: null, name }
+        }
+        onClose={close}
+      >
+        {(content) => (
+          <form
+            className={classOf(styles, "form")}
+            onSubmit={(event) => {
+              event.preventDefault();
+              save();
+            }}
+          >
+            <TextField
+              label="File name"
+              value={content.name}
+              onChange={setName}
+              autoFocus
             />
-            <Button label="Cancel" onPress={close} />
-          </div>
-        </form>
+            <div className={classOf(styles, "buttons")}>
+              <Button
+                label="Save"
+                isSubmit
+                isDisabled={given === ""}
+                {...(given === "" && { description: NAME_NEEDED })}
+              />
+              <Button label="Cancel" onPress={close} />
+            </div>
+          </form>
+        )}
       </Dialog>
     </>
   );
@@ -229,7 +236,9 @@ export function OpenProject(): React.JSX.Element {
   // calculations when they end while it is open.
   const running = useAppState((s) => s.runs.length > 0);
   const question =
-    opening.kind === "asking" ? openQuestion(opening.name, running) : null;
+    opening.kind === "asking"
+      ? { ...opening, ...openQuestion(opening.name, running) }
+      : null;
 
   return (
     <>
@@ -244,37 +253,29 @@ export function OpenProject(): React.JSX.Element {
         <Button label="Open project…" ref={button} />
       </FileTrigger>
       <Dialog
-        title={opening.kind === "refused" ? opening.title : ""}
+        content={opening.kind === "refused" ? opening : null}
         role="alertdialog"
-        isOpen={opening.kind === "refused"}
         onClose={back}
-        text={opening.kind === "refused" ? opening.text : ""}
       >
-        <div className={classOf(styles, "buttons")}>
-          <Button label="OK" onPress={back} autoFocus />
-        </div>
+        {() => (
+          <div className={classOf(styles, "buttons")}>
+            <Button label="OK" onPress={back} autoFocus />
+          </div>
+        )}
       </Dialog>
-      <Dialog
-        title={question?.title ?? ""}
-        role="alertdialog"
-        isOpen={opening.kind === "asking"}
-        onClose={back}
-        text={question?.text ?? ""}
-      >
-        <div className={classOf(styles, "buttons")}>
-          <Button
-            label={
-              opening.kind === "asking" ? openButtonText(opening.name) : ""
-            }
-            onPress={() => {
-              if (opening.kind === "asking") {
-                open(opening.name, opening.project, true);
-              }
-            }}
-          />
-          {/* The focus starts on the answer that loses nothing. */}
-          <Button label={KEEP_PROJECT} onPress={back} autoFocus />
-        </div>
+      <Dialog content={question} role="alertdialog" onClose={back}>
+        {(asking) => (
+          <div className={classOf(styles, "buttons")}>
+            <Button
+              label={openButtonText(asking.name)}
+              onPress={() => {
+                open(asking.name, asking.project, true);
+              }}
+            />
+            {/* The focus starts on the answer that loses nothing. */}
+            <Button label={KEEP_PROJECT} onPress={back} autoFocus />
+          </div>
+        )}
       </Dialog>
     </>
   );

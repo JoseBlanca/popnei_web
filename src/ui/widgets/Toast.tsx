@@ -31,28 +31,33 @@ import {
 import { classOf } from "../classOf.ts";
 import styles from "./Toast.module.css";
 
-/** What a toast is drawn with. */
-export interface ToastProps {
-  /** The name of the region of the toast, for a screen reader. */
-  readonly label: string;
-  /** What the toast shows, compared by reference: a new value replaces
+/** What a toast shows. */
+export interface ToastContent {
+  /** What the toast is of, compared by reference: a new value replaces
       the toast with a new one, which is read out; the same value keeps
-      it, with its words and buttons as they are now; `null` for none. */
-  readonly identity: object | null;
+      it, with its words and buttons as they are now. */
+  readonly identity: object;
   /** The words of the toast, read out when it appears. */
   readonly text: string;
-  /** Its buttons, after the words. */
-  readonly children: React.ReactNode;
+}
+
+/** What a toast is drawn with, whose content is of the type `C`. */
+export interface ToastProps<C extends ToastContent> {
+  /** The name of the region of the toast, for a screen reader. */
+  readonly label: string;
+  /** What the toast shows, or `null` for no toast. */
+  readonly content: C | null;
+  /** Its buttons, after the words, drawn from its content. */
+  readonly children: (content: C) => React.ReactNode;
 }
 
 /** The region of the toast, drawn at the end of the page while there is
     one. */
-export function Toast({
+export function Toast<C extends ToastContent>({
   label,
-  identity,
-  text,
+  content,
   children,
-}: ToastProps): React.JSX.Element {
+}: ToastProps<C>): React.JSX.Element {
   // React Aria's queue, the store its region reads, made once for this
   // component, with a function that subscribes to it of the same identity
   // on every drawing.
@@ -76,6 +81,7 @@ export function Toast({
   // The queue follows the identity: a toast added for each new one, and
   // closed when it changes or goes. Before the paint, so that the old
   // toast is never seen with the new words.
+  const identity = content?.identity ?? null;
   useLayoutEffect(() => {
     if (identity === null) return;
     const key = queue.add(null);
@@ -100,14 +106,22 @@ export function Toast({
       className={classOf(styles, "region")}
       ref={keepRoom}
     >
-      {({ toast }) => (
-        <AriaToast toast={toast} className={classOf(styles, "toast")}>
-          <AriaToastContent className={classOf(styles, "content")}>
-            <Text slot="title">{text}</Text>
-          </AriaToastContent>
-          <span className={classOf(styles, "actions")}>{children}</span>
-        </AriaToast>
-      )}
+      {({ toast }) =>
+        // Nothing in the one drawing where the content is gone and its
+        // toast not yet closed, which is never painted.
+        content === null ? (
+          <></>
+        ) : (
+          <AriaToast toast={toast} className={classOf(styles, "toast")}>
+            <AriaToastContent className={classOf(styles, "content")}>
+              <Text slot="title">{content.text}</Text>
+            </AriaToastContent>
+            <span className={classOf(styles, "actions")}>
+              {children(content)}
+            </span>
+          </AriaToast>
+        )
+      }
     </AriaToastRegion>
   );
 }

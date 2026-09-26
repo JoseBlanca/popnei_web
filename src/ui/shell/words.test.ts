@@ -631,6 +631,7 @@ describe("WS9 D1 the words of the notice", () => {
     expect(noticeText(notice({ removed: [DIVERSITY] }), title)).toEqual({
       text: "Diversity removed because the missing data filter changed",
       action: "Undo",
+      reverse: "undo",
     });
   });
 
@@ -642,6 +643,7 @@ describe("WS9 D1 the words of the notice", () => {
     expect(noticeText(n, title)).toEqual({
       text: "The calculation of Diversity stopped because a new variants file was loaded",
       action: "Undo",
+      reverse: "undo",
     });
   });
 
@@ -654,6 +656,7 @@ describe("WS9 D1 the words of the notice", () => {
     expect(noticeText(n, title)).toEqual({
       text: "Diversity removed and the calculation of Diversity stopped because a new variants file was loaded",
       action: "Undo",
+      reverse: "undo",
     });
   });
 
@@ -661,6 +664,7 @@ describe("WS9 D1 the words of the notice", () => {
     expect(noticeText(notice({ leftBehind: [DIVERSITY] }), title)).toEqual({
       text: "The missing data filter changed. The ongoing calculation of Diversity will be stopped unless you undo the change",
       action: "Undo",
+      reverse: "undo",
     });
   });
 
@@ -672,6 +676,7 @@ describe("WS9 D1 the words of the notice", () => {
     expect(noticeText(n, title)).toEqual({
       text: "Undone: the missing data filter changed. Diversity removed",
       action: "Redo",
+      reverse: "redo",
     });
   });
 
@@ -683,6 +688,7 @@ describe("WS9 D1 the words of the notice", () => {
     expect(noticeText(n, title)).toEqual({
       text: "Undone: a new variants file was loaded. The calculation of Diversity stopped",
       action: "Redo",
+      reverse: "redo",
     });
   });
 
@@ -695,6 +701,7 @@ describe("WS9 D1 the words of the notice", () => {
     expect(noticeText(n, title)).toEqual({
       text: "Redone: the missing data filter changed. Diversity removed. The ongoing calculation of Diversity will be stopped unless you undo the change",
       action: "Undo",
+      reverse: "undo",
     });
   });
 
@@ -707,6 +714,7 @@ describe("WS9 D1 the words of the notice", () => {
     expect(noticeText(n, title)).toEqual({
       text: "3 results removed and 2 calculations stopped because a new variants file was loaded",
       action: "Undo",
+      reverse: "undo",
     });
     const undone = notice({
       cause: { kind: "undo", description: "the missing data filter changed" },
@@ -715,6 +723,7 @@ describe("WS9 D1 the words of the notice", () => {
     expect(noticeText(undone, title)).toEqual({
       text: "Undone: the missing data filter changed. The 2 ongoing calculations will be stopped unless you redo the change",
       action: "Redo",
+      reverse: "redo",
     });
   });
 });

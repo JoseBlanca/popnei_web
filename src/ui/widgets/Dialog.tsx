@@ -23,60 +23,69 @@ import { classOf } from "../classOf.ts";
 import { DIALOG_MARK } from "./dialogMark.ts";
 import styles from "./Dialog.module.css";
 
-/** What a dialog is drawn with. */
-export interface DialogProps {
+/** What a dialog shows above its fields and its buttons. */
+export interface DialogContent {
   /** Its heading, which is also its name for a screen reader. */
   readonly title: string;
-  /** Whether it is open. */
-  readonly isOpen: boolean;
+  /** The words under its heading, which describe it for a screen reader,
+      read after its name as it opens; `null` for none. */
+  readonly text: string | null;
+}
+
+/** What a dialog is drawn with, whose content is of the type `C`. */
+export interface DialogProps<C extends DialogContent> {
+  /** What it shows while it is open, or `null` while it is closed. */
+  readonly content: C | null;
   /** Called when the user closes it with Escape. */
   readonly onClose: () => void;
   /** A dialog, or an alert dialog for a question or an error; a dialog
       when absent. */
   readonly role?: "dialog" | "alertdialog";
-  /** The words under its heading, which describe it for a screen reader,
-      read after its name as it opens; none when absent. */
-  readonly text?: string;
-  /** What it holds under its words: its fields and its buttons. */
-  readonly children: React.ReactNode;
+  /** What it holds under its words, its fields and its buttons, drawn
+      from its content. */
+  readonly children: (content: C) => React.ReactNode;
 }
 
 /** A dialog with its heading. */
-export function Dialog({
-  title,
-  isOpen,
+export function Dialog<C extends DialogContent>({
+  content,
   onClose,
   role = "dialog",
-  text,
   children,
-}: DialogProps): React.JSX.Element {
+}: DialogProps<C>): React.JSX.Element {
   const textId = useId();
   return (
     <ModalOverlay
-      isOpen={isOpen}
+      isOpen={content !== null}
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
       className={classOf(styles, "overlay")}
     >
-      <Modal className={classOf(styles, "modal")}>
-        <AriaDialog
-          role={role}
-          className={classOf(styles, "dialog")}
-          {...{ [DIALOG_MARK]: "" }}
-          {...(text !== undefined && { "aria-describedby": textId })}
-        >
-          <Heading slot="title" level={2} className={classOf(styles, "title")}>
-            {title}
-          </Heading>
-          {text !== undefined && (
-            <p id={textId} className={classOf(styles, "text")}>
-              {text}
-            </p>
-          )}
-          {children}
-        </AriaDialog>
-      </Modal>
+      {content !== null && (
+        <Modal className={classOf(styles, "modal")}>
+          <AriaDialog
+            role={role}
+            className={classOf(styles, "dialog")}
+            {...{ [DIALOG_MARK]: "" }}
+            {...(content.text !== null && { "aria-describedby": textId })}
+          >
+            <Heading
+              slot="title"
+              level={2}
+              className={classOf(styles, "title")}
+            >
+              {content.title}
+            </Heading>
+            {content.text !== null && (
+              <p id={textId} className={classOf(styles, "text")}>
+                {content.text}
+              </p>
+            )}
+            {children(content)}
+          </AriaDialog>
+        </Modal>
+      )}
     </ModalOverlay>
   );
 }
