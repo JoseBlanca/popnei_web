@@ -8,7 +8,11 @@ three decisions of the owner on the reviews of
 `docs/plans/walking-skeleton.md`: a Save while a VCF is read again with
 other options writes the options the user set; the choice of the passed
 variants of a VCF is compared, with a line when the numbers are not; and
-check numbers of the wrong count are refused at the opening. There was no
+check numbers of the wrong count are refused at the opening; and on 26
+September 2026 for the owner's decisions at stop 9.6 of that plan, points
+1 to 3 of the review of its work package 9: the line of numbers not
+compared for a file of the other format, the size compared only within a
+format, and the words of the file asked for after an opening. There was no
 code yet; it will be `src/core/projectFile.ts`, the row `projectFile.ts`
 of section 9 of `docs/architecture.md`. The project file is the file
 `<name>.popnei.json` that a user saves to take their work out of the
@@ -461,8 +465,13 @@ run.
 The Variants step, the stepper and the announcement of the opening name
 the file to give, with `askedFileText` (`docs/specs/steps/variants.md`
 and `docs/specs/shell.md`): "This project was
-made with panel_2026.nei, 342 individuals and 1,203,554 variants. Load it
-in the Variants step to run its analyses again." (**Open 1**). When that
+made with panel_2026.nei, of 342 individuals and 1,203,554 variants.
+Load it to run its analyses again." (**Open 1**). The words were "…, 342
+individuals and 1,203,554 variants. Load it in the Variants step to run
+its analyses again." until the owner took, on 26 September 2026, the
+recommendation of point 3 of the review of work package 9: the text is
+read on the Variants step itself, and after an opening, which puts that
+step on screen. When that
 file is a VCF, the Variants step starts its read options at the
 reference's, its ploidy and whether only the variants that passed are
 kept: they are settings that every fingerprint holds, and a VCF loaded
@@ -494,13 +503,18 @@ order:
 |---|---|---|
 | the name | always | "is called panel_2027.nei" |
 | the format | always | "is a VCF file", "is a .nei file" |
-| the size | always | "has 52,430,112 bytes where that one had 52,428,800" |
+| the size | the same format | "has 52,430,112 bytes where that one had 52,428,800" |
 | the number of individuals | both read | "has 360 individuals" |
 | the individuals | both read, the same number | "lacks 12 individuals of that one: ind_031, ind_044 and 10 more" |
 | the order of the individuals | both read, the same ones | "has the same individuals in another order" |
 | the ploidy | both read | "has ploidy 4 where that one had 2" |
 | the choice of the passed variants | both VCF files | "is read with every variant where that one was read with only the variants with PASS or . in the FILTER column", or the other way round |
 | the number of variants | both counted | "has 1,203,600 variants" |
+
+The size is compared only between two files of the same format, as the
+owner decided on 26 September 2026 (point 2 of the review of work
+package 9): a VCF and a `.nei` file of the same variants always differ
+in size, and the format already says that they differ.
 
 The choice of the passed variants, `onlyPassed` of the read options of a
 VCF, is compared as the owner decided on 25 September 2026 (point 10 of
@@ -572,8 +586,23 @@ in their read options:
   column.", in the order of the words of the button of the Variants
   step that reads a VCF again.
 
-It is `null` otherwise. A `.nei` file has no read options, its ploidy is
-the file's, and its numbers are compared. A setting the user changed in
+A run on a file of the other format than the reference's, a VCF given
+to a project made with a `.nei` file or the other way round, gives no
+comparison either, since a `.nei` file has no read options and its
+fingerprint then differs from a VCF's. As the owner decided on 26
+September 2026 (point 1 of the review of work package 9), the line says
+so and names the file to load, the reference's name, shown escaped:
+
+- "Not compared with the numbers of the project file: this file is a
+  VCF, and the project was made with a .nei file. Load panel.nei to
+  compare them."
+- "Not compared with the numbers of the project file: this file is a
+  .nei file, and the project was made with a VCF. Load panel.vcf.gz to
+  compare them."
+
+It is `null` otherwise. A `.nei` file given to a project made with a
+`.nei` file has no read options, its ploidy is the file's, and its
+numbers are compared. A setting the user changed in
 another step, a filter or the column of the populations, also leaves the
 numbers uncompared and gives no line, as before; decided here, not by the
 owner, since the owner's point named the read options, and a user who
@@ -703,7 +732,7 @@ knows is not compared.
 export type IdentityDifference =
   | { kind: "name"; now: string }
   | { kind: "format"; now: "vcf" | "nei" }
-  | { kind: "size"; saved: number; now: number }
+  | { kind: "size"; saved: number; now: number }        // the same format
   | { kind: "individualsCount"; now: number }
   | { kind: "otherIndividuals"; missing: readonly string[] }  // of saved, in its order
   | { kind: "individualsOrder" }
@@ -723,7 +752,8 @@ export function askedFileText(p: Project): string | null;
 export function checkVerdictText(verdict: CheckVerdict): string;
 
 /** Why the numbers of the analysis `analysis` are not compared with the
-    reference's, the VCF loaded read with other read options; null otherwise. */
+    reference's, the VCF loaded read with other read options, or the file
+    loaded of the other format; null otherwise. */
 export function uncomparedText(p: Project, analysis: AnalysisId): string | null;
 ```
 
@@ -843,9 +873,11 @@ the analyses `done`, `ready` or `removed`.
   once with the check kept of the reference, opens again, each time with
   a check of 7 numbers. The test definitions, whose `numCheckNumbers`
   gives `null`, cannot show this.
-- **The numbers not compared**: `uncomparedText` for each of its three
-  sentences, and `null` for the same read options, a reference with no check
-  of the analysis, a `.nei` file, no reference, and no variants file.
+- **The numbers not compared**: `uncomparedText` for each of its five
+  sentences, the three of the read options and the two of the format,
+  and `null` for the same read options, a reference with no check of the
+  analysis, a `.nei` file given to a project of a `.nei` file, no
+  reference, and no variants file.
 - **The identity**: a case for each row of its table, and the warning of
   `docs/functionality.md`, "The project was made with panel_2026.nei, 342
   individuals and 1,203,554 variants; this file has 360 individuals.",

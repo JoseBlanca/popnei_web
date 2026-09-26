@@ -392,9 +392,10 @@ compared there, and the ploidy with the individuals once the file is
 read, as the owner decided on 25 September 2026: a VCF read with the
 other choice gives other variants, as another ploidy gives other
 genotypes. The numbers of a run on a VCF read with other options than
-the reference's are not compared with those of the project file, and
-the panel of each analysis says so under its result, with
-`uncomparedText` of the same module.
+the reference's, or on a file of the other format, a VCF given to a
+project made with a `.nei` file or the other way round, are not compared
+with those of the project file, and the panel of each analysis says so
+under its result, with `uncomparedText` of the same module.
 
 A Save writes the options of the project, not those of the step
 (`docs/specs/core/projectFile.md`, "What is written of each part"): a
