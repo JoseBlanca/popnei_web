@@ -219,6 +219,40 @@ test("WS7 D2 Copy the details with no clipboard shows the details in a box", asy
   );
 });
 
+test("WS9 D3 Copy the details puts the details on the clipboard in WebKit, and in Chromium, which keeps the clipboard from the page, shows them in a box", async ({
+  page,
+  context,
+  browserName,
+}) => {
+  // WebKit lets the page write to the clipboard on a press, and the test
+  // read it back once granted the reading; Chromium, run by Playwright
+  // with no permission, refuses the write.
+  if (browserName === "webkit") {
+    await context.grantPermissions(["clipboard-read"]);
+  }
+  await openPopgen(page);
+  await throwFromHandler(page, "test");
+
+  await page.getByRole("button", { name: "Copy the details" }).click();
+
+  const box = page.getByRole("textbox", { name: "The details of the errors" });
+  if (browserName === "webkit") {
+    // The bar's own status region, the first of the page.
+    await expect(page.getByRole("status").first()).toHaveText(
+      "The details were copied.",
+    );
+    const copied = await page.evaluate(() => navigator.clipboard.readText());
+    expect(copied).toMatch(/popnei web: 0\.1\.0/);
+    expect(copied).toMatch(/\ntest\n/);
+    await expect(box).toHaveCount(0);
+  } else {
+    await expect(page.getByRole("status").first()).toHaveText(
+      "The details could not be copied. Select them in the box below and copy them.",
+    );
+    await expect(box).toHaveValue(/popnei web: 0\.1\.0/);
+  }
+});
+
 test("WS7 D2 the box of the details takes in an error that follows it", async ({
   page,
 }) => {

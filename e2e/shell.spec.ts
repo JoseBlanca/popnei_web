@@ -412,6 +412,64 @@ test("WS9 D3 a change that leaves a calculation behind says so in the notice, an
   );
 });
 
+test("WS9 D3 Run that takes the calculation stopped out of the notice keeps the same notice, its words without that calculation and the focus on its Undo", async ({
+  page,
+}) => {
+  await openPopgen(page);
+  await loadPanel(page);
+  await goTo(page, "Analyses");
+  await page.getByRole("button", { name: "Run" }).click();
+  await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
+  await expect(status(page)).toHaveText(/Diversity: done\.$/);
+  // A calculation of the threshold 0.05 held under way, and an undo back
+  // to the diversity done, which leaves it behind.
+  await holdResults(page);
+  await goTo(page, "Variants");
+  const threshold = page.getByLabel("Maximum proportion of missing genotypes");
+  await threshold.fill("0.05");
+  await threshold.press("Enter");
+  await goTo(page, "Analyses");
+  await page.getByRole("button", { name: "Run" }).click();
+  await expect(status(page)).toHaveText("Diversity: calculating.");
+  await undoButton(page).click();
+  await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
+  // Another variants file removes the diversity and stops that
+  // calculation.
+  await goTo(page, "Variants");
+  await pick(page, "Variants file", "panel.vcf.gz");
+  await expect(stepLink(page, "Variants")).toHaveAccessibleName(
+    "Variants, Done",
+  );
+  await expect(
+    notice(page).getByRole("alertdialog", {
+      name: "Diversity removed and the calculation of Diversity stopped because a new variants file was loaded",
+    }),
+  ).toBeVisible();
+  await goTo(page, "Analyses");
+  await page.keyboard.press("F6");
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  const undo = notice(page).getByRole("button", { name: "Undo", exact: true });
+  await expect(undo).toBeFocused();
+  // The toast on the page now, marked, to tell it from a new one.
+  await notice(page)
+    .getByRole("alertdialog")
+    .evaluate((element) => {
+      element.setAttribute("data-first-toast", "");
+    });
+
+  // Run pressed as a screen reader presses it, which leaves the focus
+  // where it is.
+  await page.getByRole("button", { name: "Run" }).dispatchEvent("click");
+
+  await expect(
+    notice(page).getByRole("alertdialog", {
+      name: "Diversity removed because a new variants file was loaded",
+    }),
+  ).toHaveAttribute("data-first-toast", "");
+  await expect(undo).toBeFocused();
+});
+
 test("WS9 D3 the shell with results removed: the notice with its words, Undo and Close, Analyses at Results removed, the field changed and the end of the page clear of the notice, and axe", async ({
   page,
   makeAxeBuilder,

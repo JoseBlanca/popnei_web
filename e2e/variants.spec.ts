@@ -319,6 +319,26 @@ test("WS7 D3 panel.txt is not loaded, and the step says why and announces it", a
   await expect(page.getByRole("main").getByText(message)).toHaveCount(0);
 });
 
+test("WS9 D3 the message of a file not loaded goes with an Undo past the pick before it", async ({
+  page,
+}) => {
+  await openVariants(page);
+  await pick(page, "panel.nei");
+  await expect(zone(page).getByText("200 individuals")).toBeVisible();
+  await pickNamed(page, "panel.txt", "not a variants file");
+  const message =
+    "panel.txt was not loaded: the Variants step reads a VCF, whose name ends in .vcf, .vcf.gz or .vcf.bgz, or a .nei file. If it is one of them, rename it.";
+  await expect(page.getByRole("main").getByText(message)).toBeVisible();
+
+  await page
+    .getByRole("banner")
+    .getByRole("button", { name: "Undo", exact: true })
+    .click();
+
+  await expect(fileButton(page)).toHaveText("Choose a variants file…");
+  await expect(page.getByRole("main").getByText(message)).toHaveCount(0);
+});
+
 test("WS7 D3 several files dropped at once load none", async ({
   page,
   makeAxeBuilder,

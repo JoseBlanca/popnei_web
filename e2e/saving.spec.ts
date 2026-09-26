@@ -8,7 +8,7 @@
  * and the warning of the identity, the Save of the error bar, and the
  * comparison under the diversity's table, with axe in each state.
  */
-import { open as openFile } from "node:fs/promises";
+import { open as openFile, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import type { Download, Locator, Page } from "@playwright/test";
@@ -153,6 +153,24 @@ async function openProject(
           mimeType: "text/plain",
           buffer: Buffer.from(file.text),
         },
+  );
+}
+
+/** The name of the element that has the focus in the next frame:
+    "body" when the focus is lost to the page. */
+async function focusedInNextFrame(page: Page): Promise<string> {
+  return page.evaluate(
+    () =>
+      new Promise<string>((resolve) => {
+        requestAnimationFrame(() => {
+          const active = document.activeElement;
+          resolve(
+            active === null || active === document.body
+              ? "body"
+              : active.textContent,
+          );
+        });
+      }),
   );
 }
 
@@ -540,6 +558,67 @@ test("WS9 D3 an opening at the Variants step moves the focus to its heading, and
   await expect(status(page)).toHaveText(/Opened panel\.popnei\.json\. /);
 });
 
+test("WS9 D3 the opening answered in the question while the Variants step is on screen moves the focus to its heading", async ({
+  page,
+}, testInfo) => {
+  await openPopgen(page);
+  await loadPanelNei(page);
+  const saved = await saveProjectFile(page, testInfo.outputPath());
+  await setThreshold(page, "0.05");
+
+  await openProject(page, saved);
+  const question = page.getByRole("alertdialog", {
+    name: "Open panel.popnei.json?",
+  });
+  await question
+    .getByRole("button", { name: "Open panel.popnei.json" })
+    .click();
+
+  await expect(question).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Variants" }),
+  ).toBeFocused();
+  await expect(threshold(page)).toHaveValue("0.1");
+});
+
+test("WS9 D3 a dialog of Save project or of Open project… has given the focus back to its button by the next frame after it closes, a Save that downloads the file among them", async ({
+  page,
+}, testInfo) => {
+  await openPopgen(page);
+  await loadPanelNei(page);
+  await saveButton(page).click();
+  await page
+    .getByRole("dialog", { name: "Save the project" })
+    .getByRole("button", { name: "Cancel" })
+    .click();
+  expect(await focusedInNextFrame(page)).toBe("Save project");
+
+  await saveButton(page).click();
+  const download = page.waitForEvent("download");
+  await page
+    .getByRole("dialog", { name: "Save the project" })
+    .getByRole("button", { name: "Save", exact: true })
+    .click();
+  expect(await focusedInNextFrame(page)).toBe("Save project");
+  const saved = testInfo.outputPath("panel.popnei.json");
+  await (await download).saveAs(saved);
+
+  await openProject(page, { name: "notes.txt", text: "some notes" });
+  await page
+    .getByRole("alertdialog", { name: "notes.txt was not opened" })
+    .getByRole("button", { name: "OK" })
+    .click();
+  expect(await focusedInNextFrame(page)).toBe("Open project…");
+
+  await setThreshold(page, "0.05");
+  await openProject(page, saved);
+  await page
+    .getByRole("alertdialog", { name: "Open panel.popnei.json?" })
+    .getByRole("button", { name: "Keep the current project" })
+    .click();
+  expect(await focusedInNextFrame(page)).toBe("Open project…");
+});
+
 test("WS9 D3 the question before an opening says that the calculations under way will be stopped", async ({
   page,
 }, testInfo) => {
@@ -665,6 +744,31 @@ test("WS9 D3 after an opening, another variants file given shows the warning of 
       .getByText(/^This project was made with/),
   ).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
+});
+
+test("WS9 D3 the read of a variants file that makes the warning of the identity appear announces both, the read and the warning", async ({
+  page,
+}, testInfo) => {
+  await openPopgen(page);
+  await loadPanelNei(page);
+  const saved = await saveProjectFile(page, testInfo.outputPath());
+  // The project file of a panel.nei of ploidy 4, of the same name, size
+  // and format, which differs only once the file given is read.
+  const file = JSON.parse(await readFile(saved, "utf-8")) as {
+    variants: { read: { ploidy: number } };
+  };
+  file.variants.read.ploidy = 4;
+  const edited = testInfo.outputPath("tetra.popnei.json");
+  await writeFile(edited, JSON.stringify(file));
+  await openProject(page, edited);
+  await expect(status(page)).toHaveText(/Opened tetra\.popnei\.json\. /);
+
+  await pick(page, "Variants file", "panel.nei");
+
+  // One change of the store, whose two announcements are joined.
+  await expect(status(page)).toHaveText(
+    "panel.nei read: 200 individuals, ploidy 2. Warning: The project was made with panel.nei and 200 individuals; this file has ploidy 2 where that one had 4. Load the file the project was made with, or go on with this one.",
+  );
 });
 
 test("WS9 D3 a ploidy typed and a file refused with no variants file are forgotten at an opening, and the VCF the project asks for is read as it was and compared, and axe", async ({
