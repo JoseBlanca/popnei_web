@@ -1289,8 +1289,12 @@ describe("WS6 D2 the opening", () => {
       obsHet: Float64Array.from([0.3, NaN]),
       polyRatio: Float64Array.from([0.91, 0.89]),
       numVarsWithValue: Uint32Array.from([1150112, 0]),
-      numVars: 1150112,
-      numVarsRead: 1203554,
+      passStats: {
+        numVars: 1150112,
+        filtering: {
+          missing_data: { varsProcessed: 1203554, varsKept: 1150112 },
+        },
+      },
     };
     const stateWith = (
       status: AnalysisStatus<JobResult>,

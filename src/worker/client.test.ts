@@ -117,8 +117,8 @@ const CSV_FILE = new File(["id,pop\ni1,p0\n"], "individuals.csv");
 const NEI = { format: "nei", readOptions: null } as const;
 const CSV = { encoding: "auto", separator: "auto", decimal: "auto" } as const;
 
-const READY = { kind: "ready", protocol: 1, popneiVersion: "0.1.0" };
-const LIGHT_READY = { kind: "ready", protocol: 1 };
+const READY = { kind: "ready", protocol: 2, popneiVersion: "0.1.0" };
+const LIGHT_READY = { kind: "ready", protocol: 2 };
 const INDIVIDUALS = Array.from({ length: 200 }, (_, i) => `i${String(i + 1)}`);
 const RESULT: DiversityResult = {
   analysis: "diversity",
@@ -128,8 +128,10 @@ const RESULT: DiversityResult = {
   obsHet: Float64Array.from([0.28]),
   polyRatio: Float64Array.from([0.9]),
   numVarsWithValue: Uint32Array.from([1152]),
-  numVars: 1152,
-  numVarsRead: 1200,
+  passStats: {
+    numVars: 1152,
+    filtering: { missing_data: { varsProcessed: 1200, varsKept: 1152 } },
+  },
 };
 const TABLE_READ = {
   kind: "read",
@@ -148,7 +150,7 @@ function job(fileId: string): DiversityJob {
     analysis: "diversity",
     fileId,
     filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.05 }],
-    individualFilters: [],
+    individuals: null,
     pops: [["p0", INDIVIDUALS]],
     minNumIndividuals: 20,
     polyThreshold: 0.95,
@@ -922,11 +924,11 @@ describe("WS2 D3 the client: starting", () => {
     });
   });
 
-  test("a ready of protocol 2 fails every request with protocolMismatch, and no other worker is made", async () => {
+  test("a ready of protocol 3 fails every request with protocolMismatch, and no other worker is made", async () => {
     const env = setUp();
     env.client.addFile("A", FILE_A);
     const readA = env.client.openVariants({ fileId: "A", ...NEI });
-    emit(last(env.calculation), { kind: "ready", protocol: 2 });
+    emit(last(env.calculation), { kind: "ready", protocol: 3 });
     expect(await now(readA.outcome)).toEqual({
       kind: "failed",
       error: { kind: "protocolMismatch" },
@@ -1146,6 +1148,10 @@ function watch(role: Watched["role"], seen: Seen): Watched {
             );
           }
           break;
+        case "write":
+          throw new Error(
+            "the client sent a write, which it sends none of yet",
+          );
       }
       watched.pending = sent;
     } else {
@@ -1197,7 +1203,8 @@ function stampedOpened(id: number, fileId: string): unknown {
 
 /** A result whose numVars is `stamp`, the id of its run. */
 function stampedResult(id: number, key: string, stamp: number): unknown {
-  return { kind: "result", id, key, result: { ...RESULT, numVars: stamp } };
+  const passStats = { ...RESULT.passStats, numVars: stamp };
+  return { kind: "result", id, key, result: { ...RESULT, passStats } };
 }
 
 /** Runs a sequence on a client over watched workers, then has every
@@ -1265,10 +1272,11 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
       if (
         answer.kind === "done" &&
         request.kind === "run" &&
-        (answer.key !== request.key || answer.result.numVars !== request.id)
+        (answer.key !== request.key ||
+          answer.result.passStats.numVars !== request.id)
       ) {
         seen.wrongAnswer.push(
-          `the run ${String(request.id)} of ${request.key} got the result of ${String(answer.result.numVars)} under ${answer.key}`,
+          `the run ${String(request.id)} of ${request.key} got the result of ${String(answer.result.passStats.numVars)} under ${answer.key}`,
         );
       }
       if (
@@ -1343,6 +1351,8 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
       case "run":
         deliver(index, stampedResult(pending.id, pending.key, pending.id));
         return;
+      case "write":
+        throw new Error("the client sent a write, which it sends none of yet");
     }
   }
 
@@ -1480,6 +1490,10 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
                 data: stampedResult(pending.id, pending.key, -1),
               });
               break;
+            case "write":
+              throw new Error(
+                "the client sent a write, which it sends none of yet",
+              );
             case "readIndividuals":
               break;
           }
@@ -1490,7 +1504,7 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
         const index = calculation.length - 1;
         const watched = calculation[index];
         if (watched !== undefined && !watched.readySent && next.chance === 0) {
-          deliver(index, { kind: "ready", protocol: 2 });
+          deliver(index, { kind: "ready", protocol: 3 });
         }
         break;
       }
@@ -1789,11 +1803,11 @@ describe("WS2 D3 the client: crashes, defects, and every read answered, on the l
     expect(env.light).toHaveLength(2);
   });
 
-  test("a ready of protocol 2 fails every read with protocolMismatch, and no other light worker is made", async () => {
+  test("a ready of protocol 3 fails every read with protocolMismatch, and no other light worker is made", async () => {
     const env = setUp();
     env.client.addFile("ind", CSV_FILE);
     const read = env.client.readIndividuals("ind", CSV);
-    emit(last(env.light), { kind: "ready", protocol: 2 });
+    emit(last(env.light), { kind: "ready", protocol: 3 });
     expect(await now(read.outcome)).toEqual({
       kind: "failed",
       error: { kind: "protocolMismatch" },

@@ -25,6 +25,7 @@ import {
 import type {
   DiversityJob,
   DiversityResult,
+  JobResult,
   Pops,
   Progress,
   VariantFilter,
@@ -85,7 +86,7 @@ function diversityJob(
     analysis: "diversity",
     fileId: FILE_ID,
     filters,
-    individualFilters: [],
+    individuals: null,
     pops,
     minNumIndividuals: 20,
     polyThreshold: 0.95,
@@ -107,12 +108,24 @@ function ignore(): void {
   // The progress, which these tests do not look at.
 }
 
-/** The value of an answer that has to be `ok`. */
+/** The value of an answer that has to be `ok`; of a run, a result that
+    has to be the diversity's. */
+function valueOf(answer: Answer<JobResult>): DiversityResult;
+function valueOf<T>(answer: Answer<T>): T;
 function valueOf<T>(answer: Answer<T>): T {
   if (answer.kind !== "ok") {
     throw new Error(`the answer is ${answer.kind}: ${JSON.stringify(answer)}`);
   }
-  return answer.value;
+  const value = answer.value;
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "analysis" in value &&
+    value.analysis !== "diversity"
+  ) {
+    throw new Error(`the result is of ${String(value.analysis)}`);
+  }
+  return value;
 }
 
 /** The numbers of a diversity result as plain arrays, for `toEqual`. */
@@ -124,8 +137,7 @@ function numbersOf(result: DiversityResult): unknown {
     obsHet: [...result.obsHet],
     polyRatio: [...result.polyRatio],
     numVarsWithValue: [...result.numVarsWithValue],
-    numVars: result.numVars,
-    numVarsRead: result.numVarsRead,
+    passStats: result.passStats,
   };
 }
 
@@ -138,8 +150,7 @@ const NO_FILTER = {
   obsHet: [0.35642172473116646, 0.3512221180544642, 0.356734697819302],
   polyRatio: [0.9266666666666666, 0.9108333333333334, 0.9175],
   numVarsWithValue: [1200, 1200, 1200],
-  numVars: 1200,
-  numVarsRead: 1200,
+  passStats: { numVars: 1200, filtering: {} },
 };
 
 /** The table of the runner spec with the missing data filter at 0.05. */
@@ -150,8 +161,10 @@ const AT_0_05 = {
   obsHet: [0.35667985874177544, 0.3512406974637824, 0.35603713961547323],
   polyRatio: [0.9288194444444444, 0.9105902777777778, 0.9157986111111112],
   numVarsWithValue: [1152, 1152, 1152],
-  numVars: 1152,
-  numVarsRead: 1200,
+  passStats: {
+    numVars: 1152,
+    filtering: { missing_data: { varsProcessed: 1200, varsKept: 1152 } },
+  },
 };
 
 beforeAll(async () => {
@@ -250,17 +263,19 @@ describe("WS3 D1 the open and the diversity", () => {
       diversityJob([missingData(0.045)]),
       ignore,
     );
-    expect(valueOf(at005).numVars).toBe(1152);
-    expect(valueOf(at0045).numVars).toBe(1113);
+    expect(valueOf(at005).passStats.numVars).toBe(1152);
+    expect(valueOf(at0045).passStats.numVars).toBe(1113);
   });
 
   test("a change of the filters opens the file again, and each run gives the numbers of its own filters", () => {
     const runner = opened("panel.nei");
     expect(
-      valueOf(runner.run(diversityJob([missingData(0.05)]), ignore)).numVars,
+      valueOf(runner.run(diversityJob([missingData(0.05)]), ignore)).passStats
+        .numVars,
     ).toBe(1152);
     expect(
-      valueOf(runner.run(diversityJob([missingData(0.045)]), ignore)).numVars,
+      valueOf(runner.run(diversityJob([missingData(0.045)]), ignore)).passStats
+        .numVars,
     ).toBe(1113);
     expect(numbersOf(valueOf(runner.run(diversityJob([]), ignore)))).toEqual(
       NO_FILTER,
@@ -282,8 +297,10 @@ describe("WS3 D1 the open and the diversity", () => {
       diversityJob([missingData(0.05), { kind: "maf", maxAllowedMaf: 0.9 }]),
       ignore,
     );
-    expect(valueOf(next).numVarsRead).toBe(1200);
-    expect(valueOf(next).numVars).toBe(1058);
+    expect(valueOf(next).passStats.filtering.missing_data?.varsProcessed).toBe(
+      1200,
+    );
+    expect(valueOf(next).passStats.numVars).toBe(1058);
   });
 
   test("the same filters in another order open the file again, and are counted in their order", () => {
@@ -300,14 +317,14 @@ describe("WS3 D1 the open and the diversity", () => {
     expect(runner.open(NEI, file).kind).toBe("ok");
     const maf: VariantFilter = { kind: "maf", maxAllowedMaf: 0.9 };
     const first = runner.run(diversityJob([missingData(0.05), maf]), ignore);
-    expect(valueOf(first).numVars).toBe(1058);
+    expect(valueOf(first).passStats.numVars).toBe(1058);
     expect(reads).toBe(1);
     const again = runner.run(diversityJob([missingData(0.05), maf]), ignore);
-    expect(valueOf(again).numVars).toBe(1058);
+    expect(valueOf(again).passStats.numVars).toBe(1058);
     expect(reads).toBe(1);
     const swapped = runner.run(diversityJob([maf, missingData(0.05)]), ignore);
     expect(reads).toBe(2);
-    expect(valueOf(swapped).numVarsRead).toBe(1200);
+    expect(valueOf(swapped).passStats.filtering.maf?.varsProcessed).toBe(1200);
   });
 
   test("a second call of loadPopnei gives the same promise", () => {
@@ -394,7 +411,7 @@ describe("WS3 D1 the open and the diversity", () => {
       };
       expect(runner.open(load, { name: "q10.vcf", source }).kind).toBe("ok");
       const result = valueOf(runner.run(diversityJob([]), ignore));
-      expect([result.numVars, result.numVarsRead]).toEqual([numVars, numVars]);
+      expect(result.passStats).toEqual({ numVars, filtering: {} });
     }
   });
 
@@ -404,7 +421,10 @@ describe("WS3 D1 the open and the diversity", () => {
     const result = valueOf(
       opened("panel.nei").run(diversityJob([filter]), ignore),
     );
-    expect([result.numVars, result.numVarsRead]).toEqual([1098, 1200]);
+    expect(result.passStats).toEqual({
+      numVars: 1098,
+      filtering: { obs_het: { varsProcessed: 1200, varsKept: 1098 } },
+    });
   });
 
   test("the LD filter at an r² of 0.1 within 1000 base pairs keeps 562 of the 1200 variants", () => {
@@ -417,7 +437,10 @@ describe("WS3 D1 the open and the diversity", () => {
     const result = valueOf(
       opened("panel.nei").run(diversityJob([filter]), ignore),
     );
-    expect([result.numVars, result.numVarsRead]).toEqual([562, 1200]);
+    expect(result.passStats).toEqual({
+      numVars: 562,
+      filtering: { ld: { varsProcessed: 1200, varsKept: 562 } },
+    });
   });
 
   test("the Variants replaced by an open again is freed", () => {
@@ -624,11 +647,11 @@ describe("WS3 D2 what goes wrong: a file that no longer reads", () => {
     expect(runner.open(NEI, file).kind).toBe("ok");
     expect(reads).toBe(1);
     const first = runner.run(diversityJob([missingData(0.05)]), ignore);
-    expect(valueOf(first).numVars).toBe(1152);
+    expect(valueOf(first).passStats.numVars).toBe(1152);
     expect(reads).toBe(1);
     // The same filters again: the Variants as it is, no read of the file.
     const again = runner.run(diversityJob([missingData(0.05)]), ignore);
-    expect(valueOf(again).numVars).toBe(1152);
+    expect(valueOf(again).passStats.numVars).toBe(1152);
     expect(reads).toBe(1);
     const reopenFailed = {
       kind: "reopenFailed",
@@ -862,7 +885,7 @@ describe("WS3 D2 what goes wrong: told, popnei's refusals and the defects", () =
       message:
         "the pass gave no variant and its source holds none: a statistic of a pass is calculated over the variants it gives",
     });
-    expect(valueOf(runOn(false).run(job, ignore)).numVarsRead).toBe(2);
+    expect(valueOf(runOn(false).run(job, ignore)).passStats.numVars).toBe(2);
   });
 
   test("a run before the open is badRequest", () => {
@@ -915,11 +938,8 @@ describe("WS3 D2 what goes wrong: told, popnei's refusals and the defects", () =
     expect(opened("panel.nei").run(job, ignore).kind).toBe("badRequest");
   });
 
-  test("a job with a filter of individuals is badRequest", () => {
-    const job: DiversityJob = {
-      ...diversityJob([]),
-      individualFilters: [{ kind: "remove", individuals: ["s000"] }],
-    };
+  test("a job with an empty list of individuals is badRequest", () => {
+    const job: DiversityJob = { ...diversityJob([]), individuals: [] };
     expect(opened("panel.nei").run(job, ignore).kind).toBe("badRequest");
   });
 });

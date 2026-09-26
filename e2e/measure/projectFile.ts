@@ -123,8 +123,10 @@ const result: JobResult = {
   obsHet: Float64Array.from({ length: POPS }, (_, k) => 0.29 + k / 100),
   polyRatio: Float64Array.from({ length: POPS }, (_, k) => 0.9 + k / 1000),
   numVarsWithValue: Uint32Array.from({ length: POPS }, () => 19_000),
-  numVars: 19_500,
-  numVarsRead: 20_000,
+  passStats: {
+    numVars: 19_500,
+    filtering: { missing_data: { varsProcessed: 20_000, varsKept: 19_500 } },
+  },
 };
 
 function stateOf(project: Project): AppState<JobResult> {

@@ -17,6 +17,7 @@ import type { WorkerClient } from "../store.ts";
 import { deepFreeze } from "../testSupport.ts";
 import type {
   Cell,
+  DiversityJob,
   DiversityResult,
   IndividualsTable,
   Job,
@@ -147,19 +148,27 @@ function result(fields: {
     numVarsWithValue: Uint32Array.from(
       fields.numVarsWithValue ?? fields.pops.map(() => fields.numVars),
     ),
-    numVars: fields.numVars,
-    numVarsRead: 1200,
+    passStats: {
+      numVars: fields.numVars,
+      filtering: {
+        missing_data: { varsProcessed: 1200, varsKept: fields.numVars },
+      },
+    },
   };
 }
 
-/** A client that records the jobs it is given and answers none. */
+/** A client that records the jobs of the diversity it is given and
+    answers none. */
 function recordingClient(): {
   readonly client: WorkerClient<Job, JobResult>;
-  readonly jobs: Job[];
+  readonly jobs: DiversityJob[];
 } {
-  const jobs: Job[] = [];
+  const jobs: DiversityJob[] = [];
   const client: WorkerClient<Job, JobResult> = {
     run(job): Run<JobResult> {
+      if (job.analysis !== "diversity") {
+        throw new Error(`the diversity sent a job of ${job.analysis}`);
+      }
       jobs.push(job);
       return {
         id: 1,
@@ -206,7 +215,7 @@ describe("WS5 D1 the example and the reasons", () => {
         analysis: "diversity",
         fileId: VARIANTS_ID,
         filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.1 }],
-        individualFilters: [],
+        individuals: null,
         pops: [
           ["A", ["i1", "i3"]],
           ["B", ["i2"]],

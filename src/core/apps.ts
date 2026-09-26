@@ -51,11 +51,11 @@ export function firstProject(app: "popgen"): Project {
   });
 }
 
-/** The number of variants of the file that the reading of a result
-    counted, which the store records into the variants file of its load:
-    `numVarsRead` of the diversity, the one analysis; when `JobResult`
-    gains a member without it this stops compiling, and each is read by
-    its `analysis`. */
-export function numVarsOf(r: JobResult): number | null {
-  return r.numVarsRead;
+/** The number of variants of the file that the pass of a result counted,
+    which the store records into the variants file of its load, from the
+    counts of the pass every result holds: what its first filter was
+    given, or what the pass gave when it had no filter. */
+export function numVarsOf(r: JobResult): number {
+  const [first] = Object.values(r.passStats.filtering);
+  return first === undefined ? r.passStats.numVars : first.varsProcessed;
 }

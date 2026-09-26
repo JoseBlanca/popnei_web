@@ -1,6 +1,18 @@
 import fc from "fast-check";
 import { describe, expect, test } from "vitest";
-import type { DiversityJob, DiversityResult } from "./protocol.ts";
+import type {
+  DiversityJob,
+  DiversityResult,
+  FilterCountsJob,
+  FilterCountsResult,
+  IndividualChecksJob,
+  IndividualChecksResult,
+  PassStats,
+  VariantChecksJob,
+  VariantChecksResult,
+  VariantDistrib,
+  WriteJob,
+} from "./protocol.ts";
 import {
   describeMessageError,
   messageOf,
@@ -23,12 +35,7 @@ const JOB: DiversityJob = {
     { kind: "obs_het", maxAllowedObsHet: 0.5 },
     { kind: "ld", maxAllowedR2: 0.2, maxDist: 100000 },
   ],
-  individualFilters: [
-    { kind: "keep", individuals: ["i1", "i2", "i4"] },
-    { kind: "remove", individuals: ["i3"] },
-    { kind: "missing_data", maxAllowedMissingRate: 0.1 },
-    { kind: "obs_het", maxAllowedObsHet: 0.6 },
-  ],
+  individuals: null,
   pops: [
     ["p0", ["i1", "i2"]],
     ["p1", ["i4"]],
@@ -45,8 +52,10 @@ const RESULT: DiversityResult = {
   obsHet: Float64Array.from([0.28, Number.NaN]),
   polyRatio: Float64Array.from([0.9, Number.NaN]),
   numVarsWithValue: Uint32Array.from([1152, 0]),
-  numVars: 1152,
-  numVarsRead: 1200,
+  passStats: {
+    numVars: 1152,
+    filtering: { missing_data: { varsProcessed: 1200, varsKept: 1152 } },
+  },
 };
 
 const OPEN_VCF = {
@@ -126,7 +135,7 @@ describe("WS2 D1 the messages accepted", () => {
   test.each([
     [
       "the ready of the calculation worker",
-      { kind: "ready", protocol: 1, popneiVersion: "0.1.0" },
+      { kind: "ready", protocol: 2, popneiVersion: "0.1.0" },
     ],
     ["opened", { kind: "opened", id: 1, individuals: ["i1", "i2"], ploidy: 2 }],
     ["the progress of a run", PROGRESS],
@@ -164,7 +173,7 @@ describe("WS2 D1 the messages accepted", () => {
   });
 
   test.each([
-    ["the ready of the light worker", { kind: "ready", protocol: 1 }],
+    ["the ready of the light worker", { kind: "ready", protocol: 2 }],
     ["an individuals file read", INDIVIDUALS_READ],
     [
       "an individuals file refused",
@@ -247,7 +256,7 @@ describe("WS2 D2 the messages refused", () => {
       error: {
         kind: "unknownKind",
         found: "readIndividuals",
-        expected: ["open", "run"],
+        expected: ["open", "run", "write"],
       },
     });
   });
@@ -470,7 +479,7 @@ describe("WS2 D2 the messages refused", () => {
     expect(
       parseFromFilesRunner({
         kind: "ready",
-        protocol: 1,
+        protocol: 2,
         popneiVersion: "0.1.0",
       }),
     ).toEqual({
@@ -485,7 +494,7 @@ describe("WS2 D2 the messages refused", () => {
   });
 
   test("a ready of the calculation worker without a popnei version", () => {
-    expect(parseFromRunner({ kind: "ready", protocol: 1 })).toEqual({
+    expect(parseFromRunner({ kind: "ready", protocol: 2 })).toEqual({
       ok: false,
       error: {
         kind: "missingFields",
@@ -543,17 +552,17 @@ describe("WS2 D2 the messages refused", () => {
 });
 
 describe("WS2 D2 the messages refused: the version", () => {
-  test("a ready of protocol 2 with no other field, from the calculation worker", () => {
-    expect(parseFromRunner({ kind: "ready", protocol: 2 })).toEqual({
+  test("a ready of protocol 3 with no other field, from the calculation worker", () => {
+    expect(parseFromRunner({ kind: "ready", protocol: 3 })).toEqual({
       ok: false,
-      error: { kind: "otherProtocol", found: 2 },
+      error: { kind: "otherProtocol", found: 3 },
     });
   });
 
-  test("a ready of protocol 2 with no other field, from the light worker", () => {
-    expect(parseFromFilesRunner({ kind: "ready", protocol: 2 })).toEqual({
+  test("a ready of protocol 3 with no other field, from the light worker", () => {
+    expect(parseFromFilesRunner({ kind: "ready", protocol: 3 })).toEqual({
       ok: false,
-      error: { kind: "otherProtocol", found: 2 },
+      error: { kind: "otherProtocol", found: 3 },
     });
   });
 
@@ -561,18 +570,18 @@ describe("WS2 D2 the messages refused: the version", () => {
     ["calculation", parseFromRunner],
     ["light", parseFromFilesRunner],
   ])(
-    "a ready of protocol 2 with fields of its own, from the %s worker, is otherProtocol and not a refusal of its fields",
+    "a ready of protocol 3 with fields of its own, from the %s worker, is otherProtocol and not a refusal of its fields",
     (_name, parse) => {
       expect(
         parse({
           kind: "ready",
-          protocol: 2,
+          protocol: 3,
           popneiVersion: 3,
           features: ["pca"],
         }),
       ).toEqual({
         ok: false,
-        error: { kind: "otherProtocol", found: 2 },
+        error: { kind: "otherProtocol", found: 3 },
       });
     },
   );
@@ -608,6 +617,469 @@ describe("WS2 D2 the messages refused: describeMessageError", () => {
   });
 });
 
+// The messages of stage 3 (docs/specs/worker/messages.md, "How it is
+// verified").
+
+const PASS_AT_0_05: PassStats = {
+  numVars: 1152,
+  filtering: { missing_data: { varsProcessed: 1200, varsKept: 1152 } },
+};
+const FILTERS_AT_0_05 = [
+  { kind: "missing_data", maxAllowedMissingRate: 0.05 },
+] as const;
+const INDIVIDUAL_CHECKS_JOB: IndividualChecksJob = {
+  analysis: "individualChecks",
+  fileId: "load-a",
+  filters: FILTERS_AT_0_05,
+};
+const VARIANT_CHECKS_JOB: VariantChecksJob = {
+  analysis: "variantChecks",
+  fileId: "load-a",
+  filters: [],
+  minNumIndividuals: 0,
+  numBins: 40,
+  range: [0, 1],
+};
+const FILTER_COUNTS_JOB: FilterCountsJob = {
+  analysis: "filterCounts",
+  fileId: "load-a",
+  filters: [
+    { kind: "missing_data", maxAllowedMissingRate: 0.05 },
+    { kind: "obs_het", maxAllowedObsHet: 0.9 },
+    { kind: "maf", maxAllowedMaf: 0.95 },
+  ],
+};
+const WRITE_JOB: WriteJob = {
+  format: "nei",
+  fileId: "load-a",
+  filters: FILTERS_AT_0_05,
+  individuals: ["i1", "i2", "i4"],
+};
+
+/** `length` numbers from 0.005 up, by 0.001. */
+function rates(length: number): Float64Array {
+  return Float64Array.from({ length }, (_, i) => 0.005 + i / 1000);
+}
+
+const INDIVIDUAL_CHECKS_RESULT: IndividualChecksResult = {
+  analysis: "individualChecks",
+  individuals: Array.from({ length: 200 }, (_, i) => `s${String(i)}`),
+  missingGtRate: rates(200),
+  obsHetRate: Float64Array.from({ length: 200 }, (_, i) =>
+    i === 7 ? Number.NaN : 0.35,
+  ),
+  passStats: PASS_AT_0_05,
+};
+
+/** A histogram of 40 bins, whose counts add up to `numVars`. */
+function distrib(mean: number, numVars: number): VariantDistrib {
+  const counts = new Uint32Array(40);
+  counts[39] = numVars;
+  return { mean, counts };
+}
+
+const VARIANT_CHECKS_RESULT: VariantChecksResult = {
+  analysis: "variantChecks",
+  binEdges: Float64Array.from({ length: 41 }, (_, i) => i / 40),
+  maf: distrib(0.7, 1200),
+  obsHet: distrib(0.35, 1200),
+  unbiasedExpHet: distrib(0.35, 1200),
+  passStats: { numVars: 1200, filtering: {} },
+};
+const FILTER_COUNTS_RESULT: FilterCountsResult = {
+  analysis: "filterCounts",
+  passStats: {
+    numVars: 1128,
+    filtering: {
+      missing_data: { varsProcessed: 1200, varsKept: 1152 },
+      obs_het: { varsProcessed: 1152, varsKept: 1152 },
+      maf: { varsProcessed: 1152, varsKept: 1128 },
+    },
+  },
+};
+const WRITTEN = {
+  kind: "written",
+  id: 5,
+  key: "k2",
+  result: {
+    format: "nei",
+    file: new Blob([new Uint8Array(3594)]),
+    numBytes: 3594,
+    passStats: { ...PASS_AT_0_05, numVars: 0 },
+  },
+};
+
+/** A `result` message of the id 2 under the key k1. */
+function resultMessage(result: unknown): unknown {
+  return { kind: "result", id: 2, key: "k1", result };
+}
+
+describe("VS1 D1 the messages of stage 3 accepted", () => {
+  test.each([
+    ["the diversity, over every individual", JOB],
+    ["the statistics of each individual", INDIVIDUAL_CHECKS_JOB],
+    ["the histograms of the variants", VARIANT_CHECKS_JOB],
+    ["the counts of the filters", FILTER_COUNTS_JOB],
+  ])("parseToRunner accepts a run of %s", (_name, job) => {
+    const run = { kind: "run", id: 2, key: "k1", job };
+    expect(parseToRunner(run)).toEqual({ ok: true, value: run });
+  });
+
+  test("parseToRunner accepts a run of the diversity with a list of individuals", () => {
+    const run = { ...RUN, job: { ...JOB, individuals: ["i1", "i2", "i4"] } };
+    expect(parseToRunner(run)).toEqual({ ok: true, value: run });
+  });
+
+  test.each([
+    ["the diversity", RESULT],
+    ["the statistics of each individual", INDIVIDUAL_CHECKS_RESULT],
+    ["the histograms of the variants", VARIANT_CHECKS_RESULT],
+    ["the counts of the filters", FILTER_COUNTS_RESULT],
+  ])("parseFromRunner accepts a result of %s", (_name, result) => {
+    const message = resultMessage(result);
+    expect(parseFromRunner(message)).toEqual({ ok: true, value: message });
+  });
+
+  test("parseToRunner accepts a write", () => {
+    const write = { kind: "write", id: 5, key: "k2", job: WRITE_JOB };
+    expect(parseToRunner(write)).toEqual({ ok: true, value: write });
+  });
+
+  test("parseFromRunner accepts a written of no variant, and keeps its Blob", () => {
+    const checked = parseFromRunner(WRITTEN);
+    expect(checked).toEqual({ ok: true, value: WRITTEN });
+    expect(
+      checked.ok &&
+        checked.value.kind === "written" &&
+        checked.value.result.file,
+    ).toBe(WRITTEN.result.file);
+  });
+
+  test("parseFromRunner accepts the progress of a write", () => {
+    const progress = { ...PROGRESS, id: 5 };
+    expect(parseFromRunner(progress)).toEqual({ ok: true, value: progress });
+  });
+
+  test("parseToRunner accepts a run and a write whose list of individuals is empty, which the runner refuses", () => {
+    const run = { ...RUN, job: { ...JOB, individuals: [] } };
+    const write = {
+      kind: "write",
+      id: 5,
+      key: "k2",
+      job: { ...WRITE_JOB, individuals: [] },
+    };
+    expect(parseToRunner(run)).toEqual({ ok: true, value: run });
+    expect(parseToRunner(write)).toEqual({ ok: true, value: write });
+  });
+
+  test("parseFromRunner accepts the structured clone of any result and any written of stage 3", () => {
+    const stage3 = fc.oneof(
+      fc.record({
+        kind: fc.constant("result" as const),
+        id: whole,
+        key: text,
+        result: jobResult,
+      }),
+      fc.record({
+        kind: fc.constant("written" as const),
+        id: whole,
+        key: text,
+        result: written,
+      }),
+    );
+    fc.assert(
+      fc.property(stage3, (message) => {
+        expect(parseFromRunner(structuredClone(message))).toEqual({
+          ok: true,
+          value: message,
+        });
+      }),
+    );
+  });
+
+  test("parseToRunner accepts any run and any write of stage 3", () => {
+    fc.assert(
+      fc.property(toRunnerMessage, (message) => {
+        expect(parseToRunner(message)).toEqual({ ok: true, value: message });
+      }),
+    );
+  });
+});
+
+describe("VS1 D2 the messages of stage 3 refused", () => {
+  test("a diversity job with the field individualFilters of stage 2 beside individuals", () => {
+    const job = { ...JOB, individualFilters: [] };
+    expect(parseToRunner({ ...RUN, job })).toEqual({
+      ok: false,
+      error: {
+        kind: "extraFields",
+        messageKind: "run",
+        path: "job",
+        fields: ["individualFilters"],
+      },
+    });
+  });
+
+  test("a diversity job without individuals", () => {
+    const job = Object.fromEntries(
+      Object.entries(JOB).filter(([name]) => name !== "individuals"),
+    );
+    expect(parseToRunner({ ...RUN, job })).toEqual({
+      ok: false,
+      error: {
+        kind: "missingFields",
+        messageKind: "run",
+        path: "job",
+        fields: ["individuals"],
+      },
+    });
+  });
+
+  test("a job whose individuals is neither null nor a list of texts", () => {
+    const job = { ...JOB, individuals: "i1" };
+    expect(parseToRunner({ ...RUN, job })).toMatchObject({
+      ok: false,
+      error: { kind: "wrongType", path: "job.individuals", found: "string" },
+    });
+  });
+
+  test("a result without passStats", () => {
+    const result = Object.fromEntries(
+      Object.entries(RESULT).filter(([name]) => name !== "passStats"),
+    );
+    expect(parseFromRunner(resultMessage(result))).toEqual({
+      ok: false,
+      error: {
+        kind: "missingFields",
+        messageKind: "result",
+        path: "result",
+        fields: ["passStats"],
+      },
+    });
+  });
+
+  test("a result with numVars at its top, as stage 2 had it", () => {
+    const result = { ...RESULT, numVars: 1152 };
+    expect(parseFromRunner(resultMessage(result))).toEqual({
+      ok: false,
+      error: {
+        kind: "extraFields",
+        messageKind: "result",
+        path: "result",
+        fields: ["numVars"],
+      },
+    });
+  });
+
+  test("a passStats.filtering with a field regions, before popnei has that filter", () => {
+    const result = {
+      ...FILTER_COUNTS_RESULT,
+      passStats: {
+        numVars: 1128,
+        filtering: {
+          regions: { varsProcessed: 1300, varsKept: 1200 },
+          ...FILTER_COUNTS_RESULT.passStats.filtering,
+        },
+      },
+    };
+    expect(parseFromRunner(resultMessage(result))).toEqual({
+      ok: false,
+      error: {
+        kind: "extraFields",
+        messageKind: "result",
+        path: "result.passStats.filtering",
+        fields: ["regions"],
+      },
+    });
+  });
+
+  test("an obsHetRate of 199 numbers beside a missingGtRate of 200", () => {
+    const result = { ...INDIVIDUAL_CHECKS_RESULT, obsHetRate: rates(199) };
+    expect(parseFromRunner(resultMessage(result))).toEqual({
+      ok: false,
+      error: {
+        kind: "wrongLength",
+        messageKind: "result",
+        path: "result.obsHetRate",
+        expected: 200,
+        found: 199,
+      },
+    });
+  });
+
+  test("an individuals of 199 beside the two arrays of 200", () => {
+    const result = {
+      ...INDIVIDUAL_CHECKS_RESULT,
+      individuals: INDIVIDUAL_CHECKS_RESULT.individuals.slice(0, 199),
+    };
+    expect(parseFromRunner(resultMessage(result))).toEqual({
+      ok: false,
+      error: {
+        kind: "wrongLength",
+        messageKind: "result",
+        path: "result.missingGtRate",
+        expected: 199,
+        found: 200,
+      },
+    });
+  });
+
+  test("binEdges of 41 numbers and the counts of the MAF of 41", () => {
+    const result = {
+      ...VARIANT_CHECKS_RESULT,
+      maf: { mean: 0.7, counts: new Uint32Array(41) },
+    };
+    expect(parseFromRunner(resultMessage(result))).toEqual({
+      ok: false,
+      error: {
+        kind: "wrongLength",
+        messageKind: "result",
+        path: "result.maf.counts",
+        expected: 40,
+        found: 41,
+      },
+    });
+  });
+
+  test("binEdges as a list of numbers where a Float64Array is expected", () => {
+    const result = { ...VARIANT_CHECKS_RESULT, binEdges: [0, 0.5, 1] };
+    expect(parseFromRunner(resultMessage(result))).toMatchObject({
+      ok: false,
+      error: {
+        kind: "wrongType",
+        path: "result.binEdges",
+        expected: "a Float64Array",
+        found: "array",
+      },
+    });
+  });
+
+  test("a result of the counts of the filters with a field more", () => {
+    const result = { ...FILTER_COUNTS_RESULT, numVarsRead: 1200 };
+    expect(parseFromRunner(resultMessage(result))).toEqual({
+      ok: false,
+      error: {
+        kind: "extraFields",
+        messageKind: "result",
+        path: "result",
+        fields: ["numVarsRead"],
+      },
+    });
+  });
+
+  test("a variantChecks job whose range is not a pair", () => {
+    const job = { ...VARIANT_CHECKS_JOB, range: [0, 0.5, 1] };
+    expect(parseToRunner({ ...RUN, job })).toEqual({
+      ok: false,
+      error: {
+        kind: "wrongLength",
+        messageKind: "run",
+        path: "job.range",
+        expected: 2,
+        found: 3,
+      },
+    });
+  });
+
+  test("a write of the format vcf, which popnei cannot write yet", () => {
+    const job = { ...WRITE_JOB, format: "vcf" };
+    expect(
+      parseToRunner({ kind: "write", id: 5, key: "k2", job }),
+    ).toMatchObject({
+      ok: false,
+      error: {
+        kind: "unknownValue",
+        messageKind: "write",
+        path: "job.format",
+        found: "vcf",
+      },
+    });
+  });
+
+  test("a variantChecks job with a filter", () => {
+    const job = { ...VARIANT_CHECKS_JOB, filters: FILTERS_AT_0_05 };
+    expect(parseToRunner({ ...RUN, job })).toEqual({
+      ok: false,
+      error: {
+        kind: "wrongLength",
+        messageKind: "run",
+        path: "job.filters",
+        expected: 0,
+        found: 1,
+      },
+    });
+  });
+
+  test("a written whose numBytes is not its file's size", () => {
+    const message = {
+      ...WRITTEN,
+      result: { ...WRITTEN.result, numBytes: 3593 },
+    };
+    expect(parseFromRunner(message)).toEqual({
+      ok: false,
+      error: {
+        kind: "wrongLength",
+        messageKind: "written",
+        path: "result.numBytes",
+        expected: 3594,
+        found: 3593,
+      },
+    });
+  });
+
+  test("a written whose file is an ArrayBuffer", () => {
+    const message = {
+      ...WRITTEN,
+      result: { ...WRITTEN.result, file: new ArrayBuffer(3594) },
+    };
+    expect(parseFromRunner(message)).toEqual({
+      ok: false,
+      error: {
+        kind: "wrongType",
+        messageKind: "written",
+        path: "result.file",
+        expected: "a Blob",
+        found: "object",
+      },
+    });
+  });
+});
+
+describe("VS1 D2 the messages of stage 3 refused: the version", () => {
+  test.each([
+    ["calculation", parseFromRunner],
+    ["light", parseFromFilesRunner],
+  ])(
+    "a ready of protocol 1, the walking skeleton's, with no other field, from the %s worker",
+    (_name, parse) => {
+      expect(parse({ kind: "ready", protocol: 1 })).toEqual({
+        ok: false,
+        error: { kind: "otherProtocol", found: 1 },
+      });
+    },
+  );
+
+  test.each([
+    ["calculation", parseFromRunner],
+    ["light", parseFromFilesRunner],
+  ])("a ready of protocol 3, from the %s worker", (_name, parse) => {
+    expect(parse({ kind: "ready", protocol: 3 })).toEqual({
+      ok: false,
+      error: { kind: "otherProtocol", found: 3 },
+    });
+  });
+
+  test.each([
+    ["calculation", parseFromRunner],
+    ["light", parseFromFilesRunner],
+  ])('a ready of protocol "2", from the %s worker', (_name, parse) => {
+    expect(parse({ kind: "ready", protocol: "2" })).toMatchObject({
+      ok: false,
+      error: { kind: "wrongType", path: "protocol", found: "string" },
+    });
+  });
+});
+
 // The messages of the two workers, drawn by fast-check.
 
 const whole = fc.nat();
@@ -625,6 +1097,20 @@ const uint32s = (length: number): fc.Arbitrary<Uint32Array> =>
     })
     .map((values) => Uint32Array.from(values));
 
+const filteringStats = fc.record({ varsProcessed: number, varsKept: number });
+const passStats: fc.Arbitrary<PassStats> = fc.record({
+  numVars: number,
+  filtering: fc.record(
+    {
+      missing_data: filteringStats,
+      obs_het: filteringStats,
+      maf: filteringStats,
+      ld: filteringStats,
+    },
+    { requiredKeys: [] },
+  ),
+});
+
 const diversityResult: fc.Arbitrary<DiversityResult> = fc
   .array(text, { maxLength: 5 })
   .chain((pops) =>
@@ -636,10 +1122,51 @@ const diversityResult: fc.Arbitrary<DiversityResult> = fc
       obsHet: float64s(pops.length),
       polyRatio: float64s(pops.length),
       numVarsWithValue: uint32s(pops.length),
-      numVars: number,
-      numVarsRead: number,
+      passStats,
     }),
   );
+const individualChecksResult: fc.Arbitrary<IndividualChecksResult> = fc
+  .array(text, { maxLength: 5 })
+  .chain((individuals) =>
+    fc.record({
+      analysis: fc.constant("individualChecks" as const),
+      individuals: fc.constant(individuals),
+      missingGtRate: float64s(individuals.length),
+      obsHetRate: float64s(individuals.length),
+      passStats,
+    }),
+  );
+const variantChecksResult: fc.Arbitrary<VariantChecksResult> = fc
+  .integer({ min: 1, max: 6 })
+  .chain((numEdges) => {
+    const distrib = fc.record({ mean: number, counts: uint32s(numEdges - 1) });
+    return fc.record({
+      analysis: fc.constant("variantChecks" as const),
+      binEdges: float64s(numEdges),
+      maf: distrib,
+      obsHet: distrib,
+      unbiasedExpHet: distrib,
+      passStats,
+    });
+  });
+const filterCountsResult: fc.Arbitrary<FilterCountsResult> = fc.record({
+  analysis: fc.constant("filterCounts" as const),
+  passStats,
+});
+const jobResult = fc.oneof(
+  diversityResult,
+  individualChecksResult,
+  variantChecksResult,
+  filterCountsResult,
+);
+const written = fc.nat({ max: 64 }).chain((numBytes) =>
+  fc.record({
+    format: fc.constant("nei" as const),
+    file: fc.constant(new Blob([new Uint8Array(numBytes)])),
+    numBytes: fc.constant(numBytes),
+    passStats,
+  }),
+);
 
 const workerStop = fc.oneof(
   fc.record({ kind: fc.constant("crashed" as const), message: text }),
@@ -649,7 +1176,7 @@ const workerStop = fc.oneof(
 const fromRunnerMessage = fc.oneof(
   fc.record({
     kind: fc.constant("ready" as const),
-    protocol: fc.constant(1),
+    protocol: fc.constant(2),
     popneiVersion: text,
   }),
   fc.record({
@@ -662,7 +1189,13 @@ const fromRunnerMessage = fc.oneof(
     kind: fc.constant("result" as const),
     id: whole,
     key: text,
-    result: diversityResult,
+    result: jobResult,
+  }),
+  fc.record({
+    kind: fc.constant("written" as const),
+    id: whole,
+    key: text,
+    result: written,
   }),
   fc.record({
     kind: fc.constant("refused" as const),
@@ -762,7 +1295,7 @@ const fileRead = fc.oneof(
 );
 
 const fromFilesRunnerMessage = fc.oneof(
-  fc.record({ kind: fc.constant("ready" as const), protocol: fc.constant(1) }),
+  fc.record({ kind: fc.constant("ready" as const), protocol: fc.constant(2) }),
   fc.record({
     kind: fc.constant("individuals" as const),
     id: whole,
@@ -789,34 +1322,44 @@ const variantFilter = fc.oneof(
     maxDist: number,
   }),
 );
-const individualFilter = fc.oneof(
-  fc.record({
-    kind: fc.constant("keep" as const),
-    individuals: fc.array(text),
-  }),
-  fc.record({
-    kind: fc.constant("remove" as const),
-    individuals: fc.array(text),
-  }),
-  fc.record({
-    kind: fc.constant("missing_data" as const),
-    maxAllowedMissingRate: number,
-  }),
-  fc.record({
-    kind: fc.constant("obs_het" as const),
-    maxAllowedObsHet: number,
-  }),
-);
+const individualsKept = fc.option(fc.array(text, { maxLength: 4 }), {
+  nil: null,
+});
+const filters = fc.array(variantFilter, { maxLength: 4 });
 const diversityJob = fc.record({
   analysis: fc.constant("diversity" as const),
   fileId: text,
-  filters: fc.array(variantFilter, { maxLength: 4 }),
-  individualFilters: fc.array(individualFilter, { maxLength: 3 }),
+  filters,
+  individuals: individualsKept,
   pops: fc.array(fc.tuple(text, fc.array(text, { maxLength: 3 })), {
     maxLength: 3,
   }),
   minNumIndividuals: number,
   polyThreshold: number,
+});
+const individualChecksJob = fc.record({
+  analysis: fc.constant("individualChecks" as const),
+  fileId: text,
+  filters,
+});
+const variantChecksJob = fc.record({
+  analysis: fc.constant("variantChecks" as const),
+  fileId: text,
+  filters: fc.constant([] as const),
+  minNumIndividuals: number,
+  numBins: number,
+  range: fc.tuple(number, number),
+});
+const filterCountsJob = fc.record({
+  analysis: fc.constant("filterCounts" as const),
+  fileId: text,
+  filters,
+});
+const writeJob = fc.record({
+  format: fc.constant("nei" as const),
+  fileId: text,
+  filters,
+  individuals: individualsKept,
 });
 const toRunnerMessage = fc.oneof(
   fc.record({
@@ -839,7 +1382,18 @@ const toRunnerMessage = fc.oneof(
     kind: fc.constant("run" as const),
     id: whole,
     key: text,
-    job: diversityJob,
+    job: fc.oneof(
+      diversityJob,
+      individualChecksJob,
+      variantChecksJob,
+      filterCountsJob,
+    ),
+  }),
+  fc.record({
+    kind: fc.constant("write" as const),
+    id: whole,
+    key: text,
+    job: writeJob,
   }),
 );
 const toFilesRunnerMessage = fc.record({
@@ -884,7 +1438,7 @@ function isPlainObject(value: unknown): value is object {
     value !== null &&
     !Array.isArray(value) &&
     !ArrayBuffer.isView(value) &&
-    !(value instanceof File)
+    !(value instanceof Blob)
   );
 }
 

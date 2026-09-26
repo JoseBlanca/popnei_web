@@ -406,7 +406,6 @@ export function createClient(config: {
           );
           return;
         }
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the diversity is the one analysis of stage 2
         if (message.result.analysis !== run.job.analysis) {
           wrongCalculationMessage(
             "a result of another analysis than its job's",
@@ -423,6 +422,12 @@ export function createClient(config: {
         pumpCalculation();
         return;
       }
+      case "written":
+        // The client sends no write yet, so no written answers one.
+        wrongCalculationMessage(
+          `a written of the id ${String(message.id)}, which is not a write it runs`,
+        );
+        return;
       case "progress": {
         const run = calc.running;
         if (run?.id !== message.id) {

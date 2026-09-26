@@ -21,15 +21,26 @@ import type {
   CsvOptions,
   DiversityJob,
   DiversityResult,
-  IndividualFilter,
+  FilterCountsJob,
+  FilterCountsResult,
+  FilteringStats,
+  IndividualChecksJob,
+  IndividualChecksResult,
   IndividualsFileError,
   IndividualsTable,
   Job,
   JobResult,
   LoadFormat,
   Opened,
+  PassStats,
   Separator,
+  VariantChecksJob,
+  VariantChecksResult,
+  VariantDistrib,
   VariantFilter,
+  VariantFilterKind,
+  WriteJob,
+  Written,
 } from "./protocol.ts";
 
 /**
@@ -37,7 +48,7 @@ import type {
  * is raised with any change to a message, to `Job` or `JobResult`, or to a
  * type of protocol.ts that a message carries.
  */
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2;
 
 /** A request of the page to the calculation worker. */
 export type ToRunner =
@@ -62,6 +73,17 @@ export type ToRunner =
       readonly key: string;
       /** What to calculate. */
       readonly job: Job;
+    }
+  /** Write the filtered variants as a file. */
+  | {
+      /** Which request this is. */
+      readonly kind: "write";
+      /** The number of the request. */
+      readonly id: number;
+      /** The key of the file, which comes back with it. */
+      readonly key: string;
+      /** What to write. */
+      readonly job: WriteJob;
     };
 
 /** A message of the calculation worker to the page. */
@@ -93,6 +115,17 @@ export type FromRunner =
       /** The result, of the analysis of the job. */
       readonly result: JobResult;
     }
+  /** The answer of a `write`: the file, as a `Blob` the runner made. */
+  | {
+      /** Which message this is. */
+      readonly kind: "written";
+      /** The id of the `write`. */
+      readonly id: number;
+      /** The key the `write` was asked with. */
+      readonly key: string;
+      /** The file, its size and the counts of its pass. */
+      readonly result: Written<Blob>;
+    }
   /** popnei refused the input of the request; the worker goes on. */
   | {
       /** Which message this is. */
@@ -114,11 +147,12 @@ export type FromRunner =
       /** popnei's message, for the console. */
       readonly message: string;
     }
-  /** How far a `run` has gone, popnei's `Progress` under its names. */
+  /** How far a `run` or a `write` has gone, popnei's `Progress` under its
+      names. */
   | {
       /** Which message this is. */
       readonly kind: "progress";
-      /** The id of the `run`. */
+      /** The id of the `run` or the `write`. */
       readonly id: number;
       /** The bytes of the file the pass has read. */
       readonly bytesRead: number;
@@ -294,7 +328,8 @@ export type MessageError =
       /** The type of what it holds. */
       readonly found: TypeName;
     }
-  /** A list is not as long as what it goes with. */
+  /** A list is not as long as what it goes with, or a file not of the
+      size its message gives. */
   | {
       readonly kind: "wrongLength";
       /** The kind of the message. */
@@ -316,8 +351,9 @@ export type MessageError =
 /**
  * Checks a request that arrived at the calculation worker: its kind is one
  * of `ToRunner`, it has exactly the fields of that kind at every depth,
- * each of its type, and a `.nei` file has no read options while a VCF has
- * them. It gives the typed request, or the first way it was wrong.
+ * each of its type, a `.nei` file has no read options while a VCF has
+ * them, and the job of the histograms of the variants has no filter. It
+ * gives the typed request, or the first way it was wrong.
  */
 export function parseToRunner(data: unknown): Result<ToRunner, MessageError> {
   const known = knownKind(data, TO_RUNNER_KINDS);
@@ -390,14 +426,35 @@ export function parseToRunner(data: unknown): Result<ToRunner, MessageError> {
       }
       return accepted({ kind, id: id.value, key: key.value, job: job.value });
     }
+    case "write": {
+      const wrong = exactFields(record, place, ["kind", "id", "key", "job"]);
+      if (wrong !== null) {
+        return wrong;
+      }
+      const id = field(record, "id", place, isWhole);
+      if (!id.ok) {
+        return id;
+      }
+      const key = field(record, "key", place, isText);
+      if (!key.ok) {
+        return key;
+      }
+      const job = field(record, "job", place, checkWriteJob);
+      if (!job.ok) {
+        return job;
+      }
+      return accepted({ kind, id: id.value, key: key.value, job: job.value });
+    }
   }
 }
 
 /**
  * Checks a message that arrived at the page from the calculation worker:
  * its kind is one of `FromRunner`, it has exactly the fields of that kind
- * at every depth, each of its type, and every array of a result is as
- * long as its populations. A `ready` of another `PROTOCOL_VERSION` gives
+ * at every depth, each of its type, every array of a result is as long as
+ * what it goes with, the populations, the individuals or the edges of the
+ * bins, and the `numBytes` of a written file is its size. A `ready` of
+ * another `PROTOCOL_VERSION` gives
  * `otherProtocol`, whatever its other fields. It gives the typed message,
  * or the first way it was wrong.
  */
@@ -473,6 +530,30 @@ export function parseFromRunner(
         return key;
       }
       const result = field(record, "result", place, checkJobResult);
+      if (!result.ok) {
+        return result;
+      }
+      return accepted({
+        kind,
+        id: id.value,
+        key: key.value,
+        result: result.value,
+      });
+    }
+    case "written": {
+      const wrong = exactFields(record, place, ["kind", "id", "key", "result"]);
+      if (wrong !== null) {
+        return wrong;
+      }
+      const id = field(record, "id", place, isWhole);
+      if (!id.ok) {
+        return id;
+      }
+      const key = field(record, "key", place, isText);
+      if (!key.ok) {
+        return key;
+      }
+      const result = field(record, "result", place, checkWritten);
       if (!result.ok) {
         return result;
       }
@@ -717,11 +798,13 @@ type Format = LoadFormat["format"];
 const TO_RUNNER_KINDS: Readonly<Record<ToRunner["kind"], true>> = {
   open: true,
   run: true,
+  write: true,
 };
 const FROM_RUNNER_KINDS: Readonly<Record<FromRunner["kind"], true>> = {
   ready: true,
   opened: true,
   result: true,
+  written: true,
   refused: true,
   reopenFailed: true,
   progress: true,
@@ -739,21 +822,27 @@ const FROM_FILES_RUNNER_KINDS: Readonly<Record<FromFilesRunner["kind"], true>> =
     badRequest: true,
   };
 const FORMATS: Readonly<Record<Format, true>> = { vcf: true, nei: true };
+const WRITE_FORMATS: Readonly<Record<WriteJob["format"], true>> = {
+  nei: true,
+};
 const JOB_ANALYSES: Readonly<Record<Job["analysis"], true>> = {
   diversity: true,
+  individualChecks: true,
+  variantChecks: true,
+  filterCounts: true,
 };
 const RESULT_ANALYSES: Readonly<Record<JobResult["analysis"], true>> = {
   diversity: true,
+  individualChecks: true,
+  variantChecks: true,
+  filterCounts: true,
 };
-const VARIANT_FILTER_KINDS: Readonly<Record<VariantFilter["kind"], true>> = {
+const VARIANT_FILTER_KINDS: Readonly<Record<VariantFilterKind, true>> = {
   missing_data: true,
   maf: true,
   obs_het: true,
   ld: true,
 };
-const INDIVIDUAL_FILTER_KINDS: Readonly<
-  Record<IndividualFilter["kind"], true>
-> = { keep: true, remove: true, missing_data: true, obs_het: true };
 const READ_KINDS: Readonly<Record<IndividualsFileRead["kind"], true>> = {
   read: true,
   failed: true,
@@ -899,9 +988,13 @@ function checkJob(value: unknown, place: Place): Checked<Job> {
   }
   const { record, tag } = tagged.value;
   switch (tag) {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the diversity is the one analysis of stage 2; the next one is a case here
     case "diversity":
       return checkDiversityJob(record, place);
+    case "individualChecks":
+    case "filterCounts":
+      return checkFiltersJob(record, place, tag);
+    case "variantChecks":
+      return checkVariantChecksJob(record, place);
   }
 }
 
@@ -914,7 +1007,7 @@ function checkDiversityJob(
     "analysis",
     "fileId",
     "filters",
-    "individualFilters",
+    "individuals",
     "pops",
     "minNumIndividuals",
     "polyThreshold",
@@ -930,14 +1023,9 @@ function checkDiversityJob(
   if (!filters.ok) {
     return filters;
   }
-  const individualFilters = field(
-    record,
-    "individualFilters",
-    place,
-    listOf(checkIndividualFilter),
-  );
-  if (!individualFilters.ok) {
-    return individualFilters;
+  const individuals = field(record, "individuals", place, isTextsOrNull);
+  if (!individuals.ok) {
+    return individuals;
   }
   const pops = field(record, "pops", place, listOf(checkPop));
   if (!pops.ok) {
@@ -955,11 +1043,148 @@ function checkDiversityJob(
     analysis: "diversity",
     fileId: fileId.value,
     filters: filters.value,
-    individualFilters: individualFilters.value,
+    individuals: individuals.value,
     pops: pops.value,
     minNumIndividuals: minNumIndividuals.value,
     polyThreshold: polyThreshold.value,
   });
+}
+
+/** The fields of a request that holds its pass alone, the load and the
+    filters of the variants: the statistics of each individual,
+    docs/specs/analyses/individualChecks.md, and the counts of the filters,
+    filterCounts.md. */
+function checkFiltersJob(
+  record: object,
+  place: Place,
+  analysis: "individualChecks" | "filterCounts",
+): Checked<IndividualChecksJob | FilterCountsJob> {
+  const wrong = exactFields(record, place, ["analysis", "fileId", "filters"]);
+  if (wrong !== null) {
+    return wrong;
+  }
+  const fileId = field(record, "fileId", place, isText);
+  if (!fileId.ok) {
+    return fileId;
+  }
+  const filters = field(record, "filters", place, listOf(checkVariantFilter));
+  if (!filters.ok) {
+    return filters;
+  }
+  return accepted({ analysis, fileId: fileId.value, filters: filters.value });
+}
+
+/** The fields of the request of the histograms of the variants,
+    docs/specs/analyses/variantChecks.md, whose filters are none. */
+function checkVariantChecksJob(
+  record: object,
+  place: Place,
+): Checked<VariantChecksJob> {
+  const wrong = exactFields(record, place, [
+    "analysis",
+    "fileId",
+    "filters",
+    "minNumIndividuals",
+    "numBins",
+    "range",
+  ]);
+  if (wrong !== null) {
+    return wrong;
+  }
+  const fileId = field(record, "fileId", place, isText);
+  if (!fileId.ok) {
+    return fileId;
+  }
+  const filters = field(record, "filters", place, listOf(checkVariantFilter));
+  if (!filters.ok) {
+    return filters;
+  }
+  if (filters.value.length !== 0) {
+    return wrongLength(inner(place, "filters"), 0, filters.value.length);
+  }
+  const minNumIndividuals = field(record, "minNumIndividuals", place, isNumber);
+  if (!minNumIndividuals.ok) {
+    return minNumIndividuals;
+  }
+  const numBins = field(record, "numBins", place, isNumber);
+  if (!numBins.ok) {
+    return numBins;
+  }
+  const range = field(record, "range", place, checkRange);
+  if (!range.ok) {
+    return range;
+  }
+  return accepted({
+    analysis: "variantChecks",
+    fileId: fileId.value,
+    filters: [],
+    minNumIndividuals: minNumIndividuals.value,
+    numBins: numBins.value,
+    range: range.value,
+  });
+}
+
+/** The request of a written file: its format, its pass and the list of
+    the individuals kept. */
+function checkWriteJob(value: unknown, place: Place): Checked<WriteJob> {
+  const record = objectWith(value, place, [
+    "format",
+    "fileId",
+    "filters",
+    "individuals",
+  ]);
+  if (!record.ok) {
+    return record;
+  }
+  const format = field(record.value, "format", place, oneOf(WRITE_FORMATS));
+  if (!format.ok) {
+    return format;
+  }
+  const fileId = field(record.value, "fileId", place, isText);
+  if (!fileId.ok) {
+    return fileId;
+  }
+  const filters = field(
+    record.value,
+    "filters",
+    place,
+    listOf(checkVariantFilter),
+  );
+  if (!filters.ok) {
+    return filters;
+  }
+  const individuals = field(record.value, "individuals", place, isTextsOrNull);
+  if (!individuals.ok) {
+    return individuals;
+  }
+  return accepted({
+    format: format.value,
+    fileId: fileId.value,
+    filters: filters.value,
+    individuals: individuals.value,
+  });
+}
+
+/** The lowest and the highest edge of the bins, a pair of numbers. */
+function checkRange(
+  value: unknown,
+  place: Place,
+): Checked<readonly [number, number]> {
+  if (!isList(value)) {
+    return wrongType(place, "a pair of numbers", value);
+  }
+  if (value.length !== 2) {
+    return wrongLength(place, 2, value.length);
+  }
+  const low = isNumber(value[0], inner(place, 0));
+  if (!low.ok) {
+    return low;
+  }
+  const high = isNumber(value[1], inner(place, 1));
+  if (!high.ok) {
+    return high;
+  }
+  return accepted([low.value, high.value] as const);
 }
 
 /** A filter of the variants, with the one threshold of its kind, or the
@@ -1026,52 +1251,6 @@ function checkVariantFilter(
   }
 }
 
-/** A filter of the individuals. */
-function checkIndividualFilter(
-  value: unknown,
-  place: Place,
-): Checked<IndividualFilter> {
-  const tagged = taggedObject(value, place, "kind", INDIVIDUAL_FILTER_KINDS);
-  if (!tagged.ok) {
-    return tagged;
-  }
-  const { record, tag } = tagged.value;
-  switch (tag) {
-    case "keep":
-    case "remove": {
-      const individuals = onlyField(
-        record,
-        place,
-        "individuals",
-        listOf(isText),
-      );
-      if (!individuals.ok) {
-        return individuals;
-      }
-      return accepted({ kind: tag, individuals: individuals.value });
-    }
-    case "missing_data": {
-      const threshold = onlyField(
-        record,
-        place,
-        "maxAllowedMissingRate",
-        isNumber,
-      );
-      if (!threshold.ok) {
-        return threshold;
-      }
-      return accepted({ kind: tag, maxAllowedMissingRate: threshold.value });
-    }
-    case "obs_het": {
-      const threshold = onlyField(record, place, "maxAllowedObsHet", isNumber);
-      if (!threshold.ok) {
-        return threshold;
-      }
-      return accepted({ kind: tag, maxAllowedObsHet: threshold.value });
-    }
-  }
-}
-
 /** A population, the pair of its name and its individuals. */
 function checkPop(
   value: unknown,
@@ -1106,9 +1285,14 @@ function checkJobResult(value: unknown, place: Place): Checked<JobResult> {
   }
   const { record, tag } = tagged.value;
   switch (tag) {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the diversity is the one analysis of stage 2; the next one is a case here
     case "diversity":
       return checkDiversityResult(record, place);
+    case "individualChecks":
+      return checkIndividualChecksResult(record, place);
+    case "variantChecks":
+      return checkVariantChecksResult(record, place);
+    case "filterCounts":
+      return checkFilterCountsResult(record, place);
   }
 }
 
@@ -1126,8 +1310,7 @@ function checkDiversityResult(
     "obsHet",
     "polyRatio",
     "numVarsWithValue",
-    "numVars",
-    "numVarsRead",
+    "passStats",
   ]);
   if (wrong !== null) {
     return wrong;
@@ -1172,13 +1355,9 @@ function checkDiversityResult(
   if (!numVarsWithValue.ok) {
     return numVarsWithValue;
   }
-  const numVars = field(record, "numVars", place, isNumber);
-  if (!numVars.ok) {
-    return numVars;
-  }
-  const numVarsRead = field(record, "numVarsRead", place, isNumber);
-  if (!numVarsRead.ok) {
-    return numVarsRead;
+  const passStats = field(record, "passStats", place, checkPassStats);
+  if (!passStats.ok) {
+    return passStats;
   }
   return accepted({
     analysis: "diversity",
@@ -1188,8 +1367,262 @@ function checkDiversityResult(
     obsHet: obsHet.value,
     polyRatio: polyRatio.value,
     numVarsWithValue: numVarsWithValue.value,
-    numVars: numVars.value,
-    numVarsRead: numVarsRead.value,
+    passStats: passStats.value,
+  });
+}
+
+/** The fields of the statistics of each individual,
+    docs/specs/analyses/individualChecks.md, the two arrays as long as its
+    individuals. */
+function checkIndividualChecksResult(
+  record: object,
+  place: Place,
+): Checked<IndividualChecksResult> {
+  const wrong = exactFields(record, place, [
+    "analysis",
+    "individuals",
+    "missingGtRate",
+    "obsHetRate",
+    "passStats",
+  ]);
+  if (wrong !== null) {
+    return wrong;
+  }
+  const individuals = field(record, "individuals", place, listOf(isText));
+  if (!individuals.ok) {
+    return individuals;
+  }
+  const numIndividuals = individuals.value.length;
+  const missingGtRate = field(
+    record,
+    "missingGtRate",
+    place,
+    float64Array(numIndividuals),
+  );
+  if (!missingGtRate.ok) {
+    return missingGtRate;
+  }
+  const obsHetRate = field(
+    record,
+    "obsHetRate",
+    place,
+    float64Array(numIndividuals),
+  );
+  if (!obsHetRate.ok) {
+    return obsHetRate;
+  }
+  const passStats = field(record, "passStats", place, checkPassStats);
+  if (!passStats.ok) {
+    return passStats;
+  }
+  return accepted({
+    analysis: "individualChecks",
+    individuals: individuals.value,
+    missingGtRate: missingGtRate.value,
+    obsHetRate: obsHetRate.value,
+    passStats: passStats.value,
+  });
+}
+
+/** The fields of the histograms of the variants,
+    docs/specs/analyses/variantChecks.md, the counts of each one fewer
+    than the edges. */
+function checkVariantChecksResult(
+  record: object,
+  place: Place,
+): Checked<VariantChecksResult> {
+  const wrong = exactFields(record, place, [
+    "analysis",
+    "binEdges",
+    "maf",
+    "obsHet",
+    "unbiasedExpHet",
+    "passStats",
+  ]);
+  if (wrong !== null) {
+    return wrong;
+  }
+  const binEdges = field(record, "binEdges", place, isFloat64Array);
+  if (!binEdges.ok) {
+    return binEdges;
+  }
+  const distrib = checkDistrib(binEdges.value.length - 1);
+  const maf = field(record, "maf", place, distrib);
+  if (!maf.ok) {
+    return maf;
+  }
+  const obsHet = field(record, "obsHet", place, distrib);
+  if (!obsHet.ok) {
+    return obsHet;
+  }
+  const unbiasedExpHet = field(record, "unbiasedExpHet", place, distrib);
+  if (!unbiasedExpHet.ok) {
+    return unbiasedExpHet;
+  }
+  const passStats = field(record, "passStats", place, checkPassStats);
+  if (!passStats.ok) {
+    return passStats;
+  }
+  return accepted({
+    analysis: "variantChecks",
+    binEdges: binEdges.value,
+    maf: maf.value,
+    obsHet: obsHet.value,
+    unbiasedExpHet: unbiasedExpHet.value,
+    passStats: passStats.value,
+  });
+}
+
+/** A check of one histogram of the variants, of `numBins` counts. */
+function checkDistrib(numBins: number): Check<VariantDistrib> {
+  return (value, place) => {
+    const record = objectWith(value, place, ["mean", "counts"]);
+    if (!record.ok) {
+      return record;
+    }
+    const mean = field(record.value, "mean", place, isNumber);
+    if (!mean.ok) {
+      return mean;
+    }
+    const counts = field(record.value, "counts", place, uint32Array(numBins));
+    if (!counts.ok) {
+      return counts;
+    }
+    return accepted({ mean: mean.value, counts: counts.value });
+  };
+}
+
+/** The fields of the counts of the filters,
+    docs/specs/analyses/filterCounts.md: the counts of the pass alone. */
+function checkFilterCountsResult(
+  record: object,
+  place: Place,
+): Checked<FilterCountsResult> {
+  const wrong = exactFields(record, place, ["analysis", "passStats"]);
+  if (wrong !== null) {
+    return wrong;
+  }
+  const checked = field(record, "passStats", place, checkPassStats);
+  if (!checked.ok) {
+    return checked;
+  }
+  return accepted({ analysis: "filterCounts", passStats: checked.value });
+}
+
+/** A written file, the `Blob` the runner made with its size and the
+    counts of its pass; `numBytes` is the `size` of the file. */
+function checkWritten(value: unknown, place: Place): Checked<Written<Blob>> {
+  const record = objectWith(value, place, [
+    "format",
+    "file",
+    "numBytes",
+    "passStats",
+  ]);
+  if (!record.ok) {
+    return record;
+  }
+  const format = field(record.value, "format", place, oneOf(WRITE_FORMATS));
+  if (!format.ok) {
+    return format;
+  }
+  const file = field(record.value, "file", place, isBlob);
+  if (!file.ok) {
+    return file;
+  }
+  const numBytes = field(record.value, "numBytes", place, isNumber);
+  if (!numBytes.ok) {
+    return numBytes;
+  }
+  if (numBytes.value !== file.value.size) {
+    return wrongLength(
+      inner(place, "numBytes"),
+      file.value.size,
+      numBytes.value,
+    );
+  }
+  const passStats = field(record.value, "passStats", place, checkPassStats);
+  if (!passStats.ok) {
+    return passStats;
+  }
+  return accepted({
+    format: format.value,
+    file: file.value,
+    numBytes: numBytes.value,
+    passStats: passStats.value,
+  });
+}
+
+/** The counts of a pass: `numVars`, and the counts of each filter under
+    its kind, a kind of `VariantFilter`, in the order they came. */
+function checkPassStats(value: unknown, place: Place): Checked<PassStats> {
+  const record = objectWith(value, place, ["numVars", "filtering"]);
+  if (!record.ok) {
+    return record;
+  }
+  const numVars = field(record.value, "numVars", place, isNumber);
+  if (!numVars.ok) {
+    return numVars;
+  }
+  const filtering = field(record.value, "filtering", place, checkFiltering);
+  if (!filtering.ok) {
+    return filtering;
+  }
+  return accepted({ numVars: numVars.value, filtering: filtering.value });
+}
+
+/** The counts of the filters of a pass, an object whose fields are kinds
+    of `VariantFilter`, kept in their order. */
+function checkFiltering(
+  value: unknown,
+  place: Place,
+): Checked<PassStats["filtering"]> {
+  if (!isRecord(value)) {
+    return wrongType(place, "an object", value);
+  }
+  const names = Object.keys(value);
+  const extra = names.filter((name) => !isOneOf(name, VARIANT_FILTER_KINDS));
+  if (extra.length > 0) {
+    return refused({
+      kind: "extraFields",
+      messageKind: place.messageKind,
+      path: place.path,
+      fields: extra,
+    });
+  }
+  const filtering: Partial<Record<VariantFilterKind, FilteringStats>> = {};
+  for (const name of names) {
+    if (!isOneOf(name, VARIANT_FILTER_KINDS)) {
+      continue;
+    }
+    const stats = field(value, name, place, checkFilteringStats);
+    if (!stats.ok) {
+      return stats;
+    }
+    filtering[name] = stats.value;
+  }
+  return accepted(filtering);
+}
+
+/** The counts of one filter of a pass. */
+function checkFilteringStats(
+  value: unknown,
+  place: Place,
+): Checked<FilteringStats> {
+  const record = objectWith(value, place, ["varsProcessed", "varsKept"]);
+  if (!record.ok) {
+    return record;
+  }
+  const varsProcessed = field(record.value, "varsProcessed", place, isNumber);
+  if (!varsProcessed.ok) {
+    return varsProcessed;
+  }
+  const varsKept = field(record.value, "varsKept", place, isNumber);
+  if (!varsKept.ok) {
+    return varsKept;
+  }
+  return accepted({
+    varsProcessed: varsProcessed.value,
+    varsKept: varsKept.value,
   });
 }
 
@@ -1674,6 +2107,12 @@ function float64Array(length: number): Check<Float64Array> {
   };
 }
 
+/** A `Float64Array` of any length. */
+const isFloat64Array: Check<Float64Array> = (value, place) =>
+  value instanceof Float64Array
+    ? accepted(value)
+    : wrongType(place, "a Float64Array", value);
+
 /** A check of a `Uint32Array` of `length` numbers. */
 function uint32Array(length: number): Check<Uint32Array> {
   return (value, place) => {
@@ -1712,6 +2151,18 @@ const isBoolean: Check<boolean> = (value, place) =>
   typeof value === "boolean"
     ? accepted(value)
     : wrongType(place, "a boolean", value);
+
+/** A list of texts, or null, as the individuals kept of a job. */
+const isTextsOrNull: Check<readonly string[] | null> = (value, place) =>
+  value === null
+    ? accepted(null)
+    : isList(value)
+      ? listOf(isText)(value, place)
+      : wrongType(place, "a list of texts, or null", value);
+
+/** A `Blob`, a file made in a worker. */
+const isBlob: Check<Blob> = (value, place) =>
+  value instanceof Blob ? accepted(value) : wrongType(place, "a Blob", value);
 
 /** A `File`, the handle of a file the user picked. */
 const isFile: Check<File> = (value, place) =>

@@ -21,7 +21,7 @@ describe("WS5 D4 apps.ts", () => {
     expect(ids).toEqual(["diversity"]);
   });
 
-  test("numVarsOf of a diversity result gives its numVarsRead", () => {
+  test("numVarsOf of a result gives what its first filter was given, or the variants of its pass when it had no filter", () => {
     expect(
       numVarsOf({
         analysis: "diversity",
@@ -30,9 +30,20 @@ describe("WS5 D4 apps.ts", () => {
         unbiasedExpHet: Float64Array.from([0.35]),
         obsHet: Float64Array.from([0.35]),
         polyRatio: Float64Array.from([0.9]),
-        numVarsWithValue: Uint32Array.from([1152]),
-        numVars: 1152,
-        numVarsRead: 1200,
+        numVarsWithValue: Uint32Array.from([1128]),
+        passStats: {
+          numVars: 1128,
+          filtering: {
+            missing_data: { varsProcessed: 1200, varsKept: 1152 },
+            maf: { varsProcessed: 1152, varsKept: 1128 },
+          },
+        },
+      }),
+    ).toBe(1200);
+    expect(
+      numVarsOf({
+        analysis: "filterCounts",
+        passStats: { numVars: 1200, filtering: {} },
       }),
     ).toBe(1200);
   });

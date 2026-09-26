@@ -475,7 +475,9 @@ function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
     analysis: ID,
     fileId: p.variants.fileId,
     filters: p.filters,
-    individualFilters: p.individualFilters,
+    // The filters of individuals lock the diversity (`needs`), so it
+    // runs over every individual of the file.
+    individuals: null,
     pops,
     minNumIndividuals: options.minNumIndividuals,
     polyThreshold: options.polyThreshold,
@@ -509,12 +511,13 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
       withValue: valueAt(r.numVarsWithValue, i, "numVarsWithValue"),
     }))
     .filter(
-      ({ row, withValue }) => row.individuals >= min && withValue < r.numVars,
+      ({ row, withValue }) =>
+        row.individuals >= min && withValue < r.passStats.numVars,
     );
   if (withoutValue.length > 0) {
     found.push({
       code: "variantsWithoutValue",
-      text: withoutValueText(withoutValue, r.numVars, min),
+      text: withoutValueText(withoutValue, r.passStats.numVars, min),
     });
   }
   const unassigned = new Set(groupedOf(p)?.unassigned);
@@ -607,7 +610,7 @@ function share(part: number, whole: number): string {
 function checkNumbers(result: JobResult): readonly (number | null)[] {
   const r = diversityResultOf(result);
   return [
-    r.numVars,
+    r.passStats.numVars,
     ...diversityRows(r).flatMap((row) => [
       row.expectedHeterozygosity,
       row.observedHeterozygosity,
@@ -689,11 +692,12 @@ function populationsColumn(p: Project): string | null {
   return p.grouping.column;
 }
 
-/** The result as the diversity's own. While the diversity is the one
-    analysis, a result is always its own; when `JobResult` gains a member
-    this stops compiling, and the check of `analysis`, with a defect for
-    the result of another analysis, goes here. */
+/** The result as the diversity's own. Throws a defect on the result of
+    another analysis, which the store never gives the diversity. */
 function diversityResultOf(r: JobResult): DiversityResult {
+  if (r.analysis !== "diversity") {
+    throw defect(`the diversity was given a result of ${r.analysis}.`);
+  }
   return r;
 }
 

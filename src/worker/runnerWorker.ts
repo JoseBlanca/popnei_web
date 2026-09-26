@@ -131,6 +131,13 @@ async function handle(data: unknown): Promise<void> {
       case "run":
         answerRun(runner, request.value);
         return;
+      case "write":
+        // The write is not built yet, and the page sends none.
+        stop({
+          kind: "badRequest",
+          message: "a write, which this worker does not answer yet",
+        });
+        return;
     }
   } catch (thrown) {
     stop({ kind: "crashed", message: messageOf(thrown) });

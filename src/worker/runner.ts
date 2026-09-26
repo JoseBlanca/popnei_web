@@ -10,7 +10,12 @@
  * under Vitest, given the bytes of a file where the worker gives the `File`.
  */
 import { calcPerVarDistribs, init, openVars, openVcf, version } from "popnei";
-import type { PerVarDistribs, Step, Variants } from "popnei";
+import type {
+  PassStats as PopneiPassStats,
+  PerVarDistribs,
+  Step,
+  Variants,
+} from "popnei";
 
 import type { Result } from "../core/result.ts";
 import { messageOf } from "./messages.ts";
@@ -18,12 +23,15 @@ import type { FromRunner, WorkerStop } from "./messages.ts";
 import type {
   DiversityJob,
   DiversityResult,
+  FilteringStats,
   Job,
   JobResult,
   LoadFormat,
   Opened,
+  PassStats,
   Progress,
   VariantFilter,
+  VariantFilterKind,
 } from "./protocol.ts";
 
 /** A load as the runner opens it: its id, new at every pick of the file,
@@ -137,17 +145,8 @@ export function answerOfThrown(thrown: unknown): Answer<never> {
  * posts, each over a buffer of its own.
  */
 export function transferablesOf(result: JobResult): ArrayBuffer[] {
-  // The diversity is the one member of JobResult in stage 2, and the lint
-  // refuses a switch of one case; the fields below stop compiling when a
-  // second member comes, which is where the switch goes.
   const buffers = new Set<ArrayBuffer>();
-  for (const array of [
-    result.numIndividuals,
-    result.unbiasedExpHet,
-    result.obsHet,
-    result.polyRatio,
-    result.numVarsWithValue,
-  ]) {
+  for (const array of arraysOf(result)) {
     const buffer = array.buffer;
     if (!(buffer instanceof ArrayBuffer)) {
       throw new Error(
@@ -162,6 +161,31 @@ export function transferablesOf(result: JobResult): ArrayBuffer[] {
     buffers.add(buffer);
   }
   return [...buffers];
+}
+
+/** The typed arrays of a result. */
+function arraysOf(result: JobResult): readonly (Float64Array | Uint32Array)[] {
+  switch (result.analysis) {
+    case "diversity":
+      return [
+        result.numIndividuals,
+        result.unbiasedExpHet,
+        result.obsHet,
+        result.polyRatio,
+        result.numVarsWithValue,
+      ];
+    case "individualChecks":
+      return [result.missingGtRate, result.obsHetRate];
+    case "variantChecks":
+      return [
+        result.binEdges,
+        result.maf.counts,
+        result.obsHet.counts,
+        result.unbiasedExpHet.counts,
+      ];
+    case "filterCounts":
+      return [];
+  }
 }
 
 /** What the runner holds: nothing before the `open`; a load whose open
@@ -265,8 +289,14 @@ export function createRunner(): Runner {
         message: `a run of the load ${job.fileId} in the worker of the load ${load.fileId}`,
       };
     }
-    // The diversity is the one member of Job in stage 2, as in
-    // transferablesOf; a second member is where a switch on `analysis` goes.
+    if (job.analysis !== "diversity") {
+      // The runner of the three analyses of the Variants step is not built
+      // yet, and core sends none of their jobs.
+      return {
+        kind: "badRequest",
+        message: `a job of ${job.analysis}, which this runner does not run yet`,
+      };
+    }
     const why = whyNotToRun(job);
     if (why !== null) {
       return { kind: "badRequest", message: why };
@@ -343,8 +373,10 @@ function putFilter(variants: Variants, filter: VariantFilter): void {
 }
 
 /** Why the runner cannot run a diversity job, or `null` when it can: two
-    populations of one name, or a filter of individuals, which waits for
-    stage 3. */
+    populations of one name; an empty list of individuals, which core never
+    sends; or a list of individuals, which this runner does not put on the
+    variants yet, while core sends none, since the filters of individuals
+    lock the diversity. */
 function whyNotToRun(job: DiversityJob): string | null {
   const names = new Set<string>();
   for (const [name] of job.pops) {
@@ -353,8 +385,10 @@ function whyNotToRun(job: DiversityJob): string | null {
     }
     names.add(name);
   }
-  if (job.individualFilters.length > 0) {
-    return "a filter of individuals, which the runner of stage 2 does not apply";
+  if (job.individuals !== null) {
+    return job.individuals.length === 0
+      ? "an empty list of individuals"
+      : "a list of individuals, which this runner does not put on the variants yet";
   }
   return null;
 }
@@ -432,8 +466,7 @@ function diversityResultOf(
     obsHet: new Float64Array(numPops),
     polyRatio: new Float64Array(numPops),
     numVarsWithValue: new Uint32Array(numPops),
-    numVars: passStats.numVars,
-    numVarsRead: numVarsReadOf(distribs, job),
+    passStats: passStatsOf(passStats, job.filters),
   };
   for (const [at, [pop, individuals]] of job.pops.entries()) {
     const index = indexOf.get(pop);
@@ -454,20 +487,47 @@ function diversityResultOf(
   return result;
 }
 
-/** The variants of the file: what its first filter was given, or what the
-    pass gave when the job has no filter. */
-function numVarsReadOf(distribs: PerVarDistribs, job: DiversityJob): number {
-  const first = job.filters[0];
-  if (first === undefined) {
-    return distribs.passStats.numVars;
+/**
+ * The counts of a pass as a result carries them, copied from popnei's:
+ * `numVars`, and the counts of each filter of the job under its kind, in
+ * the order of the job's filters. Throws a defect when a filter of the job
+ * has no entry in popnei's counts, or popnei's counts have an entry of a
+ * kind the job does not have.
+ */
+function passStatsOf(
+  stats: PopneiPassStats,
+  filters: readonly VariantFilter[],
+): PassStats {
+  const filtering: Partial<Record<VariantFilterKind, FilteringStats>> = {};
+  for (const filter of filters) {
+    const counts = ownCounts(stats.filtering, filter.kind);
+    if (counts === undefined) {
+      throw new Error(
+        `popnei_web defect: the counts of the pass have no filter ${filter.kind}`,
+      );
+    }
+    filtering[filter.kind] = {
+      varsProcessed: counts.varsProcessed,
+      varsKept: counts.varsKept,
+    };
   }
-  const counts = distribs.passStats.filtering[first.kind];
-  if (counts === undefined) {
+  const kinds = new Set<string>(filters.map((filter) => filter.kind));
+  const other = Object.keys(stats.filtering).filter((kind) => !kinds.has(kind));
+  if (other.length > 0) {
     throw new Error(
-      `popnei_web defect: the counts of the pass have no filter ${first.kind}`,
+      `popnei_web defect: the counts of the pass have filters the job has not: ${other.join(", ")}`,
     );
   }
-  return counts.varsProcessed;
+  return { numVars: stats.numVars, filtering };
+}
+
+/** The counts of the filter `kind` in popnei's counts of a pass, read as a
+    field of the object itself. */
+function ownCounts(
+  filtering: PopneiPassStats["filtering"],
+  kind: VariantFilterKind,
+): PopneiPassStats["filtering"][string] | undefined {
+  return Object.hasOwn(filtering, kind) ? filtering[kind] : undefined;
 }
 
 /** The value at `index` of an array of popnei's, one per population. */

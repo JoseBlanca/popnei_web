@@ -56,6 +56,11 @@ export function DiversityResults({
   const options = useAppState((s) =>
     analysisOptions(s.project, "diversity", DIVERSITY_DEFAULTS),
   );
+  if (result.analysis !== "diversity") {
+    throw new Error(
+      `popnei_web defect: the table of the diversity was given a result of ${result.analysis}.`,
+    );
+  }
   // A result is shown only under the key of the project's variants file
   // and of the popnei that made it, so both are known.
   if (variantsName === null || popneiVersion === null) {
@@ -76,7 +81,7 @@ export function DiversityResults({
   return (
     <div className={classOf(styles, "results")}>
       <Table
-        caption={captionText(result.numVars, variantsName)}
+        caption={captionText(result.passStats.numVars, variantsName)}
         columns={COLUMNS}
         rows={rows}
       />
