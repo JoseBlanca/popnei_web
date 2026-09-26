@@ -986,9 +986,12 @@ test("WS9 D3 a ploidy typed and a file refused with no variants file are forgott
   ).toHaveCount(0);
   await goTo(page, "Analyses");
   await page.getByRole("button", { name: "Run" }).click();
+  // The line under the table alone: the status region may say the same
+  // words after those of the read, when the two come together.
   await expect(
     page.getByText(
       "The same numbers as in the project file: this variants file gives the results the project was saved with.",
+      { exact: true },
     ),
   ).toBeVisible();
   await expectNoViolations(makeAxeBuilder);
