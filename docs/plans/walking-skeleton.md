@@ -1,7 +1,7 @@
 # Plan: the walking skeleton
 
 25 September 2026, approved by the owner on the same day, with the three
-decisions under "In and out"; under way from 25 September 2026.
+decisions under "In and out"; carried out from 25 to 26 September 2026, and done.
 It builds stage 2
 of `docs/build-order.md`, the walking skeleton of section 10 of
 `docs/architecture.md`: the smallest population genetics application
@@ -832,7 +832,7 @@ and the application checked whole.
 **Tasks:**
 
 - [x] 10.1 The measurements. Serves 1.
-- [ ] 10.2 The final checks and the map of the cases. Serves 2 and 3.
+- [x] 10.2 The final checks and the map of the cases. Serves 2 and 3.
   Needs 10.1.
 
 ## At the end

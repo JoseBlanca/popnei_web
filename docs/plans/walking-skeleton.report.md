@@ -6,8 +6,48 @@ The work report of the plan `docs/plans/walking-skeleton.md`, stage 2 of
 
 ## Where the plan stands
 
-Under way. The work packages done are written below, one section each,
-as they end.
+Done, on 26 September 2026, on the branch `plan/walking-skeleton`, which
+is not merged and not pushed. Every task is ticked, the owner accepted
+the screens of stops 7.5, 8.4 and 9.6, and the final checks pass on the
+last commit: `npm test` 1,459 passed with none skipped, and `npx
+playwright test --project=chromium --project=webkit` 348 passed, the
+probe's 40 among them.
+
+What exists now: the application of population genetics runs in the
+browser tab. It reads a VCF or a `.nei` file and a metadata file of
+the individuals, filters the variants by missing data, and computes the
+diversity of each population with popnei's release `js-v0.1.0-dev.2`.
+Undo and Redo take back every change, and a notice says which results
+a change removed. A project is saved to a file and opened again, and
+the application then says whether the variants file given gives the
+same numbers. It was tried by the owner in Firefox, and tested in
+Chromium and WebKit, the engine of Safari. It has not been tried with a
+screen reader.
+
+What is asked of the owner:
+
+1. The order to merge `plan/walking-skeleton` into `main`. The push of
+   `main` that follows runs the tests in Firefox for the first time, on
+   GitHub, and a failure there is fixed on `main` before anything else.
+2. The five decisions of the measurements, each with its
+   recommendation, under "The measurements, on 26 September 2026":
+   the React Compiler left off; no restart of the calculation worker for
+   now; the cache kept at 256 MB; at most 50,000 points in a plot; no
+   extra step to make the keys faster.
+3. Four wordings found after stop 9.6, each with a recommendation, at
+   the end of "Task 9.7, the owner's decisions of 26 September".
+4. Whether the reader of project files should load only when a file is
+   opened, which takes 4.5 KB of the 123 KB, gzipped, that the page
+   loads first, and splits a module of the core. Recommended: not now.
+
+Left open: three cases of the specs have no test, each with its reason,
+under "The map of the cases"; the spec of the Individuals step has no
+section of its cases, so none was mapped; the version of Firefox the
+owner used was not recorded; WebKit reads a variants file changed on
+the disk when its time of change was put back, and says nothing (point
+R), where Chromium and Firefox refuse it.
+
+The work packages are written below, one section each, as they ended.
 
 ## Before the first task
 
