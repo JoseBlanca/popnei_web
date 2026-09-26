@@ -120,3 +120,65 @@ The lines of existing tests that changed, for D5:
 - With a variants file of one individual, the reason of the lock would
   read "keep none of the 1 individuals". Recommended: "keep the one
   individual of panel.nei".
+
+## The review of work packages 1 and 2
+
+Reviewed together, over 8da15ef to 03239aa, by the reviewers `spec`,
+`stale`, `errors`, `api` and `architecture`, reading at the commit
+while other tasks built beside them, and then by `tests`, on a copy of
+the tree at 5185538 outside the worktree, so that its changes to the
+code could not reach the tasks running there. No reviewer found a
+wrong or stale number on the screen.
+
+What was fixed, each with a test that failed first where one could:
+
+- A written file whose size is not its message's was described in the
+  console, and in the words of an error of the application, as "the
+  list result.numBytes … has 3000 elements": a kind `wrongSize` of its
+  own, in `messages.md` first (a4548fb, 3213f33). Found by three
+  reviewers.
+- Two checks of the counts of a pass had no test (c88cdf8).
+- Nothing tied the fixture of popnei's statistics of `panel.nei` to the
+  release: a runner test now compares them, and section 4 of
+  `docs/architecture.md` and `runner.md` say so (3979688, a87258b,
+  86f2502).
+- Two doc comments that no longer said what the code does (f595d71);
+  the revision note of `individualsKept.md` (dae2f05); "at or above"
+  in `writeVariants.md` (1057a4c); the refused reopening of a write in
+  `client.md` (20fc0e6); "1 byte" in place of "1 bytes" (8eb0234,
+  060a857).
+- The tests reviewer made 150 changes to the code, 124 of which failed
+  a test. Seven tests were added for the ones that mattered (49f1faf,
+  cf229f0): a list of individuals that begins as the one already
+  applied, which would have saved a file of 125 individuals as the file
+  of 100; a written file or a refusal under another request's number;
+  names of popnei shorter than the file's; an infinite value; the last
+  edge of the bins on a range where two ways of computing it differ.
+
+Not taken:
+
+- The count of the variants of the file resting on the order of the
+  keys of the counts: `numVarsOf` was a bridge, and task 3.5 replaced
+  it with a count that reads each filter by its kind.
+- Two functions that write a size, in core and in the Variants step,
+  "251 KB" and "251.0 kB" for one file: left for task 5.3, which joins
+  the step to the writing and keeps core's.
+
+The deliverables after the fixes, on cf229f0: VS1 D1 15, D2 23, D3 30,
+D4 13, D5 21 tests; VS2 D1 18, D2 17, D3 15, D4 28.
+
+### How the work of 1 and 2 went, for whoever revises a skill or a plan
+
+- The tasks' own count of the rules broken and caught was 196 of 198;
+  the tests reviewer's own changes found 9 that mattered among 26 that
+  passed. The prompt that asks each task to break its rules halves the
+  gap of the walking skeleton, and does not close it.
+- The tests reviewer worked on a copy made with `git archive`, so it ran
+  beside three tasks with no interference. The code-review skill's rule
+  that `tests` runs alone can become "runs on a copy".
+- Reviewers that only read were told to read at a commit
+  (`git show <commit>:<path>`) while tasks edited the tree; none
+  reported files half done.
+- Tokens: the eight tasks used between 101,000 and 292,000 each; the
+  five reviewers that read, 109,000 to 226,000; the tests reviewer
+  162,000; the two fixers 157,000 and 83,000.
