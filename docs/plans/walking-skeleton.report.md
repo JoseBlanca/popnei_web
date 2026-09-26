@@ -1086,30 +1086,36 @@ the end of the walking skeleton, each with the decision it asks of the
 owner and the recommendation its numbers support. All were made on an
 Apple M5 Pro with 64 GB, under macOS 27.0, on the built site of commit
 `aea8b17` with the measuring code of this task beside it, in Chromium
-153.0.8010.12 and WebKit 26.6 under Playwright 1.63.0, and in node
-26.8.2. Firefox was not measured: Playwright cannot start it on this
-Mac. Each time is the median of the repetitions, with their range, the
+153.0.8010.12 and WebKit 26.6, the engines of Chrome and of Safari,
+driven by Playwright 1.63.0, the tool that opens a browser and clicks
+through the pages as a user would, and in node 26.8.2. Firefox was not
+measured: Playwright cannot start it on this Mac. Each time is the median of the repetitions, with their range, the
 smallest and the largest, after it. The code is in `e2e/measure.spec.ts`
 and `e2e/measure/`, and `.claude/skills/coding/testing.md`, "The
 measurements", says how to run it again.
 
 #### The React Compiler: what React's drawing costs
 
-React draws the screens: after each change it calls the components
-again and puts what changed on the page, and each such round is a
-commit. The React Compiler, left off for the walking skeleton
-(`docs/technology.md`), would spare the components whose inputs did not
-change; so what it can save is at most the time React spends drawing.
-That time was measured with React's `<Profiler>` in a build of the site
-with React's profiling build, which the site's own build does not
-contain, in Chromium, with `panel.nei` and a metadata file of 10,000
+React draws the screens. A screen is made of components, functions
+that each draw one part of it, a step, a panel, a button, from the state
+of the project. After each change React calls the components again and
+puts what changed on the page, and each such round is a commit. The
+React Compiler, left off for the walking skeleton
+(`docs/technology.md`), would skip calling the components whose inputs
+did not change; so what it can save is at most the time React spends
+drawing. That time was measured with React's own timer, which reports
+each commit and its duration and works only in a special version of
+React made for measuring. The site was built a second time with that
+version, into a folder apart, so the site itself does not contain it.
+It was measured in Chromium, with `panel.nei` and a metadata file of 10,000
 rows and 20 columns loaded (the 200 individuals of `panel.nei` and 9,800
 more), over 10 repetitions in one page. "The whole tree drawn again" is
-React's estimate of drawing every component, as a change that the
-compiler could not narrow would. The last column is the longest event
-of the interaction as the browser's Event Timing gives it, from the
-input to the next frame drawn, in steps of 8 ms and only from 16 ms up;
-it includes Playwright's delivery of the input.
+React's estimate of the time to call every component of the screen,
+which is what a change would cost if none of them could be skipped. The
+last column is the longest time from a click or a key to the next
+picture the browser drew, as the browser itself reports it, in steps of
+8 ms and only from 16 ms up; it includes the time Playwright takes to
+deliver the click.
 
 | Interaction | Commits | React drawing, all its commits | The whole tree drawn again | Input to frame |
 |---|---|---|---|---|
@@ -1123,9 +1129,10 @@ React spends at most 4.8 ms of an interaction drawing, where a frame at
 60 Hz lasts 16.7 ms, and drawing the whole tree would take at most
 3.0 ms. **The decision: whether the React Compiler is turned on for the
 stages after this one.** Recommended: keep it off. The most it could
-save here is under 5 ms per interaction, for three development packages
-more. The plots of the later stages are drawn by D3, outside React, so
-they do not change this; the measurement is run again if a later screen
+save here is under 5 ms per interaction, and turning it on costs three
+more packages to build the site with, one of them first published in
+February 2026. The plots of the later stages are drawn by D3, the
+library of plots, outside React, so they do not change this; the measurement is run again if a later screen
 shows a commit above 16 ms.
 
 #### The restart of the calculation worker, and the compiling of popnei's wasm
@@ -1133,7 +1140,8 @@ shows a commit above 16 ms.
 The calculation worker is the second thread of the tab that runs popnei.
 It is ended and a new one started when the user loads a variants file
 again (`docs/architecture.md`, section 5); a Stop does the same. Task
-8.3 measured it once; the worker's code has not changed since, but the
+8.3, the measurements of work package 8 on 25 September, measured it
+once, on one page; the worker's code has not changed since, but the
 page around it has, so it was measured again, 5 times on a new page
 each time, on the two large files of task 8.3: a VCF of 80,692,954
 bytes, 20,000 variants and 1,000 individuals in 3 populations, and the
@@ -1166,15 +1174,17 @@ again with the kinship, whose matrix is 800 MB at 10,000 individuals.
 #### The bound of the cache: the memory of the tab
 
 The cache of the page keeps the results up to a bound in bytes,
-`CACHE_MAX_BYTES`, 256 MB until this measurement (`docs/specs/core/cache.md`,
-Open 1). The memory of the tab was measured in Chromium, 5 times on a
-new page each time, with the `.nei` file of 19,161,178 bytes and its
-metadata file of 1,000 rows: the JavaScript heaps of the page and of
-the two workers from the Chrome DevTools Protocol, the memory of wasm
-of the calculation worker, where popnei holds what it reads, as the
-size of its `WebAssembly.Memory`, and the footprint of the tab's
-process, the memory macOS counts for it, which the page and its two
-workers share. Each was taken after a collection of the garbage. The
+`CACHE_MAX_BYTES`. Open point 1 of `docs/specs/core/cache.md` set it at
+256 MB as a guess, until the walking skeleton measured what a tab holds
+beside the calculation worker. The memory of the tab was measured in
+Chromium, 5 times on a new page each time, with the `.nei` file of
+19,161,178 bytes and its metadata file of 1,000 rows. Chrome's
+debugging interface, the one its developer tools use, gave the memory
+of the JavaScript of the page and of the two workers, each called its
+heap; and the size of the block of memory that popnei's wasm works in,
+in the calculation worker, where popnei holds what it reads. macOS gave
+the footprint of the tab's process, the memory it counts for the whole
+tab, which the page and its two workers share. Each was taken after a collection of the garbage. The
 light worker is the second worker, which reads the metadata file.
 
 | What | The page opened | The file opened | The diversity done | Done again at 1, the file opened again |
@@ -1185,8 +1195,10 @@ light worker is the second worker, which reads the metadata file.
 | the calculation worker, JavaScript heap | 0.6 MB (0.6 to 0.6) | 0.7 MB (0.7 to 0.7) | 0.8 MB (0.8 to 0.8) | 0.8 MB (0.8 to 0.8) |
 | the light worker, JavaScript heap | 0.0 MB | 0.4 MB (0.4 to 0.4) | 0.4 MB (0.4 to 0.4) | 0.4 MB (0.4 to 0.4) |
 
-The arrays outside the heaps, which the protocol counts apart, were
-0.7 MB at most on the page and 0.1 MB in each worker. A result of the
+The blocks of bytes that the JavaScript holds outside its heap, such
+as the numbers of a result as they arrive from the worker, which the
+debugging interface counts apart, were 0.7 MB at most on the page and
+0.1 MB in each worker. A result of the
 diversity counts 32 bytes per population in the cache, and 2 bytes per
 character of its name, 102 bytes here.
 So the whole tab holds 109 MB with the file read twice, of which the
@@ -1203,17 +1215,21 @@ laptop of 8 GB or a phone, was not measured.
 
 `.claude/skills/coding/charts.md` draws the points of a plot as one SVG
 `<path>` per group, a text of drawing commands that a loop builds. The
-time to draw 10,000 to 200,000 points so, in 4 groups, each a circle of
-16 px² in a plot of 800 × 500 px, was measured on a page that is not
+time to draw 10,000 to 200,000 points so, in 4 groups, each a circle
+whose area is 16 square pixels, 4.5 pixels across, in a plot of
+800 × 500 pixels, was measured on a page that is not
 part of the site, `e2e/measure/points.html`, 5 times after one drawing
 not counted. "The drawing" runs from the start of the loop to the next
-frame drawn after the paths are in the page; in Chromium that frame
-does not include the rasterising, which Chromium does on other threads,
-so its times are what the page's own thread spends and not the time
-until the points are on the screen. In WebKit the frame includes it.
-"The export" writes the SVG as text, as the export of a plot does. The
-numbers in the path are written at full precision, as d3-path writes
-them, or rounded to one decimal, a tenth of a pixel.
+frame drawn after the paths are in the page. In Chromium that time
+does not include turning the paths into pixels, which Chromium does on
+other threads, so it is what the page's own thread spends and not the
+time until the points are on the screen. In WebKit it includes the
+pixels. So the two columns of the drawing measure different things and
+cannot be compared as one engine being faster than the other; each
+says how long its own engine keeps the page busy. "The export" writes
+the SVG as text, as the export of a plot does. The numbers in the path
+are written at full precision, as D3's module of paths writes them by
+default, or rounded to one decimal, a tenth of a pixel.
 
 | Points | Decimals | The drawing, Chromium | The drawing, WebKit | The export, Chromium | The export, WebKit | The SVG |
 |---|---|---|---|---|---|---|
@@ -1260,8 +1276,10 @@ written, as the store keeps it. WebKit was not measured.
 | reading it back | 20.6 ms | 13.2 ms | 12.8 to 17.7 ms |
 
 The file is 2.05 MB, where the spec reckoned 3 MB from the lengths of
-its lines, so the bound of 64 MB leaves room for a table 31 times as
-large. **The decision: whether a key hashes each large part of the
+its lines. The page refuses to open a project file larger than 64 MB,
+`MAX_PROJECT_FILE_BYTES` of `docs/specs/core/projectFile.md`, so that a
+large file picked by mistake does not freeze the tab; that bound leaves
+room for a table 31 times as large. **The decision: whether a key hashes each large part of the
 project once and holds its hash in its place, the next step that
 `docs/specs/core/keys.md` names if a key delays the page.** Recommended:
 no. A key takes at most 9.4 ms after a load and 5.9 ms after a change,
