@@ -19,7 +19,7 @@ import type { Result } from "../../core/result.ts";
     not always let the page ask before it is left, and never on an iPad
     or an iPhone. */
 export const SAVE_BEFORE_LEAVING =
-  "The page cannot always ask before it is closed, on an iPad or an iPhone among them: save the project before you leave.";
+  "The page cannot always ask you before it is closed, and on an iPad or an iPhone it never can: save the project before you leave.";
 
 /** The description of Save while the field of the name is empty. */
 export const NAME_NEEDED = "Give the file a name.";

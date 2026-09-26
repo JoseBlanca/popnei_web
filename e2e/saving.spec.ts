@@ -213,7 +213,7 @@ test("WS9 D3 Save project opens its dialog with panel.popnei.json selected and t
   await expect(field).toHaveValue("panel.popnei.json");
   await expect(field).toBeFocused();
   await expect(dialog).toHaveAccessibleDescription(
-    "The page cannot always ask before it is closed, on an iPad or an iPhone among them: save the project before you leave.",
+    "The page cannot always ask you before it is closed, and on an iPad or an iPhone it never can: save the project before you leave.",
   );
   // The whole name selected, so that typing replaces it.
   expect(
