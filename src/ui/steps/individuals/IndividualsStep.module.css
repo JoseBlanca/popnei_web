@@ -113,14 +113,3 @@
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
-
-/* Read by a screen reader and not shown: the words of a population in
-   place of the "·" shown. */
-.visuallyHidden {
-  position: absolute;
-  inline-size: 1px;
-  block-size: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}

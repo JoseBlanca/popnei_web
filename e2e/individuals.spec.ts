@@ -209,7 +209,7 @@ test("WS8 D1 panel_pops.csv is read with the three options found, its columns an
   ).toEqual([]);
 });
 
-test("WS8 D1 the column popcat chosen lists the populations p0, p2 and p1 with their individuals", async ({
+test("WS8 D1 the column popcat chosen lists the populations p0, p2 and p1 with their individuals, read in words and copied as shown", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -236,24 +236,36 @@ test("WS8 D1 the column popcat chosen lists the populations p0, p2 and p1 with t
     .getByRole("region", { name: "Populations" })
     .getByRole("listitem");
   await expect(populations).toHaveCount(3);
-  // Read "p0, 48 individuals", and nothing of what is shown.
+  // Read "p0, 48 individuals", its label, and the line shown under it.
   await expect(
     page.getByRole("region", { name: "Populations" }).getByRole("list"),
   ).toMatchAriaSnapshot(`
     - list:
-      - listitem: p0, 48 individuals
-      - listitem: p2, 84 individuals
-      - listitem: p1, 68 individuals
+      - listitem "p0, 48 individuals": p0 · 48
+      - listitem "p2, 84 individuals": p2 · 84
+      - listitem "p1, 68 individuals": p1 · 68
   `);
-  // Shown "p0 · 48", and the words read not shown: a box of one pixel.
-  await expect(
-    populations.nth(0).getByText("p0 · 48", { exact: true }),
-  ).toBeVisible();
-  const read = await populations
-    .nth(0)
-    .getByText("p0, 48 individuals", { exact: true })
-    .boundingBox();
-  expect(read === null || (read.width <= 1 && read.height <= 1)).toBe(true);
+  // The list selected and copied gives the lines shown, each once: the
+  // words read are not text of the page.
+  const selected = await page
+    .getByRole("region", { name: "Populations" })
+    .getByRole("list")
+    .evaluate((list) => {
+      const range = document.createRange();
+      range.selectNodeContents(list);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      return selection?.toString() ?? "";
+    });
+  expect(
+    selected
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line !== ""),
+  ).toEqual(["p0 · 48", "p2 · 84", "p1 · 68"]);
+  // Shown "p0 · 48", and nothing else.
+  await expect(populations).toHaveText(["p0 · 48", "p2 · 84", "p1 · 68"]);
   await expectNoViolations(makeAxeBuilder);
 });
 
@@ -276,13 +288,13 @@ test("WS8 D1 the individuals with an empty cell in the column come last, in no p
     .getByRole("region", { name: "Populations" })
     .getByRole("listitem");
   await expect(populations).toHaveCount(4);
-  await expect(populations.nth(0)).toContainText("p2, 84 individuals");
-  await expect(populations.nth(1)).toContainText("p1, 68 individuals");
-  await expect(populations.nth(2)).toContainText("p0, 44 individuals");
-  await expect(populations.nth(3)).toContainText(
+  await expect(populations.nth(0)).toHaveAccessibleName("p2, 84 individuals");
+  await expect(populations.nth(1)).toHaveAccessibleName("p1, 68 individuals");
+  await expect(populations.nth(2)).toHaveAccessibleName("p0, 44 individuals");
+  await expect(populations.nth(3)).toHaveAccessibleName(
     "No population, 4 individuals, left out of the analyses per population",
   );
-  await expect(populations.nth(3)).toContainText(
+  await expect(populations.nth(3)).toHaveText(
     "No population · 4, left out of the analyses per population",
   );
   await expectNoViolations(makeAxeBuilder);
@@ -937,7 +949,7 @@ test("WS8 D1 a column empty for every individual of the variants file gives its 
     page.getByRole("region", { name: "Populations" }).getByRole("list"),
   ).toMatchAriaSnapshot(`
     - list:
-      - listitem: No population, 200 individuals, left out of the analyses per population
+      - listitem "No population, 200 individuals, left out of the analyses per population": No population · 200, left out of the analyses per population
   `);
   await expectNoViolations(makeAxeBuilder);
 });

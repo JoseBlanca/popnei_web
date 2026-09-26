@@ -604,7 +604,11 @@ function Check({
 }
 
 /** The populations, each with its number of individuals of the variants
-    file, shown "P1 · 48" and read "P1, 48 individuals". */
+    file, shown "P1 · 48" and read "P1, 48 individuals". The words read
+    are the label of the item, not text hidden beside the line, which a
+    copy of the list would take too; the line shown is not hidden, so
+    that a screen reader that does not read the label of an item of a
+    list still reads it. */
 function PopulationList({
   lines,
 }: {
@@ -613,9 +617,8 @@ function PopulationList({
   return (
     <ul className={classOf(styles, "populations")}>
       {lines.map((line) => (
-        <li key={line.read}>
-          <span aria-hidden="true">{line.shown}</span>
-          <span className={classOf(styles, "visuallyHidden")}>{line.read}</span>
+        <li key={line.read} aria-label={line.read}>
+          {line.shown}
         </li>
       ))}
     </ul>
