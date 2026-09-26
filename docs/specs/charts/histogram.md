@@ -407,7 +407,8 @@ verified in `plot2d.md`, the export on this histogram.
   the vertical ticks whole numbers for counts of 0 to 3.
 
 **The SVG, under jsdom**, with the size of the element given by a stub
-of `getBoundingClientRect` and a `ResizeObserver` the test calls:
+of `clientWidth` and `clientHeight` and a `ResizeObserver` the test
+calls:
 
 - the class `chart chart-histogram`, and no `chart-overlay`;
 - on the MAF of `panel.nei` at 0.95: 18 `rect.chart-bar-kept` and 2

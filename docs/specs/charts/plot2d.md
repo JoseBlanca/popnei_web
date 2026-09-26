@@ -105,14 +105,23 @@ with it, which is what WCAG 2.2, success criterion 1.4.4, asks.
 
 The plot never sets the size of its element (`charts.md`): the screen's
 CSS gives it a width, from its container, and a height or an
-`aspect-ratio`. The base reads the size with `getBoundingClientRect`
-when the plot is created, and draws at once when the element has one,
-so that the report, which draws a plot outside the visible page and
-takes its SVG (`docs/architecture.md`, section 8), gets a plot drawn.
-Then a `ResizeObserver` on the element calls it at each change of size,
-and the base draws once per frame of the screen, with
-`requestAnimationFrame`, at the last size given, since a drag of the window gives many calls and the eye sees no more
-than one draw per frame. While the
+`aspect-ratio`. The base reads the size when the plot is created, and
+draws at once when the element has one, so that the report, which draws
+a plot outside the visible page and takes its SVG
+(`docs/architecture.md`, section 8), gets a plot drawn. Then a
+`ResizeObserver` on the element calls it at each change of size, with
+the size of the element's content box, inside its padding and its
+border, as `contentRect`. So the size at creation is that box too, the
+`clientWidth` and `clientHeight` of the element less its padding, and an
+element with a padding or a border is drawn at one size and not at two.
+`getBoundingClientRect` would give the box outside the border, and a
+size changed by a CSS transform. `clientWidth` is rounded to a whole
+pixel, so an element 600.5 pixels wide is drawn at 600 when the plot is
+created and once more at 600.5 at the observer's first call, which comes
+at the next frame of the screen. After a change of size the base draws
+once per frame of the screen, with `requestAnimationFrame`, at the last
+size the observer gave, since a drag of the window gives many calls and
+the eye sees no more than one draw per frame. While the
 element has no size, a tab that is hidden, nothing is drawn, and the
 next call with a size draws. `width`, `height` and the `viewBox` of the
 SVG are the size in CSS pixels at the last draw, so one unit is one
@@ -370,7 +379,8 @@ is 0.95; the ticks of a vertical axis of whole numbers for a domain of 0
 to 3 are 0, 1, 2 and 3.
 
 **The SVG, under jsdom**, with the size of the element given by a stub
-of `getBoundingClientRect` and a `ResizeObserver` the test calls:
+of `clientWidth` and `clientHeight` and a `ResizeObserver` the test
+calls:
 
 - the skeleton of "The SVG and its frame", with `role="img"`, the
   classes `chart chart-‹kind›`, the `<title>` and `<desc>` of the data,
@@ -380,6 +390,9 @@ of `getBoundingClientRect` and a `ResizeObserver` the test calls:
 - a size of 0 draws nothing; the first call of the observer with a size
   draws, once, at the next frame, and three calls within one frame draw
   once, at the last size;
+- an element of 420 by 320 pixels with a padding of 10 is drawn at 400
+  by 300 when the plot is made, and not again when the observer gives
+  that content box;
 - an element not larger than the margins, when the plot is made and
   after an `update` to data with larger margins, gives an SVG of 0 by 0
   with nothing in its marks, its annotations, its legend and its axes,
