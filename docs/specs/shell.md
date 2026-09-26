@@ -273,13 +273,19 @@ file its options of the CSV compared by their values:
 | the same, to failed | the reason `projectNeeds` gives, which names the file: "popnei could not read bad.vcf: … Load a variants file in the Variants step." |
 | the metadata file of the same load and options went from pending to read | "pops.csv read: 360 rows, 5 columns.", and, when the variants file is read, the sentence of the check: "All 342 individuals found." or "12 individuals of panel.nei are not in pops.csv." |
 | the same, to failed | the reason `individualsNeeds` gives |
+| the warning of a reopened project that differs from its file, `identityWarning` of `projectFile.ts`, appeared, or is there with another load of the variants file than before | "Warning: " and its words, those of the Variants step (`docs/specs/steps/variants.md`, "A project file opened") |
 
 Nothing else is announced from the state. So a result that comes back
 from the cache after an undo is not announced, since no request ended;
 a calculation left behind that ends, or is stopped by Close, is not,
 since its result is not on the screen; an undo back to a load already
 read, and an opening, are not announced as reads, since no read of the
-same load went from pending. A calculation that a change of the load
+same load went from pending. The warning of a reopened project is
+announced from the state, and not by the Variants step, so that it is
+heard also when an Undo or a Redo pressed on another step brings it
+back, and when a second file that differs replaces the first in one
+command; it is not announced again when the read of its load makes it
+longer, nor when a change of a filter leaves it as it was. A calculation that a change of the load
 stopped is in the notice, which is not written here, since the toast of
 React Aria is read out by itself.
 
@@ -291,7 +297,7 @@ the shell gives the screens:
 | an undo or a redo that makes no notice, with the button or the keyboard | "Undone: the missing data filter changed.", "Redone: the missing data filter changed." |
 | Save of the dialog of Save project | "panel.popnei.json was handed to the browser to download." (below, "Saving") |
 | a project opened | "Opened panel.popnei.json." followed by the text of `askedFileText` when it gives one (below, "Opening") |
-| a file that a step did not load, several dropped at once, the warning of a reopened project that differs from its file | the text the step shows for it, whose words are the step's (`docs/specs/steps/variants.md` and `individuals.md`, "Its words") |
+| a file that a step did not load, several dropped at once | the text the step shows for it, whose words are the step's (`docs/specs/steps/variants.md` and `individuals.md`, "Its words") |
 
 Without the first, a user of a screen reader who pressed Ctrl+Z would
 hear nothing.
@@ -577,8 +583,9 @@ with the analyses of `TEST_DEFS` of `src/core/testSupport.ts`:
 - **`announcementsOf`**: a pair of states for each row of the first
   table of the status region; and none for a result back from the cache
   after an undo, a calculation left behind that ends, an undo back to a
-  load already read, an opening, and a read of the metadata file recorded
-  for options other than those of the present project.
+  load already read, an opening, a read of the metadata file recorded
+  for options other than those of the present project, and the warning
+  of a reopened project made longer by the read of its load.
 - **The announcer**, with the fake timers of Vitest: the same text
   announced twice empties the region and writes it each time; two texts
   within 100 ms are written together.

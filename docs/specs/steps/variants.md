@@ -433,7 +433,12 @@ ploidy 4.
   the focus, the element the keyboard acts on (4.1.3), with the words of
   `docs/specs/shell.md`, "The status region".
 - The warning of a reopened project that differs from its file is
-  announced when it first appears, through the function of the shell.
+  announced by the shell, from the state of the store, when it appears
+  or comes with another load, with the words of `docs/specs/shell.md`,
+  "The status region": so it is heard also when an Undo or a Redo on
+  another step brings it back, and when a second file that differs
+  replaces the first; not again when the read of its load makes it
+  longer.
 
 ## How it is checked
 
