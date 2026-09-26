@@ -11,7 +11,12 @@
 // read, and writes them as a CSV, e2e/fixtures/panel_pops.csv, with the
 // header `IID,popcat`, which the flows give to the individuals file input
 // (docs/specs/worker/runner.md and docs/specs/analyses/diversity.md, "How it
-// is verified").
+// is verified"). From panel.nei it writes the statistics of each
+// individual that popnei's calcPerIndividualStats gives with the missing
+// data filter of the variants at 0.05, to
+// e2e/fixtures/panel_individual_stats.json, which the tests of core read,
+// since they may not call popnei (docs/specs/core/individualsKept.md, "How
+// it is verified").
 //
 // Run it from anywhere with `node e2e/fixtures/make_fixtures.mjs`, and again
 // only when popnei's format of vars files or its panel changes; the files it
@@ -22,7 +27,13 @@ import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { init, openVars, openVcf, writeVars } from "popnei";
+import {
+  calcPerIndividualStats,
+  init,
+  openVars,
+  openVcf,
+  writeVars,
+} from "popnei";
 
 const fixtures = dirname(fileURLToPath(import.meta.url));
 const root = join(fixtures, "..", "..");
@@ -87,4 +98,37 @@ const csv = readFileSync(pops, "utf8")
 writeFileSync(join(fixtures, "panel_pops.csv"), csv);
 console.log(
   `${pops} and panel_pops.csv: ${String(csv.trim().split("\n").length)} lines`,
+);
+
+// The statistics of each individual of panel.nei at 0.05: the individuals,
+// their missingGtRate and their obsHetRate, in the order of the file.
+// JSON.stringify writes each double as the shortest text that reads back
+// as the same double, and a NaN, an individual with no called genotype,
+// as null, which the tests read back as NaN.
+const MISSING_DATA_THRESHOLD = 0.05;
+const panel = openVars(readFileSync(join(fixtures, "panel.nei")));
+let individualStats;
+try {
+  panel.filterByMissingData(MISSING_DATA_THRESHOLD);
+  individualStats = calcPerIndividualStats(panel);
+} finally {
+  panel.free();
+}
+const statsPath = join(fixtures, "panel_individual_stats.json");
+writeFileSync(
+  statsPath,
+  `${JSON.stringify(
+    {
+      maxAllowedMissingRate: MISSING_DATA_THRESHOLD,
+      individuals: individualStats.individuals,
+      missingGtRate: [...individualStats.missingGtRate],
+      obsHetRate: [...individualStats.obsHetRate],
+    },
+    null,
+    2,
+  )}\n`,
+);
+console.log(
+  `${statsPath}: ${String(individualStats.individuals.length)} individuals, ` +
+    `${String(individualStats.passStats.numVars)} variants`,
 );
