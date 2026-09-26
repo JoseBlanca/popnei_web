@@ -595,9 +595,16 @@ the walking skeleton (stage 8).
 - **The keyboard** goes through the page in this order: the error bar
   and its buttons, when it is up; the header, "popnei web", Undo, Redo,
   Open project…, Save project; the three links of the stepper; the step.
-  The notice is last in the order of the page, and F6 reaches it from
-  anywhere but a dialog (below, "The dialogs"), as React Aria gives its
-  region of toasts; when it goes while
+  The notice is last in the order of the page, and F6 (fn+F6 on a Mac)
+  reaches it from anywhere but a dialog (below, "The dialogs"), as React
+  Aria gives its region of toasts. On a Mac keyboard F6 is a media key,
+  so the notice is reached with fn+F6, or with the Tab key; the owner
+  decided on 26 September 2026 (point 10 of the review of work package
+  9) that where the notice is explained it is written "F6 (fn+F6 on a
+  Mac)". The screen of the walking skeleton names F6 nowhere, so the
+  words are written here, and go into the help drawer when it comes, in
+  stage 8. The owner reached the notice with F6 in Firefox on 26
+  September 2026; Chrome and Safari are to be tried by the owner; when it goes while
   it had the focus, the focus goes back to where it was before. Escape
   pressed in the notice gives the focus back to where it was before F6 or
   the Tab key took it there, and leaves the notice as it is, since
