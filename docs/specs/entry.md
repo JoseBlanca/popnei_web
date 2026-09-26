@@ -377,10 +377,17 @@ dialog and says what the user sees of it (`docs/specs/shell.md`,
   names no application.
 - **The base project** is the project the page started with, the one
   last opened from a project file, which `opened(p)` sets, or the one
-  last saved, which `save` sets. The project has changed when the present
-  project is another object than the base, and then the listener of the
-  window's `beforeunload` event asks the browser to confirm before the
-  page is left. A save setting the base is the owner's decision of 25
+  last saved, which `save` sets, with the keys of the analyses that were
+  done in it. The project has changed when the present project is
+  another object than the base, or when an analysis is done under a key
+  that was not done in the base: a result that ended after a Save is a
+  change, since the file saved lacks its check numbers, as the owner
+  decided on 26 September 2026 (point 8 of the review of work package 9
+  of `docs/plans/walking-skeleton.md`, with point K). Then the listener
+  of the window's `beforeunload` event asks the browser to confirm
+  before the page is left, and Open project… asks before it replaces the
+  project. A result that comes back from the cache after an undo to the
+  base is under a key done in the base, and is no change. A save setting the base is the owner's decision of 25
   September 2026, to confirm with the owner: the page does not learn
   whether the download was kept, so a user who cancels the browser's own
   question after our Save, or whose download fails, leaves the page with
@@ -487,7 +494,7 @@ export function createSaving(deps: {
   save(name: string): string;     // downloads the project file; the name used; the present project is the base
   read(text: string): Result<Project, ProjectFileError>;  // readProjectFile with the app and analyses
   opened(p: Project): void;       // a project file was opened: p is the base
-  changed(): boolean;             // the present project is not the base
+  changed(): boolean;             // the present project is not the base, or a result ended since
 };
 ```
 
@@ -606,7 +613,9 @@ hand and whose cancels it records.
   `projectFileName` of the present project; `changed` is false on the
   first project, true after a command, false again after an undo back to
   it, after `opened(p)` with the present project, and after a save, and
-  true after a command that follows the save; `read` of the text a save
+  true after a command that follows the save, and after a result that
+  ends after the save, with no command; false after a save made once
+  that result had ended; `read` of the text a save
   downloaded gives its project, and of the text of a project file of
   association refuses it as `otherApp`.
 - **`addFile`** returns 32 hexadecimal digits, a new one at every call,

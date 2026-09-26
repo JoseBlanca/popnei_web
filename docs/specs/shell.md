@@ -422,8 +422,10 @@ saving and a test of each.
 **Before the page is left.** A reload or a closed tab loses the project,
 since nothing of it is kept in the browser. So while the project has
 changed since the page opened, since a project file was last opened, or
-since the last Save, the present project another object than that one,
-the page asks the browser to confirm before it is left, with the
+since the last Save, the present project another object than that one
+or a result that ended since then, which the file saved lacks (point 8
+of the review of work package 9, decided by the owner on 26 September
+2026), the page asks the browser to confirm before it is left, with the
 browser's own words, which a page cannot change. The owner decided the
 question on 25 September 2026, and a Save stops it until the next
 change, as the owner settled with the approval of this spec, though

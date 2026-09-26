@@ -336,6 +336,13 @@ by Python. It holds:
   for each. They are there to check a new run against, never shown as
   results.
 
+Nothing of the project is kept in the browser, so a page closed or
+reloaded loses what was not saved. While the project holds anything
+that the last project file saved or opened does not, a setting changed
+or a result calculated since, the page asks before it is closed or
+reloaded, and before another project file replaces it, as the owner
+decided on 26 September 2026.
+
 Opening a project:
 
 1. The application asks for the variant file, and names the one the
