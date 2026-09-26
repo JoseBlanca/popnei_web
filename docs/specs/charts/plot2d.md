@@ -437,11 +437,20 @@ first seen working. No screen offers the export in stage 3, so the tests
 open a page of their own, `e2e/plots.html`, which draws the histogram of
 the MAF of `e2e/fixtures/panel.nei`, its bins as literals, at a size the
 test sets, and gives the test its handle through `page.evaluate`. The
-page is built into `dist/` only for the tests, when `test:e2e` sets the
-variable `POPNEI_TEST_PAGES`, so that
-the flows run against the built site as `testing.md`, "Against the
-built site", asks, and the site that users open does not carry it. The
-option not taken was to open that page on the development server of
+page is built only for the tests, when `test:e2e` sets the variable
+`POPNEI_TEST_PAGES`, so that the flows run against the built site as
+`testing.md`, "Against the built site", asks, and the site that users
+open does not carry it. It is built in a second build of its own, after
+the site's, with it as the only page, into `dist/e2e/` with its own
+assets under `dist/e2e/assets/`, so that the files of the site are byte
+for byte those of a build without the variable. Added to the same build
+as the pages of the site, it changed how the bundler splits the code
+they share: with Vite 8.3.0 on 26 September 2026, the CSS of
+`popgen.html`, 20.4 kB, became 18.0 kB and a file of the tokens of 2.4
+kB, a script of Vite to preload modules was added, and the scripts of
+`popgen.html` and `probe.html` changed, so every test in a browser ran
+on files that were not those deployed. The option not
+taken was to open that page on the development server of
 Vite, which serves the sources one by one and so is not the site the
 export will run in.
 

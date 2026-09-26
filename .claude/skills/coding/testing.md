@@ -312,9 +312,16 @@ export default defineConfig({
   `npx playwright install`, a download of several hundred MB, and again
   when Playwright is upgraded.
 - A part that no screen shows yet is tested on a page of the tests,
-  under `e2e/`, built into `dist/` only when the variable
-  `POPNEI_TEST_PAGES` is set, which `test:e2e` sets, so that it runs
-  against the built site and the deployed site does not carry it. From
+  under `e2e/`, built only when the variable `POPNEI_TEST_PAGES` is set,
+  which `test:e2e` sets, so that it runs against the built site and the
+  deployed site does not carry it. The pages of the tests are built in a
+  second build, which `vite.config.ts` starts once the build of the site
+  has closed, with them as the only input, into `dist/e2e/` and its
+  assets into `dist/e2e/assets/`: in the same build as the site's pages
+  they changed how the bundler splits the code the pages share, and the
+  tests ran on files that were not those deployed. So the files of
+  `dist/` outside `dist/e2e/` are the same, byte for byte, with the
+  variable and without it. From
   stage 3 there is one, `e2e/plots.html`, built to
   `dist/e2e/plots.html`, where the export of the plots is tested until
   stage 6 offers it on the screens (`docs/specs/charts/plot2d.md`,
