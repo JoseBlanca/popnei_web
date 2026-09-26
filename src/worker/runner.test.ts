@@ -1205,6 +1205,28 @@ describe("VS1 D3 the passes of the runner: the statistics of each individual", (
       names.mockRestore();
     }
   });
+
+  test("names of popnei's that are fewer or more than those the open gave, each at its place the same, are a defect thrown", () => {
+    // The open gives the 200 names of panel.nei and one more, or all but
+    // the last: popnei's statistics then give 200 names, one fewer or one
+    // more, and only their number tells.
+    const all = statsAt005().individuals;
+    for (const given of [[...all, "s200"], all.slice(0, -1)]) {
+      const names = vi
+        .spyOn(Variants.prototype, "individuals", "get")
+        .mockReturnValueOnce(given);
+      try {
+        const runner = opened("panel.nei");
+        expect(() =>
+          runner.run(individualChecksJob([missingData(0.05)]), ignore),
+        ).toThrow(
+          /^popnei_web defect: the statistics of each individual are not of the individuals the open gave/,
+        );
+      } finally {
+        names.mockRestore();
+      }
+    }
+  });
 });
 
 describe("VS1 D3 the passes of the runner: the diversity with a list of individuals", () => {
@@ -1865,6 +1887,26 @@ describe("VS1 D4 the written file of the runner: its progress, told and the defe
     const other = runner.write(writeJob([missingData(0.045)]), ignore);
     expect(other.kind).toBe("ok");
     expect(reads()).toBe(2);
+  });
+
+  test("a write with the first 100 of the list of 125, after one with the 125, opens the file again and holds those 100", async () => {
+    // The list of 100 is a prefix of the one popnei already has, and the
+    // steps are compared by the whole list, its length among it.
+    const { of125 } = lists();
+    const first100 = of125.slice(0, 100);
+    const { file, reads } = countedPanel();
+    const runner = createRunner();
+    expect(runner.open(NEI, file).kind).toBe("ok");
+    const all = await writtenOf(
+      runner.write(writeJob([missingData(0.05)], of125), ignore),
+    );
+    expect(readBack(all.bytes).individuals).toEqual(of125);
+    expect(reads()).toBe(1);
+    const prefix = await writtenOf(
+      runner.write(writeJob([missingData(0.05)], first100), ignore),
+    );
+    expect(reads()).toBe(2);
+    expect(readBack(prefix.bytes).individuals).toEqual(first100);
   });
 });
 

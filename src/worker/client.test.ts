@@ -847,6 +847,19 @@ describe("WS2 D3 the client: crashes, defects, and every read answered", () => {
     ["an answer of another request's id", () => resultOf(99, "r1")],
     ["an answer of the wrong kind for the request", () => opened(2)],
     ["a result under another key than its request's", () => resultOf(2, "k9")],
+    [
+      "a refused of another request's id",
+      () => ({ kind: "refused", id: 99, message: "the pass gave no variant" }),
+    ],
+    [
+      "a reopenFailed of another request's id",
+      () => ({
+        kind: "reopenFailed",
+        id: 99,
+        name: "panel.nei",
+        message: "short",
+      }),
+    ],
   ])(
     "%s: the run fails as a defect, written to the console, and the worker is started again",
     async (_name, message) => {
@@ -2249,6 +2262,11 @@ describe("VS1 D5 the write of the client: the wrong answers", () => {
     [
       "a result to a write",
       (env: ReturnType<typeof writeAndRun>) => resultOf(env.w1.id, "w1"),
+    ],
+    [
+      "a written of another request's id, under the key of the write",
+      (env: ReturnType<typeof writeAndRun>) =>
+        writtenOf(env.w1.id + 97, "w1", SMALL_FILE),
     ],
   ])(
     "%s fails the write as a defect, written to the console, and ends the worker; the run waiting reaches the new one",
