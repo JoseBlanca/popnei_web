@@ -367,7 +367,15 @@ It has three buttons:
   September 2026 (point 6 of the review of work package 9), so that the
   bar no longer tells the user to do what has just failed. The bar
   learns it from `saveFailed` of the saving (`docs/specs/entry.md`, "The
-  saving").
+  saving"). What its status region said after its Save or its Copy the
+  details is shown only while `saveFailed` is what it was when the words
+  were written, and is emptied when it changes, so that the bar never
+  says two things that disagree: after the bar's Save failed and Save of
+  the header then succeeded, the first line says to save and reload,
+  and the status no longer says that reloading would lose the project;
+  after the bar's Save succeeded and Save of the header then failed, the
+  first line says the project could not be saved, and the status no
+  longer says that it was handed to the browser.
 - **Copy the details**, which copies, for a report of the bug, the
   message and the stack of every error kept, where each came from, the
   address of the page, the versions of the application and of popnei,
@@ -394,7 +402,11 @@ The bar is `role="alert"`, which a screen reader reads at once, since it
 interrupts what the user was doing (`react.md`, "Errors"); its element
 is on the page, empty, from the first drawing, and only its first
 error's text is in the alert, so that each new count is not read out
-again.
+again. When the first line changes once the bar is shown, because a
+save failed or succeeded, the changed line is drawn in the same place
+outside the alert, which is left empty until the bar is closed, so that
+the whole sentence is not read out again: after the bar's own Save, its
+status region says what happened, nearly in the same words.
 
 ### Saving
 
