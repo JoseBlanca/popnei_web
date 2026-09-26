@@ -1374,7 +1374,7 @@ For the owner, with the report at the end, each with a recommendation:
 3. After a save failed, the bar still offers Save the project, and
    "report them" says not where. Recommended: the button reads "Try to
    save again", and the site's page of issues is linked once the site
-   has one (stage 3).
+   has one.
 4. The help under the ploidy says "set the right ploidy here and read
    the file again", which a file of mixed ploidies has not. Recommended:
    leave it, since the refusal now says so.
