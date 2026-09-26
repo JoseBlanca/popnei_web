@@ -5,7 +5,10 @@ with the walking skeleton; revised on 26 September 2026 for stage 3 of
 `docs/build-order.md`, the Variants step whole, as the architecture
 approved by the owner that day has it: the request that writes the
 filtered variants as a `.nei` file, its cancel, and the restart of the
-calculation worker after a large file written. The revision is approved by the owner on 26 September 2026. The worker client is the page's one door to the two workers, the threads of the tab
+calculation worker after a large file written. The revision is approved by the owner on 26 September 2026. Revised again on 26 September
+2026, after the review of the code of stage 3: a write that ends
+`reopenFailed` does not start the worker again, as the table of the
+failures already had it. The worker client is the page's one door to the two workers, the threads of the tab
 beside the page where the files are read and the calculations run
 (`docs/architecture.md`, section 1): it starts them, keeps the `File` of
 every file the user picked, sends each worker one request at a time and
@@ -299,6 +302,16 @@ place of `done`:
    go to the new worker after that `open`, and `onPopneiReady` is called
    when it ends, as for any worker started again with an `open` to send
    (above, "The calculation worker holds one load").
+
+A write that ends `reopenFailed` does not start the worker again,
+whatever its size: it fails with `reopenFailed`, and the worker
+goes on to the next request, as after a run that ends so (below,
+"Crashes, defects, and every read answered"). The answer names the file
+as the cause, a file the browser can no longer read, and not the memory
+of the tab, so the client can tell it from a refusal of popnei, after
+which it does start the worker again. What such a write had built before
+the read failed stays in the memory of wasm until the worker is started
+again for another reason.
 
 A file of `WRITE_RESTART_BYTES` or less leaves the worker as it is, with
 no cost to the next request. `WRITE_RESTART_BYTES` is a constant of
