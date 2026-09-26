@@ -314,7 +314,7 @@ sees changes: the page runs as before on the messages of version 2.
 
 **Tasks:**
 
-- [ ] 1.1 `src/worker/protocol.ts` and `messages.ts`, from `protocol.md`,
+- [x] 1.1 `src/worker/protocol.ts` and `messages.ts`, from `protocol.md`,
   "The TypeScript interface", and `messages.md` whole, with
   `PROTOCOL_VERSION` 2; and what the new types force elsewhere, so that
   the tree compiles and the page works: the diversity's job sends
@@ -323,7 +323,7 @@ sees changes: the page runs as before on the messages of version 2.
   `numVarsOf` of `src/core/apps.ts` reads the number of variants of the
   file from `passStats`, until task 3.5 puts `countsOf` in its place;
   the runner gives the diversity's `passStats`. Serves 1, 2 and 6.
-- [ ] 1.2 `src/worker/runner.ts`: the steps with the list of the
+- [x] 1.2 `src/worker/runner.ts`: the steps with the list of the
   individuals, the counts of every pass, the statistics of each
   individual, the histograms of the variants and the counts of the
   filters, from `runner.md`, "The steps: the file opened again when they
@@ -333,7 +333,7 @@ sees changes: the page runs as before on the messages of version 2.
   that stage 3 adds. A list put before the filters of the variants would
   change their counts with no error, so the tests of the counts with the
   list are part of this task. Serves 3. Needs 1.1.
-- [ ] 1.3 The write in `runner.ts`, "The written file", and in
+- [x] 1.3 The write in `runner.ts`, "The written file", and in
   `runnerWorker.ts`, its `write` posted as `written` with no transfer;
   and `.claude/skills/coding/worker.md`, "Reading the files of the user",
   corrected as `messages.md`, "Where this departs from worker.md", asks.
@@ -371,9 +371,11 @@ file and its size expected.
    `remove` (6), `null` while the file is not read (1), and
    `projectNeeds` `null` for a read file with a bad list (1); the filters
    of the variants out of order refused as `filterOutOfOrder` with its
-   text (1); and the property of the fixed order. `grep -rln
+   text (1); and the property of the fixed order. `grep -rlw
    moveVariantFilter src` prints nothing, where it prints four files on
-   1457d80.
+   1457d80. (Changed on 26 September 2026 from `grep -rln`, which also
+   matches `removeVariantFilter`, a function the spec keeps, and so could
+   never print nothing.)
 2. `VS2 D2 the individuals kept`. Check: `npx vitest run
    src/core/individualsKept.test.ts -t "VS2 D2"` passes at least 9
    tests: the seven cases of the worked case of `individualsKept.md`,
@@ -402,12 +404,12 @@ task 1.1.
 
 **Tasks:**
 
-- [ ] 2.1 `src/core/project.ts`: the filters of the variants in their
+- [x] 2.1 `src/core/project.ts`: the filters of the variants in their
   fixed order, `VARIANT_FILTER_ORDER`, no `moveVariantFilter`,
   `individualListNeeds` apart from `projectNeeds`, and the refusal of
   filters out of order in `parseProject`, from `project.md`'s parts
   that its opening names. Serves 1 and 5.
-- [ ] 2.2 `src/core/individualsKept.ts`, from `individualsKept.md`
+- [x] 2.2 `src/core/individualsKept.ts`, from `individualsKept.md`
   whole. A list of the wrong individuals shows on no screen, so this is a
   task of its own. `individualsKept.md` asks for popnei's numbers "in the
   runner's tests", which the lint forbids, since a test of `src/worker`
@@ -417,7 +419,7 @@ task 1.1.
   `e2e/fixtures/make_fixtures.mjs` writes with popnei, as it writes the
   other fixtures. That choice changes nothing a user sees, and the report
   names it. Serves 2.
-- [ ] 2.3 `writeKeyOf` in `src/core/keys.ts`, from `keys.md`, "The key of
+- [x] 2.3 `writeKeyOf` in `src/core/keys.ts`, from `keys.md`, "The key of
   a file written", with its literal: a key that missed a filter would
   let a file of other variants be saved as the one the step shows.
   Serves 3. Needs 1.1.
@@ -591,7 +593,7 @@ dependencies among it.
 
 **Tasks:**
 
-- [ ] 4.1 The dependencies, in a commit of their own; the project
+- [x] 4.1 The dependencies, in a commit of their own; the project
   `charts` of `vite.config.ts` (`testing.md`, "Vitest");
   `src/charts/plot2d.ts`, `types.ts`, `ids.ts`, `limits.ts` and the
   skeleton of `charts.css`, from `plot2d.md` but "The export". Serves 1
