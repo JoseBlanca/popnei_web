@@ -365,7 +365,10 @@ It has three buttons:
   and report them." in place of "Your project is intact: save it, then
   reload the page.", until a save succeeds, as the owner decided on 26
   September 2026 (point 6 of the review of work package 9), so that the
-  bar no longer tells the user to do what has just failed. The bar
+  bar no longer tells the user to do what has just failed. For as long,
+  the button reads "Try to save again", as the owner ordered the same day
+  (point 3 of the list of task 9.7), so that it does not offer again, in
+  the same words, what has just failed. The bar
   learns it from `saveFailed` of the saving (`docs/specs/entry.md`, "The
   saving"). What its status region said after its Save or its Copy the
   details is shown only while `saveFailed` is what it was when the words
