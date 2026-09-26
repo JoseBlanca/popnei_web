@@ -1160,6 +1160,64 @@ for (const theme of ["light", "dark"] as const) {
       });
     }
 
+    test("the shell with the dialog of Save, the name empty", async ({
+      page,
+    }) => {
+      await pickVariants(page, "panel.nei");
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      await page.getByRole("button", { name: "Save project" }).click();
+      await page.getByRole("textbox", { name: "File name" }).fill("");
+      await expect(page.getByText("Give the file a name.")).toBeVisible();
+      await save(page, `popgen-shell-save-dialog-empty-${theme}`, {
+        fullPage: false,
+      });
+    });
+
+    test("the shell with the question before an opening, a calculation under way", async ({
+      page,
+    }, testInfo) => {
+      await loadPanelWithPopulations(page);
+      const saved = await saveProjectFile(page, testInfo.outputPath());
+      await holdResults(page);
+      await goTo(page, "Analyses");
+      await page.getByRole("button", { name: "Run" }).click();
+      await openProject(page, saved);
+      await expect(
+        page.getByText(/The ongoing calculations will be stopped\.$/),
+      ).toBeVisible();
+      await save(page, `popgen-shell-open-question-running-${theme}`, {
+        fullPage: false,
+      });
+    });
+
+    test("the shell with its longest notice, at 320 px", async ({ page }) => {
+      // The notice of an undo that leaves a calculation behind, the
+      // longest one the diversity alone can give.
+      await page.setViewportSize({ width: 320, height: 640 });
+      await loadPanelWithPopulations(page);
+      await holdResults(page);
+      await goTo(page, "Variants");
+      const threshold = page.getByLabel(
+        "Maximum proportion of missing genotypes",
+      );
+      await threshold.fill("0.05");
+      await threshold.press("Enter");
+      await goTo(page, "Analyses");
+      await page.getByRole("button", { name: "Run" }).click();
+      await page.getByRole("heading", { level: 1, name: "Analyses" }).focus();
+      await page.keyboard.press("ControlOrMeta+z");
+      await expect(
+        page.getByRole("region", { name: "Notice" }).getByRole("alertdialog", {
+          name: "Undone: the missing data filter changed. The ongoing calculation of Diversity will be stopped unless you redo the change",
+        }),
+      ).toBeVisible();
+      await save(page, `popgen-shell-notice-longest-320-${theme}`, {
+        fullPage: false,
+      });
+    });
+
     test("the Variants step after an opening, and with the warning of the identity", async ({
       page,
     }, testInfo) => {
