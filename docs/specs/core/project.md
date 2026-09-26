@@ -8,7 +8,8 @@ decided at stop 7.5 of `docs/plans/walking-skeleton.md`, and for the
 words of the Individuals step and the reader's two new refusals the
 owner decided on the reviews of that plan, and for the end of the
 reasons of a list of individuals, Open 2, which the owner settled the
-same day. The project is everything the user has set in one application: the
+same day; and on 26 September 2026 for the end of the refusal of an
+analysis this version does not know. The project is everything the user has set in one application: the
 variants file they loaded, the filters, the individuals file with the
 types of its columns, the populations, and the options of each analysis.
 This spec gives its type, the commands that change it, the records that
@@ -802,8 +803,12 @@ or `null`.
 - **A file that names an analysis this version does not know** is refused
   whole, as the owner decided on 24 September 2026: "This project file has
   the analysis ‹id›, which this version of the application does not know:
-  it was saved by another version of the application." The option not
-  taken was to open it without that analysis.
+  it was saved by another version of the application. Open it with the
+  version of the application that saved it." The last sentence, which
+  says what to do, was added as the owner decided on 26 September 2026
+  (point 7 of the review of work package 9 of
+  `docs/plans/walking-skeleton.md`). The option not taken was to open it
+  without that analysis.
 - **A file saved by a newer version of the application** never reaches
   `parseProject`: the header of every project file holds the version of
   its format, and `projectFile.ts` refuses a version newer than the ones
