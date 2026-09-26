@@ -16,6 +16,9 @@
   --color-surface: #f4f5f7;
   --color-text: #1a1d21;
   --color-text-muted: #555d68;
+  /* the text of a disabled control: 4.5:1 on the background, and 3:1
+     from the text of an enabled one */
+  --color-text-disabled: #6b7078;
   --color-border: #7c8591;
   --color-accent: #1f5fbf;
   --color-on-accent: #ffffff;
@@ -75,6 +78,7 @@
     --color-surface: #202328;
     --color-text: #e8eaed;
     --color-text-muted: #a3abb5;
+    --color-text-disabled: #7c8188;
     --color-border: #7a838e;
     --color-accent: #7fb0ff;
     --color-on-accent: #0d1b2e;
@@ -94,6 +98,7 @@
   --color-surface: #202328;
   --color-text: #e8eaed;
   --color-text-muted: #a3abb5;
+  --color-text-disabled: #7c8188;
   --color-border: #7a838e;
   --color-accent: #7fb0ff;
   --color-on-accent: #0d1b2e;

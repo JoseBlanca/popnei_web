@@ -87,6 +87,11 @@ const PAIRS: readonly (readonly [string, string, number])[] = [
   ["--color-text", "--color-surface", 4.5],
   ["--color-text-muted", "--color-background", 4.5],
   ["--color-text-muted", "--color-surface", 4.5],
+  // The text of a disabled button, on the background of the button, and
+  // told apart from the text of an enabled one (css.md, "Contrast and
+  // colour").
+  ["--color-text-disabled", "--color-background", 4.5],
+  ["--color-text", "--color-text-disabled", 3],
   // The links of the header and of the stepper.
   ["--color-accent", "--color-background", 4.5],
   ["--color-accent", "--color-surface", 4.5],
