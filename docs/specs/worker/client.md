@@ -81,10 +81,12 @@ rule below rules out one of them.
   value `.claude/skills/coding/worker.md` gives until the walking skeleton
   measures a slow connection. A worker script that is not served, or a
   wasm that does not load, gives no message at all in some browsers, and
-  the page would wait for ever. At 30 seconds, the 565 KB of popnei's
-  wasm, gzipped, have to arrive at 150 kbit/s or faster, with nothing
-  left for compiling it; a user on a slower connection cannot start the
-  calculations, and reloading the page does not mend it.
+  the page would wait for ever. At 30 seconds, the 710.6 KB of popnei's
+  wasm, gzipped, of the release `js-v0.1.0-dev.2` as Vite measures it
+  (`docs/architecture.md`, section 11), have to arrive at about 190
+  kbit/s or faster, with nothing left for compiling it; a user on a
+  slower connection cannot start the calculations, and reloading the
+  page does not mend it.
 - **A worker that fails twice with no answer between is given up** for
   the life of the page. A failure here is one before its `ready`: the
   timeout, a `crashed`, an `error` event, a `ready` that fails its check,
@@ -280,10 +282,16 @@ shrinks, and would stay with the worker until the next load of the
 variants file. So, as the owner decided on 26 September 2026
 (`docs/architecture.md`, section 13, point 5), the client starts the
 calculation worker again after a write whose file is larger than
-`WRITE_RESTART_BYTES`:
+`WRITE_RESTART_BYTES`, and after a write that popnei refused, whatever
+its size: popnei refuses a file the memory of the tab does not take
+(`docs/specs/worker/runner.md`, "The written file"), after the memory of
+wasm has grown by the part of the file it built, and the client cannot
+tell that refusal from one of a line of the VCF, which grows it less.
+The steps are the same, with the outcome `failed` of kind `popnei` in
+place of `done`:
 
-1. It gives the write its outcome, `done` with the file, first, so that
-   the file reaches the store before anything else happens.
+1. It gives the write its outcome, `done` with the file, or the refusal,
+   first, so that it reaches the store before anything else happens.
 2. It ends the worker, in the three steps above, as if the write had
    been cancelled after its answer.
 3. It starts a new worker, and, when that worker is ready, sends it the
@@ -298,9 +306,9 @@ no cost to the next request. `WRITE_RESTART_BYTES` is a constant of
 `client.ts`, set from the measurement of section 11 of the architecture
 in the first work package of stage 3 that writes a file; meanwhile 100
 MB, 100,000,000 bytes, the value `docs/specs/analyses/writeVariants.md`
-gives, about five times the memory of wasm after one diversity on the
-`.nei` file of 19,161,178 bytes, 35.5 MB in Chromium 153
-(`docs/plans/walking-skeleton.report.md`). What a restart costs in stage
+gives, about five times the `.nei` file of 19,161,178 bytes, the one
+written file whose size is known, and so about five times the memory
+of wasm such a write adds. What a restart costs in stage
 3 is the reading of the header of the file, at most 49 ms (above); from
 stage 4 it costs also the intermediate results the worker holds, the
 pruned variants and the kinship, which is when the value matters.
@@ -642,7 +650,14 @@ walking skeleton, a diversity `Job` and a CSV.
   before the worker is ended, then a new worker is made and, once
   ready, sent the `open` of A, then k5; `onPopneiReady` is called when
   that `open` ends. A `written` of exactly 100,000,000 bytes ends no
-  worker. The test gives a fake `Blob`, since only `numBytes` is read.
+  worker. A `refused` of a write, with a run waiting: the outcome is
+  `failed` of kind `popnei` before the worker is ended, then the same
+  restart. The `Blob`s are real ones, `new Blob([new
+  Uint8Array(100_000_001)])`, 12 ms in node 26.8 on the owner's Mac on
+  26 September 2026, since the check of a
+  `written` message takes the file with `instanceof Blob` and compares
+  `numBytes` with its `size` (`docs/specs/worker/messages.md`), which a
+  fake would fail.
 - **Progress**: two `progress` of a run's id, then its `result`: its
   `onProgress` is called twice with the four fields as they came, and
   its outcome is `done`; a `progress` of an id that is not running is a
@@ -661,8 +676,11 @@ walking skeleton, a diversity `Job` and a CSV.
   is made, while the light worker still reads. An answer between the two
   failures sets the count back: a failure after it starts a worker again.
   A worker that crashes idle after each `ready`, twice: given up. A
-  `ready` of protocol 2: every request fails with `protocolMismatch`,
-  and no other worker is made.
+  `ready` of protocol 3, another than `PROTOCOL_VERSION`, 2 from stage
+  3: every request fails with `protocolMismatch`, and no other worker is
+  made. The test of stage 2 that sends protocol 2,
+  `src/worker/client.test.ts` at line 925, is changed so by the plan,
+  since protocol 2 is now the page's own.
 - **Properties, with fast-check**, which draws sequences of reads, runs,
   cancels, answers, crashes and timeouts in any order and shrinks a
   failure to the smallest: every request gets its answer or outcome

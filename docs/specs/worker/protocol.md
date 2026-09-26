@@ -76,22 +76,14 @@ project holds the numbers popnei is given, as section 3 of
   `Variants` in the order of the job, and does not sort them.
 
 The PCA's own MAF filter, of section 5 of `docs/functionality.md`, meets
-this last rule when the dataset has a MAF filter already. Two thresholds
-of one kind keep what the stricter keeps alone only when they are applied
-at the same point, and the steps of popnei run in their order: an LD
-filter keeps a variant according to the variants kept before it, and a
-frequency is counted over the individuals kept at that point. In the
-fixed order the LD pruning and the filter of individuals always come
-after the dataset's MAF filter, so the runner gives the two as one filter,
-with the smaller threshold, in the place of the dataset's, only when the
-dataset has no LD filter and the job keeps every individual. Otherwise
-the one filter would change what the dataset's LD filter keeps, and the
-runner keeps the dataset's MAF filter as it is and adds none for the PCA,
-as the PCA does not prune again when the dataset has pruned (section 5 of
-functionality); the spec of the PCA, in stage 4, says how its result
-warns of it. Placing the merged filter last was not taken, because it
-would change the dataset's own filtering for the PCA alone, where the
-user set it for every analysis.
+this last rule when the dataset has a MAF filter already; how the two
+are given to popnei is the spec's of the PCA, in stage 4. What it will
+meet is noted in `docs/specs/stage-3-open-points.md`, "For stage 4": the
+rule this spec held until stage 3 merged the two into one MAF filter only
+when the dataset had no LD pruning and the job kept every individual,
+and otherwise added none; in the fixed order, with the filter of
+individuals last, that rule leaves the PCA with no MAF filter of its own
+whenever a filter of individuals is set.
 
 The number the user types is the number popnei is given, with no
 arithmetic between them. A conversion would move the boundary: 1 − 0.9 is
@@ -559,8 +551,7 @@ fields of the filters are popnei's arguments, and the boundary above, at
 0.05, are checked by the tests of the runner (`docs/specs/worker/runner.md`);
 so are the counts of a pass in the order of the job, and the list of
 individuals put after the filters of the variants, which leaves their
-counts as they are with every individual. The PCA's MAF filter given as
-one filter waits for the job of the PCA, in stage 4.
+counts as they are with every individual.
 
 ## Open points
 

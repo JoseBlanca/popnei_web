@@ -535,7 +535,8 @@ tab, are those of `writeVariants.md`.
 
 The runner keeps nothing of a write. The memory of wasm keeps the room
 of the file, which never shrinks, and the client starts the worker again
-after a file larger than a bound, to give it back
+after a file larger than a bound, and after a write popnei refused, to
+give it back
 (`docs/specs/worker/client.md`, "A write, and the restart after a large
 one").
 
@@ -1038,9 +1039,6 @@ popnei's defaults:
 | | | p2 | 0.3440824705971255 | 0.3512406974637824 | 0.9105902777777778 |
 | | | p1 | 0.3498365468860467 | 0.35603713961547323 | 0.9157986111111112 |
 
-These are, to the last digit, the numbers that `js-v0.1.0-dev.1` gave on
-the same files on the same day, which the draft of this spec held: the
-release changed how popnei reads a file and not what it calculates.
 `panel.vcf.gz` gives the same numbers as `panel.nei`, with and without
 the filter. The filter at 1 keeps every variant, 1,200, and gives the
 numbers of no filter, and so does the filter at 0.1, the default of the
