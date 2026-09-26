@@ -489,14 +489,17 @@ the file and some, "The project file cannot be opened: …", do not:
    file it refuses: the text of its error.
 4. When the project has changed, as above, or calculations are in
    flight, a dialog asks first: "Open panel.popnei.json? It replaces the
-   project on the page, and an opening cannot be undone. To keep it,
-   answer Keep the current project and save it first.", with, when
-   calculations are in flight, "The ongoing calculations will be
-   stopped." Its buttons: "Open panel.popnei.json" and "Keep the current
-   project". The dialog has no Save of its own, so its words name the
-   button that leads to one, as the owner decided on 26 September 2026
-   (point 5 of the review of work package 9); they said "Save the
-   project first to keep it." before. The store stops the
+   project on the page, and an opening cannot be undone. To keep the
+   project on the page, press Keep the current project and save it
+   first.", with, when calculations are in flight, "The ongoing
+   calculations will be stopped." Its buttons: "Open panel.popnei.json"
+   and "Keep the current project". The dialog has no Save of its own, so
+   its words name the button that leads to one, as the owner decided on
+   26 September 2026 (point 5 of the review of work package 9); they
+   said "Save the project first to keep it." before. The owner then
+   ordered the present words, the same day (point 1 of the list of task
+   9.7), since readers took the "it" of "To keep it, answer Keep the
+   current project" for the file, and "answer" for odd. The store stops the
    calculations at the opening, since the screen asked
    (`docs/specs/core/store.md`, "Commands and events").
 5. `store.open(project)`, which starts a new history and clears the
