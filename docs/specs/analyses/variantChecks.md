@@ -1,0 +1,285 @@
+# The histograms of the variants
+
+Written on 26 September 2026, for stage 3 of `docs/build-order.md`, the
+Variants step whole. There is no code of it yet. This spec gives the
+second check of the Variants step: the module
+`src/core/analyses/variantChecks.ts`, the histograms of the major allele
+frequency, the observed heterozygosity and the expected heterozygosity
+of the variants, which the user reads to choose the thresholds of the
+filters of the variants; and, after it, the short spec of its part of the
+step. It develops section 3 of `docs/functionality.md` and section 4 of
+`docs/architecture.md`, "The checks of the Variants step, and the
+individuals they keep". It depends on the specs of stage 2 revised for
+stage 3, `docs/specs/core/keys.md`, `store.md`, `project.md` and
+`docs/specs/worker/protocol.md`, and on `docs/specs/charts/histogram.md`,
+written beside it. The words key, load, pass, check numbers and the
+filters are those of `docs/specs/analyses/individualChecks.md`.
+
+## The module
+
+### What it does
+
+It gives, over **every variant and every individual of the file**, before
+any filter, three histograms of 40 bins over 0 to 1, each with its mean:
+
+- **the major allele frequency (MAF)**, the frequency of the commonest
+  allele among the called alleles, which the MAF filter keeps a variant
+  by;
+- **the observed heterozygosity**, the heterozygous genotypes over the
+  called ones, which the filter by heterozygosity keeps a variant by;
+- **the expected heterozygosity, unbiased (Nei's)**, which no filter
+  reads, and which the diversity reports per population, so that the two
+  mean one thing in the application.
+
+All come from one call of popnei's `calcPerVarDistribs` of
+`js/popnei/src/stats.ts`, with no `pops`, which gives one population,
+`pop`, of every individual, and `minNumIndividuals` 0, so that a variant
+with few called genotypes has a value too, where popnei's default of 20
+would leave out exactly the variants the missing data filter is there to
+find (`docs/architecture.md`, section 4). A variant with no called
+genotype at all still has no value, and is in no bin: popnei counted 5 of
+the 6 variants of a VCF whose fifth is `./.` in every individual (node,
+26 September 2026, `js-v0.1.0-dev.2`).
+
+The histograms are over the file as read, and not after the filters, as
+the owner decided on 26 September 2026: the filters of the variants count
+over every individual of the file (`docs/architecture.md`, section 2), so
+each histogram shows the number its filter keeps a variant by, and one
+pass per load gives them, with no threshold moved taking them off.
+
+The expected heterozygosity is the unbiased one, decided here, since the
+diversity shows the unbiased one and a user who compares the two should
+read one statistic. The 40 bins over 0 to 1 are popnei's defaults,
+given explicitly so that a new default of popnei does not change them
+unsaid. One call gives the three with the same bins, `histBinEdges`
+shared, so the MAF of a variant of two alleles, which is at least 0.5,
+fills the right half of its plot alone; a variant of three alleles can be
+below 0.5.
+
+The histogram of the proportion of missing genotypes of each variant,
+which the missing data filter reads, comes with popnei's release that has
+it (`docs/architecture.md`, section 6, "What this asks of popnei", item
+4).
+
+### What goes into its key
+
+`filtersRead` is `{ variants: false, individuals: false }`, and
+`keyInputs(p)` gives `null`. So only a new load, the read options of a
+VCF, the key version and the version of popnei change it; no filter and
+no individuals file does. The key version is 1.
+
+### Why it cannot run
+
+`needs(p)` gives `null`; the reasons of `projectNeeds` are the only ones.
+
+### The request
+
+```ts
+{ analysis: "variantChecks", fileId: p.variants.fileId, filters: [],
+  minNumIndividuals: 0, numBins: 40, range: [0, 1] }
+```
+
+The job carries `filters: []` so that the runner, which puts the job's
+filters on its `Variants` and opens the file again when they differ from
+those it holds (`docs/architecture.md`, section 6), treats it as it
+treats every job. It calls
+
+```js
+calcPerVarDistribs(variants, {
+  stats: ["maf", "obs_het", "unbiased_exp_het"],
+  minNumIndividuals, histKwargs: { range, numBins },
+})
+```
+
+and answers:
+
+```ts
+{
+  analysis: "variantChecks",
+  binEdges: Float64Array,         // 41 edges, from histBinEdges
+  maf: { mean: number; counts: Uint32Array },            // mean[0], histCounts
+  obsHet: { mean: number; counts: Uint32Array },
+  unbiasedExpHet: { mean: number; counts: Uint32Array },
+  passStats: PassStats,           // numVars: the variants of the file
+}
+```
+
+Its `passStats` has no filter, so the store takes from it the number of
+variants of the file (`countsOf`, `docs/architecture.md`, section 4) and
+no counts of the filters. popnei refuses a file with no variant, "the
+pass gave no variant and its source holds none", and a line of a VCF it
+cannot read.
+
+### The warnings
+
+| code | when | the text |
+|---|---|---|
+| `variantsWithoutCalls` | the counts of a histogram sum to fewer than `numVars` | "12 of the 1,200 variants of panel.nei have no called genotype, and are in none of the histograms. The missing data filter removes them." |
+
+Every value is from 0 to 1, inside the range of the bins, so a variant
+missing from the counts is one with no value. The warning reads the
+counts of the MAF, which has a value wherever one allele is called. The
+observed heterozygosity reads whole genotypes: a variant whose only calls
+are `0/.` and `1/.` had a MAF and an expected heterozygosity and no
+observed one (node, 26 September 2026, `js-v0.1.0-dev.2`), a case too
+rare to warn of apart, which the help mentions.
+
+### The check numbers
+
+`checkNumbers(r)` gives `passStats.numVars` and the three means, in the
+order above, `null` for a NaN: four numbers of popnei's, with no
+arithmetic, over the whole file, and so a strong check that a reopened
+project was given the same file. `numCheckNumbers(p)` gives 4.
+
+### Its lines of the Python script
+
+```python
+# The histograms of the variants, over every variant and individual of the file
+variants_as_read = popnei.open_vars("panel.nei")
+variant_distribs = popnei.calc_per_var_distribs(
+    variants_as_read,
+    stats=[popnei.PerVarStat.MAF, popnei.PerVarStat.OBS_HET, popnei.PerVarStat.UNBIASED_EXP_HET],
+    min_num_individuals=0,
+    hist_kwargs={"range": (0, 1), "num_bins": 40},
+)
+```
+
+The file is opened again with no filter, as `script.ts` of stage 6 opens
+it, `popnei.open_vcf` with the read options for a VCF; a `Variants` takes
+no filter off.
+
+### The TypeScript interface
+
+```ts
+export interface VariantChecksJob {
+  readonly analysis: "variantChecks";
+  readonly fileId: string;
+  readonly filters: readonly [];
+  readonly minNumIndividuals: number;
+  readonly numBins: number;
+  readonly range: readonly [number, number];
+}
+
+export interface VariantDistrib { readonly mean: number; readonly counts: Uint32Array }
+
+export interface VariantChecksResult {
+  readonly analysis: "variantChecks";
+  readonly binEdges: Float64Array;
+  readonly maf: VariantDistrib;
+  readonly obsHet: VariantDistrib;
+  readonly unbiasedExpHet: VariantDistrib;
+  readonly passStats: PassStats;
+}
+
+export const variantChecks: AnalysisDef<Job, JobResult>;
+// id "variantChecks"; app ["popgen", "gwas"]; keyVersion 1;
+// filtersRead { variants: false, individuals: false }; defaults {}
+
+/** The words of a refusal of popnei, for the error state of the panel. */
+export function refusalText(message: string, p: Project): string;
+```
+
+`parseOptions` gives back `{}` for `{}` and refuses anything else, as
+that of `individualChecks`.
+
+### The cases
+
+- **A filter moved.** Nothing: the key does not hold the filters.
+- **A VCF read again with another ploidy.** A new key, a new pass.
+- **A variant of three alleles** is in the MAF histogram below 0.5; a
+  variant with one allele called in the whole file has a MAF of 1.
+
+### How it runs
+
+One pass. The result is 41 edges and 120 counts, about 1 KB, whatever
+the size of the file.
+
+### How it is verified
+
+With Vitest: the key does not change with any filter, and changes with a
+new load; `run` sends the job above; `warnings` of a result whose MAF
+counts sum to 5 of `numVars` 6 gives `variantsWithoutCalls` with "1 of
+the 6 variants"; `checkNumbers` of the result below gives its four
+numbers.
+
+The numbers of the runner's test and of the flow, on `e2e/fixtures/panel.nei`
+and on `panel.vcf.gz`, which give the same, got in node on 26 September
+2026 with `js-v0.1.0-dev.2` by the call above: `numVars` 1,200; the means
+0.7163445463101891 for the MAF, 0.35429523451520484 for the observed
+heterozygosity and 0.3754712450806149 for the expected; the MAF counts
+twenty zeros and then `69, 75, 62, 71, 60, 74, 72, 83, 70, 68, 64, 83,
+64, 63, 67, 57, 48, 25, 22, 3`, summing to 1,200, so no warning; the
+observed heterozygosity `0, 4, 9, 18, 20, 25, 30, 34, 50, 61, 53, 69, 62,
+84, 89, 101, 113, 102, 108, 58, 62, 27, 14, 5, 2` and fifteen zeros. The
+check numbers are `[1200, 0.7163445463101891, 0.35429523451520484,
+0.3754712450806149]`. The flow reads the mean of the MAF on the screen to
+four decimals, 0.7163, and sees it stay when the missing data filter
+changes.
+
+## The panel
+
+Its part of the Variants step (`docs/specs/steps/variants.md`), headed
+"Histograms of the variants".
+
+### What it shows
+
+A button, "Calculate the histograms of the variants", and, once they are
+calculated, the three histograms of `docs/specs/charts/histogram.md`,
+each titled with its statistic and its mean, "Major allele frequency,
+mean 0.7163", and a caption for the three: "Over the 1,200 variants of
+panel.nei, before any filter." The threshold of the MAF filter and of the
+filter by heterozygosity is marked on its histogram when the filter is
+on. Each plot downloads as SVG and PNG, the export of the histogram.
+
+### The states
+
+| state | what the user sees | what they can do |
+|---|---|---|
+| empty | cannot happen: locked until the file is read | |
+| locked | the reason of `projectNeeds` | load a file |
+| ready | the button | Calculate |
+| running | the bar and the clock, as the diversity's | Stop |
+| done | the three histograms, the warning above them | download |
+| results removed | only a new load, or its undo, removes them: "The histograms of the variants were removed because a new variants file was loaded. …", in the words of the diversity's table | Calculate; Undo or Redo |
+| error | the words of the diversity's error table, "the diversity" replaced by "the histograms of the variants" | as in the diversity |
+
+### Its words
+
+The warning and the words of the states are above. The help, for the
+drawer of stage 8: what each statistic is; that the histograms are over
+the file as read, so that each shows what its filter reads; that a
+variant is counted with any number of called genotypes, and one called
+only in half genotypes, `0/.`, has no observed heterozygosity; and
+`popnei.calc_per_var_distribs(variants, min_num_individuals=0)` in
+Python.
+
+### Accessibility
+
+Each histogram has the text alternative of the plot, and its threshold is
+said in words beside it, "Threshold of the MAF filter: 0.95", not by the
+line alone (WCAG 2.2, 1.4.1).
+
+### Left for the running application
+
+Whether the three are side by side or stacked, and whether the empty
+left half of the MAF is drawn.
+
+## What this spec relies on in the specs written beside it
+
+- `docs/specs/worker/protocol.md` and `runner.md`: the job and the result
+  above, `PassStats`, and a job with `filters: []` opening the file again
+  when the `Variants` holds filters.
+- `docs/specs/charts/histogram.md`: bins given as edges and counts, a
+  threshold marked, the export.
+- `docs/specs/core/store.md`: `countsOf` taking the number of variants of
+  the file from this result, and no counts of the filters.
+
+## Open points
+
+None.
+
+## Not in this spec
+
+The histogram of the proportion of missing genotypes of each variant,
+and the density of variants along each chromosome, with popnei's release
+that has them.
