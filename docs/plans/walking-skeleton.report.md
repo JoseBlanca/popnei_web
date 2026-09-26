@@ -1321,3 +1321,60 @@ the copied list. The provisional words of Q and Open 2 to 6, and the
 three points listed for 9.6 under "The rounds of 25 September", which
 had no recommendation, stay as they are. They go in task 9.7, added to
 the plan, since some reach the core and the worker.
+
+### Task 9.7, the owner's decisions of 26 September
+
+Done from ae1cc38 to 59acaaa, each spec changed in its own commit
+before the code, each test failing before its code. The twelve points
+take the recommended words, with two places the recommendations named
+that stage 2 lacks: the line on the iPad went into the Save dialog, "The
+page cannot always ask you before it is closed, and on an iPad or an
+iPhone it never can: save the project before you leave."; "F6 (fn+F6 on
+a Mac)" is in the shell spec only, since no screen names F6. A result
+that ends after a Save now counts as a change, in
+`docs/functionality.md` too. The disabled text of a button has its own
+colour: 3.39 to 1 from the enabled text in light, 3.26 in dark, where it
+was 2.54 and 1.93, and 4.98 and 4.53 against the button. The copied list
+of populations gives the visible lines alone, in Chromium and WebKit.
+
+The words of a VCF of another ploidy were changed from the owner's by
+the review, since as first merged they sent the user of a VCF with the
+X of males haploid from ploidy 2 to 1 and back: "…and the file was read
+with ploidy 2. If every genotype of the file has 4 alleles, set the
+ploidy of the VCF to 4 in the Variants step and read the file again. A
+file that mixes ploidies, such as one with the X of males haploid among
+diploid autosomes, cannot be read in this version."
+
+The review of the round, by accessibility, react and ux, and the words
+by the first-reader, found and had fixed: the error bar saying at once
+that the project could not be saved and that it was handed to the
+browser, when saves of the header and of the bar alternated; the alert
+read out again after a save failed; "Give the file a name." never heard
+by a keyboard user, since only the skipped Save carried it; the list of
+populations named by a label that some screen readers skip. On 59acaaa:
+`npm test` 1,445 passed; `npx playwright test --project=chromium
+--project=webkit` 346 passed, `e2e/saving.spec.ts` three runs of 62;
+`npm run screens` 146 passed. Seen in Chromium and WebKit through
+Playwright; no screen reader.
+
+Stops 7.5, 8.4 and 9.6 are accepted: rounds of 25 September (four) and
+of 26 September (one, task 9.7). Last screenshots in `screens/` of the
+worktree.
+
+For the owner, with the report at the end, each with a recommendation:
+
+1. The question before an opening: "It replaces the project on the
+   page… To keep it, answer Keep the current project and save it first."
+   Two readers took the first "it" for the file and "answer" as odd.
+   Recommended: "To keep the project on the page, press Keep the current
+   project and save it first."
+2. Under the diversity's table, "Load panel.vcf.gz to compare them." on
+   the Analyses step. Recommended: "Load panel.vcf.gz in the Variants
+   step to compare them."
+3. After a save failed, the bar still offers Save the project, and
+   "report them" says not where. Recommended: the button reads "Try to
+   save again", and the site's page of issues is linked once the site
+   has one (stage 3).
+4. The help under the ploidy says "set the right ploidy here and read
+   the file again", which a file of mixed ploidies has not. Recommended:
+   leave it, since the refusal now says so.

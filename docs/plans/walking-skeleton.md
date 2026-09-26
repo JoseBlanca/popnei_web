@@ -579,7 +579,7 @@ the top. It is the first time the calculation worker runs in a browser.
 - [x] 7.4 The Variants step, `src/ui/steps/variants/`, from its spec
   whole but "A project file opened", which is task 9.4; its states in
   `e2e/screens.spec.ts`. Serves 3 and 5. Needs 7.2 and 7.3.
-- [ ] 7.5 The owner accepts the Variants step, with its screenshots and
+- [x] 7.5 The owner accepts the Variants step, with its screenshots and
   the running application, in Firefox by hand as well; two rounds
   expected, each a task with its commit and its screenshots taken again.
 
@@ -690,7 +690,7 @@ CSV.
   middle, 4,096 zero bytes added, each through `cat … >` so that the
   file keeps its path, and run at 0.05 and at 1 after each. Serves 3,
   4 and 6. Needs 8.2.
-- [ ] 8.4 The owner accepts the Individuals step and the diversity panel,
+- [x] 8.4 The owner accepts the Individuals step and the diversity panel,
   in Firefox by hand as well; two rounds expected.
 
 **What could go wrong:** Playwright may give a local browser the file in
@@ -775,9 +775,9 @@ same numbers.
   the comparison under the diversity's table. Serves 2, 3 and 5. Needs
   9.2 and work package 6.
 - [x] 9.5 `e2e/skeleton.spec.ts`. Serves 4. Needs 9.3 and 9.4.
-- [ ] 9.6 The owner accepts the shell, in Firefox by hand as well; two
+- [x] 9.6 The owner accepts the shell, in Firefox by hand as well; two
   rounds expected.
-- [ ] 9.7 The owner's decisions of 26 September at stop 9.6: the twelve
+- [x] 9.7 The owner's decisions of 26 September at stop 9.6: the twelve
   points of the review of work package 9 as recommended in the report,
   the list of populations copied without its hidden words, and the words
   of a VCF that mixes ploidies; the specs first, then the code, in core,
