@@ -379,6 +379,18 @@ function byRunId(runs: readonly RunView[]): ReadonlyMap<number, RunView> {
   return new Map(runs.map((run) => [run.runId, run]));
 }
 
+/** The requests of `runs` of an analysis, without those of the writing
+    of the filtered variants, whose words are not these (shell.md, "The
+    status region"). */
+function ofAnalyses(
+  runs: readonly RunView[],
+): readonly (RunView & { readonly analysis: AnalysisId })[] {
+  return runs.filter(
+    (run): run is RunView & { readonly analysis: AnalysisId } =>
+      run.analysis !== null,
+  );
+}
+
 /** "Diversity: calculating." for each request that is new, and, in the
     same change, the calculations left behind that went to being stopped,
     added to the last. */
@@ -388,11 +400,11 @@ function startedAnnouncements<R>(
   title: (id: AnalysisId) => string,
 ): readonly string[] {
   const was = byRunId(before.runs);
-  const started = after.runs
+  const started = ofAnalyses(after.runs)
     .filter((run) => !was.has(run.runId))
     .map((run) => `${title(run.analysis)}: calculating.`);
   const now = byRunId(after.runs);
-  const stopped = before.runs.filter(
+  const stopped = ofAnalyses(before.runs).filter(
     (run) =>
       !run.current && !run.stopping && now.get(run.runId)?.stopping === true,
   );
@@ -418,7 +430,7 @@ function endedAnnouncements<R>(
 ): readonly string[] {
   const now = byRunId(after.runs);
   const announcements: string[] = [];
-  for (const run of before.runs) {
+  for (const run of ofAnalyses(before.runs)) {
     if (!run.current || now.has(run.runId)) continue;
     const name = title(run.analysis);
     if (run.stopping) {

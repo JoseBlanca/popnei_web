@@ -268,6 +268,7 @@ function state(
     runs: [],
     notice: null,
     individualsKept: null,
+    write: null,
     ...rest,
   });
 }
@@ -278,6 +279,9 @@ function notice(parts: Partial<Notice>): Notice {
     removed: [],
     leftBehind: [],
     stopped: [],
+    writeLeftBehind: false,
+    writeStopped: false,
+    writeDiscarded: false,
     ...parts,
   };
 }

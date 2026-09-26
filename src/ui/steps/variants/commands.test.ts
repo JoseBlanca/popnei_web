@@ -29,6 +29,7 @@ function realStore(): Store<JobResult> {
     countsOf,
     counts: null,
     statistics: null,
+    write: null,
     appVersion: "0.1.0",
     cacheMaxBytes: 1024 * 1024,
     maxUndoSteps: 200,

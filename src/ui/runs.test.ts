@@ -10,12 +10,21 @@ import {
   FAKE_STATISTICS,
   fakeAnalyses,
   fakeSend,
+  fakeWriteCountsOf,
   fiveIndividualsProject,
   fiveStats,
+  writeTestCountsOf,
+  writtenFile,
 } from "../core/testSupport.ts";
 import type { SentRequest, TestResult } from "../core/testSupport.ts";
-import type { Job, JobResult, Outcome, Run } from "../worker/protocol.ts";
-import { startAnalysis, startedAt } from "./runs.ts";
+import type {
+  Job,
+  JobResult,
+  Outcome,
+  Run,
+  Written,
+} from "../worker/protocol.ts";
+import { startAnalysis, startWriting, startedAt } from "./runs.ts";
 
 /** A project whose diversity is ready: a `.nei` file read with four
     individuals, and a CSV that puts them in two populations. */
@@ -66,7 +75,7 @@ const READY: Project = {
 function setUp(project: Project | null): {
   readonly store: Store<JobResult>;
   readonly ends: ((outcome: Outcome<JobResult>) => void)[];
-  readonly ended: [number, Outcome<JobResult>][];
+  readonly ended: [number, Outcome<JobResult | Written<never>>][];
 } {
   const ends: ((outcome: Outcome<JobResult>) => void)[] = [];
   let lastId = 40;
@@ -83,6 +92,7 @@ function setUp(project: Project | null): {
     countsOf,
     counts: null,
     statistics: null,
+    write: null,
     appVersion: "0.1.0",
     cacheMaxBytes: CACHE_MAX_BYTES,
     maxUndoSteps: MAX_UNDO_STEPS,
@@ -91,7 +101,7 @@ function setUp(project: Project | null): {
   if (project !== null) {
     real.open(project);
   }
-  const ended: [number, Outcome<JobResult>][] = [];
+  const ended: [number, Outcome<JobResult | Written<never>>][] = [];
   const store: Store<JobResult> = {
     ...real,
     runEnded: (runId, outcome) => {
@@ -177,6 +187,7 @@ function setUpWithThreshold(): {
     countsOf: () => ({ numVarsRead: null, counts: null }),
     counts: null,
     statistics: FAKE_STATISTICS,
+    write: null,
     appVersion: "0.1.0",
     cacheMaxBytes: CACHE_MAX_BYTES,
     maxUndoSteps: MAX_UNDO_STEPS,
@@ -278,5 +289,64 @@ describe("VS3 D4 startAnalysis of stage 3", () => {
     await started;
 
     expect(startedAt(own.run.id)).toBeNull();
+  });
+});
+
+describe("VS3 D6 startWriting", () => {
+  test("a write that waits for the statistics gives their handle; their outcome gives the write's own handle, awaited and given to runEnded too, and the promise settles after it; null when the store starts none", async () => {
+    const { analyses, stats, counts } = fakeAnalyses();
+    const { send, sent, writeSend, writes } = fakeSend();
+    const real = createStore({
+      first: firstProject("popgen"),
+      analyses: [...analyses, stats, counts],
+      send,
+      countsOf: writeTestCountsOf,
+      counts: "counts",
+      statistics: FAKE_STATISTICS,
+      write: { send: writeSend, countsOf: fakeWriteCountsOf },
+      appVersion: "0.1.0",
+      cacheMaxBytes: CACHE_MAX_BYTES,
+      maxUndoSteps: MAX_UNDO_STEPS,
+    });
+    real.popneiReady("0.1.0");
+    real.open(
+      fiveIndividualsProject([
+        { kind: "missing_data", maxAllowedMissingRate: 0.2 },
+      ]),
+    );
+    const ended: number[] = [];
+    const store: Store<TestResult, string> = {
+      ...real,
+      runEnded: (runId, outcome) => {
+        ended.push(runId);
+        return real.runEnded(runId, outcome);
+      },
+    };
+
+    const started = startWriting(store, "nei");
+    expect(sent).toHaveLength(1);
+    const statsRequest = sentAt(sent, 0);
+    expect(statsRequest.job.analysis).toBe("stats");
+    statsRequest.end({
+      kind: "done",
+      key: statsRequest.key,
+      result: fiveStats(),
+    });
+
+    expect(await settled(started)).toBe(false);
+    expect(ended).toStrictEqual([statsRequest.run.id]);
+    const write = writes[0];
+    expect(write?.job.individuals).toStrictEqual(["a", "b", "d"]);
+    expect(startedAt(write?.run.id ?? 0)).not.toBeNull();
+    expect(startWriting(store, "nei")).toBeNull();
+    write?.end({
+      kind: "done",
+      key: write.key,
+      result: writtenFile(1150, 1200),
+    });
+    await started;
+
+    expect(ended).toStrictEqual([statsRequest.run.id, write?.run.id]);
+    expect(store.getState().write?.kind).toBe("done");
   });
 });

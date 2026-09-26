@@ -50,9 +50,12 @@ import type {
   Outcome,
   Progress,
   Run,
+  PassStats,
   RunError,
   VariantFilter,
   VariantFilterKind,
+  WriteJob,
+  Written,
 } from "../worker/protocol.ts";
 
 /**
@@ -1051,7 +1054,23 @@ export interface SentRequest {
   readonly cancels: () => number;
 }
 
-/** A fake `send`, and the requests it was given, in order. */
+/** A write the fake `write.send` was given, which the test ends by
+    hand; its file is a text. */
+export interface SentWrite {
+  readonly run: Run<Written<string>>;
+  readonly key: string;
+  readonly job: WriteJob;
+  /** Passes a progress to the store, as the worker client would. */
+  readonly progress: (p: Progress) => void;
+  /** Resolves the write's outcome. */
+  readonly end: (outcome: Outcome<Written<string>>) => void;
+  /** How many times its `cancel()` was called. */
+  readonly cancels: () => number;
+}
+
+/** A fake `send`, and the requests it was given, in order; and a fake
+    `write.send` whose file is a text, with the writes it was given. The
+    two count their ids together, as the worker client does. */
 export function fakeSend(): {
   readonly send: (
     key: string,
@@ -1059,11 +1078,20 @@ export function fakeSend(): {
     onProgress: (p: Progress) => void,
   ) => Run<TestResult>;
   readonly sent: SentRequest[];
-  /** What was sent and cancelled, in order: "send 2", "cancel 1". */
+  /** What was sent and cancelled, in order: "send 2", "cancel 1",
+      "write 3". */
   readonly log: string[];
+  readonly writeSend: (
+    key: string,
+    job: WriteJob,
+    onProgress: (p: Progress) => void,
+  ) => Run<Written<string>>;
+  readonly writes: SentWrite[];
 } {
   const sent: SentRequest[] = [];
+  const writes: SentWrite[] = [];
   const log: string[] = [];
+  let lastId = 0;
   const send = (
     key: string,
     job: TestJob,
@@ -1074,7 +1102,8 @@ export function fakeSend(): {
       end = resolve;
     });
     let cancels = 0;
-    const id = sent.length + 1;
+    lastId += 1;
+    const id = lastId;
     log.push(`send ${String(id)}`);
     const run: Run<TestResult> = {
       id,
@@ -1094,7 +1123,80 @@ export function fakeSend(): {
     });
     return run;
   };
-  return { send, sent, log };
+  const writeSend = (
+    key: string,
+    job: WriteJob,
+    onProgress: (p: Progress) => void,
+  ): Run<Written<string>> => {
+    let end: (outcome: Outcome<Written<string>>) => void = () => undefined;
+    const outcome = new Promise<Outcome<Written<string>>>((resolve) => {
+      end = resolve;
+    });
+    let cancels = 0;
+    lastId += 1;
+    const id = lastId;
+    log.push(`write ${String(id)}`);
+    const run: Run<Written<string>> = {
+      id,
+      outcome,
+      cancel: () => {
+        cancels += 1;
+        log.push(`cancel ${String(id)}`);
+      },
+    };
+    writes.push({
+      run,
+      key,
+      job,
+      progress: onProgress,
+      end,
+      cancels: () => cancels,
+    });
+    return run;
+  };
+  return { send, sent, log, writeSend, writes };
+}
+
+/** A file written by the fake `write.send`, a text, of `numVars`
+    variants kept of `numVarsRead` by the missing data filter, 100 bytes a
+    variant. */
+export function writtenFile(
+  numVars: number,
+  numVarsRead: number,
+): Written<string> {
+  const passStats: PassStats = {
+    numVars,
+    filtering: {
+      missing_data: { varsProcessed: numVarsRead, varsKept: numVars },
+    },
+  };
+  return {
+    format: "nei",
+    file: `the .nei file of ${String(numVars)} variants`,
+    numBytes: 100 * numVars + 20,
+    passStats,
+  };
+}
+
+/** The result of the fake counts made of the counts of the pass of a
+    written file, the store's `write.countsOf` in the tests: the variants
+    kept, and what the first filter was given, which `writeTestCountsOf`
+    gives back as the variants of the file. */
+export function fakeWriteCountsOf(pass: PassStats): CountsResult {
+  const first = Object.values(pass.filtering)[0];
+  return {
+    kind: "counts",
+    numVars: pass.numVars,
+    kept: Uint32Array.of(first?.varsProcessed ?? pass.numVars),
+  };
+}
+
+/** `fakeCountsOf`, but for a result of the fake counts made of a written
+    file, whose variants of the file are the first number it kept. */
+export function writeTestCountsOf(r: TestResult): PassFound<TestResult> {
+  return r.kind === "counts"
+    ? { numVarsRead: r.kept[0] ?? null, counts: r }
+    : fakeCountsOf(r);
 }
 
 /** How many times the fake analyses were asked for their keys and their

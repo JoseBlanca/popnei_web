@@ -1,8 +1,9 @@
 /**
  * The store, the one object of core that changes: it holds the history of
- * the projects, the cache of the results, the version of popnei and the
- * calculations in flight, and gives the screens the state of each
- * analysis (docs/specs/core/store.md). The screens change it with
+ * the projects, the cache of the results, the version of popnei, the
+ * calculations in flight and the file of the filtered variants written
+ * until it is saved, and gives the screens the state of each analysis and
+ * of the writing (docs/specs/core/store.md). The screens change it with
  * commands, and `src/ui/runs.ts` and the entry of the page with the
  * events of the workers; it never waits.
  */
@@ -17,8 +18,9 @@ import {
   keyFromWire,
   keyOf,
   settingsFingerprint,
+  writeKeyOf,
 } from "./keys.ts";
-import type { JsonObject, JsonValue, Key } from "./keys.ts";
+import type { JsonObject, JsonValue, Key, WriteFormat } from "./keys.ts";
 import { individualsKept, keptNoneReason } from "./individualsKept.ts";
 import type { IndividualStats, IndividualsKept } from "./individualsKept.ts";
 import {
@@ -44,9 +46,12 @@ import { messageOf } from "./thrown.ts";
 import type {
   CsvOptions,
   Outcome,
+  PassStats,
   Progress,
   Run,
   RunError,
+  WriteJob,
+  Written,
 } from "../worker/protocol.ts";
 
 /**
@@ -131,9 +136,10 @@ export interface Warning {
  * The state the screens read. It is the same object until something
  * changes, and the state of an analysis that did not change is the same
  * object after a change to another, so that a screen that reads it is not
- * drawn again.
+ * drawn again. `F` is the type of a written file, a `Blob` on the page,
+ * which core holds and never reads.
  */
-export interface AppState<R> {
+export interface AppState<R, F = never> {
   /** The current project. */
   readonly project: Project;
   /** The description of what an undo would undo, "the MAF filter
@@ -154,6 +160,9 @@ export interface AppState<R> {
       individuals was given and kept; `null` when `projectNeeds` or
       `individualListNeeds` gives a reason. */
   readonly individualsKept: IndividualsKept | null;
+  /** The writing of the filtered variants as a `.nei` file; `null` when
+      the store was made with no `write`. */
+  readonly write: WriteStatus<F> | null;
 }
 
 /** One analysis and its state. */
@@ -211,6 +220,54 @@ export type AnalysisStatus<R> =
   /** None of the above: it can run. */
   | { readonly kind: "ready"; readonly key: Key };
 
+/** The writing of the filtered variants, the first of these whose
+    condition holds (the store spec, "The writing of the filtered
+    variants"). */
+export type WriteStatus<F> =
+  /** It cannot run: `projectNeeds` or `individualListNeeds` gave
+      `reason`, or the filters keep no individual, `keptNoneReason`. */
+  | { readonly kind: "locked"; readonly reason: string }
+  /** A write of its key ended with at least one variant while the project
+      gave that key, and the file has not been handed to the browser. */
+  | { readonly kind: "done"; readonly key: Key; readonly written: Written<F> }
+  /** The file of `done` was handed to the browser to save; the store no
+      longer holds it. */
+  | {
+      readonly kind: "saved";
+      readonly key: Key;
+      readonly written: Omit<Written<F>, "file">;
+    }
+  /** A write of its key ended with no variant, and no file is kept, since
+      nobody can save it. */
+  | {
+      readonly kind: "noVariant";
+      readonly key: Key;
+      readonly written: Omit<Written<F>, "file">;
+    }
+  /** A write of its key is in flight and is not being stopped, or it
+      waits for the statistics of each individual, `waitsForStatistics`,
+      and `runId` and `progress` are then those of their request. */
+  | {
+      readonly kind: "running";
+      readonly key: Key;
+      readonly runId: number;
+      readonly progress: Progress | null;
+      readonly waitsForStatistics: boolean;
+    }
+  /** popnei refused the write of its key, or it failed since the last
+      change; or, `ofStatistics`, the statistics it would wait for were
+      refused, or failed since the last change. */
+  | {
+      readonly kind: "error";
+      readonly key: Key;
+      readonly error: AnalysisError;
+      readonly ofStatistics: boolean;
+    }
+  /** None of the above: it can be written; `dropped` when the last write
+      before ended after a change of its filters and its file was not
+      kept, until the next change of the project. */
+  | { readonly kind: "ready"; readonly key: Key; readonly dropped: boolean };
+
 /** Why the calculation of an analysis gave no result. */
 export type AnalysisError =
   /** popnei refused it, with its message; kept for the session. */
@@ -226,8 +283,8 @@ export type AnalysisError =
 export interface RunView {
   /** The id of its request. */
   readonly runId: number;
-  /** The analysis it calculates. */
-  readonly analysis: AnalysisId;
+  /** The analysis it calculates; `null` for the writing of a file. */
+  readonly analysis: AnalysisId | null;
   /** The key it was asked under. */
   readonly key: Key;
   /** Whether the current project still gives its key. */
@@ -274,10 +331,20 @@ export interface Notice {
       changed the load of the variants file; it does not change until the
       notice is closed or replaced. */
   readonly stopped: readonly AnalysisId[];
+  /** The writing of the file will be stopped unless the change is
+      undone. */
+  readonly writeLeftBehind: boolean;
+  /** The writing of the file was stopped at once by a change of the load
+      of the variants file; kept and cleared as `stopped` is. */
+  readonly writeStopped: boolean;
+  /** A file written and not saved was forgotten by the change, and no
+      undo brings it back; kept and cleared as `removed` is. */
+  readonly writeDiscarded: boolean;
 }
 
-/** What the entry of the page makes the store with. */
-export interface StoreConfig<J, R> {
+/** What the entry of the page makes the store with. `F` is the type of a
+    written file, a `Blob` on the page. */
+export interface StoreConfig<J, R, F = never> {
   /** The first project of the page. */
   readonly first: Project;
   /** The definitions of the analyses of the application, in the order
@@ -306,6 +373,21 @@ export interface StoreConfig<J, R> {
     readonly analysis: AnalysisId;
     of(r: R): IndividualStats;
   } | null;
+  /** How a file of the filtered variants is written; `null` when the
+      application writes none. */
+  readonly write: {
+    /** The function of the worker client that sends a write under a key,
+        `Client.write`. */
+    readonly send: (
+      key: string,
+      job: WriteJob,
+      onProgress: (p: Progress) => void,
+    ) => Run<Written<F>>;
+    /** The result of the analysis `counts` made of the counts of the pass
+        of a written file, which always had the filters of the variants of
+        its project. */
+    readonly countsOf: (pass: PassStats) => R;
+  } | null;
   /** The version of the application. */
   readonly appVersion: string;
   /** The bound of the cache in bytes, `CACHE_MAX_BYTES`. */
@@ -327,9 +409,9 @@ export interface PassFound<R> {
 }
 
 /** The store of one page. */
-export interface Store<R> {
+export interface Store<R, F = never> {
   /** The current state, the same object until something changes. */
-  getState(): AppState<R>;
+  getState(): AppState<R, F>;
   /** Calls `listener`, a function of a screen, after every change;
       returns the function that stops it. A property made once, so React
       keeps it. */
@@ -358,10 +440,24 @@ export interface Store<R> {
       the analysis's request, or that of the statistics of each
       individual it waits for, or none when it waits for statistics
       already in flight. */
-  startRun(id: AnalysisId): readonly Run<R>[] | null;
+  startRun(id: AnalysisId): readonly Run<R | Written<F>>[] | null;
   /** Stops the calculation in flight of an analysis, or its wait for the
       statistics, if there is one. */
   cancelRun(id: AnalysisId): void;
+  /** Starts the writing of the filtered variants in `format`, in the
+      states and with the handles of `startRun`: in `ready` or `saved`, or
+      in `error` after a failure that is not popnei's nor a variants file
+      that could not be read again, of the write or of the statistics it
+      waited for; null, and nothing done, in any other state, and in all
+      of them when the store was made with no `write`. */
+  startWrite(format: WriteFormat): readonly Run<R | Written<F>>[] | null;
+  /** Stops the writing in flight of the key the project gives, or its
+      wait for the statistics, if there is one. */
+  cancelWrite(): void;
+  /** The page has handed the file of `write`, `done`, to the browser to
+      save: the store forgets the file, and `write` is `saved`. A defect
+      in any other state. */
+  writeSaved(): void;
 
   /** The calculation worker has started, with popnei of `version`. */
   popneiReady(version: string): void;
@@ -380,7 +476,10 @@ export interface Store<R> {
   /** How the request `runId` ended. Gives the handles it sent because of
       this end: the requests of the Runs that waited for these
       statistics. */
-  runEnded(runId: number, outcome: Outcome<R>): readonly Run<R>[];
+  runEnded(
+    runId: number,
+    outcome: Outcome<R | Written<F>>,
+  ): readonly Run<R | Written<F>>[];
 }
 
 /** What the cache keeps under a key: a result with the warnings it
@@ -410,31 +509,54 @@ interface NoticeKept {
   readonly cause: Notice["cause"];
   /** The analyses removed, in the order of the definitions. */
   readonly removed: readonly AnalysisId[];
-  /** The ids of the requests it left behind. */
+  /** The ids of the requests it left behind, of the analyses and of the
+      writing. */
   readonly runs: ReadonlySet<number>;
   /** The ids of the Runs waiting for the statistics that it left
-      behind. */
+      behind, of the analyses and of the writing. */
   readonly waits: ReadonlySet<number>;
   /** The analyses whose calculations it stopped at once, in the order of
       the definitions. */
   readonly stopped: readonly AnalysisId[];
+  /** Whether it stopped the writing at once. */
+  readonly writeStopped: boolean;
+  /** Whether it forgot a file written and not saved. */
+  readonly writeDiscarded: boolean;
 }
 
-/** The keys of the analyses, and the project and version they were made
-    for. */
+/** The writing of the filtered variants that cannot run, with its
+    reason, or its key; `null` when the store has no `write`. */
+type WriteKey =
+  | { readonly kind: "locked"; readonly reason: string }
+  | { readonly kind: "keyed"; readonly key: Key }
+  | null;
+
+/** The keys of the analyses and of the writing, and the project and
+    version they were made for. */
 interface Keyed {
   readonly project: Project;
   readonly popneiVersion: string | null;
   readonly keys: readonly AnalysisKey[];
+  readonly write: WriteKey;
 }
 
-/** A request in flight, as the store keeps it. */
-interface InFlight<J, R> {
+/** What a request or a Run that waits is for: an analysis, by its
+    definition and its place in the list, or the writing of a file. */
+type Target<J, R> =
+  | {
+      readonly kind: "analysis";
+      readonly def: AnalysisDef<J, R>;
+      readonly index: number;
+    }
+  | { readonly kind: "write"; readonly format: WriteFormat };
+
+/** A request in flight, as the store keeps it: of an analysis, whose
+    outcome is a result, or of the writing, whose outcome is a file. */
+interface InFlight<J, R, F> {
   /** The id of the request. */
   readonly runId: number;
-  /** The definition whose `run` made it, and its place in the list. */
-  readonly def: AnalysisDef<J, R>;
-  readonly index: number;
+  /** What it is for. */
+  readonly target: Target<J, R>;
   /** The key it was sent under. */
   readonly key: Key;
   /** The project it was made from, which its warnings are made from. */
@@ -446,7 +568,7 @@ interface InFlight<J, R> {
       counts of its pass is made with too. */
   readonly popneiVersion: string;
   /** Its handle, to stop it. */
-  readonly handle: Run<R>;
+  readonly handle: Run<R> | Run<Written<F>>;
   readonly progress: Progress | null;
   readonly stopping: boolean;
   readonly afterStop: boolean;
@@ -456,20 +578,35 @@ interface InFlight<J, R> {
   readonly byOwnRun: boolean;
 }
 
-/** A Run of an analysis that reads the filters of individuals, waiting
-    for the statistics of each individual before it sends its request. */
+/** A Run of an analysis that reads the filters of individuals, or of the
+    writing, waiting for the statistics of each individual before it
+    sends its request. */
 interface Waiting<J, R> {
   /** The id of the wait, of its own count, not that of a request. */
   readonly waitId: number;
-  /** The definition of the analysis, and its place in the list. */
-  readonly def: AnalysisDef<J, R>;
-  readonly index: number;
-  /** The key of the analysis when it was asked to run. */
+  /** The analysis, or the writing, that waits. */
+  readonly target: Target<J, R>;
+  /** The key of the analysis, or of the writing, when it was asked to
+      run. */
   readonly key: Key;
   /** The request of the statistics it waits for, and its key. */
   readonly statsRunId: number;
   readonly statsKey: Key;
 }
+
+/** The last write that ended done under the key the project gives the
+    writing, and what is kept of it: the file until it is saved, or
+    nothing of the file after the save or when it holds no variant. No
+    change has given the writing another key since. */
+type WrittenKept<F> = Extract<
+  WriteStatus<F>,
+  { readonly kind: "done" | "saved" | "noVariant" }
+>;
+
+/** The format of the file whose state `write` of the state gives: the one
+    format of stage 3, which `WriteFormat` is. The VCF comes with a state
+    of its own (the store spec). */
+const STATE_FORMAT: WriteFormat = "nei";
 
 /**
  * The store of a page, made once by its entry, with the first project,
@@ -480,7 +617,9 @@ interface Waiting<J, R> {
  * individuals, or when the bounds are not what `startHistory` and
  * `emptyCache` take.
  */
-export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
+export function createStore<J, R, F = never>(
+  config: StoreConfig<J, R, F>,
+): Store<R, F> {
   const defs = config.analyses;
   const ids = new Set<AnalysisId>();
   for (const def of defs) {
@@ -534,7 +673,7 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
   let keyed: Keyed | null = null;
   const listeners = new Set<() => void>();
   /** The requests in flight by their id, in the order they started. */
-  const requests = new Map<number, InFlight<J, R>>();
+  const requests = new Map<number, InFlight<J, R, F>>();
   /** The Runs waiting for the statistics of each individual, by the id
       of the wait, in the order they started. The request of the
       statistics of each is in flight and not being stopped: a wait ends
@@ -565,20 +704,33 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
     readonly fileId: string;
     readonly error: AnalysisError;
   } | null = null;
+  /** The last write that ended done under the key the project gives the
+      writing, or `null`; forgotten when the project gives another key. */
+  let written: WrittenKept<F> | null = null;
+  /** Whether the last write ended done after a change of its filters and
+      its file was dropped, until the next change of the project. */
+  let dropped = false;
 
   let locks: {
     readonly project: Project;
     readonly reasons: readonly (string | null)[];
+    readonly writeReason: string | null;
   } | null = null;
 
-  /** The reason each analysis cannot run, or `null`, asked again only
-      when the project changed: a check of the lists of individuals walks
-      every individual of the variants file. `projectNeeds` is asked
-      first, `individualListNeeds` second, only of an analysis that reads
-      the filters of individuals, and its `needs` last. */
-  const reasonsOf = (p: Project): readonly (string | null)[] => {
+  /** The reason each analysis, and the writing, cannot run, or `null`,
+      asked again only when the project changed: a check of the lists of
+      individuals walks every individual of the variants file.
+      `projectNeeds` is asked first, `individualListNeeds` second, only of
+      an analysis that reads the filters of individuals and of the
+      writing, and the `needs` of an analysis last. */
+  const reasonsOf = (
+    p: Project,
+  ): {
+    readonly reasons: readonly (string | null)[];
+    readonly writeReason: string | null;
+  } => {
     if (locks?.project === p) {
-      return locks.reasons;
+      return locks;
     }
     const common = projectNeeds(p);
     const listReason =
@@ -589,16 +741,19 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
         (def.filtersRead.individuals ? listReason : null) ??
         def.needs(p),
     );
-    locks = { project: p, reasons };
-    return reasons;
+    locks = { project: p, reasons, writeReason: common ?? listReason };
+    return locks;
   };
 
   const keysOf = (
     p: Project,
     version: string | null,
-  ): readonly AnalysisKey[] => {
-    const reasons = reasonsOf(p);
-    return defs.map((def, index): AnalysisKey => {
+  ): {
+    readonly keys: readonly AnalysisKey[];
+    readonly write: WriteKey;
+  } => {
+    const { reasons, writeReason } = reasonsOf(p);
+    const keys = defs.map((def, index): AnalysisKey => {
       const reason = reasons[index];
       if (reason === undefined) {
         throw defect(
@@ -628,6 +783,22 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
         check,
       };
     });
+    let write: WriteKey = null;
+    if (config.write !== null) {
+      if (writeReason !== null) {
+        write = { kind: "locked", reason: writeReason };
+      } else if (version === null) {
+        throw defect(
+          "the writing can run before the calculation worker gave the version of popnei, which its key needs.",
+        );
+      } else {
+        write = {
+          kind: "keyed",
+          key: writeKeyOf(p, STATE_FORMAT, version, memo),
+        };
+      }
+    }
+    return { keys, write };
   };
 
   /** The keys of `project` under `version`, made again only when one of
@@ -643,18 +814,26 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
     if (keyed?.project === project && keyed.popneiVersion === version) {
       return keyed.keys;
     }
-    const keys = keysOf(project, version);
-    keyed = { project, popneiVersion: version, keys };
+    const made = keysOf(project, version);
+    keyed = { project, popneiVersion: version, ...made };
     cache = use(
       cache,
-      keys.flatMap((k) => (k.kind === "keyed" ? [k.key] : [])),
+      made.keys.flatMap((k) => (k.kind === "keyed" ? [k.key] : [])),
     );
-    return keys;
+    return made.keys;
   };
 
   /** The keys of the current project and version. */
   const currentKeys = (): readonly AnalysisKey[] =>
     keysFor(history.present.project, popneiVersion);
+
+  /** The key the current project gives the writing, or `null` when it is
+      locked or the store has no `write`. */
+  const currentWriteKey = (): Key | null => {
+    currentKeys();
+    const write = keyed?.write ?? null;
+    return write?.kind === "keyed" ? write.key : null;
+  };
 
   /** The key the keys `keys` give the statistics of each individual, or
       `null` when the store has no such analysis or it is locked. */
@@ -719,19 +898,108 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
     };
   };
 
+  /** The key the keys `keys` of the current project give `target`, or
+      `null` when they lock it. */
+  const keyGivenTo = (
+    target: Target<J, R>,
+    keys: readonly AnalysisKey[],
+  ): Key | null => {
+    if (target.kind === "write") {
+      return currentWriteKey();
+    }
+    const current = keys[target.index];
+    return current?.kind === "keyed" ? current.key : null;
+  };
+
+  /** The place of the analysis a request or a wait is for, `null` for the
+      writing. */
+  const indexOf = (target: Target<J, R>): number | null =>
+    target.kind === "analysis" ? target.index : null;
+
   /** Whether the project, by its keys `keys`, still gives the Run that
       waits `wait` both its key and the key of the statistics it waits
       for. */
   const waitIsCurrent = (
     wait: Waiting<J, R>,
     keys: readonly AnalysisKey[],
-  ): boolean => {
-    const current = keys[wait.index];
-    return (
-      current?.kind === "keyed" &&
-      current.key === wait.key &&
-      statsKeyIn(keys) === wait.statsKey
-    );
+  ): boolean =>
+    keyGivenTo(wait.target, keys) === wait.key &&
+    statsKeyIn(keys) === wait.statsKey;
+
+  /** The failure the statistics a Run would wait for gave, when the list
+      of the individuals kept, `keptNow`, needs them: it would wait for
+      the same and end the same way. */
+  const statsErrorOf = (
+    keptNow: IndividualsKept | null,
+    keys: readonly AnalysisKey[],
+  ): AnalysisError | undefined => {
+    const statsKey = statsKeyIn(keys);
+    return keptNow?.list.kind === "needsStatistics" && statsKey !== null
+      ? (refusals.get(statsKey) ?? failures.get(statsKey))
+      : undefined;
+  };
+
+  /** The failure kept under `key`: popnei's refusal, a variants file of
+      the current load that could not be read again, or another failure
+      since the last change. */
+  const errorOf = (key: Key): AnalysisError | undefined =>
+    refusals.get(key) ??
+    (unreadable !== null &&
+    unreadable.fileId === history.present.project.variants?.fileId
+      ? unreadable.error
+      : undefined) ??
+    failures.get(key);
+
+  /** The request in flight, not being stopped, of `index`, an analysis's
+      place or `null` for the writing, under `key`. */
+  const inFlightFor = (
+    index: number | null,
+    key: Key,
+  ): InFlight<J, R, F> | null => {
+    let found: InFlight<J, R, F> | null = null;
+    for (const request of requests.values()) {
+      if (
+        indexOf(request.target) === index &&
+        request.key === key &&
+        !request.stopping
+      ) {
+        found = request;
+      }
+    }
+    return found;
+  };
+
+  /** The state `running` of a Run of `index`, an analysis's place or
+      `null` for the writing, that waits for the statistics under `key`,
+      or `null` when none waits. */
+  const waitingFor = (
+    index: number | null,
+    key: Key,
+    keys: readonly AnalysisKey[],
+  ): {
+    readonly kind: "running";
+    readonly key: Key;
+    readonly runId: number;
+    readonly progress: Progress | null;
+    readonly waitsForStatistics: true;
+  } | null => {
+    for (const wait of waits.values()) {
+      const statsRequest = requests.get(wait.statsRunId);
+      if (
+        indexOf(wait.target) === index &&
+        waitIsCurrent(wait, keys) &&
+        statsRequest !== undefined
+      ) {
+        return {
+          kind: "running",
+          key,
+          runId: statsRequest.runId,
+          progress: statsRequest.progress,
+          waitsForStatistics: true,
+        };
+      }
+    }
+    return null;
   };
 
   /** The state of an analysis that can run, under its key `keyed`, with
@@ -758,12 +1026,7 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
         check: verdictOf(def, keyed.check, cached.numbers),
       };
     }
-    let running: InFlight<J, R> | null = null;
-    for (const request of requests.values()) {
-      if (request.def.id === id && request.key === key && !request.stopping) {
-        running = request;
-      }
-    }
+    const running = inFlightFor(index, key);
     if (running !== null) {
       return {
         kind: "running",
@@ -773,40 +1036,16 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
         waitsForStatistics: false,
       };
     }
-    for (const wait of waits.values()) {
-      const statsRequest = requests.get(wait.statsRunId);
-      if (
-        wait.index === index &&
-        waitIsCurrent(wait, keys) &&
-        statsRequest !== undefined
-      ) {
-        return {
-          kind: "running",
-          key,
-          runId: statsRequest.runId,
-          progress: statsRequest.progress,
-          waitsForStatistics: true,
-        };
-      }
+    const waiting = waitingFor(index, key, keys);
+    if (waiting !== null) {
+      return waiting;
     }
-    const error =
-      refusals.get(key) ??
-      (unreadable !== null &&
-      unreadable.fileId === history.present.project.variants?.fileId
-        ? unreadable.error
-        : undefined) ??
-      failures.get(key);
+    const error = errorOf(key);
     if (error !== undefined) {
       return { kind: "error", key, error, ofStatistics: false };
     }
     if (def.filtersRead.individuals) {
-      // The statistics a Run would wait for failed: it would wait for the
-      // same and end the same way.
-      const statsKey = statsKeyIn(keys);
-      const statsError =
-        keptNow?.list.kind === "needsStatistics" && statsKey !== null
-          ? (refusals.get(statsKey) ?? failures.get(statsKey))
-          : undefined;
+      const statsError = statsErrorOf(keptNow, keys);
       if (statsError !== undefined) {
         return { kind: "error", key, error: statsError, ofStatistics: true };
       }
@@ -820,14 +1059,59 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       : { kind: "ready", key };
   };
 
+  /** The state of the writing, from the key the current project gives
+      it, `writeKey`, the individuals kept, `keptNow`, and the keys
+      `keys`: the first of locked, done, noVariant, saved, running, error
+      and ready; `null` when the store has no `write`. */
+  const writeStatusOf = (
+    writeKey: WriteKey,
+    keptNow: IndividualsKept | null,
+    keys: readonly AnalysisKey[],
+  ): WriteStatus<F> | null => {
+    if (writeKey === null) {
+      return null;
+    }
+    if (writeKey.kind === "locked") {
+      return { kind: "locked", reason: writeKey.reason };
+    }
+    const reason = keptNoneReason(history.present.project, keptNow);
+    if (reason !== null) {
+      return { kind: "locked", reason };
+    }
+    const key = writeKey.key;
+    if (written?.key === key) {
+      return written;
+    }
+    const running = inFlightFor(null, key);
+    if (running !== null) {
+      return {
+        kind: "running",
+        key,
+        runId: running.runId,
+        progress: running.progress,
+        waitsForStatistics: false,
+      };
+    }
+    const waiting = waitingFor(null, key, keys);
+    if (waiting !== null) {
+      return waiting;
+    }
+    const error = errorOf(key);
+    if (error !== undefined) {
+      return { kind: "error", key, error, ofStatistics: false };
+    }
+    const statsError = statsErrorOf(keptNow, keys);
+    if (statsError !== undefined) {
+      return { kind: "error", key, error: statsError, ofStatistics: true };
+    }
+    return { kind: "ready", key, dropped };
+  };
+
   /** Whether the current project gives the request its key. */
   const isCurrent = (
-    request: InFlight<J, R>,
+    request: InFlight<J, R, F>,
     keys: readonly AnalysisKey[],
-  ): boolean => {
-    const current = keys[request.index];
-    return current?.kind === "keyed" && current.key === request.key;
-  };
+  ): boolean => keyGivenTo(request.target, keys) === request.key;
 
   /** Whether the analysis at `index` is done under the current keys. */
   const isDone = (index: number, keys: readonly AnalysisKey[]): boolean => {
@@ -836,7 +1120,8 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
   };
 
   /** The requests in flight, not being stopped, whose key the current
-      project does not give: the calculations left behind. */
+      project does not give: the calculations left behind, the writing
+      among them. */
   const leftBehindNow = (keys: readonly AnalysisKey[]): Set<number> =>
     new Set(
       [...requests.values()]
@@ -856,7 +1141,7 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
   /** Stops a request: marks it and calls the `cancel()` of its handle.
       Every Run that waited for it, when it is of the statistics, ends
       with nothing sent. */
-  const stop = (request: InFlight<J, R>): void => {
+  const stop = (request: InFlight<J, R, F>): void => {
     requests.set(request.runId, { ...request, stopping: true });
     stopIssued = true;
     for (const wait of [...waits.values()]) {
@@ -889,9 +1174,22 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
     }
   };
 
-  /** Takes out of the notice an analysis done again, and a request or a
-      wait that ended, is being stopped, or whose key the project gives
-      again; drops the notice when nothing is left in it. */
+  /** Forgets the file written, or what is kept of it, when the project
+      no longer gives the writing its key; whether it forgot a file not
+      saved. */
+  const forgetStale = (): boolean => {
+    if (written === null || written.key === currentWriteKey()) {
+      return false;
+    }
+    const discarded = written.kind === "done";
+    written = null;
+    return discarded;
+  };
+
+  /** Takes out of the notice an analysis done again, a file written
+      again, and a request or a wait that ended, is being stopped, or
+      whose key the project gives again; drops the notice when nothing is
+      left in it. */
   const settle = (): void => {
     if (notice === null) {
       return;
@@ -910,25 +1208,23 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
     const waitIds = new Set(
       [...notice.waits].filter((waitId) => waitsBehind.has(waitId)),
     );
+    const writeDiscarded = notice.writeDiscarded && written === null;
     if (
       removed.length === 0 &&
       runs.size === 0 &&
       waitIds.size === 0 &&
-      notice.stopped.length === 0
+      notice.stopped.length === 0 &&
+      !notice.writeStopped &&
+      !writeDiscarded
     ) {
       notice = null;
     } else if (
       removed.length !== notice.removed.length ||
       runs.size !== notice.runs.size ||
-      waitIds.size !== notice.waits.size
+      waitIds.size !== notice.waits.size ||
+      writeDiscarded !== notice.writeDiscarded
     ) {
-      notice = {
-        cause: notice.cause,
-        removed,
-        runs,
-        waits: waitIds,
-        stopped: notice.stopped,
-      };
+      notice = { ...notice, removed, runs, waits: waitIds, writeDiscarded };
     }
   };
 
@@ -938,27 +1234,39 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
     if (notice === null) {
       return null;
     }
-    const named = new Set([
+    const targets = [
       ...[...notice.runs].flatMap((runId) => {
         const request = requests.get(runId);
-        return request === undefined ? [] : [request.def.id];
+        return request === undefined ? [] : [request.target];
       }),
       ...[...notice.waits].flatMap((waitId) => {
         const wait = waits.get(waitId);
-        return wait === undefined ? [] : [wait.def.id];
+        return wait === undefined ? [] : [wait.target];
       }),
-    ]);
+    ];
+    const named = new Set(
+      targets.flatMap((target) =>
+        target.kind === "analysis" ? [target.def.id] : [],
+      ),
+    );
     const leftBehind = defs.map((def) => def.id).filter((id) => named.has(id));
+    const writeLeftBehind = targets.some((target) => target.kind === "write");
     return previous?.cause === notice.cause &&
       sameIds(previous.removed, notice.removed) &&
       sameIds(previous.leftBehind, leftBehind) &&
-      sameIds(previous.stopped, notice.stopped)
+      sameIds(previous.stopped, notice.stopped) &&
+      previous.writeLeftBehind === writeLeftBehind &&
+      previous.writeStopped === notice.writeStopped &&
+      previous.writeDiscarded === notice.writeDiscarded
       ? previous
       : {
           cause: notice.cause,
           removed: notice.removed,
           leftBehind,
           stopped: notice.stopped,
+          writeLeftBehind,
+          writeStopped: notice.writeStopped,
+          writeDiscarded: notice.writeDiscarded,
         };
   };
 
@@ -969,12 +1277,12 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
     previous: readonly RunView[] | null,
   ): readonly RunView[] => {
     const views = [...requests.values()].map((request, index): RunView => {
-      const current = keys[request.index];
       const view: RunView = {
         runId: request.runId,
-        analysis: request.def.id,
+        analysis:
+          request.target.kind === "analysis" ? request.target.def.id : null,
         key: request.key,
-        current: current?.kind === "keyed" && current.key === request.key,
+        current: isCurrent(request, keys),
         stopping: request.stopping,
         afterStop: request.afterStop,
         progress: request.progress,
@@ -988,9 +1296,9 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       : views;
   };
 
-  /** The state of the store now, reusing every part of `previous` that
-      did not change, and `previous` itself when nothing did. */
-  const stateOf = (previous: AppState<R> | null): AppState<R> => {
+  /** The state of store now, reusing every part of `previous` that did
+      not change, and `previous` itself when nothing did. */
+  const stateOf = (previous: AppState<R, F> | null): AppState<R, F> => {
     const keys = currentKeys();
     const project = history.present.project;
     const keptNow = keptFor(project, keys);
@@ -1013,6 +1321,15 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       views.every((view, index) => view === previous.analyses[index])
         ? previous.analyses
         : views;
+    const writeNow = writeStatusOf(keyed?.write ?? null, keptNow, keys);
+    const write =
+      previous !== null &&
+      (previous.write === writeNow ||
+        (previous.write !== null &&
+          writeNow !== null &&
+          sameWrite(previous.write, writeNow)))
+        ? previous.write
+        : writeNow;
     const runs = runsOf(keys, previous?.runs ?? null);
     const shownNotice = noticeOf(previous?.notice ?? null);
     const undoText =
@@ -1026,7 +1343,8 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       previous.analyses === analyses &&
       previous.runs === runs &&
       previous.notice === shownNotice &&
-      previous.individualsKept === keptNow
+      previous.individualsKept === keptNow &&
+      previous.write === write
     ) {
       return previous;
     }
@@ -1039,6 +1357,7 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       runs,
       notice: shownNotice,
       individualsKept: keptNow,
+      write,
     };
   };
 
@@ -1047,6 +1366,7 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
   /** Makes the state again and, when it changed, calls each listener,
       all of them also when one throws; then throws the first error. */
   const changed = (): void => {
+    forgetStale();
     settle();
     const next = stateOf(state);
     if (next === state) {
@@ -1105,14 +1425,16 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
 
   /**
    * Takes `next`, the history after a command, an undo or a redo, when it
-   * is not the one there was: forgets the failures that are not popnei's;
-   * when the change changed the load of the variants file, forgets the
-   * file that could not be read again, and stops every calculation in
-   * flight and every Run that waits, and otherwise the calculations and
-   * the waits the notice named whose key the new project still does not
-   * give; and makes the notice of this change, `cause`, with the analyses
-   * that were done and are not, the calculations it leaves behind and
-   * those it stopped at once; none when it has none of the three.
+   * is not the one there was: forgets the failures that are not popnei's,
+   * the mark of a write dropped, and a file written whose key the new
+   * project does not give; when the change changed the load of the
+   * variants file, forgets the file that could not be read again, and
+   * stops every calculation in flight and every Run that waits, and
+   * otherwise the calculations and the waits the notice named whose key
+   * the new project still does not give; and makes the notice of this
+   * change, `cause`, with the analyses that were done and are not, the
+   * calculations it leaves behind and those it stopped at once, and the
+   * file written it forgot; none when it has none of these.
    */
   const changedByUser = (
     next: History,
@@ -1129,8 +1451,11 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
         .map((view) => view.id),
     );
     failures.clear();
+    dropped = false;
     history = next;
+    const writeDiscarded = forgetStale();
     let stopped: readonly AnalysisId[] = [];
+    let writeStopped = false;
     if (
       !sameLoad(before.present.project.variants, next.present.project.variants)
     ) {
@@ -1139,11 +1464,17 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       // The calculation worker is started again for the new load, so no
       // calculation of the old one can wait for an undo.
       const inFlight = [...requests.values()].filter((r) => !r.stopping);
-      const named = new Set([
-        ...inFlight.map((r) => r.def.id),
-        ...[...waits.values()].map((wait) => wait.def.id),
-      ]);
+      const targets = [
+        ...inFlight.map((r) => r.target),
+        ...[...waits.values()].map((wait) => wait.target),
+      ];
+      const named = new Set(
+        targets.flatMap((target) =>
+          target.kind === "analysis" ? [target.def.id] : [],
+        ),
+      );
       stopped = defs.map((def) => def.id).filter((id) => named.has(id));
+      writeStopped = targets.some((target) => target.kind === "write");
       // Stopping the statistics ends every Run that waits for them.
       stopAll(inFlight.map((r) => r.runId));
     } else if (notice !== null) {
@@ -1168,7 +1499,9 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       removed.length === 0 &&
       runs.size === 0 &&
       waitIds.size === 0 &&
-      stopped.length === 0
+      stopped.length === 0 &&
+      !writeStopped &&
+      !writeDiscarded
         ? null
         : {
             cause: cause(before, next),
@@ -1176,6 +1509,8 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
             runs,
             waits: waitIds,
             stopped,
+            writeStopped,
+            writeDiscarded,
           };
     changed();
   };
@@ -1224,6 +1559,37 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
     }
   };
 
+  /** Stops the calculations left behind, and ends the Runs left behind,
+      just before a request is sent, so that it does not wait behind them;
+      gives whether the request is `afterStop`. */
+  const beforeSend = (): boolean => {
+    const keys = currentKeys();
+    stopAll(leftBehindNow(keys));
+    endWaits(waitsBehindNow(keys));
+    return stopIssued || reopening !== null;
+  };
+
+  /** The project the current request is made from, with its version of
+      popnei and the load id of its variants file; a defect when either is
+      missing, since a key was made. */
+  const sendingFrom = (
+    name: string,
+  ): {
+    readonly project: Project;
+    readonly version: string;
+    readonly fileId: string;
+  } => {
+    const project = history.present.project;
+    const version = popneiVersion;
+    const fileId = project.variants?.fileId;
+    if (version === null || fileId === undefined) {
+      throw defect(
+        `${name} has a key with no version of popnei or no variants file.`,
+      );
+    }
+    return { project, version, fileId };
+  };
+
   /**
    * Sends the request of the analysis `def`, at `index`, under `key`,
    * made from the current project, through a client bound to that key
@@ -1241,14 +1607,9 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
     byOwnRun: boolean,
   ): Run<R> => {
     const id = def.id;
-    const project = history.present.project;
-    const version = popneiVersion;
-    const fileId = project.variants?.fileId;
-    if (version === null || fileId === undefined) {
-      throw defect(
-        `the analysis ${JSON.stringify(id)} has a key with no version of popnei or no variants file.`,
-      );
-    }
+    const { project, version, fileId } = sendingFrom(
+      `the analysis ${JSON.stringify(id)}`,
+    );
     const sending: { handle: Run<R> | null; afterStop: boolean } = {
       handle: null,
       afterStop: false,
@@ -1260,12 +1621,7 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
             `the analysis ${JSON.stringify(id)} sent a second request from one run.`,
           );
         }
-        // The calculations left behind are stopped before the new
-        // request is sent, so that it does not wait behind them.
-        const keys = currentKeys();
-        stopAll(leftBehindNow(keys));
-        endWaits(waitsBehindNow(keys));
-        sending.afterStop = stopIssued || reopening !== null;
+        sending.afterStop = beforeSend();
         // A progress given before `send` returns has no request to go
         // to, and is passed over.
         const sent = config.send(key, job, (progress) => {
@@ -1298,8 +1654,7 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
     }
     requests.set(handle.id, {
       runId: handle.id,
-      def,
-      index,
+      target: { kind: "analysis", def, index },
       key,
       project,
       fileId,
@@ -1313,9 +1668,62 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
     return handle;
   };
 
+  /**
+   * Sends the write of the filtered variants of the current project in
+   * `format` under `key`, with the individuals kept, `individuals`, and
+   * records it in flight. The calculations left behind are stopped, and
+   * the Runs left behind end, just before the send. A handle of a request
+   * already in flight is a defect, with what was sent cancelled.
+   */
+  const sendWrite = (
+    format: WriteFormat,
+    key: Key,
+    individuals: readonly string[] | null,
+  ): Run<Written<F>> => {
+    const write = config.write;
+    if (write === null) {
+      throw defect("the store has no write, and was asked to send one.");
+    }
+    const { project, version, fileId } = sendingFrom("the writing");
+    const job: WriteJob = {
+      format,
+      fileId,
+      filters: project.filters,
+      individuals,
+    };
+    const afterStop = beforeSend();
+    const sending: { handle: Run<Written<F>> | null } = { handle: null };
+    const handle = write.send(key, job, (progress) => {
+      if (sending.handle !== null) {
+        progressed(sending.handle.id, progress);
+      }
+    });
+    if (requests.has(handle.id)) {
+      handle.cancel();
+      throw defect(
+        `the write was given the handle ${String(handle.id)}, of a request already in flight.`,
+      );
+    }
+    sending.handle = handle;
+    requests.set(handle.id, {
+      runId: handle.id,
+      target: { kind: "write", format },
+      key,
+      project,
+      fileId,
+      popneiVersion: version,
+      handle,
+      progress: null,
+      stopping: false,
+      afterStop,
+      byOwnRun: true,
+    });
+    return handle;
+  };
+
   /** Takes the requests `sent` out of those in flight and cancels them:
       `src/ui/runs.ts` will never receive their handles. */
-  const withdraw = (sent: readonly Run<R>[]): void => {
+  const withdraw = (sent: readonly Run<R | Written<F>>[]): void => {
     for (const handle of sent) {
       requests.delete(handle.id);
       handle.cancel();
@@ -1329,7 +1737,7 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       none, when the store has no analysis of the counts, and for a
       result of that analysis itself, already put under that key. */
   const countsToPut = (
-    request: InFlight<J, R>,
+    request: InFlight<J, R, F>,
     key: Key,
     counts: R | null,
   ): { readonly key: Key; readonly cached: CachedResult<R> } | null => {
@@ -1356,63 +1764,153 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
     };
   };
 
+  /** The history with the number of variants `numVars` recorded into the
+      variants file of the load of `request`, or the history itself when
+      there is none. */
+  const withNumVars = (
+    request: InFlight<J, R, F>,
+    numVars: number | null,
+  ): History =>
+    numVars === null
+      ? history
+      : recordShared<VariantSource>(
+          history,
+          (p) => p.variants,
+          (p, variants) => ({ ...p, variants }),
+          (p) => recordVariantsCounted(p, request.fileId, numVars),
+        );
+
+  /** What the result of an analysis's request leaves in the store: the
+      result in the cache with its warnings, its counts, and its number of
+      variants recorded. */
+  const tookResult = (
+    request: InFlight<J, R, F>,
+    def: AnalysisDef<J, R>,
+    index: number,
+    key: Key,
+    result: R,
+  ): void => {
+    // Everything that can throw comes before anything is kept.
+    const warnings = def.warnings(result, request.project);
+    const numbers = def.checkNumbers(result);
+    const stats =
+      index === statsIndex && statistics !== null
+        ? statistics.of(result)
+        : null;
+    if (stats !== null) {
+      checkStatsOf(request.project, stats);
+    }
+    const found = config.countsOf(result);
+    const counts = countsToPut(request, key, found.counts);
+    const next = withNumVars(request, found.numVarsRead);
+    keysFor(next.present.project, popneiVersion);
+    const shown = new Set(
+      currentKeys().flatMap((k) => (k.kind === "keyed" ? [k.key] : [])),
+    );
+    cache = put(cache, key, { result, warnings, numbers, stats }, shown);
+    if (counts !== null) {
+      // The put of the counts keeps the result they came with.
+      cache = put(cache, counts.key, counts.cached, new Set([...shown, key]));
+    }
+    if (next !== history) {
+      history = next;
+      stopOrphans();
+    }
+  };
+
+  /** What a file written leaves in the store: the counts of its pass in
+      the cache and its number of variants recorded, as those of any pass,
+      and the file kept when the project still gives its key and it holds
+      a variant; dropped, and so marked, when the project no longer gives
+      its key. */
+  const tookWritten = (
+    request: InFlight<J, R, F>,
+    key: Key,
+    file: Written<F>,
+  ): void => {
+    const write = config.write;
+    if (write === null) {
+      throw defect("a write ended in a store that has no write.");
+    }
+    // Everything that can throw comes before anything is kept.
+    const countsResult = write.countsOf(file.passStats);
+    const found = config.countsOf(countsResult);
+    const counts = countsToPut(request, key, countsResult);
+    const next = withNumVars(request, found.numVarsRead);
+    keysFor(next.present.project, popneiVersion);
+    if (counts !== null) {
+      const shown = new Set(
+        currentKeys().flatMap((k) => (k.kind === "keyed" ? [k.key] : [])),
+      );
+      cache = put(cache, counts.key, counts.cached, shown);
+    }
+    if (next !== history) {
+      history = next;
+      stopOrphans();
+    }
+    if (key !== currentWriteKey()) {
+      // Its file holds other variants than the step shows.
+      dropped = true;
+      return;
+    }
+    const { format, numBytes, passStats } = file;
+    written =
+      passStats.numVars === 0
+        ? { kind: "noVariant", key, written: { format, numBytes, passStats } }
+        : { kind: "done", key, written: file };
+  };
+
+  /**
+   * Whether the result of a request is a file written, `Written` of the
+   * protocol, by its fields; the result of an analysis has none of them.
+   * The store knows by the request which it should be, and a mismatch is a
+   * defect; the file itself, of the type `F` it was given, it never reads.
+   */
+  const isWritten = (result: R | Written<F>): result is Written<F> => {
+    const value: unknown = result;
+    return (
+      typeof value === "object" &&
+      value !== null &&
+      "format" in value &&
+      "file" in value &&
+      "numBytes" in value &&
+      typeof value.numBytes === "number" &&
+      "passStats" in value
+    );
+  };
+
   /** What an outcome leaves in the store: the result in the cache with
-      its warnings and its number of variants recorded, or the failure
-      kept. */
-  const ended = (request: InFlight<J, R>, outcome: Outcome<R>): void => {
+      its warnings and its number of variants recorded, or the file kept,
+      or the failure kept. */
+  const ended = (
+    request: InFlight<J, R, F>,
+    outcome: Outcome<R | Written<F>>,
+  ): void => {
     switch (outcome.kind) {
       case "done": {
         const key = keyFromWire(outcome.key);
         if (key !== request.key) {
           throw defect(
-            `the request ${String(request.runId)} of the analysis ${JSON.stringify(request.def.id)} was sent under the key ${request.key} and came back under ${key}.`,
+            `the request ${String(request.runId)} of ${nameOf(request.target)} was sent under the key ${request.key} and came back under ${key}.`,
           );
         }
-        // Everything that can throw comes before anything is kept.
-        const warnings = request.def.warnings(outcome.result, request.project);
-        const numbers = request.def.checkNumbers(outcome.result);
-        const stats =
-          request.index === statsIndex && statistics !== null
-            ? statistics.of(outcome.result)
-            : null;
-        if (stats !== null) {
-          checkStatsOf(request.project, stats);
+        const result = outcome.result;
+        const target = request.target;
+        if (target.kind === "write") {
+          if (!isWritten(result)) {
+            throw defect(
+              `the request ${String(request.runId)} of the writing ended with no file written.`,
+            );
+          }
+          tookWritten(request, key, result);
+          return;
         }
-        const found = config.countsOf(outcome.result);
-        const counts = countsToPut(request, key, found.counts);
-        const numVars = found.numVarsRead;
-        const next =
-          numVars === null
-            ? history
-            : recordShared<VariantSource>(
-                history,
-                (p) => p.variants,
-                (p, variants) => ({ ...p, variants }),
-                (p) => recordVariantsCounted(p, request.fileId, numVars),
-              );
-        keysFor(next.present.project, popneiVersion);
-        const shown = new Set(
-          currentKeys().flatMap((k) => (k.kind === "keyed" ? [k.key] : [])),
-        );
-        cache = put(
-          cache,
-          key,
-          { result: outcome.result, warnings, numbers, stats },
-          shown,
-        );
-        if (counts !== null) {
-          // The put of the counts keeps the result they came with.
-          cache = put(
-            cache,
-            counts.key,
-            counts.cached,
-            new Set([...shown, key]),
+        if (isWritten(result)) {
+          throw defect(
+            `the request ${String(request.runId)} of ${nameOf(target)} ended with a file written.`,
           );
         }
-        if (next !== history) {
-          history = next;
-          stopOrphans();
-        }
+        tookResult(request, target.def, target.index, key, result);
         return;
       }
       case "failed":
@@ -1438,24 +1936,26 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
   /** Sends the requests of the Runs `waiting`, which waited for the
       statistics that just ended done, each that the project still gives
       both its key and theirs, with the list of the individuals kept; none
-      when the list keeps no individual. Gives the handles sent. */
-  const sendWaiting = (waiting: readonly Waiting<J, R>[]): Run<R>[] => {
-    const sent: Run<R>[] = [];
+      when the list keeps no individual, and none for what is done or
+      running already. Gives the handles sent. */
+  const sendWaiting = (
+    waiting: readonly Waiting<J, R>[],
+  ): Run<R | Written<F>>[] => {
+    const sent: Run<R | Written<F>>[] = [];
     for (const wait of waiting) {
       const keys = currentKeys();
       const list = keptFor(history.present.project, keys)?.list;
-      const inFlight = [...requests.values()].some(
-        (request) =>
-          request.index === wait.index &&
-          request.key === wait.key &&
-          !request.stopping,
-      );
+      const target = wait.target;
+      const served =
+        target.kind === "analysis"
+          ? get(cache, wait.key) !== null
+          : written?.key === wait.key;
       if (
         !waitIsCurrent(wait, keys) ||
         list?.kind !== "known" ||
         list.individuals?.length === 0 ||
-        get(cache, wait.key) !== null ||
-        inFlight
+        served ||
+        inFlightFor(indexOf(target), wait.key) !== null
       ) {
         // Left behind, locked by the individuals kept, or done or
         // running already: it ends with nothing sent.
@@ -1463,7 +1963,15 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       }
       try {
         sent.push(
-          sendFor(wait.def, wait.index, wait.key, list.individuals, true),
+          target.kind === "analysis"
+            ? sendFor(
+                target.def,
+                target.index,
+                wait.key,
+                list.individuals,
+                true,
+              )
+            : sendWrite(target.format, wait.key, list.individuals),
         );
       } catch (error) {
         withdraw(sent);
@@ -1471,6 +1979,142 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       }
     }
     return sent;
+  };
+
+  /**
+   * Starts the request of `target` under `key`, whose list of the
+   * individuals kept is `list`, `undefined` for an analysis that does not
+   * read the filters of individuals: at once when the list is known, or,
+   * when it needs the statistics of each individual, by starting them, or
+   * waiting for them when they are in flight already. `started` is called
+   * once the request is recorded, before the screens are told. Gives the
+   * handles sent, and when a listener throws, takes them out and stops
+   * them.
+   */
+  const startTarget = (
+    target: Target<J, R>,
+    key: Key,
+    list: IndividualsKept["list"] | undefined,
+    keys: readonly AnalysisKey[],
+    started: () => void,
+  ): readonly Run<R | Written<F>>[] => {
+    if (list?.kind !== "needsStatistics") {
+      const individuals = list?.kind === "known" ? list.individuals : null;
+      let handle: Run<R | Written<F>>;
+      try {
+        handle =
+          target.kind === "analysis"
+            ? sendFor(target.def, target.index, key, individuals, true)
+            : sendWrite(target.format, key, individuals);
+      } catch (error) {
+        return changedAfter(error);
+      }
+      failures.delete(key);
+      started();
+      try {
+        changed();
+      } catch (error) {
+        // src/ui/runs.ts will never receive the handle, nor give its
+        // outcome: the request is taken out and stopped.
+        withdraw([handle]);
+        return changedAfter(error);
+      }
+      return [handle];
+    }
+    // The list needs the statistics of each individual: they are
+    // calculated first, or waited for when already in flight.
+    const statsDef = defs[statsIndex];
+    const statsKey = statsKeyIn(keys);
+    if (statsDef === undefined || statsKey === null) {
+      throw defect(
+        `${nameOf(target)} waits for the statistics of each individual, which the store has no analysis for or locks.`,
+      );
+    }
+    const statsRequest = inFlightFor(statsIndex, statsKey);
+    let sent: Run<R> | null = null;
+    let statsRunId: number;
+    if (statsRequest !== null) {
+      statsRunId = statsRequest.runId;
+    } else {
+      let statsHandle: Run<R>;
+      try {
+        statsHandle = sendFor(statsDef, statsIndex, statsKey, null, false);
+      } catch (error) {
+        return changedAfter(error);
+      }
+      sent = statsHandle;
+      statsRunId = statsHandle.id;
+      failures.delete(statsKey);
+      runAgain(statsDef.id);
+    }
+    lastWaitId += 1;
+    const waitId = lastWaitId;
+    waits.set(waitId, { waitId, target, key, statsRunId, statsKey });
+    failures.delete(key);
+    started();
+    try {
+      changed();
+    } catch (error) {
+      waits.delete(waitId);
+      withdraw(sent === null ? [] : [sent]);
+      return changedAfter(error);
+    }
+    return sent === null ? [] : [sent];
+  };
+
+  /** Whether a state of an analysis or of the writing can be run: ready,
+      removed, or in error after a failure that is not popnei's nor a
+      variants file that could not be read again. */
+  const canStart = (
+    status: AnalysisStatus<R> | WriteStatus<F> | undefined,
+  ): boolean =>
+    status !== undefined &&
+    (status.kind === "ready" ||
+      status.kind === "removed" ||
+      (status.kind === "error" &&
+        status.error.kind === "failed" &&
+        status.error.error.kind !== "reopenFailed"));
+
+  /**
+   * Stops the Run of `index`, an analysis's place or `null` for the
+   * writing, whose key the project gives: its wait for the statistics, which are stopped too when no other Run
+   * waits for them and their own Run did not start them; or its request
+   * in flight. Nothing when there is neither.
+   */
+  const cancelOf = (index: number | null): void => {
+    const keys = currentKeys();
+    for (const wait of waits.values()) {
+      if (indexOf(wait.target) === index && waitIsCurrent(wait, keys)) {
+        waits.delete(wait.waitId);
+        // The statistics are stopped too, unless another Run waits for
+        // them or the user asked for them with their own Run.
+        const statsRequest = requests.get(wait.statsRunId);
+        const othersWait = [...waits.values()].some(
+          (other) => other.statsRunId === wait.statsRunId,
+        );
+        if (
+          statsRequest !== undefined &&
+          !statsRequest.stopping &&
+          !statsRequest.byOwnRun &&
+          !othersWait
+        ) {
+          stop(statsRequest);
+        }
+        changed();
+        return;
+      }
+    }
+    for (const request of requests.values()) {
+      if (
+        indexOf(request.target) === index &&
+        isCurrent(request, keys) &&
+        !request.stopping
+      ) {
+        stop(request);
+        changed();
+        return;
+      }
+    }
   };
 
   return {
@@ -1510,6 +2154,8 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       stopEverything();
       failures.clear();
       unreadable = null;
+      written = null;
+      dropped = false;
       history = opened;
       changed();
     },
@@ -1533,129 +2179,70 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
           : undefined;
       if (
         status === undefined ||
-        !(
-          status.kind === "ready" ||
-          status.kind === "removed" ||
-          (status.kind === "error" &&
-            status.error.kind === "failed" &&
-            status.error.error.kind !== "reopenFailed")
-        )
+        status.kind === "locked" ||
+        !canStart(status)
       ) {
         return null;
       }
-      const key = status.key;
-      const list = def.filtersRead.individuals ? keptNow?.list : undefined;
-      if (list?.kind !== "needsStatistics") {
-        let handle: Run<R>;
-        try {
-          handle = sendFor(
-            def,
-            index,
-            key,
-            list?.kind === "known" ? list.individuals : null,
-            true,
-          );
-        } catch (error) {
-          return changedAfter(error);
-        }
-        failures.delete(key);
-        runAgain(id);
-        try {
-          changed();
-        } catch (error) {
-          // src/ui/runs.ts will never receive the handle, nor give its
-          // outcome: the request is taken out and stopped.
-          withdraw([handle]);
-          return changedAfter(error);
-        }
-        return [handle];
-      }
-      // The list needs the statistics of each individual: they are
-      // calculated first, or waited for when already in flight.
-      const statsDef = defs[statsIndex];
-      const statsKey = statsKeyIn(keys);
-      if (statsDef === undefined || statsKey === null) {
-        throw defect(
-          `the analysis ${JSON.stringify(id)} waits for the statistics of each individual, which the store has no analysis for or locks.`,
-        );
-      }
-      let statsRequest: InFlight<J, R> | null = null;
-      for (const request of requests.values()) {
-        if (
-          request.index === statsIndex &&
-          request.key === statsKey &&
-          !request.stopping
-        ) {
-          statsRequest = request;
-        }
-      }
-      let sent: Run<R> | null = null;
-      let statsRunId: number;
-      if (statsRequest !== null) {
-        statsRunId = statsRequest.runId;
-      } else {
-        let statsHandle: Run<R>;
-        try {
-          statsHandle = sendFor(statsDef, statsIndex, statsKey, null, false);
-        } catch (error) {
-          return changedAfter(error);
-        }
-        sent = statsHandle;
-        statsRunId = statsHandle.id;
-        failures.delete(statsKey);
-        runAgain(statsDef.id);
-      }
-      lastWaitId += 1;
-      const waitId = lastWaitId;
-      waits.set(waitId, { waitId, def, index, key, statsRunId, statsKey });
-      failures.delete(key);
-      runAgain(id);
-      try {
-        changed();
-      } catch (error) {
-        waits.delete(waitId);
-        withdraw(sent === null ? [] : [sent]);
-        return changedAfter(error);
-      }
-      return sent === null ? [] : [sent];
+      return startTarget(
+        { kind: "analysis", def, index },
+        status.key,
+        def.filtersRead.individuals ? keptNow?.list : undefined,
+        keys,
+        () => {
+          runAgain(id);
+        },
+      );
     },
     cancelRun: (id) => {
       const { index } = defOf(id, "cancelRun");
+      cancelOf(index);
+    },
+    startWrite: (format) => {
       const keys = currentKeys();
-      const current = keys[index];
-      for (const wait of waits.values()) {
-        if (wait.index === index && waitIsCurrent(wait, keys)) {
-          waits.delete(wait.waitId);
-          // The statistics are stopped too, unless another Run waits for
-          // them or the user asked for them with their own Run.
-          const statsRequest = requests.get(wait.statsRunId);
-          const othersWait = [...waits.values()].some(
-            (other) => other.statsRunId === wait.statsRunId,
-          );
-          if (
-            statsRequest !== undefined &&
-            !statsRequest.stopping &&
-            !statsRequest.byOwnRun &&
-            !othersWait
-          ) {
-            stop(statsRequest);
+      const keptNow = keptFor(history.present.project, keys);
+      const writeKey = keyed?.write ?? null;
+      const status = writeStatusOf(writeKey, keptNow, keys);
+      if (
+        status === null ||
+        status.kind === "locked" ||
+        !(status.kind === "saved" || canStart(status))
+      ) {
+        return null;
+      }
+      // The key of the state is that of the one format, STATE_FORMAT.
+      return startTarget(
+        { kind: "write", format },
+        status.key,
+        keptNow?.list,
+        keys,
+        () => {
+          // A file saved is written again: what was kept of it goes, and
+          // so do the mark of a write dropped and the notice's stop.
+          written = null;
+          dropped = false;
+          if (notice?.writeStopped === true) {
+            notice = { ...notice, writeStopped: false };
           }
-          changed();
-          return;
-        }
+        },
+      );
+    },
+    cancelWrite: () => {
+      cancelOf(null);
+    },
+    writeSaved: () => {
+      if (written?.kind !== "done" || state.write?.kind !== "done") {
+        throw defect(
+          `writeSaved was called with the writing ${state.write?.kind ?? "absent"}, and not done.`,
+        );
       }
-      for (const request of requests.values()) {
-        if (
-          request.index === index &&
-          current?.kind === "keyed" &&
-          request.key === current.key &&
-          !request.stopping
-        ) {
-          stop(request);
-          changed();
-          return;
-        }
-      }
+      const { format, numBytes, passStats } = written.written;
+      written = {
+        kind: "saved",
+        key: written.key,
+        written: { format, numBytes, passStats },
+      };
+      changed();
     },
     popneiReady: (version) => {
       if (version === popneiVersion) {
@@ -1735,7 +2322,7 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
         });
         return changedAfter(error);
       }
-      let sent: Run<R>[] = [];
+      let sent: Run<R | Written<F>>[] = [];
       if (outcome.kind === "done") {
         try {
           sent = sendWaiting(waiting);
@@ -1824,6 +2411,43 @@ function sameLoad(a: VariantSource | null, b: VariantSource | null): boolean {
       ? x === y
       : x.ploidy === y.ploidy && x.onlyPassed === y.onlyPassed)
   );
+}
+
+/** A name of what a request is for, for the message of a defect. */
+function nameOf<J, R>(target: Target<J, R>): string {
+  return target.kind === "analysis"
+    ? `the analysis ${JSON.stringify(target.def.id)}`
+    : "the writing";
+}
+
+/** Whether two states of the writing show the same, so that the screen
+    keeps the object it has. */
+function sameWrite<F>(a: WriteStatus<F>, b: WriteStatus<F>): boolean {
+  switch (a.kind) {
+    case "locked":
+      return b.kind === "locked" && a.reason === b.reason;
+    case "done":
+    case "saved":
+    case "noVariant":
+      return b.kind === a.kind && a.key === b.key && a.written === b.written;
+    case "running":
+      return (
+        b.kind === "running" &&
+        a.key === b.key &&
+        a.runId === b.runId &&
+        a.progress === b.progress &&
+        a.waitsForStatistics === b.waitsForStatistics
+      );
+    case "error":
+      return (
+        b.kind === "error" &&
+        a.key === b.key &&
+        a.error === b.error &&
+        a.ofStatistics === b.ofStatistics
+      );
+    case "ready":
+      return b.kind === "ready" && a.key === b.key && a.dropped === b.dropped;
+  }
 }
 
 /** Whether two views of a calculation in flight show the same. */

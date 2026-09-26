@@ -158,6 +158,7 @@ function startApplication(
     countsOf,
     counts: null,
     statistics: null,
+    write: null,
     appVersion: APP_VERSION,
     cacheMaxBytes: CACHE_MAX_BYTES,
     maxUndoSteps: MAX_UNDO_STEPS,

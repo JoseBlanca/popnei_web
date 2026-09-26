@@ -5,6 +5,7 @@ import {
   intermediateKeyOf,
   keyOf,
   settingsFingerprint,
+  writeKeyOf,
 } from "./keys.ts";
 import type { JsonValue } from "./keys.ts";
 import {
@@ -34,6 +35,7 @@ import type {
   AnalysisStatus,
   AppState,
   Store,
+  WriteStatus,
 } from "./store.ts";
 import {
   FAKE_STATISTICS,
@@ -43,10 +45,15 @@ import {
   fakeAnalyses,
   fakeCountsOf,
   fakeSend,
+  FIVE_INDIVIDUALS,
+  SAMPLE_VARIANTS_ID,
+  fakeWriteCountsOf,
   fiveIndividualsProject,
   fiveStats,
   sampleProject,
   statsResult,
+  writeTestCountsOf,
+  writtenFile,
 } from "./testSupport.ts";
 import type {
   Calls,
@@ -54,6 +61,7 @@ import type {
   ListGiven,
   PopsResult,
   SentRequest,
+  SentWrite,
   TestJob,
   TestResult,
   VarsResult,
@@ -63,8 +71,10 @@ import type {
   IndividualFilter,
   Outcome,
   Progress,
+  PassStats,
   Run,
   RunError,
+  Written,
 } from "../worker/protocol.ts";
 
 const VARIANTS_ID = "0123456789abcdef0123456789abcdef";
@@ -144,6 +154,7 @@ function newStore(cacheMaxBytes: number = 1024 * 1024): {
     }),
     counts: null,
     statistics: null,
+    write: null,
     appVersion: "0.1.0",
     cacheMaxBytes,
     maxUndoSteps: 200,
@@ -247,6 +258,7 @@ function storeWithTouchyKeys(): ReturnType<typeof newStore> & {
     countsOf: () => ({ numVarsRead: null, counts: null }),
     counts: null,
     statistics: null,
+    write: null,
     appVersion: "0.1.0",
     cacheMaxBytes: 1024 * 1024,
     maxUndoSteps: 200,
@@ -519,6 +531,7 @@ describe("WP4 D1 the state with no calculation", () => {
       countsOf: () => ({ numVarsRead: null, counts: null }),
       counts: null,
       statistics: null,
+      write: null,
       appVersion: "0.1.0",
       cacheMaxBytes: 1024,
       maxUndoSteps: 200,
@@ -671,6 +684,7 @@ describe("WP4 D1 the state with no calculation", () => {
       countsOf: () => ({ numVarsRead: null, counts: null }),
       counts: null,
       statistics: null,
+      write: null,
       appVersion: "0.1.0",
       cacheMaxBytes: 1024,
       maxUndoSteps: 200,
@@ -714,6 +728,7 @@ describe("WP4 D1 the state with no calculation", () => {
         countsOf: () => ({ numVarsRead: null, counts: null }),
         counts: null,
         statistics: null,
+        write: null,
         appVersion: "0.1.0",
         cacheMaxBytes: 1024,
         maxUndoSteps: 200,
@@ -900,6 +915,7 @@ function storeWithFaultyIntake(): ReturnType<typeof newStore> & {
     },
     counts: null,
     statistics: null,
+    write: null,
     appVersion: "0.1.0",
     cacheMaxBytes: 1024 * 1024,
     maxUndoSteps: 200,
@@ -1206,6 +1222,7 @@ describe("WP4 D2 the calculations", () => {
       countsOf: () => ({ numVarsRead: null, counts: null }),
       counts: null,
       statistics: null,
+      write: null,
       appVersion: "0.1.0",
       cacheMaxBytes: 1024 * 1024,
       maxUndoSteps: 200,
@@ -1327,6 +1344,7 @@ describe("WP4 D2 the calculations", () => {
       countsOf: () => ({ numVarsRead: null, counts: null }),
       counts: null,
       statistics: null,
+      write: null,
       appVersion: "0.1.0",
       cacheMaxBytes: 1024,
       maxUndoSteps: 200,
@@ -1560,6 +1578,7 @@ describe("WP4 D2 the calculations", () => {
       countsOf: () => ({ numVarsRead: null, counts: null }),
       counts: null,
       statistics: null,
+      write: null,
       appVersion: "0.1.0",
       cacheMaxBytes: 1024 * 1024,
       maxUndoSteps: 200,
@@ -1710,6 +1729,9 @@ describe("WP4 D3 the notice", () => {
       removed: ["vars"],
       leftBehind: [],
       stopped: [],
+      writeLeftBehind: false,
+      writeStopped: false,
+      writeDiscarded: false,
     });
     store.undo();
     const again = statuses(store)[1];
@@ -1727,6 +1749,9 @@ describe("WP4 D3 the notice", () => {
       removed: [],
       leftBehind: ["vars"],
       stopped: [],
+      writeLeftBehind: false,
+      writeStopped: false,
+      writeDiscarded: false,
     });
     expect(request.cancels()).toBe(0);
     expect(kinds(store)).toStrictEqual(["locked", "ready"]);
@@ -1793,6 +1818,9 @@ describe("WP4 D3 the notice", () => {
       removed: ["pops"],
       leftBehind: ["vars"],
       stopped: [],
+      writeLeftBehind: false,
+      writeStopped: false,
+      writeDiscarded: false,
     });
     store.startRun("vars");
     expect(sentAt(sent, 1).cancels()).toBe(1);
@@ -1802,6 +1830,9 @@ describe("WP4 D3 the notice", () => {
       removed: ["pops"],
       leftBehind: [],
       stopped: [],
+      writeLeftBehind: false,
+      writeStopped: false,
+      writeDiscarded: false,
     });
     expect(kinds(store)).toStrictEqual(["removed", "running"]);
   });
@@ -1871,6 +1902,9 @@ describe("WP4 D3 the notice", () => {
       removed: ["vars"],
       leftBehind: ["pops"],
       stopped: [],
+      writeLeftBehind: false,
+      writeStopped: false,
+      writeDiscarded: false,
     });
     const { listener, count } = counter();
     store.subscribe(listener);
@@ -1910,6 +1944,9 @@ describe("WP4 D3 the notice", () => {
       removed: ["pops"],
       leftBehind: [],
       stopped: [],
+      writeLeftBehind: false,
+      writeStopped: false,
+      writeDiscarded: false,
     });
     store.startRun("pops");
     const pops = sentAt(sent, 3);
@@ -2033,6 +2070,9 @@ describe("WP4 D3 the notice", () => {
       removed: ["vars"],
       leftBehind: [],
       stopped: [],
+      writeLeftBehind: false,
+      writeStopped: false,
+      writeDiscarded: false,
     });
     // Another sequence: the redo goes to settings never calculated.
     const other = storeWithVariantsRead();
@@ -2047,6 +2087,9 @@ describe("WP4 D3 the notice", () => {
       removed: ["vars"],
       leftBehind: [],
       stopped: [],
+      writeLeftBehind: false,
+      writeStopped: false,
+      writeDiscarded: false,
     });
   });
 
@@ -2066,6 +2109,9 @@ describe("WP4 D3 the notice", () => {
       removed: [],
       leftBehind: ["vars"],
       stopped: [],
+      writeLeftBehind: false,
+      writeStopped: false,
+      writeDiscarded: false,
     });
     const notice = store.getState().notice;
     request.progress({ bytesRead: 5, numBytes: 10, pass: 1, numPasses: 1 });
@@ -2099,6 +2145,7 @@ describe("WP4 D3 the notice", () => {
       }),
       counts: null,
       statistics: null,
+      write: null,
       appVersion: "0.1.0",
       cacheMaxBytes: 1024 * 1024,
       maxUndoSteps: 200,
@@ -2148,6 +2195,7 @@ describe("WP4 D3 the notice", () => {
       countsOf: () => ({ numVarsRead: null, counts: null }),
       counts: null,
       statistics: null,
+      write: null,
       appVersion: "0.1.0",
       cacheMaxBytes: 1024 * 1024,
       maxUndoSteps: 200,
@@ -2224,6 +2272,9 @@ describe("WP4 D3 the notice", () => {
       removed: ["pops"],
       leftBehind: [],
       stopped: ["vars"],
+      writeLeftBehind: false,
+      writeStopped: false,
+      writeDiscarded: false,
     });
     expect(store.getState().runs).toMatchObject([
       { runId: vars.run.id, stopping: true },
@@ -2247,6 +2298,9 @@ describe("WP4 D3 the notice", () => {
       removed: [],
       leftBehind: [],
       stopped: ["vars"],
+      writeLeftBehind: false,
+      writeStopped: false,
+      writeDiscarded: false,
     });
   });
 
@@ -2263,6 +2317,9 @@ describe("WP4 D3 the notice", () => {
       removed: [],
       leftBehind: [],
       stopped: ["vars"],
+      writeLeftBehind: false,
+      writeStopped: false,
+      writeDiscarded: false,
     });
     store.startRun("vars");
     const onOld = sentAt(sent, 1);
@@ -2274,6 +2331,9 @@ describe("WP4 D3 the notice", () => {
       removed: [],
       leftBehind: [],
       stopped: ["vars"],
+      writeLeftBehind: false,
+      writeStopped: false,
+      writeDiscarded: false,
     });
     // Undo of the first pick: no variants file at all.
     const first = storeWithVarsRunning();
@@ -2355,6 +2415,9 @@ describe("WP4 D3 the notice", () => {
       removed: [],
       leftBehind: [],
       stopped: ["pops"],
+      writeLeftBehind: false,
+      writeStopped: false,
+      writeDiscarded: false,
     });
   });
 
@@ -2375,6 +2438,9 @@ describe("WP4 D3 the notice", () => {
       removed: ["vars"],
       leftBehind: [],
       stopped: ["vars"],
+      writeLeftBehind: false,
+      writeStopped: false,
+      writeDiscarded: false,
     });
   });
 
@@ -2512,6 +2578,7 @@ function openedAndRun(options: {
     countsOf: () => ({ numVarsRead: null, counts: null }),
     counts: null,
     statistics: null,
+    write: null,
     appVersion: "0.1.0",
     cacheMaxBytes: 1024 * 1024,
     maxUndoSteps: 200,
@@ -2946,6 +3013,7 @@ function modelledStore(): {
     }),
     counts: null,
     statistics: FAKE_STATISTICS,
+    write: null,
     appVersion: "0.1.0",
     cacheMaxBytes: 1024 * 1024 * 1024,
     maxUndoSteps: 200,
@@ -2994,7 +3062,9 @@ function modelledStore(): {
   };
   /** Follows the requests the store sent, `handles`, from a startRun or
       a runEnded: each sent stopped the requests named first. */
-  const track = (handles: readonly Run<TestResult>[]): void => {
+  const track = (
+    handles: readonly Run<TestResult | Written<never>>[],
+  ): void => {
     if (handles.length > 0) {
       stopNamed();
     }
@@ -3432,6 +3502,7 @@ function storeOfFive(
     }),
     counts: null,
     statistics: FAKE_STATISTICS,
+    write: null,
     appVersion: "0.1.0",
     cacheMaxBytes,
     maxUndoSteps: 200,
@@ -3966,6 +4037,7 @@ describe("VS3 D4 the statistics of each individual given to the store", () => {
       send,
       countsOf: () => ({ numVarsRead: null, counts: null }),
       counts: null,
+      write: null,
       appVersion: "0.1.0",
       cacheMaxBytes: 1024,
       maxUndoSteps: 200,
@@ -4079,6 +4151,7 @@ describe("VS3 D4 the failure of the statistics, and a read that leaves a wait be
       countsOf: () => ({ numVarsRead: null, counts: null }),
       counts: null,
       statistics: FAKE_STATISTICS,
+      write: null,
       appVersion: "0.1.0",
       cacheMaxBytes: 1024 * 1024,
       maxUndoSteps: 200,
@@ -4120,6 +4193,7 @@ describe("VS3 D4 two Runs that wait for the same statistics", () => {
       countsOf: () => ({ numVarsRead: null, counts: null }),
       counts: null,
       statistics: FAKE_STATISTICS,
+      write: null,
       appVersion: "0.1.0",
       cacheMaxBytes: 1024 * 1024,
       maxUndoSteps: 200,
@@ -4182,6 +4256,7 @@ function storeWithCounts(cacheMaxBytes: number = 1024 * 1024): {
     },
     counts: "counts",
     statistics: null,
+    write: null,
     appVersion: "0.1.0",
     cacheMaxBytes,
     maxUndoSteps: 200,
@@ -4316,6 +4391,7 @@ describe("VS3 D5 the counts filled", () => {
       countsOf: fakeCountsOf,
       counts: null,
       statistics: null,
+      write: null,
       appVersion: "0.1.0",
       cacheMaxBytes: 1024 * 1024,
       maxUndoSteps: 200,
@@ -4340,6 +4416,7 @@ describe("VS3 D5 the counts filled", () => {
       send,
       countsOf: fakeCountsOf,
       statistics: null,
+      write: null,
       appVersion: "0.1.0",
       cacheMaxBytes: 1024,
       maxUndoSteps: 200,
@@ -4360,6 +4437,764 @@ describe("VS3 D5 the counts filled", () => {
       }),
     ).toThrow(
       /^popnei_web defect: the analysis of the counts "counts" reads the filters of individuals/,
+    );
+  });
+});
+
+// The writing of the filtered variants: store.md, "The writing of the
+// filtered variants", and "How it is verified", "The write".
+
+/** A store that writes, with the fakes of the populations, of the
+    variants, of the statistics of each individual and of the counts, in
+    that order, and a fake `write.send` whose file is a text: popnei
+    0.1.0, and the project of the five individuals opened with the MAF
+    filter at 0.9 and the filters of individuals `filters`. */
+function storeThatWrites(filters: readonly IndividualFilter[] = []): {
+  readonly store: Store<TestResult, string>;
+  readonly analyses: readonly AnalysisDef<TestJob, TestResult>[];
+  readonly sent: SentRequest[];
+  readonly writes: SentWrite[];
+  readonly lists: readonly ListGiven[];
+} {
+  const { analyses: twoFakes, stats, counts, lists } = fakeAnalyses();
+  const analyses = [...twoFakes, stats, counts];
+  const { send, sent, writeSend, writes } = fakeSend();
+  const store = createStore({
+    first: emptyProject("popgen"),
+    analyses,
+    send,
+    countsOf: writeTestCountsOf,
+    counts: "counts",
+    statistics: FAKE_STATISTICS,
+    write: { send: writeSend, countsOf: fakeWriteCountsOf },
+    appVersion: "0.1.0",
+    cacheMaxBytes: 1024 * 1024,
+    maxUndoSteps: 200,
+  });
+  store.popneiReady("0.1.0");
+  store.open({
+    ...fiveIndividualsProject(filters),
+    filters: [{ kind: "maf", maxAllowedMaf: 0.9 }],
+  });
+  return { store, analyses, sent, writes, lists };
+}
+
+/** The write `index` the fake `write.send` was given, or a defect. */
+function writeAt(writes: readonly SentWrite[], index: number): SentWrite {
+  const write = writes[index];
+  if (write === undefined) {
+    throw new Error(`popnei_web defect: no write ${String(index)} sent`);
+  }
+  return write;
+}
+
+/** The state of the writing, or a defect when the store has none. */
+function writeIn(store: Store<TestResult, string>): WriteStatus<string> {
+  const write = store.getState().write;
+  if (write === null) {
+    throw new Error("popnei_web defect: a store with no write");
+  }
+  return write;
+}
+
+/** The state the store that writes gives the analysis `id`. */
+function analysisIn(
+  store: Store<TestResult, string>,
+  id: string,
+): AnalysisStatus<TestResult> {
+  const view = store.getState().analyses.find((one) => one.id === id);
+  if (view === undefined) {
+    throw new Error(`popnei_web defect: no analysis ${id}`);
+  }
+  return view.status;
+}
+
+/** The key `writeKeyOf` gives the writing of a `.nei` file of the
+    current project, with a memo of its own. */
+function writeKeyNow(store: Store<TestResult, string>): string {
+  return writeKeyOf(store.getState().project, "nei", "0.1.0", createKeyMemo());
+}
+
+/** The store that writes with a write sent and not ended. */
+function writing(): ReturnType<typeof storeThatWrites> & {
+  readonly write: SentWrite;
+} {
+  const made = storeThatWrites();
+  made.store.startWrite("nei");
+  return { ...made, write: writeAt(made.writes, 0) };
+}
+
+/** The store that writes with a write done, `file` kept. */
+function written(): ReturnType<typeof writing> & {
+  readonly file: ReturnType<typeof writtenFile>;
+} {
+  const made = writing();
+  const file = writtenFile(1150, 1200);
+  made.store.runEnded(made.write.run.id, {
+    kind: "done",
+    key: made.write.key,
+    result: file,
+  });
+  return { ...made, file };
+}
+
+describe("VS3 D6 the write in the store", () => {
+  test("startWrite sends a WriteJob with the load id, the filters of the variants, no list and the format, under writeKeyOf, and the write is running", () => {
+    const { store, writes, sent } = storeThatWrites();
+    expect(writeIn(store)).toStrictEqual({
+      kind: "ready",
+      key: writeKeyNow(store),
+      dropped: false,
+    });
+
+    const handles = store.startWrite("nei");
+
+    const write = writeAt(writes, 0);
+    expect(handles).toStrictEqual([write.run]);
+    expect(sent).toHaveLength(0);
+    expect(write.key).toBe(writeKeyNow(store));
+    expect(write.job).toStrictEqual({
+      format: "nei",
+      fileId: SAMPLE_VARIANTS_ID,
+      filters: [{ kind: "maf", maxAllowedMaf: 0.9 }],
+      individuals: null,
+    });
+    expect(writeIn(store)).toStrictEqual({
+      kind: "running",
+      key: write.key,
+      runId: write.run.id,
+      progress: null,
+      waitsForStatistics: false,
+    });
+    expect(store.getState().runs).toMatchObject([
+      { runId: write.run.id, analysis: null, key: write.key, current: true },
+    ]);
+    const progress = { bytesRead: 3, numBytes: 10, pass: 1, numPasses: 1 };
+    write.progress(progress);
+    expect(writeIn(store)).toMatchObject({ progress });
+  });
+
+  test("runEnded done: the write is done with what the worker gave, and the cache does not hold it", () => {
+    const { store, write, file } = written();
+
+    expect(writeIn(store)).toStrictEqual({
+      kind: "done",
+      key: write.key,
+      written: file,
+    });
+    // Only the counts of its pass are in the cache, as a result of the
+    // counts.
+    expect(
+      store
+        .getState()
+        .analyses.filter((view) => view.status.kind === "done")
+        .map((view) => view.id),
+    ).toStrictEqual(["counts"]);
+    expect(analysisIn(store, "counts")).toMatchObject({
+      result: { kind: "counts", numVars: 1150 },
+    });
+    expect(store.getState().runs).toStrictEqual([]);
+  });
+
+  test("writeSaved: the write is saved, holds no file, and its size and counts are those of the file", () => {
+    const { store, write, file } = written();
+
+    store.writeSaved();
+
+    expect(writeIn(store)).toStrictEqual({
+      kind: "saved",
+      key: write.key,
+      written: {
+        format: "nei",
+        numBytes: file.numBytes,
+        passStats: file.passStats,
+      },
+    });
+  });
+
+  test("writeSaved a second time is a defect", () => {
+    const { store } = written();
+    store.writeSaved();
+
+    expect(() => {
+      store.writeSaved();
+    }).toThrow(
+      /^popnei_web defect: writeSaved was called with the writing saved/,
+    );
+  });
+
+  test("a command and its undo after the save give the write ready", () => {
+    const { store, write } = written();
+    store.writeSaved();
+
+    store.apply("the MAF filter changed", maf(0.8));
+    store.undo();
+
+    expect(writeIn(store)).toStrictEqual({
+      kind: "ready",
+      key: write.key,
+      dropped: false,
+    });
+  });
+
+  test("a command that changes a filter while it is written leaves it behind, with no cancel, and an undo lets it go on", () => {
+    const { store, write } = writing();
+
+    store.apply("the MAF filter changed", maf(0.8));
+
+    expect(store.getState().notice).toStrictEqual({
+      cause: { kind: "command", description: "the MAF filter changed" },
+      removed: [],
+      leftBehind: [],
+      stopped: [],
+      writeLeftBehind: true,
+      writeStopped: false,
+      writeDiscarded: false,
+    });
+    expect(write.cancels()).toBe(0);
+    expect(writeIn(store)).toMatchObject({ kind: "ready", dropped: false });
+    store.undo();
+    expect(write.cancels()).toBe(0);
+    expect(writeIn(store)).toMatchObject({
+      kind: "running",
+      runId: write.run.id,
+    });
+    expect(store.getState().notice).toBeNull();
+  });
+
+  test("a result that arrives after the command is dropped: ready with dropped, no file, its counts in the cache under the old filters and its variants recorded; the next command clears dropped", () => {
+    const { store, analyses, write } = writing();
+    const countsDef = analyses[3];
+    if (countsDef === undefined) {
+      throw new Error("popnei_web defect: no fake counts");
+    }
+    const countsKeyBefore = keyOf(
+      countsDef,
+      store.getState().project,
+      "0.1.0",
+      createKeyMemo(),
+    );
+    store.apply("the MAF filter changed", maf(0.8));
+
+    const next = store.runEnded(write.run.id, {
+      kind: "done",
+      key: write.key,
+      result: writtenFile(1150, 1200),
+    });
+
+    expect(next).toStrictEqual([]);
+    expect(writeIn(store)).toStrictEqual({
+      kind: "ready",
+      key: writeKeyNow(store),
+      dropped: true,
+    });
+    expect(store.getState().notice).toBeNull();
+    expect(store.getState().project.variants?.read).toMatchObject({
+      numVars: 1200,
+    });
+    store.undo();
+    expect(analysisIn(store, "counts")).toMatchObject({
+      kind: "done",
+      key: countsKeyBefore,
+      result: { kind: "counts", numVars: 1150 },
+    });
+    expect(writeIn(store)).toStrictEqual({
+      kind: "ready",
+      key: write.key,
+      dropped: false,
+    });
+  });
+
+  test("the write done, then a command that changes a filter: ready with no file, the notice has writeDiscarded, and its undo does not give the file back", () => {
+    const { store, write } = written();
+
+    store.apply("the MAF filter changed", maf(0.8));
+
+    expect(writeIn(store)).toMatchObject({ kind: "ready", dropped: false });
+    expect(store.getState().notice).toStrictEqual({
+      cause: { kind: "command", description: "the MAF filter changed" },
+      removed: [],
+      leftBehind: [],
+      stopped: [],
+      writeLeftBehind: false,
+      writeStopped: false,
+      writeDiscarded: true,
+    });
+    store.undo();
+    expect(writeIn(store)).toStrictEqual({
+      kind: "ready",
+      key: write.key,
+      dropped: false,
+    });
+    expect(store.getState().notice).toBeNull();
+  });
+
+  test("a result with no variant makes the write noVariant, with no file", () => {
+    const { store, write } = writing();
+    const file = writtenFile(0, 1200);
+
+    store.runEnded(write.run.id, {
+      kind: "done",
+      key: write.key,
+      result: file,
+    });
+
+    expect(writeIn(store)).toStrictEqual({
+      kind: "noVariant",
+      key: write.key,
+      written: {
+        format: "nei",
+        numBytes: file.numBytes,
+        passStats: file.passStats,
+      },
+    });
+    expect(analysisIn(store, "counts")).toMatchObject({
+      kind: "done",
+      result: { kind: "counts", numVars: 0 },
+    });
+    expect(store.startWrite("nei")).toBeNull();
+  });
+
+  test("with a threshold and no statistics, startWrite waits for them; their refusal by popnei puts the write in error with ofStatistics, and startWrite then gives null and sends nothing", () => {
+    const { store, sent, writes } = storeThatWrites([MISSING_AT_02]);
+
+    const handles = store.startWrite("nei");
+
+    const stats = sentAt(sent, 0);
+    expect(handles).toStrictEqual([stats.run]);
+    expect(stats.job.analysis).toBe("stats");
+    expect(writes).toHaveLength(0);
+    expect(writeIn(store)).toStrictEqual({
+      kind: "running",
+      key: writeKeyNow(store),
+      runId: stats.run.id,
+      progress: null,
+      waitsForStatistics: true,
+    });
+    store.runEnded(stats.run.id, {
+      kind: "failed",
+      error: { kind: "popnei", message: "the pass gave no variant" },
+    });
+    expect(writeIn(store)).toStrictEqual({
+      kind: "error",
+      key: writeKeyNow(store),
+      error: { kind: "refused", message: "the pass gave no variant" },
+      ofStatistics: true,
+    });
+    expect(store.startWrite("nei")).toBeNull();
+    expect(sent).toHaveLength(1);
+    expect(writes).toHaveLength(0);
+  });
+
+  test("after a workerFailed of the statistics, startWrite starts them again", () => {
+    const { store, sent } = storeThatWrites([MISSING_AT_02]);
+    store.startWrite("nei");
+    const error = { kind: "workerFailed", message: "out of memory" } as const;
+    store.runEnded(sentAt(sent, 0).run.id, { kind: "failed", error });
+    expect(writeIn(store)).toMatchObject({
+      kind: "error",
+      error: { kind: "failed", error },
+      ofStatistics: true,
+    });
+
+    const handles = store.startWrite("nei");
+
+    const again = sentAt(sent, 1);
+    expect(handles).toStrictEqual([again.run]);
+    expect(again.job.analysis).toBe("stats");
+    expect(writeIn(store)).toMatchObject({
+      kind: "running",
+      runId: again.run.id,
+      waitsForStatistics: true,
+    });
+  });
+
+  test("startRun of an analysis while the file is written does not cancel the write, whose key the project gives", () => {
+    const { store, sent, write } = writing();
+
+    store.startRun("vars");
+
+    expect(sent).toHaveLength(1);
+    expect(write.cancels()).toBe(0);
+    expect(writeIn(store)).toMatchObject({ kind: "running" });
+  });
+
+  test("a new variants file loaded cancels the write at once, and the notice has writeStopped", () => {
+    const { store, write } = writing();
+
+    store.apply("a variants file was loaded", loadPanel(OTHER_VARIANTS_ID));
+
+    expect(write.cancels()).toBe(1);
+    expect(store.getState().notice).toStrictEqual({
+      cause: { kind: "command", description: "a variants file was loaded" },
+      removed: [],
+      leftBehind: [],
+      stopped: [],
+      writeLeftBehind: false,
+      writeStopped: true,
+      writeDiscarded: false,
+    });
+  });
+});
+
+describe("VS3 D6 the write in the store, its other rules", () => {
+  test("with a threshold, the end of the statistics sends the write with the individuals kept, a, b and d", () => {
+    const { store, sent, writes } = storeThatWrites([MISSING_AT_02]);
+    store.startWrite("nei");
+    const stats = sentAt(sent, 0);
+
+    const next = store.runEnded(stats.run.id, doneWith(stats, fiveStats()));
+
+    const write = writeAt(writes, 0);
+    expect(next).toStrictEqual([write.run]);
+    expect(write.job.individuals).toStrictEqual(["a", "b", "d"]);
+    expect(write.key).toBe(writeKeyNow(store));
+    expect(writeIn(store)).toMatchObject({
+      kind: "running",
+      runId: write.run.id,
+      waitsForStatistics: false,
+    });
+  });
+
+  test("the write is locked by the reason of individualListNeeds, and by keptNoneReason once the statistics keep no individual", () => {
+    const refused = storeThatWrites([
+      { kind: "keep", individuals: ["a", "z"] },
+    ]);
+    expect(writeIn(refused.store)).toStrictEqual({
+      kind: "locked",
+      reason: individualListNeeds(refused.store.getState().project)?.reason,
+    });
+    expect(refused.store.startWrite("nei")).toBeNull();
+
+    const none = storeThatWrites([
+      { kind: "missing_data", maxAllowedMissingRate: 0.01 },
+    ]);
+    none.store.startWrite("nei");
+    const stats = sentAt(none.sent, 0);
+    expect(
+      none.store.runEnded(stats.run.id, doneWith(stats, fiveStats())),
+    ).toStrictEqual([]);
+    expect(writeIn(none.store)).toStrictEqual({
+      kind: "locked",
+      reason:
+        "The filters of individuals keep none of the 5 individuals of panel.nei. Loosen them in the Variants step.",
+    });
+    expect(none.writes).toHaveLength(0);
+  });
+
+  test("startWrite gives null while the file is written and while it is done, and writes again once it is saved", () => {
+    const { store, writes } = writing();
+    expect(store.startWrite("nei")).toBeNull();
+    const write = writeAt(writes, 0);
+    store.runEnded(write.run.id, {
+      kind: "done",
+      key: write.key,
+      result: writtenFile(1150, 1200),
+    });
+    expect(store.startWrite("nei")).toBeNull();
+    store.writeSaved();
+
+    const handles = store.startWrite("nei");
+
+    expect(handles).toStrictEqual([writeAt(writes, 1).run]);
+    expect(writeIn(store)).toMatchObject({ kind: "running" });
+  });
+
+  test("cancelWrite stops the write in flight, and the write is ready; a Stop of a write that waits stops the statistics it started", () => {
+    const { store, write } = writing();
+    store.cancelWrite();
+    expect(write.cancels()).toBe(1);
+    expect(writeIn(store)).toMatchObject({ kind: "ready" });
+    store.runEnded(write.run.id, { kind: "cancelled" });
+    expect(writeIn(store)).toMatchObject({ kind: "ready", dropped: false });
+
+    const waiting = storeThatWrites([MISSING_AT_02]);
+    waiting.store.startWrite("nei");
+    waiting.store.cancelWrite();
+    expect(sentAt(waiting.sent, 0).cancels()).toBe(1);
+    expect(writeIn(waiting.store)).toMatchObject({ kind: "ready" });
+  });
+
+  test("a write left behind is stopped when the notice is closed, and by a startRun and a startWrite that send", () => {
+    const closed = writing();
+    closed.store.apply("the MAF filter changed", maf(0.8));
+    closed.store.dismissNotice();
+    expect(closed.write.cancels()).toBe(1);
+
+    const run = writing();
+    run.store.apply("the MAF filter changed", maf(0.8));
+    run.store.startRun("vars");
+    expect(run.write.cancels()).toBe(1);
+    expect(run.store.getState().notice).toBeNull();
+
+    const again = writing();
+    again.store.apply("the MAF filter changed", maf(0.8));
+    again.store.startWrite("nei");
+    expect(again.write.cancels()).toBe(1);
+    expect(writeAt(again.writes, 1).key).toBe(writeKeyNow(again.store));
+  });
+
+  test("a refusal of popnei of the write is kept for the session; another failure until the next change", () => {
+    const refused = writing();
+    refused.store.runEnded(refused.write.run.id, {
+      kind: "failed",
+      error: { kind: "popnei", message: "no space" },
+    });
+    refused.store.apply("the MAF filter changed", maf(0.8));
+    refused.store.undo();
+    expect(writeIn(refused.store)).toStrictEqual({
+      kind: "error",
+      key: refused.write.key,
+      error: { kind: "refused", message: "no space" },
+      ofStatistics: false,
+    });
+    expect(refused.store.startWrite("nei")).toBeNull();
+
+    const failed = writing();
+    const error = { kind: "workerFailed", message: "out of memory" } as const;
+    failed.store.runEnded(failed.write.run.id, { kind: "failed", error });
+    expect(writeIn(failed.store)).toMatchObject({
+      kind: "error",
+      error: { kind: "failed", error },
+    });
+    failed.store.apply("the MAF filter changed", maf(0.8));
+    failed.store.undo();
+    expect(writeIn(failed.store)).toMatchObject({ kind: "ready" });
+  });
+
+  test("a result of a write that is not a file written, and a file given to an analysis, are defects kept under their keys", () => {
+    const { store, write, sent } = writing();
+    expect(() =>
+      store.runEnded(write.run.id, {
+        kind: "done",
+        key: write.key,
+        result: varsResult(10),
+      }),
+    ).toThrow(
+      /^popnei_web defect: the request \d+ of the writing ended with no file written/,
+    );
+    expect(writeIn(store)).toMatchObject({
+      kind: "error",
+      error: { kind: "failed", error: { kind: "defect" } },
+    });
+
+    store.startRun("vars");
+    const vars = sentAt(sent, 0);
+    expect(() =>
+      store.runEnded(vars.run.id, {
+        kind: "done",
+        key: vars.key,
+        result: writtenFile(10, 10),
+      }),
+    ).toThrow(
+      /^popnei_web defect: the request \d+ of the analysis "vars" ended with a file written/,
+    );
+  });
+
+  test("an opening and another version of popnei forget the file, with no notice, and the command after them discards none", () => {
+    const opened = written();
+    opened.store.open(opened.store.getState().project);
+    expect(writeIn(opened.store)).toMatchObject({ kind: "ready" });
+    expect(opened.store.getState().notice).toBeNull();
+    opened.store.apply("the MAF filter changed", maf(0.8));
+    expect(opened.store.getState().notice).toBeNull();
+
+    const upgraded = written();
+    upgraded.store.popneiReady("0.2.0");
+    expect(writeIn(upgraded.store)).toMatchObject({ kind: "ready" });
+    expect(upgraded.store.getState().notice).toBeNull();
+    upgraded.store.apply("the MAF filter changed", maf(0.8));
+    expect(upgraded.store.getState().notice).toBeNull();
+  });
+
+  test("a write left behind is stopped by the next command, and dropped is forgotten by a new startWrite", () => {
+    const { store, write, writes } = writing();
+    store.apply("the MAF filter changed", maf(0.8));
+    expect(write.cancels()).toBe(0);
+    store.apply("the MAF filter changed", maf(0.7));
+    expect(write.cancels()).toBe(1);
+
+    store.undo();
+    store.startWrite("nei");
+    const late = writeAt(writes, 1);
+    store.apply("the MAF filter changed", maf(0.6));
+    store.runEnded(late.run.id, {
+      kind: "done",
+      key: late.key,
+      result: writtenFile(1150, 1200),
+    });
+    expect(writeIn(store)).toMatchObject({ kind: "ready", dropped: true });
+    store.startWrite("nei");
+    store.cancelWrite();
+    store.runEnded(writeAt(writes, 2).run.id, { kind: "cancelled" });
+
+    expect(writeIn(store)).toMatchObject({ kind: "ready", dropped: false });
+  });
+
+  test("the state of the write is the same object after a change of an analysis alone, and a store with no write gives null", () => {
+    const { store, write } = writing();
+    const before = writeIn(store);
+    store.startRun("vars");
+    expect(writeIn(store)).toBe(before);
+    expect(store.getState().write).toBe(before);
+    expect(write.cancels()).toBe(0);
+
+    const without = storeOfFive([]);
+    expect(without.store.getState().write).toBeNull();
+    expect(without.store.startWrite("nei")).toBeNull();
+  });
+
+  test("writeDiscarded leaves the notice when a file is written again under the new key", () => {
+    const { store, writes } = written();
+    store.apply("the MAF filter changed", maf(0.8));
+    expect(store.getState().notice?.writeDiscarded).toBe(true);
+
+    store.startWrite("nei");
+    const again = writeAt(writes, 1);
+    store.runEnded(again.run.id, {
+      kind: "done",
+      key: again.key,
+      result: writtenFile(1100, 1200),
+    });
+
+    expect(store.getState().notice).toBeNull();
+  });
+
+  test("a startWrite takes the writing out of the notice's writeStopped", () => {
+    const { store } = writing();
+    store.apply("a variants file was loaded", loadPanel(OTHER_VARIANTS_ID));
+    store.variantsRead(OTHER_VARIANTS_ID, {
+      kind: "read",
+      individuals: FIVE_INDIVIDUALS,
+      ploidy: 2,
+      numVars: null,
+    });
+    expect(store.getState().notice?.writeStopped).toBe(true);
+
+    store.startWrite("nei");
+
+    expect(store.getState().notice).toBeNull();
+  });
+});
+
+describe("VS3 D7 the properties of the write", () => {
+  /** A step of the property of the write. */
+  type WriteStep =
+    | { readonly kind: "startWrite" }
+    | { readonly kind: "end"; readonly numVars: number }
+    | { readonly kind: "cancelled" }
+    | { readonly kind: "maf"; readonly threshold: number }
+    | { readonly kind: "undo" }
+    | { readonly kind: "redo" }
+    | { readonly kind: "dismissNotice" }
+    | { readonly kind: "cancelWrite" }
+    | { readonly kind: "writeSaved" }
+    | { readonly kind: "startRun" };
+
+  // The writes, their ends and the changes of their key are drawn more
+  // often, so that a write that ends after a change, and an undo back to
+  // its key, come in most runs.
+  const writeStep: fc.Arbitrary<WriteStep> = fc.oneof(
+    { arbitrary: fc.constant({ kind: "startWrite" } as const), weight: 3 },
+    {
+      arbitrary: fc.record({
+        kind: fc.constant("end" as const),
+        numVars: fc.constantFrom(0, 1150, 1150),
+      }),
+      weight: 3,
+    },
+    fc.constant({ kind: "cancelled" } as const),
+    {
+      arbitrary: fc.record({
+        kind: fc.constant("maf" as const),
+        threshold: fc.constantFrom(0.8, 0.9, 0.95),
+      }),
+      weight: 3,
+    },
+    { arbitrary: fc.constant({ kind: "undo" } as const), weight: 2 },
+    fc.constant({ kind: "redo" } as const),
+    fc.constant({ kind: "dismissNotice" } as const),
+    fc.constant({ kind: "cancelWrite" } as const),
+    fc.constant({ kind: "writeSaved" } as const),
+    fc.constant({ kind: "startRun" } as const),
+  );
+
+  test("a write whose result arrives when the project gives another key leaves no file in the state", () => {
+    fc.assert(
+      fc.property(fc.array(writeStep, { maxLength: 30 }), (drawn) => {
+        const { store, writes } = storeThatWrites();
+        /** The counts of the files that arrived while the project gave
+            their key, each its own object. */
+        const kept = new Set<PassStats>();
+        /** The writes that have ended. */
+        const ended = new Set<SentWrite>();
+        for (const s of drawn) {
+          switch (s.kind) {
+            case "startWrite":
+              store.startWrite("nei");
+              break;
+            case "end":
+            case "cancelled": {
+              const write = writes.find((one) => !ended.has(one));
+              if (write === undefined) {
+                break;
+              }
+              ended.add(write);
+              if (s.kind === "cancelled") {
+                store.runEnded(write.run.id, { kind: "cancelled" });
+                break;
+              }
+              const file = writtenFile(s.numVars, 1200);
+              if (write.key === writeKeyNow(store)) {
+                kept.add(file.passStats);
+              }
+              store.runEnded(write.run.id, {
+                kind: "done",
+                key: write.key,
+                result: file,
+              });
+              break;
+            }
+            case "maf":
+              store.apply("the MAF filter changed", maf(s.threshold));
+              break;
+            case "undo":
+              store.undo();
+              break;
+            case "redo":
+              store.redo();
+              break;
+            case "dismissNotice":
+              store.dismissNotice();
+              break;
+            case "cancelWrite":
+              store.cancelWrite();
+              break;
+            case "writeSaved":
+              if (writeIn(store).kind === "done") {
+                store.writeSaved();
+              }
+              break;
+            case "startRun":
+              store.startRun("vars");
+              break;
+          }
+          const write = writeIn(store);
+          // What the state holds of a write is of one that arrived
+          // under the key the project gives now, and gave since; only
+          // `done` holds its file.
+          if (
+            write.kind === "done" ||
+            write.kind === "saved" ||
+            write.kind === "noVariant"
+          ) {
+            expect(write.key).toBe(writeKeyNow(store));
+            expect(kept.has(write.written.passStats)).toBe(true);
+            expect("file" in write.written).toBe(write.kind === "done");
+          }
+        }
+      }),
+      { numRuns: 300 },
     );
   });
 });

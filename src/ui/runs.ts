@@ -1,13 +1,16 @@
 /**
  * The outcome of a calculation (docs/specs/entry.md, "The outcome of a
  * calculation"): the Run button of an analysis panel starts it here, and
- * its outcome, when it arrives, goes to the store. The store stops a
- * calculation with the handle it keeps; nothing here cancels.
+ * the Write button of the Variants step the writing of the filtered
+ * variants, and each outcome, when it arrives, goes to the store. The
+ * store stops a calculation with the handle it keeps; nothing here
+ * cancels.
  */
 
+import type { WriteFormat } from "../core/keys.ts";
 import type { AnalysisId } from "../core/project.ts";
 import type { Store } from "../core/store.ts";
-import type { Run } from "../worker/protocol.ts";
+import type { Run, Written } from "../worker/protocol.ts";
 
 /** When each calculation in flight started, by the id of its request, in
     the milliseconds of performance.now(). */
@@ -23,18 +26,36 @@ const started = new Map<number, number>();
  * rejects only for a defect of ours, a `runEnded` that throws, which the
  * button passes over with `void` so that it reaches the error bar.
  */
-export function startAnalysis<R>(
-  store: Store<R>,
+export function startAnalysis<R, F>(
+  store: Store<R, F>,
   id: AnalysisId,
 ): Promise<void> | null {
   const runs = store.startRun(id);
   return runs === null ? null : awaitEach(store, runs);
 }
 
+/**
+ * Starts the writing of the filtered variants in `format`, as
+ * `startAnalysis` starts a calculation: the requests are those
+ * `startWrite` gives, the statistics of each individual it waits for or
+ * the write itself, and those the `runEnded` of each gives back; null
+ * when the store starts none.
+ */
+export function startWriting<R, F>(
+  store: Store<R, F>,
+  format: WriteFormat,
+): Promise<void> | null {
+  const runs = store.startWrite(format);
+  return runs === null ? null : awaitEach(store, runs);
+}
+
 /** Awaits the outcome of each of `runs`, and of each handle their
     `runEnded` gives back, noting the time of each while it is in
     flight. */
-function awaitEach<R>(store: Store<R>, runs: readonly Run<R>[]): Promise<void> {
+function awaitEach<R, F>(
+  store: Store<R, F>,
+  runs: readonly Run<R | Written<F>>[],
+): Promise<void> {
   return Promise.all(
     runs.map((run) => {
       started.set(run.id, performance.now());

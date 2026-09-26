@@ -20,6 +20,9 @@ function notice(
     removed: ["diversity"],
     leftBehind: [],
     stopped: [],
+    writeLeftBehind: false,
+    writeStopped: false,
+    writeDiscarded: false,
   };
 }
 
