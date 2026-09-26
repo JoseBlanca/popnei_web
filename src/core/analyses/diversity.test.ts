@@ -4,10 +4,12 @@ import {
   diversity,
   diversityCsv,
   diversityRows,
+  populationsKept,
   populationsNeeds,
   populationsOf,
   populationsToRun,
   refusalText,
+  statisticsFailedText,
 } from "./diversity.ts";
 import { createKeyMemo, keyOf } from "../keys.ts";
 import type { Key, KeyedDef } from "../keys.ts";
@@ -276,29 +278,6 @@ describe("WS5 D1 the example and the reasons", () => {
       null,
       null,
     ]);
-  });
-
-  test("needs locks a project with two filters of individuals, and says how many", () => {
-    const p = deepFreeze<Project>({
-      ...project(),
-      individualFilters: [
-        { kind: "remove", individuals: ["i4"] },
-        { kind: "missing_data", maxAllowedMissingRate: 0.2 },
-      ],
-    });
-    expect(diversity.needs(p)).toBe(
-      "The filters of individuals come in a later version of the application, and this project holds 2 of them, so the diversity cannot run in this version. To run it, open the project file in a text editor, empty the list named individualFilters in it, and open the project again.",
-    );
-  });
-
-  test("needs locks a project with one filter of individuals, saying one of them", () => {
-    const p = deepFreeze<Project>({
-      ...project(),
-      individualFilters: [{ kind: "remove", individuals: ["i4"] }],
-    });
-    expect(diversity.needs(p)).toBe(
-      "The filters of individuals come in a later version of the application, and this project holds one of them, so the diversity cannot run in this version. To run it, open the project file in a text editor, empty the list named individualFilters in it, and open the project again.",
-    );
   });
 
   test("needs gives each reason of individualsNeeds in its words", () => {
@@ -1267,7 +1246,7 @@ describe("WS5 D1 the example and the reasons, with options set and reasons toget
     expect(diversity.warnings(r, p)).toEqual([]);
   });
 
-  test("needs gives the filters of individuals before a reason of individualsNeeds, and that before the column", () => {
+  test("needs gives a reason of individualsNeeds before the column, whatever the filters of individuals", () => {
     const noFileNoColumn = deepFreeze<Project>({
       ...project({ column: null }),
       individuals: null,
@@ -1280,7 +1259,7 @@ describe("WS5 D1 the example and the reasons, with options set and reasons toget
       individualFilters: [{ kind: "remove", individuals: ["i4"] }],
     });
     expect(diversity.needs(filteredToo)).toBe(
-      "The filters of individuals come in a later version of the application, and this project holds one of them, so the diversity cannot run in this version. To run it, open the project file in a text editor, empty the list named individualFilters in it, and open the project again.",
+      "Load a metadata file in the Individuals step.",
     );
     const missingAndNoColumn = project({
       column: null,
@@ -1424,13 +1403,15 @@ describe("WS5 D3 the count of the check numbers", () => {
     ).toBe(4);
   });
 
-  test("null with a filter of individuals, with no column of the populations, with no individuals file, and with the variants file not read", () => {
+  test("null with a threshold on the individuals, with no column of the populations, with no individuals file, and with the variants file not read", () => {
     const p = project();
     expect(
       diversity.numCheckNumbers(
         deepFreeze<Project>({
           ...p,
-          individualFilters: [{ kind: "remove", individuals: ["i2"] }],
+          individualFilters: [
+            { kind: "missing_data", maxAllowedMissingRate: 0.2 },
+          ],
         }),
       ),
     ).toBeNull();
@@ -1483,5 +1464,255 @@ describe("WS10 the cases of the spec", () => {
     expect(diversity.warnings(r, p).map((w) => w.code)).toEqual([
       "tooFewIndividuals",
     ]);
+  });
+});
+
+/** A client that records the jobs of the diversity it is given, bound to
+    the individuals kept `individuals`. */
+function keptClient(individuals: readonly string[] | null): {
+  readonly client: WorkerClient<Job, JobResult>;
+  readonly jobs: DiversityJob[];
+} {
+  const { client, jobs } = recordingClient();
+  return { client: { ...client, individuals }, jobs };
+}
+
+/** The project of the worked example with the filters of individuals
+    `filters`. */
+function filteredProject(filters: Project["individualFilters"]): Project {
+  return deepFreeze<Project>({ ...project(), individualFilters: filters });
+}
+
+describe("VS3 D3 the diversity of stage 3", () => {
+  test("with the individuals kept i1 and i2, run sends them and the populations narrowed to them", () => {
+    const { client, jobs } = keptClient(["i1", "i2"]);
+    diversity.run(project(), client);
+    expect(jobs.map((job) => [job.individuals, job.pops])).toEqual([
+      [
+        ["i1", "i2"],
+        [
+          ["A", ["i1"]],
+          ["B", ["i2"]],
+        ],
+      ],
+    ]);
+  });
+
+  test("with the individuals kept i1 and i3, run sends A alone, and populationsKept gives B as emptied", () => {
+    const { client, jobs } = keptClient(["i1", "i3"]);
+    const p = project();
+    diversity.run(p, client);
+    expect(jobs.map((job) => [job.individuals, job.pops])).toEqual([
+      [["i1", "i3"], [["A", ["i1", "i3"]]]],
+    ]);
+    expect(populationsKept(p, ["i1", "i3"])).toEqual({
+      pops: [["A", ["i1", "i3"]]],
+      emptied: ["B"],
+    });
+  });
+
+  test("with no individual removed, null, run sends the populations of the worked example and individuals null", () => {
+    const { client, jobs } = keptClient(null);
+    diversity.run(project(), client);
+    expect(jobs.map((job) => [job.individuals, job.pops])).toEqual([
+      [
+        null,
+        [
+          ["A", ["i1", "i3"]],
+          ["B", ["i2"]],
+        ],
+      ],
+    ]);
+  });
+
+  test("a result of A alone adds populationNotInResult naming B", () => {
+    const aAlone = result({
+      pops: ["A"],
+      numIndividuals: [2],
+      numVarsWithValue: [0],
+      numVars: 1000,
+    });
+    const found = diversity.warnings(
+      aAlone,
+      filteredProject([{ kind: "missing_data", maxAllowedMissingRate: 0.2 }]),
+    );
+    expect(found.map((w) => w.code)).toEqual([
+      "tooFewIndividuals",
+      "individualsWithoutPopulation",
+      "populationNotInResult",
+    ]);
+    expect(found.at(-1)).toEqual({
+      code: "populationNotInResult",
+      text: "Population B has no individual among the individuals of panel.nei that the filters kept, so it is not in the table.",
+    });
+  });
+
+  test("a result of A with 1 individual, where populationsToRun gives it 2, ends tooFewIndividuals with the filters of individuals", () => {
+    const r = result({
+      pops: ["A"],
+      numIndividuals: [1],
+      numVarsWithValue: [0],
+      numVars: 1000,
+    });
+    expect(diversity.warnings(r, project()).at(0)).toEqual({
+      code: "tooFewIndividuals",
+      text: "Population A has 1 individual, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so A has no values. To have them, merge it with another population in the metadata file, or loosen the filters of individuals in the Variants step.",
+    });
+    const both = result({
+      pops: ["A", "B"],
+      numIndividuals: [1, 1],
+      numVarsWithValue: [0, 0],
+      numVars: 1000,
+    });
+    expect(diversity.warnings(both, project()).at(0)).toEqual({
+      code: "tooFewIndividuals",
+      text: "Populations A and B have fewer than 20 individuals, 1 and 1, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, merge each with another population in the metadata file, or loosen the filters of individuals in the Variants step.",
+    });
+  });
+
+  test("numCheckNumbers with a list to remove i2 is 4, for the one population left", () => {
+    expect(
+      diversity.numCheckNumbers(
+        filteredProject([{ kind: "remove", individuals: ["i2"] }]),
+      ),
+    ).toBe(4);
+    expect(
+      diversity.numCheckNumbers(
+        filteredProject([{ kind: "keep", individuals: ["i1", "i2"] }]),
+      ),
+    ).toBe(7);
+  });
+
+  test("numCheckNumbers with a threshold on the individuals is null, on the heterozygosity or after a list", () => {
+    expect(
+      diversity.numCheckNumbers(
+        filteredProject([{ kind: "obs_het", maxAllowedObsHet: 0.4 }]),
+      ),
+    ).toBeNull();
+    expect(
+      diversity.numCheckNumbers(
+        filteredProject([
+          { kind: "remove", individuals: ["i2"] },
+          { kind: "missing_data", maxAllowedMissingRate: 0.2 },
+        ]),
+      ),
+    ).toBeNull();
+  });
+
+  test("needs of a list to keep i4, who has no population, gives the reason of the lists; of lists that leave one, or of thresholds, none", () => {
+    const reason =
+      "The lists of individuals to keep and to remove leave none of the individuals of panel.nei that have a population in pop, so no population is left. Change the lists in the Variants step.";
+    expect(
+      diversity.needs(filteredProject([{ kind: "keep", individuals: ["i4"] }])),
+    ).toBe(reason);
+    expect(
+      diversity.needs(
+        filteredProject([
+          { kind: "keep", individuals: ["i4", "i2"] },
+          { kind: "remove", individuals: ["i1"] },
+        ]),
+      ),
+    ).toBeNull();
+    expect(
+      diversity.needs(
+        filteredProject([
+          { kind: "missing_data", maxAllowedMissingRate: 0.2 },
+          { kind: "obs_het", maxAllowedObsHet: 0.4 },
+        ]),
+      ),
+    ).toBeNull();
+    expect(
+      diversity.needs(
+        filteredProject([
+          { kind: "keep", individuals: ["i1", "i2", "i3"] },
+          { kind: "remove", individuals: ["i1", "i2", "i3"] },
+        ]),
+      ),
+    ).toBe(reason);
+  });
+
+  test("the words of the statistics that failed, refused for the empty pass of the missing data filter at 0.05 and the MAF filter at 0.4, are the statistics' and not the diversity's", () => {
+    const message =
+      "the pass gave no variant: its source gave 1200 and the steps kept none of them, the `missing_data` filter was given 1200 and kept 1152, the `maf` filter was given 1152 and kept 0; a statistic of a pass is calculated over the variants it gives";
+    expect(
+      statisticsFailedText({ kind: "refused", message }, project(), () => {
+        throw new Error("a refusal was given the words of a failure");
+      }),
+    ).toBe(
+      "The statistics of each individual, which the thresholds of the filters of individuals are applied to, could not be calculated, so the diversity was not run. The filters kept none of the variants of panel.nei, so there is no variant to count each individual's genotypes over. Loosen the filters of the variants in the Variants step.",
+    );
+  });
+
+  test("popnei's refusal with no population tells to loosen the thresholds", () => {
+    expect(
+      refusalText(
+        "`pops` names no population, and a result holds one value for each population: leave `pops` out for one population of every individual",
+        project(),
+      ),
+    ).toBe(
+      "The thresholds of the filters of individuals leave none of the individuals of panel.nei that have a population in pop, so no population is left. Loosen the thresholds in the Variants step.",
+    );
+  });
+});
+
+describe("VS3 D3 the diversity of stage 3, at its bounds", () => {
+  test("the words of the statistics that failed otherwise are those the frame gives the failure", () => {
+    const failure = { kind: "workerFailed", message: "a trap" } as const;
+    const given: unknown[] = [];
+    expect(
+      statisticsFailedText(
+        { kind: "failed", error: failure },
+        project(),
+        (error) => {
+          given.push(error);
+          return "The calculation stopped unexpectedly.";
+        },
+      ),
+    ).toBe(
+      "The statistics of each individual, which the thresholds of the filters of individuals are applied to, could not be calculated, so the diversity was not run. The calculation stopped unexpectedly.",
+    );
+    expect(given).toEqual([failure]);
+  });
+
+  test("with thresholds that leave no population, run sends no population, for popnei to refuse", () => {
+    const { client, jobs } = keptClient(["i4"]);
+    diversity.run(project(), client);
+    expect(jobs.map((job) => [job.individuals, job.pops])).toEqual([
+      [["i4"], []],
+    ]);
+    expect(populationsKept(project(), ["i4"])?.emptied).toEqual(["A", "B"]);
+  });
+
+  test("populationsKept gives the same value for the same frozen list, the populations to run whole for null, and null with no populations to run", () => {
+    const p = project();
+    const kept = Object.freeze(["i1", "i2"]);
+    expect(populationsKept(p, kept)).toBe(populationsKept(p, kept));
+    expect(populationsKept(p, null)).toBe(populationsKept(p, null));
+    expect(populationsKept(p, null)).toEqual({
+      pops: populationsToRun(p),
+      emptied: [],
+    });
+    expect(populationsKept(project({ column: null }), kept)).toBeNull();
+  });
+
+  test("populationsKept follows a list changed in place, which it does not keep", () => {
+    const p = project();
+    const kept = ["i1", "i2"];
+    expect(populationsKept(p, kept)?.emptied).toEqual([]);
+    kept.pop();
+    expect(populationsKept(p, kept)?.emptied).toEqual(["B"]);
+  });
+
+  test("the reason of the lists names the file escaped, and a list popnei would refuse is left to the store", () => {
+    const p = deepFreeze<Project>({
+      ...project({ variantsName: "a\tb.nei" }),
+      individualFilters: [{ kind: "remove", individuals: ["i1", "i2", "i3"] }],
+    });
+    expect(diversity.needs(p)).toBe(
+      "The lists of individuals to keep and to remove leave none of the individuals of a\\tb.nei that have a population in pop, so no population is left. Change the lists in the Variants step.",
+    );
+    expect(
+      diversity.needs(filteredProject([{ kind: "keep", individuals: ["i9"] }])),
+    ).toBeNull();
   });
 });

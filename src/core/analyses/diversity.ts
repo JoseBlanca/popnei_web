@@ -9,6 +9,7 @@
  * none of them.
  */
 
+import { individualsKept } from "../individualsKept.ts";
 import type { JsonObject } from "../keys.ts";
 import {
   analysisOptions,
@@ -17,12 +18,18 @@ import {
   grouped,
   individualsNeeds,
   namesOf,
-  saying,
   shown,
 } from "../project.ts";
 import type { Project, SourceRead } from "../project.ts";
 import type { Result } from "../result.ts";
-import type { AnalysisDef, Warning, WorkerClient } from "../store.ts";
+import type {
+  AnalysisDef,
+  AnalysisError,
+  Warning,
+  WorkerClient,
+} from "../store.ts";
+import { refusalText as statisticsRefusalText } from "./individualChecks.ts";
+import { refusalWords } from "./words.ts";
 import type {
   Cell,
   DiversityResult,
@@ -85,6 +92,13 @@ const GROUPED = new WeakMap<IndividualsTable, Map<string, Grouped>>();
 /** The populations to run of each set of populations, by the read of the
     variants file; only reads frozen with their individuals are kept. */
 const TO_RUN = new WeakMap<Pops, WeakMap<SourceRead, Pops>>();
+
+/** The populations to run narrowed to each frozen list of the individuals
+    kept, by the populations to run. */
+const KEPT = new WeakMap<Pops, WeakMap<readonly string[], PopulationsKept>>();
+
+/** The populations to run left whole, when the filters remove nobody. */
+const WHOLE = new WeakMap<Pops, PopulationsKept>();
 
 /** The rows of each result, so that a screen drawn again gets the same
     array. */
@@ -169,8 +183,8 @@ function isTableFrozen(table: IndividualsTable): boolean {
 
 /**
  * `populationsOf(p)` narrowed to the individuals of the variants file, the
- * populations left empty dropped: what `run` sends, what the ready state
- * of the panel and the Individuals step list. `null` when `populationsOf`
+ * populations left empty dropped: what `populationsKept` narrows to the
+ * individuals kept, what the Individuals step lists. `null` when `populationsOf`
  * is `null` or the variants file is not read. The same frozen value for
  * the same frozen table, column and read of the variants file.
  */
@@ -204,6 +218,69 @@ export function populationsToRun(p: Project): Pops | null {
     byRead.set(variantsRead, toRun);
   }
   return toRun;
+}
+
+/** The populations to run narrowed to the individuals kept. */
+export interface PopulationsKept {
+  /** The populations with an individual kept, each with the individuals
+      kept, in the order of `populationsToRun`. */
+  readonly pops: Pops;
+  /** The populations the list leaves with no individual, in the same
+      order, which are not in `pops`. */
+  readonly emptied: readonly string[];
+}
+
+/**
+ * `populationsToRun(p)` narrowed to the individuals kept, `kept`, or left
+ * whole when `kept` is `null`, the filters removing nobody; with the
+ * populations that the list leaves empty apart, in their order. What
+ * `run` sends and the ready state of the panel lists. `null` when
+ * `populationsToRun` is `null`. The same frozen value for the same
+ * populations to run and the same frozen list.
+ */
+export function populationsKept(
+  p: Project,
+  kept: readonly string[] | null,
+): PopulationsKept | null {
+  const toRun = populationsToRun(p);
+  if (toRun === null) {
+    return null;
+  }
+  if (kept === null) {
+    const whole =
+      WHOLE.get(toRun) ??
+      Object.freeze({ pops: toRun, emptied: Object.freeze([]) });
+    WHOLE.set(toRun, whole);
+    return whole;
+  }
+  const found = KEPT.get(toRun)?.get(kept);
+  if (found !== undefined) {
+    return found;
+  }
+  const inKept = new Set(kept);
+  const narrowed = toRun.map(([pop, individuals]) =>
+    Object.freeze([
+      pop,
+      Object.freeze(individuals.filter((i) => inKept.has(i))),
+    ] as const),
+  );
+  const narrowedKept: PopulationsKept = Object.freeze({
+    pops: Object.freeze(
+      narrowed.filter(([, individuals]) => individuals.length > 0),
+    ),
+    emptied: Object.freeze(
+      narrowed
+        .filter(([, individuals]) => individuals.length === 0)
+        .map(([pop]) => pop),
+    ),
+  });
+  if (Object.isFrozen(kept)) {
+    const byList =
+      KEPT.get(toRun) ?? new WeakMap<readonly string[], PopulationsKept>();
+    KEPT.set(toRun, byList);
+    byList.set(kept, narrowedKept);
+  }
+  return narrowedKept;
 }
 
 /** The reason about the column of the populations, and its kind. */
@@ -313,64 +390,68 @@ export function diversityCsv(r: DiversityResult): string {
   return [CSV_HEADER, ...lines].map((line) => `${line}\n`).join("");
 }
 
-/** The start of popnei's refusal of a pass over a source that holds no
-    variant, whatever the filters. */
-const EMPTY_SOURCE = "the pass gave no variant and its source holds none";
-
-/** The start of popnei's refusal of a pass that gave no variant from a
-    source that held some: with its colon, which the refusal of a source
-    that holds none does not have at that place, so that neither is taken
-    for the other. */
-const EMPTY_PASS = "the pass gave no variant:";
-
-/** The words of the box of the Variants step that reads only the
-    variants that passed, as its label says them. */
-const ONLY_PASSED_BOX = "Only the variants with PASS or . in the FILTER column";
-
-/** popnei's refusal of a genotype of another ploidy than the one the VCF
-    was read with: the line, the individual, the ploidy found and the one
-    given. */
-const OTHER_PLOIDY =
-  /^line (\d+) of the VCF, the column of (.*?): its genotype is of the ploidy (\d+) and the reader was asked for the ploidy (\d+)/su;
-
-/** The start of popnei's refusals of a gzipped VCF damaged or cut
-    short. */
-const BGZIP_REFUSAL = "the VCF was written by bgzip";
+/** The start of popnei's refusal of a request with no population, which
+    only the thresholds on the individuals can bring about, since `needs`
+    locks the diversity when the lists leave no population. */
+const NO_POPULATION = "`pops` names no population";
 
 /**
  * The words of a refusal of popnei, for the error state of the panel of
- * the project `p`, by the start of popnei's message: the variants file
+ * the project `p`, by the start of popnei's message: no population, which
+ * the thresholds of the filters of individuals leave; the variants file
  * holds no variant, or, for a VCF read with only the passed variants,
- * none that passed; the filters kept none; a genotype of another ploidy than the one the VCF was read
- * with; a line of the VCF it cannot read, or a gzipped file damaged or cut
- * short; any other. Throws a defect on a project with no variants file.
+ * none that passed; the filters kept none; a genotype of another ploidy
+ * than the one the VCF was read with; a line of the VCF it cannot read, or
+ * a gzipped file damaged or cut short; any other. Throws a defect on a
+ * project with no variants file, and on a refusal of no population for a
+ * project with no column of the populations.
  */
 export function refusalText(message: string, p: Project): string {
   if (p.variants === null) {
     throw defect("refusalText was given a project with no variants file.");
   }
-  const fileName = escaped(p.variants.name);
-  if (message.startsWith(EMPTY_SOURCE)) {
-    if (p.variants.readOptions?.onlyPassed === true) {
-      return `${fileName} has no variant with PASS or . in its FILTER column, and it was read with only those, so there is no variant to calculate the diversity over. Untick "${ONLY_PASSED_BOX}" in the Variants step and read the file again.`;
+  if (message.startsWith(NO_POPULATION)) {
+    const column = populationsColumn(p);
+    if (column === null) {
+      throw defect(
+        "the diversity was refused for no population with no column of the populations.",
+      );
     }
-    return `${fileName} has no variants, so there is no variant to calculate the diversity over. Load another variants file in the Variants step.`;
+    return `The thresholds of the filters of individuals leave none of the individuals of ${escaped(p.variants.name)} that have a population in ${shown(column)}, so no population is left. Loosen the thresholds in the Variants step.`;
   }
-  if (message.startsWith(EMPTY_PASS)) {
-    return `The filters kept none of the variants of ${fileName}, so there is no variant to calculate the diversity over. Loosen the filters in the Variants step.`;
-  }
-  const ploidy = OTHER_PLOIDY.exec(message);
-  if (ploidy !== null) {
-    const [, line = "", individual = "", found = "", given = ""] = ploidy;
-    const alleles = counted(Number(found), "allele");
-    return `At line ${line} of ${fileName}, the genotype of ${shown(individual)} has ${alleles}, and the file was read with ploidy ${given}. If every genotype of the file has ${alleles}, set the ploidy of the VCF to ${found} in the Variants step and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version.`;
-  }
-  const isVcfLine =
-    /^line \d+ of the VCF/u.test(message) || message.startsWith(BGZIP_REFUSAL);
-  if (isVcfLine) {
-    return `popnei could not read ${fileName}${saying(message)}. Correct the file, or fetch it again, and load it in the Variants step.`;
-  }
-  return `popnei could not calculate the diversity${saying(message)}. Change the settings, or load the variants file again, to run it again.`;
+  return refusalWords(message, p, {
+    calculate: "calculate the diversity",
+    again: "to run it again",
+    emptyPass: (fileName) =>
+      `The filters kept none of the variants of ${fileName}, so there is no variant to calculate the diversity over. Loosen the filters in the Variants step.`,
+  });
+}
+
+/** A failure of a calculation that is not popnei's refusal. */
+export type Failure = Extract<
+  AnalysisError,
+  { readonly kind: "failed" }
+>["error"];
+
+/**
+ * The words of the error state of the panel when the statistics of each
+ * individual that a Run waited for were refused or failed, the store's
+ * error with `ofStatistics`: that the statistics could not be calculated
+ * and the diversity was not run, then the words of the statistics' own
+ * panel, their `refusalText` for a refusal of popnei and `failureText`,
+ * the frame's, for another failure; never the diversity's own words,
+ * which would name it for a calculation that was not its own.
+ */
+export function statisticsFailedText(
+  error: AnalysisError,
+  p: Project,
+  failureText: (failure: Failure) => string,
+): string {
+  const words =
+    error.kind === "refused"
+      ? statisticsRefusalText(error.message, p)
+      : failureText(error.error);
+  return `The statistics of each individual, which the thresholds of the filters of individuals are applied to, could not be calculated, so the diversity was not run. ${words}`;
 }
 
 /** The definition of the diversity, as the store knows it. */
@@ -451,23 +532,40 @@ function keyInputs(p: Project): JsonObject {
 }
 
 /** The first reason the diversity cannot run beyond those every analysis
-    shares, or `null`. Throws a defect on a project of association whose
-    individuals file is read. */
+    shares and the lists of individuals popnei would refuse, or `null`:
+    the individuals file, the column of the populations, and the lists
+    to keep and to remove leaving no population. Throws a defect on a
+    project of association whose individuals file is read. */
 function needs(p: Project): string | null {
-  const numFilters = p.individualFilters.length;
-  if (numFilters > 0) {
-    const held = numFilters === 1 ? "one" : grouped(numFilters);
-    return `The filters of individuals come in a later version of the application, and this project holds ${held} of them, so the diversity cannot run in this version. To run it, open the project file in a text editor, empty the list named individualFilters in it, and open the project again.`;
-  }
-  return individualsNeeds(p) ?? populationsNeeds(p)?.reason ?? null;
+  return (
+    individualsNeeds(p) ?? populationsNeeds(p)?.reason ?? listsNeeds(p) ?? null
+  );
 }
 
-/** Builds the request and sends it through `c`. Throws a defect when the
-    variants file is not read or there are no populations to run, which
-    `needs` rules out. */
+/** The reason when the lists of individuals to keep and to remove leave
+    no individual that has a population, known from the project alone;
+    `null` otherwise, and when the individuals kept cannot be made, which
+    the store locks on first. */
+function listsNeeds(p: Project): string | null {
+  const kept = individualsKept(p, null);
+  if (kept === null || p.variants === null) {
+    return null;
+  }
+  const column = populationsColumn(p);
+  const left = populationsKept(p, kept.byLists);
+  if (column === null || left === null || left.pops.length > 0) {
+    return null;
+  }
+  return `The lists of individuals to keep and to remove leave none of the individuals of ${escaped(p.variants.name)} that have a population in ${shown(column)}, so no population is left. Change the lists in the Variants step.`;
+}
+
+/** Builds the request, with the individuals the filters keep that the
+    store gives through `c`, and sends it through `c`. Throws a defect when
+    the variants file is not read or there are no populations to run,
+    which `needs` rules out. */
 function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
-  const pops = populationsToRun(p);
-  if (p.variants === null || pops === null) {
+  const kept = populationsKept(p, c.individuals);
+  if (p.variants === null || kept === null) {
     throw defect("the diversity was run with no populations to run.");
   }
   const options = optionsOf(p);
@@ -475,10 +573,8 @@ function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
     analysis: ID,
     fileId: p.variants.fileId,
     filters: p.filters,
-    // The filters of individuals lock the diversity (`needs`), so it
-    // runs over every individual of the file.
-    individuals: null,
-    pops,
+    individuals: c.individuals,
+    pops: kept.pops,
     minNumIndividuals: options.minNumIndividuals,
     polyThreshold: options.polyThreshold,
   });
@@ -501,9 +597,21 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
   const min = optionsOf(p).minNumIndividuals;
   const found: Warning[] = [];
   const rows = diversityRows(r);
+  const toRun = populationsToRun(p) ?? [];
   const tooFew = rows.filter((row) => row.individuals < min);
   if (tooFew.length > 0) {
-    found.push({ code: "tooFewIndividuals", text: tooFewText(tooFew, min) });
+    // A population the filters of individuals took individuals from has
+    // fewer in the result than among the individuals of the variants file.
+    const sizes = new Map(
+      toRun.map(([pop, individuals]) => [pop, individuals.length]),
+    );
+    const filtered = tooFew.some(
+      (row) => row.individuals < (sizes.get(row.population) ?? 0),
+    );
+    found.push({
+      code: "tooFewIndividuals",
+      text: tooFewText(tooFew, min, filtered),
+    });
   }
   const withoutValue = rows
     .map((row, i) => ({
@@ -534,9 +642,7 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
   // A population none of whose individuals is in the variants file is
   // not among these: a metadata file may serve several panels.
   const inResult = new Set(r.pops);
-  const missing = (populationsToRun(p) ?? [])
-    .map(([pop]) => pop)
-    .filter((pop) => !inResult.has(pop));
+  const missing = toRun.map(([pop]) => pop).filter((pop) => !inResult.has(pop));
   if (missing.length > 0) {
     const one = missing.length === 1;
     found.push({
@@ -547,19 +653,28 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
   return found;
 }
 
-/** The text of `tooFewIndividuals`, for its populations. */
-function tooFewText(rows: readonly DiversityRow[], min: number): string {
+/** The text of `tooFewIndividuals`, for its populations; `filtered` when
+    the filters of individuals took individuals from one of them, which
+    the text then offers to loosen. */
+function tooFewText(
+  rows: readonly DiversityRow[],
+  min: number,
+  filtered: boolean,
+): string {
   const rule = `a variant has a value in a population only when at least ${grouped(min)} of its individuals have a called genotype there`;
   const names = namesOf(rows.map((row) => row.population));
+  const end = filtered
+    ? "in the metadata file, or loosen the filters of individuals in the Variants step."
+    : "in the metadata file.";
   const [first] = rows;
   if (rows.length === 1 && first !== undefined) {
-    return `Population ${names} has ${counted(first.individuals, "individual")}, and ${rule}, so ${names} has no values. To have them, merge it with another population in the metadata file.`;
+    return `Population ${names} has ${counted(first.individuals, "individual")}, and ${rule}, so ${names} has no values. To have them, merge it with another population ${end}`;
   }
   const counts =
     rows.length <= MAX_NAMED
       ? `, ${listed(rows.map((row) => grouped(row.individuals)))}`
       : "";
-  return `Populations ${names} have fewer than ${grouped(min)} individuals${counts}, and ${rule}, so they have no values. To have them, merge each with another population in the metadata file.`;
+  return `Populations ${names} have fewer than ${grouped(min)} individuals${counts}, and ${rule}, so they have no values. To have them, merge each with another population ${end}`;
 }
 
 /** The text of `variantsWithoutValue`, for its populations with the
@@ -620,16 +735,21 @@ function checkNumbers(result: JobResult): readonly (number | null)[] {
 }
 
 /** How many numbers `checkNumbers` gives for a result of `p`: 1 + 3 × the
-    populations of `populationsToRun`, since `run` sends every one of them
-    and popnei gives a row for each; `null` when `populationsToRun` is, and
-    when the project holds filters of individuals, which may leave a
-    population out of the result. */
+    populations the lists of individuals to keep and to remove leave,
+    since `run` sends every one of them and popnei gives a row for each;
+    `null` when `populationsToRun` is, when the project holds a threshold
+    on the individuals, whose list needs the statistics of each
+    individual, and when a list is one popnei would refuse. */
 function numCheckNumbers(p: Project): number | null {
-  const pops = populationsToRun(p);
-  if (pops === null || p.individualFilters.length > 0) {
+  const hasThreshold = p.individualFilters.some(
+    (filter) => filter.kind === "missing_data" || filter.kind === "obs_het",
+  );
+  if (populationsToRun(p) === null || hasThreshold) {
     return null;
   }
-  return 1 + NUMBERS_PER_POPULATION * pops.length;
+  const kept = individualsKept(p, null);
+  const left = kept === null ? null : populationsKept(p, kept.byLists);
+  return left === null ? null : 1 + NUMBERS_PER_POPULATION * left.pops.length;
 }
 
 /** The check numbers of each population: its expected heterozygosity, its
