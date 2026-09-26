@@ -1225,6 +1225,23 @@ for (const theme of ["light", "dark"] as const) {
       await save(page, `popgen-diversity-uncompared-${theme}`);
     });
 
+    test("the error bar, the project not saved", async ({ page }) => {
+      // Writing the file throws, as a defect of the writer would.
+      await page.evaluate(() => {
+        URL.createObjectURL = () => {
+          throw new Error("popnei_web defect: test");
+        };
+        setTimeout(() => {
+          throw new Error("test");
+        });
+      });
+      await page.getByRole("button", { name: "Save the project" }).click();
+      await expect(page.getByRole("status").first()).toHaveText(
+        /^The project could not be saved/,
+      );
+      await save(page, `popgen-error-bar-not-saved-${theme}`);
+    });
+
     test("the error bar, the details not copied", async ({ page }) => {
       await page.evaluate(() => {
         Object.defineProperty(navigator, "clipboard", { value: undefined });
