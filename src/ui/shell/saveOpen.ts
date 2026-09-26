@@ -38,7 +38,7 @@ export function openQuestion(
   running: boolean,
 ): { readonly title: string; readonly text: string } {
   const text =
-    "It replaces the project on the page, and an opening cannot be undone. To keep it, answer Keep the current project and save it first.";
+    "It replaces the project on the page, and an opening cannot be undone. To keep the project on the page, press Keep the current project and save it first.";
   return {
     title: `Open ${escaped(name)}?`,
     text: running ? `${text} The ongoing calculations will be stopped.` : text,

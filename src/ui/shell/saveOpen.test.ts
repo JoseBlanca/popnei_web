@@ -59,11 +59,11 @@ describe("the words and the reading of Save project and Open project…", () => 
   test("the question before an opening, and its sentence of the calculations in flight", () => {
     expect(openQuestion("panel.popnei.json", false)).toEqual({
       title: "Open panel.popnei.json?",
-      text: "It replaces the project on the page, and an opening cannot be undone. To keep it, answer Keep the current project and save it first.",
+      text: "It replaces the project on the page, and an opening cannot be undone. To keep the project on the page, press Keep the current project and save it first.",
     });
     expect(openQuestion("panel.popnei.json", true)).toEqual({
       title: "Open panel.popnei.json?",
-      text: "It replaces the project on the page, and an opening cannot be undone. To keep it, answer Keep the current project and save it first. The ongoing calculations will be stopped.",
+      text: "It replaces the project on the page, and an opening cannot be undone. To keep the project on the page, press Keep the current project and save it first. The ongoing calculations will be stopped.",
     });
   });
 
