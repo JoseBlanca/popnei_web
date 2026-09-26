@@ -549,7 +549,11 @@ the walking skeleton (stage 8).
   Open project…, Save project; the three links of the stepper; the step.
   The notice is last in the order of the page, and F6 reaches it from
   anywhere, as React Aria gives its region of toasts; when it goes while
-  it had the focus, the focus goes back to where it was before.
+  it had the focus, the focus goes back to where it was before. Escape
+  pressed in the notice gives the focus back to where it was before F6 or
+  the Tab key took it there, and leaves the notice as it is, since
+  closing it stops the calculations it left behind; F6 and Shift+F6 keep
+  the focus in the notice, which is the one region F6 moves between.
 - **The landmarks**: the header is `<header>`, the stepper `<nav>`
   labelled "Steps", the step `<main>`, the notice a region labelled
   "Notice"; they let a screen reader skip to the step, so no link to skip
