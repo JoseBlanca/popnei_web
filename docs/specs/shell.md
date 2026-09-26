@@ -423,8 +423,9 @@ the file and some, "The project file cannot be opened: …", do not:
    browser cannot read, moved or changed since it was picked, has no
    text of `projectFile.ts`, which reads only text: "panel.popnei.json
    could not be read: ‹the browser's message›. Choose it again."
-3. `readProjectFile` reads the text, with the application and its
-   analyses. A file it refuses: the text of its error.
+3. `read` of the saving reads the text, which is `readProjectFile` with
+   the application and its analyses that the entry gave the saving. A
+   file it refuses: the text of its error.
 4. When the project has changed, as above, or calculations are in
    flight, a dialog asks first: "Open panel.popnei.json? It replaces the
    project on the page, and an opening cannot be undone. Save the project
@@ -500,10 +501,15 @@ export function stepStates<R>(
 /** The summary line, its parts joined by " · ". */
 export function summaryLine(p: Project): string;
 
-/** The words of the notice, without its action, and the action. */
+/** The words of the notice, without its action; the words of the action;
+    and what the action does, which the button dispatches on. */
 export function noticeText(
   n: Notice, title: (id: AnalysisId) => string,
-): { readonly text: string; readonly action: "Undo" | "Redo" };
+): {
+  readonly text: string;
+  readonly action: "Undo" | "Redo";
+  readonly reverse: "undo" | "redo";
+};
 
 /** The announcements made from two states, in the order of the table; [] when none. */
 export function announcementsOf<R>(

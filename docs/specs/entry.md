@@ -361,6 +361,11 @@ dialog and says what the user sees of it (`docs/specs/shell.md`,
   project…; `panel` gives `panel.popnei.json`. `writeProjectFile` refuses
   nothing; it throws a defect on a check number that is not finite,
   which, in the event handler of the button, reaches the error bar.
+- `read(text)` calls `readProjectFile` of `projectFile.ts` with the text
+  of a picked project file, the application of the page, `"popgen"`, and
+  the same definitions of its analyses, so that Open project… of the
+  shell reads a file with what the saving writes it with, and the shell
+  names no application.
 - **The base project** is the project the page started with, the one
   last opened from a project file, which `opened(p)` sets, or the one
   last saved, which `save` sets. The project has changed when the present
@@ -464,12 +469,14 @@ The saving, in `src/ui/saving.ts`:
 ```ts
 export function createSaving(deps: {
   readonly store: Store<JobResult>;
+  readonly app: AppId;            // the application of the page, "popgen"
   readonly analyses: readonly AnalysisDef<Job, JobResult>[];
   readonly appVersion: string;
   readonly download: (name: string, text: string) => void;  // the browser's; a fake in the tests
 }): {
   proposedName(): string;         // projectFileName of the present project
   save(name: string): string;     // downloads the project file; the name used; the present project is the base
+  read(text: string): Result<Project, ProjectFileError>;  // readProjectFile with the app and analyses
   opened(p: Project): void;       // a project file was opened: p is the base
   changed(): boolean;             // the present project is not the base
 };
@@ -589,7 +596,9 @@ hand and whose cancels it records.
   `projectFileName` of the present project; `changed` is false on the
   first project, true after a command, false again after an undo back to
   it, after `opened(p)` with the present project, and after a save, and
-  true after a command that follows the save.
+  true after a command that follows the save; `read` of the text a save
+  downloaded gives its project, and of the text of a project file of
+  association refuses it as `otherApp`.
 - **`addFile`** returns 32 hexadecimal digits, a new one at every call,
   and the fake client holds the `File` under it when it returns.
 - **`createDefects`**: the first error kept, the second counted in
