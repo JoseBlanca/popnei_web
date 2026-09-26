@@ -8,7 +8,9 @@ import type { Project } from "../core/project.ts";
 import { writeProjectFile } from "../core/projectFile.ts";
 import { createStore } from "../core/store.ts";
 import type { Store } from "../core/store.ts";
-import type { Job, JobResult } from "../worker/protocol.ts";
+import { TEST_DEFS } from "../core/testSupport.ts";
+import type { TestDefJob, TestDefResult } from "../core/testSupport.ts";
+import type { Job, JobResult, Outcome, Run } from "../worker/protocol.ts";
 import { createSaving } from "./saving.ts";
 
 // The real store of core, and a fake download that records what it was
@@ -210,5 +212,100 @@ describe("WS9 D2 the saving", () => {
       ok: false,
       error: { kind: "project", error: { kind: "otherApp", found: "gwas" } },
     });
+  });
+});
+
+describe("WS9 the saving counts a result that ended as a change", () => {
+  /** A store of the analyses of population genetics of `TEST_DEFS`, with
+      panel.nei read, its saving, and `end`, which ends the diversity
+      that `start` began. */
+  function withDiversity(): {
+    readonly store: Store<TestDefResult>;
+    readonly saving: ReturnType<typeof createSaving>;
+    readonly start: () => void;
+    readonly end: () => void;
+  } {
+    const sent: { key: string; run: Run<TestDefResult> }[] = [];
+    const store = createStore<TestDefJob, TestDefResult>({
+      first: firstProject("popgen"),
+      analyses: TEST_DEFS.filter((def) => def.app.includes("popgen")),
+      send: (key) => {
+        const run: Run<TestDefResult> = {
+          id: sent.length + 1,
+          outcome: new Promise<Outcome<TestDefResult>>(() => undefined),
+          cancel: () => undefined,
+        };
+        sent.push({ key, run });
+        return run;
+      },
+      numVarsOf: () => null,
+      appVersion: "0.1.0",
+      cacheMaxBytes: CACHE_MAX_BYTES,
+      maxUndoSteps: MAX_UNDO_STEPS,
+    });
+    store.popneiReady("0.1.0");
+    store.apply("a new variants file was loaded", (p) =>
+      loadVariants(p, PANEL),
+    );
+    store.variantsRead(PANEL.fileId, {
+      kind: "read",
+      individuals: ["i1", "i2"],
+      ploidy: 2,
+      numVars: null,
+    });
+    const saving = createSaving({
+      store,
+      app: "popgen",
+      analyses: TEST_DEFS,
+      appVersion: "0.1.0",
+      download: () => undefined,
+    });
+    return {
+      store,
+      saving,
+      start: () => {
+        store.startRun("diversity");
+      },
+      end: () => {
+        const request = sent.at(-1);
+        if (request === undefined) throw new Error("no calculation was sent");
+        store.runEnded(request.run.id, {
+          kind: "done",
+          key: request.key,
+          result: { analysis: "diversity", numbers: [0.35] },
+        });
+      },
+    };
+  }
+
+  test("a result that ends after a save, with no command, is a change; a save after it is not", () => {
+    const { saving, start, end } = withDiversity();
+    start();
+    saving.save("panel");
+    expect(saving.changed()).toBe(false);
+
+    end();
+    expect(saving.changed()).toBe(true);
+
+    saving.save("panel");
+    expect(saving.changed()).toBe(false);
+  });
+
+  test("a result that comes back after an undo to the saved project, and a result done when it was saved, are no change", () => {
+    const { store, saving, start, end } = withDiversity();
+    start();
+    end();
+    saving.save("panel");
+    store.apply("the missing data filter changed", (p: Project) =>
+      setVariantFilter(p, {
+        kind: "missing_data",
+        maxAllowedMissingRate: 0.05,
+      }),
+    );
+    expect(saving.changed()).toBe(true);
+
+    store.undo();
+    expect(store.getState().analyses[0]?.status.kind).toBe("done");
+    expect(saving.changed()).toBe(false);
   });
 });

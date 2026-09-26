@@ -7,9 +7,12 @@
  * leaving the page needs.
  *
  * The base project is the project the page started with, the one last
- * opened from a project file, or the one last saved. The project has
- * changed when the present project is another object than the base, and
- * the page then asks the browser to confirm before it is left. A save
+ * opened from a project file, or the one last saved, with the keys of the
+ * analyses done in it. The project has changed when the present project
+ * is another object than the base, or when an analysis is done under a
+ * key that was not done in the base, a result that ended since, as the
+ * owner decided on 26 September 2026; the page then asks the browser to
+ * confirm before it is left. A save
  * sets the base, as the owner decided on 25 September 2026, to confirm
  * (point K of docs/specs/stage-2-open-points.md): the page does not
  * learn whether the download was kept.
@@ -28,7 +31,8 @@ import {
 import type { ProjectFileError } from "../core/projectFile.ts";
 import type { AppId, Project } from "../core/project.ts";
 import type { Result } from "../core/result.ts";
-import type { AnalysisDef, Store } from "../core/store.ts";
+import type { Key } from "../core/keys.ts";
+import type { AnalysisDef, AppState, Store } from "../core/store.ts";
 
 /** What the saving is made with: the store, of results `R` of requests
     `J`, the application and the definitions of its analyses. */
@@ -63,7 +67,9 @@ export interface Saving {
   read(text: string): Result<Project, ProjectFileError>;
   /** A project file was opened and `p` is its project: it is the base. */
   opened(p: Project): void;
-  /** Whether the present project is another than the base. */
+  /** Whether the present project is another than the base, or an
+      analysis is done under a key that was not done in the base: a result
+      that ended since, which the file saved lacks. */
   changed(): boolean;
 }
 
@@ -86,11 +92,23 @@ export function savedName(name: string): string {
 /** The ending of a name that `savedName` replaces rather than doubles. */
 const JSON_EXTENSION = ".json";
 
+/** The keys under which the analyses of `state` are done. */
+function doneKeys<R>(state: AppState<R>): ReadonlySet<Key> {
+  const keys = new Set<Key>();
+  for (const view of state.analyses) {
+    if (view.status.kind === "done") keys.add(view.status.key);
+  }
+  return keys;
+}
+
 /** The saving of the store of `deps`, whose base is its present
     project. */
 export function createSaving<J, R>(deps: SavingDeps<J, R>): Saving {
   const { store, app, analyses, appVersion, download } = deps;
   let base: Project = store.getState().project;
+  // The keys done in the base: a result done under another key ended
+  // after it, and the file saved lacks its check numbers.
+  let baseDone = doneKeys(store.getState());
   return {
     proposedName: () => projectFileName(store.getState().project),
     save: (name) => {
@@ -104,13 +122,24 @@ export function createSaving<J, R>(deps: SavingDeps<J, R>): Saving {
       const used = savedName(name);
       download(used, text);
       base = state.project;
+      baseDone = doneKeys(state);
       return used;
     },
     read: (text) => readProjectFile(text, app, analyses),
     opened: (p) => {
       base = p;
+      baseDone = doneKeys(store.getState());
     },
-    changed: () => store.getState().project !== base,
+    changed: () => {
+      const state = store.getState();
+      return (
+        state.project !== base ||
+        state.analyses.some(
+          (view) =>
+            view.status.kind === "done" && !baseDone.has(view.status.key),
+        )
+      );
+    },
   };
 }
 

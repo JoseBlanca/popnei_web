@@ -389,6 +389,57 @@ test("WS9 D3 leaving the page just after a Save raises no question, and after a 
   expect(await leave(page)).toBe("beforeunload");
 });
 
+test("WS9 D3 a result that ends after a Save is a change: leaving the page raises the question", async ({
+  page,
+}) => {
+  await openPopgen(page);
+  await loadWithPopulations(page, "panel.nei");
+  // A first run counts the variants of the file, which the project then
+  // holds, so that the second run changes nothing of the project.
+  await goTo(page, "Analyses");
+  await page.getByRole("button", { name: "Run" }).click();
+  await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
+  await goTo(page, "Variants");
+  await setThreshold(page, "0.05");
+  // The calculation worker keeps its results back until the Save is
+  // made, so that the result ends after it.
+  const worker = page.workers().find((w) => w.url().includes("runnerWorker"));
+  if (worker === undefined) throw new Error("no calculation worker");
+  await worker.evaluate(() => {
+    const scope = globalThis as unknown as {
+      postMessage: (message: unknown, transfer?: Transferable[]) => void;
+      releaseResults?: () => void;
+    };
+    const post = scope.postMessage.bind(scope);
+    const held: [unknown, Transferable[] | undefined][] = [];
+    scope.postMessage = (message, transfer) => {
+      const kind =
+        typeof message === "object" && message !== null && "kind" in message
+          ? message.kind
+          : null;
+      if (kind === "result") held.push([message, transfer]);
+      else post(message, transfer);
+    };
+    scope.releaseResults = () => {
+      scope.postMessage = post;
+      for (const [message, transfer] of held) post(message, transfer);
+    };
+  });
+  await goTo(page, "Analyses");
+  await page.getByRole("button", { name: "Run" }).click();
+  await expect(stepLink(page, "Analyses")).toHaveAccessibleName(
+    "Analyses, Running",
+  );
+  await (await saveProject(page)).path();
+
+  await worker.evaluate(() => {
+    (globalThis as unknown as { releaseResults: () => void }).releaseResults();
+  });
+  await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
+
+  expect(await leave(page)).toBe("beforeunload");
+});
+
 test("WS9 D3 Open project… with notes.txt shows the text of notJson in a dialog whose OK takes the focus and gives it back to Open project…, and axe", async ({
   page,
   makeAxeBuilder,
