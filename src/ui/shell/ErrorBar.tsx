@@ -22,7 +22,7 @@ import type { Defects } from "../defects.ts";
 import type { Saving } from "../saving.ts";
 import { Button } from "../widgets/Button.tsx";
 import styles from "./ErrorBar.module.css";
-import { handedText } from "./saveOpen.ts";
+import { saveFromBar } from "./barSave.ts";
 
 /** What the bar is drawn with. */
 export interface ErrorBarProps {
@@ -39,12 +39,12 @@ export interface ErrorBarProps {
 }
 
 /** What the bar's buttons did last: nothing, Copy the details, or Save
-    the project with the name of the file handed to the browser. */
+    the project with the words of what it did. */
 type Copying =
   | { readonly kind: "idle" }
   | { readonly kind: "copied" }
   | { readonly kind: "failed" }
-  | { readonly kind: "saved"; readonly name: string };
+  | { readonly kind: "saved"; readonly text: string };
 
 const IDLE: Copying = { kind: "idle" };
 
@@ -106,8 +106,10 @@ export function ErrorBar({
             <Button
               label="Save the project"
               onPress={() => {
-                const name = saving.save(saving.proposedName());
-                setCopying({ kind: "saved", name });
+                setCopying({
+                  kind: "saved",
+                  text: saveFromBar(saving, defects),
+                });
               }}
             />
           )}
@@ -163,7 +165,7 @@ function statusText(copying: Copying): string {
     case "failed":
       return "The details could not be copied. Select them in the box below and copy them.";
     case "saved":
-      return handedText(copying.name);
+      return copying.text;
   }
 }
 

@@ -115,9 +115,10 @@ export function SaveProject(): React.JSX.Element {
 
   const save = (): void => {
     if (given === "") return;
-    const used = saving.save(given);
+    // Closed first, so that a defect thrown in writing the file, which the
+    // error bar shows, does not leave the dialog open over the bar.
     close();
-    announcer.announce(handedText(used));
+    announcer.announce(handedText(saving.save(given)));
   };
 
   return (

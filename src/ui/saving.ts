@@ -24,14 +24,14 @@ import {
 } from "../core/projectFile.ts";
 import type { Project } from "../core/project.ts";
 import type { AnalysisDef, Store } from "../core/store.ts";
-import type { Job, JobResult } from "../worker/protocol.ts";
 
-/** What the saving is made with. */
-export interface SavingDeps {
+/** What the saving is made with: the store, of results `R` of requests
+    `J`, and the definitions of its analyses. */
+export interface SavingDeps<J, R> {
   /** The store of the page. */
-  readonly store: Store<JobResult>;
+  readonly store: Store<R>;
   /** The definitions of the analyses of the application. */
-  readonly analyses: readonly AnalysisDef<Job, JobResult>[];
+  readonly analyses: readonly AnalysisDef<J, R>[];
   /** The version of the application, written into the file. */
   readonly appVersion: string;
   /** Hands the text to the browser to download under the name; a fake in
@@ -66,7 +66,7 @@ export function savedName(name: string): string {
 
 /** The saving of the store of `deps`, whose base is its present
     project. */
-export function createSaving(deps: SavingDeps): Saving {
+export function createSaving<J, R>(deps: SavingDeps<J, R>): Saving {
   const { store, analyses, appVersion, download } = deps;
   let base: Project = store.getState().project;
   return {

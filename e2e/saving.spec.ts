@@ -563,6 +563,38 @@ test("WS9 D3 Save the project of the error bar downloads the project file with n
   await expectNoViolations(makeAxeBuilder);
 });
 
+test("WS9 D3 a project that cannot be written: Save closes its dialog and the bar shows the error, and the bar's Save says the project was not saved, and axe", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openPopgen(page);
+  await loadPanelNei(page);
+  // Writing the file throws, as a defect of the writer would.
+  await page.evaluate(() => {
+    URL.createObjectURL = () => {
+      throw new Error("popnei_web defect: test");
+    };
+  });
+
+  await saveButton(page).click();
+  await page
+    .getByRole("dialog", { name: "Save the project" })
+    .getByRole("button", { name: "Save", exact: true })
+    .click();
+
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("alert")).toContainText(
+    "popnei_web defect: test",
+  );
+  await page.getByRole("button", { name: "Save the project" }).click();
+  // The bar's own status region, the first of the page.
+  await expect(page.getByRole("status").first()).toHaveText(
+    "The project could not be saved: the application met an error of its own as it wrote the file. Reloading the page would lose the project.",
+  );
+  await expect(page.getByText("1 more error followed it.")).toBeVisible();
+  await expectNoViolations(makeAxeBuilder);
+});
+
 test("WS9 D3 under the diversity's table, a VCF read with every variant is told why its numbers are not compared, and read again as the project was, the same numbers, and axe", async ({
   page,
   makeAxeBuilder,

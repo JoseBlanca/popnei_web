@@ -29,8 +29,10 @@ export interface DefectsState {
 
 /** Where an error came from: the window's `error` event, its
     `unhandledrejection` event, React drawing the shell outside every
-    boundary, or React drawing a step, whose error boundary caught it. */
-export type DefectOrigin = "event" | "rejection" | "drawing" | "boundary";
+    boundary, React drawing a step, whose error boundary caught it, or
+    Save the project of the error bar, which caught it. */
+export type DefectOrigin =
+  "event" | "rejection" | "drawing" | "boundary" | "barSave";
 
 /** The log of the errors, made once by the entry of the page. */
 export interface Defects {
@@ -65,6 +67,8 @@ const ORIGIN_TEXT: Readonly<Record<DefectOrigin, string>> = {
   drawing: "thrown while React drew the application, through onUncaughtError",
   boundary:
     "thrown while React drew a step, caught by the error boundary of a step, through onCaughtError",
+  barSave:
+    "thrown as Save the project of the error bar wrote the project file, caught by the bar",
 };
 
 const EMPTY: DefectsState = Object.freeze({ first: null, more: 0 });
