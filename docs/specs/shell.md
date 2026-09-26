@@ -359,12 +359,15 @@ It has three buttons:
   others and its status region says "The project could not be saved: the
   application met an error of its own as it wrote the file. Reloading the
   page would lose the project.", since the bar's own words tell the user
-  to reload once it is saved. Its first line then ends "Your project
-  could not be saved; copy the details and report them." in place of
-  "Your project is intact: save it, then reload the page.", until the
-  bar is closed, as the owner decided on 26 September 2026 (point 6 of
-  the review of work package 9), so that the bar no longer tells the
-  user to do what it has just failed to do.
+  to reload once it is saved. After any save that could not write the
+  project, this one or Save of the dialog of Save project, the bar's
+  first line ends "Your project could not be saved; copy the details
+  and report them." in place of "Your project is intact: save it, then
+  reload the page.", until a save succeeds, as the owner decided on 26
+  September 2026 (point 6 of the review of work package 9), so that the
+  bar no longer tells the user to do what has just failed. The bar
+  learns it from `saveFailed` of the saving (`docs/specs/entry.md`, "The
+  saving").
 - **Copy the details**, which copies, for a report of the bug, the
   message and the stack of every error kept, where each came from, the
   address of the page, the versions of the application and of popnei,

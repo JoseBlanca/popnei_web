@@ -370,6 +370,12 @@ dialog and says what the user sees of it (`docs/specs/shell.md`,
   gives `run1.popnei.json`, and `run1.POPNEI.JSON` is kept. `writeProjectFile` refuses
   nothing; it throws a defect on a check number that is not finite,
   which, in the event handler of the button, reaches the error bar.
+- **A save that fails**, a defect thrown as the file is written or
+  handed to the browser, is recorded before it is thrown on:
+  `saveFailed()` is true from then until a save succeeds, and
+  `subscribe` tells the error bar, which then no longer says to save
+  (`docs/specs/shell.md`, "The error bar"), whichever Save failed, the
+  header's or the bar's, as the owner decided on 26 September 2026.
 - `read(text)` calls `readProjectFile` of `projectFile.ts` with the text
   of a picked project file, the application of the page, `"popgen"`, and
   the same definitions of its analyses, so that Open project… of the
@@ -495,6 +501,8 @@ export function createSaving(deps: {
   read(text: string): Result<Project, ProjectFileError>;  // readProjectFile with the app and analyses
   opened(p: Project): void;       // a project file was opened: p is the base
   changed(): boolean;             // the present project is not the base, or a result ended since
+  saveFailed(): boolean;          // the last save threw as it wrote or downloaded the file
+  readonly subscribe: (listener: () => void) => () => void;  // called when saveFailed changes
 };
 ```
 
@@ -615,7 +623,9 @@ hand and whose cancels it records.
   it, after `opened(p)` with the present project, and after a save, and
   true after a command that follows the save, and after a result that
   ends after the save, with no command; false after a save made once
-  that result had ended; `read` of the text a save
+  that result had ended; `saveFailed` is false at first, true after a
+  save whose download throws, with the listener called, and false again
+  after a save that succeeds; `read` of the text a save
   downloaded gives its project, and of the text of a project file of
   association refuses it as `otherApp`.
 - **`addFile`** returns 32 hexadecimal digits, a new one at every call,
