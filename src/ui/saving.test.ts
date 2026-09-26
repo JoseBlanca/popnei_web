@@ -39,6 +39,7 @@ function setup(): {
   const downloads: { name: string; text: string }[] = [];
   const saving = createSaving({
     store,
+    app: "popgen",
     analyses: POPGEN_ANALYSES,
     appVersion: "0.1.0",
     download: (name, text) => {
@@ -147,5 +148,40 @@ describe("WS9 D2 the saving", () => {
 
     setThreshold(store, 0.2);
     expect(saving.changed()).toBe(true);
+  });
+
+  test("read of the text a save downloaded gives its project", () => {
+    const { store, downloads, saving } = setup();
+    loadPanel(store);
+    setThreshold(store, 0.05);
+    saving.save("panel");
+    const [saved] = downloads;
+    if (saved === undefined) throw new Error("nothing downloaded");
+
+    const read = saving.read(saved.text);
+
+    if (!read.ok) throw new Error(read.error.kind);
+    expect(read.value.filters).toEqual(store.getState().project.filters);
+    expect(read.value.reference?.variants.name).toBe("panel.nei");
+  });
+
+  test("read of a project file of association refuses it as otherApp", () => {
+    const { downloads, saving } = setup();
+    saving.save("panel");
+    const [saved] = downloads;
+    if (saved === undefined) throw new Error("nothing downloaded");
+    const file: unknown = JSON.parse(saved.text);
+    if (typeof file !== "object" || file === null) throw new Error("no file");
+    const text = JSON.stringify({
+      ...file,
+      app: "gwas",
+      grouping: { kind: "roles", roles: [] },
+      checks: [],
+    });
+
+    expect(saving.read(text)).toEqual({
+      ok: false,
+      error: { kind: "project", error: { kind: "otherApp", found: "gwas" } },
+    });
   });
 });

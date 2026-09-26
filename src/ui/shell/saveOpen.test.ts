@@ -9,6 +9,10 @@ import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 
 import { POPGEN_ANALYSES } from "../../core/apps.ts";
+import { readProjectFile } from "../../core/projectFile.ts";
+import type { ProjectFileError } from "../../core/projectFile.ts";
+import type { Project } from "../../core/project.ts";
+import type { Result } from "../../core/result.ts";
 import {
   handedText,
   notOpenedTitle,
@@ -27,6 +31,12 @@ const FIXTURES = join(
   "fixtures",
   "projectFile",
 );
+
+/** `readProjectFile` with the population genetics application, as the
+    saving of its page reads. */
+function read(text: string): Result<Project, ProjectFileError> {
+  return readProjectFile(text, "popgen", POPGEN_ANALYSES);
+}
 
 function fileOf(name: string, text: string): PickedFile {
   return new File([text], name);
@@ -74,7 +84,7 @@ describe("the words and the reading of Save project and Open project…", () => 
       size: 64 * 1024 * 1024 + 1,
       text: () => Promise.reject(new Error("read")),
     };
-    expect(await readPicked(big, POPGEN_ANALYSES)).toEqual({
+    expect(await readPicked(big, read)).toEqual({
       kind: "refused",
       title: "notes.vcf was not opened",
       text: "notes.vcf cannot be opened as a project: it is larger than 64 MB, and a project file, which holds settings and no genotypes, is much smaller. Open the .popnei.json file the application saved.",
@@ -88,7 +98,7 @@ describe("the words and the reading of Save project and Open project…", () => 
       text: () =>
         Promise.reject(new DOMException("It moved.", "NotFoundError")),
     };
-    expect(await readPicked(gone, POPGEN_ANALYSES)).toEqual({
+    expect(await readPicked(gone, read)).toEqual({
       kind: "refused",
       title: "panel.popnei.json was not opened",
       text: "panel.popnei.json could not be read: It moved. Choose it again.",
@@ -96,9 +106,7 @@ describe("the words and the reading of Save project and Open project…", () => 
   });
 
   test("a text that is not JSON gives the text of notJson", async () => {
-    expect(
-      await readPicked(fileOf("notes.txt", "some notes"), POPGEN_ANALYSES),
-    ).toEqual({
+    expect(await readPicked(fileOf("notes.txt", "some notes"), read)).toEqual({
       kind: "refused",
       title: "notes.txt was not opened",
       text: "notes.txt cannot be opened as a project: it is not a project file, or it was cut short or changed outside the application. Open the .popnei.json file the application saved, or a copy of it.",
@@ -110,10 +118,7 @@ describe("the words and the reading of Save project and Open project…", () => 
       join(FIXTURES, "v1-nei-diversity.popnei.json"),
       "utf8",
     );
-    const picked = await readPicked(
-      fileOf("panel.popnei.json", text),
-      POPGEN_ANALYSES,
-    );
+    const picked = await readPicked(fileOf("panel.popnei.json", text), read);
     if (picked.kind !== "project") throw new Error(picked.text);
     expect(picked.project.variants).toBeNull();
     expect(openedText("panel.popnei.json", picked.project)).toMatch(
@@ -123,10 +128,7 @@ describe("the words and the reading of Save project and Open project…", () => 
 
   test("an opened project with no variants file is only said opened", async () => {
     const text = await readFile(join(FIXTURES, "v1-empty.popnei.json"), "utf8");
-    const picked = await readPicked(
-      fileOf("empty.popnei.json", text),
-      POPGEN_ANALYSES,
-    );
+    const picked = await readPicked(fileOf("empty.popnei.json", text), read);
     if (picked.kind !== "project") throw new Error(picked.text);
     expect(openedText("empty.popnei.json", picked.project)).toBe(
       "Opened empty.popnei.json.",

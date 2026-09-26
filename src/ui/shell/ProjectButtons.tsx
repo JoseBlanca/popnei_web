@@ -25,7 +25,6 @@
 import { useEffect, useRef, useState } from "react";
 import { FileTrigger } from "react-aria-components";
 
-import { POPGEN_ANALYSES } from "../../core/apps.ts";
 import type { Project } from "../../core/project.ts";
 import { classOf } from "../classOf.ts";
 import { useSaving } from "../saving.ts";
@@ -213,7 +212,7 @@ export function OpenProject(): React.JSX.Element {
   const onPicked = async (file: File): Promise<void> => {
     lastPick.current += 1;
     const pick = lastPick.current;
-    const picked = await readPicked(file, POPGEN_ANALYSES);
+    const picked = await readPicked(file, (text) => saving.read(text));
     if (pick !== lastPick.current) return;
     if (picked.kind === "refused") {
       setOpening(picked);

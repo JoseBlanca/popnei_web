@@ -70,6 +70,7 @@ describe("WS9 the Save of the error bar", () => {
     const downloads: string[] = [];
     const saving = createSaving({
       store,
+      app: "popgen",
       analyses: TEST_DEFS,
       appVersion: "0.1.0",
       download: (name) => {
@@ -90,6 +91,7 @@ describe("WS9 the Save of the error bar", () => {
     const downloads: string[] = [];
     const saving = createSaving({
       store,
+      app: "popgen",
       analyses: TEST_DEFS,
       appVersion: "0.1.0",
       download: (name) => {

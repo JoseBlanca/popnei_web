@@ -2,7 +2,9 @@
  * The saving of the project (docs/specs/entry.md, "The saving"): it makes
  * the text of the project file and hands it to the browser as a download,
  * for Save project of the header and Save the project of the error bar
- * alike, and keeps what the question before leaving the page needs.
+ * alike; reads the text of a project file picked with Open project…, with
+ * the same application and analyses; and keeps what the question before
+ * leaving the page needs.
  *
  * The base project is the project the page started with, the one last
  * opened from a project file, or the one last saved. The project has
@@ -20,16 +22,21 @@ import { createContext, useContext } from "react";
 import {
   PROJECT_FILE_EXTENSION,
   projectFileName,
+  readProjectFile,
   writeProjectFile,
 } from "../core/projectFile.ts";
-import type { Project } from "../core/project.ts";
+import type { ProjectFileError } from "../core/projectFile.ts";
+import type { AppId, Project } from "../core/project.ts";
+import type { Result } from "../core/result.ts";
 import type { AnalysisDef, Store } from "../core/store.ts";
 
 /** What the saving is made with: the store, of results `R` of requests
-    `J`, and the definitions of its analyses. */
+    `J`, the application and the definitions of its analyses. */
 export interface SavingDeps<J, R> {
   /** The store of the page. */
   readonly store: Store<R>;
+  /** The application of the page, whose project files it reads. */
+  readonly app: AppId;
   /** The definitions of the analyses of the application. */
   readonly analyses: readonly AnalysisDef<J, R>[];
   /** The version of the application, written into the file. */
@@ -49,6 +56,10 @@ export interface Saving {
       returns the name used. Throws a defect on a check number that is
       not finite. */
   save(name: string): string;
+  /** The project of the text `text` of a picked project file, read by
+      `readProjectFile` with the application and the analyses the saving
+      writes with, or why it does not open. */
+  read(text: string): Result<Project, ProjectFileError>;
   /** A project file was opened and `p` is its project: it is the base. */
   opened(p: Project): void;
   /** Whether the present project is another than the base. */
@@ -67,7 +78,7 @@ export function savedName(name: string): string {
 /** The saving of the store of `deps`, whose base is its present
     project. */
 export function createSaving<J, R>(deps: SavingDeps<J, R>): Saving {
-  const { store, analyses, appVersion, download } = deps;
+  const { store, app, analyses, appVersion, download } = deps;
   let base: Project = store.getState().project;
   return {
     proposedName: () => projectFileName(store.getState().project),
@@ -84,6 +95,7 @@ export function createSaving<J, R>(deps: SavingDeps<J, R>): Saving {
       base = state.project;
       return used;
     },
+    read: (text) => readProjectFile(text, app, analyses),
     opened: (p) => {
       base = p;
     },

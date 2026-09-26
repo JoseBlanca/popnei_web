@@ -178,6 +178,7 @@ function startApplication(
   // Save.
   const saving = createSaving({
     store,
+    app: "popgen",
     analyses: POPGEN_ANALYSES,
     appVersion: APP_VERSION,
     download: (name, text) => {

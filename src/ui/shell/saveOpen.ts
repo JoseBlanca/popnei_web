@@ -11,9 +11,9 @@ import {
   MAX_PROJECT_FILE_BYTES,
   askedFileText,
   projectFileErrorText,
-  readProjectFile,
 } from "../../core/projectFile.ts";
-import type { AnalysisDef } from "../../core/store.ts";
+import type { ProjectFileError } from "../../core/projectFile.ts";
+import type { Result } from "../../core/result.ts";
 
 /** The description of Save while the field of the name is empty. */
 export const NAME_NEEDED = "Give the file a name.";
@@ -80,12 +80,12 @@ export type PickedFile = Pick<File, "name" | "size" | "text">;
 /**
  * Reads and checks the picked `file`: a file above 64 MB is not read; a
  * file the browser cannot read is told so; the text is then read by
- * `readProjectFile` with the definitions `analyses` of the population
- * genetics application.
+ * `read`, `read` of the saving, which is `readProjectFile` with the
+ * application of the page and its analyses.
  */
-export async function readPicked<J, R>(
+export async function readPicked(
   file: PickedFile,
-  analyses: readonly AnalysisDef<J, R>[],
+  read: (text: string) => Result<Project, ProjectFileError>,
 ): Promise<Picked> {
   const refused = (text: string): Picked => ({
     kind: "refused",
@@ -104,8 +104,8 @@ export async function readPicked<J, R>(
     const message = error instanceof Error ? error.message : String(error);
     return refused(unreadableText(file.name, message));
   }
-  const read = readProjectFile(text, "popgen", analyses);
-  return read.ok
-    ? { kind: "project", project: read.value }
-    : refused(projectFileErrorText(read.error, file.name));
+  const opened = read(text);
+  return opened.ok
+    ? { kind: "project", project: opened.value }
+    : refused(projectFileErrorText(opened.error, file.name));
 }
