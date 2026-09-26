@@ -1,6 +1,8 @@
 import { describe, expect, test } from "vitest";
 
-import { variantsStem } from "./fileNames.ts";
+import { variantsStem, writtenName } from "./fileNames.ts";
+import type { Project } from "./project.ts";
+import { deepFreeze, sampleProject } from "./testSupport.ts";
 
 describe("the stem of the name of a variants file", () => {
   test("drops .nei, .vcf and .vcf.gz, in any case", () => {
@@ -18,5 +20,61 @@ describe("the stem of the name of a variants file", () => {
   test("is project for a name that is only an extension", () => {
     expect(variantsStem(".nei")).toBe("project");
     expect(variantsStem(".VCF.gz")).toBe("project");
+  });
+});
+
+/** `sampleProject` with its variants file named `name` and the filters
+    given, frozen deeply. */
+function projectNamed(
+  name: string,
+  filters: Pick<Project, "filters" | "individualFilters">,
+): Project {
+  const sample = sampleProject();
+  if (sample.variants === null) {
+    throw new Error("the sample project has no variants file");
+  }
+  return deepFreeze<Project>({
+    ...sample,
+    variants: { ...sample.variants, name },
+    ...filters,
+  });
+}
+
+describe("VS2 D4 the name of the written file of the filtered variants", () => {
+  test("panel.vcf.gz with a filter of the variants gives panel.filtered.nei", () => {
+    const p = projectNamed("panel.vcf.gz", {
+      filters: [{ kind: "maf", maxAllowedMaf: 0.95 }],
+      individualFilters: [],
+    });
+    expect(writtenName(p)).toBe("panel.filtered.nei");
+  });
+
+  test("panel.vcf.gz with a threshold on the individuals alone gives panel.filtered.nei", () => {
+    const p = projectNamed("panel.vcf.gz", {
+      filters: [],
+      individualFilters: [{ kind: "obs_het", maxAllowedObsHet: 0.38 }],
+    });
+    expect(writtenName(p)).toBe("panel.filtered.nei");
+  });
+
+  test("panel.vcf.gz with no filter gives panel.nei, the file converted", () => {
+    const p = projectNamed("panel.vcf.gz", {
+      filters: [],
+      individualFilters: [],
+    });
+    expect(writtenName(p)).toBe("panel.nei");
+  });
+
+  test("PANEL.NEI with a filter gives PANEL.filtered.nei", () => {
+    const p = projectNamed("PANEL.NEI", {
+      filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.05 }],
+      individualFilters: [],
+    });
+    expect(writtenName(p)).toBe("PANEL.filtered.nei");
+  });
+
+  test("a project with no variants file gives project.nei", () => {
+    const p = deepFreeze<Project>({ ...sampleProject(), variants: null });
+    expect(writtenName(p)).toBe("project.nei");
   });
 });
