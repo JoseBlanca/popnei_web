@@ -463,6 +463,98 @@ test("WS9 D3 of two project files picked close together, the second opens, and t
   ).toBeFocused();
 });
 
+/** Makes the page hold the read of every file picked until
+    `releaseRead` is called, and note when a read has ended. */
+async function holdReads(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const held: (() => void)[] = [];
+    Object.assign(window, {
+      releaseRead: () => {
+        for (const release of held.splice(0)) release();
+      },
+    });
+    File.prototype.text = async function (this: File): Promise<string> {
+      const read = await new Response(this).text();
+      await new Promise<void>((resolve) => {
+        held.push(resolve);
+      });
+      Object.assign(window, { readEnded: true });
+      return read;
+    };
+  });
+}
+
+/** Ends the reads `holdReads` held, and waits a frame past them, for the
+    page to answer the file if it does. */
+async function releaseReads(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    (window as unknown as { releaseRead: () => void }).releaseRead();
+  });
+  await expect
+    .poll(() => page.evaluate(() => "readEnded" in window))
+    .toBe(true);
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(resolve)),
+  );
+}
+
+test("WS9 D3 a project file whose read ends while the dialog of Save is open is opened once that dialog has closed, and not behind it", async ({
+  page,
+}) => {
+  // At the Individuals step, which an opening leaves for Variants.
+  await openPopgen(page, "#individuals");
+  await holdReads(page);
+  await openProject(
+    page,
+    join(
+      import.meta.dirname,
+      "..",
+      "src",
+      "core",
+      "fixtures",
+      "projectFile",
+      "v1-empty.popnei.json",
+    ),
+  );
+  await saveButton(page).click();
+  const dialog = page.getByRole("dialog", { name: "Save the project" });
+  await expect(dialog.getByRole("textbox")).toBeFocused();
+
+  await releaseReads(page);
+  expect(new URL(page.url()).hash).toBe("#individuals");
+  await expect(dialog.getByRole("textbox")).toBeFocused();
+
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(status(page)).toHaveText("Opened v1-empty.popnei.json.");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Variants" }),
+  ).toBeFocused();
+});
+
+test("WS9 D3 a project file refused whose read ends while the dialog of Save is open is told once that dialog has closed, and its OK gives the focus to Open project…", async ({
+  page,
+}) => {
+  await openPopgen(page);
+  await holdReads(page);
+  await openProject(page, { name: "notes.txt", text: "some notes" });
+  await saveButton(page).click();
+  const dialog = page.getByRole("dialog", { name: "Save the project" });
+  await expect(dialog.getByRole("textbox")).toBeFocused();
+
+  await releaseReads(page);
+  await expect(page.getByRole("alertdialog")).toHaveCount(0);
+
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  const refusal = page.getByRole("alertdialog", {
+    name: "notes.txt was not opened",
+  });
+  await expect(refusal.getByRole("button", { name: "OK" })).toBeFocused();
+  await refusal.getByRole("button", { name: "OK" }).click();
+  await expect(refusal).toHaveCount(0);
+  await expect(openButton(page)).toBeFocused();
+});
+
 test("WS9 D3 Open project… with a file above 64 MB shows the text of tooLarge", async ({
   page,
 }, testInfo) => {

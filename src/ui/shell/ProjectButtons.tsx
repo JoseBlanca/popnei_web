@@ -14,7 +14,9 @@
  * in a dialog with OK. When the project has changed since it was opened
  * or saved, or calculations are in flight, a dialog asks first, since an
  * opening cannot be undone. After the opening the Variants step is on
- * screen, with the focus on its `<h1>`.
+ * screen, with the focus on its `<h1>`. A file whose read ends while the
+ * dialog of Save is open is answered once that dialog has closed, so that
+ * no project replaces the one it is saving and no dialog opens over it.
  *
  * React Aria gives the focus back to the button that opened a dialog when
  * it takes the dialog off the page, if the focus is lost to the page
@@ -37,6 +39,7 @@ import { useSaving } from "../saving.ts";
 import { useAppState, useStore } from "../store.tsx";
 import { Button } from "../widgets/Button.tsx";
 import { Dialog } from "../widgets/Dialog.tsx";
+import { isDialogOnPage, whenNoDialog } from "../widgets/dialogMark.ts";
 import { TextField } from "../widgets/TextField.tsx";
 import { useAnnouncer } from "./announcer.tsx";
 import styles from "./ProjectButtons.module.css";
@@ -176,6 +179,7 @@ export function OpenProject(): React.JSX.Element {
   // The number of the last file picked: a file read after one picked
   // after it, a large one picked first, is not answered.
   const lastPick = useRef(0);
+  const button = useRef<HTMLButtonElement>(null);
 
   /** Closes a dialog; React Aria gives the focus back to Open
       project…. */
@@ -209,6 +213,13 @@ export function OpenProject(): React.JSX.Element {
     const pick = lastPick.current;
     const picked = await readPicked(file, (text) => saving.read(text));
     if (pick !== lastPick.current) return;
+    if (isDialogOnPage(document)) {
+      // The dialog of Save, opened while the file was read.
+      await whenNoDialog(document);
+      if (pick !== lastPick.current) return;
+      // Where a dialog opened now gives the focus back, as after a pick.
+      button.current?.focus();
+    }
     if (picked.kind === "refused") {
       setOpening(picked);
       return;
@@ -238,7 +249,7 @@ export function OpenProject(): React.JSX.Element {
           if (file !== undefined) void onPicked(file);
         }}
       >
-        <Button label="Open project…" />
+        <Button label="Open project…" ref={button} />
       </FileTrigger>
       <Dialog
         content={opening.kind === "refused" ? opening : null}
