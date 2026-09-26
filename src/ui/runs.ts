@@ -7,31 +7,43 @@
 
 import type { AnalysisId } from "../core/project.ts";
 import type { Store } from "../core/store.ts";
-import type { JobResult } from "../worker/protocol.ts";
+import type { Run } from "../worker/protocol.ts";
 
 /** When each calculation in flight started, by the id of its request, in
     the milliseconds of performance.now(). */
 const started = new Map<number, number>();
 
 /**
- * Starts the calculation of the analysis `id` and hands its outcome to the
- * store when it arrives; null when the store starts none. The promise
+ * Starts the calculation of the analysis `id`, and hands the outcome of
+ * every request it sends to the store when it arrives; null when the
+ * store starts none. The requests are those `startRun` gives, none when
+ * the Run waits for statistics of each individual already in flight, and
+ * those that the `runEnded` of each gives back, the Runs that waited for
+ * the statistics, and so on; the promise settles when all have ended. It
  * rejects only for a defect of ours, a `runEnded` that throws, which the
  * button passes over with `void` so that it reaches the error bar.
  */
-export function startAnalysis(
-  store: Store<JobResult>,
+export function startAnalysis<R>(
+  store: Store<R>,
   id: AnalysisId,
 ): Promise<void> | null {
-  const run = store.startRun(id);
-  if (run === null) {
-    return null;
-  }
-  started.set(run.id, performance.now());
-  return run.outcome.then((outcome) => {
-    started.delete(run.id);
-    store.runEnded(run.id, outcome);
-  });
+  const runs = store.startRun(id);
+  return runs === null ? null : awaitEach(store, runs);
+}
+
+/** Awaits the outcome of each of `runs`, and of each handle their
+    `runEnded` gives back, noting the time of each while it is in
+    flight. */
+function awaitEach<R>(store: Store<R>, runs: readonly Run<R>[]): Promise<void> {
+  return Promise.all(
+    runs.map((run) => {
+      started.set(run.id, performance.now());
+      return run.outcome.then((outcome) => {
+        started.delete(run.id);
+        return awaitEach(store, store.runEnded(run.id, outcome));
+      });
+    }),
+  ).then(() => undefined);
 }
 
 /** When the calculation `runId` was started, in the milliseconds of

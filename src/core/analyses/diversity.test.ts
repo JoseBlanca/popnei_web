@@ -177,6 +177,7 @@ function recordingClient(): {
       };
     },
     intermediateKey: () => "",
+    individuals: null,
   };
   return { client, jobs };
 }

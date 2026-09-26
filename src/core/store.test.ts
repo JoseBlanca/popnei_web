@@ -10,6 +10,7 @@ import type { JsonValue } from "./keys.ts";
 import {
   analysisOptions,
   emptyProject,
+  individualListNeeds,
   loadIndividuals,
   loadVariants,
   projectNeeds,
@@ -25,6 +26,7 @@ import type {
   SourceRead,
   VariantSource,
 } from "./project.ts";
+import { individualsKept, keptNoneReason } from "./individualsKept.ts";
 import { createStore } from "./store.ts";
 import type {
   AnalysisDef,
@@ -34,16 +36,21 @@ import type {
   Store,
 } from "./store.ts";
 import {
+  FAKE_STATISTICS,
   MAF_WARNING,
   NO_POPULATIONS,
   drawnCommand,
   fakeAnalyses,
   fakeSend,
+  fiveIndividualsProject,
+  fiveStats,
   sampleProject,
+  statsResult,
 } from "./testSupport.ts";
 import type {
   Calls,
   DrawnCommand,
+  ListGiven,
   PopsResult,
   SentRequest,
   TestJob,
@@ -52,6 +59,7 @@ import type {
 } from "./testSupport.ts";
 import type {
   CsvOptions,
+  IndividualFilter,
   Outcome,
   Progress,
   Run,
@@ -130,6 +138,7 @@ function newStore(cacheMaxBytes: number = 1024 * 1024): {
     analyses,
     send,
     numVarsOf: (r) => (r.kind === "vars" ? r.numVars : null),
+    statistics: null,
     appVersion: "0.1.0",
     cacheMaxBytes,
     maxUndoSteps: 200,
@@ -231,6 +240,7 @@ function storeWithTouchyKeys(): ReturnType<typeof newStore> & {
     analyses: [pops, touchy],
     send,
     numVarsOf: () => null,
+    statistics: null,
     appVersion: "0.1.0",
     cacheMaxBytes: 1024 * 1024,
     maxUndoSteps: 200,
@@ -501,6 +511,7 @@ describe("WP4 D1 the state with no calculation", () => {
       analyses: [probed],
       send,
       numVarsOf: () => null,
+      statistics: null,
       appVersion: "0.1.0",
       cacheMaxBytes: 1024,
       maxUndoSteps: 200,
@@ -651,6 +662,7 @@ describe("WP4 D1 the state with no calculation", () => {
       analyses,
       send,
       numVarsOf: () => null,
+      statistics: null,
       appVersion: "0.1.0",
       cacheMaxBytes: 1024,
       maxUndoSteps: 200,
@@ -692,6 +704,7 @@ describe("WP4 D1 the state with no calculation", () => {
         analyses: [...analyses, pops],
         send,
         numVarsOf: () => null,
+        statistics: null,
         appVersion: "0.1.0",
         cacheMaxBytes: 1024,
         maxUndoSteps: 200,
@@ -873,6 +886,7 @@ function storeWithFaultyIntake(): ReturnType<typeof newStore> & {
       fail("numVarsOf");
       return r.kind === "vars" ? r.numVars : null;
     },
+    statistics: null,
     appVersion: "0.1.0",
     cacheMaxBytes: 1024 * 1024,
     maxUndoSteps: 200,
@@ -892,7 +906,7 @@ describe("WP4 D2 the calculations", () => {
     const run = store.startRun("vars");
     expect(sent).toHaveLength(1);
     const request = sentAt(sent, 0);
-    expect(run).toBe(request.run);
+    expect(run).toStrictEqual([request.run]);
     expect(request.key).toBe(key);
     const [, vars] = analyses;
     if (vars === undefined) {
@@ -914,6 +928,7 @@ describe("WP4 D2 the calculations", () => {
       key,
       runId: request.run.id,
       progress: null,
+      waitsForStatistics: false,
     });
     expect(store.getState().runs).toStrictEqual([
       {
@@ -932,6 +947,7 @@ describe("WP4 D2 the calculations", () => {
       key,
       runId: request.run.id,
       progress: { bytesRead: 3, numBytes: 10, pass: 1, numPasses: 1 },
+      waitsForStatistics: false,
     });
     expect(store.getState().runs[0]?.progress).toStrictEqual({
       bytesRead: 3,
@@ -968,7 +984,7 @@ describe("WP4 D2 the calculations", () => {
     expect(store.getState()).toBe(before);
     expect(sent).toHaveLength(1);
     const request = sentAt(sent, 0);
-    expect(run).toBe(request.run);
+    expect(run).toStrictEqual([request.run]);
     store.runEnded(request.run.id, doneWith(request, varsResult(null)));
     expect(store.startRun("vars")).toBeNull();
     expect(sent).toHaveLength(1);
@@ -1001,6 +1017,7 @@ describe("WP4 D2 the calculations", () => {
       kind: "error",
       key,
       error: { kind: "refused", message: "no variant left" },
+      ofStatistics: false,
     };
     expect(statuses(store)[1]).toStrictEqual(refused);
     expect(store.startRun("vars")).toBeNull();
@@ -1022,10 +1039,11 @@ describe("WP4 D2 the calculations", () => {
       kind: "error",
       key,
       error: { kind: "failed", error },
+      ofStatistics: false,
     });
     // A second try, cancelled: the failure it retried is forgotten.
     const retry = store.startRun("vars");
-    expect(retry).toBe(sentAt(sent, 1).run);
+    expect(retry).toStrictEqual([sentAt(sent, 1).run]);
     expect(statuses(store)[1]?.kind).toBe("running");
     store.cancelRun("vars");
     store.runEnded(sentAt(sent, 1).run.id, { kind: "cancelled" });
@@ -1049,8 +1067,18 @@ describe("WP4 D2 the calculations", () => {
     store.runEnded(sentAt(sent, 0).run.id, reopen);
     const shownError = { kind: "failed", error: reopen.error };
     expect(statuses(store)).toStrictEqual([
-      { kind: "error", key: keyAt(store, 0), error: shownError },
-      { kind: "error", key: keyAt(store, 1), error: shownError },
+      {
+        kind: "error",
+        key: keyAt(store, 0),
+        error: shownError,
+        ofStatistics: false,
+      },
+      {
+        kind: "error",
+        key: keyAt(store, 1),
+        error: shownError,
+        ofStatistics: false,
+      },
     ]);
     expect(store.startRun("vars")).toBeNull();
     expect(store.startRun("pops")).toBeNull();
@@ -1059,6 +1087,7 @@ describe("WP4 D2 the calculations", () => {
       kind: "error",
       key: keyAt(store, 1),
       error: shownError,
+      ofStatistics: false,
     });
     expect(store.startRun("vars")).toBeNull();
     store.undo();
@@ -1066,6 +1095,7 @@ describe("WP4 D2 the calculations", () => {
       kind: "error",
       key: keyAt(store, 1),
       error: shownError,
+      ofStatistics: false,
     });
     expect(store.startRun("vars")).toBeNull();
     expect(sent).toHaveLength(1);
@@ -1099,6 +1129,7 @@ describe("WP4 D2 the calculations", () => {
       kind: "error",
       key: keyAt(store, 0),
       error: { kind: "failed", error },
+      ofStatistics: false,
     });
     store.redo();
     expect(store.getState().project.variants).toMatchObject({
@@ -1141,7 +1172,7 @@ describe("WP4 D2 the calculations", () => {
       kind: "error",
       error: { kind: "failed", error },
     });
-    expect(store.startRun("vars")).toBe(sentAt(sent, 1).run);
+    expect(store.startRun("vars")).toStrictEqual([sentAt(sent, 1).run]);
   });
 
   test("a progress after the end of its request, or before send returns, is passed over, and a progress changes only its own request", () => {
@@ -1160,6 +1191,7 @@ describe("WP4 D2 the calculations", () => {
       analyses,
       send: early,
       numVarsOf: () => null,
+      statistics: null,
       appVersion: "0.1.0",
       cacheMaxBytes: 1024 * 1024,
       maxUndoSteps: 200,
@@ -1279,6 +1311,7 @@ describe("WP4 D2 the calculations", () => {
       analyses: [pops, faulty],
       send,
       numVarsOf: () => null,
+      statistics: null,
       appVersion: "0.1.0",
       cacheMaxBytes: 1024,
       maxUndoSteps: 200,
@@ -1430,7 +1463,7 @@ describe("WP4 D2 the calculations", () => {
     expect(statuses(store)[1]?.kind).toBe("ready");
     expect(store.getState().runs).toStrictEqual([]);
     stop();
-    expect(store.startRun("vars")).toBe(sentAt(sent, 1).run);
+    expect(store.startRun("vars")).toStrictEqual([sentAt(sent, 1).run]);
     expect(statuses(store)[1]?.kind).toBe("running");
   });
 
@@ -1455,6 +1488,7 @@ describe("WP4 D2 the calculations", () => {
             message: `popnei_web defect: ${part} threw`,
           },
         },
+        ofStatistics: false,
       });
       expect(store.getState().runs).toStrictEqual([]);
       expect(store.getState().project.variants?.read).toStrictEqual(
@@ -1509,6 +1543,7 @@ describe("WP4 D2 the calculations", () => {
       analyses: [pops, faulty],
       send,
       numVarsOf: () => null,
+      statistics: null,
       appVersion: "0.1.0",
       cacheMaxBytes: 1024 * 1024,
       maxUndoSteps: 200,
@@ -1576,7 +1611,7 @@ describe("WP4 D2 the calculations", () => {
     store.dismissNotice();
     expect(statuses(store)[0]).toStrictEqual({ kind: "ready", key });
     const again = store.startRun("pops");
-    expect(again).toBe(sentAt(sent, 2).run);
+    expect(again).toStrictEqual([sentAt(sent, 2).run]);
     expect(sentAt(sent, 2).key).toBe(key);
     const result = popsResult();
     store.runEnded(sentAt(sent, 2).run.id, doneWith(sentAt(sent, 2), result));
@@ -1720,7 +1755,7 @@ describe("WP4 D3 the notice", () => {
     const { store, request, sent, log } = storeWithVarsRunning();
     store.apply("the MAF filter changed", maf(0.9));
     const run = store.startRun("vars");
-    expect(run).toBe(sentAt(sent, 1).run);
+    expect(run).toStrictEqual([sentAt(sent, 1).run]);
     expect(log).toStrictEqual(["send 1", "cancel 1", "send 2"]);
     expect(request.cancels()).toBe(1);
     expect(store.getState().runs).toMatchObject([
@@ -2043,6 +2078,7 @@ describe("WP4 D3 the notice", () => {
       analyses: [counted, vars],
       send,
       numVarsOf: (r) => (r.kind === "vars" ? r.numVars : null),
+      statistics: null,
       appVersion: "0.1.0",
       cacheMaxBytes: 1024 * 1024,
       maxUndoSteps: 200,
@@ -2090,6 +2126,7 @@ describe("WP4 D3 the notice", () => {
       analyses: [tabled, vars],
       send,
       numVarsOf: () => null,
+      statistics: null,
       appVersion: "0.1.0",
       cacheMaxBytes: 1024 * 1024,
       maxUndoSteps: 200,
@@ -2452,6 +2489,7 @@ function openedAndRun(options: {
     analyses: [pops, varsNow],
     send,
     numVarsOf: () => null,
+    statistics: null,
     appVersion: "0.1.0",
     cacheMaxBytes: 1024 * 1024,
     maxUndoSteps: 200,
@@ -2645,8 +2683,8 @@ type Step =
   | { readonly kind: "open"; readonly empty: boolean }
   | { readonly kind: "popneiReady"; readonly version: string }
   | { readonly kind: "read"; readonly ok: boolean }
-  | { readonly kind: "startRun"; readonly analysis: "pops" | "vars" }
-  | { readonly kind: "cancelRun"; readonly analysis: "pops" | "vars" }
+  | { readonly kind: "startRun"; readonly analysis: ModelAnalysis }
+  | { readonly kind: "cancelRun"; readonly analysis: ModelAnalysis }
   | {
       readonly kind: "end";
       readonly which: number;
@@ -2659,7 +2697,20 @@ type Step =
 /** How a drawn request ends: done, cancelled, or failed of a kind. */
 type OutcomeKind = "done" | "cancelled" | RunError["kind"];
 
-const analysisId = fc.constantFrom<"pops" | "vars">("pops", "vars");
+/** An analysis of the modelled store: the two fakes, and the statistics
+    of each individual, which the populations wait for when the project
+    has a threshold on the individuals. */
+type ModelAnalysis = "pops" | "vars" | "stats";
+
+/** The place of each analysis in the definitions of the modelled
+    store. */
+const MODEL_INDEX: Readonly<Record<ModelAnalysis, number>> = {
+  pops: 0,
+  vars: 1,
+  stats: 2,
+};
+
+const analysisId = fc.constantFrom<ModelAnalysis>("pops", "vars", "stats");
 
 const step: fc.Arbitrary<Step> = fc.oneof(
   {
@@ -2814,7 +2865,7 @@ const steps: fc.Arbitrary<readonly Step[]> = fc
 /** A request the fake `send` was given, as the model follows it. */
 interface ModelRequest {
   readonly sent: SentRequest;
-  readonly analysis: "pops" | "vars";
+  readonly analysis: ModelAnalysis;
   /** Whether its outcome was given to `runEnded`. */
   ended: boolean;
   /** Whether the current notice leaves it behind, by the model. */
@@ -2855,16 +2906,20 @@ function modelledStore(): {
   readonly model: ModelRequest[];
   /** The result put under each key, the last one. */
   readonly results: Map<string, TestResult>;
+  /** The list of the individuals kept each client gave, in order. */
+  readonly lists: readonly ListGiven[];
   /** Carries out one step, and updates the model. */
   readonly run: (s: Step) => void;
 } {
-  const { analyses } = fakeAnalyses();
+  const { analyses: twoFakes, stats, lists } = fakeAnalyses();
+  const analyses = [...twoFakes, stats];
   const { send, sent } = fakeSend();
   const store = createStore({
     first: emptyProject("popgen"),
     analyses,
     send,
     numVarsOf: (r) => (r.kind === "vars" ? r.numVars : null),
+    statistics: FAKE_STATISTICS,
     appVersion: "0.1.0",
     cacheMaxBytes: 1024 * 1024 * 1024,
     maxUndoSteps: 200,
@@ -2874,10 +2929,8 @@ function modelledStore(): {
   const model: ModelRequest[] = [];
   const results = new Map<string, TestResult>();
   const inFlight = (): ModelRequest[] => model.filter((r) => !r.ended);
-  const currentKey = (analysis: "pops" | "vars"): string | null => {
-    const status = statuses(store)[analysis === "pops" ? 0 : 1];
-    return status === undefined || status.kind === "locked" ? null : status.key;
-  };
+  const currentKey = (analysis: ModelAnalysis): string | null =>
+    keyGiven(store, analyses, analysis);
   const isCurrent = (r: ModelRequest): boolean =>
     currentKey(r.analysis) === r.sent.key;
   /** The rules of a change that no undo can take back: every request in
@@ -2911,6 +2964,32 @@ function modelledStore(): {
         r.mustCancel = true;
         r.named = false;
       }
+    }
+  };
+  /** Follows the requests the store sent, `handles`, from a startRun or
+      a runEnded: each sent stopped the requests named first. */
+  const track = (handles: readonly Run<TestResult>[]): void => {
+    if (handles.length > 0) {
+      stopNamed();
+    }
+    for (const handle of handles) {
+      const request = sent.find((one) => one.run === handle);
+      if (request === undefined) {
+        throw new Error("popnei_web defect: a handle the fake did not give");
+      }
+      model.push({
+        sent: request,
+        analysis:
+          request.job.analysis === "pops"
+            ? "pops"
+            : request.job.analysis === "vars"
+              ? "vars"
+              : "stats",
+        ended: false,
+        named: false,
+        mustCancel: false,
+        mayCancel: false,
+      });
     }
   };
 
@@ -2977,26 +3056,15 @@ function modelledStore(): {
         }
         break;
       }
-      case "startRun": {
-        const count = sent.length;
-        const handle = store.startRun(s.analysis);
-        if (handle !== null) {
-          stopNamed();
-          const request = sentAt(sent, count);
-          model.push({
-            sent: request,
-            analysis: s.analysis,
-            ended: false,
-            named: false,
-            mustCancel: false,
-            mayCancel: false,
-          });
-        }
+      case "startRun":
+        track(store.startRun(s.analysis) ?? []);
         break;
-      }
       case "cancelRun":
         for (const r of inFlight()) {
-          if (r.analysis === s.analysis && isCurrent(r)) {
+          // A Stop of a Run that waits may stop the statistics it waits
+          // for.
+          const waitedFor = s.analysis === "pops" && r.analysis === "stats";
+          if ((r.analysis === s.analysis || waitedFor) && isCurrent(r)) {
             r.mayCancel = true;
           }
         }
@@ -3013,7 +3081,15 @@ function modelledStore(): {
         let outcome: Outcome<TestResult>;
         if (s.outcome === "done") {
           const result =
-            r.analysis === "pops" ? popsResult() : varsResult(s.numVars);
+            r.analysis === "pops"
+              ? popsResult()
+              : r.analysis === "vars"
+                ? varsResult(s.numVars)
+                : statsResult(
+                    MODEL_INDIVIDUALS,
+                    [0.1, 0.2, 0.3, 0.4],
+                    [0.3, 0.3, Number.NaN, 0.4],
+                  );
           results.set(r.sent.key, result);
           outcome = { kind: "done", key: r.sent.key, result };
         } else if (s.outcome === "cancelled") {
@@ -3021,7 +3097,7 @@ function modelledStore(): {
         } else {
           outcome = failure(s.outcome);
         }
-        store.runEnded(r.sent.run.id, outcome);
+        track(store.runEnded(r.sent.run.id, outcome));
         break;
       }
       case "progress": {
@@ -3066,7 +3142,35 @@ function modelledStore(): {
       }
     }
   };
-  return { store, analyses, model, results, run };
+  return { store, analyses, model, results, lists, run };
+}
+
+/** The individuals of every variants file the modelled store reads. */
+const MODEL_INDIVIDUALS: readonly string[] = ["i1", "i2", "i3", "i4"];
+
+/** The key the current project of `store` gives the analysis `analysis`
+    of the modelled store, by the keys spec, whatever the lock by the
+    individuals kept; `null` when `projectNeeds`, `individualListNeeds`
+    for an analysis that reads the filters of individuals, or its `needs`
+    gives a reason. */
+function keyGiven(
+  store: Store<TestResult>,
+  analyses: readonly AnalysisDef<TestJob, TestResult>[],
+  analysis: ModelAnalysis,
+): string | null {
+  const state = store.getState();
+  const project = state.project;
+  const def = analyses[MODEL_INDEX[analysis]];
+  if (def === undefined) {
+    throw new Error(`popnei_web defect: no analysis ${analysis}`);
+  }
+  const listReason = def.filtersRead.individuals
+    ? (individualListNeeds(project)?.reason ?? null)
+    : null;
+  const reason = projectNeeds(project) ?? listReason ?? def.needs(project);
+  return reason === null
+    ? keyOf(def, project, state.popneiVersion ?? "", createKeyMemo())
+    : null;
 }
 
 /** Whether two projects hold the same load of the variants file: the
@@ -3105,15 +3209,26 @@ describe("WP4 D5 the properties of the store", () => {
           const state = store.getState();
           const project = state.project;
           const common = projectNeeds(project);
+          const listReason = individualListNeeds(project)?.reason ?? null;
           analyses.forEach((def, index) => {
             const status = state.analyses[index]?.status;
-            const reason = common ?? def.needs(project);
+            const reason =
+              common ??
+              (def.filtersRead.individuals ? listReason : null) ??
+              def.needs(project);
             if (reason !== null) {
               expect(status).toStrictEqual({ kind: "locked", reason });
               return;
             }
             const version = state.popneiVersion ?? "";
             const key = keyOf(def, project, version, createKeyMemo());
+            if (status?.kind === "locked") {
+              // The lock by the individuals kept, which has a key.
+              expect(status.reason).toBe(
+                keptNoneReason(project, state.individualsKept),
+              );
+              return;
+            }
             expect(status).toMatchObject({ key });
             if (status?.kind === "done") {
               expect(status.result).toBe(results.get(key));
@@ -3185,9 +3300,19 @@ describe("WP4 D5 the properties of the store", () => {
           expect(after.notice?.removed ?? []).toStrictEqual(expected);
           // A change of the load stops at once every calculation in
           // flight not already being stopped, and the notice lists them.
-          const running = new Set(
-            before.runs.filter((r) => !r.stopping).map((r) => r.analysis),
-          );
+          // A Run that waits for the statistics is a calculation too,
+          // shown running or named in the notice.
+          const running = new Set([
+            ...before.runs.filter((r) => !r.stopping).map((r) => r.analysis),
+            ...before.analyses
+              .filter(
+                (view) =>
+                  view.status.kind === "running" &&
+                  view.status.waitsForStatistics,
+              )
+              .map((view) => view.id),
+            ...(before.notice?.leftBehind ?? []),
+          ]);
           const stopped = sameLoadOf(before.project, after.project)
             ? []
             : after.analyses
@@ -3207,18 +3332,14 @@ describe("WP4 D5 the properties of the store", () => {
   test("every request in flight whose key the project does not give is named by the notice or being stopped", () => {
     fc.assert(
       fc.property(steps, (drawn) => {
-        eachStep(drawn, ({ store, model }) => {
+        eachStep(drawn, ({ store, analyses, model }) => {
           const state = store.getState();
           for (const r of model) {
             if (r.ended) {
               continue;
             }
-            const index = r.analysis === "pops" ? 0 : 1;
-            const status = state.analyses[index]?.status;
             const current =
-              status !== undefined &&
-              status.kind !== "locked" &&
-              status.key === r.sent.key;
+              keyGiven(store, analyses, r.analysis) === r.sent.key;
             if (!current && r.sent.cancels() === 0) {
               expect(state.notice?.leftBehind ?? []).toContain(r.analysis);
               expect(r.named).toBe(true);
@@ -3246,5 +3367,752 @@ describe("WP4 D5 the properties of the store", () => {
         });
       }),
     );
+  });
+});
+
+// The individuals kept, from stage 3: the fakes of the populations, of
+// the variants and of the statistics of each individual, in that order,
+// on the five individuals of the worked case of individualsKept.md.
+
+/** The threshold of 0.2 on the proportion of missing genotypes of each
+    individual, which keeps `a`, `b` and `d` of the worked case. */
+const MISSING_AT_02: IndividualFilter = {
+  kind: "missing_data",
+  maxAllowedMissingRate: 0.2,
+};
+
+/** A store with the fake statistics of each individual, popnei 0.1.0,
+    and the project of the five individuals opened with the filters of
+    individuals `filters`, and a cache of `cacheMaxBytes`. */
+function storeOfFive(
+  filters: readonly IndividualFilter[],
+  cacheMaxBytes: number = 1024 * 1024,
+): {
+  readonly store: Store<TestResult>;
+  readonly analyses: readonly AnalysisDef<TestJob, TestResult>[];
+  readonly sent: SentRequest[];
+  readonly lists: readonly ListGiven[];
+} {
+  const { analyses: twoFakes, stats, lists } = fakeAnalyses();
+  const analyses = [...twoFakes, stats];
+  const { send, sent } = fakeSend();
+  const store = createStore({
+    first: emptyProject("popgen"),
+    analyses,
+    send,
+    numVarsOf: (r) => (r.kind === "vars" ? r.numVars : null),
+    statistics: FAKE_STATISTICS,
+    appVersion: "0.1.0",
+    cacheMaxBytes,
+    maxUndoSteps: 200,
+  });
+  store.popneiReady("0.1.0");
+  store.open(fiveIndividualsProject(filters));
+  return { store, analyses, sent, lists };
+}
+
+/** The state the store gives the analysis `id`. */
+function statusIn(
+  store: Store<TestResult>,
+  id: string,
+): AnalysisStatus<TestResult> {
+  const view = store.getState().analyses.find((one) => one.id === id);
+  if (view === undefined) {
+    throw new Error(`popnei_web defect: no analysis ${id}`);
+  }
+  return view.status;
+}
+
+/** The key the keys spec gives the definition `def` for the current
+    project of `store`, made with a memo of its own. */
+function keyOfNow(
+  store: Store<TestResult>,
+  def: AnalysisDef<TestJob, TestResult> | undefined,
+): string {
+  if (def === undefined) {
+    throw new Error("popnei_web defect: no definition");
+  }
+  return keyOf(def, store.getState().project, "0.1.0", createKeyMemo());
+}
+
+describe("VS3 D4 the individuals kept and a Run that waits", () => {
+  test("with no filter of individuals, a Run of the analysis that reads them sends at once, its client giving no list", () => {
+    const { store, sent, lists } = storeOfFive([]);
+    expect(store.getState().individualsKept?.list).toStrictEqual({
+      kind: "known",
+      individuals: null,
+    });
+
+    const handles = store.startRun("pops");
+
+    expect(handles).toStrictEqual([sentAt(sent, 0).run]);
+    expect(sentAt(sent, 0).job.analysis).toBe("pops");
+    expect(lists).toStrictEqual([{ analysis: "pops", individuals: null }]);
+  });
+
+  test("with a threshold of 0.2, the Run calculates the statistics first, waits for them, and then sends its request with a, b and d", () => {
+    const { store, analyses, sent, lists } = storeOfFive([MISSING_AT_02]);
+    const key = keyOfNow(store, analyses[0]);
+    expect(statusIn(store, "pops")).toStrictEqual({ kind: "ready", key });
+    expect(store.getState().individualsKept?.list).toStrictEqual({
+      kind: "needsStatistics",
+    });
+
+    const handles = store.startRun("pops");
+    const stats = sentAt(sent, 0);
+    expect(handles).toStrictEqual([stats.run]);
+    expect(stats.job.analysis).toBe("stats");
+    expect(stats.key).toBe(keyOfNow(store, analyses[2]));
+    expect(statusIn(store, "pops")).toStrictEqual({
+      kind: "running",
+      key,
+      runId: stats.run.id,
+      progress: null,
+      waitsForStatistics: true,
+    });
+    expect(statusIn(store, "stats")).toMatchObject({
+      kind: "running",
+      runId: stats.run.id,
+      waitsForStatistics: false,
+    });
+    const progress = { bytesRead: 3, numBytes: 10, pass: 1, numPasses: 1 };
+    stats.progress(progress);
+    expect(statusIn(store, "pops")).toMatchObject({ progress });
+
+    const next = store.runEnded(stats.run.id, doneWith(stats, fiveStats()));
+
+    const own = sentAt(sent, 1);
+    expect(next).toStrictEqual([own.run]);
+    expect(own.job.analysis).toBe("pops");
+    expect(own.key).toBe(key);
+    expect(lists).toStrictEqual([
+      { analysis: "stats", individuals: null },
+      { analysis: "pops", individuals: ["a", "b", "d"] },
+    ]);
+    expect(statusIn(store, "pops")).toStrictEqual({
+      kind: "running",
+      key,
+      runId: own.run.id,
+      progress: null,
+      waitsForStatistics: false,
+    });
+    expect(store.getState().individualsKept).toStrictEqual({
+      list: { kind: "known", individuals: ["a", "b", "d"] },
+      byLists: ["a", "b", "c", "d", "e"],
+      counts: [{ kind: "missing_data", given: 5, kept: 3 }],
+    });
+  });
+
+  test("cancelRun of the analysis while it waits stops the statistics it started", () => {
+    const { store, analyses, sent } = storeOfFive([MISSING_AT_02]);
+    store.startRun("pops");
+    const stats = sentAt(sent, 0);
+
+    store.cancelRun("pops");
+
+    expect(stats.cancels()).toBe(1);
+    expect(statusIn(store, "pops")).toStrictEqual({
+      kind: "ready",
+      key: keyOfNow(store, analyses[0]),
+    });
+    expect(store.runEnded(stats.run.id, { kind: "cancelled" })).toStrictEqual(
+      [],
+    );
+    expect(sent).toHaveLength(1);
+  });
+
+  test("with the Run of the statistics pressed first, the Run that waits sends nothing, and its cancelRun stops nothing but its wait", () => {
+    const { store, sent } = storeOfFive([MISSING_AT_02]);
+    expect(store.startRun("stats")).toStrictEqual([sentAt(sent, 0).run]);
+    const stats = sentAt(sent, 0);
+
+    expect(store.startRun("pops")).toStrictEqual([]);
+    expect(sent).toHaveLength(1);
+    expect(statusIn(store, "pops")).toMatchObject({
+      kind: "running",
+      runId: stats.run.id,
+      waitsForStatistics: true,
+    });
+    store.cancelRun("pops");
+
+    expect(stats.cancels()).toBe(0);
+    expect(statusIn(store, "pops").kind).toBe("ready");
+    expect(statusIn(store, "stats").kind).toBe("running");
+    expect(
+      store.runEnded(stats.run.id, doneWith(stats, fiveStats())),
+    ).toStrictEqual([]);
+    expect(sent).toHaveLength(1);
+  });
+
+  test("with a threshold of 0.01, the statistics keep no individual: the analysis is locked with keptNoneReason, and nothing is sent for it", () => {
+    const { store, sent, lists } = storeOfFive([
+      { kind: "missing_data", maxAllowedMissingRate: 0.01 },
+    ]);
+    store.startRun("pops");
+    const stats = sentAt(sent, 0);
+
+    const next = store.runEnded(stats.run.id, doneWith(stats, fiveStats()));
+
+    expect(next).toStrictEqual([]);
+    expect(sent).toHaveLength(1);
+    expect(lists).toStrictEqual([{ analysis: "stats", individuals: null }]);
+    expect(statusIn(store, "pops")).toStrictEqual({
+      kind: "locked",
+      reason:
+        "The filters of individuals keep none of the 5 individuals of panel.nei. Loosen them in the Variants step.",
+    });
+    expect(store.startRun("pops")).toBeNull();
+  });
+
+  test("a threshold moved while the Run waits leaves the wait behind in the notice; the statistics end and it sends nothing, and a new Run sends at once", () => {
+    const { store, sent, lists } = storeOfFive([MISSING_AT_02]);
+    store.startRun("pops");
+    const stats = sentAt(sent, 0);
+
+    store.apply("the missing data filter of the individuals changed", (p) =>
+      setIndividualFilter(p, {
+        kind: "missing_data",
+        maxAllowedMissingRate: 0.3,
+      }),
+    );
+
+    expect(store.getState().notice?.leftBehind).toStrictEqual(["pops"]);
+    expect(stats.cancels()).toBe(0);
+    expect(statusIn(store, "pops").kind).toBe("ready");
+    expect(statusIn(store, "stats").kind).toBe("running");
+    expect(
+      store.runEnded(stats.run.id, doneWith(stats, fiveStats())),
+    ).toStrictEqual([]);
+    expect(sent).toHaveLength(1);
+    expect(store.getState().notice).toBeNull();
+    expect(statusIn(store, "pops").kind).toBe("ready");
+
+    expect(store.startRun("pops")).toStrictEqual([sentAt(sent, 1).run]);
+    expect(lists.at(-1)).toStrictEqual({
+      analysis: "pops",
+      individuals: ["a", "b", "c", "d"],
+    });
+  });
+
+  test("a refusal of the statistics by popnei shows in the analysis as the error of the statistics, and its startRun gives null", () => {
+    const { store, analyses, sent } = storeOfFive([MISSING_AT_02]);
+    store.startRun("pops");
+    const stats = sentAt(sent, 0);
+
+    const next = store.runEnded(stats.run.id, {
+      kind: "failed",
+      error: { kind: "popnei", message: "the pass gave no variant" },
+    });
+
+    expect(next).toStrictEqual([]);
+    const refused = { kind: "refused", message: "the pass gave no variant" };
+    expect(statusIn(store, "pops")).toStrictEqual({
+      kind: "error",
+      key: keyOfNow(store, analyses[0]),
+      error: refused,
+      ofStatistics: true,
+    });
+    expect(statusIn(store, "stats")).toMatchObject({
+      kind: "error",
+      error: refused,
+      ofStatistics: false,
+    });
+    expect(store.startRun("pops")).toBeNull();
+    expect(sent).toHaveLength(1);
+  });
+
+  test("after a failure of the statistics that is not popnei's, startRun of the analysis forgets it and starts the statistics again", () => {
+    const { store, sent } = storeOfFive([MISSING_AT_02]);
+    store.startRun("pops");
+    const error = { kind: "workerFailed", message: "out of memory" } as const;
+    store.runEnded(sentAt(sent, 0).run.id, { kind: "failed", error });
+    expect(statusIn(store, "pops")).toMatchObject({
+      kind: "error",
+      error: { kind: "failed", error },
+      ofStatistics: true,
+    });
+
+    const handles = store.startRun("pops");
+
+    const again = sentAt(sent, 1);
+    expect(handles).toStrictEqual([again.run]);
+    expect(again.job.analysis).toBe("stats");
+    expect(statusIn(store, "stats").kind).toBe("running");
+    expect(statusIn(store, "pops")).toMatchObject({
+      kind: "running",
+      runId: again.run.id,
+      waitsForStatistics: true,
+    });
+  });
+
+  test("cancelRun of the statistics stops their request, and the Run that waited for them ends", () => {
+    const { store, sent } = storeOfFive([MISSING_AT_02]);
+    store.startRun("pops");
+    const stats = sentAt(sent, 0);
+
+    store.cancelRun("stats");
+
+    expect(stats.cancels()).toBe(1);
+    expect(statusIn(store, "pops").kind).toBe("ready");
+    expect(store.runEnded(stats.run.id, { kind: "cancelled" })).toStrictEqual(
+      [],
+    );
+    expect(sent).toHaveLength(1);
+  });
+
+  test("a new variants file ends the Run that waits at once, its analysis in stopped with the statistics", () => {
+    const { store, sent } = storeOfFive([MISSING_AT_02]);
+    store.startRun("pops");
+    const stats = sentAt(sent, 0);
+
+    store.apply("a variants file was loaded", loadPanel(OTHER_VARIANTS_ID));
+
+    expect(stats.cancels()).toBe(1);
+    expect(store.getState().notice).toMatchObject({
+      stopped: ["pops", "stats"],
+      leftBehind: [],
+    });
+  });
+});
+
+describe("VS3 D4 a list of individuals popnei would refuse", () => {
+  test("a list to keep that names z, not in the file, locks the analysis that reads the filters of individuals with its reason; the statistics are ready, and individualsKept is null", () => {
+    const { store } = storeOfFive([{ kind: "keep", individuals: ["a", "z"] }]);
+    const reason = individualListNeeds(store.getState().project)?.reason;
+    expect(reason).toMatch(/^The list of /);
+
+    expect(statusIn(store, "pops")).toStrictEqual({ kind: "locked", reason });
+    expect(statusIn(store, "stats").kind).toBe("ready");
+    expect(statusIn(store, "vars").kind).toBe("ready");
+    expect(store.getState().individualsKept).toBeNull();
+  });
+});
+
+describe("VS3 D4 the key whatever the lock, and the lock from the cache", () => {
+  test("an undo back to a threshold whose statistics the cache dropped shows the analysis done again with the same result, under keyOf, and the list needs the statistics", () => {
+    // The statistics are 90 bytes, the two results 800 each: the third
+    // put, over 1,650 bytes, drops the oldest entry, the statistics.
+    const { store, analyses, sent } = storeOfFive([MISSING_AT_02], 1650);
+    store.startRun("pops");
+    const stats = sentAt(sent, 0);
+    store.runEnded(stats.run.id, doneWith(stats, fiveStats()));
+    const pops = sentAt(sent, 1);
+    const result = popsResult();
+    store.runEnded(pops.run.id, doneWith(pops, result));
+    store.apply("the MAF filter changed", maf(0.9));
+    expect(statusIn(store, "pops").kind).toBe("removed");
+    store.startRun("vars");
+    const vars = sentAt(sent, 2);
+    store.runEnded(vars.run.id, doneWith(vars, varsResult(null)));
+
+    store.undo();
+
+    const status = statusIn(store, "pops");
+    expect(status.kind === "done" && status.result).toBe(result);
+    expect(status).toMatchObject({ key: keyOfNow(store, analyses[0]) });
+    expect(statusIn(store, "stats").kind).toBe("ready");
+    expect(store.getState().individualsKept?.list).toStrictEqual({
+      kind: "needsStatistics",
+    });
+  });
+
+  test("the lock is worked out again from the cache: the statistics put by a Calculate change the state with no command, and the list is known", () => {
+    const { store, sent } = storeOfFive([MISSING_AT_02]);
+    store.startRun("stats");
+    const stats = sentAt(sent, 0);
+    const before = store.getState();
+    expect(before.individualsKept?.list).toStrictEqual({
+      kind: "needsStatistics",
+    });
+
+    store.runEnded(stats.run.id, doneWith(stats, fiveStats()));
+
+    const after = store.getState();
+    expect(after).not.toBe(before);
+    expect(after.project).toBe(before.project);
+    expect(after.individualsKept?.list).toStrictEqual({
+      kind: "known",
+      individuals: ["a", "b", "d"],
+    });
+    expect(statusIn(store, "pops").kind).toBe("ready");
+  });
+
+  test("a put of a result larger than the bound keeps the statistics under the key the project gives them, and the list stays known", () => {
+    const { store, sent } = storeOfFive([MISSING_AT_02], 200);
+    store.startRun("stats");
+    const stats = sentAt(sent, 0);
+    store.runEnded(stats.run.id, doneWith(stats, fiveStats()));
+    store.startRun("vars");
+    const vars = sentAt(sent, 1);
+
+    store.runEnded(vars.run.id, doneWith(vars, varsResult(null)));
+
+    expect(statusIn(store, "stats").kind).toBe("done");
+    expect(store.getState().individualsKept?.list).toStrictEqual({
+      kind: "known",
+      individuals: ["a", "b", "d"],
+    });
+  });
+});
+
+describe("VS3 D7 the properties of the store of stage 3", () => {
+  test("a result is shown only while it is under a key the project gives, whatever the lock by the individuals kept", () => {
+    fc.assert(
+      fc.property(steps, (drawn) => {
+        eachStep(drawn, ({ store, analyses, results }) => {
+          const state = store.getState();
+          for (const id of ["pops", "vars", "stats"] as const) {
+            const status = state.analyses[MODEL_INDEX[id]]?.status;
+            const key = keyGiven(store, analyses, id);
+            if (key === null) {
+              expect(status?.kind).toBe("locked");
+              continue;
+            }
+            // The cache of the modelled store drops nothing, so every
+            // result put is there, and shown under the key it was put
+            // under, locked by the individuals kept or not.
+            const result = results.get(key);
+            if (result === undefined) {
+              expect(status?.kind).not.toBe("done");
+            } else {
+              expect(status).toMatchObject({ kind: "done", key });
+              expect(status?.kind === "done" && status.result).toBe(result);
+            }
+          }
+        });
+      }),
+    );
+  });
+
+  test("the list given to a request is individualsKept of its project and of the statistics under the key that project gives them", () => {
+    fc.assert(
+      fc.property(steps, (drawn) => {
+        const { store, analyses, results, lists, run } = modelledStore();
+        let seen = 0;
+        for (const s of drawn) {
+          run(s);
+          const project = store.getState().project;
+          const statsKey = keyGiven(store, analyses, "stats");
+          const cached = statsKey === null ? undefined : results.get(statsKey);
+          const kept = individualsKept(
+            project,
+            cached?.kind === "stats" ? cached.stats : null,
+          );
+          for (const given of lists.slice(seen)) {
+            if (given.analysis === "pops") {
+              expect(kept?.list).toStrictEqual({
+                kind: "known",
+                individuals: given.individuals,
+              });
+              expect(given.individuals).not.toStrictEqual([]);
+            } else {
+              expect(given.individuals).toBeNull();
+            }
+          }
+          seen = lists.length;
+        }
+      }),
+    );
+  });
+});
+
+describe("VS3 D4 a Run that waits, stopped as a calculation", () => {
+  /** A store whose Run of the populations waits for the statistics, and
+      whose threshold was then moved, leaving the wait behind. */
+  function storeWithWaitLeftBehind(): ReturnType<typeof storeOfFive> {
+    const made = storeOfFive([MISSING_AT_02]);
+    made.store.startRun("pops");
+    made.store.apply(
+      "the missing data filter of the individuals changed",
+      (p) =>
+        setIndividualFilter(p, {
+          kind: "missing_data",
+          maxAllowedMissingRate: 0.3,
+        }),
+    );
+    expect(made.store.getState().notice?.leftBehind).toStrictEqual(["pops"]);
+    return made;
+  }
+
+  test("an undo while the statistics run gives the wait back, and it sends its request when they end", () => {
+    const { store, sent, lists } = storeWithWaitLeftBehind();
+    store.undo();
+    expect(statusIn(store, "pops")).toMatchObject({
+      kind: "running",
+      waitsForStatistics: true,
+    });
+    const stats = sentAt(sent, 0);
+
+    const next = store.runEnded(stats.run.id, doneWith(stats, fiveStats()));
+
+    expect(next).toStrictEqual([sentAt(sent, 1).run]);
+    expect(lists.at(-1)).toStrictEqual({
+      analysis: "pops",
+      individuals: ["a", "b", "d"],
+    });
+  });
+
+  test("closing the notice ends the wait it left behind, and the statistics go on", () => {
+    const { store, sent } = storeWithWaitLeftBehind();
+    store.dismissNotice();
+    store.undo();
+
+    expect(statusIn(store, "pops").kind).toBe("ready");
+    expect(sentAt(sent, 0).cancels()).toBe(0);
+  });
+
+  test("a second command ends the wait the notice left behind", () => {
+    const { store } = storeWithWaitLeftBehind();
+    store.apply("the MAF filter changed", maf(0.9));
+    expect(store.getState().notice?.leftBehind).toStrictEqual(["stats"]);
+    store.undo();
+    store.undo();
+
+    expect(statusIn(store, "pops").kind).toBe("ready");
+  });
+
+  test("a startRun that sends ends the waits left behind", () => {
+    const { store } = storeWithWaitLeftBehind();
+    store.startRun("vars");
+    expect(store.getState().notice).toBeNull();
+    store.undo();
+
+    expect(statusIn(store, "pops").kind).toBe("ready");
+  });
+
+  test("an opening and another version of popnei end every wait", () => {
+    const opened = storeOfFive([MISSING_AT_02]);
+    opened.store.startRun("pops");
+    opened.store.open(opened.store.getState().project);
+    expect(statusIn(opened.store, "pops").kind).toBe("ready");
+    expect(sentAt(opened.sent, 0).cancels()).toBe(1);
+
+    const upgraded = storeOfFive([MISSING_AT_02]);
+    upgraded.store.startRun("pops");
+    upgraded.store.popneiReady("0.2.0");
+    expect(statusIn(upgraded.store, "pops").kind).toBe("ready");
+    expect(sentAt(upgraded.sent, 0).cancels()).toBe(1);
+  });
+
+  test("a listener that throws on a Run that waits takes the wait out and stops the statistics it sent", () => {
+    const { store, sent } = storeOfFive([MISSING_AT_02]);
+    const stop = store.subscribe(() => {
+      throw new Error("a screen that throws");
+    });
+
+    expect(() => store.startRun("pops")).toThrow("a screen that throws");
+
+    stop();
+    expect(sentAt(sent, 0).cancels()).toBe(1);
+    expect(statusIn(store, "pops").kind).toBe("ready");
+    expect(store.getState().runs).toStrictEqual([]);
+  });
+
+  test("a listener that throws when the statistics end takes out and stops the request sent for the Run that waited", () => {
+    const { store, sent } = storeOfFive([MISSING_AT_02]);
+    store.startRun("pops");
+    const stats = sentAt(sent, 0);
+    const stop = store.subscribe(() => {
+      throw new Error("a screen that throws");
+    });
+
+    expect(() =>
+      store.runEnded(stats.run.id, doneWith(stats, fiveStats())),
+    ).toThrow("a screen that throws");
+
+    stop();
+    expect(sentAt(sent, 1).cancels()).toBe(1);
+    expect(store.getState().runs).toStrictEqual([]);
+    expect(statusIn(store, "pops").kind).toBe("ready");
+  });
+});
+
+describe("VS3 D4 the statistics of each individual given to the store", () => {
+  test("createStore throws on statistics of no definition, and on a definition of the statistics that reads the filters of individuals", () => {
+    const { analyses, stats } = fakeAnalyses();
+    const { send } = fakeSend();
+    const config = {
+      first: emptyProject("popgen"),
+      send,
+      numVarsOf: () => null,
+      appVersion: "0.1.0",
+      cacheMaxBytes: 1024,
+      maxUndoSteps: 200,
+    };
+    expect(() =>
+      createStore({ ...config, analyses, statistics: FAKE_STATISTICS }),
+    ).toThrow(
+      /^popnei_web defect: createStore was given the analysis of the statistics "stats"/,
+    );
+    expect(() =>
+      createStore({
+        ...config,
+        analyses: [
+          ...analyses,
+          { ...stats, filtersRead: { variants: true, individuals: true } },
+        ],
+        statistics: FAKE_STATISTICS,
+      }),
+    ).toThrow(
+      /^popnei_web defect: the analysis of the statistics "stats" reads the filters of individuals/,
+    );
+  });
+
+  test("statistics of other individuals than the file's are a defect kept under their key, and nothing of them is kept", () => {
+    const { store, sent } = storeOfFive([MISSING_AT_02]);
+    store.startRun("pops");
+    const stats = sentAt(sent, 0);
+
+    expect(() =>
+      store.runEnded(
+        stats.run.id,
+        doneWith(stats, statsResult(["a", "b"], [0, 0], [0, 0])),
+      ),
+    ).toThrow(/^popnei_web defect: the statistics of each individual are not/);
+
+    expect(statusIn(store, "stats")).toMatchObject({
+      kind: "error",
+      error: { kind: "failed", error: { kind: "defect" } },
+    });
+    expect(statusIn(store, "pops")).toMatchObject({
+      kind: "error",
+      ofStatistics: true,
+    });
+    expect(store.getState().individualsKept?.list).toStrictEqual({
+      kind: "needsStatistics",
+    });
+    expect(sent).toHaveLength(1);
+  });
+
+  test("the individuals kept are the same object until the project or the statistics change", () => {
+    const { store, sent } = storeOfFive([MISSING_AT_02]);
+    const first = store.getState().individualsKept;
+    store.startRun("vars");
+    expect(store.getState().individualsKept).toBe(first);
+    store.startRun("stats");
+    const stats = sentAt(sent, 1);
+    store.runEnded(stats.run.id, doneWith(stats, fiveStats()));
+    expect(store.getState().individualsKept).not.toBe(first);
+  });
+});
+
+describe("VS3 D4 the failure of the statistics, and a read that leaves a wait behind", () => {
+  test("with no threshold, a refusal of the statistics is theirs alone: the analysis that reads the filters of individuals is ready", () => {
+    const { store, sent } = storeOfFive([]);
+    store.startRun("stats");
+
+    store.runEnded(sentAt(sent, 0).run.id, {
+      kind: "failed",
+      error: { kind: "popnei", message: "the pass gave no variant" },
+    });
+
+    expect(statusIn(store, "stats").kind).toBe("error");
+    expect(statusIn(store, "pops").kind).toBe("ready");
+  });
+
+  test("the failure of the statistics forgotten by a startRun of the analysis stays forgotten when that Run is stopped", () => {
+    const { store, sent } = storeOfFive([MISSING_AT_02]);
+    store.startRun("pops");
+    const error = { kind: "workerFailed", message: "out of memory" } as const;
+    store.runEnded(sentAt(sent, 0).run.id, { kind: "failed", error });
+    store.startRun("pops");
+
+    store.cancelRun("pops");
+    store.runEnded(sentAt(sent, 1).run.id, { kind: "cancelled" });
+
+    expect(statusIn(store, "stats").kind).toBe("ready");
+    expect(statusIn(store, "pops").kind).toBe("ready");
+  });
+
+  test("a read that changes the key of a Run that waits ends the wait at once, and no later notice names it", () => {
+    const { analyses: twoFakes, stats } = fakeAnalyses();
+    const [pops, vars] = twoFakes;
+    if (pops === undefined || vars === undefined) {
+      throw new Error("popnei_web defect: no fake analyses");
+    }
+    // Its key holds the individuals table, and it runs while the file
+    // is read.
+    const tabled: AnalysisDef<TestJob, TestResult> = {
+      ...pops,
+      keyInputs: (p) => {
+        const read = p.individuals?.read;
+        return read?.kind === "read" ? { rows: read.table.rows } : null;
+      },
+      needs: () => null,
+    };
+    const { send } = fakeSend();
+    const store = createStore({
+      first: emptyProject("popgen"),
+      analyses: [tabled, vars, stats],
+      send,
+      numVarsOf: () => null,
+      statistics: FAKE_STATISTICS,
+      appVersion: "0.1.0",
+      cacheMaxBytes: 1024 * 1024,
+      maxUndoSteps: 200,
+    });
+    store.popneiReady("0.1.0");
+    const five = fiveIndividualsProject([MISSING_AT_02]);
+    store.open(five);
+    store.apply("an individuals file was loaded", loadPops);
+    expect(store.startRun("pops")).toHaveLength(1);
+    const read = five.individuals?.read;
+    if (read?.kind !== "read") {
+      throw new Error("popnei_web defect: the five have no table");
+    }
+
+    store.individualsRead(INDIVIDUALS_ID, CSV, read);
+    expect(store.getState().notice).toBeNull();
+    expect(statusIn(store, "pops").kind).toBe("ready");
+    store.apply("the populations changed", (p) =>
+      setGrouping(p, { kind: "populations", column: null }),
+    );
+
+    expect(store.getState().notice).toBeNull();
+  });
+});
+
+describe("VS3 D4 two Runs that wait for the same statistics", () => {
+  test("a Stop of one does not stop the statistics the other waits for, and their end sends the other's request alone", () => {
+    const { analyses: twoFakes, stats, lists } = fakeAnalyses();
+    const [pops] = twoFakes;
+    if (pops === undefined) {
+      throw new Error("popnei_web defect: no fake analyses");
+    }
+    const other: AnalysisDef<TestJob, TestResult> = { ...pops, id: "other" };
+    const { send, sent } = fakeSend();
+    const store = createStore({
+      first: emptyProject("popgen"),
+      analyses: [...twoFakes, stats, other],
+      send,
+      numVarsOf: () => null,
+      statistics: FAKE_STATISTICS,
+      appVersion: "0.1.0",
+      cacheMaxBytes: 1024 * 1024,
+      maxUndoSteps: 200,
+    });
+    store.popneiReady("0.1.0");
+    store.open(fiveIndividualsProject([MISSING_AT_02]));
+    store.startRun("pops");
+    const statsRequest = sentAt(sent, 0);
+    expect(store.startRun("other")).toStrictEqual([]);
+
+    store.cancelRun("pops");
+
+    expect(statsRequest.cancels()).toBe(0);
+    expect(statusIn(store, "other")).toMatchObject({
+      kind: "running",
+      waitsForStatistics: true,
+    });
+    const next = store.runEnded(
+      statsRequest.run.id,
+      doneWith(statsRequest, fiveStats()),
+    );
+    expect(next).toStrictEqual([sentAt(sent, 1).run]);
+    // The other is a copy of the populations, whose job it sends.
+    expect(sentAt(sent, 1).key).toBe(keyOfNow(store, other));
+    expect(lists.at(-1)?.individuals).toStrictEqual(["a", "b", "d"]);
+    expect(statusIn(store, "other").kind).toBe("running");
+    expect(statusIn(store, "pops").kind).toBe("ready");
   });
 });

@@ -61,6 +61,7 @@ function makeStore(): Store<TestDefResult> {
       cancel: () => undefined,
     }),
     numVarsOf: () => null,
+    statistics: null,
     appVersion: "0.1.0",
     cacheMaxBytes: CACHE_MAX_BYTES,
     maxUndoSteps: MAX_UNDO_STEPS,

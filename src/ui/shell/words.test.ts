@@ -197,7 +197,13 @@ function done(
 }
 
 function running(key: Key, runId: number): AnalysisStatus<TestDefResult> {
-  return { kind: "running", key, runId, progress: null };
+  return {
+    kind: "running",
+    key,
+    runId,
+    progress: null,
+    waitsForStatistics: false,
+  };
 }
 
 function ready(key: Key): AnalysisStatus<TestDefResult> {
@@ -213,6 +219,7 @@ function failed(key: Key): AnalysisStatus<TestDefResult> {
     kind: "error",
     key,
     error: { kind: "refused", message: "too few individuals" },
+    ofStatistics: false,
   };
 }
 
@@ -260,6 +267,7 @@ function state(
     ],
     runs: [],
     notice: null,
+    individualsKept: null,
     ...rest,
   });
 }

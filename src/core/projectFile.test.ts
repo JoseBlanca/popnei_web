@@ -71,6 +71,7 @@ function stateOf(
     })),
     runs: [],
     notice: null,
+    individualsKept: null,
   });
 }
 
@@ -1309,6 +1310,7 @@ describe("WS6 D2 the opening", () => {
       })),
       runs: [],
       notice: null,
+      individualsKept: null,
     });
     const done = stateWith({
       kind: "done",
@@ -2022,6 +2024,7 @@ const savedState: fc.Arbitrary<AppState<TestDefResult>> = fc
       analyses: views,
       runs: [],
       notice: null,
+      individualsKept: null,
     });
   });
 

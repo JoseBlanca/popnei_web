@@ -36,7 +36,8 @@ import type {
   VariantSource,
 } from "./project.ts";
 import type { Result } from "./result.ts";
-import type { AnalysisDef } from "./store.ts";
+import type { IndividualStats } from "./individualsKept.ts";
+import type { AnalysisDef, WorkerClient } from "./store.ts";
 import type {
   Cell,
   ColumnType,
@@ -992,11 +993,13 @@ export const wholeProject: fc.Arbitrary<Project> = fc
 // requests the test ends by hand, and two analyses, one that needs the
 // individuals file and uses the populations, and one that needs only the
 // variants file. Their results differ in shape, so that a result given
-// to the other analysis's functions shows.
+// to the other analysis's functions shows. From stage 3, two more: the
+// statistics of each individual and the counts of the filters, each
+// reading the filters of the variants alone.
 
 /** A request of the fake analyses. */
 export interface TestJob {
-  readonly analysis: "pops" | "vars";
+  readonly analysis: "pops" | "vars" | "stats" | "counts";
   /** The key of an intermediate result, made by the client. */
   readonly pruned: string;
 }
@@ -1015,7 +1018,22 @@ export interface VarsResult {
   readonly values: Float64Array;
 }
 
-export type TestResult = PopsResult | VarsResult;
+/** The result of the fake statistics of each individual. */
+export interface StatsResult {
+  readonly kind: "stats";
+  /** The statistics, which `statistics.of` of the store finds. */
+  readonly stats: IndividualStats;
+}
+
+/** The result of the fake counts of the filters. */
+export interface CountsResult {
+  readonly kind: "counts";
+  /** The variants the filters kept. */
+  readonly numVars: number;
+}
+
+/** A result of any of the fake analyses. */
+export type TestResult = PopsResult | VarsResult | StatsResult | CountsResult;
 
 /** A request the fake `send` was given, which the test ends by hand. */
 export interface SentRequest {
@@ -1091,6 +1109,13 @@ export interface Calls {
   readonly given: string[];
 }
 
+/** The list of the individuals kept that the client of a request gave
+    its fake analysis. */
+export interface ListGiven {
+  readonly analysis: TestJob["analysis"];
+  readonly individuals: readonly string[] | null;
+}
+
 /** The intermediate result both fake analyses ask the client for. */
 export const PRUNED: readonly [string, JsonValue] = ["pruned", { maxR2: 0.5 }];
 
@@ -1107,12 +1132,28 @@ export const NO_POPULATIONS =
   "Choose the column of the populations in the Individuals step.";
 
 /** The two fake analyses, the populations first, and the count of the
-    calls of their `keyInputs`. */
+    calls of their `keyInputs`; and, apart from them, the fakes of stage
+    3, the statistics of each individual, `stats`, and the counts of the
+    filters, `counts`, each reading the filters of the variants alone. */
 export function fakeAnalyses(): {
   readonly analyses: readonly AnalysisDef<TestJob, TestResult>[];
   readonly calls: Calls;
+  /** The list each client gave, in the order of the requests. */
+  readonly lists: ListGiven[];
+  readonly stats: AnalysisDef<TestJob, TestResult>;
+  readonly counts: AnalysisDef<TestJob, TestResult>;
 } {
   const calls: Calls = { pops: 0, vars: 0, needs: 0, given: [] };
+  const lists: ListGiven[] = [];
+  /** Sends the job of `analysis` through `c`, noting the list of the
+      individuals kept the client gave. */
+  const sendThrough = (
+    analysis: TestJob["analysis"],
+    c: WorkerClient<TestJob, TestResult>,
+  ): Run<TestResult> => {
+    lists.push({ analysis, individuals: c.individuals });
+    return c.run({ analysis, pruned: c.intermediateKey(...PRUNED) });
+  };
   const pops: AnalysisDef<TestJob, TestResult> = {
     id: "pops",
     app: ["popgen"],
@@ -1141,8 +1182,7 @@ export function fakeAnalyses(): {
           : null)
       );
     },
-    run: (_p, c) =>
-      c.run({ analysis: "pops", pruned: c.intermediateKey(...PRUNED) }),
+    run: (_p, c) => sendThrough("pops", c),
     warnings: (r) => {
       calls.given.push(`pops warnings of ${r.kind}`);
       return [];
@@ -1166,8 +1206,7 @@ export function fakeAnalyses(): {
       return analysisOptions(p, "vars", { minMaf: 0 });
     },
     needs: () => null,
-    run: (_p, c) =>
-      c.run({ analysis: "vars", pruned: c.intermediateKey(...PRUNED) }),
+    run: (_p, c) => sendThrough("vars", c),
     warnings: (r, p) => {
       calls.given.push(`vars warnings of ${r.kind}`);
       return p.filters.some((filter) => filter.kind === "maf")
@@ -1183,5 +1222,142 @@ export function fakeAnalyses(): {
     numCheckNumbers: () => null,
     script: () => "",
   };
-  return { analyses: [pops, vars], calls };
+  /** A fake of stage 3 of the id `id`, reading the filters of the
+      variants alone, whose check numbers are those `numbers` gives of a
+      result of its own shape. */
+  const variantsOnly = (
+    id: "stats" | "counts",
+    numbers: (r: TestResult) => readonly (number | null)[],
+  ): AnalysisDef<TestJob, TestResult> => ({
+    id,
+    app: ["popgen"],
+    defaults: {},
+    keyVersion: 1,
+    filtersRead: { variants: true, individuals: false },
+    parseOptions: (options) => jsonObjectOf(options),
+    keyInputs: () => null,
+    needs: () => null,
+    run: (_p, c) => sendThrough(id, c),
+    warnings: (r) => {
+      calls.given.push(`${id} warnings of ${r.kind}`);
+      return [];
+    },
+    checkNumbers: (r) => {
+      calls.given.push(`${id} checkNumbers of ${r.kind}`);
+      return numbers(r);
+    },
+    numCheckNumbers: () => null,
+    script: () => "",
+  });
+  const stats = variantsOnly("stats", (r) =>
+    r.kind === "stats" ? [...r.stats.missingGtRate] : [],
+  );
+  const counts = variantsOnly("counts", (r) =>
+    r.kind === "counts" ? [r.numVars] : [],
+  );
+  return { analyses: [pops, vars], calls, lists, stats, counts };
+}
+
+/** How the store finds the statistics of each individual in a result of
+    the fake `stats`, its `statistics` of `createStore`; a defect for
+    another result. */
+export const FAKE_STATISTICS: {
+  readonly analysis: AnalysisId;
+  of(r: TestResult): IndividualStats;
+} = {
+  analysis: "stats",
+  of: (r) => {
+    if (r.kind !== "stats") {
+      throw new Error(
+        `popnei_web defect: the statistics asked of a result of ${r.kind}.`,
+      );
+    }
+    return r.stats;
+  },
+};
+
+/** A result of the fake statistics of each individual, of the
+    individuals `individuals` and their numbers. */
+export function statsResult(
+  individuals: readonly string[],
+  missingGtRate: readonly number[],
+  obsHetRate: readonly number[],
+): StatsResult {
+  return {
+    kind: "stats",
+    stats: {
+      individuals,
+      missingGtRate: Float64Array.from(missingGtRate),
+      obsHetRate: Float64Array.from(obsHetRate),
+    },
+  };
+}
+
+/** The individuals of the worked case of docs/specs/core/individualsKept.md,
+    "How it is verified", in the order of their variants file. */
+export const FIVE_INDIVIDUALS: readonly string[] = ["a", "b", "c", "d", "e"];
+
+/** The statistics of the worked case: `e` calls no genotype. */
+export function fiveStats(): StatsResult {
+  return statsResult(
+    FIVE_INDIVIDUALS,
+    [0.2, 0.1, 0.3, 0.05, 1],
+    [0.3, 0.5, 0.2, 0.4, Number.NaN],
+  );
+}
+
+/**
+ * A project of population genetics, frozen deeply, on the five
+ * individuals of the worked case: a `.nei` file read, `panel.nei`, with
+ * no filter of the variants and the filters of individuals
+ * `individualFilters`; a CSV of individuals read, `pops.csv`, putting
+ * `a`, `b` and `c` in P1 and `d` and `e` in P2; and the populations
+ * grouped by `pop`, so that the fake analysis of the populations can run.
+ */
+export function fiveIndividualsProject(
+  individualFilters: readonly IndividualFilter[],
+): Project {
+  return deepFreeze<Project>({
+    app: "popgen",
+    variants: {
+      fileId: SAMPLE_VARIANTS_ID,
+      name: "panel.nei",
+      size: 1024,
+      format: "nei",
+      readOptions: null,
+      read: {
+        kind: "read",
+        individuals: FIVE_INDIVIDUALS,
+        ploidy: 2,
+        numVars: null,
+      },
+    },
+    filters: [],
+    individualFilters,
+    individuals: {
+      fileId: SAMPLE_INDIVIDUALS_ID,
+      name: "pops.csv",
+      csv: { encoding: "auto", separator: "auto", decimal: "auto" },
+      read: {
+        kind: "read",
+        table: {
+          columns: ["id", "pop"],
+          rows: FIVE_INDIVIDUALS.map((name, index) => [
+            name,
+            index < 3 ? "P1" : "P2",
+          ]),
+        },
+        columns: [{ kind: "identifier" }, { kind: "categorical" }],
+        found: {
+          encoding: "utf-8",
+          separator: ",",
+          decimal: ".",
+          undecodedLine: null,
+        },
+      },
+    },
+    grouping: { kind: "populations", column: "pop" },
+    analyses: [],
+    reference: null,
+  });
 }

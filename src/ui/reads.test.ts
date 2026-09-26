@@ -110,6 +110,7 @@ function setUp(): {
       throw new Error("the reads send no calculation");
     },
     numVarsOf,
+    statistics: null,
     appVersion: "0.1.0",
     cacheMaxBytes: CACHE_MAX_BYTES,
     maxUndoSteps: MAX_UNDO_STEPS,

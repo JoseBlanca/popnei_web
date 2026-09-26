@@ -26,6 +26,7 @@ function makeStore(): Store<JobResult> {
       throw new Error("the saving sends no calculation");
     },
     numVarsOf,
+    statistics: null,
     appVersion: "0.1.0",
     cacheMaxBytes: CACHE_MAX_BYTES,
     maxUndoSteps: MAX_UNDO_STEPS,
@@ -239,6 +240,7 @@ describe("WS9 the saving counts a result that ended as a change", () => {
         return run;
       },
       numVarsOf: () => null,
+      statistics: null,
       appVersion: "0.1.0",
       cacheMaxBytes: CACHE_MAX_BYTES,
       maxUndoSteps: MAX_UNDO_STEPS,

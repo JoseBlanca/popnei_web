@@ -156,6 +156,7 @@ function startApplication(
       return client.run(key, job, onProgress);
     },
     numVarsOf,
+    statistics: null,
     appVersion: APP_VERSION,
     cacheMaxBytes: CACHE_MAX_BYTES,
     maxUndoSteps: MAX_UNDO_STEPS,

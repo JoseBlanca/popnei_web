@@ -149,6 +149,7 @@ function stateOf(project: Project): AppState<JobResult> {
     ],
     runs: [],
     notice: null,
+    individualsKept: null,
   };
 }
 

@@ -6,6 +6,14 @@ import { MAX_UNDO_STEPS } from "../core/history.ts";
 import type { Project } from "../core/project.ts";
 import { createStore } from "../core/store.ts";
 import type { Store } from "../core/store.ts";
+import {
+  FAKE_STATISTICS,
+  fakeAnalyses,
+  fakeSend,
+  fiveIndividualsProject,
+  fiveStats,
+} from "../core/testSupport.ts";
+import type { SentRequest, TestResult } from "../core/testSupport.ts";
 import type { Job, JobResult, Outcome, Run } from "../worker/protocol.ts";
 import { startAnalysis, startedAt } from "./runs.ts";
 
@@ -73,6 +81,7 @@ function setUp(project: Project | null): {
       return { id: lastId, outcome, cancel: () => undefined };
     },
     numVarsOf,
+    statistics: null,
     appVersion: "0.1.0",
     cacheMaxBytes: CACHE_MAX_BYTES,
     maxUndoSteps: MAX_UNDO_STEPS,
@@ -86,7 +95,7 @@ function setUp(project: Project | null): {
     ...real,
     runEnded: (runId, outcome) => {
       ended.push([runId, outcome]);
-      real.runEnded(runId, outcome);
+      return real.runEnded(runId, outcome);
     },
   };
   return { store, ends, ended };
@@ -145,5 +154,127 @@ describe("WS7 D1 startAnalysis", () => {
     await expect(started).rejects.toThrow(
       "popnei_web defect: a runEnded that throws",
     );
+  });
+});
+
+/** A store of core with the fakes of its tests, the statistics of each
+    individual among them, and the five individuals of the worked case
+    opened with a threshold of 0.2 on their missing genotypes, which no
+    statistics are known for yet; and the ids of the requests its
+    `runEnded` was given, in order. */
+function setUpWithThreshold(): {
+  readonly store: Store<TestResult>;
+  readonly sent: SentRequest[];
+  readonly ended: number[];
+} {
+  const { analyses, stats } = fakeAnalyses();
+  const { send, sent } = fakeSend();
+  const real = createStore({
+    first: firstProject("popgen"),
+    analyses: [...analyses, stats],
+    send,
+    numVarsOf: () => null,
+    statistics: FAKE_STATISTICS,
+    appVersion: "0.1.0",
+    cacheMaxBytes: CACHE_MAX_BYTES,
+    maxUndoSteps: MAX_UNDO_STEPS,
+  });
+  real.popneiReady("0.1.0");
+  real.open(
+    fiveIndividualsProject([
+      { kind: "missing_data", maxAllowedMissingRate: 0.2 },
+    ]),
+  );
+  const ended: number[] = [];
+  const store: Store<TestResult> = {
+    ...real,
+    runEnded: (runId, outcome) => {
+      ended.push(runId);
+      return real.runEnded(runId, outcome);
+    },
+  };
+  return { store, sent, ended };
+}
+
+/** The request `index` the fake `send` was given, or a defect. */
+function sentAt(sent: readonly SentRequest[], index: number): SentRequest {
+  const request = sent[index];
+  if (request === undefined) {
+    throw new Error(`popnei_web defect: no request ${String(index)} sent`);
+  }
+  return request;
+}
+
+/** Whether `promise` has settled once the callbacks already due have
+    run. */
+async function settled(promise: Promise<void> | null): Promise<boolean> {
+  let done = false;
+  void promise?.then(() => {
+    done = true;
+  });
+  await new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
+  return done;
+}
+
+describe("VS3 D4 startAnalysis of stage 3", () => {
+  test("a Run that waits for the statistics gives their handle; their outcome gives the analysis's own handle, awaited and given to runEnded too, and the promise settles after it", async () => {
+    const { store, sent, ended } = setUpWithThreshold();
+
+    const started = startAnalysis(store, "pops");
+    expect(sent).toHaveLength(1);
+    const stats = sentAt(sent, 0);
+    expect(stats.job.analysis).toBe("stats");
+    stats.end({ kind: "done", key: stats.key, result: fiveStats() });
+
+    expect(await settled(started)).toBe(false);
+    expect(ended).toStrictEqual([stats.run.id]);
+    const own = sentAt(sent, 1);
+    expect(own.job.analysis).toBe("pops");
+    own.end({ kind: "cancelled" });
+    await started;
+
+    expect(ended).toStrictEqual([stats.run.id, own.run.id]);
+  });
+
+  test("a Run that waits for statistics already in flight gets no handle and settles at once, while its request, sent when they end, is awaited by the Calculate that started them", async () => {
+    const { store, sent, ended } = setUpWithThreshold();
+    const calculate = startAnalysis(store, "stats");
+    const stats = sentAt(sent, 0);
+
+    const run = startAnalysis(store, "pops");
+
+    expect(run).not.toBeNull();
+    expect(await settled(run)).toBe(true);
+    expect(sent).toHaveLength(1);
+    stats.end({ kind: "done", key: stats.key, result: fiveStats() });
+    expect(await settled(calculate)).toBe(false);
+    const own = sentAt(sent, 1);
+    expect(own.job.analysis).toBe("pops");
+    own.end({ kind: "cancelled" });
+    await calculate;
+
+    expect(ended).toStrictEqual([stats.run.id, own.run.id]);
+  });
+
+  test("startedAt gives the time of the statistics while the Run waits, and that of its own request once it is sent", async () => {
+    const { store, sent } = setUpWithThreshold();
+
+    const started = startAnalysis(store, "pops");
+    const stats = sentAt(sent, 0);
+    expect(startedAt(stats.run.id)).not.toBeNull();
+    stats.end({ kind: "done", key: stats.key, result: fiveStats() });
+    await settled(started);
+
+    const own = sentAt(sent, 1);
+    expect(startedAt(stats.run.id)).toBeNull();
+    const at = startedAt(own.run.id);
+    expect(at).not.toBeNull();
+    expect(at).toBeLessThanOrEqual(performance.now());
+    own.end({ kind: "cancelled" });
+    await started;
+
+    expect(startedAt(own.run.id)).toBeNull();
   });
 });
