@@ -319,7 +319,7 @@ test("WS7 D3 panel.txt is not loaded, and the step says why and announces it", a
   await expect(page.getByRole("main").getByText(message)).toHaveCount(0);
 });
 
-test("WS9 D3 the message of a file not loaded goes with an Undo past the pick before it", async ({
+test("WS9 D3 the message of a file not loaded goes with an Undo past the pick before it, and the Redo does not bring it back", async ({
   page,
 }) => {
   await openVariants(page);
@@ -336,6 +336,13 @@ test("WS9 D3 the message of a file not loaded goes with an Undo past the pick be
     .click();
 
   await expect(fileButton(page)).toHaveText("Choose a variants file…");
+  await expect(page.getByRole("main").getByText(message)).toHaveCount(0);
+
+  await page
+    .getByRole("banner")
+    .getByRole("button", { name: "Redo", exact: true })
+    .click();
+  await expect(fileButton(page)).toHaveText("Replace panel.nei…");
   await expect(page.getByRole("main").getByText(message)).toHaveCount(0);
 });
 

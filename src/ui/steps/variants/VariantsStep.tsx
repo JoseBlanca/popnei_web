@@ -128,12 +128,15 @@ export function VariantsStep(): React.JSX.Element {
     return vcfOptions.shown();
   };
 
-  // The message of a file not loaded, until the next pick, and shown only
-  // beside the files it was said beside: an Undo or a Redo past a pick, or
-  // an opening, takes it away.
+  // The message of a file not loaded, until the next pick, or until an
+  // Undo or a Redo past a pick, or an opening, changes the files it was
+  // said beside. It is forgotten then, during the drawing, as react.dev
+  // has it for state that follows a change of what is drawn, so that a
+  // Redo back to those files does not show it again.
   const [said, setSaid] = useState<StepMessage | null>(null);
-  const message =
-    said !== null && isBeside(said, { variants, reference }) ? said.text : null;
+  const saidBeside = said !== null && isBeside(said, { variants, reference });
+  if (said !== null && !saidBeside) setSaid(null);
+  const message = saidBeside ? said.text : null;
   const fileButton = useRef<HTMLButtonElement>(null);
   const fileHeading = useId();
   const vcfHeading = useId();
