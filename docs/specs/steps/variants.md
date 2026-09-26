@@ -437,8 +437,8 @@ ploidy 4.
   or comes with another load, with the words of `docs/specs/shell.md`,
   "The status region": so it is heard also when an Undo or a Redo on
   another step brings it back, and when a second file that differs
-  replaces the first; not again when the read of its load makes it
-  longer.
+  replaces the first; while its load is being read, once, after the
+  end of the read, with the words the read gave it.
 
 ## How it is checked
 

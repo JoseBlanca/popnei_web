@@ -281,7 +281,7 @@ file its options of the CSV compared by their values:
 | the same, to failed | the reason `projectNeeds` gives, which names the file: "popnei could not read bad.vcf: … Load a variants file in the Variants step." |
 | the metadata file of the same load and options went from pending to read | "pops.csv read: 360 rows, 5 columns.", and, when the variants file is read, the sentence of the check: "All 342 individuals found." or "12 individuals of panel.nei are not in pops.csv." |
 | the same, to failed | the reason `individualsNeeds` gives |
-| the warning of a reopened project that differs from its file, `identityWarning` of `projectFile.ts`, appeared, or is there with another load of the variants file than before | "Warning: " and its words, those of the Variants step (`docs/specs/steps/variants.md`, "A project file opened") |
+| the warning of a reopened project that differs from its file, `identityWarning` of `projectFile.ts`, appeared, or is there with another load of the variants file than before; while that load is being read, at the end of its read instead | "Warning: " and its words, those of the Variants step (`docs/specs/steps/variants.md`, "A project file opened"), after the read's own announcement |
 
 Nothing else is announced from the state. So a result that comes back
 from the cache after an undo is not announced, since no request ended;
@@ -292,8 +292,11 @@ same load went from pending. The warning of a reopened project is
 announced from the state, and not by the Variants step, so that it is
 heard also when an Undo or a Redo pressed on another step brings it
 back, and when a second file that differs replaces the first in one
-command; it is not announced again when the read of its load makes it
-longer, nor when a change of a filter leaves it as it was. A calculation that a change of the load
+command. While its load is being read it waits, and is said once, after
+the read, with the words the read gave it: a warning said at the pick
+would be heard before the read that follows it, and again, longer, when
+the read adds a difference. It is not announced again when a change of
+a filter leaves it as it was. A calculation that a change of the load
 stopped is in the notice, which is not written here, since the toast of
 React Aria is read out by itself.
 
@@ -308,7 +311,12 @@ the shell gives the screens:
 | a file that a step did not load, several dropped at once | the text the step shows for it, whose words are the step's (`docs/specs/steps/variants.md` and `individuals.md`, "Its words") |
 
 Without the first, a user of a screen reader who pressed Ctrl+Z would
-hear nothing.
+hear nothing. An undo or a redo is said before what its change
+announces from the state, "Undone: a new variants file was loaded.
+Warning: …", since it is what the user did and the rest follows from
+it; the announcer puts it before the texts its change announced, and
+after those announced before it, so that presses in quick succession
+keep their order.
 
 ### The error bar
 
@@ -608,10 +616,14 @@ with the analyses of `TEST_DEFS` of `src/core/testSupport.ts`:
   after an undo, a calculation left behind that ends, an undo back to a
   load already read, an opening, a read of the metadata file recorded
   for options other than those of the present project, and the warning
-  of a reopened project made longer by the read of its load.
+  of a reopened project while its load is being read, which the end of
+  the read announces after the read.
 - **The announcer**, with the fake timers of Vitest: the same text
   announced twice empties the region and writes it each time; two texts
-  within 100 ms are written together.
+  within 100 ms are written together; the text of a change goes before
+  what the change announced and after what came before it, and two
+  changes keep their order. **`undoOrRedo`**: an undo that brings the warning of a
+  reopened project back says "Undone: …" before the warning.
 
 With Playwright, in the three engines, against the built site, as the
 flow of the walking skeleton and beside it (`.claude/skills/coding/testing.md`):
