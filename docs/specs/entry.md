@@ -1,6 +1,9 @@
 # The entry of the population genetics page
 
-25 September 2026, approved by the owner on 25 September 2026. This spec gives
+25 September 2026, approved by the owner on 25 September 2026, and revised
+on 26 September 2026 with the owner's decisions at stop 9.6 of
+`docs/plans/walking-skeleton.md`, on the points of the review of its
+work package 9. This spec gives
 the page of the population genetics application, `popgen.html`, and its
 entry, the code that runs once when the page opens and keeps working for
 the life of the page: it makes the store and the two workers and joins
@@ -357,8 +360,14 @@ dialog and says what the user sees of it (`docs/specs/shell.md`,
   under `name`, the name the user left in the field, which starts at
   `projectFileName` of the present project, by a link to a `Blob` of the
   text that it clicks and then releases. A name that does not end in
-  `.popnei.json` gets it added, so that the file opens again with Open
-  project…; `panel` gives `panel.popnei.json`. `writeProjectFile` refuses
+  `.popnei.json` gets it, so that the file opens again with Open
+  project…: `panel` gives `panel.popnei.json`, and a name that ends in
+  `.json` has that ending replaced, so that `run1.json` gives
+  `run1.popnei.json` and not `run1.json.popnei.json`, as the owner
+  decided on 26 September 2026 (point 4 of the review of work package 9
+  of `docs/plans/walking-skeleton.md`). The endings are found in any
+  case, as `projectFileName` finds those of a variants file: `run1.JSON`
+  gives `run1.popnei.json`, and `run1.POPNEI.JSON` is kept. `writeProjectFile` refuses
   nothing; it throws a defect on a check number that is not finite,
   which, in the event handler of the button, reaches the error bar.
 - `read(text)` calls `readProjectFile` of `projectFile.ts` with the text
@@ -592,7 +601,8 @@ hand and whose cancels it records.
   throws rejects the promise.
 - **`createSaving`**: `save("panel.popnei.json")` downloads, through the
   fake, the text of `writeProjectFile` under that name, and returns it;
-  `save("panel")` downloads under `panel.popnei.json`; `proposedName` is
+  `save("panel")` downloads under `panel.popnei.json`, and
+  `save("run1.json")` and `save("run1.JSON")` under `run1.popnei.json`; `proposedName` is
   `projectFileName` of the present project; `changed` is false on the
   first project, true after a command, false again after an undo back to
   it, after `opened(p)` with the present project, and after a save, and

@@ -1,6 +1,9 @@
 # The shell of the population genetics application
 
-25 September 2026, approved by the owner on 25 September 2026. The screen
+25 September 2026, approved by the owner on 25 September 2026, and revised
+on 26 September 2026 with the owner's decisions at stop 9.6 of
+`docs/plans/walking-skeleton.md`, on the points of the review of its
+work package 9. The screen
 spec of what surrounds every step of the population genetics
 application in the walking skeleton of stage 2 (`docs/build-order.md`),
 the smallest application that goes through every part once: the header,
@@ -392,7 +395,9 @@ of the saving, which writes the project file, `docs/functionality.md`
 section 9, from the state of the store, the analyses of the
 application, the version of the application and the date, and hands it
 to the browser to download under that name, `.popnei.json` added when
-it does not end so (`docs/specs/entry.md`, "The saving"); the dialog
+it does not end so, and put in place of a `.json` it ends in, so that
+`run1.json` gives `run1.popnei.json` and not `run1.json.popnei.json`
+(`docs/specs/entry.md`, "The saving"); the dialog
 closes and the focus goes back to Save project. It can be used at any
 time, a read under way included. `writeProjectFile` refuses no project;
 a check number that is not finite is a defect of our code, which it
@@ -645,7 +650,8 @@ flow of the walking skeleton and beside it (`.claude/skills/coding/testing.md`):
 - Save project opens the dialog with "panel.popnei.json" in its field
   after `panel.nei` is loaded; Save downloads `panel.popnei.json`, the
   text of the status region says so, and the focus is on Save project;
-  a name changed to "run1" downloads `run1.popnei.json`; Cancel downloads
+  a name changed to "run1" downloads `run1.popnei.json`, and one
+  changed to "run1.json" downloads `run1.popnei.json` too; Cancel downloads
   nothing; leaving the page just after the Save raises no question, and
   after a change that follows it, the question.
 - Open project… with `notes.txt`, which is not JSON, shows the text of
