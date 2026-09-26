@@ -45,14 +45,35 @@ states of any analysis: the histograms of the variants, the counts of
 what each filter kept, and the statistics of each individual. The
 **individuals kept** are the one list that core makes from the four
 filters of individuals, with how many each filter was given and kept
-(`individualsKept`, which the store gives in its state).
+(`individualsKept`, which the store gives in its state). Each check
+shows, beside its button, the **line of the versions**, "Calculated with
+popnei 0.1.0, in version 0.1.0 of the application.", as every result
+does (`docs/functionality.md`, section 9).
+
+The words of the page around the step, `docs/specs/shell.md`'s: the
+**shell** is what surrounds every step, the header with Undo and Redo,
+the **stepper**, the row of links to the three steps with the state of
+each, and the **summary line** under it, which says what the analyses
+would run on; the **notice** is a small panel at the bottom of the page
+that says what the last change removed or will stop, with its Undo; and
+the **status region** is a part of the page, not seen, whose text a
+screen reader, the program that reads the page aloud to a user who
+cannot see it, reads out when it changes. The **focus** is the element
+the keyboard acts on, which the Tab key moves from one element to the
+next. The widgets named below are those of **React Aria**, the library
+of accessible widgets the application is built with, each of which
+already works with the keyboard and a screen reader; each is said what
+it is where it is first named.
 
 ## What it shows
 
 ### The parts, in their order
 
-The step is one page under its `<h1>` "Variants", in four sections, each
-with its `<h2>`:
+The step is one page under its heading "Variants", its `<h1>`, the
+heading of the first level, in four sections, each with a heading of the
+second level, an `<h2>`, and the blocks within them with one of the
+third, an `<h3>`; a screen reader lists the headings, and jumps between
+them:
 
 1. **Variants file**: the file, how a VCF is read, what the file holds.
 2. **Filters of the variants**: the button of the histograms of the
@@ -89,9 +110,11 @@ they belong to the project and stay across loads.
 
 ### The file
 
-A drop zone, React Aria's `DropZone`, that holds a button, a
-`FileTrigger`, "Choose a variants file…", which opens the file picker of
-the system, since dropping a file cannot be done with a keyboard
+A drop zone, React Aria's `DropZone`, an area of the page onto which a
+file is dragged from the desktop, that holds a button, React Aria's
+`FileTrigger`, a button that opens the file picker of the system,
+"Choose a variants file…", since dropping a file cannot be done with a
+keyboard
 (`.claude/skills/coding/react.md`, "Widgets"). The format is told by the
 end of the name, compared without regard to case, `PANEL.VCF.GZ` as
 `panel.vcf.gz`, since the page does not read the file:
@@ -175,8 +198,8 @@ effect on a `.nei` file, whose ploidy is in the file:
 
 | label | widget | default | from |
 |---|---|---|---|
-| Ploidy of the VCF, from 1 to 255 | `NumberField`, a whole number | 2 | the default of popnei's `openVcf`, and the range it accepts (`MAX_PLOIDY` of `src/core/project.ts`) |
-| Only the variants with PASS or . in the FILTER column | `Checkbox`, since it takes effect at the next pick and not at once, which a `Switch` would promise (`react.md`, "Widgets") | on | `onlyPassed` of `openVcf`, true by default: a variant whose FILTER column is neither `PASS` nor `.` is left out |
+| Ploidy of the VCF, from 1 to 255 | `NumberField`, React Aria's field of a number, which takes digits and arrow keys, here a whole number | 2 | the default of popnei's `openVcf`, and the range it accepts (`MAX_PLOIDY` of `src/core/project.ts`) |
+| Only the variants with PASS or . in the FILTER column | `Checkbox`, a box ticked or not, since it takes effect at the next pick and not at once, which a `Switch`, a control drawn as a sliding switch that acts when it is flipped, would promise (`react.md`, "Widgets") | on | `onlyPassed` of `openVcf`, true by default: a variant whose FILTER column is neither `PASS` nor `.` is left out |
 
 Under the ploidy, a line that the owner asked for on 25 September 2026,
 and reworded the same day so that it does not read as if the
@@ -312,11 +335,13 @@ line is announced when it appears, through the function the shell gives
 the screens, since the focus is then on the field, after Enter, or on
 the next element, after the Tab key, and a screen reader would read the
 line in neither place; it is also the field's description, read with it
-when the focus comes back. It goes at the next commit of the field,
-Enter, the Tab key or an arrow key, whatever the number committed, the
-number kept among them, which changes nothing and which React Aria
-therefore does not report; and when the value of the field changes
-otherwise, by an Undo, a new load or the switch.
+when the focus comes back. The line goes at the next commit of the
+field, by Enter, the Tab key or an arrow key, whatever number is
+committed then. That includes the number kept typed again, which is no
+change of the project, so the field clears the line itself and does not
+wait for a new value, which would never come. The line goes, too, when
+the value of the field changes otherwise, by an Undo, a new load or the
+switch.
 
 A number with more decimals than the field takes is refused and not
 rounded, as a number outside the range is: rounded, 0.001 and 0.004
@@ -409,15 +434,50 @@ The texts the histogram asks of the screen, beyond those of
 
 | histogram | horizontal axis | vertical axis | the legend, with a threshold |
 |---|---|---|---|
-| major allele frequency | "Major allele frequency" | "Variants" | "Maximum 0.95"; "Kept by the MAF filter"; "Removed by the MAF filter" |
-| observed heterozygosity | "Observed heterozygosity" | "Variants" | "Maximum 0.5"; "Kept by the filter by observed heterozygosity"; "Removed by the filter by observed heterozygosity" |
+| major allele frequency | "Major allele frequency" | "Variants" | "Maximum 0.95"; "Kept by this filter"; "Removed by this filter" |
+| observed heterozygosity | "Observed heterozygosity" | "Variants" | "Maximum 0.5"; "Kept by this filter"; "Removed by this filter" |
 | expected heterozygosity | "Expected heterozygosity (unbiased)" | "Variants" | no threshold |
 
-The threshold on a histogram follows the number the user types, as they
-type it, while it is a number the field would take (the histogram spec,
-"What the user sees"); the counts beside the filter, and the results,
-follow the number committed. The typed number is state of the screen,
-dropped at each commit.
+The legend says "this filter" and not the name of the filter, which is
+the heading the histogram stands under: the legend is anchored at the
+right edge of the plot, and at 320 pixels wide, the width of a phone,
+"Removed by the filter by observed heterozygosity", about 300 pixels of
+text of 12 pixels at an estimate of 6.5 pixels a character, would run
+out of the left of a plot about 290 pixels wide; the flow checks the
+legend at that width (below, "How it is checked").
+
+**The plot and the table of its bins.** Each histogram is a block with
+two tabs, React Aria's `Tabs`, a row of labels of which one shows its
+panel at a time, as `.claude/skills/coding/react.md` has the results of
+an analysis: "Plot", first and selected when the step is drawn, and
+"Table of the bins", the table of `docs/specs/charts/histogram.md`,
+"The numbers without the picture". The table has a header cell for each
+column, "From", "To", "Variants", or "Individuals" for the histograms of
+the individuals, and, with a threshold, "This filter", whose cells say
+"Kept", "Partly kept" or "Removed"; the line above it says that each bin
+runs from its lower edge up to its upper edge, not included, and that
+the last includes its upper edge. Which tab is selected is state of the
+screen, kept while the step is drawn. Under the two tabs, whichever is
+selected, three buttons: "Download as SVG", "Download as PNG", and
+"Download the bins as CSV", since every table of the applications
+downloads as CSV (`docs/functionality.md`, section 9). The CSV is named
+as the plot is, with `_bins`, `panel.variant_maf_bins.csv`; it has the
+header `from,to,count,state`, a row per bin, the edges with every digit
+popnei gave, as the diversity's CSV writes its numbers, and the state
+`kept`, `partly_kept` or `removed`, empty with no threshold.
+
+**The threshold typed and not yet committed.** The threshold on a
+histogram follows the number the user types, as they type it, while it
+is a number the field would take (the histogram spec, "What the user
+sees"); the counts beside the filter, and the results, follow the number
+committed. The typed number is state of the screen, dropped at each
+commit. The number field of the widgets of stage 2 gives the step each
+number as it is typed through a property more, `onTyped`, called at
+each key with the number React Aria parses from the text, or `null`
+while the text is no number, is out of the range of the field, or has
+more decimals than it takes, as "0." on the way to "0.05"; the step
+gives the histogram that number, or the threshold of the project for
+`null`.
 
 ### What each filter of the variants kept
 
@@ -426,8 +486,9 @@ The counts are a check of their own (`docs/specs/analyses/filterCounts.md`,
 filters as they are: "Kept 1,152 of the 1,200 variants it was given."
 Under the last filter, the button "Count the variants each filter
 keeps", its running and error states, and, once counted, "1,128 of the
-1,200 variants of panel.nei pass the filters." and the warning
-`filterKeptNone` when a filter kept none. Without counts for the filters
+1,200 variants of panel.nei pass the filters." and, when a filter kept
+none, the warning "The MAF filter kept none of the 1,152 variants it was
+given, …" (`filterCounts.md`, "The warnings"). Without counts for the filters
 as they are, the line "Not counted for these filters. Count, or run an
 analysis, to see what each filter keeps." stands in place of the line of
 the total, and nothing beside the filters. A change of any filter of the
@@ -449,8 +510,8 @@ heterozygosity removes an individual with no called genotype, as the
 owner decided on 26 September 2026 (`docs/architecture.md`, section 13,
 point 4).
 
-**The two lists.** Each is a text area, a React Aria `TextField` with a
-`TextArea`, and two buttons:
+**The two lists.** Each is a text area, a field of several lines of
+text, React Aria's `TextField` with a `TextArea`, and two buttons:
 
 | label of the text area | its line | buttons |
 |---|---|---|
@@ -509,7 +570,14 @@ Their fields take numbers of four decimals, with a step of 0.01 for the
 arrow keys: the proportions of missing genotypes of the individuals of
 `panel.nei` lie from 0.0165 to 0.0434 with the missing data filter at
 0.05 (`docs/specs/core/individualsKept.md`), where two decimals would
-give three thresholds, and the table shows four. Under the second: "An
+give three thresholds, and the table shows four. The number field of the
+widgets of stage 2 takes a number committed only when it is a multiple of
+its step, so 0.0312 would be refused by a step of 0.01; it is given a
+property more, `decimals`, the most decimals a number committed may
+have, 4 here and 2 for the thresholds of the variants, apart from its
+`step`, which is then only what an arrow key moves by. With no
+`decimals` the field keeps the rule of stage 2, the decimals of its
+step, so the fields of stage 2 do not change. Under the second: "An
 individual with no called genotype has no observed heterozygosity, and
 this filter removes it."
 
@@ -517,7 +585,8 @@ Beside each, its histogram of `individualChecks.md`, with the threshold
 marked when the filter is on and following the number typed as above;
 its axes "Proportion of missing genotypes" or "Observed heterozygosity",
 and "Individuals"; its legend "Maximum 0.03", "Kept by this filter",
-"Removed by this filter". Before the statistics are calculated, or once
+"Removed by this filter"; the table of its bins and its three buttons,
+as those of the variants. Before the statistics are calculated, or once
 a change of a filter of the variants has removed them, there is no
 histogram, and the line of the counts below says why.
 
@@ -538,18 +607,27 @@ Variants step.", which locks every analysis that reads them and the
 writing of the file (`docs/specs/core/store.md`, "The state of an
 analysis"). With a threshold set and no statistics, a Run of an analysis
 that reads the filters of individuals calculates them first, and so
-does the writing of the file; the step says nothing more of it, since
-the panel that waits says so.
+does the writing of the file. The step says nothing more of it here,
+since what waits says so where the user pressed: the panel of the
+diversity in the Analyses step, or the part of the writing below, shows
+"Calculating the statistics of each individual, which the filters of
+individuals are set from" while they are calculated.
 
 ### Writing the filtered variants
 
 The last section, `docs/specs/analyses/writeVariants.md`, "The step's
 part", whose states and words it shows: the button "Write the filtered
-variants as a .nei file", with the size expected, "About 18.4 MB: 20,000
-variants of 1,000 individuals.", and the warning above
-`WRITE_WARN_BYTES` above the button; its progress and Stop; the button
-"Save panel.filtered.nei, 18.4 MB" once written; and what it says once
-saved, dropped or failed. The size expected is made from the counts of
+variants as a .nei file", with the size expected, "About 20.0 MB: 20,000
+variants of 1,000 individuals.", the variants kept times the individuals
+kept at one byte each; above the button, when the size expected is 500
+MB or more, the warning that the tab may not hold the file while it is
+written; its progress and Stop; the button "Save panel.filtered.nei,
+19.2 MB" once written, the size of the file popnei wrote, 19,161,178
+bytes; and what it says once saved, dropped or failed. A change of a
+filter while a file written waits to be saved, one press of an arrow key
+in a threshold among them, discards the file, and the notice of the
+change says that Undo does not bring it back (point G of
+`docs/specs/stage-3-open-points.md`). The size expected is made from the counts of
 the variants and the individuals kept that the two sections above show,
 so a user who reads it too large sees there which filter to tighten.
 
@@ -592,8 +670,9 @@ so a user who calculates them needs no Count.
 It reads, of the state of the store, `project.variants`,
 `project.filters`, `project.individualFilters` and `project.reference`;
 `individualsKept`; `write`; the status of `variantChecks`,
-`filterCounts` and `individualChecks` among `analyses`, and their
-`RunView`s; `variantsStepNeeds` and `individualListNeeds` of the
+`filterCounts` and `individualChecks` among `analyses`, and the
+calculations in flight that the store lists, `runs`, for their progress;
+`variantsStepNeeds` and `individualListNeeds` of the
 project, the functions of core that give, in words, the reason of a
 variants file being read or not read and of a list of individuals that
 popnei would refuse, with the list it is about; and `writtenName`,
@@ -744,13 +823,16 @@ nothing on the screen says the things the lines above do not.
   ploidy, the checkbox of the passed variants, the button that reads the
   VCF again when it is there; the button of the histograms of the
   variants; each filter of the variants, its switch, its fields, and its
-  histogram, whose table and two buttons of download are reached as the
-  histogram spec says; the Count button; each list, its text area and
-  its two buttons; the button of the statistics; each threshold, its
-  switch, its field and its histogram; the table of the individuals,
-  which the Tab key enters once, as React Aria's `Table`, a grid moved
-  through with the arrow keys; its download; the button to write, and
-  Save. When the button that reads the VCF again goes, after it was
+  histogram: the row of its two tabs, one stop of the Tab key, whose
+  arrow keys move between "Plot" and "Table of the bins"; then the panel
+  of the tab selected, the plot, which is no stop, or the table of the
+  bins, one stop; then its three buttons of download; the Count button;
+  each list, its text area and its two buttons; the button of the
+  statistics; each threshold, its switch, its field and its histogram,
+  in the same order; the table of the individuals, which the Tab key
+  enters once, as React Aria's `Table`, a table moved through with the
+  arrow keys, whose headers sort it with Enter; its download; the button
+  to write, and Save. When the button that reads the VCF again goes, after it was
   pressed, the focus moves to the file button, which is in every state.
 - A warning or an error sits in the order of the text beside what it is
   about, and is text, "Warning:", as well as its colour and its icon
@@ -761,7 +843,8 @@ nothing on the screen says the things the lines above do not.
   "Variants file", which holds the zone and the message of a file not
   loaded; the button in the zone is the way to pick without dragging
   (2.1.1).
-- Each field of a filter is described, `aria-describedby`, by the line of
+- Each field of a filter is described, the text a screen reader reads
+  after the label of the field, set with `aria-describedby`, by the line of
   a number refused when there is one, then by the count of its filter,
   "Kept 1,152 of the 1,200 variants it was given.", then by the line
   under its switch, so that a user who moves to a field hears what it
@@ -803,8 +886,10 @@ nothing on the screen says the things the lines above do not.
 
 ## How it is checked
 
-In the Playwright flow (`.claude/skills/coding/testing.md`), in the
-three engines.
+In the flow of the tests in the browser, the steps a user takes, done by
+Playwright, the program that drives Chromium, Firefox and WebKit, the
+engines of Chrome, Firefox and Safari, as a user would
+(`.claude/skills/coding/testing.md`).
 
 Of stage 2, kept: `panel.nei` picked with the button, and then a file
 dropped, with the focus still on the button after each;
@@ -858,9 +943,22 @@ release `js-v0.1.0-dev.2` gave in node on 26 September 2026:
   cleared, and the reason gone; a list typed and not applied, with its
   line, and an Undo putting the text back to the list applied;
 - with the thresholds at 0.03 and 0.38, Write, Save, and the download
-  read: `panel.filtered.nei`, 170,042 bytes (`writeVariants.md`).
+  read: `panel.filtered.nei`, 170,042 bytes (`writeVariants.md`);
+- each of the five histograms downloaded as SVG and as PNG, under the
+  names of `variantChecks.md` and `individualChecks.md`, the SVG with
+  no `var(` and the PNG three times the size of the plot, and the CSV of
+  the bins of the MAF, `panel.variant_maf_bins.csv`, its header and 40
+  rows, the 39th `0.9500000000000001,0.9750000000000001,22,` with no
+  threshold, the edges as popnei gave them; the table of the bins reached with the keyboard, its tab
+  selected with the arrow keys;
+- the table of the individuals sorted with the keyboard alone, and its
+  CSV downloaded, as `individualChecks.md` has them;
+- at 320 pixels wide, the legend of each histogram inside its plot, in
+  the three engines.
 
-The axe check of each state of the table of the states. A screen reader,
+The check of axe, a program that finds the failures of accessibility a
+program can see, the missing names and the contrasts among them, in each
+state of the table of the states. A screen reader,
 VoiceOver with Safari at least, is tried on a field of a filter with its
 count, a histogram and its table of bins, the table of the individuals
 and a list, which are new widgets of this stage (`react.md`,
@@ -877,9 +975,6 @@ zone. Whether the table of the individuals draws only its rows on the
 screen is set by the measurement of `individualChecks.md`.
 
 ## What this spec relies on in the other specs
-
-Those of stage 2 were approved by the owner on 25 September 2026; those
-of stage 3 are revised or written beside this one, and not yet approved.
 
 - `docs/specs/shell.md`: the step is drawn in its `<main>` with one
   `<h1>`, "Variants"; the shell writes the notice from the description
@@ -916,6 +1011,8 @@ of stage 3 are revised or written beside this one, and not yet approved.
   `individualChecks.md` and `writeVariants.md`: the parts placed here,
   with their states and words; `docs/specs/charts/histogram.md`, the
   histogram with its threshold, its table of bins and its export.
+- The number field of `src/ui/widgets/`, of stage 2: the properties
+  `decimals` and `onTyped` above, which the plan adds to it.
 - `docs/specs/analyses/diversity.md`: a refusal of popnei in the pass is
   its error state, with a row of its own for a genotype of another
   ploidy, whose words the checks of this step take.
@@ -935,8 +1032,10 @@ The open points of the specs of stage 3 are gathered in
    individuals at 0.1 and 0.5, meanwhile. popnei gives no default for
    any of them. Point F has the options.
 
-It meets point D there, the ends of the reasons of a list, and point C,
-the download of the histograms, whose buttons it places. The two points
+It meets point D there, the ends of the reasons of a list; point C,
+the download of the histograms, whose buttons it places; point G, the
+file written and not saved that a change of its filters discards; and
+point I, what the description of each histogram counts. The two points
 of stage 2 were decided by the owner on 25 September 2026: the button
 that reads a VCF again with other options, in stage 2 (point M of
 `docs/specs/stage-2-open-points.md`), and the missing data filter on at
