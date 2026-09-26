@@ -113,3 +113,18 @@
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
+
+/* Read by a screen reader and not shown: the words of a population in
+   place of the "·" shown. They cannot be selected, so that a copy of the
+   list gives the lines shown alone; Safari reads only the prefixed
+   property. */
+.visuallyHidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  -webkit-user-select: none;
+  user-select: none;
+}

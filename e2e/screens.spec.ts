@@ -243,9 +243,7 @@ async function loadPanelWithPopulations(page: Page): Promise<void> {
   await pickIndividuals(page, "panel_pops.csv");
   await choose(page, "Column that defines the populations", "popcat");
   await expect(
-    page
-      .getByRole("main")
-      .getByRole("listitem", { name: "p0, 48 individuals" }),
+    page.getByRole("main").getByText("p0, 48 individuals"),
   ).toBeAttached();
 }
 
@@ -267,7 +265,7 @@ async function loadTetraploid(page: Page): Promise<void> {
   });
   await choose(page, "Column that defines the populations", "pop");
   await expect(
-    page.getByRole("main").getByRole("listitem", { name: "A, 12 individuals" }),
+    page.getByRole("main").getByText("A, 12 individuals"),
   ).toBeAttached();
   await goTo(page, "Variants");
 }
@@ -601,9 +599,7 @@ for (const theme of ["light", "dark"] as const) {
       await pickIndividuals(page, "panel_pops.csv");
       await choose(page, "Column that defines the populations", "popcat");
       await expect(
-        page
-          .getByRole("main")
-          .getByRole("listitem", { name: "p0, 48 individuals" }),
+        page.getByRole("main").getByText("p0, 48 individuals"),
       ).toBeAttached();
       await save(page, `popgen-individuals-read-${theme}`);
     });
