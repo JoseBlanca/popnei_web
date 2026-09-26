@@ -97,7 +97,8 @@ export interface Runner {
    * Opens the load, the first request of a worker and its only `open`.
    * `refused` or `reopenFailed` when popnei refuses the file, and
    * `crashed` when its call throws anything but a plain `Error`, a trap of
-   * the wasm among them, after each of which every run is `badRequest`;
+   * the wasm among them, after each of which every run and every write
+   * is `badRequest`;
    * `badRequest` for a second `open`. Throws only for a defect of ours.
    */
   open(load: LoadToOpen, file: LoadFile): Answer<Opened>;

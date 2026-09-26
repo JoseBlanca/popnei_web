@@ -44,8 +44,9 @@ export interface Project {
   readonly app: AppId;
   /** The variants file, or `null` before one is loaded. */
   readonly variants: VariantSource | null;
-  /** The filters of the variants, at most one of each kind, in the order
-      the user gave, which changes the result. */
+  /** The filters of the variants, at most one of each kind, in the fixed
+      order missing_data, obs_het, maf, ld of `VARIANT_FILTER_ORDER`,
+      whatever the order the user added them in. */
   readonly filters: readonly VariantFilter[];
   /** The filters of the individuals, at most one of each kind, in the
       fixed order keep, remove, missing_data, obs_het. */
