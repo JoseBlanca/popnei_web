@@ -403,7 +403,8 @@ so the page asks even when the user only picked a file.
 
 **Open project…** is a button that opens the file picker of the system,
 for a file ending in `.json`. What follows, with the texts of
-`projectFileErrorText` of `src/core/projectFile.ts`, which name the file:
+`projectFileErrorText` of `src/core/projectFile.ts`, of which some name
+the file and some, "The project file cannot be opened: …", do not:
 
 1. A file larger than 64 MB, `MAX_PROJECT_FILE_BYTES` of
    `projectFile.ts`, is not read, since the page would hold it whole:
@@ -434,8 +435,10 @@ for a file ending in `.json`. What follows, with the texts of
 The file is read and checked before the dialog, so that the user is not
 asked to give up their project for a file that does not open. Choosing
 the same file again opens it again. The errors of steps 1 to 3 are in a
-dialog with a button OK, which takes the focus and gives it back to Open
-project… when it closes.
+dialog headed by the name of the file, "panel.popnei.json was not
+opened", so that every text is read with the file it is about, with a
+button OK, which takes the focus and gives it back to Open project… when
+it closes.
 
 ## The states
 
