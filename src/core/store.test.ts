@@ -3981,6 +3981,41 @@ describe("VS3 D4 a Run that waits, stopped as a calculation", () => {
     expect(statusIn(store, "pops").kind).toBe("ready");
   });
 
+  test("a Run that waits for statistics already in flight stops the calculations left behind", () => {
+    const { store, sent } = storeOfFive([]);
+    store.startRun("pops");
+    const pops = sentAt(sent, 0);
+    store.startRun("stats");
+    const stats = sentAt(sent, 1);
+    store.apply("the missing data filter of the individuals changed", (p) =>
+      setIndividualFilter(p, MISSING_AT_02),
+    );
+    expect(store.getState().notice?.leftBehind).toStrictEqual(["pops"]);
+
+    const handles = store.startRun("pops");
+
+    expect(handles).toStrictEqual([]);
+    expect(pops.cancels()).toBe(1);
+    expect(stats.cancels()).toBe(0);
+    expect(sent).toHaveLength(2);
+    expect(store.getState().notice).toBeNull();
+    expect(statusIn(store, "pops")).toMatchObject({
+      kind: "running",
+      waitsForStatistics: true,
+    });
+  });
+
+  test("a Run that waits for the same statistics in flight ends the wait left behind", () => {
+    const { store, sent } = storeWithWaitLeftBehind();
+
+    expect(store.startRun("pops")).toStrictEqual([]);
+
+    expect(store.getState().notice).toBeNull();
+    expect(sent).toHaveLength(1);
+    store.undo();
+    expect(statusIn(store, "pops").kind).toBe("ready");
+  });
+
   test("an opening and another version of popnei end every wait", () => {
     const opened = storeOfFive([MISSING_AT_02]);
     opened.store.startRun("pops");
@@ -4838,6 +4873,30 @@ describe("VS3 D6 the write in the store", () => {
 });
 
 describe("VS3 D6 the write in the store, its other rules", () => {
+  test("a write that waits for statistics already in flight stops the calculations left behind", () => {
+    const { store, sent, writes } = storeThatWrites();
+    store.startRun("pops");
+    const pops = sentAt(sent, 0);
+    store.startRun("stats");
+    const stats = sentAt(sent, 1);
+    store.apply("the missing data filter of the individuals changed", (p) =>
+      setIndividualFilter(p, MISSING_AT_02),
+    );
+    expect(store.getState().notice?.leftBehind).toStrictEqual(["pops"]);
+
+    expect(store.startWrite("nei")).toStrictEqual([]);
+
+    expect(pops.cancels()).toBe(1);
+    expect(stats.cancels()).toBe(0);
+    expect(writes).toHaveLength(0);
+    expect(store.getState().notice).toBeNull();
+    expect(writeIn(store)).toMatchObject({
+      kind: "running",
+      runId: stats.run.id,
+      waitsForStatistics: true,
+    });
+  });
+
   test("with a threshold, the end of the statistics sends the write with the individuals kept, a, b and d", () => {
     const { store, sent, writes } = storeThatWrites([MISSING_AT_02]);
     store.startWrite("nei");

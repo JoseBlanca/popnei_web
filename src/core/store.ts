@@ -1986,7 +1986,8 @@ export function createStore<J, R, F = never>(
    * individuals kept is `list`, `undefined` for an analysis that does not
    * read the filters of individuals: at once when the list is known, or,
    * when it needs the statistics of each individual, by starting them, or
-   * waiting for them when they are in flight already. `started` is called
+   * waiting for them when they are in flight already, the calculations
+   * and the Runs left behind stopped as before a send. `started` is called
    * once the request is recorded, before the screens are told. Gives the
    * handles sent, and when a listener throws, takes them out and stops
    * them.
@@ -2034,6 +2035,10 @@ export function createStore<J, R, F = never>(
     let sent: Run<R> | null = null;
     let statsRunId: number;
     if (statsRequest !== null) {
+      // Nothing is sent, so the calculations left behind are stopped
+      // here, as a send would, that the statistics may not wait behind
+      // them; and the Runs left behind end.
+      beforeSend();
       statsRunId = statsRequest.runId;
     } else {
       let statsHandle: Run<R>;
