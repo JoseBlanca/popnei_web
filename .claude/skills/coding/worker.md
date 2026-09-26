@@ -530,10 +530,21 @@ both formats give the same types.
   its filters on the `Variants` just opened. The rule, and how the runner
   compares the filters, are in `docs/specs/worker/runner.md`, "The
   filters".
-- **The files written**, a filtered vars file in the calculation worker,
-  an xlsx and the zip of the report in the light worker, are made as a
-  `Uint8Array` and sent to the page, transferred, where they become a
-  `Blob` and a download.
+- **The files written.** A filtered vars file, written in the calculation
+  worker, crosses to the page as a `Blob`, a file the browser holds and
+  may keep on the disk, which the runner makes of popnei's bytes, and not
+  as an array transferred to the page and made a `Blob` there. The runner
+  makes the `Blob`, drops the array, and posts the `Blob` in `written`
+  with no list of transfers, since a `Blob` crosses as a handle, with no
+  copy. So the copy of up to a gigabyte that an engine may make of the
+  array into the `Blob` is made in the worker, where it does not freeze
+  the page (`docs/architecture.md`, section 6, "The files written";
+  `docs/specs/worker/messages.md`, "Where this departs from worker.md").
+  The page makes a download of the `Blob`. The xlsx and the zip of the
+  report, made in the light worker, are still made as a `Uint8Array` and
+  transferred to the page, where they become a `Blob` and a download, as
+  this skill had it for every file; the specs of stage 4, which build
+  them, are where that is settled.
 
 ### Progress, from popnei's `Variants.onProgress`
 
