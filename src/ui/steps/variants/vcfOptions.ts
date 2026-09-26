@@ -10,7 +10,7 @@
 
 import type { Store } from "../../../core/store.ts";
 import type { JobResult, VcfReadOptions } from "../../../worker/protocol.ts";
-import { shownOptions } from "./commands.ts";
+import { besideOf, shownOptions } from "./commands.ts";
 import type { EditedOptions, StepCommand } from "./commands.ts";
 
 /** The options of the next VCF of one drawing of the step. */
@@ -44,10 +44,7 @@ export function createVcfOptions(
     getEdited: () => edited,
     shown: () => shownOptions(edited, store.getState().project),
     edit: (options) => {
-      change({
-        forLoad: store.getState().project.variants?.fileId ?? null,
-        options,
-      });
+      change({ ...besideOf(store.getState().project), options });
     },
     load: (step) => {
       store.apply(step.description, step.command);

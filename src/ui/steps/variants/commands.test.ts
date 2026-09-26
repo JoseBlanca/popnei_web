@@ -10,7 +10,9 @@ import { createStore } from "../../../core/store.ts";
 import type { Store } from "../../../core/store.ts";
 import type { Job, JobResult } from "../../../worker/protocol.ts";
 import {
+  besideOf,
   filterSwitchCommand,
+  isBeside,
   pickCommand,
   readAgainCommand,
   thresholdCommand,
@@ -129,6 +131,38 @@ describe("the options of a VCF the Variants step shows", () => {
     expect(options.shown()).toEqual({ ploidy: 3, onlyPassed: false });
     apply(store, pickCommand(vcf("c", "c.vcf", 2)));
     expect(options.shown()).toEqual({ ploidy: 2, onlyPassed: true });
+  });
+
+  test("with no file, a ploidy set and then a project opened whose file was a VCF of ploidy 2: the options of that VCF", () => {
+    const store = realStore();
+    const options = createVcfOptions(store);
+    options.edit({ ploidy: 4, onlyPassed: false });
+    const made = store.getState().project;
+    store.open({
+      ...made,
+      reference: {
+        variants: {
+          ...vcf("a", "panel.vcf.gz", 2),
+          read: { kind: "pending" },
+        },
+        checks: [],
+      },
+    });
+
+    expect(options.shown()).toEqual({ ploidy: 2, onlyPassed: true });
+  });
+
+  test("what the step said beside a load is beside it after a change of the filter, and not after an undo back past its pick", () => {
+    const store = realStore();
+    apply(store, pickCommand(vcf("a", "a.vcf", 2)));
+    const beside = besideOf(store.getState().project);
+    apply(store, thresholdCommand(0.2));
+    expect(isBeside(beside, store.getState().project)).toBe(true);
+
+    store.undo();
+    store.undo();
+
+    expect(isBeside(beside, store.getState().project)).toBe(false);
   });
 
   test("each change of the edits calls the listeners, and getEdited keeps its object until then", () => {

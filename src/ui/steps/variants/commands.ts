@@ -12,7 +12,7 @@ import {
   removeVariantFilter,
   setVariantFilter,
 } from "../../../core/project.ts";
-import type { Project, VariantLoad } from "../../../core/project.ts";
+import type { Project, Reference, VariantLoad } from "../../../core/project.ts";
 import type { VcfReadOptions } from "../../../worker/protocol.ts";
 import { startingOptions } from "./words.ts";
 
@@ -66,29 +66,55 @@ export function filterSwitchCommand(on: boolean): StepCommand {
       };
 }
 
-/** Options of a VCF the user set and has not yet applied by a pick or a
-    read again, with the load they were set on. */
-export interface EditedOptions {
-  /** The load id of the variants file when they were set; `null` with
-      none. */
+/** The files of the project that something the step holds of its own
+    was set beside: the load of the variants file, and the file an opened
+    project was made with, its reference, by its identity, which only an
+    opening changes. */
+export interface Beside {
+  /** The load id of the variants file; `null` with none. */
   readonly forLoad: string | null;
+  /** The reference of the project; `null` with none. */
+  readonly forReference: Reference | null;
+}
+
+/** The files of `p` that what the step sets now is set beside. */
+export function besideOf(p: Pick<Project, "variants" | "reference">): Beside {
+  return { forLoad: p.variants?.fileId ?? null, forReference: p.reference };
+}
+
+/** Whether `beside` names the files `p` has: no Undo, Redo, pick or
+    opening has replaced them since. */
+export function isBeside(
+  beside: Beside,
+  p: Pick<Project, "variants" | "reference">,
+): boolean {
+  return (
+    beside.forLoad === (p.variants?.fileId ?? null) &&
+    beside.forReference === p.reference
+  );
+}
+
+/** Options of a VCF the user set and has not yet applied by a pick or a
+    read again, with the files they were set beside. */
+export interface EditedOptions extends Beside {
   /** The options. */
   readonly options: VcfReadOptions;
 }
 
 /**
  * The options the step shows: those the user set and did not apply,
- * while the load they were set on is the project's; otherwise those it
- * starts at, of the VCF loaded, of the reference or the defaults. The
- * step forgets the edits once a pick or a read again applies them, so
- * that an undo shows the options of the load it goes back to.
+ * while the load and the reference they were set beside are the
+ * project's; otherwise those it starts at, of the VCF loaded, of the
+ * reference or the defaults. The step forgets the edits once a pick or a
+ * read again applies them, so that an undo shows the options of the load
+ * it goes back to, and an opening those of the file the project was made
+ * with.
  */
 export function shownOptions(
   edited: EditedOptions | null,
   p: Project,
 ): VcfReadOptions {
-  const loadId = p.variants?.fileId ?? null;
-  return edited !== null && edited.forLoad === loadId
+  return edited !== null && isBeside(edited, p)
     ? edited.options
     : startingOptions(p);
 }

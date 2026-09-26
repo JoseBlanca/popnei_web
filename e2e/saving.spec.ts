@@ -479,6 +479,65 @@ test("WS9 D3 after an opening, another variants file given shows the warning of 
   await expectNoViolations(makeAxeBuilder);
 });
 
+test("WS9 D3 a ploidy typed and a file refused with no variants file are forgotten at an opening, and the VCF the project asks for is read as it was and compared, and axe", async ({
+  page,
+  context,
+  makeAxeBuilder,
+}, testInfo) => {
+  // Saved from a page of its own, and opened in the page of the test,
+  // which axe checks.
+  const first = await context.newPage();
+  await openPopgen(first);
+  await loadWithPopulations(first, "panel.vcf.gz");
+  await goTo(first, "Analyses");
+  await first.getByRole("button", { name: "Run" }).click();
+  await expect(first.getByRole("rowheader", { name: "p0" })).toBeVisible();
+  const saved = await saveProjectFile(first, testInfo.outputPath());
+
+  await openPopgen(page);
+  const ploidy = page.getByLabel("Ploidy of the VCF, from 1 to 255");
+  await ploidy.fill("4");
+  await ploidy.press("Enter");
+  await expect(ploidy).toHaveValue("4");
+  const chooser = page.waitForEvent("filechooser");
+  await page
+    .getByRole("region", { name: "Variants file" })
+    .getByRole("button", { name: "Choose a variants file…" })
+    .click();
+  await (
+    await chooser
+  ).setFiles({
+    name: "panel.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("not variants"),
+  });
+  const refused = page.getByText(/^panel\.txt was not loaded/);
+  await expect(refused).toBeVisible();
+
+  await openProject(page, saved);
+
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Variants" }),
+  ).toBeFocused();
+  await expect(ploidy).toHaveValue("2");
+  await expect(refused).toHaveCount(0);
+  await pick(page, "Variants file", "panel.vcf.gz");
+  await expect(stepLink(page, "Variants")).toHaveAccessibleName(
+    "Variants, Done",
+  );
+  await expect(
+    page.getByRole("region", { name: "Variants file" }).getByText(/^Warning/),
+  ).toHaveCount(0);
+  await goTo(page, "Analyses");
+  await page.getByRole("button", { name: "Run" }).click();
+  await expect(
+    page.getByText(
+      "The same numbers as in the project file: this variants file gives the results the project was saved with.",
+    ),
+  ).toBeVisible();
+  await expectNoViolations(makeAxeBuilder);
+});
+
 test("WS9 D3 Save the project of the error bar downloads the project file with no dialog and says so in the bar, and axe", async ({
   page,
   makeAxeBuilder,

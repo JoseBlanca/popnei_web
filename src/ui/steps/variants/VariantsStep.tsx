@@ -42,13 +42,15 @@ import { Problem } from "../../widgets/Problem.tsx";
 import { Switch } from "../../widgets/Switch.tsx";
 import { Warning } from "../../widgets/Warning.tsx";
 import {
+  besideOf,
   filterSwitchCommand,
+  isBeside,
   pickCommand,
   readAgainCommand,
   shownOptions,
   thresholdCommand,
 } from "./commands.ts";
-import type { StepCommand } from "./commands.ts";
+import type { Beside, StepCommand } from "./commands.ts";
 import { ReadingTime } from "./ReadingTime.tsx";
 import styles from "./VariantsStep.module.css";
 import { createVcfOptions } from "./vcfOptions.ts";
@@ -81,6 +83,13 @@ const NOT_FILES_WORDS = {
   several: SEVERAL_DROPPED,
 } as const;
 
+/** The message of a file the step did not load, with the files it was
+    said beside. */
+interface StepMessage extends Beside {
+  /** Its words. */
+  readonly text: string;
+}
+
 /** The missing data filter of the project, or `null` when it is off. */
 function missingDataOf(
   filters: readonly VariantFilter[],
@@ -101,6 +110,7 @@ export function VariantsStep(): React.JSX.Element {
   const reason = useAppState((s) => variantsStepNeeds(s.project));
   const asked = useAppState((s) => askedFileText(s.project));
   const identity = useAppState((s) => identityWarning(s.project));
+  const reference = useAppState((s) => s.project.reference);
 
   // The options the user set and has not applied by a pick or a read
   // again, held by the step while it is drawn (vcfOptions.ts); it shows
@@ -124,8 +134,12 @@ export function VariantsStep(): React.JSX.Element {
     return vcfOptions.shown();
   };
 
-  // The message of a file not loaded, until the next pick.
-  const [message, setMessage] = useState<string | null>(null);
+  // The message of a file not loaded, until the next pick, and shown only
+  // beside the files it was said beside: an Undo or a Redo past a pick, or
+  // an opening, takes it away.
+  const [said, setSaid] = useState<StepMessage | null>(null);
+  const message =
+    said !== null && isBeside(said, { variants, reference }) ? said.text : null;
   const fileButton = useRef<HTMLButtonElement>(null);
   const fileHeading = useId();
   const vcfHeading = useId();
@@ -147,7 +161,7 @@ export function VariantsStep(): React.JSX.Element {
     }
   }, [identity, announcer]);
   const refuse = (text: string): void => {
-    setMessage(text);
+    setSaid({ ...besideOf(store.getState().project), text });
     // The focus stays on the button, so a screen reader would not read
     // the message by itself.
     announce(text);
@@ -165,7 +179,7 @@ export function VariantsStep(): React.JSX.Element {
       refuse(notLoadedText(file.name));
       return;
     }
-    setMessage(null);
+    setSaid(null);
     const readOptions = format === "vcf" ? optionsNow() : null;
     const fileId = files.addFile(file);
     const load: VariantLoad = {
