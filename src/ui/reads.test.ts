@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 import { describe, expect, test } from "vitest";
 
-import { POPGEN_ANALYSES, firstProject, numVarsOf } from "../core/apps.ts";
+import { POPGEN_ANALYSES, countsOf, firstProject } from "../core/apps.ts";
 import { CACHE_MAX_BYTES } from "../core/cache.ts";
 import { MAX_UNDO_STEPS } from "../core/history.ts";
 import {
@@ -109,7 +109,8 @@ function setUp(): {
     send: () => {
       throw new Error("the reads send no calculation");
     },
-    numVarsOf,
+    countsOf,
+    counts: null,
     statistics: null,
     appVersion: "0.1.0",
     cacheMaxBytes: CACHE_MAX_BYTES,

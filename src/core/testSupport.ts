@@ -37,7 +37,7 @@ import type {
 } from "./project.ts";
 import type { Result } from "./result.ts";
 import type { IndividualStats } from "./individualsKept.ts";
-import type { AnalysisDef, WorkerClient } from "./store.ts";
+import type { AnalysisDef, PassFound, WorkerClient } from "./store.ts";
 import type {
   Cell,
   ColumnType,
@@ -1030,6 +1030,9 @@ export interface CountsResult {
   readonly kind: "counts";
   /** The variants the filters kept. */
   readonly numVars: number;
+  /** What each filter kept, which gives the result a size in the cache,
+      4 bytes a filter. */
+  readonly kept: Uint32Array;
 }
 
 /** A result of any of the fake analyses. */
@@ -1275,6 +1278,41 @@ export const FAKE_STATISTICS: {
     return r.stats;
   },
 };
+
+/** The filters of a result of the fake counts that `fakeCountsOf`
+    makes, 100, so that the result is 400 bytes in the cache. */
+export const FAKE_COUNTS_FILTERS = 100;
+
+/**
+ * What the pass of a result of the fake analyses counted, the store's
+ * `countsOf` of the tests of the counts: of a result of the analysis of
+ * the variants, its `numVars` as the variants of the file, and the counts
+ * of the filters, a result of the fake `counts` of those variants; of a
+ * result of the fake statistics, the counts alone, of no variant; of a
+ * result of the fake counts, itself; of a result of the analysis of the
+ * populations, nothing, as the PCA, which merges a filter of its own with
+ * the project's.
+ */
+export function fakeCountsOf(r: TestResult): PassFound<TestResult> {
+  const madeOf = (numVars: number): CountsResult => ({
+    kind: "counts",
+    numVars,
+    kept: new Uint32Array(FAKE_COUNTS_FILTERS).fill(numVars),
+  });
+  switch (r.kind) {
+    case "vars":
+      return {
+        numVarsRead: r.numVars,
+        counts: r.numVars === null ? null : madeOf(r.numVars),
+      };
+    case "stats":
+      return { numVarsRead: null, counts: madeOf(0) };
+    case "counts":
+      return { numVarsRead: null, counts: r };
+    case "pops":
+      return { numVarsRead: null, counts: null };
+  }
+}
 
 /** A result of the fake statistics of each individual, of the
     individuals `individuals` and their numbers. */

@@ -290,9 +290,15 @@ export interface StoreConfig<J, R> {
     job: J,
     onProgress: (p: Progress) => void,
   ) => Run<R>;
-  /** The number of variants the pass of a result counted, which is
-      recorded into the variants file of the request's load, or `null`. */
-  readonly numVarsOf: (r: R) => number | null;
+  /** What the pass of a result counted: the number of variants of the
+      file, recorded into the variants file of the request's load, and
+      the counts of its filters as a result of the analysis `counts`
+      (docs/specs/core/store.md, "What each filter kept"). */
+  readonly countsOf: (r: R) => PassFound<R>;
+  /** The id of the analysis whose results `countsOf` makes,
+      "filterCounts"; `null` when the store has none, and then the counts
+      `countsOf` gives are not kept. */
+  readonly counts: AnalysisId | null;
   /** The analysis of the statistics of each individual,
       "individualChecks", and how its numbers are found in its result;
       `null` when the store has none. */
@@ -306,6 +312,18 @@ export interface StoreConfig<J, R> {
   readonly cacheMaxBytes: number;
   /** The steps of undo kept, `MAX_UNDO_STEPS`. */
   readonly maxUndoSteps: number;
+}
+
+/** What the store takes from the pass of a result. */
+export interface PassFound<R> {
+  /** The variants of the file, which the first filter of the pass was
+      given, or the variants of the pass when it had no filter; `null`
+      when the result has none. */
+  readonly numVarsRead: number | null;
+  /** The counts of its filters, as a result of the analysis `counts`,
+      when the pass had the filters of the variants of its request's
+      project; `null` otherwise. */
+  readonly counts: R | null;
 }
 
 /** The store of one page. */
@@ -424,6 +442,9 @@ interface InFlight<J, R> {
   /** The load id of the variants file of that project, which the number
       of variants its pass counted is recorded into. */
   readonly fileId: string;
+  /** The version of popnei its key was made with, which the key of the
+      counts of its pass is made with too. */
+  readonly popneiVersion: string;
   /** Its handle, to stop it. */
   readonly handle: Run<R>;
   readonly progress: Progress | null;
@@ -454,8 +475,10 @@ interface Waiting<J, R> {
  * The store of a page, made once by its entry, with the first project,
  * frozen, as the history's only one. Throws a defect when two definitions
  * have one id, when `statistics` names no definition or one that reads
- * the filters of individuals, which would make it wait for itself, or
- * when the bounds are not what `startHistory` and `emptyCache` take.
+ * the filters of individuals, which would make it wait for itself, when
+ * `counts` names no definition or one that reads the filters of
+ * individuals, or when the bounds are not what `startHistory` and
+ * `emptyCache` take.
  */
 export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
   const defs = config.analyses;
@@ -487,6 +510,22 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
         `the analysis of the statistics ${JSON.stringify(statsDef.id)} reads the filters of individuals, which are set from its result, so it would wait for itself.`,
       );
     }
+  }
+  const countsId = config.counts;
+  /** The place of the analysis of the counts of the filters in the
+      definitions, -1 when the store has none. */
+  const countsIndex =
+    countsId === null ? -1 : defs.findIndex((def) => def.id === countsId);
+  const countsDef = countsId === null ? null : defs[countsIndex];
+  if (countsDef === undefined) {
+    throw defect(
+      `createStore was given the analysis of the counts ${JSON.stringify(countsId)}, which no definition has.`,
+    );
+  }
+  if (countsDef?.filtersRead.individuals === true) {
+    throw defect(
+      `the analysis of the counts ${JSON.stringify(countsDef.id)} reads the filters of individuals, which change no count of the filters of the variants.`,
+    );
   }
   const memo = createKeyMemo();
   let history = startHistory(freezeProject(config.first), config.maxUndoSteps);
@@ -1113,8 +1152,15 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       const waitsBehind = waitsBehindNow(keys);
       endWaits([...notice.waits].filter((waitId) => waitsBehind.has(waitId)));
     }
+    // The counts are left out: a change of any filter of the variants
+    // takes them off, which the user sees beside the filters.
     const removed = defs
-      .filter((def, index) => doneBefore.has(def.id) && !isDone(index, keys))
+      .filter(
+        (def, index) =>
+          index !== countsIndex &&
+          doneBefore.has(def.id) &&
+          !isDone(index, keys),
+      )
       .map((def) => def.id);
     const runs = leftBehindNow(keys);
     const waitIds = waitsBehindNow(keys);
@@ -1257,6 +1303,7 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       key,
       project,
       fileId,
+      popneiVersion: version,
       handle,
       progress: null,
       stopping: false,
@@ -1273,6 +1320,40 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
       requests.delete(handle.id);
       handle.cancel();
     }
+  };
+
+  /** The counts of the filters that the pass of `request`, which ended
+      done under `key`, gave as `counts`, with the key of the analysis of
+      the counts for the request's project, and the warnings and the
+      check numbers its definition gives of them; `null` when there are
+      none, when the store has no analysis of the counts, and for a
+      result of that analysis itself, already put under that key. */
+  const countsToPut = (
+    request: InFlight<J, R>,
+    key: Key,
+    counts: R | null,
+  ): { readonly key: Key; readonly cached: CachedResult<R> } | null => {
+    if (counts === null || countsDef === null) {
+      return null;
+    }
+    const countsKey = keyOf(
+      countsDef,
+      request.project,
+      request.popneiVersion,
+      memo,
+    );
+    if (countsKey === key) {
+      return null;
+    }
+    return {
+      key: countsKey,
+      cached: {
+        result: counts,
+        warnings: countsDef.warnings(counts, request.project),
+        numbers: countsDef.checkNumbers(counts),
+        stats: null,
+      },
+    };
   };
 
   /** What an outcome leaves in the store: the result in the cache with
@@ -1297,7 +1378,9 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
         if (stats !== null) {
           checkStatsOf(request.project, stats);
         }
-        const numVars = config.numVarsOf(outcome.result);
+        const found = config.countsOf(outcome.result);
+        const counts = countsToPut(request, key, found.counts);
+        const numVars = found.numVarsRead;
         const next =
           numVars === null
             ? history
@@ -1317,6 +1400,15 @@ export function createStore<J, R>(config: StoreConfig<J, R>): Store<R> {
           { result: outcome.result, warnings, numbers, stats },
           shown,
         );
+        if (counts !== null) {
+          // The put of the counts keeps the result they came with.
+          cache = put(
+            cache,
+            counts.key,
+            counts.cached,
+            new Set([...shown, key]),
+          );
+        }
         if (next !== history) {
           history = next;
           stopOrphans();

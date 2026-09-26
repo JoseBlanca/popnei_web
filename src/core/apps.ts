@@ -1,16 +1,19 @@
 /**
  * What each application has: the definitions of its analyses, its steps
- * and its first project, and the function by which the store finds the
- * number of variants of the file in a result (docs/specs/entry.md,
- * "`src/core/apps.ts`"). In stage 2 it holds the population genetics
- * application alone.
+ * and its first project, and the functions by which the store reads a
+ * result: what its pass counted, the counts of a written file, and the
+ * statistics of each individual (docs/specs/entry.md, "`src/core/apps.ts`").
+ * It holds the population genetics application alone.
  */
 
 import { diversity } from "./analyses/diversity.ts";
+import { variantsOfFile } from "./analyses/filterCounts.ts";
+import { defect } from "./analyses/words.ts";
+import type { IndividualStats } from "./individualsKept.ts";
 import { emptyProject, setVariantFilter } from "./project.ts";
 import type { Project } from "./project.ts";
-import type { AnalysisDef } from "./store.ts";
-import type { Job, JobResult } from "../worker/protocol.ts";
+import type { AnalysisDef, PassFound } from "./store.ts";
+import type { Job, JobResult, PassStats } from "../worker/protocol.ts";
 
 /**
  * The threshold of the missing data filter of a first project and of the
@@ -51,11 +54,48 @@ export function firstProject(app: "popgen"): Project {
   });
 }
 
-/** The number of variants of the file that the pass of a result counted,
-    which the store records into the variants file of its load, from the
-    counts of the pass every result holds: what its first filter was
-    given, or what the pass gave when it had no filter. */
-export function numVarsOf(r: JobResult): number {
-  const [first] = Object.values(r.passStats.filtering);
-  return first === undefined ? r.passStats.numVars : first.varsProcessed;
+/**
+ * What the pass of a result counted, as the store's `countsOf`, from the
+ * counts of the pass every result holds, `passStats`: the number of
+ * variants of the file, which the store records into the variants file of
+ * its load, what the first filter of the pass was given, or what the pass
+ * gave when it had no filter; and the counts of its filters, a result of
+ * `filterCounts`, for a result whose pass had the filters of the variants
+ * of its request's project, told by the analysis of the result: the
+ * diversity, the statistics of each individual and `filterCounts` itself,
+ * and not the histograms of the variants, whose pass has no filter.
+ */
+export function countsOf(r: JobResult): PassFound<JobResult> {
+  const numVarsRead = variantsOfFile(r.passStats);
+  switch (r.analysis) {
+    case "diversity":
+    case "individualChecks":
+    case "filterCounts":
+      return { numVarsRead, counts: writeCountsOf(r.passStats) };
+    case "variantChecks":
+      return { numVarsRead, counts: null };
+  }
+}
+
+/** The result of `filterCounts` made of the counts of the pass of a
+    written file, as the store's `write.countsOf`: the pass of a write
+    always has the filters of the variants of its project. */
+export function writeCountsOf(pass: PassStats): JobResult {
+  return { analysis: "filterCounts", passStats: pass };
+}
+
+/** The statistics of each individual in a result of `individualChecks`,
+    as the store's `statistics.of`. Throws a defect for a result of
+    another analysis. */
+export function individualStatsOf(r: JobResult): IndividualStats {
+  if (r.analysis !== "individualChecks") {
+    throw defect(
+      `the statistics of each individual were asked of a result of ${r.analysis}.`,
+    );
+  }
+  return {
+    individuals: r.individuals,
+    missingGtRate: r.missingGtRate,
+    obsHetRate: r.obsHetRate,
+  };
 }

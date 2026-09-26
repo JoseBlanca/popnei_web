@@ -169,9 +169,10 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
 }
 
 /** The variants of the file, as a pass counts them: those given to its
-    first filter, in the fixed order of the filters, or the variants of the
-    pass when it had none. */
-function variantsOfFile(stats: PassStats): number {
+    first filter, in the fixed order of the filters and not in the order of
+    the fields of `filtering`, or the variants of the pass when it had
+    none. */
+export function variantsOfFile(stats: PassStats): number {
   const first = VARIANT_FILTER_ORDER.map((kind) => stats.filtering[kind]).find(
     (counts) => counts !== undefined,
   );

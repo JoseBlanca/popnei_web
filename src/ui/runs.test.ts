@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { POPGEN_ANALYSES, firstProject, numVarsOf } from "../core/apps.ts";
+import { POPGEN_ANALYSES, countsOf, firstProject } from "../core/apps.ts";
 import { CACHE_MAX_BYTES } from "../core/cache.ts";
 import { MAX_UNDO_STEPS } from "../core/history.ts";
 import type { Project } from "../core/project.ts";
@@ -80,7 +80,8 @@ function setUp(project: Project | null): {
       });
       return { id: lastId, outcome, cancel: () => undefined };
     },
-    numVarsOf,
+    countsOf,
+    counts: null,
     statistics: null,
     appVersion: "0.1.0",
     cacheMaxBytes: CACHE_MAX_BYTES,
@@ -173,7 +174,8 @@ function setUpWithThreshold(): {
     first: firstProject("popgen"),
     analyses: [...analyses, stats],
     send,
-    numVarsOf: () => null,
+    countsOf: () => ({ numVarsRead: null, counts: null }),
+    counts: null,
     statistics: FAKE_STATISTICS,
     appVersion: "0.1.0",
     cacheMaxBytes: CACHE_MAX_BYTES,

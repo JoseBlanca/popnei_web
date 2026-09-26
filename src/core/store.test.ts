@@ -41,6 +41,7 @@ import {
   NO_POPULATIONS,
   drawnCommand,
   fakeAnalyses,
+  fakeCountsOf,
   fakeSend,
   fiveIndividualsProject,
   fiveStats,
@@ -137,7 +138,11 @@ function newStore(cacheMaxBytes: number = 1024 * 1024): {
     first: emptyProject("popgen"),
     analyses,
     send,
-    numVarsOf: (r) => (r.kind === "vars" ? r.numVars : null),
+    countsOf: (r) => ({
+      numVarsRead: r.kind === "vars" ? r.numVars : null,
+      counts: null,
+    }),
+    counts: null,
     statistics: null,
     appVersion: "0.1.0",
     cacheMaxBytes,
@@ -239,7 +244,8 @@ function storeWithTouchyKeys(): ReturnType<typeof newStore> & {
     first: emptyProject("popgen"),
     analyses: [pops, touchy],
     send,
-    numVarsOf: () => null,
+    countsOf: () => ({ numVarsRead: null, counts: null }),
+    counts: null,
     statistics: null,
     appVersion: "0.1.0",
     cacheMaxBytes: 1024 * 1024,
@@ -510,7 +516,8 @@ describe("WP4 D1 the state with no calculation", () => {
       first: emptyProject("popgen"),
       analyses: [probed],
       send,
-      numVarsOf: () => null,
+      countsOf: () => ({ numVarsRead: null, counts: null }),
+      counts: null,
       statistics: null,
       appVersion: "0.1.0",
       cacheMaxBytes: 1024,
@@ -661,7 +668,8 @@ describe("WP4 D1 the state with no calculation", () => {
       first,
       analyses,
       send,
-      numVarsOf: () => null,
+      countsOf: () => ({ numVarsRead: null, counts: null }),
+      counts: null,
       statistics: null,
       appVersion: "0.1.0",
       cacheMaxBytes: 1024,
@@ -703,7 +711,8 @@ describe("WP4 D1 the state with no calculation", () => {
         first: emptyProject("popgen"),
         analyses: [...analyses, pops],
         send,
-        numVarsOf: () => null,
+        countsOf: () => ({ numVarsRead: null, counts: null }),
+        counts: null,
         statistics: null,
         appVersion: "0.1.0",
         cacheMaxBytes: 1024,
@@ -848,7 +857,7 @@ function maf(threshold: number): (p: Project) => Project {
 
 /** Which function of the analysis of the variants throws a defect when a
     result is taken in. */
-type Faulty = "warnings" | "checkNumbers" | "numVarsOf" | "none";
+type Faulty = "warnings" | "checkNumbers" | "countsOf" | "none";
 
 /** A store with the variants file read, whose analysis of the variants
     throws in `faulty.part` when a result is taken in. */
@@ -882,10 +891,14 @@ function storeWithFaultyIntake(): ReturnType<typeof newStore> & {
     first: emptyProject("popgen"),
     analyses: [pops, fragile],
     send,
-    numVarsOf: (r) => {
-      fail("numVarsOf");
-      return r.kind === "vars" ? r.numVars : null;
+    countsOf: (r) => {
+      fail("countsOf");
+      return {
+        numVarsRead: r.kind === "vars" ? r.numVars : null,
+        counts: null,
+      };
     },
+    counts: null,
     statistics: null,
     appVersion: "0.1.0",
     cacheMaxBytes: 1024 * 1024,
@@ -1190,7 +1203,8 @@ describe("WP4 D2 the calculations", () => {
       first: emptyProject("popgen"),
       analyses,
       send: early,
-      numVarsOf: () => null,
+      countsOf: () => ({ numVarsRead: null, counts: null }),
+      counts: null,
       statistics: null,
       appVersion: "0.1.0",
       cacheMaxBytes: 1024 * 1024,
@@ -1310,7 +1324,8 @@ describe("WP4 D2 the calculations", () => {
       first: emptyProject("popgen"),
       analyses: [pops, faulty],
       send,
-      numVarsOf: () => null,
+      countsOf: () => ({ numVarsRead: null, counts: null }),
+      counts: null,
       statistics: null,
       appVersion: "0.1.0",
       cacheMaxBytes: 1024,
@@ -1467,7 +1482,7 @@ describe("WP4 D2 the calculations", () => {
     expect(statuses(store)[1]?.kind).toBe("running");
   });
 
-  test.each(["warnings", "checkNumbers", "numVarsOf"] as const)(
+  test.each(["warnings", "checkNumbers", "countsOf"] as const)(
     "a %s that throws while a result is taken in keeps a failure of kind defect under its key, and nothing of the result",
     (part) => {
       const { store, sent, faulty } = storeWithFaultyIntake();
@@ -1542,7 +1557,8 @@ describe("WP4 D2 the calculations", () => {
       first: emptyProject("popgen"),
       analyses: [pops, faulty],
       send,
-      numVarsOf: () => null,
+      countsOf: () => ({ numVarsRead: null, counts: null }),
+      counts: null,
       statistics: null,
       appVersion: "0.1.0",
       cacheMaxBytes: 1024 * 1024,
@@ -2077,7 +2093,11 @@ describe("WP4 D3 the notice", () => {
       first: emptyProject("popgen"),
       analyses: [counted, vars],
       send,
-      numVarsOf: (r) => (r.kind === "vars" ? r.numVars : null),
+      countsOf: (r) => ({
+        numVarsRead: r.kind === "vars" ? r.numVars : null,
+        counts: null,
+      }),
+      counts: null,
       statistics: null,
       appVersion: "0.1.0",
       cacheMaxBytes: 1024 * 1024,
@@ -2125,7 +2145,8 @@ describe("WP4 D3 the notice", () => {
       first: emptyProject("popgen"),
       analyses: [tabled, vars],
       send,
-      numVarsOf: () => null,
+      countsOf: () => ({ numVarsRead: null, counts: null }),
+      counts: null,
       statistics: null,
       appVersion: "0.1.0",
       cacheMaxBytes: 1024 * 1024,
@@ -2488,7 +2509,8 @@ function openedAndRun(options: {
     first: emptyProject("popgen"),
     analyses: [pops, varsNow],
     send,
-    numVarsOf: () => null,
+    countsOf: () => ({ numVarsRead: null, counts: null }),
+    counts: null,
     statistics: null,
     appVersion: "0.1.0",
     cacheMaxBytes: 1024 * 1024,
@@ -2918,7 +2940,11 @@ function modelledStore(): {
     first: emptyProject("popgen"),
     analyses,
     send,
-    numVarsOf: (r) => (r.kind === "vars" ? r.numVars : null),
+    countsOf: (r) => ({
+      numVarsRead: r.kind === "vars" ? r.numVars : null,
+      counts: null,
+    }),
+    counts: null,
     statistics: FAKE_STATISTICS,
     appVersion: "0.1.0",
     cacheMaxBytes: 1024 * 1024 * 1024,
@@ -3400,7 +3426,11 @@ function storeOfFive(
     first: emptyProject("popgen"),
     analyses,
     send,
-    numVarsOf: (r) => (r.kind === "vars" ? r.numVars : null),
+    countsOf: (r) => ({
+      numVarsRead: r.kind === "vars" ? r.numVars : null,
+      counts: null,
+    }),
+    counts: null,
     statistics: FAKE_STATISTICS,
     appVersion: "0.1.0",
     cacheMaxBytes,
@@ -3934,7 +3964,8 @@ describe("VS3 D4 the statistics of each individual given to the store", () => {
     const config = {
       first: emptyProject("popgen"),
       send,
-      numVarsOf: () => null,
+      countsOf: () => ({ numVarsRead: null, counts: null }),
+      counts: null,
       appVersion: "0.1.0",
       cacheMaxBytes: 1024,
       maxUndoSteps: 200,
@@ -4045,7 +4076,8 @@ describe("VS3 D4 the failure of the statistics, and a read that leaves a wait be
       first: emptyProject("popgen"),
       analyses: [tabled, vars, stats],
       send,
-      numVarsOf: () => null,
+      countsOf: () => ({ numVarsRead: null, counts: null }),
+      counts: null,
       statistics: FAKE_STATISTICS,
       appVersion: "0.1.0",
       cacheMaxBytes: 1024 * 1024,
@@ -4085,7 +4117,8 @@ describe("VS3 D4 two Runs that wait for the same statistics", () => {
       first: emptyProject("popgen"),
       analyses: [...twoFakes, stats, other],
       send,
-      numVarsOf: () => null,
+      countsOf: () => ({ numVarsRead: null, counts: null }),
+      counts: null,
       statistics: FAKE_STATISTICS,
       appVersion: "0.1.0",
       cacheMaxBytes: 1024 * 1024,
@@ -4114,5 +4147,219 @@ describe("VS3 D4 two Runs that wait for the same statistics", () => {
     expect(lists.at(-1)?.individuals).toStrictEqual(["a", "b", "d"]);
     expect(statusIn(store, "other").kind).toBe("running");
     expect(statusIn(store, "pops").kind).toBe("ready");
+  });
+});
+
+// The counts of the filters, filled from the pass of every result:
+// store.md, "What each filter kept", and "How it is verified", "The
+// counts filled".
+
+/** A store with the two fake analyses and the fake counts of the
+    filters, third, whose results `fakeCountsOf` makes, and a cache of
+    `cacheMaxBytes`: popnei 0.1.0, the variants file loaded and read.
+    `given` holds the counts `countsOf` gave, in order. */
+function storeWithCounts(cacheMaxBytes: number = 1024 * 1024): {
+  readonly store: Store<TestResult>;
+  readonly analyses: readonly AnalysisDef<TestJob, TestResult>[];
+  readonly calls: Calls;
+  readonly sent: SentRequest[];
+  readonly given: TestResult[];
+} {
+  const { analyses: twoFakes, counts, calls } = fakeAnalyses();
+  const analyses = [...twoFakes, counts];
+  const { send, sent } = fakeSend();
+  const given: TestResult[] = [];
+  const store = createStore({
+    first: emptyProject("popgen"),
+    analyses,
+    send,
+    countsOf: (r) => {
+      const found = fakeCountsOf(r);
+      if (found.counts !== null) {
+        given.push(found.counts);
+      }
+      return found;
+    },
+    counts: "counts",
+    statistics: null,
+    appVersion: "0.1.0",
+    cacheMaxBytes,
+    maxUndoSteps: 200,
+  });
+  store.popneiReady("0.1.0");
+  store.apply("a variants file was loaded", loadPanel(VARIANTS_ID));
+  store.variantsRead(VARIANTS_ID, VARIANTS_READ);
+  return { store, analyses, calls, sent, given };
+}
+
+/** The result the state `status` shows, or `null` when it is not
+    done. */
+function resultOf(status: AnalysisStatus<TestResult>): TestResult | null {
+  return status.kind === "done" ? status.result : null;
+}
+
+describe("VS3 D5 the counts filled", () => {
+  test("runEnded of a result of the analysis of the variants puts the counts countsOf gave under the key of the counts for its request's project, and the counts are done with no Count", () => {
+    const { store, analyses, calls, sent, given } = storeWithCounts();
+    store.startRun("vars");
+    const vars = sentAt(sent, 0);
+    calls.given.splice(0);
+
+    store.runEnded(vars.run.id, doneWith(vars, varsResult(1200)));
+
+    const counts = statusIn(store, "counts");
+    expect(given).toHaveLength(1);
+    expect(counts).toStrictEqual({
+      kind: "done",
+      key: keyOfNow(store, analyses[2]),
+      result: given[0],
+      warnings: [],
+      check: null,
+    });
+    expect(resultOf(counts)).toBe(given[0]);
+    expect(sent).toHaveLength(1);
+    expect(calls.given).toStrictEqual([
+      "vars warnings of vars",
+      "vars checkNumbers of vars",
+      "counts warnings of counts",
+      "counts checkNumbers of counts",
+    ]);
+    expect(store.getState().project.variants?.read).toMatchObject({
+      numVars: 1200,
+    });
+  });
+
+  test("a command that changes the filter of the variants does not name the counts among the results removed, and its undo shows them done again", () => {
+    const { store, sent, given } = storeWithCounts();
+    store.startRun("vars");
+    const vars = sentAt(sent, 0);
+    store.runEnded(vars.run.id, doneWith(vars, varsResult(1200)));
+
+    store.apply("the MAF filter changed", maf(0.9));
+
+    expect(store.getState().notice?.removed).toStrictEqual(["vars"]);
+    expect(statusIn(store, "counts").kind).toBe("ready");
+    store.undo();
+    expect(resultOf(statusIn(store, "counts"))).toBe(given[0]);
+    expect(store.getState().notice).toBeNull();
+  });
+
+  test("a result that arrives late fills the counts of its own project, which an undo shows done", () => {
+    const { store, analyses, sent, given } = storeWithCounts();
+    store.startRun("vars");
+    const vars = sentAt(sent, 0);
+    const keyBefore = keyOfNow(store, analyses[2]);
+    store.apply("the MAF filter changed", maf(0.9));
+
+    store.runEnded(vars.run.id, doneWith(vars, varsResult(1200)));
+
+    expect(statusIn(store, "counts").kind).toBe("ready");
+    store.undo();
+    const counts = statusIn(store, "counts");
+    expect(counts).toMatchObject({ kind: "done", key: keyBefore });
+    expect(resultOf(counts)).toBe(given[0]);
+  });
+
+  test("with a cache whose bound holds one result, the result put before the counts is not dropped by their put", () => {
+    // The result is 800 bytes and its counts 400: their put goes over the
+    // bound of 1,000 bytes, and the late result is not one the project
+    // shows, so only the rule of the counts keeps it.
+    const { store, sent } = storeWithCounts(1000);
+    store.startRun("vars");
+    const vars = sentAt(sent, 0);
+    const result = varsResult(1200);
+    store.apply("the MAF filter changed", maf(0.9));
+
+    store.runEnded(vars.run.id, doneWith(vars, result));
+
+    store.undo();
+    expect(resultOf(statusIn(store, "vars"))).toBe(result);
+    expect(statusIn(store, "counts").kind).toBe("done");
+  });
+
+  test("a Count in flight for the same key goes on when the counts are filled, and its result replaces them", () => {
+    const { store, sent } = storeWithCounts();
+    store.startRun("counts");
+    const count = sentAt(sent, 0);
+    store.startRun("vars");
+    const vars = sentAt(sent, 1);
+
+    store.runEnded(vars.run.id, doneWith(vars, varsResult(1200)));
+
+    expect(statusIn(store, "counts").kind).toBe("done");
+    expect(count.cancels()).toBe(0);
+    expect(store.getState().runs.map((run) => run.runId)).toStrictEqual([
+      count.run.id,
+    ]);
+    const own: TestResult = {
+      kind: "counts",
+      numVars: 1100,
+      kept: new Uint32Array(1),
+    };
+    store.runEnded(count.run.id, doneWith(count, own));
+    expect(resultOf(statusIn(store, "counts"))).toBe(own);
+  });
+
+  test("a result whose countsOf gives no counts puts none, and a store with no analysis of the counts keeps none of those it is given", () => {
+    const { store, sent } = storeWithCounts();
+    store.startRun("vars");
+    const vars = sentAt(sent, 0);
+    store.runEnded(vars.run.id, doneWith(vars, varsResult(null)));
+    expect(statusIn(store, "counts").kind).toBe("ready");
+
+    const { analyses } = fakeAnalyses();
+    const { send, sent: sentWithout } = fakeSend();
+    const without = createStore({
+      first: emptyProject("popgen"),
+      analyses,
+      send,
+      countsOf: fakeCountsOf,
+      counts: null,
+      statistics: null,
+      appVersion: "0.1.0",
+      cacheMaxBytes: 1024 * 1024,
+      maxUndoSteps: 200,
+    });
+    without.popneiReady("0.1.0");
+    without.apply("a variants file was loaded", loadPanel(VARIANTS_ID));
+    without.variantsRead(VARIANTS_ID, VARIANTS_READ);
+    without.startRun("vars");
+    const request = sentAt(sentWithout, 0);
+    without.runEnded(request.run.id, doneWith(request, varsResult(1200)));
+    expect(statusIn(without, "vars").kind).toBe("done");
+    expect(without.getState().project.variants?.read).toMatchObject({
+      numVars: 1200,
+    });
+  });
+
+  test("createStore throws on counts of no definition, and on a definition of the counts that reads the filters of individuals", () => {
+    const { analyses, counts } = fakeAnalyses();
+    const { send } = fakeSend();
+    const config = {
+      first: emptyProject("popgen"),
+      send,
+      countsOf: fakeCountsOf,
+      statistics: null,
+      appVersion: "0.1.0",
+      cacheMaxBytes: 1024,
+      maxUndoSteps: 200,
+    };
+    expect(() =>
+      createStore({ ...config, analyses, counts: "counts" }),
+    ).toThrow(
+      /^popnei_web defect: createStore was given the analysis of the counts "counts"/,
+    );
+    expect(() =>
+      createStore({
+        ...config,
+        analyses: [
+          ...analyses,
+          { ...counts, filtersRead: { variants: true, individuals: true } },
+        ],
+        counts: "counts",
+      }),
+    ).toThrow(
+      /^popnei_web defect: the analysis of the counts "counts" reads the filters of individuals/,
+    );
   });
 });

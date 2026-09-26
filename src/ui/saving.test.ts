@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { POPGEN_ANALYSES, firstProject, numVarsOf } from "../core/apps.ts";
+import { POPGEN_ANALYSES, countsOf, firstProject } from "../core/apps.ts";
 import { CACHE_MAX_BYTES } from "../core/cache.ts";
 import { MAX_UNDO_STEPS } from "../core/history.ts";
 import { loadVariants, setVariantFilter } from "../core/project.ts";
@@ -25,7 +25,8 @@ function makeStore(): Store<JobResult> {
     send: () => {
       throw new Error("the saving sends no calculation");
     },
-    numVarsOf,
+    countsOf,
+    counts: null,
     statistics: null,
     appVersion: "0.1.0",
     cacheMaxBytes: CACHE_MAX_BYTES,
@@ -239,7 +240,8 @@ describe("WS9 the saving counts a result that ended as a change", () => {
         sent.push({ key, run });
         return run;
       },
-      numVarsOf: () => null,
+      countsOf: () => ({ numVarsRead: null, counts: null }),
+      counts: null,
       statistics: null,
       appVersion: "0.1.0",
       cacheMaxBytes: CACHE_MAX_BYTES,

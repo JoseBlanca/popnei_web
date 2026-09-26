@@ -2,10 +2,57 @@ import { describe, expect, test } from "vitest";
 import {
   POPGEN_ANALYSES,
   POPGEN_STEPS,
+  countsOf,
   firstProject,
-  numVarsOf,
+  individualStatsOf,
+  writeCountsOf,
 } from "./apps.ts";
 import { emptyProject } from "./project.ts";
+import type {
+  DiversityResult,
+  IndividualChecksResult,
+  PassStats,
+  VariantChecksResult,
+  VariantDistrib,
+} from "../worker/protocol.ts";
+
+/** The counts of a pass of the missing data filter over 1,200 variants,
+    of the spec's example. */
+const MISSING_PASS: PassStats = {
+  numVars: 1152,
+  filtering: { missing_data: { varsProcessed: 1200, varsKept: 1152 } },
+};
+
+/** A result of the diversity of one population, with the counts `pass`. */
+function diversityResult(pass: PassStats): DiversityResult {
+  return {
+    analysis: "diversity",
+    pops: ["p0"],
+    numIndividuals: Uint32Array.from([48]),
+    unbiasedExpHet: Float64Array.from([0.35]),
+    obsHet: Float64Array.from([0.35]),
+    polyRatio: Float64Array.from([0.9]),
+    numVarsWithValue: Uint32Array.from([pass.numVars]),
+    passStats: pass,
+  };
+}
+
+/** A result of the statistics of each individual, of two individuals,
+    with the counts `pass`. */
+function individualChecksResult(pass: PassStats): IndividualChecksResult {
+  return {
+    analysis: "individualChecks",
+    individuals: ["i1", "i2"],
+    missingGtRate: Float64Array.from([0.1, 0.2]),
+    obsHetRate: Float64Array.from([0.3, Number.NaN]),
+    passStats: pass,
+  };
+}
+
+/** A histogram of the variants with one bin. */
+function distrib(): VariantDistrib {
+  return { mean: 0.25, counts: Uint32Array.from([1200]) };
+}
 
 describe("WS5 D4 apps.ts", () => {
   test("the first project of population genetics has the missing data filter at 0.1 and nothing else", () => {
@@ -21,34 +68,74 @@ describe("WS5 D4 apps.ts", () => {
     expect(ids).toEqual(["diversity"]);
   });
 
-  test("numVarsOf of a result gives what its first filter was given, or the variants of its pass when it had no filter", () => {
-    expect(
-      numVarsOf({
-        analysis: "diversity",
-        pops: ["p0"],
-        numIndividuals: Uint32Array.from([48]),
-        unbiasedExpHet: Float64Array.from([0.35]),
-        obsHet: Float64Array.from([0.35]),
-        polyRatio: Float64Array.from([0.9]),
-        numVarsWithValue: Uint32Array.from([1128]),
-        passStats: {
-          numVars: 1128,
-          filtering: {
-            missing_data: { varsProcessed: 1200, varsKept: 1152 },
-            maf: { varsProcessed: 1152, varsKept: 1128 },
-          },
-        },
-      }),
-    ).toBe(1200);
-    expect(
-      numVarsOf({
-        analysis: "filterCounts",
-        passStats: { numVars: 1200, filtering: {} },
-      }),
-    ).toBe(1200);
-  });
-
   test("the steps of population genetics are variants, individuals and analyses, in that order", () => {
     expect(POPGEN_STEPS).toEqual(["variants", "individuals", "analyses"]);
+  });
+});
+
+describe("VS3 D5 countsOf, writeCountsOf and individualStatsOf", () => {
+  test("countsOf of a diversity result gives the variants its missing data filter was given, 1,200, and the counts of the same passStats", () => {
+    const result = diversityResult(MISSING_PASS);
+    const found = countsOf(result);
+    expect(found).toStrictEqual({
+      numVarsRead: 1200,
+      counts: { analysis: "filterCounts", passStats: MISSING_PASS },
+    });
+    expect(found.counts?.passStats).toBe(MISSING_PASS);
+  });
+
+  test("countsOf of a result of the histograms of the variants gives the variants of its pass and no counts", () => {
+    const result: VariantChecksResult = {
+      analysis: "variantChecks",
+      binEdges: Float64Array.from([0, 1]),
+      maf: distrib(),
+      obsHet: distrib(),
+      unbiasedExpHet: distrib(),
+      passStats: { numVars: 1200, filtering: {} },
+    };
+    expect(countsOf(result)).toStrictEqual({ numVarsRead: 1200, counts: null });
+  });
+
+  test("countsOf of a result of the statistics of each individual and of filterCounts gives both the variants of the file and the counts", () => {
+    const counts = { analysis: "filterCounts", passStats: MISSING_PASS };
+    expect(countsOf(individualChecksResult(MISSING_PASS))).toStrictEqual({
+      numVarsRead: 1200,
+      counts,
+    });
+    expect(
+      countsOf({ analysis: "filterCounts", passStats: MISSING_PASS }),
+    ).toStrictEqual({ numVarsRead: 1200, counts });
+  });
+
+  test("countsOf reads the variants of the file from the first filter in the fixed order of the filters, not from the order of the fields of filtering", () => {
+    const pass: PassStats = {
+      numVars: 1128,
+      filtering: {
+        maf: { varsProcessed: 1152, varsKept: 1128 },
+        missing_data: { varsProcessed: 1200, varsKept: 1152 },
+      },
+    };
+    expect(countsOf(diversityResult(pass)).numVarsRead).toBe(1200);
+  });
+
+  test("writeCountsOf of the counts of a pass gives the same result of filterCounts as countsOf", () => {
+    const counts = countsOf(diversityResult(MISSING_PASS)).counts;
+    expect(writeCountsOf(MISSING_PASS)).toStrictEqual(counts);
+  });
+
+  test("individualStatsOf of a result of individualChecks gives its three fields, and of a diversity result throws", () => {
+    const result = individualChecksResult(MISSING_PASS);
+    const stats = individualStatsOf(result);
+    expect(stats).toStrictEqual({
+      individuals: result.individuals,
+      missingGtRate: result.missingGtRate,
+      obsHetRate: result.obsHetRate,
+    });
+    expect(stats.individuals).toBe(result.individuals);
+    expect(stats.missingGtRate).toBe(result.missingGtRate);
+    expect(stats.obsHetRate).toBe(result.obsHetRate);
+    expect(() => individualStatsOf(diversityResult(MISSING_PASS))).toThrow(
+      /^popnei_web defect: the statistics of each individual were asked of a result of diversity/,
+    );
   });
 });

@@ -17,7 +17,7 @@ import { StrictMode } from "react";
 import { I18nProvider } from "react-aria-components";
 import { createRoot } from "react-dom/client";
 
-import { POPGEN_ANALYSES, firstProject, numVarsOf } from "../core/apps.ts";
+import { POPGEN_ANALYSES, countsOf, firstProject } from "../core/apps.ts";
 import { CACHE_MAX_BYTES } from "../core/cache.ts";
 import { MAX_UNDO_STEPS } from "../core/history.ts";
 import { createStore } from "../core/store.ts";
@@ -155,7 +155,8 @@ function startApplication(
       }
       return client.run(key, job, onProgress);
     },
-    numVarsOf,
+    countsOf,
+    counts: null,
     statistics: null,
     appVersion: APP_VERSION,
     cacheMaxBytes: CACHE_MAX_BYTES,

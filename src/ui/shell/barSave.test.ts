@@ -32,7 +32,8 @@ function storeWithDiversity(numbers: readonly number[]): Store<TestDefResult> {
       sent.push({ key, run });
       return run;
     },
-    numVarsOf: () => null,
+    countsOf: () => ({ numVarsRead: null, counts: null }),
+    counts: null,
     statistics: null,
     appVersion: "0.1.0",
     cacheMaxBytes: CACHE_MAX_BYTES,
