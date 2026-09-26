@@ -134,11 +134,11 @@ the link has the pointer or the focus.
 |---|---|---|---|
 | Variants | To do | no variants file | for an opened project, the text of `askedFileText` of `projectFile.ts` (`docs/specs/core/projectFile.md`, "Opening"); otherwise the reason `projectNeeds` gives, "Load a variants file in the Variants step." |
 | | Reading | its read is pending | the reason `projectNeeds` gives, "Reading panel.nei." |
-| | Problem | its read failed, or `projectNeeds` gives another reason; or the file is read and `individualListNeeds` gives a reason, a list of individuals that popnei would refuse | the reason `projectNeeds` gives, or the `reason` of `individualListNeeds` |
+| | Problem | its read failed, or `projectNeeds` gives another reason; or the file is read and `individualListNeeds` gives a reason, a list of individuals that popnei would refuse; or the individuals kept are known and the filters keep none (**Open 2**) | the reason `projectNeeds` gives, the `reason` of `individualListNeeds`, or that of `keptNoneReason`, "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them in the Variants step." |
 | | Running | a check or the writing is running, or waits for the statistics of each individual | — |
 | | Results removed | the notice lists a check among the results removed | — |
 | | Failed | a check is in the state `error`, or the writing is | "Statistics of each individual could not be calculated.", "The file could not be written.", the first in the order of the step |
-| | Done | read, and neither `projectNeeds` nor `individualListNeeds` gives a reason | — |
+| | Done | read, neither `projectNeeds` nor `individualListNeeds` gives a reason, and the filters of individuals do not keep none | — |
 | Individuals | To do | no metadata file | the reason `individualsNeeds` gives, "Load a metadata file in the Individuals step." |
 | | Reading | its read is pending | "Reading pops.csv.", from `individualsNeeds` |
 | | Problem | its read failed, or individuals of the variants file are missing from it | the reason `individualsNeeds` gives |
@@ -189,9 +189,12 @@ and the history of the browser say where the user is (2.4.2).
 ### The summary line
 
 One line under the stepper that says what the analyses would be run on,
-made of the parts below joined by " · ": "panel.nei · 119 of 200
+made of the parts below joined by " · ": "panel.nei · 114 of 200
 individuals kept · 1,128 of 1,200 variants kept · 5 filters · 3
-populations by pop". It is text, and is not announced when it changes.
+populations by pop", with the missing data filter at 0.05, the filter
+by heterozygosity at 0.9, the MAF filter at 0.95, and the thresholds of
+the individuals at 0.03 and 0.38, over the 1,128 variants those filters
+keep (node, 26 September 2026, popnei `js-v0.1.0-dev.2`). It is text, and is not announced when it changes.
 
 | part | the project | the words |
 |---|---|---|
@@ -200,7 +203,7 @@ populations by pop". It is text, and is not announced when it changes.
 | | read failed | "panel.nei could not be read" |
 | | read | "panel.nei", then its individuals and its variants, below |
 | its individuals | no filter of individuals, or filters that remove none | "200 individuals", the individuals of the file |
-| | the individuals kept known | "119 of 200 individuals kept", from `individualsKept`; "none of 200 individuals kept" when they keep none |
+| | the individuals kept known | "114 of 200 individuals kept", from `individualsKept`; "none of 200 individuals kept" when they keep none |
 | | a threshold waiting for the statistics of each individual | "200 individuals, how many kept not yet known" |
 | its variants | not counted yet (`numVars` of the source `null`) | nothing |
 | | counted, and no counts of the filters as they are, or no filter of the variants | "1,200 variants", `numVars` of the source |
@@ -258,7 +261,12 @@ from four parts:
   "The 2 ongoing calculations will be stopped unless you undo the
   change."; after an undo, "unless you redo the change", since Redo is
   then the action;
-- **the cause**, its description.
+- **the cause**, its description;
+- from stage 3, **the written file discarded**, `writeDiscarded`: a
+  sentence of its own, "The written file, not saved, was discarded, and
+  Undo does not bring it back; write it again to save it.", after the
+  sentence of the calculations left behind, since the action of the
+  notice would otherwise promise the file back (**Open 3**).
 
 From stage 3 the writing of the file joins the calculations stopped and
 left behind, named apart, since it is not an analysis:
@@ -295,6 +303,7 @@ upper case when nothing comes before it.
 | a command, from stage 3, with the statistics of each individual removed | "2 results removed because the MAF filter changed · Undo", the diversity and the statistics; alone, "Statistics of each individual removed because the MAF filter changed · Undo" |
 | a command, with the writing left behind | "The MAF filter changed. The writing of the file will be stopped unless you undo the change · Undo" |
 | a command that changes the load, with the writing and a calculation in flight | "Statistics of each individual removed, and the calculation of Diversity and the writing of the file stopped, because a new variants file was loaded · Undo" |
+| a command that discards a file written and not saved | "The MAF filter changed. The written file, not saved, was discarded, and Undo does not bring it back; write it again to save it · Undo"; with a result removed, "Statistics of each individual removed because the MAF filter changed. The written file, not saved, was discarded, …" |
 
 The third row is the case of one analysis whose result of the old
 settings is removed and whose calculation of newer ones is stopped
@@ -350,7 +359,8 @@ file its options of the CSV compared by their values:
 | the warning of a reopened project that differs from its file, `identityWarning` of `projectFile.ts`, appeared, or is there with another load of the variants file than before; while that load is being read, at the end of its read instead | "Warning: " and its words, those of the Variants step (`docs/specs/steps/variants.md`, "A project file opened"), after the read's own announcement |
 | from stage 3, a request of the Counts of the filters that was current left `runs`, and the analysis is `done` | "Counts of the filters: done. 1,128 of the 1,200 variants of panel.nei pass the filters.", the line of the total of the Variants step, or, when a filter kept none, the text of the warning `filterKeptNone` in its place |
 | a request of the writing is in `runs` that was not | "Writing panel.filtered.nei.", the name the Variants step shows |
-| a request of the writing that was current and not being stopped left `runs`, and `write` is `done` | "panel.filtered.nei is written, 18.4 MB; Save it in the Variants step." (`docs/specs/analyses/writeVariants.md`); for a file of no variant, which gets no Save, "The filters kept none of the variants of panel.nei, so there is nothing to write." |
+| a request of the writing that was current and not being stopped left `runs`, and `write` is `done` | "panel.filtered.nei is written, 19.2 MB; Save it in the Variants step." (`docs/specs/analyses/writeVariants.md`) |
+| the same, and `write` is `noVariant`, a file of no variant, which the store does not keep | "The filters kept none of the variants of panel.nei, so there is nothing to write." |
 | the same, and `write` is in the state `error` | "The file could not be written. The Variants step says why." |
 | a request of the writing that was current and being stopped left `runs` | "Writing the file: stopped." |
 
@@ -574,11 +584,13 @@ the file and some, "The project file cannot be opened: …", do not:
    the application and its analyses that the entry gave the saving. A
    file it refuses: the text of its error.
 4. When the project has changed, as above, or calculations are in
-   flight, a dialog asks first: "Open panel.popnei.json? It replaces the
+   flight, or a file written is not saved, a dialog asks first: "Open panel.popnei.json? It replaces the
    project on the page, and an opening cannot be undone. To keep the
    project on the page, press Keep the current project and save it
    first.", with, when calculations are in flight, "The ongoing
-   calculations will be stopped." Its buttons: "Open panel.popnei.json"
+   calculations will be stopped.", and, when a file written is not
+   saved, `write` in `done`, "panel.filtered.nei, written and not saved,
+   will be discarded." (**Open 3**). Its buttons: "Open panel.popnei.json"
    and "Keep the current project". The dialog has no Save of its own, so
    its words name the button that leads to one, as the owner decided on
    26 September 2026 (point 5 of the review of work package 9); they
@@ -789,7 +801,9 @@ with the analyses of `TEST_DEFS` of `src/core/testSupport.ts`:
   Running and leaves the Analyses step as it was, a write in `error`
   gives Variants Failed with "The file could not be written.", and a
   Variants step whose list of individuals names an individual not in the
-  file is at Problem before a check running.
+  file is at Problem before a check running, and so is one whose
+  thresholds of the individuals keep none, with the words of
+  `keptNoneReason`.
 - **`summaryLine`**: the empty first project gives "No variants file · 1
   filter · no metadata file"; the example above, with 1,200 variants
   counted, gives "panel.nei · 200 individuals · 1,200 variants · 1 filter
@@ -804,7 +818,8 @@ with the analyses of `TEST_DEFS` of `src/core/testSupport.ts`:
 - **`noticeText`**: each row of the table of the notice, from a literal
   notice, with the text asserted whole; three removed and two stopped,
   counted; the writing left behind alone and with a calculation, and
-  stopped with a result removed, with the comma of that row.
+  stopped with a result removed, with the comma of that row; the written
+  file discarded, alone and with a result removed.
 - **`announcementsOf`**: a pair of states for each row of the first
   table of the status region, the rows of the writing and of the Counts
   among them, and a Run that waits for the statistics, whose end and the
@@ -904,7 +919,7 @@ none of them approved yet:
   `individualChecks.md`: the titles of their panels; the line of the
   total of `filterCounts.md`, which the end of a Count announces.
 - `docs/specs/analyses/writeVariants.md`: the name of the written file,
-  `writtenName`, and its size, `sizeText` of its `numBytes`, "18.4 MB",
+  `writtenName`, and its size, `sizeText` of its `numBytes`, "19.2 MB",
   and the words of its end, which the status region says.
 - `docs/specs/core/project.md`: `individualListNeeds`, the reason of a
   list of individuals, apart from `projectNeeds`.
@@ -926,7 +941,7 @@ above. One stayed, and stage 3 answers it:
    it was on 25 September 2026, with the kept count to join it in stage 3
    (point L of `docs/specs/stage-2-open-points.md`). Stage 3 writes it
    so, "1,128 of 1,200 variants kept", with the individuals kept beside
-   it, "119 of 200 individuals kept", and the count of the filters as
+   it, "114 of 200 individuals kept", and the count of the filters as
    its own part, "5 filters", as the other parts of the line are, rather
    than in brackets (above, "The summary line"). The variants kept are
    shown only while the counts of the filters as they are are in the
@@ -936,6 +951,24 @@ above. One stayed, and stage 3 answers it:
    This is the writer's, for the owner to judge on the screen of stage 3
    (`docs/specs/stage-3-open-points.md`, "Choices of a spec the owner may
    overrule").
+
+Stage 3 adds two, points J and G of `docs/specs/stage-3-open-points.md`:
+
+2. **The state of the Variants step when the thresholds keep no
+   individual.** Meanwhile, and recommended: Problem, with the words of
+   `keptNoneReason`, as for a list of individuals popnei would refuse,
+   since both lock every analysis that reads the filters of individuals
+   and the writing, and a user who reads Done in the stepper would go
+   on to the Analyses step and find the diversity locked there. The
+   other option is Done, as the stepper of stage 2 had it, which reads
+   the file and not the filters: the step then reads Done while nothing
+   that reads its filters of individuals can run.
+3. **A file written and not saved, which a change discards.** Meanwhile,
+   and recommended: the notice says so, and so does the question before
+   an opening, and the file is gone; the other option keeps the file
+   while the notice is up, so that its Undo gives it back, which holds
+   the file, about 1 GB for a million variants of 1,000 individuals,
+   for as long as the notice stays.
 
 ## Not in this spec
 
