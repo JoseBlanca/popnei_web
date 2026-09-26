@@ -29,6 +29,9 @@ export interface TextFieldProps {
   /** Whether it takes the focus, its text selected, when it is drawn;
       false when absent. */
   readonly autoFocus?: boolean;
+  /** The id of an element whose words describe the field, or `null` for
+      none; none when absent. */
+  readonly describedBy?: string | null;
 }
 
 /** A field of text with its label. */
@@ -37,6 +40,7 @@ export function TextField({
   value,
   onChange,
   autoFocus = false,
+  describedBy = null,
 }: TextFieldProps): React.JSX.Element {
   // Whether the field has taken the focus since it was drawn.
   const focused = useRef(false);
@@ -46,6 +50,7 @@ export function TextField({
       value={value}
       onChange={onChange}
       autoFocus={autoFocus}
+      {...(describedBy !== null && { "aria-describedby": describedBy })}
       // The text selected when the field takes the focus it is drawn
       // with, so that typing replaces it.
       onFocus={(event) => {

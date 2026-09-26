@@ -263,7 +263,11 @@ test("WS9 D3 a name typed as run1 downloads run1.popnei.json, and run2.json run2
   await page.keyboard.press("Backspace");
   await expect(save).toBeDisabled();
   await expect(save).toHaveAccessibleDescription("Give the file a name.");
+  // The Tab key skips the disabled Save, so the field, where the focus
+  // is, says it too.
+  await expect(field).toHaveAccessibleDescription("Give the file a name.");
   await page.keyboard.type("run1");
+  await expect(field).toHaveAccessibleDescription("");
   const download = page.waitForEvent("download");
   await page.keyboard.press("Enter");
 

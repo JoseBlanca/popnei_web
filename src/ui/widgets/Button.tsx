@@ -36,6 +36,10 @@ export interface ButtonProps {
   /** Words that say more of the button, why it is disabled among them,
       shown after it and read with it. */
   readonly description?: string;
+  /** The id of the element of the description, for a field that is
+      described by it too, as the field of the name of Save is; one of
+      React's when absent. */
+  readonly descriptionId?: string;
   /** What pressing it would do, shown in a tooltip and read with it, or
       `null` for none; none when absent. */
   readonly hint?: string | null;
@@ -55,12 +59,14 @@ export function Button({
   onPress,
   isDisabled = false,
   description,
+  descriptionId: givenId,
   hint = null,
   ref,
   isSubmit = false,
   autoFocus = false,
 }: ButtonProps): React.JSX.Element {
-  const descriptionId = useId();
+  const ownId = useId();
+  const descriptionId = givenId ?? ownId;
   const button = (
     <WithTooltip text={hint}>
       {(hintId) => {

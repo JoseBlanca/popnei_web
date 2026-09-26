@@ -30,7 +30,7 @@
  * the question while the Variants step is on screen, where no change of
  * the step moves the focus, the page moves it to the heading.
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { FileTrigger } from "react-aria-components";
 
 import type { Project } from "../../core/project.ts";
@@ -96,6 +96,8 @@ export function SaveProject(): React.JSX.Element {
   // closed.
   const [name, setName] = useState<string | null>(null);
   const given = name?.trim() ?? "";
+  // The words of an empty name, which describe the field and Save.
+  const nameNeededId = useId();
   const focusLater = useFocusLater();
 
   /** Closes the dialog and gives the focus back to Save project. */
@@ -142,13 +144,19 @@ export function SaveProject(): React.JSX.Element {
               value={content.name}
               onChange={setName}
               autoFocus
+              // The Tab key skips the disabled Save, so the field says
+              // why too.
+              describedBy={given === "" ? nameNeededId : null}
             />
             <div className={classOf(styles, "buttons")}>
               <Button
                 label="Save"
                 isSubmit
                 isDisabled={given === ""}
-                {...(given === "" && { description: NAME_NEEDED })}
+                {...(given === "" && {
+                  description: NAME_NEEDED,
+                  descriptionId: nameNeededId,
+                })}
               />
               <Button label="Cancel" onPress={close} />
             </div>
