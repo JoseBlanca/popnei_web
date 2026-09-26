@@ -11,7 +11,7 @@
  */
 import { join } from "node:path";
 
-import type { Locator, Page } from "@playwright/test";
+import type { Locator, Page, Worker } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
 
@@ -105,13 +105,21 @@ async function loadPanel(page: Page): Promise<void> {
   );
 }
 
+/** The calculation worker of the page, if it has one, other than
+    `ended`. */
+function runnerWorker(page: Page, ended?: Worker): Worker | undefined {
+  return page
+    .workers()
+    .find((w) => w !== ended && w.url().includes("runnerWorker"));
+}
+
 /** Makes the calculation worker keep its results back, so that a
-    calculation stays under way. */
-async function holdResults(page: Page): Promise<void> {
-  await expect
-    .poll(() => page.workers().some((w) => w.url().includes("runnerWorker")))
-    .toBe(true);
-  const worker = page.workers().find((w) => w.url().includes("runnerWorker"));
+    calculation stays under way. After a new variants file, which makes
+    the worker again, `ended` is the worker before it, which the page
+    may still list for a moment after it was ended. */
+async function holdResults(page: Page, ended?: Worker): Promise<void> {
+  await expect.poll(() => runnerWorker(page, ended) !== undefined).toBe(true);
+  const worker = runnerWorker(page, ended);
   if (worker === undefined) throw new Error("no calculation worker");
   await worker.evaluate(() => {
     const scope = globalThis as unknown as {
@@ -435,6 +443,7 @@ test("WS9 D3 Run that takes the calculation stopped out of the notice keeps the 
   await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
   // Another variants file removes the diversity and stops that
   // calculation.
+  const held = runnerWorker(page);
   await goTo(page, "Variants");
   await pick(page, "Variants file", "panel.vcf.gz");
   await expect(stepLink(page, "Variants")).toHaveAccessibleName(
@@ -445,6 +454,12 @@ test("WS9 D3 Run that takes the calculation stopped out of the notice keeps the 
       name: "Diversity removed and the calculation of Diversity stopped because a new variants file was loaded",
     }),
   ).toBeVisible();
+  // The new file made the calculation worker again, without the hold.
+  // Held again, so that the diversity the Run below starts does not end:
+  // once it ends, the diversity is no longer among the results removed,
+  // the notice goes with nothing left in it, as the store's spec has it,
+  // and the assertions below would find no notice.
+  await holdResults(page, held);
   await goTo(page, "Analyses");
   await page.keyboard.press("F6");
   await page.keyboard.press("Tab");
