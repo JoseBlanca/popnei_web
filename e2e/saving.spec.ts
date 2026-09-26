@@ -336,9 +336,8 @@ test("WS9 D3 of two project files picked close together, the second opens, and t
   // The file slow.popnei.json is read half a second late, and the page
   // notes when its read has ended.
   await page.evaluate(() => {
-    const text = File.prototype.text;
     File.prototype.text = async function (this: File): Promise<string> {
-      const read = await text.call(this);
+      const read = await new Response(this).text();
       if (this.name !== "slow.popnei.json") return read;
       await new Promise((resolve) => setTimeout(resolve, 500));
       Object.assign(window, { slowRead: true });
