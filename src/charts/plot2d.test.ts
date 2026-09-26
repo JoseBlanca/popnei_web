@@ -24,6 +24,8 @@ interface Bars extends PlotText {
 const MARGIN: Margin = { top: 10, right: 20, bottom: 30, left: 40 };
 
 const draws: { innerWidth: number; innerHeight: number }[] = [];
+/** The margins of the frame of each draw. */
+const margins: Margin[] = [];
 
 const bars: Plot2dDefinition<Bars> = {
   kind: "bars",
@@ -38,6 +40,7 @@ const bars: Plot2dDefinition<Bars> = {
       innerWidth: frame.innerWidth,
       innerHeight: frame.innerHeight,
     });
+    margins.push(frame.margin);
     const x = scaleLinear()
       .domain([0, data.values.length])
       .range([0, frame.innerWidth]);
@@ -128,6 +131,7 @@ function svgOf(element: HTMLElement): SVGSVGElement {
 beforeEach(() => {
   FakeObserver.made = [];
   draws.length = 0;
+  margins.length = 0;
   frames = new Map();
   vi.stubGlobal("ResizeObserver", FakeObserver);
   vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
@@ -340,6 +344,7 @@ describe("VS4 D1 the base of the 2D plots, under jsdom", () => {
     expect(svg.getAttribute("height")).toBe("400");
     expect(svg.getAttribute("viewBox")).toBe("0 0 640 400");
     expect(draws.at(-1)).toEqual({ innerWidth: 580, innerHeight: 360 });
+    expect(margins.at(-1)).toEqual(MARGIN);
     expect(svg.querySelector("g.chart-frame")?.getAttribute("transform")).toBe(
       "translate(40,10)",
     );

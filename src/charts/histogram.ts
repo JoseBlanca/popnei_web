@@ -353,7 +353,7 @@ function drawHistogram(frame: Frame, data: HistogramData): void {
   // The legend is placed from the top left of the SVG, each row with its
   // mark at the right edge of the frame and its text ending before it,
   // so that it needs no measure of the text.
-  const right = histogramMargin(data).left + frame.innerWidth;
+  const right = frame.margin.left + frame.innerWidth;
   frame.legend
     .selectAll<SVGGElement, LegendRow>("g.chart-legend-row")
     .data(legendRowsOf(data.threshold), (row) => row.key)

@@ -60,6 +60,11 @@ export interface Frame {
   readonly innerWidth: number;
   /** The height of the frame, the size less the margins; above 0. */
   readonly innerHeight: number;
+  /**
+   * The margins around the frame, the definition's for the data drawn,
+   * for a plot that draws in them, as the legend of the histogram.
+   */
+  readonly margin: Margin;
   /** `chart-marks`, clipped to the frame. */
   readonly marks: Group;
   /** `chart-annotations`: thresholds and lines of reference. */
@@ -283,6 +288,7 @@ export function createPlot2d<Data extends PlotText>(
     const frame: Frame = {
       innerWidth,
       innerHeight,
+      margin,
       marks,
       annotations,
       legend,
