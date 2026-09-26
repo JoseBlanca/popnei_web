@@ -11,7 +11,7 @@
 import { counted, escaped, saying } from "../../core/project.ts";
 import type { Notice } from "../../core/store.ts";
 import type { Progress, RunError } from "../../worker/protocol.ts";
-import { capitalized, undoneOrRedone } from "../shell/words.ts";
+import { capitalized, undoneOrRedone } from "../sentences.ts";
 
 /** The seconds of a minute, and of an hour. */
 const MINUTE = 60;

@@ -10,7 +10,7 @@ import type { Store } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 import type { Shortcut } from "./shortcuts.ts";
 import type { Announcer } from "./status.ts";
-import { undoneOrRedone } from "./words.ts";
+import { undoneOrRedone } from "../sentences.ts";
 
 /** Undoes or redoes the project of `store`, as `which` says, and
     announces it when it makes no notice; nothing when there is no step

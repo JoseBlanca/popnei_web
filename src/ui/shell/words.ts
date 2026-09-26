@@ -34,6 +34,7 @@ import type {
 import { askedFileText, identityWarning } from "../../core/projectFile.ts";
 import type { AppState, Notice, RunView } from "../../core/store.ts";
 import type { CsvOptions } from "../../worker/protocol.ts";
+import { capitalized, undoneOrRedone } from "../sentences.ts";
 import { sizeText } from "../steps/individuals/words.ts";
 
 /** The state of a step in the stepper: the first four are those of
@@ -58,26 +59,6 @@ export interface StepState {
   /** Why it is not done, the description of its link; `null` for a state
       that needs none. */
   readonly reason: string | null;
-}
-
-/** A sentence that starts with `words`, its first letter made upper
-    case. */
-export function capitalized(words: string): string {
-  return `${words.charAt(0).toUpperCase()}${words.slice(1)}`;
-}
-
-/** How the words of an undo or a redo start, "Undone: the missing data
-    filter changed", with no full stop; `null` for a command, whose
-    description is the reason itself. */
-export function undoneOrRedone(cause: Notice["cause"]): string | null {
-  switch (cause.kind) {
-    case "command":
-      return null;
-    case "undo":
-      return `Undone: ${cause.description}`;
-    case "redo":
-      return `Redone: ${cause.description}`;
-  }
 }
 
 /** What the stepper and the status region say of an analysis in the
