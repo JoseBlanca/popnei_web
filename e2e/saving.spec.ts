@@ -1077,7 +1077,12 @@ test("WS9 D3 a project that cannot be written: Save closes its dialog and the ba
   await expect(page.getByRole("alert")).toHaveText(
     "The application met an error of its own: popnei_web defect: test. Your project could not be saved; copy the details and report them.",
   );
-  await page.getByRole("button", { name: "Save the project" }).click();
+  // After a save that failed, the bar's Save does not offer it again in
+  // the same words.
+  await expect(
+    page.getByRole("button", { name: "Save the project" }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Try to save again" }).click();
   // The bar's own status region, the first of the page.
   await expect(page.getByRole("status").first()).toHaveText(
     "The project could not be saved: the application met an error of its own as it wrote the file. Reloading the page would lose the project.",
@@ -1138,6 +1143,9 @@ test("WS9 D3 after the error bar's Save failed, a Save of the header that succee
     "The project could not be saved: the application met an error of its own as it wrote the file. Reloading the page would lose the project.",
   );
   await expect(barLine(page, false)).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Try to save again" }),
+  ).toBeVisible();
 
   await breakWriting(page, false);
   expect((await saveProject(page)).suggestedFilename()).toBe(
@@ -1146,6 +1154,9 @@ test("WS9 D3 after the error bar's Save failed, a Save of the header that succee
 
   await expect(barLine(page, true)).toBeVisible();
   await expect(barStatus).toHaveText("");
+  await expect(
+    page.getByRole("button", { name: "Save the project" }),
+  ).toBeVisible();
 });
 
 test("WS9 D3 after the error bar's Save succeeded, a Save of the header that fails empties the bar's status, whose words would contradict its first line", async ({

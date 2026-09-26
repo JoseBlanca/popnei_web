@@ -25,7 +25,7 @@ import type { Defect, Defects } from "../defects.ts";
 import type { Saving } from "../saving.ts";
 import { Button } from "../widgets/Button.tsx";
 import styles from "./ErrorBar.module.css";
-import { barText, saveFromBar } from "./barSave.ts";
+import { barText, saveFromBar, saveLabel } from "./barSave.ts";
 
 /** What the bar is drawn with. */
 export interface ErrorBarProps {
@@ -197,7 +197,7 @@ export function ErrorBar({
         <div className={classOf(styles, "actions")}>
           {saving !== null && (
             <Button
-              label="Save the project"
+              label={saveLabel(saveFailed)}
               onPress={() => {
                 say(saveFromBar(saving, defects));
               }}

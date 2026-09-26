@@ -51,3 +51,11 @@ export function barText(
     ? `The application met an error of its own: ${text}. Your project could not be saved; copy the details and report them.`
     : `The application met an error of its own: ${text}. Your project is intact: save it, then reload the page.`;
 }
+
+/** The label of the bar's Save: "Try to save again" after a save that
+    could not write the project, until one succeeds, so that the bar does
+    not offer again in the same words what has just failed
+    (docs/specs/shell.md, "The error bar"). */
+export function saveLabel(saveFailed: boolean): string {
+  return saveFailed ? "Try to save again" : "Save the project";
+}

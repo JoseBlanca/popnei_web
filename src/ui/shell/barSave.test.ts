@@ -11,7 +11,7 @@ import type { TestDefJob, TestDefResult } from "../../core/testSupport.ts";
 import type { Outcome, Run } from "../../worker/protocol.ts";
 import { createDefects } from "../defects.ts";
 import { createSaving } from "../saving.ts";
-import { NOT_SAVED, barText, saveFromBar } from "./barSave.ts";
+import { NOT_SAVED, barText, saveFromBar, saveLabel } from "./barSave.ts";
 
 const PANEL_ID = "0123456789abcdef0123456789abcdef";
 
@@ -117,5 +117,10 @@ describe("WS9 the Save of the error bar", () => {
     expect(barText("test", false, false)).toBe(
       "The application met an error of its own as it started: test. Reload the page.",
     );
+  });
+
+  test("the bar's Save reads Try to save again after a save failed", () => {
+    expect(saveLabel(false)).toBe("Save the project");
+    expect(saveLabel(true)).toBe("Try to save again");
   });
 });
