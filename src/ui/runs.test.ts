@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import { POPGEN_ANALYSES, countsOf, firstProject } from "../core/apps.ts";
 import { CACHE_MAX_BYTES } from "../core/cache.ts";
@@ -289,6 +289,72 @@ describe("VS3 D4 startAnalysis of stage 3", () => {
     await started;
 
     expect(startedAt(own.run.id)).toBeNull();
+  });
+});
+
+describe("VS3 D4 the defects of runEnded", () => {
+  test("a runEnded that throws for a handle another runEnded gave back rejects the promise", async () => {
+    const { store, sent } = setUpWithThreshold();
+    const throwing: Store<TestResult> = {
+      ...store,
+      runEnded: (runId, outcome) => {
+        if (runId !== sentAt(sent, 0).run.id) {
+          throw new Error("popnei_web defect: a runEnded that throws");
+        }
+        return store.runEnded(runId, outcome);
+      },
+    };
+
+    const started = startAnalysis(throwing, "pops");
+    const stats = sentAt(sent, 0);
+    stats.end({ kind: "done", key: stats.key, result: fiveStats() });
+    // The callbacks already due run, and the store sends the analysis's
+    // own request.
+    await new Promise((resolve) => {
+      setTimeout(resolve, 0);
+    });
+    sentAt(sent, 1).end({ kind: "cancelled" });
+
+    await expect(started).rejects.toThrow(
+      "popnei_web defect: a runEnded that throws",
+    );
+  });
+
+  test("two runEnded that throw for the handles of one press: the first rejects the promise, and the second is thrown on its own, out of the promise", async () => {
+    const { store } = setUpWithThreshold();
+    const ends: ((outcome: Outcome<TestResult>) => void)[] = [];
+    const handle = (id: number): Run<TestResult> => ({
+      id,
+      outcome: new Promise((resolve) => {
+        ends.push(resolve);
+      }),
+      cancel: () => undefined,
+    });
+    const twoHandles: Store<TestResult> = {
+      ...store,
+      startRun: () => [handle(1), handle(2)],
+      runEnded: (runId) => {
+        throw new Error(`popnei_web defect: runEnded of ${String(runId)}`);
+      },
+    };
+    const queued: (() => void)[] = [];
+    const queue = vi
+      .spyOn(globalThis, "queueMicrotask")
+      .mockImplementation((callback) => {
+        queued.push(callback);
+      });
+
+    try {
+      const started = startAnalysis(twoHandles, "pops");
+      ends[0]?.({ kind: "cancelled" });
+      ends[1]?.({ kind: "cancelled" });
+
+      await expect(started).rejects.toThrow("popnei_web defect: runEnded of 1");
+      expect(queued).toHaveLength(1);
+      expect(queued[0]).toThrow("popnei_web defect: runEnded of 2");
+    } finally {
+      queue.mockRestore();
+    }
   });
 });
 

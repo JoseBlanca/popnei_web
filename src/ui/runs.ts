@@ -24,7 +24,9 @@ const started = new Map<number, number>();
  * those that the `runEnded` of each gives back, the Runs that waited for
  * the statistics, and so on; the promise settles when all have ended. It
  * rejects only for a defect of ours, a `runEnded` that throws, which the
- * button passes over with `void` so that it reaches the error bar.
+ * button passes over with `void` so that it reaches the error bar; when
+ * several throw, it rejects with the first, and each other one is thrown
+ * on its own, outside the promise.
  */
 export function startAnalysis<R, F>(
   store: Store<R, F>,
@@ -51,12 +53,14 @@ export function startWriting<R, F>(
 
 /** Awaits the outcome of each of `runs`, and of each handle their
     `runEnded` gives back, noting the time of each while it is in
-    flight. */
-function awaitEach<R, F>(
+    flight. Every `runEnded` that throws reaches the error bar: the
+    first rejects the promise, and each other one is thrown on its own,
+    outside the promise, which the window's `error` event takes. */
+async function awaitEach<R, F>(
   store: Store<R, F>,
   runs: readonly Run<R | Written<F>>[],
 ): Promise<void> {
-  return Promise.all(
+  const ends = await Promise.allSettled(
     runs.map((run) => {
       started.set(run.id, performance.now());
       return run.outcome.then((outcome) => {
@@ -64,7 +68,18 @@ function awaitEach<R, F>(
         return awaitEach(store, store.runEnded(run.id, outcome));
       });
     }),
-  ).then(() => undefined);
+  );
+  const reasons = ends.flatMap((end): unknown[] =>
+    end.status === "rejected" ? [end.reason] : [],
+  );
+  for (const reason of reasons.slice(1)) {
+    queueMicrotask(() => {
+      throw reason;
+    });
+  }
+  if (reasons.length > 0) {
+    throw reasons[0];
+  }
 }
 
 /** When the calculation `runId` was started, in the milliseconds of
