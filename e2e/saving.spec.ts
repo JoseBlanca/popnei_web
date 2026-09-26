@@ -250,6 +250,35 @@ test("WS9 D3 a name typed as run1 downloads run1.popnei.json, Cancel and Escape 
   expect(downloads).toEqual(["run1.popnei.json"]);
 });
 
+test("WS9 D3 in the dialog of Save, a click into the field of the name puts the cursor there, and the Tab key back into it selects the name", async ({
+  page,
+}) => {
+  await openPopgen(page);
+  await loadPanelNei(page);
+
+  await saveButton(page).click();
+  const dialog = page.getByRole("dialog", { name: "Save the project" });
+  const field = dialog.getByRole("textbox", { name: "File name" });
+  await expect(field).toBeFocused();
+  // From Cancel, the last of the dialog, the Tab key goes round to the
+  // field, and the browser selects its text, so typing replaces it.
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  await expect(dialog.getByRole("button", { name: "Cancel" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(field).toBeFocused();
+  await page.keyboard.type("run1");
+  await expect(field).toHaveValue("run1");
+
+  // A click after the first letter puts the cursor there.
+  await dialog.getByRole("heading", { name: "Save the project" }).click();
+  const box = await field.boundingBox();
+  if (box === null) throw new Error("the field is not laid out");
+  await page.mouse.click(box.x + box.width - 4, box.y + box.height / 2);
+  await page.keyboard.type("b");
+  await expect(field).toHaveValue("run1b");
+});
+
 test("WS9 D3 inside the dialog of Save the keyboard's Undo does nothing to the project", async ({
   page,
 }) => {

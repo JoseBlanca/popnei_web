@@ -3,8 +3,12 @@
  * "Widgets: React Aria, wrapped once"). The field may take the focus when
  * it is drawn, with its text selected, so that typing replaces it, as the
  * field of the name in the dialog of Save does (docs/specs/shell.md,
- * "Accessibility").
+ * "Accessibility"). Only that first focus selects the text: a click into
+ * the field afterwards puts the cursor where it was clicked, which
+ * Chromium would otherwise turn into the whole text selected, and a
+ * press of the Tab key back into it selects the text as the browser does.
  */
+import { useRef } from "react";
 import {
   Input,
   Label,
@@ -34,15 +38,19 @@ export function TextField({
   onChange,
   autoFocus = false,
 }: TextFieldProps): React.JSX.Element {
+  // Whether the field has taken the focus since it was drawn.
+  const focused = useRef(false);
   return (
     <AriaTextField
       className={classOf(styles, "field")}
       value={value}
       onChange={onChange}
       autoFocus={autoFocus}
-      // The text selected when the field takes the focus, so that typing
-      // replaces it.
+      // The text selected when the field takes the focus it is drawn
+      // with, so that typing replaces it.
       onFocus={(event) => {
+        if (focused.current) return;
+        focused.current = true;
         if (autoFocus && event.target instanceof HTMLInputElement) {
           event.target.select();
         }
