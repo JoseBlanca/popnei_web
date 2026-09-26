@@ -131,12 +131,24 @@ interface Size {
 }
 
 /**
+ * What the SVG shows: nothing yet, since the element never had a size; the
+ * plot drawn at a size; or, at a size not larger than the margins, an
+ * empty frame.
+ */
+type Drawing =
+  | { readonly kind: "none" }
+  | { readonly kind: "drawn"; readonly size: Size }
+  | { readonly kind: "noArea"; readonly size: Size };
+
+/**
  * Makes a 2D plot of `data` in `element` from the definition of its kind,
  * and returns its handle.
  *
  * The plot is drawn at once when the element has a size, and again at
  * most once per frame of the screen after each change of its size;
- * while the element has no size, nothing is drawn. `definition.check`
+ * while the element has no size, nothing is drawn and the last drawing
+ * stays. An element not larger than the margins gets an empty frame and
+ * an SVG of 0 by 0, whose `toSVG` and `toPNG` throw. `definition.check`
  * throws for data the plot cannot draw, here before anything is added to
  * the element, and in `update` leaving the plot as it was. `update`,
  * `toSVG` and `toPNG` after `destroy`, and `toSVG` and `toPNG` of a plot
@@ -188,7 +200,7 @@ export function createPlot2d<Data extends PlotText>(
   }
 
   let current = data;
-  let lastDrawn: Size | null = null;
+  let drawing: Drawing = { kind: "none" };
   let pending: Size | null = null;
   let waitingFrame: number | null = null;
   let destroyed = false;
@@ -198,13 +210,31 @@ export function createPlot2d<Data extends PlotText>(
     desc.text(current.description);
   }
 
-  /** Draws the current data at `size`, or nothing when the frame has no area. */
+  /**
+   * Empties the frame of an element of `size`, not larger than the
+   * margins: nothing of an earlier draw stays, and the SVG is of 0 by 0.
+   */
+  function emptyAt(size: Size): void {
+    drawing = { kind: "noArea", size };
+    for (const group of [marks, annotations, legend, xAxisGroup, yAxisGroup]) {
+      group.selectAll("*").remove();
+    }
+    svg.attr("width", 0).attr("height", 0).attr("viewBox", null);
+  }
+
+  /**
+   * Draws the current data at `size`, which is above 0, or empties the
+   * frame when the margins leave it no area.
+   */
   function drawAt(size: Size): void {
     const margin = definition.margin(current);
     const innerWidth = size.width - margin.left - margin.right;
     const innerHeight = size.height - margin.top - margin.bottom;
-    if (innerWidth <= 0 || innerHeight <= 0) return;
-    lastDrawn = size;
+    if (innerWidth <= 0 || innerHeight <= 0) {
+      emptyAt(size);
+      return;
+    }
+    drawing = { kind: "drawn", size };
 
     svg
       .attr("width", size.width)
@@ -256,11 +286,12 @@ export function createPlot2d<Data extends PlotText>(
     waitingFrame = null;
     const size = pending;
     pending = null;
-    if (size === null) return;
+    // An element of no size, a tab that is hidden, keeps its last drawing.
+    if (size === null || size.width <= 0 || size.height <= 0) return;
     if (
-      lastDrawn !== null &&
-      lastDrawn.width === size.width &&
-      lastDrawn.height === size.height
+      drawing.kind !== "none" &&
+      drawing.size.width === size.width &&
+      drawing.size.height === size.height
     ) {
       return;
     }
@@ -283,12 +314,18 @@ export function createPlot2d<Data extends PlotText>(
         `popnei_web defect: ${call} of a plot after its destroy.`,
       );
     }
-    if (lastDrawn === null) {
-      throw new Error(
-        `popnei_web defect: ${call} of a plot that was never drawn, whose element never had a size.`,
-      );
+    switch (drawing.kind) {
+      case "none":
+        throw new Error(
+          `popnei_web defect: ${call} of a plot that was never drawn, whose element never had a size.`,
+        );
+      case "noArea":
+        throw new Error(
+          `popnei_web defect: ${call} of a plot whose frame has no area, its element of ${String(drawing.size.width)} by ${String(drawing.size.height)} pixels being no larger than its margins.`,
+        );
+      case "drawn":
+        return drawing.size;
     }
-    return lastDrawn;
   }
 
   writeText();
@@ -308,7 +345,7 @@ export function createPlot2d<Data extends PlotText>(
       definition.check(next);
       current = next;
       writeText();
-      if (lastDrawn !== null) drawAt(lastDrawn);
+      if (drawing.kind !== "none") drawAt(drawing.size);
     },
     destroy() {
       if (destroyed) return;

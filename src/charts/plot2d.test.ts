@@ -259,6 +259,36 @@ describe("VS4 D1 the base of the 2D plots, under jsdom", () => {
     expect(draws).toHaveLength(0);
   });
 
+  test("an element not larger than the margins gets an SVG of 0 by 0, and toSVG says the frame has no area", () => {
+    // The margins take 10 + 30 = 40 pixels of the height.
+    const element = sizedElement(400, 40);
+    const handle = createPlot2d(element, barsOf([1, 2, 3]), bars);
+    const svg = svgOf(element);
+    expect(draws).toHaveLength(0);
+    expect(svg.querySelectorAll("rect.bar")).toHaveLength(0);
+    expect(svg.getAttribute("width")).toBe("0");
+    expect(svg.getAttribute("height")).toBe("0");
+    expect(svg.hasAttribute("viewBox")).toBe(false);
+    expect(() => handle.toSVG()).toThrow("frame has no area");
+    // A resize with room for the frame draws it.
+    observerOf(0).resize(400, 300);
+    runFrames();
+    expect(draws).toEqual([{ innerWidth: 340, innerHeight: 260 }]);
+    expect(svg.querySelectorAll("rect.bar")).toHaveLength(3);
+    expect(svg.getAttribute("width")).toBe("400");
+  });
+
+  test("an element whose size becomes 0 after a draw keeps its last drawing", () => {
+    const element = sizedElement(400, 300);
+    createPlot2d(element, barsOf([1, 2, 3]), bars);
+    observerOf(0).resize(0, 0);
+    runFrames();
+    const svg = svgOf(element);
+    expect(draws).toHaveLength(1);
+    expect(svg.querySelectorAll("rect.bar")).toHaveLength(3);
+    expect(svg.getAttribute("width")).toBe("400");
+  });
+
   test("the first call of the observer with a size draws once, at the next frame", () => {
     const element = sizedElement(0, 0);
     createPlot2d(element, barsOf([1, 2]), bars);

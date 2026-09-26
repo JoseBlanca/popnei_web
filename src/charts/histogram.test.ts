@@ -454,6 +454,24 @@ describe("VS4 D2 the histogram, under jsdom", () => {
     for (const bar of bars) expect(bar.getAttribute("class")).toBe("chart-bar");
   });
 
+  test("an update to a threshold in an element 80 pixels high, not larger than the margins of 56 and 44, empties the frame", () => {
+    const element = sizedElement(600, 80);
+    const handle = createHistogram(element, histogramOf(MAF_COUNTS, null));
+    const svg = svgOf(element);
+    expect(svg.querySelectorAll("rect.chart-bar")).toHaveLength(20);
+    handle.update(histogramOf(MAF_COUNTS, 0.95));
+    expect(svg.querySelectorAll("rect.chart-bar")).toHaveLength(0);
+    expect(svg.querySelector("line.chart-threshold")).toBeNull();
+    expect(svg.querySelector("g.chart-legend")?.childNodes).toHaveLength(0);
+    expect(svg.querySelector("g.chart-axis-y")?.childNodes).toHaveLength(0);
+    expect(svg.getAttribute("width")).toBe("0");
+    expect(svg.getAttribute("height")).toBe("0");
+    expect(() => handle.toSVG()).toThrow("frame has no area");
+    handle.update(histogramOf(MAF_COUNTS, null));
+    expect(svg.querySelectorAll("rect.chart-bar")).toHaveLength(20);
+    expect(svg.getAttribute("width")).toBe("600");
+  });
+
   test("an update to 20 bins of a count of 1 each gives 20 rects, in the same svg", () => {
     const element = sizedElement(600, 375);
     const handle = createHistogram(element, histogramOf(OBS_HET_COUNTS, 0.6));
