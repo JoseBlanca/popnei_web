@@ -573,6 +573,14 @@ describe("WS9 D1 the summary line", () => {
     expect(summaryLine(missing)).toBe(
       "panel.nei · 4 individuals · 1 filter · 2 individuals missing from pops.csv",
     );
+    const oneMissing = project({
+      variants: variants(READ),
+      individuals: individuals(SHORT_TABLE_READ),
+      grouping: BY_POP,
+    });
+    expect(summaryLine(oneMissing)).toBe(
+      "panel.nei · 3 individuals · 1 filter · 1 individual missing from pops.csv",
+    );
     const noSuchColumn = project({
       variants: variants(READ),
       individuals: individuals(TABLE_READ),
@@ -675,6 +683,18 @@ describe("WS9 D1 the words of the notice", () => {
     });
     expect(noticeText(n, title)).toEqual({
       text: "Undone: the missing data filter changed. Diversity removed",
+      action: "Redo",
+      reverse: "redo",
+    });
+  });
+
+  test("an undo, with a calculation left behind, names Redo", () => {
+    const n = notice({
+      cause: { kind: "undo", description: "the missing data filter changed" },
+      leftBehind: [DIVERSITY],
+    });
+    expect(noticeText(n, title)).toEqual({
+      text: "Undone: the missing data filter changed. The ongoing calculation of Diversity will be stopped unless you redo the change",
       action: "Redo",
       reverse: "redo",
     });
@@ -806,6 +826,20 @@ describe("WS9 D1 the announcements made from the state", () => {
     expect(announcementsOf(twoBefore, twoAfter, title)).toEqual([
       "Diversity: calculating. The 2 earlier calculations were stopped.",
     ]);
+    // Two requests new in the same change: the stopped are added to the
+    // last.
+    const twoStarted = state({
+      ...after,
+      runs: [
+        run(1, PCA, KEY_A, LEFT_BEHIND_STOPPING),
+        run(2, DIVERSITY, KEY_A, CURRENT),
+        run(3, PCA, KEY_B, CURRENT),
+      ],
+    });
+    expect(announcementsOf(before, twoStarted, title)).toEqual([
+      "Diversity: calculating.",
+      "PCA: calculating. The earlier calculation of PCA was stopped.",
+    ]);
   });
 
   test("a current request that ended done under its key is done, with its warnings counted", () => {
@@ -855,6 +889,12 @@ describe("WS9 D1 the announcements made from the state", () => {
     expect(announcementsOf(before, after, title)).toEqual([
       "Diversity could not be calculated. The Analyses step says why.",
     ]);
+    // An error under another key is not the end of this request.
+    const otherKey = state({
+      project: READY,
+      statuses: [failed(KEY_B), LOCKED],
+    });
+    expect(announcementsOf(before, otherKey, title)).toEqual([]);
   });
 
   test("a current request being stopped that left runs is stopped", () => {
@@ -893,6 +933,26 @@ describe("WS9 D1 the announcements made from the state", () => {
     ).toEqual([
       "panel.nei read: 3 individuals, ploidy 2. All 3 individuals found.",
     ]);
+  });
+
+  test("the variants file of the same load read while the metadata file is being read, or failed, has no check", () => {
+    for (const table of [PENDING, EMPTY_FILE]) {
+      const before = project({
+        variants: variants(PENDING),
+        individuals: individuals(table),
+      });
+      const after = project({
+        variants: variants(READ),
+        individuals: individuals(table),
+      });
+      expect(
+        announcementsOf(
+          state({ project: before }),
+          state({ project: after }),
+          title,
+        ),
+      ).toEqual(["panel.nei read: 3 individuals, ploidy 2."]);
+    }
   });
 
   test("the variants file of the same load failed gives the reason of the project", () => {
@@ -1062,6 +1122,30 @@ describe("WS9 D1 the announcements made from the state", () => {
     ).toEqual([`Warning: ${String(warning)}`]);
   });
 
+  test("the warning of a reopened project that appears at the read of its load is announced after the read", () => {
+    // Made with the file of the same name, size and format, with two
+    // individuals: the file given differs only once it is read.
+    const reference = {
+      variants: variants(readOf(["i1", "i2"])),
+      checks: [],
+    };
+    const pending = project({ reference, variants: variants(PENDING) });
+    const read = project({ reference, variants: variants(READ) });
+    expect(identityWarning(pending)).toBeNull();
+    const warning = identityWarning(read);
+    expect(warning).toMatch(/this file has 3 individuals/);
+    expect(
+      announcementsOf(
+        state({ project: pending }),
+        state({ project: read }),
+        title,
+      ),
+    ).toEqual([
+      "panel.nei read: 3 individuals, ploidy 2.",
+      `Warning: ${String(warning)}`,
+    ]);
+  });
+
   test("the warning of a reopened project made longer by the read of its load, or kept through a change of the filter, is not announced again", () => {
     const pending = project({ ...OPENED, variants: variants(PENDING) });
     const read = project({ ...OPENED, variants: variants(READ) });
@@ -1094,5 +1178,20 @@ describe("WS9 D1 the announcements made from the state", () => {
         title,
       ),
     ).toEqual([]);
+    // The same with the encoding, and with the decimal mark.
+    for (const options of [
+      { ...AUTO, encoding: "windows-1252" },
+      { ...AUTO, decimal: "," },
+    ] as const) {
+      expect(
+        announcementsOf(
+          state({
+            project: project({ individuals: individuals(PENDING, options) }),
+          }),
+          state({ project: after }),
+          title,
+        ),
+      ).toEqual([]);
+    }
   });
 });

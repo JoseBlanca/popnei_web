@@ -165,6 +165,27 @@ describe("WS9 D2 the saving", () => {
     expect(read.value.reference?.variants.name).toBe("panel.nei");
   });
 
+  test("read by a saving of association refuses a project file of population genetics as otherApp", () => {
+    const { store, downloads, saving } = setup();
+    saving.save("panel");
+    const [saved] = downloads;
+    if (saved === undefined) throw new Error("nothing downloaded");
+    const association = createSaving({
+      store,
+      app: "gwas",
+      analyses: POPGEN_ANALYSES,
+      appVersion: "0.1.0",
+      download: () => {
+        throw new Error("the test saves nothing with association");
+      },
+    });
+
+    expect(association.read(saved.text)).toEqual({
+      ok: false,
+      error: { kind: "project", error: { kind: "otherApp", found: "popgen" } },
+    });
+  });
+
   test("read of a project file of association refuses it as otherApp", () => {
     const { downloads, saving } = setup();
     saving.save("panel");
