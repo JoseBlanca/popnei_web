@@ -415,6 +415,34 @@ describe("VS4 D2 the histogram, under jsdom", () => {
     expect(numberOf(left, "height")).toBe(numberOf(right, "height"));
   });
 
+  test("a threshold of 1.2, right of the bins, keeps every bar, and one of -0.1, left of them, removes every bar", () => {
+    const keptAll = histogramOf(MAF_COUNTS, 1.2);
+    expect(binsIn(keptAll, "kept")).toEqual({
+      bins: range(0, 39),
+      count: 1200,
+    });
+    const removedAll = histogramOf(MAF_COUNTS, -0.1);
+    expect(binsIn(removedAll, "removed")).toEqual({
+      bins: range(0, 39),
+      count: 1200,
+    });
+    const classesAt = (data: HistogramData): (string | null)[] => {
+      const element = sizedElement(600, 375);
+      createHistogram(element, data);
+      return [...svgOf(element).querySelectorAll("rect.chart-bar")].map((bar) =>
+        bar.getAttribute("class"),
+      );
+    };
+    const kept = classesAt(keptAll);
+    expect(kept).toHaveLength(20);
+    for (const name of kept) expect(name).toBe("chart-bar chart-bar-kept");
+    const removed = classesAt(removedAll);
+    expect(removed).toHaveLength(20);
+    for (const name of removed) {
+      expect(name).toBe("chart-bar chart-bar-removed");
+    }
+  });
+
   test("with a threshold, the legend has its three rows, text before the mark at the right of the frame", () => {
     const element = sizedElement(600, 375);
     createHistogram(element, histogramOf(MAF_COUNTS, 0.95));

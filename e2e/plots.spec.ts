@@ -425,6 +425,57 @@ test("VS4 D3 toPNG draws nothing until the fonts of the page are ready", async (
   expect(waiting.type).toBe("image/png");
 });
 
+test("VS4 D3 a change of theme while the plot is on the screen draws nothing again, and a later toSVG is light", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await openPlots(page);
+  await draw(page, 600, 375);
+  const found = await page.evaluate(async () => {
+    const svg = window.plotsPage.element().querySelector("svg");
+    if (svg === null) throw new Error("The plot has no SVG.");
+    const kept = svg.querySelector(".chart-bar-kept");
+    if (kept === null) throw new Error("The plot has no kept bar.");
+    const lightFill = getComputedStyle(kept).fill;
+    let mutations = 0;
+    const observer = new MutationObserver((records) => {
+      mutations += records.length;
+    });
+    observer.observe(svg, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      characterData: true,
+    });
+    document.documentElement.dataset["theme"] = "dark";
+    // Two frames of the screen, in which a redraw would have run.
+    for (let frame = 0; frame < 2; frame += 1) {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    }
+    observer.disconnect();
+    const darkFill = getComputedStyle(kept).fill;
+    const file = new DOMParser().parseFromString(
+      window.plotsPage.handle().toSVG(),
+      "image/svg+xml",
+    );
+    return {
+      lightFill,
+      darkFill,
+      mutations,
+      exported: [...file.querySelectorAll(".chart-bar-kept")].map(
+        (bar) => bar.getAttribute("style") ?? "",
+      ),
+    };
+  });
+  expect(found.lightFill).toBe(LIGHT_BAR);
+  expect(found.darkFill).toBe(DARK_BAR);
+  expect(found.mutations).toBe(0);
+  expect(found.exported).toHaveLength(18);
+  for (const style of found.exported) {
+    expect(style).toContain(`fill: ${LIGHT_BAR}`);
+  }
+});
+
 test("VS4 D3 a resize draws the plot again at its new size, and after destroy the element is empty", async ({
   page,
 }) => {
