@@ -595,6 +595,54 @@ test("WS9 D3 a project that cannot be written: Save closes its dialog and the ba
   await expectNoViolations(makeAxeBuilder);
 });
 
+test("WS9 D3 the error bar's Save after a Copy that failed keeps the box of the details, and a second Save writes its words again", async ({
+  page,
+}) => {
+  await openPopgen(page);
+  await loadPanelNei(page);
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "clipboard", { value: undefined });
+    setTimeout(() => {
+      throw new Error("test");
+    });
+  });
+  await page.getByRole("button", { name: "Copy the details" }).click();
+  const box = page.getByRole("textbox", { name: "The details of the errors" });
+  await expect(box).toBeVisible();
+  const barStatus = page.getByRole("status").first();
+  await expect(barStatus).toHaveText(
+    "The details could not be copied. Select them in the box below and copy them.",
+  );
+  // Every text the bar's status region holds, in order, the empty one
+  // among them.
+  await page.evaluate(() => {
+    const region = document.querySelector('#defects [role="status"]');
+    if (region === null) throw new Error("no status region in the bar");
+    const texts: string[] = [];
+    Object.assign(window, { barTexts: texts });
+    new MutationObserver(() => {
+      texts.push(region.textContent);
+    }).observe(region, { childList: true, subtree: true, characterData: true });
+  });
+  const handed = "panel.popnei.json was handed to the browser to download.";
+
+  await page.getByRole("button", { name: "Save the project" }).click();
+  await expect(barStatus).toHaveText(handed);
+  await expect(box).toBeVisible();
+  await page.getByRole("button", { name: "Save the project" }).click();
+
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        (window as unknown as { barTexts: string[] }).barTexts.filter(
+          (text) => text !== "",
+        ),
+      ),
+    )
+    .toEqual([handed, handed]);
+  await expect(barStatus).toHaveText(handed);
+});
+
 test("WS9 D3 under the diversity's table, a VCF read with every variant is told why its numbers are not compared, and read again as the project was, the same numbers, and axe", async ({
   page,
   makeAxeBuilder,

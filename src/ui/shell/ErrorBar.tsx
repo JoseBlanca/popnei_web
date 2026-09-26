@@ -13,7 +13,7 @@
  * is heard then too; its buttons are inert with the page until the dialog
  * closes.
  */
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import type { Store } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
@@ -38,15 +38,45 @@ export interface ErrorBarProps {
   readonly appVersion: string;
 }
 
-/** What the bar's buttons did last: nothing, Copy the details, or Save
-    the project with the words of what it did. */
-type Copying =
-  | { readonly kind: "idle" }
-  | { readonly kind: "copied" }
-  | { readonly kind: "failed" }
-  | { readonly kind: "saved"; readonly text: string };
+/** What the bar's status region says after Copy the details. */
+const COPIED = "The details were copied.";
+const NOT_COPIED =
+  "The details could not be copied. Select them in the box below and copy them.";
 
-const IDLE: Copying = { kind: "idle" };
+/**
+ * The text of the bar's status region, and `say`, which empties it and
+ * writes `text` a frame later: a screen reader reads a text written
+ * again only if it changed, so a second Save, which gives the same words,
+ * would otherwise not be heard; and `clear`, which empties it.
+ */
+function useSaid(): {
+  readonly said: string;
+  readonly say: (text: string) => void;
+  readonly clear: () => void;
+} {
+  const [said, setSaid] = useState("");
+  const pending = useRef<number | null>(null);
+  const cancel = (): void => {
+    if (pending.current !== null) cancelAnimationFrame(pending.current);
+    pending.current = null;
+  };
+  useEffect(() => cancel, []);
+  return {
+    said,
+    say: (text) => {
+      cancel();
+      setSaid("");
+      pending.current = requestAnimationFrame(() => {
+        pending.current = null;
+        setSaid(text);
+      });
+    },
+    clear: () => {
+      cancel();
+      setSaid("");
+    },
+  };
+}
 
 /** The error bar: empty regions until the first error, then its words
     and its buttons. */
@@ -65,7 +95,10 @@ export function ErrorBar({
     store?.subscribe ?? subscribeToNothing,
     () => store?.getState().popneiVersion ?? null,
   );
-  const [copying, setCopying] = useState<Copying>(IDLE);
+  const { said, say, clear } = useSaid();
+  // Whether the box of the details is shown, after a copy that failed,
+  // until the bar is closed: a Save after it keeps it.
+  const [boxShown, setBoxShown] = useState(false);
   const details = detailsText(defects.details(), popneiVersion, appVersion);
 
   async function copyDetails(): Promise<void> {
@@ -74,15 +107,17 @@ export function ErrorBar({
       // navigator.clipboard is missing on a page served over plain HTTP
       // from another machine, and the call then throws.
       await navigator.clipboard.writeText(text);
-      setCopying({ kind: "copied" });
+      say(COPIED);
     } catch {
-      setCopying({ kind: "failed" });
+      setBoxShown(true);
+      say(NOT_COPIED);
     }
   }
 
   function close(): void {
     defects.dismiss();
-    setCopying(IDLE);
+    clear();
+    setBoxShown(false);
     moveFocusAfterClose();
   }
 
@@ -106,10 +141,7 @@ export function ErrorBar({
             <Button
               label="Save the project"
               onPress={() => {
-                setCopying({
-                  kind: "saved",
-                  text: saveFromBar(saving, defects),
-                });
+                say(saveFromBar(saving, defects));
               }}
             />
           )}
@@ -127,9 +159,9 @@ export function ErrorBar({
         data-live-announcer="true"
         className={classOf(styles, "status")}
       >
-        {statusText(copying)}
+        {said}
       </p>
-      {copying.kind === "failed" && (
+      {boxShown && (
         <label className={classOf(styles, "details")}>
           The details of the errors
           <textarea readOnly rows={8} value={details} />
@@ -153,20 +185,6 @@ function moreText(more: number): string {
   return more === 1
     ? "1 more error followed it."
     : `${String(more)} more errors followed it.`;
-}
-
-/** What the bar's status region says after Copy the details. */
-function statusText(copying: Copying): string {
-  switch (copying.kind) {
-    case "idle":
-      return "";
-    case "copied":
-      return "The details were copied.";
-    case "failed":
-      return "The details could not be copied. Select them in the box below and copy them.";
-    case "saved":
-      return copying.text;
-  }
 }
 
 /** What Copy the details copies, for a report of the bug: the page, the
