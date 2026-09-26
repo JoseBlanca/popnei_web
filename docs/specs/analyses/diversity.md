@@ -1272,7 +1272,9 @@ three columns (point D there again), was settled by the owner with the
 approval of this spec: `calcPerVarDistribs` of the same release, and
 `calcPopDiversity` in stage 5.
 
-Opened by the revision of stage 3:
+Opened by the revision of stage 3, and gathered with the other open
+points of that stage in `docs/specs/stage-3-open-points.md` as its point
+B:
 
 1. **The thresholds on the individuals leave no individual that has a
    population, while the filters keep some.** The list is known only once

@@ -968,7 +968,9 @@ check with its own (point E there).
    those of this spec. Another answer changes those texts and their tests
    and nothing else.
 
-2. **The version of the format in stage 3.** The architecture approved on
+2. **The version of the format in stage 3.** Point E of
+   `docs/specs/stage-3-open-points.md`, where the open points of the
+   specs of stage 3 are gathered. The architecture approved on
    26 September 2026 has version 2 from stage 3, adding the regions of a
    BED file and their filter and refusing filters of the variants out of
    their order (its section 12); the regions wait for popnei's release

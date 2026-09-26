@@ -995,7 +995,8 @@ of them changes those texts and their tests, and nothing else.
 
 2. **How the user is told to fix a list of individuals that is empty,
    names one more than once, or names individuals not in the variants
-   file.** Written again for stage 3, now that the Variants step has the
+   file.** Point D of `docs/specs/stage-3-open-points.md`, where the
+   open points of the specs of stage 3 are gathered. Written again for stage 3, now that the Variants step has the
    controls of the filters of individuals, with the ends the first draft
    of this spec had, "Add individuals to it, or remove the filter, in the
    Variants step." for an empty list and "Change the list, or remove the
