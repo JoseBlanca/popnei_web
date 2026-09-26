@@ -117,7 +117,7 @@ cannot read.
 
 | code | when | the text |
 |---|---|---|
-| `variantsWithoutCalls` | the counts of a histogram sum to fewer than `numVars` | "12 of the 1,200 variants of panel.nei have no called genotype, and are in none of the histograms. The missing data filter removes them." |
+| `variantsWithoutCalls` | the counts of a histogram sum to fewer than `numVars` | "12 of the 1,200 variants of panel.nei have no called genotype, and are in none of the histograms. The filter by observed heterozygosity, the MAF filter and the LD pruning remove them at any threshold, and the missing data filter at any threshold below 1." |
 
 Every value is from 0 to 1, inside the range of the bins, so a variant
 missing from the counts is one with no value. The warning reads the
@@ -125,7 +125,12 @@ counts of the MAF, which has a value wherever one allele is called. The
 observed heterozygosity reads whole genotypes: a variant whose only calls
 are `0/.` and `1/.` had a MAF and an expected heterozygosity and no
 observed one (node, 26 September 2026, `js-v0.1.0-dev.2`), a case too
-rare to warn of apart, which the help mentions.
+rare to warn of apart, which the help mentions. The last sentence of the
+warning is what popnei's filters did in node on 26 September 2026 with
+`js-v0.1.0-dev.2`, on a VCF of three variants whose second is `./.` in
+every individual: the missing data filter kept it at 1 and dropped it at
+0.99, and the filter by heterozygosity and the MAF filter at 1, and the
+LD pruning at an r² of 1, each dropped it.
 
 ### The check numbers
 
@@ -215,7 +220,10 @@ twenty zeros and then `69, 75, 62, 71, 60, 74, 72, 83, 70, 68, 64, 83,
 observed heterozygosity `0, 4, 9, 18, 20, 25, 30, 34, 50, 61, 53, 69, 62,
 84, 89, 101, 113, 102, 108, 58, 62, 27, 14, 5, 2` and fifteen zeros. The
 check numbers are `[1200, 0.7163445463101891, 0.35429523451520484,
-0.3754712450806149]`. The flow reads the mean of the MAF on the screen to
+0.3754712450806149]`. The descriptions of the MAF at 0.95 and of the
+observed heterozygosity at 0.5, made from these counts, are the two of
+`docs/specs/charts/histogram.md`, "The numbers without the picture",
+asserted whole with Vitest. The flow reads the mean of the MAF on the screen to
 four decimals, 0.7163, and sees it stay when the missing data filter
 changes.
 
@@ -235,10 +243,12 @@ filter by heterozygosity is marked on its histogram when the filter is
 on. Each has the table of its bins beside it, from `histogramRows`, a
 description in the form of the histogram's spec, "The major allele
 frequency of 1,200 variants, in 40 bins from 0 to 1. The threshold 0.95
-keeps bins up to 0.95 and removes 2 bins above it.", and the two buttons
+keeps the 38 bins up to it, 1,175 variants, and removes the 2 bins above
+it, 25 variants.", and the two buttons
 of its export, "Download as SVG" and "Download as PNG", which save
 `panel.variant_maf.svg`, `panel.variant_obs_het.svg` and
-`panel.variant_exp_het.svg`, or `.png`, with the line of the versions
+`panel.variant_exp_het.svg`, or `.png`, with the line of the versions,
+"Calculated with popnei 0.1.0, in version 0.1.0 of the application."
 (point C of `docs/specs/stage-3-open-points.md`, the buttons there
 meanwhile).
 
@@ -252,7 +262,7 @@ meanwhile).
 | running | the bar and the clock, as the diversity's | Stop |
 | done | the three histograms, the warning above them | download |
 | results removed | only a new load, or its undo, removes them: "The histograms of the variants were removed because a new variants file was loaded. …", in the words of the diversity's table | Calculate; Undo or Redo |
-| error | the words of the diversity's error table, "the diversity" replaced by "the histograms of the variants" | as in the diversity |
+| error | the words of the diversity's error table, "the diversity" replaced by "the histograms of the variants", and "Run it again" and "to run it again" by "Calculate them again" and "to calculate them again", since this part has a Calculate button and no Run | as in the diversity |
 
 ### Its words
 

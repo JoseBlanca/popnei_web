@@ -740,6 +740,11 @@ definition, on frozen projects, as
   as a literal.
 - **`diversityCsv`** of the result of the flow gives the text of "What it
   shows", below, as a literal; a population named `a,"b"` is quoted.
+- **The words of the statistics that failed**: the error of the store
+  with `ofStatistics` and popnei's message of the empty pass of the
+  missing data filter at 0.05 and the MAF filter at 0.4 on `panel.nei`
+  gives the first row of "Its words", below, whole, and not the row of
+  the empty pass of the diversity.
 - **`refusalText`** of each row of its table in "Its words", below, with
   popnei's messages as literals: the pass over a VCF with no variant,
   "the pass gave no variant and its source holds none: a statistic of a
@@ -1021,6 +1026,7 @@ error state, by what the store gives:
 
 | the failure | the text |
 |---|---|
+| the statistics of each individual that a Run waited for were refused by popnei, or failed, which the store gives as the failure of the statistics, `ofStatistics` (`docs/specs/core/store.md`, "The state of an analysis") | "The statistics of each individual, which the thresholds of the filters of individuals are applied to, could not be calculated, so the diversity was not run. ", then the words the part of the statistics gives that failure, `refusalText` of `docs/specs/analyses/individualChecks.md` for a refusal of popnei: "… The filters kept none of the variants of panel.nei, so there is no variant to count each individual's genotypes over. Loosen the filters of the variants in the Variants step." The rows below are never given the message of the statistics, which would name the diversity for a calculation that was not its own |
 | popnei refused a pass over a variants file that holds no variant: its message starts with "the pass gave no variant and its source holds none", and the file is a `.nei` file or a VCF read with every variant | "empty.vcf has no variants, so there is no variant to calculate the diversity over. Load another variants file in the Variants step." |
 | the same refusal, of a VCF read with only the variants that passed its filters, `onlyPassed` | "failed.vcf has no variant with PASS or . in its FILTER column, and it was read with only those, so there is no variant to calculate the diversity over. Untick "Only the variants with PASS or . in the FILTER column" in the Variants step and read the file again." |
 | popnei refused an empty pass: its message starts with "the pass gave no variant:", with the colon, which the refusal of a source that holds none does not have at that place | "The filters kept none of the variants of panel.nei, so there is no variant to calculate the diversity over. Loosen the filters in the Variants step." |
@@ -1062,7 +1068,7 @@ and there refused at a diploid one, as the review of task 9.7 of the
 plan found on 26 September 2026. The option not taken was a change to
 popnei that tells the two apart.
 
-`refusalText` of the module makes the first seven, the message without
+`refusalText` of the module makes the seven after the first, the message without
 its full stop as `project.md` shows popnei's messages. A VCF is refused
 at the first pass and not at its open for its ploidy and for a line it
 cannot read, since popnei

@@ -309,9 +309,11 @@ the last bin.
 
 ### How it runs
 
-One pass over the file in the calculation worker. The result is 16 bytes
-per individual, 160 KB at 10,000 individuals, in the cache of the page,
-so a restart of the worker does not lose it.
+One pass over the file in the calculation worker. The result is two
+numbers of 8 bytes per individual and its name, which the cache counts
+at 2 bytes per character (`docs/specs/core/cache.md`), so 32 bytes for a
+name of eight characters, 320 KB at 10,000 such individuals; it is in
+the cache of the page, so a restart of the worker does not lose it.
 
 ### How it is verified
 
@@ -342,7 +344,17 @@ With Vitest, at the functions of the definition, on frozen projects:
 - **`individualChecksCsv`** of the worked example gives, as a literal,
   the header and three rows, with an empty cell for i3's heterozygosity.
 - **`refusalText`** of each row of "Its words", below, with popnei's
-  messages as literals.
+  messages as literals: the empty pass of the missing data filter at
+  0.05 and the MAF filter at 0.4 on `panel.nei`, whose message popnei
+  gave in node on 26 September 2026 as "the pass gave no variant: its
+  source gave 1200 and the steps kept none of them, the `missing_data`
+  filter was given 1200 and kept 1152, the `maf` filter was given 1152
+  and kept 0; a statistic of a pass is calculated over the variants it
+  gives", gives the row of the filters that keep no variant.
+- **The description** of the histogram of the proportion of missing
+  genotypes at 0.03, above, asserted whole from the counts of
+  `binValues` below; the bin from 0.029947916666666668 to
+  0.03129340277777778 is the one split.
 
 The numbers of the Playwright flow and of the runner's test in node, on
 `e2e/fixtures/panel.nei`, 1,200 variants of 200 diploid individuals, got
@@ -356,6 +368,17 @@ the check numbers `[1152, 0.028472222222222204, 0.3541326613885106]`.
 With no filter, `s000` is 0.028333333333333332 and 0.3653516295025729,
 over 1,200 variants. The flow shows s000 to four decimals, 0.0260 and
 0.3672, and the same after an undo, with no calculation.
+
+The flow of the Variants step, with Playwright in Chromium, Firefox and
+WebKit (`docs/specs/steps/variants.md`, "How it is checked"), also goes
+through what only a browser shows here: the table sorted with the
+keyboard alone, the Tab key into the table, the arrow keys to the header
+Proportion of missing genotypes and Enter twice, which puts `s082` first,
+0.0434, the largest of `panel.nei` with the missing data filter at 0.05;
+the CSV downloaded, `panel.individual_stats.csv`, its header and 200
+rows, `s000` with 0.026041666666666668 and 0.3672014260249554; and each
+of the two histograms downloaded as SVG and as PNG, under the names
+above, the PNG three times the size of the plot on the screen.
 
 ## The panel
 
@@ -374,7 +397,11 @@ are calculated:
   heterozygosity, from `individualRows`, and Kept, which says in words,
   "kept" or "removed", whether the filters of individuals keep the
   individual, from the list of `individualsKept` that the store gives;
-  the column is left out while no filter of individuals is set. Which
+  the column is left out while no filter of individuals is set. It is
+  left out too while `individualsKept` is `null`, when a list of
+  individuals names one twice or one not in the file, which popnei would
+  refuse, and a line above the table says why: "Which individuals are
+  kept is shown once the lists of individuals above are corrected." Which
   filter removed an individual is read in its numbers beside it, and how
   many each filter removed beside the filter
   (`docs/specs/steps/variants.md`). The numbers to four decimals, NaN as "no value",
@@ -382,7 +409,10 @@ are calculated:
   statistics of the 200 individuals of panel.nei, over the 1,152 variants
   the filters kept." The table is sorted by any column, since finding the
   worst individuals is what it is for; React Aria's `Table`, which the
-  diversity left for the sortable tables of later stages.
+  diversity left for the sortable tables of later stages. An individual
+  with "no value" sorts after every number, in both directions, so that
+  a sort by heterozygosity, from the highest, starts with the highest
+  that were counted; Kept sorts "kept" before "removed".
 - **Two histograms**, of the proportion of missing genotypes and of the
   observed heterozygosity, drawn by the histogram of
   `docs/specs/charts/histogram.md` from the bins of `binValues`, above,
@@ -392,11 +422,14 @@ are calculated:
   called genotype are not in the histogram." Each has the table of its
   bins beside it, from `histogramRows`, a description in the form of the
   histogram's spec, "The proportion of missing genotypes of 200
-  individuals, in 20 bins from 0.0165 to 0.0434. The threshold 0.03 keeps
-  bins up to 0.03 and removes 9 bins above it.", and the two buttons of
+  individuals, in 20 bins from 0.0165 to 0.0434. The threshold 0.03
+  keeps the 10 bins up to it, 125 individuals, splits the bin from
+  0.0299 to 0.0313, 23 individuals, and removes the 9 bins above it, 52
+  individuals.", and the two buttons of
   its export, "Download as SVG" and "Download as PNG", which save
   `panel.individual_missing_rate.svg` and `panel.individual_obs_het.png`
-  and their pairs, with the line of the versions (point C of
+  and their pairs, with the line of the versions, "Calculated with
+  popnei 0.1.0, in version 0.1.0 of the application." (point C of
   `docs/specs/stage-3-open-points.md`, the buttons there meanwhile).
 - **A download**, "Download the table as CSV", which saves
   `panel.individual_stats.csv`, the stem of the variants file
@@ -433,11 +466,17 @@ a redo "Undone: the MAF filter changed. The statistics of each individual
 were removed; Redo brings back …". Its `resultName` is "the table".
 
 The error state has the words of the diversity's table, "Its words", with
-"the diversity" replaced by "the statistics of each individual", and one
+"the diversity" replaced by "the statistics of each individual", "Run it
+again" and "to run it again" by "Calculate them again" and "to calculate
+them again", since this part has a Calculate button and no Run, and one
 row more precise: the filters keep no variant, "The filters kept none of
 the variants of panel.nei, so there is no variant to count each
-individual's genotypes over. Loosen the filters of the variants in this
-step."
+individual's genotypes over. Loosen the filters of the variants in the
+Variants step." The words name the step although the part is in it,
+since the diversity's panel, on the Analyses step, shows these words
+when the statistics it waited for fail
+(`docs/specs/analyses/diversity.md`, "Its words"); `refusalText` of
+this module makes them for both.
 
 The help, for the drawer of stage 8: what each number is, over which
 variants and why; that a high heterozygosity flags a mixed or

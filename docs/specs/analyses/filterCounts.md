@@ -37,10 +37,13 @@ project, and it reaches the cache in two ways, with the same shape
   dropped them all: every calculation of popnei refuses an empty pass,
   and gives no counts then.
 - **Every other pass over the project's filters fills it.** When a result
-  arrives whose pass had the filters of the variants of its project, the
-  store puts its counts into the cache under this analysis's key for that
-  project, as a result of this analysis. So after a diversity, the counts
-  of its filters are there with no Count.
+  arrives of an analysis whose pass puts on the `Variants` the filters of
+  the variants of its project, and none of its own, the store puts its
+  counts into the cache under this analysis's key for that project, as a
+  result of this analysis. So after a diversity, the counts of its
+  filters are there with no Count. Which results those are is told by the
+  analysis of the result, below, and not by comparing the filters of its
+  pass with the project's.
 
 ### What goes into its key
 
@@ -95,13 +98,14 @@ function that only counts if it is much longer.
 `countsOf` of `src/core/apps.ts`, which replaces `numVarsOf`
 (`docs/specs/entry.md`), gives, of a result, the number of variants of
 the file, `varsProcessed` of its first filter or `numVars` when it has
-none, and its counts when its pass had the filters of the variants of the
-project of its request:
+none, and its counts when its analysis is one whose pass has the filters
+of the variants of the project of its request, by the `analysis` of the
+result:
 
 | the result | the counts |
 |---|---|
 | the diversity, the statistics of each individual, the written file, this analysis | given: each pass has the project's filters of the variants; the filter of individuals of the diversity and of the file changes no count |
-| the histograms of the variants | not given: their pass has no filter |
+| the histograms of the variants | not given: their pass has no filter, whatever the project's; with no filter of the variants in the project their counts would be those of a Count, and they are not given then either, so that one rule, by the analysis, decides |
 | the PCA, stage 4 | not given: it merges its own MAF filter with the project's (`docs/specs/worker/protocol.md`) |
 
 The store makes of the counts the result `{ analysis: "filterCounts",
@@ -113,7 +117,7 @@ result.
 
 | code | when | the text |
 |---|---|---|
-| `filterKeptNone` | a filter kept no variant; the first such | "The MAF filter kept none of the 1,152 variants it was given, so no analysis can run over these filters. Loosen it, or a filter before it." |
+| `filterKeptNone` | a filter kept no variant; the first such | "The MAF filter kept none of the 1,152 variants it was given, so the analyses and the statistics of each individual have no variant to calculate over, and a file written would hold none. Loosen it, or a filter before it." |
 | `noVariant` | the file gave no variant, `numVars` 0 with no filter or the first filter given 0 | the words of the diversity for a file with no variant, "empty.vcf has no variants. Load another variants file.", and, for a VCF read with only the variants that passed, "failed.vcf has no variant with PASS or . in its FILTER column, and it was read with only those. Untick …" |
 
 The names of the filters are those of the step's labels,
@@ -175,8 +179,13 @@ export function filterCountRows(r: FilterCountsResult, p: Project): readonly Fil
 ### The cases
 
 - **The filters keep no variant.** Count gives the counts, with
-  `filterKeptNone`; no analysis can run, and each that tries is refused
-  by popnei with its own words.
+  `filterKeptNone`. Every analysis that reads the filters of the
+  variants, and the statistics of each individual, is refused by popnei,
+  each with its own words; the histograms of the variants, which read no
+  filter, still run; and a write gives a file of no variant, 3,594 bytes
+  on `panel.nei` with the missing data filter at 0.05 and the MAF filter
+  at 0.4, which the step does not offer
+  (`docs/specs/analyses/writeVariants.md`).
 - **A threshold moved.** The counts of every filter go, since their key
   holds all of them, and come back with an undo or the next pass.
 - **A threshold moved back.** The key of the earlier filters, and their
@@ -223,7 +232,7 @@ each filter keeps."
 | running | the bar and the clock of the diversity, beside the button | Stop |
 | done | the counts beside the filters, and the warning | change a filter |
 | results removed | cannot happen: the counts are in no notice; a change shows the line of no counts | |
-| error | the words of the diversity's error table, "calculate the diversity" replaced by "count the variants" | as in the diversity |
+| error | the words of the diversity's error table, "calculate the diversity" replaced by "count the variants", and "Run it again" and "to run it again" by "Count again" and "to count again", since this part has a Count button and no Run | as in the diversity |
 
 ### Accessibility
 

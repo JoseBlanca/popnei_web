@@ -29,7 +29,7 @@ The user presses "Write the filtered variants as a .nei file" in the
 Variants step. The calculation worker makes one pass through the filters
 of the variants and the filter of individuals, with popnei's `writeVars`
 of `js/popnei/src/io_vars.ts`, and gives back the file. The step then
-shows a button, "Save panel.filtered.nei, 18.4 MB", which saves it
+shows a button, "Save panel.filtered.nei, 19.2 MB", which saves it
 through the browser's download. The file holds the six columns of a VCF,
 the chromosome, the position, the id, the alleles, the quality and the
 genotypes, of the variants kept and of the individuals kept, in the
@@ -127,7 +127,10 @@ other than the step shows, as section 6 of the architecture has it
 the browser kept the download, so the file is released when Save is
 pressed: a user who cancels the question of a browser that asks where to
 save writes the file again (point A of
-`docs/specs/stage-3-open-points.md`).
+`docs/specs/stage-3-open-points.md`). A file written and not saved that
+a change of the filters, or a new load, releases is gone, and an Undo
+does not bring it back; the notice of that change says so (**Open 1**,
+below).
 
 The name, `writtenName` of `src/core/fileNames.ts` (below, "The
 functions of core"), is the stem of the variants file, `variantsStem` of
@@ -136,7 +139,7 @@ the same module, with `.filtered.nei`: `panel.vcf.gz` gives
 individuals the name is the stem with `.nei`, `panel.nei`, since the
 file is then the variants file converted, which is what the application
 suggests doing once with a VCF (`docs/functionality.md`, section 3). The
-size is `numBytes` as `sizeText` writes it, below: "251 KB", "18.4 MB",
+size is `numBytes` as `sizeText` writes it, below: "251 KB", "19.2 MB",
 "1.2 GB".
 
 ### The size, before the write
@@ -163,9 +166,13 @@ the size it expects before the user writes:
 - **The warning** comes above `WRITE_WARN_BYTES`, a constant of the code
   set by the measurement below; meanwhile 500 MB, whose peak is up to 1.5
   GB. Its words are below.
-- **At an estimate of 4 GB or more from the counts themselves**, not from
-  a bound, the button is disabled with its reason as text beside it,
-  since the write would fail.
+- **At an estimate of `WRITE_MAX_BYTES` or more from the counts
+  themselves**, not from a bound, the button is disabled with its reason
+  as text beside it, since the write would fail. Meanwhile 4 GB, the
+  most wasm addresses; a tab that holds up to 3F at the peak may fail
+  well below it, so the measurement below finds the largest file each
+  engine writes, and `WRITE_MAX_BYTES` is set to the smallest of the
+  three, with the words of its row below.
 
 Once the write has ended, the calculation worker is started again when
 the file is larger than `WRITE_RESTART_BYTES`, a constant of
@@ -174,14 +181,22 @@ memory of wasm the file took, which would otherwise stay until the next
 load, as the owner decided on 26 September 2026 (`docs/architecture.md`,
 section 13, point 5). Meanwhile 100 MB. The restart costs the
 intermediate results the worker held and the reading of the file's
-header, at most 49 ms in the measurement of the walking skeleton.
+header, at most 49 ms from the start of a new worker to the file opened,
+measured at the end of the walking skeleton on the `.nei` file of
+19,161,178 bytes and its VCF, in Chromium 153 and WebKit 26.6 on the
+owner's Mac (`docs/plans/walking-skeleton.report.md`). The worker is
+started again, too, after a write that popnei refused, whatever the
+size of the file, since a refusal for memory leaves the memory of wasm
+grown by the part of the file it had built (`docs/specs/worker/client.md`).
 
 **To be measured**, in the first work package that writes a file, in
 Chromium, Firefox and WebKit, on the `.nei` file of 19,161,178 bytes and
 on one ten times larger (`docs/architecture.md`, section 11): the memory
 of the tab during and after a write, whether each engine copies the array
-into the `Blob`, and the time of the write. They set `WRITE_WARN_BYTES`,
-`WRITE_RESTART_BYTES` and `BYTES_PER_GENOTYPE`.
+into the `Blob`, the time of the write, and the largest file each engine
+writes before the write fails, tried by doubling the variants from the
+file ten times larger. They set `WRITE_WARN_BYTES`, `WRITE_RESTART_BYTES`,
+`WRITE_MAX_BYTES` and `BYTES_PER_GENOTYPE`.
 
 ### The functions of core
 
@@ -189,10 +204,8 @@ The step and the words of the shell read the name, the estimate and the
 sizes from these functions, pure, so that Vitest checks them in node. The
 name goes in `src/core/fileNames.ts`, beside `variantsStem`, since that
 module names every file the application writes; the estimate and the
-sizes in `src/core/writeEstimate.ts`, with the three constants above.
-Neither module is in the list of section 9 of `docs/architecture.md`,
-which names the larger modules of core; `fileNames.ts` was added in
-stage 2 on the same footing.
+sizes in `src/core/writeEstimate.ts`, with the constants above. Both are
+rows of section 9 of `docs/architecture.md`.
 
 ```ts
 // src/core/fileNames.ts
@@ -205,8 +218,8 @@ export function writtenName(p: Project): string;
 // src/core/writeEstimate.ts
 export const BYTES_PER_GENOTYPE = 1;
 export const WRITE_WARN_BYTES = 500_000_000;  // meanwhile; set by the measurement above
-export const WRITE_MAX_BYTES = 4_000_000_000; // under the 4 GiB, 4,294,967,296 bytes, wasm addresses,
-                                              // which hold the variants read too
+export const WRITE_MAX_BYTES = 4_000_000_000; // meanwhile, under the 4 GiB, 4,294,967,296 bytes, wasm
+                                              // addresses, which hold the variants read too; set by the measurement above
 
 export interface WriteEstimate {
   readonly numVars: number;         // the variants the file would hold, or their bound
@@ -227,7 +240,7 @@ export function writeEstimate(
   p: Project, kept: IndividualsKept | null, variantsKept: number | null,
 ): WriteEstimate | null;
 
-/** A size of a file in decimal units: "812 bytes", "251 KB", "18.4 MB", "1.2 GB". */
+/** A size of a file in decimal units: "812 bytes", "251 KB", "19.2 MB", "1.2 GB". */
 export function sizeText(numBytes: number): string;
 ```
 
@@ -259,22 +272,36 @@ GB". It is the same function for the estimate and for the written file.
 - **The filters keep no variant.** `writeVars` does not refuse: on
   `panel.nei` with the missing data filter at 0.05 and the MAF filter at
   0.4 it gave a file of 3,594 bytes and no variant (node, 26 September
-  2026). The step shows no Save button for a file whose `passStats.numVars`
-  is 0, and says so (below); its counts fill `filterCounts`, so the user
-  sees which filter kept none.
+  2026). The store keeps nothing of a file whose `passStats.numVars` is
+  0, and its state `write` is `noVariant` (`docs/specs/core/store.md`),
+  so the step shows no Save button, and says so (below), and the page
+  holds no file that nobody can save; its counts fill `filterCounts`, so
+  the user sees which filter kept none.
 - **The filters keep no individual.** The write is locked by the store,
   since popnei refuses an empty list, with the words below.
 - **A file written and not saved.** The step offers Save, and no second
   write of the same filters, which would give the same file: a new write
   needs another key, a change of the filters, which forgets the file of
-  the one before and releases it.
+  the one before and releases it, and the notice of the change says that
+  the file was discarded and that Undo does not bring it back (**Open
+  1**).
+- **The statistics of each individual that the write waited for fail.**
+  A refusal of popnei, or another failure, of the statistics the write
+  started first, puts the write in the state `error` with that failure,
+  as it does an analysis that reads the filters of individuals
+  (`docs/specs/core/store.md`); Write does nothing after a refusal of
+  popnei, which would come again, and starts the statistics again after
+  another failure.
 - **A write stopped, or left behind and stopped**, gives no file; the
   step shows the button to write again.
 - **A new load of the variants file** stops the write at once, as every
   request in flight (`docs/architecture.md`, section 5).
 - **A project file saved and opened.** Nothing of a write is in it.
-- **The memory of the tab does not take the file.** popnei throws, or the
-  engine does, `workerFailed`; the words below say what to do.
+- **The memory of the tab does not take the file.** popnei refuses the
+  write with a plain `Error`, which the runner answers as a refusal of
+  popnei, or the engine traps, `workerFailed` (`docs/specs/worker/runner.md`,
+  "The written file"); the words of both, below, say what to do, and
+  neither blames the variants file.
 
 ## The step's part
 
@@ -286,27 +313,40 @@ notice and the status region is "Writing the file".
 
 | state | what the user sees | what they can do |
 |---|---|---|
-| locked | the reason of `individualListNeeds` of `docs/specs/core/project.md`, or of the filters keeping no individual, beside the disabled button. While the variants file is not read, when the store locks it with the reason of `projectNeeds`, the part is not drawn, and the step shows the line of a file not read in place of it (`docs/specs/steps/variants.md`, "What it does") | what the reason says |
-| ready | the button, and the estimate: "About 18.4 MB: 20,000 variants of 1,000 individuals." | Write |
+| empty | cannot happen: while the variants file is not read the part is not drawn, and the step shows the line of a file not read in its place (`docs/specs/steps/variants.md`, "What it does") | |
+| locked | the reason of `individualListNeeds` of `docs/specs/core/project.md`, or of the filters keeping no individual, beside the disabled button. While the variants file is not read, when the store locks it with the reason of `projectNeeds`, the part is not drawn, as for empty | what the reason says |
+| ready | the button, and the estimate: "About 20.0 MB: 20,000 variants of 1,000 individuals." | Write |
 | waiting for the statistics | "Calculating the statistics of each individual, which the filters of individuals are set from · 35% · 0:12" | Stop |
 | writing | "Writing panel.filtered.nei · 35% · 0:12", the bar of the diversity | Stop |
-| written, the store's `done` | "Save panel.filtered.nei, 18.4 MB" | Save |
-| saved, the store's `saved` | "panel.filtered.nei, 18.4 MB, was handed to the browser to save. To save it again, write it again." and the button to write | Write |
+| written, the store's `done` | "Save panel.filtered.nei, 19.2 MB" | Save |
+| written with no variant, the store's `noVariant` | the words of a file of no variant, below, and no Save | loosen the filters |
+| saved, the store's `saved` | "panel.filtered.nei, 19.2 MB, was handed to the browser to save. To save it again, write it again." and the button to write | Write |
 | stopped or dropped, the store's `ready` | the button to write, and, when a change dropped it, `dropped`, "The file was not kept, since the filters changed while it was written." | Write |
+| results removed | a file written and not saved, which a change of the filters or a new load discarded: the part is `ready` for the new filters, with the button to write, and the notice of the shell says that the file was discarded and that Undo does not bring it back (`docs/specs/shell.md`, "The notice"; **Open 1**) | Write; the Undo of the notice, which brings the filters back and not the file |
 | error | the words of the failure, below | as the words say |
+
+The estimate of the ready state is 20,000 times 1,000 genotypes at one
+byte each, 20,000,000 bytes, "20.0 MB"; the file popnei writes of them
+is 19,161,178 bytes, "19.2 MB", which the Save button shows.
 
 ### Its words
 
+The sizes in the words are the estimate, "about"; 1.0 GB is a million
+variants of 1,000 individuals at one byte per genotype.
+
 | when | the text |
 |---|---|
-| above `WRITE_WARN_BYTES` | "Warning: a file of about 960 MB may need up to three times that in the memory of this tab while it is written, and a browser may close a tab that asks for too much, losing the work since the project was last saved. Save the project first. To write a smaller file, remove variants or individuals with the filters; to write any size, use popnei in Python." |
-| an estimate of 4 GB or more | "A file of about 4.3 GB cannot be written in a browser tab, which gives popnei at most 4 GB. Remove variants or individuals with the filters, or write the file with popnei in Python." |
+| above `WRITE_WARN_BYTES` | "Warning: a file of about 1.0 GB may need up to three times that in the memory of this tab while it is written, and a browser may close a tab that asks for too much, losing the work since the project was last saved. Save the project first. To write a smaller file, remove variants or individuals with the filters; to write any size, use popnei in Python." |
+| an estimate of `WRITE_MAX_BYTES` or more | "A file of about 4.3 GB cannot be written in a browser tab, which gives popnei at most 4 GB. Remove variants or individuals with the filters, or write the file with popnei in Python." |
 | no counts and no number of variants | "The size of the file is known once the variants are counted: Count, above." |
-| the filters keep no variant | "The filters kept none of the variants of panel.nei, so there is nothing to write. Loosen the filters above." |
+| the filters keep no variant, `noVariant` | "The filters kept none of the variants of panel.nei, so there is nothing to write. Loosen the filters above." |
 | the filters keep no individual | the store's lock, `keptNoneReason` of `docs/specs/core/individualsKept.md`: "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them in the Variants step." |
-| `workerFailed` | "The writing stopped unexpectedly, perhaps because the file, of about 960 MB, did not fit in the memory of this tab. Remove variants or individuals with the filters, or write the file with popnei in Python." |
-| a refusal of popnei, of a line of the VCF | the diversity's words for it, "popnei could not read panel.vcf.gz: ‹its message›. …" |
-| `reopenFailed`, `couldNotStart`, `protocolMismatch`, `defect` | the diversity's words |
+| the worker stopped with no answer, a trap of the wasm or a memory that could not grow, `workerFailed` | "The writing stopped unexpectedly, perhaps because the file, of about 1.0 GB, did not fit in the memory of this tab. Remove variants or individuals with the filters and write it again, or write the file with popnei in Python." |
+| popnei refused the write, for a memory that does not take the file or for a line of the VCF it cannot read, which its message alone tells apart | "panel.filtered.nei could not be written: popnei stopped with "‹its message›". A file of about 1.0 GB may not fit in the memory of this tab: remove variants or individuals with the filters and write it again, or write the file with popnei in Python. If the message names a line of the VCF, correct the file, or fetch it again, and load it in the Variants step." |
+| the statistics of each individual it waited for failed | "The statistics of each individual, which the thresholds of the filters of individuals are applied to, could not be calculated, so the file was not written. ", then the words the statistics' own part gives that failure (`docs/specs/analyses/individualChecks.md`, "Its words"): "… The filters kept none of the variants of panel.nei, so there is no variant to count each individual's genotypes over. Loosen the filters of the variants in the Variants step." |
+| the browser can no longer read the variants file, `reopenFailed` | the diversity's words, "panel.nei could not be read again; it may have changed on the disk since it was picked. Load it again in the Variants step." |
+| the calculations could not start, `couldNotStart`, or the page is out of date after a new version of the site, `protocolMismatch` | the diversity's words, "The application could not start its calculations. Save the project, reload the page, and open the project again." and "The page is out of date. Save the project, reload the page, and open the project again." |
+| an error of the application's own code, `defect` | "The application met an error of its own: ‹message›. Write the file again." |
 
 The help, for the drawer of stage 8: what the file holds; that a `.nei`
 file is read many times faster than a VCF, so converting once is worth
@@ -318,7 +358,7 @@ path)` in Python, which writes to the disk with no such limit.
 The Save button takes the focus when the write ends, if the focus was on
 the button that asked for it, which the write replaces; otherwise the
 focus stays where it is, and the end is announced by the shell's status
-region, "panel.filtered.nei is written, 18.4 MB; Save it in the Variants
+region, "panel.filtered.nei is written, 19.2 MB; Save it in the Variants
 step." The warning says "Warning:" in words (WCAG 2.2, 1.4.1).
 
 ### Left for the running application
@@ -337,7 +377,14 @@ before the user asks.
 - **The store, with Vitest** (`docs/specs/core/store.md`): a change of a
   filter during a write leaves it behind with the words above; a
   calculation asked for stops it; a write that ends after the change is
-  dropped and saves nothing; the counts of a write fill `filterCounts`.
+  dropped and saves nothing; the counts of a write fill `filterCounts`;
+  a write that ends with no variant is `noVariant` and holds no file; a
+  change of the filters while `write` is `done` makes a notice with the
+  file discarded; the statistics it waited for refused put it in `error`,
+  and `startWrite` then returns `null`.
+- **The words, with Vitest**, each row of "Its words" asserted whole
+  from its failure, the two of 1.0 GB and 4.3 GB from estimates of a
+  million and of 4.3 million variants of 1,000 individuals.
 - **`writeEstimate`, with Vitest**: the variants of `variantsKept`, of
   the read with and without a filter of the variants, and none, which
   gives `null`; the individuals of a known list, of `null`, and of
@@ -362,14 +409,15 @@ before the user asks.
 - `docs/specs/worker/runner.md`: the write as above, and the `Blob` made
   in the worker.
 - `docs/specs/worker/client.md`: the restart after a file larger than
-  `WRITE_RESTART_BYTES`.
+  `WRITE_RESTART_BYTES`, and after a write that popnei refused.
 - `docs/specs/core/keys.md`: the key of a write.
 - `docs/specs/core/store.md`: a write tracked as a calculation, with its
   own words in the notice, its wait for the statistics of each
   individual, its late answer dropped, its counts put under
   `filterCounts`, and the `Blob` held as a value it does not read until
-  `writeSaved` forgets it; the states `saved` and `ready` with
-  `dropped`.
+  `writeSaved` forgets it; the states `saved`, `noVariant` and `ready`
+  with `dropped`; the failure of the statistics it waited for as its
+  own; and the file discarded in the notice.
 - `docs/specs/core/individualsKept.md`: the individuals kept, and how
   many.
 - `docs/specs/entry.md`: the download through a link, and the release of
@@ -378,13 +426,29 @@ before the user asks.
 
 ## Open points
 
-None of the owner's. The three constants have their values meanwhile
-above, until the measurement.
+The constants have their values meanwhile above, until the
+measurement. One point is the owner's, point G of
+`docs/specs/stage-3-open-points.md`, where the open points of the specs
+of stage 3 are gathered:
+
+1. **A file written and not saved, which a change discards.** A change
+   of a filter, or a new load, gives the write another key, and the
+   store forgets the file, which the page then releases; one press of an
+   arrow key in a threshold is such a change. Meanwhile, and
+   recommended: the notice of the change says "The written file, not
+   saved, was discarded, and Undo does not bring it back; write it again
+   to save it.", and the user writes it again, one pass over the
+   variants file. The other option keeps the file while the notice is
+   up, so that its Undo brings it back, at the cost of holding the file,
+   about 1 GB for a million variants of 1,000 individuals, for as long
+   as the notice stays, which has no timer.
 
 ## Not in this spec
 
-- The VCF, bgzipped, and the writer by pieces, with popnei's release that
-  has them (`docs/architecture.md`, section 6, "What this asks of
+- The VCF, bgzipped, and the writer by pieces, a writer of popnei that
+  gives the file one batch of variants at a time, so that the memory of
+  wasm holds one batch and not the whole file, with popnei's release
+  that has them (`docs/architecture.md`, section 6, "What this asks of
   popnei"). With the writer by pieces, the peak falls from up to 3F to
   about F, and the warning is measured again.
 - The filtered variants in the report, which leaves them out by default
