@@ -328,8 +328,7 @@ export type MessageError =
       /** The type of what it holds. */
       readonly found: TypeName;
     }
-  /** A list is not as long as what it goes with, or a file not of the
-      size its message gives. */
+  /** A list is not as long as what it goes with. */
   | {
       readonly kind: "wrongLength";
       /** The kind of the message. */
@@ -339,6 +338,19 @@ export type MessageError =
       /** The length it should have. */
       readonly expected: number;
       /** The length it has. */
+      readonly found: number;
+    }
+  /** A field that gives the size of a file of the message, the
+      `numBytes` of a `written`, is not that size. */
+  | {
+      readonly kind: "wrongSize";
+      /** The kind of the message. */
+      readonly messageKind: string;
+      /** The field. */
+      readonly path: string;
+      /** The size of the file, in bytes. */
+      readonly expected: number;
+      /** The number the field holds. */
       readonly found: number;
     }
   /** A `ready` of another `PROTOCOL_VERSION`: a worker of another build. */
@@ -766,6 +778,8 @@ export function describeMessageError(e: MessageError): string {
       return `The field ${e.path} of the message ${e.messageKind} is ${typeWords(e.found)}, not ${e.expected}.`;
     case "wrongLength":
       return `The list ${e.path} of the message ${e.messageKind} has ${String(e.found)} elements, not ${String(e.expected)}.`;
+    case "wrongSize":
+      return `The field ${e.path} of the message ${e.messageKind} is ${String(e.found)}, not the size of its file, ${e.expected.toLocaleString("en-US")} bytes.`;
     case "otherProtocol":
       return `A worker gave version ${String(e.found)} of the messages, and the page is of version ${String(PROTOCOL_VERSION)}: the worker is of another build of the site.`;
   }
@@ -1534,11 +1548,7 @@ function checkWritten(value: unknown, place: Place): Checked<Written<Blob>> {
     return numBytes;
   }
   if (numBytes.value !== file.value.size) {
-    return wrongLength(
-      inner(place, "numBytes"),
-      file.value.size,
-      numBytes.value,
-    );
+    return wrongSize(inner(place, "numBytes"), file.value.size, numBytes.value);
   }
   const passStats = field(record.value, "passStats", place, checkPassStats);
   if (!passStats.ok) {
@@ -2234,6 +2244,16 @@ function wrongType(place: Place, expected: string, value: unknown): Refusal {
 function wrongLength(place: Place, expected: number, found: number): Refusal {
   return refused({
     kind: "wrongLength",
+    messageKind: place.messageKind,
+    path: place.path,
+    expected,
+    found,
+  });
+}
+
+function wrongSize(place: Place, expected: number, found: number): Refusal {
+  return refused({
+    kind: "wrongSize",
     messageKind: place.messageKind,
     path: place.path,
     expected,

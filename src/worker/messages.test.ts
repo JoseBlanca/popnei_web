@@ -1018,13 +1018,27 @@ describe("VS1 D2 the messages of stage 3 refused", () => {
     expect(parseFromRunner(message)).toEqual({
       ok: false,
       error: {
-        kind: "wrongLength",
+        kind: "wrongSize",
         messageKind: "written",
         path: "result.numBytes",
         expected: 3594,
         found: 3593,
       },
     });
+  });
+
+  test("a wrongSize is described as a size in bytes, not as a list", () => {
+    expect(
+      describeMessageError({
+        kind: "wrongSize",
+        messageKind: "written",
+        path: "result.numBytes",
+        expected: 3594,
+        found: 3593,
+      }),
+    ).toBe(
+      "The field result.numBytes of the message written is 3593, not the size of its file, 3,594 bytes.",
+    );
   });
 
   test("a written whose file is an ArrayBuffer", () => {
