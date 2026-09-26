@@ -27,7 +27,7 @@ the start below. On the start, on 26 September 2026, on this Mac:
 
 ## 1. The worker side, in node
 
-The four tasks are committed: 1.1 as 8da15ef, 1.2 as c185d9a, 1.3 as
+Done on 27 September 2026, after its review. The four tasks: 1.1 as 8da15ef, 1.2 as c185d9a, 1.3 as
 8227477 (`worker.md`) and baf39a1, 1.4 as 3da9b64. The review is still to
 come.
 
@@ -182,3 +182,103 @@ D4 13, D5 21 tests; VS2 D1 18, D2 17, D3 15, D4 28.
 - Tokens: the eight tasks used between 101,000 and 292,000 each; the
   five reviewers that read, 109,000 to 226,000; the tests reviewer
   162,000; the two fixers 157,000 and 83,000.
+
+Work packages 1 and 2 are done: on 4a3adee the browser check gave
+"370 passed" (the 348 of the start and the 22 of the plots) and
+`npm test` "1847 passed" in 50 files.
+
+## 4. The histogram
+
+Done on 27 September 2026, after its review. The tasks: 4.1 as 6c24318
+(the dependencies) and aecf63d, 4.2 as 84e4fd9, 4.3 as ee86b0e and
+da016ac.
+
+### The deliverables, on 4a3adee
+
+| deliverable | command | result | asked |
+|---|---|---|---|
+| D1 | `npm ls d3-selection d3-scale d3-axis jsdom` | the four at 3.0.0, 4.0.2, 3.0.0, 30.1.1 | the same |
+| D2 | `npx vitest run src/charts -t "VS4 D1"` | 25 passed | 14 |
+| D3 | the same, `-t "VS4 D2"` | 29 passed | 21 |
+| D4 | the browser check, `-g "VS4 D3"` | 22 passed, 11 in each engine | 14 |
+| D5 | `npm run build`; `POPNEI_TEST_PAGES=1 npm run build`; `npm pkg get scripts.test:e2e` | no file named with "plots"; `dist/e2e/plots.html`; the variable set | the same |
+| D6 | `npx vitest run src/ui/tokens.test.ts`; `grep -c -- "--chart-bar" src/ui/tokens.css` | 39 passed; 3 | 2 |
+
+The packages the lockfile added: at run time d3-array, d3-axis,
+d3-color, d3-format, d3-interpolate, d3-scale, d3-selection, d3-time,
+d3-time-format and internmap; for development the three `@types/d3-*`,
+`@types/d3-time`, jsdom and what jsdom brings. `internmap` is the one
+package the plan does not name: `d3-array` brings it, and `d3-array` is
+on the list of `docs/technology.md`. `docs/technology.md` and
+`charts.md` now record the owner's approval of 26 September of these.
+
+The page's first script, `popgen-*.js`, is 129.51 KB gzipped on
+4a3adee, against 123.62 KB at the start; no screen imports the plots
+yet, so the 5.89 KB are the code of work packages 1 to 3. The plots
+will add 17.82 KB gzipped once a screen draws them (measured by the
+bundle reviewer as a library build of `src/charts`).
+
+### The review
+
+Reviewed by `spec`, `stale`, `errors`, `api`, `architecture` and
+`bundle`, reading at da016ac, then by `tests` and `browser`, each on a
+copy of the tree outside the worktree with a preview server on a port of
+its own. What was fixed, each with a test that failed first:
+
+- A plot with a threshold less than 100 pixels high kept the old bars
+  after an update and exported that mixed state; a plot too small to
+  draw was shown at the browser's default of 300 by 150 pixels, and its
+  error said its element never had a size. A frame with no area now
+  clears the drawing (c0312d2, 84366c3).
+- The first drawing took the size with the padding, and the next one
+  without, so a plot in a padded panel was drawn twice at two sizes
+  (34a2bcb, 286f421).
+- The frame gives its margins, so the legend is not placed by a second
+  reckoning of them (666e5a2, feedfa7).
+- The export waits for the fonts, frees the canvas of each PNG (Safari
+  on iPhone refuses new canvases once too much canvas memory is held),
+  gives every failure as a rejected promise, and gives `notMade` for a
+  failure of `drawImage` (75d7022, 1b1a106, e7d24d1).
+- The page of the plots is built in a second build, so the site's files
+  are those of `npm run build` byte for byte: the sha256 of the 12 site
+  files are the same after both builds, where 7 differed before
+  (a954cbd, 17ea30e, 280ddc7).
+- The tests reviewer made 88 changes to the code, 68 failed a test; the
+  tests of the 19 that passed were added (d892293, 404f1e8, 4a3adee),
+  the worst two a removed bar drawn filled like a kept one, which would
+  leave only the colour to tell them apart, and the exported file
+  losing the strokes of the removed bars and of the threshold line.
+- Doc comments, types and records (c43812d, e5d0d22, 50c4eb5).
+
+Not taken, and why:
+
+- The x axis cannot take its own tick values, which a Manhattan plot
+  will need, one tick at the middle of each chromosome: left for the
+  spec of the Manhattan plot.
+- The limit of a PNG (below, for the owner): the owner's.
+
+### For the owner, before stage 6
+
+The largest PNG the export makes is set by a side of 4,096 pixels
+(`MAX_CANVAS_SIDE`), because Safari on iPhone draws nothing on a larger
+canvas. The limit of Safari on iPhone is an area, 16,777,216 pixels
+(4,096 × 4,096), not a side, and iOS 18 raised it to 8,192 × 8,192
+(from documentation; no iPhone was tried). So the rule is safe, and it
+refuses PNGs every browser could make: a plot wider than 1,365 pixels on
+the screen gets no PNG at 3 times its size, and one wider than 2,048
+gets none. Options: keep the rule (nothing to do; the export is offered
+only in stage 6, and its screen can cap the width of a plot); or check
+the area, width times height at most 16,777,216, with a side of at most
+8,192 (a change of `plot2d.md` and of four tests). Recommended: check
+the area, when stage 6 offers the export.
+
+### How the work of 4 went, for whoever revises a skill or a plan
+
+- The two reviewers that run the page, `tests` and `browser`, each ran
+  on a copy made with `git archive` and a preview server on its own
+  port, beside the tasks of work package 3: no interference.
+- The tasks' own count of the rules broken and caught was 93 of 93; the
+  tests reviewer's changes found 19 of 88 passing, most in what jsdom
+  cannot see (the CSS of the bars, the styles kept in the exported file)
+  and in the exact limits. A task of the plots should be told to test
+  in the browser what jsdom cannot lay out.

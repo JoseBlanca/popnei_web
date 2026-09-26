@@ -338,7 +338,7 @@ sees changes: the page runs as before on the messages of version 2.
   and `.claude/skills/coding/worker.md`, "Reading the files of the user",
   corrected as `messages.md`, "Where this departs from worker.md", asks.
   Serves 4. Needs 1.2.
-- [ ] 1.4 `src/worker/client.ts`: `write`, the restart after a large
+- [x] 1.4 `src/worker/client.ts`: `write`, the restart after a large
   write and after a refused one, `WRITE_RESTART_BYTES`, from `client.md`,
   "A write, and the restart after a large one", and the rows of the
   table of "Crashes, defects, and every read answered" that stage 3
@@ -423,7 +423,7 @@ task 1.1.
   a file written", with its literal: a key that missed a filter would
   let a file of other variants be saved as the one the step shows.
   Serves 3. Needs 1.1.
-- [ ] 2.4 `src/core/histogram.ts`, from `individualChecks.md`, "The bins
+- [x] 2.4 `src/core/histogram.ts`, from `individualChecks.md`, "The bins
   of its histograms"; `writtenName` in `src/core/fileNames.ts` and
   `src/core/writeEstimate.ts`, from `writeVariants.md`, "The functions of
   core". Serves 4. Needs 2.2.
@@ -502,14 +502,14 @@ filter.
 
 **Tasks:**
 
-- [ ] 3.1 `src/core/analyses/individualChecks.ts`, `variantChecks.ts` and
+- [x] 3.1 `src/core/analyses/individualChecks.ts`, `variantChecks.ts` and
   `filterCounts.ts`, from "The module" of each of their specs but the
   key. Serves 1. Needs 1.1 and 2.4.
-- [ ] 3.2 The tests of their keys, in a commit of their own: a key that
+- [x] 3.2 The tests of their keys, in a commit of their own: a key that
   missed a filter of the variants would show the statistics of other
   filters as current, and every analysis after a threshold would then
   run on the wrong individuals. Serves 2. Needs 3.1.
-- [ ] 3.3 The store: the individuals kept, the lock from the cache, and a
+- [x] 3.3 The store: the individuals kept, the lock from the cache, and a
   Run that waits for the statistics, from `store.md`, "The individuals
   kept", "The state of an analysis" and the parts of "The TypeScript
   interface" they use; `WorkerClient.individuals`; the three fakes of
@@ -519,18 +519,18 @@ filter.
   wrong list given to a request shows on no screen, so this is a task of
   its own. Serves 4 and 7. Needs 2.1 and 2.2; can run beside 3.1 and
   3.2.
-- [ ] 3.4 `src/core/analyses/diversity.ts` of stage 3, the parts the
+- [x] 3.4 `src/core/analyses/diversity.ts` of stage 3, the parts the
   opening of `diversity.md` lists: the lock on the filters of
   individuals goes, `populationsKept`, the job with `c.individuals`, the
   result with `passStats`, and its words. Serves 3. Needs 3.3.
-- [ ] 3.5 The store: the counts, `countsOf` and `PassFound` in the place
+- [x] 3.5 The store: the counts, `countsOf` and `PassFound` in the place
   of `numVarsOf`, from `store.md`, "What each filter kept"; and
   `countsOf`, `writeCountsOf` and `individualStatsOf` in
   `src/core/apps.ts`. The entry passes `counts` and `statistics` as
   `null` until task 5.2, since `createStore` refuses the id of an
   analysis the application does not list yet. Serves 5. Needs 3.1 and
   3.3.
-- [ ] 3.6 The store: the write, from `store.md`, "The writing of the
+- [x] 3.6 The store: the write, from `store.md`, "The writing of the
   filtered variants", with `writeKeyOf`, the state `write` and the three
   fields of the notice; `startWriting` in `src/ui/runs.ts`. A file of
   other filters saved as the one the step shows would show on no
@@ -598,10 +598,10 @@ dependencies among it.
   `src/charts/plot2d.ts`, `types.ts`, `ids.ts`, `limits.ts` and the
   skeleton of `charts.css`, from `plot2d.md` but "The export". Serves 1
   and 2.
-- [ ] 4.2 `src/charts/histogram.ts` with `histogramRows`, from
+- [x] 4.2 `src/charts/histogram.ts` with `histogramRows`, from
   `histogram.md` but "The export"; `--chart-bar` in `src/ui/tokens.css`
   and its test. Serves 3 and 6. Needs 4.1.
-- [ ] 4.3 `src/charts/export.ts` with `PngError`, from `plot2d.md`, "The
+- [x] 4.3 `src/charts/export.ts` with `PngError`, from `plot2d.md`, "The
   export", and `charts.md`, "PNG"; `e2e/plots.html` and its script, in
   the `input` of `vite.config.ts` only when `POPNEI_TEST_PAGES` is set;
   the variable in `test:e2e`; the local command of "Before the first
