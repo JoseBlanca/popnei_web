@@ -389,7 +389,10 @@ again.
 ### Saving
 
 **Save project** opens a dialog of the page, as the owner decided on 25
-September 2026: a React Aria `Dialog` headed "Save the project", with a
+September 2026: a React Aria `Dialog` headed "Save the project", with,
+under its heading, the line "The page cannot always ask before it is
+closed, on an iPad or an iPhone among them: save the project before you
+leave." (below, "Before the page is left"), and a
 text field, "File name", that starts at the name `proposedName` of the
 saving gives, `projectFileName` of `src/core/projectFile.ts`: the name
 of the variants file with its ending replaced, `panel.popnei.json` for
@@ -432,6 +435,15 @@ change, as the owner settled with the approval of this spec, though
 after a Save the page does not know that the file was kept. A read recorded is a change too: the source of the file now
 holds what the worker read, which a file saved before it would not hold,
 so the page asks even when the user only picked a file.
+
+The browser does not always let the page ask. Safari on an iPad or an
+iPhone never shows the question, and the browsers show it only once the
+user has clicked or typed in the page, so not after a file only dropped
+on it. The line under the heading of the dialog of Save says so, the
+place the user reads when they save, as the owner decided on 26
+September 2026 (point 9 of the review of work package 9): the review
+recommended the help of Save project, which the walking skeleton does
+not have.
 
 ### Opening
 
@@ -659,7 +671,8 @@ flow of the walking skeleton and beside it (`.claude/skills/coding/testing.md`):
   leaving it raises the browser's question, which Playwright sees as a
   `beforeunload` dialog.
 - Save project opens the dialog with "panel.popnei.json" in its field
-  after `panel.nei` is loaded; Save downloads `panel.popnei.json`, the
+  after `panel.nei` is loaded, and the line under its heading as its
+  description; Save downloads `panel.popnei.json`, the
   text of the status region says so, and the focus is on Save project;
   a name changed to "run1" downloads `run1.popnei.json`, and one
   changed to "run1.json" downloads `run1.popnei.json` too; Cancel downloads
