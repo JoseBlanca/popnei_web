@@ -682,7 +682,7 @@ test("WS8 D2 tetraploid.vcf.gz read with ploidy 2 is refused in the panel's word
   await panel(page).getByRole("button", { name: "Run" }).click();
   await expect(
     panel(page).getByText(
-      "At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. Set the ploidy of the VCF to 4 in the Variants step and read the file again.",
+      "At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. Set the ploidy of the VCF to 4 in the Variants step and read the file again; a file that mixes ploidies, as a haploid X among diploid chromosomes, cannot be read in this version.",
       { exact: true },
     ),
   ).toBeVisible();
