@@ -496,3 +496,23 @@ test("WS9 D3 after an undo that removed the diversity the notice offers Redo, wh
   await goTo(page, "Variants");
   await expect(threshold).toHaveValue("0.5");
 });
+
+test("WS9 D3 the keyboard's Undo, pressed with the focus on the Undo of the notice, undoes the change", async ({
+  page,
+}) => {
+  await openPopgen(page);
+  const threshold = await removeTheDiversity(page);
+
+  await page.keyboard.press("F6");
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  await expect(
+    notice(page).getByRole("button", { name: "Undo", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("ControlOrMeta+z");
+
+  await expect(threshold).toHaveValue("0.1");
+  await expect(status(page)).toHaveText(
+    "Undone: the missing data filter changed.",
+  );
+});

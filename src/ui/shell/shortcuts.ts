@@ -2,10 +2,13 @@
  * The keyboard's Undo and Redo (docs/specs/shell.md, "The header"; react.md,
  * "Keyboard shortcuts"): Ctrl+Z undoes, Ctrl+Shift+Z and Ctrl+Y redo, and
  * on macOS Cmd+Z and Cmd+Shift+Z; except while the focus is in a text
- * field, where they belong to the text, and in a dialog, where they would
- * change the project behind the question it asks. The shell's header
- * listens for them on the window.
+ * field, where they belong to the text, and in a dialog of the shell,
+ * where they would change the project behind the question it asks; the
+ * notice is not such a dialog. The shell's header listens for them on the
+ * window.
  */
+
+import { isInDialog } from "../widgets/dialogMark.ts";
 
 /** What a key pressed does to the project. */
 export type Shortcut = "undo" | "redo";
@@ -60,8 +63,8 @@ const INPUTS_WITHOUT_TEXT: ReadonlySet<string> = new Set([
 ]);
 
 /** Who the keys of Undo and Redo pressed on an element belong to: the
-    project; a text field, whose own undo the browser gives; or a dialog,
-    where they do nothing. */
+    project; a text field, whose own undo the browser gives; or a dialog
+    of the shell, where they do nothing. */
 export type KeysOwner = "project" | "text" | "dialog";
 
 /** Who the keys pressed on `target` belong to. A text field comes first,
@@ -77,8 +80,6 @@ export function ownerOfKeys(target: EventTarget | null): KeysOwner {
   ) {
     return "text";
   }
-  if (target.closest('[role="dialog"], [role="alertdialog"]') !== null) {
-    return "dialog";
-  }
+  if (isInDialog(target)) return "dialog";
   return "project";
 }

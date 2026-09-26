@@ -20,6 +20,7 @@ import {
 } from "react-aria-components";
 
 import { classOf } from "../classOf.ts";
+import { DIALOG_MARK } from "./dialogMark.ts";
 import styles from "./Dialog.module.css";
 
 /** What a dialog is drawn with. */
@@ -62,6 +63,7 @@ export function Dialog({
         <AriaDialog
           role={role}
           className={classOf(styles, "dialog")}
+          {...{ [DIALOG_MARK]: "" }}
           {...(text !== undefined && { "aria-describedby": textId })}
         >
           <Heading slot="title" level={2} className={classOf(styles, "title")}>

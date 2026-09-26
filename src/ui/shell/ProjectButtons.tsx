@@ -32,6 +32,7 @@ import { useSaving } from "../saving.ts";
 import { useStore } from "../store.tsx";
 import { Button } from "../widgets/Button.tsx";
 import { Dialog } from "../widgets/Dialog.tsx";
+import { isInDialog } from "../widgets/dialogMark.ts";
 import { TextField } from "../widgets/TextField.tsx";
 import { useAnnouncer } from "./announcer.tsx";
 import styles from "./ProjectButtons.module.css";
@@ -86,7 +87,7 @@ function isFocusPlaced(opener: Element | null): boolean {
     active !== document.body &&
     active !== opener &&
     active.isConnected &&
-    active.closest('[role="dialog"], [role="alertdialog"]') === null
+    !isInDialog(active)
   );
 }
 
