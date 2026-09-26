@@ -48,35 +48,60 @@ const NOT_COPIED =
  * writes `text` a frame later: a screen reader reads a text written
  * again only if it changed, so a second Save, which gives the same words,
  * would otherwise not be heard; and `clear`, which empties it.
+ *
+ * Each text is written with `failedNow()`, whether the last save failed
+ * when it was written, and `said` gives it only while `failed`, the same
+ * as the bar's first line reads, is still that; a text whose moment has
+ * passed is emptied as the bar is drawn, so that it does not come back.
+ * Its words, "could not be saved" or "handed to the browser", would
+ * otherwise contradict a first line changed by a Save of the header.
  */
-function useSaid(): {
+function useSaid(
+  failedNow: () => boolean,
+  failed: boolean,
+): {
   readonly said: string;
   readonly say: (text: string) => void;
   readonly clear: () => void;
 } {
-  const [said, setSaid] = useState("");
+  const [said, setSaid] = useState<Said>(NOTHING_SAID);
   const pending = useRef<number | null>(null);
   const cancel = (): void => {
     if (pending.current !== null) cancelAnimationFrame(pending.current);
     pending.current = null;
   };
   useEffect(() => cancel, []);
+  // A text written with another state of the saves than the present one
+  // is emptied here, in the drawing, as react.dev's "adjusting some state
+  // when a prop changes" does.
+  const current = said.text === "" || said.failed === failed;
+  if (!current) setSaid(NOTHING_SAID);
   return {
-    said,
+    said: current ? said.text : "",
     say: (text) => {
       cancel();
-      setSaid("");
+      const failedThen = failedNow();
+      setSaid(NOTHING_SAID);
       pending.current = requestAnimationFrame(() => {
         pending.current = null;
-        setSaid(text);
+        setSaid({ text, failed: failedThen });
       });
     },
     clear: () => {
       cancel();
-      setSaid("");
+      setSaid(NOTHING_SAID);
     },
   };
 }
+
+/** A text of the bar's status region, with whether the last save had
+    failed when it was written. */
+interface Said {
+  readonly text: string;
+  readonly failed: boolean;
+}
+
+const NOTHING_SAID: Said = Object.freeze({ text: "", failed: false });
 
 /** The error bar: empty regions until the first error, then its words
     and its buttons. */
@@ -95,16 +120,19 @@ export function ErrorBar({
     store?.subscribe ?? subscribeToNothing,
     () => store?.getState().popneiVersion ?? null,
   );
-  const { said, say, clear } = useSaid();
-  // Whether the box of the details is shown, after a copy that failed,
-  // until the bar is closed: a Save after it keeps it.
-  const [boxShown, setBoxShown] = useState(false);
   // Whether the last save, of the header or of the bar, could not write
   // the project: the first line then no longer says to save.
   const saveFailed = useSyncExternalStore(
     saving?.subscribe ?? subscribeToNothing,
     () => saving?.saveFailed() ?? false,
   );
+  const { said, say, clear } = useSaid(
+    () => saving?.saveFailed() ?? false,
+    saveFailed,
+  );
+  // Whether the box of the details is shown, after a copy that failed,
+  // until the bar is closed: a Save after it keeps it.
+  const [boxShown, setBoxShown] = useState(false);
   const details = detailsText(defects.details(), popneiVersion, appVersion);
 
   async function copyDetails(): Promise<void> {

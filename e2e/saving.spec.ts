@@ -1056,6 +1056,87 @@ test("WS9 D3 a project that cannot be written: Save closes its dialog and the ba
   await expectNoViolations(makeAxeBuilder);
 });
 
+/** The first line of the error bar for the error "test", with the words
+    of a project intact or of one that could not be saved. */
+function barLine(page: Page, saved: boolean): Locator {
+  return page.getByText(
+    saved
+      ? "The application met an error of its own: test. Your project is intact: save it, then reload the page."
+      : "The application met an error of its own: test. Your project could not be saved; copy the details and report them.",
+    { exact: true },
+  );
+}
+
+/** Shows the error bar with the error "test", after panel.nei is read. */
+async function showBar(page: Page): Promise<void> {
+  await openPopgen(page);
+  await loadPanelNei(page);
+  await page.evaluate(() => {
+    setTimeout(() => {
+      throw new Error("test");
+    });
+  });
+  await expect(barLine(page, true)).toBeVisible();
+}
+
+/** Makes the writing of the project file throw, as a defect of the
+    writer would, or, with `broken` false, work again. */
+async function breakWriting(page: Page, broken: boolean): Promise<void> {
+  await page.evaluate((broken) => {
+    const kept = window as unknown as { keptCreateObjectURL?: unknown };
+    kept.keptCreateObjectURL ??= URL.createObjectURL.bind(URL);
+    URL.createObjectURL = broken
+      ? () => {
+          throw new Error("popnei_web defect: writing");
+        }
+      : (kept.keptCreateObjectURL as typeof URL.createObjectURL);
+  }, broken);
+}
+
+test("WS9 D3 after the error bar's Save failed, a Save of the header that succeeds empties the bar's status, whose words would contradict its first line", async ({
+  page,
+}) => {
+  await showBar(page);
+  const barStatus = page.getByRole("status").first();
+  await breakWriting(page, true);
+  await page.getByRole("button", { name: "Save the project" }).click();
+  await expect(barStatus).toHaveText(
+    "The project could not be saved: the application met an error of its own as it wrote the file. Reloading the page would lose the project.",
+  );
+  await expect(barLine(page, false)).toBeVisible();
+
+  await breakWriting(page, false);
+  expect((await saveProject(page)).suggestedFilename()).toBe(
+    "panel.popnei.json",
+  );
+
+  await expect(barLine(page, true)).toBeVisible();
+  await expect(barStatus).toHaveText("");
+});
+
+test("WS9 D3 after the error bar's Save succeeded, a Save of the header that fails empties the bar's status, whose words would contradict its first line", async ({
+  page,
+}) => {
+  await showBar(page);
+  const barStatus = page.getByRole("status").first();
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Save the project" }).click();
+  expect((await download).suggestedFilename()).toBe("panel.popnei.json");
+  await expect(barStatus).toHaveText(
+    "panel.popnei.json was handed to the browser to download.",
+  );
+
+  await breakWriting(page, true);
+  await saveButton(page).click();
+  await page
+    .getByRole("dialog", { name: "Save the project" })
+    .getByRole("button", { name: "Save", exact: true })
+    .click();
+
+  await expect(barLine(page, false)).toBeVisible();
+  await expect(barStatus).toHaveText("");
+});
+
 test("WS9 D3 the error bar's Save after a Copy that failed keeps the box of the details, and a second Save writes its words again", async ({
   page,
 }) => {
