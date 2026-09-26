@@ -1583,6 +1583,17 @@ describe("WS6 D3 the comparisons", () => {
     ).toEqual([{ kind: "format", now: "vcf" }]);
   });
 
+  test("a format that differs, and no size then, which always differs across formats", () => {
+    expect(
+      compareIdentity(PANEL_2026, {
+        ...givenAgain({}),
+        format: "vcf",
+        size: 87304,
+        readOptions: { ploidy: 2, onlyPassed: false },
+      }),
+    ).toEqual([{ kind: "format", now: "vcf" }]);
+  });
+
   test("a size that differs", () => {
     expect(
       compareIdentity(PANEL_2026, { ...givenAgain({}), size: 52430112 }),
@@ -1712,6 +1723,48 @@ describe("WS6 D3 the comparisons", () => {
     );
   });
 
+  test("the line of numbers not compared, for a file of the other format, both ways", () => {
+    const start = "Not compared with the numbers of the project file:";
+    expect(
+      uncomparedText(
+        deepFreeze<Project>({
+          ...emptyProject("popgen"),
+          variants: {
+            ...VCF_2026,
+            fileId: SAMPLE_VARIANTS_ID,
+            name: "panel_2026.vcf.gz",
+          },
+          reference: { variants: PANEL_2026, checks: [DIVERSITY_CHECK] },
+        }),
+        "diversity",
+      ),
+    ).toBe(
+      `${start} this file is a VCF, and the project was made with a .nei file. Load panel_2026.nei to compare them.`,
+    );
+    expect(
+      uncomparedText(
+        deepFreeze<Project>({
+          ...emptyProject("popgen"),
+          variants: { ...givenAgain({}), name: "panel.nei" },
+          reference: { variants: VCF_2026, checks: [DIVERSITY_CHECK] },
+        }),
+        "diversity",
+      ),
+    ).toBe(
+      `${start} this file is a .nei file, and the project was made with a VCF. Load panel.vcf.gz to compare them.`,
+    );
+    expect(
+      uncomparedText(
+        deepFreeze<Project>({
+          ...emptyProject("popgen"),
+          variants: { ...givenAgain({}), name: "panel.nei" },
+          reference: { variants: VCF_2026, checks: [] },
+        }),
+        "diversity",
+      ),
+    ).toBeNull();
+  });
+
   test("no line of numbers not compared with the same read options, no check of the analysis, a .nei file, or no reference", () => {
     expect(
       uncomparedText(
@@ -1816,7 +1869,20 @@ describe("WS6 D3 the comparisons", () => {
 
   test("the file asked for after an opening", () => {
     expect(askedFileText(openedWith(null))).toBe(
-      "This project was made with panel_2026.nei, 342 individuals and 1,203,554 variants. Load it in the Variants step to run its analyses again.",
+      "This project was made with panel_2026.nei, of 342 individuals and 1,203,554 variants. Load it to run its analyses again.",
+    );
+    expect(
+      askedFileText(
+        deepFreeze<Project>({
+          ...emptyProject("popgen"),
+          reference: {
+            variants: { ...PANEL_2026, read: { kind: "pending" } },
+            checks: [],
+          },
+        }),
+      ),
+    ).toBe(
+      "This project was made with panel_2026.nei. Load it to run its analyses again.",
     );
     expect(askedFileText(openedWith(givenAgain({})))).toBeNull();
     expect(askedFileText(emptyProject("popgen"))).toBeNull();

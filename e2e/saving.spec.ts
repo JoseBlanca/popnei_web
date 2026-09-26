@@ -619,7 +619,7 @@ test("WS9 D3 Open project… with the saved file after a change asks first, Keep
   ).toBeFocused();
   expect(new URL(page.url()).hash).toBe("#variants");
   const asked =
-    "This project was made with panel.nei and 200 individuals. Load it in the Variants step to run its analyses again.";
+    "This project was made with panel.nei, of 200 individuals. Load it to run its analyses again.";
   await expect(page.getByRole("main").getByText(asked)).toBeVisible();
   await expect(status(page)).toHaveText(`Opened panel.popnei.json. ${asked}`);
   await expect(threshold(page)).toHaveValue("0.1");
@@ -825,7 +825,7 @@ test("WS9 D3 after an opening, another variants file given shows the warning of 
   await pick(page, "Variants file", "panel.vcf.gz");
 
   const warning =
-    "The project was made with panel.nei and 200 individuals; this file is called panel.vcf.gz, is a VCF file and has 87,304 bytes where that one had 261,490. Load the file the project was made with, or go on with this one.";
+    "The project was made with panel.nei and 200 individuals; this file is called panel.vcf.gz and is a VCF file. Load the file the project was made with, or go on with this one.";
   await expect(
     page.getByRole("region", { name: "Variants file" }).getByText(warning),
   ).toHaveText(`Warning: ${warning}`);

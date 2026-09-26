@@ -302,7 +302,7 @@ describe("WS9 D1 the states of the steps", () => {
     expect(stepOf(state({ project: OPENED }), "variants")).toEqual({
       status: "todo",
       reason:
-        "This project was made with panel_2026.nei, 3 individuals and 1,200 variants. Load it in the Variants step to run its analyses again.",
+        "This project was made with panel_2026.nei, of 3 individuals and 1,200 variants. Load it to run its analyses again.",
     });
   });
 

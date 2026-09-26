@@ -859,7 +859,7 @@ export type IdentityDifference =
   | { readonly kind: "name"; readonly now: string }
   /** Its format, `now`. */
   | { readonly kind: "format"; readonly now: "vcf" | "nei" }
-  /** Its size in bytes. */
+  /** Its size in bytes; between two files of the same format. */
   | { readonly kind: "size"; readonly saved: number; readonly now: number }
   /** Its number of individuals, `now`; both read. */
   | { readonly kind: "individualsCount"; readonly now: number }
@@ -878,8 +878,8 @@ export type IdentityDifference =
 
 /**
  * How the variants file `now` differs from `saved`, the reference's, in
- * the order of the spec's table: the name, the format and the size
- * always; the individuals, their number, their order and the ploidy when
+ * the order of the spec's table: the name and the format always, the size
+ * between two files of the same format; the individuals, their number, their order and the ploidy when
  * both are read; the choice of the passed variants when both are VCF
  * files, read or not; the number of variants when both are counted. Empty
  * when nothing differs.
@@ -895,7 +895,8 @@ export function compareIdentity(
   if (saved.format !== now.format) {
     differences.push({ kind: "format", now: now.format });
   }
-  if (saved.size !== now.size) {
+  // Across formats the sizes always differ, and the format says so.
+  if (saved.format === now.format && saved.size !== now.size) {
     differences.push({ kind: "size", saved: saved.size, now: now.size });
   }
   const savedOptions = saved.readOptions;
@@ -1008,21 +1009,33 @@ export function askedFileText(p: Project): string | null {
   if (p.variants !== null || p.reference === null) {
     return null;
   }
-  return `This project was made with ${madeWith(p.reference.variants)}. Load it in the Variants step to run its analyses again.`;
+  const reference = p.reference.variants;
+  const counts = countsOf(reference);
+  const made =
+    counts.length === 0
+      ? escaped(reference.name)
+      : `${escaped(reference.name)}, of ${bothOf(counts)}`;
+  return `This project was made with ${made}. Load it to run its analyses again.`;
 }
 
 /** What the reference knows of its file, the name first: "panel.nei,
     342 individuals and 1,203,554 variants". */
 function madeWith(source: VariantSource): string {
-  const words = [escaped(source.name)];
+  return bothOf([escaped(source.name), ...countsOf(source)]);
+}
+
+/** The counts a read knows of its file: "342 individuals" and, once
+    counted, "1,203,554 variants"; none before it is read. */
+function countsOf(source: VariantSource): readonly string[] {
   const read = source.read;
-  if (read.kind === "read") {
-    words.push(counted(read.individuals.length, "individual"));
-    if (read.numVars !== null) {
-      words.push(counted(read.numVars, "variant"));
-    }
+  if (read.kind !== "read") {
+    return [];
   }
-  return bothOf(words);
+  const counts = [counted(read.individuals.length, "individual")];
+  if (read.numVars !== null) {
+    counts.push(counted(read.numVars, "variant"));
+  }
+  return counts;
 }
 
 /** A difference as the end of a sentence whose subject is "this file". */
@@ -1054,26 +1067,38 @@ function differenceWords(difference: IdentityDifference): string {
 /**
  * Why the numbers of a result of the analysis `analysis` are not compared
  * with the check numbers of the project file, the line its panel shows
- * under the result in place of the comparison: the VCF loaded was read
- * with other read options than the reference's, another ploidy or the
- * other choice of the passed variants, which the fingerprint of the
- * settings holds. `null` when the reference holds no check of the
- * analysis, when either file is not a VCF, or when their read options
- * are the same (the spec, "Numbers not compared").
+ * under the result in place of the comparison: the file loaded is of the
+ * other format than the reference's, a VCF for a project made with a
+ * `.nei` file or the other way round; or the VCF loaded was read with
+ * other read options than the reference's, another ploidy or the other
+ * choice of the passed variants. The fingerprint of the settings holds
+ * the read options, which a `.nei` file has none of. `null` when the
+ * reference holds no check of the analysis, when both files are `.nei`
+ * files, or when their read options are the same (the spec, "Numbers not
+ * compared").
  */
 export function uncomparedText(
   p: Project,
   analysis: AnalysisId,
 ): string | null {
   const reference = p.reference;
-  const loaded = p.variants?.readOptions ?? null;
-  const saved = reference?.variants.readOptions ?? null;
   if (
     reference === null ||
-    loaded === null ||
-    saved === null ||
+    p.variants === null ||
     !reference.checks.some((check) => check.analysis === analysis)
   ) {
+    return null;
+  }
+  const start = "Not compared with the numbers of the project file:";
+  const load = `Load ${escaped(reference.variants.name)} to compare them.`;
+  if (p.variants.format !== reference.variants.format) {
+    return p.variants.format === "vcf"
+      ? `${start} this file is a VCF, and the project was made with a .nei file. ${load}`
+      : `${start} this file is a .nei file, and the project was made with a VCF. ${load}`;
+  }
+  const loaded = p.variants.readOptions;
+  const saved = reference.variants.readOptions;
+  if (loaded === null || saved === null) {
     return null;
   }
   const nowWords: string[] = [];
@@ -1090,7 +1115,7 @@ export function uncomparedText(
     return null;
   }
   const projects = bothOf(savedWords);
-  return `Not compared with the numbers of the project file: this file was read with ${bothOf(nowWords)}, and the project's with ${projects}. To compare them, read the file again in the Variants step with ${projects}.`;
+  return `${start} this file was read with ${bothOf(nowWords)}, and the project's with ${projects}. To compare them, read the file again in the Variants step with ${projects}.`;
 }
 
 /** The words of the choice of the passed variants of a VCF, as the button

@@ -296,7 +296,7 @@ test("WS9 D4 a calculation stopped in the middle of a pass leaves the panel read
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("WS9 D4 the project saved after a run and opened in a new page gives the same numbers with panel.nei, and panel.vcf.gz then gets the warning of the identity, and axe", async ({
+test("WS9 D4 the project saved after a run and opened in a new page gives the same numbers with panel.nei, and panel.vcf.gz then gets the warning of the identity and numbers not compared, and axe", async ({
   page,
   context,
   makeAxeBuilder,
@@ -315,7 +315,7 @@ test("WS9 D4 the project saved after a run and opened in a new page gives the sa
     page
       .getByRole("main")
       .getByText(
-        "This project was made with panel.nei, 200 individuals and 1,200 variants. Load it in the Variants step to run its analyses again.",
+        "This project was made with panel.nei, of 200 individuals and 1,200 variants. Load it to run its analyses again.",
       ),
   ).toBeVisible();
   // The settings of the project, back.
@@ -340,9 +340,20 @@ test("WS9 D4 the project saved after a run and opened in a new page gives the sa
   await pick(page, "Variants file", "panel.vcf.gz");
 
   const warning =
-    "The project was made with panel.nei, 200 individuals and 1,200 variants; this file is called panel.vcf.gz, is a VCF file and has 87,304 bytes where that one had 261,490. Load the file the project was made with, or go on with this one.";
+    "The project was made with panel.nei, 200 individuals and 1,200 variants; this file is called panel.vcf.gz and is a VCF file. Load the file the project was made with, or go on with this one.";
   await expect(
     page.getByRole("region", { name: "Variants file" }).getByText(warning),
   ).toHaveText(`Warning: ${warning}`);
+  await expectNoViolations(makeAxeBuilder);
+
+  // Its numbers are not compared, since the project was made with the
+  // .nei file, and the panel says so.
+  await run(page);
+  await expect(
+    panel(page).getByText(
+      "Not compared with the numbers of the project file: this file is a VCF, and the project was made with a .nei file. Load panel.nei to compare them.",
+      { exact: true },
+    ),
+  ).toBeVisible();
   await expectNoViolations(makeAxeBuilder);
 });

@@ -122,7 +122,7 @@ describe("the words and the reading of Save project and Open project…", () => 
     if (picked.kind !== "project") throw new Error(picked.text);
     expect(picked.project.variants).toBeNull();
     expect(openedText("panel.popnei.json", picked.project)).toMatch(
-      /^Opened panel\.popnei\.json\. This project was made with .+\. Load it in the Variants step to run its analyses again\.$/,
+      /^Opened panel\.popnei\.json\. This project was made with .+\. Load it to run its analyses again\.$/,
     );
   });
 
