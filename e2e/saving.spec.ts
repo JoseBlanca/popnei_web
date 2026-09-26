@@ -512,6 +512,60 @@ test("WS9 D3 the question before an opening says that the calculations under way
   );
 });
 
+test("WS9 D3 the question before an opening loses its sentence of the calculations when they end while it is open", async ({
+  page,
+}, testInfo) => {
+  await openPopgen(page);
+  await loadWithPopulations(page, "panel.nei");
+  const saved = await saveProjectFile(page, testInfo.outputPath());
+  // The calculation worker keeps its results until the test lets them go.
+  const worker = page.workers().find((w) => w.url().includes("runnerWorker"));
+  if (worker === undefined) throw new Error("no calculation worker");
+  await worker.evaluate(() => {
+    const scope = globalThis as unknown as {
+      postMessage: (message: unknown, transfer?: Transferable[]) => void;
+      release: () => void;
+    };
+    const post = scope.postMessage.bind(scope);
+    const held: [unknown, Transferable[] | undefined][] = [];
+    scope.postMessage = (message, transfer) => {
+      const kind =
+        typeof message === "object" && message !== null && "kind" in message
+          ? message.kind
+          : null;
+      if (kind === "result") held.push([message, transfer]);
+      else post(message, transfer);
+    };
+    scope.release = () => {
+      scope.postMessage = post;
+      for (const [message, transfer] of held) post(message, transfer);
+    };
+  });
+  await goTo(page, "Analyses");
+  await page.getByRole("button", { name: "Run" }).click();
+  await expect(stepLink(page, "Analyses")).toHaveAccessibleName(
+    "Analyses, Running",
+  );
+  await openProject(page, saved);
+  const question = page.getByRole("alertdialog", {
+    name: "Open panel.popnei.json?",
+  });
+  await expect(question).toHaveAccessibleDescription(
+    /The ongoing calculations will be stopped\.$/,
+  );
+
+  await worker.evaluate(() => {
+    (globalThis as unknown as { release: () => void }).release();
+  });
+
+  await expect(stepLink(page, "Analyses")).toHaveAccessibleName(
+    "Analyses, Done",
+  );
+  await expect(question).toHaveAccessibleDescription(
+    "It replaces the project on the page, and an opening cannot be undone. Save the project first to keep it.",
+  );
+});
+
 test("WS9 D3 after an opening, another variants file given shows the warning of the identity beside its card, announced, and axe", async ({
   page,
   makeAxeBuilder,

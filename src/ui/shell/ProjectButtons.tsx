@@ -29,7 +29,7 @@ import { POPGEN_ANALYSES } from "../../core/apps.ts";
 import type { Project } from "../../core/project.ts";
 import { classOf } from "../classOf.ts";
 import { useSaving } from "../saving.ts";
-import { useStore } from "../store.tsx";
+import { useAppState, useStore } from "../store.tsx";
 import { Button } from "../widgets/Button.tsx";
 import { Dialog } from "../widgets/Dialog.tsx";
 import { isInDialog } from "../widgets/dialogMark.ts";
@@ -166,7 +166,6 @@ type Opening =
       readonly kind: "asking";
       readonly name: string;
       readonly project: Project;
-      readonly running: boolean;
     };
 
 const NONE: Opening = { kind: "none" };
@@ -220,23 +219,18 @@ export function OpenProject(): React.JSX.Element {
       setOpening(picked);
       return;
     }
-    const running = store.getState().runs.length > 0;
-    if (saving.changed() || running) {
-      setOpening({
-        kind: "asking",
-        name: file.name,
-        project: picked.project,
-        running,
-      });
+    if (saving.changed() || store.getState().runs.length > 0) {
+      setOpening({ kind: "asking", name: file.name, project: picked.project });
       return;
     }
     open(file.name, picked.project, false);
   };
 
+  // Read at every drawing, so that the question loses its sentence of the
+  // calculations when they end while it is open.
+  const running = useAppState((s) => s.runs.length > 0);
   const question =
-    opening.kind === "asking"
-      ? openQuestion(opening.name, opening.running)
-      : null;
+    opening.kind === "asking" ? openQuestion(opening.name, running) : null;
 
   return (
     <>
