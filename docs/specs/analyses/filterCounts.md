@@ -172,9 +172,18 @@ export interface FilterCountRow {
 /** The rows of a result, in the order of the filters of the project it
     was asked for; a defect when a filter of it has no count. */
 export function filterCountRows(r: FilterCountsResult, p: Project): readonly FilterCountRow[];
+
+/** The words of a refusal of popnei, for the error state of the Count
+    button. */
+export function refusalText(message: string, p: Project): string;
 ```
 
 `parseOptions` gives back `{}` for `{}` and refuses anything else.
+`refusalText` gives the words of the error state below, "The states":
+those of the diversity's error table with the words of the Count. It
+has no row of its own for an empty pass, since popnei gives the counts
+of a pass the filters left empty and does not refuse it, and so such a
+message would get the words of any other refusal.
 
 ### The cases
 
@@ -198,7 +207,9 @@ export function filterCountRows(r: FilterCountsResult, p: Project): readonly Fil
 With Vitest: the key the same when a filter of individuals changes and
 different when any filter of the variants does; `filterCountRows` of the
 counts above; `warnings` of the counts of the empty pass above gives
-`filterKeptNone` naming the MAF filter; `checkNumbers` as above. The test
+`filterKeptNone` naming the MAF filter; `checkNumbers` as above;
+`refusalText` of the row of a genotype of another ploidy, and of the row
+of any other refusal, as literals. The test
 of the runner, in node on `panel.nei`, asserts the counts of the empty
 pass above and, for the three filters above, `numVars` 1,128 with 1,200
 to 1,152, 1,152 to 1,152 and 1,152 to 1,128, as literals. The store's
