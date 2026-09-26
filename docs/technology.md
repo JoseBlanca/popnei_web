@@ -121,9 +121,16 @@ zone and a file picker for loading files. The look is ours, in CSS.
 
 What it costs: 50.7 KB gzipped of the first script of the page of the
 walking skeleton, 19 KB of it its translations into 34 languages,
-measured with source maps on 25 September 2026 on the Vite build.
-The application is in English, and the entry sets the language of React
-Aria to English, `en-US`, whatever the language of the browser.
+measured with source maps on 25 September 2026 on the Vite build. With
+the components the page used at the end of work package 9 of the plan
+of the walking skeleton, `docs/plans/walking-skeleton.md`, React Aria
+bundles alone, without React, to 70.8 KB gzipped, against 64.5 KB before
+that work package; its toast added 3.2 KB, its tooltip 1.6 KB, its
+dialog 1.4 KB and its text field 0.3 KB. Measured on 26 September 2026
+by bundling those components with rolldown 1.2.10 and compressing with
+gzip -9. The application is in English, and the entry sets the
+language of React Aria to English, `en-US`, whatever the language of the
+browser.
 
 So the words of React Aria in its other 33 languages are left out of the
 build by **@react-aria/optimize-locales-plugin**, a development
