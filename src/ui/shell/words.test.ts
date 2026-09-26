@@ -20,6 +20,7 @@ import type {
 import type {
   AnalysisStatus,
   AppState,
+  CheckVerdict,
   Notice,
   RunView,
 } from "../../core/store.ts";
@@ -178,7 +179,11 @@ const LOCKED: AnalysisStatus<TestDefResult> = {
   reason: LOAD_VARIANTS,
 };
 
-function done(key: Key, numWarnings = 0): AnalysisStatus<TestDefResult> {
+function done(
+  key: Key,
+  numWarnings = 0,
+  check: CheckVerdict | null = null,
+): AnalysisStatus<TestDefResult> {
   return {
     kind: "done",
     key,
@@ -187,7 +192,7 @@ function done(key: Key, numWarnings = 0): AnalysisStatus<TestDefResult> {
       code: `w${String(index)}`,
       text: "a warning",
     })),
-    check: null,
+    check,
   };
 }
 
@@ -848,10 +853,7 @@ describe("WS9 D1 the announcements made from the state", () => {
       statuses: [running(KEY_A, 1), LOCKED],
       runs: [run(1, DIVERSITY, KEY_A, CURRENT)],
     });
-    const same: AnalysisStatus<TestDefResult> = {
-      ...done(KEY_A, 1),
-      check: { kind: "same" },
-    };
+    const same = done(KEY_A, 1, { kind: "same" });
     expect(
       announcementsOf(
         before,
