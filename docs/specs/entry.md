@@ -510,9 +510,12 @@ bring it back (`docs/specs/core/store.md`, `writeDiscarded`; point G of
 `docs/specs/stage-3-open-points.md`). The page is not told whether the
 browser kept the download, as for the project file (above, "The
 saving"): a user who cancels the browser's question of where to save,
-which Firefox and Safari can ask, writes the file again. That is point A
-of `docs/specs/stage-3-open-points.md`, whose other option keeps the
-file until a change of the filters.
+which Firefox and Safari can ask, writes the file again. The owner
+decided so on 26 September 2026 (point A of
+`docs/specs/stage-3-open-points.md`); the option not taken kept the file
+until a change of the filters, with Save offered again, and the tab
+holding its memory, about 960 MB for a million variants of 1,000
+individuals, meanwhile.
 
 `saveWritten` of a store whose `write` is not `done` is a defect: the
 Save button is shown only in that state.
@@ -874,13 +877,11 @@ the application" above has it. One part of a decision is to confirm:
 whether a Save sets the base, so that the browser's question before
 leaving is not asked after it (point K there; "The saving", above).
 
-Opened by the revision of stage 3, and gathered with the other open
-points of that stage in `docs/specs/stage-3-open-points.md`: whether a
+The one opened by the revision of stage 3 was decided by the owner on
+26 September 2026 (point A of `docs/specs/stage-3-open-points.md`): a
 file of the filtered variants is released when Save is pressed, as the
-architecture has it and this spec meanwhile, or kept until a change of
-the filters, so that a user who cancels the browser's question can save
-it again (point A there; "A file of the filtered variants saved",
-above).
+architecture has it, and not kept until a change of the filters ("A
+file of the filtered variants saved", above).
 
 ## Not in this spec
 

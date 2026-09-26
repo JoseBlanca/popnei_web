@@ -134,7 +134,7 @@ the link has the pointer or the focus.
 |---|---|---|---|
 | Variants | To do | no variants file | for an opened project, the text of `askedFileText` of `projectFile.ts` (`docs/specs/core/projectFile.md`, "Opening"); otherwise the reason `projectNeeds` gives, "Load a variants file in the Variants step." |
 | | Reading | its read is pending | the reason `projectNeeds` gives, "Reading panel.nei." |
-| | Problem | its read failed, or `projectNeeds` gives another reason; or the file is read and `individualListNeeds` gives a reason, a list of individuals that popnei would refuse; or the individuals kept are known and the filters keep none (**Open 2**) | the reason `projectNeeds` gives, the `reason` of `individualListNeeds`, or that of `keptNoneReason`, "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them in the Variants step." |
+| | Problem | its read failed, or `projectNeeds` gives another reason; or the file is read and `individualListNeeds` gives a reason, a list of individuals that popnei would refuse; or the individuals kept are known and the filters keep none, as the owner decided on 26 September 2026 (point J of `docs/specs/stage-3-open-points.md`) | the reason `projectNeeds` gives, the `reason` of `individualListNeeds`, or that of `keptNoneReason`, "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them in the Variants step." |
 | | Running | a check or the writing is running, or waits for the statistics of each individual | — |
 | | Results removed | the notice lists a check among the results removed | — |
 | | Failed | a check is in the state `error`, or the writing is | "Statistics of each individual could not be calculated.", "The file could not be written.", the first in the order of the step |
@@ -265,8 +265,8 @@ from four parts:
 - from stage 3, **the written file discarded**, `writeDiscarded`: a
   sentence of its own, "The written file, not saved, was discarded, and
   Undo does not bring it back; write it again to save it.", after the
-  sentence of the calculations left behind, since the action of the
-  notice would otherwise promise the file back (**Open 3**).
+  sentence of the calculations left behind, since the action of the notice would otherwise promise the file back, as the owner decided
+  on 26 September 2026 (point G of `docs/specs/stage-3-open-points.md`).
 
 From stage 3 the writing of the file joins the calculations stopped and
 left behind, named apart, since it is not an analysis:
@@ -590,7 +590,8 @@ the file and some, "The project file cannot be opened: …", do not:
    first.", with, when calculations are in flight, "The ongoing
    calculations will be stopped.", and, when a file written is not
    saved, `write` in `done`, "panel.filtered.nei, written and not saved,
-   will be discarded." (**Open 3**). Its buttons: "Open panel.popnei.json"
+   will be discarded." (point G of `docs/specs/stage-3-open-points.md`).
+   Its buttons: "Open panel.popnei.json"
    and "Keep the current project". The dialog has no Save of its own, so
    its words name the button that leads to one, as the owner decided on
    26 September 2026 (point 5 of the review of work package 9); they
@@ -952,23 +953,25 @@ above. One stayed, and stage 3 answers it:
    (`docs/specs/stage-3-open-points.md`, "Choices of a spec the owner may
    overrule").
 
-Stage 3 adds two, points J and G of `docs/specs/stage-3-open-points.md`:
+Stage 3 added two, points J and G of
+`docs/specs/stage-3-open-points.md`, which the owner decided on 26
+September 2026 as they were recommended, and are written above as
+decided:
 
 2. **The state of the Variants step when the thresholds keep no
-   individual.** Meanwhile, and recommended: Problem, with the words of
-   `keptNoneReason`, as for a list of individuals popnei would refuse,
-   since both lock every analysis that reads the filters of individuals
-   and the writing, and a user who reads Done in the stepper would go
-   on to the Analyses step and find the diversity locked there. The
-   other option is Done, as the stepper of stage 2 had it, which reads
-   the file and not the filters: the step then reads Done while nothing
-   that reads its filters of individuals can run.
-3. **A file written and not saved, which a change discards.** Meanwhile,
-   and recommended: the notice says so, and so does the question before
-   an opening, and the file is gone; the other option keeps the file
-   while the notice is up, so that its Undo gives it back, which holds
-   the file, about 960 MB for a million variants of 1,000 individuals,
-   for as long as the notice stays.
+   individual.** Problem, with the words of `keptNoneReason`, as for a
+   list of individuals popnei would refuse, since both lock every
+   analysis that reads the filters of individuals and the writing
+   ("The stepper", above). The option not taken was Done, as the
+   stepper of stage 2 had it, which reads the file and not the filters:
+   a user who read Done would go on to the Analyses step and find the
+   diversity locked there.
+3. **A file written and not saved, which a change discards.** The file
+   is gone at the change, and the notice says so, as does the question
+   before an opening ("The notice" and "Opening", above). The option
+   not taken kept the file while the notice is up, so that its Undo
+   gives it back, which holds the file, about 960 MB for a million
+   variants of 1,000 individuals, for as long as the notice stays.
 
 ## Not in this spec
 

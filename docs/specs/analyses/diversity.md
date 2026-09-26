@@ -282,7 +282,9 @@ decided on 25 September 2026 while the filters of individuals did not
 exist, goes with stage 3. The last row is known from the lists, which the
 project holds; with a threshold on the individuals, which can only remove
 more, the list kept waits for the statistics of each individual, and
-what happens when it leaves no population is **Open 1**, below. Two
+when it leaves no population, popnei's refusal after the Run tells the
+user, as the owner decided on 26 September 2026 ("Open points", below,
+and "Its words"). Two
 locks are the store's and not of `needs`, since they read the cache
 (`docs/architecture.md`, section 4): a Run with a threshold whose
 statistics are not in the cache starts them first, and the filters
@@ -384,7 +386,7 @@ popnei refuses the call in the cases its `@throws` lists. The module rules
 out those it can see: a population that names an individual popnei does
 not have, an empty population, a threshold out of its range, and no
 population when the lists of individuals leave none. No population left
-by a threshold is **Open 1**. The two it cannot see are the filters keeping no variant, "the
+by a threshold is told by popnei's refusal ("Its words"). The two it cannot see are the filters keeping no variant, "the
 pass gave no variant: its source gave 1200 and the steps kept none of
 them, ...", and a variants file that holds none, "the pass gave no
 variant and its source holds none: ...", which is also the refusal of a
@@ -1032,7 +1034,7 @@ error state, by what the store gives:
 | popnei refused an empty pass: its message starts with "the pass gave no variant:", with the colon, which the refusal of a source that holds none does not have at that place | "The filters kept none of the variants of panel.nei, so there is no variant to calculate the diversity over. Loosen the filters in the Variants step." |
 | popnei refused a genotype of another ploidy than the one the VCF was read with: its message starts "line ‹n› of the VCF, the column of ‹individual›: its genotype is of the ploidy ‹found› and the reader was asked for the ploidy ‹given›" | "At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 in the Variants step and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version." |
 | popnei refused a line of the VCF it cannot read, or a gzipped file that is damaged or cut short: its message starts "line ‹n› of the VCF" or "the VCF was written by bgzip" | "popnei could not read panel.vcf.gz: ‹its message›. Correct the file, or fetch it again, and load it in the Variants step." |
-| popnei refused a request with no population: its message starts with "`pops` names no population", which only the thresholds on the individuals can bring about (**Open 1**) | "The thresholds of the filters of individuals leave none of the individuals of panel.nei that have a population in popcat, so no population is left. Loosen the thresholds in the Variants step." |
+| popnei refused a request with no population: its message starts with "`pops` names no population", which only the thresholds on the individuals can bring about; an error after the Run and not a lock before it, as the owner decided on 26 September 2026 (point B of `docs/specs/stage-3-open-points.md`) | "The thresholds of the filters of individuals leave none of the individuals of panel.nei that have a population in popcat, so no population is left. Loosen the thresholds in the Variants step." |
 | popnei refused for another reason | "popnei could not calculate the diversity: ‹its message›. Change the settings, or load the variants file again, to run it again." |
 | the browser can no longer read the variants file, `reopenFailed`, as the owner decided on 25 September 2026 (point B of `docs/specs/stage-2-open-points.md`) | "panel.nei could not be read again; it may have changed on the disk since it was picked. Load it again in the Variants step." |
 | the worker crashed, `workerFailed` | "The calculation stopped unexpectedly. Run it again. If it stops again, load panel.nei again in the Variants step." The second sentence is for a trap of popnei that comes back at every run, which a new load, and the new worker it starts, can mend |
@@ -1279,29 +1281,19 @@ three columns (point D there again), was settled by the owner with the
 approval of this spec: `calcPerVarDistribs` of the same release, and
 `calcPopDiversity` in stage 5.
 
-Opened by the revision of stage 3, and gathered with the other open
-points of that stage in `docs/specs/stage-3-open-points.md` as its point
-B:
-
-1. **The thresholds on the individuals leave no individual that has a
-   population, while the filters keep some.** The list is known only once
-   the statistics of each individual are in the cache, so `needs(p)`,
-   which reads the project alone, cannot lock the diversity for it; the
-   store's lock of the architecture is for no individual kept at all.
-   Meanwhile `run` sends the request with no population, popnei refuses
-   it at once, before any pass, "`pops` names no population, …", and the
-   error state says "The thresholds of the filters of individuals leave
-   none of the individuals of panel.nei that have a population in popcat,
-   so no population is left. Loosen the thresholds in the Variants step."
-   The ready state has already said, before the Run, which populations
-   were left empty. What it costs: the words come as an error after a
-   Run rather than as a lock before it, and the refusal is kept under the
-   key, as every refusal is, so an undo back to it shows it again. The
-   other option is a lock of the store that asks the analysis, with the
-   list of individuals kept, whether it can run: a function more in the
-   definition of an analysis, `needsKept(p, kept)`, and so a change of
-   the interface of section 4 of the architecture, for a case that the
-   ready state already names. Recommended: the meanwhile.
+The one opened by the revision of stage 3, point B of
+`docs/specs/stage-3-open-points.md`, was decided by the owner on 26
+September 2026 as it was recommended. Thresholds on the individuals that
+leave no individual with a population, while the filters keep some, are
+told by popnei's refusal after the Run, which comes at once, before any
+pass, and is shown as the error of "Its words" above; the ready state has
+already named, before the Run, the populations left empty whenever the
+statistics of each individual are in the page. The option not taken was
+a lock before the Run, a function more in the definition of every
+analysis, `needsKept(p, kept)`, which the store would ask with the list
+of the individuals kept: a change of the interface of section 4 of the
+architecture that would lock only when the statistics are already in the
+page, the case the ready state already names.
 
 ## Not in this spec
 

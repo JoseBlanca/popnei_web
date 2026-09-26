@@ -126,11 +126,12 @@ other than the step shows, as section 6 of the architecture has it
 `docs/specs/core/store.md`, `writeSaved`). The page is not told whether
 the browser kept the download, so the file is released when Save is
 pressed: a user who cancels the question of a browser that asks where to
-save writes the file again (point A of
-`docs/specs/stage-3-open-points.md`). A file written and not saved that
+save writes the file again, as the owner decided on 26 September 2026
+(point A of `docs/specs/stage-3-open-points.md`). A file written and not saved that
 a change of the filters, or a new load, releases is gone, and an Undo
-does not bring it back; the notice of that change says so (**Open 1**,
-below).
+does not bring it back; the notice of that change says so, as the owner
+decided on 26 September 2026 (point G of
+`docs/specs/stage-3-open-points.md`).
 
 The name, `writtenName` of `src/core/fileNames.ts` (below, "The
 functions of core"), is the stem of the variants file, `variantsStem` of
@@ -322,7 +323,7 @@ notice and the status region is "Writing the file".
 | written with no variant, the store's `noVariant` | the words of a file of no variant, below, and no Save | loosen the filters |
 | saved, the store's `saved` | "panel.filtered.nei, 19.2 MB, was handed to the browser to save. To save it again, write it again." and the button to write | Write |
 | stopped or dropped, the store's `ready` | the button to write, and, when a change dropped it, `dropped`, "The file was not kept, since the filters changed while it was written." | Write |
-| results removed | a file written and not saved, which a change of the filters or a new load discarded: the part is `ready` for the new filters, with the button to write, and the notice of the shell says that the file was discarded and that Undo does not bring it back (`docs/specs/shell.md`, "The notice"; **Open 1**) | Write; the Undo of the notice, which brings the filters back and not the file |
+| results removed | a file written and not saved, which a change of the filters or a new load discarded: the part is `ready` for the new filters, with the button to write, and the notice of the shell says that the file was discarded and that Undo does not bring it back (`docs/specs/shell.md`, "The notice"; point G of `docs/specs/stage-3-open-points.md`) | Write; the Undo of the notice, which brings the filters back and not the file |
 | error | the words of the failure, below | as the words say |
 
 The estimate of the ready state is 20,000 times 1,000 genotypes at one
@@ -427,21 +428,17 @@ before the user asks.
 ## Open points
 
 The constants have their values meanwhile above, until the
-measurement. One point is the owner's, point G of
-`docs/specs/stage-3-open-points.md`, where the open points of the specs
-of stage 3 are gathered:
-
-1. **A file written and not saved, which a change discards.** A change
-   of a filter, or a new load, gives the write another key, and the
-   store forgets the file, which the page then releases; one press of an
-   arrow key in a threshold is such a change. Meanwhile, and
-   recommended: the notice of the change says "The written file, not
-   saved, was discarded, and Undo does not bring it back; write it again
-   to save it.", and the user writes it again, one pass over the
-   variants file. The other option keeps the file while the notice is
-   up, so that its Undo brings it back, at the cost of holding the file,
-   about 960 MB for a million variants of 1,000 individuals, for as long
-   as the notice stays, which has no timer.
+measurement. The one point that was the owner's, point G of
+`docs/specs/stage-3-open-points.md`, was decided by the owner on 26
+September 2026 as it was recommended, and is written above as decided:
+a file written and not saved is discarded at a change of a filter or a
+new load, one press of an arrow key in a threshold among them, and the
+notice of the change says "The written file, not saved, was discarded,
+and Undo does not bring it back; write it again to save it."; the user
+writes it again, one pass over the variants file. The option not taken
+kept the file while the notice is up, so that its Undo brings it back,
+at the cost of holding the file, about 960 MB for a million variants of
+1,000 individuals, for as long as the notice stays, which has no timer.
 
 ## Not in this spec
 

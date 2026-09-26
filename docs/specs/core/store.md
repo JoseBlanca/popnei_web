@@ -382,7 +382,8 @@ the cache for an undo.
 
 From stage 3, four things join the notice, three decided with the
 architecture on 26 September 2026 (its sections 4 and 5), and the
-fourth meanwhile (**Open 1**, below). The results of
+fourth, the file written and discarded, by the owner the same day
+(point G of `docs/specs/stage-3-open-points.md`). The results of
 `filterCounts`, the counts beside the filters, are never among the
 results removed (below, "What each filter kept"). A Run that waits for
 the statistics of each individual is a calculation, left behind, stopped
@@ -658,7 +659,8 @@ writer of it, with a state of its own.
   gives the write another key, the load changes or a project is opened,
   and the state is `ready`. An undo does not bring a file back once it is
   forgotten, and the notice of a command, an undo or a redo that forgets
-  a file in `done` says so, `writeDiscarded` (**Open 1**, below); an
+  a file in `done` says so, `writeDiscarded`, as the owner decided on 26 September 2026
+  (point G of `docs/specs/stage-3-open-points.md`); an
   opening makes no notice, and the question the shell asks before it
   names the file (`docs/specs/shell.md`, "Opening"). A write that ends
   with no variant keeps no file: the state is `noVariant`, and the step
@@ -667,8 +669,8 @@ writer of it, with a state of its own.
   architecture has it (`docs/specs/entry.md`, "A file of the filtered
   variants saved"). The page is not told whether the browser kept the
   download, so "saved" is the Save pressed: a user who cancels the
-  browser's own question writes the file again (point A of
-  `docs/specs/stage-3-open-points.md`).
+  browser's own question writes the file again, as the owner decided on
+  26 September 2026 (point A of `docs/specs/stage-3-open-points.md`).
 - **A write that ends after a change of its filters is dropped**, as the
   owner decided on 26 September 2026 (`docs/architecture.md`, section
   13, point 6): when it ends `done` and the project no longer gives its
@@ -1281,20 +1283,18 @@ the screens, since core reaches them through the store
 
 ## Open points
 
-Stage 3 adds one, point G of `docs/specs/stage-3-open-points.md`, where
-the open points of the specs of stage 3 are gathered; its other choices
+The one stage 3 added, point G of `docs/specs/stage-3-open-points.md`,
+was decided by the owner on 26 September 2026 as it was recommended, and
+is written above as decided: the store forgets a file written and not
+saved at the change that gives the write another key, and the notice
+says so, `writeDiscarded`. The option not taken kept the file while the
+notice is up, so that the Undo of the notice gives it back, which holds
+the file, about 960 MB for a million variants of 1,000 individuals, for
+as long as the notice stays, with no timer. The other choices of stage 3
 are the architecture's, approved by the owner on 26 September 2026, or
-decided here and said where they are. It uses the bound of the cache
-(`docs/specs/core/cache.md`, **Open 1**) and the bound of the history
-(`docs/specs/core/history.md`, **Open 1**).
-
-1. **A file written and not saved, which a change forgets.** Meanwhile,
-   and recommended, the store forgets it at the change and the notice
-   says so, `writeDiscarded`; the other option keeps it while the
-   notice is up, so that the Undo of the notice gives it back, which
-   holds the file, about 960 MB for a million variants of 1,000
-   individuals, for as long as the notice stays, with no timer. Point G
-   has the options whole.
+decided here and said where they are. The store uses the bound of the
+cache (`docs/specs/core/cache.md`, **Open 1**) and the bound of the
+history (`docs/specs/core/history.md`, **Open 1**).
 
 ## Not in this spec
 

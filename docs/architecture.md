@@ -208,8 +208,8 @@ file in a result, which gives the counts of its filters as well (section
 4); the store, which tracks a write; the
 `Project`, which gains the regions; the jobs, which carry the list of
 individuals in place of the filters of individuals; the results, each of
-which carries the counts of its pass; and the project file,
-which goes to version 2 (section 12).
+which carries the counts of its pass; and the project file, which gains the regions and stays at version 1
+(section 12).
 
 The approved specs this changes, each revised with the specs of stage 3:
 `docs/specs/worker/protocol.md`, `messages.md`, `runner.md` and
@@ -1442,9 +1442,8 @@ for the smallest part of it.
   reopened project asks only for its variants file again; their hash is
   not saved, and is made again when the file is opened. For 200,000
   regions they add about 5.8 MB to the file, which the bound of 64 MB of a
-  project file takes (`docs/specs/core/projectFile.md`). The format goes
-  to version 2, which also refuses filters out of their order (section
-  12).
+  project file takes (`docs/specs/core/projectFile.md`). The format stays at version 1, which also refuses filters out of their
+  order (section 12).
 - **The identity of the file is compared, and never decides anything.**
   When the user gives the variant file of an opened project, the
   application compares the name, the size, the individuals and the ploidy
@@ -1752,10 +1751,15 @@ code, the release `js-v0.1.0-dev.2`.
   analysis are part of that format: each analysis reads its options of
   every earlier version, through its `parseOptions`, which is given the
   version of the file (section 4).
-- **Version 2 of the project file**, from stage 3, adds the regions of a
-  BED file and the filter of the regions, and refuses filters of the
-  variants out of their fixed order (section 2); the application reads
-  version 1 as version 2 with no regions. What the filter of the regions
+- **Version 1 of the project file until the first release of the
+  application.** The application is in development, before its first
+  alpha, and the owner decided on 26 September 2026 that the format
+  stays at version 1 until its first release: the regions of a BED file
+  and the filter of the regions join version 1, which refuses filters of
+  the variants out of their fixed order (section 2), and a file saved by
+  one development version may be refused by a later one. The rule above
+  holds from that release. This revision had given version 2 to stage 3
+  (`docs/specs/stage-3-open-points.md`, point E). What the filter of the regions
   means, the regions counted as BED counts them and a variant's position
   as a VCF counts it, is kept by every file saved with one.
 

@@ -17,7 +17,8 @@ September 2026 for stage 3, the Variants step whole, as the revision of
 `docs/architecture.md` the owner approved that day has it: every filter
 of the variants and of the individuals, the filters of the variants in a
 fixed order that the opening checks, and the version of the format,
-which stays 1 until the regions of a BED file join the file (**Open 2**);
+which stays 1 until the first release of the application, the regions
+of a BED file included, as the owner decided on 26 September 2026;
 this revision is not yet approved. There was no
 code yet; it will be `src/core/projectFile.ts`, the row `projectFile.ts`
 of section 9 of `docs/architecture.md`. The project file is the file
@@ -437,7 +438,8 @@ that the reason given is the one the user can act on:
    an order of the user's, and no file the application wrote is refused
    so, since stage 2 wrote the missing data filter alone
    (`docs/architecture.md`, section 2); such a file is one edited by
-   hand (**Open 3**). `readProjectFile` gives
+   hand, and the owner decided on 26 September 2026 that it is refused and
+   not reordered ("Open points", below). `readProjectFile` gives
    it this object, built from the fields of the file:
 
    ```ts
@@ -653,6 +655,13 @@ The format is the one thing of this module that users keep, so a change
 to it is made by the rule of `docs/architecture.md`, section 12, which
 this spec makes precise:
 
+- **Version 1 until the first release of the application.** The
+  application is in development, before its first alpha, and the owner
+  decided on 26 September 2026 that the format stays at version 1 until
+  its first release: the changes of the format before it, the regions
+  of a BED file and their filter among them, are made in version 1, and
+  a file saved by one development version may be refused by a later one.
+  The rules below hold from that release.
 - **`FORMAT_VERSION` is raised** with every change to what the file holds
   or means that the version before would read wrongly or refuse: a field
   added, removed or renamed, a value of a field given another meaning,
@@ -668,14 +677,16 @@ this spec makes precise:
   is read as a file of version *k* and brought to the present one field
   by field, and the fixtures of every earlier version, below, keep
   opening.
-- **Stage 3 does not raise it.** Every kind of filter of the variants and
-  of the individuals was in the format of version 1 already, which the
-  validation of stage 2 read; the fixed order refuses only files the
-  application did not write; and the analyses of the Variants step are
-  new ids, which the rule above covers. The architecture gives version 2
-  to the regions of a BED file with the fixed order (its section 12);
-  since the regions wait for popnei's filter of them, version 2 waits
-  with them, and adds the regions and their filter (**Open 2**).
+- **Stage 3 does not raise it**, nor do the regions of a BED file when
+  they come, since the application has had no release. Stage 3 would
+  not have needed a new version anyway: every kind of filter of the
+  variants and of the individuals was in the format of version 1
+  already, which the validation of stage 2 read; the fixed order refuses
+  only files the application did not write; and the analyses of the
+  Variants step are new ids, which the rule above covers. The regions
+  and their filter join version 1 with popnei's release that filters by
+  them; a development version before them refuses a file that has them,
+  as it refuses every field it does not write.
 - **A change to what an analysis's `checkNumbers` gives**, which numbers
   or their order, raises its key version, so that the numbers of files
   saved before are told as "calculated in another way" and not blamed on
@@ -970,38 +981,32 @@ check with its own (point E there).
    and nothing else.
 
 2. **The version of the format in stage 3.** Point E of
-   `docs/specs/stage-3-open-points.md`, where the open points of the
-   specs of stage 3 are gathered. The architecture approved on
-   26 September 2026 has version 2 from stage 3, adding the regions of a
-   BED file and their filter and refusing filters of the variants out of
-   their order (its section 12); the regions wait for popnei's release
-   with their filter. Option A, meanwhile: `FORMAT_VERSION` stays 1 in
-   stage 3, whose files hold nothing version 1 did not, the fixed order
-   is checked in every version, and version 2 comes with the regions.
-   It costs nothing now and one version for the regions. Option B:
-   version 2 now, for the fixed order alone, and version 3 for the
-   regions; a file of stage 3 then tells by its version that its filters
-   are in the fixed order, which a file of version 1 of this application
-   always is anyway, at the cost of one more version to read forever.
-   Recommended: A.
+   `docs/specs/stage-3-open-points.md`, decided by the owner on 26
+   September 2026: the format stays at version 1 until the first
+   release of the application, which is in development, before its
+   first alpha, so neither stage 3 nor the regions of a BED file raise
+   it ("The versions of the format", above), and the fixed order of the
+   filters is checked in version 1. The architecture approved that day
+   gave version 2 to stage 3, for the regions and the fixed order (its
+   section 12), and is corrected so. The option not taken was version 2
+   now, for the fixed order alone, and version 3 for the regions, a
+   version more for every later application to read, to tell by the
+   version what a file of version 1 of this application always is.
 
 3. **A file of version 1 whose filters of the variants are out of the
-   fixed order.** Point H of `docs/specs/stage-3-open-points.md`. No
-   application wrote one, so it is a file edited by hand, a text editor
-   or a script. Option A, meanwhile: refused as `filterOutOfOrder`, with
-   the text of `docs/specs/core/project.md`, "the filters of the
-   variants should be in the order missing genotypes, …"; the user puts
-   them in order in the file, or sets the filters again in the Variants
-   step. Option B: opened with its filters put in the fixed order, and a
-   warning that says so. popnei applies the filters in their order: the
-   LD pruning keeps a variant by the variants kept before it, so an LD
-   pruning moved to the end keeps other variants, and each filter is
-   given other counts in another order. The project opened is then not
-   the one the file describes, and the check numbers saved with the
-   file, made in its order, would differ from those of the same variants
-   file, a difference the comparison would blame on the file.
-   Recommended: A, since B changes the numbers the file's check was made
-   with.
+   fixed order.** Point H of `docs/specs/stage-3-open-points.md`,
+   decided by the owner on 26 September 2026 as it was recommended: it
+   is refused as `filterOutOfOrder`, with the text of
+   `docs/specs/core/project.md`, "the filters of the variants should be
+   in the order missing genotypes, …"; the user puts them in order in
+   the file, or sets the filters again in the Variants step. No
+   application wrote such a file, so it is one edited by hand. The
+   option not taken opened it with its filters put in the fixed order
+   and a warning: since the LD pruning keeps a variant by the variants
+   kept before it, the project opened would not be the one the file
+   describes, and the check numbers saved with the file, made in its
+   order, would differ from those of the same variants file, a
+   difference the comparison would blame on the file.
 
 ## What this spec relies on in the specs written beside it
 
@@ -1056,6 +1061,6 @@ drops the carried numbers.
   6.
 - The regions of a BED file, saved whole with the name of their file
   and without their hash (`docs/architecture.md`, section 8): with
-  popnei's release that has the filter of the regions, and version 2.
+  popnei's release that has the filter of the regions, in version 1.
 - Keeping a project across a reload of the page without saving it: not
   built (`docs/specs/core/history.md`).

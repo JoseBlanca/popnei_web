@@ -150,9 +150,9 @@ look at the data while correcting the list.
 
 | the list | its `list` | the reason |
 |---|---|---|
-| empty | `keep` | "The list of individuals to keep is empty. Add individuals to it, or remove the filter, in the Variants step." (**Open 2**) |
-| names an individual more than once | `remove` | "The list of individuals to remove names ind_031 more than once. Change the list, or remove the filter, in the Variants step." (**Open 2**) |
-| names individuals not in the variants | `keep` | "The list of individuals to keep names 2 individuals that are not in panel.nei: ind_900 and ind_901. Change the list, or remove the filter, in the Variants step." (**Open 2**) |
+| empty | `keep` | "The list of individuals to keep is empty. Add individuals to it, or remove the filter, in the Variants step." |
+| names an individual more than once | `remove` | "The list of individuals to remove names ind_031 more than once. Change the list, or remove the filter, in the Variants step." |
+| names individuals not in the variants | `keep` | "The list of individuals to keep names 2 individuals that are not in panel.nei: ind_900 and ind_901. Change the list, or remove the filter, in the Variants step." |
 
 Each row holds for either list, "to keep" or "to remove" in its words
 and `list` naming the same one.
@@ -1031,23 +1031,22 @@ of them changes those texts and their tests, and nothing else.
 
 2. **How the user is told to fix a list of individuals that is empty,
    names one more than once, or names individuals not in the variants
-   file.** Point D of `docs/specs/stage-3-open-points.md`, where the
-   open points of the specs of stage 3 are gathered. Written again for stage 3, now that the Variants step has the
-   controls of the filters of individuals, with the ends the first draft
-   of this spec had, "Add individuals to it, or remove the filter, in the
+   file.** Decided by the owner on 26 September 2026, point D of
+   `docs/specs/stage-3-open-points.md`: the ends of the first draft of
+   this spec, "Add individuals to it, or remove the filter, in the
    Variants step." for an empty list and "Change the list, or remove the
-   filter, in the Variants step." for the other two, to be judged by the
-   owner on the screens of stage 3; meanwhile, those. Before, settled by
-   the owner on 25 September 2026 for stage 2: the three reasons
-   end "The Variants step has no control for the filters of individuals
-   in this version, so correct the list in the project file, in a text
-   editor, and open the project again." In stage 2 such a list comes
-   only from a project file, and the end these reasons had, "Add
-   individuals to it, or remove the filter, in the Variants step." and
-   "Change the list, or remove the filter, in the Variants step.", sent
-   the user to a control the step does not have. When the Variants step
-   gains the filters of individuals, in stage 3, the end is written
-   again with it. The review of the code changed, on 24 September 2026,
+   filter, in the Variants step." for the other two, as the table of
+   "What an analysis needs of every project" has them, until the owner
+   sees the Variants step at the stop of the plan of stage 3 where the
+   screens are tried. The option not taken was other words, for instance
+   ones that name the control the step gives the list, chosen before the
+   screen was seen; the owner can still choose them there, and they
+   change that table and its tests alone. Before, settled by the owner
+   on 25 September 2026 for stage 2: the three reasons end "The Variants
+   step has no control for the filters of individuals in this version,
+   so correct the list in the project file, in a text editor, and open
+   the project again.", since in stage 2 such a list came only from a
+   project file. The review of the code changed, on 24 September 2026,
    the wording of the second reason, "names ind_031 twice", to "names
    ind_031 more than once", which holds also of a name written three
    times.
