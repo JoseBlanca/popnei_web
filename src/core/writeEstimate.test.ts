@@ -158,6 +158,11 @@ describe("VS2 D4 a size of a file in words", () => {
     expect(sizeText(1000)).toBe("1 KB");
   });
 
+  test("one byte is written as 1 byte, and no byte as 0 bytes", () => {
+    expect(sizeText(1)).toBe("1 byte");
+    expect(sizeText(0)).toBe("0 bytes");
+  });
+
   test("250,994 bytes is 251 KB, in whole KB", () => {
     expect(sizeText(250_994)).toBe("251 KB");
   });

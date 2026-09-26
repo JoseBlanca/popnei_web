@@ -116,12 +116,15 @@ const UNITS = [
 /**
  * A size of a file in decimal units, rounded to the nearest, with a comma
  * between groups of three digits of the whole part: under 1,000 bytes in
- * bytes, "812 bytes"; under 1,000,000 in whole KB, "251 KB"; under
+ * bytes, "1 byte" and "812 bytes"; under 1,000,000 in whole KB, "251 KB"; under
  * 1,000,000,000 in MB with one decimal, "19.2 MB"; and above in GB with
  * one decimal, "4.3 GB". A size that rounds to 1,000 of its unit is
  * written in the next: 999,600 bytes is "1.0 MB".
  */
 export function sizeText(numBytes: number): string {
+  if (numBytes === 1) {
+    return "1 byte";
+  }
   if (numBytes < 1000) {
     return `${String(numBytes)} bytes`;
   }
