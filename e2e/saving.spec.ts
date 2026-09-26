@@ -200,7 +200,7 @@ test("WS9 D3 a page just opened is left with no question, and after a pick of a 
   expect(await leave(page)).toBe("beforeunload");
 });
 
-test("WS9 D3 Save project opens its dialog with panel.popnei.json selected, Save downloads it, the status region says so and the focus is back on Save project, and axe", async ({
+test("WS9 D3 Save project opens its dialog with panel.popnei.json selected and the line of the question before leaving, Save downloads it, the status region says so and the focus is back on Save project, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -212,6 +212,9 @@ test("WS9 D3 Save project opens its dialog with panel.popnei.json selected, Save
   const field = dialog.getByRole("textbox", { name: "File name" });
   await expect(field).toHaveValue("panel.popnei.json");
   await expect(field).toBeFocused();
+  await expect(dialog).toHaveAccessibleDescription(
+    "The page cannot always ask before it is closed, on an iPad or an iPhone among them: save the project before you leave.",
+  );
   // The whole name selected, so that typing replaces it.
   expect(
     await field.evaluate((input: HTMLInputElement) => [

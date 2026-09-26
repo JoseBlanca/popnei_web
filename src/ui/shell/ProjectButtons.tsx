@@ -46,6 +46,7 @@ import styles from "./ProjectButtons.module.css";
 import {
   KEEP_PROJECT,
   NAME_NEEDED,
+  SAVE_BEFORE_LEAVING,
   handedText,
   openButtonText,
   openQuestion,
@@ -122,7 +123,9 @@ export function SaveProject(): React.JSX.Element {
       />
       <Dialog
         content={
-          name === null ? null : { title: "Save the project", text: null, name }
+          name === null
+            ? null
+            : { title: "Save the project", text: SAVE_BEFORE_LEAVING, name }
         }
         onClose={close}
       >
