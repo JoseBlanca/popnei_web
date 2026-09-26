@@ -18,6 +18,10 @@
  * under it (WCAG 2.4.11): the toast writes its height into the property
  * `--toast-room` of the page, which base.css reads; and the element that
  * has the focus when it appears is scrolled clear of it.
+ *
+ * Escape pressed in the region gives the focus back to where it was
+ * before F6 or the Tab key took it into the region, and leaves the toast
+ * as it is (docs/specs/shell.md, "Accessibility").
  */
 import { useLayoutEffect, useState, useSyncExternalStore } from "react";
 import {
@@ -104,7 +108,7 @@ export function Toast<C extends ToastContent>({
       queue={queue}
       aria-label={label}
       className={classOf(styles, "region")}
-      ref={keepRoom}
+      ref={attachRegion}
     >
       {({ toast }) =>
         // Nothing in the one drawing where the content is gone and its
@@ -124,6 +128,43 @@ export function Toast<C extends ToastContent>({
       }
     </AriaToastRegion>
   );
+}
+
+/** What the region of the toast does on the page while it is drawn: the
+    room it keeps, and Escape. */
+function attachRegion(region: HTMLDivElement): () => void {
+  const giveRoomBack = keepRoom(region);
+  const stopEscape = escapeGoesBack(region);
+  return () => {
+    giveRoomBack();
+    stopEscape();
+  };
+}
+
+/**
+ * Makes Escape pressed in the region `region` give the focus back to the
+ * element of the page that had it before the focus came into the region,
+ * when that element is still on the page. Only Escape: F6 is React Aria's,
+ * and a toast it closed would stop what it tells of.
+ */
+function escapeGoesBack(region: HTMLDivElement): () => void {
+  let before: HTMLElement | null = null;
+  const onFocusIn = (event: FocusEvent): void => {
+    const from = event.relatedTarget;
+    if (from instanceof HTMLElement && !region.contains(from)) before = from;
+  };
+  const onKeyDown = (event: KeyboardEvent): void => {
+    const target = before;
+    if (event.key !== "Escape" || target?.isConnected !== true) return;
+    event.preventDefault();
+    target.focus();
+  };
+  region.addEventListener("focusin", onFocusIn);
+  region.addEventListener("keydown", onKeyDown);
+  return () => {
+    region.removeEventListener("focusin", onFocusIn);
+    region.removeEventListener("keydown", onKeyDown);
+  };
 }
 
 /** The property of the page that holds the room kept under its content

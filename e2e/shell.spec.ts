@@ -483,6 +483,31 @@ test("WS9 D3 F6 reaches the notice after a change that removed the diversity, an
   await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
 });
 
+test("WS9 D3 Escape in the notice gives the focus back to where it was before F6, and leaves the notice as it is", async ({
+  page,
+}) => {
+  await openPopgen(page);
+  const threshold = await removeTheDiversity(page);
+
+  await page.keyboard.press("F6");
+  await expect(notice(page)).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(threshold).toBeFocused();
+  await expect(notice(page)).toBeVisible();
+
+  // From the notice's Undo, reached by the Tab key.
+  await page.keyboard.press("F6");
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  await expect(
+    notice(page).getByRole("button", { name: "Undo", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(threshold).toBeFocused();
+  await expect(threshold).toHaveValue("1");
+  await expect(notice(page)).toBeVisible();
+});
+
 test("WS9 D3 Close of the notice leaves the change as it is and gives the focus to where it was", async ({
   page,
 }) => {
