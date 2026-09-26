@@ -714,8 +714,8 @@ function forwardProject(): Project {
     app: "popgen",
     variants: PANEL_VCF,
     filters: [
-      { kind: "ld", maxAllowedR2: 0.5, maxDist: 1000 },
       { kind: "maf", maxAllowedMaf: 0.95 },
+      { kind: "ld", maxAllowedR2: 0.5, maxDist: 1000 },
     ],
     individualFilters: [
       { kind: "keep", individuals: ["i1", "i2"] },
@@ -810,8 +810,8 @@ function reversedProject(): Project {
       { maxAllowedObsHet: 0.6, kind: "obs_het" },
     ],
     filters: [
-      { maxDist: 1000, maxAllowedR2: 0.5, kind: "ld" },
       { maxAllowedMaf: 0.95, kind: "maf" },
+      { maxDist: 1000, maxAllowedR2: 0.5, kind: "ld" },
     ],
     variants: {
       read: { numVars: 7, ploidy: 2, individuals: ["i1", "i2"], kind: "read" },
