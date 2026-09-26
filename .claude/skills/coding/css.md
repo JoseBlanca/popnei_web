@@ -56,6 +56,7 @@ there, and the dark theme is the same tokens with other values.
   --color-surface: #f4f5f7;
   --color-text: #1a1d21;
   --color-text-muted: #555d68;
+  --color-text-disabled: #6b7078;
   --color-border: #7c8591;
   --color-accent: #1f5fbf;
   --color-on-accent: #ffffff;
@@ -138,6 +139,7 @@ same tokens redefined:
     --color-surface: #202328;
     --color-text: #e8eaed;
     --color-text-muted: #a3abb5;
+    --color-text-disabled: #7c8188;
     --color-border: #7a838e;
     --color-accent: #7fb0ff;
     --color-on-accent: #0d1b2e;
@@ -285,7 +287,7 @@ as it would on `:hover` or `:checked`:
 }
 
 .switch[data-disabled] {
-  color: var(--color-text-muted);
+  color: var(--color-text-disabled);
 }
 ```
 
@@ -357,9 +359,16 @@ The values of WCAG 2.2 at level AA, in both themes:
   palette is chosen to be told apart by the common kinds of colour
   blindness, and it has a limit, seven colours here, beyond which no
   palette separates them; `charts.md` says what a plot does past it.
-- **The disabled state is exempt** from contrast in WCAG, but its text
-  still uses `--color-text-muted`, which passes, so that a user can read
-  what they cannot use and why.
+- **The disabled state is exempt** from contrast in WCAG, but its text,
+  `--color-text-disabled`, still has 4.5:1 against the background, so
+  that a user can read what they cannot use and why; and it has 3:1
+  against `--color-text`, the text of the control when it is enabled, so
+  that the two states are told apart at a glance, as the owner decided
+  on 26 September 2026 (point 12 of the review of work package 9 of
+  `docs/plans/walking-skeleton.md`). With `--color-text-muted`, which it
+  used before, a disabled Redo or Save of the dark theme was 1.93:1 from
+  an enabled one, and 2.54:1 in the light theme. The test of the tokens
+  checks both pairs.
 
 ## Size of the targets
 
