@@ -273,9 +273,13 @@ which come after them (`docs/architecture.md`, section 2).
 | Filter the variants by major allele frequency (MAF) | Maximum major allele frequency, from 0 to 1 | 0.95, the default of `docs/functionality.md`, section 3 | `filterByMaf(maxAllowedMaf)` |
 | Prune the variants by linkage disequilibrium (LD) | Maximum r² with a variant kept before it, from 0 to 1; Distance within which variants are compared, in base pairs, from 1 | 0.3 and 10000 (**Open 1**) | `filterByLd(maxAllowedR2, maxDist)` |
 
-The MAF filter is off in a new project of population genetics, and on
-at 0.95 for the PCA and the GWAS alone, inside them, from stage 4
-(`docs/functionality.md`, section 3); the other two are off. The
+In a new project only the missing data filter of the variants is on,
+at 0.1, as the owner decided on 26 September 2026: the filter by
+observed heterozygosity and the LD pruning are off, and so are the two
+thresholds of the individuals, below, until the user turns them on. The
+MAF filter is off in a new project of population genetics, and on at
+0.95 for the PCA and the GWAS alone, inside them, from stage 4
+(`docs/functionality.md`, section 3). The
 threshold fields take numbers of two decimals, with a step of 0.01, as
 the owner decided for the missing data filter on 25 September 2026, and
 no buttons of their own to step them; the distance, a whole number from 1 to 9007199254740991, the range of
@@ -458,9 +462,14 @@ the individuals, and, with a threshold, "This filter", whose cells say
 runs from its lower edge up to its upper edge, not included, and that
 the last includes its upper edge. Which tab is selected is state of the
 screen, kept while the step is drawn. Under the two tabs, whichever is
-selected, three buttons: "Download as SVG", "Download as PNG", and
-"Download the bins as CSV", since every table of the applications
-downloads as CSV (`docs/functionality.md`, section 9). The CSV is named
+selected, one button, "Download the bins as CSV", since every table of
+the applications downloads as CSV (`docs/functionality.md`, section 9).
+The plot itself has no button of download in stage 3: the owner decided
+on 26 September 2026 that the plots are offered as SVG and PNG in stage
+6, with the report, as `docs/build-order.md` has it, and the export is
+built and tested now without a button
+(`docs/specs/charts/plot2d.md`, "The export"; point C of
+`docs/specs/stage-3-open-points.md`). The CSV is named
 as the plot is, with `_bins`, `panel.variant_maf_bins.csv`; it has the
 header `from,to,count,state`, a row per bin, the edges with every digit
 popnei gave, as the diversity's CSV writes its numbers, and the state
@@ -547,8 +556,10 @@ needs of every project"): "The list of individuals to keep names 2
 individuals that are not in panel.nei: ind_900 and ind_901. Change the
 list, or remove the filter, in the Variants step." The step shows that
 reason whole, under the text area of the list it names, and the stepper
-shows it too (`docs/specs/shell.md`, "The stepper"). Its end is point D of
-`docs/specs/stage-3-open-points.md`; "remove the filter" is Clear here.
+shows it too (`docs/specs/shell.md`, "The stepper"). Its end is the one
+the owner decided on 26 September 2026 until they see the step (point D
+of `docs/specs/stage-3-open-points.md`); "remove the filter" is Clear
+here.
 
 **The statistics of each individual.** Its block, headed "Statistics of
 each individual", an `<h3>`, comes after the lists
@@ -563,10 +574,11 @@ number field, with the refusals above:
 
 | switch | its field | turned on at |
 |---|---|---|
-| Filter the individuals by missing data | Maximum proportion of missing genotypes of an individual, from 0 to 1 | 0.1, plink's default for `--mind` (**Open 1**) |
+| Filter the individuals by missing data | Maximum proportion of missing genotypes of an individual, from 0 to 1 | 0.1, plink's default for `--mind`, as the owner decided on 26 September 2026 |
 | Filter the individuals by observed heterozygosity | Maximum observed heterozygosity of an individual, from 0 to 1 | 0.5 (**Open 1**) |
 
-Their fields take numbers of four decimals, with a step of 0.01 for the
+Both are off in a new project, as the owner decided on 26 September
+2026. Their fields take numbers of four decimals, with a step of 0.01 for the
 arrow keys: the proportions of missing genotypes of the individuals of
 `panel.nei` lie from 0.0165 to 0.0434 with the missing data filter at
 0.05 (`docs/specs/core/individualsKept.md`), where two decimals would
@@ -585,8 +597,8 @@ Beside each, its histogram of `individualChecks.md`, with the threshold
 marked when the filter is on and following the number typed as above;
 its axes "Proportion of missing genotypes" or "Observed heterozygosity",
 and "Individuals"; its legend "Maximum 0.03", "Kept by this filter",
-"Removed by this filter"; the table of its bins and its three buttons,
-as those of the variants. Before the statistics are calculated, or once
+"Removed by this filter"; the table of its bins and its button of the CSV, as those of the
+variants. Before the statistics are calculated, or once
 a change of a filter of the variants has removed them, there is no
 histogram, and the line of the counts below says why.
 
@@ -648,7 +660,7 @@ step as a whole:
 | locked | cannot happen for the step: nothing has to be done before a file is picked. A file picked before the calculation worker has started is read once it has. The writing is locked when `individualListNeeds` gives a reason, with the reason beside its button, or when the filters keep no individual; the three checks read no filter of individuals and are never locked once the file is read | fix the list, or loosen the thresholds |
 | ready | no file: the zone, "Choose a variants file…", the options of a VCF, the filters, and in place of the checks the line of a file not read. With an opened project file, the file it was made with, below. With a file read: every part, each check with its button | pick a file; set the filters; calculate a check; count; write |
 | running | the read: the card with its name, format and size, "Reading panel.nei." and the seconds since the step saw the read start, which the step keeps and loses when it is left; no progress bar, since the read is of the header of a VCF, or the end of a `.nei` file, which popnei tells to nobody (`js/popnei/src/variant.ts`, `onProgress`). A check, the Count or the writing: its bar and its clock in its own part, the rest of the step as it was | during the read: pick another file, which replaces this one; Undo; set the filters. During a calculation: Stop it; set the filters, which leaves it behind, as the notice says |
-| done | the card with the individuals, the ploidy of a `.nei` file, the number of variants once counted, how a VCF was read; each check done beside its filters, the counts, the Save button | replace the file; set the filters; sort and download the table; download the histograms; save the file |
+| done | the card with the individuals, the ploidy of a `.nei` file, the number of variants once counted, how a VCF was read; each check done beside its filters, the counts, the Save button | replace the file; set the filters; sort and download the table; download the bins of a histogram as CSV; save the file |
 | results removed | the words of the change in the block of the check removed; its histograms, or its table, gone. A change of a filter of the variants removes the statistics of each individual, and the notice of the shell says so; the counts are never in the notice, and show the line of no counts | Calculate again; the Undo or Redo of the notice |
 | error | the card with the reason the file was not read, below; or a check or the writing failed, with its words in its part | what the reason says: pick a file, or, when the calculations could not start or the page is out of date, reload the page; loosen the filters when they kept no variant |
 
@@ -826,7 +838,7 @@ nothing on the screen says the things the lines above do not.
   histogram: the row of its two tabs, one stop of the Tab key, whose
   arrow keys move between "Plot" and "Table of the bins"; then the panel
   of the tab selected, the plot, which is no stop, or the table of the
-  bins, one stop; then its three buttons of download; the Count button;
+  bins, one stop; then its button of the CSV of the bins; the Count button;
   each list, its text area and its two buttons; the button of the
   statistics; each threshold, its switch, its field and its histogram,
   in the same order; the table of the individuals, which the Tab key
@@ -944,10 +956,8 @@ release `js-v0.1.0-dev.2` gave in node on 26 September 2026:
   line, and an Undo putting the text back to the list applied;
 - with the thresholds at 0.03 and 0.38, Write, Save, and the download
   read: `panel.filtered.nei`, 170,042 bytes (`writeVariants.md`);
-- each of the five histograms downloaded as SVG and as PNG, under the
-  names of `variantChecks.md` and `individualChecks.md`, the SVG with
-  no `var(` and the PNG three times the size of the plot, and the CSV of
-  the bins of the MAF, `panel.variant_maf_bins.csv`, its header and 40
+- no button that downloads a histogram as SVG or PNG on the step; the
+  CSV of the bins of the MAF, `panel.variant_maf_bins.csv`, its header and 40
   rows, the 39th `0.9500000000000001,0.9750000000000001,22,` with no
   threshold, the edges as popnei gave them; the table of the bins reached with the keyboard, its tab
   selected with the arrow keys;
@@ -1010,7 +1020,8 @@ screen is set by the measurement of `individualChecks.md`.
 - `docs/specs/analyses/variantChecks.md`, `filterCounts.md`,
   `individualChecks.md` and `writeVariants.md`: the parts placed here,
   with their states and words; `docs/specs/charts/histogram.md`, the
-  histogram with its threshold, its table of bins and its export.
+  histogram with its threshold and its table of bins, on the base of
+  the 2D plots of `docs/specs/charts/plot2d.md`.
 - The number field of `src/ui/widgets/`, of stage 2: the properties
   `decimals` and `onTyped` above, which the plan adds to it.
 - `docs/specs/analyses/diversity.md`: a refusal of popnei in the pass is
@@ -1024,20 +1035,34 @@ screen is set by the measurement of `individualChecks.md`.
 ## Open points
 
 The open points of the specs of stage 3 are gathered in
-`docs/specs/stage-3-open-points.md`. This spec adds one, point F there:
+`docs/specs/stage-3-open-points.md`. This spec added one, point F there,
+which the owner answered in part on 26 September 2026:
 
-1. **The values at which a filter starts when it is turned on.** The
-   observed heterozygosity of the variants at 0.5, the LD pruning at an
-   r² of 0.3 over 10000 base pairs, and the two thresholds of the
-   individuals at 0.1 and 0.5, meanwhile. popnei gives no default for
-   any of them. Point F has the options.
+1. **The values at which a filter starts when it is turned on.**
+   Decided: in a new project only the missing data filter of the
+   variants is on, at 0.1, as before; the filter by observed
+   heterozygosity of the variants, the LD pruning and the two thresholds
+   of the individuals are off until the user turns them on; and the
+   missing data filter of the individuals starts at 0.1 when it is
+   turned on. Still open, and asked again of the owner: the values at
+   which the three others start, meanwhile the observed heterozygosity
+   of the variants at 0.5, the LD pruning at an r² of 0.3 over 10000
+   base pairs, and the observed heterozygosity of the individuals at
+   0.5. popnei gives no default for any of them. Point F has the
+   options.
 
-It meets point D there, the ends of the reasons of a list; point C,
-the download of the histograms, whose buttons it places; point G, the
-file written and not saved that a change of its filters discards; and
-point I, what the description of each histogram counts. The two points
-of stage 2 were decided by the owner on 25 September 2026: the button
-that reads a VCF again with other options, in stage 2 (point M of
+The other points of stage 3 that this spec meets were decided by the
+owner on 26 September 2026, and are written above as decided: point C,
+the download of the histograms as SVG and PNG, which waits for stage 6,
+so the step has no button for it, and keeps the CSV of the bins; point
+D, the ends of the reasons of a list, those of `project.md`'s first
+draft until the owner sees the step at the stop of the plan where the
+screens are tried; point G, the file written and not saved that a change
+of its filters discards, with the notice that says so; and point I,
+what the description of each histogram counts, the variants or the
+individuals in the bins. The two points of stage 2 were decided by the
+owner on 25 September 2026: the button that reads a VCF again with
+other options, in stage 2 (point M of
 `docs/specs/stage-2-open-points.md`), and the missing data filter on at
 0.1 (point N).
 

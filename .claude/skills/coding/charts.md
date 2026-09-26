@@ -56,6 +56,19 @@ export const createScatter: Chart<ScatterData, ScatterEvents> = ...
   handle is a closure over the state of that plot, not a class: nothing
   outside can reach into it, and there is no `this` to lose when a method
   is passed as a callback.
+- **Every 2D plot makes its handle with `createPlot2d` of
+  `src/charts/plot2d.ts`**, from a definition of the plot, its kind, the
+  check of its data, its margins and its `draw`
+  (`docs/specs/charts/plot2d.md`). That base makes the SVG and its
+  frame, follows the size, draws the axes from the plot's scales, writes
+  the title and the description, gives `update` and `destroy`, and wires
+  `toSVG` and `toPNG` to `export.ts`; the plot draws its marks, its
+  annotations and its legend. So the order of the calls, nothing drawn at
+  a size of 0, one draw a frame after a resize and a `destroy` safe
+  twice are written once, and not in each plot. It is a function that
+  makes a closure, as the handle is, and not a base class, for the same
+  reasons; the owner asked for one shared piece for the 2D plots on 26
+  September 2026. The 3D plot has its own handle and shares `export.ts`.
 - **Everything the plot draws is in `Data`**, the labels, the title and
   the description included. The plot has no options object beside it, so
   `update` is the only way anything changes, and a plot drawn from the
@@ -189,8 +202,8 @@ data against the old axis.
 
 ## The SVG, its parts and their names
 
-Every 2D plot has the same skeleton, so that the export, the tests and
-the CSS find the same parts:
+Every 2D plot has the same skeleton, made by `plot2d.ts`, so that the
+export, the tests and the CSS find the same parts:
 
 ```
 <svg class="chart chart-scatter" role="img" aria-labelledby="chart3-title chart3-desc"
@@ -293,7 +306,10 @@ the classes their colours from the tokens:
 So the dark theme is a change of the tokens, and a plot on the screen
 follows it with no redraw.
 
-An exported SVG cannot depend on a stylesheet it does not carry: opened
+No screen offers the export before stage 6, when every plot is
+downloadable as SVG and PNG (`docs/build-order.md`), as the owner
+decided on 26 September 2026; it is built and tested from stage 3, on
+the histogram. An exported SVG cannot depend on a stylesheet it does not carry: opened
 in Inkscape, in a journal's system or in the report, it has none of the
 page's CSS. So `toSVG`, in `src/charts/export.ts`:
 
@@ -344,7 +360,7 @@ tells the screen which words to show: `tooLarge` when a side would pass
 4,096 pixels at that scale, checked before anything is drawn, and
 `notMade` when the browser gives no canvas or makes no PNG. The screen
 picks the scale: it asks for 3, and for 2 after a `tooLarge`
-(`docs/specs/charts/histogram.md`, decided on 26 September 2026).
+(`docs/specs/charts/plot2d.md`, decided on 26 September 2026).
 
 ```ts
 if (Math.max(width, height) * scale > 4096) throw new PngError("tooLarge");
@@ -382,7 +398,8 @@ canvas in Safari and make `toBlob` throw.
 ## Size: responsive with `ResizeObserver`
 
 Each plot observes its own element with a `ResizeObserver`, created in
-the function and disconnected in `destroy`. The window's `resize` event
+the function and disconnected in `destroy`; for a 2D plot, `plot2d.ts`
+does it (`docs/specs/charts/plot2d.md`, "The size and its changes"). The window's `resize` event
 is not used, because a container changes size without the window, when a
 drawer opens or a panel collapses.
 
@@ -633,7 +650,8 @@ The code of a plot is split so that most of it needs no browser:
   inlining of the export is not tested there.
 - **Playwright, in Chromium, Firefox and WebKit**: the exported SVG with
   no `var(` and no dependency on the page, and its PNG at the right size
-  in pixels; the hover and the tooltip; a resize; the 3D plot rendering,
+  in pixels, on the page of the tests of the plots, `e2e/plots.html`,
+  until a screen offers the export (`docs/specs/charts/plot2d.md`); the hover and the tooltip; a resize; the 3D plot rendering,
   turning with the mouse and with its buttons, following a change of
   theme, and surviving a forced loss of context; and, after `destroy`, no
   canvas left.

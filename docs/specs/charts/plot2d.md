@@ -1,0 +1,432 @@
+# The base of the 2D plots
+
+Written on 26 September 2026, for stage 3 of `docs/build-order.md`, the
+Variants step whole, after the owner asked that day that stage 3 make
+one piece for what every 2D plot has in common; not yet reviewed nor
+approved. There is no code in `src/charts` yet. This spec gives
+`src/charts/plot2d.ts`, the function that every plot drawn in two
+dimensions makes its handle with: the histogram of
+`docs/specs/charts/histogram.md` now, and the scatter plot of the PCA,
+the Manhattan plot and the QQ plot of later stages. It holds what those
+plots share: the SVG and its frame with the margins, the size and its
+changes, the axes drawn from the plot's scales, the themes, the text
+that a screen reader reads for the plot and the rule of the table of the
+numbers behind it, the handle with its `update` and `destroy`, and the
+export as SVG and PNG. A plot adds to it only what it draws, its marks,
+its annotations and its legend. It is built and tested in stage 3 with
+the histogram; the export is offered by buttons only in stage 6, with
+the report, as the owner decided on 26 September 2026 (point C of
+`docs/specs/stage-3-open-points.md`). It develops the row `src/charts/`
+of section 9 of `docs/architecture.md` and its section 7, "A plot is a
+function", and depends on `.claude/skills/coding/charts.md`, `css.md`
+and `testing.md`.
+
+A **handle** is the object a plot function returns, through which the
+screen gives the plot new data, removes it and exports it
+(`charts.md`, "The contract of a plot"). A **definition** of a plot is
+what a kind of plot gives this base: its name, the check of its data,
+its margins and the function that draws its marks.
+
+## Its form: a function that makes the handle from a definition
+
+`createPlot2d(element, data, definition)` returns the handle of the
+plot, and each 2D plot is that call with its definition:
+
+```ts
+export const createHistogram: Chart<HistogramData> = (element, data) =>
+  createPlot2d(element, data, histogramDefinition);
+```
+
+The base owns what happens between the calls of the screen, the order
+in which the SVG is made, drawn, drawn again after a change of size and
+removed, and calls the plot's `draw` with a frame of the right size. So
+the rules that are easy to get wrong once per plot, nothing drawn at a
+size of 0, one draw per frame of the screen after a resize, `destroy`
+safe to call twice, a check that throws before anything is added to the
+page, are written and tested once.
+
+It is a function and not a class, for the reasons `charts.md` gives for
+every handle and that section 7 of the architecture sets, "a plot is a
+function": the handle is a closure over the state of its plot, which
+nothing outside can reach into, and has no `this` that a method passed
+as a callback would lose. A base class with a subclass per plot would
+give the same sharing through inheritance, with each plot overriding
+methods whose order of calls the base decides, and the state of the
+plot in fields that the subclass and the base both write. The option
+not taken on the other side, a set of helper functions that each plot
+calls from its own `createX`, would share the drawing of the frame and
+the axes but leave each plot to write again the lifecycle above, where
+the defects are. The definition is the same shape as the definition of
+an analysis in section 4 of the architecture: plain functions that a
+common piece calls.
+
+The 3D plot of the PCA, `pca3d.ts`, is not built on this base, since it
+draws with WebGL and not into an SVG; it shares with it `export.ts`, the
+ids and the rules of the handle (`charts.md`, "The 3D PCA with
+three.js").
+
+## What it does
+
+### The SVG and its frame
+
+The base makes the skeleton of `charts.md`, "The SVG, its parts and
+their names", in the element it is given, once, when the plot is
+created: the `<svg>` with the classes `chart chart-‹kind›`, `chart
+chart-histogram` for the histogram, its `<title>` and `<desc>`, the clip
+of the marks in `<defs>`, and the groups `chart-frame`, `chart-grid`,
+`chart-axis-x`, `chart-axis-y`, `chart-marks`, `chart-annotations`, the
+two labels of the axes and `chart-legend`. It gives the plot the groups
+where it draws, and writes nothing inside `chart-marks`,
+`chart-annotations` and `chart-legend` itself. The overlay that takes
+the pointer events, `chart-overlay`, is made by the base for a plot
+whose definition asks for it, from the first plot that takes pointer
+events, the scatter of stage 4; the histogram takes none, so stage 3
+makes no overlay.
+
+The ids of each plot are unique in the page, from a counter of
+`src/charts/ids.ts`: a prefix such as `chart3`, and the ids
+`chart3-title`, `chart3-desc` and `chart3-clip`, since two histograms of
+one screen would otherwise name each other's title and clip.
+
+The frame follows the margin convention of D3 (`charts.md`, "The
+margins"): the SVG takes the size of the element, the margins of the
+plot hold its axes and their labels, and the frame is the rest, of
+`innerWidth` by `innerHeight`, which the base gives the plot. The
+margins are the definition's, a function of the data, since the
+histogram's top margin is larger when it draws a legend; they are fixed
+numbers and not measured from the text, because jsdom, the DOM of the
+unit tests, cannot measure text, and a browser can measure it only once its fonts
+are loaded. So the text of every plot has a size in pixels in
+`charts.css`, 12 for the ticks and the legend and 13 for the labels of
+the axes, which fits the fixed margins whatever size of text the user
+set in the browser; a zoom of the page enlarges the whole plot, its text
+with it, which is what WCAG 2.2, success criterion 1.4.4, asks.
+
+### The size and its changes
+
+The plot never sets the size of its element (`charts.md`): the screen's
+CSS gives it a width, from its container, and a height or an
+`aspect-ratio`. The base reads the size with `getBoundingClientRect`
+when the plot is created, and draws at once when the element has one,
+so that the report, which draws a plot outside the visible page and
+takes its SVG (`docs/architecture.md`, section 8), gets a plot drawn.
+Then a `ResizeObserver` on the element calls it at each change of size,
+and the base draws once per frame of the screen, with
+`requestAnimationFrame`, at the last size given, since a drag of the window gives many calls and the eye sees no more
+than one draw per frame. While the
+element has no size, a tab that is hidden, nothing is drawn, and the
+next call with a size draws. `width`, `height` and the `viewBox` of the
+SVG are the size in CSS pixels at the last draw, so one unit is one
+pixel on the screen and in the file.
+
+### The axes
+
+The plot builds its scales at each draw, from its data and the size of
+the frame, with the ranges `[0, innerWidth]` and `[innerHeight, 0]`,
+since a scale kept from a draw before is how a plot shows new data on an
+old axis (`charts.md`, "Drawing"). The base draws the two axes from
+those scales, with `d3-axis`, and writes the labels of the axes, the
+`xLabel` and `yLabel` of the data, centred under the horizontal axis
+and turned along the vertical one, in the margins:
+
+- about one tick for every 80 pixels of the width of the frame and one
+  for every 40 pixels of its height, meanwhile, refined in the running
+  application;
+- the labels of the ticks in the format the scale gives, `tickFormat`
+  of `d3-scale`, or the one the plot asks for;
+- for a count, ticks at whole numbers only, written with a comma between
+  thousands, "12,000", since a count of 0.5 variants means nothing; the
+  histogram asks for them.
+
+The grid, `chart-grid`, stays empty until a plot asks for one.
+
+### The themes
+
+The base writes classes and no colour, as every plot does (`charts.md`,
+"Colours, themes and the exported file"): `charts.css` gives each class
+its colours from the tokens of `src/ui/tokens.css`, so a change of theme
+changes the tokens and the plot on the screen follows with no redraw.
+The exported file is always in the light theme (below, "The export").
+
+### The text alternative and the table of the numbers
+
+A screen reader reads the plot as one image, and a user who cannot see
+it needs what it shows in words and the numbers behind its marks
+(`charts.md`, "Accessibility"):
+
+- **The SVG has `role="img"`, with `aria-labelledby` naming its
+  `<title>` and its `<desc>`**, which the base writes from the `title`
+  and the `description` of the data, as text and never as markup, since
+  a title can hold the name of a population from the user's files. The
+  screen writes the description, because it knows what the numbers mean.
+- **A table beside the plot**, drawn by the screen and not by the plot,
+  since the tables of the applications are made with React Aria, the
+  library of accessible widgets of the screens, and the plots
+  know nothing of React (`docs/architecture.md`, section 7). Each plot
+  gives the screen its rows with a pure function of its data, one row
+  per mark, `histogramRows` for the histogram, from which the screen
+  draws the table, writes its CSV and writes the description, so that
+  the table and the plot never disagree. The base gives the one rule the
+  tables of the plots share, `tableNumber(x)`, a number shown to 12
+  significant digits, `Number(x.toPrecision(12))`, so that an edge that
+  popnei gives as 0.07500000000000001 reads 0.075; the rows and the CSV
+  keep every digit.
+- The marks are not stops of the Tab key: the table is the way in for
+  the keyboard, and a few thousand tab stops would be of no use.
+
+### The handle
+
+`createPlot2d` returns the `ChartHandle<Data>` of `charts.md`:
+
+- **`update(data)`** checks the data with the definition's `check`,
+  writes the title and the description, and draws at once at the size
+  of the last draw, in the same `<svg>` element, so that the threshold line of a histogram, which follows the number
+  the user types in the field of its filter, moves as the key is
+  pressed. A draw that a
+  resize scheduled still runs, and draws the new data at the new size.
+- **`destroy()`** disconnects the `ResizeObserver`, cancels a draw that
+  waits for its frame, and removes the SVG, leaving the element with no
+  child and no listener. A second call does nothing, because React in
+  development mounts every effect, removes it and mounts it again
+  (`react.md`).
+- **`toSVG()` and `toPNG(scale)`**, below.
+
+### The export
+
+`toSVG()` and `toPNG(scale)` are made by `src/charts/export.ts`, as
+`charts.md`, "Colours, themes and the exported file" and "PNG", has
+them, from the SVG of the plot and its size; the 3D plot calls the same
+functions with the SVG it projects. In stage 3 no screen calls them: the
+buttons "Download as SVG" and "Download as PNG" come in stage 6, when
+every plot is offered so (`docs/build-order.md`), and until then the
+export is checked by its tests (below, "How it is verified").
+
+- **What the file holds**: the plot as it is on the screen, at its size,
+  with its title, its description, its axes, its marks, its annotations
+  and its legend; the colours of the light theme written on each
+  element, with no `var(` left, resolved in a hidden container with
+  `data-theme="light"`, since the file goes to papers and to print; a
+  first rectangle of the background colour, since a transparent plot on
+  a dark slide cannot be read; the overlay removed when there is one;
+  the fonts named as `charts.md`, "Fonts", has them. Not the table, and
+  not the versions of popnei and of the application, which the page
+  shows beside every download (`docs/functionality.md`, section 9).
+- **The PNG** is the SVG of `toSVG` drawn on a canvas at `scale` times
+  its size, 3 for print at 300 dpi and 2 for slides. `toPNG` rejects
+  with a `PngError` whose `kind` tells the two failures apart:
+  `tooLarge`, when that scale would make a side above 4,096 pixels,
+  which a canvas of iOS does not draw, checked before anything is drawn;
+  and `notMade`, when the browser gives no canvas or makes no PNG. The
+  screen picks the scale: it asks for 3, and for 2 after a `tooLarge`.
+  A histogram is at most 40rem wide (`histogram.md`, "The size"), 640
+  pixels at the browser's default size of text, 16 pixels, so 3 times is
+  1,920 pixels; it takes 2 times only above 1,365 pixels a side, a size
+  of text above 34 pixels, and is refused above 2,048, a size of text
+  above 51 pixels.
+- **The words of a refused PNG**, drafted with this spec for the screen
+  spec that gives the buttons in stage 6: "The plot is too large to save
+  as a PNG. Save it as SVG, or make the window narrower and try again."
+  for a `tooLarge` at 2, and "The browser could not make the PNG. Save
+  the plot as SVG." for a `notMade`, both said without moving the focus
+  (WCAG 2.2, 4.1.3).
+- **The name of each file** is the analysis's, which gives it with its
+  plot (`docs/specs/analyses/variantChecks.md` and
+  `individualChecks.md`).
+
+## The TypeScript interface
+
+The texts every 2D plot draws, which the data of each plot hold beside
+its numbers:
+
+```ts
+// src/charts/plot2d.ts
+export interface PlotText {
+  readonly title: string;          // the <title> of the SVG
+  readonly description: string;    // the <desc>, written by the screen
+  readonly xLabel: string;
+  readonly yLabel: string;
+}
+
+export interface Margin {
+  readonly top: number;            // CSS pixels
+  readonly right: number;
+  readonly bottom: number;
+  readonly left: number;
+}
+```
+
+What the base gives the plot's `draw`: the size of the frame, the groups
+where the plot draws, and the axes to draw from its scales.
+
+```ts
+export interface AxesOptions {
+  /** The labels of the ticks; the scale's tickFormat when absent. */
+  readonly xFormat?: (value: number) => string;
+  readonly yFormat?: (value: number) => string;
+  /** Ticks at whole numbers only, with a comma between thousands. */
+  readonly yWholeNumbers?: boolean;
+}
+
+export interface Frame {
+  readonly innerWidth: number;     // above 0: draw is never called at a size of 0
+  readonly innerHeight: number;
+  readonly marks: Selection<SVGGElement, unknown, null, undefined>;
+  readonly annotations: Selection<SVGGElement, unknown, null, undefined>;
+  readonly legend: Selection<SVGGElement, unknown, null, undefined>;
+  /** Draws the two axes and their labels from the plot's scales. */
+  axes(
+    x: ScaleContinuousNumeric<number, number>,
+    y: ScaleContinuousNumeric<number, number>,
+    options?: AxesOptions,
+  ): void;
+}
+```
+
+`Selection` is `d3-selection`'s and `ScaleContinuousNumeric` is
+`d3-scale`'s; both stay inside `src/charts`.
+
+What a kind of plot gives the base. `check` throws an `Error` for a
+defect of the caller, data the plot cannot draw by its contract, as
+`charts.md` asks; `draw` draws the whole plot for the data and the
+frame, and can be called any number of times with the same arguments.
+
+```ts
+export interface Plot2dDefinition<Data extends PlotText> {
+  /** The name in the class of the SVG, chart-‹kind›: "histogram". */
+  readonly kind: string;
+  readonly check: (data: Data) => void;
+  readonly margin: (data: Data) => Margin;
+  readonly draw: (frame: Frame, data: Data) => void;
+}
+
+export function createPlot2d<Data extends PlotText>(
+  element: HTMLElement,
+  data: Data,
+  definition: Plot2dDefinition<Data>,
+): ChartHandle<Data>;
+
+/** A number of a table of a plot, to 12 significant digits. */
+export function tableNumber(value: number): number;
+```
+
+The error a PNG is refused with, in `src/charts/export.ts`:
+
+```ts
+export class PngError extends Error {
+  readonly kind: "tooLarge" | "notMade"; // a side above 4,096 pixels at that scale; no canvas, or no PNG made
+}
+```
+
+`src/charts/limits.ts` holds the side of the largest canvas,
+`MAX_CANVAS_SIDE`, 4,096 pixels, beside the limits of each plot.
+
+## The cases
+
+- **Data the plot cannot draw**, when it is created: `check` throws
+  before the base adds anything to the element. In `update`: the plot
+  stays as it was, the previous data drawn.
+- **An element with no size when the plot is created**: the SVG is made,
+  with its title and description, and nothing is drawn until the
+  observer gives a size.
+- **`update`, `toSVG` or `toPNG` after `destroy`**, and `toSVG` or
+  `toPNG` of a plot never drawn, whose element never had a size: an
+  `Error`, a defect of the caller, since a screen exports only a plot it
+  shows.
+- **A title or a label with markup in it**, `<b>P1</b>`, from a name the
+  user gave: written as text; no `b` element is made.
+- **A change of theme** while the plot is on the screen: nothing is
+  drawn again; a later `toSVG` is in the light theme all the same.
+
+## How it runs
+
+On the page, in the main thread, as every plot. The base adds one
+`ResizeObserver` and at most one waiting `requestAnimationFrame` per
+plot; nothing it holds grows with the data.
+
+## How it is verified
+
+At `createPlot2d` and the handle, with a definition of a test that draws
+one rect per value, and again through the histogram, whose tests are in
+its spec.
+
+**Without a DOM, in the project `charts` of Vitest** (`testing.md`):
+`tableNumber` of 0.07500000000000001 is 0.075 and of 0.9500000000000001
+is 0.95; the ticks of a vertical axis of whole numbers for a domain of 0
+to 3 are 0, 1, 2 and 3.
+
+**The SVG, under jsdom**, with the size of the element given by a stub
+of `getBoundingClientRect` and a `ResizeObserver` the test calls:
+
+- the skeleton of "The SVG and its frame", with `role="img"`, the
+  classes `chart chart-‹kind›`, the `<title>` and `<desc>` of the data,
+  and ids that differ between two plots made in one element each;
+- a `check` that throws leaves the element with no child; an `update`
+  whose `check` throws leaves the SVG of the data before;
+- a size of 0 draws nothing; the first call of the observer with a size
+  draws, once, at the next frame, and three calls within one frame draw
+  once, at the last size;
+- `width`, `height` and the `viewBox` of the SVG at the size of the last
+  draw, and the frame of `innerWidth` by `innerHeight` of that size less
+  the margins;
+- an `update` redraws in the same `<svg>` element;
+- a title `<b>P1</b>` is text in the `<title>`, and no `b` element
+  exists;
+- `destroy` leaves the element with no child, disconnects the observer,
+  cancels a waiting draw, and a second `destroy` throws nothing; an
+  `update` after it throws.
+
+**In Playwright, in Chromium, Firefox and WebKit**, where the export is
+first seen working. No screen offers the export in stage 3, so the tests
+open a page of their own, `e2e/plots.html`, which draws the histogram of
+the MAF of `e2e/fixtures/panel.nei`, its bins as literals, at a size the
+test sets, and gives the test its handle through `page.evaluate`. The
+page is built into `dist/` only for the tests, when `test:e2e` sets the
+variable `POPNEI_TEST_PAGES`, so that
+the flows run against the built site as `testing.md`, "Against the
+built site", asks, and the site that users open does not carry it. The
+option not taken was to open that page on the development server of
+Vite, which serves the sources one by one and so is not the site the
+export will run in.
+
+- the SVG of `toSVG` holds no `var(` and no `chart-overlay`, has a first
+  background rectangle, and has the light colours when the page is dark:
+  the fill of a kept bar is `rgb(0, 114, 178)`;
+- `toPNG(3)` of a plot of 600 by 375 pixels is a PNG of 1,800 by 1,125
+  pixels; of a plot 1,400 pixels wide it rejects with `tooLarge`, and
+  `toPNG(2)` gives 2,800 pixels; `toPNG(2)` of a plot above 2,048 pixels
+  a side rejects with `tooLarge` without drawing; a canvas whose
+  `toBlob` gives `null`, stubbed, rejects with `notMade`;
+- a resize of the element draws the plot again at its new size, and
+  after `destroy` the element is empty.
+
+**The dependencies it adds**, all approved by the owner on 24 September
+2026 (`docs/technology.md`, section 2) and none yet in `package.json`:
+`d3-selection` 3.0.0, `d3-scale` 4.0.2 and `d3-axis` 3.0.0, with
+`@types/d3-selection` 3.0.12, `@types/d3-scale` 4.0.9 and `@types/d3-axis`
+3.0.6 for development; and `jsdom` 30.1.1 for development, with the
+project `charts` of `vite.config.ts` (`testing.md`, "Vitest"). The
+versions are those of `npm view` on 26 September 2026.
+
+## What this spec asks of other documents
+
+Written into those documents with this spec, on 26 September 2026:
+
+- `.claude/skills/coding/charts.md`: that every 2D plot makes its handle
+  with `createPlot2d`, and that the skeleton, the size and the export
+  are made there.
+- `docs/architecture.md`, section 9: `plot2d.ts` in the list of the
+  modules of `src/charts`.
+- `.claude/skills/coding/testing.md`, "Against the built site": the page
+  `e2e/plots.html`, built for the tests alone; `vite.config.ts` and the
+  script `test:e2e`, which are code, come with the plan.
+
+## Not in this spec
+
+- What the histogram draws, its margins, its legend and its rows:
+  `docs/specs/charts/histogram.md`.
+- The overlay and the hover, the zoom, and a grid: with the first plot
+  that has them, the scatter of the PCA in stage 4 and the Manhattan
+  plot in stage 7, each specified with it.
+- The buttons of the export, their words and the line of the versions
+  beside them: stage 6, with the report.
+- The 3D plot: `charts.md`, "The 3D PCA with three.js", in stage 4.

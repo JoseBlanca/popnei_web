@@ -1560,6 +1560,8 @@ src/worker/
                     of the columns, pure, called by filesRunner.ts
   regions/          the reader of a BED file, pure, called by filesRunner.ts
 src/charts/
+  plot2d.ts         the base every 2D plot makes its handle with: its SVG,
+                    size, axes, text for a screen reader and export
   histogram.ts scatter.ts line.ts qq.ts heatmap.ts manhattan.ts pca3d.ts
   export.ts         SVG and PNG
 src/ui/

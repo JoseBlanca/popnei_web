@@ -376,9 +376,8 @@ keyboard alone, the Tab key into the table, the arrow keys to the header
 Proportion of missing genotypes and Enter twice, which puts `s082` first,
 0.0434, the largest of `panel.nei` with the missing data filter at 0.05;
 the CSV downloaded, `panel.individual_stats.csv`, its header and 200
-rows, `s000` with 0.026041666666666668 and 0.3672014260249554; and each
-of the two histograms downloaded as SVG and as PNG, under the names
-above, the PNG three times the size of the plot on the screen.
+rows, `s000` with 0.026041666666666668 and 0.3672014260249554; and the
+CSV of the bins of each of the two histograms.
 
 ## The panel
 
@@ -425,12 +424,16 @@ are calculated:
   individuals, in 20 bins from 0.0165 to 0.0434. The threshold 0.03
   keeps the 10 bins up to it, 125 individuals, splits the bin from
   0.0299 to 0.0313, 23 individuals, and removes the 9 bins above it, 52
-  individuals.", and the two buttons of
-  its export, "Download as SVG" and "Download as PNG", which save
-  `panel.individual_missing_rate.svg` and `panel.individual_obs_het.png`
-  and their pairs, with the line of the versions, "Calculated with
-  popnei 0.1.0, in version 0.1.0 of the application." (point C of
-  `docs/specs/stage-3-open-points.md`, the buttons there meanwhile).
+  individuals.", and the download of the table of its bins as CSV,
+  `panel.individual_missing_rate_bins.csv` and
+  `panel.individual_obs_het_bins.csv` (`docs/specs/steps/variants.md`).
+  The histograms themselves are not offered as SVG or PNG in stage 3, as
+  the owner decided on 26 September 2026 (point C of
+  `docs/specs/stage-3-open-points.md`): the export is built and tested
+  with the base of the 2D plots (`docs/specs/charts/plot2d.md`), and
+  offered by buttons in stage 6, under the names
+  `panel.individual_missing_rate.svg` and `panel.individual_obs_het.svg`,
+  or `.png`.
 - **A download**, "Download the table as CSV", which saves
   `panel.individual_stats.csv`, the stem of the variants file
   (`variantsStem` of `src/core/fileNames.ts`) and `.individual_stats.csv`,

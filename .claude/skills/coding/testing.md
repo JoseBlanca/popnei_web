@@ -311,6 +311,13 @@ export default defineConfig({
 - The browsers are installed once per machine with
   `npx playwright install`, a download of several hundred MB, and again
   when Playwright is upgraded.
+- A part that no screen shows yet is tested on a page of the tests,
+  under `e2e/`, built into `dist/` only when the variable
+  `POPNEI_TEST_PAGES` is set, which `test:e2e` sets, so that it runs
+  against the built site and the deployed site does not carry it. From
+  stage 3 there is one, `e2e/plots.html`, where the export of the plots
+  is tested until stage 6 offers it on the screens
+  (`docs/specs/charts/plot2d.md`, decided on 26 September 2026).
 
 The scripts:
 

@@ -244,13 +244,16 @@ on. Each has the table of its bins beside it, from `histogramRows`, a
 description in the form of the histogram's spec, "The major allele
 frequency of 1,200 variants, in 40 bins from 0 to 1. The threshold 0.95
 keeps the 38 bins up to it, 1,175 variants, and removes the 2 bins above
-it, 25 variants.", and the two buttons
-of its export, "Download as SVG" and "Download as PNG", which save
-`panel.variant_maf.svg`, `panel.variant_obs_het.svg` and
-`panel.variant_exp_het.svg`, or `.png`, with the line of the versions,
-"Calculated with popnei 0.1.0, in version 0.1.0 of the application."
-(point C of `docs/specs/stage-3-open-points.md`, the buttons there
-meanwhile).
+it, 25 variants.", and the download of the table of its bins as CSV,
+`panel.variant_maf_bins.csv`, `panel.variant_obs_het_bins.csv` and
+`panel.variant_exp_het_bins.csv` (`docs/specs/steps/variants.md`). The
+histograms themselves are not offered as SVG or PNG in stage 3, as the
+owner decided on 26 September 2026 (point C of
+`docs/specs/stage-3-open-points.md`): the export is built and tested
+with the base of the 2D plots (`docs/specs/charts/plot2d.md`), and
+offered by buttons in stage 6, under the names `panel.variant_maf.svg`,
+`panel.variant_obs_het.svg` and `panel.variant_exp_het.svg`, or `.png`.
+The option not taken was the two buttons on each histogram from stage 3.
 
 ### The states
 

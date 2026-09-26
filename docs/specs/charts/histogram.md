@@ -4,20 +4,23 @@ Written on 26 September 2026, for stage 3 of `docs/build-order.md`, the
 Variants step whole; not yet reviewed nor approved. There is no code in
 `src/charts` yet. This spec gives the first plot of the applications: the
 function of `src/charts/histogram.ts` that draws a histogram whose bins
-are already counted, marks which bins the threshold of a filter keeps and
-which it removes, and exports the plot as an SVG or a PNG file. The
-Variants step draws five histograms with it: the major allele frequency
-(MAF), the observed and the expected heterozygosity of the variants, and
-the proportion of missing genotypes and the observed heterozygosity of the
-individuals (`docs/functionality.md`, section 3). With it come the pieces
-that every later plot shares, the contract of a plot, the ids, the export
-and the stylesheet of the plots, as `.claude/skills/coding/charts.md`
-defines them. It develops the row `src/charts/` of section 9 of
-`docs/architecture.md` and its section 7, "A plot draws the bins it is
-given". It depends on `.claude/skills/coding/charts.md`, `css.md` and
-`testing.md`, and on two specs written beside it,
-`docs/specs/analyses/variantChecks.md` and `individualChecks.md`, which
-call it; what it assumes of them is listed at the end.
+are already counted, and marks which bins the threshold of a filter keeps
+and which it removes. The Variants step draws five histograms with it:
+the major allele frequency (MAF), the observed and the expected
+heterozygosity of the variants, and the proportion of missing genotypes
+and the observed heterozygosity of the individuals
+(`docs/functionality.md`, section 3). It is drawn on the base of the 2D
+plots, `docs/specs/charts/plot2d.md`, which gives it its SVG and frame,
+its size, its axes, its text for a screen reader, its handle and its
+export as SVG and PNG, and which the histogram is the first plot of; the
+owner decided on 26 September 2026 that the export is not offered by a
+button until stage 6 (point C of `docs/specs/stage-3-open-points.md`).
+It develops the row `src/charts/` of section 9 of `docs/architecture.md`
+and its section 7, "A plot draws the bins it is given". It depends on
+`plot2d.md`, on `.claude/skills/coding/charts.md` and `css.md`, and on
+two specs written beside it, `docs/specs/analyses/variantChecks.md` and
+`individualChecks.md`, which call it; what it assumes of them is listed
+at the end.
 
 ## What it does
 
@@ -132,32 +135,32 @@ numbers without the picture").
   for the three histograms of the variants and the range of the values
   for the two of the individuals, widened to take the threshold when it
   lies outside them, so that its line is always drawn.
-  Its ticks are those of `d3-scale`'s linear scale, about one for every
-  80 pixels of width, with the format that scale gives.
+    Its ticks are those the base draws, with the format of `d3-scale`'s
+  linear scale (`plot2d.md`, "The axes").
 - **The vertical axis** runs from 0 to the largest count, made round by
   the scale's `nice`, and from 0 to 1 when every count is 0. Its ticks
-  are whole numbers only, since a count of 0.5 variants means nothing,
-  written with a comma between thousands, "12,000". It is linear: a log
+  are whole numbers only, written with a comma between thousands,
+  "12,000", the base's `yWholeNumbers`. It is linear: a log
   axis cannot show a bin of 0, and the table gives every count.
 - **A bin with a count of 0 has no bar.** It is still a row of the table.
 
 ## The TypeScript interface
 
 The contract of every plot, in `src/charts/types.ts`, is the one of
-`charts.md`, "The contract of a plot", written with this plot:
-`ChartHandle<Data>` with `update`, `destroy`, `toSVG` and `toPNG`, and
-`Chart<Data, Events>`.
+`charts.md`, "The contract of a plot": `ChartHandle<Data>` with
+`update`, `destroy`, `toSVG` and `toPNG`, and `Chart<Data, Events>`. The
+histogram makes its handle with `createPlot2d` of `plot2d.md`, from its
+definition, `kind` `"histogram"`, its `check`, its margins and its
+`draw`.
 
 What the histogram draws. Every text is the screen's, since the screen
 knows what the numbers mean; the plot writes none of its own.
 
 ```ts
 // src/charts/histogram.ts
-export interface HistogramData {
-  readonly title: string;          // the <title> of the SVG
-  readonly description: string;    // the <desc>, written by the screen
-  readonly xLabel: string;         // "Major allele frequency"
-  readonly yLabel: string;         // "Variants"
+/** With the texts of PlotText: xLabel "Major allele frequency", yLabel "Variants". */
+export interface HistogramData extends PlotText {
+
   /** The edges of the bins, one more than the bins, finite and increasing. */
   readonly edges: Readonly<Float64Array>;
   /** The count of each bin, from the left. */
@@ -178,7 +181,8 @@ export interface HistogramThreshold {
   readonly removedLabel: string;
 }
 
-export const createHistogram: Chart<HistogramData>;
+export const createHistogram: Chart<HistogramData> = (element, data) =>
+  createPlot2d(element, data, histogramDefinition);
 ```
 
 No events: the histogram has no hover and no selection in this stage
@@ -204,8 +208,9 @@ export interface HistogramRow {
 export function histogramRows(data: HistogramData): HistogramRow[];
 ```
 
-`createHistogram` and `histogramRows` throw an `Error`, a defect of the
-caller and not a state to show (`charts.md`), when `counts` is empty,
+`createHistogram`, `update` and `histogramRows` throw an `Error`, a
+defect of the caller and not a state to show (`charts.md`), from the
+`check` of the definition, when `counts` is empty,
 when `edges` is not one longer than `counts`, when an edge is not finite
 or not above the one before, when the threshold's value is not finite,
 and when there are more than `MAX_HISTOGRAM_BINS` bins, 1,000, a constant
@@ -213,32 +218,16 @@ of `src/charts/limits.ts`: 40 bars are drawn as one element each, by a
 join, and a thousand still are, while more would be a histogram no one
 can read.
 
-### The pieces shared by every plot
-
-Made with this plot, as `charts.md` gives them, and used by every later
-one:
-
-- `src/charts/ids.ts`, the prefix of the ids of each plot, from a counter,
-  so that the `<title>`, the `<desc>` and the clip of two histograms on
-  one screen have ids of their own.
-- `src/charts/export.ts`, `toSVG` and `toPNG` of `charts.md`, "Colours,
-  themes and the exported file" and "PNG", which each plot's handle calls
-  with its SVG and its size, and the error its `toPNG` rejects with:
-
-  ```ts
-  export class PngError extends Error {
-    readonly kind: "tooLarge" | "notMade"; // a side above 4,096 pixels at that scale; no canvas, or no PNG made
-  }
-  ```
-- `src/charts/charts.css`, the classes of the plots, with the colours
-  from the tokens of `src/ui/tokens.css`.
-- `src/charts/limits.ts`, with `MAX_HISTOGRAM_BINS` and the canvas limit
-  of the PNG, 4,096 pixels a side.
+The ids, the export with its `PngError`, `charts.css` and
+`src/charts/limits.ts`, which every later plot uses too, are the base's
+(`plot2d.md`); `limits.ts` holds `MAX_HISTOGRAM_BINS` beside them.
 
 ## The SVG it builds
 
-The skeleton of `charts.md`, "The SVG, its parts and their names", with
-the class `chart chart-histogram`, and in `chart-marks`:
+The base makes the skeleton, with the class `chart chart-histogram` and
+no `chart-overlay`, since the histogram takes no pointer events
+(`plot2d.md`, "The SVG and its frame"); the histogram draws, in
+`chart-marks`:
 
 - one `rect.chart-bar` per bin of a count above 0, keyed by the index of
   the bin, and a partly kept bin as two, split at the threshold, the left
@@ -249,12 +238,10 @@ the class `chart chart-histogram`, and in `chart-marks`:
 
 In `chart-annotations`, when there is a threshold, `line.chart-threshold`
 from the bottom of the frame to its top, and in `chart-legend` its three
-rows. The histogram has no `chart-overlay`, since it takes no pointer
-events.
+rows.
 
-The legend is placed without measuring its text, which jsdom cannot do
-and a browser can do only once its fonts are loaded (`charts.md`, "The
-margins"): each row has its text anchored at its end, `text-anchor: end`,
+The legend is placed without measuring its text, as the margins are
+(`plot2d.md`, "The SVG and its frame"): each row has its text anchored at its end, `text-anchor: end`,
 and its mark to the right of the text, at the right edge of the frame, in
 the top margin. So the top margin is larger when there is a threshold.
 The margins are named constants of `histogram.ts`, meanwhile these, in CSS
@@ -267,11 +254,7 @@ pixels, refined in the running application:
 | bottom | 44 | 44 |
 | left | 60 | 60 |
 
-The text of the plot is in pixels, 12 for the ticks and the legend and 13
-for the labels of the axes, in `charts.css`, so that it fits these fixed
-margins whatever size of text the user set in the browser; a zoom of the
-page enlarges the whole plot, its text with it, which is what WCAG 2.2,
-1.4.4, asks.
+
 
 ### Colours and the two themes
 
@@ -295,20 +278,21 @@ theme, red on blue; it always has the background on its right, since a
 bar the line crosses is split there and is outlined on its right.
 
 A change of theme changes the tokens, and the plot on the screen follows
-with no redraw. The exported file is always in the light theme
-(`charts.md`).
+with no redraw; the exported file is in the light theme (`plot2d.md`,
+"The themes").
 
 ## The numbers without the picture
 
-A screen reader reads the plot as one image, and a user who cannot see it
-needs the numbers behind the bars (`charts.md`, "Accessibility"):
+The base writes the text alternative, and gives the rule of the table
+(`plot2d.md`, "The text alternative and the table of the numbers"). What
+the histogram adds:
 
-- **The SVG has `role="img"`, with `aria-labelledby` naming its `<title>`
-  and its `<desc>`.** The screen writes the description as a summary,
+- **The description**, which the screen writes as a summary,
   from `histogramRows`, in this form: what is counted and how many, the
   bins and their range, and, with a threshold, the bins it keeps, the
   bin it splits when there is one, and the bins it removes, each with
-  the variants or the individuals in them (**Open 2**, below):
+  the variants or the individuals in them, as the owner decided on 26
+  September 2026 (point I of `docs/specs/stage-3-open-points.md`):
   "The major allele frequency of 1,200 variants, in 40 bins from 0 to 1.
   The threshold 0.95 keeps the 38 bins up to it, 1,175 variants, and
   removes the 2 bins above it, 25 variants." With a bin split, the
@@ -325,13 +309,13 @@ needs the numbers behind the bars (`charts.md`, "Accessibility"):
   one row per bin, in the order of the bins: the lower edge, the upper
   edge, the count, and, when there is a threshold, whether the filter
   keeps the bin, "Kept", "Partly kept" or "Removed", in words and not by
-  a colour or a mark. The edges are shown rounded to 12 significant
-  digits, `Number(x.toPrecision(12))`, so that 0.07500000000000001 reads
+  a colour or a mark. The edges are shown with `tableNumber` of
+  the base, to 12 significant digits, so that 0.07500000000000001 reads
   0.075; the rows hold them as popnei gave them. A line above the table
   says that each bin runs from its lower edge up to its upper edge, not
   included, and that the last includes its upper edge. The table is
   reachable by the keyboard and by a screen reader; the bars are not
-  focusable, as `charts.md` has it.
+  focusable.
 - **The threshold and what it keeps are in the table and in the
   description**, so that the state of each bin does not rest on the
   difference between a filled and an outlined bar alone.
@@ -343,42 +327,12 @@ the variants").
 
 ## The export
 
-The handle gives `toSVG()` and `toPNG(scale)`, made by `export.ts` as
-`charts.md` has them. The screen offers them as two buttons beside the
-plot, "Download as SVG" and "Download as PNG" (**Open 1**, below).
-
-- **What the file holds**: the plot as it is on the screen, at its size,
-  with its title, its description, its axes, its bars, the threshold line
-  and the legend when there is a threshold; the colours of the light
-  theme written on each element, with no `var(` left; a first rectangle
-  of the background colour. Not the table, not the versions of popnei and
-  of the application, which are shown on the page beside the buttons, as
-  for every download (`docs/functionality.md`, section 9): "Calculated
-  with popnei 0.1.0, in version 0.1.0 of the application."
-- **The PNG is drawn at 3 times the size on the screen**, for print at
-  300 dpi, and at 2 times when 3 would make a side above 4,096 pixels,
-  which a canvas of iOS does not draw. `toPNG(scale)` rejects with a
-  `PngError` of `src/charts/export.ts`, whose `kind` tells the two
-  failures apart: `tooLarge`, when that scale would make a side above
-  4,096 pixels, before it draws anything; and `notMade`, when the browser
-  gives no canvas or cannot make the PNG. The screen picks the scale:
-  it asks `toPNG(3)`, and after a `tooLarge` `toPNG(2)`. A plot too
-  large at 2, above 2,048 pixels a side, is refused with "The plot is
-  too large to save as a PNG. Save it as SVG, or make the window
-  narrower and try again."; a `notMade`, with "The browser could not
-  make the PNG. Save the plot as SVG." Both are said without moving the
-  focus (WCAG 2.2, 4.1.3). A histogram is at most 40rem wide (below,
-  "The size"), 640 pixels at the browser's default size of text, 16
-  pixels, so 3 times is 1,920; it takes 2 times only above 1,365 pixels
-  a side, a size of text above 34 pixels, and is refused above 2,048, a
-  size of text above 51 pixels.
-- **The name of the file** is the stem of the variants file, as
-  `variantsStem` of `src/core/fileNames.ts` makes it for the project file
-  and the CSV of the diversity, then the name of the histogram, then the
-  extension: `panel.variant_maf.svg`. Meanwhile the five names are
-  `variant_maf`, `variant_obs_het`, `variant_exp_het`,
-  `individual_missing_rate` and `individual_obs_het`; the analyses' specs
-  own them.
+The handle's `toSVG` and `toPNG` are the base's (`plot2d.md`, "The
+export"), and the file holds the plot as it is on the screen, the
+threshold line and the legend with it when there is a threshold. No
+screen offers them in stage 3; the names of the five files they will be
+saved under in stage 6 are the analyses', `panel.variant_maf.svg`
+among them.
 
 ## The size
 
@@ -387,13 +341,8 @@ CSS gives the element its width, that of its container, and its height,
 meanwhile `aspect-ratio: 16 / 10` and a `max-width` of 40rem, refined in
 the running application.
 
-The plot reads the size of its element with `getBoundingClientRect` when
-it is created, and draws at once when the element has a size, so that the
-report, which draws a plot outside the visible page and takes its SVG
-(`docs/architecture.md`, section 8), gets a plot drawn. Then a
-`ResizeObserver` on the element, as `charts.md`, "Size", has it: one draw
-per frame after a change of size, and nothing drawn while the element has
-no size, a tab that is hidden.
+How the plot follows the size of its element is the base's
+(`plot2d.md`, "The size and its changes").
 
 ## The cases
 
@@ -415,10 +364,8 @@ no size, a tab that is hidden.
   it (above); every bar is then kept, or every bar removed.
 - **Other bins after an `update`**, another number of bins: the join adds
   and removes bars by the index of the bin, in the same SVG.
-- **`destroy`** removes the SVG, disconnects the `ResizeObserver` and
-  cancels a draw that waits for its frame; a second call does nothing.
-- **A title or a label with markup in it**, from a name the user gave, is
-  written as text, never as markup (`charts.md`, "Hover and tooltips").
+- **`destroy`, a size of 0, and a title with markup in it** are the
+  base's cases (`plot2d.md`, "The cases").
 
 ## How it runs
 
@@ -429,7 +376,9 @@ the bins are counted before.
 ## How it is verified
 
 At `histogramRows`, `createHistogram` and the handle, the highest
-functions at which each thing can be seen.
+functions at which each thing can be seen. What the base does for every
+plot, the skeleton, the ids, the size, `destroy` and the export, is
+verified in `plot2d.md`, the export on this histogram.
 
 **Without a DOM, in the project `charts` of Vitest** (`testing.md`):
 
@@ -460,8 +409,7 @@ functions at which each thing can be seen.
 **The SVG, under jsdom**, with the size of the element given by a stub
 of `getBoundingClientRect` and a `ResizeObserver` the test calls:
 
-- the skeleton, with `role="img"`, the `<title>` and `<desc>` of the data
-  and ids that differ between two histograms made in one element each;
+- the class `chart chart-histogram`, and no `chart-overlay`;
 - on the MAF of `panel.nei` at 0.95: 18 `rect.chart-bar-kept` and 2
   `rect.chart-bar-removed`, and no rect for the 20 empty bins; at 0.5 of
   the heterozygosity, bin 20 drawn as one outlined rect, since its kept
@@ -470,24 +418,12 @@ of `getBoundingClientRect` and a `ResizeObserver` the test calls:
 - an `update` from the threshold 0.95 to `null` removes the line and the
   legend and leaves every bar filled, in the same `<svg>` element;
 - an `update` to 20 bins of a count of 1 each gives 20 rects, in the same `<svg>` element;
-- a title `<b>P1</b>` is text in the `<title>`, and no `b` element exists;
-- `destroy` leaves the element with no child, and a second `destroy`
-  throws nothing;
-- a size of 0 draws no bar, and the first callback of the observer with a
-  size draws them.
+- the top margin 56 with a threshold and 12 without, after an `update`
+  in each direction.
 
-**In Playwright, in Chromium, Firefox and WebKit**, the first plot being
-where `export.ts` is first seen working:
 
-- the SVG of `toSVG` holds no `var(`, no `chart-overlay`, a first
-  background rectangle, and the light colours when the page is dark: the
-  fill of a kept bar is `rgb(0, 114, 178)`;
-- `toPNG(3)` of a plot of 600 by 375 pixels is a PNG of 1,800 by 1,125
-  pixels; of a plot of 1,400 pixels wide, made so by the size of its
-  element in the test, it rejects with `tooLarge`, and `toPNG(2)` gives
-  2,800 pixels; `toPNG(2)` of a plot above 2,048 pixels a side rejects
-  with `tooLarge` without drawing; a canvas whose `toBlob` gives `null`,
-  stubbed, rejects with `notMade`;
+**In Playwright, in Chromium, Firefox and WebKit**:
+
 - at 320 pixels wide, the width of a phone of WCAG 2.2, 1.4.10, the
   three rows of the legend lie inside the SVG, their boxes measured with
   `getBBox`, with the longest words of the step, "Removed by this
@@ -496,13 +432,7 @@ where `export.ts` is first seen working:
   of `e2e/screens.spec.ts`, looked at as `testing.md` says, and axe on
   each.
 
-**The dependencies it adds**, all approved by the owner on 24 September
-2026 (`docs/technology.md`, section 2) and none yet in `package.json`:
-`d3-selection` 3.0.0, `d3-scale` 4.0.2 and `d3-axis` 3.0.0, with
-`@types/d3-selection` 3.0.12, `@types/d3-scale` 4.0.9 and `@types/d3-axis`
-3.0.6 for development; and `jsdom` 30.1.1 for development, with the
-project `charts` of `vite.config.ts` (`testing.md`, "Vitest"). The
-versions are those of `npm view` on 26 September 2026. The histogram
+**The dependencies** are those of the base (`plot2d.md`). The histogram
 imports no other module of D3: its numbers are formatted by `d3-scale`'s
 `tickFormat`, and `d3-format`, `d3-array`, `d3-shape`, `d3-path`,
 `d3-zoom`, `d3-delaunay` and `d3-scale-chromatic` are added by the first
@@ -542,8 +472,8 @@ Of `docs/specs/analyses/individualChecks.md`:
 
 Of both: the screens write the title, the labels, the description, the
 legend's three texts and the table with its CSV, from `histogramRows`,
-and own the two buttons of the export, the names of the files and the
-line of the versions.
+and own the names of the files of the export, which no button offers
+until stage 6.
 
 ## What this spec asks of other documents
 
@@ -561,35 +491,28 @@ Written into those documents with the specs of stage 3, on 26 September
 - `.claude/skills/coding/charts.md`, "The SVG, its parts and their names":
   a plot with no pointer events has no `chart-overlay`.
 - `.claude/skills/coding/charts.md`, "PNG": `toPNG` rejects with a
-  `PngError` of kind `tooLarge` or `notMade`, above; written there on 26
-  September 2026.
+  `PngError` of kind `tooLarge` or `notMade`, now in `plot2d.md`;
+  written there on 26 September 2026.
 
 ## Open points
 
-The two open points of this spec are points C and I of
-`docs/specs/stage-3-open-points.md`, where the open points of the specs
-of stage 3 are gathered; they are kept here as written.
+The two open points of this spec, points C and I of
+`docs/specs/stage-3-open-points.md`, were decided by the owner on 26
+September 2026, and are written above as decided:
 
 1. **Whether the histograms of stage 3 offer their download as SVG and
-   PNG.** `docs/build-order.md` gives "every plot as SVG and PNG" to
-   stage 6, and says the export is tried on the histogram, in stage 3.
-   With the buttons in stage 3, the user can save the histograms from
-   the first release that has them, and `export.ts` is seen working in
-   the three browsers by a user as well as by its tests; it costs two
-   buttons, their two messages and their line of versions on each of the
-   five histograms, in the specs of the two analyses. Without them, the
-   export is tested and not offered until stage 6. Recommended: the
-   buttons in stage 3, as the CSV of the diversity was offered in stage 2.
-   Meanwhile: the buttons are there.
-
-2. **What the description counts.** Point I of
-   `docs/specs/stage-3-open-points.md`. The description a screen reader
-   reads could name the bins alone, "keeps bins up to 0.95 and removes 2
-   bins above it", which is short and says nothing a user of a screen
-   reader can compare with the counts beside the filter; or the
-   variants or the individuals in the bins kept, split and removed, as
-   above, which says what the plot shows a sighted user, at the cost of
-   a longer sentence. Recommended, and meanwhile: the counts.
+   PNG.** No: the plots are offered as SVG and PNG in stage 6, as
+   `docs/build-order.md` has it, and the export is built and tested in
+   stage 3 on this histogram, with the base of the 2D plots that the
+   owner asked stage 3 to make (`plot2d.md`). The option not taken was
+   two buttons on each of the five histograms from stage 3, with their
+   two messages and their line of the versions.
+2. **What the description counts.** The variants or the individuals in
+   the bins kept, split and removed, as "The numbers without the
+   picture" has it, which says what the plot shows a sighted user. The
+   option not taken named the bins alone, "keeps bins up to 0.95 and
+   removes 2 bins above it", shorter, and with nothing a user of a
+   screen reader can compare with the counts beside the filter.
 
 ## Not in this spec
 
