@@ -7,7 +7,11 @@ approved by the owner that day has it: the request `write` and its
 answer `written`, a file of the filtered variants made in the calculation
 worker; the checks of the jobs and results of the three analyses of the
 Variants step; the counts of the pass in every result; and
-`PROTOCOL_VERSION` 2. The revision is approved by the owner on 26 September 2026. This spec gives
+`PROTOCOL_VERSION` 2. The revision is approved by the owner on 26 September 2026. Revised
+again on 26 September 2026, after the review of the code of stage 3:
+a `written` whose `numBytes` is not the size of its file is refused as
+`wrongSize`, in bytes, and not as `wrongLength`, whose words speak of a
+list. This spec gives
 `src/worker/messages.ts`: the messages the page and each of the two
 workers send each other, from the walking skeleton, the smallest
 application that goes through every part once (stage 2), on, the
@@ -315,7 +319,7 @@ and of `.claude/skills/coding/worker.md`, "Validation at the boundary":
   `individuals` of a job is `null` or a list of texts; the fields of
   `passStats.filtering` are kinds of `VariantFilter`; `filters` of a
   `variantChecks` job is empty; the `numBytes` of a `written` is the
-  `size` of its file; the refusals of the reader are the kinds
+  `size` of its file, or it is refused as `wrongSize`; the refusals of the reader are the kinds
   its spec gives. That the statistics of each individual are those of the
   individuals of the file, in its order, that a list of individuals is
   not empty, and that `passStats.filtering` follows the filters of the
@@ -400,7 +404,11 @@ export function describeMessageError(e: MessageError): string;
 The ways a message is refused: the kinds of the probe's `MessageError`,
 with the place of the field given as its path in the message,
 `"job.filters.0.maxAllowedMissingRate"`, since the messages here nest,
-and `""` for a field of the message itself; and two more.
+and `""` for a field of the message itself; and three more:
+`wrongLength`, a list that is not as long as what it goes with, a row of
+the table or an array of a result, or a `variantChecks` job with a
+filter; `wrongSize`, a `written` whose `numBytes` is not the `size` of
+its file; and `otherProtocol`, a `ready` of another version.
 
 ```ts
 export type MessageError =
@@ -413,11 +421,21 @@ export type MessageError =
   | { kind: "unknownValue"; messageKind: string; path: string; found: string; expected: string[] }
   | { kind: "wrongType"; messageKind: string; path: string; expected: string; found: TypeName }
   | { kind: "wrongLength"; messageKind: string; path: string; expected: number; found: number }
+  | { kind: "wrongSize"; messageKind: string; path: string; expected: number; found: number }  // expected: the size of the file, in bytes
   | { kind: "otherProtocol"; found: number };  // a ready of another PROTOCOL_VERSION
 ```
 
 `TypeName` is the probe's: what `typeof` gives, with `null` and `array`
 apart from `object`.
+
+`describeMessageError` gives each kind in the words of what it checks.
+Of `wrongLength` it gives the list, the number of its elements and the
+number it should have. Of `wrongSize` it gives the field, its number as
+it came, and the size of the file in bytes, with a comma between
+thousands: "The field result.numBytes of the message written is 3000,
+not the size of its file, 3,594 bytes." A refusal reaches the page in
+the words of a defect, and a number of bytes called a list of elements
+would mislead whoever reads it there.
 
 ## The cases
 
@@ -495,15 +513,18 @@ File(["…"], "panel.nei")`.
   that filter, `extraFields`; an `obsHetRate` of 199 numbers beside a
   `missingGtRate` of 200, `wrongLength`, and so an `individuals` of 199; `binEdges` of 41 numbers and
   the `counts` of the MAF of 41, `wrongLength`; a `variantChecks` job
-  with a filter; a `written` whose `numBytes` is not its file's `size`;
-  one whose `file` is an `ArrayBuffer`, `wrongType`.
+  with a filter; a `written` whose `numBytes` is 3593 and its file's
+  `size` 3594, `wrongSize` at `result.numBytes` with `expected` 3594 and
+  `found` 3593; one whose `file` is an `ArrayBuffer`, `wrongType`.
 - **The version**: a `ready` with `protocol: 1`, the walking skeleton's,
   and no other field gives `otherProtocol` with 1 from both checks of the
   page, and so does `protocol: 3` with 3; with `protocol: "2"`,
   `wrongType`.
 - **`describeMessageError`** names the path and the kind of the message:
   of `wrongType` at `job.filters.0.maxAllowedMissingRate` it gives a text
-  that holds both.
+  that holds both; of that `wrongSize` it gives "The field
+  result.numBytes of the message written is 3593, not the size of its
+  file, 3,594 bytes."
 
 That a `File`, the typed arrays and a `Blob` arrive through a real
 worker as the checks expect is seen in the browser, by the flow of the
