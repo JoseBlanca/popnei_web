@@ -352,6 +352,29 @@ of its size. The measurements have no bound to pass: a test fails only
 when it cannot measure, as when the check by deletion of point R finds a
 `File` given in memory.
 
+The measurements of the end of stage 2 are in the same file, each
+repeated `MEASURE_REPEATS` times, 5 by default, and printed as the
+median and the range: the memory of the tab, in Chromium, from the
+Chrome DevTools Protocol and macOS's `footprint`; the points an SVG plot
+can hold, drawn on `e2e/measure/points.html`, a page that the test
+serves under the site's address with `page.route`, so that it is never
+built into `dist/`; and the commits of React, in Chromium, which need
+React's profiling build. That build is made outside `dist/` by
+`e2e/measure/vite.profiling.config.ts`, which puts
+`e2e/measure/profilingRoot.ts`, a `createRoot` that draws each root in a
+`<Profiler>`, in the place of `react-dom/client`; the site's build never
+reads either file:
+
+```sh
+PROFILING_OUT=<folder> npx vite build --config e2e/measure/vite.profiling.config.ts
+PROFILING_OUT=<folder> npx vite preview --config e2e/measure/vite.profiling.config.ts --port 4174 &
+MEASURE_PROFILING=1 BASE_URL=http://localhost:4174/popnei_web/ npx playwright test --project=measure-chromium -g "commits of React"
+```
+
+The time to write and read a project file of 10,000 individuals, and to
+make the key of the diversity, is measured in node, which runs the
+TypeScript of `src/core` as it is: `node e2e/measure/projectFile.ts`.
+
 ### The files of the flows
 
 The flows open the reference files of popnei, which already have
