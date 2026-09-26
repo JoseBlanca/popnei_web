@@ -14,6 +14,7 @@ import {
   populationsOf,
   populationsToRun,
 } from "../../core/analyses/diversity.ts";
+import { POPGEN_STEPS } from "../../core/apps.ts";
 import type { StepId } from "../../core/apps.ts";
 import {
   counted,
@@ -95,11 +96,25 @@ export function stepStates<R>(
   s: AppState<R>,
   title: (id: AnalysisId) => string,
 ): readonly StepState[] {
-  return [
-    { id: "variants", ...variantsState(s.project) },
-    { id: "individuals", ...individualsState(s.project) },
-    { id: "analyses", ...analysesState(s, title) },
-  ];
+  return POPGEN_STEPS.map((id) => stepStateOf(s, id, title));
+}
+
+/** The state of the step `id` and its reason, as `stepStates` gives it,
+    worked out for that step alone, so that a screen can select its
+    state and its reason as two strings. */
+export function stepStateOf<R>(
+  s: AppState<R>,
+  id: StepId,
+  title: (id: AnalysisId) => string,
+): StepState {
+  switch (id) {
+    case "variants":
+      return { id, ...variantsState(s.project) };
+    case "individuals":
+      return { id, ...individualsState(s.project) };
+    case "analyses":
+      return { id, ...analysesState(s, title) };
+  }
 }
 
 /** The state of a step without its id. */
