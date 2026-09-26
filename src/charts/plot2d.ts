@@ -141,6 +141,30 @@ type Drawing =
   | { readonly kind: "noArea"; readonly size: Size };
 
 /**
+ * The size of the content box of `element`, inside its padding and its
+ * border, the box whose size a ResizeObserver gives as `contentRect`:
+ * `clientWidth` and `clientHeight`, which the browser rounds to whole
+ * pixels, less the padding; 0 by 0 for an element that is not laid out,
+ * in a tab that is hidden.
+ */
+function contentBoxOf(element: HTMLElement): Size {
+  const style = getComputedStyle(element);
+  const pixels = (value: string): number => {
+    const parsed = Number.parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+  const width =
+    element.clientWidth -
+    pixels(style.paddingLeft) -
+    pixels(style.paddingRight);
+  const height =
+    element.clientHeight -
+    pixels(style.paddingTop) -
+    pixels(style.paddingBottom);
+  return { width: Math.max(0, width), height: Math.max(0, height) };
+}
+
+/**
  * Makes a 2D plot of `data` in `element` from the definition of its kind,
  * and returns its handle.
  *
@@ -329,10 +353,8 @@ export function createPlot2d<Data extends PlotText>(
   }
 
   writeText();
-  const start = element.getBoundingClientRect();
-  if (start.width > 0 && start.height > 0) {
-    drawAt({ width: start.width, height: start.height });
-  }
+  const start = contentBoxOf(element);
+  if (start.width > 0 && start.height > 0) drawAt(start);
   observer.observe(element);
 
   return {

@@ -2,8 +2,8 @@
  * The base of the 2D plots, docs/specs/charts/plot2d.md, "How it is
  * verified", with a definition of a test that draws one rect per value.
  * jsdom lays nothing out and has no ResizeObserver, so the tests give the
- * size of the element with a stub of getBoundingClientRect, and call the
- * observer and the frames of the screen themselves.
+ * size of the element with stubs of clientWidth and clientHeight, and call
+ * the observer and the frames of the screen themselves.
  */
 
 import { scaleLinear } from "d3-scale";
@@ -108,10 +108,8 @@ function runFrames(): void {
 function sizedElement(width: number, height: number): HTMLDivElement {
   const element = document.createElement("div");
   document.body.append(element);
-  vi.spyOn(element, "getBoundingClientRect").mockReturnValue({
-    width,
-    height,
-  } as DOMRect);
+  vi.spyOn(element, "clientWidth", "get").mockReturnValue(width);
+  vi.spyOn(element, "clientHeight", "get").mockReturnValue(height);
   return element;
 }
 
@@ -287,6 +285,22 @@ describe("VS4 D1 the base of the 2D plots, under jsdom", () => {
     expect(draws).toHaveLength(1);
     expect(svg.querySelectorAll("rect.bar")).toHaveLength(3);
     expect(svg.getAttribute("width")).toBe("400");
+  });
+
+  test("an element with a padding is drawn at its content box when made, and not again when the observer gives that box", () => {
+    const element = sizedElement(420, 320);
+    element.style.padding = "10px";
+    // What a browser gives for that element with no border: the box
+    // outside the padding.
+    vi.spyOn(element, "getBoundingClientRect").mockReturnValue({
+      width: 420,
+      height: 320,
+    } as DOMRect);
+    createPlot2d(element, barsOf([1, 2]), bars);
+    expect(svgOf(element).getAttribute("width")).toBe("400");
+    observerOf(0).resize(400, 300);
+    runFrames();
+    expect(draws).toEqual([{ innerWidth: 340, innerHeight: 260 }]);
   });
 
   test("the first call of the observer with a size draws once, at the next frame", () => {

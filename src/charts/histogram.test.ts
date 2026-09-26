@@ -3,8 +3,8 @@
  * its rows and its scales on the bins of e2e/fixtures/panel.nei, written
  * as literals, its defects, and the SVG it draws under jsdom. jsdom lays
  * nothing out and has no ResizeObserver, so the tests give the size of the
- * element with a stub of getBoundingClientRect, which the base reads when
- * the plot is made, and an observer that does nothing.
+ * element with stubs of clientWidth and clientHeight, which the base reads
+ * when the plot is made, and an observer that does nothing.
  */
 
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
@@ -311,7 +311,7 @@ describe("VS4 D2 the histogram, the domains and ticks of its scales", () => {
 /** An observer that does nothing: these tests give the size once. */
 class StillObserver {
   observe(): void {
-    // the size is given by getBoundingClientRect
+    // the size is given by clientWidth and clientHeight
   }
   unobserve(): void {
     // not called by the base
@@ -324,10 +324,8 @@ class StillObserver {
 function sizedElement(width: number, height: number): HTMLDivElement {
   const element = document.createElement("div");
   document.body.append(element);
-  vi.spyOn(element, "getBoundingClientRect").mockReturnValue({
-    width,
-    height,
-  } as DOMRect);
+  vi.spyOn(element, "clientWidth", "get").mockReturnValue(width);
+  vi.spyOn(element, "clientHeight", "get").mockReturnValue(height);
   return element;
 }
 
