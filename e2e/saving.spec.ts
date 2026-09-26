@@ -737,7 +737,10 @@ test("WS9 D3 after an opening, another variants file given shows the warning of 
   await expect(
     page.getByRole("region", { name: "Variants file" }).getByText(warning),
   ).toHaveText(`Warning: ${warning}`);
-  await expect(status(page)).toContainText(`Warning: ${warning}`);
+  // The read first, then the warning, which waited for it.
+  await expect(status(page)).toHaveText(
+    `panel.vcf.gz read: 200 individuals, ploidy 2. Warning: ${warning}`,
+  );
   await expect(
     page
       .getByRole("region", { name: "Variants file" })

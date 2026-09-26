@@ -20,6 +20,11 @@ export interface Announcer {
       `ANNOUNCE_DELAY_MS` later, with any other text announced in that
       time after it, joined by a space. */
   announce(text: string): void;
+  /** Runs `change`, and announces the text it gives, if any, as
+      `announce` does, but before the texts announced while it ran and
+      after those announced before it: what the user did, known only
+      once the change is made, said before what the change announced. */
+  announceChange(change: () => string | null): void;
   /** The text of the region now; `""` when it is empty. */
   getState(): string;
   /** Calls `listener` after every change of the text, and returns the
@@ -53,13 +58,24 @@ export function createAnnouncer(): Announcer {
     };
   };
 
+  function wait(): void {
+    if (waiting.length === 0) {
+      change("");
+      setTimeout(write, ANNOUNCE_DELAY_MS);
+    }
+  }
+
   return {
     announce(next: string): void {
-      if (waiting.length === 0) {
-        change("");
-        setTimeout(write, ANNOUNCE_DELAY_MS);
-      }
+      wait();
       waiting.push(next);
+    },
+    announceChange(change: () => string | null): void {
+      const at = waiting.length;
+      const next = change();
+      if (next === null) return;
+      wait();
+      waiting.splice(at, 0, next);
     },
     getState(): string {
       return text;

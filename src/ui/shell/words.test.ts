@@ -1095,7 +1095,7 @@ describe("WS9 D1 the announcements made from the state", () => {
   test("the warning of a reopened project is announced when it appears, and when it comes with another load", () => {
     const given = project({
       ...OPENED,
-      variants: variants(PENDING),
+      variants: variants(READ),
     });
     const warning = identityWarning(given);
     expect(warning).toMatch(/^The project was made with panel_2026\.nei/);
@@ -1146,16 +1146,31 @@ describe("WS9 D1 the announcements made from the state", () => {
     ]);
   });
 
-  test("the warning of a reopened project made longer by the read of its load, or kept through a change of the filter, is not announced again", () => {
+  test("the warning of a reopened project waits while its load is being read, and is said once, after the read, with the words the read gave it", () => {
     const pending = project({ ...OPENED, variants: variants(PENDING) });
     const read = project({ ...OPENED, variants: variants(READ) });
+    expect(identityWarning(pending)).not.toBeNull();
+    expect(
+      announcementsOf(
+        state({ project: OPENED }),
+        state({ project: pending }),
+        title,
+      ),
+    ).toEqual([]);
     expect(
       announcementsOf(
         state({ project: pending }),
         state({ project: read }),
         title,
       ),
-    ).toEqual(["panel.nei read: 3 individuals, ploidy 2."]);
+    ).toEqual([
+      "panel.nei read: 3 individuals, ploidy 2.",
+      `Warning: ${String(identityWarning(read))}`,
+    ]);
+  });
+
+  test("the warning of a reopened project kept through a change of the filter is not announced again", () => {
+    const read = project({ ...OPENED, variants: variants(READ) });
     const unfiltered = project({ ...read, filters: [] });
     expect(
       announcementsOf(

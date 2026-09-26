@@ -56,4 +56,27 @@ describe("WS9 D1 the announcer", () => {
       "Diversity: calculating. The earlier calculation of Diversity was stopped.",
     ]);
   });
+
+  test("the text of a change goes before what was announced while it ran and after what was announced before it, and two changes keep their order", () => {
+    const announcer = createAnnouncer();
+
+    announcer.announce("Diversity: done.");
+    announcer.announceChange(() => {
+      announcer.announce("Warning: the file differs.");
+      return "Undone: a new variants file was loaded.";
+    });
+    announcer.announceChange(() => "Redone: a new variants file was loaded.");
+    announcer.announceChange(() => null);
+    vi.advanceTimersByTime(100);
+    expect(announcer.getState()).toBe(
+      "Diversity: done. Undone: a new variants file was loaded. Warning: the file differs. Redone: a new variants file was loaded.",
+    );
+
+    announcer.announceChange(() => "Undone: the missing data filter changed.");
+    expect(announcer.getState()).toBe("");
+    vi.advanceTimersByTime(100);
+    expect(announcer.getState()).toBe(
+      "Undone: the missing data filter changed.",
+    );
+  });
 });

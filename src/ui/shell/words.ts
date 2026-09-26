@@ -349,16 +349,21 @@ export function announcementsOf<R>(
 }
 
 /** The warning of a reopened project that differs from its file, when it
-    appeared or is there with another load than before; not when the read
-    of its load makes it longer, nor through a change that keeps it. */
+    appeared or is there with another load than before; while its load is
+    being read, at the end of the read instead, after the read's own
+    announcement, with the words the read gave it; not through a change
+    that keeps it. */
 function identityAnnouncements(
   before: Project,
   after: Project,
 ): readonly string[] {
   const warning = identityWarning(after);
-  if (warning === null) return [];
+  if (warning === null || after.variants?.read.kind === "pending") {
+    return [];
+  }
   const sameLoad = before.variants?.fileId === after.variants?.fileId;
-  return identityWarning(before) !== null && sameLoad
+  const readEnded = sameLoad && before.variants?.read.kind === "pending";
+  return identityWarning(before) !== null && sameLoad && !readEnded
     ? []
     : [`Warning: ${warning}`];
 }
