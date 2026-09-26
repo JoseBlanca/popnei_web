@@ -377,6 +377,41 @@ async function removeTheDiversity(page: Page): Promise<Locator> {
   return threshold;
 }
 
+test("WS9 D3 a change that leaves a calculation behind says so in the notice, and Run stops it: the notice goes and the status region says the earlier calculation was stopped", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openPopgen(page);
+  await loadPanel(page);
+  await holdResults(page);
+  await goTo(page, "Analyses");
+  await page.getByRole("button", { name: "Run" }).click();
+  await expect(stepLink(page, "Analyses")).toHaveAccessibleName(
+    "Analyses, Running",
+  );
+  await expect(status(page)).toHaveText("Diversity: calculating.");
+
+  await goTo(page, "Variants");
+  const threshold = page.getByLabel("Maximum proportion of missing genotypes");
+  await threshold.fill("0.05");
+  await threshold.press("Enter");
+  await expect(
+    notice(page).getByRole("alertdialog", {
+      name: "The missing data filter changed. The ongoing calculation of Diversity will be stopped unless you undo the change",
+    }),
+  ).toBeVisible();
+  await expectNoViolations(makeAxeBuilder);
+
+  await goTo(page, "Analyses");
+  await page.getByRole("button", { name: "Run" }).click();
+  await expect(notice(page)).toHaveCount(0);
+  // The calculation stopped, the worker is made again without the hold,
+  // and the new one may end within the pause of the announcer.
+  await expect(status(page)).toHaveText(
+    /^Diversity: calculating\. The earlier calculation of Diversity was stopped\.( Diversity: done\.)?$/,
+  );
+});
+
 test("WS9 D3 the shell with results removed: the notice with its words, Undo and Close, Analyses at Results removed, the field changed and the end of the page clear of the notice, and axe", async ({
   page,
   makeAxeBuilder,
