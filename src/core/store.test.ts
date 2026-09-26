@@ -4873,6 +4873,17 @@ describe("VS3 D6 the write in the store", () => {
 });
 
 describe("VS3 D6 the write in the store, its other rules", () => {
+  test("startWrite of a format other than the .nei of the state is a defect, and sends nothing", () => {
+    const { store, writes } = storeThatWrites();
+
+    expect(() =>
+      // @ts-expect-error -- stage 3 has no format but "nei"
+      store.startWrite("vcf"),
+    ).toThrow(/^popnei_web defect: startWrite was asked for the format "vcf"/);
+    expect(writes).toHaveLength(0);
+    expect(writeIn(store).kind).toBe("ready");
+  });
+
   test("a write that waits for statistics already in flight stops the calculations left behind", () => {
     const { store, sent, writes } = storeThatWrites();
     store.startRun("pops");

@@ -2204,6 +2204,14 @@ export function createStore<J, R, F = never>(
       cancelOf(index);
     },
     startWrite: (format) => {
+      // The key and the state of the writing are those of STATE_FORMAT
+      // alone, so another format would be filed and shown as its file.
+      const stateFormat: string = STATE_FORMAT;
+      if (format !== stateFormat) {
+        throw defect(
+          `startWrite was asked for the format ${JSON.stringify(format)}, and the state of the writing holds ${JSON.stringify(STATE_FORMAT)} alone.`,
+        );
+      }
       const keys = currentKeys();
       const keptNow = keptFor(history.present.project, keys);
       const writeKey = keyed?.write ?? null;
