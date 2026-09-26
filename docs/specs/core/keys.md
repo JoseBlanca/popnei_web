@@ -1,7 +1,11 @@
 # The keys of the results
 
 24 September 2026, approved by the owner on 24 September 2026. The code
-is in `src/core/keys.ts`. A key is the name a result is stored under in the cache: a SHA-256
+is in `src/core/keys.ts`. Revised on 26 September 2026 for stage 3, the
+Variants step whole, as the revision of `docs/architecture.md` the owner
+approved that day has it: the list of the individuals kept is in no key,
+and a file of the filtered variants being written has a key of its own;
+this revision is not yet approved. A key is the name a result is stored under in the cache: a SHA-256
 hash of everything the result was calculated from, so that a result whose
 inputs changed is never shown, and a result whose inputs came back, by an
 undo or by a value set back, is found again with no calculation
@@ -37,7 +41,7 @@ depend on:
 | `keyVersion` | a number its module raises when what the result means changes for the same inputs | its definition |
 | `popneiVersion` | the version of popnei, from the calculation worker when it starts | the store |
 | `load` | the load id of the variants file, new at every pick, and its read options | the project |
-| `filters`, `individualFilters` | the filters the analysis reads, in their order, with their parameters | the project, and the definition's `filtersRead` |
+| `filters`, `individualFilters` | the filters the analysis reads, in their fixed order, with their parameters: the thresholds on the individuals, and not the list of the individuals they keep | the project, and the definition's `filtersRead` |
 | `inputs` | what else the analysis depends on: the columns of the individuals table and the grouping it uses, its options | its `keyInputs` |
 
 Every analysis of sections 5 to 8 of `docs/functionality.md` reads all the
@@ -48,6 +52,20 @@ histogram off the screen at every move of the threshold it serves to
 choose. So the definition of an analysis says which of the two lists of
 filters it reads (`docs/specs/core/store.md`), and `keyOf` puts in the key
 only those, as an empty list for one it does not read.
+
+The list of the individuals the filters keep, which core makes from the
+statistics of each individual (`docs/specs/core/project.md`, "The
+individuals the filters keep"), is in no key, as the owner approved on
+26 September 2026 (`docs/architecture.md`, section 3). It is made from
+the load, the version of popnei, the filters of the variants and those
+of the individuals, which the key holds, so a key of the thresholds
+names one list. A key that held the list would let two thresholds that
+keep the same individuals share their results, and would be made from a
+result in the cache and not from the project alone: no key could be made
+before the statistics were calculated, and the key of an analysis would
+change when they were dropped from the cache. So the store makes the key
+of an analysis whether or not the list is known
+(`docs/specs/core/store.md`, "The individuals kept").
 
 `keyInputs` gives everything else the result depends on, and when in
 doubt it includes a part: a part too many costs a calculation, a part
@@ -147,6 +165,22 @@ asks for it, so two analyses that read the same filters share it.
 The store gives the analysis a function that calls it
 (`docs/specs/core/store.md`).
 
+### The key of a file written
+
+Writing the filtered variants as a file is a request of the calculation
+worker that is not an analysis and is never put in the cache; the store
+tracks it under a key, as it tracks a calculation, so that a change of
+the filters while it is written leaves it behind and an undo gives it
+back (`docs/architecture.md`, section 5). The file holds the variants
+and the individuals the filters keep, in its format, so its key holds
+the load of the variants file, both lists of filters, the format, `"nei"`
+in stage 3, and the version of popnei, which writes it. `writeKeyOf`
+hashes an object of five fields: `write`, the format; `load`, `filters`
+and `individualFilters`, written as in the key of an analysis; and
+`popneiVersion`. It has no field `analysis` and none `intermediate`, so it
+never coincides with the key of an analysis or of an intermediate
+result.
+
 ### The fingerprint of the settings
 
 An opened project file keeps, for each analysis, the fingerprint of its
@@ -201,6 +235,9 @@ key only for an analysis that can run.
 ```ts
 export function keyOf(def: KeyedDef, p: Project, popneiVersion: string, memo: KeyMemo): Key;
 
+/** The key of the filtered variants of `p` written in `format`. */
+export function writeKeyOf(p: Project, format: WriteFormat, popneiVersion: string, memo: KeyMemo): Key;
+
 export function intermediateKeyOf(
   def: KeyedDef, p: Project, popneiVersion: string,
   name: string, inputs: JsonValue, memo: KeyMemo,
@@ -212,6 +249,11 @@ export function settingsFingerprint(
   memo: KeyMemo | null,
 ): string;
 ```
+
+`WriteFormat` is `"nei"` in stage 3, and gains `"vcf"` with popnei's
+writer of the VCF: it is the `format` of `WriteJob`, the job of the
+write in `docs/specs/worker/protocol.md`. `writeKeyOf` throws a defect, as `keyOf` does,
+when the project has no variants file.
 
 `settingsFingerprint` takes the read options apart because, when a
 project file is opened, the project has no variants file yet: it is
@@ -266,7 +308,9 @@ export function createKeyMemo(): KeyMemo;
 
 On the page, after every change of the project or of the version of
 popnei, not after a progress message: one key for each analysis of the
-application that can run. The store keeps the keys of the last project
+application that the project does not lock, whether or not the
+individuals kept are known, and one for the writing of the filtered
+variants. The store keeps the keys of the last project
 and version and makes them again only when one of the two changes
 (`docs/specs/core/store.md`). The table of the individuals file, 10,000
 rows in the largest dataset, is written once per load thanks to the memo,
@@ -331,6 +375,20 @@ hash with node's `crypto` to compare with ours; the code is checked with
   fingerprint is saved in a file (`docs/architecture.md`, section 12).
 - **`filtersRead`**: the same analysis reading no filter of the variants
   has a key that does not change with the threshold of `missing_data`.
+- **`writeKeyOf`, a literal.** The same project with the filter of
+  individuals `missing_data` 0.03, the format `"nei"` and popnei
+  `0.1.0`. The canonical form is
+
+  ```
+  {"filters":[{"kind":"missing_data","maxAllowedMissingRate":0.1}],"individualFilters":[{"kind":"missing_data","maxAllowedMissingRate":0.03}],"load":{"fileId":"00112233445566778899aabbccddeeff","readOptions":null},"popneiVersion":"0.1.0","write":"nei"}
+  ```
+
+  and the key
+  `6e1279cc33cda1057fa8cc0ba734fb24493492ae04ff054dd1e48765e73c83d4`,
+  computed with node's `crypto.createHash("sha256")`, node 26.8.2, on 26
+  September 2026. It changes with the threshold of the individuals and
+  with each filter of the variants, and not with the individuals table or
+  the options of an analysis.
 - **`keyFromWire`**: 64 lower case hexadecimal digits give a key; 63
   digits, an upper case digit, or a `g`, a defect.
 - **Properties, with fast-check.** For any JSON value, the canonical form
@@ -360,3 +418,6 @@ section 11 of `docs/architecture.md` already says.
   spec of the analysis.
 - How the worker keeps its intermediate results under the keys it is
   sent: the spec of the workers, stage 2.
+- The hash of the regions of a BED file, which the key takes from the
+  project when their filter is on (`docs/architecture.md`, section 3):
+  it comes with popnei's release that has the filter of the regions.

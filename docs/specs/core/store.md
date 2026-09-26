@@ -5,7 +5,15 @@ revised on 25 September 2026 for decisions of the owner of that day and
 for the specs of stage 2 the owner approved that day, as
 `docs/specs/stage-2-open-points.md`, "Changes to approved files", lists,
 and again that day for `numCheckNumbers`, which the project file needs;
-built in `src/core/store.ts`. The store is the one object of core that changes: it holds the
+built in `src/core/store.ts`. Revised on 26 September 2026 for stage 3,
+the Variants step whole, as the revision of `docs/architecture.md` the
+owner approved that day has it (its sections 4 and 5): the individuals
+the filters keep, made from the statistics of each individual and given
+to each request; a Run that calculates those statistics first; the lock
+of an analysis worked out from the project and the cache; the counts of
+what each filter kept, filled from every pass; and the writing of the
+filtered variants as a file, tracked as a calculation is; this revision
+is not yet approved. The store is the one object of core that changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.
 From them it gives the screens one state to read, in which each analysis
@@ -57,10 +65,13 @@ tests in the tests.
 - `run` builds the request and sends it through the client it is given.
   The store makes that client for this one request, from the `send` of
   the worker client of `src/worker`: it sends under the key of the
-  request, passes the progress to the store, and makes the keys of the
-  intermediate results the request needs. So an analysis cannot send a
-  request under another key, lose its progress, or make a key of its own.
-  The store looks in the cache before it calls `run`.
+  request, passes the progress to the store, makes the keys of the
+  intermediate results the request needs, and gives the list of the
+  individuals the filters keep, `individuals`, which the analysis puts in
+  its job (below, "The individuals kept"). So an analysis cannot send a
+  request under another key, lose its progress, make a key of its own,
+  or make a list of its own. The store looks in the cache before it
+  calls `run`.
 - `warnings` gives the warnings a result raises from the data. The store
   calls it once, when the result arrives, with the project the request was
   made from, which may no longer be the current one; the warnings are kept
@@ -116,11 +127,23 @@ has the kind `removed` in the code.
 |---|---|---|
 | locked | `projectNeeds` or its `needs` gives a reason | the reason |
 | done | the cache holds a result under its key | the result, its warnings, and the comparison with the check numbers of an opened project file |
-| running | a calculation of its key is in flight and is not being stopped, whether it waits in the queue of the worker or runs | its progress, the `Progress` of `docs/specs/worker/protocol.md`, popnei's four numbers of the pass as the worker gave them, passed on unchanged, `null` until the worker gives one; and the request's id |
-| error | popnei refused the calculation of its key, or the calculation failed since the last change | popnei's message, or the failure |
+| running | a calculation of its key is in flight and is not being stopped, whether it waits in the queue of the worker or runs; or a Run of its key waits for the statistics of each individual (below) | its progress, the `Progress` of `docs/specs/worker/protocol.md`, popnei's four numbers of the pass as the worker gave them, passed on unchanged, `null` until the worker gives one; the request's id; and whether it waits for the statistics, whose request's progress and id it then holds |
+| error | popnei refused the calculation of its key, or the calculation failed since the last change; or it reads the filters of individuals and the statistics it waits for were refused, or failed since the last change (below) | popnei's message, or the failure |
+| locked | it reads the filters of individuals, and the list they make, known from the statistics in the cache, keeps no individual | `keptNoneReason` of `docs/specs/core/project.md` |
 | removed | the current notice lists it among the results removed | its key; it can run again |
 | ready | none of the above | its key |
 | empty | cannot happen | — |
+
+The key of an analysis is made when neither `projectNeeds` nor its
+`needs` gives a reason, the first row, and whatever the second lock, the
+one of the individuals kept: the key holds the thresholds and not the
+list (`docs/specs/core/keys.md`), so it is known without the
+statistics. That lock depends on the cache, not on the project alone,
+and so it comes after `done`: a result under the key is shown, whatever
+the cache holds of the statistics. After an undo to earlier filters whose
+statistics the cache has dropped, a diversity still in the cache is
+`done`, as section 3 of the architecture asks, and only a new Run waits
+for the statistics. The lock stops a Run and nothing else.
 
 `empty`, nothing to show and nothing the user can do, cannot happen: an
 analysis is locked until its variants file is read, and only a
@@ -351,6 +374,17 @@ change it is `ready`, its calculation in `leftBehind`, or in `stopped`
 after a change of the load, and the result that arrives late goes into
 the cache for an undo.
 
+From stage 3, three things join the notice, decided with the
+architecture on 26 September 2026 (its sections 4 and 5). The results of
+`filterCounts`, the counts beside the filters, are never among the
+results removed (below, "What each filter kept"). A Run that waits for
+the statistics of each individual is a calculation, left behind, stopped
+and named as one, by its analysis. And the writing of the filtered
+variants is named apart, since it is not an analysis: `writeLeftBehind`
+when a change leaves it behind, `writeStopped` when a change of the load
+stopped it, each kept and cleared as `leftBehind` and `stopped` are
+(below, "The writing of the filtered variants").
+
 ### A calculation that failed
 
 When popnei refuses a calculation, the store keeps its message under the
@@ -438,6 +472,199 @@ fingerprint of the settings now is made when the keys are, with the read
 options of the current variants file, and compared with the one the
 reference kept for the analysis.
 
+### The individuals kept
+
+The filters of individuals by a threshold need the statistics of each
+individual, its proportion of missing genotypes and its observed
+heterozygosity, which are the result of an analysis of the Variants
+step, `individualChecks` (`docs/specs/analyses/individualChecks.md`),
+whose key holds the filters of the variants and not those of the
+individuals. Core makes the list of the individuals kept from them,
+`individualsKept` of `docs/specs/core/project.md`, "The individuals the
+filters keep". The store is given which of its analyses that is, and a
+function that finds the statistics in its result (`statistics` of
+`createStore`, below).
+
+The store makes that list once for each project and each result of
+`individualChecks` under the key the project gives it, as it makes the
+keys: after every change of the project, and after every change of the
+cache that puts that result or drops it, since the list, the counts
+beside the filters and the lock by the individuals kept change with
+it. Without that second rule the analyses would stay locked, or keep
+waiting, after the statistics arrive, until the next command. The state
+gives it to the screens, `individualsKept`, for the counts the Variants
+step shows beside each filter of individuals
+(`docs/specs/steps/variants.md`). The client bound to a request of an
+analysis whose `filtersRead.individuals` is true gives the known list,
+`null` when the filters remove nobody; every other request gets `null`,
+and so does the analysis of the statistics itself.
+
+**A Run that waits for the statistics.** When an analysis that reads the
+filters of individuals is asked to run while the list is not known, the
+project having a threshold and the cache no statistics under the key it
+gives `individualChecks`, the store calculates the statistics first, and
+the user presses Run once (`docs/architecture.md`, section 5):
+
+- `startRun` starts the request of `individualChecks` under the key the
+  project gives it, as its own `startRun` would, stopping first the
+  calculations left behind; or, when that request is in flight already
+  and not being stopped, started by the user or by another Run, it sends
+  nothing and waits for it. The analysis is then `running`, waiting for
+  the statistics, with the id and the progress of their request, and its
+  panel says it waits, "Calculating the statistics of each individual,
+  which the filters of individuals are set from"
+  (`docs/specs/analyses/diversity.md`).
+- When the statistics end `done`, they go into the cache as any result.
+  For each Run that waited for them, when the project still gives both
+  its key and theirs, the store makes the list and sends the analysis's
+  own request with it, through the `run` of its definition, as
+  `startRun` does. `runEnded` returns the handles it sent, which
+  `src/ui/runs.ts` awaits as it awaits those `startRun` returns
+  (`docs/specs/entry.md`). When the list keeps no individual, nothing is
+  sent, and the analysis is `locked` by the individuals kept.
+- A Run that waits is a calculation. A change that gives the analysis
+  another key, or the statistics another one, leaves it behind, and the
+  notice names it in `leftBehind` as any calculation; an undo while the
+  statistics run gives it back, and it goes on. When it is stopped, or
+  the statistics end while it is left behind, it ends and sends nothing.
+  A change of the load of the variants file ends it at once, with its
+  analysis in `stopped`.
+- When the statistics are refused by popnei, fail or are stopped, every
+  Run that waited for them ends and sends nothing. A refusal or a
+  failure is kept under the key of the statistics, as any, and while the
+  project has a threshold on the individuals, gives that key, and the
+  cache has no statistics under it, every
+  analysis that reads the filters of individuals and is not `done` shows
+  it, in the state `error`: its Run would wait for the same statistics
+  and end the same way. `startRun` of such an analysis does nothing after
+  a refusal of popnei; after another failure it forgets it, as it forgets
+  one of its own, and starts the statistics again. A stop leaves the
+  analysis `ready`.
+- `cancelRun` of an analysis that waits ends its wait, and stops the
+  statistics as well when no other Run waits for them and the user did
+  not start them with the Run of `individualChecks`. So a Stop stops both,
+  as the architecture asks, and does not take from another panel the
+  statistics it too is waiting for. `cancelRun` of `individualChecks`
+  stops its request, and every Run that waited for it ends. Decided here,
+  not by the owner, on 26 September 2026.
+
+When the project has no threshold on the individuals, the list is known
+from the project alone, and a Run sends its request at once.
+
+### What each filter kept
+
+How many variants each filter of the variants was given and kept is the
+result of an analysis of its own, `filterCounts`
+(`docs/specs/analyses/filterCounts.md`), whose key holds the filters of
+the variants and nothing else of the project; the Count button of the
+Variants step runs it (`docs/architecture.md`, section 4, "What each
+filter kept"). Every pass over the filters of the project fills it too,
+so the counts are there after a diversity with no Count.
+
+The store is given `countsOf`, which replaces `numVarsOf` of stage 2,
+and the id of `filterCounts`. `countsOf` gives, of any result of an
+analysis: the number of variants of the file, which the first filter of
+its pass was given, `numVarsRead` of the counts of its pass, recorded
+into the variants file of the request's load as before
+(`docs/architecture.md`, section 6, step 5); and a result of
+`filterCounts` made of the counts of its pass, `PassCounts` of
+`docs/specs/worker/protocol.md`, popnei's `passStats`, when its pass had
+the filters of the variants of its request's project, or `null`. A file
+written always had them, and `write.countsOf` makes its result of
+`filterCounts` from the counts of its pass. It is `null` for the histograms of the
+variants, which read no filter, and for the PCA, which merges its own
+MAF filter with the project's (`docs/specs/worker/protocol.md`).
+
+- **The counts of a result go into the cache** when the result ends
+  `done`, whatever its analysis, under the key of `filterCounts` for the
+  request's project, with the warnings and the check numbers the
+  definition of `filterCounts` gives of them, as if a Count with those
+  filters had ended. The result itself is put first, and the put of the
+  counts keeps it, so that the counts cannot drop from the cache the
+  result they came with (`docs/specs/core/cache.md`). A result that
+  arrives late fills the counts of its own project, for an undo. A Count
+  in flight for the same key goes on, and its result replaces them.
+- **The counts are left out of the notice's results removed.** Their key
+  holds every filter of the variants, so a change of any takes off the
+  counts of all, which the user sees beside the filters as they change
+  one; a notice at every move of a threshold would say only that. A
+  Count in flight that a change leaves behind is named in `leftBehind`
+  as any calculation.
+- **A result of `filterCounts` made by `countsOf`** is given to the
+  `warnings` and the `checkNumbers` of the definition of `filterCounts`,
+  the one exception to the rule that a definition is given only results
+  of its own requests (above, "The definition of an analysis"): it is a
+  result of that definition's shape, made of a pass, and never the
+  result of another analysis.
+
+The counts of the filters of individuals need no pass: they are
+`individualsKept`'s, above.
+
+### The writing of the filtered variants
+
+The Variants step writes the variants and the individuals the filters
+keep as a `.nei` file, which the user saves (`docs/architecture.md`,
+section 5, and section 6, "The files written"). It is a request of the
+calculation worker that is not an analysis: its answer is the file, as
+large as the variants kept, and it never goes into the cache, since one
+file can be larger than its bound. The store tracks it as it tracks a
+calculation, under the key of `writeKeyOf` of `docs/specs/core/keys.md`,
+the load, both lists of filters, the format and the version of popnei,
+with a state of its own, `write`:
+
+| state | when | what it holds |
+|---|---|---|
+| locked | `projectNeeds` gives a reason, or the list of the individuals kept is known and empty | the reason, `keptNoneReason` for the second |
+| done | a write of its key ended done while the project gave that key, and no change has given the write another key since | what the worker gave, `Written` of `docs/specs/worker/protocol.md`: the file, its size and the counts of its pass |
+| running | a write of its key is in flight and is not being stopped, or its Run waits for the statistics of each individual | its progress and the request's id, or those of the statistics |
+| error | popnei refused the write of its key, or it failed since the last change | popnei's message, or the failure |
+| ready | none of the above | its key |
+
+Stage 3 writes the `.nei` format alone; the VCF comes with popnei's
+writer of it, with a state of its own.
+
+- **`startWrite`** in `ready`, or in `error` after a failure that is not
+  popnei's, stops the calculations left behind, as `startRun` does, waits
+  for the statistics as a Run does when the list is not known, and
+  sends, through `write.send` of `createStore`, the job of the write,
+  `WriteJob` of `docs/specs/worker/protocol.md`: the load id of the
+  variants file, its filters of the variants, the list of the
+  individuals kept and the format, under the key of the write. It
+  returns the handles it sent.
+- **The file is kept while the project gives its key.** When a write
+  ends `done` and the project still gives its key, the store keeps what
+  the worker gave, `Written` of the protocol, the file with its size and
+  the counts of its pass, and the state is `done`, until the project gives the write
+  another key, the load changes or a project is opened; then it forgets
+  it, and the page releases the file, which an undo does not bring back
+  (`docs/specs/entry.md`, the download of a written file).
+- **A write that ends after a change of its filters is dropped**, as the
+  owner decided on 26 September 2026 (`docs/architecture.md`, section
+  13, point 6): when it ends `done` and the project no longer gives its
+  key, the store keeps nothing of its file, since it would hold other
+  variants than the step shows. Its counts go into the cache all the same,
+  through `write.countsOf`, as those of any pass, and its number of
+  variants is recorded.
+- **A change of the filters while it is written leaves it behind**, as a
+  calculation: the notice says so, `writeLeftBehind`, in the words of the
+  architecture, "The writing of the file will be stopped unless you
+  undo the change." (`docs/specs/shell.md`), and the store stops it at
+  the same three moments; an undo gives its key back, and it goes on. A
+  change of the load stops it at once, `writeStopped`.
+- **A calculation asked for while a file is written waits behind it**, in
+  the queue of the one calculation worker: `startRun` does not stop a
+  write whose key the project gives. A `startWrite` stops a write left
+  behind, as it stops any calculation left behind.
+- **A failure** is kept as an analysis's is: a refusal of popnei under
+  the key of the write for the session, `reopenFailed` under the load
+  id, any other until the next change of the project.
+- **`cancelWrite`** stops the write in flight of the key the project
+  gives, and its wait for the statistics as `cancelRun` does.
+
+Starting the calculation worker again after a written file larger than a
+bound, to give back the memory of wasm the file took, is the worker
+client's (`docs/architecture.md`, section 13, point 5).
+
 ## The TypeScript interface
 
 The definition of an analysis, and the client it is given.
@@ -464,6 +691,10 @@ export interface WorkerClient<J, R> {
   run(job: J): Run<R>;
   /** The key of an intermediate result of the request, "the pruned variants". */
   intermediateKey(name: string, inputs: JsonValue): string;
+  /** The individuals the filters keep, in the order of the variants file,
+      for the job; null when they remove nobody, and for an analysis that
+      does not read the filters of individuals. */
+  readonly individuals: readonly string[] | null;
 }
 
 /** A warning raised by the data; `code` is what the tests assert. */
@@ -479,7 +710,7 @@ object after a change to another, so that a screen that reads it is not
 drawn again.
 
 ```ts
-export interface AppState<R> {
+export interface AppState<R, F = never> {  // F: the type of a written file, Blob on the page
   readonly project: Project;
   readonly undo: string | null;           // the description of what an undo would undo
   readonly redo: string | null;
@@ -487,6 +718,12 @@ export interface AppState<R> {
   readonly analyses: readonly AnalysisView<R>[];  // in the order of the definitions
   readonly runs: readonly RunView[];      // the calculations in flight
   readonly notice: Notice | null;
+  /** The individuals the filters keep, and each filter's counts; null
+      when projectNeeds gives a reason (docs/specs/core/project.md). */
+  readonly individualsKept: IndividualsKept | null;
+  /** The writing of the filtered variants as a .nei file; null when the
+      store was made with no `write`. */
+  readonly write: WriteStatus<F> | null;
 }
 
 export interface AnalysisView<R> {
@@ -499,9 +736,19 @@ export type AnalysisStatus<R> =
   | { readonly kind: "done"; readonly key: Key; readonly result: R;
       readonly warnings: readonly Warning[]; readonly check: CheckVerdict | null }
   | { readonly kind: "running"; readonly key: Key; readonly runId: number;
-      readonly progress: Progress | null }
+      readonly progress: Progress | null;
+      readonly waitsForStatistics: boolean }   // runId and progress: the statistics'
   | { readonly kind: "error"; readonly key: Key; readonly error: AnalysisError }
   | { readonly kind: "removed"; readonly key: Key }
+  | { readonly kind: "ready"; readonly key: Key };
+
+/** The writing of the filtered variants, in the states of its table above. */
+export type WriteStatus<F> =
+  | { readonly kind: "locked"; readonly reason: string }
+  | { readonly kind: "done"; readonly key: Key; readonly written: Written<F> }
+  | { readonly kind: "running"; readonly key: Key; readonly runId: number;
+      readonly progress: Progress | null; readonly waitsForStatistics: boolean }
+  | { readonly kind: "error"; readonly key: Key; readonly error: AnalysisError }
   | { readonly kind: "ready"; readonly key: Key };
 
 export type AnalysisError =
@@ -512,7 +759,7 @@ export type AnalysisError =
 /** A calculation in flight; `current` when the project still gives its key. */
 export interface RunView {
   readonly runId: number;
-  readonly analysis: AnalysisId;
+  readonly analysis: AnalysisId | null;  // null for the writing of a file
   readonly key: Key;
   readonly current: boolean;
   readonly stopping: boolean;    // cancelled, its outcome not yet arrived
@@ -531,30 +778,71 @@ export interface Notice {
   readonly removed: readonly AnalysisId[];
   readonly leftBehind: readonly AnalysisId[];  // their calculations will be stopped unless undone
   readonly stopped: readonly AnalysisId[];     // their calculations were stopped at once by a change of the load
+  readonly writeLeftBehind: boolean;           // the writing of the file will be stopped unless undone
+  readonly writeStopped: boolean;              // it was stopped at once by a change of the load
 }
 ```
 
+A Run that waits for the statistics has no request of its own yet, so
+it is in no `RunView`: the request of the statistics is, under
+`individualChecks`, and the analysis's state names it by its id.
+
 The store is made once per page, by its entry, with the definitions of
 the application's analyses; the function of the worker client that sends
-a request (`.claude/skills/coding/worker.md`, `Client.run`); the function
-that finds in a result the number of variants its pass counted, which is
-recorded into the variants file of the request's load
-(`docs/architecture.md`, section 6, step 5); and the version of the
-application.
+a request (`.claude/skills/coding/worker.md`, `Client.run`), a write
+among them; `countsOf`, which finds in a result the number of variants
+of the file and the counts of its filters (above, "What each filter
+kept"); the analyses of the statistics of each individual and of the
+counts, and how their results are read; the job of a write; and the
+version of the application. `R` is the union of the results of the
+analyses, `JobResult`, and `F` the type of a written file, a `Blob` on
+the page, which core holds and never reads; `Written<F>`, `WriteJob`
+and `PassCounts` are `docs/specs/worker/protocol.md`'s.
 
 ```ts
-export function createStore<J, R>(config: {
+export function createStore<J, R, F = never>(config: {
   readonly first: Project;
   readonly analyses: readonly AnalysisDef<J, R>[];
   readonly send: (key: string, job: J, onProgress: (p: Progress) => void) => Run<R>;
-  readonly numVarsOf: (r: R) => number | null;
+  readonly countsOf: (r: R) => PassFound<R>;
+  /** The id of the analysis whose results countsOf makes, "filterCounts"; null in the tests that have none. */
+  readonly counts: AnalysisId | null;
+  /** The analysis of the statistics of each individual, "individualChecks", and its numbers in its result. */
+  readonly statistics: { readonly analysis: AnalysisId; of(r: R): IndividualStats } | null;
+  /** How a file of the filtered variants is written; null when the application writes none. */
+  readonly write: {
+    readonly send: (key: string, job: WriteJob, onProgress: (p: Progress) => void) => Run<Written<F>>;
+    /** The result of `counts` made of the counts of the pass of a written file. */
+    readonly countsOf: (pass: PassCounts) => R;
+  } | null;
   readonly appVersion: string;
   readonly cacheMaxBytes: number;          // CACHE_MAX_BYTES
   readonly maxUndoSteps: number;           // MAX_UNDO_STEPS
-}): Store<R>;
+}): Store<R, F>;
 
-export interface Store<R> {
-  getState(): AppState<R>;
+/** What the store takes from the pass of a result. */
+export interface PassFound<R> {
+  /** The variants of the file, which the first filter of the pass was given; null when the result has none. */
+  readonly numVarsRead: number | null;
+  /** The counts of its filters, as a result of the analysis `counts`, when the pass had the filters of the variants of its request's project; null otherwise. */
+  readonly counts: R | null;
+}
+```
+
+`createStore` throws a defect when `counts` or `statistics.analysis` is
+not the id of one of the definitions, when the definition of the
+statistics reads the filters of individuals, which would make it wait for
+itself, and when the definition of the counts reads them. `IndividualStats`
+and `IndividualsKept` are those of `docs/specs/core/project.md`, "The
+individuals kept", and `WriteFormat`, `"nei"` in stage 3, is
+`WriteJob["format"]`. The handles the store gives back are of either
+kind of request, `Run<R | Written<F>>`, and `runEnded` takes the outcome
+of either; the store knows which by the id of the request.
+
+```ts
+
+export interface Store<R, F = never> {
+  getState(): AppState<R, F>;
   /** Calls `listener`, a function of a screen, after every change; returns
       the function that stops it. A property made once, so React keeps it. */
   readonly subscribe: (listener: () => void) => () => void;
@@ -570,24 +858,37 @@ export interface Store<R> {
       error after a failure that is not popnei's nor a variants file that
       could not be read again, after stopping every calculation left
       behind, and takes the analysis out of the notice's `stopped`; null,
-      and nothing done, in any other state. */
-  startRun(id: AnalysisId): Run<R> | null;
-  /** Stops the calculation in flight of an analysis, if there is one. */
+      and nothing done, in any other state. Gives the handles it sent:
+      the analysis's request, or that of the statistics it waits for, or
+      none when it waits for statistics already in flight. */
+  startRun(id: AnalysisId): readonly Run<R | Written<F>>[] | null;
+  /** Stops the calculation in flight of an analysis, or its wait for the
+      statistics, if there is one. */
   cancelRun(id: AnalysisId): void;
+  /** Starts the writing of the filtered variants, in the states and with
+      the handles of startRun. */
+  startWrite(format: WriteFormat): readonly Run<R | Written<F>>[] | null;
+  /** Stops the writing in flight, or its wait, if there is one. */
+  cancelWrite(): void;
 
   popneiReady(version: string): void;
   variantsRead(fileId: string, read: SourceRead): void;
   individualsRead(fileId: string, csv: CsvOptions | null, read: IndividualsRead): void;
-  runEnded(runId: number, outcome: Outcome<R>): void;
+  /** Gives the handles it sent because of this end: the requests of the
+      Runs that waited for these statistics. */
+  runEnded(runId: number, outcome: Outcome<R | Written<F>>): readonly Run<R | Written<F>>[];
 }
 ```
 
 A command is passed as a function: `store.apply("the MAF filter changed",
 (p) => setVariantFilter(p, { kind: "maf", maxAllowedMaf: 0.9 }))`.
 
-`startRun` returns the handle of the request to its caller,
-`src/ui/runs.ts`, which awaits its outcome and gives it to `runEnded`; the
-store keeps the handle too, to stop it. For each request in flight the
+`startRun`, `startWrite` and `runEnded` return the handles of the
+requests they sent to their caller, `src/ui/runs.ts`, which awaits the
+outcome of each and gives it to `runEnded`; the store keeps each handle
+too, to stop it. A Run that waits for the statistics gets its own
+request only when they end, so its handle comes back from the
+`runEnded` of the statistics, and `runs.ts` awaits it as the others. For each request in flight the
 store keeps its analysis, its key, the project it was made from, the load
 of its variants file and its handle.
 
@@ -597,9 +898,14 @@ those in flight:
 - `done`: the result goes into the cache under its key, with its
   warnings, made from the request's project; if the cache is then above
   its bound, it drops results the current project does not show, never
-  one it shows (`docs/specs/core/cache.md`); the number of variants, when `numVarsOf` gives one, is
-  recorded into the variants file of the request's load in every project
-  of the history.
+  one it shows (`docs/specs/core/cache.md`). The result of a write goes
+  into no cache: it is kept as the file of the state `write`, or dropped
+  (above). Then, for any result: the counts that `countsOf` gives go
+  into the cache under the key of the counts for the request's project,
+  keeping the result just put; the number of variants, when `countsOf`
+  gives one, is recorded into the variants file of the request's load in
+  every project of the history; and, for the statistics of each
+  individual, the Runs that waited for them send their requests.
 - `failed` of kind `popnei`: the message is kept under the key for the
   session. `reopenFailed`: it is kept under the load id of the request,
   until the load changes, as "A calculation that failed" says. Any
@@ -654,8 +960,8 @@ the owner, on 24 September 2026:
   request the store did not start: a defect. The store takes the request
   out of those in flight before it throws, so that the analysis is not
   shown running for ever. A defect while a result is taken in, a key
-  from the worker that is not a key, a `warnings`, `checkNumbers` or
-  `numVarsOf` that throws, also keeps the failure `{ kind: "failed",
+  from the worker that is not a key, a `warnings`, `checkNumbers`,
+  `countsOf` or `statistics.of` that throws, also keeps the failure `{ kind: "failed",
   error: { kind: "defect", message } }` under the request's key, shown
   until the next change as other failures are, so that a calculation of
   minutes that ends in a defect does not end in `ready` with nothing
@@ -682,6 +988,28 @@ the owner, on 24 September 2026:
 - **An opened project whose settings are changed and set back.** The
   fingerprint is that of the settings, so the comparison with the check
   numbers comes back with them.
+- **An undo to filters whose statistics the cache has dropped.** The
+  diversity of those filters, still in the cache, is `done`; the list is
+  not known, and only a new Run of an analysis that reads the filters of
+  individuals waits for the statistics.
+- **A threshold on the individuals moved while a Run waits for the
+  statistics.** The statistics' key does not change, since it holds no
+  filter of individuals, so their request goes on; the analysis's key
+  does, so its wait is left behind and named in the notice. When the
+  statistics end, the wait ends with nothing sent, the statistics are in
+  the cache, and the analysis is `ready` for the new threshold, with its
+  list known: a new Run sends at once.
+- **The statistics refused by popnei**, "the pass gave no variant" when
+  the filters of the variants keep none: every analysis that reads the
+  filters of individuals and is not done shows that refusal in `error`,
+  until a change gives the statistics another key.
+- **A write that ends after a change of the filters, before its stop.**
+  Its file is dropped and the state `write` is `ready` for the new
+  filters; its counts are in the cache under the key of the old filters,
+  so an undo shows them beside the filters, and shows no Save.
+- **A diversity that ends while a Count of the same filters runs.** The
+  counts of the diversity go into the cache at once; the Count goes on,
+  and its result, the same counts, replaces them.
 
 ## How it runs
 
@@ -704,7 +1032,11 @@ project alone, would have given each project a copy of its own. Decided
 here, not by the owner, on 24 September 2026.
 
 After every change of the project or of the version of
-popnei, the store makes the key of each analysis that is not locked. It
+popnei, the store makes the key of each analysis that the project does
+not lock, and the key of the write; after those and after every change
+of the cache that puts or drops the statistics under the key the project
+gives them, it makes the individuals kept, and the states of the
+analyses and of the write from them. It
 keeps the keys of the last project and version, so that a progress
 message, which changes neither, makes no key; and a memo, a table of the
 text already written for each object of the project, so that the
@@ -737,7 +1069,13 @@ With Vitest, at the functions of `Store`, with a fake `send` that returns
 requests whose outcomes the test resolves by hand, whose `cancel()` it
 records, and which passes progress when the test asks; and two fake
 analyses: one that needs the individuals file and uses the populations,
-and one that needs only the variants file.
+and one that needs only the variants file. From stage 3, three more
+fake definitions: statistics of each individual, reading the filters of
+the variants alone, whose result carries `IndividualStats`; counts,
+reading the filters of the variants alone; and the first fake analysis
+reading the filters of individuals as well; with a `countsOf` that gives
+counts for every result of the first two fakes, and a fake `write.send`
+whose file is a text.
 
 - **A worked sequence.** Create the store; both analyses are locked,
   "Load a variants file in the Variants step." `popneiReady("0.1.0")`,
@@ -750,7 +1088,7 @@ and one that needs only the variants file.
   `apply("the missing data filter changed", …)`: it is `removed`, the
   notice lists it with that cause and stops nothing. `undo()`: it is
   `done` again with the same result object, `send` was called once, and
-  the notice is `null`.
+  the notice is `null`. `startRun` gives a list of one handle.
 - **Stopping**, each case from a new store. With the second running, a
   command that changes its key:
   the notice lists it in `leftBehind`, and `cancel()` was not called.
@@ -792,6 +1130,54 @@ and one that needs only the variants file.
   the one the store was made with; a list one number
   shorter differs; a setting changed: `check` is null; set back: the
   comparison is there again.
+- **The individuals kept and a Run that waits**, on the variants file
+  of the five individuals of the worked case of `individualsKept`
+  (`docs/specs/core/project.md`). With no filter of individuals, a Run
+  of the analysis that reads them sends at once, with `individuals`
+  `null` in its client. With a threshold of 0.2 on the missing rate:
+  the analysis is `ready`, its key made, and `individualsKept` gives
+  `needsStatistics`; `startRun` gives one handle, that of the
+  statistics, the analysis is `running` with `waitsForStatistics`, the
+  statistics' id and their progress, and the statistics are `running`
+  too; `runEnded` of the statistics gives one handle, the analysis's own
+  request, whose client gave `["a", "b", "d"]`, and the state holds the
+  counts of the threshold. `cancelRun` of the analysis while it waits
+  stops the statistics; the same when the Run of the statistics was
+  pressed first, and then `cancelRun` of the analysis stops nothing but
+  its wait. With a threshold of 0.01: after the statistics, the analysis
+  is `locked` with `keptNoneReason`, and nothing was sent for it. A
+  threshold moved while it waits: the notice names it in `leftBehind`;
+  the statistics end, and `runEnded` gives no handle. A refusal of the
+  statistics: the analysis is `error` with popnei's message, and
+  `startRun` gives `null`.
+- **The key whatever the lock, and the lock from the cache**: with the
+  analysis done under a threshold, a command that changes the filter of
+  the variants, a result of the other analysis whose put drops the
+  statistics of the old filters, their sizes and the bound of the cache
+  chosen so, and an undo: the analysis is `done` again with the same
+  result, its key is `keyOf` of the project, and the list is
+  `needsStatistics`. With the statistics under the current
+  key dropped by a put of another result, the state changes at that put,
+  with no command: the list is `needsStatistics` again.
+- **The counts filled**: `runEnded` of a result of the analysis that
+  needs only the variants file puts into the cache, under the key of
+  the counts for its request's project, the counts `countsOf` gave;
+  the counts are `done` with no Count; a command that changes the filter
+  of the variants does not name them in the notice's results removed,
+  and its undo shows them `done` again. With a cache whose bound holds
+  one result, the result put before the counts is not dropped by their
+  put.
+- **The write**: `startWrite("nei")` sends a `WriteJob` with the load
+  id, the filters of the variants, `individuals` `null` and `"nei"`,
+  under `writeKeyOf`, and `write` is `running`; `runEnded` done: `write` is
+  `done` with what the worker gave, and the cache does not hold it. Again, then a
+  command that changes a filter: the notice has `writeLeftBehind` and
+  `cancel()` was not called; an undo: it goes on. Again, then the result
+  arrives after the command: `write` is `ready`, holds no file, and the
+  counts of the result are in the cache under the old filters' key.
+  Again, then `startRun` of an analysis: the write, whose key the project
+  gives, is not cancelled. Again, then a new variants file loaded: the
+  write is cancelled at once and the notice has `writeStopped`.
 - **`popneiReady` twice** with the same version gives the same state
   object; **`dismissNotice`** with no notice gives the same state object.
 - **`getState`** returns the same object between two changes, and the
@@ -815,7 +1201,12 @@ and one that needs only the variants file.
   without its key coming back, or that a `startRun` met, has been
   cancelled; and a change of the load of the variants file cancels at
   once every request in flight, and its notice lists exactly their
-  analyses in `stopped`.
+  analyses in `stopped`; a result is shown only while it is under a key
+  the project gives, whatever the lock by the individuals kept; the list
+  given to a request is `individualsKept` of its project and of the
+  statistics under the key that project gives them; a write whose result
+  arrives when the project gives another key leaves no file in the
+  state.
 
 The tests in the browser, of the walking skeleton, check the same through
 the screens, since core reaches them through the store
@@ -823,7 +1214,9 @@ the screens, since core reaches them through the store
 
 ## Open points
 
-None of the store's own. It uses the bound of the cache
+None of the store's own. Stage 3 adds none: its choices are the
+architecture's, approved by the owner on 26 September 2026, or decided
+here and said where they are. It uses the bound of the cache
 (`docs/specs/core/cache.md`, **Open 1**) and the bound of the history
 (`docs/specs/core/history.md`, **Open 1**).
 
@@ -832,8 +1225,14 @@ None of the store's own. It uses the bound of the cache
 - `src/ui/runs.ts`, which awaits the requests: `docs/specs/entry.md`.
   The hook, the function through which a React screen reads the store:
   `docs/specs/entry.md` and `.claude/skills/coding/react.md`.
-- The list of the analyses of each application, `apps.ts`, and each
-  analysis: from stage 2.
+- The list of the analyses of each application, `apps.ts`, `countsOf`
+  and the job of a write, and each analysis: from stage 2, and the
+  checks of the Variants step in their own specs, stage 3.
+- The name and the size of a written file, its Save button and its
+  release: `docs/specs/steps/variants.md` and `docs/specs/entry.md`.
+  The warning above a size, `WRITE_WARN_BYTES`, and the start of the
+  calculation worker again after a large write: the step and the worker
+  client (`docs/architecture.md`, sections 6 and 13).
 - The words of the notice and the locked reasons of each analysis: the
   screen specs, `docs/specs/shell.md` and the spec of each analysis. The
   words of the comparison: `checkVerdictText` of

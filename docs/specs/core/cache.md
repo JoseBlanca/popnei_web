@@ -1,7 +1,11 @@
 # The cache of results
 
 24 September 2026, approved by the owner on 24 September 2026. The code
-is in `src/core/cache.ts`. The cache keeps the results of the analyses under their keys, on the
+is in `src/core/cache.ts`. Revised on 26 September 2026 for stage 3, the
+Variants step whole, as the revision of `docs/architecture.md` the owner
+approved that day has it: what the store puts in the cache from stage 3,
+and what it never puts; the functions do not change, and this revision
+is not yet approved. The cache keeps the results of the analyses under their keys, on the
 page, so that a result asked for again, by an undo, a value set back, or a
 step of the application visited again, is shown with no calculation. It is
 bounded in bytes, and drops first the result used longest ago
@@ -66,6 +70,36 @@ the worker for it again, and again.
   stops a write into a typed array, so this is a rule of the code: code
   that sorts one sorts a copy (`.claude/skills/coding/SKILL.md`,
   "Numbers").
+
+### What the store puts in it from stage 3
+
+- **The statistics of each individual**, the result of `individualChecks`,
+  from which core makes the list of the individuals kept
+  (`docs/specs/core/store.md`, "The individuals kept"). They are under a
+  key the current project gives while its filters of the variants are
+  those they were counted over, whatever its thresholds, so the rule
+  above keeps them while they are used. Once dropped, the list is not
+  known until they are calculated again, which a Run of an analysis that
+  reads the filters of individuals does first. They are 16 bytes per
+  individual (`docs/architecture.md`, section 11).
+- **The counts of the filters of a pass**, put under the key of
+  `filterCounts` just after the result they came with, in the same
+  `runEnded` (`docs/specs/core/store.md`, "What each filter kept"). The
+  store gives the key of that result in `keep` for the second put, so
+  that a late result, which the screen does not show and which its own
+  put kept, is not dropped by the put of its counts.
+- **Never a file written.** The result of the writing of the filtered
+  variants is as large as the variants kept, and one can be larger than
+  the bound; the store keeps it beside the cache while the project gives
+  its key, and the cache neither holds it nor counts it
+  (`docs/architecture.md`, section 5). Nor does the bound count the file
+  while the page holds it, though it is memory of the tab (section 11
+  of the architecture).
+
+A put or a drop of the statistics changes what the screens show with no
+change of the project, the lock of the analyses that read the filters of
+individuals among it; the store works the states out again after each
+put for that reason (`docs/specs/core/store.md`).
 
 ## The TypeScript interface
 

@@ -9,7 +9,14 @@ words of the Individuals step and the reader's two new refusals the
 owner decided on the reviews of that plan, and for the end of the
 reasons of a list of individuals, Open 2, which the owner settled the
 same day; and on 26 September 2026 for the end of the refusal of an
-analysis this version does not know. The project is everything the user has set in one application: the
+analysis this version does not know. Revised again on 26 September 2026
+for stage 3, the Variants step whole, as the revision of
+`docs/architecture.md` the owner approved that day has it: the filters
+of the variants in a fixed order, with no command to move one; the ends
+of the reasons of a list of individuals, now that the step has its
+controls; and the individuals the filters keep, which a new module,
+`src/core/individualsKept.ts`, makes from the statistics of each
+individual; this revision is not yet approved. The project is everything the user has set in one application: the
 variants file they loaded, the filters, the individuals file with the
 types of its columns, the populations, and the options of each analysis.
 This spec gives its type, the commands that change it, the records that
@@ -74,15 +81,22 @@ The rules, which every function below keeps:
   made always opens again from its project file. What comes from outside
   the program, the JSON of a project file, goes through `parseProject`,
   which returns what is wrong instead.
-- **One filter of each kind**, in the list of the variants' filters and
-  in that of the individuals'. For the variants, because popnei refuses a
-  second filter of a kind (`docs/specs/worker/protocol.md`); setting a
-  filter of a kind that is there replaces it in its place, and the order
-  of the list is the one the user gave, since it changes the result. For
-  the individuals, because a second list of one kind would say what one
-  list says; and since the individuals kept are those every filter keeps,
-  in any order, that list is kept in a fixed order, keep, remove, missing
-  data, observed heterozygosity, and has no command to reorder it.
+- **One filter of each kind, in a fixed order**, in the list of the
+  variants' filters and in that of the individuals'. One of each kind for
+  the variants, because popnei refuses a second filter of a kind
+  (`docs/specs/worker/protocol.md`), and for the individuals, because a
+  second list of one kind would say what one list says. The order is
+  fixed and the user does not set it, as the owner decided on 26
+  September 2026 (`docs/architecture.md`, section 2): the variants'
+  missing data, observed heterozygosity, the major allele frequency
+  (MAF) and the LD pruning, in that order, the regions of a BED file first once popnei has that filter;
+  the individuals' keep, remove, missing data, observed heterozygosity.
+  The filter of individuals comes after every filter of the variants, as
+  popnei's `filterIndividuals` put last on the `Variants`, so the
+  variants kept do not depend on which individuals are removed. Setting
+  a filter puts it in the place of its kind, and replaces the one of its
+  kind that is there; nothing moves a filter. `moveVariantFilter`, which
+  moved one in the order the user gave until stage 2, is gone.
 - **A record is not a command.** When the calculation worker has opened
   the variants file, or the light worker, the second thread that reads
   the individuals file, has read it, what they read goes into the source
@@ -115,9 +129,9 @@ words the screen shows beside the Run button, or `null`:
 | the calculation crashed while it read the file | "panel.nei could not be read: ‹what happened› (**Open 4**). Load it again in the Variants step." |
 | the calculations could not start, or the page is out of date | "panel.nei could not be read: ‹what happened› (**Open 4**). Reload the page and load it again." |
 | the browser could no longer read the file, `reopenFailed` | "panel.nei could not be read; it may have changed on the disk since it was picked. Load it again in the Variants step." |
-| a list of individuals that is empty | "The list of individuals to keep is empty. The Variants step has no control for the filters of individuals in this version, so correct the list in the project file, in a text editor, and open the project again." (**Open 2**) |
-| a list that names an individual more than once | "The list of individuals to remove names ind_031 more than once. The Variants step has no control for the filters of individuals in this version, so correct the list in the project file, in a text editor, and open the project again." (**Open 2**) |
-| a list that names individuals not in the variants | "The list of individuals to keep names 2 individuals that are not in panel.nei: ind_900 and ind_901. The Variants step has no control for the filters of individuals in this version, so correct the list in the project file, in a text editor, and open the project again." (**Open 2**) |
+| a list of individuals that is empty | "The list of individuals to keep is empty. Add individuals to it, or remove the filter, in the Variants step." (**Open 2**) |
+| a list that names an individual more than once | "The list of individuals to remove names ind_031 more than once. Change the list, or remove the filter, in the Variants step." (**Open 2**) |
+| a list that names individuals not in the variants | "The list of individuals to keep names 2 individuals that are not in panel.nei: ind_900 and ind_901. Change the list, or remove the filter, in the Variants step." (**Open 2**) |
 
 The Variants step shows the reason of its file, being read or not
 read, with another end, since it is where the file is chosen and its
@@ -180,10 +194,11 @@ than once". These are decided here, not by the owner:
 popnei refuses these lists too, with messages that name its arguments,
 `individuals`, and that the store would keep as popnei's refusals of those
 settings (`docs/specs/core/store.md`); checked here, the user is told what
-to fix before anything runs. A threshold of individuals that keeps none of
-them cannot be known before the statistics of each individual are
-calculated; the spec of the filters of individuals, in stage 3, says how
-it is checked, and until then popnei's refusal is shown.
+to fix before anything runs. Whether a threshold on the individuals
+keeps any of them cannot be known from the project alone, since it
+needs the statistics of each individual; that lock is the store's, from
+the cache, below in "The individuals the filters keep", and
+`projectNeeds` does not give it.
 
 `individualsNeeds` gives the same for the analyses that use the
 individuals file, the first thing missing, or `null`. Every individual of
@@ -333,6 +348,93 @@ it in another way since, or because popnei changed, is told as that, and
 not blamed on the variants file alone (`docs/specs/core/store.md`, "The
 comparison with the check numbers").
 
+### The individuals the filters keep
+
+popnei filters individuals only by a list, `filterIndividuals` of
+`js/popnei/src/variant.ts`, and gives, for each individual, its
+proportion of missing genotypes and its observed heterozygosity,
+`missingGtRate` and `obsHetRate` of `calcPerIndividualStats` of
+`js/popnei/src/stats.ts`. The four filters of individuals are the
+application's arithmetic on those numbers (`docs/architecture.md`,
+section 4, "The checks of the Variants step"): core makes, from the
+project and those statistics, the one list of the individuals kept,
+which every analysis that reads the filters of individuals is given and
+the calculation worker puts on the `Variants` after the filters of the
+variants. The function is `individualsKept`, in its own module,
+`src/core/individualsKept.ts`, the row of section 9 of the architecture,
+specified here because it reads nothing but the project and a result.
+
+The statistics are the result of the analysis of the statistics of each
+individual, `individualChecks` (`docs/specs/analyses/individualChecks.md`),
+under the key the project gives it, which the store finds in its cache
+(`docs/specs/core/store.md`, "The individuals kept"). Its pass has the
+filters of the variants of the project and no filter of individuals, as
+the owner decided on 26 September 2026, so every individual of the
+variants file is in it, in the order of the file, and its numbers are
+counted over the variants the analyses read.
+
+The filters are applied in their fixed order, keep, remove, missing
+data, observed heterozygosity. The first is given every individual of
+the variants file, and each one after it the individuals the one before
+it kept. Each keeps:
+
+| filter | keeps an individual when |
+|---|---|
+| `keep` | the list names it |
+| `remove` | the list does not name it |
+| `missing_data` | its `missingGtRate` is at most `maxAllowedMissingRate` |
+| `obs_het` | its `obsHetRate` is at most `maxAllowedObsHet`; an individual with no called genotype, whose `obsHetRate` is NaN, is removed, as the owner decided on 26 September 2026 |
+
+A threshold keeps what is at most it, as popnei's filters of the
+variants do, compared with `<=` against the number the user typed, with
+no arithmetic between them (`docs/specs/worker/protocol.md`). The list is
+in the order of the variants file, whatever the order of the names in a
+list to keep.
+
+What `individualsKept` gives:
+
+- **The list**, known or not. It is known when the project has no
+  threshold, since the lists and the individuals of the variants file
+  are in the project, or when it has one and the statistics are given.
+  A known list is `null` when the filters remove no individual, as when
+  there is no filter of individuals, so that the job carries nothing and the runner
+  puts no `filterIndividuals` on the `Variants`
+  (`docs/specs/worker/runner.md`); it is empty when they keep none. It is
+  not known when the project has a threshold and no statistics are
+  given: the store then calculates them before the analysis
+  (`docs/specs/core/store.md`).
+- **How many individuals each filter was given and kept**, which the
+  Variants step shows beside each filter as it is set, with no pass
+  (`docs/specs/steps/variants.md`). A number that needs the statistics
+  and has none is `null`: the kept of a threshold, and the given and
+  kept of every filter after it.
+- **The individuals the lists keep**, the two lists alone, known from
+  the project whatever the thresholds, for a module that must know
+  before a run what the lists leave, the diversity's populations with no
+  individual left (`docs/specs/analyses/diversity.md`, "Why it cannot run");
+  a threshold can only remove more.
+- **Nothing**, `null`, when `projectNeeds` gives a reason: a variants
+  file not read has no individuals, and a list that names an individual
+  twice or one not in the file has no meaning to count.
+
+When the filters keep no individual, every analysis that reads them,
+and the writing of the filtered variants, are locked by the store with
+the words of `keptNoneReason`, since popnei refuses a `filterIndividuals`
+of no name: "The filters of individuals keep none of the 200 individuals
+of panel.nei. Loosen them in the Variants step." The count is the number
+of individuals of the variants file, written as the rules above write a
+count, and the name of the file is escaped.
+
+Seen in node 26.8.2, with popnei's release `js-v0.1.0-dev.2`, on 26
+September 2026, on `e2e/fixtures/panel.nei`, 200 individuals and 1,200
+variants: with the missing data filter of the variants at 0.05,
+`calcPerIndividualStats` gave a `missingGtRate` from 0.0165 to 0.0434
+and an `obsHetRate` from 0.318 to 0.397, none NaN; a threshold of 0.03 on
+the missing rate kept 125 of the 200 individuals, and one of 0.35 on the
+heterozygosity 48 of those 125; and `filterIndividuals` of those 48 after
+the missing data filter gave 48 individuals and the counts of the
+variants the filter gives with every individual, 1,200 to 1,152.
+
 ## The TypeScript interface
 
 The fields are `readonly` in the code, and every list `readonly T[]`;
@@ -369,7 +471,7 @@ export type AnalysisId = string;
 export interface Project {
   app: AppId;
   variants: VariantSource | null;
-  filters: VariantFilter[];                 // in the order the user gave
+  filters: VariantFilter[];                 // missing_data, obs_het, maf, ld
   individualFilters: IndividualFilter[];    // keep, remove, missing_data, obs_het
   individuals: IndividualsSource | null;
   grouping: Grouping;
@@ -506,6 +608,9 @@ export function freezeProject(p: Project): Project;
 The constants and the types the other modules and the tests use:
 
 ```ts
+/** The order the filters of the variants are kept in; "regions" joins
+    first with popnei's filter of the regions of a BED file. */
+export const VARIANT_FILTER_ORDER: readonly VariantFilterKind[]; // missing_data, obs_het, maf, ld
 /** The order the filters of the individuals are kept in. */
 export const INDIVIDUAL_FILTER_ORDER: readonly IndividualFilterKind[]; // keep, remove, missing_data, obs_het
 /** The largest ploidy of a VCF, which popnei's openVcf accepts. */
@@ -544,11 +649,9 @@ functions of `project.ts` that no other module imports.
 /** Puts a new load of the variants file, pending. Everything else is kept. */
 export function loadVariants(p: Project, source: VariantLoad): Project;
 
-/** Sets the filter of its kind: in its place when there is one, last otherwise. */
+/** Sets the filter of its kind, in the fixed order of the kinds. */
 export function setVariantFilter(p: Project, filter: VariantFilter): Project;
 export function removeVariantFilter(p: Project, kind: VariantFilterKind): Project;
-/** Moves the filter of that kind to a position of the list, 0 the first. */
-export function moveVariantFilter(p: Project, kind: VariantFilterKind, to: number): Project;
 
 /** Sets the filter of its kind, in the fixed order of the kinds. */
 export function setIndividualFilter(p: Project, filter: IndividualFilter): Project;
@@ -576,11 +679,10 @@ What each does where a reader could doubt it:
 
 | command | when | gives |
 |---|---|---|
-| any, every row below included | the value equals the one there: the same filter, the same position, the same options of the CSV, the same type, the same grouping, the same options of an analysis, a load with the load id already there and the same other fields | `p` itself |
+| any, every row below included | the value equals the one there: the same filter, the same options of the CSV, the same type, the same grouping, the same options of an analysis, a load with the load id already there and the same other fields | `p` itself |
 | any | a value `parseProject` would refuse in its place | a defect |
 | `removeVariantFilter`, `removeIndividualFilter` | no filter of that kind | `p` itself |
 | `removeIndividuals` | no individuals file | `p` itself |
-| `moveVariantFilter` | no filter of that kind, or `to` not a whole number from 0 to the length of the list − 1 | a defect |
 | `setCsvOptions` | no individuals file, or an xlsx | a defect |
 | `setColumnType` | the file not read, a column not in the table, `identifier` for another column than the first, another type for the first, a `binary` type whose two values are not the two values of the column | a defect |
 | `setGrouping` | a grouping of the other application | a defect |
@@ -734,6 +836,52 @@ export function counted(count: number, noun: string): string;
 export function grouped(count: number): string;
 ```
 
+### The individuals kept
+
+In `src/core/individualsKept.ts`. The statistics are taken by their
+shape, the three fields of popnei's `PerIndividualStats` that the result
+of `individualChecks` carries, so that this module names no type of an
+analysis.
+
+```ts
+/** The statistics of each individual, over the variants the filters keep. */
+export interface IndividualStats {
+  readonly individuals: readonly string[];  // every individual of the variants file, in its order
+  readonly missingGtRate: Float64Array;
+  readonly obsHetRate: Float64Array;        // NaN for an individual with no called genotype
+}
+
+export type KeptList =
+  | { readonly kind: "known"; readonly individuals: readonly string[] | null } // null: none removed
+  | { readonly kind: "needsStatistics" };
+
+export interface IndividualsKept {
+  readonly list: KeptList;
+  /** The individuals the lists to keep and to remove keep, in the order
+      of the variants file, known with no statistics; every individual
+      of the file when there is no list. */
+  readonly byLists: readonly string[];
+  /** One per filter of individuals of the project, in its order. */
+  readonly counts: readonly {
+    readonly kind: IndividualFilterKind;
+    readonly given: number | null;          // null: needs the statistics
+    readonly kept: number | null;
+  }[];
+}
+
+/** The individuals the filters keep, or null when projectNeeds gives a
+    reason. `stats` is used only when the project has a threshold. */
+export function individualsKept(p: Project, stats: IndividualStats | null): IndividualsKept | null;
+
+/** The reason of the lock when the list is known and empty, or null. */
+export function keptNoneReason(p: Project, kept: IndividualsKept | null): string | null;
+```
+
+Statistics whose `individuals` are not those of the variants file of
+`p`, in its order, or whose arrays are not as long, are a defect, thrown:
+the store gives only the result under the key of `p`, whose load is that
+file.
+
 ### The validation
 
 `parseProject` takes what `JSON.parse` gave of the project part of a
@@ -778,7 +926,8 @@ thresholds from 0 to 1, `maxDist` a whole number from 1 to 2^53 − 1, the
 ploidy a whole number from 1 to 255, as popnei accepts; the size of a
 variants file and its number of variants whole numbers of at least 0; a
 load id of 32 lower case hexadecimal digits; at most one filter of each
-kind in each list, and the individuals' in their order; the table as the
+kind in each list, and each list in its fixed order, the variants' as
+well since stage 3; the table as the
 reader gives it: at least one column and one row, no name of the header
 twice, every row as long as its header, the first cell of each row the
 name of an individual, a text that is not empty, and no individual in two
@@ -841,6 +990,13 @@ or `null`.
     individuals should be in the order individuals to keep, individuals to
     remove, missing genotypes, observed heterozygosity, and the second one
     is out of that order";
+  - the filters of the variants out of their order: "the filters of the
+    variants should be in the order missing genotypes, observed
+    heterozygosity, major allele frequency, linkage disequilibrium, and
+    the second one is out of that order". A project file of version 1
+    whose filters of the variants are in another order, which the
+    application of stage 2 could not write, since it had the missing data
+    filter alone, is refused so (`docs/architecture.md`, section 2);
   - a value repeated: "the second analysis repeats the analysis
     diversity";
   - a table that does not agree with its types: "the type of the second
@@ -893,6 +1049,19 @@ or `null`.
   individuals file only when it was read (`docs/specs/core/projectFile.md`,
   "What is written of each part"), so an opened project holds no pending
   read of the individuals file.
+- **An opened project with a threshold on the individuals.** The
+  statistics of each individual are results, which a project file does
+  not keep, so the list is `needsStatistics` until they are calculated
+  for the new load; the first Run of an analysis that reads the filters
+  of individuals calculates them first (`docs/specs/core/store.md`).
+- **Filters that remove no individual**: a list to keep that names every
+  individual, a threshold above every value. The list is `null`, as with
+  no filter, and the counts say so, each filter given and kept the same
+  number.
+- **Every individual without a called genotype** among the variants the
+  filters keep, with a filter by heterozygosity: none is kept, whatever
+  its threshold, and `keptNoneReason` gives the lock. Without that
+  filter, they are kept.
 
 ## How it is verified
 
@@ -905,11 +1074,33 @@ project frozen deeply with `Object.freeze`, so that a write into it throws
   `emptyProject("popgen")`, `setVariantFilter` of `{ kind: "maf",
   maxAllowedMaf: 0.95 }`, then of `{ kind: "missing_data",
   maxAllowedMissingRate: 0.1 }`, then of `{ kind: "maf", maxAllowedMaf:
-  0.9 }`: the filters are `[maf 0.9, missing_data 0.1]`, the MAF filter
-  replaced in its place; `setVariantFilter` of a new object `{ kind:
-  "missing_data", maxAllowedMissingRate: 0.1 }` returns the project
-  itself. Each row of the table of the commands, with its defect or its
-  `p`.
+  0.9 }`: the filters are `[missing_data 0.1, maf 0.9]`, the missing data
+  filter put before the MAF filter, which set first, and the MAF filter
+  replaced in its place; `setVariantFilter` of `{ kind: "ld", … }` then
+  of `{ kind: "obs_het", … }` gives `[missing_data, obs_het, maf, ld]`;
+  `setVariantFilter` of a new object `{ kind: "missing_data",
+  maxAllowedMissingRate: 0.1 }` returns the project itself. Each row of
+  the table of the commands, with its defect or its `p`.
+- **`individualsKept`**, on a project of five individuals `a` to `e` and
+  statistics given as literals, `missingGtRate` `[0.2, 0.1, 0.3, 0.05,
+  1]` and `obsHetRate` `[0.3, 0.5, 0.2, 0.4, NaN]`, `e` calling no
+  genotype: with no filter, the list `null`; with remove `[b]`, missing
+  data 0.2 and observed heterozygosity 0.4, the list `[a, d]` and the
+  counts remove 5 to 4, missing data 4 to 2, heterozygosity 2 to 2, `c`
+  and `e` dropped by their missing rate, `a` kept at 0.2 and `d` at 0.4,
+  their thresholds exactly; with keep `[e, a]`, `[a, e]`
+  in the order of the file; with observed heterozygosity 1 alone, `e`
+  removed for its NaN; with missing data 0.01, the list empty and
+  `keptNoneReason` "The filters of individuals keep none of the 5
+  individuals of panel.nei. Loosen them in the Variants step."; with a
+  threshold and no statistics, `needsStatistics`, the lists' counts
+  given and the threshold's `null`; statistics of another order of the
+  individuals, a defect. The same function, given the statistics that
+  popnei's release gives on `panel.nei` with the missing data filter at
+  0.05, gives the 125 and 48 individuals above, in the runner's tests in
+  node, which the architecture asks for (`docs/architecture.md`, section
+  4, "What would show these choices wrong";
+  `docs/specs/worker/runner.md`).
 - **Each record**: recorded into the source of its id; the project itself
   for another id, for a read already recorded, and, for the individuals
   file, for other `csv` options.
@@ -926,13 +1117,17 @@ project frozen deeply with `Object.freeze`, so that a write into it throws
 - **`parseProject`**, a case for each check above, with its `kind` and its
   `path`; `projectErrorText` of `wrongValue` at `["filters", 1,
   "maxAllowedMaf"]` holds "the threshold of the second filter of the
-  variants" and not `filters`.
+  variants" and not `filters`; the filters of the variants `[maf,
+  missing_data]` refused as `filterOutOfOrder` at `["filters", 1]`, with
+  the text above.
 - **Properties, with fast-check**, which draws random projects and
   sequences of commands, and shrinks a failure to the smallest one. For
   every project, `parseProject(JSON.parse(JSON.stringify(p)), …)` is ok
   and deeply equal to `p`. For every sequence of commands, each list has
-  at most one filter of each kind and the individuals' filters are in
-  their order; and a command applied twice with the same arguments
+  at most one filter of each kind and both lists are in their fixed
+  order; for any project and statistics, the list of `individualsKept`
+  is in the order of the variants file and holds exactly the individuals
+  that every filter keeps; and a command applied twice with the same arguments
   returns, the second time, the project it was given.
 
 ## Open points
@@ -952,7 +1147,13 @@ of them changes those texts and their tests, and nothing else.
 
 2. **How the user is told to fix a list of individuals that is empty,
    names one more than once, or names individuals not in the variants
-   file.** Settled by the owner on 25 September 2026: the three reasons
+   file.** Written again for stage 3, now that the Variants step has the
+   controls of the filters of individuals, with the ends the first draft
+   of this spec had, "Add individuals to it, or remove the filter, in the
+   Variants step." for an empty list and "Change the list, or remove the
+   filter, in the Variants step." for the other two, to be judged by the
+   owner on the screens of stage 3; meanwhile, those. Before, settled by
+   the owner on 25 September 2026 for stage 2: the three reasons
    end "The Variants step has no control for the filters of individuals
    in this version, so correct the list in the project file, in a text
    editor, and open the project again." In stage 2 such a list comes
@@ -1019,3 +1220,8 @@ of them changes those texts and their tests, and nothing else.
 - Undo and redo: `docs/specs/core/history.md`.
 - The ids of the analyses and their options: the spec of each analysis,
   from stage 2.
+- The regions of a BED file in the project, `RegionsSource` of
+  `docs/architecture.md`, section 2, and the filter of the regions: they
+  come with popnei's release that has that filter.
+- The bins of the statistics of each individual, `src/core/histogram.ts`:
+  the spec of `individualChecks`.

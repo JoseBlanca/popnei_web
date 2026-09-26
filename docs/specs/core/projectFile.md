@@ -12,7 +12,13 @@ check numbers of the wrong count are refused at the opening; and on 26
 September 2026 for the owner's decisions at stop 9.6 of that plan, points
 1 to 3 of the review of its work package 9: the line of numbers not
 compared for a file of the other format, the size compared only within a
-format, and the words of the file asked for after an opening. There was no
+format, and the words of the file asked for after an opening; and on 26
+September 2026 for stage 3, the Variants step whole, as the revision of
+`docs/architecture.md` the owner approved that day has it: every filter
+of the variants and of the individuals, the filters of the variants in a
+fixed order that the opening checks, and the version of the format,
+which stays 1 until the regions of a BED file join the file (**Open 2**);
+this revision is not yet approved. There was no
 code yet; it will be `src/core/projectFile.ts`, the row `projectFile.ts`
 of section 9 of `docs/architecture.md`. The project file is the file
 `<name>.popnei.json` that a user saves to take their work out of the
@@ -206,6 +212,22 @@ proportion of polymorphic variants: 1 + 3 × the populations, 7 numbers
 for the two populations of the example. Section 9 of
 `docs/functionality.md`, which named the expected heterozygosity alone,
 is corrected to name them.
+
+From stage 3 the project holds every filter of
+`docs/functionality.md`, section 3, but the regions of a BED file: the
+filters of the variants by missing data, observed heterozygosity, the
+major allele frequency and linkage disequilibrium, in that fixed order, and the four filters of individuals, the
+lists and the thresholds, in theirs (`docs/specs/core/project.md`). A
+filter is written as the project holds it, a threshold as the number the
+user typed. What the filters make is not written, since each is a
+result or is made from one: the list of the individuals the thresholds
+keep, the statistics of each individual, the histograms and the counts
+of the filters; of those, as of any analysis `done`, only the check
+numbers its `checkNumbers` gives. Nor is a file of the filtered
+variants, which is the user's once saved. A project opened with a
+threshold on the individuals knows its list again once the statistics
+are calculated for the new load (`docs/specs/core/store.md`, "The
+individuals kept").
 
 The options of the analyses are written only for an analysis whose
 options the user set. No screen of stage 2 sets one, the diversity's
@@ -408,7 +430,13 @@ that the reason given is the one the user can act on:
 7. **The project**, through `parseProject` of `docs/specs/core/project.md`,
    once, with the application, the version of the format of the file and
    the analyses of the application: every check of its section "The
-   validation", with its errors and their texts. `readProjectFile` gives
+   validation", with its errors and their texts, the fixed order of the
+   filters of the variants among them, which a file of version 1 meets
+   as well: a file whose filters of the variants are in another order is
+   refused as `filterOutOfOrder`, since the application no longer applies
+   an order of the user's, and no file the application wrote is refused
+   so, since stage 2 wrote the missing data filter alone
+   (`docs/architecture.md`, section 2). `readProjectFile` gives
    it this object, built from the fields of the file:
 
    ```ts
@@ -445,8 +473,11 @@ that the reason given is the one the user can act on:
    with". When `numCheckNumbers` gives `null`, the count is not checked:
    for the diversity, when the file's variants file was not read, when
    there is no individuals file or no column of the populations, or when
-   the project holds filters of individuals
-   (`docs/specs/analyses/diversity.md`, "The check numbers").
+   the project holds a threshold on the individuals, whose list needs
+   statistics not yet calculated for the new load; lists alone are in the
+   project, and the count is checked with them
+   (`docs/specs/analyses/diversity.md`, "The check numbers";
+   `docs/architecture.md`, section 4).
 10. **The fingerprints** of the settings of each check are made, with
    `settingsFingerprint` of `docs/specs/core/keys.md`, from the opened
    project and the read options of the file's variants file, and put in
@@ -636,6 +667,14 @@ this spec makes precise:
   is read as a file of version *k* and brought to the present one field
   by field, and the fixtures of every earlier version, below, keep
   opening.
+- **Stage 3 does not raise it.** Every kind of filter of the variants and
+  of the individuals was in the format of version 1 already, which the
+  validation of stage 2 read; the fixed order refuses only files the
+  application did not write; and the analyses of the Variants step are
+  new ids, which the rule above covers. The architecture gives version 2
+  to the regions of a BED file with the fixed order (its section 12);
+  since the regions wait for popnei's filter of them, version 2 waits
+  with them, and adds the regions and their filter (**Open 2**).
 - **A change to what an analysis's `checkNumbers` gives**, which numbers
   or their order, raises its key version, so that the numbers of files
   saved before are told as "calculated in another way" and not blamed on
@@ -673,8 +712,8 @@ defect on a number that is not finite, and on an analysis `done` while
 `state.popneiVersion` is `null`.
 
 ```ts
-export function writeProjectFile<J, R>(
-  state: AppState<R>,
+export function writeProjectFile<J, R, F>(
+  state: AppState<R, F>,   // F: the type of a written file, which it does not read
   analyses: readonly AnalysisDef<J, R>[],
   appVersion: string,
   saved: string,
@@ -828,7 +867,11 @@ the analyses `done`, `ready` or `removed`.
   project; `v1-nei-diversity.popnei.json`, the example above with a table
   of 6 rows in 2 populations and the 7 check numbers of the diversity;
   `v1-vcf-pending.popnei.json`, a VCF of ploidy 4 with only the variants
-  that passed, its read pending, no individuals file, and one check. Each
+  that passed, its read pending, no individuals file, and one check;
+  and, from stage 3, `v1-every-filter.popnei.json`, the four filters of
+  the variants in their order, the missing data filter at 0.05 and the LD
+  filter with `maxDist` 100000, and the four filters of individuals, a
+  list to keep, a list to remove and the two thresholds. Each
   opens into a project written as a literal in its test, and, while
   `FORMAT_VERSION` is 1, the project written back from it, with no result
   and the header's versions and date, is the fixture byte for byte. Once
@@ -852,7 +895,8 @@ the analyses `done`, `ready` or `removed`.
   line.
 - **Each refusal**, a case for each step of "Opening", with its `kind`:
   `"{"`, `"[]"`, `{"format": "popnei_web project", "formatVersion": 2}`,
-  `formatVersion` 0, 1.5 and `"1"`, a file of `"gwas"` opened in popgen, a
+  `formatVersion` 0, 1.5 and `"1"`, the filters of the variants `maf`
+  then `missing_data` in a file of version 1, a file of `"gwas"` opened in popgen, a
   field `"notes"` at the top, `appVersion` missing, `"checks": {}`, a
   check with a field `settings`, a check of the analysis `"fst"`, a check
   with `variants` null, a read of the individuals file `pending`, a
@@ -924,6 +968,20 @@ check with its own (point E there).
    those of this spec. Another answer changes those texts and their tests
    and nothing else.
 
+2. **The version of the format in stage 3.** The architecture approved on
+   26 September 2026 has version 2 from stage 3, adding the regions of a
+   BED file and their filter and refusing filters of the variants out of
+   their order (its section 12); the regions wait for popnei's release
+   with their filter. Option A, meanwhile: `FORMAT_VERSION` stays 1 in
+   stage 3, whose files hold nothing version 1 did not, the fixed order
+   is checked in every version, and version 2 comes with the regions.
+   It costs nothing now and one version for the regions. Option B:
+   version 2 now, for the fixed order alone, and version 3 for the
+   regions; a file of stage 3 then tells by its version that its filters
+   are in the fixed order, which a file of version 1 of this application
+   always is anyway, at the cost of one more version to read forever.
+   Recommended: A.
+
 ## What this spec relies on in the specs written beside it
 
 - `docs/specs/analyses/diversity.md`: the id `"diversity"`, a key version
@@ -954,6 +1012,10 @@ check with its own (point E there).
   than to change the options of the CSV of, an individuals file whose
   load id the page holds no file for.
 - `docs/specs/worker/*`: nothing of this module.
+- The specs of the checks of the Variants step, stage 3: the ids
+  `individualChecks`, `variantChecks` and `filterCounts`, their key
+  versions, and their `checkNumbers` and `numCheckNumbers`, which this
+  module writes and checks as any analysis's.
 
 These choices of this spec change what a user meets, and the owner may
 wish to overrule them on approving it: an individuals file whose read is
@@ -971,5 +1033,8 @@ drops the carried numbers.
   the warnings are shown: `docs/specs/shell.md`.
 - The report, which holds the project file, and the Python script: stage
   6.
+- The regions of a BED file, saved whole with the name of their file
+  and without their hash (`docs/architecture.md`, section 8): with
+  popnei's release that has the filter of the regions, and version 2.
 - Keeping a project across a reload of the page without saving it: not
   built (`docs/specs/core/history.md`).
