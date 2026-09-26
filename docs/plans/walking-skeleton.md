@@ -777,6 +777,12 @@ same numbers.
 - [x] 9.5 `e2e/skeleton.spec.ts`. Serves 4. Needs 9.3 and 9.4.
 - [ ] 9.6 The owner accepts the shell, in Firefox by hand as well; two
   rounds expected.
+- [ ] 9.7 The owner's decisions of 26 September at stop 9.6: the twelve
+  points of the review of work package 9 as recommended in the report,
+  the list of populations copied without its hidden words, and the words
+  of a VCF that mixes ploidies; the specs first, then the code, in core,
+  the worker and the screens. Added on 26 September, since some reach
+  `src/core` and the worker and are not a round of a screen.
 
 **What could go wrong:** the shell spec leaves open whether React Aria's
 `TooltipTrigger` takes a `Link`, and gives what to do if not; the focus

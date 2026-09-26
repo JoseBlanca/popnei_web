@@ -1285,3 +1285,39 @@ project once and holds its hash in its place, the next step that
 no. A key takes at most 9.4 ms after a load and 5.9 ms after a change,
 1.2 ms as a rule, below a frame of 16.7 ms; writing or reading the file takes at most
 21 ms, once per Save or Open.
+
+### Stop 9.6, with the owner, 26 September
+
+The owner went through the application in Firefox by hand, on the dev
+server of the worktree: the Variants step, the Individuals step, the
+diversity at 0.1 and at 0.05 (p0 48, 0.3527, 0.3567, 0.9288), the notice
+with F6 (the focus reached it), Escape, its Undo, Cmd+Z and Cmd+Shift+Z
+outside a field, the question at a reload after a change and none after
+a Save, Save project (downloaded as `panel.popnei.json`), Open project…
+of that file with `panel.nei` given again and "The same numbers as in
+the project file", then `panel.vcf.gz` and its warning, and the Tab key
+through the page. All as the specs have it. Two of the orchestrator's
+steps were wrong, not the application: an undo that removes no table
+makes no notice, and Open project… offers only `.json` files, so
+`bad.vcf` could not be picked. Copy the details was not tried: its bar
+needs a defect of the application.
+
+Found by the owner: the list of populations, copied from the page,
+gives each line twice, "p0 · 48p0, 48 individuals", since Firefox copies
+the words hidden for a screen reader.
+
+Point R in Firefox: the five rewrites of the measure (the file deleted;
+cut short, a byte changed, and 4,096 zero bytes added, each with its
+time of change put back; the zeros added with the time left) each gave
+"panel.nei could not be read again; it may have changed on the disk
+since it was picked." Firefox, like Chromium, refuses a changed file;
+WebKit alone reads one whose time of change was put back. The version of
+Firefox was not recorded.
+
+The owner accepted the screens of stops 7.5, 8.4 and 9.6, and ordered
+the recommendations: the twelve points above, the words of a VCF that
+mixes ploidies as recommended under "Not done: point 7 of 2 to 6", and
+the copied list. The provisional words of Q and Open 2 to 6, and the
+three points listed for 9.6 under "The rounds of 25 September", which
+had no recommendation, stay as they are. They go in task 9.7, added to
+the plan, since some reach the core and the worker.
