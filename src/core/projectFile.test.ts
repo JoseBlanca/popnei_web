@@ -72,6 +72,7 @@ function stateOf(
     runs: [],
     notice: null,
     individualsKept: null,
+    write: null,
   });
 }
 
@@ -1311,6 +1312,7 @@ describe("WS6 D2 the opening", () => {
       runs: [],
       notice: null,
       individualsKept: null,
+      write: null,
     });
     const done = stateWith({
       kind: "done",
@@ -2179,6 +2181,7 @@ const savedState: fc.Arbitrary<AppState<TestDefResult>> = fc
       runs: [],
       notice: null,
       individualsKept: null,
+      write: null,
     });
   });
 
