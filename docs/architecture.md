@@ -8,9 +8,9 @@ for the specs of stage 1, and approved with them the same day; and, on
 25 September 2026, for the line of a character not decoded that a read
 of the individuals file reports, as the owner decided that day
 (`docs/specs/worker/protocol.md`, `CsvFound`); and, on 26 September
-2026, for stage 3 of `docs/build-order.md`, the Variants step whole, a
-revision that waits for the owner's approval and until then is on the
-branch `docs/specs-stage-3` alone. What was revised each time is at the end
+2026, for stage 3 of `docs/build-order.md`, the Variants step whole,
+approved by the owner on 26 September 2026 with the answers to its open
+points. What was revised each time is at the end
 of section 1. The document gives the parts of the web applications of
 popnei, what each one holds, and how a change made by the user reaches the
 results on the screen. What the applications
@@ -166,8 +166,9 @@ day:
   `.claude/skills/coding/react.md`, "Errors".
 
 What was revised on 26 September 2026, for stage 3 of
-`docs/build-order.md`, the Variants step whole: a draft, which waits for
-the owner's approval. Four parts of that stage fit no slot of this
+`docs/build-order.md`, the Variants step whole, approved by the owner on
+26 September 2026 with the answers to its open points (section 13).
+Four parts of that stage fit no slot of this
 document as it stood, and each is decided in the section it changes, with
 the options not taken and what each costs:
 
@@ -192,14 +193,13 @@ the options not taken and what each costs:
   worker, kept whole in the project, and hashed once, so that a key holds
   them through their hash (sections 2, 3, 6 and 8).
 
-Three points are settled with them, each with its reason where it is
-written: the filters in a fixed order, individuals first and the LD
-pruning last (section 2); the histograms of the variants after the
-filters of individuals and before those of the variants (section 4); and
-the histograms of the individuals binned in core, which corrects
-`.claude/skills/coding/charts.md` (section 7). Over which variants each
-individual's statistics are counted is left to the owner, with a
-recommendation (section 13, point 8).
+Settled with them, each with its reason where it is written: the filters
+of the variants in a fixed order, the regions first and the LD pruning
+last, and the filter of individuals after all of them (section 2); each
+individual's statistics counted over the variants the filters keep, and
+the histograms of the variants over every variant and every individual
+of the file (section 4); and the histograms of the individuals binned in
+core, which corrects `.claude/skills/coding/charts.md` (section 7).
 
 The interfaces between the parts that change are the client through
 which an analysis sends its request, which gains the individuals kept;
@@ -221,10 +221,10 @@ individuals, decided by the owner on 25 September 2026 for stage 2, goes;
 file;
 section 3 of `docs/functionality.md`, for the order of the filters; and
 the skills `.claude/skills/coding/charts.md` and `worker.md`. What is
-measured, and what it sets, is in section 11; nothing has to be measured
+measured, and what it sets, is in section 11; nothing had to be measured
 before the choices, and one measurement, of the hash of the regions,
 closed an option (section 3). What is asked of popnei is in section 6,
-and the points left to the owner are in section 13.
+and the owner's answers to the open points are in section 13.
 
 ## 2. The project
 
@@ -382,36 +382,50 @@ holds the numbers of two sessions names the right versions for each
   the source and in every key. A `.nei` file has none: its ploidy is in
   the file. popnei reads a ploidy of 1 to 255, and its kinship and PCA one
   of at most 254; the default is 2.
-- **The filters are in a fixed order**, and the user does not order them:
-  the filter of individuals first, then missing data, the major allele
-  frequency (MAF), observed heterozygosity, the regions of a BED file, and
-  the LD pruning last; the project holds each list in that order, and
-  refuses a project file whose filters are out of it. The missing data,
-  MAF and heterozygosity filters and the regions keep a variant by what it
-  holds or where it is, so their order changes the counts of each filter
-  and not the variants kept. The filter of individuals changes every
-  number of a variant after it, and goes first, so that the missing rate
-  of a variant is counted over the individuals the analyses read; the
-  missing data filter goes before the MAF, whose frequency asks for no
-  minimum of called data (`filterByMaf` of `js/popnei/src/variant.ts`);
-  and the LD pruning goes last, because it keeps a variant according to
-  the variants kept before it on its chromosome, so a filter after it
-  would drop variants it kept in place of others. The four filters of
-  individuals are in their fixed order already (`docs/specs/core/project.md`).
+- **The filters are in a fixed order**, and the user does not order them,
+  as the owner decided on 26 September 2026: the filters of the variants
+  first, the regions of a BED file, once popnei has that filter, then
+  missing data, observed heterozygosity, the major allele frequency (MAF),
+  and the LD pruning last; then the filter of individuals, which popnei's
+  `filterIndividuals` applies after all of them, with the one list that
+  the four filters of individuals make (section 4). The project holds each
+  list in its order and refuses a project file whose filters are out of
+  it. The regions and the missing data, heterozygosity and MAF filters keep
+  a variant by where it is or what it holds, so their order changes the
+  counts of each filter and not the variants kept; the missing data filter
+  comes before the MAF, whose frequency asks for no minimum of called data
+  (`filterByMaf` of `js/popnei/src/variant.ts`); and the LD pruning comes
+  last among them, because it keeps a variant according to the variants
+  kept before it on its chromosome, so a filter after it would drop
+  variants it kept in place of others. The filters of the variants,
+  before the filter of individuals, count over every individual of the
+  file: the missing rate of a variant is its missing genotypes over all
+  the individuals, and so are the frequencies and the dosages of the LD.
+  So the variants kept do not depend on which individuals are removed,
+  and each individual's statistics can be counted over those variants,
+  which are the ones the analyses read. Seen in node with popnei's
+  release `js-v0.1.0-dev.2` on 26 September 2026: on `panel.nei`,
+  `filterIndividuals` of 9 individuals put after the missing data filter
+  at 0.05, the heterozygosity filter at 0.9 and the MAF filter at 0.95,
+  which `steps` then lists last, left the counts those filters give with
+  every individual, 1,200 to 1,152 to 1,152 to 1,128 variants; put first,
+  the same list gave 1,200 to 1,004 to 1,004 to 963.
 
-What was revised on 26 September 2026, a draft for the owner's approval.
+What was revised on 26 September 2026, approved by the owner that day.
 The filters of the variants were in the order the user gave, with a
 command to move one, `moveVariantFilter` of `docs/specs/core/project.md`,
-which goes. What the fixed order takes from the user: filtering the
-variants over every individual of the file before removing individuals,
-and pruning by LD before another filter. What an order set by the user
-costs: a control to move a filter that works with the keyboard as well as
-with the mouse (WCAG 2.2, success criterion 2.5.7), counts of the filters
-that read differently in each order, and an order among the four filters
-above that changes nothing but those counts. The user order would win if
-users of the applications asked for one of the two orders the fixed one
-excludes. No project file the application wrote is refused by it: stage
-2 has the missing data filter alone.
+which goes. Not taken: an order set by the user, which would allow the
+filters of the variants after removing individuals, and the LD pruning
+before another filter, at the cost of a control to move a filter that
+works with the keyboard as well as with the mouse (WCAG 2.2, success
+criterion 2.5.7), and counts that read differently in each order. Not
+taken either: the filter of individuals first, which the draft of this
+revision had, so that the variants' numbers were counted over the
+individuals kept; it made each individual's statistics depend on the
+filters of the variants and those filters on the individuals kept, and
+the owner chose the statistics over the variants kept (section 4). No
+project file the application wrote is refused by the fixed order: stage 2
+has the missing data filter alone.
 
 ## 3. Results, and how they go stale
 
@@ -434,7 +448,8 @@ every key are:
   `keys.ts` takes from the project's regions when the filter is on, so
   the hash is held in one place; and the list of the individuals that the filters
   of individuals keep is in no key, since it is made from the load, the
-  version of popnei and those filters, which are (section 4);
+  version of popnei, the filters of the variants and those of the
+  individuals, which are (section 4);
 - the parts of the individuals table and of the grouping that the analysis
   uses;
 - its own options;
@@ -548,7 +563,7 @@ in a session and waited for calculations of minutes each time, or if
 results were kept across sessions, in a cache that outlives the tab,
 where the id of a load of an earlier session names nothing.
 
-What was revised on 26 September 2026, a draft for the owner's approval.
+What was revised on 26 September 2026, approved by the owner that day.
 One input joins the keys, and one is left out. The regions of a BED file
 enter through their hash, which the key takes from the project's regions
 while their filter is on, and not as the regions themselves, which the
@@ -643,59 +658,61 @@ section 4), and every analysis has to read the individuals they keep.
   presses its button, as every calculation does
   (`docs/specs/core/store.md`), with the states, the progress, the stop and
   the undo of any analysis.
-- **The statistics of each individual are over the file as read**, before
-  any filter, as recommended to the owner (section 13, point 8): `filtersRead` is `{ variants: false, individuals: false }`,
-  so one pass per load gives them, and no threshold moved takes them off.
-  Taken over the variants the filters keep, the two kinds of filter would
-  depend on each other, since the missing rate of a variant is counted
-  over the individuals kept and that of an individual would be counted
-  over the variants kept, and every move of a threshold of the variants
-  would need a pass to find the individuals again. What this costs: an
-  individual's missing rate counts the variants that the missing data
-  filter will drop, so in a panel with many bad variants every individual
-  shows more missing genotypes than it has among the variants analysed.
-- **The histograms of the variants are after the filters of individuals
-  and before those of the variants**: `filtersRead` is `{ variants: false,
-  individuals: true }`. So each histogram shows the number its filter
-  keeps a variant by, over the individuals the analyses read: the missing
-  data filter comes after the filter of individuals (section 2), and so
-  divides by the individuals kept. They are of one population of every
-  individual kept, with `minNumIndividuals` 0, so that popnei counts the
-  variants with few called genotypes too, which its default of 20 called
-  individuals would leave out, and which the missing data filter is there
-  to find. A change of a filter of individuals takes them off, with the
-  notice, and a pass gives them again. Before the filters of individuals,
-  they would count the samples the user is removing, a contaminated one
-  among them. popnei has no histogram of the
-  missing rate of each variant in `js-v0.1.0-dev.2`; it is asked of popnei
-  (section 6).
+- **The statistics of each individual are over the variants the filters
+  keep**, as the owner decided on 26 September 2026: `filtersRead` is `{
+  variants: true, individuals: false }`, and their pass has the filters of
+  the variants and no filter of individuals. So an individual's missing
+  rate and heterozygosity are those of the variants the analyses read.
+  What it costs: a change of any filter of the variants takes them off,
+  and they need a pass again before the individuals kept are known; the
+  analyses that read the filters of individuals wait for that pass
+  (below).
+- **The histograms of the variants are over every variant and every
+  individual of the file**, before any filter: `filtersRead` is `{
+  variants: false, individuals: false }`, so one pass per load gives them
+  and no threshold moved takes them off. Each shows the number its filter
+  keeps a variant by, since the filters of the variants count over every
+  individual (section 2). They are of one population of every individual,
+  with `minNumIndividuals` 0, so that popnei counts the variants with few
+  called genotypes too, which its default of 20 called individuals would
+  leave out, and which the missing data filter is there to find. popnei
+  has no histogram of the missing rate of each variant in
+  `js-v0.1.0-dev.2`; it is asked of popnei (section 6).
 - **Core makes the list of the individuals kept**, from the result of
   `individualChecks` in the cache and the four filters of individuals, in
   their fixed order: the list to keep, the list to remove, the threshold
   on the missing rate, and the threshold on the observed heterozygosity,
   each keeping an individual whose number is at most its threshold, as
-  popnei's filters of the variants do. It gives the list in the order of
+  popnei's filters of the variants do. An individual with no called
+  genotype among those variants has no heterozygosity, and the filter by
+  heterozygosity removes it, as the owner decided on 26 September 2026.
+  It gives the list in the order of
   the variants file, and how many individuals each filter was given and
   kept, which the step shows beside each filter as it is set, with no
   pass. The store makes the list once for each project, as it makes the
   keys, and hands it to an analysis through the client bound to its key,
   the object the analysis sends its request through, as a field of it,
   `individuals`, which is `null` when the filters remove nobody; the
-  job carries it, and the runner puts it on the `Variants` first, as its
-  `filterIndividuals`. The result of `individualChecks` is under a key
-  that the current project gives, so the cache does not drop it while the
-  load is current (`docs/specs/core/cache.md`).
-- **An analysis that reads the filters of individuals cannot start**
-  while the project has a threshold on the individuals and
-  `individualChecks` has no result for the load, "The filters of the
-  individuals by missing genotypes and by heterozygosity are set from the
-  statistics of each individual: calculate them in the Variants step.";
-  nor when the filters keep no individual, which popnei would refuse.
-  This lock stops the Run and nothing else. It depends on the cache and
+  job carries it, and the runner puts it on the `Variants` after the
+  filters of the variants, as its `filterIndividuals`. The result of
+  `individualChecks` is under a key that the current project gives, so
+  the cache does not drop it while the project gives that key
+  (`docs/specs/core/cache.md`).
+- **An analysis that reads the filters of individuals waits for their
+  statistics.** While the project has a threshold on the individuals and
+  `individualChecks` has no result under the key the project gives it, a
+  Run of such an analysis starts the calculation of the statistics first,
+  and the analysis shows that it waits for them, "Calculating the
+  statistics of each individual, which the filters of individuals are set
+  from"; its own request is sent when they arrive, if the project still
+  gives the same keys, and it ends with their failure if they fail or are
+  stopped (section 5). An analysis cannot start when the filters keep no
+  individual, which popnei would refuse, known once the statistics are
+  there. This lock stops the Run and nothing else. It depends on the cache and
   not on the project alone, so the key of the analysis is made whatever
   the lock, since it holds the thresholds and not the list (section 3),
-  and a result in the cache under that key is shown: after an undo to an
-  earlier load whose statistics the cache has dropped, a diversity still
+  and a result in the cache under that key is shown: after an undo to
+  earlier filters whose statistics the cache has dropped, a diversity still
   in the cache is `done`, as section 3 asks, and only a new Run waits for
   the statistics. The store works these locks out again when the cache
   changes, a result of `individualChecks` put in or dropped, and not only
@@ -711,7 +728,7 @@ section 4), and every analysis has to read the individuals they keep.
   How many check numbers the diversity gives, its `numCheckNumbers`, is
   known when a project file is opened if its filters of individuals are
   lists, which the project holds, and not if one is a threshold, whose
-  list needs the statistics of a load not yet made; then it is `null`, and
+  list needs statistics not yet calculated for the new load; then it is `null`, and
   the count is not checked, as the diversity's spec has it already.
 
 ### What each filter kept
@@ -723,8 +740,9 @@ individuals has no entry there, since it drops no variant. The step shows
 those counts beside each filter, in the order of section 2.
 
 - **The counts are the result of an analysis of their own,
-  `filterCounts`**, whose key holds every filter, of the variants and of
-  the individuals, and nothing else. The Count button of the step runs its
+  `filterCounts`**, whose key holds the filters of the variants and
+  nothing else: the filter of individuals comes after them, so it changes
+  none of their counts. The Count button of the step runs its
   pass, with `iterBlocks`, whose `passStats` give the counts when the
   filters keep no variant too, which is when the user most needs to see
   which filter dropped them all. `calcPerIndividualStats`, which copies
@@ -747,17 +765,20 @@ those counts beside each filter, in the order of section 2.
   result, the number of variants of the file, the variants its first
   filter was given, and the counts of its filters only when its pass had
   the filters of its project. So the diversity, or a file written, fills
-  the counts, and an undo brings them back as it brings any result; the
-  checks, which read fewer filters, and the PCA, which merges its own MAF
+  the counts, and so do the statistics of each individual, whose pass has
+  the filters of the variants; an undo brings them back as it brings any
+  result; the histograms of the variants, which read no filter, and the
+  PCA, which merges its own MAF
   filter with the dataset's (`docs/specs/worker/protocol.md`), do not.
-- **The notice leaves the counts out.** Their key holds every filter, so
-  a change of any filter takes off the counts of all of them, which the
+- **The notice leaves the counts out.** Their key holds every filter of
+  the variants, so a change of any of them takes off the counts of all of
+  them, which the
   user sees beside the filters as they change one, and a notice at every
   move of a threshold would say only that.
 - **The counts of the filters of individuals are core's**, above, and need
   no pass.
 
-What was revised on 26 September 2026, a draft for the owner's approval.
+What was revised on 26 September 2026, approved by the owner that day.
 These two subsections are new; `docs/specs/worker/protocol.md` had the
 calculation worker make the list of individuals, and the owner had the
 diversity locked by any filter of individuals until this stage. Options
@@ -771,11 +792,18 @@ not taken:
   cancel; a list made twice, in the runner for the job and on the page for
   the counts beside the filters, by two pieces of code that must agree;
   and a core that cannot know before a run which populations lose their
-  individuals, or that none are kept. It would win if analyses had to run
-  with thresholds and no statistics in the cache, which the lock avoids at
-  the cost of one Run per load.
+  individuals, or that none are kept.
+- **The statistics of each individual over every variant of the file**,
+  before any filter, which the draft of this revision recommended: one
+  pass per load, and the individuals kept known at once whatever the
+  filters of the variants. The owner chose the variants the filters keep,
+  so that an individual's missing genotypes are counted among the
+  variants analysed, and not raised by the bad variants the missing data
+  filter drops; the cost is a pass after every change of a filter of the
+  variants.
 - **The statistics of each individual recorded into the source of the
-  variants file**, as its number of variants is. The analyses would read
+  variants file**, as its number of variants is, when they were to be
+  counted over the file as read. The analyses would read
   them from the project and nothing would change in their interface; the
   project would hold two numbers per individual calculated in a pass, which
   the project file would save or leave out by a rule of its own, and the
@@ -795,9 +823,9 @@ What would show these choices wrong: a runner test in node, on
 `panel.nei`, that the counts filled from a diversity are those of a Count
 pass with the same filters, and that the list core makes from popnei's
 statistics gives the numbers of `filterIndividuals` with the same names;
-and, on the screens of stage 3, users who meet the lock often, every
-project file with thresholds opened with its analyses locked until the
-statistics are calculated, which would argue for the first option above.
+and, on the screens of stage 3, users who wait often for the statistics
+after moving a threshold of the variants, which would argue for counting
+them over every variant of the file.
 
 ## 5. The workers and their messages
 
@@ -890,6 +918,17 @@ The page and each worker talk through typed messages
   saved, since its file would hold other variants than the step shows. A
   calculation asked for while a file is written waits behind it, in the
   queue of the one calculation worker.
+- **A request can wait for the statistics of each individual.** A Run of
+  an analysis that reads the filters of individuals, while a threshold is
+  set and the statistics for the current filters of the variants are not
+  in the cache, starts their calculation first (section 4). The store
+  sends the analysis's own request when they arrive, if the project still
+  gives both keys; until then the analysis is running, with the progress
+  of the statistics, and a Stop stops both. A change of the project that
+  gives either request another key leaves both behind, as any calculation
+  is. So the one calculation worker runs the pass of the statistics and
+  then the analysis, one request after the other, and the user presses
+  Run once.
 
 The calculation worker keeps, under keys as the results are, what several
 analyses reuse: the variants kept by the LD pruning of the PCA, the
@@ -1155,11 +1194,13 @@ has none in `js-v0.1.0-dev.2`.
   no variant says that the names of the chromosomes may differ, with the
   first name of each file.
 - **The same filter in popnei's
-  Python**, given the same arrays, is what the Python script calls, having
-  read the BED file with pandas as it reads the individuals file (section
-  8).
+  Python**, given the same arrays, is what the Python script calls,
+  having read the BED file with a reader that popnei will give in Python,
+  as the owner decided on 26 September 2026 (section 8). So popnei's
+  reader in Python and the application's in TypeScript have to agree on
+  the rules above, which the tests of the reader check against it.
 
-What was revised on 26 September 2026, a draft for the owner's approval:
+What was revised on 26 September 2026, approved by the owner that day:
 the subsection is new. Considered and not taken: **the BED file as a file
 with a load id, as the variants file is, read by popnei in the calculation
 worker.** It needs no reader of ours, and keeps the project file small. A
@@ -1258,16 +1299,16 @@ them. It is not part of popnei and nothing of popnei is in it.
 - **The xlsx and the zip of the report** are made in the light worker, by
   the files wasm, and offered as a download in the same way.
 
-What was revised on 26 September 2026, a draft for the owner's approval.
+What was revised on 26 September 2026, approved by the owner that day.
 The version before said that the file was offered as a download, and
 not how, what its limits were, or what a change of the filters did
 meanwhile. This revision writes it
-as popnei gives it now, whole, with the warning, and asks popnei for a
+as popnei gives it now, whole, with the warning. popnei is asked for a
 writer by pieces, of the `.nei` file and of the VCF, which gives the file
-one batch at a time. Approving the revision asks popnei for it, as an
-issue of popnei beside the four additions the owner decided on 26
-September; stage 3 does not wait for it, and writes the file whole with
-the warning until popnei has it. With it, the
+one batch at a time, as the owner decided on 26 September 2026, which is
+the owner's standing preference for what popnei writes; stage 3 does not
+wait for it, and writes the file whole with the warning until popnei has
+it. With it, the
 worker keeps the pieces as they come and makes one `Blob` of them at the
 end, and the memory of wasm holds one batch: the peak falls from up to 3F to about F.
 Considered and not taken, with the browsers from MDN's compatibility
@@ -1302,8 +1343,8 @@ Each is asked of popnei and not built around in the applications, and
 full list. The first two are given by `js-v0.1.0-dev.2`; the owner
 decided on 26 September 2026 that popnei adds the filter of the regions,
 the histogram of the missing rate, the writer of the VCF and the density
-of variants, for stage 3; the writer by pieces is this revision's
-proposal:
+of variants, for stage 3, and on the same day the writer by pieces and a
+reader of BED files in Python:
 
 1. Reading a JavaScript `File` by ranges with `FileReaderSync`, in
    `openVcf` and `openVars`.
@@ -1318,6 +1359,8 @@ proposal:
    pieces, with the counts of its pass at the end (the same).
 7. The density of variants along each chromosome, of
    `docs/build-order.md`, section 4, which this revision does not touch.
+8. A reader of BED files in popnei's Python, for the Python script
+   (above, "The regions of a BED file").
 
 Nothing is asked of popnei for the individuals file, nor for the identity
 of the variant file.
@@ -1447,8 +1490,8 @@ for the smallest part of it.
 - **The Python script** is the `script` lines of every analysis that was
   run, after the lines that open the variants, filter them and read the
   individuals file. It is made in core. From stage 3 it reads the BED file
-  with pandas, leaving out the lines the reader of section 6 leaves out,
-  and gives popnei's filter of the regions its first three columns; and
+  with popnei's reader in Python and gives its regions to popnei's filter
+  of the regions; and
   it makes the list of the individuals kept as core makes it, from
   popnei's statistics of each individual and the same thresholds. It
   reads the individuals file
@@ -1665,19 +1708,21 @@ code, the release `js-v0.1.0-dev.2`.
   ten times larger: the memory of the tab during and after a write,
   whether each engine copies the array into the `Blob`, and the time of
   the write. They set
-  `WRITE_WARN_BYTES`, and, if the owner starts the worker again after a
-  large write, the size above which it is done (section 13, point 5).
+  `WRITE_WARN_BYTES`, and the size of a written file above which the
+  worker is started again (section 13, point 5).
 - **The table of each individual's statistics** has three columns and a
   row per individual, 30,000 cells at 10,000 individuals, and a change of
   a threshold changes which rows are marked kept. Measured with the table,
   in the three engines, at 10,000 individuals: the time the page is
   frozen after a change of a threshold. If it is longer than a keystroke
   can wait, about 100 ms, the table draws only the rows on the screen.
-- **A threshold on the individuals costs one pass per load**, the pass of
-  their statistics, before the first analysis that reads it. Their result
-  is in the cache of the page, 16 bytes per individual, so a restart of
-  the calculation worker does not lose it; a new load of the variants
-  file, a reopened project among them, asks for it again.
+- **A threshold on the individuals costs a pass after every change of a
+  filter of the variants**, the pass of their statistics, which a Run of
+  an analysis that reads the filters of individuals starts and waits for,
+  before its own: over a gzipped VCF of gigabytes, minutes before the
+  analysis starts. Their result is in the cache of the page, 16 bytes per
+  individual, so a restart of the calculation worker does not lose it, and
+  an undo to filters already calculated finds it.
 - **The thresholds are set in number fields**, and not by dragging a line
   on a histogram, so no drag needs a way for the keyboard (WCAG 2.2,
   success criterion 2.5.7). The histograms are drawn with the D3 modules
@@ -1735,52 +1780,43 @@ user nothing but the results of a tab left open across the deploy.
    decided again with the kinship, whose matrix is 800 MB at 10,000
    individuals (`docs/plans/walking-skeleton.report.md`).
 
-Opened by the revision of 26 September 2026, each with a recommendation
-for the owner:
+Opened by the revision of 26 September 2026, and decided by the owner
+that day:
 
-3. **The order of the filters**, fixed as section 2 gives it, or set by
-   the user. The recommendation is the fixed order, which rules out two
-   orders only, filtering the variants over every individual before
-   removing individuals and pruning by LD before another filter, and needs
-   no control to move a filter.
-4. **An individual with no called genotype under the filter by
-   heterozygosity.** popnei gives it no heterozygosity, NaN. The
-   recommendation is that the filter does not keep it, as popnei's
-   filters of the variants do not keep a variant with no value, whatever
-   the threshold; the filter of individuals by missing genotypes drops it
-   too, at any threshold below 1, since its proportion is 1.
-5. **The calculation worker started again after a large write**, to give
-   the tab back the memory of wasm the file took, which stays with it
-   otherwise until the next load of the variants file. It reopens the
-   owner's decision of 26 September 2026 not to start the worker again
-   between two requests (point 2), made when the memory of wasm did not
-   grow from one diversity to the next; a write grows it by the size of
-   the file. What it costs: the intermediate results the worker held, the
+3. **The order of the filters** is fixed: the regions, once popnei has
+   that filter, missing data, observed heterozygosity, MAF and the LD
+   pruning last, and the filter of individuals after them (section 2).
+   Not taken: an order set by the user.
+4. **An individual with no called genotype** is removed by the filter by
+   heterozygosity (section 4). Not taken: keeping it, which a NaN would
+   otherwise let through whatever the threshold.
+5. **The calculation worker is started again after a written file larger
+   than a bound**, set by the measurement of section 11, to give the tab
+   back the memory of wasm the file took, which would otherwise stay with
+   it until the next load of the variants file. It is an exception to the
+   decision of point 2, since a write grows that memory by the size of the
+   file. What it costs: the intermediate results the worker held, the
    pruned variants and the kinship, and the reading of the header of the
    file, at most 49 ms from the start of a new worker to the file opened,
    measured at the end of the walking skeleton on the `.nei` file of
-   19,161,178 bytes
-   and its VCF, in Chromium 153 and WebKit 26.6 on the owner's Mac, an
-   Apple M5 Pro with 64 GB (`docs/plans/walking-skeleton.report.md`). The
-   recommendation is to start it again after a file larger than a bound
-   set by the measurement of section 11, and not after every write.
-6. **A write that ends after a change of its filters**, before the store
-   stopped it. The recommendation is to drop it, as section 5 has it, so
-   that no file is saved with other variants than the step shows; the
-   other option saves it with a notice that names the filters it was
+   19,161,178 bytes and its VCF, in Chromium 153 and WebKit 26.6 on the
+   owner's Mac, an Apple M5 Pro with 64 GB
+   (`docs/plans/walking-skeleton.report.md`). Not taken: a restart after
+   every write, or after none.
+6. **A write that ends after a change of its filters is dropped**, so
+   that no file is saved with other variants than the step shows (section
+   5). Not taken: saving it with a notice that names the filters it was
    written with.
-7. **The Python script's reading of a BED file**: with pandas, as section
-   8 has it, or with a reader of popnei in Python, if popnei gives one
-   with its filter. The recommendation is pandas, which the script
-   already reads the individuals file with; either is a second reader
-   beside the application's, and the rules of section 6 are few enough,
-   three columns and three kinds of header line, to be written in both.
-8. **Over which variants each individual's statistics are counted.** The
-   recommendation is every variant of the file, before the filters of
-   the variants, so that one pass per load gives them and the filters of
-   individuals and of variants do not depend on each other (section 4).
-   What it costs: in a panel with many bad variants, every individual
-   shows more missing genotypes than it has among the variants analysed.
-   The other option, over the variants the filters keep, shows the
-   numbers of those variants, and costs a pass at every change of a
-   filter of the variants before the individuals can be found again.
+7. **The Python script reads a BED file with a reader that popnei will
+   give in Python**, beside its filter of the regions (sections 6 and 8).
+   Not taken: pandas, as the script reads the individuals file.
+8. **Each individual's statistics are counted over the variants the
+   filters keep**, and the individuals under the thresholds are removed
+   last, by popnei's `filterIndividuals` after the filters of the
+   variants, so that the analyses read the variants the statistics were
+   counted on (sections 2 and 4). What it costs: a pass of the statistics
+   after every change of a filter of the variants, which the analyses
+   that read the filters of individuals wait for. Not taken: the
+   statistics over every variant of the file, one pass per load, which
+   counts among an individual's missing genotypes the bad variants the
+   missing data filter drops.
