@@ -567,7 +567,8 @@ the walking skeleton (stage 8).
   current step a mark; the error bar its words (1.4.1).
 - **The dialogs** of opening and of Save take the focus, the dialog of
   Save on its field of the name with the name selected, so that typing
-  replaces it, and give it back to the button that opened them, and Escape closes them, as React Aria's
+  replaces it, and a click into the field afterwards putting the cursor
+  where it was clicked, and give it back to the button that opened them, and Escape closes them, as React Aria's
   `Dialog` does; while one is open, the keyboard's Undo and Redo do
   nothing.
 - **A screen reader**, VoiceOver with Safari at least, is tried on the
