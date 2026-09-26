@@ -2512,7 +2512,7 @@ describe("WP1 D5 the validation", () => {
       expect(
         projectErrorText({ kind: "unknownAnalysis", id: "admixture" }),
       ).toBe(
-        "This project file has the analysis admixture, which this version of the application does not know: it was saved by another version of the application.",
+        "This project file has the analysis admixture, which this version of the application does not know: it was saved by another version of the application. Open it with the version of the application that saved it.",
       );
     });
 
@@ -3044,7 +3044,7 @@ describe("WP1 D5 the validation", () => {
       const id = "x".repeat(20) + "\n" + "y".repeat(280);
       const text = projectErrorText({ kind: "unknownAnalysis", id });
       expect(text).toBe(
-        `This project file has the analysis ${"x".repeat(20)}\\n${"y".repeat(19)}…, which this version of the application does not know: it was saved by another version of the application.`,
+        `This project file has the analysis ${"x".repeat(20)}\\n${"y".repeat(19)}…, which this version of the application does not know: it was saved by another version of the application. Open it with the version of the application that saved it.`,
       );
     });
 

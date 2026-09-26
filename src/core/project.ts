@@ -3113,7 +3113,7 @@ export function projectErrorText(error: ProjectError): string {
     case "otherApp":
       return `This project file is of the ${APP_WORDS[error.found]} application. Open it there.`;
     case "unknownAnalysis":
-      return `This project file has the analysis ${shown(error.id)}, which this version of the application does not know: it was saved by another version of the application.`;
+      return `This project file has the analysis ${shown(error.id)}, which this version of the application does not know: it was saved by another version of the application. Open it with the version of the application that saved it.`;
     case "unknownField": {
       const words = fieldWords(error.path);
       return opened(
