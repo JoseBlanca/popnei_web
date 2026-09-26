@@ -160,6 +160,20 @@ describe("VS2 D2 the other cases of the spec", () => {
     ).toThrow(/^popnei_web defect: /);
   });
 
+  test("statistics of the first four individuals, with arrays of the file's five, are a defect", () => {
+    // Each name given is the file's at its place, and the arrays are of
+    // the length of the file: only the length of the names tells.
+    const fewerNames: IndividualStats = {
+      ...FIVE_STATS,
+      individuals: ["a", "b", "c", "d"],
+    };
+    expect(() =>
+      keptOf([{ kind: "missing_data", maxAllowedMissingRate: 1 }], fewerNames),
+    ).toThrow(
+      "popnei_web defect: the statistics of each individual are not of the individuals of the variants file, in its order.",
+    );
+  });
+
   test("with no threshold the statistics are not read, and the list is known without them", () => {
     const wrong: IndividualStats = {
       individuals: ["z"],

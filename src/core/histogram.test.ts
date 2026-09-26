@@ -154,4 +154,29 @@ describe("VS2 D4 the bins of the statistics of each individual", () => {
     }
     expect(binValues(values, 1)?.counts).toEqual(Uint32Array.from([2]));
   });
+
+  test("an infinite value, which no statistic of popnei gives, is a defect", () => {
+    for (const value of [Infinity, -Infinity]) {
+      expect(() =>
+        binValues(Float64Array.from([0.1, value, 0.2]), INDIVIDUAL_BINS),
+      ).toThrow(`popnei_web defect: a value of ${String(value)} to bin.`);
+    }
+  });
+
+  test("from 0.336 to 0.8370000000000001 the last edge is the largest value itself, as numpy 2.5.3 gave, and not the arithmetic's 0.8370000000000002", () => {
+    // 20 * ((0.8370000000000001 - 0.336) / 20) + 0.336 is
+    // 0.8370000000000002, one double above the largest value.
+    const bins = binsOf([0.336, 0.5, 0.8370000000000001]);
+    expect(Array.from(bins.edges)).toEqual([
+      0.336, 0.36105000000000004, 0.38610000000000005, 0.41115,
+      0.43620000000000003, 0.46125000000000005, 0.48630000000000007,
+      0.5113500000000001, 0.5364000000000001, 0.5614500000000001, 0.5865,
+      0.61155, 0.6366, 0.6616500000000001, 0.6867000000000001,
+      0.7117500000000001, 0.7368000000000001, 0.7618500000000001,
+      0.7869000000000002, 0.8119500000000002, 0.8370000000000001,
+    ]);
+    expect(Array.from(bins.counts)).toEqual([
+      1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    ]);
+  });
 });
