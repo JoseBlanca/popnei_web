@@ -71,7 +71,11 @@ its `<h1>`; and the notice, at the bottom.
   undoes; Ctrl+Shift+Z and Ctrl+Y redo; on macOS Cmd+Z and Cmd+Shift+Z;
   except while the focus is in a text field, where they belong to the
   text, and while a dialog of the shell is open, where they would change
-  the project behind the question it asks.
+  the project behind the question it asks. Z and Y are the letters of
+  the keys by the layout of the keyboard, so that on a French or a
+  German keyboard they are where the user sees them; on a layout without
+  Latin letters, Russian or Greek, where no key gives Z, they are the
+  keys that are Z and Y on a US keyboard.
 - **Open project…** and **Save project**, below ("Saving", "Opening").
 
 ### The stepper
