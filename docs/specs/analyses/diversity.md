@@ -471,7 +471,10 @@ each; or `null` when `populationsToRun` is `null`, the variants file or
 the individuals file not read or no column of the populations, and when
 the project holds a threshold on the individuals, whose list needs the
 statistics of each individual, not calculated when a project file is
-opened (`docs/architecture.md`, section 4). The project file refuses, at the
+opened (`docs/architecture.md`, section 4), and when a list to keep or
+to remove is one popnei would refuse, naming an individual twice or one
+not in the variants file, which `individualsKept` gives no list for and
+the store locks the diversity on. The project file refuses, at the
 opening, a check of the diversity of another count, as the owner decided
 on 25 September 2026 (`docs/specs/core/projectFile.md`, "Opening"): 6
 numbers where the two populations of the project give 7 would otherwise

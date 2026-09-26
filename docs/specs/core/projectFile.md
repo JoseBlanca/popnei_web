@@ -477,8 +477,10 @@ that the reason given is the one the user can act on:
    for the diversity, when the file's variants file was not read, when
    there is no individuals file or no column of the populations, or when
    the project holds a threshold on the individuals, whose list needs
-   statistics not yet calculated for the new load; lists alone are in the
-   project, and the count is checked with them
+   statistics not yet calculated for the new load, or when a list to keep
+   or to remove names an individual twice or one not in the variants
+   file, a list popnei would refuse; lists alone are in the project, and
+   the count is checked with them
    (`docs/specs/analyses/diversity.md`, "The check numbers";
    `docs/architecture.md`, section 4).
 10. **The fingerprints** of the settings of each check are made, with
