@@ -11,7 +11,7 @@ and warns of, and the words. It develops section 3 of
 written", with points 5 and 6 of its section 13. Revised on 26
 September 2026, after the review of the code of stage 3: the warning
 comes at `WRITE_WARN_BYTES` as well as above it, as the interface below
-has it.
+has it; and `sizeText` writes one byte as "1 byte".
 
 **It is not an analysis** in the sense of section 4 of the architecture,
 and it is under `docs/specs/analyses/` only because the architecture names
@@ -256,8 +256,8 @@ file when the list is `known` with `null`, the length of the list when
 it is `known` with one, both exact; `byLists`, a bound, when it is
 `needsStatistics`.
 
-`sizeText` writes a size under 1,000 bytes in bytes, under 1,000,000 in
-whole KB, under 1,000,000,000 in MB with one decimal, and above in GB
+`sizeText` writes a size under 1,000 bytes in bytes, "1 byte" for one
+and "812 bytes" for any other number, under 1,000,000 in whole KB, under 1,000,000,000 in MB with one decimal, and above in GB
 with one decimal, each rounded to the nearest, with a comma between
 groups of three digits of the whole part, as `grouped` of
 `docs/specs/core/project.md` writes a count. A size that rounds to 1,000
@@ -395,7 +395,7 @@ before the user asks.
   `byLists` while a threshold waits; `bound` and the words "about" and
   "at most about"; `warn` at `WRITE_WARN_BYTES` and one byte below it;
   `tooLarge` at `WRITE_MAX_BYTES` from exact counts and not from a bound.
-- **`sizeText`**: 812, 250,994, 999,600, 19,161,178 and 4,300,000,000
+- **`sizeText`**: 1, 812, 250,994, 999,600, 19,161,178 and 4,300,000,000
   bytes, as above.
 - **`writtenName`**: `panel.vcf.gz` with a filter gives
   `panel.filtered.nei`, with a threshold on the individuals alone too,
