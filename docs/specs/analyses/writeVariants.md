@@ -440,7 +440,7 @@ of stage 3 are gathered:
    to save it.", and the user writes it again, one pass over the
    variants file. The other option keeps the file while the notice is
    up, so that its Undo brings it back, at the cost of holding the file,
-   about 1 GB for a million variants of 1,000 individuals, for as long
+   about 960 MB for a million variants of 1,000 individuals, for as long
    as the notice stays, which has no timer.
 
 ## Not in this spec

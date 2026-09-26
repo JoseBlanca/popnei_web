@@ -967,7 +967,7 @@ Stage 3 adds two, points J and G of `docs/specs/stage-3-open-points.md`:
    and recommended: the notice says so, and so does the question before
    an opening, and the file is gone; the other option keeps the file
    while the notice is up, so that its Undo gives it back, which holds
-   the file, about 1 GB for a million variants of 1,000 individuals,
+   the file, about 960 MB for a million variants of 1,000 individuals,
    for as long as the notice stays.
 
 ## Not in this spec

@@ -18,13 +18,15 @@ and, written after them, the screen spec of the Variants step,
 `docs/specs/shell.md`.
 
 This file holds their open points, the decisions each spec left to the
-owner, six, with the one three specs share made one. Each has its spec,
+owner, ten, with the one three specs share made one. Each has its spec,
 what is to be decided, the options with what each gives and costs, and
 the recommendation, which is what the specs do meanwhile, so that the
-plan can be written before the answer. They are in the order of how much
-each changes what a user sees. After them come the choices the writers
-made alone that a user meets, which the owner may overrule, and the
-numbers that a measurement sets, which are not the owner's to decide.
+plan can be written before the answer. Points A to F are in the order of
+how much each changes what a user sees, and so are points G to J, which
+the reviews of the specs found. After them come the choices the writers
+made alone that a user meets, which the owner may overrule, the numbers
+that a measurement sets, which are not the owner's to decide, and a note
+for stage 4.
 
 A few words are used throughout. A **pass** is one reading of the
 variants file from its start, which a calculation of popnei makes; over
@@ -45,7 +47,7 @@ Specs: `docs/specs/entry.md`, "A file of the filtered variants saved";
 `docs/specs/analyses/writeVariants.md`, "Saving the file".
 
 When a file of the filtered variants is written, the step shows "Save
-panel.filtered.nei, 18.4 MB"; Save hands the file to the browser, which
+panel.filtered.nei, 19.2 MB"; Save hands the file to the browser, which
 saves it in its downloads, or first asks the user where, when the
 browser is set to ask for each file, as Chrome, Firefox and Safari can
 be. The page is not told whether the file was saved: a user can cancel
@@ -54,13 +56,18 @@ neither. Section 6 of the architecture says the page releases the file
 "once it is saved", and the page can only know that Save was pressed.
 The question is whether the page releases the file then, or keeps it.
 
-- **(a) Released when Save is pressed**, a minute after the click, the
-  time Safari on iOS takes to ask before it reads the file. The memory of
-  the tab that held the file is given back: about 960 MB for a million
-  variants of 1,000 individuals, at the 0.96 bytes per genotype popnei
-  wrote for 20,000 variants of 1,000 individuals. The step then says
-  "panel.filtered.nei, 18.4 MB, was handed to the browser to save. To
-  save it again, write it again." A user who cancelled the browser's
+- **(a) Released when Save is pressed.** The page lets go of the file
+  at the click, and of the address the browser reads it from a minute
+  later: Safari on iOS asks the user whether to download before it reads
+  the file, and an address released before the answer gives a failed
+  download, which is why FileSaver.js, a common library of downloads,
+  waits a minute too, as `src/ui/download.ts` does for the project file.
+  The memory of the tab that held the file is then given back: about
+  960 MB for a million variants of 1,000 individuals, at the 0.96 bytes
+  per genotype popnei wrote for 20,000 variants of 1,000 individuals,
+  19,161,178 bytes. The step then says "panel.filtered.nei, 19.2 MB, was
+  handed to the browser to save. To save it again, write it again." A
+  user who cancelled the browser's
   question, or whose download failed, writes the file again: one pass
   over the variants file, minutes over a gzipped VCF of gigabytes.
 - **(b) Kept until a change of the filters, a new variants file or an
@@ -97,9 +104,13 @@ has nothing to calculate. Which check tells the user, and when?
   refuses at once, before a second pass; the panel says "The thresholds
   of the filters of individuals leave none of the individuals of
   panel.nei that have a population in popcat, so no population is left.
-  Loosen the thresholds in the Variants step." The state before the Run
-  has already named each population left empty, once the statistics are
-  in the page, as after a Calculate of the Variants step. It costs the
+  Loosen the thresholds in the Variants step.", where popcat is the
+  column of the populations of the individuals file of the example.
+  Before the Run, once the statistics are in the page, after a Calculate
+  of the Variants step or an earlier Run, the panel of the diversity has
+  already named, beside its Run button, each population the thresholds
+  leave empty: "p9 has no individual left after the filters of
+  individuals, and is left out." It costs the
   user the pass of the statistics before the words, when they were not
   in the page; the refusal is kept for those settings, as every refusal
   of popnei, so an undo back to them shows it again with no pass.
@@ -135,8 +146,9 @@ as SVG" and "Download as PNG", on each histogram from stage 3?
   own, and the export is seen working in Chrome, Firefox and Safari by
   users as well as by its tests. It costs ten buttons on the step, two
   per histogram, the two messages of a PNG that cannot be made, and the
-  line of the versions of popnei and of the application beside each, in
-  the specs of the two checks.
+  line beside each that says which versions of popnei and of the
+  application made it, "Calculated with popnei 0.1.0, in version 0.1.0
+  of the application.", in the specs of the two checks.
 - **(b) No buttons until stage 6.** The export is written and tested in
   stage 3, and offered with the report. The step is shorter by ten
   buttons; a user who wants a histogram meanwhile takes a screenshot.
@@ -242,6 +254,114 @@ other five numbers are the step's:
 Recommended: (a), the specs' meanwhile, with the owner's numbers where
 they know better; each is a constant of the step and its test.
 
+## G. A file written and not saved, which a change discards
+
+Specs: `docs/specs/core/store.md`, open point 1;
+`docs/specs/analyses/writeVariants.md`, open point 1;
+`docs/specs/shell.md`, open point 3.
+
+A file of the filtered variants, once written, waits for its Save. A
+change of a filter of the variants or of the individuals, or a new
+variants file, makes it another file than the step shows, and the page
+releases it, as section 6 of the architecture has it; one press of an
+arrow key in a threshold is such a change. The notice of the change
+offers Undo, which brings the filters back, and in the first draft of
+the specs neither the notice nor anything else said that the file was
+gone, and the user who pressed Undo found the button to write where the
+Save had been. What happens to the file, and what the user is told?
+
+- **(a) The file is discarded at the change, and the notice says so**,
+  the specs' meanwhile: "The MAF filter changed. The written file, not
+  saved, was discarded, and Undo does not bring it back; write it again
+  to save it · Undo". An opening of a project file discards it too, and
+  the question the page asks before an opening says "panel.filtered.nei,
+  written and not saved, will be discarded." It costs the user who
+  wanted the file one more pass over the variants file, minutes over a
+  gzipped VCF of gigabytes, and nothing of memory: the file is given
+  back at the change.
+- **(b) The file is kept while the notice is up**, and the Undo of the
+  notice brings it back with the filters, Save and all. It costs the
+  memory of the file, about 960 MB for a million variants of 1,000
+  individuals, for as long as the notice stays, which has no timer and
+  goes only when it is closed or replaced; and one rule more in the
+  store, a file kept by the notice and not by the project.
+
+Recommended: (a), since the file that costs minutes to write again is
+also the one whose memory a tab cannot hold for an Undo that may never
+come, as in point A.
+
+## H. A project file of version 1 whose filters are out of order
+
+Spec: `docs/specs/core/projectFile.md`, open point 3.
+
+The filters of the variants are applied in a fixed order from stage 3,
+and a project file holds them in that order. No application wrote a
+file with another order, since stage 2 had the missing data filter
+alone, so such a file is one edited by hand, in a text editor or by a
+script. Opening one:
+
+- **(a) Refuses the file**, the specs' meanwhile, with the words of the
+  validation: "The project file cannot be opened: the filters of the
+  variants should be in the order missing genotypes, observed
+  heterozygosity, major allele frequency, linkage disequilibrium, and
+  the second one is out of that order." The user puts them in order in
+  the file, or sets the filters again in the Variants step.
+- **(b) Opens it with its filters put in the fixed order**, and a
+  warning that says so. The LD pruning keeps a variant by the variants
+  kept before it, so an LD pruning moved to the end keeps other
+  variants, and each filter is given other counts. The project opened
+  is not the one the file describes, and the check numbers saved with
+  the file, calculated in its order, differ from those of the same
+  variants file, which the comparison after the opening would blame on
+  the variants file.
+
+Recommended: (a), since reordering changes the numbers the file's check
+was made with, and the words of (b) would tell a user whose variants
+file is the right one that it may not be.
+
+## I. What the description of a histogram counts
+
+Spec: `docs/specs/charts/histogram.md`, open point 2.
+
+Each histogram has a description, a sentence a screen reader reads for
+the plot, since it cannot read the bars. It can count the bins or what
+is in them:
+
+- **(a) The variants or the individuals in the bins**, the specs'
+  meanwhile: "The major allele frequency of 1,200 variants, in 40 bins
+  from 0 to 1. The threshold 0.95 keeps the 38 bins up to it, 1,175
+  variants, and removes the 2 bins above it, 25 variants.", and, when
+  the threshold falls inside a bin, "… splits the bin from 0.5 to 0.525,
+  62 variants, …", on `panel.nei` in node on 26 September 2026. It says
+  what the plot shows a sighted user, the share each side of the line.
+- **(b) The bins alone**: "The threshold 0.95 keeps bins up to 0.95 and
+  removes 2 bins above it." Shorter, and it says nothing a user can
+  compare with the counts beside the filter.
+
+Recommended: (a). Either is one function of the screen and its tests.
+
+## J. The Variants step in the stepper when the thresholds keep no individual
+
+Spec: `docs/specs/shell.md`, open point 2.
+
+The stepper, the row of links to the three steps at the top of the page,
+shows the state of each step. The thresholds of the individuals can
+keep none of them, once their statistics are calculated, and then every
+analysis that reads the filters of individuals, the diversity among
+them, and the writing are locked, with the reason "The filters of
+individuals keep none of the 200 individuals of panel.nei. Loosen them
+in the Variants step."
+
+- **(a) Problem, with that reason**, the specs' meanwhile, the state the
+  stepper gives a list of individuals that popnei would refuse, which
+  locks the same analyses. A user sees in the stepper, on any step, that
+  the Variants step needs them.
+- **(b) Done**, as the stepper of stage 2 has a step whose file is read:
+  the user learns it at the diversity's locked Run button, in the
+  Analyses step.
+
+Recommended: (a).
+
 ## Choices of a spec the owner may overrule
 
 Each was decided by the writer of its spec, and each changes what a user
@@ -286,7 +406,7 @@ meets:
 - **Each histogram of the variants is drawn beside its filter**, the
   expected heterozygosity beside the observed one, and the three checks
   keep their own buttons; the summary line gives "1,128 of 1,200
-  variants kept" and "119 of 200 individuals kept" only while they are
+  variants kept" and "114 of 200 individuals kept" only while they are
   known for the filters as they are (`shell.md`, open point 1).
 
 ## Set by a measurement, not by the owner
@@ -307,9 +427,28 @@ section 11 of the architecture asks:
 - the time of the pass of the Count against a pass of the diversity on
   the same files; popnei is asked for a function that only counts if it
   is much longer (`filterCounts.md`);
+- the largest file each engine writes before the write fails, which
+  sets `WRITE_MAX_BYTES`, the size at which the button to write is
+  disabled, 4 GB meanwhile, the most wasm addresses, though a tab that
+  holds up to three times the file at the peak may fail well below it
+  (`writeVariants.md`);
 - the time the page is frozen after a threshold moves, with the table of
   the statistics of 10,000 individuals; the table draws only the rows on
-  the screen if it is above about 100 ms (`individualChecks.md`).
+  the screen if it is above about 100 ms, the time within which the
+  answer to a key reads as at once, which section 11 of
+  `docs/architecture.md` takes as its bound (`individualChecks.md`).
+
+## For stage 4
+
+Not a point to decide now; the spec of the PCA meets it. The PCA has a
+MAF filter of its own (`docs/functionality.md`, section 5), and the rule
+`docs/specs/worker/protocol.md` held until stage 3 joined it with the
+dataset's MAF filter only when the dataset had no LD pruning and the job
+kept every individual, and otherwise gave the PCA none of its own. With
+the filter of individuals last in the fixed order, any filter of
+individuals set leaves the PCA without its own MAF filter under that
+rule, so the spec of the PCA decides again how the two are given to
+popnei.
 
 ## Not repeated here
 

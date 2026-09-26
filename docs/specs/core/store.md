@@ -1292,7 +1292,7 @@ decided here and said where they are. It uses the bound of the cache
    and recommended, the store forgets it at the change and the notice
    says so, `writeDiscarded`; the other option keeps it while the
    notice is up, so that the Undo of the notice gives it back, which
-   holds the file, about 1 GB for a million variants of 1,000
+   holds the file, about 960 MB for a million variants of 1,000
    individuals, for as long as the notice stays, with no timer. Point G
    has the options whole.
 
