@@ -591,14 +591,16 @@ to a project made with a `.nei` file or the other way round, gives no
 comparison either, since a `.nei` file has no read options and its
 fingerprint then differs from a VCF's. As the owner decided on 26
 September 2026 (point 1 of the review of work package 9), the line says
-so and names the file to load, the reference's name, shown escaped:
+so and names the file to load, the reference's name, shown escaped, and
+the step where it is loaded, since the line is read on the Analyses step
+(the owner's order of the same day, point 2 of the list of task 9.7):
 
 - "Not compared with the numbers of the project file: this file is a
-  VCF, and the project was made with a .nei file. Load panel.nei to
-  compare them."
+  VCF, and the project was made with a .nei file. Load panel.nei in the
+  Variants step to compare them."
 - "Not compared with the numbers of the project file: this file is a
-  .nei file, and the project was made with a VCF. Load panel.vcf.gz to
-  compare them."
+  .nei file, and the project was made with a VCF. Load panel.vcf.gz in
+  the Variants step to compare them."
 
 It is `null` otherwise. A `.nei` file given to a project made with a
 `.nei` file has no read options, its ploidy is the file's, and its
