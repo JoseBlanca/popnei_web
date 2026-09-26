@@ -1,10 +1,12 @@
 /**
  * The keys of the results: the canonical form of a JSON value, its hash,
  * the key of an analysis for a project, the key of an intermediate result
- * of the calculation worker, and the fingerprint of the settings of an
- * analysis (docs/specs/core/keys.md).
+ * of the calculation worker, the key of a file of the filtered variants
+ * written, and the fingerprint of the settings of an analysis
+ * (docs/specs/core/keys.md).
  */
 
+import type { WriteJob } from "../worker/protocol.ts";
 import type { Project, VariantSource } from "./project.ts";
 import type { AnalysisDef } from "./store.ts";
 
@@ -438,6 +440,44 @@ export function intermediateKeyOf(
   return sha256Hex(text);
 }
 
+/** The format of a file of the filtered variants written, `"nei"` until
+    popnei has a writer of the VCF: the `format` of the job of the write. */
+export type WriteFormat = WriteJob["format"];
+
+/**
+ * The key of the filtered variants of `p` written in `format`, under which
+ * the store tracks the write, so that a change of the filters while it is
+ * written leaves it behind and an undo gives it back: the hash of the
+ * canonical form of the format, the load of the variants file, both lists
+ * of filters whole, and the version of popnei, which writes the file. The
+ * file holds the variants and the individuals the filters keep, so a key
+ * that missed a filter would let a file of other variants be saved as the
+ * one the step shows. It has no field `analysis` and none `intermediate`,
+ * so it never coincides with the key of an analysis or of an intermediate
+ * result.
+ *
+ * Throws a defect when the project has no variants file.
+ */
+export function writeKeyOf(
+  p: Project,
+  format: WriteFormat,
+  popneiVersion: string,
+  memo: KeyMemo,
+): Key {
+  const text = canonicalOf(
+    {
+      write: format,
+      load: loadOf(p, "writeKeyOf"),
+      filters: p.filters,
+      individualFilters: p.individualFilters,
+      popneiVersion,
+    },
+    memo,
+    `the key of the write of a ${JSON.stringify(format)} file`,
+  );
+  return asKey(sha256Hex(text));
+}
+
 /**
  * The fingerprint of the settings of an analysis, which an opened project
  * file keeps for each analysis: the hash of the canonical form of the key
@@ -503,7 +543,7 @@ function loadOf(
 ): { fileId: string; readOptions: VariantSource["readOptions"] } {
   if (p.variants === null) {
     throw new Error(
-      `popnei_web defect: ${caller} was given a project with no variants file; the store makes a key only for an analysis that can run.`,
+      `popnei_web defect: ${caller} was given a project with no variants file; the store makes a key only for what can run, an analysis or a write.`,
     );
   }
   return { fileId: p.variants.fileId, readOptions: p.variants.readOptions };

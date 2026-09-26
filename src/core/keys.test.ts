@@ -9,8 +9,10 @@ import {
   keyOf,
   settingsFingerprint,
   sha256Hex,
+  writeKeyOf,
 } from "./keys.ts";
 import type { JsonObject, JsonValue, KeyMemo, KeyedDef } from "./keys.ts";
+import type { VariantFilter } from "../worker/protocol.ts";
 import type { Project, VariantSource } from "./project.ts";
 import {
   anyLoadId,
@@ -947,6 +949,170 @@ describe("WP2 D3 the properties of the keys", () => {
         }
         expect(expected).not.toBe(keyWith(s, memo));
       }),
+    );
+  });
+});
+
+/** The project of the keys spec's "`writeKeyOf`, a literal": that of
+    `keyOf`'s literal with the filter of the individuals `missing_data`
+    0.03. */
+function writeLiteralProject(): Project {
+  return deepFreeze(
+    withMissingRate(literalProject(), "individualFilters", 0.03),
+  );
+}
+
+/** The key of the write of `p` as a `.nei` file, with popnei 0.1.0. */
+function neiKeyOf(p: Project, memo: KeyMemo = createKeyMemo()): string {
+  return writeKeyOf(p, "nei", "0.1.0", memo);
+}
+
+const WRITE_LITERAL_TEXT =
+  '{"filters":[{"kind":"missing_data","maxAllowedMissingRate":0.1}],"individualFilters":[{"kind":"missing_data","maxAllowedMissingRate":0.03}],"load":{"fileId":"00112233445566778899aabbccddeeff","readOptions":null},"popneiVersion":"0.1.0","write":"nei"}';
+
+const WRITE_LITERAL_KEY =
+  "6e1279cc33cda1057fa8cc0ba734fb24493492ae04ff054dd1e48765e73c83d4";
+
+describe("VS2 D3 the key of a write", () => {
+  test("gives the literal key of the keys spec, the hash of its canonical form", () => {
+    expect(sha256Hex(WRITE_LITERAL_TEXT)).toBe(WRITE_LITERAL_KEY);
+    expect(neiKeyOf(writeLiteralProject())).toBe(WRITE_LITERAL_KEY);
+  });
+
+  test("changes the key with the threshold of the individuals, and finds it again when the threshold is set back", () => {
+    const memo = createKeyMemo();
+    const p = writeLiteralProject();
+    const moved = withMissingRate(p, "individualFilters", 0.05);
+    const back = withMissingRate(moved, "individualFilters", 0.03);
+    expect(neiKeyOf(moved, memo)).not.toBe(WRITE_LITERAL_KEY);
+    expect(neiKeyOf(back, memo)).toBe(WRITE_LITERAL_KEY);
+  });
+
+  test.each([
+    ["missing_data", { kind: "missing_data", maxAllowedMissingRate: 0.2 }],
+    ["maf", { kind: "maf", maxAllowedMaf: 0.9 }],
+    ["obs_het", { kind: "obs_het", maxAllowedObsHet: 0.4 }],
+    ["ld", { kind: "ld", maxAllowedR2: 0.3, maxDist: 1000 }],
+    ["ld", { kind: "ld", maxAllowedR2: 0.2, maxDist: 2000 }],
+  ] as const)(
+    "changes the key with the filter %s of the variants changed or left out, whatever its place",
+    (kind, changed) => {
+      const all: readonly VariantFilter[] = [
+        { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+        { kind: "maf", maxAllowedMaf: 0.95 },
+        { kind: "obs_het", maxAllowedObsHet: 0.5 },
+        { kind: "ld", maxAllowedR2: 0.2, maxDist: 1000 },
+      ];
+      const memo = createKeyMemo();
+      const p = { ...writeLiteralProject(), filters: all };
+      const key = neiKeyOf(p, memo);
+      const replaced = all.map((f) => (f.kind === kind ? changed : f));
+      const left = all.filter((f) => f.kind !== kind);
+      expect(neiKeyOf({ ...p, filters: replaced }, memo)).not.toBe(key);
+      expect(neiKeyOf({ ...p, filters: left }, memo)).not.toBe(key);
+    },
+  );
+
+  test("changes the key with any change of the filters of the variants", () => {
+    fc.assert(
+      fc.property(projectWithVariants, variantFilters, (p, filters) => {
+        fc.pre(canonical(filters, null) !== canonical(p.filters, null));
+        const memo = createKeyMemo();
+        expect(neiKeyOf({ ...p, filters }, memo)).not.toBe(neiKeyOf(p, memo));
+      }),
+    );
+  });
+
+  test("changes the key with any change of the filters of the individuals", () => {
+    fc.assert(
+      fc.property(projectWithVariants, individualFilters, (p, filters) => {
+        fc.pre(
+          canonical(filters, null) !== canonical(p.individualFilters, null),
+        );
+        const memo = createKeyMemo();
+        expect(neiKeyOf({ ...p, individualFilters: filters }, memo)).not.toBe(
+          neiKeyOf(p, memo),
+        );
+      }),
+    );
+  });
+
+  test("changes the key with the load id, the read options and the version of popnei", () => {
+    fc.assert(
+      fc.property(projectWithVariants, variantSource, (p, source) => {
+        const variants = variantsOf(p);
+        const memo = createKeyMemo();
+        const key = neiKeyOf(p, memo);
+        if (source.fileId !== variants.fileId) {
+          const loadedAgain = { ...variants, fileId: source.fileId };
+          expect(neiKeyOf({ ...p, variants: loadedAgain }, memo)).not.toBe(key);
+        }
+        if (
+          canonical(source.readOptions, null) !==
+          canonical(variants.readOptions, null)
+        ) {
+          const readAgain = { ...variants, readOptions: source.readOptions };
+          expect(neiKeyOf({ ...p, variants: readAgain }, memo)).not.toBe(key);
+        }
+        expect(writeKeyOf(p, "nei", "0.2.0", memo)).not.toBe(key);
+      }),
+    );
+  });
+
+  test("keeps the key with another individuals table, grouping or options of an analysis", () => {
+    const p = writeLiteralProject();
+    const q: Project = {
+      ...p,
+      individuals: null,
+      grouping: { kind: "populations", column: null },
+      analyses: [{ analysis: "diversity", options: { minNumInds: 3 } }],
+    };
+    expect(p.individuals).not.toBeNull();
+    expect(p.grouping).not.toEqual(q.grouping);
+    expect(p.analyses).not.toEqual(q.analyses);
+    expect(neiKeyOf(q)).toBe(WRITE_LITERAL_KEY);
+  });
+
+  test("keeps the key with the name, the size and the read of the variants file", () => {
+    fc.assert(
+      fc.property(projectWithVariants, variantSource, (p, source) => {
+        const renamed: Project = {
+          ...p,
+          variants: {
+            ...variantsOf(p),
+            name: source.name,
+            size: source.size,
+            read: source.read,
+          },
+        };
+        const memo = createKeyMemo();
+        expect(neiKeyOf(renamed, memo)).toBe(neiKeyOf(p, memo));
+      }),
+    );
+  });
+
+  test("is neither the key of an analysis nor of an intermediate result that reads both lists of filters", () => {
+    const p = writeLiteralProject();
+    const memo = createKeyMemo();
+    const key = neiKeyOf(p, memo);
+    expect(key).not.toBe(keyOf(DIVERSITY, p, "0.1.0", memo));
+    expect(key).not.toBe(
+      intermediateKeyOf(DIVERSITY, p, "0.1.0", "nei", null, memo),
+    );
+  });
+
+  test("gives the literal key with a memo filled by the key of an analysis", () => {
+    const p = writeLiteralProject();
+    const memo = createKeyMemo();
+    keyOf(DIVERSITY, p, "0.1.0", memo);
+    expect(neiKeyOf(p, memo)).toBe(WRITE_LITERAL_KEY);
+    expect(neiKeyOf(p, memo)).toBe(WRITE_LITERAL_KEY);
+  });
+
+  test("throws a defect on a project with no variants file", () => {
+    const p = { ...writeLiteralProject(), variants: null };
+    expect(() => neiKeyOf(p)).toThrow(
+      "popnei_web defect: writeKeyOf was given a project with no variants file; the store makes a key only for what can run, an analysis or a write.",
     );
   });
 });
