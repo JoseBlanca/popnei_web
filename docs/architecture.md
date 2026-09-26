@@ -201,16 +201,11 @@ the histograms of the individuals binned in core, which corrects
 individual's statistics are counted is left to the owner, with a
 recommendation (section 13, point 8).
 
-The six invariants of `.claude/skills/designing/SKILL.md` hold: every
-input of a result stays in its key, the list of the individuals kept
-included, through the filters it is made from (section 3); the layers
-import as before; the project stays one plain value, and the regions are
-plain data in it; core stays without the DOM; the light worker reads the
-BED file and the calculation worker runs one request at a time, a write
-among them; a cancel of a write restarts its worker. The interfaces that
-change are the client bound to a key, which gains the individuals kept;
-the function the store is given to read a result's pass, `countsOf`,
-which replaces `numVarsOf`; the store, which tracks a write; the
+The interfaces between the parts that change are the client through
+which an analysis sends its request, which gains the individuals kept;
+the function the store is given to find the number of variants of the
+file in a result, which gives the counts of its filters as well (section
+4); the store, which tracks a write; the
 `Project`, which gains the regions; the jobs, which carry the list of
 individuals in place of the filters of individuals; the results, each of
 which carries the counts of its pass; and the project file,
@@ -222,7 +217,8 @@ The approved specs this changes, each revised with the specs of stage 3:
 `projectFile.md`; `docs/specs/steps/variants.md`, which stage 3 writes
 whole; `docs/specs/analyses/diversity.md`, whose lock on the filters of
 individuals, decided by the owner on 25 September 2026 for stage 2, goes;
-`docs/specs/entry.md`, for `countsOf` and the download of a written file;
+`docs/specs/entry.md`, for that function and the download of a written
+file;
 section 3 of `docs/functionality.md`, for the order of the filters; and
 the skills `.claude/skills/coding/charts.md` and `worker.md`. What is
 measured, and what it sets, is in section 11; nothing has to be measured
@@ -560,7 +556,9 @@ canonical form would write into the text of every key that reads the
 filters: for 200,000 regions, as many as an exome panel has, that text is
 5.8 MB, and it took 40 ms to write and 80 ms to hash, in node 26.8.2 on
 the owner's Mac, with `canonical` and `sha256Hex` of `src/core/keys.ts`,
-on 26 September 2026. The memo spares the writing and not the hashing, so
+on 26 September 2026. The memo of the keys, which keeps the text of each part of the project
+already written (`docs/specs/core/keys.md`), spares the writing and not
+the hashing, so
 every command would have cost 80 ms for each analysis that reads the
 filters, most of them, on the page, where a click waits for it. Made once,
 when the read is recorded, the hash costs those 120 ms once per load of
@@ -632,14 +630,16 @@ as a table and as histograms, and the histograms of the statistics of the
 variants (`docs/functionality.md`, section 3). These are the checks.
 popnei gives their numbers, `calcPerIndividualStats` and
 `calcPerVarDistribs` of `js/popnei/src/stats.ts`, and filters individuals
-only by a list, `filterIndividuals` of `js/popnei/src/variant.ts`, one
-list per `Variants`. The filters of individuals by a threshold are the
+only by a list, `filterIndividuals` of `js/popnei/src/variant.ts`, of
+which one can be put on a `Variants`, popnei's handle on the opened file. The filters of individuals by a threshold are the
 application's arithmetic on popnei's numbers (`docs/build-order.md`,
 section 4), and every analysis has to read the individuals they keep.
 
 - **Each check is an analysis**, a module of the shape above, of both
-  applications, shown in the Variants step: `individualChecks`,
-  `variantChecks`, and `filterCounts` below. Each runs when the user
+  applications, shown in the Variants step: the statistics of each
+  individual, `individualChecks`; the histograms of the variants,
+  `variantChecks`; and the counts of what each filter kept,
+  `filterCounts`, below. Each runs when the user
   presses its button, as every calculation does
   (`docs/specs/core/store.md`), with the states, the progress, the stop and
   the undo of any analysis.
@@ -679,7 +679,8 @@ section 4), and every analysis has to read the individuals they keep.
   kept, which the step shows beside each filter as it is set, with no
   pass. The store makes the list once for each project, as it makes the
   keys, and hands it to an analysis through the client bound to its key,
-  `WorkerClient.individuals`, `null` when the filters remove nobody; the
+  the object the analysis sends its request through, as a field of it,
+  `individuals`, which is `null` when the filters remove nobody; the
   job carries it, and the runner puts it on the `Variants` first, as its
   `filterIndividuals`. The result of `individualChecks` is under a key
   that the current project gives, so the cache does not drop it while the
@@ -703,8 +704,10 @@ section 4), and every analysis has to read the individuals they keep.
   after the statistics arrive, until the next command.
 - **A population that loses all its individuals to the filters** is left
   out of the job, since popnei refuses an empty population, and the
-  diversity names it before the run, in its ready state, and after it, in
-  its warning `populationNotInResult` (`docs/specs/analyses/diversity.md`).
+  diversity names it before the run, in the panel that shows its Run
+  button, and after it, in the warning of its result that names a
+  population with no individual left (`docs/specs/analyses/diversity.md`,
+  `populationNotInResult`).
   How many check numbers the diversity gives, its `numCheckNumbers`, is
   known when a project file is opened if its filters of individuals are
   lists, which the project holds, and not if one is a threshold, whose
@@ -734,8 +737,10 @@ those counts beside each filter, in the order of section 2.
 - **Every pass over the project's filters as they are fills them too.**
   When a result arrives whose pass had the filters of its request's
   project, the store puts its counts into the cache under the key of
-  `filterCounts` for that project. The function the store is given for it,
-  `countsOf` of `src/core/apps.ts`, replaces `numVarsOf`, and so every
+  `filterCounts` for that project. The store is given a function that
+  finds the number of variants of the file in a result, `numVarsOf` of
+  `src/core/apps.ts`; it is replaced by `countsOf`, which finds the counts
+  of the filters too, and so every
   result of the protocol carries the counts of its pass, popnei's
   `passStats.filtering`, where `DiversityResult` carries only `numVars`
   and `numVarsRead` (`docs/specs/worker/protocol.md`). It gives, of any
@@ -745,9 +750,10 @@ those counts beside each filter, in the order of section 2.
   the counts, and an undo brings them back as it brings any result; the
   checks, which read fewer filters, and the PCA, which merges its own MAF
   filter with the dataset's (`docs/specs/worker/protocol.md`), do not.
-- **The notice leaves the counts out.** Every change of a filter removes
-  them, beside the filter the user is changing, and a notice at every move
-  of a threshold would say only that.
+- **The notice leaves the counts out.** Their key holds every filter, so
+  a change of any filter takes off the counts of all of them, which the
+  user sees beside the filters as they change one, and a notice at every
+  move of a threshold would say only that.
 - **The counts of the filters of individuals are core's**, above, and need
   no pass.
 
@@ -870,8 +876,9 @@ The page and each worker talk through typed messages
   closed, which would leave the new file unusable meanwhile, minutes for
   a GWAS, and hold the memory of both files.
 - **Writing the filtered variants is a request of the calculation worker,
-  and not an analysis.** Its answer is the file, a `Blob` as large as the
-  variants kept, which the user saves from the step (section 6), and
+  and not an analysis.** Its answer is the file, as a `Blob`, the
+  browser's object for a file made in the page, as large as the variants
+  kept, which the user saves from the step (section 6), and
   which never goes into the cache: one file can be larger than its bound of
   256 MB, and it is on the user's disk once saved. The store tracks a write
   as it tracks a calculation, under a key of the load, the filters and the
@@ -1210,15 +1217,17 @@ them. It is not part of popnei and nothing of popnei is in it.
   Variants step, as the owner decided on 25 September 2026, by a request
   of the calculation worker (section 5) that calls popnei's `writeVars` of
   `js/popnei/src/io_vars.ts`. It builds the whole file in the memory of
-  wasm and copies it out, piece by piece, into one array of the heap of
-  JavaScript, with the counts of its pass. The worker makes a `Blob` of
-  the array, so that a copy of up to a gigabyte, if the engine makes one,
+  wasm and copies it out, piece by piece, into one array of the memory of
+  JavaScript, outside that of wasm, with the counts of its pass. The
+  worker makes of the array a `Blob`, which the browser can hold on the
+  disk, so that a copy of up to a gigabyte, if the engine makes one,
   is made off the page and never freezes it, drops the array, and posts
   the `Blob`, which crosses to the page as a handle, with no copy.
 - **The user saves the file with a Save button** that the step shows when
-  the write ends, "Save panel.filtered.nei, 18.4 MB", and that starts the
-  download through a link whose `download` attribute names the file,
-  which every browser of the floor has. A download started by the code
+  the write ends, with the name and the size of the file, "Save
+  panel.filtered.nei, 18.4 MB" in an example, and that starts the
+  download through a link that names the file, the `download` attribute
+  of a link, which every browser of the floor has. A download started by the code
   minutes after the click that asked for the write, with no click of its
   own, may be blocked by the browser or asked about, as Chrome does for a
   page that starts several downloads. The page releases the `Blob`, and
@@ -1238,8 +1247,8 @@ them. It is not part of popnei and nothing of popnei is in it.
   lets a tab hold; and a file near 4 GB cannot be written at all, since
   wasm addresses no more. So the step says the size it expects, from the
   variants and the individuals the filters keep, before the user writes,
-  and warns above a bound, `WRITE_WARN_BYTES`, set from the measurement of
-  section 11; which is why, too, the report leaves the filtered variants
+  and warns above a size, a constant of the code, `WRITE_WARN_BYTES`, set
+  from the measurement of section 11; which is why, too, the report leaves the filtered variants
   out by default (`docs/functionality.md`, section 9). Reading the
   variants file by ranges does not change this.
 - **The VCF**, once popnei has a writer of it, is written the same way. It
@@ -1255,21 +1264,25 @@ not how, what its limits were, or what a change of the filters did
 meanwhile. This revision writes it
 as popnei gives it now, whole, with the warning, and asks popnei for a
 writer by pieces, of the `.nei` file and of the VCF, which gives the file
-one batch at a time, a request the owner has not yet made. With it, the
+one batch at a time. Approving the revision asks popnei for it, as an
+issue of popnei beside the four additions the owner decided on 26
+September; stage 3 does not wait for it, and writes the file whole with
+the warning until popnei has it. With it, the
 worker keeps the pieces as they come and makes one `Blob` of them at the
 end, and the memory of wasm holds one batch: the peak falls from up to 3F to about F.
 Considered and not taken, with the browsers from MDN's compatibility
 data, version 8.1.3, read on 26 September 2026:
 
-- **`showSaveFilePicker`**, which asks the user where to save and writes
-  there piece by piece, with no copy of the file in the tab: in Chrome and
+- **A file picker for saving**, `showSaveFilePicker`, which asks the user
+  where to save and lets the page write there piece by piece, with no copy of the file in the tab: in Chrome and
   Edge from 86, and in neither Firefox nor Safari. It saves nothing while
   popnei builds the file whole in wasm, and with a writer by pieces it
   would serve only the users of Chromium; it would win if they wrote files
   larger than a tab can hold.
-- **The origin private file system**, a storage of the site on the disk,
-  written from a worker with `createSyncAccessHandle`, in Chrome 102,
-  Firefox 111 and Safari 15.2, all within the floor. The worker would
+- **The origin private file system**, a storage on the disk that the
+  browser gives each site, which a worker writes into with the call
+  `createSyncAccessHandle`, in Chrome 102, Firefox 111 and Safari 15.2,
+  all within the floor. The worker would
   write the array there and drop it, and the page offer the `File` it
   gives back, which the disk holds, so the copy of the `Blob` would not be
   made. It costs a quota that differs by browser, and files that stay on
@@ -1644,11 +1657,14 @@ code, the release `js-v0.1.0-dev.2`.
   file in the tab at its peak, about 2.9 GB for a `.nei` file of a million
   variants of 1,000 individuals, and cannot write a file near 4 GB
   (section 6). A tab that the browser closes for its memory loses the
-  user's work since the last save of the project. Measured at the start
-  of stage 3, in Chromium, Firefox and WebKit, on the `.nei` file of 19.2
-  MB of `docs/specs/worker/runner.md` and on one ten times larger: the
-  memory of the tab during and after a write, whether each engine copies
-  the array into the `Blob`, and the time of the write. They set
+  user's work since the last save of the project. Nothing of a write has
+  been measured: the 3F is a sum of what popnei's code and the browser
+  hold, and the 19.2 MB of the file of 20,000 variants is the one number
+  seen. To be measured in the first work package of stage 3 that writes a
+  file, in Chromium, Firefox and WebKit, on that `.nei` file and on one
+  ten times larger: the memory of the tab during and after a write,
+  whether each engine copies the array into the `Blob`, and the time of
+  the write. They set
   `WRITE_WARN_BYTES`, and, if the owner starts the worker again after a
   large write, the size above which it is done (section 13, point 5).
 - **The table of each individual's statistics** has three columns and a
@@ -1667,11 +1683,11 @@ code, the release `js-v0.1.0-dev.2`.
   success criterion 2.5.7). The histograms are drawn with the D3 modules
   `docs/technology.md` chose, and add no dependency.
 - **The counts of the filters cost a pass** only when no analysis has made
-  one with the same filters. Which of popnei's functions makes that pass
-  fastest, `calcPerIndividualStats` or `iterBlocks`, which copies every
-  block of genotypes out of wasm, is measured on the same two files; if
-  both take much longer than a pass of the diversity, popnei is asked for
-  a function that only counts.
+  one with the same filters. The pass is `iterBlocks`, which copies every
+  block of genotypes out of wasm (section 4); its time against a pass of
+  the diversity is measured in the work package of the Count, on the same
+  two files, and if it is much longer popnei is asked for a function that
+  only counts.
 - **The regions of a BED file are hashed once**, when their read is
   recorded, 120 ms for 200,000 regions in node on the owner's Mac (section
   3); in the browsers it is measured with the reader.
@@ -1693,8 +1709,7 @@ code, the release `js-v0.1.0-dev.2`.
   means, the regions counted as BED counts them and a variant's position
   as a VCF counts it, is kept by every file saved with one.
 
-The canonical form of the keys is not among these, although an earlier
-version of this section said it was. No key and no fingerprint of
+The canonical form of the keys is not among these. No key and no fingerprint of
 settings is saved in a file: the cache lives in the tab, the calculation
 worker's keys are made by the same page, and the fingerprints of an
 opened project are made from its settings when it is opened (section 8).
@@ -1714,7 +1729,9 @@ user nothing but the results of a tab left open across the deploy.
    see. Its restart when the load id of the variant file changes is
    settled (section 5). Settled by the owner on 26 September 2026: not
    restarted between requests, since the walking skeleton measured the
-   memory of wasm at 35.5 MB after one diversity and after the next; it is
+   memory of wasm at 35.5 MB after one diversity and after the next, on
+   the `.nei` file of 19,161,178 bytes, in Chromium 153 on the owner's
+   Mac; it is
    decided again with the kinship, whose matrix is 800 MB at 10,000
    individuals (`docs/plans/walking-skeleton.report.md`).
 
@@ -1740,7 +1757,11 @@ for the owner:
    grow from one diversity to the next; a write grows it by the size of
    the file. What it costs: the intermediate results the worker held, the
    pruned variants and the kinship, and the reading of the header of the
-   file, at most 49 ms on the walking skeleton's measurement. The
+   file, at most 49 ms from the start of a new worker to the file opened,
+   measured at the end of the walking skeleton on the `.nei` file of
+   19,161,178 bytes
+   and its VCF, in Chromium 153 and WebKit 26.6 on the owner's Mac, an
+   Apple M5 Pro with 64 GB (`docs/plans/walking-skeleton.report.md`). The
    recommendation is to start it again after a file larger than a bound
    set by the measurement of section 11, and not after every write.
 6. **A write that ends after a change of its filters**, before the store
