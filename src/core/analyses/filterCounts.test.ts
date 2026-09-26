@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, test } from "vitest";
-import { filterCountRows, filterCounts } from "./filterCounts.ts";
+import { filterCountRows, filterCounts, refusalText } from "./filterCounts.ts";
 import { emptyProject } from "../project.ts";
 import type { Project } from "../project.ts";
 import type { WorkerClient } from "../store.ts";
@@ -287,6 +287,38 @@ describe("VS3 D1 the counts of the filters: the rest of the module", () => {
         "for _ in blocks:\n" +
         "    pass\n" +
         "print(blocks.pass_stats)\n",
+    );
+  });
+});
+
+describe("VS3 D1 the counts of the filters: refusalText", () => {
+  test("a genotype of another ploidy tells to set the ploidy", () => {
+    const message =
+      "line 5 of the VCF, the column of t00: its genotype is of the ploidy 4 and the reader was asked for the ploidy 2";
+    expect(
+      refusalText(
+        message,
+        project([], { name: "tetraploid.vcf.gz", onlyPassed: true }),
+      ),
+    ).toBe(
+      "At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 in the Variants step and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version.",
+    );
+  });
+
+  test("another message gives popnei's message without its full stop, and to count again", () => {
+    expect(refusalText("out of memory.", project([]))).toBe(
+      "popnei could not count the variants: out of memory. Change the settings, or load the variants file again, to count again.",
+    );
+  });
+
+  test("an empty pass gets the words of any other refusal", () => {
+    expect(
+      refusalText(
+        "the pass gave no variant: the filters kept none of the 1200 variants",
+        project([]),
+      ),
+    ).toBe(
+      "popnei could not count the variants: the pass gave no variant: the filters kept none of the 1200 variants. Change the settings, or load the variants file again, to count again.",
     );
   });
 });

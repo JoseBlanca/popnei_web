@@ -3,8 +3,9 @@
  * was given and kept in a pass over the filters of the project, which the
  * Variants step shows beside each filter. The module says what the counts
  * are calculated from, the request of the Count button, the warnings, the
- * check numbers, the lines of the Python script and the rows the step
- * reads (docs/specs/analyses/filterCounts.md, "The module").
+ * check numbers, the lines of the Python script, the rows the step
+ * reads and the words of its refusals (docs/specs/analyses/filterCounts.md,
+ * "The module").
  *
  * The counts are popnei's `passStats`. The Count button asks for them
  * with a pass of their own, and the store fills them from the result of
@@ -25,7 +26,7 @@ import type {
   Run,
   VariantFilterKind,
 } from "../../worker/protocol.ts";
-import { ONLY_PASSED_BOX, defect } from "./words.ts";
+import { ONLY_PASSED_BOX, defect, refusalWords } from "./words.ts";
 
 /** The id of the analysis. */
 const ID = "filterCounts";
@@ -94,6 +95,24 @@ export const filterCounts: AnalysisDef<Job, JobResult> = Object.freeze({
   numCheckNumbers,
   script,
 });
+
+/**
+ * The words of a refusal of popnei, for the error state of the Count
+ * button, by the start of popnei's message: the variants file holds no
+ * variant, or, for a VCF read with only the passed variants, none that
+ * passed; a genotype of another ploidy than the one the VCF was read
+ * with; a line of the VCF popnei cannot read, or a gzipped file damaged
+ * or cut short; any other, an empty pass among them, which popnei does
+ * not refuse for the Count. Throws a defect on a project with no
+ * variants file.
+ */
+export function refusalText(message: string, p: Project): string {
+  return refusalWords(message, p, {
+    calculate: "count the variants",
+    again: "to count again",
+    emptyPass: null,
+  });
+}
 
 /** Gives back `{}` for `{}`, and refuses anything else: the analysis has
     no option. */
