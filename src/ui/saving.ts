@@ -52,7 +52,8 @@ export interface Saving {
       present project. */
   proposedName(): string;
   /** Downloads the project file under `name`, with `.popnei.json` added
-      when it does not end so, and makes the present project the base;
+      when it does not end so, in place of a `.json` it ends in
+      (`savedName`), and makes the present project the base;
       returns the name used. Throws a defect on a check number that is
       not finite. */
   save(name: string): string;
@@ -67,13 +68,23 @@ export interface Saving {
 }
 
 /** The name of the file saved for the name `name` the user left in the
-    field: `panel` gives `panel.popnei.json`, so that the file opens
-    again with Open project…. */
+    field, so that the file opens again with Open project…: `panel`
+    gives `panel.popnei.json`, and `run1.json` gives `run1.popnei.json`,
+    the `.json` replaced rather than doubled; a name that ends in
+    `.popnei.json` is kept. The endings are found in any case. */
 export function savedName(name: string): string {
-  return name.endsWith(PROJECT_FILE_EXTENSION)
-    ? name
-    : `${name}${PROJECT_FILE_EXTENSION}`;
+  const lower = name.toLowerCase();
+  if (lower.endsWith(PROJECT_FILE_EXTENSION)) {
+    return name;
+  }
+  const stem = lower.endsWith(JSON_EXTENSION)
+    ? name.slice(0, -JSON_EXTENSION.length)
+    : name;
+  return `${stem}${PROJECT_FILE_EXTENSION}`;
 }
+
+/** The ending of a name that `savedName` replaces rather than doubles. */
+const JSON_EXTENSION = ".json";
 
 /** The saving of the store of `deps`, whose base is its present
     project. */

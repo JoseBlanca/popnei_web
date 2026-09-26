@@ -94,15 +94,21 @@ describe("WS9 D2 the saving", () => {
     expect(downloads).toEqual([{ name: "panel.popnei.json", text: expected }]);
   });
 
-  test("a name that does not end in .popnei.json gets it added", () => {
+  test("a name that does not end in .popnei.json gets it, in place of a .json it ends in, in any case", () => {
     const { downloads, saving } = setup();
 
     expect(saving.save("panel")).toBe("panel.popnei.json");
-    expect(saving.save("run1.json")).toBe("run1.json.popnei.json");
+    expect(saving.save("run1.json")).toBe("run1.popnei.json");
+    expect(saving.save("run1.JSON")).toBe("run1.popnei.json");
+    expect(saving.save("run1.POPNEI.JSON")).toBe("run1.POPNEI.JSON");
+    expect(saving.save("run1.json.txt")).toBe("run1.json.txt.popnei.json");
 
     expect(downloads.map((d) => d.name)).toEqual([
       "panel.popnei.json",
-      "run1.json.popnei.json",
+      "run1.popnei.json",
+      "run1.popnei.json",
+      "run1.POPNEI.JSON",
+      "run1.json.txt.popnei.json",
     ]);
   });
 

@@ -232,7 +232,7 @@ test("WS9 D3 Save project opens its dialog with panel.popnei.json selected, Save
   await expect(saveButton(page)).toBeFocused();
 });
 
-test("WS9 D3 a name typed as run1 downloads run1.popnei.json, Cancel and Escape download nothing, and an empty name keeps Save disabled with its reason", async ({
+test("WS9 D3 a name typed as run1 downloads run1.popnei.json, and run2.json run2.popnei.json, Cancel and Escape download nothing, and an empty name keeps Save disabled with its reason", async ({
   page,
 }) => {
   await openPopgen(page);
@@ -266,6 +266,15 @@ test("WS9 D3 a name typed as run1 downloads run1.popnei.json, Cancel and Escape 
 
   expect((await download).suggestedFilename()).toBe("run1.popnei.json");
   expect(downloads).toEqual(["run1.popnei.json"]);
+
+  // A name that ends in .json is not doubled.
+  await expect(saveButton(page)).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(field).toBeFocused();
+  await page.keyboard.type("run2.json");
+  const second = page.waitForEvent("download");
+  await page.keyboard.press("Enter");
+  expect((await second).suggestedFilename()).toBe("run2.popnei.json");
 });
 
 test("WS9 D3 once the dialog of Save has closed, the page takes a click again, with reduced motion as without", async ({
