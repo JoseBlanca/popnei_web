@@ -241,7 +241,8 @@ function Below({
   status,
 }: PartProps & { readonly id: AnalysisId }): React.JSX.Element | null {
   // Why the numbers of a result are not compared with those of the
-  // project file, when its VCF was read with other read options.
+  // project file, when the variants file loaded is of the other format
+  // than the reference's, or its VCF was read with other read options.
   const uncompared = useAppState((s) => uncomparedText(s.project, id));
   switch (status.kind) {
     case "ready":
