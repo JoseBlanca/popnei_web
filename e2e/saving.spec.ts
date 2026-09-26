@@ -604,7 +604,7 @@ test("WS9 D3 Open project… with the saved file after a change asks first, Keep
     name: "Open panel.popnei.json?",
   });
   await expect(question).toHaveAccessibleDescription(
-    "It replaces the project on the page, and an opening cannot be undone. Save the project first to keep it.",
+    "It replaces the project on the page, and an opening cannot be undone. To keep it, answer Keep the current project and save it first.",
   );
   const keep = question.getByRole("button", {
     name: "Keep the current project",
@@ -755,7 +755,7 @@ test("WS9 D3 the question before an opening says that the calculations under way
     name: "Open panel.popnei.json?",
   });
   await expect(question).toHaveAccessibleDescription(
-    "It replaces the project on the page, and an opening cannot be undone. Save the project first to keep it. The ongoing calculations will be stopped.",
+    "It replaces the project on the page, and an opening cannot be undone. To keep it, answer Keep the current project and save it first. The ongoing calculations will be stopped.",
   );
   await question
     .getByRole("button", { name: "Open panel.popnei.json" })
@@ -815,7 +815,7 @@ test("WS9 D3 the question before an opening loses its sentence of the calculatio
     "Analyses, Done",
   );
   await expect(question).toHaveAccessibleDescription(
-    "It replaces the project on the page, and an opening cannot be undone. Save the project first to keep it.",
+    "It replaces the project on the page, and an opening cannot be undone. To keep it, answer Keep the current project and save it first.",
   );
 });
 
