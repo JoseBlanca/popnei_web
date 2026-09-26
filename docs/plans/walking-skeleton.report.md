@@ -6,48 +6,75 @@ The work report of the plan `docs/plans/walking-skeleton.md`, stage 2 of
 
 ## Where the plan stands
 
-Done, on 26 September 2026, on the branch `plan/walking-skeleton`, which
-is not merged and not pushed. Every task is ticked, the owner accepted
-the screens of stops 7.5, 8.4 and 9.6, and the final checks pass on the
-last commit: `npm test` 1,459 passed with none skipped, and `npx
-playwright test --project=chromium --project=webkit` 348 passed, the
-probe's 40 among them.
+The plan is done, on 26 September 2026. The work is on the branch
+`plan/walking-skeleton`, which is not merged into `main` and not
+pushed. Every task is ticked. The owner accepted the three screens they
+were to try: the Variants step, the Individuals step with the diversity
+panel, and the frame of the page with Save and Open.
 
-What exists now: the application of population genetics runs in the
-browser tab. It reads a VCF or a `.nei` file and a metadata file of
-the individuals, filters the variants by missing data, and computes the
+What exists now. The application of population genetics runs in the
+browser tab. It reads a VCF or a `.nei` file and a metadata file of the
+individuals, filters the variants by missing data, and computes the
 diversity of each population with popnei's release `js-v0.1.0-dev.2`.
-Undo and Redo take back every change, and a notice says which results
-a change removed. A project is saved to a file and opened again, and
-the application then says whether the variants file given gives the
-same numbers. It was tried by the owner in Firefox, and tested in
-Chromium and WebKit, the engine of Safari. It has not been tried with a
-screen reader.
+Undo and Redo take back every change, and a notice says which results a
+change removed. A project is saved to a file and opened again later; the
+user then gives the variants file again, and the application says
+whether it gives the same numbers as when the project was saved.
+
+How it was checked. On the last commit the 1,459 tests of the code in
+node pass, none skipped, and so do the 348 tests that drive the page in
+Chromium, the engine of Chrome, and in WebKit, the engine of Safari. The
+owner went through the application by hand in Firefox, since the tests
+cannot start Firefox on this Mac. Nobody has tried it with a screen
+reader, the program that reads the page aloud to a blind user.
 
 What is asked of the owner:
 
-1. The order to merge `plan/walking-skeleton` into `main`. The push of
-   `main` that follows runs the tests in Firefox for the first time, on
-   GitHub, and a failure there is fixed on `main` before anything else.
-2. The five decisions of the measurements, each with its
-   recommendation, under "The measurements, on 26 September 2026":
-   the React Compiler left off; no restart of the calculation worker for
-   now; the cache kept at 256 MB; at most 50,000 points in a plot; no
-   extra step to make the keys faster.
-3. Four wordings found after stop 9.6, each with a recommendation, at
-   the end of "Task 9.7, the owner's decisions of 26 September".
-4. Whether the reader of project files should load only when a file is
-   opened, which takes 4.5 KB of the 123 KB, gzipped, that the page
-   loads first, and splits a module of the core. Recommended: not now.
+1. The order to merge the branch into `main`. Pushing `main` to GitHub
+   then runs the same tests in Firefox for the first time. If one fails
+   there, the site is not published until it is fixed on `main`.
+   Recommended: merge; the owner's pass in Firefox found nothing that
+   the tests of Firefox are likely to.
+2. Five settings the measurements of 26 September ask for, on an Apple
+   M5 Pro with 64 GB, each with its table under "The measurements, on
+   26 September 2026":
+   - React's compiler, a build step that skips redrawing what did not
+     change: the page redraws in at most 4.2 ms after a change, where a
+     user notices from about 100 ms. Recommended: leave it off.
+   - Starting the part of the page that runs popnei again between two
+     calculations, to free its memory: it would add 20 ms in Chrome and
+     40 ms in Safari to each. Recommended: not now; measure again when
+     the kinship is added, which uses more memory.
+   - The memory the page may use to keep results for Undo: the whole
+     tab took 109 MB with the 19.2 MB `.nei` file, and the limit is 256
+     MB. Recommended: keep 256 MB.
+   - The number of points a plot may draw: Safari takes 80 ms for 50,000
+     points and 309 ms for 200,000, where Chrome takes 16 and 50.
+     Recommended: at most 50,000.
+   - Saving and opening a project of 10,000 individuals takes 11 and 13
+     ms, and telling whether a result can be reused takes 3.3 ms after a
+     change. Recommended: nothing to make them faster.
+3. Four wordings of the screens found after the owner's last pass, each
+   with the words recommended, at the end of "Task 9.7, the owner's
+   decisions of 26 September".
+4. Whether the page should load the code that reads a project file only
+   when a file is opened. That code is 4.5 KB of the 123 KB, compressed,
+   that the page loads before it shows, about 0.1 s less on a slow
+   mobile connection of 3 Mbit/s, and it means splitting a part of the
+   code into two. Recommended: not now.
 
-Left open: three cases of the specs have no test, each with its reason,
-under "The map of the cases"; the spec of the Individuals step has no
-section of its cases, so none was mapped; the version of Firefox the
-owner used was not recorded; WebKit reads a variants file changed on
-the disk when its time of change was put back, and says nothing (point
-R), where Chromium and Firefox refuse it.
+Left open:
 
-The work packages are written below, one section each, as they ended.
+- Three cases of the specs have no test, each with its reason, under
+  "The map of the cases"; the spec of the Individuals step lists no
+  cases, so none of its behaviour was matched to tests.
+- Safari reads a variants file that was changed on the disk after it
+  was picked, and says nothing, when the program that changed it also
+  put back its date of change, as a copy with `rsync -t` does. Chrome
+  and Firefox refuse such a file. It is measured under "Point R".
+- The version of Firefox the owner used was not written down.
+
+The work packages follow, one section each.
 
 ## Before the first task
 
