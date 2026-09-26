@@ -774,7 +774,7 @@ same numbers.
   of the error bar; "A project file opened" of the Variants step spec;
   the comparison under the diversity's table. Serves 2, 3 and 5. Needs
   9.2 and work package 6.
-- [ ] 9.5 `e2e/skeleton.spec.ts`. Serves 4. Needs 9.3 and 9.4.
+- [x] 9.5 `e2e/skeleton.spec.ts`. Serves 4. Needs 9.3 and 9.4.
 - [ ] 9.6 The owner accepts the shell, in Firefox by hand as well; two
   rounds expected.
 

@@ -916,3 +916,9 @@ Under way while the owner looks again at the screens of stops 7.5 and
   passed, 24 in each engine; `-t "WS9 D2"` 6 passed, at least 4 asked;
   `npm run screens` 138 passed. Seen in Chromium and WebKit through
   Playwright; not in Firefox.
+- 9.5, commit bf1630a: `e2e/skeleton.spec.ts`, one test for each
+  sentence of `docs/architecture.md` section 10, with axe in each state.
+  At 0.05 the row p0 reads 48, 0.3527, 0.3567, 0.9288, the numbers of
+  the diversity spec. `npx playwright test --project=chromium
+  --project=webkit e2e/skeleton.spec.ts` 10 passed, at least 10 asked,
+  in three runs in a row; the whole suite 294 passed.
