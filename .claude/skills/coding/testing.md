@@ -315,20 +315,35 @@ export default defineConfig({
   under `e2e/`, built into `dist/` only when the variable
   `POPNEI_TEST_PAGES` is set, which `test:e2e` sets, so that it runs
   against the built site and the deployed site does not carry it. From
-  stage 3 there is one, `e2e/plots.html`, where the export of the plots
-  is tested until stage 6 offers it on the screens
-  (`docs/specs/charts/plot2d.md`, decided on 26 September 2026).
+  stage 3 there is one, `e2e/plots.html`, built to
+  `dist/e2e/plots.html`, where the export of the plots is tested until
+  stage 6 offers it on the screens (`docs/specs/charts/plot2d.md`,
+  decided on 26 September 2026). A build without the variable, such as
+  the one of `screens`, leaves the page out, and its tests then fail,
+  the page not found, until the next build with it.
 
 The scripts:
 
 | script | command |
 |---|---|
-| `test:e2e` | `npm run build && playwright test --project=chromium --project=firefox --project=webkit` |
+| `test:e2e` | `POPNEI_TEST_PAGES=1 npm run build && playwright test --project=chromium --project=firefox --project=webkit` |
 | `screens` | `npm run build && playwright test --project=screens` |
 
 `test:e2e` builds first, so it checks the build as well, and names the
 three engines so that it does not also write the screens or run the
 measurements.
+
+On the Mac of the owner, Playwright 1.63.0 cannot launch Firefox, so
+`test:e2e` fails there before its first test. The same check in the
+other two engines is run as
+
+```
+POPNEI_TEST_PAGES=1 npm run build && npx playwright test --project=chromium --project=webkit
+```
+
+with `-g "<tag>"` to select the tests of a deliverable, and Firefox runs
+on GitHub when `main` is pushed (`docs/plans/variants-step.md`, "The
+browsers").
 
 ### The measurements
 
