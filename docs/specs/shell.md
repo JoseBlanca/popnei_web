@@ -456,7 +456,15 @@ the file and some, "The project file cannot be opened: …", do not:
    variants file.
 
 The file is read and checked before the dialog, so that the user is not
-asked to give up their project for a file that does not open. Choosing
+asked to give up their project for a file that does not open. A large
+file can still be being read when the user opens the dialog of Save: a
+project file of 39 MB, of 3 million individuals, took 0.4 s from its
+pick to its opening in Chromium and 2.3 s in WebKit, on the built site,
+on 26 September 2026. Its answer, the opening, the question or the
+dialog of the refusal, waits until that dialog has closed, so that no
+project replaces the one the dialog is saving and no dialog opens over
+another; a dialog it then opens gives the focus back to Open project…
+when it closes, as after any pick. Choosing
 the same file again opens it again. The errors of steps 1 to 3 are in a
 dialog headed by the name of the file, "panel.popnei.json was not
 opened", so that every text is read with the file it is about, with a
