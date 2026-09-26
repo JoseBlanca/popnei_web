@@ -5,6 +5,11 @@
  * by every screen reader. What the announcer writes into it is read out
  * without moving the focus (WCAG 4.1.3). It is out of sight: what it says
  * is already on the screen where it happened.
+ *
+ * It is marked as a live announcer, which React Aria keeps readable while
+ * a dialog is open and makes the rest of the page inert, out of what a
+ * screen reader reads: the end of a read or of a calculation that comes
+ * while the dialog of Save is open is then still heard.
  */
 import { useSyncExternalStore } from "react";
 
@@ -19,7 +24,11 @@ export function StatusRegion(): React.JSX.Element {
     announcer.getState(),
   );
   return (
-    <div role="status" className={classOf(styles, "region")}>
+    <div
+      role="status"
+      data-live-announcer="true"
+      className={classOf(styles, "region")}
+    >
       {text}
     </div>
   );

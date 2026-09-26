@@ -6,6 +6,12 @@
  * application's root. Its Save the project saves through the saving of
  * the entry, under the name it proposes and with no dialog, since the
  * dialog of the header may be what failed.
+ *
+ * Its alert and its status region are marked as live announcers, which
+ * React Aria keeps readable while a dialog is open and makes the rest of
+ * the page inert, so that an error, or what a button of the bar did,
+ * is heard then too; its buttons are inert with the page until the dialog
+ * closes.
  */
 import { useState, useSyncExternalStore } from "react";
 
@@ -86,7 +92,7 @@ export function ErrorBar({
         first === null ? classOf(styles, "empty") : classOf(styles, "bar")
       }
     >
-      <div role="alert">
+      <div role="alert" data-live-announcer="true">
         {first !== null && (
           <p className={classOf(styles, "message")}>
             {barText(first.message, store !== null)}
@@ -114,7 +120,11 @@ export function ErrorBar({
           <Button label="Close" onPress={close} />
         </div>
       )}
-      <p role="status" className={classOf(styles, "status")}>
+      <p
+        role="status"
+        data-live-announcer="true"
+        className={classOf(styles, "status")}
+      >
         {statusText(copying)}
       </p>
       {copying.kind === "failed" && (

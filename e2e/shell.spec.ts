@@ -349,6 +349,12 @@ test("WS9 D3 the status region says the end of each read of the Variants step an
 });
 
 /** The notice, the region of the toast at the end of the page. */
+/** Whether the element of `locator` is inert, or inside an element that
+    is, which a screen reader does not read. */
+async function isInert(locator: Locator): Promise<boolean> {
+  return locator.evaluate((element) => element.closest("[inert]") !== null);
+}
+
 function notice(page: Page): Locator {
   return page.getByRole("region", { name: "Notice" });
 }
@@ -515,4 +521,32 @@ test("WS9 D3 the keyboard's Undo, pressed with the focus on the Undo of the noti
   await expect(status(page)).toHaveText(
     "Undone: the missing data filter changed.",
   );
+});
+
+test("WS9 D3 while a dialog is open, the status region and the error bar's alert and status stay where a screen reader reads them", async ({
+  page,
+}) => {
+  await openPopgen(page);
+  await loadPanel(page);
+  await goTo(page, "Analyses");
+  await page.getByRole("button", { name: "Run" }).click();
+  await header(page).getByRole("button", { name: "Save project" }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Save the project" }),
+  ).toBeVisible();
+
+  // The end of the run, announced while the dialog is open, in a region
+  // the page has not made inert, which takes an element and everything in
+  // it out of what a screen reader reads.
+  await expect(status(page)).toHaveText(/Diversity: done\.$/);
+  expect(await isInert(status(page))).toBe(false);
+  await page.evaluate(() => {
+    setTimeout(() => {
+      throw new Error("test");
+    });
+  });
+  await expect(page.getByRole("alert")).toContainText("test");
+  expect(await isInert(page.getByRole("alert"))).toBe(false);
+  // The bar's own status region, the first of the page.
+  expect(await isInert(page.getByRole("status").first())).toBe(false);
 });
