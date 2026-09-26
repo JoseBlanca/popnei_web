@@ -5,8 +5,9 @@
  * the name of the step and, under it, its state, a word with a symbol
  * beside it, so that the state is not told by colour alone (WCAG 1.4.1);
  * its name for a screen reader is the two, "Variants, To do", which
- * holds the words on the screen (WCAG 2.5.3), the symbol left out. The reason of a step that is not done is its description, and
- * a tooltip on hover and on focus. The link of the step on screen has
+ * holds the words on the screen (WCAG 2.5.3), the symbol left out. The
+ * reason of a step that is not done is its description, and a tooltip on
+ * hover and on focus. The link of the step on screen has
  * `aria-current="step"` and a mark that is not colour alone. Each name is
  * as wide as itself in bold, whether it is in bold or not, so that the
  * links do not move when the step changes (StepLink.module.css).

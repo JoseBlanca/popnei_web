@@ -2,11 +2,11 @@
  * The shell of the population genetics application, what surrounds every
  * step (docs/specs/shell.md): the header, the stepper, the summary line,
  * the step the URL hash names in `<main>`, the status region and the
- * notice, which React Aria draws at the end of the page. When the hash changes,
- * the title of the page names the new step and the focus moves to its
- * `<h1>`, since a screen reader says nothing of a content replaced without
- * a new page (react.md, "Moving focus"); not when the page opens, where
- * the browser puts the reader at the start.
+ * notice, which React Aria draws at the end of the page. When the hash
+ * changes, the title of the page names the new step and the focus moves
+ * to its `<h1>`, since a screen reader says nothing of a content replaced
+ * without a new page (react.md, "Moving focus"); not when the page opens,
+ * where the browser puts the reader at the start.
  */
 import { useEffect, useRef } from "react";
 

@@ -9,10 +9,11 @@
  * screen reader reaches in its reading and reads with the button, by
  * `aria-describedby`; a disabled button alone would say neither why nor
  * what to do (docs/specs/analyses/diversity.md, "Accessibility", the
- * locked reason). A button may instead have a hint, what pressing it would
+ * locked reason). A button may also have a hint, what pressing it would
  * do, which is shown in a tooltip on hover and on the focus of the
  * keyboard and is its description as well, as Undo and Redo have
- * (docs/specs/shell.md, "The header").
+ * (docs/specs/shell.md, "The header"); a button given both is described
+ * by the two, the description first.
  */
 import { useId } from "react";
 import { Button as AriaButton } from "react-aria-components";
