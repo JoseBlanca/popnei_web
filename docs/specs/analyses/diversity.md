@@ -11,7 +11,10 @@ goes, and the populations are sent with the individuals the filters
 keep, a population left with none left out and named
 (`docs/architecture.md`, section 4, "The checks of the Variants step");
 `numCheckNumbers` is `null` only with a threshold on the individuals; the
-result carries popnei's counts of its pass. The code of stage 2 is in
+result carries popnei's counts of its pass; and on 26 September 2026,
+after its code, for `statisticsFailedText`, the function that gives the
+words of the statistics that failed, which the spec gave with no name.
+The code of stage 2 is in
 `src/core/analyses/diversity.ts`. This spec gives the first analysis of the population genetics
 application, in its form for the walking skeleton: the module
 `src/core/analyses/diversity.ts`, which says what the diversity of each
@@ -610,7 +613,28 @@ export function diversityCsv(r: DiversityResult): string;
 
 /** The words of a refusal of popnei, for the error state of the panel. */
 export function refusalText(message: string, p: Project): string;
+
+/** A failure of a calculation that is not popnei's refusal. */
+export type Failure = Extract<AnalysisError, { readonly kind: "failed" }>["error"];
+
+/** The words of the error state when the statistics of each individual
+    that a Run waited for were refused or failed, the store's error with
+    `ofStatistics`: the first row of "Its words". */
+export function statisticsFailedText(
+  error: AnalysisError,
+  p: Project,
+  failureText: (failure: Failure) => string,
+): string;
 ```
+
+`statisticsFailedText` gives the first sentence of that row, then, for a
+refusal of popnei, `refusalText` of `individualChecks.ts`, and, for
+another failure, the words `failureText` gives it. Those are the words
+the frame of every panel gives a failure, `failureText` of
+`src/ui/analyses/words.ts`, which core cannot import, so the panel passes
+them in; the rows of the diversity's own `refusalText` are never used,
+since they would name the diversity for a calculation that was not its
+own.
 
 `warnings` and `checkNumbers` take a `JobResult`, and the store gives
 them only results of their own requests (`docs/specs/core/store.md`,
