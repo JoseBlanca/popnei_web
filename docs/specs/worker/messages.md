@@ -1,17 +1,21 @@
 # The messages of the two workers
 
-25 September 2026, approved by the owner on 25 September 2026. This spec gives
+25 September 2026, approved by the owner on 25 September 2026; built in
+`src/worker/messages.ts`; revised on 26 September 2026 for stage 3 of
+`docs/build-order.md`, the Variants step whole, as the architecture
+approved by the owner that day has it: the request `write` and its
+answer `written`, a file of the filtered variants made in the calculation
+worker; the checks of the jobs and results of the three analyses of the
+Variants step; the counts of the pass in every result; and
+`PROTOCOL_VERSION` 2. The revision is not yet approved. This spec gives
 `src/worker/messages.ts`: the messages the page and each of the two
-workers send each other in the walking skeleton, the smallest
-application that goes through every part once (stage 2 of
-`docs/build-order.md`), the functions that check
-every message when it arrives, and the number of the version of these
-messages. The workers are threads of the browser tab beside the page,
+workers send each other, from the walking skeleton, the smallest
+application that goes through every part once (stage 2), on, the
+functions that check every message when it arrives, and the number of
+the version of these messages. The workers are threads of the browser tab beside the page,
 the calculation worker, which runs popnei, and the light worker, which
 reads the individuals file (`docs/architecture.md`, section 1); they
-share nothing with the page but these messages. There is no code of this
-module yet; `src/worker/protocol.ts`, the types core names, exists since
-stage 1. It develops sections 5 and 6 of `docs/architecture.md` and the
+share nothing with the page but these messages. It develops sections 5 and 6 of `docs/architecture.md` and the
 row `messages.ts` of its section 9, and builds on
 `docs/specs/worker/protocol.md`, whose request, `Run`, outcome and
 errors it does not repeat. The page's side is
@@ -19,7 +23,7 @@ errors it does not repeat. The page's side is
 `docs/specs/worker/runner.md`, the calculation worker, and
 `docs/specs/worker/individuals.md`, the light worker and its reader of
 CSV and TSV; the request of each analysis and its result are in the
-analysis's spec, `docs/specs/analyses/diversity.md` in stage 2.
+analysis's spec under `docs/specs/analyses/`.
 
 A request is a message of the page that asks a worker for something; an
 answer is the message of the worker that ends it. Every request carries
@@ -39,13 +43,14 @@ is never used.
 
 ### The requests and their answers
 
-The walking skeleton has three requests, and each gets one answer, or
-the worker that received it is ended (below):
+There are four requests, and each gets one answer, or the worker that
+received it is ended (below):
 
 | request | to | its answer, when it goes right | when the input is refused |
 |---|---|---|---|
 | `open`: open the variants file of a load | the calculation worker | `opened`, the individuals and the ploidy | `refused`, popnei's message; `reopenFailed`, a file the browser no longer reads |
 | `run`: calculate the result of an analysis | the calculation worker | `result`, under the key it was asked with, after its `progress` | `refused`, popnei's message; `reopenFailed`, a file the browser no longer reads |
+| `write`: write the filtered variants as a file | the calculation worker | `written`, the file under the key it was asked with, after its `progress` | as `run` |
 | `readIndividuals`: read the individuals file | the light worker | `individuals`, the table, or the ways the file is wrong | none: a file the reader refuses is its answer |
 
 - **`open` carries the load**: the load id, the `File` the user picked,
@@ -63,13 +68,29 @@ the worker that received it is ended (below):
 - **`opened` carries what popnei gives once the file is open**, its
   `individuals` and its `ploidy`, with no pass over the variants
   (`docs/architecture.md`, section 6). The number of variants comes later,
-  in the result of the first run, and it is the analysis's result that
-  holds it (`docs/specs/core/store.md`, `numVarsOf`).
+  in the counts of the pass of the first run, which every result holds
+  (`docs/specs/worker/protocol.md`, `PassStats`; `docs/specs/core/store.md`,
+  `countsOf`).
 - **`run` carries the key and a `Job`**, and `result` carries the key back
   with a `JobResult`, as `.claude/skills/coding/worker.md` gives them: the
   page puts the result in its cache of results under the key the request
   was made with, since the user may have changed a setting while it ran
   and the project may then give that analysis another key.
+- **`write` carries the key and a `WriteJob`**
+  (`docs/specs/worker/protocol.md`): the format, `nei`, the load, the
+  filters of the variants and the list of the individuals kept. Its
+  key is the store's, made from the load, the filters and the format
+  (`docs/architecture.md`, section 5), and it comes back in `written`, so
+  that the page ties the file to the settings it was written with, as it
+  does a result.
+- **`written` carries the key and a `Written<Blob>`**: the file as a
+  `Blob`, the browser's object for a file made in the page, and the
+  counts of its pass. The runner makes the `Blob` in the worker from the
+  bytes popnei gives, and the worker posts it; a `Blob` crosses to the
+  page as a handle, with no copy of its bytes, as a `File` does, and
+  nothing is transferred (`docs/specs/worker/runner.md`, "The written
+  file"). Its `numBytes` is the `size` of the `Blob`, so that core,
+  which cannot name a `Blob`, reads the size (`protocol.md`, `Written`).
 - **`readIndividuals` carries the `File` and the options of a CSV**, as
   the source holds them (`docs/specs/core/project.md`,
   `IndividualsSource`). The walking skeleton reads a CSV or a TSV only; an
@@ -97,8 +118,8 @@ the worker that received it is ended (below):
   told the file may have changed and to load it again, and not that the
   calculation crashed (point B of `docs/specs/stage-2-open-points.md`).
   The worker goes on.
-- **`progress`** reports how far a `run` has gone, as popnei's
-  `Progress` gives it (below, "The progress"). A `run` may get any
+- **`progress`** reports how far a `run` or a `write` has gone, as
+  popnei's `Progress` gives it (below, "The progress"). Either may get any
   number of them before its answer, and an `open` gets none.
 
 ### The File travels in the request that needs it
@@ -126,7 +147,7 @@ a file.
 
 A `progress` carries the four fields of popnei's `Progress`
 (`js/popnei/src/variant.ts`), under their names, with the id of the
-`run`:
+`run` or the `write`:
 
 - `bytesRead`: the bytes of the file the pass has read, `numBytes` at
   most;
@@ -149,9 +170,9 @@ which the client passes to the store, holds the same four fields, a
 change to that approved file (`docs/specs/stage-2-open-points.md`,
 "Changes to approved files").
 
-`PROTOCOL_VERSION` stays 1: the messages of the draft before this one,
-whose `progress` had `done` and `total`, were never built nor deployed,
-so no worker of another build can send them.
+`PROTOCOL_VERSION` was 1 in the walking skeleton, whose messages were
+built and deployed; it is 2 from stage 3, since `write`, `written`, the
+jobs and the results change (below, "The ready message").
 
 ### A worker that cannot go on
 
@@ -217,8 +238,8 @@ check, because they differ in `ready`:
   a worker whose `ready` has other fields is still told apart as a worker
   of another version and not taken for a defect.
 - **`PROTOCOL_VERSION` is raised with any change to a message**, to `Job`
-  or `JobResult`, or to a type of `protocol.ts` a message carries. It is
-  1 in the walking skeleton.
+  or `JobResult`, or to a type of `protocol.ts` a message carries. It was
+  1 in the walking skeleton, and is 2 from stage 3.
 
 The names of the built files carry a hash of what they hold
 (`.claude/skills/coding/worker.md`, "The wasm files on GitHub Pages"), so
@@ -235,13 +256,19 @@ one comparison.
 `.claude/skills/coding/worker.md` gives them, since the analyses of core
 build a `Job` and read a `JobResult` and core imports no `messages.ts`.
 Each analysis adds one member to each, tagged with its id in the field
-`analysis`, and its spec gives the fields; stage 2 has the diversity
-alone. What every member keeps, decided here:
+`analysis`, and its spec gives the fields; stage 3 has four, the
+diversity and the three analyses of the Variants step. What every member
+keeps, decided here:
 
-- **Every `Job` holds `fileId`**, the load id of the variants file it
-  reads. The client sends a job to the worker that has opened that load
+- **Every `Job` names its pass**: `fileId`, the load id of the variants
+  file it reads, `filters`, and, in a job of an analysis that reads the
+  filters of individuals, `individuals`, the list of the individuals kept
+  or `null` (`docs/specs/worker/protocol.md`). A `WriteJob` holds the
+  three. The client sends a job to the worker that has opened that load
   (`docs/specs/worker/client.md`), and the runner refuses as `badRequest`
   a job of another load than the one it opened.
+- **Every `JobResult` holds `passStats`**, the counts of its pass, and so
+  does a `Written`.
 - **Its fields are JSON values**, text, numbers, booleans, `null`, lists
   and objects, and its names of the user's files, the populations among
   them, are pairs and never the names of fields, as
@@ -280,10 +307,20 @@ and of `.claude/skills/coding/worker.md`, "Validation at the boundary":
 - **What the types tie together is checked too**: a `.nei` file has no
   read options and a VCF has them; every row of the individuals table is
   as long as its header, and there is one type for each column; every
-  array of a `JobResult` is as long as its `pops`, so that no number is
-  put under another population; a population of a `Job` is a pair, its
-  name and its individuals; the refusals of the reader are the kinds its
-  spec gives.
+  array of a diversity result is as long as its `pops`, so that no number
+  is put under another population; the two arrays of the statistics of
+  each individual are as long as each other; the `counts` of each
+  histogram of the variants are one fewer than its `binEdges`; a
+  population of a `Job` is a pair, its name and its individuals;
+  `individuals` of a job is `null` or a list of texts; the fields of
+  `passStats.filtering` are kinds of `VariantFilter`; `filters` of a
+  `variantChecks` job is empty; the `numBytes` of a `written` is the
+  `size` of its file; the refusals of the reader are the kinds
+  its spec gives. That the statistics of each individual are those of the
+  individuals of the file, in its order, that a list of individuals is
+  not empty, and that `passStats.filtering` follows the filters of the
+  job, are not in the message: the runner checks the first two and
+  builds the third (`docs/specs/worker/runner.md`).
 - **A message that is refused is a defect of ours**, since both sides are
   our code, and never passed on half read. What the page does with it is
   in `docs/specs/worker/client.md`; a runner answers it with
@@ -297,7 +334,7 @@ Every field is `readonly`, and every array `readonly T[]`, in the code;
 The version of the messages.
 
 ```ts
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2;
 ```
 
 The requests of the calculation worker, and what it sends back.
@@ -307,16 +344,18 @@ export type ToRunner =
   | { kind: "open"; id: number; fileId: string; file: File;
       format: "vcf" | "nei";
       readOptions: { ploidy: number; onlyPassed: boolean } | null } // null for .nei
-  | { kind: "run"; id: number; key: string; job: Job };
+  | { kind: "run"; id: number; key: string; job: Job }
+  | { kind: "write"; id: number; key: string; job: WriteJob };
 
 export type FromRunner =
   | { kind: "ready"; protocol: number; popneiVersion: string }
   | { kind: "opened"; id: number; individuals: string[]; ploidy: number }
   | { kind: "result"; id: number; key: string; result: JobResult }
+  | { kind: "written"; id: number; key: string; result: Written<Blob> } // the file, as a Blob
   | { kind: "refused"; id: number; message: string }        // popnei refused the input
   | { kind: "reopenFailed"; id: number; name: string; message: string } // the file no longer reads
   | { kind: "progress"; id: number; bytesRead: number; numBytes: number;
-      pass: number; numPasses: number }                      // popnei's Progress, of a run
+      pass: number; numPasses: number }                      // popnei's Progress, of a run or a write
   | WorkerStop;
 
 /** The worker cannot go on; it closes itself after posting it. */
@@ -400,6 +439,12 @@ apart from `object`.
 - **An empty individuals file** is an answer, `individuals` with
   `{ kind: "failed", error: { kind: "empty" } }`, and not a failure of the
   worker.
+- **A `written` of no variant**, `passStats.numVars` 0, passes the check: popnei
+  writes such a file (`docs/specs/worker/protocol.md`, "The cases"), and
+  what the step does with it is its own.
+- **A `run` or a `write` whose `individuals` is an empty list** passes the
+  check, as a range would; the runner answers it `badRequest`, since core
+  never sends one.
 
 ## How it runs
 
@@ -419,11 +464,13 @@ with a refusal. Node has `File`, so the requests are built with `new
 File(["…"], "panel.nei")`.
 
 - **Every kind is accepted**: a message of each kind, the `open` of a VCF
-  and of a `.nei` file, a diversity `run`, its `progress`, `{ kind:
+  and of a `.nei` file, a `run` of each of the four jobs, with
+  `individuals` `null` and with a list, its `progress`, `{ kind:
   "progress", id: 3, bytesRead: 259376, numBytes: 261490, pass: 1,
-  numPasses: 1 }`, and its `result`, a `reopenFailed`, an
-  `individuals` read and one refused, gives `ok` with a message deeply
-  equal to it. A property, with fast-check drawing messages of every kind
+  numPasses: 1 }`, and its `result`, a `write` and its `written`, whose
+  file is `new Blob([new Uint8Array(3594)])`, a
+  `reopenFailed`, an `individuals` read and one refused, gives `ok` with a
+  message deeply equal to it. A property, with fast-check drawing messages of every kind
   of the two answers: `parseFromRunner(structuredClone(m))` is `ok` and
   deeply equal to `m`, and the same for `parseFromFilesRunner`, since what
   arrives at the page is the structured clone of what the worker posted.
@@ -440,16 +487,27 @@ File(["…"], "panel.nei")`.
   row of the table one cell short,
   `wrongLength`; three types for a table of four columns; a refusal of
   the reader of a kind its spec does not give; a light worker's `ready`
-  with a `popneiVersion`; a calculation worker's `ready` without one.
-- **The version**: a `ready` with `protocol: 2` and no other field gives
-  `otherProtocol` with 2 from both checks of the page; with `protocol:
-  "1"`, `wrongType`.
+  with a `popneiVersion`; a calculation worker's `ready` without one; a
+  diversity `job` with the field `individualFilters` of stage 2,
+  `extraFields`, and without `individuals`, `missingFields`; a result
+  without `passStats`, and one with `numVars` at its top, as stage 2 had
+  it; a `passStats.filtering` with a field `regions`, before popnei has
+  that filter, `extraFields`; an `obsHetRate` of 199 numbers beside a
+  `missingGtRate` of 200, `wrongLength`; `binEdges` of 41 numbers and
+  the `counts` of the MAF of 41, `wrongLength`; a `variantChecks` job
+  with a filter; a `written` whose `numBytes` is not its file's `size`;
+  one whose `file` is an `ArrayBuffer`, `wrongType`.
+- **The version**: a `ready` with `protocol: 1`, the walking skeleton's,
+  and no other field gives `otherProtocol` with 1 from both checks of the
+  page, and so does `protocol: 3` with 3; with `protocol: "2"`,
+  `wrongType`.
 - **`describeMessageError`** names the path and the kind of the message:
   of `wrongType` at `job.filters.0.maxAllowedMissingRate` it gives a text
   that holds both.
 
-That a `File` and the typed arrays arrive through a real worker as the
-checks expect is seen in the browser, by the flow of the walking skeleton
+That a `File`, the typed arrays and a `Blob` arrive through a real
+worker as the checks expect is seen in the browser, by the flow of the
+walking skeleton and that of the Variants step
 (`.claude/skills/coding/testing.md`, "The walking skeleton, as a flow").
 
 ## Where this departs from worker.md
@@ -474,6 +532,14 @@ spec (`docs/specs/stage-2-open-points.md`, "Changes to approved files").
 - `PROTOCOL_VERSION` is in `messages.ts`, beside the messages it
   versions, and not in `protocol.ts`: core has no use for it.
 
+From stage 3, one more, which the skill takes when the owner approves
+this revision: a file written in the calculation worker crosses as a
+`Blob` the runner made, in `written`, and not as a `Uint8Array`
+transferred to the page and made a `Blob` there, as "Reading the files of
+the user" of `worker.md` has it, so that a copy the engine makes of up to
+a gigabyte into the `Blob` is made off the page (`docs/architecture.md`,
+section 6, "The files written").
+
 ## Open points
 
 None of its own.
@@ -482,8 +548,9 @@ None of its own.
 
 - `Run`, `Outcome`, `RunError`, `Progress`, the filters and the
   individuals table: `docs/specs/worker/protocol.md`.
-- The fields of the diversity's `Job` and `JobResult`:
-  `docs/specs/analyses/diversity.md`.
+- The fields of each analysis's `Job` and `JobResult`: its spec under
+  `docs/specs/analyses/`, and the block of `docs/specs/worker/protocol.md`
+  that follows them.
 - What the runners do with each request, and which throws are `refused`
   and which `crashed`: `docs/specs/worker/runner.md` and
   `docs/specs/worker/individuals.md`.
@@ -492,5 +559,8 @@ None of its own.
   runner's spec.
 - The requests of the xlsx and of the zip of the report, and the refusal
   of the files wasm: stages 4 and 6.
+- The request of the regions of a BED file, to the light worker, and a
+  `written` of a VCF: with popnei's release that has the filter of the
+  regions and the writer of the VCF.
 - The intermediate results the calculation worker keeps, and their keys
   inside a `Job`: from stage 4, with the PCA.

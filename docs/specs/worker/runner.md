@@ -1,20 +1,25 @@
 # The runner of the calculation worker
 
-25 September 2026, approved by the owner on 25 September 2026. The calculation
+25 September 2026, approved by the owner on 25 September 2026, and built
+in `src/worker/runner.ts` and `runnerWorker.ts` with the walking
+skeleton, the smallest application that goes through every part once
+(stage 2 of `docs/build-order.md`). Revised on 26 September 2026 for
+stage 3, the Variants step whole, as the architecture approved by the
+owner that day has it; the revision is not yet approved. The calculation
 worker is the thread of the browser tab, beside the page, that runs
 popnei, so that a calculation does not freeze the page
 (`docs/architecture.md`, section 1). Its runner is the code that answers
 the page's requests there: it loads popnei, opens the variants file the
-user picked, and runs the diversity of the walking skeleton, the
-smallest application that goes through every part once (stage 2 of
-`docs/build-order.md`). This spec gives what the runner does with each
-request, what it answers when popnei refuses or something breaks, what it
-holds in memory, and the numbers popnei gives on the fixtures, which its
-tests assert. It develops the row `runner.ts` of section 9 of
-`docs/architecture.md`, and sections 5, 6 and 11. There is no code of it
-yet; the worker of the probe of stage 0, `src/probe/probeWorker.ts`,
-already loads popnei in Chromium, Firefox and WebKit
-(`docs/plans/site.report.md`). The owner decided on 25 September 2026
+user picked, puts on it the filters of the variants and the list of the
+individuals kept that each request gives, and runs the diversity, the
+three analyses of the Variants step, the statistics of each individual,
+the histograms of the variants and the counts of what each filter kept,
+and the write of the filtered variants as a `.nei` file. This spec gives
+what the runner does with each request, what it answers when popnei
+refuses or something breaks, what it holds in memory, and the numbers
+popnei gives on the fixtures, which its tests assert. It develops the
+row `runner.ts` of section 9 of `docs/architecture.md`, and sections 4,
+5, 6 and 11. The owner decided on 25 September 2026
 that stage 2 builds on popnei's release `js-v0.1.0-dev.2`, made that day
 from popnei's `main` at `b3f77c8`, whose `openVcf` and `openVars` take
 the `File` itself and read it by ranges, and whose `Variants` tells the
@@ -45,7 +50,15 @@ The words used here:
 - The **counts of the pass**, `passStats` of popnei's result: `numVars`,
   the variants the pass gave after every filter, and `filtering`, for each
   filter in its order, the variants it was given, `varsProcessed`, and
-  those it kept, `varsKept` (`js/popnei/src/filters.ts`).
+  those it kept, `varsKept` (`js/popnei/src/filters.ts`). The runner
+  gives them on as `PassStats` (`docs/specs/worker/protocol.md`).
+- The **list of the individuals kept** is the one core makes from the
+  filters of individuals and the statistics of each individual, and a job
+  carries, `individuals`, `null` for every individual, in the jobs of the
+  analyses that read the filters of individuals and in a write
+  (`docs/specs/worker/protocol.md`). The runner puts it on the
+  `Variants` last, with popnei's `filterIndividuals`, which popnei lists
+  among the steps with the kind `"individuals"`.
 - The **key** of a result is the text the page makes from everything the
   result was calculated from; the page sends it with each request and
   puts the result in its cache under it (`docs/architecture.md`, section
@@ -188,7 +201,7 @@ answered `badRequest` (`messages.md`, "A worker that cannot go on"). The
 client starts a new worker for a new load, which is also how the memory
 of the old one is given back (`docs/architecture.md`, section 5).
 
-### The filters: the file opened again when they change
+### The steps: the file opened again when they change
 
 popnei puts a filter on the `Variants` for good, in this release as in
 the one before: a step is never taken off, and a second filter of one
@@ -203,21 +216,44 @@ diversity, after the user moved the threshold, would be refused with
 the variants that the stricter of the two keeps alone", as the release
 gave in node on 25 September 2026.
 
-For each request the runner reads the steps its `Variants` holds from
-popnei's `steps`, and:
+The steps a job asks for are its filters of the variants, in their
+order, and then, when the job has `individuals` and it is a list, the
+step of the individuals with that list; a job without the field, or with
+`null`, keeps every individual (`docs/specs/worker/protocol.md`, "Job and
+JobResult").
+The list comes last, so the filters of the variants count over every
+individual of the file, as the owner decided on 26 September 2026
+(`docs/architecture.md`, section 2): popnei's `filterByMissingData` put
+after `filterIndividuals` would divide by the individuals kept
+(`js/popnei/src/variant.ts`). Every request over the variants, a `run`
+of any analysis and a `write`, goes through the same rule. For each, the
+runner reads the steps its `Variants` holds from popnei's `steps`, and:
 
-- **When those steps are the job's filters**, the same kinds in the same
-  order, each argument of the step equal with `===` to the field of the
-  same name of the filter, it runs on that `Variants` as it is.
+- **When those steps are the job's**, the same kinds in the same order,
+  each argument of a filter's step equal with `===` to the field of the
+  same name of the filter, and the step of the individuals, when there is
+  one, naming the same individuals in the same order, compared name by
+  name, it runs on that `Variants` as it is.
 - **When the `Variants` holds no step**, as it does after the open, it
-  puts the job's filters on it, in their order, and runs. Without this
+  puts the job's steps on it, in their order, and runs. Without this
   rule the first run of every load with a filter would open the file a
   second time, since a `Variants` just opened holds none of its filters.
 - **Otherwise, or when it holds no `Variants`**, after an open again that
   popnei refused (below), **it opens the file again**: it frees the
   `Variants` and holds none, opens the `File` again with the same format
-  and read options, as at the open, and puts the job's filters on the new
+  and read options, as at the open, and puts the job's steps on the new
   one, in their order.
+
+So a `Variants` whose steps are the job's filters of the variants, and a
+job that adds the list of individuals after them, is opened again, and
+not given the list at its end: the rule of stage 2, below, spares the
+reading of one range for the `Variants` just opened alone, and a rule of
+prefixes would be one more way for the steps and the job to disagree.
+Seen in node on 26 September 2026 with `js-v0.1.0-dev.2`: after
+`filterByMissingData(0.05)` and `filterIndividuals` of 125 individuals,
+`steps` is `[{ kind: "missing_data", args: { maxAllowedMissingRate: 0.05
+} }, { kind: "individuals", args: { individuals: ["s000", "s003", …] }
+}]`, the names in the order they were given.
 
 Opening the file again reads what the open read, the first range of 4
 MiB, and of a `.nei` file its last ten bytes and its footer, and not the
@@ -270,23 +306,33 @@ a browser can open.
 
 The runner puts each filter with its method, `filterByMissingData`,
 `filterByMaf`, `filterByObsHet`, `filterByLd`, with the numbers of the
-job as they are, in the order of the job: the walking skeleton has the
-missing data filter alone, and the other three are one line each. The
-number the user typed is the number popnei is given, so a variant with a
-missing rate at the threshold is kept (`docs/specs/worker/protocol.md`).
+job as they are, in the order of the job, which is the fixed order of
+the project; the runner does not sort them. The number the user typed is
+the number popnei is given, so a variant with a missing rate at the
+threshold is kept (`docs/specs/worker/protocol.md`). Then it puts the
+list of the individuals, when the job has one, with
+`filterIndividuals(job.individuals)`. An empty list is a defect of the
+page, answered `badRequest` before any step is put: core never sends one,
+since an analysis cannot start when the filters keep no individual
+(`docs/architecture.md`, section 4). A list that names an individual
+twice, or one the file does not have, popnei refuses with a message that
+names it, and the runner answers `refused` with it; core makes the list
+from the individuals of the file, so this is a defect too, which the user
+would read as popnei's message.
 
 ### The diversity
 
-A diversity job holds the load id, the filters of the variants and of
-the individuals, the populations, as pairs of a name and its
-individuals in the order of the individuals file, and the two options of
-the diversity, `minNumIndividuals` and `polyThreshold`
-(`docs/specs/analyses/diversity.md`, `DiversityJob`). The runner:
+A diversity job holds its pass, the load id, the filters of the variants
+and the list of the individuals kept, the populations, as pairs of a
+name and its individuals in the order of the individuals file, only
+individuals kept and none empty, and the two options of the diversity,
+`minNumIndividuals` and `polyThreshold` (`docs/specs/analyses/diversity.md`,
+`DiversityJob`). After the steps are on the `Variants` (above), the
+runner:
 
 1. Checks the job: no two populations of one name, since the object
    popnei takes would keep the last of them and silently give one
-   population fewer; and no filter of individuals, which the runner of
-   stage 2 does not apply (below). Either is `badRequest`.
+   population fewer. It is `badRequest`.
 2. Sets the function that is told the progress with
    `variants.onProgress`: a function of the runner's that calls the
    `told` of the run, which the worker's script makes post each
@@ -301,10 +347,11 @@ the diversity, `minNumIndividuals` and `polyThreshold`
    polyThreshold })` of `js/popnei/src/stats.ts`. The owner decided on
    25 September 2026 that the diversity is calculated with
    `calcPopDiversity`, with the same three columns; that function of the
-   release gives none of them, and the runner calls `calcPerVarDistribs`
-   of the same release until the owner confirms (point D of
-   `docs/specs/stage-2-open-points.md`, and
-   `docs/specs/analyses/diversity.md`, "What it does"). popnei takes the
+   release gives none of them, so they come from `calcPerVarDistribs` of
+   the same release, as the owner settled with the approval of this spec,
+   and `calcPopDiversity` waits for stage 5 (point D of
+   `docs/specs/stage-2-open-points.md`, "What the owner decided with the
+   approval"). popnei takes the
    populations as an object whose field names are the populations, and
    the runner builds it with `Object.fromEntries(job.pops)`. A population
    named `__proto__` is the reason: in an object written as `{ ... }`
@@ -332,39 +379,164 @@ the diversity, `minNumIndividuals` and `polyThreshold`
    individuals of each population it gave popnei; `unbiasedExpHet`,
    `obsHet` and `polyRatio`, from `unbiasedExpHet.mean`, `obsHet.mean`
    and `polyVarsRatio.polyRatio`; `numVarsWithValue`, from
-   `polyVarsRatio.totNumVariantsWithData`; `numVars`, the variants the
-   filters kept, `passStats.numVars`; and `numVarsRead`. popnei types
+   `polyVarsRatio.totNumVariantsWithData`; and `passStats`, the counts of
+   the pass (below, "The counts of every pass"). popnei types
    each of the three statistics as possibly `null`, which it gives for a
    statistic not asked for; the runner asks for all three, so a `null`
    is a defect of ours, thrown.
 
-`numVarsRead` is the number of variants of the file, which the step of
-the variants shows: the number the file gives before the filters of the
-application, `varsProcessed` of the first filter of the job in the
-counts of the pass, `passStats.filtering`, or `passStats.numVars` when
-the job has no filter (`docs/specs/steps/variants.md`). The store
-records it into the load through `numVarsOf`, the function it is given
-to find that number in a result of any kind (`docs/specs/core/store.md`),
-which `src/core/apps.ts` gives (`docs/specs/entry.md`).
-For a VCF read with only the passed variants, it counts those.
+### The counts of every pass
 
-The filters of individuals wait for stage 3, as
-`docs/specs/worker/protocol.md` has it: how the runner makes of them the
-one list it gives `filterIndividuals` is the spec of that stage. Two of
-them, the thresholds on the missing rate and the heterozygosity of each
-individual, need a pass of `calcPerIndividualStats` over variants that
-stage 3 has to choose, and where the list goes among the filters of the
-variants changes their numbers, since a filter of the variants put after
-`filterIndividuals` divides by the individuals kept
-(`js/popnei/src/variant.ts`). No screen of stage 2 sets one; a project
-file can hold one, and the diversity is then locked, as the owner decided
-on 25 September 2026, with the words `docs/specs/analyses/diversity.md`
-gives in its table "Why it cannot run", so core never sends such a job.
+Every request over the variants gives back the counts of its pass as
+`PassStats` (`docs/specs/worker/protocol.md`), popnei's `passStats`
+copied by one function of the runner, which checks them against the
+job's filters:
+
+- `numVars`, `passStats.numVars`, the variants the pass gave after every
+  step;
+- `filtering`, a field for each filter of the job, under its kind, put in
+  the order of the job's filters, from the entry of popnei's
+  `passStats.filtering` under that kind. A filter of the job with no
+  entry there, or an entry of a kind the job does not have, is a defect
+  of ours, thrown: the step of the individuals has no entry, and every
+  filter of the variants has one.
+
+The store finds the number of variants of the file in a result of any
+kind through `countsOf`, which `src/core/apps.ts` gives in the place of
+`numVarsOf` (`docs/architecture.md`, section 4, "What each filter
+kept"): `varsProcessed` of the first filter, or `numVars` when the job
+had none; of a VCF read with only the passed variants, it counts those.
+It
+records that number into the load, and fills the counts beside the
+filters from any pass that had the project's filters. Seen in node on 26
+September 2026 with `js-v0.1.0-dev.2`, on `panel.nei` with the missing
+data filter at 0.05, the heterozygosity filter at 0.9 and the MAF filter
+at 0.95, the counts were `missing_data` 1,200 to 1,152, `obs_het` 1,152
+to 1,152 and `maf` 1,152 to 1,128, `numVars` 1,128, whether or not a
+list of individuals came after them, as section 2 of the architecture
+measured it.
+
+Every request over the variants sets the function of the progress and
+tells a throw of `told` from popnei's refusal as step 2 of the diversity
+does, and catches popnei's refusal at its one call to popnei, as below.
 
 The runner computes no key and never reads one. The worker's script
-takes the key from the `run` request and puts it, as it came, into the
-`result`, so a result is always filed under the key it was asked for
+takes the key from the `run` or `write` request and puts it, as it came,
+into the `result` or the `written`, so a result is always filed under the
+key it was asked for
 (`docs/architecture.md`, section 5).
+
+### The statistics of each individual
+
+An `individualChecks` job holds its pass alone, the filters of the
+variants of the project and no list of individuals, since the statistics of
+each individual are counted over the variants the filters keep and over
+every individual, as the owner decided on 26 September 2026
+(`docs/architecture.md`, section 4; `docs/specs/analyses/individualChecks.md`).
+The runner calls `calcPerIndividualStats(variants)` of
+`js/popnei/src/stats.ts` and gives back `missingGtRate` and `obsHetRate`
+as popnei gives them, one number per individual, with `passStats`. The
+names are not sent: core has them, the individuals of the load, in the
+order of the file (`docs/specs/analyses/individualChecks.md`). So the
+runner checks that popnei's `individuals` are those the open of the file
+gave, the same names in the same order, and a difference is a defect
+of ours, thrown, since the numbers would then be read under other
+names. popnei's arrays are its own copies out of the memory of wasm
+(`calcPerIndividualStats`), so the runner posts them as they are.
+
+An individual with no called genotype among the variants of the pass has
+a missing rate of 1 and a heterozygosity of NaN, which crosses as it is;
+the filter by heterozygosity of core removes it (`docs/architecture.md`,
+section 13, point 4). Seen in node on a VCF of two individuals and two
+variants, one individual missing at both: `missingGtRate` `[0, 1]`,
+`obsHetRate` `[0.5, NaN]`.
+
+### The histograms of the variants
+
+A `variantChecks` job holds a pass with no filter and no list of
+individuals, since the histograms are of every variant and every
+individual of the file (`docs/architecture.md`, section 4), and three
+options, `minNumIndividuals`, 0, and the bins, `numBins` and `range`
+(`docs/specs/analyses/variantChecks.md`). The runner calls
+`calcPerVarDistribs(variants, { stats: ["maf", "obs_het",
+"unbiased_exp_het"], minNumIndividuals, histKwargs: { numBins, range }
+})` with no `pops`, which popnei takes as one population, `pop`, of every
+individual the pass gives. It gives back `binEdges`, one copy of popnei's
+`histBinEdges`, which popnei's three distributions share as one array
+read only; and, of each of the three, `mean`, the one number of popnei's
+`mean`, and `counts`, popnei's `histCounts`, `numBins` numbers for the
+one population; with `passStats`.
+
+With `minNumIndividuals` 0 a variant has a value whenever one genotype
+at least is called there; a variant with none has no value and is in no
+bin, so the counts of a histogram add up to the variants with something
+called (`docs/specs/worker/protocol.md`, "The cases"). The histogram of
+the missing rate of each variant comes with popnei's release that has
+it.
+
+### The counts of the filters
+
+A `filterCounts` job holds its pass, the filters of the variants of
+the project and no list of individuals, since the list comes after them
+and changes none of their counts. The runner iterates popnei's
+`variants.iterBlocks({ fields: [] })` of `js/popnei/src/variant.ts` to
+its end, keeping nothing of the blocks, and gives back `passStats` from the
+`passStats` of the iteration, read after it. The architecture, approved by the owner on 26 September 2026, chose it
+over a calculation because its counts come also when the
+filters keep no variant (`docs/architecture.md`, section 4): on
+`panel.nei` with the missing data filter at 0.05 and the MAF filter at 0,
+the iteration gave no block and the counts `missing_data` 1,200 to 1,152
+and `maf` 1,152 to 0, where every calculation of popnei refuses the
+pass, seen in node on 26 September 2026. `fields: []` asks for the
+genotypes alone, and popnei still copies every block of genotypes out of
+wasm, which is the cost section 11 of the architecture measures against
+a pass of the diversity. What the iteration throws, it throws at a
+block, and the runner catches it around the whole iteration as it would
+a call.
+
+### The written file
+
+A `write` request holds a key and a `WriteJob`: its pass, the filters of
+the variants and the list of the individuals kept of the project, and
+the format, `nei` (`docs/specs/worker/protocol.md`). After the steps are
+on the `Variants` (above), the runner:
+
+1. Calls `writeVars(variants)` of `js/popnei/src/io_vars.ts`, with
+   popnei's own size of batch. popnei builds the whole file in the memory
+   of wasm and copies it out, piece by piece, into one `Uint8Array` of
+   the heap of JavaScript, `bytes` of its result, with `passStats`. The
+   file holds the variants the steps keep, and only the individuals of
+   the list: on `panel.nei` with the missing data filter at 0.05, 250,994
+   bytes, which `openVars` opened again with 200 individuals and 1,152
+   variants; with the list of 125 individuals of "The cases" after that
+   filter, 176,098 bytes and 125 individuals; with no filter, 261,490
+   bytes, the size of `panel.nei` itself; seen in node on 26 September
+   2026.
+2. Makes a `Blob` of the bytes, `new Blob([bytes])`, and keeps no
+   reference to the array, so that the heap of the worker can give it
+   back; whether the engine copies the array into the `Blob` is measured
+   in the three engines (`docs/architecture.md`, section 11).
+3. Gives back `Written<Blob>`: the format, `"nei"`, the `Blob`,
+   `numBytes`, its `size`, and `passStats`. The worker's script posts it
+   as `written`, under the key of the request, with no list of
+   transfers: the `Blob` crosses as a handle
+   (`docs/specs/worker/messages.md`).
+
+A file of no variant is written, not refused, since popnei's `writeVars`
+writes one, 3,594 bytes for the filters above with a MAF filter at 0, and
+the runner passes popnei's answer on; the step does not offer it
+(`docs/specs/analyses/writeVariants.md`). popnei refuses the write with a plain
+`Error` when the memory of the tab does not take the file, answered
+`refused`, and a memory that cannot grow can end in a `RangeError` or a
+trap, answered `crashed` (below, "What it answers when something goes
+wrong"); the words of both, which say the file may be too large for the
+tab, are those of `writeVariants.md`.
+
+The runner keeps nothing of a write. The memory of wasm keeps the room
+of the file, which never shrinks, and the client starts the worker again
+after a file larger than a bound, to give it back
+(`docs/specs/worker/client.md`, "A write, and the restart after a large
+one").
 
 ### Progress
 
@@ -396,8 +568,11 @@ node on 25 September 2026 over `panel.nei`:
   `panel.vcf.gz` ending at its 87,304 bytes, so the bar moves with the
   file as it is, compressed.
 
-`numPassesOf("calcPerVarDistribs")` of `js/popnei/src/passes.ts` is 1,
-and every call of the diversity carries `numPasses` 1. The runner does
+`numPassesOf` of `js/popnei/src/passes.ts` is 1 for each function the
+runner calls in stage 3, `calcPerVarDistribs`, `calcPerIndividualStats`,
+`iterBlocks` and `writeVars`, and every call of their progress carries
+`numPasses` 1; over `panel.nei` each gave the two calls of the diversity,
+seen in node on 26 September 2026. The runner does
 not ask `numPassesOf`: popnei's first call, at 0 bytes, comes before a
 byte is read, and carries the passes of the run. The PCA of stage 4,
 whose `doPcaFromVariants` makes two passes when it asks for the weights
@@ -426,13 +601,18 @@ back"). The runner keeps no result, so nothing it holds is left empty.
 `transferablesOf` gives the list: the buffer of every typed array of the
 result, each once, so that two fields that hold one array, or two arrays
 over one buffer, give it once, since a list that names one buffer twice
-makes `postMessage` throw. Every array the runner builds in steps 4 and 5 owns
-its whole buffer; the function checks it all the same, and an array that
-is a view of part of a buffer is a defect, thrown (below, "Where this
-departs from the skills"). The arrays of popnei's
-results are copies out of the memory of wasm, never views into it
-(`js/popnei/src/stats.ts`), and NaN, the value popnei gives a population
-with no variant of enough data, crosses as it is.
+makes `postMessage` throw. Every array the runner posts owns its whole
+buffer: those it builds in steps 4 and 5 of the diversity, the copies of
+the edges of the histograms, and popnei's own arrays of the statistics of
+each individual and of the counts of the bins, which popnei copies out of
+the memory of wasm and never gives as views into it
+(`js/popnei/src/stats.ts`); the function checks it all the same, and an
+array that is a view of part of a buffer is a defect, thrown (below,
+"Where this departs from the skills"). NaN, the value popnei gives a
+population with no variant of enough data or an individual with no
+called genotype, crosses as it is. A `written` transfers nothing: a
+`Blob` is not transferred, it crosses as a handle, and its `passStats` holds
+no typed array.
 
 ### What it answers when something goes wrong
 
@@ -447,12 +627,12 @@ Which answer, by what was thrown:
 
 | what happened | answer | on the page (`RunError`) | the worker |
 |---|---|---|---|
-| a call to popnei that reads the file, the open or a calculation, threw a plain `Error` whose message is one of popnei's of a range the browser refused or gave short (below) | `reopenFailed`, with the name of the file and popnei's message | `reopenFailed` | goes on |
-| a call to popnei threw any other plain `Error`, whose prototype is `Error.prototype` itself | `refused`, with the message as it is | `popnei` | goes on |
+| a call to popnei that reads the file, the open, a calculation, the iteration of the counts or the write, threw a plain `Error` whose message is one of popnei's of a range the browser refused or gave short (below) | `reopenFailed`, with the name of the file and popnei's message | `reopenFailed` | goes on |
+| a call to popnei threw any other plain `Error`, whose prototype is `Error.prototype` itself: a refusal of the data, filters that keep no variant, a list of individuals that names one twice, a file the memory of the tab does not take | `refused`, with the message as it is | `popnei` | goes on |
 | a call to popnei threw anything else: a `WebAssembly.RuntimeError`, a trap of the wasm, a panic of Rust among the causes; a `RangeError` of a memory that cannot grow | `crashed`, with its message | `workerFailed` | closes |
-| popnei refused the open of the file again, in a run whose filters changed or after an open again that failed, whatever its message | `reopenFailed`, with the name of the file and popnei's message; the runner holds no `Variants`, and the next run opens the file again | `reopenFailed` | goes on |
-| a request that failed `parseToRunner`; a second `open`; a `run` before the `open`, of another load, or after an open that popnei refused; two populations of one name; a filter of individuals | `badRequest`, what was wrong | `defect` | closes |
-| a throw of our own code anywhere else: what `told` threw, which popnei's call throws back (step 2 above), and a `popnei_web defect:` of step 4 among them | `crashed`, its message | `workerFailed` | closes |
+| popnei refused the open of the file again, in a request whose steps changed or after an open again that failed, whatever its message | `reopenFailed`, with the name of the file and popnei's message; the runner holds no `Variants`, and the next run opens the file again | `reopenFailed` | goes on |
+| a request that failed `parseToRunner`; a second `open`; a `run` or a `write` before the `open`, of another load, or after an open that popnei refused; an empty list of individuals; two populations of one name | `badRequest`, what was wrong | `defect` | closes |
+| a throw of our own code anywhere else: what `told` threw, which popnei's call throws back (step 2 above), a `popnei_web defect:` of step 4 or of the counts of a pass among them | `crashed`, its message | `workerFailed` | closes |
 
 - **The file changed on the disk.** A `File` is a handle to the file as
   it was when the user picked it, and the File API asks a browser to
@@ -501,7 +681,9 @@ Which answer, by what was thrown:
   `docs/specs/stage-2-open-points.md`. None of this has been seen in a
   browser; the File API has it.
 - **popnei's refusal is caught at the call**, and only there: the open,
-  each filter, `calcPerVarDistribs`. That catch is the one `try` of the
+  each filter, the list of individuals, `calcPerVarDistribs`,
+  `calcPerIndividualStats`, the iteration of `iterBlocks` and `writeVars`.
+  That catch is the one `try` of the
   runner that does not throw again (`.claude/skills/coding/typescript.md`,
   "Errors"), save for what `told` threw, which it throws again (above,
   "The diversity", step 2). A refusal leaves the `Variants` as it was, popnei says so of
@@ -534,9 +716,10 @@ Which answer, by what was thrown:
 ## The TypeScript interface
 
 What `runner.ts` exports, which the worker's script and the tests call.
-`Job`, `JobResult` and `Progress` are of `protocol.ts` (`messages.md`,
-"Job and JobResult", and "The progress"), where `Progress` has popnei's
-four fields; `Result` is of `src/core/result.ts`.
+`Job`, `JobResult`, `WriteJob`, `Written` and `Progress` are of
+`protocol.ts` (`messages.md`, "Job and JobResult", and "The progress"),
+where `Progress` has popnei's four fields; `Result` is of
+`src/core/result.ts`.
 
 popnei loaded, with its version, or the message of what `init()` threw.
 A second call gives the same promise.
@@ -562,8 +745,9 @@ export interface LoadFile {
 }
 ```
 
-What the worker's script posts for a request: the value of `opened` or
-`result`, or one of the four other answers of `messages.md`.
+What the worker's script posts for a request: the value of `opened`,
+`result` or `written`, or one of the four other answers of
+`messages.md`.
 
 ```ts
 export type Answer<T> =
@@ -575,10 +759,10 @@ export type Answer<T> =
   | { readonly kind: "badRequest"; readonly message: string };// the worker closes after it
 ```
 
-The runner of one worker, which holds its one load. Both functions
+The runner of one worker, which holds its one load. The three functions
 throw only for a defect of ours, which the worker's script posts as
-`crashed`. `run` gives `told` each `Progress` of popnei as it comes, and
-the worker's script posts it.
+`crashed`. `run` and `write` give `told` each `Progress` of popnei as it
+comes, and the worker's script posts it.
 
 ```ts
 export interface Runner {
@@ -587,6 +771,7 @@ export interface Runner {
     readonly ploidy: number;
   }>;
   run(job: Job, told: (progress: Progress) => void): Answer<JobResult>;
+  write(job: WriteJob, told: (progress: Progress) => void): Answer<Written<Blob>>;
 }
 
 export function createRunner(): Runner; // after loadPopnei has given ok
@@ -670,12 +855,37 @@ export function transferablesOf(result: JobResult): ArrayBuffer[];
   range short. The answer is `reopenFailed`, as in the table, and the
   user reads that the file may have changed on the disk and to load it
   again in the Variants step. A browser that reads the changed file
-  without either is point R of `docs/specs/stage-2-open-points.md`. This
-  has not been seen in a browser.
-- **A cancel** ends the worker wherever it is, inside a pass included
-  (`docs/architecture.md`, section 5). The runner does nothing for it.
+  without either is point R of `docs/specs/stage-2-open-points.md`,
+  which the walking skeleton measured on 25 September 2026: Chromium 153
+  refused every rewrite, and WebKit 26.6 read the new bytes with no word
+  when the rewrite put the file's time of change back, as `rsync -t`
+  does (`docs/plans/walking-skeleton.report.md`, "Point R"); Firefox is
+  measured by the owner.
+- **The filters keep no variant.** The diversity and the statistics of
+  each individual are `refused` with popnei's "the pass gave no variant:
+  …", above; the counts of the filters are a result, since `iterBlocks`
+  gives them then; and a write gives a file of no variant, whose
+  `passStats.numVars` is 0 (above, "The written file").
+- **The filters keep no individual.** Core sends no job then; an empty
+  list that reached the runner would be `badRequest`, before any step is
+  put.
+- **A list of individuals after a threshold of the variants.** The
+  counts of the filters of the variants are those they give with every
+  individual, since the list comes after them: on `panel.nei` at 0.05,
+  with the 125 individuals whose missing rate over those 1,152 variants
+  is at most 0.03, the counts are 1,200 to 1,152, as with no list.
+- **An individual with no called genotype** among the variants of the
+  pass has the statistics 1 and NaN (above), and is in the list of core
+  only if no threshold of heterozygosity is set.
+- **A variant with nothing called** has no value in the histograms of
+  the variants, and is in no bin (above).
+- **A cancel** ends the worker wherever it is, inside a pass included,
+  and inside a write too, which leaves nothing: the bytes and the `Blob`
+  are the worker's until it posts them (`docs/architecture.md`, section
+  5). The runner does nothing for it.
 - **Progress** comes at the start of each pass, every 4 MiB, and at the
-  end of the run, and never before the first `run`: the open tells none.
+  end of the run, and never before the first `run` or `write`: the open
+  tells none.
 
 ## How it runs
 
@@ -710,7 +920,8 @@ the whole file, and a gzipped VCF is decompressed whole at every pass.
 ### What a restart costs
 
 The client ends the calculation worker at a cancel, after a `crashed`,
-and when the load changes, and starts another (`client.md`). What the
+when the load changes, and, from stage 3, after a written file larger
+than a bound, and starts another (`client.md`). What the
 new worker pays before its first request:
 
 - **Loading popnei's wasm**, from the browser's cache after the first
@@ -720,21 +931,39 @@ new worker pays before its first request:
 - **Opening the file again**: the client's `open`, which reads the
   first range of 4 MiB of the file, and of a `.nei` file its last ten
   bytes and its footer as well, and not the rest of the variants; the
-  first pass reads that range again, as every pass does. It has not been
-  measured in a browser.
+  first pass reads that range again, as every pass does. From the start
+  of a new worker to the file opened, at most 49 ms, measured at the end
+  of the walking skeleton on the VCF and the `.nei` file below, in
+  Chromium 153 and WebKit 26.6 on the owner's Mac
+  (`docs/plans/walking-skeleton.report.md`).
 - **What the old worker held is lost**: its `Variants` with its filters.
-  In stage 2 nothing else; the intermediate results come in stage 4.
+  In stages 2 and 3 nothing else; the intermediate results come in stage
+  4.
 
-The first run after a restart puts its filters on the new `Variants`,
-which holds no step, and makes its pass, with no second open (above,
-"The filters"). Stage 2 ends with the measurement of
-the restart (`docs/build-order.md`); for the runner it is the time from
-the new worker's start to its `opened`, the time of a run whose filters
-changed, which opens the file again, and the time of a pass, in the
-three engines, on the VCF of 80,692,954 bytes that popnei's
-`crates/popnei/benches/make_big_vcf.py` writes for 20,000 variants of
-1,000 individuals and on the `.nei` file of 19.2 MB that `writeVars`
-makes of it in batches of 1,000.
+The first request after a restart puts its steps on the new `Variants`,
+which holds none, and makes its pass, with no second open (above, "The
+steps"). The files of the measurement are the VCF of 80,692,954 bytes
+that popnei's `crates/popnei/benches/make_big_vcf.py` writes for 20,000
+variants of 1,000 individuals and the `.nei` file of 19,161,178 bytes
+that `writeVars` makes of it in batches of 1,000.
+
+### What a write holds
+
+A write of a file of F bytes holds in the worker, at its peak, F in the
+memory of wasm, where popnei builds the whole file, F in the array
+popnei copies it into, and F more if the engine copies the array into
+the `Blob`, up to 3F; once the array is dropped, the `Blob` and the room
+wasm grew to, which never shrinks (`docs/architecture.md`, section 6,
+"The files written"). None of it has been measured: the first work
+package of stage 3 that writes a file measures, in Chromium, Firefox and
+WebKit, the memory of the tab during and after a write of the `.nei`
+file above and of one ten times larger, whether each engine copies the
+array into the `Blob`, and the time of the write (section 11 of the
+architecture). Those measurements set the bound above which the step
+warns, and the one above which the client starts the worker again. With
+popnei's writer by pieces, asked of popnei on 26 September 2026, the
+runner keeps the pieces as they come and makes one `Blob` of them at the
+end, and the peak falls to about F; stage 3 does not wait for it.
 
 ## How it is verified
 
@@ -824,14 +1053,17 @@ the file is 1,200. The progress of each run was two calls, `{ bytesRead:
 numBytes: 261490, pass: 1, numPasses: 1 }` for `panel.nei`, and 0 then
 87,304 of 87,304 bytes for `panel.vcf.gz`.
 
-The tests, each at `open` and `run` of a runner made by `createRunner`:
+The tests of stage 2, each at `open` and `run` of a runner made by
+`createRunner`, with the diversity's `passStats` in the place of its
+`numVars` and `numVarsRead`:
 
 - **The open**: `panel.nei` gives 200 individuals, the first `s000`, and
   ploidy 2; `panel.vcf.gz` with `{ ploidy: 2, onlyPassed: true }` the same.
 - **The diversity**, with no filter and at 0.05: the table above, the
   populations in the order p0, p2, p1 with 48, 84 and 68 individuals,
-  `numVarsWithValue` 1,200 and 1,152 in each, `numVars` 1,200 and 1,152,
-  and `numVarsRead` 1,200 both times.
+  `numVarsWithValue` 1,200 and 1,152 in each, and `passStats`
+  `{ numVars: 1200, filtering: {} }` and `{ numVars: 1152, filtering: {
+  missing_data: { varsProcessed: 1200, varsKept: 1152 } } }`.
 - **The progress**: the `told` of a diversity on `panel.nei` is given
   the two calls above, in that order, as popnei gave them.
 - **The boundary** of `docs/specs/worker/protocol.md`: 39 variants of
@@ -885,27 +1117,131 @@ The tests, each at `open` and `run` of a runner made by `createRunner`:
   `.nei` file; the missing data filter at 0.05 with a MAF filter at 0;
   a VCF of a header alone, with no filter and with the missing data
   filter at 0.1; the VCF whose two variants failed, read with only the
-  passed ones, whose `numVarsRead` read with every variant is 2. The
+  passed ones, whose `passStats.numVars` read with every variant is 2. The
   same messages were given by both releases, but
   those of the VCF of a header alone and of the VCF whose variants
   failed, looked at in `js-v0.1.0-dev.2` only.
 - **The defects**: a `run` before the `open`, a `run` of another load
   id, a `run` after the `open` of `bad.vcf` that popnei refused, a second
-  `open`, two populations of one name and a job with a filter of
-  individuals are each `badRequest`.
+  `open`, two populations of one name, a job whose `individuals` is an
+  empty list, and a `write` before the `open`, are each `badRequest`.
 - **`answerOfThrown`**: `new Error("x")` is `refused` with "x";
   `new RangeError("x")`, `new WebAssembly.RuntimeError("unreachable")`,
   a `TypeError`, what JavaScript throws for a mistake of the code, and a
   thrown string are `crashed`.
-- **`transferablesOf`**: of a diversity result, one buffer per array,
-  none twice when two fields hold one array; an array that is a view of
-  part of a buffer throws.
+- **`transferablesOf`**: of a result of each of the four analyses, one
+  buffer per array, none twice when two fields hold one array; an array
+  that is a view of part of a buffer throws.
+
+The numbers of stage 3 were given by the same release, on 26 September
+2026, in the folder of the numbers above with `numbers3.mjs`, run as
+`numbers.mjs` is:
+
+```js
+import { readFileSync } from "node:fs";
+import { init, openVars, calcPerIndividualStats, calcPerVarDistribs, writeVars } from "popnei";
+await init();
+const bytes = (f) => new Uint8Array(readFileSync(`${process.env.FIXTURES}/${f}`));
+const pops = {};
+for (const line of readFileSync(`${process.env.FIXTURES}/panel_pops.txt`, "utf8").trim().split("\n").slice(1)) {
+  const [individual, pop] = line.split("\t");
+  (pops[pop] ??= []).push(individual);
+}
+const at05 = () => { const v = openVars(bytes("panel.nei")); v.filterByMissingData(0.05); return v; };
+let v = at05();
+const s = calcPerIndividualStats(v); v.free();
+console.log("individuals", s.individuals.length, [...s.missingGtRate.slice(0, 3)], [...s.obsHetRate.slice(0, 3)],
+  JSON.stringify(s.passStats));
+const kept = s.individuals.filter((_, i) => s.missingGtRate[i] <= 0.03);
+console.log("kept", kept.length, kept.slice(0, 3));
+v = at05(); v.filterIndividuals(kept);
+const keptPops = Object.fromEntries(Object.entries(pops).map(([p, is]) => [p, is.filter((i) => kept.includes(i))]));
+const d = calcPerVarDistribs(v, { pops: keptPops, stats: ["obs_het", "unbiased_exp_het", "poly_vars_ratio"] });
+console.log("diversity", d.pops, Object.values(keptPops).map((is) => is.length), [...d.unbiasedExpHet.mean], [...d.obsHet.mean],
+  [...d.polyVarsRatio.polyRatio], JSON.stringify(d.passStats));
+v.free();
+v = openVars(bytes("panel.nei"));
+const h = calcPerVarDistribs(v, { stats: ["maf", "obs_het", "unbiased_exp_het"], minNumIndividuals: 0 }); v.free();
+for (const k of ["maf", "obsHet", "unbiasedExpHet"]) {
+  const c = [...h[k].histCounts];
+  console.log(k, h[k].mean[0], c.length, c.reduce((a, b) => a + b), JSON.stringify(c));
+}
+for (const [label, put] of [["three", (x) => { x.filterByMissingData(0.05); x.filterByObsHet(0.9); x.filterByMaf(0.95); }],
+                            ["three and the list", (x) => { x.filterByMissingData(0.05); x.filterByObsHet(0.9); x.filterByMaf(0.95); x.filterIndividuals(kept); }],
+                            ["maf 0", (x) => { x.filterByMissingData(0.05); x.filterByMaf(0); }]]) {
+  v = openVars(bytes("panel.nei")); put(v);
+  const blocks = v.iterBlocks({ fields: [] }); let n = 0; for (const _ of blocks) n += 1;
+  console.log("counts", label, n, JSON.stringify(blocks.passStats)); v.free();
+}
+for (const [label, put] of [["none", () => {}], ["0.05", (x) => x.filterByMissingData(0.05)],
+                            ["0.05 and the list", (x) => { x.filterByMissingData(0.05); x.filterIndividuals(kept); }],
+                            ["0.05 and maf 0", (x) => { x.filterByMissingData(0.05); x.filterByMaf(0); }]]) {
+  v = openVars(bytes("panel.nei")); put(v);
+  const w = writeVars(v); v.free();
+  const back = openVars(w.bytes);
+  console.log("write", label, w.bytes.length, JSON.stringify(w.passStats), back.individuals.length);
+  back.free();
+}
+```
+
+The list of the tests below calls it **the list of 125**: the 125
+individuals of `panel.nei` whose missing rate over the 1,152 variants the
+missing data filter at 0.05 keeps is at most 0.03, in the order of the
+file, `s000`, `s003`, `s004` and on, which the test makes from the
+result of its own `individualChecks` run, as core would. Each test at
+`run` or `write` of a runner made by `createRunner`, after the open of
+`panel.nei`:
+
+- **The statistics of each individual**, at 0.05: 200 individuals, the
+  first three with `missingGtRate` 0.026041666666666668,
+  0.036458333333333336 and 0.03211805555555555 and `obsHetRate`
+  0.3672014260249554, 0.3441441441441441 and 0.37309417040358744, no NaN,
+  and `passStats` `{ numVars: 1152, filtering: { missing_data: {
+  varsProcessed: 1200, varsKept: 1152 } } }`. A VCF written in the test, two individuals and two variants,
+  the second individual missing at both, gives `missingGtRate` `[0, 1]`
+  and `obsHetRate` `[0.5, NaN]`.
+- **The diversity with the list of 125** after the filter at 0.05: the
+  populations p0, p2 and p1 with 32, 54 and 39 individuals, He
+  0.35235226528316066, 0.34398672129705354 and 0.34990422931551174, Ho
+  0.3565861820201193, 0.3519488909232355 and 0.35589376321324523, the
+  polymorphic share 0.9088541666666666, 0.9019097222222222 and
+  0.9192708333333334, and `passStats` 1,152 of 1,200, as without the
+  list.
+- **The steps with the list**: after that diversity, a run with the same
+  filter and no list opens the file again, as does a run with the same
+  list of other order; a run with the same filter and the same list does
+  not. The test counts the reads of the source as the test of an open
+  again that popnei refuses does.
+- **The histograms of the variants**, with no filter, `minNumIndividuals`
+  0, 40 bins and the range 0 to 1, popnei's defaults: `binEdges` of 41
+  numbers from 0 to 1, over a buffer of its own; the means
+  0.7163445463101891 of the MAF, 0.35429523451520484 of Ho and
+  0.3754712450806149 of He; 40 counts in each, which add up to 1,200, the
+  counts of the MAF 0 in its first 20 bins, and every count as the
+  literal arrays `numbers3.mjs` gave.
+- **The counts of the filters**: with the missing data filter at 0.05,
+  the heterozygosity filter at 0.9 and the MAF filter at 0.95,
+  `passStats` is `numVars` 1,128 and `filtering` `missing_data` 1,200 to
+  1,152, `obs_het` 1,152 to 1,152 and `maf` 1,152 to 1,128, its fields in
+  that order; a diversity with the same filters and the list of 125
+  gives the same `passStats`; with the missing data filter at 0.05 and a
+  MAF filter at 0, `numVars` 0 and the counts 1,200 to 1,152 and 1,152
+  to 0, a result and not a refusal.
+- **The written file**: with no filter, a `Blob` of 261,490 bytes,
+  `numBytes` 261,490, whose bytes open again with `openVars` with 200 individuals; at 0.05,
+  250,994 bytes and `passStats` 1,152 of 1,200; at 0.05 with the list of
+  125, 176,098 bytes that open again with those 125 individuals in their
+  order; at 0.05 with a MAF filter at 0, 3,594 bytes and
+  `passStats.numVars` 0. The progress of each is the two calls of
+  the diversity, and a `told` that throws makes `write` throw that
+  value, as for `run`.
 
 ### In the browser
 
 What node does not have, a `File` that popnei reads by ranges with
 `FileReaderSync`, the real worker and the transfer, is seen through the
-flow of the walking skeleton in Chromium, Firefox and WebKit
+flow of the walking skeleton, and of the Variants step from stage 3, in
+Chromium, Firefox and WebKit
 (`.claude/skills/coding/testing.md`; the flow is the entry's and the
 diversity's specs'). What it shows of the runner: a `panel.nei` picked
 opens with 200 individuals and ploidy 2; the diversity at 0.05 and then
@@ -913,7 +1249,13 @@ at 1 both show their numbers, so the `File` was opened again in the
 worker; the bar of the running state reaches its last call; the result
 reaches the page as typed arrays, which the page's check of
 `messages.md` refuses otherwise; and `tetraploid.vcf.gz` read with
-ploidy 2 opens and then shows popnei's message at the diversity.
+ploidy 2 opens and then shows popnei's message at the diversity. From
+stage 3: a file written at 0.05 is saved with 250,994 bytes, whose bytes
+are those `writeVars` gave in node, so the `Blob` made in the worker
+reached the page whole; and the same when the Stop of a calculation
+started after the write has ended the worker that made the `Blob`, so a
+`Blob` outlives its worker, which the File API has and no engine has
+been seen to do yet.
 
 A file changed on the disk after the pick is what the flow finds out for
 each engine, since popnei tested its reading of a `File` in Chromium
@@ -938,32 +1280,55 @@ record a rewrite it did not test.
 
 ## What this spec relies on in the others
 
-Each of these was written with this one and approved by the owner on 25 September 2026, and
-says what is listed here.
+Each of these was written with this one and approved by the owner on 25
+September 2026, and says what is listed here; the stage 3 revision of
+each, written at the same time as this one's, is to say what the second
+list gives.
 
 - **`docs/specs/worker/messages.md`**: the requests `open`, with the load
-  id, the `File`, the format and the read options, and `run`, with the
-  key and a `Job`; the answers `ready`, `opened`, `result`, `refused`,
-  `reopenFailed`, `progress` with popnei's four fields, and `crashed`
-  and `badRequest`, after which the worker closes itself;
-  `parseToRunner`, which the worker's script calls on every request.
+  id, the `File`, the format and the read options, `run`, with the key
+  and a `Job`, and `write`, with the key and a `WriteJob`; the answers
+  `ready`, `opened`, `result`, `written`, `refused`, `reopenFailed`,
+  `progress` with popnei's four fields, and `crashed` and `badRequest`,
+  after which the worker closes itself; `parseToRunner`, which the
+  worker's script calls on every request.
 - **`docs/specs/worker/client.md`**: every worker receives at most one
   `open`, as its first request, and a new worker is started for a new
   load and after a cancel or a crash; one request at a time; a cancel
   that ends the worker; a worker whose read popnei refused is sent
-  nothing more on that load; and `start.ts` making the worker from
-  `./runnerWorker.ts?worker`.
+  nothing more on that load; the restart after a large write; and
+  `start.ts` making the worker from `./runnerWorker.ts?worker`.
 - **`docs/specs/analyses/diversity.md`**: `DiversityJob` and
   `DiversityResult`, the populations of the job holding only individuals
-  of the variants, none empty (`populationsToRun`); and the diversity
-  locked while the project holds a filter of individuals, as the owner
-  decided, so that no job with one is sent.
-- **`docs/specs/entry.md`**: `numVarsOf` of `src/core/apps.ts` reads
-  `numVarsRead`; the page asks for the open of a source whose read is
-  pending, through the client.
+  kept, none empty (`populationsToRun`).
+- **`docs/specs/entry.md`**: the page asks for the open of a source whose
+  read is pending, through the client.
 - **`docs/specs/steps/variants.md`**: the number of variants shown is
   the one the file gives before the filters, and the ploidy of a VCF is
   shown as the one given.
+
+What the specs of stage 3 are to say, read in their drafts of 26
+September 2026 and written here as `docs/architecture.md` has them:
+
+- **`docs/specs/analyses/individualChecks.md`, `variantChecks.md`,
+  `filterCounts.md` and `writeVariants.md`**: their jobs and results as
+  the block of `docs/specs/worker/protocol.md` has them; the statistics of
+  each individual over the filters of the variants and every individual,
+  with no names in the result; the histograms of the variants over no
+  filter and every individual, with `minNumIndividuals` 0, the bins in
+  the job, and the MAF, Ho and the unbiased He; the counts over the
+  filters of the variants alone; a write over the filters and the list
+  of individuals, whose file of no variant the step does not offer.
+- **The spec of `src/core/individualsKept.ts`**: the list of the
+  individuals kept, in the order of the file, `null` when the filters
+  remove nobody, and never empty in a job.
+- **`docs/specs/core/store.md` and `docs/specs/entry.md`**: `countsOf` in
+  the place of `numVarsOf`, reading `passStats` of every result and of a
+  written file; the store's function of a write, which the client's
+  `write` is.
+- **`docs/specs/analyses/diversity.md`**: `individuals` in the place of
+  `individualFilters` in its job, and `passStats` in the place of
+  `numVars` and `numVarsRead` in its result.
 
 ## Where this departs from the skills
 
@@ -993,44 +1358,43 @@ these things change; each is corrected when the owner approves it.
 - The check of the PCA's MAF filter given as one filter, which
   `docs/specs/worker/protocol.md` gave to the tests of stage 2, waits for
   the job of the PCA, in stage 4.
+- From stage 3, a written file crosses as a `Blob` the runner made, and
+  not as a `Uint8Array` transferred, as `worker.md`, "Reading the files
+  of the user", has it (`docs/specs/worker/messages.md`, "Where this
+  departs from worker.md").
 
 ## Open points
 
-The open points of the eleven specs of stage 2 are gathered in
-`docs/specs/stage-2-open-points.md`, where the ones two specs share
-are one point, asked of the owner once. The two this spec had were
-decided by the owner on 25 September 2026, and are written above as
-decided: a file the browser can no longer read is `reopenFailed`, a kind
-of its own (point B there), and stage 2 builds on `js-v0.1.0-dev.2`,
-which reads a `File` by ranges and tells the progress of a pass (point
-C). Two points are open since:
-
-1. **Which popnei function gives the diversity.** The owner decided
-   `calcPopDiversity`, with the three columns He, Ho and the proportion
-   of polymorphic variants; that function of the release gives none of
-   the three (point D of `docs/specs/stage-2-open-points.md`, with its
-   numbers). Meanwhile, `calcPerVarDistribs` of the same release, as
-   "The diversity" above has it, whose numbers are the table of "How it
-   is verified".
-2. **What the application does in an engine that reads a changed file
-   with no word** (point R of `docs/specs/stage-2-open-points.md`).
-   Meanwhile, the browser flow records what each engine does with the
-   three rewrites, and the runner does nothing more than the table
-   above.
+None. The points of stage 2 are settled: a file the browser can no
+longer read is `reopenFailed`, a kind of its own (point B of
+`docs/specs/stage-2-open-points.md`); stage 2 builds on
+`js-v0.1.0-dev.2` (point C); the three columns of the diversity come from
+`calcPerVarDistribs`, and `calcPopDiversity` waits for stage 5 (point D,
+settled with the approval); and an engine that reads a changed file with
+no word is measured in the three engines, the help of the Variants step
+saying it meanwhile, and the runner does nothing more than the table
+above (point R, settled with the approval). Which statistics the
+histograms of the variants show, and with which bins, is the spec of
+`variantChecks`'; this one calls popnei as the architecture has it until
+that spec says otherwise.
 
 ## Not in this spec
 
 - The shapes of the messages and their checks: `messages.md`. The queue,
-  the restarts and the timeout of `ready`: `client.md`.
-- The fields of the diversity's job and result, its warnings and its
-  screen: `docs/specs/analyses/diversity.md`.
-- The filters of the individuals, and the list the runner makes of them
-  for `filterIndividuals`: stage 3. The filter of the regions of a BED
-  file: stage 3, when popnei has it.
+  the restarts, the restart after a large write and the timeout of
+  `ready`: `client.md`.
+- The fields of each analysis's job and result, its warnings and its
+  screen: its spec under `docs/specs/analyses/`.
+- How core makes the list of the individuals kept from the filters of
+  individuals: `docs/specs/core/`, the module `individualsKept.ts` of
+  section 9 of the architecture.
+- The filter of the regions of a BED file, the histogram of the missing
+  rate of each variant, and the writer of the VCF: with popnei's release
+  that has them.
 - The PCA, its MAF filter merged with the dataset's, and the
   intermediate results the worker keeps under their keys: stage 4.
-- Writing the filtered variants as a `.nei` file, `writeVars`, or as a
-  VCF: stage 3, in the Variants step, as the owner decided on 25
-  September 2026.
+- What the step does with a written file, its Save, its warning above a
+  size, and a write whose filters changed while it ran:
+  `docs/specs/analyses/writeVariants.md` and `docs/specs/core/store.md`.
 - The light worker and the reader of the individuals file:
   `docs/specs/worker/individuals.md`.

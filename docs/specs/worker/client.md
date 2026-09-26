@@ -1,14 +1,19 @@
 # The worker client
 
-25 September 2026, approved by the owner on 25 September 2026. The worker
-client is the page's one door to the two workers, the threads of the tab
+25 September 2026, approved by the owner on 25 September 2026, and built
+with the walking skeleton; revised on 26 September 2026 for stage 3 of
+`docs/build-order.md`, the Variants step whole, as the architecture
+approved by the owner that day has it: the request that writes the
+filtered variants as a `.nei` file, its cancel, and the restart of the
+calculation worker after a large file written. The revision is not yet
+approved. The worker client is the page's one door to the two workers, the threads of the tab
 beside the page where the files are read and the calculations run
 (`docs/architecture.md`, section 1): it starts them, keeps the `File` of
 every file the user picked, sends each worker one request at a time and
 keeps the others waiting, and gives every request an answer, also when a
 worker is cancelled, crashes, or cannot start. This spec gives
 `src/worker/client.ts`, and `src/worker/start.ts`, the lines that make
-the two workers. There is no code of either yet. It develops sections 5
+the two workers. It develops sections 5
 and 6 of `docs/architecture.md`, the rows `client.ts` and `start.ts` of
 its section 9, and `.claude/skills/coding/worker.md`, "The client, the
 page's side"; it depends on `docs/specs/worker/messages.md`, for the
@@ -23,7 +28,10 @@ same file picked again included (`docs/architecture.md`, section 3); a
 message that ends it; a **read** is a request that reads a file of the
 user, the opening of the variants file or the reading of the individuals
 file; a **run** is a request of a calculation, made by the store under
-the key of its result. The **entry** of the page is the code that runs
+the key of its result; a **write** is the request that writes the
+variants the filters keep as a file, which the store makes under a key
+of the load, the filters and the format, and whose answer is the file
+and not a result of the cache (`docs/architecture.md`, section 5). The **entry** of the page is the code that runs
 when the page opens: it makes the store and the client and joins them
 (`docs/architecture.md`, section 1). The walking skeleton is stage 2 of
 `docs/build-order.md`, the smallest application that goes through every
@@ -100,13 +108,20 @@ rule below rules out one of them.
   that is ended leaves its waiting requests in the client, and they go to
   the worker started in its place.
 - **The requests of the calculation worker are the reads of the variants
-  file, `openVariants`, and the runs, `run`; the light worker's is the
-  read of the individuals file, `readIndividuals`.** Every `Job` goes to
-  the calculation worker in the walking skeleton; the requests of the
-  xlsx and of the report join the light worker in stages 4 and 6.
-- **The client keeps no result.** The store looks in its cache before it
-  asks for a run (`docs/specs/core/store.md`), and the client sends every
-  run it is given.
+  file, `openVariants`, the runs, `run`, and the writes, `write`; the
+  light worker's is the read of the individuals file,
+  `readIndividuals`.** Every `Job` goes to the calculation worker; the
+  requests of the xlsx and of the report join the light worker in stages
+  4 and 6, and the read of a BED file with popnei's release that filters
+  by its regions.
+- **A write waits in the queue as a run does**, and a run asked for
+  while a file is written waits behind it (`docs/architecture.md`,
+  section 5). Which of the two the store stops, and when, is the
+  store's.
+- **The client keeps no result and no file.** The store looks in its
+  cache before it asks for a run (`docs/specs/core/store.md`), and the
+  client sends every run and every write it is given; the `Blob` of a
+  write is the store's and the page's once its outcome is given.
 
 ### The calculation worker holds one load
 
@@ -122,16 +137,17 @@ opened, and one only (`.claude/skills/coding/worker.md`, "Reading the
 files of the user"). The client keeps, for each load id,
 the `File` the entry gave it and the format and the read options of the
 last `openVariants` of that load, and the load of each request: an
-`openVariants` names its load, and a `run` names it in its job, whose
-`fileId` every `Job` holds (`docs/specs/worker/messages.md`). The load is
-the load id with its read options, as it is for the store
-(`docs/specs/core/store.md`, "The notice, and the calculations it
-stops"). In the walking skeleton other read options are always a new
-pick, with a new load id, so a job needs only the load id and the client
-finds the read options by it, and an `openVariants` of a load id it
-knows with other read options is a defect, which the client throws; if
-stage 3 lets the ploidy change under the same load id, the job carries
-the read options too.
+`openVariants` names its load, and a `run` or a `write` names it in its
+job, whose `fileId` every `Job` and `WriteJob` holds
+(`docs/specs/worker/messages.md`). The load is the load id with its read
+options, as it is for the store (`docs/specs/core/store.md`, "The
+notice, and the calculations it stops"). Other read options are always a
+new load, with a new load id: reading a VCF again with another ploidy is
+a new load of the same `File`, as the owner decided on 25 September 2026
+(point M of `docs/specs/stage-2-open-points.md`). So a job needs only the
+load id and the client finds the read options by it, and an
+`openVariants` of a load id it knows with other read options is a
+defect, which the client throws.
 
 To end a worker is always the same three steps: the client takes its
 handlers off it, so that a message it had posted and the page had not
@@ -226,8 +242,8 @@ pending (`docs/specs/entry.md`):
   once, and its answer, when it comes, goes to no one; the light worker
   is not ended, since the reader reads at most 20 MB
   (`docs/specs/worker/individuals.md`, `MAX_INDIVIDUALS_FILE_BYTES`).
-- **of the run, or the read of a variants file, that is running** ends
-  its worker, unless other runs wait on that `open`, since a worker cannot
+- **of the run, the write, or the read of a variants file, that is
+  running** ends its worker, unless other runs wait on that `open`, since a worker cannot
   read a message while wasm runs a calculation, and without
   `SharedArrayBuffer`, which GitHub Pages does not allow, the page has no
   other way to stop it (`docs/architecture.md`, section 5). The worker is
@@ -240,12 +256,60 @@ restart costs is the loading of the wasm, from the cache of the browser
 after the first time, and opening the variants file again before the
 next request on it, which reads the first range of 4 MiB of the file,
 and of a `.nei` file its last ten bytes and its footer, and not the rest
-of its variants, since popnei reads the `File` by ranges (`docs/specs/worker/runner.md`, "What a restart costs"). Neither
-has been measured on a large file; the walking skeleton measures both
-(`docs/build-order.md`, stage 2). With popnei's release before
-`js-v0.1.0-dev.2`, a restart read the whole file into the memory of the
-worker again, which is why the architecture counted it as a cost that
-grows with the file.
+of its variants, since popnei reads the `File` by ranges
+(`docs/specs/worker/runner.md`, "What a restart costs"): at most 49 ms
+from the start of a new worker to the file opened, measured at the end
+of the walking skeleton on a VCF of 80,692,954 bytes and its `.nei` file
+of 19,161,178 bytes, in Chromium 153 and WebKit 26.6 on the owner's Mac
+(`docs/plans/walking-skeleton.report.md`). A write cancelled leaves no
+file: its bytes and its `Blob` were in the worker that was ended.
+
+### A write, and the restart after a large one
+
+`write` sends the request under its key with its `WriteJob`, and its
+`Run` ends `done` with the key and the file, `Written<Blob>`
+(`docs/specs/worker/protocol.md`), after its progress, as a run does:
+the same queue, the same rule of the load, the same cancel, the same
+failures. The client checks that the answer is a `written` under the key
+of the request; which file the step shows, and a write that ends after a
+change of its filters, which the store drops, are the store's
+(`docs/specs/core/store.md`).
+
+A write grows the memory of wasm by the size of its file, which never
+shrinks, and would stay with the worker until the next load of the
+variants file. So, as the owner decided on 26 September 2026
+(`docs/architecture.md`, section 13, point 5), the client starts the
+calculation worker again after a write whose file is larger than
+`WRITE_RESTART_BYTES`:
+
+1. It gives the write its outcome, `done` with the file, first, so that
+   the file reaches the store before anything else happens.
+2. It ends the worker, in the three steps above, as if the write had
+   been cancelled after its answer.
+3. It starts a new worker, and, when that worker is ready, sends it the
+   `open` of the load the old one held, unless the first request of the
+   queue is on another load, as after a cancel; the requests that waited
+   go to the new worker after that `open`, and `onPopneiReady` is called
+   when it ends, as for any worker started again with an `open` to send
+   (above, "The calculation worker holds one load").
+
+A file of `WRITE_RESTART_BYTES` or less leaves the worker as it is, with
+no cost to the next request. `WRITE_RESTART_BYTES` is a constant of
+`client.ts`, set from the measurement of section 11 of the architecture
+in the first work package of stage 3 that writes a file; meanwhile 100
+MB, 100,000,000 bytes, the value `docs/specs/analyses/writeVariants.md`
+gives, about five times the memory of wasm after one diversity on the
+`.nei` file of 19,161,178 bytes, 35.5 MB in Chromium 153
+(`docs/plans/walking-skeleton.report.md`). What a restart costs in stage
+3 is the reading of the header of the file, at most 49 ms (above); from
+stage 4 it costs also the intermediate results the worker holds, the
+pruned variants and the kinship, which is when the value matters.
+
+The file outlives the worker that made it: a `Blob` the page holds keeps
+its bytes whatever becomes of the worker that made it, by the File API.
+It has not been seen in a browser; the flow of the Variants step saves a
+file after such a restart in the three engines (below, "How it is
+verified").
 
 ### Crashes, defects, and every read answered
 
@@ -261,7 +325,7 @@ was ready:
 | `crashed`, or an `error` event of the worker | fails with `workerFailed`, its message | ended, and started again |
 | `messageerror`, a message the browser could not copy | fails with `workerFailed` | ended, and started again |
 | `badRequest` | fails with `defect`, its message | ended, and started again |
-| a message that fails its check, an answer of another request's id or of the wrong kind for the request, a result under another key than its request's or of another analysis than its job's | fails with `defect`; the client writes what was wrong to the console of the browser | ended, and started again |
+| a message that fails its check, an answer of another request's id or of the wrong kind for the request, a `result` to a `write` or a `written` to a `run` among them, a result or a file under another key than its request's, a result of another analysis than its job's | fails with `defect`; the client writes what was wrong to the console of the browser | ended, and started again |
 | `postMessage` of the request throws, a `DataCloneError` of a job that holds what cannot be copied | fails with `defect`, the browser's message | ended, and started again |
 
 The client's `onerror` of each worker calls `event.preventDefault()`.
@@ -294,16 +358,16 @@ a calculation by the panel of its analysis
 
 ### Progress
 
-`onProgress` of a run is called with each `progress` of its id, and of no
-other; the client passes the four fields of popnei's `Progress` on as
+`onProgress` of a run or a write is called with each `progress` of its
+id, and of no other; the client passes the four fields of popnei's `Progress` on as
 they came, `bytesRead`, `numBytes`, `pass` and `numPasses`
 (`docs/specs/worker/messages.md`, "The progress"), and the store keeps
 the last one on the run (`docs/specs/core/store.md`, `RunView`). It is
 never a condition of anything: a run that sent none is not stuck, and a
 run over a `.nei` file ends with its `result` before `bytesRead` reaches
-`numBytes`. A `progress` of a request that is not a `run`, or of an id
-that is not running, is a message of the wrong kind for the request, a
-defect, as the table above has it.
+`numBytes`. A `progress` of a request that is neither a `run` nor a
+`write`, or of an id that is not running, is a message of the wrong kind
+for the request, a defect, as the table above has it.
 
 ## The TypeScript interface
 
@@ -353,7 +417,16 @@ export interface Client {
 
   /** Sends a calculation, under its key; the store's `send`. */
   run(key: string, job: Job, onProgress: (p: Progress) => void): Run<JobResult>;
+
+  /** Writes the variants the job's filters keep as a file, under its key;
+      the store's `write.send`. */
+  write(key: string, job: WriteJob, onProgress: (p: Progress) => void): Run<Written<Blob>>;
 }
+
+/** Above it, the calculation worker is started again after a write
+    (A write, and the restart after a large one, above); set by the
+    measurement of stage 3, meanwhile 100 MB. */
+export const WRITE_RESTART_BYTES = 100_000_000;
 
 /** A read under way: its answer, and how to stop it (Cancelling, above). */
 export interface Read<A> {
@@ -383,8 +456,8 @@ export type IndividualsAnswer =
 `refused` is the reader's `IndividualsFileRead` of `failed`
 (`docs/specs/worker/messages.md`). The outcome of a read never fails, as
 the outcome of a run does not: a
-failure is one of its values. The id of every request, reads and runs of
-both workers, is one count from 1 for the life of the page.
+failure is one of its values. The id of every request, reads, runs and
+writes of both workers, is one count from 1 for the life of the page.
 
 `src/worker/start.ts` is the file `.claude/skills/coding/worker.md` gives
 whole, "How Vite builds the workers": `makeRunnerWorker` and
@@ -414,13 +487,22 @@ here:
   again while the source is still pending.
 
 - **The store** is given `send: (key, job, onProgress) => client.run(key,
-  job, onProgress)` (`docs/specs/core/store.md`, `createStore`), and the
-  client is given `onPopneiReady: (v) => store.popneiReady(v)`.
+  job, onProgress)` and, from stage 3, `write.send: (key, job,
+  onProgress) => client.write(key, job, onProgress)`
+  (`docs/specs/core/store.md`, `createStore`), and the client is given
+  `onPopneiReady: (v) => store.popneiReady(v)`. The list of the
+  individuals kept that a job carries is put in it by core: the store
+  gives it to each analysis through the client bound to its key,
+  `WorkerClient.individuals` (`docs/specs/core/store.md`), and puts it in
+  the job of a write; the client of this spec sends each job as it is
+  given, and knows nothing of the filters of individuals.
 - **`src/ui/runs.ts`**, its `startAnalysis`, takes the `Run` that `store.startRun` returns,
-  awaits its `outcome`, and gives it to `store.runEnded(run.id, outcome)`.
+  awaits its `outcome`, and gives it to `store.runEnded(run.id, outcome)`,
+  and so for the handles of a write that `store.startWrite` returns.
   The client promises it: the outcome arrives once and never fails;
   `cancel()` can be called at any time, as often as the store likes; and
-  nothing of the client calls back into the page during `run()` itself.
+  nothing of the client calls back into the page during `run()` or
+  `write()` itself.
 
 ## The cases
 
@@ -472,6 +554,22 @@ here:
   what the project file writes so that it is not asked for.
 - **A worker given up** answers every request at once, as above, and
   starts no worker; the other worker goes on.
+- **A new load while a file is written.** The write is on the old load,
+  so it ends `cancelled` with every request on that load, and the worker
+  is ended (above); the store has stopped it already, as it stops every
+  request at a change of the load (`docs/specs/core/store.md`).
+- **A large write with runs waiting behind it.** The write ends `done`
+  first; the worker is ended and started again; the runs go to the new
+  worker after the `open` of the load. A run given to the client between
+  the answer of the write and the new worker's `open` waits in the queue
+  as any other.
+- **A large write whose load is no longer the next one.** When the first
+  request of the queue is on another load, the new worker is sent no
+  `open` of the old one, as after a cancel, and the rule of the load
+  takes over.
+- **A write that ends while its `Run` was cancelled** is never seen: a
+  cancel of a running write ends the worker, and the `written` it may
+  have posted goes to no one, since the handlers were taken off first.
 
 ## How it runs
 
@@ -483,7 +581,9 @@ grows by one entry per pick and is never emptied: each entry is the
 handle of a file and a few fields, not its bytes. No copy of a variants
 file is held anywhere: popnei reads the `File` by ranges in the
 calculation worker, and the memory of its wasm holds a range and a block
-of a pass (`docs/specs/worker/runner.md`, "The memory").
+of a pass (`docs/specs/worker/runner.md`, "The memory"). A written file
+is held by the client only from the answer of its write to its outcome,
+in the same turn; the `Blob` is the store's after that.
 
 ## How it is verified
 
@@ -528,6 +628,21 @@ walking skeleton, a diversity `Job` and a CSV.
   next `run` on A is not a defect: a new worker is made, sent the `open`
   of A, and then the run. A `run` that ends `reopenFailed` fails with it,
   and the worker is not ended.
+- **A write.** The worker holding A, `write` of key w1 on A: the
+  worker was sent the `write` with its key and its job. Two `progress`
+  and a `written` under w1 with a `Blob` of 3,594 bytes: its
+  `onProgress` was called twice, and its outcome is `done` with w1 and
+  that `Blob`, the very object the fake posted; the worker was not ended.
+  A `written` under another key, and a `result` to a `write`, fail it
+  with `defect` and end the worker; a `written` to a `run` too. A
+  `cancel()` of a write waiting takes it out of the queue; of a write
+  running, ends the worker.
+- **The restart after a large write**: a `written` with `numBytes`
+  100,000,001 and a run k5 waiting: the outcome of the write is `done`
+  before the worker is ended, then a new worker is made and, once
+  ready, sent the `open` of A, then k5; `onPopneiReady` is called when
+  that `open` ends. A `written` of exactly 100,000,000 bytes ends no
+  worker. The test gives a fake `Blob`, since only `numBytes` is read.
 - **Progress**: two `progress` of a run's id, then its `result`: its
   `onProgress` is called twice with the four fields as they came, and
   its outcome is `done`; a `progress` of an id that is not running is a
@@ -555,21 +670,33 @@ walking skeleton, a diversity `Job` and a CSV.
   a second one before the answer to the first; a worker that was ended is
   sent nothing more; `onPopneiReady` comes before any answer of its
   worker is given to a caller; no worker is sent a second `open`, nor a request of another
-  load than its `open`'s.
+  load than its `open`'s. The sequences draw writes as well as runs, and
+  large writes among them.
 
 What needs the browser is checked by the flow of the walking skeleton
 with Playwright (`.claude/skills/coding/testing.md`): the real workers
 built by Vite, a `File` read in the calculation worker, a Cancel that ends
 a calculation in the middle and the next one run on the new worker, and
 the time of a restart that reads the variants file again, written down as
-a measurement of stage 2 (`docs/build-order.md`).
+a measurement of stage 2 (`docs/build-order.md`). From stage 3, the
+flow of the Variants step, in Chromium, Firefox and WebKit: a file
+written and then saved, whose bytes are those the runner's test gives,
+and a file saved after the worker that made it was ended, by a Stop of
+a calculation started after the write, which shows that a `Blob`
+outlives its worker in each engine. That has not been seen yet; if an
+engine loses the bytes, the restart after a large write would lose the
+file there, and the page would have to hold the bytes itself before the
+restart.
 
 ## Open points
 
 None. The one this spec had, what a run says when its variants file
 cannot be opened again, was decided by the owner on 25 September 2026: a
 kind of its own, `reopenFailed`, as written above (point B of
-`docs/specs/stage-2-open-points.md`).
+`docs/specs/stage-2-open-points.md`). The restart after a large write
+was decided by the owner on 26 September 2026 (`docs/architecture.md`,
+section 13, point 5); its bound, `WRITE_RESTART_BYTES`, is set by a
+measurement and has its meanwhile above.
 
 ## Not in this spec
 
@@ -581,7 +708,14 @@ kind of its own, `reopenFailed`, as written above (point B of
   `docs/specs/entry.md`.
 - Which calculations are cancelled and when: `docs/specs/core/store.md`.
 - Restarting the calculation worker between two requests to give back
-  the memory of wasm: open point 2 of `docs/architecture.md`, settled on
-  what the walking skeleton measures.
+  the memory of wasm, other than after a large write: not done, as the
+  owner settled on 26 September 2026 from what the walking skeleton
+  measured (`docs/architecture.md`, section 13, point 2).
 - The intermediate results the calculation worker keeps, the xlsx and
   the zip: from stage 4.
+- Which writes and runs are stopped when, a write dropped when it ends
+  after a change of its filters, and the Save of the file:
+  `docs/specs/core/store.md`, `docs/specs/analyses/writeVariants.md` and
+  `docs/specs/entry.md`.
+- The read of a BED file in the light worker: with popnei's release that
+  filters by its regions.
