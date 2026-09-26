@@ -54,6 +54,7 @@ export function Dialog<C extends DialogContent>({
   children,
 }: DialogProps<C>): React.JSX.Element {
   const textId = useId();
+  const text = content === null ? null : content.text;
   return (
     <ModalOverlay
       isOpen={content !== null}
@@ -62,30 +63,35 @@ export function Dialog<C extends DialogContent>({
       }}
       className={classOf(styles, "overlay")}
     >
-      {content !== null && (
-        <Modal className={classOf(styles, "modal")}>
-          <AriaDialog
-            role={role}
-            className={classOf(styles, "dialog")}
-            {...{ [DIALOG_MARK]: "" }}
-            {...(content.text !== null && { "aria-describedby": textId })}
-          >
-            <Heading
-              slot="title"
-              level={2}
-              className={classOf(styles, "title")}
-            >
-              {content.title}
-            </Heading>
-            {content.text !== null && (
-              <p id={textId} className={classOf(styles, "text")}>
-                {content.text}
-              </p>
-            )}
-            {children(content)}
-          </AriaDialog>
-        </Modal>
-      )}
+      {/* The modal is drawn while the overlay closes too, which React Aria
+          waits for before it takes the overlay off the page; its content,
+          gone by then, is not. */}
+      <Modal className={classOf(styles, "modal")}>
+        <AriaDialog
+          role={role}
+          className={classOf(styles, "dialog")}
+          {...{ [DIALOG_MARK]: "" }}
+          {...(text !== null && { "aria-describedby": textId })}
+        >
+          {content !== null && (
+            <>
+              <Heading
+                slot="title"
+                level={2}
+                className={classOf(styles, "title")}
+              >
+                {content.title}
+              </Heading>
+              {text !== null && (
+                <p id={textId} className={classOf(styles, "text")}>
+                  {text}
+                </p>
+              )}
+              {children(content)}
+            </>
+          )}
+        </AriaDialog>
+      </Modal>
     </ModalOverlay>
   );
 }

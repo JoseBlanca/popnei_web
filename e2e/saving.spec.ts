@@ -250,6 +250,27 @@ test("WS9 D3 a name typed as run1 downloads run1.popnei.json, Cancel and Escape 
   expect(downloads).toEqual(["run1.popnei.json"]);
 });
 
+test("WS9 D3 once the dialog of Save has closed, the page takes a click again, with reduced motion as without", async ({
+  page,
+}) => {
+  for (const reducedMotion of ["no-preference", "reduce"] as const) {
+    await page.emulateMedia({ reducedMotion });
+    await openPopgen(page);
+    await loadPanelNei(page);
+    await saveButton(page).click();
+    const dialog = page.getByRole("dialog", { name: "Save the project" });
+    const download = page.waitForEvent("download");
+    await dialog.getByRole("button", { name: "Save", exact: true }).click();
+    await download;
+    await expect(dialog).toHaveCount(0);
+
+    await stepLink(page, "Individuals").click({ timeout: 2000 });
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Individuals" }),
+    ).toBeVisible();
+  }
+});
+
 test("WS9 D3 in the dialog of Save, a click into the field of the name puts the cursor there, and the Tab key back into it selects the name", async ({
   page,
 }) => {
