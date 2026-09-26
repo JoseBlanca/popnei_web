@@ -1378,3 +1378,67 @@ For the owner, with the report at the end, each with a recommendation:
 4. The help under the ploidy says "set the right ploidy here and read
    the file again", which a file of mixed ploidies has not. Recommended:
    leave it, since the refusal now says so.
+
+### The map of the cases
+
+Each of the ten specs lists its cases and how it is to be checked, and
+`docs/plans/walking-skeleton.cases.md` gives, for each of those 207
+items, the test that gives its input and checks its outcome. 204 have
+one, on commit 3a6698f. Per spec, items and those with a test: the
+messages 10 and 10; the client 17 and 17; the runner 26 and 26; the
+reader of the metadata file 57 and 55; the project file 22 and 22; the
+diversity 17 and 17; the entry 27 and 26; the shell 13 and 13; the
+Variants step 18 and 18. The spec of the Individuals step lists no
+cases and no checks; its flows are `e2e/individuals.spec.ts`.
+
+Fourteen of those tests were written for the map, for cases the code
+already handled and no test reached. Each failed with the code it
+guards broken and passed once it was put back. They check that a ploidy
+above 255, and a population naming an individual the file does not have,
+are refused with popnei's own words; that the column of the identifiers
+chosen as the populations gives a population of one to each individual
+and one warning; that the check numbers of the panel at 0.05 are the
+spec's ten; that a title line of one cell above the header of a metadata
+file, a file of semicolons read with the comma set, and a VCF cut at the
+top are read as the spec says; that an undo back to a file already read,
+and an opened project, ask for no read; that after an opening the
+Individuals step offers to load the metadata file again instead of its
+options of reading, since the page no longer has the file; and four
+cases of the messages and of the client between the page and its
+workers.
+
+Three items have no test:
+
+- A metadata file saved by Excel for Mac (the reader's spec). Which
+  encoding Excel for Mac writes has not been checked, and there is no
+  such file to test with.
+- A metadata file changed on the disk after it was picked (the reader's
+  spec), which the spec asks to be checked by hand in Chrome, Firefox and
+  Safari. This report records no such check. The code's side, a file the
+  browser refuses to read given as "unreadable", is tested without a
+  browser, in node.
+- A throw while React, the library that draws the screens, draws the
+  frame of the page outside every part that catches it (the entry's
+  spec). The spec leaves it to review, since it cannot be made to happen
+  without code written only for the test.
+
+One item of the entry's spec is reached in part. When the calculations
+cannot start, because popnei's wasm does not load, the spec says the page
+shows nothing until a file is picked, and then says the file could not
+be read. The flows check the second half and not the first: the page
+gives up starting after two tries, at a moment a test cannot see from
+outside, so a test that finds nothing on the screen cannot tell whether
+the page has given up yet.
+
+Two items are reached only by the measurements of `e2e/measure.spec.ts`,
+which are run by hand for this report and by no other command: point R,
+what each engine does with a variants file changed on the disk after it
+was picked, and the time to read the metadata file of 10,000 rows. The
+time of a restart of the calculations is measured there too; the rest of
+the item that asks for it is tested by the flows.
+
+On the commit of the tests the checks of the plan pass: the format, the
+types and the lint with no finding; the 1,459 tests of Vitest, in node;
+and the 348 flows of Playwright in Chromium and WebKit, the engines of
+Chrome and of Safari. Firefox was not run, since Playwright cannot start
+it on this Mac.
