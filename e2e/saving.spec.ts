@@ -961,7 +961,7 @@ test("WS9 D3 Save the project of the error bar downloads the project file with n
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("WS9 D3 a project that cannot be written: Save closes its dialog and the bar shows the error, and the bar's Save says the project was not saved, and axe", async ({
+test("WS9 D3 a project that cannot be written: Save closes its dialog and the bar shows the error, and the bar's Save says the project was not saved, and the bar then no longer says to save, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -990,6 +990,10 @@ test("WS9 D3 a project that cannot be written: Save closes its dialog and the ba
     "The project could not be saved: the application met an error of its own as it wrote the file. Reloading the page would lose the project.",
   );
   await expect(page.getByText("1 more error followed it.")).toBeVisible();
+  // The bar no longer says to save.
+  await expect(page.getByRole("alert")).toHaveText(
+    "The application met an error of its own: popnei_web defect: test. Your project could not be saved; copy the details and report them.",
+  );
   await expectNoViolations(makeAxeBuilder);
 });
 

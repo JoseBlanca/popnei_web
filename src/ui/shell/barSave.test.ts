@@ -11,7 +11,7 @@ import type { TestDefJob, TestDefResult } from "../../core/testSupport.ts";
 import type { Outcome, Run } from "../../worker/protocol.ts";
 import { createDefects } from "../defects.ts";
 import { createSaving } from "../saving.ts";
-import { NOT_SAVED, saveFromBar } from "./barSave.ts";
+import { NOT_SAVED, barText, saveFromBar } from "./barSave.ts";
 
 const PANEL_ID = "0123456789abcdef0123456789abcdef";
 
@@ -105,5 +105,17 @@ describe("WS9 the Save of the error bar", () => {
     );
     expect(downloads).toEqual(["panel.popnei.json"]);
     expect(defects.getState().first).toBeNull();
+  });
+
+  test("the first line of the bar: intact, not saved, and as the page started", () => {
+    expect(barText("test.", true, false)).toBe(
+      "The application met an error of its own: test. Your project is intact: save it, then reload the page.",
+    );
+    expect(barText("test", true, true)).toBe(
+      "The application met an error of its own: test. Your project could not be saved; copy the details and report them.",
+    );
+    expect(barText("test", false, false)).toBe(
+      "The application met an error of its own as it started: test. Reload the page.",
+    );
   });
 });
