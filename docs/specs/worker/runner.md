@@ -5,7 +5,10 @@ in `src/worker/runner.ts` and `runnerWorker.ts` with the walking
 skeleton, the smallest application that goes through every part once
 (stage 2 of `docs/build-order.md`). Revised on 26 September 2026 for
 stage 3, the Variants step whole, as the architecture approved by the
-owner that day has it; the revision is approved by the owner on 26 September 2026. The calculation
+owner that day has it; the revision is approved by the owner on 26 September 2026. Revised
+again on 26 September 2026, after the review of the code of stage 3: the
+test of the statistics of each individual also checks that the fixture
+the tests of core read is popnei's. The calculation
 worker is the thread of the browser tab, beside the page, that runs
 popnei, so that a calculation does not freeze the page
 (`docs/architecture.md`, section 1). Its runner is the code that answers
@@ -1196,7 +1199,13 @@ result of its own `individualChecks` run, as core would. Each test at
   0.036458333333333336 and 0.03211805555555555 and `obsHetRate`
   0.3672014260249554, 0.3441441441441441 and 0.37309417040358744, no NaN,
   and `passStats` `{ numVars: 1152, filtering: { missing_data: {
-  varsProcessed: 1200, varsKept: 1152 } } }`. A VCF written in the test, two individuals and two variants,
+  varsProcessed: 1200, varsKept: 1152 } } }`. The same 200 names and
+  statistics are those of `e2e/fixtures/panel_individual_stats.json`,
+  compared exactly, with a NaN held there as `null`: the tests of core
+  read popnei's statistics from that file, since they do not call popnei,
+  and this test fails when the release of popnei gives others
+  (`docs/architecture.md`, section 4, "What would show these choices
+  wrong"). A VCF written in the test, two individuals and two variants,
   the second individual missing at both, gives `missingGtRate` `[0, 1]`
   and `obsHetRate` `[0.5, NaN]`.
 - **The diversity with the list of 125** after the filter at 0.05: the
