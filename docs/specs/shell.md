@@ -277,7 +277,7 @@ file its options of the CSV compared by their values:
 |---|---|
 | a request is in `runs` that was not | "Diversity: calculating." |
 | in the same change, calculations left behind, which the current project no longer asks for, went to being stopped | added to it: "The earlier calculation of Diversity was stopped.", or "The 2 earlier calculations were stopped." |
-| a request that was current and not being stopped left `runs`, and its analysis is `done` under its key | "Diversity: done.", "Diversity: done, 2 warnings." |
+| a request that was current and not being stopped left `runs`, and its analysis is `done` under its key | "Diversity: done.", "Diversity: done, 2 warnings.", followed, for an opened project, by the line its panel shows under the result, `checkVerdictText` of its `check` or, when that is `null`, `uncomparedText`, when either gives one: "Diversity: done. The same numbers as in the project file: this variants file gives the results the project was saved with." |
 | the same, and its analysis is in the state `error` under its key | "Diversity could not be calculated. The Analyses step says why." |
 | a request that was current and being stopped left `runs` | "Diversity: stopped." |
 | the variants file of the same load went from pending to read | "panel.nei read: 200 individuals, ploidy 2.", and, when the metadata file is read, the sentence of the check below |
@@ -285,6 +285,13 @@ file its options of the CSV compared by their values:
 | the metadata file of the same load and options went from pending to read | "pops.csv read: 360 rows, 5 columns.", and, when the variants file is read, the sentence of the check: "All 342 individuals found." or "12 individuals of panel.nei are not in pops.csv." |
 | the same, to failed | the reason `individualsNeeds` gives |
 | the warning of a reopened project that differs from its file, `identityWarning` of `projectFile.ts`, appeared, or is there with another load of the variants file than before; while that load is being read, at the end of its read instead | "Warning: " and its words, those of the Variants step (`docs/specs/steps/variants.md`, "A project file opened"), after the read's own announcement |
+
+The comparison with the project file is part of the end of the
+calculation, as the owner decided on 26 September 2026 (point 11 of the
+review of work package 9): it is the one line of the result that says
+whether the variants file given is the one the project was made with,
+and a user of a screen reader, who may be on another step, would
+otherwise not learn of it.
 
 Nothing else is announced from the state. So a result that comes back
 from the cache after an undo is not announced, since no request ended;
@@ -655,7 +662,8 @@ with the analyses of `TEST_DEFS` of `src/core/testSupport.ts`:
   notice, with the text asserted whole; three removed and two stopped,
   counted.
 - **`announcementsOf`**: a pair of states for each row of the first
-  table of the status region; and none for a result back from the cache
+  table of the status region, and for the end of a calculation with
+  each of the lines of the comparison with the project file; and none for a result back from the cache
   after an undo, a calculation left behind that ends, an undo back to a
   load already read, an opening, a read of the metadata file recorded
   for options other than those of the present project, and the warning
