@@ -11,6 +11,7 @@ import { describe, expect, test } from "vitest";
 import { POPGEN_ANALYSES } from "../../core/apps.ts";
 import {
   handedText,
+  notOpenedTitle,
   openQuestion,
   openedText,
   readPicked,
@@ -36,6 +37,13 @@ describe("the words and the reading of Save project and Open project…", () => 
     expect(handedText("panel.popnei.json")).toBe(
       "panel.popnei.json was handed to the browser to download.",
     );
+  });
+
+  test("the heading of a project file refused names the file, escaped as core shows a name", () => {
+    expect(notOpenedTitle("panel.popnei.json")).toBe(
+      "panel.popnei.json was not opened",
+    );
+    expect(notOpenedTitle("a\nb.json")).toBe("a\\nb.json was not opened");
   });
 
   test("the question before an opening, and its sentence of the calculations in flight", () => {
@@ -68,6 +76,7 @@ describe("the words and the reading of Save project and Open project…", () => 
     };
     expect(await readPicked(big, POPGEN_ANALYSES)).toEqual({
       kind: "refused",
+      title: "notes.vcf was not opened",
       text: "notes.vcf cannot be opened as a project: it is larger than 64 MB, and a project file, which holds settings and no genotypes, is much smaller. Open the .popnei.json file the application saved.",
     });
   });
@@ -81,6 +90,7 @@ describe("the words and the reading of Save project and Open project…", () => 
     };
     expect(await readPicked(gone, POPGEN_ANALYSES)).toEqual({
       kind: "refused",
+      title: "panel.popnei.json was not opened",
       text: "panel.popnei.json could not be read: It moved. Choose it again.",
     });
   });
@@ -90,6 +100,7 @@ describe("the words and the reading of Save project and Open project…", () => 
       await readPicked(fileOf("notes.txt", "some notes"), POPGEN_ANALYSES),
     ).toEqual({
       kind: "refused",
+      title: "notes.txt was not opened",
       text: "notes.txt cannot be opened as a project: it is not a project file, or it was cut short or changed outside the application. Open the .popnei.json file the application saved, or a copy of it.",
     });
   });

@@ -297,7 +297,7 @@ test("WS9 D3 Open project… with notes.txt shows the text of notJson in a dialo
   await openProject(page, { name: "notes.txt", text: "some notes" });
 
   const dialog = page.getByRole("alertdialog", {
-    name: "The file was not opened",
+    name: "notes.txt was not opened",
   });
   await expect(dialog).toHaveAccessibleDescription(
     "notes.txt cannot be opened as a project: it is not a project file, or it was cut short or changed outside the application. Open the .popnei.json file the application saved, or a copy of it.",
@@ -309,6 +309,24 @@ test("WS9 D3 Open project… with notes.txt shows the text of notJson in a dialo
 
   await expect(dialog).toHaveCount(0);
   await expect(openButton(page)).toBeFocused();
+});
+
+test("WS9 D3 Open project… with a file of a newer format, whose text does not name the file, names it in the heading of its dialog", async ({
+  page,
+}) => {
+  await openPopgen(page);
+
+  await openProject(page, {
+    name: "later.popnei.json",
+    text: '{"format": "popnei_web project", "formatVersion": 99}',
+  });
+
+  const dialog = page.getByRole("alertdialog", {
+    name: "later.popnei.json was not opened",
+  });
+  await expect(dialog).toHaveAccessibleDescription(
+    /^This project file was saved by a newer version of the application/,
+  );
 });
 
 test("WS9 D3 Open project… with a file above 64 MB shows the text of tooLarge", async ({
@@ -323,7 +341,7 @@ test("WS9 D3 Open project… with a file above 64 MB shows the text of tooLarge"
   await openProject(page, path);
 
   const dialog = page.getByRole("alertdialog", {
-    name: "The file was not opened",
+    name: "big.popnei.json was not opened",
   });
   await expect(dialog).toHaveAccessibleDescription(
     "big.popnei.json cannot be opened as a project: it is larger than 64 MB, and a project file, which holds settings and no genotypes, is much smaller. Open the .popnei.json file the application saved.",
@@ -511,7 +529,9 @@ test("WS9 D3 a ploidy typed and a file refused with no variants file are forgott
     mimeType: "text/plain",
     buffer: Buffer.from("not variants"),
   });
-  const refused = page.getByText(/^panel\.txt was not loaded/);
+  const refused = page
+    .getByRole("region", { name: "Variants file" })
+    .getByText(/^panel\.txt was not loaded/);
   await expect(refused).toBeVisible();
 
   await openProject(page, saved);

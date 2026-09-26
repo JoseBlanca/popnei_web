@@ -39,7 +39,6 @@ import styles from "./ProjectButtons.module.css";
 import {
   KEEP_PROJECT,
   NAME_NEEDED,
-  NOT_OPENED_TITLE,
   handedText,
   openButtonText,
   openQuestion,
@@ -162,7 +161,7 @@ export function SaveProject(): React.JSX.Element {
 /** What Open project… is showing, besides its button. */
 type Opening =
   | { readonly kind: "none" }
-  | { readonly kind: "refused"; readonly text: string }
+  | { readonly kind: "refused"; readonly title: string; readonly text: string }
   | {
       readonly kind: "asking";
       readonly name: string;
@@ -246,7 +245,7 @@ export function OpenProject(): React.JSX.Element {
         <Button label="Open project…" ref={button} />
       </FileTrigger>
       <Dialog
-        title={NOT_OPENED_TITLE}
+        title={opening.kind === "refused" ? opening.title : ""}
         role="alertdialog"
         isOpen={opening.kind === "refused"}
         onClose={back}

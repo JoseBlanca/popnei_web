@@ -42,8 +42,11 @@ export function openQuestion(
 /** The button of the question that keeps the project on the page. */
 export const KEEP_PROJECT = "Keep the current project";
 
-/** The heading of the dialog of a project file that does not open. */
-export const NOT_OPENED_TITLE = "The file was not opened";
+/** The heading of the dialog of the project file `name` that does not
+    open, which names it, since some of the texts under it do not. */
+export function notOpenedTitle(name: string): string {
+  return `${escaped(name)} was not opened`;
+}
 
 /** The button of the question that opens the file. */
 export function openButtonText(name: string): string {
@@ -66,10 +69,10 @@ export function unreadableText(name: string, message: string): string {
 }
 
 /** What the first three steps of an opening gave: the project, or the
-    words of why the file does not open. */
+    words of why the file does not open, under its heading. */
 export type Picked =
   | { readonly kind: "project"; readonly project: Project }
-  | { readonly kind: "refused"; readonly text: string };
+  | { readonly kind: "refused"; readonly title: string; readonly text: string };
 
 /** The parts of a `File` an opening reads. */
 export type PickedFile = Pick<File, "name" | "size" | "text">;
@@ -84,24 +87,25 @@ export async function readPicked<J, R>(
   file: PickedFile,
   analyses: readonly AnalysisDef<J, R>[],
 ): Promise<Picked> {
+  const refused = (text: string): Picked => ({
+    kind: "refused",
+    title: notOpenedTitle(file.name),
+    text,
+  });
   if (file.size > MAX_PROJECT_FILE_BYTES) {
-    return {
-      kind: "refused",
-      text: projectFileErrorText(
-        { kind: "tooLarge", size: file.size },
-        file.name,
-      ),
-    };
+    return refused(
+      projectFileErrorText({ kind: "tooLarge", size: file.size }, file.name),
+    );
   }
   let text: string;
   try {
     text = await file.text();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return { kind: "refused", text: unreadableText(file.name, message) };
+    return refused(unreadableText(file.name, message));
   }
   const read = readProjectFile(text, "popgen", analyses);
   return read.ok
     ? { kind: "project", project: read.value }
-    : { kind: "refused", text: projectFileErrorText(read.error, file.name) };
+    : refused(projectFileErrorText(read.error, file.name));
 }
