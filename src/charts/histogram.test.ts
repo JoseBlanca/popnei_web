@@ -376,6 +376,18 @@ describe("VS4 D2 the histogram, under jsdom", () => {
     expect(numberOf(first, "width")).toBeCloseTo(13.1, 9);
   });
 
+  test("bin 20, of 69 variants, is a bar that stands on the bottom of the frame and rises to 69 on the axis of 0 to 90", () => {
+    // The frame is 375 less the margins of 56 and 44, 275 high; 69 of 90
+    // is 275 * 21 / 90 below its top, 64.1666..., and 275 * 69 / 90 high,
+    // 210.8333....
+    const element = sizedElement(600, 375);
+    createHistogram(element, histogramOf(MAF_COUNTS, 0.95));
+    const first =
+      svgOf(element).querySelector("g.chart-marks rect.chart-bar") ?? undefined;
+    expect(numberOf(first, "y")).toBeCloseTo(64.16666666666667, 9);
+    expect(numberOf(first, "height")).toBeCloseTo(210.83333333333334, 9);
+  });
+
   test("the observed heterozygosity at 0.5 draws bin 20 as one outlined rect at the line", () => {
     const element = sizedElement(600, 375);
     createHistogram(element, histogramOf(OBS_HET_COUNTS, 0.5));
@@ -466,6 +478,20 @@ describe("VS4 D2 the histogram, under jsdom", () => {
     expect(numberOf(text, "x")).toBeLessThan(0);
   });
 
+  test("an update from 0.95 to 0.9 writes Maximum 0.9 in the first row of the legend", () => {
+    const element = sizedElement(600, 375);
+    const handle = createHistogram(element, histogramOf(MAF_COUNTS, 0.95));
+    handle.update(histogramOf(MAF_COUNTS, 0.9));
+    const rows = [
+      ...svgOf(element).querySelectorAll("g.chart-legend g.chart-legend-row"),
+    ];
+    expect(rows.map((row) => row.textContent)).toEqual([
+      "Maximum 0.9",
+      "Kept by this filter",
+      "Removed by this filter",
+    ]);
+  });
+
   test("an update from 0.95 to no threshold removes the line and the legend and fills every bar, in the same svg", () => {
     const element = sizedElement(600, 375);
     const handle = createHistogram(element, histogramOf(MAF_COUNTS, 0.95));
@@ -485,10 +511,17 @@ describe("VS4 D2 the histogram, under jsdom", () => {
     const handle = createHistogram(element, histogramOf(MAF_COUNTS, null));
     const svg = svgOf(element);
     expect(svg.querySelectorAll("rect.chart-bar")).toHaveLength(20);
+    expect(
+      svg.querySelectorAll("g.chart-axis-x g.tick").length,
+    ).toBeGreaterThan(0);
+    expect(
+      svg.querySelectorAll("g.chart-axis-y g.tick").length,
+    ).toBeGreaterThan(0);
     handle.update(histogramOf(MAF_COUNTS, 0.95));
     expect(svg.querySelectorAll("rect.chart-bar")).toHaveLength(0);
     expect(svg.querySelector("line.chart-threshold")).toBeNull();
     expect(svg.querySelector("g.chart-legend")?.childNodes).toHaveLength(0);
+    expect(svg.querySelector("g.chart-axis-x")?.childNodes).toHaveLength(0);
     expect(svg.querySelector("g.chart-axis-y")?.childNodes).toHaveLength(0);
     expect(svg.getAttribute("width")).toBe("0");
     expect(svg.getAttribute("height")).toBe("0");
