@@ -2,7 +2,8 @@
 
 Written on 25 September 2026, and approved by the owner the same day;
 revised the same day for `numCheckNumbers` and the line of numbers not
-compared, which the owner's decisions on the project file ask for. There
+compared, which the owner's decisions on the project file ask for, and
+on 26 September 2026 for the words of a VCF that mixes ploidies. There
 was no code yet. This spec gives the first analysis of the population genetics
 application, in its form for the walking skeleton: the module
 `src/core/analyses/diversity.ts`, which says what the diversity of each
@@ -922,7 +923,7 @@ error state, by what the store gives:
 | popnei refused a pass over a variants file that holds no variant: its message starts with "the pass gave no variant and its source holds none", and the file is a `.nei` file or a VCF read with every variant | "empty.vcf has no variants, so there is no variant to calculate the diversity over. Load another variants file in the Variants step." |
 | the same refusal, of a VCF read with only the variants that passed its filters, `onlyPassed` | "failed.vcf has no variant with PASS or . in its FILTER column, and it was read with only those, so there is no variant to calculate the diversity over. Untick "Only the variants with PASS or . in the FILTER column" in the Variants step and read the file again." |
 | popnei refused an empty pass: its message starts with "the pass gave no variant:", with the colon, which the refusal of a source that holds none does not have at that place | "The filters kept none of the variants of panel.nei, so there is no variant to calculate the diversity over. Loosen the filters in the Variants step." |
-| popnei refused a genotype of another ploidy than the one the VCF was read with: its message starts "line ‹n› of the VCF, the column of ‹individual›: its genotype is of the ploidy ‹found› and the reader was asked for the ploidy ‹given›" | "At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. Set the ploidy of the VCF to 4 in the Variants step and read the file again." |
+| popnei refused a genotype of another ploidy than the one the VCF was read with: its message starts "line ‹n› of the VCF, the column of ‹individual›: its genotype is of the ploidy ‹found› and the reader was asked for the ploidy ‹given›" | "At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. Set the ploidy of the VCF to 4 in the Variants step and read the file again; a file that mixes ploidies, as a haploid X among diploid chromosomes, cannot be read in this version." |
 | popnei refused a line of the VCF it cannot read, or a gzipped file that is damaged or cut short: its message starts "line ‹n› of the VCF" or "the VCF was written by bgzip" | "popnei could not read panel.vcf.gz: ‹its message›. Correct the file, or fetch it again, and load it in the Variants step." |
 | popnei refused for another reason | "popnei could not calculate the diversity: ‹its message›. Change the settings, or load the variants file again, to run it again." |
 | the browser can no longer read the variants file, `reopenFailed`, as the owner decided on 25 September 2026 (point B of `docs/specs/stage-2-open-points.md`) | "panel.nei could not be read again; it may have changed on the disk since it was picked. Load it again in the Variants step." |
@@ -944,6 +945,15 @@ none in the source. Such a file does hold variants, which the same file
 read with every variant gives, so the words say which box to untick
 rather than to load another file; they hold as well for a VCF of a
 header alone read that way, which has no variant with PASS either.
+
+popnei gives the same refusal for a VCF all of another ploidy than the
+one it was read with and for a VCF that mixes ploidies, and nothing in it
+tells the two apart, so the words of the ploidy cover both: the ploidy
+to set, for the first, and, for the second, that this version cannot
+read it, as the owner decided on 26 September 2026 (point 7 of the
+reviews of work packages 2 to 6 of `docs/plans/walking-skeleton.md`,
+under "The rounds of 25 September" of its report). The option not taken
+was a change to popnei that tells the two apart.
 
 `refusalText` of the module makes the first six, the message without
 its full stop as `project.md` shows popnei's messages. A VCF is refused
