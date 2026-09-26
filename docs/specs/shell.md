@@ -552,7 +552,8 @@ the walking skeleton (stage 8).
   and its buttons, when it is up; the header, "popnei web", Undo, Redo,
   Open project…, Save project; the three links of the stepper; the step.
   The notice is last in the order of the page, and F6 reaches it from
-  anywhere, as React Aria gives its region of toasts; when it goes while
+  anywhere but a dialog (below, "The dialogs"), as React Aria gives its
+  region of toasts; when it goes while
   it had the focus, the focus goes back to where it was before. Escape
   pressed in the notice gives the focus back to where it was before F6 or
   the Tab key took it there, and leaves the notice as it is, since
@@ -578,7 +579,10 @@ the walking skeleton (stage 8).
   replaces it, and a click into the field afterwards putting the cursor
   where it was clicked, and give it back to the button that opened them, and Escape closes them, as React Aria's
   `Dialog` does; while one is open, the keyboard's Undo and Redo do
-  nothing.
+  nothing, wherever the focus is, and the notice, drawn under the
+  dialog, is out of the reach of F6, the Tab key and a screen reader,
+  since its Undo or Redo would change the project behind the question
+  the dialog asks; once the dialog closes, F6 reaches it again.
 - **A screen reader**, VoiceOver with Safari at least, is tried on the
   stepper, the notice, the status region and the error bar, which are new
   widgets of this stage (`react.md`, "Accessibility review").
@@ -631,7 +635,9 @@ flow of the walking skeleton and beside it (`.claude/skills/coding/testing.md`):
   step with the focus on its `<h1>`.
 - Undo pressed with the mouse until nothing is left: the focus is on
   Redo.
-- F6 reaches the notice after a change that removed the diversity.
+- F6 reaches the notice after a change that removed the diversity, and
+  not while the dialog of Save is open, where the keys that would press
+  its Undo leave the project as it is.
 - An error posted into the page, as `docs/specs/entry.md` does it, shows
   the bar; Copy the details in Chromium without the permission of the
   clipboard shows the box of text.
