@@ -19,6 +19,7 @@ import {
   parseToRunner,
 } from "./messages.ts";
 import type { FromRunner, ToRunner, WorkerStop } from "./messages.ts";
+import type { Progress } from "./protocol.ts";
 import type { LoadToOpen, Runner } from "./runner.ts";
 import { createRunner, loadPopnei, transferablesOf } from "./runner.ts";
 
@@ -42,6 +43,7 @@ let runner: Runner | null = null;
 
 type OpenRequest = Extract<ToRunner, { kind: "open" }>;
 type RunRequest = Extract<ToRunner, { kind: "run" }>;
+type WriteRequest = Extract<ToRunner, { kind: "write" }>;
 
 /** The load of an `open`, its read options kept tied to its format. */
 function loadOf(request: OpenRequest): LoadToOpen {
@@ -79,7 +81,28 @@ function answerOpen(held: Runner, request: OpenRequest): void {
 
 function answerRun(held: Runner, request: RunRequest): void {
   const { id, key, job } = request;
-  const answer = held.run(job, (progress) => {
+  const answer = held.run(job, progressOf(id));
+  switch (answer.kind) {
+    case "ok":
+      post(
+        { kind: "result", id, key, result: answer.value },
+        transferablesOf(answer.value),
+      );
+      return;
+    case "refused":
+    case "reopenFailed":
+      post({ ...answer, id });
+      return;
+    case "crashed":
+    case "badRequest":
+      stop(answer);
+      return;
+  }
+}
+
+/** Posts the progress of the request `id`, popnei's four fields. */
+function progressOf(id: number): (progress: Progress) => void {
+  return (progress) => {
     post({
       kind: "progress",
       id,
@@ -88,13 +111,17 @@ function answerRun(held: Runner, request: RunRequest): void {
       pass: progress.pass,
       numPasses: progress.numPasses,
     });
-  });
+  };
+}
+
+/** Answers a write with its file as `written`, with no list of transfers:
+    a `Blob` crosses as a handle, and its counts hold no typed array. */
+function answerWrite(held: Runner, request: WriteRequest): void {
+  const { id, key, job } = request;
+  const answer = held.write(job, progressOf(id));
   switch (answer.kind) {
     case "ok":
-      post(
-        { kind: "result", id, key, result: answer.value },
-        transferablesOf(answer.value),
-      );
+      post({ kind: "written", id, key, result: answer.value });
       return;
     case "refused":
     case "reopenFailed":
@@ -132,11 +159,7 @@ async function handle(data: unknown): Promise<void> {
         answerRun(runner, request.value);
         return;
       case "write":
-        // The write is not built yet, and the page sends none.
-        stop({
-          kind: "badRequest",
-          message: "a write, which this worker does not answer yet",
-        });
+        answerWrite(runner, request.value);
         return;
     }
   } catch (thrown) {

@@ -33,6 +33,8 @@ import type {
   Progress,
   VariantChecksJob,
   VariantFilter,
+  WriteJob,
+  Written,
 } from "./protocol.ts";
 import {
   answerOfThrown,
@@ -1589,5 +1591,242 @@ describe("VS1 D3 the passes of the runner: transferablesOf", () => {
     expect(() => transferablesOf({ ...result, obsHetRate: view })).toThrow(
       /^popnei_web defect: an array of a result is a view/,
     );
+  });
+});
+
+function writeJob(
+  filters: readonly VariantFilter[],
+  individuals: readonly string[] | null = null,
+): WriteJob {
+  return { format: "nei", fileId: FILE_ID, filters, individuals };
+}
+
+/** The file of an answer to a write that has to be `ok`, with its bytes. */
+async function writtenOf(answer: Answer<Written<Blob>>): Promise<{
+  readonly written: Written<Blob>;
+  readonly bytes: Uint8Array<ArrayBuffer>;
+}> {
+  if (answer.kind !== "ok") {
+    throw new Error(`the answer is ${answer.kind}: ${JSON.stringify(answer)}`);
+  }
+  const written = answer.value;
+  expect(written.file).toBeInstanceOf(Blob);
+  return {
+    written,
+    bytes: new Uint8Array(await written.file.arrayBuffer()),
+  };
+}
+
+/** What openVars reads back from written bytes, through a runner of its
+    own: the individuals, and the variants a pass with no filter gives. */
+function readBack(bytes: Uint8Array<ArrayBuffer>): {
+  readonly individuals: readonly string[];
+  readonly numVars: number;
+} {
+  const runner = createRunner();
+  const { individuals } = valueOf(
+    runner.open(NEI, { name: "written.nei", source: bytes }),
+  );
+  const counts = resultOf(
+    runner.run(filterCountsJob([]), ignore),
+    "filterCounts",
+  );
+  return { individuals, numVars: counts.passStats.numVars };
+}
+
+/** The progress of a pass over panel.nei, the two calls of the diversity. */
+const PANEL_PROGRESS: readonly Progress[] = [
+  { bytesRead: 0, numBytes: 261490, pass: 1, numPasses: 1 },
+  { bytesRead: 259376, numBytes: 261490, pass: 1, numPasses: 1 },
+];
+
+/** The missing data filter at 0.05 and a MAF filter at 0, which keep no
+    variant. */
+const NO_VARIANT_KEPT: readonly VariantFilter[] = [
+  missingData(0.05),
+  { kind: "maf", maxAllowedMaf: 0 },
+];
+
+describe("VS1 D4 the written file of the runner: the five files", () => {
+  test("with no filter, a Blob of 261,490 bytes, numBytes 261,490, that openVars opens again with the 200 individuals and 1,200 variants", async () => {
+    const { written, bytes } = await writtenOf(
+      opened("panel.nei").write(writeJob([]), ignore),
+    );
+    expect(written.format).toBe("nei");
+    expect(written.file.size).toBe(261490);
+    expect(written.numBytes).toBe(261490);
+    expect(bytes.length).toBe(261490);
+    expect(written.passStats).toEqual({ numVars: 1200, filtering: {} });
+    const back = readBack(bytes);
+    expect(back.individuals.length).toBe(200);
+    expect(back.individuals[0]).toBe("s000");
+    expect(back.numVars).toBe(1200);
+  });
+
+  test("at 0.05, 250,994 bytes and the counts 1,152 of 1,200, that open again with 200 individuals and 1,152 variants", async () => {
+    const { written, bytes } = await writtenOf(
+      opened("panel.nei").write(writeJob([missingData(0.05)]), ignore),
+    );
+    expect(written.file.size).toBe(250994);
+    expect(written.numBytes).toBe(250994);
+    expect(written.passStats).toEqual(COUNTS_AT_0_05);
+    const back = readBack(bytes);
+    expect(back.individuals.length).toBe(200);
+    expect(back.numVars).toBe(1152);
+  });
+
+  test("at 0.05 with the list of 125, 176,098 bytes that open again with those 125 individuals in their order", async () => {
+    const { of125 } = lists();
+    expect(of125.length).toBe(125);
+    const { written, bytes } = await writtenOf(
+      opened("panel.nei").write(writeJob([missingData(0.05)], of125), ignore),
+    );
+    expect(written.file.size).toBe(176098);
+    expect(written.numBytes).toBe(176098);
+    expect(written.passStats).toEqual(COUNTS_AT_0_05);
+    const back = readBack(bytes);
+    expect(back.individuals).toEqual(of125);
+    expect(back.numVars).toBe(1152);
+  });
+
+  test("at 0.05 with the list of 119, 170,042 bytes that open again with those 119 individuals", async () => {
+    const { of119 } = lists();
+    expect(of119.length).toBe(119);
+    const { written, bytes } = await writtenOf(
+      opened("panel.nei").write(writeJob([missingData(0.05)], of119), ignore),
+    );
+    expect(written.file.size).toBe(170042);
+    expect(written.numBytes).toBe(170042);
+    expect(readBack(bytes).individuals).toEqual(of119);
+  });
+
+  test("at 0.05 with a MAF filter at 0, a file of no variant, 3,594 bytes, written and not refused", async () => {
+    const { written, bytes } = await writtenOf(
+      opened("panel.nei").write(writeJob(NO_VARIANT_KEPT), ignore),
+    );
+    expect(written.file.size).toBe(3594);
+    expect(written.numBytes).toBe(3594);
+    expect(written.passStats).toEqual({
+      numVars: 0,
+      filtering: {
+        missing_data: { varsProcessed: 1200, varsKept: 1152 },
+        maf: { varsProcessed: 1152, varsKept: 0 },
+      },
+    });
+    const back = readBack(bytes);
+    expect(back.individuals.length).toBe(200);
+    expect(back.numVars).toBe(0);
+  });
+});
+
+describe("VS1 D4 the written file of the runner: its progress, told and the defects", () => {
+  test("the progress of each of the five writes is the two calls of the diversity over panel.nei, in their order", () => {
+    const { of125, of119 } = lists();
+    const jobs = [
+      writeJob([]),
+      writeJob([missingData(0.05)]),
+      writeJob([missingData(0.05)], of125),
+      writeJob([missingData(0.05)], of119),
+      writeJob(NO_VARIANT_KEPT),
+    ];
+    for (const job of jobs) {
+      const told: Progress[] = [];
+      const answer = opened("panel.nei").write(job, (progress) => {
+        told.push(progress);
+      });
+      expect(answer.kind).toBe("ok");
+      expect(told).toEqual(PANEL_PROGRESS);
+    }
+  });
+
+  test("what told throws is thrown by write, that very value, and not answered refused", () => {
+    const thrown = new Error("told");
+    let caught: unknown = null;
+    try {
+      opened("panel.nei").write(writeJob([]), () => {
+        throw thrown;
+      });
+    } catch (error: unknown) {
+      caught = error;
+    }
+    expect(caught).toBe(thrown);
+  });
+
+  test("what told throws at popnei's last call, at the end of the write, is thrown by write too", () => {
+    const thrown = new Error("told at the end");
+    let calls = 0;
+    let caught: unknown = null;
+    try {
+      opened("panel.nei").write(writeJob([]), () => {
+        calls += 1;
+        // The second of the two calls of a pass over panel.nei.
+        if (calls === 2) {
+          throw thrown;
+        }
+      });
+    } catch (error: unknown) {
+      caught = error;
+    }
+    expect(calls).toBe(2);
+    expect(caught).toBe(thrown);
+  });
+
+  test("a write before the open is badRequest", () => {
+    expect(createRunner().write(writeJob([]), ignore)).toEqual({
+      kind: "badRequest",
+      message: "a write before the open",
+    });
+  });
+
+  test("a write of another load, after an open that popnei refused, or with an empty list of individuals is badRequest", () => {
+    const other: WriteJob = { ...writeJob([]), fileId: "load-2" };
+    expect(opened("panel.nei").write(other, ignore).kind).toBe("badRequest");
+    const refused = createRunner();
+    expect(
+      refused.open(NEI, { name: "bad.vcf", source: bytesOf("bad.vcf") }).kind,
+    ).toBe("refused");
+    expect(refused.write(writeJob([]), ignore).kind).toBe("badRequest");
+    expect(opened("panel.nei").write(writeJob([], []), ignore)).toEqual({
+      kind: "badRequest",
+      message: "an empty list of individuals",
+    });
+  });
+
+  test("a write after a run with its steps does not open the file again, and one with other steps does", () => {
+    const { file, reads } = countedPanel();
+    const runner = createRunner();
+    expect(runner.open(NEI, file).kind).toBe("ok");
+    const counts = runner.run(filterCountsJob([missingData(0.05)]), ignore);
+    expect(counts.kind).toBe("ok");
+    expect(reads()).toBe(1);
+    const same = runner.write(writeJob([missingData(0.05)]), ignore);
+    expect(same.kind).toBe("ok");
+    expect(reads()).toBe(1);
+    const other = runner.write(writeJob([missingData(0.045)]), ignore);
+    expect(other.kind).toBe("ok");
+    expect(reads()).toBe(2);
+  });
+});
+
+describe("VS1 D4 the written file of the runner: a file that no longer reads", () => {
+  beforeAll(() => {
+    vi.stubGlobal("FileReaderSync", TestFileReaderSync);
+  });
+  afterEach(() => {
+    reading = "read";
+  });
+  afterAll(() => {
+    vi.unstubAllGlobals();
+  });
+
+  test("a range the browser refuses in the write is reopenFailed, with popnei's message", () => {
+    const runner = createRunner();
+    expect(runner.open(NEI, panelBlob()).kind).toBe("ok");
+    reading = "notReadable";
+    expect(runner.write(writeJob([]), ignore)).toEqual({
+      kind: "reopenFailed",
+      name: "panel.nei",
+      message: `${PANEL_NOT_GIVEN}the file changed`,
+    });
   });
 });

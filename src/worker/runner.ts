@@ -4,7 +4,8 @@
  * variants and the list of the individuals kept of each request, runs the
  * diversity and the three analyses of the Variants step, the statistics of
  * each individual, the histograms of the variants and the counts of the
- * filters, and says what to answer when popnei refuses or something breaks
+ * filters, writes the filtered variants as a `.nei` file, and says what to
+ * answer when popnei refuses or something breaks
  * (docs/specs/worker/runner.md).
  *
  * It is the one file of the application that calls popnei, and it calls
@@ -19,6 +20,7 @@ import {
   openVars,
   openVcf,
   version,
+  writeVars,
 } from "popnei";
 import type {
   PassStats as PopneiPassStats,
@@ -50,6 +52,8 @@ import type {
   VariantDistrib,
   VariantFilter,
   VariantFilterKind,
+  WriteJob,
+  Written,
 } from "./protocol.ts";
 
 /** A load as the runner opens it: its id, new at every pick of the file,
@@ -74,8 +78,8 @@ type AnswerOf<K extends FromRunner["kind"]> = Omit<
 >;
 
 /**
- * What the worker's script posts for a request: the value of `opened` or
- * of `result`; `refused`, popnei refused the input, and `reopenFailed`,
+ * What the worker's script posts for a request: the value of `opened`, of
+ * `result` or of `written`; `refused`, popnei refused the input, and `reopenFailed`,
  * the browser no longer reads the file, after which the worker goes on;
  * or a `WorkerStop`, after which it closes. The failures are the messages
  * of messages.ts with no id, so a field added to one of them is a field
@@ -107,6 +111,18 @@ export interface Runner {
    * ours.
    */
   run(job: Job, told: (progress: Progress) => void): Answer<JobResult>;
+  /**
+   * Writes the variants the job's filters keep, of the individuals of its
+   * list, as a `.nei` file, opening the file again as `run` does, and
+   * gives `told` each `Progress` of popnei as it comes. The file is a
+   * `Blob` made of popnei's bytes, of which the runner keeps nothing; a
+   * file of no variant is written, not refused. `badRequest` as for
+   * `run`. Throws what `told` throws, and a defect of ours.
+   */
+  write(
+    job: WriteJob,
+    told: (progress: Progress) => void,
+  ): Answer<Written<Blob>>;
 }
 
 /** The statistics the diversity asks popnei for, the three it shows. */
@@ -313,28 +329,44 @@ export function createRunner(): Runner {
     return { kind: "ok", value: variants };
   }
 
-  function run(
-    job: Job,
-    told: (progress: Progress) => void,
-  ): Answer<JobResult> {
+  /**
+   * The load opened, for a request of `what`, a run or a write, of the
+   * load `fileId`: `badRequest` before the open, after an open that gave
+   * no `Variants`, and for another load.
+   */
+  function openedFor(
+    what: "run" | "write",
+    fileId: string,
+  ): Answer<Extract<Held, { readonly kind: "opened" }>> {
     switch (held.kind) {
       case "none":
-        return { kind: "badRequest", message: "a run before the open" };
+        return { kind: "badRequest", message: `a ${what} before the open` };
       case "notOpened":
         return {
           kind: "badRequest",
-          message: "a run after an open that gave no variants",
+          message: `a ${what} after an open that gave no variants`,
         };
       case "opened":
         break;
     }
-    const { load, file } = held;
-    if (job.fileId !== load.fileId) {
+    if (fileId !== held.load.fileId) {
       return {
         kind: "badRequest",
-        message: `a run of the load ${job.fileId} in the worker of the load ${load.fileId}`,
+        message: `a ${what} of the load ${fileId} in the worker of the load ${held.load.fileId}`,
       };
     }
+    return { kind: "ok", value: held };
+  }
+
+  function run(
+    job: Job,
+    told: (progress: Progress) => void,
+  ): Answer<JobResult> {
+    const theLoad = openedFor("run", job.fileId);
+    if (theLoad.kind !== "ok") {
+      return theLoad;
+    }
+    const { load, file, individuals } = theLoad.value;
     const why = whyNotToRun(job);
     if (why !== null) {
       return { kind: "badRequest", message: why };
@@ -348,7 +380,7 @@ export function createRunner(): Runner {
       case "diversity":
         return runDiversity(pass, job);
       case "individualChecks":
-        return runIndividualChecks(pass, job, held.individuals);
+        return runIndividualChecks(pass, job, individuals);
       case "variantChecks":
         return runVariantChecks(pass, job);
       case "filterCounts":
@@ -356,7 +388,30 @@ export function createRunner(): Runner {
     }
   }
 
-  return { open, run };
+  function write(
+    job: WriteJob,
+    told: (progress: Progress) => void,
+  ): Answer<Written<Blob>> {
+    const theLoad = openedFor("write", job.fileId);
+    if (theLoad.kind !== "ok") {
+      return theLoad;
+    }
+    const { load, file } = theLoad.value;
+    const why = whyNotToWrite(job);
+    if (why !== null) {
+      return { kind: "badRequest", message: why };
+    }
+    const withSteps = variantsWithSteps(load, file, {
+      filters: job.filters,
+      individuals: job.individuals,
+    });
+    if (withSteps.kind !== "ok") {
+      return withSteps;
+    }
+    return writeFile({ variants: withSteps.value, name: file.name, told }, job);
+  }
+
+  return { open, run, write };
 }
 
 /** The steps a job asks for: its filters, and the list of individuals of
@@ -466,12 +521,9 @@ function putFilter(variants: Variants, filter: VariantFilter): void {
     keep no individual; and, of a diversity, two populations of one name,
     of which popnei would keep the last. */
 function whyNotToRun(job: Job): string | null {
-  const { individuals } = stepsOf(job);
-  if (individuals !== null && individuals.length === 0) {
-    return "an empty list of individuals";
-  }
-  if (job.analysis !== "diversity") {
-    return null;
+  const why = whyNotTheList(stepsOf(job).individuals);
+  if (why !== null || job.analysis !== "diversity") {
+    return why;
   }
   const names = new Set<string>();
   for (const [name] of job.pops) {
@@ -481,6 +533,21 @@ function whyNotToRun(job: Job): string | null {
     names.add(name);
   }
   return null;
+}
+
+/** Why the runner cannot write a job, or `null` when it can: an empty
+    list of individuals, a defect of the page, as for a run. */
+function whyNotToWrite(job: WriteJob): string | null {
+  return whyNotTheList(job.individuals);
+}
+
+/** Why a list of individuals cannot be put, or `null`: it is empty, which
+    core never sends, since nothing starts when the filters keep no
+    individual. */
+function whyNotTheList(individuals: readonly string[] | null): string | null {
+  return individuals !== null && individuals.length === 0
+    ? "an empty list of individuals"
+    : null;
 }
 
 /** A pass to make: the `Variants` with the steps of the request on it, the
@@ -652,6 +719,44 @@ function runFilterCounts(pass: Pass, job: FilterCountsJob): Answer<JobResult> {
     passStats: passStatsOf(answer.value, job.filters),
   };
   return { kind: "ok", value: result };
+}
+
+/**
+ * Writes the variants of the pass with `writeVars`, with popnei's own size
+ * of batch, and makes a `Blob` of the bytes, keeping no reference to them,
+ * so that the heap of the worker can give them back once the `Blob` holds
+ * the file. A file of no variant is written like any other. Throws a
+ * defect when the bytes are over a buffer that is not an `ArrayBuffer`,
+ * which a `Blob` does not take: popnei copies them into one of its own, and
+ * a copy of ours would hold the file twice.
+ */
+function writeFile(pass: Pass, job: WriteJob): Answer<Written<Blob>> {
+  const answer = passOf(pass, (variants) => writeVars(variants));
+  if (answer.kind !== "ok") {
+    return answer;
+  }
+  const { bytes, passStats } = answer.value;
+  if (!isOverArrayBuffer(bytes)) {
+    throw new Error(
+      "popnei_web defect: the bytes of the written file are over a buffer that is not an ArrayBuffer",
+    );
+  }
+  const file = new Blob([bytes]);
+  const result: Written<Blob> = {
+    format: job.format,
+    file,
+    numBytes: file.size,
+    passStats: passStatsOf(passStats, job.filters),
+  };
+  return { kind: "ok", value: result };
+}
+
+/** Whether the bytes are over an `ArrayBuffer`, and not a
+    `SharedArrayBuffer`. */
+function isOverArrayBuffer(
+  bytes: Uint8Array,
+): bytes is Uint8Array<ArrayBuffer> {
+  return bytes.buffer instanceof ArrayBuffer;
 }
 
 /** The `DiversityResult` of popnei's result, in the order of the job. */
