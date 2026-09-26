@@ -22,7 +22,7 @@ import type { Defects } from "../defects.ts";
 import type { Saving } from "../saving.ts";
 import { Button } from "../widgets/Button.tsx";
 import styles from "./ErrorBar.module.css";
-import { NOT_SAVED, barText, saveFromBar } from "./barSave.ts";
+import { barText, saveFromBar } from "./barSave.ts";
 
 /** What the bar is drawn with. */
 export interface ErrorBarProps {
@@ -99,9 +99,12 @@ export function ErrorBar({
   // Whether the box of the details is shown, after a copy that failed,
   // until the bar is closed: a Save after it keeps it.
   const [boxShown, setBoxShown] = useState(false);
-  // Whether a Save of the bar could not write the project, until the bar
-  // is closed: its first line then no longer says to save.
-  const [saveFailed, setSaveFailed] = useState(false);
+  // Whether the last save, of the header or of the bar, could not write
+  // the project: the first line then no longer says to save.
+  const saveFailed = useSyncExternalStore(
+    saving?.subscribe ?? subscribeToNothing,
+    () => saving?.saveFailed() ?? false,
+  );
   const details = detailsText(defects.details(), popneiVersion, appVersion);
 
   async function copyDetails(): Promise<void> {
@@ -121,7 +124,6 @@ export function ErrorBar({
     defects.dismiss();
     clear();
     setBoxShown(false);
-    setSaveFailed(false);
     moveFocusAfterClose();
   }
 
@@ -147,9 +149,7 @@ export function ErrorBar({
             <Button
               label="Save the project"
               onPress={() => {
-                const said = saveFromBar(saving, defects);
-                setSaveFailed(said === NOT_SAVED);
-                say(said);
+                say(saveFromBar(saving, defects));
               }}
             />
           )}

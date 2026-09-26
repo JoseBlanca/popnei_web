@@ -1035,8 +1035,9 @@ test("WS9 D3 a project that cannot be written: Save closes its dialog and the ba
     .click();
 
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await expect(page.getByRole("alert")).toContainText(
-    "popnei_web defect: test",
+  // The Save of the header failed: the bar does not say to save.
+  await expect(page.getByRole("alert")).toHaveText(
+    "The application met an error of its own: popnei_web defect: test. Your project could not be saved; copy the details and report them.",
   );
   await page.getByRole("button", { name: "Save the project" }).click();
   // The bar's own status region, the first of the page.

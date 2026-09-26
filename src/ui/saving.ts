@@ -67,6 +67,12 @@ export interface Saving {
   read(text: string): Result<Project, ProjectFileError>;
   /** A project file was opened and `p` is its project: it is the base. */
   opened(p: Project): void;
+  /** Whether the last save threw as it wrote or handed over the file,
+      until a save succeeds. */
+  saveFailed(): boolean;
+  /** Calls `listener` when `saveFailed` changes; returns the function
+      that stops it. A property made once, so React keeps it. */
+  readonly subscribe: (listener: () => void) => () => void;
   /** Whether the present project is another than the base, or an
       analysis is done under a key that was not done in the base: a result
       that ended since, which the file saved lacks. */
@@ -109,21 +115,43 @@ export function createSaving<J, R>(deps: SavingDeps<J, R>): Saving {
   // The keys done in the base: a result done under another key ended
   // after it, and the file saved lacks its check numbers.
   let baseDone = doneKeys(store.getState());
+  // Whether the last save threw, which the error bar reads.
+  let failed = false;
+  const listeners = new Set<() => void>();
+  const setFailed = (value: boolean): void => {
+    if (failed === value) return;
+    failed = value;
+    for (const listener of [...listeners]) listener();
+  };
   return {
     proposedName: () => projectFileName(store.getState().project),
     save: (name) => {
       const state = store.getState();
-      const text = writeProjectFile(
-        state,
-        analyses,
-        appVersion,
-        new Date().toISOString(),
-      );
       const used = savedName(name);
-      download(used, text);
+      try {
+        const text = writeProjectFile(
+          state,
+          analyses,
+          appVersion,
+          new Date().toISOString(),
+        );
+        download(used, text);
+      } catch (error) {
+        // Recorded and thrown on: a defect, which the error bar shows.
+        setFailed(true);
+        throw error;
+      }
+      setFailed(false);
       base = state.project;
       baseDone = doneKeys(state);
       return used;
+    },
+    saveFailed: () => failed,
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
     },
     read: (text) => readProjectFile(text, app, analyses),
     opened: (p) => {

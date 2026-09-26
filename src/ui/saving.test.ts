@@ -309,3 +309,34 @@ describe("WS9 the saving counts a result that ended as a change", () => {
     expect(saving.changed()).toBe(false);
   });
 });
+
+describe("WS9 the saving records a save that failed", () => {
+  test("saveFailed is false at first, true after a save whose download throws, with the listener called, and false after one that succeeds", () => {
+    const store = makeStore();
+    let fail = true;
+    const saving = createSaving({
+      store,
+      app: "popgen",
+      analyses: POPGEN_ANALYSES,
+      appVersion: "0.1.0",
+      download: () => {
+        if (fail) throw new Error("popnei_web defect: test");
+      },
+    });
+    let calls = 0;
+    const unsubscribe = saving.subscribe(() => {
+      calls += 1;
+    });
+    expect(saving.saveFailed()).toBe(false);
+
+    expect(() => saving.save("panel")).toThrow("popnei_web defect: test");
+    expect(saving.saveFailed()).toBe(true);
+    expect(calls).toBe(1);
+
+    fail = false;
+    saving.save("panel");
+    expect(saving.saveFailed()).toBe(false);
+    expect(calls).toBe(2);
+    unsubscribe();
+  });
+});
