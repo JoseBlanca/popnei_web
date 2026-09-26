@@ -10,6 +10,7 @@ import {
   INDIVIDUAL_FILTER_ORDER,
   VARIANT_FILTER_ORDER,
   analysisOptions,
+  individualsNeeds,
   loadIndividuals,
   loadVariants,
   removeIndividualFilter,
@@ -45,6 +46,9 @@ import type {
   IndividualFilterKind,
   IndividualsFileError,
   IndividualsTable,
+  Outcome,
+  Progress,
+  Run,
   RunError,
   VariantFilter,
   VariantFilterKind,
@@ -983,3 +987,201 @@ export const wholeProject: fc.Arbitrary<Project> = fc
     ),
   )
   .map((p) => deepFreeze<Project>(p));
+
+// The fakes of the store spec's "How it is verified": a `send` whose
+// requests the test ends by hand, and two analyses, one that needs the
+// individuals file and uses the populations, and one that needs only the
+// variants file. Their results differ in shape, so that a result given
+// to the other analysis's functions shows.
+
+/** A request of the fake analyses. */
+export interface TestJob {
+  readonly analysis: "pops" | "vars";
+  /** The key of an intermediate result, made by the client. */
+  readonly pruned: string;
+}
+
+/** The result of the analysis of the populations. */
+export interface PopsResult {
+  readonly kind: "pops";
+  readonly fst: Float64Array;
+}
+
+/** The result of the analysis of the variants. */
+export interface VarsResult {
+  readonly kind: "vars";
+  /** The number of variants the pass counted, or `null`. */
+  readonly numVars: number | null;
+  readonly values: Float64Array;
+}
+
+export type TestResult = PopsResult | VarsResult;
+
+/** A request the fake `send` was given, which the test ends by hand. */
+export interface SentRequest {
+  readonly run: Run<TestResult>;
+  readonly key: string;
+  readonly job: TestJob;
+  /** Passes a progress to the store, as the worker client would. */
+  readonly progress: (p: Progress) => void;
+  /** Resolves the request's outcome. */
+  readonly end: (outcome: Outcome<TestResult>) => void;
+  /** How many times its `cancel()` was called. */
+  readonly cancels: () => number;
+}
+
+/** A fake `send`, and the requests it was given, in order. */
+export function fakeSend(): {
+  readonly send: (
+    key: string,
+    job: TestJob,
+    onProgress: (p: Progress) => void,
+  ) => Run<TestResult>;
+  readonly sent: SentRequest[];
+  /** What was sent and cancelled, in order: "send 2", "cancel 1". */
+  readonly log: string[];
+} {
+  const sent: SentRequest[] = [];
+  const log: string[] = [];
+  const send = (
+    key: string,
+    job: TestJob,
+    onProgress: (p: Progress) => void,
+  ): Run<TestResult> => {
+    let end: (outcome: Outcome<TestResult>) => void = () => undefined;
+    const outcome = new Promise<Outcome<TestResult>>((resolve) => {
+      end = resolve;
+    });
+    let cancels = 0;
+    const id = sent.length + 1;
+    log.push(`send ${String(id)}`);
+    const run: Run<TestResult> = {
+      id,
+      outcome,
+      cancel: () => {
+        cancels += 1;
+        log.push(`cancel ${String(id)}`);
+      },
+    };
+    sent.push({
+      run,
+      key,
+      job,
+      progress: onProgress,
+      end,
+      cancels: () => cancels,
+    });
+    return run;
+  };
+  return { send, sent, log };
+}
+
+/** How many times the fake analyses were asked for their keys and their
+    reasons. */
+export interface Calls {
+  /** The calls of the `keyInputs` of the analysis of the populations. */
+  pops: number;
+  /** The calls of the `keyInputs` of the analysis of the variants. */
+  vars: number;
+  /** The calls of the `needs` of the analysis of the populations. */
+  needs: number;
+  /** What each `warnings` and `checkNumbers` was given, in order:
+      "pops warnings of vars" when the populations were given a result of
+      the variants. */
+  readonly given: string[];
+}
+
+/** The intermediate result both fake analyses ask the client for. */
+export const PRUNED: readonly [string, JsonValue] = ["pruned", { maxR2: 0.5 }];
+
+/** The warning of the analysis of the variants when its request's
+    project filters by MAF. */
+export const MAF_WARNING = {
+  code: "mafFiltered",
+  text: "Rare variants were removed.",
+};
+
+/** The reason of the analysis of the populations when no column of the
+    individuals file defines them. */
+export const NO_POPULATIONS =
+  "Choose the column of the populations in the Individuals step.";
+
+/** The two fake analyses, the populations first, and the count of the
+    calls of their `keyInputs`. */
+export function fakeAnalyses(): {
+  readonly analyses: readonly AnalysisDef<TestJob, TestResult>[];
+  readonly calls: Calls;
+} {
+  const calls: Calls = { pops: 0, vars: 0, needs: 0, given: [] };
+  const pops: AnalysisDef<TestJob, TestResult> = {
+    id: "pops",
+    app: ["popgen"],
+    defaults: {},
+    keyVersion: 1,
+    filtersRead: { variants: true, individuals: true },
+    parseOptions: (options) => jsonObjectOf(options),
+    keyInputs: (p) => {
+      calls.pops += 1;
+      const read = p.individuals?.read;
+      return {
+        populations:
+          p.grouping.kind === "populations" ? p.grouping.column : null,
+        table:
+          read?.kind === "read"
+            ? { columns: read.table.columns, rows: read.table.rows }
+            : null,
+      };
+    },
+    needs: (p) => {
+      calls.needs += 1;
+      return (
+        individualsNeeds(p) ??
+        (p.grouping.kind === "populations" && p.grouping.column === null
+          ? NO_POPULATIONS
+          : null)
+      );
+    },
+    run: (_p, c) =>
+      c.run({ analysis: "pops", pruned: c.intermediateKey(...PRUNED) }),
+    warnings: (r) => {
+      calls.given.push(`pops warnings of ${r.kind}`);
+      return [];
+    },
+    checkNumbers: (r) => {
+      calls.given.push(`pops checkNumbers of ${r.kind}`);
+      return r.kind === "pops" ? [...r.fst] : [];
+    },
+    numCheckNumbers: () => null,
+    script: () => "",
+  };
+  const vars: AnalysisDef<TestJob, TestResult> = {
+    id: "vars",
+    app: ["popgen"],
+    defaults: { minMaf: 0 },
+    keyVersion: 1,
+    filtersRead: { variants: true, individuals: false },
+    parseOptions: (options) => jsonObjectOf(options),
+    keyInputs: (p) => {
+      calls.vars += 1;
+      return analysisOptions(p, "vars", { minMaf: 0 });
+    },
+    needs: () => null,
+    run: (_p, c) =>
+      c.run({ analysis: "vars", pruned: c.intermediateKey(...PRUNED) }),
+    warnings: (r, p) => {
+      calls.given.push(`vars warnings of ${r.kind}`);
+      return p.filters.some((filter) => filter.kind === "maf")
+        ? [MAF_WARNING]
+        : [];
+    },
+    checkNumbers: (r) => {
+      calls.given.push(`vars checkNumbers of ${r.kind}`);
+      return r.kind === "vars"
+        ? [...r.values].map((value) => (Number.isNaN(value) ? null : value))
+        : [];
+    },
+    numCheckNumbers: () => null,
+    script: () => "",
+  };
+  return { analyses: [pops, vars], calls };
+}
