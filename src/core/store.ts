@@ -268,12 +268,15 @@ export type WriteStatus<F> =
       kept, until the next change of the project. */
   | { readonly kind: "ready"; readonly key: Key; readonly dropped: boolean };
 
-/** Why the calculation of an analysis gave no result. */
+/** Why the calculation of an analysis gave no result; `WriteStatus`
+    gives the same for the writing of the filtered variants. */
 export type AnalysisError =
   /** popnei refused it, with its message; kept for the session. */
   | { readonly kind: "refused"; readonly message: string }
   /** It failed otherwise, never popnei's refusal, which is `refused`;
-      kept until the next change of the project. */
+      kept until the next change of the project, but for `reopenFailed`,
+      the variants file the browser could not read again, which lasts
+      until the load of the variants file changes. */
   | {
       readonly kind: "failed";
       readonly error: Exclude<RunError, { readonly kind: "popnei" }>;

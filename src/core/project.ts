@@ -1501,7 +1501,7 @@ function individualsReadNeeds(
     case "failed":
       return read.error.kind === "worker"
         ? workerFailedText(name, read.error.error.kind, ends)
-        : `${name} could not be read${saying(refusalWords(read.error, app))}. ${ends.refusedEnd(read.error)}`;
+        : `${name} could not be read${saying(individualsFileRefusalWords(read.error, app))}. ${ends.refusedEnd(read.error)}`;
     case "read":
       return null;
   }
@@ -1518,7 +1518,7 @@ export function individualsStepRefusal(
   error: Exclude<IndividualsFileError, { readonly kind: "files" }>,
   app: AppId,
 ): string {
-  const words = saying(refusalWords(error, app));
+  const words = saying(individualsFileRefusalWords(error, app));
   return `${words.slice(2)}. ${stepRefusedEnd(error, app)}`;
 }
 
@@ -1668,7 +1668,10 @@ function megabytes(size: number): string {
     words of docs/specs/worker/individuals.md, "The refusals and their
     words", with the file named as the application `app` names it; or the
     message of the files wasm, which may be empty. */
-function refusalWords(error: IndividualsFileError, app: AppId): string {
+function individualsFileRefusalWords(
+  error: IndividualsFileError,
+  app: AppId,
+): string {
   switch (error.kind) {
     case "empty":
       return "it has no row of individuals";

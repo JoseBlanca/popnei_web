@@ -13,10 +13,8 @@
  * none of them.
  */
 
-import type { JsonObject } from "../keys.ts";
 import { counted, escaped, grouped } from "../project.ts";
 import type { Project } from "../project.ts";
-import type { Result } from "../result.ts";
 import type { AnalysisDef, Warning, WorkerClient } from "../store.ts";
 import type {
   Job,
@@ -24,15 +22,17 @@ import type {
   Run,
   VariantChecksResult,
 } from "../../worker/protocol.ts";
-import { defect, histogramDescription, orNull, refusalWords } from "./words.ts";
+import {
+  defect,
+  histogramDescription,
+  orNull,
+  parseNoOptions,
+  refusalWords,
+} from "./words.ts";
 import type { DescribedBin } from "./words.ts";
 
 /** The id of the analysis. */
 const ID = "variantChecks";
-
-/** What its options should be, the end of "‹the field› should be ‹…›" of
-    `projectErrorText`: it has none. */
-const OPTIONS_EXPECTED = "no option";
 
 /** The bins of each histogram, popnei's default, given so that a new
     default of popnei does not change them unsaid. */
@@ -110,7 +110,7 @@ export const variantChecks: AnalysisDef<Job, JobResult> = Object.freeze({
   defaults: Object.freeze({}),
   keyVersion: 1,
   filtersRead: Object.freeze({ variants: false, individuals: false }),
-  parseOptions,
+  parseOptions: parseNoOptions,
   keyInputs,
   needs,
   run,
@@ -119,19 +119,6 @@ export const variantChecks: AnalysisDef<Job, JobResult> = Object.freeze({
   numCheckNumbers,
   script,
 });
-
-/** Gives back `{}` for `{}`, and refuses anything else: the analysis has
-    no option. */
-function parseOptions(options: unknown): Result<JsonObject, string> {
-  const isEmpty =
-    typeof options === "object" &&
-    options !== null &&
-    !Array.isArray(options) &&
-    Reflect.ownKeys(options).length === 0;
-  return isEmpty
-    ? { ok: true, value: {} }
-    : { ok: false, error: OPTIONS_EXPECTED };
-}
 
 /** Nothing beyond the load: it reads no filter, so only a new load, the
     read options of a VCF, the key version and the version of popnei

@@ -13,10 +13,8 @@
  * variants (`countsOf` of src/core/apps.ts).
  */
 
-import type { JsonObject } from "../keys.ts";
 import { VARIANT_FILTER_ORDER, escaped, grouped } from "../project.ts";
 import type { Project } from "../project.ts";
-import type { Result } from "../result.ts";
 import type { AnalysisDef, Warning, WorkerClient } from "../store.ts";
 import type {
   FilterCountsResult,
@@ -26,14 +24,15 @@ import type {
   Run,
   VariantFilterKind,
 } from "../../worker/protocol.ts";
-import { ONLY_PASSED_BOX, defect, refusalWords } from "./words.ts";
+import {
+  ONLY_PASSED_BOX,
+  defect,
+  parseNoOptions,
+  refusalWords,
+} from "./words.ts";
 
 /** The id of the analysis. */
 const ID = "filterCounts";
-
-/** What its options should be, the end of "‹the field› should be ‹…›" of
-    `projectErrorText`: it has none. */
-const OPTIONS_EXPECTED = "no option";
 
 /** The name of each filter of the variants, as the labels of the step
     name them, at the start of a sentence. */
@@ -86,7 +85,7 @@ export const filterCounts: AnalysisDef<Job, JobResult> = Object.freeze({
   defaults: Object.freeze({}),
   keyVersion: 1,
   filtersRead: Object.freeze({ variants: true, individuals: false }),
-  parseOptions,
+  parseOptions: parseNoOptions,
   keyInputs,
   needs,
   run,
@@ -112,19 +111,6 @@ export function refusalText(message: string, p: Project): string {
     again: "to count again",
     emptyPass: null,
   });
-}
-
-/** Gives back `{}` for `{}`, and refuses anything else: the analysis has
-    no option. */
-function parseOptions(options: unknown): Result<JsonObject, string> {
-  const isEmpty =
-    typeof options === "object" &&
-    options !== null &&
-    !Array.isArray(options) &&
-    Reflect.ownKeys(options).length === 0;
-  return isEmpty
-    ? { ok: true, value: {} }
-    : { ok: false, error: OPTIONS_EXPECTED };
 }
 
 /** Nothing beyond the load and the filters of the variants: the filter of

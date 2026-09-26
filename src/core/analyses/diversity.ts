@@ -1,8 +1,12 @@
 /**
  * The diversity of each population: what its result is calculated from,
+ * the populations the filters of individuals keep (`populationsKept`),
  * when it cannot run, the request it sends, its warnings, its check
- * numbers, its lines of the Python script, and the rows and the CSV of its
- * table (docs/specs/analyses/diversity.md, "The module").
+ * numbers, its lines of the Python script, the rows and the CSV of its
+ * table, and the words of its error state, for popnei's refusal
+ * (`refusalText`) and for statistics of each individual that failed
+ * (`statisticsFailedText`) (docs/specs/analyses/diversity.md, "The
+ * module").
  *
  * The three numbers of each population are popnei's, from one call of
  * `calcPerVarDistribs` in the calculation worker; this module computes
@@ -29,7 +33,7 @@ import type {
   WorkerClient,
 } from "../store.ts";
 import { refusalText as statisticsRefusalText } from "./individualChecks.ts";
-import { refusalWords } from "./words.ts";
+import { csvField, csvNumber, defect, orNull, refusalWords } from "./words.ts";
 import type {
   Cell,
   DiversityResult,
@@ -844,23 +848,6 @@ function valueAt(
   return value;
 }
 
-/** A number of popnei, `null` for a NaN. */
-function orNull(value: number): number | null {
-  return Number.isNaN(value) ? null : value;
-}
-
-/** A number of the table in a CSV: as `String` writes it, or an empty cell
-    for no value. */
-function csvNumber(value: number | null): string {
-  return value === null ? "" : String(value);
-}
-
-/** A field of a CSV, quoted when it holds a comma, a quote or a new
-    line, its quotes doubled. */
-function csvField(value: string): string {
-  return /[",\n\r]/u.test(value) ? `"${value.replaceAll('"', '""')}"` : value;
-}
-
 /** The most populations a text names all of, as `namesOf` does. */
 const MAX_NAMED = 3;
 
@@ -870,8 +857,4 @@ function listed(words: readonly string[]): string {
   return words.length < 2
     ? last
     : `${words.slice(0, -1).join(", ")} and ${last}`;
-}
-
-function defect(message: string): Error {
-  return new Error(`popnei_web defect: ${message}`);
 }

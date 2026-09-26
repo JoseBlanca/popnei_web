@@ -1,15 +1,18 @@
 /**
- * What the three analyses of the Variants step share: the words of a
- * refusal of popnei, the description of a histogram with the threshold of
- * its filter, and the cells of a CSV. The statistics of each individual
- * and the histograms of the variants give the words of their own panels
- * from these (docs/specs/analyses/individualChecks.md, "Its words";
- * variantChecks.md, "The states"; docs/specs/charts/histogram.md, "The
+ * What the analyses share: the words of a refusal of popnei, which the
+ * diversity and the three analyses of the Variants step give their error
+ * states from; the parsing of the options of an analysis that has none;
+ * the description of a histogram with the threshold of its filter; and
+ * the cells of a CSV (docs/specs/analyses/diversity.md, "Its words";
+ * individualChecks.md, "Its words"; variantChecks.md, "The states";
+ * filterCounts.md, "The states"; docs/specs/charts/histogram.md, "The
  * numbers without the picture").
  */
 
+import type { JsonObject } from "../keys.ts";
 import { counted, escaped, saying, shown } from "../project.ts";
 import type { Project } from "../project.ts";
+import type { Result } from "../result.ts";
 
 /** The start of popnei's refusal of a pass over a source that holds no
     variant, whatever the filters. */
@@ -214,6 +217,21 @@ export function csvField(value: string): string {
 /** A number of popnei, `null` for a NaN. */
 export function orNull(value: number): number | null {
   return Number.isNaN(value) ? null : value;
+}
+
+/** What the options of an analysis that has none should be, the end of
+    "‹the field› should be ‹…›" of `projectErrorText`. */
+const NO_OPTION = "no option";
+
+/** The `parseOptions` of an analysis that has no option: gives back `{}`
+    for `{}`, and refuses anything else with "no option". */
+export function parseNoOptions(options: unknown): Result<JsonObject, string> {
+  const isEmpty =
+    typeof options === "object" &&
+    options !== null &&
+    !Array.isArray(options) &&
+    Reflect.ownKeys(options).length === 0;
+  return isEmpty ? { ok: true, value: {} } : { ok: false, error: NO_OPTION };
 }
 
 /** An error for a state the code makes impossible. */

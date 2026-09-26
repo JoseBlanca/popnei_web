@@ -13,10 +13,8 @@
  * analysis that reads the filters of individuals leans on this result.
  */
 
-import type { JsonObject } from "../keys.ts";
 import { counted, escaped, grouped, namesOf } from "../project.ts";
 import type { Project } from "../project.ts";
-import type { Result } from "../result.ts";
 import type { AnalysisDef, Warning, WorkerClient } from "../store.ts";
 import type {
   IndividualChecksResult,
@@ -30,16 +28,13 @@ import {
   defect,
   histogramDescription,
   orNull,
+  parseNoOptions,
   refusalWords,
 } from "./words.ts";
 import type { DescribedBin } from "./words.ts";
 
 /** The id of the analysis. */
 const ID = "individualChecks";
-
-/** What its options should be, the end of "‹the field› should be ‹…›" of
-    `projectErrorText`: it has none. */
-const OPTIONS_EXPECTED = "no option";
 
 /** One row of the table: the individual, and its two numbers, null for
     NaN. */
@@ -164,7 +159,7 @@ export const individualChecks: AnalysisDef<Job, JobResult> = Object.freeze({
   defaults: Object.freeze({}),
   keyVersion: 1,
   filtersRead: Object.freeze({ variants: true, individuals: false }),
-  parseOptions,
+  parseOptions: parseNoOptions,
   keyInputs,
   needs,
   run,
@@ -173,19 +168,6 @@ export const individualChecks: AnalysisDef<Job, JobResult> = Object.freeze({
   numCheckNumbers,
   script,
 });
-
-/** Gives back `{}` for `{}`, and refuses anything else: the analysis has
-    no option. */
-function parseOptions(options: unknown): Result<JsonObject, string> {
-  const isEmpty =
-    typeof options === "object" &&
-    options !== null &&
-    !Array.isArray(options) &&
-    Reflect.ownKeys(options).length === 0;
-  return isEmpty
-    ? { ok: true, value: {} }
-    : { ok: false, error: OPTIONS_EXPECTED };
-}
 
 /** Nothing beyond the load and the filters of the variants: not the
     individuals file, which the numbers do not read, nor the filters of
