@@ -32,9 +32,8 @@ What is asked of the owner:
 
 1. The order to merge the branch into `main`. Pushing `main` to GitHub
    then runs the same tests in Firefox for the first time. If one fails
-   there, the site is not published until it is fixed on `main`.
-   Recommended: merge; the owner's pass in Firefox found nothing that
-   the tests of Firefox are likely to.
+   there, it is fixed on `main` before anything else. Recommended:
+   merge.
 2. Five settings the measurements of 26 September ask for, on an Apple
    M5 Pro with 64 GB, each with its table under "The measurements, on
    26 September 2026":
@@ -59,7 +58,7 @@ What is asked of the owner:
    decisions of 26 September".
 4. Whether the page should load the code that reads a project file only
    when a file is opened. That code is 4.5 KB of the 123 KB, compressed,
-   that the page loads before it shows, about 0.1 s less on a slow
+   that the page loads before it shows, about 0.01 s less on a slow
    mobile connection of 3 Mbit/s, and it means splitting a part of the
    code into two. Recommended: not now.
 
