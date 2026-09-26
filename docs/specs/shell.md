@@ -400,9 +400,9 @@ again.
 
 **Save project** opens a dialog of the page, as the owner decided on 25
 September 2026: a React Aria `Dialog` headed "Save the project", with,
-under its heading, the line "The page cannot always ask before it is
-closed, on an iPad or an iPhone among them: save the project before you
-leave." (below, "Before the page is left"), and a
+under its heading, the line "The page cannot always ask you before it
+is closed, and on an iPad or an iPhone it never can: save the project
+before you leave." (below, "Before the page is left"), and a
 text field, "File name", that starts at the name `proposedName` of the
 saving gives, `projectFileName` of `src/core/projectFile.ts`: the name
 of the variants file with its ending replaced, `panel.popnei.json` for
