@@ -3,8 +3,9 @@
  * (docs/specs/charts/plot2d.md). It makes the SVG and its frame, follows
  * the size of the element, draws the axes from the plot's scales, writes
  * the title and the description a screen reader reads, and gives the
- * handle with its `update` and `destroy`; a kind of plot gives it a
- * definition and draws only its marks, its annotations and its legend.
+ * handle with its `update`, its `destroy` and its export, made by
+ * export.ts; a kind of plot gives it a definition and draws only its
+ * marks, its annotations and its legend.
  */
 
 import { axisBottom, axisLeft } from "d3-axis";
@@ -12,6 +13,7 @@ import type { ScaleContinuousNumeric } from "d3-scale";
 import { select } from "d3-selection";
 import type { Selection } from "d3-selection";
 import "./charts.css";
+import { exportPng, exportSvg } from "./export.ts";
 import { nextChartIds } from "./ids.ts";
 import type { ChartHandle } from "./types.ts";
 
@@ -180,6 +182,10 @@ export function createPlot2d<Data extends PlotText>(
     .append("text")
     .attr("class", "chart-axis-label chart-axis-label-y");
   const legend = svg.append("g").attr("class", "chart-legend");
+  const svgElement = svg.node();
+  if (svgElement === null) {
+    throw new Error("popnei_web defect: the SVG of a plot was not made.");
+  }
 
   let current = data;
   let lastDrawn: Size | null = null;
@@ -285,12 +291,6 @@ export function createPlot2d<Data extends PlotText>(
     return lastDrawn;
   }
 
-  function exportNotBuilt(): Error {
-    return new Error(
-      "popnei_web defect: the export of the plots, src/charts/export.ts, is not built yet.",
-    );
-  }
-
   writeText();
   const start = element.getBoundingClientRect();
   if (start.width > 0 && start.height > 0) {
@@ -320,12 +320,11 @@ export function createPlot2d<Data extends PlotText>(
       svg.remove();
     },
     toSVG() {
-      drawnSize("toSVG");
-      throw exportNotBuilt();
+      return exportSvg(svgElement, drawnSize("toSVG"));
     },
-    toPNG() {
-      drawnSize("toPNG");
-      return Promise.reject(exportNotBuilt());
+    toPNG(scale) {
+      const size = drawnSize("toPNG");
+      return exportPng(() => exportSvg(svgElement, size), size, scale);
     },
   };
 }

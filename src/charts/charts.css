@@ -11,8 +11,12 @@
  * frame").
  */
 
+/* The colour of the text is the plot's own, and not the one it would
+   inherit from the page, so that an exported plot, resolved inside an
+   element in the light theme, carries no colour of the dark one. */
 .chart {
   display: block;
+  color: var(--color-text);
   font-family: var(--font-body);
 }
 
@@ -62,4 +66,12 @@
 
 .chart-legend-text {
   text-anchor: end;
+}
+
+/* The first rectangle of an exported plot, which toSVG adds, so that the
+   file is not transparent on a dark slide (charts.md, "Colours, themes
+   and the exported file"). */
+.chart-background {
+  fill: var(--color-background);
+  stroke: none;
 }

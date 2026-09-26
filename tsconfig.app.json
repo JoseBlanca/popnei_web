@@ -12,7 +12,8 @@
     "src/charts",
     "src/worker/client.ts",
     "src/worker/start.ts",
-    "src/worker/messages.ts"
+    "src/worker/messages.ts",
+    "e2e/plots.ts"
   ],
   "exclude": ["src/ui/**/*.test.ts"]
 }

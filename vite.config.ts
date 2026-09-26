@@ -32,6 +32,9 @@ function appVersion(): string {
   throw new Error("package.json has no version, which the site is built with.");
 }
 
+/** Whether the build holds the pages of the tests, under e2e/. */
+const testPages = process.env["POPNEI_TEST_PAGES"] !== undefined;
+
 export default defineConfig({
   base: "/popnei_web/",
   // Several pages and no single-page fallback: a missing file is a 404,
@@ -42,11 +45,15 @@ export default defineConfig({
   // "React Aria Components"). The entry sets React Aria's language to it.
   plugins: [react(), optimizeLocales.vite({ locales: ["en-US"] })],
   // A page is added here with its stage: the build fails on a page that
-  // does not exist.
+  // does not exist. The page of the tests of the plots is built only for
+  // the tests, when POPNEI_TEST_PAGES is set, to dist/e2e/plots.html, so
+  // that the site users open does not carry it (testing.md, "Against the
+  // built site").
   input: {
     index: page("index"),
     probe: page("probe"),
     popgen: page("popgen"),
+    ...(testPages && { "e2e/plots": page("e2e/plots") }),
   },
   // Written into the code at the build as a literal, where the entry of a
   // page names APP_VERSION.
