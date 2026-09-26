@@ -922,3 +922,157 @@ Under way while the owner looks again at the screens of stops 7.5 and
   the diversity spec. `npx playwright test --project=chromium
   --project=webkit e2e/skeleton.spec.ts` 10 passed, at least 10 asked,
   in three runs in a row; the whole suite 294 passed.
+
+### The deliverables of work package 9, on 7b9bce1
+
+1. `npx vitest run src/ui/shell -t "WS9 D1"`: 61 passed, at least 52
+   asked.
+2. `npx vitest run src/ui/saving.test.ts -t "WS9 D2"`: 9 passed, at
+   least 4 asked.
+3. `npx playwright test --project=chromium --project=webkit -g "WS9
+   D3"`: 92 passed, 46 in each engine, at least 20 asked.
+4. `npx playwright test --project=chromium --project=webkit
+   e2e/skeleton.spec.ts`: 10 passed, at least 10 asked.
+5. The screenshots: `npm run screens` 146 passed; each state the plan
+   names is in `screens/`, light and dark, with the dialogs, the notice
+   and the ready shell also at 320 px, and the orchestrator has looked at
+   them.
+6. The owner's acceptance: waiting, task 9.6.
+
+Also on 7b9bce1: `format:check`, `typecheck` and `lint` exit 0; `npm
+test` 1,434 passed; `npx playwright test --project=chromium
+--project=webkit` 338 passed; the first script 122.93 KB gzipped, from
+105.82 before the work package. Seen in Chromium and WebKit through
+Playwright, the keyboard alone among them; not in Firefox, and not with
+a screen reader.
+
+### The review of work package 9
+
+Eleven reviewers on commits 5e2f549 to 01144df: spec, tests, stale,
+errors, api, architecture, react, accessibility, ux, browser and bundle.
+The accessibility reviewer drove the page with the keyboard in Chromium
+and WebKit; the tests reviewer ran alone, after the fixes, since it
+changes the code. Two fixers carried items A to Q, a third added the
+tests the tests reviewer found missing, and accessibility and react
+looked again at the fixes. After the tests reviewer, 1,431 passed;
+`npx playwright test --project=chromium --project=webkit` 332 passed;
+the shell and saving flows three times in a row, 82 passed each; the
+first script 122.67 KB gzipped, from 121.94 before the fixes.
+
+What a user would have met, now fixed:
+
+- A project opened on the Variants step kept a ploidy the user had typed
+  before, so the VCF the project asked for was read with it and its
+  numbers were not compared.
+- The keyboard's Undo and Redo did nothing while the focus was in the
+  notice, the one place that offers Undo; nor, outside a text field,
+  with a Russian or Greek keyboard layout.
+- In WebKit, Cmd+Z pressed twice in the Save dialog's name field put the
+  threshold behind the dialog back to its old text, while the project
+  kept the new value.
+- A project that could not be saved, a defect of the application, sent
+  the user round a loop: each Save failed with no word, while the bar
+  said to save and reload, which would lose the project. The bar now
+  says it could not be saved; the Save dialog closes before it writes.
+- What the status region said while a dialog was open was hidden from a
+  screen reader, a result that ended during a Save among it.
+- The question before an opening kept "The ongoing calculations will be
+  stopped." after they had ended; two files picked close together could
+  open the older one; seven of the eleven refusals of a project file did
+  not name the file, which the dialog's heading now does.
+- The warning of a second differing variants file was not announced,
+  nor the warning brought back by Undo from another step.
+- The details a user was copying by hand disappeared after a press of
+  Save in the bar; a second press was not read again.
+- Escape in the notice now takes the focus back where it was.
+
+For whoever maintains the code: the opening now gets its application
+and analyses from the entry, as the saving does; the stepper no longer
+redraws at every progress message; `docs/technology.md` records React
+Aria at 70.8 KB gzipped, measured on 26 September 2026, where it said
+50.7. One fix, the dialogs' content as one value, left an overlay over
+the page after a dialog closed, in both engines; its fixer found it and
+a test now guards it.
+
+The tests reviewer made 116 mutations after the fixes; 88 failed a test.
+The tests added after it cover the 28 that did not, where they showed a
+case: Copy the details that works, which the plan's WS9 D3 lists and no
+test had; the focus after an opening; eight cases of the announcements;
+the saving of the other application. Code that gave the focus back
+after a dialog, which React Aria does in every path tested, was removed,
+except after a Save, where React Aria is 2 to 5 frames late.
+
+Not taken:
+
+- Loading the reader of project files only when a file is opened would
+  take 4.5 KB gzipped off the first script, 3.7%, but splits a core
+  module specified in full. For the owner, with the measurements of
+  work package 10.
+- The check of populations sits in the diversity's module, so the next
+  analysis that needs it will touch that module or the shell. For the
+  stage that adds Fst or the PCA; no issue opened, since issues go to
+  GitHub only on the owner's order.
+
+A second look by accessibility and react at the fixes found four more,
+now fixed from 92e495a to 7b9bce1: with a dialog open, F6 still reached
+the notice, whose Undo changed the project behind the dialog, and the
+Save then wrote the undone project; the status region read a warning
+before the undo that brought it back; the message of a refused file came
+back with a Redo; and a large project file whose read ended while the
+Save dialog was open was opened behind it, which now waits for the
+dialog to close. One change of what a screen reader hears: the warning
+of a differing variants file is now read once, after the words of its
+read.
+
+### What waits for the owner at stop 9.6
+
+The shell, in Firefox by hand as well, and the words of the open points
+Q, K and Open 2 to 6 of `docs/specs/core/project.md`, with the three
+points listed above under "The rounds of 25 September". The review adds
+these, each with a recommendation:
+
+1. A project saved with `panel.nei` and given `panel.vcf.gz` shows no
+   comparison under the table and no reason. Recommended: "Not compared
+   with the numbers of the project file: this file is a VCF, and the
+   project was made with a .nei file. Load panel.nei to compare them."
+2. The warning of a differing file gives the sizes in bytes when the
+   format differs, where they always differ. Recommended: leave the
+   sizes out then.
+3. On the Variants step itself: "This project was made with panel.nei
+   and 200 individuals. Load it in the Variants step to run its analyses
+   again." Recommended: "This project was made with panel.nei, of 200
+   individuals. Load it to run its analyses again."
+4. A name typed as `run1.json` saves `run1.json.popnei.json`.
+   Recommended: a trailing `.json` or `.popnei.json` is not doubled.
+5. The question before an opening says "Save the project first to keep
+   it." and has no Save. Recommended: "To keep it, answer Keep the
+   current project and save it first."
+6. After a save that failed, the error bar still says "save it, then
+   reload the page" above its line that the project could not be saved.
+   Recommended: the first line then ends "Your project could not be
+   saved; copy the details and report them."
+7. A refused project file of an analysis this version does not know
+   says it was saved by another version, and nothing to do.
+   Recommended: add "Open it with the version of the application that
+   saved it."
+8. A result that ends after a Save does not count as a change: the page
+   does not ask before it is left, and the saved file lacks that
+   result's numbers for the comparison. With point K. Recommended: count
+   it as a change.
+9. The page cannot ask before it is left on an iPad or an iPhone, nor
+   after a file only dropped, with no click: browsers do not allow it.
+   With point K. Recommended: say so in the help of Save project.
+10. On a Mac keyboard F6 is a media key; the notice is reached with
+    fn+F6, or with Tab. Recommended: write "F6 (fn+F6 on a Mac)" where
+    the notice is explained; the owner tries F6 in Firefox, Chrome and
+    Safari.
+11. The comparison under the diversity's table is not announced to a
+    screen reader. Recommended: add it to "Diversity: done."
+12. In the dark theme a disabled Redo or Save looks close to an enabled
+    one, 1.93 to 1 between their texts. Recommended: dim the disabled
+    text further.
+
+For the hand check in Firefox, the browser reviewer lists: F6 with the
+notice up; Save project downloads `panel.popnei.json` and does not show
+it; the question at a reload after a change; Copy the details with
+Enter; Cmd+Z in Safari after closing another tab undoes on the page.
