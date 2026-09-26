@@ -7,7 +7,9 @@ owner's decisions on the review of work package 8 of
 first values joined by " · ", the check of the individuals under a
 heading of its own, and the ends of the refusals of the reader; and for
 the warning of a character not decoded and the refusal of a variants
-file, of the owner's decisions on the reviews of work packages 2 to 6.
+file, of the owner's decisions on the reviews of work packages 2 to 6;
+and on 26 September 2026 for the list of the populations copied from the
+page, which the owner found at stop 9.6.
 The screen
 spec of the second step of the population genetics application as the
 walking skeleton of stage 2 builds it (`docs/build-order.md`): the user
@@ -355,7 +357,12 @@ file with pandas, `pandas.read_csv(path, sep=";", decimal=",")`
 - The table of the columns has header cells, "Column", "Type" and "First values", and
   the name of each column is the header of its row. The populations are
   a list, each item its name and its number in words, "P1, 48
-  individuals", and not a number alone.
+  individuals", and not a number alone. The words are the label of the
+  item, and not text hidden beside the line shown: a user who copies the
+  list gets the lines as shown, "P1 · 48", one each, where the hidden text
+  was copied too in Firefox, "P1 · 48P1, 48 individuals", as the owner
+  found on 26 September 2026. The line shown stays readable to a screen
+  reader that does not read the label of an item of a list.
 - The end of a read is announced by the shell, from the state of the
   store, and not by this step, which may not be on the screen when it
   ends: through its status region, the part of the page that a screen
