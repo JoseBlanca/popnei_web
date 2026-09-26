@@ -19,6 +19,10 @@ const DARK_BAR = "rgb(86, 180, 233)";
 const LIGHT_BACKGROUND = "rgb(255, 255, 255)";
 /** The text of the light theme, --color-text, #1a1d21. */
 const LIGHT_TEXT = "rgb(26, 29, 33)";
+/** The outline of a bar in the light theme, --chart-axis, #555d68. */
+const LIGHT_AXIS = "rgb(85, 93, 104)";
+/** The threshold in the light theme, --chart-threshold, #b3261e. */
+const LIGHT_THRESHOLD = "rgb(179, 38, 30)";
 /**
  * The colours of the dark theme of src/ui/tokens.css that the light one
  * does not have: --color-text, --color-background, --chart-bar,
@@ -167,7 +171,7 @@ async function canvasSizes(page: Page): Promise<[number, number][]> {
   );
 }
 
-test("VS4 D3 the SVG of toSVG holds no var( and no overlay, has a first background rectangle, and the light colours in the dark theme", async ({
+test("VS4 D3 the SVG of toSVG holds no var( and no overlay, has a first background rectangle, the light colours in the dark theme, and the outlines, dashes and sizes of text of charts.css, and leaves the page as it was", async ({
   page,
 }) => {
   // The dark theme of the system, and then the one the user chose, the
@@ -202,12 +206,37 @@ test("VS4 D3 the SVG of toSVG holds no var( and no overlay, has a first backgrou
       const screenKept = svg.querySelector(".chart-bar-kept");
       if (screenKept === null) throw new Error("The plot has no kept bar.");
       const screenFill = getComputedStyle(screenKept).fill;
+      const screenRemoved = svg.querySelector(".chart-bar-removed");
+      if (screenRemoved === null) {
+        throw new Error("The plot has no removed bar.");
+      }
+      const screenRemovedFill = getComputedStyle(screenRemoved).fill;
 
+      const bodyBefore = [...document.body.children];
       const text = plots.handle().toSVG();
+      const bodyAfter = [...document.body.children];
       const file = new DOMParser().parseFromString(text, "image/svg+xml");
       const root = file.documentElement;
       const firstRect = root.querySelector("rect");
       const kept = root.querySelectorAll(".chart-bar-kept");
+      // The declarations of the style of each element that matches
+      // `selector`, as property and value.
+      const stylesOf = (selector: string): Record<string, string>[] =>
+        [...root.querySelectorAll(selector)].map((each) =>
+          Object.fromEntries(
+            (each.getAttribute("style") ?? "")
+              .split(";")
+              .map((declaration) => declaration.trim())
+              .filter((declaration) => declaration !== "")
+              .map((declaration) => {
+                const colon = declaration.indexOf(":");
+                return [
+                  declaration.slice(0, colon).trim(),
+                  declaration.slice(colon + 1).trim(),
+                ];
+              }),
+          ),
+        );
       const fonts = new Set(
         [root, ...root.querySelectorAll("*")].map((each) =>
           (each.getAttribute("style") ?? "")
@@ -218,6 +247,16 @@ test("VS4 D3 the SVG of toSVG holds no var( and no overlay, has a first backgrou
       );
       return {
         screenFill,
+        screenRemovedFill,
+        bodyUnchanged:
+          bodyAfter.length === bodyBefore.length &&
+          bodyAfter.every((child, index) => child === bodyBefore[index]),
+        removed: stylesOf(".chart-bar-removed"),
+        legendRemoved: stylesOf(".chart-legend-removed"),
+        thresholds: stylesOf(".chart-threshold"),
+        legendTexts: stylesOf(".chart-legend-text"),
+        tickTexts: stylesOf(".chart-axis g.tick text"),
+        axisLabels: stylesOf(".chart-axis-label"),
         screenUnchanged:
           svg.querySelector(".chart-background") === null &&
           !svg.hasAttribute("style"),
@@ -272,6 +311,41 @@ test("VS4 D3 the SVG of toSVG holds no var( and no overlay, has a first backgrou
       "Removed by this filter",
     ]);
     expect(found.fonts).toEqual([`font-family: ${FONT_STACK}`]);
+
+    // toSVG adds nothing to the page that stays.
+    expect(found.bodyUnchanged).toBe(true);
+    // A removed bar is an outline, on the screen and in the file, and so
+    // is the square of its row of the legend.
+    expect(found.screenRemovedFill).toBe("none");
+    expect(found.removed).toHaveLength(2);
+    for (const style of [...found.removed, ...found.legendRemoved]) {
+      expect(style["fill"]).toBe("none");
+      expect(style["stroke"]).toBe(LIGHT_AXIS);
+    }
+    expect(found.legendRemoved).toHaveLength(1);
+    // The threshold, a dashed line in the red of the light theme.
+    expect(found.thresholds).toHaveLength(1);
+    for (const style of found.thresholds) {
+      expect(style["stroke"]).toBe(LIGHT_THRESHOLD);
+      expect(style["stroke-width"]).toBe("2px");
+      expect(style["stroke-dasharray"]).toBe("4px, 3px");
+    }
+    // The texts, at the sizes of charts.css, and the legend ending at its
+    // mark.
+    expect(found.legendTexts).toHaveLength(3);
+    for (const style of found.legendTexts) {
+      expect(style["text-anchor"]).toBe("end");
+      expect(style["font-size"]).toBe("12px");
+    }
+    expect(found.tickTexts.length).toBeGreaterThan(0);
+    for (const style of found.tickTexts) {
+      expect(style["font-size"]).toBe("12px");
+    }
+    expect(found.axisLabels).toHaveLength(2);
+    for (const style of found.axisLabels) {
+      expect(style["font-size"]).toBe("13px");
+      expect(style["text-anchor"]).toBe("middle");
+    }
   }
 });
 
@@ -328,6 +402,36 @@ test("VS4 D3 toPNG(2) of a plot above 2,048 pixels a side rejects with tooLarge 
     urls: 0,
     revoked: 0,
     contexts: 0,
+  });
+});
+
+test("VS4 D3 a plot 1,400 pixels high and 1,000 wide: toPNG(3) rejects with tooLarge without drawing", async ({
+  page,
+}) => {
+  // The height, 4,200 pixels at that scale, is above 4,096, and the width,
+  // 3,000, is not.
+  await openPlots(page);
+  await draw(page, 1000, 1400);
+  await countDrawing(page);
+  expect(await png(page, 3)).toEqual({ made: false, kind: "tooLarge" });
+  expect(await drawingCounts(page)).toEqual({
+    urls: 0,
+    revoked: 0,
+    contexts: 0,
+  });
+});
+
+test("VS4 D3 toPNG(2) of a plot of 2,048 by 1,280 pixels, 4,096 pixels wide at that scale, is made", async ({
+  page,
+}) => {
+  await openPlots(page);
+  await draw(page, 2048, 1280);
+  expect(await png(page, 2)).toEqual({
+    made: true,
+    type: "image/png",
+    signature: PNG_SIGNATURE,
+    width: 4096,
+    height: 2560,
   });
 });
 
@@ -417,21 +521,47 @@ test("VS4 D3 toPNG draws nothing until the fonts of the page are ready", async (
     const ready = new Promise<void>((resolve) => {
       fontsLoaded = resolve;
     });
+    let readyRead = 0;
+    let loaded = false;
     Object.defineProperty(document.fonts, "ready", {
       configurable: true,
-      get: () => ready,
+      get: () => {
+        readyRead += 1;
+        return ready;
+      },
     });
+    // Each URL of a Blob and each context of a canvas asked for before the
+    // fonts are loaded is counted as it is made, so that the test does not
+    // rest on how long the browser takes to decode and draw the image.
+    const early = { urls: 0, contexts: 0 };
+    const createObjectURL = URL.createObjectURL.bind(URL);
+    URL.createObjectURL = (object) => {
+      if (!loaded) early.urls += 1;
+      return createObjectURL(object);
+    };
+    const prototype = HTMLCanvasElement.prototype;
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- called below with apply, on the canvas it was called on
+    const getContext = prototype.getContext;
+    prototype.getContext = function earlyContext(
+      this: HTMLCanvasElement,
+      ...args: Parameters<HTMLCanvasElement["getContext"]>
+    ) {
+      if (!loaded) early.contexts += 1;
+      return getContext.apply(this, args);
+    } as HTMLCanvasElement["getContext"];
     const made = plots.handle().toPNG(3);
-    // Long enough for an image to be decoded and drawn, had it not waited.
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    const counts = (window as unknown as { drawingCounts: DrawingCounts })
-      .drawingCounts;
-    const before = { ...counts };
+    // A task of its own, after every promise that toPNG settles without
+    // the fonts.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    loaded = true;
     fontsLoaded();
     const blob = await made;
-    return { before, after: { ...counts }, type: blob.type };
+    const counts = (window as unknown as { drawingCounts: DrawingCounts })
+      .drawingCounts;
+    return { readyRead, early, after: { ...counts }, type: blob.type };
   });
-  expect(waiting.before).toEqual({ urls: 0, revoked: 0, contexts: 0 });
+  expect(waiting.readyRead).toBeGreaterThan(0);
+  expect(waiting.early).toEqual({ urls: 0, contexts: 0 });
   expect(waiting.after).toEqual({ urls: 1, revoked: 1, contexts: 1 });
   expect(waiting.type).toBe("image/png");
 });
