@@ -769,7 +769,7 @@ same numbers.
 - [x] 9.3 The notice, React Aria's toast with its action and Close, and
   the line of the diversity panel on a calculation stopped by a new
   variants file. Serves 3 and 5. Needs 9.2.
-- [ ] 9.4 `src/ui/saving.ts`, the dialogs of Save project and of Open
+- [x] 9.4 `src/ui/saving.ts`, the dialogs of Save project and of Open
   project…, the question before leaving and before an opening, the Save
   of the error bar; "A project file opened" of the Variants step spec;
   the comparison under the diversity's table. Serves 2, 3 and 5. Needs

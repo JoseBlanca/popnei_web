@@ -900,3 +900,19 @@ Under way while the owner looks again at the screens of stops 7.5 and
   notice. `-g "WS9 D3"` gives 22 passed, 11 in each engine. The first
   script grew from 105.82 KB to 109.77 KB gzipped. Not seen: a notice's
   own Undo that makes a new notice, which needs two analyses.
+- 9.4, commit a47a846: `src/ui/saving.ts`, the dialogs of Save project
+  and of Open project…, the question before leaving and before an
+  opening, the Save of the error bar, the variants file an opened
+  project asks for with the warning of the identity, and the comparison
+  under the diversity's table. No spec changed. The computer rebooted
+  while the first subagent had the work written and not committed; a
+  second one found the one test that failed, in Chromium: a dialog gave
+  the focus back to its button one frame after closing, and took it
+  from a field the user had already moved to, so a quick Enter opened
+  the dialog again. The focus is now given back only when it was lost,
+  is still in the dialog, or is on that button. On a47a846: `npm test`
+  1,415 passed; the build exits 0; `npx playwright test
+  --project=chromium --project=webkit` 284 passed; `-g "WS9 D3"` 48
+  passed, 24 in each engine; `-t "WS9 D2"` 6 passed, at least 4 asked;
+  `npm run screens` 138 passed. Seen in Chromium and WebKit through
+  Playwright; not in Firefox.
