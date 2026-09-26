@@ -80,8 +80,11 @@ the worker for it again, and again.
   those they were counted over, whatever its thresholds, so the rule
   above keeps them while they are used. Once dropped, the list is not
   known until they are calculated again, which a Run of an analysis that
-  reads the filters of individuals does first. They are 16 bytes per
-  individual (`docs/architecture.md`, section 11).
+  reads the filters of individuals does first. The cache counts them, by
+  the rule above, at two numbers of 8 bytes per individual and 2 bytes
+  per unit of UTF-16 of its name: 24 bytes for `s000`, 4.8 KB for the 200
+  individuals of `panel.nei`; their counts of the pass are small and not
+  counted.
 - **The counts of the filters of a pass**, put under the key of
   `filterCounts` just after the result they came with, in the same
   `runEnded` (`docs/specs/core/store.md`, "What each filter kept"). The

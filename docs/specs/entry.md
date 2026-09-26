@@ -385,8 +385,14 @@ outcome)`. `runEnded` gives back a list of handles too, the requests of
 the Runs that waited for those statistics, which the store sends when
 they end; each is awaited in the same way, so that the outcome of every
 request the store sends reaches it, whichever call sent it. The promise
-of `startAnalysis` and of `startWriting` settles when every request
-started from that press has ended, those sent by a `runEnded` included.
+of `startAnalysis` and of `startWriting` settles when the handles its
+own `startRun` or `startWrite` gave have ended, and with them every
+handle that the `runEnded` of those gave back, and so on. A handle that
+the `runEnded` of another press's request gives back is awaited by that
+other press's promise: a Run that waits for statistics already in
+flight gets an empty list, and its promise settles at once, while its
+own request, sent when the statistics end, is awaited by the promise of
+the press that started them.
 The outcome never fails, since a failure is one of its values
 (`docs/specs/worker/protocol.md`). The store stops a request with the
 handle it keeps, and its outcome, `cancelled`, arrives here like any
@@ -498,7 +504,10 @@ the state of the store, `write` in `done`, whose `written.file` is the
 So the page releases the file once it is saved, and the store forgets it
 when a change of the filters, a new load or an opened project makes it
 another file than the step shows, as section 6 of the architecture has
-it; the page holds nothing more of it. The page is not told whether the
+it; the page holds nothing more of it. A file forgotten so before it was
+saved is gone, and the notice of the change says that its Undo does not
+bring it back (`docs/specs/core/store.md`, `writeDiscarded`; point G of
+`docs/specs/stage-3-open-points.md`). The page is not told whether the
 browser kept the download, as for the project file (above, "The
 saving"): a user who cancels the browser's question of where to save,
 which Firefox and Safari can ask, writes the file again. That is point A
@@ -767,7 +776,9 @@ hand and whose cancels it records.
   their outcome given, `runEnded` gives the diversity's own handle, whose
   outcome is awaited and given to `runEnded` too, and the promise settles
   after it; a Run that waits for statistics already in flight gives no
-  handle, and its request, sent when they end, is awaited all the same.
+  handle, and its promise settles at once, while its request, sent when
+  they end, is awaited all the same, and the promise of the Calculate
+  that started the statistics settles after it.
   **`startWriting`** in the same way, with `startWrite("nei")` and a
   fake `write.send`.
 - **`createSaving`**: `save("panel.popnei.json")` downloads, through the

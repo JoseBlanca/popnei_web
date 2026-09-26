@@ -132,7 +132,7 @@ has the kind `removed` in the code.
 | locked | `projectNeeds` gives a reason; or the analysis reads the filters of individuals and `individualListNeeds` gives one; or its `needs` does | the reason |
 | done | the cache holds a result under its key | the result, its warnings, and the comparison with the check numbers of an opened project file |
 | running | a calculation of its key is in flight and is not being stopped, whether it waits in the queue of the worker or runs; or a Run of its key waits for the statistics of each individual (below) | its progress, the `Progress` of `docs/specs/worker/protocol.md`, popnei's four numbers of the pass as the worker gave them, passed on unchanged, `null` until the worker gives one; the request's id; and whether it waits for the statistics, whose request's progress and id it then holds |
-| error | popnei refused the calculation of its key, or the calculation failed since the last change; or it reads the filters of individuals and the statistics it waits for were refused, or failed since the last change (below) | popnei's message, or the failure |
+| error | popnei refused the calculation of its key, or the calculation failed since the last change; or it reads the filters of individuals and the statistics it waits for were refused, or failed since the last change (below) | popnei's message, or the failure, and whether it is the failure of the statistics, `ofStatistics`, so that the panel does not tell it as its own |
 | locked | it reads the filters of individuals, and the list they make, known from the statistics in the cache, keeps no individual | `keptNoneReason` of `docs/specs/core/individualsKept.md` |
 | removed | the current notice lists it among the results removed | its key; it can run again |
 | ready | none of the above | its key |
@@ -349,7 +349,8 @@ definitions, each once. A calculation that was being stopped and ends
 any other.
 
 The notice goes when it is closed or replaced; a change that removes
-nothing, leaves nothing behind and stops nothing replaces it with none. An analysis is
+nothing, leaves nothing behind, stops nothing and discards no written
+file replaces it with none. An analysis is
 `removed` while the current notice lists it, or `locked` if it cannot
 run; when the notice is closed or replaced without it, the analysis is
 `ready`. An analysis among the results removed that is done again, when
@@ -379,8 +380,9 @@ change it is `ready`, its calculation in `leftBehind`, or in `stopped`
 after a change of the load, and the result that arrives late goes into
 the cache for an undo.
 
-From stage 3, three things join the notice, decided with the
-architecture on 26 September 2026 (its sections 4 and 5). The results of
+From stage 3, four things join the notice, three decided with the
+architecture on 26 September 2026 (its sections 4 and 5), and the
+fourth meanwhile (**Open 1**, below). The results of
 `filterCounts`, the counts beside the filters, are never among the
 results removed (below, "What each filter kept"). A Run that waits for
 the statistics of each individual is a calculation, left behind, stopped
@@ -388,7 +390,11 @@ and named as one, by its analysis. And the writing of the filtered
 variants is named apart, since it is not an analysis: `writeLeftBehind`
 when a change leaves it behind, `writeStopped` when a change of the load
 stopped it, each kept and cleared as `leftBehind` and `stopped` are
-(below, "The writing of the filtered variants").
+(below, "The writing of the filtered variants"). And a file written and
+not saved that the change forgot, `writeDiscarded`, so that the user
+learns that the Undo of the notice brings the filters back and not the
+file; it is kept and cleared as `removed` is, and a notice with it alone
+is made, as one with a result removed.
 
 ### A calculation that failed
 
@@ -539,7 +545,7 @@ the user presses Run once (`docs/architecture.md`, section 5):
   project has a threshold on the individuals, gives that key, and the
   cache has no statistics under it, every
   analysis that reads the filters of individuals and is not `done` shows
-  it, in the state `error`: its Run would wait for the same statistics
+  it, in the state `error` with `ofStatistics`: its Run would wait for the same statistics
   and end the same way. `startRun` of such an analysis does nothing after
   a refusal of popnei; after another failure it forgets it, as it forgets
   one of its own, and starts the statistics again. A stop leaves the
@@ -572,8 +578,10 @@ its pass was given, `numVarsRead` of the counts of its pass, recorded
 into the variants file of the request's load as before
 (`docs/architecture.md`, section 6, step 5); and a result of
 `filterCounts` made of the counts of its pass, `PassStats` of
-`docs/specs/worker/protocol.md`, popnei's `passStats`, when its pass had
-the filters of the variants of its request's project, or `null`. A file
+`docs/specs/worker/protocol.md`, popnei's `passStats`, when the analysis
+of the result is one whose pass has the filters of the variants of its
+request's project and none of its own, or `null`; `countsOf` tells it by
+the analysis of the result, and not by comparing filters. A file
 written always had them, and `write.countsOf` makes its result of
 `filterCounts` from the counts of its pass. It is `null` for the histograms of the
 variants, which read no filter, and for the PCA, which merges its own
@@ -619,23 +627,28 @@ with a state of its own, `write`:
 | state | when | what it holds |
 |---|---|---|
 | locked | `projectNeeds` or `individualListNeeds` gives a reason, or the list of the individuals kept is known and empty | the reason, the `reason` of `individualListNeeds` for the second, `keptNoneReason` for the third |
-| done | a write of its key ended done while the project gave that key, the file has not been handed to the browser, and no change has given the write another key since | what the worker gave, `Written` of `docs/specs/worker/protocol.md`: the file, its size and the counts of its pass |
+| done | a write of its key ended done with at least one variant while the project gave that key, the file has not been handed to the browser, and no change has given the write another key since | what the worker gave, `Written` of `docs/specs/worker/protocol.md`: the file, its size and the counts of its pass |
+| noVariant | a write of its key ended done with no variant, `passStats.numVars` 0, and no change has given the write another key since | its key, and the size and the counts of the file, without the file, which nobody can save |
 | saved | the file of `done` was handed to the browser to save, `writeSaved`, and no change has given the write another key since | its key, and the size and the counts of the file, without the file |
 | running | a write of its key is in flight and is not being stopped, or its Run waits for the statistics of each individual | its progress and the request's id, or those of the statistics |
-| error | popnei refused the write of its key, or it failed since the last change | popnei's message, or the failure |
+| error | popnei refused the write of its key, or it failed since the last change; or the statistics it waits for were refused, or failed since the last change, while the project has a threshold on the individuals, gives their key, and the cache has none under it, as for an analysis that reads the filters of individuals | popnei's message, or the failure, and `ofStatistics` |
 | ready | none of the above | its key, and whether the last write of the key before was dropped because it ended after a change of its filters, until the next change of the project |
 
 Stage 3 writes the `.nei` format alone; the VCF comes with popnei's
 writer of it, with a state of its own.
 
 - **`startWrite`** in `ready` or `saved`, or in `error` after a failure
-  that is not popnei's, stops the calculations left behind, as `startRun` does, waits
+  that is not popnei's, of the write or of the statistics it waited for,
+  stops the calculations left behind, as `startRun` does, waits
   for the statistics as a Run does when the list is not known, and
   sends, through `write.send` of `createStore`, the job of the write,
   `WriteJob` of `docs/specs/worker/protocol.md`: the load id of the
   variants file, its filters of the variants, the list of the
   individuals kept and the format, under the key of the write. It
-  returns the handles it sent.
+  returns the handles it sent. In any other state it does nothing and
+  returns `null`: after a refusal of popnei of the statistics, too, which
+  a new press would only start again to be refused again, as `startRun`
+  does for an analysis.
 - **The file is kept until it is saved, or until the project gives
   another key.** When a write ends `done` and the project still gives its
   key, the store keeps what the worker gave, `Written` of the protocol,
@@ -644,7 +657,12 @@ writer of it, with a state of its own.
   browser, `writeSaved`, and the state is `saved`; and when the project
   gives the write another key, the load changes or a project is opened,
   and the state is `ready`. An undo does not bring a file back once it is
-  forgotten. So the page releases the file once it is saved, and when a
+  forgotten, and the notice of a command, an undo or a redo that forgets
+  a file in `done` says so, `writeDiscarded` (**Open 1**, below); an
+  opening makes no notice, and the question the shell asks before it
+  names the file (`docs/specs/shell.md`, "Opening"). A write that ends
+  with no variant keeps no file: the state is `noVariant`, and the step
+  says why there is nothing to save. So the page releases the file once it is saved, and when a
   change makes it another file than the step shows, as section 6 of the
   architecture has it (`docs/specs/entry.md`, "A file of the filtered
   variants saved"). The page is not told whether the browser kept the
@@ -659,7 +677,8 @@ writer of it, with a state of its own.
   project gives says it was dropped, `dropped`, until the next change of
   the project, so that the step says why no Save came. Its counts go into the cache all the same,
   through `write.countsOf`, as those of any pass, and its number of
-  variants is recorded.
+  variants is recorded: `numVarsRead` that `countsOf` gives of the result
+  of `filterCounts` that `write.countsOf` made, as for a write kept.
 - **A change of the filters while it is written leaves it behind**, as a
   calculation: the notice says so, `writeLeftBehind`, in the words of the
   architecture, "The writing of the file will be stopped unless you
@@ -754,7 +773,8 @@ export type AnalysisStatus<R> =
   | { readonly kind: "running"; readonly key: Key; readonly runId: number;
       readonly progress: Progress | null;
       readonly waitsForStatistics: boolean }   // runId and progress: the statistics'
-  | { readonly kind: "error"; readonly key: Key; readonly error: AnalysisError }
+  | { readonly kind: "error"; readonly key: Key; readonly error: AnalysisError;
+      readonly ofStatistics: boolean }   // the failure of the statistics it waited for
   | { readonly kind: "removed"; readonly key: Key }
   | { readonly kind: "ready"; readonly key: Key };
 
@@ -763,9 +783,11 @@ export type WriteStatus<F> =
   | { readonly kind: "locked"; readonly reason: string }
   | { readonly kind: "done"; readonly key: Key; readonly written: Written<F> }
   | { readonly kind: "saved"; readonly key: Key; readonly written: Omit<Written<F>, "file"> }
+  | { readonly kind: "noVariant"; readonly key: Key; readonly written: Omit<Written<F>, "file"> }
   | { readonly kind: "running"; readonly key: Key; readonly runId: number;
       readonly progress: Progress | null; readonly waitsForStatistics: boolean }
-  | { readonly kind: "error"; readonly key: Key; readonly error: AnalysisError }
+  | { readonly kind: "error"; readonly key: Key; readonly error: AnalysisError;
+      readonly ofStatistics: boolean }
   | { readonly kind: "ready"; readonly key: Key; readonly dropped: boolean };
 
 export type AnalysisError =
@@ -797,6 +819,7 @@ export interface Notice {
   readonly stopped: readonly AnalysisId[];     // their calculations were stopped at once by a change of the load
   readonly writeLeftBehind: boolean;           // the writing of the file will be stopped unless undone
   readonly writeStopped: boolean;              // it was stopped at once by a change of the load
+  readonly writeDiscarded: boolean;            // a file written and not saved was forgotten by the change
 }
 ```
 
@@ -920,7 +943,8 @@ those in flight:
   its bound, it drops results the current project does not show, never
   one it shows (`docs/specs/core/cache.md`). The result of a write goes
   into no cache: it is kept as the file of the state `write` until it is
-  saved, or dropped (above). Then, for any result: the counts that `countsOf` gives go
+  saved, or dropped (above), and not kept at all when it holds no
+  variant, `noVariant`. Then, for any result: the counts that `countsOf` gives go
   into the cache under the key of the counts for the request's project,
   keeping the result just put; the number of variants, when `countsOf`
   gives one, is recorded into the variants file of the request's load in
@@ -1168,8 +1192,8 @@ whose file is a text.
   is `locked` with `keptNoneReason`, and nothing was sent for it. A
   threshold moved while it waits: the notice names it in `leftBehind`;
   the statistics end, and `runEnded` gives no handle. A refusal of the
-  statistics: the analysis is `error` with popnei's message, and
-  `startRun` gives `null`.
+  statistics: the analysis is `error` with popnei's message and
+  `ofStatistics` true, and `startRun` gives `null`.
 - **A list of individuals popnei would refuse**, a list to keep that
   names `z`, not in the file: the analysis that reads the filters of
   individuals and the write are `locked` with the `reason` of
@@ -1181,9 +1205,14 @@ whose file is a text.
   statistics of the old filters, their sizes and the bound of the cache
   chosen so, and an undo: the analysis is `done` again with the same
   result, its key is `keyOf` of the project, and the list is
-  `needsStatistics`. With the statistics under the current
-  key dropped by a put of another result, the state changes at that put,
-  with no command: the list is `needsStatistics` again.
+  `needsStatistics`. The lock worked out again from the cache: with a
+  threshold set and the list `needsStatistics`, the `runEnded` of a
+  Calculate of the statistics changes the state at their put, with no
+  command, and the list is `known`. The cache never drops the
+  statistics under the key the current project gives them
+  (`docs/specs/core/cache.md`), so no put makes the list go back to
+  `needsStatistics`; a test that a put of a large result keeps them
+  checks it.
 - **The counts filled**: `runEnded` of a result of the analysis that
   needs only the variants file puts into the cache, under the key of
   the counts for its request's project, the counts `countsOf` gave;
@@ -1203,7 +1232,16 @@ whose file is a text.
   `cancel()` was not called; an undo: it goes on. Again, then the result
   arrives after the command: `write` is `ready` with `dropped` true,
   holds no file, and the counts of the result are in the cache under the
-  old filters' key; the next command makes `dropped` false.
+  old filters' key, and `numVarsRead` of those counts is recorded into
+  the variants file; the next command makes `dropped` false. Again, the
+  write `done`, then a command that changes a filter: `write` is `ready`
+  and holds no file, the notice has `writeDiscarded`, and its undo does
+  not give the file back. A result with `numVars` 0: `write` is
+  `noVariant` and holds no file. With a threshold and no statistics,
+  `startWrite` waits for them; a refusal of popnei of the statistics
+  puts `write` in `error` with `ofStatistics` true, and `startWrite` then
+  returns `null` and sends nothing; after a `workerFailed` of the
+  statistics, `startWrite` starts them again.
   Again, then `startRun` of an analysis: the write, whose key the project
   gives, is not cancelled. Again, then a new variants file loaded: the
   write is cancelled at once and the notice has `writeStopped`.
@@ -1243,11 +1281,20 @@ the screens, since core reaches them through the store
 
 ## Open points
 
-None of the store's own. Stage 3 adds none: its choices are the
-architecture's, approved by the owner on 26 September 2026, or decided
-here and said where they are. It uses the bound of the cache
+Stage 3 adds one, point G of `docs/specs/stage-3-open-points.md`, where
+the open points of the specs of stage 3 are gathered; its other choices
+are the architecture's, approved by the owner on 26 September 2026, or
+decided here and said where they are. It uses the bound of the cache
 (`docs/specs/core/cache.md`, **Open 1**) and the bound of the history
 (`docs/specs/core/history.md`, **Open 1**).
+
+1. **A file written and not saved, which a change forgets.** Meanwhile,
+   and recommended, the store forgets it at the change and the notice
+   says so, `writeDiscarded`; the other option keeps it while the
+   notice is up, so that the Undo of the notice gives it back, which
+   holds the file, about 1 GB for a million variants of 1,000
+   individuals, for as long as the notice stays, with no timer. Point G
+   has the options whole.
 
 ## Not in this spec
 

@@ -436,7 +436,8 @@ that the reason given is the one the user can act on:
    refused as `filterOutOfOrder`, since the application no longer applies
    an order of the user's, and no file the application wrote is refused
    so, since stage 2 wrote the missing data filter alone
-   (`docs/architecture.md`, section 2). `readProjectFile` gives
+   (`docs/architecture.md`, section 2); such a file is one edited by
+   hand (**Open 3**). `readProjectFile` gives
    it this object, built from the fields of the file:
 
    ```ts
@@ -983,6 +984,24 @@ check with its own (point E there).
    are in the fixed order, which a file of version 1 of this application
    always is anyway, at the cost of one more version to read forever.
    Recommended: A.
+
+3. **A file of version 1 whose filters of the variants are out of the
+   fixed order.** Point H of `docs/specs/stage-3-open-points.md`. No
+   application wrote one, so it is a file edited by hand, a text editor
+   or a script. Option A, meanwhile: refused as `filterOutOfOrder`, with
+   the text of `docs/specs/core/project.md`, "the filters of the
+   variants should be in the order missing genotypes, …"; the user puts
+   them in order in the file, or sets the filters again in the Variants
+   step. Option B: opened with its filters put in the fixed order, and a
+   warning that says so. popnei applies the filters in their order: the
+   LD pruning keeps a variant by the variants kept before it, so an LD
+   pruning moved to the end keeps other variants, and each filter is
+   given other counts in another order. The project opened is then not
+   the one the file describes, and the check numbers saved with the
+   file, made in its order, would differ from those of the same variants
+   file, a difference the comparison would blame on the file.
+   Recommended: A, since B changes the numbers the file's check was made
+   with.
 
 ## What this spec relies on in the specs written beside it
 
