@@ -420,8 +420,11 @@ closes and the focus goes back to Save project. It can be used at any
 time, a read under way included. `writeProjectFile` refuses no project;
 a check number that is not finite is a defect of our code, which it
 throws, and the error bar shows it. The dialog closes before the file is
-written, so that it is not left open over the bar. A field left empty keeps Save
-disabled, with the description "Give the file a name."
+written, so that it is not left open over the bar. A field left empty
+keeps Save disabled, with the description "Give the file a name.",
+which describes the field of the name too: the Tab key skips a disabled
+button, so a user of the keyboard, whose focus is in the field, would
+otherwise never hear it.
 
 A download is handed to the browser and gives the page no sign of how
 it ended: the browser saves it with its downloads, or asks where, or the
