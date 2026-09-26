@@ -11,14 +11,17 @@
  * React Aria keeps readable while a dialog is open and makes the rest of
  * the page inert, so that an error, or what a button of the bar did,
  * is heard then too; its buttons are inert with the page until the dialog
- * closes.
+ * closes. Its first line is in the alert as the bar is shown with it;
+ * once a save has changed it, it is drawn in the same place outside the
+ * alert, so that the whole sentence is not read out again when the
+ * status region already says what the Save did.
  */
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import type { Store } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 import { classOf } from "../classOf.ts";
-import type { Defects } from "../defects.ts";
+import type { Defect, Defects } from "../defects.ts";
 import type { Saving } from "../saving.ts";
 import { Button } from "../widgets/Button.tsx";
 import styles from "./ErrorBar.module.css";
@@ -134,6 +137,26 @@ export function ErrorBar({
   // until the bar is closed: a Save after it keeps it.
   const [boxShown, setBoxShown] = useState(false);
   const details = detailsText(defects.details(), popneiVersion, appVersion);
+  // The first error as the bar was shown with it, and whether the first
+  // line has changed since, which then stays outside the alert until
+  // the bar is closed, so that its whole sentence is not read out again.
+  const [shown, setShown] = useState<Shown>({
+    first,
+    failed: saveFailed,
+    changed: false,
+  });
+  if (shown.first !== first) {
+    setShown({ first, failed: saveFailed, changed: false });
+  } else if (!shown.changed && shown.failed !== saveFailed) {
+    setShown({ ...shown, changed: true });
+  }
+  const inAlert = !shown.changed && shown.failed === saveFailed;
+  const line =
+    first === null ? null : (
+      <p className={classOf(styles, "message")}>
+        {barText(first.message, store !== null, saveFailed)}
+      </p>
+    );
 
   async function copyDetails(): Promise<void> {
     const text = details;
@@ -161,12 +184,11 @@ export function ErrorBar({
         first === null ? classOf(styles, "empty") : classOf(styles, "bar")
       }
     >
-      <div role="alert" data-live-announcer="true">
-        {first !== null && (
-          <p className={classOf(styles, "message")}>
-            {barText(first.message, store !== null, saveFailed)}
-          </p>
-        )}
+      <div>
+        <div role="alert" data-live-announcer="true">
+          {inAlert && line}
+        </div>
+        {!inAlert && line}
       </div>
       {first !== null && more > 0 && (
         <p className={classOf(styles, "more")}>{moreText(more)}</p>
@@ -205,6 +227,14 @@ export function ErrorBar({
       )}
     </div>
   );
+}
+
+/** The first error the bar was shown with, whether the last save had
+    failed then, and whether it has changed since. */
+interface Shown {
+  readonly first: Defect | null;
+  readonly failed: boolean;
+  readonly changed: boolean;
 }
 
 /** The count of the errors after the first. */

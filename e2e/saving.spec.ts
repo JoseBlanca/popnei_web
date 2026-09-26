@@ -1137,6 +1137,53 @@ test("WS9 D3 after the error bar's Save succeeded, a Save of the header that fai
   await expect(barStatus).toHaveText("");
 });
 
+test("WS9 D3 the first line of the error bar changed by its failed Save is not put in the alert again, so only its status is read out, and a later error after Close is", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await showBar(page);
+  const alert = page.getByRole("alert");
+  await expect(alert).toHaveText(
+    "The application met an error of its own: test. Your project is intact: save it, then reload the page.",
+  );
+  // Every text the alert holds after this point, in order.
+  await alert.evaluate((region) => {
+    const texts: string[] = [];
+    Object.assign(window, { alertTexts: texts });
+    new MutationObserver(() => {
+      texts.push(region.textContent);
+    }).observe(region, { childList: true, subtree: true, characterData: true });
+  });
+  const barStatus = page.getByRole("status").first();
+  await breakWriting(page, true);
+
+  await page.getByRole("button", { name: "Save the project" }).click();
+
+  await expect(barStatus).toHaveText(
+    "The project could not be saved: the application met an error of its own as it wrote the file. Reloading the page would lose the project.",
+  );
+  await expect(barLine(page, false)).toBeVisible();
+  await expect(alert).toHaveText("");
+  expect(
+    await page.evaluate(() =>
+      (window as unknown as { alertTexts: string[] }).alertTexts.filter(
+        (text) => text !== "",
+      ),
+    ),
+  ).toEqual([]);
+  await expectNoViolations(makeAxeBuilder);
+
+  await page.getByRole("button", { name: "Close" }).click();
+  await page.evaluate(() => {
+    setTimeout(() => {
+      throw new Error("again");
+    });
+  });
+  await expect(alert).toHaveText(
+    "The application met an error of its own: again. Your project could not be saved; copy the details and report them.",
+  );
+});
+
 test("WS9 D3 the error bar's Save after a Copy that failed keeps the box of the details, and a second Save writes its words again", async ({
   page,
 }) => {
