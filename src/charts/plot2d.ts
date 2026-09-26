@@ -176,12 +176,13 @@ function contentBoxOf(element: HTMLElement): Size {
  * The plot is drawn at once when the element has a size, and again at
  * most once per frame of the screen after each change of its size;
  * while the element has no size, nothing is drawn and the last drawing
- * stays. An element not larger than the margins gets an empty frame and
- * an SVG of 0 by 0, whose `toSVG` and `toPNG` throw. `definition.check`
- * throws for data the plot cannot draw, here before anything is added to
- * the element, and in `update` leaving the plot as it was. `update`,
- * `toSVG` and `toPNG` after `destroy`, and `toSVG` and `toPNG` of a plot
- * never drawn, throw an `Error`, a defect of the caller.
+ * stays. `definition.check` throws for data the plot cannot draw, here
+ * before anything is added to the element, and in `update` leaving the
+ * plot as it was. An `Error`, a defect of the caller, is thrown by
+ * `update` after `destroy`, and by `toSVG` after `destroy`, of a plot
+ * never drawn, and of one whose element is not larger than its margins,
+ * which gets an empty frame and an SVG of 0 by 0; `toPNG` rejects with
+ * it in the same cases.
  */
 export function createPlot2d<Data extends PlotText>(
   element: HTMLElement,
@@ -387,7 +388,9 @@ export function createPlot2d<Data extends PlotText>(
     toSVG() {
       return exportSvg(svgElement, drawnSize("toSVG"));
     },
-    toPNG(scale) {
+    // async, so that a defect of the caller rejects the promise, as every
+    // other failure of toPNG does, and is not thrown before it exists.
+    async toPNG(scale) {
       const size = drawnSize("toPNG");
       return exportPng(() => exportSvg(svgElement, size), size, scale);
     },

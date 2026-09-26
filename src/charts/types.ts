@@ -13,7 +13,12 @@ export interface ChartHandle<Data> {
   destroy(): void;
   /** The plot as it is on the screen, as a file that stands alone. */
   toSVG(): string;
-  /** The same, as PNG, at `scale` times the size on the screen. */
+  /**
+   * The same, as PNG, at `scale` times the size on the screen. Every
+   * failure is a rejection, none is thrown: a PngError of `kind`
+   * `tooLarge` or `notMade` is a PNG refused, which the screen tells the
+   * user of; anything else is a defect, which the screen throws again.
+   */
   toPNG(scale: 2 | 3): Promise<Blob>;
 }
 

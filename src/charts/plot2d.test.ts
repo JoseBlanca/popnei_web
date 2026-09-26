@@ -455,15 +455,23 @@ describe("VS4 D1 the base of the 2D plots, its axes and its handle", () => {
     expect(element.querySelectorAll("rect.bar")).toHaveLength(3);
   });
 
-  test("toSVG and toPNG of a plot never drawn, and after destroy, throw", () => {
+  test("toSVG of a plot never drawn, and after destroy, throws, and toPNG rejects", async () => {
     const hidden = sizedElement(0, 0);
     const never = createPlot2d(hidden, barsOf([1]), bars);
     expect(() => never.toSVG()).toThrow("never drawn");
-    expect(() => never.toPNG(3)).toThrow("never drawn");
+    let neverPng: Promise<Blob> | null = null;
+    expect(() => {
+      neverPng = never.toPNG(3);
+    }).not.toThrow();
+    await expect(neverPng).rejects.toThrow("never drawn");
     const element = sizedElement(400, 300);
     const handle = createPlot2d(element, barsOf([1]), bars);
     handle.destroy();
     expect(() => handle.toSVG()).toThrow("after its destroy");
-    expect(() => handle.toPNG(2)).toThrow("after its destroy");
+    let destroyedPng: Promise<Blob> | null = null;
+    expect(() => {
+      destroyedPng = handle.toPNG(2);
+    }).not.toThrow();
+    await expect(destroyedPng).rejects.toThrow("after its destroy");
   });
 });
