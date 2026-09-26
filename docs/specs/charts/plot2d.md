@@ -327,6 +327,22 @@ export class PngError extends Error {
 - **An element with no size when the plot is created**: the SVG is made,
   with its title and description, and nothing is drawn until the
   observer gives a size.
+- **An element whose size becomes 0 after a draw**, in a tab that is
+  hidden: nothing is drawn, the last drawing stays, and `toSVG` and
+  `toPNG` export it.
+- **An element with a size but no room for the frame**, not larger than
+  the margins: a histogram with a threshold in an element 56 to 100
+  pixels high, whose top margin of 56 and bottom margin of 44 take all
+  of it. The plot's `draw` is not called; the base removes everything
+  drawn in the marks, the annotations, the legend and the axes, and
+  gives the SVG a `width` and a `height` of 0 and no `viewBox`, so that
+  no bar of an earlier draw stays on the screen under the title of new
+  data, and the browser does not show an SVG with no width at its
+  default size of 300 by 150 pixels. `toSVG` and `toPNG` then fail with
+  an `Error` that says the frame has no area, a defect of the caller,
+  since a screen gives its plot a size larger than its margins. The next
+  draw with room for the frame, after a resize or an `update` to data
+  with smaller margins, draws the plot again.
 - **`update`, `toSVG` or `toPNG` after `destroy`**, and `toSVG` or
   `toPNG` of a plot never drawn, whose element never had a size: an
   `Error`, a defect of the caller, since a screen exports only a plot it
@@ -364,6 +380,11 @@ of `getBoundingClientRect` and a `ResizeObserver` the test calls:
 - a size of 0 draws nothing; the first call of the observer with a size
   draws, once, at the next frame, and three calls within one frame draw
   once, at the last size;
+- an element not larger than the margins, when the plot is made and
+  after an `update` to data with larger margins, gives an SVG of 0 by 0
+  with nothing in its marks, its annotations, its legend and its axes,
+  and a `toSVG` that throws saying the frame has no area; a resize with
+  room for the frame draws it again;
 - `width`, `height` and the `viewBox` of the SVG at the size of the last
   draw, and the frame of `innerWidth` by `innerHeight` of that size less
   the margins;
