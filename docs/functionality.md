@@ -59,7 +59,10 @@ both.
 ### What the dataset holds
 
 The number of individuals, the number of variants, the ploidy, the
-chromosomes with their number of variants.
+chromosomes with their number of variants, and the density of variants
+along each chromosome, the number of variants in each window of the
+genome, which popnei will give (decided by the owner on 26 September
+2026).
 
 ### The filters of variants
 
@@ -72,7 +75,7 @@ gives already.
 | missing data | its proportion of missing genotypes is at most a threshold | on, 0.1 |
 | major allele frequency (MAF) | the frequency of its commonest allele is at most a threshold | on for the PCA and the GWAS, 0.95; off otherwise |
 | observed heterozygosity | its observed heterozygosity is at most a threshold | off |
-| genomic regions | it falls inside a region of a BED file | off |
+| genomic regions | it falls inside a region of a BED file; the filter is popnei's, decided by the owner on 26 September 2026 | off |
 | linkage disequilibrium (LD pruning) | it is not in LD above a threshold with a variant already kept | off as a filter of the dataset, where it serves to thin a large one; on inside the PCA (section 5) |
 
 The thresholds are popnei's, and each filter keeps what is at most its
@@ -431,6 +434,14 @@ has not decided:
 - The distance at which the LD decays to half.
 - The filters of individuals by missing data and by observed
   heterozygosity.
+- A VCF writer, for the variants after the filters (section 3).
+- The filter of the variants by the regions of a BED file (section 3).
+- The histogram of the proportion of missing genotypes per variant,
+  beside those popnei gives of the MAF and the heterozygosity, for the
+  missing data filter (section 3).
+- The density of variants along each chromosome (section 3).
+
+The last four the owner decided on 26 September 2026 to add to popnei.
 - The GWAS with covariates, the λ, the pseudo heritability; the GWAS spec
   of popnei is not written yet.
 

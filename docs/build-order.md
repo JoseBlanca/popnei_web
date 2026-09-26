@@ -177,8 +177,13 @@ order does not wait for what exists:
 - **Why here:** both applications share this step, and every analysis
   after it reads the variants it leaves. The histogram is the simplest
   plot, so the plot contract and its export are tried on it first.
-- **Needs of popnei:** a VCF writer, if popnei does not have one; the
-  regions of a BED file, if they are not filtered in popnei (to check).
+- **Needs of popnei:** a VCF writer, the filter by the regions of a BED
+  file, the histogram of the proportion of missing genotypes per variant,
+  and the density of variants along each chromosome. popnei's release
+  `js-v0.1.0-dev.2` has none of the four, as was checked on 26 September
+  2026, and the owner decided that day to add them to popnei. The rest of
+  the stage, the other filters, the statistics per individual, the other
+  histograms and the `.nei` writer, is in that release.
 
 ### Stage 4. The samples step and the PCA
 
@@ -207,8 +212,8 @@ order does not wait for what exists:
   application (section 4); none of them was found on popnei's `main` on
   24 September 2026. The fall of r² with distance, with the distance at
   which it falls to half, is on `main` since that day, `LdDecay` in
-  `js/popnei/src/ld.ts`, and reaches the application with the first
-  release of popnei that has it.
+  `js/popnei/src/ld.ts`, and is in the release `js-v0.1.0-dev.2`, as
+  was checked on 26 September 2026.
 
 ### Stage 6. Taking the work out
 
@@ -254,9 +259,12 @@ order does not wait for what exists:
 |---|---|---|
 | a release of the wasm package by a workflow | technology.md, section 5 | stage 0 |
 | reading a `File` by ranges, with progress: given by the release `js-v0.1.0-dev.2` of 25 September 2026 | popnei issue #1 | stage 2 |
-| a VCF writer, if there is none | functionality.md, section 3 | stage 3 |
+| a VCF writer: none in `js-v0.1.0-dev.2`; to be added, decided by the owner on 26 September 2026 | functionality.md, section 3 | stage 3 |
+| the filter by the regions of a BED file: none; to be added, decided on 26 September 2026 | functionality.md, section 3 | stage 3 |
+| the histogram of the proportion of missing genotypes per variant: none; to be added, decided on 26 September 2026 | functionality.md, section 3 | stage 3 |
+| the density of variants along each chromosome: none; to be added, decided on 26 September 2026 | functionality.md, section 3 | stage 3 |
 | the private alleles, the rarefaction, the folded SFS | functionality.md, section 11 | stage 5 |
-| the fall of r² with distance and the distance at which it falls to half: on popnei's `main` since 24 September 2026, `LdDecay` in `js/popnei/src/ld.ts`, not yet in a release | functionality.md, section 11 | stage 5, from a release that has it |
+| the fall of r² with distance and the distance at which it falls to half: `LdDecay` in `js/popnei/src/ld.ts`, in the release `js-v0.1.0-dev.2` | functionality.md, section 11 | stage 5 |
 | the logistic models of the GWAS | popnei, being written | stage 7 |
 | the thinning of the Manhattan and QQ points, and λ | technology.md; worker.md | stage 7 |
 
@@ -274,10 +282,11 @@ Each is for the owner, and none stops stage 0 but the first.
 
 1. The name of the GitHub repository of the site, which sets its base
    path; needed for stage 0.
-2. Whether the regions of a BED file are filtered in popnei or in the
-   application, and whether the rarefaction and the distance at which the
+2. Whether the rarefaction and the distance at which the
    LD decays to half are popnei's calculations, by the rule of section 4;
-   needed for stages 3 and 5. F is settled by that rule: it is the
+   needed for stage 5. The regions of a BED file are filtered in popnei,
+   decided by the owner on 26 September 2026, since the application
+   cannot filter inside popnei's pass over the file. F is settled by that rule: it is the
    application's arithmetic on popnei's heterozygosities.
 3. Whether the association application is published with continuous
    traits alone, before popnei has the logistic models, or waits for
