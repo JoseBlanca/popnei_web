@@ -276,14 +276,22 @@ browser, which run in node:
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
     "lib": ["ES2022", "ES2023.Array", "DOM"],
-    "types": ["node"]
+    "types": ["node", "vite/client"]
   },
-  "include": ["vite.config.ts", "playwright.config.ts", "e2e"]
+  "include": ["vite.config.ts", "playwright.config.ts", "e2e"],
+  "exclude": ["e2e/plots.ts"]
 }
 ```
 
 `DOM` is there for the functions a Playwright test passes to
-`page.evaluate`, which run in the page.
+`page.evaluate`, which run in the page. `vite/client`, the declarations
+Vite gives for what it imports besides code, is there because
+`e2e/plotsPage.ts`, the handle of the page of the tests of the plots,
+names the data of the histogram, and the compiler then checks
+`src/charts/plot2d.ts`, which imports its CSS, a module that only those
+declarations type (added on 26 September 2026). `e2e/plots.ts`, the
+script of that page, runs in the browser and is checked with the
+application, in `tsconfig.app.json`.
 
 `tsconfig.test.json`, the Vitest tests that run in node, those of
 `src/core`, `src/worker` and `src/ui` (`testing.md`):

@@ -9,6 +9,7 @@
 
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
+import type { PngScale } from "../src/charts/types.ts";
 
 /** The fill of a kept bar in the light theme, --chart-bar, #0072b2. */
 const LIGHT_BAR = "rgb(0, 114, 178)";
@@ -47,7 +48,9 @@ async function openPlots(page: Page): Promise<void> {
 async function draw(page: Page, width: number, height: number): Promise<void> {
   await page.evaluate(
     ([w, h]) => {
-      window.plotsPage.draw(w, h);
+      const plots = window.plotsPage;
+      if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+      plots.draw(w, h);
     },
     [width, height] as const,
   );
@@ -69,9 +72,13 @@ interface PngRefused {
 }
 
 /** Calls `toPNG(scale)` of the plot drawn last, and reads what it gave. */
-async function png(page: Page, scale: 2 | 3): Promise<PngFound | PngRefused> {
+async function png(
+  page: Page,
+  scale: PngScale,
+): Promise<PngFound | PngRefused> {
   return page.evaluate(async (pngScale) => {
     const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
     try {
       const blob = await plots.handle().toPNG(pngScale);
       // The width and the height of a PNG are the first two fields of its
@@ -179,7 +186,9 @@ test("VS4 D3 the SVG of toSVG holds no var( and no overlay, has a first backgrou
     }
     await draw(page, 600, 375);
     const found = await page.evaluate(() => {
-      const element = window.plotsPage.element();
+      const plots = window.plotsPage;
+      if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+      const element = plots.element();
       const svg = element.querySelector("svg");
       if (svg === null) throw new Error("The plot has no SVG.");
       // An overlay, which the histogram does not draw, so that its removal
@@ -194,7 +203,7 @@ test("VS4 D3 the SVG of toSVG holds no var( and no overlay, has a first backgrou
       if (screenKept === null) throw new Error("The plot has no kept bar.");
       const screenFill = getComputedStyle(screenKept).fill;
 
-      const text = window.plotsPage.handle().toSVG();
+      const text = plots.handle().toSVG();
       const file = new DOMParser().parseFromString(text, "image/svg+xml");
       const root = file.documentElement;
       const firstRect = root.querySelector("rect");
@@ -402,6 +411,8 @@ test("VS4 D3 toPNG draws nothing until the fonts of the page are ready", async (
   await draw(page, 600, 375);
   await countDrawing(page);
   const waiting = await page.evaluate(async () => {
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
     let fontsLoaded: () => void = () => undefined;
     const ready = new Promise<void>((resolve) => {
       fontsLoaded = resolve;
@@ -410,7 +421,7 @@ test("VS4 D3 toPNG draws nothing until the fonts of the page are ready", async (
       configurable: true,
       get: () => ready,
     });
-    const made = window.plotsPage.handle().toPNG(3);
+    const made = plots.handle().toPNG(3);
     // Long enough for an image to be decoded and drawn, had it not waited.
     await new Promise((resolve) => setTimeout(resolve, 200));
     const counts = (window as unknown as { drawingCounts: DrawingCounts })
@@ -432,7 +443,9 @@ test("VS4 D3 a change of theme while the plot is on the screen draws nothing aga
   await openPlots(page);
   await draw(page, 600, 375);
   const found = await page.evaluate(async () => {
-    const svg = window.plotsPage.element().querySelector("svg");
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    const svg = plots.element().querySelector("svg");
     if (svg === null) throw new Error("The plot has no SVG.");
     const kept = svg.querySelector(".chart-bar-kept");
     if (kept === null) throw new Error("The plot has no kept bar.");
@@ -455,7 +468,7 @@ test("VS4 D3 a change of theme while the plot is on the screen draws nothing aga
     observer.disconnect();
     const darkFill = getComputedStyle(kept).fill;
     const file = new DOMParser().parseFromString(
-      window.plotsPage.handle().toSVG(),
+      plots.handle().toSVG(),
       "image/svg+xml",
     );
     return {
@@ -485,7 +498,9 @@ test("VS4 D3 a resize draws the plot again at its new size, and after destroy th
   await expect(svg).toHaveAttribute("width", "600");
 
   await page.evaluate(() => {
-    const element = window.plotsPage.element();
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    const element = plots.element();
     element.style.width = "400px";
     element.style.height = "250px";
   });
@@ -496,6 +511,7 @@ test("VS4 D3 a resize draws the plot again at its new size, and after destroy th
 
   const after = await page.evaluate(() => {
     const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
     plots.handle().destroy();
     plots.handle().destroy();
     let thrown = "";
@@ -516,7 +532,9 @@ test("VS4 D3 at 320 pixels wide the three rows of the legend lie inside the SVG"
   await openPlots(page);
   await draw(page, 320, 200);
   const rows = await page.evaluate(() => {
-    const svg = window.plotsPage.element().querySelector("svg");
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    const svg = plots.element().querySelector("svg");
     if (svg === null) throw new Error("The plot has no SVG.");
     return [...svg.querySelectorAll<SVGGElement>(".chart-legend-row")].map(
       (row) => {

@@ -5,6 +5,12 @@
  * data, removes it and exports it.
  */
 
+/**
+ * How many times the size on the screen a PNG is made at: 3 for print at
+ * 300 dpi, 2 for slides, and 2 when 3 was refused as too large.
+ */
+export type PngScale = 2 | 3;
+
 /** What a plot function returns. */
 export interface ChartHandle<Data> {
   /** Draws new data in the same element, with no flash and no new element. */
@@ -19,7 +25,7 @@ export interface ChartHandle<Data> {
    * `tooLarge` or `notMade` is a PNG refused, which the screen tells the
    * user of; anything else is a defect, which the screen throws again.
    */
-  toPNG(scale: 2 | 3): Promise<Blob>;
+  toPNG(scale: PngScale): Promise<Blob>;
 }
 
 /**

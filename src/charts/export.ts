@@ -8,6 +8,7 @@
  */
 
 import { MAX_CANVAS_SIDE } from "./limits.ts";
+import type { PngScale } from "./types.ts";
 
 /** The size of a plot at its last draw, in CSS pixels. */
 export interface ExportSize {
@@ -157,7 +158,7 @@ export function exportSvg(svg: SVGSVGElement, size: ExportSize): string {
 export async function exportPng(
   svgText: () => string,
   size: ExportSize,
-  scale: 2 | 3,
+  scale: PngScale,
 ): Promise<Blob> {
   if (Math.max(size.width, size.height) * scale > MAX_CANVAS_SIDE) {
     throw new PngError("tooLarge");

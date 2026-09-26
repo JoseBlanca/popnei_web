@@ -5,6 +5,8 @@
  * `page.evaluate` (docs/specs/charts/plot2d.md, "How it is verified").
  */
 
+import type { PngErrorKind } from "../src/charts/export.ts";
+import type { HistogramData } from "../src/charts/histogram.ts";
 import type { ChartHandle } from "../src/charts/types.ts";
 
 /** The histogram of the page, and what a test reads of it. */
@@ -15,18 +17,21 @@ export interface PlotsPage {
    * `height` CSS pixels, in place of the plot drawn before, and returns
    * its handle.
    */
-  draw(width: number, height: number): ChartHandle<unknown>;
+  draw(width: number, height: number): ChartHandle<HistogramData>;
   /** The element of the plot drawn last; throws when none was drawn. */
   element(): HTMLElement;
   /** The handle of the plot drawn last; throws when none was drawn. */
-  handle(): ChartHandle<unknown>;
+  handle(): ChartHandle<HistogramData>;
   /** The `kind` of `error` when it is a PngError, and null when it is not. */
-  pngErrorKind(error: unknown): "tooLarge" | "notMade" | null;
+  pngErrorKind(error: unknown): PngErrorKind | null;
 }
 
 declare global {
   interface Window {
-    /** Set by the script of e2e/plots.html once it has run. */
-    plotsPage: PlotsPage;
+    /**
+     * Set by the script of e2e/plots.html once it has run, and absent on
+     * every other page and before it.
+     */
+    plotsPage?: PlotsPage;
   }
 }

@@ -14,6 +14,7 @@ import { select } from "d3-selection";
 import type { Selection } from "d3-selection";
 import "./charts.css";
 import { exportPng, exportSvg } from "./export.ts";
+import type { ExportSize } from "./export.ts";
 import { nextChartIds } from "./ids.ts";
 import type { ChartHandle } from "./types.ts";
 
@@ -43,11 +44,15 @@ export interface Margin {
 
 /** How the axes are drawn, beyond what the scales give. */
 export interface AxesOptions {
-  /** The labels of the ticks; the scale's tickFormat when absent. */
+  /** The labels of the ticks of the horizontal axis; the scale's tickFormat when absent. */
   readonly xFormat?: (value: number) => string;
-  /** The labels of the ticks; the scale's tickFormat when absent. */
+  /**
+   * The labels of the ticks of the vertical axis; when absent, the
+   * scale's tickFormat, or with `yWholeNumbers` the whole numbers with a
+   * comma between thousands, "12,000".
+   */
   readonly yFormat?: (value: number) => string;
-  /** Ticks at whole numbers only, with a comma between thousands. */
+  /** Ticks of the vertical axis at whole numbers only. */
   readonly yWholeNumbers?: boolean;
 }
 
@@ -110,9 +115,9 @@ function formatWholeNumber(value: number): string {
 }
 
 /**
- * The ticks of an axis of counts: those of the scale for about `count`
- * ticks that are whole numbers, since a count of 0.5 means nothing. For
- * a domain of 0 to 3 they are 0, 1, 2 and 3.
+ * The ticks of an axis of counts: the whole numbers among the ticks the
+ * scale gives for about `count` ticks, since a count of 0.5 means
+ * nothing. For a domain of 0 to 3 they are 0, 1, 2 and 3.
  */
 export function wholeNumberTicks(
   scale: ScaleContinuousNumeric<number, number>,
@@ -130,11 +135,6 @@ export function tableNumber(value: number): number {
   return Number(value.toPrecision(12));
 }
 
-interface Size {
-  readonly width: number;
-  readonly height: number;
-}
-
 /**
  * What the SVG shows: nothing yet, since the element never had a size; the
  * plot drawn at a size; or, at a size not larger than the margins, an
@@ -142,8 +142,8 @@ interface Size {
  */
 type Drawing =
   | { readonly kind: "none" }
-  | { readonly kind: "drawn"; readonly size: Size }
-  | { readonly kind: "noArea"; readonly size: Size };
+  | { readonly kind: "drawn"; readonly size: ExportSize }
+  | { readonly kind: "noArea"; readonly size: ExportSize };
 
 /**
  * The size of the content box of `element`, inside its padding and its
@@ -152,7 +152,7 @@ type Drawing =
  * pixels, less the padding; 0 by 0 for an element that is not laid out,
  * in a tab that is hidden.
  */
-function contentBoxOf(element: HTMLElement): Size {
+function contentBoxOf(element: HTMLElement): ExportSize {
   const style = getComputedStyle(element);
   const pixels = (value: string): number => {
     const parsed = Number.parseFloat(value);
@@ -231,7 +231,7 @@ export function createPlot2d<Data extends PlotText>(
 
   let current = data;
   let drawing: Drawing = { kind: "none" };
-  let pending: Size | null = null;
+  let pending: ExportSize | null = null;
   let waitingFrame: number | null = null;
   let destroyed = false;
 
@@ -244,7 +244,7 @@ export function createPlot2d<Data extends PlotText>(
    * Empties the frame of an element of `size`, not larger than the
    * margins: nothing of an earlier draw stays, and the SVG is of 0 by 0.
    */
-  function emptyAt(size: Size): void {
+  function emptyAt(size: ExportSize): void {
     drawing = { kind: "noArea", size };
     for (const group of [marks, annotations, legend, xAxisGroup, yAxisGroup]) {
       group.selectAll("*").remove();
@@ -256,7 +256,7 @@ export function createPlot2d<Data extends PlotText>(
    * Draws the current data at `size`, which is above 0, or empties the
    * frame when the margins leave it no area.
    */
-  function drawAt(size: Size): void {
+  function drawAt(size: ExportSize): void {
     const margin = definition.margin(current);
     const innerWidth = size.width - margin.left - margin.right;
     const innerHeight = size.height - margin.top - margin.bottom;
@@ -339,7 +339,7 @@ export function createPlot2d<Data extends PlotText>(
     waitingFrame ??= requestAnimationFrame(onFrame);
   });
 
-  function drawnSize(call: string): Size {
+  function drawnSize(call: string): ExportSize {
     if (destroyed) {
       throw new Error(
         `popnei_web defect: ${call} of a plot after its destroy.`,
