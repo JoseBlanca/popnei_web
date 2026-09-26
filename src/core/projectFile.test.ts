@@ -1569,6 +1569,160 @@ function vcfOpenedWith(
   });
 }
 
+/** The project of `v1-every-filter.popnei.json` once opened, without the
+    fingerprint of its check: the four filters of the variants in their
+    fixed order and the four filters of the individuals in theirs. The
+    lists keep ind_001, ind_003 and ind_005 of the north and ind_004 of
+    the south; the thresholds, which the statistics of each individual
+    decide, had left the north alone when the file was saved, so its
+    check holds the 4 numbers of one population. */
+function everyFilterProject(): Project {
+  const individuals = [
+    "ind_001",
+    "ind_002",
+    "ind_003",
+    "ind_004",
+    "ind_005",
+    "ind_006",
+  ];
+  return {
+    app: "popgen",
+    variants: null,
+    filters: [
+      { kind: "missing_data", maxAllowedMissingRate: 0.05 },
+      { kind: "obs_het", maxAllowedObsHet: 0.6 },
+      { kind: "maf", maxAllowedMaf: 0.95 },
+      { kind: "ld", maxAllowedR2: 0.2, maxDist: 100000 },
+    ],
+    individualFilters: [
+      { kind: "keep", individuals: individuals.slice(0, 5) },
+      { kind: "remove", individuals: ["ind_002"] },
+      { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+      { kind: "obs_het", maxAllowedObsHet: 0.5 },
+    ],
+    individuals: {
+      fileId: "b0b1b2b3b4b5b6b7b8b9babbbcbdbebf",
+      name: "pops.csv",
+      csv: { encoding: "auto", separator: "auto", decimal: "auto" },
+      read: {
+        kind: "read",
+        table: {
+          columns: ["id", "pop"],
+          rows: individuals.map((name, index) => [
+            name,
+            index % 2 === 0 ? "north" : "south",
+          ]),
+        },
+        columns: [{ kind: "identifier" }, { kind: "categorical" }],
+        found: {
+          encoding: "utf-8",
+          separator: ",",
+          decimal: ".",
+          undecodedLine: null,
+        },
+      },
+    },
+    grouping: { kind: "populations", column: "pop" },
+    analyses: [],
+    reference: {
+      variants: {
+        fileId: "a0a1a2a3a4a5a6a7a8a9aaabacadaeaf",
+        name: "panel_2026.vcf.gz",
+        size: 18350120,
+        format: "vcf",
+        readOptions: { ploidy: 2, onlyPassed: false },
+        read: { kind: "read", individuals, ploidy: 2, numVars: 25000 },
+      },
+      checks: [
+        {
+          analysis: "diversity",
+          numbers: [18211, 0.2811, 0.2754, 0.8406],
+          keyVersion: 1,
+          popneiVersion: "0.1.0",
+          appVersion: "0.1.0",
+          settings: "",
+        },
+      ],
+    },
+  };
+}
+
+describe("VS3 D8 the project file of stage 3", () => {
+  const FILE = "v1-every-filter.popnei.json";
+
+  test(`${FILE} opens into its project, every filter in its order`, () => {
+    expect(readProjectFile(fixture(FILE), "popgen", POPGEN_DEFS)).toEqual({
+      ok: true,
+      value: opened(everyFilterProject()),
+    });
+  });
+
+  test(`${FILE} is written back byte for byte from its project`, () => {
+    const state = stateOf(
+      opened(everyFilterProject()),
+      Object.fromEntries(
+        POPGEN_DEFS.map((def) => [
+          def.id,
+          { kind: "locked", reason: "Load a variants file." },
+        ]),
+      ),
+    );
+    expect(
+      writeProjectFile(state, POPGEN_DEFS, "0.1.0", "2026-09-26T11:20:45.000Z"),
+    ).toBe(fixture(FILE));
+  });
+
+  test("a file of version 1 whose filters of the variants are maf then missing_data is refused as filterOutOfOrder, with its text", () => {
+    const text = JSON.stringify({
+      ...fixtureJson(FILE),
+      filters: [
+        { kind: "maf", maxAllowedMaf: 0.95 },
+        { kind: "missing_data", maxAllowedMissingRate: 0.05 },
+      ],
+    });
+    const expected: ProjectFileError = {
+      kind: "project",
+      error: { kind: "filterOutOfOrder", path: ["filters", 1] },
+    };
+    expect(readProjectFile(text, "popgen", POPGEN_DEFS)).toEqual({
+      ok: false,
+      error: expected,
+    });
+    expect(projectFileErrorText(expected, "run1.popnei.json")).toBe(
+      "The project file cannot be opened: the filters of the variants should be in the order missing genotypes, observed heterozygosity, major allele frequency, linkage disequilibrium, and the second one is out of that order. The file was changed outside the application, or is damaged. Open a copy saved before the change, or make the project again.",
+    );
+  });
+
+  test("with the diversity's own definition, the count of the check numbers is not checked with a threshold on the individuals, and is with the lists alone", () => {
+    // The file's 4 numbers, of the north alone, open: the thresholds keep
+    // individuals by statistics not yet calculated for the new load.
+    expect(readProjectFile(fixture(FILE), "popgen", POPGEN_ANALYSES).ok).toBe(
+      true,
+    );
+    // Without the thresholds, the lists keep both populations, which give
+    // 7 numbers.
+    const listsAlone = JSON.stringify({
+      ...fixtureJson(FILE),
+      individualFilters: [
+        {
+          kind: "keep",
+          individuals: ["ind_001", "ind_002", "ind_003", "ind_004", "ind_005"],
+        },
+        { kind: "remove", individuals: ["ind_002"] },
+      ],
+    });
+    expect(readProjectFile(listsAlone, "popgen", POPGEN_ANALYSES)).toEqual({
+      ok: false,
+      error: {
+        kind: "header",
+        field: "checks",
+        expected:
+          "7 numbers for the analysis diversity, as many as the rest of the file gives it, and not 4",
+      },
+    });
+  });
+});
+
 describe("WS6 D3 the comparisons", () => {
   test("a name that differs", () => {
     expect(

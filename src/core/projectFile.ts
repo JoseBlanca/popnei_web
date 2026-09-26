@@ -565,9 +565,11 @@ const NO_FINGERPRINT = "0".repeat(64);
  * the other application; a field at the top this version does not write,
  * or one missing; a header of the wrong value; check numbers that are not
  * a list of objects, or hold a fingerprint, or are there with no variants
- * file; the project, as `parseProject` checks it; a read this version
- * never writes; and a check whose count of numbers is not the one
- * `numCheckNumbers` of its analysis gives, when it gives one.
+ * file; the project, as `parseProject` checks it, the filters of the
+ * variants in their fixed order among it, in a file of version 1 too; a
+ * read this version never writes; and a check whose count of numbers is
+ * not the one `numCheckNumbers` of its analysis gives, when it gives one,
+ * which it does not with a threshold on the individuals.
  *
  * The project has no variants file, and as its reference the file's
  * variants file and check numbers, each with the fingerprint of its

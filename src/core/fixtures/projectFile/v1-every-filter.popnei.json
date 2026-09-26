@@ -1,0 +1,112 @@
+{
+  "format": "popnei_web project",
+  "formatVersion": 1,
+  "app": "popgen",
+  "appVersion": "0.1.0",
+  "popneiVersion": "0.1.0",
+  "saved": "2026-09-26T11:20:45.000Z",
+  "variants": {
+    "fileId": "a0a1a2a3a4a5a6a7a8a9aaabacadaeaf",
+    "name": "panel_2026.vcf.gz",
+    "size": 18350120,
+    "format": "vcf",
+    "readOptions": {
+      "ploidy": 2,
+      "onlyPassed": false
+    },
+    "read": {
+      "kind": "read",
+      "individuals": ["ind_001", "ind_002", "ind_003", "ind_004", "ind_005", "ind_006"],
+      "ploidy": 2,
+      "numVars": 25000
+    }
+  },
+  "filters": [
+    {
+      "kind": "missing_data",
+      "maxAllowedMissingRate": 0.05
+    },
+    {
+      "kind": "obs_het",
+      "maxAllowedObsHet": 0.6
+    },
+    {
+      "kind": "maf",
+      "maxAllowedMaf": 0.95
+    },
+    {
+      "kind": "ld",
+      "maxAllowedR2": 0.2,
+      "maxDist": 100000
+    }
+  ],
+  "individualFilters": [
+    {
+      "kind": "keep",
+      "individuals": ["ind_001", "ind_002", "ind_003", "ind_004", "ind_005"]
+    },
+    {
+      "kind": "remove",
+      "individuals": ["ind_002"]
+    },
+    {
+      "kind": "missing_data",
+      "maxAllowedMissingRate": 0.1
+    },
+    {
+      "kind": "obs_het",
+      "maxAllowedObsHet": 0.5
+    }
+  ],
+  "individuals": {
+    "fileId": "b0b1b2b3b4b5b6b7b8b9babbbcbdbebf",
+    "name": "pops.csv",
+    "csv": {
+      "encoding": "auto",
+      "separator": "auto",
+      "decimal": "auto"
+    },
+    "read": {
+      "kind": "read",
+      "table": {
+        "columns": ["id", "pop"],
+        "rows": [
+          ["ind_001", "north"],
+          ["ind_002", "south"],
+          ["ind_003", "north"],
+          ["ind_004", "south"],
+          ["ind_005", "north"],
+          ["ind_006", "south"]
+        ]
+      },
+      "columns": [
+        {
+          "kind": "identifier"
+        },
+        {
+          "kind": "categorical"
+        }
+      ],
+      "found": {
+        "encoding": "utf-8",
+        "separator": ",",
+        "decimal": ".",
+        "undecodedLine": null
+      }
+    }
+  },
+  "grouping": {
+    "kind": "populations",
+    "column": "pop"
+  },
+  "analyses": [],
+  "checks": [
+    {
+      "analysis": "diversity",
+      "numbers": [18211, 0.2811, 0.2754, 0.8406],
+      "keyVersion": 1,
+      "popneiVersion": "0.1.0",
+      "appVersion": "0.1.0"
+    }
+  ]
+}
