@@ -636,7 +636,9 @@ with a state of its own, `write`:
 | ready | none of the above | its key, and whether the last write of the key before was dropped because it ended after a change of its filters, until the next change of the project |
 
 Stage 3 writes the `.nei` format alone; the VCF comes with popnei's
-writer of it, with a state of its own.
+writer of it, with a state of its own. Until then a `startWrite` of
+another format is a defect, since the store would file its key, and
+show its file, as those of the `.nei` file.
 
 - **`startWrite`** in `ready` or `saved`, or in `error` after a failure
   that is not popnei's, of the write or of the statistics it waited for,
