@@ -75,7 +75,11 @@ its `<h1>`; and the notice, at the bottom.
   the keys by the layout of the keyboard, so that on a French or a
   German keyboard they are where the user sees them; on a layout without
   Latin letters, Russian or Greek, where no key gives Z, they are the
-  keys that are Z and Y on a US keyboard.
+  keys that are Z and Y on a US keyboard. In a text field the browser's
+  undo takes back the typing of that field alone: once the field has
+  nothing left to undo, WebKit would go on to the field edited before it,
+  the threshold behind the dialog of Save among them, which would then
+  show a number the project does not hold.
 - **Open project…** and **Save project**, below ("Saving", "Opening").
 
 ### The stepper
