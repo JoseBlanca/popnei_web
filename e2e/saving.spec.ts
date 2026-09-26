@@ -329,6 +329,49 @@ test("WS9 D3 Open project… with a file of a newer format, whose text does not 
   );
 });
 
+test("WS9 D3 of two project files picked close together, the second opens, and the first, read after it, is not answered", async ({
+  page,
+}) => {
+  await openPopgen(page);
+  // The file slow.popnei.json is read half a second late, and the page
+  // notes when its read has ended.
+  await page.evaluate(() => {
+    const text = File.prototype.text;
+    File.prototype.text = async function (this: File): Promise<string> {
+      const read = await text.call(this);
+      if (this.name !== "slow.popnei.json") return read;
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      Object.assign(window, { slowRead: true });
+      return read;
+    };
+  });
+
+  await openProject(page, { name: "slow.popnei.json", text: "some notes" });
+  await openProject(
+    page,
+    join(
+      import.meta.dirname,
+      "..",
+      "src",
+      "core",
+      "fixtures",
+      "projectFile",
+      "v1-empty.popnei.json",
+    ),
+  );
+
+  await expect(status(page)).toHaveText("Opened v1-empty.popnei.json.");
+  await expect.poll(() => page.evaluate(() => "slowRead" in window)).toBe(true);
+  // A frame for the page to answer the first file, if it did.
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(resolve)),
+  );
+  await expect(page.getByRole("alertdialog")).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Variants" }),
+  ).toBeFocused();
+});
+
 test("WS9 D3 Open project… with a file above 64 MB shows the text of tooLarge", async ({
   page,
 }, testInfo) => {

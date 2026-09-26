@@ -180,6 +180,9 @@ export function OpenProject(): React.JSX.Element {
   const button = useRef<HTMLButtonElement>(null);
   const [opening, setOpening] = useState<Opening>(NONE);
   const focusLater = useFocusLater(button);
+  // The number of the last file picked: a file read after one picked
+  // after it, a large one picked first, is not answered.
+  const lastPick = useRef(0);
 
   /** Closes a dialog and gives the focus back to Open project…. */
   const back = (): void => {
@@ -209,7 +212,10 @@ export function OpenProject(): React.JSX.Element {
   };
 
   const onPicked = async (file: File): Promise<void> => {
+    lastPick.current += 1;
+    const pick = lastPick.current;
     const picked = await readPicked(file, POPGEN_ANALYSES);
+    if (pick !== lastPick.current) return;
     if (picked.kind === "refused") {
       setOpening(picked);
       return;
