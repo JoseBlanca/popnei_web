@@ -1090,7 +1090,7 @@ export function uncomparedText(
     return null;
   }
   const start = "Not compared with the numbers of the project file:";
-  const load = `Load ${escaped(reference.variants.name)} to compare them.`;
+  const load = `Load ${escaped(reference.variants.name)} in the Variants step to compare them.`;
   if (p.variants.format !== reference.variants.format) {
     return p.variants.format === "vcf"
       ? `${start} this file is a VCF, and the project was made with a .nei file. ${load}`

@@ -1739,7 +1739,7 @@ describe("WS6 D3 the comparisons", () => {
         "diversity",
       ),
     ).toBe(
-      `${start} this file is a VCF, and the project was made with a .nei file. Load panel_2026.nei to compare them.`,
+      `${start} this file is a VCF, and the project was made with a .nei file. Load panel_2026.nei in the Variants step to compare them.`,
     );
     expect(
       uncomparedText(
@@ -1751,7 +1751,7 @@ describe("WS6 D3 the comparisons", () => {
         "diversity",
       ),
     ).toBe(
-      `${start} this file is a .nei file, and the project was made with a VCF. Load panel.vcf.gz to compare them.`,
+      `${start} this file is a .nei file, and the project was made with a VCF. Load panel.vcf.gz in the Variants step to compare them.`,
     );
     expect(
       uncomparedText(

@@ -892,7 +892,7 @@ describe("WS9 D1 the announcements made from the state", () => {
         title,
       ),
     ).toEqual([
-      "Diversity: done. Not compared with the numbers of the project file: this file is a .nei file, and the project was made with a VCF. Load panel.vcf.gz to compare them.",
+      "Diversity: done. Not compared with the numbers of the project file: this file is a .nei file, and the project was made with a VCF. Load panel.vcf.gz in the Variants step to compare them.",
     ]);
   });
 

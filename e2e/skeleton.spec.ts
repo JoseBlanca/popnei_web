@@ -351,7 +351,7 @@ test("WS9 D4 the project saved after a run and opened in a new page gives the sa
   await run(page);
   await expect(
     panel(page).getByText(
-      "Not compared with the numbers of the project file: this file is a VCF, and the project was made with a .nei file. Load panel.nei to compare them.",
+      "Not compared with the numbers of the project file: this file is a VCF, and the project was made with a .nei file. Load panel.nei in the Variants step to compare them.",
       { exact: true },
     ),
   ).toBeVisible();
