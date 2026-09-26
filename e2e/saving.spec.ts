@@ -1099,7 +1099,7 @@ test("WS9 D3 the error bar's Save after a Copy that failed keeps the box of the 
   await expect(barStatus).toHaveText(handed);
 });
 
-test("WS9 D3 under the diversity's table, a VCF read with every variant is told why its numbers are not compared, and read again as the project was, the same numbers, and axe", async ({
+test("WS9 D3 under the diversity's table, a VCF read with every variant is told why its numbers are not compared, and read again as the project was, the same numbers, both announced, and axe", async ({
   page,
   makeAxeBuilder,
 }, testInfo) => {
@@ -1134,11 +1134,13 @@ test("WS9 D3 under the diversity's table, a VCF read with every variant is told 
   await goTo(page, "Analyses");
   await page.getByRole("button", { name: "Run" }).click();
   await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
-  await expect(
-    page.getByText(
-      "Not compared with the numbers of the project file: this file was read with every variant, and the project's with only the variants with PASS or . in the FILTER column. To compare them, read the file again in the Variants step with only the variants with PASS or . in the FILTER column.",
-    ),
-  ).toBeVisible();
+  const notCompared =
+    "Not compared with the numbers of the project file: this file was read with every variant, and the project's with only the variants with PASS or . in the FILTER column. To compare them, read the file again in the Variants step with only the variants with PASS or . in the FILTER column.";
+  const diversity = page.getByRole("region", { name: "Diversity" });
+  await expect(diversity.getByText(notCompared)).toBeVisible();
+  // Announced with the end of the calculation, after the words of the
+  // read when they come within the pause of the announcer.
+  await expect(status(page)).toContainText(`Diversity: done. ${notCompared}`);
   await expectNoViolations(makeAxeBuilder);
 
   await goTo(page, "Variants");
@@ -1154,11 +1156,10 @@ test("WS9 D3 under the diversity's table, a VCF read with every variant is told 
   );
   await goTo(page, "Analyses");
   await page.getByRole("button", { name: "Run" }).click();
-  await expect(
-    page.getByText(
-      "The same numbers as in the project file: this variants file gives the results the project was saved with.",
-    ),
-  ).toBeVisible();
+  const same =
+    "The same numbers as in the project file: this variants file gives the results the project was saved with.";
+  await expect(diversity.getByText(same)).toBeVisible();
+  await expect(status(page)).toContainText(`Diversity: done. ${same}`);
   await expect(page.getByText(/^Not compared/)).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
 });

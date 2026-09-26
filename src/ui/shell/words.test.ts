@@ -842,6 +842,58 @@ describe("WS9 D1 the announcements made from the state", () => {
     ]);
   });
 
+  test("the end of a calculation of an opened project says the comparison with the project file", () => {
+    const before = state({
+      project: READY,
+      statuses: [running(KEY_A, 1), LOCKED],
+      runs: [run(1, DIVERSITY, KEY_A, CURRENT)],
+    });
+    const same: AnalysisStatus<TestDefResult> = {
+      ...done(KEY_A, 1),
+      check: { kind: "same" },
+    };
+    expect(
+      announcementsOf(
+        before,
+        state({ project: READY, statuses: [same, LOCKED] }),
+        title,
+      ),
+    ).toEqual([
+      "Diversity: done, 1 warning. The same numbers as in the project file: this variants file gives the results the project was saved with.",
+    ]);
+    // A project made with a VCF, given a .nei file: not compared.
+    const fromVcf = project({
+      ...READY,
+      reference: {
+        variants: {
+          ...variants(READ),
+          name: "panel.vcf.gz",
+          format: "vcf",
+          readOptions: { ploidy: 2, onlyPassed: true },
+        },
+        checks: [
+          {
+            analysis: DIVERSITY,
+            numbers: [],
+            keyVersion: 1,
+            popneiVersion: "0.1.0",
+            appVersion: "0.1.0",
+            settings: "0".repeat(64),
+          },
+        ],
+      },
+    });
+    expect(
+      announcementsOf(
+        { ...before, project: fromVcf },
+        state({ project: fromVcf, statuses: [done(KEY_A), LOCKED] }),
+        title,
+      ),
+    ).toEqual([
+      "Diversity: done. Not compared with the numbers of the project file: this file is a .nei file, and the project was made with a VCF. Load panel.vcf.gz to compare them.",
+    ]);
+  });
+
   test("a current request that ended done under its key is done, with its warnings counted", () => {
     const before = state({
       project: READY,

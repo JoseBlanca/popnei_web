@@ -31,7 +31,12 @@ import type {
   Project,
   VariantSource,
 } from "../../core/project.ts";
-import { askedFileText, identityWarning } from "../../core/projectFile.ts";
+import {
+  askedFileText,
+  checkVerdictText,
+  identityWarning,
+  uncomparedText,
+} from "../../core/projectFile.ts";
 import type { AppState, Notice, RunView } from "../../core/store.ts";
 import type { CsvOptions } from "../../worker/protocol.ts";
 import { capitalized, undoneOrRedone } from "../sentences.ts";
@@ -403,7 +408,8 @@ function startedAnnouncements<R>(
 }
 
 /** The end of each request that was current and left `runs`: done, with
-    its warnings, failed, or stopped. */
+    its warnings and the comparison with the project file its panel shows
+    under the result, failed, or stopped. */
 function endedAnnouncements<R>(
   before: AppState<R>,
   after: AppState<R>,
@@ -423,10 +429,17 @@ function endedAnnouncements<R>(
     )?.status;
     if (status?.kind === "done" && status.key === run.key) {
       const numWarnings = status.warnings.length;
-      announcements.push(
+      const ended =
         numWarnings === 0
           ? `${name}: done.`
-          : `${name}: done, ${counted(numWarnings, "warning")}.`,
+          : `${name}: done, ${counted(numWarnings, "warning")}.`;
+      // The line the panel shows under the result, for an opened project.
+      const comparison =
+        status.check === null
+          ? uncomparedText(after.project, run.analysis)
+          : checkVerdictText(status.check);
+      announcements.push(
+        comparison === null ? ended : `${ended} ${comparison}`,
       );
     } else if (status?.kind === "error" && status.key === run.key) {
       announcements.push(
