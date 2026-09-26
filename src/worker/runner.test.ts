@@ -1506,6 +1506,47 @@ describe("VS1 D3 the passes of the runner: the histograms and the counts", () =>
     }
     expect(caught).toBe(thrown);
   });
+
+  test.each([
+    [
+      "with no entry of a filter of the job",
+      { numVars: 1152, filtering: {} },
+      /^popnei_web defect: the counts of the pass have no filter missing_data$/,
+    ],
+    [
+      "with an entry of a kind the job has not",
+      {
+        numVars: 1152,
+        filtering: {
+          missing_data: { varsProcessed: 1200, varsKept: 1152 },
+          maf: { varsProcessed: 1152, varsKept: 1152 },
+        },
+      },
+      /^popnei_web defect: the counts of the pass have filters the job has not: maf$/,
+    ],
+  ])(
+    "popnei's counts of a pass %s are a defect thrown",
+    (_case, counts, message) => {
+      // The blocks of the pass are popnei's; only the counts read after
+      // them are replaced.
+      const iterBlocks = vi
+        .spyOn(Variants.prototype, "iterBlocks")
+        .mockImplementationOnce(function (this: Variants, options) {
+          iterBlocks.mockRestore();
+          const blocks = this.iterBlocks(options);
+          vi.spyOn(blocks, "passStats", "get").mockReturnValue(counts);
+          return blocks;
+        });
+      try {
+        const runner = opened("panel.nei");
+        expect(() =>
+          runner.run(filterCountsJob([missingData(0.05)]), ignore),
+        ).toThrow(message);
+      } finally {
+        iterBlocks.mockRestore();
+      }
+    },
+  );
 });
 
 describe("VS1 D3 the passes of the runner: a file that no longer reads, in the new passes", () => {
