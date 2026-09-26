@@ -717,6 +717,37 @@ test("WS9 D3 an opening at the Variants step moves the focus to its heading, and
   await expect(status(page)).toHaveText(/Opened panel\.popnei\.json\. /);
 });
 
+test("WS10 after an opening, the Individuals step offers to load the metadata file again in place of the options of how it is read, which the page has no file for", async ({
+  page,
+  makeAxeBuilder,
+}, testInfo) => {
+  // The project is saved from another page, so that this one holds no
+  // file of its loads, as after a reload.
+  const saving = await page.context().newPage();
+  await openPopgen(saving);
+  await loadWithPopulations(saving, "panel.nei");
+  await expect(saving.getByRole("button", { name: /Separator/ })).toHaveCount(
+    1,
+  );
+  const saved = await saveProjectFile(saving, testInfo.outputPath());
+  await saving.close();
+
+  await openPopgen(page);
+  await openProject(page, saved);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Variants" }),
+  ).toBeFocused();
+  await goTo(page, "Individuals");
+
+  await expect(
+    page.getByText("To change how panel_pops.csv is read, load it again.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: /Separator/ })).toHaveCount(0);
+  await expectNoViolations(makeAxeBuilder);
+});
+
 test("WS9 D3 the opening answered in the question while the Variants step is on screen moves the focus to its heading", async ({
   page,
 }, testInfo) => {

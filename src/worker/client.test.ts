@@ -373,6 +373,37 @@ describe("WS2 D3 the client: the load", () => {
     ).toThrow("popnei_web defect");
   });
 
+  test("a run on a load read before, while the worker holds another, ends the worker, opens that load's File on a new one, then runs", () => {
+    const env = withA();
+    env.client.addFile("B", FILE_B);
+    env.client.openVariants({ fileId: "B", ...NEI });
+    const second = last(env.calculation);
+    emit(second, READY);
+    emit(second, opened(lastSent(second).id));
+
+    const run = env.client.run("k1", job("A"), noProgress);
+    expect(second.terminated).toBe(true);
+    expect(env.calculation).toHaveLength(3);
+    const third = last(env.calculation);
+    emit(third, READY);
+    const open = lastSent(third);
+    expect(open).toMatchObject({ kind: "open", fileId: "A" });
+    expect(open.kind === "open" && open.file).toBe(FILE_A);
+    emit(third, opened(open.id));
+    expect(lastSent(third)).toMatchObject({
+      kind: "run",
+      id: run.id,
+      key: "k1",
+    });
+  });
+
+  test("addFile of a load id the client already holds is a defect, thrown", () => {
+    const env = withA();
+    expect(() => {
+      env.client.addFile("A", FILE_B);
+    }).toThrow("popnei_web defect");
+  });
+
   test("a second read of the load the worker opened gets its answer and sends nothing", async () => {
     const env = withA();
     const again = env.client.openVariants({ fileId: "A", ...NEI });
@@ -593,6 +624,28 @@ describe("WS2 D3 the client: progress", () => {
     emit(env.first, resultOf(run.id, "k1"));
     expect(seen).toEqual([first, second]);
     expect(await now(run.outcome)).toMatchObject({ kind: "done", key: "k1" });
+  });
+
+  test("an onProgress that throws: the throw reaches the caller, and the run and the queue go on", async () => {
+    const env = withA();
+    const r1 = env.client.run("r1", job("A"), () => {
+      throw new Error("a screen failed");
+    });
+    const r2 = env.client.run("r2", job("A"), noProgress);
+    expect(() => {
+      emit(env.first, {
+        kind: "progress",
+        id: r1.id,
+        bytesRead: 1,
+        numBytes: 2,
+        pass: 1,
+        numPasses: 1,
+      });
+    }).toThrow("a screen failed");
+    expect(env.first.terminated).toBe(false);
+    emit(env.first, resultOf(r1.id, "r1"));
+    expect(await now(r1.outcome)).toMatchObject({ kind: "done", key: "r1" });
+    expect(lastSent(env.first)).toMatchObject({ kind: "run", id: r2.id });
   });
 
   test("a progress of an id that is not running is a defect, and the worker is ended", async () => {

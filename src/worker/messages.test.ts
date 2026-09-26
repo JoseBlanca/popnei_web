@@ -560,6 +560,26 @@ describe("WS2 D2 the messages refused: the version", () => {
   test.each([
     ["calculation", parseFromRunner],
     ["light", parseFromFilesRunner],
+  ])(
+    "a ready of protocol 2 with fields of its own, from the %s worker, is otherProtocol and not a refusal of its fields",
+    (_name, parse) => {
+      expect(
+        parse({
+          kind: "ready",
+          protocol: 2,
+          popneiVersion: 3,
+          features: ["pca"],
+        }),
+      ).toEqual({
+        ok: false,
+        error: { kind: "otherProtocol", found: 2 },
+      });
+    },
+  );
+
+  test.each([
+    ["calculation", parseFromRunner],
+    ["light", parseFromFilesRunner],
   ])('a ready of protocol "1", from the %s worker', (_name, parse) => {
     expect(parse({ kind: "ready", protocol: "1" })).toEqual({
       ok: false,

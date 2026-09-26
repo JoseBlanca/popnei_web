@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { describe, expect, test } from "vitest";
 
 import { POPGEN_ANALYSES, firstProject, numVarsOf } from "../core/apps.ts";
@@ -10,6 +13,7 @@ import {
   setCsvOptions,
 } from "../core/project.ts";
 import type { Project } from "../core/project.ts";
+import { readProjectFile } from "../core/projectFile.ts";
 import { createStore } from "../core/store.ts";
 import type { Store } from "../core/store.ts";
 import type {
@@ -255,6 +259,51 @@ describe("WS7 D1 the rule of the reads", () => {
       PANEL_ID,
       PANEL_AGAIN_ID,
     ]);
+  });
+});
+
+describe("WS10 the cases of the entry", () => {
+  test("an undo back to a load already read asks for nothing", async () => {
+    const { store, fake } = setUp();
+    pickNei(store, PANEL_ID);
+    fake.variants[0]?.end(OPENED);
+    await settle();
+    pickVcf(store, PANEL_AGAIN_ID);
+    fake.variants[1]?.end(OPENED);
+    await settle();
+
+    store.undo();
+    await settle();
+
+    expect(store.getState().project.variants?.fileId).toBe(PANEL_ID);
+    expect(variantsRead(store)).toMatchObject({ kind: "read" });
+    expect(fake.variants).toHaveLength(2);
+  });
+
+  test("an opened project, with no variants file and its metadata file read, asks for no read", () => {
+    const { store, fake } = setUp();
+    const text = readFileSync(
+      join(
+        import.meta.dirname,
+        "..",
+        "core",
+        "fixtures",
+        "projectFile",
+        "v1-nei-diversity.popnei.json",
+      ),
+      "utf8",
+    );
+    const opened = readProjectFile(text, "popgen", POPGEN_ANALYSES);
+    if (!opened.ok) {
+      throw new Error("the fixture of version 1 does not open");
+    }
+
+    store.open(opened.value);
+
+    expect(store.getState().project.variants).toBeNull();
+    expect(individualsRead(store)).toMatchObject({ kind: "read" });
+    expect(fake.variants).toHaveLength(0);
+    expect(fake.individuals).toHaveLength(0);
   });
 });
 

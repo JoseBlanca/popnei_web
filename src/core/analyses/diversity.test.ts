@@ -1435,3 +1435,43 @@ describe("WS5 D3 the count of the check numbers", () => {
     ).toBeNull();
   });
 });
+
+describe("WS10 the cases of the spec", () => {
+  test("the check numbers of the flow's result at 0.05 are those of the spec", () => {
+    expect(diversity.checkNumbers(FLOW_RESULT)).toEqual([
+      1152, 0.35267894847982756, 0.35667985874177544, 0.9288194444444444,
+      0.3440824705971255, 0.3512406974637824, 0.9105902777777778,
+      0.3498365468860467, 0.35603713961547323, 0.9157986111111112,
+    ]);
+  });
+
+  test("the first column, the identifiers, chosen as the populations gives a population of one to each individual, a table with no values and one warning", () => {
+    const p = project({ column: "name" });
+    expect(populationsOf(p)).toEqual([
+      ["i1", ["i1"]],
+      ["i2", ["i2"]],
+      ["i3", ["i3"]],
+      ["i4", ["i4"]],
+      ["i5", ["i5"]],
+    ]);
+    const { client, jobs } = recordingClient();
+    diversity.run(p, client);
+    expect(jobs.map((j) => j.pops)).toEqual([
+      [
+        ["i1", ["i1"]],
+        ["i2", ["i2"]],
+        ["i3", ["i3"]],
+        ["i4", ["i4"]],
+      ],
+    ]);
+    const r = result({
+      pops: ["i1", "i2", "i3", "i4"],
+      numIndividuals: [1, 1, 1, 1],
+      numVarsWithValue: [0, 0, 0, 0],
+      numVars: 1000,
+    });
+    expect(diversity.warnings(r, p).map((w) => w.code)).toEqual([
+      "tooFewIndividuals",
+    ]);
+  });
+});

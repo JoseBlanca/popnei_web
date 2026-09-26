@@ -798,6 +798,28 @@ describe("WS3 D2 what goes wrong: told, popnei's refusals and the defects", () =
     });
   });
 
+  test("a ploidy above 255 is refused by popnei at the open", () => {
+    const load: LoadToOpen = {
+      ...VCF,
+      readOptions: { ploidy: 256, onlyPassed: true },
+    };
+    const file = { name: "panel.vcf.gz", source: bytesOf("panel.vcf.gz") };
+    expect(createRunner().open(load, file)).toEqual({
+      kind: "refused",
+      message:
+        "the ploidy asked of the VCF reader is 256, and a genotype holds one allele at least and 255 at most",
+    });
+  });
+
+  test("a population that names an individual the file does not have is refused with popnei's message", () => {
+    const job = diversityJob([], [["p0", ["s000", "nobody"]]]);
+    expect(opened("panel.nei").run(job, ignore)).toEqual({
+      kind: "refused",
+      message:
+        "`nobody` is named in the population `p0` and is not an individual of the variants; `individuals` gives the names the variants have, which are the ones the filter of individuals keeps when there is one",
+    });
+  });
+
   test("WS8 D2 a VCF of a header alone opens, and its diversity is refused as a file with no variant, with the missing data filter and without it", () => {
     const header =
       '##fileformat=VCFv4.2\n##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n' +

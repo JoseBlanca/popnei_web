@@ -413,6 +413,41 @@ describe("WS4 D1 readCsv", () => {
         column: 2,
       });
     });
+
+    test("a title line of one cell over the header is read with , and refused at the first row with a comma, or read as one column", () => {
+      expect(readError("Tabla 1\nid;pop;h\nA;P1;1,5\n")).toEqual({
+        kind: "raggedRow",
+        line: 3,
+        expected: 1,
+        found: 2,
+        separator: ",",
+      });
+      expect(readOk("Tabla 1\nid;pop\nA;P1\n").table).toEqual({
+        columns: ["Tabla 1"],
+        rows: [["id;pop"], ["A;P1"]],
+      });
+    });
+
+    test("the separator , set on a file of ; with no comma reads each line as the name of one column", () => {
+      const read = readOk("id;pop\nA;P1\nB;P2\n", {
+        separator: ",",
+        decimal: "auto",
+      });
+      expect(read.table).toEqual({
+        columns: ["id;pop"],
+        rows: [["A;P1"], ["B;P2"]],
+      });
+      expect(read.columns).toEqual([{ kind: "identifier" }]);
+    });
+
+    test("a VCF whose first lines were cut away, starting at a line of genotypes, is read as a table and refused", () => {
+      const text =
+        "1\t10\t.\tA\tT\t.\tPASS\t.\tGT\t0/1\n1\t20\t.\tG\tC\t.\tPASS\t.\tGT\t1/1\n";
+      expect(readError(text)).toEqual({
+        kind: "duplicateColumn",
+        name: ".",
+      });
+    });
   });
 
   describe("the rules the review of the tests found untested", () => {
