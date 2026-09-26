@@ -243,7 +243,9 @@ async function loadPanelWithPopulations(page: Page): Promise<void> {
   await pickIndividuals(page, "panel_pops.csv");
   await choose(page, "Column that defines the populations", "popcat");
   await expect(
-    page.getByRole("main").getByText("p0, 48 individuals"),
+    page
+      .getByRole("main")
+      .getByRole("listitem", { name: "p0, 48 individuals" }),
   ).toBeAttached();
 }
 
@@ -265,7 +267,7 @@ async function loadTetraploid(page: Page): Promise<void> {
   });
   await choose(page, "Column that defines the populations", "pop");
   await expect(
-    page.getByRole("main").getByText("A, 12 individuals"),
+    page.getByRole("main").getByRole("listitem", { name: "A, 12 individuals" }),
   ).toBeAttached();
   await goTo(page, "Variants");
 }
@@ -599,7 +601,9 @@ for (const theme of ["light", "dark"] as const) {
       await pickIndividuals(page, "panel_pops.csv");
       await choose(page, "Column that defines the populations", "popcat");
       await expect(
-        page.getByRole("main").getByText("p0, 48 individuals"),
+        page
+          .getByRole("main")
+          .getByRole("listitem", { name: "p0, 48 individuals" }),
       ).toBeAttached();
       await save(page, `popgen-individuals-read-${theme}`);
     });
@@ -1239,7 +1243,7 @@ for (const theme of ["light", "dark"] as const) {
       await save(page, `popgen-variants-identity-${theme}`);
     });
 
-    test("the diversity with its comparison, and with its numbers not compared", async ({
+    test("the diversity with its comparison, and with its numbers not compared, by the read options and by the format", async ({
       page,
     }, testInfo) => {
       await pickVariants(page, "panel.vcf.gz");
@@ -1281,6 +1285,19 @@ for (const theme of ["light", "dark"] as const) {
       await page.getByRole("button", { name: "Run" }).click();
       await expect(page.getByText(/^Not compared with/)).toBeVisible();
       await save(page, `popgen-diversity-uncompared-${theme}`);
+
+      // A file of the other format than the project's.
+      await goTo(page, "Variants");
+      await pickVariants(page, "panel.nei");
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      await goTo(page, "Analyses");
+      await page.getByRole("button", { name: "Run" }).click();
+      await expect(
+        page.getByText(/^Not compared with .* this file is a \.nei file/),
+      ).toBeVisible();
+      await save(page, `popgen-diversity-uncompared-format-${theme}`);
     });
 
     test("the error bar, the project not saved", async ({ page }) => {
