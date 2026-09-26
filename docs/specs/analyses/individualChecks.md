@@ -387,7 +387,15 @@ are calculated:
   each with the threshold of its filter
   of individuals marked on it when that filter is on. Under the second,
   when some individual has no heterozygosity: "3 individuals with no
-  called genotype are not in the histogram."
+  called genotype are not in the histogram." Each has the table of its
+  bins beside it, from `histogramRows`, a description in the form of the
+  histogram's spec, "The proportion of missing genotypes of 200
+  individuals, in 20 bins from 0.0165 to 0.0434. The threshold 0.03 keeps
+  bins up to 0.03 and removes 9 bins above it.", and the two buttons of
+  its export, "Download as SVG" and "Download as PNG", which save
+  `panel.individual_missing_rate.svg` and `panel.individual_obs_het.png`
+  and their pairs, with the line of the versions (point C of
+  `docs/specs/stage-3-open-points.md`, the buttons there meanwhile).
 - **A download**, "Download the table as CSV", which saves
   `panel.individual_stats.csv`, the stem of the variants file
   (`variantsStem` of `src/core/fileNames.ts`) and `.individual_stats.csv`,

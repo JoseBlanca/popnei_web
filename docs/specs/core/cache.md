@@ -90,8 +90,8 @@ the worker for it again, and again.
   put kept, is not dropped by the put of its counts.
 - **Never a file written.** The result of the writing of the filtered
   variants is as large as the variants kept, and one can be larger than
-  the bound; the store keeps it beside the cache while the project gives
-  its key, and the cache neither holds it nor counts it
+  the bound; the store keeps it beside the cache until it is saved or the
+  project gives another key, and the cache neither holds it nor counts it
   (`docs/architecture.md`, section 5). Nor does the bound count the file
   while the page holds it, though it is memory of the tab (section 11
   of the architecture).

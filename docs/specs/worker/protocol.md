@@ -417,7 +417,8 @@ export interface IndividualChecksJob {
 
 export interface IndividualChecksResult {
   analysis: "individualChecks";
-  missingGtRate: Float64Array;             // popnei's names; one per individual, in the order of the file
+  individuals: readonly string[];          // every individual of the file, in its order, as popnei gave them
+  missingGtRate: Float64Array;             // popnei's names; one per individual, in that order
   obsHetRate: Float64Array;                // NaN for an individual with no called genotype
   passStats: PassStats;
 }
@@ -572,9 +573,9 @@ None.
   `JobResult` means, and how it is checked when it arrives: the spec of
   its analysis under `docs/specs/analyses/`, and `messages.md`.
 - How core makes the list of the individuals kept, and the counts of each
-  filter of individuals: `docs/specs/core/individualsKept.md`, as the
-  architecture names the module, and the bins of the statistics of each
-  individual, `docs/specs/core/histogram.md`.
+  filter of individuals: `docs/specs/core/individualsKept.md`; and the
+  bins of the statistics of each individual, `src/core/histogram.ts`:
+  `docs/specs/analyses/individualChecks.md`.
 - The reader of the individuals file, the words of its refusals, and how
   a text cell becomes a number with the decimal mark found:
   `docs/specs/worker/individuals.md`.

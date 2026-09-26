@@ -229,7 +229,15 @@ each titled with its statistic and its mean, "Major allele frequency,
 mean 0.7163", and a caption for the three: "Over the 1,200 variants of
 panel.nei, before any filter." The threshold of the MAF filter and of the
 filter by heterozygosity is marked on its histogram when the filter is
-on. Each plot downloads as SVG and PNG, the export of the histogram.
+on. Each has the table of its bins beside it, from `histogramRows`, a
+description in the form of the histogram's spec, "The major allele
+frequency of 1,200 variants, in 40 bins from 0 to 1. The threshold 0.95
+keeps bins up to 0.95 and removes 2 bins above it.", and the two buttons
+of its export, "Download as SVG" and "Download as PNG", which save
+`panel.variant_maf.svg`, `panel.variant_obs_het.svg` and
+`panel.variant_exp_het.svg`, or `.png`, with the line of the versions
+(point C of `docs/specs/stage-3-open-points.md`, the buttons there
+meanwhile).
 
 ### The states
 

@@ -309,7 +309,7 @@ and of `.claude/skills/coding/worker.md`, "Validation at the boundary":
   as long as its header, and there is one type for each column; every
   array of a diversity result is as long as its `pops`, so that no number
   is put under another population; the two arrays of the statistics of
-  each individual are as long as each other; the `counts` of each
+  each individual are as long as its `individuals`, a list of texts; the `counts` of each
   histogram of the variants are one fewer than its `binEdges`; a
   population of a `Job` is a pair, its name and its individuals;
   `individuals` of a job is `null` or a list of texts; the fields of
@@ -493,7 +493,7 @@ File(["…"], "panel.nei")`.
   without `passStats`, and one with `numVars` at its top, as stage 2 had
   it; a `passStats.filtering` with a field `regions`, before popnei has
   that filter, `extraFields`; an `obsHetRate` of 199 numbers beside a
-  `missingGtRate` of 200, `wrongLength`; `binEdges` of 41 numbers and
+  `missingGtRate` of 200, `wrongLength`, and so an `individuals` of 199; `binEdges` of 41 numbers and
   the `counts` of the MAF of 41, `wrongLength`; a `variantChecks` job
   with a filter; a `written` whose `numBytes` is not its file's `size`;
   one whose `file` is an `ArrayBuffer`, `wrongType`.

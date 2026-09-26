@@ -25,8 +25,10 @@ call it; what it assumes of them is listed at the end.
 
 A histogram shows, for one statistic, how many variants or how many
 individuals fall in each bin: bars side by side over a horizontal axis of
-the statistic, from 0 to 1 for the five of the Variants step, and a
-vertical axis of the count, from 0. The title of the plot, the labels of
+the statistic, from the first edge of the bins to the last, and a
+vertical axis of the count, from 0. The three histograms of the variants
+run from 0 to 1; the two of the individuals from their smallest value to
+their largest (`docs/specs/analyses/individualChecks.md`). The title of the plot, the labels of
 its axes and a description are given by the screen.
 
 Beside a filter whose threshold is set, the histogram also shows what the
@@ -68,8 +70,9 @@ the statistics of the variants are popnei's, `histBinEdges` and
 `js/popnei/src/stats.ts` gives; with one population, of every individual,
 `histCounts` holds the bins of that population alone and is given to the
 plot as it is. The bins of the statistics of each individual are made in
-core, by `src/core/histogram.ts`, from the values of popnei's
-`calcPerIndividualStats`, with the rule of popnei's bins
+core, by `src/core/histogram.ts`, which
+`docs/specs/analyses/individualChecks.md` specifies, from the values of
+popnei's `calcPerIndividualStats`, with the rule of popnei's bins
 (`docs/architecture.md`, section 7). `charts.md` gives every binning to
 Rust; the architecture corrected that on 26 September 2026 for the
 statistics of each individual, a few thousand numbers, and `charts.md` is
@@ -126,8 +129,9 @@ numbers without the picture").
 ### The axes
 
 - **The horizontal axis** runs from the first edge to the last, 0 to 1
-  for the five histograms of the Variants step, widened to take the
-  threshold when it lies outside them, so that its line is always drawn.
+  for the three histograms of the variants and the range of the values
+  for the two of the individuals, widened to take the threshold when it
+  lies outside them, so that its line is always drawn.
   Its ticks are those of `d3-scale`'s linear scale, about one for every
   80 pixels of width, with the format that scale gives.
 - **The vertical axis** runs from 0 to the largest count, made round by
@@ -369,9 +373,11 @@ no size, a tab that is hidden.
   and the legend, with no pass. A field that holds no number yet, "0." on
   the way to "0.05", keeps the threshold of the project, which the screen
   gives; the plot is never given one that is not finite.
-- **Every count is 0**, the heterozygosity of individuals none of whom
-  called a genotype: the axes are drawn, the vertical one from 0 to 1, and
-  no bar. The screen says why.
+- **Every count is 0**, the histograms of the variants of a file none of
+  whose variants has a called genotype: the axes are drawn, the vertical
+  one from 0 to 1, and no bar. The screen says why. The individuals never
+  give it: when none has a value, `binValues` gives no bins, and the
+  screen draws no histogram.
 - **Values in no bin.** A variant with no value, or an individual with no
   heterozygosity, NaN, is in no bin, and the plot does not know of it: the
   screen says how many there are, as `charts.md` asks of every value that
@@ -403,7 +409,7 @@ functions at which each thing can be seen.
   and 0.9500000000000001 among them, and the counts `calcPerVarDistribs`
   gave in node on 26 September 2026 with popnei's release
   `js-v0.1.0-dev.2`, `openVars` of `e2e/fixtures/panel.nei` and
-  `calcPerVarDistribs(v, { minNumIndividuals: 0, stats: ["maf", "obs_het", "exp_het"] })`:
+  `calcPerVarDistribs(v, { minNumIndividuals: 0, stats: ["maf", "obs_het", "unbiased_exp_het"] })`:
   - MAF, `0` for bins 0 to 19, then `69,75,62,71,60,74,72,83,70,68,64,83,64,63,67,57,48,25,22,3`;
   - observed heterozygosity,
     `0,4,9,18,20,25,30,34,50,61,53,69,62,84,89,101,113,102,108,58,62,27,14,5,2`,
@@ -470,12 +476,14 @@ plot that imports them.
 
 Of `docs/specs/analyses/variantChecks.md`:
 
-- its result holds, for each of the three statistics, the `histBinEdges`
-  and the `histCounts` of popnei's one population of every individual,
-  with `minNumIndividuals` 0 and popnei's default bins, 40 over [0, 1];
-  popnei names the statistics `"maf"`, `"obs_het"` and `"exp_het"` in its
-  option `stats`, and refuses `"obsHet"`, seen in node on 26 September
-  2026;
+- its result holds `binEdges`, popnei's `histBinEdges`, shared by the
+  three statistics, and for each of them its `counts`, popnei's
+  `histCounts` of its one population of every individual, with
+  `minNumIndividuals` 0 and the bins 40 over [0, 1], popnei's defaults
+  given explicitly; the three are the MAF, the observed heterozygosity
+  and the unbiased expected heterozygosity, which popnei names `"maf"`,
+  `"obs_het"` and `"unbiased_exp_het"` in its option `stats`, and it
+  refuses `"obsHet"`, seen in node on 26 September 2026;
 - the screen gives the MAF histogram the threshold of the MAF filter, and
   the observed heterozygosity the threshold of the filter by observed
   heterozygosity, each when its filter is on, and the expected
@@ -485,12 +493,12 @@ Of `docs/specs/analyses/variantChecks.md`:
 
 Of `docs/specs/analyses/individualChecks.md`:
 
-- `src/core/histogram.ts` gives the two statistics of each individual as
-  a `Float64Array` of edges and a `Uint32Array` of counts, 40 bins over
-  [0, 1], with the edges made as popnei makes them, the start plus i times
-  the width, so that the rule of the threshold treats both kinds alike,
-  and the number of NaN values apart; that module is specified there, or
-  in a spec of its own;
+- `src/core/histogram.ts`, which that spec specifies, `binValues`, gives
+  the two statistics of each individual as a `Float64Array` of edges and
+  a `Uint32Array` of counts, 20 bins over the range of the values, as
+  `numpy.histogram` makes them, with the edges made as popnei makes its
+  own, the start plus i times the width, so that the rule of the
+  threshold treats both kinds alike, and the number of NaN values apart;
 - the screen gives each histogram the threshold of its filter of
   individuals when it is on, and says how many individuals have no
   heterozygosity and that the filter by heterozygosity removes them
@@ -502,6 +510,9 @@ and own the two buttons of the export, the names of the files and the
 line of the versions.
 
 ## What this spec asks of other documents
+
+Written into those documents with the specs of stage 3, on 26 September
+2026, but `src/ui/tokens.css`, which is code and comes with the plan.
 
 - `.claude/skills/coding/charts.md`, "The contract of a plot": the
   histograms of the statistics of each individual are binned in core, as
@@ -515,6 +526,10 @@ line of the versions.
   a plot with no pointer events has no `chart-overlay`.
 
 ## Open points
+
+The one open point of this spec is point C of
+`docs/specs/stage-3-open-points.md`, where the open points of the specs
+of stage 3 are gathered; it is kept here as written.
 
 1. **Whether the histograms of stage 3 offer their download as SVG and
    PNG.** `docs/build-order.md` gives "every plot as SVG and PNG" to
@@ -539,5 +554,5 @@ line of the versions.
   side by side, which stage 5 may need.
 - The histogram of the proportion of missing genotypes of each variant,
   which comes with popnei's release that has it.
-- The binning of the statistics of each individual, `src/core/histogram.ts`,
-  whose spec is that of the individual checks or its own.
+- The binning of the statistics of each individual, `src/core/histogram.ts`:
+  `docs/specs/analyses/individualChecks.md`.

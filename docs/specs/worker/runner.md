@@ -434,14 +434,15 @@ each individual are counted over the variants the filters keep and over
 every individual, as the owner decided on 26 September 2026
 (`docs/architecture.md`, section 4; `docs/specs/analyses/individualChecks.md`).
 The runner calls `calcPerIndividualStats(variants)` of
-`js/popnei/src/stats.ts` and gives back `missingGtRate` and `obsHetRate`
-as popnei gives them, one number per individual, with `passStats`. The
-names are not sent: core has them, the individuals of the load, in the
-order of the file (`docs/specs/analyses/individualChecks.md`). So the
-runner checks that popnei's `individuals` are those the open of the file
-gave, the same names in the same order, and a difference is a defect
-of ours, thrown, since the numbers would then be read under other
-names. popnei's arrays are its own copies out of the memory of wasm
+`js/popnei/src/stats.ts` and gives back popnei's `individuals`,
+`missingGtRate` and `obsHetRate`, one name and two numbers per
+individual, with `passStats`. The names go with the numbers so that core
+makes the list of the individuals kept from the result alone, and checks
+them against the individuals of the load
+(`docs/specs/core/individualsKept.md`); the runner checks first that
+they are those the open of the file gave, the same names in the same
+order, and a difference is a defect of ours, thrown, since the numbers
+would then be read under other names. popnei's arrays are its own copies out of the memory of wasm
 (`calcPerIndividualStats`), so the runner posts them as they are.
 
 An individual with no called genotype among the variants of the pass has
@@ -1207,6 +1208,15 @@ result of its own `individualChecks` run, as core would. Each test at
   polymorphic share 0.9088541666666666, 0.9019097222222222 and
   0.9192708333333334, and `passStats` 1,152 of 1,200, as without the
   list.
+- **The diversity with the list of 119**, the individuals of the list of
+  125 whose observed heterozygosity is also at most 0.38, the two
+  thresholds of the flow of the Variants step: p0, p2 and p1 with 32, 50
+  and 37 individuals, and the numbers of the table of
+  `docs/specs/analyses/diversity.md`, "How it is verified", He
+  0.35235226528316066, 0.34326346030608246 and 0.34948537601203733, as
+  literals; and the file written with that list, 170,042 bytes
+  (`docs/specs/analyses/writeVariants.md`). Seen in node on 26 September
+  2026 with the release.
 - **The steps with the list**: after that diversity, a run with the same
   filter and no list opens the file again, as does a run with the same
   list of other order; a run with the same filter and the same list does
@@ -1231,7 +1241,7 @@ result of its own `individualChecks` run, as core would. Each test at
   `numBytes` 261,490, whose bytes open again with `openVars` with 200 individuals; at 0.05,
   250,994 bytes and `passStats` 1,152 of 1,200; at 0.05 with the list of
   125, 176,098 bytes that open again with those 125 individuals in their
-  order; at 0.05 with a MAF filter at 0, 3,594 bytes and
+  order, and with the list of 119, 170,042 bytes; at 0.05 with a MAF filter at 0, 3,594 bytes and
   `passStats.numVars` 0. The progress of each is the two calls of
   the diversity, and a `told` that throws makes `write` throw that
   value, as for `run`.
@@ -1314,12 +1324,12 @@ September 2026 and written here as `docs/architecture.md` has them:
   `filterCounts.md` and `writeVariants.md`**: their jobs and results as
   the block of `docs/specs/worker/protocol.md` has them; the statistics of
   each individual over the filters of the variants and every individual,
-  with no names in the result; the histograms of the variants over no
+  with their names in the result; the histograms of the variants over no
   filter and every individual, with `minNumIndividuals` 0, the bins in
   the job, and the MAF, Ho and the unbiased He; the counts over the
   filters of the variants alone; a write over the filters and the list
   of individuals, whose file of no variant the step does not offer.
-- **The spec of `src/core/individualsKept.ts`**: the list of the
+- **`docs/specs/core/individualsKept.md`**: the list of the
   individuals kept, in the order of the file, `null` when the filters
   remove nobody, and never empty in a job.
 - **`docs/specs/core/store.md` and `docs/specs/entry.md`**: `countsOf` in

@@ -49,7 +49,7 @@ analysis does:
 
 ```ts
 {
-  write: "nei",
+  format: "nei",
   fileId: p.variants.fileId,
   filters: p.filters,
   individuals: readonly string[] | null, // the individuals kept, as the store
@@ -57,6 +57,9 @@ analysis does:
                                          // when the filters remove nobody
 }
 ```
+
+This is `WriteJob` of `docs/specs/worker/protocol.md`, tagged by its
+`format` and not by an `analysis`, since it is no member of `Job`.
 
 The runner puts the filters on the `Variants` in their order, then
 `filterIndividuals(individuals)` when the list is not `null`, and calls
@@ -68,8 +71,11 @@ the array, and posts the `Blob`, which crosses to the page as a handle,
 with no copy:
 
 ```ts
-{ write: "nei", file: Blob, passStats: PassStats }
+{ format: "nei", file: Blob, numBytes: number, passStats: PassStats }
 ```
+
+This is `Written<Blob>` of the protocol; `numBytes` is the `size` of the
+`Blob`, which core reads without naming a type of the browser.
 
 `numPassesOf("writeVars")` is 1, so the bar fills once. Core has no type
 of the browser, and the store holds the `Blob` without reading it, as a
@@ -115,7 +121,13 @@ that asked for it may be blocked by the browser, or asked about, as
 Chrome does for a page that starts several downloads. The `Blob` and the
 address the link reads it from are released once the file is saved, and
 when a change of the filters, a new write or a new load makes the file
-other than the step shows (`docs/specs/entry.md`).
+other than the step shows, as section 6 of the architecture has it
+(`docs/specs/entry.md`, "A file of the filtered variants saved";
+`docs/specs/core/store.md`, `writeSaved`). The page is not told whether
+the browser kept the download, so the file is released when Save is
+pressed: a user who cancels the question of a browser that asks where to
+save writes the file again (point A of
+`docs/specs/stage-3-open-points.md`).
 
 The name is the stem of the variants file, `variantsStem` of
 `src/core/fileNames.ts`, with `.filtered.nei`: `panel.vcf.gz` gives
@@ -123,7 +135,7 @@ The name is the stem of the variants file, `variantsStem` of
 individuals the name is the stem with `.nei`, `panel.nei`, since the
 file is then the variants file converted, which is what the application
 suggests doing once with a VCF (`docs/functionality.md`, section 3). The
-size is `Blob.size`, in decimal units with one decimal and a comma
+size is `numBytes`, in decimal units with one decimal and a comma
 between groups of three digits in whole numbers: "940 KB", "18.4 MB",
 "1.2 GB".
 
@@ -156,7 +168,8 @@ the size it expects before the user writes:
   since the write would fail.
 
 Once the write has ended, the calculation worker is started again when
-the file is larger than `WRITE_RESTART_BYTES`, to give the tab back the
+the file is larger than `WRITE_RESTART_BYTES`, a constant of
+`src/worker/client.ts` (`docs/specs/worker/client.md`), to give the tab back the
 memory of wasm the file took, which would otherwise stay until the next
 load, as the owner decided on 26 September 2026 (`docs/architecture.md`,
 section 13, point 5). Meanwhile 100 MB. The restart costs the
@@ -180,8 +193,10 @@ into the `Blob`, and the time of the write. They set `WRITE_WARN_BYTES`,
   sees which filter kept none.
 - **The filters keep no individual.** The write is locked by the store,
   since popnei refuses an empty list, with the words below.
-- **A new write while one is saved or not.** The new write releases the
-  `Blob` of the one before when it starts.
+- **A file written and not saved.** The step offers Save, and no second
+  write of the same filters, which would give the same file: a new write
+  needs another key, a change of the filters, which forgets the file of
+  the one before and releases it.
 - **A write stopped, or left behind and stopped**, gives no file; the
   step shows the button to write again.
 - **A new load of the variants file** stops the write at once, as every
@@ -204,9 +219,9 @@ notice and the status region is "Writing the file".
 | ready | the button, and the estimate: "About 18.4 MB: 20,000 variants of 1,000 individuals." | Write |
 | waiting for the statistics | "Calculating the statistics of each individual, which the filters of individuals are set from · 35% · 0:12" | Stop |
 | writing | "Writing panel.filtered.nei · 35% · 0:12", the bar of the diversity | Stop |
-| written | "Save panel.filtered.nei, 18.4 MB" | Save; Write again |
-| saved | "panel.filtered.nei was saved to the downloads of the browser." and the button to write | Write |
-| stopped or dropped | the button to write, and, when a change dropped it, "The file was not kept, since the filters changed while it was written." | Write |
+| written, the store's `done` | "Save panel.filtered.nei, 18.4 MB" | Save |
+| saved, the store's `saved` | "panel.filtered.nei, 18.4 MB, was handed to the browser to save. To save it again, write it again." and the button to write | Write |
+| stopped or dropped, the store's `ready` | the button to write, and, when a change dropped it, `dropped`, "The file was not kept, since the filters changed while it was written." | Write |
 | error | the words of the failure, below | as the words say |
 
 ### Its words
@@ -275,7 +290,9 @@ before the user asks.
 - `docs/specs/core/store.md`: a write tracked as a calculation, with its
   own words in the notice, its wait for the statistics of each
   individual, its late answer dropped, its counts put under
-  `filterCounts`, and the `Blob` held as a value it does not read.
+  `filterCounts`, and the `Blob` held as a value it does not read until
+  `writeSaved` forgets it; the states `saved` and `ready` with
+  `dropped`.
 - `docs/specs/core/individualsKept.md`: the individuals kept, and how
   many.
 - `docs/specs/entry.md`: the download through a link, and the release of

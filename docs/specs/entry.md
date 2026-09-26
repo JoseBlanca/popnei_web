@@ -3,7 +3,12 @@
 25 September 2026, approved by the owner on 25 September 2026, and revised
 on 26 September 2026 with the owner's decisions at stop 9.6 of
 `docs/plans/walking-skeleton.md`, on the points of the review of its
-work package 9. This spec gives
+work package 9; revised again on 26 September 2026 for stage 3, the
+Variants step whole, as the revision of `docs/architecture.md` the owner
+approved that day has it: the analyses of the Variants step in
+`apps.ts`, `countsOf` in the place of `numVarsOf`, `runs.ts` awaiting
+every handle the store gives back, and the download of a file of the
+filtered variants; this revision is not yet approved. This spec gives
 the page of the population genetics application, `popgen.html`, and its
 entry, the code that runs once when the page opens and keeps working for
 the life of the page: it makes the store and the two workers and joins
@@ -149,8 +154,13 @@ message only after the code that is running has finished:
    (below); the definitions of the analyses of the application, from the
    same file; `send`, the function `(key, job, onProgress) =>
    client.run(key, job, onProgress)`, which reaches the client made in
-   the next step, since the store sends nothing while it is made;
-   `numVarsOf`, from `apps.ts`; the version of the application,
+   the next step, since the store sends nothing while it is made; from
+   `apps.ts`, `countsOf`, the id of the counts of the filters,
+   `"filterCounts"`, and the statistics of each individual,
+   `{ analysis: "individualChecks", of: individualStatsOf }`; `write`,
+   with `send: (key, job, onProgress) => client.write(key, job,
+   onProgress)` and `countsOf: writeCountsOf` of `apps.ts`; the version
+   of the application,
    `APP_VERSION` (below, "The version of the application");
    `CACHE_MAX_BYTES` and `MAX_UNDO_STEPS`.
 4. It makes the worker client, with `makeRunnerWorker` and
@@ -220,25 +230,57 @@ the words of the comparison with the check numbers ask them to.
 ### `src/core/apps.ts`
 
 The list of what each application has, which section 9 of the
-architecture puts in core and which no other spec of stage 2 gives. In
-stage 2 it holds the population genetics application alone:
+architecture puts in core and which no other spec gives. It holds the
+population genetics application alone until stage 7:
 
 - **the definitions of its analyses**, in the order the screens show
-  them: the diversity alone (`docs/specs/analyses/diversity.md`);
+  them: from stage 3 the three checks of the Variants step, the
+  statistics of each individual, `individualChecks`
+  (`docs/specs/analyses/individualChecks.md`), the histograms of the
+  variants, `variantChecks` (`variantChecks.md`), and the counts of what
+  each filter kept, `filterCounts` (`filterCounts.md`), then the
+  diversity (`diversity.md`);
+- **the step each analysis is shown in**: the three checks in the
+  Variants step, the diversity in the Analyses step, so that the shell
+  and the steps find the panels of a step here and not by a list of
+  their own (`docs/specs/shell.md`; `docs/specs/steps/variants.md`). The
+  writing of the filtered variants is in the Variants step too, and is
+  not an analysis (`docs/specs/analyses/writeVariants.md`);
 - **its steps**, by their ids, in their order: `variants`,
   `individuals`, `analyses`, three, as the owner decided on 25 September
   2026: no Export step until the report, in stage 6, and writing the
-  filtered variants goes in the Variants step, in stage 3
+  filtered variants goes in the Variants step
   (`docs/specs/shell.md`, "The stepper");
 - **its first project**: `emptyProject("popgen")` with the missing data
   filter on at 0.1, as the owner decided on 25 September 2026
   (`docs/specs/steps/variants.md`, "The missing data filter"), since
   `emptyProject` holds no filter;
-- **`numVarsOf`**, the store's function that gives, from the result of a
-  calculation, the number of variants of the file that its reading of
-  the file counted, which the store records into the variants file:
-  `numVarsRead` of the diversity's result
-  (`docs/specs/analyses/diversity.md`).
+- **`countsOf`**, which replaces `numVarsOf` of stage 2: the store's
+  function that gives, of the result of any analysis, what its pass
+  counted (`docs/specs/core/store.md`, "What each filter kept";
+  `docs/architecture.md`, section 4). Every result carries the counts of
+  its pass, `passStats` (`docs/specs/worker/protocol.md`), and
+  `countsOf` gives two things of them, by the `analysis` of the result:
+  - the number of variants of the file, which the store records into the
+    variants file of the load: `varsProcessed` of the first entry of
+    `passStats.filtering`, the variants the first filter was given, or
+    `passStats.numVars` when the pass had no filter, for every result;
+  - the counts of the filters, a result of `filterCounts`, `{ analysis:
+    "filterCounts", passStats }`, for a result whose pass had the
+    filters of the variants of its request's project: the diversity,
+    the statistics of each individual and `filterCounts` itself; `null`
+    for the histograms of the variants, whose pass has no filter, and,
+    from stage 4, for the PCA, which merges its own MAF filter with the
+    project's (`docs/specs/analyses/filterCounts.md`, "Which results
+    fill it");
+- **`writeCountsOf`**, the store's `write.countsOf`: the result of
+  `filterCounts` made of the `passStats` of a written file, whose pass
+  always had the filters of its project;
+- **`individualStatsOf`**, the store's `statistics.of`: the statistics
+  of each individual in a result of `individualChecks`, its
+  `individuals`, `missingGtRate` and `obsHetRate`, as
+  `docs/specs/core/individualsKept.md` takes them; a defect for a result
+  of another analysis.
 
 ### Who asks for a read
 
@@ -312,35 +354,64 @@ nothing either.
 
 ### The outcome of a calculation
 
-`src/ui/runs.ts` holds two functions. The Run button of an analysis
-panel calls the first from its event handler:
+`src/ui/runs.ts` holds three functions. The Run button of an analysis
+panel, or the Calculate or Count button of a check of the Variants step,
+calls the first from its event handler, and the Write button of the step
+the second:
 
 ```ts
-/** Starts the calculation of the analysis `id` and hands its outcome to
-    the store when it arrives; null when the store starts none. */
-export function startAnalysis(store: Store<JobResult>, id: AnalysisId): Promise<void> | null;
+/** Starts the calculation of the analysis `id`, and hands the outcome of
+    every request it sends to the store when it arrives; null when the
+    store starts none. */
+export function startAnalysis(store: Store<JobResult, Blob>, id: AnalysisId): Promise<void> | null;
 
-/** When the calculation `runId` was started, in the milliseconds of
+/** Starts the writing of the filtered variants in `format`, as
+    startAnalysis starts a calculation. */
+export function startWriting(store: Store<JobResult, Blob>, format: WriteFormat): Promise<void> | null;
+
+/** When the request `runId` was started, in the milliseconds of
     performance.now(), while it is in flight; null otherwise. */
 export function startedAt(runId: number): number | null;
 ```
 
-`startAnalysis` calls `store.startRun(id)`; when that gives a handle, it
-notes the time, awaits the handle's `outcome`, forgets the time, and
-calls `store.runEnded(run.id, outcome)`. The outcome never fails, since
-a failure is one of its values (`docs/specs/worker/protocol.md`). The
-store stops a calculation with the handle it keeps, and its outcome,
-`cancelled`, arrives here like any other; `runs.ts` cancels nothing
-(`docs/architecture.md`, section 5). The panel of the diversity reads
-`startedAt` for the time it shows while the calculation runs, which is
-not lost when the user goes to another step and back
-(`docs/specs/analyses/diversity.md`, "The states").
+`startAnalysis` calls `store.startRun(id)`, and `startWriting`
+`store.startWrite(format)`; each gives `null`, and nothing is done, or a
+list of handles, the requests the store sent, which is empty when a Run
+waits for statistics of each individual already in flight
+(`docs/specs/core/store.md`, "The individuals kept"). For every handle
+the entry awaits in the same way: it notes the time, awaits the
+handle's `outcome`, forgets the time, and calls `store.runEnded(run.id,
+outcome)`. `runEnded` gives back a list of handles too, the requests of
+the Runs that waited for those statistics, which the store sends when
+they end; each is awaited in the same way, so that the outcome of every
+request the store sends reaches it, whichever call sent it. The promise
+of `startAnalysis` and of `startWriting` settles when every request
+started from that press has ended, those sent by a `runEnded` included.
+The outcome never fails, since a failure is one of its values
+(`docs/specs/worker/protocol.md`). The store stops a request with the
+handle it keeps, and its outcome, `cancelled`, arrives here like any
+other; `runs.ts` cancels nothing (`docs/architecture.md`, section 5).
 
-The button does not await what `startAnalysis` returns; it passes it
-over with `void`, which the lint allows. What rejects it is a defect of
-our code, a `runEnded` that throws, and a promise rejected with no one
-to handle it goes to the window's `unhandledrejection` event, and so to
-the error bar, which is where a defect belongs. The tests await it.
+A handle that `runEnded` gives back is awaited whichever press led to
+it, so a Run of the diversity that waited for statistics started by the
+Calculate of the Variants step has its own request awaited when the
+statistics end, though that Calculate called `startAnalysis` for
+`individualChecks`. Decided here, not by the owner.
+
+The panel of an analysis reads `startedAt` for the time it shows while
+the calculation runs, which is not lost when the user goes to another
+step and back (`docs/specs/analyses/diversity.md`, "The states"). A Run
+that waits for the statistics shows the time of their request; when its
+own request is sent, the clock starts again with it, as the words of the
+running state change from "Calculating the statistics of each
+individual…" to "Calculating".
+
+The button does not await what `startAnalysis` or `startWriting`
+returns; it passes it over with `void`, which the lint allows. What
+rejects it is a defect of our code, a `runEnded` that throws, and a
+promise rejected with no one to handle it goes to the window's
+`unhandledrejection` event, and so to the error bar, which is where a
+defect belongs. The tests await it.
 
 ### The saving
 
@@ -400,6 +471,42 @@ dialog and says what the user sees of it (`docs/specs/shell.md`,
   no question. Until it is confirmed the plan builds it so, and the other
   answer, a save that leaves the base as it was, is one line of
   `save` and one test.
+
+### A file of the filtered variants saved
+
+From stage 3, `src/ui/saving.ts` saves a file of the filtered variants
+too, as section 9 of the architecture has it, with `saveWritten`, which
+the Save button of the Variants step calls
+(`docs/specs/analyses/writeVariants.md`, "Saving the file"). It is given
+the name the step shows, `panel.filtered.nei`, and takes the file from
+the state of the store, `write` in `done`, whose `written.file` is the
+`Blob` the calculation worker made:
+
+1. It hands the `Blob` to the browser as a download, through a link to
+   an address of it, `URL.createObjectURL`, with the `download` attribute
+   naming the file, which it clicks and removes, as the project file is
+   downloaded.
+2. It calls `store.writeSaved()`, so that the store forgets the file and
+   the step shows it handed to the browser.
+3. It releases the address a minute after the click, as the download of
+   a text does in `src/ui/download.ts`: Safari on iOS asks the user
+   whether to download before it reads the address, and an address
+   released before the answer gives a failed download. The `Blob` is
+   then held by nothing of the page, and its memory is the browser's to
+   give back.
+
+So the page releases the file once it is saved, and the store forgets it
+when a change of the filters, a new load or an opened project makes it
+another file than the step shows, as section 6 of the architecture has
+it; the page holds nothing more of it. The page is not told whether the
+browser kept the download, as for the project file (above, "The
+saving"): a user who cancels the browser's question of where to save,
+which Firefox and Safari can ask, writes the file again. That is point A
+of `docs/specs/stage-3-open-points.md`, whose other option keeps the
+file until a change of the filters.
+
+`saveWritten` of a store whose `write` is not `done` is a defect: the
+Save button is shown only in that state.
 
 ### The errors nothing else shows
 
@@ -478,7 +585,7 @@ the entry calls `sync` from its subscription to the store:
 
 ```ts
 export function createReads(deps: {
-  readonly store: Pick<Store<JobResult>, "getState" | "variantsRead" | "individualsRead">;
+  readonly store: Pick<Store<JobResult, Blob>, "getState" | "variantsRead" | "individualsRead">;
   readonly client: ReadClient;              // the part of the worker client that reads
 }): { sync(): void };
 ```
@@ -490,11 +597,12 @@ The saving, in `src/ui/saving.ts`:
 
 ```ts
 export function createSaving(deps: {
-  readonly store: Store<JobResult>;
+  readonly store: Store<JobResult, Blob>;
   readonly app: AppId;            // the application of the page, "popgen"
   readonly analyses: readonly AnalysisDef<Job, JobResult>[];
   readonly appVersion: string;
   readonly download: (name: string, text: string) => void;  // the browser's; a fake in the tests
+  readonly downloadFile: (name: string, file: Blob) => void; // the same for a file, its address released a minute later
 }): {
   proposedName(): string;         // projectFileName of the present project
   save(name: string): string;     // downloads the project file; the name used; the present project is the base
@@ -503,8 +611,48 @@ export function createSaving(deps: {
   changed(): boolean;             // the present project is not the base, or a result ended since
   saveFailed(): boolean;          // the last save threw as it wrote or downloaded the file
   readonly subscribe: (listener: () => void) => () => void;  // called when saveFailed changes
+  saveWritten(name: string): void; // from stage 3: downloads the file of `write`, then store.writeSaved()
 };
 ```
+
+`downloadFile` is `src/ui/download.ts`'s, beside `downloadText`, with the
+same link and the same release a minute after the click.
+
+What `src/core/apps.ts` exports from stage 3, beside what it exported in
+stage 2, `DEFAULT_MAX_MISSING_RATE`, `DEFAULT_PLOIDY`,
+`DEFAULT_ONLY_PASSED`, `POPGEN_STEPS`, `StepId` and `firstProject`:
+
+```ts
+/** The analyses of the population genetics application, in the order the
+    screens show them: individualChecks, variantChecks, filterCounts,
+    diversity. */
+export const POPGEN_ANALYSES: readonly AnalysisDef<Job, JobResult>[];
+
+/** The step each analysis is shown in. */
+export const POPGEN_ANALYSIS_STEPS: Readonly<Record<string, StepId>>;
+// { individualChecks: "variants", variantChecks: "variants",
+//   filterCounts: "variants", diversity: "analyses" }
+
+/** What the pass of a result counted, as the store's countsOf; replaces
+    numVarsOf. */
+export function countsOf(r: JobResult): PassFound<JobResult>;
+
+/** The result of filterCounts made of the counts of the pass of a
+    written file, as the store's write.countsOf. */
+export function writeCountsOf(pass: PassStats): JobResult;
+
+/** The statistics of each individual of a result of individualChecks,
+    as the store's statistics.of; a defect for another result. */
+export function individualStatsOf(r: JobResult): IndividualStats;
+```
+
+`POPGEN_ANALYSIS_STEPS` is keyed by the ids of the analyses, which are
+literals of their modules and never names of the user, so an object is
+allowed (`.claude/skills/coding/worker.md`); a test checks that it names
+every analysis of `POPGEN_ANALYSES` and no other. `PassFound` is of
+`docs/specs/core/store.md`, `PassStats` of
+`docs/specs/worker/protocol.md`, and `IndividualStats` of
+`docs/specs/core/individualsKept.md`.
 
 The log of the errors the bar shows, in `src/ui/defects.ts`, a small
 store of its own that the bar reads with `useSyncExternalStore`, as the
@@ -613,7 +761,15 @@ hand and whose cancels it records.
 - **`startAnalysis`**: `null` when `startRun` gives `null`; the outcome
   given to `runEnded` with the id of its request; `startedAt` of that id
   a number while it is in flight and `null` after; a `runEnded` that
-  throws rejects the promise.
+  throws rejects the promise. From stage 3, with the store of core and a
+  fake `send`: a Run of the diversity with a threshold on the
+  individuals and no statistics gives one handle, of the statistics;
+  their outcome given, `runEnded` gives the diversity's own handle, whose
+  outcome is awaited and given to `runEnded` too, and the promise settles
+  after it; a Run that waits for statistics already in flight gives no
+  handle, and its request, sent when they end, is awaited all the same.
+  **`startWriting`** in the same way, with `startWrite("nei")` and a
+  fake `write.send`.
 - **`createSaving`**: `save("panel.popnei.json")` downloads, through the
   fake, the text of `writeProjectFile` under that name, and returns it;
   `save("panel")` downloads under `panel.popnei.json`, and
@@ -637,8 +793,20 @@ hand and whose cancels it records.
   with undelivered notifications." and "ResizeObserver loop limit
   exceeded", false of any other message.
 - **`apps.ts`**: the first project has the missing data filter at 0.1
-  and nothing else; the analyses have distinct ids; `numVarsOf` of a
-  diversity result gives its `numVarsRead`.
+  and nothing else; the analyses have distinct ids, and each has its
+  step in `POPGEN_ANALYSIS_STEPS`. `countsOf` of a diversity result whose
+  `passStats` is `{ numVars: 1152, filtering: { missing_data: {
+  varsProcessed: 1200, varsKept: 1152 } } }` gives `numVarsRead` 1,200
+  and the counts `{ analysis: "filterCounts", passStats }` of the same
+  `passStats`; of a result of the histograms of the variants, `{
+  numVars: 1200, filtering: {} }`, `numVarsRead` 1,200 and no counts; of
+  a result of the statistics of each individual and of `filterCounts`,
+  both. `writeCountsOf` of those counts gives the same result of
+  `filterCounts`. `individualStatsOf` of a result of `individualChecks`
+  gives its three fields, and of a diversity result throws.
+- **`saveWritten`**, with a fake `downloadFile`: in `done`, the fake is
+  given the name and the very `Blob` of the state, and then the store's
+  `write` is `saved`, with no file; in `ready`, a defect.
 
 With Playwright, which drives Chromium, Firefox and WebKit, the engines
 of the browsers the site supports, and can run code inside the page and
@@ -676,6 +844,10 @@ rules of accessibility that the tests run on the page:
   "Loading…".
 - A browser without `Array.prototype.toSorted` shows the guard's words
   for a browser too old, and no error bar.
+- From stage 3, in the flow of the Variants step: the Save of a file
+  written at 0.05 gives a download named `panel.filtered.nei` of 250,994
+  bytes in each engine, and the step then shows it handed to the
+  browser, with no second Save.
 
 One case cannot be made in the built site without a hook for the tests,
 code that exists only to let a test cause it: a throw while React draws
@@ -690,6 +862,14 @@ number in `package.json`, 0.1.0 now (point I there), as "The version of
 the application" above has it. One part of a decision is to confirm:
 whether a Save sets the base, so that the browser's question before
 leaving is not asked after it (point K there; "The saving", above).
+
+Opened by the revision of stage 3, and gathered with the other open
+points of that stage in `docs/specs/stage-3-open-points.md`: whether a
+file of the filtered variants is released when Save is pressed, as the
+architecture has it and this spec meanwhile, or kept until a change of
+the filters, so that a user who cancels the browser's question can save
+it again (point A there; "A file of the filtered variants saved",
+above).
 
 ## Not in this spec
 
@@ -724,8 +904,8 @@ Each was approved by the owner on 25 September 2026 and says what is listed here
   the worker's own `error` handler, which posts `crashed`, calls
   `event.preventDefault()`.
 - `docs/specs/analyses/diversity.md`: its definition, exported for
-  `apps.ts`, and `numVarsRead` in its result; its panel reads the time a
-  run started from `startedAt` of this spec's `runs.ts`.
+  `apps.ts`; its panel reads the time a run started from `startedAt` of
+  this spec's `runs.ts`.
 - `docs/specs/core/projectFile.md`: `writeProjectFile(state, analyses,
   appVersion, saved)`, which refuses nothing; `projectFileName`; an
   opened project holds no source whose read is pending.
@@ -734,3 +914,21 @@ Each was approved by the owner on 25 September 2026 and says what is listed here
   what Save and the question before leaving show.
 - `docs/specs/steps/variants.md` and `individuals.md`: a step calls the
   `addFile` of `src/ui/files.tsx` before the command of a pick.
+
+What stage 3 asks of the specs revised or written beside this revision,
+each of which says it:
+
+- `docs/specs/core/store.md`: `createStore` with `countsOf`, `counts`,
+  `statistics` and `write`; `startRun`, `startWrite` and `runEnded`
+  giving back the handles they sent; `writeSaved`, and the state `write`
+  with its file in `done`.
+- `docs/specs/worker/client.md`: `write(key, job, onProgress)`, the
+  store's `write.send`, whose outcome is a `Written<Blob>`.
+- `docs/specs/worker/protocol.md`: `passStats` in every `JobResult` and
+  in a `Written`, and `individuals` in a result of `individualChecks`.
+- `docs/specs/analyses/individualChecks.md`, `variantChecks.md`,
+  `filterCounts.md` and `writeVariants.md`: their definitions, exported
+  for `apps.ts`, the step they are shown in, and the Save of a written
+  file that calls `saveWritten`.
+- `docs/specs/core/individualsKept.md`: `IndividualStats`, which
+  `individualStatsOf` gives.

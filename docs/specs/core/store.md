@@ -566,7 +566,7 @@ analysis: the number of variants of the file, which the first filter of
 its pass was given, `numVarsRead` of the counts of its pass, recorded
 into the variants file of the request's load as before
 (`docs/architecture.md`, section 6, step 5); and a result of
-`filterCounts` made of the counts of its pass, `PassCounts` of
+`filterCounts` made of the counts of its pass, `PassStats` of
 `docs/specs/worker/protocol.md`, popnei's `passStats`, when its pass had
 the filters of the variants of its request's project, or `null`. A file
 written always had them, and `write.countsOf` makes its result of
@@ -614,34 +614,45 @@ with a state of its own, `write`:
 | state | when | what it holds |
 |---|---|---|
 | locked | `projectNeeds` gives a reason, or the list of the individuals kept is known and empty | the reason, `keptNoneReason` for the second |
-| done | a write of its key ended done while the project gave that key, and no change has given the write another key since | what the worker gave, `Written` of `docs/specs/worker/protocol.md`: the file, its size and the counts of its pass |
+| done | a write of its key ended done while the project gave that key, the file has not been handed to the browser, and no change has given the write another key since | what the worker gave, `Written` of `docs/specs/worker/protocol.md`: the file, its size and the counts of its pass |
+| saved | the file of `done` was handed to the browser to save, `writeSaved`, and no change has given the write another key since | its key, and the size and the counts of the file, without the file |
 | running | a write of its key is in flight and is not being stopped, or its Run waits for the statistics of each individual | its progress and the request's id, or those of the statistics |
 | error | popnei refused the write of its key, or it failed since the last change | popnei's message, or the failure |
-| ready | none of the above | its key |
+| ready | none of the above | its key, and whether the last write of the key before was dropped because it ended after a change of its filters, until the next change of the project |
 
 Stage 3 writes the `.nei` format alone; the VCF comes with popnei's
 writer of it, with a state of its own.
 
-- **`startWrite`** in `ready`, or in `error` after a failure that is not
-  popnei's, stops the calculations left behind, as `startRun` does, waits
+- **`startWrite`** in `ready` or `saved`, or in `error` after a failure
+  that is not popnei's, stops the calculations left behind, as `startRun` does, waits
   for the statistics as a Run does when the list is not known, and
   sends, through `write.send` of `createStore`, the job of the write,
   `WriteJob` of `docs/specs/worker/protocol.md`: the load id of the
   variants file, its filters of the variants, the list of the
   individuals kept and the format, under the key of the write. It
   returns the handles it sent.
-- **The file is kept while the project gives its key.** When a write
-  ends `done` and the project still gives its key, the store keeps what
-  the worker gave, `Written` of the protocol, the file with its size and
-  the counts of its pass, and the state is `done`, until the project gives the write
-  another key, the load changes or a project is opened; then it forgets
-  it, and the page releases the file, which an undo does not bring back
-  (`docs/specs/entry.md`, the download of a written file).
+- **The file is kept until it is saved, or until the project gives
+  another key.** When a write ends `done` and the project still gives its
+  key, the store keeps what the worker gave, `Written` of the protocol,
+  the file with its size and the counts of its pass, and the state is
+  `done`. It forgets the file when the page has handed it to the
+  browser, `writeSaved`, and the state is `saved`; and when the project
+  gives the write another key, the load changes or a project is opened,
+  and the state is `ready`. An undo does not bring a file back once it is
+  forgotten. So the page releases the file once it is saved, and when a
+  change makes it another file than the step shows, as section 6 of the
+  architecture has it (`docs/specs/entry.md`, "A file of the filtered
+  variants saved"). The page is not told whether the browser kept the
+  download, so "saved" is the Save pressed: a user who cancels the
+  browser's own question writes the file again (point A of
+  `docs/specs/stage-3-open-points.md`).
 - **A write that ends after a change of its filters is dropped**, as the
   owner decided on 26 September 2026 (`docs/architecture.md`, section
   13, point 6): when it ends `done` and the project no longer gives its
   key, the store keeps nothing of its file, since it would hold other
-  variants than the step shows. Its counts go into the cache all the same,
+  variants than the step shows, and the state `ready` of the key the
+  project gives says it was dropped, `dropped`, until the next change of
+  the project, so that the step says why no Save came. Its counts go into the cache all the same,
   through `write.countsOf`, as those of any pass, and its number of
   variants is recorded.
 - **A change of the filters while it is written leaves it behind**, as a
@@ -745,10 +756,11 @@ export type AnalysisStatus<R> =
 export type WriteStatus<F> =
   | { readonly kind: "locked"; readonly reason: string }
   | { readonly kind: "done"; readonly key: Key; readonly written: Written<F> }
+  | { readonly kind: "saved"; readonly key: Key; readonly written: Omit<Written<F>, "file"> }
   | { readonly kind: "running"; readonly key: Key; readonly runId: number;
       readonly progress: Progress | null; readonly waitsForStatistics: boolean }
   | { readonly kind: "error"; readonly key: Key; readonly error: AnalysisError }
-  | { readonly kind: "ready"; readonly key: Key };
+  | { readonly kind: "ready"; readonly key: Key; readonly dropped: boolean };
 
 export type AnalysisError =
   | { readonly kind: "refused"; readonly message: string }  // popnei's; kept
@@ -792,11 +804,11 @@ a request (`.claude/skills/coding/worker.md`, `Client.run`), a write
 among them; `countsOf`, which finds in a result the number of variants
 of the file and the counts of its filters (above, "What each filter
 kept"); the analyses of the statistics of each individual and of the
-counts, and how their results are read; the job of a write; and the
-version of the application. `R` is the union of the results of the
+counts, and how their results are read; how a write is sent, and how
+its counts are read; and the version of the application. `R` is the union of the results of the
 analyses, `JobResult`, and `F` the type of a written file, a `Blob` on
 the page, which core holds and never reads; `Written<F>`, `WriteJob`
-and `PassCounts` are `docs/specs/worker/protocol.md`'s.
+and `PassStats` are `docs/specs/worker/protocol.md`'s.
 
 ```ts
 export function createStore<J, R, F = never>(config: {
@@ -812,7 +824,7 @@ export function createStore<J, R, F = never>(config: {
   readonly write: {
     readonly send: (key: string, job: WriteJob, onProgress: (p: Progress) => void) => Run<Written<F>>;
     /** The result of `counts` made of the counts of the pass of a written file. */
-    readonly countsOf: (pass: PassCounts) => R;
+    readonly countsOf: (pass: PassStats) => R;
   } | null;
   readonly appVersion: string;
   readonly cacheMaxBytes: number;          // CACHE_MAX_BYTES
@@ -868,6 +880,10 @@ export interface Store<R, F = never> {
   startWrite(format: WriteFormat): readonly Run<R | Written<F>>[] | null;
   /** Stops the writing in flight, or its wait, if there is one. */
   cancelWrite(): void;
+  /** The page has handed the file of `write`, `done`, to the browser to
+      save: the store forgets the file, and `write` is `saved`. A defect
+      in any other state. */
+  writeSaved(): void;
 
   popneiReady(version: string): void;
   variantsRead(fileId: string, read: SourceRead): void;
@@ -897,8 +913,8 @@ those in flight:
   warnings, made from the request's project; if the cache is then above
   its bound, it drops results the current project does not show, never
   one it shows (`docs/specs/core/cache.md`). The result of a write goes
-  into no cache: it is kept as the file of the state `write`, or dropped
-  (above). Then, for any result: the counts that `countsOf` gives go
+  into no cache: it is kept as the file of the state `write` until it is
+  saved, or dropped (above). Then, for any result: the counts that `countsOf` gives go
   into the cache under the key of the counts for the request's project,
   keeping the result just put; the number of variants, when `countsOf`
   gives one, is recorded into the variants file of the request's load in
@@ -1003,7 +1019,7 @@ the owner, on 24 September 2026:
   until a change gives the statistics another key.
 - **A write that ends after a change of the filters, before its stop.**
   Its file is dropped and the state `write` is `ready` for the new
-  filters; its counts are in the cache under the key of the old filters,
+  filters, with `dropped` true until the next change; its counts are in the cache under the key of the old filters,
   so an undo shows them beside the filters, and shows no Save.
 - **A diversity that ends while a Count of the same filters runs.** The
   counts of the diversity go into the cache at once; the Count goes on,
@@ -1168,11 +1184,15 @@ whose file is a text.
 - **The write**: `startWrite("nei")` sends a `WriteJob` with the load
   id, the filters of the variants, `individuals` `null` and `"nei"`,
   under `writeKeyOf`, and `write` is `running`; `runEnded` done: `write` is
-  `done` with what the worker gave, and the cache does not hold it. Again, then a
+  `done` with what the worker gave, and the cache does not hold it;
+  `writeSaved()`: `write` is `saved`, holds no file, and its size and
+  counts are those of the file; `writeSaved()` again is a defect; a
+  command and its undo: `ready`. Again, then a
   command that changes a filter: the notice has `writeLeftBehind` and
   `cancel()` was not called; an undo: it goes on. Again, then the result
-  arrives after the command: `write` is `ready`, holds no file, and the
-  counts of the result are in the cache under the old filters' key.
+  arrives after the command: `write` is `ready` with `dropped` true,
+  holds no file, and the counts of the result are in the cache under the
+  old filters' key; the next command makes `dropped` false.
   Again, then `startRun` of an analysis: the write, whose key the project
   gives, is not cancelled. Again, then a new variants file loaded: the
   write is cancelled at once and the notice has `writeStopped`.
