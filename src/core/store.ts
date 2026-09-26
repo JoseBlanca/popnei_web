@@ -823,6 +823,10 @@ export function createStore<J, R, F = never>(
     return made.keys;
   };
 
+  /** The keys made among `keys`, those of the analyses not locked. */
+  const keyedIn = (keys: readonly AnalysisKey[]): Set<Key> =>
+    new Set(keys.flatMap((k) => (k.kind === "keyed" ? [k.key] : [])));
+
   /** The keys of the current project and version. */
   const currentKeys = (): readonly AnalysisKey[] =>
     keysFor(history.present.project, popneiVersion);
@@ -1803,10 +1807,9 @@ export function createStore<J, R, F = never>(
     const found = config.countsOf(result);
     const counts = countsToPut(request, key, found.counts);
     const next = withNumVars(request, found.numVarsRead);
-    keysFor(next.present.project, popneiVersion);
-    const shown = new Set(
-      currentKeys().flatMap((k) => (k.kind === "keyed" ? [k.key] : [])),
-    );
+    // The results shown are those of the project with its number of
+    // variants recorded, which `history` becomes below.
+    const shown = keyedIn(keysFor(next.present.project, popneiVersion));
     cache = put(cache, key, { result, warnings, numbers, stats }, shown);
     if (counts !== null) {
       // The put of the counts keeps the result they came with.
@@ -1837,12 +1840,9 @@ export function createStore<J, R, F = never>(
     const found = config.countsOf(countsResult);
     const counts = countsToPut(request, key, countsResult);
     const next = withNumVars(request, found.numVarsRead);
-    keysFor(next.present.project, popneiVersion);
+    const nextKeys = keysFor(next.present.project, popneiVersion);
     if (counts !== null) {
-      const shown = new Set(
-        currentKeys().flatMap((k) => (k.kind === "keyed" ? [k.key] : [])),
-      );
-      cache = put(cache, counts.key, counts.cached, shown);
+      cache = put(cache, counts.key, counts.cached, keyedIn(nextKeys));
     }
     if (next !== history) {
       history = next;
