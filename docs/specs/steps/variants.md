@@ -335,8 +335,10 @@ The descriptions of the commands are in the table above. The rest:
   step reads a VCF, whose name ends in .vcf, .vcf.gz or .vcf.bgz, or a
   .nei file. If it is one of them, rename it." It, "Load one variants
   file at a time." and the words of a drop or a paste that holds no
-  file, above, stay until the next pick, and are the screen's, not the
-  project's.
+  file, above, stay until the next pick, or until an Undo, a Redo or an
+  opening changes the variants file of the project or the file an opened
+  project was made with, so that they are never shown beside the words
+  of another file; they are the screen's, not the project's.
 - **Reading**: "Reading panel.nei.", the reason `variantsStepNeeds`
   gives.
 - **A file popnei refused**: the reason `variantsStepNeeds` of
