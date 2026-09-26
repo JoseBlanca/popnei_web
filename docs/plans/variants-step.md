@@ -71,14 +71,15 @@ and writes the filtered variants as `panel.filtered.nei` and saves it.
 The writing is built before the filters of the individuals, and not
 after them, because what it does in a browser is the least known part of
 the stage: whether a file made in the calculation worker is still whole
-after that worker is ended, which no engine has been seen to do, and how
-much memory a write takes, which sets four constants of the code (the
-open-points file, "Set by a measurement"). Built fifth, it is measured
-before the two screens that follow, and a failure changes the client
-before they rest on it. Its screen is tried at stop A, with the filters
-of the variants, and again at stop B with the individuals kept; the
-other grouping, the writing tried with the individuals alone, would
-leave its rounds with the owner until the end of the plan.
+after that worker is ended, which the File API promises and has never
+been tried in a browser, and how much memory a write takes, which sets
+four constants of the code (the open-points file, "Set by a
+measurement"). Built fifth, it is measured before the two screens that
+follow, and a failure changes the client before they rest on it. Its
+screen is tried at stop A, with the filters of the variants, and again
+at stop B with the individuals kept. Tried at stop B alone, the owner
+would first see the writing in the last screen of the plan, and a change
+asked for there would come after every other screen was accepted.
 
 ## In and out
 
@@ -127,21 +128,32 @@ earlier stages stay as they are: the words of the project file
 (`projectFile.md`, Open 1), the bound of the cache and of undo, and the
 column types lost when the metadata file is read again.
 
-When a task finds a spec too thin to build from, the task stops and the
-question goes to the spec as an open point for the owner; the tasks that
-do not stand on it go on. A change to a spec is a commit of its own
-before the code.
+When a task finds a spec too thin to build from, that task stops, with
+the tasks that need it, and the question goes to the spec as an open
+point for the owner; the rest of the plan goes on. A change to a spec is
+a commit of its own before the code.
 
 ## Before the first task
 
-- **The specs approved.** Fifteen of the twenty say in their opening
-  that they are not yet approved. Check: `grep -rlzE "not yet[[:space:]]+(reviewed nor[[:space:]]+)?approved" docs/specs`
+- **The gate before task 1.1: the owner approves this plan**, and with
+  it the new dependencies below, the packages that `d3-scale` and `jsdom`
+  bring among them. The orchestrator that wrote the plan asks for it now,
+  with the plan, and no task starts before the answer.
+- **The specs approved.** `main` is at 1457d80, which holds the twenty
+  specs. Fifteen of them still say in their opening that their revision
+  for stage 3 is not yet approved; their approval by the owner is
+  written into them, in a commit of its own, on the owner's word, before
+  task 1.1. Check: `grep -rlzE "not yet[[:space:]]+(reviewed nor[[:space:]]+)?approved" docs/specs`
   prints nothing; on 1457d80 it prints those fifteen.
 - **The branch.** `plan/variants-step` is made from `main` once the
-  owner has merged `docs/specs-stage-3`, which holds the specs and this
-  plan. Check: `git ls-tree -r --name-only main docs/plans/variants-step.md`
-  prints the path; on 1457d80 it prints nothing. The checks below are
-  then run again on that commit, and give the same counts.
+  owner has merged this plan and the commit of the approvals. Check:
+  `git ls-tree -r --name-only main docs/plans/variants-step.md` prints
+  the path; on 1457d80 it prints nothing. The commit the branch is made
+  from is called **the start** below, and the report names it under
+  "Before the first task". On the start, the checks of the next four
+  items, the versions, the browsers, "The checks on 1457d80" and the
+  counts of "How the counts are read", are run again and give the same
+  results, since the merge adds documents alone.
 - **node 24 or later.** This machine has node 26.8.2 and npm 11.19.1,
   checked on 26 September 2026.
 - **popnei.** `npm pkg get dependencies.popnei` prints the URL of
@@ -165,7 +177,7 @@ before the code.
 - **The browsers.** Playwright 1.63.0 launches Chromium (build 1243) and
   WebKit (build 2359) here. It cannot launch Firefox on this Mac, as in
   stages 0 and 2. So no check of this plan is `npm run test:e2e`, which
-  names Firefox; each browser check is
+  names Firefox; each **browser check** is
   `POPNEI_TEST_PAGES=1 npm run build && npx playwright test --project=chromium --project=webkit`,
   with a selection. The variable builds `e2e/plots.html`, the page of
   the tests of the plots, into `dist/` (`plot2d.md`, "How it is
@@ -177,12 +189,36 @@ before the code.
   `format:check`, `typecheck` and `lint` exit 0; `npm test` gives "Tests
   1460 passed (1460)" in 41 files; `npm run build` exits 0, the page's
   first script 123.62 KB gzipped; `npx playwright test
-  --project=chromium --project=webkit` gives "348 passed". `test:files`
+  --project=chromium --project=webkit` gives "348 passed", among them
+  **the probe's 40**, the tests of `e2e/probe.spec.ts`, 20 in each
+  engine, which check that the probe page of stage 0, `probe.html`,
+  still loads popnei. `test:files`
   and `build:files` are not there: the files crate comes in stage 4.
 - **Every task commits when the checks pass**: `format:check`,
   `typecheck`, `lint`, `npm test`, and the browser check above, and not
   only the count of its deliverable. A change to the messages reaches the
   page, so the browser check runs from the first task.
+- **What a task waits for.** A task waits only for the tasks its "Needs"
+  names, and a task with no "Needs" for nothing but the gate; a work
+  package's "Stands on" is the union of what its tasks need outside it,
+  and says nothing more.
+- **Tasks side by side** share the one worktree and its `dist/`, as in
+  the walking skeleton. Each runs the format, the types, the lint and
+  Vitest on its own files; none runs the build, the development server
+  or Playwright while another runs beside it. The orchestrator runs the
+  whole tree's checks, the browser check among them, once both have
+  committed.
+- **When a work package is done**: its deliverables pass, run by the
+  orchestrator; its review of the `code-review` skill has run and the
+  findings the orchestrator took are fixed, with the deliverables run
+  again after the fixes; and, for one with a stop, the owner has
+  accepted the screen. The box of its last task is ticked only then.
+- **The large files of the measurements** are made in `MEASURE_DIR`, a
+  folder outside the repository that the orchestrator sets for each run
+  of `e2e/measure.spec.ts`, `MEASURE_DIR=$TMPDIR/popnei-measure`, as
+  `testing.md`, "The measurements", has it: the VCF of 80,692,954 bytes
+  and the `.nei` file of 19,161,178 bytes of stage 2, and the larger
+  files of work packages 5 and 7.
 - **How the counts are read.** The tests of a deliverable carry its tag
   at the start of the name of their `describe` block, in Vitest, or of
   their title, in Playwright: `VS3 D4` for work package 3, deliverable 4.
@@ -250,14 +286,15 @@ sees changes: the page runs as before on the messages of version 2.
    "VS1 D2"`, at least 14 tests: each refusal of stage 3 in "Each
    refusal" (11) and in "The version" (3).
 3. `VS1 D3 the passes of the runner`. Check: `npx vitest run
-   src/worker/runner.test.ts -t "VS1 D3"` passes at least 12 tests, the
+   src/worker/runner.test.ts -t "VS1 D3"` passes at least 17 tests, the
    stage 3 list of `runner.md`, "How it is verified", but the written
    file: the statistics at 0.05 and the VCF of two individuals (2); the
    diversity with the lists of 125 and of 119 (2); the steps with the
    list, opened again or not (3); the histograms (1); the counts of the
    three filters, the same with the list, and of the empty pass (3); an
-   empty list, `badRequest` (1); and `transferablesOf` of each of the
-   four results.
+   empty list, `badRequest` (1); and `transferablesOf`, one buffer per
+   array of a result of each of the four analyses (4), and a view of
+   part of a buffer, which throws (1).
 4. `VS1 D4 the written file of the runner`. Check: the same file, `-t
    "VS1 D4"`, at least 8 tests: the five files of "The written file" in
    the same list, their sizes and what `openVars` reads back (5), their
@@ -273,7 +310,8 @@ sees changes: the page runs as before on the messages of version 2.
    them.
 6. The tests before still pass. Check: `npm test` passes, and the
    browser check gives "348 passed"; every line of an existing test that
-   `git diff <start> -- 'src/**/*.test.ts' src/core/testSupport.ts`
+   `git diff <the start> -- 'src/**/*.test.ts' src/core/testSupport.ts`,
+   with the hash of the start that the report names,
    shows changed or removed is listed in the report beside the part of
    the spec that asks for it, the diversity's result with `passStats` in
    place of `numVars` and `numVarsRead` (`runner.md`) and the test of
@@ -290,7 +328,7 @@ sees changes: the page runs as before on the messages of version 2.
   `PROTOCOL_VERSION` 2; and what the new types force elsewhere, so that
   the tree compiles and the page works: the diversity's job sends
   `individuals: null`, which is right while its `needs` locks every
-  filter of individuals, the rule of stage 2 that task 3.4 removes;
+  filter of individuals, the lock of stage 2 that task 3.4 removes;
   `numVarsOf` of `src/core/apps.ts` reads the number of variants of the
   file from `passStats`, until task 3.5 puts `countsOf` in its place;
   the runner gives the diversity's `passStats`. Serves 1, 2 and 6.
@@ -368,7 +406,7 @@ file and its size expected.
    work package 1, the tests of `moveVariantFilter` and the rows of lists
    that leave `projectNeeds` among them.
 
-**Stands on:** nothing but "Before the first task", and task 2.3 on
+**Stands on:** nothing but the gate, and task 2.3 on
 task 1.1.
 
 **Tasks:**
@@ -418,11 +456,13 @@ filter.
 
 1. `VS3 D1 the three analyses of the step`. Check: `npx vitest run
    src/core/analyses -t "VS3 D1"` passes at least 16 tests, from the
-   "How it is verified" of `individualChecks.md` (the worked example,
-   its three literals, `run`, the CSV, each row of `refusalText`, the
-   description at 0.03), of `variantChecks.md` (`run`, `warnings`,
-   `checkNumbers`, the two descriptions) and of `filterCounts.md`
-   (`filterCountRows`, `warnings`, `checkNumbers`).
+   "How it is verified" of `individualChecks.md`: the three literals of
+   the worked example (3), `run` (1), the CSV (1), `refusalText` of the
+   filters that keep no variant and of a genotype of another ploidy (2),
+   and the description at 0.03 (1); of `variantChecks.md`: `run`,
+   `warnings` and `checkNumbers` (3), and the two descriptions (2); and
+   of `filterCounts.md`: `filterCountRows`, `warnings` and `checkNumbers`
+   (3). The other rows of `refusalText` add a test each.
 2. `VS3 D2 the keys of the three analyses`. Check: the same, `-t "VS3
    D2"`, at least 9 tests: the five rows of the key of
    `individualChecks.md`, and those of `variantChecks.md` (2) and
@@ -451,7 +491,7 @@ filter.
    least 13 tests: "The write" of `store.md`, "How it is verified" (12),
    and `startWriting` (1).
 7. `VS3 D7 the properties of the store of stage 3`. Check: `npx vitest
-   run src/core/store.test.ts -t "VS3 D7"` passes the three properties
+   run src/core/store.test.ts -t "VS3 D7"` passes 3 tests, one for each of the three properties
    `store.md` adds: a result shown only under a key the project gives,
    whatever the lock; the list given to a request; a write whose result
    arrives under another key leaves no file.
@@ -465,7 +505,7 @@ filter.
    work package 1, those of `numVarsOf` and of `startRun`'s single
    handle among them.
 
-**Stands on:** work packages 1 and 2.
+**Stands on:** task 1.1 and work package 2.
 
 **Tasks:**
 
@@ -555,7 +595,7 @@ with.
    themes (`css.md`), and `grep -c -- "--chart-bar" src/ui/tokens.css`
    gives at least 2, where it gives 0 on 1457d80.
 
-**Stands on:** "Before the first task", the owner's word on the
+**Stands on:** the gate, the owner's word on the
 dependencies among it.
 
 **Tasks:**
@@ -625,7 +665,10 @@ packages 6 and 7.
    it (1); and axe in each state reached.
 4. `VS5 D4 a file saved after its worker ended`. Check: the same, `-g
    "VS5 D4"`, 2 passed, 1 in each engine, as `client.md`, "How it is
-   verified", asks: the VCF of `WS8 D3`, written by `e2e/bigVcf.ts`, with
+   verified", asks: the VCF of the flow `WS8 D3` of
+   `e2e/diversity.spec.ts`, the Stop in the middle of a pass of stage 2,
+   200,000 variants of 1,000 individuals gzipped in 127.6 MB, written by
+   `e2e/bigVcf.ts` into the test's output folder, with
    its CSV, is written; the diversity is run on it and stopped while its
    bar is below 100%, which ends the worker that made the file; Save
    then gives a download that popnei's `openVars`, in the test's node,
@@ -650,7 +693,7 @@ packages 6 and 7.
 
 The owner tries the writing at stop A, task 6.4.
 
-**Stands on:** work package 3.
+**Stands on:** work packages 1 and 3.
 
 **Tasks:**
 
@@ -670,11 +713,11 @@ The owner tries the writing at stop A, task 6.4.
   `src/ui/saving.ts`, from `entry.md`, "A file of the filtered variants
   saved". One task, because the stepper would read the three analyses
   as analyses of the Analyses step between the two halves. Serves 1 and
-  6. Needs 5.1.
+  6. Needs 5.1 and 1.4.
 - [ ] 5.3 The section "Writing the filtered variants" of the Variants
   step, from `variants.md`, "Writing the filtered variants", and
   `writeVariants.md`, "The step's part", with its states in
-  `e2e/screens.spec.ts`. Serves 3, 4 and 6. Needs 5.2.
+  `e2e/screens.spec.ts`. Serves 3, 4 and 6. Needs 5.2 and 1.3.
 - [ ] 5.4 The measurements of the write, and the four constants set from
   them: `writeVariants.md`, `client.md` and section 11 of
   `docs/architecture.md` get the numbers in one commit, then the code.
@@ -687,11 +730,15 @@ The owner tries the writing at stop A, task 6.4.
   before, during and after. Serves 5. Needs 5.3.
 
 **What could go wrong:** that a `Blob` is still whole after the worker
-that made it is ended is what the File API promises and no engine has
-been seen to do. If D4 fails in an engine, the tasks go on, the
+that made it is ended is what the File API promises, and it has never
+been tried in a browser. If D4 fails in an engine, the tasks go on, the
 deliverable stays unmet there, and the question goes to the owner and
 back to `client.md`, since the page would then have to hold the bytes
-itself before a restart. The largest writes need inputs of gigabytes:
+itself before a restart. Stop A goes ahead all the same, with the
+result and that question given to the owner there, since the screens of
+work package 6 do not rest on it; work package 5 is then done in every
+deliverable but D4 in that engine, and task 7.3's write of the
+individuals kept waits for the owner's answer. The largest writes need inputs of gigabytes:
 node's wasm has the same bound of 4 GB as the tab's, so they cannot be
 `.nei` files made by `writeVars`; they are gzipped VCFs of
 `e2e/bigVcf.ts`, whose passes take minutes, written outside the
@@ -711,7 +758,8 @@ counts how many variants each filter was given and kept.
 1. `VS6 D1 the number field`. Check: `npx vitest run src/ui/widgets -t
    "VS6 D1"` passes at least 3 tests: a field of four decimals takes
    0.0312 with a step of 0.01, refuses 0.12345 with its line, and a field
-   with no `decimals` keeps the rule of stage 2.
+   with no `decimals` takes, as in stage 2, only a number that is a
+   multiple of its step.
 2. `VS6 D2 the filters of the variants on the screen`. Check: the
    browser check with `-g "VS6 D2"` gives at least 24 passed, 12 in each
    engine, from the stage 3 list of `variants.md`, "How it is checked":
@@ -733,9 +781,11 @@ counts how many variants each filter was given and kept.
    the diversity with the same filters, on the VCF of 80,692,954 bytes
    and the `.nei` file of 19,161,178 bytes of stage 2. Check: `npx
    playwright test --project=measure-chromium --project=measure-webkit
-   -g "VS6 D3"` passes, and the report holds its table. If the Count is
-   much longer, the report asks the owner whether popnei is asked for a
-   function that only counts (`docs/architecture.md`, section 11).
+   -g "VS6 D3"` passes, and the report holds its table. If the Count
+   takes more than twice the time of the diversity on either file in
+   either engine, the report asks the owner whether popnei is asked for
+   a function that only counts (`docs/architecture.md`, section 11); the
+   plan goes on meanwhile.
 4. The screenshots, light and dark: the step with no file; with a file
    read, before any calculation; the histograms running, done with the
    thresholds of their filters, and in error (the ploidy of
@@ -757,14 +807,15 @@ counts how many variants each filter was given and kept.
   lines, refusals and commands with their descriptions, with the values
   at which they are turned on, the meanwhile of point F for two of them;
   the line in place of the three analyses before a file is read. Serves
-  1, 2 and 4.
+  1, 2 and 4. Needs work package 5, whose task 5.3 changes
+  `VariantsStep.tsx` too.
 - [ ] 6.2 The histogram in the step: the component that mounts
   `createHistogram` (`react.md`, "Mounting a plot"), in its two tabs with
   the table of its bins and their CSV; the block "Histograms of the
   variants" with its button and states, and each histogram beside its
   filter with the threshold as typed, from `variants.md`, "The
   histograms beside the filters of the variants", and `variantChecks.md`,
-  "The panel". Serves 2 and 4. Needs 6.1.
+  "The panel". Serves 2 and 4. Needs 6.1 and work package 4.
 - [ ] 6.3 The Count, the counts beside each filter and in the
   description of its field, the line of the total and its focus, from
   `variants.md`, "What each filter of the variants kept", and
@@ -856,6 +907,7 @@ writes the variants of the individuals kept.
 
 - [ ] 7.1 The two lists, from `variants.md`, "The two lists", their
   reasons under each list and beside the disabled Write. Serves 1 and 5.
+  Needs work package 6.
 - [ ] 7.2 The block "Statistics of each individual": its button and
   states, the table with its column Kept, sorted by React Aria's
   `Table`, the two histograms from `binValues` beside the thresholds,
@@ -919,7 +971,8 @@ twenty specs matched to a test.
 
 **Tasks:**
 
-- [ ] 8.1 The documents, and the final checks. Serves 1 and 2.
+- [ ] 8.1 The documents, and the final checks. Serves 1 and 2. Needs
+  work package 7.
 - [ ] 8.2 The map of the cases, and the tests it finds missing. Serves
   3. Needs 8.1.
 
