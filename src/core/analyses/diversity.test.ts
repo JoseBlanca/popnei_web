@@ -672,7 +672,7 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112
         project({ variantsName: "tetraploid.vcf.gz" }),
       ),
     ).toBe(
-      "At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. Set the ploidy of the VCF to 4 in the Variants step and read the file again; a file that mixes ploidies, as a haploid X among diploid chromosomes, cannot be read in this version.",
+      "At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 in the Variants step and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version.",
     );
   });
 

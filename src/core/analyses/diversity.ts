@@ -362,7 +362,8 @@ export function refusalText(message: string, p: Project): string {
   const ploidy = OTHER_PLOIDY.exec(message);
   if (ploidy !== null) {
     const [, line = "", individual = "", found = "", given = ""] = ploidy;
-    return `At line ${line} of ${fileName}, the genotype of ${shown(individual)} has ${counted(Number(found), "allele")}, and the file was read with ploidy ${given}. Set the ploidy of the VCF to ${found} in the Variants step and read the file again; a file that mixes ploidies, as a haploid X among diploid chromosomes, cannot be read in this version.`;
+    const alleles = counted(Number(found), "allele");
+    return `At line ${line} of ${fileName}, the genotype of ${shown(individual)} has ${alleles}, and the file was read with ploidy ${given}. If every genotype of the file has ${alleles}, set the ploidy of the VCF to ${found} in the Variants step and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version.`;
   }
   const isVcfLine =
     /^line \d+ of the VCF/u.test(message) || message.startsWith(BGZIP_REFUSAL);
