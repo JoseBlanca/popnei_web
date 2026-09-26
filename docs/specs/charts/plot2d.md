@@ -224,13 +224,31 @@ export is checked by its tests (below, "How it is verified").
   with a `PngError` whose `kind` tells the two failures apart:
   `tooLarge`, when that scale would make a side above 4,096 pixels,
   which a canvas of iOS does not draw, checked before anything is drawn;
-  and `notMade`, when the browser gives no canvas or makes no PNG. The
-  screen picks the scale: it asks for 3, and for 2 after a `tooLarge`.
+  and `notMade`, when the browser gives no canvas, cannot draw the SVG
+  on it or makes no PNG. Every failure of `toPNG` is a rejection of its
+  promise, a defect of the caller among them, so that a screen that
+  handles the promise sees them all; a rejection that is not a
+  `PngError` is a defect, which the screen does not show as a refused
+  PNG and throws again. The screen picks the scale: it asks for 3, and
+  for 2 after a `tooLarge`.
   A histogram is at most 40rem wide (`histogram.md`, "The size"), 640
   pixels at the browser's default size of text, 16 pixels, so 3 times is
   1,920 pixels; it takes 2 times only above 1,365 pixels a side, a size
   of text above 34 pixels, and is refused above 2,048, a size of text
   above 51 pixels.
+- **The fonts.** `toPNG` draws only once `document.fonts.ready` has
+  resolved, the promise of the browser that the fonts the page uses are
+  loaded, so that the PNG has its text in them (`charts.md`, "Fonts").
+  `toSVG` returns at once and waits for nothing, since the applications
+  load no web font while they use the fonts of the system, and no part
+  of a plot or of its export measures text: its file is the same before
+  and after the fonts are loaded. The work that gives the applications
+  a typeface of their own makes `toSVG` wait for it too.
+- **The canvas of a PNG** is emptied, to a width and a height of 0, once
+  the PNG is made or refused. WebKit counts the memory of the canvases
+  of a page until they are collected, and Safari on iOS then gives no
+  context for a new canvas, which would refuse with `notMade` the PNG of
+  a plot that was saved as one a moment before.
 - **The words of a refused PNG**, drafted with this spec for the screen
   spec that gives the buttons in stage 6: "The plot is too large to save
   as a PNG. Save it as SVG, or make the window narrower and try again."
@@ -351,15 +369,16 @@ export class PngError extends Error {
   gives the SVG a `width` and a `height` of 0 and no `viewBox`, so that
   no bar of an earlier draw stays on the screen under the title of new
   data, and the browser does not show an SVG with no width at its
-  default size of 300 by 150 pixels. `toSVG` and `toPNG` then fail with
-  an `Error` that says the frame has no area, a defect of the caller,
+  default size of 300 by 150 pixels. `toSVG` then throws an `Error` that
+  says the frame has no area, and `toPNG` rejects with it, a defect of
+  the caller,
   since a screen gives its plot a size larger than its margins. The next
   draw with room for the frame, after a resize or an `update` to data
   with smaller margins, draws the plot again.
 - **`update`, `toSVG` or `toPNG` after `destroy`**, and `toSVG` or
   `toPNG` of a plot never drawn, whose element never had a size: an
   `Error`, a defect of the caller, since a screen exports only a plot it
-  shows.
+  shows. `update` and `toSVG` throw it, and `toPNG` rejects with it.
 - **A title or a label with markup in it**, `<b>P1</b>`, from a name the
   user gave: written as text; no `b` element is made.
 - **A change of theme** while the plot is on the screen: nothing is
@@ -410,7 +429,8 @@ calls:
   exists;
 - `destroy` leaves the element with no child, disconnects the observer,
   cancels a waiting draw, and a second `destroy` throws nothing; an
-  `update` after it throws.
+  `update` and a `toSVG` after it throw, and a `toPNG` after it, or of a
+  plot never drawn, returns a promise that rejects, and throws nothing.
 
 **In Playwright, in Chromium, Firefox and WebKit**, where the export is
 first seen working. No screen offers the export in stage 3, so the tests
@@ -431,8 +451,11 @@ export will run in.
 - `toPNG(3)` of a plot of 600 by 375 pixels is a PNG of 1,800 by 1,125
   pixels; of a plot 1,400 pixels wide it rejects with `tooLarge`, and
   `toPNG(2)` gives 2,800 pixels; `toPNG(2)` of a plot above 2,048 pixels
-  a side rejects with `tooLarge` without drawing; a canvas whose
-  `toBlob` gives `null`, stubbed, rejects with `notMade`;
+  a side rejects with `tooLarge` without drawing; an image not decoded,
+  a canvas with no context, a `drawImage` that throws, and a `toBlob`
+  that gives `null` or throws, each stubbed, reject with `notMade`; the
+  canvas of a PNG made, and of one refused with `notMade`, is left of 0
+  by 0 pixels;
 - a resize of the element draws the plot again at its new size, and
   after `destroy` the element is empty.
 
