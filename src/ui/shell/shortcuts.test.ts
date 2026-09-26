@@ -5,7 +5,7 @@
  */
 import { describe, expect, test } from "vitest";
 
-import { shortcutOf } from "./shortcuts.ts";
+import { shortcutOf, undoesAnotherField } from "./shortcuts.ts";
 import type { KeysPressed } from "./shortcuts.ts";
 
 /** The key `key` with the modifiers `held`, none by default, at the
@@ -68,5 +68,22 @@ describe("the shortcuts of Undo and Redo", () => {
     expect(shortcutOf(keys("w", { code: "KeyZ", ctrlKey: true }))).toBeNull();
     // QWERTZ: Y where a US keyboard has Z.
     expect(shortcutOf(keys("y", { code: "KeyZ", ctrlKey: true }))).toBe("redo");
+  });
+});
+
+describe("the browser's undo of a field that has not the focus", () => {
+  const focused = { name: "the field of the name" };
+  const behind = { name: "the threshold" };
+
+  test("an undo or a redo of another field is one, and of the field with the focus is not", () => {
+    // Stand-ins for the elements, compared by identity alone.
+    const [name, threshold] = [focused, behind] as unknown as [
+      Element,
+      Element,
+    ];
+    expect(undoesAnotherField("historyUndo", threshold, name)).toBe(true);
+    expect(undoesAnotherField("historyRedo", threshold, name)).toBe(true);
+    expect(undoesAnotherField("historyUndo", name, name)).toBe(false);
+    expect(undoesAnotherField("insertText", threshold, name)).toBe(false);
   });
 });

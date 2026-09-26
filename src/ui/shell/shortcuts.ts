@@ -98,3 +98,20 @@ export function ownerOfKeys(target: EventTarget | null): KeysOwner {
   if (isInDialog(target)) return "dialog";
   return "project";
 }
+
+/** Whether an `InputEvent` of the browser, of the type `inputType` on the
+    element `target`, is the browser's undo or redo of a field other than
+    `focused`, the one that has the focus: WebKit, once the field with
+    the focus has nothing left to undo, goes on to the field edited
+    before it, which would then show a number the project does not hold
+    (docs/specs/shell.md, "The header"). */
+export function undoesAnotherField(
+  inputType: string,
+  target: EventTarget | null,
+  focused: Element | null,
+): boolean {
+  return (
+    (inputType === "historyUndo" || inputType === "historyRedo") &&
+    target !== focused
+  );
+}

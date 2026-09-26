@@ -11,7 +11,9 @@
  * the last step was undone or redone, the focus moves to the other, which
  * that change has just enabled, since a disabled button cannot hold the
  * focus, which the browser would drop to the start of the page (WCAG
- * 2.4.3). An undo or a redo is announced as undoRedo.ts says.
+ * 2.4.3). An undo or a redo is announced as undoRedo.ts says. The
+ * browser's own undo in a text field is kept from reaching another field,
+ * as shortcuts.ts says.
  */
 import { useEffect, useRef } from "react";
 import { flushSync } from "react-dom";
@@ -23,7 +25,7 @@ import { Link } from "../widgets/Link.tsx";
 import { useAnnouncer } from "./announcer.tsx";
 import styles from "./Header.module.css";
 import { OpenProject, SaveProject } from "./ProjectButtons.tsx";
-import { ownerOfKeys, shortcutOf } from "./shortcuts.ts";
+import { ownerOfKeys, shortcutOf, undoesAnotherField } from "./shortcuts.ts";
 import type { Shortcut } from "./shortcuts.ts";
 import { undoOrRedo } from "./undoRedo.ts";
 
@@ -65,9 +67,23 @@ export function Header(): React.JSX.Element {
       event.preventDefault();
       if (owner === "project") change(which);
     };
+    // The browser's undo of a text field reaches no other field.
+    const onBeforeInput = (event: InputEvent): void => {
+      if (
+        undoesAnotherField(
+          event.inputType,
+          event.target,
+          document.activeElement,
+        )
+      ) {
+        event.preventDefault();
+      }
+    };
     window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("beforeinput", onBeforeInput, true);
     return () => {
       window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("beforeinput", onBeforeInput, true);
     };
   });
 

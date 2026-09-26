@@ -322,6 +322,30 @@ test("WS9 D3 inside the dialog of Save the keyboard's Undo does nothing to the p
   ).toBeDisabled();
 });
 
+test("WS9 D3 in the field of the name of Save, the keyboard's Undo takes back the typing of that field alone, and not that of the threshold behind the dialog", async ({
+  page,
+}) => {
+  await openPopgen(page);
+  await loadPanelNei(page);
+  await setThreshold(page, "0.05");
+
+  await saveButton(page).click();
+  const dialog = page.getByRole("dialog", { name: "Save the project" });
+  const field = dialog.getByRole("textbox", { name: "File name" });
+  await expect(field).toBeFocused();
+  await page.keyboard.type("x");
+  for (let press = 0; press < 3; press++) {
+    await page.keyboard.press("ControlOrMeta+z");
+  }
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+
+  await expect(threshold(page)).toHaveValue("0.05");
+  await expect(
+    header(page).getByRole("button", { name: "Redo", exact: true }),
+  ).toBeDisabled();
+});
+
 test("WS9 D3 leaving the page just after a Save raises no question, and after a change that follows it, the question", async ({
   page,
 }) => {
