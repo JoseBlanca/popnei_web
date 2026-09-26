@@ -8,16 +8,10 @@
  *
  * After a project file was opened, the step says above the zone which
  * variants file the project was made with, and, once one is given, how it
- * differs from that one, in a warning beside its card, announced when it
- * first appears (the spec, "A project file opened").
+ * differs from that one, in a warning beside its card, which the shell
+ * announces from the state (the spec, "A project file opened").
  */
-import {
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from "react";
+import { useId, useRef, useState, useSyncExternalStore } from "react";
 
 import {
   MAX_PLOIDY,
@@ -149,17 +143,6 @@ export function VariantsStep(): React.JSX.Element {
     announcer.announce(text);
   };
 
-  // The warning of the identity is announced when it first appears, since
-  // the focus stays on the file button; not again as the read completes
-  // it, nor when the step is drawn again with it.
-  const identitySeen = useRef(identity);
-  useEffect(() => {
-    const before = identitySeen.current;
-    identitySeen.current = identity;
-    if (before === null && identity !== null) {
-      announcer.announce(`Warning: ${identity}`);
-    }
-  }, [identity, announcer]);
   const refuse = (text: string): void => {
     setSaid({ ...besideOf(store.getState().project), text });
     // The focus stays on the button, so a screen reader would not read

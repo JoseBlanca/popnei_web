@@ -23,6 +23,7 @@ import type {
   Notice,
   RunView,
 } from "../../core/store.ts";
+import { identityWarning } from "../../core/projectFile.ts";
 import { deepFreeze } from "../../core/testSupport.ts";
 import type { TestDefResult } from "../../core/testSupport.ts";
 import type { CsvOptions, IndividualsTable } from "../../worker/protocol.ts";
@@ -1020,6 +1021,56 @@ describe("WS9 D1 the announcements made from the state", () => {
       runs: [run(1, DIVERSITY, KEY_A, LEFT_BEHIND_STOPPING)],
     });
     expect(announcementsOf(before, after, title)).toEqual([]);
+  });
+
+  test("the warning of a reopened project is announced when it appears, and when it comes with another load", () => {
+    const given = project({
+      ...OPENED,
+      variants: variants(PENDING),
+    });
+    const warning = identityWarning(given);
+    expect(warning).toMatch(/^The project was made with panel_2026\.nei/);
+    expect(
+      announcementsOf(
+        state({ project: OPENED }),
+        state({ project: given }),
+        title,
+      ),
+    ).toEqual([`Warning: ${String(warning)}`]);
+
+    // A second file that differs, or an undo back to one, pressed on
+    // another step: another load, with a warning before and after.
+    const other = project({
+      ...OPENED,
+      variants: variants(READ, OTHER_VARIANTS_ID),
+    });
+    expect(
+      announcementsOf(
+        state({ project: other }),
+        state({ project: given }),
+        title,
+      ),
+    ).toEqual([`Warning: ${String(warning)}`]);
+  });
+
+  test("the warning of a reopened project made longer by the read of its load, or kept through a change of the filter, is not announced again", () => {
+    const pending = project({ ...OPENED, variants: variants(PENDING) });
+    const read = project({ ...OPENED, variants: variants(READ) });
+    expect(
+      announcementsOf(
+        state({ project: pending }),
+        state({ project: read }),
+        title,
+      ),
+    ).toEqual(["panel.nei read: 3 individuals, ploidy 2."]);
+    const unfiltered = project({ ...read, filters: [] });
+    expect(
+      announcementsOf(
+        state({ project: read }),
+        state({ project: unfiltered }),
+        title,
+      ),
+    ).toEqual([]);
   });
 
   test("a read of the metadata file recorded for options other than those of the present project announces nothing", () => {

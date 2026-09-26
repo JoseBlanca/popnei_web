@@ -30,7 +30,7 @@ import type {
   Project,
   VariantSource,
 } from "../../core/project.ts";
-import { askedFileText } from "../../core/projectFile.ts";
+import { askedFileText, identityWarning } from "../../core/projectFile.ts";
 import type { AppState, Notice, RunView } from "../../core/store.ts";
 import type { CsvOptions } from "../../worker/protocol.ts";
 import { sizeText } from "../steps/individuals/words.ts";
@@ -332,7 +332,9 @@ export function noticeText(
  * of its request, a read by its load id, and the read of the individuals
  * file also by its options of the CSV, compared by their values, so that
  * an undo back to a load already read, an opening, a result back from the
- * cache and a calculation left behind that ends announce nothing.
+ * cache and a calculation left behind that ends announce nothing. The
+ * warning of a reopened project is followed by its load too, so that it
+ * is announced when it appears or comes with another load, from any step.
  */
 export function announcementsOf<R>(
   before: AppState<R>,
@@ -344,7 +346,23 @@ export function announcementsOf<R>(
     ...endedAnnouncements(before, after, title),
     ...variantsReadAnnouncements(before.project, after.project),
     ...individualsReadAnnouncements(before.project, after.project),
+    ...identityAnnouncements(before.project, after.project),
   ];
+}
+
+/** The warning of a reopened project that differs from its file, when it
+    appeared or is there with another load than before; not when the read
+    of its load makes it longer, nor through a change that keeps it. */
+function identityAnnouncements(
+  before: Project,
+  after: Project,
+): readonly string[] {
+  const warning = identityWarning(after);
+  if (warning === null) return [];
+  const sameLoad = before.variants?.fileId === after.variants?.fileId;
+  return identityWarning(before) !== null && sameLoad
+    ? []
+    : [`Warning: ${warning}`];
 }
 
 /** The requests of `runs` by their ids. */
