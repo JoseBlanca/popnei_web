@@ -142,13 +142,17 @@ export function exportSvg(svg: SVGSVGElement, size: ExportSize): string {
 
 /**
  * The PNG of a plot of `size`, drawn from the SVG `svgText` gives on a
- * canvas of `scale` times that size.
+ * canvas of `scale` times that size, once the fonts of the page are
+ * loaded, `document.fonts.ready` (charts.md, "Fonts"). The canvas is
+ * emptied to 0 by 0 once the PNG is made or refused, since WebKit keeps
+ * the memory of a page's canvases until they are collected and iOS Safari
+ * then gives no context for a new one.
  *
  * Rejects with a PngError: `tooLarge` when a side at that scale would be
  * above MAX_CANVAS_SIDE, before `svgText` is called or anything is drawn,
  * since a canvas of iOS above it draws nothing and says nothing;
  * `notMade` when the browser does not decode the SVG as an image, gives
- * no canvas, or makes no PNG of it.
+ * no canvas, cannot draw the image on it, or makes no PNG of it.
  */
 export async function exportPng(
   svgText: () => string,
@@ -158,9 +162,11 @@ export async function exportPng(
   if (Math.max(size.width, size.height) * scale > MAX_CANVAS_SIDE) {
     throw new PngError("tooLarge");
   }
+  await document.fonts.ready;
   const url = URL.createObjectURL(
     new Blob([svgText()], { type: "image/svg+xml" }),
   );
+  let canvas: HTMLCanvasElement | null = null;
   try {
     const image = new Image();
     image.src = url;
@@ -169,15 +175,21 @@ export async function exportPng(
     } catch {
       throw new PngError("notMade");
     }
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(size.width * scale);
-    canvas.height = Math.round(size.height * scale);
-    const context = canvas.getContext("2d");
+    const made = document.createElement("canvas");
+    canvas = made;
+    made.width = Math.round(size.width * scale);
+    made.height = Math.round(size.height * scale);
+    const context = made.getContext("2d");
     if (context === null) throw new PngError("notMade");
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    try {
+      context.drawImage(image, 0, 0, made.width, made.height);
+    } catch {
+      // An image the browser cannot draw throws an InvalidStateError.
+      throw new PngError("notMade");
+    }
     return await new Promise<Blob>((resolve, reject) => {
       try {
-        canvas.toBlob((blob) => {
+        made.toBlob((blob) => {
           if (blob === null) reject(new PngError("notMade"));
           else resolve(blob);
         }, "image/png");
@@ -188,5 +200,9 @@ export async function exportPng(
     });
   } finally {
     URL.revokeObjectURL(url);
+    if (canvas !== null) {
+      canvas.width = 0;
+      canvas.height = 0;
+    }
   }
 }

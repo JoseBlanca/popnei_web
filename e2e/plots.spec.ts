@@ -105,13 +105,15 @@ interface DrawingCounts {
 
 /**
  * Counts, from now on, the calls that drawing a PNG makes: a URL of a
- * Blob made and revoked, and a context of a canvas. A PNG refused before
- * anything is drawn makes none, and a PNG made revokes its URL.
+ * Blob made and revoked, and a context of a canvas, whose canvas it keeps
+ * for canvasSizes. A PNG refused before anything is drawn makes none, and
+ * a PNG made revokes its URL.
  */
 async function countDrawing(page: Page): Promise<void> {
   await page.evaluate(() => {
     const counts = { urls: 0, revoked: 0, contexts: 0 };
-    Object.assign(window, { drawingCounts: counts });
+    const canvases: HTMLCanvasElement[] = [];
+    Object.assign(window, { drawingCounts: counts, drawnCanvases: canvases });
     const createObjectURL = URL.createObjectURL.bind(URL);
     URL.createObjectURL = (object) => {
       counts.urls += 1;
@@ -130,6 +132,7 @@ async function countDrawing(page: Page): Promise<void> {
       ...args: Parameters<HTMLCanvasElement["getContext"]>
     ) {
       counts.contexts += 1;
+      canvases.push(this);
       return getContext.apply(this, args);
     } as HTMLCanvasElement["getContext"];
   });
@@ -138,6 +141,22 @@ async function countDrawing(page: Page): Promise<void> {
 async function drawingCounts(page: Page): Promise<DrawingCounts> {
   return page.evaluate(
     () => (window as unknown as { drawingCounts: DrawingCounts }).drawingCounts,
+  );
+}
+
+/**
+ * The width and the height of each canvas a context was asked of since
+ * countDrawing was called, which the export leaves of 0 by 0 once its PNG
+ * is made or refused.
+ */
+async function canvasSizes(page: Page): Promise<[number, number][]> {
+  return page.evaluate(() =>
+    (
+      window as unknown as { drawnCanvases: HTMLCanvasElement[] }
+    ).drawnCanvases.map((canvas): [number, number] => [
+      canvas.width,
+      canvas.height,
+    ]),
   );
 }
 
@@ -285,6 +304,8 @@ test("VS4 D3 a plot 1,400 pixels wide: toPNG(3) rejects with tooLarge, and toPNG
     revoked: 1,
     contexts: 1,
   });
+  // The canvas is freed once the PNG is made.
+  expect(await canvasSizes(page)).toEqual([[0, 0]]);
 });
 
 test("VS4 D3 toPNG(2) of a plot above 2,048 pixels a side rejects with tooLarge without drawing", async ({
@@ -324,6 +345,26 @@ test("VS4 D3 an image not decoded, a canvas that gives no PNG or throws, or no c
       realDecode: PropertyDescriptor;
     };
     Object.defineProperty(HTMLImageElement.prototype, "decode", realDecode);
+    const drawImage = Object.getOwnPropertyDescriptor(
+      CanvasRenderingContext2D.prototype,
+      "drawImage",
+    );
+    Object.assign(window, { realDrawImage: drawImage });
+    CanvasRenderingContext2D.prototype.drawImage = function noDraw() {
+      throw new DOMException("Not drawn", "InvalidStateError");
+    };
+  });
+  expect(await png(page, 3)).toEqual({ made: false, kind: "notMade" });
+
+  await page.evaluate(() => {
+    const { realDrawImage } = window as unknown as {
+      realDrawImage: PropertyDescriptor;
+    };
+    Object.defineProperty(
+      CanvasRenderingContext2D.prototype,
+      "drawImage",
+      realDrawImage,
+    );
     HTMLCanvasElement.prototype.toBlob = function noBlob(callback) {
       callback(null);
     };
@@ -344,8 +385,44 @@ test("VS4 D3 an image not decoded, a canvas that gives no PNG or throws, or no c
     };
   });
   expect(await png(page, 2)).toEqual({ made: false, kind: "notMade" });
-  // Every URL made is revoked, the PNG refused or not.
-  expect(await drawingCounts(page)).toMatchObject({ urls: 4, revoked: 4 });
+  // Every URL made is revoked, the PNG refused or not, and every canvas
+  // that had a context is freed.
+  expect(await drawingCounts(page)).toMatchObject({ urls: 5, revoked: 5 });
+  expect(await canvasSizes(page)).toEqual([
+    [0, 0],
+    [0, 0],
+    [0, 0],
+  ]);
+});
+
+test("VS4 D3 toPNG draws nothing until the fonts of the page are ready", async ({
+  page,
+}) => {
+  await openPlots(page);
+  await draw(page, 600, 375);
+  await countDrawing(page);
+  const waiting = await page.evaluate(async () => {
+    let fontsLoaded: () => void = () => undefined;
+    const ready = new Promise<void>((resolve) => {
+      fontsLoaded = resolve;
+    });
+    Object.defineProperty(document.fonts, "ready", {
+      configurable: true,
+      get: () => ready,
+    });
+    const made = window.plotsPage.handle().toPNG(3);
+    // Long enough for an image to be decoded and drawn, had it not waited.
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    const counts = (window as unknown as { drawingCounts: DrawingCounts })
+      .drawingCounts;
+    const before = { ...counts };
+    fontsLoaded();
+    const blob = await made;
+    return { before, after: { ...counts }, type: blob.type };
+  });
+  expect(waiting.before).toEqual({ urls: 0, revoked: 0, contexts: 0 });
+  expect(waiting.after).toEqual({ urls: 1, revoked: 1, contexts: 1 });
+  expect(waiting.type).toBe("image/png");
 });
 
 test("VS4 D3 a resize draws the plot again at its new size, and after destroy the element is empty", async ({
