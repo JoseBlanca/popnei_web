@@ -8,7 +8,10 @@ file it gives back, how the store tracks it, the size the step expects
 and warns of, and the words. It develops section 3 of
 `docs/functionality.md`, "Reading and writing", and sections 5 and 6 of
 `docs/architecture.md`, "The workers and their messages" and "The files
-written", with points 5 and 6 of its section 13.
+written", with points 5 and 6 of its section 13. Revised on 26
+September 2026, after the review of the code of stage 3: the warning
+comes at `WRITE_WARN_BYTES` as well as above it, as the interface below
+has it.
 
 **It is not an analysis** in the sense of section 4 of the architecture,
 and it is under `docs/specs/analyses/` only because the architecture names
@@ -164,7 +167,7 @@ the size it expects before the user writes:
   `docs/specs/core/individualsKept.md`, and those the lists keep,
   `byLists`, while a threshold waits for its statistics. An estimate
   from a bound says "at most about".
-- **The warning** comes above `WRITE_WARN_BYTES`, a constant of the code
+- **The warning** comes at or above `WRITE_WARN_BYTES`, a constant of the code
   set by the measurement below; meanwhile 500 MB, whose peak is up to 1.5
   GB. Its words are below.
 - **At an estimate of `WRITE_MAX_BYTES` or more from the counts
@@ -337,7 +340,7 @@ variants of 1,000 individuals at one byte per genotype.
 
 | when | the text |
 |---|---|
-| above `WRITE_WARN_BYTES` | "Warning: a file of about 1.0 GB may need up to three times that in the memory of this tab while it is written, and a browser may close a tab that asks for too much, losing the work since the project was last saved. Save the project first. To write a smaller file, remove variants or individuals with the filters; to write any size, use popnei in Python." |
+| at or above `WRITE_WARN_BYTES` | "Warning: a file of about 1.0 GB may need up to three times that in the memory of this tab while it is written, and a browser may close a tab that asks for too much, losing the work since the project was last saved. Save the project first. To write a smaller file, remove variants or individuals with the filters; to write any size, use popnei in Python." |
 | an estimate of `WRITE_MAX_BYTES` or more | "A file of about 4.3 GB cannot be written in a browser tab, which gives popnei at most 4 GB. Remove variants or individuals with the filters, or write the file with popnei in Python." |
 | no counts and no number of variants | "The size of the file is known once the variants are counted: Count, above." |
 | the filters keep no variant, `noVariant` | "The filters kept none of the variants of panel.nei, so there is nothing to write. Loosen the filters above." |
