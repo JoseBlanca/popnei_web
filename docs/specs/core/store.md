@@ -56,9 +56,13 @@ calculation worker and `R` that of its results, `Job` and `JobResult` of
 tests in the tests.
 
 - `needs` gives the reason the analysis cannot run beyond what every
-  analysis needs (`docs/specs/core/project.md`, `projectNeeds`), in the
-  words the screen shows next to its Run button, or `null`. A reason from
-  either of the two locks the analysis; `projectNeeds` is asked first.
+  analysis needs (`docs/specs/core/project.md`, `projectNeeds`), and,
+  for an analysis whose `filtersRead.individuals` is true, beyond the
+  lists of individuals popnei would refuse (`individualListNeeds` of the
+  same spec), in the words the screen shows next to its Run button, or
+  `null`. A reason from any of them locks the analysis; `projectNeeds` is
+  asked first, `individualListNeeds` second, only of an analysis that
+  reads the filters of individuals, and `needs` last.
 - `filtersRead` says which of the two lists of filters the analysis
   reads, and `keyInputs` what else its key holds
   (`docs/specs/core/keys.md`).
@@ -125,7 +129,7 @@ has the kind `removed` in the code.
 
 | state | when | what it holds |
 |---|---|---|
-| locked | `projectNeeds` or its `needs` gives a reason | the reason |
+| locked | `projectNeeds` gives a reason; or the analysis reads the filters of individuals and `individualListNeeds` gives one; or its `needs` does | the reason |
 | done | the cache holds a result under its key | the result, its warnings, and the comparison with the check numbers of an opened project file |
 | running | a calculation of its key is in flight and is not being stopped, whether it waits in the queue of the worker or runs; or a Run of its key waits for the statistics of each individual (below) | its progress, the `Progress` of `docs/specs/worker/protocol.md`, popnei's four numbers of the pass as the worker gave them, passed on unchanged, `null` until the worker gives one; the request's id; and whether it waits for the statistics, whose request's progress and id it then holds |
 | error | popnei refused the calculation of its key, or the calculation failed since the last change; or it reads the filters of individuals and the statistics it waits for were refused, or failed since the last change (below) | popnei's message, or the failure |
@@ -134,8 +138,9 @@ has the kind `removed` in the code.
 | ready | none of the above | its key |
 | empty | cannot happen | — |
 
-The key of an analysis is made when neither `projectNeeds` nor its
-`needs` gives a reason, the first row, and whatever the second lock, the
+The key of an analysis is made when none of `projectNeeds`,
+`individualListNeeds` for an analysis that reads the filters of
+individuals, and its `needs` gives a reason, the first row, and whatever the second lock, the
 one of the individuals kept: the key holds the thresholds and not the
 list (`docs/specs/core/keys.md`), so it is known without the
 statistics. That lock depends on the cache, not on the project alone,
@@ -613,7 +618,7 @@ with a state of its own, `write`:
 
 | state | when | what it holds |
 |---|---|---|
-| locked | `projectNeeds` gives a reason, or the list of the individuals kept is known and empty | the reason, `keptNoneReason` for the second |
+| locked | `projectNeeds` or `individualListNeeds` gives a reason, or the list of the individuals kept is known and empty | the reason, the `reason` of `individualListNeeds` for the second, `keptNoneReason` for the third |
 | done | a write of its key ended done while the project gave that key, the file has not been handed to the browser, and no change has given the write another key since | what the worker gave, `Written` of `docs/specs/worker/protocol.md`: the file, its size and the counts of its pass |
 | saved | the file of `done` was handed to the browser to save, `writeSaved`, and no change has given the write another key since | its key, and the size and the counts of the file, without the file |
 | running | a write of its key is in flight and is not being stopped, or its Run waits for the statistics of each individual | its progress and the request's id, or those of the statistics |
@@ -729,7 +734,8 @@ export interface AppState<R, F = never> {  // F: the type of a written file, Blo
   readonly runs: readonly RunView[];      // the calculations in flight
   readonly notice: Notice | null;
   /** The individuals the filters keep, and each filter's counts; null
-      when projectNeeds gives a reason (docs/specs/core/individualsKept.md). */
+      when projectNeeds or individualListNeeds gives a reason
+      (docs/specs/core/individualsKept.md). */
   readonly individualsKept: IndividualsKept | null;
   /** The writing of the filtered variants as a .nei file; null when the
       store was made with no `write`. */
@@ -1164,6 +1170,11 @@ whose file is a text.
   the statistics end, and `runEnded` gives no handle. A refusal of the
   statistics: the analysis is `error` with popnei's message, and
   `startRun` gives `null`.
+- **A list of individuals popnei would refuse**, a list to keep that
+  names `z`, not in the file: the analysis that reads the filters of
+  individuals and the write are `locked` with the `reason` of
+  `individualListNeeds`; the statistics of each individual, which read
+  none, are `ready`, and `individualsKept` is `null`.
 - **The key whatever the lock, and the lock from the cache**: with the
   analysis done under a threshold, a command that changes the filter of
   the variants, a result of the other analysis whose put drops the

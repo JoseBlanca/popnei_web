@@ -143,10 +143,11 @@ of a file only by reading all of them, a pass, and the first pass is
 that of the first calculation the user starts, a check of this step
 among them (`docs/architecture.md`, section 6, "How a load of the
 variant file reaches the project", step 5). The chromosomes with their
-number of variants, and the density of variants along each chromosome,
-which section 3 of functionality lists, come with popnei's release that
-gives the density (`docs/architecture.md`, section 6, "What this asks of
-popnei", item 7).
+number of variants, which section 3 of `docs/functionality.md` lists
+under "What the dataset holds", come with popnei's density of variants
+along each chromosome, in its release that has it, as a check of
+`docs/specs/analyses/variantChecks.md` (`docs/architecture.md`, section
+6, "What this asks of popnei", item 7).
 
 The button stays in the zone, labelled "Replace panel.nei…" once a file
 is loaded, and a file dropped on the card replaces the one there. The
@@ -462,7 +463,7 @@ the text of a file of one name per line, can be pasted. Apply sends the
 names in the order written, with `setIndividualFilter`, or, when there
 is none, `removeIndividualFilter`; Clear empties the area and sends
 `removeIndividualFilter`. So the screen never sends an empty list, and
-the reason of an empty list of `projectNeeds` comes only from a project
+the reason of an empty list of `individualListNeeds` comes only from a project
 file. A list is applied with its button, and not at each key, because
 every change of it is a command, a step of Undo and a change of the key
 of every analysis that reads the filters of individuals, and a list half
@@ -476,13 +477,16 @@ under it says so: "This list is not applied yet; Apply the list to keep
 applies it.", or "… Apply the list to remove applies it."
 
 A list with a name repeated, or a name that is not in the variants file,
-is applied as written, and `projectNeeds` gives its reason, which locks
-every analysis (`docs/specs/core/project.md`, "What an analysis needs
-of every project"): "The list of individuals to keep names 2 individuals
-that are not in panel.nei: ind_900 and ind_901. Change the list, or
-remove the filter, in the Variants step." The step shows that reason
-whole, under the two lists, and the stepper shows it too
-(`docs/specs/shell.md`, "The stepper"). Its end is point D of
+is applied as written, and `individualListNeeds` gives its reason,
+with the list it is about, `keep` or `remove`, which locks every
+analysis that reads the filters of individuals, the diversity among
+them, and the writing of the file, and not the three checks of this
+step, which read none (`docs/specs/core/project.md`, "What an analysis
+needs of every project"): "The list of individuals to keep names 2
+individuals that are not in panel.nei: ind_900 and ind_901. Change the
+list, or remove the filter, in the Variants step." The step shows that
+reason whole, under the text area of the list it names, and the stepper
+shows it too (`docs/specs/shell.md`, "The stepper"). Its end is point D of
 `docs/specs/stage-3-open-points.md`; "remove the filter" is Clear here.
 
 **The statistics of each individual.** Its block, headed "Statistics of
@@ -563,7 +567,7 @@ step as a whole:
 | state | what the user sees | what they can do |
 |---|---|---|
 | empty | cannot happen: with no file, the step offers the pick and the filters, which is the ready state | — |
-| locked | cannot happen for the step: nothing has to be done before a file is picked. A file picked before the calculation worker has started is read once it has. Its calculating parts are locked when `projectNeeds` gives a reason about a list of individuals, with the reason beside each button, and the writing too when the filters keep no individual | fix the list, or loosen the thresholds |
+| locked | cannot happen for the step: nothing has to be done before a file is picked. A file picked before the calculation worker has started is read once it has. The writing is locked when `individualListNeeds` gives a reason, with the reason beside its button, or when the filters keep no individual; the three checks read no filter of individuals and are never locked once the file is read | fix the list, or loosen the thresholds |
 | ready | no file: the zone, "Choose a variants file…", the options of a VCF, the filters, and in place of the checks the line of a file not read. With an opened project file, the file it was made with, below. With a file read: every part, each check with its button | pick a file; set the filters; calculate a check; count; write |
 | running | the read: the card with its name, format and size, "Reading panel.nei." and the seconds since the step saw the read start, which the step keeps and loses when it is left; no progress bar, since the read is of the header of a VCF, or the end of a `.nei` file, which popnei tells to nobody (`js/popnei/src/variant.ts`, `onProgress`). A check, the Count or the writing: its bar and its clock in its own part, the rest of the step as it was | during the read: pick another file, which replaces this one; Undo; set the filters. During a calculation: Stop it; set the filters, which leaves it behind, as the notice says |
 | done | the card with the individuals, the ploidy of a `.nei` file, the number of variants once counted, how a VCF was read; each check done beside its filters, the counts, the Save button | replace the file; set the filters; sort and download the table; download the histograms; save the file |
@@ -589,10 +593,12 @@ It reads, of the state of the store, `project.variants`,
 `project.filters`, `project.individualFilters` and `project.reference`;
 `individualsKept`; `write`; the status of `variantChecks`,
 `filterCounts` and `individualChecks` among `analyses`, and their
-`RunView`s; and `variantsStepNeeds` and `projectNeeds` of the project,
-the functions of core that give, in words, the reason of a variants file
-being read or not read and of a list of individuals that popnei would
-refuse. It sends:
+`RunView`s; `variantsStepNeeds` and `individualListNeeds` of the
+project, the functions of core that give, in words, the reason of a
+variants file being read or not read and of a list of individuals that
+popnei would refuse, with the list it is about; and `writtenName`,
+`writeEstimate` and `sizeText` of `docs/specs/analyses/writeVariants.md`,
+"The functions of core", for the name and the sizes of the file. It sends:
 
 | action | command | description |
 |---|---|---|
@@ -791,9 +797,8 @@ nothing on the screen says the things the lines above do not.
   MAF filter: 0.95", and what each bin keeps is a word of the table,
   never the fill of a bar alone (1.4.1). The column Kept of the table of
   the individuals is a word, "kept" or "removed".
-- A disabled button of a check, the Count or the writing, locked by a
-  list of individuals or by the individuals kept, is described by its
-  reason, which is text beside it, since a disabled button is not a stop
+- The disabled button of the writing, locked by a list of individuals
+  or by the individuals kept, is described by its reason, which is text beside it, since a disabled button is not a stop
   of the Tab key and a user of the keyboard would not learn why.
 
 ## How it is checked
@@ -901,7 +906,8 @@ of stage 3 are revised or written beside this one, and not yet approved.
   it has none.
 - `docs/specs/core/project.md`: the four filters of the variants and of
   the individuals in their fixed order, the commands that set and remove
-  them, and the reasons of `projectNeeds` for a list.
+  them, and the reasons of `individualListNeeds` for a list, with the
+  list each is about.
 - `docs/specs/core/individualsKept.md` and `docs/specs/core/store.md`:
   `individualsKept` in the state, with the counts of each filter of
   individuals, `null` where they need the statistics; `keptNoneReason`;

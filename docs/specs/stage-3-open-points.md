@@ -275,7 +275,8 @@ meets:
   decimals would give three thresholds (`steps/variants.md`).
 - **A list of individuals is typed or pasted, one name per line, and
   applied with a button**, not at each key, since each change is a step
-  of Undo and a list half typed would lock every analysis; a list read
+  of Undo and a list half typed would lock every analysis that reads the
+  filters of individuals, and the writing; a list read
   from a file, or made from the rows of the table of the individuals, is
   not in stage 3 (`steps/variants.md`).
 - **Before a variants file is read, the checks, the Count and the

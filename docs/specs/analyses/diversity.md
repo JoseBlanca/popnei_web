@@ -264,8 +264,9 @@ What changes the key, which the test of the key checks row by row
 The store asks `projectNeeds` of `docs/specs/core/project.md` first,
 which gives the reasons every analysis shares: no variants file, "Load a
 variants file in the Variants step."; the file being read, "Reading
-panel.nei."; the file refused or not read, and the lists of individuals
-that popnei would refuse. Then `needs` of this module gives the first of
+panel.nei."; the file refused or not read. Then, since the diversity
+reads the filters of individuals, `individualListNeeds` of the same
+spec, the lists of individuals that popnei would refuse. Then `needs` of this module gives the first of
 these, in the words the panel shows beside its Run button:
 
 | the project | the reason |

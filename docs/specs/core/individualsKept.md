@@ -10,7 +10,7 @@ the filtered variants and the Variants step all cite it. There is no
 code of it yet; it will be `src/core/individualsKept.ts`, the row of
 section 9 of the architecture. It depends on
 `docs/specs/core/project.md`, for the project, its filters of
-individuals, `projectNeeds` and the rules by which a text names a value
+individuals, `projectNeeds`, `individualListNeeds` and the rules by which a text names a value
 of a file, and on `docs/specs/analyses/individualChecks.md`, whose
 result gives the statistics.
 
@@ -85,9 +85,10 @@ What `individualsKept` gives:
   know before a run what the lists leave, the diversity's populations
   with no individual left (`docs/specs/analyses/diversity.md`, "Why it
   cannot run"); a threshold can only remove more.
-- **Nothing**, `null`, when `projectNeeds` gives a reason: a variants
-  file not read has no individuals, and a list that names an individual
-  twice or one not in the file has no meaning to count.
+- **Nothing**, `null`, when `projectNeeds` or `individualListNeeds`
+  of `docs/specs/core/project.md` gives a reason: a variants file not
+  read has no individuals, and a list that names an individual twice or
+  one not in the file has no meaning to count.
 
 When the filters keep no individual, every analysis that reads them,
 and the writing of the filtered variants, are locked by the store with
@@ -146,8 +147,8 @@ export interface IndividualsKept {
   }[];
 }
 
-/** The individuals the filters keep, or null when projectNeeds gives a
-    reason. `stats` is used only when the project has a threshold. */
+/** The individuals the filters keep, or null when projectNeeds or
+    individualListNeeds gives a reason. `stats` is used only when the project has a threshold. */
 export function individualsKept(p: Project, stats: IndividualStats | null): IndividualsKept | null;
 
 /** The reason of the lock when the list is known and empty, or null. */

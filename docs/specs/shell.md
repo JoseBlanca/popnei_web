@@ -37,7 +37,9 @@ is its number of variants, `null` until the first calculation has read
 the whole file and counted them. `projectNeeds(p)` and
 `individualsNeeds(p)` of `src/core/project.ts` give, as a sentence, the
 reason no analysis can run because of the variants file or of the
-individuals file, or `null`. The **reference** of a project opened from
+individuals file, or `null`; `individualListNeeds(p)`, the reason of a
+list of individuals popnei would refuse, which locks only what reads the
+filters of individuals, with the list it is about, or `null`. The **reference** of a project opened from
 a project file is what that file said of the variants file it was made
 with. The **notice** is the store's record of what the last change did,
 whose `cause.kind` is `command`, `undo` or `redo`
@@ -132,11 +134,11 @@ the link has the pointer or the focus.
 |---|---|---|---|
 | Variants | To do | no variants file | for an opened project, the text of `askedFileText` of `projectFile.ts` (`docs/specs/core/projectFile.md`, "Opening"); otherwise the reason `projectNeeds` gives, "Load a variants file in the Variants step." |
 | | Reading | its read is pending | the reason `projectNeeds` gives, "Reading panel.nei." |
-| | Problem | its read failed, or `projectNeeds` gives another reason, a list of individuals that popnei would refuse among them | the reason `projectNeeds` gives |
+| | Problem | its read failed, or `projectNeeds` gives another reason; or the file is read and `individualListNeeds` gives a reason, a list of individuals that popnei would refuse | the reason `projectNeeds` gives, or the `reason` of `individualListNeeds` |
 | | Running | a check or the writing is running, or waits for the statistics of each individual | — |
 | | Results removed | the notice lists a check among the results removed | — |
 | | Failed | a check is in the state `error`, or the writing is | "Statistics of each individual could not be calculated.", "The file could not be written.", the first in the order of the step |
-| | Done | read, and `projectNeeds` gives none | — |
+| | Done | read, and neither `projectNeeds` nor `individualListNeeds` gives a reason | — |
 | Individuals | To do | no metadata file | the reason `individualsNeeds` gives, "Load a metadata file in the Individuals step." |
 | | Reading | its read is pending | "Reading pops.csv.", from `individualsNeeds` |
 | | Problem | its read failed, or individuals of the variants file are missing from it | the reason `individualsNeeds` gives |
@@ -658,12 +660,14 @@ export type StepStatus =
     the title of an analysis's panel, from src/ui/analyses/panels.ts; the
     step it is shown in, from src/core/apps.ts; and, from stage 3, the
     variants the filters keep, from the result of the Counts of the
-    filters when it is done, and the name of the written file. */
+    filters when it is done. The name and the size of the written file
+    are core's, writtenName of src/core/fileNames.ts and sizeText of
+    src/core/writeEstimate.ts (docs/specs/analyses/writeVariants.md,
+    "The functions of core"), which words.ts calls itself. */
 export interface ShellWords<R> {
   title(id: AnalysisId): string;
   stepOf(id: AnalysisId): StepId;
   variantsKept(s: AppState<R, unknown>): number | null;  // passStats.numVars of the counts done, or null
-  writtenName(p: Project): string;                       // "panel.filtered.nei" (writeVariants.md)
 }
 
 /** The state of each step and its reason, by the table of the stepper. */
@@ -900,8 +904,10 @@ none of them approved yet:
   `individualChecks.md`: the titles of their panels; the line of the
   total of `filterCounts.md`, which the end of a Count announces.
 - `docs/specs/analyses/writeVariants.md`: the name of the written file,
-  from the project, and the words of its end, which the status region
-  says.
+  `writtenName`, and its size, `sizeText` of its `numBytes`, "18.4 MB",
+  and the words of its end, which the status region says.
+- `docs/specs/core/project.md`: `individualListNeeds`, the reason of a
+  list of individuals, apart from `projectNeeds`.
 - `docs/specs/core/individualsKept.md`: the counts of the individuals
   kept, for the summary line.
 

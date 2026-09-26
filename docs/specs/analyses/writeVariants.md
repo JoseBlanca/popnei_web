@@ -129,14 +129,14 @@ pressed: a user who cancels the question of a browser that asks where to
 save writes the file again (point A of
 `docs/specs/stage-3-open-points.md`).
 
-The name is the stem of the variants file, `variantsStem` of
-`src/core/fileNames.ts`, with `.filtered.nei`: `panel.vcf.gz` gives
+The name, `writtenName` of `src/core/fileNames.ts` (below, "The
+functions of core"), is the stem of the variants file, `variantsStem` of
+the same module, with `.filtered.nei`: `panel.vcf.gz` gives
 `panel.filtered.nei`. With no filter of the variants and no filter of
 individuals the name is the stem with `.nei`, `panel.nei`, since the
 file is then the variants file converted, which is what the application
 suggests doing once with a VCF (`docs/functionality.md`, section 3). The
-size is `numBytes`, in decimal units with one decimal and a comma
-between groups of three digits in whole numbers: "940 KB", "18.4 MB",
+size is `numBytes` as `sizeText` writes it, below: "251 KB", "18.4 MB",
 "1.2 GB".
 
 ### The size, before the write
@@ -157,9 +157,9 @@ the size it expects before the user writes:
   `filterCounts` for the current filters, when the cache has them, and
   otherwise the variants of the file, when a pass has counted them; the
   individuals kept are those of `individualsKept` of
-  `docs/specs/core/individualsKept.md`, and
-  every individual of the file while a threshold waits for its
-  statistics. An estimate from a bound says "at most about".
+  `docs/specs/core/individualsKept.md`, and those the lists keep,
+  `byLists`, while a threshold waits for its statistics. An estimate
+  from a bound says "at most about".
 - **The warning** comes above `WRITE_WARN_BYTES`, a constant of the code
   set by the measurement below; meanwhile 500 MB, whose peak is up to 1.5
   GB. Its words are below.
@@ -183,8 +183,79 @@ of the tab during and after a write, whether each engine copies the array
 into the `Blob`, and the time of the write. They set `WRITE_WARN_BYTES`,
 `WRITE_RESTART_BYTES` and `BYTES_PER_GENOTYPE`.
 
+### The functions of core
+
+The step and the words of the shell read the name, the estimate and the
+sizes from these functions, pure, so that Vitest checks them in node. The
+name goes in `src/core/fileNames.ts`, beside `variantsStem`, since that
+module names every file the application writes; the estimate and the
+sizes in `src/core/writeEstimate.ts`, with the three constants above.
+Neither module is in the list of section 9 of `docs/architecture.md`,
+which names the larger modules of core; `fileNames.ts` was added in
+stage 2 on the same footing.
+
+```ts
+// src/core/fileNames.ts
+/** The name of the written file of the filtered variants:
+    "panel.filtered.nei" from panel.vcf.gz with a filter, "panel.nei" with
+    no filter of the variants and none of individuals; "project.nei" for
+    a project with no variants file, which the step never asks. */
+export function writtenName(p: Project): string;
+
+// src/core/writeEstimate.ts
+export const BYTES_PER_GENOTYPE = 1;
+export const WRITE_WARN_BYTES = 500_000_000;  // meanwhile; set by the measurement above
+export const WRITE_MAX_BYTES = 4_000_000_000; // under the 4 GiB, 4,294,967,296 bytes, wasm addresses,
+                                              // which hold the variants read too
+
+export interface WriteEstimate {
+  readonly numVars: number;         // the variants the file would hold, or their bound
+  readonly numIndividuals: number;  // the individuals, or their bound
+  readonly numBytes: number;        // numVars * numIndividuals * BYTES_PER_GENOTYPE
+  readonly bound: boolean;          // either count is a bound: "at most about"
+  readonly warn: boolean;           // numBytes >= WRITE_WARN_BYTES
+  readonly tooLarge: boolean;       // numBytes >= WRITE_MAX_BYTES and not bound
+}
+
+/** The size expected of the file, or null when the variants are not
+    known, no counts and no number of variants of the file, or when
+    `kept` is null. `variantsKept` is the number of variants the counts of
+    filterCounts give for the current filters, `passStats.numVars` of its
+    result when done, which the Variants step and the shell read the
+    same way, `variantsKept` of `docs/specs/shell.md`, or null. */
+export function writeEstimate(
+  p: Project, kept: IndividualsKept | null, variantsKept: number | null,
+): WriteEstimate | null;
+
+/** A size of a file in decimal units: "812 bytes", "251 KB", "18.4 MB", "1.2 GB". */
+export function sizeText(numBytes: number): string;
+```
+
+`writeEstimate` takes the variants from `variantsKept`, exact; when it
+is `null`, from `numVars` of the read of the variants file, exact with
+no filter of the variants and a bound with one; and `null` when neither
+is known. It takes the individuals from `kept.list`: all those of the
+file when the list is `known` with `null`, the length of the list when
+it is `known` with one, both exact; `byLists`, a bound, when it is
+`needsStatistics`.
+
+`sizeText` writes a size under 1,000 bytes in bytes, under 1,000,000 in
+whole KB, under 1,000,000,000 in MB with one decimal, and above in GB
+with one decimal, each rounded to the nearest, with a comma between
+groups of three digits of the whole part, as `grouped` of
+`docs/specs/core/project.md` writes a count. A size that rounds to 1,000
+of its unit is written in the next: 999,600 bytes is "1.0 MB". So
+250,994 bytes is "251 KB", 19,161,178 "19.2 MB", and 4,300,000,000 "4.3
+GB". It is the same function for the estimate and for the written file.
+
 ## The cases
 
+- **A list of individuals popnei would refuse**, a list to keep that
+  names an individual not in the file. The write is locked by the store
+  with the reason of `individualListNeeds` of
+  `docs/specs/core/project.md`, which the step shows under the list it
+  names and beside the button; the three checks of the step are not
+  locked by it.
 - **The filters keep no variant.** `writeVars` does not refuse: on
   `panel.nei` with the missing data filter at 0.05 and the MAF filter at
   0.4 it gave a file of 3,594 bytes and no variant (node, 26 September
@@ -215,7 +286,7 @@ notice and the status region is "Writing the file".
 
 | state | what the user sees | what they can do |
 |---|---|---|
-| locked | the reason of `projectNeeds`, or of the filters keeping no individual, beside the disabled button | what the reason says |
+| locked | the reason of `individualListNeeds` of `docs/specs/core/project.md`, or of the filters keeping no individual, beside the disabled button. While the variants file is not read, when the store locks it with the reason of `projectNeeds`, the part is not drawn, and the step shows the line of a file not read in place of it (`docs/specs/steps/variants.md`, "What it does") | what the reason says |
 | ready | the button, and the estimate: "About 18.4 MB: 20,000 variants of 1,000 individuals." | Write |
 | waiting for the statistics | "Calculating the statistics of each individual, which the filters of individuals are set from · 35% · 0:12" | Stop |
 | writing | "Writing panel.filtered.nei · 35% · 0:12", the bar of the diversity | Stop |
@@ -267,11 +338,17 @@ before the user asks.
   filter during a write leaves it behind with the words above; a
   calculation asked for stops it; a write that ends after the change is
   dropped and saves nothing; the counts of a write fill `filterCounts`.
-- **The estimate**: the variants of `filterCounts`, of the source, and
-  none; the individuals kept and all of them; the words "about" and "at
-  most about"; the warning at `WRITE_WARN_BYTES` and one byte below it.
-- **The file name**: `panel.vcf.gz` with a filter gives
-  `panel.filtered.nei`, with none `panel.nei`.
+- **`writeEstimate`, with Vitest**: the variants of `variantsKept`, of
+  the read with and without a filter of the variants, and none, which
+  gives `null`; the individuals of a known list, of `null`, and of
+  `byLists` while a threshold waits; `bound` and the words "about" and
+  "at most about"; `warn` at `WRITE_WARN_BYTES` and one byte below it;
+  `tooLarge` at `WRITE_MAX_BYTES` from exact counts and not from a bound.
+- **`sizeText`**: 812, 250,994, 999,600, 19,161,178 and 4,300,000,000
+  bytes, as above.
+- **`writtenName`**: `panel.vcf.gz` with a filter gives
+  `panel.filtered.nei`, with a threshold on the individuals alone too,
+  with none `panel.nei`; `PANEL.NEI` with a filter `PANEL.filtered.nei`.
 - **Playwright**, in Chromium, Firefox and WebKit: the flow writes
   `panel.nei` with the missing data filter at 0.05, presses Save, and
   reads the download's name and size, 250,994 bytes; and the measurement

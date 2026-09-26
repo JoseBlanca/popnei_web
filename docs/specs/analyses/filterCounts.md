@@ -57,8 +57,11 @@ The key version is 1.
 
 ### Why it cannot run
 
-`needs(p)` gives `null`. With no filter, Count gives the number of
-variants of the file.
+`needs(p)` gives `null`, and the reasons of `projectNeeds` are the only
+ones: a list of individuals that popnei would refuse,
+`individualListNeeds` of `docs/specs/core/project.md`, does not lock the
+Count, since it reads no filter of individuals. With no filter, Count
+gives the number of variants of the file.
 
 ### The request
 
@@ -215,7 +218,7 @@ each filter keeps."
 | state | what the user sees | what they can do |
 |---|---|---|
 | empty | cannot happen: locked until the file is read | |
-| locked | the reason of `projectNeeds`, beside the button | load a file |
+| locked | not drawn: while the store locks it, the variants file is not read, and the Variants step shows in place of its part the line "The histograms, the counts and the statistics of each individual are calculated once a variants file is read." (`docs/specs/steps/variants.md`, "What it does"). With the file read, `projectNeeds` gives no reason and a list of individuals popnei would refuse does not lock it, since it reads no filter of individuals, so the part is never drawn locked | load a file |
 | ready | the button, and the line of no counts | Count |
 | running | the bar and the clock of the diversity, beside the button | Stop |
 | done | the counts beside the filters, and the warning | change a filter |

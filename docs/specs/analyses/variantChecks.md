@@ -71,6 +71,9 @@ no individuals file does. The key version is 1.
 ### Why it cannot run
 
 `needs(p)` gives `null`; the reasons of `projectNeeds` are the only ones.
+A list of individuals that popnei would refuse, `individualListNeeds` of
+`docs/specs/core/project.md`, does not lock it, since it reads no filter
+of individuals.
 
 ### The request
 
@@ -244,7 +247,7 @@ meanwhile).
 | state | what the user sees | what they can do |
 |---|---|---|
 | empty | cannot happen: locked until the file is read | |
-| locked | the reason of `projectNeeds` | load a file |
+| locked | not drawn: while the store locks it, the variants file is not read, and the Variants step shows in place of its part the line "The histograms, the counts and the statistics of each individual are calculated once a variants file is read." (`docs/specs/steps/variants.md`, "What it does"). With the file read, `projectNeeds` gives no reason and a list of individuals popnei would refuse does not lock it, since it reads no filter of individuals, so the part is never drawn locked | load a file |
 | ready | the button | Calculate |
 | running | the bar and the clock, as the diversity's | Stop |
 | done | the three histograms, the warning above them | download |
@@ -290,4 +293,6 @@ None.
 
 The histogram of the proportion of missing genotypes of each variant,
 and the density of variants along each chromosome, with popnei's release
-that has them.
+that has them. The chromosomes of the file with their numbers of
+variants (`docs/functionality.md`, section 3, "What the dataset holds")
+come with the density, which gives them.

@@ -91,7 +91,9 @@ The key version is 1.
 
 `needs(p)` gives `null`: the reasons of `projectNeeds` of
 `docs/specs/core/project.md`, no variants file, the file being read, the
-file refused, are the only ones. It needs no individuals file, so it runs
+file refused, are the only ones. A list of individuals that popnei would
+refuse, `individualListNeeds` of the same spec, does not lock it, since
+it reads no filter of individuals. It needs no individuals file, so it runs
 in the association application before a file of traits is loaded, and in
 the population genetics application before the metadata file.
 
@@ -410,7 +412,7 @@ are calculated:
 | state | what the user sees | what they can do |
 |---|---|---|
 | empty | cannot happen: until the variants file is read the analysis is locked | |
-| locked | the reason of `projectNeeds`, "Load a variants file in the Variants step." | load a file |
+| locked | not drawn: while the store locks it, the variants file is not read, and the Variants step shows in place of its part the line "The histograms, the counts and the statistics of each individual are calculated once a variants file is read." (`docs/specs/steps/variants.md`, "What it does"). With the file read, `projectNeeds` gives no reason and a list of individuals popnei would refuse does not lock it, since it reads no filter of individuals, so the part is never drawn locked | load a file |
 | ready | the button | Calculate |
 | running | the bar and the clock of the diversity, "Calculating · 35% · 0:12"; after a stop, "Waiting for panel.nei to be opened again, then calculating · 0:12" | Stop |
 | done | the table, the histograms and the download; the warning above them | sort, download |

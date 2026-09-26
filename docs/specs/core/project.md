@@ -16,8 +16,10 @@ of the variants in a fixed order, with no command to move one; the ends
 of the reasons of a list of individuals, now that the step has its
 controls; and the filters of individuals by a threshold, whose list of
 the individuals kept a new module makes, `src/core/individualsKept.ts`,
-specified in `docs/specs/core/individualsKept.md`; this revision is not
-yet approved. The project is everything the user has set in one application: the
+specified in `docs/specs/core/individualsKept.md`; and the reasons of
+a list of individuals given apart, by `individualListNeeds`, so that
+they lock only what reads the filters of individuals; this revision is
+not yet approved. The project is everything the user has set in one application: the
 variants file they loaded, the filters, the individuals file with the
 types of its columns, the populations, and the options of each analysis.
 This spec gives its type, the commands that change it, the records that
@@ -118,9 +120,11 @@ here, below.
 ### What an analysis needs of every project
 
 Before an analysis looks at what it needs of its own, every one of them
-needs a variants file that was read, and filters of individuals that
-popnei will accept. `projectNeeds` gives the first thing missing, in the
-words the screen shows beside the Run button, or `null`:
+needs a variants file that was read, and one that reads the filters of
+individuals, `filtersRead.individuals` of its definition
+(`docs/specs/core/store.md`), needs lists of individuals that popnei
+will accept. `projectNeeds` gives the first thing missing of the file,
+in the words the screen shows beside the Run button, or `null`:
 
 | the project | the reason |
 |---|---|
@@ -130,15 +134,34 @@ words the screen shows beside the Run button, or `null`:
 | the calculation crashed while it read the file | "panel.nei could not be read: ‹what happened› (**Open 4**). Load it again in the Variants step." |
 | the calculations could not start, or the page is out of date | "panel.nei could not be read: ‹what happened› (**Open 4**). Reload the page and load it again." |
 | the browser could no longer read the file, `reopenFailed` | "panel.nei could not be read; it may have changed on the disk since it was picked. Load it again in the Variants step." |
-| a list of individuals that is empty | "The list of individuals to keep is empty. Add individuals to it, or remove the filter, in the Variants step." (**Open 2**) |
-| a list that names an individual more than once | "The list of individuals to remove names ind_031 more than once. Change the list, or remove the filter, in the Variants step." (**Open 2**) |
-| a list that names individuals not in the variants | "The list of individuals to keep names 2 individuals that are not in panel.nei: ind_900 and ind_901. Change the list, or remove the filter, in the Variants step." (**Open 2**) |
+
+Once the file is read, `individualListNeeds` gives the first list of
+individuals that popnei would refuse, with which of the two lists it is
+about, `keep` or `remove`, so that the Variants step puts the reason
+beside that list; or `null`, and `null` too while `projectNeeds` gives a
+reason, since a list is checked against the individuals of the file.
+The store locks with it only what reads the filters of individuals: the
+analyses whose `filtersRead.individuals` is true, the diversity among
+them, and the writing of the filtered variants. The three checks of the
+Variants step read no filter of individuals, the statistics of each
+individual, the histograms of the variants and the Count, and stay
+unlocked with a list popnei would refuse, so that the user can still
+look at the data while correcting the list.
+
+| the list | its `list` | the reason |
+|---|---|---|
+| empty | `keep` | "The list of individuals to keep is empty. Add individuals to it, or remove the filter, in the Variants step." (**Open 2**) |
+| names an individual more than once | `remove` | "The list of individuals to remove names ind_031 more than once. Change the list, or remove the filter, in the Variants step." (**Open 2**) |
+| names individuals not in the variants | `keep` | "The list of individuals to keep names 2 individuals that are not in panel.nei: ind_900 and ind_901. Change the list, or remove the filter, in the Variants step." (**Open 2**) |
+
+Each row holds for either list, "to keep" or "to remove" in its words
+and `list` naming the same one.
 
 The Variants step shows the reason of its file, being read or not
 read, with another end, since it is where the file is chosen and its
 button reads "Replace panel.nei…"; the owner decided on 25 September
 2026 that a refusal shown there ends "Choose another file.".
-`variantsStepNeeds` gives those words, the rows of the table above for a
+`variantsStepNeeds` gives those words, the rows of the first table above for a
 file being read or not read, and `null` for no file or a file read,
 which the step shows otherwise:
 
@@ -153,8 +176,9 @@ which the step shows otherwise:
 The last three ends are the writer's, the same day: the owner's words
 fit a file that popnei refused, and a file that could not be read, by
 no fault of its own, is chosen again and not replaced. The reasons of
-the other rows of `projectNeeds`, and every reason of the individuals
-file in the Individuals step, keep their words.
+the other rows of `projectNeeds`, those of `individualListNeeds`, which
+the step shows under the list they name, and every reason of the
+individuals file in the Individuals step, keep their words.
 
 The owner decided on 25 September 2026 that a variants file the browser
 can no longer read, changed, moved or deleted on the disk since it was
@@ -195,11 +219,11 @@ than once". These are decided here, not by the owner:
 popnei refuses these lists too, with messages that name its arguments,
 `individuals`, and that the store would keep as popnei's refusals of those
 settings (`docs/specs/core/store.md`); checked here, the user is told what
-to fix before anything runs. Whether a threshold on the individuals
+to fix before anything that reads them runs. Whether a threshold on the individuals
 keeps any of them cannot be known from the project alone, since it
 needs the statistics of each individual; that lock is the store's, from
-the cache (`docs/specs/core/individualsKept.md`), and `projectNeeds` does
-not give it.
+the cache (`docs/specs/core/individualsKept.md`), and neither
+`projectNeeds` nor `individualListNeeds` gives it.
 
 `individualsNeeds` gives the same for the analyses that use the
 individuals file, the first thing missing, or `null`. Every individual of
@@ -698,8 +722,17 @@ again, and a command on another column of it would throw.
 ### What every analysis needs
 
 ```ts
-/** The reason no analysis can run on this project, or null; the table above. */
+/** The reason no analysis can run on this project, because of its
+    variants file, or null; the first table above. */
 export function projectNeeds(p: Project): string | null;
+
+/** The first list of individuals popnei would refuse, which of the two
+    it is and the reason, or null, and null while projectNeeds gives a
+    reason; the table after the first. The store locks with it only what
+    reads the filters of individuals. */
+export function individualListNeeds(
+  p: Project,
+): { readonly list: "keep" | "remove"; readonly reason: string } | null;
 
 /** The reason of the variants file being read or not read, in the words
     of the Variants step, or null for no file or a file read; the second
@@ -918,7 +951,7 @@ or `null`.
   `recordVariantsRead` returns the project unchanged.
 - **A worker that could not start**, or crashed while it opened the file:
   the page records the read as failed with the worker's error, and every
-  analysis is locked with the reason of the table above, instead of
+  analysis is locked with the reason of the first table above, instead of
   "Reading panel.nei." for ever. A read of the same load that succeeds
   after the worker restarts replaces the failure.
 - **An opened project file.** `projectFile.ts` gives `parseProject` the
@@ -954,8 +987,11 @@ project frozen deeply with `Object.freeze`, so that a write into it throws
 - **Each record**: recorded into the source of its id; the project itself
   for another id, for a read already recorded, and, for the individuals
   file, for other `csv` options.
-- **`projectNeeds`**, **`variantsStepNeeds`**, **`individualsNeeds`**
-  and **`individualsStepNeeds`**, a case for each row of their tables, the individuals named; the words of each kind of
+- **`projectNeeds`**, **`individualListNeeds`**, **`variantsStepNeeds`**, **`individualsNeeds`**
+  and **`individualsStepNeeds`**, a case for each row of their tables, the individuals named;
+  `individualListNeeds` with `list` `keep` and `remove` for each of its
+  rows, `null` for a bad list while the file is not read, and
+  `projectNeeds` `null` for a read file with a bad list; the words of each kind of
   refusal of the reader; "a traits file" in the reasons of a project of
   association.
 - **`individualsCheck`**: `null` when either file is not read; the
@@ -988,8 +1024,8 @@ project frozen deeply with `Object.freeze`, so that a write into it throws
    changing the separator. Meanwhile, they are lost, and the screen of the
    individuals step says so when it reads the file again.
 
-The five that follow are the words of `projectNeeds` and
-`individualsNeeds` that the owner took as provisional on 24 September
+The five that follow are the words of `projectNeeds`,
+`individualListNeeds` and `individualsNeeds` that the owner took as provisional on 24 September
 2026, to be judged on the screens of stage 2. A different answer to any
 of them changes those texts and their tests, and nothing else.
 
