@@ -22,6 +22,13 @@
  * Escape pressed in the region gives the focus back to where it was
  * before F6 or the Tab key took it into the region, and leaves the toast
  * as it is (docs/specs/shell.md, "Accessibility").
+ *
+ * While a dialog of `Dialog.tsx` is on the page, the region is inert: F6,
+ * the Tab key and a screen reader do not reach it, and its buttons take
+ * no press. React Aria keeps a region of toasts reachable while a modal
+ * dialog is open, and a button of the toast would then act behind the
+ * question the dialog asks. It is still drawn, under the dialog's
+ * backdrop.
  */
 import { useLayoutEffect, useState, useSyncExternalStore } from "react";
 import {
@@ -33,6 +40,7 @@ import {
 } from "react-aria-components";
 
 import { classOf } from "../classOf.ts";
+import { isDialogOnPage } from "./dialogMark.ts";
 import styles from "./Toast.module.css";
 
 /** What a toast shows. */
@@ -131,13 +139,44 @@ export function Toast<C extends ToastContent>({
 }
 
 /** What the region of the toast does on the page while it is drawn: the
-    room it keeps, and Escape. */
+    room it keeps, Escape, and its place under a dialog. */
 function attachRegion(region: HTMLDivElement): () => void {
   const giveRoomBack = keepRoom(region);
   const stopEscape = escapeGoesBack(region);
+  const stopFollowing = inertUnderDialogs(region);
   return () => {
     giveRoomBack();
     stopEscape();
+    stopFollowing();
+  };
+}
+
+/**
+ * Makes the region `region` inert while a dialog of `Dialog.tsx` is on
+ * the page, and keeps F6 from React Aria then. React Aria draws its
+ * dialogs at the end of the page's `<body>`, so the region follows what
+ * is added to it and taken from it. F6 is stopped on the window, before
+ * the listener React Aria has on the document: React Aria would mark the
+ * inert region as the one F6 went to, which the browser does not focus,
+ * and the next F6, once the dialog has closed, would then not focus it
+ * either (react-aria-components 1.21.1, in Chromium and WebKit).
+ */
+function inertUnderDialogs(region: HTMLDivElement): () => void {
+  const follow = (): void => {
+    region.toggleAttribute("inert", isDialogOnPage(document));
+  };
+  const onKeyDown = (event: KeyboardEvent): void => {
+    if (event.key !== "F6" || !isDialogOnPage(document)) return;
+    event.preventDefault();
+    event.stopPropagation();
+  };
+  const observer = new MutationObserver(follow);
+  observer.observe(document.body, { childList: true, subtree: true });
+  window.addEventListener("keydown", onKeyDown, true);
+  follow();
+  return () => {
+    observer.disconnect();
+    window.removeEventListener("keydown", onKeyDown, true);
   };
 }
 

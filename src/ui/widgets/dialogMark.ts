@@ -1,7 +1,8 @@
 /**
  * The mark of the element of a dialog of `Dialog.tsx`, one that blocks the
  * page behind it, apart from the element's code so that the keyboard's
- * Undo and Redo, tested in node, can tell it without its styles.
+ * Undo and Redo, tested in node, can tell it without its styles, and so
+ * that the toast can tell when one is open.
  */
 
 /** The attribute that marks the element of a dialog of `Dialog.tsx`. */
@@ -12,4 +13,10 @@ export const DIALOG_MARK = "data-blocking-dialog";
     dialog too, which blocks nothing. */
 export function isInDialog(element: Element): boolean {
   return element.closest(`[${DIALOG_MARK}]`) !== null;
+}
+
+/** Whether a dialog of `Dialog.tsx` is on the page `page`, open or
+    closing. */
+export function isDialogOnPage(page: Document): boolean {
+  return page.querySelector(`[${DIALOG_MARK}]`) !== null;
 }

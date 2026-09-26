@@ -641,6 +641,36 @@ test("WS9 D3 the keyboard's Undo, pressed with the focus on the Undo of the noti
   );
 });
 
+test("WS9 D3 while the dialog of Save is open, F6 does not reach the notice under it and nothing pressed changes the project, and once it closes F6 reaches the notice again", async ({
+  page,
+}) => {
+  await openPopgen(page);
+  const threshold = await removeTheDiversity(page);
+
+  const save = header(page).getByRole("button", { name: "Save project" });
+  await save.focus();
+  await page.keyboard.press("Enter");
+  const dialog = page.getByRole("dialog", { name: "Save the project" });
+  await expect(dialog.getByRole("textbox")).toBeFocused();
+  expect(await isInert(notice(page))).toBe(true);
+
+  // The keys that took the focus to the notice's Undo and pressed it.
+  await page.keyboard.press("F6");
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("ControlOrMeta+z");
+  await expect(threshold).toHaveValue("1");
+  await page.keyboard.press("Enter");
+  await expect(dialog).toHaveCount(0);
+  await expect(threshold).toHaveValue("1");
+  await expect(notice(page)).toBeVisible();
+
+  expect(await isInert(notice(page))).toBe(false);
+  await expect(save).toBeFocused();
+  await page.keyboard.press("F6");
+  await expect(notice(page)).toBeFocused();
+});
+
 test("WS9 D3 while a dialog is open, the status region and the error bar's alert and status stay where a screen reader reads them", async ({
   page,
 }) => {

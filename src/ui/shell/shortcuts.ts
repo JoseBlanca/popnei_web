@@ -2,13 +2,13 @@
  * The keyboard's Undo and Redo (docs/specs/shell.md, "The header"; react.md,
  * "Keyboard shortcuts"): Ctrl+Z undoes, Ctrl+Shift+Z and Ctrl+Y redo, and
  * on macOS Cmd+Z and Cmd+Shift+Z; except while the focus is in a text
- * field, where they belong to the text, and in a dialog of the shell,
- * where they would change the project behind the question it asks; the
- * notice is not such a dialog. The shell's header listens for them on the
- * window.
+ * field, where they belong to the text, and while a dialog of the shell
+ * is open, wherever the focus is, since they would change the project
+ * behind the question it asks; the notice is not such a dialog. The
+ * shell's header listens for them on the window.
  */
 
-import { isInDialog } from "../widgets/dialogMark.ts";
+import { isDialogOnPage, isInDialog } from "../widgets/dialogMark.ts";
 
 /** What a key pressed does to the project. */
 export type Shortcut = "undo" | "redo";
@@ -79,12 +79,13 @@ const INPUTS_WITHOUT_TEXT: ReadonlySet<string> = new Set([
 
 /** Who the keys of Undo and Redo pressed on an element belong to: the
     project; a text field, whose own undo the browser gives; or a dialog
-    of the shell, where they do nothing. */
+    of the shell, open on the page, where they do nothing. */
 export type KeysOwner = "project" | "text" | "dialog";
 
 /** Who the keys pressed on `target` belong to. A text field comes first,
     so that the field of the name in the dialog of Save keeps its own
-    undo. */
+    undo. A dialog open on the page takes them from anything else, the
+    notice under it among them, which React Aria leaves reachable. */
 export function ownerOfKeys(target: EventTarget | null): KeysOwner {
   if (!(target instanceof Element)) return "project";
   if (
@@ -95,7 +96,9 @@ export function ownerOfKeys(target: EventTarget | null): KeysOwner {
   ) {
     return "text";
   }
-  if (isInDialog(target)) return "dialog";
+  if (isInDialog(target) || isDialogOnPage(target.ownerDocument)) {
+    return "dialog";
+  }
   return "project";
 }
 
