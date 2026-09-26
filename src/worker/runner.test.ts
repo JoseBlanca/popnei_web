@@ -1130,6 +1130,25 @@ describe("VS1 D3 the passes of the runner: the statistics of each individual", (
     expect(result.passStats).toEqual(COUNTS_AT_0_05);
   });
 
+  test("the statistics that the tests of core read from panel_individual_stats.json are those popnei gives the runner at 0.05", () => {
+    // The tests of core may not call popnei, and read its statistics from
+    // this file, which make_fixtures.mjs writes with popnei: this test
+    // fails when the release of popnei the runner uses gives others. The
+    // file holds a NaN as null, as JSON.stringify writes it.
+    const result = statsAt005();
+    const fixture: unknown = JSON.parse(
+      readFileSync(join(FIXTURES, "panel_individual_stats.json"), "utf8"),
+    );
+    expect(fixture).toEqual({
+      maxAllowedMissingRate: 0.05,
+      individuals: result.individuals,
+      missingGtRate: [...result.missingGtRate],
+      obsHetRate: [...result.obsHetRate].map((rate) =>
+        Number.isNaN(rate) ? null : rate,
+      ),
+    });
+  });
+
   test("a VCF of two individuals, the second missing at both variants, gives the rates 0 and 1 and the heterozygosities 0.5 and NaN", () => {
     const vcf =
       '##fileformat=VCFv4.2\n##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n' +
