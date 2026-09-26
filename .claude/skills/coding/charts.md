@@ -339,7 +339,15 @@ Text is measured and exported only after `document.fonts.ready`.
 
 `toPNG(scale)` draws the SVG of `toSVG` on a canvas:
 
+It rejects with a `PngError` of `src/charts/export.ts`, whose `kind`
+tells the screen which words to show: `tooLarge` when a side would pass
+4,096 pixels at that scale, checked before anything is drawn, and
+`notMade` when the browser gives no canvas or makes no PNG. The screen
+picks the scale: it asks for 3, and for 2 after a `tooLarge`
+(`docs/specs/charts/histogram.md`, decided on 26 September 2026).
+
 ```ts
+if (Math.max(width, height) * scale > 4096) throw new PngError("tooLarge");
 const svg = toSVG();
 const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
 try {
@@ -350,11 +358,11 @@ try {
   canvas.width = Math.round(width * scale);
   canvas.height = Math.round(height * scale);
   const context = canvas.getContext("2d");
-  if (context === null) throw new Error("The browser gave no canvas to draw the PNG on");
+  if (context === null) throw new PngError("notMade");
   context.drawImage(img, 0, 0, canvas.width, canvas.height);
   return await new Promise<Blob>((resolve, reject) =>
     canvas.toBlob(
-      (blob) => (blob ? resolve(blob) : reject(new Error("The PNG could not be made"))),
+      (blob) => (blob ? resolve(blob) : reject(new PngError("notMade"))),
       "image/png",
     ),
   );

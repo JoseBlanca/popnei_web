@@ -561,9 +561,8 @@ Written into those documents with the specs of stage 3, on 26 September
 - `.claude/skills/coding/charts.md`, "The SVG, its parts and their names":
   a plot with no pointer events has no `chart-overlay`.
 - `.claude/skills/coding/charts.md`, "PNG": `toPNG` rejects with a
-  `PngError` of kind `tooLarge` or `notMade`, above, where its example
-  throws a plain `Error`; not yet written there, and written with the
-  code of `export.ts`.
+  `PngError` of kind `tooLarge` or `notMade`, above; written there on 26
+  September 2026.
 
 ## Open points
 
