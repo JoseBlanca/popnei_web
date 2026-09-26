@@ -140,8 +140,8 @@ would see:
   data, a sort of a million points, a JSON of the project with its
   table, is measured or moved to a worker.
 - **Download size**, before anything runs and on first use: the wasm
-  package of popnei is 0.63 MB gzipped and the files wasm 0.58 MB
-  (`docs/technology.md`, section 2), and a new dependency is set beside
+  package of popnei is 0.71 MB gzipped, release `js-v0.1.0-dev.2`, and
+  the files wasm 0.58 MB (`docs/architecture.md`, section 11), and a new dependency is set beside
   those.
 - **The browsers.** The floor of the applications is Chrome 111,
   Firefox 115 and Safari 16.4, decided by the owner on 24 September 2026

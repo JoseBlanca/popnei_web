@@ -192,13 +192,14 @@ the options not taken and what each costs:
   worker, kept whole in the project, and hashed once, so that a key holds
   them through their hash (sections 2, 3, 6 and 8).
 
-Four points are settled with them, each with its reason where it is
+Three points are settled with them, each with its reason where it is
 written: the filters in a fixed order, individuals first and the LD
-pruning last (section 2); the statistics of each individual over the file
-as read, before any filter; the histograms of the variants after the
+pruning last (section 2); the histograms of the variants after the
 filters of individuals and before those of the variants (section 4); and
 the histograms of the individuals binned in core, which corrects
-`.claude/skills/coding/charts.md` (section 7).
+`.claude/skills/coding/charts.md` (section 7). Over which variants each
+individual's statistics are counted is left to the owner, with a
+recommendation (section 13, point 8).
 
 The six invariants of `.claude/skills/designing/SKILL.md` hold: every
 input of a result stays in its key, the list of the individuals kept
@@ -211,7 +212,8 @@ change are the client bound to a key, which gains the individuals kept;
 the function the store is given to read a result's pass, `countsOf`,
 which replaces `numVarsOf`; the store, which tracks a write; the
 `Project`, which gains the regions; the jobs, which carry the list of
-individuals in place of the filters of individuals; and the project file,
+individuals in place of the filters of individuals; the results, each of
+which carries the counts of its pass; and the project file,
 which goes to version 2 (section 12).
 
 The approved specs this changes, each revised with the specs of stage 3:
@@ -282,7 +284,8 @@ type SourceError =
 
 // The regions of a BED file, as the light worker read them, and their
 // hash, made once when the read is recorded (section 3). The filter of
-// the regions, { kind: "regions"; regions: string }, holds that hash.
+// the regions, { kind: "regions" }, holds nothing: keys.ts takes the
+// hash from here when the filter is on.
 interface RegionsSource {
   fileId: string;                     // the id of this load, new at every pick
   name: string;
@@ -431,8 +434,9 @@ every key are:
   the filters that the checks per variant and per individual of its
   section 3 serve to set, whose histograms would otherwise be removed at
   every move of a threshold (section 4, `filtersRead`). The filter of the
-  regions of a BED file holds the hash of its regions, so the regions are
-  in the key through it; and the list of the individuals that the filters
+  regions of a BED file enters the key with the hash of the regions, which
+  `keys.ts` takes from the project's regions when the filter is on, so
+  the hash is held in one place; and the list of the individuals that the filters
   of individuals keep is in no key, since it is made from the load, the
   version of popnei and those filters, which are (section 4);
 - the parts of the individuals table and of the grouping that the analysis
@@ -550,8 +554,8 @@ where the id of a load of an earlier session names nothing.
 
 What was revised on 26 September 2026, a draft for the owner's approval.
 One input joins the keys, and one is left out. The regions of a BED file
-enter through the
-hash their filter holds, and not as the regions themselves, which the
+enter through their hash, which the key takes from the project's regions
+while their filter is on, and not as the regions themselves, which the
 canonical form would write into the text of every key that reads the
 filters: for 200,000 regions, as many as an exome panel has, that text is
 5.8 MB, and it took 40 ms to write and 80 ms to hash, in node 26.8.2 on
@@ -640,7 +644,7 @@ section 4), and every analysis has to read the individuals they keep.
   (`docs/specs/core/store.md`), with the states, the progress, the stop and
   the undo of any analysis.
 - **The statistics of each individual are over the file as read**, before
-  any filter: `filtersRead` is `{ variants: false, individuals: false }`,
+  any filter, as recommended to the owner (section 13, point 8): `filtersRead` is `{ variants: false, individuals: false }`,
   so one pass per load gives them, and no threshold moved takes them off.
   Taken over the variants the filters keep, the two kinds of filter would
   depend on each other, since the missing rate of a variant is counted
@@ -680,14 +684,23 @@ section 4), and every analysis has to read the individuals they keep.
   `filterIndividuals`. The result of `individualChecks` is under a key
   that the current project gives, so the cache does not drop it while the
   load is current (`docs/specs/core/cache.md`).
-- **An analysis that reads the filters of individuals is locked** while
-  the project has a threshold on the individuals and `individualChecks`
-  has no result for the load, "The filters of the individuals by missing
-  genotypes and by heterozygosity are set from the statistics of each
-  individual: calculate them in the Variants step."; and when the filters
-  keep no individual, which popnei would refuse. The store gives both
-  reasons with those of `projectNeeds` (`docs/specs/core/project.md`),
-  since it is what makes the list.
+- **An analysis that reads the filters of individuals cannot start**
+  while the project has a threshold on the individuals and
+  `individualChecks` has no result for the load, "The filters of the
+  individuals by missing genotypes and by heterozygosity are set from the
+  statistics of each individual: calculate them in the Variants step.";
+  nor when the filters keep no individual, which popnei would refuse.
+  This lock stops the Run and nothing else. It depends on the cache and
+  not on the project alone, so the key of the analysis is made whatever
+  the lock, since it holds the thresholds and not the list (section 3),
+  and a result in the cache under that key is shown: after an undo to an
+  earlier load whose statistics the cache has dropped, a diversity still
+  in the cache is `done`, as section 3 asks, and only a new Run waits for
+  the statistics. The store works these locks out again when the cache
+  changes, a result of `individualChecks` put in or dropped, and not only
+  when the project changes, as it does the other reasons
+  (`docs/specs/core/store.md`); otherwise the analyses would stay locked
+  after the statistics arrive, until the next command.
 - **A population that loses all its individuals to the filters** is left
   out of the job, since popnei refuses an empty population, and the
   diversity names it before the run, in its ready state, and after it, in
@@ -709,15 +722,23 @@ those counts beside each filter, in the order of section 2.
 - **The counts are the result of an analysis of their own,
   `filterCounts`**, whose key holds every filter, of the variants and of
   the individuals, and nothing else. The Count button of the step runs its
-  pass. Which of popnei's functions that pass calls is the runner's spec's
-  and a measurement's: `calcPerIndividualStats` copies two numbers per
-  individual out of wasm, and `iterBlocks` every block of genotypes
-  (section 11).
+  pass, with `iterBlocks`, whose `passStats` give the counts when the
+  filters keep no variant too, which is when the user most needs to see
+  which filter dropped them all. `calcPerIndividualStats`, which copies
+  less out of wasm, two numbers per individual where `iterBlocks` copies
+  every block of genotypes, throws "the pass gave no variant" then, as
+  every calculation of popnei does, seen by the architecture review on
+  popnei's release `js-v0.1.0-dev.2`. If the pass of `iterBlocks` takes
+  much longer than a pass of the diversity (section 11), popnei is asked
+  for a function that only counts.
 - **Every pass over the project's filters as they are fills them too.**
   When a result arrives whose pass had the filters of its request's
   project, the store puts its counts into the cache under the key of
   `filterCounts` for that project. The function the store is given for it,
-  `countsOf` of `src/core/apps.ts`, replaces `numVarsOf`: it gives, of any
+  `countsOf` of `src/core/apps.ts`, replaces `numVarsOf`, and so every
+  result of the protocol carries the counts of its pass, popnei's
+  `passStats.filtering`, where `DiversityResult` carries only `numVars`
+  and `numVarsRead` (`docs/specs/worker/protocol.md`). It gives, of any
   result, the number of variants of the file, the variants its first
   filter was given, and the counts of its filters only when its pass had
   the filters of its project. So the diversity, or a file written, fills
@@ -849,9 +870,9 @@ The page and each worker talk through typed messages
   closed, which would leave the new file unusable meanwhile, minutes for
   a GWAS, and hold the memory of both files.
 - **Writing the filtered variants is a request of the calculation worker,
-  and not an analysis.** Its answer is the bytes of the file, as large as
-  the variants kept, which the page saves as a download (section 6), and
-  which never go into the cache: one file can be larger than its bound of
+  and not an analysis.** Its answer is the file, a `Blob` as large as the
+  variants kept, which the user saves from the step (section 6), and
+  which never goes into the cache: one file can be larger than its bound of
   256 MB, and it is on the user's disk once saved. The store tracks a write
   as it tracks a calculation, under a key of the load, the filters and the
   format, so it has a progress and a Stop, a cancel restarts the worker, a
@@ -1102,8 +1123,9 @@ has none in `js-v0.1.0-dev.2`.
   there.
 - **The regions go into the project whole**, with their hash, made once
   when the read is recorded (section 3). The filter of the regions,
-  switched on in the step, holds that hash, and a new BED file loaded
-  replaces the hash of the filter with its own.
+  switched on in the step, holds no hash of its own, so a new BED file
+  loaded changes the key of every analysis that reads the filters, and
+  nothing has to check that a filter and its regions agree.
 - **The job carries the regions** as arrays, and the runner gives them to
   popnei's filter, in its place among the steps (section 2).
 - **What the application needs of popnei's filter**, whose interface is
@@ -1116,8 +1138,17 @@ has none in `js-v0.1.0-dev.2`.
   error, since a BED of the whole genome names chromosomes a panel may
   lack; that refuses an empty list, and a region whose start is not below
   its end, naming it; and that counts its variants in the counts of the
-  pass under a kind of its own, `"regions"`. The same filter in popnei's
-  Python, given the same arrays, is what the Python script calls, having
+  pass under a kind of its own, `"regions"`.
+- **Regions named otherwise than the chromosomes of the file**, `chr1` in
+  the BED file and `1` in the VCF, keep nothing, and popnei says no more
+  than that the pass gave no variant. So the step warns when none of the
+  chromosomes of the regions is among those of the variants file, which
+  the density of variants along each chromosome gives once popnei has it;
+  before that is known, a filter of the regions whose counts show it kept
+  no variant says that the names of the chromosomes may differ, with the
+  first name of each file.
+- **The same filter in popnei's
+  Python**, given the same arrays, is what the Python script calls, having
   read the BED file with pandas as it reads the individuals file (section
   8).
 
@@ -1180,13 +1211,26 @@ them. It is not part of popnei and nothing of popnei is in it.
   of the calculation worker (section 5) that calls popnei's `writeVars` of
   `js/popnei/src/io_vars.ts`. It builds the whole file in the memory of
   wasm and copies it out, piece by piece, into one array of the heap of
-  JavaScript, with the counts of its pass. The worker transfers the array
-  to the page, with no copy, and the page makes a `Blob` of it and offers
-  it as a download, through a link whose `download` attribute names the
-  file, which every browser of the floor has.
-- **What a file of F bytes holds in the tab**, at its peak: F in the memory
-  of wasm, which never shrinks; F in the array; and F more if the engine
-  copies the array into the `Blob`, which has not been measured: up to 3F.
+  JavaScript, with the counts of its pass. The worker makes a `Blob` of
+  the array, so that a copy of up to a gigabyte, if the engine makes one,
+  is made off the page and never freezes it, drops the array, and posts
+  the `Blob`, which crosses to the page as a handle, with no copy.
+- **The user saves the file with a Save button** that the step shows when
+  the write ends, "Save panel.filtered.nei, 18.4 MB", and that starts the
+  download through a link whose `download` attribute names the file,
+  which every browser of the floor has. A download started by the code
+  minutes after the click that asked for the write, with no click of its
+  own, may be blocked by the browser or asked about, as Chrome does for a
+  page that starts several downloads. The page releases the `Blob`, and
+  the address the link read it from, once it is saved, and when a change
+  of the filters, a new write or a new load makes it another file than
+  the step shows.
+- **What a file of F bytes holds in the tab**, at its peak, all of it in
+  the calculation worker: F in the memory of wasm, which never shrinks; F
+  in the array; and F more if the engine copies the array into the
+  `Blob`, which has not been measured: up to 3F. Once the array is
+  dropped, the tab holds the `Blob` until it is released, and the memory
+  wasm grew to.
   popnei's `writeVars` wrote 20,000 variants of 1,000 individuals in 19.2
   MB (`docs/specs/worker/runner.md`), 0.96 bytes per genotype; at that
   rate a million variants of 1,000 individuals make a file of about 960
@@ -1212,9 +1256,8 @@ meanwhile. This revision writes it
 as popnei gives it now, whole, with the warning, and asks popnei for a
 writer by pieces, of the `.nei` file and of the VCF, which gives the file
 one batch at a time, a request the owner has not yet made. With it, the
-worker posts each piece as it comes, the page makes one `Blob` of the
-pieces, and the memory of wasm holds one batch: the peak falls from up to
-3F to about F, in the page.
+worker keeps the pieces as they come and makes one `Blob` of them at the
+end, and the memory of wasm holds one batch: the peak falls from up to 3F to about F.
 Considered and not taken, with the browsers from MDN's compatibility
 data, version 8.1.3, read on 26 September 2026:
 
@@ -1577,8 +1620,9 @@ code, the release `js-v0.1.0-dev.2`.
   changes (section 5); whether it is also restarted between requests is
   open point 2.
 - **The downloads**: the wasm package of popnei, 0.71 MB gzipped
-  (710.6 KB, release js-v0.1.0-dev.2, as Vite measures it), before
-  anything runs, loaded by the calculation worker alone; the files wasm,
+  (710.6 KB, release js-v0.1.0-dev.2, as Vite measures it), measured again
+  at the release that adds the writer of the VCF and the filter of the
+  regions, before anything runs, loaded by the calculation worker alone; the files wasm,
   0.58 MB gzipped, by the light worker the first time an xlsx is read or a
   report is written (`docs/technology.md`, section 2).
 - **Picking a file again calculates everything again.** Each load of the
@@ -1605,8 +1649,14 @@ code, the release `js-v0.1.0-dev.2`.
   MB of `docs/specs/worker/runner.md` and on one ten times larger: the
   memory of the tab during and after a write, whether each engine copies
   the array into the `Blob`, and the time of the write. They set
-  `WRITE_WARN_BYTES`, and the size above which the worker is started again
-  after a write (section 13, point 5).
+  `WRITE_WARN_BYTES`, and, if the owner starts the worker again after a
+  large write, the size above which it is done (section 13, point 5).
+- **The table of each individual's statistics** has three columns and a
+  row per individual, 30,000 cells at 10,000 individuals, and a change of
+  a threshold changes which rows are marked kept. Measured with the table,
+  in the three engines, at 10,000 individuals: the time the page is
+  frozen after a change of a threshold. If it is longer than a keystroke
+  can wait, about 100 ms, the table draws only the rows on the screen.
 - **A threshold on the individuals costs one pass per load**, the pass of
   their statistics, before the first analysis that reads it. Their result
   is in the cache of the page, 16 bytes per individual, so a restart of
@@ -1662,9 +1712,11 @@ user nothing but the results of a tab left open across the deploy.
    to give back the memory of wasm, which never shrinks, and which the
    bound of its cache, counted in the bytes of its typed arrays, does not
    see. Its restart when the load id of the variant file changes is
-   settled (section 5). The recommendation is to restart it between two
-   requests only if the walking skeleton shows a tab running out of
-   memory.
+   settled (section 5). Settled by the owner on 26 September 2026: not
+   restarted between requests, since the walking skeleton measured the
+   memory of wasm at 35.5 MB after one diversity and after the next; it is
+   decided again with the kinship, whose matrix is 800 MB at 10,000
+   individuals (`docs/plans/walking-skeleton.report.md`).
 
 Opened by the revision of 26 September 2026, each with a recommendation
 for the owner:
@@ -1682,11 +1734,15 @@ for the owner:
    too, at any threshold below 1, since its proportion is 1.
 5. **The calculation worker started again after a large write**, to give
    the tab back the memory of wasm the file took, which stays with it
-   otherwise until the next load of the variants file. What it costs: the
-   intermediate results the worker held, the pruned variants and the
-   kinship, and the reading of the header of the file. The recommendation
-   is to start it again after a file larger than a bound set by the
-   measurement of section 11, and not after every write.
+   otherwise until the next load of the variants file. It reopens the
+   owner's decision of 26 September 2026 not to start the worker again
+   between two requests (point 2), made when the memory of wasm did not
+   grow from one diversity to the next; a write grows it by the size of
+   the file. What it costs: the intermediate results the worker held, the
+   pruned variants and the kinship, and the reading of the header of the
+   file, at most 49 ms on the walking skeleton's measurement. The
+   recommendation is to start it again after a file larger than a bound
+   set by the measurement of section 11, and not after every write.
 6. **A write that ends after a change of its filters**, before the store
    stopped it. The recommendation is to drop it, as section 5 has it, so
    that no file is saved with other variants than the step shows; the
@@ -1698,3 +1754,12 @@ for the owner:
    already reads the individuals file with; either is a second reader
    beside the application's, and the rules of section 6 are few enough,
    three columns and three kinds of header line, to be written in both.
+8. **Over which variants each individual's statistics are counted.** The
+   recommendation is every variant of the file, before the filters of
+   the variants, so that one pass per load gives them and the filters of
+   individuals and of variants do not depend on each other (section 4).
+   What it costs: in a panel with many bad variants, every individual
+   shows more missing genotypes than it has among the variants analysed.
+   The other option, over the variants the filters keep, shows the
+   numbers of those variants, and costs a pass at every change of a
+   filter of the variants before the individuals can be found again.
