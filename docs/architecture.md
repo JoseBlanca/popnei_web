@@ -226,6 +226,13 @@ before the choices, and one measurement, of the hash of the regions,
 closed an option (section 3). What is asked of popnei is in section 6,
 and the owner's answers to the open points are in section 13.
 
+Revised again on 26 September 2026, after the review of the code of stage
+3: the runner test that the list core makes gives popnei's numbers is
+three tests, one of core over a fixture of popnei's statistics, one of
+the runner that the fixture is popnei's, and the runner's tests with the
+lists of 125 and 119, since a test of the worker imports no function of
+core (section 4, "What would show these choices wrong").
+
 ## 2. The project
 
 The project is everything the user has set, and nothing that was
@@ -821,11 +828,28 @@ not taken:
 
 What would show these choices wrong: a runner test in node, on
 `panel.nei`, that the counts filled from a diversity are those of a Count
-pass with the same filters, and that the list core makes from popnei's
-statistics gives the numbers of `filterIndividuals` with the same names;
-and, on the screens of stage 3, users who wait often for the statistics
+pass with the same filters; three tests in node, which together tie the
+list core makes to popnei's numbers; and, on the screens of stage 3, users who wait often for the statistics
 after moving a threshold of the variants, which would argue for counting
 them over every variant of the file.
+
+The three tests of the list are split between core and the runner,
+since a test of the worker imports no function of core, and a test of
+core does not call popnei:
+
+- **A test of core**, that the list `individualsKept` makes from popnei's
+  statistics of each individual of `panel.nei` with the missing data
+  filter at 0.05 holds the 125, 48 and 119 individuals of
+  `docs/specs/core/individualsKept.md`. It reads those statistics from
+  `e2e/fixtures/panel_individual_stats.json`, which
+  `e2e/fixtures/make_fixtures.mjs` writes with popnei.
+- **A runner test**, that the fixture holds the statistics the runner
+  gets from popnei's release at 0.05, exactly, so that a release that
+  gives others fails there and the fixture is written again.
+- **The runner's tests with the lists of 125 and of 119**, each made in
+  the test from the runner's own statistics as core makes it, that the
+  diversity of popnei over the individuals of the list gives the numbers
+  of `docs/specs/analyses/diversity.md`, "How it is verified".
 
 ## 5. The workers and their messages
 
