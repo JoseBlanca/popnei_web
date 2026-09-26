@@ -825,7 +825,7 @@ and the application checked whole.
 
 **Tasks:**
 
-- [ ] 10.1 The measurements. Serves 1.
+- [x] 10.1 The measurements. Serves 1.
 - [ ] 10.2 The final checks and the map of the cases. Serves 2 and 3.
   Needs 10.1.
 
