@@ -954,21 +954,19 @@ that `writeVars` makes of it in batches of 1,000.
 
 ### What a write holds
 
-A write of a file of F bytes holds in the worker, at its peak, F in the
+A write of a file of F bytes holds at its peak, measured on 27 September
+2026 in Chromium 153 and WebKit 26.6, about 4F more than the tab held
+before in Chromium and up to 6.1F in WebKit: in Chromium about 2.4F in the
 memory of wasm, where popnei builds the whole file, F in the array
-popnei copies it into, and F more if the engine copies the array into
-the `Blob`, up to 3F; once the array is dropped, the `Blob` and the room
-wasm grew to, which never shrinks (`docs/architecture.md`, section 6,
-"The files written"). None of it has been measured: the first work
-package of stage 3 that writes a file measures, in Chromium, Firefox and
-WebKit, the memory of the tab during and after a write of the `.nei`
-file above and of one ten times larger, whether each engine copies the
-array into the `Blob`, and the time of the write (section 11 of the
-architecture). Those measurements set the bound above which the step
-warns, and the one above which the client starts the worker again. With
-popnei's writer by pieces, asked of popnei on 26 September 2026, the
-runner keeps the pieces as they come and makes one `Blob` of them at the
-end, and the peak falls to about F; stage 3 does not wait for it.
+popnei copies it into, and F in the browser's own process, where the
+engine copies the array into the `Blob`; once the array is dropped, the
+`Blob` and the room wasm grew to, which never shrinks, stay
+(`docs/architecture.md`, sections 6 and 11;
+`docs/specs/analyses/writeVariants.md`, "What was measured"). The
+largest file both engines wrote was 1,982,018,522 bytes. With popnei's
+writer by pieces, asked of popnei on 26 September 2026, the runner keeps
+the pieces as they come and makes one `Blob` of them at the end, and the
+peak loses what wasm holds of the file; stage 3 does not wait for it.
 
 ## How it is verified
 

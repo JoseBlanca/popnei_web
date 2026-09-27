@@ -8,7 +8,8 @@ filtered variants as a `.nei` file, its cancel, and the restart of the
 calculation worker after a large file written. The revision is approved by the owner on 26 September 2026. Revised again on 26 September
 2026, after the review of the code of stage 3: a write that ends
 `reopenFailed` does not start the worker again, as the table of the
-failures already had it. The worker client is the page's one door to the two workers, the threads of the tab
+failures already had it. Revised on 27 September 2026:
+`WRITE_RESTART_BYTES` is 25 MB, set by the measurement of the write. The worker client is the page's one door to the two workers, the threads of the tab
 beside the page where the files are read and the calculations run
 (`docs/architecture.md`, section 1): it starts them, keeps the `File` of
 every file the user picked, sends each worker one request at a time and
@@ -315,13 +316,16 @@ again for another reason.
 
 A file of `WRITE_RESTART_BYTES` or less leaves the worker as it is, with
 no cost to the next request. `WRITE_RESTART_BYTES` is a constant of
-`client.ts`, set from the measurement of section 11 of the architecture
-in the first work package of stage 3 that writes a file; meanwhile 100
-MB, 100,000,000 bytes, the value `docs/specs/analyses/writeVariants.md`
-gives, about five times the `.nei` file of 19,161,178 bytes, the one
-written file whose size is known, and so about five times the memory
-of wasm such a write adds. What a restart costs in stage
-3 is the reading of the header of the file, at most 49 ms (above); from
+`client.ts`, 25 MB, 25,000,000 bytes, set by the measurement of 27
+September 2026 (`docs/specs/analyses/writeVariants.md`, "What was
+measured"): a write of the `.nei` file of 19,161,178 bytes, which does
+not start the worker again, left the tab 88 MB larger in Chromium 153
+and 80 MB in WebKit 26.6, about 4.5 times the file, so a file of 25 MB
+leaves at most about 115 MB until the next load, and a larger one
+restarts the worker. The value before the measurement was 100 MB, which
+assumed that a write left the size of its file in the memory of wasm.
+What a restart costs in stage 3 is the reading of the header of the
+file, at most 49 ms (above); from
 stage 4 it costs also the intermediate results the worker holds, the
 pruned variants and the kinship, which is when the value matters.
 
@@ -444,9 +448,9 @@ export interface Client {
 }
 
 /** Above it, the calculation worker is started again after a write
-    (A write, and the restart after a large one, above); set by the
-    measurement of stage 3, meanwhile 100 MB. */
-export const WRITE_RESTART_BYTES = 100_000_000;
+    (A write, and the restart after a large one, above); 25 MB, set by
+    the measurement of stage 3. */
+export const WRITE_RESTART_BYTES = 25_000_000;
 
 /** A read under way: its answer, and how to stop it (Cancelling, above). */
 export interface Read<A> {
@@ -725,8 +729,8 @@ cannot be opened again, was decided by the owner on 25 September 2026: a
 kind of its own, `reopenFailed`, as written above (point B of
 `docs/specs/stage-2-open-points.md`). The restart after a large write
 was decided by the owner on 26 September 2026 (`docs/architecture.md`,
-section 13, point 5); its bound, `WRITE_RESTART_BYTES`, is set by a
-measurement and has its meanwhile above.
+section 13, point 5); its bound, `WRITE_RESTART_BYTES`, was set by the
+measurement of 27 September 2026, above.
 
 ## Not in this spec
 

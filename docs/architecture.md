@@ -1299,21 +1299,25 @@ them. It is not part of popnei and nothing of popnei is in it.
   the address the link read it from, once it is saved, and when a change
   of the filters, a new write or a new load makes it another file than
   the step shows.
-- **What a file of F bytes holds in the tab**, at its peak, all of it in
-  the calculation worker: F in the memory of wasm, which never shrinks; F
-  in the array; and F more if the engine copies the array into the
-  `Blob`, which has not been measured: up to 3F. Once the array is
-  dropped, the tab holds the `Blob` until it is released, and the memory
-  wasm grew to.
-  popnei's `writeVars` wrote 20,000 variants of 1,000 individuals in 19.2
-  MB (`docs/specs/worker/runner.md`), 0.96 bytes per genotype; at that
-  rate a million variants of 1,000 individuals make a file of about 960
-  MB, and up to 2.9 GB at the peak, which may be more than the browser
-  lets a tab hold; and a file near 4 GB cannot be written at all, since
-  wasm addresses no more. So the step says the size it expects, from the
-  variants and the individuals the filters keep, before the user writes,
-  and warns above a size, a constant of the code, `WRITE_WARN_BYTES`, set
-  from the measurement of section 11; which is why, too, the report leaves the filtered variants
+- **What a file of F bytes holds in the tab**, at its peak, measured on
+  27 September 2026 in Chromium 153 and WebKit 26.6 on the owner's Mac
+  (`docs/specs/analyses/writeVariants.md`, "What was measured"): about 4F
+  above what the tab held before in Chromium and up to 6.1F in WebKit.
+  In Chromium, where the parts can be told apart, that is about 2.4F in
+  the memory of wasm, which never shrinks, F in the array, and F in the
+  browser's own process, where the engine copies the array into the
+  `Blob`. Once the array is dropped, the tab holds the `Blob` until it
+  is released, and the memory wasm grew to.
+  popnei's `writeVars` writes 0.96 to 1.10 bytes per genotype, by how well
+  its compression takes the genotypes: at 1.10, a million variants of
+  1,000 individuals make a file of 1.1 GB, which needs about 4.5 GB more
+  at the peak in Chromium and 6.7 GB in WebKit. The largest file written
+  in both engines was 1.98 GB; one of about 2.2 GB failed in both, and in
+  WebKit its write closed the tab. So the step says the size it expects,
+  from the variants and the individuals the filters keep, before the user
+  writes, warns from a size, a constant of the code, `WRITE_WARN_BYTES`,
+  500 MB, and refuses from another, `WRITE_MAX_BYTES`, 1.8 GB, both set
+  from that measurement; which is why, too, the report leaves the filtered variants
   out by default (`docs/functionality.md`, section 9). Reading the
   variants file by ranges does not change this.
 - **The VCF**, once popnei has a writer of it, is written the same way. It
@@ -1334,7 +1338,7 @@ the owner's standing preference for what popnei writes; stage 3 does not
 wait for it, and writes the file whole with the warning until popnei has
 it. With it, the
 worker keeps the pieces as they come and makes one `Blob` of them at the
-end, and the memory of wasm holds one batch: the peak falls from up to 3F to about F.
+end, and the memory of wasm holds one batch: the peak loses the about 2.4F that wasm held of the file.
 Considered and not taken, with the browsers from MDN's compatibility
 data, version 8.1.3, read on 26 September 2026:
 
@@ -1725,20 +1729,22 @@ code, the release `js-v0.1.0-dev.2`.
   on the walking skeleton. The report draws every plot on the page, one
   after another, and gives the page back between two plots.
 
-- **Writing a file of the filtered variants** holds up to three times the
-  file in the tab at its peak, about 2.9 GB for a `.nei` file of a million
-  variants of 1,000 individuals, and cannot write a file near 4 GB
-  (section 6). A tab that the browser closes for its memory loses the
-  user's work since the last save of the project. Nothing of a write has
-  been measured: the 3F is a sum of what popnei's code and the browser
-  hold, and the 19.2 MB of the file of 20,000 variants is the one number
-  seen. To be measured in the first work package of stage 3 that writes a
-  file, in Chromium, Firefox and WebKit, on that `.nei` file and on one
-  ten times larger: the memory of the tab during and after a write,
-  whether each engine copies the array into the `Blob`, and the time of
-  the write. They set
-  `WRITE_WARN_BYTES`, and the size of a written file above which the
-  worker is started again (section 13, point 5).
+- **Writing a file of the filtered variants** holds at its peak about 4
+  times the file more than the tab held before in Chromium 153, and up
+  to 6.1 times in WebKit 26.6: 8.3 GB and 11.5 GB for the largest file written,
+  1,982,018,522 bytes, 1,800,000 variants of 1,000 individuals. A file of
+  about 2.2 GB could not be written in either, and in WebKit its write
+  closed the tab, which loses the user's work since the last save of the
+  project (section 6). The write of the `.nei` file of 19,161,178 bytes
+  takes 144 ms in Chromium and 149 ms in WebKit, and that of a file ten
+  times larger, 220,236,506 bytes, from a gzipped VCF of 127.6 MB, 3.7 s
+  in both. Measured on 27 September 2026 on the owner's Mac, an Apple M5
+  Pro with 64 GB and macOS 27.0 (`docs/specs/analyses/writeVariants.md`,
+  "What was measured"); Firefox, which Playwright cannot launch there, is
+  measured by the owner by hand. They set `WRITE_WARN_BYTES`, 500 MB,
+  `WRITE_MAX_BYTES`, 1.8 GB, `BYTES_PER_GENOTYPE`, 1, and the size of a
+  written file above which the worker is started again,
+  `WRITE_RESTART_BYTES`, 25 MB (section 13, point 5).
 - **The table of each individual's statistics** has three columns and a
   row per individual, 30,000 cells at 10,000 individuals, and a change of
   a threshold changes which rows are marked kept. Measured with the table,

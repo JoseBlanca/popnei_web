@@ -11,7 +11,11 @@ and warns of, and the words. It develops section 3 of
 written", with points 5 and 6 of its section 13. Revised on 26
 September 2026, after the review of the code of stage 3: the warning
 comes at `WRITE_WARN_BYTES` as well as above it, as the interface below
-has it; and `sizeText` writes one byte as "1 byte".
+has it; and `sizeText` writes one byte as "1 byte". Revised on 27
+September 2026 with the measurement of the write: the peak is about 4F
+to 6.1F and not 3F, the largest file written is 1.98 GB and not 4 GB,
+and the constants and the words of the warning and of a file too large
+follow from it.
 
 **It is not an analysis** in the sense of section 4 of the architecture,
 and it is under `docs/specs/analyses/` only because the architecture names
@@ -148,42 +152,67 @@ size is `numBytes` as `sizeText` writes it, below: "251 KB", "19.2 MB",
 
 ### The size, before the write
 
-The tab holds, at the peak of a write of F bytes, F in the memory of
-wasm, F in the array, and F more if the engine copies the array into the
-`Blob`: up to 3F (`docs/architecture.md`, section 6). A file near 4 GB
-cannot be written at all, since wasm addresses no more. So the step says
-the size it expects before the user writes:
+The tab holds, at the peak of a write of F bytes, 4.1F to 4.4F above
+what it held before in Chromium and 4.8F to 6.1F in WebKit (measured,
+below, and in the doubled files of `VS5 D5`); the warning below says
+"about six times". In
+Chromium, where the parts can be told apart, that is about 2.4F in the
+memory of wasm, where popnei builds the file, which is what the page's
+process held beyond the array, F in the array, and F in the browser's
+own process, where the engine copies the array into the `Blob`. A file
+of about 2.2 GB, 2,000,000 variants of 1,000 individuals, could not be
+written in either engine, and in WebKit its write closed the tab. So the step says the size
+it expects before the user writes:
 
 - **The estimate** is the variants kept times the individuals kept, at
-  one byte per genotype, `BYTES_PER_GENOTYPE`: popnei's `writeVars` wrote
-  20,000 variants of 1,000 individuals in 19,161,178 bytes, 0.96 bytes
-  per genotype (`docs/specs/worker/runner.md`), and the 1,152 variants of
-  the 200 individuals of `panel.nei` in 250,994 bytes, 1.09, since a
+  one byte per genotype, `BYTES_PER_GENOTYPE`. The bytes of the file per
+  genotype depend on how well popnei's compression takes the genotypes:
+  0.96 for the 20,000 variants of 1,000 individuals of the `.nei` file of
+  19,161,178 bytes (`docs/specs/worker/runner.md`), 1.09 for the 1,152
+  variants of the 200 individuals of `panel.nei`, 250,994 bytes, since a
   small file has more of its head (node, 26 September 2026,
-  `js-v0.1.0-dev.2`). The variants kept are the counts of
+  `js-v0.1.0-dev.2`), and 1.10 for the VCFs of `e2e/bigVcf.ts`, whose
+  genotypes are drawn at random, from 200,000 to 1,800,000 variants of
+  1,000 individuals (the measurement below). One byte is within 10% of
+  each, and `WRITE_MAX_BYTES` takes the 10% into account. The variants
+  kept are the counts of
   `filterCounts` for the current filters, when the cache has them, and
   otherwise the variants of the file, when a pass has counted them; the
   individuals kept are those of `individualsKept` of
   `docs/specs/core/individualsKept.md`, and those the lists keep,
   `byLists`, while a threshold waits for its statistics. An estimate
   from a bound says "at most about".
-- **The warning** comes at or above `WRITE_WARN_BYTES`, a constant of the code
-  set by the measurement below; meanwhile 500 MB, whose peak is up to 1.5
-  GB. Its words are below.
+- **The warning** comes at or above `WRITE_WARN_BYTES`, 500 MB, a constant
+  of the code: a file of 500 MB to 550 MB, at 1 to 1.1 bytes per
+  genotype, needs at its peak up to about 2.4 GB more in Chromium and
+  3.4 GB more in WebKit, a large share of a computer of 8 GB. Its words are
+  below. No computer of 8 GB was measured; the value is a judgment on
+  the peak, and nothing was seen to fail at it.
 - **At an estimate of `WRITE_MAX_BYTES` or more from the counts
   themselves**, not from a bound, the button is disabled with its reason
-  as text beside it, since the write would fail. Meanwhile 4 GB, the
-  most wasm addresses; a tab that holds up to 3F at the peak may fail
-  well below it, so the measurement below finds the largest file each
-  engine writes, and `WRITE_MAX_BYTES` is set to the smallest of the
-  three, with the words of its row below.
+  as text beside it, since the write would fail. `WRITE_MAX_BYTES` is
+  1.8 GB, 1,800,000,000 bytes: at 1.10 bytes per genotype an estimate
+  under it is a file under 1.98 GB, and the largest file written in both
+  Chromium and WebKit was 1,982,018,522 bytes, 1,800,000 variants of 1,000
+  individuals, while one of 2,000,000 variants, about 2.2 GB, failed in
+  both. The 4 GB its words name are the most memory wasm addresses, 4
+  GiB, in which popnei builds the file; the failure between 1.98 GB and
+  2.2 GB fits a file that needs more than twice its size there. Its words
+  are below.
 
 Once the write has ended, the calculation worker is started again when
 the file is larger than `WRITE_RESTART_BYTES`, a constant of
 `src/worker/client.ts` (`docs/specs/worker/client.md`), to give the tab back the
 memory of wasm the file took, which would otherwise stay until the next
 load, as the owner decided on 26 September 2026 (`docs/architecture.md`,
-section 13, point 5). Meanwhile 100 MB. The restart costs the
+section 13, point 5). `WRITE_RESTART_BYTES` is 25 MB: a write of the
+`.nei` file of 19,161,178 bytes, which does not restart the worker, left
+the tab 88 MB larger than before in Chromium and 80 MB in WebKit, about
+4.5 times the file, so a file of 25 MB leaves at most about 115 MB, and
+a larger one is given back. 25 MB keeps what a write leaves near the 100
+MB that the value before the measurement, 100 MB of file, was meant to
+leave when a write was thought to leave its size, at the cost of a
+restart after any file above it, 49 ms in stage 3. The restart costs the
 intermediate results the worker held and the reading of the file's
 header, at most 49 ms from the start of a new worker to the file opened,
 measured at the end of the walking skeleton on the `.nei` file of
@@ -193,14 +222,36 @@ started again, too, after a write that popnei refused, whatever the
 size of the file, since a refusal for memory leaves the memory of wasm
 grown by the part of the file it had built (`docs/specs/worker/client.md`).
 
-**To be measured**, in the first work package that writes a file, in
-Chromium, Firefox and WebKit, on the `.nei` file of 19,161,178 bytes and
-on one ten times larger (`docs/architecture.md`, section 11): the memory
-of the tab during and after a write, whether each engine copies the array
-into the `Blob`, the time of the write, and the largest file each engine
-writes before the write fails, tried by doubling the variants from the
-file ten times larger. They set `WRITE_WARN_BYTES`, `WRITE_RESTART_BYTES`,
-`WRITE_MAX_BYTES` and `BYTES_PER_GENOTYPE`.
+### What was measured
+
+On 27 September 2026, by `VS5 D5` of `e2e/measure.spec.ts`, on the built
+site, in Chromium 153.0.8010.12 (Playwright's headless shell) and WebKit
+26.6, with Playwright 1.63.0, on the owner's Mac, an Apple M5 Pro with 64
+GB of memory and macOS 27.0. The memory is the footprint that macOS
+gives each process of the engine, its memory in RAM or compressed,
+summed over all of them, since the `Blob` is kept in another process
+than the page's; each write is on a new page, with the filters of a new
+project, and the file is saved and read back whole with pyarrow. Firefox
+cannot be launched by Playwright on that Mac and was not measured.
+
+| | Chromium | WebKit |
+|---|---|---|
+| the `.nei` file of 19,161,178 bytes written from itself: the write, median of 5 | 144 ms | 149 ms |
+| its peak, above the tab before the write | 109 MB | 134 MB |
+| left in the tab 3 s after, the worker not started again | 107 MB | 0 MB (−37 MB) |
+| the file of 200,000 variants, 220,236,506 bytes, from its gzipped VCF of 127.6 MB: the write, median of 5 | 3.73 s | 3.70 s |
+| its peak, above the tab before the write | 966 MB, 4.4F | 1,059 MB, 4.8F |
+| the `Blob` made of the array | 13 ms, a copy into the browser's own process, which grew by 220 MB | 12 ms; in some writes WebKit's network process grew by the size of the file within 1.5 s, in others no process did |
+| left in the tab 3 s after, the worker started again | 246 MB, the `Blob` in the browser's process | 45 MB |
+| the largest file written, 1,800,000 variants | 1,982,018,522 bytes in 33.8 s, peak 8.28 GB | 1,982,018,522 bytes in 33.5 s, peak 11.46 GB |
+| 2,000,000 variants, a file of about 2.2 GB | the worker stopped with no answer, the words of `workerFailed`; the same when tried again | the tab closed |
+
+The rows of 19,161,178 bytes in WebKit are the engine's processes
+summed, among which its GPU process fell by about 110 MB during the
+write; its page's process, where the worker runs, was 80 MB larger 3 s
+after. Every file saved was whole: its size was the size of the `Blob`,
+and pyarrow read every batch, with the variants and the 1,000
+individuals it was written with.
 
 ### The functions of core
 
@@ -221,9 +272,8 @@ export function writtenName(p: Project): string;
 
 // src/core/writeEstimate.ts
 export const BYTES_PER_GENOTYPE = 1;
-export const WRITE_WARN_BYTES = 500_000_000;  // meanwhile; set by the measurement above
-export const WRITE_MAX_BYTES = 4_000_000_000; // meanwhile, under the 4 GiB, 4,294,967,296 bytes, wasm
-                                              // addresses, which hold the variants read too; set by the measurement above
+export const WRITE_WARN_BYTES = 500_000_000;  // a peak of about 2 GB more in Chromium, 3 GB in WebKit
+export const WRITE_MAX_BYTES = 1_800_000_000; // a file under 1.98 GB, the largest both engines wrote
 
 export interface WriteEstimate {
   readonly numVars: number;         // the variants the file would hold, or their bound
@@ -340,8 +390,8 @@ variants of 1,000 individuals at one byte per genotype.
 
 | when | the text |
 |---|---|
-| at or above `WRITE_WARN_BYTES` | "Warning: a file of about 1.0 GB may need up to three times that in the memory of this tab while it is written, and a browser may close a tab that asks for too much, losing the work since the project was last saved. Save the project first. To write a smaller file, remove variants or individuals with the filters; to write any size, use popnei in Python." |
-| an estimate of `WRITE_MAX_BYTES` or more | "A file of about 4.3 GB cannot be written in a browser tab, which gives popnei at most 4 GB. Remove variants or individuals with the filters, or write the file with popnei in Python." |
+| at or above `WRITE_WARN_BYTES` | "Warning: a file of about 1.0 GB may need about six times that in the memory of this tab while it is written, and a browser may close a tab that asks for too much, losing the work since the project was last saved. Save the project first. To write a smaller file, remove variants or individuals with the filters; to write any size, use popnei in Python." |
+| an estimate of `WRITE_MAX_BYTES` or more | "A file of about 2.0 GB cannot be written in a browser tab: popnei needs more than twice the file in its memory while it writes it, and a tab gives popnei at most 4 GB. Remove variants or individuals with the filters, or write the file with popnei in Python." |
 | no counts and no number of variants | "The size of the file is known once the variants are counted: Count, above." |
 | the filters keep no variant, `noVariant` | "The filters kept none of the variants of panel.nei, so there is nothing to write. Loosen the filters above." |
 | the filters keep no individual | the store's lock, `keptNoneReason` of `docs/specs/core/individualsKept.md`: "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them in the Variants step." |
@@ -408,8 +458,8 @@ before the user asks.
   file discarded; the statistics it waited for refused put it in `error`,
   and `startWrite` then returns `null`.
 - **The words, with Vitest**, each row of "Its words" asserted whole
-  from its failure, the two of 1.0 GB and 4.3 GB from estimates of a
-  million and of 4.3 million variants of 1,000 individuals.
+  from its failure, the two of 1.0 GB and 2.0 GB from estimates of a
+  million and of 2 million variants of 1,000 individuals.
 - **`writeEstimate`, with Vitest**: the variants of `variantsKept`, of
   the read with and without a filter of the variants, and none, which
   gives `null`; the individuals of a known list, of `null`, and of
@@ -451,8 +501,9 @@ before the user asks.
 
 ## Open points
 
-The constants have their values meanwhile above, until the
-measurement. The one point that was the owner's, point G of
+The four constants were set by the measurement of 27 September 2026,
+"What was measured" above, in Chromium and WebKit; Firefox is measured
+by the owner by hand. The one point that was the owner's, point G of
 `docs/specs/stage-3-open-points.md`, was decided by the owner on 26
 September 2026 as it was recommended, and is written above as decided:
 a file written and not saved is discarded at a change of a filter or a
@@ -470,7 +521,8 @@ at the cost of holding the file, about 960 MB for a million variants of
   gives the file one batch of variants at a time, so that the memory of
   wasm holds one batch and not the whole file, with popnei's release
   that has them (`docs/architecture.md`, section 6, "What this asks of
-  popnei"). With the writer by pieces, the peak falls from up to 3F to
-  about F, and the warning is measured again.
+  popnei"). With the writer by pieces, the memory of wasm no longer
+  holds the file, which is about 2.4F of the peak of 4.1F to 6.1F measured
+  above, and the warning and `WRITE_MAX_BYTES` are measured again.
 - The filtered variants in the report, which leaves them out by default
   (`docs/functionality.md`, section 9): stage 6.
