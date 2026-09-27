@@ -166,6 +166,11 @@ export function individualThresholdText(
 export const KNOWN_ONCE_TEXT =
   "Known once the statistics of each individual are calculated for these filters of the variants.";
 
+/** What a filter of individuals says in place of its count while the
+    statistics of each individual are in their error state. */
+export const NOT_KNOWN_TEXT =
+  "Not known: the statistics of each individual could not be calculated, and their block says why.";
+
 /** What one filter of individuals kept: "Kept 125 of the 200 individuals
     it was given.", "Kept 1 of the 1 individual it was given." */
 export function individualKeptText(given: number, kept: number): string {
@@ -175,19 +180,23 @@ export function individualKeptText(given: number, kept: number): string {
 /**
  * The count beside the filter of individuals of the kind `kind`, from the
  * individuals kept the store gives: what it kept, or, when that needs
- * statistics the page does not have, the words that say so; `null` when
+ * statistics the page does not have, the words that say so, which say
+ * they could not be calculated when `statsFailed`, the statistics in
+ * their error state; `null` when
  * the filter is not set, or when `kept` is `null`, a list refused or a
  * variants file not read.
  */
 export function individualCountText(
   kept: IndividualsKept | null,
   kind: IndividualFilterKind,
+  statsFailed: boolean,
 ): string | null {
   const count = kept?.counts.find((c) => c.kind === kind);
   if (count === undefined) return null;
-  return count.given === null || count.kept === null
-    ? KNOWN_ONCE_TEXT
-    : individualKeptText(count.given, count.kept);
+  if (count.given !== null && count.kept !== null) {
+    return individualKeptText(count.given, count.kept);
+  }
+  return statsFailed ? NOT_KNOWN_TEXT : KNOWN_ONCE_TEXT;
 }
 
 /** What stands under the filters of individuals: nothing; the line of

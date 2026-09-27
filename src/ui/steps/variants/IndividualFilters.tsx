@@ -123,6 +123,9 @@ export function IndividualFilters(): React.JSX.Element {
   const statsDone = useAppState(
     (s) => statusOf(s, "individualChecks").kind === "done",
   );
+  const statsFailed = useAppState(
+    (s) => statusOf(s, "individualChecks").kind === "error",
+  );
 
   /** Sends a command of the section, and announces the reason of a list,
       or of no individual kept, that it makes appear, since the focus
@@ -167,7 +170,7 @@ export function IndividualFilters(): React.JSX.Element {
               text={text}
               applied={isApplied(text, list)}
               reason={needs?.list === kind ? listReasonText(needs) : null}
-              count={individualCountText(kept, kind)}
+              count={individualCountText(kept, kind, statsFailed)}
               onType={(next) => {
                 type(kind, next);
               }}
@@ -204,7 +207,7 @@ export function IndividualFilters(): React.JSX.Element {
               label={words.switchLabel}
               line={words.line}
               isOn={value !== null}
-              count={individualCountText(kept, kind)}
+              count={individualCountText(kept, kind, statsFailed)}
               describedAlso={total.kind === "keptNone" ? keptNoneId : null}
               onSwitch={(on) => {
                 typeThreshold(kind, null);
