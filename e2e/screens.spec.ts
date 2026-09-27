@@ -548,6 +548,66 @@ for (const theme of ["light", "dark"] as const) {
       await save(page, `popgen-variants-histograms-error-${theme}`);
     });
 
+    test("the Variants step, the counts done, then not counted after a change", async ({
+      page,
+    }) => {
+      await pickVariants(page, "panel.nei");
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      await page
+        .getByText("Filter the variants by major allele frequency (MAF)", {
+          exact: true,
+        })
+        .click();
+      const count = page.getByRole("button", {
+        name: "Count the variants each filter keeps",
+      });
+      // With the keyboard, so that the line of the total takes the focus,
+      // as it does in every engine.
+      await count.focus();
+      await page.keyboard.press("Enter");
+      await expect(
+        page.getByText(
+          / of the 1,200 variants of panel\.nei pass the filters\.$/,
+        ),
+      ).toBeFocused();
+      await save(page, `popgen-variants-counts-done-${theme}`);
+      const threshold = page.getByLabel("Maximum major allele frequency", {
+        exact: false,
+      });
+      await threshold.fill("0.9");
+      await threshold.press("Enter");
+      await expect(
+        page.getByText(/^Not counted for these filters\./),
+      ).toBeVisible();
+      await save(page, `popgen-variants-counts-changed-${theme}`);
+    });
+
+    test("the Variants step, a filter that kept none", async ({ page }) => {
+      await pickVariants(page, "panel.nei");
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      await page
+        .getByText("Filter the variants by major allele frequency (MAF)", {
+          exact: true,
+        })
+        .click();
+      const threshold = page.getByLabel("Maximum major allele frequency", {
+        exact: false,
+      });
+      await threshold.fill("0.4");
+      await threshold.press("Enter");
+      await page
+        .getByRole("button", { name: "Count the variants each filter keeps" })
+        .click();
+      await expect(
+        page.getByRole("main").getByText(/The MAF filter kept none of the /),
+      ).toBeVisible();
+      await save(page, `popgen-variants-counts-kept-none-${theme}`);
+    });
+
     test("the Variants step, a VCF read", async ({ page }) => {
       await pickVariants(page, "panel.vcf.gz");
       await expect(

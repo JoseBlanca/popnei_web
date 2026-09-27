@@ -6,6 +6,7 @@ import {
   distanceRefusedText,
   elapsedText,
   formatOfName,
+  keptText,
   notLoadedText,
   ploidyRefusedText,
   r2RefusedText,
@@ -240,5 +241,18 @@ describe("the lines of the fields of the LD pruning", () => {
     expect(distanceRefusedText({ kind: "notTaken", text: "-" }, 10000)).toBe(
       "‘-’ cannot be typed in the distance, which is a whole number of base pairs, as 10000; the distance stays 10000.",
     );
+  });
+});
+
+describe("VS6 D2 the count beside a filter of the variants", () => {
+  test("what a filter kept, of what it was given, with the thousands grouped and one variant in the singular", () => {
+    expect(keptText(1200, 1152)).toBe(
+      "Kept 1,152 of the 1,200 variants it was given.",
+    );
+    expect(keptText(1152, 0)).toBe(
+      "Kept 0 of the 1,152 variants it was given.",
+    );
+    expect(keptText(1, 1)).toBe("Kept 1 of the 1 variant it was given.");
+    expect(keptText(0, 0)).toBe("Kept 0 of the 0 variants it was given.");
   });
 });

@@ -7,6 +7,10 @@
  * filter starts at the values of the table of the filters; each field
  * committed, and each switch, is one command.
  *
+ * Beside each filter that is on, once the filters as they are are
+ * counted, what it kept of what it was given, which describes its fields;
+ * under the four, the part of the Count (FilterCountsPart.tsx).
+ *
  * While the variants file is not read, the line that the histograms, the
  * counts and the statistics of each individual come once it is stands
  * under the heading, in their place; the filters are drawn in every
@@ -14,6 +18,8 @@
  */
 import { useId, useState } from "react";
 
+import { filterCountRows } from "../../../core/analyses/filterCounts.ts";
+import type { FilterCountRow } from "../../../core/analyses/filterCounts.ts";
 import { MAX_LD_DIST } from "../../../core/project.ts";
 import type {
   VariantFilter,
@@ -26,6 +32,7 @@ import { useAppState, useStore } from "../../store.tsx";
 import { NumberField } from "../../widgets/NumberField.tsx";
 import { Switch } from "../../widgets/Switch.tsx";
 import { filterCommand, filterSwitchCommand } from "./commands.ts";
+import { FilterCountsPart } from "./FilterCountsPart.tsx";
 import { VariantChecksBlock } from "./VariantChecksBlock.tsx";
 import { VariantHistogram } from "./VariantHistogram.tsx";
 import styles from "./VariantsStep.module.css";
@@ -45,6 +52,7 @@ import {
   R2_LABEL,
   THRESHOLD_LABEL,
   distanceRefusedText,
+  keptText,
   r2RefusedText,
   thresholdRefusedText,
 } from "./words.ts";
@@ -89,6 +97,21 @@ export function VariantFilters(): React.JSX.Element {
   // take (the spec, "The threshold typed and not yet committed").
   const [typedObsHet, setTypedObsHet] = useState<number | null>(null);
   const [typedMaf, setTypedMaf] = useState<number | null>(null);
+  // The counts of the filters as they are, once counted: the result the
+  // store keeps, the same object until it changes, and the project it is
+  // done for, whose filters give the rows their order.
+  const counts = useAppState((s) => {
+    const status = statusOf(s, "filterCounts");
+    return status.kind === "done" && status.result.analysis === "filterCounts"
+      ? status.result
+      : null;
+  });
+  const project = useAppState((s) => s.project);
+  const rows = counts === null ? [] : filterCountRows(counts, project);
+  const countOf = (kind: VariantFilterKind): string | null => {
+    const row: FilterCountRow | undefined = rows.find((r) => r.kind === kind);
+    return row === undefined ? null : keptText(row.given, row.kept);
+  };
   const headingId = useId();
 
   const set = (filter: VariantFilter): void => {
@@ -137,6 +160,7 @@ export function VariantFilters(): React.JSX.Element {
       <div className={classOf(styles, "filters")}>
         <Filter
           label={MISSING_DATA_SWITCH}
+          count={countOf("missing_data")}
           line={MISSING_DATA_LINE}
           isOn={missingData !== null}
           onSwitch={(on) => {
@@ -164,6 +188,7 @@ export function VariantFilters(): React.JSX.Element {
         </Filter>
         <Filter
           label={OBS_HET_SWITCH}
+          count={countOf("obs_het")}
           line={null}
           isOn={obsHet !== null}
           onSwitch={(on) => {
@@ -204,6 +229,7 @@ export function VariantFilters(): React.JSX.Element {
         </Filter>
         <Filter
           label={MAF_SWITCH}
+          count={countOf("maf")}
           line={MAF_LINE}
           isOn={maf !== null}
           onSwitch={(on) => {
@@ -237,6 +263,7 @@ export function VariantFilters(): React.JSX.Element {
         </Filter>
         <Filter
           label={LD_SWITCH}
+          count={countOf("ld")}
           line={LD_LINE}
           isOn={ld !== null}
           onSwitch={(on) => {
@@ -278,12 +305,14 @@ export function VariantFilters(): React.JSX.Element {
           }
         </Filter>
       </div>
+      {read && <FilterCountsPart />}
     </section>
   );
 }
 
-/** The description a field of a filter is given: the id of the line
-    under its switch, or nothing for a filter with no line. */
+/** The description a field of a filter is given: the ids of the count
+    of its filter and of the line under its switch, in that order, or
+    nothing for a filter with neither. */
 interface Described {
   readonly describedBy?: string;
 }
@@ -298,6 +327,10 @@ interface FilterProps {
   readonly line: string | null;
   /** Whether the filter is on. */
   readonly isOn: boolean;
+  /** What it kept of what it was given, "Kept 1,152 of the 1,200
+      variants it was given.", or `null` while the filters as they are
+      are not counted. */
+  readonly count: string | null;
   /** Called when the switch is turned on or off. */
   readonly onSwitch: (on: boolean) => void;
   /** The fields of the filter, given their description; nothing while
@@ -309,24 +342,37 @@ interface FilterProps {
   readonly after?: React.ReactNode;
 }
 
-/** One filter of the variants: its switch, the line under it, and its
-    fields. */
+/** One filter of the variants: its switch, the line under it, its
+    fields, and what it kept. */
 function Filter({
   label,
   line,
   isOn,
+  count,
   onSwitch,
   children,
   after,
 }: FilterProps): React.JSX.Element {
   const lineId = useId();
-  const described: Described = line !== null ? { describedBy: lineId } : {};
+  const countId = useId();
+  // The switch is described by the line alone, and a field by the count
+  // first, so that a user who moves to it hears what it kept before the
+  // advice.
+  const switchDescribed: Described =
+    line !== null ? { describedBy: lineId } : {};
+  const shownCount = isOn ? count : null;
+  const ids = [
+    ...(shownCount !== null ? [countId] : []),
+    ...(line !== null ? [lineId] : []),
+  ];
+  const described: Described =
+    ids.length > 0 ? { describedBy: ids.join(" ") } : {};
   return (
     <div className={classOf(styles, "filter")}>
       <Switch
         label={label}
         isSelected={isOn}
-        {...described}
+        {...switchDescribed}
         onChange={onSwitch}
       />
       {line !== null && (
@@ -335,6 +381,11 @@ function Filter({
         </p>
       )}
       {children(described)}
+      {shownCount !== null && (
+        <p id={countId} className={classOf(styles, "count")}>
+          {shownCount}
+        </p>
+      )}
       {after}
     </div>
   );

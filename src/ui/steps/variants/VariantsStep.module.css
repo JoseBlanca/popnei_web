@@ -112,3 +112,9 @@
   gap: var(--space-2);
   font-variant-numeric: tabular-nums;
 }
+
+/* What a filter of the variants kept, under its fields. */
+.count {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}

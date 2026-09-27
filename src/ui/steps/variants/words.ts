@@ -290,6 +290,30 @@ export function filtersTotalText(
   return `${grouped(numVarsKept)} of the ${grouped(read.numVars)} variants of ${name} ${verb} the filters.`;
 }
 
+/** The words of the Count button (docs/specs/analyses/filterCounts.md,
+    "The Count button"). */
+export const COUNT_LABEL = "Count the variants each filter keeps";
+
+/** The counts of the filters in the middle of a sentence, which also
+    names the bar of their calculation. */
+export const COUNT_NAME = "the counts of the filters";
+
+/** The sentence that asks for the Count again after a failure
+    (filterCounts.md, "The states", error). */
+export const COUNT_AGAIN = "Count again.";
+
+/** The line in place of the line of the total while the filters as they
+    are have no counts. */
+export const NOT_COUNTED_LINE =
+  "Not counted for these filters. Count, or run an analysis, to see what each filter keeps.";
+
+/** What one filter of the variants kept, beside it: "Kept 1,152 of the
+    1,200 variants it was given.", "Kept 1 of the 1 variant it was
+    given." */
+export function keptText(given: number, kept: number): string {
+  return `Kept ${grouped(kept)} of the ${counted(given, "variant")} it was given.`;
+}
+
 /** The words of the passed variants: "only the variants with PASS or .
     in the FILTER column", or "every variant". */
 function passedWords(onlyPassed: boolean): string {
