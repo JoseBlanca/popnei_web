@@ -242,7 +242,8 @@ it changes:
 
 - **The calculation worker keeps no intermediate result before stage
   7.** popnei cannot hold the variants its LD pruning keeps, so each PCA
-  prunes inside its own pass (section 5).
+  prunes inside its own pass (section 5), as the owner decided on 27
+  September 2026.
 - **An option that changes only how a result is drawn is left out of the
   key**: the column that colours the PCA, its components on the axes, 2D
   or 3D. They are options of the analysis, saved in the project file,
@@ -258,8 +259,8 @@ it changes:
   individual in one population; a binary column holds its two values as
   text (section 2).
 - **The calculation worker is started again after a PCA or a PCoA of
-  more than 700 individuals**, a second exception to open point 2 (section 13, point
-  9).
+  more than 700 individuals**, a second exception to open point 2,
+  decided by the owner on 27 September 2026 (section 13, point 9).
 - **A file of the site fetched after a deploy**: three.js and the files
   wasm are downloaded when first needed, and a page opened before a
   deploy then asks for a file of the build it came from, which the
@@ -1038,9 +1039,12 @@ keeps the same pruned variants, which is when reusing them pays. What it
 costs, not weighed yet: a pass more the first time, the one filter of
 the regions that a `Variants` takes, which the dataset's BED file may
 already hold, and two variants at one position, which regions cannot
-tell apart. Otherwise popnei is asked for a way to keep them. Recommended to the owner on 27 September 2026,
-meanwhile (`docs/specs/stage-4-open-points.md`). So the calculation
-worker keeps no intermediate result before stage 7.
+tell apart. Otherwise popnei is asked for a way to keep them. Decided
+by the owner on 27 September 2026, who judged that a PCA is seldom made
+again the same way and left what use shows for later; the option not
+taken, asking popnei now for a way to keep them
+(`docs/specs/stage-4-open-points.md`). So the calculation worker keeps
+no intermediate result before stage 7.
 
 ### Two workers, and why
 
@@ -2024,8 +2028,9 @@ that day:
    counts among an individual's missing genotypes the bad variants the
    missing data filter drops.
 
-Opened by the revision of 27 September 2026, for stage 4; recommended,
-not yet decided by the owner (`docs/specs/stage-4-open-points.md`):
+Opened by the revision of 27 September 2026, for stage 4
+(`docs/specs/stage-4-open-points.md`); point 9 decided by the owner that
+day, as recommended, and point 10 recommended and not yet decided:
 
 9. **The calculation worker is started again after a PCA or a PCoA of
    more than 700 individuals**, `PCA_RESTART_INDIVIDUALS`, whose matrix

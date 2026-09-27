@@ -5,7 +5,9 @@ Individuals step and the PCA, and revised the same day to agree with the
 specs written beside it, and after two reviews of its claims against the
 source of calamine 0.36.1 and two crates of trial; and when the specs
 of stage 4 were made to agree, the last column of a sheet too large
-given in Excel's letters, "XFD". There is no code of it yet. This spec gives
+given in Excel's letters, "XFD"; and with the owner's answer of 27
+September 2026 to Open 2, the date whose time the format hides. There
+is no code of it yet. This spec gives
 the Rust crate `crates/files/`, which reads the first sheet of an xlsx,
 the file Excel saves by default, into its cells, and the few lines of the
 light worker that load it and call it. The light worker is the second
@@ -118,7 +120,7 @@ boolean, an empty cell as `null`.
 | a number that is not finite, which Excel does not write | `Float` | the text JavaScript writes for it, `NaN`, `Infinity`, `-Infinity` |
 | `TRUE` or `FALSE`, `VERDADERO` or `FALSO` in Spanish | `Bool` | the boolean |
 | a date: a number with a format of date or time, of 1 day or more, whose time, rounded to the millisecond, is 0 | `DateTime` whose `ExcelDateTime` is not a duration | `2024-05-13` |
-| a date and a time: the same, with a time that is not 0, whether the format shows it or not (**Open 2**, below) | `DateTime` | `2024-05-13 12:00:00`, and `2024-05-13 12:00:00.250` when its milliseconds are not 0 |
+| a date and a time: the same, with a time that is not 0, whether the format shows it or not (**Open 2**, below, decided by the owner) | `DateTime` | `2024-05-13 12:00:00`, and `2024-05-13 12:00:00.250` when its milliseconds are not 0 |
 | a time alone: a number with a format of date or time that rounds to less than 1 day and not below 0 | `DateTime` | `14:30:00` |
 | a format of date on a number below 0, or on a day after 31 December 9999, which Excel shows as `#######` | `DateTime`, with the parts of a wrong date | the number |
 | a duration, a format such as `[h]:mm:ss` | `DateTime` whose `ExcelDateTime` is a duration | hours, minutes and seconds, the hours not wrapped at 24: 1.5 days is `36:00:00`, and a negative one `-0:30:00` |
@@ -137,7 +139,8 @@ date or a time, or one of a duration, the `ExcelDateTime` that `DateTime`
 holds. So the crate cannot tell a date shown with its time from one
 shown without it, and decides by the number: a number with no time, as a
 date typed by hand has, gives the date alone, and a number with a time
-gives both, whatever Excel shows (**Open 2**, below).
+gives both, whatever Excel shows, as the owner decided on 27 September
+2026 (**Open 2**, below).
 
 The crate first rounds the number to a whole number of milliseconds, and
 splits that into its days and the milliseconds of its last day, with the
@@ -636,7 +639,7 @@ holds, and the literal cells it gives:
 | the table at C3 | `first_row` 3, `first_column` 3, the same cells |
 | a row with its second cell not written | `Empty` there |
 | a number with the format `000` | `Number(1.0)` |
-| 45425 with the format `dd/mm/yyyy`; 45425.5 with `dd/mm/yyyy hh:mm:ss`, and with `dd/mm/yyyy`; 45425.9999999999 with `dd/mm/yyyy`; 0.604166666 with `hh:mm`; 1.5 with `[h]:mm:ss`; 60, 2958465 and 2958466 with `dd/mm/yyyy`; −3 with `dd/mm/yyyy` | `2024-05-13`; `2024-05-13 12:00:00` both times (**Open 2**); `2024-05-14`; `14:30:00`, `36:00:00`, `1900-02-29`, `9999-12-31`, `Number(2958466.0)`, `Number(-3.0)`; all seen as dates by calamine in the trials |
+| 45425 with the format `dd/mm/yyyy`; 45425.5 with `dd/mm/yyyy hh:mm:ss`, and with `dd/mm/yyyy`; 45425.9999999999 with `dd/mm/yyyy`; 0.604166666 with `hh:mm`; 1.5 with `[h]:mm:ss`; 60, 2958465 and 2958466 with `dd/mm/yyyy`; −3 with `dd/mm/yyyy` | `2024-05-13`; `2024-05-13 12:00:00` both times (**Open 2**, decided); `2024-05-14`; `14:30:00`, `36:00:00`, `1900-02-29`, `9999-12-31`, `Number(2958466.0)`, `Number(-3.0)`; all seen as dates by calamine in the trials |
 | the crate's function that makes the cell of a date, in its own module, with the 1904 system, which rust_xlsxwriter does not write: 2957003, 2957004, −3 and 0.5 | `9999-12-31`, `Number(2957004.0)`, `Number(-3.0)`, `12:00:00` |
 | a formula `=1+1` saved with the value 2, one with the text `x`, one with `TRUE`, one with `#N/A`, and `=1+2` with none | `Number(2.0)`, `Text("x")`, `Bool(true)`, `Text("#N/A")`, `Number(0.0)` |
 | `0.1 + 0.2` | `Number(0.30000000000000004)` |
@@ -790,10 +793,11 @@ from the build and written in the same report, beside the numbers above.
    missing, and so which individuals a trait or a population leaves out.
    Recommendation: text, as in the CSV, since nothing is then left out
    without the user seeing it. Meanwhile, text.
-2. **A date whose time the format hides.** calamine does not give the
+2. **A date whose time the format hides, decided by the owner on 27
+   September 2026.** calamine does not give the
    format of a cell, only that it is one of a date or a time, so the
    crate cannot tell `13/05/2024` from `13/05/2024 14:03`. The rule
-   meanwhile: a number whose time, rounded to the millisecond, is 0
+   decided, as recommended: a number whose time, rounded to the millisecond, is 0
    gives the date alone, `2024-05-13`, and any other gives the date and
    the time, `2024-05-13 14:03:00`. A date typed by hand has no time, so
    it gives what the user sees. A date that a formula such as `=NOW()`
@@ -801,14 +805,14 @@ from the build and written in the same report, beside the numbers above.
    format shows as a date alone, gives the date and the time: a column
    of such dates shows times the user did not see in Excel, and, being
    text, may have a value for each individual where Excel shows a few
-   dates. The user sees it in the table; nothing is left out. The other
-   option: always the date and the time, `2024-05-13 00:00:00` for a
+   dates. The user sees it in the table; nothing is left out. The option
+   not taken: always the date and the time, `2024-05-13 00:00:00` for a
    date typed by hand, which is the same for every date and never
    depends on the number, but adds a time of midnight to every date,
    the common case, to spare the rare one. A third, reading the format
    from the file itself, is not in calamine 0.36.1, and would be a
-   reader of the styles of the workbook written for the crate.
-   Recommendation: the rule above. Meanwhile, the rule above.
+   reader of the styles of the workbook written for the crate, and was
+   not taken either.
 
 ## Not in this spec
 

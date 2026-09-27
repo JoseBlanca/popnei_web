@@ -763,9 +763,11 @@ engine of the screens gives WebGL.
 **The dependencies it adds**, none yet in `package.json`: `three`
 0.186.1, which is r186, and for development `@types/three` 0.186.0, the
 versions of `npm view` on 27 September 2026, which the owner took on 24
-September 2026 (`docs/technology.md`, section 2). `@types/three` brings
-six packages for development, which the owner has not been asked for
-(`.claude/skills/coding/SKILL.md`, "Dependencies"):
+September 2026 (`docs/technology.md`, section 2), and approved at these
+versions on 27 September 2026. `@types/three` brings six packages for
+development, which the list put to the owner that day named, and which
+came with that approval (`.claude/skills/coding/SKILL.md`,
+"Dependencies"):
 `@dimforge/rapier3d-compat` 0.12.0, a physics engine of 7.5 MB unpacked
 whose types the types of three.js name; `fflate` 0.8.3;
 `meshoptimizer` 1.1.1; `@tweenjs/tween.js` 23.1.3; `@types/webxr`

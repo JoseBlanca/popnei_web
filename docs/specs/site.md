@@ -258,8 +258,11 @@ than before. A machine without Rust stops at `build:files` with the
 shell's "cargo: command not found", and one without the command line of
 wasm-bindgen, or with another version of it, with wasm-bindgen's own
 message, which names both versions; `docs/technology.md`, section 2,
-took that cost. The owner's Mac has Rust 1.98.0, rustup 1.29.0, and
-`wasm-bindgen` 0.2.128.
+took that cost, and the owner approved on 27 September 2026 Rust 1.98.0
+and `wasm-bindgen-cli` 0.2.128 on every machine that builds the site,
+CI among them; calamine, which the crate builds, is not yet approved
+(`docs/specs/stage-4-open-points.md`). The owner's Mac has Rust 1.98.0,
+rustup 1.29.0, and `wasm-bindgen` 0.2.128.
 
 ### The workflow
 

@@ -13,7 +13,8 @@ highlight beyond the names taken as none, a group that keeps its mark
 when it has no point, the legend a vertical list, the numbers of the
 table as `pca.md` writes them, and the round joins kept in the exported
 file; and when the specs of stage 4 were made to agree, the legend over
-the plot as its **Open 1**; not yet approved. There is no
+the plot as its **Open 1**; and with the owner's answer of 27 September
+2026 to that point, to judge it on the running screen; not yet approved. There is no
 code of it yet; the base it is drawn on, `src/charts/plot2d.ts`, and the
 histogram exist from stage 3. This spec gives the function of
 `src/charts/scatter.ts` that draws the individuals on two principal
@@ -895,7 +896,8 @@ brings `d3-path`, and `d3-path` 3.1.0, imported for `pathRound`;
 `d3-interpolate`, already brought by `d3-scale`; for development,
 `@types/d3-shape` 3.2.0, `@types/d3-path` 3.1.1 and
 `@types/d3-scale-chromatic` 3.1.0. The owner took these modules on 24
-September 2026 (`docs/technology.md`, section 2). `d3-delaunay` is not
+September 2026 (`docs/technology.md`, section 2), and approved them at
+these versions on 27 September 2026. `d3-delaunay` is not
 added (above, "The point under the pointer"), and `d3-format`,
 `d3-array` and `d3-zoom` neither: the numbers of the tooltip are
 formatted by `Intl.NumberFormat`, the ranges by a loop, and the scatter
@@ -990,8 +992,11 @@ under it can be neither seen nor pointed at. The options:
 - A strip beside the plot for the legend: every point can be seen, and
   the plot is narrower by the width of the legend, most on a phone.
 
-Recommendation: over the plot. Meanwhile, over the plot, as above
-(point 14 of `docs/specs/stage-4-open-points.md`).
+Recommendation: over the plot. The owner answered on 27 September 2026,
+"we'll fix those details when we have the application working", so the
+point stays open and is judged on the running screen, when the owner
+tries the PCA panel. Meanwhile, over the plot, as above (point 14 of
+`docs/specs/stage-4-open-points.md`).
 
 The 50,000 points are the owner's decision of 26 September 2026, and
 the one decimal is decided above with the numbers of the walking

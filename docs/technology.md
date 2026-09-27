@@ -207,7 +207,9 @@ decided on 24 September 2026: `d3-selection`, `d3-scale`, `d3-axis`,
 `d3-shape`, `d3-path`, `d3-array`, `d3-format`, `d3-zoom` and
 `d3-scale-chromatic`, and not `d3-delaunay`, which a loop over the
 points replaced on 27 September 2026 (`docs/specs/charts/scatter.md`), each with its `@types/d3-*` for development,
-since D3 ships no types. The `d3` package brings every module, geography
+since D3 ships no types. `d3-shape`, `d3-path` and `d3-scale-chromatic`,
+which the scatter of stage 4 is the first to use, were approved with
+their versions by the owner on 27 September 2026. The `d3` package brings every module, geography
 and forces among them, and a list of the modules says in `package.json`
 what the plots use. The list and its versions are in
 `.claude/skills/coding/charts.md`; a module added later, `d3-brush` or
@@ -269,7 +271,8 @@ of section 6 has, unless WebGL is turned off in it or its graphics card
 is refused; the 3D view then says so, and the 2D plot stays
 (`docs/specs/charts/pca3d.md`). three.js ships no types of
 its own, so `@types/three`, from DefinitelyTyped, is taken with it for
-development. It is loaded with `import()` when the 3D PCA is first
+development; the owner approved both, three 0.186.1 and `@types/three`
+0.186.0, on 27 September 2026. It is loaded with `import()` when the 3D PCA is first
 drawn, into a chunk of its own, a script the browser downloads then, so
 that a user who never opens the 3D plot never downloads it, unlike the
 2D plots above.
@@ -366,6 +369,10 @@ costs:
   the `wasm-bindgen` crate, since the two refuse to work together when
   their versions differ. The crate pins `wasm-bindgen = "=0.2.128"`, the
   version popnei pins, so that one command line installed builds both.
+  The owner approved this cost, Rust 1.98.0 and `wasm-bindgen-cli`
+  0.2.128, on 27 September 2026; calamine itself is not yet approved,
+  since the owner is weighing making the reader of xlsx a project of its
+  own (`docs/specs/stage-4-open-points.md`).
 - **Time in the continuous integration**: installing the toolchain and
   `wasm-bindgen-cli`, which `cargo install` compiles, and a release build
   of the crate with LTO before every build of the site. Neither has been

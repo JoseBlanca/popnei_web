@@ -18,7 +18,11 @@ of the LD filter over a file not sorted, made once with the
 diversity's; the labels of the fields of its pruning, those of the
 Variants step; the selects of the axes in 3D; one format for each
 number, the minus sign among them; and the help on the keys of the
-plots. There is no code of it yet. This spec gives
+plots; and again that day with the owner's answers of 27 September
+2026: the pruning on by default at r² 0.1 with no distance, which the
+user types before the PCA can run, the pruned variants not kept between
+two PCAs, and the worker started again after a large PCA, Open 1. There
+is no code of it yet. This spec gives
 the analysis that places the individuals of a dataset on a few axes, to
 see its structure and check the populations against it: the module
 `src/core/analyses/pca.ts`, which says what the components are calculated
@@ -86,8 +90,9 @@ of 27 September 2026, that this spec takes are named where they apply,
 and gathered in `docs/specs/stage-4-open-points.md`. Some of them were
 recommended to the owner and are not answered yet; this spec follows the
 recommendation until the owner answers, and says so where each applies.
-Two more are this spec's own and open for the owner, at the end, **Open
-1** and **Open 2**, each with what the implementer does meanwhile.
+Two more are this spec's own, at the end: **Open 1**, which the owner
+decided on 27 September 2026, and **Open 2**, open, with what the
+implementer does meanwhile.
 
 ## The module
 
@@ -182,7 +187,10 @@ variants the PCA reads" in `docs/specs/stage-4-open-points.md`):
 - **One LD pruning, last among the filters of the variants**: the
   dataset's when it has one, since `docs/functionality.md` section 5 has
   the PCA not prune again then; otherwise the PCA's own when its pruning
-  is on; otherwise none.
+  is on and has a distance; otherwise none. A pruning of the PCA with no
+  distance yet puts no LD filter in the list, since popnei's `filterByLd`
+  needs one, and locks the analysis (below, "Why it cannot run"), so
+  that list is never sent.
 
 Then the list of the individuals kept, last, as for every analysis
 (`docs/architecture.md`, section 2). So the frequencies and the r² of the
@@ -197,15 +205,18 @@ every other pass of the application.
 project's filters and the options. Worked examples, for the filters of a
 first project, the missing data filter at 0.1 (`firstProject` of
 `src/core/apps.ts`), and the PCA's defaults, the MAF at 0.95 and the
-pruning at r² 0.1 within 50,000 base pairs:
+pruning at r² 0.1 with no distance, or with a distance of 50,000 base
+pairs typed by the user, the one the numbers of "How it is verified"
+were calculated with:
 
 | the dataset's filters | the PCA's options | the filters of the job |
 |---|---|---|
-| missing data 0.1 | defaults | missing data 0.1, MAF 0.95, LD r² 0.1 within 50,000 |
-| missing data 0.1, MAF 0.9 | defaults | missing data 0.1, MAF 0.9, LD r² 0.1 within 50,000 |
-| missing data 0.1, MAF 0.98 | defaults | missing data 0.1, MAF 0.95, LD r² 0.1 within 50,000 |
+| missing data 0.1 | defaults | missing data 0.1, MAF 0.95; the PCA is locked until a distance is typed |
+| missing data 0.1 | defaults, 50,000 typed | missing data 0.1, MAF 0.95, LD r² 0.1 within 50,000 |
+| missing data 0.1, MAF 0.9 | defaults, 50,000 typed | missing data 0.1, MAF 0.9, LD r² 0.1 within 50,000 |
+| missing data 0.1, MAF 0.98 | defaults, 50,000 typed | missing data 0.1, MAF 0.95, LD r² 0.1 within 50,000 |
 | missing data 0.1, heterozygosity 0.9, LD r² 0.3 within 10,000 | defaults | missing data 0.1, heterozygosity 0.9, MAF 0.95, LD r² 0.3 within 10,000 |
-| missing data 0.1, MAF 0.9, LD r² 0.3 within 10,000 | defaults | missing data 0.1, MAF 0.9, LD r² 0.3 within 10,000 |
+| missing data 0.1, MAF 0.9, LD r² 0.3 within 10,000 | defaults, 50,000 typed | missing data 0.1, MAF 0.9, LD r² 0.3 within 10,000 |
 | none | pruning off | MAF 0.95 |
 | missing data 0.1 | MAF 1, pruning off | missing data 0.1, MAF 1 |
 
@@ -230,7 +241,7 @@ The options of the analysis, as the project holds them, `PcaOptions`:
 |---|---|---|---|
 | `method` | `"pca"`, the PCA of the genotypes, or `"pcoa"`, the PCoA of the Kosman distances | `"pca"` | `docs/functionality.md`, section 5 |
 | `maxAllowedMaf` | the PCA's maximum major allele frequency, a number from 0 to 1 | 0.95 | `docs/functionality.md`, sections 3 and 5 |
-| `ldPruning` | the PCA's own LD pruning, `{ maxAllowedR2, maxDist }`, the largest r² between two variants kept and the window in base pairs, or `null` for off | `{ maxAllowedR2: 0.1, maxDist: 50000 }` | recommended to the owner, below |
+| `ldPruning` | the PCA's own LD pruning, `{ maxAllowedR2, maxDist }`, the largest r² between two variants kept and the window in base pairs, `maxDist` `null` until the user types one, or `null` for off | `{ maxAllowedR2: 0.1, maxDist: null }` | decided by the owner on 27 September 2026, below |
 | `colourBy` | the column of the individuals file whose values colour the points, or `null` for the populations of the grouping | `null` | `docs/functionality.md`, section 5 |
 | `axes` | the three components drawn, from 1: the 2D plot shows the first against the second, the 3D plot all three | `[1, 2, 3]` | `docs/functionality.md`, section 5 |
 | `view` | `"2d"` or `"3d"` | `"2d"` | recommended to the owner, "The PCA opens in 2D" in `docs/specs/stage-4-open-points.md` |
@@ -240,17 +251,31 @@ The names of the thresholds are those of the filters of
 `pcaFilters` copies them and a reader of the project file finds one name
 for one number.
 
-**The pruning at r² 0.1 within 50,000 base pairs, on by default**, was
-recommended to the owner on 27 September 2026 (meanwhile, "The PCA's
-default pruning" in `docs/specs/stage-4-open-points.md`). popnei gives no default. On
-popnei's LD test file, at 50,000 base pairs, plink2 at r² 0.3 keeps 41
-variants where popnei keeps 46 at 0.15 and 35 at 0.1
-(`docs/specs/filters.md` of popnei, near its line 940), so a threshold of
-popnei is lower than a habit of plink; 0.1 keeps no more than plink's
-common setting. The LD filter of the dataset, which starts at r² 0.3
-within 10,000 base pairs (stage 3), is another thing, a thinning of the
-dataset. On `panel.nei` the default pruning keeps 535 of the 1,175
-variants the MAF filter leaves (below, "How it is verified").
+**The pruning is on by default at r² 0.1, with no distance**, as the
+owner decided on 27 September 2026 (point 3, "The PCA's pruning: r²
+0.1, and no default distance", in `docs/specs/stage-4-open-points.md`).
+popnei gives no default of either. The r² of 0.1: on popnei's LD test file, at 50,000 base pairs,
+plink2 at r² 0.3 keeps 41 variants where popnei keeps 46 at 0.15 and 35
+at 0.1 (`docs/specs/filters.md` of popnei, near its line 940), so a
+threshold of popnei is lower than a habit of plink; 0.1 keeps no more
+than plink's common setting. The distance has no default, in the
+owner's words because "the distance really depends on the LD/recombination
+of the regions", so the user chooses it: how far linkage disequilibrium
+extends differs from one species, and one genome, to another. The
+option not taken was a default of 50,000 base pairs, which had been
+recommended. Until the user types a distance, or turns the pruning off,
+the PCA is locked (below, "Why it cannot run"). Turning the pruning on
+again gives the default, r² 0.1 with no distance, since the option
+`null` keeps no values; Undo brings back the values of before, a choice
+of the writer of this spec that the owner may overrule
+(`docs/specs/stage-4-open-points.md`). When the dataset has
+an LD filter the PCA does not prune, so its distance is not asked for
+and nothing locks, since that filter has its own distance. The LD
+filter of the dataset, which starts at r² 0.3 within 10,000 base pairs
+(stage 3), is another thing, a thinning of the dataset, and is not
+changed by this decision. On `panel.nei` the pruning at r² 0.1 within
+50,000 base pairs keeps 535 of the 1,175 variants the MAF filter leaves
+(below, "How it is verified").
 
 **The last three options change nothing that is calculated.** They are
 saved in the project file with the others, so that a project opens with
@@ -269,7 +294,9 @@ the plot as the user drew it. The writers decided so on 27 September
 `method` `"pca"` or `"pcoa"`; `maxAllowedMaf` a number from 0 to 1;
 `ldPruning` `null` or an object of exactly `maxAllowedR2`, a number from
 0 to 1, and `maxDist`, a whole number from 1 to 9,007,199,254,740,991,
-the ranges popnei's `filterByMaf` and `filterByLd` accept; `colourBy` a
+the ranges popnei's `filterByMaf` and `filterByLd` accept, or `null`, a
+distance not typed yet, which a project saved while the PCA was locked
+for it holds; `colourBy` a
 text or `null`, not checked against the table, which a later file may
 change; `axes` three different whole numbers from 1 to 10,
 `PCA_NUM_COMPS_KEPT`; and `view` `"2d"` or `"3d"`. `"pcoa"` is taken
@@ -283,7 +310,7 @@ refused with the words that follow "should be" in `projectErrorText`:
 "the method, "pca" or "pcoa"; the maximum major allele frequency, a
 number from 0 to 1; the LD pruning, null or its maximum r², a number
 from 0 to 1, with its window, a whole number of base pairs from 1 to
-9,007,199,254,740,991; the column that colours the points, a text or
+9,007,199,254,740,991 or null; the column that colours the points, a text or
 null; three different components from 1 to 10 for the axes; and the
 view, "2d" or "3d"; and nothing else". Every later version of the format
 reads version 1 so (`docs/architecture.md`, section 12).
@@ -298,15 +325,30 @@ version, the version of popnei, the load and both lists of filters.
 `keyInputs(p)` gives the rest:
 
 ```ts
-{ method: "pca" | "pcoa", filters: pcaFilters(p.filters, pcaOptions(p)) }
+{
+  method: "pca" | "pcoa",
+  filters: pcaFilters(p.filters, pcaOptions(p)),
+  ldPruning: { maxAllowedR2: number, maxDist: number | null } | null,
+                                        // the PCA's own; null when the dataset has an LD filter
+}
 ```
 
-the method, and the filters popnei is given, which hold the PCA's MAF and
-pruning as they reach popnei. So a change of the PCA's MAF that the
-dataset's stricter one overrides, or of its pruning while the dataset
-prunes, keeps the key, and takes nothing off the screen for a change
-that changes no number. The dataset's filters are in the key twice, once
-from `keyOf` and once here; that costs a few bytes of text to hash.
+the method; the filters popnei is given, which hold the PCA's MAF and
+pruning as they reach popnei; and the PCA's own pruning as the options
+hold it, its `maxDist` `null` included, when the dataset has no LD
+filter, and `null` when it has one. The last is there so that the key
+holds the option as it is, as the owner's answer of 27 September 2026
+has it: the pruning with no distance puts no LD filter in the list, and
+without it would share the key of the pruning off, whether or not a key
+is ever asked for while the PCA is locked, since `keyInputs` answers
+for any project (`docs/specs/core/keys.md`). Once a distance is typed, or the pruning is off, the filters
+alone tell the settings apart.
+So a change of the PCA's MAF that the dataset's stricter one overrides,
+or of its pruning while the dataset prunes, keeps the key, and takes
+nothing off the screen for a change that changes no number. The
+dataset's filters are in the key twice, once from `keyOf` and once
+here, and the PCA's pruning twice when it prunes; that costs a few bytes
+of text to hash.
 
 Not in the key:
 
@@ -332,7 +374,7 @@ the key before holds another number of components.
 | a filter of the variants added, removed, or its threshold | changes |
 | a filter of individuals, a list or a threshold, whether or not it keeps other individuals | changes |
 | `method` | changes |
-| `maxAllowedMaf` or `ldPruning`, when it changes the filters of the job | changes |
+| `maxAllowedMaf`, when it changes the filters of the job; `ldPruning`, its distance typed included, while the dataset has no LD filter | changes |
 | `maxAllowedMaf` above the dataset's MAF, or `ldPruning` while the dataset prunes | same |
 | `colourBy`, `axes`, `view` | same |
 | the individuals file, its types, the grouping | same |
@@ -352,6 +394,18 @@ gives the first of these:
 | the method `"pcoa"` while popnei's release in the application has no `doPcoaFromVariants`, `PCOA_IN_POPNEI` false | "This project asks for the PCoA of the Kosman distances, which this version of the application cannot calculate yet. Choose the PCA of the genotypes as the method." |
 | more individuals in the variants file than the method's limit, 9,381 for the PCA and 8,695 for the PCoA | "panel.nei has 12,000 individuals, and the principal components of more than 9,381 need more memory than a browser tab can hold. Calculate them with popnei in Python, outside the browser." For the PCoA, "…the principal coordinates of more than 8,695…" |
 | any reason of `individualsNeeds` of `project.md`: the metadata file being read, "Reading pops.csv."; its read refused or failed; a file named by an opened project and not read when the project was saved, `notGiven`, "pops.csv was not read when this project was saved, so the project file does not hold it. Load pops.csv again in the Individuals step."; individuals of the variants missing from it, "12 individuals of panel.nei are not in pops.csv: ind_031, ind_044 and 10 more. Add them to the file and load it again in the Individuals step." | its words |
+| the PCA's pruning on with no distance, `maxDist` `null`, and no LD filter in the dataset, `pruningDistanceReason` | "The LD pruning of the PCA needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn the pruning off." |
+
+**The pruning with no distance.** The owner decided on 27 September 2026
+that the distance of the PCA's pruning has no default (above, "Its
+options"), so a new project's PCA is locked until the user types one, or
+turns the pruning off, which then gives the warning `pruningOff` on the
+result (below, "The warnings"). The reason is last in the table; the
+panel shows it beside the field of the distance whenever it
+holds, and not only when it is the first reason, so that the empty
+field always says why it has to be filled (below, "What it shows"). While the dataset has an LD filter the PCA
+does not prune, and nothing locks. The words say why there is no
+default and what to do; the help says how to choose the distance.
 
 **The PCoA before popnei's release has it.** `PCOA_IN_POPNEI`, a
 constant of the module, says whether the release of popnei the
@@ -569,8 +623,8 @@ pruning that is on.
 
 `fewVariants` at fewer variants than individuals is the writers': below it the matrix of the individuals has no more
 components with variance than variants, and each component is estimated
-from few. On `panel.nei` the default pruning uses 535 variants for 200
-individuals, and no warning.
+from few. On `panel.nei` the pruning at r² 0.1 within 50,000 base pairs
+uses 535 variants for 200 individuals, and no warning.
 
 `lingoesCorrection` is given for every PCoA whose distances were
 corrected, as the owner asked that users be warned of it, whatever the
@@ -640,8 +694,8 @@ result with a PC3 never matches one without. `numCheckNumbers(p)` gives
 4. The
 store compares them exactly (`docs/specs/core/store.md`, "The comparison
 with the check numbers"), which holds for the PCA: the eigendecomposition
-is popnei's compiled Rust in the same wasm, and four runs of the default
-PCA on `panel.nei` in one process, one of them after a diversity, gave
+is popnei's compiled Rust in the same wasm, and four runs of the PCA
+on `panel.nei`, pruned at r² 0.1 within 50,000 base pairs, in one process, one of them after a diversity, gave
 the same percentages and projections to the last bit (node, the release,
 27 September 2026). The PCoA decomposes with the same code and is
 expected to hold as well; it is run twice in the runner's test once
@@ -680,7 +734,8 @@ individuals kept, `individuals_kept`, which `script.ts` makes before
 `variants.filter_individuals` (`docs/specs/analyses/individualChecks.md`,
 "Its lines of the Python script"), when the project has a filter of
 individuals. For the project of the flow below, `panel.nei` with the
-filters of a first project and the PCA's defaults:
+filters of a first project, the PCA's defaults and a distance of 50,000
+base pairs typed:
 
 ```python
 # The principal components of the individuals, a PCA of the genotypes,
@@ -720,6 +775,9 @@ decomposes with another library than the wasm, so the script gives the
 application's numbers to about 1e-14 and not to the last digit, and the
 comparison of the check numbers is between runs of the application
 alone. The warnings as comments come in stage 6 with `script.ts`.
+`script` is asked only for an analysis that has run, as the diversity's
+is, so a PCA locked by a pruning with no distance writes no line, and
+asking for its lines is a defect.
 
 ### The TypeScript interface
 
@@ -764,7 +822,7 @@ export const pca: AnalysisDef<Job, JobResult>;
 export interface PcaOptions {
   readonly method: "pca" | "pcoa";
   readonly maxAllowedMaf: number;
-  readonly ldPruning: { readonly maxAllowedR2: number; readonly maxDist: number } | null;
+  readonly ldPruning: { readonly maxAllowedR2: number; readonly maxDist: number | null } | null;
   readonly colourBy: string | null;
   readonly axes: readonly [number, number, number];
   readonly view: "2d" | "3d";
@@ -780,6 +838,10 @@ export const PCOA_IN_POPNEI: boolean;
 /** The reason of the lock of a PCoA that popnei's release lacks, or null;
     needs calls it with PCOA_IN_POPNEI, and the tests with both values. */
 export function pcoaLock(o: PcaOptions, inPopnei: boolean): string | null;
+/** The reason of the lock of the PCA's pruning with no distance while the
+    dataset has no LD filter, or null; needs gives it, and the panel shows
+    it beside the field of the distance (above, "Why it cannot run"). */
+export function pruningDistanceReason(p: Project): string | null;
 export const MANY_MISSING_RATE = 0.2;              // the note of the missing genotypes
 /** The group of an individual with no population or no value, 0xffff:
     NO_GROUP of src/charts/marks.ts, which core does not import; a test of
@@ -1052,6 +1114,11 @@ comes and goes with the statistics in the cache (**Open 2**).
   first components, PC1, PC2 and PC3, and the note "The axes chosen, PC4,
   PC5 and PC6, are beyond the 3 components of this result, so PC1, PC2
   and PC3 are drawn." The option stays.
+- **The LD filter of the Variants step turned off while the PCA's
+  pruning has no distance.** The PCA that ran on the dataset's pruning
+  leaves the screen with the notice, as for any change of the filters,
+  and is locked with the reason of the pruning with no distance until
+  the user types one; an undo brings the plot back.
 - **A pruning over a file not sorted by position** is refused, above,
   and the words say to sort it or turn the pruning off.
 - **The dataset's filters of individuals leave the PCA fewer than two
@@ -1103,7 +1170,8 @@ between two PCAs" in `docs/specs/stage-4-open-points.md`), and
 the next analysis, whose filters are not the PCA's, would open the file
 again in any case (`docs/specs/worker/runner.md`, "The steps"). This is a
 second exception to the owner's decision of 26 September 2026 that the
-worker is not restarted between requests (**Open 1**).
+worker is not restarted between requests, which the owner decided on 27
+September 2026 (**Open 1**, below).
 
 The result in the cache is 8 bytes × individuals × 10 for the
 projections, 80 bytes for the percentages, and the names at 2 bytes a
@@ -1112,10 +1180,11 @@ characters, 750,480 + 80 + 150,096 = 900,656 bytes, about 0.90 MB, far
 under its bound of 256 MB (`docs/specs/core/cache.md`). So the words
 "Undo brings back the plot and the table as they were, with no
 calculation" hold as they do for the diversity. The pruning is made again
-at every PCA, and its time is measured in stage 4, on `panel.nei` and on
-the files of 20,000 variants, with and without it (meanwhile, "The
-pruned variants are not kept between two PCAs" in
-`docs/specs/stage-4-open-points.md`).
+at every PCA, as the owner decided on 27 September 2026 ("The pruned
+variants are not kept between two PCAs" in
+`docs/specs/stage-4-open-points.md`), and its time is measured in stage
+4, on `panel.nei` and on the files of 20,000 variants, with and without
+it.
 
 `pcaColours` walks the table once per result and table, kept in a
 `WeakMap` by the result, the table, the grouping and the option, so a
@@ -1126,13 +1195,15 @@ same object, which the highlight of the legend is kept with.
 
 With Vitest, at the functions of the definition, on frozen projects:
 
-- **`pcaFilters`**, one test for each of the seven rows of the table of
-  "Which variants it reads", in its order, as literals. The first: the
-  filters `[{ kind: "missing_data", maxAllowedMissingRate: 0.1 }]` and
-  `PCA_DEFAULTS` give `[{ kind: "missing_data", maxAllowedMissingRate:
-  0.1 }, { kind: "maf", maxAllowedMaf: 0.95 }, { kind: "ld",
-  maxAllowedR2: 0.1, maxDist: 50000 }]`. Then the same frozen value twice
-  for the same inputs.
+- **`pcaFilters`**, one test for each of the eight rows of the table of
+  "Which variants it reads", in its order, as literals. The first two:
+  the filters `[{ kind: "missing_data", maxAllowedMissingRate: 0.1 }]`
+  and `PCA_DEFAULTS` give `[{ kind: "missing_data",
+  maxAllowedMissingRate: 0.1 }, { kind: "maf", maxAllowedMaf: 0.95 }]`,
+  and with `maxDist` 50000 `[{ kind: "missing_data",
+  maxAllowedMissingRate: 0.1 }, { kind: "maf", maxAllowedMaf: 0.95 }, {
+  kind: "ld", maxAllowedR2: 0.1, maxDist: 50000 }]`. Then the same
+  frozen value twice for the same inputs.
 - **`run`**, with a fake client that records its job: the filters of
   `pcaFilters`, the method, `numCompsKept` 10, and `individuals` as the
   client gives it, `null` and a list.
@@ -1143,13 +1214,21 @@ With Vitest, at the functions of the definition, on frozen projects:
 - **`needs`**: a variants file of 9,382 individuals locked with the words
   above, of 9,381 not, and a PCoA of 8,696 locked; `pcoaLock` of the
   method `"pcoa"` with `false` gives the words of a PCoA not yet in
-  popnei, and with `true`, or of the method `"pca"`, `null`; each reason of `individualsNeeds` comes through; a project with no
-  metadata file, and one with a file and no column chosen, are not
-  locked.
+  popnei, and with `true`, or of the method `"pca"`, `null`; each reason of `individualsNeeds` comes through; with `PCA_DEFAULTS`
+  and the filters of a first project, the words of the pruning with no
+  distance, and none with `maxDist` 50000, with the pruning off, or with
+  an LD filter in the dataset; `pruningDistanceReason` gives the same
+  words in the same cases, also while another reason comes first; a
+  project with no metadata file, and one with a file and no column
+  chosen, each with a distance typed, are not locked.
+- **The key**, beside its table: `PCA_DEFAULTS`, with no distance, and
+  the pruning off give different keys, though `pcaFilters` gives both
+  the same list.
 - **`PCOA_IN_POPNEI`** equals `typeof doPcoaFromVariants === "function"`
   of the popnei installed.
-- **`parseOptions`**: the defaults back, `method` `"pcoa"`, `ldPruning`
-  `null`, `axes` `[10, 9, 1]`; a missing field, a field more, a method
+- **`parseOptions`**: the defaults back, `maxDist` `null` among them,
+  `maxDist` 50000, `method` `"pcoa"`, `ldPruning` `null`, `axes` `[10,
+  9, 1]`; a missing field, a field more, a method
   `"tsne"`, `maxAllowedMaf` 1.5, `maxDist` 0 or 2.5, `axes` `[1, 1, 2]`
   or `[1, 2, 11]`, `view` `"4d"`, refused.
 - **`warnings`**: a result whose job had no LD filter gives `pruningOff`,
@@ -1166,7 +1245,7 @@ With Vitest, at the functions of the definition, on frozen projects:
   distances worked out is 0.406 within 1e-12, the ten squares adding up
   to 4.06, and the share 0.3153051229612133. The same result with
   `lingoesConstant` and `negativeEigenvaluesPercent` 0 gives none.
-- **`checkNumbers`**: the numbers of the default flow below, `[535,
+- **`checkNumbers`**: the numbers of the flow below, `[535,
   3.543326238768707, 3.4381786862515153, 1.920566779749705]`; a result of
   one component, `[1175, 100, null, null]`.
 - **`pcaColours`**, on the worked table of the diversity's spec, `i1 A`,
@@ -1232,7 +1311,7 @@ import { readFileSync } from "node:fs";
 import { init, openVars, doPcaFromVariants } from "popnei";
 await init();
 const runs = [
-  ["defaults", (v) => { v.filterByMissingData(0.1); v.filterByMaf(0.95); v.filterByLd(0.1, 50000); }],
+  ["pruned", (v) => { v.filterByMissingData(0.1); v.filterByMaf(0.95); v.filterByLd(0.1, 50000); }],
   ["pruning off", (v) => { v.filterByMissingData(0.1); v.filterByMaf(0.95); }],
 ];
 for (const [label, put] of runs) {
@@ -1251,7 +1330,7 @@ for (const [label, put] of runs) {
 }
 ```
 
-| | the default pruning, r² 0.1 within 50,000 | the pruning off |
+| | the pruning at r² 0.1 within 50,000 | the pruning off |
 |---|---|---|
 | filters of the job | missing data 0.1, MAF 0.95, LD | missing data 0.1, MAF 0.95 |
 | `passStats` | `missing_data` 1,200 to 1,200, `maf` 1,200 to 1,175, `ld` 1,175 to 535; `numVars` 535 | `missing_data` 1,200 to 1,200, `maf` 1,200 to 1,175; `numVars` 1,175 |
@@ -1261,7 +1340,7 @@ for (const [label, put] of runs) {
 | `s000` on PC1, PC2, PC3 | −0.7546702846382134, 7.577178941266335, −4.924745039386669 | 1.5339065839147532, 12.930969544429235, −5.957159200821336 |
 | `s199` on PC1, PC2, PC3 | −2.633169063152295, −0.5579069230470312, −1.9284342262244138 | −9.28420972449867, −2.158094322945647, 4.43518504525279 |
 
-The ten percentages of the default, which the cut keeps:
+The ten percentages of the pruning, which the cut keeps:
 3.543326238768707, 3.4381786862515153, 1.920566779749705,
 1.8449703994478044, 1.770199736345114, 1.7520689760233366,
 1.7399545794492481, 1.700511107629948, 1.6551669240097038,
@@ -1299,7 +1378,9 @@ writes that file; making it is a task of the plan.
 
 The Playwright flow, in Chromium, Firefox and WebKit
 (`.claude/skills/coding/testing.md`): loads `panel.nei` and
-`panel_meta.csv`, chooses `popcat`, runs the PCA with its defaults and
+`panel_meta.csv`, chooses `popcat`; reads the reason of the pruning with
+no distance beside the field of the distance and beside Run, which is
+disabled; types 50000 as the distance, runs the PCA and
 reads "PC1 (3.54%)" and "PC2 (3.44%)" on the axes and `s000` at −0.7547,
 7.5772 in the table; highlights p1 from the legend, with the keyboard,
 and sees its entry checked, an element of the role `radio` with
@@ -1349,10 +1430,15 @@ method.
   disequilibrium", on, with two `NumberField`s labelled as those of the
   LD filter of the Variants step, "Maximum r² with a variant kept before
   it", 0.1, "from 0 to 1", and "Distance within which variants are
-  compared, in base pairs", 50000, "from 1". When the dataset has an LD filter, the three are
-  disabled and a line says why: "The LD filter of the Variants step, r²
-  at most 0.3 within 10,000 base pairs, is used, and the PCA does not
-  prune again."
+  compared, in base pairs", empty until the user types a distance,
+  "from 1". While it is empty and the pruning on, the reason of
+  `pruningDistanceReason` is the text beside it, which describes the
+  field to a screen reader, as it is beside the disabled Run button
+  when it is the reason `needs` gives first (above, "Why it cannot
+  run"). When the dataset has an LD filter, the three are
+  disabled, no distance is asked for, and a line says why: "The LD filter
+  of the Variants step, r² at most 0.3 within 10,000 base pairs, is used,
+  and the PCA does not prune again."
 
 The three number fields follow the rules of the fields of the Variants
 step, "A number the fields do not take" and "A character the fields do
@@ -1361,8 +1447,15 @@ numbers from 0 to 1 of at most two decimals, the window a whole number
 from 1 to 9007199254740991, written with no comma between thousands; a
 number outside that, or with more decimals, is refused with the line of
 that step under the field, "1.5 is more than 1; the maximum r² stays
-0.1.", "0 is less than 1; the distance stays 50000.", and sends nothing; a
-field left empty sends nothing and shows its value again. So every
+0.1.", "0 is less than 1; the distance stays 50000.", or, while there is
+no distance, "0 is less than 1; the distance is still to be typed.", and
+sends nothing; a field left empty sends nothing and shows its value
+again, or stays empty while there is no distance. The field of the
+distance is given `NaN` for a `null` distance, which React Aria's
+`NumberField` shows as empty, and not `undefined`, which would let it
+keep a number the project no longer has after an undo; an arrow key in
+the empty field sends nothing, so that no distance of 1 base pair is
+sent that the user never typed. So every
 option the fields send is one `parseOptions` takes, whose ranges are
 these.
 - A line of what it will run on: "200 individuals of panel.nei", or "119
@@ -1512,7 +1605,7 @@ the 3D view as it is turned (`charts.md`, "Export of the 3D plot").
 | state | what the user sees | what they can do |
 |---|---|---|
 | empty | cannot happen: until the variants file is read the analysis is locked with a reason | |
-| locked | the reason, as text beside a Run button that is disabled and described by it: "panel.nei has 12,000 individuals, and the principal components of more than 9,381 need more memory …", "This project asks for the PCoA of the Kosman distances, which this version of the application cannot calculate yet. …", "12 individuals of panel.nei are not in pops.csv: …", "Reading pops.csv.", "pops.csv was not read when this project was saved, so the project file does not hold it. …"; or the store's when the filters keep no individual. The options stay editable, since they are what the user may change | go to the step the reason names; change the options |
+| locked | the reason, as text beside a Run button that is disabled and described by it: "panel.nei has 12,000 individuals, and the principal components of more than 9,381 need more memory …", "This project asks for the PCoA of the Kosman distances, which this version of the application cannot calculate yet. …", "12 individuals of panel.nei are not in pops.csv: …", "Reading pops.csv.", "pops.csv was not read when this project was saved, so the project file does not hold it. …", "The LD pruning of the PCA needs the distance within which variants are compared. …", this one also beside the field of the distance; or the store's when the filters keep no individual. The options stay editable, since they are what the user may change | go to the step the reason names; type the distance or turn the pruning off; change the options |
 | ready | the options, the line of the individuals it will run on, and Run | set the options; Run |
 | running | the bar and the clock of the diversity, "Calculating · 35% · 0:12", its words after a stop and while it waits for the statistics of each individual; and under them "The bar shows the reading of panel.nei. The components are calculated once it is read, and the bar does not move meanwhile: from under a second for 1,000 individuals to minutes for several thousand." The options stay editable, as in every analysis and in the Variants step: a change of the method, the MAF or the pruning that changes the key leaves the calculation behind, with the notice of the store, which says it will be stopped unless the change is undone (`docs/specs/core/store.md`, "The notice, and the calculations it stops"), and the panel shows the state of the new settings; a change of the colour, the axes or the view keeps the key and the calculation | Stop; change the options |
 | done | the bar of controls, the plot, the legend, the explained variance, the table and their downloads; the warnings above the plot, with their count on the heading, "2 warnings"; the notes; after an opened project file, the comparison with its check numbers under the table; and the options, whose change removes the result | draw, colour, turn, highlight, sort, download; change the options |
@@ -1640,11 +1733,16 @@ The help, for the drawer of stage 8:
   individuals differ most, PC1 the most; the explained variance of each;
   how to read clusters, and that the distance along a component with
   little variance means little.
-- Its defaults: the MAF filter at 0.95 and the pruning at r² 0.1 within
-  50,000 base pairs, for this analysis alone and for both its methods,
-  and why: rare variants and linked
-  regions would otherwise shape the components; when the Variants step
-  has its own, the stricter MAF and its LD filter are used.
+- Its defaults: the MAF filter at 0.95 and the pruning at r² 0.1, for
+  this analysis alone and for both its methods, and why: rare variants
+  and linked regions would otherwise shape the components; when the
+  Variants step has its own, the stricter MAF and its LD filter are used.
+- The distance of the pruning, which the user types, and why it has no
+  default: it depends on how far linkage disequilibrium extends in the
+  genome of the species, and differs from one species to another. Once
+  the application has the LD decay, stage 5 of `docs/build-order.md`,
+  which gives the distance at which r² falls to half, the help points to
+  it as the way to choose the distance.
 - When not to trust it: with the pruning off, a linked region can make a
   component; with few variants, chance can look like structure; the PCA
   draws individuals with many missing genotypes toward the centre, and
@@ -1691,7 +1789,8 @@ The help, for the drawer of stage 8:
   and −2.8. p1 is highlighted. The table of the individuals gives each
   one's place." The centre of a group is the mean of its projections,
   arithmetic on popnei's numbers, written to one decimal; those of the
-  example are of the default PCA of `panel.nei` coloured by `popcat`,
+  example are of the PCA of `panel.nei` pruned at r² 0.1 within 50,000
+  base pairs, coloured by `popcat`,
   0.611 and 7.324, −4.497 and −1.937, 5.124 and −2.777 to three
   decimals, the means of the projections of the script of "How it is
   verified" over the populations of `panel_pops.csv`, in node with the
@@ -1756,7 +1855,9 @@ The help, for the drawer of stage 8:
   read the text that replaced the plot; and the notes that appear after
   a change of the colour, the axes or the view, "Note: " and their
   words, since the focus is then on the select or the button that made
-  them. A highlight is said by the checked state of its entry and not
+  them; and the reason of the pruning with no distance when turning the
+  pruning on makes it appear, since the focus is then on the checkbox.
+  A highlight is said by the checked state of its entry and not
   announced again.
 - A warning says "Warning:" in words, and a note "Note:".
 
@@ -1814,7 +1915,7 @@ Of the specs written beside it for stage 4:
   of a metadata file loaded over a PCA rest on; made after the last
   reviews of 27 September 2026.
 - `docs/architecture.md`, section 13: point 9, the restart after a large
-  PCA (**Open 1**); and section 11, the times and the memory of "How it
+  PCA (**Open 1**, decided by the owner on 27 September 2026); and section 11, the times and the memory of "How it
   runs".
 - `src/core/script.ts`, stage 6: `individuals_kept`, the list of the
   individuals kept, in the script, and the call that opened the variants
@@ -1883,33 +1984,31 @@ tested on results the tests build.
 
 ## Open points
 
-The recommendations to the owner of 27 September 2026 that this spec
-follows until they are answered are listed once, in
-`docs/specs/stage-4-open-points.md`: the pruned variants not kept
-between two PCAs, which variants the PCA reads, its default pruning, the
-variants of more than two alleles, and the PCA opening in 2D. The two
-that follow are this spec's, and are open: the owner decides each, and
-until then the implementer builds what its "Meanwhile" says.
+The points of `docs/specs/stage-4-open-points.md` this spec rests on
+are listed there once. Decided by the owner on 27 September 2026: the
+pruned variants not kept between two PCAs, and its default pruning, r²
+0.1 with no distance. Recommended and not yet answered, which this spec
+follows until they are: which variants the PCA reads, the variants of
+more than two alleles, and the PCA opening in 2D. Of the two that
+follow, this spec's own, the owner decided the first on 27 September
+2026; the second is open, and until the owner decides it the
+implementer builds what its "Meanwhile" says.
 
-**Open 1: the calculation worker started again after a large PCA.** A
-PCA of n individuals grows the memory of wasm by about 49 bytes per pair,
-662 MB at 4,000 in node, and that memory never shrinks, so the tab keeps
-it until the next load of the variants file. The options:
-
-- Start the worker again after a PCA or a PCoA of more than 700
-  individuals, as after a written file above 25 MB. It costs the reading
-  of the header of the file, at most 49 ms, and nothing else in stage 4,
-  since the worker keeps no intermediate result; from stage 7 it would
-  also cost the kinship the worker keeps, and the bound is decided again
-  then.
-- Do not, as the owner decided on 26 September 2026 for every request but
-  a write (`docs/architecture.md`, section 13, point 2): the tab holds up
-  to 4.3 GB after a PCA of 9,381 individuals, which a phone, or a
-  laptop with the variants file and other tabs open, may not have for
-  the next analysis.
-
-Recommendation: start it again, since in stage 4 it costs a read of the
-header. Meanwhile the client does so (`docs/specs/worker/client.md`).
+**Open 1, decided by the owner on 27 September 2026: the calculation
+worker started again after a large PCA.** A PCA of n individuals grows
+the memory of wasm by about 49 bytes per pair, 662 MB at 4,000 in node,
+and that memory never shrinks, so the tab would keep it until the next
+load of the variants file. The client starts the worker again after a
+PCA or a PCoA of more than 700 individuals, as after a written file
+above 25 MB (`docs/specs/worker/client.md`). It costs the reading of the
+header of the file, at most 49 ms, and nothing else in stage 4, since
+the worker keeps no intermediate result; from stage 7 it would also cost
+the kinship the worker keeps, and the bound is decided again then. The
+option not taken: not starting it again, as the owner decided on 26
+September 2026 for every request but a write (`docs/architecture.md`,
+section 13, point 2), which leaves the tab holding up to 4.3 GB after a
+PCA of 9,381 individuals, which a phone, or a laptop with the variants
+file and other tabs open, may not have for the next analysis.
 
 **Open 2: the individuals with many missing genotypes told by a note of
 the panel.** The PCA draws them toward the centre, and the result does
@@ -1938,9 +2037,9 @@ counts. Meanwhile the note, at 0.2.
   trait of the traits file: stage 7.
 - The weights of the variants, which popnei gives with `numPrinComps`
   above 0, and a second pass: not shown.
-- The variants kept by the pruning, kept for the next PCA: not in stage 4
-  ("The pruned variants are not kept between two PCAs" in
-  `docs/specs/stage-4-open-points.md`).
+- The variants kept by the pruning, kept for the next PCA: not built, as
+  the owner decided on 27 September 2026 ("The pruned variants are not
+  kept between two PCAs" in `docs/specs/stage-4-open-points.md`).
 - The export of the plots as SVG and PNG, and the report: stage 6.
 - The scatter and the 3D view as plots: `docs/specs/charts/scatter.md`
   and `pca3d.md`.

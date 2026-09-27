@@ -12,8 +12,10 @@ failures already had it. Revised on 27 September 2026:
 `WRITE_RESTART_BYTES` is 25 MB, set by the measurement of the write.
 Revised on 27 September 2026 for stage 4: the calculation worker is
 started again after a PCA or a PCoA of more than 700 individuals, as after a large
-write, meanwhile (open point 1 of `docs/specs/analyses/pca.md`), and it
-keeps no intermediate result in stage 4; and again the same day, to
+write, and it keeps no intermediate result in stage 4, both decided by the
+owner on 27 September 2026 (open point 1 of `docs/specs/analyses/pca.md`
+and "The pruned variants are not kept between two PCAs" in
+`docs/specs/stage-4-open-points.md`); and again the same day, to
 agree with the specs written beside it: the read of an xlsx, whose
 request has no options of a CSV and whose answer no `found`, and the
 test of the restart after a write at the bound of 25 MB; and when the
@@ -336,8 +338,9 @@ assumed that a write left the size of its file in the memory of wasm.
 What a restart costs in stages 3 and 4 is the reading of the header of
 the file, at most 49 ms (above): the worker keeps no intermediate result
 before the kinship of stage 7, the variants the pruning of the PCA kept
-among them (meanwhile, "The pruned variants are not kept between two
-PCAs" in `docs/specs/stage-4-open-points.md`),
+among them (decided by the owner on 27 September 2026, "The pruned
+variants are not kept between two PCAs" in
+`docs/specs/stage-4-open-points.md`),
 and the value of the bound is decided again then.
 
 The file outlives the worker that made it: a `Blob` the page holds keeps
@@ -376,8 +379,8 @@ next analysis, whose filters are not the PCA's, would open the file again
 anyway (`docs/specs/worker/runner.md`, "The steps"). This is a second
 exception to the owner's decision of 26 September 2026 that the worker is
 not started again between requests (`docs/architecture.md`, section 13,
-points 2, 5 and 9), recommended to the owner as open point 1 of
-`docs/specs/analyses/pca.md` and done meanwhile.
+points 2, 5 and 9), decided by the owner on 27 September 2026 (open
+point 1 of `docs/specs/analyses/pca.md`).
 
 ### Crashes, defects, and every read answered
 
@@ -789,7 +792,8 @@ kind of its own, `reopenFailed`, as written above (point B of
 was decided by the owner on 26 September 2026 (`docs/architecture.md`,
 section 13, point 5); its bound, `WRITE_RESTART_BYTES`, was set by the
 measurement of 27 September 2026, above. The restart after a large PCA
-is open point 1 of `docs/specs/analyses/pca.md`, done meanwhile.
+was decided by the owner on 27 September 2026 (open point 1 of
+`docs/specs/analyses/pca.md`).
 
 ## Not in this spec
 

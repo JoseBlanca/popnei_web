@@ -193,16 +193,24 @@ give the principal components that go into the GWAS as covariates.
 
 - The default is a PCA of the genotypes as 0, 1, 2 counts, after the MAF
   filter at 0.95 and LD pruning, both applied for the PCA alone. The
-  pruning is on by default and can be turned off, with a warning on the
-  result that linked regions can dominate the components. When the
-  filters of the dataset have pruned already, the PCA does not prune
-  again. Each PCA prunes again inside its one pass over the file:
-  popnei has no way to keep the variants a pruning left and to give
-  them to the next PCA, and a PCA reads the whole file anyway, so
-  keeping them would spare only the calculation of r². Recommended to
-  the owner on 27 September 2026, meanwhile; the time of the pruning is
-  measured in stage 4, and popnei is asked for a way to keep them only
-  if it is large (`docs/specs/stage-4-open-points.md`).
+  pruning is on by default, at an r² of 0.1, and can be turned off, with
+  a warning on the result that linked regions can dominate the
+  components. Its distance, within which variants are compared, has no
+  default: it depends on how far linkage disequilibrium extends in the
+  genome of the species, so the user types it, and the PCA does not run
+  until the user has typed one or turned the pruning off, with the
+  reason said beside the field and beside the Run button. Decided by
+  the owner on 27 September 2026; the option not taken, a default of
+  50,000 base pairs. The LD decay of section 6, once it exists, is the
+  way to choose it. When the filters of the dataset have pruned already,
+  the PCA does not prune again, and asks for no distance. Each PCA
+  prunes again inside its one pass over the file: popnei has no way to
+  keep the variants a pruning left and to give them to the next PCA, and
+  a PCA reads the whole file anyway, so keeping them would spare only
+  the calculation of r². Decided by the owner on 27 September 2026; the
+  time of the pruning is measured in stage 4, and popnei is asked for a
+  way to keep them only if it is large
+  (`docs/specs/stage-4-open-points.md`).
 - The alternative is a principal coordinate analysis (PCoA) of the Kosman
   distances between the individuals, for data with a lot of missing
   genotypes. popnei gives the distances and not yet the PCoA, which the
@@ -481,7 +489,12 @@ The last four the owner decided on 26 September 2026 to add to popnei.
    is in the 95%.
 4. The default thresholds of LD pruning and of the filters of
    individuals. The missing data filter is on at 0.1 by default, plink's
-   default for `--geno`, as the owner decided on 25 September 2026.
+   default for `--geno`, as the owner decided on 25 September 2026. The
+   PCA's pruning is on at an r² of 0.1 with no default distance, which
+   the user types, as the owner decided on 27 September 2026 (section 5).
+   The LD filter of the dataset is another thing, which starts at r² 0.3
+   within 10,000 base pairs when the user turns it on, as the owner left
+   it on 26 September 2026 (`docs/specs/stage-3-open-points.md`).
 5. The number of principal components offered as covariates by default.
 6. The schema of the project file, field by field, and which numbers of
    each result it keeps to check a new run against.

@@ -16,7 +16,10 @@ does; and that the worker keeps no intermediate result in stage 4; and
 again the same day, to agree with the specs written beside it: the
 populations of a diversity job made by `src/core/project.ts`; and
 when the specs of stage 4 were made to agree, the restart after a PCoA
-as after a PCA. The calculation
+as after a PCA; and with the owner's answers of 27 September 2026: the
+pruned variants not kept between two PCAs, decided, and the PCA's
+pruning, which has no distance by default, given one in the test of the
+PCA. The calculation
 worker is the thread of the browser tab, beside the page, that runs
 popnei, so that a calculation does not freeze the page
 (`docs/architecture.md`, section 1). Its runner is the code that answers
@@ -583,9 +586,9 @@ or a PCoA of more than 700 individuals (`docs/specs/worker/client.md`, "A large 
 and the restart after it"). The runner keeps nothing of a
 PCA: in stage 4 the worker keeps no intermediate result, the variants
 the pruning kept included, which popnei has no way to hold and give back
-(meanwhile, "The pruned variants are not kept between two PCAs" in
-`docs/specs/stage-4-open-points.md`), so each PCA
-prunes again inside its one pass.
+(decided by the owner on 27 September 2026, "The pruned variants are
+not kept between two PCAs" in `docs/specs/stage-4-open-points.md`), so
+each PCA prunes again inside its one pass.
 
 ### The written file
 
@@ -1047,8 +1050,8 @@ new worker pays before its first request:
 - **What the old worker held is lost**: its `Variants` with its filters.
   Nothing else before stage 7: the worker keeps no intermediate result in
   stage 4, the variants the pruning of the PCA kept among them
-  (meanwhile, "The pruned variants are not kept between two PCAs" in
-  `docs/specs/stage-4-open-points.md`), and the
+  (decided by the owner on 27 September 2026, "The pruned variants are
+  not kept between two PCAs" in `docs/specs/stage-4-open-points.md`), and the
   kinship, the first, comes with the GWAS.
 
 The first request after a restart puts its steps on the new `Variants`,
@@ -1364,9 +1367,10 @@ The numbers of stage 4 were given by the same release on 27 September
 verified", which gives the table they come from. Each test at `run` of a
 runner made by `createRunner`, after the open of `panel.nei`:
 
-- **The PCA with the defaults**, a job of the filters of a first project
+- **The PCA with its pruning**, a job of the filters of a first project
   and the PCA's, the missing data filter at 0.1, the MAF filter at 0.95
-  and the LD pruning at r² 0.1 within 50,000 base pairs, and no list:
+  and the LD pruning at r² 0.1 within 50,000 base pairs, a distance the
+  user types, since the PCA's pruning has none by default, and no list:
   `numCompsFound` 199, `numComps` 10, `projections` of 2,000 numbers,
   those of `s000` −0.7546702846382134, 7.577178941266335 and
   −4.924745039386669 first, the ten percentages of that spec,

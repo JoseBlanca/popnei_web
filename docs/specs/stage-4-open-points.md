@@ -7,7 +7,9 @@ the user, and the principal components of the individuals, drawn in 2D
 and in 3D. This file gathers what the specs of stage 4 ask the owner to
 decide, what they decided alone that a user meets, what the owner is
 asked to make or approve, and what is asked of popnei. None of the specs
-is reviewed or approved yet.
+is reviewed or approved yet. On 27 September 2026 the owner answered
+points 1, 3, 8, 14 and 15 and approved the new dependencies but
+calamine, and the specs named with each were revised the same day.
 
 The specs are, new: `docs/specs/analyses/pca.md`, the analysis and its
 panel; `docs/specs/charts/scatter.md`, the 2D plot, and `pca3d.md`, the
@@ -49,11 +51,8 @@ back.
   the correction is the common case and not an exception (`pca.md`).
   Recorded at popnei's commit `2f7545f`, on its branch `spec/pcoa`.
 
-## Recommended on 27 September 2026, not yet answered
-
-Each was put to the owner in chat that day with its recommendation. The
-specs take the recommendation as the meanwhile; an answer that differs
-changes the spec named, and nothing else unless said.
+The four numbered points below were put to the owner with a
+recommendation, and keep their numbers, which the specs cite.
 
 ### 1. The pruned variants are not kept between two PCAs
 
@@ -62,12 +61,94 @@ are kept for the next PCA. popnei cannot hold them: its pruning is a
 step of the file made again at every pass, and it has no way to put a
 list of variants back on a file. The one way through popnei, writing the
 pruned file into memory and opening it again, holds the whole file in
-the tab. Recommended: each PCA prunes again inside its one pass over the
-file, which it makes anyway, so what keeping them would spare is the
-calculation of r²; its time is measured in stage 4, and popnei is asked
-for a way to keep them if it is large. Not taken: asking popnei now.
-Specs: `pca.md`, `runner.md`; `docs/functionality.md` and
+the tab. Decided, as recommended: each PCA prunes again inside its one
+pass over the file, which it makes anyway, so what keeping them would
+spare is the calculation of r²; its time is measured in stage 4, and
+popnei is asked for a way to keep them if it is large. The owner's
+reason: "usually we don't need to redo the PCA exactly the same way, so
+I don't think this is a problem. We'll see in the future what happens
+when we use the application." Not taken: asking popnei now. Specs:
+`pca.md`, `runner.md`, `client.md`; `docs/functionality.md` and
 `docs/architecture.md`, section 5.
+
+### 3. The PCA's pruning: r² 0.1, and no default distance
+
+popnei gives no default of either. On popnei's test file of LD, with a
+window of 50,000 base pairs, plink2 at an r² of 0.3 keeps 41 variants,
+and popnei keeps 46 at 0.15 and 35 at 0.1 (`docs/specs/filters.md` of
+popnei), so a threshold of popnei is lower than the same habit in plink.
+Decided: the pruning is on by default at an r² of 0.1, as recommended,
+and its distance has no default, in the owner's words because "the
+distance really depends on the LD/recombination of the regions, so I
+don't think we can set a default, the user should choose." Not taken: a
+default distance of 50,000 base pairs, which was recommended.
+
+What a user meets: the PCA of a new project cannot run until the user
+types a distance or turns the pruning off, which gives the warning of
+the pruning off on the result. The reason is text beside the field of
+the distance and beside the disabled Run button: "The LD pruning of the
+PCA needs the distance within which variants are compared. It has no
+default, because it depends on how far linkage disequilibrium extends
+in the genome of your species. Type a distance in base pairs, or turn
+the pruning off." The help says the same, and points to the LD decay of
+stage 5, once it exists, as the way to choose the distance. When the
+dataset's own LD filter is on, the PCA does not prune again, asks for no
+distance and is not locked, since that filter has its own.
+
+In the specs, the option of the PCA's pruning holds its r² and its
+distance, the distance empty until the user types one, and is empty as
+a whole when the pruning is off; a project file saved before the
+distance was typed opens with it still empty; the key of the result, the
+hash of what the result was calculated from, holds the option as it is;
+and the Python script that the project gives, which calculates the same
+results with popnei in Python, has no lines for a PCA that cannot run. The LD filter of
+the Variants step, which starts at an r² of 0.3 within 10,000 base pairs
+when the user turns it on (stage 3), is a different thing and is not
+changed. Specs: `pca.md`, its options, "Why it cannot run", the panel
+and the help; `runner.md`, whose test types the distance;
+`docs/functionality.md`, section 5 and open point 4.
+
+### 8. The calculation worker started again after a PCA or a PCoA of more than 700 individuals
+
+A PCA grows the memory of the worker by about 49 bytes per pair of
+individuals, 662 MB at 4,000 in node, which stays until the next load of
+the variants file: up to about 4.3 GB after a PCA of 9,381. Decided, as
+recommended: the worker is started again, which in stage 4 costs reading
+the header of the file, at most 49 ms. It is a second exception to the
+owner's decision of 26 September 2026 not to start it again between
+calculations, the first being a filtered variants file written above
+25 MB, decided on 26 September 2026. Not taken: keeping
+the worker, and its memory, until the next load. Whether 700 is the
+right bound is measured in the plan (below). `pca.md`, Open 1;
+`client.md`; `docs/architecture.md`, section 13, point 9.
+
+### 15. A date cell of an xlsx, with or without its time
+
+calamine gives the value of a date cell and not its format, so a cell of
+`=NOW()` that Excel shows as 13/05/2024 holds the time as well. Decided,
+as recommended: a time that, rounded to the millisecond, is midnight
+gives the date alone, `2024-05-13`, and any other the date and the time,
+`2024-05-13 14:31:07`, so such a cell does not match the other dates of
+its column and the user sees why in its values. Not taken: always the
+date and the time, which writes `2024-05-13 00:00:00` for every plain
+date. `files.md`, Open 2.
+
+### The new dependencies of stage 4, but calamine
+
+Approved by the owner: three.js 0.186.1, loaded only when the 3D view is
+first shown, 134 KB gzipped, and its types, `@types/three` 0.186.0, for
+development, with the six packages they bring, which never reach the
+site, one of them 7.5 MB unpacked; the modules of D3 the scatter uses
+that stage 3 did not, `d3-shape`, `d3-path` and `d3-scale-chromatic`,
+with their types; and Rust 1.98.0 and `wasm-bindgen-cli` 0.2.128 on
+every machine that builds the site, CI among them. calamine is not
+approved yet (below, "Asked of the owner to make or approve").
+
+## Recommended on 27 September 2026, not yet answered
+
+Each was put to the owner in chat that day with its recommendation. The
+specs take the recommendation as the meanwhile; an answer that differs
+changes the spec named, and nothing else unless said.
 
 ### 2. Which variants the PCA reads
 
@@ -80,21 +161,10 @@ keep, last, as in every analysis. So the frequencies and the r² are
 counted over every individual of the file, as the dataset's filters are,
 and a PCA reads the same variants as every other analysis with the same
 filters, but for its MAF and its pruning. On `panel.nei`, with the
-missing data filter at 0.1, the PCA uses 535 variants with its default
-pruning and 1,175 with its pruning off. Not taken: the individuals
+missing data filter at 0.1, the PCA uses 535 variants with its pruning
+at r² 0.1 within 50,000 base pairs and 1,175 with its pruning off. Not taken: the individuals
 removed first for the PCA alone, so that its frequencies are those of the
 individuals kept. Spec: `pca.md`, "Which variants it reads".
-
-### 3. The PCA's default pruning
-
-popnei gives no default. On popnei's test file of LD, with a window of
-50,000 base pairs, plink2 at an r² of 0.3 keeps 41 variants, and popnei
-keeps 46 at 0.15 and 35 at 0.1 (`docs/specs/filters.md` of popnei), so a
-threshold of popnei is lower than the same habit in plink. Recommended:
-an r² of 0.1 within 50,000 base pairs, on by default, unless the owner
-knows better for the species of the users. It is a different thing from
-the dataset's pruning filter, which starts at 0.3 within 10,000 when the
-user turns it on (stage 3). Spec: `pca.md`, its options.
 
 ### 4. Variants of more than two alleles
 
@@ -146,16 +216,6 @@ their own and counted, and the bar of buttons above the plot.
 Each with its options and its recommendation in the spec named, which is
 the meanwhile.
 
-8. **The calculation worker started again after a PCA or a PCoA of more
-   than 700 individuals.** A PCA grows the memory of the worker by about 49 bytes
-   per pair of individuals, 662 MB at 4,000 in node, which stays until
-   the next load of the variants file: up to about 4.3 GB after a PCA of
-   9,381. Recommended: start the worker again, which in stage 4 costs
-   reading the header of the file, at most 49 ms. It is a second
-   exception to the owner's decision of 26 September 2026 not to start
-   it again between calculations, the first being a large written file.
-   `pca.md`, Open 1; `client.md`; `docs/architecture.md`, section 13,
-   point 9.
 9. **The individuals with many missing genotypes.** The PCA gives a
    missing genotype the mean of its variant, which pulls an individual
    with many of them toward the centre of the plot. popnei's PCA does not
@@ -195,16 +255,11 @@ the meanwhile.
    over the plot, since the highlight of a population and the table of
    the individuals reach every point, and the plot keeps its full size.
    Not taken: a strip beside the plot for the legend, which makes the
-   plot narrower, most on a phone. `scatter.md`, Open 1.
-15. **A date cell of an xlsx, with or without its time.** calamine gives
-   the value of a date cell and not its format, so a cell of `=NOW()`
-   that Excel shows as 13/05/2024 holds the time as well. Recommended: a
-   time that, rounded to the millisecond, is midnight gives the date
-   alone, `2024-05-13`, and any other the date and the time,
-   `2024-05-13 14:31:07`, so such a
-   cell does not match the other dates of its column and the user sees
-   why in its values. Not taken: always the date and the time, which
-   writes `2024-05-13 00:00:00` for every plain date. `files.md`, Open 2.
+   plot narrower, most on a phone. The owner answered on 27 September
+   2026, "we'll fix those details when we have the application
+   working": the recommendation stands meanwhile, and the point is
+   judged on the running screen, when the owner tries the PCA panel.
+   `scatter.md`, Open 1.
 
 ## Choices of a spec the owner may overrule
 
@@ -279,6 +334,9 @@ meets.
   plot, one tab stop, the Up and Down arrow keys moving between them; a press
   highlights a population and fades the others, and a second press
   clears it. The highlight is not saved (`scatter.md`).
+- **Turning the PCA's pruning on again gives r² 0.1 with no distance**,
+  and not the values it had before it was turned off, which the option
+  does not keep; Undo brings them back (`pca.md`, "Its options").
 - **The individuals of no population** are drawn as rings, not in a
   colour of their own, and counted in the legend (`scatter.md`).
 - **The 3D view** starts turned 30° about the vertical and 20° up; its
@@ -385,16 +443,13 @@ meets.
   settles whether the newest errors of Excel are refused by name or read
   as the text `#VALUE!`, which the specs cannot tell before it. `files.md` says what
   each holds. Until they exist, their tests are skipped and say so.
-- **New dependencies**, for the plan of stage 4 to name and the owner to
-  approve with it: three.js 0.186.1, loaded only when the 3D view is
-  first shown, 134 KB gzipped; its types, `@types/three` 0.186.0, for
-  development, which bring six packages that never reach the site, one
-  of them 7.5 MB unpacked; the modules of D3 the scatter uses that stage
-  3 did not, `d3-shape`, `d3-path` and `d3-scale-chromatic`, with their
-  types; calamine 0.36.1 in the crate, 0.30 MB gzipped, downloaded the
+- **calamine 0.36.1 in the crate**, 0.30 MB gzipped, downloaded the
   first time an xlsx is read, and `rust_xlsxwriter` 0.99.1 for its tests
-  alone; Rust 1.98.0 and `wasm-bindgen-cli` 0.2.128 on every machine that
-  builds the site, CI among them. `d3-delaunay`, which
+  alone. Not approved yet: on 27 September 2026 the owner was weighing
+  making the reader of xlsx a project of its own. The specs of the
+  reader, `files.md` and `docs/specs/worker/individuals.md`, are left as
+  they are until the owner decides. The other new dependencies were
+  approved that day (above). `d3-delaunay`, which
   `.claude/skills/coding/charts.md` listed for finding the point under the
   pointer, is not needed: a plain loop over 50,000 points took 0.027 ms
   in node.
