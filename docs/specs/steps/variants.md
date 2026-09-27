@@ -629,9 +629,9 @@ individuals are set from" while they are calculated.
 
 The last section, `docs/specs/analyses/writeVariants.md`, "The step's
 part", whose states and words it shows: the button "Write the filtered
-variants as a .nei file", with the size expected, "About 20.0 MB: 20,000
+variants as a .nei file", with the size expected, "About 20.8 MB: 20,000
 variants of 1,000 individuals.", the variants kept times the individuals
-kept at one byte each; above the button, when the size expected is 500
+kept at one byte each and 40 bytes more; above the button, when the size expected is 500
 MB or more, the warning that the tab may not hold the file while it is
 written; its progress and Stop; the button "Save panel.filtered.nei,
 19.2 MB" once written, the size of the file popnei wrote, 19,161,178

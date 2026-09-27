@@ -15,7 +15,12 @@ has it; and `sizeText` writes one byte as "1 byte". Revised on 27
 September 2026 with the measurement of the write: the peak is about 4F
 to 6.1F and not 3F, the largest file written is 1.98 GB and not 4 GB,
 and the constants and the words of the warning and of a file too large
-follow from it.
+follow from it. Revised again on 27 September 2026, after the review of
+the code: the estimate adds 40 bytes per variant, `BYTES_PER_VARIANT`,
+since the columns of a variant cost about 22 to 40 bytes whatever the
+number of individuals, which one byte per genotype missed by up to ten
+times with 2 individuals; the words of a refusal for another ploidy and
+of an empty source; and Save of a written file announced.
 
 **It is not an analysis** in the sense of section 4 of the architecture,
 and it is under `docs/specs/analyses/` only because the architecture names
@@ -164,17 +169,35 @@ of about 2.2 GB, 2,000,000 variants of 1,000 individuals, could not be
 written in either engine, and in WebKit its write closed the tab. So the step says the size
 it expects before the user writes:
 
-- **The estimate** is the variants kept times the individuals kept, at
-  one byte per genotype, `BYTES_PER_GENOTYPE`. The bytes of the file per
-  genotype depend on how well popnei's compression takes the genotypes:
-  0.96 for the 20,000 variants of 1,000 individuals of the `.nei` file of
-  19,161,178 bytes (`docs/specs/worker/runner.md`), 1.09 for the 1,152
-  variants of the 200 individuals of `panel.nei`, 250,994 bytes, since a
-  small file has more of its head (node, 26 September 2026,
-  `js-v0.1.0-dev.2`), and 1.10 for the VCFs of `e2e/bigVcf.ts`, whose
-  genotypes are drawn at random, from 200,000 to 1,800,000 variants of
-  1,000 individuals (the measurement below). One byte is within 10% of
-  each, and `WRITE_MAX_BYTES` takes the 10% into account. The variants
+- **The estimate** is the variants kept times the bytes of one
+  variant: the individuals kept at one byte per genotype,
+  `BYTES_PER_GENOTYPE`, and 40 bytes for its other columns,
+  `BYTES_PER_VARIANT`. A file of popnei holds, for each variant, its
+  genotypes, which popnei's compression takes to about one byte each,
+  and its chromosome, position, id, alleles and quality, which cost about
+  the same whatever the number of individuals, and which one byte per
+  genotype alone left out. `e2e/measure/writeSize.ts` measured both, in
+  node with the popnei of `package.json`, `js-v0.1.0-dev.2`, on 27
+  September 2026: the files `writeVars` wrote of 50,000 variants of 2,
+  10, 20, 200 and 1,000 individuals, with the random genotypes of
+  `e2e/bigVcf.ts`, took beyond one byte per genotype 22 to 24 bytes per
+  variant for 2 to 20 individuals with one chromosome and no id nor
+  quality, 27 to 29 with twelve chromosomes of the names of an assembly,
+  `SL4.0ch01`, a quality and the four bases, and 40 to 42 with an id of
+  11 characters too; for 200 and 1,000 individuals the genotypes took
+  1.07 to 1.09 bytes each. So the file is at most 7% larger than the
+  estimate in every case measured: 6.9% for 1,000 individuals with ids,
+  a file of 55,589,898 bytes of an estimate of 52,000,000; and the
+  estimate is up to 77% larger than the file for 2 individuals with no
+  id, 42 bytes per variant for a file of 23.7. Of the files of real
+  genotypes, the `.nei` file of 19,161,178 bytes, 20,000 variants of
+  1,000 individuals (`docs/specs/worker/runner.md`), is 8% under its
+  estimate, 20,800,000 bytes, and `panel.nei` written at 0.05, 250,994
+  bytes, 9% under its estimate, 276,480 bytes. Before this revision the
+  estimate was one byte per genotype alone, which gave 100,000 bytes for
+  a file of 1,182,922 of 2 individuals. An id or alleles longer than
+  those measured, as those of indels, make a variant cost more, and the
+  file larger than the estimate. The variants
   kept are the counts of
   `filterCounts` for the current filters, when the cache has them, and
   otherwise the variants of the file, when a pass has counted them; the
@@ -191,8 +214,9 @@ it expects before the user writes:
 - **At an estimate of `WRITE_MAX_BYTES` or more from the counts
   themselves**, not from a bound, the button is disabled with its reason
   as text beside it, since the write would fail. `WRITE_MAX_BYTES` is
-  1.8 GB, 1,800,000,000 bytes: at 1.10 bytes per genotype an estimate
-  under it is a file under 1.98 GB, and the largest file written in both
+  1.8 GB, 1,800,000,000 bytes: with the file at most 7% larger than its
+  estimate, an estimate under it is a file under 1.93 GB, and the
+  largest file written in both
   Chromium and WebKit was 1,982,018,522 bytes, 1,800,000 variants of 1,000
   individuals, while one of 2,000,000 variants, about 2.2 GB, failed in
   both. The 4 GB its words name are the most memory wasm addresses, 4
@@ -272,13 +296,14 @@ export function writtenName(p: Project): string;
 
 // src/core/writeEstimate.ts
 export const BYTES_PER_GENOTYPE = 1;
+export const BYTES_PER_VARIANT = 40;          // the columns of a variant but its genotypes
 export const WRITE_WARN_BYTES = 500_000_000;  // a peak of about 2 GB more in Chromium, 3 GB in WebKit
-export const WRITE_MAX_BYTES = 1_800_000_000; // a file under 1.98 GB, the largest both engines wrote
+export const WRITE_MAX_BYTES = 1_800_000_000; // a file under 1.93 GB, under the 1.98 GB both engines wrote
 
 export interface WriteEstimate {
   readonly numVars: number;         // the variants the file would hold, or their bound
   readonly numIndividuals: number;  // the individuals, or their bound
-  readonly numBytes: number;        // numVars * numIndividuals * BYTES_PER_GENOTYPE
+  readonly numBytes: number;        // numVars * (numIndividuals * BYTES_PER_GENOTYPE + BYTES_PER_VARIANT)
   readonly bound: boolean;          // either count is a bound: "at most about"
   readonly warn: boolean;           // numBytes >= WRITE_WARN_BYTES
   readonly tooLarge: boolean;       // numBytes >= WRITE_MAX_BYTES and not bound
@@ -379,7 +404,7 @@ notice and the status region is "Writing the file".
 |---|---|---|
 | empty | cannot happen: while the variants file is not read the part is not drawn, and the step shows the line of a file not read in its place (`docs/specs/steps/variants.md`, "What it does") | |
 | locked | the reason of `individualListNeeds` of `docs/specs/core/project.md`, or of the filters keeping no individual, beside the disabled button. While the variants file is not read, when the store locks it with the reason of `projectNeeds`, the part is not drawn, as for empty | what the reason says |
-| ready | the button, and the estimate: "About 20.0 MB: 20,000 variants of 1,000 individuals." | Write |
+| ready | the button, and the estimate: "About 20.8 MB: 20,000 variants of 1,000 individuals." | Write |
 | waiting for the statistics | "Calculating the statistics of each individual, which the filters of individuals are set from · 35% · 0:12" | Stop |
 | writing | "Writing panel.filtered.nei · 35% · 0:12", the bar of the diversity | Stop |
 | written, the store's `done` | "Save panel.filtered.nei, 19.2 MB" | Save |
@@ -389,14 +414,16 @@ notice and the status region is "Writing the file".
 | results removed | a file written and not saved, which a change of the filters or a new load discarded: the part is `ready` for the new filters, with the button to write, and the notice of the shell says that the file was discarded and that Undo does not bring it back (`docs/specs/shell.md`, "The notice"; point G of `docs/specs/stage-3-open-points.md`) | Write; the Undo of the notice, which brings the filters back and not the file |
 | error | the words of the failure, below | as the words say |
 
-The estimate of the ready state is 20,000 times 1,000 genotypes at one
-byte each, 20,000,000 bytes, "20.0 MB"; the file popnei writes of them
+The estimate of the ready state is 20,000 variants of 1,040 bytes each,
+1,000 genotypes at one byte and 40 bytes more, 20,800,000 bytes, "20.8
+MB"; the file popnei writes of them
 is 19,161,178 bytes, "19.2 MB", which the Save button shows.
 
 ### Its words
 
 The sizes in the words are the estimate, "about"; 1.0 GB is a million
-variants of 1,000 individuals at one byte per genotype.
+variants of 1,000 individuals, 1,040,000,000 bytes, and 2.0 GB about
+1,920,000 variants of 1,000 individuals.
 
 | when | the text |
 |---|---|
@@ -419,7 +446,7 @@ What the table leaves open, chosen with the code of the step on 27
 September 2026:
 
 - An estimate from a bound starts "At most about" in the ready state,
-  "At most about 240 KB: 1,200 variants of 200 individuals.", and says
+  "At most about 288 KB: 1,200 variants of 200 individuals.", and says
   "at most about" in the warning.
 - The line of the writing before the first progress has no share,
   "Writing panel.filtered.nei · 0:12", and, when the write waits for
@@ -478,7 +505,9 @@ before the user asks.
 - **The words, with Vitest**, each row of "Its words" asserted whole
   from its failure, the two of 1.0 GB and 2.0 GB from estimates of a
   million and of 2 million variants of 1,000 individuals.
-- **`writeEstimate`, with Vitest**: the variants of `variantsKept`, of
+- **`writeEstimate`, with Vitest**: the bytes of 20,000 variants of
+  1,000 individuals, 20,800,000, and of one variant of one individual,
+  41; the variants of `variantsKept`, of
   the read with and without a filter of the variants, and none, which
   gives `null`; the individuals of a known list, of `null`, and of
   `byLists` while a threshold waits; `bound` and the words "about" and

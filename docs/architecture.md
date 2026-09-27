@@ -1764,9 +1764,15 @@ code, the release `js-v0.1.0-dev.2`.
   Pro with 64 GB and macOS 27.0 (`docs/specs/analyses/writeVariants.md`,
   "What was measured"); Firefox, which Playwright cannot launch there, is
   measured by the owner by hand. They set `WRITE_WARN_BYTES`, 500 MB,
-  `WRITE_MAX_BYTES`, 1.8 GB, `BYTES_PER_GENOTYPE`, 1, and the size of a
-  written file above which the worker is started again,
-  `WRITE_RESTART_BYTES`, 25 MB (section 13, point 5).
+  `WRITE_MAX_BYTES`, 1.8 GB, and the size of a written file above which
+  the worker is started again, `WRITE_RESTART_BYTES`, 25 MB (section 13,
+  point 5). The estimate of the size of a file, which the warning and
+  the limit are compared with, is the variants times the individuals at
+  `BYTES_PER_GENOTYPE`, 1, and `BYTES_PER_VARIANT`, 40 bytes more per
+  variant for its other columns: in node, with `writeVars`, 50,000
+  variants of 2 to 1,000 individuals gave files at most 7% larger than
+  that estimate, and up to 77% smaller, for 2 individuals and no ids
+  (`e2e/measure/writeSize.ts`, 27 September 2026).
 - **The table of each individual's statistics** has three columns and a
   row per individual, 30,000 cells at 10,000 individuals, and a change of
   a threshold changes which rows are marked kept. Measured with the table,
