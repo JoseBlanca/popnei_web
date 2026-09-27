@@ -2013,6 +2013,115 @@ for (const theme of ["light", "dark"] as const) {
       await save(page, `popgen-lists-not-in-file-write-${theme}`);
     });
 
+    /** Saves the section of the filters of the individuals as `name`. */
+    async function saveIndividuals(page: Page, name: string): Promise<void> {
+      await individualLists(page).screenshot({
+        path: join(SCREENS, `${name}-${theme}.png`),
+      });
+    }
+    const CALCULATE_STATS = "Calculate the statistics of each individual";
+    const STATS_CAPTION =
+      /^The statistics of the 200 individuals of panel\.nei/;
+
+    test("the statistics of each individual, ready", async ({ page }) => {
+      await pickPanel(page);
+      await expect(
+        individualLists(page).getByRole("button", { name: CALCULATE_STATS }),
+      ).toBeVisible();
+      await saveIndividuals(page, "popgen-stats-ready");
+    });
+
+    test("the statistics of each individual, running", async ({ page }) => {
+      await pickPanel(page);
+      await holdResults(page);
+      await individualLists(page)
+        .getByRole("button", { name: CALCULATE_STATS })
+        .click();
+      await expect(
+        individualLists(page).getByText(/^Calculating · \d+% · 0:0\d$/),
+      ).toBeVisible();
+      await saveIndividuals(page, "popgen-stats-running");
+    });
+
+    test("the statistics of each individual, done, with a list applied and the column Kept, and at 320 pixels wide", async ({
+      page,
+    }) => {
+      await pickPanel(page);
+      await individualLists(page)
+        .getByRole("button", { name: CALCULATE_STATS })
+        .click();
+      await expect(
+        individualLists(page).getByText(STATS_CAPTION),
+      ).toBeVisible();
+      await listArea(page, "Individuals to remove, one name per line").fill(
+        "s001",
+      );
+      await individualLists(page)
+        .getByRole("button", { name: "Apply the list to remove" })
+        .click();
+      await expect(
+        individualLists(page).getByRole("columnheader", { name: /^Kept/ }),
+      ).toBeVisible();
+      await saveIndividuals(page, "popgen-stats-done");
+      // Sorted down by the proportion of missing genotypes.
+      const header = individualLists(page).getByRole("columnheader", {
+        name: /^Proportion of missing genotypes/,
+      });
+      await header.click();
+      await header.click();
+      await expect(header).toHaveAttribute("aria-sort", "descending");
+      await individualLists(page)
+        .getByRole("grid", { name: "Statistics of each individual" })
+        .screenshot({
+          path: join(SCREENS, `popgen-stats-table-sorted-${theme}.png`),
+        });
+      await page.setViewportSize({ width: 320, height: 900 });
+      await saveIndividuals(page, "popgen-stats-320");
+    });
+
+    test("the statistics of each individual, removed by the missing data filter, with the notice", async ({
+      page,
+    }) => {
+      await pickPanel(page);
+      await individualLists(page)
+        .getByRole("button", { name: CALCULATE_STATS })
+        .click();
+      await expect(
+        individualLists(page).getByText(STATS_CAPTION),
+      ).toBeVisible();
+      const threshold = page.getByLabel(
+        "Maximum proportion of missing genotypes, from 0 to 1",
+        { exact: true },
+      );
+      await threshold.fill("0.05");
+      await threshold.press("Enter");
+      await expect(
+        individualLists(page).getByText(
+          /^The statistics of each individual were removed because/,
+        ),
+      ).toBeVisible();
+      await saveIndividuals(page, "popgen-stats-removed");
+      await save(page, `popgen-stats-removed-notice-${theme}`, {
+        fullPage: false,
+      });
+    });
+
+    test("the statistics of each individual, in error, the ploidy refused", async ({
+      page,
+    }) => {
+      await pickVariants(page, "tetraploid.vcf.gz");
+      await expect(
+        page.getByRole("main").getByText("12 individuals"),
+      ).toBeVisible();
+      await individualLists(page)
+        .getByRole("button", { name: CALCULATE_STATS })
+        .click();
+      await expect(
+        individualLists(page).getByText(/^At line 5 of tetraploid\.vcf\.gz/),
+      ).toBeVisible();
+      await saveIndividuals(page, "popgen-stats-error");
+    });
+
     test("the Variants step after an opening, and with the warning of the identity", async ({
       page,
     }, testInfo) => {

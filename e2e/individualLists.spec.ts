@@ -467,7 +467,7 @@ test("VS7 D1 an opening puts the text of each list back to the lists of the proj
   await expect(lists(page).getByText(/not applied yet/)).toHaveCount(0);
 });
 
-test("VS7 D1 the Tab key goes from the Count through each list, its text area and its two buttons, to Write", async ({
+test("VS7 D1 the Tab key goes from the Count through each list, its text area and its two buttons, and the button of the statistics of each individual, to Write", async ({
   page,
 }) => {
   await openVariants(page);
@@ -482,6 +482,7 @@ test("VS7 D1 the Tab key goes from the Count through each list, its text area an
     removeArea(page),
     button(page, "Apply the list to remove"),
     button(page, "Clear the list to remove"),
+    button(page, "Calculate the statistics of each individual"),
     writeButton(page),
   ];
   for (const next of order) {

@@ -140,3 +140,12 @@
   flex-wrap: wrap;
   gap: var(--space-2);
 }
+
+/* The table of the individuals, the line above it and its download; as
+   narrow as its parent, so that a table wider than the page scrolls in
+   its box and not the page. */
+.individualTable {
+  display: grid;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}

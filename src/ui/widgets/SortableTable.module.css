@@ -1,0 +1,106 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+/* The grid is the box it scrolls in, both ways, as React Aria's
+   Virtualizer has it: thousands of rows scroll in it and not in the
+   page, and a page narrower than the table scrolls it sideways and not
+   the page (WCAG 1.4.10). The Tab key reaches it, and its arrow keys
+   scroll it as they move. The Virtualizer places the rows and needs a
+   height it can fill; how high is left for the running application
+   (individualChecks.md). */
+.table {
+  display: block;
+  block-size: min(70vh, 28rem);
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.table[data-focus-visible] {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+/* The row of the headers, which stays in view while the rows scroll
+   under it: its line and its background are the row's, since each
+   header is as high as its own words, and a line under each would stand
+   at as many heights. */
+.headerRow {
+  border-block-end: 1px solid var(--color-border);
+  background: var(--color-background);
+}
+
+.header {
+  display: flex;
+  align-items: flex-end;
+  padding-block: var(--space-1);
+  padding-inline: var(--space-3);
+  font-weight: 600;
+  cursor: default;
+}
+
+.cell {
+  display: flex;
+  align-items: center;
+  padding-block: var(--space-1);
+  padding-inline: var(--space-3);
+  border-block-end: 1px solid var(--color-border);
+}
+
+/* On a narrow page less space between the columns, as the plain table
+   has it. */
+@media (width < 30em) {
+  .header,
+  .cell {
+    padding-inline: var(--space-2);
+  }
+}
+
+.row {
+  background: var(--color-background);
+}
+
+.rowHeader {
+  font-weight: 600;
+}
+
+.headerText {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: baseline;
+}
+
+/* The arrow of the direction keeps its width when the column is not
+   sorted, so that a header does not move when it is sorted. */
+.arrow {
+  display: inline-block;
+  min-inline-size: 1ch;
+  font-size: var(--text-sm);
+}
+
+.header[data-hovered] {
+  background: var(--color-surface);
+}
+
+.header[data-focus-visible],
+.cell[data-focus-visible],
+.row[data-focus-visible] {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.text {
+  justify-content: flex-start;
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+
+/* A header of numbers wraps its words, and its numbers do not. */
+.numeric {
+  justify-content: flex-end;
+  text-align: end;
+}
+
+.cell.numeric {
+  white-space: nowrap;
+}

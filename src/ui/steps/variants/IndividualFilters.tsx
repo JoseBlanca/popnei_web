@@ -14,10 +14,24 @@
  * makes it appear, since the focus stays on the button; the stepper and
  * the writing show it too. The lists are drawn in every state, since they belong to the
  * project, and a list is checked only once the variants file is read.
+ *
+ * After the lists, once the variants file is read, the block of the
+ * statistics of each individual (IndividualChecksBlock.tsx); once they
+ * are calculated, the histogram of each of the two statistics, in the
+ * place of the threshold of its filter, with that threshold marked while
+ * the filter is on, and the table of the individuals with its download.
+ * The block, each histogram and the table are drawn inside an error
+ * boundary of their own, and each reads its result inside it, so that a
+ * defect in drawing one leaves the lists and the rest of the step
+ * (react.md, "Errors").
  */
 import { useId, useMemo, useState } from "react";
 
+import type { IndividualStatistic } from "../../../core/analyses/individualChecks.ts";
 import { individualListNeeds } from "../../../core/project.ts";
+import { resultOf, statusOf } from "../../analyses/status.ts";
+import { titleOf } from "../../analyses/titles.ts";
+import { ErrorBoundary } from "../../shell/ErrorBoundary.tsx";
 import { classOf } from "../../classOf.ts";
 import { useHistoryMoves } from "../../historyMoves.ts";
 import { useAnnouncer } from "../../shell/announcer.tsx";
@@ -26,6 +40,9 @@ import { Button } from "../../widgets/Button.tsx";
 import { Problem } from "../../widgets/Problem.tsx";
 import { TextArea } from "../../widgets/TextArea.tsx";
 import type { StepCommand } from "./commands.ts";
+import { IndividualChecksBlock } from "./IndividualChecksBlock.tsx";
+import { IndividualHistogram } from "./IndividualHistogram.tsx";
+import { IndividualTable } from "./IndividualTable.tsx";
 import {
   INDIVIDUAL_FILTERS_HEADING,
   LIST_KINDS,
@@ -40,6 +57,11 @@ import {
   shownText,
 } from "./individualLists.ts";
 import type { ListKind, TypedList } from "./individualLists.ts";
+import {
+  INDIVIDUAL_HISTOGRAMS,
+  STATS_TABLE_NAME,
+  individualThreshold,
+} from "./individualStats.ts";
 import styles from "./VariantsStep.module.css";
 
 /** The texts typed in the two lists, `null` where nothing was typed. */
@@ -62,6 +84,10 @@ export function IndividualFilters(): React.JSX.Element {
   const [clears, setClears] = useState<Clears>(NO_CLEAR);
   const headingId = useId();
   const needs = useMemo(() => individualListNeeds(project), [project]);
+  const read = project.variants?.read.kind === "read";
+  const statsDone = useAppState(
+    (s) => statusOf(s, "individualChecks").kind === "done",
+  );
 
   /** Sends the command of Apply or Clear, and announces the reason of
       a list that it makes appear. */
@@ -113,7 +139,87 @@ export function IndividualFilters(): React.JSX.Element {
           );
         })}
       </div>
+      {read && (
+        <ErrorBoundary level={3} heading={titleOf("individualChecks")}>
+          <IndividualChecksBlock />
+        </ErrorBoundary>
+      )}
+      {read && statsDone && (
+        <>
+          <div className={classOf(styles, "filters")}>
+            {STATISTICS.map((statistic) => (
+              // The threshold of the filter of the statistic goes before
+              // its histogram.
+              <div key={statistic} className={classOf(styles, "filter")}>
+                <ErrorBoundary
+                  level={3}
+                  heading={INDIVIDUAL_HISTOGRAMS[statistic].title}
+                >
+                  <HistogramOf
+                    statistic={statistic}
+                    threshold={individualThreshold(
+                      project.individualFilters,
+                      statistic,
+                    )}
+                  />
+                </ErrorBoundary>
+              </div>
+            ))}
+          </div>
+          <ErrorBoundary level={3} heading={STATS_TABLE_NAME}>
+            <TableOf />
+          </ErrorBoundary>
+        </>
+      )}
     </section>
+  );
+}
+
+/** The two statistics, in the order of their filters. */
+const STATISTICS: readonly IndividualStatistic[] = Object.freeze([
+  "missingGenotypes",
+  "observedHeterozygosity",
+]);
+
+/** The statistics of each individual the store keeps, and the name of
+    the variants file, once they are calculated. */
+function useStats(): {
+  readonly result: ReturnType<typeof resultOf<"individualChecks">>;
+  readonly variantsName: string | null;
+} {
+  const result = useAppState((s) =>
+    resultOf(statusOf(s, "individualChecks"), "individualChecks"),
+  );
+  const variantsName = useAppState((s) => s.project.variants?.name ?? null);
+  return { result, variantsName };
+}
+
+/** The histogram of `statistic` with `threshold`, from the statistics the
+    store keeps, once they are calculated. */
+function HistogramOf({
+  statistic,
+  threshold,
+}: {
+  readonly statistic: IndividualStatistic;
+  readonly threshold: number | null;
+}): React.JSX.Element | null {
+  const { result, variantsName } = useStats();
+  return result === null || variantsName === null ? null : (
+    <IndividualHistogram
+      statistic={statistic}
+      result={result}
+      threshold={threshold}
+      variantsName={variantsName}
+    />
+  );
+}
+
+/** The table of the individuals, from the statistics the store keeps,
+    once they are calculated. */
+function TableOf(): React.JSX.Element | null {
+  const { result, variantsName } = useStats();
+  return result === null || variantsName === null ? null : (
+    <IndividualTable result={result} variantsName={variantsName} />
   );
 }
 

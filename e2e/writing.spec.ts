@@ -219,9 +219,10 @@ test("VS5 D3 with the focus on Write, the write ends with the focus on Save, the
 
   // The keyboard alone: from the threshold, the switches of the three
   // filters that are off, the Count, each list of individuals with its
-  // two buttons, and then Write.
+  // two buttons, the button of the statistics of each individual, and
+  // then Write.
   await threshold(page).focus();
-  for (let press = 0; press < 11; press++) {
+  for (let press = 0; press < 12; press++) {
     await page.keyboard.press("Tab");
   }
   await expect(writeButton(page)).toBeFocused();
