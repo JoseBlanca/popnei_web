@@ -18,6 +18,11 @@ const FIXTURES = join(import.meta.dirname, "fixtures");
 const PLOIDY_LINE =
   "A VCF does not say its ploidy, so it is given here. If it is wrong, the first analysis stops with a message that names the line and the individual; set the right ploidy here and read the file again.";
 
+/** The line under the switch of the missing data filter, the last part
+    of the description of its field. */
+const MISSING_DATA_LINE =
+  "A genotype is missing when any of its alleles is, 0/. among them; the proportion is over every individual of the file.";
+
 async function openVariants(page: Page): Promise<void> {
   await page.goto("popgen.html#variants");
   await expect(
@@ -402,7 +407,10 @@ test("WS7 D3 the threshold takes a number of two decimals from 0 to 1, and refus
     await threshold.press("Enter");
     await expect(threshold).toHaveValue("0.13");
     await expect(page.getByRole("main").getByText(line)).toBeVisible();
-    await expect(threshold).toHaveAccessibleDescription(line);
+    // The line of the refusal, then the line under the switch.
+    await expect(threshold).toHaveAccessibleDescription(
+      `${line} ${MISSING_DATA_LINE}`,
+    );
     await expect(page.getByRole("status").last()).toHaveText(line);
   }
   await expectNoViolations(makeAxeBuilder);
@@ -468,7 +476,9 @@ test("WS7 D3 a comma typed key by key in the threshold is thrown away, and the f
     await threshold.press("Enter");
     await expect(threshold).toHaveValue("0.1");
     await expect(page.getByRole("main").getByText(comma)).toBeVisible();
-    await expect(threshold).toHaveAccessibleDescription(comma);
+    await expect(threshold).toHaveAccessibleDescription(
+      `${comma} ${MISSING_DATA_LINE}`,
+    );
   }
   await expectNoViolations(makeAxeBuilder);
 

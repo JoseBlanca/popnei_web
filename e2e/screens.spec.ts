@@ -685,6 +685,60 @@ for (const theme of ["light", "dark"] as const) {
       await save(page, `popgen-variants-filter-off-${theme}`);
     });
 
+    test("the Variants step, a file read and the four filters on", async ({
+      page,
+    }) => {
+      await pickVariants(page, "panel.nei");
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      for (const name of [
+        "Filter the variants by observed heterozygosity",
+        "Filter the variants by major allele frequency (MAF)",
+        "Prune the variants by linkage disequilibrium (LD)",
+      ]) {
+        await page.getByText(name, { exact: true }).click();
+      }
+      await expect(page.getByLabel("Maximum r² with a variant")).toHaveValue(
+        "0.3",
+      );
+      await save(page, `popgen-variants-filters-on-${theme}`);
+    });
+
+    test("the Variants step, a distance refused", async ({ page }) => {
+      await page
+        .getByText("Prune the variants by linkage disequilibrium (LD)", {
+          exact: true,
+        })
+        .click();
+      const distance = page.getByLabel("Distance within which variants");
+      await distance.fill("2.5");
+      await distance.press("Enter");
+      await expect(
+        page
+          .getByRole("main")
+          .getByText("2.5 is not a whole number; the distance stays 10000."),
+      ).toBeVisible();
+      await save(page, `popgen-variants-distance-refused-${theme}`);
+    });
+
+    test("the Variants step, the four filters on at 320 px", async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 320, height: 900 });
+      for (const name of [
+        "Filter the variants by observed heterozygosity",
+        "Filter the variants by major allele frequency (MAF)",
+        "Prune the variants by linkage disequilibrium (LD)",
+      ]) {
+        await page.getByText(name, { exact: true }).click();
+      }
+      await expect(page.getByLabel("Maximum r² with a variant")).toHaveValue(
+        "0.3",
+      );
+      await save(page, `popgen-variants-filters-320-${theme}`);
+    });
+
     test("the Individuals step with no file", async ({ page }) => {
       await goTo(page, "Individuals");
       await save(page, `popgen-individuals-empty-${theme}`);

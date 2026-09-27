@@ -66,12 +66,63 @@ export const PLOIDY_DESCRIPTION =
 /** The label of the ploidy, with its range. */
 export const PLOIDY_LABEL = "Ploidy of the VCF, from 1 to 255";
 
+/** The heading of the section of the filters of the variants. */
+export const FILTERS_HEADING = "Filters of the variants";
+
+/** The line under that heading, in place of the checks and the Count,
+    while the variants file is not read (docs/specs/steps/variants.md,
+    "The parts, in their order"). */
+export const NOT_READ_LINE =
+  "The histograms, the counts and the statistics of each individual are calculated once a variants file is read.";
+
+/** The switch of the missing data filter. */
+export const MISSING_DATA_SWITCH = "Filter the variants by missing data";
+
 /** The label of the threshold of missing data, with its range. */
 export const THRESHOLD_LABEL =
   "Maximum proportion of missing genotypes, from 0 to 1";
 
+/** The line under the switch of the missing data filter: what popnei
+    counts as missing, and over which individuals. */
+export const MISSING_DATA_LINE =
+  "A genotype is missing when any of its alleles is, 0/. among them; the proportion is over every individual of the file.";
+
+/** The switch of the filter by observed heterozygosity. */
+export const OBS_HET_SWITCH = "Filter the variants by observed heterozygosity";
+
+/** The label of its threshold, with its range. */
+export const OBS_HET_LABEL = "Maximum observed heterozygosity, from 0 to 1";
+
+/** The switch of the MAF filter. */
+export const MAF_SWITCH = "Filter the variants by major allele frequency (MAF)";
+
+/** The label of its threshold, with its range. */
+export const MAF_LABEL = "Maximum major allele frequency, from 0 to 1";
+
+/** The line under the switch of the MAF filter: the MAF is the major
+    allele frequency, as the owner decided on 24 September 2026, and a
+    user who reads it as the minor one would set 0.05 and keep almost
+    nothing. */
+export const MAF_LINE =
+  "The frequency of the commonest allele: 0.95 removes a variant whose commonest allele is above 0.95. For a variant of two alleles, that is a minor allele frequency below 0.05.";
+
+/** The switch of the LD pruning. */
+export const LD_SWITCH = "Prune the variants by linkage disequilibrium (LD)";
+
+/** The label of its r², with its range. */
+export const R2_LABEL = "Maximum r² with a variant kept before it, from 0 to 1";
+
+/** The label of its distance, with its range. */
+export const DISTANCE_LABEL =
+  "Distance within which variants are compared, in base pairs, from 1";
+
+/** The line under the switch of the LD pruning: popnei's `filterByLd`
+    keeps the variant that comes first. */
+export const LD_LINE =
+  "Of two variants closer than the distance whose r² is above the maximum, the first is kept.";
+
 /** The number of decimals in words, as a refusal says it. */
-const DECIMAL_WORDS = ["no", "one", "two", "three"] as const;
+const DECIMAL_WORDS = ["no", "one", "two", "three", "four"] as const;
 
 /** What a field says of a character typed that it threw away. */
 interface NotTakenWords {
@@ -94,7 +145,23 @@ const PLOIDY_NOT_TAKEN: NotTakenWords = Object.freeze({
   other: "cannot be typed in the ploidy, which is a whole number, as 4",
 });
 
-/** The characters a number of the two fields is written with. */
+/** What the maximum r² says of a character it threw away: the words of
+    the threshold, with the noun of the field. */
+const R2_NOT_TAKEN: NotTakenWords = Object.freeze({
+  comma: THRESHOLD_NOT_TAKEN.comma,
+  other:
+    "cannot be typed in the maximum r², which is written with digits and a point, as 0.05",
+});
+
+/** What the distance says of a character it threw away. */
+const DISTANCE_NOT_TAKEN: NotTakenWords = Object.freeze({
+  comma:
+    "Write the distance as a whole number of base pairs, 10000 and not 10,000",
+  other:
+    "cannot be typed in the distance, which is a whole number of base pairs, as 10000",
+});
+
+/** The characters a number of the fields is written with. */
 const NUMBER_CHARACTER = /^[0-9.]$/;
 
 /** The line of the text `text` a field threw away: the comma's, when
@@ -142,6 +209,23 @@ export function thresholdRefusedText(
   kept: number,
 ): string {
   return `${refusedWhy(refusal, THRESHOLD_NOT_TAKEN)}; the threshold stays ${numberText(kept)}.`;
+}
+
+/** The line under the maximum r² of the LD pruning for a number it
+    refused, or a character it threw away, with the r² kept: "1.5 is more
+    than 1; the maximum r² stays 0.3." */
+export function r2RefusedText(refusal: NumberRefusal, kept: number): string {
+  return `${refusedWhy(refusal, R2_NOT_TAKEN)}; the maximum r² stays ${numberText(kept)}.`;
+}
+
+/** The line under the distance of the LD pruning for a number it
+    refused, or a character it threw away, with the distance kept: "0 is
+    less than 1; the distance stays 10000." */
+export function distanceRefusedText(
+  refusal: NumberRefusal,
+  kept: number,
+): string {
+  return `${refusedWhy(refusal, DISTANCE_NOT_TAKEN)}; the distance stays ${numberText(kept)}.`;
 }
 
 /** The line under the ploidy for a number it refused, or a character it

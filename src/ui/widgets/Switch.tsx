@@ -13,6 +13,9 @@ export interface SwitchProps {
   readonly label: string;
   /** Whether it is on. */
   readonly isSelected: boolean;
+  /** The id of an element elsewhere on the page that describes the
+      switch, the line under the switch of a filter. */
+  readonly describedBy?: string;
   /** Called with the new state when the user turns it on or off. */
   readonly onChange: (isSelected: boolean) => void;
 }
@@ -21,10 +24,15 @@ export interface SwitchProps {
 export function Switch({
   label,
   isSelected,
+  describedBy,
   onChange,
 }: SwitchProps): React.JSX.Element {
   return (
-    <SwitchField isSelected={isSelected} onChange={onChange}>
+    <SwitchField
+      isSelected={isSelected}
+      onChange={onChange}
+      {...(describedBy !== undefined && { "aria-describedby": describedBy })}
+    >
       <SwitchButton className={classOf(styles, "switch")}>
         <span className={classOf(styles, "track")} aria-hidden="true">
           <span className={classOf(styles, "thumb")} />

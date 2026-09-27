@@ -1,7 +1,9 @@
 /**
  * The Variants step (docs/specs/steps/variants.md): the user picks the
  * variants file, a VCF or a `.nei` file, sets how a VCF is read, sees
- * what the file holds, and sets the missing data filter. The step reads
+ * what the file holds, sets the filters of the variants
+ * (VariantFilters.tsx), and writes the filtered variants
+ * (WriteSection.tsx). The step reads
  * the project from the store and sends it commands; what it holds itself
  * is the options of the next VCF, until the pick writes them into the
  * project, and the message of a file it did not load.
@@ -21,10 +23,7 @@ import {
 import type { VariantLoad, VariantSource } from "../../../core/project.ts";
 import { askedFileText, identityWarning } from "../../../core/projectFile.ts";
 import { sizeText } from "../../../core/writeEstimate.ts";
-import type {
-  VariantFilter,
-  VcfReadOptions,
-} from "../../../worker/protocol.ts";
+import type { VcfReadOptions } from "../../../worker/protocol.ts";
 import { classOf } from "../../classOf.ts";
 import { useFiles } from "../../files.tsx";
 import { useAnnouncer } from "../../shell/announcer.tsx";
@@ -34,19 +33,17 @@ import { Checkbox } from "../../widgets/Checkbox.tsx";
 import { FileZone } from "../../widgets/FileZone.tsx";
 import { NumberField } from "../../widgets/NumberField.tsx";
 import { Problem } from "../../widgets/Problem.tsx";
-import { Switch } from "../../widgets/Switch.tsx";
 import { Warning } from "../../widgets/Warning.tsx";
 import {
   besideOf,
-  filterSwitchCommand,
   isBeside,
   pickCommand,
   readAgainCommand,
   shownOptions,
-  thresholdCommand,
 } from "./commands.ts";
-import type { Beside, StepCommand } from "./commands.ts";
+import type { Beside } from "./commands.ts";
 import { ReadingTime } from "./ReadingTime.tsx";
+import { VariantFilters } from "./VariantFilters.tsx";
 import styles from "./VariantsStep.module.css";
 import { createVcfOptions } from "./vcfOptions.ts";
 import { WriteSection } from "./WriteSection.tsx";
@@ -58,7 +55,6 @@ import {
   PLOIDY_LABEL,
   SEVERAL_DROPPED,
   TEXT_DROPPED,
-  THRESHOLD_LABEL,
   formatOfName,
   formatText,
   individualsText,
@@ -67,7 +63,6 @@ import {
   ploidyText,
   readAgainLabel,
   readWithText,
-  thresholdRefusedText,
   variantsText,
 } from "./words.ts";
 
@@ -85,23 +80,12 @@ interface StepMessage extends Beside {
   readonly text: string;
 }
 
-/** The missing data filter of the project, or `null` when it is off. */
-function missingDataOf(
-  filters: readonly VariantFilter[],
-): Extract<VariantFilter, { kind: "missing_data" }> | null {
-  for (const filter of filters) {
-    if (filter.kind === "missing_data") return filter;
-  }
-  return null;
-}
-
 /** The Variants step, in the `<main>` of the shell. */
 export function VariantsStep(): React.JSX.Element {
   const store = useStore();
   const files = useFiles();
   const announcer = useAnnouncer();
   const variants = useAppState((s) => s.project.variants);
-  const filters = useAppState((s) => s.project.filters);
   const reason = useAppState((s) => variantsStepNeeds(s.project));
   const asked = useAppState((s) => askedFileText(s.project));
   const identity = useAppState((s) => identityWarning(s.project));
@@ -141,7 +125,6 @@ export function VariantsStep(): React.JSX.Element {
   const fileButton = useRef<HTMLButtonElement>(null);
   const fileHeading = useId();
   const vcfHeading = useId();
-  const filterHeading = useId();
 
   const announce = (text: string): void => {
     announcer.announce(text);
@@ -200,11 +183,6 @@ export function VariantsStep(): React.JSX.Element {
     // The button goes with the new load; the file button is in every
     // state.
     fileButton.current?.focus();
-  };
-
-  const missingData = missingDataOf(filters);
-  const send = (step: StepCommand): void => {
-    store.apply(step.description, step.command);
   };
 
   return (
@@ -290,35 +268,7 @@ export function VariantsStep(): React.JSX.Element {
         </section>
       </div>
 
-      <section
-        aria-labelledby={filterHeading}
-        className={classOf(styles, "section")}
-      >
-        <h2 id={filterHeading} className={classOf(styles, "heading")}>
-          Missing data filter
-        </h2>
-        <Switch
-          label="Filter the variants by missing data"
-          isSelected={missingData !== null}
-          onChange={(on) => {
-            send(filterSwitchCommand(on));
-          }}
-        />
-        {missingData !== null && (
-          <NumberField
-            label={THRESHOLD_LABEL}
-            value={missingData.maxAllowedMissingRate}
-            minValue={0}
-            maxValue={1}
-            step={0.01}
-            refusedText={thresholdRefusedText}
-            onRefused={announce}
-            onChange={(maxAllowedMissingRate) => {
-              send(thresholdCommand(maxAllowedMissingRate));
-            }}
-          />
-        )}
-      </section>
+      <VariantFilters />
 
       <WriteSection />
     </div>

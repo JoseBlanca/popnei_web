@@ -65,6 +65,34 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* The four filters of the variants, one under the other. */
+.filters {
+  display: grid;
+  gap: var(--space-6);
+}
+
+/* A filter: its switch, the line under it, and its fields. */
+.filter {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
+
+.filterLine {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+/* The two fields of the LD pruning, side by side when there is room. */
+.fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  /* A line under one field leaves the other at its height. */
+  align-items: start;
+}
+
 /* The bar and the line of a write under way. */
 .running {
   display: grid;

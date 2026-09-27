@@ -6,6 +6,7 @@
  * them to the real store.
  */
 
+import { FILTER_NAMES } from "../../../core/analyses/filterCounts.ts";
 import { DEFAULT_MAX_MISSING_RATE } from "../../../core/apps.ts";
 import {
   loadVariants,
@@ -13,7 +14,11 @@ import {
   setVariantFilter,
 } from "../../../core/project.ts";
 import type { Project, Reference, VariantLoad } from "../../../core/project.ts";
-import type { VcfReadOptions } from "../../../worker/protocol.ts";
+import type {
+  VariantFilter,
+  VariantFilterKind,
+  VcfReadOptions,
+} from "../../../worker/protocol.ts";
 import { startingOptions } from "./words.ts";
 
 /** A command of the step with its description. */
@@ -40,30 +45,79 @@ export function readAgainCommand(load: VariantLoad): StepCommand {
   };
 }
 
-/** A threshold of the missing data filter committed. */
-export function thresholdCommand(maxAllowedMissingRate: number): StepCommand {
+/** The threshold the filter by observed heterozygosity starts at when it
+    is turned on: 0.5, the most a variant of two alleles has in
+    Hardy-Weinberg proportions, so that more points to a paralogue read as
+    one site. popnei gives no default; the owner kept this value on 26
+    September 2026 (docs/specs/stage-3-open-points.md, point F). */
+export const OBS_HET_TURNED_ON = 0.5;
+
+/** The threshold the MAF filter starts at when it is turned on, the
+    default of docs/functionality.md, section 3. */
+export const MAF_TURNED_ON = 0.95;
+
+/** The maximum r² the LD pruning starts at when it is turned on, the
+    example of the doc comment of popnei's filters; kept by the owner on
+    26 September 2026, as the observed heterozygosity's. */
+export const LD_R2_TURNED_ON = 0.3;
+
+/** The distance in base pairs the LD pruning starts at when it is
+    turned on, with its r². */
+export const LD_DIST_TURNED_ON = 10000;
+
+/** The filter of the kind `kind` with the values it starts at when its
+    switch is turned on (docs/specs/steps/variants.md, "The filters of the
+    variants"). */
+export function turnedOnFilter(kind: VariantFilterKind): VariantFilter {
+  switch (kind) {
+    case "missing_data":
+      return { kind, maxAllowedMissingRate: DEFAULT_MAX_MISSING_RATE };
+    case "obs_het":
+      return { kind, maxAllowedObsHet: OBS_HET_TURNED_ON };
+    case "maf":
+      return { kind, maxAllowedMaf: MAF_TURNED_ON };
+    case "ld":
+      return {
+        kind,
+        maxAllowedR2: LD_R2_TURNED_ON,
+        maxDist: LD_DIST_TURNED_ON,
+      };
+  }
+}
+
+/** The name of a filter of the variants inside a sentence, "the MAF
+    filter", as the words of the counts of the filters name it. */
+function filterName(kind: VariantFilterKind): string {
+  const name = FILTER_NAMES[kind];
+  return `${name.charAt(0).toLowerCase()}${name.slice(1)}`;
+}
+
+/** A field of a filter of the variants committed: the filter with its
+    fields, "the MAF filter changed". */
+export function filterCommand(filter: VariantFilter): StepCommand {
   return {
-    description: "the missing data filter changed",
-    command: (p) =>
-      setVariantFilter(p, { kind: "missing_data", maxAllowedMissingRate }),
+    description: `${filterName(filter.kind)} changed`,
+    command: (p) => setVariantFilter(p, filter),
   };
 }
 
-/** The switch of the missing data filter turned on, or off. */
-export function filterSwitchCommand(on: boolean): StepCommand {
-  return on
-    ? {
-        description: "the missing data filter was turned on",
-        command: (p) =>
-          setVariantFilter(p, {
-            kind: "missing_data",
-            maxAllowedMissingRate: DEFAULT_MAX_MISSING_RATE,
-          }),
-      }
-    : {
-        description: "the missing data filter was turned off",
-        command: (p) => removeVariantFilter(p, "missing_data"),
-      };
+/** The switch of the filter of the kind `kind` turned on, with the values
+    it starts at, or off. */
+export function filterSwitchCommand(
+  kind: VariantFilterKind,
+  on: boolean,
+): StepCommand {
+  if (on) {
+    const filter = turnedOnFilter(kind);
+    return {
+      description: `${filterName(kind)} was turned on`,
+      command: (p) => setVariantFilter(p, filter),
+    };
+  }
+  return {
+    description: `${filterName(kind)} was turned off`,
+    command: (p) => removeVariantFilter(p, kind),
+  };
 }
 
 /** The files of the project that something the step holds of its own

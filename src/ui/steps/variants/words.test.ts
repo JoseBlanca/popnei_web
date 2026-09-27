@@ -3,10 +3,12 @@ import { describe, expect, test } from "vitest";
 import { emptyProject } from "../../../core/project.ts";
 import type { Project, VariantSource } from "../../../core/project.ts";
 import {
+  distanceRefusedText,
   elapsedText,
   formatOfName,
   notLoadedText,
   ploidyRefusedText,
+  r2RefusedText,
   readAgainLabel,
   readWithText,
   startingOptions,
@@ -195,5 +197,48 @@ describe("the words of the Variants step", () => {
       ploidy: 2,
       onlyPassed: true,
     });
+  });
+});
+
+describe("VS6 D1 the line of a number of more decimals than a field of four takes", () => {
+  test("0.12345 in a threshold of four decimals is said to have more than four", () => {
+    expect(
+      thresholdRefusedText(
+        { kind: "offStep", typed: 0.12345, decimals: 4 },
+        0.03,
+      ),
+    ).toBe("0.12345 has more than four decimals; the threshold stays 0.03.");
+  });
+});
+
+describe("the lines of the fields of the LD pruning", () => {
+  test("a number the maximum r² refused, and a character it threw away, with the r² kept", () => {
+    expect(
+      r2RefusedText({ kind: "aboveMax", typed: 1.5, maxValue: 1 }, 0.3),
+    ).toBe("1.5 is more than 1; the maximum r² stays 0.3.");
+    expect(
+      r2RefusedText({ kind: "offStep", typed: 0.125, decimals: 2 }, 0.3),
+    ).toBe("0.125 has more than two decimals; the maximum r² stays 0.3.");
+    expect(r2RefusedText({ kind: "notTaken", text: "," }, 0.3)).toBe(
+      "Write the decimals with a point, 0.1 and not 0,1; the maximum r² stays 0.3.",
+    );
+    expect(r2RefusedText({ kind: "notTaken", text: "-" }, 0.3)).toBe(
+      "‘-’ cannot be typed in the maximum r², which is written with digits and a point, as 0.05; the maximum r² stays 0.3.",
+    );
+  });
+
+  test("a number the distance refused, and a character it threw away, with the distance kept", () => {
+    expect(
+      distanceRefusedText({ kind: "belowMin", typed: 0, minValue: 1 }, 10000),
+    ).toBe("0 is less than 1; the distance stays 10000.");
+    expect(
+      distanceRefusedText({ kind: "offStep", typed: 2.5, decimals: 0 }, 10000),
+    ).toBe("2.5 is not a whole number; the distance stays 10000.");
+    expect(distanceRefusedText({ kind: "notTaken", text: "," }, 10000)).toBe(
+      "Write the distance as a whole number of base pairs, 10000 and not 10,000; the distance stays 10000.",
+    );
+    expect(distanceRefusedText({ kind: "notTaken", text: "-" }, 10000)).toBe(
+      "‘-’ cannot be typed in the distance, which is a whole number of base pairs, as 10000; the distance stays 10000.",
+    );
   });
 });

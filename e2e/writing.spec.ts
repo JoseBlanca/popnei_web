@@ -218,9 +218,12 @@ test("VS5 D3 with the focus on Write, the write ends with the focus on Save, the
   await setThreshold(page, "0.05");
   await holdWritten(page);
 
-  // The keyboard alone: from the threshold, the next stop is Write.
+  // The keyboard alone: from the threshold, the switches of the three
+  // filters that are off, and then Write.
   await threshold(page).focus();
-  await page.keyboard.press("Tab");
+  for (let press = 0; press < 4; press++) {
+    await page.keyboard.press("Tab");
+  }
   await expect(writeButton(page)).toBeFocused();
   await page.keyboard.press("Enter");
 

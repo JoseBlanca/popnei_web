@@ -35,15 +35,16 @@ import {
 const ID = "filterCounts";
 
 /** The name of each filter of the variants, as the labels of the step
-    name them, at the start of a sentence. */
-const FILTER_NAMES: Readonly<Record<VariantFilterKind, string>> = Object.freeze(
-  {
+    name them, at the start of a sentence; the descriptions of the
+    commands of the step name them alike (docs/specs/steps/variants.md,
+    "What it sends and reads"). */
+export const FILTER_NAMES: Readonly<Record<VariantFilterKind, string>> =
+  Object.freeze({
     missing_data: "The missing data filter",
     obs_het: "The filter by observed heterozygosity",
     maf: "The MAF filter",
     ld: "The LD pruning",
-  },
-);
+  });
 
 /** What one filter of the variants was given and kept. */
 export interface FilterCountRow {

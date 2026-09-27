@@ -7,11 +7,11 @@ import type { Store } from "../../../core/store.ts";
 import type { Job, JobResult } from "../../../worker/protocol.ts";
 import {
   besideOf,
+  filterCommand,
   filterSwitchCommand,
   isBeside,
   pickCommand,
   readAgainCommand,
-  thresholdCommand,
 } from "./commands.ts";
 import type { StepCommand } from "./commands.ts";
 import { createVcfOptions } from "./vcfOptions.ts";
@@ -40,6 +40,11 @@ function apply(store: Store<JobResult>, step: StepCommand): void {
   store.apply(step.description, step.command);
 }
 
+/** The missing data filter at `maxAllowedMissingRate` committed. */
+function missingData(maxAllowedMissingRate: number): StepCommand {
+  return filterCommand({ kind: "missing_data", maxAllowedMissingRate });
+}
+
 function vcf(fileId: string, name: string, ploidy: number): VariantLoad {
   return {
     fileId: fileId.repeat(32),
@@ -59,12 +64,12 @@ describe("the commands of the Variants step", () => {
     expect(store.getState().undo).toBe(
       "the variants file was read again with other options",
     );
-    apply(store, filterSwitchCommand(false));
+    apply(store, filterSwitchCommand("missing_data", false));
     expect(store.getState().undo).toBe(
       "the missing data filter was turned off",
     );
     expect(store.getState().project.filters).toEqual([]);
-    apply(store, filterSwitchCommand(true));
+    apply(store, filterSwitchCommand("missing_data", true));
     expect(store.getState().undo).toBe("the missing data filter was turned on");
     expect(store.getState().project.filters).toEqual([
       { kind: "missing_data", maxAllowedMissingRate: 0.1 },
@@ -73,8 +78,8 @@ describe("the commands of the Variants step", () => {
 
   test("two presses of an arrow key from 0.1 are two commands, each undone alone", () => {
     const store = realStore();
-    apply(store, thresholdCommand(0.11));
-    apply(store, thresholdCommand(0.12));
+    apply(store, missingData(0.11));
+    apply(store, missingData(0.12));
     expect(store.getState().undo).toBe("the missing data filter changed");
     store.undo();
     expect(store.getState().project.filters).toEqual([
@@ -83,6 +88,65 @@ describe("the commands of the Variants step", () => {
     expect(store.getState().undo).toBe("the missing data filter changed");
     store.undo();
     expect(store.getState().project.filters).toEqual([
+      { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+    ]);
+  });
+});
+
+describe("the four filters of the variants", () => {
+  test("each switch turned on starts its filter at the values of the table of the filters, in the fixed order, with its description", () => {
+    const store = realStore();
+    apply(store, filterSwitchCommand("ld", true));
+    expect(store.getState().undo).toBe("the LD pruning was turned on");
+    apply(store, filterSwitchCommand("maf", true));
+    expect(store.getState().undo).toBe("the MAF filter was turned on");
+    apply(store, filterSwitchCommand("obs_het", true));
+    expect(store.getState().undo).toBe(
+      "the filter by observed heterozygosity was turned on",
+    );
+    expect(store.getState().project.filters).toEqual([
+      { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+      { kind: "obs_het", maxAllowedObsHet: 0.5 },
+      { kind: "maf", maxAllowedMaf: 0.95 },
+      { kind: "ld", maxAllowedR2: 0.3, maxDist: 10000 },
+    ]);
+  });
+
+  test("a field committed changes its filter alone, with the description of the filter, and off removes it", () => {
+    const store = realStore();
+    apply(store, filterSwitchCommand("ld", true));
+    apply(
+      store,
+      filterCommand({ kind: "ld", maxAllowedR2: 0.3, maxDist: 500 }),
+    );
+    expect(store.getState().undo).toBe("the LD pruning changed");
+    apply(store, filterCommand({ kind: "maf", maxAllowedMaf: 0.9 }));
+    expect(store.getState().undo).toBe("the MAF filter changed");
+    apply(store, filterCommand({ kind: "obs_het", maxAllowedObsHet: 0.4 }));
+    expect(store.getState().undo).toBe(
+      "the filter by observed heterozygosity changed",
+    );
+    expect(store.getState().project.filters).toEqual([
+      { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+      { kind: "obs_het", maxAllowedObsHet: 0.4 },
+      { kind: "maf", maxAllowedMaf: 0.9 },
+      { kind: "ld", maxAllowedR2: 0.3, maxDist: 500 },
+    ]);
+    apply(store, filterSwitchCommand("obs_het", false));
+    expect(store.getState().undo).toBe(
+      "the filter by observed heterozygosity was turned off",
+    );
+    apply(store, filterSwitchCommand("maf", false));
+    expect(store.getState().undo).toBe("the MAF filter was turned off");
+    apply(store, filterSwitchCommand("ld", false));
+    expect(store.getState().undo).toBe("the LD pruning was turned off");
+    expect(store.getState().project.filters).toEqual([
+      { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+    ]);
+  });
+
+  test("a new project has the missing data filter alone, at 0.1", () => {
+    expect(realStore().getState().project.filters).toEqual([
       { kind: "missing_data", maxAllowedMissingRate: 0.1 },
     ]);
   });
@@ -126,7 +190,7 @@ describe("the options of a VCF the Variants step shows", () => {
     const options = createVcfOptions(store);
     options.load(pickCommand(vcf("a", "a.vcf", 2)));
     options.edit({ ploidy: 3, onlyPassed: false });
-    apply(store, thresholdCommand(0.2));
+    apply(store, missingData(0.2));
     expect(options.shown()).toEqual({ ploidy: 3, onlyPassed: false });
     apply(store, pickCommand(vcf("c", "c.vcf", 2)));
     expect(options.shown()).toEqual({ ploidy: 2, onlyPassed: true });
@@ -155,7 +219,7 @@ describe("the options of a VCF the Variants step shows", () => {
     const store = realStore();
     apply(store, pickCommand(vcf("a", "a.vcf", 2)));
     const beside = besideOf(store.getState().project);
-    apply(store, thresholdCommand(0.2));
+    apply(store, missingData(0.2));
     expect(isBeside(beside, store.getState().project)).toBe(true);
 
     store.undo();
