@@ -23,9 +23,12 @@ individuals the filters keep; and writes the filtered variants as a
 `.nei` file and saves it. Every number shown is popnei's, from the
 release `js-v0.1.0-dev.2`.
 
-On the last commit, 2,104 tests of Vitest and 618 flows in Chromium
-and WebKit pass. 370 of the 375 cases of the twenty specs have a test
-(`docs/plans/variants-step.cases.md`).
+On the last commit, 2,104 tests of the code in node pass (Vitest), and
+618 flows, tests that drive the built page in a browser as a user does
+(Playwright), pass in Chromium, the engine of Chrome and Edge, and in
+WebKit, the engine of Safari. The specs list 375 cases, each an input
+and the outcome the application must give; 370 have a test that gives
+the one and checks the other (`docs/plans/variants-step.cases.md`).
 
 Left open:
 
@@ -46,7 +49,10 @@ Left open:
   variants wait for popnei's next release and a plan of their own.
 
 Asked of the owner: the order to merge `plan/variants-step` into
-`main`.
+`main`, and whether to push `main` to GitHub after it, which is a
+separate order. The push runs the flows in Firefox for the first time;
+a flow that fails there is fixed on `main` before any other work. The
+question of the PNG is for stage 6 and does not hold the merge.
 
 ## Before the first task
 
@@ -944,7 +950,7 @@ column Kept changes (a list applied) and after a sort:
 
 Every row drawn froze the page for seconds, so the table draws only
 the rows on the screen, React Aria's `Virtualizer`, as the plan says.
-It still freezes 88 to 375 ms, above the 100 ms the plan named; taken
+It still freezes up to 375 ms, above the 100 ms the plan named; taken
 as it is, and task 7.3 adds the thresholds to the measurement. The
 page's first script is 189.72 KB gzipped after 7.2 as Vite counts it,
 against 154.9 KB after 6.2 with `gzip -9`: the review below found the
@@ -1075,7 +1081,7 @@ would change how every value of the user is shown.
 | a threshold committed | 223 / 152 | 145 / 101 |
 
 What is left is React Aria building its collection of 10,000 rows of
-four cells at each change, which nothing cheap in our code changes.
+four cells at each change, which nothing cheap in our code changes; the column Kept added took 14 to 17 ms more than before, a change measured once in each engine, and so not told apart from chance.
 
 ### The deliverables, on 416d21a
 
@@ -1117,7 +1123,7 @@ The whole on 416d21a: `format:check`, `typecheck` and `lint` exit 0; `npm test` 
 
 The owner tried the filters of the individuals, the diversity with
 them and the writing of the individuals kept in Firefox on 27
-September 2026, said that they work, and decided the five points
+September 2026, said that they work, and decided the first five points
 above: the freeze accepted; Run locked when no population is left;
 the words of one individual; the words of point D and "Known once …"
 kept. The status region saying what the filters keep was not
@@ -1131,10 +1137,10 @@ tree in Chromium and WebKit instead.
   individuals kept have no population in popcat, so none of the 2
   populations has an individual left. Loosen …"; one individual reads
   "The filters of individuals do not keep the one individual of …",
-  since the recommended words alone would have said they keep it.
+  and not "keep the one individual of …", the words recommended, which alone would have said the filters keep it.
   `accessibility`, `react` and `ux` ran again on it and found no
-  defect of access or of React; a Redo that locks the diversity is
-  announced only as the Redo, as `shell.md` has it, not taken. A flow
+  defect of access or of React. One point was not taken: a Redo that locks the diversity is
+  announced only as the Redo, as `shell.md` has it, and the reason of the lock stands after the heading that takes the focus. A flow
   of work package 6 that failed 1 time in 20 in WebKit looked for a
   refusal in the whole page, the status region included; it now looks
   in the step (375a2d4), 40 of 40.
@@ -1170,7 +1176,7 @@ the step. `d3-time` and `d3-time-format` are not in it.
 Three agents mapped the items of the twenty specs to their tests, a
 third each, and a fourth added the tests they found missing and
 assembled the map: 375 items, 370 with a test that gives the item's
-input and checks its outcome. 21 tests of Vitest in 10 files, three
+input and checks its outcome. The tests of Vitest went from 2,082 to 2,104 in 10 files, three
 flows and one check of a flow were added, each seen to fail with the
 code it guards broken; none found a defect. `client.md` gave the
 restart after a large write at 100,000,001 bytes, the value before the
