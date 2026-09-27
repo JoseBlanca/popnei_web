@@ -14,7 +14,7 @@
 
 import {
   populationsNeeds,
-  populationsKept,
+  populationsBeforeRun,
   populationsOf,
   populationsToRun,
 } from "../../core/analyses/diversity.ts";
@@ -399,17 +399,10 @@ function metadataPart(p: Project, kept: IndividualsKept | null): string {
     return `column ${shown(column)} not in ${name}`;
   }
   const all = `${counted(pops.length, "population")} by ${shown(column)}`;
-  // The individuals kept, or, while a threshold waits for the
-  // statistics, those the lists keep, as the panel of the diversity
-  // lists them.
-  const list = kept?.list;
+  // The populations as known before a Run, as the panel of the
+  // diversity lists them.
   const numEmptied =
-    list === undefined
-      ? 0
-      : (populationsKept(
-          p,
-          list.kind === "known" ? list.individuals : (kept?.byLists ?? null),
-        )?.emptied.length ?? 0);
+    kept === null ? 0 : (populationsBeforeRun(p, kept)?.emptied.length ?? 0);
   if (numEmptied === 0) {
     return all;
   }

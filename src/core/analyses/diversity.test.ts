@@ -4,6 +4,7 @@ import {
   diversity,
   diversityCsv,
   diversityRows,
+  populationsBeforeRun,
   populationsKept,
   populationsNeeds,
   populationsOf,
@@ -1719,6 +1720,38 @@ describe("VS3 D3 the diversity of stage 3, at its bounds", () => {
       emptied: [],
     });
     expect(populationsKept(project({ column: null }), kept)).toBeNull();
+  });
+
+  test("populationsBeforeRun takes the known list, and the individuals the lists keep while a threshold waits for the statistics", () => {
+    const p = project();
+    expect(
+      populationsBeforeRun(p, {
+        list: { kind: "known", individuals: ["i1", "i3"] },
+        byLists: ["i1", "i2", "i3"],
+        counts: [],
+      }),
+    ).toEqual({ pops: [["A", ["i1", "i3"]]], emptied: ["B"] });
+    expect(
+      populationsBeforeRun(p, {
+        list: { kind: "known", individuals: null },
+        byLists: ["i2"],
+        counts: [],
+      }),
+    ).toBe(populationsKept(p, null));
+    expect(
+      populationsBeforeRun(p, {
+        list: { kind: "needsStatistics" },
+        byLists: ["i2"],
+        counts: [],
+      }),
+    ).toEqual({ pops: [["B", ["i2"]]], emptied: ["A"] });
+    expect(
+      populationsBeforeRun(project({ column: null }), {
+        list: { kind: "needsStatistics" },
+        byLists: ["i2"],
+        counts: [],
+      }),
+    ).toBeNull();
   });
 
   test("populationsKept follows a list changed in place, which it does not keep", () => {

@@ -14,6 +14,7 @@
  */
 
 import { individualsKept } from "../individualsKept.ts";
+import type { IndividualsKept } from "../individualsKept.ts";
 import type { JsonObject } from "../keys.ts";
 import {
   analysisOptions,
@@ -293,6 +294,25 @@ export function populationsKept(
     byList.set(kept, narrowedKept);
   }
   return narrowedKept;
+}
+
+/**
+ * The populations as they are known before a Run, which the ready state
+ * of the panel and the summary line of the shell list:
+ * `populationsKept(p, list)` with the list of `kept` when it is known,
+ * and, while a threshold on the individuals waits for the statistics of
+ * each individual, with `kept.byLists`, the individuals the lists to keep
+ * and to remove keep, since the thresholds can only remove more. `null`
+ * when `populationsToRun(p)` is `null`.
+ */
+export function populationsBeforeRun(
+  p: Project,
+  kept: IndividualsKept,
+): PopulationsKept | null {
+  return populationsKept(
+    p,
+    kept.list.kind === "known" ? kept.list.individuals : kept.byLists,
+  );
 }
 
 /** The reason about the column of the populations, and its kind. */

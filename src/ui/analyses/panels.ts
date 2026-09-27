@@ -18,7 +18,7 @@
 import type { ComponentType } from "react";
 
 import {
-  populationsKept,
+  populationsBeforeRun,
   populationsToRun,
   refusalText,
   statisticsFailedText,
@@ -94,10 +94,7 @@ const DIVERSITY: AnalysisUi = Object.freeze({
     // While a threshold waits for the statistics, the populations the
     // lists keep, before it.
     const waits = kept.list.kind === "needsStatistics";
-    const pops = populationsKept(
-      p,
-      kept.list.kind === "known" ? kept.list.individuals : kept.byLists,
-    );
+    const pops = populationsBeforeRun(p, kept);
     return pops === null ? [] : readyLines(pops, waits);
   },
   refusalText,
