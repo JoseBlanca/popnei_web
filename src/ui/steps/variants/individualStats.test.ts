@@ -342,6 +342,11 @@ describe("the line before the table", () => {
     expect(tableRowsText(200)).toBe(
       "200 individuals; the table scrolls, and its CSV holds them all.",
     );
+    expect(tableRowsText(10)).toBe("10 individuals; the CSV holds them all.");
+    expect(tableRowsText(3)).toBe("3 individuals; the CSV holds them all.");
+    expect(tableRowsText(11)).toBe(
+      "11 individuals; the table scrolls, and its CSV holds them all.",
+    );
     expect(tableRowsText(10000)).toBe(
       "10,000 individuals; the table scrolls, and its CSV holds them all.",
     );

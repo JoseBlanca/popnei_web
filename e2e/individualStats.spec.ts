@@ -271,6 +271,18 @@ test("VS7 D1 an individual with no called genotype: the warning, no value sorted
       { exact: true },
     ),
   ).toBeVisible();
+  // Three rows: a box as high as they are, which does not scroll.
+  await expect(
+    section(page).getByText("3 individuals; the CSV holds them all.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  const box = await table(page).evaluate((grid) => ({
+    scroll: grid.scrollHeight,
+    client: grid.clientHeight,
+  }));
+  expect(box.scroll).toBeLessThanOrEqual(box.client);
+  expect(box.client).toBeLessThan(200);
   const header = table(page).getByRole("columnheader", {
     name: /^Observed heterozygosity/,
   });
