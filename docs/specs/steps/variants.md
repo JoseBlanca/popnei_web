@@ -716,7 +716,13 @@ histogram, and the line of the counts below says why.
 
 **The table of the individuals** follows the thresholds, with its
 column Kept while any filter of individuals is set, and its download
-(`individualChecks.md`, "What it shows").
+(`individualChecks.md`, "What it shows"). A line before it says how
+many rows it has and that they are all there, since its box shows about
+a dozen and a user could take them for the whole: "200 individuals; the
+table scrolls, and its CSV holds them all.", the count of the
+individuals of the variants file, written as `counted` writes a count.
+At 320 pixels wide the box scrolls sideways too, so the column Kept is
+reached by scrolling it.
 
 **What each filter of the individuals kept**, from `individualsKept`,
 with no pass. Beside each filter that is set, a list applied under its
