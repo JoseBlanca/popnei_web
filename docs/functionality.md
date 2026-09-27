@@ -135,7 +135,8 @@ whose CSV depends on the language of the computer: in Spanish, German or
 French it separates the fields with `;` and writes decimals with a comma,
 and its encoding varies with the version. So:
 
-- `.xlsx` is read directly, the first sheet of the file, with calamine,
+- `.xlsx` is read directly, the first sheet of the file in the order of
+  its tabs that is not hidden, with calamine,
   which is pure Rust, in a small Rust crate of the applications
   (`docs/architecture.md`, section 6; `docs/technology.md`).
 - CSV and TSV are read by the applications, in TypeScript, and a BOM at

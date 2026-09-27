@@ -449,9 +449,13 @@ const scriptsButRunner = {
   message:
     "runnerWorker.ts imports runner.ts as a module, and no other worker's script.",
 };
+// Core may import columnTypes.ts alone, its pure functions of the
+// numbers and the types of a column (docs/specs/core/project.md,
+// columnAllows).
 const individualsReader = {
-  group: ["**/worker/individuals/**"],
-  message: "src/core does not import the reader; the light worker runs it.",
+  group: ["**/worker/individuals/**", "!**/worker/individuals/columnTypes*"],
+  message:
+    "src/core imports only columnTypes.ts of the reader; the light worker reads the file.",
 };
 // individualsFile.ts decodes the bytes of a File and reads it by ranges,
 // for filesRunner.ts alone; the screens may still import the reader of
@@ -1025,7 +1029,15 @@ export default defineConfig(
   ProbeWorker()` in the probe's page.
 - Core's block adds `individualsReader`: the reader is TypeScript with no
   DOM, which core could import and run on the page, where a file of
-  10,000 rows would freeze it; it belongs to the light worker.
+  10,000 rows would freeze it; it belongs to the light worker. From stage
+  4 core imports one file of it, `columnTypes.ts`, whose `cellNumber` and
+  `inferColumnTypes` give the types each column allows and the numbers of
+  a continuous column that colours the PCA
+  (`docs/specs/core/project.md`, `columnAllows`;
+  `docs/specs/analyses/pca.md`, "The colours"): a walk of the cells of a
+  table already read, kept by the read, as `individualsCheck` walks it,
+  and no read of a file. Decided on 27 September 2026 with the specs of
+  stage 4.
 - The two blocks of the screens add `individualsFile`:
   `src/worker/individualsFile.ts` decodes the bytes of a `File` and reads
   it, and only `filesRunner.ts`, in the light worker, imports it. The
@@ -1151,14 +1163,17 @@ run in the repository and installs what it names:
 
 ```toml
 [toolchain]
-channel = "1.xx.0" # the stable release current when the crate is made
+channel = "1.98.0" # the stable release of 18 August 2026, current when the crate was specified
 targets = ["wasm32-unknown-unknown"]
 components = ["rustfmt", "clippy"]
 ```
 
 A pinned version and not `stable`, so that a new release of Rust, with
 new lints of clippy, is a commit someone made and not what the day of the
-build gave, as `save-exact` does for npm.
+build gave, as `save-exact` does for npm. 1.98.0 is the version on the
+owner's Mac on 27 September 2026; calamine 0.36.1 needs 1.88 at least
+(`docs/specs/worker/files.md`, "The crate's Cargo.toml", which gives the
+dependencies and why).
 
 `crates/files/Cargo.toml`, the parts that are not the list of
 dependencies:
@@ -1178,8 +1193,15 @@ crate-type = ["cdylib", "rlib"]
 # Pinned to the command line, which refuses a crate of another version;
 # the version popnei pins, so one command line builds both.
 wasm-bindgen = "=0.2.128"
-# calamine, rust_xlsxwriter and zip, at the versions measured in
-# docs/technology.md, section 2, with exact versions.
+# In stage 4, which only reads, calamine alone, with no default feature;
+# rust_xlsxwriter and zip join with the report, in stage 6, at the
+# versions measured in docs/technology.md, section 2.
+calamine = { version = "=0.36.1", default-features = false }
+
+[dev-dependencies]
+# The xlsx files of the tests are written in memory; the library the
+# report will write with in stage 6, in the tests only until then.
+rust_xlsxwriter = { version = "=0.99.1", default-features = false }
 
 [profile.release]
 # As measured in docs/technology.md, section 2.

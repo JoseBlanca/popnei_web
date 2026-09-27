@@ -16,7 +16,10 @@ filtered variants as a file, tracked as a calculation is; this revision
 is approved by the owner on 26 September 2026. Revised on 27 September
 2026 for stage 4 where it names the PCA: its pass fills no counts, since
 its filters are not the project's, and no analysis of stage 4 asks for
-the key of an intermediate result. The store is the one object of core that changes: it holds the
+the key of an intermediate result; and again the same day, to agree
+with the specs written beside it: the read of the individuals file given
+to `individualsRead` without the types lost, which the record of
+`project.ts` works out. The store is the one object of core that changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.
 From them it gives the screens one state to read, in which each analysis
@@ -932,7 +935,9 @@ export interface Store<R, F = never> {
 
   popneiReady(version: string): void;
   variantsRead(fileId: string, read: SourceRead): void;
-  individualsRead(fileId: string, csv: CsvOptions | null, read: IndividualsRead): void;
+  /** From stage 4 the read is given without typesLost, which the record
+      works out (docs/specs/core/project.md, recordIndividualsRead). */
+  individualsRead(fileId: string, csv: CsvOptions | null, read: IndividualsReadGiven): void;
   /** Gives the handles it sent because of this end: the requests of the
       Runs that waited for these statistics. */
   runEnded(runId: number, outcome: Outcome<R | Written<F>>): readonly Run<R | Written<F>>[];

@@ -1,7 +1,11 @@
 # The 3D plot of the PCA
 
 Written on 27 September 2026, for stage 4 of `docs/build-order.md`, the
-Individuals step and the PCA; not yet reviewed or approved. There is no
+Individuals step and the PCA; revised the same day to agree with the
+specs written beside it: the words of the buttons, of the loading, of
+the failures and of the description are `docs/specs/analyses/pca.md`'s,
+and `.claude/skills/coding/charts.md` and `testing.md` are revised for
+it; not yet reviewed or approved. There is no
 code of it yet. This spec gives the function of `src/charts/pca3d.ts`
 that draws the individuals on three principal components with three.js,
 the library of WebGL the applications take for it
@@ -35,14 +39,14 @@ panel shows it.
 ### What the user sees
 
 The PCA opens as the 2D scatter of its first two components, and 3D is
-one button away, in the bar of controls above the plot (point 5 of the
-recommendations of 27 September 2026, `docs/specs/stage-4-open-points.md`).
+one button away, in the bar of controls above the plot (meanwhile, "The
+PCA opens in 2D" in `docs/specs/stage-4-open-points.md`).
 In 3D the individuals are shown on the three components of the axes,
 PC1, PC2 and PC3 by default (`pca.md`, the option `axes`), each with the
 colour and the shape of its group as in 2D, and the same legend over
 the top right corner. Three lines through the origin, one along each
 component over the range of its values, carry at their positive ends
-the labels "PC1 (12.3%)", "PC2 (8.1%)" and "PC3 (5.4%)". The user turns
+the labels "PC1 (3.54%)", "PC2 (3.44%)" and "PC3 (1.92%)". The user turns
 the view by dragging it, zooms it, and turns it with the buttons of the
 bar; the pointer over a point shows the tooltip of the scatter, with
 three coordinates.
@@ -108,18 +112,19 @@ scrolled by a finger on the rest of it.
 
 The screen draws the bar with React Aria's buttons and calls the
 handle; the plot draws no control. The bar holds the switch between 2D
-and 3D (`pca.md`), and, in 3D, these buttons, meanwhile, with their
-words refined in the running application:
+and 3D (`pca.md`), and, in 3D, these buttons, whose words are
+`pca.md`'s, "What it shows", and may be refined in the running
+application:
 
 | button | calls | what the user sees |
 |---|---|---|
 | "Turn left", "Turn right" | `rotate("vertical", −15)`, `rotate("vertical", 15)` | the view turns by 15° about the vertical of the screen |
 | "Tilt up", "Tilt down" | `rotate("horizontal", 15)`, `rotate("horizontal", −15)` | the view turns by 15° about the horizontal of the screen, and stops when it looks straight down or straight up the second component |
-| "Along PC1", "Along PC2", "Along PC3" | `viewAlong(0)`, `viewAlong(1)`, `viewAlong(2)` | the view looks down that component: along PC3, PC1 across and PC2 up, the 2D plot of the first two; along PC1, PC2 across and PC3 up; along PC2, PC1 across and PC3 up |
+| "View along PC1", "View along PC2", "View along PC3" | `viewAlong(0)`, `viewAlong(1)`, `viewAlong(2)` | the view looks down that component: along PC3, PC1 across and PC2 up, the 2D plot of the first two; along PC1, PC2 across and PC3 up; along PC2, PC1 across and PC3 up |
 | "Zoom in", "Zoom out" | `zoom(1.25)`, `zoom(0.8)` | the points spread further apart or closer, their marks keeping their size |
 | "Reset view" | `resetView()` | the starting view and zoom |
 
-The names of the components are those of the axes shown, "Along PC4"
+The names of the components are those of the axes shown, "View along PC4"
 when the user chose PC4. A step of 15° makes a whole turn in 24 presses,
 and the drag gives any angle between them. The view jumps to the new
 angle with no animation, so a user who asked the system for reduced
@@ -165,20 +170,19 @@ page, into a script file of its own that the browser downloads then
   slow mobile connection, the 134 KB take about 0.4 s; the browser keeps
   the file for the next time. The file of the built site is measured
   again when the plot is built.
-- **While it loads**, the screen shows in the place of the plot
-  "Loading the 3D view…", read by a screen reader without moving the
-  focus (WCAG 2.2, 4.1.3); the switch back to 2D works, and the buttons
-  of the turns are shown once the plot is drawn.
+- **While it loads**, the screen shows in the place of the plot the
+  words of `pca.md` for it, "Loading the 3D view…", read by a screen
+  reader without moving the focus (WCAG 2.2, 4.1.3); the switch back to
+  2D works, and the buttons of the turns are shown once the plot is
+  drawn.
 - **When it fails to load**, the promise of `import()` is refused: the
   connection is down, or the site was deployed again since the page was
   opened. A deploy to GitHub Pages replaces every file of the site, and
   the name of this file holds a hash of its content, so a page opened
   before a deploy asks for a file of the old build that is no longer
-  there. The screen says, drafted here for `pca.md`: "The 3D view could
-  not be loaded. If the connection works, the site may have been
-  updated since this page was opened: save the project, reload the page
-  and open the project again." with a button "Try again", which calls
-  `import()` again, and the 2D plot one press away. Whether an engine
+  there. The screen says so, in the words of `pca.md`, "Its words",
+  with a button "Try again", which calls `import()` again, and the 2D
+  plot one press away. Whether an engine
   asks the network again for a module whose download failed, or keeps
   the failure, is seen in each engine when the plot is built. In an
   engine that keeps it, "Try again" fails again, and what works there is
@@ -204,11 +208,9 @@ removing what it added, and the element is left as it was. It is a
 thrown error and not a state of the handle, because there is no plot to
 give a handle to; and a typed one, as `PngError` is, because it is a
 state of the browser that the screen shows, and not a defect. Every
-other error of `createPca3d` is a defect. The screen shows, drafted here
-for `pca.md`: "This browser cannot draw the 3D view: WebGL, the part of
-the browser that draws it, is turned off or not available on this
-computer. The 2D plot shows any two of the components." The 2D plot
-stays one press away. A project saved in 3D and opened on such a
+other error of `createPca3d` is a defect. The screen says that this
+browser cannot draw the 3D view, in the words of `pca.md`, "Its words".
+The 2D plot stays one press away. A project saved in 3D and opened on such a
 machine shows the same words; the screen does not switch the project to
 2D by itself, since that would be a change of the project the user did
 not make.
@@ -223,13 +225,12 @@ As `charts.md`, "Losing the WebGL context": the browser can take the
 context away, and three.js asks it back (its `webglcontextlost`
 listener calls `preventDefault`, `three.module.js` line 17152). The plot
 calls `events.onContextChange(true)` when it is lost, and `(false)` when
-it is given back, after it has drawn again; the screen shows the words
-over the plot, since the words of the screens are the screen's:
-"The browser stopped drawing the 3D view. It is drawn again when the
-browser allows it, or when you switch to 2D and back to 3D." A switch to
-2D destroys the plot and its context, and a switch back makes a new one
-(`pca.md`). `charts.md` had the plot show "The 3D view was lost by the
-browser" itself; that sentence does not say what the user can do.
+it is given back, after it has drawn again; the screen shows its words
+over the plot, those of `pca.md`, "Its words", since the words of the
+screens are the screen's. A switch to 2D destroys the plot and its
+context, and a switch back makes a new one (`pca.md`). `charts.md` had
+the plot show "The 3D view was lost by the browser" itself, a sentence
+that does not say what the user can do; it is revised with this spec.
 
 ### A change of theme
 
@@ -264,9 +265,9 @@ of which a browser allows only a few at once, while 2D is shown.
 The canvas has `role="img"` and is named by a hidden title and described
 by a hidden description, elements the plot adds beside it from the
 `title` and `description` of the data, as text. The screen writes a
-description of the 3D view that says what it adds and where the numbers
-are: "The same 200 individuals on PC1, PC2 and PC3. The table gives
-every coordinate." The labels of the axes and the tooltip are hidden
+description of the 3D view that names its components and says where the
+numbers are, since what is across and what is up changes as the view
+turns (`pca.md`, "Accessibility"). The labels of the axes and the tooltip are hidden
 from a screen reader, which reads the table beside the plot.
 
 ### The export
@@ -309,7 +310,7 @@ export interface Pca3dData {
   readonly z: Float64Array;
   /** The short names of the components, for the tooltip: "PC1", "PC2", "PC3". */
   readonly axisNames: readonly [string, string, string];
-  /** The labels at the ends of the lines: "PC1 (12.3%)". */
+  /** The labels at the ends of the lines: "PC1 (3.54%)". */
   readonly axisLabels: readonly [string, string, string];
   /** The name of each point, an individual, for the tooltip. */
   readonly pointNames: readonly string[];
@@ -519,8 +520,7 @@ Of `docs/specs/charts/scatter.md`: `PointColours`, `groupMark`,
 
 ## What this spec asks of other documents
 
-- `.claude/skills/coding/charts.md`, "The 3D PCA with three.js", not
-  edited by this spec: the data as three columns and `PointColours`, not
+- `.claude/skills/coding/charts.md`, "The 3D PCA with three.js": the data as three columns and `PointColours`, not
   the projections whole; the words of a lost context shown by the
   screen through `onContextChange`, not by the plot; `projectToScreen`
   with the matrix as 16 numbers, the pixels and the depth apart, so that
@@ -532,12 +532,18 @@ Of `docs/specs/charts/scatter.md`: `PointColours`, `groupMark`,
   WebGL, on the Mac and on CI, once the first work package has seen it.
 - `docs/architecture.md`, section 9: `project.ts` in the list of
   `src/charts`.
-- `docs/architecture.md`, section 11, for the orchestrator to weigh: a
+- `docs/architecture.md`, section 11: a
   page opened before a deploy that later downloads a file of the build,
   the file of three.js here, and also the files wasm, which the light
   worker loads the first time an xlsx is read, finds it gone. Nothing
-  in the architecture says what the user sees then; this spec gives the
-  words for the 3D view alone.
+  in the architecture says what the user sees then; `pca.md` gives the
+  words for the 3D view, and `docs/specs/worker/individuals.md` the same
+  advice for the files wasm, `xlsxReaderNotLoaded`.
+
+Each of these was made in its document on 27 September 2026, when the
+specs of stage 4 were made to agree, but those of `docs/architecture.md`,
+and the line of `testing.md` on the headless engines, which waits for
+the first work package.
 
 ## Open points
 

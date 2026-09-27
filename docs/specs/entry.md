@@ -11,7 +11,10 @@ every handle the store gives back, and the download of a file of the
 filtered variants; this revision is approved by the owner on 26 September 2026.
 Revised on 27 September 2026 for stage 4 where it names the PCA: `pca`
 joins the analyses of `apps.ts`, in the Analyses step before the
-diversity, and `countsOf` gives no counts of its pass. This spec gives
+diversity, and `countsOf` gives no counts of its pass; and again the
+same day, to agree with the specs written beside it: an individuals
+source of an xlsx, with no options of a CSV, is asked for, where stage 2
+threw it as a defect. This spec gives
 the page of the population genetics application, `popgen.html`, and its
 entry, the code that runs once when the page opens and keeps working for
 the life of the page: it makes the store and the two workers and joins
@@ -330,10 +333,12 @@ outcome of a read makes it look again whatever the project, as below.
   calculation worker, started again first when the load changed
   (`docs/architecture.md`, section 5).
 - **The individuals file** is asked as a `readIndividuals` of its load
-  and the options of its CSV, which the client sends to the light
-  worker. An individuals source pending with no options of a CSV, an
-  xlsx, cannot be asked for in stage 2, which has no reader of xlsx and
-  no screen that loads one; `wantedReads` throws it as a defect.
+  and the options of its CSV, `null` for an xlsx, which the client sends
+  to the light worker. In stage 2, which had no reader of xlsx and no
+  screen that loaded one, a pending source with no options of a CSV was
+  a defect, which `wantedReads` threw; from stage 4 it is an xlsx, asked
+  for with `csv` `null` (`docs/specs/worker/individuals.md`, "The
+  xlsx"), and its read is recorded under that `null`.
 - **A read under way whose source the present project no longer holds
   pending** is cancelled: its file was replaced, or the change was
   undone, or the options of the CSV changed again. This is the
@@ -619,10 +624,10 @@ export type WantedRead =
   | { readonly kind: "variants"; readonly fileId: string;
       readonly format: "vcf" | "nei";
       readonly readOptions: { readonly ploidy: number; readonly onlyPassed: boolean } | null }
-  | { readonly kind: "individuals"; readonly fileId: string; readonly csv: CsvOptions };
+  | { readonly kind: "individuals"; readonly fileId: string;
+      readonly csv: CsvOptions | null };   // null for an xlsx, from stage 4
 
-/** The reads the project waits for: its sources whose read is pending.
-    Throws a defect on an individuals source pending with no CSV options. */
+/** The reads the project waits for: its sources whose read is pending. */
 export function wantedReads(p: Project): readonly WantedRead[];
 ```
 
@@ -803,7 +808,9 @@ hand and whose cancels it records.
   of the light worker, recorded as the table says; after a
   `workerFailed`, no second request.
 - **`wantedReads`** of an individuals source pending with `csv` null
-  throws.
+  gives a read with `csv` `null`, which the client is asked for with
+  `null`, and its outcome is recorded with `individualsRead(fileId,
+  null, …)`; stage 2 threw it.
 - **`startAnalysis`**: `null` when `startRun` gives `null`; the outcome
   given to `runEnded` with the id of its request; `startedAt` of that id
   a number while it is in flight and `null` after; a `runEnded` that

@@ -15,8 +15,12 @@ list. Revised on 27 September 2026 for stage 4, the Individuals step and
 the PCA: the read of an xlsx, whose request carries no options of a CSV
 and whose answer reports none; the files wasm, the Rust module that
 reads an xlsx (`docs/specs/worker/files.md`), which fails to load as an
-answer and not as a failure of the worker; and `PROTOCOL_VERSION` 3; not
-approved yet. This spec gives
+answer and not as a failure of the worker; and `PROTOCOL_VERSION` 3; and
+again the same day, to agree with the specs written beside it: the
+checks of the job and the result of the principal components
+(`docs/specs/analyses/pca.md`), which make one pass, the two values of
+a binary type checked as texts, and no intermediate result before stage
+7; not approved yet. This spec gives
 `src/worker/messages.ts`: the messages the page and each of the two
 workers send each other, from the walking skeleton, the smallest
 application that goes through every part once (stage 2), on, the
@@ -178,7 +182,9 @@ A `progress` carries the four fields of popnei's `Progress`
   function that makes them.
 
 They are popnei's as they came, not a fraction the worker works out, so
-that the page can say which pass is reading, "pass 2 of 2" of a PCA, and
+that the page can say which pass is reading, "pass 2 of 2" of a
+calculation of popnei that reads the file twice, none of which the
+applications make in stage 4, and
 draw the bar with the rule of popnei's README: the run is
 `(pass − 1 + bytesRead / numBytes) / numPasses` done. A pass over a
 `.nei` file ends below `numBytes`, since popnei does not read the whole
@@ -333,7 +339,8 @@ and of `.claude/skills/coding/worker.md`, "Validation at the boundary":
   A NaN is a number: popnei gives one where a value is not defined.
 - **What the types tie together is checked too**: a `.nei` file has no
   read options and a VCF has them; `csv` of a `readIndividuals` and
-  `found` of a read are `null` or have all their fields; every row of the individuals table is
+  `found` of a read are `null` or have all their fields; the `one` and
+  the `zero` of a binary type are texts, from stage 4; every row of the individuals table is
   as long as its header, and there is one type for each column; every
   array of a diversity result is as long as its `pops`, so that no number
   is put under another population; the two arrays of the statistics of
@@ -342,7 +349,15 @@ and of `.claude/skills/coding/worker.md`, "Validation at the boundary":
   population of a `Job` is a pair, its name and its individuals;
   `individuals` of a job is `null` or a list of texts; the fields of
   `passStats.filtering` are kinds of `VariantFilter`; `filters` of a
-  `variantChecks` job is empty; the `numBytes` of a `written` is the
+  `variantChecks` job is empty; for the principal components, from
+  stage 4, the `method` of a job and of a result is `"pca"` or
+  `"pcoa"`, `numCompsKept` of a job, `numComps` and `numCompsFound` of a
+  result are whole numbers, `projections` is as long as `individuals`
+  times `numComps`, `explainedVariancePercent` is as long as
+  `numComps`, and a result of the PCA has `numVarsUsed` a number and
+  `negativeEigenvaluesPercent` `null`, and one of the PCoA the other way
+  round; that `numCompsKept` is at least 1 and `numComps` at most
+  `numCompsFound` is core's and the runner's to keep, as a range; the `numBytes` of a `written` is the
   `size` of its file, or it is refused as `wrongSize`; the refusals of the reader are the kinds
   its spec gives. That the statistics of each individual are those of the
   individuals of the file, in its order, that a list of individuals is
@@ -514,7 +529,8 @@ with a refusal. Node has `File`, so the requests are built with `new
 File(["…"], "panel.nei")`.
 
 - **Every kind is accepted**: a message of each kind, the `open` of a VCF
-  and of a `.nei` file, a `run` of each of the four jobs, with
+  and of a `.nei` file, a `run` of each of the five jobs, the principal
+  components with the method `"pca"` and with `"pcoa"`, with
   `individuals` `null` and with a list, its `progress`, `{ kind:
   "progress", id: 3, bytesRead: 259376, numBytes: 261490, pass: 1,
   numPasses: 1 }`, and its `result`, a `write` and its `written`, whose
@@ -550,12 +566,19 @@ File(["…"], "panel.nei")`.
   the `counts` of the MAF of 41, `wrongLength`; a `variantChecks` job
   with a filter; a `written` whose `numBytes` is 3593 and its file's
   `size` 3594, `wrongSize` at `result.numBytes` with `expected` 3594 and
-  `found` 3593; one whose `file` is an `ArrayBuffer`, `wrongType`.
+  `found` 3593; one whose `file` is an `ArrayBuffer`, `wrongType`; a
+  `pca` job whose `method` is `"tsne"`, `unknownValue`, and whose
+  `numCompsKept` is 1.5, `wrongType`; a result of the principal
+  components whose `projections` is a list of numbers, `wrongType`, has
+  1,999 numbers for 200 individuals and 10 components, `wrongLength`,
+  or whose `explainedVariancePercent` has 9, `wrongLength`; a result of
+  the PCA with `numVarsUsed` `null`, `wrongType`.
 - **The version**: a `ready` with `protocol: 2`, stage 3's, and no
   other field gives `otherProtocol` with 2 from both checks of the page,
   and so does `protocol: 4` with 4; with `protocol: "3"`, `wrongType`.
 - **The xlsx**: a `readIndividuals` whose `csv` is `{}`,
-  `missingFields`; a `found` of an xlsx with the fields of a `CsvFound`
+  `missingFields`; a binary type whose `one` is the number 1,
+  `wrongType`; a `found` of an xlsx with the fields of a `CsvFound`
   but `undecodedLine`, `missingFields`; an `emptySheet` without its
   `sheet`, `missingFields`.
 - **`describeMessageError`** names the path and the kind of the message:
@@ -599,14 +622,14 @@ the user" of `worker.md` has it, so that a copy the engine makes of up to
 a gigabyte into the `Blob` is made off the page (`docs/architecture.md`,
 section 6, "The files written").
 
-From stage 4, one more, which the skill takes when the owner approves
-this revision: a files wasm that could not be downloaded is the answer
-`xlsxReaderNotLoaded`, and the light worker goes on, where the skill
-says nothing of it and treats a wasm that does not load as a worker that
-fails; and the refusals of the files crate that the user can mend are
-kinds of their own, `encrypted` among them, where the skill has every
-error of the files wasm sent as `files` with its message
-(`docs/specs/worker/files.md`, "The refusals").
+From stage 4, one more, written into the skill with this revision on
+27 September 2026, to be approved with it: a files wasm that could not
+be downloaded is the answer `xlsxReaderNotLoaded`, and the light worker
+goes on, where the skill said nothing of it and treated a wasm that
+does not load as a worker that fails; and the refusals of the files
+crate that the user can mend are kinds of their own, `encrypted` among
+them, where the skill had every error of the files wasm sent as `files`
+with its message (`docs/specs/worker/files.md`, "The refusals").
 
 ## Open points
 
@@ -633,4 +656,6 @@ None of its own.
   `written` of a VCF: with popnei's release that has the filter of the
   regions and the writer of the VCF.
 - The intermediate results the calculation worker keeps, and their keys
-  inside a `Job`: from stage 4, with the PCA.
+  inside a `Job`: none before the kinship of stage 7, since the variants
+  the pruning of the PCA keeps are not kept ("The pruned variants are not
+  kept between two PCAs" in `docs/specs/stage-4-open-points.md`).

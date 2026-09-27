@@ -13,7 +13,10 @@ failures already had it. Revised on 27 September 2026:
 Revised on 27 September 2026 for stage 4: the calculation worker is
 started again after a PCA of more than 700 individuals, as after a large
 write, meanwhile (open point 1 of `docs/specs/analyses/pca.md`), and it
-keeps no intermediate result in stage 4. The worker client is the page's one door to the two workers, the threads of the tab
+keeps no intermediate result in stage 4; and again the same day, to
+agree with the specs written beside it: the read of an xlsx, whose
+request has no options of a CSV and whose answer no `found`, and the
+test of the restart after a write at the bound of 25 MB. The worker client is the page's one door to the two workers, the threads of the tab
 beside the page where the files are read and the calculations run
 (`docs/architecture.md`, section 1): it starts them, keeps the `File` of
 every file the user picked, sends each worker one request at a time and
@@ -331,7 +334,8 @@ assumed that a write left the size of its file in the memory of wasm.
 What a restart costs in stages 3 and 4 is the reading of the header of
 the file, at most 49 ms (above): the worker keeps no intermediate result
 before the kinship of stage 7, the variants the pruning of the PCA kept
-among them (meanwhile, point 1 of `docs/specs/stage-4-open-points.md`),
+among them (meanwhile, "The pruned variants are not kept between two
+PCAs" in `docs/specs/stage-4-open-points.md`),
 and the value of the bound is decided again then.
 
 The file outlives the worker that made it: a `Blob` the page holds keeps
@@ -475,7 +479,7 @@ export interface Client {
   }): Read<VariantsOpened>;
 
   /** Reads the individuals file of a load on the light worker. */
-  readIndividuals(fileId: string, csv: CsvOptions): Read<IndividualsAnswer>;
+  readIndividuals(fileId: string, csv: CsvOptions | null): Read<IndividualsAnswer>;  // null for an xlsx
 
   /** Sends a calculation, under its key; the store's `send`. */
   run(key: string, job: Job, onProgress: (p: Progress) => void): Run<JobResult>;
@@ -514,7 +518,8 @@ export type VariantsOpened =
   | { kind: "cancelled" };   // cancelled, or a request on another load came first
 
 export type IndividualsAnswer =
-  | { kind: "read"; table: IndividualsTable; columns: ColumnType[]; found: CsvFound }
+  | { kind: "read"; table: IndividualsTable; columns: ColumnType[];
+      found: CsvFound | null }                          // null for an xlsx
   | { kind: "refused"; error: IndividualsFileError }  // the reader refused the file
   | { kind: "failed"; error: Exclude<RunError, { kind: "popnei" | "files" }> }
   | { kind: "cancelled" };
@@ -705,18 +710,20 @@ walking skeleton, a diversity `Job` and a CSV.
   `cancel()` of a write waiting takes it out of the queue; of a write
   running, ends the worker.
 - **The restart after a large write**: a `written` with `numBytes`
-  100,000,001 and a run k5 waiting: the outcome of the write is `done`
+  25,000,001, one more than `WRITE_RESTART_BYTES`, and a run k5
+  waiting: the outcome of the write is `done`
   before the worker is ended, then a new worker is made and, once
   ready, sent the `open` of A, then k5; `onPopneiReady` is called when
-  that `open` ends. A `written` of exactly 100,000,000 bytes ends no
+  that `open` ends. A `written` of exactly 25,000,000 bytes ends no
   worker. A `refused` of a write, with a run waiting: the outcome is
   `failed` of kind `popnei` before the worker is ended, then the same
   restart. The `Blob`s are real ones, `new Blob([new
-  Uint8Array(100_000_001)])`, 12 ms in node 26.8 on the owner's Mac on
-  26 September 2026, since the check of a
+  Uint8Array(25_000_001)])`, since the check of a
   `written` message takes the file with `instanceof Blob` and compares
   `numBytes` with its `size` (`docs/specs/worker/messages.md`), which a
-  fake would fail.
+  fake would fail; one of 100,000,001 bytes, the bound before its
+  measurement, took 12 ms to make in node 26.8 on the owner's Mac on 26
+  September 2026.
 - **The restart after a large PCA**: a `result` of a `pca` job of 701
   individuals, of its list, with a run k6 waiting: the outcome is `done`
   before the worker is ended, then a new worker, the `open` of A, then

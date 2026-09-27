@@ -299,14 +299,23 @@ export function createClient(make: {
   was picked. Load it again in the Variants step." The runner tells it
   from a refusal of the data by popnei's message
   (`docs/specs/worker/runner.md`).
-- **An error of the files wasm is handled the same way.** Every function
-  the crate exports returns a `Result` whose error wasm-bindgen turns into
-  a JavaScript `Error` with its message, "not an xlsx file", a sheet that
-  calamine cannot read; `filesRunner.ts` catches it at the call and sends
-  it as `{ kind: "files" }` with that message. A file that the reader of
-  CSV and TSV refuses is not an error of the run: the reader returns a
-  `Result`, and the job gives it back as its result, the table or the
-  ways the file is wrong, which the module spec of the reader lists.
+- **A refusal of the files wasm is a value too.** A file the crate
+  refuses for a reason the user can mend, not a zip, an old `.xls`, a
+  password, an empty first sheet, an error cell calamine does not know,
+  a sheet too large, is a code in the struct `readXlsx` returns, with
+  the fields its words need, and `filesRunner.ts` makes of it the kind of
+  `IndividualsFileError` it names; only a file calamine cannot open
+  throws, a `Result` whose error wasm-bindgen turns into a JavaScript
+  `Error` with calamine's message, which `filesRunner.ts` catches at the
+  call and gives as the refusal `files` with that message
+  (`docs/specs/worker/files.md`, "The Rust interface"). Either way the
+  read answers `individuals` with a failed read, and the worker goes on.
+  A file that the reader of CSV and TSV refuses is not an error of the
+  run either: the reader returns a `Result`, and the job gives it back as
+  its result, the table or the ways the file is wrong, which the module
+  spec of the reader lists. Decided on 27 September 2026 with the specs
+  of stage 4, where this bullet had every error of the files wasm sent as
+  `files` with its message.
 - **A trap of the wasm is fatal for the worker.** A panic of Rust in wasm
   is a `WebAssembly.RuntimeError`, and after one the memory of the wasm
   keeps what it held and an object that was borrowed stays borrowed
@@ -460,9 +469,13 @@ never downloads it.
   its own, and calls its default export, the `init` that `--target web`
   generates, which fetches the `.wasm` from `new URL("files_bg.wasm",
   import.meta.url)` as popnei's loader does.
-  What weighs is the `.wasm`, about 0.5 MB gzipped; the JavaScript that
-  wasm-bindgen generates is a few tens of KB, and it no longer rides in
-  the worker's first file. A static `import` of it would put that
+  What weighs is the `.wasm`, 0.30 MB gzipped while the crate only reads,
+  calamine alone, 295,521 bytes with `gzip -9` in the trial of 27
+  September 2026 (`docs/specs/worker/files.md`), and about 0.58 MB once
+  rust_xlsxwriter and zip join it for the report in stage 6
+  (`docs/technology.md`, section 2); the JavaScript that wasm-bindgen
+  generates is 2,962 bytes gzipped in that trial, and it no longer rides
+  in the worker's first file. A static `import` of it would put that
   JavaScript back into the first file.
 - `filesRunner.ts` keeps one promise, `filesReady ??= loadFiles()`, where
   `loadFiles` does the import and the `init()`, and awaits it in the
@@ -470,6 +483,16 @@ never downloads it.
   does. A CSV or TSV of the individuals, and the inference of the types of
   its columns, are read by the TypeScript of `src/worker/individuals/`
   and never load the files wasm (`docs/architecture.md`, section 6).
+- **A load that fails is a value, and is tried again.** When the
+  `import()` or the `init()` rejects, a network that drops or a page
+  left open across a deploy whose files are gone, the promise is reset,
+  `filesReady = null`, so that the next xlsx tries again, and the read
+  answers the failed read `xlsxReaderNotLoaded`, with the browser's
+  message for the console; the worker goes on, since a failed load leaves
+  nothing of the wasm behind and a CSV can still be read. It is not
+  `crashed`, which a popnei that does not load is for the calculation
+  worker, which can do nothing without it (`docs/specs/worker/files.md`,
+  "How the light worker loads it"; decided on 27 September 2026).
 
 ### The reader of the individuals file
 
@@ -610,9 +633,12 @@ other side without a copy and are left empty, detached, where they were.
 ### The intermediate caches
 
 The calculation worker keeps what is costly to make and used by several analyses:
-the variants kept by the LD pruning of the PCA, the kinship, the
-principal components the GWAS takes as covariates (`docs/architecture.md`,
-section 5).
+the kinship and the principal components the GWAS takes as covariates,
+from stage 7 (`docs/architecture.md`, section 5). It keeps nothing
+before: the variants the LD pruning of the PCA keeps are not kept, since
+popnei cannot put a list of variants back on a file, and each PCA prunes
+again inside its one pass ("The pruned variants are not kept between two
+PCAs" in `docs/specs/stage-4-open-points.md`, 27 September 2026).
 
 - **Under keys, made as the page makes its keys**, a hash of everything
   the value was made from, including the version of popnei. The page sends
@@ -750,7 +776,8 @@ the release `js-v0.1.0-dev.2` of 25 September 2026.
   them, for the inference. That the result helper copies an array that
   does not own its buffer, and transfers one that does, is a test too.
 - **With `cargo test`, natively**: the Rust of `crates/files/`, reading
-  and writing an xlsx and zipping, over files kept in the crate. The
+  and writing an xlsx and zipping, over files kept in the crate and over
+  files the tests write in memory with rust_xlsxwriter. The
   functions that wasm-bindgen exports are stubs that panic when called
   natively, so they are thin wrappers over plain Rust functions, and the
   tests call those (`SKILL.md`, "The files crate").

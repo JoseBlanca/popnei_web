@@ -325,7 +325,13 @@ export default defineConfig({
   stage 3 there is one, `e2e/plots.html`, built to
   `dist/e2e/plots.html`, where the export of the plots is tested until
   stage 6 offers it on the screens (`docs/specs/charts/plot2d.md`,
-  decided on 26 September 2026). A build without the variable, such as
+  decided on 26 September 2026); from stage 4 it draws the scatter of
+  the PCA and its 3D plot too, for their pointer, their export and the
+  3D plot's WebGL (`docs/specs/charts/scatter.md` and `pca3d.md`). Which
+  of the headless engines give WebGL, on the owner's Mac and on
+  GitHub's runners, has not been seen; the first work package of the 3D
+  plot writes it here, and in an engine that gives none the tests of the
+  3D plot are reported as not run for that reason, and not as passed. A build without the variable, such as
   the one of `screens`, leaves the page out, and its tests then fail,
   the page not found, until the next build with it.
 
@@ -616,20 +622,37 @@ runs of a branch go one at a time in the order of the pushes, so an older
 run whose e2e finishes later cannot publish over a newer one. Each job
 has a `timeout-minutes`, 20 for e2e and 10 for the others, so that a
 browser that hangs stops the run instead of holding a runner for six
-hours.
+hours; from stage 4, 30 for e2e and 20 for the others, since a run whose
+cache of Rust is empty compiles the command line of wasm-bindgen and the
+crate, until the first runs are timed and the timeouts set to about
+twice the time of a run with the cache empty (`docs/specs/site.md`).
 
-The Rust setup, in each job that builds the files crate: the toolchain of
-`rust-toolchain.toml`, with its target `wasm32-unknown-unknown`, which
-rustup, already on GitHub's Ubuntu runners, installs at the first cargo
-command; `wasm-bindgen-cli` at the version the crate pins, `cargo install
-wasm-bindgen-cli --version 0.2.128 --locked`, which compiles it; and
-`actions/cache` over `~/.cargo/bin`, `~/.cargo/registry` and
-`crates/files/target`, keyed by `rust-toolchain.toml` and
-`crates/files/Cargo.lock`, so that the command line and the dependencies
-are built once and not on every run. How long a run takes with and
-without the cache has not been measured. The Rust setup and
-`build:files` come with the crate, after the walking skeleton
-(`configs.md`); the workflow of the skeleton needs no Rust.
+The Rust setup, in each job that builds the files crate, after
+`actions/checkout` and before `npm ci`, in three steps
+(`docs/specs/site.md`, "Rust in the workflow, from stage 4"):
+
+1. `actions/cache` over `~/.cargo/registry/index/`,
+   `~/.cargo/registry/cache/`, `crates/files/target/`, and the three
+   programs of wasm-bindgen's command line in `~/.cargo/bin/`,
+   `wasm-bindgen`, `wasm-bindgen-test-runner` and `wasm2es6js`, keyed by
+   `rust-toolchain.toml` and `crates/files/Cargo.lock`, with a
+   `restore-keys` of the same prefix so that a new key starts from the
+   last cache. Not the rest of `~/.cargo/bin/`, rustup's own programs,
+   which the runner brings, and not `~/.rustup/`, some hundreds of MB.
+2. `rustup toolchain install`, which with no name installs the toolchain
+   `rust-toolchain.toml` names, with its target and components (rustup
+   1.28 and later), explicit so that a failure to install shows as this
+   step and not inside the first `cargo`.
+3. `wasm-bindgen --version | grep -qx 'wasm-bindgen 0.2.128' || cargo
+   install wasm-bindgen-cli --version 0.2.128 --locked`: the command line
+   at the version the crate pins, compiled only when the cache did not
+   bring it, since `cargo install` alone compiles it again whenever its
+   own record of what it installed, which is not cached, is missing.
+
+How long a run takes with and without the cache has not been measured;
+the report of the plan of stage 4 writes it. The Rust setup and
+`build:files` come with the crate, in stage 4 (`configs.md`); the
+workflow before it needs no Rust.
 
 `npm ci` installs the wasm package of popnei from its GitHub Release, by
 the URL and the hash of the lockfile (`docs/technology.md`, section 5), so

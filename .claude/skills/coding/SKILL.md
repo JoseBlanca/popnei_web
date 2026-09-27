@@ -52,7 +52,7 @@ import:
 
 | layer | may import | must not import |
 |---|---|---|
-| `src/core` | itself; the types of `src/worker/protocol.ts`; the types of `popnei` | `src/ui`, `src/charts`, `src/worker/client.ts`, `src/worker/messages.ts`, `src/worker/start.ts`, `src/worker/runner.ts`, `src/worker/filesRunner.ts`, React, D3, three.js, a value of `popnei` |
+| `src/core` | itself; the types of `src/worker/protocol.ts`; from stage 4, `src/worker/individuals/columnTypes.ts`, the reader's pure functions of the numbers and the types of a column, for `columnAllows` and the colours of the PCA (`configs.md`); the types of `popnei` | `src/ui`, `src/charts`, `src/worker/client.ts`, `src/worker/messages.ts`, `src/worker/start.ts`, `src/worker/runner.ts`, `src/worker/filesRunner.ts`, React, D3, three.js, a value of `popnei` |
 | `src/worker` | itself; `popnei`, in `runner.ts` only; the files wasm, in `filesRunner.ts` only; the types of `src/core/result.ts` | anything else of `src/core`, `src/ui`, `src/charts`, React, D3, three.js |
 | `crates/files/` (Rust) | its crates, wasm-bindgen, calamine, rust_xlsxwriter and zip | popnei; it is called only by `src/worker/filesRunner.ts` |
 | `src/charts` | itself; D3; three.js | `src/core`, `src/ui`, `src/worker`, React, a value of `popnei` |
@@ -288,17 +288,29 @@ What matters most here:
   deny outside the tests, and every function the crate exports returns
   `Result<T, JsError>`: wasm-bindgen turns the error into a JavaScript
   `Error` with its message, which the runner catches at the call and
-  sends to the page (`worker.md`, "Errors are values").
+  sends to the page (`worker.md`, "Errors are values"). A refusal the
+  user can mend, a password, an empty first sheet, is not that error but
+  a value of the result, with the fields its words need
+  (`docs/specs/worker/files.md`, "The Rust interface").
 - **The exported functions are thin.** Each one converts its arguments,
   calls a plain Rust function that does the work and returns a `Result`
   of the crate's own error type, and maps that error to `JsError`. The
   functions wasm-bindgen generates are stubs that panic when called
   natively, so the plain functions are what `cargo test` calls.
-- **Its tests**: `cargo test`, natively, over xlsx files kept in the
-  crate, written by Excel and LibreOffice, with dates, sparse rows and a
-  sheet in Spanish among them (`docs/technology.md`, open point 1); and
-  the light worker's tests in Playwright, which read an xlsx and write a
-  report through the real wasm (`testing.md`).
+- **Its tests**: `cargo test`, natively, over two sets of files. Files
+  the tests write in memory with rust_xlsxwriter, `save_to_buffer`, each
+  case a few lines that say what the file holds, for what a program can
+  write: dates of every format, formulas, merged cells, a hidden sheet, a
+  sheet too large. And xlsx files kept in the crate,
+  `crates/files/tests/data/`, made by the owner with Excel, LibreOffice
+  and Google Sheets, with dates, sparse rows and a sheet in Spanish among
+  them, for what only those programs write: the date system of 1904, a
+  password, an old `.xls`, the errors of the newest Excel
+  (`docs/technology.md`, open point 1; `docs/specs/worker/files.md`, "How
+  it is verified"). And the light worker's tests in Playwright, which
+  read an xlsx, and from stage 6 write a report, through the real wasm
+  (`testing.md`). The tests in memory were added on 27 September 2026
+  with the specs of stage 4.
 - **Its dependencies** are the owner's decision as npm's are, with exact
   versions, and `crates/files/Cargo.lock` is committed.
 

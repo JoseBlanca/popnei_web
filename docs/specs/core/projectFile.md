@@ -21,11 +21,13 @@ which stays 1 until the first release of the application, the regions
 of a BED file included, as the owner decided on 26 September 2026;
 this revision is approved by the owner on 26 September 2026. Revised on
 27 September 2026 for stage 4, the Individuals step whole, not yet
-approved: the grouping of one population, the types the user set and
-what the values of each column allow, written in version 1, and a
-project with no metadata file, whose diversity has the check numbers of
-one population (`docs/specs/core/project.md`, "The populations" and
-"The types of the columns"). There was no
+approved: the grouping of one population and the types the user set,
+written in version 1, and a project with no metadata file, whose
+diversity has the check numbers of one population
+(`docs/specs/core/project.md`, "The populations" and "The types of the
+columns"); and again the same day, to agree with the specs written
+beside it: what the values of each column allow is worked out from the
+table and not written. There was no
 code yet; it will be `src/core/projectFile.ts`, the row `projectFile.ts`
 of section 9 of `docs/architecture.md`. The project file is the file
 `<name>.popnei.json` that a user saves to take their work out of the
@@ -145,20 +147,6 @@ written as below, the rows of the table shortened here to two:
           "kind": "categorical"
         }
       ],
-      "allows": [
-        {
-          "continuous": false,
-          "binary": null
-        },
-        {
-          "continuous": false,
-          "binary": {
-            "kind": "binary",
-            "one": "south",
-            "zero": "north"
-          }
-        }
-      ],
       "found": {
         "encoding": "utf-8",
         "separator": ",",
@@ -206,12 +194,13 @@ written as below, the rows of the table shortened here to two:
   names and the values of `docs/specs/core/project.md`: the read options
   of a VCF in `variants`; the filters in their order; the individuals
   table whole, with the type of each column, which the user can set from
-  stage 4, the types the user set, `typesSet`, and what the values of
-  each column allow, `allows`; the grouping, `{ "kind": "onePopulation" }`
+  stage 4, and the types the user set, `typesSet`; the grouping, `{ "kind": "onePopulation" }`
   among its values from stage 4; the options of
   each analysis, whole, the defaults filled in. In the example the reader
   inferred `pop`, a column of two values, as binary, and the user set it
-  categorical, as a column of populations. Some parts are written
+  categorical, as a column of populations. What the values of each
+  column allow is not written: core works it out from the table
+  (`docs/specs/core/project.md`, `columnAllows`). Some parts are written
   otherwise, in the table below: the variants file when none is loaded or
   its read is not done, the individuals file when its read is not done,
   and the reference, which is not written as such.
@@ -274,7 +263,7 @@ example does.
 | `variants` null, a reference | the reference's `variants`, so that a project opened and saved again before its file is given still names the file it was made with |
 | `variants` null, no reference | `null` |
 | whichever `variants` is written, when its read is pending or failed | that source with its read `{ "kind": "pending" }`: the name, the size, the format and the read options are known, and the rest is not |
-| `individuals` read | the source as it is, its load id, its table, its `typesSet` and its `allows` included, and its `typesLost` left out |
+| `individuals` read | the source as it is, its load id, its table and its `typesSet` included, and its `typesLost` left out |
 | `individuals` pending or failed | `null`, and the grouping is kept by the name of its column, or as `onePopulation`; the types the user set go with the source |
 | `individuals` null | `null`, whatever the grouping: the analyses per population run on one population, and the grouping is kept for a file loaded later |
 | `reference` | not written as such: its `variants` as above, and its check numbers under the rule below |
@@ -720,12 +709,12 @@ this spec makes precise:
   is read as a file of version *k* and brought to the present one field
   by field, and the fixtures of every earlier version, below, keep
   opening.
-- **Stage 4 does not raise it.** The grouping `onePopulation`, the
-  types the user set, `typesSet`, and `allows` join version 1; a file of
-  stages 2 and 3, which has neither of the last two, opens with none set
-  and `allows` made from its types (`docs/specs/core/project.md`, "The
-  validation"), and a development version before stage 4 refuses a file
-  that has them, as it refuses every field it does not write. The
+- **Stage 4 does not raise it.** The grouping `onePopulation` and the
+  types the user set, `typesSet`, join version 1; a file of stages 2 and
+  3, which has no `typesSet`, opens with none set
+  (`docs/specs/core/project.md`, "The validation"), and a development
+  version before stage 4 refuses a file that has one, as it refuses
+  every field it does not write. The
   binary type holds texts, which is what every file of stages 2 and 3
   holds, since they read only CSV.
 - **Stage 3 does not raise it**, nor do the regions of a BED file when
@@ -955,8 +944,8 @@ the analyses `done`, `ready` or `removed`.
   `FORMAT_VERSION` is 1, the project written back from it, with no result
   and the header's versions and date, is the fixture byte for byte; but
   `v1-nei-diversity.popnei.json`, written before stage 4, which is
-  written back with `typesSet` and `allows` added to its individuals
-  file and nothing else changed, the test asserting that text. Once
+  written back with `typesSet` added to its individuals file, empty,
+  and nothing else changed, the test asserting that text. Once
   a version of the site that writes a format is deployed, its fixtures are
   never edited: a later version adds its own and keeps the tests that open
   the old ones, changing only the project they are expected to give when
@@ -1108,13 +1097,12 @@ check with its own (point E there).
 - `docs/specs/steps/individuals.md`: it offers to load again, rather
   than to change the options of the CSV of, an individuals file whose
   load id the page holds no file for.
-- `docs/specs/worker/*`: nothing of this module; from stage 4,
-  `ColumnAllows` and the binary type of texts of
-  `docs/specs/worker/protocol.md`, which the file writes as the project
-  holds them.
-- `docs/specs/core/project.md`, from stage 4: `typesSet`, `allows`,
-  `typesLost` and the grouping `onePopulation`, and the reading of a
-  file of stages 2 and 3 that lacks the first two.
+- `docs/specs/worker/*`: nothing of this module; from stage 4, the
+  binary type of texts of `docs/specs/worker/protocol.md`, which the file
+  writes as the project holds it.
+- `docs/specs/core/project.md`, from stage 4: `typesSet`, `typesLost`
+  and the grouping `onePopulation`, and the reading of a file of stages
+  2 and 3 that lacks the first.
 - The specs of the checks of the Variants step, stage 3: the ids
   `individualChecks`, `variantChecks` and `filterCounts`, their key
   versions, and their `checkNumbers` and `numCheckNumbers`, which this

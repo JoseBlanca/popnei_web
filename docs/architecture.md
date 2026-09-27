@@ -233,6 +233,39 @@ the runner that the fixture is popnei's, and the runner's tests with the
 lists of 125 and 119, since a test of the worker imports no function of
 core (section 4, "What would show these choices wrong").
 
+What was revised on 27 September 2026, for stage 4 of
+`docs/build-order.md`, the Individuals step and the PCA; a draft, not yet
+reviewed or approved. Stage 4 fits the slots this document has: the PCA
+is an analysis of the shape of section 4, its plots are functions of
+`src/charts`, and the reader of xlsx is the files crate of section 6. What
+it changes:
+
+- **The calculation worker keeps no intermediate result before stage
+  7.** popnei cannot hold the variants its LD pruning keeps, so each PCA
+  prunes inside its own pass (section 5).
+- **An option that changes only how a result is drawn is left out of the
+  key**: the column that colours the PCA, its components on the axes, 2D
+  or 3D. They are options of the analysis, saved in the project file,
+  and a change of them is a command that removes no result (section 4).
+- **The individuals file** gains, in the project, the types the user set
+  and, in its read, what types each column allows, so that core offers
+  the types without importing the reader; `Grouping` gains every
+  individual in one population; a binary column holds its two values as
+  text (section 2).
+- **The calculation worker is started again after a PCA of more than 700
+  individuals**, a second exception to open point 2 (section 13, point
+  9).
+- **A file of the site fetched after a deploy**: three.js and the files
+  wasm are downloaded when first needed, and a page opened before a
+  deploy then asks for a file of the build it came from, which the
+  deploy removed (section 11, point 10 of section 13).
+
+The specs of stage 4 hold the rest: `docs/specs/analyses/pca.md`,
+`docs/specs/charts/scatter.md` and `pca3d.md`, `docs/specs/worker/files.md`,
+and the revised specs of the project, the reader of the individuals file
+and the Individuals step. The decisions the owner is asked for are in
+`docs/specs/stage-4-open-points.md`.
+
 ## 2. The project
 
 The project is everything the user has set, and nothing that was
@@ -251,8 +284,9 @@ interface Project {
   individualFilters: IndividualFilter[]; // the same
   regions: RegionsSource | null;      // the BED file, whole once read (section 6)
   individuals: IndividualsSource | null; // the metadata or traits file
-  // popgen: the column that defines the populations, and later the
-  //         edits made with the lasso; gwas: the roles of the columns
+  // popgen: the column that defines the populations, or every
+  //         individual in one population, and later the edits made
+  //         with the lasso; gwas: the roles of the columns
   grouping: Grouping;
   analyses: AnalysisOptions[];        // the options of each, as pairs
                                       // { analysis, options }, since a
@@ -308,10 +342,14 @@ interface IndividualsSource {
   fileId: string;                     // the id of this load, new at every pick
   name: string;
   csv: CsvOptions | null;             // how a CSV or TSV is read; null for xlsx
+  typesSet: ColumnTypeOf[];           // the types the user set, by column,
+                                      // kept by name when the file is read again
   read:
     | { kind: "pending" }             // the light worker is reading it
     | { kind: "read"; table: IndividualsTable; columns: ColumnType[];
-        found: CsvFound | null }      // how it was read; null for xlsx
+        allows: ColumnAllows[];       // the types each column's values allow
+        found: CsvFound | null;       // how it was read; null for xlsx
+        typesLost: ColumnTypeOf[] }   // types set that this read could not keep
     | { kind: "failed";
         error:
           | IndividualsFileError      // the reader refused the file
@@ -343,7 +381,7 @@ interface CsvFound {
 // the Python script use (section 8).
 type ColumnType =
   | { kind: "identifier" }
-  | { kind: "binary"; one: string | number | boolean; zero: string | number | boolean }
+  | { kind: "binary"; one: string; zero: string } // the text of the two values
   | { kind: "continuous" }
   | { kind: "categorical" };
 
@@ -647,6 +685,18 @@ chosen.
 
 An application is a list of steps and a list of analyses. The two
 applications share the steps of the variants and the analysis of the PCA.
+
+**An option that changes only how a result is drawn is left out of its
+key**, from stage 4: the column that colours the points of the PCA, the
+components on its axes, and whether it is drawn in 2D or 3D
+(`docs/specs/analyses/pca.md`). They are options of the analysis, as
+`AnalysisOptions` holds them, so a project file saves them and an undo
+gives them back; `keyInputs` leaves them out, since they are not inputs
+of the result, and a change of them is a command that removes no result.
+Section 3 asks a key to hold every input of a result, which this keeps.
+The option not taken was to keep them as state of the screen, lost at a
+reload and missing from a reopened project and from the report of stage
+6, which draws the plot as the user set it.
 
 ### The checks of the Variants step, and the individuals they keep
 
@@ -1611,6 +1661,14 @@ src/charts/
   plot2d.ts         the base every 2D plot makes its handle with: its SVG,
                     size, axes, text for a screen reader and export
   histogram.ts scatter.ts line.ts qq.ts heatmap.ts manhattan.ts pca3d.ts
+  marks.ts          the colour and the symbol of each group of points, and
+                    the colours of a column of numbers, for the 2D and 3D
+                    plots of the PCA (docs/specs/charts/scatter.md)
+  legend.ts         the entries of the legend of those plots, and the
+                    legend drawn into an exported SVG
+  hover.ts          the point nearest the pointer, and its tooltip
+  project.ts        where each point of the 3D view falls on the screen,
+                    with nothing of three.js (docs/specs/charts/pca3d.md)
   export.ts         SVG and PNG
 src/ui/
   popgen.tsx        the entry of the population genetics page: it makes the
@@ -1732,7 +1790,23 @@ code, the release `js-v0.1.0-dev.2`.
   eigendecomposition take about 6 times 8 bytes per pair of individuals,
   which at 9382 is more than the 4 GB that wasm addresses
   (`src/pca.ts` of popnei). popnei refuses with its message, and points to
-  a program outside the browser, popnei in Python among them.
+  a program outside the browser, popnei in Python among them. It counts
+  the individuals of the file and not those the filters of individuals
+  keep, in `js-v0.1.0-dev.2` and on popnei's main of 27 September 2026, so
+  a file of more than 9381 individuals cannot be analysed on a part of
+  them; asked of popnei (`docs/specs/analyses/pca.md`).
+- **The time and the memory of a PCA grow with the individuals**, and
+  mostly not with the variants: in node 26.8.2 on the owner's Mac, with
+  300 variants, 0.45 s and 69 MB more for 1,000 individuals, 3.0 s and 196
+  MB for 2,000, and 21 s and 662 MB for 4,000, on 27 September 2026
+  (`docs/specs/analyses/pca.md`). The time grows about seven times when
+  the individuals double, which puts a PCA of 9,381 individuals at
+  minutes, not measured. popnei reports no progress while it decomposes
+  the matrix, so the bar stands full meanwhile, 6.7 of the 6.75 s of a
+  PCA of 2,500 individuals; the panel says so, and popnei is asked for a
+  progress of the decomposition. The memory stays with wasm after the
+  PCA, which is why the worker is started again after a large one
+  (section 13, point 9).
 - **The kinship takes n² × 8 bytes**, 800 MB at 10,000 individuals, and
   the calculation worker keeps it in its cache for the GWAS. While it is
   calculated it is in the memory of wasm as well, which keeps that room
@@ -1812,6 +1886,18 @@ code, the release `js-v0.1.0-dev.2`.
 - **The regions of a BED file are hashed once**, when their read is
   recorded, 120 ms for 200,000 regions in node on the owner's Mac (section
   3); in the browsers it is measured with the reader.
+- **A file of the site fetched after a deploy.** three.js, for the 3D
+  view of the PCA, 134 KB gzipped, and the files wasm, for an xlsx, 0.30
+  MB, are downloaded the first time they are needed, not when the page
+  opens (`docs/technology.md`). A deploy replaces every file of the site,
+  and the name of each of these files holds a hash of its content, so a
+  page opened before a deploy that asks for one of them afterwards asks
+  for a file that is no longer there, and its download fails. The screen
+  says that the site may have been updated since the page was opened,
+  and to save the project, reload the page and open the project again
+  (`docs/specs/charts/pca3d.md`, `docs/specs/worker/files.md`). Found by
+  the specs of stage 4 on 27 September 2026, and not yet seen in a
+  browser (section 13, point 10).
 
 ## 12. What is hard to undo
 
@@ -1901,3 +1987,23 @@ that day:
    statistics over every variant of the file, one pass per load, which
    counts among an individual's missing genotypes the bad variants the
    missing data filter drops.
+
+Opened by the revision of 27 September 2026, for stage 4; recommended,
+not yet decided by the owner (`docs/specs/stage-4-open-points.md`):
+
+9. **The calculation worker is started again after a PCA or a PCoA of
+   more than 700 individuals**, `PCA_RESTART_INDIVIDUALS`, whose matrix
+   of the individuals then takes more than the 25 MB after which a
+   written file restarts it (point 5), so that the tab gets back the
+   memory of wasm the analysis took: about 4.3 GB after a PCA of 9,381
+   individuals. It is a second exception to point 2. What it costs in
+   stage 4: reading the header of the variants file again, at most 49 ms,
+   since the worker keeps no intermediate result before stage 7 (section
+   5). Not taken: keeping the worker, and the memory, until the next load
+   of the variants file.
+10. **What a page opened before a deploy does when it later fetches a
+   file of the old build** (section 11). Recommended: say so in words,
+   with what works, save, reload and open the project again, as the
+   specs of stage 4 have it. Not taken: keeping the files of the last
+   builds on the site for a while after a deploy, which GitHub Pages,
+   deploying the `dist/` folder of one build, does not do by itself.

@@ -28,7 +28,9 @@ metadata file, as the owner decided on 25 September 2026 (point A of
 `docs/specs/stage-2-open-points.md`); the summary line with one
 population; the populations read from `src/core/project.ts`, where they
 moved from the module of the diversity; and the end of a read of the
-metadata file that lost types the user set, announced with them. The screen
+metadata file that lost types the user set, announced with them; and
+the title of the panel of the PCA, "Principal components", by which the
+notice and the status region name it. The screen
 spec of what surrounds every step of the population genetics
 application, first built in the walking skeleton of stage 2 (`docs/build-order.md`),
 the smallest application that goes through every part once: the header,
@@ -335,7 +337,10 @@ hold the writing too, by ", and" with a comma after the stopped, so that
 the two "and"s are read apart. The sentences are
 joined by a full stop, with none after the last, which the action
 follows. A name is the title of the analysis's panel, "Diversity",
-"Statistics of each individual". A
+"Statistics of each individual", and from stage 4 "Principal
+components", whatever its method (`docs/specs/analyses/pca.md`, "The
+panel"): "Principal components removed because the missing data filter
+changed · Undo". A
 command's description starts the sentence with its first letter made
 upper case when nothing comes before it.
 
@@ -1036,6 +1041,10 @@ revision, 27 September 2026:
   the grouping `onePopulation`; `typesLost` of a read.
 - `docs/specs/steps/individuals.md`: the words of the types lost, which
   the step shows and the end of a read announces in short.
+- `docs/specs/analyses/pca.md`: the title of its panel, "Principal
+  components", its `<h2>`, in `src/ui/analyses/titles.ts`; the start, the
+  end and the stop of a run announced by the shell, "Principal
+  components: done.", with the words of this spec.
 
 ## Open points
 

@@ -28,7 +28,12 @@ analysis per population reads, made here and no longer in the module of
 the diversity; the types of the columns set by the user, with the
 coding of a binary column; and those types kept when the file is read
 again, recommended to the owner on 27 September 2026 and taken
-meanwhile (`docs/specs/stage-4-open-points.md`), which answers Open 1. The project is everything the user has set in one application: the
+meanwhile (`docs/specs/stage-4-open-points.md`), which answers Open 1.
+Revised again the same day to agree with the specs written beside it:
+the types each column allows worked out by core from the table,
+`columnAllows`, and not given by the reader nor saved in the project
+file; the words of `notText`, now that an xlsx is read; and the seven
+refusals of an xlsx in the validation. The project is everything the user has set in one application: the
 variants file they loaded, the filters, the individuals file with the
 types of its columns, the populations, and the options of each analysis.
 This spec gives its type, the commands that change it, the records that
@@ -261,8 +266,9 @@ reasons below are those of population genetics.
 
 The words after "could not be read:" of a refusal of the reader are
 those of the reader's spec, `docs/specs/worker/individuals.md`, "The
-refusals and their words", one for each of the thirteen kinds of
-`IndividualsFileError`, which settles the words of **Open 5**: "it has
+refusals and their words", one for each kind of `IndividualsFileError`,
+thirteen in stage 2 and twenty from stage 4, which settles the words of
+**Open 5**: "it has
 no row of individuals"; "two columns are named pop"; "the individual ind_031 is in
 two rows"; "line 7 has 3 cells where the header has 4, read with the
 semicolon as the separator"; "column 4 has values but no name in the
@@ -272,7 +278,9 @@ as the separator"; "it is 312.4 MB, more than the 20 MB a metadata file
 can have; check that it is the metadata file and not the variants", with
 "a traits file" and "the traits file" in association; "the browser could
 not read it; it may have been changed, moved or deleted since it was
-picked"; "it is not a text file; in Excel, save the sheet as CSV"; "it
+picked"; "it is not a text file; if it is an Excel workbook, give it a
+name that ends in .xlsx", from stage 4, where stage 2 said "in Excel,
+save the sheet as CSV"; "it
 is a variants file, which the Variants step takes"; "it ends in the
 middle of a character and may have been cut short"; and the message of
 the files wasm for `files`, until stage 4. From stage 4 the reader's spec gives the
@@ -307,7 +315,7 @@ file or a file read, which the step shows otherwise:
 | refused by the reader, `raggedRow` or `unclosedQuote` | "pops.csv could not be read: line 7 has 3 cells where the header has 4, read with the semicolon as the separator. Choose another separator, or load a corrected file." |
 | refused by the reader, `variantsFile` | "pops.csv could not be read: it is a variants file, which the Variants step takes. Load a metadata file." |
 | refused by the reader, `unreadable` | "pops.csv could not be read: the browser could not read it; it may have been changed, moved or deleted since it was picked. Choose it again." |
-| refused by the reader, `xlsxReaderNotLoaded`, the files wasm not downloaded, from stage 4 | "pops.xlsx could not be read: the part of the application that reads Excel files could not be downloaded; check the connection and load the file again, or reload the page if it fails again.", with no end, since its words say what to do; the same beside a Run button |
+| refused by the reader, `xlsxReaderNotLoaded`, the files wasm not downloaded, from stage 4 | "pops.xlsx could not be read: the part of the application that reads Excel files could not be downloaded; check the connection and load the file again; if it fails again, the site may have been updated since this page was opened: save the project, reload the page and open the project again.", with no end, since its words say what to do; the same beside a Run button |
 | refused by the reader, any other kind, or by the files wasm | "pops.csv could not be read: it has no row of individuals. Load a corrected file." |
 | its read stopped by a crash of the light worker | "pops.csv could not be read: ‹what happened› (**Open 4**). Choose it again." |
 | the light worker could not start, or the page is out of date | "pops.csv could not be read: ‹what happened› (**Open 4**). Reload the page and choose it again." |
@@ -498,17 +506,34 @@ exactly two values, with which of the two is coded 1, the case; and
 continuous for a column whose values are all numbers. The first column
 is always identifier, and no other column is.
 
-Which types the values of a column allow is the reader's to say, since
-a cell is a number by the reader's rule and with the decimal mark of the
-read (`docs/specs/worker/individuals.md`, "The decimal mark and the
-numbers"), and core imports nothing of the reader but its types. So a
-read gives, beside the type of each column, `allows`: whether the
-column can be continuous, and, for a column of exactly two values, the
-binary type with the coding the reader proposes; for the first column,
-which is always identifier, neither. The step sends that binary type
-when the user makes that column binary. Without it, a column made
-categorical and then binary again would have no proposal of which value
-is the case.
+Which types the values of a column allow, `columnAllows(read)`, is
+worked out here from the table and the decimal mark of the read,
+`found.decimal` for a CSV and the point for an xlsx, with two pure
+functions of the reader, `cellNumber` and `inferColumnTypes` of
+`src/worker/individuals/columnTypes.ts`, which core may import
+(`tsconfig.core.json` holds `src/worker/individuals`), so that a cell is
+a number by the reader's rule and a binary column is coded by the
+reader's proposal (`docs/specs/worker/individuals.md`, "The decimal mark
+and the numbers" and "The types of the columns"). For each column: it
+can be continuous when every value that is not missing is a number, and
+there is one at least; and, when it has exactly two values, compared as
+text, it can be binary, with the coding `inferColumnTypes` gives that
+column, which infers every column of exactly two values binary; the
+first column, which is always identifier, neither. The step sends that
+binary type when the user makes a column binary, so that a column made
+categorical and then binary again has the reader's proposal of which
+value is the case.
+
+The types a column allows are worked out, and not given by the reader
+in its read and saved with it, because a field saved in version 1 of the
+project file is kept for good (`docs/architecture.md`, section 12); a
+project file of stages 2 and 3 then offers the same types as a file read
+now; and a saved value that the validation would have to check against
+the table is a value that could disagree with it. `columnAllows` keeps
+its answer for the same read, as `individualsCheck` does, so that a
+table of 10,000 rows is not walked again each time the step is drawn.
+The option not taken, the reader's `allows` in the read, was the first
+draft of this revision, of 27 September 2026.
 
 The values of a column are compared as text, a number or a boolean of
 an xlsx as `String` writes it, as the reader compares them for its
@@ -529,7 +554,7 @@ was recommended on 27 September 2026 and as is taken meanwhile
 `typesSet` of the source it replaces and `setCsvOptions` keeps it, and
 the record of the new read puts each type set on the column of its
 name when the new read allows it: categorical on any column but the
-first; continuous when `allows` says so; binary, with the coding the
+first; continuous when `columnAllows` of the new read says so; binary, with the coding the
 user set, when the column has exactly the same two values. Otherwise
 the column keeps the type the reader inferred, the type set leaves
 `typesSet`, and the read names it in `typesLost`, with the type that was
@@ -574,7 +599,7 @@ import type { JsonObject } from "./keys.ts";
 import type { Result } from "./result.ts";
 import type {
   VariantFilter, VariantFilterKind, IndividualFilter, IndividualFilterKind,
-  IndividualsTable, ColumnType, ColumnAllows, CsvOptions, CsvFound, IndividualsFileError,
+  IndividualsTable, ColumnType, CsvOptions, CsvFound, IndividualsFileError,
   RunError, Pops,
 } from "../worker/protocol.ts";
 
@@ -635,8 +660,7 @@ each as the user set it or, where it was `"auto"`, as the reader found
 it, and the line of the first character it could not decode, or `null`
 (`docs/specs/worker/protocol.md`, `CsvFound`); `found` is `null` for
 an xlsx. `typesSet` and `typesLost` are those of "The types of the
-columns", above; `allows` is the reader's, one per column, in the order
-of the table (`docs/specs/worker/protocol.md`, `ColumnAllows`).
+columns", above.
 
 ```ts
 /** A column's name, with a type. */
@@ -652,7 +676,7 @@ export interface IndividualsSource {
 
 export type IndividualsRead =
   | { kind: "pending" }
-  | { kind: "read"; table: IndividualsTable; columns: ColumnType[]; allows: ColumnAllows[];
+  | { kind: "read"; table: IndividualsTable; columns: ColumnType[];
       found: CsvFound | null;
       typesLost: ColumnTypeOf[] }   // types set that this read could not keep
   | { kind: "failed"; error: IndividualsFileError | { kind: "worker"; error: Exclude<RunError, { kind: "files" }> } };
@@ -822,7 +846,7 @@ What each does where a reader could doubt it:
 | `removeVariantFilter`, `removeIndividualFilter` | no filter of that kind | `p` itself |
 | `removeIndividuals` | no individuals file | `p` itself |
 | `setCsvOptions` | no individuals file, or an xlsx | a defect |
-| `setColumnType` | the file not read, a column not in the table, `identifier` for another column than the first, another type for the first, a `binary` type whose two values are not those of `allows.binary` of the column, `continuous` where `allows.continuous` is false | a defect |
+| `setColumnType` | the file not read, a column not in the table, `identifier` for another column than the first, another type for the first, a `binary` type whose two values are not those of the column's `binary` in `columnAllows`, `continuous` where its `continuous` is false | a defect |
 | `setColumnType` | a type the column may have | the type in `columns`; the pair of the column in `typesSet` replaced in its place, or put last; the column taken out of `typesLost` |
 | `setGrouping` | a grouping of the other application; `onePopulation` in association | a defect |
 | `removeIndividuals` | a file, whatever the grouping | the source gone with its `typesSet`; the grouping kept, a column or `onePopulation`, and the analyses per population on one population while there is no file |
@@ -865,9 +889,9 @@ not changed in silence.
 A `binary` type's two values are the texts of the two distinct values
 of its column that are not missing, a cell of an xlsx written as
 `String` writes it, and `one` is not `zero`; a column with more or fewer
-than two such values cannot be binary. `allows.binary` of the column
-holds the same two, with the reader's coding, and `setColumnType` takes
-either coding. The same rule holds in `setColumnType` and in
+than two such values cannot be binary. The column's `binary` in
+`columnAllows` holds the same two, with the reader's coding, and
+`setColumnType` takes either coding. The same rule holds in `setColumnType` and in
 `parseProject`.
 
 ### The records
@@ -919,7 +943,7 @@ values, so it is categorical, as inferred, `typesSet` holds `score`
 alone, and `typesLost` holds `status` with the binary type that was set.
 
 A read whose table `parseProject` would refuse, a column named twice, an
-individual in two rows, an `allows` that does not match its table, is not recorded as it is: the reader is our code,
+individual in two rows, is not recorded as it is: the reader is our code,
 so the read is recorded as failed, `{ kind: "worker", error: { kind:
 "defect", message } }`, the message saying what the validation refused.
 Recorded as read, it would make a project whose file cannot be opened
@@ -964,9 +988,9 @@ export function individualsStepMissing(p: Project): string | null;
     Variants step takes. Load a metadata file.", so that the step says a
     variants file told by its name, `.vcf`, `.vcf.gz`, `.bcf` or `.nei`,
     in the same words (`docs/specs/steps/individuals.md`). It takes any
-    refusal but one of the files wasm, whose message can be empty and
-    leave nothing before the end; the step's one use is the variants
-    file. */
+    refusal but `files`, whose words until stage 4 were the message of
+    the files wasm, which could be empty; the step's one use is the
+    variants file. */
 export function individualsStepRefusal(
   error: Exclude<IndividualsFileError, { readonly kind: "files" }>,
   app: AppId,
@@ -979,6 +1003,21 @@ export function individualsStepRefusal(
 export function individualsCheck(p: Project): {
   found: number; missing: string[]; ignoredRows: number;
 } | null;
+```
+
+The types each column of a read allows, of "The types of the columns"
+above, one per column in the order of the table:
+
+```ts
+export interface ColumnAllows {
+  continuous: boolean;
+  binary: { kind: "binary"; one: string; zero: string } | null;  // the reader's coding
+}
+
+/** For a read of a table, with its decimal mark, found.decimal or "." for
+    an xlsx; the first column { continuous: false, binary: null }. The
+    same array for the same read. */
+export function columnAllows(read: Extract<IndividualsRead, { kind: "read" }>): ColumnAllows[];
 ```
 
 The populations, of "The populations" above; they were exported by
@@ -1095,11 +1134,9 @@ twice, every row as long as its header, the first cell of each row the
 name of an individual, a text that is not empty, and no individual in two
 rows; one type per column, the first `identifier` and no other; a binary
 type whose `one` and `zero` are the texts of the two distinct values of
-its column that are not missing, `one` not `zero`; one `allows` per
-column, the first's `{ continuous: false, binary: null }`, whose
-`binary`, when it is not `null`, holds the two values of a column of
-exactly two, and a `continuous` type only where
-`allows.continuous` is true; in `typesSet` and `typesLost`, no column
+its column that are not missing, `one` not `zero`; a `continuous` type
+only where `columnAllows` gives `continuous`, every value of the column
+a number with the decimal mark of the read; in `typesSet` and `typesLost`, no column
 named twice and no `identifier`, and, in a source read, each pair of
 `typesSet` a column of the table whose type in `columns` it is; nothing found of the options of
 a CSV for an xlsx, whose `csv` is `null`; each analysis id one of those
@@ -1110,7 +1147,8 @@ of the reference of an analysis among those given, once, with a key
 version that is a whole number of at least 0, its version of popnei and
 of the application, two texts, and a fingerprint of 64 lower case
 hexadecimal digits; a failed read of the individuals file of any kind of
-`IndividualsFileError` with its fields, the separator among them one of
+`IndividualsFileError` with its fields, the seven of an xlsx among them,
+the separator among them one of
 the three a CSV can have; `"utf-16"` among the encodings found; and the
 line of `undecodedLine` of what was found a whole number of at least 1,
 or `null`.
@@ -1136,17 +1174,13 @@ or `null`.
   words these are).
 - **A project saved by stages 2 and 3**, in version 1 of the format
   (`docs/architecture.md`, section 12), has no `typesSet` in its
-  individuals file and no `allows` in its read. `typesSet` is read as
-  none set, and `allows` is made from the types:
-  `continuous` true for a continuous column only, and `binary` the type
-  of a binary column, `null` for any other. So such a project opens with
-  the types it had, and offers fewer types than the reader would, a
-  column of one number is not offered as continuous, until its file is
-  loaded again. The option not taken was to refuse it, which version 1
-  allows before the first release; those files were written by the
-  application, and nothing in them is wrong. A read with no `typesLost`,
-  which no project file writes, is read as none lost, whatever stage
-  saved it.
+  individuals file, and it is read as none set. So such a project opens
+  with the types it had, and offers the types a read of now would, since
+  `columnAllows` works them out from the table. The option not taken was
+  to refuse it, which version 1 allows before the first release; those
+  files were written by the application, and nothing in them is wrong. A
+  read with no `typesLost`, which no project file writes, is read as none
+  lost, whatever stage saved it.
 - **A field the type does not have**, in a file whose version this
   application knows, is refused, as `unknownField`: such a file was
   changed by hand or damaged, since this version would not have written
@@ -1184,10 +1218,9 @@ or `null`.
     column of the individuals file cannot be identifier: only the first
     column can have that type"; "the type of the third column of the
     individuals file cannot be continuous: its values are not all
-    numbers"; and, of the new fields of stage 4, named "the types set by
-    the user" and "what the values of the third column allow", "the
-    second of the types set by the user names the column score, which the
-    individuals file does not have".
+    numbers"; and, of the new field of stage 4, named "the types set by
+    the user", "the second of the types set by the user names the column
+    score, which the individuals file does not have".
 
   The last sentence of these texts and of the one above, what the user
   can do, the owner decided on 24 September 2026; the option not taken
@@ -1305,13 +1338,24 @@ project frozen deeply with `Object.freeze`, so that a write into it throws
   `noColumn`, with its words; a column of an xlsx whose cells are the
   number 1, the text `1` and the number 2 gives the populations `1` and
   `2`; every function `null` for a project of association.
+- **`columnAllows`**, on the worked table of the diversity's spec,
+  `i1` to `i4`, with a column `h` of `1,5`, `2`, `2` and a missing cell,
+  read with the comma, and a column `st` of `yes`, `no`, `yes` and `no`:
+  the first column `{ continuous: false,
+  binary: null }`; `pop`, of `A` and `B` and a missing cell, binary with
+  `B` coded 1 by the order of the code units, and not continuous; `h`
+  continuous and binary, `2` coded 1; `st` binary with `yes` coded 1;
+  the same `h` read with the point, `1,5` text, binary and not
+  continuous; in the table of an xlsx, a column of the number 1, the
+  text `1` and the number 0, binary with `1` coded 1; the same array for
+  the same read.
 - **The types**: `setColumnType` of each type a column may have, and a
-  defect for each it may not, from `allows`; a binary type of either
+  defect for each it may not, from `columnAllows`; a binary type of either
   coding accepted; `typesSet` holding the pair, replaced in its place when
   the column is set again; the column taken out of `typesLost`. The
   record, on the example of "The records": `score` kept, `status` lost
   with its type, `typesSet` `[score]`; a type set continuous on a column
-  whose new `allows.continuous` is false, lost; a binary type kept, with
+  whose new values are not all numbers, lost; a binary type kept, with
   the user's coding, when the new column has the same two values in
   another order of the rows, and lost when it has other two; a type set
   on a column absent from the new table, lost; a failed read, `typesSet`
@@ -1324,16 +1368,15 @@ project frozen deeply with `Object.freeze`, so that a write into it throws
   "maxAllowedMaf"]` holds "the threshold of the second filter of the
   variants" and not `filters`; the filters of the variants `[maf,
   missing_data]` refused as `filterOutOfOrder` at `["filters", 1]`, with
-  the text above; an individuals file of stage 2, with no `typesSet` and
-  no `allows`, opens with none set and `allows` made from its types; the
-  grouping `onePopulation` opens in population genetics and is refused
-  in association; a `continuous` type where `allows.continuous` is
-  false, refused, with its text.
+  the text above; an individuals file of stage 2, with no `typesSet`,
+  opens with none set; the grouping `onePopulation` opens in population
+  genetics and is refused in association; a `continuous` type on a
+  column of which one value is not a number, refused, with its text.
 - **Properties, with fast-check**, which draws random projects and
   sequences of commands, and shrinks a failure to the smallest one. For
   every project, `parseProject(JSON.parse(JSON.stringify(p)), …)` is ok
   and deeply equal to `p`; the projects drawn hold the fields of stage
-  4, `typesSet`, `allows`, `typesLost` and `onePopulation`, which
+  4, `typesSet`, `typesLost` and `onePopulation`, which
   `wholeProject` of `src/core/testSupport.ts` draws. For every sequence of commands, each list has
   at most one filter of each kind and both lists are in their fixed
   order; and a command applied twice with the same arguments
@@ -1442,7 +1485,7 @@ of them changes those texts and their tests, and nothing else.
 - The bins of the statistics of each individual, `src/core/histogram.ts`:
   `docs/specs/analyses/individualChecks.md`.
 - How the reader infers the types, reads a number and proposes the
-  coding of a binary column, and what it gives in `allows`:
+  coding of a binary column, with the functions `columnAllows` calls:
   `docs/specs/worker/individuals.md`, and, for an xlsx,
   `docs/specs/worker/files.md`.
 - The populations edited with a lasso on the PCA: not in stage 4; a
@@ -1454,20 +1497,18 @@ Stage 4, 27 September 2026:
 
 - `docs/specs/worker/protocol.md` and `src/worker/protocol.ts`: the
   binary type of `ColumnType` holds texts, `one: string; zero: string`,
-  where it held a cell; and `ColumnAllows`, `{ continuous: boolean;
-  binary: { kind: "binary"; one: string; zero: string } | null }`, one
-  per column, in the read the light worker gives.
-- `docs/specs/worker/individuals.md` and `docs/specs/worker/files.md`:
-  the reader gives `allows`, by its rule of numbers and with the
-  decimal mark of the read, `continuous` true when every value that is
-  not missing is a number and there is one at least, and `binary` its
-  proposed coding for a column of exactly two values compared as text;
-  for the first column `{ continuous: false, binary: null }`; its binary
-  types hold texts.
+  where it held a cell.
+- `docs/specs/worker/individuals.md`: its binary types hold texts; and
+  `cellNumber` and `inferColumnTypes` pure, for `columnAllows`.
 - `docs/architecture.md`, section 2: `IndividualsSource` with
-  `typesSet`, the read with `allows` and `typesLost`, and `Grouping` with
+  `typesSet`, the read with `typesLost`, and `Grouping` with
   `onePopulation`; and the text of `ColumnType`, whose binary values are
   texts.
 - `docs/specs/worker/runner.md`, which names `populationsToRun` of the
   diversity for the order of the populations: they are of
   `src/core/project.ts`.
+- `.claude/skills/coding/configs.md`: the lint of core lets it import
+  `columnTypes.ts` of the reader, for `columnAllows`.
+
+Each of these was made in its document on 27 September 2026, when the
+specs of stage 4 were made to agree, but those of `docs/architecture.md`.

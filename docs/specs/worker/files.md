@@ -1,7 +1,9 @@
 # The files crate: an xlsx read into cells
 
 Written on 27 September 2026, for stage 4 of `docs/build-order.md`, the
-Individuals step and the PCA. There is no code of it yet. This spec gives
+Individuals step and the PCA, and revised the same day to agree with the
+specs written beside it: the words of a files wasm that could not be
+downloaded give the advice of the 3D view in the same case. There is no code of it yet. This spec gives
 the Rust crate `crates/files/`, which reads the first sheet of an xlsx,
 the file Excel saves by default, into its cells, and the few lines of the
 light worker that load it and call it. The light worker is the second
@@ -385,8 +387,12 @@ files wasm, on first need":
   again, and the read fails as `xlsxReaderNotLoaded`, with the browser's
   message for the console. The user reads "pops.xlsx could not be read:
   the part of the application that reads Excel files could not be
-  downloaded; check the connection and load the file again, or reload the
-  page if it fails again" (`docs/specs/worker/individuals.md`). The
+  downloaded; check the connection and load the file again; if it fails
+  again, the site may have been updated since this page was opened: save
+  the project, reload the page and open the project again"
+  (`docs/specs/worker/individuals.md`), the advice of the 3D view whose
+  file is gone after a deploy (`docs/specs/analyses/pca.md`), since a
+  reload alone loses what the user has not saved. The
   worker goes on: a failed `import()` or
   `init()` leaves nothing of the wasm behind, and a CSV read after it is
   read. The option not taken was to end the worker, as a failure to load
@@ -586,6 +592,11 @@ from the build and written in the same report, beside the numbers above.
   files written by rust_xlsxwriter in memory as well as the owner's.
 - `docs/functionality.md`, section 4: "the first sheet" is the first that
   is not hidden, and merged cells take the value Excel shows over them.
+
+Each of these was made in its document on 27 September 2026, when the
+specs of stage 4 were made to agree, but those of `docs/functionality.md`
+and the answer to open point 1 of `docs/technology.md`, which waits for
+the owner's files.
 
 ## Open points
 

@@ -12,7 +12,11 @@ missing. Revised on 27 September 2026 for stage 4 of
 (`docs/specs/worker/files.md`) and this reader makes into the table, with
 its refusals; the types inferred from the cells compared as text, which
 settles the last open point of this spec; and `readIndividualsFile`,
-which takes an xlsx. The revision is not approved yet. The reader turns
+which takes an xlsx; and again the same day, to agree with the specs
+written beside it: the end of the warnings of a column of few whole
+numbers, now that the user sets the types, the words of `notText`, now
+that an xlsx is read, and the two functions of the inference that core
+calls. The revision is not approved yet. The reader turns
 the file of the individuals, a CSV, a TSV or an xlsx, the
 metadata file of population genetics or the traits file of association,
 into the table the project holds, and infers the type of each of its
@@ -398,15 +402,20 @@ Its words, which `docs/specs/steps/individuals.md` shows beside the
 column:
 
 > "score holds only 5 different whole numbers, from 1 to 5, and is taken
-> as a measurement. If they are codes, such as numbered populations, it
-> can still be chosen as the column of the populations."
+> as a measurement. If they are codes, such as numbered populations, set
+> its type to categorical."
 
 and, for a column whose values are one number written in several ways,
 `1`, `01` and `001`:
 
 > "score holds only one whole number, 1, written in different ways, and
 > is taken as a measurement. If it is a code, such as a numbered
-> population, it can still be chosen as the column of the populations."
+> population, set its type to categorical."
+
+The end of stage 2, "it can still be chosen as the column of the
+populations", still holds and no longer says what to do: from stage 4
+the user sets the type in the Individuals step, beside the warning
+(`docs/specs/steps/individuals.md`, "The columns").
 
 The name of the column is written as the warning holds it, and the
 numbers as JavaScript writes them, `-3`, `12000`. The words are made by
@@ -470,7 +479,7 @@ Each is a kind of `IndividualsFileError`, and the last eight are new:
 | `unclosedQuote` | "the quote that opens a cell on line 7 is never closed, read with the comma as the separator" |
 | `tooLarge` | "it is 312.4 MB, more than the 20 MB a metadata file can have; check that it is the metadata file and not the variants", with the name of the file of the application, "a traits file" in association |
 | `unreadable` | "the browser could not read it; it may have been changed, moved or deleted since it was picked" |
-| `notText` | "it is not a text file; in Excel, save the sheet as CSV" |
+| `notText` | "it is not a text file; if it is an Excel workbook, give it a name that ends in .xlsx", from stage 4, which reads an xlsx by the end of its name; stage 2 said "in Excel, save the sheet as CSV" |
 | `variantsFile` | "it is a variants file, which the Variants step takes" |
 | `cutShort` | "it ends in the middle of a character and may have been cut short" |
 
@@ -493,7 +502,7 @@ words after "pops.xlsx could not be read:":
 | `emptySheet` | the first sheet that is not hidden has no value | "its first sheet, Hoja1, is empty, and only the first sheet is read; put the table in the first sheet" |
 | `cellError` | a cell with an error calamine does not know | "a cell holds the error #SPILL!, which cannot be read; in Excel, correct its formula or replace it with its value" |
 | `sheetTooLarge` | a rectangle of more than 2,000,000 cells | "its first sheet, Hoja1, has values over 200 rows and 16,384 columns, 3,276,800 cells, more than the 2,000,000 a metadata file can have; delete the values outside the table", "a traits file" in association |
-| `xlsxReaderNotLoaded` | the files wasm could not be downloaded | "the part of the application that reads Excel files could not be downloaded; check the connection and load the file again, or reload the page if it fails again" |
+| `xlsxReaderNotLoaded` | the files wasm could not be downloaded | "the part of the application that reads Excel files could not be downloaded; check the connection and load the file again; if it fails again, the site may have been updated since this page was opened: save the project, reload the page and open the project again" |
 | `files` | calamine could not open it as a workbook | "it could not be read as an Excel workbook and may be damaged; open it in Excel and save it again" |
 
 The message of `files` and of `xlsxReaderNotLoaded`, calamine's and the
@@ -976,7 +985,8 @@ plan.
   `recordIndividualsRead` of `project.ts`.
 - `docs/specs/steps/individuals.md`: it shows the options used, from
   `found`, and which were `"auto"`; no row of the table, only its columns
-  with their first values; the types, read only; the warnings of
+  with their first values; the types, read only in stage 2 and set by
+  the user from stage 4; the warnings of
   `columnWarnings` with the words above; and offers every column but the
   first as the column of the populations, whatever its type; it takes
   `.csv`, `.tsv` and `.txt` files in stage 2, and from stage 4 a file
@@ -1016,6 +1026,9 @@ lists in `docs/specs/stage-4-open-points.md`:
 - `docs/specs/entry.md`: a pending source with `csv` `null` is asked for,
   where stage 2 throws it as a defect.
 
+Each of these was made in its document on 27 September 2026, when the
+specs of stage 4 were made to agree.
+
 ## Open points
 
 The open points of the eleven specs of stage 2 are gathered in
@@ -1037,8 +1050,8 @@ this one is new:
 
 1. **The name of the sheet read, shown beside the file.** `found` is
    `null` for an xlsx, so the Individuals step can say only "Read from
-   the first sheet of pops.xlsx; any other sheet is not read."
-   (`docs/specs/steps/individuals.md`). The first sheet is the first
+   the first sheet of pops.xlsx that is not hidden; the other sheets are
+   not read." (`docs/specs/steps/individuals.md`). The first sheet is the first
    that is not hidden, and a user whose workbook has a hidden sheet
    before the table may not know which that is. The other option:
    `found` for an xlsx gives the name of the sheet read and the number
@@ -1057,9 +1070,14 @@ this one is new:
 - The types changed by the user, the coding of a binary column, and the
   roles of the traits file: `setColumnType` of
   `docs/specs/core/project.md`, and the screens of stages 4 and 7.
-- Who turns the text of a continuous column into numbers for the GWAS
-  and the covariates, with `cellNumber` and the decimal mark of the
-  project: the specs of stage 7.
+- Who turns the text of a continuous column into numbers, with
+  `cellNumber` and the decimal mark of the read: from stage 4, core, for
+  the colours of the PCA by a continuous column
+  (`docs/specs/analyses/pca.md`, "The colours") and for the types each
+  column allows, which core works out with `cellNumber` and
+  `inferColumnTypes` (`columnAllows` of `docs/specs/core/project.md`);
+  both are pure and core may import them; for the GWAS and the
+  covariates, the specs of stage 7.
 - That every individual of the variants is in the file:
   `individualsNeeds` of `docs/specs/core/project.md`.
 - The messages, the queue, the restart of the light worker:

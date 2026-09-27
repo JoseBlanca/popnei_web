@@ -15,8 +15,11 @@ from an xlsx as well as from a CSV or a TSV; the types of the columns,
 and the coding of a binary column, set by the user; the types set kept
 when the file is read again; the file optional, with every individual
 in one population without it; and the item "All individuals in one
-population" among the choices of the populations. The code of stage 2
-is in `src/ui/steps/individuals/`.
+population" among the choices of the populations; and again the same
+day, to agree with the specs written beside it: the types a column
+allows worked out by core, `columnAllows`, and the decimal mark given to
+the warning of few whole numbers. The code of stage 2 is in
+`src/ui/steps/individuals/`.
 
 The screen spec of the second step of the population genetics
 application: the user picks the metadata file, or goes on without one,
@@ -160,14 +163,15 @@ three values show what a wrong option does.
 
 The type of the first column is "identifier", as text: it names the
 individuals and cannot be changed. The type of every other column is a
-`Select`, whose items are the types its values allow, from `allows` of
-the read (`docs/specs/core/project.md`, "The types of the columns"):
+`Select`, whose items are the types its values allow, from
+`columnAllows` of the read, which core works out from the table and the
+decimal mark (`docs/specs/core/project.md`, "The types of the columns"):
 
 | item | offered when |
 |---|---|
 | categorical | always |
-| binary | the column has exactly two values, `allows.binary` |
-| continuous | every value of the column is a number, `allows.continuous` |
+| binary | the column has exactly two values, its `binary` |
+| continuous | every value of the column is a number, its `continuous` |
 
 A column offered only one type, a column of three or more words, still
 has its select, with the one item, so that every row reads alike and the
@@ -175,7 +179,7 @@ user learns that the type exists; a text in its place would be a row the
 keyboard skips. The select shows the type of the column, `columns` of
 the read, whether the reader inferred it or the user set it. Choosing
 another sends `setColumnType`; choosing binary sends the binary type of
-`allows.binary`, with the coding the reader proposes.
+its `binary` in `columnAllows`, with the coding the reader proposes.
 
 A binary column also has its coding, which of its two values is 1, the
 case, and which 0 (`docs/functionality.md`, section 4). Under its type,
@@ -203,8 +207,7 @@ the warning the reader's `columnWarnings` gives, in that spec's words
 (`docs/specs/worker/individuals.md`, "The types of the columns"):
 "Warning: score holds only 5 different whole numbers, from 1 to 5, and
 is taken as a measurement. If they are codes, such as numbered
-populations, set its type to categorical." (the end asked of that spec
-for stage 4, below). The warning is made from the table and its types,
+populations, set its type to categorical.", the end of stage 4. The warning is made from the table and its types,
 so it goes when the user sets the column categorical.
 
 When a new read could not keep a type the user set, the read's
@@ -303,7 +306,7 @@ the project for the reason of a read under way or failed, and
 | a CSV or a TSV picked or dropped | `loadIndividuals(p, { fileId, name, csv: { encoding: "auto", separator: "auto", decimal: "auto" } })` | "a new metadata file was loaded" |
 | an xlsx picked or dropped | `loadIndividuals(p, { fileId, name, csv: null })` | "a new metadata file was loaded" |
 | an option of the reader chosen | `setCsvOptions(p, csv)` with the other two as they are | "the encoding of pops.csv changed", "the separator of pops.csv changed", "the decimal mark of pops.csv changed" |
-| a type chosen | `setColumnType(p, column, type)`, binary as `allows.binary` gives it | "the type of score changed" |
+| a type chosen | `setColumnType(p, column, type)`, binary as `columnAllows` gives it | "the type of score changed" |
 | the value coded 1 chosen | `setColumnType(p, column, { kind: "binary", one, zero })`, the other value as `zero` | "the value coded 1 in status changed" |
 | a column chosen for the populations | `setGrouping(p, { kind: "populations", column })` | "the column of the populations changed" |
 | "All individuals in one population" chosen | `setGrouping(p, { kind: "onePopulation" })` | "every individual was put in one population" |
@@ -334,9 +337,12 @@ which a screen does not write as a cache of its own
   the individuals of the variants file, as every analysis per population
   sends them; the list follows their order. The reasons about the
   column, at the select, are `populationsNeeds(p)` of the same module.
+- **the types each column allows**, `columnAllows(read)` of
+  `src/core/project.ts`.
 - **the warning of a column of few whole numbers**, `columnWarnings` of
-  the reader, from the table and its types, and `columnWarningText` for
-  its words.
+  the reader, from the table, its types and the decimal mark of the
+  read, `found?.decimal ?? "."`, the point for an xlsx, whose `found` is
+  `null`; and `columnWarningText` for its words.
 
 Each keeps its answer for the same inputs, so that a table of 10,000
 rows is not matched again each time React draws the screen again, which
@@ -406,8 +412,9 @@ The descriptions of the commands are in the table above. The rest:
   `cellError`, `sheetTooLarge`, `xlsxReaderNotLoaded` and `files`, with
   that spec's words after "could not be read:" and core's ends, "Load a
   corrected file.", but for `xlsxReaderNotLoaded`, whose words end with
-  what to do, "check the connection and load the file again, or reload
-  the page if it fails again", and take no end
+  what to do, "check the connection and load the file again; if it
+  fails again, … save the project, reload the page and open the project
+  again", and take no end
   (`docs/specs/core/project.md`); a row of the wrong length and a quote
   never closed are refusals of a CSV alone.
   The reasons of core name the file as each application does, "a
@@ -571,7 +578,7 @@ Of stage 4, written beside this spec on 27 September 2026:
 
 - `docs/specs/core/project.md`: the grouping `onePopulation`;
   `individualsNeeds` giving no reason for no file; `setColumnType` with
-  `typesSet`, `allows` and `typesLost`; `populationsToRun` and
+  `typesSet` and `typesLost`, and `columnAllows`; `populationsToRun` and
   `populationsNeeds` in `project.ts`, with the words of the one
   population in the reasons of the column; `individualsCheck` `null`
   without a file.
@@ -580,9 +587,7 @@ Of stage 4, written beside this spec on 27 September 2026:
   refused with and their words, `xlsxReaderNotLoaded` for a failed
   download of the files wasm; the first sheet that is not hidden; the
   cells of an xlsx compared as text for the types.
-- `docs/specs/worker/individuals.md`, asked of it by this spec and
-  `docs/specs/core/project.md`: `allows` of each column, which it does
-  not give yet; and the end
+- `docs/specs/worker/individuals.md`, revised for this spec: the end
   of the warning of a column of few whole numbers, "If they are codes,
   such as numbered populations, set its type to categorical.", in place
   of "it can still be chosen as the column of the populations", which

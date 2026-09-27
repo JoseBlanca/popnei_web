@@ -12,7 +12,9 @@ the tests of core read is popnei's. Revised on 27 September 2026 for
 stage 4: the job of the principal components, its steps, its calls of
 popnei, its cut to 10 components and its refusals, below, "The principal
 components"; the note that the PCA makes two passes, which it no longer
-does; and that the worker keeps no intermediate result in stage 4. The calculation
+does; and that the worker keeps no intermediate result in stage 4; and
+again the same day, to agree with the specs written beside it: the
+populations of a diversity job made by `src/core/project.ts`. The calculation
 worker is the thread of the browser tab, beside the page, that runs
 popnei, so that a calculation does not freeze the page
 (`docs/architecture.md`, section 1). Its runner is the code that answers
@@ -567,7 +569,8 @@ of more than 700 individuals (`docs/specs/worker/client.md`, "A large PCA,
 and the restart after it"). The runner keeps nothing of a
 PCA: in stage 4 the worker keeps no intermediate result, the variants
 the pruning kept included, which popnei has no way to hold and give back
-(meanwhile, point 1 of `docs/specs/stage-4-open-points.md`), so each PCA
+(meanwhile, "The pruned variants are not kept between two PCAs" in
+`docs/specs/stage-4-open-points.md`), so each PCA
 prunes again inside its one pass.
 
 ### The written file
@@ -1030,7 +1033,8 @@ new worker pays before its first request:
 - **What the old worker held is lost**: its `Variants` with its filters.
   Nothing else before stage 7: the worker keeps no intermediate result in
   stage 4, the variants the pruning of the PCA kept among them
-  (meanwhile, point 1 of `docs/specs/stage-4-open-points.md`), and the
+  (meanwhile, "The pruned variants are not kept between two PCAs" in
+  `docs/specs/stage-4-open-points.md`), and the
   kinship, the first, comes with the GWAS.
 
 The first request after a restart puts its steps on the new `Variants`,
@@ -1438,7 +1442,9 @@ list gives.
   `start.ts` making the worker from `./runnerWorker.ts?worker`.
 - **`docs/specs/analyses/diversity.md`**: `DiversityJob` and
   `DiversityResult`, the populations of the job holding only individuals
-  kept, none empty (`populationsToRun`).
+  kept, none empty, which `run` of the diversity makes with
+  `populationsKept` of `src/core/project.ts` from stage 4
+  (`docs/specs/core/project.md`, "The populations").
 - **`docs/specs/entry.md`**: the page asks for the open of a source whose
   read is pending, through the client.
 - **`docs/specs/steps/variants.md`**: the number of variants shown is

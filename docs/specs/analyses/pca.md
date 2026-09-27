@@ -1,7 +1,11 @@
 # The principal components of the individuals
 
 Written on 27 September 2026, for stage 4 of `docs/build-order.md`, the
-Individuals step and the PCA. There is no code of it yet. This spec gives
+Individuals step and the PCA, and revised the same day to agree with the
+specs written beside it: the buttons of the 3D view and its words, the
+legend drawn by the panel, the columns that can colour the points, and
+the populations and the numbers of a column read by the functions of
+`docs/specs/core/project.md`. There is no code of it yet. This spec gives
 the analysis that places the individuals of a dataset on a few axes, to
 see its structure and check the populations against it: the module
 `src/core/analyses/pca.ts`, which says what the components are calculated
@@ -41,11 +45,11 @@ of the analysis, PC1 the one along which the individuals vary most; the
 the **explained variance** of a component is the share of the variance
 of the individuals it holds, in percent.
 
-Decisions of the owner and of the writers of stage 4 that this spec
-takes, from the brief of the specs of stage 4 of 27 September 2026, are
-named where they apply; those recommended to the owner and not yet
-answered are listed in `docs/specs/stage-4-open-points.md`, and this spec
-writes them as decided meanwhile.
+The decisions of the owner and of the writers of the specs of stage 4,
+of 27 September 2026, that this spec takes are named where they apply;
+they are gathered in `docs/specs/stage-4-open-points.md`, those
+recommended to the owner and not yet answered among them, which this
+spec writes as decided meanwhile.
 
 ## The module
 
@@ -81,7 +85,7 @@ Both read the same variants, the dataset's filters with the PCA's own
 MAF filter and pruning, so that the two can be compared, and both give
 the same shape of result, so that one panel and one plot draw either.
 One analysis with the method as its option, and not two analyses, is the
-writers' decision of 27 September 2026 (the brief of stage 4): one panel,
+writers' decision of 27 September 2026 (`docs/specs/stage-4-open-points.md`): one panel,
 one plot, and the GWAS of stage 7 takes the components as covariates
 whichever the method.
 
@@ -102,9 +106,9 @@ of variants, with no word of it.
 popnei takes one filter of each kind on a `Variants`, and a second of one
 kind throws (`docs/specs/worker/protocol.md`), so the PCA cannot add its
 MAF filter to a dataset that has one. The job carries the dataset's
-filters of the variants, in their fixed order, with two changes, as the
-brief of stage 4 recommended to the owner on 27 September 2026
-(meanwhile, point 2 of `docs/specs/stage-4-open-points.md`):
+filters of the variants, in their fixed order, with two changes, as was
+recommended to the owner on 27 September 2026 (meanwhile, "Which
+variants the PCA reads" in `docs/specs/stage-4-open-points.md`):
 
 - **The MAF filter is the stricter of the dataset's and the PCA's own**,
   the smaller of the two thresholds, since popnei keeps a variant whose
@@ -161,20 +165,19 @@ The options of the analysis, as the project holds them, `PcaOptions`:
 |---|---|---|---|
 | `method` | `"pca"`, the PCA of the genotypes, or `"pcoa"`, the PCoA of the Kosman distances | `"pca"` | `docs/functionality.md`, section 5 |
 | `maxAllowedMaf` | the PCA's maximum major allele frequency, a number from 0 to 1 | 0.95 | `docs/functionality.md`, sections 3 and 5 |
-| `ldPruning` | the PCA's own LD pruning, `{ maxAllowedR2, maxDist }`, the largest r² between two variants kept and the window in base pairs, or `null` for off | `{ maxAllowedR2: 0.1, maxDist: 50000 }` | the brief of stage 4, point 3 (below) |
+| `ldPruning` | the PCA's own LD pruning, `{ maxAllowedR2, maxDist }`, the largest r² between two variants kept and the window in base pairs, or `null` for off | `{ maxAllowedR2: 0.1, maxDist: 50000 }` | recommended to the owner, below |
 | `colourBy` | the column of the individuals file whose values colour the points, or `null` for the populations of the grouping | `null` | `docs/functionality.md`, section 5 |
 | `axes` | the three components drawn, from 1: the 2D plot shows the first against the second, the 3D plot all three | `[1, 2, 3]` | `docs/functionality.md`, section 5 |
-| `view` | `"2d"` or `"3d"` | `"2d"` | the brief of stage 4, point 5 |
+| `view` | `"2d"` or `"3d"` | `"2d"` | recommended to the owner, "The PCA opens in 2D" in `docs/specs/stage-4-open-points.md` |
 
 The names of the thresholds are those of the filters of
 `docs/specs/worker/protocol.md`, which are popnei's arguments, so that
 `pcaFilters` copies them and a reader of the project file finds one name
-for one number. The brief of stage 4 named them `maxMaf` and `maxR2`; the
-change is this spec's.
+for one number.
 
-**The pruning at r² 0.1 within 50,000 base pairs, on by default**, is the
-recommendation of the brief of stage 4 to the owner (meanwhile, point 3
-of `docs/specs/stage-4-open-points.md`). popnei gives no default. On
+**The pruning at r² 0.1 within 50,000 base pairs, on by default**, was
+recommended to the owner on 27 September 2026 (meanwhile, "The PCA's
+default pruning" in `docs/specs/stage-4-open-points.md`). popnei gives no default. On
 popnei's LD test file, at 50,000 base pairs, plink2 at r² 0.3 keeps 41
 variants where popnei keeps 46 at 0.15 and 35 at 0.1
 (`docs/specs/filters.md` of popnei, near its line 940), so a threshold of
@@ -191,7 +194,8 @@ Undo, that removes no result, since the key leaves them out (below). They
 are options of the analysis, and not state of the screen, because the
 project file restores what the user set, and the report of stage 6 draws
 the plot as the user drew it. The writers decided so on 27 September
-2026 (the brief of stage 4).
+2026, among the choices the owner may overrule
+(`docs/specs/stage-4-open-points.md`).
 
 `pcaOptions(p)` gives the options of the project for `pca`, or
 `PCA_DEFAULTS`.
@@ -311,13 +315,12 @@ or fixed and loaded again. The option not taken was to run and draw
 through a bad file, coloured as one group, with a line naming its
 problem. A project with no individuals file is not locked: from stage 4
 the file is optional, and the points are then of one group, "All
-individuals" (the writers' decision of 27 September 2026, the brief of
-stage 4). While the result is locked the store makes no key for it, so
+individuals" (`docs/specs/core/project.md`, "The populations"). While the result is locked the store makes no key for it, so
 the cache may drop it to stay under its bound (`docs/specs/core/cache.md`),
 which a PCA of a few hundred kilobytes makes unlikely.
 
 `needs` gives no reason about the column of the populations, which
-locks the diversity (`populationsNeeds` of `docs/specs/analyses/diversity.md`):
+locks the diversity (`populationsNeeds` of `docs/specs/core/project.md`, "The populations"):
 with no column chosen the points are of one group, and the panel says
 why (below, "Its words").
 
@@ -354,7 +357,8 @@ components of what popnei gives.
   dosage; popnei refuses such a variant otherwise, and a user could not
   mend the file in the application. popnei does not say how many such
   variants there were, so no warning counts them, and the help says it
-  (meanwhile, point 4 of `docs/specs/stage-4-open-points.md`). The Kosman
+  (meanwhile, "Variants of more than two alleles" in
+  `docs/specs/stage-4-open-points.md`). The Kosman
   distance takes any number of alleles.
 - **The first 10 components are kept**, `PCA_NUM_COMPS_KEPT`, the
   writers' decision of 27 September 2026. popnei gives every component
@@ -439,8 +443,7 @@ the components, is `pruningOff`. Its condition is the job's filters and
 not the option, so that a PCA whose dataset prunes does not warn of a
 pruning that is on.
 
-`fewVariants` at fewer variants than individuals, the brief's example, is
-the writers': below it the matrix of the individuals has no more
+`fewVariants` at fewer variants than individuals is the writers': below it the matrix of the individuals has no more
 components with variance than variants, and each component is estimated
 from few. On `panel.nei` the default pruning uses 535 variants for 200
 individuals, and no warning.
@@ -455,7 +458,7 @@ of the distances by a twentieth; the share is shown under the plot of
 every PCoA whatever it is (below, "What it shows"), so a lower share is
 read there. The number is written to one decimal, "7.9%".
 
-Two things the brief asked to weigh are not warnings of the module:
+Two things that could have been warnings of the module are not:
 
 - **More than 9,381 individuals** is a lock before the Run, above, and
   not a warning after it, since popnei refuses it before any pass.
@@ -606,6 +609,14 @@ export const PCA_MAX_INDIVIDUALS = 9381;           // popnei's limit
 export const PCOA_MAX_INDIVIDUALS = 8695;          // popnei's draft, provisional
 export const NEGATIVE_EIGENVALUES_WARN_PERCENT = 5;
 export const MANY_MISSING_RATE = 0.2;              // the note of the missing genotypes
+/** The group of an individual with no population or no value, 0xffff:
+    NO_GROUP of src/charts/marks.ts, which core does not import; a test of
+    the panel asserts the two are equal. */
+export const NO_COLOUR_GROUP = 0xffff;
+/** The most groups the points are coloured by: MAX_POINT_GROUPS of
+    src/charts/limits.ts, which the scatter refuses above; the same test
+    asserts it. */
+export const MAX_COLOUR_GROUPS = 1000;
 
 /** The options of the project for the PCA, or the defaults. */
 export function pcaOptions(p: Project): PcaOptions;
@@ -624,7 +635,7 @@ export type PcaColours =
       readonly kind: "groups";
       readonly title: string;                 // "Population", or the column's name
       readonly names: readonly string[];      // in the order of first appearance
-      readonly group: Uint16Array;            // of each individual of the result; 0xffff, NO_GROUP, for none
+      readonly group: Uint16Array;            // of each individual of the result; NO_COLOUR_GROUP for none
       readonly counts: readonly number[];     // the individuals of each group
       readonly numNone: number;               // those in no group
       readonly noneName: "No population" | "No value";
@@ -641,7 +652,8 @@ export type PcaColours =
 export function pcaColours(r: PcaResult, p: Project): PcaColours;
 
 /** The columns the colour can be taken from: every column of the table
-    but the first, the identifiers, in its order. */
+    but the first, the identifiers, and but a categorical or binary
+    column of more than MAX_COLOUR_GROUPS values, in its order. */
 export function colourColumns(p: Project): readonly string[];
 
 /** The components drawn, from the options and the result, and the line
@@ -661,7 +673,8 @@ export function pcaRows(r: PcaResult, c: PcaColours): readonly PcaRow[];
 export function pcaCsv(r: PcaResult, c: PcaColours): string;
 export function varianceCsv(r: PcaResult): string;
 
-/** The text a screen reader reads for the plot (below, "Accessibility"). */
+/** The text a screen reader reads for the plot, the 2D plot with two
+    axes and the 3D view with three (below, "Accessibility"). */
 export function pcaDescription(r: PcaResult, c: PcaColours, axes: readonly number[],
   highlighted: number | null, p: Project): string;
 
@@ -693,21 +706,28 @@ in the two ways the scatter draws (`docs/specs/charts/scatter.md`, "The
 colours: groups, or the values of a column"):
 
 - **`colourBy` null, the populations of the grouping**, as groups titled
-  "Population". With a column of the populations chosen, its values;
-  with the grouping of one population, or no metadata file, one group,
-  "All individuals"; with a metadata file and no column chosen yet, one
-  group, "All individuals", and the note "The column of the populations
-  is not chosen, so the points are of one colour. Choose it in the
-  Individuals step, or colour them by another column."
+  "Population", those `populationsOf` of `docs/specs/core/project.md`
+  gives, so that the plot and the diversity name the same populations.
+  With a column of the populations chosen, its values; with the grouping
+  of one population, or no metadata file, one group, "All individuals";
+  with a metadata file and no column chosen yet, one group, "All
+  individuals", and the note "The column of the populations is not
+  chosen, so the points are of one colour. Choose it in the Individuals
+  step, or colour them by another column."; with a column chosen that
+  the table no longer has, the same group and the note "pops.csv has no
+  column popcat, from which the populations were taken, so the points
+  are of one colour. Choose the column in the Individuals step, or colour
+  them by another column."
 - **`colourBy` a categorical or binary column**, as groups titled by the
   name of the column, a group by the text of each cell, a number or a
   boolean of an xlsx written with `String`, as the diversity names its
   populations.
 - **`colourBy` a continuous column**, as values: the number of each cell,
   read as the reader of the individuals file reads a number, with the
-  decimal mark of the read, `cellNumber` of
-  `docs/specs/worker/individuals.md`, the point for an xlsx. The scatter
-  colours them along viridis, and a colouring by values has no highlight.
+  decimal mark of the read, `found.decimal`, the point for an xlsx, by
+  `cellNumber` of `src/worker/individuals/columnTypes.ts`, which core
+  may import (`docs/specs/worker/individuals.md`). The scatter colours
+  them along viridis, and a colouring by values has no highlight.
 - **`colourBy` a column the table does not have**, after a new metadata
   file without it: the populations of the grouping, as for `null`, and
   the note "pops.csv has no column country, by which the points were
@@ -725,7 +745,16 @@ scatter draws it as a ring (`scatter.md`). The groups are in the order in
 which each first appears in the file, as the diversity's populations; a
 group none of whose individuals is in the result is not listed. The
 identifiers are not offered, since each individual would be a group of
-one. The plots give group `i` colour `i % 7` and shape `(i + ⌊i / 7⌋) %
+one, and neither is a categorical or binary column of more than 1,000
+values, `MAX_COLOUR_GROUPS`, since the scatter draws a path and a legend
+entry per group and refuses more (`docs/specs/charts/scatter.md`, "The
+TypeScript interface"); a continuous column is offered whatever the
+number of its values. A colouring the options ask that would give more
+than 1,000 groups, a `colourBy` saved before its column grew, or more
+populations than that, is drawn as one group, "All individuals", with
+the note "popcat has 1,204 different values, more than the 1,000 the
+plot can tell apart, so the points are of one colour; the table gives
+each individual's value.", and the option is not changed. The plots give group `i` colour `i % 7` and shape `(i + ⌊i / 7⌋) %
 7`, 49 different marks (`.claude/skills/coding/charts.md`, "Not colour
 alone"); past 49 groups the marks repeat, and the legend and the table,
 which name each individual's group, still tell them apart, so the panel
@@ -834,20 +863,23 @@ more than about 24 MB, the size at which a written file restarts it
 (`WRITE_RESTART_BYTES`, 25 MB, `docs/specs/worker/client.md`). In stage 4
 the restart costs the reading of the header of the file, at most 49 ms
 (`docs/architecture.md`, section 13, point 5), and nothing else: the
-worker keeps no intermediate result (the brief of stage 4, point 1), and
+worker keeps no intermediate result ("The pruned variants are not kept
+between two PCAs" in `docs/specs/stage-4-open-points.md`), and
 the next analysis, whose filters are not the PCA's, would open the file
 again in any case (`docs/specs/worker/runner.md`, "The steps"). This is a
 second exception to the owner's decision of 26 September 2026 that the
 worker is not restarted between requests (**Open 1**).
 
 The result in the cache is 8 bytes × individuals × 10 for the
-projections, 80 bytes for the percentages, and the names: at 9,381
-individuals of eight characters, 900 KB, as the cache counts it, far
+projections, 80 bytes for the percentages, and the names at 2 bytes a
+character: at 9,381 individuals of eight characters, 750,480 and
+150,096 bytes, about 0.90 MB, as the cache counts it, far
 under its bound of 256 MB (`docs/specs/core/cache.md`). So the words
 "Undo brings back the plot and the table as they were, with no
 calculation" hold as they do for the diversity. The pruning is made again
 at every PCA, and its time is measured in stage 4, on `panel.nei` and on
-the files of 20,000 variants, with and without it (meanwhile, point 1 of
+the files of 20,000 variants, with and without it (meanwhile, "The
+pruned variants are not kept between two PCAs" in
 `docs/specs/stage-4-open-points.md`).
 
 `pcaColours` walks the table once per result and table, kept in a
@@ -889,7 +921,11 @@ With Vitest, at the functions of the definition, on frozen projects:
   `numNone` 1; a continuous column of `1,5`, `2`, `3` and a missing cell,
   read with the comma, the values 1.5, 2, 3 and NaN; with `colourBy` a
   column that is not in the table, the populations and the note; with no
-  metadata file, the one group "All individuals".
+  metadata file, the one group "All individuals"; with `colourBy` a
+  categorical column of 1,001 values, one group and the note of a column
+  of more values than the plot can tell apart.
+- **`colourColumns`**: every column but the first, and not a categorical
+  column of 1,001 values, where a continuous one of as many is offered.
 - **`axesShown`**, `[4, 5, 6]` on three components, the first three and
   the note; `[2, 1, 3]` on two, `[2, 1]` and a note for the third.
 - **`pcaCsv`** and **`varianceCsv`** of the result of the flow, as
@@ -1030,34 +1066,49 @@ method.
   buttons of one group; the components on the axes, selects of PC1 to
   PC‹numComps›, "Horizontal axis" and "Vertical axis" in 2D, and a third,
   "Depth axis", in 3D; "Colour the points by", a select of "Population"
-  and the columns of `colourColumns`; and, in 3D, the buttons that turn
-  the view, "Turn left", "Turn right", "Turn up", "Turn down", by 15°
-  each, and "View along PC1", "View along PC2", "View along PC3", which
-  look down one axis and show the plot of the other two
-  (`.claude/skills/coding/charts.md`, `rotate` and `viewAlong`). A change
-  of the view, the axes or the colour is a command, which removes
-  nothing.
+  and the columns of `colourColumns`; and, in 3D, the buttons of the
+  view of `docs/specs/charts/pca3d.md`, "The buttons of the bar above the
+  plot", in these words: "Turn left" and "Turn right", about the vertical
+  of the screen, and "Tilt up" and "Tilt down", about its horizontal, by
+  15° each; "View along PC1", "View along PC2" and "View along PC3",
+  named by the components of the axes, which look down one of them and
+  show the plot of the other two; "Zoom in", "Zoom out" and "Reset view".
+  They call `rotate`, `viewAlong`, `zoom` and `resetView` of the plot's
+  handle. A change of the view, the axes or the colour is a command,
+  which removes nothing; a turn or a zoom of the 3D view is not, and is
+  not saved.
 - **The plot**: the 2D scatter of `docs/specs/charts/scatter.md`,
   `createScatter`, of the two components chosen, each axis labelled with
   its explained variance, "PC1 (3.54%)"; or the 3D view of
   `docs/specs/charts/pca3d.md`, `createPca3d`, with three.js loaded when
-  the user first opens it. 2D opens first, the brief's point 5, meanwhile.
+  the user first opens it. 2D opens first, meanwhile ("The PCA opens in
+  2D" in `docs/specs/stage-4-open-points.md`).
   With one component, no plot and the line of "The cases"; with two, the
   3D button is disabled and a line says why: "The 3D view needs three
-  components, and this result has 2."
-- **The legend**, over the plot, from `pcaColours`: a list of buttons,
-  one per group, each with its mark, its name and its count, "p0 (48)",
-  and "No population (5)" last, as `docs/specs/charts/scatter.md` draws
-  it. Pressing one highlights its group and fades the others, a second
-  press clears it, and pressing another moves the highlight; one group
-  at a time. The highlight is state of the screen, kept while the panel
-  is drawn, from the 2D plot to the 3D one and back, and not in the
-  project, since it changes nothing the user would save; it is cleared
-  when the groups change. A colouring by the values of a continuous
-  column has a bar of its scale for a legend, and no highlight. This
-  is what stage 4 takes from the owner's widget any_scatter3d (the brief
-  of stage 4): the legend that picks a population, over the plot, and the
-  bar of controls above it; not its keys listened for on the whole page.
+  components, and this result has 2." The panel makes the data of both
+  plots with one function of its own, from the result, `pcaColours` and
+  the axes shown: the components taken out of the projections as
+  columns, `x`, `y` and, in 3D, `z`, and the colours as the
+  `PointColours` of `src/charts/marks.ts` with the group highlighted, so
+  that the two plots give a group the same mark.
+- **The legend**, over the top right corner of the plot, drawn by the
+  panel with React Aria's `ToggleButtonGroup` of one selection, one
+  legend for the 2D and the 3D plot (`docs/specs/charts/scatter.md`,
+  "The legend, drawn by the screen"): an entry per group, from `legendOf`
+  of `src/charts/legend.ts`, each with its mark, `symbolPath`, its name
+  and its count, "p0 (48)", and "No population (5)" last. Pressing one
+  highlights its group and fades the others, a second press clears it,
+  and pressing another moves the highlight; one group at a time, the
+  group of no population among them. The highlight is state of the
+  screen, kept while the panel is drawn, from the 2D plot to the 3D one
+  and back, and not in the project, since it changes nothing the user
+  would save; it is cleared when the groups change. A colouring by the
+  values of a continuous column has a bar of its scale for a legend, and
+  no highlight. This is what stage 4 takes from the owner's widget
+  any_scatter3d, which the owner named on 27 September 2026 for the look
+  and the interaction: the legend that picks a population, over the
+  plot, and the bar of controls above it; not its keys listened for on
+  the whole page.
 - **The explained variance**: a table of the components kept, PC and
   percent, with a caption, "The variance of the individuals explained by
   each component, of the 199 components of the PCA.", and, for the PCoA,
@@ -1130,8 +1181,11 @@ Run calls `startAnalysis(store, "pca")` of `src/ui/runs.ts`, Stop sends
 | `view` | "the principal components were drawn in 3D", "… in 2D" |
 
 The panel holds no state of the project; its own state is the tick of
-the clock, the group highlighted, and the three.js view as it is turned,
-which a change of the options does not reset.
+the clock, the group highlighted, and the 3D view as it is turned and
+zoomed, which a change of the colour, of the axes or of the highlight
+does not reset, and a switch to 2D does, since the 3D plot is destroyed
+then, so that it holds no WebGL context while it is not shown
+(`docs/specs/charts/pca3d.md`, "`update`, the view and `destroy`").
 
 ### Its words
 
@@ -1167,6 +1221,19 @@ since popnei's PCA words its empty pass otherwise.
 
 The notes of "What it shows" and of the module are its other words.
 
+The 3D view, in the place of the plot, with the 2D button still
+offered in each case (`docs/specs/charts/pca3d.md`, "Loading three.js",
+"When the browser has no WebGL" and "The WebGL context lost"):
+
+| when | the text |
+|---|---|
+| three.js is being downloaded, the first time 3D is shown | "Loading the 3D view…", announced without moving the focus |
+| its download failed, the connection down or the site deployed again since the page was opened | "The 3D view could not be loaded. If the connection works, the site may have been updated since this page was opened: save the project, reload the page and open the project again.", with a "Try again" button |
+| the browser gives no WebGL 2, `Pca3dError` of kind `noWebGl` | "This browser cannot draw the 3D view: WebGL, the part of the browser that draws it, is turned off or not available on this computer. The 2D plot shows any two of the components." A project saved in 3D and opened there shows the same, and is not switched to 2D by the screen |
+| the browser took the drawing away, `onContextChange(true)`, until `onContextChange(false)` | "The browser stopped drawing the 3D view. It is drawn again when the browser allows it, or when you switch to 2D and back to 3D." |
+
+`pca3d.md` points here for them.
+
 The help, for the drawer of stage 8:
 
 - What it gives: the place of each individual on the axes along which the
@@ -1192,8 +1259,10 @@ The help, for the drawer of stage 8:
 ### Accessibility
 
 - **The plot** is an image with a text alternative, the title and the
-  description of the base of the 2D plots (`docs/specs/charts/plot2d.md`),
-  from `pcaDescription`: "Principal components of 200 individuals of
+  description of the base of the 2D plots (`docs/specs/charts/plot2d.md`):
+  the title "Principal components, PC1 and PC2", or of the 3D view
+  "Principal components, PC1, PC2 and PC3", by the axes shown; and the
+  description from `pcaDescription`: "Principal components of 200 individuals of
   panel.nei, PC1, 3.54% of the variance, across, and PC2, 3.44%, up.
   Coloured by population: p0, 48 individuals, centred at 1.2 on PC1 and
   −0.4 on PC2; p2, 84, centred at …; p1, 68, centred at …. p1 is
@@ -1208,18 +1277,26 @@ The help, for the drawer of stage 8:
   (`charts.md`, "The data are also a table"): the plot is followed by the
   line "The table below the plot gives the place of each individual.",
   a link to it.
-- **The legend** is a group of toggle buttons, each with its pressed
-  state said to a screen reader, "p1, 68 individuals, highlighted",
-  reached by the Tab key, and pressed with Enter or Space; nothing listens
-  for keys on the whole page, where they would take the keys of the
-  fields.
-- **The 3D view** is turned by its buttons, which WCAG 2.2 success
-  criterion 2.5.7 asks for a drag; its canvas has the description of the
-  2D plot of its first two axes, and the line "The 3D view shows PC1, PC2
-  and PC3; the 2D plot and the table give the same points." When the
-  browser cannot draw it, or takes the drawing away, the view says so in
-  words, "The 3D view was lost by the browser" (`charts.md`), and the 2D
-  button stays.
+- **The legend** is React Aria's `ToggleButtonGroup` of one selection
+  (`docs/specs/charts/scatter.md`, "The legend, drawn by the screen"):
+  one stop of the Tab key for the whole list, the arrow keys to move
+  along it, Space or Enter to press, and a press on the pressed entry to
+  clear it. React Aria 1.21.1 gives the group the role of a group of
+  radio buttons and each entry that of a radio button, so a screen reader
+  says "p1 (68), radio button, 3 of 3", and whether it is checked, which
+  is how the highlight is said. The group is named by the title of the
+  colours, "Population" or the column's name. Nothing listens for keys
+  on the whole page, where they would take the keys of the fields.
+- **The 3D view** is turned and zoomed by its buttons, which WCAG 2.2
+  success criteria 2.5.7 and 2.5.1 ask for a drag and a pinch; its
+  canvas is described by `pcaDescription` with the three axes: "The 3D
+  view of the same 200 individuals of panel.nei on PC1, PC2 and PC3,
+  which the 2D plot shows two at a time. The table below gives every
+  coordinate." A description of a turned view cannot say what is across
+  and what is up, so it names the components and points to the 2D plot
+  and the table. When the browser cannot draw it, or takes the drawing
+  away, the view says so in the words of "Its words", and the 2D button
+  stays.
 - **Not colour alone** (1.4.1): each group has its shape as well as its
   colour, the legend shows both, and the table names each individual's
   group in words. The faded groups of a highlight keep their shapes.
@@ -1230,7 +1307,7 @@ The help, for the drawer of stage 8:
   moves to the heading when it goes, as the diversity's.
 - **Announced without moving the focus**: the end of a run and the notice,
   by the shell's status region and toast (WCAG 2.2, 4.1.3); a highlight
-  is said by the pressed state of its button and not announced again.
+  is said by the checked state of its entry and not announced again.
 - A warning says "Warning:" in words, and a note "Note:".
 
 ### Left for the running application
@@ -1249,12 +1326,11 @@ settles with their writers:
   the two components, the group of each point with the names of the
   groups, and a group to highlight, drawn with the others faded and with
   their shapes kept; the title and the description come from the panel;
-  the legend is the panel's list of buttons, over the plot, or the
-  scatter's with that behaviour.
-- `docs/specs/charts/pca3d.md`: `createPca3d` takes the projections as
-  the result holds them, `numComps` wide, the three components, the
-  groups and a group to highlight, and has `rotate(axis, degrees)` and
-  `viewAlong(axis)`.
+  the legend is the panel's list of buttons, over the plot, from the
+  scatter's `legendOf`.
+- `docs/specs/charts/pca3d.md`: `createPca3d` takes the three components
+  as columns, the groups and a group to highlight, and has `rotate`,
+  `viewAlong`, `zoom` and `resetView`.
 - `docs/specs/core/project.md`: `Grouping` gains `{ kind: "onePopulation" }`,
   and `individualsNeeds` no longer locks on no file, from stage 4.
 - `docs/specs/steps/individuals.md`: the types of the columns as the
@@ -1285,6 +1361,10 @@ settles with their writers:
   file, which the PCA writes again.
 - `docs/specs/stage-3-open-points.md`, "For stage 4": answered by "Which
   variants it reads".
+
+Each of these was made in its document on 27 September 2026, when the
+specs of stage 4 were made to agree, but those of `docs/architecture.md`
+and of `src/core/script.ts`, which stage 6 writes.
 
 Revised by the writer of this spec, in the same session:
 `docs/specs/worker/protocol.md`, `runner.md` and `client.md`,
@@ -1332,11 +1412,12 @@ checked against popnei's release that has the PCoA before its code here.
 
 ## Open points
 
-The recommendations of the brief of stage 4 that this spec takes as
-meanwhile are listed once, in `docs/specs/stage-4-open-points.md`: the
-pruned variants not kept (point 1), the PCA's variants (2), its default
-pruning (3), the variants of more than two alleles (4), and 2D first (5).
-The two that follow are this spec's.
+The recommendations to the owner of 27 September 2026 that this spec
+takes as meanwhile are listed once, in
+`docs/specs/stage-4-open-points.md`: the pruned variants not kept
+between two PCAs, which variants the PCA reads, its default pruning, the
+variants of more than two alleles, and the PCA opening in 2D. The two
+that follow are this spec's.
 
 **Open 1: the calculation worker started again after a large PCA.** A
 PCA of n individuals grows the memory of wasm by about 49 bytes per pair,
@@ -1386,7 +1467,8 @@ counts. Meanwhile the note, at 0.2.
 - The weights of the variants, which popnei gives with `numPrinComps`
   above 0, and a second pass: not shown.
 - The variants kept by the pruning, kept for the next PCA: not in stage 4
-  (the brief, point 1).
+  ("The pruned variants are not kept between two PCAs" in
+  `docs/specs/stage-4-open-points.md`).
 - The export of the plots as SVG and PNG, and the report: stage 6.
 - The scatter and the 3D view as plots: `docs/specs/charts/scatter.md`
   and `pca3d.md`.

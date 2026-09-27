@@ -316,6 +316,27 @@ to a wasm module:
 The trial showed that they build and what they weigh, not yet that they
 read the files of real users right.
 
+In stage 4 the crate only reads, so it holds calamine alone, and
+rust_xlsxwriter and zip join it with the report, in stage 6. Measured on
+27 September 2026 in a crate of trial with calamine 0.36.1 alone, built
+as `build:files` builds it, with Rust 1.98.0 on the owner's Mac, and
+gzipped with `gzip -9`: `files_bg.wasm` is 533,519 bytes raw and 295,521
+gzipped, 0.30 MB, and the JavaScript wasm-bindgen generates beside it
+11,892 and 2,962 (`docs/specs/worker/files.md`, "What the user sees
+while it downloads"). That agrees with the 0.29 MB of calamine in the
+table above.
+
+calamine 0.36.1 refuses a whole sheet at an error cell it does not
+know, as its source reads and the same trial saw: it knows the seven
+errors of older Excel,
+`#N/A`, `#DIV/0!`, `#NAME?`, `#NULL!`, `#NUM!`, `#REF!` and `#VALUE!`,
+and gives `XlsxError::CellError` at any other, such as `#SPILL!` and
+`#CALC!` of the newest versions of Excel, or `#GETTING_DATA`, which
+rust_xlsxwriter writes and which the trial refused with "Unsupported
+cell error value '#GETTING_DATA'". The crate gives such a sheet as a
+refusal that names the error, so that the user is told which formula to
+mend (`docs/specs/worker/files.md`, "The refusals").
+
 Together they would almost double what a user downloads before anything
 runs. So they are a second wasm module, apart from the wasm package of
 popnei, which the application loads the first time it is asked to read an
@@ -541,7 +562,12 @@ worker, is in `.claude/skills/coding/typescript.md`, `css.md` and
 
 1. Whether calamine reads right the xlsx files that users make, dates,
    sparse rows and Excel in other languages included, on a set of
-   test files kept in the repository.
+   test files kept in the repository. On 27 September 2026 its source,
+   and a trial with `#GETTING_DATA`, showed that it refuses a whole
+   sheet at an error cell of the newest Excel, `#SPILL!` among them
+   (section 2, "xlsx and zip in Rust"); the
+   files the owner makes for the tests of the crate,
+   `docs/specs/worker/files.md`, "How it is verified", answer the rest.
 2. How the second wasm module is built and published. Settled by the
    owner on 24 September 2026: it is a crate of this repository,
    `crates/files/`, built by the site's own build (section 2).

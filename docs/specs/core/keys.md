@@ -5,7 +5,10 @@ is in `src/core/keys.ts`. Revised on 26 September 2026 for stage 3, the
 Variants step whole, as the revision of `docs/architecture.md` the owner
 approved that day has it: the list of the individuals kept is in no key,
 and a file of the filtered variants being written has a key of its own;
-this revision is approved by the owner on 26 September 2026. A key is the name a result is stored under in the cache: a SHA-256
+this revision is approved by the owner on 26 September 2026. Revised on
+27 September 2026 for stage 4, not yet approved: the example of an
+intermediate result is the kinship of stage 7, since the variants the
+pruning of the PCA keeps are not kept. A key is the name a result is stored under in the cache: a SHA-256
 hash of everything the result was calculated from, so that a result whose
 inputs changed is never shown, and a result whose inputs came back, by an
 undo or by a value set back, is found again with no calculation
@@ -145,14 +148,18 @@ request.
 
 ### The key of an intermediate result
 
-The calculation worker keeps what several analyses reuse, the variants
-kept by the LD pruning of the PCA, the kinship, under keys made as the
-keys of the results are (`.claude/skills/coding/worker.md`, "The
-intermediate caches"). The worker does not make keys, so the page sends
-them inside the request. The key of an intermediate result is made from
-five parts: its name, "the pruned variants"; what it was made from beyond
-the file and the filters, which the analysis gives, the threshold of the
-pruning; and the three parts that `keyOf` puts in every key itself, the
+The calculation worker keeps what several analyses reuse, the kinship
+of stage 7 the first, under keys made as the keys of the results are
+(`.claude/skills/coding/worker.md`, "The intermediate caches"). The
+variants the LD pruning of the PCA keeps, the example of this section
+until stage 4, are not kept: each PCA prunes again inside its one pass
+("The pruned variants are not kept between two PCAs" in
+`docs/specs/stage-4-open-points.md`), so no analysis of stage 4 asks for
+the key of an intermediate result. The worker does not make keys, so the
+page sends them inside the request. The key of an intermediate result is
+made from five parts: its name, "the kinship"; what it was made from
+beyond the file and the filters, which the analysis gives, the options
+of its calculation; and the three parts that `keyOf` puts in every key itself, the
 load of the variants file, the filters the analysis reads, and the
 version of popnei. `intermediateKeyOf` makes it, so that the analysis
 cannot leave out those three. It hashes an object of six fields:

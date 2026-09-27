@@ -18,7 +18,10 @@ as a `.nei` file is new. The revision is approved by the owner on 26 September 2
 Revised on 27 September 2026 for stage 4: the job and the result of the
 principal components join `Job` and `JobResult`, and the passage on the
 PCA's own MAF filter says how it is given to popnei, as
-`docs/specs/analyses/pca.md` decides it.
+`docs/specs/analyses/pca.md` decides it; and, to agree with the specs
+written beside it, the seven refusals of an xlsx join
+`IndividualsFileError`, and the two values of a binary column are texts
+(`docs/specs/worker/individuals.md`, "The types of the columns").
 
 This spec gives the part of `src/worker/protocol.ts` that core
 names: the filters of the variants and of the individuals, the table of
@@ -86,7 +89,8 @@ filters in the fixed order: the dataset's, with the stricter of the two
 MAF filters in the MAF's place and one LD pruning last, the dataset's
 when it has one and otherwise the PCA's own when it is on
 (`pcaFilters` of `docs/specs/analyses/pca.md`, "Which variants it
-reads"; meanwhile, point 2 of `docs/specs/stage-4-open-points.md`). The
+reads"; meanwhile, "Which variants the PCA reads" in
+`docs/specs/stage-4-open-points.md`). The
 list of individuals comes after them, as for every job. So the runner
 puts the filters of a PCA as it puts any job's, and never merges two.
 The rule this spec held until stage 3, which merged the two MAF filters
@@ -226,16 +230,19 @@ export interface IndividualsTable {
 
 The type of a column, as the reader inferred it and the user set it
 (`docs/functionality.md`, section 4). A binary column holds its two
-values and which is coded 1. They are two cells of the column as the
-table holds them, compared exactly: in a CSV the text `"1"`, in an xlsx
-the number `1` or the boolean `true`. A text `"1"` and a number `1` are
-never compared, since the cells of one column come from one file. A
-missing cell is not one of the two values.
+values and which is coded 1. They are the texts of two cells of the
+column, compared exactly: a text as it is, and a number or a boolean of
+an xlsx as JavaScript's `String` writes it, `"1"`, `"true"`, so that a
+number 1 and a text `"1"` of one column of an xlsx are one value
+(`docs/specs/worker/individuals.md`, "The types of the columns"). A
+missing cell is not one of the two values. Until stage 3 they were the
+cells as the table holds them; every project file of those stages read a
+CSV, whose cells are all text, so none holds another value.
 
 ```ts
 export type ColumnType =
   | { kind: "identifier" }
-  | { kind: "binary"; one: string | number | boolean; zero: string | number | boolean }
+  | { kind: "binary"; one: string; zero: string }       // the texts of the two values
   | { kind: "continuous" }
   | { kind: "categorical" };
 ```
@@ -277,7 +284,7 @@ export type IndividualsFileError =
   | { kind: "duplicateIndividual"; name: string }      // one individual in two rows
   | { kind: "raggedRow"; line: number; expected: number; found: number;
       separator: "," | ";" | "\t" }
-  | { kind: "files"; message: string }                 // the xlsx reader refused the file, stage 4
+  | { kind: "files"; message: string }                 // calamine could not open the xlsx as a workbook; its message, for the console
   | { kind: "unnamedColumn"; column: number }          // values under no name; counted from 1
   | { kind: "emptyIndividual"; line: number }          // a row with no name of an individual
   | { kind: "unclosedQuote"; line: number;             // the line where the cell starts
@@ -286,7 +293,16 @@ export type IndividualsFileError =
   | { kind: "unreadable"; message: string }            // the browser's, for the console
   | { kind: "notText" }                                // not a text file
   | { kind: "variantsFile" }                           // a VCF picked by mistake
-  | { kind: "cutShort" };                              // UTF-16 that ends in the middle of a character
+  | { kind: "cutShort" }                               // UTF-16 that ends in the middle of a character
+  // From stage 4, an xlsx (docs/specs/worker/files.md, "The refusals"):
+  | { kind: "notXlsx" }                                // not a zip, as every xlsx is
+  | { kind: "oldExcel" }                               // a workbook of Excel 97–2003
+  | { kind: "encrypted" }                              // saved with a password
+  | { kind: "emptySheet"; sheet: string }              // the first sheet not hidden has no value
+  | { kind: "cellError"; error: string }               // an error calamine does not know, "#SPILL!"
+  | { kind: "sheetTooLarge"; sheet: string; rows: number; columns: number;
+      max: number }                                    // cells, MAX_SHEET_CELLS
+  | { kind: "xlsxReaderNotLoaded"; message: string };  // the files wasm not downloaded; the browser's, for the console
 ```
 
 A request to a worker, as `.claude/skills/coding/worker.md` gives it. `id`

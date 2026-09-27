@@ -4,7 +4,12 @@ Read this before writing or changing anything in `src/charts`. It was
 written in September 2026, before any plot existed, from the docs of D3
 7.9 and its modules, of three.js r186, from MDN and from the W3C. What
 the walking skeleton and the first plots find to be different is
-corrected here.
+corrected here. Revised on 27 September 2026 with the specs of the
+scatter and the 3D plot of the PCA, `docs/specs/charts/scatter.md` and
+`pca3d.md`: the data of the scatter and of the 3D plot, the point under
+the pointer found by a loop, the rings of no group, the marks of 64
+square pixels, the colours of viridis written on their paths, the legend
+drawn by the screen, and what the 3D plot does and needs.
 
 The plots are listed in `docs/functionality.md`: histograms, scatter
 plots, the QQ plot, line plots, the heatmap of Fst, the Manhattan plot,
@@ -34,17 +39,26 @@ export type Chart<Data, Events = object> = (
   events?: Events,
 ) => ChartHandle<Data>;
 
+// src/charts/marks.ts: how the points are coloured, shared by the
+// scatter and the 3D plot (docs/specs/charts/scatter.md)
+export const NO_GROUP = 0xffff;        // a point with no population, or no value
+export type PointColours =
+  | { readonly kind: "groups"; readonly title: string;
+      readonly group: Uint16Array;     // index into names, or NO_GROUP
+      readonly names: readonly string[]; readonly noneName: string;
+      readonly highlighted: number | null }
+  | { readonly kind: "values"; readonly title: string;
+      readonly values: Float64Array;   // NaN for none
+      readonly noneName: string };
+
 // src/charts/scatter.ts
-export interface ScatterData {
-  readonly title: string;              // the <title> of the SVG
-  readonly description: string;        // the <desc>, written by the screen
-  readonly xLabel: string;
-  readonly yLabel: string;
+export interface ScatterData extends PlotText { // title, description, xLabel, yLabel
   readonly x: Float64Array;
   readonly y: Float64Array;
-  readonly group: Uint16Array;         // index into groupNames, one per point
-  readonly groupNames: readonly string[];
+  readonly xName: string;              // "PC1", for the tooltip and the table
+  readonly yName: string;
   readonly pointNames: readonly string[]; // for the tooltip
+  readonly colours: PointColours;
 }
 export interface ScatterEvents {
   onHover?(point: number | null): void;
@@ -126,9 +140,14 @@ D3 is imported as its modules, not as the `d3` package:
 | `d3-path` | 3.1.0 | the paths the symbols of the points are drawn into |
 | `d3-array` | 3.2.4 | `extent`, `ticks`, `bisect` |
 | `d3-format` | 3.1.2 | the numbers of the ticks and the tooltips |
-| `d3-zoom` | 3.0.0 | zoom and pan of the Manhattan and the scatter |
-| `d3-delaunay` | 6.0.4 | the nearest point under the pointer |
+| `d3-zoom` | 3.0.0 | zoom and pan of the Manhattan plot, from stage 7 |
 | `d3-scale-chromatic` | 3.1.0 | viridis, for continuous colours |
+
+`d3-delaunay`, which this table listed for the nearest point under the
+pointer, is off it since 27 September 2026: a plain loop over the pixel
+positions finds the point within a frame (below, "Hover and tooltips"),
+where `d3-delaunay` is a module and two packages more, `delaunator` and
+`robust-predicates` (`docs/specs/charts/scatter.md`).
 
 The modules bring these, which no plot imports:
 
@@ -204,6 +223,13 @@ for (let i = 0; i < x.length; i++) {
 }
 ```
 
+The numbers of the path are rounded to one decimal, a tenth of a pixel,
+with `pathRound(1)` of `d3-path`: the walking skeleton measured an SVG of
+50,000 points at 3.1 MB so and 9.7 MB with every digit, and its drawing
+slower with every digit in WebKit and Chromium
+(`docs/plans/walking-skeleton.report.md`; `docs/specs/charts/scatter.md`,
+decided on 27 September 2026).
+
 `drawSymbolAt` lives in `src/charts/marks.ts`: it draws a `d3-shape`
 symbol type into a `d3-path` through a context that adds the offset, so
 the path is vectors, exports as vectors, and costs one element per group.
@@ -232,7 +258,7 @@ export, the tests and the CSS find the same parts:
     <g class="chart-axis chart-axis-x" transform="translate(0,innerHeight)"/>
     <g class="chart-axis chart-axis-y"/>
     <g class="chart-marks" clip-path="url(#chart3-clip)">
-      <path class="chart-points chart-group-0" d="…"/> …
+      <path class="chart-points chart-colour-0" d="…"/> …
     </g>
     <g class="chart-annotations"/>      thresholds, λ, the line y = x of the QQ plot
     <text class="chart-axis-label chart-axis-label-x"/> …
@@ -294,7 +320,13 @@ A plot is an image to a screen reader, and has to say what it shows:
   `d3-shape` (`symbolsFill`), so the first seven groups differ in both
   and 49 groups have 49 different marks. Where there is room, a group is
   labelled on the plot as well, as the lines of the LD decay are at their
-  ends.
+  ends. A point in no group, or with no value, is a ring, a circle with
+  no fill outlined in `--chart-axis`, drawn first, under every group: a
+  mark with no colour of its own, which differs in shape from the seven
+  filled symbols. A mark has an area of 64 square pixels, `SYMBOL_AREA`,
+  a circle 9 pixels across, so that the narrowest of the seven, the
+  cross, keeps 2.6 pixels of colour inside its outline
+  (`docs/specs/charts/scatter.md`, 27 September 2026).
 - **A palette that people with a colour vision deficiency can tell
   apart**: the seven colours of Okabe and Ito, without black, as the
   tokens `--chart-cat-1` to `--chart-cat-7` (`css.md`). A continuous
@@ -310,12 +342,16 @@ A plot is an image to a screen reader, and has to say what it shows:
 
 ## Colours, themes and the exported file
 
-The plot never writes a colour. It writes classes, and `charts.css` gives
+The plot never writes a colour, but one: the colours of viridis, which
+are the same in both themes and in the file, and which the scatter
+writes as the `fill` of each of its 256 steps
+(`docs/specs/charts/scatter.md`). It writes classes, and `charts.css` gives
 the classes their colours from the tokens:
 
 ```css
 .chart-axis { color: var(--chart-axis); }          /* d3-axis draws in currentColor */
-.chart-group-0 { fill: var(--chart-cat-1); stroke: var(--chart-axis); stroke-width: 1px; }
+.chart-points { stroke: var(--chart-axis); stroke-width: 1px; }
+.chart-colour-0 { fill: var(--chart-cat-1); }      /* the colour i % 7 of group i, to .chart-colour-6 */
 .chart-threshold { stroke: var(--chart-threshold); stroke-dasharray: 4 3; }
 ```
 
@@ -435,12 +471,16 @@ drawer opens or a panel collapses.
 ## Hover and tooltips
 
 - **One transparent `chart-overlay` rect takes the pointer events**, not
-  the marks, which are paths of many points. On `pointermove`, the plot
-  takes the position with `pointer(event, frame)` from `d3-selection`,
-  and finds the nearest point with a `Delaunay` of `d3-delaunay`, built
-  once from the pixel positions at each draw: `delaunay.find(px, py)` is
-  fast for any number of points. A point further than a few pixels is no
-  point.
+  the marks, which are paths of many points. On `pointermove`, the base
+  of the 2D plots takes the position with `pointer(event, frame)` from
+  `d3-selection` and gives it to the plot, which finds the nearest point
+  within 10 pixels by a plain loop over the pixel positions of the
+  points it drew, kept from the last draw, `nearestPoint` of
+  `src/charts/hover.ts`: 0.027 ms at the median for 50,000 points in node
+  26.8.2 on the owner's Apple M5 Pro, 27 September 2026, where a movement
+  of the pointer comes at most once a frame, 16 ms. The 3D plot uses the
+  same function over its projected points. A point further than 10
+  pixels is no point.
 - **The tooltip is one HTML `<div>`** that the plot adds to its element,
   positioned absolutely, and removes in `destroy`. HTML and not SVG,
   because it wraps text and is not part of the exported plot. The element
@@ -504,32 +544,50 @@ well. The extent of the zoom is set again after every resize.
 `src/charts/pca3d.ts` has the same contract as every plot: `createPca3d(
 element, data, events)` returns the handle. three.js r186 is imported by
 name from `three`, and `OrbitControls` from
-`three/addons/controls/OrbitControls.js`.
+`three/addons/controls/OrbitControls.js`: `three` 0.186.1, and for
+development `@types/three` 0.186.0, which brings six packages that never
+reach the site (`docs/specs/charts/pca3d.md`, "How it is verified").
+The screen loads `pca3d.ts` with `import()` when 3D is first shown, so
+that three.js is a file of its own the page downloads then.
 
 ### The data and the scene
 
-The data are the projections as popnei gives them, `numComps` wide and
-row after row, the three components to show, the groups and their names,
-and for each axis its label with the variance it explains. The plot
-copies the three columns into one `Float32Array` of positions for a
-`BufferGeometry`, which is what the GPU takes, and uses one scale for the
-three axes, so that the spread along each component is shown as it is.
+The data are the three components to show as three columns, `x`, `y`
+and `z`, as the scatter gets two, the colours as the scatter's
+`PointColours`, and for each axis its name and its label with the
+variance it explains (`docs/specs/charts/pca3d.md`, `Pca3dData`); the
+screen takes the columns out of the projections, which popnei gives
+`numComps` wide and row after row, so that one shape serves the two
+plots. The plot copies the three columns into one `Float32Array` of
+positions for a `BufferGeometry`, which is what the GPU takes, and uses
+one scale for the three axes, so that the spread along each component
+is shown as it is.
 
 The points of each group are one `Points` object whose material is a
 `PointsMaterial` with `sizeAttenuation: false`, so that a point is the
 same size in pixels near and far, and a `map` of that group's symbol:
 the same `d3-shape` symbol as in 2D, drawn once on a small canvas into a
 `CanvasTexture`, with `alphaTest` to cut its edge. So the groups differ in
-shape in 3D as in 2D, and the legend, which is HTML beside the canvas,
-shows the same marks. The axes are three lines, and their labels are HTML
-elements placed at the projected ends of the axes after each render.
+shape in 3D as in 2D. The legend is not the plot's: the screen draws it
+in React, with React Aria's `ToggleButtonGroup`, over the plot, one
+legend for the 2D and the 3D plot, from `legendOf` and `symbolPath` of
+`src/charts/legend.ts` and `marks.ts`, since a button inside an SVG of
+`role="img"`, or on a canvas, cannot be reached by the keyboard nor
+named to a screen reader (`docs/specs/charts/scatter.md`, "The legend,
+drawn by the screen"); the plot draws a legend only into its exported
+file. The axes are three lines, and their labels are HTML elements
+placed at the projected ends of the axes after each render.
 
 ### Renderer, camera and controls
 
 - **`WebGLRenderer`, not `WebGPURenderer`.** The WebGL renderer is the
-  mature one, every browser popnei supports has WebGL
-  (`docs/technology.md`), and a few thousand points gain nothing from
-  WebGPU. `WebGPURenderer`, which falls back to WebGL 2, can be tried when
+  mature one, and a few thousand points gain nothing from WebGPU. It
+  needs WebGL 2: three.js refuses WebGL 1 since r163, and r186 throws
+  "Error creating WebGL context." when the browser gives none. The
+  browsers of the floor of the applications have WebGL 2, but a browser
+  whose WebGL is turned off, or whose graphics card it refuses, gives
+  none, and `createPca3d` then throws a `Pca3dError` of kind `noWebGl`,
+  whose words the screen shows (`docs/specs/charts/pca3d.md`). `WebGPURenderer`, which falls back to WebGL 2, can be tried when
   it is the default of three.js; the plot's code outside the renderer
   would not change.
 - **An `OrthographicCamera`.** In a perspective the points nearer the
@@ -537,15 +595,19 @@ elements placed at the projected ends of the axes after each render.
   reads; with an orthographic camera, looking down an axis shows exactly
   the 2D plot of the other two. The depth comes from turning it.
 - **`OrbitControls`**, the standard controls of three.js: drag to turn,
-  wheel to zoom, right drag to pan. It keeps one axis up, which is less
-  free than `TrackballControls` and much less disorienting. No damping,
-  so that the scene can be drawn only when something changes.
+  wheel and pinch to zoom. It keeps one axis up, which is less free than
+  `TrackballControls` and much less disorienting. No damping, so that
+  the scene can be drawn only when something changes. No pan, the
+  moving of the view sideways that the controls give to the right drag
+  and two fingers: the cloud of a PCA is centred on the origin, and a pan
+  would need a button for a user who cannot drag
+  (`docs/specs/charts/pca3d.md`, 27 September 2026).
 - **Turning without dragging.** A user who cannot drag turns the view
   with buttons beside the plot, and WCAG 2.5.7 asks for them. The handle
-  of `pca3d` has two more functions, `rotate(axis, degrees)`, which turns
-  by a fixed step, and `viewAlong(axis)`, which looks down one component
-  and so shows the 2D plot of the other two. The screen spec lists the
-  buttons.
+  of `pca3d` has four more functions, `rotate(axis, degrees)`, which
+  turns by a fixed step, `viewAlong(component)`, which looks down one
+  component and so shows the 2D plot of the other two, `zoom(factor)`
+  and `resetView()`. The screen spec lists the buttons.
 - **Render on demand.** There is no animation loop: the plot renders
   after `update`, after a resize and on the `change` event of the
   controls. A loop at 60 frames a second for a still scene spends the
@@ -568,18 +630,24 @@ and takes the nearest, not the `Raycaster`, not GPU picking:
   distance in pixels, which is what the user sees. Among the points within
   a few pixels, the nearest to the camera wins.
 
-The projection is one function, `projectToScreen(positions, camera,
-width, height, out)` in `src/charts/project.ts`, and it serves four
-uses: the hover, the labels of the axes, `toSVG` and, later, the lasso.
-It is plain arithmetic over typed arrays and the camera's matrices, so it
-is tested in Vitest without WebGL.
+The projection is one function, `projectToScreen(positions,
+viewProjection, width, height, xy, depth)` in `src/charts/project.ts`,
+with the camera's projection times its view as 16 numbers in the
+column-major order of three.js, and the pixels and the depth written
+apart, and it serves four uses: the hover, the labels of the axes,
+`toSVG` and, later, the lasso. It is plain arithmetic over typed arrays
+and imports nothing of three.js, so that the scatter, which shares the
+hover, loads none of it, and it is tested in Vitest without WebGL.
 
 ### Export of the 3D plot
 
 `toSVG` writes the current view as a 2D SVG: the points projected with
-`projectToScreen`, sorted from far to near so the nearer ones are drawn on
-top, each as its symbol in its group's path, with the axes and the legend,
-through the same `export.ts` as the other plots. So the 3D plot exports as
+`projectToScreen`, sorted from far to near across every group, so that a
+nearer point is drawn over a farther one of another group, as on the
+screen; consecutive points of one group in that order share one path,
+and the faded groups of a highlight are all drawn before the highlighted
+one. With the axes and the legend, through the same `export.ts` as the
+other plots. So the 3D plot exports as
 vectors, and `toPNG` draws that SVG on a canvas like every other plot, at
 any scale, with no `preserveDrawingBuffer` and no reading of the WebGL
 canvas.
@@ -633,9 +701,13 @@ tokens and renders.
 The browser can take the context away, when the GPU resets, when the
 driver updates, or when too many contexts are open. three.js listens for
 `webglcontextlost` and `webglcontextrestored` on its canvas and rebuilds
-its state on restore. The plot also listens: on loss it shows a short
-message over the canvas, "The 3D view was lost by the browser", instead
-of a canvas that stays black; on restore it hides it and renders again.
+its state on restore. The plot also listens, and calls
+`events.onContextChange(true)` on loss and `(false)` once it has drawn
+again on restore; the screen shows its words over the canvas meanwhile,
+since the words of the screens are the screen's, and they say what the
+user can do (`docs/specs/analyses/pca.md`, "Its words"). Before 27
+September 2026 the plot showed "The 3D view was lost by the browser"
+itself.
 A test forces a loss with the `WEBGL_lose_context` extension
 (`renderer.forceContextLoss()`) and a restore, and sees the plot come
 back (`testing.md`).
@@ -684,7 +756,7 @@ regression: later", has why.
 ## Sources
 
 - D3: https://d3js.org/getting-started, https://d3js.org/d3-selection/joining,
-  https://d3js.org/d3-zoom, https://d3js.org/d3-delaunay/delaunay,
+  https://d3js.org/d3-zoom,
   https://d3js.org/d3-shape/symbol, and the margin convention,
   https://observablehq.com/@d3/margin-convention
 - three.js: the manual, https://threejs.org/manual/#en/how-to-dispose-of-objects,

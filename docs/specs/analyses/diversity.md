@@ -25,7 +25,10 @@ on 25 September 2026 (point A of `docs/specs/stage-2-open-points.md`);
 and the functions that make the populations, `populationsOf`,
 `populationsToRun`, `populationsKept` and `populationsNeeds`, move to
 `src/core/project.ts`, which every analysis per population shares
-(`docs/specs/core/project.md`, "The populations").
+(`docs/specs/core/project.md`, "The populations"); and again the same
+day, to agree with the specs written beside it: no run of stage 4 makes
+two passes, and the size of a result of the PCA in the cache, names
+included.
 The code of stage 2 is in
 `src/core/analyses/diversity.ts`. This spec gives the first analysis of the population genetics
 application, in its form for the walking skeleton: the module
@@ -1043,10 +1046,13 @@ the result removed. It drops a result only to stay under its bound of
 256 MB (`docs/specs/core/cache.md`), and a result of the diversity is a
 few hundred bytes, the only kind of result of stage 2, so no session of
 stage 2 fills it. Checked again for the PCA of stage 4, which keeps 10
-components (`docs/specs/analyses/pca.md`): its projections at 9,381
-individuals, the most popnei's PCA takes, are 9,381 × 10 × 8 bytes,
-0.75 MB, so about 340 of them fill the bound, and the words hold for a
-session of stage 4.
+components (`docs/specs/analyses/pca.md`, "How it runs"): at 9,381
+individuals, the most popnei's PCA takes, its projections are 9,381 × 10
+× 8 bytes, 750,480, and the names of the individuals, at eight
+characters and 2 bytes a character as the cache counts a text
+(`docs/specs/core/cache.md`), 150,096 more, about 0.90 MB in all; so
+about 300 of them fill the bound of 268,435,456 bytes, and the words
+hold for a session of stage 4.
 
 The words of "results removed", and the line of a calculation stopped,
 are written from the change itself, the cause of the notice,
@@ -1099,9 +1105,11 @@ read; the diversity is one pass, `numPassesOf("calcPerVarDistribs")` 1 of
 file ends a little below the size of the file, 259,376 of the 261,490
 bytes of `panel.nei`, since popnei does not read its head
 (`docs/specs/worker/runner.md`, "Progress"), so the bar may stop at 99%
-and the result replaces it. A run that makes two passes, the PCA of
-stage 4, shows "pass 2 of 2" beside the bar, so that a bar that goes back
-to empty does not look broken; the diversity never does.
+and the result replaces it. A run that makes two passes would show
+"pass 2 of 2" beside the bar, so that a bar that goes back to empty does
+not look broken; the diversity never does, and no run of stage 4 does,
+since the PCA asks popnei for no weights of the variants and reads the
+file once (`docs/specs/analyses/pca.md`, "The request").
 
 The state `running` covers a request that waits in the queue of the
 calculation worker as well as one that runs; the store does not tell
@@ -1397,7 +1405,8 @@ September 2026:
 - `docs/specs/shell.md`: the stepper and the summary line read the
   populations of `project.ts`.
 - `docs/specs/analyses/pca.md`: the PCA keeps 10 components, which the
-  words of "Undo brings back the table" above were checked against.
+  words of "Undo brings back the table" above were checked against, and
+  reads the file once.
 
 ## Open points
 

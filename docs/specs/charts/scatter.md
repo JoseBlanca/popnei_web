@@ -1,7 +1,11 @@
 # The scatter plot of the PCA
 
 Written on 27 September 2026, for stage 4 of `docs/build-order.md`, the
-Individuals step and the PCA; not yet reviewed or approved. There is no
+Individuals step and the PCA; revised the same day to agree with the
+specs written beside it: the description and the labels in the words of
+`docs/specs/analyses/pca.md`, which columns colour by groups, and
+`.claude/skills/coding/charts.md` and `testing.md` revised for it; not
+yet reviewed or approved. There is no
 code of it yet; the base it is drawn on, `src/charts/plot2d.ts`, and the
 histogram exist from stage 3. This spec gives the function of
 `src/charts/scatter.ts` that draws the individuals on two principal
@@ -37,7 +41,7 @@ pointer.
 One mark per individual, at its projection on the two components of the
 axes, `axes[0]` across and `axes[1]` up (`pca.md`, the options),
 PC1 and PC2 by default. The labels of the axes say the component and the
-share of the variance it explains, "PC1 (12.3%)", which the screen
+share of the variance it explains, "PC1 (3.54%)", which the screen
 writes from `explainedVariancePercent` of the result. The marks of one
 population share a colour and a shape. Over the top right corner of the
 frame, the legend lists the populations with their marks and the number
@@ -133,9 +137,9 @@ the rule is there for the PCoA and any later use.
 
 The points are coloured one of two ways, which the data say
 (`PointColours`, below). The screen chooses which from the type of the
-column the user colours by (`pca.md`): the populations and a column of
-categories, of text or binary give groups; a column of numbers gives
-values.
+column the user colours by, as the user set it in the Individuals step
+(`pca.md`, "The colours"): the populations and a categorical or binary
+column give groups; a continuous column gives values.
 
 **Groups.** Each point has the index of its group, or `NO_GROUP` when it
 has none, and the names of the groups. The marks are those above.
@@ -441,7 +445,7 @@ export function tooltipLines(
 ```
 
 The scatter. Its texts are the screen's, with those of `PlotText`:
-`xLabel` "PC1 (12.3%)" and `yLabel` "PC2 (8.1%)".
+`xLabel` "PC1 (3.54%)" and `yLabel` "PC2 (3.44%)".
 
 ```ts
 // src/charts/scatter.ts
@@ -548,15 +552,15 @@ The base writes the text alternative and gives the rule of the table
 (`plot2d.md`, "The text alternative and the table of the numbers"). What
 the scatter adds:
 
-- **The description**, which the screen writes, in this form: how many
-  individuals are drawn and in how many groups, the two components and
-  the variance each explains, and those not in a group: "The PCA of 200
-  individuals in 3 populations, PC1 against PC2. PC1 explains 12.3% of
-  the variance and PC2 8.1%. 12 individuals have no population." For
-  values: "… coloured by height, from 1.52 to 1.96; 3 individuals have
-  no height." The PCA's spec gives the words (`pca.md`). It describes
-  the 2D plot, which is the one the PCA opens in and exports (point 5 of
-  the recommendations of 27 September 2026, `docs/specs/stage-4-open-points.md`).
+- **The description**, which the screen writes: the individuals drawn,
+  the two components and the variance each explains, and where each
+  group lies, or the range of the values and how many have none, in the
+  words of `pca.md`, "Accessibility", `pcaDescription`: "Principal
+  components of 200 individuals of panel.nei, PC1, 3.54% of the
+  variance, across, and PC2, 3.44%, up. Coloured by population: p0, 48
+  individuals, centred at …". It describes the 2D plot, which is the one
+  the PCA opens in and exports (meanwhile, "The PCA opens in 2D" in
+  `docs/specs/stage-4-open-points.md`).
 - **A table of the individuals, drawn by the screen**, one row per
   individual with its name, its group or value and its coordinates on
   the two components, from `scatterRows`, whose numbers are shown with
@@ -756,9 +760,10 @@ Of `docs/specs/analyses/pca.md`:
   metadata into `x`, `y`, the names and `PointColours`, shared with the
   3D plot, which gives the names of the groups in the same order
   whatever is shown;
-- which columns colour by groups and which by values, and that a column
-  with more than `MAX_POINT_GROUPS` values is not offered, or is offered
-  some other way it decides;
+- which columns colour by groups and which by values, and that a
+  categorical or binary column of more than `MAX_POINT_GROUPS` values is
+  not offered, `MAX_COLOUR_GROUPS` of `pca.md`, which draws a colouring
+  that would give more as one group;
 - the words: the labels of the axes with the percentages, `xName`, the
   title of the colouring, `noneName`, the description, and the legend's
   name for a screen reader;
@@ -776,7 +781,7 @@ Of `docs/specs/analyses/pca.md`:
   definition; the hook that draws into the exported copy, `drawExport`;
   the export leaving out `chart-hover`; a definition made per plot when
   it holds the state of one plot.
-- `.claude/skills/coding/charts.md`, not edited by this spec:
+- `.claude/skills/coding/charts.md`:
   - "The contract of a plot": `ScatterData` as above, the colours in
     `PointColours` of `marks.ts`, shared with the 3D plot;
   - "Hover and tooltips": the nearest point by a loop over the pixel
@@ -798,13 +803,17 @@ Of `docs/specs/analyses/pca.md`:
 - `.claude/skills/coding/testing.md`, "Against the built site": the
   page `e2e/plots.html` draws the scatter and the 3D plot too.
 
+Each of these was made in its document on 27 September 2026, when the
+specs of stage 4 were made to agree, but those of `docs/architecture.md`
+and of `css.md`, which needs no change.
+
 ## Open points
 
 None of its own. The 50,000 points are the owner's decision of 26
 September 2026, and the one decimal is decided above with the numbers of
 the walking skeleton. The points of `docs/specs/stage-4-open-points.md`
-this spec leans on are the 2D plot opening first (point 5) and the
-drawing options kept out of the key of the PCA (`pca.md`).
+this spec leans on are the PCA opening in 2D and the drawing options
+kept out of the key of the PCA (`pca.md`).
 
 ## Not in this spec
 

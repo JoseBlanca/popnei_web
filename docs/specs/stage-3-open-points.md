@@ -353,6 +353,13 @@ individuals set leaves the PCA without its own MAF filter under that
 rule, so the spec of the PCA decides again how the two are given to
 popnei.
 
+Answered on 27 September 2026 by `docs/specs/analyses/pca.md`, "Which
+variants it reads", as recommended to the owner that day and taken
+meanwhile: the job of the PCA carries the dataset's filters with the
+stricter of the two MAF filters in the MAF's place and one LD pruning
+last, then the individuals kept ("Which variants the PCA reads" in
+`docs/specs/stage-4-open-points.md`).
+
 ## Not repeated here
 
 The open points of earlier stages that stage 3 does not touch stay in
