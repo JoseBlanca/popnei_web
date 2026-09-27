@@ -9,6 +9,7 @@ import {
   runningBarLabel,
   runningText,
   stoppedText,
+  versionsText,
   warningsHeading,
 } from "./words.ts";
 
@@ -182,5 +183,18 @@ describe("the words of the frame of an analysis panel", () => {
     expect(() =>
       failureText({ kind: "files", message: "zip" }, "panel.nei"),
     ).toThrow(/^popnei_web defect: /);
+  });
+});
+
+describe("the line of the versions", () => {
+  test("the line of the versions", () => {
+    expect(versionsText("0.1.0", "0.1.0")).toBe(
+      "Calculated with popnei 0.1.0, in version 0.1.0 of the application.",
+    );
+    // Two versions that differ, so that one in the place of the other
+    // shows.
+    expect(versionsText("0.1.0", "0.2.0")).toBe(
+      "Calculated with popnei 0.1.0, in version 0.2.0 of the application.",
+    );
   });
 });

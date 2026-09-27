@@ -27,7 +27,6 @@ import { useRef } from "react";
 import { refusalText } from "../../../core/analyses/individualChecks.ts";
 import type { Notice } from "../../../core/store.ts";
 import { classOf } from "../../classOf.ts";
-import { versionsText } from "../../analyses/diversity/words.ts";
 import { Failed } from "../../analyses/Failed.tsx";
 import { RunButton } from "../../analyses/RunButton.tsx";
 import { Running } from "../../analyses/Running.tsx";
@@ -39,7 +38,7 @@ import {
 } from "../../analyses/status.ts";
 import { titleOf } from "../../analyses/titles.ts";
 import { Warnings } from "../../analyses/Warnings.tsx";
-import { stoppedText } from "../../analyses/words.ts";
+import { stoppedText, versionsText } from "../../analyses/words.ts";
 import { startAnalysis } from "../../runs.ts";
 import { useAppState, useStore } from "../../store.tsx";
 import {

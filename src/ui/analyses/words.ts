@@ -3,8 +3,9 @@
  * (docs/specs/analyses/diversity.md, "The panel", its states and its
  * words): the line of a calculation under way, the words of a result
  * removed and of a calculation stopped, written from the change that
- * caused them, the count of the warnings, and a
- * failure that is not popnei's refusal. Pure, so that a test in node
+ * caused them, the count of the warnings, a
+ * failure that is not popnei's refusal, and the line of the versions
+ * beside a result. Pure, so that a test in node
  * checks them; `AnalysisPanel.tsx`, `Failed.tsx` and the parts of the
  * checks of the Variants step draw them.
  */
@@ -13,6 +14,15 @@ import { counted, escaped, saying } from "../../core/project.ts";
 import type { Notice } from "../../core/store.ts";
 import type { Progress, RunError } from "../../worker/protocol.ts";
 import { capitalized, undoneOrRedone } from "../sentences.ts";
+
+/** The line beside the download: "Calculated with popnei 0.1.0, in
+    version 0.1.0 of the application." */
+export function versionsText(
+  popneiVersion: string,
+  appVersion: string,
+): string {
+  return `Calculated with popnei ${escaped(popneiVersion)}, in version ${escaped(appVersion)} of the application.`;
+}
 
 /** The seconds of a minute, and of an hour. */
 const MINUTE = 60;

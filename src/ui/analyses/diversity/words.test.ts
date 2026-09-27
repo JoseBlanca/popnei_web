@@ -9,7 +9,6 @@ import {
   optionsText,
   populationsText,
   readyLines,
-  versionsText,
 } from "./words.ts";
 
 describe("the words of the panel of the diversity", () => {
@@ -110,17 +109,6 @@ describe("the words of the panel of the diversity", () => {
   test("the line of the options", () => {
     expect(optionsText(20, 0.95)).toBe(
       "A variant counts in a population when at least 20 of its individuals have a called genotype there, and is polymorphic when its commonest allele is below 0.95.",
-    );
-  });
-
-  test("the line of the versions", () => {
-    expect(versionsText("0.1.0", "0.1.0")).toBe(
-      "Calculated with popnei 0.1.0, in version 0.1.0 of the application.",
-    );
-    // Two versions that differ, so that one in the place of the other
-    // shows.
-    expect(versionsText("0.1.0", "0.2.0")).toBe(
-      "Calculated with popnei 0.1.0, in version 0.2.0 of the application.",
     );
   });
 

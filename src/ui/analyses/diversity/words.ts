@@ -1,8 +1,9 @@
 /**
  * The words of the panel of the diversity (docs/specs/analyses/diversity.md,
  * "The panel"): the populations it will run on, the caption of its table
- * and its cells, the line of its options, the line of the versions, and
- * the name of its download. Pure, so that a test in node checks them; the
+ * and its cells, the line of its options, and the name of its download;
+ * the line of the versions is in `../words.ts`, shared with the checks
+ * of the Variants step. Pure, so that a test in node checks them; the
  * panel draws them.
  */
 
@@ -61,15 +62,6 @@ export function optionsText(
   polyThreshold: number,
 ): string {
   return `A variant counts in a population when at least ${grouped(minNumIndividuals)} of its individuals have a called genotype there, and is polymorphic when its commonest allele is below ${String(polyThreshold)}.`;
-}
-
-/** The line beside the download: "Calculated with popnei 0.1.0, in
-    version 0.1.0 of the application." */
-export function versionsText(
-  popneiVersion: string,
-  appVersion: string,
-): string {
-  return `Calculated with popnei ${escaped(popneiVersion)}, in version ${escaped(appVersion)} of the application.`;
 }
 
 /** The name of the download of the table: the stem of the variants

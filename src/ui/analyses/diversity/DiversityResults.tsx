@@ -20,14 +20,9 @@ import { Button } from "../../widgets/Button.tsx";
 import { Table } from "../../widgets/Table.tsx";
 import type { TableColumn } from "../../widgets/Table.tsx";
 import type { ResultsProps } from "../panels.ts";
+import { versionsText } from "../words.ts";
 import styles from "./DiversityResults.module.css";
-import {
-  captionText,
-  csvName,
-  optionsText,
-  rowCells,
-  versionsText,
-} from "./words.ts";
+import { captionText, csvName, optionsText, rowCells } from "./words.ts";
 
 /** The columns of the table (the spec, "What it shows"). */
 const COLUMNS: readonly TableColumn[] = Object.freeze([

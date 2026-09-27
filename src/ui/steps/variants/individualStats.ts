@@ -17,8 +17,17 @@ import type { IndividualsKept } from "../../../core/individualsKept.ts";
 import { counted, escaped } from "../../../core/project.ts";
 import type { Notice } from "../../../core/store.ts";
 import type { IndividualFilter } from "../../../worker/protocol.ts";
-import { cellText } from "../../analyses/diversity/words.ts";
 import { capitalized, undoneOrRedone } from "../../sentences.ts";
+
+/** The decimals of the two numbers of the table of the individuals
+    (variants.md, "The statistics of each individual"). */
+const STATS_DECIMALS = 4;
+
+/** A number of the table of the individuals, to four decimals with a
+    point, or "no value" where popnei gave NaN. */
+function statText(value: number | null): string {
+  return value === null ? "no value" : value.toFixed(STATS_DECIMALS);
+}
 
 /** The words of the button of the block. */
 export const STATS_CALCULATE_LABEL =
@@ -128,8 +137,8 @@ export function individualCells(
 ): readonly string[] {
   const cells = [
     escaped(row.individual),
-    cellText(row.missingGenotypes),
-    cellText(row.observedHeterozygosity),
+    statText(row.missingGenotypes),
+    statText(row.observedHeterozygosity),
   ];
   if (kept === null) return cells;
   return [...cells, kept ? KEPT_WORDS.kept : KEPT_WORDS.removed];
