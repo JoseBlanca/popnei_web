@@ -2130,3 +2130,132 @@ test("VS6 D3 the Count against the diversity: a pass of each with the same filte
     rows,
   );
 });
+
+// ---------------------------------------------------------------------
+// The table of the statistics of 10,000 individuals (VS7 D4).
+
+/** The individuals and the variants of the VCF of the table. */
+const TABLE_INDIVIDUALS = 10_000;
+const TABLE_VARIANTS = 500;
+
+/** The gzipped VCF of 10,000 individuals and 500 variants of
+    `e2e/bigVcf.ts` in MEASURE_DIR, written when it is not there. */
+async function tableVcf(): Promise<string> {
+  await mkdir(MEASURE_DIR, { recursive: true });
+  const name = `individuals_${String(TABLE_INDIVIDUALS)}`;
+  const path = join(MEASURE_DIR, `${name}.vcf.gz`);
+  if (!existsSync(path)) {
+    // Under another name until whole, as the files of the write.
+    const part = join(MEASURE_DIR, `${name}.part.vcf.gz`);
+    await writeBigVcf(part, TABLE_VARIANTS, TABLE_INDIVIDUALS);
+    await rename(part, path);
+  }
+  return path;
+}
+
+/** The time the page is frozen by a press of `control`: from the click,
+    which React answers in the same task, to the end of the task that
+    follows the next frame, so that the change drawn, its layout and its
+    paint are in it. */
+async function frozenBy(control: Locator): Promise<number> {
+  return control.evaluate(async (element) => {
+    if (!(element instanceof HTMLElement)) {
+      throw new Error("the control is not an HTML element");
+    }
+    const t0 = performance.now();
+    element.click();
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => {
+        setTimeout(resolve, 0);
+      });
+    });
+    return performance.now() - t0;
+  });
+}
+
+/**
+ * The time the page is frozen by the table of the statistics of each
+ * individual at 10,000 individuals (docs/specs/analyses/individualChecks.md,
+ * "Left for the running application"; the plan of the Variants step,
+ * VS7 D4): the column Kept added by a list applied, then changed by
+ * another list, and the table sorted by a header. The change of a
+ * threshold of the filters of individuals redraws the column Kept as a
+ * list does, with no pass, and is measured here once its fields exist.
+ */
+test("VS7 D4 the table at 10,000 individuals: the page frozen when the column Kept changes and when a header sorts it", async ({
+  page,
+  browser,
+  browserName,
+}) => {
+  test.setTimeout(600_000);
+  const vcf = await tableVcf();
+  await page.goto("popgen.html#variants");
+  await pick(page, "Variants file", vcf);
+  await expect(
+    page
+      .getByRole("region", { name: "Variants file" })
+      .getByText(`${TABLE_INDIVIDUALS.toLocaleString("en-US")} individuals`),
+  ).toBeVisible({ timeout: 60_000 });
+  const section = page.getByRole("region", {
+    name: "Filters of the individuals",
+  });
+  await section
+    .getByRole("button", {
+      name: "Calculate the statistics of each individual",
+    })
+    .click();
+  const table = section.getByRole("grid", {
+    name: "Statistics of each individual",
+  });
+  await expect(table).toBeVisible({ timeout: 120_000 });
+  const drawn = await table.getByRole("row").count();
+
+  const area = section.getByRole("textbox", {
+    name: "Individuals to remove, one name per line",
+  });
+  const apply = section.getByRole("button", {
+    name: "Apply the list to remove",
+    exact: true,
+  });
+  const kept = table.getByRole("columnheader", { name: /^Kept/ });
+
+  // The column Kept added: a list to remove applied to a table with none.
+  await area.fill("s0000");
+  const added = await frozenBy(apply);
+  await expect(kept).toBeVisible();
+
+  // The column Kept changed: the list to remove, s0001 and s0000 in turn.
+  const changed: number[] = [];
+  for (let k = 0; k < REPEATS; k++) {
+    const name = k % 2 === 0 ? "s0001" : "s0000";
+    await area.fill(name);
+    changed.push(await frozenBy(apply));
+    await expect(
+      table
+        .getByRole("row")
+        .filter({ has: page.getByRole("rowheader", { name, exact: true }) })
+        .getByRole("gridcell", { name: "removed", exact: true }),
+    ).toBeVisible();
+  }
+
+  // A header sorts the table, up and down in turn.
+  const header = table.getByRole("columnheader", {
+    name: /^Proportion of missing genotypes/,
+  });
+  const sorted: number[] = [];
+  for (let k = 0; k < REPEATS; k++) {
+    sorted.push(await frozenBy(header));
+  }
+  await expect(header).toHaveAttribute("aria-sort", /ascending|descending/);
+
+  report(
+    `The table of the statistics of ${TABLE_INDIVIDUALS.toLocaleString("en-US")} individuals, from a VCF of ${String(TABLE_VARIANTS)} variants`,
+    `${machine(browser, browserName)}; ${String(drawn)} rows of the table in the page, its header among them; each time from the click to the end of the task after the next frame, ${String(REPEATS)} times but the first`,
+    ["change", "median", "range"],
+    [
+      ["the column Kept added by a list", ms(added), "once"],
+      ["the column Kept changed by a list", ...stats(changed, ms)],
+      ["a header sorts the rows", ...stats(sorted, ms)],
+    ],
+  );
+});
