@@ -17,20 +17,18 @@ import { StrictMode } from "react";
 import { I18nProvider } from "react-aria-components";
 import { createRoot } from "react-dom/client";
 
-import { POPGEN_ANALYSES, countsOf, firstProject } from "../core/apps.ts";
-import { CACHE_MAX_BYTES } from "../core/cache.ts";
-import { MAX_UNDO_STEPS } from "../core/history.ts";
-import { createStore } from "../core/store.ts";
+import { POPGEN_ANALYSES } from "../core/apps.ts";
 import type { Store } from "../core/store.ts";
 import { createClient } from "../worker/client.ts";
 import type { Client } from "../worker/client.ts";
-import type { Job, JobResult } from "../worker/protocol.ts";
+import type { JobResult } from "../worker/protocol.ts";
 import { makeFilesWorker, makeRunnerWorker } from "../worker/start.ts";
-import { SHELL_WORDS } from "./analyses/panels.ts";
+import { SHELL_WORDS } from "./analyses/titles.ts";
 import { createDefects, isResizeObserverNoise } from "./defects.ts";
 import type { Defects } from "./defects.ts";
 import { FilesProvider, createFiles } from "./files.tsx";
-import { downloadText } from "./download.ts";
+import { downloadFile, downloadText } from "./download.ts";
+import { createPopgenStore } from "./popgenStore.ts";
 import { createReads } from "./reads.ts";
 import { SavingProvider, createSaving } from "./saving.ts";
 import type { Saving } from "./saving.ts";
@@ -105,7 +103,7 @@ function start(): void {
   // 2. The error bar, in a root of its own, with no store yet.
   const defectsRoot = createRoot(element("defects"));
   const drawBar = (
-    store: Store<JobResult> | null,
+    store: Store<JobResult, Blob> | null,
     saving: Saving | null,
   ): void => {
     defectsRoot.render(
@@ -139,29 +137,26 @@ function start(): void {
     announcer and the reads, and the application. */
 function startApplication(
   defects: Defects,
-  drawBar: (store: Store<JobResult>, saving: Saving) => void,
+  drawBar: (store: Store<JobResult, Blob>, saving: Saving) => void,
 ): void {
-  // 3. The store. It sends nothing while it is made, so its `send` reaches
-  // the client of the next step.
+  // 3. The store, with the counts of the filters, the statistics of each
+  // individual and the writing of the filtered variants. It sends nothing
+  // while it is made, so its `send` and its write reach the client of the
+  // next step.
   let client: Client | null = null;
-  const store = createStore<Job, JobResult>({
-    first: firstProject("popgen"),
-    analyses: POPGEN_ANALYSES,
-    send: (key, job, onProgress) => {
-      if (client === null) {
-        throw new Error(
-          "popnei_web defect: the store sent a request before the worker client was made.",
-        );
-      }
-      return client.run(key, job, onProgress);
-    },
-    countsOf,
-    counts: null,
-    statistics: null,
-    write: null,
+  const madeClient = (): Client => {
+    if (client === null) {
+      throw new Error(
+        "popnei_web defect: the store sent a request before the worker client was made.",
+      );
+    }
+    return client;
+  };
+  const store = createPopgenStore({
+    send: (key, job, onProgress) => madeClient().run(key, job, onProgress),
+    sendWrite: (key, job, onProgress) =>
+      madeClient().write(key, job, onProgress),
     appVersion: APP_VERSION,
-    cacheMaxBytes: CACHE_MAX_BYTES,
-    maxUndoSteps: MAX_UNDO_STEPS,
   });
 
   // 4. The worker client, which starts the calculation worker at once, so
@@ -187,6 +182,7 @@ function startApplication(
     download: (name, text) => {
       downloadText(name, text, "application/json");
     },
+    downloadFile,
   });
   askBeforeLeaving(saving);
   drawBar(store, saving);
@@ -255,7 +251,10 @@ function askBeforeLeaving(saving: Saving): void {
     calculation and the end of a read, with the words of
     `announcementsOf` of the shell (docs/specs/shell.md, "The status
     region"). */
-function announceChanges(store: Store<JobResult>, announcer: Announcer): void {
+function announceChanges(
+  store: Store<JobResult, Blob>,
+  announcer: Announcer,
+): void {
   let before = store.getState();
   store.subscribe(() => {
     const after = store.getState();

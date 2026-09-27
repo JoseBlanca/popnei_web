@@ -12,7 +12,8 @@
  * checked before anything is asked, so that the user is not asked to give
  * up their project for a file that does not open; a file refused is told
  * in a dialog with OK. When the project has changed since it was opened
- * or saved, or calculations are in flight, a dialog asks first, since an
+ * or saved, calculations are in flight, or a file of the filtered
+ * variants is written and not saved, a dialog asks first, since an
  * opening cannot be undone. After the opening the Variants step is on
  * screen, with the focus on its `<h1>`. A file whose read ends while the
  * dialog of Save is open is answered once that dialog has closed, so that
@@ -33,7 +34,9 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { FileTrigger } from "react-aria-components";
 
+import { writtenName } from "../../core/fileNames.ts";
 import type { Project } from "../../core/project.ts";
+import type { AppState } from "../../core/store.ts";
 import { classOf } from "../classOf.ts";
 import { useSaving } from "../saving.ts";
 import { useAppState, useStore } from "../store.tsx";
@@ -167,6 +170,13 @@ export function SaveProject(): React.JSX.Element {
   );
 }
 
+/** The name of the file of the filtered variants written and not saved,
+    `write` in `done`, "panel.filtered.nei", or `null` when there is
+    none. */
+function unsavedName(s: AppState<unknown, unknown>): string | null {
+  return s.write?.kind === "done" ? writtenName(s.project) : null;
+}
+
 /** What Open project… is showing, besides its button. */
 type Opening =
   | { readonly kind: "none" }
@@ -235,7 +245,12 @@ export function OpenProject(): React.JSX.Element {
       setOpening(picked);
       return;
     }
-    if (saving.changed() || store.getState().runs.length > 0) {
+    const state = store.getState();
+    if (
+      saving.changed() ||
+      state.runs.length > 0 ||
+      unsavedName(state) !== null
+    ) {
       setOpening({ kind: "asking", name: file.name, project: picked.project });
       return;
     }
@@ -243,11 +258,13 @@ export function OpenProject(): React.JSX.Element {
   };
 
   // Read at every drawing, so that the question loses its sentence of the
-  // calculations when they end while it is open.
+  // calculations when they end while it is open, and gains the one of a
+  // file written while it is open.
   const running = useAppState((s) => s.runs.length > 0);
+  const unsaved = useAppState(unsavedName);
   const question =
     opening.kind === "asking"
-      ? { ...opening, ...openQuestion(opening.name, running) }
+      ? { ...opening, ...openQuestion(opening.name, running, unsaved) }
       : null;
 
   return (

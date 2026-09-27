@@ -66,7 +66,7 @@ export const PROJECT_FILE_EXTENSION = ".popnei.json";
  * them, and on an analysis done while the state has no version of popnei.
  */
 export function writeProjectFile<J, R>(
-  state: AppState<R>,
+  state: AppState<R, unknown>,
   analyses: readonly AnalysisDef<J, R>[],
   appVersion: string,
   saved: string,
@@ -173,7 +173,7 @@ type CheckWritten = Omit<Check, "settings">;
  * reference's; otherwise none.
  */
 function checksWritten<J, R>(
-  state: AppState<R>,
+  state: AppState<R, unknown>,
   analyses: readonly AnalysisDef<J, R>[],
   appVersion: string,
 ): CheckWritten[] {

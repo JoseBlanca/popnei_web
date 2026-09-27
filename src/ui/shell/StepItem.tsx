@@ -8,7 +8,7 @@
  * not theirs.
  */
 import type { StepId } from "../../core/apps.ts";
-import { SHELL_WORDS } from "../analyses/panels.ts";
+import { SHELL_WORDS } from "../analyses/titles.ts";
 import { useAppState } from "../store.tsx";
 import { StepLink } from "../widgets/StepLink.tsx";
 import { STEP_NAMES, hashOfStep } from "./steps.ts";

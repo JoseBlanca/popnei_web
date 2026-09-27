@@ -4,7 +4,10 @@
  * for Save project of the header and Save the project of the error bar
  * alike; reads the text of a project file picked with Open project…, with
  * the same application and analyses; and keeps what the question before
- * leaving the page needs.
+ * leaving the page needs. From stage 3 it also hands the browser a file
+ * of the filtered variants the calculation worker wrote, and then has the
+ * store forget it (docs/specs/entry.md, "A file of the filtered variants
+ * saved").
  *
  * The base project is the project the page started with, the one last
  * opened from a project file, or the one last saved, with the keys of the
@@ -35,10 +38,11 @@ import type { Key } from "../core/keys.ts";
 import type { AnalysisDef, AppState, Store } from "../core/store.ts";
 
 /** What the saving is made with: the store, of results `R` of requests
-    `J`, the application and the definitions of its analyses. */
-export interface SavingDeps<J, R> {
+    `J` and written files `F`, the application and the definitions of its
+    analyses. */
+export interface SavingDeps<J, R, F> {
   /** The store of the page. */
-  readonly store: Store<R>;
+  readonly store: Store<R, F>;
   /** The application of the page, whose project files it reads. */
   readonly app: AppId;
   /** The definitions of the analyses of the application. */
@@ -48,6 +52,9 @@ export interface SavingDeps<J, R> {
   /** Hands the text to the browser to download under the name; a fake in
       the tests. */
   readonly download: (name: string, text: string) => void;
+  /** Hands the file to the browser to download under the name, and
+      releases its address a minute later; a fake in the tests. */
+  readonly downloadFile: (name: string, file: F) => void;
 }
 
 /** The saving of the page, made once by the entry. */
@@ -77,6 +84,11 @@ export interface Saving {
       analysis is done under a key that was not done in the base: a result
       that ended since, which the file saved lacks. */
   changed(): boolean;
+  /** Hands the file of the filtered variants the store holds, `write` in
+      `done`, to the browser to download under `name`, "panel.filtered.nei",
+      then tells the store, which forgets the file and is `saved`. Throws a
+      defect when `write` is not `done`: Save is shown only then. */
+  saveWritten(name: string): void;
 }
 
 /** The name of the file saved for the name `name` the user left in the
@@ -99,7 +111,7 @@ export function savedName(name: string): string {
 const JSON_EXTENSION = ".json";
 
 /** The keys under which the analyses of `state` are done. */
-function doneKeys<R>(state: AppState<R>): ReadonlySet<Key> {
+function doneKeys<R, F>(state: AppState<R, F>): ReadonlySet<Key> {
   const keys = new Set<Key>();
   for (const view of state.analyses) {
     if (view.status.kind === "done") keys.add(view.status.key);
@@ -109,8 +121,8 @@ function doneKeys<R>(state: AppState<R>): ReadonlySet<Key> {
 
 /** The saving of the store of `deps`, whose base is its present
     project. */
-export function createSaving<J, R>(deps: SavingDeps<J, R>): Saving {
-  const { store, app, analyses, appVersion, download } = deps;
+export function createSaving<J, R, F>(deps: SavingDeps<J, R, F>): Saving {
+  const { store, app, analyses, appVersion, download, downloadFile } = deps;
   let base: Project = store.getState().project;
   // The keys done in the base: a result done under another key ended
   // after it, and the file saved lacks its check numbers.
@@ -167,6 +179,16 @@ export function createSaving<J, R>(deps: SavingDeps<J, R>): Saving {
             view.status.kind === "done" && !baseDone.has(view.status.key),
         )
       );
+    },
+    saveWritten: (name) => {
+      const write = store.getState().write;
+      if (write?.kind !== "done") {
+        throw new Error(
+          `popnei_web defect: saveWritten was called with the writing ${write === null ? "absent" : `in the state ${write.kind}`}; Save is shown only when a file is written and not saved.`,
+        );
+      }
+      downloadFile(name, write.written.file);
+      store.writeSaved();
     },
   };
 }

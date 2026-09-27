@@ -67,7 +67,7 @@ export interface AnalysisPanelProps {
 /** The state of the analysis `id` in `s`; a defect when the store has
     none. */
 function statusOf(
-  s: AppState<JobResult>,
+  s: AppState<JobResult, unknown>,
   id: AnalysisId,
 ): AnalysisStatus<JobResult> {
   const view = s.analyses.find((a) => a.id === id);

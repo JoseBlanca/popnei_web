@@ -126,6 +126,14 @@ function setUp(): {
   return { store, fake };
 }
 
+/** The calculation worker gives popnei's version, which the client
+    passes on before any answer of that worker (docs/specs/entry.md, "At
+    the opening"): a file read makes the checks of the Variants step
+    ready, and their keys hold the version. */
+function ready(store: Store<JobResult>): void {
+  store.popneiReady("0.1.0");
+}
+
 /** Lets the outcomes ended by the test reach the reads. */
 async function settle(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve));
@@ -236,6 +244,7 @@ describe("WS7 D1 the rule of the reads", () => {
 
   test("the outcome opened makes the source read, with the individuals and the ploidy", async () => {
     const { store, fake } = setUp();
+    ready(store);
     pickNei(store, PANEL_ID);
 
     fake.variants[0]?.end(OPENED);
@@ -252,6 +261,7 @@ describe("WS7 D1 the rule of the reads", () => {
 
   test("the same file picked again, a new load id, asks a second openVariants", async () => {
     const { store, fake } = setUp();
+    ready(store);
     pickNei(store, PANEL_ID);
     fake.variants[0]?.end(OPENED);
     await settle();
@@ -268,6 +278,7 @@ describe("WS7 D1 the rule of the reads", () => {
 describe("WS10 the cases of the entry", () => {
   test("an undo back to a load already read asks for nothing", async () => {
     const { store, fake } = setUp();
+    ready(store);
     pickNei(store, PANEL_ID);
     fake.variants[0]?.end(OPENED);
     await settle();
@@ -463,6 +474,7 @@ describe("WS7 D1 the reads cancelled", () => {
 
   test("pick, undo, redo, then a late cancelled of the first read leaves the second under way and asks nothing more", async () => {
     const { store, fake } = setUp();
+    ready(store);
     pickNei(store, PANEL_ID);
     store.undo();
     store.redo();

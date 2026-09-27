@@ -16,8 +16,8 @@ import { undoneOrRedone } from "../sentences.ts";
 /** Undoes or redoes the project of `store`, as `which` says, and
     announces it when it makes no notice; nothing when there is no step
     to undo or redo. */
-export function undoOrRedo<R>(
-  store: Store<R>,
+export function undoOrRedo<R, F>(
+  store: Store<R, F>,
   announcer: Announcer,
   which: Shortcut,
 ): void {

@@ -34,7 +34,7 @@ export type ReadClient = Pick<Client, "openVariants" | "readIndividuals">;
 
 /** What the reads need of the store. */
 export type ReadStore = Pick<
-  Store<JobResult>,
+  Store<JobResult, Blob>,
   "getState" | "variantsRead" | "individualsRead"
 >;
 

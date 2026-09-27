@@ -3,13 +3,16 @@
  * screen and of an analysis"): what the frame of `AnalysisPanel.tsx`
  * needs of an analysis beyond the state the store gives, its title, its
  * name in a sentence, the line of its ready state, the words of popnei's
- * refusals, and the component that draws its result. The shell names an
- * analysis by its title in the notice and the status region
- * (docs/specs/shell.md, "What it sends and reads").
+ * refusals, and the component that draws its result. The title is that
+ * of `titles.ts`, by which the shell names the analysis in the notice and
+ * the status region (docs/specs/shell.md, "What it sends and reads").
  *
- * `AnalysisId` is a string, so the compiler cannot tell an analysis with
- * no panel; `panelOf` throws a defect for one, which the Analyses step,
- * drawing a panel for every analysis of the application, meets at once.
+ * The three checks of the Variants step have no panel here: the Variants
+ * step draws their parts among its filters
+ * (docs/specs/steps/variants.md). `AnalysisId` is a string, so the
+ * compiler cannot tell an analysis with no panel; `panelOf` throws a
+ * defect for one, which the Analyses step, drawing a panel for every
+ * analysis of its step, meets at once.
  */
 import type { ComponentType } from "react";
 
@@ -17,12 +20,11 @@ import {
   populationsToRun,
   refusalText,
 } from "../../core/analyses/diversity.ts";
-import type { StepId } from "../../core/apps.ts";
 import type { AnalysisId, Project } from "../../core/project.ts";
 import type { JobResult } from "../../worker/protocol.ts";
-import type { ShellWords } from "../shell/words.ts";
 import { DiversityResults } from "./diversity/DiversityResults.tsx";
 import { populationsText } from "./diversity/words.ts";
+import { titleOf } from "./titles.ts";
 
 /** What the component of a result is drawn with. */
 export interface ResultsProps {
@@ -57,7 +59,7 @@ export interface AnalysisUi {
 /** The panel of the diversity (docs/specs/analyses/diversity.md, "The
     panel"). */
 const DIVERSITY: AnalysisUi = Object.freeze({
-  title: "Diversity",
+  title: titleOf("diversity"),
   name: "the diversity",
   resultName: "the table",
   readyText: (p: Project): string | null => {
@@ -68,7 +70,7 @@ const DIVERSITY: AnalysisUi = Object.freeze({
   Results: DiversityResults,
 });
 
-/** The panel of every analysis of the applications, by its id. */
+/** The panel of every analysis of the Analyses step, by its id. */
 export const PANELS: ReadonlyMap<AnalysisId, AnalysisUi> = new Map([
   ["diversity", DIVERSITY],
 ]);
@@ -81,22 +83,3 @@ export function panelOf(id: AnalysisId): AnalysisUi {
   }
   return panel;
 }
-
-/** The title of the panel of the analysis `id`, "Diversity". */
-export function titleOf(id: AnalysisId): string {
-  return panelOf(id).title;
-}
-
-/**
- * What the words of the shell need of the application
- * (docs/specs/shell.md, "What it sends and reads"). Until the checks of
- * the Variants step join the application, its one analysis, the
- * diversity, is shown in the Analyses step and no Counts of the filters
- * are done; task 5.2 of docs/plans/variants-step.md takes the steps from
- * `src/core/apps.ts` and the variants kept from the Counts.
- */
-export const SHELL_WORDS: ShellWords<JobResult> = Object.freeze({
-  title: titleOf,
-  stepOf: (): StepId => "analyses",
-  variantsKept: (): number | null => null,
-});

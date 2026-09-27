@@ -33,7 +33,7 @@ export interface ErrorBarProps {
   readonly defects: Defects;
   /** The store, once the entry has made it; `null` before, when the bar
       says that the application met the error as it started. */
-  readonly store: Store<JobResult> | null;
+  readonly store: Store<JobResult, Blob> | null;
   /** The saving of the entry, made with the store; `null` before, when
       there is no project to save. */
   readonly saving: Saving | null;

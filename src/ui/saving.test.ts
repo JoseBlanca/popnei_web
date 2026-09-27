@@ -8,9 +8,16 @@ import type { Project } from "../core/project.ts";
 import { writeProjectFile } from "../core/projectFile.ts";
 import { createStore } from "../core/store.ts";
 import type { Store } from "../core/store.ts";
-import { TEST_DEFS } from "../core/testSupport.ts";
+import { TEST_DEFS, fiveIndividualsProject } from "../core/testSupport.ts";
 import type { TestDefJob, TestDefResult } from "../core/testSupport.ts";
-import type { Job, JobResult, Outcome, Run } from "../worker/protocol.ts";
+import type {
+  Job,
+  JobResult,
+  Outcome,
+  Run,
+  Written,
+} from "../worker/protocol.ts";
+import { createPopgenStore } from "./popgenStore.ts";
 import { createSaving } from "./saving.ts";
 
 // The real store of core, and a fake download that records what it was
@@ -47,6 +54,7 @@ function setup(): {
     app: "popgen",
     analyses: POPGEN_ANALYSES,
     appVersion: "0.1.0",
+    downloadFile: () => undefined,
     download: (name, text) => {
       downloads.push({ name, text });
     },
@@ -186,6 +194,7 @@ describe("WS9 D2 the saving", () => {
       app: "gwas",
       analyses: POPGEN_ANALYSES,
       appVersion: "0.1.0",
+      downloadFile: () => undefined,
       download: () => {
         throw new Error("the test saves nothing with association");
       },
@@ -264,6 +273,7 @@ describe("WS9 the saving counts a result that ended as a change", () => {
       app: "popgen",
       analyses: TEST_DEFS,
       appVersion: "0.1.0",
+      downloadFile: () => undefined,
       download: () => undefined,
     });
     return {
@@ -325,6 +335,7 @@ describe("WS9 the saving records a save that failed", () => {
       app: "popgen",
       analyses: POPGEN_ANALYSES,
       appVersion: "0.1.0",
+      downloadFile: () => undefined,
       download: () => {
         if (fail) throw new Error("popnei_web defect: test");
       },
@@ -344,5 +355,96 @@ describe("WS9 the saving records a save that failed", () => {
     expect(saving.saveFailed()).toBe(false);
     expect(calls).toBe(2);
     unsubscribe();
+  });
+});
+
+/** The store of the page, as the entry makes it, with a fake `write` of
+    the worker client, the five individuals of the worked case opened, a
+    saving whose fake `downloadFile` records what it was given, and a
+    function that writes `file` and gives the store the end of the
+    write. */
+function setUpWriting(): {
+  readonly store: Store<JobResult, Blob>;
+  readonly saving: ReturnType<typeof createSaving>;
+  readonly files: { readonly name: string; readonly file: Blob }[];
+  readonly write: (file: Blob) => void;
+} {
+  let lastId = 0;
+  const store = createPopgenStore({
+    send: () => {
+      throw new Error("the test sends no calculation");
+    },
+    sendWrite: (): Run<Written<Blob>> => {
+      lastId += 1;
+      return {
+        id: lastId,
+        // The test gives the end to the store itself.
+        outcome: new Promise<Outcome<Written<Blob>>>(() => undefined),
+        cancel: () => undefined,
+      };
+    },
+    appVersion: "0.1.0",
+  });
+  store.popneiReady("0.1.0");
+  store.open(fiveIndividualsProject([]));
+  const files: { name: string; file: Blob }[] = [];
+  const saving = createSaving({
+    store,
+    app: "popgen",
+    analyses: POPGEN_ANALYSES,
+    appVersion: "0.1.0",
+    download: () => {
+      throw new Error("the test saves no project file");
+    },
+    downloadFile: (name, file) => {
+      files.push({ name, file });
+    },
+  });
+  const write = (file: Blob): void => {
+    const run = (store.startWrite("nei") ?? [])[0];
+    const status = store.getState().write;
+    if (run === undefined || status?.kind !== "running") {
+      throw new Error("the write did not start");
+    }
+    store.runEnded(run.id, {
+      kind: "done",
+      key: status.key,
+      result: {
+        format: "nei",
+        file,
+        numBytes: file.size,
+        passStats: { numVars: 3, filtering: {} },
+      },
+    });
+  };
+  return { store, saving, files, write };
+}
+
+describe("VS5 D1 saveWritten", () => {
+  test("with the file written, downloadFile is given the name and the very Blob of the state, and then the writing is saved, with no file", () => {
+    const { store, saving, files, write } = setUpWriting();
+    const file = new Blob([new Uint8Array([1, 2, 3])]);
+    write(file);
+    expect(store.getState().write?.kind).toBe("done");
+
+    saving.saveWritten("panel.filtered.nei");
+
+    expect(files).toHaveLength(1);
+    expect(files[0]?.name).toBe("panel.filtered.nei");
+    expect(files[0]?.file).toBe(file);
+    const status = store.getState().write;
+    expect(status?.kind).toBe("saved");
+    expect(status?.kind === "saved" && "file" in status.written).toBe(false);
+  });
+
+  test("with the writing ready, no file written, it is a defect and nothing is downloaded", () => {
+    const { store, saving, files } = setUpWriting();
+    expect(store.getState().write?.kind).toBe("ready");
+
+    expect(() => {
+      saving.saveWritten("panel.filtered.nei");
+    }).toThrow(/^popnei_web defect: saveWritten/);
+    expect(files).toEqual([]);
+    expect(store.getState().write?.kind).toBe("ready");
   });
 });

@@ -32,7 +32,7 @@ export interface VcfOptions {
 
 /** The options of the next VCF, with no edit, over `store`. */
 export function createVcfOptions(
-  store: Pick<Store<JobResult>, "apply" | "getState">,
+  store: Pick<Store<JobResult, Blob>, "apply" | "getState">,
 ): VcfOptions {
   let edited: EditedOptions | null = null;
   const listeners = new Set<() => void>();

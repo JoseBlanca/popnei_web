@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import { downloadText } from "./download.ts";
+import { downloadFile, downloadText } from "./download.ts";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -46,5 +46,46 @@ describe("the download of a text", () => {
     expect(revoke).not.toHaveBeenCalled();
     vi.advanceTimersByTime(1);
     expect(revoke).toHaveBeenCalledWith("blob:the-text");
+  });
+});
+
+describe("the download of a file", () => {
+  test("clicks a link to the very Blob it is given, under the name, and releases it only after 60 seconds", () => {
+    vi.useFakeTimers();
+    const clicked: string[] = [];
+    const link = {
+      href: "",
+      download: "",
+      hidden: false,
+      click(): void {
+        clicked.push(`${this.download} ${this.href}`);
+      },
+      remove(): void {
+        // Out of the page.
+      },
+    };
+    vi.stubGlobal("document", {
+      createElement: () => link,
+      body: { append: () => undefined },
+    });
+    const given: unknown[] = [];
+    vi.spyOn(URL, "createObjectURL").mockImplementation((blob) => {
+      given.push(blob);
+      return "blob:the-file";
+    });
+    const revoke = vi
+      .spyOn(URL, "revokeObjectURL")
+      .mockImplementation(() => undefined);
+    const file = new Blob([new Uint8Array([1, 2, 3])]);
+
+    downloadFile("panel.filtered.nei", file);
+
+    expect(clicked).toEqual(["panel.filtered.nei blob:the-file"]);
+    expect(given).toHaveLength(1);
+    expect(given[0]).toBe(file);
+    vi.advanceTimersByTime(59_999);
+    expect(revoke).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(revoke).toHaveBeenCalledWith("blob:the-file");
   });
 });

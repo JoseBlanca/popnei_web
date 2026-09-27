@@ -76,6 +76,7 @@ describe("WS9 the Save of the error bar", () => {
       app: "popgen",
       analyses: TEST_DEFS,
       appVersion: "0.1.0",
+      downloadFile: () => undefined,
       download: (name) => {
         downloads.push(name);
       },
@@ -97,6 +98,7 @@ describe("WS9 the Save of the error bar", () => {
       app: "popgen",
       analyses: TEST_DEFS,
       appVersion: "0.1.0",
+      downloadFile: () => undefined,
       download: (name) => {
         downloads.push(name);
       },

@@ -1,10 +1,11 @@
 /**
- * The browser's download of a text the application wrote: a link to a
- * `Blob` of the text, clicked and then released. The browser saves the
- * file under `name`, or asks where, as the user set it.
+ * The browser's download of a text the application wrote, or of a file
+ * the calculation worker made: a link to the `Blob`, clicked and then
+ * released. The browser saves the file under `name`, or asks where, as
+ * the user set it.
  */
 
-/** How long the link to the text is kept, in milliseconds. */
+/** How long the link to the file is kept, in milliseconds. */
 const RELEASE_AFTER_MS = 60_000;
 
 /**
@@ -12,9 +13,17 @@ const RELEASE_AFTER_MS = 60_000;
  * `name` of the media type `type`, "text/csv".
  */
 export function downloadText(name: string, text: string, type: string): void {
-  const url = URL.createObjectURL(
-    new Blob([text], { type: `${type};charset=utf-8` }),
-  );
+  downloadFile(name, new Blob([text], { type: `${type};charset=utf-8` }));
+}
+
+/**
+ * Downloads `file`, a file of the filtered variants the calculation
+ * worker wrote among them, as a file named `name`. The page holds no
+ * reference to `file` once the link is released, a minute after the
+ * click.
+ */
+export function downloadFile(name: string, file: Blob): void {
+  const url = URL.createObjectURL(file);
   const link = document.createElement("a");
   link.href = url;
   link.download = name;

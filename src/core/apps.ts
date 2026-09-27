@@ -7,7 +7,9 @@
  */
 
 import { diversity } from "./analyses/diversity.ts";
-import { variantsOfFile } from "./analyses/filterCounts.ts";
+import { filterCounts, variantsOfFile } from "./analyses/filterCounts.ts";
+import { individualChecks } from "./analyses/individualChecks.ts";
+import { variantChecks } from "./analyses/variantChecks.ts";
 import { defect } from "./analyses/words.ts";
 import type { IndividualStats } from "./individualsKept.ts";
 import { emptyProject, setVariantFilter } from "./project.ts";
@@ -33,9 +35,11 @@ export const DEFAULT_PLOIDY = 2;
 export const DEFAULT_ONLY_PASSED = true;
 
 /** The analyses of the population genetics application, in the order the
-    screens show them. */
+    screens show them: the three checks of the Variants step, the
+    statistics of each individual, the histograms of the variants and the
+    counts of what each filter kept, then the diversity. */
 export const POPGEN_ANALYSES: readonly AnalysisDef<Job, JobResult>[] =
-  Object.freeze([diversity]);
+  Object.freeze([individualChecks, variantChecks, filterCounts, diversity]);
 
 /** The steps of the population genetics application, by their ids, in
     their order. */
@@ -44,6 +48,18 @@ export const POPGEN_STEPS: readonly ["variants", "individuals", "analyses"] =
 
 /** The id of a step of the population genetics application. */
 export type StepId = (typeof POPGEN_STEPS)[number];
+
+/** The step each analysis of `POPGEN_ANALYSES` is shown in, by its id: the
+    three checks in the Variants step, the diversity in the Analyses step.
+    The ids are literals of their modules, never names of the user, so an
+    object may hold them. */
+export const POPGEN_ANALYSIS_STEPS: Readonly<Record<string, StepId>> =
+  Object.freeze({
+    individualChecks: "variants",
+    variantChecks: "variants",
+    filterCounts: "variants",
+    diversity: "analyses",
+  });
 
 /** The first project of the population genetics application: an empty
     project with the missing data filter on at 0.1. */

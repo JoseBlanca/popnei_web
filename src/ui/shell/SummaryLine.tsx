@@ -4,7 +4,7 @@
  * · 1 filter · 3 populations by pop", from `summaryLine` of words.ts. It
  * is text, and is not announced when it changes.
  */
-import { SHELL_WORDS } from "../analyses/panels.ts";
+import { SHELL_WORDS } from "../analyses/titles.ts";
 import { classOf } from "../classOf.ts";
 import { useAppState } from "../store.tsx";
 import styles from "./SummaryLine.module.css";

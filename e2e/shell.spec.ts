@@ -230,9 +230,11 @@ test("WS9 D3 the shell done: Analyses at Done, the end in the status region, the
   await expect(status(page)).toHaveText(
     /^(Diversity: calculating\. )?Diversity: done\.$/,
   );
+  // The diversity fills the Counts of the filters, so the summary says
+  // how many variants the filters keep (shell.md, "The summary line").
   await expectSummary(
     page,
-    "panel.nei · 200 individuals · 1,200 variants · 1 filter · 3 populations by popcat",
+    "panel.nei · 200 individuals · 1,200 of 1,200 variants kept · 1 filter · 3 populations by popcat",
   );
   await expectNoViolations(makeAxeBuilder);
 });

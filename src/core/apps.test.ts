@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   POPGEN_ANALYSES,
+  POPGEN_ANALYSIS_STEPS,
   POPGEN_STEPS,
   countsOf,
   firstProject,
@@ -54,7 +55,7 @@ function distrib(): VariantDistrib {
   return { mean: 0.25, counts: Uint32Array.from([1200]) };
 }
 
-describe("WS5 D4 apps.ts", () => {
+describe("VS5 D1 apps.ts", () => {
   test("the first project of population genetics has the missing data filter at 0.1 and nothing else", () => {
     expect(firstProject("popgen")).toEqual({
       ...emptyProject("popgen"),
@@ -62,12 +63,31 @@ describe("WS5 D4 apps.ts", () => {
     });
   });
 
-  test("the analyses of population genetics have distinct ids, the diversity among them", () => {
+  test("the analyses of population genetics have distinct ids: the three checks of the Variants step, then the diversity", () => {
     const ids = POPGEN_ANALYSES.map((def) => def.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(ids).toEqual(["diversity"]);
+    expect(ids).toEqual([
+      "individualChecks",
+      "variantChecks",
+      "filterCounts",
+      "diversity",
+    ]);
   });
 
+  test("each analysis has its step in POPGEN_ANALYSIS_STEPS, the checks in the Variants step and the diversity in the Analyses step, and no other analysis has one", () => {
+    expect(POPGEN_ANALYSIS_STEPS).toStrictEqual({
+      individualChecks: "variants",
+      variantChecks: "variants",
+      filterCounts: "variants",
+      diversity: "analyses",
+    });
+    expect(Object.keys(POPGEN_ANALYSIS_STEPS).toSorted()).toEqual(
+      POPGEN_ANALYSES.map((def) => def.id).toSorted(),
+    );
+  });
+});
+
+describe("WS5 D4 apps.ts", () => {
   test("the steps of population genetics are variants, individuals and analyses, in that order", () => {
     expect(POPGEN_STEPS).toEqual(["variants", "individuals", "analyses"]);
   });

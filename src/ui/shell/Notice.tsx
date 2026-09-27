@@ -13,7 +13,7 @@
  * calculations it left behind. The next command, undo, redo or opening
  * replaces it with a new toast.
  */
-import { titleOf } from "../analyses/panels.ts";
+import { titleOf } from "../analyses/titles.ts";
 import { useAppState, useStore } from "../store.tsx";
 import { Button } from "../widgets/Button.tsx";
 import { Toast } from "../widgets/Toast.tsx";

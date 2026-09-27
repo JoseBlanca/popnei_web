@@ -30,19 +30,26 @@ export function handedText(name: string): string {
   return `${escaped(name)} was handed to the browser to download.`;
 }
 
-/** The question before an opening, when the project has changed or
-    calculations are in flight: its heading, the question itself, and the
-    rest of its words under it. */
+/** The question before an opening of the project file `name`, when the
+    project has changed, calculations are in flight, `running`, or a file
+    of the filtered variants is written and not saved, `unsaved`, its
+    name, "panel.filtered.nei", or `null`: its heading, the question
+    itself, and the rest of its words under it. */
 export function openQuestion(
   name: string,
   running: boolean,
+  unsaved: string | null,
 ): { readonly title: string; readonly text: string } {
-  const text =
-    "It replaces the project on the page, and an opening cannot be undone. To keep the project on the page, press Keep the current project and save it first.";
-  return {
-    title: `Open ${escaped(name)}?`,
-    text: running ? `${text} The ongoing calculations will be stopped.` : text,
-  };
+  const sentences = [
+    "It replaces the project on the page, and an opening cannot be undone. To keep the project on the page, press Keep the current project and save it first.",
+  ];
+  if (running) sentences.push("The ongoing calculations will be stopped.");
+  if (unsaved !== null) {
+    sentences.push(
+      `${escaped(unsaved)}, written and not saved, will be discarded.`,
+    );
+  }
+  return { title: `Open ${escaped(name)}?`, text: sentences.join(" ") };
 }
 
 /** The button of the question that keeps the project on the page. */
