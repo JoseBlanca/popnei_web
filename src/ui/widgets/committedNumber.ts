@@ -45,18 +45,21 @@ function decimalsOf(step: number): number {
   return point === -1 ? 0 : text.length - point - 1;
 }
 
-/** `value` rounded to the nearest multiple of `step` from 0. The decimal
-    point is shifted in the text, and not by a product, which keeps 0.145
-    as 14.5 where 0.145 × 100 is 14.499999999999998. */
-function nearestStep(value: number, step: number): number {
-  const decimals = decimalsOf(step);
+/** `value` rounded to the nearest multiple of `units` × 10^−`decimals`
+    from 0, as 0.13 is 13 units of 0.01. The decimal point is shifted in
+    the text, and not by a product, which keeps 0.145 as 14.5 where
+    0.145 × 100 is 14.499999999999998. */
+function nearestMultiple(
+  value: number,
+  units: number,
+  decimals: number,
+): number {
   const text = String(value);
   const shifted = text.includes("e")
     ? value * 10 ** decimals
     : Number(`${text}e${String(decimals)}`);
-  const stepUnits = Math.round(step * 10 ** decimals);
-  const units = Math.round(shifted / stepUnits) * stepUnits;
-  return Number(`${String(units)}e-${String(decimals)}`);
+  const rounded = Math.round(shifted / units) * units;
+  return Number(`${String(rounded)}e-${String(decimals)}`);
 }
 
 /** How far a number may be from a multiple of the step, as a part of the
@@ -66,15 +69,21 @@ const ON_STEP_TOLERANCE = 1e-9;
 
 /**
  * The number `value`, committed in a field from `minValue` to `maxValue`
- * of step `step`, when it is within them and a multiple of the step, as a
- * multiple of the step written in the fewest decimals; otherwise the
- * reason it is refused, a bound before the step.
+ * of step `step`, when it is within them and has at most `decimals`
+ * decimals, written in the fewest decimals; otherwise the reason it is
+ * refused, a bound before the decimals. With no `decimals` the number
+ * must be a multiple of the step, as in stage 2, which for a step of 0.01
+ * is the same as two decimals and for a step of 1 a whole number; with
+ * them, the step is only what an arrow key moves by, so that a field of
+ * four decimals takes 0.0312 with a step of 0.01
+ * (docs/specs/steps/variants.md, "The two thresholds").
  */
 export function checkCommitted(
   value: number,
   minValue: number,
   maxValue: number,
   step: number,
+  decimals?: number,
 ): Result<number, NumberRefusal> {
   if (value > maxValue) {
     return { ok: false, error: { kind: "aboveMax", typed: value, maxValue } };
@@ -82,14 +91,51 @@ export function checkCommitted(
   if (value < minValue) {
     return { ok: false, error: { kind: "belowMin", typed: value, minValue } };
   }
-  const onStep = nearestStep(value, step);
-  if (Math.abs(onStep - value) > step * ON_STEP_TOLERANCE) {
+  const places = decimals ?? decimalsOf(step);
+  const unit = 10 ** -places;
+  const units = decimals === undefined ? Math.round(step / unit) : 1;
+  const onStep = nearestMultiple(value, units, places);
+  if (Math.abs(onStep - value) > units * unit * ON_STEP_TOLERANCE) {
     return {
       ok: false,
-      error: { kind: "offStep", typed: value, decimals: decimalsOf(step) },
+      error: { kind: "offStep", typed: value, decimals: places },
     };
   }
   return { ok: true, value: onStep };
+}
+
+/** A number as a field is typed with: digits with at most one point, and
+    at least one digit after the point when there is one, so that "0." on
+    the way to "0.05" is none yet. */
+const TYPED_NUMBER = /^(?:\d+(?:\.\d+)?|\.\d+)$/;
+
+/**
+ * The number the text `text` of a field holds, as it is typed, when the
+ * field would take it on a commit, as `checkCommitted` has it; `null`
+ * while the text is no number, "0." or "0,05" among them, is out of the
+ * bounds, or has more decimals than the field takes. The text is read as
+ * digits and a point and not by the language of the browser, so that the
+ * number is the same in a browser set to Spanish
+ * (docs/specs/steps/variants.md, "The threshold typed and not yet
+ * committed").
+ */
+export function typedNumber(
+  text: string,
+  minValue: number,
+  maxValue: number,
+  step: number,
+  decimals?: number,
+): number | null {
+  const trimmed = text.trim();
+  if (!TYPED_NUMBER.test(trimmed)) return null;
+  const checked = checkCommitted(
+    Number(trimmed),
+    minValue,
+    maxValue,
+    step,
+    decimals,
+  );
+  return checked.ok ? checked.value : null;
 }
 
 /** `value` as the field shows it, for the words of a refusal: in

@@ -13,6 +13,13 @@
  * written with the decimal mark of another language, 0,05 in English or
  * 0.05 in Spanish, is no number, and not 5.
  *
+ * A number committed has at most the decimals of the step, or, when the
+ * field is given `decimals`, at most those, and the step is then only
+ * what an arrow key moves by. At each key the field gives `onTyped` the
+ * number its text holds, while the field would take it, and `null`
+ * otherwise and at each commit, for a screen that follows the number as
+ * it is typed (the spec, "The threshold typed and not yet committed").
+ *
  * React Aria throws away, with no word, a character typed that cannot
  * start a number of the range, a comma among them, so that 0,1 typed key
  * by key would show as 01 and be committed as 1. The field catches it as
@@ -29,7 +36,11 @@ import {
 } from "react-aria-components";
 
 import { classOf } from "../classOf.ts";
-import { checkCommitted, takesTextOut } from "./committedNumber.ts";
+import {
+  checkCommitted,
+  takesTextOut,
+  typedNumber,
+} from "./committedNumber.ts";
 import type { NumberRefusal } from "./committedNumber.ts";
 import styles from "./NumberField.module.css";
 import { Problem } from "./Problem.tsx";
@@ -67,10 +78,18 @@ export interface NumberFieldProps {
   /** The largest number it takes. */
   readonly maxValue: number;
   /** The step an arrow key moves by; a number committed must be a
-      multiple of it. */
+      multiple of it, unless `decimals` is given. */
   readonly step: number;
+  /** The most decimals a number committed may have, apart from the step:
+      4 for a threshold of the individuals, whose step is 0.01. */
+  readonly decimals?: number;
+  /** The ids of the elements elsewhere on the page that describe the
+      field, separated by spaces, read after the line of a refusal and
+      before `description`: the count of a filter and the line under its
+      switch. */
+  readonly describedBy?: string;
   /** A line under the field, which a screen reader reads with it, after
-      the line of a refusal. */
+      the line of a refusal and the elements of `describedBy`. */
   readonly description?: string;
   /** The line under the field for a number it refused, or a character it
       threw away, from the reason and the value it keeps, the one it shows
@@ -85,6 +104,14 @@ export interface NumberFieldProps {
       a screen that needs the number before the field is left, a file
       dropped on it while it is typed. */
   readonly onCommitReady?: (commit: (() => void) | null) => void;
+  /** Called at each change of the text typed with the number it holds
+      when the field would take it, and with `null` while it is no
+      number, is out of the bounds or has more decimals than the field
+      takes, and at each commit, when the field shows again the number
+      committed or kept. The value of the field changed otherwise, by an
+      Undo, gives no call: the field has lost the focus, and been
+      committed, before an Undo is pressed. */
+  readonly onTyped?: (typed: number | null) => void;
   /** Called with the number committed, within the bounds and on the
       step, never with an empty field nor with a number refused. */
   readonly onChange: (value: number) => void;
@@ -97,10 +124,13 @@ export function NumberField({
   minValue,
   maxValue,
   step,
+  decimals,
+  describedBy,
   description,
   refusedText,
   onRefused,
   onCommitReady,
+  onTyped,
   onChange,
 }: NumberFieldProps): React.JSX.Element {
   const refusedId = useId();
@@ -136,14 +166,16 @@ export function NumberField({
   };
   const commitEnds = (): void => {
     refusing.current = false;
+    onTyped?.(null);
   };
 
   // The description of the field, the line of a refusal first and the
   // line under the field after it (the spec, "Accessibility"). Given by
   // the page and not by React Aria's slot of a description, which it
   // would put before the line of the refusal.
-  const describedBy = [
+  const describers = [
     ...(refused !== null ? [refusedId] : []),
+    ...(describedBy !== undefined && describedBy !== "" ? [describedBy] : []),
     ...(description !== undefined ? [descriptionId] : []),
   ];
 
@@ -159,8 +191,8 @@ export function NumberField({
       // as it is; checkCommitted takes it or refuses it.
       commitBehavior="validate"
       isWheelDisabled
-      {...(describedBy.length > 0 && {
-        "aria-describedby": describedBy.join(" "),
+      {...(describers.length > 0 && {
+        "aria-describedby": describers.join(" "),
       })}
       onChange={(committed) => {
         // What the field showed was not what was typed: nothing is sent,
@@ -169,7 +201,13 @@ export function NumberField({
         if (refusing.current) return;
         // An empty field gives NaN, which sends nothing.
         if (!Number.isFinite(committed)) return;
-        const checked = checkCommitted(committed, minValue, maxValue, step);
+        const checked = checkCommitted(
+          committed,
+          minValue,
+          maxValue,
+          step,
+          decimals,
+        );
         if (checked.ok) {
           setRefused(null);
           onChange(checked.value);
@@ -193,6 +231,9 @@ export function NumberField({
         onCommitStarts={commitStarts}
         onCommitEnds={commitEnds}
         onCommitReady={onCommitReady}
+        onText={(text) => {
+          onTyped?.(typedNumber(text, minValue, maxValue, step, decimals));
+        }}
       />
       {description !== undefined && (
         <p id={descriptionId} className={classOf(styles, "description")}>
@@ -219,6 +260,9 @@ interface FieldInputProps {
   readonly onCommitEnds: () => void;
   /** As the field's. */
   readonly onCommitReady: NumberFieldProps["onCommitReady"];
+  /** Called with the text of the input at each change of it that React
+      Aria took. */
+  readonly onText: (text: string) => void;
 }
 
 /** The input of the field, which reads React Aria's state of it: to
@@ -232,6 +276,7 @@ function FieldInput({
   onCommitStarts,
   onCommitEnds,
   onCommitReady,
+  onText,
 }: FieldInputProps): React.JSX.Element {
   const state = useContext(NumberFieldStateContext);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -296,6 +341,7 @@ function FieldInput({
         if (takesTextOut(state.inputValue, event.currentTarget.value)) {
           onMended();
         }
+        onText(event.currentTarget.value);
       }}
       onPaste={(event) => {
         // A text pasted over the whole field is committed by React Aria at
@@ -303,6 +349,9 @@ function FieldInput({
         if (state === null || !event.isDefaultPrevented()) return;
         const pasted = event.clipboardData.getData("text/plain").trim();
         if (!state.validate(pasted)) onNotTaken(pasted);
+        // Committed, or left as it was: the text is again the number of
+        // the field.
+        onCommitEnds();
       }}
       onKeyDownCapture={(event) => {
         if (isCommitKey(event)) onCommitStarts();
