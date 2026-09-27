@@ -884,3 +884,27 @@ otherwise wrote "s000s000", which nobody typed, in Chromium and WebKit.
 As at stop A, the reason under a list does not say "in the Variants
 step"; it describes its text area, and an Apply that brings a reason
 announces it.
+
+7.2 as c02d7cd (`individualChecks.md`: the order of equal rows, the
+name of the table, the titles of the two histograms), fa7a2af and
+7fc0011. The task's subagent left the worktree on its commit 910fa4b
+and not on the branch, with its work uncommitted; the orchestrator put
+it back on the branch, and the work carried over whole.
+
+### The table at 10,000 individuals (task 7.2, `VS7 D4`)
+
+On the Mac of work package 5, a VCF of 10,000 individuals from
+`e2e/bigVcf.ts`, the median time the page is frozen, in ms, after the
+column Kept changes (a list applied) and after a sort:
+
+| engine | every row drawn: Kept / sort | the rows on the screen drawn: Kept added / changed / sort |
+|---|---|---|
+| Chromium 153.0.8010.12 | 5,307 / 6,714 | 130 / 121 / 262 |
+| WebKit 26.6 | 2,471 / 3,712 | 113 / 88 / 375 |
+
+Every row drawn froze the page for seconds, so the table draws only
+the rows on the screen, React Aria's `Virtualizer`, as the plan says.
+It still freezes 88 to 375 ms, above the 100 ms the plan named; taken
+as it is, and task 7.3 adds the thresholds to the measurement. The
+page's first script is 189.72 KB gzipped after 7.2, against 154.9 KB
+after 6.2: to be looked at by the review.

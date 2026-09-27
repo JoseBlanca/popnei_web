@@ -901,7 +901,7 @@ writes the variants of the individuals kept.
 - [x] 7.1 The two lists, from `variants.md`, "The two lists", their
   reasons under each list and beside the disabled Write. Serves 1 and 5.
   Needs work package 6.
-- [ ] 7.2 The block "Statistics of each individual": its button and
+- [x] 7.2 The block "Statistics of each individual": its button and
   states, the table with its column Kept, sorted by React Aria's
   `Table`, the two histograms from `binValues` beside the thresholds,
   and the CSVs, from `individualChecks.md`, "The panel", and
