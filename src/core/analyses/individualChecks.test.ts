@@ -145,6 +145,38 @@ function panelMissingGtRate(): Float64Array {
   );
 }
 
+/** The statistics of each individual of panel.nei at 0.05, from the
+    fixture, as a result of the 1,152 variants that filter keeps. */
+function panelResult(): IndividualChecksResult {
+  const parsed: unknown = JSON.parse(
+    readFileSync(
+      new URL(
+        "../../../e2e/fixtures/panel_individual_stats.json",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    !("individuals" in parsed) ||
+    !Array.isArray(parsed.individuals) ||
+    !("obsHetRate" in parsed) ||
+    !Array.isArray(parsed.obsHetRate)
+  ) {
+    throw new Error("panel_individual_stats.json lacks a field");
+  }
+  return result({
+    individuals: parsed.individuals.map((v: unknown) => String(v)),
+    missingGtRate: Array.from(panelMissingGtRate()),
+    obsHetRate: parsed.obsHetRate.map((v: unknown) =>
+      typeof v === "number" ? v : NaN,
+    ),
+    numVars: 1152,
+  });
+}
+
 /** The bins of `edges` and `counts` as `histogramRows` gives them for a
     threshold that keeps the bins before `split`, splits it and removes
     those after it. */
@@ -188,6 +220,14 @@ describe("VS3 D1 the statistics of each individual: the worked example", () => {
   test("checkNumbers gives the variants kept and the two means", () => {
     expect(individualChecks.checkNumbers(EXAMPLE)).toEqual([4, 0.5, 0.5]);
     expect(individualChecks.numCheckNumbers(project())).toBe(3);
+  });
+
+  test("checkNumbers of the statistics of panel.nei at 0.05 gives the check numbers of the spec", () => {
+    // Exact: a project file compares its check numbers exactly, so a
+    // mean summed in another order would differ from a saved one.
+    expect(individualChecks.checkNumbers(panelResult())).toEqual([
+      1152, 0.028472222222222204, 0.3541326613885106,
+    ]);
   });
 
   test("run sends the job with the filters of the project in their order", () => {
