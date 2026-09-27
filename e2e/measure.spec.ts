@@ -2173,16 +2173,40 @@ async function frozenBy(control: Locator): Promise<number> {
   });
 }
 
+/** The time the page is frozen by Enter pressed in the field `field`,
+    which commits what it holds: from the key, which React answers in the
+    same task, to the end of the task that follows the next frame, as
+    `frozenBy`. */
+async function frozenByEnter(field: Locator): Promise<number> {
+  return field.evaluate(async (element) => {
+    const t0 = performance.now();
+    element.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Enter",
+        code: "Enter",
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => {
+        setTimeout(resolve, 0);
+      });
+    });
+    return performance.now() - t0;
+  });
+}
+
 /**
  * The time the page is frozen by the table of the statistics of each
  * individual at 10,000 individuals (docs/specs/analyses/individualChecks.md,
  * "Left for the running application"; the plan of the Variants step,
  * VS7 D4): the column Kept added by a list applied, then changed by
- * another list, and the table sorted by a header. The change of a
- * threshold of the filters of individuals redraws the column Kept as a
- * list does, with no pass, and is measured here once its fields exist.
+ * another list, the table sorted by a header, and a threshold of the
+ * filters of individuals committed, which redraws the column Kept and
+ * the counts beside the filters with no pass.
  */
-test("VS7 D4 the table at 10,000 individuals: the page frozen when the column Kept changes and when a header sorts it", async ({
+test("VS7 D4 the table at 10,000 individuals: the page frozen when the column Kept changes, when a header sorts it and when a threshold moves", async ({
   page,
   browser,
   browserName,
@@ -2248,6 +2272,31 @@ test("VS7 D4 the table at 10,000 individuals: the page frozen when the column Ke
   }
   await expect(header).toHaveAttribute("aria-sort", /ascending|descending/);
 
+  // A threshold of the individuals committed: the missing data of each
+  // individual, about 3 in 100 of its 500 genotypes, so that 0.03 and
+  // 0.028 in turn move thousands of individuals between kept and removed.
+  // The number is typed, and the Enter that commits it timed.
+  await section
+    .getByText("Filter the individuals by missing data", { exact: true })
+    .click();
+  const threshold = section.getByLabel(
+    "Maximum proportion of missing genotypes of an individual, from 0 to 1",
+    { exact: true },
+  );
+  await expect(threshold).toHaveValue("0.1");
+  const moved: number[] = [];
+  for (let k = 0; k < REPEATS; k++) {
+    const value = k % 2 === 0 ? "0.03" : "0.028";
+    await threshold.fill(value);
+    moved.push(await frozenByEnter(threshold));
+    await expect(
+      section.getByText(
+        /^Kept [\d,]+ of the 10,000 individuals it was given\.$/,
+      ),
+    ).toBeVisible();
+    await expect(threshold).toHaveValue(value);
+  }
+
   report(
     `The table of the statistics of ${TABLE_INDIVIDUALS.toLocaleString("en-US")} individuals, from a VCF of ${String(TABLE_VARIANTS)} variants`,
     `${machine(browser, browserName)}; ${String(drawn)} rows of the table in the page, its header among them; each time from the click to the end of the task after the next frame, ${String(REPEATS)} times but the first`,
@@ -2256,6 +2305,7 @@ test("VS7 D4 the table at 10,000 individuals: the page frozen when the column Ke
       ["the column Kept added by a list", ms(added), "once"],
       ["the column Kept changed by a list", ...stats(changed, ms)],
       ["a header sorts the rows", ...stats(sorted, ms)],
+      ["a threshold of the individuals committed", ...stats(moved, ms)],
     ],
   );
 });
