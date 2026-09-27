@@ -750,7 +750,17 @@ stop A; the stepper shows it whole. The reason describes the field of
 each threshold that is on, after its count, and when a command of the
 section, an Apply, a Clear, a threshold committed or a switch, makes
 it appear, the step announces it, since the focus stays on the control
-that sent it. Nothing stands under the filters, and no count beside
+that sent it. After such a command, when the line of the individuals
+that pass stands under the filters, the step announces that line,
+"119 of the 200 individuals of panel.nei pass the filters.", since a
+screen reader does not read the description of a field again when it
+changes under the focus, and the user would not hear what the filters
+now keep; not when the reason of a list appears, which is announced in
+its place, nor while the individuals kept wait for the statistics, when
+the counts say "Known once …" and nothing is announced. Decided without
+the owner on 27 September 2026, in the line of the owner's rule at stop
+A that a reason is announced when it appears, for the owner to judge at
+stop B. Nothing stands under the filters, and no count beside
 them, while no filter of individuals is set, where "200 of the 200
 individuals of panel.nei pass the filters." would say only what the
 card of the file says; while the list or the file gives
