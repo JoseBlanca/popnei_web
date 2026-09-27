@@ -311,7 +311,13 @@ function FieldInput({
       const start = input.selectionStart ?? input.value.length;
       const end = input.selectionEnd ?? start;
       const next = `${input.value.slice(0, start)}${inserted}${input.value.slice(end)}`;
-      if (state.validate(next)) return;
+      if (state.validate(next)) {
+        // A text selected and typed over mends what was typed, even when
+        // it is typed over with the same text, 0 over 0, which the
+        // change of the input cannot tell from no change.
+        if (start !== end) onMended();
+        return;
+      }
       onNotTakenPending();
       onNotTaken(inserted);
     };
@@ -319,7 +325,7 @@ function FieldInput({
     return () => {
       input.removeEventListener("beforeinput", onBeforeInput);
     };
-  }, [state, onNotTaken, onNotTakenPending]);
+  }, [state, onNotTaken, onNotTakenPending, onMended]);
 
   useEffect(() => {
     if (state === null || onCommitReady === undefined) return;
