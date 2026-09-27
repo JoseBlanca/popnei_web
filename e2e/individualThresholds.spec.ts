@@ -156,6 +156,11 @@ async function thresholdsSet(page: Page): Promise<void> {
   await commit(page, MISSING_LABEL, "0.03");
   await flip(page, OBS_HET_SWITCH);
   await commit(page, OBS_HET_LABEL, "0.38");
+  // Heard as well as seen: the field's description changed under the
+  // focus, which a screen reader does not read again.
+  await expect(status(page)).toHaveText(
+    new RegExp(`(^| )${PASS_119.replaceAll(".", "\\.")}$`),
+  );
   await expect(
     section(page).getByText(PASS_119, { exact: true }),
   ).toBeVisible();

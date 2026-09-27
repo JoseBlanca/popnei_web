@@ -236,6 +236,19 @@ export function keptTotal(p: Project, kept: IndividualsKept | null): KeptTotal {
   };
 }
 
+/** What the step announces after a command of the section: the line of
+    the individuals that pass when it stands under the filters after it,
+    since a screen reader does not read again a description that changes
+    under the focus; the reason of none kept when it appears,
+    `appearedKeptNone`; nothing while the individuals kept wait for the
+    statistics, or no filter is set. */
+export function keptAnnouncement(
+  before: KeptTotal,
+  after: KeptTotal,
+): string | null {
+  return after.kind === "passed" ? after.text : appearedKeptNone(before, after);
+}
+
 /** What the step announces after a command of the section that changed
     the reason of no individual kept from `before` to `after`: the reason,
     as it is shown, when there is one now that was not there before;

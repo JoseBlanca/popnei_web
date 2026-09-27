@@ -22,6 +22,7 @@ import {
   INDIVIDUAL_OBS_HET_TURNED_ON,
   KNOWN_ONCE_TEXT,
   appearedKeptNone,
+  keptAnnouncement,
   individualCountText,
   individualKeptText,
   individualThresholdText,
@@ -257,5 +258,23 @@ describe("what stands under the filters of individuals", () => {
     expect(
       appearedKeptNone(none, { kind: "keptNone", text: "Other words." }),
     ).toBe("Other words.");
+  });
+
+  test("after a command, the line of those that pass is announced; the reason of none kept when it appears; nothing while they wait", () => {
+    const none = {
+      kind: "keptNone",
+      text: "The filters of individuals keep none of the 5 individuals of panel.nei. Loosen them.",
+    } as const;
+    const passed = {
+      kind: "passed",
+      text: "2 of the 5 individuals of panel.nei pass the filters.",
+    } as const;
+    const nothing = { kind: "nothing" } as const;
+    expect(keptAnnouncement(nothing, passed)).toBe(passed.text);
+    expect(keptAnnouncement(passed, passed)).toBe(passed.text);
+    expect(keptAnnouncement(none, passed)).toBe(passed.text);
+    expect(keptAnnouncement(passed, none)).toBe(none.text);
+    expect(keptAnnouncement(none, none)).toBeNull();
+    expect(keptAnnouncement(passed, nothing)).toBeNull();
   });
 });

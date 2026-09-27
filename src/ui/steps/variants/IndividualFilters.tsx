@@ -71,7 +71,7 @@ import {
   INDIVIDUAL_THRESHOLD_STEP,
   THRESHOLD_KINDS,
   THRESHOLD_WORDS,
-  appearedKeptNone,
+  keptAnnouncement,
   individualCountText,
   individualThresholdText,
   keptTotal,
@@ -128,9 +128,9 @@ export function IndividualFilters(): React.JSX.Element {
     (s) => statusOf(s, "individualChecks").kind === "error",
   );
 
-  /** Sends a command of the section, and announces the reason of a list,
-      or of no individual kept, that it makes appear, since the focus
-      stays on the control that sent it. */
+  /** Sends a command of the section, and announces the reason of a list
+      that it makes appear, or else what the filters now keep, since the
+      focus stays on the control that sent it. */
   const send = (step: StepCommand): void => {
     const state = store.getState();
     const before = individualListNeeds(state.project);
@@ -139,7 +139,7 @@ export function IndividualFilters(): React.JSX.Element {
     const after = store.getState();
     const appeared =
       appearedReason(before, individualListNeeds(after.project)) ??
-      appearedKeptNone(
+      keptAnnouncement(
         totalBefore,
         keptTotal(after.project, after.individualsKept),
       );

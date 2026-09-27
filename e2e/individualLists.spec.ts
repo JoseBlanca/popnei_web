@@ -199,24 +199,26 @@ test("VS7 D1 the list cleared: the text emptied, the reason gone and Write given
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("VS7 D1 a list popnei accepts is applied with nothing announced, and a Clear that brings the reason of the other list announces it and describes that list, and axe", async ({
+test("VS7 D1 a list popnei accepts is applied with what the filters keep announced, and a Clear that brings the reason of the other list announces it and describes that list, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {
   await openVariants(page);
   await loadPanelNei(page);
   await expect(status(page)).toHaveText(/panel\.nei read/u);
-  const read = await status(page).textContent();
   await typeInto(keepArea(page), "s000\ns001");
   await button(page, "Apply the list to keep").click();
   await expect(undoButton(page)).toHaveAccessibleDescription(
     "Undo: the list of individuals to keep changed",
   );
-  // Described by its count alone, which is not announced.
+  // Described by its count, which a screen reader does not read again
+  // under the focus; what the filters keep is announced instead.
   await expect(keepArea(page)).toHaveAccessibleDescription(
     "Kept 2 of the 200 individuals it was given.",
   );
-  await expect(status(page)).toHaveText(read ?? "");
+  await expect(status(page)).toHaveText(
+    "2 of the 200 individuals of panel.nei pass the filters.",
+  );
 
   // The list to keep is checked first, so a refused list to remove shows
   // its reason only once the list to keep is fine.
