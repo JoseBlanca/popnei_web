@@ -732,6 +732,31 @@ test("WS7 D3 the calculations that could not start are told in the words of the 
   ).toBeVisible();
 });
 
+test("WS7 D3 popnei's wasm not served: once the calculation worker is given up, nothing is shown before a file is picked", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  let wasmAsked = 0;
+  await page.route("**/*.wasm", (route) => {
+    wasmAsked += 1;
+    return route.fulfill({ status: 404 });
+  });
+  await openVariants(page);
+
+  // Two starts of the calculation worker, each asking for the wasm, and
+  // then no worker: the client has given it up.
+  await expect.poll(() => wasmAsked).toBeGreaterThanOrEqual(2);
+  await expect
+    .poll(() => page.workers().some((w) => w.url().includes("runnerWorker")))
+    .toBe(false);
+
+  await expect(page.getByRole("main").getByText(/could not/)).toHaveCount(0);
+  await expect(page.getByRole("alert")).toHaveText("");
+  await expect(fileButton(page)).toHaveText("Choose a variants file…");
+  await expectNoViolations(makeAxeBuilder);
+  expect(wasmAsked).toBe(2);
+});
+
 test("WS7 D3 a piece of text dropped on the zone loads nothing, and the step says what to drop", async ({
   page,
   makeAxeBuilder,
