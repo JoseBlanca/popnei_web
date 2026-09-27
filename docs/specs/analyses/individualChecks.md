@@ -412,7 +412,10 @@ are calculated:
   with "no value" sorts after every number, in both directions, so that
   a sort by heterozygosity, from the highest, starts with the highest
   that were counted; Kept sorts "kept" before "removed", and "removed"
-  first the other way. Rows equal in the column sorted keep the order
+  first the other way; a sort by Kept goes with the column when it is
+  left out, the rows back in the order of the variants file, and the
+  column is not sorted when it comes back, since a filter turned on
+  again is not a request to sort. Rows equal in the column sorted keep the order
   of the variants file, and Individual sorts the names as the browser
   orders text in English. The table is named "Statistics of each
   individual", the heading of its block, since its caption stands in
