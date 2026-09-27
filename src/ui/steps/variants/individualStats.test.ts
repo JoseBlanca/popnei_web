@@ -256,6 +256,24 @@ describe("VS7 D1 the order of the table", () => {
     ).toEqual(["b", "c", "d", "a"]);
   });
 
+  test("equal numbers keep the order of the file, not that of the names, in both directions", () => {
+    const rows = Object.freeze([
+      row("y", 0.1, 0.3),
+      row("x", 0.1, 0.3),
+      row("w", 0.2, 0.1),
+    ]);
+    for (const direction of ["ascending", "descending"] as const) {
+      const heterozygosity = names(
+        sortedRows(rows, { column: "observedHeterozygosity", direction }, null),
+      );
+      const missing = names(
+        sortedRows(rows, { column: "missingGenotypes", direction }, null),
+      );
+      expect(heterozygosity.filter((name) => name !== "w")).toEqual(["y", "x"]);
+      expect(missing.filter((name) => name !== "w")).toEqual(["y", "x"]);
+    }
+  });
+
   test("by the individual, as text in English", () => {
     expect(
       names(
@@ -278,17 +296,19 @@ describe("VS7 D1 the order of the table", () => {
   });
 
   test("by Kept, kept first going up and removed first going down, each in the order of the file", () => {
-    const isKept = (name: string): boolean => name === "d" || name === "a";
+    // b and a kept, d and c removed: in the order of the file, which is
+    // not that of their names.
+    const isKept = (name: string): boolean => name === "b" || name === "a";
     expect(
       names(
         sortedRows(ROWS, { column: "kept", direction: "ascending" }, isKept),
       ),
-    ).toEqual(["a", "d", "b", "c"]);
+    ).toEqual(["b", "a", "d", "c"]);
     expect(
       names(
         sortedRows(ROWS, { column: "kept", direction: "descending" }, isKept),
       ),
-    ).toEqual(["b", "c", "a", "d"]);
+    ).toEqual(["d", "c", "b", "a"]);
     expect(() =>
       sortedRows(ROWS, { column: "kept", direction: "ascending" }, null),
     ).toThrow(/^popnei_web defect: /);
