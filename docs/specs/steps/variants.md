@@ -727,6 +727,9 @@ many rows it has and that they are all there, since its box shows about
 a dozen and a user could take them for the whole: "200 individuals; the
 table scrolls, and its CSV holds them all.", the count of the
 individuals of the variants file, written as `counted` writes a count.
+Up to 10 individuals the box is as high as its rows and does not
+scroll, and the line says "3 individuals; the CSV holds them all.";
+10 rows fit a box of 28rem on a screen at least 500 pixels high.
 At 320 pixels wide the box scrolls sideways too, so the column Kept is
 reached by scrolling it.
 

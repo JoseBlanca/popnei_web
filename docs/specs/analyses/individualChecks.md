@@ -421,8 +421,10 @@ are calculated:
   individual", the heading of its block, since its caption stands in
   the block above the histograms (`docs/specs/steps/variants.md`), and
   it scrolls in a box of its own with its header in view, so that
-  10,000 rows do not make the step 10,000 lines long; how high the box
-  is, is left for the running application. Written with the code on 27
+  10,000 rows do not make the step 10,000 lines long; the box is as high
+  as its rows, and at most 28rem or 70% of the height of the window,
+  beyond which it scrolls, so that a table of a few rows stands in no
+  empty box. Written with the code on 27
   September 2026.
 - **Two histograms**, of the proportion of missing genotypes and of the
   observed heterozygosity, drawn by the histogram of
