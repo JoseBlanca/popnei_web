@@ -675,3 +675,55 @@ when the new calculation ended after the status region had written its
 start, the end replaced it, and the test looked too late. The page lost
 no announcement; the test now reads every text the region held
 (64989f6), 30 of 30 in each engine.
+
+### The review
+
+Reviewed by `spec`, `stale`, `errors`, `api`, `architecture`, `react`,
+`ux`, `tests`, `accessibility`, `browser` and `bundle`, those that read
+at 64989f6 and those that run the page each on a copy with its own
+port. The fixes are 2340bb8..aafbf69 and those after the second round
+below. What was fixed, each with a test that failed first where one
+could:
+
+- Typing "0,1" key by key in a threshold field drew the histogram's
+  threshold at 1 (the field dropped the comma and read "01"), while the
+  field refused the number; "0,0" drew it at 0 (e20e094, b9362ec).
+  Found by four reviewers.
+- In Chromium, Cmd+Z in a threshold field after a commit ran the
+  browser's own undo on text the page had replaced, and Tab then set the
+  filter to 0, with no word (54b452c, 3605a08).
+- The plots stayed 640 px wide when the window narrowed after they were
+  drawn, so the page scrolled sideways (ff2ee03); at 320 px the table of
+  the bins cut its column "This filter" (4471320).
+- The bar of the observed heterozygosity from 0.5, at the default 0.5,
+  was drawn like a removed bar, though 8 of its 62 variants are kept: a
+  line under the plot now names the bin the threshold splits (fe9da96,
+  8d18461).
+- After a Count refused by popnei, two lines still sent the user to a
+  Count button that was gone (8e6c5a3, c2f3a0c); a refusal of the
+  histograms told the user to change the settings, which brings nothing
+  back (49c4a4c, cc9eddc).
+- A defect in the histograms or the Count emptied the whole Variants
+  step, also after coming back to it: each now has its own error
+  boundary (19d7f9b).
+- On an iPhone set to a region that writes decimals with a comma, the
+  keypad of a threshold field had no point, so no decimal could be
+  typed (f938ade, 15b8a9d); not seen on a device.
+- Words the specs left out or said wrongly (e0034a2, 0213941, 852ae5c),
+  helpers written three times before work package 7 adds a fourth
+  (3a4f28c, ee34537, c39db42, 67379cf), and the screenshots of the Count
+  running and in error and of the histograms removed (aafbf69).
+- `docs/technology.md` now records the 21.1 KB of the plots in the
+  first script: loading them only when drawn would save 16 KB, 1.7% of a
+  first visit, which is mostly popnei's wasm, and was not taken
+  (edd9ae5).
+- The tests reviewer made 65 changes to the code, 8 of which passed
+  every test; the tests of the five that matter were added (c822fdd,
+  9457471), the worst a threshold left on the plot after an Undo.
+
+Not taken: the filter by observed heterozygosity has no line under its
+switch, as `variants.md` has it; the Count's key leaves out the filters
+of individuals, since they apply after the filters of the variants
+(`runner.md`); the notice of removed histograms lies over the line that
+says they were removed in a window 720 px high, and "done" is announced
+after a defect caught by a boundary, both for the owner below.
