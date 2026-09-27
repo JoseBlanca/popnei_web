@@ -50,16 +50,18 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
       testMatch: /screens\.spec\.ts/,
     },
-    // The measurements of stage 2, run on their own and not by test:e2e
-    // (testing.md, "The measurements").
+    // The measurements, run on their own and not by test:e2e (testing.md,
+    // "The measurements"). With no trace: its screenshots grow WebKit's GPU
+    // process by more than a gigabyte in a pass of seconds, which the
+    // measurements of the memory would count as the page's.
     {
       name: "measure-chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: { ...devices["Desktop Chrome"], trace: "off" },
       testMatch: /measure\.spec\.ts/,
     },
     {
       name: "measure-webkit",
-      use: { ...devices["Desktop Safari"] },
+      use: { ...devices["Desktop Safari"], trace: "off" },
       testMatch: /measure\.spec\.ts/,
     },
   ],

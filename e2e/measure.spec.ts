@@ -36,6 +36,17 @@
  *   the profiling build of e2e/measure/vite.profiling.config.ts, served
  *   at BASE_URL, and runs only when MEASURE_PROFILING is set.
  *
+ * And those of the writing of the filtered variants of stage 3 (VS5 D5,
+ * docs/specs/analyses/writeVariants.md, "To be measured"), in both
+ * engines, run on one worker so that one browser runs at a time: the
+ * write of the .nei file of 19,161,178 bytes and of a file ten times
+ * larger, 200,000 variants, each MEASURE_REPEATS times, with the time
+ * and the memory of the engine, the footprints of all its processes, at
+ * each moment of the write; and the largest file written, the variants
+ * doubled from 200,000, the first that fails tried again once, then
+ * three halvings between the last written and the first failed. Every
+ * file written is saved and read back whole with pyarrow, with uv.
+ *
  * The time to write and read a project file, and to make a key, is
  * measured in node, by e2e/measure/projectFile.ts.
  *
@@ -45,12 +56,13 @@
  * popnei's checkout at POPNEI or beside this repository, and the .nei by
  * writeVars of popnei in node.
  */
-import { execFileSync } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import {
   copyFile,
   mkdir,
   readFile,
+  rename,
   rm,
   utimes,
   writeFile,
@@ -64,6 +76,7 @@ import {
   type Browser,
   type Locator,
   type Page,
+  type Worker as PlaywrightWorker,
 } from "@playwright/test";
 import { init, openVcf, writeVars } from "popnei";
 
@@ -1326,4 +1339,693 @@ test("the commits of React, with a metadata file of 10,000 rows", async ({
       ];
     }),
   );
+});
+
+// ---------------------------------------------------------------------
+// The writing of the filtered variants (VS5 D5).
+
+/** A process of the engine under test: its pid and what it does, the
+    type Chromium gives it or the service WebKit runs in it. */
+interface EngineProcess {
+  readonly pid: number;
+  readonly kind: string;
+}
+
+/** Runs a command and gives its output, also when it exits with an error,
+    as `footprint` does when a process it was given has ended. */
+function execFileAsync(
+  command: string,
+  args: readonly string[],
+): Promise<string> {
+  return new Promise((resolve) => {
+    execFile(
+      command,
+      args,
+      { encoding: "utf8", maxBuffer: 16 * 2 ** 20 },
+      (_, stdout) => {
+        resolve(stdout);
+      },
+    );
+  });
+}
+
+/** The processes of the engine, Chromium's from the Chrome DevTools
+    Protocol, WebKit's from the paths of Playwright's build of it, which
+    runs one browser at a time when the tests run on one worker. */
+async function engineProcesses(
+  browser: Browser,
+  browserName: string,
+): Promise<readonly EngineProcess[]> {
+  if (browserName === "chromium") {
+    const cdp = await browser.newBrowserCDPSession();
+    try {
+      const { processInfo } = await cdp.send("SystemInfo.getProcessInfo");
+      return processInfo.map((p) => ({
+        pid: p.id,
+        kind: p.type.includes("NetworkService") ? "network" : p.type,
+      }));
+    } finally {
+      await cdp.detach();
+    }
+  }
+  const text = await execFileAsync("ps", ["-axo", "pid=,command="]);
+  const found: EngineProcess[] = [];
+  for (const line of text.split("\n")) {
+    const match = /^\s*(\d+) (.*ms-playwright\/webkit-.*)$/.exec(line);
+    if (match === null) continue;
+    const command = match[2] ?? "";
+    const service = /com\.apple\.WebKit\.(\w+)\.xpc/.exec(command)?.[1];
+    const kind = service ?? (command.includes("Playwright.app") ? "UI" : null);
+    if (kind !== null) found.push({ pid: Number(match[1]), kind });
+  }
+  return found;
+}
+
+/** The footprint of each process, as macOS counts it: its memory in RAM
+    or compressed. A process that ended meanwhile is left out. */
+async function footprints(
+  processes: readonly EngineProcess[],
+): Promise<Map<number, number>> {
+  const args = ["-f", "bytes", "--noCategories"];
+  for (const p of processes) args.push("-p", String(p.pid));
+  const text = await execFileAsync("footprint", args);
+  const found = new Map<number, number>();
+  for (const match of text.matchAll(/\[(\d+)\]: .*Footprint: (\d+) B/g)) {
+    found.set(Number(match[1]), Number(match[2]));
+  }
+  return found;
+}
+
+/** The memory of the engine at one moment: the sum of the footprints of
+    its processes of each kind, and of all of them. */
+interface Sample {
+  /** `Date.now()`, the clock the calculation worker marks its moments by. */
+  readonly t: number;
+  readonly byKind: ReadonlyMap<string, number>;
+  readonly total: number;
+}
+
+/** Takes the memory of the engine one time after another until stopped,
+    a few tens of milliseconds apart. */
+function sampleMemory(
+  browser: Browser,
+  browserName: string,
+): { readonly samples: readonly Sample[]; stop(): Promise<void> } {
+  const samples: Sample[] = [];
+  const state = { stopped: false };
+  const loop = (async () => {
+    while (!state.stopped) {
+      const processes = await engineProcesses(browser, browserName);
+      const sizes = await footprints(processes);
+      const byKind = new Map<string, number>();
+      let total = 0;
+      for (const p of processes) {
+        const size = sizes.get(p.pid);
+        if (size === undefined) continue;
+        byKind.set(p.kind, (byKind.get(p.kind) ?? 0) + size);
+        total += size;
+      }
+      samples.push({ t: Date.now(), byKind, total });
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+  })();
+  return {
+    samples,
+    async stop() {
+      state.stopped = true;
+      await loop;
+    },
+  };
+}
+
+/** How long the calculation worker holds still, busy, before and after
+    it makes the `Blob` of a written file, so that the memory can be taken
+    with the array alone and with the array and the `Blob`. */
+const WRITE_PAUSE_MS = 1500;
+
+/** The moments the calculation worker marks around the `Blob` of a
+    written file, `Date.now()` of each. */
+interface BlobMarks {
+  /** The array held, before the first pause. */
+  readonly array: number;
+  /** After the pause, the `Blob` about to be made. */
+  readonly blobStart: number;
+  /** The `Blob` made, the array still held. */
+  readonly blobEnd: number;
+  /** The end of the second pause, after which the runner drops the array. */
+  readonly pauseEnd: number;
+}
+
+/** Makes the calculation worker mark, on its console, the moments of the
+    `Blob` of a file larger than 1 MB, and hold still `WRITE_PAUSE_MS`
+    before and after making it. The worker's `Blob` is replaced by a
+    subclass that does this and is a `Blob` all the same. */
+async function markBlobs(worker: PlaywrightWorker): Promise<void> {
+  await worker.evaluate((pauseMs) => {
+    const Original = Blob;
+    const hold = (ms: number): void => {
+      const end = Date.now() + ms;
+      while (Date.now() < end) {
+        // Busy, so that nothing of the worker runs meanwhile.
+      }
+    };
+    const mark = (what: string): void => {
+      console.warn(`measure ${what} ${String(Date.now())}`);
+    };
+    class Marked extends Original {
+      constructor(parts?: BlobPart[], options?: BlobPropertyBag) {
+        const large = (parts ?? []).some(
+          (part) =>
+            typeof part !== "string" &&
+            "byteLength" in part &&
+            part.byteLength > 1_000_000,
+        );
+        if (large) {
+          mark("array");
+          hold(pauseMs);
+          mark("blobStart");
+        }
+        super(parts, options);
+        if (large) {
+          mark("blobEnd");
+          hold(pauseMs);
+          mark("pauseEnd");
+        }
+      }
+    }
+    globalThis.Blob = Marked;
+  }, WRITE_PAUSE_MS);
+}
+
+/** What one write gave. */
+interface WriteRun {
+  /** How it ended: the Save button, popnei's refusal, the worker stopped
+      with no answer, the page crashed, or other words. */
+  readonly outcome: "saved" | "refused" | "workerFailed" | "crashed" | "other";
+  /** What the section of the writing said at its end. */
+  readonly words: string;
+  /** From the write posted to the worker to its answer, the two pauses
+      taken off, in ms; null when the worker gave no answer. */
+  readonly writeMs: number | null;
+  /** How long the engine took to make the `Blob`, in ms. */
+  readonly blobMs: number | null;
+  /** The size of the file downloaded, and what pyarrow read back of it. */
+  readonly fileBytes: number | null;
+  readonly whole: string;
+  /** The memory of the engine, the sum over its processes, at each
+      moment. */
+  readonly before: Sample | null;
+  readonly peak: Sample | null;
+  readonly withArray: Sample | null;
+  readonly withArrayAndBlob: Sample | null;
+  readonly after: Sample | null;
+  readonly afterSave: Sample | null;
+}
+
+/** The sample of the largest total among those taken between `from` and
+    `to`, or null when none was. */
+function largest(
+  samples: readonly Sample[],
+  from: number,
+  to: number,
+): Sample | null {
+  let best: Sample | null = null;
+  for (const s of samples) {
+    if (s.t < from || s.t > to) continue;
+    if (best === null || s.total > best.total) best = s;
+  }
+  return best;
+}
+
+/** The sample of the median total among those between `from` and `to`. */
+function settled(
+  samples: readonly Sample[],
+  from: number,
+  to: number,
+): Sample | null {
+  const inside = samples
+    .filter((s) => s.t >= from && s.t <= to)
+    .sort((a, b) => a.total - b.total);
+  return inside[Math.floor(inside.length / 2)] ?? null;
+}
+
+function writingSection(page: Page): Locator {
+  return page.getByRole("region", { name: "Writing the filtered variants" });
+}
+
+/** Reads the written file at `path` with pyarrow: its variants, its
+    individuals and the position of its last variant, "20,000 variants of
+    1,000 individuals, the last at 20,000,000". Every batch is read, so a
+    file with a part missing or damaged fails here. */
+function readBack(path: string): string {
+  const script = [
+    "import json, sys, pyarrow as pa",
+    "r = pa.ipc.open_file(pa.memory_map(sys.argv[1]))",
+    "n = 0",
+    "last = None",
+    "for i in range(r.num_record_batches):",
+    "    b = r.get_batch(i)",
+    "    n += b.num_rows",
+    "    last = b.column('pos')[-1].as_py()",
+    "inds = json.loads(r.schema.metadata[b'popnei'])['individuals']",
+    "print(f'{n:,} variants of {len(inds):,} individuals, the last at {last:,}')",
+  ].join("\n");
+  return execFileSync(
+    UV,
+    ["run", "--no-project", "--with", "pyarrow", "python", "-c", script, path],
+    { encoding: "utf8" },
+  ).trim();
+}
+
+/** How a write ended: the Save button, or the words of a failure. */
+async function writeOutcome(
+  page: Page,
+  crashed: () => boolean,
+  timeout: number,
+): Promise<WriteRun["outcome"]> {
+  const section = writingSection(page);
+  const found: { outcome: WriteRun["outcome"] | null; started: boolean } = {
+    outcome: null,
+    started: false,
+  };
+  await expect
+    .poll(
+      async () => {
+        let bar: boolean;
+        try {
+          bar = (await section.getByRole("progressbar").count()) > 0;
+        } catch (error) {
+          // A page whose process ended answers no locator, sometimes before
+          // its event of the crash arrives.
+          if (!crashed() && !/crash|closed/i.test(String(error))) throw error;
+          found.outcome = "crashed";
+          return true;
+        }
+        if (crashed()) {
+          found.outcome = "crashed";
+        } else if (
+          (await section.getByRole("button", { name: /^Save / }).count()) > 0
+        ) {
+          found.outcome = "saved";
+        } else if (bar) {
+          found.started = true;
+        } else if (found.started) {
+          const text = await section.innerText();
+          found.outcome = text.includes("could not be written")
+            ? "refused"
+            : text.includes("stopped unexpectedly")
+              ? "workerFailed"
+              : "other";
+        }
+        return found.outcome !== null;
+      },
+      { timeout, intervals: [250] },
+    )
+    .toBe(true);
+  return found.outcome ?? "other";
+}
+
+/** Presses Write on the page, whose variants file is read, waits for the
+    end, and saves the file when there is one into MEASURE_DIR, reads it
+    back and deletes it. */
+async function writeAndSave(
+  page: Page,
+  samples: readonly Sample[],
+  crashed: () => boolean,
+): Promise<WriteRun> {
+  await expect
+    .poll(() => page.workers().some((w) => w.url().includes("runnerWorker")))
+    .toBe(true);
+  const worker = page.workers().find((w) => w.url().includes("runnerWorker"));
+  if (worker === undefined) throw new Error("no calculation worker");
+  const marks = new Map<string, number>();
+  worker.on("console", (message) => {
+    const match = /^measure (\w+) (\d+)$/.exec(message.text());
+    if (match !== null) marks.set(match[1] ?? "", Number(match[2]));
+  });
+  await markBlobs(worker);
+  await page.waitForTimeout(1500);
+  const logFrom = (await logOf(page)).length;
+  const clicked = Date.now();
+  await writingSection(page)
+    .getByRole("button", { name: "Write the filtered variants as a .nei file" })
+    .click();
+  const outcome = await writeOutcome(page, crashed, 1_800_000);
+  const ended = Date.now();
+  const words =
+    crashed() || outcome === "crashed"
+      ? "the page crashed"
+      : (await writingSection(page).innerText()).replace(/\s+/g, " ").trim();
+  const log = outcome === "crashed" ? [] : (await logOf(page)).slice(logFrom);
+  const posted = log.find((l) => l.event === "out" && l.kind === "write");
+  const answered = log.find(
+    (l) =>
+      l.event === "in" && ["written", "refused", "crashed"].includes(l.kind),
+  );
+  const array = marks.get("array");
+  const blobStart = marks.get("blobStart");
+  const blobEnd = marks.get("blobEnd");
+  const pauseEnd = marks.get("pauseEnd");
+  const blob: BlobMarks | null =
+    array === undefined ||
+    blobStart === undefined ||
+    blobEnd === undefined ||
+    pauseEnd === undefined
+      ? null
+      : { array, blobStart, blobEnd, pauseEnd };
+  const paused =
+    blob === null
+      ? 0
+      : blob.blobStart - blob.array + blob.pauseEnd - blob.blobEnd;
+  const base = {
+    words,
+    writeMs:
+      posted === undefined || answered === undefined
+        ? null
+        : answered.t - posted.t - paused,
+    blobMs: blob === null ? null : blob.blobEnd - blob.blobStart,
+    before: settled(samples, clicked - 1200, clicked),
+    peak: largest(samples, clicked, ended),
+    withArray:
+      blob === null ? null : settled(samples, blob.array + 500, blob.blobStart),
+    withArrayAndBlob:
+      blob === null
+        ? null
+        : settled(samples, blob.blobEnd + 500, blob.pauseEnd),
+  };
+  if (outcome !== "saved") {
+    return {
+      ...base,
+      outcome,
+      fileBytes: null,
+      whole: "",
+      after: null,
+      afterSave: null,
+    };
+  }
+  // The worker is started again after a large file, and the page holds
+  // the Blob until it is saved.
+  await page.waitForTimeout(3000);
+  const afterAt = Date.now();
+  await page.waitForTimeout(1000);
+  const after = settled(samples, afterAt, Date.now());
+  const download = page.waitForEvent("download", { timeout: 1_800_000 });
+  await writingSection(page)
+    .getByRole("button", { name: /^Save / })
+    .click();
+  const saving = await download;
+  const failure = await saving.failure();
+  let fileBytes: number | null = null;
+  let whole = `the download failed: ${String(failure)}`;
+  if (failure === null) {
+    await mkdir(join(MEASURE_DIR, "written"), { recursive: true });
+    const path = join(MEASURE_DIR, "written", saving.suggestedFilename());
+    await saving.saveAs(path);
+    fileBytes = statSync(path).size;
+    try {
+      whole = readBack(path);
+    } catch (error) {
+      whole = `not read back: ${String(error)}`;
+    }
+    await rm(path);
+  }
+  await page.waitForTimeout(3000);
+  const savedAt = Date.now();
+  await page.waitForTimeout(1000);
+  return {
+    ...base,
+    outcome,
+    fileBytes,
+    whole,
+    after,
+    afterSave: settled(samples, savedAt, Date.now()),
+  };
+}
+
+/** Opens a new page, picks `file`, and writes its variants with the
+    filters of a new project, taking the memory of the engine throughout.
+    With `retry`, a write that fails is tried again once, after a change of
+    the threshold that keeps the same variants, in the worker the client
+    started after the failure. */
+async function writeOnce(
+  browser: Browser,
+  browserName: string,
+  file: string,
+  retry: boolean,
+): Promise<{ run: WriteRun; retried: WriteRun | null }> {
+  const context = await browser.newContext({ acceptDownloads: true });
+  const page = await context.newPage();
+  let pageCrashed = false;
+  page.on("crash", () => {
+    pageCrashed = true;
+  });
+  const sampler = sampleMemory(browser, browserName);
+  try {
+    await page.addInitScript(instrument);
+    await page.goto("popgen.html#variants");
+    await pick(page, "Variants file", file);
+    await expect(page.getByText(/^[\d,]+ individuals$/)).toBeVisible({
+      timeout: 120_000,
+    });
+    const run = await writeAndSave(page, sampler.samples, () => pageCrashed);
+    let retried: WriteRun | null = null;
+    if (retry && run.outcome !== "saved" && run.outcome !== "crashed") {
+      await setThreshold(page, "0.2");
+      retried = await writeAndSave(page, sampler.samples, () => pageCrashed);
+    }
+    return { run, retried };
+  } finally {
+    await sampler.stop();
+    await context.close();
+  }
+}
+
+/** The kinds of process of each engine, in the order of the tables. */
+const KINDS: Readonly<Record<string, readonly string[]>> = {
+  chromium: ["browser", "renderer", "GPU", "network"],
+  webkit: ["UI", "WebContent", "Networking", "GPU"],
+};
+
+const gb = (bytes: number): string => `${(bytes / 1e9).toFixed(2)} GB`;
+
+/** The rows of the memory of the writes of one file: each moment, the
+    median of the total and its range, and the median of each kind. */
+function memoryRows(
+  runs: readonly WriteRun[],
+  browserName: string,
+): string[][] {
+  const moments: readonly [string, (r: WriteRun) => Sample | null][] = [
+    ["before the write, the file read", (r) => r.before],
+    ["the largest during the write", (r) => r.peak],
+    ["the array made, before the Blob", (r) => r.withArray],
+    ["the Blob made, the array still held", (r) => r.withArrayAndBlob],
+    ["the file written, 3 s after", (r) => r.after],
+    ["the file saved, 3 s after", (r) => r.afterSave],
+  ];
+  return moments.map(([what, of]) => {
+    const samples = runs.map(of).filter((s): s is Sample => s !== null);
+    if (samples.length === 0) return [what, "not taken"];
+    const [mid, range] = stats(
+      samples.map((s) => s.total),
+      mb,
+    );
+    const kinds = (KINDS[browserName] ?? []).map((kind) =>
+      mb(median(samples.map((s) => s.byKind.get(kind) ?? 0))),
+    );
+    return [what, `${mid} (${range})`, ...kinds];
+  });
+}
+
+/** The version of macOS, for the head of a table. */
+function macOs(): string {
+  return execFileSync("sw_vers", ["-productVersion"], {
+    encoding: "utf8",
+  }).trim();
+}
+
+/** The .nei file of 200,000 variants of the 1,000 individuals, ten times
+    that of 20,000, is written from a gzipped VCF of `e2e/bigVcf.ts`, and
+    so are the larger ones: node's wasm has the 4 GB bound of the tab's,
+    so writeVars in node cannot make them. */
+const TEN_TIMES_VARIANTS = 200_000;
+
+/** The gzipped VCF of `numVars` variants of `e2e/bigVcf.ts` in
+    MEASURE_DIR, written when it is not there: 127.6 MB for 200,000
+    variants, 5 s to write in node on the owner's Mac. */
+async function writeVcfOf(numVars: number): Promise<string> {
+  await mkdir(MEASURE_DIR, { recursive: true });
+  const path = join(MEASURE_DIR, `write_${String(numVars)}.vcf.gz`);
+  if (!existsSync(path)) {
+    // Under another name until whole, so that a run stopped midway leaves
+    // no short file for the next one to take.
+    const part = join(MEASURE_DIR, `write_${String(numVars)}.part.vcf.gz`);
+    await writeBigVcf(part, numVars);
+    await rename(part, path);
+  }
+  return path;
+}
+
+/** Writes `file` MEASURE_REPEATS times, each on a new page, and prints
+    the time and the memory. */
+async function measureWrites(
+  browser: Browser,
+  browserName: string,
+  file: string,
+  title: string,
+): Promise<void> {
+  const runs: WriteRun[] = [];
+  for (let k = 0; k < REPEATS; k++) {
+    const { run } = await writeOnce(browser, browserName, file, false);
+    expect(run.outcome, run.words).toBe("saved");
+    runs.push(run);
+  }
+  const numbers = (of: (r: WriteRun) => number | null): number[] =>
+    runs.map(of).filter((x): x is number => x !== null);
+  const head = `${machine(browser, browserName)}, macOS ${macOs()}; ${String(REPEATS)} writes, each on a new page; the median, and the range in brackets; the source ${statSync(file).size.toLocaleString("en-US")} bytes`;
+  report(
+    `${title}: the time`,
+    head,
+    ["what", "median", "range"],
+    [
+      [
+        "the write, from its request to the file in the page, the pauses taken off",
+        ...stats(
+          numbers((r) => r.writeMs),
+          ms,
+        ),
+      ],
+      [
+        "the Blob made of the array",
+        ...stats(
+          numbers((r) => r.blobMs),
+          ms,
+        ),
+      ],
+      [
+        "the file downloaded, in bytes",
+        ...stats(
+          numbers((r) => r.fileBytes),
+          (x) => x.toLocaleString("en-US"),
+        ),
+      ],
+      [
+        "read back with pyarrow",
+        [...new Set(runs.map((r) => r.whole))].join("; "),
+        "",
+      ],
+    ],
+  );
+  report(
+    `${title}: the memory of the engine, the footprints of its processes summed`,
+    `${head}; the worker held still ${ms(WRITE_PAUSE_MS)} before and after it made the Blob`,
+    ["moment", "all the processes", ...(KINDS[browserName] ?? [])],
+    memoryRows(runs, browserName),
+  );
+}
+
+test.describe("VS5 D5 the measurements of the write", () => {
+  test("VS5 D5 the write of the .nei file of 19,161,178 bytes: the time, the memory, and the copy into the Blob", async ({
+    browser,
+    browserName,
+  }) => {
+    test.setTimeout(1_800_000);
+    const { nei } = await bigFiles();
+    await measureWrites(
+      browser,
+      browserName,
+      nei,
+      "The write of the .nei file of 20,000 variants of 1,000 individuals, from itself",
+    );
+  });
+
+  test("VS5 D5 the write of a file ten times larger, 200,000 variants of 1,000 individuals: the time, the memory, and the copy into the Blob", async ({
+    browser,
+    browserName,
+  }) => {
+    test.setTimeout(3_600_000);
+    const vcf = await writeVcfOf(TEN_TIMES_VARIANTS);
+    await measureWrites(
+      browser,
+      browserName,
+      vcf,
+      "The write of the .nei file of 200,000 variants of 1,000 individuals, from their gzipped VCF",
+    );
+  });
+
+  test("VS5 D5 the largest file written, the variants doubled from 200,000 until a write fails, and a second try of the one that failed", async ({
+    browser,
+    browserName,
+  }) => {
+    // Each size is a pass over a gzipped VCF of up to 2 GB, and the file
+    // written is downloaded and read back.
+    test.setTimeout(7_200_000);
+    const rows: string[][] = [];
+    const row = (what: string, r: WriteRun): string[] => [
+      what,
+      r.outcome,
+      r.fileBytes === null ? "" : r.fileBytes.toLocaleString("en-US"),
+      r.whole,
+      r.writeMs === null ? "" : ms(r.writeMs),
+      r.peak === null ? "" : gb(r.peak.total),
+      r.withArray === null ? "" : gb(r.withArray.total),
+      r.withArrayAndBlob === null ? "" : gb(r.withArrayAndBlob.total),
+      r.after === null ? "" : gb(r.after.total),
+      r.words,
+    ];
+    /** Writes the VCF of `numVars` variants, and says whether the file
+        was saved. */
+    const tryWrite = async (
+      numVars: number,
+      retry: boolean,
+    ): Promise<boolean> => {
+      const vcf = await writeVcfOf(numVars);
+      const { run, retried } = await writeOnce(
+        browser,
+        browserName,
+        vcf,
+        retry,
+      );
+      rows.push(row(numVars.toLocaleString("en-US"), run));
+      if (retried !== null) rows.push(row("the same, tried again", retried));
+      return run.outcome === "saved";
+    };
+    // Doubled up to 3,200,000 variants, a file of about 3.5 GB, since one
+    // of 6,400,000 would be larger than the 4 GiB wasm addresses; the
+    // first that fails is tried again. Then three halvings of the interval
+    // between the last file written and the first that failed.
+    let written: number | null = null;
+    let failedAt: number | null = null;
+    for (let numVars = TEN_TIMES_VARIANTS; numVars <= 3_200_000; numVars *= 2) {
+      if (!(await tryWrite(numVars, true))) {
+        failedAt = numVars;
+        break;
+      }
+      written = numVars;
+    }
+    if (failedAt !== null && written !== null) {
+      let [low, high] = [written, failedAt];
+      for (let k = 0; k < 3; k++) {
+        const middle = (low + high) / 2;
+        if (await tryWrite(middle, false)) low = middle;
+        else high = middle;
+      }
+    }
+    report(
+      "The largest file written, the variants of 1,000 individuals doubled",
+      `${machine(browser, browserName)}, macOS ${macOs()}; one write of each, on a new page; the memory is the footprints of the engine's processes summed; a failed write is tried again once, after a change of the threshold that keeps every variant`,
+      [
+        "variants",
+        "outcome",
+        "file, bytes",
+        "read back with pyarrow",
+        "write",
+        "largest memory",
+        "the array made",
+        "the array and the Blob",
+        "written, 3 s after",
+        "the words of the step",
+      ],
+      rows,
+    );
+  });
 });

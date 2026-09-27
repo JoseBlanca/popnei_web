@@ -55,14 +55,15 @@ export function estimateText(estimate: WriteEstimate): string {
     more, after the "Warning:" that the widget of a warning puts before
     it. */
 export function warnText(estimate: WriteEstimate): string {
-  return `A file of ${aboutSize(estimate)} may need up to three times that in the memory of this tab while it is written, and a browser may close a tab that asks for too much, losing the work since the project was last saved. Save the project first. To write a smaller file, remove variants or individuals with the filters; to write any size, use popnei in Python.`;
+  return `A file of ${aboutSize(estimate)} may need about six times that in the memory of this tab while it is written, and a browser may close a tab that asks for too much, losing the work since the project was last saved. Save the project first. To write a smaller file, remove variants or individuals with the filters; to write any size, use popnei in Python.`;
 }
 
 /** Why the button is disabled for an estimate of `WRITE_MAX_BYTES` or
-    more from the counts themselves. The 4 GB are what wasm addresses,
-    whatever `WRITE_MAX_BYTES` is set to below them. */
+    more from the counts themselves. The 4 GB are what wasm addresses;
+    popnei builds the file there, about 2.4 times its size in Chromium
+    (writeVariants.md, "What was measured"). */
 export function tooLargeText(estimate: WriteEstimate): string {
-  return `A file of ${aboutSize(estimate)} cannot be written in a browser tab, which gives popnei at most 4 GB. Remove variants or individuals with the filters, or write the file with popnei in Python.`;
+  return `A file of ${aboutSize(estimate)} cannot be written in a browser tab: popnei needs more than twice the file in its memory while it writes it, and a tab gives popnei at most 4 GB. Remove variants or individuals with the filters, or write the file with popnei in Python.`;
 }
 
 /** What the part says when the filters kept no variant, and the store

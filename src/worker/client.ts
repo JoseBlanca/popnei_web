@@ -53,10 +53,12 @@ export const WORKER_READY_TIMEOUT_MS = 30_000;
 
 /** Above it, in bytes, the calculation worker is started again after a
     write, to give back the memory of wasm the file took (client.md, "A
-    write, and the restart after a large one"). Set by the measurement of
-    stage 3; meanwhile 100 MB, the value writeVariants.md gives, about five
-    times the `.nei` file of 19,161,178 bytes of the walking skeleton. */
-export const WRITE_RESTART_BYTES = 100_000_000;
+    write, and the restart after a large one"). 25 MB: a write leaves
+    about 4.5 times its file in the tab until the worker is started again,
+    88 MB for the `.nei` file of 19,161,178 bytes in Chromium, so a file of
+    25 MB leaves at most about 115 MB (writeVariants.md, "What was
+    measured"). */
+export const WRITE_RESTART_BYTES = 25_000_000;
 
 /** The page's side of the two workers. */
 export interface Client {

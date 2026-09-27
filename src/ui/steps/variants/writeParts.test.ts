@@ -34,7 +34,7 @@ function estimateOf(
     numBytes,
     bound,
     warn: numBytes >= 500_000_000,
-    tooLarge: numBytes >= 4_000_000_000 && !bound,
+    tooLarge: numBytes >= 1_800_000_000 && !bound,
   };
 }
 
@@ -77,14 +77,14 @@ describe("VS5 D3 the parts of the section of the writing in each state", () => {
   });
 
   test("ready at the largest size from the counts: Write disabled with its reason, and no warning", () => {
-    expect(writeParts(READY, estimateOf(4_300_000, 1000), PROJECT)).toEqual({
+    expect(writeParts(READY, estimateOf(2_000_000, 1000), PROJECT)).toEqual({
       message: null,
       warning: null,
       button: {
         kind: "write",
         disabled: true,
         description:
-          "A file of about 4.3 GB cannot be written in a browser tab, which gives popnei at most 4 GB. Remove variants or individuals with the filters, or write the file with popnei in Python.",
+          "A file of about 2.0 GB cannot be written in a browser tab: popnei needs more than twice the file in its memory while it writes it, and a tab gives popnei at most 4 GB. Remove variants or individuals with the filters, or write the file with popnei in Python.",
       },
     });
   });

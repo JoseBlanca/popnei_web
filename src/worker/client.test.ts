@@ -2337,18 +2337,18 @@ describe("VS1 D5 the write of the client: cancelling", () => {
 });
 
 describe("VS1 D5 the write of the client: the restart after a large write", () => {
-  test("a written of 100,000,001 bytes: the write is done, the worker ended, and a new one opens A again, then runs k5", async () => {
+  test("a written of 25,000,001 bytes, a byte above WRITE_RESTART_BYTES: the write is done, the worker ended, and a new one opens A again, then runs k5", async () => {
     const env = writeAndRun();
     emit(env.first, writtenOf(env.w1.id, "w1", LARGE_FILE));
     const outcome = await now(env.w1.outcome);
     expect(outcome).toMatchObject({ kind: "done", key: "w1" });
-    expect(fileOf(outcome)?.size).toBe(100_000_001);
+    expect(fileOf(outcome)?.size).toBe(25_000_001);
     expectReopenedThenK5(env);
   });
 
-  test("a written of exactly 100,000,000 bytes ends no worker, and k5 is sent to it", async () => {
+  test("a written of exactly WRITE_RESTART_BYTES, 25,000,000 bytes, ends no worker, and k5 is sent to it", async () => {
     const env = writeAndRun();
-    const exact = new Blob([new Uint8Array(100_000_000)]);
+    const exact = new Blob([new Uint8Array(25_000_000)]);
     emit(env.first, writtenOf(env.w1.id, "w1", exact));
     expect(await now(env.w1.outcome)).toMatchObject({ kind: "done" });
     expect(env.first.terminated).toBe(false);

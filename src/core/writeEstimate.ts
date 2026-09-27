@@ -3,8 +3,9 @@
  * written, whether it is large enough to warn of or too large to write,
  * and a size of a file in words (docs/specs/analyses/writeVariants.md,
  * "The size, before the write" and "The functions of core"). At the peak
- * of a write of F bytes the tab holds up to 3F, so the Variants step
- * says the size it expects before the user writes.
+ * of a write of F bytes the tab holds about 4F more than before in
+ * Chromium and up to 6.1F in WebKit, so the Variants step says the size it
+ * expects before the user writes.
  */
 
 import type { IndividualsKept } from "./individualsKept.ts";
@@ -12,23 +13,24 @@ import { grouped } from "./project.ts";
 import type { Project } from "./project.ts";
 
 /** The bytes of the file per genotype of a variant kept and an individual
-    kept. Meanwhile 1: popnei's `writeVars` wrote 20,000 variants of 1,000
-    individuals in 19,161,178 bytes, 0.96 per genotype, and the 1,152
-    variants of the 200 individuals of panel.nei in 250,994, 1.09; set by
-    the measurement of writeVariants.md. */
+    kept. popnei's `writeVars` wrote 0.96 to 1.10 bytes per genotype, by
+    how well its compression takes the genotypes: 0.96 for the .nei file
+    of 19,161,178 bytes, 1.09 for panel.nei, and 1.10 for the random
+    genotypes of e2e/bigVcf.ts; one byte is within 10% of each. */
 export const BYTES_PER_GENOTYPE = 1;
 
-/** The estimate from which the step warns of the memory of the write.
-    Meanwhile 500 MB, whose peak is up to 1.5 GB; set by the measurement of
-    writeVariants.md. */
+/** The estimate from which the step warns of the memory of the write: a
+    file of up to 550 MB, whose peak is up to about 2.4 GB more than the
+    tab held before in Chromium and 3.4 GB in WebKit (writeVariants.md,
+    "What was measured"). */
 export const WRITE_WARN_BYTES = 500_000_000;
 
 /** The estimate, from the counts themselves, from which the write is
-    refused. Meanwhile 4 GB, under the 4 GiB, 4,294,967,296 bytes, that
-    wasm addresses, which hold the variants read too; set by the
-    measurement of writeVariants.md, to the largest file the three engines
-    write. */
-export const WRITE_MAX_BYTES = 4_000_000_000;
+    refused: at 1.10 bytes per genotype an estimate under it is a file
+    under 1.98 GB, the largest Chromium and WebKit wrote, while a file of
+    about 2.2 GB failed in both, and closed the tab in WebKit
+    (writeVariants.md, "What was measured"). */
+export const WRITE_MAX_BYTES = 1_800_000_000;
 
 /** The size expected of the file of the filtered variants. */
 export interface WriteEstimate {

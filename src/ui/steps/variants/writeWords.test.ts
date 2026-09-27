@@ -1,7 +1,7 @@
 /**
  * The words of the writing of the filtered variants, each row of "Its
  * words" of docs/specs/analyses/writeVariants.md asserted whole from its
- * failure, the sizes of 1.0 GB and 4.3 GB from estimates of a million and
+ * failure, the sizes of 1.0 GB and 2.0 GB from estimates of a million and
  * of 4.3 million variants of 1,000 individuals.
  */
 import { describe, expect, test } from "vitest";
@@ -37,12 +37,12 @@ function estimateOf(
     numBytes,
     bound,
     warn: numBytes >= 500_000_000,
-    tooLarge: numBytes >= 4_000_000_000 && !bound,
+    tooLarge: numBytes >= 1_800_000_000 && !bound,
   };
 }
 
 const GIGABYTE = estimateOf(1_000_000, 1000);
-const TOO_LARGE = estimateOf(4_300_000, 1000);
+const TOO_LARGE = estimateOf(2_000_000, 1000);
 
 /** The sample project of core: panel.nei, with filters, so its file is
     panel.filtered.nei. */
@@ -63,16 +63,16 @@ describe("VS5 D3 the words of the writing of the filtered variants", () => {
 
   test("the warning of the memory, at about 1.0 GB, and from a bound", () => {
     expect(warnText(GIGABYTE)).toBe(
-      "A file of about 1.0 GB may need up to three times that in the memory of this tab while it is written, and a browser may close a tab that asks for too much, losing the work since the project was last saved. Save the project first. To write a smaller file, remove variants or individuals with the filters; to write any size, use popnei in Python.",
+      "A file of about 1.0 GB may need about six times that in the memory of this tab while it is written, and a browser may close a tab that asks for too much, losing the work since the project was last saved. Save the project first. To write a smaller file, remove variants or individuals with the filters; to write any size, use popnei in Python.",
     );
     expect(warnText(estimateOf(1_000_000, 1000, true))).toMatch(
       /^A file of at most about 1\.0 GB may need/u,
     );
   });
 
-  test("a file too large to write, at about 4.3 GB", () => {
+  test("a file too large to write, at about 2.0 GB", () => {
     expect(tooLargeText(TOO_LARGE)).toBe(
-      "A file of about 4.3 GB cannot be written in a browser tab, which gives popnei at most 4 GB. Remove variants or individuals with the filters, or write the file with popnei in Python.",
+      "A file of about 2.0 GB cannot be written in a browser tab: popnei needs more than twice the file in its memory while it writes it, and a tab gives popnei at most 4 GB. Remove variants or individuals with the filters, or write the file with popnei in Python.",
     );
   });
 

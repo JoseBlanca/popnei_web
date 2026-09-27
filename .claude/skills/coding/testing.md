@@ -400,6 +400,19 @@ PROFILING_OUT=<folder> npx vite preview --config e2e/measure/vite.profiling.conf
 MEASURE_PROFILING=1 BASE_URL=http://localhost:4174/popnei_web/ npx playwright test --project=measure-chromium -g "commits of React"
 ```
 
+The measurements of the write of stage 3, `VS5 D5`, are in the same
+file: the write of the `.nei` file of 19,161,178 bytes and of one of
+200,000 variants, and the largest file each engine writes, in both
+engines, with the memory taken as the footprints of all the processes of
+the engine, since the `Blob` is kept in another process than the page's.
+They run with `--workers=1`, so that one browser runs at a time, and the
+trace off, which the two projects set, since its screenshots grow
+WebKit's GPU process by more than a gigabyte. Their gzipped VCFs, of
+`e2e/bigVcf.ts`, up to 2 GB for 3,200,000 variants, are made in
+`MEASURE_DIR` when they are not there, and every file written is read
+back with pyarrow through `uv`; the largest take about 7 minutes in each
+engine on the owner's Mac.
+
 The time to write and read a project file of 10,000 individuals, and to
 make the key of the diversity, is measured in node, which runs the
 TypeScript of `src/core` as it is: `node e2e/measure/projectFile.ts`.

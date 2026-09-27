@@ -125,26 +125,26 @@ describe("VS2 D4 the size expected of the written file", () => {
   });
 
   test("tooLarge at WRITE_MAX_BYTES from exact counts, and not one byte below nor from a bound", () => {
-    expect(WRITE_MAX_BYTES).toBe(4_000_000_000);
-    const at = writeEstimate(projectOf(null, []), ONE, 4_000_000_000);
+    expect(WRITE_MAX_BYTES).toBe(1_800_000_000);
+    const at = writeEstimate(projectOf(null, []), ONE, 1_800_000_000);
     expect(at).toEqual({
-      numVars: 4_000_000_000,
+      numVars: 1_800_000_000,
       numIndividuals: 1,
-      numBytes: 4_000_000_000,
+      numBytes: 1_800_000_000,
       bound: false,
       warn: true,
       tooLarge: true,
     });
-    const below = writeEstimate(projectOf(null, []), ONE, 3_999_999_999);
+    const below = writeEstimate(projectOf(null, []), ONE, 1_799_999_999);
     expect(below?.tooLarge).toBe(false);
-    const fromRead = writeEstimate(projectOf(4_000_000_000, MAF), ONE, null);
+    const fromRead = writeEstimate(projectOf(1_800_000_000, MAF), ONE, null);
     expect(fromRead?.bound).toBe(true);
     expect(fromRead?.warn).toBe(true);
     expect(fromRead?.tooLarge).toBe(false);
     const fromLists = writeEstimate(
       projectOf(null, []),
       keptOf({ kind: "needsStatistics" }, ["i1"]),
-      4_000_000_000,
+      1_800_000_000,
     );
     expect(fromLists?.bound).toBe(true);
     expect(fromLists?.tooLarge).toBe(false);
