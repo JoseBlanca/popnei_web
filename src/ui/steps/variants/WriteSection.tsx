@@ -21,9 +21,9 @@ import { useId, useLayoutEffect, useRef } from "react";
 
 import { variantsKept as variantsKeptOf } from "../../../core/apps.ts";
 import { writtenName } from "../../../core/fileNames.ts";
-import type { WriteStatus } from "../../../core/store.ts";
+import type { AnalysisStatus, WriteStatus } from "../../../core/store.ts";
 import { writeEstimate } from "../../../core/writeEstimate.ts";
-import type { Progress } from "../../../worker/protocol.ts";
+import type { JobResult, Progress } from "../../../worker/protocol.ts";
 import { buttonOf, statusOf } from "../../analyses/status.ts";
 import { progressShare } from "../../analyses/words.ts";
 import { classOf } from "../../classOf.ts";
@@ -38,7 +38,7 @@ import { ProgressBar } from "../../widgets/ProgressBar.tsx";
 import { Warning } from "../../widgets/Warning.tsx";
 import styles from "./VariantsStep.module.css";
 import { writeParts } from "./writeParts.ts";
-import type { WriteButton } from "./writeParts.ts";
+import type { CountState, WriteButton } from "./writeParts.ts";
 import {
   WRITE_HEADING,
   WRITE_LABEL,
@@ -76,15 +76,14 @@ function WriteBody({
   const heading = useRef<HTMLHeadingElement>(null);
 
   const countStatus = useAppState((s) => statusOf(s, "filterCounts"));
-  const countRefused =
-    countStatus.kind === "error" && buttonOf(countStatus) === null;
+  const count = countStateOf(countStatus);
 
   const estimate = writeEstimate(project, kept, variantsKept);
   const { message, warning, button } = writeParts(
     write,
     estimate,
     project,
-    countRefused,
+    count,
   );
 
   return (
@@ -147,6 +146,24 @@ function WriteBody({
   );
 }
 
+/** What the Count of the filters is doing, from its state, as the
+    section needs it: refused when it is in error with no button to count
+    again. */
+function countStateOf(status: AnalysisStatus<JobResult>): CountState {
+  switch (status.kind) {
+    case "done":
+      return "counted";
+    case "running":
+      return "counting";
+    case "error":
+      return buttonOf(status) === null ? "refused" : "notCounted";
+    case "locked":
+    case "ready":
+    case "removed":
+      return "notCounted";
+  }
+}
+
 /** What the button of the section is drawn with. */
 interface ActionButtonProps {
   /** Write, with what describes it, Stop, or Save. */
@@ -206,7 +223,9 @@ function ActionButton({
           onPress={onWrite}
           ref={element}
           isDisabled={button.disabled}
-          description={button.description}
+          {...(button.description === null
+            ? {}
+            : { description: button.description })}
         />
       );
   }

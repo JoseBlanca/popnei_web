@@ -200,12 +200,11 @@ test("VS5 D3 panel.nei at 0.05 written and saved: the download panel.filtered.ne
     ),
   ).toBeVisible();
   await expect(saveButtons(page)).toHaveCount(0);
-  // The write counted the variants the filter keeps, so the size is
-  // known: 1,152 variants of 200 individuals, at one byte each and 40
-  // bytes more a variant, 276,480 bytes for the 250,994 written.
-  await expect(writeButton(page)).toHaveAccessibleDescription(
-    "About 276 KB: 1,152 variants of 200 individuals.",
-  );
+  // Write, with no estimate beside it, so that the size written is the
+  // one size of the section, as the owner decided at stop A on 27
+  // September 2026.
+  await expect(writeButton(page)).toBeEnabled();
+  await expect(writeButton(page)).toHaveAccessibleDescription("");
   await expectNoViolations(makeAxeBuilder);
 });
 
@@ -417,7 +416,7 @@ test("VS5 D3 with the focus on Stop of a write that waits for the statistics, a 
   await releaseResults(page);
   await expect(writeButton(page)).toBeDisabled();
   await expect(writeButton(page)).toHaveAccessibleDescription(
-    "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them in the Variants step.",
+    "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them.",
   );
   await expect(
     writing(page).getByRole("heading", {
@@ -490,7 +489,7 @@ test("VS5 D3 Open project… with the file written and not saved asks first, and
     name: "Open panel.popnei.json?",
   });
   await expect(question).toHaveAccessibleDescription(
-    "It replaces the project on the page, and an opening cannot be undone. To keep the project on the page, press Keep the current project and save it first. panel.filtered.nei, written and not saved, will be discarded.",
+    "It replaces the project on the page, and an opening cannot be undone. To keep the project on the page, press Keep the current project and save it first. panel.filtered.nei, written and not saved, will be discarded; to keep it, press Keep the current project and save it in the Variants step.",
   );
   await expectNoViolations(makeAxeBuilder);
   await question
@@ -574,7 +573,7 @@ test("VS5 D3 a VCF with no variant that passed, read with only those, written: t
   await writeButton(page).click();
   await expect(
     writing(page).getByText(
-      'nopass.vcf has no variant with PASS or . in its FILTER column, and it was read with only those, so there is nothing to write. Untick "Only the variants with PASS or . in the FILTER column" in the Variants step and read the file again.',
+      'nopass.vcf has no variant with PASS or . in its FILTER column, and it was read with only those, so there is nothing to write. Untick "Only the variants with PASS or . in the FILTER column" and read the file again.',
       { exact: true },
     ),
   ).toBeVisible();
@@ -713,16 +712,15 @@ test("VS5 D3 counts of 3,000,000 variants of 200 individuals warn of the memory 
   await writeAndSaveCounted(page, 3_000_000);
   await expect(
     writing(page).getByText(
-      "Warning: A file of about 720.0 MB may need about six times that in the memory of this tab while it is written, and a browser may close a tab that asks for too much, losing the work since the project was last saved. Save the project first. To write a smaller file, remove variants or individuals with the filters; to write any size, use popnei in Python.",
+      "Warning: A file of about 720.0 MB may need about six times that in the memory of this tab while it is written, and a browser may close a tab that asks for too much, losing the work since the project was last saved. On a phone or a tablet, the write fails with far smaller files. Save the project first. To write a smaller file, remove variants or individuals with the filters; to write any size, use popnei in Python.",
       {
         exact: true,
       },
     ),
   ).toBeVisible();
+  // Saved, Write has no estimate beside it.
   await expect(writeButton(page)).toBeEnabled();
-  await expect(writeButton(page)).toHaveAccessibleDescription(
-    "About 720.0 MB: 3,000,000 variants of 200 individuals.",
-  );
+  await expect(writeButton(page)).toHaveAccessibleDescription("");
   await expectNoViolations(makeAxeBuilder);
 
   // New filters, whose counts the next write gives.
@@ -734,6 +732,36 @@ test("VS5 D3 counts of 3,000,000 variants of 200 individuals warn of the memory 
   );
   await expect(writing(page).getByText(/^Warning:/)).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
+});
+
+test("VS5 D3 before a Count, a file whose variants make a bound of 1.8 GB or more refuses Write and asks for the Count, which gives Write back, and axe", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openVariants(page);
+  await loadPanelNei(page);
+  // A write that the worker counts as 8,000,000 variants kept of
+  // 8,001,000 makes the step take the file for one of 8,001,000
+  // variants.
+  await writeAndSaveCounted(page, 8_000_000);
+  // New filters, not counted: the variants of the file are a bound,
+  // 8,001,000 of 240 bytes, 1,920,240,000 bytes.
+  await setThreshold(page, "0.06");
+  await expect(writeButton(page)).toBeDisabled();
+  await expect(writeButton(page)).toHaveAccessibleDescription(
+    "A file of at most about 1.9 GB may be too large to be written in a browser tab. Count the variants first, above.",
+  );
+  await expect(writing(page).getByText(/^Warning:/)).toHaveCount(0);
+  await expectNoViolations(makeAxeBuilder);
+
+  // The Count gives the variants kept, and Write back with their size.
+  await page
+    .getByRole("button", { name: "Count the variants each filter keeps" })
+    .click();
+  await expect(writeButton(page)).toBeEnabled();
+  await expect(writeButton(page)).toHaveAccessibleDescription(
+    /^About .*: [\d,]+ variants of 200 individuals\.$/u,
+  );
 });
 
 test("VS5 D3 a write whose worker stopped shows its error and offers Write again, and axe", async ({
@@ -771,7 +799,7 @@ test("VS5 D3 with the focus on Stop, popnei's refusal of the write shows its err
   await releaseWritten(page);
   await expect(
     writing(page).getByText(
-      'panel.filtered.nei could not be written: popnei stopped with "memory could not grow". The file may not fit in the memory of this tab: remove variants or individuals with the filters and write it again, or write the file with popnei in Python. If the message names a line of the VCF, correct the file, or fetch it again, and load it in the Variants step.',
+      'panel.filtered.nei could not be written: popnei stopped with "memory could not grow". The file may not fit in the memory of this tab: remove variants or individuals with the filters and write it again, or write the file with popnei in Python. If the message names a line of the VCF, correct the file, or fetch it again, and load it again.',
       { exact: true },
     ),
   ).toBeVisible();

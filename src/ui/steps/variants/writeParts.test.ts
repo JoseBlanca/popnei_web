@@ -63,12 +63,11 @@ describe("VS5 D3 the parts of the section of the writing in each state", () => {
     });
   });
 
-  test("ready with no size known and the Count refused: Write, described by the size not known", () => {
-    expect(writeParts(READY, null, PROJECT, true).button).toEqual({
+  test("ready with no size known while the Count runs: Write, described by the end of the Count, with no word that asks for it", () => {
+    expect(writeParts(READY, null, PROJECT, "counting").button).toEqual({
       kind: "write",
       disabled: false,
-      description:
-        "The size of the file is not known, since the variants could not be counted.",
+      description: "The size of the file is known once the Count above ends.",
     });
   });
 
@@ -253,7 +252,7 @@ describe("VS5 D3 the parts of the section of the writing in each state", () => {
     ).toEqual({
       message: {
         kind: "line",
-        text: "panel.nei has no variants, so there is nothing to write. Load another variants file in the Variants step.",
+        text: "panel.nei has no variants, so there is nothing to write. Load another variants file.",
       },
       warning: null,
       button: null,
@@ -311,5 +310,137 @@ describe("VS5 D3 the parts of the section of the writing in each state", () => {
       /^The statistics of each individual, .* so the file was not written\. /u,
     );
     expect(statsRefused.button).toBeNull();
+  });
+});
+
+/** The sample project with `numVars` variants counted in its file. */
+function withFileVariants(numVars: number): Project {
+  const variants = PROJECT.variants;
+  if (variants?.read.kind !== "read") {
+    throw new Error("the sample project has a read variants file");
+  }
+  return {
+    ...PROJECT,
+    variants: { ...variants, read: { ...variants.read, numVars } },
+  };
+}
+
+describe("the writing refused before it starts, as the owner decided at stop A on 27 September 2026", () => {
+  const BOUND = estimateOf(2_000_000, 1000, true);
+
+  test("before a Count, a bound at the largest size: Write disabled, asking for the Count, and no warning", () => {
+    for (const count of ["notCounted", undefined] as const) {
+      expect(writeParts(READY, BOUND, PROJECT, count)).toEqual({
+        message: null,
+        warning: null,
+        button: {
+          kind: "write",
+          disabled: true,
+          description:
+            "A file of at most about 2.0 GB may be too large to be written in a browser tab. Count the variants first, above.",
+        },
+      });
+    }
+  });
+
+  test("while the Count runs, a bound at the largest size: Write disabled, with no word that asks for the Count", () => {
+    expect(writeParts(READY, BOUND, PROJECT, "counting").button).toEqual({
+      kind: "write",
+      disabled: true,
+      description:
+        "A file of at most about 2.0 GB may be too large to be written in a browser tab. Its size is known once the Count above ends.",
+    });
+  });
+
+  test("a bound one byte under the largest size, or a bound of the individuals alone with the variants counted: Write offered", () => {
+    const under = { ...BOUND, numBytes: 1_799_999_999 };
+    expect(writeParts(READY, under, PROJECT).button).toMatchObject({
+      disabled: false,
+    });
+    expect(writeParts(READY, BOUND, PROJECT, "counted").button).toMatchObject({
+      disabled: false,
+    });
+    const noVariantFilter: Project = { ...PROJECT, filters: [] };
+    expect(writeParts(READY, BOUND, noVariantFilter).button).toMatchObject({
+      disabled: false,
+    });
+  });
+
+  test("the Count says the filters keep no variant: Write disabled with the words of a file of no variant", () => {
+    expect(
+      writeParts(READY, estimateOf(0, 200), withFileVariants(1200), "counted"),
+    ).toEqual({
+      message: null,
+      warning: null,
+      button: {
+        kind: "write",
+        disabled: true,
+        description:
+          "The filters keep none of the variants of panel.nei, so there is nothing to write. Loosen the filters above.",
+      },
+    });
+  });
+
+  test("a variants file of no variant: Write disabled with the words of an empty source, without the name of the step", () => {
+    expect(
+      writeParts(READY, estimateOf(0, 200), withFileVariants(0), "counted")
+        .button,
+    ).toEqual({
+      kind: "write",
+      disabled: true,
+      description:
+        "panel.nei has no variants, so there is nothing to write. Load another variants file.",
+    });
+  });
+
+  test("the Count refused: Write disabled, sent to the words of the Count, with or without a size", () => {
+    const refused = {
+      kind: "write",
+      disabled: true,
+      description:
+        "The variants could not be counted, so the file cannot be written either: the Count above says why.",
+    };
+    expect(writeParts(READY, null, PROJECT, "refused")).toEqual({
+      message: null,
+      warning: null,
+      button: refused,
+    });
+    expect(
+      writeParts(READY, estimateOf(600_000, 1000), PROJECT, "refused"),
+    ).toEqual({ message: null, warning: null, button: refused });
+  });
+
+  test("saved: Write with no estimate, so that the size written is the one size of the part", () => {
+    expect(
+      writeParts(
+        {
+          kind: "saved",
+          key: KEY,
+          written: { format: "nei", numBytes: 250_994, passStats: PASS },
+        },
+        SMALL,
+        PROJECT,
+        "counted",
+      ).button,
+    ).toEqual({ kind: "write", disabled: false, description: null });
+  });
+
+  test("the store's reason of a lock, shown in the Variants step, without the name of the step", () => {
+    expect(
+      writeParts(
+        {
+          kind: "locked",
+          reason:
+            "The list of individuals to keep names 2 individuals that are not in panel.nei: ind_900 and ind_901. Change the list, or remove the filter, in the Variants step.",
+        },
+        SMALL,
+        PROJECT,
+      ).button,
+    ).toEqual({
+      kind: "write",
+      disabled: true,
+      description:
+        "The list of individuals to keep names 2 individuals that are not in panel.nei: ind_900 and ind_901. Change the list, or remove the filter.",
+    });
   });
 });

@@ -94,7 +94,7 @@ describe("VS5 D3 the words of the writing of the filtered variants", () => {
 
   test("the warning of the memory, at about 1.0 GB, and from a bound", () => {
     expect(warnText(GIGABYTE)).toBe(
-      "A file of about 1.0 GB may need about six times that in the memory of this tab while it is written, and a browser may close a tab that asks for too much, losing the work since the project was last saved. Save the project first. To write a smaller file, remove variants or individuals with the filters; to write any size, use popnei in Python.",
+      "A file of about 1.0 GB may need about six times that in the memory of this tab while it is written, and a browser may close a tab that asks for too much, losing the work since the project was last saved. On a phone or a tablet, the write fails with far smaller files. Save the project first. To write a smaller file, remove variants or individuals with the filters; to write any size, use popnei in Python.",
     );
     expect(warnText(estimateOf(1_000_000, 1000, true))).toMatch(
       /^A file of at most about 1\.0 GB may need/u,
@@ -121,13 +121,13 @@ describe("VS5 D3 the words of the writing of the filtered variants", () => {
 
   test("the variants file holds no variant, or a VCF read with only the passed variants none that passed", () => {
     expect(noVariantText(PROJECT, EMPTY_SOURCE)).toBe(
-      "panel.nei has no variants, so there is nothing to write. Load another variants file in the Variants step.",
+      "panel.nei has no variants, so there is nothing to write. Load another variants file.",
     );
     expect(noVariantText(vcfProject(true), EMPTY_SOURCE)).toBe(
-      'panel.vcf has no variant with PASS or . in its FILTER column, and it was read with only those, so there is nothing to write. Untick "Only the variants with PASS or . in the FILTER column" in the Variants step and read the file again.',
+      'panel.vcf has no variant with PASS or . in its FILTER column, and it was read with only those, so there is nothing to write. Untick "Only the variants with PASS or . in the FILTER column" and read the file again.',
     );
     expect(noVariantText(vcfProject(false), EMPTY_SOURCE)).toBe(
-      "panel.vcf has no variants, so there is nothing to write. Load another variants file in the Variants step.",
+      "panel.vcf has no variants, so there is nothing to write. Load another variants file.",
     );
   });
 
@@ -144,7 +144,7 @@ describe("VS5 D3 the words of the writing of the filtered variants", () => {
         GIGABYTE,
       ),
     ).toBe(
-      "panel.filtered.nei could not be written. At line 12 of panel.vcf, the genotype of ind_3 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 in the Variants step and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version.",
+      "panel.filtered.nei could not be written. At line 12 of panel.vcf, the genotype of ind_3 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version.",
     );
   });
 
@@ -266,10 +266,10 @@ describe("VS5 D3 the words of the writing of the filtered variants", () => {
       message: "memory could not grow.",
     } as const;
     expect(writeErrorText(error, false, PROJECT, GIGABYTE)).toBe(
-      'panel.filtered.nei could not be written: popnei stopped with "memory could not grow". A file of about 1.0 GB may not fit in the memory of this tab: remove variants or individuals with the filters and write it again, or write the file with popnei in Python. If the message names a line of the VCF, correct the file, or fetch it again, and load it in the Variants step.',
+      'panel.filtered.nei could not be written: popnei stopped with "memory could not grow". A file of about 1.0 GB may not fit in the memory of this tab: remove variants or individuals with the filters and write it again, or write the file with popnei in Python. If the message names a line of the VCF, correct the file, or fetch it again, and load it again.',
     );
     expect(writeErrorText(error, false, PROJECT, null)).toBe(
-      'panel.filtered.nei could not be written: popnei stopped with "memory could not grow". The file may not fit in the memory of this tab: remove variants or individuals with the filters and write it again, or write the file with popnei in Python. If the message names a line of the VCF, correct the file, or fetch it again, and load it in the Variants step.',
+      'panel.filtered.nei could not be written: popnei stopped with "memory could not grow". The file may not fit in the memory of this tab: remove variants or individuals with the filters and write it again, or write the file with popnei in Python. If the message names a line of the VCF, correct the file, or fetch it again, and load it again.',
     );
   });
 
@@ -286,7 +286,7 @@ describe("VS5 D3 the words of the writing of the filtered variants", () => {
         GIGABYTE,
       ),
     ).toBe(
-      "The statistics of each individual, which the thresholds of the filters of individuals are applied to, could not be calculated, so the file was not written. The filters kept none of the variants of panel.nei, so there is no variant to count each individual's genotypes over. Loosen the filters of the variants in the Variants step.",
+      "The statistics of each individual, which the thresholds of the filters of individuals are applied to, could not be calculated, so the file was not written. The filters kept none of the variants of panel.nei, so there is no variant to count each individual's genotypes over. Loosen the filters of the variants.",
     );
     expect(
       writeErrorText(
@@ -299,7 +299,7 @@ describe("VS5 D3 the words of the writing of the filtered variants", () => {
         GIGABYTE,
       ),
     ).toBe(
-      "The statistics of each individual, which the thresholds of the filters of individuals are applied to, could not be calculated, so the file was not written. The calculation stopped unexpectedly. Run it again. If it stops again, load panel.nei again in the Variants step.",
+      "The statistics of each individual, which the thresholds of the filters of individuals are applied to, could not be calculated, so the file was not written. The calculation stopped unexpectedly. Run it again. If it stops again, load panel.nei again.",
     );
   });
 
@@ -319,7 +319,7 @@ describe("VS5 D3 the words of the writing of the filtered variants", () => {
         GIGABYTE,
       ),
     ).toBe(
-      "panel.nei could not be read again; it may have changed on the disk since it was picked. Load it again in the Variants step.",
+      "panel.nei could not be read again; it may have changed on the disk since it was picked. Load it again.",
     );
     expect(
       writeErrorText(

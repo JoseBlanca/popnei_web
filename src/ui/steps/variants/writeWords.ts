@@ -38,10 +38,33 @@ export const NO_SIZE_TEXT =
   "The size of the file is known once the variants are counted: Count, above.";
 
 /** What the part says in place of the size while the variants are not
-    counted and the Count has no button to count them again, since popnei
-    refused it or the browser can no longer read the variants file. */
-export const NOT_COUNTABLE_SIZE_TEXT =
-  "The size of the file is not known, since the variants could not be counted.";
+    counted and the Count that counts them runs, which a word that asks
+    for the Count would not say. */
+export const COUNTING_SIZE_TEXT =
+  "The size of the file is known once the Count above ends.";
+
+/** Why Write is disabled while the Count is in error with no button to
+    count again, since popnei refused it or the browser can no longer read
+    the variants file: a write makes the same pass over the same filters,
+    and would fail the same way. */
+export const COUNT_REFUSED_TEXT =
+  "The variants could not be counted, so the file cannot be written either: the Count above says why.";
+
+/** " in the Variants step", and the comma before it, where it ends a
+    sentence or comes before "and": the end that the words of a failure
+    have elsewhere in the application, and that the part, in the Variants
+    step, leaves out. */
+const IN_THE_STEP = /,? in the Variants step(?=\.| and )/gu;
+
+/** `text` without "in the Variants step", as the part shows the words it
+    takes from the store and from the other parts of the application:
+    "Load another variants file in the Variants step." becomes "Load
+    another variants file.", and "Change the list, or remove the filter,
+    in the Variants step." becomes "Change the list, or remove the
+    filter." (writeVariants.md, "Its words"). */
+export function inTheStep(text: string): string {
+  return text.replace(IN_THE_STEP, "");
+}
 
 /** What the part says when a change of the filters dropped the file of
     the last write, which ended after it. */
@@ -67,7 +90,7 @@ export function estimateText(estimate: WriteEstimate): string {
     more, after the "Warning:" that the widget of a warning puts before
     it. */
 export function warnText(estimate: WriteEstimate): string {
-  return `A file of ${aboutSize(estimate)} may need about six times that in the memory of this tab while it is written, and a browser may close a tab that asks for too much, losing the work since the project was last saved. Save the project first. To write a smaller file, remove variants or individuals with the filters; to write any size, use popnei in Python.`;
+  return `A file of ${aboutSize(estimate)} may need about six times that in the memory of this tab while it is written, and a browser may close a tab that asks for too much, losing the work since the project was last saved. On a phone or a tablet, the write fails with far smaller files. Save the project first. To write a smaller file, remove variants or individuals with the filters; to write any size, use popnei in Python.`;
 }
 
 /** Why the button is disabled for an estimate of `WRITE_MAX_BYTES` or
@@ -78,6 +101,32 @@ export function tooLargeText(estimate: WriteEstimate): string {
   return `A file of ${aboutSize(estimate)} cannot be written in a browser tab: popnei needs more than twice the file in its memory while it writes it, and a tab gives popnei at most 4 GB. Remove variants or individuals with the filters, or write the file with popnei in Python.`;
 }
 
+/** Why Write is disabled for an estimate from a bound of
+    `WRITE_MAX_BYTES` or more before a Count, when a filter of the
+    variants makes the variants of the file a bound: the Count gives the
+    size in one pass, and while it runs, the words say that and do not
+    ask for it. */
+export function mayBeTooLargeText(
+  estimate: WriteEstimate,
+  counting: boolean,
+): string {
+  const then = counting
+    ? "Its size is known once the Count above ends."
+    : "Count the variants first, above.";
+  return `A file of ${aboutSize(estimate)} may be too large to be written in a browser tab. ${then}`;
+}
+
+/** Why Write is disabled when the counts say the filters keep no variant
+    of `p`: when the variants file holds none, the words of an empty
+    source; otherwise the filters keep none. */
+export function keptNoVariantText(p: Project): string {
+  const read = p.variants?.read;
+  if (read?.kind === "read" && read.numVars === 0) {
+    return inTheStep(emptySourceText(p, "there is nothing to write"));
+  }
+  return `The filters keep none of the variants of ${variantsName(p)}, so there is nothing to write. Loosen the filters above.`;
+}
+
 /** What the part says when a write gave no variant, and the store kept
     no file, from the counts of its pass, `pass`: when the pass was given
     no variant, the variants file holds none, or none that passed for a
@@ -85,7 +134,7 @@ export function tooLargeText(estimate: WriteEstimate): string {
     source; otherwise the filters kept none. */
 export function noVariantText(p: Project, pass: PassStats): string {
   if (variantsOfFile(pass) === 0) {
-    return emptySourceText(p, "there is nothing to write");
+    return inTheStep(emptySourceText(p, "there is nothing to write"));
   }
   return `The filters kept none of the variants of ${variantsName(p)}, so there is nothing to write. Loosen the filters above.`;
 }
@@ -167,13 +216,25 @@ export function writingBarLabel(
  * a genotype of another ploidy, and otherwise in its own; the worker that stopped with no
  * answer; a variants file the browser can no longer read, the
  * calculations that could not start and the page out of date, in the
- * diversity's words; an error of our own. `estimate` is the size
+ * diversity's words; an error of our own; each without "in the
+ * Variants step", the step the part is in. `estimate` is the size
  * expected, which the words of a memory too small give, and leave out
  * when it is `null`. Throws a defect on a project with no variants file,
  * which a write in error always has, and on a failure of the files wasm,
  * which the calculation worker does not hold.
  */
 export function writeErrorText(
+  error: AnalysisError,
+  ofStatistics: boolean,
+  p: Project,
+  estimate: WriteEstimate | null,
+): string {
+  return inTheStep(errorWords(error, ofStatistics, p, estimate));
+}
+
+/** The words of `writeErrorText`, as the rest of the application gives
+    them. */
+function errorWords(
   error: AnalysisError,
   ofStatistics: boolean,
   p: Project,
@@ -202,7 +263,7 @@ export function writeErrorText(
       estimate === null
         ? "The file may not fit"
         : `A file of ${aboutSize(estimate)} may not fit`;
-    return `${escaped(writtenName(p))} could not be written: popnei stopped with "${withoutStop(error.message)}". ${fit} in the memory of this tab: remove variants or individuals with the filters and write it again, or write the file with popnei in Python. If the message names a line of the VCF, correct the file, or fetch it again, and load it in the Variants step.`;
+    return `${escaped(writtenName(p))} could not be written: popnei stopped with "${withoutStop(error.message)}". ${fit} in the memory of this tab: remove variants or individuals with the filters and write it again, or write the file with popnei in Python. If the message names a line of the VCF, correct the file, or fetch it again, and load it again.`;
   }
   const failure = error.error;
   switch (failure.kind) {
