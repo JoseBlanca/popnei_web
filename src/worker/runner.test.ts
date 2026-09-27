@@ -207,6 +207,17 @@ describe("WS3 D1 the open and the diversity", () => {
       expect(numbersOf(valueOf(answer))).toEqual(NO_FILTER);
     });
 
+    test(`the diversity of ${name} with the missing data filter at 1 gives the numbers with no filter, and keeps 1200 of its 1200 variants`, () => {
+      const answer = opened(name).run(diversityJob([missingData(1)]), ignore);
+      expect(numbersOf(valueOf(answer))).toEqual({
+        ...NO_FILTER,
+        passStats: {
+          numVars: 1200,
+          filtering: { missing_data: { varsProcessed: 1200, varsKept: 1200 } },
+        },
+      });
+    });
+
     test(`the diversity of ${name} with the missing data filter at 0.05 keeps 1152 of its 1200 variants`, () => {
       const answer = opened(name).run(
         diversityJob([missingData(0.05)]),
@@ -1130,6 +1141,17 @@ describe("VS1 D3 the passes of the runner: the statistics of each individual", (
     expect(result.passStats).toEqual(COUNTS_AT_0_05);
   });
 
+  test("with no filter, s000 has the missing rate 0.028333333333333332 and the observed heterozygosity 0.3653516295025729, over 1,200 variants", () => {
+    const result = resultOf(
+      opened("panel.nei").run(individualChecksJob([]), ignore),
+      "individualChecks",
+    );
+    expect(result.individuals[0]).toBe("s000");
+    expect(result.missingGtRate[0]).toBe(0.028333333333333332);
+    expect(result.obsHetRate[0]).toBe(0.3653516295025729);
+    expect(result.passStats).toEqual({ numVars: 1200, filtering: {} });
+  });
+
   test("the statistics that the tests of core read from panel_individual_stats.json are those popnei gives the runner at 0.05", () => {
     // The tests of core may not call popnei, and read its statistics from
     // this file, which make_fixtures.mjs writes with popnei: this test
@@ -1443,6 +1465,55 @@ describe("VS1 D3 the passes of the runner: the histograms and the counts", () =>
       expect(distrib.counts.reduce((sum, count) => sum + count, 0)).toBe(1200);
     }
     expect(result.passStats).toEqual({ numVars: 1200, filtering: {} });
+  });
+
+  test("the histograms of panel.vcf.gz are those of panel.nei: the same edges, means and counts", () => {
+    const ofNei = resultOf(
+      opened("panel.nei").run(variantChecksJob(), ignore),
+      "variantChecks",
+    );
+    const ofVcf = resultOf(
+      opened("panel.vcf.gz").run(variantChecksJob(), ignore),
+      "variantChecks",
+    );
+    expect(ofVcf.maf.mean).toBe(0.7163445463101891);
+    expect(ofVcf).toEqual(ofNei);
+  });
+
+  test("a variant of three alleles is in a bin of the MAF below 0.5, and a variant with one allele called has a MAF of 1, in the last bin", () => {
+    // 21 diploid individuals: 42 alleles, so that no frequency falls on
+    // an edge of the 40 bins. The first variant has 15 alleles A, 14 G and
+    // 13 T, a major allele frequency of 15/42, 0.357, in the bin from
+    // 0.35 to 0.375; at the second every call is 0/0.
+    const alleles = [
+      ...Array<number>(15).fill(0),
+      ...Array<number>(14).fill(1),
+      ...Array<number>(13).fill(2),
+    ];
+    const names = Array.from({ length: 21 }, (_, i) => `i${String(i)}`);
+    const triallelic = names.map(
+      (_, i) => `${String(alleles[2 * i])}/${String(alleles[2 * i + 1])}`,
+    );
+    const vcf =
+      '##fileformat=VCFv4.2\n##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n' +
+      `#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t${names.join("\t")}\n` +
+      `1\t100\t.\tA\tG,T\t.\tPASS\t.\tGT\t${triallelic.join("\t")}\n` +
+      `1\t200\t.\tC\tT\t.\tPASS\t.\tGT\t${names.map(() => "0/0").join("\t")}\n`;
+    const runner = createRunner();
+    const open = runner.open(VCF, {
+      name: "alleles.vcf",
+      source: new TextEncoder().encode(vcf),
+    });
+    expect(open.kind).toBe("ok");
+    const result = resultOf(
+      runner.run(variantChecksJob(), ignore),
+      "variantChecks",
+    );
+    const expected = Array<number>(40).fill(0);
+    expected[14] = 1;
+    expected[39] = 1;
+    expect([...result.maf.counts]).toEqual(expected);
+    expect(result.maf.mean).toBeCloseTo((15 / 42 + 1) / 2, 12);
   });
 
   test("the bins are the job's: 20 from 0 to 0.5 give 21 edges and 20 counts, the values above 0.5 in no bin and in the mean", () => {
@@ -1798,6 +1869,41 @@ describe("VS1 D4 the written file of the runner: the five files", () => {
     const back = readBack(bytes);
     expect(back.individuals.length).toBe(200);
     expect(back.numVars).toBe(0);
+  });
+});
+
+describe("VS1 D4 the written file of the runner: a file that holds no variant", () => {
+  test("a Count and a write of a VCF of a header alone give the same counts, with no filter and with the missing data filter at 0.1", async () => {
+    const header =
+      '##fileformat=VCFv4.2\n##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n' +
+      "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\ta\tb\n";
+    const cases = [
+      { filters: [], passStats: { numVars: 0, filtering: {} } },
+      {
+        filters: [missingData(0.1)],
+        passStats: {
+          numVars: 0,
+          filtering: { missing_data: { varsProcessed: 0, varsKept: 0 } },
+        },
+      },
+    ];
+    for (const { filters, passStats } of cases) {
+      const runner = createRunner();
+      const open = runner.open(VCF, {
+        name: "empty.vcf",
+        source: new TextEncoder().encode(header),
+      });
+      expect(open.kind).toBe("ok");
+      const counted = resultOf(
+        runner.run(filterCountsJob(filters), ignore),
+        "filterCounts",
+      );
+      const { written } = await writtenOf(
+        runner.write(writeJob(filters), ignore),
+      );
+      expect(counted.passStats).toEqual(passStats);
+      expect(written.passStats).toEqual(passStats);
+    }
   });
 });
 
