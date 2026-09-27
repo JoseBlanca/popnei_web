@@ -400,7 +400,7 @@ are calculated:
   left out too while `individualsKept` is `null`, when a list of
   individuals names one twice or one not in the file, which popnei would
   refuse, and a line above the table says why: "Which individuals are
-  kept is shown once the lists of individuals above are corrected." Which
+  kept is shown once the lists of individuals to keep and to remove are corrected." Which
   filter removed an individual is read in its numbers beside it, and how
   many each filter removed beside the filter
   (`docs/specs/steps/variants.md`). The numbers to four decimals, NaN as "no value",
@@ -485,12 +485,16 @@ individuals started it, and a Stop of that analysis stops it
 
 ### Its words
 
-The results removed, by the cause of the notice, as the diversity's: "The
+The results removed, by the cause of the notice, as the diversity's,
+with the histograms named beside the table, since both go: "The
 statistics of each individual were removed because the MAF filter
-changed. Undo brings back the table as it was, with no calculation;
-Calculate makes a new one for the new settings.", and after an undo or
-a redo "Undone: the MAF filter changed. The statistics of each individual
-were removed; Redo brings back …". Its `resultName` is "the table".
+changed. Undo brings back the table and the histograms as they were,
+without calculating again; Calculate makes new ones for the new
+settings.", and after an undo or a redo "Undone: the MAF filter changed.
+The statistics of each individual were removed; Redo brings back the
+table and the histograms as they were, without calculating again, and
+Calculate makes new ones for the settings as they are now." Its
+`resultName` is "the table".
 
 The error state has the words of the diversity's table, "Its words", with
 "the diversity" replaced by "the statistics of each individual", "Run it
