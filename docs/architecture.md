@@ -351,6 +351,8 @@ interface IndividualsSource {
     | { kind: "read"; table: IndividualsTable; columns: ColumnType[];
         found: CsvFound | null;       // how it was read; null for xlsx
         typesLost: ColumnTypeOf[] }   // types set that this read could not keep
+    | { kind: "notGiven" }            // named by an opened project file that was
+                                      // saved before the file was read; asked for again
     | { kind: "failed";
         error:
           | IndividualsFileError      // the reader refused the file

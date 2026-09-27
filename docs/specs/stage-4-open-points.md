@@ -296,10 +296,21 @@ meets.
   that one file through (`project.md`; `docs/architecture.md`, section
   9).
 - **A project saved while its metadata file was still being read, or
-  had failed, opens asking for that file**: the analyses per population
-  are locked with words that say to load it again in the Individuals
-  step, and never run on one population while the project names a
-  column of populations (`projectFile.md`, `project.md`).
+  had failed, opens asking for that file**: every analysis that uses it
+  is locked, "pops.csv was not read when this project was saved, so the
+  project file does not hold it. Load pops.csv again in the Individuals
+  step.", the stepper shows Individuals to do and the summary line
+  "pops.csv not loaded"; it never runs on one population while the
+  project names a column of populations. Not taken: opening it as a
+  project with no file, which ran the diversity on "All individuals"
+  without a word (`projectFile.md`, `project.md`).
+- **Loading a metadata file while the project is in one population**
+  removes the diversity, with its notice, while the file is read; the
+  result comes back from the cache once it is read, and the notice
+  stays until it is closed (`project.md`).
+- **A type set on a column that the new file puts first is lost**, with
+  words that say so; the first column is always the names of the
+  individuals (`steps/individuals.md`).
 
 ## Asked of the owner to make or approve
 
