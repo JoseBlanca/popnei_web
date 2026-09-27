@@ -228,9 +228,9 @@ keep (node, 26 September 2026, popnei `js-v0.1.0-dev.2`). It is text, and is not
 | | a threshold waiting for the statistics of each individual | "200 individuals, how many kept not yet known" |
 | its variants | not counted yet (`numVars` of the source `null`) | nothing |
 | | counted, and no filter of the variants | "1,200 variants", `numVars` of the source |
-| | counted, a filter of the variants, and no counts of the filters as they are | "1,200 variants, filters not counted" |
+| | counted, a filter of the variants, and no counts of the filters as they are | "1,200 variants", and the part of the filters says they are not counted, below |
 | | the counts of the filters as they are, `filterCounts` done | "1,128 of 1,200 variants kept": `passStats.numVars` of the counts, of the `numVars` of the source |
-| the filters | | "no filter", "1 filter", "2 filters": the filters of the variants and of the individuals |
+| the filters | | "no filter", "1 filter", "2 filters": the filters of the variants and of the individuals; "3 filters, not counted" while the variants are counted, a filter of the variants is on, and the filters as they are have no counts |
 | the metadata file | none | "no metadata file" |
 | | being read | "reading pops.csv" |
 | | read failed, or individuals missing, or the column of the populations not in it | "pops.csv could not be read", "12 individuals missing from pops.csv", "column pop not in pops.csv" |
@@ -858,14 +858,14 @@ with the analyses of `TEST_DEFS` of `src/core/testSupport.ts`:
 - **`summaryLine`**: the empty first project gives "No variants file · 1
   filter · no metadata file"; the example above, with 1,200 variants
   counted and the missing data filter not counted, gives "panel.nei · 200
-  individuals · 1,200 variants, filters not counted · 1 filter · 3
-  populations by pop"; with the thresholds of the individuals at 0.03
+  individuals · 1,200 variants · 1 filter, not counted · 3 populations
+  by pop"; with the thresholds of the individuals at 0.03
   and 0.38 and the missing data filter at 0.05 on `panel.nei`, whose
   numbers are those of `docs/specs/core/individualsKept.md` and
   `filterCounts.md`, "panel.nei · 119 of 200 individuals kept · 1,152 of
   1,200 variants kept · 3 filters · 3 populations by pop", and with no
   counts and no statistics "panel.nei · 200 individuals, how many kept
-  not yet known · 1,200 variants, filters not counted · 3 filters · …";
+  not yet known · 1,200 variants · 3 filters, not counted · …";
   with the thresholds alone, no filter of the variants, "… · 1,200
   variants · 2 filters · …"; a case for each row of its table.
 - **`openQuestion`**: with calculations, with the writing, with both,
@@ -997,9 +997,9 @@ above. One stayed, and stage 3 answered it:
    Decided by the owner on 27 September 2026, at stop A of
    `docs/plans/variants-step.md`, as written here and with one change:
    while the filters of the variants are not counted, the line says so,
-   "1,200 variants, filters not counted", and not "1,200 variants"
-   alone, which read beside "3 filters" as the variants the filters
-   keep. The
+   "1,200 variants · 3 filters, not counted", and not "1,200 variants
+   · 3 filters", which read as the variants the filters keep; with a
+   Count, "1,175 of 1,200 variants kept · 2 filters". The
    owner's mockup has "48,210 of 1,203,554 variants kept (3 filters)".
    The walking skeleton did not know it, and the owner left the line as
    it was on 25 September 2026, with the kept count to join it in stage 3

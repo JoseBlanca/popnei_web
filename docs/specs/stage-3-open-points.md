@@ -240,7 +240,7 @@ owner". Each is written in its spec as decided. What changes for a user:
   "Of two variants closer than the distance, and with an r² above the
   maximum, the first is kept."; a line under the filter by observed
   heterozygosity (`steps/variants.md`); the summary line before a
-  Count, "1,200 variants, filters not counted" (`shell.md`, open point
+  Count, "1,200 variants · 3 filters, not counted" (`shell.md`, open point
   1); a file with no variant shows the warning of the Count alone, and
   a refusal of the Count for one says "there is no variant to count"
   (`filterCounts.md`); the words of the writing leave out "in the
