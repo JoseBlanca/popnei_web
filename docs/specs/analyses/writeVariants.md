@@ -443,7 +443,7 @@ notice and the status region is "Writing the file".
 | empty | cannot happen: while the variants file is not read the part is not drawn, and the step shows the line of a file not read in its place (`docs/specs/steps/variants.md`, "What it does") | |
 | locked | the reason of `individualListNeeds` of `docs/specs/core/project.md`, or of the filters keeping no individual, beside the disabled button. While the variants file is not read, when the store locks it with the reason of `projectNeeds`, the part is not drawn, as for empty | what the reason says |
 | ready | the button, and the estimate: "About 20.8 MB: 20,000 variants of 1,000 individuals."; disabled, with its reason, for a file too large, a bound too large before a Count, filters that keep no variant, or a Count refused (above, "The size, before the write") | Write; what the reason says |
-| waiting for the statistics | "Calculating the statistics of each individual, which the filters of individuals are set from · 35% · 0:12" | Stop |
+| waiting for the statistics | "Calculating the statistics of each individual, which the thresholds of the individuals need · 35% · 0:12" | Stop |
 | writing | "Writing panel.filtered.nei · 35% · 0:12", the bar of the diversity | Stop |
 | written, the store's `done` | "Save panel.filtered.nei, 19.2 MB" | Save |
 | written with no variant, the store's `noVariant` | the words of a file of no variant, below, and no Save | loosen the filters |
@@ -491,7 +491,7 @@ specs, below, are given as the part shows them.
 | the worker stopped with no answer, a trap of the wasm or a memory that could not grow, `workerFailed` | "The writing stopped unexpectedly, perhaps because the file, of about 1.0 GB, did not fit in the memory of this tab. Remove variants or individuals with the filters and write it again, or write the file with popnei in Python." |
 | popnei refused the write for a genotype of another ploidy than the VCF was read with, its message "line ‹n› of the VCF, the column of ‹individual›: its genotype is of the ploidy ‹found› and the reader was asked for the ploidy ‹given›" | "panel.filtered.nei could not be written. ", then the words the analyses give that refusal (`docs/specs/analyses/diversity.md`, "Its words"): "At line 12 of panel.vcf.gz, the genotype of ind_3 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version." |
 | popnei refused the write otherwise, for a memory that does not take the file or for a line of the VCF it cannot read, which its message alone tells apart | "panel.filtered.nei could not be written: popnei stopped with "‹its message›". A file of about 1.0 GB may not fit in the memory of this tab: remove variants or individuals with the filters and write it again, or write the file with popnei in Python. If the message names a line of the VCF, correct the file, or fetch it again, and load it again." |
-| the statistics of each individual it waited for failed | "The statistics of each individual, which the thresholds of the filters of individuals are applied to, could not be calculated, so the file was not written. ", then the words the statistics' own part gives that failure (`docs/specs/analyses/individualChecks.md`, "Its words"): "… The filters kept none of the variants of panel.nei, so there is no variant to count each individual's genotypes over. Loosen the filters of the variants." |
+| the statistics of each individual it waited for failed | "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the file was not written. ", then the words the statistics' own part gives that failure (`docs/specs/analyses/individualChecks.md`, "Its words"): "… The filters kept none of the variants of panel.nei, so there is no variant to count each individual's genotypes over. Loosen the filters of the variants." |
 | the browser can no longer read the variants file, `reopenFailed` | the diversity's words, "panel.nei could not be read again; it may have changed on the disk since it was picked. Load it again." |
 | the calculations could not start, `couldNotStart`, or the page is out of date after a new version of the site, `protocolMismatch` | the diversity's words, "The application could not start its calculations. Save the project, reload the page, and open the project again." and "The page is out of date. Save the project, reload the page, and open the project again." |
 | an error of the application's own code, `defect` | "The application met an error of its own: ‹message›. Write the file again." |
@@ -508,7 +508,7 @@ September 2026:
   panel.nei to be opened again, then writing panel.filtered.nei · 0:12",
   as the diversity's line does; the line of the statistics it waits for
   does the same with "calculating the statistics of each individual,
-  which the filters of individuals are set from". The bar is named
+  which the thresholds of the individuals need". The bar is named
   "Writing panel.filtered.nei", or "Calculating the statistics of each
   individual" while the write waits for them.
 - When no size is known at a failure, no counts and no number of

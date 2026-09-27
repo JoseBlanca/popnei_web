@@ -532,7 +532,7 @@ the user presses Run once (`docs/architecture.md`, section 5):
   nothing and waits for it. The analysis is then `running`, waiting for
   the statistics, with the id and the progress of their request, and its
   panel says it waits, "Calculating the statistics of each individual,
-  which the filters of individuals are set from"
+  which the thresholds of the individuals need"
   (`docs/specs/analyses/diversity.md`).
 - When the statistics end `done`, they go into the cache as any result.
   For each Run that waited for them, when the project still gives both
