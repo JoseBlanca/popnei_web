@@ -87,13 +87,13 @@ describe("VS5 D1 apps.ts", () => {
     });
   });
 
-  test("the analyses of population genetics have distinct ids: the three checks of the Variants step, then the diversity", () => {
+  test("the analyses of population genetics have distinct ids: the three checks of the Variants step in the order of its sections, then the diversity", () => {
     const ids = POPGEN_ANALYSES.map((def) => def.id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toEqual([
-      "individualChecks",
       "variantChecks",
       "filterCounts",
+      "individualChecks",
       "diversity",
     ]);
   });
