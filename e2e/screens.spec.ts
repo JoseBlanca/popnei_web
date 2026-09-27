@@ -476,6 +476,78 @@ for (const theme of ["light", "dark"] as const) {
       await save(page, `popgen-variants-nei-read-${theme}`);
     });
 
+    test("the Variants step, the histograms of the variants running", async ({
+      page,
+    }) => {
+      await pickVariants(page, "panel.nei");
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      await holdResults(page);
+      await page
+        .getByRole("button", {
+          name: "Calculate the histograms of the variants",
+        })
+        .click();
+      await expect(
+        page.getByRole("main").getByText(/^Calculating · \d+% · 0:0\d$/),
+      ).toBeVisible();
+      await save(page, `popgen-variants-histograms-running-${theme}`);
+    });
+
+    test("the Variants step, the histograms done with the thresholds of their filters", async ({
+      page,
+    }) => {
+      await pickVariants(page, "panel.nei");
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      await page
+        .getByRole("button", {
+          name: "Calculate the histograms of the variants",
+        })
+        .click();
+      for (const name of [
+        "Filter the variants by observed heterozygosity",
+        "Filter the variants by major allele frequency (MAF)",
+      ]) {
+        await page.getByText(name, { exact: true }).click();
+      }
+      await expect(page.locator("line.chart-threshold")).toHaveCount(2);
+      await save(page, `popgen-variants-histograms-done-${theme}`);
+      // The table of the bins of the MAF.
+      await page
+        .getByRole("group", { name: /^Major allele frequency/ })
+        .getByRole("tab", { name: "Table of the bins" })
+        .click();
+      await expect(
+        page.getByRole("table", {
+          name: "The bins of the major allele frequency",
+        }),
+      ).toBeVisible();
+      await save(page, `popgen-variants-histograms-table-${theme}`);
+      await page.setViewportSize({ width: 320, height: 900 });
+      await save(page, `popgen-variants-histograms-320-${theme}`);
+    });
+
+    test("the Variants step, the histograms in error, the ploidy refused", async ({
+      page,
+    }) => {
+      await pickVariants(page, "tetraploid.vcf.gz");
+      await expect(
+        page.getByRole("main").getByText("12 individuals"),
+      ).toBeVisible();
+      await page
+        .getByRole("button", {
+          name: "Calculate the histograms of the variants",
+        })
+        .click();
+      await expect(
+        page.getByRole("main").getByText(/^At line 5 of tetraploid\.vcf\.gz/),
+      ).toBeVisible();
+      await save(page, `popgen-variants-histograms-error-${theme}`);
+    });
+
     test("the Variants step, a VCF read", async ({ page }) => {
       await pickVariants(page, "panel.vcf.gz");
       await expect(

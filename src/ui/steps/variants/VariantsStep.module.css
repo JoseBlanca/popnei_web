@@ -65,6 +65,19 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* The block of a check of the step, the histograms of the variants: its
+   heading, its button and the words of its state. */
+.check {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+}
+
+.checkHeading {
+  margin: 0;
+  font-size: var(--text-base);
+}
+
 /* The four filters of the variants, one under the other. */
 .filters {
   display: grid;

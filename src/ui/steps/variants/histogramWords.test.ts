@@ -1,0 +1,134 @@
+/**
+ * The words of the histograms of the variants on the Variants step
+ * (docs/specs/steps/variants.md, "The histograms beside the filters of
+ * the variants"; docs/specs/analyses/variantChecks.md, "The panel"), and
+ * the agreement of the two types of the state of a bin, core's, which
+ * the description and the CSV read, and that of src/charts, which the
+ * rows of a histogram give: core may not import src/charts, so the two
+ * are written apart, and this file, which may import both, fails to
+ * type check when they drift apart.
+ */
+import { describe, expect, expectTypeOf, test } from "vitest";
+
+import type { DescribedBin } from "../../../core/analyses/words.ts";
+import type { Notice } from "../../../core/store.ts";
+import type { BinState, HistogramRow } from "../../../charts/histogram.ts";
+import {
+  VARIANT_HISTOGRAMS,
+  binCells,
+  histogramThreshold,
+  histogramTitle,
+  histogramsCaption,
+  removedText,
+  thresholdText,
+} from "./histogramWords.ts";
+
+/** A notice of a change of the load, of the kind `kind`. */
+function notice(kind: Notice["cause"]["kind"]): Notice {
+  return {
+    cause: { kind, description: "a new variants file was loaded" },
+    removed: ["variantChecks"],
+    leftBehind: [],
+    stopped: [],
+    writeLeftBehind: false,
+    writeStopped: false,
+    writeDiscarded: false,
+  };
+}
+
+describe("VS6 D2 the words of the histograms of the variants", () => {
+  test("the state of a bin is the same three words in core and in src/charts", () => {
+    expectTypeOf<DescribedBin["state"]>().toEqualTypeOf<BinState | null>();
+    // The rows of a histogram are what the screen gives the description
+    // and the CSV of core.
+    expectTypeOf<HistogramRow>().toExtend<DescribedBin>();
+  });
+
+  test("the title with the mean to four decimals, and with no mean", () => {
+    expect(histogramTitle("Major allele frequency", 0.7163445463101891)).toBe(
+      "Major allele frequency, mean 0.7163",
+    );
+    expect(histogramTitle("Major allele frequency", Number.NaN)).toBe(
+      "Major allele frequency, no mean",
+    );
+  });
+
+  test("the threshold and the rows of its legend", () => {
+    expect(histogramThreshold(0.95)).toEqual({
+      value: 0.95,
+      label: "Maximum 0.95",
+      keptLabel: "Kept by this filter",
+      removedLabel: "Removed by this filter",
+    });
+    expect(thresholdText("the MAF filter", 0.9)).toBe(
+      "Threshold of the MAF filter: 0.9",
+    );
+  });
+
+  test("the three histograms, their axes and their tables", () => {
+    expect(VARIANT_HISTOGRAMS.maf.name).toBe("Major allele frequency");
+    expect(VARIANT_HISTOGRAMS.obsHet.name).toBe("Observed heterozygosity");
+    expect(VARIANT_HISTOGRAMS.unbiasedExpHet.name).toBe(
+      "Expected heterozygosity (unbiased)",
+    );
+    for (const words of Object.values(VARIANT_HISTOGRAMS)) {
+      expect(words.countLabel).toBe("Variants");
+    }
+    expect(VARIANT_HISTOGRAMS.maf.filterName).toBe("the MAF filter");
+    expect(VARIANT_HISTOGRAMS.obsHet.filterName).toBe(
+      "the filter by observed heterozygosity",
+    );
+    expect(VARIANT_HISTOGRAMS.unbiasedExpHet.filterName).toBeNull();
+  });
+
+  test("the caption of the three", () => {
+    expect(histogramsCaption(1200, "panel.nei")).toBe(
+      "Over the 1,200 variants of panel.nei, before any filter.",
+    );
+  });
+
+  test("the cells of a bin: the edges to 12 significant digits, the count grouped, the state in words", () => {
+    expect(
+      binCells({
+        from: 0.07500000000000001,
+        to: 0.1,
+        toIncluded: false,
+        count: 1234,
+        state: null,
+      }),
+    ).toEqual(["0.075", "0.1", "1,234"]);
+    expect(
+      binCells({
+        from: 0.5,
+        to: 0.525,
+        toIncluded: false,
+        count: 62,
+        state: "partlyKept",
+      }),
+    ).toEqual(["0.5", "0.525", "62", "Partly kept"]);
+    expect(
+      binCells({ from: 0, to: 1, toIncluded: true, count: 1, state: "kept" }),
+    ).toEqual(["0", "1", "1", "Kept"]);
+    expect(
+      binCells({
+        from: 0.975,
+        to: 1,
+        toIncluded: true,
+        count: 3,
+        state: "removed",
+      }),
+    ).toEqual(["0.975", "1", "3", "Removed"]);
+  });
+
+  test("the words of the histograms removed, after a command, an undo and a redo", () => {
+    expect(removedText(notice("command"))).toBe(
+      "The histograms of the variants were removed because a new variants file was loaded. Undo brings them back as they were, with no calculation; Calculate makes them anew for the file loaded now.",
+    );
+    expect(removedText(notice("undo"))).toBe(
+      "Undone: a new variants file was loaded. The histograms of the variants were removed; Redo brings them back as they were, with no calculation, and Calculate makes them anew for the file loaded now.",
+    );
+    expect(removedText(notice("redo"))).toBe(
+      "Redone: a new variants file was loaded. The histograms of the variants were removed; Undo brings them back as they were, with no calculation, and Calculate makes them anew for the file loaded now.",
+    );
+  });
+});

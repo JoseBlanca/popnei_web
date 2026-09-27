@@ -609,6 +609,9 @@ test("WS7 D3 the keyboard goes through the step in the order of the spec", async
     page.getByRole("checkbox", {
       name: "Only the variants with PASS or . in the FILTER column",
     }),
+    page.getByRole("button", {
+      name: "Calculate the histograms of the variants",
+    }),
     page.getByRole("switch", { name: "Filter the variants by missing data" }),
     page.getByLabel("Maximum proportion of missing genotypes"),
   ];

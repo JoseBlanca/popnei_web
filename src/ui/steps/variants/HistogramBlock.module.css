@@ -1,0 +1,27 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+/* A histogram: its title, its threshold, its tabs and its download. */
+.block {
+  display: grid;
+  gap: var(--space-2);
+  inline-size: 100%;
+  max-inline-size: 40rem;
+}
+
+.title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.muted {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+/* The element the plot draws in, whose size the plot reads
+   (docs/specs/charts/histogram.md, "The size"). */
+.plot {
+  inline-size: 100%;
+  aspect-ratio: 16 / 10;
+}

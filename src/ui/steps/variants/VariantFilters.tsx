@@ -12,19 +12,22 @@
  * under the heading, in their place; the filters are drawn in every
  * state, since they belong to the project.
  */
-import { useId } from "react";
+import { useId, useState } from "react";
 
 import { MAX_LD_DIST } from "../../../core/project.ts";
 import type {
   VariantFilter,
   VariantFilterKind,
 } from "../../../worker/protocol.ts";
+import { statusOf } from "../../analyses/status.ts";
 import { classOf } from "../../classOf.ts";
 import { useAnnouncer } from "../../shell/announcer.tsx";
 import { useAppState, useStore } from "../../store.tsx";
 import { NumberField } from "../../widgets/NumberField.tsx";
 import { Switch } from "../../widgets/Switch.tsx";
 import { filterCommand, filterSwitchCommand } from "./commands.ts";
+import { VariantChecksBlock } from "./VariantChecksBlock.tsx";
+import { VariantHistogram } from "./VariantHistogram.tsx";
 import styles from "./VariantsStep.module.css";
 import {
   DISTANCE_LABEL,
@@ -71,6 +74,21 @@ export function VariantFilters(): React.JSX.Element {
   const announcer = useAnnouncer();
   const filters = useAppState((s) => s.project.filters);
   const read = useAppState((s) => s.project.variants?.read.kind === "read");
+  const variantsName = useAppState((s) => s.project.variants?.name ?? null);
+  // The histograms of the variants, once calculated: the result the store
+  // keeps, the same object until it changes.
+  const histograms = useAppState((s) => {
+    const status = statusOf(s, "variantChecks");
+    return status.kind === "done" && status.result.analysis === "variantChecks"
+      ? status.result
+      : null;
+  });
+  // The numbers typed in the thresholds of the two filters that have a
+  // histogram, and not yet committed, which the threshold on each
+  // histogram follows; `null` while nothing is typed that the field would
+  // take (the spec, "The threshold typed and not yet committed").
+  const [typedObsHet, setTypedObsHet] = useState<number | null>(null);
+  const [typedMaf, setTypedMaf] = useState<number | null>(null);
   const headingId = useId();
 
   const set = (filter: VariantFilter): void => {
@@ -90,12 +108,32 @@ export function VariantFilters(): React.JSX.Element {
   const maf = filterOf(filters, "maf");
   const ld = filterOf(filters, "ld");
 
+  /** The histogram of `statistic` beside its filter, with `threshold`,
+      once the histograms are calculated. */
+  const histogram = (
+    statistic: "maf" | "obsHet" | "unbiasedExpHet",
+    threshold: number | null,
+  ): React.ReactNode =>
+    histograms !== null &&
+    variantsName !== null && (
+      <VariantHistogram
+        statistic={statistic}
+        result={histograms}
+        threshold={threshold}
+        variantsName={variantsName}
+      />
+    );
+
   return (
     <section aria-labelledby={headingId} className={classOf(styles, "section")}>
       <h2 id={headingId} className={classOf(styles, "heading")}>
         {FILTERS_HEADING}
       </h2>
-      {!read && <p className={classOf(styles, "line")}>{NOT_READ_LINE}</p>}
+      {read ? (
+        <VariantChecksBlock />
+      ) : (
+        <p className={classOf(styles, "line")}>{NOT_READ_LINE}</p>
+      )}
       <div className={classOf(styles, "filters")}>
         <Filter
           label={MISSING_DATA_SWITCH}
@@ -129,8 +167,20 @@ export function VariantFilters(): React.JSX.Element {
           line={null}
           isOn={obsHet !== null}
           onSwitch={(on) => {
+            setTypedObsHet(null);
             turn("obs_het", on);
           }}
+          after={
+            <>
+              {histogram(
+                "obsHet",
+                obsHet === null
+                  ? null
+                  : (typedObsHet ?? obsHet.maxAllowedObsHet),
+              )}
+              {histogram("unbiasedExpHet", null)}
+            </>
+          }
         >
           {(described) =>
             obsHet !== null && (
@@ -144,6 +194,7 @@ export function VariantFilters(): React.JSX.Element {
                 {...described}
                 refusedText={thresholdRefusedText}
                 onRefused={announce}
+                onTyped={setTypedObsHet}
                 onChange={(maxAllowedObsHet) => {
                   set({ kind: "obs_het", maxAllowedObsHet });
                 }}
@@ -156,8 +207,13 @@ export function VariantFilters(): React.JSX.Element {
           line={MAF_LINE}
           isOn={maf !== null}
           onSwitch={(on) => {
+            setTypedMaf(null);
             turn("maf", on);
           }}
+          after={histogram(
+            "maf",
+            maf === null ? null : (typedMaf ?? maf.maxAllowedMaf),
+          )}
         >
           {(described) =>
             maf !== null && (
@@ -171,6 +227,7 @@ export function VariantFilters(): React.JSX.Element {
                 {...described}
                 refusedText={thresholdRefusedText}
                 onRefused={announce}
+                onTyped={setTypedMaf}
                 onChange={(maxAllowedMaf) => {
                   set({ kind: "maf", maxAllowedMaf });
                 }}
@@ -246,6 +303,10 @@ interface FilterProps {
   /** The fields of the filter, given their description; nothing while
       it is off. */
   readonly children: (described: Described) => React.ReactNode;
+  /** What comes after the fields, whether the filter is on or off: the
+      histograms of the number it keeps a variant by; nothing when
+      absent. */
+  readonly after?: React.ReactNode;
 }
 
 /** One filter of the variants: its switch, the line under it, and its
@@ -256,6 +317,7 @@ function Filter({
   isOn,
   onSwitch,
   children,
+  after,
 }: FilterProps): React.JSX.Element {
   const lineId = useId();
   const described: Described = line !== null ? { describedBy: lineId } : {};
@@ -273,6 +335,7 @@ function Filter({
         </p>
       )}
       {children(described)}
+      {after}
     </div>
   );
 }

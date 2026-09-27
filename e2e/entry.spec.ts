@@ -378,12 +378,20 @@ test("WS7 D2 a throw while a step is drawn shows the bar and keeps the frame and
   page,
 }) => {
   // The number field of the Variants step formats its value with
-  // Intl.NumberFormat, which the header and the stepper do not call.
+  // Intl.NumberFormat and no separator of thousands, which the header and
+  // the stepper do not call; the base of the plots makes a format of its
+  // own as its module loads, which is left to the browser's, so that the
+  // page starts.
   await page.addInitScript(() => {
+    const original = Intl.NumberFormat;
     Object.defineProperty(Intl, "NumberFormat", {
       // A function, which new can call, unlike an arrow function.
-      value: function () {
-        throw new Error("test");
+      value: function (
+        locales?: string | string[],
+        options?: Intl.NumberFormatOptions,
+      ) {
+        if (options?.useGrouping === false) throw new Error("test");
+        return new original(locales, options);
       },
     });
   });
