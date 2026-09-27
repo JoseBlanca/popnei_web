@@ -1057,9 +1057,12 @@ test("WS8 D3 a Stop in the middle of a pass leaves the panel ready with no table
   await expect(bars).toHaveCount(0);
   await expect(table).toHaveCount(0);
   await expect(
-    panel(page).getByText("3 populations: a, 334 individuals; b, 333; c, 333", {
-      exact: true,
-    }),
+    panel(page).getByText(
+      "3 populations: a, 334 individuals; b, 333 individuals; c, 333 individuals",
+      {
+        exact: true,
+      },
+    ),
   ).toBeVisible();
   await expectNoViolations(makeAxeBuilder);
 
