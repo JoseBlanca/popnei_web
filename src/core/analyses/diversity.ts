@@ -34,7 +34,14 @@ import type {
 } from "../store.ts";
 import { statisticsFailedWords } from "./individualChecks.ts";
 import type { Failure } from "./individualChecks.ts";
-import { csvField, csvNumber, defect, orNull, refusalWords } from "./words.ts";
+import {
+  CHANGE_SETTINGS,
+  csvField,
+  csvNumber,
+  defect,
+  orNull,
+  refusalWords,
+} from "./words.ts";
 import type {
   Cell,
   DiversityResult,
@@ -425,6 +432,7 @@ export function refusalText(message: string, p: Project): string {
     return `The thresholds of the filters of individuals leave none of the individuals of ${escaped(p.variants.name)} that have a population in ${shown(column)}, so no population is left. Loosen the thresholds in the Variants step.`;
   }
   return refusalWords(message, p, {
+    change: CHANGE_SETTINGS,
     calculate: "calculate the diversity",
     again: "to run it again",
     emptyPass: (fileName) =>

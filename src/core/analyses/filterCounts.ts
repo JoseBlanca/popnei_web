@@ -25,6 +25,7 @@ import type {
   VariantFilterKind,
 } from "../../worker/protocol.ts";
 import {
+  CHANGE_SETTINGS,
   ONLY_PASSED_BOX,
   defect,
   parseNoOptions,
@@ -108,6 +109,7 @@ export const filterCounts: AnalysisDef<Job, JobResult> = Object.freeze({
  */
 export function refusalText(message: string, p: Project): string {
   return refusalWords(message, p, {
+    change: CHANGE_SETTINGS,
     calculate: "count the variants",
     again: "to count again",
     emptyPass: null,

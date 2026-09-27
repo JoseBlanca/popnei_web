@@ -398,7 +398,7 @@ describe("VS3 D1 the histograms of the variants: refusalText", () => {
     expect(
       refusalText("the pass gave no variant: its source gave 3", project()),
     ).toBe(
-      "popnei could not calculate the histograms of the variants: the pass gave no variant: its source gave 3. Change the settings, or load the variants file again, to calculate them again.",
+      "popnei could not calculate the histograms of the variants: the pass gave no variant: its source gave 3. Load the variants file again, or read it again with other options, to calculate them again.",
     );
   });
 });

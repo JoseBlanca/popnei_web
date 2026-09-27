@@ -28,6 +28,7 @@ import type {
   Run,
 } from "../../worker/protocol.ts";
 import {
+  CHANGE_SETTINGS,
   csvField,
   csvNumber,
   defect,
@@ -115,6 +116,7 @@ export function individualChecksCsv(r: IndividualChecksResult): string {
  */
 export function refusalText(message: string, p: Project): string {
   return refusalWords(message, p, {
+    change: CHANGE_SETTINGS,
     calculate: "calculate the statistics of each individual",
     again: "to calculate them again",
     emptyPass: (fileName) =>

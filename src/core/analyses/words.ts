@@ -39,11 +39,21 @@ const OTHER_PLOIDY =
     short. */
 const BGZIP_REFUSAL = "the VCF was written by bgzip";
 
+/** What to change for a calculation that depends on the settings to be
+    offered again after a refusal for another reason, the diversity's
+    words. */
+export const CHANGE_SETTINGS =
+  "Change the settings, or load the variants file again";
+
 /** What the words of a refusal say of the calculation refused. */
 export interface RefusalWords {
   /** What was calculated, after "no variant to" and "popnei could not":
       "calculate the statistics of each individual". */
   readonly calculate: string;
+  /** What the user changes to be offered the calculation again after a
+      refusal for another reason, before `again`: "Change the settings,
+      or load the variants file again". */
+  readonly change: string;
   /** How to try again, the end of the last row: "to calculate them
       again". */
   readonly again: string;
@@ -88,7 +98,7 @@ export function refusalWords(
   if (isVcfLine) {
     return `popnei could not read ${fileName}${saying(message)}. Correct the file, or fetch it again, and load it in the Variants step.`;
   }
-  return `popnei could not ${words.calculate}${saying(message)}. Change the settings, or load the variants file again, ${words.again}.`;
+  return `popnei could not ${words.calculate}${saying(message)}. ${words.change}, ${words.again}.`;
 }
 
 /**
