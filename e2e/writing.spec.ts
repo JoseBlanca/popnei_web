@@ -37,7 +37,7 @@ const NO_SIZE =
 /** The words of the notice of the change of the threshold that discarded
     the file. */
 const DISCARDED =
-  "The missing data filter changed. The written file, not saved, was discarded, and Undo does not bring it back; write it again to save it";
+  "The filter of the variants by missing data changed. The written file, not saved, was discarded, and Undo does not bring it back; write it again to save it";
 
 async function expectNoViolations(
   makeAxeBuilder: () => { analyze(): Promise<{ violations: unknown[] }> },

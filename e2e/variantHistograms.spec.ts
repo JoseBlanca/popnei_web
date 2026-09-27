@@ -196,7 +196,7 @@ test("VS6 D2 the histograms calculated: the button, the caption, the versions, t
   await field(page, MISSING_LABEL).fill("0.05");
   await field(page, MISSING_LABEL).press("Enter");
   await expect(banner(page, "Undo")).toHaveAccessibleDescription(
-    "Undo: the missing data filter changed",
+    "Undo: the filter of the variants by missing data changed",
   );
   await expect(histogram(page, MAF_TITLE)).toBeVisible();
   await expect(block(page).getByText(CAPTION, { exact: true })).toBeVisible();
@@ -219,7 +219,7 @@ test("VS6 D2 the histograms calculated: the button, the caption, the versions, t
   );
   await expect(
     histogram(page, OBS_HET_TITLE).getByText(
-      "Threshold of the filter by observed heterozygosity: 0.5, drawn over every variant of the file",
+      "Threshold of the filter of the variants by observed heterozygosity: 0.5, drawn over every variant of the file",
       { exact: true },
     ),
   ).toBeVisible();
@@ -522,7 +522,7 @@ test("VS6 D2 the threshold line of the observed heterozygosity moves as 0.4 is t
   await expect(group.getByText("Maximum 0.4", { exact: true })).toBeAttached();
   await expect(
     group.getByText(
-      "Threshold of the filter by observed heterozygosity: 0.4, drawn over every variant of the file",
+      "Threshold of the filter of the variants by observed heterozygosity: 0.4, drawn over every variant of the file",
       {
         exact: true,
       },
@@ -531,7 +531,7 @@ test("VS6 D2 the threshold line of the observed heterozygosity moves as 0.4 is t
   expect(await lineX(group)).toBeLessThan(at5);
   // Not committed: no command yet.
   await expect(banner(page, "Undo")).toHaveAccessibleDescription(
-    "Undo: the filter by observed heterozygosity was turned on",
+    "Undo: the filter of the variants by observed heterozygosity was turned on",
   );
 });
 
@@ -606,7 +606,7 @@ test("VS6 D2 the filter by observed heterozygosity at 0.5 splits the bin from 0.
   await obsHet.press("Enter");
   await expect(
     group.getByText(
-      "Threshold of the filter by observed heterozygosity: 0.6, drawn over every variant of the file",
+      "Threshold of the filter of the variants by observed heterozygosity: 0.6, drawn over every variant of the file",
       {
         exact: true,
       },

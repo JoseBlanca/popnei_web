@@ -1734,7 +1734,7 @@ describe("WP4 D3 the notice", () => {
       warnings: [],
       check: null,
     });
-    store.apply("the missing data filter changed", (p) =>
+    store.apply("the filter of the variants by missing data changed", (p) =>
       setVariantFilter(p, { kind: "missing_data", maxAllowedMissingRate: 0.1 }),
     );
     expect(statuses(store)[1]).toStrictEqual({
@@ -1744,7 +1744,7 @@ describe("WP4 D3 the notice", () => {
     expect(store.getState().notice).toStrictEqual({
       cause: {
         kind: "command",
-        description: "the missing data filter changed",
+        description: "the filter of the variants by missing data changed",
       },
       removed: ["vars"],
       leftBehind: [],
@@ -2117,14 +2117,14 @@ describe("WP4 D3 the notice", () => {
     const { store, request } = storeWithVarsRunning();
     store.apply("the MAF filter changed", maf(0.9));
     store.undo();
-    store.apply("the missing data filter changed", (p) =>
+    store.apply("the filter of the variants by missing data changed", (p) =>
       setVariantFilter(p, { kind: "missing_data", maxAllowedMissingRate: 0.1 }),
     );
     expect(request.cancels()).toBe(0);
     expect(store.getState().notice).toStrictEqual({
       cause: {
         kind: "command",
-        description: "the missing data filter changed",
+        description: "the filter of the variants by missing data changed",
       },
       removed: [],
       leftBehind: ["vars"],

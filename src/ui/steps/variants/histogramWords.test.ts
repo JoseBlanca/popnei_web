@@ -83,7 +83,7 @@ describe("VS6 D2 the words of the histograms of the variants", () => {
     }
     expect(VARIANT_HISTOGRAMS.maf.filterName).toBe("the MAF filter");
     expect(VARIANT_HISTOGRAMS.obsHet.filterName).toBe(
-      "the filter by observed heterozygosity",
+      "the filter of the variants by observed heterozygosity",
     );
     expect(VARIANT_HISTOGRAMS.unbiasedExpHet.filterName).toBeNull();
   });

@@ -251,7 +251,7 @@ test("VS7 D1 a list typed and not applied has its line, and an Undo of another c
   await threshold(page).fill("0.05");
   await threshold(page).press("Enter");
   await expect(undoButton(page)).toHaveAccessibleDescription(
-    "Undo: the missing data filter changed",
+    "Undo: the filter of the variants by missing data changed",
   );
 
   await typeInto(keepArea(page), "\ns002");

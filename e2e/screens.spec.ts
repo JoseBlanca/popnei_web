@@ -1574,7 +1574,7 @@ for (const theme of ["light", "dark"] as const) {
       await page.keyboard.press("ControlOrMeta+z");
       await expect(
         page.getByRole("region", { name: "Notice" }).getByRole("alertdialog", {
-          name: "Undone: the missing data filter changed. The ongoing calculation of Diversity will be stopped unless you redo the change",
+          name: "Undone: the filter of the variants by missing data changed. The ongoing calculation of Diversity will be stopped unless you redo the change",
         }),
       ).toBeVisible();
       await save(page, `popgen-shell-notice-longest-320-${theme}`, {

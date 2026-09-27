@@ -351,7 +351,7 @@ test("VS7 D1 the missing data filter of the variants moved: the statistics remov
   await setMissing(page, "0.06");
   await expect(
     block(page).getByText(
-      "The statistics of each individual were removed because the missing data filter changed. Undo brings back the table as it was, with no calculation; Calculate makes a new one for the new settings.",
+      "The statistics of each individual were removed because the filter of the variants by missing data changed. Undo brings back the table as it was, with no calculation; Calculate makes a new one for the new settings.",
       { exact: true },
     ),
   ).toBeVisible();
@@ -384,7 +384,7 @@ test("VS7 D1 the missing data filter of the variants moved: the statistics remov
   await banner(page, "Redo").click();
   await expect(
     block(page).getByText(
-      "Redone: the missing data filter changed. The statistics of each individual were removed; Undo brings back the table as it was, with no calculation, and Calculate makes a new one for the settings as they are now.",
+      "Redone: the filter of the variants by missing data changed. The statistics of each individual were removed; Undo brings back the table as it was, with no calculation, and Calculate makes a new one for the settings as they are now.",
       { exact: true },
     ),
   ).toBeVisible();

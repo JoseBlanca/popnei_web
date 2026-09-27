@@ -399,7 +399,7 @@ test("VS7 D1 the missing data filter of the variants moved: the statistics remov
   await variants.press("Enter");
   await expect(
     section(page).getByText(
-      /^The statistics of each individual were removed because the missing data filter changed\./,
+      /^The statistics of each individual were removed because the filter of the variants by missing data changed\./,
     ),
   ).toBeVisible();
   await expect(

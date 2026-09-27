@@ -123,7 +123,7 @@ export function runningText(line: RunningLine): string {
  * command, "The diversity was removed because the missing data filter
  * changed. Undo brings back the table as it was, with no calculation; Run
  * calculates a new one for the new settings."; after an undo, "Undone:
- * the missing data filter changed. The diversity was removed; Redo brings
+ * the filter of the variants by missing data changed. The diversity was removed; Redo brings
  * back the table as it was, with no calculation, and Run calculates a new
  * one for the settings as they are now.", and after a redo the same with
  * "Redone:" and Undo. `name` is the analysis in a sentence, "the

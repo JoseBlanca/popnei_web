@@ -75,11 +75,13 @@ function loadPanel(store: Store<JobResult>): void {
 }
 
 function setThreshold(store: Store<JobResult>, threshold: number): void {
-  store.apply("the missing data filter changed", (p: Project) =>
-    setVariantFilter(p, {
-      kind: "missing_data",
-      maxAllowedMissingRate: threshold,
-    }),
+  store.apply(
+    "the filter of the variants by missing data changed",
+    (p: Project) =>
+      setVariantFilter(p, {
+        kind: "missing_data",
+        maxAllowedMissingRate: threshold,
+      }),
   );
 }
 
@@ -312,11 +314,13 @@ describe("WS9 the saving counts a result that ended as a change", () => {
     start();
     end();
     saving.save("panel");
-    store.apply("the missing data filter changed", (p: Project) =>
-      setVariantFilter(p, {
-        kind: "missing_data",
-        maxAllowedMissingRate: 0.05,
-      }),
+    store.apply(
+      "the filter of the variants by missing data changed",
+      (p: Project) =>
+        setVariantFilter(p, {
+          kind: "missing_data",
+          maxAllowedMissingRate: 0.05,
+        }),
     );
     expect(saving.changed()).toBe(true);
 

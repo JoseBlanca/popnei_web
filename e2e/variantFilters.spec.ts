@@ -38,14 +38,14 @@ const FILTERS = [
     switch: "Filter the variants by missing data",
     fields: [["Maximum proportion of missing genotypes, from 0 to 1", "0.1"]],
     line: MISSING_DATA_LINE,
-    name: "the missing data filter",
+    name: "the filter of the variants by missing data",
   },
   {
     kind: "obs_het",
     switch: "Filter the variants by observed heterozygosity",
     fields: [["Maximum observed heterozygosity, from 0 to 1", "0.5"]],
     line: OBS_HET_LINE,
-    name: "the filter by observed heterozygosity",
+    name: "the filter of the variants by observed heterozygosity",
   },
   {
     kind: "maf",
@@ -222,7 +222,7 @@ test("VS6 D2 each switch turned on starts its filter at its value of the table o
   // The missing data filter, on in a new project, turned off first.
   await flip(page, FILTERS[0].switch);
   await expect(undoButton(page)).toHaveAccessibleDescription(
-    "Undo: the missing data filter was turned off",
+    "Undo: the filter of the variants by missing data was turned off",
   );
 
   for (const filter of FILTERS) {

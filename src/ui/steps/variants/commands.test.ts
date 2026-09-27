@@ -66,11 +66,13 @@ describe("the commands of the Variants step", () => {
     );
     apply(store, filterSwitchCommand("missing_data", false));
     expect(store.getState().undo).toBe(
-      "the missing data filter was turned off",
+      "the filter of the variants by missing data was turned off",
     );
     expect(store.getState().project.filters).toEqual([]);
     apply(store, filterSwitchCommand("missing_data", true));
-    expect(store.getState().undo).toBe("the missing data filter was turned on");
+    expect(store.getState().undo).toBe(
+      "the filter of the variants by missing data was turned on",
+    );
     expect(store.getState().project.filters).toEqual([
       { kind: "missing_data", maxAllowedMissingRate: 0.1 },
     ]);
@@ -80,12 +82,16 @@ describe("the commands of the Variants step", () => {
     const store = realStore();
     apply(store, missingData(0.11));
     apply(store, missingData(0.12));
-    expect(store.getState().undo).toBe("the missing data filter changed");
+    expect(store.getState().undo).toBe(
+      "the filter of the variants by missing data changed",
+    );
     store.undo();
     expect(store.getState().project.filters).toEqual([
       { kind: "missing_data", maxAllowedMissingRate: 0.11 },
     ]);
-    expect(store.getState().undo).toBe("the missing data filter changed");
+    expect(store.getState().undo).toBe(
+      "the filter of the variants by missing data changed",
+    );
     store.undo();
     expect(store.getState().project.filters).toEqual([
       { kind: "missing_data", maxAllowedMissingRate: 0.1 },
@@ -102,7 +108,7 @@ describe("the four filters of the variants", () => {
     expect(store.getState().undo).toBe("the MAF filter was turned on");
     apply(store, filterSwitchCommand("obs_het", true));
     expect(store.getState().undo).toBe(
-      "the filter by observed heterozygosity was turned on",
+      "the filter of the variants by observed heterozygosity was turned on",
     );
     expect(store.getState().project.filters).toEqual([
       { kind: "missing_data", maxAllowedMissingRate: 0.1 },
@@ -124,7 +130,7 @@ describe("the four filters of the variants", () => {
     expect(store.getState().undo).toBe("the MAF filter changed");
     apply(store, filterCommand({ kind: "obs_het", maxAllowedObsHet: 0.4 }));
     expect(store.getState().undo).toBe(
-      "the filter by observed heterozygosity changed",
+      "the filter of the variants by observed heterozygosity changed",
     );
     expect(store.getState().project.filters).toEqual([
       { kind: "missing_data", maxAllowedMissingRate: 0.1 },
@@ -134,7 +140,7 @@ describe("the four filters of the variants", () => {
     ]);
     apply(store, filterSwitchCommand("obs_het", false));
     expect(store.getState().undo).toBe(
-      "the filter by observed heterozygosity was turned off",
+      "the filter of the variants by observed heterozygosity was turned off",
     );
     apply(store, filterSwitchCommand("maf", false));
     expect(store.getState().undo).toBe("the MAF filter was turned off");

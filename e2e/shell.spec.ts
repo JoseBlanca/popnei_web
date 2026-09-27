@@ -252,17 +252,17 @@ test("WS9 D3 Undo pressed with the mouse until nothing is left puts the focus on
   await threshold.fill("0.05");
   await threshold.press("Enter");
   await expect(undoButton(page)).toHaveAccessibleDescription(
-    "Undo: the missing data filter changed",
+    "Undo: the filter of the variants by missing data changed",
   );
 
   await undoButton(page).click();
   await expect(threshold).toHaveValue("0.1");
   await expect(status(page)).toHaveText(
-    "Undone: the missing data filter changed.",
+    "Undone: the filter of the variants by missing data changed.",
   );
   await expect(undoButton(page)).toBeFocused();
   await expect(redoButton(page)).toHaveAccessibleDescription(
-    "Redo: the missing data filter changed",
+    "Redo: the filter of the variants by missing data changed",
   );
 
   await undoButton(page).click();
@@ -278,7 +278,7 @@ test("WS9 D3 Undo pressed with the mouse until nothing is left puts the focus on
   await expect(undoButton(page)).toBeFocused();
   // After the texts of the presses within the pause of the announcer.
   await expect(status(page)).toHaveText(
-    /Redone: the missing data filter changed\.$/,
+    /Redone: the filter of the variants by missing data changed\.$/,
   );
 });
 
@@ -301,12 +301,12 @@ test("WS9 D3 Ctrl+Z undoes and Ctrl+Shift+Z and Ctrl+Y redo, and in a number fie
   await page.keyboard.press("ControlOrMeta+z");
   await expect(threshold).toHaveValue("0.1");
   await expect(status(page)).toHaveText(
-    "Undone: the missing data filter changed.",
+    "Undone: the filter of the variants by missing data changed.",
   );
   await page.keyboard.press("ControlOrMeta+Shift+z");
   await expect(threshold).toHaveValue("0.05");
   await expect(status(page)).toHaveText(
-    "Redone: the missing data filter changed.",
+    "Redone: the filter of the variants by missing data changed.",
   );
   await page.keyboard.press("ControlOrMeta+z");
   await expect(threshold).toHaveValue("0.1");
@@ -321,7 +321,7 @@ test("WS9 D3 Ctrl+Z undoes and Ctrl+Shift+Z and Ctrl+Y redo, and in a number fie
   await page.keyboard.press("ControlOrMeta+z");
   await expect(threshold).toHaveValue("0.1");
   await expect(status(page)).toHaveText(
-    /Undone: the missing data filter changed\.$/,
+    /Undone: the filter of the variants by missing data changed\.$/,
   );
   await page.keyboard.press("ControlOrMeta+Shift+z");
   await expect(threshold).toHaveValue("0.05");
@@ -336,7 +336,7 @@ test("WS9 D3 Ctrl+Z undoes and Ctrl+Shift+Z and Ctrl+Y redo, and in a number fie
   await expect(threshold).toHaveValue("0.05");
   await expect(redoButton(page)).toBeDisabled();
   await expect(undoButton(page)).toHaveAccessibleDescription(
-    "Undo: the missing data filter changed",
+    "Undo: the filter of the variants by missing data changed",
   );
 });
 
@@ -423,7 +423,7 @@ test("WS9 D3 a change that leaves a calculation behind says so in the notice, an
   await threshold.press("Enter");
   await expect(
     notice(page).getByRole("alertdialog", {
-      name: "The missing data filter changed. The ongoing calculation of Diversity will be stopped unless you undo the change",
+      name: "The filter of the variants by missing data changed. The ongoing calculation of Diversity will be stopped unless you undo the change",
     }),
   ).toBeVisible();
   await expectNoViolations(makeAxeBuilder);
@@ -536,7 +536,7 @@ test("WS9 D3 the shell with results removed: the notice with its words, Undo and
 
   await expect(
     notice(page).getByRole("alertdialog", {
-      name: "Diversity removed because the missing data filter changed",
+      name: "Diversity removed because the filter of the variants by missing data changed",
     }),
   ).toBeVisible();
   await expect(
@@ -589,7 +589,7 @@ test("WS9 D3 F6 reaches the notice after a change that removed the diversity, an
   await expect(threshold).toBeFocused();
   await expect(threshold).toHaveValue("0.1");
   await expect(status(page)).toHaveText(
-    "Undone: the missing data filter changed.",
+    "Undone: the filter of the variants by missing data changed.",
   );
   await goTo(page, "Analyses");
   await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
@@ -661,14 +661,14 @@ test("WS9 D3 after an undo that removed the diversity the notice offers Redo, wh
   await page.keyboard.press("ControlOrMeta+z");
   await expect(
     notice(page).getByRole("alertdialog", {
-      name: "Undone: the missing data filter changed. Diversity removed",
+      name: "Undone: the filter of the variants by missing data changed. Diversity removed",
     }),
   ).toBeVisible();
 
   await notice(page).getByRole("button", { name: "Redo", exact: true }).click();
   await expect(notice(page)).toHaveCount(0);
   await expect(status(page)).toHaveText(
-    "Redone: the missing data filter changed.",
+    "Redone: the filter of the variants by missing data changed.",
   );
   await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
   await goTo(page, "Variants");
@@ -691,7 +691,7 @@ test("WS9 D3 the keyboard's Undo, pressed with the focus on the Undo of the noti
 
   await expect(threshold).toHaveValue("0.1");
   await expect(status(page)).toHaveText(
-    "Undone: the missing data filter changed.",
+    "Undone: the filter of the variants by missing data changed.",
   );
 });
 

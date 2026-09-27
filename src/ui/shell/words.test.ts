@@ -309,7 +309,10 @@ function state(
 
 function notice(parts: Partial<Notice>): Notice {
   return {
-    cause: { kind: "command", description: "the missing data filter changed" },
+    cause: {
+      kind: "command",
+      description: "the filter of the variants by missing data changed",
+    },
     removed: [],
     leftBehind: [],
     stopped: [],
@@ -688,7 +691,7 @@ const NEW_FILE = "a new variants file was loaded";
 describe("WS9 D1 the words of the notice", () => {
   test("a command", () => {
     expect(noticeText(notice({ removed: [DIVERSITY] }), title)).toEqual({
-      text: "Diversity removed because the missing data filter changed",
+      text: "Diversity removed because the filter of the variants by missing data changed",
       action: "Undo",
       reverse: "undo",
     });
@@ -721,7 +724,7 @@ describe("WS9 D1 the words of the notice", () => {
 
   test("a command, with a calculation left behind and nothing removed", () => {
     expect(noticeText(notice({ leftBehind: [DIVERSITY] }), title)).toEqual({
-      text: "The missing data filter changed. The ongoing calculation of Diversity will be stopped unless you undo the change",
+      text: "The filter of the variants by missing data changed. The ongoing calculation of Diversity will be stopped unless you undo the change",
       action: "Undo",
       reverse: "undo",
     });
@@ -729,11 +732,14 @@ describe("WS9 D1 the words of the notice", () => {
 
   test("an undo", () => {
     const n = notice({
-      cause: { kind: "undo", description: "the missing data filter changed" },
+      cause: {
+        kind: "undo",
+        description: "the filter of the variants by missing data changed",
+      },
       removed: [DIVERSITY],
     });
     expect(noticeText(n, title)).toEqual({
-      text: "Undone: the missing data filter changed. Diversity removed",
+      text: "Undone: the filter of the variants by missing data changed. Diversity removed",
       action: "Redo",
       reverse: "redo",
     });
@@ -741,11 +747,14 @@ describe("WS9 D1 the words of the notice", () => {
 
   test("an undo, with a calculation left behind, names Redo", () => {
     const n = notice({
-      cause: { kind: "undo", description: "the missing data filter changed" },
+      cause: {
+        kind: "undo",
+        description: "the filter of the variants by missing data changed",
+      },
       leftBehind: [DIVERSITY],
     });
     expect(noticeText(n, title)).toEqual({
-      text: "Undone: the missing data filter changed. The ongoing calculation of Diversity will be stopped unless you redo the change",
+      text: "Undone: the filter of the variants by missing data changed. The ongoing calculation of Diversity will be stopped unless you redo the change",
       action: "Redo",
       reverse: "redo",
     });
@@ -765,12 +774,15 @@ describe("WS9 D1 the words of the notice", () => {
 
   test("a redo, with a calculation left behind", () => {
     const n = notice({
-      cause: { kind: "redo", description: "the missing data filter changed" },
+      cause: {
+        kind: "redo",
+        description: "the filter of the variants by missing data changed",
+      },
       removed: [DIVERSITY],
       leftBehind: [DIVERSITY],
     });
     expect(noticeText(n, title)).toEqual({
-      text: "Redone: the missing data filter changed. Diversity removed. The ongoing calculation of Diversity will be stopped unless you undo the change",
+      text: "Redone: the filter of the variants by missing data changed. Diversity removed. The ongoing calculation of Diversity will be stopped unless you undo the change",
       action: "Undo",
       reverse: "undo",
     });
@@ -788,11 +800,14 @@ describe("WS9 D1 the words of the notice", () => {
       reverse: "undo",
     });
     const undone = notice({
-      cause: { kind: "undo", description: "the missing data filter changed" },
+      cause: {
+        kind: "undo",
+        description: "the filter of the variants by missing data changed",
+      },
       leftBehind: [DIVERSITY, PCA],
     });
     expect(noticeText(undone, title)).toEqual({
-      text: "Undone: the missing data filter changed. The 2 ongoing calculations will be stopped unless you redo the change",
+      text: "Undone: the filter of the variants by missing data changed. The 2 ongoing calculations will be stopped unless you redo the change",
       action: "Redo",
       reverse: "redo",
     });
@@ -1135,7 +1150,7 @@ describe("WS9 D1 the announcements made from the state", () => {
     const after = state({
       project: READY,
       statuses: [done(KEY_A), LOCKED],
-      redo: "the missing data filter changed",
+      redo: "the filter of the variants by missing data changed",
     });
     expect(announcementsOf(before, after, WORDS)).toEqual([]);
   });

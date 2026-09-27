@@ -6,7 +6,7 @@
  * and Save project, in ProjectButtons.tsx.
  *
  * Undo and Redo are described by what they would take back or bring
- * again, "Undo: the missing data filter changed", and are disabled when
+ * again, "Undo: the filter of the variants by missing data changed", and are disabled when
  * there is none. When the one that has the focus becomes disabled, after
  * the last step was undone or redone, the focus moves to the other, which
  * that change has just enabled, since a disabled button cannot hold the

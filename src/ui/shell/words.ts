@@ -460,7 +460,7 @@ function andTheWriting(
  * left behind, the writing among them, a sentence of their own that names
  * the action; and the written file discarded, a sentence after it. The
  * sentences are joined by a full stop, with none after the last:
- * "Diversity removed because the missing data filter changed", with the
+ * "Diversity removed because the filter of the variants by missing data changed", with the
  * action Undo.
  */
 export function noticeText(

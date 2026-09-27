@@ -2,7 +2,7 @@
  * An undo or a redo of the project, as the header's buttons, the keyboard
  * and the notice's action make it (docs/specs/shell.md, "The status
  * region"). One that makes no notice is announced in the status region,
- * "Undone: the missing data filter changed.", since without it a user of
+ * "Undone: the filter of the variants by missing data changed.", since without it a user of
  * a screen reader who pressed Ctrl+Z would hear nothing; one that makes a
  * notice is read out by the notice. It is said before what the change
  * announces from the state, the warning of a reopened project it brings

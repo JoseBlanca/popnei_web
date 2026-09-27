@@ -72,11 +72,13 @@ describe("WS9 D1 the announcer", () => {
       "Diversity: done. Undone: a new variants file was loaded. Warning: the file differs. Redone: a new variants file was loaded.",
     );
 
-    announcer.announceChange(() => "Undone: the missing data filter changed.");
+    announcer.announceChange(
+      () => "Undone: the filter of the variants by missing data changed.",
+    );
     expect(announcer.getState()).toBe("");
     vi.advanceTimersByTime(100);
     expect(announcer.getState()).toBe(
-      "Undone: the missing data filter changed.",
+      "Undone: the filter of the variants by missing data changed.",
     );
   });
 

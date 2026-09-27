@@ -38,17 +38,19 @@ const ID = "filterCounts";
 /** The name of each filter of the variants, as the labels of the step
     name them, at the start of a sentence; the descriptions of the
     commands of the step name them alike (docs/specs/steps/variants.md,
-    "What it sends and reads"). */
+    "What it sends and reads"). The two that the individuals have too
+    say "of the variants", as their switches do. */
 export const FILTER_NAMES: Readonly<Record<VariantFilterKind, string>> =
   Object.freeze({
-    missing_data: "The missing data filter",
-    obs_het: "The filter by observed heterozygosity",
+    missing_data: "The filter of the variants by missing data",
+    obs_het: "The filter of the variants by observed heterozygosity",
     maf: "The MAF filter",
     ld: "The LD pruning",
   });
 
 /** The name of the filter of the variants of the kind `kind` inside a
-    sentence, "the MAF filter", "the filter by observed heterozygosity":
+    sentence, "the MAF filter", "the filter of the variants by observed
+    heterozygosity":
     that of `FILTER_NAMES` with its first letter in lower case. */
 export function filterNameInSentence(kind: VariantFilterKind): string {
   const name = FILTER_NAMES[kind];
