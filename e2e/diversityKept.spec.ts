@@ -33,12 +33,14 @@ const STATS_CAPTION =
   "The statistics of the 200 individuals of panel.nei, over the 1,152 variants the filters kept.";
 const PASS_119 = "119 of the 200 individuals of panel.nei pass the filters.";
 
-const POPS_ALL = "3 populations: p0, 48 individuals; p2, 84; p1, 68";
-const POPS_119 = "3 populations: p0, 32 individuals; p2, 50; p1, 37";
+const POPS_ALL =
+  "3 populations: p0, 48 individuals; p2, 84 individuals; p1, 68 individuals";
+const POPS_119 =
+  "3 populations: p0, 32 individuals; p2, 50 individuals; p1, 37 individuals";
 const RUN_WAITS =
   "Run calculates the statistics of each individual first, and the populations may lose individuals to the thresholds.";
 const P1_LEFT_OUT =
-  "p1 has no individual left after the filters of individuals, and is left out.";
+  "p1 has no individual left after the filters of individuals, and is left out. Loosen the filters of individuals in the Variants step to keep it.";
 const WAIT_LINE =
   /^Calculating the statistics of each individual, which the thresholds of the individuals need · \d+% · \d:\d\d$/;
 const WAIT_BAR = "Calculating the statistics of each individual";
@@ -302,7 +304,7 @@ test("VS7 D2 the ready state lists the populations the filters keep, before the 
   // keeps, before them.
   await goTo(page, "Analyses");
   await expect(
-    line(page, "2 populations: p0, 48 individuals; p2, 84"),
+    line(page, "2 populations: p0, 48 individuals; p2, 84 individuals"),
   ).toBeVisible();
   await expect(line(page, P1_LEFT_OUT)).toBeVisible();
   await expect(line(page, RUN_WAITS)).toBeVisible();
@@ -312,7 +314,7 @@ test("VS7 D2 the ready state lists the populations the filters keep, before the 
   await calculateStatistics(page);
   await goTo(page, "Analyses");
   await expect(
-    line(page, "2 populations: p0, 32 individuals; p2, 50"),
+    line(page, "2 populations: p0, 32 individuals; p2, 50 individuals"),
   ).toBeVisible();
   await expect(line(page, P1_LEFT_OUT)).toBeVisible();
   await expect(line(page, RUN_WAITS)).toHaveCount(0);
@@ -454,7 +456,7 @@ test("VS7 D2 thresholds that keep only individuals with no population leave none
   await expect(
     line(
       page,
-      "p0 has no individual left after the filters of individuals, and is left out.",
+      "p0 has no individual left after the filters of individuals. Loosen the filters of individuals in the Variants step to keep it.",
     ),
   ).toBeVisible();
   await expect(panel(page).getByText(/^\d+ populations?:/)).toHaveCount(0);

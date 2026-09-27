@@ -116,13 +116,13 @@ describe("VS7 D1 the words of the statistics of each individual", () => {
 
   test("the statistics removed by a command, an undo and a redo", () => {
     expect(statsRemovedText(notice("command"))).toBe(
-      "The statistics of each individual were removed because the MAF filter changed. Undo brings back the table as it was, with no calculation; Calculate makes a new one for the new settings.",
+      "The statistics of each individual were removed because the MAF filter changed. Undo brings back the table and the histograms as they were, without calculating again; Calculate makes new ones for the new settings.",
     );
     expect(statsRemovedText(notice("undo"))).toBe(
-      "Undone: the MAF filter changed. The statistics of each individual were removed; Redo brings back the table as it was, with no calculation, and Calculate makes a new one for the settings as they are now.",
+      "Undone: the MAF filter changed. The statistics of each individual were removed; Redo brings back the table and the histograms as they were, without calculating again, and Calculate makes new ones for the settings as they are now.",
     );
     expect(statsRemovedText(notice("redo"))).toBe(
-      "Redone: the MAF filter changed. The statistics of each individual were removed; Undo brings back the table as it was, with no calculation, and Calculate makes a new one for the settings as they are now.",
+      "Redone: the MAF filter changed. The statistics of each individual were removed; Undo brings back the table and the histograms as they were, without calculating again, and Calculate makes new ones for the settings as they are now.",
     );
   });
 

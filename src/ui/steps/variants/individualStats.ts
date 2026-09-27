@@ -49,7 +49,7 @@ export const STATS_TABLE_NAME = "Statistics of each individual";
 /** The line above the table while the lists of individuals are refused,
     in place of the column Kept. */
 export const KEPT_NOT_KNOWN_LINE =
-  "Which individuals are kept is shown once the lists of individuals above are corrected.";
+  "Which individuals are kept is shown once the lists of individuals to keep and to remove are corrected.";
 
 /** The line before the table: how many rows it holds, since its box
     shows a dozen of them, "200 individuals; the table scrolls, and its
@@ -220,23 +220,24 @@ export function statsCaption(
  * The words of the statistics removed, from the change of the notice that
  * lists them (individualChecks.md, "Its words"): after a command, "The
  * statistics of each individual were removed because the MAF filter
- * changed. Undo brings back the table as it was, with no calculation;
- * Calculate makes a new one for the new settings."; after an undo,
- * "Undone: the MAF filter changed. The statistics of each individual were
- * removed; Redo brings back the table as it was, with no calculation, and
- * Calculate makes a new one for the settings as they are now.", and after
+ * changed. Undo brings back the table and the histograms as they were,
+ * without calculating again; Calculate makes new ones for the new
+ * settings."; after an undo, "Undone: the MAF filter changed. The
+ * statistics of each individual were removed; Redo brings back …, and
+ * Calculate makes new ones for the settings as they are now.", and after
  * a redo the same with "Redone:" and Undo.
  */
 export function statsRemovedText(notice: Notice): string {
   const cause = notice.cause;
   const start = undoneOrRedone(cause);
   const name = capitalized(STATS_NAME);
-  const back = "brings back the table as it was, with no calculation";
+  const back =
+    "brings back the table and the histograms as they were, without calculating again";
   if (start === null) {
-    return `${name} were removed because ${cause.description}. Undo ${back}; Calculate makes a new one for the new settings.`;
+    return `${name} were removed because ${cause.description}. Undo ${back}; Calculate makes new ones for the new settings.`;
   }
   const action = cause.kind === "undo" ? "Redo" : "Undo";
-  return `${start}. ${name} were removed; ${action} ${back}, and Calculate makes a new one for the settings as they are now.`;
+  return `${start}. ${name} were removed; ${action} ${back}, and Calculate makes new ones for the settings as they are now.`;
 }
 
 /** What one histogram of the individuals is shown with. */

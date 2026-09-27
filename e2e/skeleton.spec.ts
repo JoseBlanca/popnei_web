@@ -166,9 +166,12 @@ test("WS9 D4 panel.nei, filtered at 0.05 and grouped by the populations of panel
   await setThreshold(page, "0.05");
   await goTo(page, "Analyses");
   await expect(
-    panel(page).getByText("3 populations: p0, 48 individuals; p2, 84; p1, 68", {
-      exact: true,
-    }),
+    panel(page).getByText(
+      "3 populations: p0, 48 individuals; p2, 84 individuals; p1, 68 individuals",
+      {
+        exact: true,
+      },
+    ),
   ).toBeVisible();
 
   await run(page);

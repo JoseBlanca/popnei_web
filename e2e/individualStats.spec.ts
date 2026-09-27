@@ -357,7 +357,7 @@ test("VS7 D1 the missing data filter of the variants moved: the statistics remov
   await setMissing(page, "0.06");
   await expect(
     block(page).getByText(
-      "The statistics of each individual were removed because the filter of the variants by missing data changed. Undo brings back the table as it was, with no calculation; Calculate makes a new one for the new settings.",
+      "The statistics of each individual were removed because the filter of the variants by missing data changed. Undo brings back the table and the histograms as they were, without calculating again; Calculate makes new ones for the new settings.",
       { exact: true },
     ),
   ).toBeVisible();
@@ -390,7 +390,7 @@ test("VS7 D1 the missing data filter of the variants moved: the statistics remov
   await banner(page, "Redo").click();
   await expect(
     block(page).getByText(
-      "Redone: the filter of the variants by missing data changed. The statistics of each individual were removed; Undo brings back the table as it was, with no calculation, and Calculate makes a new one for the settings as they are now.",
+      "Redone: the filter of the variants by missing data changed. The statistics of each individual were removed; Undo brings back the table and the histograms as they were, without calculating again, and Calculate makes new ones for the settings as they are now.",
       { exact: true },
     ),
   ).toBeVisible();
@@ -476,7 +476,7 @@ test("VS7 D1 the column Kept: a list to remove applied marks s000 removed and s0
   await applyList(page, KEEP_LABEL, "Apply the list to keep", "ind_900");
   await expect(
     section(page).getByText(
-      "Which individuals are kept is shown once the lists of individuals above are corrected.",
+      "Which individuals are kept is shown once the lists of individuals to keep and to remove are corrected.",
       { exact: true },
     ),
   ).toBeVisible();
@@ -541,7 +541,7 @@ test("VS7 D1 a new file loaded: the statistics removed with the words of the new
   await pick(page, "panel.nei");
   await expect(
     block(page).getByText(
-      "The statistics of each individual were removed because a new variants file was loaded. Undo brings back the table as it was, with no calculation; Calculate makes a new one for the new settings.",
+      "The statistics of each individual were removed because a new variants file was loaded. Undo brings back the table and the histograms as they were, without calculating again; Calculate makes new ones for the new settings.",
       { exact: true },
     ),
   ).toBeVisible();

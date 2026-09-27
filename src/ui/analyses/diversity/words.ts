@@ -18,13 +18,13 @@ import type { Pops } from "../../../worker/protocol.ts";
 /** The decimals of every number of the table. */
 const DECIMALS = 4;
 
-/** The populations a run will take, with their sizes: "3 populations:
-    p0, 48 individuals; p2, 84; p1, 68". */
+/** The populations a run will take, with their sizes, the noun with
+    each: "3 populations: p0, 48 individuals; p2, 84 individuals; p1, 68
+    individuals". */
 export function populationsText(pops: Pops): string {
-  const parts = pops.map(([pop, members], index) =>
-    index === 0
-      ? `${escaped(pop)}, ${counted(members.length, "individual")}`
-      : `${escaped(pop)}, ${grouped(members.length)}`,
+  const parts = pops.map(
+    ([pop, members]) =>
+      `${escaped(pop)}, ${counted(members.length, "individual")}`,
   );
   return `${counted(pops.length, "population")}: ${parts.join("; ")}`;
 }
@@ -77,12 +77,30 @@ export const WAITS_FOR_STATISTICS_TEXT =
   "Run calculates the statistics of each individual first, and the populations may lose individuals to the thresholds.";
 
 /** The populations the filters of individuals leave with no individual,
-    which a run leaves out: "p9 has no individual left after the filters
-    of individuals, and is left out."; "p1 and p2 have …, and are left
-    out.". */
+    which a run leaves out, and what to do, since the panel is in the
+    Analyses step: "p9 has no individual left after the filters of
+    individuals, and is left out. Loosen the filters of individuals in
+    the Variants step to keep it."; "p1 and p2 have …, and are left out.
+    Loosen … to keep them.". */
 export function emptiedText(emptied: readonly string[]): string {
   const one = emptied.length === 1;
-  return `${namesOf(emptied)} ${one ? "has" : "have"} no individual left after the filters of individuals, and ${one ? "is" : "are"} left out.`;
+  return `${namesOf(emptied)} ${one ? "has" : "have"} no individual left after the filters of individuals, and ${one ? "is" : "are"} left out. ${loosenText(one)}`;
+}
+
+/** The populations when the filters of individuals leave every one of
+    them empty, said whole: "None of the 3 populations has an individual
+    left after the filters of individuals. Loosen …", or, of one, by its
+    name. */
+export function allEmptiedText(emptied: readonly string[]): string {
+  const [only] = emptied;
+  return emptied.length === 1 && only !== undefined
+    ? `${escaped(only)} has no individual left after the filters of individuals. ${loosenText(true)}`
+    : `None of the ${counted(emptied.length, "population")} has an individual left after the filters of individuals. ${loosenText(false)}`;
+}
+
+/** What to do about populations left empty, of one or of several. */
+function loosenText(one: boolean): string {
+  return `Loosen the filters of individuals in the Variants step to keep ${one ? "it" : "them"}.`;
 }
 
 /**
@@ -99,7 +117,11 @@ export function readyLines(
 ): readonly string[] {
   return [
     ...(kept.pops.length > 0 ? [populationsText(kept.pops)] : []),
-    ...(kept.emptied.length > 0 ? [emptiedText(kept.emptied)] : []),
+    ...(kept.emptied.length === 0
+      ? []
+      : kept.pops.length === 0
+        ? [allEmptiedText(kept.emptied)]
+        : [emptiedText(kept.emptied)]),
     ...(waitsForStatistics ? [WAITS_FOR_STATISTICS_TEXT] : []),
   ];
 }
