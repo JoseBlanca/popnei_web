@@ -137,7 +137,7 @@ the link has the pointer or the focus.
 | | Problem | its read failed, or `projectNeeds` gives another reason; or the file is read and `individualListNeeds` gives a reason, a list of individuals that popnei would refuse; or the individuals kept are known and the filters keep none, as the owner decided on 26 September 2026 (point J of `docs/specs/stage-3-open-points.md`) | the reason `projectNeeds` gives, the `reason` of `individualListNeeds`, or that of `keptNoneReason`, "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them in the Variants step." |
 | | Running | a check or the writing is running, or waits for the statistics of each individual | — |
 | | Results removed | the notice lists a check among the results removed | — |
-| | Failed | a check is in the state `error`, or the writing is | "Statistics of each individual could not be calculated.", "The file could not be written.", the first in the order of the step |
+| | Failed | a check is in the state `error`, or the writing is | "Statistics of each individual could not be calculated.", "The file could not be written.", the first in the order of the step: the checks in the order of the analyses of `apps.ts`, then the writing |
 | | Done | read, neither `projectNeeds` nor `individualListNeeds` gives a reason, and the filters of individuals do not keep none | — |
 | Individuals | To do | no metadata file | the reason `individualsNeeds` gives, "Load a metadata file in the Individuals step." |
 | | Reading | its read is pending | "Reading pops.csv.", from `individualsNeeds` |
@@ -266,7 +266,9 @@ from four parts:
   sentence of its own, "The written file, not saved, was discarded, and
   Undo does not bring it back; write it again to save it.", after the
   sentence of the calculations left behind, since the action of the notice would otherwise promise the file back, as the owner decided
-  on 26 September 2026 (point G of `docs/specs/stage-3-open-points.md`).
+  on 26 September 2026 (point G of `docs/specs/stage-3-open-points.md`);
+  after an undo it names Redo, "and Redo does not bring it back", since
+  Redo is then the action.
 
 From stage 3 the writing of the file joins the calculations stopped and
 left behind, named apart, since it is not an analysis:
@@ -350,7 +352,7 @@ file its options of the CSV compared by their values:
 | a request is in `runs` that was not | "Diversity: calculating." |
 | in the same change, calculations left behind, which the current project no longer asks for, went to being stopped | added to it: "The earlier calculation of Diversity was stopped.", or "The 2 earlier calculations were stopped." |
 | a request that was current and not being stopped left `runs`, and its analysis is `done` under its key | "Diversity: done.", "Diversity: done, 2 warnings.", followed, for an opened project, by the line its panel shows under the result, `checkVerdictText` of its `check` or, when that is `null`, `uncomparedText`, when either gives one: "Diversity: done. The same numbers as in the project file: this variants file gives the results the project was saved with." |
-| the same, and its analysis is in the state `error` under its key | "Diversity could not be calculated. The Analyses step says why." |
+| the same, and its analysis is in the state `error` under its key | "Diversity could not be calculated. The Analyses step says why.", with the step the analysis is shown in: "Statistics of each individual could not be calculated. The Variants step says why." |
 | a request that was current and being stopped left `runs` | "Diversity: stopped." |
 | the variants file of the same load went from pending to read | "panel.nei read: 200 individuals, ploidy 2.", and, when the metadata file is read, the sentence of the check below |
 | the same, to failed | the reason `projectNeeds` gives, which names the file: "popnei could not read bad.vcf: … Load a variants file in the Variants step." |
@@ -380,7 +382,10 @@ its field. A Run that waits for the statistics of each individual puts
 the request of the statistics into `runs`, which is announced as theirs,
 and its own request, when the statistics arrive, as its own:
 "Statistics of each individual: calculating.", later "Statistics of each
-individual: done. Diversity: calculating." A write that ends after a
+individual: done. Diversity: calculating." So within one change the ends
+of the requests, of the analyses and then of the writing, are said
+before the starts, of the analyses and then of the writing, and the rest
+follows in the order of the table. A write that ends after a
 change of its filters, and is dropped, is not announced, since it was
 not current: the notice of that change named it, and the Variants step
 says why no Save came. Counts filled by the pass of another analysis are
@@ -705,7 +710,7 @@ export function noticeText(
   readonly reverse: "undo" | "redo";
 };
 
-/** The announcements made from two states, in the order of the table; [] when none. */
+/** The announcements made from two states, the ends before the starts and the rest in the order of the table; [] when none. */
 export function announcementsOf<R>(
   before: AppState<R, unknown>, after: AppState<R, unknown>, w: ShellWords<R>,
 ): readonly string[];
