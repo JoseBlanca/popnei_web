@@ -664,7 +664,8 @@ open; nothing of the project.
 The words are made by pure functions of the shell, in
 `src/ui/shell/words.ts`, from the state of the store, so that Vitest, the
 runner of the tests that need no browser, checks them in node. `title`
-gives the title of an analysis's panel, from `src/ui/analyses/panels.ts`:
+gives the title of an analysis, the heading of its panel or of its part
+of the Variants step, from `src/ui/analyses/titles.ts`:
 
 ```ts
 // StepId, "variants" | "individuals" | "analyses", is imported from
@@ -675,10 +676,10 @@ export type StepStatus =
   | "locked" | "running" | "removed" | "failed" | "ready";           // Analyses; Variants from stage 3 but "locked" and "ready"
 
 /** What the words of the shell need of the application, beyond the state:
-    the title of an analysis's panel, from src/ui/analyses/panels.ts; the
-    step it is shown in, from src/core/apps.ts; and, from stage 3, the
-    variants the filters keep, from the result of the Counts of the
-    filters when it is done. The name and the size of the written file
+    the title of an analysis, from src/ui/analyses/titles.ts; the step it
+    is shown in, from src/core/apps.ts; and, from stage 3, the variants
+    the filters keep, from the result of the Counts of the filters when it
+    is done, variantsKept of src/core/apps.ts. The name and the size of the written file
     are core's, writtenName of src/core/fileNames.ts and sizeText of
     src/core/writeEstimate.ts (docs/specs/analyses/writeVariants.md,
     "The functions of core"), which words.ts calls itself. */
@@ -723,8 +724,16 @@ count of its warnings, the state of `write` and the size of its file;
 the one number of a result they say, the variants that pass the filters,
 comes through `variantsKept`, and the text of the warning of a filter
 that kept none from the warnings of the state. The entry passes its
-`AppState<JobResult, Blob>` and a `ShellWords` made from `panels.ts` and
-`apps.ts`, and the tests states with the results of `TEST_DEFS`.
+`AppState<JobResult, Blob>` and a `ShellWords`, `SHELL_WORDS` of
+`src/ui/analyses/titles.ts`, made from the titles there, the steps of
+`POPGEN_ANALYSIS_STEPS` and `variantsKept`, both of `apps.ts`, and
+the tests states with the results of `TEST_DEFS`. The entry gives
+`SHELL_WORDS` to the components of the shell through a provider,
+`ShellWordsProvider` of `src/ui/shell/shellWords.tsx`, as it gives them
+the store, and a component reads it with `useShellWords()`; so no
+component of the shell imports the words of the population genetics
+application, and the association application, in stage 7, gives its
+own.
 `summaryLine` takes the project and not the state, as in stage 2, with
 the two numbers beside it, so that its tests need no store.
 
@@ -899,7 +908,7 @@ Each was approved by the owner on 25 September 2026 and says what is listed here
   the state, with the words of this spec, and not by the steps; what
   they announce themselves goes through `announce`.
 - `docs/specs/analyses/diversity.md`: the title of its panel,
-  "Diversity", its `<h2>`, in `src/ui/analyses/panels.ts`, under the
+  "Diversity", its `<h2>`, in `src/ui/analyses/titles.ts`, under the
   `<h1>` "Analyses" of the Analyses step; the start, the end and the stop
   of a run announced by the shell, with the words of this spec;
   `populationsNeeds`, for the stepper; `populationsToRun` and

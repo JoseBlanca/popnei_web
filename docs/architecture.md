@@ -632,7 +632,11 @@ used to set. `numCheckNumbers` was added on 25 September 2026, when the
 owner decided that a project file whose check numbers are not as many as
 its analysis gives is refused as damaged at the opening, since only the
 module of the analysis knows how many it gives. Adding an
-analysis is adding its module and its panel; nothing else changes. This is the
+analysis is adding its module and its panel, and three lines beside
+them: its definition in the list of the analyses of `src/core/apps.ts`,
+the step it is shown in in `POPGEN_ANALYSIS_STEPS` of the same file, and
+its title in `src/ui/analyses/titles.ts`, by which the shell names it;
+nothing else changes. This is the
 piece the work is split into, and what lets an analysis be tried, changed
 or dropped without touching the others.
 
@@ -1559,7 +1563,11 @@ src/core/
                     the list of the individuals the filters keep, and the
                     counts of each filter of individuals (section 4)
   histogram.ts      the bins of the statistics of each individual (section 7)
-  apps.ts           the steps and the analyses of each application
+  apps.ts           the steps and the analyses of each application, the
+                    step each analysis is shown in, and what the store
+                    and the shell read of a result: what its pass
+                    counted, the statistics of each individual, the
+                    variants the filters keep
   fileNames.ts      the names of the files the application writes, from
                     the stem of the variants file
   writeEstimate.ts  the size expected of a file of the filtered variants,
@@ -1594,7 +1602,12 @@ src/charts/
   export.ts         SVG and PNG
 src/ui/
   popgen.tsx        the entry of the population genetics page: it makes the
-                    store and the workers, joins them, and draws the shell
+                    store, with popgenStore.ts, and the workers, joins
+                    them, and draws the shell
+  popgenStore.ts    the store of the population genetics page, made with
+                    the analyses and the functions of apps.ts and the
+                    functions of the worker client that send; apart from
+                    the entry, so that a test in node makes it
   reads.ts          asks for the read of each file whose read is pending
                     (section 6, "Who asks for a read")
   saving.ts         the project file downloaded, and whether the project
@@ -1604,17 +1617,26 @@ src/ui/
   files.tsx         a picked file: its load id, and the File kept under it
   store.tsx         the store of core, given to the screens
   shell/            the header, the stepper, the summary line, the notices;
-                    status.ts, what is read to a screen reader, and
-                    words.ts, the words of the shell made from the store
+                    status.ts, what is read to a screen reader;
+                    words.ts, the words of the shell made from the store;
+                    and shellWords.tsx, which gives the components of the
+                    shell what those words need of the application
   runs.ts           awaits the outcome of each run core starts, and hands
                     it to the store, which cancels the runs no longer
                     asked for (section 5)
+  runSeconds.ts     the clock of a calculation under way, the seconds
+                    since the start runs.ts noted, which the panel of an
+                    analysis and the writing of the Variants step show
   steps/            one folder per step: variants, individuals and analyses in
                     stage 2, and export, which joins in stage 6
   analyses/         AnalysisPanel.tsx, the frame of the seven states that
-                    every analysis shares; panels.ts, the panel and the
-                    title of each analysis; and one folder per analysis,
-                    diversity/ first, with its options and its results
+                    every analysis shares; titles.ts, the title of each
+                    analysis, by which its panel, its part of the Variants
+                    step and the shell name it, and what the words of the
+                    shell need of the application; panels.ts, the panel
+                    of each analysis of the Analyses step; and one folder
+                    per analysis, diversity/ first, with its options and
+                    its results
   report/           renders the report model into its HTML page, with the plots
   widgets/          React Aria components with our styles
   tokens.css        the design tokens

@@ -4,9 +4,9 @@
  * announcements the status region makes from two states of the store.
  * Pure functions of the state, so that a test in node checks them; the
  * shell draws them, and the entry announces what `announcementsOf` gives
- * at every change of the store. An analysis is named by the title of its
- * panel, and placed in the step it is shown in, by what the caller gives
- * as `ShellWords`, so that these words need no component. From stage 3
+ * at every change of the store. An analysis is named by its title, and
+ * placed in the step it is shown in, by what the caller gives as
+ * `ShellWords`, so that these words need no component. From stage 3
  * they take in the checks of the Variants step, the individuals and the
  * variants the filters keep, and the writing of the filtered variants as
  * a file.
@@ -86,14 +86,14 @@ export interface StepState {
 
 /**
  * What the words of the shell need of the application, beyond the state:
- * the title of an analysis's panel, from `src/ui/analyses/panels.ts`; the
- * step it is shown in, from `src/core/apps.ts`; and the variants the
- * filters keep, from the result of the Counts of the filters when it is
- * done. The name and the size of the written file are core's,
- * `writtenName` and `sizeText`, which these words call themselves.
+ * the title of an analysis, from `src/ui/analyses/titles.ts`; the step it
+ * is shown in, from `src/core/apps.ts`; and the variants the filters
+ * keep, from the result of the Counts of the filters when it is done.
+ * The name and the size of the written file are core's, `writtenName` and
+ * `sizeText`, which these words call themselves.
  */
 export interface ShellWords<R> {
-  /** The title of the panel of the analysis `id`, "Diversity". */
+  /** The title of the analysis `id`, "Diversity". */
   title(id: AnalysisId): string;
   /** The step the analysis `id` is shown in. */
   stepOf(id: AnalysisId): StepId;

@@ -149,15 +149,19 @@ message only after the code that is running has finished:
    shown.
 2. It makes the log of the errors, `createDefects()`, and draws the error
    bar into `#defects`, with no store yet.
-3. It makes the store, with `createStore` of `src/core/store.ts`: the
+3. It makes the store, with `createPopgenStore` of
+   `src/ui/popgenStore.ts`, which is apart from the entry so that a test
+   in node makes the store with what the page gives it, and which calls
+   `createStore` of `src/core/store.ts` with: the
    first project, `firstProject("popgen")` of `src/core/apps.ts`
    (below); the definitions of the analyses of the application, from the
    same file; `send`, the function `(key, job, onProgress) =>
    client.run(key, job, onProgress)`, which reaches the client made in
    the next step, since the store sends nothing while it is made; from
    `apps.ts`, `countsOf`, the id of the counts of the filters,
-   `"filterCounts"`, and the statistics of each individual,
-   `{ analysis: "individualChecks", of: individualStatsOf }`; `write`,
+   `filterCounts.id`, and the statistics of each individual,
+   `{ analysis: individualChecks.id, of: individualStatsOf }`, the ids
+   taken from the definitions of the two analyses; `write`,
    with `send: (key, job, onProgress) => client.write(key, job,
    onProgress)` and `countsOf: writeCountsOf` of `apps.ts`; the version
    of the application,
@@ -186,8 +190,10 @@ message only after the code that is running has finished:
    `createRoot`, with `onUncaughtError` and `onCaughtError`, and draws
    the shell in `StrictMode`, inside the providers that give the screens
    the store (`src/ui/store.tsx`, `.claude/skills/coding/react.md`), the
-   announcer, the saving, and the function that adds a picked file,
-   below.
+   announcer, the saving, the function that adds a picked file, below,
+   and what the words of the shell need of the application, `SHELL_WORDS`
+   of `src/ui/analyses/titles.ts` (`docs/specs/shell.md`, "What it sends
+   and reads").
 
 The store and the workers are made here, outside any component, once
 per page: a store or a worker made inside a component would be made
@@ -280,7 +286,13 @@ population genetics application alone until stage 7:
   of each individual in a result of `individualChecks`, its
   `individuals`, `missingGtRate` and `obsHetRate`, as
   `docs/specs/core/individualsKept.md` takes them; a defect for a result
-  of another analysis.
+  of another analysis;
+- **`variantsKept`**, the variants that pass the filters, from a state
+  of the store: `passStats.numVars` of the result of `filterCounts` in
+  the state done, or `null` when it is not done for the filters as they
+  are. The summary line of the shell and the size expected of the
+  writing read it (`docs/specs/shell.md`, `ShellWords`;
+  `docs/specs/analyses/writeVariants.md`, `writeEstimate`).
 
 ### Who asks for a read
 
