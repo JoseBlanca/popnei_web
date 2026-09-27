@@ -633,6 +633,26 @@ describe("WP4 D1 the state with no calculation", () => {
     expect(store.getState()).toBe(before);
   });
 
+  test("historyMoves counts each undo, redo and opening, and no command, event or move with nothing to move", () => {
+    const { store } = storeWithBothReady();
+    const start = store.getState().historyMoves;
+    expect(start).toBe(0);
+    store.undo();
+    expect(store.getState().historyMoves).toBe(1);
+    store.redo();
+    expect(store.getState().historyMoves).toBe(2);
+    store.redo();
+    expect(store.getState().historyMoves).toBe(2);
+    store.apply("the MAF filter changed", (p) =>
+      setVariantFilter(p, { kind: "maf", maxAllowedMaf: 0.8 }),
+    );
+    expect(store.getState().historyMoves).toBe(2);
+    store.open(store.getState().project);
+    expect(store.getState().historyMoves).toBe(3);
+    store.undo();
+    expect(store.getState().historyMoves).toBe(3);
+  });
+
   test("open starts a history with the opened project and nothing to undo or redo", () => {
     const { store, analyses } = storeWithBothReady();
     store.undo();

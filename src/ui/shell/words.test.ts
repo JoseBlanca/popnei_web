@@ -293,6 +293,7 @@ function state(
     project: firstProject("popgen"),
     undo: null,
     redo: null,
+    historyMoves: 0,
     popneiVersion: "0.1.0",
     analyses: [
       { id: DIVERSITY, status: statuses[0] },
@@ -1363,6 +1364,7 @@ function checksState(
     project: PANEL,
     undo: null,
     redo: null,
+    historyMoves: 0,
     popneiVersion: "0.1.0",
     analyses: THE_ORDER.map((id) => ({
       id,

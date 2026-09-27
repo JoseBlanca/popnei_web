@@ -11,7 +11,6 @@
 import type { Store } from "../../core/store.ts";
 import type { Shortcut } from "./shortcuts.ts";
 import type { Announcer } from "./status.ts";
-import { historyMoved } from "../historyMoves.ts";
 import { undoneOrRedone } from "../sentences.ts";
 
 /** Undoes or redoes the project of `store`, as `which` says, and
@@ -25,7 +24,6 @@ export function undoOrRedo<R, F>(
   const description = store.getState()[which];
   if (description === null) return;
   announcer.announceChange(() => {
-    historyMoved(store);
     if (which === "undo") store.undo();
     else store.redo();
     if (store.getState().notice !== null) return null;

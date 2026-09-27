@@ -64,6 +64,7 @@ function stateOf(
     project,
     undo: null,
     redo: null,
+    historyMoves: 0,
     popneiVersion,
     analyses: POPGEN_DEFS.map((def) => ({
       id: def.id,
@@ -1304,6 +1305,7 @@ describe("WS6 D2 the opening", () => {
       project: p,
       undo: null,
       redo: null,
+      historyMoves: 0,
       popneiVersion: "0.1.0",
       analyses: POPGEN_ANALYSES.map((def) => ({
         id: def.id,
@@ -2175,6 +2177,7 @@ const savedState: fc.Arbitrary<AppState<TestDefResult>> = fc
       project,
       undo: null,
       redo: null,
+      historyMoves: 0,
       popneiVersion:
         anyDone && popneiVersion === null ? "0.1.0" : popneiVersion,
       analyses: views,

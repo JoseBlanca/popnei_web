@@ -146,7 +146,7 @@ export function clearCommand(kind: ListKind): StepCommand {
 export interface TypedList {
   /** The text. */
   readonly text: string;
-  /** The moves of the history when it was typed (`historyMoves.ts`). */
+  /** The moves of the history when it was typed (`historyMoves` of the store). */
   readonly moves: number;
 }
 

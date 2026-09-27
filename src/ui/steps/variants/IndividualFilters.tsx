@@ -39,7 +39,6 @@ import { resultOf, statusOf } from "../../analyses/status.ts";
 import { titleOf } from "../../analyses/titles.ts";
 import { ErrorBoundary } from "../../shell/ErrorBoundary.tsx";
 import { classOf } from "../../classOf.ts";
-import { useHistoryMoves } from "../../historyMoves.ts";
 import { useAnnouncer } from "../../shell/announcer.tsx";
 import { useAppState, useStore } from "../../store.tsx";
 import { Button } from "../../widgets/Button.tsx";
@@ -111,7 +110,7 @@ export function IndividualFilters(): React.JSX.Element {
   const announcer = useAnnouncer();
   const project = useAppState((s) => s.project);
   const kept = useAppState((s) => s.individualsKept);
-  const moves = useHistoryMoves();
+  const moves = useAppState((s) => s.historyMoves);
   const [typed, setTyped] = useState<TypedLists>(NOTHING_TYPED);
   const [clears, setClears] = useState<Clears>(NO_CLEAR);
   const [typedThresholds, setTypedThresholds] =

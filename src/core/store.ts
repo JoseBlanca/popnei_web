@@ -147,6 +147,11 @@ export interface AppState<R, F = never> {
   readonly undo: string | null;
   /** The description of what a redo would redo, or `null`. */
   readonly redo: string | null;
+  /** The undos, redos and openings so far, 0 when the store is made:
+      a screen that holds text of its own beside a part of the project
+      starts again at the project when it changes, since a command
+      cannot be told from an undo by the project alone. */
+  readonly historyMoves: number;
   /** The version of popnei the calculation worker gave, or `null` until
       it has started. */
   readonly popneiVersion: string | null;
@@ -671,6 +676,8 @@ export function createStore<J, R, F = never>(
   }
   const memo = createKeyMemo();
   let history = startHistory(freezeProject(config.first), config.maxUndoSteps);
+  // The undos, redos and openings so far.
+  let historyMoves = 0;
   let popneiVersion: string | null = null;
   let cache: Cache<CachedResult<R>> = emptyCache(config.cacheMaxBytes);
   let keyed: Keyed | null = null;
@@ -1346,6 +1353,7 @@ export function createStore<J, R, F = never>(
       previous?.project === project &&
       previous.undo === undoText &&
       previous.redo === redoText &&
+      previous.historyMoves === historyMoves &&
       previous.popneiVersion === popneiVersion &&
       previous.analyses === analyses &&
       previous.runs === runs &&
@@ -1359,6 +1367,7 @@ export function createStore<J, R, F = never>(
       project,
       undo: undoText,
       redo: redoText,
+      historyMoves,
       popneiVersion,
       analyses,
       runs,
@@ -2145,13 +2154,17 @@ export function createStore<J, R, F = never>(
       }));
     },
     undo: () => {
-      changedByUser(undo(history), (before) => ({
+      const next = undo(history);
+      if (next !== history) historyMoves += 1;
+      changedByUser(next, (before) => ({
         kind: "undo",
         description: before.present.description,
       }));
     },
     redo: () => {
-      changedByUser(redo(history), (_before, after) => ({
+      const next = redo(history);
+      if (next !== history) historyMoves += 1;
+      changedByUser(next, (_before, after) => ({
         kind: "redo",
         description: after.present.description,
       }));
@@ -2165,6 +2178,7 @@ export function createStore<J, R, F = never>(
       written = null;
       dropped = false;
       history = opened;
+      historyMoves += 1;
       changed();
     },
     dismissNotice: () => {
