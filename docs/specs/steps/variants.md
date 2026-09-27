@@ -499,7 +499,10 @@ commit. The number field of the widgets of stage 2 gives the step each
 number as it is typed through a property more, `onTyped`, called at
 each key with the number the text holds, or `null` while the text is no
 number, is out of the range of the field, or has more decimals than it
-takes, as "0." on the way to "0.05"; and called with `null` at each
+takes, as "0." on the way to "0.05"; with `null` from a character thrown
+away until a deletion mends the text, since what the field shows is then
+not what was typed, 0,1 shown as 01, and the number comes back with the
+edit that mends it; and called with `null` at each
 commit, when the field shows the number committed or kept, which is how
 the typed number is dropped. The step gives the histogram that number,
 or the threshold of the project for `null`. The text is read by the
