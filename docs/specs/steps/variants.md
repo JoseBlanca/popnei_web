@@ -712,7 +712,10 @@ words were written with the code on 27 September 2026, as the variants'
 were, for the owner to judge at stop B of `docs/plans/variants-step.md`.
 Before the statistics are calculated, or once
 a change of a filter of the variants has removed them, there is no
-histogram, and the line of the counts below says why.
+histogram; while the threshold's filter is on, its count says why,
+"Known once the statistics of each individual are calculated …", and
+while it is off nothing does, since the button of the statistics above
+the switches is then the only thing to do.
 
 **The table of the individuals** follows the thresholds, with its
 column Kept while any filter of individuals is set, and its download
