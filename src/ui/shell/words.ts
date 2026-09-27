@@ -103,6 +103,19 @@ export interface ShellWords<R> {
   variantsKept(s: AppState<R, unknown>): number | null;
 }
 
+/** Whether a file of the filtered variants written and not saved in
+    `before`, `write` in `done`, was discarded in `after`: `write` is
+    there neither `done` nor `saved`, by a change of the filters, a new
+    load or an opening. The status region is then emptied, since its words
+    may say to save the file (docs/specs/shell.md, "The status region"). */
+export function writtenDiscarded(
+  before: AppState<unknown, unknown>,
+  after: AppState<unknown, unknown>,
+): boolean {
+  const now = after.write?.kind;
+  return before.write?.kind === "done" && now !== "done" && now !== "saved";
+}
+
 /** What the stepper and the status region say of an analysis in the
     state `error`, "Diversity could not be calculated.". */
 function notCalculatedText(title: string): string {

@@ -79,4 +79,25 @@ describe("WS9 D1 the announcer", () => {
       "Undone: the missing data filter changed.",
     );
   });
+
+  test("clear empties the region at once and drops a text waiting", () => {
+    const announcer = createAnnouncer();
+    announcer.announce(
+      "panel.filtered.nei is written, 251 KB; Save it in the Variants step.",
+    );
+    vi.advanceTimersByTime(100);
+    announcer.clear();
+    expect(announcer.getState()).toBe("");
+
+    announcer.announce(
+      "panel.filtered.nei is written, 251 KB; Save it in the Variants step.",
+    );
+    announcer.clear();
+    vi.advanceTimersByTime(100);
+    expect(announcer.getState()).toBe("");
+
+    announcer.announce("Diversity: done.");
+    vi.advanceTimersByTime(100);
+    expect(announcer.getState()).toBe("Diversity: done.");
+  });
 });

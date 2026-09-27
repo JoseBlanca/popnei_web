@@ -37,6 +37,7 @@ import {
   noticeText,
   stepStates,
   summaryLine,
+  writtenDiscarded,
 } from "./words.ts";
 import type { ShellWords, StepState } from "./words.ts";
 
@@ -2045,5 +2046,39 @@ describe("VS5 D2 the announcements of stage 3", () => {
       runs: [run(1, null, KEY_W, LEFT_BEHIND_STOPPING)],
     });
     expect(announcementsOf(stopping, after, WORDS)).toEqual([]);
+  });
+});
+
+describe("VS5 D2 writtenDiscarded", () => {
+  test("a file written and not saved is discarded when the writing goes to ready, to locked or to none, and not when it is saved or stays", () => {
+    const done = checksState({
+      write: { kind: "done", key: KEY_W, written: WRITTEN },
+    });
+    const saved = checksState({
+      write: {
+        kind: "saved",
+        key: KEY_W,
+        written: {
+          format: WRITTEN.format,
+          numBytes: WRITTEN.numBytes,
+          passStats: WRITTEN.passStats,
+        },
+      },
+    });
+    const ready = checksState({ write: WRITE_READY });
+    const locked = checksState({
+      write: {
+        kind: "locked",
+        reason: "Load a variants file in the Variants step.",
+      },
+    });
+    const none = checksState({ write: null });
+    expect(writtenDiscarded(done, ready)).toBe(true);
+    expect(writtenDiscarded(done, locked)).toBe(true);
+    expect(writtenDiscarded(done, none)).toBe(true);
+    expect(writtenDiscarded(done, saved)).toBe(false);
+    expect(writtenDiscarded(done, done)).toBe(false);
+    expect(writtenDiscarded(ready, locked)).toBe(false);
+    expect(writtenDiscarded(saved, ready)).toBe(false);
   });
 });

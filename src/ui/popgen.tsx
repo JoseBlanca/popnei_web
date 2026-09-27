@@ -38,7 +38,7 @@ import { Shell } from "./shell/Shell.tsx";
 import { ShellWordsProvider } from "./shell/shellWords.tsx";
 import { createAnnouncer } from "./shell/status.ts";
 import type { Announcer } from "./shell/status.ts";
-import { announcementsOf } from "./shell/words.ts";
+import { announcementsOf, writtenDiscarded } from "./shell/words.ts";
 import { StoreProvider } from "./store.tsx";
 
 declare global {
@@ -254,7 +254,8 @@ function askBeforeLeaving(saving: Saving, store: Store<JobResult, Blob>): void {
 /** Announces in the status region what each change of the store did
     that the user may not be looking at, the start and the end of a
     calculation and the end of a read, with the words of
-    `announcementsOf` of the shell (docs/specs/shell.md, "The status
+    `announcementsOf` of the shell, and empties the region when a file
+    written and not saved is discarded (docs/specs/shell.md, "The status
     region"). */
 function announceChanges(
   store: Store<JobResult, Blob>,
@@ -264,6 +265,9 @@ function announceChanges(
   store.subscribe(() => {
     const after = store.getState();
     const texts = announcementsOf(before, after, SHELL_WORDS);
+    // Before this change's own texts: the words of a file written and
+    // not saved, which say to save it, no longer hold once it is gone.
+    if (writtenDiscarded(before, after)) announcer.clear();
     before = after;
     for (const text of texts) announcer.announce(text);
   });

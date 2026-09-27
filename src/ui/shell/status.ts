@@ -25,6 +25,10 @@ export interface Announcer {
       after those announced before it: what the user did, known only
       once the change is made, said before what the change announced. */
   announceChange(change: () => string | null): void;
+  /** Empties the region at once, and drops the texts waiting to be
+      written into it: for words that no longer hold, and that nothing
+      replaces. */
+  clear(): void;
   /** The text of the region now; `""` when it is empty. */
   getState(): string;
   /** Calls `listener` after every change of the text, and returns the
@@ -76,6 +80,11 @@ export function createAnnouncer(): Announcer {
       if (next === null) return;
       wait();
       waiting.splice(at, 0, next);
+    },
+    clear(): void {
+      // A timer still running writes the empty text of no text waiting.
+      waiting = [];
+      if (text !== "") change("");
     },
     getState(): string {
       return text;

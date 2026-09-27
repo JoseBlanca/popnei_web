@@ -435,9 +435,15 @@ test("VS5 D3 a change of the threshold with the file not saved discards it: the 
   await writeButton(page).click();
   await expect(saveButtons(page)).toHaveCount(1);
 
+  await expect(status(page)).toHaveText(
+    /panel\.filtered\.nei is written, 251 KB; Save it in the Variants step\.$/,
+  );
+
   await setThreshold(page, "0.06");
   const alert = notice(page).getByRole("alertdialog", { name: DISCARDED });
   await expect(alert).toBeVisible();
+  // Its words "Save it in the Variants step" no longer hold.
+  await expect(status(page)).toHaveText("");
   await expect(saveButtons(page)).toHaveCount(0);
   await expect(writeButton(page)).toBeVisible();
   await expectNoViolations(makeAxeBuilder);
