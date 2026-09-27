@@ -48,7 +48,7 @@ keep, which needs no calculation.
 The words of core used here: the **project** is everything the user has
 set; a **command** is a change of it that one Undo takes back, sent with
 a description that ends the notice of what it removed, "Diversity
-removed because the missing data filter changed · Undo"; a **load** is
+removed because the filter of the variants by missing data changed · Undo"; a **load** is
 one pick of a file, with an id of its own, new at every pick; the
 **source** is what the project holds of the loaded file, its name, size,
 format, read options, and what the calculation worker, the second thread
@@ -515,8 +515,9 @@ gives none, a file none of whose variants has a called genotype; the
 block is a group named by that title, so that a screen reader names the
 tabs and the button of the CSV with the histogram they belong to; under
 the title, while the filter is on, "Threshold of the MAF filter: 0.95,
-drawn over every variant of the file", or "Threshold of the filter by
-observed heterozygosity: 0.5, drawn over every variant of the file",
+drawn over every variant of the file", or "Threshold of the filter of
+the variants by observed heterozygosity: 0.5, drawn over every variant
+of the file",
 with the number the plot is given, the one typed while it is typed,
 since the histogram counts every variant of the file and the count
 beside the filter only those the filters above it kept, as the owner
@@ -826,9 +827,9 @@ popnei would refuse, with the list it is about; and `writtenName`,
 |---|---|---|
 | a file picked or dropped | `loadVariants(p, { fileId, name, size, format, readOptions })`, `readOptions` `{ ploidy, onlyPassed }` for a VCF and `null` for a `.nei` file | "a new variants file was loaded" |
 | Read ‹name› again | `loadVariants` of the same `File` under a new load id, with the options of the step | "the variants file was read again with other options" |
-| a threshold of the variants committed, on Enter, an arrow key or when the field loses the focus | `setVariantFilter(p, filter)`, the filter of its kind with its fields | "the missing data filter changed", "the filter by observed heterozygosity changed", "the MAF filter changed", "the LD pruning changed" |
-| its switch turned off | `removeVariantFilter(p, kind)` | "the missing data filter was turned off", and so for each |
-| its switch turned on | `setVariantFilter(p, filter)`, with the values of the table of the filters | "the missing data filter was turned on", and so for each |
+| a threshold of the variants committed, on Enter, an arrow key or when the field loses the focus | `setVariantFilter(p, filter)`, the filter of its kind with its fields | "the filter of the variants by missing data changed", "the filter of the variants by observed heterozygosity changed", "the MAF filter changed", "the LD pruning changed", with the names of `docs/specs/analyses/filterCounts.md` |
+| its switch turned off | `removeVariantFilter(p, kind)` | "the filter of the variants by missing data was turned off", and so for each |
+| its switch turned on | `setVariantFilter(p, filter)`, with the values of the table of the filters | "the filter of the variants by missing data was turned on", and so for each |
 | Apply the list to keep, or to remove | `setIndividualFilter(p, { kind: "keep", individuals })`, or `removeIndividualFilter(p, "keep")` for no name | "the list of individuals to keep changed", "the list of individuals to remove changed" |
 | Clear the list | `removeIndividualFilter(p, kind)` | "the list of individuals to keep was cleared", "… to remove was cleared" |
 | a threshold of the individuals committed, turned off, turned on | `setIndividualFilter` or `removeIndividualFilter` of `missing_data` or `obs_het` | "the filter of individuals by missing data changed", "… was turned off", "… was turned on"; "the filter of individuals by observed heterozygosity changed", and so on |

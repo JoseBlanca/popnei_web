@@ -40,8 +40,8 @@ of the diversity among them. There is no code of it yet.
 
 The words of core used here: the **project** is everything the user has
 set; a **command** is a change of it that one Undo takes back, sent with
-a **description** that ends its notice, "the missing data filter
-changed"; a **load** is one pick of a file; a **source** is what the
+a **description** that ends its notice, "the filter of the variants
+by missing data changed"; a **load** is one pick of a file; a **source** is what the
 project holds of a loaded file, and its **read** what a worker read of
 it, pending until the worker answers; `numVars` of a read variants file
 is its number of variants, `null` until the first calculation has read
@@ -325,13 +325,13 @@ upper case when nothing comes before it.
 
 | the cause | the notice |
 |---|---|
-| a command | "Diversity removed because the missing data filter changed · Undo" |
+| a command | "Diversity removed because the filter of the variants by missing data changed · Undo" |
 | a command that changes the load, with a calculation running and no result to remove | "The calculation of Diversity stopped because a new variants file was loaded · Undo" |
 | a command, with calculations stopped | "Diversity removed and the calculation of Diversity stopped because a new variants file was loaded · Undo" |
-| a command, with a calculation left behind and nothing removed | "The missing data filter changed. The ongoing calculation of Diversity will be stopped unless you undo the change · Undo" |
-| an undo | "Undone: the missing data filter changed. Diversity removed · Redo" |
+| a command, with a calculation left behind and nothing removed | "The filter of the variants by missing data changed. The ongoing calculation of Diversity will be stopped unless you undo the change · Undo" |
+| an undo | "Undone: the filter of the variants by missing data changed. Diversity removed · Redo" |
 | an undo that changes the load | "Undone: a new variants file was loaded. The calculation of Diversity stopped · Redo" |
-| a redo, with a calculation left behind | "Redone: the missing data filter changed. Diversity removed. The ongoing calculation of Diversity will be stopped unless you undo the change · Undo" |
+| a redo, with a calculation left behind | "Redone: the filter of the variants by missing data changed. Diversity removed. The ongoing calculation of Diversity will be stopped unless you undo the change · Undo" |
 | a command, from stage 3, with the statistics of each individual removed | "2 results removed because the MAF filter changed · Undo", the diversity and the statistics; alone, "Statistics of each individual removed because the MAF filter changed · Undo" |
 | a command, with the writing left behind | "The MAF filter changed. The writing of the file will be stopped unless you undo the change · Undo" |
 | a command that changes the load, with the writing and a calculation in flight | "Statistics of each individual removed, and the calculation of Diversity and the writing of the file stopped, because a new variants file was loaded · Undo" |
@@ -447,7 +447,7 @@ the shell gives the screens:
 
 | what the user did | the announcement |
 |---|---|
-| an undo or a redo that makes no notice, with the button or the keyboard | "Undone: the missing data filter changed.", "Redone: the missing data filter changed." |
+| an undo or a redo that makes no notice, with the button or the keyboard | "Undone: the filter of the variants by missing data changed.", "Redone: the filter of the variants by missing data changed." |
 | Save of the dialog of Save project | "panel.popnei.json was handed to the browser to download." (below, "Saving") |
 | from stage 3, Save of a written file in the Variants step | "panel.filtered.nei was handed to the browser to save.", the name of the file; the button, which keeps the focus, turns into Write, and the line above it, which says the same, is behind the focus (`docs/specs/analyses/writeVariants.md`, "Accessibility") |
 | a project opened | "Opened panel.popnei.json." followed by the text of `askedFileText` when it gives one (below, "Opening") |

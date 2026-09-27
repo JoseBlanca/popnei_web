@@ -990,13 +990,13 @@ are written from the change itself, the cause of the notice,
 not give the change undone as the reason, and after a new read of the
 same file they do not say that a new file was loaded; the owner decided
 so on 25 September 2026. The cause is a command, an undo or a redo, with
-the description of the command, "the missing data filter changed":
+the description of the command, "the filter of the variants by missing data changed":
 
 | the cause | results removed |
 |---|---|
-| a command | "The diversity was removed because the missing data filter changed. Undo brings back the table as it was, with no calculation; Run calculates a new one for the new settings." |
-| an undo | "Undone: the missing data filter changed. The diversity was removed; Redo brings back the table as it was, with no calculation, and Run calculates a new one for the settings as they are now." |
-| a redo | "Redone: the missing data filter changed. The diversity was removed; Undo brings back the table as it was, with no calculation, and Run calculates a new one for the settings as they are now." |
+| a command | "The diversity was removed because the filter of the variants by missing data changed. Undo brings back the table as it was, with no calculation; Run calculates a new one for the new settings." |
+| an undo | "Undone: the filter of the variants by missing data changed. The diversity was removed; Redo brings back the table as it was, with no calculation, and Run calculates a new one for the settings as they are now." |
+| a redo | "Redone: the filter of the variants by missing data changed. The diversity was removed; Undo brings back the table as it was, with no calculation, and Run calculates a new one for the settings as they are now." |
 
 The words say what each button gives, the table as it was, of the
 settings before the change, or a new one, of the settings now, since
@@ -1280,8 +1280,8 @@ written with it, is in the second list.
   removed and of calculations stopped is the shell's, with its words; its
   stepper shows `populationsNeeds`.
 - `docs/specs/steps/variants.md`: the missing data filter can be set to
-  0.05 and to 1, and its command is described "the missing data filter
-  changed"; the step sends the user to this panel for a VCF refused at
+  0.05 and to 1, and its command is described "the filter of the variants
+  by missing data changed"; the step sends the user to this panel for a VCF refused at
   its first pass for its ploidy; its button "Read ‹name› again with
   ploidy N" is where the words of that refusal send the user.
 - `docs/specs/steps/individuals.md`: the step offers as the column of
