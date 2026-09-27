@@ -164,22 +164,6 @@ export function formatText(format: VariantSource["format"]): string {
   }
 }
 
-/** A size of a file in bytes, as the card shows it: "812 bytes", "45.3
-    kB", "1.2 MB", "3.4 GB", in units of 1000, as the file managers of
-    macOS and of most Linux desktops show them. */
-export function sizeText(bytes: number): string {
-  if (bytes < 1000) return bytes === 1 ? "1 byte" : `${grouped(bytes)} bytes`;
-  const units = ["kB", "MB", "GB", "TB"] as const;
-  let value = bytes / 1000;
-  for (const unit of units) {
-    if (value < 999.95 || unit === "TB") {
-      return `${value.toFixed(1)} ${unit}`;
-    }
-    value /= 1000;
-  }
-  throw new Error("popnei_web defect: sizeText went past its last unit.");
-}
-
 /** The line of the individuals of a read file: "200 individuals". */
 export function individualsText(numIndividuals: number): string {
   return counted(numIndividuals, "individual");

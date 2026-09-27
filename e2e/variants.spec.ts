@@ -155,7 +155,7 @@ test("WS7 D3 panel.nei picked with the button shows 200 individuals and ploidy 2
   const card = zone(page);
   await expect(card.getByText("200 individuals")).toBeVisible();
   await expect(card.getByText("Ploidy 2", { exact: true })).toBeVisible();
-  await expect(card.getByText(".nei file · 261.5 kB")).toBeVisible();
+  await expect(card.getByText(".nei file · 261 KB")).toBeVisible();
   await expect(
     card.getByText(
       "Variants: not counted yet; the first analysis that reads the whole file counts them",
@@ -194,7 +194,7 @@ test("WS7 D3 panel.vcf.gz shows the line of how it was read, and no line of its 
 
   const card = zone(page);
   await expect(card.getByText("200 individuals")).toBeVisible();
-  await expect(card.getByText("VCF · 87.3 kB")).toBeVisible();
+  await expect(card.getByText("VCF · 87 KB")).toBeVisible();
   await expect(
     card.getByText(
       "Read with ploidy 2, only the variants with PASS or . in the FILTER column",

@@ -20,6 +20,7 @@ import {
 } from "../../../core/project.ts";
 import type { VariantLoad, VariantSource } from "../../../core/project.ts";
 import { askedFileText, identityWarning } from "../../../core/projectFile.ts";
+import { sizeText } from "../../../core/writeEstimate.ts";
 import type {
   VariantFilter,
   VcfReadOptions,
@@ -65,7 +66,6 @@ import {
   ploidyText,
   readAgainLabel,
   readWithText,
-  sizeText,
   thresholdRefusedText,
   variantsText,
 } from "./words.ts";

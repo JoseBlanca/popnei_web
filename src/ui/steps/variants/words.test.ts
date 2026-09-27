@@ -9,7 +9,6 @@ import {
   ploidyRefusedText,
   readAgainLabel,
   readWithText,
-  sizeText,
   startingOptions,
   thresholdRefusedText,
   variantsText,
@@ -166,15 +165,6 @@ describe("the words of the Variants step", () => {
     expect(variantsText(null)).toBe(
       "Variants: not counted yet; the first analysis that reads the whole file counts them",
     );
-  });
-
-  test("a size in bytes, kB, MB and GB", () => {
-    expect(sizeText(812)).toBe("812 bytes");
-    expect(sizeText(45_300)).toBe("45.3 kB");
-    expect(sizeText(999_990)).toBe("1.0 MB");
-    expect(sizeText(1_234_567)).toBe("1.2 MB");
-    expect(sizeText(80_692_954)).toBe("80.7 MB");
-    expect(sizeText(3_400_000_000)).toBe("3.4 GB");
   });
 
   test("the seconds of a read, from the first", () => {
