@@ -1638,7 +1638,13 @@ src/ui/
                     per analysis, diversity/ first, with its options and
                     its results
   report/           renders the report model into its HTML page, with the plots
-  widgets/          React Aria components with our styles
+  widgets/          React Aria components with our styles, one wrapper per
+                    widget; among them Table.tsx, the plain table of a
+                    few rows that is only read, SortableTable.tsx, the
+                    table sorted by any column, whose Virtualizer draws
+                    only the rows in view, for thousands of rows such as
+                    the statistics of each individual, and TextArea.tsx,
+                    the text of several lines, the lists of individuals
   tokens.css        the design tokens
 src/probe/          the probe of stage 0, a page of its own outside the
                     layers, that checks a deploy still loads popnei
