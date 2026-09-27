@@ -12,8 +12,9 @@ import {
   removeIndividualFilter,
   setIndividualFilter,
 } from "../../../core/project.ts";
-import type { Project } from "../../../core/project.ts";
+import type { ListNeeds, Project } from "../../../core/project.ts";
 import type { StepCommand } from "./commands.ts";
+import { inTheStep } from "./writeWords.ts";
 
 /** The two lists, in their fixed order. */
 export const LIST_KINDS = ["keep", "remove"] as const;
@@ -159,4 +160,27 @@ export function shownText(
   return typed !== null && typed.moves === moves
     ? typed.text
     : textOfList(list);
+}
+
+/** The reason of a list that popnei would refuse, as the step shows it
+    under the list: without the end "in the Variants step", the step it
+    is in, as the section of the writing shows its words (the spec, "The
+    two lists"). */
+export function listReasonText(needs: ListNeeds): string {
+  return inTheStep(needs.reason);
+}
+
+/** What the step announces after an Apply or a Clear that changed the
+    reasons of the lists from `before` to `after`: the reason, as it is
+    shown, when there is one now that was not there before; `null`
+    otherwise, a list popnei accepts among it. */
+export function appearedReason(
+  before: ListNeeds | null,
+  after: ListNeeds | null,
+): string | null {
+  if (after === null) return null;
+  if (before?.list === after.list && before.reason === after.reason) {
+    return null;
+  }
+  return listReasonText(after);
 }

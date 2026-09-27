@@ -1,14 +1,19 @@
 import { describe, expect, test } from "vitest";
 
 import { POPGEN_ANALYSES, countsOf, firstProject } from "../../../core/apps.ts";
+import { individualListNeeds } from "../../../core/project.ts";
+import type { Project } from "../../../core/project.ts";
 import { createStore } from "../../../core/store.ts";
 import type { Store } from "../../../core/store.ts";
+import { sampleProject } from "../../../core/testSupport.ts";
 import type { Job, JobResult } from "../../../worker/protocol.ts";
 import {
   applyCommand,
+  appearedReason,
   clearCommand,
   isApplied,
   listOf,
+  listReasonText,
   namesOfText,
   notAppliedText,
   shownText,
@@ -192,5 +197,73 @@ describe("Apply and Clear", () => {
     const store = realStore();
     apply(store, clearCommand("remove"));
     expect(store.getState().undo).toBeNull();
+  });
+});
+
+describe("the reason under a list", () => {
+  /** The sample project, of panel.nei with the individuals i1 to i4,
+      with the lists `keep` and `remove`, `null` for none. */
+  function withLists(
+    keep: readonly string[] | null,
+    remove: readonly string[] | null,
+  ): Project {
+    return {
+      ...sampleProject(),
+      individualFilters: [
+        ...(keep === null
+          ? []
+          : [{ kind: "keep", individuals: keep } as const]),
+        ...(remove === null
+          ? []
+          : [{ kind: "remove", individuals: remove } as const]),
+      ],
+    };
+  }
+
+  test("no reason of either list, empty, repeated or not in the file, names the Variants step under the list, and each ends as the step shows it", () => {
+    const cases: readonly (readonly [
+      readonly string[] | null,
+      readonly string[] | null,
+    ])[] = [
+      [[], null],
+      [["i1", "i1"], null],
+      [["i1", "ind_900"], null],
+      [null, []],
+      [null, ["i2", "i2"]],
+      [null, ["ind_900", "ind_901"]],
+    ];
+    const texts = cases.map(([keep, remove]) => {
+      const needs = individualListNeeds(withLists(keep, remove));
+      if (needs === null) throw new Error("a list with no reason");
+      expect(needs.reason).toContain("in the Variants step");
+      return listReasonText(needs);
+    });
+    expect(texts.filter((text) => text.includes("Variants step"))).toEqual([]);
+    expect(texts[0]).toBe(
+      "The list of individuals to keep is empty. Add individuals to it, or remove the filter.",
+    );
+    expect(texts[2]).toBe(
+      "The list of individuals to keep names 1 individual that is not in panel.nei: ind_900. Change the list, or remove the filter.",
+    );
+    expect(texts[5]).toBe(
+      "The list of individuals to remove names 2 individuals that are not in panel.nei: ind_900 and ind_901. Change the list, or remove the filter.",
+    );
+  });
+
+  test("a reason that appears is announced as shown, and none that stays, goes, or a list accepted", () => {
+    const refused = individualListNeeds(withLists(["ind_900"], null));
+    const other = individualListNeeds(withLists(["ind_901"], null));
+    const removeRefused = individualListNeeds(withLists(null, ["ind_900"]));
+    if (refused === null || other === null || removeRefused === null) {
+      throw new Error("a list with no reason");
+    }
+    expect(appearedReason(null, refused)).toBe(listReasonText(refused));
+    expect(appearedReason(refused, other)).toBe(listReasonText(other));
+    expect(appearedReason(refused, removeRefused)).toBe(
+      listReasonText(removeRefused),
+    );
+    expect(appearedReason(refused, refused)).toBeNull();
+    expect(appearedReason(refused, null)).toBeNull();
+    expect(appearedReason(null, null)).toBeNull();
   });
 });

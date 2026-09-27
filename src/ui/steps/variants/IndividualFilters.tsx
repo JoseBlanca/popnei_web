@@ -9,8 +9,10 @@
  * undo, redo or opening, and while its names are not the list applied a
  * line under it says so. The reason `individualListNeeds` gives for a
  * list popnei would refuse, a name not in the variants file among them,
- * stands whole under the list it names; the stepper and the writing show
- * it too. The lists are drawn in every state, since they belong to the
+ * stands under the list it names without its end "in the Variants step",
+ * describes its text area, and is announced when an Apply or a Clear
+ * makes it appear, since the focus stays on the button; the stepper and
+ * the writing show it too. The lists are drawn in every state, since they belong to the
  * project, and a list is checked only once the variants file is read.
  */
 import { useId, useMemo, useState } from "react";
@@ -18,6 +20,7 @@ import { useId, useMemo, useState } from "react";
 import { individualListNeeds } from "../../../core/project.ts";
 import { classOf } from "../../classOf.ts";
 import { useHistoryMoves } from "../../historyMoves.ts";
+import { useAnnouncer } from "../../shell/announcer.tsx";
 import { useAppState, useStore } from "../../store.tsx";
 import { Button } from "../../widgets/Button.tsx";
 import { Problem } from "../../widgets/Problem.tsx";
@@ -28,9 +31,11 @@ import {
   LIST_KINDS,
   LIST_WORDS,
   applyCommand,
+  appearedReason,
   clearCommand,
   isApplied,
   listOf,
+  listReasonText,
   notAppliedText,
   shownText,
 } from "./individualLists.ts";
@@ -50,6 +55,7 @@ const NO_CLEAR: Clears = { keep: 0, remove: 0 };
 /** The section of the filters of the individuals. */
 export function IndividualFilters(): React.JSX.Element {
   const store = useStore();
+  const announcer = useAnnouncer();
   const project = useAppState((s) => s.project);
   const moves = useHistoryMoves();
   const [typed, setTyped] = useState<TypedLists>(NOTHING_TYPED);
@@ -57,8 +63,16 @@ export function IndividualFilters(): React.JSX.Element {
   const headingId = useId();
   const needs = useMemo(() => individualListNeeds(project), [project]);
 
+  /** Sends the command of Apply or Clear, and announces the reason of
+      a list that it makes appear. */
   const send = (step: StepCommand): void => {
+    const before = individualListNeeds(store.getState().project);
     store.apply(step.description, step.command);
+    const appeared = appearedReason(
+      before,
+      individualListNeeds(store.getState().project),
+    );
+    if (appeared !== null) announcer.announce(appeared);
   };
   const type = (kind: ListKind, text: string): void => {
     setTyped((before) => ({ ...before, [kind]: { text, moves } }));
@@ -80,7 +94,7 @@ export function IndividualFilters(): React.JSX.Element {
               edition={`${String(moves)} ${String(clears[kind])}`}
               text={text}
               applied={isApplied(text, list)}
-              reason={needs?.list === kind ? needs.reason : null}
+              reason={needs?.list === kind ? listReasonText(needs) : null}
               onType={(next) => {
                 type(kind, next);
               }}
@@ -144,6 +158,11 @@ function IndividualList({
 }: IndividualListProps): React.JSX.Element {
   const words = LIST_WORDS[kind];
   const notAppliedId = useId();
+  const reasonId = useId();
+  const described = [
+    applied ? null : notAppliedId,
+    reason === null ? null : reasonId,
+  ].filter((id) => id !== null);
   return (
     <div className={classOf(styles, "list")}>
       <TextArea
@@ -151,7 +170,7 @@ function IndividualList({
         label={words.label}
         value={text}
         onChange={onType}
-        describedBy={applied ? null : notAppliedId}
+        describedBy={described.length === 0 ? null : described.join(" ")}
       />
       <p className={classOf(styles, "filterLine")}>{words.line}</p>
       {!applied && (
@@ -159,7 +178,7 @@ function IndividualList({
           {notAppliedText(kind)}
         </p>
       )}
-      {reason !== null && <Problem>{reason}</Problem>}
+      {reason !== null && <Problem id={reasonId}>{reason}</Problem>}
       <div className={classOf(styles, "buttons")}>
         <Button label={words.apply} onPress={onApply} />
         <Button label={words.clear} onPress={onClear} />

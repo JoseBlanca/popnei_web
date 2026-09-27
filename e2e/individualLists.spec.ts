@@ -18,12 +18,12 @@ import { expect, test } from "./axe.ts";
 const FIXTURES = join(import.meta.dirname, "fixtures");
 
 /** The reason of a list to keep that names ind_900, not in panel.nei,
-    whole under the list, and without the step at the end beside Write
-    (writeVariants.md, "Its words"). */
+    as the step shows it under the list and beside Write, without the end
+    "in the Variants step", and whole in the stepper. */
 const IND_900 =
-  "The list of individuals to keep names 1 individual that is not in panel.nei: ind_900. Change the list, or remove the filter, in the Variants step.";
-const IND_900_WRITE =
   "The list of individuals to keep names 1 individual that is not in panel.nei: ind_900. Change the list, or remove the filter.";
+const IND_900_WHOLE =
+  "The list of individuals to keep names 1 individual that is not in panel.nei: ind_900. Change the list, or remove the filter, in the Variants step.";
 
 const KEEP_LABEL = "Individuals to keep, one name per line";
 const REMOVE_LABEL = "Individuals to remove, one name per line";
@@ -75,6 +75,11 @@ function writeButton(page: Page): Locator {
     });
 }
 
+/** The shell's status region, the last of the page's two. */
+function status(page: Page): Locator {
+  return page.getByRole("status").last();
+}
+
 function undoButton(page: Page): Locator {
   return page
     .getByRole("banner")
@@ -123,7 +128,7 @@ async function typeInto(area: Locator, text: string): Promise<void> {
 /** The modifier of the keyboard's Undo on this engine's platform. */
 const UNDO = process.platform === "darwin" ? "Meta+z" : "Control+z";
 
-test("VS7 D1 a list to keep with ind_900 applied: its reason under the list, beside the disabled Write and in the stepper, and axe", async ({
+test("VS7 D1 a list to keep with ind_900 applied: its reason under the list, describing it and announced, beside the disabled Write and in the stepper, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -139,7 +144,11 @@ test("VS7 D1 a list to keep with ind_900 applied: its reason under the list, bes
 
   await button(page, "Apply the list to keep").click();
   await expect(lists(page).getByText(KEEP_NOT_APPLIED)).toHaveCount(0);
-  await expect(keepArea(page)).toHaveAccessibleDescription("");
+  await expect(keepArea(page)).toHaveAccessibleDescription(IND_900);
+  await expect(status(page)).toHaveText(IND_900);
+  await expect(
+    lists(page).getByText("Variants step", { exact: false }),
+  ).toHaveCount(0);
   await expect(keepArea(page)).toHaveValue("s000\nind_900");
   await expect(lists(page).getByText(IND_900, { exact: true })).toBeVisible();
   // Under the list to keep, before the list to remove.
@@ -147,11 +156,13 @@ test("VS7 D1 a list to keep with ind_900 applied: its reason under the list, bes
   const keepBox = await keepArea(page).boundingBox();
   expect(reasonBox?.y ?? 0).toBeGreaterThan(keepBox?.y ?? Infinity);
   await expect(writeButton(page)).toBeDisabled();
-  await expect(writeButton(page)).toHaveAccessibleDescription(IND_900_WRITE);
+  await expect(writeButton(page)).toHaveAccessibleDescription(IND_900);
   await expect(stepLink(page, "Variants")).toHaveAccessibleName(
     "Variants, Problem",
   );
-  await expect(stepLink(page, "Variants")).toHaveAccessibleDescription(IND_900);
+  await expect(stepLink(page, "Variants")).toHaveAccessibleDescription(
+    IND_900_WHOLE,
+  );
   await expect(undoButton(page)).toHaveAccessibleDescription(
     "Undo: the list of individuals to keep changed",
   );
@@ -185,6 +196,44 @@ test("VS7 D1 the list cleared: the text emptied, the reason gone and Write given
   await expect(keepArea(page)).toHaveValue("ind_900");
   await expect(lists(page).getByText(IND_900, { exact: true })).toBeVisible();
   await expect(writeButton(page)).toBeDisabled();
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("VS7 D1 a list popnei accepts is applied with nothing announced, and a Clear that brings the reason of the other list announces it and describes that list, and axe", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openVariants(page);
+  await loadPanelNei(page);
+  await expect(status(page)).toHaveText(/panel\.nei read/u);
+  const read = await status(page).textContent();
+  await typeInto(keepArea(page), "s000\ns001");
+  await button(page, "Apply the list to keep").click();
+  await expect(undoButton(page)).toHaveAccessibleDescription(
+    "Undo: the list of individuals to keep changed",
+  );
+  await expect(keepArea(page)).toHaveAccessibleDescription("");
+  await expect(status(page)).toHaveText(read ?? "");
+
+  // The list to keep is checked first, so a refused list to remove shows
+  // its reason only once the list to keep is fine.
+  await keepArea(page).fill("ind_900");
+  await button(page, "Apply the list to keep").click();
+  await expect(status(page)).toHaveText(IND_900);
+  await typeInto(removeArea(page), "ind_901");
+  await button(page, "Apply the list to remove").click();
+  await expect(undoButton(page)).toHaveAccessibleDescription(
+    "Undo: the list of individuals to remove changed",
+  );
+  await expect(status(page)).toHaveText(IND_900);
+  await expect(removeArea(page)).toHaveAccessibleDescription("");
+
+  const removeReason =
+    "The list of individuals to remove names 1 individual that is not in panel.nei: ind_901. Change the list, or remove the filter.";
+  await button(page, "Clear the list to keep").click();
+  await expect(status(page)).toHaveText(removeReason);
+  await expect(removeArea(page)).toHaveAccessibleDescription(removeReason);
+  await expect(keepArea(page)).toHaveAccessibleDescription("");
   await expectNoViolations(makeAxeBuilder);
 });
 
@@ -263,7 +312,7 @@ test("VS7 D1 a list applied before a file is read has no reason until the file i
   await loadPanelNei(page);
   await expect(
     lists(page).getByText(
-      "The list of individuals to remove names 1 individual that is not in panel.nei: ind_900. Change the list, or remove the filter, in the Variants step.",
+      "The list of individuals to remove names 1 individual that is not in panel.nei: ind_900. Change the list, or remove the filter.",
       { exact: true },
     ),
   ).toBeVisible();
@@ -362,7 +411,7 @@ test("VS7 D1 a column of 200 names pasted with CRLF and tabs, one of them with a
   await button(page, "Apply the list to keep").click();
   await expect(
     lists(page).getByText(
-      "The list of individuals to keep names 1 individual that is not in panel.nei: s199, s198. Change the list, or remove the filter, in the Variants step.",
+      "The list of individuals to keep names 1 individual that is not in panel.nei: s199, s198. Change the list, or remove the filter.",
       { exact: true },
     ),
   ).toBeVisible();
