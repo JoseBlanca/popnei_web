@@ -5,7 +5,8 @@
  * removed and of a calculation stopped, written from the change that
  * caused them, the count of the warnings, and a
  * failure that is not popnei's refusal. Pure, so that a test in node
- * checks them; `AnalysisPanel.tsx` draws them.
+ * checks them; `AnalysisPanel.tsx`, `Failed.tsx` and the parts of the
+ * checks of the Variants step draw them.
  */
 
 import { counted, escaped, saying } from "../../core/project.ts";
