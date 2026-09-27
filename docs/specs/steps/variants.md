@@ -493,13 +493,16 @@ tabs and the button of the CSV with the histogram they belong to; under
 the title, while the filter is on, "Threshold of the MAF filter: 0.95",
 or "Threshold of the filter by observed heterozygosity: 0.5", with the
 number the plot is given, the one typed while it is typed; under the
-plot, in its tab, while the threshold splits a bin, the line "The
+plot, in its tab, while the threshold splits a bin that holds any
+variant, the line "The
 threshold 0.5 splits the bin from 0.5 to 0.525, 62 variants: the filter
 keeps those of its variants at most 0.5 and removes the others.", with
 the edges and the threshold to four decimals at most as the description
 of the plot has them, since the plot draws that bin outlined when the
 line falls on its lower edge, and its legend has no row for it
-(`histogram.md`, "Which bins the threshold keeps"); the table is
+(`histogram.md`, "Which bins the threshold keeps"); a split bin of no
+variant, as the one from 0 to 0.025 when 0 is typed, has nothing to
+keep or remove, and no line; the table is
 named "The bins of the major allele frequency", "… of the observed
 heterozygosity" or "… of the expected heterozygosity (unbiased)", and
 the line above it reads "Each bin runs from its lower edge up to its
