@@ -18,8 +18,11 @@ export const ANNOUNCE_DELAY_MS = 100;
 export interface Announcer {
   /** Empties the region at once and writes `text` into it
       `ANNOUNCE_DELAY_MS` later, with any other text announced in that
-      time after it, joined by a space. */
-  announce(text: string): void;
+      time after it, joined by a space. With `replaces`, the kind of a
+      text only its latest holds, a text of that kind still waiting is
+      dropped: the line of the individuals that pass, said once after a
+      threshold stepped several times within that time. */
+  announce(text: string, options?: AnnounceOptions): void;
   /** Runs `change`, and announces the text it gives, if any, as
       `announce` does, but before the texts announced while it ran and
       after those announced before it: what the user did, known only
@@ -36,12 +39,19 @@ export interface Announcer {
   readonly subscribe: (listener: () => void) => () => void;
 }
 
+/** How a text is announced. */
+export interface AnnounceOptions {
+  /** The kind of the text, of which only the latest is said. */
+  readonly replaces: string;
+}
+
 /** Makes the announcer, with an empty region. */
 export function createAnnouncer(): Announcer {
   let text = "";
   // The texts announced since the region was emptied, waiting for the
-  // timer; empty when no timer runs.
-  let waiting: string[] = [];
+  // timer, with the kind each replaces, or null; empty when no timer
+  // runs.
+  let waiting: { readonly text: string; readonly kind: string | null }[] = [];
   // The timer that writes the texts waiting, while one runs.
   let timer: ReturnType<typeof setTimeout> | undefined;
   // The number of clears so far, by which a change tells that the texts
@@ -56,7 +66,7 @@ export function createAnnouncer(): Announcer {
 
   function write(): void {
     timer = undefined;
-    const joined = waiting.join(" ");
+    const joined = waiting.map((w) => w.text).join(" ");
     waiting = [];
     change(joined);
   }
@@ -76,9 +86,13 @@ export function createAnnouncer(): Announcer {
   }
 
   return {
-    announce(next: string): void {
+    announce(next: string, options?: AnnounceOptions): void {
       wait();
-      waiting.push(next);
+      const kind = options?.replaces ?? null;
+      if (kind !== null) {
+        waiting = waiting.filter((w) => w.kind !== kind);
+      }
+      waiting.push({ text: next, kind });
     },
     announceChange(change: () => string | null): void {
       const clearsBefore = clears;
@@ -89,7 +103,7 @@ export function createAnnouncer(): Announcer {
       // the change's text goes first.
       const at = clears === clearsBefore ? waitingBefore : 0;
       wait();
-      waiting.splice(at, 0, next);
+      waiting.splice(at, 0, { text: next, kind: null });
     },
     clear(): void {
       clears += 1;

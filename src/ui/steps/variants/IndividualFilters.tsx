@@ -137,13 +137,20 @@ export function IndividualFilters(): React.JSX.Element {
     const totalBefore = keptTotal(state.project, state.individualsKept);
     store.apply(step.description, step.command);
     const after = store.getState();
-    const appeared =
-      appearedReason(before, individualListNeeds(after.project)) ??
-      keptAnnouncement(
-        totalBefore,
-        keptTotal(after.project, after.individualsKept),
-      );
-    if (appeared !== null) announcer.announce(appeared);
+    const reason = appearedReason(before, individualListNeeds(after.project));
+    if (reason !== null) {
+      announcer.announce(reason);
+      return;
+    }
+    const kept = keptAnnouncement(
+      totalBefore,
+      keptTotal(after.project, after.individualsKept),
+    );
+    // Only the latest of what the filters keep is said, when a
+    // threshold is stepped several times within the pause of the region.
+    if (kept !== null) {
+      announcer.announce(kept, { replaces: "individualsKept" });
+    }
   };
   const type = (kind: ListKind, text: string): void => {
     setTyped((before) => ({ ...before, [kind]: { text, moves } }));

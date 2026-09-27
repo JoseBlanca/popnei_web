@@ -453,6 +453,14 @@ test("VS7 D1 an arrow key moves a threshold by 0.01, committed at once with its 
   await expect(
     section(page).getByText(/^Kept \d+ of the 200 individuals it was given\.$/),
   ).toBeVisible();
+  // Stepped six times at once: what the filters keep is said once.
+  for (let press = 0; press < 6; press += 1) {
+    await page.keyboard.press("ArrowUp");
+  }
+  await expect(field(page, MISSING_LABEL)).toHaveValue("0.1");
+  await expect(status(page)).toHaveText(/pass the filters\.$/);
+  const said = (await status(page).textContent()) ?? "";
+  expect(said.match(/pass the filters/g)).toHaveLength(1);
 });
 
 test("VS7 D1 before the statistics, a threshold turned on says it is known once they are calculated, and a new file loaded says so again", async ({

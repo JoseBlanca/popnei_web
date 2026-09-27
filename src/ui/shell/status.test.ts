@@ -36,6 +36,21 @@ describe("WS9 D1 the announcer", () => {
     expect(seen).toEqual(["", "Diversity: done.", "", "Diversity: done."]);
   });
 
+  test("a text that replaces its kind drops the one of that kind still waiting, and is written last", () => {
+    const announcer = createAnnouncer();
+    const total = { replaces: "individualsTotal" } as const;
+    announcer.announce("125 of the 200 pass.", total);
+    announcer.announce("Other words.");
+    announcer.announce("124 of the 200 pass.", total);
+    announcer.announce("123 of the 200 pass.", total);
+    vi.advanceTimersByTime(100);
+    expect(announcer.getState()).toBe("Other words. 123 of the 200 pass.");
+    // Once written, the next of the kind is a new announcement.
+    announcer.announce("122 of the 200 pass.", total);
+    vi.advanceTimersByTime(100);
+    expect(announcer.getState()).toBe("122 of the 200 pass.");
+  });
+
   test("two texts announced within 100 ms are written together, joined by a space", () => {
     const announcer = createAnnouncer();
     const seen: string[] = [];
