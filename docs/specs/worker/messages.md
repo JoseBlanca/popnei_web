@@ -355,8 +355,8 @@ and of `.claude/skills/coding/worker.md`, "Validation at the boundary":
   result are whole numbers, `projections` is as long as `individuals`
   times `numComps`, `explainedVariancePercent` is as long as
   `numComps`, and a result of the PCA has `numVarsUsed` a number and
-  `negativeEigenvaluesPercent` `null`, and one of the PCoA the other way
-  round; that `numCompsKept` is at least 1 and `numComps` at most
+  `lingoesConstant` and `negativeEigenvaluesPercent` `null`, and one of
+  the PCoA the other way round; that `numCompsKept` is at least 1 and `numComps` at most
   `numCompsFound` is core's and the runner's to keep, as a range; the `numBytes` of a `written` is the
   `size` of its file, or it is refused as `wrongSize`; the refusals of the reader are the kinds
   its spec gives. That the statistics of each individual are those of the
@@ -572,7 +572,8 @@ File(["…"], "panel.nei")`.
   components whose `projections` is a list of numbers, `wrongType`, has
   1,999 numbers for 200 individuals and 10 components, `wrongLength`,
   or whose `explainedVariancePercent` has 9, `wrongLength`; a result of
-  the PCA with `numVarsUsed` `null`, `wrongType`.
+  the PCA with `numVarsUsed` `null`, `wrongType`; a result of the PCoA
+  with `lingoesConstant` `null`, `wrongType`.
 - **The version**: a `ready` with `protocol: 2`, stage 3's, and no
   other field gives `otherProtocol` with 2 from both checks of the page,
   and so does `protocol: 4` with 4; with `protocol: "3"`, `wrongType`.

@@ -525,10 +525,16 @@ file. After the steps are on the `Variants`, the runner:
    alleles is not refused. Both keys are popnei's options in the release
    and on `main`, where an unknown key is refused and the release ignores
    it (`git diff js-v0.1.0-dev.2 main -- js/popnei/src/pca.ts`). For the
-   PCoA it calls `doPcoaFromVariants(variants)`, with no option, from
-   popnei's release that has it; its name and its fields are popnei's
-   draft, provisional (`pca.md`, "The names of popnei's PCoA,
-   provisional").
+   PCoA it calls `doPcoaFromVariants(variants, { correctByLingoes: true
+   })`, from popnei's release that has it, so that Kosman distances no
+   space holds are corrected by Lingoes' method rather than refused, as
+   the owner decided on 27 September 2026 (`pca.md`, "What it does"); its
+   name, its option and its fields are popnei's draft, provisional
+   (`pca.md`, "The names of popnei's PCoA, provisional"). Until the
+   release in `package.json` has that function, the runner has no call of
+   it, and answers a `pca` job of the method `"pcoa"` `badRequest`, "the
+   PCoA is not in this release of popnei", before any step; core's lock
+   on the method, `PCOA_IN_POPNEI` of `pca.md`, never sends one.
 3. Checks that popnei's `individuals` are those the pass was to give, the
    list of the job or, when it is `null`, those of the open, in the same
    order, and that `projections` holds `individuals.length × numComps`
@@ -544,8 +550,9 @@ file. After the steps are on the `Variants`, the runner:
    percentages are popnei's, over the variance of every component.
 5. Builds the `PcaResult` of `pca.md` with `method`, `numVarsUsed`, the
    length of popnei's `usedVars` for the PCA and `null` for the PCoA,
-   `negativeEigenvaluesPercent`, the PCoA's and `null` for the PCA, and
-   `passStats`, the counts of the pass.
+   `lingoesConstant` and `negativeEigenvaluesPercent`, popnei's for the
+   PCoA and `null` for the PCA, and `passStats`, the counts of the
+   pass.
 
 popnei refuses, with a plain `Error`, answered `refused`: more than 9,381
 individuals in the source, before the pass, "the principal components of
@@ -558,7 +565,12 @@ the file holds none or the filters kept none; no variant with variance,
 with one individual kept; and, with an LD pruning among the filters, a
 file whose variants are not in the order of their positions, "the
 variant 2 of the ones the filter by linkage disequilibrium has read, …",
-at the pass. The panel says each in the user's words (`pca.md`, "Its
+at the pass. The PCoA, by popnei's draft, refuses fewer than two
+individuals and more than 8,695, before the pass; a pass that keeps no
+variant, with popnei's usual "the pass gave no variant …"; a pair of
+individuals with no variant called in both; and distances all 0. With
+the correction asked, it does not refuse distances that no space holds.
+The panel says each in the user's words (`pca.md`, "Its
 words").
 
 The PCA holds the individuals × individuals matrix in the memory of
@@ -718,7 +730,7 @@ Which answer, by what was thrown:
 | a call to popnei threw any other plain `Error`, whose prototype is `Error.prototype` itself: a refusal of the data, filters that keep no variant, a list of individuals that names one twice, a file the memory of the tab does not take | `refused`, with the message as it is | `popnei` | goes on |
 | a call to popnei threw anything else: a `WebAssembly.RuntimeError`, a trap of the wasm, a panic of Rust among the causes; a `RangeError` of a memory that cannot grow | `crashed`, with its message | `workerFailed` | closes |
 | popnei refused the open of the file again, in a request whose steps changed or after an open again that failed, whatever its message | `reopenFailed`, with the name of the file and popnei's message; the runner holds no `Variants`, and the next run opens the file again | `reopenFailed` | goes on |
-| a request that failed `parseToRunner`; a second `open`; a `run` or a `write` before the `open`, of another load, or after an open that popnei refused; an empty list of individuals; two populations of one name | `badRequest`, what was wrong | `defect` | closes |
+| a request that failed `parseToRunner`; a second `open`; a `run` or a `write` before the `open`, of another load, or after an open that popnei refused; an empty list of individuals; two populations of one name; a PCoA before popnei's release has it | `badRequest`, what was wrong | `defect` | closes |
 | a throw of our own code anywhere else: what `told` threw, which popnei's call throws back (step 2 above), a `popnei_web defect:` of step 4 or of the counts of a pass among them | `crashed`, its message | `workerFailed` | closes |
 
 - **The file changed on the disk.** A `File` is a handle to the file as
@@ -1356,7 +1368,7 @@ runner made by `createRunner`, after the open of `panel.nei`:
   `numCompsFound` 199, `numComps` 10, `projections` of 2,000 numbers,
   those of `s000` −0.7546702846382134, 7.577178941266335 and
   −4.924745039386669 first, the ten percentages of that spec,
-  `numVarsUsed` 535, `negativeEigenvaluesPercent` `null`, and `passStats`
+  `numVarsUsed` 535, `lingoesConstant` and `negativeEigenvaluesPercent` `null`, and `passStats`
   `missing_data` 1,200 to 1,200, `maf` 1,200 to 1,175 and `ld` 1,175 to
   535, in that order; and the two calls of the progress of the diversity.
 - **The PCA with the pruning off**: PC1 7.7259798956433725, `s000` on
@@ -1374,6 +1386,12 @@ runner made by `createRunner`, after the open of `panel.nei`:
   individuals whose second variant is at position 10 after one at 30,
   with the LD pruning, the message of the LD filter, and without it a
   result.
+- **The PCoA**, once popnei's release has it: the job of the defaults
+  with the method `"pcoa"` gives the numbers `pca.md` records then, from
+  `doPcoaFromVariants(v, { correctByLingoes: true })` in node, its
+  `lingoesConstant` and `negativeEigenvaluesPercent` among them, and a
+  second run the same numbers to the last bit; `numVarsUsed` is `null`.
+  Until then, a job of the method `"pcoa"` is answered `badRequest`.
 - **The steps of a PCA**: after a diversity at 0.1, a PCA opens the file
   again, since its filters are not the diversity's, and a second PCA with
   the same job does not.

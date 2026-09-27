@@ -481,7 +481,8 @@ export interface FilterCountsResult {
 }
 
 // The principal components, stage 4: a PCA of the genotypes or a PCoA of
-// the Kosman distances, over the filters pcaFilters gives, the first
+// the Kosman distances, corrected by Lingoes' method when no space holds
+// them (docs/specs/analyses/pca.md), over the filters pcaFilters gives, the first
 // numCompsKept components of what popnei gives.
 export interface PcaJob {
   analysis: "pca";
@@ -501,7 +502,8 @@ export interface PcaResult {
   projections: Float64Array;               // individuals × numComps, row after row
   explainedVariancePercent: Float64Array;  // numComps, over the variance of every component
   numVarsUsed: number | null;              // the PCA's usedVars.length; null for the PCoA
-  negativeEigenvaluesPercent: number | null; // the PCoA's; null for the PCA
+  lingoesConstant: number | null;          // the PCoA's constant of Lingoes' correction, 0 for none; null for the PCA
+  negativeEigenvaluesPercent: number | null; // the PCoA's, of its distances before the correction; null for the PCA
   passStats: PassStats;                    // of filters that are not the project's
 }
 
