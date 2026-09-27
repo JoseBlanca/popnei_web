@@ -447,7 +447,12 @@ The Save button takes the focus when the write ends, if the focus was on
 the button that asked for it, which the write replaces; otherwise the
 focus stays where it is, and the end is announced by the shell's status
 region, "panel.filtered.nei is written, 19.2 MB; Save it in the Variants
-step." The warning says "Warning:" in words (WCAG 2.2, 1.4.1).
+step." Save keeps the focus as it turns into Write, and the status
+region says "panel.filtered.nei was handed to the browser to save.", so
+that a user of a screen reader learns that the press did something
+before a second Enter starts a new write (`docs/specs/shell.md`, "The
+status region"). The warning says "Warning:" in words (WCAG 2.2,
+1.4.1).
 
 ### Left for the running application
 

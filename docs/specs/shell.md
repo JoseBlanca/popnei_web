@@ -365,6 +365,7 @@ file its options of the CSV compared by their values:
 | the same, and `write` is `noVariant`, a file of no variant, which the store does not keep | "The filters kept none of the variants of panel.nei, so there is nothing to write." |
 | the same, and `write` is in the state `error` | "The file could not be written. The Variants step says why." |
 | a request of the writing that was current and being stopped left `runs` | "Writing the file: stopped." |
+| `write` went from `done` to a state other than `done` and `saved`: the file written and not saved was discarded, by a change of the filters, a new load or an opening | nothing is said, and the region is emptied, with the texts waiting to be written into it, by `clear()` of the announcer: its words may be "panel.filtered.nei is written, 19.2 MB; Save it in the Variants step.", which no longer hold, and a user who reads the region later would follow them. The notice of the change, read out by itself, says the file was discarded |
 
 The comparison with the project file is part of the end of the
 calculation, as the owner decided on 26 September 2026 (point 11 of the
@@ -415,6 +416,7 @@ the shell gives the screens:
 |---|---|
 | an undo or a redo that makes no notice, with the button or the keyboard | "Undone: the missing data filter changed.", "Redone: the missing data filter changed." |
 | Save of the dialog of Save project | "panel.popnei.json was handed to the browser to download." (below, "Saving") |
+| from stage 3, Save of a written file in the Variants step | "panel.filtered.nei was handed to the browser to save.", the name of the file; the button, which keeps the focus, turns into Write, and the line above it, which says the same, is behind the focus (`docs/specs/analyses/writeVariants.md`, "Accessibility") |
 | a project opened | "Opened panel.popnei.json." followed by the text of `askedFileText` when it gives one (below, "Opening") |
 | a file that a step did not load, several dropped at once | the text the step shows for it, whose words are the step's (`docs/specs/steps/variants.md` and `individuals.md`, "Its words") |
 
@@ -592,8 +594,14 @@ the file and some, "The project file cannot be opened: …", do not:
    flight, or a file written is not saved, a dialog asks first: "Open panel.popnei.json? It replaces the
    project on the page, and an opening cannot be undone. To keep the
    project on the page, press Keep the current project and save it
-   first.", with, when calculations are in flight, "The ongoing
-   calculations will be stopped.", and, when a file written is not
+   first.", with, when calculations of analyses are in flight, "The
+   ongoing calculations will be stopped."; when the filtered variants
+   are being written, a request of the writing in flight or `write`
+   running while it waits for the statistics of each individual, whose
+   request is then the writing's and not a calculation of its own, "The
+   writing of panel.filtered.nei will be stopped."; when both, "The
+   ongoing calculations and the writing of panel.filtered.nei will be
+   stopped."; and, when a file written is not
    saved, `write` in `done`, "panel.filtered.nei, written and not saved,
    will be discarded." (point G of `docs/specs/stage-3-open-points.md`).
    Its buttons: "Open panel.popnei.json"
@@ -744,6 +752,7 @@ store of core:
 ```ts
 export function createAnnouncer(): {
   announce(text: string): void;
+  clear(): void;                                    // empties the region now, and drops the texts waiting
   getState(): string;                               // the text of the region now
   readonly subscribe: (listener: () => void) => () => void;
 };
@@ -830,6 +839,8 @@ with the analyses of `TEST_DEFS` of `src/core/testSupport.ts`:
   counts and no statistics "panel.nei · 200 individuals, how many kept
   not yet known · 1,200 variants · 3 filters · …"; a case for each row of
   its table.
+- **`openQuestion`**: with calculations, with the writing, with both,
+  and with a file written and not saved, the words asserted whole.
 - **`noticeText`**: each row of the table of the notice, from a literal
   notice, with the text asserted whole; three removed and two stopped,
   counted; the writing left behind alone and with a calculation, and
@@ -845,10 +856,13 @@ with the analyses of `TEST_DEFS` of `src/core/testSupport.ts`:
   dropped because it ended after a change, a read of the metadata file recorded
   for options other than those of the present project, and the warning
   of a reopened project while its load is being read, which the end of
-  the read announces after the read.
+  the read announces after the read. **`writtenDiscarded`**, the
+  condition of the row that empties the region: `done` to `ready`, to
+  `locked` and to no writing, and not `done` to `saved` or to `done`.
 - **The announcer**, with the fake timers of Vitest: the same text
   announced twice empties the region and writes it each time; two texts
-  within 100 ms are written together; the text of a change goes before
+  within 100 ms are written together; `clear()` empties the region and
+  drops a text waiting; the text of a change goes before
   what the change announced and after what came before it, and two
   changes keep their order. **`undoOrRedo`**: an undo that brings the warning of a
   reopened project back says "Undone: …" before the warning.
