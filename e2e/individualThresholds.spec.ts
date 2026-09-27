@@ -503,6 +503,37 @@ test("VS7 D1 thresholds that keep none: the reason under the filters, announced 
   await expect(writeButton(page)).toBeEnabled();
 });
 
+test("VS7 D1 a list to remove of every individual, then a threshold turned on: the reason at once, Kept 0 of the 0, Write disabled, with no statistics", async ({
+  page,
+}) => {
+  await panelAt005(page);
+  const everyone = Array.from(
+    { length: 200 },
+    (_, index) => `s${String(index).padStart(3, "0")}`,
+  );
+  await section(page)
+    .getByLabel("Individuals to remove, one name per line", { exact: true })
+    .fill(everyone.join("\n"));
+  await section(page)
+    .getByRole("button", { name: "Apply the list to remove" })
+    .click();
+  await expect(
+    section(page).getByText(NONE_KEPT, { exact: true }),
+  ).toBeVisible();
+  await flip(page, MISSING_SWITCH);
+  await expect(
+    section(page).getByText("Kept 0 of the 0 individuals it was given.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(section(page).getByText(KNOWN_ONCE)).toHaveCount(0);
+  await expect(
+    section(page).getByText(NONE_KEPT, { exact: true }),
+  ).toBeVisible();
+  await expect(writeButton(page)).toBeDisabled();
+  await expect(writeButton(page)).toHaveAccessibleDescription(NONE_KEPT);
+});
+
 test("VS7 D1 the keyboard goes from the button of the statistics through each threshold, its switch, its field and its histogram, to the table", async ({
   page,
 }) => {

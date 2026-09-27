@@ -35,7 +35,8 @@ export type KeptList =
   /** Known: the individuals kept, in the order of the variants file, or
       `null` when the filters remove none. */
   | { readonly kind: "known"; readonly individuals: readonly string[] | null }
-  /** Not known: the project has a threshold and no statistics were given. */
+  /** Not known: the project has a threshold, no statistics were given,
+      and the lists keep some individual. */
   | { readonly kind: "needsStatistics" };
 
 /** How many individuals one filter of individuals was given and kept. */
@@ -99,6 +100,9 @@ export function individualsKept(
   const counts: FilterCount[] = [];
   for (const filter of p.individualFilters) {
     const before: readonly number[] | null = current;
+    // A threshold given no individual keeps none, so it needs no
+    // statistics: it can only remove more.
+    const noneGiven: boolean = before?.length === 0;
     switch (filter.kind) {
       case "keep": {
         const named = new Set(filter.individuals);
@@ -117,8 +121,9 @@ export function individualsKept(
       }
       case "missing_data": {
         const threshold = filter.maxAllowedMissingRate;
-        current =
-          given === null
+        current = noneGiven
+          ? []
+          : given === null
             ? null
             : (before?.filter(
                 (index) => rateAt(given.missingGtRate, index) <= threshold,
@@ -129,8 +134,9 @@ export function individualsKept(
         const threshold = filter.maxAllowedObsHet;
         // A NaN is not at most any threshold, so an individual with no
         // called genotype is removed.
-        current =
-          given === null
+        current = noneGiven
+          ? []
+          : given === null
             ? null
             : (before?.filter(
                 (index) => rateAt(given.obsHetRate, index) <= threshold,
