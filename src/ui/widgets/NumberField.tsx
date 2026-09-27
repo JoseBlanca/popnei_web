@@ -181,6 +181,15 @@ export function NumberField({
     typed.current = false;
     typedTo.current?.(null);
   }, [value]);
+  // The field gone, by its switch turned off, an Undo or a Clear: a
+  // number typed in it is typed no longer, and the screen, which may
+  // draw it elsewhere, a threshold on a plot, is told so.
+  useEffect(
+    () => () => {
+      typedTo.current?.(null);
+    },
+    [],
+  );
   // Whether a number committed may have decimals, as checkCommitted has
   // it: with `decimals`, any but 0; otherwise, a step that is not whole.
   const takesDecimals =
