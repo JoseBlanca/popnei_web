@@ -344,7 +344,7 @@ interface IndividualsSource {
   fileId: string;                     // the id of this load, new at every pick
   name: string;
   csv: CsvOptions | null;             // how a CSV or TSV is read; null for xlsx
-  typesSet: ColumnTypeOf[];           // the types the user set, by column,
+  typesSet: ColumnTypeOf[];           // the types the user set, { column, type },
                                       // kept by name when the file is read again
   read:
     | { kind: "pending" }             // the light worker is reading it
@@ -1017,13 +1017,22 @@ takes as covariates, from stage 7. Not the variants kept by the LD
 pruning of the PCA, which this section named until 27 September 2026:
 popnei's pruning, `filterByLd` of `js/popnei/src/variant.ts`, is a step of
 a `Variants` made again at every pass, and popnei has no way to hold the
-variants it kept or to put a list of variants back on a `Variants`. The
-one way through popnei, writing the pruned variants as a `.nei` file in
-memory and opening it again, holds the whole file in the memory of wasm,
-which never shrinks. So each PCA prunes inside its own pass, which it
-makes in any case; what keeping them would spare is the calculation of
-r², whose time is measured in stage 4, and popnei is asked for a way to
-keep them if it is large. Recommended to the owner on 27 September 2026,
+variants it kept. Writing the pruned variants as a `.nei` file in memory
+and opening it again holds the whole file in the memory of wasm, which
+never shrinks. So each PCA prunes inside its own pass, which it makes in
+any case; what keeping them would spare is the calculation of r², whose
+time is measured in stage 4. If it is large, the option to weigh first
+is one popnei's main has had since 27 September 2026, after the release
+`js-v0.1.0-dev.2`: the chromosome and the position of each variant the
+pruning kept, from a pass of `iterBlocks`, given back as regions of one
+base pair to `filterByRegions` (`js/popnei/src/variant.ts`), which as the
+first filter hands on only those variants. Since the pruning counts over
+every individual of the file, a change of the filters of individuals
+keeps the same pruned variants, which is when reusing them pays. What it
+costs, not weighed yet: a pass more the first time, the one filter of
+the regions that a `Variants` takes, which the dataset's BED file may
+already hold, and two variants at one position, which regions cannot
+tell apart. Otherwise popnei is asked for a way to keep them. Recommended to the owner on 27 September 2026,
 meanwhile (`docs/specs/stage-4-open-points.md`). So the calculation
 worker keeps no intermediate result before stage 7.
 
@@ -1901,9 +1910,15 @@ code, the release `js-v0.1.0-dev.2`.
   for a file that is no longer there, and its download fails. The screen
   says that the site may have been updated since the page was opened,
   and to save the project, reload the page and open the project again
-  (`docs/specs/charts/pca3d.md`, `docs/specs/worker/files.md`). Found by
-  the specs of stage 4 on 27 September 2026, and not yet seen in a
-  browser (section 13, point 10).
+  (`docs/specs/charts/pca3d.md`, `docs/specs/worker/files.md`). The
+  script of each worker is such a file too: a worker started again, after
+  a cancel, a crash, a large write or a large PCA (section 13, point 9),
+  fetches its script from the build the page came from, and after a
+  deploy cannot start, which the client reports as `couldNotStart`, whose
+  words say to reload the page (`docs/specs/core/project.md`, open point
+  4); they are to say to save the project first as well. Found by the
+  specs and the architecture review of stage 4 on 27 September 2026, and
+  not yet seen in a browser (section 13, point 10).
 
 ## 12. What is hard to undo
 
@@ -2006,10 +2021,17 @@ not yet decided by the owner (`docs/specs/stage-4-open-points.md`):
    stage 4: reading the header of the variants file again, at most 49 ms,
    since the worker keeps no intermediate result before stage 7 (section
    5). Not taken: keeping the worker, and the memory, until the next load
-   of the variants file.
+   of the variants file. It is decided again in stage 7, with the kinship
+   and the principal components the worker keeps for the GWAS, which a
+   restart after a large PCA would drop: a kinship of 10,000 individuals
+   is 800 MB and minutes to make again.
 10. **What a page opened before a deploy does when it later fetches a
    file of the old build** (section 11). Recommended: say so in words,
    with what works, save, reload and open the project again, as the
    specs of stage 4 have it. Not taken: keeping the files of the last
    builds on the site for a while after a deploy, which GitHub Pages,
-   deploying the `dist/` folder of one build, does not do by itself.
+   deploying the `dist/` folder of one build, does not do by itself; and
+   downloading three.js and the files wasm when the page is idle, so that
+   a deploy afterwards finds them already in the page, at the cost of
+   their 0.43 MB gzipped for every visit, and which would not cover the
+   script of a worker started again.
