@@ -6,12 +6,16 @@
  */
 import { describe, expect, test } from "vitest";
 
+import { keptNoneReason } from "../../../core/individualsKept.ts";
 import { keyFromWire } from "../../../core/keys.ts";
+import { individualListNeeds } from "../../../core/project.ts";
 import type { Project } from "../../../core/project.ts";
-import type { WriteStatus } from "../../../core/store.ts";
+import type { AnalysisError, WriteStatus } from "../../../core/store.ts";
+import type { PassStats } from "../../../worker/protocol.ts";
 import { sampleProject } from "../../../core/testSupport.ts";
 import type { WriteEstimate } from "../../../core/writeEstimate.ts";
 import { writeParts } from "./writeParts.ts";
+import type { CountState, WriteParts } from "./writeParts.ts";
 
 const KEY = keyFromWire("a".repeat(64));
 
@@ -442,5 +446,160 @@ describe("the writing refused before it starts, as the owner decided at stop A o
       description:
         "The list of individuals to keep names 2 individuals that are not in panel.nei: ind_900 and ind_901. Change the list, or remove the filter.",
     });
+  });
+});
+
+describe("the saved line with Write disabled, and no text of the section that names the Variants step", () => {
+  const SAVED: WriteStatus<Blob> = {
+    kind: "saved",
+    key: KEY,
+    written: { format: "nei", numBytes: 250_994, passStats: PASS },
+  };
+
+  test("saved, with Write disabled by a Count refused after the save: the line ends at the save", () => {
+    const parts = writeParts(SAVED, SMALL, PROJECT, "refused");
+    expect(parts.message).toEqual({
+      kind: "line",
+      text: "panel.filtered.nei, 251 KB, was handed to the browser to save.",
+    });
+    expect(parts.button).toMatchObject({ kind: "write", disabled: true });
+    expect(writeParts(SAVED, SMALL, PROJECT, "counted").message).toEqual({
+      kind: "line",
+      text: "panel.filtered.nei, 251 KB, was handed to the browser to save. To save it again, write it again.",
+    });
+  });
+
+  /** The sample project as a VCF read with only the passed variants,
+      `onlyPassed`, or every variant. */
+  function vcf(onlyPassed: boolean): Project {
+    const variants = PROJECT.variants;
+    if (variants === null) throw new Error("the sample has a variants file");
+    return {
+      ...PROJECT,
+      variants: {
+        ...variants,
+        name: "panel.vcf",
+        format: "vcf",
+        readOptions: { ploidy: 2, onlyPassed },
+      },
+    };
+  }
+
+  test("no text of any state, for any failure, count or project, says Variants step", () => {
+    const projects = [
+      PROJECT,
+      vcf(true),
+      vcf(false),
+      withFileVariants(0),
+      withFileVariants(1200),
+    ];
+    const messages = [
+      "the pass gave no variant and its source holds none",
+      "the pass gave no variant: the filters kept none of the 1200 variants",
+      "line 5 of the VCF, the column of t00: its genotype is of the ploidy 4 and the reader was asked for the ploidy 2",
+      "line 12 of the VCF: a field is missing",
+      "the VCF was written by bgzip and is cut short",
+      "memory could not grow",
+    ];
+    const errors: AnalysisError[] = [
+      ...messages.map((message) => ({ kind: "refused", message }) as const),
+      ...(
+        [
+          { kind: "reopenFailed", name: "panel.nei", message: "gone" },
+          { kind: "workerFailed", message: "a trap" },
+          { kind: "couldNotStart", reason: "no ready" },
+          { kind: "protocolMismatch" },
+          { kind: "defect", message: "a bug" },
+        ] as const
+      ).map((error) => ({ kind: "failed", error }) as const),
+    ];
+    const passes: PassStats[] = [
+      {
+        numVars: 0,
+        filtering: { missing_data: { varsProcessed: 1200, varsKept: 0 } },
+      },
+      {
+        numVars: 0,
+        filtering: { missing_data: { varsProcessed: 0, varsKept: 0 } },
+      },
+    ];
+    const estimates = [
+      null,
+      SMALL,
+      estimateOf(0, 200),
+      estimateOf(600_000, 1000),
+      estimateOf(2_000_000, 1000),
+      estimateOf(2_000_000, 1000, true),
+    ];
+    const counts: CountState[] = [
+      "notCounted",
+      "counting",
+      "counted",
+      "refused",
+    ];
+    const kept = {
+      list: { kind: "known", individuals: [] },
+      byLists: [],
+      counts: [],
+    } as const;
+    const listed: Project = {
+      ...PROJECT,
+      individualFilters: [{ kind: "keep", individuals: ["nobody"] }],
+    };
+    const reasons = [
+      keptNoneReason(PROJECT, kept),
+      individualListNeeds(listed)?.reason ?? null,
+    ];
+    expect(
+      reasons.every((reason) => reason?.includes("Variants step") === true),
+    ).toBe(true);
+
+    const texts: string[] = [];
+    const add = (parts: WriteParts): void => {
+      if (parts.message !== null) texts.push(parts.message.text);
+      if (parts.warning !== null) texts.push(parts.warning);
+      if (parts.button?.kind === "write" && parts.button.description !== null)
+        texts.push(parts.button.description);
+    };
+    for (const p of projects) {
+      for (const reason of reasons) {
+        if (reason !== null)
+          add(writeParts({ kind: "locked", reason }, SMALL, p));
+      }
+      for (const pass of passes) {
+        add(
+          writeParts(
+            {
+              kind: "noVariant",
+              key: KEY,
+              written: { format: "nei", numBytes: 3594, passStats: pass },
+            },
+            SMALL,
+            p,
+          ),
+        );
+      }
+      for (const estimate of estimates) {
+        for (const count of counts) {
+          add(writeParts(READY, estimate, p, count));
+          add(writeParts({ ...READY, dropped: true }, estimate, p, count));
+          add(writeParts(SAVED, estimate, p, count));
+          for (const error of errors) {
+            for (const ofStatistics of [false, true]) {
+              add(
+                writeParts(
+                  { kind: "error", key: KEY, error, ofStatistics },
+                  estimate,
+                  p,
+                  count,
+                ),
+              );
+            }
+          }
+        }
+      }
+    }
+    expect(texts.length).toBeGreaterThan(1000);
+    expect(texts.filter((text) => text.includes("Variants step"))).toEqual([]);
   });
 });

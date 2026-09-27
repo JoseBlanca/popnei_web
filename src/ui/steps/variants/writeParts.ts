@@ -168,7 +168,9 @@ export function writeParts(
     case "saved":
       return {
         ...offered,
-        message: line(savedText(writtenName(p), write.written.numBytes)),
+        message: line(
+          savedText(writtenName(p), write.written.numBytes, !button.disabled),
+        ),
         button: button.disabled ? button : { ...button, description: null },
       };
     case "running":

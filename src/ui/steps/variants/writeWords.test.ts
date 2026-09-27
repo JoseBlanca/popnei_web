@@ -153,7 +153,7 @@ describe("VS5 D3 the words of the writing of the filtered variants", () => {
     expect(saveLabel(name, 250_994)).toBe(
       "Save pa\\u202enel.filtered.nei, 251 KB",
     );
-    expect(savedText(name, 250_994)).toBe(
+    expect(savedText(name, 250_994, true)).toBe(
       "pa\\u202enel.filtered.nei, 251 KB, was handed to the browser to save. To save it again, write it again.",
     );
     expect(handedText(name)).toBe(
@@ -197,7 +197,7 @@ describe("VS5 D3 the words of the writing of the filtered variants", () => {
     expect(saveLabel("panel.filtered.nei", 19_161_178)).toBe(
       "Save panel.filtered.nei, 19.2 MB",
     );
-    expect(savedText("panel.filtered.nei", 19_161_178)).toBe(
+    expect(savedText("panel.filtered.nei", 19_161_178, true)).toBe(
       "panel.filtered.nei, 19.2 MB, was handed to the browser to save. To save it again, write it again.",
     );
     expect(DROPPED_TEXT).toBe(

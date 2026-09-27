@@ -152,9 +152,16 @@ export function handedText(name: string): string {
 }
 
 /** What the part says once the file was handed to the browser: the page
-    is not told whether the browser kept it. */
-export function savedText(name: string, numBytes: number): string {
-  return `${escaped(name)}, ${sizeText(numBytes)}, was handed to the browser to save. To save it again, write it again.`;
+    is not told whether the browser kept it. `writable` when Write is
+    offered, and the line then says how to save it again; not when Write
+    is disabled, which a Count refused after the save can make. */
+export function savedText(
+  name: string,
+  numBytes: number,
+  writable: boolean,
+): string {
+  const handed = `${escaped(name)}, ${sizeText(numBytes)}, was handed to the browser to save.`;
+  return writable ? `${handed} To save it again, write it again.` : handed;
 }
 
 /** What the line of a write under way is made of. */
