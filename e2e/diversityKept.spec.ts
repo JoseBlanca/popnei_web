@@ -40,10 +40,10 @@ const RUN_WAITS =
 const P1_LEFT_OUT =
   "p1 has no individual left after the filters of individuals, and is left out.";
 const WAIT_LINE =
-  /^Calculating the statistics of each individual, which the filters of individuals are set from · \d+% · \d:\d\d$/;
+  /^Calculating the statistics of each individual, which the thresholds of the individuals need · \d+% · \d:\d\d$/;
 const WAIT_BAR = "Calculating the statistics of each individual";
 const STATS_FAILED =
-  "The statistics of each individual, which the thresholds of the filters of individuals are applied to, could not be calculated, so the diversity was not run. At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 in the Variants step and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version.";
+  "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the diversity was not run. At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 in the Variants step and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version.";
 const NO_POPULATION =
   "The thresholds of the filters of individuals leave none of the individuals of panel.nei that have a population in popcat, so no population is left. Loosen the thresholds in the Variants step.";
 

@@ -82,13 +82,13 @@ describe("the words of the frame of an analysis panel", () => {
       waitsForStatistics: true,
     };
     expect(runningText(line)).toBe(
-      "Calculating the statistics of each individual, which the filters of individuals are set from · 35% · 0:12",
+      "Calculating the statistics of each individual, which the thresholds of the individuals need · 35% · 0:12",
     );
     expect(runningText({ ...line, share: null })).toBe(
-      "Calculating the statistics of each individual, which the filters of individuals are set from · 0:12",
+      "Calculating the statistics of each individual, which the thresholds of the individuals need · 0:12",
     );
     expect(runningText({ ...line, share: null, waitingFor: "panel.nei" })).toBe(
-      "Waiting for panel.nei to be opened again, then calculating the statistics of each individual, which the filters of individuals are set from · 0:12",
+      "Waiting for panel.nei to be opened again, then calculating the statistics of each individual, which the thresholds of the individuals need · 0:12",
     );
     expect(runningBarLabel("the diversity", true)).toBe(
       "Calculating the statistics of each individual",

@@ -153,7 +153,7 @@ export function statisticsFailedWords(
     error.kind === "refused"
       ? refusalText(error.message, p)
       : failureText(error.error);
-  return `The statistics of each individual, which the thresholds of the filters of individuals are applied to, could not be calculated, so ${notDone}. ${words}`;
+  return `The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so ${notDone}. ${words}`;
 }
 
 /** The two statistics of each individual that have a histogram. */

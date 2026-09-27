@@ -2320,7 +2320,7 @@ for (const theme of ["light", "dark"] as const) {
         page
           .getByRole("main")
           .getByText(
-            /^Calculating the statistics of each individual, which the filters of individuals are set from · \d+% · 0:01$/,
+            /^Calculating the statistics of each individual, which the thresholds of the individuals need · \d+% · 0:01$/,
           ),
       ).toBeVisible({ timeout: 3000 });
       await save(page, `popgen-diversity-waits-running-${theme}`);

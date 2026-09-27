@@ -1666,7 +1666,7 @@ describe("VS3 D3 the diversity of stage 3", () => {
         throw new Error("a refusal was given the words of a failure");
       }),
     ).toBe(
-      "The statistics of each individual, which the thresholds of the filters of individuals are applied to, could not be calculated, so the diversity was not run. The filters kept none of the variants of panel.nei, so there is no variant to count each individual's genotypes over. Loosen the filters of the variants in the Variants step.",
+      "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the diversity was not run. The filters kept none of the variants of panel.nei, so there is no variant to count each individual's genotypes over. Loosen the filters of the variants in the Variants step.",
     );
   });
 
@@ -1696,7 +1696,7 @@ describe("VS3 D3 the diversity of stage 3, at its bounds", () => {
         },
       ),
     ).toBe(
-      "The statistics of each individual, which the thresholds of the filters of individuals are applied to, could not be calculated, so the diversity was not run. The calculation stopped unexpectedly.",
+      "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the diversity was not run. The calculation stopped unexpectedly.",
     );
     expect(given).toEqual([failure]);
   });

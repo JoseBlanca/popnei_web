@@ -77,7 +77,7 @@ export interface RunningLine {
 /** The statistics of each individual, as the line of a Run that waits for
     them names them, and the line of a write that waits for them. */
 export const STATISTICS_WORDS =
-  "the statistics of each individual, which the filters of individuals are set from";
+  "the statistics of each individual, which the thresholds of the individuals need";
 
 /** The name of the bar of a Run that waits for the statistics of each
     individual, and of a write that waits for them: the share it shows is
