@@ -337,7 +337,7 @@ test("VS7 D2 the ready state lists the populations the filters keep, before the 
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("VS7 D2 a Run whose statistics keep no individual is not run, says why beside the disabled Run, and announces it", async ({
+test("VS7 D2 a Run whose statistics keep no individual is not run, says why beside the disabled Run, announces it, and moves the focus to the heading", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -348,7 +348,8 @@ test("VS7 D2 a Run whose statistics keep no individual is not run, says why besi
   await threshold(page, MISSING_SWITCH, MISSING_LABEL, "0.03");
   await threshold(page, OBS_HET_SWITCH, OBS_HET_LABEL, "0.1");
   await goTo(page, "Analyses");
-  await panel(page).getByRole("button", { name: "Run" }).click();
+  await panel(page).getByRole("button", { name: "Run" }).focus();
+  await page.keyboard.press("Enter");
 
   await expect(status(page)).toHaveText(
     new RegExp(
@@ -358,6 +359,10 @@ test("VS7 D2 a Run whose statistics keep no individual is not run, says why besi
   const run = panel(page).getByRole("button", { name: "Run" });
   await expect(run).toBeDisabled();
   await expect(run).toHaveAccessibleDescription(reason);
+  // The disabled Run cannot hold the focus, which goes to the heading.
+  await expect(
+    panel(page).getByRole("heading", { level: 2, name: "Diversity" }),
+  ).toBeFocused();
   await expect(line(page, reason)).toBeVisible();
   await expect(
     page.getByText(/ · none of 3 populations by popcat$/),
