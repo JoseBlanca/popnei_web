@@ -115,7 +115,8 @@ its `<h1>`; and the notice, at the bottom.
   `docs/plans/variants-step.md`: while something is typed in a number
   field since its last commit, Ctrl+Z puts back the number the field
   holds, as the text shows it, drops the number typed from the plot and
-  the line of a character refused, as Escape would, and Ctrl+Shift+Z and
+  the line of a refusal, of a number or of a character, which no longer
+  concerns the number shown, as Escape would, and Ctrl+Shift+Z and
   Ctrl+Y do nothing; with nothing typed, they are the project's Undo and
   Redo, as anywhere outside a text field.
 - **Open project…** and **Save project**, below ("Saving", "Opening").
