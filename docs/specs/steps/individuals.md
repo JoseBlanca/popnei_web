@@ -525,12 +525,13 @@ The descriptions of the commands are in the table above. The rest:
     the table in the first sheet. Load a corrected file."
   - an error of the newest Excel, `cellError`: "pops.xlsx could not be
     read: a cell holds the error #SPILL!, which cannot be read; in Excel,
-    correct its formula or replace it with its value. Load a corrected
-    file."
+    find the cells with an error with Find & Select › Go To Special ›
+    Formulas › Errors, and correct the formula or replace it with its
+    value. Load a corrected file."
   - a value far from the table, `sheetTooLarge`: "pops.xlsx could not be
-    read: its first sheet, Hoja1, has values over 200 rows and 16,384
-    columns, 3,276,800 cells, more than the 2,000,000 a metadata file can
-    have; delete the values outside the table. Load a corrected file."
+    read: its first sheet, Hoja1, has values as far as row 123 and column
+    XFD, more than the 2,000,000 cells a metadata file can have; delete
+    the values outside the table. Load a corrected file."
   - damaged, or another format, `files`: "pops.xlsx could not be read:
     it could not be read as an Excel workbook and may be damaged; open
     it in Excel and save it again. Load a corrected file."

@@ -323,8 +323,8 @@ In stage 4 the crate only reads, so it holds calamine alone, and
 rust_xlsxwriter and zip join it with the report, in stage 6. Measured on
 27 September 2026 in a crate of trial with calamine 0.36.1 alone, built
 as `build:files` builds it, with Rust 1.98.0 on the owner's Mac, and
-gzipped with `gzip -9`: `files_bg.wasm` is 533,519 bytes raw and 295,521
-gzipped, 0.30 MB, and the JavaScript wasm-bindgen generates beside it
+gzipped with `gzip -9`: `files_bg.wasm` is 533,415 to 533,519 bytes raw
+and 295,475 to 295,521 gzipped in two builds, 0.30 MB, and the JavaScript wasm-bindgen generates beside it
 11,892 and 2,962 (`docs/specs/worker/files.md`, "What the user sees
 while it downloads"). That agrees with the 0.29 MB of calamine in the
 table above.
@@ -333,8 +333,11 @@ calamine 0.36.1 refuses a whole sheet at an error cell it does not
 know, as its source reads and the same trial saw: it knows the seven
 errors of older Excel,
 `#N/A`, `#DIV/0!`, `#NAME?`, `#NULL!`, `#NUM!`, `#REF!` and `#VALUE!`,
-and gives `XlsxError::CellError` at any other, such as `#SPILL!` and
-`#CALC!` of the newest versions of Excel, or `#GETTING_DATA`, which
+and gives `XlsxError::CellError` at any other: `#SPILL!` and `#CALC!` of
+the newest versions of Excel, if Excel stores them as such, which it may
+instead store as `#VALUE!` with the real error elsewhere in the file,
+unconfirmed until the owner's `spill.xlsx` is read
+(`docs/specs/worker/files.md`); and `#GETTING_DATA`, which
 rust_xlsxwriter writes and which the trial refused with "Unsupported
 cell error value '#GETTING_DATA'". The crate gives such a sheet as a
 refusal that names the error, so that the user is told which formula to
@@ -567,7 +570,8 @@ worker, is in `.claude/skills/coding/typescript.md`, `css.md` and
    sparse rows and Excel in other languages included, on a set of
    test files kept in the repository. On 27 September 2026 its source,
    and a trial with `#GETTING_DATA`, showed that it refuses a whole
-   sheet at an error cell of the newest Excel, `#SPILL!` among them
+   sheet at an error cell it does not know, `#GETTING_DATA` among them;
+   whether `#SPILL!` of the newest Excel is one is unconfirmed
    (section 2, "xlsx and zip in Rust"); the
    files the owner makes for the tests of the crate,
    `docs/specs/worker/files.md`, "How it is verified", answer the rest.

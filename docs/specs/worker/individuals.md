@@ -517,8 +517,8 @@ words after "pops.xlsx could not be read:":
 | `oldExcel` | a compound file of the old Office, not encrypted | "it is a workbook of Excel 97–2003, although its name ends in .xlsx; in Excel, save it as Excel Workbook (.xlsx)" |
 | `encrypted` | saved with a password | "it is protected by a password; in Excel, save a copy without the password" |
 | `emptySheet` | the first sheet that is not hidden has no value | "its first sheet, Hoja1, is empty, and only the first sheet is read; put the table in the first sheet" |
-| `cellError` | a cell with an error calamine does not know | "a cell holds the error #SPILL!, which cannot be read; in Excel, correct its formula or replace it with its value" |
-| `sheetTooLarge` | a rectangle of more than 2,000,000 cells | "its first sheet, Hoja1, has values over 200 rows and 16,384 columns, 3,276,800 cells, more than the 2,000,000 a metadata file can have; delete the values outside the table", "a traits file" in association |
+| `cellError` | a cell with an error calamine does not know | "a cell holds the error #SPILL!, which cannot be read; in Excel, find the cells with an error with Find & Select › Go To Special › Formulas › Errors, and correct the formula or replace it with its value" |
+| `sheetTooLarge` | a rectangle of more than 2,000,000 cells | "its first sheet, Hoja1, has values as far as row 123 and column XFD, more than the 2,000,000 cells a metadata file can have; delete the values outside the table", "a traits file" in association |
 | `xlsxReaderNotLoaded` | the files wasm could not be downloaded | "the part of the application that reads Excel files could not be downloaded; check the connection and load the file again; if it fails again, the site may have been updated since this page was opened: save the project, reload the page and open the project again" |
 | `files` | calamine could not open it as a workbook | "it could not be read as an Excel workbook and may be damaged; open it in Excel and save it again" |
 
@@ -727,7 +727,7 @@ export type IndividualsFileError =
   | { kind: "encrypted" }                              // saved with a password
   | { kind: "emptySheet"; sheet: string }
   | { kind: "cellError"; error: string }               // "#SPILL!"
-  | { kind: "sheetTooLarge"; sheet: string; rows: number; columns: number; max: number }
+  | { kind: "sheetTooLarge"; sheet: string; lastRow: number; lastColumn: string; max: number }
   | { kind: "xlsxReaderNotLoaded"; message: string };  // the browser's, for the console
 ```
 

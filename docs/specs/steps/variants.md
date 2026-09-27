@@ -884,7 +884,10 @@ in their sections. The rest:
 - **A file whose read stopped because the calculation worker failed**:
   "panel.nei could not be read: the calculation stopped unexpectedly.
   Choose it again."; when the calculations could not start, or the page
-  is out of date, "… Reload the page and choose it again.". What
+  is out of date, "… Save the project, reload the page, open the project
+  and choose panel.nei again.", since a new version of the site deployed
+  since the page was opened is one cause (`docs/specs/core/project.md`,
+  Open 4; revised for stage 4 on 27 September 2026). What
   happened is said in the words of `docs/specs/core/project.md`, Open
   4.
 - **No variants file read**, in place of the checks: "The histograms,

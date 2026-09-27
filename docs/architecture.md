@@ -248,7 +248,10 @@ it changes:
   or 3D. They are options of the analysis, saved in the project file,
   and a change of them is a command that removes no result (section 4).
 - **The individuals file** gains, in the project, the types the user set,
-  kept by the name of the column when the file is read again; what types
+  kept by the name of the column when the file is read again, and
+  applied when a read allows them, so that a type a wrong separator could
+  not apply comes back once the separator is corrected; which types wait
+  is worked out and not stored; what types
   each column allows is worked out in core from the table, with the
   reader's pure functions of `src/worker/individuals/columnTypes.ts`,
   which core may now import, and saved nowhere; `Grouping` gains every
@@ -345,12 +348,12 @@ interface IndividualsSource {
   name: string;
   csv: CsvOptions | null;             // how a CSV or TSV is read; null for xlsx
   typesSet: ColumnTypeOf[];           // the types the user set, { column, type },
-                                      // kept by name when the file is read again
+                                      // kept by name when the file is read again,
+                                      // and applied when the read allows them
   read:
     | { kind: "pending" }             // the light worker is reading it
     | { kind: "read"; table: IndividualsTable; columns: ColumnType[];
-        found: CsvFound | null;       // how it was read; null for xlsx
-        typesLost: ColumnTypeOf[] }   // types set that this read could not keep
+        found: CsvFound | null }      // how it was read; null for xlsx
     | { kind: "notGiven" }            // named by an opened project file that was
                                       // saved before the file was read; asked for again
     | { kind: "failed";
@@ -1916,7 +1919,7 @@ code, the release `js-v0.1.0-dev.2`.
   fetches its script from the build the page came from, and after a
   deploy cannot start, which the client reports as `couldNotStart`, whose
   words say to reload the page (`docs/specs/core/project.md`, open point
-  4); they are to say to save the project first as well. Found by the
+  4), and to save the project first, which they now say. Found by the
   specs and the architecture review of stage 4 on 27 September 2026, and
   not yet seen in a browser (section 13, point 10).
 

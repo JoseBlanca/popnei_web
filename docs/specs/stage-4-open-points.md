@@ -118,8 +118,14 @@ separator of a CSV, or loading the file again, reads a new table, and
 until now brought back the inferred types, open point 1 of
 `docs/specs/core/project.md`. Recommended: each type set is kept by the
 name of its column when the new values allow it, a binary type when the
-column still has exactly those two values; otherwise the inferred type,
-and the step says which columns lost the type set, and why. Specs:
+column still has exactly those two values. A type the new read cannot
+apply is not dropped: it waits, the column shows its inferred type, the
+step says which types wait and why, and the type is applied again when a
+later read allows it, so that correcting a wrong separator brings every
+type back. A button beside that warning forgets the types that wait,
+added by the writer of the spec (below). Not taken: dropping a type the
+read cannot apply, which a wrong separator, making the file one column,
+would do to every type set. Specs:
 `project.md`, `steps/individuals.md`.
 
 ### 7. The lasso out of stage 4
@@ -325,9 +331,30 @@ meets.
   removes the diversity, with its notice, while the file is read; once it
   is read, the result comes back from the cache and the notice no longer
   names it (`project.md`, `store.md`).
-- **A type set on a column that the new file puts first is lost**, with
-  words that say so; the first column is always the names of the
-  individuals (`steps/individuals.md`).
+- **A type set on a column that the new file puts first waits**, with
+  words that say so, since the first column is always the names of the
+  individuals; it comes back if a later file puts the column elsewhere
+  (`steps/individuals.md`).
+- **"Forget these types"**, a button beside the warning of the types
+  that wait, so that a type set on a column the file no longer has is
+  not warned of at every read; otherwise only removing the file, which
+  loses every type set, would end it (`project.md`,
+  `steps/individuals.md`).
+- **"Copy the 12 names"**, a button that copies the individuals missing
+  from the metadata file, one a line, for a user of the keyboard alone,
+  who cannot select text without a mouse (`steps/individuals.md`).
+- **The check of the individuals and the choice of the populations are
+  not shown while the metadata file has no table**, being read, refused
+  or not given by an opened project; the choice made is kept
+  (`steps/individuals.md`).
+- **A project file saved by the code of stages 2 and 3 while its
+  metadata file was not read** holds no file, and opens on one
+  population; only the owner's development files can be such
+  (`projectFile.md`).
+- **After a worker that could not start**, the words say to save the
+  project before reloading the page, since a new version of the site
+  deployed since the page was opened is one cause (`project.md`, Open
+  4).
 
 ## Asked of the owner to make or approve
 
@@ -336,7 +363,9 @@ meets.
   metadata sheet with a date column and a column of decimals, saved from
   Excel in Spanish and in English, from LibreOffice, in Excel's date
   system of 1904, with a password, as an old `.xls`, with a cell of
-  `#SPILL!`, and, if possible, from Google Sheets. `files.md` says what
+  `#SPILL!`, and, if possible, from Google Sheets. The file with `#SPILL!`
+  settles whether the newest errors of Excel are refused by name or read
+  as the text `#VALUE!`, which the specs cannot tell before it. `files.md` says what
   each holds. Until they exist, their tests are skipped and say so.
 - **New dependencies**, for the plan of stage 4 to name and the owner to
   approve with it: three.js 0.186.1, loaded only when the 3D view is
