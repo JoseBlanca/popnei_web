@@ -189,6 +189,9 @@ test("VS5 D3 panel.nei at 0.05 written and saved: the download panel.filtered.ne
   const path = testInfo.outputPath("panel.filtered.nei");
   await file.saveAs(path);
   expect((await stat(path)).size).toBe(WRITTEN_AT_005);
+  await expect(status(page)).toHaveText(
+    "panel.filtered.nei was handed to the browser to save.",
+  );
 
   await expect(
     writing(page).getByText(

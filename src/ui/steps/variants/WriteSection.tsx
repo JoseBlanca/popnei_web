@@ -29,6 +29,7 @@ import { classOf } from "../../classOf.ts";
 import { startWriting } from "../../runs.ts";
 import { useRunSeconds } from "../../runSeconds.ts";
 import { useSaving } from "../../saving.ts";
+import { useAnnouncer } from "../../shell/announcer.tsx";
 import { useAppState, useStore } from "../../store.tsx";
 import { Button } from "../../widgets/Button.tsx";
 import { Problem } from "../../widgets/Problem.tsx";
@@ -40,6 +41,7 @@ import type { WriteButton } from "./writeParts.ts";
 import {
   WRITE_HEADING,
   WRITE_LABEL,
+  handedText,
   saveLabel,
   writingBarLabel,
   writingText,
@@ -65,6 +67,7 @@ function WriteBody({
 }): React.JSX.Element {
   const store = useStore();
   const saving = useSaving();
+  const announcer = useAnnouncer();
   const project = useAppState((s) => s.project);
   const kept = useAppState((s) => s.individualsKept);
   const variantsKept = useAppState(variantsKeptOf);
@@ -112,6 +115,7 @@ function WriteBody({
             }}
             onSave={(name) => {
               saving.saveWritten(name);
+              announcer.announce(handedText(name));
             }}
             onGone={() => {
               heading.current?.focus();

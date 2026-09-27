@@ -89,6 +89,13 @@ export function saveLabel(name: string, numBytes: number): string {
   return `Save ${escaped(name)}, ${sizeText(numBytes)}`;
 }
 
+/** What the status region says when Save is pressed, since the button,
+    which keeps the focus, turns into Write in silence
+    (docs/specs/shell.md, "The status region"). */
+export function handedText(name: string): string {
+  return `${escaped(name)} was handed to the browser to save.`;
+}
+
 /** What the part says once the file was handed to the browser: the page
     is not told whether the browser kept it. */
 export function savedText(name: string, numBytes: number): string {

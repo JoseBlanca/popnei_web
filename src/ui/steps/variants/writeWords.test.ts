@@ -14,6 +14,7 @@ import {
   DROPPED_TEXT,
   NO_SIZE_TEXT,
   estimateText,
+  handedText,
   noVariantText,
   saveLabel,
   savedText,
@@ -144,6 +145,12 @@ describe("VS5 D3 the words of the writing of the filtered variants", () => {
       ),
     ).toBe(
       "panel.filtered.nei could not be written. At line 12 of panel.vcf, the genotype of ind_3 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 in the Variants step and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version.",
+    );
+  });
+
+  test("what the status region says when Save is pressed", () => {
+    expect(handedText("panel.filtered.nei")).toBe(
+      "panel.filtered.nei was handed to the browser to save.",
     );
   });
 
