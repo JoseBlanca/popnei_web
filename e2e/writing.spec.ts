@@ -232,10 +232,8 @@ test("VS5 D3 with the focus on Write, the write ends with the focus on Save, the
     }),
   ).toBeVisible();
   await expect(
-    writing(page).getByText(
-      /^Writing panel\.filtered\.nei · (\d+% · )?\d:\d\d$/,
-    ),
-  ).toBeVisible();
+    writing(page).getByText(/^Writing panel\.filtered\.nei · \d+% · 0:0[1-9]$/),
+  ).toBeVisible({ timeout: 5000 });
   // After the words of the read, when they come within the pause of the
   // announcer.
   await expect(status(page)).toHaveText(/Writing panel\.filtered\.nei\.$/);
@@ -614,6 +612,203 @@ test("VS5 D3 Open project… while only a write is under way names the writing i
     "It replaces the project on the page, and an opening cannot be undone. To keep the project on the page, press Keep the current project and save it first. The writing of panel.filtered.nei will be stopped.",
   );
   await expectNoViolations(makeAxeBuilder);
+});
+
+/** What the calculation worker does with the next file it writes:
+    posts it with the counts of a pass that kept `numVars` variants, of
+    the missing data filter, in place of its own; posts a crash in its
+    place; or posts popnei's refusal `message` in its place. */
+type WrittenAs =
+  | { readonly kind: "counted"; readonly numVars: number }
+  | { readonly kind: "crashed" }
+  | { readonly kind: "refused"; readonly message: string };
+
+/** Makes the calculation worker post the files it writes as `as` says,
+    from now until it is called again. */
+async function writtenAs(page: Page, as: WrittenAs): Promise<void> {
+  await expect
+    .poll(() => page.workers().some((w) => w.url().includes("runnerWorker")))
+    .toBe(true);
+  const worker = page.workers().find((w) => w.url().includes("runnerWorker"));
+  if (worker === undefined) throw new Error("no calculation worker");
+  await worker.evaluate((given) => {
+    const scope = globalThis as unknown as {
+      postMessage: (message: unknown, transfer?: Transferable[]) => void;
+      writtenAs?: WrittenAs;
+    };
+    const first = scope.writtenAs === undefined;
+    scope.writtenAs = given;
+    if (!first) return;
+    const post = scope.postMessage.bind(scope);
+    scope.postMessage = (message, transfer) => {
+      const as = scope.writtenAs;
+      const written =
+        typeof message === "object" &&
+        message !== null &&
+        "kind" in message &&
+        message.kind === "written";
+      if (!written || as === undefined) {
+        post(message, transfer);
+        return;
+      }
+      const { id, key, result } = message as unknown as {
+        id: number;
+        key: string;
+        result: Record<string, unknown>;
+      };
+      switch (as.kind) {
+        case "counted":
+          post({
+            kind: "written",
+            id,
+            key,
+            result: {
+              ...result,
+              passStats: {
+                numVars: as.numVars,
+                filtering: {
+                  missing_data: {
+                    varsProcessed: as.numVars + 1000,
+                    varsKept: as.numVars,
+                  },
+                },
+              },
+            },
+          });
+          break;
+        case "crashed":
+          post({ kind: "crashed", message: "a crash made by the test" });
+          break;
+        case "refused":
+          post({ kind: "refused", id, message: as.message });
+          break;
+      }
+    };
+  }, as);
+}
+
+/** Writes the file, which the worker counts as `numVars` variants kept,
+    and saves it, so that the step offers Write with the size of those
+    variants. */
+async function writeAndSaveCounted(page: Page, numVars: number): Promise<void> {
+  await writtenAs(page, { kind: "counted", numVars });
+  await writeButton(page).click();
+  const download = page.waitForEvent("download");
+  await saveButtons(page).click();
+  await download;
+}
+
+test("VS5 D3 counts of 3,000,000 variants of 200 individuals warn of the memory above Write, and of 8,000,000 disable Write with the words of a file too large, and axe", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openVariants(page);
+  await loadPanelNei(page);
+  await writeAndSaveCounted(page, 3_000_000);
+  await expect(
+    writing(page).getByText(
+      "Warning: A file of about 720.0 MB may need about six times that in the memory of this tab while it is written, and a browser may close a tab that asks for too much, losing the work since the project was last saved. Save the project first. To write a smaller file, remove variants or individuals with the filters; to write any size, use popnei in Python.",
+      {
+        exact: true,
+      },
+    ),
+  ).toBeVisible();
+  await expect(writeButton(page)).toBeEnabled();
+  await expect(writeButton(page)).toHaveAccessibleDescription(
+    "About 720.0 MB: 3,000,000 variants of 200 individuals.",
+  );
+  await expectNoViolations(makeAxeBuilder);
+
+  // New filters, whose counts the next write gives.
+  await setThreshold(page, "0.06");
+  await writeAndSaveCounted(page, 8_000_000);
+  await expect(writeButton(page)).toBeDisabled();
+  await expect(writeButton(page)).toHaveAccessibleDescription(
+    "A file of about 1.9 GB cannot be written in a browser tab: popnei needs more than twice the file in its memory while it writes it, and a tab gives popnei at most 4 GB. Remove variants or individuals with the filters, or write the file with popnei in Python.",
+  );
+  await expect(writing(page).getByText(/^Warning:/)).toHaveCount(0);
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("VS5 D3 a write whose worker stopped shows its error and offers Write again, and axe", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openVariants(page);
+  await loadPanelNei(page);
+  await writtenAs(page, { kind: "crashed" });
+  await writeButton(page).click();
+  await expect(
+    writing(page).getByText(
+      "The writing stopped unexpectedly, perhaps because the file did not fit in the memory of this tab. Remove variants or individuals with the filters and write it again, or write the file with popnei in Python.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(writeButton(page)).toBeEnabled();
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("VS5 D3 with the focus on Stop, popnei's refusal of the write shows its error, offers no Write, and the focus moves to the heading of the section, and axe", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openVariants(page);
+  await loadPanelNei(page);
+  // The refusal in place of the file, held back until Stop has the focus.
+  await writtenAs(page, { kind: "refused", message: "memory could not grow." });
+  await holdWritten(page);
+  await writeButton(page).click();
+  await expect(
+    writing(page).getByRole("button", { name: "Stop" }),
+  ).toBeFocused();
+
+  await releaseWritten(page);
+  await expect(
+    writing(page).getByText(
+      'panel.filtered.nei could not be written: popnei stopped with "memory could not grow". The file may not fit in the memory of this tab: remove variants or individuals with the filters and write it again, or write the file with popnei in Python. If the message names a line of the VCF, correct the file, or fetch it again, and load it in the Variants step.',
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(writing(page).getByRole("button")).toHaveCount(0);
+  await expect(
+    writing(page).getByRole("heading", {
+      name: "Writing the filtered variants",
+    }),
+  ).toBeFocused();
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("VS5 D3 a write asked just after a Stop waits for the variants file to be opened again, with a bar of no value, and axe", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openVariants(page);
+  await loadPanelNei(page);
+  await holdWritten(page);
+  await writeButton(page).click();
+  // The wasm of the worker the stop starts is held back, so that it
+  // does not open the file again while the line is read.
+  const held: Route[] = [];
+  await page.route("**/*.wasm", (route) => {
+    held.push(route);
+  });
+  await writing(page).getByRole("button", { name: "Stop" }).click();
+  await writeButton(page).click();
+  await expect(
+    writing(page).getByText(
+      /^Waiting for panel\.nei to be opened again, then writing panel\.filtered\.nei · 0:0\d$/,
+    ),
+  ).toBeVisible();
+  const bar = writing(page).getByRole("progressbar", {
+    name: "Writing panel.filtered.nei",
+  });
+  await expect(bar).toBeVisible();
+  await expect(bar).not.toHaveAttribute("aria-valuenow");
+  await expectNoViolations(makeAxeBuilder);
+
+  for (const route of held) await route.continue();
+  await page.unroute("**/*.wasm");
+  await expect(saveButtons(page)).toHaveCount(1);
 });
 
 test("VS5 D4 a file written from the big VCF is saved after the worker that made it was ended, and popnei in node opens it with its 1,000 individuals", async ({
