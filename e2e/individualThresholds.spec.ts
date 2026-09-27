@@ -440,6 +440,21 @@ test("VS7 D1 the missing data filter of the variants moved: the statistics remov
   await expectNoViolations(makeAxeBuilder);
 });
 
+test("VS7 D1 an arrow key moves a threshold by 0.01, committed at once with its count", async ({
+  page,
+}) => {
+  await thresholdsSet(page);
+  await field(page, MISSING_LABEL).focus();
+  await page.keyboard.press("ArrowUp");
+  await expect(field(page, MISSING_LABEL)).toHaveValue("0.04");
+  await expect(section(page).getByText(KEPT_125, { exact: true })).toHaveCount(
+    0,
+  );
+  await expect(
+    section(page).getByText(/^Kept \d+ of the 200 individuals it was given\.$/),
+  ).toBeVisible();
+});
+
 test("VS7 D1 before the statistics, a threshold turned on says it is known once they are calculated, and a new file loaded says so again", async ({
   page,
 }) => {
