@@ -37,12 +37,18 @@ export function FocusOnLeave({
     return () => {
       // The cleanup of a layout effect runs while the part is still in
       // the page, so the focus is still in it when it had it.
-      if (node?.contains(document.activeElement) === true) {
+      if (node?.contains(document.activeElement) !== true) return;
+      // Which heading stays is known only once the whole change is in the
+      // page: the block may leave in the same change, an Undo of the
+      // load, and React may remove it before or after this part, by
+      // their order in the page. So the heading is looked for after the
+      // change, in a microtask, which runs before the browser paints.
+      queueMicrotask(() => {
         const heading =
           document.getElementById(headingId) ??
           document.getElementById(sectionHeadingId);
         heading?.focus();
-      }
+      });
     };
   }, [headingId, sectionHeadingId]);
   return (
