@@ -53,10 +53,12 @@ export const KEPT_NOT_KNOWN_LINE =
 
 /** The line before the table: how many rows it holds, since its box
     shows about a dozen of them, "200 individuals; the CSV holds them
-    all."; whether the box scrolls is left out, since it depends on the
+    all.", or of one "1 individual; the CSV holds it."; whether the box scrolls is left out, since it depends on the
     height of the window (variants.md, "The table of the individuals"). */
 export function tableRowsText(numIndividuals: number): string {
-  return `${counted(numIndividuals, "individual")}; the CSV holds them all.`;
+  return numIndividuals === 1
+    ? "1 individual; the CSV holds it."
+    : `${counted(numIndividuals, "individual")}; the CSV holds them all.`;
 }
 
 /** The words of the button that downloads the table. */
