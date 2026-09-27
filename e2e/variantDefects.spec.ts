@@ -124,3 +124,62 @@ test("VS6 D2 a defect in drawing the histograms leaves the filters and the Count
     filters(page).getByRole("button", { name: COUNT }),
   ).toBeVisible();
 });
+
+/** Makes the calculation worker send counts of the filters with no count
+    of any filter and no variant: core, which words the warning of a file
+    of no variant from them, takes them, and the count beside each filter
+    that is on cannot be drawn. */
+async function spoilCounts(page: Page): Promise<void> {
+  await expect
+    .poll(() => page.workers().some((w) => w.url().includes("runnerWorker")))
+    .toBe(true);
+  const worker = page.workers().find((w) => w.url().includes("runnerWorker"));
+  if (worker === undefined) throw new Error("no calculation worker");
+  await worker.evaluate(() => {
+    const scope = globalThis as unknown as {
+      postMessage: (message: unknown, transfer?: Transferable[]) => void;
+    };
+    const post = scope.postMessage.bind(scope);
+    scope.postMessage = (message, transfer) => {
+      const answer = message as {
+        kind?: string;
+        result?: { analysis?: string; passStats?: unknown };
+      };
+      const result = answer.result;
+      if (answer.kind === "result" && result?.analysis === "filterCounts") {
+        result.passStats = { numVars: 0, filtering: {} };
+      }
+      post(message, transfer);
+    };
+  });
+}
+
+test("VS6 D2 a defect in drawing the counts beside the filters leaves no heading in the filters, and each field described only by what is on the page", async ({
+  page,
+}) => {
+  await openVariants(page);
+  await pick(page, "panel.nei");
+  await filters(page).getByText(MAF_SWITCH, { exact: true }).click();
+  await spoilCounts(page);
+  await filters(page).getByRole("button", { name: COUNT }).click();
+  await expect(page.getByRole("alert")).toContainText(
+    "popnei_web defect: the counts of the filters have no count of",
+  );
+  await expectTheStepStands(page);
+  await expect(
+    filters(page).getByRole("heading", {
+      level: 3,
+      name: "Counts of the filters",
+    }),
+  ).toHaveCount(0);
+  for (const label of [MISSING_LABEL, MAF_LABEL]) {
+    const missing = await page
+      .getByLabel(label, { exact: true })
+      .evaluate((input) =>
+        (input.getAttribute("aria-describedby") ?? "")
+          .split(" ")
+          .filter((id) => id !== "" && document.getElementById(id) === null),
+      );
+    expect(missing).toEqual([]);
+  }
+});

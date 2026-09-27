@@ -381,9 +381,13 @@ function Filter({
       )}
       {children(described)}
       {shown && (
-        <ErrorBoundary level={3} heading={titleOf("filterCounts")}>
-          <KeptCount kind={kind} id={countId} />
-        </ErrorBoundary>
+        // The line is there whatever its count gives, so that the fields
+        // it describes name only what is on the page.
+        <p id={countId} className={classOf(styles, "count")}>
+          <ErrorBoundary heading={null}>
+            <KeptCount kind={kind} />
+          </ErrorBoundary>
+        </p>
       )}
       {after}
     </div>
@@ -391,15 +395,13 @@ function Filter({
 }
 
 /** What the filter of the kind `kind` kept of what it was given, "Kept
-    1,152 of the 1,200 variants it was given.", with the id `id` its
-    fields are described by, once the filters as they are are counted. */
+    1,152 of the 1,200 variants it was given.", once the filters as they
+    are are counted. */
 function KeptCount({
   kind,
-  id,
 }: {
   readonly kind: VariantFilterKind;
-  readonly id: string;
-}): React.JSX.Element | null {
+}): string | null {
   // The counts the store keeps, the same object until they change, and
   // the project they are done for, whose filters give the rows their
   // order.
@@ -409,11 +411,7 @@ function KeptCount({
   const project = useAppState((s) => s.project);
   if (counts === null) return null;
   const row = filterCountRows(counts, project).find((r) => r.kind === kind);
-  return row === undefined ? null : (
-    <p id={id} className={classOf(styles, "count")}>
-      {keptText(row.given, row.kept)}
-    </p>
-  );
+  return row === undefined ? null : keptText(row.given, row.kept);
 }
 
 /** The histogram of `statistic` with `threshold`, from the histograms the

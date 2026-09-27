@@ -19,8 +19,11 @@ import type { ReactNode } from "react";
 /** What the boundary is drawn with. */
 export interface ErrorBoundaryProps {
   /** The name of the step, the words of its `<h1>`, or the title of an
-      analysis panel or of a part of a check. */
-  readonly heading: string;
+      analysis panel or of a part of a check; `null` for a part inside a
+      line, the count beside a filter, in whose place nothing is drawn,
+      since a heading there would stand once per filter, and the error bar
+      says what happened. */
+  readonly heading: string | null;
   /** The level of the heading: 1 for a step, the default, 2 for an
       analysis panel inside the Analyses step, 3 for a part of a check
       of the Variants step. */
@@ -47,6 +50,7 @@ export class ErrorBoundary extends Component<
 
   override render(): ReactNode {
     if (this.state.failed) {
+      if (this.props.heading === null) return null;
       // It takes the focus when the step changes, as the step's own does.
       switch (this.props.level) {
         case 3:
