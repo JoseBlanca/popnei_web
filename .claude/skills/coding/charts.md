@@ -9,7 +9,14 @@ scatter and the 3D plot of the PCA, `docs/specs/charts/scatter.md` and
 `pca3d.md`: the data of the scatter and of the 3D plot, the point under
 the pointer found by a loop, the rings of no group, the marks of 64
 square pixels, the colours of viridis written on their paths, the legend
-drawn by the screen, and what the 3D plot does and needs.
+drawn by the screen, the class of the colour of a path named
+`chart-colour-‹0 to 6›` where it was `chart-group-‹i›`, and what the 3D
+plot does and needs; and again the same day after the review of those
+specs: the tooltip kept while the pointer is on it and hidden by Escape,
+the outlines with round joins and 10 pixels kept inside the frame, the
+third component kept up in 3D, the point nearest the camera only among
+those whose mark covers the pointer, the highlighted group drawn over
+the faded ones in 3D, and the plot's own test for WebGL 2.
 
 The plots are listed in `docs/functionality.md`: histograms, scatter
 plots, the QQ plot, line plots, the heatmap of Fst, the Manhattan plot,
@@ -225,8 +232,9 @@ for (let i = 0; i < x.length; i++) {
 
 The numbers of the path are rounded to one decimal, a tenth of a pixel,
 with `pathRound(1)` of `d3-path`: the walking skeleton measured an SVG of
-50,000 points at 3.1 MB so and 9.7 MB with every digit, and its drawing
-slower with every digit in WebKit and Chromium
+50,000 points at 3.1 MB so and 9.7 MB with every digit, and the rounded
+one drawn up to 26% slower in WebKit and 50% slower in Chromium, a cost
+taken for a file a third of the size
 (`docs/plans/walking-skeleton.report.md`; `docs/specs/charts/scatter.md`,
 decided on 27 September 2026).
 
@@ -326,7 +334,11 @@ A plot is an image to a screen reader, and has to say what it shows:
   filled symbols. A mark has an area of 64 square pixels, `SYMBOL_AREA`,
   a circle 9 pixels across, so that the narrowest of the seven, the
   cross, keeps 2.6 pixels of colour inside its outline
-  (`docs/specs/charts/scatter.md`, 27 September 2026).
+  (`docs/specs/charts/scatter.md`, 27 September 2026). The outline has
+  round joins, so that no mark reaches beyond 8.05 pixels from its
+  point, the tips of the star; mitred, the outline at a tip of the star
+  reaches 9.2. The scatter keeps 10 pixels between its points and the
+  edge of its frame, and the 3D plot draws its points on squares of 18.
 - **A palette that people with a colour vision deficiency can tell
   apart**: the seven colours of Okabe and Ito, without black, as the
   tokens `--chart-cat-1` to `--chart-cat-7` (`css.md`). A continuous
@@ -350,7 +362,7 @@ the classes their colours from the tokens:
 
 ```css
 .chart-axis { color: var(--chart-axis); }          /* d3-axis draws in currentColor */
-.chart-points { stroke: var(--chart-axis); stroke-width: 1px; }
+.chart-points { stroke: var(--chart-axis); stroke-width: 1px; stroke-linejoin: round; }
 .chart-colour-0 { fill: var(--chart-cat-1); }      /* the colour i % 7 of group i, to .chart-colour-6 */
 .chart-threshold { stroke: var(--chart-threshold); stroke-dasharray: 4 3; }
 ```
@@ -479,12 +491,27 @@ drawer opens or a panel collapses.
   `src/charts/hover.ts`: 0.027 ms at the median for 50,000 points in node
   26.8.2 on the owner's Apple M5 Pro, 27 September 2026, where a movement
   of the pointer comes at most once a frame, 16 ms. The 3D plot uses the
-  same function over its projected points. A point further than 10
+  same function over its projected points, with their depth (below,
+  "Picking the point under the pointer"). A point further than 10
   pixels is no point.
 - **The tooltip is one HTML `<div>`** that the plot adds to its element,
   positioned absolutely, and removes in `destroy`. HTML and not SVG,
   because it wraps text and is not part of the exported plot. The element
   is `position: relative` in `css.md`.
+- **It stays while it is read and goes when asked**, as WCAG 2.2, 1.4.13,
+  asks of content that appears on hover: it stays while the pointer is
+  on its point or on the tooltip itself, which takes the pointer so that
+  a user of a screen magnifier can move onto it; it goes when a draw
+  makes it stale; and the Escape key hides it. Escape is heard by a
+  listener on the document, there only while a tooltip is shown, that
+  acts on Escape alone and neither stops the key nor prevents its
+  default, since nothing in a plot takes the focus and a listener on the
+  plot's element would hear no key. `createTooltip` of `hover.ts` does
+  it for every plot (`docs/specs/charts/scatter.md`, 27 September 2026).
+- **Its numbers**: a coordinate to three significant digits, a value of
+  a column as `tableNumber` writes it, and a negative number with the
+  minus sign, U+2212, as the ticks of `d3-axis` write it, where
+  `Intl.NumberFormat` writes a hyphen.
 - **The text of the tooltip is set with `textContent`, never
   `innerHTML`.** The names of the individuals and of the populations come
   from the files of the user, and a name with `<img onerror=…>` in it
@@ -568,7 +595,20 @@ The points of each group are one `Points` object whose material is a
 same size in pixels near and far, and a `map` of that group's symbol:
 the same `d3-shape` symbol as in 2D, drawn once on a small canvas into a
 `CanvasTexture`, with `alphaTest` to cut its edge. So the groups differ in
-shape in 3D as in 2D. The legend is not the plot's: the screen draws it
+shape in 3D as in 2D. three.js draws each point as a square of a size in
+CSS pixels with the texture on it, 18 pixels here, to hold the star, the
+largest mark, and the texture is 36 by 36 pixels, for the pixel ratio of
+2 at most, one per mark in use and shared by the groups with that mark,
+50 at most.
+
+A highlighted group is drawn over the faded ones, as in 2D. three.js
+draws every opaque object before every transparent one, whatever their
+`renderOrder`, which orders objects only within each list; so while a
+group is highlighted every group is transparent to three.js, the faded
+ones at an opacity of 0.25 with `depthWrite: false` and `renderOrder` 0,
+the highlighted one at 1 with `renderOrder` 1. `alphaTest` is half the
+opacity, since three.js compares it with the alpha of the texture times
+the opacity (`docs/specs/charts/pca3d.md`, 27 September 2026). The legend is not the plot's: the screen draws it
 in React, with React Aria's `ToggleButtonGroup`, over the plot, one
 legend for the 2D and the 3D plot, from `legendOf` and `symbolPath` of
 `src/charts/legend.ts` and `marks.ts`, since a button inside an SVG of
@@ -582,21 +622,35 @@ placed at the projected ends of the axes after each render.
 
 - **`WebGLRenderer`, not `WebGPURenderer`.** The WebGL renderer is the
   mature one, and a few thousand points gain nothing from WebGPU. It
-  needs WebGL 2: three.js refuses WebGL 1 since r163, and r186 throws
-  "Error creating WebGL context." when the browser gives none. The
-  browsers of the floor of the applications have WebGL 2, but a browser
-  whose WebGL is turned off, or whose graphics card it refuses, gives
-  none, and `createPca3d` then throws a `Pca3dError` of kind `noWebGl`,
-  whose words the screen shows (`docs/specs/charts/pca3d.md`). `WebGPURenderer`, which falls back to WebGL 2, can be tried when
-  it is the default of three.js; the plot's code outside the renderer
-  would not change.
+  needs WebGL 2: three.js refuses WebGL 1 since r163, and r186 throws a
+  plain `Error` when the browser gives none. The browsers of the floor
+  of the applications have WebGL 2, but a browser whose WebGL is turned
+  off, or whose graphics card it refuses, gives none. So the plot asks
+  the canvas for a `webgl2` context itself, with the attributes three.js
+  would ask for, and gives the canvas and the context to
+  `new WebGLRenderer({ canvas, context })`; no context, and
+  `createPca3d` throws a `Pca3dError` of kind `noWebGl`, whose words the
+  screen shows (`docs/specs/charts/pca3d.md`). The kind comes from that
+  call and not from the words of an error of three.js.
+  `WebGPURenderer`, which falls back to WebGL 2, can be tried when it is
+  the default of three.js; the plot's code outside the renderer would
+  not change.
 - **An `OrthographicCamera`.** In a perspective the points nearer the
   camera spread further apart, and distances in a PCA are what the user
   reads; with an orthographic camera, looking down an axis shows exactly
   the 2D plot of the other two. The depth comes from turning it.
 - **`OrbitControls`**, the standard controls of three.js: drag to turn,
   wheel and pinch to zoom. It keeps one axis up, which is less free than
-  `TrackballControls` and much less disorienting. No damping, so that
+  `TrackballControls` and much less disorienting: the third component,
+  set as the camera's `up` before the controls are made, since they read
+  it once, in their constructor. The view along the third component,
+  the 2D plot of the first two, is then the view from straight above,
+  0.000001 radians from it, the closest the controls come, and the
+  other two views along a component are level
+  (`docs/specs/charts/pca3d.md`, "The view"). The controls listen on the
+  document to the Ctrl key, passively and only to tell a pinch of a
+  trackpad from Ctrl and the wheel; nothing of ours listens to a key but
+  the tooltip's Escape (above). No damping, so that
   the scene can be drawn only when something changes. No pan, the
   moving of the view sideways that the controls give to the right drag
   and two fingers: the cloud of a PCA is centred on the origin, and a pan
@@ -627,8 +681,12 @@ and takes the nearest, not the `Raycaster`, not GPU picking:
   target to dispose of.
 - Projecting a few thousand points with the camera is a loop of a few
   thousand multiplications, well under a millisecond, and gives the
-  distance in pixels, which is what the user sees. Among the points within
-  a few pixels, the nearest to the camera wins.
+  distance in pixels, which is what the user sees. Among the points whose
+  mark covers the pointer, within `MARK_RADIUS`, 4.5 pixels, the nearest
+  to the camera wins, since its mark is the one drawn there; when no mark
+  covers the pointer, the nearest within 10 pixels, whatever its depth.
+  The nearest to the camera among every point within 10 pixels would
+  name a point beside the one the pointer is on.
 
 The projection is one function, `projectToScreen(positions,
 viewProjection, width, height, xy, depth)` in `src/charts/project.ts`,

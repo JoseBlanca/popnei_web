@@ -5,7 +5,10 @@ Individuals step and the PCA; revised the same day to agree with the
 specs written beside it: the words of the buttons, of the loading, of
 the failures and of the description are `docs/specs/analyses/pca.md`'s,
 and `.claude/skills/coding/charts.md` and `testing.md` are revised for
-it; not yet reviewed or approved. There is no
+it; reviewed the same day, and revised for the review: the third
+component kept up, the point under the pointer, the highlight, the size
+of the marks, the test for WebGL and the pieces the tests call; not yet
+approved. There is no
 code of it yet. This spec gives the function of `src/charts/pca3d.ts`
 that draws the individuals on three principal components with three.js,
 the library of WebGL the applications take for it
@@ -44,7 +47,10 @@ PCA opens in 2D" in `docs/specs/stage-4-open-points.md`).
 In 3D the individuals are shown on the three components of the axes,
 PC1, PC2 and PC3 by default (`pca.md`, the option `axes`), each with the
 colour and the shape of its group as in 2D, and the same legend over
-the top right corner. Three lines through the origin, one along each
+the top right corner, at the same place as in 2D, `SCATTER_MARGIN.top`
+pixels from the top of the element and `SCATTER_MARGIN.right` from its
+right (`scatter.md`), so that it does not move when the user switches.
+Three lines through the origin, one along each
 component over the range of its values, carry at their positive ends
 the labels "PC1 (3.54%)", "PC2 (3.44%)" and "PC3 (1.92%)". The user turns
 the view by dragging it, zooms it, and turns it with the buttons of the
@@ -67,30 +73,92 @@ position, and leaves out the others, which the legend does not count
 (`legendOf` of `scatter.md`); popnei's PCA gives none. The three
 components have one scale, the largest absolute value among them
 brought to 1, so that the spread along each is shown as it is
-(`charts.md`). The first component is the world's x, across the screen
-in the view along the third; the second its y, up; the third its z,
-towards the viewer.
+(`charts.md`). The first component is the x of the scene, the second
+its y and the third its z, and the third is kept up (below, "The
+view"). `scenePositions` of "The TypeScript interface" makes the
+positions, the index and the scale.
 
 The groups are one `Points` object each, with the symbol of the group
 drawn on a small canvas as its texture, in its colour with the outline
 in `--chart-axis`, the no-group a ring, and the area of a mark on the
 screen that of the scatter, `SYMBOL_AREA`, whatever the zoom
-(`charts.md`, "The data and the scene"). A colouring by values is one
-`Points` object whose points each carry their colour of viridis, as
-circles, and the rings of the points with no value. A highlighted group
-is drawn after the others, and the others at an opacity of 0.25 and
-behind it, as in 2D.
+(`charts.md`, "The data and the scene"). three.js draws each point of a
+`Points` object as a square of a size in CSS pixels, with the texture
+on it, so the square has to hold the largest mark: the star of
+`d3-shape`, whose tips reach 7.55 pixels from its centre at 64 square
+pixels, and 8.05 with half of its outline of 1 pixel, drawn with round
+joins as in 2D (`scatter.md`, "The marks of the groups"). The square is
+18 pixels a side, and its texture 36 by 36 pixels, for the pixel ratio
+of 2 at most (`charts.md`, "Resizing and the pixel ratio"). The texture
+is one per mark in use, shared by the groups that have that mark, so 50
+at most, the 49 marks and the ring, 259 KB. A colouring by values is
+one `Points` object whose points each carry their colour of viridis, as
+circles, and the rings of the points with no value.
+
+A highlighted group is drawn over the faded ones wherever they are, as
+in 2D. three.js draws every opaque object of a scene before every
+transparent one, whatever their `renderOrder`, which orders the objects
+only within each of the two lists (`three.module.js` of three 0.186.1,
+lines 18025 and 18027). So an opaque highlighted group would be drawn
+first, and a faded point nearer the camera would cover it. While a
+group is highlighted, every group is transparent to three.js: the faded
+ones at an opacity of 0.25, with `depthWrite: false`, so that they hide
+nothing drawn after them, and `renderOrder` 0; the highlighted one at an
+opacity of 1, with `transparent: true` and `renderOrder` 1, so it is
+drawn after all of them and over them, and its own points hide each
+other by their depth. With no highlight every group is opaque, and the
+points hide each other by their depth alone. The `alphaTest` that cuts
+the edge of a mark is half the opacity of its material, 0.5 or 0.125,
+since three.js compares it with the alpha of the texture times the
+opacity, and a test of 0.5 at an opacity of 0.25 would cut every point
+away.
 
 ### The view
 
-The view starts turned, meanwhile 30° about the vertical and 20° above
-the plane of the first two components, so that the three lines are seen
-at once; refined in the running application. The option not taken,
-starting along the third component, shows the 2D plot again, and a user
-who switched to 3D would see no change until they turned it. The camera
-is orthographic, and the controls are `OrbitControls` of three.js, with
-one axis kept up (`charts.md`, "Renderer, camera and controls"). Two
-settings of the controls are decided here:
+The camera is orthographic, and the controls are `OrbitControls` of
+three.js (`charts.md`, "Renderer, camera and controls"). They turn the
+camera about one axis of the scene, which they keep up on the screen:
+the one the camera's `up` names when the controls are made, which they
+read once, in their constructor (`OrbitControls.js` of three 0.186.1,
+line 406). The plot sets `up` to the z of the scene, the third
+component, before it makes them. So PC3 is always up, or towards the
+top of the screen, and a turn to the left or the right turns the cloud
+about PC3.
+
+A view along PC3 is then a view straight down the axis the controls
+keep up, which they allow: they keep the angle between the camera and
+that axis between 0.000001 radians and π less that, `makeSafe` of
+`Spherical.js`, line 87, so the camera is 0.00006° from straight above,
+and which way PC1 and PC2 point on the screen is set by the turn of the
+camera about PC3. Placed straight above the centre, the camera takes the
+turn 0, and PC1 runs across to the right and PC2 up: the 2D plot of the
+first two components, as a node script with three 0.186.1 showed on 27
+September 2026, with PC3 at the centre within 0.0001 of the width. The
+other views along a component are level, with PC3 up: along PC1, the
+camera on the positive side of PC1, PC2 runs to the right; along PC2,
+the camera on the negative side of PC2, PC1 runs to the right. Each view
+so shows the first of its two components growing to the right and the
+second growing upwards, as the 2D plot of them does, and none is a
+mirror image. `lookAlong` of "The TypeScript interface" puts
+the camera for each.
+
+The option not taken: PC2 kept up. The view along PC3, the 2D plot, is
+then level, and a turn to the right from it brings PC3 into depth, which
+is how a user explores from the 2D plot; but the view along PC1 shows
+PC3 across and not up, and the view along PC2 falls straight down the
+axis kept up. With PC3 up, PC3 is up in both of those views, and the 2D
+plot is the view from above: a user reaches it by tilting the view down
+to the top, and there a turn spins the 2D plot about its centre rather
+than bringing PC3 in. plotly's 3D scatter plots keep their third axis
+up in the same way, `scene.camera.up` of (0, 0, 1) by default in its
+documentation.
+
+The view starts turned, meanwhile 20° above the plane of PC1 and PC2,
+and turned by 30° about PC3 from the view along PC2, so that the three
+lines are seen at once; refined in the running application. The option
+not taken, starting along the third component, shows the 2D plot again,
+and a user who switched to 3D would see no change until they turned it.
+Two settings of the controls are decided here:
 
 - **No pan**, the moving of the view sideways that `OrbitControls`
   gives to the right button and to two fingers: the cloud of a PCA is
@@ -114,36 +182,53 @@ The screen draws the bar with React Aria's buttons and calls the
 handle; the plot draws no control. The bar holds the switch between 2D
 and 3D (`pca.md`), and, in 3D, these buttons, whose words are
 `pca.md`'s, "What it shows", and may be refined in the running
-application:
+application. Each turn does what a drag of 15° in its direction does:
+the side of the cloud nearest the viewer moves that way.
 
 | button | calls | what the user sees |
 |---|---|---|
-| "Turn left", "Turn right" | `rotate("vertical", −15)`, `rotate("vertical", 15)` | the view turns by 15° about the vertical of the screen |
-| "Tilt up", "Tilt down" | `rotate("horizontal", 15)`, `rotate("horizontal", −15)` | the view turns by 15° about the horizontal of the screen, and stops when it looks straight down or straight up the second component |
-| "View along PC1", "View along PC2", "View along PC3" | `viewAlong(0)`, `viewAlong(1)`, `viewAlong(2)` | the view looks down that component: along PC3, PC1 across and PC2 up, the 2D plot of the first two; along PC1, PC2 across and PC3 up; along PC2, PC1 across and PC3 up |
+| "Turn left", "Turn right" | `rotate("vertical", −15)`, `rotate("vertical", 15)` | the cloud turns by 15° about the third component, as a drag to the left or the right turns it; in the view along the third component, the 2D plot spins about its centre |
+| "Tilt up", "Tilt down" | `rotate("horizontal", 15)`, `rotate("horizontal", −15)` | the cloud turns by 15° about the horizontal of the screen, as a drag upwards or downwards turns it: "Tilt down" brings the view towards looking straight down the third component, and "Tilt up" towards looking straight up it from below; at either the view stops |
+| "View along PC1", "View along PC2", "View along PC3" | `viewAlong(0)`, `viewAlong(1)`, `viewAlong(2)` | the view looks down that component: along PC3, from above, PC1 across and PC2 up, the 2D plot of the first two; along PC1, PC2 across and PC3 up; along PC2, PC1 across and PC3 up |
 | "Zoom in", "Zoom out" | `zoom(1.25)`, `zoom(0.8)` | the points spread further apart or closer, their marks keeping their size |
 | "Reset view" | `resetView()` | the starting view and zoom |
 
 The names of the components are those of the axes shown, "View along PC4"
 when the user chose PC4. A step of 15° makes a whole turn in 24 presses,
-and the drag gives any angle between them. The view jumps to the new
-angle with no animation, so a user who asked the system for reduced
-motion needs nothing more (`css.md`, "Motion"). Each button is a stop of
-the Tab key; nothing listens for a key on the canvas or the page, since
-a key listened for on the whole page would act while the user types in
-another field, as the owner's widget does and this one does not.
+and the drag gives any angle between them. From the starting view, 20°
+above the plane of PC1 and PC2, 5 presses of "Tilt down", 75°, would
+pass the top, so the fifth stops there, at the 2D plot. The view jumps to
+the new angle with no animation, so a user who asked the system for
+reduced motion needs nothing more (`css.md`, "Motion"). Each button is a
+stop of the Tab key, and the plot listens for no key of its own: a key
+listened for on the whole page would act while the user types in
+another field, as it does in the owner's widget. Two listeners of the
+page remain, neither of which acts on a key the user types in a field.
+`OrbitControls` listens on the document to the Ctrl key going down and
+up (`OrbitControls.js` of three 0.186.1, lines 506 and 1944 to 1969),
+passively, only to tell a pinch on a trackpad, which the browser sends
+as a wheel with Ctrl, from the wheel turned with Ctrl held, and a pinch
+zooms ten times faster; it changes nothing else. And the tooltip is
+hidden by the Escape key while it is shown (`scatter.md`, "The point
+under the pointer").
 
 ### The point under the pointer
 
 As `charts.md`, "Picking the point under the pointer": at each movement
 of the pointer that is not a drag, the plot projects the points to the
 pixels of the element with `projectToScreen`, and `nearestPoint` of
-`hover.ts` (`scatter.md`) takes the nearest within 10 pixels, the one
-nearest the camera among those. The tooltip, its words, its
-`textContent` and `events.onHover` are the scatter's, with the three
-coordinates, "PC1 −0.0231, PC2 0.0104, PC3 0.0012". A turn, a zoom or an
-`update` hides it. A tap that does not move shows the tooltip of the
-point tapped.
+`hover.ts` (`scatter.md`) finds the point. Among the points whose mark
+covers the pointer, those within `MARK_RADIUS` pixels of it, the radius
+of a circle of a mark's area, 4.5 pixels, it takes the one nearest the
+camera, since that is the mark the user sees there; when no mark covers
+the pointer, the nearest within 10 pixels, whatever its depth. The rule
+not taken, the nearest to the camera among every point within 10
+pixels, would name a point 9 pixels away in front of the one the
+pointer is on. The tooltip, its words, its numbers, its `textContent`,
+how it is kept and dismissed, and `events.onHover` are the scatter's,
+with the three coordinates, "PC1 −0.0231, PC2 0.0104, PC3 0.0012". A
+turn, a zoom or an `update` hides it. A tap that does not move shows
+the tooltip of the point tapped.
 
 ### Loading three.js
 
@@ -175,6 +260,16 @@ page, into a script file of its own that the browser downloads then
   reader without moving the focus (WCAG 2.2, 4.1.3); the switch back to
   2D works, and the buttons of the turns are shown once the plot is
   drawn.
+- **When it arrives too late.** The download takes its time, and by
+  the end the user may have switched back to 2D, closed the panel, or
+  React in development may have removed the effect that asked for it
+  and mounted it again (`react.md`, "Mounting a plot"). A plot made
+  then would draw into an element that is gone, or would be a second
+  plot with a second WebGL context in the same element. So the effect
+  that calls `import()` notes, in its cleanup, that it is over, and when
+  the promise resolves it calls `createPca3d` only if it is not; the
+  module downloaded is kept by the browser, and the next effect's
+  `import()` resolves at once with it.
 - **When it fails to load**, the promise of `import()` is refused: the
   connection is down, or the site was deployed again since the page was
   opened. A deploy to GitHub Pages replaces every file of the site, and
@@ -192,9 +287,9 @@ page, into a script file of its own that the browser downloads then
 
 three.js r186 draws with WebGL 2 alone: it refuses WebGL 1 since r163
 (`build/three.module.js` of three 0.186.1, line 16139), and its
-`WebGLRenderer` throws "Error creating WebGL context." when the browser
-gives no context (line 16458). The browsers of the floor of the
-applications, Chrome 111, Firefox 115 and Safari 16.4
+`WebGLRenderer` throws a plain `Error`, "Error creating WebGL context.",
+when the browser gives no context (line 16458). The browsers of the
+floor of the applications, Chrome 111, Firefox 115 and Safari 16.4
 (`docs/technology.md`, section 6), are newer than the first of their
 engines with WebGL 2, Chrome 56, Firefox 51 and Safari 15, as MDN's
 data of compatibility give them, not tried in a browser; a browser
@@ -203,8 +298,18 @@ an institution, when its hardware acceleration is off or the graphics
 card is on its list of cards it refuses, and in some remote desktops.
 Which of these gives no WebGL in which browser was not tried.
 
-`createPca3d` then throws a `Pca3dError` of kind `noWebGl`, after
-removing what it added, and the element is left as it was. It is a
+So the plot asks for the context itself, before three.js does: it makes
+its canvas, calls `canvas.getContext("webgl2", { alpha: true, depth:
+true, stencil: false, antialias: false, premultipliedAlpha: true,
+preserveDrawingBuffer: false })`, the attributes `WebGLRenderer` asks
+for by default (line 16425), and gives the canvas and the context to
+`new WebGLRenderer({ canvas, context })`, which then asks for none of
+its own. When `getContext` gives no context, `null` in a browser and
+in jsdom, `createPca3d` throws a `Pca3dError` of kind `noWebGl`, after
+removing what it added, and the element is left as it was. `noWebGl`
+comes from that call alone, and not from reading the message of an
+error of three.js, whose words can change in any release; an error of
+three.js made with a context in hand is a defect. It is a
 thrown error and not a state of the handle, because there is no plot to
 give a handle to; and a typed one, as `PngError` is, because it is a
 state of the browser that the screen shows, and not a defect. Every
@@ -277,10 +382,14 @@ is on the screen as an SVG of vectors, with `projectToScreen`, and no
 reading of the WebGL canvas, so it works while the context is lost. The
 SVG is built apart from the page with the classes of the plots, `chart
 chart-pca3d`, its title and description, the three lines and their
-labels as text, the points and the legend of `drawLegendSvg`
-(`scatter.md`) at the top right, and given to `exportSvg` of
-`export.ts`, which writes the colours of the light theme on it; `toPNG`
-draws that SVG, as every plot does, with its `PngError`.
+labels as text, the points, and the legend of `drawLegendSvg`
+(`scatter.md`) at the place it has on the screen, its rows ending
+`SCATTER_MARGIN.right` pixels from the right and starting
+`SCATTER_MARGIN.top` from the top, over its background. The plot draws
+the legend into the SVG it builds, so it passes no function to
+`exportSvg` of `export.ts` (`plot2d.md`, "The export"), which writes the
+colours of the light theme on it; `toPNG` draws that SVG, as every plot
+does, with its `PngError`.
 
 The points are sorted from far to near, and consecutive points of one
 group in that order share one path, so that a nearer point is drawn over
@@ -326,9 +435,12 @@ export interface Pca3dEvents {
 ```
 
 The handle has the four functions of every plot and the turns of the
-view. `"vertical"` turns about the vertical of the screen, to the right
-for a positive angle; `"horizontal"` about its horizontal, upwards for
-a positive angle, and stops at the poles as `OrbitControls` does. A
+view. `rotate` turns the cloud as a drag in that direction does:
+`"vertical"` about the third component, a positive angle as a drag to
+the right, which is `rotateLeft` of `OrbitControls` with the angle in
+radians; `"horizontal"` about the horizontal of the screen, a positive
+angle as a drag upwards, `rotateUp` with the angle negated, stopping at
+straight down or straight up the third component as the controls do. A
 turn, a zoom and a view along a component render once and change
 nothing in the data.
 
@@ -364,6 +476,65 @@ interface"), with `z` among the arrays of one length; `rotate` and
 less; and every function of the handle after `destroy`, but `destroy`,
 as the base's do (`plot2d.md`). `toSVG` and `toPNG` of a plot never
 drawn, whose element never had a size, are the base's defect too.
+
+The pieces the handle is built from that its tests check without WebGL,
+exported for them; the screen calls none of them. `OrbitControls`
+works with no element to listen to, `null`, and three.js computes
+under node, so the view is tested with the very camera and controls the
+plot uses.
+
+```ts
+/**
+ * The points with three finite coordinates, in the units of the scene,
+ * the largest absolute value among them brought to 1: `positions` x, y
+ * and z per point drawn, `index` the index in the data of each, `scale`
+ * the units of the scene per unit of the components, 1 when none is
+ * drawn.
+ */
+export function scenePositions(
+  x: Float64Array,
+  y: Float64Array,
+  z: Float64Array,
+): { readonly positions: Float32Array; readonly index: Uint32Array; readonly scale: number };
+
+export type ViewName = 0 | 1 | 2 | "start";
+
+/**
+ * The orthographic camera of a plot of `width` by `height` CSS pixels,
+ * with the third component up, and its OrbitControls, with no pan and
+ * no damping, at the starting view. `canvas` null gives controls that
+ * listen to nothing.
+ */
+export function createView(
+  canvas: HTMLCanvasElement | null,
+  width: number,
+  height: number,
+): { readonly camera: OrthographicCamera; readonly controls: OrbitControls };
+
+/**
+ * Puts the camera along component 0, 1 or 2, as "The view" says, or at
+ * the starting view, 20° above the plane of the first two and turned
+ * 30° about the third from the view along the second.
+ */
+export function lookAlong(controls: OrbitControls, view: ViewName): void;
+
+/** Turns the view as `rotate` of the handle does. */
+export function turnView(controls: OrbitControls, axis: TurnAxis, degrees: number): void;
+
+/**
+ * The paths of the exported view, in the order they are drawn: runs of
+ * consecutive points of one path from far to near, `depth` one per point
+ * drawn and `index` its index in the data; `path` gives the path of each
+ * point of the data, its group or its step of viridis. With `highlighted`,
+ * the runs of every other path first, then those of the highlighted one.
+ */
+export function exportRuns(
+  depth: Float32Array,
+  index: Uint32Array,
+  path: Uint16Array,
+  highlighted: number | null,
+): readonly { readonly path: number; readonly points: Uint32Array }[];
+```
 
 The projection, plain arithmetic over typed arrays, with no WebGL and no
 import of three.js:
@@ -405,23 +576,31 @@ export function projectToScreen(
   (`charts.md`), and two are within it.
 - **A name with markup in it**: shown as text in the tooltip, the
   hidden title and description, the labels and the legend of the file.
-- **Many groups**: as the scatter's; each group is a `Points` object
-  and a texture, a thousand at most.
+- **Many groups**: as the scatter's; each group is a `Points` object,
+  a thousand at most, and the groups share the textures of their marks,
+  50 at most.
 
 ## How it runs
 
 On the page, in the main thread, with the graphics card drawing. The
 plot keeps the positions, 12 bytes per point, the projected positions,
-another 12, 225 KB for 9,381 points, one texture of 32 by 32 pixels per
-group, and one WebGL context. It renders only after a change
+another 12, 225 KB for 9,381 points, the textures of the marks in use,
+259 KB at most, and one WebGL context. It renders only after a change
 (`charts.md`), and a projection of 9,381 points for the hover is a loop
 of about 150,000 multiplications, under a millisecond.
 
+A point of 18 CSS pixels is 36 pixels of the screen at a pixel ratio of
+2. WebGL 2 promises points of 1 pixel only, and a graphics card gives
+its largest size in `ALIASED_POINT_SIZE_RANGE`; the first work package
+reads it in each engine, on the Mac and on CI, and writes it here, and
+the plot is drawn with smaller squares, and smaller marks, where it is
+below 36 pixels.
+
 ## How it is verified
 
-At `projectToScreen`, `createPca3d` and its handle, and at the pure
-functions the plot is built from: the positions and their scale, the
-angles of each view, and the order of the exported paths.
+At `projectToScreen`, `createPca3d` and its handle, and at the pieces
+the plot is built from, `scenePositions`, `createView`, `lookAlong`,
+`turnView` and `exportRuns` (above, "The TypeScript interface").
 
 **In the project `charts` of Vitest**, where three.js runs as arithmetic
 with no WebGL:
@@ -432,17 +611,29 @@ with no WebGL:
   (−1, −0.5, 0) at (100, 150), and (0, 0, 1) nearer than (0, 0, −1); and
   for 100 points drawn by fast-check, the pixels that three.js's own
   `Vector3.project` gives, within 0.001 pixel.
-- The positions: for x `[1, −4, NaN]`, y `[2, 0, 1]`, z `[0, 2, 3]`, the
-  scale 1/4, two positions, (0.25, 0.5, 0) and (−1, 0, 0.5), and the
-  index `[0, 1]`.
-- The views: after the view along component 2, the first component
-  projects to the right of the centre and the second above it; along
-  component 0, the second to the right and the third above; along
-  component 1, the first to the right and the third above; a
-  `rotate("horizontal", 15)` from the top stays at the top.
-- The order of the export: three points of groups A, B and A, from far
-  to near, give three paths, A, B and A, in that order; with B
-  highlighted, one path of A's two points from far to near, then B's.
+- `scenePositions`: for x `[1, −4, NaN]`, y `[2, 0, 1]`, z `[0, 2, 3]`,
+  the scale 1/4, two positions, (0.25, 0.5, 0) and (−1, 0, 0.5), and
+  the index `[0, 1]`.
+- The views, with `createView(null, 400, 300)` and the ends of the three
+  components, (1, 0, 0), (0, 1, 0) and (0, 0, 1), projected with
+  `Vector3.project` of three.js: after `lookAlong(controls, 2)`, the
+  first component projects to the right of the centre and the second
+  above it, the third within 0.0001 of the centre, and the polar angle
+  of the controls, `getPolarAngle`, is 0.000001; after `lookAlong(…,
+  0)`, the second to the right and the third above; after `lookAlong(…,
+  1)`, the first to the right and the third above; after `lookAlong(…,
+  "start")`, a polar angle of 70° and an azimuth of 30°. A node script
+  with three 0.186.1 gave these on 27 September 2026.
+- The turns: from the view along component 2, `turnView(controls,
+  "horizontal", −15)` leaves the polar angle at 0.000001, since the
+  view is at the top, and `turnView(controls, "horizontal", 15)` makes
+  it 15°; from the view along component 1, `turnView(controls,
+  "vertical", 15)` moves the end of the first component to 0.966 of its
+  length to the right, cos 15°, and the end of the second to the left of
+  the centre, so the near side of the cloud moved to the right.
+- `exportRuns`: three points of groups A, B and A, from far to near,
+  give three runs, A, B and A, in that order; with B highlighted, one
+  run of A's two points from far to near, then B's.
 - Each defect of "The TypeScript interface" throws.
 - Under jsdom, which gives no WebGL, `createPca3d` throws a `Pca3dError`
   of kind `noWebGl` and leaves the element with no child.
@@ -458,7 +649,8 @@ scatter's 9,381 points with a third coordinate:
   of `toSVG`; after `viewAlong(2)` the order of the points across and up
   in `toSVG` is the order of their first and second coordinates;
 - the pointer over the projected place of point 0 shows its tooltip and
-  calls `onHover(0)`;
+  calls `onHover(0)`; Escape hides it; and of two points at one pixel,
+  the tooltip is the one nearer the camera;
 - a loss of the context forced with `WEBGL_lose_context`, then its
   restore, calls `onContextChange(true)` then `(false)`, and the plot
   draws again (`charts.md`);
@@ -485,7 +677,9 @@ runs there.
 PCA in 2D downloads no file of `pca3d`, and pressing 3D downloads one,
 as the requests of the page show in Playwright; and the first script of
 `popgen.html` in `dist/` holds no text of three.js, such as
-"WebGLRenderer".
+"WebGLRenderer". And a download that arrives too late: with the file
+of `pca3d` held back by the routing of Playwright, 3D pressed and then
+2D, the file let through leaves no canvas in the panel.
 
 The 3D view, in both themes, with a group highlighted, is in the screens
 of `e2e/screens.spec.ts`, looked at as `testing.md` says, where the
@@ -510,13 +704,18 @@ option `view` saved in the project; the one function that gives the
 scatter and the 3D plot their data; the bar with the buttons of the
 table above, the words of loading, of a failed load, of no WebGL and of
 a lost context, and where each is shown; the `import()` of `pca3d.ts`
-when 3D is first shown, and the plot destroyed when the user switches
-to 2D; the description of the 3D view; the legend and its highlight,
-shared with the scatter.
+when 3D is first shown, its result dropped when the effect that asked
+for it is over ("Loading three.js"), and the plot destroyed when the
+user switches to 2D; the description of the 3D view; the legend and its
+highlight, shared with the scatter, placed at the same offset from the
+corner in 2D and 3D; the words of the buttons of the turns, which are
+about the third component and do what a drag does ("The buttons of the
+bar above the plot").
 
 Of `docs/specs/charts/scatter.md`: `PointColours`, `groupMark`,
-`symbolPath`, `SYMBOL_AREA`, `legendOf`, `drawLegendSvg`,
-`nearestPoint` and `tooltipLines`, and the rings of no group.
+`symbolPath`, `SYMBOL_AREA`, `MARK_RADIUS`, `legendOf`, `drawLegendSvg`,
+`nearestPoint`, `tooltipLines` and `createTooltip`, the rings of no
+group, and the outlines drawn with round joins.
 
 ## What this spec asks of other documents
 
@@ -526,8 +725,20 @@ Of `docs/specs/charts/scatter.md`: `PointColours`, `groupMark`,
   with the matrix as 16 numbers, the pixels and the depth apart, so that
   it imports nothing of three.js; the exported points in one order of
   depth for every group; no pan; three.js r186 needs WebGL 2, and a
-  browser without it gets a `Pca3dError`; the versions, three 0.186.1
-  and `@types/three` 0.186.0, and the six packages the latter brings.
+  browser without it gets a `Pca3dError`, from the plot's own call of
+  `getContext`; the versions, three 0.186.1 and `@types/three` 0.186.0,
+  and the six packages the latter brings. Revised again after the
+  review of 27 September 2026: the third component kept up, set by the
+  camera's `up` before the controls are made; the points nearest the
+  camera only among those whose mark covers the pointer; the highlighted
+  group drawn over the faded ones as a transparent object of a later
+  `renderOrder`; the squares of the points, 18 pixels, and one texture
+  per mark; and the listener of `OrbitControls` on the document for the
+  Ctrl key.
+- `docs/technology.md`, section 2, "three.js for the 3D PCA": that
+  three.js r186 needs WebGL 2, which a browser of the floor has unless
+  it is turned off or refused, in place of "every browser has WebGL";
+  made on 27 September 2026.
 - `.claude/skills/coding/testing.md`: what each headless engine gives for
   WebGL, on the Mac and on CI, once the first work package has seen it.
 - `docs/architecture.md`, section 9: `project.ts` in the list of

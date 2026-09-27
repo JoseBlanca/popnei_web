@@ -6,8 +6,9 @@ one piece for what every 2D plot has in common; approved by the owner on 26 Sept
 Revised on 27 September 2026 for the scatter plot of the PCA,
 `docs/specs/charts/scatter.md`, in stage 4, not yet approved: the
 overlay and the calls of the pointer, the hook that draws the legend
-into the exported file, and the mark of the point under the pointer
-left out of that file; the code of stage 3, `src/charts/plot2d.ts`, has
+into the exported file, with the argument of `exportSvg` that carries
+it into the SVG and the PNG, and the mark of the point under the
+pointer left out of that file; the code of stage 3, `src/charts/plot2d.ts`, has
 none of the three yet. This spec gives
 `src/charts/plot2d.ts`, the function that every plot drawn in two
 dimensions makes its handle with: the histogram of
@@ -193,7 +194,9 @@ it needs what it shows in words and the numbers behind its marks
   gives the screen its rows with a pure function of its data, one row
   per mark, `histogramRows` for the histogram, from which the screen
   draws the table, writes its CSV and writes the description, so that
-  the table and the plot never disagree. The base gives the one rule the
+  the table and the plot never disagree. The scatter of the PCA gives
+  none: its table, of every component kept, is the PCA's, from the same
+  result as the plot's data (`scatter.md`). The base gives the one rule the
   tables of the plots share, `tableNumber(x)`, a number shown to 12
   significant digits, `Number(x.toPrecision(12))`, so that an edge that
   popnei gives as 0.07500000000000001 reads 0.075; the rows and the CSV
@@ -246,7 +249,16 @@ export is checked by its tests (below, "How it is verified").
   the `chart-legend` group of the copy that is exported, before the
   styles are written on it, with the frame of the last draw, and the
   plot on the screen is not changed. `exportSvg` of `export.ts` takes
-  the function that does it as a third argument.
+  the function that does it as a third argument, `drawBeside`, which it
+  calls with the copy once the overlay and the mark of the point under
+  the pointer are removed and before it writes the styles, so that what
+  it draws gets its colours written like the rest. The base gives
+  `exportSvg` a function that finds the `chart-legend` group of the copy
+  and calls `drawExport` with it, the frame and the data of the last
+  draw, and gives the same function in `toSVG` and in `toPNG`, whose
+  PNG is drawn from `exportSvg`'s SVG: a PNG made without it would lack
+  the legend its SVG has. The 3D plot builds its SVG with the legend in
+  it, and gives no third argument.
 - **The PNG** is the SVG of `toSVG` drawn on a canvas at `scale` times
   its size, 3 for print at 300 dpi and 2 for slides. `toPNG` rejects
   with a `PngError` whose `kind` tells the two failures apart:
@@ -391,9 +403,35 @@ export function createPlot2d<Data extends PlotText>(
 export function tableNumber(value: number): number;
 ```
 
-The error a PNG is refused with, in `src/charts/export.ts`:
+The export of a plot and the error a PNG is refused with, in
+`src/charts/export.ts`. `exportSvg` has, from stage 3, the SVG of the
+plot and its size at the last draw; stage 4 adds `drawBeside`.
 
 ```ts
+export interface ExportSize {
+  readonly width: number;          // CSS pixels, the SVG's at the last draw
+  readonly height: number;
+}
+
+/**
+ * The SVG of the file: a copy of `svg` with the colours of the light
+ * theme written on it, a first rectangle of the background, and no
+ * overlay and no mark of the point under the pointer. `drawBeside`, when
+ * given, draws into the copy before the colours are written.
+ */
+export function exportSvg(
+  svg: SVGSVGElement,
+  size: ExportSize,
+  drawBeside?: (copy: SVGSVGElement) => void,
+): string;
+
+/** The PNG of the SVG that `svgText` gives, at `scale` times `size`. */
+export function exportPng(
+  svgText: () => string,
+  size: ExportSize,
+  scale: PngScale,                 // 2 | 3, of src/charts/types.ts
+): Promise<Blob>;
+
 export class PngError extends Error {
   readonly kind: "tooLarge" | "notMade"; // a side above 4,096 pixels at that scale; no canvas, or no PNG made
 }
@@ -519,7 +557,10 @@ export will run in.
 
 - the SVG of `toSVG` holds no `var(` and no `chart-overlay`, has a first
   background rectangle, and has the light colours when the page is dark:
-  the fill of a kept bar is `rgb(0, 114, 178)`;
+  the fill of a kept bar is `rgb(0, 114, 178)`; and `exportSvg` with a
+  `drawBeside` that adds a rect of the classes `chart-points
+  chart-colour-0` gives that rect a fill of `rgb(230, 159, 0)` written
+  on it, as the colours of the plot are;
 - `toPNG(3)` of a plot of 600 by 375 pixels is a PNG of 1,800 by 1,125
   pixels; of a plot 1,400 pixels wide it rejects with `tooLarge`, and
   `toPNG(2)` gives 2,800 pixels; `toPNG(2)` of a plot above 2,048 pixels
@@ -533,7 +574,9 @@ export will run in.
 - on the scatter, the page's second plot from stage 4, a move of the
   mouse over the overlay calls `pointer.move` with the position in the
   pixels of the frame, a tap calls it too, and a mouse that leaves the
-  frame calls `pointer.leave` (`scatter.md`, "How it is verified").
+  frame calls `pointer.leave` (`scatter.md`, "How it is verified"); and
+  its PNG holds the legend that `drawExport` draws, as its SVG does,
+  read from the pixels of the PNG (`scatter.md`).
 
 **The dependencies it adds**, all approved by the owner on 24 September
 2026 (`docs/technology.md`, section 2) and none yet in `package.json`:

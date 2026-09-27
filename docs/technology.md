@@ -263,7 +263,10 @@ Considered and not taken:
 The established library of WebGL, since 2010. The 3D scatter of the PCA
 is drawn with it, with a thin layer of ours for the axes, the rotation,
 the hover and, later, the lasso, which would be our code with any library.
-Every browser that popnei runs in has WebGL. three.js ships no types of
+three.js r186 draws with WebGL 2 alone, which every browser of the floor
+of section 6 has, unless WebGL is turned off in it or its graphics card
+is refused; the 3D view then says so, and the 2D plot stays
+(`docs/specs/charts/pca3d.md`). three.js ships no types of
 its own, so `@types/three`, from DefinitelyTyped, is taken with it for
 development. It is loaded with `import()` when the 3D PCA is first
 drawn, into a chunk of its own, a script the browser downloads then, so
