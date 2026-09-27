@@ -6,6 +6,7 @@
  */
 import { readFile, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { gunzipSync } from "node:zlib";
 
 import { expect, test } from "@playwright/test";
 import type { Locator, Page, Route } from "@playwright/test";
@@ -314,6 +315,95 @@ async function holdWritten(page: Page): Promise<void> {
       if (kind !== "written") post(message, transfer);
     };
   });
+}
+
+/** What the calculation worker does with the files it writes: posts
+    them with the counts of a pass that kept `numVars` variants, of the
+    missing data filter, in place of their own; posts a crash in their
+    place; posts popnei's refusal `message` in their place; or keeps them
+    back until `writtenAs` is called again. A test hook of the pictures,
+    so that a size of gigabytes is reached with panel.nei. */
+type WrittenAs =
+  | { readonly kind: "counted"; readonly numVars: number }
+  | { readonly kind: "crashed" }
+  | { readonly kind: "refused"; readonly message: string }
+  | { readonly kind: "held" }
+  | { readonly kind: "released" };
+
+/** Makes the calculation worker post the files it writes as `as` says,
+    from now until it is called again. */
+async function writtenAs(page: Page, as: WrittenAs): Promise<void> {
+  await expect
+    .poll(() => page.workers().some((w) => w.url().includes("runnerWorker")))
+    .toBe(true);
+  const worker = page.workers().find((w) => w.url().includes("runnerWorker"));
+  if (worker === undefined) throw new Error("no calculation worker");
+  await worker.evaluate((given) => {
+    const scope = globalThis as unknown as {
+      postMessage: (message: unknown, transfer?: Transferable[]) => void;
+      writtenAs?: WrittenAs;
+      heldWritten?: unknown[];
+    };
+    const first = scope.writtenAs === undefined;
+    scope.writtenAs = given;
+    const post = first
+      ? scope.postMessage.bind(scope)
+      : (scope as unknown as { post: (m: unknown) => void }).post;
+    (scope as unknown as { post: (m: unknown) => void }).post = post;
+    if (given.kind === "released") {
+      for (const message of scope.heldWritten ?? []) post(message);
+      scope.heldWritten = [];
+    }
+    if (!first) return;
+    scope.heldWritten = [];
+    scope.postMessage = (message, transfer) => {
+      const as = scope.writtenAs;
+      const written =
+        typeof message === "object" &&
+        message !== null &&
+        "kind" in message &&
+        message.kind === "written";
+      if (!written || as === undefined || as.kind === "released") {
+        post(message, transfer);
+        return;
+      }
+      const { id, key, result } = message as unknown as {
+        id: number;
+        key: string;
+        result: Record<string, unknown>;
+      };
+      switch (as.kind) {
+        case "counted":
+          post({
+            kind: "written",
+            id,
+            key,
+            result: {
+              ...result,
+              passStats: {
+                numVars: as.numVars,
+                filtering: {
+                  missing_data: {
+                    varsProcessed: as.numVars + 1000,
+                    varsKept: as.numVars,
+                  },
+                },
+              },
+            },
+          });
+          break;
+        case "crashed":
+          post({ kind: "crashed", message: "a crash made by the test" });
+          break;
+        case "refused":
+          post({ kind: "refused", id, message: as.message });
+          break;
+        case "held":
+          scope.heldWritten?.push(message);
+          break;
+      }
+    };
+  }, as);
 }
 
 // The page of the population genetics application, in both themes, since
@@ -1369,6 +1459,213 @@ for (const theme of ["light", "dark"] as const) {
       await save(page, `popgen-write-open-question-${theme}`, {
         fullPage: false,
       });
+    });
+
+    /** The Write button of the section. */
+    function writeButton(page: Page): Locator {
+      return writing(page).getByRole("button", {
+        name: "Write the filtered variants as a .nei file",
+      });
+    }
+
+    /** Picks panel.nei and waits for its read. */
+    async function pickPanel(page: Page): Promise<void> {
+      await pickVariants(page, "panel.nei");
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+    }
+
+    /** Writes the file, counted as `numVars` variants kept, and saves it,
+        so that the step offers Write with the size of those variants. */
+    async function writeCounted(page: Page, numVars: number): Promise<void> {
+      await writtenAs(page, { kind: "counted", numVars });
+      await writeButton(page).click();
+      const download = page.waitForEvent("download");
+      await writing(page)
+        .getByRole("button", { name: /^Save / })
+        .click();
+      await download;
+    }
+
+    /** Saves the project with panel.nei loaded as a project file with
+        the fields `fields` changed, opens it, and picks panel.nei again. */
+    async function openChanged(
+      page: Page,
+      folder: string,
+      fields: Record<string, unknown>,
+    ): Promise<void> {
+      await pickPanel(page);
+      const saved = await saveProjectFile(page, folder);
+      const file = JSON.parse(await readFile(saved, "utf8")) as Record<
+        string,
+        unknown
+      >;
+      await openProject(page, {
+        name: "changed.popnei.json",
+        text: JSON.stringify({ ...file, ...fields }, null, 2),
+      });
+      await pickPanel(page);
+    }
+
+    test("the writing, the warning of the memory", async ({ page }) => {
+      await pickPanel(page);
+      await writeCounted(page, 3_000_000);
+      await expect(writing(page).getByText(/^Warning:/)).toBeVisible();
+      await writing(page).scrollIntoViewIfNeeded();
+      await save(page, `popgen-write-warning-${theme}`);
+    });
+
+    test("the writing, Write disabled for a file too large", async ({
+      page,
+    }) => {
+      await pickPanel(page);
+      await writeCounted(page, 8_000_000);
+      await expect(writeButton(page)).toBeDisabled();
+      await writing(page).scrollIntoViewIfNeeded();
+      await save(page, `popgen-write-too-large-${theme}`);
+    });
+
+    test("the writing locked by a list of individuals", async ({
+      page,
+    }, testInfo) => {
+      await openChanged(page, testInfo.outputPath(), {
+        individualFilters: [{ kind: "keep", individuals: ["nobody"] }],
+      });
+      await expect(writeButton(page)).toBeDisabled();
+      await writing(page).scrollIntoViewIfNeeded();
+      await save(page, `popgen-write-locked-list-${theme}`);
+    });
+
+    test("the writing locked by thresholds that keep no individual", async ({
+      page,
+    }, testInfo) => {
+      await openChanged(page, testInfo.outputPath(), {
+        individualFilters: [{ kind: "obs_het", maxAllowedObsHet: 0.1 }],
+      });
+      await writeButton(page).click();
+      await expect(writeButton(page)).toBeDisabled();
+      await writing(page).scrollIntoViewIfNeeded();
+      await save(page, `popgen-write-locked-none-${theme}`);
+    });
+
+    test("the writing waiting for the statistics of each individual", async ({
+      page,
+    }, testInfo) => {
+      await openChanged(page, testInfo.outputPath(), {
+        individualFilters: [{ kind: "obs_het", maxAllowedObsHet: 0.36 }],
+      });
+      await holdResults(page);
+      await writeButton(page).click();
+      await expect(
+        writing(page).getByText(
+          /^Calculating the statistics of each individual, .* · 0:0[1-9]$/,
+        ),
+      ).toBeVisible({ timeout: 3000 });
+      await save(page, `popgen-write-waiting-statistics-${theme}`);
+    });
+
+    test("the writing, the filters kept no variant", async ({
+      page,
+    }, testInfo) => {
+      await openChanged(page, testInfo.outputPath(), {
+        filters: [
+          { kind: "missing_data", maxAllowedMissingRate: 0.05 },
+          { kind: "maf", maxAllowedMaf: 0.4 },
+        ],
+      });
+      await writeButton(page).click();
+      await expect(
+        writing(page).getByText(/^The filters kept none of the variants/),
+      ).toBeVisible();
+      await writing(page).scrollIntoViewIfNeeded();
+      await save(page, `popgen-write-no-variant-${theme}`);
+    });
+
+    test("the writing, a VCF with no variant that passed", async ({
+      page,
+    }, testInfo) => {
+      const text = gunzipSync(await readFile(join(FIXTURES, "panel.vcf.gz")))
+        .toString("utf8")
+        .replaceAll("\tPASS\t", "\tLowQual\t");
+      const vcf = testInfo.outputPath("nopass.vcf");
+      await writeFile(vcf, text);
+      await pickVariants(page, { path: vcf });
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      await writeButton(page).click();
+      await expect(
+        writing(page).getByText(/^nopass\.vcf has no variant with PASS/),
+      ).toBeVisible();
+      await writing(page).scrollIntoViewIfNeeded();
+      await save(page, `popgen-write-empty-source-${theme}`);
+    });
+
+    test("the writing in error, with Write offered again", async ({ page }) => {
+      await pickPanel(page);
+      await writtenAs(page, { kind: "crashed" });
+      await writeButton(page).click();
+      await expect(
+        writing(page).getByText(/^The writing stopped unexpectedly/),
+      ).toBeVisible();
+      await writing(page).scrollIntoViewIfNeeded();
+      await save(page, `popgen-write-error-again-${theme}`);
+    });
+
+    test("the writing in error, refused by popnei, with no Write", async ({
+      page,
+    }) => {
+      await pickPanel(page);
+      await writtenAs(page, {
+        kind: "refused",
+        message: "memory could not grow.",
+      });
+      await writeButton(page).click();
+      await expect(
+        writing(page).getByText(/could not be written: popnei stopped/),
+      ).toBeVisible();
+      await writing(page).scrollIntoViewIfNeeded();
+      await save(page, `popgen-write-error-refused-${theme}`);
+    });
+
+    test("the writing, the file dropped since the filters changed while it was written", async ({
+      page,
+    }) => {
+      await pickPanel(page);
+      await writtenAs(page, { kind: "held" });
+      await writeButton(page).click();
+      await expect(
+        writing(page).getByRole("button", { name: "Stop" }),
+      ).toBeVisible();
+      const threshold = page.getByLabel(
+        "Maximum proportion of missing genotypes",
+      );
+      await threshold.fill("0.06");
+      await threshold.press("Enter");
+      await writtenAs(page, { kind: "released" });
+      await expect(
+        writing(page).getByText(/^The file was not kept/),
+      ).toBeVisible();
+      await writing(page).scrollIntoViewIfNeeded();
+      await save(page, `popgen-write-dropped-${theme}`);
+    });
+
+    test("the writing, an estimate from a bound", async ({ page }) => {
+      await writePanel(page);
+      const threshold = page.getByLabel(
+        "Maximum proportion of missing genotypes",
+      );
+      await threshold.fill("0.06");
+      await threshold.press("Enter");
+      await expect(
+        writing(page).getByText(
+          "At most about 288 KB: 1,200 variants of 200 individuals.",
+        ),
+      ).toBeVisible();
+      await page.getByRole("button", { name: "Close" }).click();
+      await writing(page).scrollIntoViewIfNeeded();
+      await save(page, `popgen-write-bound-${theme}`);
     });
 
     test("the Variants step after an opening, and with the warning of the identity", async ({
