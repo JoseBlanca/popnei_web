@@ -361,7 +361,12 @@ It is written by the **announcer**, `createAnnouncer()` of
 `src/ui/shell/status.ts`, which the entry makes once
 (`docs/specs/entry.md`) and the shell gives the screens. `announce(text)`
 empties the region at once and writes the text 100 ms later, with any
-other text announced in those 100 ms after it, joined by a space. The
+other text announced in those 100 ms after it, joined by a space.
+`announce(text, { replaces: kind })` names the kind of a text that only
+its latest holds, and drops a text of that kind still waiting: the line
+of the individuals that pass, after a threshold stepped six times with
+an arrow key within 100 ms, is said once, with the last count, and not
+three times in one text. The
 region is emptied first because a screen reader reads a text written
 again only if it changed, and the pause, because React draws two changes
 made in the same moment as one. 100 ms is decided here, to be checked
