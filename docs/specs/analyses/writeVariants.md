@@ -20,7 +20,14 @@ the code: the estimate adds 40 bytes per variant, `BYTES_PER_VARIANT`,
 since the columns of a variant cost about 22 to 40 bytes whatever the
 number of individuals, which one byte per genotype missed by up to ten
 times with 2 individuals; the words of a refusal for another ploidy and
-of an empty source; and Save of a written file announced.
+of an empty source; and Save of a written file announced. Revised on 27
+September 2026 with the owner's decisions at stop A of
+`docs/plans/variants-step.md`, where the owner tried the screen: Write is
+refused before a Count when the file may reach `WRITE_MAX_BYTES`, when
+the Count says the filters keep no variant, and after a Count that
+popnei refused; the warning says that phones and tablets fail with far
+smaller files; once saved, the part gives the size written alone; and
+its words leave out "in the Variants step", the step they are shown in.
 
 **It is not an analysis** in the sense of section 4 of the architecture,
 and it is under `docs/specs/analyses/` only because the architecture names
@@ -210,7 +217,15 @@ it expects before the user writes:
   genotype, needs at its peak up to about 2.4 GB more in Chromium and
   3.4 GB more in WebKit, a large share of a computer of 8 GB. Its words are
   below. No computer of 8 GB was measured; the value is a judgment on
-  the peak, and nothing was seen to fail at it.
+  the peak, and nothing was seen to fail at it. The warning also says
+  that phones and tablets fail with far smaller files, as the owner
+  decided on 27 September 2026: Safari on an iPhone closes a tab that
+  asks for more than about 300 to 450 MB on the iPhone 11 to 14, and
+  about 1 GB from the iPhone 15, from reports and not from a device, so
+  a file of 50 to 200 MB can close it, and Safari there never asks
+  before a page is left. The limits stay those of a computer, since the
+  population genetics page is meant for one, and the page cannot tell a
+  phone for certain.
 - **At an estimate of `WRITE_MAX_BYTES` or more from the counts
   themselves**, not from a bound, the button is disabled with its reason
   as text beside it, since the write would fail. `WRITE_MAX_BYTES` is
@@ -223,6 +238,26 @@ it expects before the user writes:
   GiB, in which popnei builds the file; the failure between 1.98 GB and
   2.2 GB fits a file that needs more than twice its size there. Its words
   are below.
+- **Before a Count, at a bound of `WRITE_MAX_BYTES` or more**, an
+  estimate from the variants of the file with a filter of the variants,
+  the button is disabled too, with words that ask for the Count, which
+  gives the exact size in one pass, as the owner decided on 27 September
+  2026: a VCF not yet counted whose file would be over about 2 GB stops
+  the worker in Chromium and closes the tab in WebKit. While the Count
+  runs, the words say that the size comes when it ends, and not to
+  press it. The option not taken left Write offered on the bound, with
+  the warning alone. A bound from the individuals, while a threshold
+  waits for the statistics of each individual, is not refused: the
+  Count does not make it exact.
+- **When the Count says the filters keep no variant**, `variantsKept`
+  0, or the variants file holds none, the button is disabled with the
+  words of a file of no variant, since a write would give a file that
+  the step does not offer; and **after a Count in error with no button
+  to count again**, a refusal of popnei or a variants file the browser
+  can no longer read, it is disabled with words that send the user to
+  the words of the Count, since a write makes the same pass over the
+  same filters and would fail the same way. Both decided by the owner
+  on 27 September 2026; before, Write was offered in both cases.
 
 Once the write has ended, the calculation worker is started again when
 the file is larger than `WRITE_RESTART_BYTES`, a constant of
@@ -355,7 +390,10 @@ GB". It is the same function for the estimate and for the written file.
   0, and its state `write` is `noVariant` (`docs/specs/core/store.md`),
   so the step shows no Save button, and says so (below), and the page
   holds no file that nobody can save; its counts fill `filterCounts`, so
-  the user sees which filter kept none.
+  the user sees which filter kept none. Once the counts of the filters
+  as they are say so, from a Count or from such a write, Write is
+  disabled with that reason, and no write is made (above, "The size,
+  before the write").
 - **The variants file holds no variant**, or, for a VCF read with only
   the variants with PASS or . in its FILTER column, none that passed.
   `writeVars` does not refuse an empty source either (popnei's
@@ -404,12 +442,12 @@ notice and the status region is "Writing the file".
 |---|---|---|
 | empty | cannot happen: while the variants file is not read the part is not drawn, and the step shows the line of a file not read in its place (`docs/specs/steps/variants.md`, "What it does") | |
 | locked | the reason of `individualListNeeds` of `docs/specs/core/project.md`, or of the filters keeping no individual, beside the disabled button. While the variants file is not read, when the store locks it with the reason of `projectNeeds`, the part is not drawn, as for empty | what the reason says |
-| ready | the button, and the estimate: "About 20.8 MB: 20,000 variants of 1,000 individuals." | Write |
+| ready | the button, and the estimate: "About 20.8 MB: 20,000 variants of 1,000 individuals."; disabled, with its reason, for a file too large, a bound too large before a Count, filters that keep no variant, or a Count refused (above, "The size, before the write") | Write; what the reason says |
 | waiting for the statistics | "Calculating the statistics of each individual, which the filters of individuals are set from · 35% · 0:12" | Stop |
 | writing | "Writing panel.filtered.nei · 35% · 0:12", the bar of the diversity | Stop |
 | written, the store's `done` | "Save panel.filtered.nei, 19.2 MB" | Save |
 | written with no variant, the store's `noVariant` | the words of a file of no variant, below, and no Save | loosen the filters |
-| saved, the store's `saved` | "panel.filtered.nei, 19.2 MB, was handed to the browser to save. To save it again, write it again." and the button to write | Write |
+| saved, the store's `saved` | "panel.filtered.nei, 19.2 MB, was handed to the browser to save. To save it again, write it again." and the button to write, with no estimate beside it, so that the part gives one size of the file, the one written, as the owner decided on 27 September 2026 | Write |
 | stopped or dropped, the store's `ready` | the button to write, and, when a change dropped it, `dropped`, "The file was not kept, since the filters changed while it was written." | Write |
 | results removed | a file written and not saved, which a change of the filters or a new load discarded: the part is `ready` for the new filters, with the button to write, and the notice of the shell says that the file was discarded and that Undo does not bring it back (`docs/specs/shell.md`, "The notice"; point G of `docs/specs/stage-3-open-points.md`) | Write; the Undo of the notice, which brings the filters back and not the file |
 | error | the words of the failure, below | as the words say |
@@ -422,24 +460,39 @@ is 19,161,178 bytes, "19.2 MB", which the Save button shows.
 ### Its words
 
 The sizes in the words are the estimate, "about"; 1.0 GB is a million
-variants of 1,000 individuals, 1,040,000,000 bytes, and 2.0 GB about
-1,920,000 variants of 1,000 individuals.
+variants of 1,000 individuals, 1,040,000,000 bytes, 2.0 GB about
+1,920,000 variants of 1,000 individuals, and "at most about 2.1 GB" a
+bound of 2,000,000 variants of 1,000 individuals before a Count.
+
+The part is in the Variants step, so its words leave out "in the
+Variants step", which the words of the same failures end with elsewhere
+in the application, the stepper and the status region among them: "Load
+another variants file." and not "Load another variants file in the
+Variants step.", as the Variants step does for its own reasons
+(`docs/specs/steps/variants.md`, "What it does"), and as the owner
+decided on 27 September 2026. The words the part takes from other
+specs, below, are given as the part shows them.
 
 | when | the text |
 |---|---|
-| at or above `WRITE_WARN_BYTES` | "Warning: a file of about 1.0 GB may need about six times that in the memory of this tab while it is written, and a browser may close a tab that asks for too much, losing the work since the project was last saved. Save the project first. To write a smaller file, remove variants or individuals with the filters; to write any size, use popnei in Python." |
+| at or above `WRITE_WARN_BYTES` | "Warning: a file of about 1.0 GB may need about six times that in the memory of this tab while it is written, and a browser may close a tab that asks for too much, losing the work since the project was last saved. On a phone or a tablet, the write fails with far smaller files. Save the project first. To write a smaller file, remove variants or individuals with the filters; to write any size, use popnei in Python." |
 | an estimate of `WRITE_MAX_BYTES` or more | "A file of about 2.0 GB cannot be written in a browser tab: popnei needs more than twice the file in its memory while it writes it, and a tab gives popnei at most 4 GB. Remove variants or individuals with the filters, or write the file with popnei in Python." |
-| no counts and no number of variants | "The size of the file is known once the variants are counted: Count, above." |
-| no counts, and the Count in error with no button to count again, since popnei refused it or the browser can no longer read the variants file (`filterCounts.md`, "The states") | "The size of the file is not known, since the variants could not be counted." |
+| before a Count, a bound of `WRITE_MAX_BYTES` or more, the Count ready or in error with its button, beside the disabled button | "A file of at most about 2.1 GB may be too large to be written in a browser tab. Count the variants first, above." |
+| the same, while the Count runs | "A file of at most about 2.1 GB may be too large to be written in a browser tab. Its size is known once the Count above ends." |
+| the Count done, and the filters keep no variant, beside the disabled button | "The filters keep none of the variants of panel.nei, so there is nothing to write. Loosen the filters above." |
+| the variants file holds no variant, beside the disabled button | the words of a file of no variant below, in the present: "panel.nei has no variants, so there is nothing to write. Load another variants file." |
+| no counts, and the Count in error with no button to count again, since popnei refused it or the browser can no longer read the variants file (`filterCounts.md`, "The states"), beside the disabled button | "The variants could not be counted, so the file cannot be written either: the Count above says why." |
+| no counts and no number of variants, the Count ready or in error with its button | "The size of the file is known once the variants are counted: Count, above." |
+| the same, while the Count runs | "The size of the file is known once the Count above ends." |
 | the filters keep no variant, `noVariant` | "The filters kept none of the variants of panel.nei, so there is nothing to write. Loosen the filters above." |
-| the variants file holds no variant, `noVariant` with `variantsOfFile` 0 | "panel.nei has no variants, so there is nothing to write. Load another variants file in the Variants step." |
-| a VCF read with only the variants that passed holds none that passed, `noVariant` with `variantsOfFile` 0 | "panel.vcf has no variant with PASS or . in its FILTER column, and it was read with only those, so there is nothing to write. Untick "Only the variants with PASS or . in the FILTER column" in the Variants step and read the file again." |
-| the filters keep no individual | the store's lock, `keptNoneReason` of `docs/specs/core/individualsKept.md`: "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them in the Variants step." |
+| the variants file holds no variant, `noVariant` with `variantsOfFile` 0 | "panel.nei has no variants, so there is nothing to write. Load another variants file." |
+| a VCF read with only the variants that passed holds none that passed, `noVariant` with `variantsOfFile` 0 | "panel.vcf has no variant with PASS or . in its FILTER column, and it was read with only those, so there is nothing to write. Untick "Only the variants with PASS or . in the FILTER column" and read the file again." |
+| the filters keep no individual | the store's lock, `keptNoneReason` of `docs/specs/core/individualsKept.md`: "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them."; and a list of individuals popnei would refuse, `individualListNeeds`: "… Change the list, or remove the filter." |
 | the worker stopped with no answer, a trap of the wasm or a memory that could not grow, `workerFailed` | "The writing stopped unexpectedly, perhaps because the file, of about 1.0 GB, did not fit in the memory of this tab. Remove variants or individuals with the filters and write it again, or write the file with popnei in Python." |
-| popnei refused the write for a genotype of another ploidy than the VCF was read with, its message "line ‹n› of the VCF, the column of ‹individual›: its genotype is of the ploidy ‹found› and the reader was asked for the ploidy ‹given›" | "panel.filtered.nei could not be written. ", then the words the analyses give that refusal (`docs/specs/analyses/diversity.md`, "Its words"): "At line 12 of panel.vcf.gz, the genotype of ind_3 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 in the Variants step and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version." |
-| popnei refused the write otherwise, for a memory that does not take the file or for a line of the VCF it cannot read, which its message alone tells apart | "panel.filtered.nei could not be written: popnei stopped with "‹its message›". A file of about 1.0 GB may not fit in the memory of this tab: remove variants or individuals with the filters and write it again, or write the file with popnei in Python. If the message names a line of the VCF, correct the file, or fetch it again, and load it in the Variants step." |
-| the statistics of each individual it waited for failed | "The statistics of each individual, which the thresholds of the filters of individuals are applied to, could not be calculated, so the file was not written. ", then the words the statistics' own part gives that failure (`docs/specs/analyses/individualChecks.md`, "Its words"): "… The filters kept none of the variants of panel.nei, so there is no variant to count each individual's genotypes over. Loosen the filters of the variants in the Variants step." |
-| the browser can no longer read the variants file, `reopenFailed` | the diversity's words, "panel.nei could not be read again; it may have changed on the disk since it was picked. Load it again in the Variants step." |
+| popnei refused the write for a genotype of another ploidy than the VCF was read with, its message "line ‹n› of the VCF, the column of ‹individual›: its genotype is of the ploidy ‹found› and the reader was asked for the ploidy ‹given›" | "panel.filtered.nei could not be written. ", then the words the analyses give that refusal (`docs/specs/analyses/diversity.md`, "Its words"): "At line 12 of panel.vcf.gz, the genotype of ind_3 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version." |
+| popnei refused the write otherwise, for a memory that does not take the file or for a line of the VCF it cannot read, which its message alone tells apart | "panel.filtered.nei could not be written: popnei stopped with "‹its message›". A file of about 1.0 GB may not fit in the memory of this tab: remove variants or individuals with the filters and write it again, or write the file with popnei in Python. If the message names a line of the VCF, correct the file, or fetch it again, and load it again." |
+| the statistics of each individual it waited for failed | "The statistics of each individual, which the thresholds of the filters of individuals are applied to, could not be calculated, so the file was not written. ", then the words the statistics' own part gives that failure (`docs/specs/analyses/individualChecks.md`, "Its words"): "… The filters kept none of the variants of panel.nei, so there is no variant to count each individual's genotypes over. Loosen the filters of the variants." |
+| the browser can no longer read the variants file, `reopenFailed` | the diversity's words, "panel.nei could not be read again; it may have changed on the disk since it was picked. Load it again." |
 | the calculations could not start, `couldNotStart`, or the page is out of date after a new version of the site, `protocolMismatch` | the diversity's words, "The application could not start its calculations. Save the project, reload the page, and open the project again." and "The page is out of date. Save the project, reload the page, and open the project again." |
 | an error of the application's own code, `defect` | "The application met an error of its own: ‹message›. Write the file again." |
 
@@ -505,7 +558,11 @@ before the user asks.
   and `startWrite` then returns `null`.
 - **The words, with Vitest**, each row of "Its words" asserted whole
   from its failure, the two of 1.0 GB and 2.0 GB from estimates of a
-  million and of 2 million variants of 1,000 individuals.
+  million and of 2 million variants of 1,000 individuals; and the parts
+  of the section in each state, the button disabled for a bound too
+  large before a Count, with the Count ready, running and refused, for
+  filters that keep no variant and a file that holds none, and the
+  saved state with no estimate.
 - **`writeEstimate`, with Vitest**: the bytes of 20,000 variants of
   1,000 individuals, 20,800,000, and of one variant of one individual,
   41; the variants of `variantsKept`, of
@@ -551,6 +608,15 @@ before the user asks.
 - `docs/specs/steps/variants.md`: where the button goes.
 
 ## Open points
+
+None. The owner decided on 27 September 2026, at stop A of
+`docs/plans/variants-step.md`, the points of the screen written above,
+and kept one rule as it was: a write that popnei refuses stays refused
+under its key for the session, as every refusal of popnei does
+(`docs/specs/core/store.md`, "A failure"), also when the refusal is for
+memory, since no write that failed for its size in the measurement was
+a refusal of popnei, and a second try in a fresh worker failed the same
+way in Chromium.
 
 The four constants were set by the measurement of 27 September 2026,
 "What was measured" above, in Chromium and WebKit; Firefox is measured

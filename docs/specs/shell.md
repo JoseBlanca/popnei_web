@@ -10,7 +10,13 @@ line gives the variants and the individuals the filters keep (Open 1,
 below); the stepper takes the checks of the Variants step, the three
 calculations that step shows, into its state; and the notice and the
 status region name those checks and the writing of the filtered
-variants as a file. This revision is approved by the owner on 26 September 2026. The screen
+variants as a file. This revision is approved by the owner on 26 September 2026. Revised
+on 27 September 2026 with the owner's decisions at stop A of
+`docs/plans/variants-step.md`: the summary line says when the filters
+of the variants are not counted (Open 1, below), the status region
+names a writing left behind that a calculation stopped, and the question
+before an opening says how to keep a file written and not saved; the
+undo of a number field is kept as it was built. The screen
 spec of what surrounds every step of the population genetics
 application, first built in the walking skeleton of stage 2 (`docs/build-order.md`),
 the smallest application that goes through every part once: the header,
@@ -111,8 +117,9 @@ its `<h1>`; and the notice, at the bottom.
   Tab key then committed as 0, a filter that keeps no variant, with no
   word; after a commit and one character typed, Cmd+Z did nothing in
   Chromium or WebKit; and with no commit before it, Chromium's undo
-  turned 0.95 into 0. So, as the owner is to judge at stop A of
-  `docs/plans/variants-step.md`: while something is typed in a number
+  turned 0.95 into 0. So, as the owner decided on 27 September 2026 at
+  stop A of `docs/plans/variants-step.md`, keeping it as it was built:
+  while something is typed in a number
   field since its last commit, Ctrl+Z puts back the number the field
   holds, as the text shows it, drops the number typed from the plot and
   the line of a refusal, of a number or of a character, which no longer
@@ -220,7 +227,8 @@ keep (node, 26 September 2026, popnei `js-v0.1.0-dev.2`). It is text, and is not
 | | the individuals kept known | "114 of 200 individuals kept", from `individualsKept`; "none of 200 individuals kept" when they keep none |
 | | a threshold waiting for the statistics of each individual | "200 individuals, how many kept not yet known" |
 | its variants | not counted yet (`numVars` of the source `null`) | nothing |
-| | counted, and no counts of the filters as they are, or no filter of the variants | "1,200 variants", `numVars` of the source |
+| | counted, and no filter of the variants | "1,200 variants", `numVars` of the source |
+| | counted, a filter of the variants, and no counts of the filters as they are | "1,200 variants, filters not counted" |
 | | the counts of the filters as they are, `filterCounts` done | "1,128 of 1,200 variants kept": `passStats.numVars` of the counts, of the `numVars` of the source |
 | the filters | | "no filter", "1 filter", "2 filters": the filters of the variants and of the individuals |
 | the metadata file | none | "no metadata file" |
@@ -234,11 +242,12 @@ writes them (`docs/specs/core/project.md`). A name from the user's
 files is shown escaped as core shows it. How many the filters keep
 follows the pattern of the owner's mockup, "48,210 of 1,203,554
 variants kept (3 filters)", with the individuals kept beside it, since
-the filters of individuals come in the same stage (**Open 1**, below).
+the filters of individuals come in the same stage (Open 1, below).
 The variants kept are known only from a pass over the filters as they
 are, so after a change of a filter the line goes back to the variants of
-the file until a Count or an analysis counts them again, while the
-Variants step says beside the filters that they are not counted; the
+the file, with the words that the filters are not counted, until a Count
+or an analysis counts them again, as the Variants step says beside the
+filters; the
 individuals kept are known with no pass, except for a threshold, which
 needs the statistics of each individual.
 
@@ -364,7 +373,7 @@ file its options of the CSV compared by their values:
 | what changed, from one state to the next | the announcement |
 |---|---|
 | a request is in `runs` that was not | "Diversity: calculating." |
-| in the same change, calculations left behind, which the current project no longer asks for, went to being stopped | added to it: "The earlier calculation of Diversity was stopped.", or "The 2 earlier calculations were stopped." |
+| in the same change, calculations left behind, which the current project no longer asks for, went to being stopped | added to it: "The earlier calculation of Diversity was stopped.", or "The 2 earlier calculations were stopped."; with the writing left behind among them, "The earlier writing of the file was stopped.", "The earlier calculation of Diversity and the writing of the file were stopped.", or "The 2 earlier calculations and the writing of the file were stopped.", as the owner decided on 27 September 2026 |
 | a request that was current and not being stopped left `runs`, and its analysis is `done` under its key | "Diversity: done.", "Diversity: done, 2 warnings.", followed, for an opened project, by the line its panel shows under the result, `checkVerdictText` of its `check` or, when that is `null`, `uncomparedText`, when either gives one: "Diversity: done. The same numbers as in the project file: this variants file gives the results the project was saved with." |
 | the same, and its analysis is in the state `error` under its key | "Diversity could not be calculated. The Analyses step says why.", with the step the analysis is shown in: "Statistics of each individual could not be calculated. The Variants step says why." |
 | a request that was current and being stopped left `runs` | "Diversity: stopped." |
@@ -373,7 +382,7 @@ file its options of the CSV compared by their values:
 | the metadata file of the same load and options went from pending to read | "pops.csv read: 360 rows, 5 columns.", and, when the variants file is read, the sentence of the check: "All 342 individuals found." or "12 individuals of panel.nei are not in pops.csv." |
 | the same, to failed | the reason `individualsNeeds` gives |
 | the warning of a reopened project that differs from its file, `identityWarning` of `projectFile.ts`, appeared, or is there with another load of the variants file than before; while that load is being read, at the end of its read instead | "Warning: " and its words, those of the Variants step (`docs/specs/steps/variants.md`, "A project file opened"), after the read's own announcement |
-| from stage 3, a request of the Counts of the filters that was current left `runs`, and the analysis is `done` | "Counts of the filters: done. 1,128 of the 1,200 variants of panel.nei pass the filters.", the line of the total of the Variants step, or, when a filter kept none, the text of the warning `filterKeptNone` in its place |
+| from stage 3, a request of the Counts of the filters that was current left `runs`, and the analysis is `done` | "Counts of the filters: done. 1,128 of the 1,200 variants of panel.nei pass the filters.", the line of the total of the Variants step, or, when a filter kept none, the text of the warning `filterKeptNone` in its place, and, when the file holds no variant, the text of the warning `noVariant`, which the step shows alone |
 | a request of the writing is in `runs` that was not | "Writing panel.filtered.nei.", the name the Variants step shows |
 | a request of the writing that was current and not being stopped left `runs`, and `write` is `done` | "panel.filtered.nei is written, 19.2 MB; Save it in the Variants step." (`docs/specs/analyses/writeVariants.md`) |
 | the same, and `write` is `noVariant`, a file of no variant, which the store does not keep | "The filters kept none of the variants of panel.nei, so there is nothing to write."; when the pass was given no variant, a variants file with none or a VCF read with only the passed variants with none that passed, the words the Variants step shows for it (`docs/specs/analyses/writeVariants.md`, "Its words"): "panel.nei has no variants, so there is nothing to write. Load another variants file in the Variants step." |
@@ -618,7 +627,10 @@ the file and some, "The project file cannot be opened: …", do not:
    ongoing calculations and the writing of panel.filtered.nei will be
    stopped."; and, when a file written is not
    saved, `write` in `done`, "panel.filtered.nei, written and not saved,
-   will be discarded." (point G of `docs/specs/stage-3-open-points.md`).
+   will be discarded; to keep it, press Keep the current project and
+   save it in the Variants step." (point G of
+   `docs/specs/stage-3-open-points.md`), since saving the project does
+   not keep the file, as the owner decided on 27 September 2026.
    Its buttons: "Open panel.popnei.json"
    and "Keep the current project". The dialog has no Save of its own, so
    its words name the button that leads to one, as the owner decided on
@@ -845,15 +857,17 @@ with the analyses of `TEST_DEFS` of `src/core/testSupport.ts`:
   `keptNoneReason`.
 - **`summaryLine`**: the empty first project gives "No variants file · 1
   filter · no metadata file"; the example above, with 1,200 variants
-  counted, gives "panel.nei · 200 individuals · 1,200 variants · 1 filter
-  · 3 populations by pop"; with the thresholds of the individuals at 0.03
+  counted and the missing data filter not counted, gives "panel.nei · 200
+  individuals · 1,200 variants, filters not counted · 1 filter · 3
+  populations by pop"; with the thresholds of the individuals at 0.03
   and 0.38 and the missing data filter at 0.05 on `panel.nei`, whose
   numbers are those of `docs/specs/core/individualsKept.md` and
   `filterCounts.md`, "panel.nei · 119 of 200 individuals kept · 1,152 of
   1,200 variants kept · 3 filters · 3 populations by pop", and with no
   counts and no statistics "panel.nei · 200 individuals, how many kept
-  not yet known · 1,200 variants · 3 filters · …"; a case for each row of
-  its table.
+  not yet known · 1,200 variants, filters not counted · 3 filters · …";
+  with the thresholds alone, no filter of the variants, "… · 1,200
+  variants · 2 filters · …"; a case for each row of its table.
 - **`openQuestion`**: with calculations, with the writing, with both,
   and with a file written and not saved, the words asserted whole.
 - **`noticeText`**: each row of the table of the notice, from a literal
@@ -977,9 +991,15 @@ The open points of the eleven specs of stage 2 are gathered in
 decided by the owner on 25 September 2026, and are written above as
 decided: three steps, and no Export step (point J there), and Save as a
 dialog of the page (point K), with its question before leaving as
-above. One stayed, and stage 3 answers it:
+above. One stayed, and stage 3 answered it:
 
-1. **How many variants the filters keep, in the summary line.** The
+1. **How many variants the filters keep, in the summary line.**
+   Decided by the owner on 27 September 2026, at stop A of
+   `docs/plans/variants-step.md`, as written here and with one change:
+   while the filters of the variants are not counted, the line says so,
+   "1,200 variants, filters not counted", and not "1,200 variants"
+   alone, which read beside "3 filters" as the variants the filters
+   keep. The
    owner's mockup has "48,210 of 1,203,554 variants kept (3 filters)".
    The walking skeleton did not know it, and the owner left the line as
    it was on 25 September 2026, with the kept count to join it in stage 3
@@ -992,7 +1012,7 @@ above. One stayed, and stage 3 answers it:
    page, and the line goes back to "1,200 variants" otherwise; the
    option not taken was to keep the last counts with a word that they
    are of other filters, which the line, read at a glance, would hide.
-   This is the writer's, for the owner to judge on the screen of stage 3
+   It was the writer's, for the owner to judge on the screen of stage 3
    (`docs/specs/stage-3-open-points.md`, "Choices of a spec the owner may
    overrule").
 

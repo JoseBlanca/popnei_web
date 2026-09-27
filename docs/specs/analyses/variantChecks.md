@@ -111,7 +111,11 @@ Its `passStats` has no filter, so the store takes from it the number of
 variants of the file (`countsOf`, `docs/architecture.md`, section 4) and
 no counts of the filters. popnei refuses a file with no variant, "the
 pass gave no variant and its source holds none", and a line of a VCF it
-cannot read.
+cannot read. A refusal of an empty pass, "the pass gave no variant:",
+gets popnei's own message in the words of any other refusal, and not
+"Loosen the filters", since the pass of the histograms reads no filter
+and no filter would help; the owner kept it so on 27 September 2026, at
+stop A of `docs/plans/variants-step.md`.
 
 ### The warnings
 
@@ -274,8 +278,8 @@ start with "Calculate", and they say "for the file loaded now", since
 only a change of the load removes them, a new file or the same file read
 again with other options, whose words end the sentence as the command
 gives them. They were written with the code
-on 27 September 2026, for the owner to judge at the stop of the plan
-where the screens are tried:
+on 27 September 2026, and the owner accepted them the same day, at stop
+A of `docs/plans/variants-step.md`, where the screens are tried:
 
 | the cause | results removed |
 |---|---|

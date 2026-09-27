@@ -9,6 +9,13 @@ owner's decisions on the screen as built (stop 7.5 of
 `docs/build-order.md`, the Variants step whole, as the revision of
 `docs/architecture.md` the owner approved that day has it; the revision
 is approved by the owner on 26 September 2026, and there is no code of its parts yet.
+Revised on 27 September 2026 with the owner's decisions at stop A of
+`docs/plans/variants-step.md`, where the owner tried the step as built
+and accepted it: a line under the filter by observed heterozygosity, the
+words of the LD pruning, of a threshold on a histogram and of no counts,
+a file with no variant counted, the writing refused in three more cases
+(`docs/specs/analyses/writeVariants.md`), and the panel of a plot as a
+stop of the Tab key.
 
 The screen spec of the first step of both applications. In stage 2 the
 user picks the variants file, a VCF or a `.nei` file, sets how a VCF is
@@ -286,21 +293,28 @@ no buttons of their own to step them; the distance, a whole number from 1 to 900
 `filterByLd` (`js/popnei/src/variant.ts`), shown and typed with no comma
 between thousands, so that what the field shows can be typed back.
 
-Under three of the switches, a line says what popnei filters on, since a
-label alone would mislead:
+Under each switch, a line says what popnei filters on, since a label
+alone would mislead:
 
 - missing data: "A genotype is missing when any of its alleles is, 0/.
   among them; the proportion is over every individual of the file." A
   genotype is missing when any of its alleles is, so `0/.` counts as
   missing (`js/popnei/src/variant.ts`).
+- observed heterozygosity: "The proportion of the individuals with a
+  called genotype that are heterozygous; a high one often marks
+  duplicated regions read as one." The owner decided it on 27 September
+  2026; the filter had no line before, and a user who had not met the
+  statistic learned from the label alone neither what it counts nor
+  why a variant is removed for it.
 - MAF: "The frequency of the commonest allele: 0.95 removes a variant
   whose commonest allele is above 0.95. For a variant of two alleles,
   that is a minor allele frequency below 0.05." The MAF is the major
   allele frequency, as the owner decided on 24 September 2026
   (`docs/functionality.md`, section 3), and a user who reads "MAF" as
   the minor one would set 0.05 and keep almost nothing.
-- LD pruning: "Of two variants closer than the distance whose r² is
-  above the maximum, the first is kept." popnei's `filterByLd` keeps the
+- LD pruning: "Of two variants closer than the distance, and with an r²
+  above the maximum, the first is kept.", the words the owner chose on
+  27 September 2026. popnei's `filterByLd` keeps the
   one that comes first, and compares a variant with those already kept
   on its chromosome within the distance.
 
@@ -484,19 +498,27 @@ popnei gave, as the diversity's CSV writes its numbers, and the state
 `kept`, `partly_kept` or `removed`, empty with no threshold.
 
 The words of each block, which the specs above leave to the screen,
-written with the code on 27 September 2026: above the two tabs, the
+written with the code on 27 September 2026 and accepted by the owner
+the same day, at stop A of `docs/plans/variants-step.md`: above the two
+tabs, the
 title of the histogram, "Major allele frequency, mean 0.7163", with the
 mean to four decimals, or "Major allele frequency, no mean" when popnei
 gives none, a file none of whose variants has a called genotype; the
 block is a group named by that title, so that a screen reader names the
 tabs and the button of the CSV with the histogram they belong to; under
-the title, while the filter is on, "Threshold of the MAF filter: 0.95",
-or "Threshold of the filter by observed heterozygosity: 0.5", with the
-number the plot is given, the one typed while it is typed; under the
+the title, while the filter is on, "Threshold of the MAF filter: 0.95,
+drawn over every variant of the file", or "Threshold of the filter by
+observed heterozygosity: 0.5, drawn over every variant of the file",
+with the number the plot is given, the one typed while it is typed,
+since the histogram counts every variant of the file and the count
+beside the filter only those the filters above it kept, as the owner
+decided on 27 September 2026; under the
 plot, in its tab, while the threshold splits a bin that holds any
 variant, the line "The
 threshold 0.5 splits the bin from 0.5 to 0.525, 62 variants: the filter
-keeps those of its variants at most 0.5 and removes the others.", with
+keeps those of its variants at most 0.5 and removes the others.", which
+the owner kept on 27 September 2026 rather than a row more in the
+legend, with
 the edges and the threshold to four decimals at most as the description
 of the plot has them, since the plot draws that bin outlined when the
 line falls on its lower edge, and its legend has no row for it
@@ -543,8 +565,8 @@ keeps", its running and error states, and, once counted, "1,128 of the
 1,200 variants of panel.nei pass the filters." and, when a filter kept
 none, the warning "The MAF filter kept none of the 1,152 variants it was
 given, …" (`filterCounts.md`, "The warnings"). Without counts for the filters
-as they are, the line "Not counted for these filters. Count, or run an
-analysis, to see what each filter keeps." stands in place of the line of
+as they are, the line "Not counted for these filters. Count to see what
+each filter keeps." stands in place of the line of
 the total while the Count is ready, beside its button, and nothing beside
 the filters; while it runs, and in error, the bar or the words of the
 error stand there instead, since the line asks for a Count that is under
@@ -555,6 +577,12 @@ variants takes every count off at once, and is in no notice
 an undo, or any calculation over the same filters, brings them back.
 With no filter on, the Count gives the variants of the file, and the
 line of the total reads "1,200 variants in panel.nei, with no filter."
+For a file with no variant, the Count gives counts of zero and the
+warning `noVariant` (`filterCounts.md`, "The cases"), which the step
+shows alone, with no line of the total and no count beside the filters,
+where "0 of the 0 variants …" and "Kept 0 of the 0 variants it was
+given." would say nothing more, as the owner decided on 27 September
+2026.
 
 ### The filters of the individuals
 
@@ -886,8 +914,10 @@ nothing on the screen says the things the lines above do not.
   variants; each filter of the variants, its switch, its fields, and its
   histogram: the row of its two tabs, one stop of the Tab key, whose
   arrow keys move between "Plot" and "Table of the bins"; then the panel
-  of the tab selected, the plot, which is no stop, or the table of the
-  bins, one stop; then its button of the CSV of the bins; the Count button;
+  of the tab selected, the plot or the table of the bins, one stop each:
+  React Aria makes a panel with nothing to focus a stop, as the WAI-ARIA
+  guidance for tabs advises, so that a user of the keyboard reaches what
+  the tab shows, and the owner kept it so on 27 September 2026; then its button of the CSV of the bins; the Count button;
   each list, its text area and its two buttons; the button of the
   statistics; each threshold, its switch, its field and its histogram,
   in the same order; the table of the individuals, which the Tab key
@@ -948,7 +978,9 @@ nothing on the screen says the things the lines above do not.
   never the fill of a bar alone (1.4.1). The column Kept of the table of
   the individuals is a word, "kept" or "removed".
 - The disabled button of the writing, locked by a list of individuals
-  or by the individuals kept, is described by its reason, which is text beside it, since a disabled button is not a stop
+  or by the individuals kept, or refused for its size, for filters that
+  keep no variant or after a Count refused
+  (`docs/specs/analyses/writeVariants.md`), is described by its reason, which is text beside it, since a disabled button is not a stop
   of the Tab key and a user of the keyboard would not learn why.
 
 ## How it is checked
@@ -1115,7 +1147,9 @@ draft until the owner sees the step at the stop of the plan where the
 screens are tried; point G, the file written and not saved that a change
 of its filters discards, with the notice that says so; and point I,
 what the description of each histogram counts, the variants or the
-individuals in the bins. The two points of stage 2 were decided by the
+individuals in the bins. The owner accepted the step on 27 September
+2026 at stop A of `docs/plans/variants-step.md`, with the changes this
+revision names, and the ends of the reasons of a list with it. The two points of stage 2 were decided by the
 owner on 25 September 2026: the button that reads a VCF again with
 other options, in stage 2 (point M of
 `docs/specs/stage-2-open-points.md`), and the missing data filter on at

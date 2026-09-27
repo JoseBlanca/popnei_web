@@ -12,7 +12,10 @@ kept". It depends on the specs of stage 2 revised for stage 3,
 `docs/specs/core/keys.md`, `store.md` and `docs/specs/worker/protocol.md`,
 and on `docs/specs/entry.md`, for `countsOf`. The words key, load, pass,
 check numbers and the filters are those of
-`docs/specs/analyses/individualChecks.md`.
+`docs/specs/analyses/individualChecks.md`. Revised on 27 September 2026
+with the owner's decisions at stop A of `docs/plans/variants-step.md`:
+the line of no counts, the counts of a file with no variant, and the
+words of a refusal for a file with none.
 
 ## The module
 
@@ -117,7 +120,7 @@ result.
 
 | code | when | the text |
 |---|---|---|
-| `filterKeptNone` | a filter kept no variant; the first such | "The MAF filter kept none of the 1,152 variants it was given, so the analyses and the statistics of each individual have no variant to calculate over, and a file written would hold none. Loosen it, or a filter before it." |
+| `filterKeptNone` | a filter kept no variant; the first such | "The MAF filter kept none of the 1,152 variants it was given, so the analyses and the statistics of each individual have no variant to calculate over, and a file written would hold none. Loosen it, or a filter before it.", and, when it is the first filter, which has none before it, "… Loosen it.", as the owner kept it on 27 September 2026 |
 | `noVariant` | the file gave no variant, `numVars` 0 with no filter or the first filter given 0 | the words of the diversity for a file with no variant, "empty.vcf has no variants. Load another variants file.", and, for a VCF read with only the variants that passed, "failed.vcf has no variant with PASS or . in its FILTER column, and it was read with only those. Untick …" |
 
 The names of the filters are those of the step's labels,
@@ -204,8 +207,12 @@ message would get the words of any other refusal.
   same file gives the same counts, so the counts the store fills from a
   write and those of a Count agree, and the first row of `refusalText`,
   the source that holds no variant, never reaches the Count's error
-  state. The step shows the counts as for any file, "Kept 0 of the 0
-  variants it was given.", with the warning under the line of the total.
+  state. The step shows the warning alone, with no count beside the
+  filters and no line of the total, since "Kept 0 of the 0 variants it
+  was given." and "0 of the 0 variants of empty.vcf pass the filters."
+  would say nothing the warning does not, as the owner decided on 27
+  September 2026; the shell announces the warning at the end of the
+  Count in place of the line of the total.
 - **A threshold moved.** The counts of every filter go, since their key
   holds all of them, and come back with an undo or the next pass.
 - **A threshold moved back.** The key of the earlier filters, and their
@@ -241,8 +248,10 @@ The button "Count the variants each filter keeps", under the filters of
 the variants. Beside each filter, once counted: "Kept 1,152 of the 1,200
 variants it was given." Under the last: "1,128 of the 1,200 variants of
 panel.nei pass the filters." Without counts for the filters as they are:
-"Not counted for these filters. Count, or run an analysis, to see what
-each filter keeps."
+"Not counted for these filters. Count to see what each filter keeps.",
+as the owner decided on 27 September 2026; the words before, "Count, or
+run an analysis, …", sent the user to the analyses also while the
+Analyses step was locked.
 
 ### The states
 
@@ -254,7 +263,7 @@ each filter keeps."
 | running | the bar and the clock of the diversity, beside the button | Stop |
 | done | the counts beside the filters, and the warning | change a filter |
 | results removed | cannot happen: the counts are in no notice; a change shows the line of no counts | |
-| error | the words of the diversity's error table, "calculate the diversity" replaced by "count the variants", and "Run it again" and "to run it again" by "Count again" and "to count again", since this part has a Count button and no Run | as in the diversity |
+| error | the words of the diversity's error table, "calculate the diversity" replaced by "count the variants", and "Run it again" and "to run it again" by "Count again" and "to count again", since this part has a Count button and no Run; but for a file with no variant, "there is no variant to count", "empty.vcf has no variants, so there is no variant to count. Load another variants file in the Variants step.", and not "there is no variant to count the variants over", as the owner decided on 27 September 2026 | as in the diversity |
 
 ### Accessibility
 

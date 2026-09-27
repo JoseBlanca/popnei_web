@@ -695,7 +695,11 @@ show its file, as those of the `.nei` file.
   behind, as it stops any calculation left behind.
 - **A failure** is kept as an analysis's is: a refusal of popnei under
   the key of the write for the session, `reopenFailed` under the load
-  id, any other until the next change of the project.
+  id, any other until the next change of the project. A refusal for
+  memory is kept too, as the owner decided on 27 September 2026 at stop
+  A of `docs/plans/variants-step.md`: no write that failed for its size
+  was a refusal of popnei, and a second try failed the same way
+  (`docs/specs/analyses/writeVariants.md`, "Open points").
 - **`cancelWrite`** stops the write in flight of the key the project
   gives, and its wait for the statistics as `cancelRun` does.
 

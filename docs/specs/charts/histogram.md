@@ -130,8 +130,8 @@ edge, and the table of the bins says it is partly kept (below, "The
 numbers without the picture"). The legend has no row for a bar partly
 kept, and the outlined bar reads as removed, so that the plot would say
 1,090 variants kept where the filter keeps 1,098: the screen names the
-bin a threshold splits in a line under the plot, as the owner is to
-judge at stop A of `docs/plans/variants-step.md`; a fourth row of the
+bin a threshold splits in a line under the plot, as the owner decided on
+27 September 2026 at stop A of `docs/plans/variants-step.md`; a fourth row of the
 legend, the other way, would take room from the plot at 320 pixels
 wide and change where the legend is placed.
 
@@ -140,7 +140,11 @@ wide and change where the legend is placed.
 - **The horizontal axis** runs from the first edge to the last, 0 to 1
   for the three histograms of the variants and the range of the values
   for the two of the individuals, widened to take the threshold when it
-  lies outside them, so that its line is always drawn.
+  lies outside them, so that its line is always drawn. The axis of the
+  major allele frequency, and the table of its bins, start at 0 too,
+  though no variant of two alleles has a value below 0.5, so that the
+  three histograms of the variants share one axis for every file; the
+  owner kept it so on 27 September 2026.
     Its ticks are those the base draws, with the format of `d3-scale`'s
   linear scale (`plot2d.md`, "The axes").
 - **The vertical axis** runs from 0 to the largest count, made round by

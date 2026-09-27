@@ -24,7 +24,10 @@ below has the owner's answer, what it changed in the specs, and the
 option not taken. The last part of point F, the values at which three
 filters start when they are turned on, the owner settled the same day
 by keeping those filters off until the user turns them on, and the
-values of (a) below stand. After the points come the choices the writers made alone
+values of (a) below stand. On 27 September 2026, at stop A of
+`docs/plans/variants-step.md`, the owner tried the Variants step as
+built, accepted it, and took every recommendation of the report of the
+plan on it; those decisions are the section after the points. After them come the choices the writers made alone
 that a user meets, which the owner may overrule, the numbers that a
 measurement sets, which are not the owner's to decide, and a note for
 stage 4.
@@ -215,10 +218,55 @@ The option not taken was Done, with which the user would learn it only
 at the diversity's locked Run button, in the Analyses step. Spec:
 `shell.md`.
 
+## What the owner decided on 27 September 2026, at stop A
+
+The owner tried the screens of the writing of the filtered variants and
+of the filters of the variants, and took the nineteen recommendations of
+`docs/plans/variants-step.report.md`, "Stop A: what waits for the
+owner". Each is written in its spec as decided. What changes for a user:
+
+- **Write refused in three more cases** (`writeVariants.md`): before a
+  Count, when the bound of the file from the variants of the file
+  reaches `WRITE_MAX_BYTES`, 1.8 GB, with "… Count the variants first,
+  above."; when the Count says the filters keep no variant, or the file
+  holds none; and after a Count in error with no button, a refusal of
+  popnei or a file the browser can no longer read, which a write would
+  meet the same way. While the Count runs, no word asks for it.
+- **The warning above 500 MB** says that on a phone or a tablet the
+  write fails with far smaller files (`writeVariants.md`).
+- **Words**: the threshold under a histogram, "Threshold of the MAF
+  filter: 0.95, drawn over every variant of the file"; "Not counted for
+  these filters. Count to see what each filter keeps."; the LD pruning,
+  "Of two variants closer than the distance, and with an r² above the
+  maximum, the first is kept."; a line under the filter by observed
+  heterozygosity (`steps/variants.md`); the summary line before a
+  Count, "1,200 variants, filters not counted" (`shell.md`, open point
+  1); a file with no variant shows the warning of the Count alone, and
+  a refusal of the Count for one says "there is no variant to count"
+  (`filterCounts.md`); the words of the writing leave out "in the
+  Variants step"; the question before an opening says "… will be
+  discarded; to keep it, press Keep the current project and save it in
+  the Variants step." (`shell.md`); once saved, the writing gives the
+  size written alone; and the status region says "The earlier writing
+  of the file was stopped." when a calculation stops a writing left
+  behind (`shell.md`).
+- **Kept as built**: a write that popnei refuses for memory stays
+  refused under its key (`store.md`, `writeVariants.md`); Cmd+Z in a
+  number field with nothing typed since its commit is the project's
+  Undo (`shell.md`); the panel of a plot is a stop of the Tab key
+  (`steps/variants.md`); the line under a plot that names the bin a
+  threshold splits (`histogram.md`); the axis of the major allele
+  frequency from 0 (`histogram.md`); a refusal of an empty pass of the
+  histograms in popnei's words (`variantChecks.md`), and the warning of
+  a first filter that keeps no variant ending "Loosen it."
+  (`filterCounts.md`).
+
 ## Choices of a spec the owner may overrule
 
 Each was decided by the writer of its spec, and each changes what a user
-meets:
+meets. The owner accepted the screens that show them on 27 September
+2026, above, so they stand as decided, with the change of the summary
+line said there:
 
 - **The bins of the histograms of the individuals** are 20 over the
   range of the values, from the smallest to the largest, and not 40 over
@@ -232,7 +280,8 @@ meets:
   filter `panel.filtered.nei`, since the first is the variants file
   converted; a file of no variant, which popnei writes, gets no Save
   button, and the step says the filters kept none; the button to write
-  is disabled at an estimate of 4 GB or more, which wasm cannot address
+  is disabled at an estimate of 4 GB or more, which wasm cannot address,
+  1.8 GB since the measurement of 27 September 2026
   (`writeVariants.md`).
 - **A Stop of an analysis that waits for the statistics of each
   individual** stops the statistics too, unless another analysis waits
