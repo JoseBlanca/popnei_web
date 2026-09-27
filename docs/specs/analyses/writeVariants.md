@@ -447,7 +447,7 @@ notice and the status region is "Writing the file".
 | writing | "Writing panel.filtered.nei · 35% · 0:12", the bar of the diversity | Stop |
 | written, the store's `done` | "Save panel.filtered.nei, 19.2 MB" | Save |
 | written with no variant, the store's `noVariant` | the words of a file of no variant, below, and no Save | loosen the filters |
-| saved, the store's `saved` | "panel.filtered.nei, 19.2 MB, was handed to the browser to save. To save it again, write it again." and the button to write, with no estimate beside it, so that the part gives one size of the file, the one written, as the owner decided on 27 September 2026 | Write |
+| saved, the store's `saved` | "panel.filtered.nei, 19.2 MB, was handed to the browser to save. To save it again, write it again." and the button to write, with no estimate beside it, so that the part gives one size of the file, the one written, as the owner decided on 27 September 2026; when Write is then disabled, a Count refused after the save among the reasons, the line ends at "… to save.", since it cannot be written again | Write |
 | stopped or dropped, the store's `ready` | the button to write, and, when a change dropped it, `dropped`, "The file was not kept, since the filters changed while it was written." | Write |
 | results removed | a file written and not saved, which a change of the filters or a new load discarded: the part is `ready` for the new filters, with the button to write, and the notice of the shell says that the file was discarded and that Undo does not bring it back (`docs/specs/shell.md`, "The notice"; point G of `docs/specs/stage-3-open-points.md`) | Write; the Undo of the notice, which brings the filters back and not the file |
 | error | the words of the failure, below | as the words say |
@@ -562,7 +562,8 @@ before the user asks.
   of the section in each state, the button disabled for a bound too
   large before a Count, with the Count ready, running and refused, for
   filters that keep no variant and a file that holds none, and the
-  saved state with no estimate.
+  saved state with no estimate; and no text of the section, in any
+  state and for any failure, with "Variants step" in it.
 - **`writeEstimate`, with Vitest**: the bytes of 20,000 variants of
   1,000 individuals, 20,800,000, and of one variant of one individual,
   41; the variants of `variantsKept`, of

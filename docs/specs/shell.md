@@ -227,10 +227,11 @@ keep (node, 26 September 2026, popnei `js-v0.1.0-dev.2`). It is text, and is not
 | | the individuals kept known | "114 of 200 individuals kept", from `individualsKept`; "none of 200 individuals kept" when they keep none |
 | | a threshold waiting for the statistics of each individual | "200 individuals, how many kept not yet known" |
 | its variants | not counted yet (`numVars` of the source `null`) | nothing |
+| | counted, and the file holds none (`numVars` 0) | "no variant", with or without counts, where "0 of 0 variants kept" would say nothing more, as the Variants step shows a file of no variant (`docs/specs/steps/variants.md`) |
 | | counted, and no filter of the variants | "1,200 variants", `numVars` of the source |
-| | counted, a filter of the variants, and no counts of the filters as they are | "1,200 variants", and the part of the filters says they are not counted, below |
+| | counted, a filter of the variants, and no counts of the filters as they are | "1,200 variants before the filters" |
 | | the counts of the filters as they are, `filterCounts` done | "1,128 of 1,200 variants kept": `passStats.numVars` of the counts, of the `numVars` of the source |
-| the filters | | "no filter", "1 filter", "2 filters": the filters of the variants and of the individuals; "3 filters, not counted" while the variants are counted, a filter of the variants is on, and the filters as they are have no counts |
+| the filters | | "no filter", "1 filter", "2 filters": the filters of the variants and of the individuals |
 | the metadata file | none | "no metadata file" |
 | | being read | "reading pops.csv" |
 | | read failed, or individuals missing, or the column of the populations not in it | "pops.csv could not be read", "12 individuals missing from pops.csv", "column pop not in pops.csv" |
@@ -245,7 +246,7 @@ variants kept (3 filters)", with the individuals kept beside it, since
 the filters of individuals come in the same stage (Open 1, below).
 The variants kept are known only from a pass over the filters as they
 are, so after a change of a filter the line goes back to the variants of
-the file, with the words that the filters are not counted, until a Count
+the file, "before the filters", until a Count
 or an analysis counts them again, as the Variants step says beside the
 filters; the
 individuals kept are known with no pass, except for a threshold, which
@@ -627,10 +628,15 @@ the file and some, "The project file cannot be opened: …", do not:
    ongoing calculations and the writing of panel.filtered.nei will be
    stopped."; and, when a file written is not
    saved, `write` in `done`, "panel.filtered.nei, written and not saved,
-   will be discarded; to keep it, press Keep the current project and
-   save it in the Variants step." (point G of
-   `docs/specs/stage-3-open-points.md`), since saving the project does
-   not keep the file, as the owner decided on 27 September 2026.
+   will be discarded." (point G of
+   `docs/specs/stage-3-open-points.md`). Then, since saving the project
+   does not keep the file, as the owner decided on 27 September 2026,
+   the first two sentences are one about both and one that says how to
+   keep both: "It replaces the project on the page, and an opening
+   cannot be undone, and panel.filtered.nei, written and not saved, will
+   be discarded. To keep them, press Keep the current project, then save
+   the project with Save project and panel.filtered.nei in the Variants
+   step.", followed by what will be stopped.
    Its buttons: "Open panel.popnei.json"
    and "Keep the current project". The dialog has no Save of its own, so
    its words name the button that leads to one, as the owner decided on
@@ -858,14 +864,16 @@ with the analyses of `TEST_DEFS` of `src/core/testSupport.ts`:
 - **`summaryLine`**: the empty first project gives "No variants file · 1
   filter · no metadata file"; the example above, with 1,200 variants
   counted and the missing data filter not counted, gives "panel.nei · 200
-  individuals · 1,200 variants · 1 filter, not counted · 3 populations
-  by pop"; with the thresholds of the individuals at 0.03
+  individuals · 1,200 variants before the filters · 1 filter · 3
+  populations by pop"; with the thresholds of the individuals at 0.03
   and 0.38 and the missing data filter at 0.05 on `panel.nei`, whose
   numbers are those of `docs/specs/core/individualsKept.md` and
   `filterCounts.md`, "panel.nei · 119 of 200 individuals kept · 1,152 of
   1,200 variants kept · 3 filters · 3 populations by pop", and with no
   counts and no statistics "panel.nei · 200 individuals, how many kept
-  not yet known · 1,200 variants · 3 filters, not counted · …";
+  not yet known · 1,200 variants before the filters · 3 filters · …";
+  a file of no variant "nopass.vcf · 200 individuals · no variant · 1
+  filter · …";
   with the thresholds alone, no filter of the variants, "… · 1,200
   variants · 2 filters · …"; a case for each row of its table.
 - **`openQuestion`**: with calculations, with the writing, with both,
@@ -997,9 +1005,12 @@ above. One stayed, and stage 3 answered it:
    Decided by the owner on 27 September 2026, at stop A of
    `docs/plans/variants-step.md`, as written here and with one change:
    while the filters of the variants are not counted, the line says so,
-   "1,200 variants · 3 filters, not counted", and not "1,200 variants
-   · 3 filters", which read as the variants the filters keep; with a
-   Count, "1,175 of 1,200 variants kept · 2 filters". The
+   "1,200 variants before the filters · 3 filters", and not "1,200
+   variants · 3 filters", which read as the variants the filters keep;
+   with a Count, "1,175 of 1,200 variants kept · 3 filters". It does
+   not say the filters are not counted, since their number counts the
+   filters of individuals too, which no Count counts. A file of no
+   variant reads "no variant". The
    owner's mockup has "48,210 of 1,203,554 variants kept (3 filters)".
    The walking skeleton did not know it, and the owner left the line as
    it was on 25 September 2026, with the kept count to join it in stage 3

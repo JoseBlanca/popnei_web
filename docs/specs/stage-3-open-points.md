@@ -240,13 +240,14 @@ owner". Each is written in its spec as decided. What changes for a user:
   "Of two variants closer than the distance, and with an r² above the
   maximum, the first is kept."; a line under the filter by observed
   heterozygosity (`steps/variants.md`); the summary line before a
-  Count, "1,200 variants · 3 filters, not counted" (`shell.md`, open point
-  1); a file with no variant shows the warning of the Count alone, and
+  Count, "1,200 variants before the filters · 3 filters", and "no
+  variant" for a file with none (`shell.md`, open point 1); a file with no variant shows the warning of the Count alone, and
   a refusal of the Count for one says "there is no variant to count"
   (`filterCounts.md`); the words of the writing leave out "in the
-  Variants step"; the question before an opening says "… will be
-  discarded; to keep it, press Keep the current project and save it in
-  the Variants step." (`shell.md`); once saved, the writing gives the
+  Variants step"; the question before an opening says that a file
+  written and not saved will be discarded, and that Keep the current
+  project, then Save project and the Variants step, keep both
+  (`shell.md`); once saved, the writing gives the
   size written alone; and the status region says "The earlier writing
   of the file was stopped." when a calculation stops a writing left
   behind (`shell.md`).
