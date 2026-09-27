@@ -389,6 +389,14 @@ stays until the commit after it. A deletion in the field before that
 commit, the user mending what they typed, lets the commit take the
 number again. The line is announced as the line of a number refused is.
 
+The keyboard a phone shows for a field follows from the same rule. React
+Aria asks an iPhone, and a phone of Android, for the keypad of decimals,
+which in a region that writes 0,1 has a comma and no point, so that no
+decimal could be typed in a threshold. A field that takes decimals, a
+threshold or the r², asks for the whole keyboard, which has the point;
+a field of whole numbers, the ploidy and the distance, for the keypad of
+digits alone.
+
 A field left empty sends nothing and shows again the value it had, with
 no line, since nothing was typed that could be taken for another number;
 the same holds for the ploidy, which then keeps its value for the next
