@@ -908,7 +908,11 @@ nothing on the screen says the things the lines above do not.
   (`docs/specs/analyses/diversity.md`, "Accessibility"). When the Count
   ends done with the focus on its button, the focus moves to the line of
   the variants that pass, which takes the focus for that and is not a
-  stop of the Tab key. The Save button takes the focus when a write ends
+  stop of the Tab key. When the Count ends in an error that offers no
+  button, popnei's refusal or a file the browser can no longer read, and
+  the focus was on the button, the focus moves in the same way to the
+  words of the error, since the Count has no heading of its own to take
+  it, as the block of a check does. The Save button takes the focus when a write ends
   with the focus on the button that asked for it (`writeVariants.md`).
 - Each histogram is an image with its title and description, and the
   table of its bins beside it, as `docs/specs/charts/histogram.md` has

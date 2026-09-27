@@ -195,6 +195,17 @@ message would get the words of any other refusal.
   on `panel.nei` with the missing data filter at 0.05 and the MAF filter
   at 0.4, which the step does not offer
   (`docs/specs/analyses/writeVariants.md`).
+- **The file holds no variant.** Count gives counts of zero, with
+  `noVariant`, and is not refused: popnei's `iterBlocks` refuses no
+  empty source, and gave `{ numVars: 0, filtering: {} }` with no filter
+  and `{ numVars: 0, filtering: { missing_data: { varsProcessed: 0,
+  varsKept: 0 } } }` with the missing data filter, on a VCF of a header
+  alone (node, 27 September 2026, `js-v0.1.0-dev.2`). A write over the
+  same file gives the same counts, so the counts the store fills from a
+  write and those of a Count agree, and the first row of `refusalText`,
+  the source that holds no variant, never reaches the Count's error
+  state. The step shows the counts as for any file, "Kept 0 of the 0
+  variants it was given.", with the warning under the line of the total.
 - **A threshold moved.** The counts of every filter go, since their key
   holds all of them, and come back with an undo or the next pass.
 - **A threshold moved back.** The key of the earlier filters, and their
