@@ -19,7 +19,11 @@ stop of the Tab key. Revised the same day for the lists of individuals,
 by the owner's decision at stop A that the words of this step do not
 end "in the Variants step": the reason of a list under it leaves that
 end out, describes its text area, and is announced when an Apply or a
-Clear brings it.
+Clear brings it. Revised the same day for the two thresholds of the
+individuals, with the words the section had left to the code: the line
+of each threshold beside its histogram, the reason of no individual
+kept as the step shows it, and when the counts and the line of the
+individuals that pass are left out.
 
 The screen spec of the first step of both applications. In stage 2 the
 user picks the variants file, a VCF or a `.nei` file, sets how a VCF is
@@ -687,7 +691,22 @@ marked when the filter is on and following the number typed as above;
 its axes "Proportion of missing genotypes" or "Observed heterozygosity",
 and "Individuals"; its legend "Maximum 0.03", "Kept by this filter",
 "Removed by this filter"; the table of its bins and its button of the CSV, as those of the
-variants. Before the statistics are calculated, or once
+variants. Under the title of each, while its filter is on, the line of
+its threshold in the words of the variants': "Threshold of the filter of
+individuals by missing data: 0.03, drawn over every individual of the
+file", or "Threshold of the filter of individuals by observed
+heterozygosity: 0.38, drawn over every individual of the file", with
+the number the plot is given, the one typed while it is typed. The
+histogram counts every individual of the file, since the statistics are
+calculated with no filter of individuals, and the count beside the
+filter only those the filters above it kept, the lists and, for the
+heterozygosity, the missing data. The line under a plot that names the
+bin a threshold splits is the variants' as well, "The threshold 0.03
+splits the bin from 0.0299 to 0.0313, 23 individuals: the filter keeps
+those of its individuals at most 0.03 and removes the others." These
+words were written with the code on 27 September 2026, as the variants'
+were, for the owner to judge at stop B of `docs/plans/variants-step.md`.
+Before the statistics are calculated, or once
 a change of a filter of the variants has removed them, there is no
 histogram, and the line of the counts below says why.
 
@@ -696,7 +715,8 @@ column Kept while any filter of individuals is set, and its download
 (`individualChecks.md`, "What it shows").
 
 **What each filter of the individuals kept**, from `individualsKept`,
-with no pass. Beside each filter that is set: "Kept 125 of the 200
+with no pass. Beside each filter that is set, a list applied under its
+buttons and a threshold under its field: "Kept 125 of the 200
 individuals it was given." A threshold whose statistics are not in the
 page, and each filter after it, has instead "Known once the statistics
 of each individual are calculated for these filters of the variants."
@@ -706,7 +726,22 @@ none, the reason `keptNoneReason` gives, "The filters of individuals
 keep none of the 200 individuals of panel.nei. Loosen them in the
 Variants step.", which locks every analysis that reads them and the
 writing of the file (`docs/specs/core/store.md`, "The state of an
-analysis"). With a threshold set and no statistics, a Run of an analysis
+analysis"). The step shows that reason as a problem, with its mark,
+and without the end "in the Variants step", "… of panel.nei. Loosen
+them.", as it shows the reason of a list, by the owner's decision at
+stop A; the stepper shows it whole. The reason describes the field of
+each threshold that is on, after its count, and when a command of the
+section, an Apply, a Clear, a threshold committed or a switch, makes
+it appear, the step announces it, since the focus stays on the control
+that sent it. Nothing stands under the filters, and no count beside
+them, while no filter of individuals is set, where "200 of the 200
+individuals of panel.nei pass the filters." would say only what the
+card of the file says; while the list or the file gives
+`individualsKept` nothing, a list refused or a file not read, since
+the reason of the list stands under it; and while the individuals kept
+wait for the statistics, since the counts of the thresholds say so.
+These choices were made with the code on 27 September 2026, for the
+owner to judge at stop B. With a threshold set and no statistics, a Run of an analysis
 that reads the filters of individuals calculates them first, and so
 does the writing of the file. The step says nothing more of it here,
 since what waits says so where the user pressed: the panel of the
@@ -951,7 +986,8 @@ nothing on the screen says the things the lines above do not.
   a number refused when there is one, then by the count of its filter,
   "Kept 1,152 of the 1,200 variants it was given.", then by the line
   under its switch, so that a user who moves to a field hears what it
-  kept before the advice. The switch is described by that line too,
+  kept before the advice; a threshold of the individuals, by the
+  reason of no individual kept after its count, when there is one. The switch is described by that line too,
   so that a user who moves to a filter that is off hears what it
   filters on before turning it on. The line under the ploidy, 190 characters, is
   the last part of the ploidy's description, after the line of a number
