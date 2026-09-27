@@ -352,6 +352,27 @@ variants of 1,000 individuals at one byte per genotype.
 | the calculations could not start, `couldNotStart`, or the page is out of date after a new version of the site, `protocolMismatch` | the diversity's words, "The application could not start its calculations. Save the project, reload the page, and open the project again." and "The page is out of date. Save the project, reload the page, and open the project again." |
 | an error of the application's own code, `defect` | "The application met an error of its own: ‹message›. Write the file again." |
 
+What the table leaves open, chosen with the code of the step on 27
+September 2026:
+
+- An estimate from a bound starts "At most about" in the ready state,
+  "At most about 240 KB: 1,200 variants of 200 individuals.", and says
+  "at most about" in the warning.
+- The line of the writing before the first progress has no share,
+  "Writing panel.filtered.nei · 0:12", and, when the write waits for
+  the variants file to be opened again after a stop, "Waiting for
+  panel.nei to be opened again, then writing panel.filtered.nei · 0:12",
+  as the diversity's line does; the line of the statistics it waits for
+  does the same with "calculating the statistics of each individual,
+  which the filters of individuals are set from". The bar is named
+  "Writing panel.filtered.nei", or "Calculating the statistics of each
+  individual" while the write waits for them.
+- When no size is known at a failure, no counts and no number of
+  variants, the words of `workerFailed` and of popnei's refusal leave the
+  size out: "The writing stopped unexpectedly, perhaps because the file
+  did not fit in the memory of this tab. …" and "… popnei stopped with
+  "‹its message›". The file may not fit in the memory of this tab: …".
+
 The help, for the drawer of stage 8: what the file holds; that a `.nei`
 file is read many times faster than a VCF, so converting once is worth
 it; the memory a large file needs, and `popnei.write_vars(variants,
