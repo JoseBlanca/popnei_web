@@ -17,7 +17,11 @@ import {
   populationsOf,
   populationsToRun,
 } from "../../core/analyses/diversity.ts";
-import { filterCounts } from "../../core/analyses/filterCounts.ts";
+import {
+  filterCounts,
+  variantsOfFile,
+} from "../../core/analyses/filterCounts.ts";
+import { emptySourceText } from "../../core/analyses/words.ts";
 import { POPGEN_STEPS } from "../../core/apps.ts";
 import type { StepId } from "../../core/apps.ts";
 import { writtenName } from "../../core/fileNames.ts";
@@ -714,11 +718,14 @@ function writeEndedAnnouncements(
         break;
       case "noVariant": {
         const variants = after.project.variants;
-        if (variants !== null) {
-          announcements.push(
-            `The filters kept none of the variants of ${escaped(variants.name)}, so there is nothing to write.`,
-          );
-        }
+        if (variants === null) break;
+        // A pass given no variant: the file holds none, whatever the
+        // filters, in the words the Variants step shows.
+        announcements.push(
+          variantsOfFile(write.written.passStats) === 0
+            ? emptySourceText(after.project, "there is nothing to write")
+            : `The filters kept none of the variants of ${escaped(variants.name)}, so there is nothing to write.`,
+        );
         break;
       }
       case "error":

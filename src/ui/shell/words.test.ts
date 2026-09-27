@@ -1341,10 +1341,14 @@ const WRITTEN = {
   passStats: { numVars: 20_000, filtering: {} },
 } as const;
 
+/** The analyses of the states of stage 3, the three checks and the
+    diversity, in an order of these tests' own: apps.ts has the
+    histograms, the Counts, the statistics of each individual, then the
+    diversity, in the order of the sections of the Variants step. */
 const THE_ORDER = [STATISTICS, HISTOGRAMS, COUNTS, DIVERSITY] as const;
 
 /** A state of stage 3: `PANEL`, the three checks and the diversity in
-    the order of apps.ts, each ready unless `statuses` gives it another
+    the order of `THE_ORDER`, each ready unless `statuses` gives it another
     state, the writing ready, nothing in flight and no notice, with
     `parts` set. */
 function checksState(
@@ -2157,6 +2161,32 @@ describe("VS5 D2 the announcements of the writing, more", () => {
     expect(announcementsOf(before, after, WORDS)).toEqual([
       "Diversity: done.",
       "panel.filtered.nei is written, 19.2 MB; Save it in the Variants step.",
+    ]);
+  });
+
+  test("the end of a write of a variants file with no variant says so in the step's words", () => {
+    const before = checksState({
+      project: FIVE_FILTERS,
+      write: writeRunning(1),
+      runs: [run(1, null, KEY_W, CURRENT)],
+    });
+    const after = checksState({
+      project: FIVE_FILTERS,
+      write: {
+        kind: "noVariant",
+        key: KEY_W,
+        written: {
+          format: WRITTEN.format,
+          numBytes: 3594,
+          passStats: {
+            numVars: 0,
+            filtering: { missing_data: { varsProcessed: 0, varsKept: 0 } },
+          },
+        },
+      },
+    });
+    expect(announcementsOf(before, after, WORDS)).toEqual([
+      "panel.nei has no variants, so there is nothing to write. Load another variants file in the Variants step.",
     ]);
   });
 
