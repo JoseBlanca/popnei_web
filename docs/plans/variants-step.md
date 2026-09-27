@@ -536,7 +536,7 @@ filter.
   other filters saved as the one the step shows would show on no
   screen, so this is a task of its own. Serves 6 and 7. Needs 2.3 and
   3.5.
-- [ ] 3.7 `src/core/projectFile.ts` of stage 3, from the parts of
+- [x] 3.7 `src/core/projectFile.ts` of stage 3, from the parts of
   `projectFile.md` its opening names, with the fixture
   `v1-every-filter.popnei.json` written by hand from the spec. Serves 8.
   Needs 2.1 and 3.4; can run beside 3.5 and 3.6.

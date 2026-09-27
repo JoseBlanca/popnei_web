@@ -6,7 +6,7 @@ The work report of the plan `docs/plans/variants-step.md`, stage 3 of
 
 ## Where the plan stands
 
-Under way since 26 September 2026.
+Under way since 26 September 2026. On 27 September work packages 1 to 4 are done, each after its review; work package 5, the page joined and the writing, is next. Stop A, at the end of work package 6, is the first screen the owner tries.
 
 ## Before the first task
 
@@ -282,3 +282,110 @@ the area, when stage 6 offers the export.
   cannot see (the CSS of the bars, the styles kept in the exported file)
   and in the exact limits. A task of the plots should be told to test
   in the browser what jsdom cannot lay out.
+
+## 3. The store and the analyses in core
+
+Done on 27 September 2026, after its review. The tasks: 3.1 as 6d5301c,
+3.2 as 1b1d9d2, 3.3 as 602ccaf and 5185538, 3.4 as 774781d and 2079eba
+(the spec), 3.5 as d954d86, 3.6 as ca52c23 and 26b88dc, 3.7 as
+e080dc5.
+
+### The deliverables, on 647897b
+
+| deliverable | command | result | asked |
+|---|---|---|---|
+| D1 | `npx vitest run src/core/analyses -t "VS3 D1"` | 60 passed | 16 |
+| D2 | the same, `-t "VS3 D2"` | 12 passed | 9 |
+| D3 | `npx vitest run src/core/analyses/diversity.test.ts -t "VS3 D3"` | 16 passed | 10 |
+| D4 | `npx vitest run src/core/store.test.ts src/ui/runs.test.ts -t "VS3 D4"` | 38 passed | 14 |
+| D5 | `npx vitest run src/core -t "VS3 D5"` | 14 passed | 9 |
+| D6 | `npx vitest run src/core/store.test.ts src/ui/runs.test.ts -t "VS3 D6"` | 28 passed | 13 |
+| D7 | `npx vitest run src/core/store.test.ts -t "VS3 D7"` | 3 passed | 3 |
+| D8 | `npx vitest run src/core/projectFile.test.ts -t "VS3 D8"` | 4 passed | 4 |
+| D9 | `npm test`; the browser check | 1863 passed in 50 files; 370 passed | |
+
+For D2, a scratch `keyInputs` that gave a filter of individuals made the
+row "a filter of individuals leaves the key the same" fail, for the
+statistics of each individual and for the Count (task 3.2).
+
+The lines of existing tests that changed, each asked for by a spec:
+`statistics: null`, `counts: null` and `write: null` in the
+configurations of `createStore`, and `individualsKept`, `write`,
+`ofStatistics`, `waitsForStatistics` and the three fields of the write
+in the literals of the state (`store.md`, the interface); the handles of
+`startRun` compared as lists (`store.md`, its return); the two tests of
+the lock of the diversity on every filter of individuals removed, and
+one renamed (`diversity.md`, the lock goes); `numVarsOf` replaced by
+`countsOf` (`store.md`, "What each filter kept"); the literals of two
+projects of the tests of the project file put in the fixed order.
+
+### The review
+
+Reviewed by `spec`, `stale`, `errors`, `api`, `architecture` and
+`react`, reading at 26b88dc, then by `tests` on a copy at 7b2a655. What
+was fixed, each with a test that failed first where one could:
+
+- A Run, or a write, that waited for statistics already on their way
+  did not stop the calculations left behind, so the statistics waited in
+  the worker behind an old diversity, and the notice still said that
+  diversity would be stopped while the panel showed the new one running
+  (7a97b21).
+- When one press met two errors of the application, only the first
+  reached the bar at the top of the page (cc1cc9b, 5373e80).
+- A write of another format than `.nei` would have been filed as the
+  `.nei` file: a defect now, before the VCF is added (7752a83, d00a72a).
+- The cache kept the keys of the project as it was before the number of
+  variants was recorded (b1c3c1b).
+- The Count had no words for a refusal of popnei (38d5f8a, 55f9fe8); a
+  case of the check numbers the specs did not list (9b89a67); doc
+  comments, helpers written twice or three times, and two projects of
+  the tests out of the fixed order (900fe86, 7b2a655).
+- The tests reviewer made 181 changes to the code, 151 failed a test;
+  the tests of the ten that mattered were added (ffa9d17, 198cc98,
+  647897b), the worst the analyses that do not read the filters of
+  individuals locked when a threshold keeps nobody.
+
+Not taken, and why:
+
+- The stale warning of the individuals with no population, a finding of
+  stage 2: it does not hold, since an individual of the variants file
+  with no row in the metadata file locks the diversity, so no result is
+  kept under the earlier state.
+- A flow of stage 2, `WS9 D3` "Run that takes the calculation stopped
+  out of the notice", failed 6 times in 40 in WebKit already on the
+  start: the test held the first worker and not the one a new file
+  starts. The test was corrected (84acf1f): 40 of 40 in each engine.
+
+### For the owner, at stop A
+
+- A write that popnei refuses for lack of memory is kept as refused
+  for the session, so the user cannot press Write again until they
+  change a filter (`store.md`, "A calculation that failed", keeps every
+  refusal of popnei, since popnei refuses the same data the same way).
+  A refusal for memory can pass in the fresh worker the client starts
+  after it. Options: keep it as it is (the words already send the user
+  to the filters); or keep such a refusal only until the next change,
+  like a failure that is not popnei's, which lets the user try again.
+  Recommended: let the user try again, once the measurements of task
+  5.4 say whether a second try can succeed. Until the owner answers, the
+  spec as it stands.
+- Choices of task 3.1 the specs leave open: a histogram pass that keeps
+  no variant shows popnei's own message and not "Loosen the filters",
+  since that pass reads no filter; the warning when the first filter
+  keeps no variant ends "Loosen it.". Recommended: keep both.
+- The words of the Count for a file with no variant come out, by the
+  substitution `filterCounts.md` gives, as "there is no variant to count
+  the variants over". Recommended: "there is no variant to count", in
+  `filterCounts.md` and the code, to be judged on the screen.
+
+### How the work of 3 went, for whoever revises a skill or a plan
+
+- The tasks' own count of the rules broken and caught was 259 of 264;
+  the tests reviewer's changes found 10 that mattered among 30 of 181
+  passing, most in what a fake of `testSupport.ts` ignores (the fake
+  counts that read no project) and in the branches of the notice.
+- A fixer stopped at the session limit of the API with its edits
+  uncommitted; resumed with `SendMessage`, it went on from them.
+- Tokens: the seven tasks used 94,000 to 356,000 each (3.3, the store,
+  the most); the six reviewers that read, 34,000 to 251,000; the tests
+  reviewer 172,000; the two fixers 181,000 and 152,000.
