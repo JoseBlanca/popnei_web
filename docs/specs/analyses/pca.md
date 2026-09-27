@@ -21,8 +21,10 @@ number, the minus sign among them; and the help on the keys of the
 plots; and again that day with the owner's answers of 27 September
 2026: the pruning on by default at r² 0.1 with no distance, which the
 user types before the PCA can run, the pruned variants not kept between
-two PCAs, and the worker started again after a large PCA, Open 1. There
-is no code of it yet. This spec gives
+two PCAs, and the worker started again after a large PCA, Open 1; and
+again that day, the option of the pruning made to keep its r² and its
+distance while the pruning is off, so that turning it off and on again
+does not lose the distance typed. There is no code of it yet. This spec gives
 the analysis that places the individuals of a dataset on a few axes, to
 see its structure and check the populations against it: the module
 `src/core/analyses/pca.ts`, which says what the components are calculated
@@ -218,7 +220,11 @@ were calculated with:
 | missing data 0.1, heterozygosity 0.9, LD r² 0.3 within 10,000 | defaults | missing data 0.1, heterozygosity 0.9, MAF 0.95, LD r² 0.3 within 10,000 |
 | missing data 0.1, MAF 0.9, LD r² 0.3 within 10,000 | defaults, 50,000 typed | missing data 0.1, MAF 0.9, LD r² 0.3 within 10,000 |
 | none | pruning off | MAF 0.95 |
+| missing data 0.1 | pruning off, 50,000 typed before | missing data 0.1, MAF 0.95 |
 | missing data 0.1 | MAF 1, pruning off | missing data 0.1, MAF 1 |
+
+A pruning that is off puts no LD filter in the list, whatever r² and
+distance it keeps for when it is turned on again.
 
 A MAF of 1 keeps every variant; the MAF filter is always in the job, so
 that the user's number is always the one popnei is given
@@ -241,7 +247,7 @@ The options of the analysis, as the project holds them, `PcaOptions`:
 |---|---|---|---|
 | `method` | `"pca"`, the PCA of the genotypes, or `"pcoa"`, the PCoA of the Kosman distances | `"pca"` | `docs/functionality.md`, section 5 |
 | `maxAllowedMaf` | the PCA's maximum major allele frequency, a number from 0 to 1 | 0.95 | `docs/functionality.md`, sections 3 and 5 |
-| `ldPruning` | the PCA's own LD pruning, `{ maxAllowedR2, maxDist }`, the largest r² between two variants kept and the window in base pairs, `maxDist` `null` until the user types one, or `null` for off | `{ maxAllowedR2: 0.1, maxDist: null }` | decided by the owner on 27 September 2026, below |
+| `ldPruning` | the PCA's own LD pruning, `{ on, maxAllowedR2, maxDist }`: whether it prunes, the largest r² between two variants kept, and the window in base pairs, `maxDist` `null` until the user types one; the two numbers are kept while `on` is false | `{ on: true, maxAllowedR2: 0.1, maxDist: null }` | decided by the owner on 27 September 2026, below |
 | `colourBy` | the column of the individuals file whose values colour the points, or `null` for the populations of the grouping | `null` | `docs/functionality.md`, section 5 |
 | `axes` | the three components drawn, from 1: the 2D plot shows the first against the second, the 3D plot all three | `[1, 2, 3]` | `docs/functionality.md`, section 5 |
 | `view` | `"2d"` or `"3d"` | `"2d"` | recommended to the owner, "The PCA opens in 2D" in `docs/specs/stage-4-open-points.md` |
@@ -264,11 +270,12 @@ of the regions", so the user chooses it: how far linkage disequilibrium
 extends differs from one species, and one genome, to another. The
 option not taken was a default of 50,000 base pairs, which had been
 recommended. Until the user types a distance, or turns the pruning off,
-the PCA is locked (below, "Why it cannot run"). Turning the pruning on
-again gives the default, r² 0.1 with no distance, since the option
-`null` keeps no values; Undo brings back the values of before, a choice
-of the writer of this spec that the owner may overrule
-(`docs/specs/stage-4-open-points.md`). When the dataset has
+the PCA is locked (below, "Why it cannot run"). Turning the pruning off
+changes `on` alone and keeps the r² and the distance, so that turning it
+on again gives back the values the user had, and a distance once typed
+does not have to be typed again, nor the PCA be locked again for it. The
+writers decided so on 27 September 2026; the option not taken, the
+pruning `null` when off, lost both numbers at every turn off. When the dataset has
 an LD filter the PCA does not prune, so its distance is not asked for
 and nothing locks, since that filter has its own distance. The LD
 filter of the dataset, which starts at r² 0.3 within 10,000 base pairs
@@ -292,11 +299,12 @@ the plot as the user drew it. The writers decided so on 27 September
 
 `parseOptions(o, 1)` gives back an object with exactly the six fields:
 `method` `"pca"` or `"pcoa"`; `maxAllowedMaf` a number from 0 to 1;
-`ldPruning` `null` or an object of exactly `maxAllowedR2`, a number from
-0 to 1, and `maxDist`, a whole number from 1 to 9,007,199,254,740,991,
-the ranges popnei's `filterByMaf` and `filterByLd` accept, or `null`, a
-distance not typed yet, which a project saved while the PCA was locked
-for it holds; `colourBy` a
+`ldPruning` an object of exactly `on`, `true` or `false`, `maxAllowedR2`,
+a number from 0 to 1, and `maxDist`, a whole number from 1 to
+9,007,199,254,740,991, the ranges popnei's `filterByMaf` and `filterByLd`
+accept, or `null`, a distance not typed yet, which a project saved while
+the PCA was locked for it holds, or saved with the pruning off before a
+distance was typed; `colourBy` a
 text or `null`, not checked against the table, which a later file may
 change; `axes` three different whole numbers from 1 to 10,
 `PCA_NUM_COMPS_KEPT`; and `view` `"2d"` or `"3d"`. `"pcoa"` is taken
@@ -308,9 +316,9 @@ no option the panel sends is refused here, which would be a defect of
 `setAnalysisOptions` (`docs/specs/core/project.md`). Anything else is
 refused with the words that follow "should be" in `projectErrorText`:
 "the method, "pca" or "pcoa"; the maximum major allele frequency, a
-number from 0 to 1; the LD pruning, null or its maximum r², a number
-from 0 to 1, with its window, a whole number of base pairs from 1 to
-9,007,199,254,740,991 or null; the column that colours the points, a text or
+number from 0 to 1; the LD pruning, whether it is on, true or false,
+its maximum r², a number from 0 to 1, and its window, a whole number of
+base pairs from 1 to 9,007,199,254,740,991 or null; the column that colours the points, a text or
 null; three different components from 1 to 10 for the axes; and the
 view, "2d" or "3d"; and nothing else". Every later version of the format
 reads version 1 so (`docs/architecture.md`, section 12).
@@ -329,22 +337,30 @@ version, the version of popnei, the load and both lists of filters.
   method: "pca" | "pcoa",
   filters: pcaFilters(p.filters, pcaOptions(p)),
   ldPruning: { maxAllowedR2: number, maxDist: number | null } | null,
-                                        // the PCA's own; null when the dataset has an LD filter
+                                        // the PCA's own while on; null when off,
+                                        // or when the dataset has an LD filter
 }
 ```
 
 the method; the filters popnei is given, which hold the PCA's MAF and
-pruning as they reach popnei; and the PCA's own pruning as the options
-hold it, its `maxDist` `null` included, when the dataset has no LD
-filter, and `null` when it has one. The last is there so that the key
-holds the option as it is, as the owner's answer of 27 September 2026
-has it: the pruning with no distance puts no LD filter in the list, and
-without it would share the key of the pruning off, whether or not a key
-is ever asked for while the PCA is locked, since `keyInputs` answers
-for any project (`docs/specs/core/keys.md`). Once a distance is typed, or the pruning is off, the filters
-alone tell the settings apart.
+pruning as they reach popnei; and the PCA's own pruning, its r² and its
+distance, `maxDist` `null` included, when it is on and the dataset has
+no LD filter, and `null` otherwise. The last is there so that the key
+holds the pruning as the user set it, as the owner's answer of 27
+September 2026 has it: the pruning with no distance puts no LD filter in
+the list, and without it would share the key of the pruning off, whether
+or not a key is ever asked for while the PCA is locked, since
+`keyInputs` answers for any project (`docs/specs/core/keys.md`). Once a
+distance is typed, or the pruning is off, the filters alone tell the
+settings apart. The r² and the distance kept while the pruning is off
+are not in the key, as the colours and the axes are not (below): they
+are not inputs of the result, which is calculated with no pruning, and
+in the key a change of them would take off the screen a result they did
+not make. The flag `on` is not a field of its own in the key, since
+`null` says that the pruning is off.
 So a change of the PCA's MAF that the dataset's stricter one overrides,
-or of its pruning while the dataset prunes, keeps the key, and takes
+of its pruning while the dataset prunes, or of the r² or the distance
+of its pruning while it is off, keeps the key, and takes
 nothing off the screen for a change that changes no number. The
 dataset's filters are in the key twice, once from `keyOf` and once
 here, and the PCA's pruning twice when it prunes; that costs a few bytes
@@ -355,6 +371,9 @@ Not in the key:
 - **`colourBy`, `axes` and `view`**, which draw the result and are not
   inputs of it. In the key, a change of the colours would take the plot
   off the screen and ask minutes of calculation for the same numbers.
+- **The r² and the distance of the PCA's pruning while it is off**, for
+  the same reason: the result is calculated with no pruning, and the
+  numbers wait for the pruning to be turned on again.
 - **The individuals file and the grouping**, which only colour the
   points: changing the column of the populations changes the key of the
   diversity and not that of the PCA (`docs/architecture.md`, section 3).
@@ -374,8 +393,8 @@ the key before holds another number of components.
 | a filter of the variants added, removed, or its threshold | changes |
 | a filter of individuals, a list or a threshold, whether or not it keeps other individuals | changes |
 | `method` | changes |
-| `maxAllowedMaf`, when it changes the filters of the job; `ldPruning`, its distance typed included, while the dataset has no LD filter | changes |
-| `maxAllowedMaf` above the dataset's MAF, or `ldPruning` while the dataset prunes | same |
+| `maxAllowedMaf`, when it changes the filters of the job; `ldPruning` turned off or on, or its r² or its distance, a distance typed included, while it is on and the dataset has no LD filter | changes |
+| `maxAllowedMaf` above the dataset's MAF; the r² or the distance of `ldPruning` while it is off; `ldPruning` while the dataset prunes | same |
 | `colourBy`, `axes`, `view` | same |
 | the individuals file, its types, the grouping | same |
 | the options of another analysis, the reference | same |
@@ -394,7 +413,7 @@ gives the first of these:
 | the method `"pcoa"` while popnei's release in the application has no `doPcoaFromVariants`, `PCOA_IN_POPNEI` false | "This project asks for the PCoA of the Kosman distances, which this version of the application cannot calculate yet. Choose the PCA of the genotypes as the method." |
 | more individuals in the variants file than the method's limit, 9,381 for the PCA and 8,695 for the PCoA | "panel.nei has 12,000 individuals, and the principal components of more than 9,381 need more memory than a browser tab can hold. Calculate them with popnei in Python, outside the browser." For the PCoA, "…the principal coordinates of more than 8,695…" |
 | any reason of `individualsNeeds` of `project.md`: the metadata file being read, "Reading pops.csv."; its read refused or failed; a file named by an opened project and not read when the project was saved, `notGiven`, "pops.csv was not read when this project was saved, so the project file does not hold it. Load pops.csv again in the Individuals step."; individuals of the variants missing from it, "12 individuals of panel.nei are not in pops.csv: ind_031, ind_044 and 10 more. Add them to the file and load it again in the Individuals step." | its words |
-| the PCA's pruning on with no distance, `maxDist` `null`, and no LD filter in the dataset, `pruningDistanceReason` | "The LD pruning of the PCA needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn the pruning off." |
+| the PCA's pruning on, `on` true, with no distance, `maxDist` `null`, and no LD filter in the dataset, `pruningDistanceReason` | "The LD pruning of the PCA needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn the pruning off." |
 
 **The pruning with no distance.** The owner decided on 27 September 2026
 that the distance of the PCA's pruning has no default (above, "Its
@@ -403,7 +422,9 @@ turns the pruning off, which then gives the warning `pruningOff` on the
 result (below, "The warnings"). The reason is last in the table; the
 panel shows it beside the field of the distance whenever it
 holds, and not only when it is the first reason, so that the empty
-field always says why it has to be filled (below, "What it shows"). While the dataset has an LD filter the PCA
+field always says why it has to be filled (below, "What it shows"). While
+the pruning is off, `on` false, a distance still `null` locks nothing,
+since no pruning is made. While the dataset has an LD filter the PCA
 does not prune, and nothing locks. The words say why there is no
 default and what to do; the help says how to choose the distance.
 
@@ -822,7 +843,11 @@ export const pca: AnalysisDef<Job, JobResult>;
 export interface PcaOptions {
   readonly method: "pca" | "pcoa";
   readonly maxAllowedMaf: number;
-  readonly ldPruning: { readonly maxAllowedR2: number; readonly maxDist: number | null } | null;
+  readonly ldPruning: {
+    readonly on: boolean;
+    readonly maxAllowedR2: number;
+    readonly maxDist: number | null;    // null until the user types a distance
+  };
   readonly colourBy: string | null;
   readonly axes: readonly [number, number, number];
   readonly view: "2d" | "3d";
@@ -838,8 +863,8 @@ export const PCOA_IN_POPNEI: boolean;
 /** The reason of the lock of a PCoA that popnei's release lacks, or null;
     needs calls it with PCOA_IN_POPNEI, and the tests with both values. */
 export function pcoaLock(o: PcaOptions, inPopnei: boolean): string | null;
-/** The reason of the lock of the PCA's pruning with no distance while the
-    dataset has no LD filter, or null; needs gives it, and the panel shows
+/** The reason of the lock of the PCA's pruning, on with no distance, while
+    the dataset has no LD filter, or null; needs gives it, and the panel shows
     it beside the field of the distance (above, "Why it cannot run"). */
 export function pruningDistanceReason(p: Project): string | null;
 export const MANY_MISSING_RATE = 0.2;              // the note of the missing genotypes
@@ -1195,7 +1220,7 @@ same object, which the highlight of the legend is kept with.
 
 With Vitest, at the functions of the definition, on frozen projects:
 
-- **`pcaFilters`**, one test for each of the eight rows of the table of
+- **`pcaFilters`**, one test for each of the nine rows of the table of
   "Which variants it reads", in its order, as literals. The first two:
   the filters `[{ kind: "missing_data", maxAllowedMissingRate: 0.1 }]`
   and `PCA_DEFAULTS` give `[{ kind: "missing_data",
@@ -1216,21 +1241,28 @@ With Vitest, at the functions of the definition, on frozen projects:
   method `"pcoa"` with `false` gives the words of a PCoA not yet in
   popnei, and with `true`, or of the method `"pca"`, `null`; each reason of `individualsNeeds` comes through; with `PCA_DEFAULTS`
   and the filters of a first project, the words of the pruning with no
-  distance, and none with `maxDist` 50000, with the pruning off, or with
-  an LD filter in the dataset; `pruningDistanceReason` gives the same
+  distance, and none with `maxDist` 50000, with the pruning off, `on`
+  false and `maxDist` `null`, or with an LD filter in the dataset;
+  `pruningDistanceReason` gives the same
   words in the same cases, also while another reason comes first; a
   project with no metadata file, and one with a file and no column
   chosen, each with a distance typed, are not locked.
 - **The key**, beside its table: `PCA_DEFAULTS`, with no distance, and
   the pruning off give different keys, though `pcaFilters` gives both
-  the same list.
+  the same list. The pruning off with `maxDist` `null`, with 50000, and
+  with 50000 and r² 0.3 give one key, since the numbers kept while it is
+  off are not inputs of the result; turned on again with 50000, the key
+  is that of the pruning on with 50000 typed, so the result of before
+  comes back from the cache.
 - **`PCOA_IN_POPNEI`** equals `typeof doPcoaFromVariants === "function"`
   of the popnei installed.
 - **`parseOptions`**: the defaults back, `maxDist` `null` among them,
-  `maxDist` 50000, `method` `"pcoa"`, `ldPruning` `null`, `axes` `[10,
-  9, 1]`; a missing field, a field more, a method
-  `"tsne"`, `maxAllowedMaf` 1.5, `maxDist` 0 or 2.5, `axes` `[1, 1, 2]`
-  or `[1, 2, 11]`, `view` `"4d"`, refused.
+  `maxDist` 50000, `method` `"pcoa"`, `ldPruning` `{ on: false,
+  maxAllowedR2: 0.1, maxDist: 50000 }` and `{ on: false, maxAllowedR2:
+  0.1, maxDist: null }`, `axes` `[10, 9, 1]`; a missing field, a field
+  more, a method `"tsne"`, `maxAllowedMaf` 1.5, `ldPruning` `null`
+  or without `on`, `on` `1`, `maxDist`
+  0 or 2.5, `axes` `[1, 1, 2]` or `[1, 2, 11]`, `view` `"4d"`, refused.
 - **`warnings`**: a result whose job had no LD filter gives `pruningOff`,
   and one of the dataset's LD filter none; `numVarsUsed` 150 for 200
   individuals gives `fewVariants` with the text above, 200 for 200 none.
@@ -1389,7 +1421,10 @@ and sees its entry checked, an element of the role `radio` with
 100 to 2060; 3 individuals have no value." in the description, and
 back to the populations, and sees no calculation and one step of Undo
 for each; turns the pruning off, sees the plot go with its notice, runs and
-reads 7.73%; undoes and reads 3.54% again with no calculation; opens the
+reads 7.73%; undoes and reads 3.54% again with no calculation; turns the
+pruning off and reads 7.73% from the cache, turns it on again and reads
+50000 still in the field of the distance and 3.54% with no calculation;
+opens the
 3D view, turns it with the buttons, and back to 2D; saves the table and
 reads its header and the row of `s000`; runs axe, the checker of
 accessibility, in each state it reaches. Once popnei's release has the
@@ -1435,7 +1470,13 @@ method.
   `pruningDistanceReason` is the text beside it, which describes the
   field to a screen reader, as it is beside the disabled Run button
   when it is the reason `needs` gives first (above, "Why it cannot
-  run"). When the dataset has an LD filter, the three are
+  run"). The checkbox sends `on` alone, and keeps the r² and the
+  distance as they are. Unchecked, the two fields go, as the fields of a
+  filter turned off go in the Variants step, so that no field is shown
+  for a number that is not used; checked again, they come back with the
+  numbers the project kept, where a filter of the Variants step turned on
+  again starts from the values of its table, since a filter that is off
+  is not in that project. When the dataset has an LD filter, the three are
   disabled, no distance is asked for, and a line says why: "The LD filter
   of the Variants step, r² at most 0.3 within 10,000 base pairs, is used,
   and the PCA does not prune again."
@@ -1637,8 +1678,8 @@ interface", and the command of the project of
 |---|---|
 | `method` | "the method of the principal components changed" |
 | `maxAllowedMaf` | "the maximum major allele frequency of the principal components changed" |
-| `ldPruning` turned off, or on | "the LD pruning of the principal components was turned off", "… was turned on" |
-| `ldPruning`, its r² or its window | "the LD pruning of the principal components changed" |
+| `on` of `ldPruning`, the checkbox, which sends `ldPruning: { ...pcaOptions(p).ldPruning, on }`, with the r² and the distance as they are | "the LD pruning of the principal components was turned off", "… was turned on" |
+| `ldPruning`, its r² or its window, fields shown only while it is on | "the LD pruning of the principal components changed" |
 | `colourBy` | "the colour of the points of the principal components changed" |
 | `axes` | "the components on the axes changed" |
 | `view` | "the principal components were drawn in 3D", "… in 2D" |

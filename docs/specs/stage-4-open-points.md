@@ -95,11 +95,16 @@ stage 5, once it exists, as the way to choose the distance. When the
 dataset's own LD filter is on, the PCA does not prune again, asks for no
 distance and is not locked, since that filter has its own.
 
-In the specs, the option of the PCA's pruning holds its r² and its
-distance, the distance empty until the user types one, and is empty as
-a whole when the pruning is off; a project file saved before the
-distance was typed opens with it still empty; the key of the result, the
-hash of what the result was calculated from, holds the option as it is;
+In the specs, the option of the PCA's pruning holds whether it is on,
+its r² and its distance, the distance empty until the user types one.
+Turning the pruning off keeps the r² and the distance, so that turning
+it on again gives them back and a distance once typed is not asked for
+again, as the writers settled on 27 September 2026. A project file saved
+before the distance was typed opens with it still empty; the key of the
+result, the hash of what the result was calculated from, holds the
+pruning as the user set it while it is on, and leaves out the r² and
+the distance kept while it is off, which the result was not calculated
+from;
 and the Python script that the project gives, which calculates the same
 results with popnei in Python, has no lines for a PCA that cannot run. The LD filter of
 the Variants step, which starts at an r² of 0.3 within 10,000 base pairs
@@ -334,9 +339,6 @@ meets.
   plot, one tab stop, the Up and Down arrow keys moving between them; a press
   highlights a population and fades the others, and a second press
   clears it. The highlight is not saved (`scatter.md`).
-- **Turning the PCA's pruning on again gives r² 0.1 with no distance**,
-  and not the values it had before it was turned off, which the option
-  does not keep; Undo brings them back (`pca.md`, "Its options").
 - **The individuals of no population** are drawn as rings, not in a
   colour of their own, and counted in the legend (`scatter.md`).
 - **The 3D view** starts turned 30° about the vertical and 20° up; its

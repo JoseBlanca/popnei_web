@@ -10,7 +10,9 @@ this revision is approved by the owner on 26 September 2026. Revised on
 intermediate result is the kinship of stage 7, since the variants the
 pruning of the PCA keeps are not kept; and again the same day, when
 the specs of stage 4 were made to agree: the options that change only
-how a result is drawn are in no key. A key is the name a result is stored under in the cache: a SHA-256
+how a result is drawn are in no key; and again that day, the reason
+`keyInputs` answers for a locked project corrected: the fingerprint of
+an opened project needs it, and the store does not. A key is the name a result is stored under in the cache: a SHA-256
 hash of everything the result was calculated from, so that a result whose
 inputs changed is never shown, and a result whose inputs came back, by an
 undo or by a value set back, is found again with no calculation
@@ -75,9 +77,12 @@ of an analysis whether or not the list is known
 doubt it includes a part: a part too many costs a calculation, a part
 missing shows a stale result (`.claude/skills/coding/SKILL.md`, "Keys").
 It does not read `p.variants`, which `keyOf` puts in itself, and it gives
-a value for every project, a locked one included, since the store asks
-for it before it knows whether the analysis can run, and the fingerprint
-of an opened project is made with no variants file loaded.
+a value for every project, a locked one included, since the fingerprint
+of an opened project is made from it with no variants file loaded, and a
+function that throws on some projects would be a defect waiting for one.
+The store itself makes the key of an analysis only when none of
+`projectNeeds`, `individualListNeeds` and the analysis's `needs` gives a
+reason (`docs/specs/core/store.md`, "The state of an analysis").
 
 ### The canonical form
 
