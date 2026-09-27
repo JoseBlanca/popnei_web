@@ -490,13 +490,17 @@ test("VS6 D2 0.9 pasted over 0.8 typed in the MAF field is committed at once, an
   await maf.evaluate((input) => {
     const data = new DataTransfer();
     data.setData("text/plain", "0.9");
-    input.dispatchEvent(
-      new ClipboardEvent("paste", {
-        clipboardData: data,
-        bubbles: true,
-        cancelable: true,
-      }),
-    );
+    // Firefox takes the text of a paste made by a script from the
+    // members `dataType` and `data`, which only it knows, and not from
+    // `clipboardData`; the other two engines take `clipboardData`.
+    const init: ClipboardEventInit & { dataType: string; data: string } = {
+      clipboardData: data,
+      dataType: "text/plain",
+      data: "0.9",
+      bubbles: true,
+      cancelable: true,
+    };
+    input.dispatchEvent(new ClipboardEvent("paste", init));
   });
   await expect(banner(page, "Undo")).toHaveAccessibleDescription(
     "Undo: the MAF filter changed",
