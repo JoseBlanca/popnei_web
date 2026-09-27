@@ -13,6 +13,7 @@
  * none of them.
  */
 
+import { variantsStem } from "../fileNames.ts";
 import { counted, escaped, grouped } from "../project.ts";
 import type { Project } from "../project.ts";
 import type { AnalysisDef, Warning, WorkerClient } from "../store.ts";
@@ -100,6 +101,28 @@ export function variantHistogramDescription(
     bins,
     threshold,
   );
+}
+
+/** The part of the name of each file of a histogram that names its
+    statistic. */
+const FILE_PARTS: Readonly<Record<VariantStatistic, string>> = Object.freeze({
+  maf: "maf",
+  obsHet: "obs_het",
+  unbiasedExpHet: "exp_het",
+});
+
+/**
+ * The name of the download of the bins of the histogram of `statistic`:
+ * the stem of the variants file, `variantsStem`, then `.variant_maf`,
+ * `.variant_obs_het` or `.variant_exp_het`, then `_bins.csv`;
+ * `panel.vcf.gz` gives `panel.variant_maf_bins.csv`
+ * (docs/specs/analyses/variantChecks.md, "What it shows").
+ */
+export function binsCsvName(
+  variantsName: string,
+  statistic: VariantStatistic,
+): string {
+  return `${variantsStem(variantsName)}.variant_${FILE_PARTS[statistic]}_bins.csv`;
 }
 
 /** The definition of the histograms of the variants, as the store knows

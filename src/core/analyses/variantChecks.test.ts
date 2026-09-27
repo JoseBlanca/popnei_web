@@ -10,10 +10,12 @@
 
 import { describe, expect, test } from "vitest";
 import {
+  binsCsvName,
   refusalText,
   variantChecks,
   variantHistogramDescription,
 } from "./variantChecks.ts";
+import { binsCsv } from "./words.ts";
 import type { DescribedBin } from "./words.ts";
 import { emptyProject } from "../project.ts";
 import type { Project } from "../project.ts";
@@ -380,6 +382,37 @@ describe("VS3 D1 the histograms of the variants: refusalText", () => {
       refusalText("the pass gave no variant: its source gave 3", project()),
     ).toBe(
       "popnei could not calculate the histograms of the variants: the pass gave no variant: its source gave 3. Change the settings, or load the variants file again, to calculate them again.",
+    );
+  });
+});
+
+describe("VS6 D2 the CSV of the bins of a histogram and its name", () => {
+  test("the bins of the MAF of panel.nei with no threshold: the header, 40 rows, the 39th with the edges as popnei gave them", () => {
+    const bins = binsOf(PANEL_MAF, 40).map((bin) => ({ ...bin, state: null }));
+    const lines = binsCsv(bins).split("\n");
+    expect(lines[0]).toBe("from,to,count,state");
+    // 40 rows, and the empty text after the last new line.
+    expect(lines).toHaveLength(42);
+    expect(lines.at(-1)).toBe("");
+    expect(lines[1]).toBe("0,0.025,0,");
+    expect(lines[39]).toBe("0.9500000000000001,0.9750000000000001,22,");
+    expect(lines[40]).toBe("0.9750000000000001,1,3,");
+  });
+
+  test("the states of the bins at a threshold are kept, partly_kept and removed", () => {
+    const lines = binsCsv(binsOf(PANEL_OBS_HET, 21, 20)).split("\n");
+    expect(lines[20]).toBe("0.47500000000000003,0.5,58,kept");
+    expect(lines[21]).toBe("0.5,0.525,62,partly_kept");
+    expect(lines[22]).toBe("0.525,0.55,27,removed");
+  });
+
+  test("the names of the three files, from the stem of the variants file", () => {
+    expect(binsCsvName("panel.nei", "maf")).toBe("panel.variant_maf_bins.csv");
+    expect(binsCsvName("panel.vcf.gz", "obsHet")).toBe(
+      "panel.variant_obs_het_bins.csv",
+    );
+    expect(binsCsvName("panel.nei", "unbiasedExpHet")).toBe(
+      "panel.variant_exp_het_bins.csv",
     );
   });
 });

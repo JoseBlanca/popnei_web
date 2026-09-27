@@ -234,6 +234,40 @@ function decimals(value: number): string {
   return String(Number(value.toFixed(4)));
 }
 
+/** The words of the state of a bin in the CSV of the bins of a
+    histogram. */
+const BIN_STATE_WORDS: Readonly<
+  Record<NonNullable<DescribedBin["state"]>, string>
+> = Object.freeze({
+  kept: "kept",
+  partlyKept: "partly_kept",
+  removed: "removed",
+});
+
+/** The header of the CSV of the bins of a histogram. */
+const BINS_CSV_HEADER = "from,to,count,state";
+
+/**
+ * The CSV of the bins of a histogram, from the rows that `histogramRows`
+ * of src/charts/histogram.ts gives (docs/specs/steps/variants.md, "The
+ * plot and the table of its bins"): the header `from,to,count,state`, then
+ * a row per bin from the left, its edges with every digit, as `String`
+ * writes them, its count, and what the threshold does to it, `kept`,
+ * `partly_kept` or `removed`, empty with no threshold. Each line ends in
+ * a new line.
+ */
+export function binsCsv(bins: readonly DescribedBin[]): string {
+  const lines = bins.map((bin) =>
+    [
+      String(bin.from),
+      String(bin.to),
+      String(bin.count),
+      bin.state === null ? "" : BIN_STATE_WORDS[bin.state],
+    ].join(","),
+  );
+  return [BINS_CSV_HEADER, ...lines].map((line) => `${line}\n`).join("");
+}
+
 /** A number of a result in a CSV: as `String` writes it, or an empty cell
     for no value. */
 export function csvNumber(value: number | null): string {
