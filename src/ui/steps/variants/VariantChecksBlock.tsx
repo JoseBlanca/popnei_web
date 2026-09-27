@@ -50,6 +50,7 @@ import {
   removedText,
 } from "./histogramWords.ts";
 import styles from "./VariantsStep.module.css";
+import { withoutTheStep } from "./words.ts";
 
 /** The id of the check. */
 const ID = "variantChecks";
@@ -100,6 +101,7 @@ export function VariantChecksBlock({
           name={CHECK_NAME}
           refusalText={refusalText}
           again={CALCULATE_AGAIN}
+          asShown={withoutTheStep}
         />
       )}
       {button !== null && (

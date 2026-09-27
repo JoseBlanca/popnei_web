@@ -959,7 +959,7 @@ test("VS6 D2 in error: the ploidy of tetraploid.vcf.gz refused, in the words of 
   await block(page).getByRole("button", { name: CALCULATE }).click();
   await expect(
     block(page).getByText(
-      "At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 in the Variants step and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version.",
+      "At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version.",
       { exact: true },
     ),
   ).toBeVisible();
@@ -1026,7 +1026,7 @@ test("VS6 D2 a calculation whose worker stopped asks to calculate them again, wi
   await block(page).getByRole("button", { name: CALCULATE }).click();
   await expect(
     block(page).getByText(
-      "The calculation stopped unexpectedly. Calculate them again. If it stops again, load panel.nei again in the Variants step.",
+      "The calculation stopped unexpectedly. Calculate them again. If it stops again, load panel.nei again.",
       { exact: true },
     ),
   ).toBeVisible();

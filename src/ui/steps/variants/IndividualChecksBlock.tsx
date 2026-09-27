@@ -49,6 +49,7 @@ import {
   statsRemovedText,
 } from "./individualStats.ts";
 import styles from "./VariantsStep.module.css";
+import { withoutTheStep } from "./words.ts";
 
 /** The id of the check. */
 const ID = "individualChecks";
@@ -99,6 +100,7 @@ export function IndividualChecksBlock({
           name={STATS_NAME}
           refusalText={refusalText}
           again={STATS_AGAIN}
+          asShown={withoutTheStep}
         />
       )}
       {button !== null && (

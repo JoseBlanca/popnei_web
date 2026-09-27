@@ -421,7 +421,7 @@ test("VS6 D2 the Count refused: the ploidy of tetraploid.vcf.gz, in the words of
   await pick(page, "tetraploid.vcf.gz");
   await count(page);
   const words = filters(page).getByText(
-    "At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 in the Variants step and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version.",
+    "At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version.",
     { exact: true },
   );
   await expect(words).toBeVisible();
@@ -454,7 +454,7 @@ test("VS6 D2 a Count whose worker stopped asks to count again, with the button, 
   await count(page);
   await expect(
     filters(page).getByText(
-      "The calculation stopped unexpectedly. Count again. If it stops again, load panel.nei again in the Variants step.",
+      "The calculation stopped unexpectedly. Count again. If it stops again, load panel.nei again.",
       { exact: true },
     ),
   ).toBeVisible();
