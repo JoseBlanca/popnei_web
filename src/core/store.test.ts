@@ -3050,8 +3050,10 @@ function modelledStore(): {
       r.named = !r.mustCancel && r.sent.cancels() === 0 && !isCurrent(r);
     }
   };
-  /** The rule of closing the notice, and of a startRun that sent: every
-      request named is stopped. */
+  /** The rule of closing the notice, and of a startRun that started,
+      whether it sent or waits for the statistics already in flight:
+      every request named is stopped (store.md, "startRun, when the user
+      presses Run, stops first every calculation left behind"). */
   const stopNamed = (): void => {
     for (const r of inFlight()) {
       if (r.named) {
@@ -3152,9 +3154,15 @@ function modelledStore(): {
         }
         break;
       }
-      case "startRun":
-        track(store.startRun(s.analysis) ?? []);
+      case "startRun": {
+        const handles = store.startRun(s.analysis);
+        // A Run that waits for the statistics in flight sends nothing, and
+        // stops the requests named all the same; a startRun that gives
+        // null did nothing.
+        if (handles !== null) stopNamed();
+        track(handles ?? []);
         break;
+      }
       case "cancelRun":
         for (const r of inFlight()) {
           // A Stop of a Run that waits may stop the statistics it waits
