@@ -136,7 +136,8 @@ French it separates the fields with `;` and writes decimals with a comma,
 and its encoding varies with the version. So:
 
 - `.xlsx` is read directly, the first sheet of the file in the order of
-  its tabs that is not hidden, with calamine,
+  its tabs that is not hidden, a merged cell giving its value to every
+  cell of its range as Excel shows it, with calamine,
   which is pure Rust, in a small Rust crate of the applications
   (`docs/architecture.md`, section 6; `docs/technology.md`).
 - CSV and TSV are read by the applications, in TypeScript, and a BOM at
@@ -212,8 +213,10 @@ give the principal components that go into the GWAS as covariates.
   screen reader's description carry, and three are one button away,
   recommended to the owner on 27 September 2026, meanwhile
   (`docs/specs/stage-4-open-points.md`).
-- The points are coloured by any column of the file of the individuals:
-  a population or a metadata column, or a trait in association.
+- The points are coloured by any column of the file of the individuals
+  but the first, the names: a population or a metadata column, or a trait
+  in association; a column of text of more than 1,000 different values,
+  which no legend could show, is not offered.
 - Later, not in the first version: selecting a group of points with a
   lasso to assign or rename a population, which writes into the
   populations of the project.

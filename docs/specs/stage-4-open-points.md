@@ -32,6 +32,18 @@ already kept within a window of base pairs is at most a threshold. The
 memory grows and never shrinks, and starting it again gives the memory
 back.
 
+## Decided by the owner on 27 September 2026
+
+- **The PCoA is popnei's**, asked of popnei that day, and stage 4 builds
+  it last, against popnei's draft of it, whose names are provisional
+  until popnei's release.
+- **The PCoA corrects a matrix that is not Euclidean by Lingoes'
+  method**, as popnei's draft records the owner decided: popnei refuses
+  such a matrix unless the correction is asked for, popnei_web asks for
+  it by default, and warns its users that the distances were corrected.
+  The Kosman distances of `panel.nei` give 44 negative eigenvalues, so
+  the correction is the common case and not an exception (`pca.md`).
+
 ## Recommended on 27 September 2026, not yet answered
 
 Each was put to the owner in chat that day with its recommendation. The
@@ -193,7 +205,9 @@ meets.
   group, "All individuals" (`pca.md`).
 - **More than 9,381 individuals locks the PCA before its Run**, with
   words that point to popnei in Python, and not a warning after a Run
-  that fails (`pca.md`).
+  that fails. They are counted on the variants file, not on the
+  individuals the filters keep, as popnei counts them now, so the words
+  do not suggest the filters of individuals (`pca.md`).
 - **The warnings of the PCA**: the pruning turned off; fewer variants
   used than individuals; for the PCoA, a share of negative eigenvalues
   above 5% (`pca.md`).
@@ -203,8 +217,16 @@ meets.
 - **Every column but the first can colour the PCA**: a column of two
   values or of text by groups, a column of numbers by the colours of
   viridis, which people with a colour vision deficiency can tell apart;
-  a column of more than 1,000 values is not offered (`pca.md`,
+  a column of text of more than 1,000 different values is not offered,
+  since no legend could show it. A colouring that would still give more,
+  after a new file, is drawn as one group with a note, and so is a PCA
+  coloured by a column the new file no longer has (`pca.md`,
   `scatter.md`).
+- **The PCA comes before the diversity in the Analyses step**, since it
+  is where the user checks the populations the diversity groups by
+  (`pca.md`, `entry.md`).
+- **The warning of few variants** is raised when the PCA used fewer
+  variants than there are individuals (`pca.md`).
 - **The legend** is a row of buttons over the top right corner of the
   plot, one tab stop, the arrow keys moving between them; a press
   highlights a population and fades the others, and a second press
@@ -231,7 +253,20 @@ meets.
   refused (`files.md`).
 - **The download of the reader of xlsx failing is a refusal of that
   file**, with words, and the next xlsx tries again; not a crash of the
-  worker (`files.md`, `messages.md`).
+  worker. Its words advise saving the project before reloading the page,
+  as those of the 3D view do (`files.md`, `messages.md`).
+- **What types a column allows is worked out in core from the table**,
+  and saved nowhere, so that the format of the project file, which users
+  keep, gains only the types the user set. It needs core to import the
+  pure functions of the reader of the individuals file, which the lint of
+  the code forbade; `.claude/skills/coding/configs.md` is revised to let
+  that one file through (`project.md`; `docs/architecture.md`, section
+  9).
+- **A project saved while its metadata file was still being read, or
+  had failed, opens asking for that file**: the analyses per population
+  are locked with words that say to load it again in the Individuals
+  step, and never run on one population while the project names a
+  column of populations (`projectFile.md`, `project.md`).
 
 ## Asked of the owner to make or approve
 

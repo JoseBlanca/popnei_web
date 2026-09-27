@@ -29,7 +29,7 @@ it only through messages.
 │ ui      React screens and widgets;  │    │ the popnei wasm package      │
 │   │     renders the report          │◀──▶│ the variant file, opened     │
 │   ▼     reads state, sends commands │    │ what is costly to redo:      │
-│ core    the project, the keys of    │    │   pruned variants, kinship   │
+│ core    the project, the keys of    │    │   the kinship, from stage 7  │
 │         results, undo, the cache    │    └──────────────────────────────┘
 │   ▼                                 │     light worker
 │ charts  D3 and three.js             │    ┌──────────────────────────────┐
@@ -247,9 +247,11 @@ it changes:
   key**: the column that colours the PCA, its components on the axes, 2D
   or 3D. They are options of the analysis, saved in the project file,
   and a change of them is a command that removes no result (section 4).
-- **The individuals file** gains, in the project, the types the user set
-  and, in its read, what types each column allows, so that core offers
-  the types without importing the reader; `Grouping` gains every
+- **The individuals file** gains, in the project, the types the user set,
+  kept by the name of the column when the file is read again; what types
+  each column allows is worked out in core from the table, with the
+  reader's pure functions of `src/worker/individuals/columnTypes.ts`,
+  which core may now import, and saved nowhere; `Grouping` gains every
   individual in one population; a binary column holds its two values as
   text (section 2).
 - **The calculation worker is started again after a PCA of more than 700
@@ -347,7 +349,6 @@ interface IndividualsSource {
   read:
     | { kind: "pending" }             // the light worker is reading it
     | { kind: "read"; table: IndividualsTable; columns: ColumnType[];
-        allows: ColumnAllows[];       // the types each column's values allow
         found: CsvFound | null;       // how it was read; null for xlsx
         typesLost: ColumnTypeOf[] }   // types set that this read could not keep
     | { kind: "failed";
@@ -657,8 +658,8 @@ the browser's `Worker`; the store makes one for each request from the
 `run` of the client of `src/worker`, bound to the key of that request,
 and looks in the cache before it calls `run`, so that an analysis neither
 makes the key of its result nor reads the cache. The bound client also
-makes the keys of the intermediate results the request needs, the pruned
-variants, the kinship, with the load, the filters and the version of
+makes the keys of the intermediate results the request needs, the
+kinship from stage 7, with the load, the filters and the version of
 popnei that every key holds (`docs/specs/core/store.md`), and, from stage
 3, gives the list of the individuals the filters of individuals keep
 (below, "The checks of the Variants step"). `parseOptions`
@@ -970,8 +971,8 @@ The page and each worker talk through typed messages
   header, not the whole file; the results of
   the previous load are still found in the cache of the page, with no
   calculation, and only a new calculation on it waits for the reopening.
-  The intermediate results of the old load, the pruned variants, the
-  kinship, are lost with the worker, and they belong to a load no longer
+  The intermediate results of the old load, the kinship from stage 7,
+  are lost with the worker, and they belong to a load no longer
   asked for. So the store stops every request in flight at the change of
   the load, and the notice of the change says they were stopped rather
   than that they will be stopped unless the change is undone, as the
@@ -1044,8 +1045,7 @@ Considered and not taken: **a pool of calculation workers**, which would
 run two analyses at once on two cores. Each worker would hold its own
 intermediate results, a kinship of 10,000 individuals is 800 MB in each
 one that uses it, and its own wasm memory, which never shrinks (section
-11); and two workers that both needed the pruned variants would each
-make them. A
+11); and two workers that both needed the kinship would each make it. A
 pool would win if the walking skeleton showed users waiting on several
 independent analyses whose intermediate results are small.
 
@@ -1722,7 +1722,11 @@ docs/
 
 `core` has no DOM and no React, and is tested with Vitest alone. Nothing
 in `core` imports from `ui` or `charts`, and nothing in `charts` imports
-from `core` or `ui`. Only `src/worker/runner.ts` calls popnei, apart
+from `core` or `ui`. From stage 4 core imports, of `src/worker`, the
+types of `protocol.ts` and the pure functions of
+`src/worker/individuals/columnTypes.ts`, which read the number a cell
+holds and the types a column allows, so that the project and the reader
+cannot disagree on them (`docs/specs/core/project.md`, `columnAllows`). Only `src/worker/runner.ts` calls popnei, apart
 from the probe's worker, `src/probe/probeWorker.ts`: the calculation
 worker's script, `runnerWorker.ts`, calls `runner.ts` and not popnei. Only
 `src/worker/filesRunner.ts` calls the files wasm.
@@ -1963,7 +1967,7 @@ that day:
    it until the next load of the variants file. It is an exception to the
    decision of point 2, since a write grows that memory by the size of the
    file. What it costs: the intermediate results the worker held, the
-   pruned variants and the kinship, and the reading of the header of the
+   kinship from stage 7, and the reading of the header of the
    file, at most 49 ms from the start of a new worker to the file opened,
    measured at the end of the walking skeleton on the `.nei` file of
    19,161,178 bytes and its VCF, in Chromium 153 and WebKit 26.6 on the
