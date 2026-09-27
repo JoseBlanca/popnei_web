@@ -51,20 +51,12 @@ export const STATS_TABLE_NAME = "Statistics of each individual";
 export const KEPT_NOT_KNOWN_LINE =
   "Which individuals are kept is shown once the lists of individuals to keep and to remove are corrected.";
 
-/** The most rows the box of the table shows whole, which it is then as
-    high as, on a window at least 500 pixels high (variants.md, "The
-    table of the individuals"). */
-const ROWS_SHOWN_WHOLE = 10;
-
 /** The line before the table: how many rows it holds, since its box
-    shows about a dozen of them, "200 individuals; the table scrolls, and
-    its CSV holds them all."; up to ten, which the box shows whole, "3
-    individuals; the CSV holds them all." */
+    shows about a dozen of them, "200 individuals; the CSV holds them
+    all."; whether the box scrolls is left out, since it depends on the
+    height of the window (variants.md, "The table of the individuals"). */
 export function tableRowsText(numIndividuals: number): string {
-  const count = counted(numIndividuals, "individual");
-  return numIndividuals <= ROWS_SHOWN_WHOLE
-    ? `${count}; the CSV holds them all.`
-    : `${count}; the table scrolls, and its CSV holds them all.`;
+  return `${counted(numIndividuals, "individual")}; the CSV holds them all.`;
 }
 
 /** The words of the button that downloads the table. */

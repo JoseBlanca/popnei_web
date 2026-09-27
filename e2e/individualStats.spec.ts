@@ -177,10 +177,9 @@ test("VS7 D1 the statistics at 0.05: s000 0.0260 and 0.3672, the caption, the ve
     "0.3672",
   ]);
   await expect(
-    section(page).getByText(
-      "200 individuals; the table scrolls, and its CSV holds them all.",
-      { exact: true },
-    ),
+    section(page).getByText("200 individuals; the CSV holds them all.", {
+      exact: true,
+    }),
   ).toBeVisible();
   // No filter of individuals: no column Kept.
   await expect(table(page).getByRole("columnheader")).toHaveText([
