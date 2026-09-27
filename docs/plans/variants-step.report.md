@@ -6,7 +6,7 @@ The work report of the plan `docs/plans/variants-step.md`, stage 3 of
 
 ## Where the plan stands
 
-Under way since 26 September 2026. On 27 September work packages 1 to 6 are done, each after its review, and the owner accepted the screens of the writing and of the filters of the variants at stop A. In work package 7, the filters of the individuals, the four tasks 7.1 to 7.4 are done and committed; its review of the code-review skill is next, then stop B (task 7.5).
+Under way since 26 September 2026. On 27 September work packages 1 to 6 are done, each after its review, and the owner accepted the screens of the writing and of the filters of the variants at stop A. In work package 7, the filters of the individuals, the four tasks 7.1 to 7.4 are done and committed; its review found 52 points that held, all fixed in four rounds, on 416d21a, and stop B (task 7.5), where the owner tries the filters of the individuals, is next.
 
 ## Before the first task
 
@@ -906,8 +906,9 @@ Every row drawn froze the page for seconds, so the table draws only
 the rows on the screen, React Aria's `Virtualizer`, as the plan says.
 It still freezes 88 to 375 ms, above the 100 ms the plan named; taken
 as it is, and task 7.3 adds the thresholds to the measurement. The
-page's first script is 189.72 KB gzipped after 7.2, against 154.9 KB
-after 6.2: to be looked at by the review.
+page's first script is 189.72 KB gzipped after 7.2 as Vite counts it,
+against 154.9 KB after 6.2 with `gzip -9`: the review below found the
+cause, measured the same way.
 
 7.3 as 295dea5 (`variants.md`: the threshold line and the line under
 a plot of the individuals, as the variants' have them), 8707318 (the
@@ -944,20 +945,130 @@ On 8c4b27d: `format:check`, `typecheck` and `lint` exit 0; `npm test`
 "Tests 2061 passed (2061)"; the browser check "582 passed". Firefox was
 not run.
 
+### The review
+
+Reviewed on 9c513cc..0b13e8b by `spec`, `tests`, `stale`, `errors`,
+`api`, `architecture`, `react`, `accessibility`, `ux`, `browser` and
+`bundle`, those that read at 0b13e8b and those that run the page each
+on a copy with its own port. One fixer took every finding, in 71 commits, 0b13e8b..416d21a.
+What was fixed, each with a test that failed first where one could:
+
+- Lists that keep no individual, then a threshold turned on: the step
+  said the count was "Known once the statistics … are calculated",
+  offered Write, and a press spent a pass of statistics before refusing.
+  A threshold can only remove more, so the individuals kept are now
+  known to be none (6a08397).
+- The header of the table of the individuals was transparent once the
+  table scrolled, rows showing through its words, and a row the
+  keyboard moved to could sit hidden under it (7a1a945, 39ca9b4); a
+  focused row showed no ring, in Windows' high contrast neither
+  (76f73f8, a0e56f0). Found by two reviewers.
+- A keyboard user lost the focus to the top of the page when a Run of
+  the diversity that waited ended locked (1ca01db), and when an Undo
+  removed the statistics or the file while the focus was in the table
+  or a histogram, the variants' histograms included (883d86f, 26717e2).
+- A screen reader user never heard what a list applied or a threshold
+  committed kept, since the count changes the description of a field
+  that already has the focus; the status region now says the line of
+  the total, once however fast a threshold is stepped (08bfd98,
+  e88676c, d0373b8).
+- A Run of the diversity whose statistics failed was announced only as
+  the statistics' failure; it now adds that the diversity was not run
+  (105d128).
+- The failures of the statistics said "in the Variants step" on that
+  step, against the owner's rule of stop A, and so did the histograms
+  and the Count of work package 6 (44c11ae).
+- Words that misled: "the missing data filter changed" once the
+  individuals have a filter of the same name, now "the filter of the
+  variants by missing data" (b9a0bac, 1026ddb); one phrase for what the
+  statistics are to the thresholds (b1f0cc7); "None of the 3
+  populations has an individual left …" in place of "p1, p2 and 1 more"
+  (9df6ac2); a threshold's line after the statistics were refused
+  (90acd34); a line above the table with the number of individuals
+  and that its CSV holds them all (293f0d7, 0e34444).
+- A sort by the column Kept came back by itself when the column came
+  back (fd4535d); a name pasted with a no-break space at its end was
+  "not in the file" (36a439d).
+- The freeze of the table of 10,000 individuals: a sort moved every row
+  in React; the rows in view are now drawn anew (8febc64), and a key
+  typed in a list no longer draws the table again (61431b0). The
+  measurement below.
+- Structure: the rule of the populations kept before a Run in core
+  once, not twice in the page (80a99d1); the store counts its own undos
+  and openings, in place of a second store in the page (6459fc9); the
+  words shared by the analyses out of the diversity's module (1a9015e).
+- The tests reviewer made 106 changes to the code, 17 of which passed
+  every test, 8 of them real gaps; their tests were added (5cde640 to
+  485a522), the worst the order of equal rows under a sort, and an
+  individual with no called genotype, which no flow reached.
+- The first script: the review measured it with `gzip -9` at 156,467
+  bytes on 9c513cc and 188,958 on 0b13e8b, 32.5 KB more, of which React
+  Aria's `Table` and its `Virtualizer` are about 26 KB. Loading the
+  table only when drawn would save 26.1 KB, 2.7% of a first visit of
+  977.7 KB, most of which is popnei's wasm; not taken, as for the plots,
+  and recorded in `docs/technology.md` (e72c299).
+
+`react` and `accessibility` ran again on the fixes, twice. The second
+round found the focus still lost after an Undo of the file, no ring in
+high contrast, the total said three times, and the header 1 px short
+at 320 px; the third found the focus fix resting on the order in which
+React removes elements, the line above a table of 10 rows wrong on a
+window 500 px high, and a stale count heard after a quick Undo. All
+fixed (e8dd03d, d11530e, 54981b8, b96865d). A short fourth round of `react` on those found a timer of the status region lost after the last of them, fixed with the rest of its points (745a7a4, 91f070b, e0053e4).
+
+Not taken: WebKit's lag of about 0.35 s a key in a list of 20,000
+names, 200 ms of which is WebKit's own text area; the CSVs written
+with no byte order mark, which Excel reads as another encoding when a
+name holds letters outside ASCII, older than this work package and a
+question for a later stage; a no-break space inside a name, which
+would change how every value of the user is shown.
+
+### The table at 10,000 individuals, after the review
+
+`VS7 D4` on 61431b0, the same Mac, median ms:
+
+| change | Chromium 153, before / after | WebKit 26.6, before / after |
+|---|---|---|
+| the column Kept added by a list | 151 / 165 | 122 / 139 |
+| the column Kept changed by a list | 141 / 141 | 97 / 101 |
+| a sort by a header | 279 / 149 | 381 / 107 |
+| a threshold committed | 223 / 152 | 145 / 101 |
+
+What is left is React Aria building its collection of 10,000 rows of
+four cells at each change, which nothing cheap in our code changes.
+
+### The deliverables, on 416d21a
+
+| deliverable | command | result | asked |
+|---|---|---|---|
+| D1 | the browser check, `-g "VS7 D1"` | 82 passed, 41 in each engine | 26 |
+| D2 | the same, `-g "VS7 D2"` | 12 passed, 6 in each engine | 6 |
+| D3 | the same, `-g "VS7 D3"` | 2 passed, 1 in each engine | 2 |
+| D4 | `npx playwright test --project=measure-chromium --project=measure-webkit -g "VS7 D4" --workers=1`, on 61431b0 | 2 passed; the table above | passes |
+| D5 | the screenshots, `screens/popgen-{lists,stats,thresholds}-*` and `popgen-diversity-{kept,waits-*,stats-failed,all-emptied}` | each looked at | the states of the plan |
+| D6 | VoiceOver with Safari | for the owner at stop B | |
+| D7 | the owner accepts the screens (task 7.5) | waits | |
+
+The whole on 416d21a: `format:check`, `typecheck` and `lint` exit 0; `npm test` "Tests 2079 passed (2079)" in 61 files; the browser check "608 passed", three times, one by the fixer; `npm run screens` 244 passed. Firefox was not run. A flow of the writing, `VS5 D3` with the focus on Stop and a refused write, failed in WebKit in 10 of 20 lone runs: the test released the held file through a worker the page had just restarted; the test now waits for its call to return (416d21a), 20 of 20.
+
 ### For the owner, at stop B
 
-- With 10,000 individuals the page is frozen 97 to 381 ms after a
-  change of the table of the statistics, though the table draws only
-  the rows on the screen (the table above). Options: accept it; or
-  profile whether the cost is the table, the two histograms or the
-  counts, and draw less. Recommended: accept it for now and profile if a
-  user with such a file finds it slow.
-- A list of individuals keeps its reason's words of point D (the
-  meantime of `variants.md`), and a file of one individual reads "keep
-  none of the 1 individuals"; recommended: "keep the one individual of
-  panel.nei".
-- The first reader of task 7.3 read "Known once …" as a state and not
-  as an instruction, and could not tell whether the line of the filter
-  by heterozygosity means an individual is removed at any threshold.
-  Recommended: keep the spec's words, since the button Calculate stands
-  just above.
+1. With 10,000 individuals the page is frozen 101 to 165 ms after a
+   change of the table of the statistics (the table above, after the
+   review). Options: accept it; or show the table of a file that large
+   only on request. Recommended: accept it, and look again if a user
+   with such a file finds it slow.
+2. When the filters of individuals leave every population empty, the
+   diversity still offers Run, which can only fail; the line above it
+   says why. Recommended: lock Run there, with that line as its reason.
+3. A file of one individual reads "keep none of the 1 individuals".
+   Recommended: "keep the one individual of panel.nei".
+4. The words that send the user to fix a list (point D). Recommended:
+   keep the meantime of `variants.md`.
+5. "Known once the statistics of each individual are calculated …" was
+   read by a first reader as a state, not an instruction. Recommended:
+   keep it, since the button Calculate stands just above.
+6. Settled without the owner, which they may overrule: after a list
+   applied or a threshold committed, the status region says how many
+   individuals pass the filters, as the owner's rule of stop A has a
+   reason announced when it appears.
