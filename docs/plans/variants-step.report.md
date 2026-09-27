@@ -1103,3 +1103,25 @@ On 375a2d4: `format:check`, `typecheck` and `lint` exit 0; `npm test`
 "Tests 2082 passed (2082)" in 61 files; the browser check "612 passed",
 three times. The last screenshots are `screens/popgen-{lists,stats,thresholds}-*`
 and `screens/popgen-diversity-*`.
+
+## 8. The end of the stage
+
+8.1 made no commit: every change of a skill, of `docs/architecture.md`
+or of `docs/technology.md` that the twenty specs ask for was already
+made, 25 items, 11 on `main` before the start and the rest on the
+branch (8227477, da016ac, a954cbd, e5d0d22, 84e4fd9, 2914e1a, edd9ae5,
+e72c299). The list, item by item, was checked against `git log
+0bb7d78..` of each document.
+
+The whole, on 5b7a982: `format:check`, `typecheck`, `lint` and `build`
+exit 0; `npm test` "Tests 2082 passed (2082)" in 61 files, none
+skipped; the browser check "612 passed", the probe's 40 among them;
+`npm run screens` "244 passed"; `npm pkg get dependencies.popnei`
+prints the URL of `js-v0.1.0-dev.2`; the search of `src/core` for
+clocks, chance, timers, `await` and imports of popnei finds nothing.
+The page's first script is 191.82 KB gzipped as Vite counts it, against
+123.62 KB on 1457d80, 68.2 KB more: the plots, with the D3 modules
+`d3-array`, `d3-axis`, `d3-color`, `d3-format`, `d3-interpolate`,
+`d3-scale` and `d3-selection` (21.1 KB, work package 6), React Aria's
+`Table` and `Virtualizer` (about 26 KB, work package 7), and the code of
+the step. `d3-time` and `d3-time-format` are not in it.
