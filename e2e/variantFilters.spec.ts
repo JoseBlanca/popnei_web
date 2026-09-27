@@ -407,3 +407,39 @@ for (const locale of ["en-US", "es-ES"] as const) {
     });
   });
 }
+
+// React Aria asks an iPhone for the keypad of decimals, which in a region
+// that writes 0,1 has no point (the spec, "A character the fields do not
+// take"). It tells an iPhone by the platform the browser gives, which
+// the page is made to give before it starts.
+test("VS6 D2 on an iPhone a field of decimals asks for the whole keyboard, and a field of whole numbers for the keypad of digits", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(Navigator.prototype, "platform", {
+      get: () => "iPhone",
+    });
+    Object.defineProperty(Navigator.prototype, "userAgentData", {
+      get: () => undefined,
+    });
+  });
+  await openVariants(page);
+  expect(await page.evaluate(() => navigator.platform)).toBe("iPhone");
+  await flip(page, "Filter the variants by major allele frequency (MAF)");
+  await flip(page, "Prune the variants by linkage disequilibrium (LD)");
+  for (const label of [
+    "Maximum proportion of missing genotypes, from 0 to 1",
+    "Maximum major allele frequency, from 0 to 1",
+    R2_LABEL,
+  ]) {
+    await expect(field(page, label)).toHaveAttribute("inputmode", "text");
+  }
+  await expect(field(page, DISTANCE_LABEL)).toHaveAttribute(
+    "inputmode",
+    "numeric",
+  );
+  await expect(page.getByLabel("Ploidy of the VCF")).toHaveAttribute(
+    "inputmode",
+    "numeric",
+  );
+});

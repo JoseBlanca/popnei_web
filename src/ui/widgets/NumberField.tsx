@@ -151,6 +151,10 @@ export function NumberField({
   const notTaken = useRef(false);
   // Whether the commit under way is the one refused for it.
   const refusing = useRef(false);
+  // Whether a number committed may have decimals, as checkCommitted has
+  // it: with `decimals`, any but 0; otherwise, a step that is not whole.
+  const takesDecimals =
+    decimals === undefined ? !Number.isInteger(step) : decimals > 0;
 
   const refuse = (refusal: NumberRefusal): void => {
     const text = refusedText(refusal, value);
@@ -234,6 +238,7 @@ export function NumberField({
         onCommitStarts={commitStarts}
         onCommitEnds={commitEnds}
         onCommitReady={onCommitReady}
+        inputMode={takesDecimals ? "text" : "numeric"}
         onText={(text) => {
           // After a character thrown away, and until a deletion mends the
           // text, what it holds is not what was typed: 0,1 shows as 01.
@@ -272,6 +277,13 @@ interface FieldInputProps {
   /** Called with the text of the input at each change of it that React
       Aria took. */
   readonly onText: (text: string) => void;
+  /** The keyboard a phone shows for the input: the keypad of digits for
+      a field of whole numbers, the whole keyboard, which has the point,
+      for a field of decimals. React Aria asks an iPhone for the keypad
+      of decimals, which in a region that writes 0,1 has a comma and no
+      point (docs/specs/steps/variants.md, "A character the fields do
+      not take"). */
+  readonly inputMode: "numeric" | "text";
 }
 
 /** The input of the field, which reads React Aria's state of it: to
@@ -286,6 +298,7 @@ function FieldInput({
   onCommitEnds,
   onCommitReady,
   onText,
+  inputMode,
 }: FieldInputProps): React.JSX.Element {
   const state = useContext(NumberFieldStateContext);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -349,6 +362,7 @@ function FieldInput({
     <Input
       ref={inputRef}
       className={classOf(styles, "input")}
+      inputMode={inputMode}
       onChange={(event) => {
         // A change React Aria took, of the text it showed; one that took
         // text out mends what was typed.
