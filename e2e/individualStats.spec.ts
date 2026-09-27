@@ -433,6 +433,33 @@ test("VS7 D1 a row focused while moving up is not under the header, whose cells 
   expect(backgrounds).not.toContain("rgba(0, 0, 0, 0)");
 });
 
+test("VS7 D1 at 320 pixels wide, with the column Kept, a row focused while moving up is not under the header of three lines", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  await calculated(page);
+  await applyList(page, REMOVE_LABEL, "Apply the list to remove", "s001");
+  await rowOf(page, "s002").getByRole("rowheader").click();
+  for (let step = 0; step < 40; step += 1) {
+    await page.keyboard.press("ArrowDown");
+  }
+  for (let step = 0; step < 25; step += 1) {
+    await page.keyboard.press("ArrowUp");
+  }
+  const focused = page.locator(":focus");
+  await expect(focused).toHaveText("s017");
+  const headerBottom = Math.max(
+    ...(await table(page)
+      .getByRole("columnheader")
+      .evaluateAll((cells) =>
+        cells.map((cell) => cell.getBoundingClientRect().bottom),
+      )),
+  );
+  const focusedBox = await focused.boundingBox();
+  if (focusedBox === null) throw new Error("the focused cell has no box");
+  expect(focusedBox.y).toBeGreaterThanOrEqual(headerBottom - 0.5);
+});
+
 test("VS7 D1 the CSV of the table: panel.individual_stats.csv, its header, 200 rows, and s000 with every digit", async ({
   page,
 }) => {

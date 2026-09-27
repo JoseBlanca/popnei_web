@@ -17,8 +17,8 @@
   /* A row that the arrow keys bring into view from below the header
      stops under it and not behind it, its focus ring in view (WCAG
      2.4.11): the header's height at most, three lines of words at 320
-     pixels wide and their padding. */
-  scroll-padding-block-start: 5rem;
+     pixels wide, their padding and its line, 81 pixels, with a margin. */
+  scroll-padding-block-start: 5.5rem;
 }
 
 .table[data-focus-visible] {
