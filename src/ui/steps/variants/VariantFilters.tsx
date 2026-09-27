@@ -11,6 +11,11 @@
  * counted, what it kept of what it was given, which describes its fields;
  * under the four, the part of the Count (FilterCountsPart.tsx).
  *
+ * The block of the histograms, each histogram, each count and the part of
+ * the Count are drawn inside an error boundary of their own, and each
+ * reads its result inside it, so that a defect in drawing one leaves the
+ * filters and the rest of the step (react.md, "Errors").
+ *
  * While the variants file is not read, the line that the histograms, the
  * counts and the statistics of each individual come once it is stands
  * under the heading, in their place; the filters are drawn in every
@@ -19,20 +24,23 @@
 import { useId, useState } from "react";
 
 import { filterCountRows } from "../../../core/analyses/filterCounts.ts";
-import type { FilterCountRow } from "../../../core/analyses/filterCounts.ts";
+import type { VariantStatistic } from "../../../core/analyses/variantChecks.ts";
 import { MAX_LD_DIST } from "../../../core/project.ts";
 import type {
   VariantFilter,
   VariantFilterKind,
 } from "../../../worker/protocol.ts";
 import { resultOf, statusOf } from "../../analyses/status.ts";
+import { titleOf } from "../../analyses/titles.ts";
 import { classOf } from "../../classOf.ts";
 import { useAnnouncer } from "../../shell/announcer.tsx";
+import { ErrorBoundary } from "../../shell/ErrorBoundary.tsx";
 import { useAppState, useStore } from "../../store.tsx";
 import { NumberField } from "../../widgets/NumberField.tsx";
 import { Switch } from "../../widgets/Switch.tsx";
 import { filterCommand, filterSwitchCommand } from "./commands.ts";
 import { FilterCountsPart } from "./FilterCountsPart.tsx";
+import { VARIANT_HISTOGRAMS } from "./histogramWords.ts";
 import { VariantChecksBlock } from "./VariantChecksBlock.tsx";
 import { VariantHistogram } from "./VariantHistogram.tsx";
 import styles from "./VariantsStep.module.css";
@@ -82,11 +90,14 @@ export function VariantFilters(): React.JSX.Element {
   const announcer = useAnnouncer();
   const filters = useAppState((s) => s.project.filters);
   const read = useAppState((s) => s.project.variants?.read.kind === "read");
-  const variantsName = useAppState((s) => s.project.variants?.name ?? null);
-  // The histograms of the variants, once calculated: the result the store
-  // keeps, the same object until it changes.
-  const histograms = useAppState((s) =>
-    resultOf(statusOf(s, "variantChecks"), "variantChecks"),
+  // Whether the histograms of the variants are calculated, and the
+  // filters as they are counted; each histogram and each count reads its
+  // result itself, inside its boundary.
+  const histogramsDone = useAppState(
+    (s) => statusOf(s, "variantChecks").kind === "done",
+  );
+  const counted = useAppState(
+    (s) => statusOf(s, "filterCounts").kind === "done",
   );
   // The numbers typed in the thresholds of the two filters that have a
   // histogram, and not yet committed, which the threshold on each
@@ -94,18 +105,6 @@ export function VariantFilters(): React.JSX.Element {
   // take (the spec, "The threshold typed and not yet committed").
   const [typedObsHet, setTypedObsHet] = useState<number | null>(null);
   const [typedMaf, setTypedMaf] = useState<number | null>(null);
-  // The counts of the filters as they are, once counted: the result the
-  // store keeps, the same object until it changes, and the project it is
-  // done for, whose filters give the rows their order.
-  const counts = useAppState((s) =>
-    resultOf(statusOf(s, "filterCounts"), "filterCounts"),
-  );
-  const project = useAppState((s) => s.project);
-  const rows = counts === null ? [] : filterCountRows(counts, project);
-  const countOf = (kind: VariantFilterKind): string | null => {
-    const row: FilterCountRow | undefined = rows.find((r) => r.kind === kind);
-    return row === undefined ? null : keptText(row.given, row.kept);
-  };
   const headingId = useId();
 
   const set = (filter: VariantFilter): void => {
@@ -128,17 +127,13 @@ export function VariantFilters(): React.JSX.Element {
   /** The histogram of `statistic` beside its filter, with `threshold`,
       once the histograms are calculated. */
   const histogram = (
-    statistic: "maf" | "obsHet" | "unbiasedExpHet",
+    statistic: VariantStatistic,
     threshold: number | null,
   ): React.ReactNode =>
-    histograms !== null &&
-    variantsName !== null && (
-      <VariantHistogram
-        statistic={statistic}
-        result={histograms}
-        threshold={threshold}
-        variantsName={variantsName}
-      />
+    histogramsDone && (
+      <ErrorBoundary level={3} heading={VARIANT_HISTOGRAMS[statistic].name}>
+        <HistogramOf statistic={statistic} threshold={threshold} />
+      </ErrorBoundary>
     );
 
   return (
@@ -147,14 +142,17 @@ export function VariantFilters(): React.JSX.Element {
         {FILTERS_HEADING}
       </h2>
       {read ? (
-        <VariantChecksBlock />
+        <ErrorBoundary level={3} heading={titleOf("variantChecks")}>
+          <VariantChecksBlock />
+        </ErrorBoundary>
       ) : (
         <p className={classOf(styles, "line")}>{NOT_READ_LINE}</p>
       )}
       <div className={classOf(styles, "filters")}>
         <Filter
           label={MISSING_DATA_SWITCH}
-          count={countOf("missing_data")}
+          kind="missing_data"
+          counted={counted}
           line={MISSING_DATA_LINE}
           isOn={missingData !== null}
           onSwitch={(on) => {
@@ -182,7 +180,8 @@ export function VariantFilters(): React.JSX.Element {
         </Filter>
         <Filter
           label={OBS_HET_SWITCH}
-          count={countOf("obs_het")}
+          kind="obs_het"
+          counted={counted}
           line={null}
           isOn={obsHet !== null}
           onSwitch={(on) => {
@@ -223,7 +222,8 @@ export function VariantFilters(): React.JSX.Element {
         </Filter>
         <Filter
           label={MAF_SWITCH}
-          count={countOf("maf")}
+          kind="maf"
+          counted={counted}
           line={MAF_LINE}
           isOn={maf !== null}
           onSwitch={(on) => {
@@ -257,7 +257,8 @@ export function VariantFilters(): React.JSX.Element {
         </Filter>
         <Filter
           label={LD_SWITCH}
-          count={countOf("ld")}
+          kind="ld"
+          counted={counted}
           line={LD_LINE}
           isOn={ld !== null}
           onSwitch={(on) => {
@@ -299,7 +300,11 @@ export function VariantFilters(): React.JSX.Element {
           }
         </Filter>
       </div>
-      {read && <FilterCountsPart />}
+      {read && (
+        <ErrorBoundary level={3} heading={titleOf("filterCounts")}>
+          <FilterCountsPart />
+        </ErrorBoundary>
+      )}
     </section>
   );
 }
@@ -313,6 +318,8 @@ interface Described {
 
 /** What one filter of the variants is drawn with. */
 interface FilterProps {
+  /** Its kind, which names its count. */
+  readonly kind: VariantFilterKind;
   /** The words of its switch. */
   readonly label: string;
   /** The line under the switch, which describes the switch and the
@@ -321,10 +328,10 @@ interface FilterProps {
   readonly line: string | null;
   /** Whether the filter is on. */
   readonly isOn: boolean;
-  /** What it kept of what it was given, "Kept 1,152 of the 1,200
-      variants it was given.", or `null` while the filters as they are
-      are not counted. */
-  readonly count: string | null;
+  /** Whether the filters as they are are counted, when its count, "Kept
+      1,152 of the 1,200 variants it was given.", is shown while it is
+      on. */
+  readonly counted: boolean;
   /** Called when the switch is turned on or off. */
   readonly onSwitch: (on: boolean) => void;
   /** The fields of the filter, given their description; nothing while
@@ -339,10 +346,11 @@ interface FilterProps {
 /** One filter of the variants: its switch, the line under it, its
     fields, and what it kept. */
 function Filter({
+  kind,
   label,
   line,
   isOn,
-  count,
+  counted,
   onSwitch,
   children,
   after,
@@ -354,11 +362,8 @@ function Filter({
   // advice.
   const switchDescribed: Described =
     line !== null ? { describedBy: lineId } : {};
-  const shownCount = isOn ? count : null;
-  const ids = [
-    ...(shownCount !== null ? [countId] : []),
-    ...(line !== null ? [lineId] : []),
-  ];
+  const shown = isOn && counted;
+  const ids = [...(shown ? [countId] : []), ...(line !== null ? [lineId] : [])];
   const described: Described =
     ids.length > 0 ? { describedBy: ids.join(" ") } : {};
   return (
@@ -375,12 +380,61 @@ function Filter({
         </p>
       )}
       {children(described)}
-      {shownCount !== null && (
-        <p id={countId} className={classOf(styles, "count")}>
-          {shownCount}
-        </p>
+      {shown && (
+        <ErrorBoundary level={3} heading={titleOf("filterCounts")}>
+          <KeptCount kind={kind} id={countId} />
+        </ErrorBoundary>
       )}
       {after}
     </div>
+  );
+}
+
+/** What the filter of the kind `kind` kept of what it was given, "Kept
+    1,152 of the 1,200 variants it was given.", with the id `id` its
+    fields are described by, once the filters as they are are counted. */
+function KeptCount({
+  kind,
+  id,
+}: {
+  readonly kind: VariantFilterKind;
+  readonly id: string;
+}): React.JSX.Element | null {
+  // The counts the store keeps, the same object until they change, and
+  // the project they are done for, whose filters give the rows their
+  // order.
+  const counts = useAppState((s) =>
+    resultOf(statusOf(s, "filterCounts"), "filterCounts"),
+  );
+  const project = useAppState((s) => s.project);
+  if (counts === null) return null;
+  const row = filterCountRows(counts, project).find((r) => r.kind === kind);
+  return row === undefined ? null : (
+    <p id={id} className={classOf(styles, "count")}>
+      {keptText(row.given, row.kept)}
+    </p>
+  );
+}
+
+/** The histogram of `statistic` with `threshold`, from the histograms the
+    store keeps, once they are calculated. */
+function HistogramOf({
+  statistic,
+  threshold,
+}: {
+  readonly statistic: VariantStatistic;
+  readonly threshold: number | null;
+}): React.JSX.Element | null {
+  const histograms = useAppState((s) =>
+    resultOf(statusOf(s, "variantChecks"), "variantChecks"),
+  );
+  const variantsName = useAppState((s) => s.project.variants?.name ?? null);
+  return histograms === null || variantsName === null ? null : (
+    <VariantHistogram
+      statistic={statistic}
+      result={histograms}
+      threshold={threshold}
+      variantsName={variantsName}
+    />
   );
 }
