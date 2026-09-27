@@ -696,14 +696,24 @@ function countsText<R>(
 
 /** The end of a request of the writing that was current and left
     `runs`: the file written with its size, a file of no variant, a
-    failure, or a stop. */
+    failure, or a stop; and the end of the statistics a write waited for
+    when the writing is then locked, the filters of individuals keeping
+    no one. */
 function writeEndedAnnouncements(
   before: AppState<unknown, unknown>,
   after: AppState<unknown, unknown>,
 ): readonly string[] {
   const announcements: string[] = [];
   const write = after.write;
+  const waited =
+    before.write?.kind === "running" && before.write.waitsForStatistics
+      ? before.write.runId
+      : null;
   for (const run of endedRuns(before, after)) {
+    if (run.runId === waited && !run.stopping && write?.kind === "locked") {
+      announcements.push(`The file was not written. ${write.reason}`);
+      continue;
+    }
     if (run.analysis !== null) continue;
     if (run.stopping) {
       announcements.push("Writing the file: stopped.");

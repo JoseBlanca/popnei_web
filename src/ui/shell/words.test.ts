@@ -2164,6 +2164,33 @@ describe("VS5 D2 the announcements of the writing, more", () => {
     ]);
   });
 
+  test("a write whose statistics end with the filters of individuals keeping no one says the file was not written, and why", () => {
+    const before = checksState({
+      project: THREE_FILTERS,
+      statuses: { [STATISTICS]: running(KEY_S, 1) },
+      write: {
+        kind: "running",
+        key: KEY_W,
+        runId: 1,
+        progress: null,
+        waitsForStatistics: true,
+      },
+      runs: [run(1, STATISTICS, KEY_S, CURRENT)],
+    });
+    const reason =
+      "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them in the Variants step.";
+    const after = checksState({
+      project: THREE_FILTERS,
+      statuses: { [STATISTICS]: done(KEY_S) },
+      individualsKept: keptFirst(0),
+      write: { kind: "locked", reason },
+    });
+    expect(announcementsOf(before, after, WORDS)).toEqual([
+      "Statistics of each individual: done.",
+      `The file was not written. ${reason}`,
+    ]);
+  });
+
   test("the end of a write of a variants file with no variant says so in the step's words", () => {
     const before = checksState({
       project: FIVE_FILTERS,
