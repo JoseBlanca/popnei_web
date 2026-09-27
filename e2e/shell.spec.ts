@@ -413,11 +413,32 @@ test("WS9 D3 a change that leaves a calculation behind says so in the notice, an
   await expectNoViolations(makeAxeBuilder);
 
   await goTo(page, "Analyses");
+  // Every text but the empty one that the region holds from here on, in
+  // order, since the new calculation may end within the pause of the
+  // announcer, and be joined to the start, or after it, and replace the
+  // start in the region some 20 ms later, which in WebKit is at times
+  // before an assertion on the region looks.
+  await status(page).evaluate((region) => {
+    const texts: string[] = [];
+    Object.assign(window, { statusTexts: texts });
+    new MutationObserver(() => {
+      if (region.textContent !== "") texts.push(region.textContent);
+    }).observe(region, { childList: true, subtree: true, characterData: true });
+  });
   await page.getByRole("button", { name: "Run" }).click();
   await expect(notice(page)).toHaveCount(0);
-  // The calculation stopped, the worker is made again without the hold,
-  // and the new one may end within the pause of the announcer.
-  await expect(status(page)).toHaveText(
+  // The calculation stopped, and the worker made again without the hold
+  // calculates the diversity to its end.
+  const texts = (): Promise<string[]> =>
+    page.evaluate(
+      () => (window as unknown as { statusTexts: string[] }).statusTexts,
+    );
+  await expect
+    .poll(async () => (await texts()).join(" "))
+    .toBe(
+      "Diversity: calculating. The earlier calculation of Diversity was stopped. Diversity: done.",
+    );
+  expect((await texts())[0]).toMatch(
     /^Diversity: calculating\. The earlier calculation of Diversity was stopped\.( Diversity: done\.)?$/,
   );
 });
