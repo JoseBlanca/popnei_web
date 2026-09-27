@@ -383,7 +383,12 @@ function FieldInput({
         // A text selected and typed over mends what was typed, even when
         // it is typed over with the same text, 0 over 0, which the
         // change of the input cannot tell from no change.
-        if (start !== end) onMended();
+        if (start !== end) {
+          onMended();
+          // No change of the input follows a text typed over with the
+          // same text, so the number typed is given here.
+          onText(next);
+        }
         return;
       }
       onNotTakenPending();
@@ -393,7 +398,7 @@ function FieldInput({
     return () => {
       input.removeEventListener("beforeinput", onBeforeInput);
     };
-  }, [state, onNotTaken, onNotTakenPending, onMended]);
+  }, [state, onNotTaken, onNotTakenPending, onMended, onText]);
 
   useEffect(() => {
     if (state === null || onCommitReady === undefined) return;

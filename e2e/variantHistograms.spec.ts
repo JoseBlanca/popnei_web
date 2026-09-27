@@ -429,6 +429,28 @@ test("VS6 D2 0.3 typed with no commit before: Cmd+Z puts 0.95 back, not 0, the r
   await expect(maf).toHaveValue("0.4");
 });
 
+test("VS6 D2 0.3 and a comma thrown away, mended by typing 3 over the 3: the line follows 0.3", async ({
+  page,
+}) => {
+  await openVariants(page);
+  await pick(page, "panel.nei");
+  await calculate(page);
+  await flip(page, MAF_SWITCH);
+  const group = histogram(page, MAF_TITLE);
+  const maf = field(page, MAF_LABEL);
+  await maf.click();
+  await maf.press("ControlOrMeta+a");
+  await maf.pressSequentially("0.3,");
+  await expect(group.getByText("Maximum 0.95")).toBeAttached();
+  await maf.press("Shift+ArrowLeft");
+  await maf.pressSequentially("3");
+  await expect(maf).toHaveValue("0.3");
+  await expect(group.getByText("Maximum 0.3", { exact: true })).toBeAttached();
+  await expect(
+    group.getByText("Threshold of the MAF filter: 0.3", { exact: true }),
+  ).toBeVisible();
+});
+
 test("VS6 D2 0.9 pasted over 0.8 typed in the MAF field is committed at once, and the line follows it", async ({
   page,
 }) => {
