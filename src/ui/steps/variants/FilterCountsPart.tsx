@@ -7,7 +7,8 @@
  * beside it (VariantFilters.tsx); the part holds what the filters share:
  *
  * - ready: the button, and the line of no counts;
- * - running: Stop, the bar, and the line with the time since it started;
+ * - running: Stop, the bar, and the line with the time since it started,
+ *   and no line of no counts;
  * - done: the line of the total, and the warning of a filter that kept
  *   none or of a file of no variant; the button goes, and the focus, when
  *   it was on it, moves to the line of the total;
@@ -123,19 +124,22 @@ export function FilterCountsPart(): React.JSX.Element {
   );
 }
 
-/** The line of no counts, in every state but done; a defect in the state
-    removed, which the store never gives the counts, since they are in no
-    notice. */
+/** The line of no counts, beside the button while the Count is ready
+    (filterCounts.md, "The states"): running, the bar stands there, and in
+    error the words of the error, which may leave no button to count
+    with. A defect in the state removed, which the store never gives the
+    counts, since they are in no notice. */
 function NotCounted({
   status,
 }: {
   readonly status: AnalysisStatus<JobResult>;
-}): React.JSX.Element {
+}): React.JSX.Element | null {
   if (status.kind === "removed") {
     throw new Error(
       "popnei_web defect: the counts of the filters are removed, and they are in no notice.",
     );
   }
+  if (status.kind !== "ready") return null;
   return <p className={classOf(styles, "line")}>{NOT_COUNTED_LINE}</p>;
 }
 

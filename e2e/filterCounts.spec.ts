@@ -278,7 +278,7 @@ test("VS6 D2 an undo brings back the counts of the filters before, with no calcu
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("VS6 D2 the Count running: Stop, the bar and its line, the line of no counts; stopped, the button back with the focus", async ({
+test("VS6 D2 the Count running: Stop, the bar and its line, and no line of no counts; stopped, the button back with the focus", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -294,9 +294,7 @@ test("VS6 D2 the Count running: Stop, the bar and its line, the line of no count
     }),
   ).toBeVisible();
   await expect(filters(page).getByText(/^Calculating · /)).toBeVisible();
-  await expect(
-    filters(page).getByText(NOT_COUNTED, { exact: true }),
-  ).toBeVisible();
+  await expect(filters(page).getByText(NOT_COUNTED)).toHaveCount(0);
   await expect(filters(page).getByText(/^Kept /)).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
 
@@ -331,7 +329,7 @@ test("VS6 D2 a Count under way stopped by a new load, with the line that says so
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("VS6 D2 the Count refused: the ploidy of tetraploid.vcf.gz, in the words of the diversity with no button, and the focus on them", async ({
+test("VS6 D2 the Count refused: the ploidy of tetraploid.vcf.gz, in the words of the diversity with no button, the focus on them, no line of no counts, and the size of the file not known", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -349,9 +347,18 @@ test("VS6 D2 the Count refused: the ploidy of tetraploid.vcf.gz, in the words of
   const focused = page.locator(":focus");
   await expect(focused).toHaveAttribute("tabindex", "-1");
   await expect(focused).toContainText("At line 5 of tetraploid.vcf.gz");
+  // No line that asks for a Count that has no button, here or in the
+  // part of the writing.
+  await expect(filters(page).getByText(NOT_COUNTED)).toHaveCount(0);
   await expect(
-    filters(page).getByText(NOT_COUNTED, { exact: true }),
-  ).toBeVisible();
+    page
+      .getByRole("region", { name: "Writing the filtered variants" })
+      .getByRole("button", {
+        name: "Write the filtered variants as a .nei file",
+      }),
+  ).toHaveAccessibleDescription(
+    "The size of the file is not known, since the variants could not be counted.",
+  );
   await expect(filters(page).getByText(/^Kept /)).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
 });
@@ -371,6 +378,7 @@ test("VS6 D2 a Count whose worker stopped asks to count again, with the button, 
     ),
   ).toBeVisible();
   await expect(countButton(page)).toBeFocused();
+  await expect(filters(page).getByText(NOT_COUNTED)).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
   // The crash started a new worker, which answers.
   await count(page);

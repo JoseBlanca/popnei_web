@@ -13,6 +13,7 @@ import type { WriteStatus } from "../../../core/store.ts";
 import type { WriteEstimate } from "../../../core/writeEstimate.ts";
 import {
   DROPPED_TEXT,
+  NOT_COUNTABLE_SIZE_TEXT,
   NO_SIZE_TEXT,
   estimateText,
   noVariantText,
@@ -54,7 +55,9 @@ export interface WriteParts {
 
 /**
  * The parts of the section in the state `write` of the project `p`, with
- * the size expected `estimate`, `null` when the variants are not counted.
+ * the size expected `estimate`, `null` when the variants are not counted;
+ * `countRefused` when the Count is in error with no button to count
+ * again, so that the words of no size do not ask for it.
  * Write is offered in `ready`, `saved`, and `error` after a failure that
  * is neither popnei's refusal nor a variants file the browser can no
  * longer read, of the write or of the statistics it waited for, since
@@ -66,6 +69,7 @@ export function writeParts(
   write: WriteStatus<Blob>,
   estimate: WriteEstimate | null,
   p: Project,
+  countRefused = false,
 ): WriteParts {
   const offered: WriteParts = {
     message: null,
@@ -84,7 +88,11 @@ export function writeParts(
             kind: "write",
             disabled: false,
             description:
-              estimate === null ? NO_SIZE_TEXT : estimateText(estimate),
+              estimate !== null
+                ? estimateText(estimate)
+                : countRefused
+                  ? NOT_COUNTABLE_SIZE_TEXT
+                  : NO_SIZE_TEXT,
           },
   };
   const line = (text: string): WriteParts["message"] => ({

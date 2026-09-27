@@ -63,6 +63,15 @@ describe("VS5 D3 the parts of the section of the writing in each state", () => {
     });
   });
 
+  test("ready with no size known and the Count refused: Write, described by the size not known", () => {
+    expect(writeParts(READY, null, PROJECT, true).button).toEqual({
+      kind: "write",
+      disabled: false,
+      description:
+        "The size of the file is not known, since the variants could not be counted.",
+    });
+  });
+
   test("ready at the warning's size: the warning above Write, which can still be pressed", () => {
     const parts = writeParts(READY, estimateOf(500_000, 1000), PROJECT);
     expect(parts.warning).toMatch(/^A file of about 500\.0 MB may need/u);

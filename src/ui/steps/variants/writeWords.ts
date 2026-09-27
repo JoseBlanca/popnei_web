@@ -37,6 +37,12 @@ export const WRITE_LABEL = "Write the filtered variants as a .nei file";
 export const NO_SIZE_TEXT =
   "The size of the file is known once the variants are counted: Count, above.";
 
+/** What the part says in place of the size while the variants are not
+    counted and the Count has no button to count them again, since popnei
+    refused it or the browser can no longer read the variants file. */
+export const NOT_COUNTABLE_SIZE_TEXT =
+  "The size of the file is not known, since the variants could not be counted.";
+
 /** What the part says when a change of the filters dropped the file of
     the last write, which ended after it. */
 export const DROPPED_TEXT =

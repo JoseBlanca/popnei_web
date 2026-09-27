@@ -24,6 +24,7 @@ import { writtenName } from "../../../core/fileNames.ts";
 import type { WriteStatus } from "../../../core/store.ts";
 import { writeEstimate } from "../../../core/writeEstimate.ts";
 import type { Progress } from "../../../worker/protocol.ts";
+import { buttonOf, statusOf } from "../../analyses/status.ts";
 import { progressShare } from "../../analyses/words.ts";
 import { classOf } from "../../classOf.ts";
 import { startWriting } from "../../runs.ts";
@@ -74,8 +75,17 @@ function WriteBody({
   const headingId = useId();
   const heading = useRef<HTMLHeadingElement>(null);
 
+  const countStatus = useAppState((s) => statusOf(s, "filterCounts"));
+  const countRefused =
+    countStatus.kind === "error" && buttonOf(countStatus) === null;
+
   const estimate = writeEstimate(project, kept, variantsKept);
-  const { message, warning, button } = writeParts(write, estimate, project);
+  const { message, warning, button } = writeParts(
+    write,
+    estimate,
+    project,
+    countRefused,
+  );
 
   return (
     <section aria-labelledby={headingId} className={classOf(styles, "section")}>
