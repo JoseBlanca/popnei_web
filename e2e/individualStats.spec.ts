@@ -244,6 +244,34 @@ test("VS7 D1 the table sorted with the keyboard alone: into the table, up to the
   await expectNoViolations(makeAxeBuilder);
 });
 
+test("VS7 D1 a row focused while moving up is not under the header, whose cells are opaque", async ({
+  page,
+}) => {
+  await calculated(page);
+  await rowOf(page, "s002").getByRole("rowheader").click();
+  for (let step = 0; step < 40; step += 1) {
+    await page.keyboard.press("ArrowDown");
+  }
+  for (let step = 0; step < 25; step += 1) {
+    await page.keyboard.press("ArrowUp");
+  }
+  const focused = page.locator(":focus");
+  await expect(focused).toHaveText("s017");
+  const headers = table(page).getByRole("columnheader");
+  const headerBottom = Math.max(
+    ...(await headers.evaluateAll((cells) =>
+      cells.map((cell) => cell.getBoundingClientRect().bottom),
+    )),
+  );
+  const focusedBox = await focused.boundingBox();
+  if (focusedBox === null) throw new Error("the focused cell has no box");
+  expect(focusedBox.y).toBeGreaterThanOrEqual(headerBottom - 0.5);
+  const backgrounds = await headers.evaluateAll((cells) =>
+    cells.map((cell) => getComputedStyle(cell).backgroundColor),
+  );
+  expect(backgrounds).not.toContain("rgba(0, 0, 0, 0)");
+});
+
 test("VS7 D1 the CSV of the table: panel.individual_stats.csv, its header, 200 rows, and s000 with every digit", async ({
   page,
 }) => {

@@ -2084,6 +2084,21 @@ for (const theme of ["light", "dark"] as const) {
         .screenshot({
           path: join(SCREENS, `popgen-stats-table-sorted-${theme}.png`),
         });
+      // Scrolled with the arrow keys, down and back up: the rows under
+      // the header, and the cell focused below it.
+      const grid = individualLists(page).getByRole("grid", {
+        name: "Statistics of each individual",
+      });
+      await grid.getByRole("rowheader").first().click();
+      for (let step = 0; step < 30; step += 1) {
+        await page.keyboard.press("ArrowDown");
+      }
+      for (let step = 0; step < 12; step += 1) {
+        await page.keyboard.press("ArrowUp");
+      }
+      await grid.screenshot({
+        path: join(SCREENS, `popgen-stats-table-scrolled-${theme}.png`),
+      });
       await page.setViewportSize({ width: 320, height: 900 });
       await saveIndividuals(page, "popgen-stats-320");
     });

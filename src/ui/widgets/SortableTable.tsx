@@ -124,7 +124,7 @@ export function SortableTable<Id extends string>({
         {...(sort !== null && { sortDescriptor: sort })}
         onSortChange={onSort}
       >
-        <TableHeader columns={columns} className={classOf(styles, "headerRow")}>
+        <TableHeader columns={columns}>
           {(column) => (
             <Column
               id={column.id}
