@@ -1025,7 +1025,12 @@ nothing on the screen says the things the lines above do not.
   button, popnei's refusal or a file the browser can no longer read, and
   the focus was on the button, the focus moves in the same way to the
   words of the error, since the Count has no heading of its own to take
-  it, as the block of a check does. The Save button takes the focus when a write ends
+  it, as the block of a check does. When the result of a check leaves
+  the page with the focus in it, on the table of the individuals, a tab,
+  the panel or a CSV button of a histogram, by an Undo or a change that
+  removes it, the focus moves to the heading of the block of that check,
+  the histograms of the variants or the statistics of each individual,
+  in the same way. The Save button takes the focus when a write ends
   with the focus on the button that asked for it (`writeVariants.md`).
 - Each histogram is an image with its title and description, and the
   table of its bins in the tab "Table of the bins", next to the tab of
