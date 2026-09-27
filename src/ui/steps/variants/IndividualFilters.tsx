@@ -40,6 +40,7 @@ import { titleOf } from "../../analyses/titles.ts";
 import { ErrorBoundary } from "../../shell/ErrorBoundary.tsx";
 import { classOf } from "../../classOf.ts";
 import { useAnnouncer } from "../../shell/announcer.tsx";
+import { INDIVIDUALS_KEPT_KIND } from "../../shell/status.ts";
 import { useAppState, useStore } from "../../store.tsx";
 import { Button } from "../../widgets/Button.tsx";
 import { NumberField } from "../../widgets/NumberField.tsx";
@@ -149,7 +150,7 @@ export function IndividualFilters(): React.JSX.Element {
     // Only the latest of what the filters keep is said, when a
     // threshold is stepped several times within the pause of the region.
     if (kept !== null) {
-      announcer.announce(kept, { replaces: "individualsKept" });
+      announcer.announce(kept, { replaces: INDIVIDUALS_KEPT_KIND });
     }
   };
   const type = (kind: ListKind, text: string): void => {

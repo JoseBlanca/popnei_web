@@ -4,7 +4,7 @@
  */
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { createAnnouncer } from "./status.ts";
+import { INDIVIDUALS_KEPT_KIND, createAnnouncer } from "./status.ts";
 
 describe("WS9 D1 the announcer", () => {
   beforeEach(() => {
@@ -38,7 +38,7 @@ describe("WS9 D1 the announcer", () => {
 
   test("a text that replaces its kind drops the one of that kind still waiting, and is written last", () => {
     const announcer = createAnnouncer();
-    const total = { replaces: "individualsTotal" } as const;
+    const total = { replaces: INDIVIDUALS_KEPT_KIND } as const;
     announcer.announce("125 of the 200 pass.", total);
     announcer.announce("Other words.");
     announcer.announce("124 of the 200 pass.", total);
@@ -49,6 +49,35 @@ describe("WS9 D1 the announcer", () => {
     announcer.announce("122 of the 200 pass.", total);
     vi.advanceTimersByTime(100);
     expect(announcer.getState()).toBe("122 of the 200 pass.");
+  });
+
+  test("a text of a kind that replaces one waiting waits 100 ms again, so a held key writes only its last", () => {
+    const announcer = createAnnouncer();
+    const seen: string[] = [];
+    announcer.subscribe(() => {
+      seen.push(announcer.getState());
+    });
+    const total = { replaces: INDIVIDUALS_KEPT_KIND } as const;
+    for (let step = 1; step <= 5; step += 1) {
+      announcer.announce(`${String(step)} pass.`, total);
+      vi.advanceTimersByTime(60);
+    }
+    expect(announcer.getState()).toBe("");
+    vi.advanceTimersByTime(40);
+    expect(announcer.getState()).toBe("5 pass.");
+    expect(seen).toEqual(["", "5 pass."]);
+  });
+
+  test("a held key holds the region back at most about 1 s", () => {
+    const announcer = createAnnouncer();
+    const total = { replaces: INDIVIDUALS_KEPT_KIND } as const;
+    announcer.announce("Other words.");
+    for (let step = 1; step <= 40; step += 1) {
+      announcer.announce(`${String(step)} pass.`, total);
+      vi.advanceTimersByTime(50);
+      if (announcer.getState() !== "") break;
+    }
+    expect(announcer.getState()).toMatch(/^Other words\. \d+ pass\.$/);
   });
 
   test("two texts announced within 100 ms are written together, joined by a space", () => {

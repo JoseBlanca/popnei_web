@@ -14,6 +14,11 @@
     shell spec, to be checked with VoiceOver. */
 export const ANNOUNCE_DELAY_MS = 100;
 
+/** How many times a text that replaces its kind may start the pause
+    again, so that a key held on a threshold writes only its last count
+    and yet holds the other texts back for about 1 s at most. */
+const MAX_RESTARTS = 9;
+
 /** The announcer: what is announced, and the text of the region now. */
 export interface Announcer {
   /** Empties the region at once and writes `text` into it
@@ -39,6 +44,10 @@ export interface Announcer {
   readonly subscribe: (listener: () => void) => () => void;
 }
 
+/** The kind of the line of what the filters of individuals keep, which
+    only its latest holds. */
+export const INDIVIDUALS_KEPT_KIND = "individualsKept";
+
 /** How a text is announced. */
 export interface AnnounceOptions {
   /** The kind of the text, of which only the latest is said. */
@@ -54,6 +63,8 @@ export function createAnnouncer(): Announcer {
   let waiting: { readonly text: string; readonly kind: string | null }[] = [];
   // The timer that writes the texts waiting, while one runs.
   let timer: ReturnType<typeof setTimeout> | undefined;
+  // How many times the pause started again since the region was emptied.
+  let restarts = 0;
   // The number of clears so far, by which a change tells that the texts
   // waiting before it were dropped while it ran.
   let clears = 0;
@@ -66,6 +77,7 @@ export function createAnnouncer(): Announcer {
 
   function write(): void {
     timer = undefined;
+    restarts = 0;
     const joined = waiting.map((w) => w.text).join(" ");
     waiting = [];
     change(joined);
@@ -90,7 +102,15 @@ export function createAnnouncer(): Announcer {
       wait();
       const kind = options?.replaces ?? null;
       if (kind !== null) {
+        const before = waiting.length;
         waiting = waiting.filter((w) => w.kind !== kind);
+        // One of its kind dropped: the pause starts again, so that a key
+        // held down writes its last text alone, up to a bound.
+        if (waiting.length < before && restarts < MAX_RESTARTS) {
+          restarts += 1;
+          clearTimeout(timer);
+          timer = setTimeout(write, ANNOUNCE_DELAY_MS);
+        }
       }
       waiting.push({ text: next, kind });
     },
@@ -109,6 +129,7 @@ export function createAnnouncer(): Announcer {
       clears += 1;
       clearTimeout(timer);
       timer = undefined;
+      restarts = 0;
       waiting = [];
       if (text !== "") change("");
     },
