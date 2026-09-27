@@ -6,7 +6,7 @@ The work report of the plan `docs/plans/variants-step.md`, stage 3 of
 
 ## Where the plan stands
 
-Under way since 26 September 2026. On 27 September work packages 1 to 5 are done, each after its review; work package 6, the filters of the variants, is next. Stop A, at the end of work package 6, is the first screen the owner tries, and the writing of work package 5 is tried there.
+Under way since 26 September 2026. On 27 September work packages 1 to 6 are done, each after its review, and the owner accepted the screens of the writing and of the filters of the variants at stop A. Work package 7, the filters of the individuals, is next; it ends at stop B.
 
 ## Before the first task
 
@@ -626,7 +626,7 @@ value that keeps every file measured within 6.9% above it
 
 ## 6. The filters of the variants
 
-Under way. The tasks: 6.1 as 95adc98 (`variants.md`: the number field
+Done on 27 September 2026, after its review and stop A. The tasks: 6.1 as 95adc98 (`variants.md`: the number field
 reads the digits typed itself, so the number is the same in any
 language of the browser; the switch of a filter is described by the
 line under it), 2e0fb5f and 4f2c966. Two flows of stage 2 changed for
@@ -748,7 +748,7 @@ English of `src/ui/popgen.tsx`.
 | D2 | the browser check, `-g "VS6 D2"` | 106 passed, 53 in each engine | 24 |
 | D3 | `npx playwright test --project=measure-chromium --project=measure-webkit -g "VS6 D3" --workers=1`, on 4aae168 | 2 passed; the table above | passes |
 | D4 | the screenshots, `screens/popgen-variants-*` | 17 states, light and dark, each looked at | 12 states |
-| D5 | the owner accepts the screens (task 6.4) | waiting | |
+| D5 | the owner accepts the screens (task 6.4) | accepted on 27 September 2026, in one round | |
 
 The whole on 532478b: `format:check`, `typecheck` and `lint` exit 0;
 `npm test` "Tests 1990 passed (1990)" in 58 files; the browser check
@@ -849,3 +849,26 @@ and of a file with no variant in the writing; the status region
 announces a Save and a write that ends with no file; the estimate of a
 file counts 40 bytes per variant besides the genotypes; the order of the
 checks in the stepper is the order of the step.
+
+### Stop A, the rounds
+
+The owner tried the writing and the filters of the variants in Firefox
+on 27 September 2026, said that everything worked, and took every
+recommendation of the list above. They gave no numbers of the memory of
+a large write in Firefox, so that measurement stays not made in
+Firefox.
+
+- Round 1 (e4fbc56, 7726b16, 67508e4, 205c4a4, 7fb1390, 63ce94f,
+  44fa269): the nineteen decisions in the specs and the code; Write
+  refused before a Count when the file could reach 1.8 GB, when the
+  Count keeps no variant, and after a Count refused; the words of points
+  6 and 8 to 17. `react`, `ux` and `accessibility` ran again on it and
+  found no defect of React or of access; their five points of words and
+  states were fixed (84c451f, f864b33, c70d02c): the summary line before
+  a Count reads "1,200 variants before the filters · 3 filters", since
+  its first form, "3 filters, not counted", also covered the filters of
+  individuals, which the Count does not count.
+
+The last screenshots are `screens/popgen-write-*` and
+`screens/popgen-variants-*`. On c70d02c: `npm test` "Tests 2006 passed
+(2006)"; the browser check "508 passed", twice.

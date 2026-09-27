@@ -814,7 +814,7 @@ counts how many variants each filter was given and kept.
   `variants.md`, "What each filter of the variants kept", and
   `filterCounts.md`, "The Count button"; and the measurement of D3.
   Serves 2, 3 and 4. Needs 6.2, since both change `VariantsStep.tsx`.
-- [ ] 6.4 Stop A: the owner accepts the writing of work package 5 and
+- [x] 6.4 Stop A: the owner accepts the writing of work package 5 and
   the filters of the variants, with their screenshots and the running
   application, in Firefox by hand as well, and judges the choices of
   the open-points file that these screens show and the summary line
