@@ -57,11 +57,23 @@ describe("the words and the reading of Save project and Open project…", () => 
   });
 
   test("the question before an opening, and its sentence of the calculations in flight", () => {
-    expect(openQuestion("panel.popnei.json", false, null)).toEqual({
+    expect(
+      openQuestion("panel.popnei.json", {
+        calculating: false,
+        writing: null,
+        unsaved: null,
+      }),
+    ).toEqual({
       title: "Open panel.popnei.json?",
       text: "It replaces the project on the page, and an opening cannot be undone. To keep the project on the page, press Keep the current project and save it first.",
     });
-    expect(openQuestion("panel.popnei.json", true, null)).toEqual({
+    expect(
+      openQuestion("panel.popnei.json", {
+        calculating: true,
+        writing: null,
+        unsaved: null,
+      }),
+    ).toEqual({
       title: "Open panel.popnei.json?",
       text: "It replaces the project on the page, and an opening cannot be undone. To keep the project on the page, press Keep the current project and save it first. The ongoing calculations will be stopped.",
     });
@@ -69,16 +81,47 @@ describe("the words and the reading of Save project and Open project…", () => 
 
   test("the question before an opening names the file written and not saved, after the calculations", () => {
     expect(
-      openQuestion("panel.popnei.json", false, "panel.filtered.nei"),
+      openQuestion("panel.popnei.json", {
+        calculating: false,
+        writing: null,
+        unsaved: "panel.filtered.nei",
+      }),
     ).toEqual({
       title: "Open panel.popnei.json?",
       text: "It replaces the project on the page, and an opening cannot be undone. To keep the project on the page, press Keep the current project and save it first. panel.filtered.nei, written and not saved, will be discarded.",
     });
     expect(
-      openQuestion("panel.popnei.json", true, "panel.filtered.nei"),
+      openQuestion("panel.popnei.json", {
+        calculating: true,
+        writing: null,
+        unsaved: "panel.filtered.nei",
+      }),
     ).toEqual({
       title: "Open panel.popnei.json?",
       text: "It replaces the project on the page, and an opening cannot be undone. To keep the project on the page, press Keep the current project and save it first. The ongoing calculations will be stopped. panel.filtered.nei, written and not saved, will be discarded.",
+    });
+  });
+
+  test("the question before an opening names the writing under way, alone and with the calculations", () => {
+    expect(
+      openQuestion("panel.popnei.json", {
+        calculating: false,
+        writing: "panel.filtered.nei",
+        unsaved: null,
+      }),
+    ).toEqual({
+      title: "Open panel.popnei.json?",
+      text: "It replaces the project on the page, and an opening cannot be undone. To keep the project on the page, press Keep the current project and save it first. The writing of panel.filtered.nei will be stopped.",
+    });
+    expect(
+      openQuestion("panel.popnei.json", {
+        calculating: true,
+        writing: "panel.filtered.nei",
+        unsaved: null,
+      }),
+    ).toEqual({
+      title: "Open panel.popnei.json?",
+      text: "It replaces the project on the page, and an opening cannot be undone. To keep the project on the page, press Keep the current project and save it first. The ongoing calculations and the writing of panel.filtered.nei will be stopped.",
     });
   });
 

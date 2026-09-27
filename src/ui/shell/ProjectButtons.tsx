@@ -177,6 +177,26 @@ function unsavedName(s: AppState<unknown, unknown>): string | null {
   return s.write?.kind === "done" ? writtenName(s.project) : null;
 }
 
+/** The name of the file of the filtered variants being written,
+    "panel.filtered.nei": a request of the writing in flight, or the
+    writing waiting for the statistics of each individual, whose request
+    is then the writing's; `null` when none is. */
+function writingName(s: AppState<unknown, unknown>): string | null {
+  const writing =
+    s.write?.kind === "running" || s.runs.some((r) => r.analysis === null);
+  return writing ? writtenName(s.project) : null;
+}
+
+/** Whether calculations of analyses are in flight, other than the
+    statistics of each individual a write waits for. */
+function calculating(s: AppState<unknown, unknown>): boolean {
+  const forWrite =
+    s.write?.kind === "running" && s.write.waitsForStatistics
+      ? s.write.runId
+      : null;
+  return s.runs.some((r) => r.analysis !== null && r.runId !== forWrite);
+}
+
 /** What Open project… is showing, besides its button. */
 type Opening =
   | { readonly kind: "none" }
@@ -260,11 +280,19 @@ export function OpenProject(): React.JSX.Element {
   // Read at every drawing, so that the question loses its sentence of the
   // calculations when they end while it is open, and gains the one of a
   // file written while it is open.
-  const running = useAppState((s) => s.runs.length > 0);
+  const running = useAppState(calculating);
+  const writing = useAppState(writingName);
   const unsaved = useAppState(unsavedName);
   const question =
     opening.kind === "asking"
-      ? { ...opening, ...openQuestion(opening.name, running, unsaved) }
+      ? {
+          ...opening,
+          ...openQuestion(opening.name, {
+            calculating: running,
+            writing,
+            unsaved,
+          }),
+        }
       : null;
 
   return (

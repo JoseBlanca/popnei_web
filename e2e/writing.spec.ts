@@ -577,6 +577,44 @@ test("VS5 D3 a VCF with no variant that passed, read with only those, written: t
   await expectNoViolations(makeAxeBuilder);
 });
 
+test("VS5 D3 Open project… while only a write is under way names the writing in its question, and axe", async ({
+  page,
+  makeAxeBuilder,
+}, testInfo) => {
+  await openVariants(page);
+  await loadPanelNei(page);
+  await page
+    .getByRole("banner")
+    .getByRole("button", { name: "Save project" })
+    .click();
+  const download = page.waitForEvent("download");
+  await page
+    .getByRole("dialog", { name: "Save the project" })
+    .getByRole("button", { name: "Save", exact: true })
+    .click();
+  const saved = testInfo.outputPath("panel.popnei.json");
+  await (await download).saveAs(saved);
+  await holdWritten(page);
+  await writeButton(page).click();
+  await expect(
+    writing(page).getByRole("button", { name: "Stop" }),
+  ).toBeVisible();
+
+  const chooser = page.waitForEvent("filechooser");
+  await page
+    .getByRole("banner")
+    .getByRole("button", { name: "Open project…" })
+    .click();
+  await (await chooser).setFiles(saved);
+  const question = page.getByRole("alertdialog", {
+    name: "Open panel.popnei.json?",
+  });
+  await expect(question).toHaveAccessibleDescription(
+    "It replaces the project on the page, and an opening cannot be undone. To keep the project on the page, press Keep the current project and save it first. The writing of panel.filtered.nei will be stopped.",
+  );
+  await expectNoViolations(makeAxeBuilder);
+});
+
 test("VS5 D4 a file written from the big VCF is saved after the worker that made it was ended, and popnei in node opens it with its 1,000 individuals", async ({
   page,
 }, testInfo) => {

@@ -14,6 +14,7 @@ import {
 } from "../../core/projectFile.ts";
 import type { ProjectFileError } from "../../core/projectFile.ts";
 import type { Result } from "../../core/result.ts";
+import { capitalized } from "../sentences.ts";
 
 /** The line under the heading of the dialog of Save: the browser does
     not always let the page ask before it is left, and never on an iPad
@@ -30,20 +31,37 @@ export function handedText(name: string): string {
   return `${escaped(name)} was handed to the browser to download.`;
 }
 
+/** What an opening would stop or discard, which the question before it
+    names. */
+export interface OpeningLoses {
+  /** Whether calculations of analyses are in flight. */
+  readonly calculating: boolean;
+  /** The name of the file of the filtered variants being written,
+      "panel.filtered.nei", or `null` when none is. */
+  readonly writing: string | null;
+  /** The name of the file of the filtered variants written and not
+      saved, or `null` when there is none. */
+  readonly unsaved: string | null;
+}
+
 /** The question before an opening of the project file `name`, when the
-    project has changed, calculations are in flight, `running`, or a file
-    of the filtered variants is written and not saved, `unsaved`, its
-    name, "panel.filtered.nei", or `null`: its heading, the question
-    itself, and the rest of its words under it. */
+    project has changed or the opening would lose what `loses` says: its
+    heading, the question itself, and the rest of its words under it. */
 export function openQuestion(
   name: string,
-  running: boolean,
-  unsaved: string | null,
+  loses: OpeningLoses,
 ): { readonly title: string; readonly text: string } {
+  const { calculating, writing, unsaved } = loses;
   const sentences = [
     "It replaces the project on the page, and an opening cannot be undone. To keep the project on the page, press Keep the current project and save it first.",
   ];
-  if (running) sentences.push("The ongoing calculations will be stopped.");
+  const stopped = [
+    ...(calculating ? ["the ongoing calculations"] : []),
+    ...(writing === null ? [] : [`the writing of ${escaped(writing)}`]),
+  ];
+  if (stopped.length > 0) {
+    sentences.push(capitalized(`${stopped.join(" and ")} will be stopped.`));
+  }
   if (unsaved !== null) {
     sentences.push(
       `${escaped(unsaved)}, written and not saved, will be discarded.`,
