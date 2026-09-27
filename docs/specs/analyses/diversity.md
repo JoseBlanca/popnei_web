@@ -303,10 +303,12 @@ keeping no individual stop the Run, in the words of `keptNoneReason` of
 `docs/specs/core/individualsKept.md`, "The filters of individuals keep none of
 the 200 individuals of panel.nei. Loosen them in the Variants step.";
 and the individuals kept leaving no population lock the diversity, in
-the words of its `keptNeeds`, "None of the 3 populations has an individual left after the filters of individuals. Loosen the filters of individuals in the Variants step to keep them.", or, with one
-population, "p0 has no individual left after the filters of
-individuals. Loosen the filters of individuals in the Variants step to
-keep it.", as the owner decided at stop B on 27 September 2026, in
+the words of its `keptNeeds`, which say why with the number the
+filters keep and the column of the populations, "The 34 individuals kept have no population in popcat, so none of the 2 populations has an individual left. Loosen the filters of individuals in the Variants step to keep them.", or, of
+one individual kept, "The one individual kept has no population in
+popcat, …", and, with one population, "…, so p0 has no individual left.
+Loosen the filters of individuals in the Variants step to keep it.",
+as the owner decided at stop B on 27 September 2026, in
 place of popnei's refusal after the Run of their decision of 26
 September 2026: a Run that could only fail taught nothing the line of
 the ready state did not already say. While the list waits for the

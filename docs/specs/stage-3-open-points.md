@@ -272,7 +272,7 @@ points:
 
 - **Thresholds that leave no population lock the diversity**, point B
   above changed: once the individuals kept are known, the Run is
-  disabled with "None of the 3 populations has an individual left after the filters of individuals. Loosen the filters of individuals in the Variants step to keep them." beside it, in place of popnei's
+  disabled with "The 34 individuals kept have no population in popcat, so none of the 2 populations has an individual left. Loosen the filters of individuals in the Variants step to keep them." beside it, in place of popnei's
   refusal after the Run (`diversity.md`, `store.md`, `shell.md`).
 - **A variants file of one individual** reads "The filters of
   individuals do not keep the one individual of one.vcf. …" in place
