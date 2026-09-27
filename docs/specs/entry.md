@@ -240,12 +240,18 @@ architecture puts in core and which no other spec gives. It holds the
 population genetics application alone until stage 7:
 
 - **the definitions of its analyses**, in the order the screens show
-  them: from stage 3 the three checks of the Variants step, the
-  statistics of each individual, `individualChecks`
-  (`docs/specs/analyses/individualChecks.md`), the histograms of the
-  variants, `variantChecks` (`variantChecks.md`), and the counts of what
-  each filter kept, `filterCounts` (`filterCounts.md`), then the
-  diversity (`diversity.md`);
+  them: from stage 3 the three checks of the Variants step in the order
+  of its sections (`docs/specs/steps/variants.md`, "What it does"), the
+  histograms of the variants, `variantChecks`
+  (`docs/specs/analyses/variantChecks.md`), and the counts of what each
+  filter kept, `filterCounts` (`filterCounts.md`), both in the section
+  of the filters of the variants, then the statistics of each
+  individual, `individualChecks` (`individualChecks.md`), in the section
+  of the filters of the individuals; then the diversity
+  (`diversity.md`). The stepper names the first check in error in this
+  order (`docs/specs/shell.md`, "The stepper"), and the notice, the
+  status region and the check numbers of a project file list the
+  analyses in it;
 - **the step each analysis is shown in**: the three checks in the
   Variants step, the diversity in the Analyses step, so that the shell
   and the steps find the panels of a step here and not by a list of
