@@ -6,7 +6,47 @@ The work report of the plan `docs/plans/variants-step.md`, stage 3 of
 
 ## Where the plan stands
 
-Under way since 26 September 2026. On 27 September work packages 1 to 7 are done, each after its review, and the owner accepted the screens of the writing and of the filters of the variants at stop A. In work package 7, the filters of the individuals, the four tasks 7.1 to 7.4 are done and committed; its review found 52 points that held, all fixed in four rounds, and the owner accepted its screens at stop B in one round. Work package 8, the end of the stage, is next.
+The plan is done, on 27 September 2026, on the branch
+`plan/variants-step`: every task ticked, each work package reviewed,
+and the screens accepted by the owner at stops A and B, each in one
+round, after trying them in Firefox.
+
+What exists now that did not: in the Variants step of the population
+genetics application, a user loads a variants file and sets the four
+filters of the variants beside the histograms of the major allele
+frequency and of the observed and expected heterozygosity; counts what
+each filter kept; types or pastes the lists of individuals to keep and
+to remove; calculates the statistics of each individual, reads them in
+a table sorted by any column and in two histograms, and sets the two
+thresholds of the individuals beside them; runs the diversity on the
+individuals the filters keep; and writes the filtered variants as a
+`.nei` file and saves it. Every number shown is popnei's, from the
+release `js-v0.1.0-dev.2`.
+
+On the last commit, 2,104 tests of Vitest and 618 flows in Chromium
+and WebKit pass. 370 of the 375 cases of the twenty specs have a test
+(`docs/plans/variants-step.cases.md`).
+
+Left open:
+
+- Firefox was tried by the owner at the two stops, and never by
+  Playwright on this Mac; the flows run in Firefox for the first time
+  on GitHub, after the merge and the push of `main`.
+- VoiceOver with Safari was not tried (work package 7, deliverable 6).
+- The memory of a large write in Firefox was not measured (work
+  package 5).
+- With 10,000 individuals the page is frozen 101 to 165 ms after a
+  change of the table of the statistics; the owner accepted it at stop
+  B.
+- Before stage 6: whether a PNG is limited by its area of 16,777,216
+  pixels rather than by a side of 4,096 (work package 4, recommended
+  the area).
+- The VCF writer, the filter by the regions of a BED file, the
+  histogram of the missing rate of each variant and the density of
+  variants wait for popnei's next release and a plan of their own.
+
+Asked of the owner: the order to merge `plan/variants-step` into
+`main`.
 
 ## Before the first task
 
@@ -1125,3 +1165,24 @@ The page's first script is 191.82 KB gzipped as Vite counts it, against
 `d3-scale` and `d3-selection` (21.1 KB, work package 6), React Aria's
 `Table` and `Virtualizer` (about 26 KB, work package 7), and the code of
 the step. `d3-time` and `d3-time-format` are not in it.
+
+8.2: the map of the cases is `docs/plans/variants-step.cases.md`.
+Three agents mapped the items of the twenty specs to their tests, a
+third each, and a fourth added the tests they found missing and
+assembled the map: 375 items, 370 with a test that gives the item's
+input and checks its outcome. 21 tests of Vitest in 10 files, three
+flows and one check of a flow were added, each seen to fail with the
+code it guards broken; none found a defect. `client.md` gave the
+restart after a large write at 100,000,001 bytes, the value before the
+measurement of task 5.4; it now names `WRITE_RESTART_BYTES`, 25,000,000
+(9775603). Left without a test, with the reason in the map: the filter
+of regions of a BED file, which needs popnei's next release; popnei's
+refusal of a block its memory cannot hold, which needs a file of
+gigabytes; VoiceOver, and the screen seen in each engine, which ask a
+person; and the throw outside every boundary, which `entry.md` leaves to
+review.
+
+On e2d7fac: `format:check`, `typecheck` and `lint` exit 0; `npm test`
+"Tests 2104 passed (2104)" in 62 files, none skipped; the browser check
+"618 passed"; `npm pkg get dependencies.popnei` prints the URL of
+`js-v0.1.0-dev.2`. Firefox was not run by Playwright.

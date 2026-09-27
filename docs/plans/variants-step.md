@@ -1,6 +1,6 @@
 # Plan: the Variants step, whole
 
-26 September 2026, approved by the owner on the same day, with its new dependencies; under way since then. It builds stage 3 of
+26 September 2026, approved by the owner on the same day, with its new dependencies; done on 27 September 2026, waiting for the owner's order to merge. It builds stage 3 of
 `docs/build-order.md`, the Variants step whole, as far as popnei's
 release `js-v0.1.0-dev.2` allows: every filter of the variants and of
 the individuals, what each filter kept, the histograms of the variants,
@@ -966,7 +966,7 @@ twenty specs matched to a test.
 
 - [x] 8.1 The documents, and the final checks. Serves 1 and 2. Needs
   work package 7.
-- [ ] 8.2 The map of the cases, and the tests it finds missing. Serves
+- [x] 8.2 The map of the cases, and the tests it finds missing. Serves
   3. Needs 8.1.
 
 ## At the end
