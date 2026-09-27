@@ -1222,8 +1222,11 @@ moves.
   place, so the focus stays on it when it changes. The button goes when
   the run ends done, ends refused by popnei, or ends with a variants
   file the browser can no longer read, since none of these states
-  offers Run; then, when the focus was on the button, it moves to the
-  heading of the panel, so that a user of the keyboard is not sent to the
+  offers Run; and Stop turns into a disabled Run when a Run that waited
+  for the statistics of each individual ends locked, the filters of
+  individuals keeping no one, and a disabled button cannot hold the
+  focus. Then, when the focus was on the button, it moves to the
+  heading of the panel, as the Write does in the same state, so that a user of the keyboard is not sent to the
   top of the page (2.4.3, which asks that the focus move in an order
   that keeps the meaning). When the focus was elsewhere, it stays where
   it is.
