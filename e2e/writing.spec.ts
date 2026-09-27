@@ -485,6 +485,61 @@ test("VS5 D3 Open project… with the file written and not saved asks first, and
   await expect(saveButtons(page)).toHaveCount(1);
 });
 
+/** Reloads the page, and gives the type of the dialog the browser
+    raised before it, "beforeunload", or "none". */
+async function leave(page: Page): Promise<string> {
+  let raised = "none";
+  page.once("dialog", (dialog) => {
+    raised = dialog.type();
+    // Playwright may have accepted it already, when the reload goes on.
+    dialog.accept().catch(() => undefined);
+  });
+  await page.reload();
+  return raised;
+}
+
+/** Writes the file and saves it, which records the variants of the file
+    into the project, then saves the project and writes the file again,
+    so that the project is as saved and only the file is not. */
+async function writeAfterSavingTheProject(page: Page): Promise<void> {
+  await writeButton(page).click();
+  const file = page.waitForEvent("download");
+  await saveButtons(page).click();
+  await file;
+  await page
+    .getByRole("banner")
+    .getByRole("button", { name: "Save project" })
+    .click();
+  const project = page.waitForEvent("download");
+  await page
+    .getByRole("dialog", { name: "Save the project" })
+    .getByRole("button", { name: "Save", exact: true })
+    .click();
+  await project;
+  await writeButton(page).click();
+  await expect(saveButtons(page)).toHaveCount(1);
+}
+
+test("VS5 D3 with the project saved, leaving the page while a written file is not saved raises the browser's question, and after its Save none", async ({
+  page,
+}) => {
+  await openVariants(page);
+  await loadPanelNei(page);
+  await writeAfterSavingTheProject(page);
+
+  expect(await leave(page)).toBe("beforeunload");
+
+  await openVariants(page);
+  await loadPanelNei(page);
+  await writeAfterSavingTheProject(page);
+  const download = page.waitForEvent("download");
+  await saveButtons(page).click();
+  await download;
+  await expect(saveButtons(page)).toHaveCount(0);
+
+  expect(await leave(page)).toBe("none");
+});
+
 test("VS5 D4 a file written from the big VCF is saved after the worker that made it was ended, and popnei in node opens it with its 1,000 individuals", async ({
   page,
 }, testInfo) => {

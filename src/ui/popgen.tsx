@@ -173,8 +173,8 @@ function startApplication(
   const files = createFiles(made);
 
   // 5. The saving, and the question before the page is left while the
-  // project has changed; the error bar again, now with the store and its
-  // Save.
+  // project has changed or a written file is not saved; the error bar
+  // again, now with the store and its Save.
   const saving = createSaving({
     store,
     app: "popgen",
@@ -185,7 +185,7 @@ function startApplication(
     },
     downloadFile,
   });
-  askBeforeLeaving(saving);
+  askBeforeLeaving(saving, store);
   drawBar(store, saving);
 
   // 6. The announcer of the shell's status region, with the announcements
@@ -234,12 +234,14 @@ function startApplication(
 
 /** Asks the browser to confirm before the page is left, reloaded or
     closed while the project has changed since the page opened, since a
-    project file was last opened, or since the last Save, since nothing of
-    the project is kept in the browser. The browser asks with its own
-    words, which a page cannot change. */
-function askBeforeLeaving(saving: Saving): void {
+    project file was last opened, or since the last Save, or while a file
+    of the filtered variants of the store `store` is written and not
+    saved, since nothing of either is kept in the browser. The browser
+    asks with its own words, which a page cannot change. */
+function askBeforeLeaving(saving: Saving, store: Store<JobResult, Blob>): void {
   window.addEventListener("beforeunload", (event) => {
-    if (!saving.changed()) return;
+    const unsaved = store.getState().write?.kind === "done";
+    if (!saving.changed() && !unsaved) return;
     event.preventDefault();
     // Chrome and Edge before 119, above the floor of 111, ask only when
     // the event's returnValue is set to a value that is true, a use the
