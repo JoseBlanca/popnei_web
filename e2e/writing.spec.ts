@@ -421,6 +421,9 @@ test("VS5 D3 with the focus on Stop of a write that waits for the statistics, a 
       name: "Writing the filtered variants",
     }),
   ).toBeFocused();
+  await expect(status(page)).toHaveText(
+    /The file was not written\. The filters of individuals keep none of the 200 individuals of panel\.nei\. Loosen them in the Variants step\.$/,
+  );
   await expectNoViolations(makeAxeBuilder);
 });
 
