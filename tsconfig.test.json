@@ -7,6 +7,7 @@
     "jsx": "react-jsx"
   },
   "include": [
+    "src/nodeTestSetup.ts",
     "src/core/**/*.test.ts",
     "src/worker/**/*.test.ts",
     "src/ui/**/*.test.ts",

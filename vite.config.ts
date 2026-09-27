@@ -115,6 +115,8 @@ export default defineConfig(({ mode }) => {
               "src/probe/**/*.test.ts",
             ],
             environment: "node",
+            // A global of the browsers that node 24 lacks, ErrorEvent.
+            setupFiles: ["src/nodeTestSetup.ts"],
           },
         },
         {
