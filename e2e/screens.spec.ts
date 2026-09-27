@@ -2347,7 +2347,7 @@ for (const theme of ["light", "dark"] as const) {
       await saveIndividuals(page, "popgen-stats-kept-not-known");
     });
 
-    test("the diversity ready, every population left empty by a threshold of the individuals", async ({
+    test("the diversity locked, every population left empty by a threshold of the individuals", async ({
       page,
     }) => {
       await pickVariants(page, "panel.nei");
