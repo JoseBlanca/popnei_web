@@ -331,6 +331,16 @@ GB". It is the same function for the estimate and for the written file.
   so the step shows no Save button, and says so (below), and the page
   holds no file that nobody can save; its counts fill `filterCounts`, so
   the user sees which filter kept none.
+- **The variants file holds no variant**, or, for a VCF read with only
+  the variants with PASS or . in its FILTER column, none that passed.
+  `writeVars` does not refuse an empty source either (popnei's
+  `write_vars`, `vars.rs`), so the write ends in `noVariant` as above,
+  and its `passStats` tell the case apart: the first filter was given no
+  variant, or, with no filter, the pass gave none, `variantsOfFile` of
+  `docs/specs/analyses/filterCounts.md` giving 0. No filter would help,
+  so the words are those of an empty source that the analyses give for
+  popnei's refusal of one (`docs/specs/analyses/diversity.md`, "Its
+  words"), with "there is nothing to write" (below).
 - **The filters keep no individual.** The write is locked by the store,
   since popnei refuses an empty list, with the words below.
 - **A file written and not saved.** The step offers Save, and no second
@@ -394,9 +404,12 @@ variants of 1,000 individuals at one byte per genotype.
 | an estimate of `WRITE_MAX_BYTES` or more | "A file of about 2.0 GB cannot be written in a browser tab: popnei needs more than twice the file in its memory while it writes it, and a tab gives popnei at most 4 GB. Remove variants or individuals with the filters, or write the file with popnei in Python." |
 | no counts and no number of variants | "The size of the file is known once the variants are counted: Count, above." |
 | the filters keep no variant, `noVariant` | "The filters kept none of the variants of panel.nei, so there is nothing to write. Loosen the filters above." |
+| the variants file holds no variant, `noVariant` with `variantsOfFile` 0 | "panel.nei has no variants, so there is nothing to write. Load another variants file in the Variants step." |
+| a VCF read with only the variants that passed holds none that passed, `noVariant` with `variantsOfFile` 0 | "panel.vcf has no variant with PASS or . in its FILTER column, and it was read with only those, so there is nothing to write. Untick "Only the variants with PASS or . in the FILTER column" in the Variants step and read the file again." |
 | the filters keep no individual | the store's lock, `keptNoneReason` of `docs/specs/core/individualsKept.md`: "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them in the Variants step." |
 | the worker stopped with no answer, a trap of the wasm or a memory that could not grow, `workerFailed` | "The writing stopped unexpectedly, perhaps because the file, of about 1.0 GB, did not fit in the memory of this tab. Remove variants or individuals with the filters and write it again, or write the file with popnei in Python." |
-| popnei refused the write, for a memory that does not take the file or for a line of the VCF it cannot read, which its message alone tells apart | "panel.filtered.nei could not be written: popnei stopped with "‹its message›". A file of about 1.0 GB may not fit in the memory of this tab: remove variants or individuals with the filters and write it again, or write the file with popnei in Python. If the message names a line of the VCF, correct the file, or fetch it again, and load it in the Variants step." |
+| popnei refused the write for a genotype of another ploidy than the VCF was read with, its message "line ‹n› of the VCF, the column of ‹individual›: its genotype is of the ploidy ‹found› and the reader was asked for the ploidy ‹given›" | "panel.filtered.nei could not be written. ", then the words the analyses give that refusal (`docs/specs/analyses/diversity.md`, "Its words"): "At line 12 of panel.vcf.gz, the genotype of ind_3 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 in the Variants step and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version." |
+| popnei refused the write otherwise, for a memory that does not take the file or for a line of the VCF it cannot read, which its message alone tells apart | "panel.filtered.nei could not be written: popnei stopped with "‹its message›". A file of about 1.0 GB may not fit in the memory of this tab: remove variants or individuals with the filters and write it again, or write the file with popnei in Python. If the message names a line of the VCF, correct the file, or fetch it again, and load it in the Variants step." |
 | the statistics of each individual it waited for failed | "The statistics of each individual, which the thresholds of the filters of individuals are applied to, could not be calculated, so the file was not written. ", then the words the statistics' own part gives that failure (`docs/specs/analyses/individualChecks.md`, "Its words"): "… The filters kept none of the variants of panel.nei, so there is no variant to count each individual's genotypes over. Loosen the filters of the variants in the Variants step." |
 | the browser can no longer read the variants file, `reopenFailed` | the diversity's words, "panel.nei could not be read again; it may have changed on the disk since it was picked. Load it again in the Variants step." |
 | the calculations could not start, `couldNotStart`, or the page is out of date after a new version of the site, `protocolMismatch` | the diversity's words, "The application could not start its calculations. Save the project, reload the page, and open the project again." and "The page is out of date. Save the project, reload the page, and open the project again." |
@@ -473,8 +486,11 @@ before the user asks.
   with none `panel.nei`; `PANEL.NEI` with a filter `PANEL.filtered.nei`.
 - **Playwright**, in Chromium, Firefox and WebKit: the flow writes
   `panel.nei` with the missing data filter at 0.05, presses Save, and
-  reads the download's name and size, 250,994 bytes; and the measurement
-  above.
+  reads the download's name and size, 250,994 bytes; the variants of
+  `panel.vcf.gz` with LowQual in place of PASS in every FILTER column,
+  a VCF made by the flow, read with only the variants that passed and
+  written, which gives the words of a VCF with none that passed; and
+  the measurement above.
 
 ## What this spec relies on in the specs written beside it
 
