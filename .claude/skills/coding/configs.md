@@ -302,7 +302,7 @@ application, in `tsconfig.app.json`.
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo",
     "lib": ["ES2022", "ES2023.Array", "DOM", "DOM.Iterable"],
-    "types": ["node"],
+    "types": ["node", "vite/client"],
     "jsx": "react-jsx"
   },
   "include": [
@@ -325,6 +325,11 @@ there because a test of `src/ui` imports a module of React, such as the
 test of `addFile` that imports `src/ui/files.tsx`, and TypeScript refuses
 to resolve a `.tsx` file without it, whether it holds JSX or not; added
 on 25 September 2026, with the first such test.
+`vite/client` is there because a test of `src/ui` imports a module of
+`src/charts`, whose base imports `charts.css`, a module TypeScript
+resolves only with the declarations Vite gives for a CSS file; added on
+27 September 2026, with the test of the words of the histograms of the
+variants.
 
 The probe of stage 0 (`docs/specs/site.md`), a page with its own worker,
 is checked as the page and the worker are. `tsconfig.probe.json`, its
