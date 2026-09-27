@@ -25,7 +25,7 @@ import type {
   VariantFilter,
   VariantFilterKind,
 } from "../../../worker/protocol.ts";
-import { statusOf } from "../../analyses/status.ts";
+import { resultOf, statusOf } from "../../analyses/status.ts";
 import { classOf } from "../../classOf.ts";
 import { useAnnouncer } from "../../shell/announcer.tsx";
 import { useAppState, useStore } from "../../store.tsx";
@@ -85,12 +85,9 @@ export function VariantFilters(): React.JSX.Element {
   const variantsName = useAppState((s) => s.project.variants?.name ?? null);
   // The histograms of the variants, once calculated: the result the store
   // keeps, the same object until it changes.
-  const histograms = useAppState((s) => {
-    const status = statusOf(s, "variantChecks");
-    return status.kind === "done" && status.result.analysis === "variantChecks"
-      ? status.result
-      : null;
-  });
+  const histograms = useAppState((s) =>
+    resultOf(statusOf(s, "variantChecks"), "variantChecks"),
+  );
   // The numbers typed in the thresholds of the two filters that have a
   // histogram, and not yet committed, which the threshold on each
   // histogram follows; `null` while nothing is typed that the field would
@@ -100,12 +97,9 @@ export function VariantFilters(): React.JSX.Element {
   // The counts of the filters as they are, once counted: the result the
   // store keeps, the same object until it changes, and the project it is
   // done for, whose filters give the rows their order.
-  const counts = useAppState((s) => {
-    const status = statusOf(s, "filterCounts");
-    return status.kind === "done" && status.result.analysis === "filterCounts"
-      ? status.result
-      : null;
-  });
+  const counts = useAppState((s) =>
+    resultOf(statusOf(s, "filterCounts"), "filterCounts"),
+  );
   const project = useAppState((s) => s.project);
   const rows = counts === null ? [] : filterCountRows(counts, project);
   const countOf = (kind: VariantFilterKind): string | null => {

@@ -2,11 +2,11 @@
  * What the frame of an analysis reads of the store, shared by the panels
  * of the Analyses step (AnalysisPanel.tsx) and the parts of the checks of
  * the Variants step (docs/specs/steps/variants.md): the state of an
- * analysis, and the button that state offers, Run or its Calculate, Stop,
- * or none.
+ * analysis, the button that state offers, Run or its Calculate, Stop, or
+ * none, its result once done, and the notice that stopped it.
  */
 import type { AnalysisId } from "../../core/project.ts";
-import type { AnalysisStatus, AppState } from "../../core/store.ts";
+import type { AnalysisStatus, AppState, Notice } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 
 /** The state of the analysis `id` in `s`; a defect when the store has
@@ -49,4 +49,51 @@ export function buttonOf(status: AnalysisStatus<JobResult>): ButtonOf {
         ? null
         : { kind: "run", reason: null };
   }
+}
+
+/** The result of the analysis `id`, of the union of the results of the
+    workers. */
+export type ResultOf<Id extends JobResult["analysis"]> = Extract<
+  JobResult,
+  { readonly analysis: Id }
+>;
+
+/** Whether `result` is one of the analysis `id`. */
+function isResultOf<Id extends JobResult["analysis"]>(
+  result: JobResult,
+  id: Id,
+): result is ResultOf<Id> {
+  return result.analysis === id;
+}
+
+/** The result of the analysis `id` in its state `status` once it is done,
+    or `null` in any other state; a defect when the store gave it the
+    result of another analysis. The same object as the store's, so that it
+    may be what a selector returns. */
+export function resultOf<Id extends JobResult["analysis"]>(
+  status: AnalysisStatus<JobResult>,
+  id: Id,
+): ResultOf<Id> | null {
+  if (status.kind !== "done") return null;
+  if (!isResultOf(status.result, id)) {
+    throw new Error(
+      `popnei_web defect: ${id} was given a result of ${status.result.analysis}.`,
+    );
+  }
+  return status.result;
+}
+
+/** The notice that stopped the calculation of the analysis `id` at once,
+    by a change of the load of the variants file, while it is up and the
+    analysis can be run again, `status` ready or locked; `null`
+    otherwise. */
+export function stoppedNotice(
+  status: AnalysisStatus<JobResult>,
+  notice: Notice | null,
+  id: AnalysisId,
+): Notice | null {
+  return notice?.stopped.includes(id) === true &&
+    (status.kind === "ready" || status.kind === "locked")
+    ? notice
+    : null;
 }

@@ -29,17 +29,22 @@
 import { useLayoutEffect, useRef } from "react";
 
 import { refusalText } from "../../../core/analyses/filterCounts.ts";
-import type { AnalysisError, AnalysisStatus } from "../../../core/store.ts";
+import type { AnalysisStatus } from "../../../core/store.ts";
 import type { JobResult } from "../../../worker/protocol.ts";
 import { RunButton } from "../../analyses/RunButton.tsx";
 import { Running } from "../../analyses/Running.tsx";
-import { buttonOf, statusOf } from "../../analyses/status.ts";
+import { Failed } from "../../analyses/Failed.tsx";
+import {
+  buttonOf,
+  resultOf,
+  statusOf,
+  stoppedNotice,
+} from "../../analyses/status.ts";
 import { Warnings } from "../../analyses/Warnings.tsx";
-import { failureText, stoppedText } from "../../analyses/words.ts";
+import { stoppedText } from "../../analyses/words.ts";
 import { classOf } from "../../classOf.ts";
 import { startAnalysis } from "../../runs.ts";
 import { useAppState, useStore } from "../../store.tsx";
-import { Problem } from "../../widgets/Problem.tsx";
 import styles from "./VariantsStep.module.css";
 import {
   COUNT_AGAIN,
@@ -73,11 +78,7 @@ export function FilterCountsPart(): React.JSX.Element {
   });
 
   const button = buttonOf(status);
-  const stoppedBy =
-    notice?.stopped.includes(ID) === true &&
-    (status.kind === "ready" || status.kind === "locked")
-      ? notice
-      : null;
+  const stoppedBy = stoppedNotice(status, notice, ID);
 
   return (
     <div className={classOf(styles, "check")}>
@@ -88,7 +89,12 @@ export function FilterCountsPart(): React.JSX.Element {
       )}
       {status.kind === "error" && (
         <div ref={failed} tabIndex={-1}>
-          <Failed error={status.error} />
+          <Failed
+            error={status.error}
+            name={COUNT_NAME}
+            refusalText={refusalText}
+            again={COUNT_AGAIN}
+          />
         </div>
       )}
       {button !== null && (
@@ -155,10 +161,10 @@ function Done({
   readonly totalRef: React.RefObject<HTMLParagraphElement | null>;
 }): React.JSX.Element {
   const project = useAppState((s) => s.project);
-  const result = status.result;
-  if (result.analysis !== ID) {
+  const result = resultOf(status, ID);
+  if (result === null) {
     throw new Error(
-      `popnei_web defect: the counts of the filters were given a result of ${result.analysis}.`,
+      "popnei_web defect: the counts of the filters are done with no result.",
     );
   }
   const text = filtersTotalText(project, result.passStats.numVars);
@@ -177,26 +183,4 @@ function Done({
       {status.warnings.length > 0 && <Warnings warnings={status.warnings} />}
     </>
   );
-}
-
-/** What went wrong, and what to do. */
-function Failed({
-  error,
-}: {
-  readonly error: AnalysisError;
-}): React.JSX.Element {
-  const text = useAppState((s) => {
-    const variants = s.project.variants;
-    // A calculation is keyed by the load of the variants file, so an
-    // error has one.
-    if (variants === null) {
-      throw new Error(
-        "popnei_web defect: the counts of the filters are in error with no variants file.",
-      );
-    }
-    return error.kind === "refused"
-      ? refusalText(error.message, s.project)
-      : failureText(error.error, variants.name, COUNT_AGAIN);
-  });
-  return <Problem>{text}</Problem>;
 }

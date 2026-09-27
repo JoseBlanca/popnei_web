@@ -26,19 +26,23 @@
 import { useId, useRef } from "react";
 
 import { refusalText } from "../../../core/analyses/variantChecks.ts";
-import type { AnalysisError, Notice } from "../../../core/store.ts";
-import type { JobResult } from "../../../worker/protocol.ts";
+import type { Notice } from "../../../core/store.ts";
 import { classOf } from "../../classOf.ts";
 import { versionsText } from "../../analyses/diversity/words.ts";
 import { RunButton } from "../../analyses/RunButton.tsx";
 import { Running } from "../../analyses/Running.tsx";
-import { buttonOf, statusOf } from "../../analyses/status.ts";
+import { Failed } from "../../analyses/Failed.tsx";
+import {
+  buttonOf,
+  resultOf,
+  statusOf,
+  stoppedNotice,
+} from "../../analyses/status.ts";
 import { Warnings } from "../../analyses/Warnings.tsx";
-import { failureText, stoppedText } from "../../analyses/words.ts";
+import { stoppedText } from "../../analyses/words.ts";
 import { titleOf } from "../../analyses/titles.ts";
 import { startAnalysis } from "../../runs.ts";
 import { useAppState, useStore } from "../../store.tsx";
-import { Problem } from "../../widgets/Problem.tsx";
 import {
   CALCULATE_AGAIN,
   CALCULATE_LABEL,
@@ -55,16 +59,13 @@ const ID = "variantChecks";
 export function VariantChecksBlock(): React.JSX.Element {
   const store = useStore();
   const status = useAppState((s) => statusOf(s, ID));
+  const result = resultOf(status, ID);
   const notice = useAppState((s) => s.notice);
   const headingId = useId();
   const heading = useRef<HTMLHeadingElement>(null);
 
   const button = buttonOf(status);
-  const stoppedBy =
-    notice?.stopped.includes(ID) === true &&
-    (status.kind === "ready" || status.kind === "locked")
-      ? notice
-      : null;
+  const stoppedBy = stoppedNotice(status, notice, ID);
 
   return (
     <section aria-labelledby={headingId} className={classOf(styles, "check")}>
@@ -86,7 +87,14 @@ export function VariantChecksBlock(): React.JSX.Element {
       {status.kind === "removed" && (
         <p className={classOf(styles, "line")}>{removedWords(notice)}</p>
       )}
-      {status.kind === "error" && <Failed error={status.error} />}
+      {status.kind === "error" && (
+        <Failed
+          error={status.error}
+          name={CHECK_NAME}
+          refusalText={refusalText}
+          again={CALCULATE_AGAIN}
+        />
+      )}
       {button !== null && (
         <RunButton
           button={button}
@@ -111,12 +119,12 @@ export function VariantChecksBlock(): React.JSX.Element {
           progress={status.progress}
         />
       )}
-      {status.kind === "done" && (
+      {status.kind === "done" && result !== null && (
         <>
           {status.warnings.length > 0 && (
             <Warnings warnings={status.warnings} />
           )}
-          <Done numVars={numVarsOf(status.result)} />
+          <Done numVars={result.passStats.numVars} />
         </>
       )}
     </section>
@@ -133,17 +141,6 @@ function removedWords(notice: Notice | null): string {
     );
   }
   return removedText(notice);
-}
-
-/** The variants of the file, which the result of the histograms counts;
-    a defect for the result of another analysis. */
-function numVarsOf(result: JobResult): number {
-  if (result.analysis !== ID) {
-    throw new Error(
-      `popnei_web defect: the histograms of the variants were given a result of ${result.analysis}.`,
-    );
-  }
-  return result.passStats.numVars;
 }
 
 /** The caption of the three histograms and the line of the versions. */
@@ -167,26 +164,4 @@ function Done({ numVars }: { readonly numVars: number }): React.JSX.Element {
       </p>
     </>
   );
-}
-
-/** What went wrong, and what to do. */
-function Failed({
-  error,
-}: {
-  readonly error: AnalysisError;
-}): React.JSX.Element {
-  const text = useAppState((s) => {
-    const variants = s.project.variants;
-    // A calculation is keyed by the load of the variants file, so an
-    // error has one.
-    if (variants === null) {
-      throw new Error(
-        "popnei_web defect: the histograms of the variants are in error with no variants file.",
-      );
-    }
-    return error.kind === "refused"
-      ? refusalText(error.message, s.project)
-      : failureText(error.error, variants.name, CALCULATE_AGAIN);
-  });
-  return <Problem>{text}</Problem>;
 }

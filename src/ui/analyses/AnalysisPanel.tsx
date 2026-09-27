@@ -29,20 +29,20 @@ import { useId, useRef } from "react";
 
 import { checkVerdictText, uncomparedText } from "../../core/projectFile.ts";
 import type { AnalysisId } from "../../core/project.ts";
-import type { AnalysisError, AnalysisStatus } from "../../core/store.ts";
+import type { AnalysisStatus } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 import { classOf } from "../classOf.ts";
 import { startAnalysis } from "../runs.ts";
 import { useAppState, useStore } from "../store.tsx";
-import { Problem } from "../widgets/Problem.tsx";
 import styles from "./AnalysisPanel.module.css";
+import { Failed } from "./Failed.tsx";
 import { panelOf } from "./panels.ts";
 import type { AnalysisUi } from "./panels.ts";
 import { RunButton } from "./RunButton.tsx";
 import { Running } from "./Running.tsx";
-import { buttonOf, statusOf } from "./status.ts";
+import { buttonOf, statusOf, stoppedNotice } from "./status.ts";
 import { Warnings } from "./Warnings.tsx";
-import { failureText, removedText, stoppedText } from "./words.ts";
+import { removedText, stoppedText } from "./words.ts";
 
 /** What the panel of an analysis is drawn with. */
 export interface AnalysisPanelProps {
@@ -60,11 +60,7 @@ export function AnalysisPanel({ id }: AnalysisPanelProps): React.JSX.Element {
   const heading = useRef<HTMLHeadingElement>(null);
 
   const button = buttonOf(status);
-  const stoppedBy =
-    notice?.stopped.includes(id) === true &&
-    (status.kind === "ready" || status.kind === "locked")
-      ? notice
-      : null;
+  const stoppedBy = stoppedNotice(status, notice, id);
 
   return (
     <section aria-labelledby={headingId} className={classOf(styles, "panel")}>
@@ -119,7 +115,13 @@ function Above({ ui, status }: PartProps): React.JSX.Element | null {
     case "removed":
       return <Removed ui={ui} />;
     case "error":
-      return <Failed ui={ui} error={status.error} />;
+      return (
+        <Failed
+          error={status.error}
+          name={ui.title}
+          refusalText={ui.refusalText}
+        />
+      );
     case "locked":
     case "ready":
     case "running":
@@ -199,28 +201,4 @@ function Removed({ ui }: { readonly ui: AnalysisUi }): React.JSX.Element {
       {removedText(ui.name, ui.resultName, notice)}
     </p>
   );
-}
-
-/** What went wrong, and what to do. */
-function Failed({
-  ui,
-  error,
-}: {
-  readonly ui: AnalysisUi;
-  readonly error: AnalysisError;
-}): React.JSX.Element {
-  const text = useAppState((s) => {
-    const variants = s.project.variants;
-    // A calculation is keyed by the load of the variants file, so an
-    // error has one.
-    if (variants === null) {
-      throw new Error(
-        `popnei_web defect: ${ui.title} is in error with no variants file.`,
-      );
-    }
-    return error.kind === "refused"
-      ? ui.refusalText(error.message, s.project)
-      : failureText(error.error, variants.name);
-  });
-  return <Problem>{text}</Problem>;
 }
