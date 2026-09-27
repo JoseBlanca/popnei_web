@@ -396,7 +396,13 @@ test("VS6 D2 a comma thrown away, then Cmd+Z: the text and the line are back, th
   await maf.click();
   await maf.press("ControlOrMeta+a");
   await maf.pressSequentially("0,");
-  const refusal = page.getByText(/^Write the decimals with a point/);
+  // The line under the field, in the step; the status region, outside
+  // it, says the refusal 100 ms after it is made and keeps it, also
+  // after the Cmd+Z below, which WebKit reached before or after those
+  // 100 ms, so a search of the whole page found it there in 3 of 40 runs.
+  const refusal = page
+    .getByRole("main")
+    .getByText(/^Write the decimals with a point/);
   await expect(refusal).toBeVisible();
   await maf.press("ControlOrMeta+z");
   await expect(maf).toHaveValue("0.95");
