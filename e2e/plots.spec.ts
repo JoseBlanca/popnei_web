@@ -656,6 +656,47 @@ test("VS4 D3 a resize draws the plot again at its new size, and after destroy th
   expect(after.thrown).toContain("after its destroy");
 });
 
+test("VS4 D3 a plot whose element becomes 0 by 0 after a draw keeps its last drawing, which toSVG and toPNG export", async ({
+  page,
+}) => {
+  await openPlots(page);
+  await draw(page, 600, 375);
+  const svg = page.locator("#plots svg");
+  await expect(svg).toHaveAttribute("width", "600");
+
+  const exported = await page.evaluate(async () => {
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    const element = plots.element();
+    element.style.width = "0px";
+    element.style.height = "0px";
+    // Three frames of the screen: the observer's call, and the frame in
+    // which a redraw would have run.
+    for (let frame = 0; frame < 3; frame += 1) {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    }
+    const file = new DOMParser().parseFromString(
+      plots.handle().toSVG(),
+      "image/svg+xml",
+    );
+    return {
+      width: file.documentElement.getAttribute("width"),
+      height: file.documentElement.getAttribute("height"),
+      kept: file.querySelectorAll(".chart-bar-kept").length,
+    };
+  });
+
+  expect(exported).toEqual({ width: "600", height: "375", kept: 18 });
+  await expect(svg).toHaveAttribute("width", "600");
+  expect(await png(page, 3)).toEqual({
+    made: true,
+    type: "image/png",
+    signature: PNG_SIGNATURE,
+    width: 1800,
+    height: 1125,
+  });
+});
+
 test("VS4 D3 at 320 pixels wide the three rows of the legend lie inside the SVG", async ({
   page,
 }) => {
