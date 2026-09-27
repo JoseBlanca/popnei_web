@@ -9,7 +9,12 @@
  */
 
 import { describe, expect, test } from "vitest";
-import { filterCountRows, filterCounts, refusalText } from "./filterCounts.ts";
+import {
+  filterCountRows,
+  filterCounts,
+  filterNameInSentence,
+  refusalText,
+} from "./filterCounts.ts";
 import { emptyProject } from "../project.ts";
 import type { Project } from "../project.ts";
 import type { WorkerClient } from "../store.ts";
@@ -288,6 +293,19 @@ describe("VS3 D1 the counts of the filters: the rest of the module", () => {
         "    pass\n" +
         "print(blocks.pass_stats)\n",
     );
+  });
+});
+
+describe("VS6 D2 the name of a filter of the variants inside a sentence", () => {
+  test("each of the four, as the lines of the histograms and the descriptions of the commands name them", () => {
+    expect(filterNameInSentence("missing_data")).toBe(
+      "the missing data filter",
+    );
+    expect(filterNameInSentence("obs_het")).toBe(
+      "the filter by observed heterozygosity",
+    );
+    expect(filterNameInSentence("maf")).toBe("the MAF filter");
+    expect(filterNameInSentence("ld")).toBe("the LD pruning");
   });
 });
 

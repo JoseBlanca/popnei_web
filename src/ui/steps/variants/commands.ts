@@ -6,7 +6,7 @@
  * them to the real store.
  */
 
-import { FILTER_NAMES } from "../../../core/analyses/filterCounts.ts";
+import { filterNameInSentence } from "../../../core/analyses/filterCounts.ts";
 import { DEFAULT_MAX_MISSING_RATE } from "../../../core/apps.ts";
 import {
   loadVariants,
@@ -85,18 +85,11 @@ export function turnedOnFilter(kind: VariantFilterKind): VariantFilter {
   }
 }
 
-/** The name of a filter of the variants inside a sentence, "the MAF
-    filter", as the words of the counts of the filters name it. */
-function filterName(kind: VariantFilterKind): string {
-  const name = FILTER_NAMES[kind];
-  return `${name.charAt(0).toLowerCase()}${name.slice(1)}`;
-}
-
 /** A field of a filter of the variants committed: the filter with its
     fields, "the MAF filter changed". */
 export function filterCommand(filter: VariantFilter): StepCommand {
   return {
-    description: `${filterName(filter.kind)} changed`,
+    description: `${filterNameInSentence(filter.kind)} changed`,
     command: (p) => setVariantFilter(p, filter),
   };
 }
@@ -110,12 +103,12 @@ export function filterSwitchCommand(
   if (on) {
     const filter = turnedOnFilter(kind);
     return {
-      description: `${filterName(kind)} was turned on`,
+      description: `${filterNameInSentence(kind)} was turned on`,
       command: (p) => setVariantFilter(p, filter),
     };
   }
   return {
-    description: `${filterName(kind)} was turned off`,
+    description: `${filterNameInSentence(kind)} was turned off`,
     command: (p) => removeVariantFilter(p, kind),
   };
 }

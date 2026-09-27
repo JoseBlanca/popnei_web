@@ -47,6 +47,14 @@ export const FILTER_NAMES: Readonly<Record<VariantFilterKind, string>> =
     ld: "The LD pruning",
   });
 
+/** The name of the filter of the variants of the kind `kind` inside a
+    sentence, "the MAF filter", "the filter by observed heterozygosity":
+    that of `FILTER_NAMES` with its first letter in lower case. */
+export function filterNameInSentence(kind: VariantFilterKind): string {
+  const name = FILTER_NAMES[kind];
+  return `${name.charAt(0).toLowerCase()}${name.slice(1)}`;
+}
+
 /** What one filter of the variants was given and kept. */
 export interface FilterCountRow {
   /** The filter. */

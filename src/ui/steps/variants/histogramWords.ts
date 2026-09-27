@@ -8,6 +8,7 @@
  * node checks them; the step draws them.
  */
 
+import { filterNameInSentence } from "../../../core/analyses/filterCounts.ts";
 import type { VariantStatistic } from "../../../core/analyses/variantChecks.ts";
 import { counted, escaped, grouped } from "../../../core/project.ts";
 import type { Notice } from "../../../core/store.ts";
@@ -80,14 +81,14 @@ export const VARIANT_HISTOGRAMS: Readonly<
     name: "Major allele frequency",
     countLabel: "Variants",
     tableName: "The bins of the major allele frequency",
-    filterName: "the MAF filter",
+    filterName: filterNameInSentence("maf"),
   },
   obsHet: {
     statistic: "obsHet",
     name: "Observed heterozygosity",
     countLabel: "Variants",
     tableName: "The bins of the observed heterozygosity",
-    filterName: "the filter by observed heterozygosity",
+    filterName: filterNameInSentence("obs_het"),
   },
   unbiasedExpHet: {
     statistic: "unbiasedExpHet",
