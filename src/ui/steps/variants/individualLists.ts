@@ -62,12 +62,15 @@ export function notAppliedText(kind: ListKind): string {
 /** A line break of any system: CRLF, LF, or a CR alone. */
 const LINE_BREAK = /\r\n|\r|\n/u;
 
-/** The spaces and tabs at the ends of a line. */
-const ENDS = /^[ \t]+|[ \t]+$/gu;
+/** The white space at the ends of a line: spaces and tabs, and a
+    no-break space or a byte order mark, U+00A0 and U+FEFF, which a name
+    copied from a web page or a PDF may carry and which look like
+    nothing. */
+const ENDS = /^\s+|\s+$/gu;
 
 /**
  * The names of `text`, one per line, in the order written: each line with
- * the spaces and tabs at its ends taken off, and the empty lines dropped,
+ * the white space at its ends taken off, and the empty lines dropped,
  * so that a column copied from a spreadsheet, or the text of a file of
  * one name per line, can be pasted. Nothing else is taken off: a comma or
  * a tab inside a line is part of its name.

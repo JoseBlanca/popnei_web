@@ -53,6 +53,14 @@ describe("the names of the text of a list", () => {
     ]);
   });
 
+  test("a no-break space and a byte order mark at the ends are taken off, and one inside is part of the name", () => {
+    expect(namesOfText("\u00a0s000\u00a0\n\ufeffs001\ns0\u00a002")).toEqual([
+      "s000",
+      "s001",
+      "s0\u00a002",
+    ]);
+  });
+
   test("CRLF, a CR alone and LF all end a line", () => {
     expect(namesOfText("s000\r\ns001\rs002\ns003\r\n")).toEqual([
       "s000",
@@ -68,10 +76,6 @@ describe("the names of the text of a list", () => {
       "s002\ts003",
       "ind 7",
     ]);
-  });
-
-  test("other spaces at the ends, a no-break space among them, are kept", () => {
-    expect(namesOfText(" s000 ")).toEqual([" s000 "]);
   });
 
   test("an empty text, or one of blank lines, has no name", () => {
