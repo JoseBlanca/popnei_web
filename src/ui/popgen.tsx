@@ -243,9 +243,9 @@ function askBeforeLeaving(saving: Saving, store: Store<JobResult, Blob>): void {
     const unsaved = store.getState().write?.kind === "done";
     if (!saving.changed() && !unsaved) return;
     event.preventDefault();
-    // Chrome and Edge before 119, above the floor of 111, ask only when
-    // the event's returnValue is set to a value that is true, a use the
-    // standard keeps for them; an empty text does not make them ask.
+    // Chrome and Edge before 119, above the floor of 111, do not ask on
+    // preventDefault alone; they ask when the event's returnValue is set,
+    // a legacy use the standard keeps for them (MDN, "beforeunload").
     // eslint-disable-next-line no-param-reassign, @typescript-eslint/no-deprecated -- the only way those browsers ask
     event.returnValue = true;
   });
