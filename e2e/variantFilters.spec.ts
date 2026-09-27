@@ -376,7 +376,13 @@ for (const locale of ["en-US", "es-ES"] as const) {
       await openVariants(page);
       await flip(page, FILTERS[3].switch);
       const r2 = field(page, R2_LABEL);
-      await r2.fill("0,25");
+      // Typed key by key, as a user types it. Playwright's fill gives the text
+      // in Firefox as one composition, the way the input method of a
+      // language gives it, whose characters the field leaves to React Aria
+      // to check at the end, with no line of the comma (NumberField.tsx).
+      await r2.click();
+      await r2.press("ControlOrMeta+a");
+      await r2.pressSequentially("0,25");
       await r2.press("Enter");
       await expect(r2).toHaveValue("0.3");
       await expect(
