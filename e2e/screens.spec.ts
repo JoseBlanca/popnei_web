@@ -1705,7 +1705,9 @@ for (const theme of ["light", "dark"] as const) {
       ).toBeVisible();
       await openProject(page, saved);
       await expect(
-        page.getByText(/written and not saved, will be discarded\.$/),
+        page.getByText(
+          /written and not saved, will be discarded; to keep it, press Keep the current project and save it in the Variants step\.$/,
+        ),
       ).toBeVisible();
       await save(page, `popgen-write-open-question-${theme}`, {
         fullPage: false,
@@ -1775,6 +1777,42 @@ for (const theme of ["light", "dark"] as const) {
       await expect(writeButton(page)).toBeDisabled();
       await writing(page).scrollIntoViewIfNeeded();
       await save(page, `popgen-write-too-large-${theme}`);
+    });
+
+    test("the writing, Write refused before a Count for a bound too large", async ({
+      page,
+    }) => {
+      await pickPanel(page);
+      await writeCounted(page, 8_000_000);
+      const threshold = page.getByLabel(
+        "Maximum proportion of missing genotypes",
+      );
+      await threshold.fill("0.06");
+      await threshold.press("Enter");
+      await expect(writeButton(page)).toHaveAccessibleDescription(
+        /Count the variants first, above\.$/u,
+      );
+      await writing(page).scrollIntoViewIfNeeded();
+      await save(page, `popgen-write-count-first-${theme}`);
+    });
+
+    test("the writing, Write refused after a Count that keeps no variant", async ({
+      page,
+    }, testInfo) => {
+      await openChanged(page, testInfo.outputPath(), {
+        filters: [
+          { kind: "missing_data", maxAllowedMissingRate: 0.05 },
+          { kind: "maf", maxAllowedMaf: 0.4 },
+        ],
+      });
+      await page
+        .getByRole("button", { name: "Count the variants each filter keeps" })
+        .click();
+      await expect(writeButton(page)).toHaveAccessibleDescription(
+        /^The filters keep none of the variants/u,
+      );
+      await writing(page).scrollIntoViewIfNeeded();
+      await save(page, `popgen-write-kept-none-${theme}`);
     });
 
     test("the writing locked by a list of individuals", async ({

@@ -125,10 +125,13 @@ test("VS6 D2 a defect in drawing the histograms leaves the filters and the Count
   ).toBeVisible();
 });
 
-/** Makes the calculation worker send counts of the filters with no count
-    of any filter and no variant: core, which words the warning of a file
-    of no variant from them, takes them, and the count beside each filter
-    that is on cannot be drawn. */
+/** Makes the calculation worker send counts of the filters of 1,200
+    variants with no count of any filter. Since a file of no variant shows
+    no count beside the filters (decided by the owner on 27 September
+    2026), counts that reach the drawing of a count are counts core also
+    reads for its warnings, which throw the same defect first; so this
+    checks that the step stands after the defect, and no longer reaches
+    the boundary around the count beside a filter. */
 async function spoilCounts(page: Page): Promise<void> {
   await expect
     .poll(() => page.workers().some((w) => w.url().includes("runnerWorker")))
@@ -147,14 +150,14 @@ async function spoilCounts(page: Page): Promise<void> {
       };
       const result = answer.result;
       if (answer.kind === "result" && result?.analysis === "filterCounts") {
-        result.passStats = { numVars: 0, filtering: {} };
+        result.passStats = { numVars: 1200, filtering: {} };
       }
       post(message, transfer);
     };
   });
 }
 
-test("VS6 D2 a defect in drawing the counts beside the filters leaves no heading in the filters, and each field described only by what is on the page", async ({
+test("VS6 D2 a defect in the counts of the filters leaves no heading in the filters, and each field described only by what is on the page", async ({
   page,
 }) => {
   await openVariants(page);
