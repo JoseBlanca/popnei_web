@@ -320,6 +320,29 @@ test("VS7 D1 the CSVs of the bins of the two histograms: their names, their head
   }
 });
 
+test("VS7 D1 the statistics removed by an Undo while the focus is in the table or on a CSV button of a histogram: the focus goes to the heading of the block", async ({
+  page,
+}) => {
+  const undo = process.platform === "darwin" ? "Meta+z" : "Control+z";
+  const heading = block(page).getByRole("heading", {
+    name: "Statistics of each individual",
+  });
+  await calculated(page);
+  await rowOf(page, "s000").getByRole("rowheader").click();
+  await page.keyboard.press(undo);
+  await expect(table(page)).toHaveCount(0);
+  await expect(heading).toBeFocused();
+
+  await banner(page, "Redo").click();
+  await expect(table(page)).toBeVisible();
+  await histogram(page, OBS_HET_TITLE)
+    .getByRole("button", { name: "Download the bins as CSV" })
+    .focus();
+  await page.keyboard.press(undo);
+  await expect(histogram(page, OBS_HET_TITLE)).toHaveCount(0);
+  await expect(heading).toBeFocused();
+});
+
 test("VS7 D1 the missing data filter of the variants moved: the statistics removed with the words of the change and the notice; an undo, and the statistics back with no calculation, and axe", async ({
   page,
   makeAxeBuilder,

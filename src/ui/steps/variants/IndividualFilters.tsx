@@ -50,6 +50,7 @@ import type { StepCommand } from "./commands.ts";
 import { Filter } from "./Filter.tsx";
 import { IndividualChecksBlock } from "./IndividualChecksBlock.tsx";
 import { IndividualHistogram } from "./IndividualHistogram.tsx";
+import { FocusOnLeave } from "./FocusOnLeave.tsx";
 import { IndividualTable } from "./IndividualTable.tsx";
 import {
   INDIVIDUAL_FILTERS_HEADING,
@@ -117,6 +118,7 @@ export function IndividualFilters(): React.JSX.Element {
     useState<TypedThresholds>(NO_THRESHOLD_TYPED);
   const headingId = useId();
   const keptNoneId = useId();
+  const statsHeadingId = useId();
   const needs = useMemo(() => individualListNeeds(project), [project]);
   const total = keptTotal(project, kept);
   const read = project.variants?.read.kind === "read";
@@ -191,7 +193,7 @@ export function IndividualFilters(): React.JSX.Element {
       </div>
       {read && (
         <ErrorBoundary level={3} heading={titleOf("individualChecks")}>
-          <IndividualChecksBlock />
+          <IndividualChecksBlock headingId={statsHeadingId} />
         </ErrorBoundary>
       )}
       <div className={classOf(styles, "filters")}>
@@ -220,15 +222,17 @@ export function IndividualFilters(): React.JSX.Element {
                     level={3}
                     heading={INDIVIDUAL_HISTOGRAMS[words.statistic].title}
                   >
-                    <HistogramOf
-                      statistic={words.statistic}
-                      threshold={shown}
-                      thresholdLine={
-                        shown === null
-                          ? null
-                          : individualThresholdText(kind, shown)
-                      }
-                    />
+                    <FocusOnLeave headingId={statsHeadingId}>
+                      <HistogramOf
+                        statistic={words.statistic}
+                        threshold={shown}
+                        thresholdLine={
+                          shown === null
+                            ? null
+                            : individualThresholdText(kind, shown)
+                        }
+                      />
+                    </FocusOnLeave>
                   </ErrorBoundary>
                 )
               }
@@ -262,7 +266,9 @@ export function IndividualFilters(): React.JSX.Element {
       </div>
       {read && statsDone && (
         <ErrorBoundary level={3} heading={STATS_TABLE_NAME}>
-          <TableOf />
+          <FocusOnLeave headingId={statsHeadingId}>
+            <TableOf />
+          </FocusOnLeave>
         </ErrorBoundary>
       )}
       {total.kind === "passed" && (

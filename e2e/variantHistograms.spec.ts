@@ -1087,3 +1087,26 @@ test("VS6 D2 a variant with no called genotype gives the warning above the capti
   );
   await expectNoViolations(makeAxeBuilder);
 });
+
+test("VS6 D2 the histograms removed by a redo while the focus is on a CSV button of theirs: the focus goes to the heading of the block", async ({
+  page,
+}) => {
+  await openVariants(page);
+  await pick(page, "panel.nei");
+  await calculate(page);
+  await pick(page, "panel.nei");
+  await banner(page, "Undo").click();
+  await expect(histogram(page, MAF_TITLE)).toBeVisible();
+  await histogram(page, MAF_TITLE)
+    .getByRole("button", { name: "Download the bins as CSV" })
+    .focus();
+  await page.keyboard.press(
+    process.platform === "darwin" ? "Meta+Shift+z" : "Control+Shift+z",
+  );
+  await expect(page.getByRole("group", { name: /, mean / })).toHaveCount(0);
+  await expect(
+    block(page).getByRole("heading", {
+      name: "Histograms of the variants",
+    }),
+  ).toBeFocused();
+});

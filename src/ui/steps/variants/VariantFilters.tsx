@@ -44,6 +44,7 @@ import { filterCommand, filterSwitchCommand } from "./commands.ts";
 import { Filter } from "./Filter.tsx";
 import { FilterCountsPart } from "./FilterCountsPart.tsx";
 import { VARIANT_HISTOGRAMS } from "./histogramWords.ts";
+import { FocusOnLeave } from "./FocusOnLeave.tsx";
 import { VariantChecksBlock } from "./VariantChecksBlock.tsx";
 import { VariantHistogram } from "./VariantHistogram.tsx";
 import styles from "./VariantsStep.module.css";
@@ -113,6 +114,7 @@ export function VariantFilters(): React.JSX.Element {
   const [typedObsHet, setTypedObsHet] = useState<number | null>(null);
   const [typedMaf, setTypedMaf] = useState<number | null>(null);
   const headingId = useId();
+  const checksHeadingId = useId();
 
   const set = (filter: VariantFilter): void => {
     const step = filterCommand(filter);
@@ -139,7 +141,9 @@ export function VariantFilters(): React.JSX.Element {
   ): React.ReactNode =>
     histogramsDone && (
       <ErrorBoundary level={3} heading={VARIANT_HISTOGRAMS[statistic].name}>
-        <HistogramOf statistic={statistic} threshold={threshold} />
+        <FocusOnLeave headingId={checksHeadingId}>
+          <HistogramOf statistic={statistic} threshold={threshold} />
+        </FocusOnLeave>
       </ErrorBoundary>
     );
 
@@ -150,7 +154,7 @@ export function VariantFilters(): React.JSX.Element {
       </h2>
       {read ? (
         <ErrorBoundary level={3} heading={titleOf("variantChecks")}>
-          <VariantChecksBlock />
+          <VariantChecksBlock headingId={checksHeadingId} />
         </ErrorBoundary>
       ) : (
         <p className={classOf(styles, "line")}>{NOT_READ_LINE}</p>
