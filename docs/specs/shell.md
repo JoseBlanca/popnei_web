@@ -242,7 +242,7 @@ keep (node, 26 September 2026, popnei `js-v0.1.0-dev.2`). It is text, and is not
 | | read failed, or individuals missing, or the column of the populations not in it | "pops.csv could not be read", "12 individuals missing from pops.csv", "column pop not in pops.csv" |
 | | read, no column chosen | "one population" |
 | | read, a column chosen | "3 populations by pop": the number of populations `populationsToRun` of `docs/specs/analyses/diversity.md` gives, or `populationsOf` while the variants file is not read, the individuals with an empty cell in no population |
-| | the same, and the filters of individuals leave populations with no individual | "2 of 3 populations by pop", the populations `populationsKept` of `docs/specs/analyses/diversity.md` gives with the individuals kept, of those of `populationsToRun`; "none of 3 populations by pop" when they leave none; while a threshold waits for the statistics of each individual, from the individuals the lists keep, as the panel of the diversity lists them |
+| | the same, and the filters of individuals leave populations with no individual | "2 of 3 populations by pop", the populations `populationsBeforeRun` of `docs/specs/analyses/diversity.md` gives with the individuals kept, of those of `populationsToRun`; "none of 3 populations by pop" when they leave none; while a threshold waits for the statistics of each individual, from the individuals the lists keep, as the panel of the diversity lists them |
 
 A count is written with a comma between groups of three digits, as core
 writes them (`docs/specs/core/project.md`). A name from the user's

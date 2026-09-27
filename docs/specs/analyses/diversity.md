@@ -195,8 +195,15 @@ grouping"):
 table alone; `populationsToRun(p)` narrows them to the individuals of the
 variants file, as the Individuals step lists them; and
 `populationsKept(p, kept)` narrows those to a list of individuals kept,
-and gives the populations it leaves empty apart, as `run` sends them and
-as the ready state of the panel lists them. The key holds the thresholds
+and gives the populations it leaves empty apart, as `run` sends them.
+`populationsBeforeRun(p, kept)` gives the populations as they are known
+before a Run, from the individuals kept of `individualsKept`
+(`docs/specs/core/individualsKept.md`): `populationsKept` with its list
+when the list is known, and, while a threshold on the individuals waits
+for the statistics of each individual, with `byLists`, the individuals
+the lists to keep and to remove keep, since the thresholds can only
+remove more. The ready state of the panel and the summary line of the
+shell both list them through it, so the two never disagree. The key holds the thresholds
 of the filters of individuals and not the list, which is made from a
 result in the cache (`docs/architecture.md`, section 3).
 
@@ -595,6 +602,13 @@ export function populationsToRun(p: Project): Pops | null;
 export function populationsKept(p: Project, kept: readonly string[] | null):
   { readonly pops: Pops; readonly emptied: readonly string[] } | null;
 
+/** The populations as known before a Run, for the ready state and the
+    summary line: populationsKept with the list of `kept` when it is
+    known, and with kept.byLists while a threshold waits for the
+    statistics of each individual; null when populationsToRun is null. */
+export function populationsBeforeRun(p: Project, kept: IndividualsKept):
+  { readonly pops: Pops; readonly emptied: readonly string[] } | null;
+
 /** The reason about the column of the populations, the last three rows
     of "Why it cannot run", with its kind; null when the individuals file
     is not read, or when the column gives populations, or when a column
@@ -946,7 +960,7 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112
 |---|---|---|
 | empty | cannot happen: until the variants file is read the analysis is locked with a reason (`docs/specs/core/store.md`, "The state of an analysis") | |
 | locked | the reason the store gives, as text beside a Run button that is disabled and described by it: "Choose the column that defines the populations in the Individuals step."; or the store's, once the statistics are there, when the filters keep no individual, in its words (`docs/specs/core/store.md`) | go to the step the reason names |
-| ready | a Run button, and the populations it will run on with their sizes, "3 populations: p0, 48 individuals; p2, 84; p1, 68", from `populationsKept` with the individuals kept that the store gives; a population left empty is named after them, "p9 has no individual left after the filters of individuals, and is left out."; several populations left empty are named together, "p1 and p2 have no individual left after the filters of individuals, and are left out.", as `namesOf` of `project.ts` names them, and when the filters leave no population, the line of the populations is left out and that line names them all, since the error of no population comes after the Run (below, "Its words"); while a threshold on the individuals waits for the statistics of each individual, the populations the lists keep, before that threshold, and the line "Run calculates the statistics of each individual first, and the populations may lose individuals to the thresholds." | Run |
+| ready | a Run button, and the populations it will run on with their sizes, "3 populations: p0, 48 individuals; p2, 84; p1, 68", from `populationsBeforeRun` with the individuals kept that the store gives; a population left empty is named after them, "p9 has no individual left after the filters of individuals, and is left out."; several populations left empty are named together, "p1 and p2 have no individual left after the filters of individuals, and are left out.", as `namesOf` of `project.ts` names them, and when the filters leave no population, the line of the populations is left out and that line names them all, since the error of no population comes after the Run (below, "Its words"); while a threshold on the individuals waits for the statistics of each individual, the populations the lists keep, before that threshold, and the line "Run calculates the statistics of each individual first, and the populations may lose individuals to the thresholds." | Run |
 | running | a progress bar, "Calculating · 35% · 0:12", from the last `progress` of its `RunView`, and the time since it started, counted every second; before the first `progress`, and while the request waits in the queue, the bar has no value and is drawn hatched over its whole length and still, since a bar that moved by itself through a long calculation would be motion the user cannot stop (WCAG 2.2.2), and the clock shows the calculation goes on, "Calculating · 0:12"; after a stop or a change of the load, when the store marks the request `afterStop`, "Waiting for panel.nei to be opened again, then calculating · 0:12"; while the statistics of each individual that it waits for are calculated, "Calculating the statistics of each individual, which the filters of individuals are set from · 35% · 0:12", with their progress, the bar labelled "Calculating the statistics of each individual", since its share is theirs, and after a stop "Waiting for panel.nei to be opened again, then calculating the statistics of each individual, which the filters of individuals are set from · 0:12"; the clock starts again at 0:00 when the statistics end and the request of the diversity is sent, with the words of its own calculation, as the part of the writing does (`docs/specs/analyses/writeVariants.md`) | Stop, which cancels it, and the statistics with it |
 | done | the table and its download; the warnings above the table, each as a sentence, with their count on the heading, "2 warnings"; after an opened project file, the comparison with its check numbers under the table | download |
 | results removed | the words of the change that removed it, below, and, beside the Run button, the populations it will run on, as in the state ready | Run; the Undo or Redo of the notice or of the header |
