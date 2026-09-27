@@ -4,7 +4,7 @@
  * "The two lists"): the names a text holds, one per line; the text a list
  * of the project starts at; whether a text is the list applied; the
  * commands of Apply and Clear; and their words. Pure, so that a test in
- * node applies the commands to the real store; `IndividualLists.tsx`
+ * node applies the commands to the real store; `IndividualFilters.tsx`
  * draws them.
  */
 
@@ -14,7 +14,7 @@ import {
 } from "../../../core/project.ts";
 import type { ListNeeds, Project } from "../../../core/project.ts";
 import type { StepCommand } from "./commands.ts";
-import { inTheStep } from "./writeWords.ts";
+import { withoutTheStep } from "./words.ts";
 
 /** The two lists, in their fixed order. */
 export const LIST_KINDS = ["keep", "remove"] as const;
@@ -170,7 +170,7 @@ export function shownText(
     is in, as the section of the writing shows its words (the spec, "The
     two lists"). */
 export function listReasonText(needs: ListNeeds): string {
-  return inTheStep(needs.reason);
+  return withoutTheStep(needs.reason);
 }
 
 /** What the step announces after an Apply or a Clear that changed the

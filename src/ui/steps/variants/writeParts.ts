@@ -18,7 +18,6 @@ import {
   DROPPED_TEXT,
   NO_SIZE_TEXT,
   estimateText,
-  inTheStep,
   keptNoVariantText,
   mayBeTooLargeText,
   noVariantText,
@@ -27,6 +26,7 @@ import {
   warnText,
   writeErrorText,
 } from "./writeWords.ts";
+import { withoutTheStep } from "./words.ts";
 
 /** What the Count of the filters is doing, as the section needs it:
     `counted` when its counts are those of the filters as they are;
@@ -158,7 +158,7 @@ export function writeParts(
         button: {
           kind: "write",
           disabled: true,
-          description: inTheStep(write.reason),
+          description: withoutTheStep(write.reason),
         },
       };
     case "ready":

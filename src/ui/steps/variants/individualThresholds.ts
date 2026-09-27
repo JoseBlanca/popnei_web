@@ -28,7 +28,7 @@ import type {
 } from "../../../worker/protocol.ts";
 import type { StepCommand } from "./commands.ts";
 import { individualThreshold } from "./individualStats.ts";
-import { inTheStep } from "./writeWords.ts";
+import { withoutTheStep } from "./words.ts";
 
 /** The two thresholds, in their fixed order. */
 export const THRESHOLD_KINDS = ["missing_data", "obs_het"] as const;
@@ -221,7 +221,8 @@ const NOTHING: KeptTotal = Object.freeze({ kind: "nothing" });
 export function keptTotal(p: Project, kept: IndividualsKept | null): KeptTotal {
   if (kept === null || p.individualFilters.length === 0) return NOTHING;
   const reason = keptNoneReason(p, kept);
-  if (reason !== null) return { kind: "keptNone", text: inTheStep(reason) };
+  if (reason !== null)
+    return { kind: "keptNone", text: withoutTheStep(reason) };
   const list = kept.list;
   if (list.kind === "needsStatistics" || p.variants?.read.kind !== "read") {
     return NOTHING;

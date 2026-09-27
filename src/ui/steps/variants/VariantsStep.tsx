@@ -1,9 +1,10 @@
 /**
  * The Variants step (docs/specs/steps/variants.md): the user picks the
  * variants file, a VCF or a `.nei` file, sets how a VCF is read, sees
- * what the file holds, sets the filters of the variants
- * (VariantFilters.tsx), types the lists of individuals to keep and to
- * remove (IndividualFilters.tsx), and writes the filtered variants
+ * what the file holds, sets the filters of the variants with their
+ * histograms (VariantFilters.tsx), sets the filters of the individuals,
+ * the two lists and the two thresholds, with the statistics of each
+ * individual (IndividualFilters.tsx), and writes the filtered variants
  * (WriteSection.tsx). The step reads
  * the project from the store and sends it commands; what it holds itself
  * is the options of the next VCF, until the pick writes them into the

@@ -1,7 +1,8 @@
 /**
  * The words of the Variants step and the rules they rest on
  * (docs/specs/steps/variants.md): the format a name tells, the options a
- * VCF is read with, and the lines of the card. Pure, so that a test in
+ * VCF is read with, the lines of the card, and the words of the rest
+ * of the application with "in the Variants step" taken out. Pure, so that a test in
  * node checks them; the step draws them.
  */
 
@@ -11,6 +12,22 @@ import type { Project, VariantSource } from "../../../core/project.ts";
 import type { VcfReadOptions } from "../../../worker/protocol.ts";
 import { numberText } from "../../widgets/committedNumber.ts";
 import type { NumberRefusal } from "../../widgets/committedNumber.ts";
+
+/** " in the Variants step", and the comma before it, where it ends a
+    sentence or comes before "and": the end that the words of a failure
+    have elsewhere in the application, and that the step, which is the
+    Variants step, leaves out, as the owner decided at stop A. */
+const IN_THE_STEP = /,? in the Variants step(?=\.| and )/gu;
+
+/** `text` with "in the Variants step" taken out, as the step shows the
+    words it takes from the store and from the other parts of the
+    application: "Load another variants file in the Variants step."
+    becomes "Load another variants file.", and "Change the list, or
+    remove the filter, in the Variants step." becomes "Change the list,
+    or remove the filter." (writeVariants.md, "Its words"). */
+export function withoutTheStep(text: string): string {
+  return text.replace(IN_THE_STEP, "");
+}
 
 /** The options of a VCF with nothing loaded and no reference. */
 export const DEFAULT_READ_OPTIONS: VcfReadOptions = Object.freeze({
