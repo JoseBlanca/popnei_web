@@ -125,21 +125,25 @@ export function warningsHeading(count: number): string {
 /**
  * What the panel says of a calculation that failed otherwise than by
  * popnei's refusal, which each analysis words itself. `variantsName` is
- * the name of the variants file of the project. A failure of the files
- * wasm is a defect: the calculation worker, which runs every job, holds
- * none (docs/specs/worker/client.md).
+ * the name of the variants file of the project; `again` is the sentence
+ * that asks for the calculation again, "Run it again." beside a Run
+ * button, "Calculate them again." for the histograms of the variants
+ * (docs/specs/analyses/variantChecks.md, "The states"). A failure of the
+ * files wasm is a defect: the calculation worker, which runs every job,
+ * holds none (docs/specs/worker/client.md).
  */
 export function failureText(
   error: Exclude<RunError, { readonly kind: "popnei" }>,
   variantsName: string,
+  again = "Run it again.",
 ): string {
   switch (error.kind) {
     case "reopenFailed":
       return `${escaped(error.name)} could not be read again; it may have changed on the disk since it was picked. Load it again in the Variants step.`;
     case "workerFailed":
-      return `The calculation stopped unexpectedly. Run it again. If it stops again, load ${escaped(variantsName)} again in the Variants step.`;
+      return `The calculation stopped unexpectedly. ${again} If it stops again, load ${escaped(variantsName)} again in the Variants step.`;
     case "defect":
-      return `The application met an error of its own${saying(error.message)}. Run it again.`;
+      return `The application met an error of its own${saying(error.message)}. ${again}`;
     case "couldNotStart":
       return "The application could not start its calculations. Save the project, reload the page, and open the project again.";
     case "protocolMismatch":

@@ -25,83 +25,29 @@
  * the keyboard is not sent to the top of the page (WCAG 2.4.3). The one
  * state of its own is the clock of a calculation under way.
  */
-import { useId, useLayoutEffect, useRef } from "react";
+import { useId, useRef } from "react";
 
 import { checkVerdictText, uncomparedText } from "../../core/projectFile.ts";
 import type { AnalysisId } from "../../core/project.ts";
-import type {
-  AnalysisError,
-  AnalysisStatus,
-  AppState,
-  Warning as DataWarning,
-} from "../../core/store.ts";
-import type { JobResult, Progress } from "../../worker/protocol.ts";
+import type { AnalysisError, AnalysisStatus } from "../../core/store.ts";
+import type { JobResult } from "../../worker/protocol.ts";
 import { classOf } from "../classOf.ts";
 import { startAnalysis } from "../runs.ts";
-import { useRunSeconds } from "../runSeconds.ts";
 import { useAppState, useStore } from "../store.tsx";
-import { Button } from "../widgets/Button.tsx";
 import { Problem } from "../widgets/Problem.tsx";
-import { ProgressBar } from "../widgets/ProgressBar.tsx";
-import { Warning } from "../widgets/Warning.tsx";
 import styles from "./AnalysisPanel.module.css";
 import { panelOf } from "./panels.ts";
 import type { AnalysisUi } from "./panels.ts";
-import {
-  failureText,
-  progressShare,
-  removedText,
-  runningText,
-  stoppedText,
-  warningsHeading,
-} from "./words.ts";
+import { RunButton } from "./RunButton.tsx";
+import { Running } from "./Running.tsx";
+import { buttonOf, statusOf } from "./status.ts";
+import { Warnings } from "./Warnings.tsx";
+import { failureText, removedText, stoppedText } from "./words.ts";
 
 /** What the panel of an analysis is drawn with. */
 export interface AnalysisPanelProps {
   /** The id of the analysis. */
   readonly id: AnalysisId;
-}
-
-/** The state of the analysis `id` in `s`; a defect when the store has
-    none. */
-function statusOf(
-  s: AppState<JobResult, unknown>,
-  id: AnalysisId,
-): AnalysisStatus<JobResult> {
-  const view = s.analyses.find((a) => a.id === id);
-  if (view === undefined) {
-    throw new Error(`popnei_web defect: the store has no analysis ${id}.`);
-  }
-  return view.status;
-}
-
-/** What the button of the panel is in a state, or `null` when the state
-    offers none. */
-type ButtonOf =
-  | { readonly kind: "run"; readonly reason: string | null }
-  | { readonly kind: "stop" }
-  | null;
-
-/** The button of the state `status`. */
-function buttonOf(status: AnalysisStatus<JobResult>): ButtonOf {
-  switch (status.kind) {
-    case "locked":
-      return { kind: "run", reason: status.reason };
-    case "ready":
-    case "removed":
-      return { kind: "run", reason: null };
-    case "running":
-      return { kind: "stop" };
-    case "done":
-      return null;
-    case "error":
-      // popnei would refuse the same settings again, and a file the
-      // browser can no longer read fails again until it is loaded again.
-      return status.error.kind === "refused" ||
-        status.error.error.kind === "reopenFailed"
-        ? null
-        : { kind: "run", reason: null };
-  }
 }
 
 /** The panel of the analysis `id`, in the state the store gives it. */
@@ -141,6 +87,7 @@ export function AnalysisPanel({ id }: AnalysisPanelProps): React.JSX.Element {
       {button !== null && (
         <RunButton
           button={button}
+          runLabel="Run"
           onRun={() => {
             void startAnalysis(store, id);
           }}
@@ -154,56 +101,6 @@ export function AnalysisPanel({ id }: AnalysisPanelProps): React.JSX.Element {
       )}
       <Below id={id} ui={ui} status={status} />
     </section>
-  );
-}
-
-/** What the button of the panel is drawn with. */
-interface RunButtonProps {
-  /** Run, with the reason it cannot, or Stop. */
-  readonly button: NonNullable<ButtonOf>;
-  /** Starts the calculation. */
-  readonly onRun: () => void;
-  /** Stops the calculation. */
-  readonly onStop: () => void;
-  /** Called when the button leaves the page while it has the focus. */
-  readonly onGone: () => void;
-}
-
-/** Run or Stop, one button in one place. */
-function RunButton({
-  button,
-  onRun,
-  onStop,
-  onGone,
-}: RunButtonProps): React.JSX.Element {
-  const element = useRef<HTMLButtonElement>(null);
-  // The latest onGone, for the cleanup below, which runs once.
-  const gone = useRef(onGone);
-  useLayoutEffect(() => {
-    gone.current = onGone;
-  });
-  useLayoutEffect(() => {
-    const node = element.current;
-    return () => {
-      // The cleanup of a layout effect runs while the button is still in
-      // the page, so the focus is still on it when it had it.
-      if (node !== null && document.activeElement === node) {
-        gone.current();
-      }
-    };
-  }, []);
-
-  if (button.kind === "stop") {
-    return <Button label="Stop" onPress={onStop} ref={element} />;
-  }
-  return (
-    <Button
-      label="Run"
-      onPress={onRun}
-      ref={element}
-      isDisabled={button.reason !== null}
-      {...(button.reason !== null && { description: button.reason })}
-    />
   );
 }
 
@@ -251,7 +148,7 @@ function Below({
       return (
         <Running
           key={status.runId}
-          ui={ui}
+          name={ui.name}
           runId={status.runId}
           progress={status.progress}
         />
@@ -326,65 +223,4 @@ function Failed({
       : failureText(error.error, variants.name);
   });
   return <Problem>{text}</Problem>;
-}
-
-/** What the part of a calculation under way is drawn with. */
-interface RunningProps {
-  /** The panel of the analysis. */
-  readonly ui: AnalysisUi;
-  /** The id of its request. */
-  readonly runId: number;
-  /** How far it has gone, or `null` until the worker says. */
-  readonly progress: Progress | null;
-}
-
-/** The bar and the line of a calculation under way, with the time since
-    it started, counted every second. */
-function Running({ ui, runId, progress }: RunningProps): React.JSX.Element {
-  const afterStop = useAppState(
-    (s) => s.runs.find((r) => r.runId === runId)?.afterStop ?? false,
-  );
-  const variantsName = useAppState((s) => s.project.variants?.name ?? null);
-  const seconds = useRunSeconds(runId);
-
-  const share = progress === null ? null : progressShare(progress);
-  return (
-    <div className={classOf(styles, "running")}>
-      <ProgressBar label={`Calculating ${ui.name}`} value={share} />
-      <p className={classOf(styles, "line")}>
-        {runningText({
-          share,
-          seconds,
-          waitingFor: afterStop ? variantsName : null,
-        })}
-      </p>
-    </div>
-  );
-}
-
-/** The warnings of a result, above it, with their count on their
-    heading. */
-function Warnings({
-  warnings,
-}: {
-  readonly warnings: readonly DataWarning[];
-}): React.JSX.Element {
-  const headingId = useId();
-  return (
-    <section
-      aria-labelledby={headingId}
-      className={classOf(styles, "warnings")}
-    >
-      <h3 id={headingId} className={classOf(styles, "warningsHeading")}>
-        {warningsHeading(warnings.length)}
-      </h3>
-      <ul className={classOf(styles, "warningList")}>
-        {warnings.map((warning) => (
-          <li key={warning.code}>
-            <Warning>{warning.text}</Warning>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
 }
