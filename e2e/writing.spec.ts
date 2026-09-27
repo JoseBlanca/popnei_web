@@ -14,7 +14,7 @@ import { join } from "node:path";
 import { gunzipSync } from "node:zlib";
 
 import type { Locator, Page, Route } from "@playwright/test";
-import { init, openVars } from "popnei";
+import { init, openVars, writeVars } from "popnei";
 
 import { expect, test } from "./axe.ts";
 import { NUM_INDIVIDUALS, bigVcfPopsCsv, writeBigVcf } from "./bigVcf.ts";
@@ -197,6 +197,15 @@ test("VS5 D3 panel.nei at 0.05 written and saved: the download panel.filtered.ne
   const path = testInfo.outputPath("panel.filtered.nei");
   await file.saveAs(path);
   expect((await stat(path)).size).toBe(WRITTEN_AT_005);
+  // The bytes popnei's writeVars gives in node for panel.nei at 0.05, as
+  // the runner's test has them, and not only a file of their size.
+  await init();
+  const variants = openVars(
+    new Uint8Array(await readFile(join(FIXTURES, "panel.nei"))),
+  );
+  variants.filterByMissingData(0.05);
+  const inNode = writeVars(variants).bytes;
+  expect(Buffer.compare(await readFile(path), inNode)).toBe(0);
   await expect(status(page)).toHaveText(
     "panel.filtered.nei was handed to the browser to save.",
   );
