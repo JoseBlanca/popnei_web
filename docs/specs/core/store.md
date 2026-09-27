@@ -175,6 +175,15 @@ them is shown for the new project unless its keys give it. The
 calculations in flight are stopped at once, since the screen asked before
 opening; an opening makes no notice, and clears the one there was.
 
+The store counts its moves of the history, `historyMoves`, one more at
+each undo, redo and opening, and none at a command or an event. A
+screen that holds text of its own beside a part of the project, the
+text of a list of individuals typed and not applied, starts again at
+the project when the count changes, even when the step undone did not
+change that part (`docs/specs/steps/variants.md`, "The two lists"); a
+command cannot be told from an undo by the project alone. An undo or a
+redo with nothing to move, which changes nothing, counts nothing.
+
 The events come from the workers, through `src/ui/runs.ts` and the entry
 of the page, the code that starts when the page opens, makes the store and
 the workers and joins them, and change what the screens show without a
@@ -756,6 +765,8 @@ export interface AppState<R, F = never> {  // F: the type of a written file, Blo
   readonly project: Project;
   readonly undo: string | null;           // the description of what an undo would undo
   readonly redo: string | null;
+  /** The undos, redos and openings so far, 0 when the store is made. */
+  readonly historyMoves: number;
   readonly popneiVersion: string | null;
   readonly analyses: readonly AnalysisView<R>[];  // in the order of the definitions
   readonly runs: readonly RunView[];      // the calculations in flight
