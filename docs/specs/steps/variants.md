@@ -612,9 +612,12 @@ text, React Aria's `TextField` with a `TextArea`, and two buttons:
 | Individuals to keep, one name per line | "Only the individuals of this list are kept. Leave it empty to keep every individual." | "Apply the list to keep", "Clear the list to keep" |
 | Individuals to remove, one name per line | "The individuals of this list are removed." | "Apply the list to remove", "Clear the list to remove" |
 
-Each line is a name, with the spaces and tabs at its ends taken off and
-the empty lines dropped, so that a column copied from a spreadsheet, or
-the text of a file of one name per line, can be pasted. Apply sends the
+Each line is a name, with the white space at its ends taken off, the
+spaces and tabs and also a no-break space or a byte order mark, U+00A0
+and U+FEFF, which a name copied from a web page or a PDF may carry and
+which look like nothing, and the empty lines dropped, so that a column
+copied from a spreadsheet, or the text of a file of one name per line,
+can be pasted. Apply sends the
 names in the order written, with `setIndividualFilter`, or, when there
 is none, `removeIndividualFilter`; Clear empties the area and sends
 `removeIndividualFilter`. So the screen never sends an empty list, and
