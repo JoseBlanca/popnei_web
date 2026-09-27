@@ -1738,8 +1738,10 @@ async function writeAndSave(
   let fileBytes: number | null = null;
   let whole = `the download failed: ${String(failure)}`;
   if (failure === null) {
-    await mkdir(join(MEASURE_DIR, "written"), { recursive: true });
-    const path = join(MEASURE_DIR, "written", saving.suggestedFilename());
+    // A folder for each project, since the two engines may run at once.
+    const dir = join(MEASURE_DIR, `written-${test.info().project.name}`);
+    await mkdir(dir, { recursive: true });
+    const path = join(dir, saving.suggestedFilename());
     await saving.saveAs(path);
     fileBytes = statSync(path).size;
     try {
