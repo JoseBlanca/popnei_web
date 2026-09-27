@@ -69,6 +69,19 @@
   vertical-align: bottom;
 }
 
+/* On a narrow page, a phone or a desktop zoomed in, less space between
+   the columns, so that a table of four short columns, the bins of a
+   histogram with the state of each, fits 320 pixels with no sideways
+   scroll. 30em, 480 pixels at the default size of text, is wider than a
+   phone held upright. */
+@media (width < 30em) {
+  .header,
+  .rowHeader,
+  .cell {
+    padding-inline: var(--space-2);
+  }
+}
+
 .header,
 .rowHeader {
   font-weight: 600;

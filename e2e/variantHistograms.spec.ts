@@ -581,6 +581,32 @@ test("VS6 D2 at 320 pixels wide the legend of each histogram with a threshold li
   await expectNoViolations(makeAxeBuilder);
 });
 
+test("VS6 D2 at 320 pixels wide the table of the bins of a filter that is on fits its four columns with no sideways scroll", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  await openVariants(page);
+  await pick(page, "panel.nei");
+  await calculate(page);
+  await flip(page, OBS_HET_SWITCH);
+  const group = histogram(page, OBS_HET_TITLE);
+  await group.getByRole("tab", { name: "Table of the bins" }).click();
+  const table = group.getByRole("table");
+  await expect(
+    table.getByRole("columnheader", { name: "This filter" }),
+  ).toBeVisible();
+  await expect(table.getByRole("cell", { name: "Partly kept" })).toBeVisible();
+  expect(
+    await table.evaluate((element) => {
+      const frame = element.parentElement;
+      return frame === null ? null : frame.scrollWidth <= frame.clientWidth;
+    }),
+  ).toBe(true);
+  await expect(group.getByText(/^Scroll the table sideways/)).toHaveCount(0);
+  await expectNoViolations(makeAxeBuilder);
+});
+
 test("VS6 D2 histograms drawn at 1280 pixels wide narrow with the window to 320: no sideways scroll, and each plot within its panel", async ({
   page,
 }) => {
