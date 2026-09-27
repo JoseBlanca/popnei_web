@@ -13,7 +13,11 @@ keep, a population left with none left out and named
 `numCheckNumbers` is `null` only with a threshold on the individuals; the
 result carries popnei's counts of its pass; and on 26 September 2026,
 after its code, for `statisticsFailedText`, the function that gives the
-words of the statistics that failed, which the spec gave with no name.
+words of the statistics that failed, which the spec gave with no name;
+and on 27 September 2026, with the code of the panel, for the words of
+the ready state when several populations, or all, are left empty, and
+for the name of the bar and the clock while a Run waits for the
+statistics of each individual.
 The code of stage 2 is in
 `src/core/analyses/diversity.ts`. This spec gives the first analysis of the population genetics
 application, in its form for the walking skeleton: the module
@@ -942,8 +946,8 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112
 |---|---|---|
 | empty | cannot happen: until the variants file is read the analysis is locked with a reason (`docs/specs/core/store.md`, "The state of an analysis") | |
 | locked | the reason the store gives, as text beside a Run button that is disabled and described by it: "Choose the column that defines the populations in the Individuals step."; or the store's, once the statistics are there, when the filters keep no individual, in its words (`docs/specs/core/store.md`) | go to the step the reason names |
-| ready | a Run button, and the populations it will run on with their sizes, "3 populations: p0, 48 individuals; p2, 84; p1, 68", from `populationsKept` with the individuals kept that the store gives; a population left empty is named after them, "p9 has no individual left after the filters of individuals, and is left out."; while a threshold on the individuals waits for the statistics of each individual, the populations before that threshold and the line "Run calculates the statistics of each individual first, and the populations may lose individuals to the thresholds." | Run |
-| running | a progress bar, "Calculating · 35% · 0:12", from the last `progress` of its `RunView`, and the time since it started, counted every second; before the first `progress`, and while the request waits in the queue, the bar has no value and is drawn hatched over its whole length and still, since a bar that moved by itself through a long calculation would be motion the user cannot stop (WCAG 2.2.2), and the clock shows the calculation goes on, "Calculating · 0:12"; after a stop or a change of the load, when the store marks the request `afterStop`, "Waiting for panel.nei to be opened again, then calculating · 0:12"; while the statistics of each individual that it waits for are calculated, "Calculating the statistics of each individual, which the filters of individuals are set from · 35% · 0:12", with their progress | Stop, which cancels it, and the statistics with it |
+| ready | a Run button, and the populations it will run on with their sizes, "3 populations: p0, 48 individuals; p2, 84; p1, 68", from `populationsKept` with the individuals kept that the store gives; a population left empty is named after them, "p9 has no individual left after the filters of individuals, and is left out."; several populations left empty are named together, "p1 and p2 have no individual left after the filters of individuals, and are left out.", as `namesOf` of `project.ts` names them, and when the filters leave no population, the line of the populations is left out and that line names them all, since the error of no population comes after the Run (below, "Its words"); while a threshold on the individuals waits for the statistics of each individual, the populations the lists keep, before that threshold, and the line "Run calculates the statistics of each individual first, and the populations may lose individuals to the thresholds." | Run |
+| running | a progress bar, "Calculating · 35% · 0:12", from the last `progress` of its `RunView`, and the time since it started, counted every second; before the first `progress`, and while the request waits in the queue, the bar has no value and is drawn hatched over its whole length and still, since a bar that moved by itself through a long calculation would be motion the user cannot stop (WCAG 2.2.2), and the clock shows the calculation goes on, "Calculating · 0:12"; after a stop or a change of the load, when the store marks the request `afterStop`, "Waiting for panel.nei to be opened again, then calculating · 0:12"; while the statistics of each individual that it waits for are calculated, "Calculating the statistics of each individual, which the filters of individuals are set from · 35% · 0:12", with their progress, the bar labelled "Calculating the statistics of each individual", since its share is theirs, and after a stop "Waiting for panel.nei to be opened again, then calculating the statistics of each individual, which the filters of individuals are set from · 0:12"; the clock starts again at 0:00 when the statistics end and the request of the diversity is sent, with the words of its own calculation, as the part of the writing does (`docs/specs/analyses/writeVariants.md`) | Stop, which cancels it, and the statistics with it |
 | done | the table and its download; the warnings above the table, each as a sentence, with their count on the heading, "2 warnings"; after an opened project file, the comparison with its check numbers under the table | download |
 | results removed | the words of the change that removed it, below, and, beside the Run button, the populations it will run on, as in the state ready | Run; the Undo or Redo of the notice or of the header |
 | error | what happened and what to do, below; a refusal of popnei stays for these settings, and Run is not offered, since popnei would refuse them again; nor after `reopenFailed`, a variants file the browser can no longer read, which fails again until it is loaded again | Run again after another failure; change the settings after a refusal; load the file again after `reopenFailed` |
@@ -1184,7 +1188,8 @@ moves.
   `Table` is for the sortable tables of later stages
   (`docs/technology.md`, "React Aria Components").
 - The progress bar is React Aria's `ProgressBar`, labelled "Calculating
-  the diversity", whose value a screen reader reads when the user reaches
+  the diversity", or "Calculating the statistics of each individual"
+  while the Run waits for them, whose value a screen reader reads when the user reaches
   it, "35%"; it is not in a status region, so it is not read out at each
   of its changes, and neither is the clock. Before the first `progress`
   it has no value, which a screen reader reads as busy.
