@@ -74,19 +74,14 @@ export function refusalWords(
   }
   const fileName = escaped(p.variants.name);
   if (message.startsWith(EMPTY_SOURCE)) {
-    if (p.variants.readOptions?.onlyPassed === true) {
-      return `${fileName} has no variant with PASS or . in its FILTER column, and it was read with only those, so there is no variant to ${words.calculate} over. Untick "${ONLY_PASSED_BOX}" in the Variants step and read the file again.`;
-    }
-    return `${fileName} has no variants, so there is no variant to ${words.calculate} over. Load another variants file in the Variants step.`;
+    return emptySourceText(p, `there is no variant to ${words.calculate} over`);
   }
   if (words.emptyPass !== null && message.startsWith(EMPTY_PASS)) {
     return words.emptyPass(fileName);
   }
-  const ploidy = OTHER_PLOIDY.exec(message);
+  const ploidy = otherPloidyText(message, p);
   if (ploidy !== null) {
-    const [, line = "", individual = "", found = "", given = ""] = ploidy;
-    const alleles = counted(Number(found), "allele");
-    return `At line ${line} of ${fileName}, the genotype of ${shown(individual)} has ${alleles}, and the file was read with ploidy ${given}. If every genotype of the file has ${alleles}, set the ploidy of the VCF to ${found} in the Variants step and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version.`;
+    return ploidy;
   }
   const isVcfLine =
     /^line \d+ of the VCF/u.test(message) || message.startsWith(BGZIP_REFUSAL);
@@ -94,6 +89,43 @@ export function refusalWords(
     return `popnei could not read ${fileName}${saying(message)}. Correct the file, or fetch it again, and load it in the Variants step.`;
   }
   return `popnei could not ${words.calculate}${saying(message)}. Change the settings, or load the variants file again, ${words.again}.`;
+}
+
+/**
+ * The words of a variants file of `p` that holds no variant, or, for a VCF
+ * read with only the passed variants, none that passed, with what that
+ * leaves, `consequence`, after "so": "there is no variant to calculate the
+ * diversity over", "there is nothing to write". Throws a defect on a
+ * project with no variants file.
+ */
+export function emptySourceText(p: Project, consequence: string): string {
+  if (p.variants === null) {
+    throw defect("an empty source was given a project with no variants file.");
+  }
+  const fileName = escaped(p.variants.name);
+  if (p.variants.readOptions?.onlyPassed === true) {
+    return `${fileName} has no variant with PASS or . in its FILTER column, and it was read with only those, so ${consequence}. Untick "${ONLY_PASSED_BOX}" in the Variants step and read the file again.`;
+  }
+  return `${fileName} has no variants, so ${consequence}. Load another variants file in the Variants step.`;
+}
+
+/**
+ * The words of popnei's refusal `message` of a genotype of another ploidy
+ * than the one the VCF of `p` was read with, or `null` for another
+ * message. Throws a defect on a project with no variants file.
+ */
+export function otherPloidyText(message: string, p: Project): string | null {
+  if (p.variants === null) {
+    throw defect("a refusal was given a project with no variants file.");
+  }
+  const ploidy = OTHER_PLOIDY.exec(message);
+  if (ploidy === null) {
+    return null;
+  }
+  const fileName = escaped(p.variants.name);
+  const [, line = "", individual = "", found = "", given = ""] = ploidy;
+  const alleles = counted(Number(found), "allele");
+  return `At line ${line} of ${fileName}, the genotype of ${shown(individual)} has ${alleles}, and the file was read with ploidy ${given}. If every genotype of the file has ${alleles}, set the ploidy of the VCF to ${found} in the Variants step and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version.`;
 }
 
 /**

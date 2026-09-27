@@ -120,7 +120,11 @@ export function writeParts(
         },
       };
     case "noVariant":
-      return { message: line(noVariantText(p)), warning: null, button: null };
+      return {
+        message: line(noVariantText(p, write.written.passStats)),
+        warning: null,
+        button: null,
+      };
     case "error": {
       const message = {
         kind: "problem",

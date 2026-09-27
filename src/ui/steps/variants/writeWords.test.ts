@@ -9,6 +9,7 @@ import { describe, expect, test } from "vitest";
 import type { Project } from "../../../core/project.ts";
 import { sampleProject } from "../../../core/testSupport.ts";
 import type { WriteEstimate } from "../../../core/writeEstimate.ts";
+import type { PassStats } from "../../../worker/protocol.ts";
 import {
   DROPPED_TEXT,
   NO_SIZE_TEXT,
@@ -48,6 +49,35 @@ const TOO_LARGE = estimateOf(2_000_000, 1000);
     panel.filtered.nei. */
 const PROJECT: Project = sampleProject();
 
+/** The sample project with panel.vcf, a VCF read with ploidy 2 and with
+    only the passed variants, `onlyPassed`, or every variant. */
+function vcfProject(onlyPassed: boolean): Project {
+  const variants = PROJECT.variants;
+  if (variants === null) throw new Error("the sample has a variants file");
+  return {
+    ...PROJECT,
+    variants: {
+      ...variants,
+      name: "panel.vcf",
+      format: "vcf",
+      readOptions: { ploidy: 2, onlyPassed },
+    },
+  };
+}
+
+/** The counts of a pass whose missing data filter was given 1,200
+    variants and kept none. */
+const KEPT_NONE: PassStats = {
+  numVars: 0,
+  filtering: { missing_data: { varsProcessed: 1200, varsKept: 0 } },
+};
+
+/** The counts of a pass over a source of no variant. */
+const EMPTY_SOURCE: PassStats = {
+  numVars: 0,
+  filtering: { missing_data: { varsProcessed: 0, varsKept: 0 } },
+};
+
 describe("VS5 D3 the words of the writing of the filtered variants", () => {
   test("the size expected, exact and from a bound", () => {
     expect(estimateText(estimateOf(20_000, 1000))).toBe(
@@ -83,8 +113,37 @@ describe("VS5 D3 the words of the writing of the filtered variants", () => {
   });
 
   test("the filters keep no variant", () => {
-    expect(noVariantText(PROJECT)).toBe(
+    expect(noVariantText(PROJECT, KEPT_NONE)).toBe(
       "The filters kept none of the variants of panel.nei, so there is nothing to write. Loosen the filters above.",
+    );
+  });
+
+  test("the variants file holds no variant, or a VCF read with only the passed variants none that passed", () => {
+    expect(noVariantText(PROJECT, EMPTY_SOURCE)).toBe(
+      "panel.nei has no variants, so there is nothing to write. Load another variants file in the Variants step.",
+    );
+    expect(noVariantText(vcfProject(true), EMPTY_SOURCE)).toBe(
+      'panel.vcf has no variant with PASS or . in its FILTER column, and it was read with only those, so there is nothing to write. Untick "Only the variants with PASS or . in the FILTER column" in the Variants step and read the file again.',
+    );
+    expect(noVariantText(vcfProject(false), EMPTY_SOURCE)).toBe(
+      "panel.vcf has no variants, so there is nothing to write. Load another variants file in the Variants step.",
+    );
+  });
+
+  test("popnei refused the write for a genotype of another ploidy: the words of the panels, with no memory", () => {
+    expect(
+      writeErrorText(
+        {
+          kind: "refused",
+          message:
+            "line 12 of the VCF, the column of ind_3: its genotype is of the ploidy 4 and the reader was asked for the ploidy 2",
+        },
+        false,
+        vcfProject(true),
+        GIGABYTE,
+      ),
+    ).toBe(
+      "panel.filtered.nei could not be written. At line 12 of panel.vcf, the genotype of ind_3 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 in the Variants step and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version.",
     );
   });
 

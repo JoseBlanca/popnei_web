@@ -176,7 +176,14 @@ describe("VS5 D3 the parts of the section of the writing in each state", () => {
         {
           kind: "noVariant",
           key: KEY,
-          written: { format: "nei", numBytes: 3594, passStats: PASS },
+          written: {
+            format: "nei",
+            numBytes: 3594,
+            passStats: {
+              numVars: 0,
+              filtering: { missing_data: { varsProcessed: 1200, varsKept: 0 } },
+            },
+          },
         },
         SMALL,
         PROJECT,
@@ -185,6 +192,34 @@ describe("VS5 D3 the parts of the section of the writing in each state", () => {
       message: {
         kind: "line",
         text: "The filters kept none of the variants of panel.nei, so there is nothing to write. Loosen the filters above.",
+      },
+      warning: null,
+      button: null,
+    });
+  });
+
+  test("no variant of an empty source: the words of a file of no variant, and no button", () => {
+    expect(
+      writeParts(
+        {
+          kind: "noVariant",
+          key: KEY,
+          written: {
+            format: "nei",
+            numBytes: 3594,
+            passStats: {
+              numVars: 0,
+              filtering: { missing_data: { varsProcessed: 0, varsKept: 0 } },
+            },
+          },
+        },
+        SMALL,
+        PROJECT,
+      ),
+    ).toEqual({
+      message: {
+        kind: "line",
+        text: "panel.nei has no variants, so there is nothing to write. Load another variants file in the Variants step.",
       },
       warning: null,
       button: null,

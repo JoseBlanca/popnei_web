@@ -8,13 +8,19 @@
  * checks them; `WriteSection.tsx` draws them.
  */
 
+import { variantsOfFile } from "../../../core/analyses/filterCounts.ts";
 import { statisticsFailedWords } from "../../../core/analyses/individualChecks.ts";
+import {
+  emptySourceText,
+  otherPloidyText,
+} from "../../../core/analyses/words.ts";
 import { writtenName } from "../../../core/fileNames.ts";
 import { counted, escaped } from "../../../core/project.ts";
 import type { Project } from "../../../core/project.ts";
 import type { AnalysisError } from "../../../core/store.ts";
 import { sizeText } from "../../../core/writeEstimate.ts";
 import type { WriteEstimate } from "../../../core/writeEstimate.ts";
+import type { PassStats } from "../../../worker/protocol.ts";
 import { clockText, failureText } from "../../analyses/words.ts";
 import { capitalized } from "../../sentences.ts";
 
@@ -66,9 +72,15 @@ export function tooLargeText(estimate: WriteEstimate): string {
   return `A file of ${aboutSize(estimate)} cannot be written in a browser tab: popnei needs more than twice the file in its memory while it writes it, and a tab gives popnei at most 4 GB. Remove variants or individuals with the filters, or write the file with popnei in Python.`;
 }
 
-/** What the part says when the filters kept no variant, and the store
-    kept no file. */
-export function noVariantText(p: Project): string {
+/** What the part says when a write gave no variant, and the store kept
+    no file, from the counts of its pass, `pass`: when the pass was given
+    no variant, the variants file holds none, or none that passed for a
+    VCF read with only those, in the words the analyses give an empty
+    source; otherwise the filters kept none. */
+export function noVariantText(p: Project, pass: PassStats): string {
+  if (variantsOfFile(pass) === 0) {
+    return emptySourceText(p, "there is nothing to write");
+  }
   return `The filters kept none of the variants of ${variantsName(p)}, so there is nothing to write. Loosen the filters above.`;
 }
 
@@ -138,7 +150,8 @@ export function writingBarLabel(
 /**
  * The words of a write that failed, the store's `error`: the statistics
  * it waited for, `ofStatistics`, with the words their own part gives the
- * failure; popnei's refusal of the write; the worker that stopped with no
+ * failure; popnei's refusal of the write, in the words the analyses give
+ * a genotype of another ploidy, and otherwise in its own; the worker that stopped with no
  * answer; a variants file the browser can no longer read, the
  * calculations that could not start and the page out of date, in the
  * diversity's words; an error of our own. `estimate` is the size
@@ -168,6 +181,10 @@ export function writeErrorText(
     );
   }
   if (error.kind === "refused") {
+    const ploidy = otherPloidyText(error.message, p);
+    if (ploidy !== null) {
+      return `${escaped(writtenName(p))} could not be written. ${ploidy}`;
+    }
     const fit =
       estimate === null
         ? "The file may not fit"

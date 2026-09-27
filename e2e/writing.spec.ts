@@ -11,6 +11,7 @@
  */
 import { readFile, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { gunzipSync } from "node:zlib";
 
 import type { Locator, Page, Route } from "@playwright/test";
 import { init, openVars } from "popnei";
@@ -538,6 +539,33 @@ test("VS5 D3 with the project saved, leaving the page while a written file is no
   await expect(saveButtons(page)).toHaveCount(0);
 
   expect(await leave(page)).toBe("none");
+});
+
+test("VS5 D3 a VCF with no variant that passed, read with only those, written: the words of a file with none that passed, and no Save, and axe", async ({
+  page,
+  makeAxeBuilder,
+}, testInfo) => {
+  // The variants of panel.vcf.gz, each with LowQual in its FILTER column.
+  const text = gunzipSync(await readFile(join(FIXTURES, "panel.vcf.gz")))
+    .toString("utf8")
+    .replaceAll("\tPASS\t", "\tLowQual\t");
+  const vcf = testInfo.outputPath("nopass.vcf");
+  await writeFile(vcf, text);
+
+  await openVariants(page);
+  await pick(page, "Variants file", vcf);
+  await expect(stepLink(page, "Variants")).toHaveAccessibleName(
+    "Variants, Done",
+  );
+  await writeButton(page).click();
+  await expect(
+    writing(page).getByText(
+      'nopass.vcf has no variant with PASS or . in its FILTER column, and it was read with only those, so there is nothing to write. Untick "Only the variants with PASS or . in the FILTER column" in the Variants step and read the file again.',
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(writing(page).getByRole("button")).toHaveCount(0);
+  await expectNoViolations(makeAxeBuilder);
 });
 
 test("VS5 D4 a file written from the big VCF is saved after the worker that made it was ended, and popnei in node opens it with its 1,000 individuals", async ({
