@@ -240,7 +240,8 @@ each titled with its statistic and its mean, "Major allele frequency,
 mean 0.7163", and a caption for the three: "Over the 1,200 variants of
 panel.nei, before any filter." The threshold of the MAF filter and of the
 filter by heterozygosity is marked on its histogram when the filter is
-on. Each has the table of its bins beside it, from `histogramRows`, a
+on. Each has the table of its bins in the tab "Table of the bins", next
+to the tab of the plot, from `histogramRows`, a
 description in the form of the histogram's spec, "The major allele
 frequency of 1,200 variants, in 40 bins from 0 to 1. The threshold 0.95
 keeps the 38 bins up to it, 1,175 variants, and removes the 2 bins above

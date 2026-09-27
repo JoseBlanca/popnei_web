@@ -929,8 +929,8 @@ nothing on the screen says the things the lines above do not.
   it, as the block of a check does. The Save button takes the focus when a write ends
   with the focus on the button that asked for it (`writeVariants.md`).
 - Each histogram is an image with its title and description, and the
-  table of its bins beside it, as `docs/specs/charts/histogram.md` has
-  it; its threshold is also said in words beside it, "Threshold of the
+  table of its bins in the tab "Table of the bins", next to the tab of
+  the plot, as `docs/specs/charts/histogram.md` has it; its threshold is also said in words beside it, "Threshold of the
   MAF filter: 0.95", and what each bin keeps is a word of the table,
   never the fill of a bar alone (1.4.1). The column Kept of the table of
   the individuals is a word, "kept" or "removed".

@@ -126,7 +126,7 @@ the same file, in node on 26 September 2026, the bins numbered from 0 at the lef
 At 0.5 the line falls on the lower edge of bin 20, and 8 of its 62
 variants have a heterozygosity of 0.5 exactly, which the filter keeps: the
 bin is partly kept, it is drawn outlined, since the line is at its left
-edge, and the table beside the plot says it is partly kept (below, "The
+edge, and the table of the bins says it is partly kept (below, "The
 numbers without the picture"). The legend has no row for a bar partly
 kept, and the outlined bar reads as removed, so that the plot would say
 1,090 variants kept where the filter keeps 1,098: the screen names the
@@ -195,7 +195,7 @@ No events: the histogram has no hover and no selection in this stage
 (below, "Not in this spec").
 
 What each bin holds and what the threshold does to it, as numbers. The
-screen draws the table beside the plot from these rows, and writes its
+screen draws the table of the bins from these rows, and writes its
 CSV and its description from them, so that the table and the plot never
 disagree on a bin.
 
@@ -311,7 +311,7 @@ the histogram adds:
   table below rounds them; a part with no bin is left out, "keeps none
   of the bins" when the threshold is below the first edge. The analyses'
   specs give the words of what is counted.
-- **A table beside the plot, drawn by the screen from `histogramRows`**,
+- **A table of the bins, drawn by the screen from `histogramRows`**,
   one row per bin, in the order of the bins: the lower edge, the upper
   edge, the count, and, when there is a threshold, whether the filter
   keeps the bin, "Kept", "Partly kept" or "Removed", in words and not by
