@@ -272,6 +272,41 @@ test("VS5 D3 Stop of a write under way gives Write back with the focus on it and
   await expectNoViolations(makeAxeBuilder);
 });
 
+test("VS5 D3 back at the Variants step, the line of a write under way gives the time since the write started from its first drawing, never 0:00", async ({
+  page,
+}) => {
+  await openVariants(page);
+  await loadPanelNei(page);
+  await holdWritten(page);
+  await writeButton(page).click();
+  const line = writing(page).getByText(/^Writing panel\.filtered\.nei · /);
+  await expect(line).toHaveText(/ · 0:0[2-9]$/, { timeout: 5000 });
+
+  await goTo(page, "Individuals");
+  // Every text of the line from the moment the section is drawn again.
+  await page.evaluate(() => {
+    const seen: string[] = [];
+    (globalThis as unknown as { seenLines: string[] }).seenLines = seen;
+    new MutationObserver(() => {
+      for (const p of document.querySelectorAll("main p")) {
+        const text = p.textContent;
+        if (text.startsWith("Writing panel.filtered.nei")) seen.push(text);
+      }
+    }).observe(document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+  });
+  await goTo(page, "Variants");
+  await expect(line).toHaveText(/ · 0:0[2-9]$/);
+  const seen = await page.evaluate(
+    () => (globalThis as unknown as { seenLines: string[] }).seenLines,
+  );
+  expect(seen.length).toBeGreaterThan(0);
+  expect(seen.filter((text) => text.endsWith(" 0:00"))).toEqual([]);
+});
+
 test("VS5 D3 a change of the threshold with the file not saved discards it: the notice says so, and its Undo brings the threshold back and no Save, and axe", async ({
   page,
   makeAxeBuilder,
