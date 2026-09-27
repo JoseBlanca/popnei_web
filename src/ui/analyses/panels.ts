@@ -19,7 +19,6 @@ import type { ComponentType } from "react";
 
 import {
   populationsBeforeRun,
-  populationsToRun,
   refusalText,
   statisticsFailedText,
 } from "../../core/analyses/diversity.ts";
@@ -29,7 +28,7 @@ import type { AnalysisId, Project } from "../../core/project.ts";
 import type { AnalysisError } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 import { DiversityResults } from "./diversity/DiversityResults.tsx";
-import { populationsText, readyLines } from "./diversity/words.ts";
+import { readyLines } from "./diversity/words.ts";
 import { titleOf } from "./titles.ts";
 
 /** What the component of a result is drawn with. */
@@ -84,12 +83,14 @@ const DIVERSITY: AnalysisUi = Object.freeze({
   name: "the diversity",
   resultName: "the table",
   readyLines: (p: Project, kept: IndividualsKept | null): readonly string[] => {
-    // The filters of individuals refused, or a file not read: the
-    // diversity is locked, and the removed state lists the populations
-    // of the file.
+    // No individuals kept, `null`, comes of a variants file not read or
+    // of lists popnei would refuse, and the store locks the diversity for
+    // both before it is ready or removed, the only states that draw these
+    // lines (store.md, "The state of an analysis").
     if (kept === null) {
-      const pops = populationsToRun(p);
-      return pops === null ? [] : [populationsText(pops)];
+      throw new Error(
+        "popnei_web defect: the diversity is ready or removed with no individuals kept.",
+      );
     }
     // While a threshold waits for the statistics, the populations the
     // lists keep, before it.
