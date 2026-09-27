@@ -162,8 +162,9 @@ export function individualsKept(
  * locked when the list of `kept` is known and empty, "The filters of
  * individuals keep none of the 200 individuals of panel.nei. Loosen them
  * in the Variants step.", with the count of the individuals of the
- * variants file and its name escaped; or `null`, for a list not known, not
- * empty, or no `kept`.
+ * variants file and its name escaped, and of one, "The filters of
+ * individuals do not keep the one individual of one.vcf. …"; or `null`,
+ * for a list not known, not empty, or no `kept`.
  */
 export function keptNoneReason(
   p: Project,
@@ -177,7 +178,11 @@ export function keptNoneReason(
     return null;
   }
   const numIndividuals = fileIndividuals(p).length;
-  return `The filters of individuals keep none of the ${grouped(numIndividuals)} individuals of ${escaped(p.variants.name)}. Loosen them in the Variants step.`;
+  const name = escaped(p.variants.name);
+  // One individual in the singular, as the owner decided at stop B.
+  return numIndividuals === 1
+    ? `The filters of individuals do not keep the one individual of ${name}. Loosen them in the Variants step.`
+    : `The filters of individuals keep none of the ${grouped(numIndividuals)} individuals of ${name}. Loosen them in the Variants step.`;
 }
 
 /** The individuals of the variants file of `p`, which `projectNeeds`
