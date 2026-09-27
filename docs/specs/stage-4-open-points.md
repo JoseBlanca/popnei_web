@@ -258,6 +258,19 @@ meets.
   has no moving sideways, which a button could not do for a user who
   cannot drag. Switching to 2D and back starts the view again
   (`pca3d.md`).
+- **In the 3D view the third component is up**, so that looking straight
+  down it, five presses of "Tilt down" from the start, gives exactly the
+  2D plot of the first two; there, "Turn left" and "Turn right" spin the
+  plot in its plane. Not taken: the second component up, where the view
+  along the second component falls where the controls of three.js
+  cannot turn (`pca3d.md`).
+- **The tooltip** of a point stays while the pointer is on it, does not
+  cover its point, and Escape hides it; its coordinates have three
+  significant digits and the true minus sign, and a value of a column is
+  written whole, so that a year of 2019 is not "2,020" (`scatter.md`).
+- **The exported legend** sits on a background, so that it can be read
+  over a dense cloud of points; a faded entry of the legend fades its
+  mark and not its name (`scatter.md`).
 - **A browser without WebGL 2** gets words that say so, and the 2D plot;
   three.js has needed WebGL 2 since its release r163 (`pca3d.md`).
 - **The one population is named "All individuals"**, and a project with
