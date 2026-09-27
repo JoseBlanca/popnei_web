@@ -6,12 +6,16 @@ import {
   countsOf,
   firstProject,
   individualStatsOf,
+  variantsKept,
   writeCountsOf,
 } from "./apps.ts";
+import { keyFromWire } from "./keys.ts";
 import { emptyProject } from "./project.ts";
+import type { AnalysisView, AppState } from "./store.ts";
 import type {
   DiversityResult,
   IndividualChecksResult,
+  JobResult,
   PassStats,
   VariantChecksResult,
   VariantDistrib,
@@ -55,6 +59,26 @@ function distrib(): VariantDistrib {
   return { mean: 0.25, counts: Uint32Array.from([1200]) };
 }
 
+/** A state of the first project whose analyses are `views`, and nothing
+    else `variantsKept` reads. */
+function stateWith(
+  views: readonly AnalysisView<JobResult>[],
+): AppState<JobResult, unknown> {
+  return {
+    project: firstProject("popgen"),
+    undo: null,
+    redo: null,
+    popneiVersion: "0.1.0",
+    analyses: views,
+    runs: [],
+    notice: null,
+    individualsKept: null,
+    write: null,
+  };
+}
+
+const KEY = keyFromWire("0".repeat(64));
+
 describe("VS5 D1 apps.ts", () => {
   test("the first project of population genetics has the missing data filter at 0.1 and nothing else", () => {
     expect(firstProject("popgen")).toEqual({
@@ -84,6 +108,35 @@ describe("VS5 D1 apps.ts", () => {
     expect(Object.keys(POPGEN_ANALYSIS_STEPS).toSorted()).toEqual(
       POPGEN_ANALYSES.map((def) => def.id).toSorted(),
     );
+  });
+
+  test("the variants kept are those the Counts of the filters kept when they are done, and null otherwise", () => {
+    const done: AnalysisView<JobResult> = {
+      id: "filterCounts",
+      status: {
+        kind: "done",
+        key: KEY,
+        result: {
+          analysis: "filterCounts",
+          passStats: {
+            numVars: 1128,
+            filtering: {
+              missing_data: { varsProcessed: 1200, varsKept: 1128 },
+            },
+          },
+        },
+        warnings: [],
+        check: null,
+      },
+    };
+    expect(variantsKept(stateWith([done]))).toBe(1128);
+    expect(
+      variantsKept(
+        stateWith([
+          { id: "filterCounts", status: { kind: "ready", key: KEY } },
+        ]),
+      ),
+    ).toBeNull();
   });
 });
 

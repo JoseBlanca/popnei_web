@@ -7,6 +7,8 @@
  * that sends it. Apart from the entry, so that a test in node makes the
  * store with what the page gives it.
  */
+import { filterCounts } from "../core/analyses/filterCounts.ts";
+import { individualChecks } from "../core/analyses/individualChecks.ts";
 import {
   POPGEN_ANALYSES,
   countsOf,
@@ -34,12 +36,6 @@ export interface PopgenStoreDeps {
   readonly appVersion: string;
 }
 
-/** The id of the analysis whose results hold the counts of the filters. */
-const COUNTS_ANALYSIS = "filterCounts";
-
-/** The id of the analysis of the statistics of each individual. */
-const STATISTICS_ANALYSIS = "individualChecks";
-
 /** Makes the store of the population genetics page. It sends nothing
     while it is made. */
 export function createPopgenStore(
@@ -50,8 +46,8 @@ export function createPopgenStore(
     analyses: POPGEN_ANALYSES,
     send: deps.send,
     countsOf,
-    counts: COUNTS_ANALYSIS,
-    statistics: { analysis: STATISTICS_ANALYSIS, of: individualStatsOf },
+    counts: filterCounts.id,
+    statistics: { analysis: individualChecks.id, of: individualStatsOf },
     write: { send: deps.sendWrite, countsOf: writeCountsOf },
     appVersion: deps.appVersion,
     cacheMaxBytes: CACHE_MAX_BYTES,

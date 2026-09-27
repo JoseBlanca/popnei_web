@@ -1,8 +1,9 @@
 /**
  * What each application has: the definitions of its analyses, its steps
  * and its first project, and the functions by which the store reads a
- * result: what its pass counted, the counts of a written file, and the
- * statistics of each individual (docs/specs/entry.md, "`src/core/apps.ts`").
+ * result: what its pass counted, the counts of a written file, the
+ * statistics of each individual, and the variants the filters keep
+ * (docs/specs/entry.md, "`src/core/apps.ts`").
  * It holds the population genetics application alone.
  */
 
@@ -14,7 +15,7 @@ import { defect } from "./analyses/words.ts";
 import type { IndividualStats } from "./individualsKept.ts";
 import { emptyProject, setVariantFilter } from "./project.ts";
 import type { Project } from "./project.ts";
-import type { AnalysisDef, PassFound } from "./store.ts";
+import type { AnalysisDef, AppState, PassFound } from "./store.ts";
 import type { Job, JobResult, PassStats } from "../worker/protocol.ts";
 
 /**
@@ -98,6 +99,17 @@ export function countsOf(r: JobResult): PassFound<JobResult> {
     always has the filters of the variants of its project. */
 export function writeCountsOf(pass: PassStats): JobResult {
   return { analysis: "filterCounts", passStats: pass };
+}
+
+/** The variants that pass the filters of the state `s`, `passStats.numVars`
+    of the result of `filterCounts` in the state done, or `null` when it is
+    not done for the filters as they are: what the summary line of the
+    shell and the size expected of the writing say. */
+export function variantsKept(s: AppState<JobResult, unknown>): number | null {
+  const counts = s.analyses.find((view) => view.id === filterCounts.id);
+  return counts?.status.kind === "done"
+    ? counts.status.result.passStats.numVars
+    : null;
 }
 
 /** The statistics of each individual in a result of `individualChecks`,

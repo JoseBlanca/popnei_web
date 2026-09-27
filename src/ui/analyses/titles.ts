@@ -3,8 +3,8 @@
  * the notice and the status region, and what the words of the shell need
  * of the application, `SHELL_WORDS` (docs/specs/shell.md, "What it sends
  * and reads"): those titles, the step each analysis is shown in, from
- * `src/core/apps.ts`, and the variants the filters keep, from the Counts
- * of the filters. Apart from `panels.ts`, which holds components, so that
+ * `src/core/apps.ts`, and the variants the filters keep, `variantsKept`
+ * of the same file. Apart from `panels.ts`, which holds components, so that
  * a test in node reads them. The three checks of the Variants step have a
  * title and no panel of `panels.ts`: the Variants step draws their parts
  * among its filters (docs/specs/steps/variants.md).
@@ -13,10 +13,9 @@
  * no title or no step; `titleOf` and `stepOf` throw a defect for one,
  * which the shell meets at once.
  */
-import { POPGEN_ANALYSIS_STEPS } from "../../core/apps.ts";
+import { POPGEN_ANALYSIS_STEPS, variantsKept } from "../../core/apps.ts";
 import type { StepId } from "../../core/apps.ts";
 import type { AnalysisId } from "../../core/project.ts";
-import type { AppState } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 import type { ShellWords } from "../shell/words.ts";
 
@@ -49,20 +48,6 @@ export function stepOf(id: AnalysisId): StepId {
     throw new Error(`popnei_web defect: the analysis ${id} is in no step.`);
   }
   return step;
-}
-
-/** The id of the Counts of the filters, whose result gives the variants
-    the filters keep. */
-const COUNTS_ID = "filterCounts";
-
-/** The variants that pass the filters, `passStats.numVars` of the result
-    of the Counts of the filters in the state done, or `null` when they
-    are not done for the filters as they are. */
-function variantsKept(s: AppState<JobResult, unknown>): number | null {
-  const counts = s.analyses.find((view) => view.id === COUNTS_ID);
-  return counts?.status.kind === "done"
-    ? counts.status.result.passStats.numVars
-    : null;
 }
 
 /** What the words of the shell need of the population genetics
