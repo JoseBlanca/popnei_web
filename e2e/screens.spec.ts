@@ -2196,6 +2196,134 @@ for (const theme of ["light", "dark"] as const) {
       await saveIndividuals(page, "popgen-stats-error");
     });
 
+    /** Turns the threshold of the individuals `name` on and commits
+        `value` in its field `label`. */
+    async function individualThreshold(
+      page: Page,
+      name: string,
+      label: string,
+      value: string,
+    ): Promise<void> {
+      await individualLists(page).getByText(name, { exact: true }).click();
+      const field = individualLists(page).getByLabel(label, { exact: true });
+      await field.fill(value);
+      await field.press("Enter");
+      await expect(field).toHaveValue(value);
+    }
+
+    /** panel.nei and its populations, the missing data filter of the
+        variants at 0.05, the statistics of each individual calculated
+        when `statistics`, and the thresholds of the individuals at 0.03
+        and 0.38; ends at the Analyses step. */
+    async function diversityWithThresholds(
+      page: Page,
+      statistics: boolean,
+    ): Promise<void> {
+      await loadPanelWithPopulations(page);
+      await goTo(page, "Variants");
+      const variants = page.getByLabel(
+        "Maximum proportion of missing genotypes, from 0 to 1",
+        { exact: true },
+      );
+      await variants.fill("0.05");
+      await variants.press("Enter");
+      if (statistics) {
+        await individualLists(page)
+          .getByRole("button", { name: CALCULATE_STATS })
+          .click();
+        await expect(
+          individualLists(page).getByText(STATS_CAPTION),
+        ).toBeVisible();
+      }
+      await individualThreshold(
+        page,
+        "Filter the individuals by missing data",
+        "Maximum proportion of missing genotypes of an individual, from 0 to 1",
+        "0.03",
+      );
+      await individualThreshold(
+        page,
+        "Filter the individuals by observed heterozygosity",
+        "Maximum observed heterozygosity of an individual, from 0 to 1",
+        "0.38",
+      );
+    }
+
+    test("the diversity ready, with the populations the filters of individuals keep and one a list leaves empty", async ({
+      page,
+    }) => {
+      await diversityWithThresholds(page, true);
+      const pops = await readFile(join(FIXTURES, "panel_pops.csv"), "utf8");
+      const p1 = pops
+        .split("\n")
+        .map((text) => text.split(","))
+        .filter(([, pop]) => pop === "p1")
+        .map(([name]) => name ?? "");
+      await listArea(page, "Individuals to remove, one name per line").fill(
+        p1.join("\n"),
+      );
+      await individualLists(page)
+        .getByRole("button", { name: "Apply the list to remove" })
+        .click();
+      await goTo(page, "Analyses");
+      await expect(
+        page
+          .getByRole("main")
+          .getByText("2 populations: p0, 32 individuals; p2, 50"),
+      ).toBeVisible();
+      await save(page, `popgen-diversity-kept-${theme}`);
+    });
+
+    test("the diversity ready, the thresholds waiting for the statistics of each individual", async ({
+      page,
+    }) => {
+      await diversityWithThresholds(page, false);
+      await goTo(page, "Analyses");
+      await expect(
+        page.getByRole("main").getByText(/^Run calculates the statistics/),
+      ).toBeVisible();
+      await save(page, `popgen-diversity-waits-ready-${theme}`);
+    });
+
+    test("the diversity running, waiting for the statistics of each individual", async ({
+      page,
+    }) => {
+      await diversityWithThresholds(page, false);
+      await holdResults(page);
+      await goTo(page, "Analyses");
+      await page.getByRole("button", { name: "Run" }).click();
+      await expect(
+        page
+          .getByRole("main")
+          .getByText(
+            /^Calculating the statistics of each individual, which the filters of individuals are set from · \d+% · 0:01$/,
+          ),
+      ).toBeVisible({ timeout: 3000 });
+      await save(page, `popgen-diversity-waits-running-${theme}`);
+    });
+
+    test("the diversity in error, the statistics of each individual refused", async ({
+      page,
+    }) => {
+      await loadTetraploid(page);
+      await individualThreshold(
+        page,
+        "Filter the individuals by missing data",
+        "Maximum proportion of missing genotypes of an individual, from 0 to 1",
+        "0.5",
+      );
+      await goTo(page, "Analyses");
+      await page.getByRole("button", { name: "Run" }).click();
+      await expect(
+        page
+          .getByRole("main")
+          .getByText(
+            /^The statistics of each individual, which the thresholds/,
+          ),
+      ).toBeVisible();
+      await save(page, `popgen-diversity-stats-failed-${theme}`);
+    });
+
     test("the Variants step after an opening, and with the warning of the identity", async ({
       page,
     }, testInfo) => {
