@@ -84,8 +84,8 @@ export function IndividualHistogram({
     return { data, rows: binRows };
   }, [bins, words, threshold, statistic]);
 
-  const numNaN =
-    bins === null ? values.filter((v) => Number.isNaN(v)).length : bins.numNaN;
+  // binValues gives no bins only when every value is NaN.
+  const numNaN = bins === null ? values.length : bins.numNaN;
   const noValue = noHeterozygosityText(numNaN);
   return (
     <>
