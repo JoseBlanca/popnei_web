@@ -49,6 +49,7 @@ import type { Beside, StepCommand } from "./commands.ts";
 import { ReadingTime } from "./ReadingTime.tsx";
 import styles from "./VariantsStep.module.css";
 import { createVcfOptions } from "./vcfOptions.ts";
+import { WriteSection } from "./WriteSection.tsx";
 import {
   FOLDER_DROPPED,
   ONLY_PASSED_LABEL,
@@ -318,6 +319,8 @@ export function VariantsStep(): React.JSX.Element {
           />
         )}
       </section>
+
+      <WriteSection />
     </div>
   );
 }

@@ -64,3 +64,10 @@
   list-style: none;
   font-variant-numeric: tabular-nums;
 }
+
+/* The bar and the line of a write under way. */
+.running {
+  display: grid;
+  gap: var(--space-2);
+  font-variant-numeric: tabular-nums;
+}

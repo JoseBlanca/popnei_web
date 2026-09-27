@@ -8,7 +8,7 @@ import { readFile, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { expect, test } from "@playwright/test";
-import type { Page, Route } from "@playwright/test";
+import type { Locator, Page, Route } from "@playwright/test";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 const SCREENS = join(import.meta.dirname, "..", "screens");
@@ -289,6 +289,29 @@ async function holdResults(page: Page): Promise<void> {
           ? message.kind
           : null;
       if (kind !== "result") post(message, transfer);
+    };
+  });
+}
+
+/** Makes the calculation worker keep back the files it writes and pass
+    its progress on, so that a write stays under way. */
+async function holdWritten(page: Page): Promise<void> {
+  await expect
+    .poll(() => page.workers().some((w) => w.url().includes("runnerWorker")))
+    .toBe(true);
+  const worker = page.workers().find((w) => w.url().includes("runnerWorker"));
+  if (worker === undefined) throw new Error("no calculation worker");
+  await worker.evaluate(() => {
+    const scope = globalThis as unknown as {
+      postMessage: (message: unknown, transfer?: Transferable[]) => void;
+    };
+    const post = scope.postMessage.bind(scope);
+    scope.postMessage = (message, transfer) => {
+      const kind =
+        typeof message === "object" && message !== null && "kind" in message
+          ? message.kind
+          : null;
+      if (kind !== "written") post(message, transfer);
     };
   });
 }
@@ -1214,6 +1237,136 @@ for (const theme of ["light", "dark"] as const) {
         }),
       ).toBeVisible();
       await save(page, `popgen-shell-notice-longest-320-${theme}`, {
+        fullPage: false,
+      });
+    });
+
+    /** The section of the writing of the Variants step. */
+    function writing(page: Page): Locator {
+      return page.getByRole("region", {
+        name: "Writing the filtered variants",
+      });
+    }
+
+    /** Picks panel.nei, sets its missing data filter at 0.05, and writes
+        it; the Save button is then shown. */
+    async function writePanel(page: Page): Promise<void> {
+      await pickVariants(page, "panel.nei");
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      const threshold = page.getByLabel(
+        "Maximum proportion of missing genotypes",
+      );
+      await threshold.fill("0.05");
+      await threshold.press("Enter");
+      await writing(page)
+        .getByRole("button", {
+          name: "Write the filtered variants as a .nei file",
+        })
+        .click();
+      await expect(
+        writing(page).getByRole("button", {
+          name: "Save panel.filtered.nei, 251 KB",
+        }),
+      ).toBeVisible();
+    }
+
+    test("the writing, the size not yet known", async ({ page }) => {
+      await pickVariants(page, "panel.nei");
+      await expect(
+        writing(page).getByText(/^The size of the file is known once/),
+      ).toBeVisible();
+      await writing(page).scrollIntoViewIfNeeded();
+      await save(page, `popgen-write-no-size-${theme}`);
+    });
+
+    test("the writing ready, with the size expected", async ({ page }) => {
+      // The diversity counts the variants the filter keeps.
+      await loadPanelWithPopulations(page);
+      await goTo(page, "Analyses");
+      await page.getByRole("button", { name: "Run" }).click();
+      await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
+      await goTo(page, "Variants");
+      await expect(
+        writing(page).getByText(
+          "About 240 KB: 1,200 variants of 200 individuals.",
+        ),
+      ).toBeVisible();
+      await save(page, `popgen-write-ready-${theme}`);
+    });
+
+    test("the writing under way, with its bar", async ({ page }) => {
+      await pickVariants(page, "panel.nei");
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      await holdWritten(page);
+      await writing(page)
+        .getByRole("button", {
+          name: "Write the filtered variants as a .nei file",
+        })
+        .click();
+      await expect(
+        writing(page).getByText(
+          /^Writing panel\.filtered\.nei · \d+% · 0:0[1-9]$/,
+        ),
+      ).toBeVisible({ timeout: 3000 });
+      await save(page, `popgen-write-running-${theme}`);
+    });
+
+    test("the writing done, with Save", async ({ page }) => {
+      await writePanel(page);
+      await save(page, `popgen-write-done-${theme}`);
+    });
+
+    test("the writing saved", async ({ page }) => {
+      await writePanel(page);
+      const download = page.waitForEvent("download");
+      await writing(page)
+        .getByRole("button", { name: "Save panel.filtered.nei, 251 KB" })
+        .click();
+      await download;
+      await expect(
+        writing(page).getByText(/was handed to the browser to save\./),
+      ).toBeVisible();
+      await save(page, `popgen-write-saved-${theme}`);
+    });
+
+    test("the writing, the notice of a file discarded", async ({ page }) => {
+      await writePanel(page);
+      const threshold = page.getByLabel(
+        "Maximum proportion of missing genotypes",
+      );
+      await threshold.fill("0.06");
+      await threshold.press("Enter");
+      await expect(
+        page.getByText(/The written file, not saved, was discarded/),
+      ).toBeVisible();
+      await save(page, `popgen-write-discarded-${theme}`, { fullPage: false });
+    });
+
+    test("the writing, the question before an opening", async ({
+      page,
+    }, testInfo) => {
+      await pickVariants(page, "panel.nei");
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      const saved = await saveProjectFile(page, testInfo.outputPath());
+      await writing(page)
+        .getByRole("button", {
+          name: "Write the filtered variants as a .nei file",
+        })
+        .click();
+      await expect(
+        writing(page).getByRole("button", { name: /^Save / }),
+      ).toBeVisible();
+      await openProject(page, saved);
+      await expect(
+        page.getByText(/written and not saved, will be discarded\.$/),
+      ).toBeVisible();
+      await save(page, `popgen-write-open-question-${theme}`, {
         fullPage: false,
       });
     });

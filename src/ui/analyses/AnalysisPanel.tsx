@@ -25,7 +25,7 @@
  * the keyboard is not sent to the top of the page (WCAG 2.4.3). The one
  * state of its own is the clock of a calculation under way.
  */
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useId, useLayoutEffect, useRef } from "react";
 
 import { checkVerdictText, uncomparedText } from "../../core/projectFile.ts";
 import type { AnalysisId } from "../../core/project.ts";
@@ -37,7 +37,8 @@ import type {
 } from "../../core/store.ts";
 import type { JobResult, Progress } from "../../worker/protocol.ts";
 import { classOf } from "../classOf.ts";
-import { startAnalysis, startedAt } from "../runs.ts";
+import { startAnalysis } from "../runs.ts";
+import { useRunSeconds } from "../runSeconds.ts";
 import { useAppState, useStore } from "../store.tsx";
 import { Button } from "../widgets/Button.tsx";
 import { Problem } from "../widgets/Problem.tsx";
@@ -54,9 +55,6 @@ import {
   stoppedText,
   warningsHeading,
 } from "./words.ts";
-
-/** A second, in the milliseconds of performance.now(). */
-const SECOND_MS = 1000;
 
 /** What the panel of an analysis is drawn with. */
 export interface AnalysisPanelProps {
@@ -347,24 +345,7 @@ function Running({ ui, runId, progress }: RunningProps): React.JSX.Element {
     (s) => s.runs.find((r) => r.runId === runId)?.afterStop ?? false,
   );
   const variantsName = useAppState((s) => s.project.variants?.name ?? null);
-  const [seconds, setSeconds] = useState(0);
-
-  useEffect(() => {
-    // From the start runs.ts noted, so that the time is not lost when the
-    // user goes to another step and back.
-    const start = startedAt(runId) ?? performance.now();
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const tick = (): void => {
-      const elapsed = performance.now() - start;
-      setSeconds(Math.floor(elapsed / SECOND_MS));
-      // The next tick at the next whole second since the start.
-      timer = setTimeout(tick, SECOND_MS - (elapsed % SECOND_MS));
-    };
-    timer = setTimeout(tick);
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [runId]);
+  const seconds = useRunSeconds(runId);
 
   const share = progress === null ? null : progressShare(progress);
   return (
