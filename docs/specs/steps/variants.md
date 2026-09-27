@@ -482,11 +482,18 @@ sees"); the counts beside the filter, and the results, follow the number
 committed. The typed number is state of the screen, dropped at each
 commit. The number field of the widgets of stage 2 gives the step each
 number as it is typed through a property more, `onTyped`, called at
-each key with the number React Aria parses from the text, or `null`
-while the text is no number, is out of the range of the field, or has
-more decimals than it takes, as "0." on the way to "0.05"; the step
-gives the histogram that number, or the threshold of the project for
-`null`.
+each key with the number the text holds, or `null` while the text is no
+number, is out of the range of the field, or has more decimals than it
+takes, as "0." on the way to "0.05"; and called with `null` at each
+commit, when the field shows the number committed or kept, which is how
+the typed number is dropped. The step gives the histogram that number,
+or the threshold of the project for `null`. The text is read by the
+field itself, as digits with at most one point and nothing else, and
+not by the parser of React Aria, which follows the language it is
+given: so the number is the same in a browser set to Spanish, where a
+field of stage 2 once read another, and it is the number React Aria
+commits, since the entry gives it English and the field takes only
+digits and a point (above, "A character the fields do not take").
 
 ### What each filter of the variants kept
 
@@ -860,7 +867,9 @@ nothing on the screen says the things the lines above do not.
   a number refused when there is one, then by the count of its filter,
   "Kept 1,152 of the 1,200 variants it was given.", then by the line
   under its switch, so that a user who moves to a field hears what it
-  kept before the advice; the line under the ploidy, 190 characters, is
+  kept before the advice. The switch is described by that line too,
+  so that a user who moves to a filter that is off hears what it
+  filters on before turning it on. The line under the ploidy, 190 characters, is
   the last part of the ploidy's description, after the line of a number
   refused. A text area is described by its line of not applied, then by
   its count.
