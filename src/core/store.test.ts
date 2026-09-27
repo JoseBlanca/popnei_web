@@ -3645,8 +3645,8 @@ describe("VS3 D4 the individuals kept and a Run that waits", () => {
     expect(sent).toHaveLength(1);
   });
 
-  test("with a threshold of 0.01, the statistics keep no individual: the analysis is locked with keptNoneReason, and nothing is sent for it", () => {
-    const { store, sent, lists } = storeOfFive([
+  test("with a threshold of 0.01, the statistics keep no individual: the analysis is locked with keptNoneReason, and nothing is sent for it; the analysis that does not read the filters of individuals stays ready", () => {
+    const { store, analyses, sent, lists } = storeOfFive([
       { kind: "missing_data", maxAllowedMissingRate: 0.01 },
     ]);
     store.startRun("pops");
@@ -3661,6 +3661,10 @@ describe("VS3 D4 the individuals kept and a Run that waits", () => {
       kind: "locked",
       reason:
         "The filters of individuals keep none of the 5 individuals of panel.nei. Loosen them in the Variants step.",
+    });
+    expect(statusIn(store, "vars")).toStrictEqual({
+      kind: "ready",
+      key: keyOfNow(store, analyses[1]),
     });
     expect(store.startRun("pops")).toBeNull();
   });
@@ -3695,7 +3699,7 @@ describe("VS3 D4 the individuals kept and a Run that waits", () => {
     });
   });
 
-  test("a refusal of the statistics by popnei shows in the analysis as the error of the statistics, and its startRun gives null", () => {
+  test("a refusal of the statistics by popnei shows in the analysis as the error of the statistics, and its startRun gives null; the analysis that does not read the filters of individuals stays ready", () => {
     const { store, analyses, sent } = storeOfFive([MISSING_AT_02]);
     store.startRun("pops");
     const stats = sentAt(sent, 0);
@@ -3717,6 +3721,10 @@ describe("VS3 D4 the individuals kept and a Run that waits", () => {
       kind: "error",
       error: refused,
       ofStatistics: false,
+    });
+    expect(statusIn(store, "vars")).toStrictEqual({
+      kind: "ready",
+      key: keyOfNow(store, analyses[1]),
     });
     expect(store.startRun("pops")).toBeNull();
     expect(sent).toHaveLength(1);
@@ -3773,6 +3781,28 @@ describe("VS3 D4 the individuals kept and a Run that waits", () => {
       stopped: ["pops", "stats"],
       leftBehind: [],
     });
+  });
+
+  test("a Run again after a new variants file, which starts the statistics again, takes both out of the stopped of the notice", () => {
+    const { store, sent } = storeOfFive([MISSING_AT_02]);
+    store.startRun("pops");
+    store.apply("a variants file was loaded", loadPanel(OTHER_VARIANTS_ID));
+    store.variantsRead(OTHER_VARIANTS_ID, {
+      kind: "read",
+      individuals: FIVE_INDIVIDUALS,
+      ploidy: 2,
+      numVars: null,
+    });
+    expect(store.getState().notice).toMatchObject({
+      stopped: ["pops", "stats"],
+    });
+
+    const handles = store.startRun("pops");
+
+    const again = sentAt(sent, 1);
+    expect(handles).toStrictEqual([again.run]);
+    expect(again.job.analysis).toBe("stats");
+    expect(store.getState().notice).toBeNull();
   });
 });
 
@@ -4042,6 +4072,9 @@ describe("VS3 D4 a Run that waits, stopped as a calculation", () => {
     expect(sentAt(sent, 0).cancels()).toBe(1);
     expect(statusIn(store, "pops").kind).toBe("ready");
     expect(store.getState().runs).toStrictEqual([]);
+    // No wait is left over for the next change to name as left behind.
+    store.apply("the MAF filter changed", maf(0.9));
+    expect(store.getState().notice).toBeNull();
   });
 
   test("a listener that throws when the statistics end takes out and stops the request sent for the Run that waited", () => {
@@ -4257,6 +4290,98 @@ describe("VS3 D4 two Runs that wait for the same statistics", () => {
     expect(statusIn(store, "other").kind).toBe("running");
     expect(statusIn(store, "pops").kind).toBe("ready");
   });
+
+  test("when the send of the second Run that waited throws, the request already sent for the first is taken out and stopped, and neither shows running", () => {
+    const { analyses: twoFakes, stats } = fakeAnalyses();
+    const [pops] = twoFakes;
+    if (pops === undefined) {
+      throw new Error("popnei_web defect: no fake analyses");
+    }
+    const other: AnalysisDef<TestJob, TestResult> = {
+      ...pops,
+      id: "other",
+      run: () => {
+        throw new Error("an analysis whose run throws");
+      },
+    };
+    const { send, sent } = fakeSend();
+    const store = createStore({
+      first: emptyProject("popgen"),
+      analyses: [...twoFakes, stats, other],
+      send,
+      countsOf: () => ({ numVarsRead: null, counts: null }),
+      counts: null,
+      statistics: FAKE_STATISTICS,
+      write: null,
+      appVersion: "0.1.0",
+      cacheMaxBytes: 1024 * 1024,
+      maxUndoSteps: 200,
+    });
+    store.popneiReady("0.1.0");
+    store.open(fiveIndividualsProject([MISSING_AT_02]));
+    store.startRun("pops");
+    const statsRequest = sentAt(sent, 0);
+    store.startRun("other");
+
+    expect(() =>
+      store.runEnded(statsRequest.run.id, doneWith(statsRequest, fiveStats())),
+    ).toThrow("an analysis whose run throws");
+
+    const first = sentAt(sent, 1);
+    expect(first.job.analysis).toBe("pops");
+    expect(first.cancels()).toBe(1);
+    expect(statusIn(store, "pops").kind).toBe("ready");
+    expect(statusIn(store, "other").kind).toBe("ready");
+    expect(store.getState().runs).toStrictEqual([]);
+  });
+});
+
+describe("VS3 D4 the analysis's own error before that of the statistics", () => {
+  test("an analysis refused by popnei under its key shows its own refusal, not the failure of the statistics it would wait for", () => {
+    // The statistics are 90 bytes, the results 800 each: the puts under
+    // the MAF filter drop the first statistics, which the undo then
+    // needs again.
+    const { store, analyses, sent } = storeOfFive([MISSING_AT_02], 1650);
+    store.startRun("pops");
+    const firstStats = sentAt(sent, 0);
+    store.runEnded(firstStats.run.id, doneWith(firstStats, fiveStats()));
+    const refusedPops = sentAt(sent, 1);
+    store.runEnded(refusedPops.run.id, {
+      kind: "failed",
+      error: { kind: "popnei", message: "the pass gave no variant" },
+    });
+    store.apply("the MAF filter changed", maf(0.9));
+    store.startRun("vars");
+    const vars = sentAt(sent, 2);
+    store.runEnded(vars.run.id, doneWith(vars, varsResult(null)));
+    store.startRun("pops");
+    const secondStats = sentAt(sent, 3);
+    store.runEnded(secondStats.run.id, doneWith(secondStats, fiveStats()));
+    const pops = sentAt(sent, 4);
+    store.runEnded(pops.run.id, doneWith(pops, popsResult()));
+    store.undo();
+    expect(store.getState().individualsKept?.list).toStrictEqual({
+      kind: "needsStatistics",
+    });
+    store.startRun("stats");
+    const thirdStats = sentAt(sent, 5);
+
+    store.runEnded(thirdStats.run.id, {
+      kind: "failed",
+      error: { kind: "workerFailed", message: "out of memory" },
+    });
+
+    expect(statusIn(store, "stats")).toMatchObject({
+      kind: "error",
+      ofStatistics: false,
+    });
+    expect(statusIn(store, "pops")).toStrictEqual({
+      kind: "error",
+      key: keyOfNow(store, analyses[0]),
+      error: { kind: "refused", message: "the pass gave no variant" },
+      ofStatistics: false,
+    });
+  });
 });
 
 // The counts of the filters, filled from the pass of every result:
@@ -4368,6 +4493,29 @@ describe("VS3 D5 the counts filled", () => {
     const counts = statusIn(store, "counts");
     expect(counts).toMatchObject({ kind: "done", key: keyBefore });
     expect(resultOf(counts)).toBe(given[0]);
+  });
+
+  test("a pass that arrives after a filter was added gives the counts, under the key of its request's project, the warnings of that project and not of the current one", () => {
+    const { store, analyses, sent, given } = storeWithCounts();
+    store.startRun("vars");
+    const vars = sentAt(sent, 0);
+    const keyBefore = keyOfNow(store, analyses[2]);
+    store.apply("the MAF filter changed", maf(0.9));
+
+    // The pass counted no variant: under the MAF filter of the current
+    // project the fake counts would warn that it kept none.
+    expect(() =>
+      store.runEnded(vars.run.id, doneWith(vars, varsResult(0))),
+    ).not.toThrow();
+
+    store.undo();
+    expect(statusIn(store, "counts")).toStrictEqual({
+      kind: "done",
+      key: keyBefore,
+      result: given[0],
+      warnings: [],
+      check: null,
+    });
   });
 
   test("with a cache whose bound holds one result, the result put before the counts is not dropped by their put", () => {
@@ -4663,6 +4811,8 @@ describe("VS3 D6 the write in the store", () => {
     store.writeSaved();
 
     store.apply("the MAF filter changed", maf(0.8));
+    // The file was saved, so nothing is discarded, and no notice says so.
+    expect(store.getState().notice).toBeNull();
     store.undo();
 
     expect(writeIn(store)).toStrictEqual({
@@ -4788,6 +4938,10 @@ describe("VS3 D6 the write in the store", () => {
       result: { kind: "counts", numVars: 0 },
     });
     expect(store.startWrite("nei")).toBeNull();
+
+    // A write with no variant holds no file, so a command discards none.
+    store.apply("the MAF filter changed", maf(0.8));
+    expect(store.getState().notice).toBeNull();
   });
 
   test("with a threshold and no statistics, startWrite waits for them; their refusal by popnei puts the write in error with ofStatistics, and startWrite then gives null and sends nothing", () => {

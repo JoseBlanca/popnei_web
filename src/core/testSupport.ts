@@ -1357,9 +1357,31 @@ export function fakeAnalyses(): {
   const stats = variantsOnly("stats", (r) =>
     r.kind === "stats" ? [...r.stats.missingGtRate] : [],
   );
-  const counts = variantsOnly("counts", (r) =>
-    r.kind === "counts" ? [r.numVars] : [],
-  );
+  const counts: AnalysisDef<TestJob, TestResult> = {
+    ...variantsOnly("counts", (r) => (r.kind === "counts" ? [r.numVars] : [])),
+    // As the warnings of filterCounts.ts read the rows of the project's
+    // filters: the first filter of `p` that kept none of its variants,
+    // and a defect when the result has no count for a filter of `p`.
+    warnings: (r, p) => {
+      calls.given.push(`counts warnings of ${r.kind}`);
+      if (r.kind !== "counts") {
+        return [];
+      }
+      const index = p.filters.findIndex((filter, at) => {
+        const kept = r.kept[at];
+        if (kept === undefined) {
+          throw new Error(
+            `popnei_web defect: the fake counts have no count of ${filter.kind}.`,
+          );
+        }
+        return kept === 0;
+      });
+      const filter = p.filters[index];
+      return filter === undefined
+        ? []
+        : [{ code: "filterKeptNone", text: `${filter.kind} kept none.` }];
+    },
+  };
   return { analyses: [pops, vars], calls, lists, stats, counts };
 }
 
