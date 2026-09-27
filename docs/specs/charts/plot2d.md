@@ -2,7 +2,13 @@
 
 Written on 26 September 2026, for stage 3 of `docs/build-order.md`, the
 Variants step whole, after the owner asked that day that stage 3 make
-one piece for what every 2D plot has in common; approved by the owner on 26 September 2026. There is no code in `src/charts` yet. This spec gives
+one piece for what every 2D plot has in common; approved by the owner on 26 September 2026. There is no code in `src/charts` yet.
+Revised on 27 September 2026 for the scatter plot of the PCA,
+`docs/specs/charts/scatter.md`, in stage 4, not yet approved: the
+overlay and the calls of the pointer, the hook that draws the legend
+into the exported file, and the mark of the point under the pointer
+left out of that file; the code of stage 3, `src/charts/plot2d.ts`, has
+none of the three yet. This spec gives
 `src/charts/plot2d.ts`, the function that every plot drawn in two
 dimensions makes its handle with: the histogram of
 `docs/specs/charts/histogram.md` now, and the scatter plot of the PCA,
@@ -76,11 +82,24 @@ of the marks in `<defs>`, and the groups `chart-frame`, `chart-grid`,
 `chart-axis-x`, `chart-axis-y`, `chart-marks`, `chart-annotations`, the
 two labels of the axes and `chart-legend`. It gives the plot the groups
 where it draws, and writes nothing inside `chart-marks`,
-`chart-annotations` and `chart-legend` itself. The overlay that takes
-the pointer events, `chart-overlay`, is made by the base for a plot
-whose definition asks for it, from the first plot that takes pointer
-events, the scatter of stage 4; the histogram takes none, so stage 3
-makes no overlay.
+`chart-annotations` and `chart-legend` itself.
+
+The overlay, `rect.chart-overlay`, a transparent rectangle over the
+frame that takes the movements of the pointer, is made by the base for
+a plot whose definition has `pointer`, the scatter of stage 4 the first;
+the histogram has none, and so no overlay. It is the last child of
+`chart-frame`, over everything drawn, of the size of the frame at each
+draw, with `fill: none` and `pointer-events: all` in `charts.css`, so
+that it takes the pointer where it is transparent. The base listens on
+it to `pointermove` and `pointerdown`, and calls `pointer.move(x, y)`
+with the position of the pointer in the pixels of the frame, from
+`pointer` of `d3-selection`, so that a tap on a touch screen, which
+moves no pointer before it, is a move too; and to `pointerleave` from a
+mouse or a pen, and calls `pointer.leave()`. A finger that leaves the
+screen is not a leave, so that the tooltip of a tap stays
+(`scatter.md`, "The point under the pointer"). The listeners go with
+the SVG in `destroy`. What the plot does with the position, the nearest
+point, its tooltip and its events, is the plot's.
 
 The ids of each plot are unique in the page, from a counter of
 `src/charts/ids.ts`: a prefix such as `chart3`, and the ids
@@ -215,10 +234,19 @@ export is checked by its tests (below, "How it is verified").
   element, with no `var(` left, resolved in a hidden container with
   `data-theme="light"`, since the file goes to papers and to print; a
   first rectangle of the background colour, since a transparent plot on
-  a dark slide cannot be read; the overlay removed when there is one;
-  the fonts named as `charts.md`, "Fonts", has them. Not the table, and
-  not the versions of popnei and of the application, which the page
-  shows beside every download (`docs/functionality.md`, section 9).
+  a dark slide cannot be read; the overlay removed when there is one,
+  and the mark of the point under the pointer, `chart-hover`, since
+  neither is part of the plot; the fonts named as `charts.md`, "Fonts",
+  has them. Not the table, and not the versions of popnei and of the
+  application, which the page shows beside every download
+  (`docs/functionality.md`, section 9).
+- **What the screen draws beside the SVG**, the legend of the scatter,
+  which on the screen is HTML of the screen (`scatter.md`, "The legend,
+  drawn by the screen"): the definition's `drawExport` draws it into
+  the `chart-legend` group of the copy that is exported, before the
+  styles are written on it, with the frame of the last draw, and the
+  plot on the screen is not changed. `exportSvg` of `export.ts` takes
+  the function that does it as a third argument.
 - **The PNG** is the SVG of `toSVG` drawn on a canvas at `scale` times
   its size, 3 for print at 300 dpi and 2 for slides. `toPNG` rejects
   with a `PngError` whose `kind` tells the two failures apart:
@@ -319,6 +347,12 @@ What a kind of plot gives the base. `check` throws an `Error` for a
 defect of the caller, data the plot cannot draw by its contract, as
 `charts.md` asks; `draw` draws the whole plot for the data and the
 frame, and can be called any number of times with the same arguments.
+`pointer` and `drawExport` are for a plot that takes the pointer or
+draws something beside its SVG, the scatter; the histogram has neither.
+A definition is a constant when the plot keeps no state of its own
+between draws, as the histogram's is, and is made in each call of the
+plot's function when it does, as the scatter's holds the positions of
+its last draw and its tooltip.
 
 ```ts
 export interface Plot2dDefinition<Data extends PlotText> {
@@ -327,6 +361,24 @@ export interface Plot2dDefinition<Data extends PlotText> {
   readonly check: (data: Data) => void;
   readonly margin: (data: Data) => Margin;
   readonly draw: (frame: Frame, data: Data) => void;
+  /** The base makes the overlay and calls these, in the pixels of the frame. */
+  readonly pointer?: {
+    readonly move: (x: number, y: number) => void;
+    readonly leave: () => void;
+  };
+  /** Draws into `legend`, of the exported copy, what the screen shows beside the SVG. */
+  readonly drawExport?: (
+    legend: Selection<SVGGElement, unknown, null, undefined>,
+    frame: ExportFrame,
+    data: Data,
+  ) => void;
+}
+
+/** The frame of the last draw, for what is drawn into the exported copy. */
+export interface ExportFrame {
+  readonly innerWidth: number;
+  readonly innerHeight: number;
+  readonly margin: Margin;
 }
 
 export function createPlot2d<Data extends PlotText>(
@@ -383,6 +435,9 @@ export class PngError extends Error {
   user gave: written as text; no `b` element is made.
 - **A change of theme** while the plot is on the screen: nothing is
   drawn again; a later `toSVG` is in the light theme all the same.
+- **A frame with no area, for a plot with an overlay**: the overlay is
+  given a size of 0 and `pointer.leave()` is called, so that no tooltip
+  stays over an empty frame.
 
 ## How it runs
 
@@ -430,7 +485,15 @@ calls:
 - `destroy` leaves the element with no child, disconnects the observer,
   cancels a waiting draw, and a second `destroy` throws nothing; an
   `update` and a `toSVG` after it throw, and a `toPNG` after it, or of a
-  plot never drawn, returns a promise that rejects, and throws nothing.
+  plot never drawn, returns a promise that rejects, and throws nothing;
+- a definition with `pointer` gives `rect.chart-overlay`, the last child
+  of `chart-frame`, of the size of the frame after a draw and after a
+  resize, and of 0 by 0 with `leave` called when the frame has no area;
+  one without it gives none;
+- `toSVG` of a definition with `drawExport` holds in its `chart-legend`
+  what `drawExport` drew there, with the frame of the last draw, and the
+  `chart-legend` on the screen stays empty; a `path.chart-hover` in the
+  plot is not in the file.
 
 **In Playwright, in Chromium, Firefox and WebKit**, where the export is
 first seen working. No screen offers the export in stage 3, so the tests
@@ -466,7 +529,11 @@ export will run in.
   canvas of a PNG made, and of one refused with `notMade`, is left of 0
   by 0 pixels;
 - a resize of the element draws the plot again at its new size, and
-  after `destroy` the element is empty.
+  after `destroy` the element is empty;
+- on the scatter, the page's second plot from stage 4, a move of the
+  mouse over the overlay calls `pointer.move` with the position in the
+  pixels of the frame, a tap calls it too, and a mouse that leaves the
+  frame calls `pointer.leave` (`scatter.md`, "How it is verified").
 
 **The dependencies it adds**, all approved by the owner on 24 September
 2026 (`docs/technology.md`, section 2) and none yet in `package.json`:
@@ -493,9 +560,9 @@ Written into those documents with this spec, on 26 September 2026:
 
 - What the histogram draws, its margins, its legend and its rows:
   `docs/specs/charts/histogram.md`.
-- The overlay and the hover, the zoom, and a grid: with the first plot
-  that has them, the scatter of the PCA in stage 4 and the Manhattan
-  plot in stage 7, each specified with it.
+- The zoom and a grid: with the first plot that has them, the Manhattan
+  plot in stage 7. What the scatter does with the pointer, its nearest
+  point and its tooltip: `scatter.md`.
 - The buttons of the export, their words and the line of the versions
   beside them: stage 6, with the report.
-- The 3D plot: `charts.md`, "The 3D PCA with three.js", in stage 4.
+- The 3D plot: `docs/specs/charts/pca3d.md`, in stage 4.

@@ -21,7 +21,14 @@ decisions, which ask that a reason be announced when it appears, the
 status region says when a Run of an analysis that waited for the
 statistics of each individual was not run, the filters keeping no one,
 and the summary line counts the populations the filters of individuals
-leave with an individual. The screen
+leave with an individual. Revised on 27 September 2026 for stage 4, the
+Individuals step whole, not yet approved, only where it touches the
+shell: the Individuals step at "Optional" in the stepper without a
+metadata file, as the owner decided on 25 September 2026 (point A of
+`docs/specs/stage-2-open-points.md`); the summary line with one
+population; the populations read from `src/core/project.ts`, where they
+moved from the module of the diversity; and the end of a read of the
+metadata file that lost types the user set, announced with them. The screen
 spec of what surrounds every step of the population genetics
 application, first built in the walking skeleton of stage 2 (`docs/build-order.md`),
 the smallest application that goes through every part once: the header,
@@ -165,10 +172,10 @@ the link has the pointer or the focus.
 | | Results removed | the notice lists a check among the results removed | — |
 | | Failed | a check is in the state `error`, or the writing is | "Statistics of each individual could not be calculated.", "The file could not be written.", the first in the order of the step: the checks in the order of the analyses of `apps.ts`, then the writing |
 | | Done | read, neither `projectNeeds` nor `individualListNeeds` gives a reason, and the filters of individuals do not keep none | — |
-| Individuals | To do | no metadata file | the reason `individualsNeeds` gives, "Load a metadata file in the Individuals step." |
+| Individuals | Optional | no metadata file | "Without it, every individual is in one population." |
 | | Reading | its read is pending | "Reading pops.csv.", from `individualsNeeds` |
 | | Problem | its read failed, or individuals of the variants file are missing from it | the reason `individualsNeeds` gives |
-| | To do | read, and no column of the populations chosen, `populationsNeeds` of kind `noColumn` | its reason, "Choose the column that defines the populations in the Individuals step." |
+| | To do | read, and no column of the populations chosen, `populationsNeeds` of kind `noColumn` | its reason, "Choose the column that defines the populations, or all individuals in one population, in the Individuals step." |
 | | Problem | the column chosen is not in the table, or no individual of the variants file has a population in it, `populationsNeeds` of kind `noSuchColumn` or `noPopulation` | its reason |
 | | Done | otherwise | — |
 | Analyses | Locked | every analysis is locked | the reason of the first analysis, "Load a variants file in the Variants step." |
@@ -188,17 +195,20 @@ otherwise read Running while the user counts the variants of a filter.
 The Variants step takes the checks and the writing into its own rows,
 after those of its file, so that a file not read is told before a
 calculation of it; the counts, which are never in the notice, never
-make it Results removed. The reasons about the column of the populations are the
-diversity's words, "Why it cannot run" of
-`docs/specs/analyses/diversity.md`, given with their kind by
-`populationsNeeds` of that module, so that one condition has one text.
+make it Results removed. The reasons about the column of the populations are
+given with their kind by `populationsNeeds` of `src/core/project.ts`
+(`docs/specs/core/project.md`, "The populations"), in the diversity's
+module until stage 4, so that one condition has one text.
 The reasons of core name the file as each application does, the
 metadata file here and the traits file in association, as the owner
 decided on 25 September 2026, so the stepper and the step say the same
-name. The metadata file is required in stage 2, and so the first To do
-of Individuals is not "Optional"; from stage 4, when the owner decided
-the file becomes optional, that To do becomes "Optional", with the
-reason "Without it, every individual is in one population."
+name. The metadata file was required in stage 2, and the first state of
+Individuals was To do; from stage 4, when the owner decided the file
+becomes optional, it is "Optional", with the reason "Without it, every
+individual is in one population.", a state of its own and not To do,
+since nothing is left to do: the analyses run without the file. With
+the grouping `onePopulation` and a file read that holds every
+individual of the variants, Individuals is Done.
 
 **The step in the hash.** The step on screen is the one the hash names;
 an empty hash, or one that names no step, shows Variants and leaves the
@@ -237,12 +247,18 @@ keep (node, 26 September 2026, popnei `js-v0.1.0-dev.2`). It is text, and is not
 | | counted, a filter of the variants, and no counts of the filters as they are | "1,200 variants before the filters" |
 | | the counts of the filters as they are, `filterCounts` done | "1,128 of 1,200 variants kept": `passStats.numVars` of the counts, of the `numVars` of the source |
 | the filters | | "no filter", "1 filter", "2 filters": the filters of the variants and of the individuals |
-| the metadata file | none | "no metadata file" |
+| the metadata file | none | "no metadata file: one population", from stage 4, whatever the grouping |
 | | being read | "reading pops.csv" |
 | | read failed, or individuals missing, or the column of the populations not in it | "pops.csv could not be read", "12 individuals missing from pops.csv", "column pop not in pops.csv" |
-| | read, no column chosen | "one population" |
-| | read, a column chosen | "3 populations by pop": the number of populations `populationsToRun` of `docs/specs/analyses/diversity.md` gives, or `populationsOf` while the variants file is not read, the individuals with an empty cell in no population |
-| | the same, and the filters of individuals leave populations with no individual | "2 of 3 populations by pop", the populations `populationsKept` of `docs/specs/analyses/diversity.md` gives with the individuals kept, of those of `populationsToRun`; "none of 3 populations by pop" when they leave none; while a threshold waits for the statistics of each individual, from the individuals the lists keep, as the panel of the diversity lists them |
+| | read, no column chosen | "populations not chosen", from stage 4, where stage 2 said "one population", since with a file the analyses per population are then locked |
+| | read, the grouping `onePopulation` | "one population" |
+| | read, a column chosen | "3 populations by pop": the number of populations `populationsToRun` of `src/core/project.ts` gives, or `populationsOf` while the variants file is not read, the individuals with an empty cell in no population |
+| | the same, and the filters of individuals leave populations with no individual | "2 of 3 populations by pop", the populations `populationsKept` of `src/core/project.ts` gives with the individuals kept, of those of `populationsToRun`; "none of 3 populations by pop" when they leave none; while a threshold waits for the statistics of each individual, from the individuals the lists keep, as the panel of the diversity lists them |
+
+The one population is not counted against the individuals kept: the
+part of the individuals says how many the filters keep, "114 of 200
+individuals kept", and filters that keep none lock every analysis, so
+"one population" is the whole of what the line needs to say of it.
 
 A count is written with a comma between groups of three digits, as core
 writes them (`docs/specs/core/project.md`). A name from the user's
@@ -386,7 +402,7 @@ file its options of the CSV compared by their values:
 | a request that was current and being stopped left `runs` | "Diversity: stopped." |
 | the variants file of the same load went from pending to read | "panel.nei read: 200 individuals, ploidy 2.", and, when the metadata file is read, the sentence of the check below |
 | the same, to failed | the reason `projectNeeds` gives, which names the file: "popnei could not read bad.vcf: … Load a variants file in the Variants step." |
-| the metadata file of the same load and options went from pending to read | "pops.csv read: 360 rows, 5 columns.", and, when the variants file is read, the sentence of the check: "All 342 individuals found." or "12 individuals of panel.nei are not in pops.csv." |
+| the metadata file of the same load and options went from pending to read | "pops.csv read: 360 rows, 5 columns.", and, when the variants file is read, the sentence of the check: "All 342 individuals found." or "12 individuals of panel.nei are not in pops.csv."; from stage 4, when the read lost types the user set, `typesLost`, then "status lost the type you set.", or "2 columns lost the type you set.", whose names and types the Individuals step lists (`docs/specs/steps/individuals.md`, "Its words") |
 | the same, to failed | the reason `individualsNeeds` gives |
 | the warning of a reopened project that differs from its file, `identityWarning` of `projectFile.ts`, appeared, or is there with another load of the variants file than before; while that load is being read, at the end of its read instead | "Warning: " and its words, those of the Variants step (`docs/specs/steps/variants.md`, "A project file opened"), after the read's own announcement |
 | from stage 3, a request of the Counts of the filters that was current left `runs`, and the analysis is `done` | "Counts of the filters: done. 1,128 of the 1,200 variants of panel.nei pass the filters.", the line of the total of the Variants step, or, when a filter kept none, the text of the warning `filterKeptNone` in its place, and, when the file holds no variant, the text of the warning `noVariant`, which the step shows alone |
@@ -687,7 +703,7 @@ of the steps and of the store. Its states:
 
 | state | what the user sees | what they can do |
 |---|---|---|
-| empty | the page just opened: Undo and Redo disabled; the stepper at Variants, To do, Individuals, To do, Analyses, Locked with "Load a variants file in the Variants step."; the summary "No variants file · 1 filter · no metadata file"; no notice | pick a file in the step, open a project |
+| empty | the page just opened: Undo and Redo disabled; the stepper at Variants, To do, Individuals, Optional, Analyses, Locked with "Load a variants file in the Variants step."; the summary "No variants file · 1 filter · no metadata file: one population"; no notice | pick a file in the step, open a project |
 | locked | cannot happen for the shell as a whole: it waits for nothing. What cannot be done yet says why in words: a step that cannot go on, with its reason; Undo or Redo with nothing to take back, disabled with no reason needed | — |
 | ready | files loaded: the stepper with the state of each step; the summary with the file, its individuals, the filters and the populations | move between steps, undo, redo, save, open |
 | running | a read or a calculation: Reading on its step, or Running on Analyses; the summary "Reading panel.nei"; its start and end in the status region | all of the above; opening asks and says the calculations will stop |
@@ -703,8 +719,9 @@ It reads, from the state of the store, `project`, `undo`, `redo`,
 selector, a function that picks one part of the state so that a
 component is drawn again only when that part changes (`react.md`,
 "Reading core"); `projectNeeds`, `individualsNeeds` and `askedFileText`
-of the project, and `populationsNeeds`, `populationsToRun` and
-`populationsOf` of the diversity; and the step from the hash, with `useStepHash` of
+of the project, and `populationsNeeds`, `populationsToRun`,
+`populationsOf` and `populationsKept`, of `src/core/project.ts` from
+stage 4 and of the diversity before; and the step from the hash, with `useStepHash` of
 `react.md`. It sends `store.undo()`, `store.redo()`,
 `store.dismissNotice()` and `store.open(project)`, and calls the saving
 of the entry. It holds, as state of the screen, whether a dialog is
@@ -722,6 +739,7 @@ of the Variants step, from `src/ui/analyses/titles.ts`:
 
 export type StepStatus =
   | "todo" | "reading" | "problem" | "done"                          // Variants and Individuals
+  | "optional"                                                       // Individuals with no file, from stage 4
   | "locked" | "running" | "removed" | "failed" | "ready";           // Analyses; Variants from stage 3 but "locked" and "ready"
 
 /** What the words of the shell need of the application, beyond the state:
@@ -868,9 +886,14 @@ with the analyses of `TEST_DEFS` of `src/core/testSupport.ts`:
   Variants step whose list of individuals names an individual not in the
   file is at Problem before a check running, and so is one whose
   thresholds of the individuals keep none, with the words of
-  `keptNoneReason`.
+  `keptNoneReason`; from stage 4, Individuals Optional with no metadata
+  file, whatever the grouping, To do with a file read and no column,
+  with the words of the one population, and Done with a file read and
+  `onePopulation`.
 - **`summaryLine`**: the empty first project gives "No variants file · 1
-  filter · no metadata file"; the example above, with 1,200 variants
+  filter · no metadata file: one population"; from stage 4, a file read
+  and no column "… · populations not chosen", and a file read with
+  `onePopulation` "… · one population"; the example above, with 1,200 variants
   counted and the missing data filter not counted, gives "panel.nei · 200
   individuals · 1,200 variants before the filters · 1 filter · 3
   populations by pop"; with the thresholds of the individuals at 0.03
@@ -893,7 +916,9 @@ with the analyses of `TEST_DEFS` of `src/core/testSupport.ts`:
   counted; the writing left behind alone and with a calculation, and
   stopped with a result removed, with the comma of that row; the written
   file discarded, alone and with a result removed.
-- **`announcementsOf`**: a pair of states for each row of the first
+- **`announcementsOf`**: from stage 4, the end of a read of the metadata
+  file with one type lost and with two, the sentence after the check;
+  a pair of states for each row of the first
   table of the status region, the rows of the writing and of the Counts
   among them, and a Run that waits for the statistics, whose end and the
   start of its own request are said in one change; and for the end of a calculation with
@@ -1001,6 +1026,16 @@ none of them approved yet:
   list of individuals, apart from `projectNeeds`.
 - `docs/specs/core/individualsKept.md`: the counts of the individuals
   kept, for the summary line.
+
+What stage 4 asks, of the specs revised or written beside this
+revision, 27 September 2026:
+
+- `docs/specs/core/project.md`: `populationsNeeds`, `populationsToRun`,
+  `populationsOf` and `populationsKept` in `project.ts`, with the one
+  population; `individualsNeeds` giving no reason for no metadata file;
+  the grouping `onePopulation`; `typesLost` of a read.
+- `docs/specs/steps/individuals.md`: the words of the types lost, which
+  the step shows and the end of a read announces in short.
 
 ## Open points
 

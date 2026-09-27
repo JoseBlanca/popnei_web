@@ -194,13 +194,23 @@ give the principal components that go into the GWAS as covariates.
   pruning is on by default and can be turned off, with a warning on the
   result that linked regions can dominate the components. When the
   filters of the dataset have pruned already, the PCA does not prune
-  again. The pruned variants are kept for the next PCA, since pruning is
-  costly.
+  again. Each PCA prunes again inside its one pass over the file:
+  popnei has no way to keep the variants a pruning left and to give
+  them to the next PCA, and a PCA reads the whole file anyway, so
+  keeping them would spare only the calculation of r². Recommended to
+  the owner on 27 September 2026, meanwhile; the time of the pruning is
+  measured in stage 4, and popnei is asked for a way to keep them only
+  if it is large (`docs/specs/stage-4-open-points.md`).
 - The alternative is a principal coordinate analysis (PCoA) of the Kosman
   distances between the individuals, for data with a lot of missing
-  genotypes.
-- It is shown in three dimensions, drawn with WebGL, the first three
-  components by default, with the variance each one explains.
+  genotypes. popnei gives the distances and not yet the PCoA, which the
+  owner asked of popnei on 27 September 2026 (section 11).
+- It is shown in two dimensions, the first two components, and in three,
+  drawn with WebGL, the first three, with the variance each one
+  explains. It opens in two, which is what the export, the report and a
+  screen reader's description carry, and three are one button away,
+  recommended to the owner on 27 September 2026, meanwhile
+  (`docs/specs/stage-4-open-points.md`).
 - The points are coloured by any column of the file of the individuals:
   a population or a metadata column, or a trait in association.
 - Later, not in the first version: selecting a group of points with a
@@ -442,6 +452,8 @@ has not decided:
 - The density of variants along each chromosome (section 3).
 
 The last four the owner decided on 26 September 2026 to add to popnei.
+- The PCoA of the Kosman distances between the individuals (section 5),
+  asked of popnei by the owner on 27 September 2026.
 - The GWAS with covariates, the λ, the pseudo heritability; the GWAS spec
   of popnei is not written yet.
 

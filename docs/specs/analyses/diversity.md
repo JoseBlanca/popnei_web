@@ -17,7 +17,15 @@ words of the statistics that failed, which the spec gave with no name;
 and on 27 September 2026, with the code of the panel, for the words of
 the ready state when several populations, or all, are left empty, and
 for the name of the bar and the clock while a Run waits for the
-statistics of each individual.
+statistics of each individual. Revised on 27 September 2026 for stage
+4, the Individuals step whole, not yet approved: without a metadata
+file, or with the grouping `onePopulation`, the diversity runs on one
+population of every individual, "All individuals", as the owner decided
+on 25 September 2026 (point A of `docs/specs/stage-2-open-points.md`);
+and the functions that make the populations, `populationsOf`,
+`populationsToRun`, `populationsKept` and `populationsNeeds`, move to
+`src/core/project.ts`, which every analysis per population shares
+(`docs/specs/core/project.md`, "The populations").
 The code of stage 2 is in
 `src/core/analyses/diversity.ts`. This spec gives the first analysis of the population genetics
 application, in its form for the walking skeleton: the module
@@ -156,15 +164,18 @@ them.
 
 ### The populations
 
-The populations come from the column of the individuals file that the
-user chose, `p.grouping.column` (`docs/specs/core/project.md`, "The
-grouping"):
+The populations are those the project defines, made by the functions of
+`docs/specs/core/project.md`, "The populations", which the module of the
+diversity exported until stage 4: those of the column of the metadata
+file that the user chose; or, without a metadata file, or with the
+grouping `onePopulation`, one population, "All individuals", of every
+individual of the variants file. With a column:
 
 - **A population is named by the text of its cell**, whatever type the
-  reader inferred for the column: a column of two populations, `P1` and
-  `P2`, inferred binary, gives the populations `P1` and `P2`, and not 1
-  and 0. In a CSV every cell is text already; a number or a boolean of an
-  xlsx, from stage 4, is written with `String`, `1.5`, `true`.
+  column has: a column of two populations, `P1` and `P2`, inferred
+  binary, gives the populations `P1` and `P2`, and not 1 and 0. In a CSV
+  every cell is text already; a number or a boolean of an xlsx is
+  written with `String`, `1.5`, `true`.
 - **An individual whose cell is missing**, empty, `NA` or `-`, belongs
   to no population and is left out of the calculation
   (`docs/functionality.md`, section 4), with a warning (below).
@@ -191,14 +202,21 @@ grouping"):
   population, and named before the run, in the ready state of the panel,
   and after it, in the warning `populationNotInResult` (below).
 
-`populationsOf(p)` gives the populations as the key holds them, from the
-table alone; `populationsToRun(p)` narrows them to the individuals of the
-variants file, as the Individuals step lists them; and
-`populationsKept(p, kept)` narrows those to a list of individuals kept,
-and gives the populations it leaves empty apart, as `run` sends them and
-as the ready state of the panel lists them. The key holds the thresholds
-of the filters of individuals and not the list, which is made from a
-result in the cache (`docs/architecture.md`, section 3).
+The one population is every individual of the variants file, in the
+order of the file; with the filters of individuals, those they keep. A
+metadata file given with the grouping `onePopulation` holds every
+individual of the variants, or the diversity is locked (below), so the
+one population is the same with the file and without it.
+
+`populationsOf(p)` of `project.ts` gives the populations as the key
+holds them, from the project alone, those of the column or `"all"`;
+`populationsToRun(p)` narrows them to the individuals of the variants
+file, as the Individuals step lists them; and `populationsKept(p,
+kept)` narrows those to a list of individuals kept, and gives the
+populations it leaves empty apart, as `run` sends them and as the ready
+state of the panel lists them. The key holds the thresholds of the
+filters of individuals and not the list, which is made from a result in
+the cache (`docs/architecture.md`, section 3).
 
 ### What goes into its key
 
@@ -211,14 +229,15 @@ every filter changes which genotypes the means are over.
 `keyInputs(p)` gives the rest:
 
 ```ts
-{ pops: Pops | null, options: { minNumIndividuals: number, polyThreshold: number } }
+{ pops: Pops | "all" | null, options: { minNumIndividuals: number, polyThreshold: number } }
 ```
 
 `pops` is `populationsOf(p)`: every population of the column with every
 individual of the file that has it, in the order above, as pairs
-`[population, individuals]`; `null` when there is no individuals file,
-when it is not read, when no column is chosen, or when the table has no
-column of that name. `options` are those of the project for
+`[population, individuals]`; `"all"` for the one population, whose
+individuals the load of the variants file, in every key, fixes; `null`
+when a metadata file is not read, when no column is chosen in it, or
+when the table has no column of that name. `options` are those of the project for
 `diversity`, or the defaults. It does not read `p.variants`, as keys.md
 asks, and so it holds the individuals of the file that are not in the
 variants file too: a change to one of them costs a calculation and shows
@@ -257,6 +276,8 @@ What changes the key, which the test of the key checks row by row
 | a filter of individuals added or removed, a name of its list, or its threshold, whether or not it keeps other individuals | changes |
 | another column of the populations that groups the individuals otherwise | changes |
 | another column that makes the same populations with the same names | same |
+| the metadata file removed, with a column chosen; or the grouping set to `onePopulation` | changes, to `"all"` |
+| the metadata file removed, with `onePopulation`; or a metadata file loaded with `onePopulation` | same: `"all"` with the file and without it |
 | a cell of the column of the populations, one of an individual not in the variants file included | changes |
 | a cell of another column | same |
 | the rows of the file in another order | changes: the order of the table follows it |
@@ -278,11 +299,15 @@ these, in the words the panel shows beside its Run button:
 
 | the project | the reason |
 |---|---|
-| any reason of `individualsNeeds` (`project.md`), in the words of the population genetics application, which calls the file the metadata file, as the owner decided on 25 September 2026: no metadata file, "Load a metadata file in the Individuals step."; the file being read, "Reading pops.csv."; its read refused or failed; individuals of the variants missing from it, "12 individuals of panel.nei are not in pops.csv: ind_031, ind_044 and 10 more. Add them to the file and load it again in the Individuals step." | its words |
-| no column of the populations chosen | "Choose the column that defines the populations in the Individuals step." |
-| the table has no column of that name, after a new load of the file | "pops.csv has no column popcat, from which the populations were taken. Choose the column that defines the populations in the Individuals step." |
+| any reason of `individualsNeeds` (`project.md`), in the words of the population genetics application, which calls the file the metadata file, as the owner decided on 25 September 2026: the file being read, "Reading pops.csv."; its read refused or failed; individuals of the variants missing from it, "12 individuals of panel.nei are not in pops.csv: ind_031, ind_044 and 10 more. Add them to the file and load it again in the Individuals step." From stage 4, no metadata file is no reason | its words |
+| a metadata file read, and no column of the populations chosen | "Choose the column that defines the populations, or all individuals in one population, in the Individuals step." |
+| the table has no column of that name, after a new load of the file | "pops.csv has no column popcat, from which the populations were taken. Choose the column that defines the populations, or all individuals in one population, in the Individuals step." |
 | no individual of the variants file has a population in the column | "No individual of panel.nei has a population in the column popcat of pops.csv. Fill in the column and load the file again, or choose another column, in the Individuals step." |
-| the lists of individuals to keep and to remove leave no individual that has a population, known from the project alone | "The lists of individuals to keep and to remove leave none of the individuals of panel.nei that have a population in popcat, so no population is left. Change the lists in the Variants step." |
+| the lists of individuals to keep and to remove leave no individual that has a population, known from the project alone | "The lists of individuals to keep and to remove leave none of the individuals of panel.nei that have a population in popcat, so no population is left. Change the lists in the Variants step."; for the one population, "The lists of individuals to keep and to remove leave none of the individuals of panel.nei. Change the lists in the Variants step." |
+
+Without a metadata file, or with the grouping `onePopulation`, only the
+first row and the last can lock the diversity, and the first only with a
+file.
 
 The lock of stage 2 on any filter of individuals, which the owner
 decided on 25 September 2026 while the filters of individuals did not
@@ -301,14 +326,19 @@ the 200 individuals of panel.nei. Loosen them in the Variants step."
 
 The owner decided on 25 September 2026 that the metadata file, and a
 column of populations chosen in it, are required in stage 2, and
-optional from stage 4, when the Individuals step is whole: then a project
-with no file runs as one population of every individual, and `Grouping`
-of `docs/specs/core/project.md` gains a value for that choice. So the
-second and third rows lock the diversity in stage 2.
+optional from stage 4, when the Individuals step is whole. So, from
+stage 4, a project with no file runs on one population of every
+individual, and so does one whose grouping is `onePopulation`, which the
+Individuals step offers beside the columns. A project with a file and no
+column chosen, `column: null`, still locks, with the words above, which
+from stage 4 name the one population as a choice: the user who loaded a
+file is asked what it defines rather than given one population they did
+not choose.
 
 The second to the fourth rows, the reasons about the column of the
-populations, are given by `populationsNeeds(p)`, which the module exports
-with the kind of each, so that the stepper of the shell shows the same
+populations, are given by `populationsNeeds(p)` of `project.ts`
+(`docs/specs/core/project.md`, "The populations"), whose words they
+are, with the kind of each, so that the stepper of the shell shows the same
 text for the same condition, "To do" for no column chosen and "Problem"
 for the two others (`docs/specs/shell.md`, "The stepper"), and the
 Individuals step shows it at its select (`docs/specs/steps/individuals.md`,
@@ -411,10 +441,10 @@ first two and how many more.
 
 | code | when | the text |
 |---|---|---|
-| `tooFewIndividuals` | a population has fewer individuals in `numIndividuals` than `minNumIndividuals` | "Population p3 has 12 individuals, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so p3 has no values. To have them, merge it with another population in the metadata file." With two or three: "Populations p3 and p5 have fewer than 20 individuals, 12 and 8, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, merge each with another population in the metadata file." With more than three, the counts are left out: "Populations p3, p5 and 4 more have fewer than 20 individuals, and ..." When the filters of individuals removed some of the individuals of one of them, the last sentence ends "…in the metadata file, or loosen the filters of individuals in the Variants step." |
+| `tooFewIndividuals` | a population has fewer individuals in `numIndividuals` than `minNumIndividuals` | "Population p3 has 12 individuals, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so p3 has no values. To have them, merge it with another population in the metadata file." With two or three: "Populations p3 and p5 have fewer than 20 individuals, 12 and 8, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, merge each with another population in the metadata file." With more than three, the counts are left out: "Populations p3, p5 and 4 more have fewer than 20 individuals, and ..." When the filters of individuals removed some of the individuals of one of them, the last sentence ends "…in the metadata file, or loosen the filters of individuals in the Variants step." For the one population, which has no metadata file to merge in: "All individuals, the one population, has 12 individuals, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so it has no values. The minimum of 20 cannot be changed in this version.", and, when the filters of individuals removed some, the last sentence "To have them, loosen the filters of individuals in the Variants step." |
 | `variantsWithoutValue` | a population with enough individuals has a value at fewer variants than `numVars`, whatever the number skipped | "p0a has a value at 641 of the 1,152 variants kept (56%); at the others fewer than 20 of its individuals have a genotype." With two or three: "p0a and p0b have a value at 641 and 1,100 of the 1,152 variants kept (56% and 95%); at the others fewer than 20 of their individuals have a genotype." With more than three, the first two and how many more, with no counts: "p0a, p0b and 3 more have a value at fewer than the 1,152 variants kept; at the others fewer than 20 of their individuals have a genotype." When it is none of them: "p0a has a value at none of the 1,152 variants kept: at each, fewer than 20 of its individuals have a genotype." |
-| `individualsWithoutPopulation` | individuals of the variants file have a missing cell in the column | "5 individuals of panel.nei have no population, and are left out of the diversity: s001, s002 and 3 more. If they belong to one, fill in their population in the metadata file and load it again." |
-| `populationNotInResult` | a population of `populationsToRun(p)`, which has individuals in the variants file, is not in `r.pops` | "Population p9 has no individual among the individuals of panel.nei that the filters kept, so it is not in the table." |
+| `individualsWithoutPopulation` | individuals of the variants file have a missing cell in the column; never for the one population, which holds every one | "5 individuals of panel.nei have no population, and are left out of the diversity: s001, s002 and 3 more. If they belong to one, fill in their population in the metadata file and load it again." |
+| `populationNotInResult` | a population of `populationsToRun(p)`, which has individuals in the variants file, is not in `r.pops`; never for the one population, since filters that keep none of it keep no individual, which locks the diversity or stops its Run in the words of `keptNoneReason` (`docs/specs/core/individualsKept.md`) | "Population p9 has no individual among the individuals of panel.nei that the filters kept, so it is not in the table." |
 
 The owner decided on 25 September 2026 that `variantsWithoutValue` is
 raised whenever a population skips any variant, one or a thousand, and
@@ -471,8 +501,8 @@ individuals. The project file saves them with the key version
 populations of `populationsKept(p, byLists)`, with `byLists`, the
 individuals the lists to keep and to remove keep, of `individualsKept`
 (`docs/specs/core/individualsKept.md`), since `run` sends every one of them and popnei gives a row for
-each; or `null` when `populationsToRun` is `null`, the variants file or
-the individuals file not read or no column of the populations, and when
+each, so 4 for the one population; or `null` when `populationsToRun` is `null`, the variants file or
+a metadata file not read or no column of the populations chosen in it, and when
 the project holds a threshold on the individuals, whose list needs the
 statistics of each individual, not calculated when a project file is
 opened (`docs/architecture.md`, section 4), and when a list to keep or
@@ -529,6 +559,26 @@ given; `script.ts` adds them in stage 6. `script` is asked only for an
 analysis that has run, so a project with no populations is a defect
 there.
 
+For the one population, without a metadata file or with the grouping
+`onePopulation`, the dict of the populations is made from the
+individuals of the variants, which are those the filters of individuals
+keep once `filter_individuals` is put on `variants`, as the property's
+doc in popnei's `python/popnei/variant.py` says, so no narrowing
+follows; the lines after the dict are the same:
+
+```python
+# The diversity of every individual, as one population
+pops = {"All individuals": list(variants.individuals)}
+diversity = popnei.calc_per_var_distribs(
+    variants, pops=pops, min_num_individuals=20, poly_threshold=0.95
+)
+```
+
+and the `print` of the table as above. The script reads no metadata
+file when the project has none; with one, and `onePopulation`, it reads
+it as for a column, since every individual of the variants must be in
+it, and does not use it for the populations.
+
 ### The TypeScript interface
 
 The request and the result are members of `Job` and `JobResult` of
@@ -567,7 +617,12 @@ The module exports its definition, an `AnalysisDef` of
 which the store knows an analysis (`keyInputs`, `needs`, `run`,
 `warnings`, `checkNumbers`, `numCheckNumbers`, `script`, `parseOptions`), which
 `src/core/apps.ts` lists for the population genetics application, and
-what the panel reads:
+what the panel reads. `populationsOf`, `populationsToRun`,
+`populationsKept` and `populationsNeeds`, which it exported until stage
+4, are exported by `src/core/project.ts` from stage 4, with the same
+names (`docs/specs/core/project.md`, "What every analysis needs"); the
+module imports them, and the panel, the Individuals step and the shell
+import them from there.
 
 ```ts
 export const diversity: AnalysisDef<Job, JobResult>;
@@ -576,33 +631,6 @@ export const diversity: AnalysisDef<Job, JobResult>;
 // defaults DIVERSITY_DEFAULTS
 
 export const DIVERSITY_DEFAULTS: { readonly minNumIndividuals: 20; readonly polyThreshold: 0.95 };
-
-/** The populations of the column chosen, from the table alone, as the key
-    holds them; null when there are none to give. */
-export function populationsOf(p: Project): Pops | null;
-
-/** populationsOf(p) narrowed to the individuals of the variants file, the
-    populations left empty dropped: what run sends, what the ready state
-    and the Individuals step list; null when populationsOf is null or the
-    variants file is not read. */
-export function populationsToRun(p: Project): Pops | null;
-
-/** populationsToRun(p) narrowed to the individuals kept, `kept`, or left
-    whole when `kept` is null, the filters removing nobody; with the
-    populations that the list leaves empty, in their order, which are
-    not in `pops`. What run sends and the ready state lists; null when
-    populationsToRun is null. The same frozen value for the same inputs. */
-export function populationsKept(p: Project, kept: readonly string[] | null):
-  { readonly pops: Pops; readonly emptied: readonly string[] } | null;
-
-/** The reason about the column of the populations, the last three rows
-    of "Why it cannot run", with its kind; null when the individuals file
-    is not read, or when the column gives populations, or when a column
-    of that name is chosen and the variants file is not read, since no
-    population is looked for until it is. */
-export function populationsNeeds(p: Project):
-  | { readonly kind: "noColumn" | "noSuchColumn" | "noPopulation"; readonly reason: string }
-  | null;
 
 /** One row of the table, a number null where popnei gave NaN. */
 export interface DiversityRow {
@@ -653,8 +681,9 @@ a defect, `popnei_web defect: ...`, for a result of another analysis.
 whose entries are kept by the object itself and dropped with it, so that
 the panel, which asks for them each time React draws it again, gets the
 same array (`.claude/skills/coding/react.md`, "Reading core");
-`populationsToRun` keeps its answer in the same way, by the project's
-table, the name of the column and the read of the variants file.
+`populationsToRun` of `project.ts` keeps its answer in the same way,
+by the project's table, the name of the column and the read of the
+variants file (`docs/specs/core/project.md`).
 
 `parseOptions(o, 1)` gives back an object with exactly the two fields,
 `minNumIndividuals` a whole number from 0 to 4,294,967,295, as popnei's
@@ -703,10 +732,22 @@ version 1 in the same way (`docs/architecture.md`, section 12).
 - **A population whose individuals the filters all remove.** It is left
   out of the request, named in the ready state and, after the run, by
   `populationNotInResult`.
+- **No metadata file.** The diversity runs once the variants file is
+  read, on "All individuals", every individual the filters keep; the
+  table has one row. A metadata file loaded after it, whose read is
+  under way, locks it with "Reading pops.csv."; once read, with a column
+  chosen before, the populations are those of the column and the table
+  of the one population goes from the screen, the key being another;
+  removing the file brings it back from the cache, with no calculation.
+- **A column chosen, and the file removed.** The same: one population,
+  whatever the grouping holds, until a file is loaded again.
+- **Every individual of the variants file with no population in the
+  column, and the user then chooses the one population.** The lock of
+  `noPopulation` goes, and the diversity runs on every individual.
 
 ### How it runs
 
-`populationsOf` walks the table once when the store makes the key after
+`populationsOf` of `project.ts` walks the table once when the store makes the key after
 a change, 10,000 rows in the largest individuals table the architecture
 plans for (`docs/architecture.md`, section 11), a time not measured; the key's memo does not
 cover it, since `keyInputs` builds a new value. It is kept by the
@@ -755,6 +796,18 @@ definition, on frozen projects, as
   `individualsNeeds` has been checked to come through; `populationsNeeds`
   gives the same text for the rows of the column, with their kinds, and
   `null` for a project whose individuals file is not read.
+- **The one population**, from stage 4. In the project of the worked
+  example with no metadata file, the grouping `pop` kept: `needs` gives
+  `null`; `keyInputs` gives `{ pops: "all", options: DIVERSITY_DEFAULTS }`;
+  `run` sends `pops` `[["All individuals", ["i1", "i2", "i3", "i4"]]]`,
+  and, with `c.individuals` `["i1", "i3"]`, `[["All individuals", ["i1",
+  "i3"]]]`; `numCheckNumbers` gives 4; the key is the same with the
+  file and `onePopulation`, and differs from that of the column `pop`. A
+  result of "All individuals" with 2 individuals gives
+  `tooFewIndividuals` with the words of the one population, and no
+  `individualsWithoutPopulation`. `needs` with a list to remove of the
+  four gives the words of the lists for the one population. `script`
+  gives the lines of the one population, as a literal.
 - **The key**: for each row of the table of what changes the key, two
   projects that differ in it, and `keyOf` equal or not as the row says;
   `keyInputs` of `emptyProject("popgen")` and of a project whose reads are
@@ -851,6 +904,28 @@ over 1,152 variants, at each of which every population has a value; the
 counts of the pass are those of the filter of the variants alone, 1,152
 of 1,200, as without the filter of individuals.
 
+With the one population of stage 4, the 200 individuals of `panel.nei`
+as "All individuals", popnei gave (node 26.8.2, 27 September 2026,
+`js-v0.1.0-dev.2` as the site installs it, the script above with `pops`
+`{ "All individuals": [...variants.individuals] }` and the two options
+given):
+
+| filter | individuals | expected heterozygosity | observed heterozygosity | polymorphic |
+|---|---|---|---|---|
+| missing data at 0.05, 1,152 of 1,200 kept | 200 | 0.37487834409014364 | 0.3541409192154764 | 0.9791666666666666 |
+| missing data at 1, 1,200 of 1,200 kept | 200 | 0.3754712450806149 | 0.35429523451520484 | 0.9791666666666666 |
+
+with a value at every variant kept, 1,152 and 1,200. Its check numbers
+with the filter at 0.05 are `[1152, 0.37487834409014364,
+0.3541409192154764, 0.9791666666666666]`. The expected heterozygosity
+of the whole is above that of each of the three populations, 0.3527,
+0.3441 and 0.3498 with the filter at 0.05, as it is when the
+populations differ in their frequencies. The test of the runner asserts
+the first row as literals, and the flow of stage 4 loads `panel.nei`
+with no metadata file, runs with the missing data filter at its default
+of 0.1, which keeps the 1,200 variants, and reads 200, 0.3755, 0.3543,
+0.9792 in the row "All individuals".
+
 The Vitest test of the runner, in node with popnei, asserts these
 numbers as literals. The Playwright flow asserts them as the screen shows
 them, to four decimals: with the filter at 0.05, the row p0 shows 48,
@@ -945,8 +1020,8 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112
 | state | what the user sees | what they can do |
 |---|---|---|
 | empty | cannot happen: until the variants file is read the analysis is locked with a reason (`docs/specs/core/store.md`, "The state of an analysis") | |
-| locked | the reason the store gives, as text beside a Run button that is disabled and described by it: "Choose the column that defines the populations in the Individuals step."; or the store's, once the statistics are there, when the filters keep no individual, in its words (`docs/specs/core/store.md`) | go to the step the reason names |
-| ready | a Run button, and the populations it will run on with their sizes, "3 populations: p0, 48 individuals; p2, 84; p1, 68", from `populationsKept` with the individuals kept that the store gives; a population left empty is named after them, "p9 has no individual left after the filters of individuals, and is left out."; several populations left empty are named together, "p1 and p2 have no individual left after the filters of individuals, and are left out.", as `namesOf` of `project.ts` names them, and when the filters leave no population, the line of the populations is left out and that line names them all, since the error of no population comes after the Run (below, "Its words"); while a threshold on the individuals waits for the statistics of each individual, the populations the lists keep, before that threshold, and the line "Run calculates the statistics of each individual first, and the populations may lose individuals to the thresholds." | Run |
+| locked | the reason the store gives, as text beside a Run button that is disabled and described by it: "Choose the column that defines the populations, or all individuals in one population, in the Individuals step."; or the store's, once the statistics are there, when the filters keep no individual, in its words (`docs/specs/core/store.md`) | go to the step the reason names |
+| ready | a Run button, and the populations it will run on with their sizes, "3 populations: p0, 48 individuals; p2, 84; p1, 68", from `populationsKept` with the individuals kept that the store gives; for the one population, "1 population, All individuals: 200 individuals", and, without a metadata file, the line "No metadata file: every individual is in one population.", the words of the Individuals step, so that a user who meant to load one learns it here; a population left empty is named after them, "p9 has no individual left after the filters of individuals, and is left out."; several populations left empty are named together, "p1 and p2 have no individual left after the filters of individuals, and are left out.", as `namesOf` of `project.ts` names them, and when the filters leave no population, the line of the populations is left out and that line names them all, since the error of no population comes after the Run (below, "Its words"); while a threshold on the individuals waits for the statistics of each individual, the populations the lists keep, before that threshold, and the line "Run calculates the statistics of each individual first, and the populations may lose individuals to the thresholds." | Run |
 | running | a progress bar, "Calculating · 35% · 0:12", from the last `progress` of its `RunView`, and the time since it started, counted every second; before the first `progress`, and while the request waits in the queue, the bar has no value and is drawn hatched over its whole length and still, since a bar that moved by itself through a long calculation would be motion the user cannot stop (WCAG 2.2.2), and the clock shows the calculation goes on, "Calculating · 0:12"; after a stop or a change of the load, when the store marks the request `afterStop`, "Waiting for panel.nei to be opened again, then calculating · 0:12"; while the statistics of each individual that it waits for are calculated, "Calculating the statistics of each individual, which the filters of individuals are set from · 35% · 0:12", with their progress, the bar labelled "Calculating the statistics of each individual", since its share is theirs, and after a stop "Waiting for panel.nei to be opened again, then calculating the statistics of each individual, which the filters of individuals are set from · 0:12"; the clock starts again at 0:00 when the statistics end and the request of the diversity is sent, with the words of its own calculation, as the part of the writing does (`docs/specs/analyses/writeVariants.md`) | Stop, which cancels it, and the statistics with it |
 | done | the table and its download; the warnings above the table, each as a sentence, with their count on the heading, "2 warnings"; after an opened project file, the comparison with its check numbers under the table | download |
 | results removed | the words of the change that removed it, below, and, beside the Run button, the populations it will run on, as in the state ready | Run; the Undo or Redo of the notice or of the header |
@@ -967,8 +1042,11 @@ approves this spec.
 the result removed. It drops a result only to stay under its bound of
 256 MB (`docs/specs/core/cache.md`), and a result of the diversity is a
 few hundred bytes, the only kind of result of stage 2, so no session of
-stage 2 fills it; when the PCA and its large results come, in stage 4,
-these words are checked against the cache again.
+stage 2 fills it. Checked again for the PCA of stage 4, which keeps 10
+components (`docs/specs/analyses/pca.md`): its projections at 9,381
+individuals, the most popnei's PCA takes, are 9,381 × 10 × 8 bytes,
+0.75 MB, so about 340 of them fill the bound, and the words hold for a
+session of stage 4.
 
 The words of "results removed", and the line of a calculation stopped,
 are written from the change itself, the cause of the notice,
@@ -1130,7 +1208,10 @@ The help, a few lines of Markdown for the help drawer of stage 8:
   heterozygosity, the share of the called genotypes that are
   heterozygous; and the share of the variants whose commonest allele is
   below 0.95. Each is a mean over the variants that have a value in the
-  population.
+  population. Without a metadata file, or with all individuals in one
+  population, the table has one row, "All individuals", the diversity
+  of the whole set, whose expected heterozygosity is above that of its
+  populations when they differ in their frequencies.
 - Its defaults: a variant has a value in a population only when at least
   20 of its individuals have a called genotype there, so that no mean
   leans on frequencies estimated from a handful of individuals; a
@@ -1297,6 +1378,27 @@ What stage 3 asks, of specs revised or written beside this revision:
 - `docs/specs/steps/variants.md`: the filters of individuals, and their
   commands described as the notice says them.
 
+What stage 4 asks, of specs revised or written beside this revision, 27
+September 2026:
+
+- `docs/specs/core/project.md`: `populationsOf`, `populationsToRun`,
+  `populationsKept` and `populationsNeeds` in `project.ts`, with `"all"`
+  and the one population "All individuals"; `individualsNeeds` giving no
+  reason for no file in population genetics; the grouping
+  `onePopulation`.
+- `docs/specs/core/projectFile.md`: 4 check numbers for the one
+  population, and the fixture `v1-one-population.popnei.json`.
+- `docs/specs/worker/runner.md`: the runner's test asserts the one
+  population's numbers above; a population named "All individuals" is a
+  population as any other to the runner.
+- `docs/specs/steps/individuals.md`: the item "All individuals in one
+  population" sends `setGrouping(p, { kind: "onePopulation" })`, and
+  the step lists the one population with `populationsToRun`.
+- `docs/specs/shell.md`: the stepper and the summary line read the
+  populations of `project.ts`.
+- `docs/specs/analyses/pca.md`: the PCA keeps 10 components, which the
+  words of "Undo brings back the table" above were checked against.
+
 ## Open points
 
 The open points of the eleven specs of stage 2 are gathered in
@@ -1338,9 +1440,11 @@ page, the case the ready state already names.
   spec until a second analysis needs more.
 - The notice, its words and its toast, the status region and the header:
   `docs/specs/shell.md`.
-- A cell of an xlsx as the name of a population, and whether pandas reads
-  it as the same text as the application, `1` and `1.0`: stage 4, with the
-  xlsx.
+- Whether pandas reads a number of the `.xlsx` the report writes as the
+  text the application names its population with, `1` and not `1.0`:
+  the report, stage 6, which writes that file. The application names a
+  population of a cell of an xlsx by `String` of the cell from stage 4
+  (`docs/specs/core/project.md`, "The populations").
 - How a CSV opens in Excel set to a language whose separator is `;`, and
   whether the downloads start with the byte order mark of UTF-8, which
   makes Excel read the accents of a name right and puts a stray

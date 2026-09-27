@@ -11,7 +11,12 @@ Variants step; the counts of the pass in every result; and
 again on 26 September 2026, after the review of the code of stage 3:
 a `written` whose `numBytes` is not the size of its file is refused as
 `wrongSize`, in bytes, and not as `wrongLength`, whose words speak of a
-list. This spec gives
+list. Revised on 27 September 2026 for stage 4, the Individuals step and
+the PCA: the read of an xlsx, whose request carries no options of a CSV
+and whose answer reports none; the files wasm, the Rust module that
+reads an xlsx (`docs/specs/worker/files.md`), which fails to load as an
+answer and not as a failure of the worker; and `PROTOCOL_VERSION` 3; not
+approved yet. This spec gives
 `src/worker/messages.ts`: the messages the page and each of the two
 workers send each other, from the walking skeleton, the smallest
 application that goes through every part once (stage 2), on, the
@@ -26,7 +31,7 @@ errors it does not repeat. The page's side is
 `docs/specs/worker/client.md`; the workers' sides are
 `docs/specs/worker/runner.md`, the calculation worker, and
 `docs/specs/worker/individuals.md`, the light worker and its reader of
-CSV and TSV; the request of each analysis and its result are in the
+the individuals file; the request of each analysis and its result are in the
 analysis's spec under `docs/specs/analyses/`.
 
 A request is a message of the page that asks a worker for something; an
@@ -55,7 +60,7 @@ received it is ended (below):
 | `open`: open the variants file of a load | the calculation worker | `opened`, the individuals and the ploidy | `refused`, popnei's message; `reopenFailed`, a file the browser no longer reads |
 | `run`: calculate the result of an analysis | the calculation worker | `result`, under the key it was asked with, after its `progress` | `refused`, popnei's message; `reopenFailed`, a file the browser no longer reads |
 | `write`: write the filtered variants as a file | the calculation worker | `written`, the file under the key it was asked with, after its `progress` | as `run` |
-| `readIndividuals`: read the individuals file | the light worker | `individuals`, the table, or the ways the file is wrong | none: a file the reader refuses is its answer |
+| `readIndividuals`: read the individuals file, a CSV, a TSV or an xlsx | the light worker | `individuals`, the table, or the ways the file is wrong | none: a file the reader refuses is its answer, and so is a files wasm that could not be downloaded |
 
 - **`open` carries the load**: the load id, the `File` the user picked,
   its format, and its read options, as the project holds them
@@ -97,16 +102,27 @@ received it is ended (below):
   which cannot name a `Blob`, reads the size (`protocol.md`, `Written`).
 - **`readIndividuals` carries the `File` and the options of a CSV**, as
   the source holds them (`docs/specs/core/project.md`,
-  `IndividualsSource`). The walking skeleton reads a CSV or a TSV only; an
-  xlsx, whose source has no CSV options, joins in stage 4 with the files
-  wasm. Its answer is the reader's `IndividualsFileRead`
-  (`docs/specs/worker/individuals.md`): the table, the types of its
-  columns, and the three options of the CSV the reader used, the
-  encoding, the separator and the decimal mark, each as the user set it
-  or as the reader found it where it was "auto" (`CsvFound`); or the
-  ways the file is wrong, `IndividualsFileError` of
-  `protocol.ts`, a file with no rows, two columns of one name, which the
-  reader's spec owns and extends, a file it cannot read among them.
+  `IndividualsSource`), and `csv` `null` for an xlsx, whose source has no
+  options of a CSV, from stage 4. Its answer is the reader's
+  `IndividualsFileRead` (`docs/specs/worker/individuals.md`): the table,
+  the types of its columns, and, for a CSV or a TSV, the three options
+  the reader used, the encoding, the separator and the decimal mark, each
+  as the user set it or as the reader found it where it was "auto"
+  (`CsvFound`), and `null` for an xlsx; or the ways the file is wrong,
+  `IndividualsFileError` of `protocol.ts`, a file with no rows, two
+  columns of one name, an xlsx saved with a password, which the reader's
+  spec owns and extends, a file it cannot read among them.
+- **A files wasm that could not be downloaded is an answer**, the failed
+  read `xlsxReaderNotLoaded`, with the browser's message for the console,
+  and the light worker goes on (`docs/specs/worker/files.md`, "How the
+  light worker loads it"). It is not `crashed`, which would end a worker
+  that can still read a CSV, and would tell the user that the reading
+  stopped where the words of the refusal tell them to check their
+  connection; a failed `import()` or `init()` leaves nothing of the wasm
+  behind. The option not taken is `crashed`, as a popnei that does not
+  load ends the calculation worker, which without popnei can do nothing.
+  A file calamine cannot open is the refusal `files`, with calamine's
+  message; a panic of the files wasm is a trap, and `crashed`.
 - **`refused` is popnei's refusal of its input**, a plain `Error` thrown
   by a call to popnei, with its message as it is
   (`docs/specs/worker/protocol.md`, "The cases"). The worker goes on to
@@ -176,7 +192,8 @@ change to that approved file (`docs/specs/stage-2-open-points.md`,
 
 `PROTOCOL_VERSION` was 1 in the walking skeleton, whose messages were
 built and deployed; it is 2 from stage 3, since `write`, `written`, the
-jobs and the results change (below, "The ready message").
+jobs and the results change, and 3 from stage 4 (below, "The ready
+message").
 
 ### A worker that cannot go on
 
@@ -188,7 +205,10 @@ knows which one it was:
   wasm, a `WebAssembly.RuntimeError`, after which the memory of the wasm
   keeps what it held; an error of the engine in a call to popnei, the
   `RangeError` of a memory that cannot grow; a throw of our code outside a
-  call to popnei; or popnei's wasm that did not load. The runner posts it
+  call to popnei; or popnei's wasm that did not load. In the light
+  worker, a trap of the files wasm, a panic of the crate or a memory
+  that cannot grow, or a throw of our code; not a files wasm that did not
+  load, which is an answer (above). The runner posts it
   with the message of what was thrown, then closes itself. The client
   fails the request with the `RunError` `workerFailed` of
   `docs/specs/worker/protocol.md`, or, before the worker was ready, counts
@@ -243,7 +263,10 @@ check, because they differ in `ready`:
   of another version and not taken for a defect.
 - **`PROTOCOL_VERSION` is raised with any change to a message**, to `Job`
   or `JobResult`, or to a type of `protocol.ts` a message carries. It was
-  1 in the walking skeleton, and is 2 from stage 3.
+  1 in the walking skeleton, 2 from stage 3, and is 3 from stage 4,
+  whose `readIndividuals`, `individuals` and refusals of the reader
+  change here, and whose job and result of the PCA join `Job` and
+  `JobResult` (`docs/specs/analyses/pca.md`); one number for the stage.
 
 The names of the built files carry a hash of what they hold
 (`.claude/skills/coding/worker.md`, "The wasm files on GitHub Pages"), so
@@ -309,7 +332,8 @@ and of `.claude/skills/coding/worker.md`, "Validation at the boundary":
   and 1, or a ploidy from 1 to 255, is popnei's to check and the tests'.
   A NaN is a number: popnei gives one where a value is not defined.
 - **What the types tie together is checked too**: a `.nei` file has no
-  read options and a VCF has them; every row of the individuals table is
+  read options and a VCF has them; `csv` of a `readIndividuals` and
+  `found` of a read are `null` or have all their fields; every row of the individuals table is
   as long as its header, and there is one type for each column; every
   array of a diversity result is as long as its `pops`, so that no number
   is put under another population; the two arrays of the statistics of
@@ -338,7 +362,7 @@ Every field is `readonly`, and every array `readonly T[]`, in the code;
 The version of the messages.
 
 ```ts
-export const PROTOCOL_VERSION = 2;
+export const PROTOCOL_VERSION = 3;
 ```
 
 The requests of the calculation worker, and what it sends back.
@@ -374,7 +398,8 @@ types of the columns and what "auto" found are the types of
 
 ```ts
 export type ToFilesRunner =
-  | { kind: "readIndividuals"; id: number; file: File; csv: CsvOptions };
+  | { kind: "readIndividuals"; id: number; file: File;
+      csv: CsvOptions | null };                                 // null for an xlsx
 
 export type FromFilesRunner =
   | { kind: "ready"; protocol: number }
@@ -384,7 +409,8 @@ export type FromFilesRunner =
 /** What the reader made of the file: the table, or the ways it is wrong;
     the type of docs/specs/worker/individuals.md. */
 export type IndividualsFileRead =
-  | { kind: "read"; table: IndividualsTable; columns: ColumnType[]; found: CsvFound }
+  | { kind: "read"; table: IndividualsTable; columns: ColumnType[];
+      found: CsvFound | null }                                  // null for an xlsx
   | { kind: "failed"; error: IndividualsFileError };
 ```
 
@@ -456,7 +482,13 @@ would mislead whoever reads it there.
   (`docs/specs/worker/client.md`).
 - **An empty individuals file** is an answer, `individuals` with
   `{ kind: "failed", error: { kind: "empty" } }`, and not a failure of the
-  worker.
+  worker; so is an xlsx the reader refuses, `encrypted`, and a files wasm
+  that could not be downloaded, `xlsxReaderNotLoaded`.
+- **A read of an xlsx whose answer has a `found`**, or of a CSV whose
+  answer has none, passes the check, which does not know the request;
+  the reader never gives one, and core records the read under the
+  options it was asked with (`docs/specs/core/project.md`, "The
+  records").
 - **A `written` of no variant**, `passStats.numVars` 0, passes the check: popnei
   writes such a file (`docs/specs/worker/protocol.md`, "The cases"), and
   what the step does with it is its own.
@@ -487,7 +519,10 @@ File(["…"], "panel.nei")`.
   "progress", id: 3, bytesRead: 259376, numBytes: 261490, pass: 1,
   numPasses: 1 }`, and its `result`, a `write` and its `written`, whose
   file is `new Blob([new Uint8Array(3594)])`, a
-  `reopenFailed`, an `individuals` read and one refused, gives `ok` with a
+  `reopenFailed`, a `readIndividuals` with the options of a CSV and one
+  with `csv` `null`, an `individuals` read with a `found` and one with
+  `found` `null`, and one refused of each kind of the reader, the seven
+  of the xlsx among them, gives `ok` with a
   message deeply equal to it. A property, with fast-check drawing messages of every kind
   of the two answers: `parseFromRunner(structuredClone(m))` is `ok` and
   deeply equal to `m`, and the same for `parseFromFilesRunner`, since what
@@ -516,10 +551,13 @@ File(["…"], "panel.nei")`.
   with a filter; a `written` whose `numBytes` is 3593 and its file's
   `size` 3594, `wrongSize` at `result.numBytes` with `expected` 3594 and
   `found` 3593; one whose `file` is an `ArrayBuffer`, `wrongType`.
-- **The version**: a `ready` with `protocol: 1`, the walking skeleton's,
-  and no other field gives `otherProtocol` with 1 from both checks of the
-  page, and so does `protocol: 3` with 3; with `protocol: "2"`,
-  `wrongType`.
+- **The version**: a `ready` with `protocol: 2`, stage 3's, and no
+  other field gives `otherProtocol` with 2 from both checks of the page,
+  and so does `protocol: 4` with 4; with `protocol: "3"`, `wrongType`.
+- **The xlsx**: a `readIndividuals` whose `csv` is `{}`,
+  `missingFields`; a `found` of an xlsx with the fields of a `CsvFound`
+  but `undecodedLine`, `missingFields`; an `emptySheet` without its
+  `sheet`, `missingFields`.
 - **`describeMessageError`** names the path and the kind of the message:
   of `wrongType` at `job.filters.0.maxAllowedMissingRate` it gives a text
   that holds both; of that `wrongSize` it gives "The field
@@ -561,6 +599,15 @@ the user" of `worker.md` has it, so that a copy the engine makes of up to
 a gigabyte into the `Blob` is made off the page (`docs/architecture.md`,
 section 6, "The files written").
 
+From stage 4, one more, which the skill takes when the owner approves
+this revision: a files wasm that could not be downloaded is the answer
+`xlsxReaderNotLoaded`, and the light worker goes on, where the skill
+says nothing of it and treats a wasm that does not load as a worker that
+fails; and the refusals of the files crate that the user can mend are
+kinds of their own, `encrypted` among them, where the skill has every
+error of the files wasm sent as `files` with its message
+(`docs/specs/worker/files.md`, "The refusals").
+
 ## Open points
 
 None of its own.
@@ -578,8 +625,10 @@ None of its own.
 - Which transfers a result's arrays and which copies them:
   `.claude/skills/coding/worker.md`, "Sending results back", and the
   runner's spec.
-- The requests of the xlsx and of the zip of the report, and the refusal
-  of the files wasm: stages 4 and 6.
+- The request of the zip of the report, and of an xlsx written: stage 6.
+- What the light worker does to read an xlsx, and the files wasm it
+  loads for it: `docs/specs/worker/individuals.md` and
+  `docs/specs/worker/files.md`.
 - The request of the regions of a BED file, to the light worker, and a
   `written` of a VCF: with popnei's release that has the filter of the
   regions and the writer of the VCF.

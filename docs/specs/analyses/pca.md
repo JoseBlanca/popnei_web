@@ -1,0 +1,1393 @@
+# The principal components of the individuals
+
+Written on 27 September 2026, for stage 4 of `docs/build-order.md`, the
+Individuals step and the PCA. There is no code of it yet. This spec gives
+the analysis that places the individuals of a dataset on a few axes, to
+see its structure and check the populations against it: the module
+`src/core/analyses/pca.ts`, which says what the components are calculated
+from, which variants they read, when they cannot run, what they ask of
+the calculation worker, what they warn of, what they keep in the project
+file and write in the Python script; and, after it, the panel of
+`src/ui/analyses/pca/` that shows them, as a scatter plot in two
+dimensions and in three. It develops section 5 of `docs/functionality.md`
+and section 4 of `docs/architecture.md`, whose shape of an analysis it
+fills, with the row `analyses/` of its section 9. It depends on the specs
+of stage 3, `docs/specs/core/keys.md`, `store.md`, `project.md`,
+`individualsKept.md` and `docs/specs/worker/protocol.md` and `runner.md`,
+the last two revised for stage 4 beside this one; on the specs of the two
+plots written beside it, `docs/specs/charts/scatter.md` and `pca3d.md`;
+and on the revision of `docs/specs/core/project.md` for stage 4, the
+grouping of one population. What it relies on in them is listed at the
+end.
+
+The words of the documents used here, as `docs/specs/analyses/diversity.md`
+and `individualChecks.md` define them: the **key** of a result, a hash of
+everything it was calculated from, under which the store shows it, so
+that a change of any of those inputs takes the result off the screen and
+an undo brings it back from the cache with no calculation
+(`docs/architecture.md`, section 3); the **load** of the variants file,
+the id of one pick of it with its read options; a **pass**, one reading
+of the variants from the start of the file, through the **steps** put on
+popnei's `Variants`, the filters and the list of individuals; and the
+**check numbers**, a few numbers of a result saved in the project file,
+to compare a later run with. The **filters of the variants** are missing
+data, observed heterozygosity, the major allele frequency (MAF) and the
+LD pruning, in that fixed order, with the regions of a BED file first
+once popnei has that filter; the **filters of individuals** make one list
+of the individuals kept, which a job carries and the runner puts last
+(`docs/architecture.md`, sections 2 and 4). A **component** is one axis
+of the analysis, PC1 the one along which the individuals vary most; the
+**projection** of an individual on a component is its coordinate there;
+the **explained variance** of a component is the share of the variance
+of the individuals it holds, in percent.
+
+Decisions of the owner and of the writers of stage 4 that this spec
+takes, from the brief of the specs of stage 4 of 27 September 2026, are
+named where they apply; those recommended to the owner and not yet
+answered are listed in `docs/specs/stage-4-open-points.md`, and this spec
+writes them as decided meanwhile.
+
+## The module
+
+### What it does
+
+It gives, for each individual the filters keep, its projection on the
+first 10 components, and the explained variance of each, by one of two
+methods, which the user chooses:
+
+- **The PCA of the genotypes**, the default: each variant becomes one
+  number per individual, its dosage, the alleles of its genotype that
+  are not the major allele of the variant; popnei's
+  `doPcaFromVariants` of `js/popnei/src/pca.ts` centres and standardizes
+  each variant and takes the components of the individuals × individuals
+  matrix. A missing genotype takes the mean dosage of its variant, so
+  that it pulls its individual nowhere (the doc comment of
+  `doPcaFromVariants`).
+- **The PCoA of the Kosman distances**, a principal coordinate analysis:
+  the Kosman distance of every pair of individuals, the mean over the
+  variants both have called of how many alleles differ, divided by the
+  ploidy (`calcPairwiseKosmanDists` of `js/popnei/src/dists.ts`), and the
+  components of the space where the individuals lie at those distances,
+  as nearly as a space can. Each pair is compared over its own variants,
+  so an individual with many missing genotypes is not drawn toward the
+  centre, which is what it is for (`docs/functionality.md`, section 5).
+  popnei gives it as `doPcoaFromVariants`, which the owner asked of
+  popnei on 27 September 2026 and which popnei's draft spec describes,
+  "The principal coordinates of distances" of `docs/specs/pca.md` on its
+  branch `spec/pcoa`; every name of it this spec uses is provisional, and
+  is listed in "The names of popnei's PCoA, provisional", below.
+
+Both read the same variants, the dataset's filters with the PCA's own
+MAF filter and pruning, so that the two can be compared, and both give
+the same shape of result, so that one panel and one plot draw either.
+One analysis with the method as its option, and not two analyses, is the
+writers' decision of 27 September 2026 (the brief of stage 4): one panel,
+one plot, and the GWAS of stage 7 takes the components as covariates
+whichever the method.
+
+Every number is popnei's. In each component popnei makes the projection
+of the largest absolute value positive, so that the same data give the
+same signs in TypeScript and in Python (`PcaResult` of `pca.ts`).
+
+What a user would see go wrong because of this module, and what the
+rules below prevent: a plot of other filters shown as current, when the
+key misses an input; a plot taken off the screen, and minutes of
+calculation, for a change of its colours; a PCA refused with a message
+about its arguments, when the module could have said beforehand what
+was missing; a PCA dominated by a linked region, or drawn from a handful
+of variants, with no word of it.
+
+### Which variants it reads
+
+popnei takes one filter of each kind on a `Variants`, and a second of one
+kind throws (`docs/specs/worker/protocol.md`), so the PCA cannot add its
+MAF filter to a dataset that has one. The job carries the dataset's
+filters of the variants, in their fixed order, with two changes, as the
+brief of stage 4 recommended to the owner on 27 September 2026
+(meanwhile, point 2 of `docs/specs/stage-4-open-points.md`):
+
+- **The MAF filter is the stricter of the dataset's and the PCA's own**,
+  the smaller of the two thresholds, since popnei keeps a variant whose
+  major allele frequency is at most the threshold; it is in the
+  dataset's MAF filter's place, or, when the dataset has none, in the
+  place of the MAF in the fixed order, after missing data and observed
+  heterozygosity.
+- **One LD pruning, last among the filters of the variants**: the
+  dataset's when it has one, since `docs/functionality.md` section 5 has
+  the PCA not prune again then; otherwise the PCA's own when its pruning
+  is on; otherwise none.
+
+Then the list of the individuals kept, last, as for every analysis
+(`docs/architecture.md`, section 2). So the frequencies and the r² of the
+pruning are counted over every individual of the file, as the dataset's
+filters are, and which individuals are removed changes no variant the PCA
+reads. The option not taken was the individuals first, for the PCA alone,
+which would count the frequencies over the individuals analysed at the
+cost of a pass whose variants depend on the individuals kept, unlike
+every other pass of the application.
+
+`pcaFilters(filters, options)` makes that list, a pure function of the
+project's filters and the options. Worked examples, for the filters of a
+first project, the missing data filter at 0.1 (`firstProject` of
+`src/core/apps.ts`), and the PCA's defaults, the MAF at 0.95 and the
+pruning at r² 0.1 within 50,000 base pairs:
+
+| the dataset's filters | the PCA's options | the filters of the job |
+|---|---|---|
+| missing data 0.1 | defaults | missing data 0.1, MAF 0.95, LD r² 0.1 within 50,000 |
+| missing data 0.1, MAF 0.9 | defaults | missing data 0.1, MAF 0.9, LD r² 0.1 within 50,000 |
+| missing data 0.1, MAF 0.98 | defaults | missing data 0.1, MAF 0.95, LD r² 0.1 within 50,000 |
+| missing data 0.1, heterozygosity 0.9, LD r² 0.3 within 10,000 | defaults | missing data 0.1, heterozygosity 0.9, MAF 0.95, LD r² 0.3 within 10,000 |
+| missing data 0.1, MAF 0.9, LD r² 0.3 within 10,000 | defaults | missing data 0.1, MAF 0.9, LD r² 0.3 within 10,000 |
+| none | pruning off | MAF 0.95 |
+| missing data 0.1 | MAF 1, pruning off | missing data 0.1, MAF 1 |
+
+A MAF of 1 keeps every variant; the MAF filter is always in the job, so
+that the user's number is always the one popnei is given
+(`docs/specs/worker/protocol.md`, "The number the user types").
+
+The pass of the PCA has other filters than the project's, so the counts
+of its filters are not those beside the filters of the Variants step,
+and it fills none: `countsOf` of `src/core/apps.ts` gives `null` counts
+for it, and the number of variants of the file, `varsProcessed` of its
+first filter, which is the whole file whatever the filter
+(`docs/specs/analyses/filterCounts.md`, "Which results fill it").
+
+### Its options
+
+The options of the analysis, as the project holds them, `PcaOptions`:
+
+| option | what it is | default | from |
+|---|---|---|---|
+| `method` | `"pca"`, the PCA of the genotypes, or `"pcoa"`, the PCoA of the Kosman distances | `"pca"` | `docs/functionality.md`, section 5 |
+| `maxAllowedMaf` | the PCA's maximum major allele frequency, a number from 0 to 1 | 0.95 | `docs/functionality.md`, sections 3 and 5 |
+| `ldPruning` | the PCA's own LD pruning, `{ maxAllowedR2, maxDist }`, the largest r² between two variants kept and the window in base pairs, or `null` for off | `{ maxAllowedR2: 0.1, maxDist: 50000 }` | the brief of stage 4, point 3 (below) |
+| `colourBy` | the column of the individuals file whose values colour the points, or `null` for the populations of the grouping | `null` | `docs/functionality.md`, section 5 |
+| `axes` | the three components drawn, from 1: the 2D plot shows the first against the second, the 3D plot all three | `[1, 2, 3]` | `docs/functionality.md`, section 5 |
+| `view` | `"2d"` or `"3d"` | `"2d"` | the brief of stage 4, point 5 |
+
+The names of the thresholds are those of the filters of
+`docs/specs/worker/protocol.md`, which are popnei's arguments, so that
+`pcaFilters` copies them and a reader of the project file finds one name
+for one number. The brief of stage 4 named them `maxMaf` and `maxR2`; the
+change is this spec's.
+
+**The pruning at r² 0.1 within 50,000 base pairs, on by default**, is the
+recommendation of the brief of stage 4 to the owner (meanwhile, point 3
+of `docs/specs/stage-4-open-points.md`). popnei gives no default. On
+popnei's LD test file, at 50,000 base pairs, plink2 at r² 0.3 keeps 41
+variants where popnei keeps 46 at 0.15 and 35 at 0.1
+(`docs/specs/filters.md` of popnei, near its line 940), so a threshold of
+popnei is lower than a habit of plink; 0.1 keeps no more than plink's
+common setting. The LD filter of the dataset, which starts at r² 0.3
+within 10,000 base pairs (stage 3), is another thing, a thinning of the
+dataset. On `panel.nei` the default pruning keeps 535 of the 1,175
+variants the MAF filter leaves (below, "How it is verified").
+
+**The last three options change nothing that is calculated.** They are
+saved in the project file with the others, so that a project opens with
+the plot as the user left it, and a change of one is a command, a step of
+Undo, that removes no result, since the key leaves them out (below). They
+are options of the analysis, and not state of the screen, because the
+project file restores what the user set, and the report of stage 6 draws
+the plot as the user drew it. The writers decided so on 27 September
+2026 (the brief of stage 4).
+
+`pcaOptions(p)` gives the options of the project for `pca`, or
+`PCA_DEFAULTS`.
+
+`parseOptions(o, 1)` gives back an object with exactly the six fields:
+`method` `"pca"` or `"pcoa"`; `maxAllowedMaf` a number from 0 to 1;
+`ldPruning` `null` or an object of exactly `maxAllowedR2`, a number from
+0 to 1, and `maxDist`, a whole number from 1 to 9,007,199,254,740,991,
+the ranges popnei's `filterByMaf` and `filterByLd` accept; `colourBy` a
+text or `null`, not checked against the table, which a later file may
+change; `axes` three different whole numbers from 1 to 10,
+`PCA_NUM_COMPS_KEPT`; and `view` `"2d"` or `"3d"`. Anything else is
+refused with the words that follow "should be" in `projectErrorText`:
+"the method, "pca" or "pcoa"; the maximum major allele frequency, a
+number from 0 to 1; the LD pruning, null or its maximum r², a number
+from 0 to 1, with its window, a whole number of base pairs from 1 to
+9,007,199,254,740,991; the column that colours the points, a text or
+null; three different components from 1 to 10 for the axes; and the
+view, "2d" or "3d"; and nothing else". Every later version of the format
+reads version 1 so (`docs/architecture.md`, section 12).
+
+### What goes into its key
+
+`filtersRead` is `{ variants: true, individuals: true }`: every filter
+changes the variants or the individuals the components are made of.
+`keyOf` of `docs/specs/core/keys.md` puts in itself the id `pca`, the key
+version, the version of popnei, the load and both lists of filters.
+
+`keyInputs(p)` gives the rest:
+
+```ts
+{ method: "pca" | "pcoa", filters: pcaFilters(p.filters, pcaOptions(p)) }
+```
+
+the method, and the filters popnei is given, which hold the PCA's MAF and
+pruning as they reach popnei. So a change of the PCA's MAF that the
+dataset's stricter one overrides, or of its pruning while the dataset
+prunes, keeps the key, and takes nothing off the screen for a change
+that changes no number. The dataset's filters are in the key twice, once
+from `keyOf` and once here; that costs a few bytes of text to hash.
+
+Not in the key:
+
+- **`colourBy`, `axes` and `view`**, which draw the result and are not
+  inputs of it. In the key, a change of the colours would take the plot
+  off the screen and ask minutes of calculation for the same numbers.
+- **The individuals file and the grouping**, which only colour the
+  points: changing the column of the populations changes the key of the
+  diversity and not that of the PCA (`docs/architecture.md`, section 3).
+  So a PCA calculated before the metadata file is loaded is shown after
+  it, coloured by it, with no calculation.
+- The options of the other analyses, the reference of an opened project
+  file.
+
+The key version is 1.
+
+| change to the project | the key |
+|---|---|
+| a new load of the variants file, the same file included; the ploidy or `onlyPassed` of a VCF | changes |
+| a filter of the variants added, removed, or its threshold | changes |
+| a filter of individuals, a list or a threshold, whether or not it keeps other individuals | changes |
+| `method` | changes |
+| `maxAllowedMaf` or `ldPruning`, when it changes the filters of the job | changes |
+| `maxAllowedMaf` above the dataset's MAF, or `ldPruning` while the dataset prunes | same |
+| `colourBy`, `axes`, `view` | same |
+| the individuals file, its types, the grouping | same |
+| the options of another analysis, the reference | same |
+| the key version, the version of popnei | changes |
+
+### Why it cannot run
+
+The store asks `projectNeeds` and, since the PCA reads the filters of
+individuals, `individualListNeeds` of `docs/specs/core/project.md` first,
+and the two locks of the individuals kept, which read the cache
+(`docs/specs/core/store.md`, "The state of an analysis"). Then `needs(p)`
+gives the first of these:
+
+| the project | the reason |
+|---|---|
+| more individuals in the variants file than the method's limit, 9,381 for the PCA and 8,695 for the PCoA | "panel.nei has 12,000 individuals, and the principal components of more than 9,381 need more memory than a browser tab can hold. Calculate them with popnei in Python, outside the browser." For the PCoA, "…the principal coordinates of more than 8,695…" |
+| any reason of `individualsNeeds` of `project.md`: the metadata file being read, "Reading pops.csv."; its read refused or failed; individuals of the variants missing from it, "12 individuals of panel.nei are not in pops.csv: ind_031, ind_044 and 10 more. Add them to the file and load it again in the Individuals step." | its words |
+
+**The limit on the individuals.** popnei refuses a PCA of more than
+9,381 individuals, since the individuals × individuals matrix, its
+eigenvectors and the workspace of the decomposition take about 6.1 × 8
+bytes per pair, more than the 4 GB wasm addresses at 9,382
+(`room_for_the_square_of` of `crates/popnei-js/src/pca.rs` of popnei;
+`docs/architecture.md`, section 11). It refuses before the pass, in 1 ms,
+and it counts the individuals of the file and not those the list of
+individuals keeps: in node, with the release, a VCF of 9,382 individuals
+with `filterIndividuals` of 100 of them was refused with the same
+message, "the principal components of 9382 individuals hold about 5 GB,
+…" (27 September 2026, `js-v0.1.0-dev.2`; the same code is on popnei's
+`main` at `2d2229c`). So the lock counts the individuals of the file,
+and its words do not offer the filters of individuals, which would not
+help. popnei is asked to count the individuals of the pass (below,
+"What this spec asks of popnei"); when it does, the lock counts the
+individuals the lists keep, `byLists` of `individualsKept`, and its words
+end "Keep at most 9,381 with the filters of individuals in the Variants
+step, or calculate them with popnei in Python, outside the browser.", and
+a threshold that leaves more is told by popnei's refusal after the Run,
+as the diversity's empty populations are. The PCoA's 8,695 is popnei's
+draft, worked out and not yet measured there (`PCOA_MAX_INDIVIDUALS`,
+provisional).
+
+**The metadata file, which only colours.** The PCA locks while the
+individuals file is being read, when it could not be read, and when it
+lacks individuals of the variants, as every analysis that reads the file
+does, although the PCA reads it only for its colours. `docs/functionality.md`
+section 4 has the application run nothing until such a file is fixed, and
+a plot coloured by a file that is not the one the user loaded, or with
+individuals of no colour for a reason the legend would not give, is a
+plot that misleads without a warning. What the lock costs is small: the
+key holds nothing of the file, so the result stays in the cache, and it
+is on the screen again with no calculation as soon as the file is read,
+or fixed and loaded again. The option not taken was to run and draw
+through a bad file, coloured as one group, with a line naming its
+problem. A project with no individuals file is not locked: from stage 4
+the file is optional, and the points are then of one group, "All
+individuals" (the writers' decision of 27 September 2026, the brief of
+stage 4). While the result is locked the store makes no key for it, so
+the cache may drop it to stay under its bound (`docs/specs/core/cache.md`),
+which a PCA of a few hundred kilobytes makes unlikely.
+
+`needs` gives no reason about the column of the populations, which
+locks the diversity (`populationsNeeds` of `docs/specs/analyses/diversity.md`):
+with no column chosen the points are of one group, and the panel says
+why (below, "Its words").
+
+### The request
+
+`run(p, c)` sends, through the client the store bound to its key:
+
+```ts
+{
+  analysis: "pca",
+  fileId: p.variants.fileId,
+  filters: pcaFilters(p.filters, pcaOptions(p)),
+  individuals: c.individuals,   // the individuals kept; null when the filters remove nobody
+  method: "pca",                // or "pcoa"
+  numCompsKept: 10,             // PCA_NUM_COMPS_KEPT
+}
+```
+
+What the runner does with it (`docs/specs/worker/runner.md`, "The
+principal components"): it puts the filters of the job on the open
+`Variants` in their order and the list after them, as for any job; for
+the PCA it calls `doPcaFromVariants(variants, { numPrinComps: 0,
+transformToBiallelic: true })`, and for the PCoA `doPcoaFromVariants(
+variants)`, with no option; and it keeps the first `numCompsKept`
+components of what popnei gives.
+
+- **`numPrinComps: 0`** asks popnei for no weights of the variants, which
+  makes one pass over the file instead of two:
+  `numPassesOf("doPcaFromVariants", { numPrinComps: 0 })` is 1 and
+  without it 2, in node with the release on 27 September 2026. The screen
+  shows no weights, the writers' decision of 27 September 2026.
+- **`transformToBiallelic: true`** counts every allele that is not the
+  major one the same, which gives a variant of more than two alleles a
+  dosage; popnei refuses such a variant otherwise, and a user could not
+  mend the file in the application. popnei does not say how many such
+  variants there were, so no warning counts them, and the help says it
+  (meanwhile, point 4 of `docs/specs/stage-4-open-points.md`). The Kosman
+  distance takes any number of alleles.
+- **The first 10 components are kept**, `PCA_NUM_COMPS_KEPT`, the
+  writers' decision of 27 September 2026. popnei gives every component
+  with variance, the individuals less one at most, and the projections of
+  all of them at 9,381 individuals would be 9,380 × 9,381 × 8 bytes, 704
+  MB, above the 256 MB bound of the cache of the page. The explained
+  variance of each of the 10 is popnei's, over the variance of every
+  component, so the 10 add up to less than 100%. The GWAS of stage 7
+  takes its components within these 10. The number goes in the job, and
+  not in a constant of the runner, since the runner imports nothing of
+  core and the options of the axes are checked against it.
+
+The result, a member of `JobResult`:
+
+```ts
+{
+  analysis: "pca",
+  method: "pca",                        // as the job had it
+  individuals: readonly string[],       // those of the pass, in the order of the file
+  numComps: number,                     // the components kept: the smaller of 10 and numCompsFound
+  numCompsFound: number,                // every component with variance that popnei gave
+  projections: Float64Array,            // individuals × numComps, row after row
+  explainedVariancePercent: Float64Array, // numComps, over the variance of every component
+  numVarsUsed: number | null,           // the PCA: the variants with variance it used; the PCoA: null
+  negativeEigenvaluesPercent: number | null, // the PCoA: its part left out (below); the PCA: null
+  passStats: PassStats,                 // the counts of its pass, which fill no counts
+}
+```
+
+`numVarsUsed` is the length of popnei's `usedVars`: a variant whose
+called genotypes all have one dosage has no variance and is left out.
+`numCompsFound` lets the panel say how many components there were,
+"PC1 to PC10 of 199".
+
+popnei refuses the call, with a plain `Error`, in the cases its
+`@throws` lists; the module rules out those it can see (the limit on the
+individuals, above; the options, by `parseOptions`), and these reach the
+user as the panel's error words (below, "Its words"):
+
+- **No variant left**: "there are no variants to do a PCA with", with no
+  counts, whether the file holds none or the filters kept none, seen in
+  node with the release on 27 September 2026 for a VCF of a header
+  alone, with and without a MAF filter, and for `panel.nei` with the
+  missing data filter at 0.05 and a MAF filter at 0. It is not the "the
+  pass gave no variant: …" of the other calculations of popnei, which
+  tells the two apart; popnei is asked for it (below).
+- **No variant with variance**: "no variant has more than one dosage
+  among its called genotypes, so none of them varies and there is
+  nothing to do a PCA with", which one individual kept gives: `panel.nei`
+  with the MAF filter at 0.95 and a list of one individual, in node on the
+  same day.
+- **A source not sorted, with an LD pruning**: popnei's LD filter compares
+  a variant with those kept behind it on its chromosome, and refuses, at
+  the pass, a variant whose position falls below the one before it: "the
+  variant 2 of the ones the filter by linkage disequilibrium has read, on
+  the chromosome 1, does not come after the one before it, …; give it a
+  source whose variants come with each chromosome together and in the
+  order of their positions, which `bcftools sort` writes". The same file
+  with the pruning off gives a result. The PCA meets it more than any
+  other analysis, since its pruning is on by default.
+- **A VCF of another ploidy, a line of a VCF popnei cannot read**, as for
+  every analysis.
+- **The PCoA**: a pair of individuals with no variant called in both has
+  no Kosman distance, and popnei's draft refuses the PCoA then, with a
+  message that counts such pairs, names the first and the individual in
+  most of them; and a dataset whose distances are all 0.
+
+### The warnings
+
+`warnings(r, p)` gives them from the result and the project of the
+request, in this order; each has its code, which the tests assert, and
+its text.
+
+| code | when | the text |
+|---|---|---|
+| `pruningOff` | the job had no LD filter: the PCA's pruning off and none in the dataset | "The LD pruning is off, so a region of the genome counts once for each of its variants, and a region of many variants in linkage disequilibrium, such as an inversion, can make a component of its own that separates the individuals by that region rather than by their ancestry. Turn the pruning on, unless such regions are what you are looking for." |
+| `fewVariants` | fewer variants used than individuals: `numVarsUsed` for the PCA, `passStats.numVars` for the PCoA, below `individuals.length` | "The PCA used 150 variants that vary among its 200 individuals, fewer variants than individuals, so each component rests on few variants and can show chance differences as structure. If the dataset has more, loosen the filters in the Variants step, or the maximum major allele frequency or the LD pruning of the PCA." For the PCoA: "The PCoA used 150 variants for its 200 individuals, …" |
+| `negativeEigenvalues` | the PCoA, `negativeEigenvaluesPercent` above 5 | "The Kosman distances between these individuals cannot all be drawn in one space: 7.9% of their variance lies in directions no space has, and the PCoA leaves it out. So the percentages of its components add up to more than 100, and the distance drawn between two individuals can be longer than their Kosman distance, never shorter. The PCA of the genotypes has no such part; compare the two." |
+
+The warning of functionality section 5, that linked regions can dominate
+the components, is `pruningOff`. Its condition is the job's filters and
+not the option, so that a PCA whose dataset prunes does not warn of a
+pruning that is on.
+
+`fewVariants` at fewer variants than individuals, the brief's example, is
+the writers': below it the matrix of the individuals has no more
+components with variance than variants, and each component is estimated
+from few. On `panel.nei` the default pruning uses 535 variants for 200
+individuals, and no warning.
+
+`negativeEigenvalues` above 5%, `NEGATIVE_EIGENVALUES_WARN_PERCENT`, is
+decided here. popnei's draft gives the share of the variance of the
+distances that lies in negative eigenvalues, `negativeEigenvaluesPercent`,
+and leaves the value to warn at to the application; it gives 2.98 for the
+Kosman distances of its panel of 200 individuals and 7.88 for the ten
+distances of pyNei's test. At 5% the components overstate the variance
+of the distances by a twentieth; the share is shown under the plot of
+every PCoA whatever it is (below, "What it shows"), so a lower share is
+read there. The number is written to one decimal, "7.9%".
+
+Two things the brief asked to weigh are not warnings of the module:
+
+- **More than 9,381 individuals** is a lock before the Run, above, and
+  not a warning after it, since popnei refuses it before any pass.
+- **Individuals with many missing genotypes**, which the PCA draws toward
+  the centre, since a missing genotype takes the mean dosage: an
+  individual missing everywhere is drawn at 0 on every component, seen in
+  node on a VCF of three individuals whose third had no genotype. A
+  warning is made from the result and the project alone, and neither
+  holds how many genotypes each individual lacks: popnei's
+  `doPcaFromVariants` does not give it, and a warning cannot run a
+  calculation. The statistics of each individual, `individualChecks`,
+  count it, over the variants of the dataset's filters, which are the
+  PCA's but for its MAF and pruning. So the panel shows a note made from
+  them when they are in the cache for the filters as they are, and
+  nothing when they are not (below, "The note of the missing genotypes";
+  **Open 2**). popnei is asked for the called genotypes of each
+  individual with the PCA, which would make it a warning.
+
+### The check numbers
+
+`checkNumbers(r)` gives four: `passStats.numVars`, the variants the pass
+gave; and the explained variance of PC1, PC2 and PC3, `null` for a
+component the result does not have. `numCheckNumbers(p)` gives 4. The
+store compares them exactly (`docs/specs/core/store.md`, "The comparison
+with the check numbers"), which holds for the PCA: the eigendecomposition
+is popnei's compiled Rust in the same wasm, and four runs of the default
+PCA on `panel.nei` in one process, one of them after a diversity, gave
+the same percentages and projections to the last bit (node, the release,
+27 September 2026). A new release of popnei may give other last digits,
+and the comparison then names both versions, as for any analysis.
+
+- **The number of variants**, and not `numVarsUsed`, because it means
+  the same for both methods: the PCoA uses no count of variants with
+  variance. A file with the same individuals and other variants gives
+  another number here.
+- **The percentages of the first three components** say how the variance
+  of the dataset is shared, which a file with other genotypes changes.
+  They depend on no sign.
+- **No projection**, though the sign rule makes them stable: a projection
+  checks one individual, chosen by a rule of its own, where the
+  percentages move with the genotypes of every individual; and it hangs
+  on the sign rule, which a tie of two projections of the same size and
+  opposite sign could turn round in a new release.
+
+Four numbers, and not the ten percentages, for a check that three make
+as well. The fingerprint of the settings, which the comparison needs to
+be the file's, holds the method and the filters of the job, so the four
+numbers are only compared with those of the same method.
+
+### Its lines of the Python script
+
+`script(p)` gives the lines that calculate the same components with the
+Python API of popnei, after the lines of `src/core/script.ts`, in stage
+6. popnei puts a filter on a `Variants` for good, and the script's
+`variants` holds the dataset's filters already, so the PCA opens the file
+again into a `Variants` of its own, with the call that opened it, and
+puts on it the filters of the job, from `pcaFilters`, and the list of the
+individuals kept, `individuals_kept`, which `script.ts` makes before
+`variants.filter_individuals` (`docs/specs/analyses/individualChecks.md`,
+"Its lines of the Python script"), when the project has a filter of
+individuals. For the project of the flow below, `panel.nei` with the
+filters of a first project and the PCA's defaults:
+
+```python
+# The principal components of the individuals, a PCA of the genotypes,
+# over the filters of the dataset, the PCA's maximum major allele
+# frequency and its LD pruning, on a Variants of its own
+pca_variants = popnei.open_vars("panel.nei")
+pca_variants.filter_by_missing_data(0.1)
+pca_variants.filter_by_maf(0.95)
+pca_variants.filter_by_ld(0.1, 50000)
+pca = popnei.do_pca_from_variants(
+    pca_variants, transform_to_biallelic=True, num_prin_comps=0
+)
+print(pca.explained_variance_percent.iloc[:10].to_string())
+print(pca.projections.iloc[:, :10].to_string())
+```
+
+A VCF is opened with `popnei.open_vcf("panel.vcf.gz", ploidy=2,
+only_passed=True)`, its read options written out; a filter of
+individuals adds `pca_variants.filter_individuals(individuals_kept)`
+after the filters. The PCoA calls `pcoa = popnei.do_pcoa_from_variants(
+pca_variants)` in the place of `do_pca_from_variants`, and prints
+`pcoa.negative_eigenvalues_percent` as well, with popnei's draft names,
+provisional. popnei names the components `PC0`, `PC1`, … in Python, with
+zeros on the left, `PC000` for 199, where the application writes PC1 to
+PC10, as a user reads them; the help says so.
+
+These lines, with the missing data filter at 0.05 in the place of 0.1,
+were run with popnei's Python package, built natively from popnei's
+`main` at `2d2229c`, on 27 September 2026: PC1 to PC3 explained
+3.5791902392779886, 3.459168102873343 and 1.9063456362555027, where the
+wasm of the release gives 3.5791902392779953, 3.4591681028733494 and
+1.9063456362555034, the same to 13 significant digits. The native build
+decomposes with another library than the wasm, so the script gives the
+application's numbers to about 1e-14 and not to the last digit, and the
+comparison of the check numbers is between runs of the application
+alone. The warnings as comments come in stage 6 with `script.ts`.
+
+### The TypeScript interface
+
+The request and the result are members of `Job` and `JobResult` of
+`src/worker/protocol.ts`:
+
+```ts
+export interface PcaJob {
+  readonly analysis: "pca";
+  readonly fileId: string;
+  readonly filters: readonly VariantFilter[];   // pcaFilters of the project's
+  readonly individuals: readonly string[] | null;
+  readonly method: "pca" | "pcoa";
+  readonly numCompsKept: number;                // PCA_NUM_COMPS_KEPT, a whole number from 1
+}
+
+export interface PcaResult {
+  readonly analysis: "pca";
+  readonly method: "pca" | "pcoa";
+  readonly individuals: readonly string[];
+  readonly numComps: number;
+  readonly numCompsFound: number;
+  readonly projections: Float64Array;
+  readonly explainedVariancePercent: Float64Array;
+  readonly numVarsUsed: number | null;
+  readonly negativeEigenvaluesPercent: number | null;
+  readonly passStats: PassStats;
+}
+```
+
+The module exports its definition, which `src/core/apps.ts` lists for
+both applications, and what the panel reads:
+
+```ts
+export const pca: AnalysisDef<Job, JobResult>;
+// id "pca"; app ["popgen", "gwas"]; keyVersion 1;
+// filtersRead { variants: true, individuals: true }; defaults PCA_DEFAULTS
+
+export interface PcaOptions {
+  readonly method: "pca" | "pcoa";
+  readonly maxAllowedMaf: number;
+  readonly ldPruning: { readonly maxAllowedR2: number; readonly maxDist: number } | null;
+  readonly colourBy: string | null;
+  readonly axes: readonly [number, number, number];
+  readonly view: "2d" | "3d";
+}
+export const PCA_DEFAULTS: PcaOptions;             // frozen, the table of "Its options"
+export const PCA_NUM_COMPS_KEPT = 10;
+export const PCA_MAX_INDIVIDUALS = 9381;           // popnei's limit
+export const PCOA_MAX_INDIVIDUALS = 8695;          // popnei's draft, provisional
+export const NEGATIVE_EIGENVALUES_WARN_PERCENT = 5;
+export const MANY_MISSING_RATE = 0.2;              // the note of the missing genotypes
+
+/** The options of the project for the PCA, or the defaults. */
+export function pcaOptions(p: Project): PcaOptions;
+
+/** The filters of the job: the project's, with the stricter MAF and one
+    LD pruning (above, "Which variants it reads"). The same frozen value
+    for the same inputs. */
+export function pcaFilters(filters: readonly VariantFilter[], o: PcaOptions): readonly VariantFilter[];
+
+/** How the individuals of a result are coloured (below, "The colours"):
+    by groups, or by the numbers of a continuous column. The panel gives
+    the plots the `PointColours` of `src/charts/marks.ts` made of it, with
+    the group it highlights; core imports nothing of `src/charts`. */
+export type PcaColours =
+  | {
+      readonly kind: "groups";
+      readonly title: string;                 // "Population", or the column's name
+      readonly names: readonly string[];      // in the order of first appearance
+      readonly group: Uint16Array;            // of each individual of the result; 0xffff, NO_GROUP, for none
+      readonly counts: readonly number[];     // the individuals of each group
+      readonly numNone: number;               // those in no group
+      readonly noneName: "No population" | "No value";
+      readonly note: string | null;           // why the colours are not those the options ask
+    }
+  | {
+      readonly kind: "values";
+      readonly title: string;                 // the column's name
+      readonly values: Float64Array;          // of each individual of the result; NaN for none
+      readonly numNone: number;
+      readonly noneName: "No value";
+      readonly note: string | null;
+    };
+export function pcaColours(r: PcaResult, p: Project): PcaColours;
+
+/** The columns the colour can be taken from: every column of the table
+    but the first, the identifiers, in its order. */
+export function colourColumns(p: Project): readonly string[];
+
+/** The components drawn, from the options and the result, and the line
+    that says why they are not those chosen, or null. */
+export function axesShown(o: PcaOptions, r: PcaResult):
+  { readonly axes: readonly number[]; readonly note: string | null };
+
+/** The rows of the table, one per individual in the order of the result,
+    and the table as the text of a CSV file; the same array for the same
+    result and groups. */
+export interface PcaRow {
+  readonly individual: string;
+  readonly colour: string | number | null;   // its group's name, or its value; null for none
+  readonly projections: readonly number[];   // numComps
+}
+export function pcaRows(r: PcaResult, c: PcaColours): readonly PcaRow[];
+export function pcaCsv(r: PcaResult, c: PcaColours): string;
+export function varianceCsv(r: PcaResult): string;
+
+/** The text a screen reader reads for the plot (below, "Accessibility"). */
+export function pcaDescription(r: PcaResult, c: PcaColours, axes: readonly number[],
+  highlighted: number | null, p: Project): string;
+
+/** The note of the individuals with many missing genotypes, from the
+    statistics of each individual when the store has them for the filters
+    as they are, or null. */
+export function manyMissingNote(r: PcaResult, stats: IndividualStats | null, p: Project): string | null;
+
+/** The words of a refusal of popnei, and of the statistics that a Run
+    waited for and that failed, for the error state of the panel. */
+export function refusalText(message: string, p: Project): string;
+export function statisticsFailedText(
+  error: AnalysisError, p: Project, failureText: (failure: Failure) => string,
+): string;
+```
+
+`warnings` and `checkNumbers` throw a defect for a result of another
+analysis, as the diversity's do. `pcaRows` keeps its rows by the result
+and the groups in a `WeakMap`, and `pcaFilters` its list by the project's
+filters and the options, so that a screen drawn again gets the same
+arrays (`.claude/skills/coding/react.md`, "Reading core"). The names of
+the files downloaded are made from the stem of the variants file,
+`variantsStem` of `src/core/fileNames.ts`.
+
+### The colours
+
+`pcaColours(r, p)` gives how each individual of the result is coloured,
+in the two ways the scatter draws (`docs/specs/charts/scatter.md`, "The
+colours: groups, or the values of a column"):
+
+- **`colourBy` null, the populations of the grouping**, as groups titled
+  "Population". With a column of the populations chosen, its values;
+  with the grouping of one population, or no metadata file, one group,
+  "All individuals"; with a metadata file and no column chosen yet, one
+  group, "All individuals", and the note "The column of the populations
+  is not chosen, so the points are of one colour. Choose it in the
+  Individuals step, or colour them by another column."
+- **`colourBy` a categorical or binary column**, as groups titled by the
+  name of the column, a group by the text of each cell, a number or a
+  boolean of an xlsx written with `String`, as the diversity names its
+  populations.
+- **`colourBy` a continuous column**, as values: the number of each cell,
+  read as the reader of the individuals file reads a number, with the
+  decimal mark of the read, `cellNumber` of
+  `docs/specs/worker/individuals.md`, the point for an xlsx. The scatter
+  colours them along viridis, and a colouring by values has no highlight.
+- **`colourBy` a column the table does not have**, after a new metadata
+  file without it: the populations of the grouping, as for `null`, and
+  the note "pops.csv has no column country, by which the points were
+  coloured, so they are coloured by the populations." The option stays
+  as it was, so that loading the file with that column again, or an
+  undo, colours by it again; it is not changed without a command of the
+  user.
+
+The type of the column, as the user set it in the Individuals step,
+decides between groups and values, so a score from 1 to 5 set as
+categorical colours five groups. An individual whose cell is missing is
+in no group, `NO_GROUP`, or has NaN, and the legend names it "No
+population", or "No value" for another column, last, with its count; the
+scatter draws it as a ring (`scatter.md`). The groups are in the order in
+which each first appears in the file, as the diversity's populations; a
+group none of whose individuals is in the result is not listed. The
+identifiers are not offered, since each individual would be a group of
+one. The plots give group `i` colour `i % 7` and shape `(i + ⌊i / 7⌋) %
+7`, 49 different marks (`.claude/skills/coding/charts.md`, "Not colour
+alone"); past 49 groups the marks repeat, and the legend and the table,
+which name each individual's group, still tell them apart, so the panel
+adds the line "The 60 values of collection are drawn with 49 marks, which
+repeat; the legend and the table tell them apart."
+
+### The note of the missing genotypes
+
+For the PCA, not the PCoA, `manyMissingNote` names the individuals of the
+result whose proportion of missing genotypes is above `MANY_MISSING_RATE`,
+0.2, in the statistics of each individual that the store holds for the
+filters as they are (`docs/specs/analyses/individualChecks.md`):
+
+"s012 and s044 lack more than 20% of their genotypes among the variants
+the filters of the Variants step keep. The PCA gives a missing genotype
+the mean of its variant, which draws an individual toward the centre of
+the plot about as much as it lacks. The PCoA of the Kosman distances
+compares each pair over the variants both have called, and does not."
+
+With more than three, the first two and how many more, as `project.md`
+lists individuals. 0.2 is decided here: the projection of an individual
+shrinks toward the centre roughly in proportion to its missing share, so
+at 0.2 it is drawn about a fifth of the way in, which moves a point off
+its cluster on the plot. The statistics count over the dataset's filters
+and not over the PCA's MAF and pruning, which the words say. The note is
+not a warning: it is not kept with the result nor in the report, and it
+comes and goes with the statistics in the cache (**Open 2**).
+
+### The cases
+
+- **Two individuals.** One component has variance, PC1, 100%, with `s000`
+  at 18.78829422805594 and `s001` its opposite, in node with the MAF
+  filter at 0.95 and the list of the two (27 September 2026, the
+  release). There is no plot: the panel shows the table and the line
+  "Only one component has variance, since 2 individuals have one axis
+  between them, so there is no plot; the table gives each individual's
+  place on it." Three individuals give two components, a 2D plot and no
+  3D.
+- **The filters keep no variant, or the file holds none.** popnei refuses
+  with "there are no variants to do a PCA with"; the store keeps the
+  refusal under the key (`docs/specs/core/store.md`, "A calculation that
+  failed").
+- **No variant varies among the individuals kept**, as with one
+  individual: refused, above.
+- **More than 9,381 individuals** in the variants file: locked, above.
+- **A cancel** ends the worker wherever it is, the decomposition
+  included, and the store keeps no result (`docs/architecture.md`, section
+  5); a restart of the worker loses nothing of the PCA's, which keeps no
+  intermediate result.
+- **A result that arrives after a change.** It goes into the cache under
+  the key it was asked for and is not shown, as any result
+  (`docs/specs/core/store.md`, "The cases"). A change of `colourBy`,
+  `axes` or `view` while it runs gives the same key, so the calculation
+  goes on and its result is drawn with the options as they are when it
+  arrives.
+- **The method changed.** The key changes: the PCA leaves the screen with
+  the notice, and the PCoA needs a Run. Both stay in the cache, and an
+  undo, or setting the method back, shows the other with no calculation.
+- **The colour column is not in a new metadata file.** The key does not
+  change, so the plot stays, coloured by the populations, with the note
+  of "The colours". While the new file is being read the PCA is locked,
+  "Reading pops.csv.", and its plot comes back when the read ends, with
+  no calculation.
+- **The axes chosen are beyond the result**, a project file's `axes` of
+  `[4, 5, 6]` and a result of three components: `axesShown` gives the
+  first components, PC1, PC2 and PC3, and the note "The axes chosen, PC4,
+  PC5 and PC6, are beyond the 3 components of this result, so PC1, PC2
+  and PC3 are drawn." The option stays.
+- **A pruning over a file not sorted by position** is refused, above,
+  and the words say to sort it or turn the pruning off.
+- **The dataset's filters of individuals leave the PCA fewer than two
+  individuals.** One is refused by popnei, above; none cannot start, as
+  for every analysis (`docs/architecture.md`, section 4).
+
+### How it runs
+
+One pass over the file in the calculation worker, for either method,
+`numPassesOf` 1, then the decomposition, which gives no progress. popnei
+calls `onProgress` at each range of 4 MiB it reads and once at the end of
+the run, and the end comes after the decomposition: over a VCF of
+20,066,850 bytes, 2,500 individuals and 2,000 variants, the last range
+was told at 0.04 s and the end at 6.75 s (node 26.8.2, the release, on the
+owner's Mac, an Apple M5 Pro, 27 September 2026). So the bar of the
+panel stops at the share of the last range and stays there while the
+components are calculated, which the running state says in words (below).
+
+The decomposition grows as the cube of the individuals, and its memory
+as their square. Measured the same day in node, with the release, on
+VCFs of 300 variants: 1,000 individuals in 0.45 s, the memory of the
+process grown by 69 MB; 2,000 in 3.0 s and 196 MB; 4,000 in 21 s and 662
+MB, against popnei's estimate of 6.1 × 8 bytes per pair of individuals,
+49, 195 and 781 MB. At 9,381 individuals the cube gives about four
+minutes and the estimate 4.3 GB. These are node's times; the browsers
+run the same wasm, and the plan measures them in Chromium and WebKit.
+The PCoA holds, by popnei's draft, the sums of the Kosman distances, 8
+bytes per pair while the pass runs, then about 56.8 bytes per pair at
+its peak, 8 bytes a pair more than the PCA, since it writes the
+projections of every component while the eigenvectors are held.
+
+The memory of wasm grows to the matrix and never shrinks
+(`docs/architecture.md`, section 11), so a worker that made a PCA of
+4,000 individuals holds some 700 MB until it is started again. The
+client starts the calculation worker again after a PCA or a PCoA of more
+than `PCA_RESTART_INDIVIDUALS`, 700 individuals, whose matrix is then
+more than about 24 MB, the size at which a written file restarts it
+(`WRITE_RESTART_BYTES`, 25 MB, `docs/specs/worker/client.md`). In stage 4
+the restart costs the reading of the header of the file, at most 49 ms
+(`docs/architecture.md`, section 13, point 5), and nothing else: the
+worker keeps no intermediate result (the brief of stage 4, point 1), and
+the next analysis, whose filters are not the PCA's, would open the file
+again in any case (`docs/specs/worker/runner.md`, "The steps"). This is a
+second exception to the owner's decision of 26 September 2026 that the
+worker is not restarted between requests (**Open 1**).
+
+The result in the cache is 8 bytes × individuals × 10 for the
+projections, 80 bytes for the percentages, and the names: at 9,381
+individuals of eight characters, 900 KB, as the cache counts it, far
+under its bound of 256 MB (`docs/specs/core/cache.md`). So the words
+"Undo brings back the plot and the table as they were, with no
+calculation" hold as they do for the diversity. The pruning is made again
+at every PCA, and its time is measured in stage 4, on `panel.nei` and on
+the files of 20,000 variants, with and without it (meanwhile, point 1 of
+`docs/specs/stage-4-open-points.md`).
+
+`pcaColours` walks the table once per result and table, kept in a
+`WeakMap` by the result, the table and the option, so a change of the
+axes does not walk it again.
+
+### How it is verified
+
+With Vitest, at the functions of the definition, on frozen projects:
+
+- **`pcaFilters`**, each row of the table of "Which variants it reads",
+  as literals, and the same frozen value twice for the same inputs.
+- **`run`**, with a fake client that records its job: the filters of
+  `pcaFilters`, the method, `numCompsKept` 10, and `individuals` as the
+  client gives it, `null` and a list.
+- **The key**: for each row of its table, two projects that differ in it,
+  and `keyOf` equal or not as the row says; `keyInputs` of an empty
+  project does not read `p.variants`, which the test makes a getter that
+  throws.
+- **`needs`**: a variants file of 9,382 individuals locked with the words
+  above, of 9,381 not, and a PCoA of 8,696 locked; each reason of
+  `individualsNeeds` comes through; a project with no metadata file, and
+  one with a file and no column chosen, are not locked.
+- **`parseOptions`**: the defaults back, `ldPruning` `null`, `axes` `[10,
+  9, 1]`; a missing field, a field more, a method `"tsne"`,
+  `maxAllowedMaf` 1.5, `maxDist` 0 or 2.5, `axes` `[1, 1, 2]` or `[1, 2,
+  11]`, `view` `"4d"`, refused.
+- **`warnings`**: a result whose job had no LD filter gives `pruningOff`,
+  and one of the dataset's LD filter none; `numVarsUsed` 150 for 200
+  individuals gives `fewVariants` with the text above, 200 for 200 none;
+  a PCoA with `negativeEigenvaluesPercent` 7.88262807403034 gives
+  `negativeEigenvalues` with "7.9%", 2.98 none.
+- **`checkNumbers`**: the numbers of the default flow below, `[535,
+  3.543326238768707, 3.4381786862515153, 1.920566779749705]`; a result of
+  one component, `[1175, 100, null, null]`.
+- **`pcaColours`**, on the worked table of the diversity's spec, `i1 A`,
+  `i2 B`, `i3 A`, `i4` with no population, the column `pop`: the groups
+  A and B, in that order, counts 2 and 1, and `i4` in `NO_GROUP`,
+  `numNone` 1; a continuous column of `1,5`, `2`, `3` and a missing cell,
+  read with the comma, the values 1.5, 2, 3 and NaN; with `colourBy` a
+  column that is not in the table, the populations and the note; with no
+  metadata file, the one group "All individuals".
+- **`axesShown`**, `[4, 5, 6]` on three components, the first three and
+  the note; `[2, 1, 3]` on two, `[2, 1]` and a note for the third.
+- **`pcaCsv`** and **`varianceCsv`** of the result of the flow, as
+  literals of their first rows; a group named `a,"b"` quoted.
+- **`manyMissingNote`**: statistics of 0.25 and 0.1 for two individuals
+  name the first; a PCoA, or no statistics, give `null`.
+- **`refusalText`**, each row of "Its words" with popnei's messages as
+  literals: "there are no variants to do a PCA with" with a source of 0
+  variants known and not known; the message of no variance; the message
+  of the LD filter over the VCF of three individuals whose second variant
+  is at position 10 after one at 30, with the PCA's pruning and with the
+  dataset's; the ploidy of `tetraploid.vcf.gz` read with ploidy 2.
+- **`script`** of the project of the flow gives the lines above, as a
+  literal.
+
+The numbers of the runner's test in node and of the Playwright flow, on
+`e2e/fixtures/panel.nei`, 1,200 variants of 200 diploid individuals, with
+the populations of `e2e/fixtures/panel_pops.csv`, p0 of 48, p2 of 84 and
+p1 of 68 individuals in the order they first appear, were given by the
+release the application builds on, `js-v0.1.0-dev.2`, as installed in
+`node_modules/popnei` of the main checkout of popnei_web, its
+`package-lock.json` resolving it to
+`https://github.com/JoseBlanca/popnei/releases/download/js-v0.1.0-dev.2/popnei-0.1.0.tgz`
+(the worktree of these specs had no `node_modules`), on 27 September
+2026, in node 26.8.2, by this script, saved as `pca_numbers.mjs` in a
+folder whose `node_modules` is that one and run with
+`FIXTURES=‹the worktree›/e2e/fixtures node pca_numbers.mjs`:
+
+```js
+import { readFileSync } from "node:fs";
+import { init, openVars, doPcaFromVariants } from "popnei";
+await init();
+const runs = [
+  ["defaults", (v) => { v.filterByMissingData(0.1); v.filterByMaf(0.95); v.filterByLd(0.1, 50000); }],
+  ["pruning off", (v) => { v.filterByMissingData(0.1); v.filterByMaf(0.95); }],
+];
+for (const [label, put] of runs) {
+  const v = openVars(new Uint8Array(readFileSync(`${process.env.FIXTURES}/panel.nei`)));
+  put(v);
+  const progress = [];
+  v.onProgress((p) => progress.push(p));
+  const r = doPcaFromVariants(v, { numPrinComps: 0, transformToBiallelic: true });
+  v.free();
+  const k = r.numComps;
+  console.log(label, k, r.usedVars.length, JSON.stringify(r.passStats),
+    JSON.stringify([...r.explainedVariancePercent.slice(0, 10)]),
+    r.individuals[0], JSON.stringify([...r.projections.slice(0, 3)]),
+    r.individuals[199], JSON.stringify([...r.projections.slice(199 * k, 199 * k + 3)]),
+    JSON.stringify(progress));
+}
+```
+
+| | the default pruning, r² 0.1 within 50,000 | the pruning off |
+|---|---|---|
+| filters of the job | missing data 0.1, MAF 0.95, LD | missing data 0.1, MAF 0.95 |
+| `passStats` | `missing_data` 1,200 to 1,200, `maf` 1,200 to 1,175, `ld` 1,175 to 535; `numVars` 535 | `missing_data` 1,200 to 1,200, `maf` 1,200 to 1,175; `numVars` 1,175 |
+| `usedVars`, `numVarsUsed` | 535 | 1,175 |
+| components found | 199 | 199 |
+| PC1, PC2, PC3, explained % | 3.543326238768707, 3.4381786862515153, 1.920566779749705 | 7.7259798956433725, 5.607518517973541, 1.562751904323915 |
+| `s000` on PC1, PC2, PC3 | −0.7546702846382134, 7.577178941266335, −4.924745039386669 | 1.5339065839147532, 12.930969544429235, −5.957159200821336 |
+| `s199` on PC1, PC2, PC3 | −2.633169063152295, −0.5579069230470312, −1.9284342262244138 | −9.28420972449867, −2.158094322945647, 4.43518504525279 |
+
+The ten percentages of the default, which the cut keeps:
+3.543326238768707, 3.4381786862515153, 1.920566779749705,
+1.8449703994478044, 1.770199736345114, 1.7520689760233366,
+1.7399545794492481, 1.700511107629948, 1.6551669240097038,
+1.635487451555156. Of the pruning off, from the fourth:
+1.5232473149032213, 1.5020363517560236, 1.4902070790894821,
+1.4710450676779012, 1.4527098234387317, 1.419762992925622,
+1.3933823406088568. `panel.vcf.gz` read with ploidy 2 and only the passed
+variants gives the same numbers as `panel.nei`. The progress of each run
+was the two calls of the diversity, `{ bytesRead: 0, numBytes: 261490,
+pass: 1, numPasses: 1 }` and `{ bytesRead: 259376, … }`. The pruning
+halves the share of PC1 on this panel, which is simulated with weak
+structure; with it the first two components are 3.5% and 3.4%.
+
+The runner's test asserts these as literals, with the result cut to 10
+components: `numComps` 10, `numCompsFound` 199, `projections` of 2,000
+numbers, whose first three are `s000`'s above; and the two refusals of
+"The request", as literals. The PCoA's numbers on `panel.nei` are got by
+the same script with `doPcoaFromVariants` once popnei's release has it;
+popnei's draft gives numbers for another panel,
+`tests/reference/dists/panel.vcf.gz` of popnei, which is not
+`e2e/fixtures/panel.vcf.gz` (their MD5 differ).
+
+The Playwright flow, in Chromium, Firefox and WebKit
+(`.claude/skills/coding/testing.md`): loads `panel.nei` and
+`panel_pops.csv`, chooses `popcat`, runs the PCA with its defaults and
+reads "PC1 (3.54%)" and "PC2 (3.44%)" on the axes and `s000` at −0.7547,
+7.5772 in the table; highlights p1 from the legend, with the keyboard,
+and sees its button pressed and the description name it; colours by
+another column and back, and sees no calculation and one step of Undo for
+each; turns the pruning off, sees the plot go with its notice, runs and
+reads 7.73%; undoes and reads 3.54% again with no calculation; opens the
+3D view, turns it with the buttons, and back to 2D; saves the table and
+reads its header and the row of `s000`; runs axe, the checker of
+accessibility, in each state it reaches. What it cannot check, whether
+the 3D view and the plot read well, is seen by the owner in the running
+application.
+
+## The panel
+
+The panel of the principal components in the Analyses step, from the
+module above, drawn inside the frame of every analysis,
+`src/ui/analyses/AnalysisPanel.tsx`, which draws the state the store
+gives. Its heading, an `<h2>`, is "Principal components", the title by
+which the shell names it in the notice and the status region, in
+`src/ui/analyses/titles.ts`; it says "PCA" and "PCoA" in its lines by the
+method.
+
+### What it shows
+
+**The options**, above the Run button, each a command of
+`setAnalysisOptions`:
+
+- **Method**, two radio buttons: "PCA of the genotypes" and "PCoA of the
+  Kosman distances, for data with many missing genotypes". The PCoA is
+  offered once popnei's release has it; until then the second is not
+  shown.
+- **Maximum major allele frequency**, a number field, 0.95, "from 0 to
+  1", as the MAF filter of the Variants step. When the dataset's MAF
+  filter is stricter, a line under it: "The MAF filter of the Variants
+  step, 0.9, is stricter, and is the one used."
+- **LD pruning**, a checkbox "Prune variants in linkage disequilibrium",
+  on, with "Maximum r²", 0.1, "from 0 to 1", and "Window, in base pairs",
+  50,000. When the dataset has an LD filter, the three are disabled and
+  a line says why: "The LD filter of the Variants step, r² at most 0.3
+  within 10,000 base pairs, is used, and the PCA does not prune again."
+- A line of what it will run on: "200 individuals of panel.nei", or "119
+  of the 200 individuals of panel.nei, those the filters of individuals
+  keep", and, while a threshold on the individuals waits for their
+  statistics, the diversity's line, "Run calculates the statistics of
+  each individual first, …".
+
+**The result**, once calculated:
+
+- **A bar of controls above the plot**: "2D" and "3D", two toggle
+  buttons of one group; the components on the axes, selects of PC1 to
+  PC‹numComps›, "Horizontal axis" and "Vertical axis" in 2D, and a third,
+  "Depth axis", in 3D; "Colour the points by", a select of "Population"
+  and the columns of `colourColumns`; and, in 3D, the buttons that turn
+  the view, "Turn left", "Turn right", "Turn up", "Turn down", by 15°
+  each, and "View along PC1", "View along PC2", "View along PC3", which
+  look down one axis and show the plot of the other two
+  (`.claude/skills/coding/charts.md`, `rotate` and `viewAlong`). A change
+  of the view, the axes or the colour is a command, which removes
+  nothing.
+- **The plot**: the 2D scatter of `docs/specs/charts/scatter.md`,
+  `createScatter`, of the two components chosen, each axis labelled with
+  its explained variance, "PC1 (3.54%)"; or the 3D view of
+  `docs/specs/charts/pca3d.md`, `createPca3d`, with three.js loaded when
+  the user first opens it. 2D opens first, the brief's point 5, meanwhile.
+  With one component, no plot and the line of "The cases"; with two, the
+  3D button is disabled and a line says why: "The 3D view needs three
+  components, and this result has 2."
+- **The legend**, over the plot, from `pcaColours`: a list of buttons,
+  one per group, each with its mark, its name and its count, "p0 (48)",
+  and "No population (5)" last, as `docs/specs/charts/scatter.md` draws
+  it. Pressing one highlights its group and fades the others, a second
+  press clears it, and pressing another moves the highlight; one group
+  at a time. The highlight is state of the screen, kept while the panel
+  is drawn, from the 2D plot to the 3D one and back, and not in the
+  project, since it changes nothing the user would save; it is cleared
+  when the groups change. A colouring by the values of a continuous
+  column has a bar of its scale for a legend, and no highlight. This
+  is what stage 4 takes from the owner's widget any_scatter3d (the brief
+  of stage 4): the legend that picks a population, over the plot, and the
+  bar of controls above it; not its keys listened for on the whole page.
+- **The explained variance**: a table of the components kept, PC and
+  percent, with a caption, "The variance of the individuals explained by
+  each component, of the 199 components of the PCA.", and, for the PCoA,
+  a line under it: "The PCoA leaves out 2.98% of the variance of the
+  Kosman distances, which lies in directions no space has, so its
+  percentages add up to more than 100 over all its components." Its
+  download, "Download the explained variance as CSV",
+  `panel.pca_variance.csv`, or `panel.pcoa_variance.csv`, with the header
+  `component,explained_variance_percent` and rows `PC1,3.543326238768707`.
+- **The table of the individuals**, one row per individual of the result
+  in the order of the file: Individual; its group or its value, headed
+  by the title of the colours, "Population" or the column's name; and PC1
+  to PC‹numComps›.
+  Sortable by any column, React Aria's `Table`, as the statistics of each
+  individual, in a box that scrolls with its header in view. Its caption:
+  "The place of each of the 200 individuals of panel.nei on the first 10
+  of the 199 components, from 535 variants." Its download, "Download the
+  table as CSV", `panel.pca.csv` or `panel.pcoa.csv`: the header
+  `individual,population,PC1,…,PC10`, the second field named by the title
+  of the colours in lower case, and a row per individual, numbers as
+  `String` writes them, fields with a comma, a quote or a new line quoted
+  as RFC 4180 has it.
+- **The notes**: the note of the colours, of the axes, of the marks past
+  49 groups, and of the missing genotypes, under the plot; they are not
+  warnings, and have no count on the heading.
+- The line of the versions, "Calculated with popnei 0.1.0, in version
+  0.1.0 of the application.", as the diversity's.
+
+The coordinates are written to four decimals, the percentages to two,
+"3.54%". The plot is not offered as SVG or PNG in stage 4: its export is
+built and tested with the scatter and the 3D view, and offered by
+buttons in stage 6, as the owner decided for every plot on 26 September
+2026 (point C of `docs/specs/stage-3-open-points.md`;
+`docs/specs/charts/plot2d.md`). What is exported then is the 2D plot, or
+the 3D view as it is turned (`charts.md`, "Export of the 3D plot").
+
+### The states
+
+| state | what the user sees | what they can do |
+|---|---|---|
+| empty | cannot happen: until the variants file is read the analysis is locked with a reason | |
+| locked | the reason, as text beside a Run button that is disabled and described by it: "panel.nei has 12,000 individuals, and the principal components of more than 9,381 need more memory …", "12 individuals of panel.nei are not in pops.csv: …", "Reading pops.csv."; or the store's when the filters keep no individual. The options stay editable, since they are what the user may change | go to the step the reason names; change the options |
+| ready | the options, the line of the individuals it will run on, and Run | set the options; Run |
+| running | the bar and the clock of the diversity, "Calculating · 35% · 0:12", its words after a stop and while it waits for the statistics of each individual; and under them "The bar shows the reading of panel.nei. The components are calculated once it is read, and the bar does not move meanwhile: from under a second for 1,000 individuals to minutes for several thousand." The options are disabled while it runs, since a change of the MAF or the pruning would leave the calculation behind | Stop |
+| done | the bar of controls, the plot, the legend, the explained variance, the table and their downloads; the warnings above the plot, with their count on the heading, "2 warnings"; the notes; after an opened project file, the comparison with its check numbers under the table; and the options, whose change removes the result | draw, colour, turn, highlight, sort, download; change the options |
+| results removed | the words of the change that removed it, below, and the options and the line of the individuals, as in ready | Run; the Undo or Redo of the notice or of the header |
+| error | what happened and what to do, below; a refusal of popnei stays for these settings, and Run is not offered, as the diversity's | Run again after another failure; change the settings after a refusal |
+
+### What it sends and reads
+
+It reads, through `useAppState`, the status of `pca` among
+`state.analyses`, the `RunView` of its run, the notice, the project, for
+`pcaOptions`, `pcaColours`, `colourColumns` and the names of the files,
+the individuals kept as the store gives them, and the status of
+`individualChecks`, whose result, when done, gives the statistics of the
+note of the missing genotypes (`individualStatsOf` of `src/core/apps.ts`).
+Run calls `startAnalysis(store, "pca")` of `src/ui/runs.ts`, Stop sends
+`store.cancelRun("pca")`, and each option is `store.apply(description,
+(p) => setAnalysisOptions(p, pca, { ...pcaOptions(p), ‹the option›
+}))`. The descriptions, which end the notice and name the header's Undo:
+
+| the change | the description |
+|---|---|
+| `method` | "the method of the principal components changed" |
+| `maxAllowedMaf` | "the maximum major allele frequency of the principal components changed" |
+| `ldPruning` turned off, or on | "the LD pruning of the principal components was turned off", "… was turned on" |
+| `ldPruning`, its r² or its window | "the LD pruning of the principal components changed" |
+| `colourBy` | "the colour of the points of the principal components changed" |
+| `axes` | "the components on the axes changed" |
+| `view` | "the principal components were drawn in 3D", "… in 2D" |
+
+The panel holds no state of the project; its own state is the tick of
+the clock, the group highlighted, and the three.js view as it is turned,
+which a change of the options does not reset.
+
+### Its words
+
+The locked reasons and the warnings are those of the module. The results
+removed, by the cause of the notice, as the diversity's, with
+`resultName` "the plot and the table": "The principal components were
+removed because the LD pruning of the principal components was turned
+off. Undo brings back the plot and the table as they were, with no
+calculation; Run calculates new ones for the new settings.", and after an
+undo or a redo "Undone: … The principal components were removed; Redo
+brings back …".
+
+The error state, by what the store gives; the method is named "the PCA"
+or "the PCoA":
+
+| the failure | the text |
+|---|---|
+| the statistics of each individual a Run waited for failed, `ofStatistics` | the diversity's row, with "so the PCA was not run" in place of "so the diversity was not run" |
+| "there are no variants to do a PCA with", and a pass has counted the file at 0 variants (`numVars` of the read of the variants file) | the words of a file with no variant, `emptySourceText` of `src/core/analyses/words.ts`: "empty.vcf has no variants, so there is no variant to do the PCA with. Load another variants file in the Variants step.", or, for a VCF read with only the passed variants, "failed.vcf has no variant with PASS or . in its FILTER column, …" |
+| the same, the variants of the file not counted or more than 0 | "No variant of panel.nei is left after the filters of the Variants step and the options of the PCA, so there is no variant to do the PCA with. Loosen the filters, or the maximum major allele frequency of the PCA; the Count button of the Variants step shows how many each filter keeps." |
+| "no variant has more than one dosage among its called genotypes" | "No variant left after the filters varies among the individuals kept, so there is nothing to do the PCA with. This happens with one individual, or a few of one line; keep more individuals with the filters of individuals in the Variants step." |
+| a message that starts "the variant ‹n› of the ones the filter by linkage disequilibrium has read", the pruning the PCA's own | "The LD pruning of the PCA needs the variants of each chromosome together and in the order of their positions, and panel.vcf.gz is not: ‹popnei's message›. Sort the file, with bcftools sort for a VCF, and load it again, or turn the LD pruning of the PCA off." |
+| the same, the pruning the dataset's | "…The LD filter of the Variants step needs …, or turn off the LD filter in the Variants step." |
+| a genotype of another ploidy; a line of the VCF | the diversity's rows, `otherPloidyText` and the line of the VCF |
+| "the principal components of ‹n› individuals hold about", which the lock prevents | "panel.nei has 12,000 individuals, …", the words of the lock |
+| the PCoA's refusal of the pairs with no distance, recognised by the start of popnei's message once its release words it (provisional) | "‹n› pairs of individuals of panel.nei have no variant called in both, so they have no Kosman distance and the PCoA cannot place them; s082 is in 17 of them. Remove the individuals with many missing genotypes with the filters of individuals in the Variants step, or use the PCA of the genotypes, which places every individual." |
+| any other refusal | "popnei could not calculate the principal components: ‹its message›. Change the settings, or load the variants file again, to run it again." |
+| `reopenFailed`, `workerFailed`, `defect`, `couldNotStart`, `protocolMismatch`, `files` | the diversity's rows |
+
+`refusalText` makes the rows of popnei's refusals; the rows of the
+refusals of the diversity whose words are not the PCA's are not used,
+since popnei's PCA words its empty pass otherwise.
+
+The notes of "What it shows" and of the module are its other words.
+
+The help, for the drawer of stage 8:
+
+- What it gives: the place of each individual on the axes along which the
+  individuals differ most, PC1 the most; the explained variance of each;
+  how to read clusters, and that the distance along a component with
+  little variance means little.
+- Its defaults: the MAF filter at 0.95 and the pruning at r² 0.1 within
+  50,000 base pairs, for the PCA alone, and why: rare variants and linked
+  regions would otherwise shape the components; when the Variants step
+  has its own, the stricter MAF and its LD filter are used.
+- When not to trust it: with the pruning off, a linked region can make a
+  component; with few variants, chance can look like structure; the PCA
+  draws individuals with many missing genotypes toward the centre, and
+  the PCoA of the Kosman distances is for such data; a variant of more
+  than two alleles counts every allele but the major one the same, and
+  popnei does not say how many there were; the PCoA leaves out the part
+  of the distances no space holds.
+- In Python: `popnei.do_pca_from_variants(variants,
+  transform_to_biallelic=True, num_prin_comps=0)` after the same filters,
+  whose components are named `PC0`, `PC1`, … where the application
+  writes PC1, PC2, …; the numbers agree to about 1e-14.
+
+### Accessibility
+
+- **The plot** is an image with a text alternative, the title and the
+  description of the base of the 2D plots (`docs/specs/charts/plot2d.md`),
+  from `pcaDescription`: "Principal components of 200 individuals of
+  panel.nei, PC1, 3.54% of the variance, across, and PC2, 3.44%, up.
+  Coloured by population: p0, 48 individuals, centred at 1.2 on PC1 and
+  −0.4 on PC2; p2, 84, centred at …; p1, 68, centred at …. p1 is
+  highlighted. The table below gives each individual's place." The centre
+  of a group is the mean of its projections, arithmetic on popnei's
+  numbers. Coloured by the values of a column, it says their range in
+  place of the groups: "Coloured by altitude, from 120 to 2,300; 3
+  individuals have no value." A description cannot hold 200 points; it
+  says where each group lies, which is what a user reads the plot for.
+- **The table is the keyboard's way in** to the points, which are not
+  stops of the Tab key, since a few thousand stops are no use
+  (`charts.md`, "The data are also a table"): the plot is followed by the
+  line "The table below the plot gives the place of each individual.",
+  a link to it.
+- **The legend** is a group of toggle buttons, each with its pressed
+  state said to a screen reader, "p1, 68 individuals, highlighted",
+  reached by the Tab key, and pressed with Enter or Space; nothing listens
+  for keys on the whole page, where they would take the keys of the
+  fields.
+- **The 3D view** is turned by its buttons, which WCAG 2.2 success
+  criterion 2.5.7 asks for a drag; its canvas has the description of the
+  2D plot of its first two axes, and the line "The 3D view shows PC1, PC2
+  and PC3; the 2D plot and the table give the same points." When the
+  browser cannot draw it, or takes the drawing away, the view says so in
+  words, "The 3D view was lost by the browser" (`charts.md`), and the 2D
+  button stays.
+- **Not colour alone** (1.4.1): each group has its shape as well as its
+  colour, the legend shows both, and the table names each individual's
+  group in words. The faded groups of a highlight keep their shapes.
+- **The keyboard order**: the options, Run or Stop, the warnings, the bar
+  of controls, the legend, the plot's link to the table, the explained
+  variance, the table, the downloads. The switch of 2D and 3D keeps the
+  focus on the button pressed. Run and Stop are one button, and the focus
+  moves to the heading when it goes, as the diversity's.
+- **Announced without moving the focus**: the end of a run and the notice,
+  by the shell's status region and toast (WCAG 2.2, 4.1.3); a highlight
+  is said by the pressed state of its button and not announced again.
+- A warning says "Warning:" in words, and a note "Note:".
+
+### Left for the running application
+
+The layout of the bar of controls and of the legend over the plot, the
+size of the plot and of the points, how much the faded groups are
+faded, where the notes go, the step of the turns, and whether the
+options fold away once there is a result.
+
+## What this spec asks of other documents
+
+Of the specs written beside it for stage 4, which the orchestrator
+settles with their writers:
+
+- `docs/specs/charts/scatter.md`: `createScatter` takes the x and y of
+  the two components, the group of each point with the names of the
+  groups, and a group to highlight, drawn with the others faded and with
+  their shapes kept; the title and the description come from the panel;
+  the legend is the panel's list of buttons, over the plot, or the
+  scatter's with that behaviour.
+- `docs/specs/charts/pca3d.md`: `createPca3d` takes the projections as
+  the result holds them, `numComps` wide, the three components, the
+  groups and a group to highlight, and has `rotate(axis, degrees)` and
+  `viewAlong(axis)`.
+- `docs/specs/core/project.md`: `Grouping` gains `{ kind: "onePopulation" }`,
+  and `individualsNeeds` no longer locks on no file, from stage 4.
+- `docs/specs/steps/individuals.md`: the types of the columns as the
+  user sets them, which decide between groups and values.
+- `docs/specs/worker/individuals.md`: `cellNumber`, pure, where core can
+  import it, for the values of a continuous column.
+- `docs/specs/worker/messages.md`: the check of `PcaJob` and `PcaResult`,
+  the arrays with `instanceof`, `numCompsKept` a whole number from 1, and
+  the version of the messages raised for a new member; its line 165, "pass
+  2 of 2" of a PCA, which no run of stage 4 makes, and its lines 586–587,
+  the intermediate results with the PCA, which stage 4 does not keep.
+- `docs/specs/analyses/diversity.md`: its lines 1024–1026, a run of two
+  passes "the PCA of stage 4", which no longer holds, since the PCA asks
+  for no weights; and its lines 966–971, which ask that "Undo brings back
+  the table" be checked against the cache when the PCA comes: a result of
+  the PCA is at most 900 KB, and the words hold.
+- `docs/specs/core/keys.md`, "The key of an intermediate result", and
+  `docs/specs/core/cache.md`, lines 189 and 232: their example, the
+  variants kept by the pruning of the PCA, is not kept in stage 4; the
+  kinship of stage 7 is the first intermediate result.
+- `docs/specs/shell.md`: the title "Principal components" in the notice
+  and the status region.
+- `docs/architecture.md`, section 13: a sixth point, or point 5 widened,
+  for the restart after a large PCA (**Open 1**); and section 11, the
+  times and the memory of "How it runs".
+- `src/core/script.ts`, stage 6: `individuals_kept`, the list of the
+  individuals kept, in the script, and the call that opened the variants
+  file, which the PCA writes again.
+- `docs/specs/stage-3-open-points.md`, "For stage 4": answered by "Which
+  variants it reads".
+
+Revised by the writer of this spec, in the same session:
+`docs/specs/worker/protocol.md`, `runner.md` and `client.md`,
+`docs/specs/core/store.md`, `docs/specs/analyses/filterCounts.md` and
+`docs/specs/entry.md`, where they name the PCA. `entry.md` lists `pca`
+in `POPGEN_ANALYSES` of `src/core/apps.ts`, before the diversity, since
+the PCA is where the user checks the populations the diversity then uses
+(`docs/build-order.md`, stage 4), in the Analyses step.
+
+## What this spec asks of popnei
+
+- **The limit on the individuals counted on the individuals of the
+  pass**, after `filterIndividuals`, and not on those of the source:
+  `pca_of_variants` of `crates/popnei-js/src/vars.rs` and `vcf.rs` gives
+  `self.individuals.len()` to `room_for_the_analysis_of_the_variants`, on
+  the release and on `main` at `2d2229c`, so a file of 12,000 individuals
+  cannot be analysed through a list of 5,000. Until then the application
+  locks on the file's individuals.
+- **The refusal of the PCA's empty pass in the words of the other
+  calculations**, "the pass gave no variant and its source holds none"
+  or "the pass gave no variant: …" with the counts of each filter, in
+  the place of "there are no variants to do a PCA with", so that the user
+  is told which filter dropped them.
+- **A call of `onProgress` when the reading of the pass ends**, before
+  the decomposition, or a progress of the decomposition, so that the bar
+  says what is being done for the minutes of a large PCA.
+- **The called genotypes of each individual with the PCA**, one number
+  per individual, which would make the note of the missing genotypes a
+  warning of the result.
+- **`doPcoaFromVariants`**, asked by the owner on 27 September 2026, and
+  a version of popnei raised at its release.
+
+## The names of popnei's PCoA, provisional
+
+From popnei's draft spec on its branch `spec/pcoa`, "The principal
+coordinates of distances" of `docs/specs/pca.md`, commit `e00b9c0`, not
+approved: the function `doPcoaFromVariants(variants, { minNumSnps })`,
+called with no option, so a pair needs one variant called in both; its
+result's `individuals`, `numComps`, `projections`,
+`explainedVariancePercent`, `passStats` and `negativeEigenvaluesPercent`;
+`numPassesOf("doPcoaFromVariants")` 1; the limit of 8,695 individuals;
+the refusal of the pairs with no distance, and its words; in Python
+`do_pcoa_from_variants` and `negative_eigenvalues_percent`. Each is
+checked against popnei's release that has the PCoA before its code here.
+
+## Open points
+
+The recommendations of the brief of stage 4 that this spec takes as
+meanwhile are listed once, in `docs/specs/stage-4-open-points.md`: the
+pruned variants not kept (point 1), the PCA's variants (2), its default
+pruning (3), the variants of more than two alleles (4), and 2D first (5).
+The two that follow are this spec's.
+
+**Open 1: the calculation worker started again after a large PCA.** A
+PCA of n individuals grows the memory of wasm by about 49 bytes per pair,
+662 MB at 4,000 in node, and that memory never shrinks, so the tab keeps
+it until the next load of the variants file. The options:
+
+- Start the worker again after a PCA or a PCoA of more than 700
+  individuals, as after a written file above 25 MB. It costs the reading
+  of the header of the file, at most 49 ms, and nothing else in stage 4,
+  since the worker keeps no intermediate result; from stage 7 it would
+  also cost the kinship the worker keeps, and the bound is decided again
+  then.
+- Do not, as the owner decided on 26 September 2026 for every request but
+  a write (`docs/architecture.md`, section 13, point 2): the tab holds up
+  to 4.3 GB after a PCA of 9,381 individuals, which a phone, or a
+  laptop with the variants file and other tabs open, may not have for
+  the next analysis.
+
+Recommendation: start it again, since in stage 4 it costs a read of the
+header. Meanwhile the client does so (`docs/specs/worker/client.md`).
+
+**Open 2: the individuals with many missing genotypes told by a note of
+the panel.** The PCA draws them toward the centre, and the result does
+not hold their missing genotypes. The options:
+
+- A note of the panel, from the statistics of each individual when the
+  store has them for the filters as they are, as above: nothing to
+  calculate, but shown only after those statistics are calculated, not
+  kept with the result nor in the report, and counted over the dataset's
+  filters rather than the PCA's.
+- A warning of the module, which needs popnei to give the called
+  genotypes of each individual with the PCA (asked above), and until
+  then nothing.
+- The PCA's Run calculates the statistics of each individual first, as a
+  Run with a threshold on the individuals does: a pass more, of the
+  length of the PCA's own, for every PCA without them.
+
+Recommendation: the note meanwhile, and the warning once popnei gives the
+counts. Meanwhile the note, at 0.2.
+
+## Not in this spec
+
+- The lasso that edits the populations on the plot: not in stage 4, the
+  owner's meanwhile of 27 September 2026, with a design of its own.
+- The principal components as covariates of the GWAS, and the colour of a
+  trait of the traits file: stage 7.
+- The weights of the variants, which popnei gives with `numPrinComps`
+  above 0, and a second pass: not shown.
+- The variants kept by the pruning, kept for the next PCA: not in stage 4
+  (the brief, point 1).
+- The export of the plots as SVG and PNG, and the report: stage 6.
+- The scatter and the 3D view as plots: `docs/specs/charts/scatter.md`
+  and `pca3d.md`.
+- The notice, its toast, the status region: `docs/specs/shell.md`.

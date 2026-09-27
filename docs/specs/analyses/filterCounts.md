@@ -15,7 +15,8 @@ check numbers and the filters are those of
 `docs/specs/analyses/individualChecks.md`. Revised on 27 September 2026
 with the owner's decisions at stop A of `docs/plans/variants-step.md`:
 the line of no counts, the counts of a file with no variant, and the
-words of a refusal for a file with none.
+words of a refusal for a file with none. Revised on 27 September 2026
+for stage 4, in the row of the PCA: why its pass fills no counts.
 
 ## The module
 
@@ -109,7 +110,7 @@ result:
 |---|---|
 | the diversity, the statistics of each individual, the written file, this analysis | given: each pass has the project's filters of the variants; the filter of individuals of the diversity and of the file changes no count |
 | the histograms of the variants | not given: their pass has no filter, whatever the project's; with no filter of the variants in the project their counts would be those of a Count, and they are not given then either, so that one rule, by the analysis, decides |
-| the PCA, stage 4 | not given: it merges its own MAF filter with the project's (`docs/specs/worker/protocol.md`) |
+| the principal components, stage 4 | not given: its pass has filters of its own, the stricter of its MAF filter and the project's and its LD pruning, whose counts are not those beside the filters (`pcaFilters` of `docs/specs/analyses/pca.md`); the number of variants of the file is given, `varsProcessed` of its first filter |
 
 The store makes of the counts the result `{ analysis: "filterCounts",
 passStats }` and puts it under the key of this analysis for the request's

@@ -8,7 +8,10 @@ Variants step whole, as the revision of `docs/architecture.md` the owner
 approved that day has it: the analyses of the Variants step in
 `apps.ts`, `countsOf` in the place of `numVarsOf`, `runs.ts` awaiting
 every handle the store gives back, and the download of a file of the
-filtered variants; this revision is approved by the owner on 26 September 2026. This spec gives
+filtered variants; this revision is approved by the owner on 26 September 2026.
+Revised on 27 September 2026 for stage 4 where it names the PCA: `pca`
+joins the analyses of `apps.ts`, in the Analyses step before the
+diversity, and `countsOf` gives no counts of its pass. This spec gives
 the page of the population genetics application, `popgen.html`, and its
 entry, the code that runs once when the page opens and keeps working for
 the life of the page: it makes the store and the two workers and joins
@@ -282,9 +285,10 @@ population genetics application alone until stage 7:
     filters of the variants of its request's project: the diversity,
     the statistics of each individual and `filterCounts` itself; `null`
     for the histograms of the variants, whose pass has no filter, and,
-    from stage 4, for the PCA, which merges its own MAF filter with the
-    project's (`docs/specs/analyses/filterCounts.md`, "Which results
-    fill it");
+    from stage 4, for the PCA, whose pass has filters of its own, the
+    stricter of its MAF filter and the project's and its LD pruning
+    (`docs/specs/analyses/pca.md`, "Which variants it reads";
+    `docs/specs/analyses/filterCounts.md`, "Which results fill it");
 - **`writeCountsOf`**, the store's `write.countsOf`: the result of
   `filterCounts` made of the `passStats` of a written file, whose pass
   always had the filters of its project;
@@ -667,13 +671,13 @@ stage 2, `DEFAULT_MAX_MISSING_RATE`, `DEFAULT_PLOIDY`,
 ```ts
 /** The analyses of the population genetics application, in the order the
     screens show them: individualChecks, variantChecks, filterCounts,
-    diversity. */
+    and, from stage 4, pca before diversity. */
 export const POPGEN_ANALYSES: readonly AnalysisDef<Job, JobResult>[];
 
 /** The step each analysis is shown in. */
 export const POPGEN_ANALYSIS_STEPS: Readonly<Record<string, StepId>>;
 // { individualChecks: "variants", variantChecks: "variants",
-//   filterCounts: "variants", diversity: "analyses" }
+//   filterCounts: "variants", pca: "analyses", diversity: "analyses" }
 
 /** What the pass of a result counted, as the store's countsOf; replaces
     numVarsOf. */
@@ -847,7 +851,9 @@ hand and whose cancels it records.
   `passStats`; of a result of the histograms of the variants, `{
   numVars: 1200, filtering: {} }`, `numVarsRead` 1,200 and no counts; of
   a result of the statistics of each individual and of `filterCounts`,
-  both. `writeCountsOf` of those counts gives the same result of
+  both; of a result of the PCA whose `passStats` has `missing_data` 1,200
+  to 1,200, `maf` 1,200 to 1,175 and `ld` 1,175 to 535, `numVarsRead`
+  1,200 and no counts. `writeCountsOf` of those counts gives the same result of
   `filterCounts`. `individualStatsOf` of a result of `individualChecks`
   gives its three fields, and of a diversity result throws.
 - **`saveWritten`**, with a fake `downloadFile`: in `done`, the fake is

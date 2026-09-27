@@ -13,7 +13,10 @@ to each request; a Run that calculates those statistics first; the lock
 of an analysis worked out from the project and the cache; the counts of
 what each filter kept, filled from every pass; and the writing of the
 filtered variants as a file, tracked as a calculation is; this revision
-is approved by the owner on 26 September 2026. The store is the one object of core that changes: it holds the
+is approved by the owner on 26 September 2026. Revised on 27 September
+2026 for stage 4 where it names the PCA: its pass fills no counts, since
+its filters are not the project's, and no analysis of stage 4 asks for
+the key of an intermediate result. The store is the one object of core that changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.
 From them it gives the screens one state to read, in which each analysis
@@ -70,7 +73,8 @@ tests in the tests.
   The store makes that client for this one request, from the `send` of
   the worker client of `src/worker`: it sends under the key of the
   request, passes the progress to the store, makes the keys of the
-  intermediate results the request needs, and gives the list of the
+  intermediate results the request needs, none before the kinship of
+  stage 7 (`docs/specs/analyses/pca.md`, "How it runs"), and gives the list of the
   individuals the filters keep, `individuals`, which the analysis puts in
   its job (below, "The individuals kept"). So an analysis cannot send a
   request under another key, lose its progress, make a key of its own,
@@ -585,8 +589,11 @@ request's project and none of its own, or `null`; `countsOf` tells it by
 the analysis of the result, and not by comparing filters. A file
 written always had them, and `write.countsOf` makes its result of
 `filterCounts` from the counts of its pass. It is `null` for the histograms of the
-variants, which read no filter, and for the PCA, which merges its own
-MAF filter with the project's (`docs/specs/worker/protocol.md`).
+variants, which read no filter, and for the PCA, whose pass has filters
+of its own, the stricter of its MAF filter and the project's and its LD
+pruning (`pcaFilters` of `docs/specs/analyses/pca.md`); its number of
+variants of the file is given, `varsProcessed` of its first filter, which
+is the whole file whatever the filter.
 
 - **The counts of a result go into the cache** when the result ends
   `done`, whatever its analysis, under the key of `filterCounts` for the
@@ -731,7 +738,8 @@ export interface AnalysisDef<J, R> {
 /** What an analysis sends its request through, bound by the store to one key. */
 export interface WorkerClient<J, R> {
   run(job: J): Run<R>;
-  /** The key of an intermediate result of the request, "the pruned variants". */
+  /** The key of an intermediate result of the request, "the kinship";
+      no analysis asks for one before stage 7. */
   intermediateKey(name: string, inputs: JsonValue): string;
   /** The individuals the filters keep, in the order of the variants file,
       for the job; null when they remove nobody, and for an analysis that

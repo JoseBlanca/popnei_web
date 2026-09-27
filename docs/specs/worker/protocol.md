@@ -15,6 +15,10 @@ analyses of the Variants step, the statistics of each individual, the
 histograms of the variants and the counts of what each filter kept, join
 `Job` and `JobResult`; and the request that writes the filtered variants
 as a `.nei` file is new. The revision is approved by the owner on 26 September 2026.
+Revised on 27 September 2026 for stage 4: the job and the result of the
+principal components join `Job` and `JobResult`, and the passage on the
+PCA's own MAF filter says how it is given to popnei, as
+`docs/specs/analyses/pca.md` decides it.
 
 This spec gives the part of `src/worker/protocol.ts` that core
 names: the filters of the variants and of the individuals, the table of
@@ -75,15 +79,21 @@ project holds the numbers popnei is given, as section 3 of
   that order, and a job carries them so; the runner puts them on the
   `Variants` in the order of the job, and does not sort them.
 
-The PCA's own MAF filter, of section 5 of `docs/functionality.md`, meets
-this last rule when the dataset has a MAF filter already; how the two
-are given to popnei is the spec's of the PCA, in stage 4. What it will
-meet is noted in `docs/specs/stage-3-open-points.md`, "For stage 4": the
-rule this spec held until stage 3 merged the two into one MAF filter only
-when the dataset had no LD pruning and the job kept every individual,
-and otherwise added none; in the fixed order, with the filter of
-individuals last, that rule leaves the PCA with no MAF filter of its own
-whenever a filter of individuals is set.
+The PCA's own MAF filter and LD pruning, of section 5 of
+`docs/functionality.md`, meet the rule of one filter of each kind when
+the dataset has its own. Core gives the job of the PCA one list of
+filters in the fixed order: the dataset's, with the stricter of the two
+MAF filters in the MAF's place and one LD pruning last, the dataset's
+when it has one and otherwise the PCA's own when it is on
+(`pcaFilters` of `docs/specs/analyses/pca.md`, "Which variants it
+reads"; meanwhile, point 2 of `docs/specs/stage-4-open-points.md`). The
+list of individuals comes after them, as for every job. So the runner
+puts the filters of a PCA as it puts any job's, and never merges two.
+The rule this spec held until stage 3, which merged the two MAF filters
+only when the dataset had no LD pruning and the job kept every
+individual, goes: it left the PCA with no MAF filter of its own whenever
+a filter of individuals was set (`docs/specs/stage-3-open-points.md`,
+"For stage 4").
 
 The number the user types is the number popnei is given, with no
 arithmetic between them. A conversion would move the boundary: 1 − 0.9 is
@@ -369,7 +379,8 @@ Stage 3 has four members: the diversity
 Variants step, the statistics of each individual
 (`individualChecks.md`), the histograms of the variants
 (`variantChecks.md`) and the counts of the filters (`filterCounts.md`),
-each under `docs/specs/analyses/`. The block below is written from those
+each under `docs/specs/analyses/`. Stage 4 adds the fifth, the principal
+components (`pca.md`). The block below is written from those
 specs, which were written at the same time as this one; where one of
 them gives other fields, the spec of the analysis stands and this block
 follows it. The populations are pairs in the order of the file, since
@@ -453,9 +464,36 @@ export interface FilterCountsResult {
   passStats: PassStats;
 }
 
-export type Job = DiversityJob | IndividualChecksJob | VariantChecksJob | FilterCountsJob;
+// The principal components, stage 4: a PCA of the genotypes or a PCoA of
+// the Kosman distances, over the filters pcaFilters gives, the first
+// numCompsKept components of what popnei gives.
+export interface PcaJob {
+  analysis: "pca";
+  fileId: string;
+  filters: readonly VariantFilter[];       // the dataset's, with the PCA's MAF and pruning
+  individuals: readonly string[] | null;
+  method: "pca" | "pcoa";
+  numCompsKept: number;                    // 10, PCA_NUM_COMPS_KEPT of core
+}
+
+export interface PcaResult {
+  analysis: "pca";
+  method: "pca" | "pcoa";
+  individuals: readonly string[];          // those of the pass, in the order of the file
+  numComps: number;                        // kept: the smaller of numCompsKept and numCompsFound
+  numCompsFound: number;                   // every component with variance popnei gave
+  projections: Float64Array;               // individuals × numComps, row after row
+  explainedVariancePercent: Float64Array;  // numComps, over the variance of every component
+  numVarsUsed: number | null;              // the PCA's usedVars.length; null for the PCoA
+  negativeEigenvaluesPercent: number | null; // the PCoA's; null for the PCA
+  passStats: PassStats;                    // of filters that are not the project's
+}
+
+export type Job =
+  DiversityJob | IndividualChecksJob | VariantChecksJob | FilterCountsJob | PcaJob;
 export type JobResult =
-  | DiversityResult | IndividualChecksResult | VariantChecksResult | FilterCountsResult;
+  | DiversityResult | IndividualChecksResult | VariantChecksResult | FilterCountsResult
+  | PcaResult;
 ```
 
 The request of a written file is not a `Job`, since it is not an
@@ -524,7 +562,10 @@ beside the messages it versions, and not here: core has no use for it.
   it; a command is never given one.
 - **Filters that keep no variant.** Every calculation of popnei refuses
   its pass then, "the pass gave no variant: …", so the diversity and the
-  statistics of each individual end `popnei` with that message. The
+  statistics of each individual end `popnei` with that message; the PCA
+  of the release words it "there are no variants to do a PCA with",
+  whether the file holds none or the filters kept none
+  (`docs/specs/analyses/pca.md`, "The request"). The
   counts of the filters do not: their pass is `iterBlocks`, whose
   `passStats` give the counts of a pass that gave nothing, which is when
   the user most needs to see which filter dropped every variant

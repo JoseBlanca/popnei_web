@@ -1,0 +1,821 @@
+# The scatter plot of the PCA
+
+Written on 27 September 2026, for stage 4 of `docs/build-order.md`, the
+Individuals step and the PCA; not yet reviewed or approved. There is no
+code of it yet; the base it is drawn on, `src/charts/plot2d.ts`, and the
+histogram exist from stage 3. This spec gives the function of
+`src/charts/scatter.ts` that draws the individuals on two principal
+components, each a mark whose colour and shape say its population, or
+coloured by the values of a column of the metadata file; and the pieces
+the 3D plot of the PCA shares with it, the marks of the groups, the
+legend and the point under the pointer, in `src/charts/marks.ts`,
+`legend.ts` and `hover.ts`. It is drawn on the base of the 2D plots,
+`docs/specs/charts/plot2d.md`, which gives it its SVG and frame, its
+size, its axes, its text for a screen reader, its handle and its export,
+and which this spec revises for the pointer and the legend of the
+exported file (below, "What this spec asks of other documents"). It
+develops the row `src/charts/` of section 9 of `docs/architecture.md`
+and its section 7, and depends on `.claude/skills/coding/charts.md`,
+`css.md` and `testing.md`. The PCA whose result it draws, its options
+and its panel are `docs/specs/analyses/pca.md`; the 3D plot is
+`docs/specs/charts/pca3d.md`.
+
+The words of this spec: a **group** is one of the values that colour
+the points, a population of the grouping or a value of a column the
+user chose; a point with no value there is in **no group**, which the
+legend names "No population" or "No value". A point is
+**highlighted** when the user picked its group in the legend, and the
+others are then **faded**, drawn pale. The **legend** is the list of
+the groups beside the plot, which the screen draws; the **tooltip** is
+the small box of text that the plot shows next to the point under the
+pointer.
+
+## What it does
+
+### What the user sees
+
+One mark per individual, at its projection on the two components of the
+axes, `axes[0]` across and `axes[1]` up (`pca.md`, the options),
+PC1 and PC2 by default. The labels of the axes say the component and the
+share of the variance it explains, "PC1 (12.3%)", which the screen
+writes from `explainedVariancePercent` of the result. The marks of one
+population share a colour and a shape. Over the top right corner of the
+frame, the legend lists the populations with their marks and the number
+of individuals in each, "P1 (48)", and "No population (12)" last when
+some individuals have none. Pressing a population in the legend
+highlights it: its points are drawn on top and the others faded. A
+second press on the same population clears the highlight, and every
+point is drawn as before; a press on another population highlights that
+one instead. Moving the
+pointer over a point shows its tooltip, the name of the individual, its
+population and its two coordinates.
+
+When the user colours the points by a column of numbers, a trait or an
+age, each point is coloured by its value along viridis, a scale of
+colours from dark purple to yellow that stays in order to the eye, in
+grey and to the common kinds of colour blindness; the legend is then a
+bar of that scale with its smallest and largest value, and no press
+highlights anything.
+
+### The marks of the groups
+
+The rule of `charts.md`, "Accessibility", which the 3D plot follows too,
+so that a population has the same mark in both:
+
+- group `i` has the colour `i % 7`, of the seven colours of Okabe and
+  Ito, `--chart-cat-1` to `--chart-cat-7`, and the shape
+  `(i + Math.floor(i / 7)) % 7` of the seven filled symbols of
+  `d3-shape`, `symbolsFill`: circle, cross, diamond, square, star,
+  triangle and wye. The first seven groups differ in colour and in
+  shape, and the first 49 have 49 different marks; group 49 has the mark
+  of group 0 again, and the legend and the tooltip still name each.
+- every mark has an outline of 1 pixel in `--chart-axis`, since three of
+  the seven colours are below 3:1 on the light background, orange,
+  sky blue and yellow, and the outline gives the edge of each mark the
+  contrast the fill does not (`css.md`, "Contrast and colour").
+- a point in no group is a ring, a circle with no fill outlined in
+  `--chart-axis`, since a mark with no colour of its own is what "no
+  value" looks like, and the ring differs in shape from the seven filled
+  symbols, so no colour needs to be added to the tokens. Its points are
+  drawn first, under every group.
+- a mark has an area of 64 square pixels, `SYMBOL_AREA`, a circle 9
+  pixels across, meanwhile, refined in the running application: the
+  cross, the narrowest of the seven, then has arms 3.6 pixels wide, of
+  which the outline, drawn on the edge, leaves 2.6 pixels of colour.
+  The walking skeleton, stage 2 of `docs/build-order.md`, the first
+  application that went through every part once, measured circles of 16 square pixels; at 16, the
+  arms of the cross are 1.8 pixels wide and the outline leaves 0.8 of
+  colour.
+
+The index of a group is its place in the names the screen gives, so a
+population keeps its mark as long as the screen gives the populations in
+the same order: in the 2D and the 3D plot, after a filter, after an undo.
+That order is `pca.md`'s.
+
+### The points: one path per group, drawn by a loop
+
+The points of one group are one SVG `<path>`, whose drawing commands a
+plain loop over the typed arrays writes, each point its symbol at its
+position, as `charts.md`, "Drawing", has it: an element per point would
+make 9,381 elements and objects for the largest PCA, where one path per
+group makes a few. `drawSymbolAt` of `src/charts/marks.ts` draws a
+`d3-shape` symbol into a `d3-path` through a context that adds the
+offset of the point.
+
+The numbers of the path are rounded to one decimal, a tenth of a pixel,
+with `pathRound(1)` of `d3-path` 3.1.0. The walking skeleton measured
+it: an SVG of 50,000 points is 3.1 MB so and 9.7 MB with every digit,
+and its drawing up to 26% slower in WebKit and 50% slower in Chromium
+(`docs/plans/walking-skeleton.report.md`, "The points an SVG plot can
+hold", measured on 26 September 2026 on the owner's Apple M5 Pro). The
+report recommended both, the 50,000 points at most and the one decimal;
+the owner took its recommendations on 26 September 2026, and its summary
+named the 50,000 alone, so the one decimal is written here as this
+spec's decision, on the report's numbers. The option not taken, every
+digit, draws faster and writes an exported file three times larger, and
+a tenth of a pixel is below what a screen or a printer at 300 dpi shows.
+
+A plot is given at most `MAX_SVG_POINTS` points, 50,000, a constant of
+`src/charts/limits.ts`, and more is a defect of the caller. The PCA has
+at most 9,381 points, since popnei refuses more individuals
+(`docs/architecture.md`, section 11), and the walking skeleton drew
+10,000 points in 20 ms in WebKit and 16 ms in Chromium with circles of
+16 square pixels; the marks here are four times that area, so the time
+of this plot is measured again, on 9,381 points in WebKit, when it is
+built (below, "How it is verified").
+
+A point whose coordinate is not finite, NaN or an infinity, is not drawn
+and is not counted in the legend, and the screen says how many there
+are (`charts.md`, "The contract of a plot"); popnei's PCA gives none, and
+the rule is there for the PCoA and any later use.
+
+### The colours: groups, or the values of a column
+
+The points are coloured one of two ways, which the data say
+(`PointColours`, below). The screen chooses which from the type of the
+column the user colours by (`pca.md`): the populations and a column of
+categories, of text or binary give groups; a column of numbers gives
+values.
+
+**Groups.** Each point has the index of its group, or `NO_GROUP` when it
+has none, and the names of the groups. The marks are those above.
+
+**Values.** Each point has a number, NaN when it has none. The colour of
+a value is viridis, `interpolateViridis` of `d3-scale-chromatic`, at its
+place between the smallest and the largest finite value, in 256 steps,
+which are the 256 colours that `interpolateViridis` holds, so nothing is
+lost by the steps. The points of one step are one path, 256 paths at
+most, all circles, each with an outline in `--chart-axis`, since the
+yellow end of viridis is below 3:1 on the light background. The colour of
+each step is written on its path as its `fill` attribute: viridis is
+the same in both themes and in the file, so it is the one colour a plot
+writes that is not a token. A point with no value is a ring, as a point
+in no group is. When every finite value is the same, every point takes
+the middle of the scale, step 128, and the bar of the legend shows that
+one value.
+
+### The highlighted group
+
+The data hold the group the legend highlights, or none. When a group is
+highlighted, the paths of the other groups have the class
+`chart-points-faded`, at an opacity of 0.25 meanwhile, and the path of
+the highlighted group is drawn last, over them. The no-group can be
+highlighted too, to see where the individuals with no population lie. A
+faded mark is below the 3:1 of a mark on purpose: it is the context of
+the highlighted group, and its group is still in the legend and the
+table. The highlight is state of the screen and not of the project
+(`docs/architecture.md`, section 7): it is not saved, is not a step of
+Undo, and is kept by the screen when the user goes from the 2D plot to
+the 3D one and back (`pca.md`). A colouring by values has no highlight.
+
+### The axes: one scale for both
+
+The two components are drawn at the same scale, as many pixels for a
+unit of PC1 as for a unit of PC2, so that a distance on the plot is the
+same distance whichever way it points, and a component that explains
+little variance looks narrow. With a scale for each axis, each filling
+its side of the frame, PC2 at 3% of the variance would be spread as wide
+as PC1 at 30%, and clusters that differ only along PC1 would look as
+far apart along PC2; that is the option not taken.
+
+The scale is the largest at which every point fits in the frame with 8
+pixels to spare on each side, so that no mark is cut by its edge:
+`k = min((innerWidth − 16) / spanX, (innerHeight − 16) / spanY)` pixels
+per unit, where each span is the range of the finite values of that
+axis. Each axis then runs over `innerWidth / k` or `innerHeight / k`
+units, centred on the middle of its data. So the axis along which the
+data are narrower for the shape of the frame runs past its data at both
+ends, and an empty band lies along two opposite sides of the frame, the
+ticks running into it: for PC1 spread over 2 units and PC2 over 1, in a
+frame of 400 by 300 pixels, `k` is 192, and bands of 54 pixels lie
+above and below the points. The option of shrinking the frame to the
+shape of the data would leave the same empty room outside the axes,
+which then would not start at the corner of the plot. When a span is 0,
+every point at the same place along that axis, the other axis sets `k`;
+when both are 0, a single point or every point at one place, both spans
+are taken as 2, one unit either side of the point, which is then at the
+centre of the frame.
+
+The scales are not made round by `nice`, which would change the scale of
+one axis and not of the other. The ticks are the base's, one about every
+80 pixels across and every 40 up (`plot2d.md`, "The axes"), so their step
+can differ between the axes while the scale does not.
+
+### The legend, drawn by the screen
+
+The legend is HTML beside the SVG, drawn by the screen with React and
+placed over the top right corner of the frame, and not part of the SVG.
+Three reasons:
+
+- **The keyboard and the screen reader.** The SVG has `role="img"`,
+  which makes everything inside it one image to a screen reader, so a
+  button inside it cannot be reached or named. The buttons have to be
+  outside it.
+- **One legend for the 2D and the 3D plot.** The 3D plot has no SVG; a
+  legend of the screen stays in place when the user switches between the
+  two, with its highlight.
+- **The widgets of the screens are React Aria's**, the library of
+  accessible widgets the applications use (`docs/technology.md`). Its
+  `ToggleButtonGroup` with `selectionMode="single"` is what the legend
+  needs: one stop of the Tab key for the whole list, the arrow keys to
+  move along it, Space or Enter to press, and a press on the pressed
+  entry to clear it, as the owner's widget does
+  (https://github.com/JoseBlanca/any_scatter3d, which the owner named on
+  27 September 2026 for the look and the interaction). In that mode
+  React Aria 1.21.1 gives the group the role `radiogroup` and each entry
+  the role `radio` (`useToggleButtonGroup`, read in its code on 27
+  September 2026), so a screen reader says "P1 (48), radio button, 1 of
+  4". A plot that drew its own buttons with D3 would have to write that
+  keyboard handling again.
+
+The plots know nothing of React (`docs/architecture.md`, section 7), so
+what the legend shows comes from the charts as data and marks:
+`legendOf(colours)` gives the entries, each group with its name, its
+number of points and whether it is faded, the no-group last and a group
+with no point left out; `symbolPath(group)` gives the drawing of its
+mark, which the screen puts in a small SVG of its own, hidden from a
+screen reader, with the class of its colour. The screen places the
+legend with its corner at the corner of the frame, `SCATTER_MARGIN.top`
+pixels from the top of the plot's element and `SCATTER_MARGIN.right`
+from its right. Its look, a background of the surface so that the points
+under it do not show through its text, a height beyond which it scrolls,
+and whether it can be folded away, are left for the running application.
+
+The legend in the exported file is drawn by the plot, since the file has
+no screen beside it (below, "The export").
+
+### The point under the pointer
+
+A transparent rectangle over the frame, `chart-overlay`, which the base
+makes for a plot that asks for it (`plot2d.md`, revised with this spec),
+takes the movements of the pointer, since the marks are paths of many
+points and a path cannot say which of its points is under the pointer.
+The base gives the plot the position of the pointer in the pixels of
+the frame; the plot finds the nearest point:
+
+- **The nearest point within 10 pixels**, or none, by a loop over the
+  pixel positions of the drawn points, kept from the last draw. In node
+  26.8.2 on the owner's Apple M5 Pro, a loop over 50,000 points took
+  0.027 ms at the median and 0.079 ms at the 99th percentile of 1,000
+  calls, on 27 September 2026; a movement of the pointer comes at most
+  once a frame, 16 ms. `charts.md` had a Delaunay triangulation of
+  `d3-delaunay` for this, which finds the point in fewer steps but is a
+  module of D3 and two packages more, `delaunator` and
+  `robust-predicates`, for a search that the loop does well inside a
+  frame; not taken. The 3D plot finds its point by the same loop over
+  its projected points (`pca3d.md`). A faded point can be under the
+  pointer too: fading draws it pale, and it is still a point.
+- **The tooltip** is one HTML `<div>`, `chart-tooltip`, that the plot
+  adds to its element on the first hover and removes in `destroy`,
+  placed 12 pixels right of and below the point, and on its left or
+  above it where it would leave the element. It is HTML and not SVG,
+  since it wraps text and is not part of the exported plot. Its lines
+  are the name of the individual; the name of its group or its value,
+  after the title of the colouring, "Population: P2", "No population",
+  "Height: 1.72"; and the two coordinates, "PC1 −0.0231, PC2 0.0104",
+  to three significant digits. Its text is set with `textContent` and
+  never as markup, since the names come from the user's files and a
+  name holding `<img onerror=…>` would run in the page (`charts.md`,
+  "Hover and tooltips"). It has `aria-hidden="true"` and takes no
+  pointer events: the table beside the plot gives the same numbers to a
+  screen reader and a keyboard.
+- **The mark of the point**, a ring of 2 pixels around it in
+  `--color-text`, one `path.chart-hover` in `chart-annotations`, drawn
+  over the marks. The export leaves it out, as it leaves out the overlay.
+- **`events.onHover`** is called with the index of the point, or with
+  `null`, each time the point under the pointer changes and never twice
+  with the same one, so that a screen can mark the row of the table.
+- **A mouse or a pen that leaves the frame** hides the tooltip and calls
+  `onHover(null)`. **A tap** on a touch screen shows the tooltip of the
+  nearest point, and a tap on the plot away from every point hides it; a
+  tap outside the plot leaves it shown until the next tap on the plot,
+  since the plot listens to its own element and not to the page.
+- **A draw hides the tooltip**, after `update` or a resize, since the
+  point under the pointer may have moved, and calls `onHover(null)` when
+  a point was under it; the next movement of the pointer finds the point
+  again.
+
+## The TypeScript interface
+
+What the scatter and the 3D plot share: how the points are coloured,
+and the mark of each group. `highlighted` and the texts are the
+screen's.
+
+```ts
+// src/charts/marks.ts
+/** The group of a point with no population, or no value in the column. */
+export const NO_GROUP = 0xffff;
+
+/** How the points are coloured: by their group, or by a number. */
+export type PointColours = GroupColours | ValueColours;
+
+export interface GroupColours {
+  readonly kind: "groups";
+  /** The title of the legend and of the tooltip: "Population", or the column's name. */
+  readonly title: string;
+  /** The index of each point's group in `names`, or NO_GROUP. */
+  readonly group: Uint16Array;
+  /** The names of the groups; the index of a group gives its mark. */
+  readonly names: readonly string[];
+  /** The name of the points of NO_GROUP: "No population", "No value". */
+  readonly noneName: string;
+  /** The group the legend highlights, an index of `names` or NO_GROUP; null for none. */
+  readonly highlighted: number | null;
+}
+
+export interface ValueColours {
+  readonly kind: "values";
+  /** The title of the legend and of the tooltip: the column's name. */
+  readonly title: string;
+  /** The value of each point; NaN for none. */
+  readonly values: Float64Array;
+  /** The name of the points with no value: "No value". */
+  readonly noneName: string;
+}
+
+/** The mark of group `group`: its colour, 0 to 6, and its symbol, 0 to 6, of symbolsFill. */
+export function groupMark(group: number): { readonly colour: number; readonly symbol: number };
+
+/**
+ * The drawing of the mark of `group`, centred on 0,0, of SYMBOL_AREA,
+ * as the `d` of an SVG path; the ring for NO_GROUP. For the legend.
+ */
+export function symbolPath(group: number): string;
+
+/** The step of viridis, 0 to 255, of `value` between `min` and `max`; 128 when they are equal. */
+export function viridisStep(value: number, min: number, max: number): number;
+
+/** The colour of a step of viridis, "#440154" for 0 and "#fde725" for 255. */
+export function viridisColour(step: number): string;
+
+/** The area of a mark in square pixels. */
+export const SYMBOL_AREA = 64;
+```
+
+`symbolPath` and `drawSymbolAt`, the loop's function, draw the same
+`d3-shape` symbols, so the legend and the plot cannot differ; the 3D plot
+draws them on a canvas with the same symbol types.
+
+What the legend shows, as data, for the screen's legend and for the one
+of the exported file:
+
+```ts
+// src/charts/legend.ts
+export interface LegendGroup {
+  /** The index of the group in `names`, or NO_GROUP; its mark is symbolPath(group). */
+  readonly group: number;
+  readonly name: string;
+  /** How many points of the group are drawn, those with finite coordinates. */
+  readonly count: number;
+  /** True when another group is highlighted. */
+  readonly faded: boolean;
+}
+
+export type Legend =
+  | {
+      readonly kind: "groups";
+      readonly title: string;
+      /** The groups in the order of `names`, those with no point left out, then NO_GROUP when it has points. */
+      readonly entries: readonly LegendGroup[];
+    }
+  | {
+      readonly kind: "values";
+      readonly title: string;
+      /** The smallest and largest finite value of the points drawn; null when none has one. */
+      readonly min: number | null;
+      readonly max: number | null;
+      readonly noneName: string;
+      /** How many points drawn have no value. */
+      readonly noneCount: number;
+    };
+
+/**
+ * The legend of the points drawn, those whose every coordinate is
+ * finite: [x, y] for the scatter, [x, y, z] for the 3D plot. What the
+ * screen shows over the plot and the export writes in the file.
+ */
+export function legendOf(
+  colours: PointColours,
+  coordinates: readonly Float64Array[],
+): Legend;
+
+/**
+ * Draws `legend` into `group` of an exported SVG, its rows ending at
+ * `right` and starting at `top`, in SVG pixels, and no row below
+ * `bottom` (below, "The export"). For the scatter and the 3D plot.
+ */
+export function drawLegendSvg(
+  group: Selection<SVGGElement, unknown, null, undefined>,
+  legend: Legend,
+  right: number,
+  top: number,
+  bottom: number,
+): void;
+```
+
+The point under the pointer and its tooltip, shared with the 3D plot:
+
+```ts
+// src/charts/hover.ts
+/**
+ * The index of the point nearest to (px, py) within `radius` pixels, or
+ * null. `positions` holds x and y in pixels, two per point, NaN for a
+ * point not drawn. With `depth`, one per point, the nearest to the
+ * camera wins among the points within `radius` (pca3d.md).
+ */
+export function nearestPoint(
+  positions: Float32Array,
+  px: number,
+  py: number,
+  radius: number,
+  depth?: Float32Array,
+): number | null;
+
+/** The lines of the tooltip of point `index`, with its coordinates by name: [["PC1", -0.0231], ["PC2", 0.0104]]. */
+export function tooltipLines(
+  name: string,
+  colours: PointColours,
+  index: number,
+  coordinates: readonly (readonly [string, number])[],
+): string[];
+```
+
+The scatter. Its texts are the screen's, with those of `PlotText`:
+`xLabel` "PC1 (12.3%)" and `yLabel` "PC2 (8.1%)".
+
+```ts
+// src/charts/scatter.ts
+export interface ScatterData extends PlotText {
+  /** The coordinate of each point across and up; NaN or an infinity is not drawn. */
+  readonly x: Float64Array;
+  readonly y: Float64Array;
+  /** The short names of the two axes, for the tooltip and the table: "PC1", "PC2". */
+  readonly xName: string;
+  readonly yName: string;
+  /** The name of each point, an individual, for the tooltip. */
+  readonly pointNames: readonly string[];
+  readonly colours: PointColours;
+}
+
+export interface ScatterEvents {
+  /** The point under the pointer, by its index, or null; called when it changes. */
+  onHover?(point: number | null): void;
+}
+
+export const createScatter: Chart<ScatterData, ScatterEvents>;
+
+/** The margins of the scatter, in CSS pixels; the screen places the legend by them. */
+export const SCATTER_MARGIN: Margin; // top 12, right 16, bottom 44, left 60
+
+/** The two scales, of the same pixels per unit, for a frame of this size. */
+export function scatterScales(
+  data: ScatterData,
+  innerWidth: number,
+  innerHeight: number,
+): { readonly x: ScaleLinear<number, number>; readonly y: ScaleLinear<number, number> };
+
+/** One point, as the table beside the plot shows it. */
+export interface ScatterRow {
+  readonly name: string;
+  readonly x: number;
+  readonly y: number;
+  /** Its group's name, noneName for NO_GROUP; or its value, null for none. */
+  readonly colour: string | number | null;
+}
+
+/** One row per point, in the order of the data, those not drawn among them. */
+export function scatterRows(data: ScatterData): ScatterRow[];
+```
+
+`createScatter`, `update`, `scatterRows` and `legendOf` throw an
+`Error`, a defect of the caller, from the check of the data, when `x`,
+`y`, `pointNames` and the `group` or the `values` of the colours are not
+all of one length; when there are more than `MAX_SVG_POINTS` points,
+50,000; when a group index is neither below the number of names nor
+`NO_GROUP`; when `highlighted` is neither null, nor below the number of
+names, nor `NO_GROUP`; and when there are more than `MAX_POINT_GROUPS`
+names, 1,000, a constant of `src/charts/limits.ts`: each group is a path
+and an entry of the legend, and a thousand are still drawn, while more
+is a column of names, which the screen does not offer for colouring
+(`pca.md`). A highlighted group with no point drawn is not a defect,
+since the screen may give it for one draw before it clears it: every
+point is then faded.
+
+`createScatter` makes its definition for the base in each call, since
+the definition holds the state of one plot, the pixel positions of the
+last draw, the tooltip and the events, and wraps the base's handle so
+that `destroy` also removes the tooltip (`plot2d.md`, revised).
+
+## The SVG it builds
+
+The base makes the skeleton, with the class `chart chart-scatter` and the
+overlay, `rect.chart-overlay`, the last child of `chart-frame`
+(`plot2d.md`). The scatter draws, in `chart-marks`, which the base clips
+to the frame:
+
+- for groups: one `path.chart-points` per group with a point drawn, with
+  the class of its colour, `chart-colour-‹0 to 6›`, keyed by the index of
+  the group; the path of the no-group, `path.chart-points
+  chart-points-none`, first, and the highlighted group's last; each
+  path of a group that is not highlighted, while another is, with
+  `chart-points-faded`;
+- for values: one `path.chart-points chart-points-value` per step of
+  viridis with a point, keyed by the step, with its `fill` attribute,
+  and the ring path of the points with no value first.
+
+In `chart-annotations`, `path.chart-hover` while a point is under the
+pointer. The group `chart-legend` of the SVG stays empty on the screen;
+the export draws into it (below).
+
+```css
+.chart-points         { stroke: var(--chart-axis); stroke-width: 1px; }
+.chart-colour-0       { fill: var(--chart-cat-1); }   /* … to .chart-colour-6, --chart-cat-7 */
+.chart-points-none    { fill: none; }
+.chart-points-faded   { opacity: 0.25; }
+.chart-hover          { fill: none; stroke: var(--color-text); stroke-width: 2px; }
+.chart-overlay        { fill: none; pointer-events: all; }
+.chart-tooltip        { position: absolute; pointer-events: none; … }
+```
+
+The colours of the groups are the same in both themes (`css.md`, "Light
+and dark"), and the outline, the ring and the mark under the pointer
+follow the theme through their tokens with no redraw. The tooltip takes
+the surface and the text of the theme.
+
+## The numbers without the picture
+
+The base writes the text alternative and gives the rule of the table
+(`plot2d.md`, "The text alternative and the table of the numbers"). What
+the scatter adds:
+
+- **The description**, which the screen writes, in this form: how many
+  individuals are drawn and in how many groups, the two components and
+  the variance each explains, and those not in a group: "The PCA of 200
+  individuals in 3 populations, PC1 against PC2. PC1 explains 12.3% of
+  the variance and PC2 8.1%. 12 individuals have no population." For
+  values: "… coloured by height, from 1.52 to 1.96; 3 individuals have
+  no height." The PCA's spec gives the words (`pca.md`). It describes
+  the 2D plot, which is the one the PCA opens in and exports (point 5 of
+  the recommendations of 27 September 2026, `docs/specs/stage-4-open-points.md`).
+- **A table of the individuals, drawn by the screen**, one row per
+  individual with its name, its group or value and its coordinates on
+  the two components, from `scatterRows`, whose numbers are shown with
+  `tableNumber`. The PCA's table may show more, every component the
+  result keeps (`pca.md`); its rows for the two components drawn are
+  those of `scatterRows`, so that the table and the plot never disagree.
+  The table is reachable by the keyboard and read by a screen reader;
+  the marks are not, since 9,381 stops of the Tab key would be of use to
+  no one (`charts.md`, "Accessibility").
+- **The groups are told apart by more than colour**: by the shape of the
+  mark, by the legend with the names and counts, by the tooltip and by
+  the table (WCAG 2.2, success criterion 1.4.1).
+
+## The export
+
+The handle's `toSVG` and `toPNG` are the base's (`plot2d.md`, "The
+export"), and no screen offers them until stage 6. The file holds the
+plot as it is on the screen, the highlight with it, with no overlay, no
+mark of a point under the pointer and no tooltip; and it holds the
+legend, which on the screen is the screen's, drawn by the plot into the
+`chart-legend` group of the copy that `toSVG` writes, through the hook
+of the base for it, `drawExport` (`plot2d.md`, revised). The legend of
+the file is `legendOf` of the data, drawn by `drawLegendSvg` as the
+screen draws it:
+
+- at the top right of the frame, over the points, as on the screen, one
+  row of 16 pixels per entry, its text ending before its mark and its
+  mark at the right edge of the frame, so that it needs no measure of
+  the text (`histogram.md`, "The SVG it builds"), with the title first;
+- a faded entry with the class `chart-legend-faded`, at the opacity of
+  the faded points;
+- for values, a bar of 32 bands of viridis, 96 pixels high, the largest
+  value at its top and the smallest at its bottom, each band a
+  rectangle with its `fill`, which needs no gradient and so no id of its
+  own; then the ring and "No value (3)" when there are some;
+- when the rows would pass the bottom of the frame, the last row that
+  fits says "and 12 more", since the file cannot scroll; the table,
+  downloaded beside it as CSV, has every group.
+
+A plot 48rem wide, the largest of "The size" below, is 768 pixels wide
+at the browser's default size of text, 16 pixels, so its PNG at 3 times
+is 2,304 pixels wide; it takes 2 times above a size of text of 28.4
+pixels, and is refused above 42.7 (`plot2d.md`, "The export").
+
+## The size
+
+The plot never sets the size of its element (`charts.md`). The screen's
+CSS gives the element its width, that of its container, and its height,
+meanwhile `aspect-ratio: 4 / 3`, with a `max-width` of 48rem, refined in
+the running application; the 3D plot takes the same size, so that the
+switch between the two does not move the page (`pca3d.md`). The element
+is `position: relative`, so that the tooltip is placed inside it
+(`css.md`). At 320 pixels wide, the width of a phone in WCAG 2.2,
+1.4.10, the frame is 244 by 184 pixels.
+
+## The cases
+
+- **No point with finite coordinates**: the axes are drawn as for one
+  point at (0, 0), no mark is drawn, and the legend counts none; the
+  screen says why.
+- **One point, or every point at one place**: it is drawn at the centre
+  of the frame (above, "The axes").
+- **A group with no point drawn** has no path and no entry in the
+  legend, and keeps its mark: the next group is not given its colour.
+- **An `update` to another colouring**, from groups to values or to
+  another column: the paths are joined by their keys, those of the
+  groups or of the steps, in the same SVG; the tooltip is hidden.
+- **An `update` that only changes the highlight** redraws the paths with
+  their classes and order, in well under a frame for the 9,381 points of
+  the largest PCA, by the measurements above.
+- **A resize** draws again at the new size, with new scales and new
+  pixel positions, and hides the tooltip.
+- **A name with markup in it**, of an individual, a population or a
+  column, `<b>P1</b>`: shown as text in the tooltip, and as text in the
+  legend of the file; no `b` element is made.
+- **A change of theme**: nothing is drawn again; a later `toSVG` is in
+  the light theme all the same.
+- **`destroy`, a size of 0, a frame with no area and data the plot
+  refuses** are the base's cases (`plot2d.md`, "The cases"); `destroy`
+  also removes the tooltip, and a second call does nothing.
+
+## How it runs
+
+On the page, in the main thread. The scatter keeps the pixel positions
+of the last draw, two 4-byte numbers per point, 75 KB for 9,381 points,
+and the tooltip; the paths are the SVG's. A draw is a loop over the
+points and a join of at most a few hundred paths.
+
+## How it is verified
+
+At `createScatter`, its handle and the pure functions of the four
+modules, the highest functions at which each thing can be seen. What
+the base does for every plot is verified in `plot2d.md`, with the
+overlay and the legend of the exported file added there.
+
+**The pure functions, in the project `charts` of Vitest** (`testing.md`):
+
+- `groupMark`: group 0 is colour 0 and symbol 0, group 7 colour 0 and
+  symbol 1, group 8 colour 1 and symbol 2, the 49 groups 0 to 48 have
+  49 different pairs, and group 49 the pair of group 0.
+- `scatterScales` for x from −1 to 1 and y from 0 to 1 in a frame of 400
+  by 300: 192 pixels per unit on both axes, the domain of x
+  −1.0416666666666667 to 1.0416666666666667 and of y −0.28125 to
+  1.28125, so that y = 1 is 54 pixels below the top; for one point at
+  (2, 3) in the same frame, 142 pixels per unit, (300 − 16) / 2, and the
+  point at (200, 150); and for no finite point, the same scale around
+  (0, 0).
+- `legendOf`: for groups `[0, 1, NO_GROUP, 0, 2]` with names `P1`, `P2`,
+  `P3`, `P4` and the fifth point not drawn, the entries P1 2, P2 1 and
+  "No population" 1, with no P3, whose one point is not drawn, and no P4;
+  with P2 highlighted, P1 and "No population" faded; for values
+  `[1.5, NaN, 2.5]`, min 1.5, max 2.5 and 1 with no value.
+- `viridisStep` of the smallest value 0, of the largest 255, of a value
+  when min and max are equal 128; `viridisColour` of 0 "#440154" and of
+  255 "#fde725".
+- `nearestPoint`: the nearer of two points within 10 pixels; none beyond
+  10; a NaN position never; with a depth, the point nearer the camera
+  among two at the same pixel.
+- `tooltipLines` of a point of P2 at (−0.02314, 0.01041): "Population:
+  P2" and "PC1 −0.0231, PC2 0.0104"; of a point of no group, "No
+  population".
+- `scatterRows` gives the group's name, `noneName` or the value, with
+  every coordinate as given.
+- Each defect of "The TypeScript interface" throws, with 50,000 points
+  accepted and 50,001 refused.
+- The path of one group of two points is the one `drawSymbolAt` writes
+  with one decimal, a literal made by `symbol` and `pathRound(1)` of D3
+  for those points and written into the test.
+
+**The SVG, under jsdom**, with the size of the element given by a stub
+of `clientWidth` and `clientHeight` and a `ResizeObserver` the test
+calls, as `plot2d.md` does:
+
+- the class `chart chart-scatter`, and `rect.chart-overlay` as the last
+  child of `chart-frame`, of the size of the frame;
+- four groups and a no-group: five `path.chart-points`, the
+  `chart-points-none` first, each group with the class of its colour;
+  with group 2 highlighted, its path last and the four others with
+  `chart-points-faded`; an `update` to no highlight removes the class;
+- values: one path per step used, each with a `fill` attribute that is
+  a colour of viridis, and the ring path of the points with no value;
+- an `update` from groups to values and back, in the same `<svg>`
+  element, with no path of the other colouring left;
+- `toSVG` holds the legend in `chart-legend`: one row per entry with its
+  text, "No population (1)" last, and "and 12 more" when the frame
+  holds fewer rows than the entries; `chart-legend` of the plot on the
+  screen stays empty after it;
+- `destroy` after a hover leaves the element with no child, the tooltip
+  gone.
+
+jsdom has no layout, so the position of the pointer that `pointer` of
+`d3-selection` computes from the SVG's place on the page cannot be had
+there; the hover is verified in the browser.
+
+**In Playwright, in Chromium, Firefox and WebKit**, on the page of the
+tests of the plots, `e2e/plots.html`, which draws a scatter of 9,381
+points in 5 groups, a no-group among them, from literal arrays, at a
+size the test sets:
+
+- the pointer moved to the pixel of point 0, which the page computes
+  with `scatterScales`, shows a tooltip with its name, and `onHover` is
+  called with 0; moved 30 pixels away from every point, the tooltip is
+  hidden and `onHover` called with `null`; a name `<img src=x
+  onerror=…>` shows as text and runs nothing;
+- a tap, in a context with touch, shows the tooltip of the point tapped;
+- `toSVG` has no `chart-overlay`, no `chart-hover` and no `var(`, and
+  holds the legend; its PNG at 3 times of a plot of 600 by 450 is 1,800
+  by 1,350 pixels;
+- the time from `createScatter` to the next frame drawn, for the 9,381
+  points, five times, printed with the engine and the machine, as the
+  walking skeleton measured it; no bound fails the test, and the time is
+  written into this spec with its engine.
+
+The PCA panel in both themes, with the legend over the plot and a group
+highlighted, is in the screens of `e2e/screens.spec.ts`, looked at as
+`testing.md` says, and axe runs on it (`pca.md`).
+
+**The dependencies it adds**, none yet in `package.json`, the versions
+those of `npm view` on 27 September 2026: `d3-shape` 3.2.0, which
+brings `d3-path`, and `d3-path` 3.1.0, imported for `pathRound`;
+`d3-scale-chromatic` 3.1.0, which brings `d3-color` and
+`d3-interpolate`, already brought by `d3-scale`; for development,
+`@types/d3-shape` 3.2.0, `@types/d3-path` 3.1.1 and
+`@types/d3-scale-chromatic` 3.1.0. The owner took these modules on 24
+September 2026 (`docs/technology.md`, section 2). `d3-delaunay` is not
+added (above, "The point under the pointer"), and `d3-format`,
+`d3-array` and `d3-zoom` neither: the numbers of the tooltip are
+formatted by `Intl.NumberFormat`, the ranges by a loop, and the scatter
+has no zoom in stage 4.
+
+## What this spec assumes of other specs
+
+Of `docs/specs/analyses/pca.md`:
+
+- the options `colourBy` and `axes`, the 2D plot showing `axes[0]`
+  against `axes[1]`, and a function that turns the result and the
+  metadata into `x`, `y`, the names and `PointColours`, shared with the
+  3D plot, which gives the names of the groups in the same order
+  whatever is shown;
+- which columns colour by groups and which by values, and that a column
+  with more than `MAX_POINT_GROUPS` values is not offered, or is offered
+  some other way it decides;
+- the words: the labels of the axes with the percentages, `xName`, the
+  title of the colouring, `noneName`, the description, and the legend's
+  name for a screen reader;
+- the panel draws the legend with React Aria's `ToggleButtonGroup`, as
+  "The legend, drawn by the screen" says, keeps the highlight as state
+  of the screen, clears it when the colouring changes, and gives it to
+  the 2D and the 3D plot alike;
+- the table of the individuals, from `scatterRows` for the two
+  components drawn.
+
+## What this spec asks of other documents
+
+- `docs/specs/charts/plot2d.md`: revised with this spec, on 27 September
+  2026, for the overlay and the calls of the pointer, `pointer` of the
+  definition; the hook that draws into the exported copy, `drawExport`;
+  the export leaving out `chart-hover`; a definition made per plot when
+  it holds the state of one plot.
+- `.claude/skills/coding/charts.md`, not edited by this spec:
+  - "The contract of a plot": `ScatterData` as above, the colours in
+    `PointColours` of `marks.ts`, shared with the 3D plot;
+  - "Hover and tooltips": the nearest point by a loop over the pixel
+    positions, 0.027 ms for 50,000 points in node, and not a Delaunay;
+    `d3-delaunay` off the list of the modules;
+  - "Colours, themes and the exported file": the colours of viridis are
+    written on their paths, the one colour a plot writes, the same in
+    both themes;
+  - "Accessibility": a point in no group, or with no value, is a ring in
+    `--chart-axis`, drawn first; the marks are of 64 square pixels;
+  - "The 3D PCA with three.js": the legend is the screen's, in React,
+    shared by the two plots, and not HTML the plot makes;
+  - "What SVG can draw": the numbers of the paths rounded to one
+    decimal with `pathRound(1)`.
+- `docs/architecture.md`, section 9: `marks.ts`, `legend.ts` and
+  `hover.ts` in the list of `src/charts`.
+- `.claude/skills/coding/css.md`: the classes of `charts.css` above use
+  no new token.
+- `.claude/skills/coding/testing.md`, "Against the built site": the
+  page `e2e/plots.html` draws the scatter and the 3D plot too.
+
+## Open points
+
+None of its own. The 50,000 points are the owner's decision of 26
+September 2026, and the one decimal is decided above with the numbers of
+the walking skeleton. The points of `docs/specs/stage-4-open-points.md`
+this spec leans on are the 2D plot opening first (point 5) and the
+drawing options kept out of the key of the PCA (`pca.md`).
+
+## Not in this spec
+
+- The lasso that assigns the points to a population, which is not in
+  stage 4 and needs a design of its own (`charts.md`, "The lasso,
+  later").
+- A zoom and a pan of the 2D plot, with `d3-zoom`, which the Manhattan
+  plot brings in stage 7; the 3D plot zooms (`pca3d.md`).
+- A grid, and lines at 0 of each component.
+- The buttons of the export, in stage 6.
+- The legend as a React component, the bar above the plot and the switch
+  between 2D and 3D: `pca.md`, the panel.
+- A scatter of two quantities of different units, whose axes would each
+  need their own scale: the option comes with the first such plot.

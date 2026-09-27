@@ -959,8 +959,20 @@ The page and each worker talk through typed messages
   Run once.
 
 The calculation worker keeps, under keys as the results are, what several
-analyses reuse: the variants kept by the LD pruning of the PCA, the
-kinship, the principal components that the GWAS takes as covariates.
+analyses reuse: the kinship, and the principal components that the GWAS
+takes as covariates, from stage 7. Not the variants kept by the LD
+pruning of the PCA, which this section named until 27 September 2026:
+popnei's pruning, `filterByLd` of `js/popnei/src/variant.ts`, is a step of
+a `Variants` made again at every pass, and popnei has no way to hold the
+variants it kept or to put a list of variants back on a `Variants`. The
+one way through popnei, writing the pruned variants as a `.nei` file in
+memory and opening it again, holds the whole file in the memory of wasm,
+which never shrinks. So each PCA prunes inside its own pass, which it
+makes in any case; what keeping them would spare is the calculation of
+r², whose time is measured in stage 4, and popnei is asked for a way to
+keep them if it is large. Recommended to the owner on 27 September 2026,
+meanwhile (`docs/specs/stage-4-open-points.md`). So the calculation
+worker keeps no intermediate result before stage 7.
 
 ### Two workers, and why
 

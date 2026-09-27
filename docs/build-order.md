@@ -197,6 +197,11 @@ order does not wait for what exists:
   groups by, and the PCA is where the user checks them. The 3D view comes
   after the 2D one, because the 2D plot tries the scatter, the colours of
   the populations and the export, which the 3D one reuses.
+- **Needs of popnei:** the PCoA of the Kosman distances between the
+  individuals, which popnei did not have on 27 September 2026, and which
+  the owner asked of popnei that day. The PCA, the Kosman distances and
+  the LD pruning are in the release `js-v0.1.0-dev.2`. The PCoA comes last
+  in the stage, so the stage does not wait for it.
 
 ### Stage 5. The analyses of the populations
 
@@ -263,6 +268,7 @@ order does not wait for what exists:
 | the filter by the regions of a BED file: none; to be added, decided on 26 September 2026 | functionality.md, section 3 | stage 3 |
 | the histogram of the proportion of missing genotypes per variant: none; to be added, decided on 26 September 2026 | functionality.md, section 3 | stage 3 |
 | the density of variants along each chromosome: none; to be added, decided on 26 September 2026 | functionality.md, section 3 | stage 3 |
+| the PCoA of the Kosman distances between the individuals: none; asked of popnei by the owner on 27 September 2026 | functionality.md, section 11 | stage 4 |
 | the private alleles, the rarefaction, the folded SFS | functionality.md, section 11 | stage 5 |
 | the fall of r² with distance and the distance at which it falls to half: `LdDecay` in `js/popnei/src/ld.ts`, in the release `js-v0.1.0-dev.2` | functionality.md, section 11 | stage 5 |
 | the logistic models of the GWAS | popnei, being written | stage 7 |

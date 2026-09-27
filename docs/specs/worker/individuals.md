@@ -7,7 +7,13 @@ the same day for the owner's decisions on the reviews of work packages
 at its end: the empty cells at the end of a header, a variants file
 picked by mistake, the byte order mark of UTF-8 with a bad byte, a
 UTF-16 file cut short, and a column with no name whose cells are all
-missing. The reader turns the CSV or TSV file of the individuals, the
+missing. Revised on 27 September 2026 for stage 4 of
+`docs/build-order.md`: the xlsx, whose cells the files crate reads
+(`docs/specs/worker/files.md`) and this reader makes into the table, with
+its refusals; the types inferred from the cells compared as text, which
+settles the last open point of this spec; and `readIndividualsFile`,
+which takes an xlsx. The revision is not approved yet. The reader turns
+the file of the individuals, a CSV, a TSV or an xlsx, the
 metadata file of population genetics or the traits file of association,
 into the table the project holds, and infers the type of each of its
 columns. It runs in the light worker, the second thread of the tab that
@@ -17,10 +23,11 @@ reads the files of the user and holds no popnei, so that a file of
 worker that reads the bytes of the file and decodes them,
 `src/worker/individualsFile.ts`, and the light worker's runner,
 `src/worker/filesRunner.ts`, the code of the worker that answers the
-page, as far as the walking skeleton needs it: CSV and TSV only. The
-walking skeleton is stage 2 of `docs/build-order.md`, the smallest
-application that goes through every part once; the xlsx and the files
-crate, the small Rust module that reads them, come in stage 4. It
+page: CSV and TSV from the walking skeleton, stage 2 of
+`docs/build-order.md`, the smallest application that goes through every
+part once, and the xlsx from stage 4. The files crate, the small Rust
+module that reads the cells of an xlsx, and how the light worker loads
+it, are `docs/specs/worker/files.md`. It
 develops the rows `individuals/` and `filesRunner.ts` of section 9 of
 `docs/architecture.md` and its section 6, "The individuals file", and
 depends on `docs/specs/worker/protocol.md`, for the table, the types of
@@ -279,10 +286,73 @@ among them. So a file of `1,75` and `1,82` is read with a comma, and a
 file that mixes `1,75` and `1.82` is read with the mark most of its cells
 use, and the others are text.
 
+### The xlsx
+
+A source with no options of a CSV, `csv` `null`, is an xlsx
+(`docs/specs/core/project.md`, `IndividualsSource`); the Individuals
+step makes it so for a file whose name ends in `.xlsx`
+(`docs/specs/steps/individuals.md`). Its read:
+
+1. The size is checked as a CSV's, point 1 of "The bytes and the
+   encoding", with the same 20 MB, and the bytes are read as there, point
+   2. An xlsx is compressed, so 20 MB of it is a larger table than 20 MB
+   of CSV; the size of the table is bounded by the next point.
+2. The files crate reads the cells of the first sheet that is not hidden,
+   the rectangle from its first to its last row and column with a value,
+   each cell empty, text, number or boolean, dates and errors made text
+   (`docs/specs/worker/files.md`, "Each cell"), or refuses the file. A
+   rectangle of more than `MAX_SHEET_CELLS`, 2,000,000 cells, is refused,
+   `sheetTooLarge`, before its cells are made: a CSV of 20 MB holds about
+   1,000,000 cells of ten characters, and a sheet twice that is still a
+   table of individuals. It is an estimate, as the 20 MB is.
+3. The rows of the rectangle go through the rules of "The rows and the
+   cells", but those of the text of a CSV: no variants file, no line
+   ending, no quote, no row of another length, since every row of the
+   rectangle is as long as it. So a blank row is skipped, the header is
+   the first row that is not blank, the empty cells at the end of the
+   header whose columns hold no value are dropped, a column with no name
+   and a value is refused, and so on, in the same order of refusals. The
+   code of those rules is one, for the rows of a CSV and of an xlsx.
+4. **A text cell** has its spaces and tabs at the ends removed, as a
+   cell of a CSV outside quotes has, and is missing when it is then
+   empty, `NA` or `-`, exactly. A cell with an error of Excel, `#N/A`, is
+   its text and not missing (`docs/specs/worker/files.md`, **Open 1**
+   there).
+5. **A number or a boolean** stays one in the table, but in the header
+   and in the first column, whose cells are names and so text: there it
+   is written as JavaScript's `String` writes it, `1`, `1.5`, `true`, so
+   that an individual stored by Excel as the number 1 is named `1`, and
+   a column named by the year 2024 is `2024`. Its **text** is the same
+   in every column, and is what the types compare, below.
+6. The read gives `found` `null`: an xlsx has no encoding, separator or
+   decimal mark to report, as `docs/specs/core/project.md` has it
+   (`IndividualsRead`). The decimal mark of an xlsx is the point: a
+   number of an xlsx is a number already, and a text cell is read as a
+   number, when a type is inferred, with the point, as its text writes a
+   number, `1.75`. A text `1,75` in an xlsx, which Excel did not take for
+   a number when it was typed or pasted, is text.
+
+A refusal of an xlsx names a row and a column as Excel does, so that the
+user finds them: the row by its number in the sheet, and the column by
+its number, A being 1, which the words write as Excel's letters. The
+line of `emptyIndividual` is the row of the sheet, and the column of
+`unnamedColumn` the column of the sheet, not of the rectangle.
+
 ### The types of the columns
 
 Each column gets one type, from its values, the cells that are not
-missing, compared as text (`docs/functionality.md`, section 4):
+missing, compared as text (`docs/functionality.md`, section 4). The
+**text of a cell** is the cell itself when it is text, and, for a number
+or a boolean of an xlsx, what JavaScript's `String` writes, `1`,
+`0.30000000000000004`, `true`. So a number 1 and a text `1` in one column
+of an xlsx are one value, as the writers of the specs of stage 4
+decided on 27 September 2026, which settles the open point this spec had
+and which the owner may overrule (`docs/specs/stage-4-open-points.md`): a
+column of Excel where some cells were typed as numbers and some pasted
+as text would otherwise count each value twice, and a column of `0` and
+`1` would not be binary. A number is read from the text with the decimal
+mark of the read, the point for an xlsx. A CSV gives only text, so what
+it reads is not changed.
 
 | type | when | example |
 |---|---|---|
@@ -291,9 +361,9 @@ missing, compared as text (`docs/functionality.md`, section 4):
 | continuous | three distinct values or more, every one a number | `1,75`, `1,82`, `1,69`; a score from 1 to 5 |
 | categorical | anything else: one value, no value, or three or more of which one is not a number | `España`, `Italia`, `Perú`; `12`, `15`, `n.d.` |
 
-A binary column holds its two values as they are in the table, the text
-`"1"` and not the number 1, and which of the two is coded 1, the case,
-proposed by these rules and changed by the user from stage 4:
+A binary column holds the text of its two values, the text `"1"` and
+not the number 1 also for an xlsx, and which of the two is coded 1, the
+case, proposed by these rules and changed by the user from stage 4:
 
 1. Two numbers: the larger is 1, so `0`/`1` gives `1`, and `1`/`2` gives
    `2`, as in the phenotypes of plink, the common program of association,
@@ -311,8 +381,8 @@ proposed by these rules and changed by the user from stage 4:
 The case is spelled `case` or `Case` in the file, and `one` holds it as
 written.
 
-A continuous column whose values are all whole numbers, written as
-digits with an optional sign and no decimal mark or exponent, `12` and
+A continuous column whose values are all whole numbers, their text
+written as digits with an optional sign and no decimal mark or exponent, `12` and
 `-3` but not `12,0` or `1e3`, and that has at most 20 distinct numbers,
 counted by value, so `1`, `01` and `001` are one,
 `MAX_FEW_WHOLE_LEVELS`, is continuous with a warning: such a column is
@@ -404,6 +474,33 @@ Each is a kind of `IndividualsFileError`, and the last eight are new:
 | `variantsFile` | "it is a variants file, which the Variants step takes" |
 | `cutShort` | "it ends in the middle of a character and may have been cut short" |
 
+An xlsx is refused with the kinds of the rows and the cells that its
+rows can meet, `empty`, `duplicateColumn`, `duplicateIndividual`,
+`unnamedColumn` and `emptyIndividual`, with `tooLarge` and `unreadable`
+as a CSV, and with its own, from stage 4. Of the first five, two speak
+of a place, and for an xlsx they name it as Excel does: "row 7 has no name of an individual in its first
+column" and "column D has values but no name in the header", the column
+written with the letters of Excel, since a user looks for column D and
+not for column 4. `src/core/project.ts` writes them so for a source whose
+`csv` is `null`. The kinds of the xlsx, which only it gives, with the
+words after "pops.xlsx could not be read:":
+
+| kind | when | what the user reads after "could not be read:" |
+|---|---|---|
+| `notXlsx` | not a zip, as every xlsx is | "it is not an Excel workbook, although its name ends in .xlsx; if it is a CSV or a TSV, give it a name that ends in .csv" |
+| `oldExcel` | a compound file of the old Office, not encrypted | "it is a workbook of Excel 97–2003, although its name ends in .xlsx; in Excel, save it as Excel Workbook (.xlsx)" |
+| `encrypted` | saved with a password | "it is protected by a password; in Excel, save a copy without the password" |
+| `emptySheet` | the first sheet that is not hidden has no value | "its first sheet, Hoja1, is empty, and only the first sheet is read; put the table in the first sheet" |
+| `cellError` | a cell with an error calamine does not know | "a cell holds the error #SPILL!, which cannot be read; in Excel, correct its formula or replace it with its value" |
+| `sheetTooLarge` | a rectangle of more than 2,000,000 cells | "its first sheet, Hoja1, has values over 200 rows and 16,384 columns, 3,276,800 cells, more than the 2,000,000 a metadata file can have; delete the values outside the table", "a traits file" in association |
+| `xlsxReaderNotLoaded` | the files wasm could not be downloaded | "the part of the application that reads Excel files could not be downloaded; check the connection and load the file again, or reload the page if it fails again" |
+| `files` | calamine could not open it as a workbook | "it could not be read as an Excel workbook and may be damaged; open it in Excel and save it again" |
+
+The message of `files` and of `xlsxReaderNotLoaded`, calamine's and the
+browser's, is written to the console and not shown, as that of
+`unreadable`: it is for whoever reports the problem, and says nothing a
+user can act on.
+
 A size is in MB of 1,000,000 bytes, as macOS shows it, with one
 decimal rounded up, so that a file of 20,000,001 bytes is "20.1 MB" and
 never "20.0 MB, more than the 20 MB"; the limit, a whole number of MB, is
@@ -447,11 +544,46 @@ export function readCsv(
 ): Result<CsvRead, IndividualsFileError>;
 ```
 
-The inference, in `src/worker/individuals/columnTypes.ts`, which the xlsx
-of stage 4 calls too. `decimal` is the mark a text cell is read with; a
-number cell of an xlsx is a number already.
+The reader of the cells of an xlsx, in `src/worker/individuals/sheet.ts`,
+pure as `csv.ts` is: it takes the rectangle the files crate gave and
+makes the table, by the rules of "The xlsx", with the rules of the rows
+that it shares with `readCsv`.
 
 ```ts
+/** The rectangle of a sheet, as the light worker makes it of what the
+    files wasm gives (docs/specs/worker/files.md). */
+export interface SheetCells {
+  sheet: string;                  // the name of the sheet
+  firstRow: number;               // as Excel numbers the rows, from 1
+  firstColumn: number;            // column A is 1
+  numColumns: number;
+  cells: (string | number | boolean | null)[]; // row after row; numbers finite
+}
+
+/** What the light worker gets of an xlsx: its cells, or a refusal of the
+    crate or of the download of the files wasm. */
+export type SheetCellsRead =
+  | { kind: "cells"; cells: SheetCells }
+  | { kind: "failed"; error: IndividualsFileError };
+
+export const MAX_SHEET_CELLS = 2_000_000;
+
+/** The table and the types of the columns; throws a defect when `cells`
+    is not a whole number of rows of `numColumns`. */
+export function readSheet(
+  sheet: SheetCells,
+): Result<{ table: IndividualsTable; columns: ColumnType[] }, IndividualsFileError>;
+```
+
+The inference, in `src/worker/individuals/columnTypes.ts`, which
+`readSheet` calls too. `decimal` is the mark a text is read with, the
+point for an xlsx; a number cell of an xlsx is a number already.
+
+```ts
+/** The text of a cell by which the types compare it: a text as it is, a
+    number or a boolean as String writes it; null for a missing cell. */
+export function cellText(cell: Cell): string | null;
+
 /** The number a cell holds, or null: a missing cell, a text that is not a
     number by the rules above, a boolean. */
 export function cellNumber(cell: Cell, decimal: "." | ","): number | null;
@@ -482,7 +614,11 @@ export function columnWarningText(warning: ColumnWarning): string;
 ```
 
 The read of a file, in `src/worker/individualsFile.ts`, which
-`filesRunner.ts` calls with the `File`. It never rejects. It is apart
+`filesRunner.ts` calls with the `File`, the options of its CSV, `null`
+for an xlsx, and the function that reads the cells of an xlsx with the
+files wasm, which only `filesRunner.ts` may import
+(`docs/specs/worker/files.md`, "How the light worker loads it"). It never
+rejects. It is apart
 from the runner so that it runs under Vitest in node, where `Blob`,
 `TextDecoder` and Windows-1252 exist and a worker does not; it is checked
 with the worker's configuration, since the reader of the text may not
@@ -496,10 +632,16 @@ export interface BytesSource { size: number; arrayBuffer(): Promise<ArrayBuffer>
 
 // In src/worker/messages.ts (docs/specs/worker/messages.md):
 // type IndividualsFileRead =
-//   | { kind: "read"; table: IndividualsTable; columns: ColumnType[]; found: CsvFound }
+//   | { kind: "read"; table: IndividualsTable; columns: ColumnType[];
+//       found: CsvFound | null }                                  // null for an xlsx
 //   | { kind: "failed"; error: IndividualsFileError };
 
-export function readIndividualsFile(file: BytesSource, csv: CsvOptions): Promise<IndividualsFileRead>;
+/** Reads the cells of an xlsx; never rejects. */
+export type XlsxReader = (bytes: Uint8Array) => Promise<SheetCellsRead>;
+
+export function readIndividualsFile(
+  file: BytesSource, csv: CsvOptions | null, readXlsx: XlsxReader,
+): Promise<IndividualsFileRead>;
 ```
 
 `CsvFound.encoding` gains `"utf-16"`, which only the mark of a file
@@ -526,8 +668,9 @@ entry the read or the refusal, and the entry records it into the store
 as the project's `IndividualsRead`, a read or a failure
 (`docs/specs/entry.md`, "Who asks for a read").
 
-The union of the refusals, in `src/worker/protocol.ts`, grows by eight
-kinds, the last two with the owner's decisions of 25 September 2026:
+The union of the refusals, in `src/worker/protocol.ts`, grew by eight
+kinds in stage 2, the last two with the owner's decisions of 25
+September 2026, and grows by seven for the xlsx in stage 4:
 
 ```ts
 export type IndividualsFileError =
@@ -536,7 +679,7 @@ export type IndividualsFileError =
   | { kind: "duplicateIndividual"; name: string }
   | { kind: "raggedRow"; line: number; expected: number; found: number;
       separator: "," | ";" | "\t" }                   // the one the read used
-  | { kind: "files"; message: string }                 // the reader of xlsx, stage 4
+  | { kind: "files"; message: string }                 // calamine's, for the console
   | { kind: "unnamedColumn"; column: number }          // counted from 1
   | { kind: "emptyIndividual"; line: number }
   | { kind: "unclosedQuote"; line: number;             // where the cell starts
@@ -545,18 +688,31 @@ export type IndividualsFileError =
   | { kind: "unreadable"; message: string }            // the browser's, for the console
   | { kind: "notText" }
   | { kind: "variantsFile" }                           // a VCF picked by mistake
-  | { kind: "cutShort" };                              // UTF-16 that ends in the middle of a character
+  | { kind: "cutShort" }                               // UTF-16 that ends in the middle of a character
+  // From stage 4, an xlsx:
+  | { kind: "notXlsx" }                                // not a zip
+  | { kind: "oldExcel" }                               // Excel 97–2003
+  | { kind: "encrypted" }                              // saved with a password
+  | { kind: "emptySheet"; sheet: string }
+  | { kind: "cellError"; error: string }               // "#SPILL!"
+  | { kind: "sheetTooLarge"; sheet: string; rows: number; columns: number; max: number }
+  | { kind: "xlsxReaderNotLoaded"; message: string };  // the browser's, for the console
 ```
+
+For an xlsx, the `line` of `emptyIndividual` is the row of the sheet and
+the `column` of `unnamedColumn` the column of the sheet, A being 1
+("The xlsx").
 
 `src/core/project.ts` learns them in two places: the words above, in
 `individualsNeeds`, and the validation of a project file, which accepts a
 failed read of each kind with its fields.
 
-The runner, `src/worker/filesRunner.ts`, in stage 2: it posts its
+The runner, `src/worker/filesRunner.ts`: it posts its
 `ready` as soon as it starts, and answers each `readIndividuals` by
 calling `readIndividualsFile` with the `File` and the options the
 request carries, and posting what it gives. It holds nothing between two
-reads, and imports neither popnei nor the files wasm. The messages, and
+reads but, from stage 4, the files wasm once an xlsx has loaded it
+(`docs/specs/worker/files.md`), and imports no popnei. The messages, and
 what the worker does with a request that fails its check, are those of
 `docs/specs/worker/messages.md`, "A worker that cannot go on": each
 request is handled inside one `try`, a throw posts `crashed` and the
@@ -613,6 +769,21 @@ errors nothing else shows").
   another file**, is dropped by `recordIndividualsRead`, by its load id
   and options (`docs/specs/core/project.md`, "The records"); the reader
   does nothing for it.
+- **An xlsx column of `0` and `1`, some typed as numbers and some pasted
+  as text**: the numbers 0 and 1 and the texts `0` and `1` are two values
+  by their text, so the column is binary, one `"1"`, zero `"0"`.
+- **An xlsx column of heights with one text `n.d.`**, or one error
+  `#N/A`: categorical, as in a CSV, and the user sees the value in the
+  column.
+- **An xlsx column of dates**: text, `2024-05-13`, and so categorical,
+  with as many values as dates. A year typed as a number is a number.
+- **An xlsx column of `TRUE` and `FALSE`**, booleans: binary, by the
+  known pair `true` over `false`, one `"true"`.
+- **An xlsx whose header holds the number 2024**: the column is named
+  `2024`, and is chosen by that name.
+- **An xlsx that is a CSV renamed**: `notXlsx`, whose words say to give
+  it a name that ends in `.csv`; the reader does not try it as a CSV,
+  since the source has no options of a CSV to read it with.
 
 ## How it runs
 
@@ -635,13 +806,20 @@ columns with their first values (`docs/specs/steps/individuals.md`, "The
 columns").
 
 With a CSV or TSV, the light worker loads no wasm at all
-(`docs/architecture.md`, section 6).
+(`docs/architecture.md`, section 6). With an xlsx it loads the files
+wasm the first time, and the read holds the bytes, the rectangle of
+cells, 2,000,000 at most, as the crate gives them, and the table
+(`docs/specs/worker/files.md`, "How it runs"); a table of 10,000 rows
+and 20 columns from an xlsx is timed in the flow of stage 4, as the CSV
+of stage 2 was.
 
 ## How it is verified
 
-With Vitest in node, at `readCsv`, `cellNumber`, `inferColumnTypes`,
-`columnWarnings` and `readIndividualsFile`, the highest functions that run without a
-worker, and in the browser with Playwright.
+With Vitest in node, at `readCsv`, `readSheet`, `cellText`,
+`cellNumber`, `inferColumnTypes`, `columnWarnings` and
+`readIndividualsFile`, the highest functions that run without a worker,
+and in the browser with Playwright. The files crate has its own tests,
+with `cargo test` (`docs/specs/worker/files.md`).
 
 A table of cases at `readCsv`, each a literal text and the literal table,
 types and options it gives, or the refusal. Among them, with `\n` for a
@@ -684,7 +862,37 @@ line break:
 At `cellNumber`, with a comma: `12` is 12, `-1,75` is −1.75, `,5` is
 0.5, `5,` is 5, `1,2E-03` is 0.0012, and `1.234,5`, `1,5 `, `Inf`,
 `1e999`, `-`, `NA` and `null` give `null`, as do `1,5` with a point and
-`true`.
+`true`. With a point, the number 1.75 is 1.75. At `cellText`: the number
+1 is `"1"`, 0.1 + 0.2 is `"0.30000000000000004"`, `true` is `"true"`,
+`"001"` is `"001"`, `null` is `null`.
+
+A table of cases at `readSheet`, each a literal rectangle, with `firstRow`
+and `firstColumn` 1 unless said, and the literal table and types it
+gives, or the refusal. Among them:
+
+| rows of the rectangle | gives |
+|---|---|
+| `["id","pop"]`, `[1,"P1"]`, `[2,"P2"]`, `[3,"P1"]` | first cells `"1"`, `"2"`, `"3"`; `pop` binary, one `"P2"` |
+| `["id","h"]`, `["A",1.75]`, `["B","1.8"]`, `["C",1.69]` | `h` continuous, cells `1.75`, `"1.8"`, `1.69` |
+| `["id","g"]`, `["A",1]`, `["B","1"]`, `["C",0]` | `g` binary, one `"1"`, zero `"0"`: the number 1 and the text `1` are one value |
+| `["id","h"]`, `["A","1,75"]`, `["B",1.8]`, `["C",1.7]` | `h` categorical: `1,75` is text in an xlsx |
+| `["id","ok"]`, `["A",true]`, `["B",false]` | `ok` binary, one `"true"`, zero `"false"` |
+| `["id",2024]`, `["A",1]` | columns `id`, `2024` |
+| `["id","pop"]`, `["A"," P1 "]`, `["B","NA"]`, `["C","  "]` | cells `"P1"`, `null`, `null` |
+| `["id","pop"]`, `[null,null]`, `["A","P1"]` | the blank row skipped |
+| `["id","pop",null]`, `["A","P1",null]` | columns `id`, `pop` |
+| `["id",null,"pop"]`, `["A","x","P1"]`, with `firstColumn` 3 and `firstRow` 5 | `unnamedColumn`, 4, the column D of the sheet |
+| `["id","pop"]`, `[null,"P1"]`, with `firstRow` 5 | `emptyIndividual`, 6, the row of the sheet |
+| `["id","pop"]`, `[1,"P1"]`, `["1","P2"]` | `duplicateIndividual`, `1` |
+| `["id","pop"]` | `empty` |
+| `["id","#N/A"]`, `["A","#N/A"]` | the cell `"#N/A"`, a value |
+
+At `readIndividualsFile`, with a source whose `csv` is `null` and a
+`readXlsx` of the test: the bytes given to it are those of the file; its
+cells give the table of `readSheet` and `found` `null`; its refusal, each
+of the seven kinds of the xlsx, is the failed read; a file of 20,000,001
+bytes is `tooLarge` and `readXlsx` never called; and with options of a
+CSV, `readXlsx` is never called.
 
 At `readIndividualsFile`, over bytes written into the test as literals,
 in a `Blob`:
@@ -728,15 +936,21 @@ Properties, with fast-check (`.claude/skills/coding/testing.md`):
 - **The types do not depend on the order of the rows**: `inferColumnTypes`
   of a table and of the same table with its rows shuffled are equal, the
   coding of a binary column included.
+- **The types of an xlsx are those of its text**: `inferColumnTypes` of
+  a table of numbers, booleans, texts and `null`, with the point, and of
+  the same table with every number and boolean replaced by its
+  `cellText`, are equal, the coding of a binary column included.
 - **The first type is identifier and no other is**, and a binary type's
-  two values are the two distinct values of its column, which is what
+  two values are the texts of the two distinct values of its column, which is what
   `parseProject` checks of a project file (`docs/specs/core/project.md`).
 
 With Playwright, in the flow of stage 2: a CSV loaded through the page,
 the table and "Read as" shown, and no request for any wasm from the light
 worker in the network log (`.claude/skills/coding/worker.md`, "What is
 tested where"); and the measurement of the file of 10,000 rows, above.
-That a file changed on the disk gives `unreadable` is checked by hand in
+From stage 4, an xlsx loaded through the page, as
+`docs/specs/worker/files.md` says, "In the browser". That a file changed
+on the disk gives `unreadable` is checked by hand in
 Chrome, Firefox and Safari, since a test cannot change a file the page
 has picked, and what each browser did is written in the report of the
 plan.
@@ -744,9 +958,14 @@ plan.
 ## What this spec relies on in the others
 
 - `docs/specs/worker/messages.md`: `readIndividuals` carries the `File`
-  and its `CsvOptions`, `{ kind: "readIndividuals", id, file, csv }`, with
-  no other message that gives the worker a file, and its answer is an
-  `IndividualsFileRead`, the union that spec declares.
+  and its `CsvOptions`, `null` for an xlsx from stage 4, `{ kind:
+  "readIndividuals", id, file, csv }`, with no other message that gives
+  the worker a file, and its answer is an `IndividualsFileRead`, the
+  union that spec declares, whose `found` is `null` for an xlsx.
+- `docs/specs/worker/files.md`: the files crate gives the rectangle of
+  the first sheet that is not hidden, its cells finite numbers, text,
+  booleans or empty, dates and errors made text, or one of the refusals
+  of the xlsx above.
 - `docs/specs/worker/client.md`: the client sends that request to the
   light worker, gives a refusal of the reader as `refused` and a crash
   of the worker as `failed`, and the entry records the second as `{ kind:
@@ -760,7 +979,10 @@ plan.
   with their first values; the types, read only; the warnings of
   `columnWarnings` with the words above; and offers every column but the
   first as the column of the populations, whatever its type; it takes
-  `.csv`, `.tsv` and `.txt` files in stage 2.
+  `.csv`, `.tsv` and `.txt` files in stage 2, and from stage 4 a file
+  whose name ends in `.xlsx` as an xlsx, with `csv` `null`, and shows no
+  "Read as" for it; it gives `columnWarnings` the decimal mark of
+  `found`, and the point for an xlsx.
 
 What this spec changes in `src/worker/protocol.ts` and
 `src/core/project.ts`, which are approved, is listed in
@@ -774,6 +996,26 @@ its check; the name of the file of each application in the reasons;
 check of `found` when a project file is opened; and the comment of
 `CsvFound`, which says all three options.
 
+What the revision of stage 4 asks of other specs, which the orchestrator
+lists in `docs/specs/stage-4-open-points.md`:
+
+- `docs/specs/worker/protocol.md`: the seven kinds of the xlsx in
+  `IndividualsFileError`; and a binary `ColumnType` whose `one` and
+  `zero` are the texts of its two values, `string`, where they were
+  cells as the table holds them, compared exactly. The sentence there
+  that a text `"1"` and a number `1` are never compared, "since the
+  cells of one column come from one file", does not hold for an xlsx. No
+  project file holds another, since every one saved before stage 4 read
+  a CSV, whose cells are all text.
+- `docs/specs/core/project.md`: the words of the seven kinds in
+  `individualsNeeds`, and "row" and the letters of a column for an xlsx
+  in those of `emptyIndividual` and `unnamedColumn`; their fields in the
+  validation of a project file; and the binary type checked by the text
+  of the cells, in `setColumnType` and `parseProject`, where it says "in
+  an xlsx the numbers or the booleans".
+- `docs/specs/entry.md`: a pending source with `csv` `null` is asked for,
+  where stage 2 throws it as a defect.
+
 ## Open points
 
 The open points of the eleven specs of stage 2 are gathered in
@@ -784,19 +1026,34 @@ field `separator` on `raggedRow` and `unclosedQuote`, which changes
 those two kinds in the approved `protocol.ts` and their check in a
 project file in the approved `project.ts`.
 
-One is open, to be settled before the reader of xlsx of stage 4 is
-written. "The types of the columns" compares the values of a column as
-text, so that a number 1 of an xlsx and a text `1` in the same column
-would be one value; `inferColumnTypes` compares the cells as they are,
-and counts them as two, so that such a column of `1`, `1` as text and
-`2` is continuous and not binary. A CSV gives only text, so stage 2 is
-not touched.
+The one left open, whether a number 1 and a text `1` of one column of an
+xlsx are one value, was settled for stage 4 on 27 September 2026: they
+are, by their text ("The types of the columns"); `inferColumnTypes` of
+stage 2 compares the cells as they are, and is changed to compare their
+text. The open points of stage 4 are gathered in
+`docs/specs/stage-4-open-points.md`; one of the xlsx is in
+`docs/specs/worker/files.md`, whether an error cell `#N/A` is missing, and
+this one is new:
+
+1. **The name of the sheet read, shown beside the file.** `found` is
+   `null` for an xlsx, so the Individuals step can say only "Read from
+   the first sheet of pops.xlsx; any other sheet is not read."
+   (`docs/specs/steps/individuals.md`). The first sheet is the first
+   that is not hidden, and a user whose workbook has a hidden sheet
+   before the table may not know which that is. The other option:
+   `found` for an xlsx gives the name of the sheet read and the number
+   of sheets, and the step shows "Read from the sheet Hoja1, the first of
+   3 not hidden". It changes the type of `found` in `protocol.ts` and
+   `project.ts`, the check of the answer in `messages.ts`, and the words
+   of the step. Recommendation: name the sheet. Meanwhile, `found` is
+   `null`, as `docs/specs/core/project.md` has it, and the step's line
+   stands.
 
 ## Not in this spec
 
-- The xlsx, read by the files crate, and how its cells, numbers and
-  booleans among them, and a number in the first column, become the
-  table: stage 4, with the crate.
+- How an xlsx is read into cells, its dates, errors, merged cells and
+  the sheet chosen, and the files wasm loaded on first need:
+  `docs/specs/worker/files.md`.
 - The types changed by the user, the coding of a binary column, and the
   roles of the traits file: `setColumnType` of
   `docs/specs/core/project.md`, and the screens of stages 4 and 7.

@@ -9,7 +9,11 @@ calculation worker after a large file written. The revision is approved by the o
 2026, after the review of the code of stage 3: a write that ends
 `reopenFailed` does not start the worker again, as the table of the
 failures already had it. Revised on 27 September 2026:
-`WRITE_RESTART_BYTES` is 25 MB, set by the measurement of the write. The worker client is the page's one door to the two workers, the threads of the tab
+`WRITE_RESTART_BYTES` is 25 MB, set by the measurement of the write.
+Revised on 27 September 2026 for stage 4: the calculation worker is
+started again after a PCA of more than 700 individuals, as after a large
+write, meanwhile (open point 1 of `docs/specs/analyses/pca.md`), and it
+keeps no intermediate result in stage 4. The worker client is the page's one door to the two workers, the threads of the tab
 beside the page where the files are read and the calculations run
 (`docs/architecture.md`, section 1): it starts them, keeps the `File` of
 every file the user picked, sends each worker one request at a time and
@@ -324,16 +328,50 @@ and 80 MB in WebKit 26.6, about 4.5 times the file, so a file of 25 MB
 leaves at most about 115 MB until the next load, and a larger one
 restarts the worker. The value before the measurement was 100 MB, which
 assumed that a write left the size of its file in the memory of wasm.
-What a restart costs in stage 3 is the reading of the header of the
-file, at most 49 ms (above); from
-stage 4 it costs also the intermediate results the worker holds, the
-pruned variants and the kinship, which is when the value matters.
+What a restart costs in stages 3 and 4 is the reading of the header of
+the file, at most 49 ms (above): the worker keeps no intermediate result
+before the kinship of stage 7, the variants the pruning of the PCA kept
+among them (meanwhile, point 1 of `docs/specs/stage-4-open-points.md`),
+and the value of the bound is decided again then.
 
 The file outlives the worker that made it: a `Blob` the page holds keeps
 its bytes whatever becomes of the worker that made it, by the File API.
 It has not been seen in a browser; the flow of the Variants step saves a
 file after such a restart in the three engines (below, "How it is
 verified").
+
+### A large PCA, and the restart after it
+
+A PCA holds in the memory of wasm the individuals × individuals matrix,
+its eigenvectors and the workspace of the decomposition, about 6.1 × 8
+bytes per pair of individuals, and a PCoA about 56.8 bytes per pair by
+popnei's draft; that memory never shrinks. In node, with popnei's
+release, the process grew by 69 MB for a PCA of 1,000 individuals, 196
+MB for 2,000 and 662 MB for 4,000 (`docs/specs/analyses/pca.md`, "How it
+runs"). So the client starts the calculation worker again after a run of
+the analysis `pca` whose individuals are more than
+`PCA_RESTART_INDIVIDUALS`, 700: those of its job's list, or, when the
+list is `null`, those the `opened` of its load gave. At 700 a PCA's
+matrix is about 24 MB and a PCoA's 28 MB, the size of
+`WRITE_RESTART_BYTES`, the bound of a write, below which the worker is
+left as it is. It does so after an outcome `done`, and after a refusal
+of popnei, which may come after the matrix was made, a pass with no
+variant of variance among them; a refusal of more than 9,381
+individuals, which popnei gives before it makes anything, restarts it
+too, since the client does not tell refusals apart, and core's lock
+keeps such a job from being sent. Not after `reopenFailed`, as for a
+write. The steps are those of a write, above:
+the outcome first, then the worker ended, then a new one, sent the
+`open` of the load and the requests that waited.
+
+It costs in stage 4 the reading of the header of the file, at most 49
+ms, and nothing more: the worker keeps no intermediate result, and the
+next analysis, whose filters are not the PCA's, would open the file again
+anyway (`docs/specs/worker/runner.md`, "The steps"). This is a second
+exception to the owner's decision of 26 September 2026 that the worker is
+not started again between requests (`docs/architecture.md`, section 13,
+points 2 and 5), recommended to the owner as open point 1 of
+`docs/specs/analyses/pca.md` and done meanwhile.
 
 ### Crashes, defects, and every read answered
 
@@ -451,6 +489,11 @@ export interface Client {
     (A write, and the restart after a large one, above); 25 MB, set by
     the measurement of stage 3. */
 export const WRITE_RESTART_BYTES = 25_000_000;
+
+/** Above it, the calculation worker is started again after a run of the
+    principal components (A large PCA, and the restart after it, above);
+    the individuals whose matrix is about WRITE_RESTART_BYTES. */
+export const PCA_RESTART_INDIVIDUALS = 700;
 
 /** A read under way: its answer, and how to stop it (Cancelling, above). */
 export interface Read<A> {
@@ -674,6 +717,12 @@ walking skeleton, a diversity `Job` and a CSV.
   `written` message takes the file with `instanceof Blob` and compares
   `numBytes` with its `size` (`docs/specs/worker/messages.md`), which a
   fake would fail.
+- **The restart after a large PCA**: a `result` of a `pca` job of 701
+  individuals, of its list, with a run k6 waiting: the outcome is `done`
+  before the worker is ended, then a new worker, the `open` of A, then
+  k6. A job of 700 ends no worker; a job with `individuals` `null` over a
+  load whose `opened` gave 701 does; a `refused` of such a job restarts
+  it too, and a `reopenFailed` does not.
 - **Progress**: two `progress` of a run's id, then its `result`: its
   `onProgress` is called twice with the four fields as they came, and
   its outcome is `done`; a `progress` of an id that is not running is a
@@ -730,7 +779,8 @@ kind of its own, `reopenFailed`, as written above (point B of
 `docs/specs/stage-2-open-points.md`). The restart after a large write
 was decided by the owner on 26 September 2026 (`docs/architecture.md`,
 section 13, point 5); its bound, `WRITE_RESTART_BYTES`, was set by the
-measurement of 27 September 2026, above.
+measurement of 27 September 2026, above. The restart after a large PCA
+is open point 1 of `docs/specs/analyses/pca.md`, done meanwhile.
 
 ## Not in this spec
 
@@ -745,8 +795,9 @@ measurement of 27 September 2026, above.
   the memory of wasm, other than after a large write: not done, as the
   owner settled on 26 September 2026 from what the walking skeleton
   measured (`docs/architecture.md`, section 13, point 2).
-- The intermediate results the calculation worker keeps, the xlsx and
-  the zip: from stage 4.
+- The intermediate results the calculation worker keeps: none before
+  the kinship of stage 7. The xlsx read in the light worker:
+  `docs/specs/worker/individuals.md`; the zip: stage 6.
 - Which writes and runs are stopped when, a write dropped when it ends
   after a change of its filters, and the Save of the file:
   `docs/specs/core/store.md`, `docs/specs/analyses/writeVariants.md` and
