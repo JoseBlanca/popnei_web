@@ -199,6 +199,18 @@ test("VS7 D1 the list cleared: the text emptied, the reason gone and Write given
   await expectNoViolations(makeAxeBuilder);
 });
 
+test("VS7 D1 the text areas of the lists check no spelling and change no letter", async ({
+  page,
+}) => {
+  await openVariants(page);
+  await loadPanelNei(page);
+  for (const area of [keepArea(page), removeArea(page)]) {
+    await expect(area).toHaveAttribute("spellcheck", "false");
+    await expect(area).toHaveAttribute("autocapitalize", "off");
+    await expect(area).toHaveAttribute("autocorrect", "off");
+  }
+});
+
 test("VS7 D1 a list's text area is described in order: not applied, then the reason of the list applied, or its count", async ({
   page,
 }) => {
