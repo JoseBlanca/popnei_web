@@ -567,10 +567,14 @@ for (const theme of ["light", "dark"] as const) {
       // as it does in every engine.
       await count.focus();
       await page.keyboard.press("Enter");
+      // In the section of the filters: the status region may say the
+      // same words for a moment.
       await expect(
-        page.getByText(
-          / of the 1,200 variants of panel\.nei pass the filters\.$/,
-        ),
+        page
+          .getByRole("region", { name: "Filters of the variants" })
+          .getByText(
+            / of the 1,200 variants of panel\.nei pass the filters\.$/,
+          ),
       ).toBeFocused();
       await save(page, `popgen-variants-counts-done-${theme}`);
       const threshold = page.getByLabel("Maximum major allele frequency", {
@@ -606,6 +610,67 @@ for (const theme of ["light", "dark"] as const) {
         page.getByRole("main").getByText(/The MAF filter kept none of the /),
       ).toBeVisible();
       await save(page, `popgen-variants-counts-kept-none-${theme}`);
+    });
+
+    test("the Variants step, the Count running", async ({ page }) => {
+      await pickVariants(page, "panel.nei");
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      await holdResults(page);
+      await page
+        .getByRole("button", { name: "Count the variants each filter keeps" })
+        .click();
+      await expect(
+        page
+          .getByRole("region", { name: "Filters of the variants" })
+          .getByText(/^Calculating · \d+% · 0:0\d$/),
+      ).toBeVisible();
+      await save(page, `popgen-variants-counts-running-${theme}`);
+    });
+
+    test("the Variants step, the Count in error, the ploidy refused", async ({
+      page,
+    }) => {
+      await pickVariants(page, "tetraploid.vcf.gz");
+      await expect(
+        page.getByRole("main").getByText("12 individuals"),
+      ).toBeVisible();
+      await page
+        .getByRole("button", { name: "Count the variants each filter keeps" })
+        .click();
+      await expect(
+        page
+          .getByRole("region", { name: "Filters of the variants" })
+          .getByText(/^At line 5 of tetraploid\.vcf\.gz/),
+      ).toBeVisible();
+      await save(page, `popgen-variants-counts-error-${theme}`);
+    });
+
+    test("the Variants step, the histograms removed by a new load, with their notice", async ({
+      page,
+    }) => {
+      await pickVariants(page, "panel.nei");
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      await page
+        .getByRole("button", {
+          name: "Calculate the histograms of the variants",
+        })
+        .click();
+      await expect(
+        page.getByText(
+          "Over the 1,200 variants of panel.nei, before any filter.",
+        ),
+      ).toBeVisible();
+      await pickVariants(page, "panel.vcf.gz");
+      await expect(
+        page.getByText(
+          /^The histograms of the variants were removed because a new variants file was loaded\./,
+        ),
+      ).toBeVisible();
+      await save(page, `popgen-variants-histograms-removed-${theme}`);
     });
 
     test("the Variants step, a VCF read", async ({ page }) => {
