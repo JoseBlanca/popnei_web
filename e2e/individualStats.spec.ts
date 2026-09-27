@@ -393,6 +393,16 @@ test("VS7 D1 a row the Tab key enters the table on shows a ring around its cells
     );
   expect(shadows.length).toBeGreaterThan(0);
   expect(shadows).not.toContain("none");
+
+  // Forced colours, as Windows' high contrast, erase the shadows: the
+  // cells then have an outline.
+  await page.emulateMedia({ forcedColors: "active" });
+  const outlines = await focused
+    .locator('[role="rowheader"], [role="gridcell"]')
+    .evaluateAll((cells) =>
+      cells.map((cell) => getComputedStyle(cell).outlineStyle),
+    );
+  expect(outlines).not.toContain("none");
 });
 
 test("VS7 D1 a row focused while moving up is not under the header, whose cells are opaque", async ({

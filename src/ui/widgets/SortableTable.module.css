@@ -119,6 +119,16 @@
     inset -2px 0 0 var(--color-focus);
 }
 
+/* Forced colours, as Windows' high contrast, draw no shadow: the cells
+   of the focused row then have an outline of the system's colour of a
+   selection (css.md, "Focus"). */
+@media (forced-colors: active) {
+  .row[data-focus-visible] .cell {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+}
+
 .text {
   justify-content: flex-start;
   text-align: start;
