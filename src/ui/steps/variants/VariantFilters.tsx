@@ -40,8 +40,8 @@ import { useAnnouncer } from "../../shell/announcer.tsx";
 import { ErrorBoundary } from "../../shell/ErrorBoundary.tsx";
 import { useAppState, useStore } from "../../store.tsx";
 import { NumberField } from "../../widgets/NumberField.tsx";
-import { Switch } from "../../widgets/Switch.tsx";
 import { filterCommand, filterSwitchCommand } from "./commands.ts";
+import { Filter } from "./Filter.tsx";
 import { FilterCountsPart } from "./FilterCountsPart.tsx";
 import { VARIANT_HISTOGRAMS } from "./histogramWords.ts";
 import { VariantChecksBlock } from "./VariantChecksBlock.tsx";
@@ -158,8 +158,7 @@ export function VariantFilters(): React.JSX.Element {
       <div className={classOf(styles, "filters")}>
         <Filter
           label={MISSING_DATA_SWITCH}
-          kind="missing_data"
-          counted={counted}
+          count={counted ? <KeptCount kind="missing_data" /> : null}
           line={MISSING_DATA_LINE}
           isOn={missingData !== null}
           onSwitch={(on) => {
@@ -187,8 +186,7 @@ export function VariantFilters(): React.JSX.Element {
         </Filter>
         <Filter
           label={OBS_HET_SWITCH}
-          kind="obs_het"
-          counted={counted}
+          count={counted ? <KeptCount kind="obs_het" /> : null}
           line={OBS_HET_LINE}
           isOn={obsHet !== null}
           onSwitch={(on) => {
@@ -229,8 +227,7 @@ export function VariantFilters(): React.JSX.Element {
         </Filter>
         <Filter
           label={MAF_SWITCH}
-          kind="maf"
-          counted={counted}
+          count={counted ? <KeptCount kind="maf" /> : null}
           line={MAF_LINE}
           isOn={maf !== null}
           onSwitch={(on) => {
@@ -264,8 +261,7 @@ export function VariantFilters(): React.JSX.Element {
         </Filter>
         <Filter
           label={LD_SWITCH}
-          kind="ld"
-          counted={counted}
+          count={counted ? <KeptCount kind="ld" /> : null}
           line={LD_LINE}
           isOn={ld !== null}
           onSwitch={(on) => {
@@ -313,86 +309,6 @@ export function VariantFilters(): React.JSX.Element {
         </ErrorBoundary>
       )}
     </section>
-  );
-}
-
-/** The description a field of a filter is given: the ids of the count
-    of its filter, while it is shown, and of the line under its switch,
-    in that order. */
-interface Described {
-  readonly describedBy?: string;
-}
-
-/** What one filter of the variants is drawn with. */
-interface FilterProps {
-  /** Its kind, which names its count. */
-  readonly kind: VariantFilterKind;
-  /** The words of its switch. */
-  readonly label: string;
-  /** The line under the switch, which describes the switch and the
-      fields. */
-  readonly line: string;
-  /** Whether the filter is on. */
-  readonly isOn: boolean;
-  /** Whether the filters as they are are counted, when its count, "Kept
-      1,152 of the 1,200 variants it was given.", is shown while it is
-      on. */
-  readonly counted: boolean;
-  /** Called when the switch is turned on or off. */
-  readonly onSwitch: (on: boolean) => void;
-  /** The fields of the filter, given their description; nothing while
-      it is off. */
-  readonly children: (described: Described) => React.ReactNode;
-  /** What comes after the fields, whether the filter is on or off: the
-      histograms of the number it keeps a variant by; nothing when
-      absent. */
-  readonly after?: React.ReactNode;
-}
-
-/** One filter of the variants: its switch, the line under it, its
-    fields, and what it kept. */
-function Filter({
-  kind,
-  label,
-  line,
-  isOn,
-  counted,
-  onSwitch,
-  children,
-  after,
-}: FilterProps): React.JSX.Element {
-  const lineId = useId();
-  const countId = useId();
-  // The switch is described by the line alone, and a field by the count
-  // first, so that a user who moves to it hears what it kept before the
-  // advice.
-  const shown = isOn && counted;
-  const described: Described = {
-    describedBy: shown ? `${countId} ${lineId}` : lineId,
-  };
-  return (
-    <div className={classOf(styles, "filter")}>
-      <Switch
-        label={label}
-        isSelected={isOn}
-        describedBy={lineId}
-        onChange={onSwitch}
-      />
-      <p id={lineId} className={classOf(styles, "filterLine")}>
-        {line}
-      </p>
-      {children(described)}
-      {shown && (
-        // The line is there whatever its count gives, so that the fields
-        // it describes name only what is on the page.
-        <p id={countId} className={classOf(styles, "count")}>
-          <ErrorBoundary heading={null}>
-            <KeptCount kind={kind} />
-          </ErrorBoundary>
-        </p>
-      )}
-      {after}
-    </div>
   );
 }
 
