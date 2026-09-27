@@ -366,9 +366,11 @@ Not taken, and why:
   after it. Options: keep it as it is (the words already send the user
   to the filters); or keep such a refusal only until the next change,
   like a failure that is not popnei's, which lets the user try again.
-  Recommended: let the user try again, once the measurements of task
-  5.4 say whether a second try can succeed. Until the owner answers, the
-  spec as it stands.
+  Recommended, since task 5.4 measured it: keep it as it is. No write
+  that failed for its size was a refusal of popnei (the worker trapped
+  in Chromium, the tab closed in WebKit), and in Chromium a second try
+  in a fresh worker failed the same way, so a second try would not have
+  helped.
 - Choices of task 3.1 the specs leave open: a histogram pass that keeps
   no variant shows popnei's own message and not "Loosen the filters",
   since that pass reads no filter; the warning when the first filter
@@ -409,6 +411,39 @@ worker that made the file is closed before Save, and the file saved
 opens in popnei in node with 1,000 individuals. So the page need not
 hold the bytes itself before a restart (`client.md`).
 
+5.4 as 5d15db4 (the specs), e671e14 and 3e6735d.
+
+### The measurements of the write (task 5.4, `VS5 D5`)
+
+On a Mac17,9 (Apple M5 Pro, 64 GB, macOS 27.0), Chromium 153.0.8010.12
+(headless shell) and WebKit 26.6 under Playwright 1.63.0, one worker.
+The memory is macOS `footprint` summed over every process of the engine,
+so it is read the same way in both; F is the size of the file.
+
+| | Chromium | WebKit |
+|---|---|---|
+| a file of 19,161,178 bytes, median of 5 | 144 ms, peak +109 MB | 149 ms, peak +134 MB |
+| a file of 220,236,506 bytes (200,000 variants) | 3.73 s, peak +966 MB (4.4 F) | 3.70 s, peak +1,059 MB (4.8 F) |
+| the bytes copied into the `Blob` | yes, +220 MB in the browser's process, 13 ms | 12 ms; the network process grew by F in some runs only |
+| the largest file written | 1,982,018,522 bytes (1.8 million variants), peak 8.28 GB | the same, peak 11.46 GB (up to 6.1 F) |
+| about 2.2 GB (2 million variants) | the worker stops (`workerFailed`) | the whole tab closes |
+
+Every file saved was whole: its size was right, and pyarrow read back
+every batch with its variants and 1,000 individuals.
+
+The constants set from them: `BYTES_PER_GENOTYPE` stays 1 (the files
+had 0.96, 1.09 and 1.10 bytes per genotype); `WRITE_WARN_BYTES` stays
+500 MB; `WRITE_MAX_BYTES` goes from 4 GB to 1.8 GB, so that an estimate
+under it is a file under 1.98 GB at 1.10 bytes per genotype, the largest
+both engines wrote; `WRITE_RESTART_BYTES` goes from 100 MB to 25 MB,
+since a write leaves about 4.5 F in the tab. The warning now says the
+tab needs "about six times" the file, where it said "up to three
+times".
+
+No failure was a refusal of popnei: in Chromium the worker trapped,
+and a second try in the fresh worker failed the same way; in WebKit the
+tab closed. Firefox was not measured; the owner's steps are at stop A.
+
 ### What was changed in the plan
 
 - Task 5.2 put the titles of the analyses and the words of the shell in
@@ -445,3 +480,25 @@ stop A.
   earlier writing of the file was stopped.", and with a calculation "The
   earlier calculation of Diversity and the writing of the file were
   stopped." Until the owner answers, nothing is announced.
+- Before any Count, the size beside Write is only an upper bound, and
+  Write is not refused on it. A VCF not yet counted whose file would be
+  over about 2 GB can then stop the worker in Chromium and close the
+  whole tab in WebKit. Options: leave it (the warning above 500 MB
+  already says "about six times" the memory); or refuse Write with "Count
+  the variants first, above" when the upper bound reaches the limit of
+  1.8 GB, which costs the user one pass of the Count on such a file.
+  Recommended: refuse it until counted.
+- The Write section, on the Variants step, ends four of its messages
+  with "… in the Variants step" (popnei's refusal of the file, a file
+  that could not be opened again, statistics that could not be had, and
+  thresholds that keep nobody). `variants.md` leaves that ending out for
+  the step's own reasons. Recommended: leave it out here too.
+- The question before Open project… says "press Keep the current
+  project and save it first. panel.filtered.nei, written and not saved,
+  will be discarded." Saving the project does not keep the file.
+  Recommended: "… will be discarded; to keep it, press Keep the current
+  project and save it in the Variants step."
+- Once saved, the section shows the size written, "251 KB", and under
+  it the estimate, "About 230 KB: 1,152 variants of 200 individuals",
+  for the same file. Recommended: after a write, give the size written
+  only.
