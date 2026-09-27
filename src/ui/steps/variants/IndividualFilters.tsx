@@ -16,14 +16,20 @@
  * project, and a list is checked only once the variants file is read.
  *
  * After the lists, once the variants file is read, the block of the
- * statistics of each individual (IndividualChecksBlock.tsx); once they
- * are calculated, the histogram of each of the two statistics, in the
- * place of the threshold of its filter, with that threshold marked while
- * the filter is on, and the table of the individuals with its download.
- * The block, each histogram and the table are drawn inside an error
- * boundary of their own, and each reads its result inside it, so that a
- * defect in drawing one leaves the lists and the rest of the step
- * (react.md, "Errors").
+ * statistics of each individual (IndividualChecksBlock.tsx); then the two
+ * thresholds, each a switch and a field of four decimals, drawn in every
+ * state as the lists are, with the histogram of its statistic after it
+ * once the statistics are calculated, its threshold marked while the
+ * filter is on and following the number typed; then the table of the
+ * individuals with its download. Beside each filter that is set, what it
+ * kept, from the individuals kept the store gives, or that it is known
+ * once the statistics are calculated; under them all, the individuals
+ * that pass, or the reason that none does, which describes the field of
+ * each threshold and is announced when a command of the section makes it
+ * appear (individualThresholds.ts). The block, each histogram and the
+ * table are drawn inside an error boundary of their own, and each reads
+ * its result inside it, so that a defect in drawing one leaves the lists
+ * and the rest of the step (react.md, "Errors").
  */
 import { useId, useMemo, useState } from "react";
 
@@ -37,9 +43,11 @@ import { useHistoryMoves } from "../../historyMoves.ts";
 import { useAnnouncer } from "../../shell/announcer.tsx";
 import { useAppState, useStore } from "../../store.tsx";
 import { Button } from "../../widgets/Button.tsx";
+import { NumberField } from "../../widgets/NumberField.tsx";
 import { Problem } from "../../widgets/Problem.tsx";
 import { TextArea } from "../../widgets/TextArea.tsx";
 import type { StepCommand } from "./commands.ts";
+import { Filter } from "./Filter.tsx";
 import { IndividualChecksBlock } from "./IndividualChecksBlock.tsx";
 import { IndividualHistogram } from "./IndividualHistogram.tsx";
 import { IndividualTable } from "./IndividualTable.tsx";
@@ -57,12 +65,23 @@ import {
   shownText,
 } from "./individualLists.ts";
 import type { ListKind, TypedList } from "./individualLists.ts";
+import { INDIVIDUAL_HISTOGRAMS, STATS_TABLE_NAME } from "./individualStats.ts";
 import {
-  INDIVIDUAL_HISTOGRAMS,
-  STATS_TABLE_NAME,
-  individualThreshold,
-} from "./individualStats.ts";
+  INDIVIDUAL_THRESHOLD_DECIMALS,
+  INDIVIDUAL_THRESHOLD_STEP,
+  THRESHOLD_KINDS,
+  THRESHOLD_WORDS,
+  appearedKeptNone,
+  individualCountText,
+  individualThresholdText,
+  keptTotal,
+  thresholdCommand,
+  thresholdOf,
+  thresholdSwitchCommand,
+} from "./individualThresholds.ts";
+import type { ThresholdKind } from "./individualThresholds.ts";
 import styles from "./VariantsStep.module.css";
+import { thresholdRefusedText } from "./words.ts";
 
 /** The texts typed in the two lists, `null` where nothing was typed. */
 type TypedLists = Readonly<Record<ListKind, TypedList | null>>;
@@ -74,34 +93,61 @@ type Clears = Readonly<Record<ListKind, number>>;
 
 const NO_CLEAR: Clears = { keep: 0, remove: 0 };
 
+/** The numbers typed in the two thresholds and not yet committed, which
+    the threshold on each histogram follows; `null` while nothing is typed
+    that the field would take (the spec, "The threshold typed and not yet
+    committed"). */
+type TypedThresholds = Readonly<Record<ThresholdKind, number | null>>;
+
+const NO_THRESHOLD_TYPED: TypedThresholds = {
+  missing_data: null,
+  obs_het: null,
+};
+
 /** The section of the filters of the individuals. */
 export function IndividualFilters(): React.JSX.Element {
   const store = useStore();
   const announcer = useAnnouncer();
   const project = useAppState((s) => s.project);
+  const kept = useAppState((s) => s.individualsKept);
   const moves = useHistoryMoves();
   const [typed, setTyped] = useState<TypedLists>(NOTHING_TYPED);
   const [clears, setClears] = useState<Clears>(NO_CLEAR);
+  const [typedThresholds, setTypedThresholds] =
+    useState<TypedThresholds>(NO_THRESHOLD_TYPED);
   const headingId = useId();
+  const keptNoneId = useId();
   const needs = useMemo(() => individualListNeeds(project), [project]);
+  const total = keptTotal(project, kept);
   const read = project.variants?.read.kind === "read";
   const statsDone = useAppState(
     (s) => statusOf(s, "individualChecks").kind === "done",
   );
 
-  /** Sends the command of Apply or Clear, and announces the reason of
-      a list that it makes appear. */
+  /** Sends a command of the section, and announces the reason of a list,
+      or of no individual kept, that it makes appear, since the focus
+      stays on the control that sent it. */
   const send = (step: StepCommand): void => {
-    const before = individualListNeeds(store.getState().project);
+    const state = store.getState();
+    const before = individualListNeeds(state.project);
+    const totalBefore = keptTotal(state.project, state.individualsKept);
     store.apply(step.description, step.command);
-    const appeared = appearedReason(
-      before,
-      individualListNeeds(store.getState().project),
-    );
+    const after = store.getState();
+    const appeared =
+      appearedReason(before, individualListNeeds(after.project)) ??
+      appearedKeptNone(
+        totalBefore,
+        keptTotal(after.project, after.individualsKept),
+      );
     if (appeared !== null) announcer.announce(appeared);
   };
   const type = (kind: ListKind, text: string): void => {
     setTyped((before) => ({ ...before, [kind]: { text, moves } }));
+  };
+  const typeThreshold = (kind: ThresholdKind, value: number | null): void => {
+    setTypedThresholds((before) =>
+      before[kind] === value ? before : { ...before, [kind]: value },
+    );
   };
 
   return (
@@ -121,6 +167,7 @@ export function IndividualFilters(): React.JSX.Element {
               text={text}
               applied={isApplied(text, list)}
               reason={needs?.list === kind ? listReasonText(needs) : null}
+              count={individualCountText(kept, kind)}
               onType={(next) => {
                 type(kind, next);
               }}
@@ -144,42 +191,86 @@ export function IndividualFilters(): React.JSX.Element {
           <IndividualChecksBlock />
         </ErrorBoundary>
       )}
-      {read && statsDone && (
-        <>
-          <div className={classOf(styles, "filters")}>
-            {STATISTICS.map((statistic) => (
-              // The threshold of the filter of the statistic goes before
-              // its histogram.
-              <div key={statistic} className={classOf(styles, "filter")}>
-                <ErrorBoundary
-                  level={3}
-                  heading={INDIVIDUAL_HISTOGRAMS[statistic].title}
-                >
-                  <HistogramOf
-                    statistic={statistic}
-                    threshold={individualThreshold(
-                      project.individualFilters,
-                      statistic,
-                    )}
+      <div className={classOf(styles, "filters")}>
+        {THRESHOLD_KINDS.map((kind) => {
+          const words = THRESHOLD_WORDS[kind];
+          const value = thresholdOf(project.individualFilters, kind);
+          // The plot follows the number typed, while it is typed.
+          const shown =
+            value === null ? null : (typedThresholds[kind] ?? value);
+          return (
+            <Filter
+              key={kind}
+              label={words.switchLabel}
+              line={words.line}
+              isOn={value !== null}
+              count={individualCountText(kept, kind)}
+              describedAlso={total.kind === "keptNone" ? keptNoneId : null}
+              onSwitch={(on) => {
+                typeThreshold(kind, null);
+                send(thresholdSwitchCommand(kind, on));
+              }}
+              after={
+                read &&
+                statsDone && (
+                  <ErrorBoundary
+                    level={3}
+                    heading={INDIVIDUAL_HISTOGRAMS[words.statistic].title}
+                  >
+                    <HistogramOf
+                      statistic={words.statistic}
+                      threshold={shown}
+                      thresholdLine={
+                        shown === null
+                          ? null
+                          : individualThresholdText(kind, shown)
+                      }
+                    />
+                  </ErrorBoundary>
+                )
+              }
+            >
+              {(described) =>
+                value !== null && (
+                  <NumberField
+                    label={words.label}
+                    value={value}
+                    minValue={0}
+                    maxValue={1}
+                    step={INDIVIDUAL_THRESHOLD_STEP}
+                    decimals={INDIVIDUAL_THRESHOLD_DECIMALS}
+                    {...described}
+                    refusedText={thresholdRefusedText}
+                    onRefused={(text) => {
+                      announcer.announce(text);
+                    }}
+                    onTyped={(number) => {
+                      typeThreshold(kind, number);
+                    }}
+                    onChange={(committed) => {
+                      send(thresholdCommand(kind, committed));
+                    }}
                   />
-                </ErrorBoundary>
-              </div>
-            ))}
-          </div>
-          <ErrorBoundary level={3} heading={STATS_TABLE_NAME}>
-            <TableOf />
-          </ErrorBoundary>
-        </>
+                )
+              }
+            </Filter>
+          );
+        })}
+      </div>
+      {read && statsDone && (
+        <ErrorBoundary level={3} heading={STATS_TABLE_NAME}>
+          <TableOf />
+        </ErrorBoundary>
+      )}
+      {total.kind === "passed" && (
+        <p className={classOf(styles, "count")}>{total.text}</p>
+      )}
+      {total.kind === "keptNone" && (
+        <Problem id={keptNoneId}>{total.text}</Problem>
       )}
     </section>
   );
 }
-
-/** The two statistics, in the order of their filters. */
-const STATISTICS: readonly IndividualStatistic[] = Object.freeze([
-  "missingGenotypes",
-  "observedHeterozygosity",
-]);
 
 /** The statistics of each individual the store keeps, and the name of
     the variants file, once they are calculated. */
@@ -199,9 +290,11 @@ function useStats(): {
 function HistogramOf({
   statistic,
   threshold,
+  thresholdLine,
 }: {
   readonly statistic: IndividualStatistic;
   readonly threshold: number | null;
+  readonly thresholdLine: string | null;
 }): React.JSX.Element | null {
   const { result, variantsName } = useStats();
   return result === null || variantsName === null ? null : (
@@ -209,6 +302,7 @@ function HistogramOf({
       statistic={statistic}
       result={result}
       threshold={threshold}
+      thresholdLine={thresholdLine}
       variantsName={variantsName}
     />
   );
@@ -241,6 +335,8 @@ interface IndividualListProps {
   readonly applied: boolean;
   /** The reason popnei would refuse the list applied, or `null`. */
   readonly reason: string | null;
+  /** What the list applied kept, or `null` while it has no count. */
+  readonly count: string | null;
   /** Called with the text at each change of it. */
   readonly onType: (text: string) => void;
   /** Called by Apply. */
@@ -250,14 +346,15 @@ interface IndividualListProps {
 }
 
 /** One list: its text area, the line under it, the line of a list not
-    applied, the reason of a list popnei would refuse, and its two
-    buttons. */
+    applied, the reason of a list popnei would refuse, its two buttons,
+    and what it kept. */
 function IndividualList({
   kind,
   edition,
   text,
   applied,
   reason,
+  count,
   onType,
   onApply,
   onClear,
@@ -265,9 +362,13 @@ function IndividualList({
   const words = LIST_WORDS[kind];
   const notAppliedId = useId();
   const reasonId = useId();
+  const countId = useId();
+  // The line of not applied, then the reason of the list, then its count
+  // (the spec, "Accessibility").
   const described = [
     applied ? null : notAppliedId,
     reason === null ? null : reasonId,
+    count === null ? null : countId,
   ].filter((id) => id !== null);
   return (
     <div className={classOf(styles, "list")}>
@@ -289,6 +390,11 @@ function IndividualList({
         <Button label={words.apply} onPress={onApply} />
         <Button label={words.clear} onPress={onClear} />
       </div>
+      {count !== null && (
+        <p id={countId} className={classOf(styles, "count")}>
+          {count}
+        </p>
+      )}
     </div>
   );
 }

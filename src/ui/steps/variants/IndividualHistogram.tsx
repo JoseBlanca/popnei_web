@@ -6,7 +6,7 @@
  * `binValues` makes of the values of the result, 20 over their range,
  * with the threshold of its filter while the filter is on, and the texts
  * the step writes for it, its title, its axes, its legend, its
- * description, the line of the bin it splits, its table and the name of
+ * description, the line of its threshold, the line of the bin it splits, its table and the name of
  * its CSV. Under the histogram of the heterozygosity, the individuals
  * with no called genotype, which are in no bin; when none has a value,
  * that line alone, since there is no bin to draw.
@@ -37,8 +37,12 @@ export interface IndividualHistogramProps {
   readonly statistic: IndividualStatistic;
   /** The statistics of each individual, as the store gives them. */
   readonly result: IndividualChecksResult;
-  /** The threshold of its filter, or `null` while the filter is off. */
+  /** The threshold of its filter, the number typed while it is typed,
+      or `null` while the filter is off. */
   readonly threshold: number | null;
+  /** The line that says the threshold in words, or `null` while the
+      filter is off. */
+  readonly thresholdLine: string | null;
   /** The name of the variants file, which the CSV is named after. */
   readonly variantsName: string;
 }
@@ -48,6 +52,7 @@ export function IndividualHistogram({
   statistic,
   result,
   threshold,
+  thresholdLine,
   variantsName,
 }: IndividualHistogramProps): React.JSX.Element {
   const words = INDIVIDUAL_HISTOGRAMS[statistic];
@@ -90,9 +95,7 @@ export function IndividualHistogram({
           rows={shown.rows}
           countLabel={INDIVIDUALS_LABEL}
           tableName={words.tableName}
-          // The words of the threshold beside the histogram come with the
-          // fields of the thresholds.
-          thresholdLine={null}
+          thresholdLine={thresholdLine}
           splitLine={splitBinText("individual", shown.rows, threshold)}
           csvName={individualBinsCsvName(variantsName, statistic)}
         />

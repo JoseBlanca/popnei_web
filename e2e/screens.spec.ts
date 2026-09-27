@@ -2106,6 +2106,80 @@ for (const theme of ["light", "dark"] as const) {
       });
     });
 
+    /** panel.nei at 0.05, its statistics calculated, and the two
+        thresholds of the individuals at `missing` and `obsHet`. */
+    async function thresholdsAt(
+      page: Page,
+      missing: string,
+      obsHet: string,
+    ): Promise<void> {
+      await pickPanel(page);
+      const variants = page.getByLabel(
+        "Maximum proportion of missing genotypes, from 0 to 1",
+        { exact: true },
+      );
+      await variants.fill("0.05");
+      await variants.press("Enter");
+      await individualLists(page)
+        .getByRole("button", { name: CALCULATE_STATS })
+        .click();
+      await expect(
+        individualLists(page).getByText(STATS_CAPTION),
+      ).toBeVisible();
+      for (const [name, label, value] of [
+        [
+          "Filter the individuals by missing data",
+          "Maximum proportion of missing genotypes of an individual, from 0 to 1",
+          missing,
+        ],
+        [
+          "Filter the individuals by observed heterozygosity",
+          "Maximum observed heterozygosity of an individual, from 0 to 1",
+          obsHet,
+        ],
+      ] as const) {
+        await individualLists(page).getByText(name, { exact: true }).click();
+        const field = individualLists(page).getByLabel(label, { exact: true });
+        await field.fill(value);
+        await field.press("Enter");
+        await expect(field).toHaveValue(value);
+      }
+    }
+
+    test("the thresholds of the individuals at 0.03 and 0.38, with their counts, and then Known once … after the missing data filter of the variants moved", async ({
+      page,
+    }) => {
+      await thresholdsAt(page, "0.03", "0.38");
+      await expect(
+        individualLists(page).getByText(
+          "119 of the 200 individuals of panel.nei pass the filters.",
+        ),
+      ).toBeVisible();
+      await saveIndividuals(page, "popgen-thresholds-counts");
+      const variants = page.getByLabel(
+        "Maximum proportion of missing genotypes, from 0 to 1",
+        { exact: true },
+      );
+      await variants.fill("0.06");
+      await variants.press("Enter");
+      await expect(
+        individualLists(page).getByText(/^Known once the statistics/),
+      ).toHaveCount(2);
+      await saveIndividuals(page, "popgen-thresholds-known-once");
+    });
+
+    test("the thresholds of the individuals that keep none", async ({
+      page,
+    }) => {
+      await thresholdsAt(page, "0.03", "0.1");
+      await expect(
+        individualLists(page).getByText(
+          /^The filters of individuals keep none/,
+        ),
+      ).toBeVisible();
+      await saveIndividuals(page, "popgen-thresholds-kept-none");
+    });
+
     test("the statistics of each individual, in error, the ploidy refused", async ({
       page,
     }) => {

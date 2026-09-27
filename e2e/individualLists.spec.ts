@@ -212,7 +212,10 @@ test("VS7 D1 a list popnei accepts is applied with nothing announced, and a Clea
   await expect(undoButton(page)).toHaveAccessibleDescription(
     "Undo: the list of individuals to keep changed",
   );
-  await expect(keepArea(page)).toHaveAccessibleDescription("");
+  // Described by its count alone, which is not announced.
+  await expect(keepArea(page)).toHaveAccessibleDescription(
+    "Kept 2 of the 200 individuals it was given.",
+  );
   await expect(status(page)).toHaveText(read ?? "");
 
   // The list to keep is checked first, so a refused list to remove shows
@@ -467,7 +470,7 @@ test("VS7 D1 an opening puts the text of each list back to the lists of the proj
   await expect(lists(page).getByText(/not applied yet/)).toHaveCount(0);
 });
 
-test("VS7 D1 the Tab key goes from the Count through each list, its text area and its two buttons, and the button of the statistics of each individual, to Write", async ({
+test("VS7 D1 the Tab key goes from the Count through each list, its text area and its two buttons, the button of the statistics of each individual and the switch of each threshold, to Write", async ({
   page,
 }) => {
   await openVariants(page);
@@ -483,6 +486,12 @@ test("VS7 D1 the Tab key goes from the Count through each list, its text area an
     button(page, "Apply the list to remove"),
     button(page, "Clear the list to remove"),
     button(page, "Calculate the statistics of each individual"),
+    lists(page).getByRole("switch", {
+      name: "Filter the individuals by missing data",
+    }),
+    lists(page).getByRole("switch", {
+      name: "Filter the individuals by observed heterozygosity",
+    }),
     writeButton(page),
   ];
   for (const next of order) {
