@@ -550,12 +550,16 @@ test("WS9 D3 the shell with results removed: the notice with its words, Undo and
   );
   await expect(threshold).toBeFocused();
 
-  /** Expects the field of the threshold to be above the notice. */
+  /** Expects the field of the threshold to be above the notice, to less
+      than a pixel: Firefox and WebKit scroll by whole pixels, so a field
+      whose edge falls between two, as with the fonts of Linux, stays a
+      fraction of a pixel under the notice, 0.37 px in Firefox 155 on
+      GitHub's Ubuntu. */
   const expectAboveTheNotice = async (): Promise<void> => {
     const field = await threshold.boundingBox();
     const region = await notice(page).boundingBox();
     if (field === null || region === null) throw new Error("not laid out");
-    expect(field.y + field.height).toBeLessThanOrEqual(region.y);
+    expect(field.y + field.height).toBeLessThan(region.y + 1);
   };
   // The field just changed, which has the focus, scrolled clear of the
   // notice that appeared over it.
