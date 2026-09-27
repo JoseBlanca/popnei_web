@@ -68,7 +68,7 @@ describe("VS6 D2 the words of the histograms of the variants", () => {
       removedLabel: "Removed by this filter",
     });
     expect(thresholdText("the MAF filter", 0.9)).toBe(
-      "Threshold of the MAF filter: 0.9",
+      "Threshold of the MAF filter: 0.9, drawn over every variant of the file",
     );
   });
 

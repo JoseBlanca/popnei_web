@@ -434,6 +434,7 @@ export function refusalText(message: string, p: Project): string {
   return refusalWords(message, p, {
     change: CHANGE_SETTINGS,
     calculate: "calculate the diversity",
+    nothingLeft: "there is no variant to calculate the diversity over",
     again: "to run it again",
     emptyPass: (fileName) =>
       `The filters kept none of the variants of ${fileName}, so there is no variant to calculate the diversity over. Loosen the filters in the Variants step.`,

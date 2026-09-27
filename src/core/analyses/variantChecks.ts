@@ -64,6 +64,8 @@ export function refusalText(message: string, p: Project): string {
   return refusalWords(message, p, {
     change: "Load the variants file again, or read it again with other options",
     calculate: "calculate the histograms of the variants",
+    nothingLeft:
+      "there is no variant to calculate the histograms of the variants over",
     again: "to calculate them again",
     emptyPass: null,
   });

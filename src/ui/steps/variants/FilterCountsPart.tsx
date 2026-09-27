@@ -10,8 +10,9 @@
  * - running: Stop, the bar, and the line with the time since it started,
  *   and no line of no counts;
  * - done: the line of the total, and the warning of a filter that kept
- *   none or of a file of no variant; the button goes, and the focus, when
- *   it was on it, moves to the line of the total;
+ *   none; for a file of no variant, its warning alone; the button goes,
+ *   and the focus, when it was on it, moves to the line of the total, or
+ *   to the warning;
  * - error: what happened and what to do, with the button after a failure
  *   that is neither popnei's refusal nor a file the browser can no longer
  *   read; with no button, the focus, when it was on it, moves to those
@@ -28,7 +29,10 @@
  */
 import { useLayoutEffect, useRef } from "react";
 
-import { refusalText } from "../../../core/analyses/filterCounts.ts";
+import {
+  refusalText,
+  variantsOfFile,
+} from "../../../core/analyses/filterCounts.ts";
 import type { AnalysisStatus } from "../../../core/store.ts";
 import type { JobResult } from "../../../worker/protocol.ts";
 import { RunButton } from "../../analyses/RunButton.tsx";
@@ -62,10 +66,12 @@ export function FilterCountsPart(): React.JSX.Element {
   const store = useStore();
   const status = useAppState((s) => statusOf(s, ID));
   const notice = useAppState((s) => s.notice);
-  // The line of the total, or the words of an error, which take the
+  // The line of the total, the warning of a file of no variant shown
+  // alone, or the words of an error, which take the
   // focus when the button goes while it had it, and are not in the order
   // of the Tab key.
   const total = useRef<HTMLParagraphElement>(null);
+  const empty = useRef<HTMLDivElement>(null);
   const failed = useRef<HTMLDivElement>(null);
   // Set when the button goes with the focus on it. The line or the words
   // that take the focus come in the same commit as the button goes, and
@@ -74,7 +80,7 @@ export function FilterCountsPart(): React.JSX.Element {
   useLayoutEffect(() => {
     if (!focusLost.current) return;
     focusLost.current = false;
-    (total.current ?? failed.current)?.focus();
+    (total.current ?? empty.current ?? failed.current)?.focus();
   });
 
   const button = buttonOf(status);
@@ -122,7 +128,7 @@ export function FilterCountsPart(): React.JSX.Element {
         />
       )}
       {status.kind === "done" ? (
-        <Done status={status} totalRef={total} />
+        <Done status={status} totalRef={total} emptyRef={empty} />
       ) : (
         <NotCounted status={status} />
       )}
@@ -149,22 +155,34 @@ function NotCounted({
   return <p className={classOf(styles, "line")}>{NOT_COUNTED_LINE}</p>;
 }
 
-/** The line of the total and the warning. */
+/** The line of the total and the warning, or, for a file of no variant,
+    its warning alone, where "0 of the 0 variants" would say nothing more
+    (filterCounts.md, "The cases"). */
 function Done({
   status,
   totalRef,
+  emptyRef,
 }: {
   readonly status: Extract<
     AnalysisStatus<JobResult>,
     { readonly kind: "done" }
   >;
   readonly totalRef: React.RefObject<HTMLParagraphElement | null>;
+  /** The warning of a file of no variant, shown alone. */
+  readonly emptyRef: React.RefObject<HTMLDivElement | null>;
 }): React.JSX.Element {
   const project = useAppState((s) => s.project);
   const result = resultOf(status, ID);
   if (result === null) {
     throw new Error(
       "popnei_web defect: the counts of the filters are done with no result.",
+    );
+  }
+  if (variantsOfFile(result.passStats) === 0) {
+    return (
+      <div ref={emptyRef} tabIndex={-1}>
+        <Warnings warnings={status.warnings} />
+      </div>
     );
   }
   const text = filtersTotalText(project, result.passStats.numVars);

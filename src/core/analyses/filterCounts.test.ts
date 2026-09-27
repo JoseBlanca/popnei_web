@@ -329,6 +329,17 @@ describe("VS3 D1 the counts of the filters: refusalText", () => {
     );
   });
 
+  test("a file of no variant says there is no variant to count, as the owner decided on 27 September 2026", () => {
+    expect(
+      refusalText(
+        "the pass gave no variant and its source holds none",
+        project([]),
+      ),
+    ).toBe(
+      "panel.nei has no variants, so there is no variant to count. Load another variants file in the Variants step.",
+    );
+  });
+
   test("an empty pass gets the words of any other refusal", () => {
     expect(
       refusalText(

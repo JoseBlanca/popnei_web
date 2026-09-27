@@ -120,10 +120,13 @@ export function histogramThreshold(value: number): HistogramThreshold {
   };
 }
 
-/** The line beside a histogram that says its threshold in words:
-    "Threshold of the MAF filter: 0.95". */
+/** The line beside a histogram of the variants that says its threshold
+    in words, and that the histogram counts every variant of the file,
+    where the count beside the filter counts those the filters above it
+    kept: "Threshold of the MAF filter: 0.95, drawn over every variant of
+    the file". */
 export function thresholdText(filterName: string, value: number): string {
-  return `Threshold of ${filterName}: ${String(value)}`;
+  return `Threshold of ${filterName}: ${String(value)}, drawn over every variant of the file`;
 }
 
 /** The caption of the three histograms: "Over the 1,200 variants of

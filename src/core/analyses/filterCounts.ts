@@ -119,6 +119,7 @@ export function refusalText(message: string, p: Project): string {
   return refusalWords(message, p, {
     change: CHANGE_SETTINGS,
     calculate: "count the variants",
+    nothingLeft: "there is no variant to count",
     again: "to count again",
     emptyPass: null,
   });

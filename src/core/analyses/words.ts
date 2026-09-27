@@ -50,6 +50,11 @@ export interface RefusalWords {
   /** What was calculated, after "no variant to" and "popnei could not":
       "calculate the statistics of each individual". */
   readonly calculate: string;
+  /** What a variants file of no variant leaves, after "so": "there is no
+      variant to calculate the diversity over", and, for the Count,
+      "there is no variant to count", as the owner decided on 27
+      September 2026. */
+  readonly nothingLeft: string;
   /** What the user changes to be offered the calculation again after a
       refusal for another reason, before `again`: "Change the settings,
       or load the variants file again". */
@@ -84,7 +89,7 @@ export function refusalWords(
   }
   const fileName = escaped(p.variants.name);
   if (message.startsWith(EMPTY_SOURCE)) {
-    return emptySourceText(p, `there is no variant to ${words.calculate} over`);
+    return emptySourceText(p, words.nothingLeft);
   }
   if (words.emptyPass !== null && message.startsWith(EMPTY_PASS)) {
     return words.emptyPass(fileName);

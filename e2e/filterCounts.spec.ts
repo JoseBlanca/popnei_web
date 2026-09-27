@@ -22,7 +22,7 @@ const FIXTURES = join(import.meta.dirname, "fixtures");
 
 const COUNT = "Count the variants each filter keeps";
 const NOT_COUNTED =
-  "Not counted for these filters. Count, or run an analysis, to see what each filter keeps.";
+  "Not counted for these filters. Count to see what each filter keeps.";
 const MISSING_LABEL = "Maximum proportion of missing genotypes, from 0 to 1";
 const OBS_HET_LABEL = "Maximum observed heterozygosity, from 0 to 1";
 const MAF_LABEL = "Maximum major allele frequency, from 0 to 1";
@@ -32,6 +32,8 @@ const MISSING_SWITCH = "Filter the variants by missing data";
 const LD_SWITCH = "Prune the variants by linkage disequilibrium (LD)";
 const MISSING_DATA_LINE =
   "A genotype is missing when any of its alleles is, 0/. among them; the proportion is over every individual of the file.";
+const OBS_HET_LINE =
+  "The proportion of the individuals with a called genotype that are heterozygous; a high one often marks duplicated regions read as one.";
 const MAF_LINE =
   "The frequency of the commonest allele: 0.95 removes a variant whose commonest allele is above 0.95. For a variant of two alleles, that is a minor allele frequency below 0.05.";
 const KEPT_AT_005 = "Kept 1,152 of the 1,200 variants it was given.";
@@ -72,6 +74,15 @@ function filters(page: Page): Locator {
 
 function field(page: Page, label: string): Locator {
   return page.getByLabel(label, { exact: true });
+}
+
+/** Write, in the section of the writing. */
+function writeButton(page: Page): Locator {
+  return page
+    .getByRole("region", { name: "Writing the filtered variants" })
+    .getByRole("button", {
+      name: "Write the filtered variants as a .nei file",
+    });
 }
 
 function countButton(page: Page): Locator {
@@ -236,10 +247,8 @@ test("VS6 D2 the three filters counted, 1,152 of 1,152 and 1,128 of 1,152, and t
       exact: true,
     }),
   ).toBeVisible();
-  // The filter by observed heterozygosity has no line under its switch:
-  // its field is described by its count alone.
   await expect(field(page, OBS_HET_LABEL)).toHaveAccessibleDescription(
-    "Kept 1,152 of the 1,152 variants it was given.",
+    `Kept 1,152 of the 1,152 variants it was given. ${OBS_HET_LINE}`,
   );
   await expect(field(page, MAF_LABEL)).toHaveAccessibleDescription(
     `Kept 1,128 of the 1,152 variants it was given. ${MAF_LINE}`,
@@ -251,7 +260,7 @@ test("VS6 D2 the three filters counted, 1,152 of 1,152 and 1,128 of 1,152, and t
 // node on 27 September 2026: openVars of panel.nei, the filters applied
 // in their order, and the passStats of iterBlocks.
 const LD_LINE =
-  "Of two variants closer than the distance whose r² is above the maximum, the first is kept.";
+  "Of two variants closer than the distance, and with an r² above the maximum, the first is kept.";
 const R2_LABEL = "Maximum r² with a variant kept before it, from 0 to 1";
 const DISTANCE_LABEL =
   "Distance within which variants are compared, in base pairs, from 1";
@@ -311,7 +320,7 @@ test("VS6 D2 the four filters counted, each removing some variants, give each co
     `Kept 1,152 of the 1,200 variants it was given. ${MISSING_DATA_LINE}`,
   );
   await expect(field(page, OBS_HET_LABEL)).toHaveAccessibleDescription(
-    "Kept 688 of the 1,152 variants it was given.",
+    `Kept 688 of the 1,152 variants it was given. ${OBS_HET_LINE}`,
   );
   await expect(field(page, MAF_LABEL)).toHaveAccessibleDescription(
     `Kept 594 of the 688 variants it was given. ${MAF_LINE}`,
@@ -404,7 +413,7 @@ test("VS6 D2 a Count under way stopped by a new load, with the line that says so
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("VS6 D2 the Count refused: the ploidy of tetraploid.vcf.gz, in the words of the diversity with no button, the focus on them, no line of no counts, and the size of the file not known", async ({
+test("VS6 D2 the Count refused: the ploidy of tetraploid.vcf.gz, in the words of the diversity with no button, the focus on them, no line of no counts, and Write refused", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -422,17 +431,14 @@ test("VS6 D2 the Count refused: the ploidy of tetraploid.vcf.gz, in the words of
   const focused = page.locator(":focus");
   await expect(focused).toHaveAttribute("tabindex", "-1");
   await expect(focused).toContainText("At line 5 of tetraploid.vcf.gz");
-  // No line that asks for a Count that has no button, here or in the
-  // part of the writing.
+  // No line that asks for a Count that has no button, and Write refused,
+  // since a write would meet the same refusal, as the owner decided at
+  // stop A on 27 September 2026.
   await expect(filters(page).getByText(NOT_COUNTED)).toHaveCount(0);
-  await expect(
-    page
-      .getByRole("region", { name: "Writing the filtered variants" })
-      .getByRole("button", {
-        name: "Write the filtered variants as a .nei file",
-      }),
-  ).toHaveAccessibleDescription(
-    "The size of the file is not known, since the variants could not be counted.",
+  const write = writeButton(page);
+  await expect(write).toBeDisabled();
+  await expect(write).toHaveAccessibleDescription(
+    "The variants could not be counted, so the file cannot be written either: the Count above says why.",
   );
   await expect(filters(page).getByText(/^Kept /)).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
@@ -495,6 +501,12 @@ test("VS6 D2 a filter that kept none: its count, the line of the total, and the 
   await expect(status(page)).toContainText(
     `Counts of the filters: done. ${warning}`,
   );
+  // Write refused, since the file would hold no variant, as the owner
+  // decided at stop A on 27 September 2026.
+  await expect(writeButton(page)).toBeDisabled();
+  await expect(writeButton(page)).toHaveAccessibleDescription(
+    "The filters keep none of the variants of panel.nei, so there is nothing to write. Loosen the filters above.",
+  );
   await expectNoViolations(makeAxeBuilder);
 });
 
@@ -515,7 +527,7 @@ test("VS6 D2 with no filter the Count gives the variants of the file", async ({
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("VS6 D2 a file of no variant counted: counts of zero and the warning of a file with no variant", async ({
+test("VS6 D2 a file of no variant counted: the warning of a file with no variant alone, with the focus on it, and Write refused", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -529,22 +541,23 @@ test("VS6 D2 a file of no variant counted: counts of zero and the warning of a f
     ),
   });
   await count(page);
-  await expect(
-    filters(page).getByText(
-      "0 of the 0 variants of empty.vcf pass the filters.",
-      { exact: true },
-    ),
-  ).toBeFocused();
-  await expect(
-    filters(page).getByText("Kept 0 of the 0 variants it was given.", {
-      exact: true,
-    }),
-  ).toBeVisible();
-  await expect(
-    filters(page).getByText(
-      'empty.vcf has no variant with PASS or . in its FILTER column, and it was read with only those. Untick "Only the variants with PASS or . in the FILTER column" and read the file again.',
-    ),
-  ).toBeVisible();
+  const warning =
+    'empty.vcf has no variant with PASS or . in its FILTER column, and it was read with only those. Untick "Only the variants with PASS or . in the FILTER column" and read the file again.';
+  await expect(filters(page).getByText(warning)).toBeVisible();
+  // The warning alone, as the owner decided at stop A on 27 September
+  // 2026, and the focus, which was on the button, on it.
+  const focused = page.locator(":focus");
+  await expect(focused).toHaveAttribute("tabindex", "-1");
+  await expect(focused).toContainText(warning);
+  await expect(filters(page).getByText(/pass the filters\.$/)).toHaveCount(0);
+  await expect(filters(page).getByText(/^Kept /)).toHaveCount(0);
+  await expect(status(page)).toContainText(
+    `Counts of the filters: done. ${warning}`,
+  );
+  await expect(writeButton(page)).toBeDisabled();
+  await expect(writeButton(page)).toHaveAccessibleDescription(
+    'empty.vcf has no variant with PASS or . in its FILTER column, and it was read with only those, so there is nothing to write. Untick "Only the variants with PASS or . in the FILTER column" and read the file again.',
+  );
   await expectNoViolations(makeAxeBuilder);
 });
 

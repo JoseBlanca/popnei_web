@@ -3,6 +3,9 @@ import { describe, expect, test } from "vitest";
 import { emptyProject } from "../../../core/project.ts";
 import type { Project, VariantSource } from "../../../core/project.ts";
 import {
+  LD_LINE,
+  NOT_COUNTED_LINE,
+  OBS_HET_LINE,
   distanceRefusedText,
   elapsedText,
   formatOfName,
@@ -254,5 +257,19 @@ describe("VS6 D2 the count beside a filter of the variants", () => {
     );
     expect(keptText(1, 1)).toBe("Kept 1 of the 1 variant it was given.");
     expect(keptText(0, 0)).toBe("Kept 0 of the 0 variants it was given.");
+  });
+});
+
+describe("the lines the owner chose at stop A, on 27 September 2026", () => {
+  test("the line under the filter by observed heterozygosity, the LD pruning and the line of no counts", () => {
+    expect(OBS_HET_LINE).toBe(
+      "The proportion of the individuals with a called genotype that are heterozygous; a high one often marks duplicated regions read as one.",
+    );
+    expect(LD_LINE).toBe(
+      "Of two variants closer than the distance, and with an r² above the maximum, the first is kept.",
+    );
+    expect(NOT_COUNTED_LINE).toBe(
+      "Not counted for these filters. Count to see what each filter keeps.",
+    );
   });
 });

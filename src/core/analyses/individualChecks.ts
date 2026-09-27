@@ -118,6 +118,8 @@ export function refusalText(message: string, p: Project): string {
   return refusalWords(message, p, {
     change: CHANGE_SETTINGS,
     calculate: "calculate the statistics of each individual",
+    nothingLeft:
+      "there is no variant to calculate the statistics of each individual over",
     again: "to calculate them again",
     emptyPass: (fileName) =>
       `The filters kept none of the variants of ${fileName}, so there is no variant to count each individual's genotypes over. Loosen the filters of the variants in the Variants step.`,

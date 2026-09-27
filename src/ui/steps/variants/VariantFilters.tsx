@@ -23,7 +23,10 @@
  */
 import { useId, useState } from "react";
 
-import { filterCountRows } from "../../../core/analyses/filterCounts.ts";
+import {
+  filterCountRows,
+  variantsOfFile,
+} from "../../../core/analyses/filterCounts.ts";
 import type { VariantStatistic } from "../../../core/analyses/variantChecks.ts";
 import { MAX_LD_DIST } from "../../../core/project.ts";
 import type {
@@ -56,6 +59,7 @@ import {
   MISSING_DATA_SWITCH,
   NOT_READ_LINE,
   OBS_HET_LABEL,
+  OBS_HET_LINE,
   OBS_HET_SWITCH,
   R2_LABEL,
   THRESHOLD_LABEL,
@@ -91,14 +95,17 @@ export function VariantFilters(): React.JSX.Element {
   const filters = useAppState((s) => s.project.filters);
   const read = useAppState((s) => s.project.variants?.read.kind === "read");
   // Whether the histograms of the variants are calculated, and the
-  // filters as they are counted; each histogram and each count reads its
-  // result itself, inside its boundary.
+  // filters as they are counted over a file that holds variants, since
+  // for one that holds none the part of the Count shows its warning
+  // alone; each histogram and each count reads its result itself, inside
+  // its boundary.
   const histogramsDone = useAppState(
     (s) => statusOf(s, "variantChecks").kind === "done",
   );
-  const counted = useAppState(
-    (s) => statusOf(s, "filterCounts").kind === "done",
-  );
+  const counted = useAppState((s) => {
+    const counts = resultOf(statusOf(s, "filterCounts"), "filterCounts");
+    return counts !== null && variantsOfFile(counts.passStats) > 0;
+  });
   // The numbers typed in the thresholds of the two filters that have a
   // histogram, and not yet committed, which the threshold on each
   // histogram follows; `null` while nothing is typed that the field would
@@ -182,7 +189,7 @@ export function VariantFilters(): React.JSX.Element {
           label={OBS_HET_SWITCH}
           kind="obs_het"
           counted={counted}
-          line={null}
+          line={OBS_HET_LINE}
           isOn={obsHet !== null}
           onSwitch={(on) => {
             setTypedObsHet(null);
@@ -310,8 +317,8 @@ export function VariantFilters(): React.JSX.Element {
 }
 
 /** The description a field of a filter is given: the ids of the count
-    of its filter and of the line under its switch, in that order, or
-    nothing for a filter with neither. */
+    of its filter, while it is shown, and of the line under its switch,
+    in that order. */
 interface Described {
   readonly describedBy?: string;
 }
@@ -323,9 +330,8 @@ interface FilterProps {
   /** The words of its switch. */
   readonly label: string;
   /** The line under the switch, which describes the switch and the
-      fields; `null` for the filter by observed heterozygosity, which has
-      none. */
-  readonly line: string | null;
+      fields. */
+  readonly line: string;
   /** Whether the filter is on. */
   readonly isOn: boolean;
   /** Whether the filters as they are are counted, when its count, "Kept
@@ -360,25 +366,21 @@ function Filter({
   // The switch is described by the line alone, and a field by the count
   // first, so that a user who moves to it hears what it kept before the
   // advice.
-  const switchDescribed: Described =
-    line !== null ? { describedBy: lineId } : {};
   const shown = isOn && counted;
-  const ids = [...(shown ? [countId] : []), ...(line !== null ? [lineId] : [])];
-  const described: Described =
-    ids.length > 0 ? { describedBy: ids.join(" ") } : {};
+  const described: Described = {
+    describedBy: shown ? `${countId} ${lineId}` : lineId,
+  };
   return (
     <div className={classOf(styles, "filter")}>
       <Switch
         label={label}
         isSelected={isOn}
-        {...switchDescribed}
+        describedBy={lineId}
         onChange={onSwitch}
       />
-      {line !== null && (
-        <p id={lineId} className={classOf(styles, "filterLine")}>
-          {line}
-        </p>
-      )}
+      <p id={lineId} className={classOf(styles, "filterLine")}>
+        {line}
+      </p>
       {children(described)}
       {shown && (
         // The line is there whatever its count gives, so that the fields

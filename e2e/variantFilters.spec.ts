@@ -23,10 +23,12 @@ const NOT_READ =
 /** The lines under the switches. */
 const MISSING_DATA_LINE =
   "A genotype is missing when any of its alleles is, 0/. among them; the proportion is over every individual of the file.";
+const OBS_HET_LINE =
+  "The proportion of the individuals with a called genotype that are heterozygous; a high one often marks duplicated regions read as one.";
 const MAF_LINE =
   "The frequency of the commonest allele: 0.95 removes a variant whose commonest allele is above 0.95. For a variant of two alleles, that is a minor allele frequency below 0.05.";
 const LD_LINE =
-  "Of two variants closer than the distance whose r² is above the maximum, the first is kept.";
+  "Of two variants closer than the distance, and with an r² above the maximum, the first is kept.";
 
 /** Each filter: its switch, its fields with the values they are turned
     on at, the line under the switch, and the words of its commands. */
@@ -42,7 +44,7 @@ const FILTERS = [
     kind: "obs_het",
     switch: "Filter the variants by observed heterozygosity",
     fields: [["Maximum observed heterozygosity, from 0 to 1", "0.5"]],
-    line: null,
+    line: OBS_HET_LINE,
     name: "the filter by observed heterozygosity",
   },
   {
@@ -147,15 +149,9 @@ test("VS6 D2 before a file the line stands in place of the checks, the four filt
       await expect(field(page, label)).toHaveCount(0);
     }
   }
-  // The lines under three of the switches, there while their filters are
-  // off, and the description of each switch.
+  // The lines under the switches, there while their filters are off, and
+  // the description of each switch.
   for (const filter of FILTERS) {
-    if (filter.line === null) {
-      await expect(switchOf(page, filter.switch)).toHaveAccessibleDescription(
-        "",
-      );
-      continue;
-    }
     await expect(region.getByText(filter.line, { exact: true })).toBeVisible();
     await expect(switchOf(page, filter.switch)).toHaveAccessibleDescription(
       filter.line,
@@ -240,9 +236,7 @@ test("VS6 D2 each switch turned on starts its filter at its value of the table o
     );
     for (const [label, value] of filter.fields) {
       await expect(field(page, label)).toHaveValue(value);
-      await expect(field(page, label)).toHaveAccessibleDescription(
-        filter.line ?? "",
-      );
+      await expect(field(page, label)).toHaveAccessibleDescription(filter.line);
     }
     await expectNoViolations(makeAxeBuilder);
 

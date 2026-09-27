@@ -207,16 +207,19 @@ test("VS6 D2 the histograms calculated: the button, the caption, the versions, t
   await flip(page, MAF_SWITCH);
   await flip(page, OBS_HET_SWITCH);
   await expect(
-    histogram(page, MAF_TITLE).getByText("Threshold of the MAF filter: 0.95", {
-      exact: true,
-    }),
+    histogram(page, MAF_TITLE).getByText(
+      "Threshold of the MAF filter: 0.95, drawn over every variant of the file",
+      {
+        exact: true,
+      },
+    ),
   ).toBeVisible();
   await expect(mafSvg).toHaveAccessibleName(
     `${MAF_TITLE} The major allele frequency of 1,200 variants, in 40 bins from 0 to 1. The threshold 0.95 keeps the 38 bins up to it, 1,175 variants, and removes the 2 bins above it, 25 variants.`,
   );
   await expect(
     histogram(page, OBS_HET_TITLE).getByText(
-      "Threshold of the filter by observed heterozygosity: 0.5",
+      "Threshold of the filter by observed heterozygosity: 0.5, drawn over every variant of the file",
       { exact: true },
     ),
   ).toBeVisible();
@@ -276,7 +279,10 @@ for (const locale of ["en-US", "es-ES"] as const) {
         group.getByText("Maximum 0.9", { exact: true }),
       ).toBeAttached();
       await expect(
-        group.getByText("Threshold of the MAF filter: 0.9", { exact: true }),
+        group.getByText(
+          "Threshold of the MAF filter: 0.9, drawn over every variant of the file",
+          { exact: true },
+        ),
       ).toBeVisible();
       const at9 = await lineX(group);
       expect(at9).toBeLessThan(at95);
@@ -334,7 +340,10 @@ for (const locale of ["en-US", "es-ES"] as const) {
       await expect(maf).toBeFocused();
       await expect(group.getByText("Maximum 0.95")).toBeAttached();
       await expect(
-        group.getByText("Threshold of the MAF filter: 0.95", { exact: true }),
+        group.getByText(
+          "Threshold of the MAF filter: 0.95, drawn over every variant of the file",
+          { exact: true },
+        ),
       ).toBeVisible();
     });
   });
@@ -368,7 +377,10 @@ test("VS6 D2 0.9 typed back over 0.9 committed: Cmd+Z puts the text back and lea
   await expect(maf).toHaveValue("0.95");
   await expect(group.getByText("Maximum 0.95")).toBeAttached();
   await expect(
-    group.getByText("Threshold of the MAF filter: 0.95", { exact: true }),
+    group.getByText(
+      "Threshold of the MAF filter: 0.95, drawn over every variant of the file",
+      { exact: true },
+    ),
   ).toBeVisible();
 });
 
@@ -447,7 +459,10 @@ test("VS6 D2 0.3 and a comma thrown away, mended by typing 3 over the 3: the lin
   await expect(maf).toHaveValue("0.3");
   await expect(group.getByText("Maximum 0.3", { exact: true })).toBeAttached();
   await expect(
-    group.getByText("Threshold of the MAF filter: 0.3", { exact: true }),
+    group.getByText(
+      "Threshold of the MAF filter: 0.3, drawn over every variant of the file",
+      { exact: true },
+    ),
   ).toBeVisible();
 });
 
@@ -483,7 +498,10 @@ test("VS6 D2 0.9 pasted over 0.8 typed in the MAF field is committed at once, an
   await expect(maf).toHaveValue("0.9");
   await expect(group.getByText("Maximum 0.9", { exact: true })).toBeAttached();
   await expect(
-    group.getByText("Threshold of the MAF filter: 0.9", { exact: true }),
+    group.getByText(
+      "Threshold of the MAF filter: 0.9, drawn over every variant of the file",
+      { exact: true },
+    ),
   ).toBeVisible();
 });
 
@@ -503,9 +521,12 @@ test("VS6 D2 the threshold line of the observed heterozygosity moves as 0.4 is t
   await obsHet.pressSequentially("0.4");
   await expect(group.getByText("Maximum 0.4", { exact: true })).toBeAttached();
   await expect(
-    group.getByText("Threshold of the filter by observed heterozygosity: 0.4", {
-      exact: true,
-    }),
+    group.getByText(
+      "Threshold of the filter by observed heterozygosity: 0.4, drawn over every variant of the file",
+      {
+        exact: true,
+      },
+    ),
   ).toBeVisible();
   expect(await lineX(group)).toBeLessThan(at5);
   // Not committed: no command yet.
@@ -543,7 +564,10 @@ for (const keys of ["0,", "0,1", "0,0", "0.,5"] as const) {
       ),
     ).toBeVisible();
     await expect(
-      group.getByText("Threshold of the MAF filter: 0.95", { exact: true }),
+      group.getByText(
+        "Threshold of the MAF filter: 0.95, drawn over every variant of the file",
+        { exact: true },
+      ),
     ).toBeVisible();
     await expect(group.getByText("Maximum 0.95")).toBeAttached();
     await expect(described).toHaveText(description ?? "");
@@ -553,7 +577,10 @@ for (const keys of ["0,", "0,1", "0,0", "0.,5"] as const) {
     await maf.press("ControlOrMeta+a");
     await maf.pressSequentially("0.9");
     await expect(
-      group.getByText("Threshold of the MAF filter: 0.9", { exact: true }),
+      group.getByText(
+        "Threshold of the MAF filter: 0.9, drawn over every variant of the file",
+        { exact: true },
+      ),
     ).toBeVisible();
     expect(await lineX(group)).toBeLessThan(at95);
   });
@@ -578,9 +605,12 @@ test("VS6 D2 the filter by observed heterozygosity at 0.5 splits the bin from 0.
   await obsHet.fill("0.6");
   await obsHet.press("Enter");
   await expect(
-    group.getByText("Threshold of the filter by observed heterozygosity: 0.6", {
-      exact: true,
-    }),
+    group.getByText(
+      "Threshold of the filter by observed heterozygosity: 0.6, drawn over every variant of the file",
+      {
+        exact: true,
+      },
+    ),
   ).toBeVisible();
   await expect(line).toHaveCount(0);
 });

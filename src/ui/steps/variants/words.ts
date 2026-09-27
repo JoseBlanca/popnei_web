@@ -93,6 +93,12 @@ export const OBS_HET_SWITCH = "Filter the variants by observed heterozygosity";
 /** The label of its threshold, with its range. */
 export const OBS_HET_LABEL = "Maximum observed heterozygosity, from 0 to 1";
 
+/** The line under the switch of the filter by observed heterozygosity,
+    as the owner chose it on 27 September 2026: what the statistic
+    counts, and why a variant is removed for it. */
+export const OBS_HET_LINE =
+  "The proportion of the individuals with a called genotype that are heterozygous; a high one often marks duplicated regions read as one.";
+
 /** The switch of the MAF filter. */
 export const MAF_SWITCH = "Filter the variants by major allele frequency (MAF)";
 
@@ -119,7 +125,7 @@ export const DISTANCE_LABEL =
 /** The line under the switch of the LD pruning: popnei's `filterByLd`
     keeps the variant that comes first. */
 export const LD_LINE =
-  "Of two variants closer than the distance whose r² is above the maximum, the first is kept.";
+  "Of two variants closer than the distance, and with an r² above the maximum, the first is kept.";
 
 /** The number of decimals in words, as a refusal says it. */
 const DECIMAL_WORDS = ["no", "one", "two", "three", "four"] as const;
@@ -305,7 +311,7 @@ export const COUNT_AGAIN = "Count again.";
 /** The line in place of the line of the total while the filters as they
     are have no counts. */
 export const NOT_COUNTED_LINE =
-  "Not counted for these filters. Count, or run an analysis, to see what each filter keeps.";
+  "Not counted for these filters. Count to see what each filter keeps.";
 
 /** What one filter of the variants kept, beside it: "Kept 1,152 of the
     1,200 variants it was given.", "Kept 1 of the 1 variant it was
