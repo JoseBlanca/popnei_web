@@ -31,7 +31,9 @@ export interface Announcer {
   /** Runs `change`, and announces the text it gives, if any, as
       `announce` does, but before the texts announced while it ran and
       after those announced before it: what the user did, known only
-      once the change is made, said before what the change announced. */
+      once the change is made, said before what the change announced.
+      The texts of a kind announced before it are dropped, since the
+      change moved the history and they no longer hold. */
   announceChange(change: () => string | null): void;
   /** Empties the region at once, and drops the texts waiting to be
       written into it: for words that no longer hold, and that nothing
@@ -118,10 +120,20 @@ export function createAnnouncer(): Announcer {
       const clearsBefore = clears;
       const waitingBefore = waiting.length;
       const next = change();
-      if (next === null) return;
       // A clear in the change dropped the texts waiting before it, so
-      // the change's text goes first.
-      const at = clears === clearsBefore ? waitingBefore : 0;
+      // the change's text goes first. Otherwise the texts of a kind
+      // announced before it are dropped: the change moved the history,
+      // and a count still waiting, of a threshold stepped just before an
+      // Undo, no longer holds.
+      let at = 0;
+      if (clears === clearsBefore) {
+        const earlier = waiting
+          .slice(0, waitingBefore)
+          .filter((w) => w.kind === null);
+        waiting = [...earlier, ...waiting.slice(waitingBefore)];
+        at = earlier.length;
+      }
+      if (next === null) return;
       wait();
       waiting.splice(at, 0, { text: next, kind: null });
     },

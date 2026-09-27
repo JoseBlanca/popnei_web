@@ -68,6 +68,19 @@ describe("WS9 D1 the announcer", () => {
     expect(seen).toEqual(["", "5 pass."]);
   });
 
+  test("a change of the history drops the texts of a kind still waiting, which it makes stale", () => {
+    const announcer = createAnnouncer();
+    const total = { replaces: INDIVIDUALS_KEPT_KIND } as const;
+    announcer.announce("Other words.");
+    announcer.announce("109 of the 200 pass.", total);
+    announcer.announceChange(() => "Undone: the filter changed.");
+    announcer.announce("After it.");
+    vi.advanceTimersByTime(100);
+    expect(announcer.getState()).toBe(
+      "Other words. Undone: the filter changed. After it.",
+    );
+  });
+
   test("a held key holds the region back at most about 1 s", () => {
     const announcer = createAnnouncer();
     const total = { replaces: INDIVIDUALS_KEPT_KIND } as const;
