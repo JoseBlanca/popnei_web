@@ -44,6 +44,11 @@ export function FocusOnLeave({
       // their order in the page. So the heading is looked for after the
       // change, in a microtask, which runs before the browser paints.
       queueMicrotask(() => {
+        // Only when the focus fell with the part: on the body, or on an
+        // element no longer in the page. Anything else took it since,
+        // and keeps it.
+        const now = document.activeElement;
+        if (now !== null && now !== document.body && now.isConnected) return;
         const heading =
           document.getElementById(headingId) ??
           document.getElementById(sectionHeadingId);
