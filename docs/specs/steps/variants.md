@@ -726,7 +726,8 @@ column Kept while any filter of individuals is set, and its download
 many rows it has and that they are all there, since its box shows about
 a dozen and a user could take them for the whole: "200 individuals; the
 CSV holds them all.", the count of the individuals of the variants
-file, written as `counted` writes a count. The line does not say
+file, written as `counted` writes a count, and of one, "1 individual;
+the CSV holds it.". The line does not say
 whether the box scrolls, which depends on the height of the window and
 not only on the rows; the count tells a user that a box showing fewer
 rows holds more. The box is as high as its rows up to its limit
