@@ -22,41 +22,50 @@ import type { Key } from "react-aria-components";
 import { classOf } from "../classOf.ts";
 import styles from "./Tabs.module.css";
 
-/** One tab: its label and what its panel holds. */
-export interface TabItem {
+/** One tab: its label and what its panel holds; `Id` is the union of
+    the ids of the tabs of a set. */
+export interface TabItem<Id extends string> {
   /** Its id, unique among the tabs. */
-  readonly id: string;
+  readonly id: Id;
   /** The words of its label. */
   readonly label: string;
   /** What its panel shows. */
   readonly content: React.ReactNode;
 }
 
-/** What a set of tabs is drawn with. */
-export interface TabsProps {
+/** What a set of tabs is drawn with, whose ids are of the union
+    `Id`. */
+export interface TabsProps<Id extends string> {
   /** The name of the row of labels, read before its labels: the title of
       the result the tabs belong to. */
   readonly label: string;
   /** The tabs, in their order. */
-  readonly tabs: readonly TabItem[];
+  readonly tabs: readonly TabItem<Id>[];
   /** The id of the tab shown. */
-  readonly selected: string;
+  readonly selected: Id;
   /** Called with the id of the tab the user chose. */
-  readonly onChange: (id: string) => void;
+  readonly onChange: (id: Id) => void;
 }
 
 /** A row of labels, and the panel of the one chosen. */
-export function Tabs({
+export function Tabs<Id extends string>({
   label,
   tabs,
   selected,
   onChange,
-}: TabsProps): React.JSX.Element {
+}: TabsProps<Id>): React.JSX.Element {
   return (
     <AriaTabs
       selectedKey={selected}
       onSelectionChange={(key: Key) => {
-        onChange(String(key));
+        // React Aria gives back the id of one of the tabs it was given.
+        const chosen = tabs.find((tab) => tab.id === key);
+        if (chosen === undefined) {
+          throw new Error(
+            `popnei_web defect: a tab was chosen that is not among the tabs, ${String(key)}.`,
+          );
+        }
+        onChange(chosen.id);
       }}
       className={classOf(styles, "tabs")}
     >

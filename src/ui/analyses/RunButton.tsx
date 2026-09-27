@@ -3,9 +3,10 @@
  * changes (docs/specs/analyses/diversity.md, "Accessibility"). A disabled
  * Run is described by the reason it cannot run. When the button leaves
  * the page while it has the focus, the calculation done or refused, it
- * calls `onGone`, for the panel to move the focus to its heading, so
- * that a user of the keyboard is not sent to the top of the page (WCAG
- * 2.4.3).
+ * calls `onGone`, for the part that holds it to move the focus: a panel
+ * or the block of the histograms to its heading, the Count to the line
+ * of the total or to the words of its error; so that a user of the
+ * keyboard is not sent to the top of the page (WCAG 2.4.3).
  */
 import { useLayoutEffect, useRef } from "react";
 
@@ -24,7 +25,8 @@ export interface RunButtonProps {
   readonly onRun: () => void;
   /** Stops the calculation. */
   readonly onStop: () => void;
-  /** Called when the button leaves the page while it has the focus. */
+  /** Called when the button leaves the page while it has the focus, to
+      move the focus where the part that holds it says. */
   readonly onGone: () => void;
 }
 

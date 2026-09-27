@@ -27,14 +27,18 @@ import { HistogramPlot } from "./HistogramPlot.tsx";
 import {
   BINS_CSV_LABEL,
   BINS_LINE,
+  FROM_COLUMN,
   PLOT_TAB,
+  STATE_COLUMN,
   TABLE_TAB,
+  TO_COLUMN,
   binCells,
 } from "./histogramWords.ts";
 
 /** The ids of the two tabs. */
 const PLOT_ID = "plot";
 const TABLE_ID = "table";
+type BlockTab = typeof PLOT_ID | typeof TABLE_ID;
 
 /** What one histogram is drawn with. */
 export interface HistogramBlockProps {
@@ -69,13 +73,13 @@ export function HistogramBlock({
   csvName,
 }: HistogramBlockProps): React.JSX.Element {
   const titleId = useId();
-  const [tab, setTab] = useState(PLOT_ID);
+  const [tab, setTab] = useState<BlockTab>(PLOT_ID);
 
   const columns: TableColumn[] = [
-    { id: "from", label: "From", isRowHeader: true, isNumeric: true },
-    { id: "to", label: "To", isNumeric: true },
+    { id: "from", label: FROM_COLUMN, isRowHeader: true, isNumeric: true },
+    { id: "to", label: TO_COLUMN, isNumeric: true },
     { id: "count", label: countLabel, isNumeric: true },
-    ...(data.threshold === null ? [] : [{ id: "state", label: "This filter" }]),
+    ...(data.threshold === null ? [] : [{ id: "state", label: STATE_COLUMN }]),
   ];
   const tableRows = rows.map((row, index) => ({
     id: String(index),
@@ -98,7 +102,7 @@ export function HistogramBlock({
       {thresholdLine !== null && (
         <p className={classOf(styles, "muted")}>{thresholdLine}</p>
       )}
-      <Tabs
+      <Tabs<BlockTab>
         label={data.title}
         selected={tab}
         onChange={setTab}

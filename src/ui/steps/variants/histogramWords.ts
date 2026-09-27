@@ -34,6 +34,13 @@ export const CALCULATE_AGAIN = "Calculate them again.";
 export const PLOT_TAB = "Plot";
 export const TABLE_TAB = "Table of the bins";
 
+/** The headers of the columns of a table of bins, but for the count's,
+    which each histogram names: the two edges of a bin, and what the
+    threshold of the filter does to it. */
+export const FROM_COLUMN = "From";
+export const TO_COLUMN = "To";
+export const STATE_COLUMN = "This filter";
+
 /** The words of the button that downloads the bins of a histogram. */
 export const BINS_CSV_LABEL = "Download the bins as CSV";
 
