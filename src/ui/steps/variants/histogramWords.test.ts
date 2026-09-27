@@ -14,6 +14,7 @@ import type { DescribedBin } from "../../../core/analyses/words.ts";
 import type { Notice } from "../../../core/store.ts";
 import type { BinState, HistogramRow } from "../../../charts/histogram.ts";
 import { failureText } from "../../analyses/words.ts";
+import { readAgainCommand } from "./commands.ts";
 import {
   CALCULATE_AGAIN,
   VARIANT_HISTOGRAMS,
@@ -25,10 +26,14 @@ import {
   thresholdText,
 } from "./histogramWords.ts";
 
-/** A notice of a change of the load, of the kind `kind`. */
-function notice(kind: Notice["cause"]["kind"]): Notice {
+/** A notice of a change of the load, of the kind `kind`, a new load
+    unless `description` says otherwise. */
+function notice(
+  kind: Notice["cause"]["kind"],
+  description = "a new variants file was loaded",
+): Notice {
   return {
-    cause: { kind, description: "a new variants file was loaded" },
+    cause: { kind, description },
     removed: ["variantChecks"],
     leftBehind: [],
     stopped: [],
@@ -140,6 +145,22 @@ describe("VS6 D2 the words of the histograms of the variants", () => {
       ),
     ).toBe(
       "The application met an error of its own: a bad answer. Calculate them again.",
+    );
+  });
+
+  test("the words of the histograms removed by a read of the same file with other options, and its undo", () => {
+    const { description } = readAgainCommand({
+      fileId: "b".repeat(32),
+      name: "panel.vcf.gz",
+      size: 1000,
+      format: "vcf",
+      readOptions: { ploidy: 4, onlyPassed: true },
+    });
+    expect(removedText(notice("command", description))).toBe(
+      "The histograms of the variants were removed because the variants file was read again with other options. Undo brings them back as they were, with no calculation; Calculate makes them anew for the file loaded now.",
+    );
+    expect(removedText(notice("undo", description))).toBe(
+      "Undone: the variants file was read again with other options. The histograms of the variants were removed; Redo brings them back as they were, with no calculation, and Calculate makes them anew for the file loaded now.",
     );
   });
 
