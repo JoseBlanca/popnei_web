@@ -2,7 +2,8 @@
  * One histogram on the Variants step (docs/specs/steps/variants.md, "The
  * plot and the table of its bins"): its title, the line of its threshold
  * while its filter is on, and two tabs, "Plot", selected when the block
- * is drawn, and "Table of the bins"; under them, whichever is selected,
+ * is drawn, with the line of the bin the threshold splits under the plot,
+ * and "Table of the bins"; under them, whichever is selected,
  * the button that downloads the bins as CSV. The block is a group named
  * by its title, so that a screen reader names its tabs and its button
  * with the histogram they belong to. The plot, its table, its CSV and its
@@ -49,6 +50,10 @@ export interface HistogramBlockProps {
   /** The line that says the threshold in words, or `null` while the
       filter is off. */
   readonly thresholdLine: string | null;
+  /** The line under the plot that names the bin the threshold splits,
+      or `null` while it splits none (docs/specs/steps/variants.md, "The
+      plot and the table of its bins"). */
+  readonly splitLine: string | null;
   /** The name of the CSV of the bins, `panel.variant_maf_bins.csv`. */
   readonly csvName: string;
 }
@@ -60,6 +65,7 @@ export function HistogramBlock({
   countLabel,
   tableName,
   thresholdLine,
+  splitLine,
   csvName,
 }: HistogramBlockProps): React.JSX.Element {
   const titleId = useId();
@@ -100,7 +106,14 @@ export function HistogramBlock({
           {
             id: PLOT_ID,
             label: PLOT_TAB,
-            content: <HistogramPlot data={data} />,
+            content: (
+              <>
+                <HistogramPlot data={data} />
+                {splitLine !== null && (
+                  <p className={classOf(styles, "muted")}>{splitLine}</p>
+                )}
+              </>
+            ),
           },
           {
             id: TABLE_ID,

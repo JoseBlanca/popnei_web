@@ -4,8 +4,8 @@
  * the variants"): the bins popnei gave for its statistic, with the
  * threshold of its filter while the filter is on, the number typed while
  * it is typed, and the texts the step writes for it, its title, its axes,
- * its legend, its description, the line of its threshold, its table and
- * the name of its CSV.
+ * its legend, its description, the line of its threshold, the line of
+ * the bin it splits, its table and the name of its CSV.
  */
 import { useMemo } from "react";
 
@@ -14,6 +14,7 @@ import {
   variantHistogramDescription,
 } from "../../../core/analyses/variantChecks.ts";
 import type { VariantStatistic } from "../../../core/analyses/variantChecks.ts";
+import { splitBinText } from "../../../core/analyses/words.ts";
 import { histogramRows } from "../../../charts/histogram.ts";
 import type { HistogramData } from "../../../charts/histogram.ts";
 import type { VariantChecksResult } from "../../../worker/protocol.ts";
@@ -78,6 +79,7 @@ export function VariantHistogram({
           ? null
           : thresholdText(words.filterName, threshold)
       }
+      splitLine={splitBinText("variant", rows, threshold)}
       csvName={binsCsvName(variantsName, statistic)}
     />
   );

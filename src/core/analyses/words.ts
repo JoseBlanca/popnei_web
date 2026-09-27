@@ -205,6 +205,33 @@ export function histogramDescription(
   return `${opening} The threshold ${decimals(threshold)} ${listed(parts)}.`;
 }
 
+/**
+ * The line under a histogram that names the bin its threshold splits,
+ * which the plot draws outlined when the threshold is on its lower edge
+ * and its legend does not name (docs/specs/steps/variants.md, "The plot
+ * and the table of its bins"): "The threshold 0.5 splits the bin from 0.5
+ * to 0.525, 62 variants: the filter keeps those of its variants at most
+ * 0.5 and removes the others."; `null` with no threshold or no bin split.
+ * The edges and the threshold are written as the description writes them;
+ * `noun` is what is counted, in the singular, "variant". Throws a defect
+ * when more than one bin is split.
+ */
+export function splitBinText(
+  noun: string,
+  bins: readonly DescribedBin[],
+  threshold: number | null,
+): string | null {
+  if (threshold === null) return null;
+  const split = bins.filter((bin) => bin.state === "partlyKept");
+  if (split.length > 1) {
+    throw defect("a threshold splits more than one bin of a histogram.");
+  }
+  const bin = split.at(0);
+  if (bin === undefined) return null;
+  const at = decimals(threshold);
+  return `The threshold ${at} splits the bin from ${decimals(bin.from)} to ${decimals(bin.to)}, ${counted(bin.count, noun)}: the filter keeps those of its ${noun}s at most ${at} and removes the others.`;
+}
+
 /** "the bin" for one, "the 38 bins" for more. */
 function theBins(count: number): string {
   return count === 1 ? "the bin" : `the ${counted(count, "bin")}`;

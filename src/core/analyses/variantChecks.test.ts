@@ -15,7 +15,7 @@ import {
   variantChecks,
   variantHistogramDescription,
 } from "./variantChecks.ts";
-import { binsCsv } from "./words.ts";
+import { binsCsv, splitBinText } from "./words.ts";
 import type { DescribedBin } from "./words.ts";
 import { emptyProject } from "../project.ts";
 import type { Project } from "../project.ts";
@@ -240,6 +240,23 @@ describe("VS3 D1 the histograms of the variants", () => {
     ).toBe(
       "The observed heterozygosity of 1,200 variants, in 40 bins from 0 to 1. The threshold 0.5 keeps the 20 bins up to it, 1,090 variants, splits the bin from 0.5 to 0.525, 62 variants, and removes the 19 bins above it, 48 variants.",
     );
+  });
+});
+
+describe("VS6 D2 the line under a histogram of the bin its threshold splits", () => {
+  test("the observed heterozygosity of panel.nei at 0.5 splits the bin from 0.5, 62 variants", () => {
+    expect(splitBinText("variant", binsOf(PANEL_OBS_HET, 21, 20), 0.5)).toBe(
+      "The threshold 0.5 splits the bin from 0.5 to 0.525, 62 variants: the filter keeps those of its variants at most 0.5 and removes the others.",
+    );
+  });
+
+  test("the MAF of panel.nei at 0.95 splits no bin, and no threshold gives no line", () => {
+    expect(splitBinText("variant", binsOf(PANEL_MAF, 38), 0.95)).toBeNull();
+    const unmarked = binsOf(PANEL_MAF, 40).map((bin) => ({
+      ...bin,
+      state: null,
+    }));
+    expect(splitBinText("variant", unmarked, null)).toBeNull();
   });
 });
 

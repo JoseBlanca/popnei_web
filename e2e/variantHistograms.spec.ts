@@ -358,6 +358,32 @@ for (const keys of ["0,", "0,1", "0,0", "0.,5"] as const) {
   });
 }
 
+test("VS6 D2 the filter by observed heterozygosity at 0.5 splits the bin from 0.5, which a line under its plot names; at 0.6 it splits none", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openVariants(page);
+  await pick(page, "panel.nei");
+  await calculate(page);
+  const group = histogram(page, OBS_HET_TITLE);
+  const line = group.getByText(/^The threshold .* splits the bin/);
+  await expect(line).toHaveCount(0);
+  await flip(page, OBS_HET_SWITCH);
+  await expect(line).toHaveText(
+    "The threshold 0.5 splits the bin from 0.5 to 0.525, 62 variants: the filter keeps those of its variants at most 0.5 and removes the others.",
+  );
+  await expectNoViolations(makeAxeBuilder);
+  const obsHet = field(page, "Maximum observed heterozygosity, from 0 to 1");
+  await obsHet.fill("0.6");
+  await obsHet.press("Enter");
+  await expect(
+    group.getByText("Threshold of the filter by observed heterozygosity: 0.6", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(line).toHaveCount(0);
+});
+
 test("VS6 D2 the table of the bins reached with the keyboard: the tabs one stop, the arrow keys between them, the table the next stop, then the CSV", async ({
   page,
   makeAxeBuilder,
