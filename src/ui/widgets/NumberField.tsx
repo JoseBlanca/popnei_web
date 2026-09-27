@@ -112,8 +112,10 @@ export interface NumberFieldProps {
       takes, from a character thrown away until a deletion mends the
       text, and at each commit, when the field shows again the number
       committed or kept. The value of the field changed otherwise, by an
-      Undo, gives no call: the field has lost the focus, and been
-      committed, before an Undo is pressed. */
+      Undo, gives no call: before an Undo the field was committed, whether
+      it lost the focus or holds its number with nothing typed, the one
+      case the keys of Undo reach the project from it, so no number typed
+      is left. */
   readonly onTyped?: (typed: number | null) => void;
   /** Called with the number committed, within the bounds and on the
       step, never with an empty field nor with a number refused. */
