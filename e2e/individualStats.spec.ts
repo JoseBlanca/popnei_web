@@ -204,6 +204,117 @@ test("VS7 D1 the statistics at 0.05: s000 0.0260 and 0.3672, the caption, the ve
   await expectNoViolations(makeAxeBuilder);
 });
 
+/** The worked example of individualChecks.md, "How it is verified":
+    three individuals and four variants, i3 with no called genotype, i2
+    with ./. at the third variant and 0/. at the fourth. */
+const CALLS_VCF = [
+  "##fileformat=VCFv4.2",
+  "##contig=<ID=1>",
+  '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
+  "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\ti1\ti2\ti3",
+  "1\t10\t.\tA\tG\t.\tPASS\t.\tGT\t0/1\t0/0\t./.",
+  "1\t20\t.\tA\tG\t.\tPASS\t.\tGT\t1/1\t0/1\t./.",
+  "1\t30\t.\tA\tG\t.\tPASS\t.\tGT\t0/0\t./.\t./.",
+  "1\t40\t.\tA\tG\t.\tPASS\t.\tGT\t0/1\t0/.\t./.",
+  "",
+].join("\n");
+
+/** Picks the VCF `text` as calls.vcf, turns the filter of the variants by
+    missing data off, which would drop every variant of it, and
+    calculates the statistics. */
+async function calculatedCalls(page: Page, text: string): Promise<void> {
+  await openVariants(page);
+  const chooser = page.waitForEvent("filechooser");
+  await page
+    .getByRole("region", { name: "Variants file" })
+    .getByRole("button", { name: /^(Choose|Replace) .*…$/ })
+    .click();
+  await (
+    await chooser
+  ).setFiles({
+    name: "calls.vcf",
+    mimeType: "text/plain",
+    buffer: Buffer.from(text),
+  });
+  await expect(
+    page
+      .getByRole("region", { name: "Variants file" })
+      .getByText(/individuals$/),
+  ).toBeVisible();
+  await page
+    .getByRole("main")
+    .getByText("Filter the variants by missing data", { exact: true })
+    .click();
+  await block(page).getByRole("button", { name: CALCULATE }).click();
+  await expect(
+    block(page).getByText(/^The statistics of the 3 individuals of calls\.vcf/),
+  ).toBeVisible();
+}
+
+test("VS7 D1 an individual with no called genotype: the warning, no value sorted last both ways, the line under the histogram, and the filter by heterozygosity removes it", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await calculatedCalls(page, CALLS_VCF);
+  await expect(
+    block(page).getByText(
+      "i3 has no called genotype among the 4 variants the filters kept, so it has no observed heterozygosity. The filter by observed heterozygosity removes it when it is on.",
+    ),
+  ).toBeVisible();
+  await expect(rowOf(page, "i3").getByRole("gridcell")).toHaveText([
+    "1.0000",
+    "no value",
+  ]);
+  await expect(
+    section(page).getByText(
+      "1 individual with no called genotype is not in the histogram.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  const header = table(page).getByRole("columnheader", {
+    name: /^Observed heterozygosity/,
+  });
+  for (const direction of ["ascending", "descending"] as const) {
+    await header.click();
+    await expect(header).toHaveAttribute("aria-sort", direction);
+    await expect(
+      table(page).getByRole("row").last().getByRole("rowheader"),
+    ).toHaveText("i3");
+  }
+  await expectNoViolations(makeAxeBuilder);
+
+  // Turned on, the filter by heterozygosity removes i3 whatever its
+  // threshold.
+  await section(page)
+    .getByText("Filter the individuals by observed heterozygosity", {
+      exact: true,
+    })
+    .click();
+  await expect(
+    section(page).getByText("Kept 2 of the 3 individuals it was given.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(rowOf(page, "i3").getByRole("gridcell").last()).toHaveText(
+    "removed",
+  );
+});
+
+test("VS7 D1 no individual with a called genotype: no histogram of the heterozygosity, and the line alone in its place", async ({
+  page,
+}) => {
+  const uncalled = CALLS_VCF.replace(/\t(0|1)\/(0|1|\.)/g, "\t./.");
+  await calculatedCalls(page, uncalled);
+  await expect(
+    section(page).getByText(
+      "3 individuals with no called genotype are not in the histogram.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(histogram(page, OBS_HET_TITLE)).toHaveCount(0);
+  await expect(histogram(page, MISSING_TITLE)).toBeVisible();
+});
+
 test("VS7 D1 the table sorted with the keyboard alone: into the table, up to the headers, Enter twice, s082 first at 0.0434, each sort announced, and axe", async ({
   page,
   makeAxeBuilder,

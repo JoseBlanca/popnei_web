@@ -2232,33 +2232,19 @@ for (const theme of ["light", "dark"] as const) {
       await saveIndividuals(page, "popgen-stats-error");
     });
 
-    /** A VCF of four individuals and six variants, of which those named
-        in `uncalled` have no called genotype, read with the filter of the
-        variants by missing data off, and its statistics calculated. */
+    /** The VCF `vcf`, of `numIndividuals` individuals, read with the
+        filter of the variants by missing data off, and its statistics
+        calculated. */
     async function statisticsOfCalls(
       page: Page,
-      uncalled: readonly string[],
+      vcf: string,
+      numIndividuals: number,
     ): Promise<void> {
-      const names = ["i1", "i2", "i3", "i4"];
-      const called = ["0/1", "0/0", "1/1", "0/1", "0/0", "1/1"];
-      const vcf = [
-        "##fileformat=VCFv4.2",
-        "##contig=<ID=1>",
-        '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
-        `#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t${names.join("\t")}`,
-        ...called.map(
-          (gt, index) =>
-            `1\t${String(index + 1)}\t.\tA\tT\t.\tPASS\t.\tGT\t${names
-              .map((name, at) =>
-                uncalled.includes(name) ? "./." : at % 2 === 0 ? gt : "0/1",
-              )
-              .join("\t")}`,
-        ),
-        "",
-      ].join("\n");
       await pickVariants(page, { name: "calls.vcf", text: vcf });
       await expect(
-        page.getByRole("main").getByText("4 individuals"),
+        page
+          .getByRole("main")
+          .getByText(`${String(numIndividuals)} individuals`),
       ).toBeVisible();
       await page
         .getByRole("main")
@@ -2269,18 +2255,52 @@ for (const theme of ["light", "dark"] as const) {
         .click();
       await expect(
         individualLists(page).getByText(
-          /^The statistics of the 4 individuals of calls\.vcf/,
+          new RegExp(
+            `^The statistics of the ${String(numIndividuals)} individuals of calls\\.vcf`,
+          ),
         ),
       ).toBeVisible();
     }
 
-    test("the statistics of each individual, two individuals with no called genotype", async ({
+    /** The lines of a VCF of four variants, its header and one line per
+        variant with the genotypes `gts` of its individuals `names`. */
+    function callsVcf(
+      names: readonly string[],
+      gts: readonly (readonly string[])[],
+    ): string {
+      return [
+        "##fileformat=VCFv4.2",
+        "##contig=<ID=1>",
+        '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
+        `#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t${names.join("\t")}`,
+        ...gts.map(
+          (row, index) =>
+            `1\t${String((index + 1) * 10)}\t.\tA\tG\t.\tPASS\t.\tGT\t${row.join("\t")}`,
+        ),
+        "",
+      ].join("\n");
+    }
+
+    test("the statistics of each individual, an individual with no called genotype", async ({
       page,
     }) => {
-      await statisticsOfCalls(page, ["i3", "i4"]);
+      // The worked example of individualChecks.md: i3 calls nothing.
+      await statisticsOfCalls(
+        page,
+        callsVcf(
+          ["i1", "i2", "i3"],
+          [
+            ["0/1", "0/0", "./."],
+            ["1/1", "0/1", "./."],
+            ["0/0", "./.", "./."],
+            ["0/1", "0/.", "./."],
+          ],
+        ),
+        3,
+      );
       await expect(
         individualLists(page).getByText(
-          "2 individuals with no called genotype are not in the histogram.",
+          "1 individual with no called genotype is not in the histogram.",
         ),
       ).toBeVisible();
       await saveIndividuals(page, "popgen-stats-no-called");
@@ -2289,10 +2309,17 @@ for (const theme of ["light", "dark"] as const) {
     test("the statistics of each individual, no individual with a called genotype", async ({
       page,
     }) => {
-      await statisticsOfCalls(page, ["i1", "i2", "i3", "i4"]);
+      await statisticsOfCalls(
+        page,
+        callsVcf(
+          ["i1", "i2", "i3"],
+          Array.from({ length: 4 }, () => ["./.", "./.", "./."]),
+        ),
+        3,
+      );
       await expect(
         individualLists(page).getByText(
-          "4 individuals with no called genotype are not in the histogram.",
+          "3 individuals with no called genotype are not in the histogram.",
         ),
       ).toBeVisible();
       await saveIndividuals(page, "popgen-stats-none-called");
