@@ -81,6 +81,37 @@ describe("WS9 D1 the announcer", () => {
     );
   });
 
+  test("a kind alone, then a change within 100 ms: one timer, the change written once at the end of the first pause", () => {
+    const announcer = createAnnouncer();
+    const seen: string[] = [];
+    announcer.subscribe(() => {
+      seen.push(announcer.getState());
+    });
+    const total = { replaces: INDIVIDUALS_KEPT_KIND } as const;
+    announcer.announce("109 pass.", total);
+    vi.advanceTimersByTime(60);
+    announcer.announceChange(() => "Undone: the filter changed.");
+    vi.advanceTimersByTime(40);
+    expect(announcer.getState()).toBe("Undone: the filter changed.");
+    vi.advanceTimersByTime(200);
+    expect(announcer.getState()).toBe("Undone: the filter changed.");
+    expect(seen).toEqual(["", "Undone: the filter changed."]);
+  });
+
+  test("a kind, a change, a clear: the next announcement waits its full 100 ms", () => {
+    const announcer = createAnnouncer();
+    const total = { replaces: INDIVIDUALS_KEPT_KIND } as const;
+    announcer.announce("109 pass.", total);
+    vi.advanceTimersByTime(60);
+    announcer.announceChange(() => "Undone: the filter changed.");
+    announcer.clear();
+    announcer.announce("Later.");
+    vi.advanceTimersByTime(99);
+    expect(announcer.getState()).toBe("");
+    vi.advanceTimersByTime(1);
+    expect(announcer.getState()).toBe("Later.");
+  });
+
   test("a held key holds the region back at most about 1 s", () => {
     const announcer = createAnnouncer();
     const total = { replaces: INDIVIDUALS_KEPT_KIND } as const;

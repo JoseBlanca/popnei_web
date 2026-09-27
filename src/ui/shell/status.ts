@@ -92,8 +92,11 @@ export function createAnnouncer(): Announcer {
     };
   };
 
+  // Empties the region and starts the pause, unless a pause runs: the
+  // texts waiting may all have been dropped while it runs, and a second
+  // timer would leave the first beyond the reach of clear.
   function wait(): void {
-    if (waiting.length === 0) {
+    if (timer === undefined) {
       change("");
       timer = setTimeout(write, ANNOUNCE_DELAY_MS);
     }
