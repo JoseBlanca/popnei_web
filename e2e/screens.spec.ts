@@ -1704,7 +1704,16 @@ for (const theme of ["light", "dark"] as const) {
         writing(page).getByRole("button", { name: /^Save / }),
       ).toBeVisible();
       await openProject(page, saved);
-      await expect(page.getByText(/in the Variants step\.$/)).toBeVisible();
+      // The question's own words: "in the Variants step." alone also ends
+      // the announcement of the file written, which the status region
+      // holds from 100 ms after the write, so that it matched two elements
+      // whenever the question came after it.
+      await expect(
+        page.getByText(/will be discarded\. To keep them, press Keep/),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Keep the current project" }),
+      ).toBeFocused();
       await save(page, `popgen-write-open-question-${theme}`, {
         fullPage: false,
       });
