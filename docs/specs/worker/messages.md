@@ -122,8 +122,10 @@ received it is ended (below):
   light worker loads it"). It is not `crashed`, which would end a worker
   that can still read a CSV, and would tell the user that the reading
   stopped where the words of the refusal tell them to check their
-  connection; a failed `import()` or `init()` leaves nothing of the wasm
-  behind. The option not taken is `crashed`, as a popnei that does not
+  connection; a failed `import()` or `init()` leaves no wasm behind,
+  though a browser may keep a failed `import()` as failed until the
+  worker ends, so that trying again fails too (`files.md`, "How the
+  light worker loads it"). The option not taken is `crashed`, as a popnei that does not
   load ends the calculation worker, which without popnei can do nothing.
   A file calamine cannot open is the refusal `files`, with calamine's
   message; a panic of the files wasm is a trap, and `crashed`.

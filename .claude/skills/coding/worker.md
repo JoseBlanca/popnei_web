@@ -470,8 +470,8 @@ never downloads it.
   generates, which fetches the `.wasm` from `new URL("files_bg.wasm",
   import.meta.url)` as popnei's loader does.
   What weighs is the `.wasm`, 0.30 MB gzipped while the crate only reads,
-  calamine alone, 295,521 bytes with `gzip -9` in the trial of 27
-  September 2026 (`docs/specs/worker/files.md`), and about 0.58 MB once
+  calamine alone, 295,475 and 295,521 bytes with `gzip -9` in the two
+  crates of trial of 27 September 2026 (`docs/specs/worker/files.md`), and about 0.58 MB once
   rust_xlsxwriter and zip join it for the report in stage 6
   (`docs/technology.md`, section 2); the JavaScript that wasm-bindgen
   generates is 2,962 bytes gzipped in that trial, and it no longer rides
@@ -489,10 +489,22 @@ never downloads it.
   `filesReady = null`, so that the next xlsx tries again, and the read
   answers the failed read `xlsxReaderNotLoaded`, with the browser's
   message for the console; the worker goes on, since a failed load leaves
-  nothing of the wasm behind and a CSV can still be read. It is not
+  no wasm behind and a CSV can still be read. It is not
   `crashed`, which a popnei that does not load is for the calculation
   worker, which can do nothing without it (`docs/specs/worker/files.md`,
   "How the light worker loads it"; decided on 27 September 2026).
+  A browser may keep an `import()` whose download failed as failed for
+  the life of the worker, as the HTML standard has it, so that the next
+  try fails with no request; the words of `xlsxReaderNotLoaded` then
+  tell the user to save the project and reload, and a Playwright test
+  finds which engines do it (`docs/specs/worker/files.md`).
+- **What the files wasm returns is made a plain value outside the
+  runner**, by `readXlsxCells` of `src/worker/xlsxCells.ts`, which takes
+  the files wasm's `readXlsx` as an argument and so runs under Vitest with
+  an object of the test in its place: the codes of refusal, the `Error`
+  that is `files`, the `free()` in a `finally`, and the defects it
+  throws for (`docs/specs/worker/files.md`, "How the light worker loads
+  it").
 
 ### The reader of the individuals file
 

@@ -2,13 +2,9 @@
 
 Written on 27 September 2026, for stage 4 of `docs/build-order.md`, the
 Individuals step and the PCA, and revised the same day to agree with the
-specs written beside it: the words of a files wasm that could not be
-downloaded give the advice of the 3D view in the same case; and again
-that day after a review of its claims against the source of calamine
-0.36.1 and a second crate of trial: the values calamine gives as it
-reads the cells one by one, the dates past the last day Excel shows,
-the sheet Excel opens on, and the declarations wasm-bindgen generates.
-There is no code of it yet. This spec gives
+specs written beside it, and after two reviews of its claims against the
+source of calamine 0.36.1 and two crates of trial. There is no code of
+it yet. This spec gives
 the Rust crate `crates/files/`, which reads the first sheet of an xlsx,
 the file Excel saves by default, into its cells, and the few lines of the
 light worker that load it and call it. The light worker is the second
@@ -30,16 +26,20 @@ the workflow that builds the crate is `docs/specs/site.md`'s.
 
 calamine, the Rust library that reads the file, gives each cell, as its
 reader of the cells one by one gives them, as one of the values of its
-`DataRef`: empty, a number, a text, a text of the workbook's table of
-texts, which an xlsx keeps once for all the cells that hold it
-(`SharedString`), a boolean, a date or a time, a date written in ISO
-8601, or an error such as `#N/A`. `DataRef` also has a whole number and
-a duration in ISO 8601, which calamine's reader of an xlsx never gives,
-and which the crate turns into a number and a text all the same. The crate turns each into one of the four kinds
-of cell the table holds (`Cell`, `docs/specs/worker/protocol.md`): empty,
-text, number or boolean. The rules below are read from the source of
-calamine 0.36.1, the version `docs/technology.md` measured, and tried on
-27 September 2026 in a crate of trial built from them on the owner's Mac.
+type `DataRef`, which is what the crate matches on: empty, a number, a
+text of the workbook's table of texts, which an xlsx keeps once for all
+the cells that hold it (`SharedString`), a text the cell holds itself
+(`String`), a boolean, a date or a time, a date written in ISO 8601, or
+an error such as `#N/A`. `DataRef` also has a whole number and a
+duration in ISO 8601, which calamine's reader of an xlsx never gives,
+and which the crate turns into a number and a text all the same. calamine's
+other type of value, `Data`, is what it gives when it reads a whole
+sheet at once, which the crate does not do (below). The crate turns each
+value into one of the four kinds of cell the table holds (`Cell`,
+`docs/specs/worker/protocol.md`): empty, text, number or boolean. The
+rules below are read from the source of calamine 0.36.1, the version
+`docs/technology.md` measured, and tried on 27 September 2026 in two
+crates of trial built from them on the owner's Mac, with Rust 1.98.0.
 
 ## What it does
 
@@ -53,7 +53,7 @@ crate is seen there, or is not seen at all:
   the variants;
 - a value merged over ten rows in Excel, the population of ten
   individuals, would belong to the first of them only;
-- a sheet with one error cell of the newest versions of Excel is not read
+- a sheet with one cell of an error calamine does not know is not read
   at all, since calamine refuses it (below, "The refusals").
 
 ### The sheet read
@@ -84,35 +84,43 @@ and a column as the user finds them in Excel
 from the file, as a sparse row leaves them, is empty.
 
 A sheet whose rectangle has more than 2,000,000 cells, rows times
-columns, is refused before the cells are made, as `sheetTooLarge`. The
-limit is `MAX_SHEET_CELLS` of `docs/specs/worker/individuals.md`, which
-the light worker gives the crate with each read, so that the number is
-written in one place. A CSV of 20 MB, the limit of a file of the
-individuals, holds about 1,000,000 cells of ten characters; a sheet
-twice that is still a table of individuals, and a larger one is a stray
-value far from the table, a note in column XFD, the last of Excel, or not a table of
+columns, is refused, as `sheetTooLarge`. The crate keeps the rectangle
+of the values it has read so far as it goes, and refuses the sheet at
+the first cell that makes it larger than the limit, without reading
+further: a note in column XFD, the last of Excel, at row 200, over a
+table at A1, is refused when the note is read, and not after the rest of
+the sheet. So the crate never holds more than 2,000,000 cells with a
+value, and the refusal names the last row and the last column the
+rectangle had reached, where the user looks for the values outside the
+table. The limit is `MAX_SHEET_CELLS` of
+`docs/specs/worker/individuals.md`, which the light worker gives the
+crate with each read, so that the number is written in one place. A CSV
+of 20 MB, the limit of a file of the individuals, holds about 1,800,000
+cells of ten characters, each with its separator, eleven bytes: the
+limit of an xlsx lets it hold a table as large as a CSV can, and a
+larger rectangle is a stray value far from the table, or not a table of
 individuals. It is an estimate: no sheet of that size has been read.
 
 ### Each cell
 
-What each value of calamine's `Data` becomes. A text crosses as a
+What each value of calamine's `DataRef` becomes. A text crosses as a
 JavaScript string, a number as a JavaScript number, a boolean as a
 boolean, an empty cell as `null`.
 
 | in the file | calamine gives | the cell |
 |---|---|---|
 | nothing, or a text with no character | `Empty`, `SharedString("")`, `String("")` | empty |
-| a text | `SharedString`, or `String` for the text a formula saved | the text as it is, spaces at its ends and line breaks in it kept; the reader removes the spaces (`docs/specs/worker/individuals.md`) |
+| a text | `SharedString`; `String` for the text a formula saved, for a text written in the cell itself, which programs other than Excel may write, and for a value of no type that is not a number | the text as it is, spaces at its ends and line breaks in it kept; the reader removes the spaces (`docs/specs/worker/individuals.md`) |
 | text with several fonts in it | `SharedString`, its parts joined | the text |
 | a number, of any format that is not a date: `1,75`, `50 %`, `001` | `Float` | the number, `1.75`, `0.5`, `1` |
 | a whole number | `Float`: an xlsx stores every number alike, and calamine gives `Int` only for other formats | the number |
 | a number that is not finite, which Excel does not write | `Float` | the text JavaScript writes for it, `NaN`, `Infinity`, `-Infinity` |
 | `TRUE` or `FALSE`, `VERDADERO` or `FALSO` in Spanish | `Bool` | the boolean |
-| a date | `DateTime`, not a duration | `2024-05-13` |
-| a date and a time | `DateTime` | `2024-05-13 12:00:00`, and `2024-05-13 12:00:00.250` when its milliseconds are not 0 |
-| a time alone, a number from 0 to below 1 with a format of time | `DateTime` | `14:30:00` |
-| a date format on a number below 0, or of 2,958,466 or more, after 31 December 9999, which Excel shows as `#######` | `DateTime`, with the parts of a wrong date: 31 December 1899 for any number below 0, the year 10000 above | the number |
-| a duration, a format such as `[h]:mm:ss` | `DateTime`, a duration | hours, minutes and seconds, the hours not wrapped at 24: 1.5 days is `36:00:00`, and a negative one `-0:30:00` |
+| a date: a number with a format of date or time, of 1 day or more, whose time, rounded to the millisecond, is 0 | `DateTime` whose `ExcelDateTime` is not a duration | `2024-05-13` |
+| a date and a time: the same, with a time that is not 0, whether the format shows it or not (**Open 2**, below) | `DateTime` | `2024-05-13 12:00:00`, and `2024-05-13 12:00:00.250` when its milliseconds are not 0 |
+| a time alone: a number with a format of date or time that rounds to less than 1 day and not below 0 | `DateTime` | `14:30:00` |
+| a format of date on a number below 0, or on a day after 31 December 9999, which Excel shows as `#######` | `DateTime`, with the parts of a wrong date | the number |
+| a duration, a format such as `[h]:mm:ss` | `DateTime` whose `ExcelDateTime` is a duration | hours, minutes and seconds, the hours not wrapped at 24: 1.5 days is `36:00:00`, and a negative one `-0:30:00` |
 | a date written as ISO 8601 text, a cell of the type `d`, which other programs than Excel may write | `DateTimeIso` | the text as it is |
 | an error: `#N/A`, `#DIV/0!`, `#NAME?`, `#NULL!`, `#NUM!`, `#REF!`, `#VALUE!` | `Error` | the text of the error as Excel writes it in English (**Open 1**, below) |
 | a formula | the value saved with it | the cell of that value, by the rows above |
@@ -121,23 +129,40 @@ A date becomes text in ISO 8601, year, month, day, and not the number
 Excel stores, 45425 for 13 May 2024, which a user would not recognise,
 nor the date as Excel shows it, which depends on the language of the
 computer. It is text in the table, so a column of dates is categorical,
-and a year is a number and not a date. calamine gives the parts of the
-date, `ExcelDateTime::to_ymd_hms_milli`, with no library of dates: the
-crate takes calamine without its feature `chrono`. It counts the days from
-the start of the date system the workbook says it uses, the 1900 one or
-the 1904 one of old Excel for Mac, so the same date shown in Excel gives
-the same text in both, and reproduces Excel's 29 February 1900, a day
-that did not exist, as Excel does: 60 gives `1900-02-29` in the trial.
-calamine works the parts out only from 0 to the end of 9999: it turns
-the number of days into a whole number with no sign, so every number
-below 0 gives 31 December 1899, and 2,958,466 gives the year 10000, as
-the trial saw. So the crate looks at the number, `as_f64`, before the
-parts, and gives the number itself outside that range, as the table
-says. A time alone is a number below 1,
-which calamine also gives as a date, of 31 December 1899; the crate
-writes the time only. A duration is written from the number of days
-itself, since calamine gives its parts as a date of January 1900; its
-milliseconds are rounded, as calamine rounds those of a date.
+and a year is a number and not a date.
+
+calamine gives no format of a cell, only that the format is one of a
+date or a time, or one of a duration, the `ExcelDateTime` that `DateTime`
+holds. So the crate cannot tell a date shown with its time from one
+shown without it, and decides by the number: a number with no time, as a
+date typed by hand has, gives the date alone, and a number with a time
+gives both, whatever Excel shows (**Open 2**, below).
+
+The crate first rounds the number to a whole number of milliseconds, and
+splits that into its days and the milliseconds of its last day, with the
+arithmetic of whole numbers. 45425.9999999999, a hundredth of a
+millisecond before midnight, is then 14 May 2024 at 0:00, where
+calamine's parts of the number as it is give 13 May at hour 24, as the
+second trial saw. The parts of the day come from calamine, an
+`ExcelDateTime::new` of the days in the date system of the workbook,
+`Xlsx::has_1904_epoch`, and its `to_ymd_hms_milli`, with no library of
+dates: the crate takes calamine without its feature `chrono`. The date
+system is the 1900 one or the 1904 one of old Excel for Mac, so the same
+date shown in Excel gives the same text in both, and calamine reproduces
+Excel's 29 February 1900, a day that did not exist, as Excel does: 60
+gives `1900-02-29` in the trial.
+
+calamine works the parts out only from the first day of the system to
+the end of 9999. It turns the days into a whole number with no sign, so
+a number below 0 gives 31 December 1899 in the 1900 system and 1 January
+1904 in the other; and a day after 9999 gives the year 10000 or later,
+from 2,958,466 in the 1900 system and from 2,957,004 in the 1904 one, as
+the second trial saw. So the crate gives the number itself for a number
+below 0 and for a year after 9999 in the parts, a rule that holds in both
+systems. A time alone, a number that rounds to less than a day, is also
+a date for calamine, of 31 December 1899 or 1 January 1904; the crate
+writes the time only. A duration is written from its whole number of
+milliseconds, since calamine gives its parts as a date of January 1900.
 
 A number whose format calamine takes for a date, one with a `d`, `m`,
 `y`, `h` or `s` outside quotes, such as `0.0m`, comes as a date too. It
@@ -200,19 +225,28 @@ and the light worker makes the refusal of it. In the order it looks:
    as `ReadError::Unreadable`.
 5. **A cell with an error calamine does not know**: calamine 0.36.1 knows
    the seven errors of the table above, and refuses the whole sheet at
-   any other, with `XlsxError::CellError`, whose text is the error. The
-   newest versions of Excel write others, `#SPILL!` and `#CALC!` among
-   them, and rust_xlsxwriter writes `#GETTING_DATA`, which the trial
-   refused with "Unsupported cell error value '#GETTING_DATA'". The crate
-   gives it as `cellError`, with the text of the error, so that the user
-   is told which formula to mend; calamine does not say which cell, and
-   neither can the crate.
-6. **A sheet with no value**: `emptySheet`, with the name of the sheet.
-   The likeliest cause is a table on the second sheet of a workbook whose
-   first holds notes that were deleted, or a first sheet left empty; the
-   words say that only the first sheet is read.
-7. **A sheet too large**: `sheetTooLarge`, with the name of the sheet and
-   its rows and columns, above.
+   any other, with `XlsxError::CellError`, whose text is the error.
+   rust_xlsxwriter writes `#GETTING_DATA`, which the trial refused with
+   "Unsupported cell error value '#GETTING_DATA'". The crate gives it as
+   `cellError`, with the text of the error, so that the user is told
+   which formula to mend; calamine does not say which cell, and neither
+   can the crate, so the words say how to find the cells with an error in
+   Excel. The newest versions of Excel have other errors, `#SPILL!` and
+   `#CALC!` among them, but whether they reach calamine as such is not
+   known: Excel may save them as `#VALUE!`, with the real error in a
+   part of the file calamine does not read, and then the cell is the
+   text `#VALUE!` and nothing is refused. So the refusal of `#SPILL!` in
+   this spec is unconfirmed until the owner's `spill.xlsx` is read
+   (below, "Made by the owner").
+6. **A sheet too large**: `sheetTooLarge`, with the name of the sheet and
+   the last row and column the rectangle had reached, above. It and a
+   cell of point 5 come as the cells are read, so the one met first in
+   the order of the file is the refusal.
+7. **A sheet with no value**: `emptySheet`, with the name of the sheet,
+   known once every cell is read. The likeliest cause is a table on the
+   second sheet of a workbook whose first holds notes that were deleted,
+   or a first sheet left empty; the words say that only the first sheet
+   is read.
 
 A sheet whose rows are all blank but its header, or whose values are
 all spaces, is not refused here: the crate gives its cells, and the
@@ -266,8 +300,16 @@ pub enum Refusal {
     OldExcel,
     Encrypted,
     EmptySheet { sheet: String },
-    CellError { error: String },          // "#SPILL!"
-    SheetTooLarge { sheet: String, rows: u32, columns: u32 },
+    CellError { error: String },          // "#GETTING_DATA"
+    /// The rectangle of the values read when it passed the limit, in the
+    /// numbers of Sheet.
+    SheetTooLarge {
+        sheet: String,
+        first_row: u32,
+        first_column: u32,
+        num_rows: u32,
+        num_columns: u32,
+    },
 }
 
 pub enum ReadError {
@@ -276,7 +318,8 @@ pub enum ReadError {
 }
 
 /// Reads the first worksheet that is not hidden of the xlsx `bytes`,
-/// refusing a rectangle of more than `max_cells` cells.
+/// refusing it at the first cell that makes the rectangle of the values
+/// larger than `max_cells` cells.
 pub fn read_first_sheet(bytes: &[u8], max_cells: u32) -> Result<Sheet, ReadError>;
 ```
 
@@ -304,9 +347,9 @@ pub struct XlsxRead {
     /// The name of the sheet, for a sheet read, "emptySheet" and
     /// "sheetTooLarge".
     #[wasm_bindgen(readonly)] pub sheet: String,
+    /// The rectangle of the sheet read, or of "sheetTooLarge".
     #[wasm_bindgen(readonly, js_name = firstRow)] pub first_row: u32,
     #[wasm_bindgen(readonly, js_name = firstColumn)] pub first_column: u32,
-    /// Also the size of the sheet refused as "sheetTooLarge".
     #[wasm_bindgen(readonly, js_name = numRows)] pub num_rows: u32,
     #[wasm_bindgen(readonly, js_name = numColumns)] pub num_columns: u32,
     /// Row after row: null, a string, a number or a boolean; empty for a
@@ -420,21 +463,84 @@ files wasm, on first need":
   the project, reload the page and open the project again"
   (`docs/specs/worker/individuals.md`), the advice of the 3D view whose
   file is gone after a deploy (`docs/specs/analyses/pca.md`), since a
-  reload alone loses what the user has not saved. The
-  worker goes on: a failed `import()` or
-  `init()` leaves nothing of the wasm behind, and a CSV read after it is
-  read. The option not taken was to end the worker, as a failure to load
-  popnei ends the calculation worker: the user would be told that the
-  reading stopped, and not to check their connection.
+  reload alone loses what the user has not saved. The worker goes on,
+  and a CSV read after it is read. The option not taken was to end the
+  worker, as a failure to load popnei ends the calculation worker: the
+  user would be told that the reading stopped, and not to check their
+  connection.
+- **A try again that may fail at once.** A failed `init()` leaves
+  nothing of the wasm behind, and the next one fetches `files_bg.wasm`
+  again. A failed `import()` may not: the HTML standard, which the
+  browsers follow, keeps a module whose download failed as failed, for
+  the life of the worker, so that the next `import()` of the same
+  address fails again with no request. Whether it should is asked in
+  the standard's issue 6768 on GitHub, `whatwg/html`, and what each
+  engine does on 27 September 2026 is not known here. In an engine that keeps it,
+  "load the file again" fails again after the JavaScript of the files
+  wasm failed to download, even with the connection back, and the second
+  half of the words, save the project, reload the page and open it
+  again, is what mends it, since a reload starts a new worker. The
+  Playwright case below finds which engines keep it, and the report of
+  the plan says so. The options not taken: an `import()` of a new
+  address at each try, which Vite cannot give, since it names the file
+  it makes of the files wasm's JavaScript when it builds the site; and the JavaScript imported with the worker's
+  own file, so that only the `.wasm` could fail to download, at 2,962
+  bytes gzipped more for every user of the light worker, CSV users
+  included. The second is the one to take if an engine keeps the failure
+  and the owner wants a connection that dropped mended without a
+  reload.
 - **The read** calls `readXlsx` with the bytes and `MAX_SHEET_CELLS`,
-  makes of what it gives a plain value, the cells or a refusal of
-  `IndividualsFileError`, and frees the `XlsxRead` in a `finally`. A code
-  in `refusal` that is not one of the six, or `cells` not as long as
-  `numRows × numColumns`, is a defect of ours, and throws, which ends the
-  worker with `crashed`. An `Error` thrown by `readXlsx` is the refusal
+  and makes of what it gives a plain value, the cells or a refusal of
+  `IndividualsFileError`, with `readXlsxCells` below, which also frees
+  the `XlsxRead`. A code in `refusal` that is not one of the six, or
+  `cells` not as long as `numRows × numColumns`, is a defect of ours and
+  throws; the read of the individuals file then rejects, and the worker
+  ends with `crashed`, the message with which a worker says it cannot go
+  on before it closes itself (`docs/specs/worker/messages.md`, "A worker
+  that cannot go on"). An `Error` thrown by `readXlsx` is the refusal
   `files`, with its message.
 
-The function that does this is given to `readIndividualsFile`, which
+`readXlsxCells`, in `src/worker/xlsxCells.ts`, is the part of this that
+has no wasm in it, so that Vitest checks it in node with an object of
+the test in the place of the files wasm. It names no import of the
+files wasm, and so does not break the rule that only `filesRunner.ts`
+imports it: the struct `XlsxRead` of `files.d.ts` has every field of
+`XlsxReadFields`, and `filesRunner.ts` passes the files wasm's
+`readXlsx` itself.
+
+```ts
+/** The fields of the files wasm's XlsxRead that the light worker reads. */
+export interface XlsxReadFields {
+  readonly refusal: string;
+  readonly detail: string;
+  readonly sheet: string;
+  readonly firstRow: number;
+  readonly firstColumn: number;
+  readonly numRows: number;
+  readonly numColumns: number;
+  readonly cells: unknown[];
+  free(): void;
+}
+
+/** The cells of an xlsx or its refusal: calls `readXlsx` with `bytes`
+    and MAX_SHEET_CELLS, gives an Error it throws as the refusal "files"
+    with its message, and frees what it returns. Throws a defect for a
+    code of refusal it does not know or cells of the wrong length. */
+export function readXlsxCells(
+  readXlsx: (bytes: Uint8Array, maxCells: number) => XlsxReadFields,
+  bytes: Uint8Array,
+): SheetCellsRead;
+```
+
+A `sheetTooLarge` gives its last row and column, `firstRow + numRows −
+1` and `firstColumn + numColumns − 1`, since that is where the words
+send the user (`docs/specs/worker/individuals.md`, "The refusals and
+their words"). `SheetCellsRead`, the cells of the sheet or a refusal of
+`IndividualsFileError`, the union of every way a file of the individuals
+is refused, are `docs/specs/worker/individuals.md`'s.
+
+The loading and `readXlsxCells` together are the function given to
+`readIndividualsFile`, which
 calls it for a source with no options of a CSV, an xlsx
 (`docs/specs/worker/individuals.md`, "The TypeScript interface"). So
 `readIndividualsFile` runs in node under Vitest, the runner of the
@@ -447,16 +553,18 @@ The Individuals step shows the file as being read, as it does for a CSV
 (`docs/specs/steps/individuals.md`), from the pick until the table
 arrives, the download included; no state of its own says that something
 is downloading. The download is the wasm and its JavaScript, measured
-in the trial of 27 September 2026, built as `build:files` builds it, with
-Rust 1.98.0 on the owner's Mac, gzipped with `gzip -9`:
+in the two crates of trial of 27 September 2026, which have calamine
+alone and little code of their own, each a little different, built as
+`build:files` builds it, with Rust 1.98.0 on the owner's Mac, gzipped
+with `gzip -9`:
 
 | file | raw | gzipped |
 |---|---|---|
-| `files_bg.wasm`, calamine and wasm-bindgen | 533,519 bytes | 295,521 bytes |
-| `files.js`, what wasm-bindgen generates | 11,892 bytes | 2,962 bytes |
+| `files_bg.wasm`, calamine and wasm-bindgen | 533,415 and 533,519 bytes | 295,475 and 295,521 bytes |
+| `files.js`, what wasm-bindgen generates, in the crate with the struct `XlsxRead` above | 11,892 bytes | 2,962 bytes |
 | popnei's wasm package, for comparison (`docs/technology.md`, section 2) | 2.16 MB | 0.71 MB |
 
-So 0.30 MB, which agrees with the 0.29 MB `docs/technology.md` measured
+So 0.30 MB, the crate's own code a few hundred bytes of it, which agrees with the 0.29 MB `docs/technology.md` measured
 for calamine inside the crate of the three libraries, and is less than
 half of popnei's wasm, which every user downloads. At 10 Mbit/s it takes
 about a quarter of a second, and at 1.6 Mbit/s about 1.5 s, by
@@ -477,9 +585,15 @@ again from the build of the stage, and written in the report of its plan.
 - **Several tables in one sheet**, side by side: one rectangle, whose
   columns between the two are empty in the header, which the reader
   refuses or drops by the rules of a CSV.
-- **A value far from the table**, a note in Z1: the rectangle reaches
-  it, and the reader refuses the column with a value and no name,
-  "column Z has values but no name in the header".
+- **A value far from the table**, a note in Z5 beside a table of
+  columns A to F: the rectangle reaches it, the columns G to Y, with no
+  name and no value, are dropped, and the reader refuses column Z, with
+  a value and no name, "column Z has values but no name in the header".
+  A note in Z1, in the row of the header, is instead the name of a
+  column Z with no value in any row, which the user sees in the table.
+  Neither reaches the limit of 2,000,000 cells: a note in column XFD,
+  over a table of 123 rows or more, does, and is refused as
+  `sheetTooLarge`, naming column XFD.
 - **The same sheet saved as CSV and as xlsx** gives one table but for
   the dates, `13/05/2024` in the CSV and `2024-05-13` in the xlsx, the
   numbers, as Excel shows them in the CSV, `1,8` rounded to its format,
@@ -487,19 +601,22 @@ again from the build of the stage, and written in the report of its plan.
   `VERDADERO` in a CSV of Spanish Excel and a boolean in the xlsx.
 - **The files wasm, downloaded, then the light worker restarted** after
   a crash or a cancel: the new worker imports it again, which the
-  browser's cache serves.
+  browser's cache serves. A new worker also starts with no module
+  kept as failed, so a restart mends a failed `import()` as a reload
+  does.
 
 ## How it runs
 
 In the light worker, one read at a time. At its largest, near its end, a
 read holds at once: the bytes, 20 MB at most, in the worker's memory and
 a copy in the wasm's; the texts of the workbook, which an xlsx keeps in
-one table and calamine holds whole; the cells with a value and the
-rectangle made of them; and the JavaScript array of the cells, 2,000,000
-at most. The memory of a wasm grows and never shrinks, so the worker keeps
+one table and calamine holds whole; the cells with a value, 2,000,000
+at most since the size is checked as they are read, and the rectangle
+made of them; and the JavaScript array of the cells, 2,000,000 at
+most. The memory of a wasm grows and never shrinks, so the worker keeps
 the largest a read has needed until it is ended. None of it is measured;
-the flow of the stage measures the time of a sheet of 10,000 rows and 20
-columns (below).
+the Playwright test of the Individuals step measures the time of a sheet
+of 10,000 rows and 20 columns (below, "In the browser").
 
 ## How it is verified
 
@@ -518,7 +635,8 @@ holds, and the literal cells it gives:
 | the table at C3 | `first_row` 3, `first_column` 3, the same cells |
 | a row with its second cell not written | `Empty` there |
 | a number with the format `000` | `Number(1.0)` |
-| 45425 with the format `dd/mm/yyyy`; 45425.5 with `dd/mm/yyyy hh:mm:ss`; 0.604166666 with `hh:mm`; 1.5 with `[h]:mm:ss`; 60, 2958465 and 2958466 with `dd/mm/yyyy`; −3 with `dd/mm/yyyy` | `2024-05-13`, `2024-05-13 12:00:00`, `14:30:00`, `36:00:00`, `1900-02-29`, `9999-12-31`, `Number(2958466.0)`, `Number(-3.0)`; all seen as dates by calamine in the trial |
+| 45425 with the format `dd/mm/yyyy`; 45425.5 with `dd/mm/yyyy hh:mm:ss`, and with `dd/mm/yyyy`; 45425.9999999999 with `dd/mm/yyyy`; 0.604166666 with `hh:mm`; 1.5 with `[h]:mm:ss`; 60, 2958465 and 2958466 with `dd/mm/yyyy`; −3 with `dd/mm/yyyy` | `2024-05-13`; `2024-05-13 12:00:00` both times (**Open 2**); `2024-05-14`; `14:30:00`, `36:00:00`, `1900-02-29`, `9999-12-31`, `Number(2958466.0)`, `Number(-3.0)`; all seen as dates by calamine in the trials |
+| the crate's function that makes the cell of a date, in its own module, with the 1904 system, which rust_xlsxwriter does not write: 2957003, 2957004, −3 and 0.5 | `9999-12-31`, `Number(2957004.0)`, `Number(-3.0)`, `12:00:00` |
 | a formula `=1+1` saved with the value 2, one with the text `x`, one with `TRUE`, one with `#N/A`, and `=1+2` with none | `Number(2.0)`, `Text("x")`, `Bool(true)`, `Text("#N/A")`, `Number(0.0)` |
 | `0.1 + 0.2` | `Number(0.30000000000000004)` |
 | a text `"  sp "` and a text with a line break | both as they are |
@@ -526,7 +644,8 @@ holds, and the literal cells it gives:
 | a population merged over rows 2 to 4, and a name merged over two columns of the header | the population in the three rows; the name in both columns |
 | a hidden first sheet, and the table on the second | the second, by its name |
 | a first sheet with no value, and a table on the second | `EmptySheet`, with the name of the first |
-| a value at A1 and one at XFD200, with `max_cells` 2,000,000 | `SheetTooLarge`, 200 rows, 16,384 columns |
+| a value at A1 and one at XFD200, with `max_cells` 2,000,000 | `SheetTooLarge`, from row 1 and column 1, 200 rows and 16,384 columns |
+| a value at XFD1, and one in column A of each row down to row 200 | `SheetTooLarge` at row 123, 16,384 × 123 being the first rectangle above 2,000,000: 123 rows and 16,384 columns, the rows after it not read |
 | a formula saved with the value `#GETTING_DATA` | `CellError`, `#GETTING_DATA` |
 | the bytes of `id,pop\n` | `NotXlsx`; and the empty bytes |
 | the first 500 bytes of an xlsx | `Unreadable`, with calamine's message |
@@ -561,7 +680,10 @@ five rows, typed by hand as a user would:
 6. `excel97.xls`, any table saved as "Excel 97-2003 Workbook":
    `OldExcel`.
 7. `spill.xlsx`, from Excel 365: a cell `=SEQUENCE(3)` with a value
-   under it, which gives `#SPILL!`: `CellError`, `#SPILL!`.
+   under it, which gives `#SPILL!`: `CellError`, `#SPILL!`, or the text
+   `#VALUE!` if Excel saves it so (above, "The refusals", point 5). What
+   it gives settles the words of `cellError`, and the spec is corrected
+   to it.
 8. `google_sheets.xlsx`, the first file downloaded from Google Sheets as
    .xlsx, if the owner uses it.
 
@@ -570,6 +692,20 @@ the name of the file they wait for, and the report of the plan says
 which ran. What each gives that this spec does not expect, a date read
 as a number, a cell missing, is a finding for this spec and not a test
 to be bent.
+
+### With Vitest, in node
+
+At `readXlsxCells`, with a function of the test in the place of
+`readXlsx` that returns an object of the fields, or throws, and counts
+the calls of its `free()`:
+
+| the object | gives |
+|---|---|
+| `refusal` "", the sheet `Hoja1` at row 3 and column 2, 2 rows of 2 columns, cells `["id", "pop", "a", 1]` | the cells, with the same numbers; `free()` called once |
+| `refusal` "encrypted"; "emptySheet" with its sheet; "cellError" with `detail` `#GETTING_DATA` | those refusals, with their fields |
+| `refusal` "sheetTooLarge", from row 1 and column 1, 123 rows of 16,384 columns | `sheetTooLarge`, last row 123, last column 16,384, with the sheet and `MAX_SHEET_CELLS` |
+| a function that throws `Error("Zip error")` | the refusal `files`, with that message |
+| `refusal` "other", and cells 3 long for 2 × 2 | a throw each, with `free()` still called once |
 
 ### In the browser
 
@@ -586,6 +722,13 @@ test, in the flow of the Individuals step
   put in the place of the site's answer: the
   words of `xlsxReaderNotLoaded`; the route removed and the file loaded
   again: the table;
+- the JavaScript of the files wasm answered with an error, the same way:
+  the words of `xlsxReaderNotLoaded`; the route removed and the file
+  loaded again: the table in an engine that tries the `import()` again,
+  or the same words in one that keeps the failure (above, "How the light
+  worker loads it"). The test records which, for each engine, and asserts
+  only that one of the two is shown; the report of the plan names the
+  engines that keep it;
 - `encrypted.xlsx`: its words;
 - a sheet of 10,000 rows and 20 columns, `e2e/fixtures/individuals_10000.xlsx`,
   written by a test of the crate marked `#[ignore]` and run by hand, as
@@ -601,13 +744,21 @@ from the build and written in the same report, beside the numbers above.
 - `docs/specs/worker/individuals.md`, revised beside this spec: the
   refusals `notXlsx`, `oldExcel`, `encrypted`, `emptySheet`, `cellError`,
   `sheetTooLarge` and `xlsxReaderNotLoaded` and their words, and
-  `MAX_SHEET_CELLS`.
+  `MAX_SHEET_CELLS`. From the second review: `sheetTooLarge` carries the
+  last row and the last column the rectangle reached, `lastRow` and
+  `lastColumn`, in place of its rows and columns, and its words name
+  them; the words of `cellError` say how to find the cell in Excel; a
+  CSV of 20 MB holds about 1,800,000 cells; and `XlsxReader` rejects for
+  a defect of ours. The same fields go into `docs/specs/worker/protocol.md`
+  and the words into `docs/specs/steps/individuals.md`.
 - `docs/specs/worker/messages.md`, revised beside this spec: the request
   of an xlsx, and the load of the files wasm that fails.
 - `docs/technology.md`, section 2 and open point 1: the measure of
-  calamine alone, 295,521 bytes gzipped; that calamine 0.36.1 refuses a
-  whole sheet at an error it does not know, `#SPILL!` among them; and the
-  answer to open point 1 when the owner's files have been read.
+  calamine alone, 295,475 to 295,521 bytes gzipped in two crates of
+  trial; that calamine 0.36.1 refuses a whole sheet at an error it does
+  not know, and that whether `#SPILL!` reaches it as such waits for the
+  owner's `spill.xlsx`; and the answer to open point 1 when the owner's
+  files have been read.
 - `.claude/skills/coding/worker.md`, "The files wasm, on first need":
   "about 0.5 MB gzipped" is 0.30 MB while the crate only reads; a failed
   load forgets the promise and is the refusal `xlsxReaderNotLoaded`, and
@@ -615,16 +766,13 @@ from the build and written in the same report, beside the numbers above.
   crate are values of its result, and only a file calamine cannot read
   throws, `files`.
 - `.claude/skills/coding/configs.md`: the dependencies above, the
-  development dependency on rust_xlsxwriter, and `channel = "1.98.0"`.
+  development dependency on rust_xlsxwriter, `channel = "1.98.0"`, and
+  the line `//!` each file of the crate's tests opens with, without
+  which `missing_docs = "deny"` stops it compiling.
 - `.claude/skills/coding/SKILL.md`, "The files crate": its tests over
   files written by rust_xlsxwriter in memory as well as the owner's.
 - `docs/functionality.md`, section 4: "the first sheet" is the first that
   is not hidden, and merged cells take the value Excel shows over them.
-
-Each of these was made in its document on 27 September 2026, when the
-specs of stage 4 were made to agree, but those of `docs/functionality.md`
-and the answer to open point 1 of `docs/technology.md`, which waits for
-the owner's files.
 
 ## Open points
 
@@ -641,6 +789,25 @@ the owner's files.
    missing, and so which individuals a trait or a population leaves out.
    Recommendation: text, as in the CSV, since nothing is then left out
    without the user seeing it. Meanwhile, text.
+2. **A date whose time the format hides.** calamine does not give the
+   format of a cell, only that it is one of a date or a time, so the
+   crate cannot tell `13/05/2024` from `13/05/2024 14:03`. The rule
+   meanwhile: a number whose time, rounded to the millisecond, is 0
+   gives the date alone, `2024-05-13`, and any other gives the date and
+   the time, `2024-05-13 14:03:00`. A date typed by hand has no time, so
+   it gives what the user sees. A date that a formula such as `=NOW()`
+   made, or that another program wrote with its time, and that the
+   format shows as a date alone, gives the date and the time: a column
+   of such dates shows times the user did not see in Excel, and, being
+   text, may have a value for each individual where Excel shows a few
+   dates. The user sees it in the table; nothing is left out. The other
+   option: always the date and the time, `2024-05-13 00:00:00` for a
+   date typed by hand, which is the same for every date and never
+   depends on the number, but adds a time of midnight to every date,
+   the common case, to spare the rare one. A third, reading the format
+   from the file itself, is not in calamine 0.36.1, and would be a
+   reader of the styles of the workbook written for the crate.
+   Recommendation: the rule above. Meanwhile, the rule above.
 
 ## Not in this spec
 

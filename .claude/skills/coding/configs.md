@@ -68,7 +68,7 @@ install on a Node older than `engines` fail instead of warn.
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "npm run build && playwright test --project=chromium --project=firefox --project=webkit",
+    "test:e2e": "POPNEI_TEST_PAGES=1 npm run build && playwright test --project=chromium --project=firefox --project=webkit",
     "screens": "npm run build && playwright test --project=screens"
   }
 }
@@ -1232,6 +1232,13 @@ code that reads and writes files, with its `clippy.toml` beside the
 crate, `allow-unwrap-in-tests = true` and `allow-expect-in-tests = true`;
 `SKILL.md`, "The files crate", has the rules. `lib.rs` also carries
 `#![forbid(unsafe_code)]`.
+
+The lints hold for every target of the crate, its tests included, and
+cargo builds each file under `crates/files/tests/` as a crate of its own.
+So each opens with a line `//!` that says what it tests, since without
+one `missing_docs = "deny"` stops the file compiling with "missing
+documentation for the crate", as a crate of trial did on 27 September
+2026.
 
 ## `vite.config.ts`
 
