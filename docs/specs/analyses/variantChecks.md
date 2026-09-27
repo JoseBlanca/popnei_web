@@ -265,7 +265,7 @@ The option not taken was the two buttons on each histogram from stage 3.
 | running | the bar and the clock, as the diversity's | Stop |
 | done | the three histograms, the warning above them | download |
 | results removed | only a new load, or its undo or redo, removes them, in the words of the table below | Calculate; Undo or Redo |
-| error | the words of the diversity's error table, "the diversity" replaced by "the histograms of the variants", and "Run it again" and "to run it again" by "Calculate them again" and "to calculate them again", since this part has a Calculate button and no Run | as in the diversity |
+| error | the words of the diversity's error table, "the diversity" replaced by "the histograms of the variants", and "Run it again" and "to run it again" by "Calculate them again" and "to calculate them again", since this part has a Calculate button and no Run; and, when popnei refused for another reason, "Change the settings, or load the variants file again" by "Load the variants file again, or read it again with other options", since the histograms depend on the load alone and no change of a filter gives the button back: "popnei could not calculate the histograms of the variants: ‹its message›. Load the variants file again, or read it again with other options, to calculate them again." | as in the diversity |
 
 The words of the histograms removed are those of the diversity's table
 of results removed, for a result in the plural and a button whose words
