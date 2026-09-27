@@ -6,7 +6,7 @@ The work report of the plan `docs/plans/variants-step.md`, stage 3 of
 
 ## Where the plan stands
 
-Under way since 26 September 2026. On 27 September work packages 1 to 4 are done, each after its review; work package 5, the page joined and the writing, is next. Stop A, at the end of work package 6, is the first screen the owner tries.
+Under way since 26 September 2026. On 27 September work packages 1 to 5 are done, each after its review; work package 6, the filters of the variants, is next. Stop A, at the end of work package 6, is the first screen the owner tries, and the writing of work package 5 is tried there.
 
 ## Before the first task
 
@@ -394,7 +394,8 @@ Not taken, and why:
 
 ## 5. The page joined, and the writing
 
-Under way. The tasks: 5.1 as 2970371 (`shell.md`) and c3c6214, 5.2 as
+Done on 27 September 2026, after its review; its screen is tried at
+stop A. The tasks: 5.1 as 2970371 (`shell.md`) and c3c6214, 5.2 as
 f12b889. Since 5.2 the entry gives the store the counts, the statistics
 and the write, so a project with a threshold on the individuals runs the
 diversity after the statistics, with no error of the application (seen
@@ -444,6 +445,83 @@ No failure was a refusal of popnei: in Chromium the worker trapped,
 and a second try in the fresh worker failed the same way; in WebKit the
 tab closed. Firefox was not measured; the owner's steps are at stop A.
 
+### The deliverables, on 953ca7c
+
+| deliverable | command | result | asked |
+|---|---|---|---|
+| D1 | `npx vitest run src/core src/ui -t "VS5 D1"` | 13 passed | 5 |
+| D2 | `npx vitest run src/ui/shell -t "VS5 D2"` | 45 passed | 31 |
+| D3 | the browser check, `-g "VS5 D3"` | 28 passed, 14 in each engine | 10 |
+| D4 | the same, `-g "VS5 D4"` | 2 passed, 1 in each engine | 2 |
+| D5 | `npx playwright test --project=measure-chromium --project=measure-webkit -g "VS5 D5" --workers=1`, on c898b9a | 6 passed in 16.5 minutes; the tables above | passes |
+| D6 | the screenshots of the writing, in `screens/popgen-write-*` | 18 states, light and dark, each looked at | 7 states |
+
+The whole on 953ca7c: `format:check`, `typecheck` and `lint` exit 0;
+`npm test` "Tests 1958 passed (1958)" in 56 files; the browser check
+"400 passed". Firefox was not run.
+
+### The review
+
+Reviewed by `spec`, `stale`, `errors`, `api`, `architecture`, `react`
+and `ux`, reading at 534865f beside task 5.4, then by `tests`,
+`accessibility` and `browser`, each on a copy of 3e6735d outside the
+worktree with a preview server on its own port. The fixes are the 27
+commits 5bb1981..c898b9a. What was fixed, each with a test that failed
+first where one could:
+
+- The estimate of a written file left out the bytes each variant
+  carries whatever the number of individuals, so with few individuals
+  the file was up to ten times the estimate (10.4 bytes per genotype at
+  2 individuals, 1.68 at 20), and a file past the size that closes a
+  WebKit tab could be allowed. The estimate is now the variants times
+  (the individuals + 40 bytes), `BYTES_PER_VARIANT` measured with
+  popnei's `writeVars` in node (62d5099, 0c3bf5d, 974a28f): every file
+  measured is at most 6.9% above it, and one of 2 individuals with no
+  ids is 77% under it. `panel.nei` at 0.05 now reads "About 276 KB" for
+  the 251 KB written.
+- Closing or reloading the tab with a file written and not saved asked
+  nothing, where Open project… asks (642b4ac, 11c3390). Found by two
+  reviewers.
+- A wrong ploidy refused by popnei during a write was put down to
+  memory and to a broken file; a file with no variant at all, or a VCF
+  where no variant passed, was told to loosen the filters. Both now get
+  the words the other panels give (a27f841, 733fe69, 4ac06bb, c898b9a).
+- Pressing Save was announced by nothing, and a second Enter started a
+  new write; the status region kept "Save it" after the file was
+  discarded; the question before an opening said "calculations" of a
+  write (9ba6452, 0ef8c5a, e4d446c, 69fd1f5).
+- A focused Stop that turned into a disabled Write, when statistics
+  arrived that kept nobody, left the focus on a disabled button
+  (8cc3892); the clock showed 0:00 for a frame on coming back to the
+  step (c88f540).
+- The stepper named the statistics first among failed checks, though
+  the histograms and the Count are above them on the step:
+  `POPGEN_ANALYSES` is now in the order of the step (adf5c93, d7e1076).
+- The shell's words are given by the entry through a context, and the
+  count of the variants kept moved to core; documents and names brought
+  to the code (c2e27f7, e8a7516, 1bb1a30, 6665eba, 255078e, 730cc09).
+- The screenshots of the eleven states of the section not yet taken
+  (b3e908d): `screens/popgen-write-{warning,too-large,locked-list,locked-none,waiting-statistics,no-variant,empty-source,error-again,error-refused,dropped,bound}-{light,dark}.png`.
+- The tests reviewer made 114 changes to the code, 32 of which passed
+  every test; the tests were added (2b7e56b, cb5b00f), the worst a Write
+  that is not disabled for a file too large, and ten of the sixteen
+  changes to the Write section, which task 5.3 had counted as caught.
+- A property of the store that failed once in three runs was a model
+  in the test that missed a case `store.md` allows (a Run that sends
+  nothing still stops the calculations left behind), not a defect of the
+  store (4b361b7); it passes at 20,000 runs.
+
+After the fixes, `react` and `accessibility` ran again, on 5bb1981..c898b9a,
+and found two more, fixed with tests that failed first: the status
+region's new clearing left its timer running, so a sentence could be
+read 50 ms after the region was emptied and then wiped (0cfe39f); and a
+write that ended with no file because the thresholds keep nobody was
+announced by nothing (4d3e3e5, 6951c9e, 953ca7c).
+
+Not taken: the notice drops the file of a write that ends while the
+notice names it, as `store.md` chose; the ploidy field shown for a
+`.nei` file, of stage 2 and outside the range.
+
 ### What was changed in the plan
 
 - Task 5.2 put the titles of the analyses and the words of the shell in
@@ -459,9 +537,13 @@ tab closed. Firefox was not measured; the owner's steps are at stop A.
 - Task 7.4: `AnalysisPanel.tsx` does not read `ofStatistics`, so a
   refusal of the statistics a diversity waited for shows the
   diversity's own words; 7.4 uses `statisticsFailedText` there.
-- The review of work package 5: the notice of a file discarded covers
-  the size written beside Write, in the screenshot
-  `screens/popgen-write-discarded-*.png`.
+- Task 6.3: counts filled from the pass of a write over a file with no
+  variant may show zeros where the Count's own pass shows popnei's
+  refusal of an empty file; check which the step shows.
+- Work packages 6 and 7: the Write section already says "Count, above"
+  and "Loosen the filters above", and the lock "Loosen them in the
+  Variants step", before the Count and the fields of those filters are
+  on the step; each is true once they are.
 
 ### What was changed in the specs, without the owner
 
@@ -472,6 +554,17 @@ Variants step says why."; after an undo, the sentence of a file
 discarded names Redo; the stepper's Failed names the checks in the order
 of `apps.ts`, then the writing. Each is words on the screen, judged at
 stop A.
+
+The review of work package 5 changed four specs in the same way, each
+settled without the owner and to be judged at stop A: leaving the page
+asks when a file is written and not saved (`entry.md`); the words of a
+wrong ploidy and of a file with no variant in the writing
+(`writeVariants.md`); the status region announces a Save, a write that
+ends locked, and is cleared when a written file is discarded, and the
+question before an opening names the writing (`shell.md`); the estimate
+of a written file counts 40 bytes per variant besides the genotypes, a
+value that keeps every file measured within 6.9% above it
+(`writeVariants.md`, `docs/architecture.md` section 11).
 
 ### For the owner, at stop A
 
@@ -498,7 +591,35 @@ stop A.
   will be discarded." Saving the project does not keep the file.
   Recommended: "… will be discarded; to keep it, press Keep the current
   project and save it in the Variants step."
+- On an iPhone, Safari closes a tab that asks for more than about 300
+  to 450 MB (iPhone 11 to 14) or about 1 GB (from iPhone 15), from
+  reports and not from a device; the limits were set on a Mac of 64 GB.
+  A file of 50 to 200 MB can then close the tab with no warning, and
+  Safari on iPhone never asks before a tab is left (it has no
+  `beforeunload`). Options: nothing; the warning's words saying that a
+  phone or a tablet fails with far smaller files; or a lower limit when
+  the page detects a phone, which is guessed and not told by the
+  browser. Recommended: the words, since the Population genetics page is
+  meant for a computer.
 - Once saved, the section shows the size written, "251 KB", and under
   it the estimate, "About 230 KB: 1,152 variants of 200 individuals",
   for the same file. Recommended: after a write, give the size written
   only.
+
+### How the work of 5 went, for whoever revises a skill or a plan
+
+- Task 5.3 counted 35 of its 36 rules as caught by a test; the tests
+  reviewer found 10 of 16 changes to the Write section passing every
+  test. A task's own count of the rules it broke is not evidence for a
+  component, whose flows it checks on the states it happens to reach.
+- The seven reviewers that only read ran beside the measurements of
+  task 5.4, reading at a commit, and then three that run the page on
+  copies. A fixer that ran the build during a measurement would have
+  replaced `dist/` under it: the orchestrator held it back with a
+  message. The code-review skill could say that a measurement runs
+  alone in its tree.
+- The measurements took 72 minutes of task 5.4 and 16.5 minutes to run
+  again; the largest files are gigabytes in `MEASURE_DIR`.
+- Tokens: the four tasks used 242,000, 275,000, 321,000 and 260,000;
+  the ten reviewers 44,000 to 142,000; the fixer, across its five
+  rounds, 475,000.

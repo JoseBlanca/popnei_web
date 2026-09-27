@@ -711,7 +711,7 @@ The owner tries the writing at stop A, task 6.4.
   step, from `variants.md`, "Writing the filtered variants", and
   `writeVariants.md`, "The step's part", with its states in
   `e2e/screens.spec.ts`. Serves 3, 4 and 6. Needs 5.2 and 1.3.
-- [ ] 5.4 The measurements of the write, and the four constants set from
+- [x] 5.4 The measurements of the write, and the four constants set from
   them: `writeVariants.md`, `client.md` and section 11 of
   `docs/architecture.md` get the numbers in one commit, then the code.
   The memory of the tab is read as the measurement of stage 2 read it in
