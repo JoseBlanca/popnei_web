@@ -2099,6 +2099,18 @@ for (const theme of ["light", "dark"] as const) {
       await grid.screenshot({
         path: join(SCREENS, `popgen-stats-table-scrolled-${theme}.png`),
       });
+      // A row with the focus: the Tab key back to the cell that had it,
+      // and the left arrow from the first cell to its row.
+      await individualLists(page)
+        .getByRole("button", { name: "Download the bins as CSV" })
+        .last()
+        .focus();
+      await page.keyboard.press("Tab");
+      await page.keyboard.press("ArrowLeft");
+      await expect(page.locator(":focus")).toHaveAttribute("role", "row");
+      await grid.screenshot({
+        path: join(SCREENS, `popgen-stats-row-focused-${theme}.png`),
+      });
       await page.setViewportSize({ width: 320, height: 900 });
       await saveIndividuals(page, "popgen-stats-320");
     });

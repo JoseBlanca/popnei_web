@@ -252,6 +252,26 @@ test("VS7 D1 the table sorted with the keyboard alone: into the table, up to the
   await expectNoViolations(makeAxeBuilder);
 });
 
+test("VS7 D1 a row the Tab key enters the table on shows a ring around its cells", async ({
+  page,
+}) => {
+  await calculated(page);
+  await histogram(page, OBS_HET_TITLE)
+    .getByRole("button", { name: "Download the bins as CSV" })
+    .focus();
+  await page.keyboard.press("Tab");
+  const focused = page.locator(":focus");
+  await expect(focused).toHaveAttribute("role", "row");
+  // The row's own box has no height; the ring is drawn by its cells.
+  const shadows = await focused
+    .locator('[role="rowheader"], [role="gridcell"]')
+    .evaluateAll((cells) =>
+      cells.map((cell) => getComputedStyle(cell).boxShadow),
+    );
+  expect(shadows.length).toBeGreaterThan(0);
+  expect(shadows).not.toContain("none");
+});
+
 test("VS7 D1 a row focused while moving up is not under the header, whose cells are opaque", async ({
   page,
 }) => {

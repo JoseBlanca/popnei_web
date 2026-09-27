@@ -89,10 +89,34 @@
 }
 
 .header[data-focus-visible],
-.cell[data-focus-visible],
-.row[data-focus-visible] {
+.cell[data-focus-visible] {
   outline: var(--focus-ring);
   outline-offset: -2px;
+}
+
+/* A row with the focus, which the Tab key gives the table first: the
+   Virtualizer draws the row with no height of its own, its cells placed
+   in boxes beside it, so an outline of the row paints nothing. The ring
+   is drawn on its cells instead, a line at the top and the bottom of
+   each, and at the outer side of the first and the last. */
+.row[data-focus-visible] .cell {
+  box-shadow:
+    inset 0 2px 0 var(--color-focus),
+    inset 0 -2px 0 var(--color-focus);
+}
+
+.row[data-focus-visible] > :first-child .cell {
+  box-shadow:
+    inset 0 2px 0 var(--color-focus),
+    inset 0 -2px 0 var(--color-focus),
+    inset 2px 0 0 var(--color-focus);
+}
+
+.row[data-focus-visible] > :last-child .cell {
+  box-shadow:
+    inset 0 2px 0 var(--color-focus),
+    inset 0 -2px 0 var(--color-focus),
+    inset -2px 0 0 var(--color-focus);
 }
 
 .text {
