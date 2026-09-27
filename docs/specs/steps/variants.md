@@ -475,6 +475,21 @@ header `from,to,count,state`, a row per bin, the edges with every digit
 popnei gave, as the diversity's CSV writes its numbers, and the state
 `kept`, `partly_kept` or `removed`, empty with no threshold.
 
+The words of each block, which the specs above leave to the screen,
+written with the code on 27 September 2026: above the two tabs, the
+title of the histogram, "Major allele frequency, mean 0.7163", with the
+mean to four decimals, or "Major allele frequency, no mean" when popnei
+gives none, a file none of whose variants has a called genotype; the
+block is a group named by that title, so that a screen reader names the
+tabs and the button of the CSV with the histogram they belong to; under
+the title, while the filter is on, "Threshold of the MAF filter: 0.95",
+or "Threshold of the filter by observed heterozygosity: 0.5", with the
+number the plot is given, the one typed while it is typed; the table is
+named "The bins of the major allele frequency", "… of the observed
+heterozygosity" or "… of the expected heterozygosity (unbiased)", and
+the line above it reads "Each bin runs from its lower edge up to its
+upper edge, not included; the last bin includes its upper edge."
+
 **The threshold typed and not yet committed.** The threshold on a
 histogram follows the number the user types, as they type it, while it
 is a number the field would take (the histogram spec, "What the user

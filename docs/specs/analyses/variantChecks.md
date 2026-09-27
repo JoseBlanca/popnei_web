@@ -264,8 +264,26 @@ The option not taken was the two buttons on each histogram from stage 3.
 | ready | the button | Calculate |
 | running | the bar and the clock, as the diversity's | Stop |
 | done | the three histograms, the warning above them | download |
-| results removed | only a new load, or its undo, removes them: "The histograms of the variants were removed because a new variants file was loaded. …", in the words of the diversity's table | Calculate; Undo or Redo |
+| results removed | only a new load, or its undo or redo, removes them, in the words of the table below | Calculate; Undo or Redo |
 | error | the words of the diversity's error table, "the diversity" replaced by "the histograms of the variants", and "Run it again" and "to run it again" by "Calculate them again" and "to calculate them again", since this part has a Calculate button and no Run | as in the diversity |
+
+The words of the histograms removed are those of the diversity's table
+of results removed, for a result in the plural and a button whose words
+start with "Calculate", and they say "for the file loaded now", since
+only a change of the load removes them. They were written with the code
+on 27 September 2026, for the owner to judge at the stop of the plan
+where the screens are tried:
+
+| the cause | results removed |
+|---|---|
+| a command | "The histograms of the variants were removed because a new variants file was loaded. Undo brings them back as they were, with no calculation; Calculate makes them anew for the file loaded now." |
+| an undo | "Undone: a new variants file was loaded. The histograms of the variants were removed; Redo brings them back as they were, with no calculation, and Calculate makes them anew for the file loaded now." |
+| a redo | "Redone: a new variants file was loaded. The histograms of the variants were removed; Undo brings them back as they were, with no calculation, and Calculate makes them anew for the file loaded now." |
+
+A calculation stopped at once by a change of the load has the line of
+the diversity, "The calculation of the histograms of the variants was
+stopped because the variants file was read again with other options.",
+while the notice that says so is up.
 
 ### Its words
 
