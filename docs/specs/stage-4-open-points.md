@@ -41,8 +41,10 @@ back.
   method**, as popnei's draft records the owner decided: popnei refuses
   such a matrix unless the correction is asked for, popnei_web asks for
   it by default, and warns its users that the distances were corrected.
-  The Kosman distances of `panel.nei` give 44 negative eigenvalues, so
+  The Kosman distances of popnei's own test panel of 200 individuals,
+  `tests/reference/dists/panel.vcf.gz`, give 44 negative eigenvalues, so
   the correction is the common case and not an exception (`pca.md`).
+  Recorded at popnei's commit `2f7545f`, on its branch `spec/pcoa`.
 
 ## Recommended on 27 September 2026, not yet answered
 
@@ -209,8 +211,26 @@ meets.
   individuals the filters keep, as popnei counts them now, so the words
   do not suggest the filters of individuals (`pca.md`).
 - **The warnings of the PCA**: the pruning turned off; fewer variants
-  used than individuals; for the PCoA, a share of negative eigenvalues
-  above 5% (`pca.md`).
+  used than individuals; and, for the PCoA, a warning whenever the
+  distances were corrected, whatever the size of the correction, with
+  its size in its words: on popnei's panel, the correction adds to every
+  squared distance 30% of their mean, and draws two individuals of the
+  same genotypes 0.17 apart. The share of the mean is worked out by the
+  application from popnei's numbers, which popnei does not give as such
+  (`pca.md`).
+- **The PCoA is locked before popnei's release has it**, with words, for
+  a project that asks for it, a project file among them; the method is
+  not offered otherwise until then (`pca.md`).
+- **A PCA that ends the calculation worker, when it needed 250 MB or
+  more**, 2,264 individuals for the PCA, is told as the tab lacking
+  memory, with what to do: fewer individuals, other tabs closed, or
+  popnei in Python. Where each browser really refuses is measured in the
+  plan (`pca.md`).
+- **The options of the PCA can be changed while it runs**, as those of
+  every analysis: a change of what it calculates leaves the run behind,
+  with the notice and its Undo; a change of the colour, the axes or the
+  view keeps it. **Choosing for an axis the component another axis
+  shows swaps the two** (`pca.md`).
 - **The check numbers of the PCA**: the variants of its pass, and the
   share of the variance of the first three components; no projection
   (`pca.md`).
