@@ -458,6 +458,18 @@ test("VS7 D1 the column Kept: a list to remove applied marks s000 removed and s0
     "0.3672",
   ]);
   await expectNoViolations(makeAxeBuilder);
+
+  // The sort by Kept went with its column: the column back is not
+  // sorted, and no other header is.
+  await section(page)
+    .getByRole("button", { name: "Clear the list to keep", exact: true })
+    .click();
+  await expect(
+    table(page).getByRole("columnheader", { name: /^Kept/ }),
+  ).toBeVisible();
+  await expect(
+    table(page).locator('[aria-sort="ascending"], [aria-sort="descending"]'),
+  ).toHaveCount(0);
 });
 
 test("VS7 D1 at 320 pixels wide, drawn wide first: no sideways scroll of the page, each plot within its panel, and the table within the page scrolling in its own box", async ({
