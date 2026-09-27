@@ -964,7 +964,7 @@ twenty specs matched to a test.
 
 **Tasks:**
 
-- [ ] 8.1 The documents, and the final checks. Serves 1 and 2. Needs
+- [x] 8.1 The documents, and the final checks. Serves 1 and 2. Needs
   work package 7.
 - [ ] 8.2 The map of the cases, and the tests it finds missing. Serves
   3. Needs 8.1.
