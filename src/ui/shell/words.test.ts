@@ -1643,7 +1643,38 @@ describe("VS5 D2 the summary line of stage 3", () => {
 
   test("filters that keep no individual give none of them kept", () => {
     expect(summaryLine(THREE_FILTERS, keptFirst(0), null)).toBe(
-      "panel.nei · none of 200 individuals kept · 1,200 variants before the filters · 3 filters · 3 populations by pop",
+      "panel.nei · none of 200 individuals kept · 1,200 variants before the filters · 3 filters · none of 3 populations by pop",
+    );
+  });
+
+  test("VS7 D2 filters of individuals that leave populations with no individual give how many populations are kept", () => {
+    // Every individual of p1, the second of each three, removed.
+    const withoutP1 = TWO_HUNDRED.filter((_, index) => index % 3 !== 1);
+    expect(
+      summaryLine(
+        THREE_FILTERS,
+        {
+          list: { kind: "known", individuals: withoutP1 },
+          byLists: withoutP1,
+          counts: [],
+        },
+        1152,
+      ),
+    ).toBe(
+      "panel.nei · 133 of 200 individuals kept · 1,152 of 1,200 variants kept · 3 filters · 2 of 3 populations by pop",
+    );
+    expect(summaryLine(THREE_FILTERS, keptFirst(1), 1152)).toBe(
+      "panel.nei · 1 of 200 individuals kept · 1,152 of 1,200 variants kept · 3 filters · 1 of 3 populations by pop",
+    );
+    // While the thresholds wait for the statistics, from the lists.
+    expect(
+      summaryLine(
+        THREE_FILTERS,
+        { list: { kind: "needsStatistics" }, byLists: withoutP1, counts: [] },
+        null,
+      ),
+    ).toBe(
+      "panel.nei · 200 individuals, how many kept not yet known · 1,200 variants before the filters · 3 filters · 2 of 3 populations by pop",
     );
   });
 
@@ -2267,6 +2298,60 @@ describe("VS5 D2 the announcements of the writing, more", () => {
     expect(announcementsOf(before, after, WORDS)).toEqual([
       "Statistics of each individual: done.",
       `The file was not written. ${reason}`,
+    ]);
+  });
+
+  test("VS7 D2 a Run of the diversity whose statistics end with the filters of individuals keeping no one says it was not run, and why", () => {
+    const reason =
+      "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them in the Variants step.";
+    const before = checksState({
+      project: THREE_FILTERS,
+      statuses: {
+        [STATISTICS]: running(KEY_S, 1),
+        [DIVERSITY]: {
+          kind: "running",
+          key: KEY_A,
+          runId: 1,
+          progress: null,
+          waitsForStatistics: true,
+        },
+      },
+      runs: [run(1, STATISTICS, KEY_S, CURRENT)],
+    });
+    const after = checksState({
+      project: THREE_FILTERS,
+      statuses: {
+        [STATISTICS]: done(KEY_S),
+        [DIVERSITY]: { kind: "locked", reason },
+      },
+      individualsKept: keptFirst(0),
+    });
+    expect(announcementsOf(before, after, WORDS)).toEqual([
+      "Statistics of each individual: done.",
+      `Diversity was not run. ${reason}`,
+    ]);
+    // Stopped, it says only that.
+    const stopping = checksState({
+      ...before,
+      runs: [{ ...run(1, STATISTICS, KEY_S, CURRENT), stopping: true }],
+    });
+    expect(announcementsOf(stopping, after, WORDS)).toEqual([
+      "Statistics of each individual: stopped.",
+    ]);
+    // Individuals kept: its own request starts, and nothing is said of a
+    // lock.
+    const sent = checksState({
+      project: THREE_FILTERS,
+      statuses: {
+        [STATISTICS]: done(KEY_S),
+        [DIVERSITY]: running(KEY_A, 2),
+      },
+      individualsKept: keptFirst(119),
+      runs: [run(2, DIVERSITY, KEY_A, CURRENT)],
+    });
+    expect(announcementsOf(before, sent, WORDS)).toEqual([
+      "Statistics of each individual: done.",
+      "Diversity: calculating.",
     ]);
   });
 

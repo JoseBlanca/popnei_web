@@ -14,6 +14,7 @@
 
 import {
   populationsNeeds,
+  populationsKept,
   populationsOf,
   populationsToRun,
 } from "../../core/analyses/diversity.ts";
@@ -293,7 +294,7 @@ export function summaryLine(
   return [
     variantsPart(p, kept, variantsKept),
     filtersPart(p),
-    metadataPart(p),
+    metadataPart(p, kept),
   ].join(" · ");
 }
 
@@ -367,8 +368,9 @@ function filtersPart(p: Project): string {
 }
 
 /** The part of the summary line on the metadata file and the populations
-    it gives. */
-function metadataPart(p: Project): string {
+    it gives, and how many of them the filters of individuals leave with
+    an individual, `kept` being `individualsKept` of the state. */
+function metadataPart(p: Project, kept: IndividualsKept | null): string {
   const individuals: IndividualsSource | null = p.individuals;
   if (individuals === null) {
     return "no metadata file";
@@ -396,7 +398,23 @@ function metadataPart(p: Project): string {
   if (pops === null) {
     return `column ${shown(column)} not in ${name}`;
   }
-  return `${counted(pops.length, "population")} by ${shown(column)}`;
+  const all = `${counted(pops.length, "population")} by ${shown(column)}`;
+  // The individuals kept, or, while a threshold waits for the
+  // statistics, those the lists keep, as the panel of the diversity
+  // lists them.
+  const list = kept?.list;
+  const numEmptied =
+    list === undefined
+      ? 0
+      : (populationsKept(
+          p,
+          list.kind === "known" ? list.individuals : (kept?.byLists ?? null),
+        )?.emptied.length ?? 0);
+  if (numEmptied === 0) {
+    return all;
+  }
+  const numKept = pops.length - numEmptied;
+  return `${numKept === 0 ? "none" : grouped(numKept)} of ${all}`;
 }
 
 /** The words of the notice and its action. */
@@ -544,6 +562,7 @@ export function announcementsOf<R>(
 ): readonly string[] {
   return [
     ...endedAnnouncements(before, after, w),
+    ...notRunAnnouncements(before, after, w),
     ...writeEndedAnnouncements(before, after),
     ...startedAnnouncements(before, after, w),
     ...variantsReadAnnouncements(before.project, after.project),
@@ -699,6 +718,39 @@ function endedAnnouncements<R>(
       announcements.push(
         `${notCalculatedText(name)} The ${step} step says why.`,
       );
+    }
+  }
+  return announcements;
+}
+
+/** The Runs of analyses that waited for the statistics of each
+    individual, whose request left `runs` not being stopped, and that are
+    then locked, the filters of individuals keeping no one: "Diversity
+    was not run. " and the reason of the lock, the words beside its
+    disabled Run. */
+function notRunAnnouncements<R>(
+  before: AppState<R, unknown>,
+  after: AppState<R, unknown>,
+  w: ShellWords<R>,
+): readonly string[] {
+  const ended = new Set(
+    endedRuns(before, after)
+      .filter((run) => !run.stopping)
+      .map((run) => run.runId),
+  );
+  const announcements: string[] = [];
+  for (const analysis of before.analyses) {
+    const was = analysis.status;
+    if (
+      was.kind !== "running" ||
+      !was.waitsForStatistics ||
+      !ended.has(was.runId)
+    ) {
+      continue;
+    }
+    const now = after.analyses.find((a) => a.id === analysis.id)?.status;
+    if (now?.kind === "locked") {
+      announcements.push(`${w.title(analysis.id)} was not run. ${now.reason}`);
     }
   }
   return announcements;

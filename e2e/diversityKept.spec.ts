@@ -316,6 +316,10 @@ test("VS7 D2 the ready state lists the populations the filters keep, before the 
   ).toBeVisible();
   await expect(line(page, P1_LEFT_OUT)).toBeVisible();
   await expect(line(page, RUN_WAITS)).toHaveCount(0);
+  // The summary line counts the populations kept.
+  await expect(
+    page.getByText(/ · 2 of 3 populations by popcat$/),
+  ).toBeVisible();
   await expectNoViolations(makeAxeBuilder);
 
   await goTo(page, "Variants");
@@ -329,6 +333,35 @@ test("VS7 D2 the ready state lists the populations the filters keep, before the 
   await expect(line(page, POPS_119)).toBeVisible();
   await expect(line(page, P1_LEFT_OUT)).toHaveCount(0);
   await expect(line(page, RUN_WAITS)).toHaveCount(0);
+  await expect(page.getByText(/ · 3 populations by popcat$/)).toBeVisible();
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("VS7 D2 a Run whose statistics keep no individual is not run, says why beside the disabled Run, and announces it", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  const reason =
+    "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them in the Variants step.";
+  await load(page, "panel.nei", "panel_pops.csv", "popcat", "0.05");
+  // 0.03 and 0.1 keep none (e2e/screens.spec.ts).
+  await threshold(page, MISSING_SWITCH, MISSING_LABEL, "0.03");
+  await threshold(page, OBS_HET_SWITCH, OBS_HET_LABEL, "0.1");
+  await goTo(page, "Analyses");
+  await panel(page).getByRole("button", { name: "Run" }).click();
+
+  await expect(status(page)).toHaveText(
+    new RegExp(
+      `(^| )Diversity was not run\\. ${reason.replaceAll(".", "\\.")}$`,
+    ),
+  );
+  const run = panel(page).getByRole("button", { name: "Run" });
+  await expect(run).toBeDisabled();
+  await expect(run).toHaveAccessibleDescription(reason);
+  await expect(line(page, reason)).toBeVisible();
+  await expect(
+    page.getByText(/ · none of 3 populations by popcat$/),
+  ).toBeVisible();
   await expectNoViolations(makeAxeBuilder);
 });
 
