@@ -727,3 +727,125 @@ of individuals, since they apply after the filters of the variants
 (`runner.md`); the notice of removed histograms lies over the line that
 says they were removed in a window 720 px high, and "done" is announced
 after a defect caught by a boundary, both for the owner below.
+
+After the fixes, `react` and `accessibility` ran twice more, on
+2340bb8..aafbf69 and on aafbf69..ebc8cba. The second round found an
+Undo from the keyboard that left the plot at a threshold the project
+no longer held, a number typed after a thrown-away comma dropped with
+no word, and the browser's own undo of a number field doing nothing or
+turning 0.95 into 0; the field now handles Cmd+Z itself (3d43174,
+9939aaf, 3335139, ebc8cba, 5a2a11f, 3d00b1a, 532478b). The third round
+found nothing that shuts a user out, and axe no violation in 57 states
+in each engine. One finding did not hold: a field that shows its number
+in the browser's language, since the page gives every field the
+English of `src/ui/popgen.tsx`.
+
+### The deliverables, on 532478b
+
+| deliverable | command | result | asked |
+|---|---|---|---|
+| D1 | `npx vitest run src/ui/widgets -t "VS6 D1"` | 5 passed | 3 |
+| D2 | the browser check, `-g "VS6 D2"` | 106 passed, 53 in each engine | 24 |
+| D3 | `npx playwright test --project=measure-chromium --project=measure-webkit -g "VS6 D3" --workers=1`, on 4aae168 | 2 passed; the table above | passes |
+| D4 | the screenshots, `screens/popgen-variants-*` | 17 states, light and dark, each looked at | 12 states |
+| D5 | the owner accepts the screens (task 6.4) | waiting | |
+
+The whole on 532478b: `format:check`, `typecheck` and `lint` exit 0;
+`npm test` "Tests 1990 passed (1990)" in 58 files; the browser check
+"506 passed". Firefox was not run.
+
+### How the work of 6 went, for whoever revises a skill or a plan
+
+- Four reviewers of different categories found the same defect, the
+  comma typed in a field with a histogram: a number field is where the
+  web differs most from what its tests type.
+- The fixes of a review brought defects of their own twice (the
+  announcer's timer in work package 5, the undo of a number field
+  here); running `react` and `accessibility` again after the fixes, as
+  the walking skeleton taught, found both.
+- Tokens: the three tasks used 283,000, 333,000 and 268,000; the eleven
+  reviewers 74,000 to 147,000; the fixer, across its rounds, 440,000.
+
+## Stop A: what waits for the owner
+
+Every point below is the owner's, with its recommendation; until they
+answer, the code follows the spec as it stands or the meantime named.
+
+Choices that change what the application does:
+
+1. A write refused by popnei for lack of memory stays refused until a
+   filter changes. Recommended: keep it, since no failure measured was
+   a refusal, and a second try failed the same way.
+2. Before any Count, Write is not refused however large the file may
+   be; above about 2 GB the WebKit tab closes. Recommended: refuse Write
+   with "Count the variants first, above" when the upper bound reaches
+   the limit of 1.8 GB.
+3. Write stays offered when the Count says the filters keep no variant
+   ("About 0 bytes"), and after a Count refused by popnei. Recommended:
+   refuse it with the reason, as for a file too large.
+4. In a number field with nothing typed since its last commit, Cmd+Z is
+   the project's Undo, which may undo a change of another field; with
+   something typed it puts the field's number back. Recommended: keep.
+5. The panel of a plot is a stop of the Tab key, though `variants.md`
+   says no stop, as React Aria and the guidance for tabs have it.
+   Recommended: keep, and the spec says so.
+6. On an iPhone, a tab may close for a file of a few hundred MB, and
+   Safari there never asks before a page is left. Recommended: the
+   warning above 500 MB says that phones and tablets fail with far
+   smaller files.
+
+Words, to be judged on the screen:
+
+7. The bar a threshold splits is named by a line under the plot, "The
+   threshold 0.5 splits the bin from 0.5 to 0.525, 62 variants: …",
+   rather than a third look with a row of the legend. Recommended: the
+   line.
+8. The histograms are over every variant of the file, the counts beside
+   them after the filters above. Recommended: the threshold line says
+   "…, drawn over every variant of the file".
+9. The line before a Count, "Count, or run an analysis, to see what each
+   filter keeps.", while the Analyses step is locked. Recommended: "Count
+   to see what each filter keeps."
+10. The line of the LD pruning. Recommended: "Of two variants closer
+    than the distance, and with an r² above the maximum, the first is
+    kept."
+11. The filter by observed heterozygosity has no line. Recommended: "The
+    proportion of the individuals with a called genotype that are
+    heterozygous; a high one often marks duplicated regions read as
+    one."
+12. The summary line before a Count reads "1,200 variants · 3 filters"
+    (`shell.md`, Open 1). Recommended: "1,200 variants, filters not
+    counted".
+13. A file with no variant reads "0 of the 0 variants … pass the
+    filters", "Kept 0 of the 0 variants it was given.", and the words
+    of the Count "there is no variant to count the variants over".
+    Recommended: the warning alone, and "there is no variant to count".
+14. Four messages of the Write section, on the Variants step, end "… in
+    the Variants step". Recommended: leave that ending out.
+15. The question before Open project… says "save it first" of the
+    project, which does not keep the written file. Recommended: "…
+    will be discarded; to keep it, press Keep the current project and
+    save it in the Variants step."
+16. Once saved, the section shows the size written and, under it, the
+    estimate. Recommended: the size written alone.
+17. A write left behind that Run stops is announced by nothing.
+    Recommended: "The earlier writing of the file was stopped."
+18. The axis and the table of the major allele frequency start at 0,
+    though no value is below 0.5. Recommended: leave it (the axis is the
+    same for every file).
+19. Choices of task 3.1: a histogram pass that keeps no variant shows
+    popnei's own message; the warning when the first filter keeps none
+    ends "Loosen it." Recommended: keep both.
+
+Known and not fixed, for the owner to know: in a window 720 px high,
+the notice of removed histograms lies over the line that says they
+were removed, until the page is scrolled; "done" is announced right
+after a defect caught by a boundary, which only a bug of the
+application reaches.
+
+Settled without the owner, which they may overrule: leaving the page
+asks when a file is written and not saved; the words of a wrong ploidy
+and of a file with no variant in the writing; the status region
+announces a Save and a write that ends with no file; the estimate of a
+file counts 40 bytes per variant besides the genotypes; the order of the
+checks in the stepper is the order of the step.
