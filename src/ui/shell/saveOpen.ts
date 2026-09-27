@@ -64,7 +64,7 @@ export function openQuestion(
   }
   if (unsaved !== null) {
     sentences.push(
-      `${escaped(unsaved)}, written and not saved, will be discarded.`,
+      `${escaped(unsaved)}, written and not saved, will be discarded; to keep it, press Keep the current project and save it in the Variants step.`,
     );
   }
   return { title: `Open ${escaped(name)}?`, text: sentences.join(" ") };

@@ -281,7 +281,8 @@ function analysesState<R>(s: AppState<R, unknown>, w: ShellWords<R>): Status {
  * `kept` is `individualsKept` of the state; `variantsKept` the variants
  * the Counts of the filters as they are found to pass them, or `null`
  * when the filters are not counted, and the line then gives the variants
- * of the file once a calculation has counted them.
+ * of the file once a calculation has counted them, "1,200 variants,
+ * filters not counted" while a filter of the variants is on.
  */
 export function summaryLine(
   p: Project,
@@ -317,10 +318,13 @@ function variantsPart(
     case "read": {
       const parts = [name, individualsPart(read.individuals.length, kept)];
       if (read.numVars !== null) {
+        const ofFile = counted(read.numVars, "variant");
         parts.push(
-          variantsKept === null || p.filters.length === 0
-            ? counted(read.numVars, "variant")
-            : `${grouped(variantsKept)} of ${counted(read.numVars, "variant")} kept`,
+          p.filters.length === 0
+            ? ofFile
+            : variantsKept === null
+              ? `${ofFile}, filters not counted`
+              : `${grouped(variantsKept)} of ${ofFile} kept`,
         );
       }
       return parts.join(" · ");
@@ -583,8 +587,8 @@ function ofAnalyses(
 
 /** "Diversity: calculating." for each request of an analysis that is
     new, then "Writing panel.filtered.nei." for a request of the writing
-    that is new, and, in the same change, the calculations left behind
-    that went to being stopped, added to the last. */
+    that is new, and, in the same change, the calculations and the
+    writing left behind that went to being stopped, added to the last. */
 function startedAnnouncements<R>(
   before: AppState<R, unknown>,
   after: AppState<R, unknown>,
@@ -599,20 +603,41 @@ function startedAnnouncements<R>(
     started.push(`Writing ${escaped(writtenName(after.project))}.`);
   }
   const now = byRunId(after.runs);
-  const stopped = ofAnalyses(before.runs).filter(
+  const wentStopping = before.runs.filter(
     (run) =>
       !run.current && !run.stopping && now.get(run.runId)?.stopping === true,
   );
   const last = started.pop();
   if (last === undefined) return [];
-  const [only] = stopped;
-  const earlier =
-    only === undefined
-      ? null
-      : stopped.length === 1
-        ? `The earlier calculation of ${w.title(only.analysis)} was stopped.`
-        : `The ${grouped(stopped.length)} earlier calculations were stopped.`;
+  const earlier = earlierStoppedText(
+    ofAnalyses(wentStopping).map((run) => w.title(run.analysis)),
+    wentStopping.some((run) => run.analysis === null),
+  );
   return [...started, earlier === null ? last : `${last} ${earlier}`];
+}
+
+/** The calculations of the titles `titles` and, when `writing`, the
+    writing of the file, left behind and stopped: "The earlier calculation
+    of Diversity was stopped.", "The 2 earlier calculations were
+    stopped.", "The earlier writing of the file was stopped.", "The
+    earlier calculation of Diversity and the writing of the file were
+    stopped."; `null` for none. */
+function earlierStoppedText(
+  titles: readonly string[],
+  writing: boolean,
+): string | null {
+  const [only] = titles;
+  if (only === undefined) {
+    return writing ? "The earlier writing of the file was stopped." : null;
+  }
+  const calculations =
+    titles.length === 1
+      ? `The earlier calculation of ${only}`
+      : `The ${grouped(titles.length)} earlier calculations`;
+  if (writing) {
+    return `${calculations} and ${THE_WRITING} were stopped.`;
+  }
+  return `${calculations} ${titles.length === 1 ? "was" : "were"} stopped.`;
 }
 
 /** The requests of `before` that were current and are no longer in the
@@ -677,15 +702,17 @@ function endedAnnouncements<R>(
 }
 
 /** What the Counts of the filters counted, the line of the total of the
-    Variants step, or, when a filter kept none, the text of that warning
-    in its place; `null` when neither can be said. */
+    Variants step, or, when a filter kept none or the file holds no
+    variant, the text of that warning in its place, which the step shows
+    alone for a file of no variant; `null` when neither can be said. */
 function countsText<R>(
   s: AppState<R, unknown>,
   w: ShellWords<R>,
   warnings: readonly Warning[],
 ): string | null {
   const keptNone = warnings.find(
-    (warning) => warning.code === "filterKeptNone",
+    (warning) =>
+      warning.code === "filterKeptNone" || warning.code === "noVariant",
   );
   if (keptNone !== undefined) {
     return keptNone.text;

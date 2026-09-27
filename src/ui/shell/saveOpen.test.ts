@@ -88,7 +88,7 @@ describe("the words and the reading of Save project and Open project…", () => 
       }),
     ).toEqual({
       title: "Open panel.popnei.json?",
-      text: "It replaces the project on the page, and an opening cannot be undone. To keep the project on the page, press Keep the current project and save it first. panel.filtered.nei, written and not saved, will be discarded.",
+      text: "It replaces the project on the page, and an opening cannot be undone. To keep the project on the page, press Keep the current project and save it first. panel.filtered.nei, written and not saved, will be discarded; to keep it, press Keep the current project and save it in the Variants step.",
     });
     expect(
       openQuestion("panel.popnei.json", {
@@ -98,7 +98,7 @@ describe("the words and the reading of Save project and Open project…", () => 
       }),
     ).toEqual({
       title: "Open panel.popnei.json?",
-      text: "It replaces the project on the page, and an opening cannot be undone. To keep the project on the page, press Keep the current project and save it first. The ongoing calculations will be stopped. panel.filtered.nei, written and not saved, will be discarded.",
+      text: "It replaces the project on the page, and an opening cannot be undone. To keep the project on the page, press Keep the current project and save it first. The ongoing calculations will be stopped. panel.filtered.nei, written and not saved, will be discarded; to keep it, press Keep the current project and save it in the Variants step.",
     });
   });
 
@@ -111,7 +111,7 @@ describe("the words and the reading of Save project and Open project…", () => 
       }),
     ).toEqual({
       title: "Open pa\\u202enel.popnei.json?",
-      text: "It replaces the project on the page, and an opening cannot be undone. To keep the project on the page, press Keep the current project and save it first. The writing of pa\\u202enel.filtered.nei will be stopped. pa\\u202enel.filtered.nei, written and not saved, will be discarded.",
+      text: "It replaces the project on the page, and an opening cannot be undone. To keep the project on the page, press Keep the current project and save it first. The writing of pa\\u202enel.filtered.nei will be stopped. pa\\u202enel.filtered.nei, written and not saved, will be discarded; to keep it, press Keep the current project and save it in the Variants step.",
     });
   });
 
