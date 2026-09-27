@@ -17,10 +17,12 @@ export function downloadText(name: string, text: string, type: string): void {
 }
 
 /**
- * Downloads `file`, a file of the filtered variants the calculation
- * worker wrote among them, as a file named `name`. The page holds no
- * reference to `file` once the link is released, a minute after the
- * click.
+ * Downloads `file` as a file named `name`, whatever made it: the text of
+ * `downloadText`, a project file or a table, or a file of the filtered
+ * variants the calculation worker wrote. The address of `file` is
+ * released a minute after the click, and from then this function holds
+ * no reference to it; whatever else holds `file`, the store among them,
+ * keeps it in memory.
  */
 export function downloadFile(name: string, file: Blob): void {
   const url = URL.createObjectURL(file);
