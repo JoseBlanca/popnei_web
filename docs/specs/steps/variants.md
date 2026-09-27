@@ -618,7 +618,10 @@ spaces and tabs and also a no-break space or a byte order mark, U+00A0
 and U+FEFF, which a name copied from a web page or a PDF may carry and
 which look like nothing, and the empty lines dropped, so that a column
 copied from a spreadsheet, or the text of a file of one name per line,
-can be pasted. Apply sends the
+can be pasted. The text area checks no spelling and changes no letter:
+the names of individuals are not words, and a browser that checked them
+would underline each in red, and on a phone would capitalize or correct
+them. Apply sends the
 names in the order written, with `setIndividualFilter`, or, when there
 is none, `removeIndividualFilter`; Clear empties the area and sends
 `removeIndividualFilter`. So the screen never sends an empty list, and
