@@ -408,6 +408,33 @@ for (const locale of ["en-US", "es-ES"] as const) {
   });
 }
 
+// Cmd+Z right after a commit, with the focus still in the field, is the
+// project's undo: the browser's own would take back the text React Aria
+// wrote, and Chromium left "0." to be committed as 0 (docs/specs/shell.md,
+// "The header").
+test("VS6 D2 Cmd+Z in the MAF field right after 0.9 was committed undoes the change of the project, and the Tab key then commits nothing", async ({
+  page,
+}) => {
+  await openVariants(page);
+  await flip(page, "Filter the variants by major allele frequency (MAF)");
+  const maf = field(page, "Maximum major allele frequency, from 0 to 1");
+  await maf.click();
+  await maf.press("ControlOrMeta+a");
+  await maf.pressSequentially("0.9");
+  await maf.press("Enter");
+  await expect(undoButton(page)).toHaveAccessibleDescription(
+    "Undo: the MAF filter changed",
+  );
+  await maf.press("ControlOrMeta+z");
+  await expect(maf).toHaveValue("0.95");
+  await expect(status(page)).toHaveText("Undone: the MAF filter changed.");
+  await maf.press("Tab");
+  await expect(maf).toHaveValue("0.95");
+  await expect(undoButton(page)).toHaveAccessibleDescription(
+    "Undo: the MAF filter was turned on",
+  );
+});
+
 // React Aria asks an iPhone for the keypad of decimals, which in a region
 // that writes 0,1 has no point (the spec, "A character the fields do not
 // take"). It tells an iPhone by the platform the browser gives, which

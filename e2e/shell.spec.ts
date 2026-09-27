@@ -282,7 +282,7 @@ test("WS9 D3 Undo pressed with the mouse until nothing is left puts the focus on
   );
 });
 
-test("WS9 D3 Ctrl+Z undoes and Ctrl+Shift+Z and Ctrl+Y redo, and in a text field they belong to the text", async ({
+test("WS9 D3 Ctrl+Z undoes and Ctrl+Shift+Z and Ctrl+Y redo, and in a text field they belong to the text while something is typed in it", async ({
   page,
 }) => {
   await openPopgen(page);
@@ -314,9 +314,24 @@ test("WS9 D3 Ctrl+Z undoes and Ctrl+Shift+Z and Ctrl+Y redo, and in a text field
   await expect(threshold).toHaveValue("0.05");
   await expect(redoButton(page)).toBeDisabled();
 
-  // In the field, the text's own undo, and the project is left as it is:
-  // nothing to redo.
+  // In the number field with nothing typed in it, the project's; the
+  // region holds the announcements made close together, the last at its
+  // end.
   await threshold.focus();
+  await page.keyboard.press("ControlOrMeta+z");
+  await expect(threshold).toHaveValue("0.1");
+  await expect(status(page)).toHaveText(
+    /Undone: the missing data filter changed\.$/,
+  );
+  await page.keyboard.press("ControlOrMeta+Shift+z");
+  await expect(threshold).toHaveValue("0.05");
+  await expect(redoButton(page)).toBeDisabled();
+
+  // With something typed in it, the text's own undo, and the project is
+  // left as it is: nothing to redo.
+  await threshold.press("ControlOrMeta+a");
+  await threshold.pressSequentially("0.07");
+  await expect(threshold).toHaveValue("0.07");
   await page.keyboard.press("ControlOrMeta+z");
   await expect(redoButton(page)).toBeDisabled();
   await expect(undoButton(page)).toHaveAccessibleDescription(

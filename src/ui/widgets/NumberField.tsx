@@ -37,7 +37,9 @@ import {
 
 import { classOf } from "../classOf.ts";
 import {
+  COMMITTED_ATTRIBUTE,
   checkCommitted,
+  numberText,
   takesTextOut,
   typedNumber,
 } from "./committedNumber.ts";
@@ -239,6 +241,7 @@ export function NumberField({
         onCommitEnds={commitEnds}
         onCommitReady={onCommitReady}
         inputMode={takesDecimals ? "text" : "numeric"}
+        committedText={numberText(value)}
         onText={(text) => {
           // After a character thrown away, and until a deletion mends the
           // text, what it holds is not what was typed: 0,1 shows as 01.
@@ -284,6 +287,10 @@ interface FieldInputProps {
       point (docs/specs/steps/variants.md, "A character the fields do
       not take"). */
   readonly inputMode: "numeric" | "text";
+  /** The number the field holds as it shows it, which the input carries
+      so that Undo and Redo of the keyboard go to the project while its
+      text is that number (shortcuts.ts, `ownerOfKeys`). */
+  readonly committedText: string;
 }
 
 /** The input of the field, which reads React Aria's state of it: to
@@ -299,6 +306,7 @@ function FieldInput({
   onCommitReady,
   onText,
   inputMode,
+  committedText,
 }: FieldInputProps): React.JSX.Element {
   const state = useContext(NumberFieldStateContext);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -363,6 +371,7 @@ function FieldInput({
       ref={inputRef}
       className={classOf(styles, "input")}
       inputMode={inputMode}
+      {...{ [COMMITTED_ATTRIBUTE]: committedText }}
       onChange={(event) => {
         // A change React Aria took, of the text it showed; one that took
         // text out mends what was typed.
