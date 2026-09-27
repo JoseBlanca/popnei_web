@@ -172,7 +172,7 @@ function writeJob(fileId: string): WriteJob {
 /** Files as the runner makes them, real Blobs, since the check of a
     written compares its numBytes with the size of its file: one of the
     3,594 bytes of the smallest file of writeVariants.md, and one a byte
-    larger than WRITE_RESTART_BYTES, about 12 ms to make in node. */
+    larger than WRITE_RESTART_BYTES, about 3 ms to make in node. */
 const SMALL_FILE = new Blob([new Uint8Array(3_594)]);
 const LARGE_FILE = new Blob([new Uint8Array(WRITE_RESTART_BYTES + 1)]);
 
@@ -632,6 +632,28 @@ describe("WS2 D3 the client: the reopen that fails", () => {
     expect(env.first.terminated).toBe(false);
     expect(lastSent(env.first)).toMatchObject({ kind: "run", id: env.r2.id });
   });
+
+  test("a first open that ends reopenFailed fails the read with it, the name of the file and the browser's message", async () => {
+    const env = setUp();
+    const first = last(env.calculation);
+    env.client.addFile("A", FILE_A);
+    const readA = env.client.openVariants({ fileId: "A", ...NEI });
+    emit(first, READY);
+    emit(first, {
+      kind: "reopenFailed",
+      id: lastSent(first).id,
+      name: "panel.nei",
+      message: "the file was changed on the disk",
+    });
+    expect(await now(readA.outcome)).toEqual({
+      kind: "failed",
+      error: {
+        kind: "reopenFailed",
+        name: "panel.nei",
+        message: "the file was changed on the disk",
+      },
+    });
+  });
 });
 
 describe("WS2 D3 the client: progress", () => {
@@ -847,6 +869,15 @@ describe("WS2 D3 the client: crashes, defects, and every read answered", () => {
     ["an answer of another request's id", () => resultOf(99, "r1")],
     ["an answer of the wrong kind for the request", () => opened(2)],
     ["a result under another key than its request's", () => resultOf(2, "k9")],
+    [
+      "a result of another analysis than its job's",
+      () => ({
+        kind: "result",
+        id: 2,
+        key: "r1",
+        result: { analysis: "filterCounts", passStats: RESULT.passStats },
+      }),
+    ],
     [
       "a refused of another request's id",
       () => ({ kind: "refused", id: 99, message: "the pass gave no variant" }),
@@ -2342,13 +2373,36 @@ describe("VS1 D5 the write of the client: the restart after a large write", () =
     emit(env.first, writtenOf(env.w1.id, "w1", LARGE_FILE));
     const outcome = await now(env.w1.outcome);
     expect(outcome).toMatchObject({ kind: "done", key: "w1" });
-    expect(fileOf(outcome)?.size).toBe(25_000_001);
+    expect(fileOf(outcome)?.size).toBe(WRITE_RESTART_BYTES + 1);
     expectReopenedThenK5(env);
+  });
+
+  test("a run given between the answer of a large write and the new worker's open waits in the queue, and is sent after k5", async () => {
+    const env = writeAndRun();
+    emit(env.first, writtenOf(env.w1.id, "w1", LARGE_FILE));
+    expect(await now(env.w1.outcome)).toMatchObject({ kind: "done" });
+    const k6 = env.client.run("k6", job("A"), noProgress);
+    const second = last(env.calculation);
+    expect(env.calculation).toHaveLength(2);
+    expect(second.posted).toEqual([]);
+    expect(await now(k6.outcome)).toBe("pending");
+    emit(second, READY);
+    const open = lastSent(second);
+    expect(open).toMatchObject({ kind: "open", fileId: "A" });
+    emit(second, opened(open.id));
+    expect(lastSent(second)).toMatchObject({ kind: "run", id: env.k5.id });
+    emit(second, resultOf(env.k5.id, "k5"));
+    expect(lastSent(second)).toMatchObject({
+      kind: "run",
+      id: k6.id,
+      key: "k6",
+    });
+    expect(second.posted).toHaveLength(3);
   });
 
   test("a written of exactly WRITE_RESTART_BYTES, 25,000,000 bytes, ends no worker, and k5 is sent to it", async () => {
     const env = writeAndRun();
-    const exact = new Blob([new Uint8Array(25_000_000)]);
+    const exact = new Blob([new Uint8Array(WRITE_RESTART_BYTES)]);
     emit(env.first, writtenOf(env.w1.id, "w1", exact));
     expect(await now(env.w1.outcome)).toMatchObject({ kind: "done" });
     expect(env.first.terminated).toBe(false);
