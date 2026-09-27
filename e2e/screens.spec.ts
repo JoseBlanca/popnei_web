@@ -1953,6 +1953,66 @@ for (const theme of ["light", "dark"] as const) {
       await save(page, `popgen-write-bound-${theme}`);
     });
 
+    /** The section of the lists of individuals, and its list `label`. */
+    function individualLists(page: Page): Locator {
+      return page.getByRole("region", { name: "Filters of the individuals" });
+    }
+    function listArea(page: Page, label: string): Locator {
+      return individualLists(page).getByRole("textbox", { name: label });
+    }
+
+    test("the lists of individuals, applied", async ({ page }) => {
+      await pickPanel(page);
+      await listArea(page, "Individuals to keep, one name per line").fill(
+        "s000\ns001\ns002",
+      );
+      await individualLists(page)
+        .getByRole("button", { name: "Apply the list to keep" })
+        .click();
+      await listArea(page, "Individuals to remove, one name per line").fill(
+        "s001",
+      );
+      await individualLists(page)
+        .getByRole("button", { name: "Apply the list to remove" })
+        .click();
+      await individualLists(page).screenshot({
+        path: join(SCREENS, `popgen-lists-applied-${theme}.png`),
+      });
+    });
+
+    test("the lists of individuals, not applied", async ({ page }) => {
+      await pickPanel(page);
+      await listArea(page, "Individuals to keep, one name per line").fill(
+        "s000\ns001",
+      );
+      await expect(
+        individualLists(page).getByText(/^This list is not applied yet/u),
+      ).toBeVisible();
+      await individualLists(page).screenshot({
+        path: join(SCREENS, `popgen-lists-not-applied-${theme}.png`),
+      });
+    });
+
+    test("the lists of individuals, a name not in the file", async ({
+      page,
+    }) => {
+      await pickPanel(page);
+      await listArea(page, "Individuals to keep, one name per line").fill(
+        "s000\nind_900\nind_901",
+      );
+      await individualLists(page)
+        .getByRole("button", { name: "Apply the list to keep" })
+        .click();
+      await expect(
+        individualLists(page).getByText(/^The list of individuals to keep/u),
+      ).toBeVisible();
+      await individualLists(page).screenshot({
+        path: join(SCREENS, `popgen-lists-not-in-file-${theme}.png`),
+      });
+      await writing(page).scrollIntoViewIfNeeded();
+      await save(page, `popgen-lists-not-in-file-write-${theme}`);
+    });
+
     test("the Variants step after an opening, and with the warning of the identity", async ({
       page,
     }, testInfo) => {
