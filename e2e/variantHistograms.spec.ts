@@ -1094,6 +1094,45 @@ test("VS6 D2 a variant with no called genotype gives the warning above the capti
   await expectNoViolations(makeAxeBuilder);
 });
 
+test("VS6 D2 a file none of whose variants has a called genotype: the histograms have no mean and no bar, and the warning says why", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openVariants(page);
+  const vcf = [
+    "##fileformat=VCFv4.2",
+    "##contig=<ID=1>",
+    '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
+    "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\ta\tb",
+    "1\t1\t.\tA\tT\t.\tPASS\t.\tGT\t./.\t./.",
+    "1\t2\t.\tA\tT\t.\tPASS\t.\tGT\t./.\t./.",
+    "",
+  ].join("\n");
+  const chooser = page.waitForEvent("filechooser");
+  await page
+    .getByRole("region", { name: "Variants file" })
+    .getByRole("button", { name: /^(Choose|Replace) .*…$/ })
+    .click();
+  await (
+    await chooser
+  ).setFiles({
+    name: "nocalls.vcf",
+    mimeType: "text/plain",
+    buffer: Buffer.from(vcf),
+  });
+  await block(page).getByRole("button", { name: CALCULATE }).click();
+  await expect(
+    block(page).getByText(
+      "2 of the 2 variants of nocalls.vcf have no called genotype, and are in none of the histograms.",
+    ),
+  ).toBeVisible();
+  const maf = histogram(page, "Major allele frequency, no mean");
+  await expect(maf).toBeVisible();
+  await expect(maf.locator("rect.chart-bar")).toHaveCount(0);
+  await expect(maf.locator("g.chart-axis-y g.tick")).toHaveText(["0", "1"]);
+  await expectNoViolations(makeAxeBuilder);
+});
+
 test("VS6 D2 the histograms removed by a redo while the focus is on a CSV button of theirs: the focus goes to the heading of the block", async ({
   page,
 }) => {
