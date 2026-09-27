@@ -489,7 +489,11 @@ dialog and says what the user sees of it (`docs/specs/shell.md`,
   of `docs/plans/walking-skeleton.md`, with point K). Then the listener
   of the window's `beforeunload` event asks the browser to confirm
   before the page is left, and Open project… asks before it replaces the
-  project. A result that comes back from the cache after an undo to the
+  project. From stage 3 the listener asks as well while a file of the
+  filtered variants is written and not saved, `write` of the store in
+  `done`, even when the project has not changed: leaving the page loses
+  the file as an opening does, and Open project… asks for it too
+  (`docs/specs/shell.md`, "Opening"). A result that comes back from the cache after an undo to the
   base is under a key done in the base, and is no change. A save setting the base is the owner's decision of 25
   September 2026, to confirm with the owner: the page does not learn
   whether the download was kept, so a user who cancels the browser's own
@@ -884,6 +888,9 @@ rules of accessibility that the tests run on the page:
   written at 0.05 gives a download named `panel.filtered.nei` of 250,994
   bytes in each engine, and the step then shows it handed to the
   browser, with no second Save.
+- From stage 3: with the project saved and then a file written, a
+  reload of the page raises the browser's question, and after the file
+  is saved it raises none.
 
 One case cannot be made in the built site without a hook for the tests,
 code that exists only to let a test cause it: a throw while React draws
