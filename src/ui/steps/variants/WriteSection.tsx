@@ -35,7 +35,7 @@ import { ProgressBar } from "../../widgets/ProgressBar.tsx";
 import { Warning } from "../../widgets/Warning.tsx";
 import styles from "./VariantsStep.module.css";
 import { writeParts } from "./writeParts.ts";
-import type { WriteButton as WriteButtonOf } from "./writeParts.ts";
+import type { WriteButton } from "./writeParts.ts";
 import {
   WRITE_HEADING,
   WRITE_LABEL,
@@ -53,11 +53,11 @@ export function WriteSection(): React.JSX.Element | null {
   const read = useAppState((s) => s.project.variants?.read.kind === "read");
   const write = useAppState((s) => s.write);
   if (!read || write === null) return null;
-  return <WriteParts write={write} />;
+  return <WriteBody write={write} />;
 }
 
 /** The parts of the section in the state `write`. */
-function WriteParts({
+function WriteBody({
   write,
 }: {
   readonly write: WriteStatus<Blob>;
@@ -92,7 +92,7 @@ function WriteParts({
       {warning !== null && <Warning>{warning}</Warning>}
       {button !== null && (
         <div>
-          <WriteButton
+          <ActionButton
             button={button}
             onWrite={() => {
               void startWriting(store, FORMAT);
@@ -124,9 +124,9 @@ function WriteParts({
 }
 
 /** What the button of the section is drawn with. */
-interface WriteButtonProps {
+interface ActionButtonProps {
   /** Write, with what describes it, Stop, or Save. */
-  readonly button: WriteButtonOf;
+  readonly button: WriteButton;
   /** Starts the write. */
   readonly onWrite: () => void;
   /** Stops it. */
@@ -138,13 +138,13 @@ interface WriteButtonProps {
 }
 
 /** Write, Stop or Save, one button in one place. */
-function WriteButton({
+function ActionButton({
   button,
   onWrite,
   onStop,
   onSave,
   onGone,
-}: WriteButtonProps): React.JSX.Element {
+}: ActionButtonProps): React.JSX.Element {
   const element = useRef<HTMLButtonElement>(null);
   // The latest onGone, for the cleanup below, which runs once.
   const gone = useRef(onGone);
