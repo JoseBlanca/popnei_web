@@ -270,7 +270,9 @@ The option not taken was the two buttons on each histogram from stage 3.
 The words of the histograms removed are those of the diversity's table
 of results removed, for a result in the plural and a button whose words
 start with "Calculate", and they say "for the file loaded now", since
-only a change of the load removes them. They were written with the code
+only a change of the load removes them, a new file or the same file read
+again with other options, whose words end the sentence as the command
+gives them. They were written with the code
 on 27 September 2026, for the owner to judge at the stop of the plan
 where the screens are tried:
 
@@ -279,6 +281,7 @@ where the screens are tried:
 | a command | "The histograms of the variants were removed because a new variants file was loaded. Undo brings them back as they were, with no calculation; Calculate makes them anew for the file loaded now." |
 | an undo | "Undone: a new variants file was loaded. The histograms of the variants were removed; Redo brings them back as they were, with no calculation, and Calculate makes them anew for the file loaded now." |
 | a redo | "Redone: a new variants file was loaded. The histograms of the variants were removed; Undo brings them back as they were, with no calculation, and Calculate makes them anew for the file loaded now." |
+| a command that reads the same file again with other options, "Read … again" of the Variants step | "The histograms of the variants were removed because the variants file was read again with other options. Undo brings them back as they were, with no calculation; Calculate makes them anew for the file loaded now."; its undo and redo as the two rows above, "Undone: the variants file was read again with other options. …" |
 
 A calculation stopped at once by a change of the load has the line of
 the diversity, "The calculation of the histograms of the variants was
