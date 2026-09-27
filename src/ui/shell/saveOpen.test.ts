@@ -102,6 +102,19 @@ describe("the words and the reading of Save project and Open project…", () => 
     });
   });
 
+  test("the question before an opening escapes the names that could change the text around them", () => {
+    expect(
+      openQuestion("pa\u202enel.popnei.json", {
+        calculating: false,
+        writing: "pa\u202enel.filtered.nei",
+        unsaved: "pa\u202enel.filtered.nei",
+      }),
+    ).toEqual({
+      title: "Open pa\\u202enel.popnei.json?",
+      text: "It replaces the project on the page, and an opening cannot be undone. To keep the project on the page, press Keep the current project and save it first. The writing of pa\\u202enel.filtered.nei will be stopped. pa\\u202enel.filtered.nei, written and not saved, will be discarded.",
+    });
+  });
+
   test("the question before an opening names the writing under way, alone and with the calculations", () => {
     expect(
       openQuestion("panel.popnei.json", {

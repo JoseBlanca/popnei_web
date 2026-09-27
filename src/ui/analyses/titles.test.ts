@@ -26,4 +26,8 @@ describe("VS5 D1 the words of the shell of the page", () => {
     ]);
     expect(() => SHELL_WORDS.stepOf("pca")).toThrow(/^popnei_web defect:/);
   });
+
+  test("an analysis with no title is a defect", () => {
+    expect(() => SHELL_WORDS.title("pca")).toThrow(/^popnei_web defect:/);
+  });
 });

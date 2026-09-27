@@ -12,12 +12,11 @@ import { startedAt } from "./runs.ts";
 /** A second, in the milliseconds of performance.now(). */
 const SECOND_MS = 1000;
 
-/** The whole seconds from `start`, in the milliseconds of
-    performance.now(), to now; 0 with no start. */
-function secondsSince(start: number | null): number {
-  return start === null
-    ? 0
-    : Math.floor((performance.now() - start) / SECOND_MS);
+/** The whole seconds from `start` to `now`, both in the milliseconds of
+    performance.now(), rounded down, so that a clock shows 0:01 only once
+    a second has passed; 0 with no start. */
+export function secondsSince(start: number | null, now: number): number {
+  return start === null ? 0 : Math.floor((now - start) / SECOND_MS);
 }
 
 /** The whole seconds since the request `runId` started, drawn again at
@@ -28,14 +27,17 @@ function secondsSince(start: number | null): number {
     the first time, so a caller draws a new component for a new request,
     with `key={runId}`. */
 export function useRunSeconds(runId: number): number {
-  const [seconds, setSeconds] = useState(() => secondsSince(startedAt(runId)));
+  const [seconds, setSeconds] = useState(() =>
+    secondsSince(startedAt(runId), performance.now()),
+  );
 
   useEffect(() => {
     const start = startedAt(runId) ?? performance.now();
     let timer: ReturnType<typeof setTimeout> | undefined;
     const tick = (): void => {
-      const elapsed = performance.now() - start;
-      setSeconds(Math.floor(elapsed / SECOND_MS));
+      const now = performance.now();
+      const elapsed = now - start;
+      setSeconds(secondsSince(start, now));
       // The next tick at the next whole second since the start.
       timer = setTimeout(tick, SECOND_MS - (elapsed % SECOND_MS));
     };

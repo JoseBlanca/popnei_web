@@ -2082,3 +2082,115 @@ describe("VS5 D2 writtenDiscarded", () => {
     expect(writtenDiscarded(saved, ready)).toBe(false);
   });
 });
+
+describe("VS5 D2 each step takes the states of its own analyses", () => {
+  test("a check that failed makes the Variants step Failed and leaves the Analyses step Done with the diversity done", () => {
+    const s = checksState({
+      statuses: { [STATISTICS]: failed(KEY_S), [DIVERSITY]: done(KEY_A) },
+    });
+    expect(stepStateOfState(s, "variants")).toEqual({
+      status: "failed",
+      reason: "Statistics of each individual could not be calculated.",
+    });
+    expect(stepStateOfState(s, "analyses")).toEqual({
+      status: "done",
+      reason: null,
+    });
+  });
+
+  test("the diversity running, or failed, leaves the Variants step Done; waiting for the statistics it makes it Running", () => {
+    const runningDiversity = checksState({
+      statuses: { [DIVERSITY]: running(KEY_A, 1) },
+      runs: [run(1, DIVERSITY, KEY_A, CURRENT)],
+    });
+    expect(stepStateOfState(runningDiversity, "variants").status).toBe("done");
+    const failedDiversity = checksState({
+      statuses: { [DIVERSITY]: failed(KEY_A) },
+    });
+    expect(stepStateOfState(failedDiversity, "variants").status).toBe("done");
+    const waiting = checksState({
+      statuses: { [DIVERSITY]: waitsForStatistics(1) },
+      runs: [run(1, STATISTICS, KEY_S, CURRENT)],
+    });
+    expect(stepStateOfState(waiting, "variants").status).toBe("running");
+  });
+});
+
+describe("VS5 D2 the announcements of the writing, more", () => {
+  test("two states that hold the same request of the writing announce nothing", () => {
+    const before = checksState({
+      project: FIVE_FILTERS,
+      write: writeRunning(1),
+      runs: [run(1, null, KEY_W, CURRENT)],
+    });
+    const after = checksState({
+      project: FIVE_FILTERS,
+      write: {
+        kind: "running",
+        key: KEY_W,
+        runId: 1,
+        progress: { bytesRead: 10, numBytes: 20, pass: 1, numPasses: 1 },
+        waitsForStatistics: false,
+      },
+      runs: [
+        {
+          ...run(1, null, KEY_W, CURRENT),
+          progress: { bytesRead: 10, numBytes: 20, pass: 1, numPasses: 1 },
+        },
+      ],
+    });
+    expect(announcementsOf(before, after, WORDS)).toEqual([]);
+  });
+
+  test("the end of an analysis is said before the end of the writing in one change", () => {
+    const before = checksState({
+      project: FIVE_FILTERS,
+      statuses: { [DIVERSITY]: running(KEY_A, 1) },
+      write: writeRunning(2),
+      runs: [run(1, DIVERSITY, KEY_A, CURRENT), run(2, null, KEY_W, CURRENT)],
+    });
+    const after = checksState({
+      project: FIVE_FILTERS,
+      statuses: { [DIVERSITY]: done(KEY_A) },
+      write: { kind: "done", key: KEY_W, written: WRITTEN },
+    });
+    expect(announcementsOf(before, after, WORDS)).toEqual([
+      "Diversity: done.",
+      "panel.filtered.nei is written, 19.2 MB; Save it in the Variants step.",
+    ]);
+  });
+
+  test("a file name that could change the text around it is escaped in the start and in the words of no variant", () => {
+    const bidi = project({
+      ...FIVE_FILTERS,
+      variants: {
+        ...variants(readOf(TWO_HUNDRED, 1200)),
+        name: "pa\u202enel.nei",
+      },
+    });
+    const idle = checksState({ project: bidi });
+    const started = checksState({
+      project: bidi,
+      write: writeRunning(1),
+      runs: [run(1, null, KEY_W, CURRENT)],
+    });
+    expect(announcementsOf(idle, started, WORDS)).toEqual([
+      "Writing pa\\u202enel.filtered.nei.",
+    ]);
+    const noVariant = checksState({
+      project: bidi,
+      write: {
+        kind: "noVariant",
+        key: KEY_W,
+        written: {
+          format: WRITTEN.format,
+          numBytes: WRITTEN.numBytes,
+          passStats: WRITTEN.passStats,
+        },
+      },
+    });
+    expect(announcementsOf(started, noVariant, WORDS)).toEqual([
+      "The filters kept none of the variants of pa\\u202enel.nei, so there is nothing to write.",
+    ]);
+  });
+});

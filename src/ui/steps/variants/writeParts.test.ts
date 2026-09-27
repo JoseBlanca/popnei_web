@@ -170,6 +170,31 @@ describe("VS5 D3 the parts of the section of the writing in each state", () => {
     expect(parts.button?.kind).toBe("write");
   });
 
+  test("locked with a large estimate shows no warning; saved with one shows it above Write", () => {
+    const large = estimateOf(3_000_000, 200);
+    expect(
+      writeParts(
+        {
+          kind: "locked",
+          reason: "Load a variants file in the Variants step.",
+        },
+        large,
+        PROJECT,
+      ).warning,
+    ).toBeNull();
+    const saved = writeParts(
+      {
+        kind: "saved",
+        key: KEY,
+        written: { format: "nei", numBytes: 250_994, passStats: PASS },
+      },
+      large,
+      PROJECT,
+    );
+    expect(saved.warning).toMatch(/^A file of about 600\.0 MB may need/);
+    expect(saved.button?.kind).toBe("write");
+  });
+
   test("no variant: its line, and no button", () => {
     expect(
       writeParts(

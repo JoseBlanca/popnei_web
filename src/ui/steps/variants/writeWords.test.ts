@@ -148,6 +148,45 @@ describe("VS5 D3 the words of the writing of the filtered variants", () => {
     );
   });
 
+  test("a file name that could change the text around it is escaped in Save, the saved line, the words of no variant and the words of Save pressed", () => {
+    const name = "pa\u202enel.filtered.nei";
+    expect(saveLabel(name, 250_994)).toBe(
+      "Save pa\\u202enel.filtered.nei, 251 KB",
+    );
+    expect(savedText(name, 250_994)).toBe(
+      "pa\\u202enel.filtered.nei, 251 KB, was handed to the browser to save. To save it again, write it again.",
+    );
+    expect(handedText(name)).toBe(
+      "pa\\u202enel.filtered.nei was handed to the browser to save.",
+    );
+    const variants = PROJECT.variants;
+    if (variants === null) throw new Error("the sample has a variants file");
+    const bidi: Project = {
+      ...PROJECT,
+      variants: { ...variants, name: "pa\u202enel.nei" },
+    };
+    expect(noVariantText(bidi, KEPT_NONE)).toBe(
+      "The filters kept none of the variants of pa\\u202enel.nei, so there is nothing to write. Loosen the filters above.",
+    );
+  });
+
+  test("an error of our own with no text, and with a full stop or none at the end of its text", () => {
+    const defect = (message: string): string =>
+      writeErrorText(
+        { kind: "failed", error: { kind: "defect", message } },
+        false,
+        PROJECT,
+        GIGABYTE,
+      );
+    expect(defect("")).toBe(
+      "The application met an error of its own. Write the file again.",
+    );
+    expect(defect("a broken rule.")).toBe(defect("a broken rule"));
+    expect(defect("  a broken rule.  ")).toBe(
+      "The application met an error of its own: a broken rule. Write the file again.",
+    );
+  });
+
   test("what the status region says when Save is pressed", () => {
     expect(handedText("panel.filtered.nei")).toBe(
       "panel.filtered.nei was handed to the browser to save.",
