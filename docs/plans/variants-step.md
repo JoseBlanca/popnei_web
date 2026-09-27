@@ -694,7 +694,7 @@ The owner tries the writing at stop A, task 6.4.
   "What it sends and reads", "The stepper", "The summary line", "The
   notice" and "The status region", its functions tested on the states
   of `TEST_DEFS` as that spec has them. Serves 2. Needs work package 3.
-- [ ] 5.2 The page joined: `POPGEN_ANALYSES` and
+- [x] 5.2 The page joined: `POPGEN_ANALYSES` and
   `POPGEN_ANALYSIS_STEPS` in `src/core/apps.ts`, the titles of the three
   analyses in `src/ui/analyses/panels.ts`, the Analyses step drawing
   only the analyses of its step, and `createStore` in `src/ui/popgen.tsx`

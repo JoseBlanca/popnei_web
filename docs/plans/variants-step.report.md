@@ -392,7 +392,20 @@ Not taken, and why:
 
 ## 5. The page joined, and the writing
 
-Under way. The tasks: 5.1 as 2970371 (`shell.md`) and c3c6214.
+Under way. The tasks: 5.1 as 2970371 (`shell.md`) and c3c6214, 5.2 as
+f12b889. Since 5.2 the entry gives the store the counts, the statistics
+and the write, so a project with a threshold on the individuals runs the
+diversity after the statistics, with no error of the application (seen
+in Chromium and WebKit by the task, 116 of 200 individuals kept at
+0.03).
+
+### What was changed in the plan
+
+- Task 5.2 put the titles of the analyses and the words of the shell in
+  a new `src/ui/analyses/titles.ts`, not in `panels.ts`, since the test
+  of the types cannot import a file that imports components and CSS; and
+  the making of the store in `src/ui/popgenStore.ts`, so a test in node
+  makes it as the page does.
 
 ### What was changed in the specs, without the owner
 
