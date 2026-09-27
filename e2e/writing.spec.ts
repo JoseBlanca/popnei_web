@@ -154,12 +154,20 @@ async function holdWritten(page: Page): Promise<void> {
   });
 }
 
-/** Posts the files the calculation worker kept back. */
+/** Posts the files the calculation worker kept back, once the call
+    that asks for it has returned: a refusal of the write makes the page
+    start a new calculation worker at once, and WebKit ended the call to
+    the old one before it could answer, "Target page, context or browser
+    has been closed", in 10 of 20 runs of the flow of the refusal. */
 async function releaseWritten(page: Page): Promise<void> {
   const worker = page.workers().find((w) => w.url().includes("runnerWorker"));
   if (worker === undefined) throw new Error("no calculation worker");
   await worker.evaluate(() => {
-    (globalThis as unknown as { releaseWritten: () => void }).releaseWritten();
+    setTimeout(() => {
+      (
+        globalThis as unknown as { releaseWritten: () => void }
+      ).releaseWritten();
+    }, 0);
   });
 }
 
