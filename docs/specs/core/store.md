@@ -133,7 +133,7 @@ has the kind `removed` in the code.
 | done | the cache holds a result under its key | the result, its warnings, and the comparison with the check numbers of an opened project file |
 | running | a calculation of its key is in flight and is not being stopped, whether it waits in the queue of the worker or runs; or a Run of its key waits for the statistics of each individual (below) | its progress, the `Progress` of `docs/specs/worker/protocol.md`, popnei's four numbers of the pass as the worker gave them, passed on unchanged, `null` until the worker gives one; the request's id; and whether it waits for the statistics, whose request's progress and id it then holds |
 | error | popnei refused the calculation of its key, or the calculation failed since the last change; or it reads the filters of individuals and the statistics it waits for were refused, or failed since the last change (below) | popnei's message, or the failure, and whether it is the failure of the statistics, `ofStatistics`, so that the panel does not tell it as its own |
-| locked | it reads the filters of individuals, and the list they make, known from the statistics in the cache, keeps no individual | `keptNoneReason` of `docs/specs/core/individualsKept.md` |
+| locked | it reads the filters of individuals, and the list they make, known from the statistics in the cache, keeps no individual; or its `keptNeeds` gives a reason for that list, the diversity when the list leaves no population, as the owner decided at stop B on 27 September 2026 | `keptNoneReason` of `docs/specs/core/individualsKept.md`, or the reason of `keptNeeds` |
 | removed | the current notice lists it among the results removed | its key; it can run again |
 | ready | none of the above | its key |
 | empty | cannot happen | — |
@@ -730,6 +730,10 @@ export interface AnalysisDef<J, R> {
   parseOptions(options: unknown, formatVersion: number): Result<JsonObject, string>;
   keyInputs(p: Project): JsonValue;       // must not read p.variants; answers for any project
   needs(p: Project): string | null;
+  /** The reason it cannot run for the individuals kept, a known list that
+      keeps some individual, or null; absent for an analysis with none.
+      The diversity's: the list leaves no population. */
+  keptNeeds?(p: Project, kept: IndividualsKept): string | null;
   run(p: Project, c: WorkerClient<J, R>): Run<R>;
   warnings(r: R, p: Project): readonly Warning[];
   checkNumbers(r: R): readonly (number | null)[];

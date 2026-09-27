@@ -102,7 +102,10 @@ of no name: "The filters of individuals keep none of the 200 individuals
 of panel.nei. Loosen them in the Variants step." The count is the number
 of individuals of the variants file, written as `grouped` of
 `project.ts` writes a count, and the name of the file is escaped with
-`escaped` of the same module.
+`escaped` of the same module. A file of one individual reads "The
+filters of individuals do not keep the one individual of one.vcf.
+Loosen them in the Variants step.", in place of "keep none of the 1
+individuals", as the owner decided at stop B on 27 September 2026.
 
 Seen in node 26.8.2, with popnei's release `js-v0.1.0-dev.2`, on 26
 September 2026, on `e2e/fixtures/panel.nei`, 200 individuals and 1,200
