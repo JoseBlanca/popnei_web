@@ -321,6 +321,12 @@ describe("VS3 D1 the histograms of the variants: the rest of the module", () => 
     expect(lines[1]).toBe(
       'variants_as_read = popnei.open_vcf("panel.vcf.gz", ploidy=4, only_passed=True)',
     );
+    const every = variantChecks
+      .script(project({ name: "panel.vcf.gz", onlyPassed: false }))
+      .split("\n");
+    expect(every[1]).toBe(
+      'variants_as_read = popnei.open_vcf("panel.vcf.gz", ploidy=2, only_passed=False)',
+    );
   });
 });
 

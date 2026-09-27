@@ -311,6 +311,33 @@ describe("VS3 D1 the statistics of each individual: the rest of the module", () 
         '"a,""b""",0.25,0.125\n',
     );
   });
+
+  test("individualChecksCsv quotes a name with a carriage return, which ends a line of a CSV", () => {
+    const r = result({
+      individuals: ["a\rb"],
+      missingGtRate: [0.25],
+      obsHetRate: [0.125],
+      numVars: 4,
+    });
+    expect(individualChecksCsv(r)).toBe(
+      "individual,missing_genotypes,observed_heterozygosity\n" +
+        '"a\rb",0.25,0.125\n',
+    );
+  });
+
+  test("warnings of several individuals with no call name the file escaped", () => {
+    const r = result({
+      individuals: ["s000", "s001", "s002"],
+      missingGtRate: [0.02, 1, 1],
+      obsHetRate: [0.3, NaN, NaN],
+      numVars: 1152,
+    });
+    expect(
+      individualChecks.warnings(r, project({ name: "a\tb.nei" })).at(0)?.text,
+    ).toBe(
+      "2 individuals of a\\tb.nei have no called genotype among the 1,152 variants the filters kept, so they have no observed heterozygosity: s001 and s002. The filter by observed heterozygosity removes them when it is on.",
+    );
+  });
 });
 
 describe("VS3 D1 the statistics of each individual: refusalText", () => {
