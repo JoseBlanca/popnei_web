@@ -397,7 +397,17 @@ f12b889. Since 5.2 the entry gives the store the counts, the statistics
 and the write, so a project with a threshold on the individuals runs the
 diversity after the statistics, with no error of the application (seen
 in Chromium and WebKit by the task, 116 of 200 individuals kept at
-0.03).
+0.03). 5.3 as 17097ae (`writeVariants.md`), 3bb950a (the step's own
+`sizeText` removed; the card of the file now reads "261 KB"), 59f8a38
+(one function for the words of statistics that could not be had,
+shared with the diversity) and 534865f.
+
+A file written in the calculation worker is still whole after that
+worker is ended, in Chromium and WebKit: in the flow `VS5 D4`, the
+diversity is stopped below 100% on the VCF of 1,000 individuals, the
+worker that made the file is closed before Save, and the file saved
+opens in popnei in node with 1,000 individuals. So the page need not
+hold the bytes itself before a restart (`client.md`).
 
 ### What was changed in the plan
 
@@ -406,6 +416,17 @@ in Chromium and WebKit by the task, 116 of 200 individuals kept at
   of the types cannot import a file that imports components and CSS; and
   the making of the store in `src/ui/popgenStore.ts`, so a test in node
   makes it as the page does.
+- The screenshot "ready with the size expected" runs the diversity
+  first, since the Count, which would give the size, comes in task 6.3.
+
+### Carried to later tasks
+
+- Task 7.4: `AnalysisPanel.tsx` does not read `ofStatistics`, so a
+  refusal of the statistics a diversity waited for shows the
+  diversity's own words; 7.4 uses `statisticsFailedText` there.
+- The review of work package 5: the notice of a file discarded covers
+  the size written beside Write, in the screenshot
+  `screens/popgen-write-discarded-*.png`.
 
 ### What was changed in the specs, without the owner
 

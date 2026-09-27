@@ -707,7 +707,7 @@ The owner tries the writing at stop A, task 6.4.
   saved". One task, because the stepper would read the three analyses
   as analyses of the Analyses step between the two halves. Serves 1 and
   6. Needs 5.1 and 1.4.
-- [ ] 5.3 The section "Writing the filtered variants" of the Variants
+- [x] 5.3 The section "Writing the filtered variants" of the Variants
   step, from `variants.md`, "Writing the filtered variants", and
   `writeVariants.md`, "The step's part", with its states in
   `e2e/screens.spec.ts`. Serves 3, 4 and 6. Needs 5.2 and 1.3.
