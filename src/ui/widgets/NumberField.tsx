@@ -107,7 +107,8 @@ export interface NumberFieldProps {
   /** Called at each change of the text typed with the number it holds
       when the field would take it, and with `null` while it is no
       number, is out of the bounds or has more decimals than the field
-      takes, and at each commit, when the field shows again the number
+      takes, from a character thrown away until a deletion mends the
+      text, and at each commit, when the field shows again the number
       committed or kept. The value of the field changed otherwise, by an
       Undo, gives no call: the field has lost the focus, and been
       committed, before an Undo is pressed. */
@@ -224,6 +225,8 @@ export function NumberField({
         }}
         onNotTakenPending={() => {
           notTaken.current = true;
+          // What the field shows from now on is not what was typed.
+          onTyped?.(null);
         }}
         onMended={() => {
           notTaken.current = false;
@@ -232,7 +235,13 @@ export function NumberField({
         onCommitEnds={commitEnds}
         onCommitReady={onCommitReady}
         onText={(text) => {
-          onTyped?.(typedNumber(text, minValue, maxValue, step, decimals));
+          // After a character thrown away, and until a deletion mends the
+          // text, what it holds is not what was typed: 0,1 shows as 01.
+          onTyped?.(
+            notTaken.current
+              ? null
+              : typedNumber(text, minValue, maxValue, step, decimals),
+          );
         }}
       />
       {description !== undefined && (

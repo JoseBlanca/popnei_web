@@ -313,6 +313,51 @@ for (const locale of ["en-US", "es-ES"] as const) {
   });
 }
 
+// React Aria throws a comma away as it is typed, so that 0,1 shows as 01;
+// the threshold drawn is then the number committed, not the 1 or the 0
+// the field shows (the spec, "A character the field does not take").
+for (const keys of ["0,", "0,1", "0,0", "0.,5"] as const) {
+  test(`VS6 D2 "${keys}" typed key by key leaves the threshold of the MAF, its line and the plot's description at 0.95, and a deletion gives the number typed back`, async ({
+    page,
+  }) => {
+    await openVariants(page);
+    await pick(page, "panel.nei");
+    await calculate(page);
+    await flip(page, MAF_SWITCH);
+    const group = histogram(page, MAF_TITLE);
+    await expect(group.locator("line.chart-threshold")).toHaveCount(1);
+    const at95 = await lineX(group);
+    const described = group.locator("svg.chart desc");
+    const description = await described.textContent();
+    expect(description).toContain("The threshold 0.95 ");
+
+    const maf = field(page, MAF_LABEL);
+    await maf.click();
+    await maf.press("ControlOrMeta+a");
+    await maf.press("Backspace");
+    await maf.pressSequentially(keys);
+    await expect(
+      page.getByText(
+        /^Write the decimals with a point, 0.1 and not 0,1; the threshold stays 0.95.$/,
+      ),
+    ).toBeVisible();
+    await expect(
+      group.getByText("Threshold of the MAF filter: 0.95", { exact: true }),
+    ).toBeVisible();
+    await expect(group.getByText("Maximum 0.95")).toBeAttached();
+    await expect(described).toHaveText(description ?? "");
+    expect(await lineX(group)).toBe(at95);
+
+    // A deletion mends the text: what it shows now is what was typed.
+    await maf.press("ControlOrMeta+a");
+    await maf.pressSequentially("0.9");
+    await expect(
+      group.getByText("Threshold of the MAF filter: 0.9", { exact: true }),
+    ).toBeVisible();
+    expect(await lineX(group)).toBeLessThan(at95);
+  });
+}
+
 test("VS6 D2 the table of the bins reached with the keyboard: the tabs one stop, the arrow keys between them, the table the next stop, then the CSV", async ({
   page,
   makeAxeBuilder,
