@@ -359,6 +359,22 @@ describe("VS4 D2 the histogram, under jsdom", () => {
     expect(svg.querySelector(".chart-overlay")).toBeNull();
   });
 
+  test("counts all 0, with a threshold and without, draw the two axes, the vertical one from 0 to 1, and no bar", () => {
+    for (const threshold of [null, 0.95]) {
+      const element = sizedElement(600, 375);
+      createHistogram(element, histogramOf(new Uint32Array(40), threshold));
+      const svg = svgOf(element);
+      expect(svg.querySelectorAll("rect.chart-bar")).toHaveLength(0);
+      const yTicks = [
+        ...svg.querySelectorAll("g.chart-axis-y g.tick text"),
+      ].map((text) => text.textContent);
+      expect(yTicks).toEqual(["0", "1"]);
+      expect(
+        svg.querySelectorAll("g.chart-axis-x g.tick").length,
+      ).toBeGreaterThan(1);
+    }
+  });
+
   test("the MAF at 0.95 draws 18 kept bars, 2 removed, and no rect for the 20 empty bins", () => {
     const element = sizedElement(600, 375);
     createHistogram(element, histogramOf(MAF_COUNTS, 0.95));
