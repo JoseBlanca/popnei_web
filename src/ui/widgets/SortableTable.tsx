@@ -155,7 +155,18 @@ export function SortableTable<Id extends string>({
             </Column>
           )}
         </TableHeader>
-        <TableBody items={rows} dependencies={[columns]}>
+        {/* Keyed by the sort, so that a sort draws the rows in view anew
+            rather than have React move every row of the collection to its
+            new place: with 10,000 rows that move was about 540 ms of a
+            sort's freeze, and keyed, 7 sorts took a median of 165 ms in
+            Chromium 153 and 111 ms in WebKit 26.6, against 290 and 412
+            ms, on 27 September 2026 (VS7 D4 of e2e/measure.spec.ts). The
+            focus stays on the header sorted, which is not in the body. */}
+        <TableBody
+          key={sort === null ? "unsorted" : `${sort.column} ${sort.direction}`}
+          items={rows}
+          dependencies={[columns]}
+        >
           {(row) => (
             <Row
               id={row.id}

@@ -225,6 +225,7 @@ test("VS7 D1 the table sorted with the keyboard alone: into the table, up to the
 
   await page.keyboard.press("Enter");
   await expect(header).toHaveAttribute("aria-sort", "ascending");
+  await expect(header).toBeFocused();
   await expect(
     page.locator("div[data-live-announcer]:not([role])"),
   ).toContainText(
@@ -232,6 +233,7 @@ test("VS7 D1 the table sorted with the keyboard alone: into the table, up to the
   );
   await page.keyboard.press("Enter");
   await expect(header).toHaveAttribute("aria-sort", "descending");
+  await expect(header).toBeFocused();
   await expect(
     page.locator("div[data-live-announcer]:not([role])"),
   ).toContainText(
