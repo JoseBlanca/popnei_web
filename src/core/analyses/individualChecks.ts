@@ -255,8 +255,8 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
   const names = namesOf(withoutCalls);
   const text =
     withoutCalls.length === 1
-      ? `${names} has no called genotype among ${variantsKept}, so it has no observed heterozygosity. The filter by observed heterozygosity removes it when it is on.`
-      : `${counted(withoutCalls.length, "individual")} of ${escaped(p.variants.name)} have no called genotype among ${variantsKept}, so they have no observed heterozygosity: ${names}. The filter by observed heterozygosity removes them when it is on.`;
+      ? `${names} has no called genotype among ${variantsKept}, so it has no observed heterozygosity. The filter of the individuals by observed heterozygosity removes it when it is on.`
+      : `${counted(withoutCalls.length, "individual")} of ${escaped(p.variants.name)} have no called genotype among ${variantsKept}, so they have no observed heterozygosity: ${names}. The filter of the individuals by observed heterozygosity removes them when it is on.`;
   return [{ code: "individualsWithoutCalls", text }];
 }
 

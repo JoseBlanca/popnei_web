@@ -258,7 +258,7 @@ test("VS7 D1 an individual with no called genotype: the warning, no value sorted
   await calculatedCalls(page, CALLS_VCF);
   await expect(
     block(page).getByText(
-      "i3 has no called genotype among the 4 variants the filters kept, so it has no observed heterozygosity. The filter by observed heterozygosity removes it when it is on.",
+      "i3 has no called genotype among the 4 variants the filters kept, so it has no observed heterozygosity. The filter of the individuals by observed heterozygosity removes it when it is on.",
     ),
   ).toBeVisible();
   await expect(rowOf(page, "i3").getByRole("gridcell")).toHaveText([

@@ -180,7 +180,7 @@ describe("VS3 D1 the statistics of each individual: the worked example", () => {
     expect(individualChecks.warnings(EXAMPLE, project())).toEqual([
       {
         code: "individualsWithoutCalls",
-        text: "i3 has no called genotype among the 4 variants the filters kept, so it has no observed heterozygosity. The filter by observed heterozygosity removes it when it is on.",
+        text: "i3 has no called genotype among the 4 variants the filters kept, so it has no observed heterozygosity. The filter of the individuals by observed heterozygosity removes it when it is on.",
       },
     ]);
   });
@@ -227,7 +227,7 @@ describe("VS3 D1 the statistics of each individual: the rest of the module", () 
     expect(individualChecks.warnings(r, project())).toEqual([
       {
         code: "individualsWithoutCalls",
-        text: "3 individuals of panel.nei have no called genotype among the 1,152 variants the filters kept, so they have no observed heterozygosity: s001, s002 and s003. The filter by observed heterozygosity removes them when it is on.",
+        text: "3 individuals of panel.nei have no called genotype among the 1,152 variants the filters kept, so they have no observed heterozygosity: s001, s002 and s003. The filter of the individuals by observed heterozygosity removes them when it is on.",
       },
     ]);
   });
@@ -240,7 +240,7 @@ describe("VS3 D1 the statistics of each individual: the rest of the module", () 
       numVars: 1,
     });
     expect(individualChecks.warnings(r, project()).map((w) => w.text)).toEqual([
-      "i2 has no called genotype among the one variant the filters kept, so it has no observed heterozygosity. The filter by observed heterozygosity removes it when it is on.",
+      "i2 has no called genotype among the one variant the filters kept, so it has no observed heterozygosity. The filter of the individuals by observed heterozygosity removes it when it is on.",
     ]);
   });
 
@@ -335,7 +335,7 @@ describe("VS3 D1 the statistics of each individual: the rest of the module", () 
     expect(
       individualChecks.warnings(r, project({ name: "a\tb.nei" })).at(0)?.text,
     ).toBe(
-      "2 individuals of a\\tb.nei have no called genotype among the 1,152 variants the filters kept, so they have no observed heterozygosity: s001 and s002. The filter by observed heterozygosity removes them when it is on.",
+      "2 individuals of a\\tb.nei have no called genotype among the 1,152 variants the filters kept, so they have no observed heterozygosity: s001 and s002. The filter of the individuals by observed heterozygosity removes them when it is on.",
     );
   });
 });
