@@ -16,7 +16,12 @@ on 27 September 2026 with the owner's decisions at stop A of
 of the variants are not counted (Open 1, below), the status region
 names a writing left behind that a calculation stopped, and the question
 before an opening says how to keep a file written and not saved; the
-undo of a number field is kept as it was built. The screen
+undo of a number field is kept as it was built; and, with the same
+decisions, which ask that a reason be announced when it appears, the
+status region says when a Run of an analysis that waited for the
+statistics of each individual was not run, the filters keeping no one,
+and the summary line counts the populations the filters of individuals
+leave with an individual. The screen
 spec of what surrounds every step of the population genetics
 application, first built in the walking skeleton of stage 2 (`docs/build-order.md`),
 the smallest application that goes through every part once: the header,
@@ -237,6 +242,7 @@ keep (node, 26 September 2026, popnei `js-v0.1.0-dev.2`). It is text, and is not
 | | read failed, or individuals missing, or the column of the populations not in it | "pops.csv could not be read", "12 individuals missing from pops.csv", "column pop not in pops.csv" |
 | | read, no column chosen | "one population" |
 | | read, a column chosen | "3 populations by pop": the number of populations `populationsToRun` of `docs/specs/analyses/diversity.md` gives, or `populationsOf` while the variants file is not read, the individuals with an empty cell in no population |
+| | the same, and the filters of individuals leave populations with no individual | "2 of 3 populations by pop", the populations `populationsKept` of `docs/specs/analyses/diversity.md` gives with the individuals kept, of those of `populationsToRun`; "none of 3 populations by pop" when they leave none; while a threshold waits for the statistics of each individual, from the individuals the lists keep, as the panel of the diversity lists them |
 
 A count is written with a comma between groups of three digits, as core
 writes them (`docs/specs/core/project.md`). A name from the user's
@@ -388,6 +394,7 @@ file its options of the CSV compared by their values:
 | a request of the writing that was current and not being stopped left `runs`, and `write` is `done` | "panel.filtered.nei is written, 19.2 MB; Save it in the Variants step." (`docs/specs/analyses/writeVariants.md`) |
 | the same, and `write` is `noVariant`, a file of no variant, which the store does not keep | "The filters kept none of the variants of panel.nei, so there is nothing to write."; when the pass was given no variant, a variants file with none or a VCF read with only the passed variants with none that passed, the words the Variants step shows for it (`docs/specs/analyses/writeVariants.md`, "Its words"): "panel.nei has no variants, so there is nothing to write. Load another variants file in the Variants step." |
 | the same, and `write` is in the state `error` | "The file could not be written. The Variants step says why." |
+| the request of the statistics of each individual that a Run of an analysis waited for left `runs`, not being stopped, and the analysis is `locked`: the filters of individuals keep no one, and it was not run | its title, " was not run. " and the reason of the lock, the words beside its disabled Run, `keptNoneReason`: "Diversity was not run. The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them in the Variants step.", after the end of the statistics, "Statistics of each individual: done." |
 | the request of the statistics of each individual that a write waited for left `runs`, not being stopped, and `write` is `locked`: the filters of individuals keep no one, and no file is written | "The file was not written. " and the reason of the lock, the words beside the disabled Write, `keptNoneReason`: "The file was not written. The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them in the Variants step." |
 | a request of the writing that was current and being stopped left `runs` | "Writing the file: stopped." |
 | `write` went from `done` to a state other than `done` and `saved`: the file written and not saved was discarded, by a change of the filters, a new load or an opening | nothing is said, and the region is emptied, with the texts waiting to be written into it, by `clear()` of the announcer: its words may be "panel.filtered.nei is written, 19.2 MB; Save it in the Variants step.", which no longer hold, and a user who reads the region later would follow them. The notice of the change, read out by itself, says the file was discarded |
@@ -876,7 +883,9 @@ with the analyses of `TEST_DEFS` of `src/core/testSupport.ts`:
   a file of no variant "nopass.vcf · 200 individuals · no variant · 1
   filter · …";
   with the thresholds alone, no filter of the variants, "… · 1,200
-  variants · 2 filters · …"; a case for each row of its table.
+  variants · 2 filters · …"; with the thresholds at 0.03 and 0.38 and
+  a list to remove that holds every individual of p1, "… · 2 of 3
+  populations by pop"; a case for each row of its table.
 - **`openQuestion`**: with calculations, with the writing, with both,
   and with a file written and not saved, the words asserted whole.
 - **`noticeText`**: each row of the table of the notice, from a literal
