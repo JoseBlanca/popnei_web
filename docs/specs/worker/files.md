@@ -3,8 +3,9 @@
 Written on 27 September 2026, for stage 4 of `docs/build-order.md`, the
 Individuals step and the PCA, and revised the same day to agree with the
 specs written beside it, and after two reviews of its claims against the
-source of calamine 0.36.1 and two crates of trial. There is no code of
-it yet. This spec gives
+source of calamine 0.36.1 and two crates of trial; and when the specs
+of stage 4 were made to agree, the last column of a sheet too large
+given in Excel's letters, "XFD". There is no code of it yet. This spec gives
 the Rust crate `crates/files/`, which reads the first sheet of an xlsx,
 the file Excel saves by default, into its cells, and the few lines of the
 light worker that load it and call it. The light worker is the second
@@ -533,8 +534,8 @@ export function readXlsxCells(
 ```
 
 A `sheetTooLarge` gives its last row and column, `firstRow + numRows −
-1` and `firstColumn + numColumns − 1`, since that is where the words
-send the user (`docs/specs/worker/individuals.md`, "The refusals and
+1` and `firstColumn + numColumns − 1`, the column written in Excel's
+letters, 16,384 as "XFD", since that is where the words send the user (`docs/specs/worker/individuals.md`, "The refusals and
 their words"). `SheetCellsRead`, the cells of the sheet or a refusal of
 `IndividualsFileError`, the union of every way a file of the individuals
 is refused, are `docs/specs/worker/individuals.md`'s.
@@ -703,7 +704,7 @@ the calls of its `free()`:
 |---|---|
 | `refusal` "", the sheet `Hoja1` at row 3 and column 2, 2 rows of 2 columns, cells `["id", "pop", "a", 1]` | the cells, with the same numbers; `free()` called once |
 | `refusal` "encrypted"; "emptySheet" with its sheet; "cellError" with `detail` `#GETTING_DATA` | those refusals, with their fields |
-| `refusal` "sheetTooLarge", from row 1 and column 1, 123 rows of 16,384 columns | `sheetTooLarge`, last row 123, last column 16,384, with the sheet and `MAX_SHEET_CELLS` |
+| `refusal` "sheetTooLarge", from row 1 and column 1, 123 rows of 16,384 columns | `sheetTooLarge`, `lastRow` 123 and `lastColumn` "XFD", with the sheet and `max` `MAX_SHEET_CELLS` |
 | a function that throws `Error("Zip error")` | the refusal `files`, with that message |
 | `refusal` "other", and cells 3 long for 2 × 2 | a throw each, with `free()` still called once |
 

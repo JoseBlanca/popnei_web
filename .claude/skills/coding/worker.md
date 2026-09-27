@@ -63,7 +63,7 @@ package does not have yet.
   once on two cores. Each worker would hold its own intermediate results,
   a kinship of 10,000 individuals is 800 MB in each one that uses it, and
   its own memory of wasm, which never shrinks; two workers that both
-  needed the pruned variants would each make them. A pool would win if the walking
+  needed the kinship would each make it. A pool would win if the walking
   skeleton showed users waiting on several independent analyses whose
   intermediate results are small (`docs/architecture.md`, section 5).
 - **Our own layer, not Comlink**, as `docs/technology.md` decided.
@@ -112,7 +112,7 @@ export type FromRunner =
   | WorkerStop;
 
 export type ToFilesRunner =            // the light worker, which holds no popnei
-  | { kind: "readIndividuals"; id: number; file: File; csv: CsvOptions };
+  | { kind: "readIndividuals"; id: number; file: File; csv: CsvOptions | null }; // null for an xlsx
 
 export type FromFilesRunner =
   | { kind: "ready"; protocol: number }
@@ -121,7 +121,7 @@ export type FromFilesRunner =
 
 /** The worker cannot go on; it closes itself after posting it. */
 export type WorkerStop =
-  | { kind: "crashed"; message: string }     // a trap, a throw outside popnei, the wasm not loaded
+  | { kind: "crashed"; message: string }     // a trap, a throw outside popnei, popnei's wasm not loaded
   | { kind: "badRequest"; message: string }; // a request that failed its check
 ```
 
@@ -224,7 +224,7 @@ export type Outcome<R> =
 export type RunError =
   | { kind: "popnei"; message: string }       // popnei refused the input
   | { kind: "reopenFailed"; name: string; message: string } // the file changed on the disk
-  | { kind: "files"; message: string }        // the files wasm refused a file
+  | { kind: "files"; message: string }        // a call to the files wasm threw
   | { kind: "workerFailed"; message: string } // a trap, an error event
   | { kind: "couldNotStart"; reason: string } // no `ready`, twice
   | { kind: "protocolMismatch" }              // a stale file after a deploy
@@ -392,9 +392,10 @@ section 4). So:
   open file, one `Variants`, and never the room of an old one. An undo to
   the previous load opens its file again, which costs the reading of its
   header, and no calculation whose result is still in the cache of the
-  page. Whether it also restarts between two requests
-  is open point 2 of `docs/architecture.md`, to be settled if the walking
-  skeleton shows a tab running out of memory.
+  page. It does not restart between two requests, as the owner settled
+  on 26 September 2026 (`docs/architecture.md`, section 13, point 2),
+  but after a written file above 25 MB and after a PCA of more than 700
+  individuals (points 5 and 9).
 
 ### Timeouts
 
@@ -595,8 +596,9 @@ popnei calls from inside the pass, and that function posts a `progress`
   bytes of the file the pass has read; `numBytes`, the bytes of the file
   on the disk, compressed for a gzipped VCF; `pass`, the pass that is
   reading; and `numPasses`, the passes of the run, which popnei's
-  `numPassesOf` gives before it runs, two for the PCA, so that the bar does
-  not go from full to empty at the second pass. The page draws the share
+  `numPassesOf` gives before it runs, one for the PCA of stage 4, so that
+  the bar does not go from full to empty at the second pass of a run that
+  makes two. The page draws the share
   done as `(pass − 1 + bytesRead / numBytes) / numPasses`.
 - **No throttle.** popnei calls the function at the start of each pass,
   every 4 MiB and at the end of the run, about 500 calls for a pass over
@@ -752,7 +754,7 @@ the release `js-v0.1.0-dev.2` of 25 September 2026.
    `openVcf` and `openVars`. Given by `js-v0.1.0-dev.2`.
 2. **The number of passes a function makes and the progress of each
    pass**, so that the progress bar does not go from full to empty
-   between the two passes of a PCA. Given by `js-v0.1.0-dev.2`, as
+   between the two passes of a run that makes two. Given by `js-v0.1.0-dev.2`, as
    `numPassesOf` and `Variants.onProgress`.
 3. **A way to tell a trap from an error**, stated in popnei's docs:
    whether every refusal of the core is a plain `Error` and every trap a

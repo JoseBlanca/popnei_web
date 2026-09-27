@@ -14,7 +14,9 @@ popnei, its cut to 10 components and its refusals, below, "The principal
 components"; the note that the PCA makes two passes, which it no longer
 does; and that the worker keeps no intermediate result in stage 4; and
 again the same day, to agree with the specs written beside it: the
-populations of a diversity job made by `src/core/project.ts`. The calculation
+populations of a diversity job made by `src/core/project.ts`; and
+when the specs of stage 4 were made to agree, the restart after a PCoA
+as after a PCA. The calculation
 worker is the thread of the browser tab, beside the page, that runs
 popnei, so that a calculation does not freeze the page
 (`docs/architecture.md`, section 1). Its runner is the code that answers
@@ -577,7 +579,7 @@ The PCA holds the individuals × individuals matrix in the memory of
 wasm, which grows to it and never shrinks: about 6.1 × 8 bytes per pair
 of individuals, 662 MB more in the process at 4,000 individuals in node
 (`pca.md`, "How it runs"). The client starts the worker again after a PCA
-of more than 700 individuals (`docs/specs/worker/client.md`, "A large PCA,
+or a PCoA of more than 700 individuals (`docs/specs/worker/client.md`, "A large PCA,
 and the restart after it"). The runner keeps nothing of a
 PCA: in stage 4 the worker keeps no intermediate result, the variants
 the pruning kept included, which popnei has no way to hold and give back

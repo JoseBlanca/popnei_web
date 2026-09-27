@@ -33,7 +33,11 @@ individuals that leave none lock with the words of the filters that keep
 none, and a metadata file named by an opened project and not read locks
 it; and after its last review: the result that the read of a metadata
 file gives back leaves the notice, and lists that alone leave nobody
-lock before a Run, with or without a threshold.
+lock before a Run, with or without a threshold; and when the specs of
+stage 4 were made to agree: the words of the LD filter of the Variants
+step over a file not sorted by position, made in one place for every
+panel with the PCA's, and popnei's message of a refusal no row foresees
+shown without its backquotes, as the PCA's is.
 The code of stage 2 is in
 `src/core/analyses/diversity.ts`. This spec gives the first analysis of the population genetics
 application, in its form for the walking skeleton: the module
@@ -878,7 +882,12 @@ definition, on frozen projects, as
   `docs/specs/worker/runner.md`; the ploidy of `tetraploid.vcf.gz` read with ploidy 2, a data line
   of a VCF, "line 4 of the VCF, the column of a: `z` is not an allele
   number, which is a run of digits", which the popnei of the release gave
-  in node on 25 September 2026 for a genotype `0/z`, and another message.
+  in node on 25 September 2026 for a genotype `0/z`; the message of the
+  LD filter of the Variants step over the VCF of three individuals whose
+  second variant is at position 10 after one at 30, and one of a
+  chromosome that had already ended, as `docs/specs/analyses/pca.md`
+  gets them; and another message, with a word between backquotes, which
+  the text gives without them.
 
 The numbers popnei gives for the files of the Playwright flow, the panel
 of popnei's `tests/reference/stats/`, 1,200 variants of two alleles each
@@ -1181,6 +1190,7 @@ error state, by what the store gives:
 | popnei refused an empty pass: its message starts with "the pass gave no variant:", with the colon, which the refusal of a source that holds none does not have at that place | "The filters kept none of the variants of panel.nei, so there is no variant to calculate the diversity over. Loosen the filters in the Variants step." |
 | popnei refused a genotype of another ploidy than the one the VCF was read with: its message starts "line ‹n› of the VCF, the column of ‹individual›: its genotype is of the ploidy ‹found› and the reader was asked for the ploidy ‹given›" | "At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 in the Variants step and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version." |
 | popnei refused a line of the VCF it cannot read, or a gzipped file that is damaged or cut short: its message starts "line ‹n› of the VCF" or "the VCF was written by bgzip" | "popnei could not read panel.vcf.gz: ‹its message›. Correct the file, or fetch it again, and load it in the Variants step." |
+| popnei's LD filter, the LD filter of the Variants step, refused a variant that does not come after the one before it on its chromosome: its message starts "the variant ‹n› of the ones the filter by linkage disequilibrium has read" | "The LD filter of the Variants step needs the variants of each chromosome together and in the order of their positions, and panel.vcf.gz does not have them so: on chromosome 1, a variant at position 10 comes after one at position 30. Sort the file, with bcftools sort for a VCF, and load it again, or turn off the LD filter in the Variants step." A variant of a chromosome that had already ended: "…: a variant of chromosome 1, at position 10, comes after a variant of another chromosome, though variants of chromosome 1 came before that one." |
 | popnei refused a request with no population: its message starts with "`pops` names no population", which only the thresholds on the individuals can bring about; an error after the Run and not a lock before it, as the owner decided on 26 September 2026 (point B of `docs/specs/stage-3-open-points.md`) | "The thresholds of the filters of individuals leave none of the individuals of panel.nei that have a population in popcat, so no population is left. Loosen the thresholds in the Variants step." |
 | popnei refused for another reason | "popnei could not calculate the diversity: ‹its message›. Change the settings, or load the variants file again, to run it again." |
 | the browser can no longer read the variants file, `reopenFailed`, as the owner decided on 25 September 2026 (point B of `docs/specs/stage-2-open-points.md`) | "panel.nei could not be read again; it may have changed on the disk since it was picked. Load it again in the Variants step." |
@@ -1217,8 +1227,43 @@ and there refused at a diploid one, as the review of task 9.7 of the
 plan found on 26 September 2026. The option not taken was a change to
 popnei that tells the two apart.
 
-`refusalText` of the module makes the seven after the first, the message without
-its full stop as `project.md` shows popnei's messages. A VCF is refused
+`refusalText` of the module makes the eight after the first, the message without
+its full stop as `project.md` shows popnei's messages. In the row of a
+refusal for another reason, ‹its message› is popnei's sentence shown as
+text with its backquotes left out, as in every panel
+(`docs/specs/analyses/pca.md`, "Its words"): a refusal no row foresees is
+one the application did not expect, and popnei's words are then the only
+account the user has, so they are not rewritten.
+
+The words of the LD filter's refusal take from popnei's message only the
+chromosome and the two positions, which it gives as "on the chromosome
+‹name›" and "it is at the position ‹p› of its chromosome and the variant
+before it at the position ‹q› of the same chromosome", or "of a
+chromosome that had already ended" (`TheOrderOfTheVariants` of
+`crates/popnei/src/filters.rs` of popnei); a message they cannot be read
+from gives the words without the place, "…and panel.vcf.gz does not
+have them so. Sort the file, …". popnei's own sentence names the variant
+by its count among those the filter read and ends with `bcftools sort`
+between backquotes, neither of which a user of the application can use.
+The words are made in one place, `ldOrderText` of
+`src/core/analyses/words.ts`, from stage 4, given the filter's name and
+how to turn it off; `refusalWords` gives them with the LD filter of the
+Variants step, so the Count and the statistics of each individual, whose
+words are this table's, give them too, and the PCA gives them with its
+own pruning as well (`docs/specs/analyses/pca.md`, "Its words").
+
+```ts
+/** The words of popnei's refusal of a variant out of the order of its
+    chromosome by an LD filter, `filter` naming the filter, "The LD
+    filter of the Variants step", and how to turn it off, "turn off the
+    LD filter in the Variants step"; null when `message` is not that
+    refusal. Throws a defect on a project with no variants file. */
+export function ldOrderText(
+  message: string,
+  p: Project,
+  filter: { readonly name: string; readonly turnOff: string },
+): string | null;
+``` A VCF is refused
 at the first pass and not at its open for its ploidy and for a line it
 cannot read, since popnei
 opens a VCF by its header and reads its lines only in a pass
@@ -1227,7 +1272,8 @@ so the Variants step shows nothing wrong, and the panel's words are the
 ones that say what to do. popnei's refusals have
 no kind by which a program can tell them apart, so the file with no
 variant, the empty pass, the
-ploidy and a line of the VCF are recognised by the start of the message,
+ploidy, a line of the VCF and the order of the LD filter are recognised
+by the start of the message,
 the empty pass by "the pass gave no variant:" with its colon, so that
 neither of the first two is taken for the other whatever the order they
 are tested in; and the test of the runner,
@@ -1449,6 +1495,13 @@ After the review of the same day:
   after a record, a read of the metadata file, leaves the results
   removed of the notice, as one done again by a calculation does
   (above, "The cases").
+
+When the specs of stage 4 were made to agree, the same day:
+
+- `docs/specs/analyses/pca.md`: its rows of the LD filter over a file
+  not sorted by position cite `ldOrderText`, whose words are above, in
+  "Its words", and its row of any other refusal leaves popnei's
+  backquotes out, as the row here does; made there.
 
 ## Open points
 

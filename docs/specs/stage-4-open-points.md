@@ -13,10 +13,13 @@ The specs are, new: `docs/specs/analyses/pca.md`, the analysis and its
 panel; `docs/specs/charts/scatter.md`, the 2D plot, and `pca3d.md`, the
 3D one; `docs/specs/worker/files.md`, the reader of xlsx in Rust. Revised:
 `docs/specs/steps/individuals.md`, rewritten whole; `docs/specs/core/project.md`,
-`projectFile.md` and `store.md`; `docs/specs/analyses/diversity.md` and
-`filterCounts.md`; `docs/specs/worker/protocol.md`, `messages.md`,
+`projectFile.md`, `store.md`, `keys.md`, `cache.md` and
+`individualsKept.md`; `docs/specs/analyses/diversity.md` and
+`filterCounts.md`; `docs/specs/steps/variants.md`; `docs/specs/worker/protocol.md`, `messages.md`,
 `runner.md`, `client.md` and `individuals.md`; `docs/specs/charts/plot2d.md`;
-`docs/specs/shell.md`, `entry.md` and `site.md`. They are written against
+`docs/specs/shell.md`, `entry.md` and `site.md`; and, beside them,
+`docs/functionality.md`, `docs/technology.md`, `docs/build-order.md` and
+the coding skills under `.claude/skills/coding/`. They are written against
 the branch of stage 3, which is not merged yet, and against
 `docs/architecture.md` as revised the same day, whose section 1 says what
 changed.
@@ -143,8 +146,8 @@ their own and counted, and the bar of buttons above the plot.
 Each with its options and its recommendation in the spec named, which is
 the meanwhile.
 
-8. **The calculation worker started again after a PCA of more than 700
-   individuals.** A PCA grows the memory of the worker by about 49 bytes
+8. **The calculation worker started again after a PCA or a PCoA of more
+   than 700 individuals.** A PCA grows the memory of the worker by about 49 bytes
    per pair of individuals, 662 MB at 4,000 in node, which stays until
    the next load of the variants file: up to about 4.3 GB after a PCA of
    9,381. Recommended: start the worker again, which in stage 4 costs
@@ -192,15 +195,16 @@ the meanwhile.
    over the plot, since the highlight of a population and the table of
    the individuals reach every point, and the plot keeps its full size.
    Not taken: a strip beside the plot for the legend, which makes the
-   plot narrower, most on a phone. `scatter.md`.
+   plot narrower, most on a phone. `scatter.md`, Open 1.
 15. **A date cell of an xlsx, with or without its time.** calamine gives
    the value of a date cell and not its format, so a cell of `=NOW()`
    that Excel shows as 13/05/2024 holds the time as well. Recommended: a
-   time of exactly midnight gives the date alone, `2024-05-13`, and any
-   other time the date and the time, `2024-05-13 14:31:07`, so such a
+   time that, rounded to the millisecond, is midnight gives the date
+   alone, `2024-05-13`, and any other the date and the time,
+   `2024-05-13 14:31:07`, so such a
    cell does not match the other dates of its column and the user sees
    why in its values. Not taken: always the date and the time, which
-   writes `2024-05-13 00:00:00` for every plain date. `files.md`.
+   writes `2024-05-13 00:00:00` for every plain date. `files.md`, Open 2.
 
 ## Choices of a spec the owner may overrule
 
@@ -260,7 +264,8 @@ meets.
 - **Every column but the first can colour the PCA**: a column of two
   values or of text by groups, a column of numbers by the colours of
   viridis, which people with a colour vision deficiency can tell apart;
-  a column of text of more than 1,000 different values is not offered,
+  a column of groups, categorical or binary, of more than 1,000 different
+  values is not offered,
   since no legend could show it. A colouring that would still give more,
   after a new file, is drawn as one group with a note, and so is a PCA
   coloured by a column the new file no longer has (`pca.md`,
@@ -270,8 +275,8 @@ meets.
   (`pca.md`, `entry.md`).
 - **The warning of few variants** is raised when the PCA used fewer
   variants than there are individuals (`pca.md`).
-- **The legend** is a row of buttons over the top right corner of the
-  plot, one tab stop, the arrow keys moving between them; a press
+- **The legend** is a column of buttons over the top right corner of the
+  plot, one tab stop, the Up and Down arrow keys moving between them; a press
   highlights a population and fades the others, and a second press
   clears it. The highlight is not saved (`scatter.md`).
 - **The individuals of no population** are drawn as rings, not in a
@@ -294,6 +299,15 @@ meets.
 - **The exported legend** sits on a background, so that it can be read
   over a dense cloud of points; a faded entry of the legend fades its
   mark and not its name (`scatter.md`).
+- **The selects of the components in 3D** read "First axis", "Second
+  axis" and "Third axis, kept up", and not "Horizontal", "Vertical" and
+  "Depth", since the view turns and only the third component keeps its
+  direction (`pca.md`).
+- **A file not sorted by position under the LD filter of the Variants
+  step** is told in the same words by every calculation, the diversity,
+  the Count and the statistics of each individual as well as the PCA:
+  the chromosome and the two positions, and to sort the file or turn the
+  filter off (`diversity.md`, "Its words").
 - **A browser without WebGL 2** gets words that say so, and the 2D plot;
   three.js has needed WebGL 2 since its release r163 (`pca3d.md`).
 - **The one population is named "All individuals"**, and a project with
@@ -301,6 +315,10 @@ meets.
   metadata file loaded with no column chosen still locks the analyses
   per population until the user chooses a column or the one population
   (`project.md`, `steps/individuals.md`).
+- **A number 1 and a text `1` in one column of an xlsx are one value**,
+  compared by their text, so that a column where some cells were typed
+  as numbers and some pasted as text is not split in two
+  (`docs/specs/worker/individuals.md`, "The types of the columns").
 - **Every column but the first has a select of its type**, even when its
   values allow one type (`steps/individuals.md`).
 - **An xlsx**: the first sheet that is not hidden; a merged cell gives

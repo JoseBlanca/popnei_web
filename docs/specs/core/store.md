@@ -21,7 +21,8 @@ with the specs written beside it: the read of the individuals file given
 to `individualsRead` as the light worker gives it, the types the user
 set applied by the record of `project.ts`; and again the same day after
 the review of those specs: a result that a read gives back leaves the
-notice, and a list of individuals that keeps nobody locks without the
+notice, and so does a calculation whose key a read gives back, while one
+the notice names and a read keeps locked stays in it; and a list of individuals that keeps nobody locks without the
 statistics. The store is the one object of core that changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.
@@ -391,10 +392,22 @@ left with nothing goes.
 A change of the user leaves calculations behind, and its notice names
 them. A read of a file, the number of variants of a result among them,
 can leave one behind too, when it changes the key of an analysis whose
-calculation is in flight or locks it: no notice names that one, and no
-undo gives its key back, since the read is recorded into every project
-of the history. So the store stops it at once, when the read is
-recorded. And `startRun` stops every calculation left behind, those the
+calculation is in flight and whose key the project gave until the read,
+or locks it: no notice names that one, and no undo gives its key back,
+since the read is recorded into every project of the history. So the
+store stops it at once, when the read is recorded. A calculation the
+notice already names among those left behind is not of this kind: the
+change of the user left it behind, and a read after it that still does
+not give its key, an individuals file refused or that lacks individuals
+of the variants, keeps it in `leftBehind`, stopped as the notice says,
+unless the change is undone. The read is recorded only into the projects
+that hold its load, so the project before the change keeps the file it
+had, and an undo gives the key back. Decided on 27 September 2026, after
+the review of the specs of stage 4, as section 5 of the architecture has
+a request the project no longer asks for stopped unless the change is
+undone; the option not taken stopped it at the read, which would cost
+the user the calculation that the Undo the notice still offered was
+meant to keep (`docs/specs/analyses/pca.md`, "The cases"). And `startRun` stops every calculation left behind, those the
 notice names and any other, so that the new request never waits behind
 one. Decided here, not by the owner, on 24 September 2026, after the
 review of the store.
@@ -1305,7 +1318,14 @@ whose file is a text.
   not called, and the notice, which held nothing else, is `null`. The
   same with a cache whose bound holds one result, and a result of the
   other analysis put while the file is read, which drops the first: the
-  analysis stays among the results removed, and is `removed`.
+  analysis stays among the results removed, and is `removed`. With the
+  same analysis running instead of done, the same load: the notice
+  lists it in `leftBehind`; `individualsRead` of a table that holds every
+  individual: it is `running`, `cancel()` was not called, and the notice
+  is `null`. Again, with a table that lacks an individual of the
+  variants: it is `locked`, `cancel()` was not called and the notice
+  still lists it in `leftBehind`; `undo()`: it is `running`, and
+  `dismissNotice()` instead calls `cancel()`.
 - **A result kept to its definition**: the two fake analyses give
   results of different shapes, and the `warnings` and `checkNumbers` of
   each are called only with results of its own requests; two definitions

@@ -12,7 +12,8 @@ its last review: the tooltip placed where the pointer can reach it, a
 highlight beyond the names taken as none, a group that keeps its mark
 when it has no point, the legend a vertical list, the numbers of the
 table as `pca.md` writes them, and the round joins kept in the exported
-file; not yet approved. There is no
+file; and when the specs of stage 4 were made to agree, the legend over
+the plot as its **Open 1**; not yet approved. There is no
 code of it yet; the base it is drawn on, `src/charts/plot2d.ts`, and the
 histogram exist from stage 3. This spec gives the function of
 `src/charts/scatter.ts` that draws the individuals on two principal
@@ -56,7 +57,8 @@ user chose; a point with no value there is in **no group**, which the
 legend names "No population" or "No value". A point is
 **highlighted** when the user picked its group in the legend, and the
 others are then **faded**, drawn pale. The **legend** is the list of
-the groups beside the plot, which the screen draws; the **tooltip** is
+the groups over the top right corner of the plot, which the screen
+draws; the **tooltip** is
 the small box of text that the plot shows next to the point under the
 pointer.
 
@@ -275,7 +277,7 @@ Three reasons:
 
 The plots know nothing of React (`docs/architecture.md`, section 7), so
 what the legend shows comes from the charts as data and marks:
-`legendOf(colours)` gives the entries, each group with its name, its
+`legendOf(colours, coordinates)` gives the entries of the points drawn, each group with its name, its
 number of points and whether it is faded, the no-group last and a group
 with no point left out; `symbolPath(group)` gives the drawing of its
 mark, which the screen puts in a small SVG of its own, hidden from a
@@ -667,8 +669,9 @@ the scatter adds:
   words of `pca.md`, "Accessibility", `pcaDescription`: "Principal
   components of 200 individuals of panel.nei, PC1, 3.54% of the
   variance, across, and PC2, 3.44%, up. Coloured by population: p0, 48
-  individuals, centred at …". It describes the 2D plot, which is the one
-  the PCA opens in and exports (meanwhile, "The PCA opens in 2D" in
+  individuals, centred at …". It describes the 2D plot, the one the PCA
+  opens in, and the 3D view has a description of its own (`pca.md`,
+  "Accessibility"; meanwhile, "The PCA opens in 2D" in
   `docs/specs/stage-4-open-points.md`).
 - **A table of the individuals, drawn by the screen**, one row per
   individual with its name, its group or value and its coordinates on
@@ -971,16 +974,30 @@ Of `docs/specs/analyses/pca.md`:
   page `e2e/plots.html` draws the scatter and the 3D plot too.
 
 Each of these was made in its document on 27 September 2026, when the
-specs of stage 4 were made to agree, but those of `docs/architecture.md`
-and of `css.md`, which needs no change.
+specs of stage 4 were made to agree, `docs/architecture.md` among them,
+but that of `css.md`, which needs no change.
 
 ## Open points
 
-None of its own. The 50,000 points are the owner's decision of 26
-September 2026, and the one decimal is decided above with the numbers of
-the walking skeleton. The points of `docs/specs/stage-4-open-points.md`
-this spec leans on are the PCA opening in 2D and the drawing options
-kept out of the key of the PCA (`pca.md`).
+**Open 1: the legend over the plot hides the points under it.** The
+legend sits over the top right corner of the frame, on a background of
+the surface, and the scale fills the whole frame, so the few points
+under it can be neither seen nor pointed at. The options:
+
+- Keep it over the plot, as the owner's widget has it: the plot keeps
+  its full size, and the highlight of a population and the table of the
+  individuals reach every point.
+- A strip beside the plot for the legend: every point can be seen, and
+  the plot is narrower by the width of the legend, most on a phone.
+
+Recommendation: over the plot. Meanwhile, over the plot, as above
+(point 14 of `docs/specs/stage-4-open-points.md`).
+
+The 50,000 points are the owner's decision of 26 September 2026, and
+the one decimal is decided above with the numbers of the walking
+skeleton. The points of `docs/specs/stage-4-open-points.md` this spec
+leans on are the PCA opening in 2D and the drawing options kept out of
+the key of the PCA (`pca.md`).
 
 ## Not in this spec
 

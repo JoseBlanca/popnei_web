@@ -151,7 +151,7 @@ D3 is imported as its modules, not as the `d3` package:
 | `d3-shape` | 3.2.0 | lines, areas, symbols |
 | `d3-path` | 3.1.0 | the paths the symbols of the points are drawn into |
 | `d3-array` | 3.2.4 | `extent`, `ticks`, `bisect` |
-| `d3-format` | 3.1.2 | the numbers of the ticks and the tooltips |
+| `d3-format` | 3.1.2 | the numbers of the ticks; the tooltips of the PCA write theirs with `Intl.NumberFormat` (`docs/specs/charts/scatter.md`) |
 | `d3-zoom` | 3.0.0 | zoom and pan of the Manhattan plot, from stage 7 |
 | `d3-scale-chromatic` | 3.1.0 | viridis, for continuous colours |
 
@@ -208,7 +208,7 @@ next one.
 
 ```ts
 legend
-  .selectAll<SVGGElement, LegendEntry>("g.chart-legend-entry")
+  .selectAll<SVGGElement, LegendGroup>("g.chart-legend-entry")
   .data(entries, (d) => d.name)
   .join((enter) => {
     const g = enter.append("g").attr("class", "chart-legend-entry");
@@ -231,7 +231,7 @@ for (let i = 0; i < x.length; i++) {
   if (group[i] !== g) continue;
   const px = xScale(x[i]), py = yScale(y[i]);
   if (!Number.isFinite(px) || !Number.isFinite(py)) continue;
-  drawSymbolAt(path, symbolOf(g), SYMBOL_AREA, px, py); // d3-path with an offset
+  drawSymbolAt(path, symbolsFill[groupMark(g).symbol], SYMBOL_AREA, px, py); // d3-path with an offset
 }
 ```
 
@@ -317,9 +317,10 @@ A plot is an image to a screen reader, and has to say what it shows:
   and `<desc>`.** An SVG has the role `graphics-document` by default, and
   what screen readers do with the `<title>` and `<desc>` of it varies;
   `role="img"` with `aria-labelledby` is read the same way in every one.
-  The title names the plot, "PCA of the individuals, PC1 and PC2". The
-  description sums it up, "342 individuals in 5 populations; PC1 explains
-  12.3% of the variance and PC2 8.1%", and the screen writes it, because
+  The title names the plot, "Principal components, PC1 and PC2". The
+  description sums it up, "342 individuals in 5 populations; PC1, 3.54% of
+  the variance, across, and PC2, 3.44%, up" (`docs/specs/analyses/pca.md`,
+  "Accessibility"), and the screen writes it, because
   it knows what the numbers mean.
 - **The data are also a table.** A description cannot hold a thousand
   points. Every plot of the applications has a table beside it, which
@@ -530,8 +531,10 @@ drawer opens or a panel collapses.
 - The point under the pointer is marked with one extra element, drawn
   over the others, and `events.onHover` is called with its index or with
   `null`, so that a screen can highlight the row of the table.
-- On touch, a tap shows the tooltip of the nearest point, and a tap
-  elsewhere hides it; `pointer` events cover mouse and touch alike.
+- On touch, a tap shows the tooltip of the nearest point, and a tap on
+  the plot away from every point hides it; a tap outside the plot leaves
+  it until the next tap on the plot, which listens on its own element
+  (`docs/specs/charts/scatter.md`); `pointer` events cover mouse and touch alike.
 
 ## What SVG can draw: the budget and the thinning of the Manhattan plot
 

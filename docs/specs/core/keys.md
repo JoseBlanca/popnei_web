@@ -8,7 +8,9 @@ and a file of the filtered variants being written has a key of its own;
 this revision is approved by the owner on 26 September 2026. Revised on
 27 September 2026 for stage 4, not yet approved: the example of an
 intermediate result is the kinship of stage 7, since the variants the
-pruning of the PCA keeps are not kept. A key is the name a result is stored under in the cache: a SHA-256
+pruning of the PCA keeps are not kept; and again the same day, when
+the specs of stage 4 were made to agree: the options that change only
+how a result is drawn are in no key. A key is the name a result is stored under in the cache: a SHA-256
 hash of everything the result was calculated from, so that a result whose
 inputs changed is never shown, and a result whose inputs came back, by an
 undo or by a value set back, is found again with no calculation
@@ -45,7 +47,7 @@ depend on:
 | `popneiVersion` | the version of popnei, from the calculation worker when it starts | the store |
 | `load` | the load id of the variants file, new at every pick, and its read options | the project |
 | `filters`, `individualFilters` | the filters the analysis reads, in their fixed order, with their parameters: the thresholds on the individuals, and not the list of the individuals they keep | the project, and the definition's `filtersRead` |
-| `inputs` | what else the analysis depends on: the columns of the individuals table and the grouping it uses, its options | its `keyInputs` |
+| `inputs` | what else the analysis depends on: the columns of the individuals table and the grouping it uses, its options but those that change only how the result is drawn, as the colour, the axes and the view of the PCA (`docs/architecture.md`, section 4; `docs/specs/analyses/pca.md`) | its `keyInputs` |
 
 Every analysis of sections 5 to 8 of `docs/functionality.md` reads all the
 filters. The checks per variant and per individual of its section 3,

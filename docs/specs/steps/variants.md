@@ -23,7 +23,10 @@ Clear brings it. Revised the same day for the two thresholds of the
 individuals, with the words the section had left to the code: the line
 of each threshold beside its histogram, the reason of no individual
 kept as the step shows it, and when the counts and the line of the
-individuals that pass are left out.
+individuals that pass are left out. Revised on 27 September 2026 for
+stage 4, not yet approved: the words of a file whose read stopped
+because the calculations could not start, which now say to save the
+project before the reload (`docs/specs/core/project.md`, Open 4).
 
 The screen spec of the first step of both applications. In stage 2 the
 user picks the variants file, a VCF or a `.nei` file, sets how a VCF is

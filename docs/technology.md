@@ -204,8 +204,9 @@ once.
 
 D3 is taken as its modules, not as the `d3` package, as the owner
 decided on 24 September 2026: `d3-selection`, `d3-scale`, `d3-axis`,
-`d3-shape`, `d3-path`, `d3-array`, `d3-format`, `d3-zoom`, `d3-delaunay`
-and `d3-scale-chromatic`, each with its `@types/d3-*` for development,
+`d3-shape`, `d3-path`, `d3-array`, `d3-format`, `d3-zoom` and
+`d3-scale-chromatic`, and not `d3-delaunay`, which a loop over the
+points replaced on 27 September 2026 (`docs/specs/charts/scatter.md`), each with its `@types/d3-*` for development,
 since D3 ships no types. The `d3` package brings every module, geography
 and forces among them, and a list of the modules says in `package.json`
 what the plots use. The list and its versions are in

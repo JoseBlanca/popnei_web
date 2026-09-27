@@ -9,7 +9,10 @@ an xlsx as well as from a CSV or a TSV; the types of the columns, and
 the coding of a binary column, set by the user and kept when the file is
 read again; the file optional, with every individual in one population
 without it; and the item "All individuals in one population" among the
-choices of the populations; revised the same day after its reviews. The
+choices of the populations; revised the same day after its reviews,
+and when the specs of stage 4 were made to agree: the options of a CSV
+not shown for a file `notGiven`, and the help's Python reading the table
+from the `.xlsx` of the report. The
 code of stage 2 is in `src/ui/steps/individuals/`.
 
 The screen spec of the second step of the population genetics
@@ -158,7 +161,9 @@ column, change the separator. Changing one reads the file again."
 The decimal mark changes which columns read as numbers, and so their
 types and the types they can be given.
 
-The three are shown whenever the file is a CSV, whatever its read: a
+The three are shown whenever the file is a CSV, whatever its read, but
+for a file `notGiven`, which is loaded again rather than read with other
+options (below, "The states"): a
 refusal, "line 7 has 3 cells where the header has 4", most often comes
 from a wrong separator, and the user mends it here. They can be changed
 while a read is under way; the read of the older options is then
@@ -645,10 +650,12 @@ word of a known pair, `case` of `case` and `control`; that the types
 decide how a column colours the PCA and, in association, how it enters
 the GWAS, and not the populations; that an individual with an empty
 cell in the column of the populations belongs to no population; and,
-for Python, that the script reads the file with pandas, every column as
-text, `pandas.read_csv(path, sep=";", decimal=",", dtype=str)` or
-`pandas.read_excel(path, sheet_name=0, dtype=str)`
-(`docs/functionality.md`, section 9).
+for Python, that the script reads the table from the `.xlsx` of the
+report with pandas, every column as text, `pandas.read_excel(path,
+dtype=str, keep_default_na=False, na_values=["", "NA", "-"])`, so that
+it reads the table the application read, whatever the separator or the
+hidden sheets of the user's file (`docs/architecture.md`, section 8;
+`docs/functionality.md`, section 9).
 
 ## Accessibility
 

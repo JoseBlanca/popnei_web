@@ -17,7 +17,9 @@ source of an xlsx, with no options of a CSV, is asked for, where stage 2
 threw it as a defect; and after the review of those specs, a source
 `notGiven` of an opened project, which is not asked for, and the words
 after a worker that could not start, which say to save the project
-first. This spec gives
+first; and when the specs of stage 4 were made to agree, a read of the
+individuals file reports the options of a CSV it used, set or found.
+This spec gives
 the page of the population genetics application, `popgen.html`, and its
 entry, the code that runs once when the page opens and keeps working for
 the life of the page: it makes the store and the two workers and joins
@@ -367,7 +369,7 @@ it").
 | `opened`: the individuals and the ploidy of the variants file | `variantsRead(fileId, { kind: "read", individuals, ploidy, numVars: null })` |
 | `failed`, with `popnei`: popnei refused the file | `variantsRead(fileId, { kind: "failed", error: { kind: "popnei", message } })` |
 | `failed`, any other kind: the browser could not read the file, `reopenFailed`; the calculation worker crashed, could not start, is of another version, or a message was a defect | `variantsRead(fileId, { kind: "failed", error: { kind: "worker", error } })`, the error as the client gives it, whose words `projectNeeds` gives by its kind |
-| `read`: the individuals file read, its table, the types of its columns, and what "auto" found | `individualsRead(fileId, csv, { kind: "read", table, columns, found })` |
+| `read`: the individuals file read, its table, the types of its columns, and the options of the CSV it used, set or found | `individualsRead(fileId, csv, { kind: "read", table, columns, found })` |
 | `refused`: the reader refused the file, with the way it is wrong | `individualsRead(fileId, csv, { kind: "failed", error })` |
 | `failed`: the light worker failed | `individualsRead(fileId, csv, { kind: "failed", error: { kind: "worker", error } })` |
 | `cancelled`, of either | nothing |

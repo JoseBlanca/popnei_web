@@ -18,7 +18,10 @@ numbers, now that the user sets the types, the words of `notText`, now
 that an xlsx is read, and the two functions of the inference that core
 calls; and after the review of the specs of stage 4, the warning of a
 column of one number written in one way, which the user set continuous.
-The revision is not approved yet. The reader turns
+And when the specs of stage 4 were made to agree: the validation of a
+project file accepts no failed read, which a project file writes as
+`notGiven`, and the refusal of a files wasm not downloaded ends with no
+words of its own. The revision is not approved yet. The reader turns
 the file of the individuals, a CSV, a TSV or an xlsx, the
 metadata file of population genetics or the traits file of association,
 into the table the project holds, and infers the type of each of its
@@ -475,7 +478,8 @@ back as the result of the read, not as a failure of the request
 records it, and `src/core/project.ts` shows it as "pops.csv could not
 be read: ‹what the reader found›." and what to do: beside a Run button,
 `individualsNeeds` ends it "Load a metadata file in the Individuals
-step."; in the Individuals step, `individualsStepNeeds` ends it by what
+step.", but for `xlsxReaderNotLoaded`, whose words say what to do and
+take no end; in the Individuals step, `individualsStepNeeds` ends it by what
 mends it there (`docs/specs/core/project.md`, "What an analysis needs of
 every project"). The file is named as each application names it, "a
 metadata file" in population genetics and "a traits file" in
@@ -736,8 +740,9 @@ the `column` of `unnamedColumn` the column of the sheet, A being 1
 ("The xlsx").
 
 `src/core/project.ts` learns them in two places: the words above, in
-`individualsNeeds`, and the validation of a project file, which accepts a
-failed read of each kind with its fields.
+`individualsNeeds`, and the validation of a project file, which accepts
+none of them, since a project file writes a read that failed as
+`notGiven` (`docs/specs/core/projectFile.md`).
 
 The runner, `src/worker/filesRunner.ts`: it posts its
 `ready` as soon as it starts, and answers each `readIndividuals` by
@@ -1031,8 +1036,7 @@ its check; the name of the file of each application in the reasons;
 check of `found` when a project file is opened; and the comment of
 `CsvFound`, which says all three options.
 
-What the revision of stage 4 asks of other specs, which the orchestrator
-lists in `docs/specs/stage-4-open-points.md`:
+What the revision of stage 4 asks of other specs:
 
 - `docs/specs/worker/protocol.md`: the seven kinds of the xlsx in
   `IndividualsFileError`; and a binary `ColumnType` whose `one` and

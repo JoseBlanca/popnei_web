@@ -257,8 +257,8 @@ it changes:
   which core may now import, and saved nowhere; `Grouping` gains every
   individual in one population; a binary column holds its two values as
   text (section 2).
-- **The calculation worker is started again after a PCA of more than 700
-  individuals**, a second exception to open point 2 (section 13, point
+- **The calculation worker is started again after a PCA or a PCoA of
+  more than 700 individuals**, a second exception to open point 2 (section 13, point
   9).
 - **A file of the site fetched after a deploy**: three.js and the files
   wasm are downloaded when first needed, and a page opened before a
@@ -347,15 +347,16 @@ interface IndividualsSource {
   fileId: string;                     // the id of this load, new at every pick
   name: string;
   csv: CsvOptions | null;             // how a CSV or TSV is read; null for xlsx
-  typesSet: ColumnTypeOf[];           // the types the user set, { column, type },
+  typesSet: ColumnTypeOf[];           // the types the user set, [column, type],
                                       // kept by name when the file is read again,
                                       // and applied when the read allows them
   read:
     | { kind: "pending" }             // the light worker is reading it
     | { kind: "read"; table: IndividualsTable; columns: ColumnType[];
         found: CsvFound | null }      // how it was read; null for xlsx
-    | { kind: "notGiven" }            // named by an opened project file that was
-                                      // saved before the file was read; asked for again
+    | { kind: "notGiven" }            // named by an opened project file saved while
+                                      // the file was read or after it was refused;
+                                      // no read is asked, the user loads it again
     | { kind: "failed";
         error:
           | IndividualsFileError      // the reader refused the file
@@ -363,7 +364,8 @@ interface IndividualsSource {
 }
 
 // How a CSV or TSV is read. Each is "auto" until the user sets it; the
-// read reports what "auto" found, which the screen shows.
+// read reports the three options it used, set or found, which the
+// screen shows.
 interface CsvOptions {
   encoding: "auto" | "utf-8" | "windows-1252";
   separator: "auto" | "," | ";" | "\t";
@@ -835,8 +837,8 @@ those counts beside each filter, in the order of section 2.
   the counts, and so do the statistics of each individual, whose pass has
   the filters of the variants; an undo brings them back as it brings any
   result; the histograms of the variants, which read no filter, and the
-  PCA, which merges its own MAF
-  filter with the dataset's (`docs/specs/worker/protocol.md`), do not.
+  PCA, whose pass has its own MAF filter and pruning with the dataset's
+  (`pcaFilters` of `docs/specs/analyses/pca.md`), do not.
 - **The notice leaves the counts out.** Their key holds every filter of
   the variants, so a change of any of them takes off the counts of all of
   them, which the
@@ -952,7 +954,8 @@ The page and each worker talk through typed messages
   four numbers during a run: the bytes of the variant file that the
   current pass has read, the bytes of the file, the pass, and the passes
   of the run, which popnei's `numPassesOf` gives before the run starts, so
-  that the bar does not go from full to empty at the second pass of a PCA.
+  that the bar does not go from full to empty at the second pass of a run
+  that makes two.
   The worker passes them on to the page (section 6).
 - **Cancelling** a request that is running ends its worker and starts a
   new one. While a calculation runs inside wasm, the worker cannot read a
@@ -1150,7 +1153,7 @@ project, and the types of its columns are inferred there too. Loading it
 goes as the variant file does (section 6). The page makes a new file id
 for the load, as for the variant file (section 3), and one command puts
 an `IndividualsSource` with that id and the name in the project, pending,
-which locks what needs it with the reason "reading the file". The light
+which locks what needs it with the reason "Reading pops.csv.". The light
 worker reads it, and the store records the table and the types, or the
 error, into the source with that id and no other, as an event that is not
 a step of undo; an undo of the load removes the source. So when the user
@@ -1665,6 +1668,8 @@ src/worker/
                     calls runner.ts and posts the answers and the progress
   filesRunner.ts    the light worker, with no popnei: the individuals file,
                     the files wasm, xlsx and zip
+  xlsxCells.ts      the cells of an xlsx or its refusal, from what the files
+                    wasm gives, with no wasm in it (docs/specs/worker/files.md)
   individualsFile.ts
                     the bytes of the individuals file, read and decoded,
                     for filesRunner.ts
@@ -1683,6 +1688,7 @@ src/charts/
   hover.ts          the point nearest the pointer, and its tooltip
   project.ts        where each point of the 3D view falls on the screen,
                     with nothing of three.js (docs/specs/charts/pca3d.md)
+  pca3dError.ts     the ways the 3D view cannot be drawn, with no three.js
   export.ts         SVG and PNG
 src/ui/
   popgen.tsx        the entry of the population genetics page: it makes the
@@ -1805,10 +1811,13 @@ code, the release `js-v0.1.0-dev.2`.
   is calculated again from what the file holds now (section 3).
 - **The PCA refuses more than 9381 individuals.** The matrix of the
   individuals, its eigenvectors and the workspace of the
-  eigendecomposition take about 6 times 8 bytes per pair of individuals,
-  which at 9382 is more than the 4 GB that wasm addresses
-  (`src/pca.ts` of popnei). popnei refuses with its message, and points to
-  a program outside the browser, popnei in Python among them. It counts
+  eigendecomposition take about 6.1 times 8 bytes per pair of
+  individuals, which at 9382 is more than the 4 GB that wasm addresses
+  (`room_for_the_square_of` of `crates/popnei-js/src/pca.rs` of popnei); the PCoA of popnei's draft refuses more than
+  8,695. popnei refuses with its message, and points to a program outside
+  the browser, popnei in Python among them; the application locks the
+  analysis before its Run instead, with words of its own that say the
+  same (`docs/specs/analyses/pca.md`, "Why it cannot run"). popnei counts
   the individuals of the file and not those the filters of individuals
   keep, in `js-v0.1.0-dev.2` and on popnei's main of 27 September 2026, so
   a file of more than 9381 individuals cannot be analysed on a part of
@@ -1832,14 +1841,17 @@ code, the release `js-v0.1.0-dev.2`.
 - **The memory of wasm grows and never shrinks** (`js/popnei/README.md`
   of popnei), so the only way to give it back is to restart the worker.
   The calculation worker is restarted when the load of the variant file
-  changes (section 5); whether it is also restarted between requests is
-  open point 2.
+  changes (section 5); it is not restarted between requests, as the
+  owner settled on 26 September 2026 (section 13, point 2), but after a
+  large written file and after a large PCA (points 5 and 9).
 - **The downloads**: the wasm package of popnei, 0.71 MB gzipped
   (710.6 KB, release js-v0.1.0-dev.2, as Vite measures it), measured again
   at the release that adds the writer of the VCF and the filter of the
   regions, before anything runs, loaded by the calculation worker alone; the files wasm,
-  0.58 MB gzipped, by the light worker the first time an xlsx is read or a
-  report is written (`docs/technology.md`, section 2).
+  0.30 MB gzipped while it only reads, in stage 4, and about 0.58 MB with
+  the writing of the report from stage 6, by the light worker the first
+  time an xlsx is read or a report is written (`docs/technology.md`,
+  section 2).
 - **Picking a file again calculates everything again.** Each load of the
   variant file has a new id, so the results of an earlier load of the same
   file are not found (section 3): the user waits the time of each analysis
@@ -2017,8 +2029,9 @@ not yet decided by the owner (`docs/specs/stage-4-open-points.md`):
 
 9. **The calculation worker is started again after a PCA or a PCoA of
    more than 700 individuals**, `PCA_RESTART_INDIVIDUALS`, whose matrix
-   of the individuals then takes more than the 25 MB after which a
-   written file restarts it (point 5), so that the tab gets back the
+   of the individuals then takes about the 25 MB after which a written
+   file restarts it (point 5), 24 MB for a PCA of 700 and 28 MB for a
+   PCoA, so that the tab gets back the
    memory of wasm the analysis took: about 4.3 GB after a PCA of 9,381
    individuals. It is a second exception to point 2. What it costs in
    stage 4: reading the header of the variants file again, at most 49 ms,

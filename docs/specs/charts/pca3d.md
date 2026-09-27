@@ -11,7 +11,9 @@ of the marks, the test for WebGL and the pieces the tests call; and
 again after its last review: the zoom set on the camera within limits,
 a colouring by values as one object per step of viridis, `Pca3dError`
 in a file with no three.js, the bottom of the legend of the exported
-file, and what five presses of "Tilt down" show; not yet approved. There is no
+file, and what five presses of "Tilt down" show; and when the specs of stage
+4 were made to agree, the bounds of the zoom named, `ZOOM_MIN` and
+`ZOOM_MAX`; not yet approved. There is no
 code of it yet. This spec gives the function of `src/charts/pca3d.ts`
 that draws the individuals on three principal components with three.js,
 the library of WebGL the applications take for it
@@ -195,7 +197,7 @@ Two settings of the controls are decided here:
   fingers to have one of a single pointer). Whether the wheel
   zooms alone or with the Ctrl key held is open (**Open 1**, below).
   The zoom runs from 0.25, the cloud a quarter of its starting size, to
-  20, meanwhile, refined in the running application: the controls'
+  20, `ZOOM_MIN` and `ZOOM_MAX`, meanwhile, refined in the running application: the controls'
   `minZoom` and `maxZoom`, which bound the wheel and the pinch, and
   which the buttons keep to as well. The buttons set the camera's
   `zoom` themselves, multiplied by their factor and held within the
@@ -503,10 +505,14 @@ export interface Pca3dHandle extends ChartHandle<Pca3dData> {
   rotate(axis: TurnAxis, degrees: number): void;
   /** Looks down component 0, 1 or 2 of the data. */
   viewAlong(component: 0 | 1 | 2): void;
-  /** Multiplies the camera's zoom by `factor`, above 1 nearer, within 0.25 and 20. */
+  /** Multiplies the camera's zoom by `factor`, above 1 nearer, within ZOOM_MIN and ZOOM_MAX. */
   zoom(factor: number): void;
   resetView(): void;
 }
+
+/** The bounds of the zoom, the controls' minZoom and maxZoom and the buttons' alike. */
+export const ZOOM_MIN = 0.25;
+export const ZOOM_MAX = 20;
 
 // src/charts/pca3dError.ts, which imports nothing
 /** The browser gives no WebGL 2 context. */
@@ -819,13 +825,14 @@ group, and the outlines drawn with round joins.
   the file of three.js here, and also the files wasm, which the light
   worker loads the first time an xlsx is read, finds it gone. Nothing
   in the architecture says what the user sees then; `pca.md` gives the
-  words for the 3D view, and `docs/specs/worker/individuals.md` the same
-  advice for the files wasm, `xlsxReaderNotLoaded`.
+  words for the 3D view, and `docs/specs/worker/files.md` and
+  `docs/specs/core/project.md` the same advice for the files wasm,
+  `xlsxReaderNotLoaded`.
 
 Each of these was made in its document on 27 September 2026, when the
-specs of stage 4 were made to agree, but those of `docs/architecture.md`,
-and the line of `testing.md` on the headless engines, which waits for
-the first work package.
+specs of stage 4 were made to agree, `docs/architecture.md` among them
+(its sections 9, 11 and 13, point 10), but the line of `testing.md` on
+the headless engines, which waits for the first work package.
 
 ## Open points
 

@@ -20,7 +20,8 @@ again the same day, to agree with the specs written beside it: the
 checks of the job and the result of the principal components
 (`docs/specs/analyses/pca.md`), which make one pass, the two values of
 a binary type checked as texts, and no intermediate result before stage
-7; not approved yet. This spec gives
+7; and when the specs of stage 4 were made to agree, the wasm whose
+failure to load stops a worker named as popnei's; not approved yet. This spec gives
 `src/worker/messages.ts`: the messages the page and each of the two
 workers send each other, from the walking skeleton, the smallest
 application that goes through every part once (stage 2), on, the
@@ -405,12 +406,12 @@ export type FromRunner =
 
 /** The worker cannot go on; it closes itself after posting it. */
 export type WorkerStop =
-  | { kind: "crashed"; message: string }     // a trap, a throw outside popnei, the wasm not loaded
+  | { kind: "crashed"; message: string }     // a trap, a throw outside popnei, popnei's wasm not loaded
   | { kind: "badRequest"; message: string }; // a request that failed its check
 ```
 
 The request of the light worker, and what it sends back. The table, the
-types of the columns and what "auto" found are the types of
+types of the columns and the options of a CSV used, set or found, are the types of
 `protocol.ts`.
 
 ```ts

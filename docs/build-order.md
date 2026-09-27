@@ -91,7 +91,8 @@ order does not wait for what exists:
   polymorphic variants, as means and histograms;
 - seven distances between populations, Hudson's Fst and Jost's D among
   them, with their standard errors; Kosman distances between individuals;
-- the PCA of the genotypes and the PCoA of a distance matrix; the r² of
+- the PCA of the genotypes, and not yet the PCoA, which the owner asked
+  of popnei on 27 September 2026 (stage 4, below); the r² of
   Rogers and Huff; the kinship;
 - the GWAS of a continuous trait, linear and linear mixed, with
   covariates, its null model with the heritability; the logistic models

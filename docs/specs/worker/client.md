@@ -11,12 +11,14 @@ calculation worker after a large file written. The revision is approved by the o
 failures already had it. Revised on 27 September 2026:
 `WRITE_RESTART_BYTES` is 25 MB, set by the measurement of the write.
 Revised on 27 September 2026 for stage 4: the calculation worker is
-started again after a PCA of more than 700 individuals, as after a large
+started again after a PCA or a PCoA of more than 700 individuals, as after a large
 write, meanwhile (open point 1 of `docs/specs/analyses/pca.md`), and it
 keeps no intermediate result in stage 4; and again the same day, to
 agree with the specs written beside it: the read of an xlsx, whose
 request has no options of a CSV and whose answer no `found`, and the
-test of the restart after a write at the bound of 25 MB. The worker client is the page's one door to the two workers, the threads of the tab
+test of the restart after a write at the bound of 25 MB; and when the
+specs of stage 4 were made to agree, the restart after a large PCA
+among the exceptions of "Not in this spec". The worker client is the page's one door to the two workers, the threads of the tab
 beside the page where the files are read and the calculations run
 (`docs/architecture.md`, section 1): it starts them, keeps the `File` of
 every file the user picked, sends each worker one request at a time and
@@ -374,7 +376,7 @@ next analysis, whose filters are not the PCA's, would open the file again
 anyway (`docs/specs/worker/runner.md`, "The steps"). This is a second
 exception to the owner's decision of 26 September 2026 that the worker is
 not started again between requests (`docs/architecture.md`, section 13,
-points 2 and 5), recommended to the owner as open point 1 of
+points 2, 5 and 9), recommended to the owner as open point 1 of
 `docs/specs/analyses/pca.md` and done meanwhile.
 
 ### Crashes, defects, and every read answered
@@ -799,7 +801,8 @@ is open point 1 of `docs/specs/analyses/pca.md`, done meanwhile.
   `docs/specs/entry.md`.
 - Which calculations are cancelled and when: `docs/specs/core/store.md`.
 - Restarting the calculation worker between two requests to give back
-  the memory of wasm, other than after a large write: not done, as the
+  the memory of wasm, other than after a large write and a large PCA
+  (above): not done, as the
   owner settled on 26 September 2026 from what the walking skeleton
   measured (`docs/architecture.md`, section 13, point 2).
 - The intermediate results the calculation worker keeps: none before

@@ -44,7 +44,10 @@ set that a read cannot apply waits in `typesSet` for a read that allows
 it, and `typesLost` is worked out and not kept, with `forgetTypesLost`
 to drop those that wait; the time of `columnAllows` measured in the
 plan; and the words after a worker that could not start, which say to
-save the project before the reload.
+save the project before the reload. Revised again the same day when the
+specs of stage 4 were made to agree: the validation of a project file
+accepts no failed read of the individuals file, which `projectFile.ts`
+refuses first; and what it asked of other documents, made.
 
 The project is everything the user has set in one application: the
 variants file they loaded, the filters, the individuals file with the
@@ -1080,9 +1083,8 @@ export function individualsStepMissing(p: Project): string | null;
     Variants step takes. Load a metadata file.", so that the step says a
     variants file told by its name, `.vcf`, `.vcf.gz`, `.bcf` or `.nei`,
     in the same words (`docs/specs/steps/individuals.md`). It takes any
-    refusal but `files`, whose words until stage 4 were the message of
-    the files wasm, which could be empty; the step's one use is the
-    variants file. */
+    refusal but `files`, which the step's one use, the variants file,
+    never meets. */
 export function individualsStepRefusal(
   error: Exclude<IndividualsFileError, { readonly kind: "files" }>,
   app: AppId,
@@ -1254,10 +1256,10 @@ of the reference of an analysis among those given, once, with a key
 version that is a whole number of at least 0, its version of popnei and
 of the application, two texts, and a fingerprint of 64 lower case
 hexadecimal digits; a read of the individuals file `notGiven`, with no
-other field; a failed read of the individuals file of any kind of
-`IndividualsFileError` with its fields, the seven of an xlsx among them,
-the separator among them one of
-the three a CSV can have; `"utf-16"` among the encodings found; and the
+other field, and never `pending` or `failed`, which `projectFile.ts`
+refuses before, since this version writes them as `notGiven`
+(`docs/specs/core/projectFile.md`, rule 8 of the opening); each
+separator one of the three a CSV can have; `"utf-16"` among the encodings found; and the
 line of `undecodedLine` of what was found a whole number of at least 1,
 or `null`.
 
@@ -1623,7 +1625,7 @@ of them changes those texts and their tests, and nothing else.
    panel.nei again.", since only a new page can mend those. Both can
    come of a new version of the site deployed while the page was open,
    which removes the script a worker started again fetches
-   (`docs/architecture.md`, section 13), so the words say to save the
+   (`docs/architecture.md`, section 11, and section 13, point 10), so the words say to save the
    project first, which a reload would otherwise lose; the project file
    holds no variants file, and a metadata file not read is asked for
    again, so the last words name the file. Decided on 27 September 2026,
@@ -1690,11 +1692,11 @@ Stage 4, 27 September 2026:
   `columnTypes.ts` of the reader, for `columnAllows`.
 
 Each of these was made in its document on 27 September 2026, when the
-specs of stage 4 were made to agree, but those of `docs/architecture.md`.
+specs of stage 4 were made to agree, `docs/architecture.md` among them.
 
 After the review of the same day, made in `docs/specs/entry.md` (a
 source `notGiven` is never asked for a read, as a source read is not;
-only a pending one is), and not yet made in their documents:
+only a pending one is), and in the documents below the same day:
 
 - `docs/architecture.md`, section 2: the read without `typesLost`, and
   `typesSet` holding the types not applied as well.

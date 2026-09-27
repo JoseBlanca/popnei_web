@@ -207,16 +207,19 @@ give the principal components that go into the GWAS as covariates.
   distances between the individuals, for data with a lot of missing
   genotypes. popnei gives the distances and not yet the PCoA, which the
   owner asked of popnei on 27 September 2026 (section 11).
-- It is shown in two dimensions, the first two components, and in three,
-  drawn with WebGL, the first three, with the variance each one
-  explains. It opens in two, which is what the export, the report and a
-  screen reader's description carry, and three are one button away,
+- It is shown in two dimensions, the first two components by default,
+  and in three, drawn with WebGL, the first three by default, with the
+  variance each one explains; the user chooses the components of each
+  axis. It opens in two, which needs no WebGL and whose description tells
+  a screen reader where each population lies, and three are one button
+  away,
   recommended to the owner on 27 September 2026, meanwhile
   (`docs/specs/stage-4-open-points.md`).
 - The points are coloured by any column of the file of the individuals
   but the first, the names: a population or a metadata column, or a trait
-  in association; a column of text of more than 1,000 different values,
-  which no legend could show, is not offered.
+  in association; a column of groups, categorical or binary, of more
+  than 1,000 different values, which no legend could show, is not
+  offered.
 - Later, not in the first version: selecting a group of points with a
   lasso to assign or rename a population, which writes into the
   populations of the project.
@@ -333,8 +336,9 @@ by Python. It holds:
   reused.
 - **The file of the individuals, whole**: its rows, the types of its
   columns and, in the traits file, their roles; in population genetics,
-  the column that defines the populations and the population of each
-  individual. It is kept whole because it is small, so that a project
+  the column that defines the populations. A file that was still being
+  read, or was refused, when the project was saved is named without its
+  rows, and asked for again when the project is opened. It is kept whole because it is small, so that a project
   needs no file other than the variants, and because the populations
   edited in the application, with the lasso, are in no file of the
   user.

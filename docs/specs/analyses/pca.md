@@ -13,7 +13,12 @@ a group that keeps its mark when the filters leave it no individual, the
 highlight given to the plots only with the colouring it was pressed in,
 the refusals worded without popnei's code, the control of React Aria of
 each option, what is announced, and a metadata file loaded while the
-PCA runs. There is no code of it yet. This spec gives
+PCA runs; and when the specs of stage 4 were made to agree: the words
+of the LD filter over a file not sorted, made once with the
+diversity's; the labels of the fields of its pruning, those of the
+Variants step; the selects of the axes in 3D; one format for each
+number, the minus sign among them; and the help on the keys of the
+plots. There is no code of it yet. This spec gives
 the analysis that places the individuals of a dataset on a few axes, to
 see its structure and check the populations against it: the module
 `src/core/analyses/pca.ts`, which says what the components are calculated
@@ -719,7 +724,9 @@ alone. The warnings as comments come in stage 6 with `script.ts`.
 ### The TypeScript interface
 
 The request and the result are members of `Job` and `JobResult` of
-`src/worker/protocol.ts`:
+`src/worker/protocol.ts`, where they are written as the other jobs are,
+without `readonly` (`docs/specs/worker/protocol.md`); core reads them as
+below:
 
 ```ts
 export interface PcaJob {
@@ -925,7 +932,7 @@ colours: groups, or the values of a column"):
 The type of the column, as the user set it in the Individuals step,
 decides between groups and values, so a score from 1 to 5 set as
 categorical colours five groups. An individual whose cell is missing is
-in no group, `NO_GROUP`, or has NaN, and the legend names it "No
+in no group, `NO_COLOUR_GROUP`, or has NaN, and the legend names it "No
 population", or "No value" for another column, last, with its count; the
 scatter draws it as a ring (`scatter.md`). The groups are every group of
 the table, in the order in which each first appears in the file, as the
@@ -1164,7 +1171,7 @@ With Vitest, at the functions of the definition, on frozen projects:
   one component, `[1175, 100, null, null]`.
 - **`pcaColours`**, on the worked table of the diversity's spec, `i1 A`,
   `i2 B`, `i3 A`, `i4` with no population, the column `pop`: the groups
-  A and B, in that order, counts 2 and 1, and `i4` in `NO_GROUP`,
+  A and B, in that order, counts 2 and 1, and `i4` in `NO_COLOUR_GROUP`,
   `numNone` 1; a result of `i1`, `i2` and `i4` alone, as a filter of
   individuals gives it, the names A and B still, counts 1 and 1, so that
   B keeps its index 1; a result of `i1`, `i3` and `i4`, the names A and
@@ -1298,7 +1305,7 @@ reads "PC1 (3.54%)" and "PC2 (3.44%)" on the axes and `s000` at −0.7547,
 and sees its entry checked, an element of the role `radio` with
 `aria-checked="true"`, and the description name it; colours by
 `altitude`, sees the bar of its scale and "Coloured by altitude, from
-100 to 2,060; 3 individuals have no value." in the description, and
+100 to 2060; 3 individuals have no value." in the description, and
 back to the populations, and sees no calculation and one step of Undo
 for each; turns the pruning off, sees the plot go with its notice, runs and
 reads 7.73%; undoes and reads 3.54% again with no calculation; opens the
@@ -1339,8 +1346,10 @@ method.
   filter is stricter, a line under it: "The MAF filter of the Variants
   step, 0.9, is stricter, and is the one used."
 - **LD pruning**, a `Checkbox` "Prune variants in linkage
-  disequilibrium", on, with two `NumberField`s, "Maximum r²", 0.1, "from
-  0 to 1", and "Window, in base pairs", 50000, "from 1". When the dataset has an LD filter, the three are
+  disequilibrium", on, with two `NumberField`s labelled as those of the
+  LD filter of the Variants step, "Maximum r² with a variant kept before
+  it", 0.1, "from 0 to 1", and "Distance within which variants are
+  compared, in base pairs", 50000, "from 1". When the dataset has an LD filter, the three are
   disabled and a line says why: "The LD filter of the Variants step, r²
   at most 0.3 within 10,000 base pairs, is used, and the PCA does not
   prune again."
@@ -1352,7 +1361,7 @@ numbers from 0 to 1 of at most two decimals, the window a whole number
 from 1 to 9007199254740991, written with no comma between thousands; a
 number outside that, or with more decimals, is refused with the line of
 that step under the field, "1.5 is more than 1; the maximum r² stays
-0.1.", "0 is less than 1; the window stays 50000.", and sends nothing; a
+0.1.", "0 is less than 1; the distance stays 50000.", and sends nothing; a
 field left empty sends nothing and shows its value again. So every
 option the fields send is one `parseOptions` takes, whose ranges are
 these.
@@ -1368,7 +1377,10 @@ these.
   `ToggleButton`s of a `ToggleButtonGroup` of one selection, React
   Aria's buttons that stay pressed; the components on the axes, React
   Aria's `Select`s of PC1 to PC‹numComps›, "Horizontal axis" and
-  "Vertical axis" in 2D, and a third, "Depth axis", in 3D; "Colour the
+  "Vertical axis" in 2D, and in 3D "First axis", "Second axis" and
+  "Third axis, kept up", since the view turns and only the third
+  component keeps its direction (`docs/specs/charts/pca3d.md`, "The
+  view"); "Colour the
   points by", a `Select` of "Population" and the columns of
   `colourColumns`; and, in 3D, the `Button`s of the view of
   `docs/specs/charts/pca3d.md`, "The buttons of the bar above the plot",
@@ -1481,10 +1493,14 @@ significant digits in the tooltip of the plot, "−0.755", as
 `docs/specs/charts/scatter.md` has it, since a tooltip is read at a
 glance and the table is where the numbers are read; the percentages to
 two decimals, "3.54%"; a value of a column as `tableNumber` of
-`src/charts/plot2d.ts` gives it, up to 12 significant digits, in the
-table and in the tooltip; the centres of the groups in the description
-to one decimal; and every number of the downloaded files as `String`
-writes it. The plot is not offered as SVG or PNG in stage 4: its export is
+`src/charts/plot2d.ts` gives it, up to 12 significant digits, with no
+comma between thousands, in the table, the tooltip, the ends of the bar
+of viridis and the range of the description; the centres of the groups
+in the description to one decimal; the ticks of the axes as the base
+writes them (`docs/specs/charts/plot2d.md`, "The axes"); every negative
+number on the screen with the minus sign, "−", and not the hyphen; and
+every number of the downloaded files as `String` writes it, with the
+hyphen. The plot is not offered as SVG or PNG in stage 4: its export is
 built and tested with the scatter and the 3D view, and offered by
 buttons in stage 6, as the owner decided for every plot on 26 September
 2026 (point C of `docs/specs/stage-3-open-points.md`;
@@ -1561,8 +1577,8 @@ or "the PCoA":
 | "there are no variants to do a PCA with", and a pass has counted the file at 0 variants (`numVars` of the read of the variants file) | the words of a file with no variant, `emptySourceText` of `src/core/analyses/words.ts`: "empty.vcf has no variants, so there is no variant to do the PCA with. Load another variants file in the Variants step.", or, for a VCF read with only the passed variants, "failed.vcf has no variant with PASS or . in its FILTER column, …" |
 | the same, the variants of the file not counted or more than 0 | "No variant of panel.nei is left after the filters of the Variants step and the options of the PCA, so there is no variant to do the PCA with. Loosen the filters, or the maximum major allele frequency of the PCA; the Count button of the Variants step shows how many each filter keeps." |
 | "no variant has more than one dosage among its called genotypes" | "No variant left after the filters varies among the individuals kept, so there is nothing to do the PCA with. This happens with one individual, or a few of one line; keep more individuals with the filters of individuals in the Variants step." |
-| a message that starts "the variant ‹n› of the ones the filter by linkage disequilibrium has read", the pruning the PCA's own | "The LD pruning of the PCA needs the variants of each chromosome together and in the order of their positions, and panel.vcf.gz does not have them so: on chromosome 1, a variant at position 10 comes after one at position 30. Sort the file, with bcftools sort for a VCF, and load it again, or turn the LD pruning of the PCA off." A variant of a chromosome that had already ended: "…: a variant of chromosome 1, at position 10, comes after a variant of another chromosome, though variants of chromosome 1 came before that one." |
-| the same, the pruning the dataset's | "The LD filter of the Variants step needs …, or turn off the LD filter in the Variants step." |
+| a message that starts "the variant ‹n› of the ones the filter by linkage disequilibrium has read", the pruning the PCA's own | `ldOrderText` of `src/core/analyses/words.ts` (`docs/specs/analyses/diversity.md`, "Its words"), with the PCA's pruning: "The LD pruning of the PCA needs the variants of each chromosome together and in the order of their positions, and panel.vcf.gz does not have them so: on chromosome 1, a variant at position 10 comes after one at position 30. Sort the file, with bcftools sort for a VCF, and load it again, or turn the LD pruning of the PCA off." A variant of a chromosome that had already ended: "…: a variant of chromosome 1, at position 10, comes after a variant of another chromosome, though variants of chromosome 1 came before that one." |
+| the same, the pruning the dataset's | the diversity's row, with the LD filter of the Variants step: "The LD filter of the Variants step needs …, or turn off the LD filter in the Variants step." |
 | a genotype of another ploidy; a line of the VCF | the diversity's rows, `otherPloidyText` and the line of the VCF |
 | "the principal components of ‹n› individuals hold about", or of the PCoA "the principal coordinates of ‹n› individuals hold about", which the lock prevents | "panel.nei has 12,000 individuals, …", the words of the lock |
 | the PCoA's empty pass, "the pass gave no variant and its source holds none" or "the pass gave no variant: …" | the two rows of the empty pass above, with "the PCoA" |
@@ -1574,16 +1590,9 @@ or "the PCoA":
 | `workerFailed` below that, `reopenFailed`, `defect`, `couldNotStart`, `protocolMismatch`, `files` | the diversity's rows |
 
 The words of the LD filter's refusal take from popnei's message only
-the chromosome and the two positions, which it gives as "on the
-chromosome ‹name›" and "it is at the position ‹p› of its chromosome and
-the variant before it at the position ‹q› of the same chromosome", or
-"of a chromosome that had already ended" (`TheOrderOfTheVariants` of
-`crates/popnei/src/filters.rs` of popnei); a message they cannot be
-read from gives the words without the place, "…and panel.vcf.gz does
-not have them so. Sort the file, …". popnei's own sentence names the
-variant by its count among those the filter read and ends with
-`bcftools sort` between backquotes, neither of which a user of the
-application can use.
+the chromosome and the two positions, as the diversity's row says
+(`docs/specs/analyses/diversity.md`, "Its words"), where they are made
+once for every panel.
 
 In the row of any other refusal, ‹its message› is popnei's sentence,
 shown as text with its backquotes left out: a refusal that no row foresees is one the application
@@ -1650,6 +1659,10 @@ The help, for the drawer of stage 8:
   drawn apart; its warning gives how much was added beside the mean of
   the squared distances, and the PCA of the genotypes, which needs no
   correction, is the one to compare with.
+- How to use the plots: Escape hides the tooltip of a point; the 3D
+  view turns by dragging or with the buttons, and zooms with the wheel
+  while the Ctrl key is held, by pinching, or with the buttons
+  (`docs/specs/charts/pca3d.md`, **Open 1**).
 - In Python: `popnei.do_pca_from_variants(variants,
   transform_to_biallelic=True, num_prin_comps=0)` after the same filters,
   whose components are named `PC0`, `PC1`, … where the application
@@ -1684,7 +1697,7 @@ The help, for the drawer of stage 8:
   verified" over the populations of `panel_pops.csv`, in node with the
   release on 27 September 2026. Coloured by the values of a column, it
   says their range in place of the groups: "Coloured by altitude, from
-  100 to 2,060; 3 individuals have no value.", as `panel_meta.csv` gives.
+  100 to 2060; 3 individuals have no value.", as `panel_meta.csv` gives.
   A description cannot hold 200 points; it
   says where each group lies, which is what a user reads the plot for.
 - **The table is the keyboard's way in** to the points, which are not
@@ -1700,8 +1713,10 @@ The help, for the drawer of stage 8:
   radio buttons and each entry that of a radio button, so a screen reader
   says "p1 (68), radio button, 3 of 3", and whether it is checked, which
   is how the highlight is said. The group is named by the title of the
-  colours, "Population" or the column's name. Nothing listens for keys
-  on the whole page, where they would take the keys of the fields.
+  colours, "Population" or the column's name. The legend hears keys only
+  while it has the focus, and not on the whole page, where it would take
+  the keys of the fields; the one listener of the page is that of
+  Escape while a tooltip is shown, above.
 - **The 3D view** is turned and zoomed by its buttons, since WCAG 2.2
   asks that what a drag does can be done with single presses (success
   criterion 2.5.7) and what a pinch of two fingers does with one pointer
@@ -1749,13 +1764,13 @@ The help, for the drawer of stage 8:
 
 The layout of the bar of controls and of the legend over the plot, the
 size of the plot and of the points, how much the faded groups are
-faded, where the notes go, the step of the turns, and whether the
-options fold away once there is a result.
+faded, where the notes go, and whether the options fold away once
+there is a result. The step of the turns, 15°, is decided in
+`docs/specs/charts/pca3d.md`, whose tests rest on it.
 
 ## What this spec asks of other documents
 
-Of the specs written beside it for stage 4, which the orchestrator
-settles with their writers:
+Of the specs written beside it for stage 4:
 
 - `docs/specs/charts/scatter.md`: `createScatter` takes the x and y of
   the two components, the group of each point with the names of the
@@ -1773,30 +1788,34 @@ settles with their writers:
 - `docs/specs/worker/individuals.md`: `cellNumber`, pure, where core can
   import it, for the values of a continuous column.
 - `docs/specs/worker/messages.md`: the check of `PcaJob` and `PcaResult`,
-  the arrays with `instanceof`, `numCompsKept` a whole number from 1,
+  the arrays with `instanceof`, `numCompsKept` a whole number, its range
+  from 1 kept by core and the runner,
   `lingoesConstant` and `negativeEigenvaluesPercent` numbers for the PCoA
   and `null` for the PCA, and
-  the version of the messages raised for a new member; its line 165, "pass
-  2 of 2" of a PCA, which no run of stage 4 makes, and its lines 586–587,
-  the intermediate results with the PCA, which stage 4 does not keep.
-- `docs/specs/analyses/diversity.md`: its lines 1024–1026, a run of two
-  passes "the PCA of stage 4", which no longer holds, since the PCA asks
-  for no weights; and its lines 966–971, which ask that "Undo brings back
+  the version of the messages raised for a new member; its example of
+  "pass 2 of 2" of a PCA, which no run of stage 4 makes, and its
+  intermediate results with the PCA, which stage 4 does not keep.
+- `docs/specs/analyses/diversity.md`: its run of two passes, "the PCA of
+  stage 4", in "How it runs", which no longer holds, since the PCA asks
+  for no weights; and its words "Undo brings back the table", which ask that "Undo brings back
   the table" be checked against the cache when the PCA comes: a result of
   the PCA is at most 900 KB, and the words hold.
 - `docs/specs/core/keys.md`, "The key of an intermediate result", and
-  `docs/specs/core/cache.md`, lines 189 and 232: their example, the
+  `docs/specs/core/cache.md`, where it names an intermediate result:
+  their example, the
   variants kept by the pruning of the PCA, is not kept in stage 4; the
   kinship of stage 7 is the first intermediate result.
 - `docs/specs/shell.md`: the title "Principal components" in the notice
   and the status region.
 - `docs/specs/core/store.md`: an analysis leaves the results removed of
   the notice, and its calculation those left behind, when a read of a
-  file gives its key again, which the cases of a metadata file loaded
-  over a PCA rest on; made after the last reviews of 27 September 2026.
-- `docs/architecture.md`, section 13: a sixth point, or point 5 widened,
-  for the restart after a large PCA (**Open 1**); and section 11, the
-  times and the memory of "How it runs".
+  file gives its key again, and a calculation the notice names stays
+  among those left behind when a read keeps it locked, which the cases
+  of a metadata file loaded over a PCA rest on; made after the last
+  reviews of 27 September 2026.
+- `docs/architecture.md`, section 13: point 9, the restart after a large
+  PCA (**Open 1**); and section 11, the times and the memory of "How it
+  runs".
 - `src/core/script.ts`, stage 6: `individuals_kept`, the list of the
   individuals kept, in the script, and the call that opened the variants
   file, which the PCA writes again.
@@ -1804,8 +1823,8 @@ settles with their writers:
   variants it reads".
 
 Each of these was made in its document on 27 September 2026, when the
-specs of stage 4 were made to agree, but those of `docs/architecture.md`
-and of `src/core/script.ts`, which stage 6 writes.
+specs of stage 4 were made to agree, `docs/architecture.md` among them,
+but that of `src/core/script.ts`, which stage 6 writes.
 
 Revised by the writer of this spec, in the same session:
 `docs/specs/worker/protocol.md`, `runner.md` and `client.md`,

@@ -373,7 +373,7 @@ What each one is for here:
 | need | React Aria | notes |
 |---|---|---|
 | choose one of a few, the column of the populations, Hudson or Jost | `Select` with `Label`, `Button`, `SelectValue`, `Popover`, `ListBox` | items with `id`; `selectedKey` and `onSelectionChange` |
-| on or off, the pruning of the PCA | `Switch` | for a setting that takes effect at once |
+| on or off, a setting that takes effect at once | `Switch` | not for an option of an analysis, which takes effect at the next Run: the pruning of the PCA is a `Checkbox` (`docs/specs/analyses/pca.md`) |
 | a number with bounds, a threshold | `NumberField` | `minValue`, `maxValue`, `step`, `formatOptions`; it parses the number in the user's locale, so `0,95` works in Spanish |
 | a yes or no inside a list, the columns kept | `Checkbox`, `CheckboxGroup` | |
 | the results of one analysis, table and plot | `Tabs`, `TabList`, `Tab`, `TabPanel` | the selected tab is screen state |
