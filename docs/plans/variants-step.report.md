@@ -872,3 +872,15 @@ Firefox.
 The last screenshots are `screens/popgen-write-*` and
 `screens/popgen-variants-*`. On c70d02c: `npm test` "Tests 2006 passed
 (2006)"; the browser check "508 passed", twice.
+
+## 7. The filters of the individuals
+
+Under way. The tasks: 7.1 as da09a2a, 979c859, ab31f92 (`variants.md`
+and `shell.md`) and fa351e4. A list is read one name per line, spaces
+and tabs taken off its ends, empty lines dropped, a comma kept inside a
+name. The page redraws a list's text area after an undo, a redo, an
+opening or a Clear, since the browser's own redo inside the field
+otherwise wrote "s000s000", which nobody typed, in Chromium and WebKit.
+As at stop A, the reason under a list does not say "in the Variants
+step"; it describes its text area, and an Apply that brings a reason
+announces it.

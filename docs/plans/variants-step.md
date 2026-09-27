@@ -898,7 +898,7 @@ writes the variants of the individuals kept.
 
 **Tasks:**
 
-- [ ] 7.1 The two lists, from `variants.md`, "The two lists", their
+- [x] 7.1 The two lists, from `variants.md`, "The two lists", their
   reasons under each list and beside the disabled Write. Serves 1 and 5.
   Needs work package 6.
 - [ ] 7.2 The block "Statistics of each individual": its button and
