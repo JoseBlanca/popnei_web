@@ -70,8 +70,9 @@ What `individualsKept` gives:
 
 - **The list**, known or not. It is known when the project has no
   threshold, since the lists and the individuals of the variants file
-  are in the project, or when it has one and the statistics are given.
-  A known list is `null` when the filters remove no individual, as when
+  are in the project, or when it has one and the statistics are given,
+  or when the lists keep no individual, since a threshold can only
+  remove more: the list is then empty, with no statistics. A known list is `null` when the filters remove no individual, as when
   there is no filter of individuals, so that the job carries nothing and
   the runner puts no `filterIndividuals` on the `Variants`
   (`docs/specs/worker/runner.md`); it is empty when they keep none. It is
@@ -82,7 +83,8 @@ What `individualsKept` gives:
   Variants step shows beside each filter as it is set, with no pass
   (`docs/specs/steps/variants.md`). A number that needs the statistics
   and has none is `null`: the kept of a threshold, and the given and
-  kept of every filter after it.
+  kept of every filter after it; a threshold given no individual by the
+  lists is given and keeps 0, known.
 - **The individuals the lists keep**, `byLists`, the two lists alone,
   known from the project whatever the thresholds, for a module that must
   know before a run what the lists leave, the diversity's populations
@@ -178,6 +180,13 @@ file.
   filters keep, with a filter by heterozygosity: none is kept, whatever
   its threshold, and `keptNoneReason` gives the lock. Without that
   filter, they are kept.
+- **Lists that keep no individual, with a threshold and no
+  statistics**: a list to remove that names every individual, then the
+  missing data switch turned on. The list is known and empty, and
+  `keptNoneReason` gives the lock at once. Were it `needsStatistics`,
+  the threshold would read "Known once the statistics are calculated",
+  the writing would be offered, and a press would spend a pass of the
+  statistics before it was refused.
 - **A filter of the variants changed.** The statistics of the old
   filters are under another key, so the list is `needsStatistics` again
   until a new pass; the lists' counts stay known.
@@ -207,8 +216,10 @@ With Vitest, at the two functions, on frozen projects:
   filters of individuals keep none of the 5 individuals of panel.nei.
   Loosen them in the Variants step."; with a threshold and no
   statistics, `needsStatistics`, the lists' counts given and the
-  threshold's `null`; statistics of another order of the individuals, a
-  defect.
+  threshold's `null`; with remove `[a, b, c, d, e]`, missing data 0.2
+  and no statistics, the list empty, the counts remove 5 to 0 and
+  missing data 0 to 0, and the reason of the lock; statistics of another
+  order of the individuals, a defect.
 - **popnei's numbers**: the same function, given the statistics that
   popnei's release gives on `panel.nei` with the missing data filter at
   0.05, gives the 125, 48 and 119 individuals above, which the
