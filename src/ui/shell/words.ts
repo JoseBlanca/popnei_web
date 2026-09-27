@@ -5,8 +5,11 @@
  * Pure functions of the state, so that a test in node checks them; the
  * shell draws them, and the entry announces what `announcementsOf` gives
  * at every change of the store. An analysis is named by the title of its
- * panel, which the caller gives as `title`, so that these words need no
- * component.
+ * panel, and placed in the step it is shown in, by what the caller gives
+ * as `ShellWords`, so that these words need no component. From stage 3
+ * they take in the checks of the Variants step, the individuals and the
+ * variants the filters keep, and the writing of the filtered variants as
+ * a file.
  */
 
 import {
@@ -14,8 +17,12 @@ import {
   populationsOf,
   populationsToRun,
 } from "../../core/analyses/diversity.ts";
+import { filterCounts } from "../../core/analyses/filterCounts.ts";
 import { POPGEN_STEPS } from "../../core/apps.ts";
 import type { StepId } from "../../core/apps.ts";
+import { writtenName } from "../../core/fileNames.ts";
+import { keptNoneReason } from "../../core/individualsKept.ts";
+import type { IndividualsKept } from "../../core/individualsKept.ts";
 import {
   counted,
   escaped,
@@ -38,13 +45,23 @@ import {
   identityWarning,
   uncomparedText,
 } from "../../core/projectFile.ts";
-import type { AppState, Notice, RunView } from "../../core/store.ts";
+import type {
+  AnalysisView,
+  AppState,
+  Notice,
+  RunView,
+  Warning,
+} from "../../core/store.ts";
+import { sizeText } from "../../core/writeEstimate.ts";
 import type { CsvOptions } from "../../worker/protocol.ts";
 import { capitalized, undoneOrRedone } from "../sentences.ts";
-import { sizeText } from "../steps/individuals/words.ts";
+import { sizeText as tableSizeText } from "../steps/individuals/words.ts";
+import { filtersTotalText } from "../steps/variants/words.ts";
+import { STEP_NAMES } from "./steps.ts";
 
 /** The state of a step in the stepper: the first four are those of
-    Variants and Individuals, the others, with done, those of Analyses. */
+    Variants and Individuals, the others, with done, those of Analyses;
+    from stage 3 Variants takes running, removed and failed too. */
 export type StepStatus =
   | "todo"
   | "reading"
@@ -67,58 +84,125 @@ export interface StepState {
   readonly reason: string | null;
 }
 
+/**
+ * What the words of the shell need of the application, beyond the state:
+ * the title of an analysis's panel, from `src/ui/analyses/panels.ts`; the
+ * step it is shown in, from `src/core/apps.ts`; and the variants the
+ * filters keep, from the result of the Counts of the filters when it is
+ * done. The name and the size of the written file are core's,
+ * `writtenName` and `sizeText`, which these words call themselves.
+ */
+export interface ShellWords<R> {
+  /** The title of the panel of the analysis `id`, "Diversity". */
+  title(id: AnalysisId): string;
+  /** The step the analysis `id` is shown in. */
+  stepOf(id: AnalysisId): StepId;
+  /** The variants that pass the filters, `passStats.numVars` of the
+      Counts of the filters in the state done, or `null` when they are
+      not done. */
+  variantsKept(s: AppState<R, unknown>): number | null;
+}
+
 /** What the stepper and the status region say of an analysis in the
     state `error`, "Diversity could not be calculated.". */
 function notCalculatedText(title: string): string {
   return `${title} could not be calculated.`;
 }
 
+/** What the stepper and the status region say of the writing in the
+    state `error`. */
+const NOT_WRITTEN = "The file could not be written.";
+
 /**
  * The state of each step and its reason, in the order of the steps, by
  * the table of the stepper: the first row of its step whose condition
- * holds. The states of the Analyses step are taken from the states the
- * store gives each analysis.
+ * holds. The Analyses step takes the states the store gives the analyses
+ * `w` shows in it; the Variants step, after those of its file, takes the
+ * states of the checks, the analyses `w` shows in it, and of the writing.
  */
 export function stepStates<R>(
-  s: AppState<R>,
-  title: (id: AnalysisId) => string,
+  s: AppState<R, unknown>,
+  w: ShellWords<R>,
 ): readonly StepState[] {
-  return POPGEN_STEPS.map((id) => stepStateOf(s, id, title));
+  return POPGEN_STEPS.map((id) => stepStateOf(s, id, w));
 }
 
 /** The state of the step `id` and its reason, as `stepStates` gives it,
     worked out for that step alone, so that a screen can select its
     state and its reason as two strings. */
 export function stepStateOf<R>(
-  s: AppState<R>,
+  s: AppState<R, unknown>,
   id: StepId,
-  title: (id: AnalysisId) => string,
+  w: ShellWords<R>,
 ): StepState {
   switch (id) {
     case "variants":
-      return { id, ...variantsState(s.project) };
+      return { id, ...variantsState(s, w) };
     case "individuals":
       return { id, ...individualsState(s.project) };
     case "analyses":
-      return { id, ...analysesState(s, title) };
+      return { id, ...analysesState(s, w) };
   }
 }
 
 /** The state of a step without its id. */
 type Status = Omit<StepState, "id">;
 
-/** The state of the Variants step. */
-function variantsState(p: Project): Status {
+/** The analyses of the state that `w` shows in the step `step`, in the
+    order of the state. */
+function analysesOfStep<R>(
+  s: AppState<R, unknown>,
+  w: ShellWords<R>,
+  step: StepId,
+): readonly AnalysisView<R>[] {
+  return s.analyses.filter((analysis) => w.stepOf(analysis.id) === step);
+}
+
+/** The state of the Variants step: its file, then the list of the
+    individuals and the individuals kept, then the checks and the
+    writing. */
+function variantsState<R>(s: AppState<R, unknown>, w: ShellWords<R>): Status {
+  const p = s.project;
   if (p.variants === null) {
     return { status: "todo", reason: askedFileText(p) ?? projectNeeds(p) };
   }
   if (p.variants.read.kind === "pending") {
     return { status: "reading", reason: projectNeeds(p) };
   }
-  const reason = projectNeeds(p) ?? individualListNeeds(p)?.reason ?? null;
-  return reason === null
-    ? { status: "done", reason: null }
-    : { status: "problem", reason };
+  const reason =
+    projectNeeds(p) ??
+    individualListNeeds(p)?.reason ??
+    keptNoneReason(p, s.individualsKept);
+  if (reason !== null) {
+    return { status: "problem", reason };
+  }
+  const checks = analysesOfStep(s, w, "variants");
+  const write = s.write;
+  // A Run of any step that waits for the statistics of each individual
+  // is a calculation of this step until they arrive.
+  const waitsForStatistics = s.analyses.some(
+    (analysis) =>
+      analysis.status.kind === "running" && analysis.status.waitsForStatistics,
+  );
+  if (
+    waitsForStatistics ||
+    write?.kind === "running" ||
+    checks.some((check) => check.status.kind === "running")
+  ) {
+    return { status: "running", reason: null };
+  }
+  const removed = s.notice?.removed ?? [];
+  if (checks.some((check) => removed.includes(check.id))) {
+    return { status: "removed", reason: null };
+  }
+  const failed = checks.find((check) => check.status.kind === "error");
+  if (failed !== undefined) {
+    return { status: "failed", reason: notCalculatedText(w.title(failed.id)) };
+  }
+  if (write?.kind === "error") {
+    return { status: "failed", reason: NOT_WRITTEN };
+  }
+  return { status: "done", reason: null };
 }
 
 /** The state of the Individuals step, of a project of population
@@ -143,13 +227,11 @@ function individualsState(p: Project): Status {
     : { status: "problem", reason: need.reason };
 }
 
-/** The state of the Analyses step, from the states of its analyses and
-    the notice. */
-function analysesState<R>(
-  s: AppState<R>,
-  title: (id: AnalysisId) => string,
-): Status {
-  const statuses = s.analyses.map((analysis) => analysis.status);
+/** The state of the Analyses step, from the states of the analyses shown
+    in it and the notice. */
+function analysesState<R>(s: AppState<R, unknown>, w: ShellWords<R>): Status {
+  const inStep = analysesOfStep(s, w, "analyses");
+  const statuses = inStep.map((analysis) => analysis.status);
   const first = statuses[0];
   if (statuses.every((status) => status.kind === "locked")) {
     return {
@@ -160,14 +242,13 @@ function analysesState<R>(
   if (statuses.some((status) => status.kind === "running")) {
     return { status: "running", reason: null };
   }
-  if (s.notice !== null && s.notice.removed.length > 0) {
+  const removed = s.notice?.removed ?? [];
+  if (inStep.some((analysis) => removed.includes(analysis.id))) {
     return { status: "removed", reason: null };
   }
-  const failed = s.analyses.find(
-    (analysis) => analysis.status.kind === "error",
-  );
+  const failed = inStep.find((analysis) => analysis.status.kind === "error");
   if (failed !== undefined) {
-    return { status: "failed", reason: notCalculatedText(title(failed.id)) };
+    return { status: "failed", reason: notCalculatedText(w.title(failed.id)) };
   }
   const allDone = statuses.every(
     (status) => status.kind === "locked" || status.kind === "done",
@@ -176,19 +257,33 @@ function analysesState<R>(
 }
 
 /**
- * The summary line, what the analyses would be run on: the variants file,
- * the filters and the metadata file, joined by " · ", "panel.nei · 200
- * individuals · 1,200 variants · 1 filter · 3 populations by pop". The
- * variants the filters keep are not in it, which the walking skeleton
- * does not know (the shell spec, Open 1): the line gives the variants of
- * the file once a calculation has counted them.
+ * The summary line, what the analyses would be run on: the variants file
+ * with the individuals and the variants the filters keep, the filters and
+ * the metadata file, joined by " · ", "panel.nei · 114 of 200 individuals
+ * kept · 1,128 of 1,200 variants kept · 5 filters · 3 populations by pop".
+ * `kept` is `individualsKept` of the state; `variantsKept` the variants
+ * the Counts of the filters as they are found to pass them, or `null`
+ * when the filters are not counted, and the line then gives the variants
+ * of the file once a calculation has counted them.
  */
-export function summaryLine(p: Project): string {
-  return [variantsPart(p), filtersPart(p), metadataPart(p)].join(" · ");
+export function summaryLine(
+  p: Project,
+  kept: IndividualsKept | null,
+  variantsKept: number | null,
+): string {
+  return [
+    variantsPart(p, kept, variantsKept),
+    filtersPart(p),
+    metadataPart(p),
+  ].join(" · ");
 }
 
 /** The part of the summary line on the variants file. */
-function variantsPart(p: Project): string {
+function variantsPart(
+  p: Project,
+  kept: IndividualsKept | null,
+  variantsKept: number | null,
+): string {
   const variants: VariantSource | null = p.variants;
   if (variants === null) {
     return p.reference === null
@@ -203,11 +298,39 @@ function variantsPart(p: Project): string {
     case "failed":
       return `${name} could not be read`;
     case "read": {
-      const parts = [name, counted(read.individuals.length, "individual")];
+      const parts = [name, individualsPart(read.individuals.length, kept)];
       if (read.numVars !== null) {
-        parts.push(counted(read.numVars, "variant"));
+        parts.push(
+          variantsKept === null || p.filters.length === 0
+            ? counted(read.numVars, "variant")
+            : `${grouped(variantsKept)} of ${counted(read.numVars, "variant")} kept`,
+        );
       }
       return parts.join(" · ");
+    }
+  }
+}
+
+/** The part of the summary line on the individuals of the variants file,
+    `numIndividuals` of them, and those the filters keep. */
+function individualsPart(
+  numIndividuals: number,
+  kept: IndividualsKept | null,
+): string {
+  const all = counted(numIndividuals, "individual");
+  const list = kept?.list;
+  if (list === undefined) {
+    return all;
+  }
+  switch (list.kind) {
+    case "needsStatistics":
+      return `${all}, how many kept not yet known`;
+    case "known": {
+      if (list.individuals === null) {
+        return all;
+      }
+      const numKept = list.individuals.length;
+      return `${numKept === 0 ? "none" : grouped(numKept)} of ${all} kept`;
     }
   }
 }
@@ -264,6 +387,10 @@ export interface NoticeText {
   readonly reverse: "undo" | "redo";
 }
 
+/** How the notice names the writing of the filtered variants among the
+    calculations stopped or left behind. */
+const THE_WRITING = "the writing of the file";
+
 /** Some analyses in words: one named by its title, with `one`; more
     counted, with `several`; `null` for none. */
 function namedOrCounted(
@@ -277,14 +404,29 @@ function namedOrCounted(
   return ids.length === 1 ? one(title(only)) : several(ids.length);
 }
 
+/** Some calculations and, when `withWriting`, the writing of the file
+    after them, joined by "and"; `null` for none. */
+function andTheWriting(
+  calculations: string | null,
+  withWriting: boolean,
+): string | null {
+  if (!withWriting) return calculations;
+  return calculations === null
+    ? THE_WRITING
+    : `${calculations} and ${THE_WRITING}`;
+}
+
 /**
- * The words of the notice, from its four parts: the results removed and
- * the calculations stopped, joined by "and"; after a command, its
- * description after them, "because …", or alone; after an undo or a redo,
- * "Undone: …" first; and the calculations left behind, a sentence of
- * their own that names the action. The sentences are joined by a full
- * stop, with none after the last: "Diversity removed because the missing
- * data filter changed", with the action Undo.
+ * The words of the notice, from its parts: the results removed and the
+ * calculations stopped, the writing of the file among them, joined by
+ * "and", or by ", and" with a comma after the stopped when they hold the
+ * writing; after a command, its description after them, "because …", or
+ * alone; after an undo or a redo, "Undone: …" first; the calculations
+ * left behind, the writing among them, a sentence of their own that names
+ * the action; and the written file discarded, a sentence after it. The
+ * sentences are joined by a full stop, with none after the last:
+ * "Diversity removed because the missing data filter changed", with the
+ * action Undo.
  */
 export function noticeText(
   n: Notice,
@@ -299,20 +441,35 @@ export function noticeText(
     (name) => `${name} removed`,
     (count) => `${counted(count, "result")} removed`,
   );
-  const stopped = namedOrCounted(
-    n.stopped,
-    title,
-    (name) => `the calculation of ${name} stopped`,
-    (count) => `${counted(count, "calculation")} stopped`,
+  const stoppedWhat = andTheWriting(
+    namedOrCounted(
+      n.stopped,
+      title,
+      (name) => `the calculation of ${name}`,
+      (count) => counted(count, "calculation"),
+    ),
+    n.writeStopped,
   );
-  const what = [removed, stopped].filter((part) => part !== null).join(" and ");
-  const leftBehind = namedOrCounted(
-    n.leftBehind,
-    title,
-    (name) =>
-      `The ongoing calculation of ${name} will be stopped unless you ${reverse} the change`,
-    (count) =>
-      `The ${grouped(count)} ongoing calculations will be stopped unless you ${reverse} the change`,
+  const stopped = stoppedWhat === null ? null : `${stoppedWhat} stopped`;
+  // The two "and"s of the removed and of a writing stopped are read
+  // apart by a comma before and after the stopped.
+  const commas = removed !== null && stopped !== null && n.writeStopped;
+  const what =
+    removed === null
+      ? (stopped ?? "")
+      : stopped === null
+        ? removed
+        : commas
+          ? `${removed}, and ${stopped}`
+          : `${removed} and ${stopped}`;
+  const leftBehindWhat = andTheWriting(
+    namedOrCounted(
+      n.leftBehind,
+      title,
+      (name) => `the ongoing calculation of ${name}`,
+      (count) => `the ${grouped(count)} ongoing calculations`,
+    ),
+    n.writeLeftBehind,
   );
   const start = undoneOrRedone(cause);
   const sentences =
@@ -321,33 +478,50 @@ export function noticeText(
           capitalized(
             what === ""
               ? cause.description
-              : `${what} because ${cause.description}`,
+              : `${what}${commas ? "," : ""} because ${cause.description}`,
           ),
         ]
       : [start, ...(what === "" ? [] : [capitalized(what)])];
-  if (leftBehind !== null) sentences.push(leftBehind);
+  if (leftBehindWhat !== null) {
+    sentences.push(
+      capitalized(
+        `${leftBehindWhat} will be stopped unless you ${reverse} the change`,
+      ),
+    );
+  }
+  if (n.writeDiscarded) {
+    sentences.push(
+      `The written file, not saved, was discarded, and ${action} does not bring it back; write it again to save it`,
+    );
+  }
   return { text: sentences.join(". "), action, reverse };
 }
 
 /**
  * The announcements of the status region made from two states of the
- * store, `before` and `after` one change, in the order of the table of
- * the status region; `[]` when none. A calculation is followed by the id
- * of its request, a read by its load id, and the read of the individuals
+ * store, `before` and `after` one change; `[]` when none. The ends of the
+ * requests come first, of the analyses and then of the writing, then
+ * their starts, so that the end of the statistics a Run waited for is
+ * said before the start of its own request; then the reads and the
+ * warning of a reopened project. A calculation is followed by the id of
+ * its request, a read by its load id, and the read of the individuals
  * file also by its options of the CSV, compared by their values, so that
  * an undo back to a load already read, an opening, a result back from the
- * cache and a calculation left behind that ends announce nothing. The
- * warning of a reopened project is followed by its load too, so that it
- * is announced when it appears or comes with another load, from any step.
+ * cache, a calculation left behind that ends, counts filled by the pass of
+ * another analysis and a write dropped after a change announce nothing.
+ * The warning of a reopened project is followed by its load too, so that
+ * it is announced when it appears or comes with another load, from any
+ * step.
  */
 export function announcementsOf<R>(
-  before: AppState<R>,
-  after: AppState<R>,
-  title: (id: AnalysisId) => string,
+  before: AppState<R, unknown>,
+  after: AppState<R, unknown>,
+  w: ShellWords<R>,
 ): readonly string[] {
   return [
-    ...startedAnnouncements(before, after, title),
-    ...endedAnnouncements(before, after, title),
+    ...endedAnnouncements(before, after, w),
+    ...writeEndedAnnouncements(before, after),
+    ...startedAnnouncements(before, after, w),
     ...variantsReadAnnouncements(before.project, after.project),
     ...individualsReadAnnouncements(before.project, after.project),
     ...identityAnnouncements(before.project, after.project),
@@ -380,8 +554,7 @@ function byRunId(runs: readonly RunView[]): ReadonlyMap<number, RunView> {
 }
 
 /** The requests of `runs` of an analysis, without those of the writing
-    of the filtered variants, whose words are not these (shell.md, "The
-    status region"). */
+    of the filtered variants, whose words are their own. */
 function ofAnalyses(
   runs: readonly RunView[],
 ): readonly (RunView & { readonly analysis: AnalysisId })[] {
@@ -391,18 +564,23 @@ function ofAnalyses(
   );
 }
 
-/** "Diversity: calculating." for each request that is new, and, in the
-    same change, the calculations left behind that went to being stopped,
-    added to the last. */
+/** "Diversity: calculating." for each request of an analysis that is
+    new, then "Writing panel.filtered.nei." for a request of the writing
+    that is new, and, in the same change, the calculations left behind
+    that went to being stopped, added to the last. */
 function startedAnnouncements<R>(
-  before: AppState<R>,
-  after: AppState<R>,
-  title: (id: AnalysisId) => string,
+  before: AppState<R, unknown>,
+  after: AppState<R, unknown>,
+  w: ShellWords<R>,
 ): readonly string[] {
   const was = byRunId(before.runs);
+  const isNew = (run: RunView): boolean => !was.has(run.runId);
   const started = ofAnalyses(after.runs)
-    .filter((run) => !was.has(run.runId))
-    .map((run) => `${title(run.analysis)}: calculating.`);
+    .filter(isNew)
+    .map((run) => `${w.title(run.analysis)}: calculating.`);
+  if (after.runs.some((run) => run.analysis === null && isNew(run))) {
+    started.push(`Writing ${escaped(writtenName(after.project))}.`);
+  }
   const now = byRunId(after.runs);
   const stopped = ofAnalyses(before.runs).filter(
     (run) =>
@@ -415,24 +593,34 @@ function startedAnnouncements<R>(
     only === undefined
       ? null
       : stopped.length === 1
-        ? `The earlier calculation of ${title(only.analysis)} was stopped.`
+        ? `The earlier calculation of ${w.title(only.analysis)} was stopped.`
         : `The ${grouped(stopped.length)} earlier calculations were stopped.`;
   return [...started, earlier === null ? last : `${last} ${earlier}`];
 }
 
-/** The end of each request that was current and left `runs`: done, with
-    its warnings and the comparison with the project file its panel shows
-    under the result, failed, or stopped. */
-function endedAnnouncements<R>(
-  before: AppState<R>,
-  after: AppState<R>,
-  title: (id: AnalysisId) => string,
-): readonly string[] {
+/** The requests of `before` that were current and are no longer in the
+    runs of `after`. */
+function endedRuns(
+  before: AppState<unknown, unknown>,
+  after: AppState<unknown, unknown>,
+): readonly RunView[] {
   const now = byRunId(after.runs);
+  return before.runs.filter((run) => run.current && !now.has(run.runId));
+}
+
+/** The end of each request of an analysis that was current and left
+    `runs`: done, with its warnings and the comparison with the project
+    file its panel shows under the result, or for the Counts of the
+    filters what they counted; failed, with the step that says why; or
+    stopped. */
+function endedAnnouncements<R>(
+  before: AppState<R, unknown>,
+  after: AppState<R, unknown>,
+  w: ShellWords<R>,
+): readonly string[] {
   const announcements: string[] = [];
-  for (const run of ofAnalyses(before.runs)) {
-    if (!run.current || now.has(run.runId)) continue;
-    const name = title(run.analysis);
+  for (const run of ofAnalyses(endedRuns(before, after))) {
+    const name = w.title(run.analysis);
     if (run.stopping) {
       announcements.push(`${name}: stopped.`);
       continue;
@@ -441,6 +629,13 @@ function endedAnnouncements<R>(
       (analysis) => analysis.id === run.analysis,
     )?.status;
     if (status?.kind === "done" && status.key === run.key) {
+      if (run.analysis === filterCounts.id) {
+        const counts = countsText(after, w, status.warnings);
+        announcements.push(
+          counts === null ? `${name}: done.` : `${name}: done. ${counts}`,
+        );
+        continue;
+      }
       const numWarnings = status.warnings.length;
       const ended =
         numWarnings === 0
@@ -455,9 +650,73 @@ function endedAnnouncements<R>(
         comparison === null ? ended : `${ended} ${comparison}`,
       );
     } else if (status?.kind === "error" && status.key === run.key) {
+      const step = STEP_NAMES[w.stepOf(run.analysis)];
       announcements.push(
-        `${notCalculatedText(name)} The Analyses step says why.`,
+        `${notCalculatedText(name)} The ${step} step says why.`,
       );
+    }
+  }
+  return announcements;
+}
+
+/** What the Counts of the filters counted, the line of the total of the
+    Variants step, or, when a filter kept none, the text of that warning
+    in its place; `null` when neither can be said. */
+function countsText<R>(
+  s: AppState<R, unknown>,
+  w: ShellWords<R>,
+  warnings: readonly Warning[],
+): string | null {
+  const keptNone = warnings.find(
+    (warning) => warning.code === "filterKeptNone",
+  );
+  if (keptNone !== undefined) {
+    return keptNone.text;
+  }
+  const numVarsKept = w.variantsKept(s);
+  return numVarsKept === null ? null : filtersTotalText(s.project, numVarsKept);
+}
+
+/** The end of a request of the writing that was current and left
+    `runs`: the file written with its size, a file of no variant, a
+    failure, or a stop. */
+function writeEndedAnnouncements(
+  before: AppState<unknown, unknown>,
+  after: AppState<unknown, unknown>,
+): readonly string[] {
+  const announcements: string[] = [];
+  const write = after.write;
+  for (const run of endedRuns(before, after)) {
+    if (run.analysis !== null) continue;
+    if (run.stopping) {
+      announcements.push("Writing the file: stopped.");
+      continue;
+    }
+    // A request that was current ends with the state of its key.
+    switch (write?.kind) {
+      case "done":
+        announcements.push(
+          `${escaped(writtenName(after.project))} is written, ${sizeText(write.written.numBytes)}; Save it in the Variants step.`,
+        );
+        break;
+      case "noVariant": {
+        const variants = after.project.variants;
+        if (variants !== null) {
+          announcements.push(
+            `The filters kept none of the variants of ${escaped(variants.name)}, so there is nothing to write.`,
+          );
+        }
+        break;
+      }
+      case "error":
+        announcements.push(`${NOT_WRITTEN} The Variants step says why.`);
+        break;
+      case "locked":
+      case "saved":
+      case "running":
+      case "ready":
+      case undefined:
+        break;
     }
   }
   return announcements;
@@ -543,7 +802,7 @@ function individualsReadAnnouncements(
     case "failed":
       return reasonOf(individualsNeeds(after));
     case "read": {
-      const text = `${escaped(now.name)} read: ${sizeText(read.table)}.`;
+      const text = `${escaped(now.name)} read: ${tableSizeText(read.table)}.`;
       const check = checkSentence(after);
       return [check === null ? text : `${text} ${check}`];
     }

@@ -198,6 +198,30 @@ export function variantsText(numVars: number | null): string {
     : counted(numVars, "variant");
 }
 
+/**
+ * The line of the total under the filters of the variants, once they are
+ * counted for the filters as they are (docs/specs/steps/variants.md, "What
+ * each filter of the variants kept"): "1,128 of the 1,200 variants of
+ * panel.nei pass the filters.", or with no filter of the variants "1,200
+ * variants in panel.nei, with no filter."; `null` while the variants of
+ * the file are not counted. The shell announces it at the end of a Count.
+ */
+export function filtersTotalText(
+  p: Project,
+  numVarsKept: number,
+): string | null {
+  const read = p.variants?.read;
+  if (p.variants === null || read?.kind !== "read" || read.numVars === null) {
+    return null;
+  }
+  const name = escaped(p.variants.name);
+  if (p.filters.length === 0) {
+    return `${counted(read.numVars, "variant")} in ${name}, with no filter.`;
+  }
+  const verb = numVarsKept === 1 ? "passes" : "pass";
+  return `${grouped(numVarsKept)} of the ${grouped(read.numVars)} variants of ${name} ${verb} the filters.`;
+}
+
 /** The words of the passed variants: "only the variants with PASS or .
     in the FILTER column", or "every variant". */
 function passedWords(onlyPassed: boolean): string {

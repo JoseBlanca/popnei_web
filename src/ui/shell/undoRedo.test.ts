@@ -78,7 +78,11 @@ function announceChanges(
   let before = store.getState();
   store.subscribe(() => {
     const after = store.getState();
-    const texts = announcementsOf(before, after, (id) => id);
+    const texts = announcementsOf(before, after, {
+      title: (id) => id,
+      stepOf: () => "analyses",
+      variantsKept: () => null,
+    });
     before = after;
     for (const text of texts) announcer.announce(text);
   });

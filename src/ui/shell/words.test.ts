@@ -23,10 +23,14 @@ import type {
   CheckVerdict,
   Notice,
   RunView,
+  Warning,
+  WriteStatus,
 } from "../../core/store.ts";
 import { identityWarning } from "../../core/projectFile.ts";
 import { deepFreeze } from "../../core/testSupport.ts";
 import type { TestDefResult } from "../../core/testSupport.ts";
+import type { IndividualsKept } from "../../core/individualsKept.ts";
+import { individualListNeeds } from "../../core/project.ts";
 import type { CsvOptions, IndividualsTable } from "../../worker/protocol.ts";
 import {
   announcementsOf,
@@ -34,15 +38,23 @@ import {
   stepStates,
   summaryLine,
 } from "./words.ts";
-import type { StepState } from "./words.ts";
+import type { ShellWords, StepState } from "./words.ts";
 
 // The two analyses of population genetics of TEST_DEFS.
 const DIVERSITY = "diversity";
 const PCA = "pca";
 
+// The three checks of the Variants step, from stage 3, by their ids.
+const STATISTICS = "individualChecks";
+const HISTOGRAMS = "variantChecks";
+const COUNTS = "filterCounts";
+
 const TITLES: ReadonlyMap<AnalysisId, string> = new Map([
   [DIVERSITY, "Diversity"],
   [PCA, "PCA"],
+  [STATISTICS, "Statistics of each individual"],
+  [HISTOGRAMS, "Histograms of the variants"],
+  [COUNTS, "Counts of the filters"],
 ]);
 
 function title(id: AnalysisId): string {
@@ -51,6 +63,26 @@ function title(id: AnalysisId): string {
     throw new Error(`popnei_web defect: no title for ${id}.`);
   }
   return found;
+}
+
+/** What the shell's words are given: the titles above, the checks in the
+    Variants step and the others in the Analyses step, and the variants
+    kept as the first number of the result of the Counts done. */
+const WORDS: ShellWords<TestDefResult> = {
+  title,
+  stepOf: (id) =>
+    [STATISTICS, HISTOGRAMS, COUNTS].includes(id) ? "variants" : "analyses",
+  variantsKept: (s) => {
+    const counts = s.analyses.find((analysis) => analysis.id === COUNTS);
+    return counts?.status.kind === "done"
+      ? (counts.status.result.numbers[0] ?? null)
+      : null;
+  },
+};
+
+/** The summary line of stage 2: no individuals kept, no counts. */
+function plainLine(p: Project): string {
+  return summaryLine(p, null, null);
 }
 
 const KEY_A: Key = keyFromWire("a".repeat(64));
@@ -225,7 +257,7 @@ function failed(key: Key): AnalysisStatus<TestDefResult> {
 
 function run(
   runId: number,
-  analysis: AnalysisId,
+  analysis: AnalysisId | null,
   key: Key,
   flags: { readonly current: boolean; readonly stopping: boolean },
 ): RunView {
@@ -291,7 +323,7 @@ function stepOf(
   s: AppState<TestDefResult>,
   id: StepState["id"],
 ): Omit<StepState, "id"> {
-  const found = stepStates(s, title).find((step) => step.id === id);
+  const found = stepStates(s, WORDS).find((step) => step.id === id);
   if (found === undefined) {
     throw new Error(`popnei_web defect: no step ${id}.`);
   }
@@ -300,7 +332,7 @@ function stepOf(
 
 describe("WS9 D1 the states of the steps", () => {
   test("the steps come in their order, each with its state", () => {
-    expect(stepStates(state({}), title)).toEqual([
+    expect(stepStates(state({}), WORDS)).toEqual([
       { id: "variants", status: "todo", reason: LOAD_VARIANTS },
       {
         id: "individuals",
@@ -506,7 +538,7 @@ const THREE_POPS = tableRead({
 
 describe("WS9 D1 the summary line", () => {
   test("the empty first project", () => {
-    expect(summaryLine(firstProject("popgen"))).toBe(
+    expect(plainLine(firstProject("popgen"))).toBe(
       "No variants file · 1 filter · no metadata file",
     );
   });
@@ -517,46 +549,46 @@ describe("WS9 D1 the summary line", () => {
       individuals: individuals(THREE_POPS),
       grouping: BY_POP,
     });
-    expect(summaryLine(p)).toBe(
+    expect(plainLine(p)).toBe(
       "panel.nei · 200 individuals · 1,200 variants · 1 filter · 3 populations by pop",
     );
   });
 
   test("no variants file, and for an opened project the file it was made with", () => {
-    expect(summaryLine(OPENED)).toBe(
+    expect(plainLine(OPENED)).toBe(
       "No variants file: the project was made with panel_2026.nei · 1 filter · no metadata file",
     );
   });
 
   test("a variants file being read", () => {
-    expect(summaryLine(project({ variants: variants(PENDING) }))).toBe(
+    expect(plainLine(project({ variants: variants(PENDING) }))).toBe(
       "Reading panel.nei · 1 filter · no metadata file",
     );
   });
 
   test("a variants file whose read failed", () => {
-    expect(summaryLine(project({ variants: variants(REFUSED) }))).toBe(
+    expect(plainLine(project({ variants: variants(REFUSED) }))).toBe(
       "panel.nei could not be read · 1 filter · no metadata file",
     );
   });
 
   test("a variants file read, its variants once a calculation has counted them", () => {
-    expect(summaryLine(project({ variants: variants(READ) }))).toBe(
+    expect(plainLine(project({ variants: variants(READ) }))).toBe(
       "panel.nei · 3 individuals · 1 filter · no metadata file",
     );
     expect(
-      summaryLine(project({ variants: variants(readOf(["i1"], 1_203_554)) })),
+      plainLine(project({ variants: variants(readOf(["i1"], 1_203_554)) })),
     ).toBe(
       "panel.nei · 1 individual · 1,203,554 variants · 1 filter · no metadata file",
     );
   });
 
   test("the filters of the variants and of the individuals, counted", () => {
-    expect(summaryLine(project({ filters: [] }))).toBe(
+    expect(plainLine(project({ filters: [] }))).toBe(
       "No variants file · no filter · no metadata file",
     );
     expect(
-      summaryLine(
+      plainLine(
         project({
           individualFilters: [
             { kind: "missing_data", maxAllowedMissingRate: 0.2 },
@@ -567,19 +599,19 @@ describe("WS9 D1 the summary line", () => {
   });
 
   test("no metadata file", () => {
-    expect(summaryLine(project({ variants: variants(READ) }))).toMatch(
+    expect(plainLine(project({ variants: variants(READ) }))).toMatch(
       / · no metadata file$/,
     );
   });
 
   test("a metadata file being read", () => {
-    expect(summaryLine(project({ individuals: individuals(PENDING) }))).toBe(
+    expect(plainLine(project({ individuals: individuals(PENDING) }))).toBe(
       "No variants file · 1 filter · reading pops.csv",
     );
   });
 
   test("a metadata file whose read failed, with individuals missing, or without the column of the populations", () => {
-    expect(summaryLine(project({ individuals: individuals(EMPTY_FILE) }))).toBe(
+    expect(plainLine(project({ individuals: individuals(EMPTY_FILE) }))).toBe(
       "No variants file · 1 filter · pops.csv could not be read",
     );
     const missing = project({
@@ -587,7 +619,7 @@ describe("WS9 D1 the summary line", () => {
       individuals: individuals(SHORT_TABLE_READ),
       grouping: BY_POP,
     });
-    expect(summaryLine(missing)).toBe(
+    expect(plainLine(missing)).toBe(
       "panel.nei · 4 individuals · 1 filter · 2 individuals missing from pops.csv",
     );
     const oneMissing = project({
@@ -595,7 +627,7 @@ describe("WS9 D1 the summary line", () => {
       individuals: individuals(SHORT_TABLE_READ),
       grouping: BY_POP,
     });
-    expect(summaryLine(oneMissing)).toBe(
+    expect(plainLine(oneMissing)).toBe(
       "panel.nei · 3 individuals · 1 filter · 1 individual missing from pops.csv",
     );
     const noSuchColumn = project({
@@ -603,7 +635,7 @@ describe("WS9 D1 the summary line", () => {
       individuals: individuals(TABLE_READ),
       grouping: { kind: "populations", column: "region" },
     });
-    expect(summaryLine(noSuchColumn)).toBe(
+    expect(plainLine(noSuchColumn)).toBe(
       "panel.nei · 3 individuals · 1 filter · column region not in pops.csv",
     );
   });
@@ -613,7 +645,7 @@ describe("WS9 D1 the summary line", () => {
       variants: variants(READ),
       individuals: individuals(TABLE_READ),
     });
-    expect(summaryLine(p)).toBe(
+    expect(plainLine(p)).toBe(
       "panel.nei · 3 individuals · 1 filter · one population",
     );
   });
@@ -635,7 +667,7 @@ describe("WS9 D1 the summary line", () => {
       individuals: individuals(withEmptyCell),
       grouping: BY_POP,
     });
-    expect(summaryLine(read)).toBe(
+    expect(plainLine(read)).toBe(
       "panel.nei · 3 individuals · 1 filter · 2 populations by pop",
     );
     const reading = project({
@@ -643,7 +675,7 @@ describe("WS9 D1 the summary line", () => {
       individuals: individuals(withEmptyCell),
       grouping: BY_POP,
     });
-    expect(summaryLine(reading)).toBe(
+    expect(plainLine(reading)).toBe(
       "Reading panel.nei · 1 filter · 3 populations by pop",
     );
   });
@@ -773,10 +805,11 @@ describe("WS9 D1 the announcements made from the state", () => {
       statuses: [running(KEY_A, 1), LOCKED],
       runs: [run(1, DIVERSITY, KEY_A, CURRENT)],
     });
-    expect(announcementsOf(before, after, title)).toEqual([
+    expect(announcementsOf(before, after, WORDS)).toEqual([
       "Diversity: calculating.",
     ]);
-    // In the order of the table: a start comes before an end.
+    // In one change the ends come before the starts, as a Run that waits
+    // for the statistics has them from stage 3.
     const ending = state({
       project: READY,
       statuses: [running(KEY_A, 1), ready(KEY_B)],
@@ -787,9 +820,9 @@ describe("WS9 D1 the announcements made from the state", () => {
       statuses: [done(KEY_A), running(KEY_B, 2)],
       runs: [run(2, PCA, KEY_B, CURRENT)],
     });
-    expect(announcementsOf(ending, endedAndStarted, title)).toEqual([
-      "PCA: calculating.",
+    expect(announcementsOf(ending, endedAndStarted, WORDS)).toEqual([
       "Diversity: done.",
+      "PCA: calculating.",
     ]);
   });
 
@@ -807,7 +840,7 @@ describe("WS9 D1 the announcements made from the state", () => {
         run(2, DIVERSITY, KEY_A, CURRENT),
       ],
     });
-    expect(announcementsOf(before, after, title)).toEqual([
+    expect(announcementsOf(before, after, WORDS)).toEqual([
       "Diversity: calculating. The earlier calculation of PCA was stopped.",
     ]);
     // A current calculation being stopped is not one left behind.
@@ -822,7 +855,7 @@ describe("WS9 D1 the announcements made from the state", () => {
         run(2, DIVERSITY, KEY_A, CURRENT),
       ],
     });
-    expect(announcementsOf(currentBefore, currentAfter, title)).toEqual([
+    expect(announcementsOf(currentBefore, currentAfter, WORDS)).toEqual([
       "Diversity: calculating.",
     ]);
     const twoBefore = state({
@@ -840,7 +873,7 @@ describe("WS9 D1 the announcements made from the state", () => {
         run(2, DIVERSITY, KEY_A, CURRENT),
       ],
     });
-    expect(announcementsOf(twoBefore, twoAfter, title)).toEqual([
+    expect(announcementsOf(twoBefore, twoAfter, WORDS)).toEqual([
       "Diversity: calculating. The 2 earlier calculations were stopped.",
     ]);
     // Two requests new in the same change: the stopped are added to the
@@ -853,7 +886,7 @@ describe("WS9 D1 the announcements made from the state", () => {
         run(3, PCA, KEY_B, CURRENT),
       ],
     });
-    expect(announcementsOf(before, twoStarted, title)).toEqual([
+    expect(announcementsOf(before, twoStarted, WORDS)).toEqual([
       "Diversity: calculating.",
       "PCA: calculating. The earlier calculation of PCA was stopped.",
     ]);
@@ -870,7 +903,7 @@ describe("WS9 D1 the announcements made from the state", () => {
       announcementsOf(
         before,
         state({ project: READY, statuses: [same, LOCKED] }),
-        title,
+        WORDS,
       ),
     ).toEqual([
       "Diversity: done, 1 warning. The same numbers as in the project file: this variants file gives the results the project was saved with.",
@@ -901,7 +934,7 @@ describe("WS9 D1 the announcements made from the state", () => {
       announcementsOf(
         { ...before, project: fromVcf },
         state({ project: fromVcf, statuses: [done(KEY_A), LOCKED] }),
-        title,
+        WORDS,
       ),
     ).toEqual([
       "Diversity: done. Not compared with the numbers of the project file: this file is a .nei file, and the project was made with a VCF. Load panel.vcf.gz in the Variants step to compare them.",
@@ -918,21 +951,21 @@ describe("WS9 D1 the announcements made from the state", () => {
       announcementsOf(
         before,
         state({ project: READY, statuses: [done(KEY_A), LOCKED] }),
-        title,
+        WORDS,
       ),
     ).toEqual(["Diversity: done."]);
     expect(
       announcementsOf(
         before,
         state({ project: READY, statuses: [done(KEY_A, 2), LOCKED] }),
-        title,
+        WORDS,
       ),
     ).toEqual(["Diversity: done, 2 warnings."]);
     expect(
       announcementsOf(
         before,
         state({ project: READY, statuses: [done(KEY_A, 1), LOCKED] }),
-        title,
+        WORDS,
       ),
     ).toEqual(["Diversity: done, 1 warning."]);
     // Done under another key is not the end of this request.
@@ -940,7 +973,7 @@ describe("WS9 D1 the announcements made from the state", () => {
       announcementsOf(
         before,
         state({ project: READY, statuses: [done(KEY_B), LOCKED] }),
-        title,
+        WORDS,
       ),
     ).toEqual([]);
   });
@@ -952,7 +985,7 @@ describe("WS9 D1 the announcements made from the state", () => {
       runs: [run(1, DIVERSITY, KEY_A, CURRENT)],
     });
     const after = state({ project: READY, statuses: [failed(KEY_A), LOCKED] });
-    expect(announcementsOf(before, after, title)).toEqual([
+    expect(announcementsOf(before, after, WORDS)).toEqual([
       "Diversity could not be calculated. The Analyses step says why.",
     ]);
     // An error under another key is not the end of this request.
@@ -960,7 +993,7 @@ describe("WS9 D1 the announcements made from the state", () => {
       project: READY,
       statuses: [failed(KEY_B), LOCKED],
     });
-    expect(announcementsOf(before, otherKey, title)).toEqual([]);
+    expect(announcementsOf(before, otherKey, WORDS)).toEqual([]);
   });
 
   test("a current request being stopped that left runs is stopped", () => {
@@ -970,7 +1003,7 @@ describe("WS9 D1 the announcements made from the state", () => {
       runs: [run(1, DIVERSITY, KEY_A, CURRENT_STOPPING)],
     });
     const after = state({ project: READY, statuses: [ready(KEY_A), LOCKED] });
-    expect(announcementsOf(before, after, title)).toEqual([
+    expect(announcementsOf(before, after, WORDS)).toEqual([
       "Diversity: stopped.",
     ]);
   });
@@ -982,7 +1015,7 @@ describe("WS9 D1 the announcements made from the state", () => {
       announcementsOf(
         state({ project: pending }),
         state({ project: read }),
-        title,
+        WORDS,
       ),
     ).toEqual(["panel.nei read: 3 individuals, ploidy 2."]);
     const withTable = project({
@@ -994,7 +1027,7 @@ describe("WS9 D1 the announcements made from the state", () => {
       announcementsOf(
         state({ project: withTable }),
         state({ project: READY }),
-        title,
+        WORDS,
       ),
     ).toEqual([
       "panel.nei read: 3 individuals, ploidy 2. All 3 individuals found.",
@@ -1015,7 +1048,7 @@ describe("WS9 D1 the announcements made from the state", () => {
         announcementsOf(
           state({ project: before }),
           state({ project: after }),
-          title,
+          WORDS,
         ),
       ).toEqual(["panel.nei read: 3 individuals, ploidy 2."]);
     }
@@ -1026,7 +1059,7 @@ describe("WS9 D1 the announcements made from the state", () => {
       announcementsOf(
         state({ project: project({ variants: variants(PENDING) }) }),
         state({ project: project({ variants: variants(REFUSED) }) }),
-        title,
+        WORDS,
       ),
     ).toEqual([
       "popnei could not read panel.nei: not a nei file. Load a variants file in the Variants step.",
@@ -1048,7 +1081,7 @@ describe("WS9 D1 the announcements made from the state", () => {
       announcementsOf(
         state({ project: pending }),
         state({ project: read }),
-        title,
+        WORDS,
       ),
     ).toEqual([
       "pops.csv read: 2 rows, 2 columns. 1 individual of panel.nei is not in pops.csv.",
@@ -1064,7 +1097,7 @@ describe("WS9 D1 the announcements made from the state", () => {
           project: { ...twoMissing, individuals: individuals(PENDING) },
         }),
         state({ project: twoMissing }),
-        title,
+        WORDS,
       ),
     ).toEqual([
       "pops.csv read: 2 rows, 2 columns. 2 individuals of panel.nei are not in pops.csv.",
@@ -1074,7 +1107,7 @@ describe("WS9 D1 the announcements made from the state", () => {
       announcementsOf(
         state({ project: project({ individuals: individuals(PENDING) }) }),
         state({ project: alone }),
-        title,
+        WORDS,
       ),
     ).toEqual(["pops.csv read: 4 rows, 2 columns."]);
   });
@@ -1084,7 +1117,7 @@ describe("WS9 D1 the announcements made from the state", () => {
       announcementsOf(
         state({ project: project({ individuals: individuals(PENDING) }) }),
         state({ project: project({ individuals: individuals(EMPTY_FILE) }) }),
-        title,
+        WORDS,
       ),
     ).toEqual([
       "pops.csv could not be read: it has no row of individuals. Load a metadata file in the Individuals step.",
@@ -1102,7 +1135,7 @@ describe("WS9 D1 the announcements made from the state", () => {
       statuses: [done(KEY_A), LOCKED],
       redo: "the missing data filter changed",
     });
-    expect(announcementsOf(before, after, title)).toEqual([]);
+    expect(announcementsOf(before, after, WORDS)).toEqual([]);
   });
 
   test("a calculation left behind that ends, by itself or stopped, announces nothing", () => {
@@ -1113,7 +1146,7 @@ describe("WS9 D1 the announcements made from the state", () => {
         statuses: [done(KEY_A), LOCKED],
         runs: [run(1, DIVERSITY, KEY_A, flags)],
       });
-      expect(announcementsOf(before, after, title)).toEqual([]);
+      expect(announcementsOf(before, after, WORDS)).toEqual([]);
     }
   });
 
@@ -1126,7 +1159,7 @@ describe("WS9 D1 the announcements made from the state", () => {
       announcementsOf(
         state({ project: before }),
         state({ project: after }),
-        title,
+        WORDS,
       ),
     ).toEqual([]);
     const tableBefore = project({
@@ -1140,7 +1173,7 @@ describe("WS9 D1 the announcements made from the state", () => {
       announcementsOf(
         state({ project: tableBefore }),
         state({ project: tableAfter }),
-        title,
+        WORDS,
       ),
     ).toEqual([]);
   });
@@ -1155,7 +1188,7 @@ describe("WS9 D1 the announcements made from the state", () => {
       project: OPENED,
       runs: [run(1, DIVERSITY, KEY_A, LEFT_BEHIND_STOPPING)],
     });
-    expect(announcementsOf(before, after, title)).toEqual([]);
+    expect(announcementsOf(before, after, WORDS)).toEqual([]);
   });
 
   test("the warning of a reopened project is announced when it appears, and when it comes with another load", () => {
@@ -1169,7 +1202,7 @@ describe("WS9 D1 the announcements made from the state", () => {
       announcementsOf(
         state({ project: OPENED }),
         state({ project: given }),
-        title,
+        WORDS,
       ),
     ).toEqual([`Warning: ${String(warning)}`]);
 
@@ -1183,7 +1216,7 @@ describe("WS9 D1 the announcements made from the state", () => {
       announcementsOf(
         state({ project: other }),
         state({ project: given }),
-        title,
+        WORDS,
       ),
     ).toEqual([`Warning: ${String(warning)}`]);
   });
@@ -1204,7 +1237,7 @@ describe("WS9 D1 the announcements made from the state", () => {
       announcementsOf(
         state({ project: pending }),
         state({ project: read }),
-        title,
+        WORDS,
       ),
     ).toEqual([
       "panel.nei read: 3 individuals, ploidy 2.",
@@ -1220,14 +1253,14 @@ describe("WS9 D1 the announcements made from the state", () => {
       announcementsOf(
         state({ project: OPENED }),
         state({ project: pending }),
-        title,
+        WORDS,
       ),
     ).toEqual([]);
     expect(
       announcementsOf(
         state({ project: pending }),
         state({ project: read }),
-        title,
+        WORDS,
       ),
     ).toEqual([
       "panel.nei read: 3 individuals, ploidy 2.",
@@ -1242,7 +1275,7 @@ describe("WS9 D1 the announcements made from the state", () => {
       announcementsOf(
         state({ project: read }),
         state({ project: unfiltered }),
-        title,
+        WORDS,
       ),
     ).toEqual([]);
   });
@@ -1256,7 +1289,7 @@ describe("WS9 D1 the announcements made from the state", () => {
       announcementsOf(
         state({ project: before }),
         state({ project: after }),
-        title,
+        WORDS,
       ),
     ).toEqual([]);
     // The same with the encoding, and with the decimal mark.
@@ -1270,9 +1303,747 @@ describe("WS9 D1 the announcements made from the state", () => {
             project: project({ individuals: individuals(PENDING, options) }),
           }),
           state({ project: after }),
-          title,
+          WORDS,
         ),
       ).toEqual([]);
     }
+  });
+});
+
+// From stage 3: the checks of the Variants step, the individuals and the
+// variants the filters keep, and the writing of the filtered variants.
+
+const KEY_S: Key = keyFromWire("c".repeat(64));
+const KEY_W: Key = keyFromWire("d".repeat(64));
+
+/** panel.nei of the examples of the specs: 200 individuals and 1,200
+    variants counted, the populations by pop, and the missing data filter
+    of the first project at 0.1. */
+const PANEL = project({
+  variants: variants(readOf(TWO_HUNDRED, 1200)),
+  individuals: individuals(THREE_POPS),
+  grouping: BY_POP,
+});
+
+const WRITE_READY: WriteStatus<unknown> = {
+  kind: "ready",
+  key: KEY_W,
+  dropped: false,
+};
+
+/** The file popnei writes of 20,000 variants of 1,000 individuals
+    (docs/specs/analyses/writeVariants.md). */
+const WRITTEN = {
+  format: "nei",
+  file: "the file",
+  numBytes: 19_161_178,
+  passStats: { numVars: 20_000, filtering: {} },
+} as const;
+
+const THE_ORDER = [STATISTICS, HISTOGRAMS, COUNTS, DIVERSITY] as const;
+
+/** A state of stage 3: `PANEL`, the three checks and the diversity in
+    the order of apps.ts, each ready unless `statuses` gives it another
+    state, the writing ready, nothing in flight and no notice, with
+    `parts` set. */
+function checksState(
+  parts: Partial<AppState<TestDefResult, unknown>> & {
+    readonly statuses?: Readonly<
+      Partial<Record<(typeof THE_ORDER)[number], AnalysisStatus<TestDefResult>>>
+    >;
+  },
+): AppState<TestDefResult, unknown> {
+  const { statuses = {}, ...rest } = parts;
+  return deepFreeze<AppState<TestDefResult, unknown>>({
+    project: PANEL,
+    undo: null,
+    redo: null,
+    popneiVersion: "0.1.0",
+    analyses: THE_ORDER.map((id) => ({
+      id,
+      status: statuses[id] ?? ready(KEY_A),
+    })),
+    runs: [],
+    notice: null,
+    individualsKept: null,
+    write: WRITE_READY,
+    ...rest,
+  });
+}
+
+/** The Counts of the filters done under `key`, `kept` variants passing
+    the filters. */
+function countsDone(
+  key: Key,
+  kept: number,
+  warnings: readonly Warning[] = [],
+): AnalysisStatus<TestDefResult> {
+  return {
+    kind: "done",
+    key,
+    result: { analysis: COUNTS, numbers: [kept] },
+    warnings,
+    check: null,
+  };
+}
+
+function waitsForStatistics(runId: number): AnalysisStatus<TestDefResult> {
+  return {
+    kind: "running",
+    key: KEY_B,
+    runId,
+    progress: null,
+    waitsForStatistics: true,
+  };
+}
+
+function writeRunning(runId: number): WriteStatus<unknown> {
+  return {
+    kind: "running",
+    key: KEY_W,
+    runId,
+    progress: null,
+    waitsForStatistics: false,
+  };
+}
+
+const WRITE_FAILED: WriteStatus<unknown> = {
+  kind: "error",
+  key: KEY_W,
+  error: { kind: "refused", message: "memory" },
+  ofStatistics: false,
+};
+
+/** The individuals kept, a known list of the first `numKept` of the 200. */
+function keptFirst(numKept: number): IndividualsKept {
+  return {
+    list: { kind: "known", individuals: TWO_HUNDRED.slice(0, numKept) },
+    byLists: TWO_HUNDRED,
+    counts: [],
+  };
+}
+
+const THRESHOLDS = [
+  { kind: "missing_data", maxAllowedMissingRate: 0.03 },
+  { kind: "obs_het", maxAllowedObsHet: 0.38 },
+] as const;
+
+describe("VS5 D2 the states of the steps of stage 3", () => {
+  test("a check running, the writing running, or a Run that waits for the statistics gives Variants Running", () => {
+    const check = checksState({
+      statuses: { [HISTOGRAMS]: running(KEY_B, 1) },
+    });
+    expect(stepStateOfState(check, "variants")).toEqual({
+      status: "running",
+      reason: null,
+    });
+    const writing = checksState({ write: writeRunning(2) });
+    expect(stepStateOfState(writing, "variants")).toEqual({
+      status: "running",
+      reason: null,
+    });
+    const waiting = checksState({
+      statuses: { [DIVERSITY]: waitsForStatistics(3) },
+    });
+    expect(stepStateOfState(waiting, "variants")).toEqual({
+      status: "running",
+      reason: null,
+    });
+  });
+
+  test("a check running leaves the Analyses step as it was", () => {
+    const doneDiversity = checksState({
+      statuses: { [STATISTICS]: running(KEY_B, 1), [DIVERSITY]: done(KEY_A) },
+    });
+    expect(stepStateOfState(doneDiversity, "analyses")).toEqual({
+      status: "done",
+      reason: null,
+    });
+    const readyDiversity = checksState({
+      statuses: { [COUNTS]: running(KEY_B, 1) },
+    });
+    expect(stepStateOfState(readyDiversity, "analyses")).toEqual({
+      status: "ready",
+      reason: null,
+    });
+  });
+
+  test("a check among the results removed gives Variants Results removed, and not the Analyses step", () => {
+    const s = checksState({
+      statuses: { [STATISTICS]: removed(KEY_B) },
+      notice: notice({ removed: [STATISTICS] }),
+    });
+    expect(stepStateOfState(s, "variants")).toEqual({
+      status: "removed",
+      reason: null,
+    });
+    expect(stepStateOfState(s, "analyses")).toEqual({
+      status: "ready",
+      reason: null,
+    });
+    // Results removed comes before Failed, and the writing in error.
+    const alsoFailed = checksState({
+      statuses: { [STATISTICS]: removed(KEY_B), [HISTOGRAMS]: failed(KEY_S) },
+      notice: notice({ removed: [STATISTICS] }),
+      write: WRITE_FAILED,
+    });
+    expect(stepStateOfState(alsoFailed, "variants")).toEqual({
+      status: "removed",
+      reason: null,
+    });
+  });
+
+  test("a check in error gives Failed with its title, the writing in error its own words, the first in the order of the step", () => {
+    const statistics = checksState({
+      statuses: { [STATISTICS]: failed(KEY_B) },
+    });
+    expect(stepStateOfState(statistics, "variants")).toEqual({
+      status: "failed",
+      reason: "Statistics of each individual could not be calculated.",
+    });
+    const writing = checksState({ write: WRITE_FAILED });
+    expect(stepStateOfState(writing, "variants")).toEqual({
+      status: "failed",
+      reason: "The file could not be written.",
+    });
+    const all = checksState({
+      statuses: { [HISTOGRAMS]: failed(KEY_B), [STATISTICS]: failed(KEY_S) },
+      write: WRITE_FAILED,
+    });
+    expect(stepStateOfState(all, "variants")).toEqual({
+      status: "failed",
+      reason: "Statistics of each individual could not be calculated.",
+    });
+  });
+
+  test("a list of individuals that names one not in the file gives Problem before a check running", () => {
+    const p = project({
+      ...PANEL,
+      individualFilters: [{ kind: "keep", individuals: ["i1", "x9"] }],
+    });
+    const reason = individualListNeeds(p)?.reason ?? null;
+    expect(reason).not.toBeNull();
+    const s = checksState({
+      project: p,
+      statuses: { [HISTOGRAMS]: running(KEY_B, 1) },
+    });
+    expect(stepStateOfState(s, "variants")).toEqual({
+      status: "problem",
+      reason,
+    });
+  });
+
+  test("thresholds that keep no individual give Problem with the words of keptNoneReason, before a check running", () => {
+    const s = checksState({
+      project: project({ ...PANEL, individualFilters: THRESHOLDS }),
+      individualsKept: keptFirst(0),
+      statuses: { [STATISTICS]: running(KEY_B, 1) },
+    });
+    expect(stepStateOfState(s, "variants")).toEqual({
+      status: "problem",
+      reason:
+        "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them in the Variants step.",
+    });
+  });
+
+  test("Variants read with nothing running, removed or failed is Done, the Counts done and a file written among it", () => {
+    expect(stepStateOfState(checksState({}), "variants")).toEqual({
+      status: "done",
+      reason: null,
+    });
+    const s = checksState({
+      statuses: { [COUNTS]: countsDone(KEY_B, 1128) },
+      write: { kind: "done", key: KEY_W, written: WRITTEN },
+    });
+    expect(stepStateOfState(s, "variants")).toEqual({
+      status: "done",
+      reason: null,
+    });
+  });
+});
+
+/** The state and reason stepStates gives the step `id` of a state of
+    stage 3. */
+function stepStateOfState(
+  s: AppState<TestDefResult, unknown>,
+  id: StepState["id"],
+): Omit<StepState, "id"> {
+  const found = stepStates(s, WORDS).find((step) => step.id === id);
+  if (found === undefined) {
+    throw new Error(`popnei_web defect: no step ${id}.`);
+  }
+  return { status: found.status, reason: found.reason };
+}
+
+/** The filters of the example of the summary line: the missing data
+    filter at 0.05, the filter by heterozygosity at 0.9 and the MAF filter
+    at 0.95, and the thresholds of the individuals at 0.03 and 0.38. */
+const FIVE_FILTERS = project({
+  ...PANEL,
+  filters: [
+    { kind: "missing_data", maxAllowedMissingRate: 0.05 },
+    { kind: "obs_het", maxAllowedObsHet: 0.9 },
+    { kind: "maf", maxAllowedMaf: 0.95 },
+  ],
+  individualFilters: THRESHOLDS,
+});
+
+/** The thresholds of the individuals at 0.03 and 0.38 and the missing
+    data filter at 0.05 (docs/specs/core/individualsKept.md,
+    filterCounts.md). */
+const THREE_FILTERS = project({
+  ...PANEL,
+  filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.05 }],
+  individualFilters: THRESHOLDS,
+});
+
+describe("VS5 D2 the summary line of stage 3", () => {
+  test("the example of the spec, with the individuals and the variants the filters keep", () => {
+    expect(summaryLine(FIVE_FILTERS, keptFirst(114), 1128)).toBe(
+      "panel.nei · 114 of 200 individuals kept · 1,128 of 1,200 variants kept · 5 filters · 3 populations by pop",
+    );
+  });
+
+  test("the thresholds of the individuals with their statistics, and the counts", () => {
+    expect(summaryLine(THREE_FILTERS, keptFirst(119), 1152)).toBe(
+      "panel.nei · 119 of 200 individuals kept · 1,152 of 1,200 variants kept · 3 filters · 3 populations by pop",
+    );
+  });
+
+  test("the thresholds of the individuals with no statistics and no counts", () => {
+    expect(
+      summaryLine(
+        THREE_FILTERS,
+        { list: { kind: "needsStatistics" }, byLists: TWO_HUNDRED, counts: [] },
+        null,
+      ),
+    ).toBe(
+      "panel.nei · 200 individuals, how many kept not yet known · 1,200 variants · 3 filters · 3 populations by pop",
+    );
+  });
+
+  test("filters of individuals that remove none, or none known, give the individuals of the file", () => {
+    const noneRemoved: IndividualsKept = {
+      list: { kind: "known", individuals: null },
+      byLists: TWO_HUNDRED,
+      counts: [],
+    };
+    expect(summaryLine(PANEL, noneRemoved, null)).toBe(
+      "panel.nei · 200 individuals · 1,200 variants · 1 filter · 3 populations by pop",
+    );
+    expect(summaryLine(PANEL, null, null)).toBe(
+      "panel.nei · 200 individuals · 1,200 variants · 1 filter · 3 populations by pop",
+    );
+  });
+
+  test("filters that keep no individual give none of them kept", () => {
+    expect(summaryLine(THREE_FILTERS, keptFirst(0), null)).toBe(
+      "panel.nei · none of 200 individuals kept · 1,200 variants · 3 filters · 3 populations by pop",
+    );
+  });
+
+  test("variants not counted yet give no part of the variants, whatever the counts", () => {
+    const notCounted = project({
+      ...PANEL,
+      variants: variants(readOf(TWO_HUNDRED, null)),
+    });
+    expect(summaryLine(notCounted, null, 1128)).toBe(
+      "panel.nei · 200 individuals · 1 filter · 3 populations by pop",
+    );
+  });
+
+  test("variants counted with no counts of the filters as they are give the variants of the file", () => {
+    expect(summaryLine(FIVE_FILTERS, keptFirst(114), null)).toBe(
+      "panel.nei · 114 of 200 individuals kept · 1,200 variants · 5 filters · 3 populations by pop",
+    );
+  });
+
+  test("counts with no filter of the variants give the variants of the file", () => {
+    const noFilter = project({ ...PANEL, filters: [] });
+    expect(summaryLine(noFilter, null, 1200)).toBe(
+      "panel.nei · 200 individuals · 1,200 variants · no filter · 3 populations by pop",
+    );
+  });
+});
+
+const MAF_CHANGED = {
+  kind: "command",
+  description: "the MAF filter changed",
+} as const;
+
+const NEW_LOAD = {
+  kind: "command",
+  description: "a new variants file was loaded",
+} as const;
+
+const DISCARDED =
+  "The written file, not saved, was discarded, and Undo does not bring it back; write it again to save it";
+
+describe("VS5 D2 the words of the notice of stage 3", () => {
+  test("the statistics of each individual removed, alone and with the diversity", () => {
+    expect(
+      noticeText(notice({ cause: MAF_CHANGED, removed: [STATISTICS] }), title)
+        .text,
+    ).toBe(
+      "Statistics of each individual removed because the MAF filter changed",
+    );
+    expect(
+      noticeText(
+        notice({ cause: MAF_CHANGED, removed: [DIVERSITY, STATISTICS] }),
+        title,
+      ).text,
+    ).toBe("2 results removed because the MAF filter changed");
+  });
+
+  test("the writing left behind alone", () => {
+    expect(
+      noticeText(notice({ cause: MAF_CHANGED, writeLeftBehind: true }), title),
+    ).toEqual({
+      text: "The MAF filter changed. The writing of the file will be stopped unless you undo the change",
+      action: "Undo",
+      reverse: "undo",
+    });
+  });
+
+  test("the writing left behind with one calculation, and with two", () => {
+    expect(
+      noticeText(
+        notice({
+          cause: MAF_CHANGED,
+          leftBehind: [DIVERSITY],
+          writeLeftBehind: true,
+        }),
+        title,
+      ).text,
+    ).toBe(
+      "The MAF filter changed. The ongoing calculation of Diversity and the writing of the file will be stopped unless you undo the change",
+    );
+    expect(
+      noticeText(
+        notice({
+          cause: MAF_CHANGED,
+          leftBehind: [DIVERSITY, STATISTICS],
+          writeLeftBehind: true,
+        }),
+        title,
+      ).text,
+    ).toBe(
+      "The MAF filter changed. The 2 ongoing calculations and the writing of the file will be stopped unless you undo the change",
+    );
+  });
+
+  test("the writing stopped with a calculation and a result removed, with the comma of its row", () => {
+    expect(
+      noticeText(
+        notice({
+          cause: NEW_LOAD,
+          removed: [STATISTICS],
+          stopped: [DIVERSITY],
+          writeStopped: true,
+        }),
+        title,
+      ).text,
+    ).toBe(
+      "Statistics of each individual removed, and the calculation of Diversity and the writing of the file stopped, because a new variants file was loaded",
+    );
+  });
+
+  test("the writing stopped alone, and after an undo with a result removed and no because", () => {
+    expect(
+      noticeText(notice({ cause: NEW_LOAD, writeStopped: true }), title).text,
+    ).toBe(
+      "The writing of the file stopped because a new variants file was loaded",
+    );
+    expect(
+      noticeText(
+        notice({
+          cause: { ...NEW_LOAD, kind: "undo" },
+          removed: [STATISTICS],
+          writeStopped: true,
+        }),
+        title,
+      ).text,
+    ).toBe(
+      "Undone: a new variants file was loaded. Statistics of each individual removed, and the writing of the file stopped",
+    );
+  });
+
+  test("the written file discarded, alone", () => {
+    expect(
+      noticeText(notice({ cause: MAF_CHANGED, writeDiscarded: true }), title),
+    ).toEqual({
+      text: `The MAF filter changed. ${DISCARDED}`,
+      action: "Undo",
+      reverse: "undo",
+    });
+  });
+
+  test("the written file discarded with a result removed", () => {
+    expect(
+      noticeText(
+        notice({
+          cause: MAF_CHANGED,
+          removed: [STATISTICS],
+          writeDiscarded: true,
+        }),
+        title,
+      ).text,
+    ).toBe(
+      `Statistics of each individual removed because the MAF filter changed. ${DISCARDED}`,
+    );
+  });
+
+  test("the written file discarded comes after the calculations left behind", () => {
+    expect(
+      noticeText(
+        notice({
+          cause: MAF_CHANGED,
+          leftBehind: [DIVERSITY],
+          writeDiscarded: true,
+        }),
+        title,
+      ).text,
+    ).toBe(
+      `The MAF filter changed. The ongoing calculation of Diversity will be stopped unless you undo the change. ${DISCARDED}`,
+    );
+  });
+
+  test("the written file discarded by an undo names Redo, the action", () => {
+    expect(
+      noticeText(
+        notice({
+          cause: { ...MAF_CHANGED, kind: "undo" },
+          writeDiscarded: true,
+        }),
+        title,
+      ),
+    ).toEqual({
+      text: "Undone: the MAF filter changed. The written file, not saved, was discarded, and Redo does not bring it back; write it again to save it",
+      action: "Redo",
+      reverse: "redo",
+    });
+  });
+});
+
+const KEPT_NONE_WARNING: Warning = {
+  code: "filterKeptNone",
+  text: "The MAF filter kept none of the 1,152 variants it was given, so the analyses and the statistics of each individual have no variant to calculate over, and a file written would hold none. Loosen it, or a filter before it.",
+};
+
+describe("VS5 D2 the announcements of stage 3", () => {
+  test("a check is named by its title as it starts and ends", () => {
+    const before = checksState({});
+    const started = checksState({
+      statuses: { [STATISTICS]: running(KEY_S, 1) },
+      runs: [run(1, STATISTICS, KEY_S, CURRENT)],
+    });
+    expect(announcementsOf(before, started, WORDS)).toEqual([
+      "Statistics of each individual: calculating.",
+    ]);
+    const ended = checksState({ statuses: { [STATISTICS]: done(KEY_S) } });
+    expect(announcementsOf(started, ended, WORDS)).toEqual([
+      "Statistics of each individual: done.",
+    ]);
+  });
+
+  test("a check that ends in error names the Variants step, which says why", () => {
+    const before = checksState({
+      statuses: { [HISTOGRAMS]: running(KEY_S, 1) },
+      runs: [run(1, HISTOGRAMS, KEY_S, CURRENT)],
+    });
+    const after = checksState({ statuses: { [HISTOGRAMS]: failed(KEY_S) } });
+    expect(announcementsOf(before, after, WORDS)).toEqual([
+      "Histograms of the variants could not be calculated. The Variants step says why.",
+    ]);
+  });
+
+  test("the end of a Count says the line of the total", () => {
+    const before = checksState({
+      project: FIVE_FILTERS,
+      statuses: { [COUNTS]: running(KEY_S, 1) },
+      runs: [run(1, COUNTS, KEY_S, CURRENT)],
+    });
+    const after = checksState({
+      project: FIVE_FILTERS,
+      statuses: { [COUNTS]: countsDone(KEY_S, 1128) },
+    });
+    expect(announcementsOf(before, after, WORDS)).toEqual([
+      "Counts of the filters: done. 1,128 of the 1,200 variants of panel.nei pass the filters.",
+    ]);
+  });
+
+  test("the end of a Count where a filter kept none says its warning in place of the total", () => {
+    const before = checksState({
+      project: FIVE_FILTERS,
+      statuses: { [COUNTS]: running(KEY_S, 1) },
+      runs: [run(1, COUNTS, KEY_S, CURRENT)],
+    });
+    const after = checksState({
+      project: FIVE_FILTERS,
+      statuses: { [COUNTS]: countsDone(KEY_S, 0, [KEPT_NONE_WARNING]) },
+    });
+    expect(announcementsOf(before, after, WORDS)).toEqual([
+      `Counts of the filters: done. ${KEPT_NONE_WARNING.text}`,
+    ]);
+  });
+
+  test("the end of a Count with no filter of the variants says the variants of the file", () => {
+    const noFilter = project({ ...PANEL, filters: [] });
+    const before = checksState({
+      project: noFilter,
+      statuses: { [COUNTS]: running(KEY_S, 1) },
+      runs: [run(1, COUNTS, KEY_S, CURRENT)],
+    });
+    const after = checksState({
+      project: noFilter,
+      statuses: { [COUNTS]: countsDone(KEY_S, 1200) },
+    });
+    expect(announcementsOf(before, after, WORDS)).toEqual([
+      "Counts of the filters: done. 1,200 variants in panel.nei, with no filter.",
+    ]);
+  });
+
+  test("a request of the writing new in runs is Writing, with the name of the file", () => {
+    const after = checksState({
+      project: FIVE_FILTERS,
+      write: writeRunning(1),
+      runs: [run(1, null, KEY_W, CURRENT)],
+    });
+    expect(
+      announcementsOf(checksState({ project: FIVE_FILTERS }), after, WORDS),
+    ).toEqual(["Writing panel.filtered.nei."]);
+  });
+
+  test("a request of the writing new in runs that stopped a calculation left behind says so", () => {
+    const before = checksState({
+      project: FIVE_FILTERS,
+      runs: [run(1, DIVERSITY, KEY_B, LEFT_BEHIND)],
+    });
+    const after = checksState({
+      project: FIVE_FILTERS,
+      write: writeRunning(2),
+      runs: [
+        run(1, DIVERSITY, KEY_B, LEFT_BEHIND_STOPPING),
+        run(2, null, KEY_W, CURRENT),
+      ],
+    });
+    expect(announcementsOf(before, after, WORDS)).toEqual([
+      "Writing panel.filtered.nei. The earlier calculation of Diversity was stopped.",
+    ]);
+  });
+
+  test("the writing that ends done says the file, its size and where to save it", () => {
+    const before = checksState({
+      project: FIVE_FILTERS,
+      write: writeRunning(1),
+      runs: [run(1, null, KEY_W, CURRENT)],
+    });
+    const after = checksState({
+      project: FIVE_FILTERS,
+      write: { kind: "done", key: KEY_W, written: WRITTEN },
+    });
+    expect(announcementsOf(before, after, WORDS)).toEqual([
+      "panel.filtered.nei is written, 19.2 MB; Save it in the Variants step.",
+    ]);
+  });
+
+  test("the writing that ends with no variant, or in error, says so", () => {
+    const before = checksState({
+      project: FIVE_FILTERS,
+      write: writeRunning(1),
+      runs: [run(1, null, KEY_W, CURRENT)],
+    });
+    const noFile = {
+      format: WRITTEN.format,
+      numBytes: WRITTEN.numBytes,
+      passStats: WRITTEN.passStats,
+    };
+    const noVariant = checksState({
+      project: FIVE_FILTERS,
+      write: { kind: "noVariant", key: KEY_W, written: noFile },
+    });
+    expect(announcementsOf(before, noVariant, WORDS)).toEqual([
+      "The filters kept none of the variants of panel.nei, so there is nothing to write.",
+    ]);
+    const failedWrite = checksState({
+      project: FIVE_FILTERS,
+      write: WRITE_FAILED,
+    });
+    expect(announcementsOf(before, failedWrite, WORDS)).toEqual([
+      "The file could not be written. The Variants step says why.",
+    ]);
+  });
+
+  test("the writing stopped says so", () => {
+    const before = checksState({
+      project: FIVE_FILTERS,
+      write: writeRunning(1),
+      runs: [run(1, null, KEY_W, CURRENT_STOPPING)],
+    });
+    const after = checksState({ project: FIVE_FILTERS });
+    expect(announcementsOf(before, after, WORDS)).toEqual([
+      "Writing the file: stopped.",
+    ]);
+  });
+
+  test("a Run that waits for the statistics: their end and the start of its own request in one change", () => {
+    const before = checksState({
+      statuses: {
+        [STATISTICS]: running(KEY_S, 1),
+        [DIVERSITY]: waitsForStatistics(1),
+      },
+      runs: [run(1, STATISTICS, KEY_S, CURRENT)],
+    });
+    const after = checksState({
+      statuses: { [STATISTICS]: done(KEY_S), [DIVERSITY]: running(KEY_B, 2) },
+      runs: [run(2, DIVERSITY, KEY_B, CURRENT)],
+    });
+    expect(announcementsOf(before, after, WORDS)).toEqual([
+      "Statistics of each individual: done.",
+      "Diversity: calculating.",
+    ]);
+    const writeAfter = checksState({
+      project: FIVE_FILTERS,
+      statuses: { [STATISTICS]: done(KEY_S) },
+      write: writeRunning(2),
+      runs: [run(2, null, KEY_W, CURRENT)],
+    });
+    expect(
+      announcementsOf({ ...before, project: FIVE_FILTERS }, writeAfter, WORDS),
+    ).toEqual([
+      "Statistics of each individual: done.",
+      "Writing panel.filtered.nei.",
+    ]);
+  });
+
+  test("counts filled by the pass of a diversity are not announced", () => {
+    const before = checksState({
+      project: FIVE_FILTERS,
+      statuses: { [DIVERSITY]: running(KEY_B, 1) },
+      runs: [run(1, DIVERSITY, KEY_B, CURRENT)],
+    });
+    const after = checksState({
+      project: FIVE_FILTERS,
+      statuses: { [DIVERSITY]: done(KEY_B), [COUNTS]: countsDone(KEY_S, 1128) },
+    });
+    expect(announcementsOf(before, after, WORDS)).toEqual(["Diversity: done."]);
+  });
+
+  test("a write dropped because it ended after a change is not announced", () => {
+    const before = checksState({
+      project: FIVE_FILTERS,
+      runs: [run(1, null, KEY_W, LEFT_BEHIND)],
+    });
+    const after = checksState({
+      project: FIVE_FILTERS,
+      write: { kind: "ready", key: KEY_B, dropped: true },
+    });
+    expect(announcementsOf(before, after, WORDS)).toEqual([]);
+    // Nor a write left behind that Close stopped.
+    const stopping = checksState({
+      project: FIVE_FILTERS,
+      runs: [run(1, null, KEY_W, LEFT_BEHIND_STOPPING)],
+    });
+    expect(announcementsOf(stopping, after, WORDS)).toEqual([]);
   });
 });

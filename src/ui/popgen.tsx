@@ -26,7 +26,7 @@ import { createClient } from "../worker/client.ts";
 import type { Client } from "../worker/client.ts";
 import type { Job, JobResult } from "../worker/protocol.ts";
 import { makeFilesWorker, makeRunnerWorker } from "../worker/start.ts";
-import { titleOf } from "./analyses/panels.ts";
+import { SHELL_WORDS } from "./analyses/panels.ts";
 import { createDefects, isResizeObserverNoise } from "./defects.ts";
 import type { Defects } from "./defects.ts";
 import { FilesProvider, createFiles } from "./files.tsx";
@@ -259,7 +259,7 @@ function announceChanges(store: Store<JobResult>, announcer: Announcer): void {
   let before = store.getState();
   store.subscribe(() => {
     const after = store.getState();
-    const texts = announcementsOf(before, after, titleOf);
+    const texts = announcementsOf(before, after, SHELL_WORDS);
     before = after;
     for (const text of texts) announcer.announce(text);
   });

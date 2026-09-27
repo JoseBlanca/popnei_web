@@ -17,8 +17,10 @@ import {
   populationsToRun,
   refusalText,
 } from "../../core/analyses/diversity.ts";
+import type { StepId } from "../../core/apps.ts";
 import type { AnalysisId, Project } from "../../core/project.ts";
 import type { JobResult } from "../../worker/protocol.ts";
+import type { ShellWords } from "../shell/words.ts";
 import { DiversityResults } from "./diversity/DiversityResults.tsx";
 import { populationsText } from "./diversity/words.ts";
 
@@ -84,3 +86,17 @@ export function panelOf(id: AnalysisId): AnalysisUi {
 export function titleOf(id: AnalysisId): string {
   return panelOf(id).title;
 }
+
+/**
+ * What the words of the shell need of the application
+ * (docs/specs/shell.md, "What it sends and reads"). Until the checks of
+ * the Variants step join the application, its one analysis, the
+ * diversity, is shown in the Analyses step and no Counts of the filters
+ * are done; task 5.2 of docs/plans/variants-step.md takes the steps from
+ * `src/core/apps.ts` and the variants kept from the Counts.
+ */
+export const SHELL_WORDS: ShellWords<JobResult> = Object.freeze({
+  title: titleOf,
+  stepOf: (): StepId => "analyses",
+  variantsKept: (): number | null => null,
+});
