@@ -30,7 +30,11 @@ population; the populations read from `src/core/project.ts`, where they
 moved from the module of the diversity; and the end of a read of the
 metadata file that lost types the user set, announced with them; and
 the title of the panel of the PCA, "Principal components", by which the
-notice and the status region name it. The screen
+notice and the status region name it; and again the same day for a
+metadata file named by an opened project and not read when it was saved,
+`notGiven` (`docs/specs/core/project.md`, "The project of an opened
+project file"), which the stepper, the summary line and the opening
+tell. The screen
 spec of what surrounds every step of the population genetics
 application, first built in the walking skeleton of stage 2 (`docs/build-order.md`),
 the smallest application that goes through every part once: the header,
@@ -175,6 +179,7 @@ the link has the pointer or the focus.
 | | Failed | a check is in the state `error`, or the writing is | "Statistics of each individual could not be calculated.", "The file could not be written.", the first in the order of the step: the checks in the order of the analyses of `apps.ts`, then the writing |
 | | Done | read, neither `projectNeeds` nor `individualListNeeds` gives a reason, and the filters of individuals do not keep none | — |
 | Individuals | Optional | no metadata file | "Without it, every individual is in one population." |
+| | To do | the metadata file of an opened project, not read when the project was saved, `notGiven` | the reason `individualsNeeds` gives, "pops.csv was not read when this project was saved, so the project file does not hold it. Load pops.csv again in the Individuals step." |
 | | Reading | its read is pending | "Reading pops.csv.", from `individualsNeeds` |
 | | Problem | its read failed, or individuals of the variants file are missing from it | the reason `individualsNeeds` gives |
 | | To do | read, and no column of the populations chosen, `populationsNeeds` of kind `noColumn` | its reason, "Choose the column that defines the populations, or all individuals in one population, in the Individuals step." |
@@ -251,6 +256,7 @@ keep (node, 26 September 2026, popnei `js-v0.1.0-dev.2`). It is text, and is not
 | the filters | | "no filter", "1 filter", "2 filters": the filters of the variants and of the individuals |
 | the metadata file | none | "no metadata file: one population", from stage 4, whatever the grouping |
 | | being read | "reading pops.csv" |
+| | named by an opened project and not read, `notGiven` | "pops.csv not loaded", from stage 4 |
 | | read failed, or individuals missing, or the column of the populations not in it | "pops.csv could not be read", "12 individuals missing from pops.csv", "column pop not in pops.csv" |
 | | read, no column chosen | "populations not chosen", from stage 4, where stage 2 said "one population", since with a file the analyses per population are then locked |
 | | read, the grouping `onePopulation` | "one population" |
@@ -470,7 +476,7 @@ the shell gives the screens:
 | an undo or a redo that makes no notice, with the button or the keyboard | "Undone: the missing data filter changed.", "Redone: the missing data filter changed." |
 | Save of the dialog of Save project | "panel.popnei.json was handed to the browser to download." (below, "Saving") |
 | from stage 3, Save of a written file in the Variants step | "panel.filtered.nei was handed to the browser to save.", the name of the file; the button, which keeps the focus, turns into Write, and the line above it, which says the same, is behind the focus (`docs/specs/analyses/writeVariants.md`, "Accessibility") |
-| a project opened | "Opened panel.popnei.json." followed by the text of `askedFileText` when it gives one (below, "Opening") |
+| a project opened | "Opened panel.popnei.json." followed by the text of `askedFileText` when it gives one (below, "Opening"), and, from stage 4, by the reason `individualsNeeds` gives a metadata file `notGiven` |
 | a file that a step did not load, several dropped at once | the text the step shows for it, whose words are the step's (`docs/specs/steps/variants.md` and `individuals.md`, "Its words") |
 | from stage 3, Apply or Clear of a list of individuals in the Variants step, after which `individualListNeeds` gives a reason it did not give before | the reason as the step shows it under the list, without the end "in the Variants step": "The list of individuals to keep names 1 individual that is not in panel.nei: ind_900. Change the list, or remove the filter." (`docs/specs/steps/variants.md`, "The two lists"); nothing for a list popnei accepts |
 
@@ -683,7 +689,10 @@ the file and some, "The project file cannot be opened: …", do not:
    of Variants once the dialog has closed, also when the hash was already
    `#variants`; and the status region says "Opened panel.popnei.json.",
    followed by the text of `askedFileText` when the file names a
-   variants file.
+   variants file, and, from stage 4, by the reason of a metadata file
+   `notGiven`, "pops.csv was not read when this project was saved, so
+   the project file does not hold it. Load pops.csv again in the
+   Individuals step."
 
 The file is read and checked before the dialog, so that the user is not
 asked to give up their project for a file that does not open. A large
@@ -893,12 +902,13 @@ with the analyses of `TEST_DEFS` of `src/core/testSupport.ts`:
   thresholds of the individuals keep none, with the words of
   `keptNoneReason`; from stage 4, Individuals Optional with no metadata
   file, whatever the grouping, To do with a file read and no column,
-  with the words of the one population, and Done with a file read and
-  `onePopulation`.
+  with the words of the one population, To do with a file `notGiven`,
+  with its words, and Done with a file read and `onePopulation`.
 - **`summaryLine`**: the empty first project gives "No variants file · 1
   filter · no metadata file: one population"; from stage 4, a file read
-  and no column "… · populations not chosen", and a file read with
-  `onePopulation` "… · one population"; the example above, with 1,200 variants
+  and no column "… · populations not chosen", a file read with
+  `onePopulation` "… · one population", and a file `notGiven` "… ·
+  pops.csv not loaded"; the example above, with 1,200 variants
   counted and the missing data filter not counted, gives "panel.nei · 200
   individuals · 1,200 variants before the filters · 1 filter · 3
   populations by pop"; with the thresholds of the individuals at 0.03
@@ -1038,7 +1048,8 @@ revision, 27 September 2026:
 - `docs/specs/core/project.md`: `populationsNeeds`, `populationsToRun`,
   `populationsOf` and `populationsKept` in `project.ts`, with the one
   population; `individualsNeeds` giving no reason for no metadata file;
-  the grouping `onePopulation`; `typesLost` of a read.
+  the grouping `onePopulation`; `typesLost` of a read; the read
+  `notGiven` of an opened project, with its reason.
 - `docs/specs/steps/individuals.md`: the words of the types lost, which
   the step shows and the end of a read announces in short.
 - `docs/specs/analyses/pca.md`: the title of its panel, "Principal

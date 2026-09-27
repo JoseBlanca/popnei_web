@@ -28,7 +28,10 @@ and the functions that make the populations, `populationsOf`,
 (`docs/specs/core/project.md`, "The populations"); and again the same
 day, to agree with the specs written beside it: no run of stage 4 makes
 two passes, and the size of a result of the PCA in the cache, names
-included.
+included; and again after its review: with the one population, lists of
+individuals that leave none lock with the words of the filters that keep
+none, and a metadata file named by an opened project and not read locks
+it.
 The code of stage 2 is in
 `src/core/analyses/diversity.ts`. This spec gives the first analysis of the population genetics
 application, in its form for the walking skeleton: the module
@@ -302,15 +305,24 @@ these, in the words the panel shows beside its Run button:
 
 | the project | the reason |
 |---|---|
-| any reason of `individualsNeeds` (`project.md`), in the words of the population genetics application, which calls the file the metadata file, as the owner decided on 25 September 2026: the file being read, "Reading pops.csv."; its read refused or failed; individuals of the variants missing from it, "12 individuals of panel.nei are not in pops.csv: ind_031, ind_044 and 10 more. Add them to the file and load it again in the Individuals step." From stage 4, no metadata file is no reason | its words |
+| any reason of `individualsNeeds` (`project.md`), in the words of the population genetics application, which calls the file the metadata file, as the owner decided on 25 September 2026: the file being read, "Reading pops.csv."; its read refused or failed; the file of an opened project not read when it was saved, "pops.csv was not read when this project was saved, so the project file does not hold it. Load pops.csv again in the Individuals step."; individuals of the variants missing from it, "12 individuals of panel.nei are not in pops.csv: ind_031, ind_044 and 10 more. Add them to the file and load it again in the Individuals step." From stage 4, no metadata file is no reason | its words |
 | a metadata file read, and no column of the populations chosen | "Choose the column that defines the populations, or all individuals in one population, in the Individuals step." |
 | the table has no column of that name, after a new load of the file | "pops.csv has no column popcat, from which the populations were taken. Choose the column that defines the populations, or all individuals in one population, in the Individuals step." |
 | no individual of the variants file has a population in the column | "No individual of panel.nei has a population in the column popcat of pops.csv. Fill in the column and load the file again, or choose another column, in the Individuals step." |
-| the lists of individuals to keep and to remove leave no individual that has a population, known from the project alone | "The lists of individuals to keep and to remove leave none of the individuals of panel.nei that have a population in popcat, so no population is left. Change the lists in the Variants step."; for the one population, "The lists of individuals to keep and to remove leave none of the individuals of panel.nei. Change the lists in the Variants step." |
+| a column of the populations, and the lists of individuals to keep and to remove leave no individual that has a population in it, known from the project alone | "The lists of individuals to keep and to remove leave none of the individuals of panel.nei that have a population in popcat, so no population is left. Change the lists in the Variants step." |
 
 Without a metadata file, or with the grouping `onePopulation`, only the
-first row and the last can lock the diversity, and the first only with a
-file.
+first row can lock the diversity, and only with a file. Lists that leave
+none of the one population leave no individual at all, which the store
+locks with the words of `keptNoneReason`, "The filters of individuals
+keep none of the 200 individuals of panel.nei. Loosen them in the
+Variants step." (`docs/specs/core/individualsKept.md`), the words the
+Variants step shows for the same condition, so that the last row, given
+for the one population too, would be a second text for it. With a threshold on the
+individuals as well, that lock waits for the statistics of each
+individual, which a Run calculates first, unless
+`docs/specs/core/individualsKept.md` knows the list empty from the lists
+alone (below, "What this spec relies on in the specs written beside it").
 
 The lock of stage 2 on any filter of individuals, which the owner
 decided on 25 September 2026 while the filters of individuals did not
@@ -744,6 +756,19 @@ version 1 in the same way (`docs/architecture.md`, section 12).
   removing the file brings it back from the cache, with no calculation.
 - **A column chosen, and the file removed.** The same: one population,
   whatever the grouping holds, until a file is loaded again.
+- **The one population chosen, and a metadata file loaded.** The
+  diversity is locked while the file is read, so its result leaves the
+  screen and the notice names it; once the file is read and holds every
+  individual of the variants, the key is the one it had, `"all"`, and
+  the result comes back from the cache with no calculation, while the
+  notice stays until it is closed or replaced
+  (`docs/specs/steps/individuals.md`, "The populations").
+- **An opened project whose metadata file was not read when it was
+  saved**, `notGiven`. Locked with the reason of `individualsNeeds`,
+  whatever the grouping, until the file is loaded again or removed; it
+  never runs on one population while the project names a file it does
+  not have (`docs/specs/core/project.md`, "The project of an opened
+  project file").
 - **Every individual of the variants file with no population in the
   column, and the user then chooses the one population.** The lock of
   `noPopulation` goes, and the diversity runs on every individual.
@@ -809,7 +834,8 @@ definition, on frozen projects, as
   result of "All individuals" with 2 individuals gives
   `tooFewIndividuals` with the words of the one population, and no
   `individualsWithoutPopulation`. `needs` with a list to remove of the
-  four gives the words of the lists for the one population. `script`
+  four gives `null`, the lock being the store's, `keptNoneReason`.
+  `script`
   gives the lines of the one population, as a literal.
 - **The key**: for each row of the table of what changes the key, two
   projects that differ in it, and `keyOf` equal or not as the row says;
@@ -1407,6 +1433,19 @@ September 2026:
 - `docs/specs/analyses/pca.md`: the PCA keeps 10 components, which the
   words of "Undo brings back the table" above were checked against, and
   reads the file once.
+
+After the review of the same day, not yet made in their documents:
+
+- `docs/specs/core/individualsKept.md`: when the lists to keep and to
+  remove leave no individual, the list kept is known and empty whatever
+  the thresholds, since a threshold can only remove more; so the store
+  locks with `keptNoneReason` before a Run, with no statistics
+  calculated for a list that cannot keep anyone.
+- `docs/specs/core/store.md`: whether a result that comes back under its
+  key after a record, a read of the metadata file, leaves the results
+  removed of the notice, as one done again by a calculation does; as
+  that spec reads now, it stays listed while it is on the screen again
+  (above, "The cases").
 
 ## Open points
 

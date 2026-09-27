@@ -27,7 +27,10 @@ diversity has the check numbers of one population
 (`docs/specs/core/project.md`, "The populations" and "The types of the
 columns"); and again the same day, to agree with the specs written
 beside it: what the values of each column allow is worked out from the
-table and not written. There was no
+table and not written; and again after its review, the same day: an
+individuals file whose read was not done at the save is written as
+named and not read, `notGiven`, and the project opened from it asks for
+the file again rather than run on one population. There was no
 code yet; it will be `src/core/projectFile.ts`, the row `projectFile.ts`
 of section 9 of `docs/architecture.md`. The project file is the file
 `<name>.popnei.json` that a user saves to take their work out of the
@@ -264,7 +267,7 @@ example does.
 | `variants` null, no reference | `null` |
 | whichever `variants` is written, when its read is pending or failed | that source with its read `{ "kind": "pending" }`: the name, the size, the format and the read options are known, and the rest is not |
 | `individuals` read | the source as it is, its load id, its table and its `typesSet` included, and its `typesLost` left out |
-| `individuals` pending or failed | `null`, and the grouping is kept by the name of its column, or as `onePopulation`; the types the user set go with the source |
+| `individuals` pending, failed, or `notGiven` | the source with its read `{ "kind": "notGiven" }`: its load id, its name, the options of its CSV and its `typesSet`, and no table |
 | `individuals` null | `null`, whatever the grouping: the analyses per population run on one population, and the grouping is kept for a file loaded later |
 | `reference` | not written as such: its `variants` as above, and its check numbers under the rule below |
 
@@ -302,18 +305,27 @@ the owner.
 The failed read of the variants file is written as pending because what
 failed was a read of that session: a new load of the file reads it again,
 and the reason of a crash would be noise in a file kept for years. The
-individuals file is written only when it was read, because the file keeps
-it whole, as its table, and a pending or failed read has no table; the
-opened project then has no metadata file, as an empty project, and its
-analyses per population run on one population until the user loads the
-file again, when the grouping finds its column by its name; in
-association, it asks for the traits file, "Load a traits file in the
-Individuals step." (`docs/specs/core/project.md`, `individualsNeeds`). What is lost is the
-name of the file and the options of the CSV, which a new load starts from
-"auto" again. This is what `docs/specs/core/project.md`, "The cases", left
-to this spec: an opened project holds no source whose read is pending.
-So the entry of the page, the code that starts when the page opens, makes
-the store and the workers and joins them, and asks for the read of every
+individuals file is kept whole, as its table, and a pending or failed
+read has no table, so it is written as a file named and not read,
+`notGiven`. The project opened from it keeps asking for the file: every
+analysis that uses it is locked with "pops.csv was not read when this
+project was saved, so the project file does not hold it. Load pops.csv
+again in the Individuals step.", whatever the grouping, until the user
+loads the file again, when the grouping finds its column by its name and
+the types set are carried to the new read, or removes it
+(`docs/specs/core/project.md`, "The project of an opened project file").
+A new load starts the options of the CSV at "auto" again, as every pick
+does. This was decided on 27 September 2026 by the writers of the specs
+of stage 4, for the owner to overrule. The option not taken, the first
+draft of this revision, wrote such a file as `null`: the opened project
+had no metadata file, and its analyses per population ran on one
+population, "All individuals", although its grouping named a column,
+with no word of the file the user had loaded.
+
+This is what `docs/specs/core/project.md`, "The cases", left to this
+spec: an opened project holds no source whose read is pending. So the
+entry of the page, the code that starts when the page opens, makes the
+store and the workers and joins them, and asks for the read of every
 pending source after each change (`docs/architecture.md`, section 6, "Who
 asks for a read"), never asks for the read of a file the page does not
 hold.
@@ -487,7 +499,8 @@ that the reason given is the one the user can act on:
    `project.ts` listed in `docs/specs/stage-2-open-points.md`.
 8. **What this version does not write**, refused as `header` with the
    field `variants` or `individuals`: a read of the variants file that is
-   `failed`, and a read of the individuals file that is not `read`.
+   `failed`, and a read of the individuals file that is `pending` or
+   `failed`, which this version writes as `notGiven`.
 9. **The count of the check numbers**: each check holds as many numbers
    as `numCheckNumbers` of its analysis gives for the opened project with
    the file's variants file as its variants file, or it is refused as
@@ -502,8 +515,8 @@ that the reason given is the one the user can act on:
    told that its variants file "may not be the one the project was saved
    with". When `numCheckNumbers` gives `null`, the count is not checked:
    for the diversity, when the file's variants file was not read, when
-   there is an individuals file and no column of the populations chosen
-   in it, or when
+   there is an individuals file not read, `notGiven`, or one with no
+   column of the populations chosen in it, or when
    the project holds a threshold on the individuals, whose list needs
    statistics not yet calculated for the new load, or when a list to keep
    or to remove names an individual twice or one not in the variants
@@ -709,11 +722,12 @@ this spec makes precise:
   is read as a file of version *k* and brought to the present one field
   by field, and the fixtures of every earlier version, below, keep
   opening.
-- **Stage 4 does not raise it.** The grouping `onePopulation` and the
-  types the user set, `typesSet`, join version 1; a file of stages 2 and
+- **Stage 4 does not raise it.** The grouping `onePopulation`, the
+  types the user set, `typesSet`, and the read `notGiven` join version
+  1; a file of stages 2 and
   3, which has no `typesSet`, opens with none set
   (`docs/specs/core/project.md`, "The validation"), and a development
-  version before stage 4 refuses a file that has one, as it refuses
+  version before stage 4 refuses a file that has any of them, as it refuses
   every field it does not write. The
   binary type holds texts, which is what every file of stages 2 and 3
   holds, since they read only CSV.
@@ -868,12 +882,15 @@ export function uncomparedText(p: Project, analysis: AnalysisId): string | null;
   of the reference's check numbers (above, after the table of what is
   written).
 - **A project saved while the individuals file is being read**, or after
-  the reader refused it: the file holds no individuals file, and the
-  reopened project runs its analyses per population on one population
-  until the file is loaded again; the diversity it had done under the
-  populations of a column is not done under the key of the one
-  population, and its numbers are not carried, since the fingerprint of
-  its settings differs, so no check of the wrong count is written.
+  the reader refused it: the file holds the source `notGiven`, with its
+  name and its types set and no table, and the reopened project locks
+  every analysis that uses the file until it is loaded again, with
+  "pops.csv was not read when this project was saved, so the project
+  file does not hold it. Load pops.csv again in the Individuals step."
+  While the file was being read the diversity was locked too, so no
+  numbers of it are written from a result; the count of numbers carried
+  from a reference is not checked at the opening, since
+  `numCheckNumbers` gives `null` without the table.
 - **A project with no metadata file.** It is written with `individuals`
   `null` and its grouping, and the diversity's check numbers are 4, the
   number of variants kept and the three numbers of "All individuals";
@@ -937,9 +954,11 @@ the analyses `done`, `ready` or `removed`.
   list to keep, a list to remove and the two thresholds; and, from stage
   4, `v1-types.popnei.json`, the example above whole, with a third
   column `status` of `yes` and `no` whose coding the user set, `no`
-  coded 1, and `v1-one-population.popnei.json`, `panel.nei` with no
+  coded 1, `v1-one-population.popnei.json`, `panel.nei` with no
   individuals file, the missing data filter at 0.05 and the 4 check
-  numbers of the one population. Each
+  numbers of the one population, and `v1-metadata-not-read.popnei.json`,
+  `pops.csv` `notGiven` with a type set and the grouping `pop`, no
+  check. Each
   opens into a project written as a literal in its test, and, while
   `FORMAT_VERSION` is 1, the project written back from it, with no result
   and the header's versions and date, is the fixture byte for byte; but
@@ -970,7 +989,8 @@ the analyses `done`, `ready` or `removed`.
   then `missing_data` in a file of version 1, a file of `"gwas"` opened in popgen, a
   field `"notes"` at the top, `appVersion` missing, `"checks": {}`, a
   check with a field `settings`, a check of the analysis `"fst"`, a check
-  with `variants` null, a read of the individuals file `pending`, a
+  with `variants` null, a read of the individuals file `pending` and one
+  `failed`, a
   check of the diversity with 6 numbers where `numCheckNumbers` gives 7,
   whose text is asserted whole; and a check whose count is not checked,
   `numCheckNumbers` giving `null`, which opens. The
@@ -1009,7 +1029,8 @@ the analyses `done`, `ready` or `removed`.
   - `readProjectFile(writeProjectFile(s, …))` is ok, and its project is
     the one the table of "What is written" gives: equal to `s.project` in
     the filters, the individuals file when it was read, but its
-    `typesLost`, which is empty, the grouping and
+    `typesLost`, which is empty, the individuals file `notGiven` when it
+    was pending, failed or `notGiven`, the grouping and
     the options; `variants` null; the reference's variants file as written.
   - Written, opened, and written again from a state with no result and
     the same version of popnei, a project gives the same text: the check
@@ -1084,7 +1105,8 @@ check with its own (point E there).
   `new Date().toISOString()`, and downloads the text under the name the
   user gave in the dialog of Save, which starts at `projectFileName`, at any time, a pending read included; and the page's
   map of files holds no file under the load ids of an opened project,
-  whose sources are read, so nothing of the opening asks for a read.
+  whose sources are read or `notGiven`, and the entry asks for the read
+  of a pending source alone, so nothing of the opening asks for a read.
 - `docs/specs/shell.md`: Save project calls that `save()`; Open project…
   refuses a file above `MAX_PROJECT_FILE_BYTES`, reads it with
   `File.text()`, shows `projectFileErrorText` of a file refused, asks
@@ -1096,7 +1118,8 @@ check with its own (point E there).
   the project.
 - `docs/specs/steps/individuals.md`: it offers to load again, rather
   than to change the options of the CSV of, an individuals file whose
-  load id the page holds no file for.
+  load id the page holds no file for, and shows the reason of a file
+  `notGiven`.
 - `docs/specs/worker/*`: nothing of this module; from stage 4, the
   binary type of texts of `docs/specs/worker/protocol.md`, which the file
   writes as the project holds it.
@@ -1110,7 +1133,9 @@ check with its own (point E there).
 
 These choices of this spec change what a user meets, and the owner may
 wish to overrule them on approving it: an individuals file whose read is
-pending or failed is not saved; the Variants step starts a VCF's read
+pending or failed is saved without its table, as `notGiven`, and the
+project opened from it asks for the file before any analysis that uses
+it runs; the Variants step starts a VCF's read
 options at the reference's; a variants file whose name alone differs
 drops the carried numbers; and, from stage 4, the types a read could
 not keep, `typesLost`, are not saved.

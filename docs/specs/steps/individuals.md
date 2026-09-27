@@ -18,8 +18,12 @@ in one population without it; and the item "All individuals in one
 population" among the choices of the populations; and again the same
 day, to agree with the specs written beside it: the types a column
 allows worked out by core, `columnAllows`, and the decimal mark given to
-the warning of few whole numbers. The code of stage 2 is in
-`src/ui/steps/individuals/`.
+the warning of few whole numbers; and again the same day after its first
+reader and its review: a metadata file named by an opened project and
+not read when it was saved, the words of the refusals of an xlsx quoted
+whole, a type lost because its column became the first, the name of the
+select of the coding, and the reasons of the populations in the words of
+the step. The code of stage 2 is in `src/ui/steps/individuals/`.
 
 The screen spec of the second step of the population genetics
 application: the user picks the metadata file, or goes on without one,
@@ -45,6 +49,23 @@ option of the reader of CSV, means that the reader detects it. The
 **types** are those of `docs/functionality.md`, section 4: identifier,
 binary, continuous and categorical.
 
+The words of the web this spec needs, as it uses them. **React** is the
+library that draws the screens of the application from the state of the
+project, again after every change of it. **React Aria** is the library
+of controls built on React that the screens use, which gives each
+control the keys and the names that a screen reader expects; its
+`Select` is a button that opens a list of choices. A **screen reader**
+is the program that reads the page aloud to a user who cannot see it:
+NVDA and JAWS on Windows, VoiceOver on a Mac. It reads from the **tree of
+accessibility**, the outline of the page that the browser gives it,
+each element with its role and its name. The **focus** is the control
+the keyboard acts on, which the Tab key moves from one control to the
+next. The **shell** is the part of the page around the steps: the
+header, the stepper, the summary line and the notices
+(`docs/specs/shell.md`). The **entry** is the code that starts when the
+page opens, makes the store and the two workers and joins them
+(`docs/specs/entry.md`).
+
 ## What it shows
 
 ### The file
@@ -52,9 +73,12 @@ binary, continuous and categorical.
 A drop zone that holds a button, "Choose a metadata file…", as in the
 Variants step, and the same one button in every state, "Replace
 pops.csv…" once a file is loaded, so that the focus stays on it after a
-pick. The zone holds React Aria's hidden button, "Paste a metadata
-file", which takes a file pasted into it, as in the Variants step, and a
-paste is a drop to the step, with the same words.
+pick. React Aria's drop zone holds a button of its own, hidden from the
+eye, "Paste a metadata file", on which a file copied in the file manager
+lands when the user pastes it with Cmd+V or Ctrl+V, so that a user of
+the keyboard, who cannot drag a file, can load one, as in the Variants
+step (`docs/specs/steps/variants.md`); a paste is a drop to the step,
+with the same words.
 
 What is loaded is told by the end of the name, compared without regard
 to case:
@@ -62,7 +86,7 @@ to case:
 | the name ends in | what the step does |
 |---|---|
 | `.csv`, `.tsv` or `.txt` | loads it as a CSV or a TSV, `loadIndividuals` with the three options of the reader at "auto"; the reader finds the separator whatever the ending |
-| `.xlsx` | loads it as an xlsx, `loadIndividuals` with `csv: null`; the reader reads its first sheet that is not hidden, the one Excel shows first (`docs/functionality.md`, section 4; `docs/specs/worker/files.md`) |
+| `.xlsx` | loads it as an xlsx, `loadIndividuals` with `csv: null`; the reader reads the first sheet in the order of the tabs that is not hidden, which may not be the one Excel opens on, since Excel opens a workbook on the sheet that was active when it was saved (`docs/functionality.md`, section 4; `docs/specs/worker/files.md`) |
 | `.xls` | does not load it, as the spec of stage 2 had it, approved by the owner on 25 September 2026: Excel's format before 2007, which `docs/functionality.md`, section 4, does not list; the words say to save it as `.xlsx` or CSV (below, "Its words") |
 | `.vcf`, `.vcf.gz`, `.bcf` or `.nei` | does not load it: it is a variants file, and the step says so in the words of the reader for a VCF found by its first line, as the owner decided on 25 September 2026, and not "rename it", which would lead the user to load it |
 | anything else | does not load it, with words that name the endings it reads |
@@ -88,6 +112,17 @@ expect with no word why. When the read of a CSV could not decode a
 character, `found.undecodedLine` of `docs/specs/worker/individuals.md`,
 the card also shows the warning of a character not decoded, below
 ("Its words"), which names the line.
+
+A project opened from a project file saved while its metadata file was
+being read, or after its reader refused it, names the file and holds no
+table of it, `notGiven` (`docs/specs/core/project.md`, "The project of
+an opened project file"). The card then shows the name, "Replace
+pops.csv…", "Remove pops.csv" and the reason "pops.csv was not read when
+this project was saved, so the project file does not hold it. Choose it
+again.", and the step shows nothing under it, having no table. The
+analyses that use the file are locked until the user picks it, which
+loads it with the types they had set, or removes it, which puts every
+individual in one population.
 
 The first xlsx the page reads downloads the files wasm, and its read
 takes that much longer, about a quarter of a second at 10 Mbit/s and 1.5
@@ -157,9 +192,11 @@ September 2026, because a column of the decimal comma would read "1,75,
 1,62, 1,80". The space before the dot does not break, so that a value
 keeps its dot on its line and a line never starts with a dot, which at
 320 px wide, where the values wrap, would read as the mark of a list. A
-value of an xlsx is shown as its text, `String` of the cell. The rows of
-the file are not drawn: 10,000 of them would take seconds, and the
-three values show what a wrong option does.
+number or a boolean of an xlsx is shown as the text JavaScript writes
+for it, `1.5`, and `TRUE` as `true`. The rows of the file are not
+drawn: the three values show what a wrong option does, and a file of
+10,000 rows would be a table of 10,000 lines to scroll past to reach
+the populations.
 
 The type of the first column is "identifier", as text: it names the
 individuals and cannot be changed. The type of every other column is a
@@ -183,8 +220,8 @@ its `binary` in `columnAllows`, with the coding the reader proposes.
 
 A binary column also has its coding, which of its two values is 1, the
 case, and which 0 (`docs/functionality.md`, section 4). Under its type,
-a second `Select`, "Coded 1, the case", whose two items are its two
-values, and beside it the other: "no is coded 0.". The reader proposes
+a second `Select`, labelled "Coded 1, the case", whose two items are its
+two values, and beside it the other: "no is coded 0.". The reader proposes
 the coding, the larger of two numbers, `case` over `control`, `yes`
 over `no` and the other known pairs, and otherwise the value that comes
 second in the order of the code units, `P2` over `P1`
@@ -252,7 +289,10 @@ made by the screen would be a command no action of the user made
 loaded into a new project locks the analyses per population with "Choose
 the column that defines the populations, or all individuals in one
 population, in the Individuals step.", and the user who loaded a file
-says what it defines. The option not taken was to start at the one
+says what it defines. At the select, where the user already is, the
+same reason is shown without its place, "Choose the column that defines
+the populations, or all individuals in one population.", the `inStep`
+that `populationsNeeds` gives beside its `reason`. The option not taken was to start at the one
 population, which would run the diversity on every individual of a
 file the user loaded for its populations, and show a table of one row
 as if that were the result they asked for.
@@ -282,6 +322,21 @@ before the file was removed is kept in the project, and found again by
 its name when a file is loaded (`docs/specs/core/project.md`, "The
 populations").
 
+A file loaded while every individual is in one population, with no
+file or with the grouping `onePopulation`, locks the diversity while it
+is read, since a file has to hold every individual of the variants
+before anything that uses it runs (`docs/functionality.md`, section 4).
+So the table of "All individuals" leaves the screen, and the shell's
+notice says so, "Diversity removed because a new metadata file was
+loaded · Undo". With `onePopulation`, once the file is read and holds
+every individual, the key of the diversity is the one it had, and its
+result comes back from the cache with no calculation, while the notice
+stays until the user closes it or the next change replaces it
+(`docs/specs/core/store.md`, "The notice, and the calculations it
+stops"). That is taken: the result did leave the screen while the file
+was read, and the lock is what keeps a file that lacks individuals from
+being used without a word.
+
 ## The states
 
 | state | what the user sees | what they can do |
@@ -292,7 +347,7 @@ populations").
 | running | the card with the name and "Reading pops.csv."; for a CSV the three options of the reader; the columns and the populations of an earlier read are gone, since the read replaced them; no progress, a read of a second or two, and, for the first xlsx of the page, the download of the files wasm before it | change an option of a CSV; pick another file; Undo |
 | done | the card, the options of the reader of a CSV or the line of the first sheet of an xlsx, the columns with their types, the check, the choice of the populations and the populations; the warning of types lost after a read that lost some | change an option of a CSV, set a type or a coding, choose the populations, replace or remove the file |
 | results removed | cannot happen here: the step shows no result. A command of this step that removes results has its notice in the shell (`docs/specs/shell.md`), with the descriptions below | — |
-| error | the reader refused the file, its worker failed, individuals of the variants file are missing from it, or the column chosen gives no population or is not in the file, with the words below. The options of a CSV stay in every case; the columns only when the file was read, since a refusal has no table | change an option; choose another column or the one population; pick another file; remove the file; reload the page when the reason says so |
+| error | the reader refused the file, its worker failed, individuals of the variants file are missing from it, or the column chosen gives no population or is not in the file, with the words below. The options of a CSV stay in every case; the columns only when the file was read, since a refusal has no table. The file of an opened project that was not read when it was saved, `notGiven`, is shown here too, with its reason and neither options nor columns (above, "The file") | change an option; choose another column or the one population; pick another file, or the same one again; remove the file; reload the page when the reason says so |
 
 ## What it sends and reads
 
@@ -336,9 +391,11 @@ which a screen does not write as a cache of its own
   in the diversity's module until stage 4: the populations narrowed to
   the individuals of the variants file, as every analysis per population
   sends them; the list follows their order. The reasons about the
-  column, at the select, are `populationsNeeds(p)` of the same module.
+  column, at the select, are the `inStep` of `populationsNeeds(p)` of
+  the same module.
 - **the types each column allows**, `columnAllows(read)` of
-  `src/core/project.ts`.
+  `src/core/project.ts`, and why a type set was lost, `typeLostReason`
+  of the same module.
 - **the warning of a column of few whole numbers**, `columnWarnings` of
   the reader, from the table, its types and the decimal mark of the
   read, `found?.decimal ?? "."`, the point for an xlsx, whose `found` is
@@ -398,6 +455,8 @@ The descriptions of the commands are in the table above. The rest:
   4, read with the semicolon as the separator. Choose another separator,
   or load a corrected file.", "pops.csv could not be read: it is a
   variants file, which the Variants step takes. Load a metadata file.",
+  "pops.csv was not read when this project was saved, so the project
+  file does not hold it. Choose it again." for a file `notGiven`,
   as the Variants step shows `variantsStepNeeds`
   (`docs/specs/steps/variants.md`, "Its words"); the words of the
   refusals are the reader's (`docs/specs/worker/individuals.md`), a
@@ -408,15 +467,41 @@ The descriptions of the commands are in the table above. The rest:
   analysis needs of every project"). An xlsx is refused with the kinds
   of `IndividualsFileError` that `docs/specs/worker/individuals.md`,
   "The refusals and their words", gives it, those of the rows and the
-  cells and its own, `notXlsx`, `oldExcel`, `encrypted`, `emptySheet`,
-  `cellError`, `sheetTooLarge`, `xlsxReaderNotLoaded` and `files`, with
-  that spec's words after "could not be read:" and core's ends, "Load a
-  corrected file.", but for `xlsxReaderNotLoaded`, whose words end with
-  what to do, "check the connection and load the file again; if it
-  fails again, … save the project, reload the page and open the project
-  again", and take no end
-  (`docs/specs/core/project.md`); a row of the wrong length and a quote
-  never closed are refusals of a CSV alone.
+  cells, and its own, with that spec's words after "could not be read:"
+  and core's end, "Load a corrected file."; a row of the wrong length
+  and a quote never closed are refusals of a CSV alone. The user reads
+  an xlsx refused so:
+  - not a workbook, `notXlsx`: "pops.xlsx could not be read: it is not
+    an Excel workbook, although its name ends in .xlsx; if it is a CSV
+    or a TSV, give it a name that ends in .csv. Load a corrected file."
+  - Excel's older format renamed, `oldExcel`: "pops.xlsx could not be
+    read: it is a workbook of Excel 97–2003, although its name ends in
+    .xlsx; in Excel, save it as Excel Workbook (.xlsx). Load a corrected
+    file."
+  - saved with a password, `encrypted`: "pops.xlsx could not be read: it
+    is protected by a password; in Excel, save a copy without the
+    password. Load a corrected file."
+  - an empty first sheet, `emptySheet`: "pops.xlsx could not be read: its
+    first sheet, Hoja1, is empty, and only the first sheet is read; put
+    the table in the first sheet. Load a corrected file."
+  - an error of the newest Excel, `cellError`: "pops.xlsx could not be
+    read: a cell holds the error #SPILL!, which cannot be read; in Excel,
+    correct its formula or replace it with its value. Load a corrected
+    file."
+  - a value far from the table, `sheetTooLarge`: "pops.xlsx could not be
+    read: its first sheet, Hoja1, has values over 200 rows and 16,384
+    columns, 3,276,800 cells, more than the 2,000,000 a metadata file can
+    have; delete the values outside the table. Load a corrected file."
+  - damaged, or another format, `files`: "pops.xlsx could not be read:
+    it could not be read as an Excel workbook and may be damaged; open
+    it in Excel and save it again. Load a corrected file."
+  - the reader of Excel files not downloaded, `xlsxReaderNotLoaded`,
+    whose words say what to do and take no end: "pops.xlsx could not be
+    read: the part of the application that reads Excel files could not
+    be downloaded; check the connection and load the file again; if it
+    fails again, the site may have been updated since this page was
+    opened: save the project, reload the page and open the project
+    again."
   The reasons of core name the file as each application does, "a
   metadata file" here and "a traits file" in association, as the owner
   decided on 25 September 2026 (point P of
@@ -448,7 +533,14 @@ The descriptions of the commands are in the table above. The rest:
   1, now categorical, since its values no longer allow it", "score:
   categorical, and the file no longer has this column", and after the
   list "Set their types again if the new values allow the ones you want,
-  or correct the file and load it again." The file is named as the
+  or correct the file and load it again." For a column the new file has
+  in the first place, which names the individuals: "Warning: pops.csv
+  was read again, and status lost the type you set, binary with yes
+  coded 1, since it is now the first column, whose cells are the names of
+  the individuals. If it should not be, correct the file and load it
+  again.", and in a list "status: binary with yes coded 1, now the first
+  column, the names of the individuals". Which of the three a column
+  meets is `typeLostReason` of `src/core/project.ts`. The file is named as the
   source names it after the read, so after a new load, the new file.
   The words are the writer's, 27 September 2026.
 - **Individuals missing**: the reason `individualsStepMissing` of
@@ -465,13 +557,17 @@ The descriptions of the commands are in the table above. The rest:
 - **The column of the populations not in the file**, after a new file or
   new options of the reader give a table without it; the grouping keeps
   its name and is not changed in silence (`docs/specs/core/project.md`,
-  "The commands"). At the select, the reason `populationsNeeds` gives,
-  of kind `noSuchColumn`, so that one fact has one text; its words are
-  those of `docs/specs/core/project.md`, "The populations". The select
-  shows "Choose a column".
+  "The commands"). At the select, the `inStep` that `populationsNeeds`
+  gives, of kind `noSuchColumn`, so that one fact has one text: "pops.csv
+  has no column popcat, from which the populations were taken. Choose
+  the column that defines the populations, or all individuals in one
+  population." (`docs/specs/core/project.md`, "The populations"). The
+  select shows "Choose a column".
 - **A column that gives no population**, every individual of the
-  variants file empty in it: at the select, the reason `populationsNeeds`
-  gives, of kind `noPopulation`, in the same words.
+  variants file empty in it: at the select, the `inStep` of kind
+  `noPopulation`, "No individual of panel.nei has a population in the
+  column popcat of pops.csv. Fill in the column and load the file again,
+  or choose another column."
 - **Every individual of the variants file found**, and **the
   populations**: above.
 
@@ -506,33 +602,43 @@ text, `pandas.read_csv(path, sep=";", decimal=",", dtype=str)` or
   button, Remove, the encoding, the separator, the decimal mark, the
   type of each column in the order of the table, each binary one
   followed by its value coded 1, the disclosure of the individuals
-  missing, the select of the populations. A file of 20 columns, a few of
-  them binary, makes some 25 stops of the Tab key in the table; that is
+  missing, the select of the populations. A file of 20 columns, 5 of
+  them binary, makes 24 stops of the Tab key in the table, 19 selects of
+  a type and 5 of a coding, a count and not a measurement; that is
   taken, since each is a setting the user may need, and the table holds
   nothing else that the Tab key stops at.
-- The table of the columns is a native `<table>`, with header cells
-  "Column", "Type" and "First values", and the name of each column in a
-  `<th scope="row">`, so that a screen reader reads the name with each
-  cell; not React Aria's `Table`, a grid that the Tab key enters once
-  and the arrow keys move through, which would hide its selects from a
-  user who tabs. Each select of a type has its own name, "Type of
-  score", and each select of the coding "Value coded 1 in status, the
-  case", given as their labels, hidden from the eye, since the header of
-  the column says "Type" for every row and a screen reader that reaches
-  the select by Tab does not read the header.
-- The populations are a list, each item its name and its number in
-  words, "P1, 48 individuals", and not a number alone. The words are
-  text hidden beside the line shown, which is itself hidden from a
-  screen reader, and not the label of the item: NVDA and JAWS may skip
-  the label of an item of a list as they read the page, which would lose
-  "individuals", and other readers would read the label and the line
-  both. The hidden words cannot be selected, so a user who copies the
-  list gets the lines as shown, "P1 · 48", one each, where the hidden
-  text was copied too in Firefox, "P1 · 48P1, 48 individuals", as the
-  owner found on 26 September 2026; the review of task 9.7 of
+- The table of the columns is the table of HTML, `<table>`, with
+  header cells "Column", "Type" and "First values", and the name of each
+  column in a `<th scope="row">`, a header cell of its row, so that a
+  screen reader reads the name with each cell. It is not React Aria's
+  `Table`, which is a grid: a table the Tab key enters once and leaves
+  at the next Tab, its cells reached with the arrow keys, which would
+  make a user who moves by Tab pass over every select in it. Each
+  select of a type has its own name, "Type of score", given as its
+  label, hidden from the eye, since the header of the column says "Type"
+  for every row and a screen reader that reaches the select by Tab does
+  not read the header. Each select of the coding has the name "Coded 1,
+  the case, in status": its visible label first, so that a user who
+  drives the page by voice and says the words they see, "Coded 1, the
+  case", reaches it (WCAG 2.2, success criterion 2.5.3, the visible
+  label part of the name), and the column after, which the eye takes
+  from the row and a screen reader does not.
+- The populations are a list, and a screen reader reads each item as
+  its name and its number in words, "P1, 48 individuals", and not a
+  number alone. Each item holds two texts: the line the eye sees, "P1 ·
+  48", which is hidden from the screen reader, and the words the screen
+  reader reads, "P1, 48 individuals", which are hidden from the eye. The
+  words are text of the item and not its label, the name given to it in
+  the tree of accessibility, because NVDA and JAWS may skip the label of
+  an item of a list as they read the page, which would lose
+  "individuals", and other screen readers would read the label and the
+  line both. The words hidden from the eye cannot be selected, so a user
+  who copies the list gets the lines they see, "P1 · 48", one each;
+  before, Firefox copied both texts, "P1 · 48P1, 48 individuals", as the
+  owner found on 26 September 2026. The review of task 9.7 of
   `docs/plans/walking-skeleton.md` checked in Chromium and WebKit that
-  the copy then gives "p0 · 48" and "p1 · 6" and the tree of
-  accessibility the item "p0, 48 individuals" alone.
+  the copy gives "p0 · 48" and "p1 · 6" and the tree of accessibility
+  the item "p0, 48 individuals" alone.
 - The end of a read is announced by the shell, from the state of the
   store, and not by this step, which may not be on the screen when it
   ends: through its status region, the part of the page that a screen
@@ -549,8 +655,8 @@ text, `pandas.read_csv(path, sep=";", decimal=",", dtype=str)` or
 
 ## Left for the running application
 
-Where the options of the reader sit, whether behind a disclosure once
-they are right; the order of the parts; how the select of the coding
+Where the options of the reader sit, and whether they fold away under a
+line that opens them, once the file reads well; the order of the parts; how the select of the coding
 sits under its type; how the table of the columns fits a phone, 320 px
 wide, with a select in each row; the colours of the populations, which
 the PCA assigns in stage 4.
@@ -578,10 +684,12 @@ Of stage 4, written beside this spec on 27 September 2026:
 
 - `docs/specs/core/project.md`: the grouping `onePopulation`;
   `individualsNeeds` giving no reason for no file; `setColumnType` with
-  `typesSet` and `typesLost`, and `columnAllows`; `populationsToRun` and
-  `populationsNeeds` in `project.ts`, with the words of the one
-  population in the reasons of the column; `individualsCheck` `null`
-  without a file.
+  `typesSet` and `typesLost`, `columnAllows` and `typeLostReason`;
+  `populationsToRun` and `populationsNeeds` in `project.ts`, with the
+  words of the one population in the reasons of the column and their
+  `inStep`; `individualsCheck` `null` without a file; the read
+  `notGiven` of an opened project, with the reasons of
+  `individualsNeeds` and `individualsStepNeeds`.
 - `docs/specs/worker/files.md` and `docs/specs/worker/individuals.md`,
   revised for stage 4: the kinds of `IndividualsFileError` an xlsx is
   refused with and their words, `xlsxReaderNotLoaded` for a failed

@@ -33,7 +33,14 @@ Revised again the same day to agree with the specs written beside it:
 the types each column allows worked out by core from the table,
 `columnAllows`, and not given by the reader nor saved in the project
 file; the words of `notText`, now that an xlsx is read; and the seven
-refusals of an xlsx in the validation. The project is everything the user has set in one application: the
+refusals of an xlsx in the validation. Revised again the same day after
+its review: the metadata file named by an opened project whose read was
+not done when it was saved, `notGiven`, which locks what uses the file
+until the user loads it again; why a type the user set was lost, told
+from the table of the read; and the reasons about the column of the
+populations in the words of the Individuals step as well.
+
+The project is everything the user has set in one application: the
 variants file they loaded, the filters, the individuals file with the
 types of its columns, the populations, and the options of each analysis.
 This spec gives its type, the commands that change it, the records that
@@ -258,6 +265,7 @@ reasons below are those of population genetics.
 |---|---|
 | no individuals file | none in population genetics, from stage 4: every analysis per population runs on one population of every individual (below, "The populations"); in association, whose GWAS needs a trait, "Load a traits file in the Individuals step." |
 | the individuals file being read | "Reading pops.csv." |
+| the individuals file of an opened project, not read when the project was saved, `notGiven` (below, "The project of an opened project file") | "pops.csv was not read when this project was saved, so the project file does not hold it. Load pops.csv again in the Individuals step." |
 | the files wasm refused the file | "pops.xlsx could not be read: it could not be read as an Excel workbook and may be damaged; open it in Excel and save it again. Load a metadata file in the Individuals step.", in the words the reader's spec gives `files` from stage 4, where stage 2 showed the message of the files wasm |
 | the reader of CSV and TSV refused the file | "pops.csv could not be read: line 7 has 3 cells where the header has 4, read with the semicolon as the separator. Load a metadata file in the Individuals step." (**Open 5**) |
 | the worker crashed while it read the file | "pops.csv could not be read: ‹what happened› (**Open 4**). Load it again in the Individuals step." |
@@ -312,6 +320,7 @@ file or a file read, which the step shows otherwise:
 | the individuals file | the reason in the Individuals step |
 |---|---|
 | being read | "Reading pops.csv." |
+| named by an opened project, not read when it was saved, `notGiven` | "pops.csv was not read when this project was saved, so the project file does not hold it. Choose it again." |
 | refused by the reader, `raggedRow` or `unclosedQuote` | "pops.csv could not be read: line 7 has 3 cells where the header has 4, read with the semicolon as the separator. Choose another separator, or load a corrected file." |
 | refused by the reader, `variantsFile` | "pops.csv could not be read: it is a variants file, which the Variants step takes. Load a metadata file." |
 | refused by the reader, `unreadable` | "pops.csv could not be read: the browser could not read it; it may have been changed, moved or deleted since it was picked. Choose it again." |
@@ -321,7 +330,8 @@ file or a file read, which the step shows otherwise:
 | the light worker could not start, or the page is out of date | "pops.csv could not be read: ‹what happened› (**Open 4**). Reload the page and choose it again." |
 
 The ends of the rows of `variantsFile`, `unreadable` and a crash are the
-writer's, the same day, on the pattern of the Variants step: a variants
+writer's, the same day, and that of `notGiven` the writers' of stage 4,
+on 27 September 2026, on the pattern of the Variants step: a variants
 file is not corrected but replaced, with "a traits file" in
 association; and a file that could not be read by no fault of its own
 is chosen again, not corrected, in the words of the Variants step, "Choose it
@@ -362,10 +372,11 @@ So `individualsNeeds` no longer locks on no file in population
 genetics, and `Grouping` gains `{ kind: "onePopulation" }`, every
 individual in one population, which a project with a file can choose
 (below, "The populations"). A file that is given still has to be read
-and to hold every individual of the variants: a file refused, or one
-that lacks individuals, locks what uses it as before, since its rows
-would otherwise be ignored without a word. The user who wants no file
-removes it.
+and to hold every individual of the variants: a file refused, one that
+lacks individuals, or one an opened project names and the page does not
+hold, `notGiven`, locks what uses it as before, since its rows would
+otherwise be ignored without a word. The user who wants no file removes
+it.
 
 ### The project of an opened project file
 
@@ -403,6 +414,30 @@ numbers"). So a result that differs because the application calculates
 it in another way since, or because popnei changed, is told as that, and
 not blamed on the variants file alone (`docs/specs/core/store.md`, "The
 comparison with the check numbers").
+
+The individuals file is kept in the project file with its table, and so
+only when it was read (`docs/specs/core/projectFile.md`, "What is
+written of each part"). A project saved while that file was being read,
+or after its reader refused it, names a file of which it has no table.
+The project opened from it holds that source with its name, its options
+of a CSV and the types the user set, and the read `{ kind: "notGiven"
+}`: a file named by the project that the page holds no copy of, and
+for which no read is asked. It locks every analysis that uses the
+individuals file, with the reasons of the tables above, "pops.csv was
+not read when this project was saved, so the project file does not hold
+it. Load pops.csv again in the Individuals step.", whatever the grouping,
+until the user loads the file again, a new load with a new load id, or
+removes it, after which the analyses per population run on one
+population. This was decided on 27 September 2026 by the writers of the
+specs of stage 4, for the owner to overrule
+(`docs/specs/stage-4-open-points.md`). The option not taken, the first
+draft of stage 4, opened such a project with no individuals file: its
+analyses per population would have run on one population, "All
+individuals", although its grouping names a column of a file the user
+had loaded, and the table of one row would have read as the result they
+asked for, with no word of the file. A column chosen and no file does
+not lock in general, since a user who removes the file chose to go
+without it (below, "The populations").
 
 ### The individuals the filters keep
 
@@ -491,7 +526,14 @@ analysis show one text for one condition:
 | no individual of the variants file has a population in the column | `noPopulation` | "No individual of panel.nei has a population in the column popcat of pops.csv. Fill in the column and load the file again, or choose another column, in the Individuals step." |
 
 They are the words of stage 2, with the one population named where the
-user chooses. `populationsNeeds` gives `null` without a file, with the
+user chooses. At the select of the column, in the Individuals step,
+where the user already is, the same words are shown without the place,
+"Choose the column that defines the populations, or all individuals in
+one population.", "… Choose the column that defines the populations, or
+all individuals in one population." and "… Fill in the column and load
+the file again, or choose another column."; `populationsNeeds` gives
+both, `reason` and `inStep`, so that one condition still has one text.
+`populationsNeeds` gives `null` without a file, with the
 grouping `onePopulation`, while the file is not read, and while a column
 of that name is chosen and the variants file is not read, since no
 population is looked for until it is. The four give `null` for a
@@ -545,7 +587,9 @@ another value in a binary type.
 of the source, the types the user set, each by the name of its column.
 It is a command, a step of undo. No key of stage 4 holds a type: the
 populations are the texts of the cells, whatever the type of their
-column.
+column. The first column is never in `typesSet`: its one type,
+identifier, is the one it has, so setting it gives the project itself,
+and any other is a defect.
 
 **The types the user set are kept when the file is read again**, by
 the name of their column, where the new values allow them, as the owner
@@ -555,7 +599,9 @@ was recommended on 27 September 2026 and as is taken meanwhile
 the record of the new read puts each type set on the column of its
 name when the new read allows it: categorical on any column but the
 first; continuous when `columnAllows` of the new read says so; binary, with the coding the
-user set, when the column has exactly the same two values. Otherwise
+user set, when `columnAllows` gives the column `binary` with the same
+two values. A column that the new file has in the first place names the
+individuals, and is the identifier whatever was set on it. Otherwise
 the column keeps the type the reader inferred, the type set leaves
 `typesSet`, and the read names it in `typesLost`, with the type that was
 set, so that the step can say which columns lost it. A new load is a
@@ -575,7 +621,13 @@ values give another, though the user had chosen nothing.
 `typesLost` is a fact about one read: the next read replaces it,
 `setColumnType` of a column takes that column out of it, and the
 project file does not write it, as it writes no notice
-(`docs/specs/core/projectFile.md`). `removeIndividuals` removes the
+(`docs/specs/core/projectFile.md`). Why each type was lost is not kept
+with it, since the table of the read tells it, and `typeLostReason`
+gives it, so that the step and the shell say the same: `"gone"`, the
+table has no column of that name; `"firstColumn"`, the column is now the
+first of the file, which names the individuals; `"values"`, its values
+no longer allow the type. The step words each
+(`docs/specs/steps/individuals.md`, "Its words"). `removeIndividuals` removes the
 source with its types set, so a file loaded after a removal starts from
 the types the reader infers; an undo of the removal gives them back.
 
@@ -679,7 +731,9 @@ export type IndividualsRead =
   | { kind: "read"; table: IndividualsTable; columns: ColumnType[];
       found: CsvFound | null;
       typesLost: ColumnTypeOf[] }   // types set that this read could not keep
-  | { kind: "failed"; error: IndividualsFileError | { kind: "worker"; error: Exclude<RunError, { kind: "files" }> } };
+  | { kind: "failed"; error: IndividualsFileError | { kind: "worker"; error: Exclude<RunError, { kind: "files" }> } }
+  // named by an opened project, not read when it was saved; no read is asked
+  | { kind: "notGiven" };
 
 /** A read as the light worker gives it, to be recorded: typesLost is the record's. */
 export type IndividualsReadGiven =
@@ -691,7 +745,10 @@ A refusal of the reader of xlsx files is the `files` kind of
 `IndividualsFileError`, or another kind of that union that
 `docs/specs/worker/files.md` gives an xlsx, never a failure of the
 worker. While a source is read, each entry of `typesSet` names a column
-of its table and is the type of that column in `columns`.
+of its table and is the type of that column in `columns`. A source
+`notGiven` is made only by the opening of a project file; the entry of
+the page, which asks for the read of every pending source, never asks
+for its read, since the page holds no file under its load id.
 
 The grouping: in population genetics, the column that defines the
 populations, `null` until one is chosen, or every individual in one
@@ -845,8 +902,9 @@ What each does where a reader could doubt it:
 | any | a value `parseProject` would refuse in its place | a defect |
 | `removeVariantFilter`, `removeIndividualFilter` | no filter of that kind | `p` itself |
 | `removeIndividuals` | no individuals file | `p` itself |
-| `setCsvOptions` | no individuals file, or an xlsx | a defect |
+| `setCsvOptions` | no individuals file, an xlsx, or a file `notGiven`, whose read the page could not make | a defect |
 | `setColumnType` | the file not read, a column not in the table, `identifier` for another column than the first, another type for the first, a `binary` type whose two values are not those of the column's `binary` in `columnAllows`, `continuous` where its `continuous` is false | a defect |
+| `setColumnType` | the first column, `identifier` | `p` itself, the type it has; `typesSet` never holds the first column |
 | `setColumnType` | a type the column may have | the type in `columns`; the pair of the column in `typesSet` replaced in its place, or put last; the column taken out of `typesLost` |
 | `setGrouping` | a grouping of the other application; `onePopulation` in association | a defect |
 | `removeIndividuals` | a file, whatever the grouping | the source gone with its `typesSet`; the grouping kept, a column or `onePopulation`, and the analyses per population on one population while there is no file |
@@ -854,7 +912,7 @@ What each does where a reader could doubt it:
 | `setAnalysisOptions` | no entry for the analysis | a new entry, last, also when the options are the defaults |
 | `loadVariants`, `loadIndividuals` | the load id already there, with another field different | a defect: a new read of a file is a new load, with a new load id |
 | `loadVariants` | a new load id | the filters, the individuals file, the grouping, the options and the reference kept |
-| `loadIndividuals`, `setCsvOptions` | a new load id, or other options | the read pending; the grouping kept by the name of its column; `typesSet` of the source before kept, `[]` when there was none |
+| `loadIndividuals`, `setCsvOptions` | a new load id, or other options | the read pending; the grouping kept by the name of its column; `typesSet` of the source before kept, `[]` when there was none, a source `notGiven` included |
 
 Two values are compared as the command keeps them, the fields its type
 does not have left out, so an object of the caller with a field more is
@@ -900,8 +958,9 @@ Each records a read into the source with that load id, and, for the
 individuals file, with those options, while its read is pending or
 failed because its worker failed, `{ kind: "worker" }`. Otherwise it
 returns the project it was given: for no source with that load id, for a
-source read, and for one whose read failed because popnei or the reader
-refused the file, which the same file would give again. So a read that
+source read, for one whose read failed because popnei or the reader
+refused the file, which the same file would give again, and for a
+source `notGiven`, for which no read was asked. So a read that
 comes back for a load the user has replaced changes nothing, and a read
 that succeeds after a failure of the worker replaces the failure: with
 the options of a CSV set to A, then B, then back to A, a first read of A
@@ -930,8 +989,8 @@ export function recordIndividualsRead(
 A read of a table is recorded with the types the reader inferred, then,
 for each pair of `typesSet` in its order, the type set in place of the
 inferred one when the new read allows it, by the rule of "The types of
-the columns", above; the pairs it does not allow, their column gone or
-their values changed, leave `typesSet` and make `typesLost`, in the
+the columns", above; the pairs it does not allow, their column gone,
+now the first, or their values changed, leave `typesSet` and make `typesLost`, in the
 order of `typesSet`. A failed read keeps `typesSet` as it is, so that a
 read that succeeds after the file is mended, or after the worker
 restarts, still finds the types the user set. Suppose `typesSet` holds
@@ -1018,6 +1077,13 @@ export interface ColumnAllows {
     an xlsx; the first column { continuous: false, binary: null }. The
     same array for the same read. */
 export function columnAllows(read: Extract<IndividualsRead, { kind: "read" }>): ColumnAllows[];
+
+/** Why the read could not keep a type the user set on `column`, one of
+    its typesLost: its table has no such column, the column is its first,
+    or the values of the column do not allow the type. */
+export function typeLostReason(
+  read: Extract<IndividualsRead, { kind: "read" }>, column: string,
+): "gone" | "firstColumn" | "values";
 ```
 
 The populations, of "The populations" above; they were exported by
@@ -1047,12 +1113,14 @@ export function populationsToRun(p: Project): Pops | null;
 export function populationsKept(p: Project, kept: readonly string[] | null):
   { readonly pops: Pops; readonly emptied: readonly string[] } | null;
 
-/** The reason about the column of the populations, with its kind; null
-    without a file, with onePopulation, while the file is not read, and
-    while a column of that name is chosen and the variants file is not
-    read. */
+/** The reason about the column of the populations, with its kind, and
+    the same words without "in the Individuals step" for that step, inStep;
+    null without a file, with onePopulation, while the file is not read,
+    and while a column of that name is chosen and the variants file is
+    not read. */
 export function populationsNeeds(p: Project):
-  | { readonly kind: "noColumn" | "noSuchColumn" | "noPopulation"; readonly reason: string }
+  | { readonly kind: "noColumn" | "noSuchColumn" | "noPopulation";
+      readonly reason: string; readonly inStep: string }
   | null;
 ```
 
@@ -1133,8 +1201,9 @@ reader gives it: at least one column and one row, no name of the header
 twice, every row as long as its header, the first cell of each row the
 name of an individual, a text that is not empty, and no individual in two
 rows; one type per column, the first `identifier` and no other; a binary
-type whose `one` and `zero` are the texts of the two distinct values of
-its column that are not missing, `one` not `zero`; a `continuous` type
+type only where `columnAllows` gives the column `binary`, with its two
+values in either coding, the texts of the two distinct values of its
+column that are not missing, `one` not `zero`; a `continuous` type
 only where `columnAllows` gives `continuous`, every value of the column
 a number with the decimal mark of the read; in `typesSet` and `typesLost`, no column
 named twice and no `identifier`, and, in a source read, each pair of
@@ -1146,7 +1215,8 @@ application given, `onePopulation` only in population genetics, with no column n
 of the reference of an analysis among those given, once, with a key
 version that is a whole number of at least 0, its version of popnei and
 of the application, two texts, and a fingerprint of 64 lower case
-hexadecimal digits; a failed read of the individuals file of any kind of
+hexadecimal digits; a read of the individuals file `notGiven`, with no
+other field; a failed read of the individuals file of any kind of
 `IndividualsFileError` with its fields, the seven of an xlsx among them,
 the separator among them one of
 the three a CSV can have; `"utf-16"` among the encodings found; and the
@@ -1264,10 +1334,18 @@ or `null`.
   project part, then makes a project with `variants: null` and the
   reference built from the file (`docs/architecture.md`, section 8). A
   pending read in a project is valid here; a project file writes the read
-  of its variants file as pending, whatever it was, and writes the
-  individuals file only when it was read (`docs/specs/core/projectFile.md`,
-  "What is written of each part"), so an opened project holds no pending
-  read of the individuals file.
+  of its variants file as pending, whatever it was, and the individuals
+  file with its table when it was read and as `notGiven` otherwise
+  (`docs/specs/core/projectFile.md`, "What is written of each part"), so
+  an opened project holds no pending read of the individuals file.
+- **An opened project whose individuals file was not read when it was
+  saved**, `notGiven`. `individualsNeeds` and `individualsStepNeeds`
+  give their reasons, whatever the grouping; `populationsOf`,
+  `populationsNeeds` and `individualsCheck` give `null`, as for a file
+  not read. A new load of the file replaces it, pending, with its
+  `typesSet`, and the grouping finds its column by its name;
+  `removeIndividuals` removes it, and the analyses per population run on
+  one population.
 - **An opened project with a threshold on the individuals** opens as
   any other; its list of individuals kept waits for the statistics of
   the new load (`docs/specs/core/individualsKept.md`, "The cases").
@@ -1288,6 +1366,10 @@ or `null`.
 - **A type set for a column that a new read no longer has.** It leaves
   `typesSet` and is named in `typesLost`; an undo back past the new load
   gives the source before it, with the type set.
+- **A column with a type set that a new file has in the first place**,
+  the user having moved it there in Excel. It is the identifier and
+  names the individuals; its type set leaves `typesSet` and is in
+  `typesLost`, and `typeLostReason` gives `"firstColumn"`.
 - **A project of association with no traits file.** `individualsNeeds`
   gives "Load a traits file in the Individuals step.", as before.
 
@@ -1358,9 +1440,20 @@ project frozen deeply with `Object.freeze`, so that a write into it throws
   whose new values are not all numbers, lost; a binary type kept, with
   the user's coding, when the new column has the same two values in
   another order of the rows, and lost when it has other two; a type set
-  on a column absent from the new table, lost; a failed read, `typesSet`
-  unchanged. `loadIndividuals` after `setColumnType` carries `typesSet`;
-  `removeIndividuals` then `loadIndividuals` does not.
+  on a column absent from the new table, lost; a type set on `status`
+  and a new table whose first column is `status`, lost; a failed read,
+  `typesSet` unchanged. `typeLostReason` gives `"values"`, `"gone"` and
+  `"firstColumn"` for these three. `setColumnType` of the first column
+  with `identifier`, the project itself. `loadIndividuals` after
+  `setColumnType` carries `typesSet`; `removeIndividuals` then
+  `loadIndividuals` does not.
+- **A source `notGiven`**: `individualsNeeds` and `individualsStepNeeds`
+  with their words, with a column, with `column: null` and with
+  `onePopulation`; `populationsOf` `null`; `setCsvOptions` a defect;
+  `recordIndividualsRead` of its load id, the project itself;
+  `loadIndividuals` after it, pending, with its `typesSet`.
+- **`populationsNeeds`** gives `inStep`, the words of `reason` without
+  "in the Individuals step", for each of its three kinds.
 - **`individualsNeeds`** with no file, `null` in population genetics and
   "Load a traits file in the Individuals step." in association.
 - **`parseProject`**, a case for each check above, with its `kind` and its
@@ -1376,7 +1469,7 @@ project frozen deeply with `Object.freeze`, so that a write into it throws
   sequences of commands, and shrinks a failure to the smallest one. For
   every project, `parseProject(JSON.parse(JSON.stringify(p)), …)` is ok
   and deeply equal to `p`; the projects drawn hold the fields of stage
-  4, `typesSet`, `typesLost` and `onePopulation`, which
+  4, `typesSet`, `typesLost`, `onePopulation` and a read `notGiven`, which
   `wholeProject` of `src/core/testSupport.ts` draws. For every sequence of commands, each list has
   at most one filter of each kind and both lists are in their fixed
   order; and a command applied twice with the same arguments
@@ -1501,9 +1594,9 @@ Stage 4, 27 September 2026:
 - `docs/specs/worker/individuals.md`: its binary types hold texts; and
   `cellNumber` and `inferColumnTypes` pure, for `columnAllows`.
 - `docs/architecture.md`, section 2: `IndividualsSource` with
-  `typesSet`, the read with `typesLost`, and `Grouping` with
-  `onePopulation`; and the text of `ColumnType`, whose binary values are
-  texts.
+  `typesSet`, the read with `typesLost` and the kind `notGiven`, and
+  `Grouping` with `onePopulation`; and the text of `ColumnType`, whose
+  binary values are texts.
 - `docs/specs/worker/runner.md`, which names `populationsToRun` of the
   diversity for the order of the populations: they are of
   `src/core/project.ts`.
@@ -1512,3 +1605,11 @@ Stage 4, 27 September 2026:
 
 Each of these was made in its document on 27 September 2026, when the
 specs of stage 4 were made to agree, but those of `docs/architecture.md`.
+
+After the review of the same day, not yet made in their documents:
+
+- `docs/specs/entry.md`: a source `notGiven` is never asked for a read,
+  as a source read is not; only a pending one is.
+- `docs/specs/analyses/pca.md`: `populationsNeeds` gives `inStep` beside
+  `reason`, and the PCA, which locks on `individualsNeeds`, locks on a
+  source `notGiven` too.

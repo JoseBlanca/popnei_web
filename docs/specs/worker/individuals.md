@@ -1052,8 +1052,10 @@ this one is new:
    `null` for an xlsx, so the Individuals step can say only "Read from
    the first sheet of pops.xlsx that is not hidden; the other sheets are
    not read." (`docs/specs/steps/individuals.md`). The first sheet is the first
-   that is not hidden, and a user whose workbook has a hidden sheet
-   before the table may not know which that is. The other option:
+   in the order of the tabs that is not hidden, and a user whose
+   workbook has a hidden sheet before the table, or whose Excel opens it
+   on another sheet, the one active when it was saved, may not know
+   which that is. The other option:
    `found` for an xlsx gives the name of the sheet read and the number
    of sheets, and the step shows "Read from the sheet Hoja1, the first of
    3 not hidden". It changes the type of `found` in `protocol.ts` and

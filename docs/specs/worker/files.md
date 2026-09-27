@@ -3,7 +3,12 @@
 Written on 27 September 2026, for stage 4 of `docs/build-order.md`, the
 Individuals step and the PCA, and revised the same day to agree with the
 specs written beside it: the words of a files wasm that could not be
-downloaded give the advice of the 3D view in the same case. There is no code of it yet. This spec gives
+downloaded give the advice of the 3D view in the same case; and again
+that day after a review of its claims against the source of calamine
+0.36.1 and a second crate of trial: the values calamine gives as it
+reads the cells one by one, the dates past the last day Excel shows,
+the sheet Excel opens on, and the declarations wasm-bindgen generates.
+There is no code of it yet. This spec gives
 the Rust crate `crates/files/`, which reads the first sheet of an xlsx,
 the file Excel saves by default, into its cells, and the few lines of the
 light worker that load it and call it. The light worker is the second
@@ -23,10 +28,14 @@ files, `rust-toolchain.toml`, the crate's `Cargo.toml` and the scripts
 `build:files` and `test:files`, are `.claude/skills/coding/configs.md`'s;
 the workflow that builds the crate is `docs/specs/site.md`'s.
 
-calamine, the Rust library that reads the file, gives each cell as one of
-the values of its `Data`: empty, a whole number, a number, a text, a
-boolean, a date or a time, a date or a duration written in ISO 8601, or
-an error such as `#N/A`. The crate turns each into one of the four kinds
+calamine, the Rust library that reads the file, gives each cell, as its
+reader of the cells one by one gives them, as one of the values of its
+`DataRef`: empty, a number, a text, a text of the workbook's table of
+texts, which an xlsx keeps once for all the cells that hold it
+(`SharedString`), a boolean, a date or a time, a date written in ISO
+8601, or an error such as `#N/A`. `DataRef` also has a whole number and
+a duration in ISO 8601, which calamine's reader of an xlsx never gives,
+and which the crate turns into a number and a text all the same. The crate turns each into one of the four kinds
 of cell the table holds (`Cell`, `docs/specs/worker/protocol.md`): empty,
 text, number or boolean. The rules below are read from the source of
 calamine 0.36.1, the version `docs/technology.md` measured, and tried on
@@ -50,10 +59,14 @@ crate is seen there, or is not seen at all:
 ### The sheet read
 
 The first sheet is the first worksheet in the order of the tabs that is
-not hidden: the one the user sees first when they open the file. A hidden
-first sheet, which holds the lists of a form or old data, is passed over;
-the option not taken, the first sheet whether hidden or not, would read a
-table the user does not see. A chart sheet is not a worksheet and is
+not hidden, the leftmost tab the user sees. It may not be the sheet
+Excel opens the file on, which is the one that was active when the file
+was saved; the crate does not read that one, since calamine 0.36.1 does
+not give it, and the Individuals step says that the first sheet was read
+(`docs/specs/worker/individuals.md`, **Open 1**). A hidden first sheet,
+which holds the lists of a form or old data, is passed over; the option
+not taken, the first sheet whether hidden or not, would read a table the
+user does not see. A chart sheet is not a worksheet and is
 passed over too. Every row and column of the sheet is read, those hidden
 or filtered out included, since a hidden row still holds an individual.
 
@@ -88,19 +101,19 @@ boolean, an empty cell as `null`.
 
 | in the file | calamine gives | the cell |
 |---|---|---|
-| nothing, or a text with no character | `Empty`, `String("")` | empty |
-| a text | `String` | the text as it is, spaces at its ends and line breaks in it kept; the reader removes the spaces (`docs/specs/worker/individuals.md`) |
-| text with several fonts in it | `String`, its parts joined | the text |
+| nothing, or a text with no character | `Empty`, `SharedString("")`, `String("")` | empty |
+| a text | `SharedString`, or `String` for the text a formula saved | the text as it is, spaces at its ends and line breaks in it kept; the reader removes the spaces (`docs/specs/worker/individuals.md`) |
+| text with several fonts in it | `SharedString`, its parts joined | the text |
 | a number, of any format that is not a date: `1,75`, `50 %`, `001` | `Float` | the number, `1.75`, `0.5`, `1` |
-| a whole number, which an xlsx does not store apart | `Int` | the number |
+| a whole number | `Float`: an xlsx stores every number alike, and calamine gives `Int` only for other formats | the number |
 | a number that is not finite, which Excel does not write | `Float` | the text JavaScript writes for it, `NaN`, `Infinity`, `-Infinity` |
 | `TRUE` or `FALSE`, `VERDADERO` or `FALSO` in Spanish | `Bool` | the boolean |
 | a date | `DateTime`, not a duration | `2024-05-13` |
 | a date and a time | `DateTime` | `2024-05-13 12:00:00`, and `2024-05-13 12:00:00.250` when its milliseconds are not 0 |
 | a time alone, a number from 0 to below 1 with a format of time | `DateTime` | `14:30:00` |
-| a date format on a number below 0, which Excel shows as `#######` | `DateTime` | the number |
+| a date format on a number below 0, or of 2,958,466 or more, after 31 December 9999, which Excel shows as `#######` | `DateTime`, with the parts of a wrong date: 31 December 1899 for any number below 0, the year 10000 above | the number |
 | a duration, a format such as `[h]:mm:ss` | `DateTime`, a duration | hours, minutes and seconds, the hours not wrapped at 24: 1.5 days is `36:00:00`, and a negative one `-0:30:00` |
-| a date or a duration written as ISO 8601 text, which other programs than Excel may write | `DateTimeIso`, `DurationIso` | the text as it is |
+| a date written as ISO 8601 text, a cell of the type `d`, which other programs than Excel may write | `DateTimeIso` | the text as it is |
 | an error: `#N/A`, `#DIV/0!`, `#NAME?`, `#NULL!`, `#NUM!`, `#REF!`, `#VALUE!` | `Error` | the text of the error as Excel writes it in English (**Open 1**, below) |
 | a formula | the value saved with it | the cell of that value, by the rows above |
 
@@ -114,7 +127,13 @@ crate takes calamine without its feature `chrono`. It counts the days from
 the start of the date system the workbook says it uses, the 1900 one or
 the 1904 one of old Excel for Mac, so the same date shown in Excel gives
 the same text in both, and reproduces Excel's 29 February 1900, a day
-that did not exist, as Excel does. A time alone is a number below 1,
+that did not exist, as Excel does: 60 gives `1900-02-29` in the trial.
+calamine works the parts out only from 0 to the end of 9999: it turns
+the number of days into a whole number with no sign, so every number
+below 0 gives 31 December 1899, and 2,958,466 gives the year 10000, as
+the trial saw. So the crate looks at the number, `as_f64`, before the
+parts, and gives the number itself outside that range, as the table
+says. A time alone is a number below 1,
 which calamine also gives as a date, of 31 December 1899; the crate
 writes the time only. A duration is written from the number of days
 itself, since calamine gives its parts as a date of January 1900; its
@@ -167,17 +186,18 @@ and the light worker makes the refusal of it. In the order it looks:
    and 4, as every xlsx does, since an xlsx is a zip of XML files:
    `notXlsx`. It is most often a CSV saved with the name `.xlsx`, which
    the words say how to mend. An empty file is one.
-3. **A zip that calamine cannot open as a workbook**: a file cut short,
-   damaged, or another format in a zip, a sheet of LibreOffice in its own
-   format, `.ods`, or Excel's binary workbook, `.xlsb`, with the name
-   `.xlsx`. calamine's message
+3. **A zip that calamine cannot open as a workbook, or whose sheet it
+   cannot read**: a file cut short, damaged, or another format in a zip,
+   a sheet of LibreOffice in its own format, `.ods`, or Excel's binary
+   workbook, `.xlsb`, with the name `.xlsx`. calamine's message
    goes into the refusal `files`, which says the file could not be read
    as a workbook and may be damaged, and the message is written to the
    console, where it helps the one who reports it: "Zip error: invalid
    Zip archive: Could not find EOCD", the record that ends every zip, for
    the first 500 bytes of an xlsx, in the trial.
 4. **No worksheet that is not hidden**, which Excel does not let a user
-   save: `files`, with the message "no visible worksheet".
+   save: `files`, with the crate's own message, "no visible worksheet",
+   as `ReadError::Unreadable`.
 5. **A cell with an error calamine does not know**: calamine 0.36.1 knows
    the seven errors of the table above, and refuses the whole sheet at
    any other, with `XlsxError::CellError`, whose text is the error. The
@@ -299,29 +319,37 @@ pub fn read_xlsx(bytes: &[u8], max_cells: u32) -> Result<XlsxRead, JsError>;
 ```
 
 What wasm-bindgen declares of it in `crates/files/pkg/files.d.ts`, which
-the light worker's TypeScript reads. The trial of 27 September 2026
-generated this shape for a struct of five of these fields, a
-`Vec<JsValue>` among them:
+the light worker's TypeScript reads. A second crate of trial, of 27
+September 2026, with this struct and this function, generated these
+lines, the fields in the order of their names, with wasm-bindgen 0.2.128
+(the comments are added here):
 
 ```ts
 export class XlsxRead {
-  free(): void;
-  readonly refusal: string;
-  readonly detail: string;
-  readonly sheet: string;
-  readonly firstRow: number;
-  readonly firstColumn: number;
-  readonly numRows: number;
-  readonly numColumns: number;
-  readonly cells: any[];
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+    readonly cells: any[];
+    readonly detail: string;
+    readonly firstColumn: number;
+    readonly firstRow: number;
+    readonly numColumns: number;
+    readonly numRows: number;
+    readonly refusal: string;
+    readonly sheet: string;
 }
 
 /** Throws an Error with calamine's message for a file it cannot read. */
 export function readXlsx(bytes: Uint8Array, max_cells: number): XlsxRead;
 
-/** Fetches and compiles files_bg.wasm, from beside files.js. */
-export default function init(): Promise<InitOutput>;
+/** Fetches and compiles files_bg.wasm, from beside files.js when it is
+    called with no argument, as the light worker calls it. */
+export default function __wbg_init (module_or_path?: { module_or_path: InitInput | Promise<InitInput> } | InitInput | Promise<InitInput>): Promise<InitOutput>;
 ```
+
+JavaScript cannot make an `XlsxRead` of its own, `private
+constructor()`. `[Symbol.dispose]` frees it as `free()` does; the
+light worker calls `free()`, in a `finally`.
 
 wasm-bindgen copies the bytes of the `Uint8Array` into the memory of the
 wasm, 20 MB at most, and `cells` makes a JavaScript array of the values
@@ -490,7 +518,7 @@ holds, and the literal cells it gives:
 | the table at C3 | `first_row` 3, `first_column` 3, the same cells |
 | a row with its second cell not written | `Empty` there |
 | a number with the format `000` | `Number(1.0)` |
-| 45425 with the format `dd/mm/yyyy`; 45425.5 with `dd/mm/yyyy hh:mm:ss`; 0.604166666 with `hh:mm`; 1.5 with `[h]:mm:ss`; −3 with `dd/mm/yyyy` | `2024-05-13`, `2024-05-13 12:00:00`, `14:30:00`, `36:00:00`, `Number(-3.0)`; the first four seen as dates by calamine in the trial |
+| 45425 with the format `dd/mm/yyyy`; 45425.5 with `dd/mm/yyyy hh:mm:ss`; 0.604166666 with `hh:mm`; 1.5 with `[h]:mm:ss`; 60, 2958465 and 2958466 with `dd/mm/yyyy`; −3 with `dd/mm/yyyy` | `2024-05-13`, `2024-05-13 12:00:00`, `14:30:00`, `36:00:00`, `1900-02-29`, `9999-12-31`, `Number(2958466.0)`, `Number(-3.0)`; all seen as dates by calamine in the trial |
 | a formula `=1+1` saved with the value 2, one with the text `x`, one with `TRUE`, one with `#N/A`, and `=1+2` with none | `Number(2.0)`, `Text("x")`, `Bool(true)`, `Text("#N/A")`, `Number(0.0)` |
 | `0.1 + 0.2` | `Number(0.30000000000000004)` |
 | a text `"  sp "` and a text with a line break | both as they are |
