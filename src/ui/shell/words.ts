@@ -717,10 +717,11 @@ function endedAnnouncements<R>(
 }
 
 /** The Runs of analyses that waited for the statistics of each
-    individual, whose request left `runs` not being stopped, and that are
-    then locked, the filters of individuals keeping no one: "Diversity
-    was not run. " and the reason of the lock, the words beside its
-    disabled Run. */
+    individual, whose request left `runs` not being stopped, and that
+    were then not run: locked, the filters of individuals keeping no one,
+    "Diversity was not run. " and the reason of the lock, the words
+    beside its disabled Run; or in error, the statistics having failed,
+    "Diversity was not run. The Analyses step says why." */
 function notRunAnnouncements<R>(
   before: AppState<R, unknown>,
   after: AppState<R, unknown>,
@@ -742,8 +743,12 @@ function notRunAnnouncements<R>(
       continue;
     }
     const now = after.analyses.find((a) => a.id === analysis.id)?.status;
+    const name = w.title(analysis.id);
     if (now?.kind === "locked") {
-      announcements.push(`${w.title(analysis.id)} was not run. ${now.reason}`);
+      announcements.push(`${name} was not run. ${now.reason}`);
+    } else if (now?.kind === "error" && now.ofStatistics) {
+      const step = STEP_NAMES[w.stepOf(analysis.id)];
+      announcements.push(`${name} was not run. The ${step} step says why.`);
     }
   }
   return announcements;

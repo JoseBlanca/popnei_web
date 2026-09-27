@@ -2301,6 +2301,39 @@ describe("VS5 D2 the announcements of the writing, more", () => {
     ]);
   });
 
+  test("a Run of the diversity whose statistics fail says, after their failure, that it was not run and where why is", () => {
+    const before = checksState({
+      project: THREE_FILTERS,
+      statuses: {
+        [STATISTICS]: running(KEY_S, 1),
+        [DIVERSITY]: {
+          kind: "running",
+          key: KEY_A,
+          runId: 1,
+          progress: null,
+          waitsForStatistics: true,
+        },
+      },
+      runs: [run(1, STATISTICS, KEY_S, CURRENT)],
+    });
+    const after = checksState({
+      project: THREE_FILTERS,
+      statuses: {
+        [STATISTICS]: failed(KEY_S),
+        [DIVERSITY]: {
+          kind: "error",
+          key: KEY_A,
+          error: { kind: "refused", message: "too few individuals" },
+          ofStatistics: true,
+        },
+      },
+    });
+    expect(announcementsOf(before, after, WORDS)).toEqual([
+      "Statistics of each individual could not be calculated. The Variants step says why.",
+      "Diversity was not run. The Analyses step says why.",
+    ]);
+  });
+
   test("VS7 D2 a Run of the diversity whose statistics end with the filters of individuals keeping no one says it was not run, and why", () => {
     const reason =
       "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them in the Variants step.";
