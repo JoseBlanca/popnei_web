@@ -21,7 +21,12 @@ import type { AnalysisError } from "../../../core/store.ts";
 import { sizeText } from "../../../core/writeEstimate.ts";
 import type { WriteEstimate } from "../../../core/writeEstimate.ts";
 import type { PassStats } from "../../../worker/protocol.ts";
-import { clockText, failureText } from "../../analyses/words.ts";
+import {
+  clockText,
+  failureText,
+  STATISTICS_BAR_LABEL,
+  STATISTICS_WORDS,
+} from "../../analyses/words.ts";
 import { capitalized } from "../../sentences.ts";
 
 /** The heading of the part, and its title in the notice and the status
@@ -181,11 +186,6 @@ export interface WritingLine {
   readonly waitingFor: string | null;
 }
 
-/** What the statistics of each individual are, in the line of a write
-    that waits for them. */
-const STATISTICS_WORDS =
-  "the statistics of each individual, which the filters of individuals are set from";
-
 /** The line beside the bar: "Writing panel.filtered.nei · 35% · 0:12",
     "Calculating the statistics of each individual, which the filters of
     individuals are set from · 35% · 0:12"; with no share before the first
@@ -211,9 +211,7 @@ export function writingBarLabel(
   name: string,
   waitsForStatistics: boolean,
 ): string {
-  return waitsForStatistics
-    ? "Calculating the statistics of each individual"
-    : `Writing ${escaped(name)}`;
+  return waitsForStatistics ? STATISTICS_BAR_LABEL : `Writing ${escaped(name)}`;
 }
 
 /**

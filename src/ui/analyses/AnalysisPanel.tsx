@@ -7,14 +7,19 @@
  * the component of its result.
  *
  * - locked: Run, disabled, with the reason beside it as its description;
- * - ready: Run, and what it will run on;
- * - running: Stop, the bar, and the line with the time since it started;
+ * - ready: Run, and what it will run on, the individuals the filters
+ *   keep, or, while a threshold waits for the statistics of each
+ *   individual, those before it and that Run calculates them first;
+ * - running: Stop, the bar, and the line with the time since it started,
+ *   the statistics' while the Run waits for them;
  * - done: the warnings, and the result with, under its table, the
  *   comparison with the check numbers of an opened project file, or why
  *   its numbers are not compared, the VCF read with other read options;
  * - removed: the words of the change that removed it, Run, and what it
  *   will run on;
- * - error: what happened and what to do, with Run after a failure that
+ * - error: what happened and what to do, in the words of the statistics
+ *   of each individual when they failed and the Run waited for them, with
+ *   Run after a failure that
  *   is neither popnei's refusal nor a variants file the browser can no
  *   longer read, which fails again until it is loaded again.
  *
@@ -114,14 +119,32 @@ function Above({ ui, status }: PartProps): React.JSX.Element | null {
   switch (status.kind) {
     case "removed":
       return <Removed ui={ui} />;
-    case "error":
+    case "error": {
+      if (!status.ofStatistics) {
+        return (
+          <Failed
+            error={status.error}
+            name={ui.title}
+            refusalText={ui.refusalText}
+          />
+        );
+      }
+      // The failure of the statistics its Run waited for, in their
+      // words, never in the analysis's own.
+      if (ui.statisticsFailedText === null) {
+        throw new Error(
+          `popnei_web defect: ${ui.title} failed by the statistics of each individual, which it does not read.`,
+        );
+      }
       return (
         <Failed
           error={status.error}
           name={ui.title}
           refusalText={ui.refusalText}
+          statisticsFailedText={ui.statisticsFailedText}
         />
       );
+    }
     case "locked":
     case "ready":
     case "running":
@@ -153,6 +176,7 @@ function Below({
           name={ui.name}
           runId={status.runId}
           progress={status.progress}
+          waitsForStatistics={status.waitsForStatistics}
         />
       );
     case "done":
@@ -179,11 +203,20 @@ function Below({
   }
 }
 
-/** What a run will take, "3 populations: p0, 48 individuals; …". */
-function Ready({ ui }: { readonly ui: AnalysisUi }): React.JSX.Element | null {
-  const text = useAppState((s) => ui.readyText(s.project));
-  return text === null ? null : (
-    <p className={classOf(styles, "line")}>{text}</p>
+/** What a run will take, "3 populations: p0, 32 individuals; …", with
+    the populations the filters of individuals leave empty, and whether a
+    Run calculates the statistics of each individual first. */
+function Ready({ ui }: { readonly ui: AnalysisUi }): React.JSX.Element {
+  const project = useAppState((s) => s.project);
+  const kept = useAppState((s) => s.individualsKept);
+  return (
+    <>
+      {ui.readyLines(project, kept).map((line) => (
+        <p key={line} className={classOf(styles, "line")}>
+          {line}
+        </p>
+      ))}
+    </>
   );
 }
 

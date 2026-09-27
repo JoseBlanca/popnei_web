@@ -1,7 +1,8 @@
 /**
  * The bar and the line of a calculation under way, with the time since
  * it started, counted every second (docs/specs/analyses/diversity.md,
- * "The states", running), shared by the panels of the Analyses step and
+ * "The states", running), and the words of a Run that waits for the
+ * statistics of each individual, shared by the panels of the Analyses step and
  * the checks of the Variants step. The class names are those of
  * AnalysisPanel.module.css.
  */
@@ -11,7 +12,7 @@ import { useAppState } from "../store.tsx";
 import { ProgressBar } from "../widgets/ProgressBar.tsx";
 import type { Progress } from "../../worker/protocol.ts";
 import styles from "./AnalysisPanel.module.css";
-import { progressShare, runningText } from "./words.ts";
+import { progressShare, runningBarLabel, runningText } from "./words.ts";
 
 /** What the part of a calculation under way is drawn with. */
 export interface RunningProps {
@@ -22,6 +23,9 @@ export interface RunningProps {
   readonly runId: number;
   /** How far it has gone, or `null` until the worker says. */
   readonly progress: Progress | null;
+  /** Whether it is a Run that waits for the statistics of each
+      individual, whose request `runId` and `progress` are then. */
+  readonly waitsForStatistics: boolean;
 }
 
 /** The bar and the line of a calculation under way, with the time since
@@ -30,6 +34,7 @@ export function Running({
   name,
   runId,
   progress,
+  waitsForStatistics,
 }: RunningProps): React.JSX.Element {
   const afterStop = useAppState(
     (s) => s.runs.find((r) => r.runId === runId)?.afterStop ?? false,
@@ -40,12 +45,16 @@ export function Running({
   const share = progress === null ? null : progressShare(progress);
   return (
     <div className={classOf(styles, "running")}>
-      <ProgressBar label={`Calculating ${name}`} value={share} />
+      <ProgressBar
+        label={runningBarLabel(name, waitsForStatistics)}
+        value={share}
+      />
       <p className={classOf(styles, "line")}>
         {runningText({
           share,
           seconds,
           waitingFor: afterStop ? variantsName : null,
+          waitsForStatistics,
         })}
       </p>
     </div>

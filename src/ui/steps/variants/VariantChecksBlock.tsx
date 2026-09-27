@@ -117,6 +117,7 @@ export function VariantChecksBlock(): React.JSX.Element {
           name={CHECK_NAME}
           runId={status.runId}
           progress={status.progress}
+          waitsForStatistics={status.waitsForStatistics}
         />
       )}
       {status.kind === "done" && result !== null && (

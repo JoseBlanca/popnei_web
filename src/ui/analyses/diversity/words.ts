@@ -6,9 +6,12 @@
  * panel draws them.
  */
 
-import type { DiversityRow } from "../../../core/analyses/diversity.ts";
+import type {
+  DiversityRow,
+  PopulationsKept,
+} from "../../../core/analyses/diversity.ts";
 import { variantsStem } from "../../../core/fileNames.ts";
-import { counted, escaped, grouped } from "../../../core/project.ts";
+import { counted, escaped, grouped, namesOf } from "../../../core/project.ts";
 import type { Pops } from "../../../worker/protocol.ts";
 
 /** The decimals of every number of the table. */
@@ -74,4 +77,37 @@ export function versionsText(
     `panel.diversity.csv`. */
 export function csvName(variantsName: string): string {
   return `${variantsStem(variantsName)}.diversity.csv`;
+}
+
+/** The line of the ready state while a threshold on the individuals waits
+    for the statistics of each individual, which a Run calculates first. */
+export const WAITS_FOR_STATISTICS_TEXT =
+  "Run calculates the statistics of each individual first, and the populations may lose individuals to the thresholds.";
+
+/** The populations the filters of individuals leave with no individual,
+    which a run leaves out: "p9 has no individual left after the filters
+    of individuals, and is left out."; "p1 and p2 have …, and are left
+    out.". */
+export function emptiedText(emptied: readonly string[]): string {
+  const one = emptied.length === 1;
+  return `${namesOf(emptied)} ${one ? "has" : "have"} no individual left after the filters of individuals, and ${one ? "is" : "are"} left out.`;
+}
+
+/**
+ * The lines of the ready state, and of the state of a result removed:
+ * the populations a run will take with their sizes, when any is left;
+ * the populations the filters of individuals leave empty, when any; and,
+ * when `waitsForStatistics`, a threshold on the individuals waiting for
+ * the statistics of each individual, the line that says Run calculates
+ * them first, `kept` being then the populations before the thresholds.
+ */
+export function readyLines(
+  kept: PopulationsKept,
+  waitsForStatistics: boolean,
+): readonly string[] {
+  return [
+    ...(kept.pops.length > 0 ? [populationsText(kept.pops)] : []),
+    ...(kept.emptied.length > 0 ? [emptiedText(kept.emptied)] : []),
+    ...(waitsForStatistics ? [WAITS_FOR_STATISTICS_TEXT] : []),
+  ];
 }

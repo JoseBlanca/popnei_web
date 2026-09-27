@@ -125,6 +125,7 @@ export function FilterCountsPart(): React.JSX.Element {
           name={COUNT_NAME}
           runId={status.runId}
           progress={status.progress}
+          waitsForStatistics={status.waitsForStatistics}
         />
       )}
       {status.kind === "done" ? (

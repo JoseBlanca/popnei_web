@@ -59,21 +59,52 @@ export interface RunningLine {
   /** The name of the variants file the calculation waits to be opened
       again, after a stop or a change of the load; `null` otherwise. */
   readonly waitingFor: string | null;
+  /** Whether the calculation is a Run that waits for the statistics of
+      each individual, whose share the line then gives. */
+  readonly waitsForStatistics: boolean;
+}
+
+/** The statistics of each individual, as the line of a Run that waits for
+    them names them, and the line of a write that waits for them. */
+export const STATISTICS_WORDS =
+  "the statistics of each individual, which the filters of individuals are set from";
+
+/** The name of the bar of a Run that waits for the statistics of each
+    individual, and of a write that waits for them: the share it shows is
+    theirs. */
+export const STATISTICS_BAR_LABEL =
+  "Calculating the statistics of each individual";
+
+/** The name of the bar of a calculation under way: "Calculating the
+    diversity", `name` being the analysis in a sentence; or
+    STATISTICS_BAR_LABEL while it waits for the statistics of each
+    individual. */
+export function runningBarLabel(
+  name: string,
+  waitsForStatistics: boolean,
+): string {
+  return waitsForStatistics ? STATISTICS_BAR_LABEL : `Calculating ${name}`;
 }
 
 /** The line beside the bar: "Calculating · 35% · 0:12"; "Calculating ·
     0:12" before the first progress; "Waiting for panel.nei to be opened
     again, then calculating · 0:12" after a stop, until the first
-    progress. */
+    progress; and, while a Run waits for the statistics of each
+    individual, "Calculating the statistics of each individual, which the
+    filters of individuals are set from · 35% · 0:12", and the same for
+    the other two. */
 export function runningText(line: RunningLine): string {
   const clock = clockText(line.seconds);
+  const doing = line.waitsForStatistics
+    ? `calculating ${STATISTICS_WORDS}`
+    : "calculating";
   if (line.share !== null) {
-    return `Calculating · ${String(line.share)}% · ${clock}`;
+    return `${capitalized(doing)} · ${String(line.share)}% · ${clock}`;
   }
   if (line.waitingFor !== null) {
-    return `Waiting for ${escaped(line.waitingFor)} to be opened again, then calculating · ${clock}`;
+    return `Waiting for ${escaped(line.waitingFor)} to be opened again, then ${doing} · ${clock}`;
   }
-  return `Calculating · ${clock}`;
+  return `${capitalized(doing)} · ${clock}`;
 }
 
 /**

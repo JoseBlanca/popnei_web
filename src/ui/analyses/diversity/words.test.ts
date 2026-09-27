@@ -5,8 +5,10 @@ import {
   cellText,
   rowCells,
   csvName,
+  emptiedText,
   optionsText,
   populationsText,
+  readyLines,
   versionsText,
 } from "./words.ts";
 
@@ -33,6 +35,51 @@ describe("the words of the panel of the diversity", () => {
     expect(populationsText([["p1\u202e", ["s0", "s1"]]])).toBe(
       "1 population: p1\\u202e, 2 individuals",
     );
+  });
+
+  test("VS7 D2 the populations the filters of individuals leave empty are named, one or several", () => {
+    expect(emptiedText(["p9"])).toBe(
+      "p9 has no individual left after the filters of individuals, and is left out.",
+    );
+    expect(emptiedText(["p1", "p2"])).toBe(
+      "p1 and p2 have no individual left after the filters of individuals, and are left out.",
+    );
+    expect(emptiedText(["p1", "p2", "p3", "p4"])).toBe(
+      "p1, p2 and 2 more have no individual left after the filters of individuals, and are left out.",
+    );
+    expect(emptiedText(["p1\u202e"])).toBe(
+      "p1\\u202e has no individual left after the filters of individuals, and is left out.",
+    );
+  });
+
+  test("VS7 D2 the lines of the ready state: the populations kept, those left empty, and the wait for the statistics", () => {
+    const s = (count: number): string[] =>
+      Array.from({ length: count }, (_, i) => `s${String(i)}`);
+    const pops = [
+      ["p0", s(32)],
+      ["p2", s(50)],
+      ["p1", s(37)],
+    ] as const;
+    expect(readyLines({ pops, emptied: [] }, false)).toEqual([
+      "3 populations: p0, 32 individuals; p2, 50; p1, 37",
+    ]);
+    expect(
+      readyLines({ pops: [["p0", s(48)]], emptied: ["p9"] }, false),
+    ).toEqual([
+      "1 population: p0, 48 individuals",
+      "p9 has no individual left after the filters of individuals, and is left out.",
+    ]);
+    expect(readyLines({ pops, emptied: [] }, true)).toEqual([
+      "3 populations: p0, 32 individuals; p2, 50; p1, 37",
+      "Run calculates the statistics of each individual first, and the populations may lose individuals to the thresholds.",
+    ]);
+    // No population left: the line of the populations is left out, and
+    // the one of the empty ones names them all.
+    expect(
+      readyLines({ pops: [], emptied: ["p0", "p2", "p1"] }, false),
+    ).toEqual([
+      "p0, p2 and p1 have no individual left after the filters of individuals, and are left out.",
+    ]);
   });
 
   test("the caption says what the table is over", () => {

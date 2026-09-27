@@ -6,6 +6,7 @@ import {
   failureText,
   progressShare,
   removedText,
+  runningBarLabel,
   runningText,
   stoppedText,
   warningsHeading,
@@ -53,18 +54,44 @@ describe("the words of the frame of an analysis panel", () => {
   });
 
   test("the line of a calculation under way", () => {
-    expect(runningText({ share: 35, seconds: 12, waitingFor: null })).toBe(
-      "Calculating · 35% · 0:12",
+    const line = {
+      share: 35,
+      seconds: 12,
+      waitingFor: null,
+      waitsForStatistics: false,
+    };
+    expect(runningText(line)).toBe("Calculating · 35% · 0:12");
+    expect(runningText({ ...line, share: null })).toBe("Calculating · 0:12");
+    expect(runningText({ ...line, share: null, waitingFor: "panel.nei" })).toBe(
+      "Waiting for panel.nei to be opened again, then calculating · 0:12",
     );
-    expect(runningText({ share: null, seconds: 12, waitingFor: null })).toBe(
-      "Calculating · 0:12",
+    expect(runningText({ ...line, share: 3, waitingFor: "panel.nei" })).toBe(
+      "Calculating · 3% · 0:12",
     );
-    expect(
-      runningText({ share: null, seconds: 12, waitingFor: "panel.nei" }),
-    ).toBe("Waiting for panel.nei to be opened again, then calculating · 0:12");
-    expect(
-      runningText({ share: 3, seconds: 12, waitingFor: "panel.nei" }),
-    ).toBe("Calculating · 3% · 0:12");
+    expect(runningBarLabel("the diversity", false)).toBe(
+      "Calculating the diversity",
+    );
+  });
+
+  test("VS7 D2 the line and the bar of a Run that waits for the statistics of each individual", () => {
+    const line = {
+      share: 35,
+      seconds: 12,
+      waitingFor: null,
+      waitsForStatistics: true,
+    };
+    expect(runningText(line)).toBe(
+      "Calculating the statistics of each individual, which the filters of individuals are set from · 35% · 0:12",
+    );
+    expect(runningText({ ...line, share: null })).toBe(
+      "Calculating the statistics of each individual, which the filters of individuals are set from · 0:12",
+    );
+    expect(runningText({ ...line, share: null, waitingFor: "panel.nei" })).toBe(
+      "Waiting for panel.nei to be opened again, then calculating the statistics of each individual, which the filters of individuals are set from · 0:12",
+    );
+    expect(runningBarLabel("the diversity", true)).toBe(
+      "Calculating the statistics of each individual",
+    );
   });
 
   test("WS8 D2 a result removed is told from the change: its cause after a command, the change undone or redone after an undo or a redo", () => {

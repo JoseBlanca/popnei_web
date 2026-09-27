@@ -116,6 +116,7 @@ export function IndividualChecksBlock(): React.JSX.Element {
           name={STATS_NAME}
           runId={status.runId}
           progress={status.progress}
+          waitsForStatistics={status.waitsForStatistics}
         />
       )}
       {status.kind === "done" && result !== null && (
