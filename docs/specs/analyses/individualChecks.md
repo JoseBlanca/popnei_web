@@ -411,14 +411,35 @@ are calculated:
   diversity left for the sortable tables of later stages. An individual
   with "no value" sorts after every number, in both directions, so that
   a sort by heterozygosity, from the highest, starts with the highest
-  that were counted; Kept sorts "kept" before "removed".
+  that were counted; Kept sorts "kept" before "removed", and "removed"
+  first the other way. Rows equal in the column sorted keep the order
+  of the variants file, and Individual sorts the names as the browser
+  orders text in English. The table is named "Statistics of each
+  individual", the heading of its block, since its caption stands in
+  the block above the histograms (`docs/specs/steps/variants.md`), and
+  it scrolls in a box of its own with its header in view, so that
+  10,000 rows do not make the step 10,000 lines long; how high the box
+  is, is left for the running application. Written with the code on 27
+  September 2026.
 - **Two histograms**, of the proportion of missing genotypes and of the
   observed heterozygosity, drawn by the histogram of
   `docs/specs/charts/histogram.md` from the bins of `binValues`, above,
   each with the threshold of its filter
   of individuals marked on it when that filter is on. Under the second,
   when some individual has no heterozygosity: "3 individuals with no
-  called genotype are not in the histogram." Each has the table of its
+  called genotype are not in the histogram.", or "1 individual with no
+  called genotype is not in the histogram."; when none has one,
+  `binValues` gives no bins, and that line stands alone in place of the
+  histogram. Their titles, which name each histogram, its tabs and its
+  button for a screen reader, are "Proportion of missing genotypes of
+  each individual" and "Observed heterozygosity of each individual",
+  so that neither has the name of the histogram of the observed
+  heterozygosity of the variants on the same step; their axes are
+  "Proportion of missing genotypes" or "Observed heterozygosity", and
+  "Individuals", and the tables of their bins "The bins of the
+  proportion of missing genotypes of each individual" and "The bins of
+  the observed heterozygosity of each individual", written with the
+  code on 27 September 2026. Each has the table of its
   bins beside it, from `histogramRows`, a description in the form of the
   histogram's spec, "The proportion of missing genotypes of 200
   individuals, in 20 bins from 0.0165 to 0.0434. The threshold 0.03
