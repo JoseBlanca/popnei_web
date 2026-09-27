@@ -18,8 +18,11 @@ is approved by the owner on 26 September 2026. Revised on 27 September
 its filters are not the project's, and no analysis of stage 4 asks for
 the key of an intermediate result; and again the same day, to agree
 with the specs written beside it: the read of the individuals file given
-to `individualsRead` without the types lost, which the record of
-`project.ts` works out. The store is the one object of core that changes: it holds the
+to `individualsRead` as the light worker gives it, the types the user
+set applied by the record of `project.ts`; and again the same day after
+the review of those specs: a result that a read gives back leaves the
+notice, and a list of individuals that keeps nobody locks without the
+statistics. The store is the one object of core that changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.
 From them it gives the screens one state to read, in which each analysis
@@ -140,7 +143,7 @@ has the kind `removed` in the code.
 | done | the cache holds a result under its key | the result, its warnings, and the comparison with the check numbers of an opened project file |
 | running | a calculation of its key is in flight and is not being stopped, whether it waits in the queue of the worker or runs; or a Run of its key waits for the statistics of each individual (below) | its progress, the `Progress` of `docs/specs/worker/protocol.md`, popnei's four numbers of the pass as the worker gave them, passed on unchanged, `null` until the worker gives one; the request's id; and whether it waits for the statistics, whose request's progress and id it then holds |
 | error | popnei refused the calculation of its key, or the calculation failed since the last change; or it reads the filters of individuals and the statistics it waits for were refused, or failed since the last change (below) | popnei's message, or the failure, and whether it is the failure of the statistics, `ofStatistics`, so that the panel does not tell it as its own |
-| locked | it reads the filters of individuals, and the list they make, known from the statistics in the cache, keeps no individual | `keptNoneReason` of `docs/specs/core/individualsKept.md` |
+| locked | it reads the filters of individuals, and the list they make keeps no individual, known from the statistics in the cache, or from the project alone when the lists to keep and to remove leave nobody | `keptNoneReason` of `docs/specs/core/individualsKept.md` |
 | removed | the current notice lists it among the results removed | its key; it can run again |
 | ready | none of the above | its key |
 | empty | cannot happen | — |
@@ -363,7 +366,22 @@ run; when the notice is closed or replaced without it, the analysis is
 `ready`. An analysis among the results removed that is done again, when
 a calculation of its new key ends, leaves the results removed; it stays
 in `stopped` if it is there and was done again by an undo, and a
-`startRun` that calculated it has taken it out. A calculation left behind that
+`startRun` that calculated it has taken it out. An analysis among the
+results removed leaves them too when a read of a file, recorded, makes
+the project give again the key of the result the change removed, and the
+cache still holds that result: the result is back on the screen, `done`,
+with no calculation, and a notice that went on saying it was removed
+would be false. So the store keeps, with the notice, the key of each
+result it lists as removed. The case is a metadata file loaded while
+every individual is in one population: the diversity is locked while
+the file is read, which removes its result, and with the grouping
+`onePopulation` the read gives the key it had (`docs/specs/steps/individuals.md`,
+"The populations"). A result the cache has dropped in the meantime stays
+among the results removed, since it did leave and an undo would not
+bring it back either. Decided on 27 September 2026, after the review of
+the specs of stage 4; the option not taken kept it in the notice until
+the notice was closed or replaced, which told of a removal the user could
+see had not lasted. A calculation left behind that
 ends by itself, done, failed or cancelled, leaves `leftBehind`, and so
 does one whose key the project gives again through a read of a file,
 which is not a change of the user; when `leftBehind` is empty, the
@@ -935,8 +953,9 @@ export interface Store<R, F = never> {
 
   popneiReady(version: string): void;
   variantsRead(fileId: string, read: SourceRead): void;
-  /** From stage 4 the read is given without typesLost, which the record
-      works out (docs/specs/core/project.md, recordIndividualsRead). */
+  /** From stage 4 the read is given as the light worker gives it, and the
+      record applies the types the user set that it allows
+      (docs/specs/core/project.md, recordIndividualsRead). */
   individualsRead(fileId: string, csv: CsvOptions | null, read: IndividualsReadGiven): void;
   /** Gives the handles it sent because of this end: the requests of the
       Runs that waited for these statistics. */
@@ -1214,7 +1233,11 @@ whose file is a text.
   threshold moved while it waits: the notice names it in `leftBehind`;
   the statistics end, and `runEnded` gives no handle. A refusal of the
   statistics: the analysis is `error` with popnei's message and
-  `ofStatistics` true, and `startRun` gives `null`.
+  `ofStatistics` true, and `startRun` gives `null`. With keep `[a]`,
+  remove `[a]` and a threshold of 0.2 on the missing rate, and no
+  statistics in the cache: the analysis is `locked` with
+  `keptNoneReason`, and `startRun` gives `null` and sends nothing, the
+  statistics' request among it.
 - **A list of individuals popnei would refuse**, a list to keep that
   names `z`, not in the file: the analysis that reads the filters of
   individuals and the write are `locked` with the `reason` of
@@ -1273,6 +1296,16 @@ whose file is a text.
   change to another.
 - **A read recorded**: two projects of the history that shared the
   source of the file share the new one after the read.
+- **A result given back by a read**: with the analysis that uses the
+  populations done under the grouping `onePopulation`, `apply("a new
+  metadata file was loaded", (p) => loadIndividuals(p, …))`: it is
+  `locked`, and the notice lists it among the results removed;
+  `individualsRead` of that load, a table that holds every individual of
+  the variants file: it is `done` with the same result object, `send` was
+  not called, and the notice, which held nothing else, is `null`. The
+  same with a cache whose bound holds one result, and a result of the
+  other analysis put while the file is read, which drops the first: the
+  analysis stays among the results removed, and is `removed`.
 - **A result kept to its definition**: the two fake analyses give
   results of different shapes, and the `warnings` and `checkNumbers` of
   each are called only with results of its own requests; two definitions

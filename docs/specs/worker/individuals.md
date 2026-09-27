@@ -16,7 +16,9 @@ which takes an xlsx; and again the same day, to agree with the specs
 written beside it: the end of the warnings of a column of few whole
 numbers, now that the user sets the types, the words of `notText`, now
 that an xlsx is read, and the two functions of the inference that core
-calls. The revision is not approved yet. The reader turns
+calls; and after the review of the specs of stage 4, the warning of a
+column of one number written in one way, which the user set continuous.
+The revision is not approved yet. The reader turns
 the file of the individuals, a CSV, a TSV or an xlsx, the
 metadata file of population genetics or the traits file of association,
 into the table the project holds, and infers the type of each of its
@@ -306,9 +308,10 @@ step makes it so for a file whose name ends in `.xlsx`
    each cell empty, text, number or boolean, dates and errors made text
    (`docs/specs/worker/files.md`, "Each cell"), or refuses the file. A
    rectangle of more than `MAX_SHEET_CELLS`, 2,000,000 cells, is refused,
-   `sheetTooLarge`, before its cells are made: a CSV of 20 MB holds about
-   1,000,000 cells of ten characters, and a sheet twice that is still a
-   table of individuals. It is an estimate, as the 20 MB is.
+   `sheetTooLarge`, at the first cell that makes it so, as the cells are
+   read: a CSV of 20 MB holds about 1,800,000 cells of ten characters
+   and a separator, so the limit lets an xlsx hold a table as large as a
+   CSV can. It is an estimate, as the 20 MB is.
 3. The rows of the rectangle go through the rules of "The rows and the
    cells", but those of the text of a CSV: no variants file, no line
    ending, no quote, no row of another length, since every row of the
@@ -411,6 +414,20 @@ and, for a column whose values are one number written in several ways,
 > "score holds only one whole number, 1, written in different ways, and
 > is taken as a measurement. If it is a code, such as a numbered
 > population, set its type to categorical."
+
+and, for a column whose values are one number written in one way, `1`
+in every cell, which the reader infers categorical, one value, and the
+user can set continuous (`docs/specs/core/project.md`, "The types of the
+columns"), since the warning is worked out from the types the column
+has, set or inferred:
+
+> "score holds only one whole number, 1, and is taken as a measurement.
+> If it is a code, such as a numbered population, set its type to
+> categorical."
+
+The two sentences of one number are told apart by `numTexts`, the
+number of distinct texts of the column, compared as text, as the values
+of a binary column are.
 
 The end of stage 2, "it can still be chosen as the column of the
 populations", still holds and no longer says what to do: from stage 4
@@ -607,6 +624,7 @@ export interface ColumnWarning {
   kind: "fewWholeLevels";
   column: string;                  // its name
   numLevels: number;               // its distinct numbers, by value, 1 to 20
+  numTexts: number;                // its distinct texts, compared as text; at least numLevels
   min: number;
   max: number;
 }
@@ -626,8 +644,10 @@ The read of a file, in `src/worker/individualsFile.ts`, which
 `filesRunner.ts` calls with the `File`, the options of its CSV, `null`
 for an xlsx, and the function that reads the cells of an xlsx with the
 files wasm, which only `filesRunner.ts` may import
-(`docs/specs/worker/files.md`, "How the light worker loads it"). It never
-rejects. It is apart
+(`docs/specs/worker/files.md`, "How the light worker loads it"). It
+rejects only when that function rejects, for a defect of ours, and then
+the worker ends with `crashed`; a file it cannot read, or cannot
+download the files wasm for, is a failed read. It is apart
 from the runner so that it runs under Vitest in node, where `Blob`,
 `TextDecoder` and Windows-1252 exist and a worker does not; it is checked
 with the worker's configuration, since the reader of the text may not
@@ -645,7 +665,10 @@ export interface BytesSource { size: number; arrayBuffer(): Promise<ArrayBuffer>
 //       found: CsvFound | null }                                  // null for an xlsx
 //   | { kind: "failed"; error: IndividualsFileError };
 
-/** Reads the cells of an xlsx; never rejects. */
+/** Reads the cells of an xlsx; a refusal, a file calamine cannot open and
+    a files wasm that could not be downloaded are a failed read; rejects
+    only for a defect of ours, a result of the files wasm that breaks its
+    contract (docs/specs/worker/files.md, readXlsxCells). */
 export type XlsxReader = (bytes: Uint8Array) => Promise<SheetCellsRead>;
 
 export function readIndividualsFile(
@@ -843,7 +866,9 @@ line break:
 | `id,x\n001,1\n002,2\n003,3\n` | auto | first cells `"001"`, `"002"`, `"003"`; `x` continuous |
 | `id,st\nA,case\nB,control\nC,\nD,NA\n` | auto | `st` binary, one `case`, zero `control`; cells of C and D `null` |
 | `id,g\nA,1\nB,2\n` | auto | `g` binary, one `"2"`, zero `"1"` |
-| `id,s\nA,1\nB,2\nC,3\nD,5\n` | auto | `s` continuous; `columnWarnings` gives `s`, 4 levels, 1 to 5 |
+| `id,s\nA,1\nB,2\nC,3\nD,5\n` | auto | `s` continuous; `columnWarnings` gives `s`, 4 levels, 4 texts, 1 to 5 |
+| `id,s\nA,1\nB,01\nC,001\n` | auto | `s` continuous; `columnWarnings` gives `s`, 1 level, 3 texts, and `columnWarningText` the sentence of one number written in different ways |
+| `id,s\nA,1\nB,1\n` | auto | `s` categorical; with its type set continuous, `columnWarnings` gives `s`, 1 level, 1 text, and `columnWarningText` the sentence of one number with no "written in different ways" |
 | `id,n\nA,"x, y"\nB,"say ""hi"""\n` | auto | cells `x, y` and `say "hi"` |
 | `id,n\r\nA,1\r\n\r\nB,2\r\n` and the same with `\r` alone | auto | the same table as with `\n`, the blank line skipped |
 | `id;pop;;\nA;P1;;\n` | auto | columns `id`, `pop` |

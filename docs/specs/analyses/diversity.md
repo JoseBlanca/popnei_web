@@ -31,7 +31,9 @@ two passes, and the size of a result of the PCA in the cache, names
 included; and again after its review: with the one population, lists of
 individuals that leave none lock with the words of the filters that keep
 none, and a metadata file named by an opened project and not read locks
-it.
+it; and after its last review: the result that the read of a metadata
+file gives back leaves the notice, and lists that alone leave nobody
+lock before a Run, with or without a threshold.
 The code of stage 2 is in
 `src/core/analyses/diversity.ts`. This spec gives the first analysis of the population genetics
 application, in its form for the walking skeleton: the module
@@ -320,9 +322,10 @@ Variants step." (`docs/specs/core/individualsKept.md`), the words the
 Variants step shows for the same condition, so that the last row, given
 for the one population too, would be a second text for it. With a threshold on the
 individuals as well, that lock waits for the statistics of each
-individual, which a Run calculates first, unless
-`docs/specs/core/individualsKept.md` knows the list empty from the lists
-alone (below, "What this spec relies on in the specs written beside it").
+individual, which a Run calculates first, but when the lists alone
+leave nobody: the list kept is then known and empty whatever the
+thresholds, and the store locks before a Run, with no statistics
+calculated (`docs/specs/core/individualsKept.md`, "What it does").
 
 The lock of stage 2 on any filter of individuals, which the owner
 decided on 25 September 2026 while the filters of individuals did not
@@ -760,9 +763,10 @@ version 1 in the same way (`docs/architecture.md`, section 12).
   diversity is locked while the file is read, so its result leaves the
   screen and the notice names it; once the file is read and holds every
   individual of the variants, the key is the one it had, `"all"`, and
-  the result comes back from the cache with no calculation, while the
-  notice stays until it is closed or replaced
-  (`docs/specs/steps/individuals.md`, "The populations").
+  the result comes back from the cache with no calculation, and leaves
+  the notice, which goes if it named nothing else
+  (`docs/specs/core/store.md`, "The notice, and the calculations it
+  stops").
 - **An opened project whose metadata file was not read when it was
   saved**, `notGiven`. Locked with the reason of `individualsNeeds`,
   whatever the grouping, until the file is loaded again or removed; it
@@ -1434,17 +1438,16 @@ September 2026:
   words of "Undo brings back the table" above were checked against, and
   reads the file once.
 
-After the review of the same day, not yet made in their documents:
+After the review of the same day:
 
 - `docs/specs/core/individualsKept.md`: when the lists to keep and to
   remove leave no individual, the list kept is known and empty whatever
   the thresholds, since a threshold can only remove more; so the store
   locks with `keptNoneReason` before a Run, with no statistics
   calculated for a list that cannot keep anyone.
-- `docs/specs/core/store.md`: whether a result that comes back under its
-  key after a record, a read of the metadata file, leaves the results
-  removed of the notice, as one done again by a calculation does; as
-  that spec reads now, it stays listed while it is on the screen again
+- `docs/specs/core/store.md`: a result that comes back under its key
+  after a record, a read of the metadata file, leaves the results
+  removed of the notice, as one done again by a calculation does
   (above, "The cases").
 
 ## Open points

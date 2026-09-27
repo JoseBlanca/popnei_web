@@ -30,7 +30,11 @@ beside it: what the values of each column allow is worked out from the
 table and not written; and again after its review, the same day: an
 individuals file whose read was not done at the save is written as
 named and not read, `notGiven`, and the project opened from it asks for
-the file again rather than run on one population. There was no
+the file again rather than run on one population; and after the
+review of the architecture, the same day: the types the user set
+written whole, those a read does not apply among them, and the project
+files of stages 2 and 3 that wrote a metadata file not read as none.
+There was no
 code yet; it will be `src/core/projectFile.ts`, the row `projectFile.ts`
 of section 9 of `docs/architecture.md`. The project file is the file
 `<name>.popnei.json` that a user saves to take their work out of the
@@ -266,7 +270,7 @@ example does.
 | `variants` null, a reference | the reference's `variants`, so that a project opened and saved again before its file is given still names the file it was made with |
 | `variants` null, no reference | `null` |
 | whichever `variants` is written, when its read is pending or failed | that source with its read `{ "kind": "pending" }`: the name, the size, the format and the read options are known, and the rest is not |
-| `individuals` read | the source as it is, its load id, its table and its `typesSet` included, and its `typesLost` left out |
+| `individuals` read | the source as it is, its load id, its table and its whole `typesSet` included, the types the read does not apply among them |
 | `individuals` pending, failed, or `notGiven` | the source with its read `{ "kind": "notGiven" }`: its load id, its name, the options of its CSV and its `typesSet`, and no table |
 | `individuals` null | `null`, whatever the grouping: the analyses per population run on one population, and the grouping is kept for a file loaded later |
 | `reference` | not written as such: its `variants` as above, and its check numbers under the rule below |
@@ -295,12 +299,15 @@ ploidy typed in the Variants step and not yet applied with that button
 is the step's and not the project's (`docs/specs/steps/variants.md`), so
 a Save before it writes the file as it was read.
 
-`typesLost` names the types a read of that session could not keep, for
-a line of the Individuals step; it is left out as the notice is, since a
-week later, in another session, it would tell of a read the user no
-longer remembers, and `parseProject` reads its absence as none lost
-(`docs/specs/core/project.md`, "The validation"). Decided here, not by
-the owner.
+`typesSet` is written whole, the types that the read does not apply
+among them, which wait for a read that allows them
+(`docs/specs/core/project.md`, "The types of the columns"). Which types
+the read does not apply, `typesLost`, is not written, since it is worked
+out from `typesSet` and the table; so an opened project names the same
+ones as the project that was saved, and the Individuals step shows them
+in words that do not say the file was just read. The first draft of
+this revision kept `typesLost` in the read and left it out of the file,
+so an opened project named none.
 
 The failed read of the variants file is written as pending because what
 failed was a read of that session: a new load of the file reads it again,
@@ -321,6 +328,17 @@ draft of this revision, wrote such a file as `null`: the opened project
 had no metadata file, and its analyses per population ran on one
 population, "All individuals", although its grouping named a column,
 with no word of the file the user had loaded.
+
+The code of stages 2 and 3 writes that `null` still, so a project file
+it saved while its metadata file was being read, or after the file was
+refused, opens in stage 4 with no metadata file and runs its analyses
+per population on one population, although its grouping names a column.
+That is accepted: in those stages the file was required, such a project
+file was saved by a development build before any release, and the user
+sees the Individuals step with no file and the line "No metadata file:
+every individual is in one population.", and loads the file again. A
+project file of those stages whose metadata file was read opens with it,
+as any other.
 
 This is what `docs/specs/core/project.md`, "The cases", left to this
 spec: an opened project holds no source whose read is pending. So the
@@ -1028,8 +1046,8 @@ the analyses `done`, `ready` or `removed`.
   drawn, so that rule 2 is met:
   - `readProjectFile(writeProjectFile(s, …))` is ok, and its project is
     the one the table of "What is written" gives: equal to `s.project` in
-    the filters, the individuals file when it was read, but its
-    `typesLost`, which is empty, the individuals file `notGiven` when it
+    the filters, the individuals file when it was read, its whole
+    `typesSet` included, the individuals file `notGiven` when it
     was pending, failed or `notGiven`, the grouping and
     the options; `variants` null; the reference's variants file as written.
   - Written, opened, and written again from a state with no result and
@@ -1123,9 +1141,10 @@ check with its own (point E there).
 - `docs/specs/worker/*`: nothing of this module; from stage 4, the
   binary type of texts of `docs/specs/worker/protocol.md`, which the file
   writes as the project holds it.
-- `docs/specs/core/project.md`, from stage 4: `typesSet`, `typesLost`
-  and the grouping `onePopulation`, and the reading of a file of stages
-  2 and 3 that lacks the first.
+- `docs/specs/core/project.md`, from stage 4: `typesSet`, with the
+  types not applied, `typesLost` worked out from it and the table, and
+  the grouping `onePopulation`, and the reading of a file of stages 2
+  and 3 that lacks the first.
 - The specs of the checks of the Variants step, stage 3: the ids
   `individualChecks`, `variantChecks` and `filterCounts`, their key
   versions, and their `checkNumbers` and `numCheckNumbers`, which this
@@ -1137,8 +1156,9 @@ pending or failed is saved without its table, as `notGiven`, and the
 project opened from it asks for the file before any analysis that uses
 it runs; the Variants step starts a VCF's read
 options at the reference's; a variants file whose name alone differs
-drops the carried numbers; and, from stage 4, the types a read could
-not keep, `typesLost`, are not saved.
+drops the carried numbers; and, from stage 4, a project file of
+stages 2 and 3 saved while its metadata file was not read opens with no
+metadata file, on one population.
 
 ## Not in this spec
 

@@ -1,29 +1,16 @@
 # The Individuals step
 
 Written on 25 September 2026 for the walking skeleton, stage 2 of
-`docs/build-order.md`, and approved by the owner the same day; revised
-the same day for the owner's decisions on the review of work package 8
-of `docs/plans/walking-skeleton.md`, points 5 to 7 of its report: the
-first values joined by " · ", the check of the individuals under a
-heading of its own, and the ends of the refusals of the reader; and for
-the warning of a character not decoded and the refusal of a variants
-file, of the owner's decisions on the reviews of work packages 2 to 6;
-and on 26 September 2026 for the list of the populations copied from the
-page, which the owner found at stop 9.6. Rewritten on 27 September 2026
-for stage 4, the step whole, not yet approved: the metadata file read
-from an xlsx as well as from a CSV or a TSV; the types of the columns,
-and the coding of a binary column, set by the user; the types set kept
-when the file is read again; the file optional, with every individual
-in one population without it; and the item "All individuals in one
-population" among the choices of the populations; and again the same
-day, to agree with the specs written beside it: the types a column
-allows worked out by core, `columnAllows`, and the decimal mark given to
-the warning of few whole numbers; and again the same day after its first
-reader and its review: a metadata file named by an opened project and
-not read when it was saved, the words of the refusals of an xlsx quoted
-whole, a type lost because its column became the first, the name of the
-select of the coding, and the reasons of the populations in the words of
-the step. The code of stage 2 is in `src/ui/steps/individuals/`.
+`docs/build-order.md`, approved by the owner the same day and revised
+with the owner's decisions of 25 and 26 September 2026 on the reviews of
+`docs/plans/walking-skeleton.md`. Rewritten on 27 September 2026 for
+stage 4, the step whole, not yet approved: the metadata file read from
+an xlsx as well as from a CSV or a TSV; the types of the columns, and
+the coding of a binary column, set by the user and kept when the file is
+read again; the file optional, with every individual in one population
+without it; and the item "All individuals in one population" among the
+choices of the populations; revised the same day after its reviews. The
+code of stage 2 is in `src/ui/steps/individuals/`.
 
 The screen spec of the second step of the population genetics
 application: the user picks the metadata file, or goes on without one,
@@ -34,9 +21,20 @@ shows section 4 of `docs/functionality.md`, and reads the project and
 its commands of `docs/specs/core/project.md` through the store of
 `docs/specs/core/store.md`.
 
-The words of core used here are those of the spec of the Variants step,
-`docs/specs/steps/variants.md`: the project, a command with its
-description, a load, a source. The **reader** is our code that reads
+The words of core used here. The **project** is everything the user
+has set; a **command** is a change of it that one Undo takes back, sent
+with a description that ends the notice of what it removed, "Diversity
+removed because a new metadata file was loaded · Undo". A **load** is
+one pick of a file, and its **load id** the random name the page gives
+that pick, new at every pick, the same file picked again included; the
+**source** is what the project holds of the loaded file: its load id,
+its name, how it is read, the types the user set, and what the read gave.
+The **grouping** is what the project holds of the populations: the
+column that defines them, none chosen yet, or every individual in one
+population. The **key** of an analysis is a text made from everything its
+result is calculated from; a result is kept under its key, so a project
+that gives the same key again shows the same result with no
+calculation (`docs/architecture.md`, section 3). The **reader** is our code that reads
 the file into a table and infers the type of each column, in the light
 worker, the thread of the tab that reads the files of the individuals:
 the reader of CSV and TSV, `docs/specs/worker/individuals.md`, and the
@@ -108,10 +106,12 @@ from the first sheet of pops.xlsx that is not hidden; the other sheets
 are not read.", since
 a workbook of several sheets is common and the user who kept the
 populations on the second would otherwise see columns they did not
-expect with no word why. When the read of a CSV could not decode a
-character, `found.undecodedLine` of `docs/specs/worker/individuals.md`,
-the card also shows the warning of a character not decoded, below
-("Its words"), which names the line.
+expect with no word why. When the read of a CSV met bytes that it
+could not decode in its encoding, and so shows as �, it gives the line
+of the first of them, `found.undecodedLine` of
+`docs/specs/worker/individuals.md`, and the card also shows the warning
+of a character not decoded, below ("Its words"), which names that
+line.
 
 A project opened from a project file saved while its metadata file was
 being read, or after its reader refused it, names the file and holds no
@@ -224,7 +224,9 @@ a second `Select`, labelled "Coded 1, the case", whose two items are its
 two values, and beside it the other: "no is coded 0.". The reader proposes
 the coding, the larger of two numbers, `case` over `control`, `yes`
 over `no` and the other known pairs, and otherwise the value that comes
-second in the order of the code units, `P2` over `P1`
+second when their characters are compared one by one by the number
+JavaScript gives each, as its `<` compares two texts, which gives the
+same order in every browser, `P2` over `P1`
 (`docs/specs/worker/individuals.md`, "The types of the columns"); the
 user changes it here. The coding is used by the association and the
 Python script, not by population genetics, where a binary column is two
@@ -247,10 +249,21 @@ is taken as a measurement. If they are codes, such as numbered
 populations, set its type to categorical.", the end of stage 4. The warning is made from the table and its types,
 so it goes when the user sets the column categorical.
 
-When a new read could not keep a type the user set, the read's
-`typesLost`, a warning above the table says which columns lost it, and
-it stays until the next read, or until the user sets the type of that
-column again (below, "Its words").
+The types the user set are kept when the file is read again, a new
+load or other options of the reader, and applied where the new values
+allow them (`docs/specs/core/project.md`, "The types of the columns").
+A type set that the read does not apply is kept too, and comes back
+when a later read allows it: a wrong separator, which reads the file as
+one column, applies none of them, and the right one applies them all
+again. While some are not applied, a warning above the table says which
+columns do not have the type set and why, made from `typesLost(source)`
+of core (below, "Its words"). It goes when a read applies them, when
+the user sets another type on the column, or when the user presses the
+button beside it, "Forget these types", or "Forget this type" for one,
+which sends `forgetTypesLost` and drops the types set that are not
+applied; the types applied stay. The button is there because a type set
+on a column that the file no longer has would otherwise be named at
+every read for as long as the file is loaded.
 
 ### Every individual of the variants file in it
 
@@ -265,15 +278,18 @@ individuals missing are not shown under the select of the populations,
 where they read as if choosing a column would find them. The part shows
 where the check stands:
 
-- no variants file read: "The individuals are checked against the
-  variants file once it is read.";
+- no variants file read, whatever the read of the metadata file: "The
+  individuals are checked against the variants file once it is read.";
 - every individual found: "All 342 individuals of panel.nei found · 18
   rows not in panel.nei, ignored", the second half only when there are
   such rows;
 - some missing: the error below, with the full list.
 
 Without a metadata file there is nothing to check, and the part is not
-shown.
+shown; nor is it while the variants file is read and the metadata file
+has no table, being read, refused, or not read when an opened project
+was saved, `notGiven`, since the reason on the card already says why
+nothing can be checked.
 
 ### The populations
 
@@ -291,11 +307,19 @@ the column that defines the populations, or all individuals in one
 population, in the Individuals step.", and the user who loaded a file
 says what it defines. At the select, where the user already is, the
 same reason is shown without its place, "Choose the column that defines
-the populations, or all individuals in one population.", the `inStep`
-that `populationsNeeds` gives beside its `reason`. The option not taken was to start at the one
+the populations, or all individuals in one population.": core's
+`populationsNeeds` gives each reason about the column twice, `reason`,
+which names the step and is shown beside a Run button, and `inStep`,
+the same words without the step, which this step shows. The option not taken was to start at the one
 population, which would run the diversity on every individual of a
 file the user loaded for its populations, and show a table of one row
 as if that were the result they asked for.
+
+The items are told apart by a key that is not their text: the one
+population by the key `one`, and each column by `column:` followed by
+its name, so that a column named "one", or "All individuals in one
+population", is not taken for the one population, and the select shows
+the right item as chosen.
 
 Every column but the first is offered, whatever its type: a column of
 populations written as numbers, 1 to 12, inferred continuous, can be
@@ -317,7 +341,11 @@ variants file: before it is read they are not known, and with some
 missing the list would leave them out without saying so.
 
 Without a metadata file the part of the populations is not shown: the
-line under the zone says what the analyses run on. A column chosen
+line under the zone says what the analyses run on. Nor is it while the
+file has no table, being read, refused, or `notGiven`, since the select
+offers the columns of the table; the grouping is kept, and the select
+comes back with the table, showing the column chosen before, found by
+its name. A column chosen
 before the file was removed is kept in the project, and found again by
 its name when a file is loaded (`docs/specs/core/project.md`, "The
 populations").
@@ -330,12 +358,12 @@ So the table of "All individuals" leaves the screen, and the shell's
 notice says so, "Diversity removed because a new metadata file was
 loaded · Undo". With `onePopulation`, once the file is read and holds
 every individual, the key of the diversity is the one it had, and its
-result comes back from the cache with no calculation, while the notice
-stays until the user closes it or the next change replaces it
+result comes back from the cache with no calculation; the notice then
+drops it, and goes if it named nothing else
 (`docs/specs/core/store.md`, "The notice, and the calculations it
-stops"). That is taken: the result did leave the screen while the file
-was read, and the lock is what keeps a file that lacks individuals from
-being used without a word.
+stops"). The result is off the screen for as long as the read takes;
+the lock is what keeps a file that lacks individuals
+from being used without a word.
 
 ## The states
 
@@ -344,10 +372,10 @@ being used without a word.
 | empty | cannot happen: with no file, the step offers the pick and says what the analyses run on, which is the ready state | — |
 | locked | cannot happen: the file can be loaded before the variants file, and is checked once that one is read | — |
 | ready | no file: the zone, "Choose a metadata file…", and "No metadata file: every individual is in one population." | pick a file, or go on without one |
-| running | the card with the name and "Reading pops.csv."; for a CSV the three options of the reader; the columns and the populations of an earlier read are gone, since the read replaced them; no progress, a read of a second or two, and, for the first xlsx of the page, the download of the files wasm before it | change an option of a CSV; pick another file; Undo |
-| done | the card, the options of the reader of a CSV or the line of the first sheet of an xlsx, the columns with their types, the check, the choice of the populations and the populations; the warning of types lost after a read that lost some | change an option of a CSV, set a type or a coding, choose the populations, replace or remove the file |
+| running | the card with the name and "Reading pops.csv."; for a CSV the three options of the reader; the columns, the check and the populations of an earlier read are gone, since the read replaced them; no progress, a read of a second or two, and, for the first xlsx of the page, the download of the files wasm before it | change an option of a CSV; pick another file; Undo |
+| done | the card, the options of the reader of a CSV or the line of the first sheet of an xlsx, the columns with their types, the check, the choice of the populations and the populations; the warning of the types set and not applied, while there are some | change an option of a CSV, set a type or a coding, forget the types not applied, choose the populations, replace or remove the file |
 | results removed | cannot happen here: the step shows no result. A command of this step that removes results has its notice in the shell (`docs/specs/shell.md`), with the descriptions below | — |
-| error | the reader refused the file, its worker failed, individuals of the variants file are missing from it, or the column chosen gives no population or is not in the file, with the words below. The options of a CSV stay in every case; the columns only when the file was read, since a refusal has no table. The file of an opened project that was not read when it was saved, `notGiven`, is shown here too, with its reason and neither options nor columns (above, "The file") | change an option; choose another column or the one population; pick another file, or the same one again; remove the file; reload the page when the reason says so |
+| error | the reader refused the file, its worker failed, individuals of the variants file are missing from it, or the column chosen gives no population or is not in the file, with the words below. The options of a CSV stay in every case; the columns, the check and the populations only when the file was read, since a refusal has no table. The file of an opened project that was not read when it was saved, `notGiven`, is shown here too, with its reason and neither options nor columns (above, "The file") | change an option; choose another column or the one population; pick another file, or the same one again; remove the file; save the project and reload the page when the reason says so |
 
 ## What it sends and reads
 
@@ -365,12 +393,22 @@ the project for the reason of a read under way or failed, and
 | the value coded 1 chosen | `setColumnType(p, column, { kind: "binary", one, zero })`, the other value as `zero` | "the value coded 1 in status changed" |
 | a column chosen for the populations | `setGrouping(p, { kind: "populations", column })` | "the column of the populations changed" |
 | "All individuals in one population" chosen | `setGrouping(p, { kind: "onePopulation" })` | "every individual was put in one population" |
+| "Forget these types" or "Forget this type" | `forgetTypesLost(p)` | "the types set and not applied were forgotten" |
 | Remove | `removeIndividuals(p)` | "the metadata file was removed" |
+
+After Remove the focus goes to the file button, "Choose a metadata
+file…", which is in every state, since the button that had it is gone
+with the file, and a focus left on nothing sends a user of the keyboard
+back to the top of the page; the code of stage 2 does so. After "Forget
+these types" the warning and its button go, and the focus goes to the
+first select of a type in the table of the columns, or to the file
+button when the table has only the first column, as a file read with
+the wrong separator has.
 
 The descriptions end the notice, "Diversity removed because every
 individual was put in one population · Undo", and name the step of
-undo. A type or a coding changes no key of stage 4, so it removes no
-result and has no notice; its description names its step of undo, and
+undo. A type, a coding or the types forgotten change no key of stage
+4, so they remove no result and have no notice; its description names its step of undo, and
 the shell says it after an undo or a redo.
 
 Before the command of a pick, the step calls `addFile(file)` of
@@ -394,7 +432,8 @@ which a screen does not write as a cache of its own
   column, at the select, are the `inStep` of `populationsNeeds(p)` of
   the same module.
 - **the types each column allows**, `columnAllows(read)` of
-  `src/core/project.ts`, and why a type set was lost, `typeLostReason`
+  `src/core/project.ts`; the types set that the read does not apply,
+  `typesLost(source)`; and why each is not applied, `typeLostReason`,
   of the same module.
 - **the warning of a column of few whole numbers**, `columnWarnings` of
   the reader, from the table, its types and the decimal mark of the
@@ -518,39 +557,54 @@ The descriptions of the commands are in the table above. The rest:
   as �. Correct them in the file and load it again." A file read as
   Windows-1252 has none, nor has an xlsx. The warning is the screen's,
   made from the read.
-- **Types lost**, when a read could not keep types the user set, the
-  read's `typesLost`, a warning above the table of the columns. A type
-  is named by its word, and a binary one with its coding, "binary with
-  yes coded 1". For one column still in the file: "Warning: pops.csv was
-  read again, and status lost the type you set, binary with yes coded 1,
-  since its values no longer allow it; it is categorical, as its values
-  give it. Set its type again if the new values allow the one you want,
-  or correct the file and load it again." For one column no longer in
-  the file: "Warning: pops.csv was read again, and has no column score,
-  whose type you had set as categorical." For more than one, a sentence
-  and a list, a line for each column: "Warning: pops.csv was read again,
-  and 2 columns lost the type you set:", "status: binary with yes coded
-  1, now categorical, since its values no longer allow it", "score:
-  categorical, and the file no longer has this column", and after the
-  list "Set their types again if the new values allow the ones you want,
-  or correct the file and load it again." For a column the new file has
-  in the first place, which names the individuals: "Warning: pops.csv
-  was read again, and status lost the type you set, binary with yes
-  coded 1, since it is now the first column, whose cells are the names of
-  the individuals. If it should not be, correct the file and load it
-  again.", and in a list "status: binary with yes coded 1, now the first
-  column, the names of the individuals". Which of the three a column
-  meets is `typeLostReason` of `src/core/project.ts`. The file is named as the
-  source names it after the read, so after a new load, the new file.
-  The words are the writer's, 27 September 2026.
+- **Types set and not applied**, `typesLost(source)`, a warning above
+  the table of the columns, with the button to forget them. The words do
+  not say that the file was just read, since a project opened from a
+  project file shows the same warning. A type is named by its word, and
+  a binary one with its coding, "binary with yes coded 1". For one
+  column, by the reason `typeLostReason` of `src/core/project.ts` gives:
+  - its values, `"values"`: "Warning: status does not have the type you
+    set, binary with yes coded 1, since its values in pops.csv do not
+    allow it; it is categorical, as its values give it. The type you set
+    comes back when the file is read with values that allow it."
+  - no such column, `"gone"`: "Warning: pops.csv has no column score,
+    whose type you set as categorical. The type comes back when the file
+    is read with a column of that name."
+  - the first column, `"firstColumn"`: "Warning: status is the first
+    column of pops.csv, whose cells are the names of the individuals, so
+    it does not have the type you set, binary with yes coded 1. If it
+    should not be first, correct the file and load it again; the type
+    you set then comes back."
+
+  For more than one, a sentence and a list, a line for each column in
+  the order of `typesLost`: "Warning: 2 columns do not have the type you
+  set:", "status: binary with yes coded 1; its values do not allow it,
+  and it is categorical", "score: categorical; pops.csv has no column
+  score", "code: categorical; it is the first column, the names of the
+  individuals", and after the list "Each type you set comes
+  back when the file is read with a column that allows it." The file is
+  named as the source names it, so after a new load, the new file. These
+  words are the writers' of the specs of stage 4, 27 September 2026, for
+  the owner to judge on the screen.
 - **Individuals missing**: the reason `individualsStepMissing` of
   `src/core/project.ts` gives, "12 individuals of panel.nei are not in
   pops.csv: ind_031, ind_044 and 10 more. Add them to pops.csv and load
   it again.", which names the file where `individualsNeeds`, beside a
-  Run button, names this step; and under it a disclosure, "The 12
-  individuals missing", that opens the whole list, one name a line,
-  which the user can select and copy into their sheet; a disclosure is a
-  line that opens and closes a part of the page under it. A user who
+  Run button, names this step; and under it a disclosure, a line that
+  opens and closes a part of the page under it, React Aria's
+  `Disclosure` as the widget of `src/ui/widgets/Disclosure.tsx` wraps
+  it, "The 12 individuals missing", that opens the whole list, one name
+  a line, which the user can select with the mouse, and a button under
+  the list, "Copy the 12 names", or "Copy the name" for one, which copies them to the clipboard, one
+  a line, to paste into their sheet: a list of text cannot be selected
+  with the keyboard alone in most browsers, and WCAG 2.2 asks that what
+  the mouse does the keyboard can do (success criterion 2.1.1). After
+  the copy the shell's status region says "12 names copied." or "The
+  name was copied."; when the
+  page has no clipboard, which the browser gives only to a page served
+  over HTTPS or from the machine itself, or the browser refuses the
+  copy, it says "The names could not be copied. Select them in the
+  list.", as the bar of errors does (`docs/specs/shell.md`). A user who
   wants no file can also remove it, which the Remove button beside the
   name offers; the reason does not say so, since a file that lacks
   individuals is most often a file to correct.
@@ -600,9 +654,10 @@ text, `pandas.read_csv(path, sep=";", decimal=",", dtype=str)` or
 - The keyboard goes through the step in this order: the zone's hidden
   button that takes a pasted file, "Paste a metadata file", the file
   button, Remove, the encoding, the separator, the decimal mark, the
-  type of each column in the order of the table, each binary one
-  followed by its value coded 1, the disclosure of the individuals
-  missing, the select of the populations. A file of 20 columns, 5 of
+  button that forgets the types not applied, the type of each column in
+  the order of the table, each binary one followed by its value coded 1,
+  the disclosure of the individuals missing and, when it is open, the
+  button that copies their names, the select of the populations. A file of 20 columns, 5 of
   them binary, makes 24 stops of the Tab key in the table, 19 selects of
   a type and 5 of a coding, a count and not a measurement; that is
   taken, since each is a setting the user may need, and the table holds
@@ -645,9 +700,14 @@ text, `pandas.read_csv(path, sep=";", decimal=",", dtype=str)` or
   reader reads out when its text changes, whatever has the focus, the
   element the keyboard acts on, without moving the focus (WCAG 2.2,
   success criterion 4.1.3), with the words of `docs/specs/shell.md`,
-  "The status region", which from stage 4 add the types lost. A read
+  "The status region". From stage 4 they add, in short, what the read
+  brings up on this step that a user of a screen reader would otherwise
+  not reach until they moved through the table: the character not
+  decoded, the columns of few whole numbers, the column of the
+  populations not in the file, and the types set and not applied. A read
   again after a change of an option is announced the same way, since the
-  table under the select changes.
+  table under the select changes. The copy of the names missing is
+  announced through `announce` of the shell, since it follows a press.
 - A change of a type is not announced: the select that the user changed
   shows the new value, and a screen reader reads it.
 - An error, a warning and the line of the check say what they are in
@@ -684,7 +744,8 @@ Of stage 4, written beside this spec on 27 September 2026:
 
 - `docs/specs/core/project.md`: the grouping `onePopulation`;
   `individualsNeeds` giving no reason for no file; `setColumnType` with
-  `typesSet` and `typesLost`, `columnAllows` and `typeLostReason`;
+  `typesSet`, which keeps the types not applied; `typesLost(source)`,
+  worked out; `forgetTypesLost`; `columnAllows` and `typeLostReason`;
   `populationsToRun` and `populationsNeeds` in `project.ts`, with the
   words of the one population in the reasons of the column and their
   `inStep`; `individualsCheck` `null` without a file; the read
@@ -701,8 +762,11 @@ Of stage 4, written beside this spec on 27 September 2026:
   of "it can still be chosen as the column of the populations", which
   holds in stage 4 too but no longer says what to do.
 - `docs/specs/shell.md`: the Individuals step at "Optional" in the
-  stepper without a file; the end of a read that lost types announced
-  with them; the notice from the descriptions above.
+  stepper without a file; the end of a read announced with the warnings
+  it brings up on this step; the notice from the descriptions above; and
+  `announce` for the copy of the names.
+- `docs/specs/core/store.md`: a result that the read of the file gives
+  back leaves the notice.
 - `docs/specs/analyses/diversity.md`: it runs without a file, and with
   `onePopulation`, on "All individuals".
 - `docs/specs/analyses/pca.md`: the types decide how a column colours
@@ -723,8 +787,10 @@ gathered in `docs/specs/stage-4-open-points.md`. These choices of the
 writer change what a user meets, and the owner may overrule them on the
 screen: a new project with a file
 locked until the user chooses a column or the one population, rather
-than started at the one population; the words of the types lost; and a
-select of the type in every row, a column of one allowed type included.
+than started at the one population; the words of the types set and not
+applied, and the button that forgets them; the populations and the
+check not shown while the file has no table; and a select of the type
+in every row, a column of one allowed type included.
 
 ## Not in this spec
 

@@ -14,7 +14,10 @@ joins the analyses of `apps.ts`, in the Analyses step before the
 diversity, and `countsOf` gives no counts of its pass; and again the
 same day, to agree with the specs written beside it: an individuals
 source of an xlsx, with no options of a CSV, is asked for, where stage 2
-threw it as a defect. This spec gives
+threw it as a defect; and after the review of those specs, a source
+`notGiven` of an opened project, which is not asked for, and the words
+after a worker that could not start, which say to save the project
+first. This spec gives
 the page of the population genetics application, `popgen.html`, and its
 entry, the code that runs once when the page opens and keeps working for
 the life of the page: it makes the store and the two workers and joins
@@ -745,9 +748,10 @@ an error thrown in a loop does not fill the memory of the tab.
   gives up after its second start fails, and every request, the read of
   the variants file among them, fails with `couldNotStart`. The read is
   recorded as failed, and the analyses are locked with "panel.nei could
-  not be read: the application could not start its calculations. Reload
-  the page and load it again." (`docs/specs/core/project.md`, open point
-  4). Nothing is shown before a file is picked.
+  not be read: the application could not start its calculations. Save
+  the project, reload the page, open the project and load panel.nei
+  again." (`docs/specs/core/project.md`, open point 4). Nothing is shown
+  before a file is picked.
 - **The calculation worker crashes while it opens the file**: the read
   fails and is recorded as failed because its worker failed. The entry
   does not ask for it again, since the source is no longer pending, and a
@@ -757,7 +761,11 @@ an error thrown in a loop does not fill the memory of the tab.
   read. The client opens that file again before the next calculation on
   it (`docs/architecture.md`, section 6).
 - **An opened project** holds no variants file, so nothing is read until
-  the user gives it. Its individuals file is in the project, read. A
+  the user gives it. Its individuals file is in the project, read, or
+  `notGiven` when its read was not done when the project was saved
+  (`docs/specs/core/project.md`, "The project of an opened project
+  file"); `wantedReads` asks for neither, only for a pending source, so
+  a source `notGiven` waits for the user to load the file again. A
   project file with a source whose read is pending would name a load
   whose `File` the page does not hold (`docs/architecture.md`, section
   6); `docs/specs/core/projectFile.md` gives no such project. If it did,
@@ -810,7 +818,8 @@ hand and whose cancels it records.
 - **`wantedReads`** of an individuals source pending with `csv` null
   gives a read with `csv` `null`, which the client is asked for with
   `null`, and its outcome is recorded with `individualsRead(fileId,
-  null, …)`; stage 2 threw it.
+  null, …)`; stage 2 threw it. An individuals source `notGiven`, and
+  one read, give no read.
 - **`startAnalysis`**: `null` when `startRun` gives `null`; the outcome
   given to `runEnded` with the id of its request; `startedAt` of that id
   a number while it is in flight and `null` after; a `runEnded` that

@@ -10,7 +10,9 @@ the filtered variants and the Variants step all cite it. Revised on 26
 September 2026, after its approval: popnei's numbers of `panel.nei` are
 tested in core, from a fixture of popnei's statistics, and not among the
 runner's tests, since a test of the worker imports no function of core
-("How it is verified"). Built in `src/core/individualsKept.ts`, the row
+("How it is verified"). Revised on 27 September 2026, after the review
+of the specs of stage 4: the list known and empty, with no statistics,
+when the lists alone leave nobody. Built in `src/core/individualsKept.ts`, the row
 of section 9 of the architecture. It depends on
 `docs/specs/core/project.md`, for the project, its filters of
 individuals, `projectNeeds`, `individualListNeeds` and the rules by which a text names a value
@@ -70,7 +72,11 @@ What `individualsKept` gives:
 
 - **The list**, known or not. It is known when the project has no
   threshold, since the lists and the individuals of the variants file
-  are in the project, or when it has one and the statistics are given.
+  are in the project; when it has one and the statistics are given; and
+  when the lists to keep and to remove leave no individual, whatever the
+  thresholds, since a threshold can only remove more: the list is then
+  empty, and no statistics are calculated for a list that cannot keep
+  anyone.
   A known list is `null` when the filters remove no individual, as when
   there is no filter of individuals, so that the job carries nothing and
   the runner puts no `filterIndividuals` on the `Variants`
@@ -82,7 +88,8 @@ What `individualsKept` gives:
   Variants step shows beside each filter as it is set, with no pass
   (`docs/specs/steps/variants.md`). A number that needs the statistics
   and has none is `null`: the kept of a threshold, and the given and
-  kept of every filter after it.
+  kept of every filter after it. A filter given no individual keeps
+  none, so after lists that leave nobody every count is 0, known.
 - **The individuals the lists keep**, `byLists`, the two lists alone,
   known from the project whatever the thresholds, for a module that must
   know before a run what the lists leave, the diversity's populations
@@ -207,8 +214,10 @@ With Vitest, at the two functions, on frozen projects:
   filters of individuals keep none of the 5 individuals of panel.nei.
   Loosen them in the Variants step."; with a threshold and no
   statistics, `needsStatistics`, the lists' counts given and the
-  threshold's `null`; statistics of another order of the individuals, a
-  defect.
+  threshold's `null`; with keep `[a]`, remove `[a]` and missing data
+  0.2, and no statistics, the list known and empty, the counts keep 5 to
+  1, remove 1 to 0, missing data 0 to 0, and `keptNoneReason` the words
+  above; statistics of another order of the individuals, a defect.
 - **popnei's numbers**: the same function, given the statistics that
   popnei's release gives on `panel.nei` with the missing data filter at
   0.05, gives the 125, 48 and 119 individuals above, which the

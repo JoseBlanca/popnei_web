@@ -28,7 +28,8 @@ metadata file, as the owner decided on 25 September 2026 (point A of
 `docs/specs/stage-2-open-points.md`); the summary line with one
 population; the populations read from `src/core/project.ts`, where they
 moved from the module of the diversity; and the end of a read of the
-metadata file that lost types the user set, announced with them; and
+metadata file announced with what it brings up on the Individuals step,
+the types the user set and the read does not apply among them; and
 the title of the panel of the PCA, "Principal components", by which the
 notice and the status region name it; and again the same day for a
 metadata file named by an opened project and not read when it was saved,
@@ -413,7 +414,7 @@ file its options of the CSV compared by their values:
 | a request that was current and being stopped left `runs` | "Diversity: stopped." |
 | the variants file of the same load went from pending to read | "panel.nei read: 200 individuals, ploidy 2.", and, when the metadata file is read, the sentence of the check below |
 | the same, to failed | the reason `projectNeeds` gives, which names the file: "popnei could not read bad.vcf: … Load a variants file in the Variants step." |
-| the metadata file of the same load and options went from pending to read | "pops.csv read: 360 rows, 5 columns.", and, when the variants file is read, the sentence of the check: "All 342 individuals found." or "12 individuals of panel.nei are not in pops.csv."; from stage 4, when the read lost types the user set, `typesLost`, then "status lost the type you set.", or "2 columns lost the type you set.", whose names and types the Individuals step lists (`docs/specs/steps/individuals.md`, "Its words") |
+| the metadata file of the same load and options went from pending to read | "pops.csv read: 360 rows, 5 columns.", and, when the variants file is read, the sentence of the check: "All 342 individuals found." or "12 individuals of panel.nei are not in pops.csv."; from stage 4, after them, in this order and each when it holds, what the read brings up on the Individuals step, in short, since the step gives the whole words (`docs/specs/steps/individuals.md`, "Its words"): a character not decoded, `found.undecodedLine`, "Warning: line 3 of pops.csv has bytes that could not be read."; the columns of few whole numbers, `columnWarnings` of the reader on the table and its types, "Warning: score may hold codes and is taken as a measurement." or "Warning: 2 columns may hold codes and are taken as measurements."; the column of the populations not in the file, `populationsNeeds` of kind `noSuchColumn`, its `inStep`, "pops.csv has no column popcat, from which the populations were taken. Choose the column that defines the populations, or all individuals in one population."; and the types set and not applied, `typesLost` of the source, "status does not have the type you set." or "2 columns do not have the type you set." |
 | the same, to failed | the reason `individualsNeeds` gives |
 | the warning of a reopened project that differs from its file, `identityWarning` of `projectFile.ts`, appeared, or is there with another load of the variants file than before; while that load is being read, at the end of its read instead | "Warning: " and its words, those of the Variants step (`docs/specs/steps/variants.md`, "A project file opened"), after the read's own announcement |
 | from stage 3, a request of the Counts of the filters that was current left `runs`, and the analysis is `done` | "Counts of the filters: done. 1,128 of the 1,200 variants of panel.nei pass the filters.", the line of the total of the Variants step, or, when a filter kept none, the text of the warning `filterKeptNone` in its place, and, when the file holds no variant, the text of the warning `noVariant`, which the step shows alone |
@@ -932,7 +933,9 @@ with the analyses of `TEST_DEFS` of `src/core/testSupport.ts`:
   stopped with a result removed, with the comma of that row; the written
   file discarded, alone and with a result removed.
 - **`announcementsOf`**: from stage 4, the end of a read of the metadata
-  file with one type lost and with two, the sentence after the check;
+  file with each of the four sentences after the check, alone and all
+  four in their order, with one column and with two where the words
+  count them; and none of them for a read that brings none up;
   a pair of states for each row of the first
   table of the status region, the rows of the writing and of the Counts
   among them, and a Run that waits for the statistics, whose end and the
@@ -1048,10 +1051,15 @@ revision, 27 September 2026:
 - `docs/specs/core/project.md`: `populationsNeeds`, `populationsToRun`,
   `populationsOf` and `populationsKept` in `project.ts`, with the one
   population; `individualsNeeds` giving no reason for no metadata file;
-  the grouping `onePopulation`; `typesLost` of a read; the read
-  `notGiven` of an opened project, with its reason.
-- `docs/specs/steps/individuals.md`: the words of the types lost, which
-  the step shows and the end of a read announces in short.
+  the grouping `onePopulation`; `typesLost` of a source, worked out from
+  the types set and the read; the read `notGiven` of an opened project,
+  with its reason.
+- `docs/specs/steps/individuals.md`: the words of the types set and not
+  applied, of a character not decoded, of the columns of few whole
+  numbers and of the column of the populations not in the file, which
+  the step shows and the end of a read announces in short; and the copy
+  of the names of the individuals missing, announced through
+  `announce`.
 - `docs/specs/analyses/pca.md`: the title of its panel, "Principal
   components", its `<h2>`, in `src/ui/analyses/titles.ts`; the start, the
   end and the stop of a run announced by the shell, "Principal
