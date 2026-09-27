@@ -61,7 +61,7 @@ function block(page: Page): Locator {
   return page.getByRole("region", { name: "Histograms of the variants" });
 }
 
-function histogram(page: Page, title: string): Locator {
+function histogram(page: Page, title: string | RegExp): Locator {
   return page.getByRole("group", { name: title });
 }
 
@@ -621,5 +621,99 @@ test("VS6 D2 a calculation under way stopped by a new load, with the line that s
   await expect(
     block(page).getByRole("button", { name: CALCULATE }),
   ).toBeVisible();
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("VS6 D2 a calculation whose worker stopped asks to calculate them again, with the button, which then gives them", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openVariants(page);
+  await pick(page, "panel.nei");
+  // The worker answers the next result as if it had crashed.
+  await expect
+    .poll(() => page.workers().some((w) => w.url().includes("runnerWorker")))
+    .toBe(true);
+  const worker = page.workers().find((w) => w.url().includes("runnerWorker"));
+  if (worker === undefined) throw new Error("no calculation worker");
+  await worker.evaluate(() => {
+    const scope = globalThis as unknown as {
+      postMessage: (message: unknown, transfer?: Transferable[]) => void;
+    };
+    const post = scope.postMessage.bind(scope);
+    scope.postMessage = (message, transfer) => {
+      const kind =
+        typeof message === "object" && message !== null && "kind" in message
+          ? message.kind
+          : null;
+      if (kind === "result") {
+        post({ kind: "crashed", message: "a crash made by the test" });
+      } else {
+        post(message, transfer);
+      }
+    };
+  });
+  await block(page).getByRole("button", { name: CALCULATE }).click();
+  await expect(
+    block(page).getByText(
+      "The calculation stopped unexpectedly. Calculate them again. If it stops again, load panel.nei again in the Variants step.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expectNoViolations(makeAxeBuilder);
+  // The crash started a new worker, which answers.
+  await calculate(page);
+  await expect(histogram(page, MAF_TITLE)).toBeVisible();
+});
+
+test("VS6 D2 a variant with no called genotype gives the warning above the caption, and is in no bin", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openVariants(page);
+  const vcf = [
+    "##fileformat=VCFv4.2",
+    "##contig=<ID=1>",
+    '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
+    "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\ta\tb",
+    "1\t1\t.\tA\tT\t.\tPASS\t.\tGT\t0/1\t0/0",
+    "1\t2\t.\tA\tT\t.\tPASS\t.\tGT\t./.\t./.",
+    "1\t3\t.\tA\tT\t.\tPASS\t.\tGT\t1/1\t0/1",
+    "",
+  ].join("\n");
+  const chooser = page.waitForEvent("filechooser");
+  await page
+    .getByRole("region", { name: "Variants file" })
+    .getByRole("button", { name: /^(Choose|Replace) .*…$/ })
+    .click();
+  await (
+    await chooser
+  ).setFiles({
+    name: "calls.vcf",
+    mimeType: "text/plain",
+    buffer: Buffer.from(vcf),
+  });
+  await block(page).getByRole("button", { name: CALCULATE }).click();
+  await expect(
+    block(page).getByText(
+      "Over the 3 variants of calls.vcf, before any filter.",
+      {
+        exact: true,
+      },
+    ),
+  ).toBeVisible();
+  await expect(
+    block(page).getByRole("heading", { name: "1 warning" }),
+  ).toBeVisible();
+  await expect(
+    block(page).getByText(
+      "1 of the 3 variants of calls.vcf has no called genotype, and is in none of the histograms.",
+    ),
+  ).toBeVisible();
+  await expect(
+    histogram(page, /^Major allele frequency, mean /).getByRole("img"),
+  ).toHaveAccessibleName(
+    /The major allele frequency of 2 variants, in 40 bins/,
+  );
   await expectNoViolations(makeAxeBuilder);
 });
