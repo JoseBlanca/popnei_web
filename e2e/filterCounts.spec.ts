@@ -247,6 +247,81 @@ test("VS6 D2 the three filters counted, 1,152 of 1,152 and 1,128 of 1,152, and t
   await expectNoViolations(makeAxeBuilder);
 });
 
+// The numbers of the two tests below are popnei's, js-v0.1.0-dev.2, in
+// node on 27 September 2026: openVars of panel.nei, the filters applied
+// in their order, and the passStats of iterBlocks.
+const LD_LINE =
+  "Of two variants closer than the distance whose r² is above the maximum, the first is kept.";
+const R2_LABEL = "Maximum r² with a variant kept before it, from 0 to 1";
+const DISTANCE_LABEL =
+  "Distance within which variants are compared, in base pairs, from 1";
+
+test("VS6 D2 the LD pruning alone counted: 1,187 of the 1,200 variants, beside it and in the description of its two fields", async ({
+  page,
+}) => {
+  await openVariants(page);
+  await pick(page, "panel.nei");
+  await flip(page, MISSING_SWITCH);
+  await flip(page, LD_SWITCH);
+  await count(page);
+  const kept = "Kept 1,187 of the 1,200 variants it was given.";
+  await expect(filters(page).getByText(/^Kept /)).toHaveText([kept]);
+  await expect(field(page, R2_LABEL)).toHaveAccessibleDescription(
+    `${kept} ${LD_LINE}`,
+  );
+  await expect(field(page, DISTANCE_LABEL)).toHaveAccessibleDescription(
+    `${kept} ${LD_LINE}`,
+  );
+  await expect(
+    filters(page).getByText(
+      "1,187 of the 1,200 variants of panel.nei pass the filters.",
+      { exact: true },
+    ),
+  ).toBeFocused();
+});
+
+test("VS6 D2 the four filters counted, each removing some variants, give each count beside its own filter, in their order", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openVariants(page);
+  await pick(page, "panel.nei");
+  await setField(page, MISSING_LABEL, "0.05");
+  await flip(page, OBS_HET_SWITCH);
+  await setField(page, OBS_HET_LABEL, "0.4");
+  await flip(page, MAF_SWITCH);
+  await setField(page, MAF_LABEL, "0.9");
+  await flip(page, LD_SWITCH);
+  await count(page);
+  await expect(
+    filters(page).getByText(
+      "588 of the 1,200 variants of panel.nei pass the filters.",
+      { exact: true },
+    ),
+  ).toBeFocused();
+  // In the order of the filters on the page: missing data, observed
+  // heterozygosity, MAF, LD pruning.
+  await expect(filters(page).getByText(/^Kept /)).toHaveText([
+    "Kept 1,152 of the 1,200 variants it was given.",
+    "Kept 688 of the 1,152 variants it was given.",
+    "Kept 594 of the 688 variants it was given.",
+    "Kept 588 of the 594 variants it was given.",
+  ]);
+  await expect(field(page, MISSING_LABEL)).toHaveAccessibleDescription(
+    `Kept 1,152 of the 1,200 variants it was given. ${MISSING_DATA_LINE}`,
+  );
+  await expect(field(page, OBS_HET_LABEL)).toHaveAccessibleDescription(
+    "Kept 688 of the 1,152 variants it was given.",
+  );
+  await expect(field(page, MAF_LABEL)).toHaveAccessibleDescription(
+    `Kept 594 of the 688 variants it was given. ${MAF_LINE}`,
+  );
+  await expect(field(page, R2_LABEL)).toHaveAccessibleDescription(
+    `Kept 588 of the 594 variants it was given. ${LD_LINE}`,
+  );
+  await expectNoViolations(makeAxeBuilder);
+});
+
 test("VS6 D2 an undo brings back the counts of the filters before, with no calculation", async ({
   page,
   makeAxeBuilder,
