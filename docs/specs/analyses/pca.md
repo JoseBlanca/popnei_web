@@ -1288,11 +1288,16 @@ these.
   "Depth axis", in 3D; "Colour the points by", a select of "Population"
   and the columns of `colourColumns`; and, in 3D, the buttons of the
   view of `docs/specs/charts/pca3d.md`, "The buttons of the bar above the
-  plot", in these words: "Turn left" and "Turn right", about the vertical
-  of the screen, and "Tilt up" and "Tilt down", about its horizontal, by
-  15° each; "View along PC1", "View along PC2" and "View along PC3",
-  named by the components of the axes, which look down one of them and
-  show the plot of the other two; "Zoom in", "Zoom out" and "Reset view".
+  plot", in these words: "Turn left" and "Turn right", which turn the
+  view about the third component shown, as a drag left or right does, so
+  that in the view down that component the plot spins in its plane; and
+  "Tilt up" and "Tilt down", as a drag up or down does, "Tilt down"
+  toward looking straight down the third component, which is the 2D plot
+  of the other two, five presses from the start; by 15° each. "View
+  along PC1", "View along PC2" and "View along PC3", named by the
+  components of the axes, look down one of them and show the plot of the
+  other two, the third component up in the first two
+  (`docs/specs/charts/pca3d.md`); "Zoom in", "Zoom out" and "Reset view".
   They call `rotate`, `viewAlong`, `zoom` and `resetView` of the plot's
   handle. A change of the view, the axes or the colour is a command,
   which removes nothing; a turn or a zoom of the 3D view is not, and is
@@ -1326,7 +1331,11 @@ these.
   group of no population among them. The highlight is state of the
   screen, kept while the panel is drawn, from the 2D plot to the 3D one
   and back, and not in the project, since it changes nothing the user
-  would save; it is cleared when the groups change. A colouring by the
+  would save; it is cleared when the colouring or the names of the
+  groups change, since an index kept across such a change would mark
+  another group. A faded entry fades its mark and not its name, whose
+  contrast stays that of the text; the legend sits at the same place
+  over the plot in 2D and in 3D (`docs/specs/charts/scatter.md`). A colouring by the
   values of a continuous column has a bar of its scale for a legend, and
   no highlight. This is what stage 4 takes from the owner's widget
   any_scatter3d, which the owner named on 27 September 2026 for the look
@@ -1479,7 +1488,7 @@ offered in each case (`docs/specs/charts/pca3d.md`, "Loading three.js",
 
 | when | the text |
 |---|---|
-| three.js is being downloaded, the first time 3D is shown | "Loading the 3D view…", announced without moving the focus |
+| three.js is being downloaded, the first time 3D is shown | "Loading the 3D view…", announced without moving the focus. A download that ends after the user went back to 2D is dropped, and draws nothing (`docs/specs/charts/pca3d.md`, "Loading three.js") |
 | its download failed, the connection down or the site deployed again since the page was opened | "The 3D view could not be loaded. If the connection works, the site may have been updated since this page was opened: save the project, reload the page and open the project again.", with a "Try again" button |
 | the browser gives no WebGL 2, `Pca3dError` of kind `noWebGl` | "This browser cannot draw the 3D view: WebGL, the part of the browser that draws it, is turned off or not available on this computer. The 2D plot shows any two of the components." A project saved in 3D and opened there shows the same, and is not switched to 2D by the screen |
 | the browser took the drawing away, `onContextChange(true)`, until `onContextChange(false)` | "The browser stopped drawing the 3D view. It is drawn again when the browser allows it, or when you switch to 2D and back to 3D." |
@@ -1521,6 +1530,13 @@ The help, for the drawer of stage 8:
 
 ### Accessibility
 
+- **The tooltip** of the point under the pointer stays while the pointer
+  is on the point or on the tooltip, does not cover its point, and hides
+  when Escape is pressed, in 2D and in 3D, as WCAG 2.2 asks of what a
+  hover shows (success criterion 1.4.13: it can be dismissed, hovered
+  and stays until the user moves away). Escape is heard by a listener on
+  the whole page that exists only while a tooltip is shown and acts on
+  that key alone (`docs/specs/charts/scatter.md`); the help says so.
 - **The plot** is an image with a text alternative, the title and the
   description of the base of the 2D plots (`docs/specs/charts/plot2d.md`):
   the title "Principal components, PC1 and PC2", or of the 3D view
