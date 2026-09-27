@@ -137,7 +137,7 @@ file:
 
 | code | when | the text |
 |---|---|---|
-| `individualsWithoutCalls` | an individual has NaN in `obsHetRate` | "3 individuals of panel.nei have no called genotype among the 1,152 variants the filters kept, so they have no observed heterozygosity: s001, s002 and s003. The filter by observed heterozygosity removes them when it is on." With one: "s001 has no called genotype among the 1,152 variants the filters kept, so it has no observed heterozygosity. …" |
+| `individualsWithoutCalls` | an individual has NaN in `obsHetRate` | "3 individuals of panel.nei have no called genotype among the 1,152 variants the filters kept, so they have no observed heterozygosity: s001, s002 and s003. The filter of the individuals by observed heterozygosity removes them when it is on." With one: "s001 has no called genotype among the 1,152 variants the filters kept, so it has no observed heterozygosity. …" |
 
 The individuals are listed as `project.md` lists them, three or fewer by
 name, more as the first two and how many more. The last sentence is the
