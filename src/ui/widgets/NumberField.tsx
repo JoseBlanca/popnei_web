@@ -27,7 +27,14 @@
  * unless a deletion mended the text before it (the spec, "A character
  * the field does not take").
  */
-import { useContext, useEffect, useId, useRef, useState } from "react";
+import {
+  useContext,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   NumberField as AriaNumberField,
   Input,
@@ -36,8 +43,9 @@ import {
 } from "react-aria-components";
 
 import { classOf } from "../classOf.ts";
+import { shortcutOf } from "../shell/shortcuts.ts";
 import {
-  COMMITTED_ATTRIBUTE,
+  NUMBER_FIELD_ATTRIBUTE,
   checkCommitted,
   numberText,
   takesTextOut,
@@ -155,6 +163,24 @@ export function NumberField({
   const notTaken = useRef(false);
   // Whether the commit under way is the one refused for it.
   const refusing = useRef(false);
+  // Whether anything was typed, or thrown away, since the last commit:
+  // Undo and Redo of the keyboard are then the field's, and otherwise the
+  // project's (docs/specs/shell.md, "The header").
+  const typed = useRef(false);
+  // The latest onTyped, for the effect below, which runs when the value
+  // changes and not when the screen gives another function.
+  const typedTo = useRef(onTyped);
+  useLayoutEffect(() => {
+    typedTo.current = onTyped;
+  });
+  // The number changed otherwise than by a commit, by an Undo or a new
+  // load: nothing typed is left, nor a character thrown away (the spec,
+  // "The threshold typed and not yet committed").
+  useEffect(() => {
+    notTaken.current = false;
+    typed.current = false;
+    typedTo.current?.(null);
+  }, [value]);
   // Whether a number committed may have decimals, as checkCommitted has
   // it: with `decimals`, any but 0; otherwise, a step that is not whole.
   const takesDecimals =
@@ -175,6 +201,16 @@ export function NumberField({
   };
   const commitEnds = (): void => {
     refusing.current = false;
+    typed.current = false;
+    onTyped?.(null);
+  };
+  /** Ctrl+Z with something typed: the number of the field back, as
+      Escape would, with no number typed and no line of a character
+      thrown away. */
+  const revert = (): void => {
+    notTaken.current = false;
+    typed.current = false;
+    setRefused(null);
     onTyped?.(null);
   };
 
@@ -233,6 +269,7 @@ export function NumberField({
         }}
         onNotTakenPending={() => {
           notTaken.current = true;
+          typed.current = true;
           // What the field shows from now on is not what was typed.
           onTyped?.(null);
         }}
@@ -244,7 +281,10 @@ export function NumberField({
         onCommitReady={onCommitReady}
         inputMode={takesDecimals ? "text" : "numeric"}
         committedText={numberText(value)}
+        isTyped={() => typed.current}
+        onRevert={revert}
         onText={(text) => {
+          typed.current = true;
           // After a character thrown away, and until a deletion mends the
           // text, what it holds is not what was typed: 0,1 shows as 01.
           onTyped?.(
@@ -289,10 +329,13 @@ interface FieldInputProps {
       point (docs/specs/steps/variants.md, "A character the fields do
       not take"). */
   readonly inputMode: "numeric" | "text";
-  /** The number the field holds as it shows it, which the input carries
-      so that Undo and Redo of the keyboard go to the project while its
-      text is that number (shortcuts.ts, `ownerOfKeys`). */
+  /** The number the field holds as it shows it, which Ctrl+Z puts back
+      while something is typed. */
   readonly committedText: string;
+  /** Whether anything was typed since the last commit. */
+  readonly isTyped: () => boolean;
+  /** Called when Ctrl+Z puts the number of the field back. */
+  readonly onRevert: () => void;
 }
 
 /** The input of the field, which reads React Aria's state of it: to
@@ -309,6 +352,8 @@ function FieldInput({
   onText,
   inputMode,
   committedText,
+  isTyped,
+  onRevert,
 }: FieldInputProps): React.JSX.Element {
   const state = useContext(NumberFieldStateContext);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -373,7 +418,7 @@ function FieldInput({
       ref={inputRef}
       className={classOf(styles, "input")}
       inputMode={inputMode}
-      {...{ [COMMITTED_ATTRIBUTE]: committedText }}
+      {...{ [NUMBER_FIELD_ATTRIBUTE]: "" }}
       onChange={(event) => {
         // A change React Aria took, of the text it showed; one that took
         // text out mends what was typed.
@@ -398,6 +443,17 @@ function FieldInput({
       }}
       onKeyDown={(event) => {
         if (isCommitKey(event)) onCommitEnds();
+        // Undo and Redo are never the browser's here (docs/specs/shell.md,
+        // "The header"): with something typed, Ctrl+Z puts the number back
+        // and redo does nothing; with nothing typed, the shell takes them
+        // for the project.
+        const shortcut = shortcutOf(event);
+        if (shortcut === null || state === null || !isTyped()) return;
+        event.preventDefault();
+        if (shortcut === "undo") {
+          state.setInputValue(committedText);
+          onRevert();
+        }
       }}
       onBlurCapture={onCommitStarts}
       onBlur={onCommitEnds}

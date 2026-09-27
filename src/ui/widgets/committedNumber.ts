@@ -38,11 +38,11 @@ export type NumberRefusal =
       readonly text: string;
     };
 
-/** The attribute a number field gives its input, `data-committed`, with
-    the text of the number it holds, as the field shows it, so that the
-    shell tells a field with nothing typed in it since its last commit
-    (src/ui/shell/shortcuts.ts). */
-export const COMMITTED_ATTRIBUTE = "data-committed";
+/** The attribute a number field gives its input, so that the shell
+    takes Undo and Redo of the keyboard pressed in it for the project's:
+    the field handles them itself while something is typed in it, and
+    leaves them to the shell otherwise (src/ui/shell/shortcuts.ts). */
+export const NUMBER_FIELD_ATTRIBUTE = "data-number-field";
 
 /** The decimals of `step`: 2 for 0.01, 0 for 1. */
 function decimalsOf(step: number): number {

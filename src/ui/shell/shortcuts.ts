@@ -2,14 +2,15 @@
  * The keyboard's Undo and Redo (docs/specs/shell.md, "The header"; react.md,
  * "Keyboard shortcuts"): Ctrl+Z undoes, Ctrl+Shift+Z and Ctrl+Y redo, and
  * on macOS Cmd+Z and Cmd+Shift+Z; except while the focus is in a text
- * field, where they belong to the text, but for a number field with
- * nothing typed in it since its last commit, and while a dialog of the shell
+ * field, where they belong to the text, but for a number field, which
+ * handles them itself while something is typed in it and leaves them to
+ * the project otherwise, and while a dialog of the shell
  * is open, wherever the focus is, since they would change the project
  * behind the question it asks; the notice is not such a dialog. The
  * shell's header listens for them on the window.
  */
 
-import { COMMITTED_ATTRIBUTE } from "../widgets/committedNumber.ts";
+import { NUMBER_FIELD_ATTRIBUTE } from "../widgets/committedNumber.ts";
 import { isDialogOnPage, isInDialog } from "../widgets/dialogMark.ts";
 
 /** What a key pressed does to the project. */
@@ -84,17 +85,17 @@ const INPUTS_WITHOUT_TEXT: ReadonlySet<string> = new Set([
     of the shell, open on the page, where they do nothing. */
 export type KeysOwner = "project" | "text" | "dialog";
 
-/** Whether `input` is a number field whose text is the number it holds:
-    nothing typed in it since its last commit, where the browser's undo
-    would take back the text React Aria wrote at the commit
-    (docs/specs/shell.md, "The header"). */
-function holdsItsNumber(input: HTMLInputElement): boolean {
-  return input.getAttribute(COMMITTED_ATTRIBUTE) === input.value;
+/** Whether `input` is a number field, which handles the keys itself
+    while something is typed in it, and gives them to the project
+    otherwise (docs/specs/shell.md, "The header"). */
+function isNumberField(input: HTMLInputElement): boolean {
+  return input.hasAttribute(NUMBER_FIELD_ATTRIBUTE);
 }
 
 /** Who the keys pressed on `target` belong to. A text field comes first,
     so that the field of the name in the dialog of Save keeps its own
-    undo; a number field with nothing typed in it is no text field here.
+    undo; a number field, whose keys reach here only while nothing is
+    typed in it, is no text field here.
     A dialog open on the page takes them from anything else, the notice
     under it among them, which React Aria leaves reachable. */
 export function ownerOfKeys(target: EventTarget | null): KeysOwner {
@@ -103,7 +104,7 @@ export function ownerOfKeys(target: EventTarget | null): KeysOwner {
     target instanceof HTMLTextAreaElement ||
     (target instanceof HTMLInputElement &&
       !INPUTS_WITHOUT_TEXT.has(target.type) &&
-      !holdsItsNumber(target)) ||
+      !isNumberField(target)) ||
     (target instanceof HTMLElement && target.isContentEditable)
   ) {
     return "text";

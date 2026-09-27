@@ -340,6 +340,95 @@ for (const locale of ["en-US", "es-ES"] as const) {
   });
 }
 
+// Undo and Redo of the keyboard in a number field are never the browser's
+// (docs/specs/shell.md, "The header"): with something typed since the
+// last commit, Ctrl+Z puts the number of the field back; with nothing
+// typed, they are the project's.
+test("VS6 D2 0.9 typed back over 0.9 committed: Cmd+Z puts the text back and leaves the project, a second Cmd+Z undoes the project and the line follows", async ({
+  page,
+}) => {
+  await openVariants(page);
+  await pick(page, "panel.nei");
+  await calculate(page);
+  await flip(page, MAF_SWITCH);
+  const group = histogram(page, MAF_TITLE);
+  const maf = field(page, MAF_LABEL);
+  await maf.click();
+  await maf.press("ControlOrMeta+a");
+  await maf.pressSequentially("0.9");
+  await maf.press("Enter");
+  await maf.press("ControlOrMeta+a");
+  await maf.pressSequentially("0.9");
+  await maf.press("ControlOrMeta+z");
+  await expect(maf).toHaveValue("0.9");
+  await expect(banner(page, "Undo")).toHaveAccessibleDescription(
+    "Undo: the MAF filter changed",
+  );
+  await maf.press("ControlOrMeta+z");
+  await expect(maf).toHaveValue("0.95");
+  await expect(group.getByText("Maximum 0.95")).toBeAttached();
+  await expect(
+    group.getByText("Threshold of the MAF filter: 0.95", { exact: true }),
+  ).toBeVisible();
+});
+
+test("VS6 D2 a comma thrown away, then Cmd+Z: the text and the line are back, the refusal gone, and a number typed after it is committed", async ({
+  page,
+}) => {
+  await openVariants(page);
+  await pick(page, "panel.nei");
+  await calculate(page);
+  await flip(page, MAF_SWITCH);
+  const group = histogram(page, MAF_TITLE);
+  const maf = field(page, MAF_LABEL);
+  await maf.click();
+  await maf.press("ControlOrMeta+a");
+  await maf.pressSequentially("0,");
+  const refusal = page.getByText(/^Write the decimals with a point/);
+  await expect(refusal).toBeVisible();
+  await maf.press("ControlOrMeta+z");
+  await expect(maf).toHaveValue("0.95");
+  await expect(refusal).toHaveCount(0);
+  await expect(banner(page, "Undo")).toHaveAccessibleDescription(
+    "Undo: the MAF filter was turned on",
+  );
+  await maf.press("ControlOrMeta+a");
+  await maf.pressSequentially("0.8");
+  await maf.press("Enter");
+  await expect(maf).toHaveValue("0.8");
+  await expect(banner(page, "Undo")).toHaveAccessibleDescription(
+    "Undo: the MAF filter changed",
+  );
+  await expect(group.getByText("Maximum 0.8", { exact: true })).toBeAttached();
+});
+
+test("VS6 D2 0.3 typed with no commit before: Cmd+Z puts 0.95 back, not 0, the redo keys do nothing, and the project is left", async ({
+  page,
+}) => {
+  await openVariants(page);
+  await pick(page, "panel.nei");
+  await calculate(page);
+  await flip(page, MAF_SWITCH);
+  const group = histogram(page, MAF_TITLE);
+  const maf = field(page, MAF_LABEL);
+  await maf.click();
+  await maf.press("ControlOrMeta+a");
+  await maf.pressSequentially("0.3");
+  await expect(group.getByText("Maximum 0.3", { exact: true })).toBeAttached();
+  await maf.press("ControlOrMeta+z");
+  await expect(maf).toHaveValue("0.95");
+  await expect(group.getByText("Maximum 0.95")).toBeAttached();
+  await maf.press("ControlOrMeta+a");
+  await maf.pressSequentially("0.4");
+  await maf.press("ControlOrMeta+Shift+z");
+  await expect(maf).toHaveValue("0.4");
+  await expect(banner(page, "Undo")).toHaveAccessibleDescription(
+    "Undo: the MAF filter was turned on",
+  );
+  await maf.press("Tab");
+  await expect(maf).toHaveValue("0.4");
+});
+
 test("VS6 D2 0.9 pasted over 0.8 typed in the MAF field is committed at once, and the line follows it", async ({
   page,
 }) => {
