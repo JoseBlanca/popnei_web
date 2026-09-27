@@ -347,3 +347,15 @@ describe("the line before the table", () => {
     );
   });
 });
+
+describe("the names of the user's files, escaped", () => {
+  test("an individual whose name holds a tab shows it escaped in its cell", () => {
+    expect(individualCells(row("s\t0", 0.5, 0.25), null)[0]).toBe("s\\t0");
+  });
+
+  test("a variants file whose name holds a tab shows it escaped in the caption", () => {
+    expect(statsCaption(2, "a\tb.vcf", 3)).toBe(
+      "The statistics of the 2 individuals of a\\tb.vcf, over the 3 variants the filters kept.",
+    );
+  });
+});

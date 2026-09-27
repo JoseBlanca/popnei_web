@@ -213,6 +213,20 @@ describe("what stands under the filters of individuals", () => {
     });
   });
 
+  test("a variants file whose name holds a tab is named escaped in the line of those that pass", () => {
+    const { p, kept } = worked([{ kind: "remove", individuals: ["b"] }]);
+    const variants = p.variants;
+    if (variants === null) throw new Error("the worked case has a file");
+    const tabbed: Project = {
+      ...p,
+      variants: { ...variants, name: "a\tb.nei" },
+    };
+    expect(keptTotal(tabbed, kept)).toEqual({
+      kind: "passed",
+      text: "4 of the 5 individuals of a\\tb.nei pass the filters.",
+    });
+  });
+
   test("filters that remove none give every individual, and one individual passes", () => {
     const all = worked([{ kind: "missing_data", maxAllowedMissingRate: 1 }]);
     expect(keptTotal(all.p, all.kept)).toEqual({
