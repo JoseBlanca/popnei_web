@@ -104,16 +104,20 @@ its `<h1>`; and the notice, at the bottom.
   undo takes back the typing of that field alone: once the field has
   nothing left to undo, WebKit would go on to the field edited before it,
   the threshold behind the dialog of Save among them, which would then
-  show a number the project does not hold. A number field whose text is
-  the number it holds, nothing typed in it since its last commit, gives
-  the keys to the project, as the owner is to judge at stop A of
-  `docs/plans/variants-step.md`: there the browser's undo would take
-  back the text React Aria wrote at the commit, and Chromium left "0."
-  in the MAF field after 0.9 was typed, committed with Enter and undone
-  with Cmd+Z, which the Tab key then committed as 0, a filter that keeps
-  no variant, with no word; the user who pressed Cmd+Z there meant the
-  project's undo. While something is typed in it, the keys are the
-  text's own, as in any text field.
+  show a number the project does not hold. A number field never leaves
+  the keys to the browser, whose undo of a field that React Aria rewrites
+  at each commit is unreliable: after 0.9 was typed, committed with Enter
+  and undone with Cmd+Z, Chromium left "0." in the MAF field, which the
+  Tab key then committed as 0, a filter that keeps no variant, with no
+  word; after a commit and one character typed, Cmd+Z did nothing in
+  Chromium or WebKit; and with no commit before it, Chromium's undo
+  turned 0.95 into 0. So, as the owner is to judge at stop A of
+  `docs/plans/variants-step.md`: while something is typed in a number
+  field since its last commit, Ctrl+Z puts back the number the field
+  holds, as the text shows it, drops the number typed from the plot and
+  the line of a character refused, as Escape would, and Ctrl+Shift+Z and
+  Ctrl+Y do nothing; with nothing typed, they are the project's Undo and
+  Redo, as anywhere outside a text field.
 - **Open project…** and **Save project**, below ("Saving", "Opening").
 
 ### The stepper

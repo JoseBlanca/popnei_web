@@ -522,7 +522,9 @@ away until a deletion mends the text, since what the field shows is then
 not what was typed, 0,1 shown as 01, and the number comes back with the
 edit that mends it; and called with `null` at each
 commit, when the field shows the number committed or kept, which is how
-the typed number is dropped. The step gives the histogram that number,
+the typed number is dropped; it is dropped too, and a character thrown
+away is forgotten, when the number of the field changes otherwise, by an
+Undo or a new load. The step gives the histogram that number,
 or the threshold of the project for `null`. The text is read by the
 field itself, as digits with at most one point and nothing else, and
 not by the parser of React Aria, which follows the language it is
