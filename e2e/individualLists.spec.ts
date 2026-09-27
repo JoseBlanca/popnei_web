@@ -199,6 +199,25 @@ test("VS7 D1 the list cleared: the text emptied, the reason gone and Write given
   await expectNoViolations(makeAxeBuilder);
 });
 
+test("VS7 D1 a list's text area is described in order: not applied, then the reason of the list applied, or its count", async ({
+  page,
+}) => {
+  await openVariants(page);
+  await loadPanelNei(page);
+  await typeInto(keepArea(page), "ind_900");
+  await button(page, "Apply the list to keep").click();
+  await typeInto(keepArea(page), "\ns000");
+  await expect(keepArea(page)).toHaveAccessibleDescription(
+    `${KEEP_NOT_APPLIED} ${IND_900}`,
+  );
+  await keepArea(page).fill("s000\ns001");
+  await button(page, "Apply the list to keep").click();
+  await typeInto(keepArea(page), "\ns002");
+  await expect(keepArea(page)).toHaveAccessibleDescription(
+    `${KEEP_NOT_APPLIED} Kept 2 of the 200 individuals it was given.`,
+  );
+});
+
 test("VS7 D1 a list popnei accepts is applied with what the filters keep announced, and a Clear that brings the reason of the other list announces it and describes that list, and axe", async ({
   page,
   makeAxeBuilder,
