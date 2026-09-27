@@ -6,7 +6,7 @@ The work report of the plan `docs/plans/variants-step.md`, stage 3 of
 
 ## Where the plan stands
 
-Under way since 26 September 2026. On 27 September work packages 1 to 6 are done, each after its review, and the owner accepted the screens of the writing and of the filters of the variants at stop A. Work package 7, the filters of the individuals, is next; it ends at stop B.
+Under way since 26 September 2026. On 27 September work packages 1 to 6 are done, each after its review, and the owner accepted the screens of the writing and of the filters of the variants at stop A. In work package 7, the filters of the individuals, the four tasks 7.1 to 7.4 are done and committed; its review of the code-review skill is next, then stop B (task 7.5).
 
 ## Before the first task
 
@@ -927,3 +927,37 @@ the rows on the screen, the median time the page is frozen:
 
 Above the 100 ms the plan named, with the rows on the screen alone
 drawn already; for the owner at stop B.
+
+7.4 as cbdd010 (`diversity.md`), 30a0425, 2e79245, d57703c
+(`shell.md`), 912ff69 and 8c4b27d. The panel of the diversity lists the
+populations kept, waits for the statistics with their own bar, and
+says, in the words of the statistics, why they failed (the finding of
+work package 5). As at stop A, a diversity locked because the
+statistics it waited for keep no individual is announced, "Diversity
+was not run." and the reason; and the summary line counts the
+populations kept, "2 of 3 populations by popcat". A screenshot test
+whose locator matched two elements once the status region spoke
+failed 9 times in 10 when forced; it now finds the question by its own
+words, 20 of 20.
+
+On 8c4b27d: `format:check`, `typecheck` and `lint` exit 0; `npm test`
+"Tests 2061 passed (2061)"; the browser check "582 passed". Firefox was
+not run.
+
+### For the owner, at stop B
+
+- With 10,000 individuals the page is frozen 97 to 381 ms after a
+  change of the table of the statistics, though the table draws only
+  the rows on the screen (the table above). Options: accept it; or
+  profile whether the cost is the table, the two histograms or the
+  counts, and draw less. Recommended: accept it for now and profile if a
+  user with such a file finds it slow.
+- A list of individuals keeps its reason's words of point D (the
+  meantime of `variants.md`), and a file of one individual reads "keep
+  none of the 1 individuals"; recommended: "keep the one individual of
+  panel.nei".
+- The first reader of task 7.3 read "Known once …" as a state and not
+  as an instruction, and could not tell whether the line of the filter
+  by heterozygosity means an individual is removed at any threshold.
+  Recommended: keep the spec's words, since the button Calculate stands
+  just above.

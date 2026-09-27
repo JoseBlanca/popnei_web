@@ -913,7 +913,7 @@ writes the variants of the individuals kept.
   kept, from `variants.md`, "The two thresholds" and "What each filter
   of the individuals kept"; the flow of D3. Serves 1, 3 and 5. Needs
   7.2.
-- [ ] 7.4 The diversity panel of stage 3, from `diversity.md`, "The
+- [x] 7.4 The diversity panel of stage 3, from `diversity.md`, "The
   panel": the populations kept in the ready state, the wait for the
   statistics in the running state, and the words of the statistics that
   failed and of no population left. Serves 2 and 5. Needs 7.3.
