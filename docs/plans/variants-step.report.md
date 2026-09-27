@@ -633,3 +633,19 @@ line under it), 2e0fb5f and 4f2c966. Two flows of stage 2 changed for
 it: the description of the missing data field now ends with the line of
 its switch, and the flow of the writing presses Tab four times to reach
 Write past the new filters.
+
+6.2 as 3edab28 (`variants.md`: the words of the histograms removed by a
+change, which the spec gave only by their start, written on the model
+of the diversity's), 8182b5e, 4ab5cf5, 3562d1d, ca9c80a, b3afbec and
+b69da83. The plots are now in the page: its first script is 154,923
+bytes with `gzip -9`, against 133,788 on 3ba619a (21.1 KB more). A test
+of the types fails if the states of a bin in core and in the plots
+drift apart. Two flows of stage 2 changed: the order of the keyboard
+has the new button, and the flow of an error of the application now
+breaks only the formatting of the number field, since breaking every
+formatting of numbers also broke the plots and the page did not start.
+
+For the owner, decided without them: the spec says the panel of a plot
+is no stop of the Tab key, but React Aria makes a panel with nothing
+to focus a stop, as the WAI-ARIA guidance for tabs advises; the panel
+stays a stop, and the spec is to say so.

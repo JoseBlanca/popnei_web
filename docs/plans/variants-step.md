@@ -802,7 +802,7 @@ counts how many variants each filter was given and kept.
   the line in place of the three analyses before a file is read. Serves
   1, 2 and 4. Needs work package 5, whose task 5.3 changes
   `VariantsStep.tsx` too.
-- [ ] 6.2 The histogram in the step: the component that mounts
+- [x] 6.2 The histogram in the step: the component that mounts
   `createHistogram` (`react.md`, "Mounting a plot"), in its two tabs with
   the table of its bins and their CSV; the block "Histograms of the
   variants" with its button and states, and each histogram beside its
