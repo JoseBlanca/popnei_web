@@ -532,7 +532,11 @@ none, the warning "The MAF filter kept none of the 1,152 variants it was
 given, …" (`filterCounts.md`, "The warnings"). Without counts for the filters
 as they are, the line "Not counted for these filters. Count, or run an
 analysis, to see what each filter keeps." stands in place of the line of
-the total, and nothing beside the filters. A change of any filter of the
+the total while the Count is ready, beside its button, and nothing beside
+the filters; while it runs, and in error, the bar or the words of the
+error stand there instead, since the line asks for a Count that is under
+way, or that has no button after popnei refused it (`filterCounts.md`,
+"The states"). A change of any filter of the
 variants takes every count off at once, and is in no notice
 (`docs/architecture.md`, section 4, "The notice leaves the counts out");
 an undo, or any calculation over the same filters, brings them back.
