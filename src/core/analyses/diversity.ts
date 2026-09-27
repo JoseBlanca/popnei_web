@@ -315,16 +315,26 @@ export function populationsBeforeRun(
   );
 }
 
-/** The populations when the individuals kept leave every one of them
-    empty, said whole: "None of the 3 populations has an individual left
-    after the filters of individuals. Loosen …", or, of one, by its
-    name; the reason of the lock of `keptNeeds` and a line of the ready
-    state. */
-export function allEmptiedText(emptied: readonly string[]): string {
+/** The reason of the lock of `keptNeeds`, when the `numKept`
+    individuals kept have no population in the column `column`, which
+    leaves every population, `emptied`, empty: "The 34 individuals kept
+    have no population in popcat, so none of the 2 populations has an
+    individual left. Loosen …", with one population by its name. */
+export function allEmptiedText(
+  numKept: number,
+  column: string,
+  emptied: readonly string[],
+): string {
+  const kept =
+    numKept === 1
+      ? "The one individual kept has"
+      : `The ${counted(numKept, "individual")} kept have`;
   const [only] = emptied;
-  return emptied.length === 1 && only !== undefined
-    ? `${escaped(only)} has no individual left after the filters of individuals. ${loosenText(true)}`
-    : `None of the ${counted(emptied.length, "population")} has an individual left after the filters of individuals. ${loosenText(false)}`;
+  const left =
+    emptied.length === 1 && only !== undefined
+      ? `${escaped(only)} has no individual left. ${loosenText(true)}`
+      : `none of the ${counted(emptied.length, "population")} has an individual left. ${loosenText(false)}`;
+  return `${kept} no population in ${shown(column)}, so ${left}`;
 }
 
 /** What to do about populations left empty, of one or of several. */
@@ -339,9 +349,17 @@ export function loosenText(one: boolean): string {
 function keptNeeds(p: Project, kept: IndividualsKept): string | null {
   const list = kept.list.kind === "known" ? kept.list.individuals : null;
   const left = populationsKept(p, list);
-  return left === null || left.pops.length > 0 || left.emptied.length === 0
-    ? null
-    : allEmptiedText(left.emptied);
+  const column = populationsColumn(p);
+  if (
+    list === null ||
+    column === null ||
+    left === null ||
+    left.pops.length > 0 ||
+    left.emptied.length === 0
+  ) {
+    return null;
+  }
+  return allEmptiedText(list.length, column, left.emptied);
 }
 
 /** The reason about the column of the populations, and its kind. */

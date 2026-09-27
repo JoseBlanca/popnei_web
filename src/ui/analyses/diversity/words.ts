@@ -11,10 +11,7 @@ import type {
   DiversityRow,
   PopulationsKept,
 } from "../../../core/analyses/diversity.ts";
-import {
-  allEmptiedText,
-  loosenText,
-} from "../../../core/analyses/diversity.ts";
+import { loosenText } from "../../../core/analyses/diversity.ts";
 import { variantsStem } from "../../../core/fileNames.ts";
 import { counted, escaped, grouped, namesOf } from "../../../core/project.ts";
 import type { Pops } from "../../../worker/protocol.ts";
@@ -105,11 +102,7 @@ export function readyLines(
 ): readonly string[] {
   return [
     ...(kept.pops.length > 0 ? [populationsText(kept.pops)] : []),
-    ...(kept.emptied.length === 0
-      ? []
-      : kept.pops.length === 0
-        ? [allEmptiedText(kept.emptied)]
-        : [emptiedText(kept.emptied)]),
+    ...(kept.emptied.length > 0 ? [emptiedText(kept.emptied)] : []),
     ...(waitsForStatistics ? [WAITS_FOR_STATISTICS_TEXT] : []),
   ];
 }

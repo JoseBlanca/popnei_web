@@ -74,16 +74,6 @@ describe("the words of the panel of the diversity", () => {
       "3 populations: p0, 32 individuals; p2, 50 individuals; p1, 37 individuals",
       "Run calculates the statistics of each individual first, and the populations may lose individuals to the thresholds.",
     ]);
-    // No population left: the line of the populations is left out, and
-    // one line says so whole, without the names, or with the one name.
-    expect(
-      readyLines({ pops: [], emptied: ["p0", "p2", "p1"] }, false),
-    ).toEqual([
-      "None of the 3 populations has an individual left after the filters of individuals. Loosen the filters of individuals in the Variants step to keep them.",
-    ]);
-    expect(readyLines({ pops: [], emptied: ["p0"] }, false)).toEqual([
-      "p0 has no individual left after the filters of individuals. Loosen the filters of individuals in the Variants step to keep it.",
-    ]);
   });
 
   test("the caption says what the table is over", () => {

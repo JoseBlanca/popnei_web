@@ -2389,7 +2389,9 @@ for (const theme of ["light", "dark"] as const) {
       );
       await goTo(page, "Analyses");
       await expect(
-        page.getByRole("main").getByText(/^None of the 2 populations has/),
+        page
+          .getByRole("main")
+          .getByText(/^The 34 individuals kept have no population in popcat/),
       ).toBeVisible();
       await save(page, `popgen-diversity-all-emptied-${theme}`);
     });

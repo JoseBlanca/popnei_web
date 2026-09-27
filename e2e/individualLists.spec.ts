@@ -532,3 +532,40 @@ test("VS7 D1 the Tab key goes from the Count through each list, its text area an
     await expect(next).toBeFocused();
   }
 });
+
+test("VS7 D1 a list to remove that names the one individual of a file says so in the singular", async ({
+  page,
+}) => {
+  await openVariants(page);
+  const vcf = [
+    "##fileformat=VCFv4.2",
+    "##contig=<ID=1>",
+    '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
+    "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tonly",
+    "1\t10\t.\tA\tG\t.\tPASS\t.\tGT\t0/1",
+    "",
+  ].join("\n");
+  const chooser = page.waitForEvent("filechooser");
+  await page
+    .getByRole("region", { name: "Variants file" })
+    .getByRole("button", { name: /^(Choose|Replace) .*…$/ })
+    .click();
+  await (
+    await chooser
+  ).setFiles({
+    name: "one.vcf",
+    mimeType: "text/plain",
+    buffer: Buffer.from(vcf),
+  });
+  await expect(page.getByRole("main").getByText("1 individual")).toBeVisible();
+  await typeInto(removeArea(page), "only");
+  await button(page, "Apply the list to remove").click();
+  await expect(
+    page
+      .getByRole("region", { name: "Filters of the individuals" })
+      .getByText(
+        "The filters of individuals do not keep the one individual of one.vcf. Loosen them.",
+        { exact: true },
+      ),
+  ).toBeVisible();
+});

@@ -46,10 +46,11 @@ const WAIT_LINE =
 const WAIT_BAR = "Calculating the statistics of each individual";
 const STATS_FAILED =
   "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the diversity was not run. At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 in the Variants step and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version.";
-/** The reason of the lock when the thresholds leave p0, the one
-    population, with no individual. */
+/** The reason of the lock when the threshold of 0.36 on the observed
+    heterozygosity keeps 132 individuals of panel.nei at 0.05, s000, the
+    one with a population, p0, not among them. */
 const P0_EMPTIED =
-  "p0 has no individual left after the filters of individuals. Loosen the filters of individuals in the Variants step to keep it.";
+  "The 132 individuals kept have no population in popcat, so p0 has no individual left. Loosen the filters of individuals in the Variants step to keep it.";
 
 /** The twelve individuals of tetraploid.vcf.gz, in one population, A. */
 const TETRAPLOID_POPS = {
@@ -473,5 +474,36 @@ test("VS7 D2 thresholds that keep only individuals with no population lock the d
   await expect(
     panel(page).getByRole("heading", { level: 2, name: "Diversity" }),
   ).toBeFocused();
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("VS7 D2 a threshold that leaves both populations empty locks the diversity with the individuals kept and the column, and axe", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  // s000 in p0 and s001 in p1, the others with no population; at 0.05,
+  // their observed heterozygosity, 0.367 and 0.344, is above 0.34, which
+  // keeps 34 individuals.
+  const rows = Array.from({ length: 200 }, (_, index) => {
+    const name = `s${String(index).padStart(3, "0")}`;
+    return `${name},${index === 0 ? "p0" : index === 1 ? "p1" : "NA"}`;
+  });
+  await load(
+    page,
+    "panel.nei",
+    { name: "two_pops.csv", text: `IID,popcat\n${rows.join("\n")}\n` },
+    "popcat",
+    "0.05",
+  );
+  await calculateStatistics(page);
+  await threshold(page, OBS_HET_SWITCH, OBS_HET_LABEL, "0.34");
+  await goTo(page, "Analyses");
+  const reason =
+    "The 34 individuals kept have no population in popcat, so none of the 2 populations has an individual left. Loosen the filters of individuals in the Variants step to keep them.";
+  const run = panel(page).getByRole("button", { name: "Run" });
+  await expect(run).toBeDisabled();
+  await expect(run).toHaveAccessibleDescription(reason);
+  await expect(line(page, reason)).toBeVisible();
+  await expect(panel(page).getByText(/^\d+ populations?:/)).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
 });

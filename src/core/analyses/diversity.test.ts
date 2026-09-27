@@ -1712,11 +1712,14 @@ describe("VS3 D3 the diversity of stage 3, at its bounds", () => {
     const keptNeeds = diversity.keptNeeds;
     if (keptNeeds === undefined) throw new Error("the diversity has keptNeeds");
     expect(keptNeeds(project(), kept(["i4"]))).toBe(
-      "None of the 2 populations has an individual left after the filters of individuals. Loosen the filters of individuals in the Variants step to keep them.",
+      "The one individual kept has no population in pop, so none of the 2 populations has an individual left. Loosen the filters of individuals in the Variants step to keep them.",
     );
     expect(keptNeeds(project(), kept(["i1", "i4"]))).toBeNull();
-    expect(allEmptiedText(["A"])).toBe(
-      "A has no individual left after the filters of individuals. Loosen the filters of individuals in the Variants step to keep it.",
+    expect(allEmptiedText(34, "popcat", ["p0", "p1"])).toBe(
+      "The 34 individuals kept have no population in popcat, so none of the 2 populations has an individual left. Loosen the filters of individuals in the Variants step to keep them.",
+    );
+    expect(allEmptiedText(2, "pop\tcat", ["A"])).toBe(
+      "The 2 individuals kept have no population in pop\\tcat, so A has no individual left. Loosen the filters of individuals in the Variants step to keep it.",
     );
   });
 
