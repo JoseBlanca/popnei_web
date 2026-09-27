@@ -179,6 +179,23 @@ the meanwhile.
    open it again. `docs/architecture.md`, section 11 and section 13,
    point 10.
 
+14. **The legend over the plot hides the points under it.** The legend
+   sits over the top right corner of the plot, as in the owner's widget,
+   on a background, and the scale fills the whole plot, so the few points
+   under it can be neither seen nor pointed at. Recommended: keep it
+   over the plot, since the highlight of a population and the table of
+   the individuals reach every point, and the plot keeps its full size.
+   Not taken: a strip beside the plot for the legend, which makes the
+   plot narrower, most on a phone. `scatter.md`.
+15. **A date cell of an xlsx, with or without its time.** calamine gives
+   the value of a date cell and not its format, so a cell of `=NOW()`
+   that Excel shows as 13/05/2024 holds the time as well. Recommended: a
+   time of exactly midnight gives the date alone, `2024-05-13`, and any
+   other time the date and the time, `2024-05-13 14:31:07`, so such a
+   cell does not match the other dates of its column and the user sees
+   why in its values. Not taken: always the date and the time, which
+   writes `2024-05-13 00:00:00` for every plain date. `files.md`.
+
 ## Choices of a spec the owner may overrule
 
 Each was decided by the writer of its spec, and each changes what a user
@@ -305,9 +322,9 @@ meets.
   project with no file, which ran the diversity on "All individuals"
   without a word (`projectFile.md`, `project.md`).
 - **Loading a metadata file while the project is in one population**
-  removes the diversity, with its notice, while the file is read; the
-  result comes back from the cache once it is read, and the notice
-  stays until it is closed (`project.md`).
+  removes the diversity, with its notice, while the file is read; once it
+  is read, the result comes back from the cache and the notice no longer
+  names it (`project.md`, `store.md`).
 - **A type set on a column that the new file puts first is lost**, with
   words that say so; the first column is always the names of the
   individuals (`steps/individuals.md`).
