@@ -722,7 +722,11 @@ with no pass. Beside each filter that is set, a list applied under its
 buttons and a threshold under its field: "Kept 125 of the 200
 individuals it was given." A threshold whose statistics are not in the
 page, and each filter after it, has instead "Known once the statistics
-of each individual are calculated for these filters of the variants."
+of each individual are calculated for these filters of the variants.",
+or, while the statistics are in their error state, refused by popnei
+or failed, "Not known:
+the statistics of each individual could not be calculated, and their
+block says why."
 Under the last filter, the individuals that pass them all: "119 of the
 200 individuals of panel.nei pass the filters.", or, when they keep
 none, the reason `keptNoneReason` gives, "The filters of individuals
