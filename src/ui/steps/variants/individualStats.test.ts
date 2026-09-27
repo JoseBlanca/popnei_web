@@ -23,6 +23,7 @@ import {
   statsCaption,
   statsCsvName,
   statsRemovedText,
+  tableRowsText,
 } from "./individualStats.ts";
 
 /** A row of the table. */
@@ -312,6 +313,17 @@ describe("VS7 D1 the order of the table", () => {
     expect(first?.individual).toBe("s082");
     expect(first === undefined ? null : individualCells(first, null)[1]).toBe(
       "0.0434",
+    );
+  });
+});
+
+describe("the line before the table", () => {
+  test("the count of the individuals, and that the table scrolls and its CSV holds them all", () => {
+    expect(tableRowsText(200)).toBe(
+      "200 individuals; the table scrolls, and its CSV holds them all.",
+    );
+    expect(tableRowsText(10000)).toBe(
+      "10,000 individuals; the table scrolls, and its CSV holds them all.",
     );
   });
 });

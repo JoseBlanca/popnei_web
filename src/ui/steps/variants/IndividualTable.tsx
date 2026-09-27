@@ -33,6 +33,7 @@ import {
   keptColumn,
   sortedRows,
   statsCsvName,
+  tableRowsText,
 } from "./individualStats.ts";
 import type { IndividualColumnId } from "./individualStats.ts";
 import styles from "./VariantsStep.module.css";
@@ -141,6 +142,9 @@ export function IndividualTable({
 
   return (
     <div className={classOf(styles, "individualTable")}>
+      <p className={classOf(styles, "line")}>
+        {tableRowsText(result.individuals.length)}
+      </p>
       {column.kind === "notKnown" && (
         <p className={classOf(styles, "line")}>{KEPT_NOT_KNOWN_LINE}</p>
       )}

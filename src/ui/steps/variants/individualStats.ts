@@ -51,6 +51,13 @@ export const STATS_TABLE_NAME = "Statistics of each individual";
 export const KEPT_NOT_KNOWN_LINE =
   "Which individuals are kept is shown once the lists of individuals above are corrected.";
 
+/** The line before the table: how many rows it holds, since its box
+    shows a dozen of them, "200 individuals; the table scrolls, and its
+    CSV holds them all." */
+export function tableRowsText(numIndividuals: number): string {
+  return `${counted(numIndividuals, "individual")}; the table scrolls, and its CSV holds them all.`;
+}
+
 /** The words of the button that downloads the table. */
 export const STATS_CSV_LABEL = "Download the table as CSV";
 
