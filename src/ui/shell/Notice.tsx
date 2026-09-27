@@ -13,11 +13,11 @@
  * calculations it left behind. The next command, undo, redo or opening
  * replaces it with a new toast.
  */
-import { titleOf } from "../analyses/titles.ts";
 import { useAppState, useStore } from "../store.tsx";
 import { Button } from "../widgets/Button.tsx";
 import { Toast } from "../widgets/Toast.tsx";
 import { useAnnouncer } from "./announcer.tsx";
+import { useShellWords } from "./shellWords.tsx";
 import { undoOrRedo } from "./undoRedo.ts";
 import { noticeText } from "./words.ts";
 
@@ -25,11 +25,15 @@ import { noticeText } from "./words.ts";
 export function Notice(): React.JSX.Element {
   const store = useStore();
   const announcer = useAnnouncer();
+  const shellWords = useShellWords();
   const notice = useAppState((s) => s.notice);
   const content =
     notice === null
       ? null
-      : { identity: notice.cause, ...noticeText(notice, titleOf) };
+      : {
+          identity: notice.cause,
+          ...noticeText(notice, (id) => shellWords.title(id)),
+        };
   return (
     <Toast label="Notice" content={content}>
       {(words) => (

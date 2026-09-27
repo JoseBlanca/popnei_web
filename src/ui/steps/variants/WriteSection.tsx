@@ -18,11 +18,11 @@
  */
 import { useId, useLayoutEffect, useRef } from "react";
 
+import { variantsKept as variantsKeptOf } from "../../../core/apps.ts";
 import { writtenName } from "../../../core/fileNames.ts";
 import type { WriteStatus } from "../../../core/store.ts";
 import { writeEstimate } from "../../../core/writeEstimate.ts";
 import type { Progress } from "../../../worker/protocol.ts";
-import { SHELL_WORDS } from "../../analyses/titles.ts";
 import { progressShare } from "../../analyses/words.ts";
 import { classOf } from "../../classOf.ts";
 import { startWriting } from "../../runs.ts";
@@ -66,7 +66,7 @@ function WriteParts({
   const saving = useSaving();
   const project = useAppState((s) => s.project);
   const kept = useAppState((s) => s.individualsKept);
-  const variantsKept = useAppState((s) => SHELL_WORDS.variantsKept(s));
+  const variantsKept = useAppState(variantsKeptOf);
   const headingId = useId();
   const heading = useRef<HTMLHeadingElement>(null);
 

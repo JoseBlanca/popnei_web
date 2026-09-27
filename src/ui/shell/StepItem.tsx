@@ -8,9 +8,9 @@
  * not theirs.
  */
 import type { StepId } from "../../core/apps.ts";
-import { SHELL_WORDS } from "../analyses/titles.ts";
 import { useAppState } from "../store.tsx";
 import { StepLink } from "../widgets/StepLink.tsx";
+import { useShellWords } from "./shellWords.tsx";
 import { STEP_NAMES, hashOfStep } from "./steps.ts";
 import { stepStateOf } from "./words.ts";
 import type { StepStatus } from "./words.ts";
@@ -41,8 +41,9 @@ export interface StepItemProps {
 
 /** The link of one step. */
 export function StepItem({ id, isCurrent }: StepItemProps): React.JSX.Element {
-  const status = useAppState((s) => stepStateOf(s, id, SHELL_WORDS).status);
-  const reason = useAppState((s) => stepStateOf(s, id, SHELL_WORDS).reason);
+  const words = useShellWords();
+  const status = useAppState((s) => stepStateOf(s, id, words).status);
+  const reason = useAppState((s) => stepStateOf(s, id, words).reason);
   return (
     <StepLink
       href={hashOfStep(id)}

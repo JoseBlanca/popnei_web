@@ -35,6 +35,7 @@ import type { Saving } from "./saving.ts";
 import { AnnouncerProvider } from "./shell/announcer.tsx";
 import { ErrorBar } from "./shell/ErrorBar.tsx";
 import { Shell } from "./shell/Shell.tsx";
+import { ShellWordsProvider } from "./shell/shellWords.tsx";
 import { createAnnouncer } from "./shell/status.ts";
 import type { Announcer } from "./shell/status.ts";
 import { announcementsOf } from "./shell/words.ts";
@@ -219,7 +220,9 @@ function startApplication(
           <AnnouncerProvider value={announcer}>
             <FilesProvider value={files}>
               <SavingProvider value={saving}>
-                <Shell />
+                <ShellWordsProvider value={SHELL_WORDS}>
+                  <Shell />
+                </ShellWordsProvider>
               </SavingProvider>
             </FilesProvider>
           </AnnouncerProvider>
