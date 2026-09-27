@@ -649,3 +649,29 @@ For the owner, decided without them: the spec says the panel of a plot
 is no stop of the Tab key, but React Aria makes a panel with nothing
 to focus a stop, as the WAI-ARIA guidance for tabs advises; the panel
 stays a stop, and the spec is to say so.
+
+6.3 as e9cb602 (`variants.md` and `filterCounts.md`: the focus goes to
+the words of an error when the Count ends with no button; popnei's
+reading of a file with no variant gives zero counts and a warning, as a
+write does, so the two agree), ed6ca4d and 4aae168.
+
+### The Count against the diversity (task 6.3, `VS6 D3`)
+
+On the Mac of work package 5, median of 5 passes each:
+
+| engine | file | Count | diversity | ratio |
+|---|---|---|---|---|
+| Chromium 153.0.8010.12 | the VCF of 80,692,954 bytes | 194 ms | 248 ms | 0.78 |
+| Chromium | the `.nei` file of 19,161,178 bytes | 80 ms | 136 ms | 0.59 |
+| WebKit 26.6 | the VCF | 204 ms | 243 ms | 0.84 |
+| WebKit | the `.nei` file | 82 ms | 132 ms | 0.62 |
+
+The Count is faster than the diversity on both files in both engines,
+so popnei is not asked for a function that only counts.
+
+A flow of stage 2, `WS9 D3` "a change that leaves a calculation behind
+… and Run stops it", failed 9 times in 30 in WebKit already at 953ca7c:
+when the new calculation ended after the status region had written its
+start, the end replaced it, and the test looked too late. The page lost
+no announcement; the test now reads every text the region held
+(64989f6), 30 of 30 in each engine.

@@ -809,7 +809,7 @@ counts how many variants each filter was given and kept.
   filter with the threshold as typed, from `variants.md`, "The
   histograms beside the filters of the variants", and `variantChecks.md`,
   "The panel". Serves 2 and 4. Needs 6.1 and work package 4.
-- [ ] 6.3 The Count, the counts beside each filter and in the
+- [x] 6.3 The Count, the counts beside each filter and in the
   description of its field, the line of the total and its focus, from
   `variants.md`, "What each filter of the variants kept", and
   `filterCounts.md`, "The Count button"; and the measurement of D3.
