@@ -201,9 +201,10 @@ test("VS5 D3 panel.nei at 0.05 written and saved: the download panel.filtered.ne
   ).toBeVisible();
   await expect(saveButtons(page)).toHaveCount(0);
   // The write counted the variants the filter keeps, so the size is
-  // known: 1,152 variants of 200 individuals at one byte each.
+  // known: 1,152 variants of 200 individuals, at one byte each and 40
+  // bytes more a variant, 276,480 bytes for the 250,994 written.
   await expect(writeButton(page)).toHaveAccessibleDescription(
-    "About 230 KB: 1,152 variants of 200 individuals.",
+    "About 276 KB: 1,152 variants of 200 individuals.",
   );
   await expectNoViolations(makeAxeBuilder);
 });

@@ -13,11 +13,18 @@ import { grouped } from "./project.ts";
 import type { Project } from "./project.ts";
 
 /** The bytes of the file per genotype of a variant kept and an individual
-    kept. popnei's `writeVars` wrote 0.96 to 1.10 bytes per genotype, by
-    how well its compression takes the genotypes: 0.96 for the .nei file
-    of 19,161,178 bytes, 1.09 for panel.nei, and 1.10 for the random
-    genotypes of e2e/bigVcf.ts; one byte is within 10% of each. */
+    kept, by how well popnei's compression takes the genotypes: 1.07 to
+    1.09 for the random genotypes of 200 and 1,000 individuals that
+    e2e/measure/writeSize.ts wrote, less for real genotypes. */
 export const BYTES_PER_GENOTYPE = 1;
+
+/** The bytes of the file per variant kept besides its genotypes: its
+    chromosome, position, id, alleles and quality, whatever the number of
+    individuals. e2e/measure/writeSize.ts measured 22 to 42, the most with
+    an id of 11 characters; with it every file measured is at most 6.9%
+    larger than the estimate, and up to 77% smaller, at 2 individuals and
+    no id (writeVariants.md, "The size, before the write"). */
+export const BYTES_PER_VARIANT = 40;
 
 /** The estimate from which the step warns of the memory of the write: a
     file of up to 550 MB, whose peak is up to about 2.4 GB more than the
@@ -26,8 +33,9 @@ export const BYTES_PER_GENOTYPE = 1;
 export const WRITE_WARN_BYTES = 500_000_000;
 
 /** The estimate, from the counts themselves, from which the write is
-    refused: at 1.10 bytes per genotype an estimate under it is a file
-    under 1.98 GB, the largest Chromium and WebKit wrote, while a file of
+    refused: with a file at most 6.9% larger than its estimate, an
+    estimate under it is a file under 1.93 GB, under the 1.98 GB Chromium
+    and WebKit wrote, while a file of
     about 2.2 GB failed in both, and closed the tab in WebKit
     (writeVariants.md, "What was measured"). */
 export const WRITE_MAX_BYTES = 1_800_000_000;
@@ -38,7 +46,8 @@ export interface WriteEstimate {
   readonly numVars: number;
   /** The individuals the file would hold, or their bound. */
   readonly numIndividuals: number;
-  /** `numVars * numIndividuals * BYTES_PER_GENOTYPE`. */
+  /** `numVars * (numIndividuals * BYTES_PER_GENOTYPE +
+      BYTES_PER_VARIANT)`. */
   readonly numBytes: number;
   /** Whether either count is a bound, which the step says as "at most
       about", and otherwise "about". */
@@ -95,7 +104,8 @@ export function writeEstimate(
       individualsBound = true;
       break;
   }
-  const numBytes = numVars * numIndividuals * BYTES_PER_GENOTYPE;
+  const numBytes =
+    numVars * (numIndividuals * BYTES_PER_GENOTYPE + BYTES_PER_VARIANT);
   const bound = varsBound || individualsBound;
   return {
     numVars,

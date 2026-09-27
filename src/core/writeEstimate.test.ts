@@ -48,13 +48,33 @@ function keptOf(
 const MAF: readonly VariantFilter[] = [{ kind: "maf", maxAllowedMaf: 0.95 }];
 const ONE: IndividualsKept = keptOf({ kind: "known", individuals: ["i1"] });
 
+/** 60 individuals kept, so that a variant is 100 bytes with the 40 of
+    its other columns. */
+const SIXTY: IndividualsKept = keptOf({
+  kind: "known",
+  individuals: Array.from({ length: 60 }, (_, i) => `i${String(i)}`),
+});
+
+describe("VS5 D5 the bytes of a variant", () => {
+  test("a variant is one byte per individual and 40 bytes more: 20,000 variants of 1,000 individuals are 20,800,000 bytes, one of one individual 41", () => {
+    const thousand = keptOf({
+      kind: "known",
+      individuals: Array.from({ length: 1000 }, (_, i) => `i${String(i)}`),
+    });
+    expect(writeEstimate(projectOf(null, []), thousand, 20_000)?.numBytes).toBe(
+      20_800_000,
+    );
+    expect(writeEstimate(projectOf(null, []), ONE, 1)?.numBytes).toBe(41);
+  });
+});
+
 describe("VS2 D4 the size expected of the written file", () => {
   test("the variants of variantsKept are exact, even with a filter of the variants", () => {
     const kept = keptOf({ kind: "known", individuals: ["i1", "i2"] });
     expect(writeEstimate(projectOf(1200, MAF), kept, 1152)).toEqual({
       numVars: 1152,
       numIndividuals: 2,
-      numBytes: 2304,
+      numBytes: 1152 * 42,
       bound: false,
       warn: false,
       tooLarge: false,
@@ -66,7 +86,7 @@ describe("VS2 D4 the size expected of the written file", () => {
     expect(writeEstimate(projectOf(1200, []), kept, null)).toEqual({
       numVars: 1200,
       numIndividuals: 2,
-      numBytes: 2400,
+      numBytes: 1200 * 42,
       bound: false,
       warn: false,
       tooLarge: false,
@@ -77,7 +97,7 @@ describe("VS2 D4 the size expected of the written file", () => {
     const kept = keptOf({ kind: "known", individuals: ["i1", "i2"] });
     const estimate = writeEstimate(projectOf(1200, MAF), kept, null);
     expect(estimate?.numVars).toBe(1200);
-    expect(estimate?.numBytes).toBe(2400);
+    expect(estimate?.numBytes).toBe(1200 * 42);
     expect(estimate?.bound).toBe(true);
   });
 
@@ -94,7 +114,7 @@ describe("VS2 D4 the size expected of the written file", () => {
     const kept = keptOf({ kind: "known", individuals: ["i1", "i3", "i4"] });
     const estimate = writeEstimate(projectOf(null, []), kept, 1000);
     expect(estimate?.numIndividuals).toBe(3);
-    expect(estimate?.numBytes).toBe(3000);
+    expect(estimate?.numBytes).toBe(43_000);
     expect(estimate?.bound).toBe(false);
   });
 
@@ -102,7 +122,7 @@ describe("VS2 D4 the size expected of the written file", () => {
     const kept = keptOf({ kind: "known", individuals: null });
     const estimate = writeEstimate(projectOf(null, []), kept, 1000);
     expect(estimate?.numIndividuals).toBe(4);
-    expect(estimate?.numBytes).toBe(4000);
+    expect(estimate?.numBytes).toBe(44_000);
     expect(estimate?.bound).toBe(false);
   });
 
@@ -110,41 +130,43 @@ describe("VS2 D4 the size expected of the written file", () => {
     const kept = keptOf({ kind: "needsStatistics" }, ["i1", "i2", "i3"]);
     const estimate = writeEstimate(projectOf(null, []), kept, 1000);
     expect(estimate?.numIndividuals).toBe(3);
-    expect(estimate?.numBytes).toBe(3000);
+    expect(estimate?.numBytes).toBe(43_000);
     expect(estimate?.bound).toBe(true);
   });
 
-  test("the warning comes at WRITE_WARN_BYTES and not one byte below it", () => {
+  test("the warning comes at WRITE_WARN_BYTES and not 100 bytes below it", () => {
     expect(WRITE_WARN_BYTES).toBe(500_000_000);
-    const at = writeEstimate(projectOf(null, []), ONE, 500_000_000);
+    const at = writeEstimate(projectOf(null, []), SIXTY, 5_000_000);
     expect(at?.numBytes).toBe(500_000_000);
     expect(at?.warn).toBe(true);
     expect(at?.tooLarge).toBe(false);
-    const below = writeEstimate(projectOf(null, []), ONE, 499_999_999);
+    // 100 bytes below.
+    const below = writeEstimate(projectOf(null, []), SIXTY, 4_999_999);
     expect(below?.warn).toBe(false);
   });
 
-  test("tooLarge at WRITE_MAX_BYTES from exact counts, and not one byte below nor from a bound", () => {
+  test("tooLarge at WRITE_MAX_BYTES from exact counts, and not 100 bytes below nor from a bound", () => {
     expect(WRITE_MAX_BYTES).toBe(1_800_000_000);
-    const at = writeEstimate(projectOf(null, []), ONE, 1_800_000_000);
+    const at = writeEstimate(projectOf(null, []), SIXTY, 18_000_000);
     expect(at).toEqual({
-      numVars: 1_800_000_000,
-      numIndividuals: 1,
+      numVars: 18_000_000,
+      numIndividuals: 60,
       numBytes: 1_800_000_000,
       bound: false,
       warn: true,
       tooLarge: true,
     });
-    const below = writeEstimate(projectOf(null, []), ONE, 1_799_999_999);
+    // 100 bytes below.
+    const below = writeEstimate(projectOf(null, []), SIXTY, 17_999_999);
     expect(below?.tooLarge).toBe(false);
-    const fromRead = writeEstimate(projectOf(1_800_000_000, MAF), ONE, null);
+    const fromRead = writeEstimate(projectOf(18_000_000, MAF), SIXTY, null);
     expect(fromRead?.bound).toBe(true);
     expect(fromRead?.warn).toBe(true);
     expect(fromRead?.tooLarge).toBe(false);
     const fromLists = writeEstimate(
       projectOf(null, []),
       keptOf({ kind: "needsStatistics" }, ["i1"]),
-      1_800_000_000,
+      18_000_000_000,
     );
     expect(fromLists?.bound).toBe(true);
     expect(fromLists?.tooLarge).toBe(false);

@@ -1290,7 +1290,7 @@ for (const theme of ["light", "dark"] as const) {
       await goTo(page, "Variants");
       await expect(
         writing(page).getByText(
-          "About 240 KB: 1,200 variants of 200 individuals.",
+          "About 288 KB: 1,200 variants of 200 individuals.",
         ),
       ).toBeVisible();
       await save(page, `popgen-write-ready-${theme}`);
