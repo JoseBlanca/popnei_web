@@ -11,8 +11,9 @@
  * Write, Stop and Save are one button in one place, so the focus stays on
  * it as it changes: Save takes the focus when a write ends with the focus
  * on the button that asked for it, and stays where it is otherwise. When
- * the button goes, after a file of no variant or a refusal of popnei, the
- * focus, when it was on it, moves to the heading of the section. The
+ * the button goes, after a file of no variant or a refusal of popnei, or
+ * turns into a disabled Write, the focus, when it was on it, moves to the
+ * heading of the section. The
  * section is drawn only while the variants file is read, as the store
  * locks the writing with the reason of a file not read otherwise.
  */
@@ -92,7 +93,16 @@ function WriteBody({
       {warning !== null && <Warning>{warning}</Warning>}
       {button !== null && (
         <div>
+          {/* A disabled button is another button, so that its cleanup
+              moves the focus to the heading when the button had it, as
+              when Stop of a write that waits for the statistics turns into
+              Write locked by filters that keep no individual. */}
           <ActionButton
+            key={
+              button.kind === "write" && button.disabled
+                ? "disabled"
+                : "enabled"
+            }
             button={button}
             onWrite={() => {
               void startWriting(store, FORMAT);

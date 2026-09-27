@@ -307,6 +307,120 @@ test("VS5 D3 back at the Variants step, the line of a write under way gives the 
   expect(seen.filter((text) => text.endsWith(" 0:00"))).toEqual([]);
 });
 
+/** Makes the calculation worker keep back the results of its
+    calculations, until `releaseResults`. */
+async function holdResults(page: Page): Promise<void> {
+  await expect
+    .poll(() => page.workers().some((w) => w.url().includes("runnerWorker")))
+    .toBe(true);
+  const worker = page.workers().find((w) => w.url().includes("runnerWorker"));
+  if (worker === undefined) throw new Error("no calculation worker");
+  await worker.evaluate(() => {
+    const scope = globalThis as unknown as {
+      postMessage: (message: unknown, transfer?: Transferable[]) => void;
+      heldResults: [unknown, Transferable[] | undefined][];
+      releaseResults: () => void;
+    };
+    const post = scope.postMessage.bind(scope);
+    scope.heldResults = [];
+    scope.releaseResults = () => {
+      scope.postMessage = post;
+      for (const [message, transfer] of scope.heldResults) {
+        post(message, transfer);
+      }
+      scope.heldResults = [];
+    };
+    scope.postMessage = (message, transfer) => {
+      const kind =
+        typeof message === "object" && message !== null && "kind" in message
+          ? message.kind
+          : null;
+      if (kind === "result") scope.heldResults.push([message, transfer]);
+      else post(message, transfer);
+    };
+  });
+}
+
+/** Posts the results the calculation worker kept back. */
+async function releaseResults(page: Page): Promise<void> {
+  const worker = page.workers().find((w) => w.url().includes("runnerWorker"));
+  if (worker === undefined) throw new Error("no calculation worker");
+  await worker.evaluate(() => {
+    (globalThis as unknown as { releaseResults: () => void }).releaseResults();
+  });
+}
+
+/** Saves the project of the page, with panel.nei loaded, as a project
+    file whose filters of individuals are `individualFilters`, and opens
+    it; then picks panel.nei again, as the page asks. */
+async function openWithIndividualFilters(
+  page: Page,
+  folder: string,
+  individualFilters: readonly object[],
+): Promise<void> {
+  await page
+    .getByRole("banner")
+    .getByRole("button", { name: "Save project" })
+    .click();
+  const download = page.waitForEvent("download");
+  await page
+    .getByRole("dialog", { name: "Save the project" })
+    .getByRole("button", { name: "Save", exact: true })
+    .click();
+  const saved = join(folder, "panel.popnei.json");
+  await (await download).saveAs(saved);
+  const file = JSON.parse(await readFile(saved, "utf8")) as Record<
+    string,
+    unknown
+  >;
+  const changed = join(folder, "filtered.popnei.json");
+  await writeFile(
+    changed,
+    JSON.stringify({ ...file, individualFilters }, null, 2),
+  );
+  const chooser = page.waitForEvent("filechooser");
+  await page
+    .getByRole("banner")
+    .getByRole("button", { name: "Open project…" })
+    .click();
+  await (await chooser).setFiles(changed);
+  await loadPanelNei(page);
+}
+
+test("VS5 D3 with the focus on Stop of a write that waits for the statistics, a threshold of individuals that keeps none locks Write and the focus moves to the heading of the section, and axe", async ({
+  page,
+  makeAxeBuilder,
+}, testInfo) => {
+  await openVariants(page);
+  await loadPanelNei(page);
+  // Every individual of panel.nei has an observed heterozygosity above
+  // 0.3, so a threshold of 0.1 keeps none of them.
+  await openWithIndividualFilters(page, testInfo.outputPath(), [
+    { kind: "obs_het", maxAllowedObsHet: 0.1 },
+  ]);
+  await holdResults(page);
+  await writeButton(page).click();
+  const stop = writing(page).getByRole("button", { name: "Stop" });
+  await expect(stop).toBeFocused();
+  await expect(
+    writing(page).getByRole("progressbar", {
+      name: "Calculating the statistics of each individual",
+    }),
+  ).toBeVisible();
+
+  await releaseResults(page);
+  await expect(writeButton(page)).toBeDisabled();
+  await expect(writeButton(page)).toHaveAccessibleDescription(
+    "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them in the Variants step.",
+  );
+  await expect(
+    writing(page).getByRole("heading", {
+      name: "Writing the filtered variants",
+    }),
+  ).toBeFocused();
+  await expectNoViolations(makeAxeBuilder);
+});
+
 test("VS5 D3 a change of the threshold with the file not saved discards it: the notice says so, and its Undo brings the threshold back and no Save, and axe", async ({
   page,
   makeAxeBuilder,
