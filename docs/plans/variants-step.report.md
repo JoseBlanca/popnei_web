@@ -623,3 +623,13 @@ value that keeps every file measured within 6.9% above it
 - Tokens: the four tasks used 242,000, 275,000, 321,000 and 260,000;
   the ten reviewers 44,000 to 142,000; the fixer, across its five
   rounds, 475,000.
+
+## 6. The filters of the variants
+
+Under way. The tasks: 6.1 as 95adc98 (`variants.md`: the number field
+reads the digits typed itself, so the number is the same in any
+language of the browser; the switch of a filter is described by the
+line under it), 2e0fb5f and 4f2c966. Two flows of stage 2 changed for
+it: the description of the missing data field now ends with the line of
+its switch, and the flow of the writing presses Tab four times to reach
+Write past the new filters.

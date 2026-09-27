@@ -793,7 +793,7 @@ counts how many variants each filter was given and kept.
 
 **Tasks:**
 
-- [ ] 6.1 `decimals` and `onTyped` in `src/ui/widgets/NumberField.tsx`
+- [x] 6.1 `decimals` and `onTyped` in `src/ui/widgets/NumberField.tsx`
   and `committedNumber.ts`, from `variants.md`, "The two thresholds" and
   "The threshold typed and not yet committed"; the four filters of the
   variants, from "The filters of the variants", their switches, fields,
