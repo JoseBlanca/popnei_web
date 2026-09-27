@@ -156,7 +156,9 @@ export function IndividualFilters(): React.JSX.Element {
 
   return (
     <section aria-labelledby={headingId} className={classOf(styles, "section")}>
-      <h2 id={headingId} className={classOf(styles, "heading")}>
+      {/* It takes the focus when a part of a check leaves the page with
+          its block, and is not in the order of the Tab key. */}
+      <h2 id={headingId} tabIndex={-1} className={classOf(styles, "heading")}>
         {INDIVIDUAL_FILTERS_HEADING}
       </h2>
       <div className={classOf(styles, "lists")}>
@@ -221,7 +223,10 @@ export function IndividualFilters(): React.JSX.Element {
                     level={3}
                     heading={INDIVIDUAL_HISTOGRAMS[words.statistic].title}
                   >
-                    <FocusOnLeave headingId={statsHeadingId}>
+                    <FocusOnLeave
+                      sectionHeadingId={headingId}
+                      headingId={statsHeadingId}
+                    >
                       <HistogramOf
                         statistic={words.statistic}
                         threshold={shown}
@@ -265,7 +270,7 @@ export function IndividualFilters(): React.JSX.Element {
       </div>
       {read && statsDone && (
         <ErrorBoundary level={3} heading={STATS_TABLE_NAME}>
-          <FocusOnLeave headingId={statsHeadingId}>
+          <FocusOnLeave sectionHeadingId={headingId} headingId={statsHeadingId}>
             <TableOf />
           </FocusOnLeave>
         </ErrorBoundary>

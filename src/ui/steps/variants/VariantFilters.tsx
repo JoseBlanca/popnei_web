@@ -141,7 +141,7 @@ export function VariantFilters(): React.JSX.Element {
   ): React.ReactNode =>
     histogramsDone && (
       <ErrorBoundary level={3} heading={VARIANT_HISTOGRAMS[statistic].name}>
-        <FocusOnLeave headingId={checksHeadingId}>
+        <FocusOnLeave sectionHeadingId={headingId} headingId={checksHeadingId}>
           <HistogramOf statistic={statistic} threshold={threshold} />
         </FocusOnLeave>
       </ErrorBoundary>
@@ -149,7 +149,9 @@ export function VariantFilters(): React.JSX.Element {
 
   return (
     <section aria-labelledby={headingId} className={classOf(styles, "section")}>
-      <h2 id={headingId} className={classOf(styles, "heading")}>
+      {/* It takes the focus when a part of a check leaves the page with
+          its block, and is not in the order of the Tab key. */}
+      <h2 id={headingId} tabIndex={-1} className={classOf(styles, "heading")}>
         {FILTERS_HEADING}
       </h2>
       {read ? (

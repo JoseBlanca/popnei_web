@@ -1110,3 +1110,19 @@ test("VS6 D2 the histograms removed by a redo while the focus is on a CSV button
     }),
   ).toBeFocused();
 });
+
+test("VS6 D2 an Undo of the load while the focus is on a tab of a histogram: the block goes with the file, and the focus goes to the heading of the section", async ({
+  page,
+}) => {
+  await openVariants(page);
+  await pick(page, "panel.nei");
+  await calculate(page);
+  await histogram(page, MAF_TITLE).getByRole("tab", { name: "Plot" }).focus();
+  await page.keyboard.press(
+    process.platform === "darwin" ? "Meta+z" : "Control+z",
+  );
+  await expect(page.getByRole("group", { name: /, mean / })).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Filters of the variants" }),
+  ).toBeFocused();
+});
