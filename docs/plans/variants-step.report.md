@@ -908,3 +908,22 @@ It still freezes 88 to 375 ms, above the 100 ms the plan named; taken
 as it is, and task 7.3 adds the thresholds to the measurement. The
 page's first script is 189.72 KB gzipped after 7.2, against 154.9 KB
 after 6.2: to be looked at by the review.
+
+7.3 as 295dea5 (`variants.md`: the threshold line and the line under
+a plot of the individuals, as the variants' have them), 8707318 (the
+part of a filter shared by both kinds), 0a4d79f and 4cea169. With the
+thresholds at 0.03 and 0.38, Write and Save give `panel.filtered.nei`
+of 170,042 bytes (`VS7 D3`, 2 passed).
+
+`VS7 D4` with the thresholds, on the same Mac, the table drawing only
+the rows on the screen, the median time the page is frozen:
+
+| change | Chromium 153 | WebKit 26.6 |
+|---|---|---|
+| the column Kept added by a list | 151 ms | 122 ms |
+| the column Kept changed by a list | 141 ms | 97 ms |
+| a sort by a header | 279 ms | 381 ms |
+| a threshold committed | 223 ms | 145 ms |
+
+Above the 100 ms the plan named, with the rows on the screen alone
+drawn already; for the owner at stop B.

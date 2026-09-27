@@ -908,7 +908,7 @@ writes the variants of the individuals kept.
   `variants.md`, "The statistics of each individual"; `e2e/bigVcf.ts`
   given the number of individuals as a parameter; the measurement of D4.
   Serves 1, 4 and 5. Needs 7.1.
-- [ ] 7.3 The two thresholds, of four decimals, turned on at 0.1 and at
+- [x] 7.3 The two thresholds, of four decimals, turned on at 0.1 and at
   the meanwhile of point F, and what each filter of the individuals
   kept, from `variants.md`, "The two thresholds" and "What each filter
   of the individuals kept"; the flow of D3. Serves 1, 3 and 5. Needs
