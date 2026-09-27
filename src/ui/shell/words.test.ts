@@ -551,7 +551,7 @@ describe("WS9 D1 the summary line", () => {
       grouping: BY_POP,
     });
     expect(plainLine(p)).toBe(
-      "panel.nei · 200 individuals · 1,200 variants, filters not counted · 1 filter · 3 populations by pop",
+      "panel.nei · 200 individuals · 1,200 variants · 1 filter, not counted · 3 populations by pop",
     );
   });
 
@@ -580,7 +580,7 @@ describe("WS9 D1 the summary line", () => {
     expect(
       plainLine(project({ variants: variants(readOf(["i1"], 1_203_554)) })),
     ).toBe(
-      "panel.nei · 1 individual · 1,203,554 variants, filters not counted · 1 filter · no metadata file",
+      "panel.nei · 1 individual · 1,203,554 variants · 1 filter, not counted · no metadata file",
     );
   });
 
@@ -1623,7 +1623,7 @@ describe("VS5 D2 the summary line of stage 3", () => {
         null,
       ),
     ).toBe(
-      "panel.nei · 200 individuals, how many kept not yet known · 1,200 variants, filters not counted · 3 filters · 3 populations by pop",
+      "panel.nei · 200 individuals, how many kept not yet known · 1,200 variants · 3 filters, not counted · 3 populations by pop",
     );
   });
 
@@ -1634,16 +1634,16 @@ describe("VS5 D2 the summary line of stage 3", () => {
       counts: [],
     };
     expect(summaryLine(PANEL, noneRemoved, null)).toBe(
-      "panel.nei · 200 individuals · 1,200 variants, filters not counted · 1 filter · 3 populations by pop",
+      "panel.nei · 200 individuals · 1,200 variants · 1 filter, not counted · 3 populations by pop",
     );
     expect(summaryLine(PANEL, null, null)).toBe(
-      "panel.nei · 200 individuals · 1,200 variants, filters not counted · 1 filter · 3 populations by pop",
+      "panel.nei · 200 individuals · 1,200 variants · 1 filter, not counted · 3 populations by pop",
     );
   });
 
   test("filters that keep no individual give none of them kept", () => {
     expect(summaryLine(THREE_FILTERS, keptFirst(0), null)).toBe(
-      "panel.nei · none of 200 individuals kept · 1,200 variants, filters not counted · 3 filters · 3 populations by pop",
+      "panel.nei · none of 200 individuals kept · 1,200 variants · 3 filters, not counted · 3 populations by pop",
     );
   });
 
@@ -1659,7 +1659,7 @@ describe("VS5 D2 the summary line of stage 3", () => {
 
   test("variants counted with no counts of the filters as they are give the variants of the file, and say the filters are not counted", () => {
     expect(summaryLine(FIVE_FILTERS, keptFirst(114), null)).toBe(
-      "panel.nei · 114 of 200 individuals kept · 1,200 variants, filters not counted · 5 filters · 3 populations by pop",
+      "panel.nei · 114 of 200 individuals kept · 1,200 variants · 5 filters, not counted · 3 populations by pop",
     );
   });
 
