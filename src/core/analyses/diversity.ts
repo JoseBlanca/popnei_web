@@ -32,7 +32,8 @@ import type {
   Warning,
   WorkerClient,
 } from "../store.ts";
-import { refusalText as statisticsRefusalText } from "./individualChecks.ts";
+import { statisticsFailedWords } from "./individualChecks.ts";
+import type { Failure } from "./individualChecks.ts";
 import { csvField, csvNumber, defect, orNull, refusalWords } from "./words.ts";
 import type {
   Cell,
@@ -431,31 +432,23 @@ export function refusalText(message: string, p: Project): string {
   });
 }
 
-/** A failure of a calculation that is not popnei's refusal. */
-export type Failure = Extract<
-  AnalysisError,
-  { readonly kind: "failed" }
->["error"];
-
 /**
  * The words of the error state of the panel when the statistics of each
  * individual that a Run waited for were refused or failed, the store's
- * error with `ofStatistics`: that the statistics could not be calculated
- * and the diversity was not run, then the words of the statistics' own
- * panel, their `refusalText` for a refusal of popnei and `failureText`,
- * the frame's, for another failure; never the diversity's own words,
- * which would name it for a calculation that was not its own.
+ * error with `ofStatistics`: `statisticsFailedWords` of the statistics,
+ * with "the diversity was not run".
  */
 export function statisticsFailedText(
   error: AnalysisError,
   p: Project,
   failureText: (failure: Failure) => string,
 ): string {
-  const words =
-    error.kind === "refused"
-      ? statisticsRefusalText(error.message, p)
-      : failureText(error.error);
-  return `The statistics of each individual, which the thresholds of the filters of individuals are applied to, could not be calculated, so the diversity was not run. ${words}`;
+  return statisticsFailedWords(
+    error,
+    p,
+    failureText,
+    "the diversity was not run",
+  );
 }
 
 /** The definition of the diversity, as the store knows it. */

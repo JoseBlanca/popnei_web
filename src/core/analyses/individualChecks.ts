@@ -15,7 +15,12 @@
 
 import { counted, escaped, grouped, namesOf } from "../project.ts";
 import type { Project } from "../project.ts";
-import type { AnalysisDef, Warning, WorkerClient } from "../store.ts";
+import type {
+  AnalysisDef,
+  AnalysisError,
+  Warning,
+  WorkerClient,
+} from "../store.ts";
 import type {
   IndividualChecksResult,
   Job,
@@ -115,6 +120,36 @@ export function refusalText(message: string, p: Project): string {
     emptyPass: (fileName) =>
       `The filters kept none of the variants of ${fileName}, so there is no variant to count each individual's genotypes over. Loosen the filters of the variants in the Variants step.`,
   });
+}
+
+/** A failure of a calculation that is not popnei's refusal. */
+export type Failure = Extract<
+  AnalysisError,
+  { readonly kind: "failed" }
+>["error"];
+
+/**
+ * The words of a calculation or a write that waited for the statistics of
+ * each individual when those were refused or failed, the store's error
+ * with `ofStatistics`: that the statistics could not be calculated, so
+ * that `notDone`, "the diversity was not run", "the file was not
+ * written", then the words of the statistics' own part, their
+ * `refusalText` for a refusal of popnei and `failureText`, the frame's,
+ * for another failure; never the words of the calculation that waited,
+ * which would name it for a calculation that was not its own
+ * (docs/specs/analyses/diversity.md and writeVariants.md, "Its words").
+ */
+export function statisticsFailedWords(
+  error: AnalysisError,
+  p: Project,
+  failureText: (failure: Failure) => string,
+  notDone: string,
+): string {
+  const words =
+    error.kind === "refused"
+      ? refusalText(error.message, p)
+      : failureText(error.error);
+  return `The statistics of each individual, which the thresholds of the filters of individuals are applied to, could not be calculated, so ${notDone}. ${words}`;
 }
 
 /** The two statistics of each individual that have a histogram. */
