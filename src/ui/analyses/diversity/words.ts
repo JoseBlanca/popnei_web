@@ -11,6 +11,10 @@ import type {
   DiversityRow,
   PopulationsKept,
 } from "../../../core/analyses/diversity.ts";
+import {
+  allEmptiedText,
+  loosenText,
+} from "../../../core/analyses/diversity.ts";
 import { variantsStem } from "../../../core/fileNames.ts";
 import { counted, escaped, grouped, namesOf } from "../../../core/project.ts";
 import type { Pops } from "../../../worker/protocol.ts";
@@ -85,22 +89,6 @@ export const WAITS_FOR_STATISTICS_TEXT =
 export function emptiedText(emptied: readonly string[]): string {
   const one = emptied.length === 1;
   return `${namesOf(emptied)} ${one ? "has" : "have"} no individual left after the filters of individuals, and ${one ? "is" : "are"} left out. ${loosenText(one)}`;
-}
-
-/** The populations when the filters of individuals leave every one of
-    them empty, said whole: "None of the 3 populations has an individual
-    left after the filters of individuals. Loosen …", or, of one, by its
-    name. */
-export function allEmptiedText(emptied: readonly string[]): string {
-  const [only] = emptied;
-  return emptied.length === 1 && only !== undefined
-    ? `${escaped(only)} has no individual left after the filters of individuals. ${loosenText(true)}`
-    : `None of the ${counted(emptied.length, "population")} has an individual left after the filters of individuals. ${loosenText(false)}`;
-}
-
-/** What to do about populations left empty, of one or of several. */
-function loosenText(one: boolean): string {
-  return `Loosen the filters of individuals in the Variants step to keep ${one ? "it" : "them"}.`;
 }
 
 /**

@@ -90,6 +90,12 @@ export interface AnalysisDef<J, R> {
   /** The reason it cannot run beyond what every analysis needs, in the
       words the screen shows next to its Run button, or `null`. */
   needs(p: Project): string | null;
+  /** The reason it cannot run for the individuals kept, `kept`, whose
+      list is known and keeps some individual, in the words beside its
+      Run, or `null`; absent for an analysis with none. The diversity's:
+      the list leaves no population (store.md, "The state of an
+      analysis"). */
+  readonly keptNeeds?: (p: Project, kept: IndividualsKept) => string | null;
   /** Builds its request and sends it through `c`, which the store binds
       to its key, and returns the handle without waiting on it. */
   run(p: Project, c: WorkerClient<J, R>): Run<R>;
@@ -184,7 +190,8 @@ export type AnalysisStatus<R> =
   /** It cannot run: `projectNeeds`, `individualListNeeds` for an
       analysis that reads the filters of individuals, or its `needs` gave
       `reason`; or it reads the filters of individuals and they keep
-      none, `keptNoneReason`. */
+      none, `keptNoneReason`, or its `keptNeeds` gives a reason for the
+      individuals they keep. */
   | { readonly kind: "locked"; readonly reason: string }
   /** The cache holds its result under its key, with the warnings of the
       result and the comparison with the check numbers of an opened
@@ -1016,6 +1023,23 @@ export function createStore<J, R, F = never>(
     return null;
   };
 
+  /** The reason `def` cannot run for the individuals kept, `kept`, from
+      its `keptNeeds`, asked only of a list that is known and keeps some
+      individual; `null` otherwise. */
+  const keptNeedsOf = (
+    def: AnalysisDef<J, R>,
+    kept: IndividualsKept | null,
+  ): string | null => {
+    if (
+      def.keptNeeds === undefined ||
+      kept?.list.kind !== "known" ||
+      kept.list.individuals?.length === 0
+    ) {
+      return null;
+    }
+    return def.keptNeeds(history.present.project, kept);
+  };
+
   /** The state of an analysis that can run, under its key `keyed`, with
       the individuals the filters keep, `keptNow`, and the keys `keys`:
       the first of done, running, error, locked by the individuals kept,
@@ -1063,7 +1087,9 @@ export function createStore<J, R, F = never>(
       if (statsError !== undefined) {
         return { kind: "error", key, error: statsError, ofStatistics: true };
       }
-      const reason = keptNoneReason(history.present.project, keptNow);
+      const reason =
+        keptNoneReason(history.present.project, keptNow) ??
+        keptNeedsOf(def, keptNow);
       if (reason !== null) {
         return { kind: "locked", reason };
       }
@@ -1956,7 +1982,8 @@ export function createStore<J, R, F = never>(
     const sent: Run<R | Written<F>>[] = [];
     for (const wait of waiting) {
       const keys = currentKeys();
-      const list = keptFor(history.present.project, keys)?.list;
+      const kept = keptFor(history.present.project, keys);
+      const list = kept?.list;
       const target = wait.target;
       const served =
         target.kind === "analysis"
@@ -1966,6 +1993,8 @@ export function createStore<J, R, F = never>(
         !waitIsCurrent(wait, keys) ||
         list?.kind !== "known" ||
         list.individuals?.length === 0 ||
+        (target.kind === "analysis" &&
+          keptNeedsOf(target.def, kept) !== null) ||
         served ||
         inFlightFor(indexOf(target), wait.key) !== null
       ) {

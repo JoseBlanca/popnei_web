@@ -3511,6 +3511,7 @@ const MISSING_AT_02: IndividualFilter = {
 function storeOfFive(
   filters: readonly IndividualFilter[],
   cacheMaxBytes: number = 1024 * 1024,
+  keptNeeds: AnalysisDef<TestJob, TestResult>["keptNeeds"] | null = null,
 ): {
   readonly store: Store<TestResult>;
   readonly analyses: readonly AnalysisDef<TestJob, TestResult>[];
@@ -3518,7 +3519,12 @@ function storeOfFive(
   readonly lists: readonly ListGiven[];
 } {
   const { analyses: twoFakes, stats, lists } = fakeAnalyses();
-  const analyses = [...twoFakes, stats];
+  const analyses = [
+    ...twoFakes.map((def) =>
+      def.id === "pops" && keptNeeds !== null ? { ...def, keptNeeds } : def,
+    ),
+    stats,
+  ];
   const { send, sent } = fakeSend();
   const store = createStore({
     first: emptyProject("popgen"),
@@ -3565,6 +3571,31 @@ function keyOfNow(
 }
 
 describe("VS3 D4 the individuals kept and a Run that waits", () => {
+  test("keptNeeds of the analysis locks it for the individuals kept, and a Run that waited for them ends with nothing sent", () => {
+    // Locked when the individuals kept leave out c.
+    const noC = "No population is left.";
+    const { store, sent } = storeOfFive(
+      [MISSING_AT_02],
+      1024 * 1024,
+      (_p, kept) =>
+        kept.list.kind === "known" &&
+        kept.list.individuals !== null &&
+        !kept.list.individuals.includes("c")
+          ? noC
+          : null,
+    );
+    store.startRun("pops");
+    const stats = sentAt(sent, 0);
+    const next = store.runEnded(stats.run.id, doneWith(stats, fiveStats()));
+    expect(next).toStrictEqual([]);
+    expect(sent).toHaveLength(1);
+    expect(statusIn(store, "pops")).toStrictEqual({
+      kind: "locked",
+      reason: noC,
+    });
+    expect(store.startRun("pops")).toBeNull();
+  });
+
   test("with no filter of individuals, a Run of the analysis that reads them sends at once, its client giving no list", () => {
     const { store, sent, lists } = storeOfFive([]);
     expect(store.getState().individualsKept?.list).toStrictEqual({

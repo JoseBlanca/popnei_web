@@ -315,6 +315,35 @@ export function populationsBeforeRun(
   );
 }
 
+/** The populations when the individuals kept leave every one of them
+    empty, said whole: "None of the 3 populations has an individual left
+    after the filters of individuals. Loosen …", or, of one, by its
+    name; the reason of the lock of `keptNeeds` and a line of the ready
+    state. */
+export function allEmptiedText(emptied: readonly string[]): string {
+  const [only] = emptied;
+  return emptied.length === 1 && only !== undefined
+    ? `${escaped(only)} has no individual left after the filters of individuals. ${loosenText(true)}`
+    : `None of the ${counted(emptied.length, "population")} has an individual left after the filters of individuals. ${loosenText(false)}`;
+}
+
+/** What to do about populations left empty, of one or of several. */
+export function loosenText(one: boolean): string {
+  return `Loosen the filters of individuals in the Variants step to keep ${one ? "it" : "them"}.`;
+}
+
+/** The reason the diversity cannot run for the individuals kept: they
+    leave no population (docs/specs/analyses/diversity.md, "Why it
+    cannot run", decided by the owner at stop B on 27 September 2026);
+    `null` when some population keeps an individual. */
+function keptNeeds(p: Project, kept: IndividualsKept): string | null {
+  const list = kept.list.kind === "known" ? kept.list.individuals : null;
+  const left = populationsKept(p, list);
+  return left === null || left.pops.length > 0 || left.emptied.length === 0
+    ? null
+    : allEmptiedText(left.emptied);
+}
+
 /** The reason about the column of the populations, and its kind. */
 export interface PopulationsNeed {
   /** No column chosen, "To do" in the stepper; a column the table does
@@ -490,6 +519,7 @@ export const diversity: AnalysisDef<Job, JobResult> = Object.freeze({
   parseOptions,
   keyInputs,
   needs,
+  keptNeeds,
   run,
   warnings,
   checkNumbers,

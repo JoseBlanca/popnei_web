@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   DIVERSITY_DEFAULTS,
+  allEmptiedText,
   diversity,
   diversityCsv,
   diversityRows,
@@ -16,6 +17,7 @@ import { createKeyMemo, keyOf } from "../keys.ts";
 import type { Key, KeyedDef } from "../keys.ts";
 import { emptyProject, individualsNeeds } from "../project.ts";
 import type { Project, VariantSource } from "../project.ts";
+import type { IndividualsKept } from "../individualsKept.ts";
 import type { WorkerClient } from "../store.ts";
 import { deepFreeze } from "../testSupport.ts";
 import type {
@@ -1699,6 +1701,23 @@ describe("VS3 D3 the diversity of stage 3, at its bounds", () => {
       "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the diversity was not run. The calculation stopped unexpectedly.",
     );
     expect(given).toEqual([failure]);
+  });
+
+  test("keptNeeds locks the diversity when the individuals kept leave no population, with the words of all left empty", () => {
+    const kept = (individuals: readonly string[]): IndividualsKept => ({
+      list: { kind: "known", individuals },
+      byLists: ["i1", "i2", "i3", "i4"],
+      counts: [],
+    });
+    const keptNeeds = diversity.keptNeeds;
+    if (keptNeeds === undefined) throw new Error("the diversity has keptNeeds");
+    expect(keptNeeds(project(), kept(["i4"]))).toBe(
+      "None of the 2 populations has an individual left after the filters of individuals. Loosen the filters of individuals in the Variants step to keep them.",
+    );
+    expect(keptNeeds(project(), kept(["i1", "i4"]))).toBeNull();
+    expect(allEmptiedText(["A"])).toBe(
+      "A has no individual left after the filters of individuals. Loosen the filters of individuals in the Variants step to keep it.",
+    );
   });
 
   test("with thresholds that leave no population, run sends no population, for popnei to refuse", () => {

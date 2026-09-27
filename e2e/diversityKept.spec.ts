@@ -46,8 +46,10 @@ const WAIT_LINE =
 const WAIT_BAR = "Calculating the statistics of each individual";
 const STATS_FAILED =
   "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the diversity was not run. At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 in the Variants step and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version.";
-const NO_POPULATION =
-  "The thresholds of the filters of individuals leave none of the individuals of panel.nei that have a population in popcat, so no population is left. Loosen the thresholds in the Variants step.";
+/** The reason of the lock when the thresholds leave p0, the one
+    population, with no individual. */
+const P0_EMPTIED =
+  "p0 has no individual left after the filters of individuals. Loosen the filters of individuals in the Variants step to keep it.";
 
 /** The twelve individuals of tetraploid.vcf.gz, in one population, A. */
 const TETRAPLOID_POPS = {
@@ -428,7 +430,7 @@ test("VS7 D2 the statistics a Run waited for, refused by popnei, are told in the
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("VS7 D2 thresholds that keep only individuals with no population leave none, named before the Run and told after it, and axe", async ({
+test("VS7 D2 thresholds that keep only individuals with no population lock the diversity: a Run that waited for the statistics is not run, and the Run is disabled with the reason, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -450,20 +452,26 @@ test("VS7 D2 thresholds that keep only individuals with no population leave none
     "popcat",
     "0.05",
   );
-  await calculateStatistics(page);
   await threshold(page, OBS_HET_SWITCH, OBS_HET_LABEL, "0.36");
   await goTo(page, "Analyses");
-  await expect(
-    line(
-      page,
-      "p0 has no individual left after the filters of individuals. Loosen the filters of individuals in the Variants step to keep it.",
-    ),
-  ).toBeVisible();
-  await expect(panel(page).getByText(/^\d+ populations?:/)).toHaveCount(0);
-  await expectNoViolations(makeAxeBuilder);
+  await expect(line(page, RUN_WAITS)).toBeVisible();
+  const run = panel(page).getByRole("button", { name: "Run" });
+  await run.focus();
+  await page.keyboard.press("Enter");
 
-  await panel(page).getByRole("button", { name: "Run" }).click();
-  await expect(line(page, NO_POPULATION)).toBeVisible();
-  await expect(panel(page).getByRole("button")).toHaveCount(0);
+  // The statistics calculated, the list leaves no population: nothing is
+  // sent, and the Run is disabled with the reason.
+  await expect(status(page)).toHaveText(
+    new RegExp(
+      `(^| )Diversity was not run\\. ${P0_EMPTIED.replaceAll(".", "\\.")}$`,
+    ),
+  );
+  await expect(run).toBeDisabled();
+  await expect(run).toHaveAccessibleDescription(P0_EMPTIED);
+  await expect(line(page, P0_EMPTIED)).toBeVisible();
+  await expect(panel(page).getByText(/^\d+ populations?:/)).toHaveCount(0);
+  await expect(
+    panel(page).getByRole("heading", { level: 2, name: "Diversity" }),
+  ).toBeFocused();
   await expectNoViolations(makeAxeBuilder);
 });
