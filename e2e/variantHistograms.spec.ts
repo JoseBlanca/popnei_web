@@ -581,6 +581,48 @@ test("VS6 D2 at 320 pixels wide the legend of each histogram with a threshold li
   await expectNoViolations(makeAxeBuilder);
 });
 
+test("VS6 D2 histograms drawn at 1280 pixels wide narrow with the window to 320: no sideways scroll, and each plot within its panel", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await openVariants(page);
+  await pick(page, "panel.nei");
+  await calculate(page);
+  await flip(page, MAF_SWITCH);
+  await flip(page, OBS_HET_SWITCH);
+  await expect(page.locator("line.chart-threshold")).toHaveCount(2);
+  const widths = (): Promise<number[]> =>
+    page
+      .locator("svg.chart")
+      .evaluateAll((svgs) =>
+        svgs.map((svg) => svg.getBoundingClientRect().width),
+      );
+  expect(Math.min(...(await widths()))).toBeGreaterThan(320);
+
+  await page.setViewportSize({ width: 320, height: 900 });
+  // The plots are drawn again when their element changes size.
+  await expect
+    .poll(async () => Math.max(...(await widths())))
+    .toBeLessThanOrEqual(320 - 2 * 16);
+  const overflows = await page.locator("svg.chart").evaluateAll((svgs) =>
+    svgs.map((svg) => {
+      const panel = svg.closest('[role="tabpanel"]');
+      if (panel === null) return "no panel";
+      const plot = svg.getBoundingClientRect();
+      const frame = panel.getBoundingClientRect();
+      return plot.left >= frame.left && plot.right <= frame.right
+        ? "inside"
+        : `${String(plot.width)} in ${String(frame.width)}`;
+    }),
+  );
+  expect(overflows).toEqual(["inside", "inside", "inside"]);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+});
+
 test("VS6 D2 running: Stop, the bar and its line; stopped, the button back and no histogram", async ({
   page,
   makeAxeBuilder,

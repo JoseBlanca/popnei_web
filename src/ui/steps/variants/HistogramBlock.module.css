@@ -6,6 +6,10 @@
   gap: var(--space-2);
   inline-size: 100%;
   max-inline-size: 40rem;
+  /* As narrow as its parent: a grid item is otherwise at least as wide
+     as what it holds, and a plot drawn wide would keep it wide after the
+     window narrows. */
+  min-inline-size: 0;
 }
 
 .title {
@@ -20,8 +24,10 @@
 }
 
 /* The element the plot draws in, whose size the plot reads
-   (docs/specs/charts/histogram.md, "The size"). */
+   (docs/specs/charts/histogram.md, "The size"); as narrow as its
+   parent, as the block, whatever width the SVG in it was drawn at. */
 .plot {
   inline-size: 100%;
+  min-inline-size: 0;
   aspect-ratio: 16 / 10;
 }
