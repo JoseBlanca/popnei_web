@@ -1599,7 +1599,7 @@ describe("VS3 D3 the diversity of stage 3", () => {
     ).toBeNull();
   });
 
-  test("needs of a list to keep i4, who has no population, gives the reason of the lists; of lists that leave one, or of thresholds, none", () => {
+  test("needs of a list to keep i4, who has no population, gives the reason of the lists, with a threshold after it too; of lists that leave one, or of thresholds alone, none", () => {
     const reason =
       "The lists of individuals to keep and to remove leave none of the individuals of panel.nei that have a population in pop, so no population is left. Change the lists in the Variants step.";
     expect(
@@ -1629,6 +1629,32 @@ describe("VS3 D3 the diversity of stage 3", () => {
         ]),
       ),
     ).toBe(reason);
+    // A threshold after the list does not hide the reason of the lists,
+    // which is known before the statistics are.
+    expect(
+      diversity.needs(
+        filteredProject([
+          { kind: "keep", individuals: ["i4"] },
+          { kind: "missing_data", maxAllowedMissingRate: 0.2 },
+        ]),
+      ),
+    ).toBe(reason);
+  });
+
+  test("a population of the metadata with more individuals than it has in the variants file, and no filter of individuals, is too small with no advice to loosen the filters", () => {
+    // A is i1 and i3 in the metadata, and the variants file holds i1 alone.
+    const r = result({
+      pops: ["A", "B"],
+      numIndividuals: [1, 1],
+      numVarsWithValue: [0, 0],
+      numVars: 1000,
+    });
+    expect(
+      diversity.warnings(r, project({ individuals: ["i1", "i2"] })).at(0),
+    ).toEqual({
+      code: "tooFewIndividuals",
+      text: "Populations A and B have fewer than 20 individuals, 1 and 1, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, merge each with another population in the metadata file.",
+    });
   });
 
   test("the words of the statistics that failed, refused for the empty pass of the missing data filter at 0.05 and the MAF filter at 0.4, are the statistics' and not the diversity's", () => {
