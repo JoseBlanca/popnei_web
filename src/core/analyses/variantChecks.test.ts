@@ -250,6 +250,11 @@ describe("VS6 D2 the line under a histogram of the bin its threshold splits", ()
     );
   });
 
+  test("the MAF of panel.nei at 0, which splits the bin from 0 to 0.025 of no variant, gives no line", () => {
+    expect(PANEL_MAF[0]).toBe(0);
+    expect(splitBinText("variant", binsOf(PANEL_MAF, 1, 0), 0)).toBeNull();
+  });
+
   test("the MAF of panel.nei at 0.95 splits no bin, and no threshold gives no line", () => {
     expect(splitBinText("variant", binsOf(PANEL_MAF, 38), 0.95)).toBeNull();
     const unmarked = binsOf(PANEL_MAF, 40).map((bin) => ({

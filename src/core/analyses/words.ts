@@ -221,7 +221,8 @@ export function histogramDescription(
  * and its legend does not name (docs/specs/steps/variants.md, "The plot
  * and the table of its bins"): "The threshold 0.5 splits the bin from 0.5
  * to 0.525, 62 variants: the filter keeps those of its variants at most
- * 0.5 and removes the others."; `null` with no threshold or no bin split.
+ * 0.5 and removes the others."; `null` with no threshold, no bin split,
+ * or a split bin that holds none.
  * The edges and the threshold are written as the description writes them;
  * `noun` is what is counted, in the singular, "variant". Throws a defect
  * when more than one bin is split.
@@ -237,7 +238,8 @@ export function splitBinText(
     throw defect("a threshold splits more than one bin of a histogram.");
   }
   const bin = split.at(0);
-  if (bin === undefined) return null;
+  // A bin of none has nothing to keep or remove.
+  if (bin === undefined || bin.count === 0) return null;
   const at = decimals(threshold);
   return `The threshold ${at} splits the bin from ${decimals(bin.from)} to ${decimals(bin.to)}, ${counted(bin.count, noun)}: the filter keeps those of its ${noun}s at most ${at} and removes the others.`;
 }
