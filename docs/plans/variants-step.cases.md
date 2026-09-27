@@ -24,11 +24,20 @@ An item counts as having a test when a test reaches all of it. The five
 that do not are in the list at the end, "Left without a test", each with
 its reason; one of them, of the protocol, is reached in part.
 
-Two counts differ from those the three parts of this map were first
-written with. The store's spec has 31 items, not 32. The base of the 2D
-plots has 20: its paragraphs of the dependencies and of the page of the
-tests state facts of the build, which the section of the plots gives,
-and are not counted.
+Three sessions mapped the specs, a third each, and two of their counts
+are corrected here. The store's spec has 31 items, not 32. The spec of
+the base of the 2D plots has 20: two more paragraphs of its "How it is
+verified", on its dependencies and on the page of the tests, say what
+the build holds and ask for no test, so they are not counted; the
+section of the plots below says what the build holds.
+
+Some notes name labels of the plan. Stops A and B are the two points of
+the plan where the owner tried the screens in a browser; point R is the
+question of stage 2 whether an engine reads a variants file changed on
+the disk after it was picked, measured by `e2e/measure.spec.ts` and
+answered in the report of that stage. `WRITE_RESTART_BYTES` is the size
+of a written file above which the page starts the calculation worker
+again, to give back the memory the write took.
 
 | spec | items | with a test |
 |---|---|---|
@@ -646,5 +655,6 @@ in `src/ui/shell/words.test.ts`, written `words:` below.
   screenshots of `e2e/screens.spec.ts` are of Chromium; WebKit ran the
   flows and was not looked at.
 - **A throw while React draws the shell outside every boundary**
-  (`entry.md`, 901). The spec leaves it to review: it can be made only
-  with code that exists for a test.
+  (`entry.md`, 901). Only code put into the built site for the test
+  alone could make React throw there, so the spec leaves the case to the
+  review of the code.
