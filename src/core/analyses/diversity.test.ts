@@ -826,6 +826,40 @@ describe("WS5 D2 the key", () => {
     expect(keyOfDiversity(filtered)).not.toBe(baseKey);
   });
 
+  test("a filter of individuals removed, a name of its list changed, or its threshold moved to one that keeps the same individuals, changes the key", () => {
+    const filtered = deepFreeze<Project>({
+      ...base,
+      individualFilters: [
+        { kind: "remove", individuals: ["ind_900"] },
+        { kind: "missing_data", maxAllowedMissingRate: 0.2 },
+      ],
+    });
+    const changed = [
+      deepFreeze<Project>({
+        ...base,
+        individualFilters: [{ kind: "remove", individuals: ["ind_900"] }],
+      }),
+      deepFreeze<Project>({
+        ...base,
+        individualFilters: [
+          { kind: "remove", individuals: ["ind_901"] },
+          { kind: "missing_data", maxAllowedMissingRate: 0.2 },
+        ],
+      }),
+      // No individual of the table is named ind_900 or has statistics,
+      // so each threshold keeps the same individuals.
+      deepFreeze<Project>({
+        ...base,
+        individualFilters: [
+          { kind: "remove", individuals: ["ind_900"] },
+          { kind: "missing_data", maxAllowedMissingRate: 0.25 },
+        ],
+      }),
+    ];
+    const keys = [filtered, ...changed].map((p) => keyOfDiversity(p));
+    expect(new Set(keys).size).toBe(4);
+  });
+
   test("another column of the populations that groups the individuals otherwise changes the key", () => {
     expect(keyOfDiversity(keyProject(KEY_ROWS, "pop2"))).not.toBe(baseKey);
   });
