@@ -6,7 +6,7 @@ The work report of the plan `docs/plans/variants-step.md`, stage 3 of
 
 ## Where the plan stands
 
-Under way since 26 September 2026. On 27 September work packages 1 to 6 are done, each after its review, and the owner accepted the screens of the writing and of the filters of the variants at stop A. In work package 7, the filters of the individuals, the four tasks 7.1 to 7.4 are done and committed; its review found 52 points that held, all fixed in four rounds, on 416d21a, and stop B (task 7.5), where the owner tries the filters of the individuals, is next.
+Under way since 26 September 2026. On 27 September work packages 1 to 7 are done, each after its review, and the owner accepted the screens of the writing and of the filters of the variants at stop A. In work package 7, the filters of the individuals, the four tasks 7.1 to 7.4 are done and committed; its review found 52 points that held, all fixed in four rounds, and the owner accepted its screens at stop B in one round. Work package 8, the end of the stage, is next.
 
 ## Before the first task
 
@@ -875,7 +875,7 @@ The last screenshots are `screens/popgen-write-*` and
 
 ## 7. The filters of the individuals
 
-Under way. The tasks: 7.1 as da09a2a, 979c859, ab31f92 (`variants.md`
+Done on 27 September 2026, after its review and stop B. The tasks: 7.1 as da09a2a, 979c859, ab31f92 (`variants.md`
 and `shell.md`) and fa351e4. A list is read one name per line, spaces
 and tabs taken off its ends, empty lines dropped, a comma kept inside a
 name. The page redraws a list's text area after an undo, a redo, an
@@ -1046,8 +1046,8 @@ four cells at each change, which nothing cheap in our code changes.
 | D3 | the same, `-g "VS7 D3"` | 2 passed, 1 in each engine | 2 |
 | D4 | `npx playwright test --project=measure-chromium --project=measure-webkit -g "VS7 D4" --workers=1`, on 61431b0 | 2 passed; the table above | passes |
 | D5 | the screenshots, `screens/popgen-{lists,stats,thresholds}-*` and `popgen-diversity-{kept,waits-*,stats-failed,all-emptied}` | each looked at | the states of the plan |
-| D6 | VoiceOver with Safari | for the owner at stop B | |
-| D7 | the owner accepts the screens (task 7.5) | waits | |
+| D6 | VoiceOver with Safari | not tried by the owner; not met | |
+| D7 | the owner accepts the screens (task 7.5) | accepted on 27 September 2026, in one round | |
 
 The whole on 416d21a: `format:check`, `typecheck` and `lint` exit 0; `npm test` "Tests 2079 passed (2079)" in 61 files; the browser check "608 passed", three times, one by the fixer; `npm run screens` 244 passed. Firefox was not run. A flow of the writing, `VS5 D3` with the focus on Stop and a refused write, failed in WebKit in 10 of 20 lone runs: the test released the held file through a worker the page had just restarted; the test now waits for its call to return (416d21a), 20 of 20.
 
@@ -1072,3 +1072,34 @@ The whole on 416d21a: `format:check`, `typecheck` and `lint` exit 0; `npm test` 
    applied or a threshold committed, the status region says how many
    individuals pass the filters, as the owner's rule of stop A has a
    reason announced when it appears.
+
+### Stop B, the rounds
+
+The owner tried the filters of the individuals, the diversity with
+them and the writing of the individuals kept in Firefox on 27
+September 2026, said that they work, and decided the five points
+above: the freeze accepted; Run locked when no population is left;
+the words of one individual; the words of point D and "Known once …"
+kept. The status region saying what the filters keep was not
+overruled. VoiceOver with Safari was not tried, so deliverable D6 is
+not met; the review drove the keyboard and read the accessibility
+tree in Chromium and WebKit instead.
+
+- Round 1 (e5e4c41, 7aa47e5, cafb574, abd7b46, 607cfde): the decisions
+  in the specs, `stage-3-open-points.md` among them; the diversity
+  locked when the filters leave no population, its reason "The 34
+  individuals kept have no population in popcat, so none of the 2
+  populations has an individual left. Loosen …"; one individual reads
+  "The filters of individuals do not keep the one individual of …",
+  since the recommended words alone would have said they keep it.
+  `accessibility`, `react` and `ux` ran again on it and found no
+  defect of access or of React; a Redo that locks the diversity is
+  announced only as the Redo, as `shell.md` has it, not taken. A flow
+  of work package 6 that failed 1 time in 20 in WebKit looked for a
+  refusal in the whole page, the status region included; it now looks
+  in the step (375a2d4), 40 of 40.
+
+On 375a2d4: `format:check`, `typecheck` and `lint` exit 0; `npm test`
+"Tests 2082 passed (2082)" in 61 files; the browser check "612 passed",
+three times. The last screenshots are `screens/popgen-{lists,stats,thresholds}-*`
+and `screens/popgen-diversity-*`.

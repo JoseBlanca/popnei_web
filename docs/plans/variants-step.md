@@ -917,7 +917,7 @@ writes the variants of the individuals kept.
   panel": the populations kept in the ready state, the wait for the
   statistics in the running state, and the words of the statistics that
   failed and of no population left. Serves 2 and 5. Needs 7.3.
-- [ ] 7.5 Stop B: the owner accepts the filters of the individuals, the
+- [x] 7.5 Stop B: the owner accepts the filters of the individuals, the
   diversity with them and the writing of the individuals kept, in
   Firefox by hand as well; judges the words that send the user to fix a
   list (point D) and the choices of the open-points file that these
