@@ -310,8 +310,98 @@ for (const locale of ["en-US", "es-ES"] as const) {
       await expect(group.getByText("Maximum 0.95")).toBeAttached();
       expect(await lineX(group)).toBe(at95);
     });
+
+    test(`VS6 D2 in a browser in ${locale} 0.9 typed in the MAF field, committed with Enter and undone with the keys, with the focus kept in the field, puts the line back at 0.95`, async ({
+      page,
+    }) => {
+      await openVariants(page);
+      await pick(page, "panel.nei");
+      await calculate(page);
+      await flip(page, MAF_SWITCH);
+      const group = histogram(page, MAF_TITLE);
+      const maf = field(page, MAF_LABEL);
+      await maf.click();
+      await maf.press("ControlOrMeta+a");
+      await maf.pressSequentially("0.9");
+      await maf.press("Enter");
+      await expect(
+        group.getByText("Maximum 0.9", { exact: true }),
+      ).toBeAttached();
+      // The field keeps the focus: the number typed is dropped by the
+      // commit, and not by leaving the field.
+      await maf.press("ControlOrMeta+z");
+      await expect(maf).toHaveValue("0.95");
+      await expect(maf).toBeFocused();
+      await expect(group.getByText("Maximum 0.95")).toBeAttached();
+      await expect(
+        group.getByText("Threshold of the MAF filter: 0.95", { exact: true }),
+      ).toBeVisible();
+    });
   });
 }
+
+test("VS6 D2 0.9 pasted over 0.8 typed in the MAF field is committed at once, and the line follows it", async ({
+  page,
+}) => {
+  await openVariants(page);
+  await pick(page, "panel.nei");
+  await calculate(page);
+  await flip(page, MAF_SWITCH);
+  const group = histogram(page, MAF_TITLE);
+  const maf = field(page, MAF_LABEL);
+  await maf.click();
+  await maf.press("ControlOrMeta+a");
+  await maf.pressSequentially("0.8");
+  await expect(group.getByText("Maximum 0.8", { exact: true })).toBeAttached();
+  await maf.press("ControlOrMeta+a");
+  // A paste as the browser gives it, with the text in its data.
+  await maf.evaluate((input) => {
+    const data = new DataTransfer();
+    data.setData("text/plain", "0.9");
+    input.dispatchEvent(
+      new ClipboardEvent("paste", {
+        clipboardData: data,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+  });
+  await expect(banner(page, "Undo")).toHaveAccessibleDescription(
+    "Undo: the MAF filter changed",
+  );
+  await expect(maf).toHaveValue("0.9");
+  await expect(group.getByText("Maximum 0.9", { exact: true })).toBeAttached();
+  await expect(
+    group.getByText("Threshold of the MAF filter: 0.9", { exact: true }),
+  ).toBeVisible();
+});
+
+test("VS6 D2 the threshold line of the observed heterozygosity moves as 0.4 is typed, before Enter", async ({
+  page,
+}) => {
+  await openVariants(page);
+  await pick(page, "panel.nei");
+  await calculate(page);
+  await flip(page, OBS_HET_SWITCH);
+  const group = histogram(page, OBS_HET_TITLE);
+  await expect(group.locator("line.chart-threshold")).toHaveCount(1);
+  const at5 = await lineX(group);
+  const obsHet = field(page, "Maximum observed heterozygosity, from 0 to 1");
+  await obsHet.click();
+  await obsHet.press("ControlOrMeta+a");
+  await obsHet.pressSequentially("0.4");
+  await expect(group.getByText("Maximum 0.4", { exact: true })).toBeAttached();
+  await expect(
+    group.getByText("Threshold of the filter by observed heterozygosity: 0.4", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  expect(await lineX(group)).toBeLessThan(at5);
+  // Not committed: no command yet.
+  await expect(banner(page, "Undo")).toHaveAccessibleDescription(
+    "Undo: the filter by observed heterozygosity was turned on",
+  );
+});
 
 // React Aria throws a comma away as it is typed, so that 0,1 shows as 01;
 // the threshold drawn is then the number committed, not the 1 or the 0
