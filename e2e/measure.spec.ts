@@ -47,6 +47,12 @@
  * three halvings between the last written and the first failed. Every
  * file written is saved and read back whole with pyarrow, with uv.
  *
+ * And the Count against the diversity (VS6 D3,
+ * docs/specs/analyses/filterCounts.md, "The request"): a pass of each
+ * with the missing data filter at 0.05, on the VCF of 80,692,954 bytes
+ * and the .nei file of 19,161,178 bytes, each on a new page just after
+ * the load, and the ratio of their medians.
+ *
  * The time to write and read a project file, and to make a key, is
  * measured in node, by e2e/measure/projectFile.ts.
  *
@@ -2030,4 +2036,97 @@ test.describe("VS5 D5 the measurements of the write", () => {
       rows,
     );
   });
+});
+
+// ---------------------------------------------------------------------
+// The Count against the diversity (VS6 D3).
+
+/** The time of one pass of `what`, the Count or the diversity, with the
+    missing data filter at 0.05, on a new page with `file` just loaded,
+    from the run posted to the calculation worker to its answer: the
+    filter put on the Variants opened at the load, and a pass. */
+async function passOnce(
+  browser: Browser,
+  file: string,
+  pops: string,
+  what: "count" | "diversity",
+): Promise<number> {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  try {
+    await load(page, file, pops, "pop");
+    await setThreshold(page, "0.05");
+    if (what === "diversity") {
+      const ran = await runAndSettle(page, 240_000);
+      expect(ran.table).toBe(true);
+      return ran.runMs;
+    }
+    const before = (await logOf(page)).length;
+    await page
+      .getByRole("button", { name: "Count the variants each filter keeps" })
+      .click();
+    let ended: readonly Logged[] = [];
+    await expect
+      .poll(
+        async () => {
+          ended = (await logOf(page)).slice(before).filter(isCalc);
+          return ended.some((l) => l.event === "in" && ENDS.has(l.kind));
+        },
+        { timeout: 240_000, intervals: [50] },
+      )
+      .toBe(true);
+    const run = ended.find((l) => l.event === "out" && l.kind === "run");
+    const answer = ended.find((l) => l.event === "in" && ENDS.has(l.kind));
+    if (run === undefined || answer === undefined) {
+      throw new Error("no run, or no answer to it, in the log of the worker");
+    }
+    expect(answer.kind).toBe("result");
+    await expect(
+      page
+        .getByRole("main")
+        .getByText(/ variants of big\.(vcf|nei) pass the filters\.$/),
+    ).toBeVisible();
+    return answer.t - run.t;
+  } finally {
+    await context.close();
+  }
+}
+
+test("VS6 D3 the Count against the diversity: a pass of each with the same filters, on the VCF of 80,692,954 bytes and the .nei file of 19,161,178 bytes", async ({
+  browser,
+  browserName,
+}) => {
+  test.setTimeout(1_800_000);
+  const files = await bigFiles();
+  const rows: string[][] = [];
+  for (const which of ["vcf", "nei"] as const) {
+    const file = files[which];
+    const counts: number[] = [];
+    const diversities: number[] = [];
+    // Each pass on a new page, the Count and the diversity in turn, so
+    // that neither finds the Variants of the other already opened.
+    for (let k = 0; k < REPEATS; k++) {
+      counts.push(await passOnce(browser, file, files.pops, "count"));
+      diversities.push(await passOnce(browser, file, files.pops, "diversity"));
+    }
+    rows.push([
+      `${which === "vcf" ? "VCF" : ".nei file"} of ${statSync(file).size.toLocaleString("en-US")} bytes`,
+      ...stats(counts, ms),
+      ...stats(diversities, ms),
+      (median(counts) / median(diversities)).toFixed(2),
+    ]);
+  }
+  report(
+    "The Count against the diversity, with the missing data filter at 0.05",
+    `${machine(browser, browserName)}; ${String(REPEATS)} passes of each, each on a new page just after the load, from the run posted to the calculation worker to its answer`,
+    [
+      "file",
+      "Count, median",
+      "Count, range",
+      "diversity, median",
+      "diversity, range",
+      "Count / diversity",
+    ],
+    rows,
+  );
 });
