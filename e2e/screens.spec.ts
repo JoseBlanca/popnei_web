@@ -2220,6 +2220,141 @@ for (const theme of ["light", "dark"] as const) {
       await saveIndividuals(page, "popgen-stats-error");
     });
 
+    /** A VCF of four individuals and six variants, of which those named
+        in `uncalled` have no called genotype, read with the filter of the
+        variants by missing data off, and its statistics calculated. */
+    async function statisticsOfCalls(
+      page: Page,
+      uncalled: readonly string[],
+    ): Promise<void> {
+      const names = ["i1", "i2", "i3", "i4"];
+      const called = ["0/1", "0/0", "1/1", "0/1", "0/0", "1/1"];
+      const vcf = [
+        "##fileformat=VCFv4.2",
+        "##contig=<ID=1>",
+        '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
+        `#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t${names.join("\t")}`,
+        ...called.map(
+          (gt, index) =>
+            `1\t${String(index + 1)}\t.\tA\tT\t.\tPASS\t.\tGT\t${names
+              .map((name, at) =>
+                uncalled.includes(name) ? "./." : at % 2 === 0 ? gt : "0/1",
+              )
+              .join("\t")}`,
+        ),
+        "",
+      ].join("\n");
+      await pickVariants(page, { name: "calls.vcf", text: vcf });
+      await expect(
+        page.getByRole("main").getByText("4 individuals"),
+      ).toBeVisible();
+      await page
+        .getByRole("main")
+        .getByText("Filter the variants by missing data", { exact: true })
+        .click();
+      await individualLists(page)
+        .getByRole("button", { name: CALCULATE_STATS })
+        .click();
+      await expect(
+        individualLists(page).getByText(
+          /^The statistics of the 4 individuals of calls\.vcf/,
+        ),
+      ).toBeVisible();
+    }
+
+    test("the statistics of each individual, two individuals with no called genotype", async ({
+      page,
+    }) => {
+      await statisticsOfCalls(page, ["i3", "i4"]);
+      await expect(
+        individualLists(page).getByText(
+          "2 individuals with no called genotype are not in the histogram.",
+        ),
+      ).toBeVisible();
+      await saveIndividuals(page, "popgen-stats-no-called");
+    });
+
+    test("the statistics of each individual, no individual with a called genotype", async ({
+      page,
+    }) => {
+      await statisticsOfCalls(page, ["i1", "i2", "i3", "i4"]);
+      await expect(
+        individualLists(page).getByText(
+          "4 individuals with no called genotype are not in the histogram.",
+        ),
+      ).toBeVisible();
+      await saveIndividuals(page, "popgen-stats-none-called");
+    });
+
+    test("the statistics of each individual, the column Kept not known while a list is refused", async ({
+      page,
+    }) => {
+      await pickPanel(page);
+      await individualLists(page)
+        .getByRole("button", { name: CALCULATE_STATS })
+        .click();
+      await expect(
+        individualLists(page).getByText(STATS_CAPTION),
+      ).toBeVisible();
+      await listArea(page, "Individuals to keep, one name per line").fill(
+        "ind_900",
+      );
+      await individualLists(page)
+        .getByRole("button", { name: "Apply the list to keep" })
+        .click();
+      await expect(
+        individualLists(page).getByText(/^Which individuals are kept is shown/),
+      ).toBeVisible();
+      await saveIndividuals(page, "popgen-stats-kept-not-known");
+    });
+
+    test("the diversity ready, every population left empty by a threshold of the individuals", async ({
+      page,
+    }) => {
+      await pickVariants(page, "panel.nei");
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      await goTo(page, "Individuals");
+      const rows = Array.from({ length: 200 }, (_, index) => {
+        const name = `s${String(index).padStart(3, "0")}`;
+        return `${name},${index === 0 ? "p0" : index === 1 ? "p1" : "NA"}`;
+      });
+      await pickIndividuals(page, {
+        name: "two_pops.csv",
+        text: `IID,popcat\n${rows.join("\n")}\n`,
+      });
+      await choose(page, "Column that defines the populations", "popcat");
+      await goTo(page, "Variants");
+      // The lists cannot leave every population empty, which locks the
+      // diversity; a threshold can: at 0.05 of the variants, s000 and
+      // s001 have an observed heterozygosity of 0.367 and 0.344, above
+      // 0.34, and some individuals with no population lie below it.
+      const variants = page.getByLabel(
+        "Maximum proportion of missing genotypes, from 0 to 1",
+        { exact: true },
+      );
+      await variants.fill("0.05");
+      await variants.press("Enter");
+      await individualLists(page)
+        .getByRole("button", { name: CALCULATE_STATS })
+        .click();
+      await expect(
+        individualLists(page).getByText(STATS_CAPTION),
+      ).toBeVisible();
+      await individualThreshold(
+        page,
+        "Filter the individuals by observed heterozygosity",
+        "Maximum observed heterozygosity of an individual, from 0 to 1",
+        "0.34",
+      );
+      await goTo(page, "Analyses");
+      await expect(
+        page.getByRole("main").getByText(/^None of the 2 populations has/),
+      ).toBeVisible();
+      await save(page, `popgen-diversity-all-emptied-${theme}`);
+    });
+
     /** Turns the threshold of the individuals `name` on and commits
         `value` in its field `label`. */
     async function individualThreshold(
@@ -2293,7 +2428,7 @@ for (const theme of ["light", "dark"] as const) {
       await expect(
         page
           .getByRole("main")
-          .getByText("2 populations: p0, 32 individuals; p2, 50"),
+          .getByText("2 populations: p0, 32 individuals; p2, 50 individuals"),
       ).toBeVisible();
       await save(page, `popgen-diversity-kept-${theme}`);
     });
