@@ -16,7 +16,12 @@ specs: the tooltip kept while the pointer is on it and hidden by Escape,
 the outlines with round joins and 10 pixels kept inside the frame, the
 third component kept up in 3D, the point nearest the camera only among
 those whose mark covers the pointer, the highlighted group drawn over
-the faded ones in 3D, and the plot's own test for WebGL 2.
+the faded ones in 3D, and the plot's own test for WebGL 2; and after
+their last review: the tooltip placed where the pointer reaches it, a
+highlight beyond the names drawn as none, the round joins written on
+the exported file, the zoom of the 3D view set on the camera within
+limits, a colouring by values in 3D as one object per step of viridis,
+and `Pca3dError` in a file with no three.js.
 
 The plots are listed in `docs/functionality.md`: histograms, scatter
 plots, the QQ plot, line plots, the heatmap of Fst, the Manhattan plot,
@@ -53,7 +58,7 @@ export type PointColours =
   | { readonly kind: "groups"; readonly title: string;
       readonly group: Uint16Array;     // index into names, or NO_GROUP
       readonly names: readonly string[]; readonly noneName: string;
-      readonly highlighted: number | null }
+      readonly highlighted: number | null } // at or above names.length: none
   | { readonly kind: "values"; readonly title: string;
       readonly values: Float64Array;   // NaN for none
       readonly noneName: string };
@@ -382,7 +387,8 @@ page's CSS. So `toSVG`, in `src/charts/export.ts`:
    and writes on each of its elements, as a `style` attribute, the values
    `getComputedStyle` gives there for a fixed list of properties:
    `fill`, `fill-opacity`, `stroke`, `stroke-width`, `stroke-dasharray`,
-   `stroke-opacity`, `opacity`, `color`, `font-size`, `font-weight`,
+   `stroke-linejoin`, since the outlines of the marks have round joins
+   (`docs/specs/charts/scatter.md`), `stroke-opacity`, `opacity`, `color`, `font-size`, `font-weight`,
    `text-anchor`, `dominant-baseline`, resolved, with no `var()` left,
    and `font-family` as the stack of "Fonts", below. The original on the
    screen is not read or changed. The classes stay, as names.
@@ -501,7 +507,12 @@ drawer opens or a panel collapses.
 - **It stays while it is read and goes when asked**, as WCAG 2.2, 1.4.13,
   asks of content that appears on hover: it stays while the pointer is
   on its point or on the tooltip itself, which takes the pointer so that
-  a user of a screen magnifier can move onto it; it goes when a draw
+  a user of a screen magnifier can move onto it; its nearest corner is 7
+  pixels right of and 7 below the point, 9.9 pixels away, inside the 10
+  pixels of the point, so that the pointer reaches it without the point
+  being lost on the way, and outside the 8.05 pixels a mark reaches; the
+  base gives `pointer.leave` the element the pointer went onto, so that
+  a leave onto the tooltip is not a leave of the plot; it goes when a draw
   makes it stale; and the Escape key hides it. Escape is heard by a
   listener on the document, there only while a tooltip is shown, that
   acts on Escape alone and neither stops the key nor prevents its
@@ -599,7 +610,13 @@ shape in 3D as in 2D. three.js draws each point as a square of a size in
 CSS pixels with the texture on it, 18 pixels here, to hold the star, the
 largest mark, and the texture is 36 by 36 pixels, for the pixel ratio of
 2 at most, one per mark in use and shared by the groups with that mark,
-50 at most.
+50 at most. A colouring by the values of a column is one `Points` object
+per step of viridis that has points, 256 at most, each with a texture of
+a circle in the colour of its step and its outline, as the scatter has
+one path per step; not one object with a colour per point,
+`vertexColors`, which three.js multiplies with the texture, so that the
+outline would take the colour of each point and the yellow end of
+viridis would lose the edge it has in 2D.
 
 A highlighted group is drawn over the faded ones, as in 2D. three.js
 draws every opaque object before every transparent one, whatever their
@@ -630,7 +647,10 @@ placed at the projected ends of the axes after each render.
   would ask for, and gives the canvas and the context to
   `new WebGLRenderer({ canvas, context })`; no context, and
   `createPca3d` throws a `Pca3dError` of kind `noWebGl`, whose words the
-  screen shows (`docs/specs/charts/pca3d.md`). The kind comes from that
+  screen shows (`docs/specs/charts/pca3d.md`). The class is in
+  `src/charts/pca3dError.ts`, which imports nothing of three.js, so that
+  the screen imports it with the page and tells the error apart without
+  loading three.js with the page. The kind comes from that
   call and not from the words of an error of three.js.
   `WebGPURenderer`, which falls back to WebGL 2, can be tried when it is
   the default of three.js; the plot's code outside the renderer would
@@ -661,7 +681,12 @@ placed at the projected ends of the axes after each render.
   of `pca3d` has four more functions, `rotate(axis, degrees)`, which
   turns by a fixed step, `viewAlong(component)`, which looks down one
   component and so shows the 2D plot of the other two, `zoom(factor)`
-  and `resetView()`. The screen spec lists the buttons.
+  and `resetView()`. `zoom` multiplies the camera's own `zoom` by the
+  factor, within the controls' `minZoom` and `maxZoom`, 0.25 and 20,
+  which bound the wheel and the pinch too, and calls
+  `updateProjectionMatrix`; not the controls' `dollyIn`, whose factor
+  above 1 zooms an orthographic camera out
+  (`docs/specs/charts/pca3d.md`). The screen spec lists the buttons.
 - **Render on demand.** There is no animation loop: the plot renders
   after `update`, after a resize and on the `change` event of the
   controls. A loop at 60 frames a second for a still scene spends the

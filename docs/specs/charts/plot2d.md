@@ -8,8 +8,11 @@ Revised on 27 September 2026 for the scatter plot of the PCA,
 overlay and the calls of the pointer, the hook that draws the legend
 into the exported file, with the argument of `exportSvg` that carries
 it into the SVG and the PNG, and the mark of the point under the
-pointer left out of that file; the code of stage 3, `src/charts/plot2d.ts`, has
-none of the three yet. This spec gives
+pointer left out of that file; and after the last review of the
+scatter the same day, the element the pointer went onto given to
+`pointer.leave`, and the round joins of the outlines written on the
+exported file with `stroke-linejoin`. The code of stage 3,
+`src/charts/plot2d.ts` and `export.ts`, has none of these yet. This spec gives
 `src/charts/plot2d.ts`, the function that every plot drawn in two
 dimensions makes its handle with: the histogram of
 `docs/specs/charts/histogram.md` now, and the scatter plot of the PCA,
@@ -96,7 +99,11 @@ it to `pointermove` and `pointerdown`, and calls `pointer.move(x, y)`
 with the position of the pointer in the pixels of the frame, from
 `pointer` of `d3-selection`, so that a tap on a touch screen, which
 moves no pointer before it, is a move too; and to `pointerleave` from a
-mouse or a pen, and calls `pointer.leave()`. A finger that leaves the
+mouse or a pen, and calls `pointer.leave(to)` with the element the
+pointer went onto, the event's `relatedTarget`, or `null` when it left
+the page, so that a plot whose tooltip takes the pointer can tell a
+leave onto its tooltip from a leave of the plot (`scatter.md`, "The
+point under the pointer"). A finger that leaves the
 screen is not a leave, so that the tooltip of a tap stays
 (`scatter.md`, "The point under the pointer"). The listeners go with
 the SVG in `destroy`. What the plot does with the position, the nearest
@@ -234,7 +241,9 @@ export is checked by its tests (below, "How it is verified").
 - **What the file holds**: the plot as it is on the screen, at its size,
   with its title, its description, its axes, its marks, its annotations
   and its legend; the colours of the light theme written on each
-  element, with no `var(` left, resolved in a hidden container with
+  element, with the other properties of the list of `charts.md`,
+  `stroke-linejoin` among them from stage 4 so that the outlines of the
+  scatter keep their round joins, with no `var(` left, resolved in a hidden container with
   `data-theme="light"`, since the file goes to papers and to print; a
   first rectangle of the background colour, since a transparent plot on
   a dark slide cannot be read; the overlay removed when there is one,
@@ -376,7 +385,8 @@ export interface Plot2dDefinition<Data extends PlotText> {
   /** The base makes the overlay and calls these, in the pixels of the frame. */
   readonly pointer?: {
     readonly move: (x: number, y: number) => void;
-    readonly leave: () => void;
+    /** `to`: the element the pointer went onto, the event's relatedTarget; null off the page or for the base's own call. */
+    readonly leave: (to: EventTarget | null) => void;
   };
   /** Draws into `legend`, of the exported copy, what the screen shows beside the SVG. */
   readonly drawExport?: (
@@ -474,7 +484,7 @@ export class PngError extends Error {
 - **A change of theme** while the plot is on the screen: nothing is
   drawn again; a later `toSVG` is in the light theme all the same.
 - **A frame with no area, for a plot with an overlay**: the overlay is
-  given a size of 0 and `pointer.leave()` is called, so that no tooltip
+  given a size of 0 and `pointer.leave(null)` is called, so that no tooltip
   stays over an empty frame.
 
 ## How it runs
@@ -574,7 +584,8 @@ export will run in.
 - on the scatter, the page's second plot from stage 4, a move of the
   mouse over the overlay calls `pointer.move` with the position in the
   pixels of the frame, a tap calls it too, and a mouse that leaves the
-  frame calls `pointer.leave` (`scatter.md`, "How it is verified"); and
+  frame calls `pointer.leave` with the element it went onto
+  (`scatter.md`, "How it is verified"); and
   its PNG holds the legend that `drawExport` draws, as its SVG does,
   read from the pixels of the PNG (`scatter.md`).
 

@@ -7,8 +7,12 @@ specs written beside it: the description and the labels in the words of
 `.claude/skills/coding/charts.md` and `testing.md` revised for it;
 reviewed the same day, and revised for the review: the tooltip that can
 be dismissed and hovered, its numbers, the marks inside the frame, the
-legend's faded entries and its background in the file; not yet
-approved. There is no
+legend's faded entries and its background in the file; and again after
+its last review: the tooltip placed where the pointer can reach it, a
+highlight beyond the names taken as none, a group that keeps its mark
+when it has no point, the legend a vertical list, the numbers of the
+table as `pca.md` writes them, and the round joins kept in the exported
+file; not yet approved. There is no
 code of it yet; the base it is drawn on, `src/charts/plot2d.ts`, and the
 histogram exist from stage 3. This spec gives the function of
 `src/charts/scatter.ts` that draws the individuals on two principal
@@ -26,6 +30,25 @@ and its section 7, and depends on `.claude/skills/coding/charts.md`,
 `css.md` and `testing.md`. The PCA whose result it draws, its options
 and its panel are `docs/specs/analyses/pca.md`; the 3D plot is
 `docs/specs/charts/pca3d.md`.
+
+The words of the web this spec needs, as it uses them. **SVG** is the
+format of drawings made of lines and shapes that the browser draws
+inside the page, and a `<path>` is one of its elements, any number of
+shapes given by a text of drawing commands. The **base** is
+`src/charts/plot2d.ts`, the piece every 2D plot is drawn on
+(`plot2d.md`), and a **handle** the object a plot's function returns,
+through which the screen gives the plot new data, removes it and
+exports it. **React** is the library that draws the screens from the
+state of the project, and **React Aria** the library of controls built
+on it that the screens use, which gives each control the keys and the
+names a screen reader expects. A **screen reader** is the program that
+reads the page aloud to a user who cannot see it, and the **focus** the
+control the keyboard acts on, which the Tab key moves from one control
+to the next. **WCAG 2.2** is the standard of accessibility the
+applications meet, at its level AA, and each of its **success
+criteria**, numbered as 1.4.1 is, one thing it asks. **jsdom** is the
+imitation of a page, with no layout and no drawing, in which the unit
+tests run under node.
 
 The words of this spec: a **group** is one of the values that colour
 the points, a population of the grouping or a value of a column the
@@ -103,7 +126,11 @@ so that a population has the same mark in both:
 The index of a group is its place in the names the screen gives, so a
 population keeps its mark as long as the screen gives the populations in
 the same order: in the 2D and the 3D plot, after a filter, after an undo.
-That order is `pca.md`'s.
+The PCA gives the names of every group of the metadata file, in the
+order each first appears, those with no point among them, so that a
+filter of individuals that leaves a population with no individual does
+not give its mark to the next one (`pca.md`, "The colours"); such a
+group has no path and no entry in the legend.
 
 ### The points: one path per group, drawn by a loop
 
@@ -233,9 +260,10 @@ Three reasons:
   two, with its highlight.
 - **The widgets of the screens are React Aria's**, the library of
   accessible widgets the applications use (`docs/technology.md`). Its
-  `ToggleButtonGroup` with `selectionMode="single"` is what the legend
-  needs: one stop of the Tab key for the whole list, the arrow keys to
-  move along it, Space or Enter to press, and a press on the pressed
+  `ToggleButtonGroup` with `selectionMode="single"` and
+  `orientation="vertical"`, since its entries are a column, is what the
+  legend needs: one stop of the Tab key for the whole list, the Up and
+  Down arrow keys to move along it, Space or Enter to press, and a press on the pressed
   entry to clear it, as the owner's widget does
   (https://github.com/JoseBlanca/any_scatter3d, which the owner named on
   27 September 2026 for the look and the interaction). In that mode
@@ -290,9 +318,17 @@ the frame; the plot finds the nearest point:
   fading draws it pale, and it is still a point.
 - **The tooltip** is one HTML `<div>`, `chart-tooltip`, that the plot
   adds to its element on the first hover and removes in `destroy`,
-  placed 12 pixels right of and below the point, and on its left or
-  above it where it would leave the element, so that it does not cover
-  the point it names. It is HTML and not SVG, since it wraps text and is
+  placed with its nearest corner 7 pixels right of and 7 pixels below
+  the point, and on its left or above it where it would leave the
+  element. That corner is 9.9 pixels from the point: inside the 10
+  pixels within which the point stays under the pointer, so that a
+  pointer that goes from the point straight to the tooltip never leaves
+  them and finds the tooltip still shown. And every place of the
+  tooltip is at least 7 pixels right of and 7 below the point, so 9.9
+  pixels from it at least, beyond the 8.05 a mark reaches: the tooltip
+  covers no part of the mark it names. The option not taken, the tooltip further away and a
+  wait of some 300 ms before it is hidden, adds a timer to every
+  movement of the pointer and a wait to every test of it. It is HTML and not SVG, since it wraps text and is
   not part of the exported plot. Its lines are the name of the
   individual; the name of its group or its value, after the title of
   the colouring, "Population: P2", "No population", "Height: 1.72",
@@ -316,7 +352,12 @@ the frame; the plot finds the nearest point:
   of its point, and while the pointer is on the tooltip itself, which
   takes the pointer for that, so that a user who reads with the screen
   enlarged can move onto it; the pointer that leaves the tooltip hides
-  it, or shows the tooltip of the point it lands near. It goes when a
+  it, or shows the tooltip of the point it lands near. The tooltip is
+  not inside the overlay, so a pointer that goes onto it leaves the
+  overlay, and the base gives `pointer.leave` the element the pointer
+  went onto, the `relatedTarget` of the browser's event (`plot2d.md`,
+  revised): a leave onto the tooltip, which `holds` of the tooltip
+  tells, is not a leave of the plot, and the tooltip stays. It goes when a
   draw makes it stale, below. And the Escape key hides it, with the mark
   of the point, and calls `onHover(null)`; it stays hidden until the
   pointer is near another point, or leaves every point and comes back.
@@ -369,7 +410,7 @@ export interface GroupColours {
   readonly names: readonly string[];
   /** The name of the points of NO_GROUP: "No population", "No value". */
   readonly noneName: string;
-  /** The group the legend highlights, an index of `names` or NO_GROUP; null for none. */
+  /** The group the legend highlights, an index of `names` or NO_GROUP; null for none, and a whole number at or above names.length is none too. */
   readonly highlighted: number | null;
 }
 
@@ -509,6 +550,8 @@ export interface Tooltip {
   hide(): void;
   /** True while the pointer is on the tooltip. */
   readonly hovered: boolean;
+  /** True when `target` is the tooltip or inside it: a leave of the plot onto it is none. */
+  holds(target: EventTarget | null): boolean;
   /** Removes the <div> and the listener of Escape; safe to call twice. */
   destroy(): void;
 }
@@ -556,14 +599,19 @@ export function scatterScales(
 `y`, `pointNames` and the `group` or the `values` of the colours are not
 all of one length; when there are more than `MAX_SVG_POINTS` points,
 50,000; when a group index is neither below the number of names nor
-`NO_GROUP`; when `highlighted` is neither null, nor below the number of
-names, nor `NO_GROUP`; and when there are more than `MAX_POINT_GROUPS`
+`NO_GROUP`; when `highlighted` is neither null nor a whole number from
+0; and when there are more than `MAX_POINT_GROUPS`
 names, 1,000, a constant of `src/charts/limits.ts`: each group is a path
 and an entry of the legend, and a thousand are still drawn, while more
 is a column of names, which the screen does not offer for colouring
-(`pca.md`). A highlighted group with no point drawn is not a defect,
-since the screen may give it for one draw before it clears it: every
-point is then faded.
+(`pca.md`). A highlighted group with no point drawn is not a defect:
+every point is then faded. A `highlighted` at or above the number of
+names, and not `NO_GROUP`, is drawn as no highlight, and not refused:
+the highlight is state of the screen, kept apart from the names it
+indexes, and a screen that gave it for one draw after the names changed
+would otherwise break the plot, where this rule costs one draw with no
+highlight. The PCA's panel gives it only with the colouring it was
+pressed in (`pca.md`, "What it shows"), so it does not meet this.
 
 `createScatter` makes its definition for the base in each call, since
 the definition holds the state of one plot, the pixel positions of the
@@ -625,8 +673,9 @@ the scatter adds:
 - **A table of the individuals, drawn by the screen**, one row per
   individual with its name, its group or value and its coordinates on
   every component the result keeps, from `pcaRows` of core (`pca.md`),
-  whose numbers are shown with `tableNumber`, and the plot is linked to
-  it. The scatter gives no rows of its own, where `plot2d.md` has each
+  the coordinates written to four decimals and the values of a column
+  as `tableNumber` gives them, as `pca.md` decides for the panel, and
+  the plot is linked to it. The scatter gives no rows of its own, where `plot2d.md` has each
   plot give them: the table holds all 10 components and the plot two,
   and the panel makes the rows and the data of the plot from the same
   result and the same colours, so that the two never disagree.
@@ -671,6 +720,12 @@ screen draws it:
 - when the rows would pass the bottom of the frame, the last row that
   fits says "and 12 more", since the file cannot scroll; the table,
   downloaded beside it as CSV, has every group.
+
+The outlines of the marks keep their round joins in the file:
+`stroke-linejoin` is among the properties the export writes on each
+element (`charts.md`, "Colours, themes and the exported file"), and
+without it a program that opens the file draws the mitred joins, whose
+tips reach 9.2 pixels from the point of a star.
 
 A plot 48rem wide, the largest of "The size" below, is 768 pixels wide
 at the browser's default size of text, 16 pixels, so its PNG at 3 times
@@ -776,7 +831,9 @@ calls, as `plot2d.md` does:
 - four groups and a no-group: five `path.chart-points`, the
   `chart-points-none` first, each group with the class of its colour;
   with group 2 highlighted, its path last and the four others with
-  `chart-points-faded`; an `update` to no highlight removes the class;
+  `chart-points-faded`; an `update` to no highlight removes the class,
+  and so does an `update` with `highlighted` 4, beyond the four names,
+  which throws nothing;
 - values: one path per step used, each with a `fill` attribute that is
   a colour of viridis, and the ring path of the points with no value;
 - an `update` from groups to values and back, in the same `<svg>`
@@ -804,13 +861,16 @@ size the test sets:
   called with 0; moved 30 pixels away from every point, the tooltip is
   hidden and `onHover` called with `null`; a name `<img src=x
   onerror=…>` shows as text and runs nothing;
-- the pointer moved from point 0 onto its tooltip keeps it shown, and
-  moved off it, away from every point, hides it; Escape pressed while
+- the pointer moved from point 0 onto its tooltip in 10 steps,
+  `mouse.move` with `steps: 10`, so that the browser sees the pixels in
+  between as a user's hand would pass them, keeps it shown, and moved
+  off it, away from every point, hides it; Escape pressed while
   the focus is in a text field of the page hides the tooltip, and the
   field keeps the focus and its text;
 - a tap, in a context with touch, shows the tooltip of the point tapped;
-- `toSVG` has no `chart-overlay`, no `chart-hover` and no `var(`, and
-  holds the legend; its PNG at 3 times of a plot of 600 by 450 is 1,800
+- `toSVG` has no `chart-overlay`, no `chart-hover` and no `var(`,
+  holds the legend, and has `stroke-linejoin: round` in the style of
+  each `path.chart-points`; its PNG at 3 times of a plot of 600 by 450 is 1,800
   by 1,350 pixels, and holds the legend too: the pixel at the centre of
   the mark of the first entry, where the PNG is drawn on a canvas and
   read, has the colour of the first group, `rgb(230, 159, 0)`, within 8
@@ -857,11 +917,14 @@ Of `docs/specs/analyses/pca.md`:
 - the panel draws the legend with React Aria's `ToggleButtonGroup`, as
   "The legend, drawn by the screen" says, at the same offset from the
   corner in 2D and 3D, with the mark of a faded entry faded and its name
-  not; keeps the highlight as state of the screen, and clears it when
-  the colouring changes or when the names of the groups change, since
-  the highlight is an index into the names, and a filter that removes a
-  population would otherwise make it name the next one; and gives it to
-  the 2D and the 3D plot alike;
+  not, vertical; keeps the highlight as state of the screen, and gives
+  it to the plots only with the colouring it was pressed in, since the
+  highlight is an index into the names; and gives it to the 2D and the
+  3D plot alike;
+- the names of the groups are every group of the metadata file, those
+  with no point among them, so that a population keeps its index, and
+  its mark, when a filter leaves it no individual;
+- the coordinates of the table written to four decimals;
 - the table of the individuals, the panel's, from `pcaRows` with every
   component kept, made from the same result and colours as the data of
   the plot, and linked from it.
@@ -870,7 +933,8 @@ Of `docs/specs/analyses/pca.md`:
 
 - `docs/specs/charts/plot2d.md`: revised with this spec, on 27 September
   2026, for the overlay and the calls of the pointer, `pointer` of the
-  definition; the hook that draws into the exported copy, `drawExport`,
+  definition, whose `leave` is given the element the pointer went onto;
+  `stroke-linejoin` among the properties the export writes; the hook that draws into the exported copy, `drawExport`,
   carried by the third argument of `exportSvg`, `drawBeside`, in `toSVG`
   and in `toPNG` alike; the export leaving out `chart-hover`; a
   definition made per plot when it holds the state of one plot.
