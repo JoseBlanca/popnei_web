@@ -40,10 +40,23 @@ jobs:
       - run: npm run lint
       - run: npm test
 
+  # One job for each engine, run side by side. The three in one job, on
+  # the two workers Playwright gives the four processors of the runner,
+  # passed 20 minutes on 27 September 2026 with 781 of the 927 tests run
+  # (runs 36347810899 and 36348662768): Chromium took about 5.5 minutes,
+  # Firefox about 9 and WebKit about 10, after a minute of setup. Each
+  # job builds the site with the pages of the tests and runs its engine's
+  # tests, as `npm run test:e2e` does for the three.
   e2e:
     runs-on: ubuntu-latest
-    # Its first run took 1 min 39 s.
     timeout-minutes: 20
+    strategy:
+      # An engine that fails does not stop the other two, whose results
+      # are still wanted.
+      fail-fast: false
+      matrix:
+        project: [chromium, firefox, webkit]
+    name: e2e (${{ matrix.project }})
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -51,21 +64,24 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      # The browsers of the installed Playwright, and the system libraries
-      # they need on Ubuntu.
-      - run: npx playwright install --with-deps
-      # Builds the site and runs Chromium, Firefox and WebKit. Firefox does
-      # not start without a window on the owner's Mac, so this is where it
-      # runs (docs/plans/site.md, work package 2).
-      - run: npm run test:e2e
+      # The browser of the installed Playwright for this engine, and the
+      # system libraries it needs on Ubuntu.
+      - run: npx playwright install --with-deps ${{ matrix.project }}
+      # Firefox does not start without a window on the owner's Mac, so
+      # this is where it runs (docs/plans/site.md, work package 2).
+      - run: npm run build
+        env:
+          POPNEI_TEST_PAGES: "1"
+      - run: npx playwright test --project=${{ matrix.project }}
       # The report and the traces, to read what the browser did: kept
-      # after every run that was not cancelled, since a test that passed
-      # only on its retry fails the run but leaves its trace from the first
-      # attempt.
-      - if: ${{ !cancelled() }}
+      # after every run, since a test that passed only on its retry fails
+      # the run but leaves its trace from the first attempt, and a job
+      # stopped by its time limit leaves the traces of the tests that
+      # failed before it, which is all there is to read then.
+      - if: ${{ always() }}
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.project }}
           path: |
             playwright-report/
             test-results/
