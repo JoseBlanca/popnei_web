@@ -228,6 +228,18 @@ lie along the axis and cannot be told apart, are thinned. The thinning
 runs in Rust, beside the calculation. The plot keeps a few tens of
 thousands of points, which SVG draws, and which export as vectors.
 
+The plots are in the first script of the page, the one the browser
+downloads before it shows anything, and not loaded when the first plot
+is drawn. The histograms of the Variants step, the first plots on a
+screen, made that script 154,923 bytes with `gzip -9` against 133,788
+before them, 21.1 KB more, on the site built at commit 64989f6 on 27
+September 2026. Loading the plots with `import()`, when a result first
+needs one, would take 16,007 of those bytes out of the first script,
+1.7% of the about 942 KB of a first visit, most of which is the wasm of
+popnei; not taken, for a second request and a moment of waiting before
+the first plot, against 16 KB, and it is measured again if the plots
+grow. three.js is the exception, below.
+
 Considered and not taken:
 
 - **Plotly.js.** One library for every plot, the 3D scatter included, and
@@ -253,7 +265,10 @@ is drawn with it, with a thin layer of ours for the axes, the rotation,
 the hover and, later, the lasso, which would be our code with any library.
 Every browser that popnei runs in has WebGL. three.js ships no types of
 its own, so `@types/three`, from DefinitelyTyped, is taken with it for
-development.
+development. It is loaded with `import()` when the 3D PCA is first
+drawn, into a chunk of its own, a script the browser downloads then, so
+that a user who never opens the 3D plot never downloads it, unlike the
+2D plots above.
 
 ### The calls to the worker
 
