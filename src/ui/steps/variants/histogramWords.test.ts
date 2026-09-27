@@ -13,7 +13,9 @@ import { describe, expect, expectTypeOf, test } from "vitest";
 import type { DescribedBin } from "../../../core/analyses/words.ts";
 import type { Notice } from "../../../core/store.ts";
 import type { BinState, HistogramRow } from "../../../charts/histogram.ts";
+import { failureText } from "../../analyses/words.ts";
 import {
+  CALCULATE_AGAIN,
   VARIANT_HISTOGRAMS,
   binCells,
   histogramThreshold,
@@ -118,6 +120,27 @@ describe("VS6 D2 the words of the histograms of the variants", () => {
         state: "removed",
       }),
     ).toEqual(["0.975", "1", "3", "Removed"]);
+  });
+
+  test("the words of a failure ask to calculate them again, and not to run it", () => {
+    expect(
+      failureText(
+        { kind: "workerFailed", message: "trap" },
+        "panel.nei",
+        CALCULATE_AGAIN,
+      ),
+    ).toBe(
+      "The calculation stopped unexpectedly. Calculate them again. If it stops again, load panel.nei again in the Variants step.",
+    );
+    expect(
+      failureText(
+        { kind: "defect", message: "a bad answer" },
+        "panel.nei",
+        CALCULATE_AGAIN,
+      ),
+    ).toBe(
+      "The application met an error of its own: a bad answer. Calculate them again.",
+    );
   });
 
   test("the words of the histograms removed, after a command, an undo and a redo", () => {
