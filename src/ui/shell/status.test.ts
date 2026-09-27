@@ -100,4 +100,32 @@ describe("WS9 D1 the announcer", () => {
     vi.advanceTimersByTime(100);
     expect(announcer.getState()).toBe("Diversity: done.");
   });
+
+  test("an announce after a clear waits its full 100 ms and stays: clear stops the timer of the texts it drops", () => {
+    const announcer = createAnnouncer();
+    announcer.announce("A");
+    vi.advanceTimersByTime(50);
+    announcer.clear();
+    announcer.announce("B");
+    vi.advanceTimersByTime(99);
+    expect(announcer.getState()).toBe("");
+    vi.advanceTimersByTime(1);
+    expect(announcer.getState()).toBe("B");
+    vi.advanceTimersByTime(200);
+    expect(announcer.getState()).toBe("B");
+  });
+
+  test("a clear inside a change keeps the change's text before what the change announced", () => {
+    const announcer = createAnnouncer();
+    announcer.announce("Diversity: done.");
+    announcer.announceChange(() => {
+      announcer.clear();
+      announcer.announce("Warning: the file differs.");
+      return "Undone: a new variants file was loaded.";
+    });
+    vi.advanceTimersByTime(100);
+    expect(announcer.getState()).toBe(
+      "Undone: a new variants file was loaded. Warning: the file differs.",
+    );
+  });
 });

@@ -42,6 +42,11 @@ export function createAnnouncer(): Announcer {
   // The texts announced since the region was emptied, waiting for the
   // timer; empty when no timer runs.
   let waiting: string[] = [];
+  // The timer that writes the texts waiting, while one runs.
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  // The number of clears so far, by which a change tells that the texts
+  // waiting before it were dropped while it ran.
+  let clears = 0;
   const listeners = new Set<() => void>();
 
   function change(next: string): void {
@@ -50,6 +55,7 @@ export function createAnnouncer(): Announcer {
   }
 
   function write(): void {
+    timer = undefined;
     const joined = waiting.join(" ");
     waiting = [];
     change(joined);
@@ -65,7 +71,7 @@ export function createAnnouncer(): Announcer {
   function wait(): void {
     if (waiting.length === 0) {
       change("");
-      setTimeout(write, ANNOUNCE_DELAY_MS);
+      timer = setTimeout(write, ANNOUNCE_DELAY_MS);
     }
   }
 
@@ -75,14 +81,20 @@ export function createAnnouncer(): Announcer {
       waiting.push(next);
     },
     announceChange(change: () => string | null): void {
-      const at = waiting.length;
+      const clearsBefore = clears;
+      const waitingBefore = waiting.length;
       const next = change();
       if (next === null) return;
+      // A clear in the change dropped the texts waiting before it, so
+      // the change's text goes first.
+      const at = clears === clearsBefore ? waitingBefore : 0;
       wait();
       waiting.splice(at, 0, next);
     },
     clear(): void {
-      // A timer still running writes the empty text of no text waiting.
+      clears += 1;
+      clearTimeout(timer);
+      timer = undefined;
       waiting = [];
       if (text !== "") change("");
     },
