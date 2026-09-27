@@ -44,6 +44,7 @@ import type { SortDescriptor } from "react-aria-components";
 
 import { classOf } from "../classOf.ts";
 import styles from "./SortableTable.module.css";
+import type { TableSort } from "./tableSort.ts";
 
 /** A column of the table, whose id is of the union `Id`. */
 export interface SortableColumn<Id extends string> {
@@ -74,14 +75,6 @@ export interface SortableRow {
   readonly id: string;
   /** The text of its cells, one per column, in their order. */
   readonly cells: readonly string[];
-}
-
-/** Which column is sorted, and which way. */
-export interface TableSort<Id extends string> {
-  /** The column sorted. */
-  readonly column: Id;
-  /** Up or down. */
-  readonly direction: "ascending" | "descending";
 }
 
 /** What a sortable table is drawn with. */

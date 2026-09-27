@@ -18,6 +18,7 @@ import { counted, escaped } from "../../../core/project.ts";
 import type { Notice } from "../../../core/store.ts";
 import type { IndividualFilter } from "../../../worker/protocol.ts";
 import { capitalized, undoneOrRedone } from "../../sentences.ts";
+import type { TableSort } from "../../widgets/tableSort.ts";
 
 /** The decimals of the two numbers of the table of the individuals
     (variants.md, "The statistics of each individual"). */
@@ -73,14 +74,6 @@ export const INDIVIDUAL_COLUMNS: readonly IndividualColumn[] = Object.freeze([
   { id: "observedHeterozygosity", label: "Observed heterozygosity" },
   { id: "kept", label: "Kept" },
 ]);
-
-/** The order of a column sorted. */
-export interface IndividualSort {
-  /** The column sorted. */
-  readonly column: IndividualColumnId;
-  /** Up or down. */
-  readonly direction: "ascending" | "descending";
-}
 
 /** What the table shows of the individuals kept: no column, while no
     filter of individuals is set; the line that they are not known,
@@ -159,7 +152,7 @@ const NAME_ORDER = new Intl.Collator("en-US");
  */
 export function sortedRows(
   rows: readonly IndividualRow[],
-  sort: IndividualSort | null,
+  sort: TableSort<IndividualColumnId> | null,
   isKept: ((individual: string) => boolean) | null,
 ): readonly IndividualRow[] {
   if (sort === null) return rows;

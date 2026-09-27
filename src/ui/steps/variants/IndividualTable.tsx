@@ -22,10 +22,8 @@ import { downloadText } from "../../download.ts";
 import { useAppState } from "../../store.tsx";
 import { Button } from "../../widgets/Button.tsx";
 import { SortableTable } from "../../widgets/SortableTable.tsx";
-import type {
-  SortableColumn,
-  TableSort,
-} from "../../widgets/SortableTable.tsx";
+import type { SortableColumn } from "../../widgets/SortableTable.tsx";
+import type { TableSort } from "../../widgets/tableSort.ts";
 import {
   INDIVIDUAL_COLUMNS,
   KEPT_NOT_KNOWN_LINE,
