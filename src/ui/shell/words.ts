@@ -281,9 +281,9 @@ function analysesState<R>(s: AppState<R, unknown>, w: ShellWords<R>): Status {
  * `kept` is `individualsKept` of the state; `variantsKept` the variants
  * the Counts of the filters as they are found to pass them, or `null`
  * when the filters are not counted, and the line then gives the variants
- * of the file once a calculation has counted them, and the part of the
- * filters says they are not counted, "1,200 variants · 3 filters, not
- * counted", while a filter of the variants is on.
+ * of the file once a calculation has counted them, "1,200 variants
+ * before the filters" while a filter of the variants is on, and "no
+ * variant" for a file that holds none.
  */
 export function summaryLine(
   p: Project,
@@ -292,7 +292,7 @@ export function summaryLine(
 ): string {
   return [
     variantsPart(p, kept, variantsKept),
-    filtersPart(p, variantsKept),
+    filtersPart(p),
     metadataPart(p),
   ].join(" · ");
 }
@@ -321,9 +321,13 @@ function variantsPart(
       if (read.numVars !== null) {
         const ofFile = counted(read.numVars, "variant");
         parts.push(
-          p.filters.length === 0 || variantsKept === null
-            ? ofFile
-            : `${grouped(variantsKept)} of ${ofFile} kept`,
+          read.numVars === 0
+            ? "no variant"
+            : p.filters.length === 0
+              ? ofFile
+              : variantsKept === null
+                ? `${ofFile} before the filters`
+                : `${grouped(variantsKept)} of ${ofFile} kept`,
         );
       }
       return parts.join(" · ");
@@ -356,23 +360,10 @@ function individualsPart(
 }
 
 /** The part of the summary line on the filters of the variants and of
-    the individuals: "no filter", "1 filter", "2 filters"; "3 filters, not
-    counted" while the variants of the file are counted, a filter of the
-    variants is on, and `variantsKept`, the counts of the filters as they
-    are, is `null`. */
-function filtersPart(p: Project, variantsKept: number | null): string {
+    the individuals: "no filter", "1 filter", "2 filters". */
+function filtersPart(p: Project): string {
   const numFilters = p.filters.length + p.individualFilters.length;
-  if (numFilters === 0) {
-    return "no filter";
-  }
-  const read = p.variants?.read;
-  const notCounted =
-    read?.kind === "read" &&
-    read.numVars !== null &&
-    p.filters.length > 0 &&
-    variantsKept === null;
-  const filters = counted(numFilters, "filter");
-  return notCounted ? `${filters}, not counted` : filters;
+  return numFilters === 0 ? "no filter" : counted(numFilters, "filter");
 }
 
 /** The part of the summary line on the metadata file and the populations

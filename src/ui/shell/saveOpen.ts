@@ -52,20 +52,22 @@ export function openQuestion(
   loses: OpeningLoses,
 ): { readonly title: string; readonly text: string } {
   const { calculating, writing, unsaved } = loses;
-  const sentences = [
-    "It replaces the project on the page, and an opening cannot be undone. To keep the project on the page, press Keep the current project and save it first.",
-  ];
+  // A file written and not saved is lost with the project, and saving
+  // the project does not keep it, so the words of keeping name both.
+  const sentences =
+    unsaved === null
+      ? [
+          "It replaces the project on the page, and an opening cannot be undone. To keep the project on the page, press Keep the current project and save it first.",
+        ]
+      : [
+          `It replaces the project on the page, and an opening cannot be undone, and ${escaped(unsaved)}, written and not saved, will be discarded. To keep them, press Keep the current project, then save the project with Save project and ${escaped(unsaved)} in the Variants step.`,
+        ];
   const stopped = [
     ...(calculating ? ["the ongoing calculations"] : []),
     ...(writing === null ? [] : [`the writing of ${escaped(writing)}`]),
   ];
   if (stopped.length > 0) {
     sentences.push(capitalized(`${stopped.join(" and ")} will be stopped.`));
-  }
-  if (unsaved !== null) {
-    sentences.push(
-      `${escaped(unsaved)}, written and not saved, will be discarded; to keep it, press Keep the current project and save it in the Variants step.`,
-    );
   }
   return { title: `Open ${escaped(name)}?`, text: sentences.join(" ") };
 }

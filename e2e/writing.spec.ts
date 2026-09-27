@@ -489,7 +489,7 @@ test("VS5 D3 Open project… with the file written and not saved asks first, and
     name: "Open panel.popnei.json?",
   });
   await expect(question).toHaveAccessibleDescription(
-    "It replaces the project on the page, and an opening cannot be undone. To keep the project on the page, press Keep the current project and save it first. panel.filtered.nei, written and not saved, will be discarded; to keep it, press Keep the current project and save it in the Variants step.",
+    "It replaces the project on the page, and an opening cannot be undone, and panel.filtered.nei, written and not saved, will be discarded. To keep them, press Keep the current project, then save the project with Save project and panel.filtered.nei in the Variants step.",
   );
   await expectNoViolations(makeAxeBuilder);
   await question

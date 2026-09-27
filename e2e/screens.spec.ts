@@ -1704,11 +1704,7 @@ for (const theme of ["light", "dark"] as const) {
         writing(page).getByRole("button", { name: /^Save / }),
       ).toBeVisible();
       await openProject(page, saved);
-      await expect(
-        page.getByText(
-          /written and not saved, will be discarded; to keep it, press Keep the current project and save it in the Variants step\.$/,
-        ),
-      ).toBeVisible();
+      await expect(page.getByText(/in the Variants step\.$/)).toBeVisible();
       await save(page, `popgen-write-open-question-${theme}`, {
         fullPage: false,
       });
