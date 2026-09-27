@@ -127,7 +127,13 @@ At 0.5 the line falls on the lower edge of bin 20, and 8 of its 62
 variants have a heterozygosity of 0.5 exactly, which the filter keeps: the
 bin is partly kept, it is drawn outlined, since the line is at its left
 edge, and the table beside the plot says it is partly kept (below, "The
-numbers without the picture").
+numbers without the picture"). The legend has no row for a bar partly
+kept, and the outlined bar reads as removed, so that the plot would say
+1,090 variants kept where the filter keeps 1,098: the screen names the
+bin a threshold splits in a line under the plot, as the owner is to
+judge at stop A of `docs/plans/variants-step.md`; a fourth row of the
+legend, the other way, would take room from the plot at 320 pixels
+wide and change where the legend is placed.
 
 ### The axes
 
