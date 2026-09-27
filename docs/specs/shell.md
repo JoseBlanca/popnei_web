@@ -444,6 +444,7 @@ the shell gives the screens:
 | from stage 3, Save of a written file in the Variants step | "panel.filtered.nei was handed to the browser to save.", the name of the file; the button, which keeps the focus, turns into Write, and the line above it, which says the same, is behind the focus (`docs/specs/analyses/writeVariants.md`, "Accessibility") |
 | a project opened | "Opened panel.popnei.json." followed by the text of `askedFileText` when it gives one (below, "Opening") |
 | a file that a step did not load, several dropped at once | the text the step shows for it, whose words are the step's (`docs/specs/steps/variants.md` and `individuals.md`, "Its words") |
+| from stage 3, Apply or Clear of a list of individuals in the Variants step, after which `individualListNeeds` gives a reason it did not give before | the reason as the step shows it under the list, without the end "in the Variants step": "The list of individuals to keep names 1 individual that is not in panel.nei: ind_900. Change the list, or remove the filter." (`docs/specs/steps/variants.md`, "The two lists"); nothing for a list popnei accepts |
 
 Without the first, a user of a screen reader who pressed Ctrl+Z would
 hear nothing. An undo or a redo is said before what its change

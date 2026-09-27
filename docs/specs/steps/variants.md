@@ -15,7 +15,11 @@ and accepted it: a line under the filter by observed heterozygosity, the
 words of the LD pruning, of a threshold on a histogram and of no counts,
 a file with no variant counted, the writing refused in three more cases
 (`docs/specs/analyses/writeVariants.md`), and the panel of a plot as a
-stop of the Tab key.
+stop of the Tab key. Revised the same day for the lists of individuals,
+by the owner's decision at stop A that the words of this step do not
+end "in the Variants step": the reason of a list under it leaves that
+end out, describes its text area, and is announced when an Apply or a
+Clear brings it.
 
 The screen spec of the first step of both applications. In stage 2 the
 user picks the variants file, a VCF or a `.nei` file, sets how a VCF is
@@ -632,11 +636,19 @@ step, which read none (`docs/specs/core/project.md`, "What an analysis
 needs of every project"): "The list of individuals to keep names 2
 individuals that are not in panel.nei: ind_900 and ind_901. Change the
 list, or remove the filter, in the Variants step." The step shows that
-reason whole, under the text area of the list it names, and the stepper
-shows it too (`docs/specs/shell.md`, "The stepper"). Its end is the one
-the owner decided on 26 September 2026 until they see the step (point D
-of `docs/specs/stage-3-open-points.md`); "remove the filter" is Clear
-here.
+reason under the text area of the list it names without the end "in the
+Variants step", as the section of the writing shows its words, by the
+owner's decision at stop A of `docs/plans/variants-step.md` on 27
+September 2026: "… ind_900 and ind_901. Change the list, or remove the
+filter." The stepper shows it whole (`docs/specs/shell.md`, "The
+stepper"). The rest of its end is the one the owner decided on 26
+September 2026 until they see the step (point D of
+`docs/specs/stage-3-open-points.md`); "remove the filter" is Clear
+here. The reason describes the text area of its list, and when an Apply
+or a Clear makes a reason appear that was not there before, for either
+list, the step announces it, since the focus stays on the button and a
+user of a screen reader would otherwise not learn that the list is
+refused; a list applied that popnei accepts is not announced.
 
 **The statistics of each individual.** Its block, headed "Statistics of
 each individual", an `<h3>`, comes after the lists
@@ -944,11 +956,12 @@ nothing on the screen says the things the lines above do not.
   filters on before turning it on. The line under the ploidy, 190 characters, is
   the last part of the ploidy's description, after the line of a number
   refused. A text area is described by its line of not applied, then by
-  its count.
+  the reason of its list, then by its count.
 - Announced without moving the focus, through the function the shell
   gives the screens (`docs/specs/shell.md`, "The status region"): the
-  messages of a file not loaded, and the line of a number a field
-  refused or of a character it threw away. Announced by the shell from
+  messages of a file not loaded, the line of a number a field
+  refused or of a character it threw away, and the reason of a list of
+  individuals that an Apply or a Clear makes appear. Announced by the shell from
   the state of the store, and not by this step, which may not be on the
   screen when they happen: the end of a read; the start, the end and the
   stop of each check, of the Count and of the writing; and the warning
@@ -1038,7 +1051,9 @@ release `js-v0.1.0-dev.2` gave in node on 26 September 2026:
   moved, the statistics removed with the notice, and the counts of the
   thresholds "Known once …"; an undo, and the statistics back;
 - a list to keep with `ind_900` applied, and the reason of a name not in
-  the file under the lists and beside each disabled button; the list
+  the file under the lists, describing the text area and announced, and
+  beside each disabled button, with no text under a list that names the
+  Variants step; the list
   cleared, and the reason gone; a list typed and not applied, with its
   line, and an Undo putting the text back to the list applied;
 - with the thresholds at 0.03 and 0.38, Write, Save, and the download
