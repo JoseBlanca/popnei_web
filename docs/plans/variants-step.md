@@ -690,7 +690,7 @@ The owner tries the writing at stop A, task 6.4.
 
 **Tasks:**
 
-- [ ] 5.1 `src/ui/shell/words.ts` of stage 3 whole, from `shell.md`,
+- [x] 5.1 `src/ui/shell/words.ts` of stage 3 whole, from `shell.md`,
   "What it sends and reads", "The stepper", "The summary line", "The
   notice" and "The status region", its functions tested on the states
   of `TEST_DEFS` as that spec has them. Serves 2. Needs work package 3.

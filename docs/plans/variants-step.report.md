@@ -389,3 +389,25 @@ Not taken, and why:
 - Tokens: the seven tasks used 94,000 to 356,000 each (3.3, the store,
   the most); the six reviewers that read, 34,000 to 251,000; the tests
   reviewer 172,000; the two fixers 181,000 and 152,000.
+
+## 5. The page joined, and the writing
+
+Under way. The tasks: 5.1 as 2970371 (`shell.md`) and c3c6214.
+
+### What was changed in the specs, without the owner
+
+Task 5.1 settled four points `shell.md` left open, in 2970371: within
+one change, the ends of calculations are announced before the starts,
+as the spec's own example has it; a check of the step in error says "The
+Variants step says why."; after an undo, the sentence of a file
+discarded names Redo; the stepper's Failed names the checks in the order
+of `apps.ts`, then the writing. Each is words on the screen, judged at
+stop A.
+
+### For the owner, at stop A
+
+- A write left behind that is stopped when Run is pressed is announced
+  by nothing, since `shell.md` gives it no words. Recommended: "The
+  earlier writing of the file was stopped.", and with a calculation "The
+  earlier calculation of Diversity and the writing of the file were
+  stopped." Until the owner answers, nothing is announced.
