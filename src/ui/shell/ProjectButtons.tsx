@@ -38,6 +38,7 @@ import { writtenName } from "../../core/fileNames.ts";
 import type { Project } from "../../core/project.ts";
 import type { AppState } from "../../core/store.ts";
 import { classOf } from "../classOf.ts";
+import { historyMoved } from "../historyMoves.ts";
 import { useSaving } from "../saving.ts";
 import { useAppState, useStore } from "../store.tsx";
 import { Button } from "../widgets/Button.tsx";
@@ -233,6 +234,7 @@ export function OpenProject(): React.JSX.Element {
       the opening said in the status region; `asked` when the question
       before an opening is open, and closed by it. */
   const open = (name: string, project: Project, asked: boolean): void => {
+    historyMoved(store);
     store.open(project);
     saving.opened(project);
     const onVariants = stepOfHash(window.location.hash) === "variants";

@@ -2,7 +2,8 @@
  * The Variants step (docs/specs/steps/variants.md): the user picks the
  * variants file, a VCF or a `.nei` file, sets how a VCF is read, sees
  * what the file holds, sets the filters of the variants
- * (VariantFilters.tsx), and writes the filtered variants
+ * (VariantFilters.tsx), types the lists of individuals to keep and to
+ * remove (IndividualFilters.tsx), and writes the filtered variants
  * (WriteSection.tsx). The step reads
  * the project from the store and sends it commands; what it holds itself
  * is the options of the next VCF, until the pick writes them into the
@@ -42,6 +43,7 @@ import {
   shownOptions,
 } from "./commands.ts";
 import type { Beside } from "./commands.ts";
+import { IndividualFilters } from "./IndividualFilters.tsx";
 import { ReadingTime } from "./ReadingTime.tsx";
 import { VariantFilters } from "./VariantFilters.tsx";
 import styles from "./VariantsStep.module.css";
@@ -269,6 +271,8 @@ export function VariantsStep(): React.JSX.Element {
       </div>
 
       <VariantFilters />
+
+      <IndividualFilters />
 
       <WriteSection />
     </div>

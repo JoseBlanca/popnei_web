@@ -1,0 +1,32 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+.field {
+  display: grid;
+  gap: var(--space-1);
+  inline-size: 100%;
+  max-inline-size: 32rem;
+}
+
+.label {
+  font-weight: 600;
+}
+
+/* The user may make it taller, and not wider than its column. */
+.input {
+  min-inline-size: 0;
+  padding-block: var(--space-1);
+  padding-inline: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-background);
+  color: var(--color-text);
+  font: inherit;
+  resize: vertical;
+}
+
+/* A field of text shows the ring whenever it has the focus, since the
+   caret alone is hard to see. */
+.input[data-focused] {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
