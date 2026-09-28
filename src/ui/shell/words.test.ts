@@ -2488,6 +2488,28 @@ describe("IP3 D3 the stepper and the summary line with the switches of stage 4",
     });
   });
 
+  test("a list of individuals popnei would refuse is said before the LD filter with no distance", () => {
+    const p = project({
+      ...LD_NO_DISTANCE,
+      individualFilters: [{ kind: "keep", individuals: ["i1", "x9"] }],
+    });
+    const reason = individualListNeeds(p)?.reason ?? null;
+    expect(reason).not.toBeNull();
+    expect(stepStateOfState(checksState({ project: p }), "variants")).toEqual({
+      status: "problem",
+      reason,
+    });
+  });
+
+  test("the LD filter with no distance is said before thresholds that keep no individual", () => {
+    const p = project({ ...LD_NO_DISTANCE, individualFilters: THRESHOLDS });
+    const s = checksState({ project: p, individualsKept: keptFirst(0) });
+    expect(stepStateOfState(s, "variants")).toEqual({
+      status: "problem",
+      reason: variantFilterNeeds(p),
+    });
+  });
+
   test("the LD filter with no distance turned off locks nothing: Variants is Done", () => {
     const off = project({
       ...PANEL,

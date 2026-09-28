@@ -907,8 +907,9 @@ export function setVariantFilter(
 
 /** Turns the filter of the variants of that kind off: it leaves
     `filters` and is kept, with its values, in `filtersOff`, in the fixed
-    order, in place of one of its kind kept before. `p` itself when no
-    filter of that kind is on, whatever `filtersOff` holds. */
+    order. `p` itself when no filter of that kind is on, whatever
+    `filtersOff` holds; a defect when one of that kind is on and kept off
+    at once, which no command makes. */
 export function turnOffVariantFilter(
   p: Project,
   kind: VariantFilterKind,
@@ -937,16 +938,21 @@ function withoutKind<F extends { readonly kind: string }>(
 }
 
 /** The list of the filters off with `filter` kept in it, in the order
-    `order`, in place of the one of its kind. */
+    `order`. The list holds none of its kind, since turning a filter on
+    takes its kind out of it and `parseProject` refuses a filter both on
+    and off: one there is a defect. */
 function keptOff<K extends string, F extends { readonly kind: K }>(
   filtersOff: readonly F[],
   order: readonly K[],
   filter: F,
 ): readonly F[] {
   const { index, at } = placeOf(filtersOff, order, filter.kind);
-  return index === -1
-    ? filtersOff.toSpliced(at, 0, filter)
-    : filtersOff.with(index, filter);
+  if (index !== -1) {
+    throw defect(
+      `the filter ${JSON.stringify(filter.kind)} was turned off while one of its kind was kept off.`,
+    );
+  }
+  return filtersOff.toSpliced(at, 0, filter);
 }
 
 function copyIndividualFilter(filter: IndividualFilter): IndividualFilter {
@@ -1008,9 +1014,10 @@ export function removeIndividualFilter(
 
 /** Turns the threshold of the individuals of that kind off: it leaves
     `individualFilters` and is kept, with its value, in
-    `individualFiltersOff`, in place of one of its kind kept before. `p`
-    itself when no threshold of that kind is on, whatever
-    `individualFiltersOff` holds. */
+    `individualFiltersOff`, in the fixed order. `p` itself when no
+    threshold of that kind is on, whatever `individualFiltersOff` holds;
+    a defect when one of that kind is on and kept off at once, which no
+    command makes. */
 export function turnOffIndividualFilter(
   p: Project,
   kind: IndividualThreshold["kind"],

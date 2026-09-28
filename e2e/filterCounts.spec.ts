@@ -601,3 +601,63 @@ test("VS6 D2 the keyboard reaches the Count after the last filter, and leaves th
   await page.keyboard.press("Tab");
   await expect(total).not.toBeFocused();
 });
+
+const UNDO = process.platform === "darwin" ? "Meta+z" : "Control+z";
+
+/** A VCF with its header and no variant. */
+const EMPTY_VCF = {
+  name: "empty.vcf",
+  mimeType: "text/plain",
+  buffer: Buffer.from(
+    [
+      "##fileformat=VCFv4.2",
+      '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
+      ["#CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO"]
+        .concat(["FORMAT", "a", "b"])
+        .join("\t"),
+      "",
+    ].join("\n"),
+  ),
+};
+
+test("IP3 the words of the Count refused, with the focus, taken off the page by an Undo of the MAF filter: the focus on the Count", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openVariants(page);
+  await pick(page, "tetraploid.vcf.gz");
+  await flip(page, MAF_SWITCH);
+  await count(page);
+  await expect(page.locator(":focus")).toContainText(
+    "At line 5 of tetraploid.vcf.gz",
+  );
+  await page.keyboard.press(UNDO);
+  await expect(
+    page.getByRole("switch", { name: MAF_SWITCH }),
+  ).not.toBeChecked();
+  await expect(filters(page).getByText(/^At line 5 of/)).toHaveCount(0);
+  await expect(countButton(page)).toBeFocused();
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("IP3 the warning of a file of no variant, with the focus, taken off the page by an Undo of the MAF filter: the focus on the Count", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openVariants(page);
+  await pick(page, EMPTY_VCF);
+  await flip(page, MAF_SWITCH);
+  await count(page);
+  await expect(page.locator(":focus")).toContainText(
+    "empty.vcf has no variant with PASS",
+  );
+  await page.keyboard.press(UNDO);
+  await expect(
+    page.getByRole("switch", { name: MAF_SWITCH }),
+  ).not.toBeChecked();
+  await expect(
+    filters(page).getByText(/^empty\.vcf has no variant/),
+  ).toHaveCount(0);
+  await expect(countButton(page)).toBeFocused();
+  await expectNoViolations(makeAxeBuilder);
+});

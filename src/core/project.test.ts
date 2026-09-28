@@ -4263,7 +4263,28 @@ describe("IP3 D1 the filters turned off", () => {
     expect(back.individualFiltersOff).toStrictEqual([]);
   });
 
-  test("turned off again, a filter replaces the one of its kind kept before, in its place", () => {
+  test("a filter off by a project that already keeps one of its kind is a defect, for the variants and the individuals", () => {
+    const md = { kind: "missing_data", maxAllowedMissingRate: 0.1 } as const;
+    const both = freezeProject({
+      ...sampleProject(),
+      filters: [md],
+      filtersOff: [md],
+    });
+    expect(() => turnOffVariantFilter(both, "missing_data")).toThrow(
+      /^popnei_web defect: /u,
+    );
+    const threshold = { kind: "obs_het", maxAllowedObsHet: 0.38 } as const;
+    const bothIndividuals = freezeProject({
+      ...sampleProject(),
+      individualFilters: [threshold],
+      individualFiltersOff: [threshold],
+    });
+    expect(() => turnOffIndividualFilter(bothIndividuals, "obs_het")).toThrow(
+      /^popnei_web defect: /u,
+    );
+  });
+
+  test("turned off after it was turned on again, a filter goes among those off at the place of its kind, before one of a later kind", () => {
     let p = sampleProject();
     p = freezeProject(turnOffVariantFilter(p, "missing_data"));
     p = freezeProject(turnOffVariantFilter(p, "maf"));
