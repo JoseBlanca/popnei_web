@@ -337,7 +337,7 @@ function panelStats(): IndividualStats & { readonly numFilters: number } {
   };
 }
 
-describe("VS2 D2 popnei's numbers of panel.nei", () => {
+describe("IP2 D2 popnei's numbers of panel.nei", () => {
   test("popnei's statistics with no filter give 116 individuals at a missing rate of 0.03, and 42 or 111 of them at a heterozygosity of 0.35 or 0.38", () => {
     const stats = panelStats();
     expect(stats.numFilters).toBe(0);

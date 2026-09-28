@@ -95,15 +95,15 @@ const EXAMPLE = result({
   numVars: 4,
 });
 
-/** A client that records the jobs it is given and answers none. */
+/** A client that records the jobs it is given and answers none, and whose
+    individuals kept throw when read: the statistics read no filter, so
+    their request never carries a list. */
 function recordingClient(): {
   readonly client: WorkerClient<Job, JobResult>;
   readonly jobs: Job[];
 } {
   const jobs: Job[] = [];
-  // Not annotated, so that the field `individuals`, which the client of
-  // stage 3 gains, is taken whether the interface has it yet or not.
-  const client = {
+  const client: WorkerClient<Job, JobResult> = {
     run(job: Job): Run<JobResult> {
       jobs.push(job);
       return {
@@ -113,7 +113,9 @@ function recordingClient(): {
       };
     },
     intermediateKey: () => "",
-    individuals: null,
+    get individuals(): never {
+      throw new Error("the statistics read the individuals kept");
+    },
   };
   return { client, jobs };
 }
@@ -199,6 +201,54 @@ function binsAround(
 const PANEL_EMPTY_PASS =
   "the pass gave no variant: its source gave 1200 and the steps kept none of them, the `missing_data` filter was given 1200 and kept 1152, the `maf` filter was given 1152 and kept 0; a statistic of a pass is calculated over the variants it gives";
 
+describe("IP2 D2 the statistics of each individual over every variant of the file", () => {
+  test("run sends the job with no filter, whatever the filters of the variants and of individuals, and does not read the individuals kept", () => {
+    const filters: readonly VariantFilter[] = [
+      { kind: "missing_data", maxAllowedMissingRate: 0.05 },
+      { kind: "obs_het", maxAllowedObsHet: 0.9 },
+      { kind: "maf", maxAllowedMaf: 0.95 },
+    ];
+    const withThresholds = deepFreeze<Project>({
+      ...project({ filters }),
+      individualFilters: [
+        { kind: "missing_data", maxAllowedMissingRate: 0.03 },
+        { kind: "obs_het", maxAllowedObsHet: 0.38 },
+      ],
+    });
+    const { client, jobs } = recordingClient();
+    individualChecks.run(withThresholds, client);
+    const expected: IndividualChecksJob = {
+      analysis: "individualChecks",
+      fileId: VARIANTS_ID,
+      filters: [],
+    };
+    expect(jobs).toEqual([expected]);
+  });
+
+  test("warnings name the variants of the file, and not those the filters kept", () => {
+    const r = result({
+      individuals: ["s000", "s001", "s002", "s003"],
+      missingGtRate: [0.02, 1, 1, 1],
+      obsHetRate: [0.3, NaN, NaN, NaN],
+      numVars: 1200,
+    });
+    const text = individualChecks.warnings(
+      r,
+      project({
+        filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.05 }],
+      }),
+    )[0]?.text;
+    expect(text).toMatch(/among the 1,200 variants of the file,/);
+    expect(text).not.toMatch(/filters kept/);
+  });
+
+  test("an empty pass has the words of any other refusal, and does not send the user to the filters", () => {
+    expect(refusalText(PANEL_EMPTY_PASS, project())).not.toMatch(
+      /Loosen the filters/,
+    );
+  });
+});
+
 describe("VS3 D1 the statistics of each individual: the worked example", () => {
   test("individualRows gives i3 with no observed heterozygosity", () => {
     expect(individualRows(EXAMPLE)).toEqual([
@@ -213,7 +263,7 @@ describe("VS3 D1 the statistics of each individual: the worked example", () => {
     expect(individualChecks.warnings(EXAMPLE, project())).toEqual([
       {
         code: "individualsWithoutCalls",
-        text: "i3 has no called genotype among the 4 variants the filters kept, so it has no observed heterozygosity. The filter of the individuals by observed heterozygosity removes it when it is on.",
+        text: "i3 has no called genotype among the 4 variants of panel.nei, so it has no observed heterozygosity. The filter of the individuals by observed heterozygosity removes it when it is on.",
       },
     ]);
   });
@@ -229,22 +279,6 @@ describe("VS3 D1 the statistics of each individual: the worked example", () => {
     expect(individualChecks.checkNumbers(panelResult())).toEqual([
       1200, 0.0297, 0.3542891741075382,
     ]);
-  });
-
-  test("run sends the job with no filter, whatever the project's", () => {
-    const filters: readonly VariantFilter[] = [
-      { kind: "missing_data", maxAllowedMissingRate: 0.05 },
-      { kind: "obs_het", maxAllowedObsHet: 0.9 },
-      { kind: "maf", maxAllowedMaf: 0.95 },
-    ];
-    const { client, jobs } = recordingClient();
-    individualChecks.run(project({ filters }), client);
-    const expected: IndividualChecksJob = {
-      analysis: "individualChecks",
-      fileId: VARIANTS_ID,
-      filters: [],
-    };
-    expect(jobs).toEqual([expected]);
   });
 
   test("individualChecksCsv gives the header and three rows, i3's heterozygosity empty", () => {
@@ -263,17 +297,17 @@ describe("VS3 D1 the statistics of each individual: the rest of the module", () 
       individuals: ["s000", "s001", "s002", "s003"],
       missingGtRate: [0.02, 1, 1, 1],
       obsHetRate: [0.3, NaN, NaN, NaN],
-      numVars: 1152,
+      numVars: 1200,
     });
     expect(individualChecks.warnings(r, project())).toEqual([
       {
         code: "individualsWithoutCalls",
-        text: "3 individuals of panel.nei have no called genotype among the 1,152 variants the filters kept, so they have no observed heterozygosity: s001, s002 and s003. The filter of the individuals by observed heterozygosity removes them when it is on.",
+        text: "3 individuals of panel.nei have no called genotype among the 1,200 variants of the file, so they have no observed heterozygosity: s001, s002 and s003. The filter of the individuals by observed heterozygosity removes them when it is on.",
       },
     ]);
   });
 
-  test("warnings over one variant kept says the one variant", () => {
+  test("warnings over a file of one variant says the one variant of the file", () => {
     const r = result({
       individuals: ["i1", "i2"],
       missingGtRate: [0, 1],
@@ -281,7 +315,7 @@ describe("VS3 D1 the statistics of each individual: the rest of the module", () 
       numVars: 1,
     });
     expect(individualChecks.warnings(r, project()).map((w) => w.text)).toEqual([
-      "i2 has no called genotype among the one variant the filters kept, so it has no observed heterozygosity. The filter of the individuals by observed heterozygosity removes it when it is on.",
+      "i2 has no called genotype among the one variant of panel.nei, so it has no observed heterozygosity. The filter of the individuals by observed heterozygosity removes it when it is on.",
     ]);
   });
 
@@ -332,7 +366,7 @@ describe("VS3 D1 the statistics of each individual: the rest of the module", () 
 
   test("script gives the lines of the spec", () => {
     expect(individualChecks.script(project())).toBe(
-      "# The statistics of each individual, over the variants the filters kept\n" +
+      "# The statistics of each individual, over every variant of the file\n" +
         "print(pandas.DataFrame({\n" +
         '    "missing_genotypes": individual_stats.missing_gt_rate,\n' +
         '    "observed_heterozygosity": individual_stats.obs_het_rate,\n' +
@@ -376,15 +410,15 @@ describe("VS3 D1 the statistics of each individual: the rest of the module", () 
     expect(
       individualChecks.warnings(r, project({ name: "a\tb.nei" })).at(0)?.text,
     ).toBe(
-      "2 individuals of a\\tb.nei have no called genotype among the 1,152 variants the filters kept, so they have no observed heterozygosity: s001 and s002. The filter of the individuals by observed heterozygosity removes them when it is on.",
+      "2 individuals of a\\tb.nei have no called genotype among the 1,152 variants of the file, so they have no observed heterozygosity: s001 and s002. The filter of the individuals by observed heterozygosity removes them when it is on.",
     );
   });
 });
 
 describe("VS3 D1 the statistics of each individual: refusalText", () => {
-  test("the empty pass of the missing data filter at 0.05 and the MAF filter at 0.4 says the filters kept no variant", () => {
+  test("an empty pass, which a pass with no filter cannot give, has the words of any other refusal", () => {
     expect(refusalText(PANEL_EMPTY_PASS, project())).toBe(
-      "The filters kept none of the variants of panel.nei, so there is no variant to count each individual's genotypes over. Loosen the filters of the variants in the Variants step.",
+      "popnei could not calculate the statistics of each individual: the pass gave no variant: its source gave 1200 and the steps kept none of them, the `missing_data` filter was given 1200 and kept 1152, the `maf` filter was given 1152 and kept 0; a statistic of a pass is calculated over the variants it gives. Change the settings, or load the variants file again, to calculate them again.",
     );
   });
 

@@ -1,7 +1,7 @@
 /**
  * The statistics of each individual: its proportion of missing genotypes
- * and its observed heterozygosity over the variants the filters of the
- * variants keep, and every individual of the file. The module says what
+ * and its observed heterozygosity over every variant of the file, before
+ * any filter, and every individual of the file. The module says what
  * they are calculated from, the request, the warnings, the check numbers,
  * the lines of the Python script, the rows and the CSV of the table, the
  * words of a refusal and the descriptions of the two histograms
@@ -11,6 +11,9 @@
  * `calcPerIndividualStats` in the calculation worker. Core makes the list
  * of the individuals kept from them (src/core/individualsKept.ts), so every
  * analysis that reads the filters of individuals leans on this result.
+ * Their pass has no filter, since the filters of individuals act before
+ * those of the variants: one pass per load gives them, and no change of a
+ * filter takes them off.
  */
 
 import { counted, escaped, grouped, namesOf } from "../project.ts";
@@ -47,8 +50,8 @@ const ID = "individualChecks";
 export interface IndividualRow {
   /** The name of the individual, as the variants file has it. */
   readonly individual: string;
-  /** Its proportion of missing genotypes over the variants the filters
-      kept. */
+  /** Its proportion of missing genotypes over every variant of the
+      file. */
   readonly missingGenotypes: number;
   /** Its observed heterozygosity over its called genotypes, `null` when it
       called none. */
@@ -108,11 +111,12 @@ export function individualChecksCsv(r: IndividualChecksResult): string {
  * The words of a refusal of popnei, for the error state of the panel and
  * for the diversity's panel when the statistics it waited for fail, by
  * the start of popnei's message: the variants file holds no variant, or,
- * for a VCF read with only the passed variants, none that passed; the
- * filters of the variants kept none; a genotype of another ploidy than
- * the one the VCF was read with; a line of the VCF popnei cannot read, or
- * a gzipped file damaged or cut short; any other. Throws a defect on a
- * project with no variants file.
+ * for a VCF read with only the passed variants, none that passed; a
+ * genotype of another ploidy than the one the VCF was read with; a line
+ * of the VCF popnei cannot read, or a gzipped file damaged or cut short;
+ * any other. The pass has no filter, so an empty pass has the words of
+ * any other refusal, and not those that send the user to the filters.
+ * Throws a defect on a project with no variants file.
  */
 export function refusalText(message: string, p: Project): string {
   return refusalWords(message, p, {
@@ -121,8 +125,7 @@ export function refusalText(message: string, p: Project): string {
     nothingLeft:
       "there is no variant to calculate the statistics of each individual over",
     again: "to calculate them again",
-    emptyPass: (fileName) =>
-      `The filters kept none of the variants of ${fileName}, so there is no variant to count each individual's genotypes over. Loosen the filters of the variants in the Variants step.`,
+    emptyPass: null,
   });
 }
 
@@ -170,10 +173,10 @@ const HISTOGRAM_SUBJECTS: Readonly<Record<IndividualStatistic, string>> =
  * The description of the histogram of `statistic`, from the rows of its
  * bins that `histogramRows` gives and the threshold of its filter of
  * individuals, `null` when that filter is off: "The proportion of missing
- * genotypes of 200 individuals, in 20 bins from 0.0165 to 0.0434. The
- * threshold 0.03 keeps the 10 bins up to it, 125 individuals, splits the
- * bin from 0.0299 to 0.0313, 23 individuals, and removes the 9 bins above
- * it, 52 individuals." The individuals counted are those in the bins, so
+ * genotypes of 200 individuals, in 20 bins from 0.0175 to 0.0442. The
+ * threshold 0.03 keeps the 9 bins up to it, 104 individuals, splits the
+ * bin from 0.0295 to 0.0308, 12 individuals, and removes the 10 bins above
+ * it, 84 individuals." The individuals counted are those in the bins, so
  * an individual with no heterozygosity is not among them. Throws a defect
  * as `histogramDescription` of words.ts does.
  */
@@ -233,8 +236,9 @@ function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
 }
 
 /** The warnings of a result, given the project its request was made from:
-    the individuals with no called genotype, which have no observed
-    heterozygosity. Throws a defect on a project with no variants file. */
+    the individuals with no called genotype among the variants of the
+    file, which have no observed heterozygosity. Throws a defect on a
+    project with no variants file. */
 function warnings(result: JobResult, p: Project): readonly Warning[] {
   const r = individualChecksResultOf(result);
   if (p.variants === null) {
@@ -249,20 +253,23 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
     return [];
   }
   const numVars = r.passStats.numVars;
-  const variantsKept =
+  const fileName = escaped(p.variants.name);
+  // The file is named once: after the individuals when there are several,
+  // after the variants when there is one.
+  const variantsOf = (file: string): string =>
     numVars === 1
-      ? "the one variant the filters kept"
-      : `the ${grouped(numVars)} variants the filters kept`;
+      ? `the one variant of ${file}`
+      : `the ${grouped(numVars)} variants of ${file}`;
   const names = namesOf(withoutCalls);
   const text =
     withoutCalls.length === 1
-      ? `${names} has no called genotype among ${variantsKept}, so it has no observed heterozygosity. The filter of the individuals by observed heterozygosity removes it when it is on.`
-      : `${counted(withoutCalls.length, "individual")} of ${escaped(p.variants.name)} have no called genotype among ${variantsKept}, so they have no observed heterozygosity: ${names}. The filter of the individuals by observed heterozygosity removes them when it is on.`;
+      ? `${names} has no called genotype among ${variantsOf(fileName)}, so it has no observed heterozygosity. The filter of the individuals by observed heterozygosity removes it when it is on.`
+      : `${counted(withoutCalls.length, "individual")} of ${fileName} have no called genotype among ${variantsOf("the file")}, so they have no observed heterozygosity: ${names}. The filter of the individuals by observed heterozygosity removes them when it is on.`;
   return [{ code: "individualsWithoutCalls", text }];
 }
 
 /**
- * The check numbers: the variants the filters kept, the mean proportion
+ * The check numbers: the variants of the file, the mean proportion
  * of missing genotypes over every individual, and the mean observed
  * heterozygosity over the individuals that have one, `null` when none
  * has. Each mean is the sum in the order of the file over the count, the
@@ -303,7 +310,7 @@ function numCheckNumbers(): number {
     filter of individuals. */
 function script(): string {
   return [
-    "# The statistics of each individual, over the variants the filters kept",
+    "# The statistics of each individual, over every variant of the file",
     "print(pandas.DataFrame({",
     '    "missing_genotypes": individual_stats.missing_gt_rate,',
     '    "observed_heterozygosity": individual_stats.obs_het_rate,',

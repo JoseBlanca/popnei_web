@@ -492,7 +492,7 @@ test("VS6 D2 a filter that kept none: its count, the line of the total, and the 
     }),
   ).toBeVisible();
   const warning =
-    "The MAF filter kept none of the 1,152 variants it was given, so the analyses and the statistics of each individual have no variant to calculate over, and a file written would hold none. Loosen it, or a filter before it.";
+    "The MAF filter kept none of the 1,152 variants it was given, so the analyses have no variant to calculate over, and a file written would hold none. Loosen it, or a filter before it.";
   await expect(filters(page).getByText(warning)).toBeVisible();
   await expect(
     filters(page).getByRole("heading", { name: "1 warning" }),

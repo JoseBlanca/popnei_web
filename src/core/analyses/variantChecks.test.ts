@@ -27,6 +27,7 @@ import type {
   Run,
   VariantChecksJob,
   VariantChecksResult,
+  IndividualFilter,
   VariantFilter,
 } from "../../worker/protocol.ts";
 
@@ -41,6 +42,7 @@ function project(
     readonly filters?: readonly VariantFilter[];
     readonly onlyPassed?: boolean;
     readonly ploidy?: number;
+    readonly individualFilters?: readonly IndividualFilter[];
   } = {},
 ): Project {
   const isVcf = options.onlyPassed !== undefined;
@@ -63,8 +65,16 @@ function project(
       },
     },
     filters: options.filters ?? [],
+    individualFilters: options.individualFilters ?? [],
   });
 }
+
+/** The thresholds of the flow of the Variants step on the individuals,
+    0.03 of missing genotypes and 0.38 of observed heterozygosity. */
+const THRESHOLDS: readonly IndividualFilter[] = [
+  { kind: "missing_data", maxAllowedMissingRate: 0.03 },
+  { kind: "obs_het", maxAllowedObsHet: 0.38 },
+];
 
 /** The 41 edges of popnei's 40 bins over 0 to 1, i × (1 / 40). */
 const EDGES = Float64Array.from({ length: 41 }, (_, i) => i * (1 / 40));
@@ -158,15 +168,14 @@ function binsOf(
   }));
 }
 
-/** A client that records the jobs it is given and answers none. */
-function recordingClient(): {
+/** A client that records the jobs it is given and answers none, and gives
+    `individuals` as the individuals kept. */
+function recordingClient(individuals: readonly string[] | null = null): {
   readonly client: WorkerClient<Job, JobResult>;
   readonly jobs: Job[];
 } {
   const jobs: Job[] = [];
-  // Not annotated, so that the field `individuals`, which the client of
-  // stage 3 gains, is taken whether the interface has it yet or not.
-  const client = {
+  const client: WorkerClient<Job, JobResult> = {
     run(job: Job): Run<JobResult> {
       jobs.push(job);
       return {
@@ -176,17 +185,18 @@ function recordingClient(): {
       };
     },
     intermediateKey: () => "",
-    individuals: null,
+    individuals,
   };
   return { client, jobs };
 }
 
-describe("VS3 D1 the histograms of the variants", () => {
-  test("run sends the job of the spec, with no filter whatever the project's", () => {
-    const { client, jobs } = recordingClient();
+describe("IP2 D2 the histograms of the variants over the individuals kept", () => {
+  test("run sends the job of the spec with the individuals kept that the client gives, and no filter of the variants whatever the project's", () => {
+    const { client, jobs } = recordingClient(["s000"]);
     variantChecks.run(
       project({
         filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.05 }],
+        individualFilters: THRESHOLDS,
       }),
       client,
     );
@@ -194,7 +204,7 @@ describe("VS3 D1 the histograms of the variants", () => {
       analysis: "variantChecks",
       fileId: VARIANTS_ID,
       filters: [],
-      individuals: null,
+      individuals: ["s000"],
       minNumIndividuals: 0,
       numBins: 40,
       range: [0, 1],
@@ -202,6 +212,52 @@ describe("VS3 D1 the histograms of the variants", () => {
     expect(jobs).toEqual([expected]);
   });
 
+  test("run sends individuals null when the client gives null, the filters removing nobody", () => {
+    const { client, jobs } = recordingClient(null);
+    variantChecks.run(project({ individualFilters: THRESHOLDS }), client);
+    expect(jobs).toEqual([
+      expect.objectContaining({ analysis: "variantChecks", individuals: null }),
+    ]);
+  });
+
+  test("warnings with a filter of individuals say the variants have no called genotype among the individuals kept", () => {
+    const r: VariantChecksResult = {
+      ...PANEL,
+      maf: {
+        mean: 0.7,
+        counts: Uint32Array.from(PANEL_MAF, (count, i) =>
+          i === 38 ? count - 12 : count,
+        ),
+      },
+    };
+    expect(
+      variantChecks.warnings(r, project({ individualFilters: THRESHOLDS })),
+    ).toEqual([
+      {
+        code: "variantsWithoutCalls",
+        text: "12 of the 1,200 variants of panel.nei have no called genotype among the individuals kept, and are in none of the histograms. The filter by observed heterozygosity, the MAF filter and the LD pruning remove them at any threshold, and the missing data filter at any threshold below 1.",
+      },
+    ]);
+  });
+
+  test("script with a filter of individuals gives the individuals kept to the file opened again", () => {
+    expect(
+      variantChecks.script(project({ individualFilters: THRESHOLDS })),
+    ).toBe(
+      "# The histograms of the variants, over every variant of the file and the individuals kept\n" +
+        'variants_as_read = popnei.open_vars("panel.nei")\n' +
+        "variants_as_read.filter_individuals(individuals_kept)\n" +
+        "variant_distribs = popnei.calc_per_var_distribs(\n" +
+        "    variants_as_read,\n" +
+        "    stats=[popnei.PerVarStat.MAF, popnei.PerVarStat.OBS_HET, popnei.PerVarStat.UNBIASED_EXP_HET],\n" +
+        "    min_num_individuals=0,\n" +
+        '    hist_kwargs={"range": (0, 1), "num_bins": 40},\n' +
+        ")\n",
+    );
+  });
+});
+
+describe("VS3 D1 the histograms of the variants", () => {
   test("warnings of MAF counts that sum to 5 of 6 variants gives variantsWithoutCalls", () => {
     const counts = Uint32Array.from([0, 0, 2, 3]);
     const r: VariantChecksResult = {
@@ -326,9 +382,9 @@ describe("VS3 D1 the histograms of the variants: the rest of the module", () => 
     });
   });
 
-  test("script of a .nei file opens it with open_vars", () => {
+  test("script of a .nei file opens it with open_vars, and with no filter of individuals gives it no list", () => {
     expect(variantChecks.script(project())).toBe(
-      "# The histograms of the variants, over every variant and individual of the file\n" +
+      "# The histograms of the variants, over every variant of the file and the individuals kept\n" +
         'variants_as_read = popnei.open_vars("panel.nei")\n' +
         "variant_distribs = popnei.calc_per_var_distribs(\n" +
         "    variants_as_read,\n" +

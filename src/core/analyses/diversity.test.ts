@@ -1695,7 +1695,7 @@ describe("VS3 D3 the diversity of stage 3", () => {
     });
   });
 
-  test("the words of the statistics that failed, refused for the empty pass of the missing data filter at 0.05 and the MAF filter at 0.4, are the statistics' and not the diversity's", () => {
+  test("the words of the statistics that failed, refused for the empty pass of the missing data filter at 0.05 and the MAF filter at 0.4, are the statistics' words of any other refusal and not the diversity's", () => {
     const message =
       "the pass gave no variant: its source gave 1200 and the steps kept none of them, the `missing_data` filter was given 1200 and kept 1152, the `maf` filter was given 1152 and kept 0; a statistic of a pass is calculated over the variants it gives";
     expect(
@@ -1703,7 +1703,7 @@ describe("VS3 D3 the diversity of stage 3", () => {
         throw new Error("a refusal was given the words of a failure");
       }),
     ).toBe(
-      "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the diversity was not run. The filters kept none of the variants of panel.nei, so there is no variant to count each individual's genotypes over. Loosen the filters of the variants in the Variants step.",
+      "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the diversity was not run. popnei could not calculate the statistics of each individual: the pass gave no variant: its source gave 1200 and the steps kept none of them, the `missing_data` filter was given 1200 and kept 1152, the `maf` filter was given 1152 and kept 0; a statistic of a pass is calculated over the variants it gives. Change the settings, or load the variants file again, to calculate them again.",
     );
   });
 

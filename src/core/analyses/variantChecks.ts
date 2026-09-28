@@ -1,8 +1,10 @@
 /**
  * The histograms of the variants: the major allele frequency, the
  * observed heterozygosity and the unbiased expected heterozygosity of
- * every variant of the file, before any filter and over every individual,
- * each in 40 bins over 0 to 1 with its mean. The module says what they are
+ * every variant of the file, before any filter of the variants and over
+ * the individuals the filters of individuals keep, each in 40 bins over 0
+ * to 1 with its mean, so that each shows the number its filter keeps a
+ * variant by, counted as the filter counts it. The module says what they are
  * calculated from, the request, the warning, the check numbers, the lines
  * of the Python script, the words of a refusal and the descriptions of
  * the three histograms (docs/specs/analyses/variantChecks.md, "The
@@ -158,9 +160,10 @@ function needs(): null {
   return null;
 }
 
-/** Builds the request, with no filter and no list of individuals, and
-    sends it through `c`. Throws a defect when the project has no variants
-    file, which `projectNeeds` rules out. */
+/** Builds the request, with no filter of the variants and the list of the
+    individuals kept that `c` gives, `null` when the filters remove nobody,
+    and sends it through `c`. Throws a defect when the project has no
+    variants file, which `projectNeeds` rules out. */
 function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
   if (p.variants === null) {
     throw defect("the histograms of the variants were run with no file.");
@@ -169,16 +172,21 @@ function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
     analysis: ID,
     fileId: p.variants.fileId,
     filters: [],
-    individuals: null,
+    individuals: c.individuals,
     minNumIndividuals: VARIANT_MIN_NUM_INDIVIDUALS,
     numBins: VARIANT_BINS,
     range: VARIANT_RANGE,
   });
 }
 
-/** The warnings of a result, given the project its request was made from:
-    the variants with no called genotype, which the counts of the MAF do
-    not hold. Throws a defect on a project with no variants file. */
+/**
+ * The warnings of a result, given the project its request was made from:
+ * the variants with no called genotype, which the counts of the MAF do not
+ * hold, "among the individuals kept" when the project has a filter of
+ * individuals. The result does not say whether its list removed anybody,
+ * so a filter that removes nobody gives those words too, which are then
+ * still true. Throws a defect on a project with no variants file.
+ */
 function warnings(result: JobResult, p: Project): readonly Warning[] {
   const r = variantChecksResultOf(result);
   if (p.variants === null) {
@@ -195,6 +203,8 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
   }
   const one = withoutCalls === 1;
   const fileName = escaped(p.variants.name);
+  const among =
+    p.individualFilters.length === 0 ? "" : " among the individuals kept";
   const which =
     numVars === 1
       ? `The one variant of ${fileName}`
@@ -202,7 +212,7 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
   return [
     {
       code: "variantsWithoutCalls",
-      text: `${which} ${one ? "has" : "have"} no called genotype, and ${one ? "is" : "are"} in none of the histograms. The filter by observed heterozygosity, the MAF filter and the LD pruning remove ${one ? "it" : "them"} at any threshold, and the missing data filter at any threshold below 1.`,
+      text: `${which} ${one ? "has" : "have"} no called genotype${among}, and ${one ? "is" : "are"} in none of the histograms. The filter by observed heterozygosity, the MAF filter and the LD pruning remove ${one ? "it" : "them"} at any threshold, and the missing data filter at any threshold below 1.`,
     },
   ];
 }
@@ -229,8 +239,11 @@ function numCheckNumbers(): number {
  * The lines of the Python script that calculate the same histograms,
  * opening the file again with no filter, since a `Variants` takes no
  * filter off: `popnei.open_vars` for a `.nei` file, `popnei.open_vcf` with
- * the read options for a VCF. Throws a defect on a project with no
- * variants file, since it is asked only of an analysis that has run.
+ * the read options for a VCF; then the list of the individuals kept,
+ * `individuals_kept`, which src/core/script.ts makes before any filter,
+ * when the project has a filter of individuals. Throws a defect on a
+ * project with no variants file, since it is asked only of an analysis
+ * that has run.
  */
 function script(p: Project): string {
   const variants = p.variants;
@@ -245,8 +258,11 @@ function script(p: Project): string {
       : `popnei.open_vcf(${name}, ploidy=${String(options.ploidy)}, only_passed=${options.onlyPassed ? "True" : "False"})`;
   const [low, high] = VARIANT_RANGE;
   return [
-    "# The histograms of the variants, over every variant and individual of the file",
+    "# The histograms of the variants, over every variant of the file and the individuals kept",
     `variants_as_read = ${open}`,
+    ...(p.individualFilters.length === 0
+      ? []
+      : ["variants_as_read.filter_individuals(individuals_kept)"]),
     "variant_distribs = popnei.calc_per_var_distribs(",
     "    variants_as_read,",
     "    stats=[popnei.PerVarStat.MAF, popnei.PerVarStat.OBS_HET, popnei.PerVarStat.UNBIASED_EXP_HET],",

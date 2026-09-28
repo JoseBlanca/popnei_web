@@ -98,15 +98,14 @@ const THREE_PASS = result({
   },
 });
 
-/** A client that records the jobs it is given and answers none. */
-function recordingClient(): {
+/** A client that records the jobs it is given and answers none, and gives
+    `individuals` as the individuals kept. */
+function recordingClient(individuals: readonly string[] | null = null): {
   readonly client: WorkerClient<Job, JobResult>;
   readonly jobs: Job[];
 } {
   const jobs: Job[] = [];
-  // Not annotated, so that the field `individuals`, which the client of
-  // stage 3 gains, is taken whether the interface has it yet or not.
-  const client = {
+  const client: WorkerClient<Job, JobResult> = {
     run(job: Job): Run<JobResult> {
       jobs.push(job);
       return {
@@ -116,10 +115,45 @@ function recordingClient(): {
       };
     },
     intermediateKey: () => "",
-    individuals: null,
+    individuals,
   };
   return { client, jobs };
 }
+
+describe("IP2 D2 the counts of the filters over the individuals kept", () => {
+  test("run sends the filters of the project in their order and the individuals kept that the client gives", () => {
+    const { client, jobs } = recordingClient(["s000"]);
+    filterCounts.run(project(THREE_FILTERS), client);
+    const expected: FilterCountsJob = {
+      analysis: "filterCounts",
+      fileId: VARIANTS_ID,
+      filters: THREE_FILTERS,
+      individuals: ["s000"],
+    };
+    expect(jobs).toEqual([expected]);
+  });
+
+  test("run sends individuals null when the client gives null, the filters removing nobody", () => {
+    const { client, jobs } = recordingClient(null);
+    filterCounts.run(project(THREE_FILTERS), client);
+    const expected: FilterCountsJob = {
+      analysis: "filterCounts",
+      fileId: VARIANTS_ID,
+      filters: THREE_FILTERS,
+      individuals: null,
+    };
+    expect(jobs).toEqual([expected]);
+  });
+
+  test("filterKeptNone no longer names the statistics of each individual, whose pass has no filter", () => {
+    const text = filterCounts.warnings(EMPTY_PASS, project(EMPTY_FILTERS))[0]
+      ?.text;
+    expect(text).toBe(
+      "The MAF filter kept none of the 1,152 variants it was given, so the analyses have no variant to calculate over, and a file written would hold none. Loosen it, or a filter before it.",
+    );
+    expect(text).not.toMatch(/statistics of each individual/);
+  });
+});
 
 describe("VS3 D1 the counts of the filters", () => {
   test("filterCountRows of the empty pass gives each filter's counts in the order of the project", () => {
@@ -133,7 +167,7 @@ describe("VS3 D1 the counts of the filters", () => {
     expect(filterCounts.warnings(EMPTY_PASS, project(EMPTY_FILTERS))).toEqual([
       {
         code: "filterKeptNone",
-        text: "The MAF filter kept none of the 1,152 variants it was given, so the analyses and the statistics of each individual have no variant to calculate over, and a file written would hold none. Loosen it, or a filter before it.",
+        text: "The MAF filter kept none of the 1,152 variants it was given, so the analyses have no variant to calculate over, and a file written would hold none. Loosen it, or a filter before it.",
       },
     ]);
   });
@@ -147,18 +181,6 @@ describe("VS3 D1 the counts of the filters", () => {
 });
 
 describe("VS3 D1 the counts of the filters: the rest of the module", () => {
-  test("run sends the job with the filters of the project in their order", () => {
-    const { client, jobs } = recordingClient();
-    filterCounts.run(project(THREE_FILTERS), client);
-    const expected: FilterCountsJob = {
-      analysis: "filterCounts",
-      fileId: VARIANTS_ID,
-      filters: THREE_FILTERS,
-      individuals: null,
-    };
-    expect(jobs).toEqual([expected]);
-  });
-
   test("filterCountRows of the three filters, and a defect for a filter with no count", () => {
     expect(filterCountRows(THREE_PASS, project(THREE_FILTERS))).toEqual([
       { kind: "missing_data", given: 1200, kept: 1152 },
@@ -191,7 +213,7 @@ describe("VS3 D1 the counts of the filters: the rest of the module", () => {
     expect(filterCounts.warnings(r, project(filters))).toEqual([
       {
         code: "filterKeptNone",
-        text: "The filter of the variants by missing data kept none of the 1,200 variants it was given, so the analyses and the statistics of each individual have no variant to calculate over, and a file written would hold none. Loosen it.",
+        text: "The filter of the variants by missing data kept none of the 1,200 variants it was given, so the analyses have no variant to calculate over, and a file written would hold none. Loosen it.",
       },
     ]);
   });
@@ -207,7 +229,7 @@ describe("VS3 D1 the counts of the filters: the rest of the module", () => {
     expect(
       filterCounts.warnings(r, project(EMPTY_FILTERS)).map((w) => w.text),
     ).toEqual([
-      "The filter of the variants by missing data kept none of the 1,200 variants it was given, so the analyses and the statistics of each individual have no variant to calculate over, and a file written would hold none. Loosen it.",
+      "The filter of the variants by missing data kept none of the 1,200 variants it was given, so the analyses have no variant to calculate over, and a file written would hold none. Loosen it.",
     ]);
   });
 
@@ -222,7 +244,7 @@ describe("VS3 D1 the counts of the filters: the rest of the module", () => {
     expect(
       filterCounts.warnings(r, project(EMPTY_FILTERS)).map((w) => w.text),
     ).toEqual([
-      "The MAF filter kept none of the one variant it was given, so the analyses and the statistics of each individual have no variant to calculate over, and a file written would hold none. Loosen it, or a filter before it.",
+      "The MAF filter kept none of the one variant it was given, so the analyses have no variant to calculate over, and a file written would hold none. Loosen it, or a filter before it.",
     ]);
   });
 

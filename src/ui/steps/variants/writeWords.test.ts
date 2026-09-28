@@ -279,14 +279,14 @@ describe("VS5 D3 the words of the writing of the filtered variants", () => {
         {
           kind: "refused",
           message:
-            "the pass gave no variant: the filters kept none of the 1200 variants",
+            "line 4 of the VCF, the column of a: `z` is not an allele number, which is a run of digits",
         },
         true,
         PROJECT,
         GIGABYTE,
       ),
     ).toBe(
-      "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the file was not written. The filters kept none of the variants of panel.nei, so there is no variant to count each individual's genotypes over. Loosen the filters of the variants.",
+      "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the file was not written. popnei could not read panel.nei: line 4 of the VCF, the column of a: `z` is not an allele number, which is a run of digits. Correct the file, or fetch it again, and load it.",
     );
     expect(
       writeErrorText(

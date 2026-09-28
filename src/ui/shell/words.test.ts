@@ -1904,7 +1904,7 @@ describe("VS5 D2 the words of the notice of stage 3", () => {
 
 const KEPT_NONE_WARNING: Warning = {
   code: "filterKeptNone",
-  text: "The MAF filter kept none of the 1,152 variants it was given, so the analyses and the statistics of each individual have no variant to calculate over, and a file written would hold none. Loosen it, or a filter before it.",
+  text: "The MAF filter kept none of the 1,152 variants it was given, so the analyses have no variant to calculate over, and a file written would hold none. Loosen it, or a filter before it.",
 };
 
 describe("VS5 D2 the announcements of stage 3", () => {

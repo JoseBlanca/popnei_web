@@ -7,10 +7,12 @@
  * reads and the words of its refusals (docs/specs/analyses/filterCounts.md,
  * "The module").
  *
- * The counts are popnei's `passStats`. The Count button asks for them
- * with a pass of their own, and the store fills them from the result of
- * every other analysis whose pass has the project's filters of the
- * variants (`countsOf` of src/core/apps.ts).
+ * The counts are popnei's `passStats`, over the individuals the filters
+ * of individuals keep, whose list the calculation worker puts before the
+ * filters of the variants. The Count button asks for them with a pass of
+ * their own, and the store fills them from the result of every other
+ * analysis whose pass has the project's list of the individuals kept and
+ * its filters of the variants (`countsOf` of src/core/apps.ts).
  */
 
 import { VARIANT_FILTER_ORDER, escaped, grouped } from "../project.ts";
@@ -141,8 +143,9 @@ function needs(): null {
 }
 
 /** Builds the request of the Count, the filters of the variants of the
-    project in their order and no list of individuals, and sends it through
-    `c`. Throws a defect when the project has no variants file, which
+    project in their order and the list of the individuals kept that `c`
+    gives, `null` when the filters remove nobody, and sends it through `c`.
+    Throws a defect when the project has no variants file, which
     `projectNeeds` rules out. */
 function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
   if (p.variants === null) {
@@ -152,7 +155,7 @@ function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
     analysis: ID,
     fileId: p.variants.fileId,
     filters: p.filters,
-    individuals: null,
+    individuals: c.individuals,
   });
 }
 
@@ -189,7 +192,7 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
   return [
     {
       code: "filterKeptNone",
-      text: `${FILTER_NAMES[row.kind]} kept none of ${given} it was given, so the analyses and the statistics of each individual have no variant to calculate over, and a file written would hold none. ${loosen}`,
+      text: `${FILTER_NAMES[row.kind]} kept none of ${given} it was given, so the analyses have no variant to calculate over, and a file written would hold none. ${loosen}`,
     },
   ];
 }
