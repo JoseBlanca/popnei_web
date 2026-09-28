@@ -508,10 +508,13 @@ drawer opens or a panel collapses.
 - **It stays while it is read and goes when asked**, as WCAG 2.2, 1.4.13,
   asks of content that appears on hover: it stays while the pointer is
   on its point or on the tooltip itself, which takes the pointer so that
-  a user of a screen magnifier can move onto it; its nearest corner is 7
-  pixels right of and 7 below the point, 9.9 pixels away, inside the 10
-  pixels of the point, so that the pointer reaches it without the point
-  being lost on the way, and outside the 8.05 pixels a mark reaches; the
+  a user of a screen magnifier can move onto it; its nearest corner is 6
+  pixels right of and 6 below the point, 8.5 pixels away, inside the 10
+  pixels of the point by more than the whole pixel at which a browser
+  finds the element under the pointer, so that the pointer reaches it
+  without the point being lost on the way, and outside the 8.05 pixels a
+  mark reaches; that corner is square, since rounded by 4 pixels its
+  edge would be 10.1 pixels from the point (`scatter.md`); the
   base gives `pointer.leave` the element the pointer went onto, so that
   a leave onto the tooltip is not a leave of the plot; it goes when a draw
   makes it stale; and the Escape key hides it. Escape is heard by a

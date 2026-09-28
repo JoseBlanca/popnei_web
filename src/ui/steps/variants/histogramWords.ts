@@ -18,7 +18,7 @@ import type {
   HistogramRow,
   HistogramThreshold,
 } from "../../../charts/histogram.ts";
-import { tableNumber } from "../../../charts/plot2d.ts";
+import { tableNumber } from "../../../charts/numbers.ts";
 import { capitalized, undoneOrRedone } from "../../sentences.ts";
 import { LOAD_DESCRIPTIONS } from "./commands.ts";
 

@@ -169,10 +169,6 @@ export function wholeNumberTicks(
   return scale.ticks(count).filter((tick) => Number.isInteger(tick));
 }
 
-// tableNumber is numbers.ts's; given here too until the screen of the
-// histogram imports it from there, since src/ui is not this change's.
-export { tableNumber } from "./numbers.ts";
-
 /**
  * What the SVG shows: nothing yet, since the element never had a size; the
  * plot drawn at a size; or, at a size not larger than the margins, an

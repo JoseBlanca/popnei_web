@@ -2119,6 +2119,8 @@ src/charts/
   legend.ts         the entries of the legend of those plots, and the
                     legend drawn into an exported SVG
   hover.ts          the point nearest the pointer, and its tooltip
+  numbers.ts        how the tables of the plots write a number, apart
+                    from D3, for the tooltip and the legend
   project.ts        where each point of the 3D view falls on the screen,
                     with nothing of three.js (docs/specs/charts/pca3d.md)
   pca3dError.ts     the ways the 3D view cannot be drawn, with no three.js
