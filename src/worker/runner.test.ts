@@ -1,10 +1,10 @@
 /**
  * The runner of the calculation worker in node, over the fixtures of
  * e2e/fixtures/ given as bytes (docs/specs/worker/runner.md, "How it is
- * verified"). The numbers are popnei's of the release js-v0.1.0-dev.2, as
- * the spec's table has them, compared exactly: the runner passes them on
- * with no arithmetic. js-v0.1.0-dev.3 gives the same numbers but the sizes
- * of the files written, which are its own.
+ * verified"). The numbers are popnei's of the release js-v0.1.0-dev.3,
+ * compared exactly: the runner passes them on with no arithmetic. They are
+ * those of js-v0.1.0-dev.2 in the spec's table, but the sizes of the files
+ * written, which are dev.3's own.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";

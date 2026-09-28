@@ -85,7 +85,7 @@ so that every commit passes its checks, and the tags came after.
   today: `runner.md` asks each options object to be written with its
   keys in the call, where the type check catches a wrong one. How to
   class it is a question for the owner, below.
-- Not taken: the table of `docs/technology.md`, section 5, that gives
+- Not taken: the table of `docs/technology.md`, section 2, that gives
   0.71 MB for dev.2's wasm, since it compares the releases as they were
   measured then.
 

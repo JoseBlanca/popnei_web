@@ -1567,7 +1567,8 @@ worker; the bar of the running state reaches its last call; the result
 reaches the page as typed arrays, which the page's check of
 `messages.md` refuses otherwise; and `tetraploid.vcf.gz` read with
 ploidy 2 opens and then shows popnei's message at the diversity. From
-stage 3: a file written at 0.05 is saved with 250,994 bytes, whose bytes
+stage 3: a file written at 0.05 is saved with 250,994 bytes with
+`js-v0.1.0-dev.2` and 251,074 with `js-v0.1.0-dev.3`, whose bytes
 are those `writeVars` gave in node, so the `Blob` made in the worker
 reached the page whole; and the same when the Stop of a calculation
 started after the write has ended the worker that made the `Blob`, so a
