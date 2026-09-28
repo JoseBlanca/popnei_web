@@ -509,6 +509,25 @@ describe("WP1 D3 the commands", () => {
       );
     });
 
+    test("setColumnType of binary with values not those of its column, or on a column not of two values, is a defect that says which", () => {
+      expect(() =>
+        setColumnType(sampleProject(), "pop", {
+          kind: "binary",
+          one: "P1",
+          zero: "P3",
+        }),
+      ).toThrow("should be binary with the values");
+      expect(() =>
+        setColumnType(sampleProject(), "height", {
+          kind: "binary",
+          one: "1.52",
+          zero: "1.61",
+        }),
+      ).toThrow(
+        "cannot be binary: its column does not have exactly two values",
+      );
+    });
+
     test("setColumnType of a column not in the table is a defect", () => {
       expect(() =>
         setColumnType(sampleProject(), "breed", { kind: "categorical" }),
@@ -2925,7 +2944,19 @@ describe("WP1 D5 the validation", () => {
       });
       expect(textOf(readWith({ columns }))).toBe(
         opened(
-          "the type of the third column of the individuals file should be binary, with the two values found in the column coded 1 and 0",
+          "the type of the third column of the individuals file should be binary with the values 2 and 1, in either coding",
+        ),
+      );
+    });
+
+    test("of a binary type on a column of three values", () => {
+      const table = {
+        ...SAMPLE_TABLE,
+        rows: SAMPLE_TABLE.rows.with(0, ["i1", "P1", "3", "1.52"]),
+      };
+      expect(textOf(readWith({ table }))).toBe(
+        opened(
+          "the type of the third column of the individuals file cannot be binary: its column does not have exactly two values",
         ),
       );
     });
@@ -5935,7 +5966,7 @@ describe("IP4 D3 a metadata file not given", () => {
     });
   });
 
-  test("a read of a kind not known is refused, with the words of the four kinds", () => {
+  test("a read of a kind not known is refused, with the words of the two kinds a project file holds", () => {
     const data = fileWith({
       individuals: {
         ...individualsOf(sampleProject()),
@@ -5945,9 +5976,35 @@ describe("IP4 D3 a metadata file not given", () => {
     expect(parse(data)).toStrictEqual(
       wrong(
         ["individuals", "read", "kind"],
-        "not yet read, read, not readable or not read when the project was saved",
+        "read or not read when the project was saved",
       ),
     );
+  });
+
+  test("a read of the variants file of a kind not known is refused, with the words of the two kinds a project file holds", () => {
+    expect(parse(variantsWith({ read: { kind: "given" } }))).toStrictEqual(
+      wrong(["variants", "read", "kind"], "not yet read or read"),
+    );
+  });
+
+  test("a grouping of a kind not known is refused with the kinds of its application alone", () => {
+    expect(parse(fileWith({ grouping: { kind: "lost" } }))).toStrictEqual(
+      wrong(
+        ["grouping", "kind"],
+        "the column of the populations or all individuals in one population",
+      ),
+    );
+    expect(
+      parseProject(
+        {
+          ...emptyProject("gwas"),
+          grouping: { kind: "lost" },
+        },
+        "gwas",
+        1,
+        TEST_ANALYSES,
+      ),
+    ).toStrictEqual(wrong(["grouping", "kind"], "the roles of the columns"));
   });
 });
 

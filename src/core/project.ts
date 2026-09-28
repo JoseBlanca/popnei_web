@@ -789,9 +789,12 @@ function typeError(
         ? null
         : "cannot be continuous: its values are not all numbers";
     case "binary":
-      return allowed.binary !== null && sameValues(type, allowed.binary)
+      if (allowed.binary === null) {
+        return "cannot be binary: its column does not have exactly two values";
+      }
+      return sameValues(type, allowed.binary)
         ? null
-        : "should be binary, with the two values found in the column coded 1 and 0";
+        : `should be binary with the values ${shown(allowed.binary.one)} and ${shown(allowed.binary.zero)}, in either coding`;
   }
 }
 
@@ -2733,7 +2736,7 @@ export function parseProject(
   if (!individuals.ok) {
     return individuals;
   }
-  const grouping = parseGrouping(f["grouping"], ["grouping"]);
+  const grouping = parseGrouping(f["grouping"], app, ["grouping"]);
   if (!grouping.ok) {
     return grouping;
   }
@@ -2866,11 +2869,14 @@ function eitherOf(words: readonly string[]): string {
 }
 
 /** An object whose `kind` is one of the kinds of `kinds`, with the fields
-    that kind has besides it. */
+    that kind has besides it. A kind not known is refused with the words
+    of the kinds of `listed`, those a project file of this application and
+    version holds, every kind of `kinds` when it is not given. */
 function readKind<K extends string>(
   value: unknown,
   path: FieldPath,
   kinds: Kinds<K>,
+  listed: readonly NoInfer<K>[] = keysOf(kinds),
 ): Parsed<{ readonly kind: K; readonly fields: Fields }> {
   if (!isFields(value)) {
     return failure(wrongValue(path, OBJECT));
@@ -2881,7 +2887,7 @@ function readKind<K extends string>(
     return failure(
       wrongValue(
         [...path, "kind"],
-        eitherOf(names.map((name) => kinds[name].words)),
+        eitherOf(listed.map((name) => kinds[name].words)),
       ),
     );
   }
@@ -3471,7 +3477,8 @@ function parseReadOptions(
 }
 
 function parseSourceRead(value: unknown, path: FieldPath): Parsed<SourceRead> {
-  const read = readKind(value, path, SOURCE_READ_KINDS);
+  // A read failed is the page's, and a project file never holds one.
+  const read = readKind(value, path, SOURCE_READ_KINDS, ["pending", "read"]);
   if (!read.ok) {
     return read;
   }
@@ -3776,7 +3783,12 @@ function parseIndividualsRead(
   value: unknown,
   path: FieldPath,
 ): Parsed<IndividualsRead> {
-  const read = readKind(value, path, INDIVIDUALS_READ_KINDS);
+  // A read pending or failed is the page's; a project file holds it as
+  // notGiven (docs/specs/core/projectFile.md, rule 8 of the opening).
+  const read = readKind(value, path, INDIVIDUALS_READ_KINDS, [
+    "read",
+    "notGiven",
+  ]);
   if (!read.ok) {
     return read;
   }
@@ -3982,8 +3994,17 @@ function parseColumnType(value: unknown, path: FieldPath): Parsed<ColumnType> {
   }
 }
 
-function parseGrouping(value: unknown, path: FieldPath): Parsed<Grouping> {
-  const read = readKind(value, path, GROUPING_KINDS);
+function parseGrouping(
+  value: unknown,
+  app: AppId,
+  path: FieldPath,
+): Parsed<Grouping> {
+  const read = readKind(
+    value,
+    path,
+    GROUPING_KINDS,
+    app === "popgen" ? ["populations", "onePopulation"] : ["roles"],
+  );
   if (!read.ok) {
     return read;
   }
