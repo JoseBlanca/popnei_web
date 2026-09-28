@@ -49,6 +49,7 @@ import { VARIANT_HISTOGRAMS } from "./histogramWords.ts";
 import { FocusOnLeave } from "./FocusOnLeave.tsx";
 import { VariantChecksBlock } from "./VariantChecksBlock.tsx";
 import { VariantHistogram } from "./VariantHistogram.tsx";
+import { usePressedInPlace } from "./pressedInPlace.ts";
 import styles from "./VariantsStep.module.css";
 import {
   DISTANCE_LABEL,
@@ -119,6 +120,9 @@ export function VariantFilters(): React.JSX.Element {
   const headingId = useId();
   const checksHeadingId = useId();
   const ldReasonId = useId();
+  // A switch pressed while a number typed is committed stays under the
+  // pointer when the counts above it go (pressedInPlace.ts).
+  const pressedInPlace = usePressedInPlace();
 
   const set = (filter: ProjectVariantFilter): void => {
     const step = filterCommand(filter);
@@ -155,7 +159,11 @@ export function VariantFilters(): React.JSX.Element {
     );
 
   return (
-    <section aria-labelledby={headingId} className={classOf(styles, "section")}>
+    <section
+      aria-labelledby={headingId}
+      className={classOf(styles, "section")}
+      {...pressedInPlace}
+    >
       {/* It takes the focus when a part of a check leaves the page with
           its block, and is not in the order of the Tab key. */}
       <h2 id={headingId} tabIndex={-1} className={classOf(styles, "heading")}>

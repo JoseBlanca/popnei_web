@@ -431,3 +431,23 @@ test("IP3 D3 the threshold of the individuals by observed heterozygosity at 0.38
   );
   await expectNoViolations(makeAxeBuilder);
 });
+
+test("IP3 D3 with a distance typed and not committed after a Count, one click on the switch turns the LD pruning off", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await ldTurnedOn(page);
+  await commit(page, DISTANCE_LABEL, "50000");
+  await count(page);
+  await expect(ldCount(page)).toHaveText(LD_KEPT);
+  // Typed, and not committed: the press takes the focus from the field,
+  // which commits 60000 and takes the counts above the switch away.
+  await distance(page).fill("60000");
+  await flip(filters(page), LD_SWITCH);
+  await expect(page.getByRole("switch", { name: LD_SWITCH })).not.toBeChecked();
+  await expect(distance(page)).toHaveCount(0);
+  await expect(banner(page, "Undo")).toHaveAccessibleDescription(
+    "Undo: the LD pruning was turned off",
+  );
+  await expectNoViolations(makeAxeBuilder);
+});
