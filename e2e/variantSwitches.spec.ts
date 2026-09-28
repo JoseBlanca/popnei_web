@@ -466,13 +466,77 @@ async function paste(input: Locator, text: string): Promise<void> {
   }, text);
 }
 
+test("IP3 the line of a count stands under a filter that is on only once a variants file is read, where a count can come", async ({
+  page,
+}) => {
+  /** The space between the field of the missing data filter and the
+      switch of the next filter, which the line of its count takes. */
+  async function gap(): Promise<number> {
+    const field = await filters(page)
+      .getByLabel(MISSING_LABEL, { exact: true })
+      .boundingBox();
+    // The words of the switch: its input is hidden from the eye.
+    const next = await filters(page)
+      .getByText("Filter the variants by observed heterozygosity", {
+        exact: true,
+      })
+      .boundingBox();
+    if (field === null || next === null) throw new Error("not drawn");
+    return next.y - (field.y + field.height);
+  }
+  await openVariants(page);
+  const before = await gap();
+  await pickPanel(page);
+  // One line of 24 px, empty until a Count, and the 8 px of the gap of
+  // the filter's grid before it.
+  expect((await gap()) - before).toBe(32);
+  await expect(filters(page).getByText(/^Kept /)).toHaveCount(0);
+});
+
+/** Puts the caret at the end of the text of `input`, with nothing
+    selected. Not with End, which in a number field steps the number to
+    the largest of its range. */
+async function caretAtTheEnd(input: Locator): Promise<void> {
+  await input.evaluate((element) => {
+    if (!(element instanceof HTMLInputElement)) {
+      throw new Error("not an input");
+    }
+    element.setSelectionRange(element.value.length, element.value.length);
+  });
+}
+
+test("IP3 the number of the field pasted over it mends a character thrown away: 1 typed after it is taken, 500001", async ({
+  page,
+}) => {
+  await ldTurnedOn(page);
+  await commit(page, DISTANCE_LABEL, "50000");
+  await distance(page).focus();
+  await caretAtTheEnd(distance(page));
+  await distance(page).pressSequentially("-");
+  await expect(
+    page.getByRole("main").getByText(/^‘-’ cannot be typed in the distance/),
+  ).toBeVisible();
+  await distance(page).selectText();
+  await paste(distance(page), "50000");
+  await caretAtTheEnd(distance(page));
+  await distance(page).pressSequentially("1");
+  await distance(page).press("Tab");
+  await expect(distance(page)).toHaveValue("500001");
+  await expect(
+    page.getByRole("main").getByText(/cannot be typed in the distance/),
+  ).toHaveCount(0);
+  await expect(banner(page, "Undo")).toHaveAccessibleDescription(
+    "Undo: the LD pruning changed",
+  );
+});
+
 test("IP3 a paste at the caret that the field does not take leaves the next commit to be taken: 60000 pasted over 50000, then the Tab key", async ({
   page,
 }) => {
   await ldTurnedOn(page);
   await commit(page, DISTANCE_LABEL, "50000");
   await distance(page).focus();
-  await distance(page).press("End");
+  await caretAtTheEnd(distance(page));
   await paste(distance(page), "-");
   await distance(page).selectText();
   await paste(distance(page), "60000");

@@ -479,7 +479,15 @@ function FieldInput({
         if (selected !== input.value.length) return;
         const pasted = event.clipboardData.getData("text/plain").trim();
         onPasted(pasted);
-        if (state.validate(pasted)) return;
+        if (state.validate(pasted)) {
+          // A number the field takes, pasted over all it held, mends what
+          // was typed before, a character thrown away among it, even when
+          // it is the number the field already holds, which gives no
+          // change of the input to tell.
+          onMended();
+          onCommitStarts();
+          return;
+        }
         onNotTakenPending();
         onCommitStarts();
       }}
