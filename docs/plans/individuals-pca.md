@@ -699,7 +699,7 @@ in its version 1.
   (`diversity.md`, the parts its opening dates 27 and 28 September
   2026); a result given back by a read leaving the notice (`store.md`,
   "The notice, and the calculations it stops"). Serves 1 and 5.
-- [ ] 4.2 The types of the columns: `typesSet`, `typesLost`,
+- [x] 4.2 The types of the columns: `typesSet`, `typesLost`,
   `typeLostReason`, `columnAllows`, `setColumnType` and
   `forgetTypesLost`, and the record that applies the types
   (`project.md`, "The types of the columns", "The commands" and "The
@@ -1197,7 +1197,9 @@ the branch was merged meanwhile.
   `readSheet`, the refusals of an xlsx and every error of Excel as
   missing (`individuals.md`, "The xlsx" and "The refusals and their
   words"); the messages of an xlsx (`messages.md`); `wantedReads` with
-  `csv` `null` (`entry.md`, "Who asks for a read"). Serves 1 and 2.
+  `csv` `null` (`entry.md`, "Who asks for a read"). Serves 1 and 2. Added on 28 September 2026 (found by task 4.2):
+  the words of a file that is not text (`notText` of `individuals.md`), which
+  tell the user to name the file `.xlsx` and so wait for the xlsx.
 - [ ] 9.2 The Individuals step accepts an `.xlsx`, with the fixed line
   of the first sheet (`steps/individuals.md`, "The file" and "How the
   file was read"); the three xlsx files copied into `e2e/fixtures/`; the
