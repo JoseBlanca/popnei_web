@@ -443,9 +443,14 @@ const scriptsButRunner = {
 };
 // Core may import columnTypes.ts alone, its pure functions of the
 // numbers and the types of a column (docs/specs/core/project.md,
-// columnAllows).
+// columnAllows); by its whole name, so that its tests and a file named
+// like it stay out.
 const individualsReader = {
-  group: ["**/worker/individuals/**", "!**/worker/individuals/columnTypes*"],
+  group: [
+    "**/worker/individuals/**",
+    "!**/worker/individuals/columnTypes.ts",
+    "!**/worker/individuals/columnTypes",
+  ],
   message:
     "src/core imports only columnTypes.ts of the reader; the light worker reads the file.",
 };
