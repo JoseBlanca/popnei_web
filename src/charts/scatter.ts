@@ -391,16 +391,25 @@ export const createScatter: Chart<ScatterData, ScatterEvents> = (
     events.onHover?.(null);
   }
 
-  const tooltip = createTooltip(element, (by) => {
-    // Escape, or the pointer gone from the tooltip out of the plot: the
-    // tooltip is hidden already. After a leave the pointer has left every
-    // point, and the tooltip shows again when it comes back.
-    if (hovered === null) return;
-    dismissed = by === "escape" ? hovered : null;
-    hovered = null;
-    last?.annotations.selectAll("path.chart-hover").remove();
-    events.onHover?.(null);
-  });
+  const tooltip = createTooltip(
+    element,
+    (by) => {
+      // Escape, or the pointer gone from the tooltip onto an axis, the
+      // margin or out of the plot: the tooltip is hidden already. After a
+      // leave the pointer has left every point, and the tooltip shows
+      // again when it comes back.
+      if (hovered === null) return;
+      dismissed = by === "escape" ? hovered : null;
+      hovered = null;
+      last?.annotations.selectAll("path.chart-hover").remove();
+      events.onHover?.(null);
+    },
+    // The overlay of this plot, whose movements find the point.
+    (target) =>
+      target instanceof Element &&
+      target.classList.contains("chart-overlay") &&
+      element.contains(target),
+  );
 
   function showHover(drawn: LastDraw, point: number): void {
     const px = drawn.positions[2 * point];
@@ -514,6 +523,14 @@ export const createScatter: Chart<ScatterData, ScatterEvents> = (
     pointer: {
       move(x, y) {
         if (last === null) return;
+        // The point whose tooltip is shown stays under the pointer while
+        // the pointer is within HOVER_RADIUS of it, though another point
+        // be nearer, so that the pointer can reach its tooltip.
+        if (hovered !== null) {
+          const px = last.positions[2 * hovered] ?? Number.NaN;
+          const py = last.positions[2 * hovered + 1] ?? Number.NaN;
+          if (Math.hypot(px - x, py - y) <= HOVER_RADIUS) return;
+        }
         const point = nearestPoint(last.positions, x, y, HOVER_RADIUS);
         if (point === null) {
           dismissed = null;
@@ -548,6 +565,8 @@ export const createScatter: Chart<ScatterData, ScatterEvents> = (
       base.update(next);
     },
     destroy() {
+      // A screen that marked the row of the point unmarks it.
+      clearHover();
       base.destroy();
       tooltip.destroy();
     },

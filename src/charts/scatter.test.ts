@@ -401,8 +401,12 @@ describe("IP7 D2 the scatter under jsdom, its SVG", () => {
   test("the path of a group is its marks drawn at the pixels of its points; a group with no point drawn has no path and keeps its colour", () => {
     const element = sizedElement(400, 300);
     // One point of P4, the square, at the centre of the frame; P1 to P3
-    // have no point, and P2's only one is not finite.
-    const data = scatterOf([7, Number.NaN], [7, 1], groups([3, 1], FOUR_NAMES));
+    // have no point, P2's only one is not finite, and neither is P1's.
+    const data = scatterOf(
+      [7, Number.NaN, 8],
+      [7, 1, Number.POSITIVE_INFINITY],
+      groups([3, 1, 0], FOUR_NAMES),
+    );
     createScatter(element, data);
     const paths = element.querySelectorAll("g.chart-marks > path");
     expect(paths).toHaveLength(1);
@@ -424,8 +428,14 @@ describe("IP7 D2 the scatter under jsdom, its SVG", () => {
     const element = sizedElement(400, 300);
     createScatter(
       element,
-      scatterOf(SIX_X, SIX_Y, values([0, 1, Number.NaN, 0.5, 1, 0])),
+      scatterOf(
+        [...SIX_X, Number.POSITIVE_INFINITY],
+        [...SIX_Y, 0],
+        values([0, 1, Number.NaN, 0.5, 1, 0, 7]),
+      ),
     );
+    // The seventh point, at an infinity, is not drawn and does not make 7
+    // the largest value.
     const paths = [...element.querySelectorAll("g.chart-marks > path")];
     expect(paths.map((path) => path.getAttribute("class"))).toEqual([
       "chart-points chart-points-none",
@@ -767,6 +777,42 @@ describe("IP7 D2 the scatter under jsdom, the point under the pointer", () => {
     expect(tooltipText(element)?.[1]).toBe("Population: P4");
   });
 
+  test("a point is under the pointer within 10 pixels of it and not at 11", () => {
+    const element = sizedElement(400, 300);
+    const onHover = vi.fn();
+    createScatter(element, six(), { onHover });
+    const [x, y] = pixelOf(six(), 0);
+    moveTo(element, [x + 11, y]);
+    expect(tooltipText(element)).toBeNull();
+    moveTo(element, [x + 7, y - 7]);
+    expect(tooltipText(element)).not.toBeNull();
+    expect(onHover.mock.calls).toEqual([[0]]);
+  });
+
+  test("the point whose tooltip is shown stays under the pointer within 10 pixels of it, though another is nearer; beyond them, the nearest", () => {
+    const element = sizedElement(400, 300);
+    const onHover = vi.fn();
+    // Points 0 and 1 3 pixels apart, at 60.8 pixels per unit.
+    const data = scatterOf(
+      [0, 0.05, 5],
+      [0, 0, 0],
+      groups([0, 1, 2], ["P1", "P2", "P3"]),
+    );
+    createScatter(element, data, { onHover });
+    const [x0, y0] = pixelOf(data, 0);
+    const [x1] = pixelOf(data, 1);
+    expect(x1 - x0).toBeCloseTo(3.04, 2);
+    moveTo(element, [x0, y0]);
+    moveTo(element, [x1, y0]);
+    moveTo(element, [x1 + 5, y0 + 5]);
+    expect(onHover.mock.calls).toEqual([[0]]);
+    expect(tooltipText(element)?.[1]).toBe("Population: P1");
+    // 11 pixels from point 0 and 8 from point 1.
+    moveTo(element, [x1 + 8, y0]);
+    expect(onHover.mock.calls).toEqual([[0], [1]]);
+    expect(tooltipText(element)?.[1]).toBe("Population: P2");
+  });
+
   test("a leave onto the tooltip keeps it; a leave elsewhere hides it; a finger lifted leaves it", () => {
     const element = sizedElement(400, 300);
     const onHover = vi.fn();
@@ -782,25 +828,34 @@ describe("IP7 D2 the scatter under jsdom, the point under the pointer", () => {
     expect(onHover.mock.calls).toEqual([[1], [null]]);
   });
 
-  test("a mouse that leaves the plot from the tooltip hides it and calls onHover with null, and back at the same point the tooltip shows again", () => {
+  test("a mouse that leaves the tooltip out of the plot, or onto an axis, hides it and calls onHover with null, and back at the same point the tooltip shows again; onto the overlay it stays", () => {
     const element = sizedElement(400, 300);
     const onHover = vi.fn();
     createScatter(element, six(), { onHover });
+    /** A mouse leaving the tooltip onto `to`. */
+    const leaveTooltip = (to: EventTarget | null): void => {
+      tooltipOf(element)?.dispatchEvent(
+        Object.defineProperties(new Event("pointerleave"), {
+          pointerType: { value: "mouse" },
+          relatedTarget: { value: to },
+        }),
+      );
+    };
     moveTo(element, pixelOf(six(), 1));
     const box = tooltipOf(element);
     leave(element, "mouse", box?.firstChild ?? null);
-    element.dispatchEvent(
-      Object.defineProperties(new Event("pointerleave"), {
-        pointerType: { value: "mouse" },
-        relatedTarget: { value: document.body },
-      }),
-    );
+    leaveTooltip(overlayOf(element));
+    expect(tooltipText(element)).not.toBeNull();
+    leaveTooltip(document.body);
     expect(tooltipText(element)).toBeNull();
     expect(element.querySelector("path.chart-hover")).toBeNull();
     expect(onHover.mock.calls).toEqual([[1], [null]]);
     moveTo(element, pixelOf(six(), 1));
     expect(tooltipText(element)).not.toBeNull();
     expect(onHover.mock.calls).toEqual([[1], [null], [1]]);
+    leaveTooltip(element.querySelector("g.chart-axis-x"));
+    expect(tooltipText(element)).toBeNull();
+    expect(onHover.mock.calls).toEqual([[1], [null], [1], [null]]);
   });
 
   test("Escape hides the tooltip and calls onHover with null; it stays hidden near that point, and a point near another shows again", () => {
@@ -819,14 +874,38 @@ describe("IP7 D2 the scatter under jsdom, the point under the pointer", () => {
     expect(tooltipText(element)).toBeNull();
     moveTo(element, pixelOf(six(), 3));
     expect(tooltipText(element)).not.toBeNull();
-    // Away from every point and back: the point hidden by Escape shows.
-    document.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
-    );
+    expect(onHover.mock.calls.at(-1)).toEqual([3]);
+  });
+
+  test("the point Escape hid shows again after the pointer leaves every point, leaves the plot, or a draw", () => {
+    const element = sizedElement(400, 300);
+    const onHover = vi.fn();
+    const handle = createScatter(element, six(), { onHover });
+    const [x, y] = pixelOf(six(), 2);
+    const escape = (): void => {
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+      );
+    };
+    // Away from every point and back.
+    moveTo(element, [x, y]);
+    escape();
     moveTo(element, [x + 30, y + 30]);
     moveTo(element, [x, y]);
-    expect(onHover.mock.calls.at(-1)).toEqual([2]);
     expect(tooltipText(element)).not.toBeNull();
+    expect(onHover.mock.calls).toEqual([[2], [null], [2]]);
+    // Out of the plot and back.
+    escape();
+    leave(element, "mouse", document.body);
+    moveTo(element, [x, y]);
+    expect(tooltipText(element)).not.toBeNull();
+    expect(onHover.mock.calls).toEqual([[2], [null], [2], [null], [2]]);
+    // An update draws again, and the next movement finds the point.
+    escape();
+    handle.update(six(1));
+    moveTo(element, [x + 1, y]);
+    expect(tooltipText(element)).not.toBeNull();
+    expect(onHover.mock.calls.at(-1)).toEqual([2]);
   });
 
   test("a tap shows the tooltip of the point tapped, and a tap away from every point hides it", () => {
@@ -876,7 +955,7 @@ describe("IP7 D2 the scatter under jsdom, the point under the pointer", () => {
     expect(file).not.toContain("chart-tooltip");
   });
 
-  test("destroy after a hover leaves the element with no child, the tooltip gone, and a second destroy does nothing", () => {
+  test("destroy after a hover leaves the element with no child, the tooltip gone, calls onHover with null, and a second destroy does nothing", () => {
     const element = sizedElement(400, 300);
     const onHover = vi.fn();
     const handle = createScatter(element, six(), { onHover });
@@ -887,9 +966,11 @@ describe("IP7 D2 the scatter under jsdom, the point under the pointer", () => {
     document.dispatchEvent(
       new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
     );
-    expect(onHover.mock.calls).toEqual([[0]]);
+    // A screen that marked the row of point 0 unmarks it.
+    expect(onHover.mock.calls).toEqual([[0], [null]]);
     expect(() => {
       handle.destroy();
     }).not.toThrow();
+    expect(onHover.mock.calls).toEqual([[0], [null]]);
   });
 });

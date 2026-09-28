@@ -13,6 +13,11 @@ import { NO_GROUP, type GroupColours, type ValueColours } from "./marks.ts";
 const MINUS = "−";
 
 describe("IP7 D1 the pieces of the scatter, the nearest point", () => {
+  test("of two points at the same distance, the first in the order of the data", () => {
+    expect(nearestPoint(Float32Array.from([0, 0, 2, 0]), 1, 0, 10)).toBe(0);
+    expect(nearestPoint(Float32Array.from([2, 0, 0, 0]), 1, 0, 10)).toBe(0);
+  });
+
   test("the nearer of two points within 10 pixels", () => {
     const positions = Float32Array.from([100, 100, 104, 103]);
     expect(nearestPoint(positions, 105, 105, 10)).toBe(1);
@@ -169,7 +174,11 @@ afterEach(() => {
 describe("IP7 D1 the pieces of the scatter, the tooltip", () => {
   test("made at the first show, hidden from a screen reader, its lines as text", () => {
     const element = laidOut();
-    const tooltip = createTooltip(element, () => undefined);
+    const tooltip = createTooltip(
+      element,
+      () => undefined,
+      () => false,
+    );
     expect(tooltipOf(element)).toBeNull();
     tooltip.show(["<img src=x onerror=alert(1)>", "Population: P1"], 10, 10);
     const box = tooltipOf(element);
@@ -185,7 +194,11 @@ describe("IP7 D1 the pieces of the scatter, the tooltip", () => {
 
   test("placed 7 pixels right of and below the point, and on its left or above where it would leave the element", () => {
     const element = laidOut();
-    const tooltip = createTooltip(element, () => undefined);
+    const tooltip = createTooltip(
+      element,
+      () => undefined,
+      () => false,
+    );
     tooltip.show(["s0"], 100, 50);
     const box = tooltipOf(element);
     expect([box?.style.left, box?.style.top]).toEqual(["107px", "57px"]);
@@ -197,7 +210,7 @@ describe("IP7 D1 the pieces of the scatter, the tooltip", () => {
   test('Escape hides it and calls onDismiss with "escape", and neither stops nor prevents the key', () => {
     const element = laidOut();
     const onDismiss = vi.fn();
-    const tooltip = createTooltip(element, onDismiss);
+    const tooltip = createTooltip(element, onDismiss, () => false);
     const field = document.createElement("input");
     document.body.append(field);
     const heard = vi.fn();
@@ -234,7 +247,7 @@ describe("IP7 D1 the pieces of the scatter, the tooltip", () => {
   test("Escape is listened for on the document only while the tooltip is shown", () => {
     const element = laidOut();
     const onDismiss = vi.fn();
-    const tooltip = createTooltip(element, onDismiss);
+    const tooltip = createTooltip(element, onDismiss, () => false);
     const added = vi.spyOn(document, "addEventListener");
     const removed = vi.spyOn(document, "removeEventListener");
     tooltip.show(["s0"], 10, 10);
@@ -248,18 +261,17 @@ describe("IP7 D1 the pieces of the scatter, the tooltip", () => {
     tooltip.destroy();
   });
 
-  test("hovered while the pointer is on it, and holds its own nodes and no other", () => {
+  test("holds its own nodes and no other", () => {
     const element = laidOut();
-    const tooltip = createTooltip(element, () => undefined);
+    const tooltip = createTooltip(
+      element,
+      () => undefined,
+      () => false,
+    );
     expect(tooltip.holds(element)).toBe(false);
     tooltip.show(["s0", "P1"], 10, 10);
     const box = tooltipOf(element);
     if (box === null) throw new Error("no tooltip");
-    expect(tooltip.hovered).toBe(false);
-    box.dispatchEvent(new Event("pointerenter"));
-    expect(tooltip.hovered).toBe(true);
-    box.dispatchEvent(new Event("pointerleave"));
-    expect(tooltip.hovered).toBe(false);
     expect(tooltip.holds(box)).toBe(true);
     expect(tooltip.holds(box.firstChild)).toBe(true);
     expect(tooltip.holds(element)).toBe(false);
@@ -267,11 +279,17 @@ describe("IP7 D1 the pieces of the scatter, the tooltip", () => {
     tooltip.destroy();
   });
 
-  test('a mouse that leaves the element while it is shown hides it and calls onDismiss with "leave"; a touch does not', () => {
+  test('a mouse that leaves it onto the element that takes the pointer keeps it; onto an axis or out of the plot, it hides and calls onDismiss with "leave"; a touch keeps it', () => {
     const element = laidOut();
+    const overlay = document.createElement("span");
+    const axis = document.createElement("span");
+    element.append(overlay, axis);
     const onDismiss = vi.fn();
-    const tooltip = createTooltip(element, onDismiss);
-    tooltip.show(["s0"], 10, 10);
+    const tooltip = createTooltip(
+      element,
+      onDismiss,
+      (target) => target === overlay,
+    );
     const leave = (
       pointerType: string,
       relatedTarget: EventTarget | null,
@@ -281,23 +299,47 @@ describe("IP7 D1 the pieces of the scatter, the tooltip", () => {
         pointerType: { value: pointerType },
         relatedTarget: { value: relatedTarget },
       });
-      element.dispatchEvent(event);
+      tooltipOf(element)?.dispatchEvent(event);
     };
-    leave("touch", null);
+    tooltip.show(["s0"], 10, 10);
+    leave("touch", axis);
     expect(tooltipOf(element)?.hidden).toBe(false);
-    leave("mouse", element.firstChild);
+    leave("mouse", overlay);
     expect(tooltipOf(element)?.hidden).toBe(false);
+    expect(onDismiss).not.toHaveBeenCalled();
+    leave("pen", axis);
+    expect(tooltipOf(element)?.hidden).toBe(true);
+    expect(onDismiss.mock.calls).toEqual([["leave"]]);
+    tooltip.show(["s0"], 10, 10);
     leave("mouse", document.body);
     expect(tooltipOf(element)?.hidden).toBe(true);
-    expect(onDismiss).toHaveBeenCalledTimes(1);
-    expect(onDismiss).toHaveBeenCalledWith("leave");
+    leave("mouse", null);
+    expect(onDismiss.mock.calls).toEqual([["leave"], ["leave"]]);
+    tooltip.destroy();
+  });
+
+  test("where it fits on neither side, it lies against the left and the top edges of the element", () => {
+    const element = document.createElement("div");
+    vi.spyOn(element, "clientWidth", "get").mockReturnValue(100);
+    vi.spyOn(element, "clientHeight", "get").mockReturnValue(50);
+    vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(80);
+    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(40);
+    document.body.append(element);
+    const tooltip = createTooltip(
+      element,
+      () => undefined,
+      () => false,
+    );
+    tooltip.show(["s0"], 50, 25);
+    const box = tooltipOf(element);
+    expect([box?.style.left, box?.style.top]).toEqual(["0px", "0px"]);
     tooltip.destroy();
   });
 
   test("destroy removes the div and the listener of Escape, and is safe twice", () => {
     const element = laidOut();
     const onDismiss = vi.fn();
-    const tooltip = createTooltip(element, onDismiss);
+    const tooltip = createTooltip(element, onDismiss, () => false);
     tooltip.show(["s0"], 10, 10);
     tooltip.destroy();
     expect(element.childElementCount).toBe(0);

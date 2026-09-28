@@ -147,23 +147,23 @@ function colourLine(colours: PointColours, index: number): string {
 
 /**
  * How the user hid a tooltip: by Escape, or by a mouse or a pen that
- * left the plot's element from the tooltip itself.
+ * left the tooltip onto anything but the element that takes the pointer
+ * for the plot.
  */
 export type TooltipDismissal = "escape" | "leave";
 
 /**
  * The tooltip of a plot, a <div> in `element`, made at the first `show`:
  * kept while the pointer is on it; hidden by Escape, which then calls
- * `onDismiss("escape")`, and by a mouse or a pen that leaves `element`
- * from it, which calls `onDismiss("leave")`, as "The point under the
- * pointer" says.
+ * `onDismiss("escape")`, and by a mouse or a pen that leaves it onto
+ * anything but the element that takes the pointer for the plot, for
+ * which `takesPointer` is true, which calls `onDismiss("leave")`, as "The
+ * point under the pointer" says.
  */
 export interface Tooltip {
   /** Shows `lines` beside the point at (x, y), in the pixels of `element`. */
   show(lines: readonly string[], x: number, y: number): void;
   hide(): void;
-  /** True while the pointer is on the tooltip. */
-  readonly hovered: boolean;
   /** True when `target` is the tooltip or inside it: a leave of the plot onto it is none. */
   holds(target: EventTarget | null): boolean;
   /** Removes the <div> and the listener of Escape; safe to call twice. */
@@ -173,19 +173,22 @@ export interface Tooltip {
 /**
  * The tooltip of the plot in `element`, whose CSS makes it `position:
  * relative`. `onDismiss` is called when the user hides the tooltip: by
- * Escape, and by a mouse or a pen that leaves `element` from the tooltip,
- * which the plot's own leave, on its overlay or its canvas, does not
- * hear. The plot then forgets its point and calls its `onHover(null)`;
- * after Escape it keeps that point's tooltip hidden until the pointer
- * leaves every point, which a leave of `element` already is.
+ * Escape, and by a mouse or a pen that leaves the tooltip onto anything
+ * for which `takesPointer` is false, an axis, the margin or the page
+ * outside the plot, where the plot's own element that takes the pointer,
+ * its overlay or its canvas, hears nothing. The plot then forgets its
+ * point and calls its `onHover(null)`; after Escape it keeps that point's
+ * tooltip hidden until the pointer leaves every point, which a leave
+ * already is. A leave onto the element that takes the pointer is the
+ * plot's: its next movement finds the point under the pointer.
  */
 export function createTooltip(
   element: HTMLElement,
   onDismiss: (by: TooltipDismissal) => void,
+  takesPointer: (target: EventTarget | null) => boolean,
 ): Tooltip {
   let div: HTMLDivElement | null = null;
   let shown = false;
-  let hovered = false;
   let listening = false;
   let destroyed = false;
 
@@ -197,20 +200,11 @@ export function createTooltip(
     onDismiss("escape");
   };
 
-  const onPointerEnter = (): void => {
-    hovered = true;
-  };
-
-  const onPointerLeave = (): void => {
-    hovered = false;
-  };
-
-  // A leave of the element with the pointer on the tooltip, which the
-  // overlay does not hear. A touch "leaves" when the finger is lifted,
-  // and its tooltip stays until the next tap on the plot.
-  const onElementLeave = (event: PointerEvent): void => {
+  // A touch "leaves" when the finger is lifted, and its tooltip stays
+  // until the next tap on the plot.
+  const onPointerLeave = (event: PointerEvent): void => {
     if (event.pointerType === "touch" || !shown) return;
-    if (holdsNode(element, event.relatedTarget)) return;
+    if (takesPointer(event.relatedTarget)) return;
     hide();
     onDismiss("leave");
   };
@@ -218,13 +212,8 @@ export function createTooltip(
   function listen(on: boolean): void {
     if (on === listening) return;
     listening = on;
-    if (on) {
-      document.addEventListener("keydown", onKeyDown);
-      element.addEventListener("pointerleave", onElementLeave);
-    } else {
-      document.removeEventListener("keydown", onKeyDown);
-      element.removeEventListener("pointerleave", onElementLeave);
-    }
+    if (on) document.addEventListener("keydown", onKeyDown);
+    else document.removeEventListener("keydown", onKeyDown);
   }
 
   function made(): HTMLDivElement {
@@ -233,7 +222,6 @@ export function createTooltip(
     created.className = "chart-tooltip";
     created.setAttribute("aria-hidden", "true");
     created.hidden = true;
-    created.addEventListener("pointerenter", onPointerEnter);
     created.addEventListener("pointerleave", onPointerLeave);
     element.append(created);
     div = created;
@@ -261,11 +249,15 @@ export function createTooltip(
     const height = box.offsetHeight;
     const right = x + TOOLTIP_OFFSET;
     const below = y + TOOLTIP_OFFSET;
+    // On the left or above where it would leave the element, and against
+    // its left or top edge where it fits on neither side.
     const left =
-      right + width > element.clientWidth ? x - TOOLTIP_OFFSET - width : right;
+      right + width > element.clientWidth
+        ? Math.max(0, x - TOOLTIP_OFFSET - width)
+        : right;
     const top =
       below + height > element.clientHeight
-        ? y - TOOLTIP_OFFSET - height
+        ? Math.max(0, y - TOOLTIP_OFFSET - height)
         : below;
     box.style.left = `${String(left)}px`;
     box.style.top = `${String(top)}px`;
@@ -274,7 +266,6 @@ export function createTooltip(
 
   function hide(): void {
     shown = false;
-    hovered = false;
     if (div !== null) div.hidden = true;
     listen(false);
   }
@@ -282,9 +273,6 @@ export function createTooltip(
   return {
     show,
     hide,
-    get hovered() {
-      return hovered;
-    },
     holds(target) {
       return div !== null && holdsNode(div, target);
     },
@@ -293,7 +281,6 @@ export function createTooltip(
       destroyed = true;
       hide();
       if (div !== null) {
-        div.removeEventListener("pointerenter", onPointerEnter);
         div.removeEventListener("pointerleave", onPointerLeave);
         div.remove();
         div = null;
