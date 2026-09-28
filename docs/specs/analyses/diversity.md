@@ -1196,7 +1196,8 @@ moves.
   stay on one line on a window of 1,050 px and wider, and wrap below. At
   320 px, in Chromium 153 and WebKit 26.6 on the Mac, the table is 564
   px wide in a frame of 288 px, its headers on up to four lines, and
-  the frame shows the populations and their individuals and no value.
+  the frame shows the populations, their individuals and the start of
+  the expected heterozygosity.
   The owner decided on 28 September 2026 that the headers wrap. While
   the table is
   wider than its frame, and only then, three things say so and let it be
