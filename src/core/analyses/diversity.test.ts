@@ -693,6 +693,17 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112
       "popnei could not calculate the diversity: the memory of the tab ran out. Change the settings, or load the variants file again, to run it again.",
     );
   });
+
+  test("refusalText of another message with words between backquotes gives popnei's message without them", () => {
+    expect(
+      refusalText(
+        "`minNumIndividuals` is 0, and `calcDiversity` needs one at least.",
+        project(),
+      ),
+    ).toBe(
+      "popnei could not calculate the diversity: minNumIndividuals is 0, and calcDiversity needs one at least. Change the settings, or load the variants file again, to run it again.",
+    );
+  });
 });
 
 /** The key of the diversity for `p`, with popnei 0.1.0 unless another
@@ -1654,7 +1665,7 @@ describe("VS3 D3 the diversity of stage 3", () => {
         throw new Error("a refusal was given the words of a failure");
       }),
     ).toBe(
-      "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the diversity was not run. popnei could not calculate the statistics of each individual: the pass gave no variant: its source gave 1200 and the steps kept none of them, the `missing_data` filter was given 1200 and kept 1152, the `maf` filter was given 1152 and kept 0; a statistic of a pass is calculated over the variants it gives. Change the settings, or load the variants file again, to calculate them again.",
+      "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the diversity was not run. popnei could not calculate the statistics of each individual: the pass gave no variant: its source gave 1200 and the steps kept none of them, the missing_data filter was given 1200 and kept 1152, the maf filter was given 1152 and kept 0; a statistic of a pass is calculated over the variants it gives. Change the settings, or load the variants file again, to calculate them again.",
     );
   });
 

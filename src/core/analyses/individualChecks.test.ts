@@ -418,7 +418,7 @@ describe("VS3 D1 the statistics of each individual: the rest of the module", () 
 describe("VS3 D1 the statistics of each individual: refusalText", () => {
   test("an empty pass, which a pass with no filter cannot give, has the words of any other refusal", () => {
     expect(refusalText(PANEL_EMPTY_PASS, project())).toBe(
-      "popnei could not calculate the statistics of each individual: the pass gave no variant: its source gave 1200 and the steps kept none of them, the `missing_data` filter was given 1200 and kept 1152, the `maf` filter was given 1152 and kept 0; a statistic of a pass is calculated over the variants it gives. Change the settings, or load the variants file again, to calculate them again.",
+      "popnei could not calculate the statistics of each individual: the pass gave no variant: its source gave 1200 and the steps kept none of them, the missing_data filter was given 1200 and kept 1152, the maf filter was given 1152 and kept 0; a statistic of a pass is calculated over the variants it gives. Change the settings, or load the variants file again, to calculate them again.",
     );
   });
 

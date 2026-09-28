@@ -851,7 +851,6 @@ export function refusalText(message: string, p: Project): string {
     change: CHANGE_SETTINGS,
     again: "to run it again",
     emptyPass: () => nothingKept,
-    withoutBackquotes: true,
   });
 }
 

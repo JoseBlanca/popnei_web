@@ -374,6 +374,14 @@ describe("VS3 D1 the counts of the filters: refusalText", () => {
       "popnei could not count the variants: the pass gave no variant: the filters kept none of the 1200 variants. Change the settings, or load the variants file again, to count again.",
     );
   });
+
+  test("any other refusal gives popnei's message without its backquotes, as the diversity's table does", () => {
+    expect(
+      refusalText("the `maf` filter was given no variant.", project([])),
+    ).toBe(
+      "popnei could not count the variants: the maf filter was given no variant. Change the settings, or load the variants file again, to count again.",
+    );
+  });
 });
 
 describe("IP2 D3 the words of the statistics of each individual that a Calculate or a Count waited for, refused or failed", () => {

@@ -66,10 +66,6 @@ export interface RefusalWords {
       escaped; `null` for a calculation whose pass has no filter, whose
       empty pass then gets the words of any other refusal. */
   readonly emptyPass: ((fileName: string) => string) | null;
-  /** Whether the words of any other refusal leave out the backquotes of
-      popnei's message, as the PCA's do (docs/specs/analyses/pca.md, "Its
-      words"); kept when absent. */
-  readonly withoutBackquotes?: true;
 }
 
 /**
@@ -82,8 +78,10 @@ export interface RefusalWords {
  * a variant out of the order of its chromosome, refused by the LD filter
  * of the Variants step, `ldOrderText`; a line of the VCF popnei cannot
  * read, or a gzipped file damaged or cut short; any other, with popnei's
- * message without its full stop, and without its backquotes when
- * `words.withoutBackquotes`. Throws a defect on a project with no
+ * message without its full stop and without its backquotes, which name
+ * code a user of the application cannot use, in every panel, since each
+ * takes its words from the diversity's table (docs/specs/analyses/
+ * diversity.md, "Its words"). Throws a defect on a project with no
  * variants file.
  */
 export function refusalWords(
@@ -114,9 +112,7 @@ export function refusalWords(
   if (isVcfLine) {
     return `popnei could not read ${fileName}${saying(message)}. Correct the file, or fetch it again, and load it in the Variants step.`;
   }
-  const shownMessage =
-    words.withoutBackquotes === true ? message.replaceAll("`", "") : message;
-  return `popnei could not ${words.calculate}${saying(shownMessage)}. ${words.change}, ${words.again}.`;
+  return `popnei could not ${words.calculate}${saying(message.replaceAll("`", ""))}. ${words.change}, ${words.again}.`;
 }
 
 /** How the words of a refusal of an LD filter name the filter and say how

@@ -464,6 +464,14 @@ describe("VS3 D1 the histograms of the variants: refusalText", () => {
       "popnei could not calculate the histograms of the variants: the pass gave no variant: its source gave 3. Load the variants file again, or read it again with other options, to calculate them again.",
     );
   });
+
+  test("any other refusal gives popnei's message without its backquotes, as the diversity's table does", () => {
+    expect(
+      refusalText("`numBins` is 0, and a histogram needs one bin", project()),
+    ).toBe(
+      "popnei could not calculate the histograms of the variants: numBins is 0, and a histogram needs one bin. Load the variants file again, or read it again with other options, to calculate them again.",
+    );
+  });
 });
 
 describe("VS6 D2 the CSV of the bins of a histogram and its name", () => {
