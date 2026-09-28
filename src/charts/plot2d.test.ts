@@ -802,6 +802,42 @@ describe("IP7 D2 the base of the 2D plots, what the export draws beside the SVG"
     expect(text).not.toContain("chart-hover");
   });
 
+  test("toPNG draws the plot as it was when it was called, though an update comes before the fonts are ready", async () => {
+    const element = sizedElement(400, 300);
+    const handle = createPlot2d(
+      element,
+      barsOf([1, 2]),
+      exportedBars().definition,
+    );
+    let fontsLoaded: () => void = () => undefined;
+    Object.defineProperty(document, "fonts", {
+      configurable: true,
+      value: {
+        ready: new Promise<void>((resolve) => {
+          fontsLoaded = resolve;
+        }),
+      },
+    });
+    const blobs: Blob[] = [];
+    vi.spyOn(URL, "createObjectURL").mockImplementation((blob) => {
+      if (blob instanceof Blob) blobs.push(blob);
+      return "blob:plot";
+    });
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    const png = handle.toPNG(2);
+    handle.update(barsOf([1, 2, 3]));
+    fontsLoaded();
+    await expect(png).rejects.toMatchObject({ kind: "notMade" });
+    Reflect.deleteProperty(document, "fonts");
+    const file = new DOMParser().parseFromString(
+      (await blobs[0]?.text()) ?? "",
+      "image/svg+xml",
+    );
+    // The bars and what drawExport drew, both of the two values.
+    expect(file.querySelectorAll("rect.bar")).toHaveLength(2);
+    expect(file.querySelector("rect.beside")?.getAttribute("width")).toBe("2");
+  });
+
   test("exportSvg calls drawBeside once the overlay and the mark of the point under the pointer are removed, and writes the styles on what it drew, stroke-linejoin among them", () => {
     const style = document.createElement("style");
     style.textContent =

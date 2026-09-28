@@ -162,7 +162,9 @@ export function exportSvg(
 /**
  * The PNG of a plot of `size`, drawn from the SVG `svgText` gives on a
  * canvas of `scale` times that size, once the fonts of the page are
- * loaded, `document.fonts.ready` (charts.md, "Fonts"). The canvas is
+ * loaded, `document.fonts.ready` (charts.md, "Fonts"). `svgText` is called
+ * before that wait, so that the PNG is the plot as it was when it was
+ * asked for. The canvas is
  * emptied to 0 by 0 once the PNG is made or refused, since WebKit keeps
  * the memory of a page's canvases until they are collected and iOS Safari
  * then gives no context for a new one.
@@ -181,10 +183,11 @@ export async function exportPng(
   if (Math.max(size.width, size.height) * scale > MAX_CANVAS_SIDE) {
     throw new PngError("tooLarge");
   }
+  // The file of the plot as it is now, before the wait: an update that
+  // comes before the fonts are ready does not reach this PNG.
+  const text = svgText();
   await document.fonts.ready;
-  const url = URL.createObjectURL(
-    new Blob([svgText()], { type: "image/svg+xml" }),
-  );
+  const url = URL.createObjectURL(new Blob([text], { type: "image/svg+xml" }));
   let canvas: HTMLCanvasElement | null = null;
   try {
     const image = new Image();
