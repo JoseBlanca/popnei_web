@@ -5983,3 +5983,45 @@ describe("IP4 D3 the words after a worker that could not start", () => {
     );
   });
 });
+
+describe("IP4 D4 the projects drawn with the fields of stage 4", () => {
+  test("every project drawn, with types set applied and not, onePopulation and a read notGiven among them, reads back from its JSON equal to itself", () => {
+    const seen = {
+      notGiven: 0,
+      onePopulation: 0,
+      typeApplied: 0,
+      gone: 0,
+      firstColumn: 0,
+      values: 0,
+      typesSetNotRead: 0,
+    };
+    fc.assert(
+      fc.property(wholeProject, (p) => {
+        const source = p.individuals;
+        seen.onePopulation += p.grouping.kind === "onePopulation" ? 1 : 0;
+        if (source !== null) {
+          const read = source.read;
+          if (read.kind === "read") {
+            const lost = typesLost(source);
+            seen.typeApplied += source.typesSet.length > lost.length ? 1 : 0;
+            for (const [column] of lost) {
+              seen[typeLostReason(read, column)] += 1;
+            }
+          } else {
+            seen.notGiven += read.kind === "notGiven" ? 1 : 0;
+            seen.typesSetNotRead += source.typesSet.length > 0 ? 1 : 0;
+          }
+        }
+        expect(
+          parseProject(JSON.parse(JSON.stringify(p)), p.app, 1, TEST_ANALYSES),
+        ).toStrictEqual({ ok: true, value: p });
+      }),
+      { numRuns: 400 },
+    );
+    // The drawn projects reach each field of stage 4, and each reason a
+    // read does not apply a type.
+    for (const count of Object.values(seen)) {
+      expect(count).toBeGreaterThan(2);
+    }
+  });
+});

@@ -27,6 +27,7 @@ import type {
   AnalysisOptions,
   Check,
   Grouping,
+  IndividualsRead,
   IndividualsSource,
   Project,
   ProjectVariantFilter,
@@ -70,10 +71,6 @@ export function writeProjectFile<J, R>(
 ): string {
   const p = state.project;
   const variants = variantsWritten(p);
-  const individuals =
-    p.individuals !== null && p.individuals.read.kind === "read"
-      ? p.individuals
-      : null;
   const file = fields([
     ["format", FORMAT_NAME],
     ["formatVersion", FORMAT_VERSION],
@@ -86,7 +83,10 @@ export function writeProjectFile<J, R>(
     ["filtersOff", p.filtersOff.map(variantFilterOut)],
     ["individualFilters", p.individualFilters.map(individualFilterOut)],
     ["individualFiltersOff", p.individualFiltersOff.map(individualFilterOut)],
-    ["individuals", individuals === null ? null : individualsOut(individuals)],
+    [
+      "individuals",
+      p.individuals === null ? null : individualsOut(p.individuals),
+    ],
     ["grouping", groupingOut(p.grouping)],
     ["analyses", p.analyses.map(analysisOptionsOut)],
     [
@@ -339,13 +339,15 @@ function individualFilterOut(filter: IndividualFilter): Fields {
   }
 }
 
-/** An individuals file whose read is done; the caller writes `null` for
-    any other. */
+/**
+ * The individuals file (the spec, "What is written of each part"): its
+ * load id, name, options of the CSV and the types the user set, whole,
+ * those its read does not apply among them; then its read, the table when
+ * it was read, and `notGiven` when it was pending, failed or `notGiven`,
+ * since the file keeps the individuals file as its table and such a read
+ * has none.
+ */
 function individualsOut(source: IndividualsSource): Fields {
-  const read = source.read;
-  if (read.kind !== "read") {
-    throw defect("an individuals file whose read is not done was written.");
-  }
   return fields([
     ["fileId", source.fileId],
     ["name", source.name],
@@ -360,8 +362,21 @@ function individualsOut(source: IndividualsSource): Fields {
           ]),
     ],
     [
-      "read",
-      fields([
+      "typesSet",
+      source.typesSet.map(([column, type]) => [column, columnTypeOut(type)]),
+    ],
+    ["read", individualsReadOut(source.read)],
+  ]);
+}
+
+function individualsReadOut(read: IndividualsRead): Fields {
+  switch (read.kind) {
+    case "pending":
+    case "failed":
+    case "notGiven":
+      return fields([["kind", "notGiven"]]);
+    case "read":
+      return fields([
         ["kind", "read"],
         [
           "table",
@@ -382,9 +397,8 @@ function individualsOut(source: IndividualsSource): Fields {
                 ["undecodedLine", read.found.undecodedLine],
               ]),
         ],
-      ]),
-    ],
-  ]);
+      ]);
+  }
 }
 
 function columnTypeOut(column: ColumnType): Fields {
@@ -589,7 +603,9 @@ const NO_FINGERPRINT = "0".repeat(64);
  * a list of objects, or hold a fingerprint, or are there with no variants
  * file; the project, as `parseProject` checks it, the filters of the
  * variants in their fixed order among it, in a file of version 1 too; a
- * read this version never writes; and a check whose count of numbers is
+ * read this version never writes, a read of the variants file failed and
+ * one of the individuals file pending or failed, which it writes as
+ * `notGiven`; and a check whose count of numbers is
  * not the one `numCheckNumbers` of its analysis gives, when it gives one,
  * which it does not with a threshold on the individuals.
  *
@@ -716,11 +732,12 @@ export function readProjectFile<J, R>(
       "the file read, or nothing yet, as the application saves it",
     );
   }
-  if (
-    project.individuals !== null &&
-    project.individuals.read.kind !== "read"
-  ) {
-    return header("individuals", "the table read, as the application saves it");
+  const individualsRead = project.individuals?.read.kind;
+  if (individualsRead === "pending" || individualsRead === "failed") {
+    return header(
+      "individuals",
+      "the table read, or no table for a file not read, as the application saves it",
+    );
   }
 
   if (reference === null) {

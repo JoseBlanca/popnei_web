@@ -29,6 +29,7 @@ import type {
   AnalysisId,
   AppId,
   ColumnAllows,
+  ColumnTypeOf,
   Grouping,
   VariantLoad,
   IndividualThreshold,
@@ -851,7 +852,7 @@ const individualsFileError: fc.Arbitrary<IndividualsFileError> = fc.oneof(
   fc.constant<IndividualsFileError>({ kind: "notText" }),
 );
 
-/** Any read of the individuals file. */
+/** Any read of the individuals file, `notGiven` among them. */
 const individualsRead: fc.Arbitrary<IndividualsRead> = fc.oneof(
   fc.constant<IndividualsRead>({ kind: "pending" }),
   fc
@@ -875,16 +876,80 @@ const individualsRead: fc.Arbitrary<IndividualsRead> = fc.oneof(
       kind: "failed",
       error: { kind: "worker", error },
     })),
+  fc.constant<IndividualsRead>({ kind: "notGiven" }),
 );
 
-/** Any individuals file. */
+/** Any type the user can set on a column, whatever its values: never
+    identifier, and a binary type of two different texts. */
+const typeSetAnywhere: fc.Arbitrary<ColumnType> = fc.oneof(
+  fc.constant<ColumnType>({ kind: "categorical" }),
+  fc.constant<ColumnType>({ kind: "continuous" }),
+  fc
+    .tuple(fc.string(), fc.string())
+    .filter(([one, zero]) => one !== zero)
+    .map(([one, zero]): ColumnType => ({ kind: "binary", one, zero })),
+);
+
+/**
+ * Any `typesSet` of a source whose read is `read`, in any order: for a
+ * table read, pairs the read applies, which are the types of their
+ * columns, and pairs it does not, a column gone, the first column, and
+ * continuous on a column whose values are not all numbers; for a read not
+ * done, any pairs.
+ */
+function typesSetOf(read: IndividualsRead): fc.Arbitrary<ColumnTypeOf[]> {
+  const gone = (header: readonly string[]) =>
+    fc.uniqueArray(
+      fc.tuple(
+        fc.string().filter((name) => !header.includes(name)),
+        typeSetAnywhere,
+      ),
+      { selector: ([column]) => column, maxLength: 2 },
+    );
+  if (read.kind !== "read") {
+    return gone([]).chain((pairs) => fc.shuffledSubarray(pairs));
+  }
+  const header = read.table.columns;
+  const allows = columnAllows(read);
+  const perColumn = header.map((column, index) => {
+    const type = read.columns[index];
+    const allowed = allows[index];
+    if (type === undefined || allowed === undefined) {
+      throw new Error("popnei_web defect: a column with no type drawn.");
+    }
+    const options: ColumnTypeOf[] =
+      index === 0
+        ? [[column, { kind: "categorical" }]]
+        : [
+            [column, type],
+            ...(allowed.continuous
+              ? []
+              : [[column, { kind: "continuous" }] as const]),
+          ];
+    return fc.option(fc.constantFrom(...options), { nil: null });
+  });
+  return fc
+    .tuple(fc.tuple(...perColumn), gone(header))
+    .map(([columns, lost]) => [
+      ...columns.filter((pair): pair is ColumnTypeOf => pair !== null),
+      ...lost,
+    ])
+    .chain((pairs) =>
+      fc.shuffledSubarray(pairs, {
+        minLength: pairs.length,
+        maxLength: pairs.length,
+      }),
+    );
+}
+
+/** Any individuals file, with the types the user set, applied by its read
+    and not. */
 const individualsSource: fc.Arbitrary<IndividualsSource> = fc
   .record(
     {
       fileId: anyLoadId,
       name: fc.string(),
       csv: fc.option(csvOptions),
-      typesSet: fc.constant([]),
       read: individualsRead,
     },
     PLAIN,
@@ -894,6 +959,15 @@ const individualsSource: fc.Arbitrary<IndividualsSource> = fc
     source.csv === null && source.read.kind === "read"
       ? { ...source, read: { ...source.read, found: null } }
       : source,
+  )
+  .chain((source) =>
+    typesSetOf(source.read).map((typesSet): IndividualsSource => ({
+      fileId: source.fileId,
+      name: source.name,
+      csv: source.csv,
+      typesSet,
+      read: source.read,
+    })),
   );
 
 /** The analyses the generator of whole projects draws from, with a check
@@ -1013,11 +1087,13 @@ const role = fc.constantFrom("trait", "covariate", "ignored");
 
 /**
  * Any valid project of either application: every part drawn, the reads
- * of both files in each of their states, tables whose rows are as long as
- * their header and whose binary columns have two values, the options of
- * the analyses of `TEST_ANALYSES`, a reference with its checks, and
- * filters turned off, with their values. Frozen deeply. Every number is
- * one JSON writes back as itself.
+ * of both files in each of their states, `notGiven` among those of the
+ * individuals file, tables whose rows are as long as their header and
+ * whose binary columns have two values, the types the user set, applied
+ * by the read and not, the grouping `onePopulation` in population
+ * genetics, the options of the analyses of `TEST_ANALYSES`, a reference
+ * with its checks, and filters turned off, with their values. Frozen
+ * deeply. Every number is one JSON writes back as itself.
  */
 export const wholeProject: fc.Arbitrary<Project> = fc
   .constantFrom<AppId>("popgen", "gwas")
@@ -1031,9 +1107,12 @@ export const wholeProject: fc.Arbitrary<Project> = fc
         individuals: fc.option(individualsSource),
         grouping:
           app === "popgen"
-            ? fc
-                .option(fc.string())
-                .map((column): Grouping => ({ kind: "populations", column }))
+            ? fc.oneof(
+                fc
+                  .option(fc.string())
+                  .map((column): Grouping => ({ kind: "populations", column })),
+                fc.constant<Grouping>({ kind: "onePopulation" }),
+              )
             : fc
                 .uniqueArray(fc.tuple(fc.string(), role), {
                   selector: ([column]) => column,

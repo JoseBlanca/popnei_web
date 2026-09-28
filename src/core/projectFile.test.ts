@@ -6,6 +6,7 @@ import { keyFromWire, settingsFingerprint } from "./keys.ts";
 import {
   emptyProject,
   freezeProject,
+  individualsNeeds,
   setVariantFilter,
   variantFilterNeeds,
 } from "./project.ts";
@@ -359,6 +360,7 @@ describe("WS6 D1 what is written", () => {
       fileId: SAMPLE_INDIVIDUALS_ID,
       name: "pops.csv",
       csv: { encoding: "auto", separator: "auto", decimal: "auto" },
+      typesSet: [],
       read: {
         kind: "read",
         table: {
@@ -386,7 +388,7 @@ describe("WS6 D1 what is written", () => {
     });
   });
 
-  test("an individuals file pending or failed is written as null, and the grouping by its column", () => {
+  test("an individuals file pending, failed or notGiven is written as notGiven, with its name, its options and its types set, and the grouping by its column", () => {
     const sample = sampleProject();
     const base = sample.individuals;
     if (base === null) {
@@ -395,13 +397,31 @@ describe("WS6 D1 what is written", () => {
     for (const read of [
       { kind: "pending" },
       { kind: "failed", error: { kind: "empty" } },
+      { kind: "notGiven" },
     ] as const) {
       const p = deepFreeze<Project>({
         ...sample,
-        individuals: { ...base, read },
+        individuals: {
+          ...base,
+          csv: { encoding: "windows-1252", separator: ";", decimal: "," },
+          typesSet: [
+            ["pop", { kind: "categorical" }],
+            ["status", { kind: "binary", one: "no", zero: "yes" }],
+          ],
+          read,
+        },
       });
       const json = writtenJson(stateOf(p));
-      expect(json["individuals"]).toBeNull();
+      expect(json["individuals"]).toEqual({
+        fileId: SAMPLE_INDIVIDUALS_ID,
+        name: "pops.csv",
+        csv: { encoding: "windows-1252", separator: ";", decimal: "," },
+        typesSet: [
+          ["pop", { kind: "categorical" }],
+          ["status", { kind: "binary", one: "no", zero: "yes" }],
+        ],
+        read: { kind: "notGiven" },
+      });
       expect(json["grouping"]).toEqual({ kind: "populations", column: "pop" });
     }
   });
@@ -2239,6 +2259,7 @@ const NAMED_FIELDS = new Set([
   "encoding",
   "separator",
   "decimal",
+  "typesSet",
   "table",
   "columns",
   "rows",
@@ -2351,7 +2372,9 @@ describe("WS6 D4 the properties of the project file", () => {
         expect(got.filters).toEqual(p.filters);
         expect(got.individualFilters).toEqual(p.individualFilters);
         expect(got.individuals).toEqual(
-          p.individuals?.read.kind === "read" ? p.individuals : null,
+          p.individuals === null || p.individuals.read.kind === "read"
+            ? p.individuals
+            : { ...p.individuals, read: { kind: "notGiven" } },
         );
         expect(got.grouping).toEqual(p.grouping);
         expect(got.analyses).toEqual(p.analyses);
@@ -2677,6 +2700,25 @@ function withListsOff(text: string): string {
   );
 }
 
+/**
+ * The text of a fixture saved before the types the user set were written,
+ * as this version writes it back: `"typesSet": []` before the read of its
+ * individuals file, when it has one, and nothing else changed.
+ */
+function withTypesSetEmpty(text: string): string {
+  const csvEnd = '\n      "decimal": "auto"\n    },\n    "read": ';
+  if (!text.includes('\n  "individuals": {')) {
+    return text;
+  }
+  if (text.split(csvEnd).length !== 2) {
+    throw new Error("the fixture does not have the end of its CSV once");
+  }
+  return text.replace(
+    csvEnd,
+    '\n      "decimal": "auto"\n    },\n    "typesSet": [],\n    "read": ',
+  );
+}
+
 describe("IP3 D2 the project file of the filters turned off", () => {
   const FILE = "v1-filters-off.popnei.json";
 
@@ -2746,7 +2788,7 @@ describe("IP3 D2 the project file of the filters turned off", () => {
       const text = writeProjectFile(state, POPGEN_DEFS, f.appVersion, f.saved);
       expect(fixture(f.file)).not.toContain("filtersOff");
       expect(fixture(f.file)).not.toContain("individualFiltersOff");
-      expect(text).toBe(withListsOff(fixture(f.file)));
+      expect(text).toBe(withTypesSetEmpty(withListsOff(fixture(f.file))));
       expect(text).toContain('\n  "filtersOff": [],\n');
       expect(text).toContain('\n  "individualFiltersOff": [],\n');
     },
@@ -2785,5 +2827,404 @@ describe("IP3 D2 the project file of the filters turned off", () => {
     expect(projectFileErrorText(expected, "run1.popnei.json")).toBe(
       "The project file cannot be opened: it has the filter of the variants by missing genotypes both on and turned off, and a filter is one or the other. The file was changed outside the application, or is damaged. Open a copy saved before the change, or make the project again.",
     );
+  });
+});
+
+// The project file of stage 4: the types the user set, a metadata file
+// not read when the project was saved, and a project with no metadata
+// file, whose diversity runs on one population.
+
+/** A project as an opening with the definitions of the application gives
+    it: the fingerprint of each check of its reference made, with the
+    definition of its analysis, from the project and the read options of
+    the reference's variants file. */
+function openedInPopgen(p: Project): Project {
+  const reference = p.reference;
+  if (reference === null) {
+    return deepFreeze(p);
+  }
+  return deepFreeze<Project>({
+    ...p,
+    reference: {
+      ...reference,
+      checks: reference.checks.map((check) => {
+        const def = POPGEN_ANALYSES.find((d) => d.id === check.analysis);
+        if (def === undefined) {
+          throw new Error(`no definition of ${check.analysis}`);
+        }
+        return {
+          ...check,
+          settings: settingsFingerprint(
+            def,
+            p,
+            reference.variants.readOptions,
+            null,
+          ),
+        };
+      }),
+    },
+  });
+}
+
+/** The state of the store of the application of population genetics with
+    the project `p`, popnei 0.1.0, the diversity of the status `diversity`
+    when one is given, and every other analysis locked. The project is
+    frozen, and the result is not, since its typed arrays cannot be. */
+function popgenState(
+  p: Project,
+  diversity: AnalysisStatus<JobResult> | null = null,
+): AppState<JobResult> {
+  return {
+    project: deepFreeze(p),
+    undo: null,
+    redo: null,
+    historyMoves: 0,
+    popneiVersion: "0.1.0",
+    analyses: POPGEN_ANALYSES.map((def) => ({
+      id: def.id,
+      status:
+        def.id === "diversity" && diversity !== null
+          ? diversity
+          : { kind: "locked", reason: "Load a variants file." },
+    })),
+    runs: [],
+    notice: null,
+    individualsKept: null,
+    write: null,
+  };
+}
+
+/** The project of `v1-types.popnei.json` once opened, without the
+    fingerprint of its check: the example of the spec whole, `pop` set
+    categorical where the reader inferred binary, and `status`, of yes and
+    no, set binary with no coded 1. */
+function typesProject(): Project {
+  return {
+    ...neiDiversityProject(),
+    individuals: {
+      fileId: "ffeeddccbbaa99887766554433221100",
+      name: "pops.csv",
+      csv: { encoding: "auto", separator: "auto", decimal: "auto" },
+      typesSet: [
+        ["pop", { kind: "categorical" }],
+        ["status", { kind: "binary", one: "no", zero: "yes" }],
+      ],
+      read: {
+        kind: "read",
+        table: {
+          columns: ["id", "pop", "status"],
+          rows: [
+            ["ind_001", "north", "yes"],
+            ["ind_002", "south", "no"],
+            ["ind_003", "north", "no"],
+            ["ind_004", "south", "yes"],
+            ["ind_005", "north", "yes"],
+            ["ind_006", "south", "no"],
+          ],
+        },
+        columns: [
+          { kind: "identifier" },
+          { kind: "categorical" },
+          { kind: "binary", one: "no", zero: "yes" },
+        ],
+        found: {
+          encoding: "utf-8",
+          separator: ",",
+          decimal: ".",
+          undecodedLine: null,
+        },
+      },
+    },
+  };
+}
+
+/** The project of `v1-metadata-not-read.popnei.json` once opened:
+    panel.nei, the missing data filter at 0.1, pops.csv not read when the
+    project was saved, with `pop` set categorical, the grouping by `pop`,
+    and no check. */
+function metadataNotReadProject(): Project {
+  return {
+    app: "popgen",
+    variants: null,
+    filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.1 }],
+    filtersOff: [],
+    individualFilters: [],
+    individualFiltersOff: [],
+    individuals: {
+      fileId: "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff",
+      name: "pops.csv",
+      csv: { encoding: "auto", separator: "auto", decimal: "auto" },
+      typesSet: [["pop", { kind: "categorical" }]],
+      read: { kind: "notGiven" },
+    },
+    grouping: { kind: "populations", column: "pop" },
+    analyses: [],
+    reference: {
+      variants: {
+        fileId: "e0e1e2e3e4e5e6e7e8e9eaebecedeeef",
+        name: "panel.nei",
+        size: 261490,
+        format: "nei",
+        readOptions: null,
+        read: {
+          kind: "read",
+          individuals: ["ind_001", "ind_002", "ind_003", "ind_004"],
+          ploidy: 2,
+          numVars: 1200,
+        },
+      },
+      checks: [],
+    },
+  };
+}
+
+/** The 200 individuals of panel.nei, s000 to s199. */
+const PANEL_INDIVIDUALS = Array.from(
+  { length: 200 },
+  (_, index) => `s${String(index).padStart(3, "0")}`,
+);
+
+/** The check numbers of the diversity of panel.nei with no metadata file
+    and the missing data filter at 0.05: the variants kept, then the
+    expected and observed heterozygosity and the proportion polymorphic of
+    "All individuals" (docs/specs/analyses/diversity.md, "How it is
+    verified"). */
+const ONE_POPULATION_NUMBERS = [
+  1152, 0.37487834409014364, 0.3541409192154764, 0.9791666666666666,
+];
+
+/** The project of `v1-one-population.popnei.json` once opened, without
+    the fingerprint of its check: panel.nei, no metadata file, the grouping
+    of one population, the missing data filter at 0.05, and the check of
+    the diversity of "All individuals". */
+function onePopulationProject(): Project {
+  return {
+    app: "popgen",
+    variants: null,
+    filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.05 }],
+    filtersOff: [],
+    individualFilters: [],
+    individualFiltersOff: [],
+    individuals: null,
+    grouping: { kind: "onePopulation" },
+    analyses: [],
+    reference: {
+      variants: {
+        fileId: "a0a1a2a3a4a5a6a7a8a9aaabacadaeaf",
+        name: "panel.nei",
+        size: 261490,
+        format: "nei",
+        readOptions: null,
+        read: {
+          kind: "read",
+          individuals: PANEL_INDIVIDUALS,
+          ploidy: 2,
+          numVars: 1200,
+        },
+      },
+      checks: [
+        {
+          analysis: "diversity",
+          numbers: ONE_POPULATION_NUMBERS,
+          keyVersion: 2,
+          popneiVersion: "0.1.0",
+          appVersion: "0.1.0",
+          settings: "",
+        },
+      ],
+    },
+  };
+}
+
+describe("IP4 D4 the project file of stage 4", () => {
+  test("v1-types.popnei.json opens into its project, the types set applied, and is written back byte for byte", () => {
+    const FILE = "v1-types.popnei.json";
+    expect(readProjectFile(fixture(FILE), "popgen", POPGEN_DEFS)).toEqual({
+      ok: true,
+      value: opened(typesProject()),
+    });
+    const state = stateOf(
+      opened(typesProject()),
+      Object.fromEntries(
+        POPGEN_DEFS.map((def) => [
+          def.id,
+          { kind: "locked", reason: "Load a variants file." },
+        ]),
+      ),
+    );
+    expect(
+      writeProjectFile(state, POPGEN_DEFS, "0.1.0", "2026-09-25T14:03:11.000Z"),
+    ).toBe(fixture(FILE));
+  });
+
+  test("v1-metadata-not-read.popnei.json, pops.csv notGiven, opens into its project, locked until the file is loaded again, and is written back byte for byte", () => {
+    const FILE = "v1-metadata-not-read.popnei.json";
+    const read = readProjectFile(fixture(FILE), "popgen", POPGEN_ANALYSES);
+    expect(read).toEqual({ ok: true, value: metadataNotReadProject() });
+    expect(read.ok && individualsNeeds(read.value)).toBe(
+      "pops.csv was not read when this project was saved, so the project file does not hold it. Load pops.csv again in the Individuals step.",
+    );
+    expect(
+      writeProjectFile(
+        popgenState(deepFreeze(metadataNotReadProject())),
+        POPGEN_ANALYSES,
+        "0.1.0",
+        "2026-09-28T17:05:40.000Z",
+      ),
+    ).toBe(fixture(FILE));
+  });
+
+  test("v1-nei-diversity.popnei.json, saved before the types set were written, is written back with an empty typesSet added to its individuals file, and nothing else changed but the filters off", () => {
+    const FILE = "v1-nei-diversity.popnei.json";
+    expect(fixture(FILE)).not.toContain("typesSet");
+    const state = stateOf(
+      opened(neiDiversityProject()),
+      Object.fromEntries(
+        POPGEN_DEFS.map((def) => [
+          def.id,
+          { kind: "locked", reason: "Load a variants file." },
+        ]),
+      ),
+    );
+    const text = writeProjectFile(
+      state,
+      POPGEN_DEFS,
+      "0.1.0",
+      "2026-09-25T14:03:11.000Z",
+    );
+    expect(text).toBe(withTypesSetEmpty(withListsOff(fixture(FILE))));
+    expect(text).toContain(
+      '\n      "decimal": "auto"\n    },\n    "typesSet": [],\n    "read": {\n      "kind": "read",\n',
+    );
+    expect(text.split('"typesSet"')).toHaveLength(2);
+  });
+
+  test("v1-one-population.popnei.json, no metadata file, opens with the 4 check numbers of one population, is written back byte for byte, and is refused with 7", () => {
+    const FILE = "v1-one-population.popnei.json";
+    const project = openedInPopgen(onePopulationProject());
+    expect(readProjectFile(fixture(FILE), "popgen", POPGEN_ANALYSES)).toEqual({
+      ok: true,
+      value: project,
+    });
+    expect(
+      writeProjectFile(
+        popgenState(project),
+        POPGEN_ANALYSES,
+        "0.1.0",
+        "2026-09-28T17:20:15.000Z",
+      ),
+    ).toBe(fixture(FILE));
+
+    // With no metadata file, the grouping by no column is one population
+    // too.
+    const noColumn = JSON.stringify({
+      ...fixtureJson(FILE),
+      grouping: { kind: "populations", column: null },
+    });
+    expect(readProjectFile(noColumn, "popgen", POPGEN_ANALYSES).ok).toBe(true);
+
+    const seven = JSON.stringify({
+      ...fixtureJson(FILE),
+      checks: [
+        {
+          analysis: "diversity",
+          numbers: [...ONE_POPULATION_NUMBERS, 0.3, 0.3, 0.9],
+          keyVersion: 2,
+          popneiVersion: "0.1.0",
+          appVersion: "0.1.0",
+        },
+      ],
+    });
+    expect(readProjectFile(seven, "popgen", POPGEN_ANALYSES)).toEqual({
+      ok: false,
+      error: {
+        kind: "header",
+        field: "checks",
+        expected:
+          "4 numbers for the analysis diversity, as many as the rest of the file gives it, and not 7",
+      },
+    });
+  });
+
+  test("the diversity of a project with no metadata file, done over All individuals, is saved with its 4 check numbers, which open again", () => {
+    const opening = readProjectFile(
+      fixture("v1-one-population.popnei.json"),
+      "popgen",
+      POPGEN_ANALYSES,
+    );
+    if (!opening.ok || opening.value.reference === null) {
+      throw new Error("the fixture opens, with its reference");
+    }
+    const p = deepFreeze<Project>({
+      ...opening.value,
+      variants: opening.value.reference.variants,
+    });
+    const result: DiversityResult = {
+      analysis: "diversity",
+      pops: ["All individuals"],
+      numIndividuals: Uint32Array.from([200]),
+      unbiasedExpHet: Float64Array.from([0.37487834409014364]),
+      obsHet: Float64Array.from([0.3541409192154764]),
+      polyRatio: Float64Array.from([0.9791666666666666]),
+      numVarsWithValue: Uint32Array.from([1152]),
+      passStats: {
+        numVars: 1152,
+        filtering: {
+          missing_data: { varsProcessed: 1200, varsKept: 1152 },
+        },
+      },
+    };
+    const text = writeProjectFile(
+      popgenState(p, {
+        kind: "done",
+        key: A_KEY,
+        result,
+        warnings: [],
+        check: null,
+      }),
+      POPGEN_ANALYSES,
+      "0.2.0",
+      "2026-09-28T18:00:00.000Z",
+    );
+    const again = readProjectFile(text, "popgen", POPGEN_ANALYSES);
+    if (!again.ok) {
+      throw new Error(JSON.stringify(again.error));
+    }
+    expect(again.value.grouping).toEqual({ kind: "onePopulation" });
+    expect(again.value.individuals).toBeNull();
+    expect(again.value.reference?.checks.map((c) => c.numbers)).toEqual([
+      ONE_POPULATION_NUMBERS,
+    ]);
+  });
+
+  test("a read of the individuals file pending or failed is refused as header, with its text, and one notGiven opens", () => {
+    const file = fixtureJson("v1-metadata-not-read.popnei.json");
+    const individuals = file["individuals"];
+    if (typeof individuals !== "object" || individuals === null) {
+      throw new Error("the fixture has an individuals file");
+    }
+    const withRead = (read: unknown): string =>
+      JSON.stringify({ ...file, individuals: { ...individuals, read } });
+    const expected: ProjectFileError = {
+      kind: "header",
+      field: "individuals",
+      expected:
+        "the table read, or no table for a file not read, as the application saves it",
+    };
+    for (const read of [
+      { kind: "pending" },
+      { kind: "failed", error: { kind: "empty" } },
+    ]) {
+      expect(readProjectFile(withRead(read), "popgen", POPGEN_DEFS)).toEqual({
+        ok: false,
+        error: expected,
+      });
+    }
+    expect(projectFileErrorText(expected, "run1.popnei.json")).toBe(
+      "The project file cannot be opened: what was read of the individuals file should be the table read, or no table for a file not read, as the application saves it. The file was changed outside the application, or is damaged. Open a copy saved before the change, or make the project again.",
+    );
+    expect(
+      readProjectFile(withRead({ kind: "notGiven" }), "popgen", POPGEN_DEFS).ok,
+    ).toBe(true);
   });
 });
