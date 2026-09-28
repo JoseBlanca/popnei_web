@@ -906,7 +906,7 @@ browsers is measured.
 - [x] 6.2 The client's restart after a large PCA, `PCA_RESTART_INDIVIDUALS`
   (`client.md`, "A large PCA, and the restart after it", and its rows of
   "Crashes, defects, and every read answered"). Serves 3. Needs 6.1.
-- [ ] 6.3 `src/core/analyses/pca.ts` but its key: "What it does", "Which
+- [x] 6.3 `src/core/analyses/pca.ts` but its key: "What it does", "Which
   variants it reads", "Its options", "Why it cannot run", "The
   request", "The warnings", "The check numbers", "Its lines of the
   Python script", "The TypeScript interface" and "Its words" of
@@ -921,7 +921,10 @@ browsers is measured.
   its own (`pca.md`, "What goes into its key"): a key that missed the
   PCA's own filters, or put the colour or the view into it, would show a
   PCA of other variants as current, or calculate again for a change of
-  colour. Serves 5. Needs 6.3.
+  colour. Serves 5. Needs 6.3. Added on 28 September 2026 (found by task
+  6.3): the diversity's words of any other refusal without popnei's
+  backquotes, as `diversity.md`, "Its words", asks and no task built
+  (`withoutBackquotes` of `words.ts`).
 - [ ] 6.5 The measurements of D6 (above, "Where the specs are thin", for
   how the PCA runs in the browser before its panel); `e2e/bigVcf.ts`
   given the individuals it needs (`pca.md`, "How it runs"; the
