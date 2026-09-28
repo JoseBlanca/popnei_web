@@ -91,8 +91,9 @@ data, observed heterozygosity, the major allele frequency (MAF) and the
 LD pruning, in that fixed order, with the regions of a BED file first
 once popnei has that filter; the **filters of individuals** make one list
 of the individuals kept, which a job carries, and over which the filters
-of the variants count, as the owner decided on 28 September 2026
-(`docs/architecture.md`, sections 2 and 4). A **component** is one axis
+of the variants but the regions count, as the owner decided on 28
+September 2026; the regions come before the list, as the owner decided
+later that day (`docs/architecture.md`, sections 2 and 4). A **component** is one axis
 of the analysis, PC1 the one along which the individuals vary most; the
 **projection** of an individual on a component is its coordinate there;
 the **explained variance** of a component is the share of the variance

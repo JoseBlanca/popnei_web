@@ -49,7 +49,9 @@ filters of the variants; and `createStore` refuses a definition of the
 statistics that reads any filter. Revised again that day for the
 owner's decision that the PCA has its own filters of missing data, MAF
 and LD, each following the Variants step by default: why the PCA still
-fills no counts. Not yet reviewed or approved; it
+fills no counts; and the property that no request of the statistics
+carries a filter, which will allow the regions of a BED file once the
+application has that filter. Not yet reviewed or approved; it
 changes the code of stage 3. The store is the one object of core that
 changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
@@ -1455,8 +1457,11 @@ whose file is a text.
   with no distance, and only then for that reason, and no definition
   that reads only the filters of individuals is locked for it; and no
   request of the statistics carries a filter or a list, whatever the
-  project (`docs/architecture.md`, section 2, "What would show the
-  choice wrong").
+  project, but for the regions of a BED file once the application has
+  that filter: a request of the statistics then carries the regions of
+  its project and no other filter
+  (`docs/architecture.md`, section 2, "What would show the choice
+  wrong").
 
 The tests in the browser, of the walking skeleton, check the same through
 the screens, since core reaches them through the store

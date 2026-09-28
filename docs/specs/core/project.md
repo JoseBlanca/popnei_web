@@ -83,7 +83,10 @@ missing data, MAF and LD, each following the Variants step by default
 (`docs/specs/analyses/pca.md`): what said the PCA's pruning now says
 the PCA's own LD filter, and the PCA is locked by the LD filter of the
 step through its own `needs`, and only while its LD filter follows the
-step. Not yet reviewed or approved; it changes the code of stage 3.
+step; and again that day for the owner's decision that the regions of
+a BED file, once the application has that filter, come before the
+filter of individuals. Not yet reviewed or approved; it changes the
+code of stage 3.
 
 The project is everything the user has set in one application: the
 variants file they loaded, the filters, the individuals file with the
@@ -162,11 +165,15 @@ The rules, which every function below keeps:
   missing data, observed heterozygosity, the major allele frequency
   (MAF) and the LD pruning, in that order, the regions of a BED file first once popnei has that filter;
   the individuals' keep, remove, missing data, observed heterozygosity.
-  The filter of individuals comes before every filter of the variants,
-  as popnei's `filterIndividuals` put first on the `Variants`, so the
-  filters of the variants count over the individuals kept, as the owner
-  decided on 28 September 2026; until then it came after them, and they
-  counted over every individual of the file. Setting
+  The filter of individuals comes before every filter of the variants
+  but the regions, as popnei's `filterIndividuals` put on the `Variants`
+  after the regions and before any other step, so the other filters of
+  the variants count over the individuals kept, as the owner decided on
+  28 September 2026; until then it came after them, and they counted
+  over every individual of the file. The regions, once the application
+  has that filter, come before the filter of individuals, as the owner
+  decided later that day, since they keep a variant by its position
+  alone (`docs/architecture.md`, section 2). Setting
   a filter puts it in the place of its kind, and replaces the one of its
   kind that is there; nothing moves a filter. `moveVariantFilter`, which
   moved one in the order the user gave until stage 2, is gone.
