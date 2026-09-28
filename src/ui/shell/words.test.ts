@@ -11,6 +11,7 @@ import { keyFromWire } from "../../core/keys.ts";
 import type { Key } from "../../core/keys.ts";
 import type {
   AnalysisId,
+  Grouping,
   IndividualsRead,
   IndividualsSource,
   Project,
@@ -31,7 +32,11 @@ import { deepFreeze } from "../../core/testSupport.ts";
 import type { TestDefResult } from "../../core/testSupport.ts";
 import type { IndividualsKept } from "../../core/individualsKept.ts";
 import { individualListNeeds, variantFilterNeeds } from "../../core/project.ts";
-import type { CsvOptions, IndividualsTable } from "../../worker/protocol.ts";
+import type {
+  ColumnType,
+  CsvOptions,
+  IndividualsTable,
+} from "../../worker/protocol.ts";
 import {
   announcementsOf,
   noticeText,
@@ -339,7 +344,11 @@ describe("WS9 D1 the states of the steps", () => {
   test("the steps come in their order, each with its state", () => {
     expect(stepStates(state({}), WORDS)).toEqual([
       { id: "variants", status: "todo", reason: LOAD_VARIANTS },
-      { id: "individuals", status: "todo", reason: null },
+      {
+        id: "individuals",
+        status: "optional",
+        reason: "Without it, every individual is in one population.",
+      },
       { id: "analyses", status: "locked", reason: LOAD_VARIANTS },
     ]);
   });
@@ -390,11 +399,11 @@ describe("WS9 D1 the states of the steps", () => {
     });
   });
 
-  test("Individuals with no metadata file is To do", () => {
+  test("Individuals with no metadata file is Optional", () => {
     const p = project({ variants: variants(READ) });
     expect(stepOf(state({ project: p }), "individuals")).toEqual({
-      status: "todo",
-      reason: null,
+      status: "optional",
+      reason: "Without it, every individual is in one population.",
     });
   });
 
@@ -540,7 +549,7 @@ const THREE_POPS = tableRead({
 describe("WS9 D1 the summary line", () => {
   test("the empty first project", () => {
     expect(plainLine(firstProject("popgen"))).toBe(
-      "No variants file · 1 filter · no metadata file",
+      "No variants file · 1 filter · no metadata file: one population",
     );
   });
 
@@ -557,36 +566,36 @@ describe("WS9 D1 the summary line", () => {
 
   test("no variants file, and for an opened project the file it was made with", () => {
     expect(plainLine(OPENED)).toBe(
-      "No variants file: the project was made with panel_2026.nei · 1 filter · no metadata file",
+      "No variants file: the project was made with panel_2026.nei · 1 filter · no metadata file: one population",
     );
   });
 
   test("a variants file being read", () => {
     expect(plainLine(project({ variants: variants(PENDING) }))).toBe(
-      "Reading panel.nei · 1 filter · no metadata file",
+      "Reading panel.nei · 1 filter · no metadata file: one population",
     );
   });
 
   test("a variants file whose read failed", () => {
     expect(plainLine(project({ variants: variants(REFUSED) }))).toBe(
-      "panel.nei could not be read · 1 filter · no metadata file",
+      "panel.nei could not be read · 1 filter · no metadata file: one population",
     );
   });
 
   test("a variants file read, its variants once a calculation has counted them", () => {
     expect(plainLine(project({ variants: variants(READ) }))).toBe(
-      "panel.nei · 3 individuals · 1 filter · no metadata file",
+      "panel.nei · 3 individuals · 1 filter · no metadata file: one population",
     );
     expect(
       plainLine(project({ variants: variants(readOf(["i1"], 1_203_554)) })),
     ).toBe(
-      "panel.nei · 1 individual · 1,203,554 variants before the filters · 1 filter · no metadata file",
+      "panel.nei · 1 individual · 1,203,554 variants before the filters · 1 filter · no metadata file: one population",
     );
   });
 
   test("the filters of the variants and of the individuals, counted", () => {
     expect(plainLine(project({ filters: [] }))).toBe(
-      "No variants file · no filter · no metadata file",
+      "No variants file · no filter · no metadata file: one population",
     );
     expect(
       plainLine(
@@ -596,12 +605,12 @@ describe("WS9 D1 the summary line", () => {
           ],
         }),
       ),
-    ).toBe("No variants file · 2 filters · no metadata file");
+    ).toBe("No variants file · 2 filters · no metadata file: one population");
   });
 
   test("no metadata file", () => {
     expect(plainLine(project({ variants: variants(READ) }))).toMatch(
-      / · no metadata file$/,
+      / · no metadata file: one population$/,
     );
   });
 
@@ -641,13 +650,13 @@ describe("WS9 D1 the summary line", () => {
     );
   });
 
-  test("a metadata file read with no column chosen is one population", () => {
+  test("a metadata file read with no column chosen is populations not chosen", () => {
     const p = project({
       variants: variants(READ),
       individuals: individuals(TABLE_READ),
     });
     expect(plainLine(p)).toBe(
-      "panel.nei · 3 individuals · 1 filter · one population",
+      "panel.nei · 3 individuals · 1 filter · populations not chosen",
     );
   });
 
@@ -2535,5 +2544,271 @@ describe("IP3 D3 the stepper and the summary line with the switches of stage 4",
     expect(summaryLine(off, null, null)).toBe(
       "panel.nei · 200 individuals · 1,200 variants before the filters · 1 filter · 3 populations by pop",
     );
+  });
+});
+
+// Stage 4: the metadata file optional, the one population, a file not
+// given, and the end of a read with what it brings up on the
+// Individuals step (docs/specs/shell.md, "How it is checked").
+
+/** The reason of the Individuals step at Optional. */
+const OPTIONAL_REASON = "Without it, every individual is in one population.";
+
+const ONE_POPULATION_GROUPING = { kind: "onePopulation" } as const;
+
+const NO_COLUMN = { kind: "populations", column: null } as const;
+
+const NOT_GIVEN: IndividualsRead = { kind: "notGiven" };
+
+/** A read of `table` with the types `types`, found with the options of
+    a comma and a point, and a first character not decoded on the line
+    `undecodedLine`. */
+function typedRead(
+  table: IndividualsTable,
+  types: readonly ColumnType[],
+  undecodedLine: number | null = null,
+): IndividualsRead {
+  return {
+    kind: "read",
+    table,
+    columns: types,
+    found: { encoding: "utf-8", separator: ",", decimal: ".", undecodedLine },
+  };
+}
+
+// i1, i2 and i3 in the populations p0 and p1, with two columns of whole
+// numbers.
+const SCORED_TABLE: IndividualsTable = {
+  columns: ["id", "pop", "score", "grade"],
+  rows: [
+    ["i1", "p0", "1", "2"],
+    ["i2", "p1", "2", "3"],
+    ["i3", "p0", "3", "4"],
+  ],
+};
+
+const IDENTIFIER: ColumnType = { kind: "identifier" };
+const CATEGORICAL: ColumnType = { kind: "categorical" };
+const CONTINUOUS: ColumnType = { kind: "continuous" };
+const STATUS_BINARY: ColumnType = { kind: "binary", one: "yes", zero: "no" };
+
+/** The announcements of the end of a read of pops.csv, the same load
+    pending before and read with `read` after, in a project of READ with
+    the grouping `grouping` and the types set `typesSet`. */
+function readEnded(
+  read: IndividualsRead,
+  grouping: Grouping = BY_POP,
+  typesSet: IndividualsSource["typesSet"] = [],
+): readonly string[] {
+  const source = (r: IndividualsRead): IndividualsSource => ({
+    ...individuals(r),
+    typesSet,
+  });
+  const before = project({
+    variants: variants(READ),
+    individuals: source(PENDING),
+    grouping,
+  });
+  const after = project({
+    variants: variants(READ),
+    individuals: source(read),
+    grouping,
+  });
+  return announcementsOf(
+    state({ project: before }),
+    state({ project: after }),
+    WORDS,
+  );
+}
+
+/** A read of SCORED_TABLE with every column but the first categorical. */
+const SCORED_PLAIN = typedRead(SCORED_TABLE, [
+  IDENTIFIER,
+  CATEGORICAL,
+  CATEGORICAL,
+  CATEGORICAL,
+]);
+
+const READ_WORDS = "pops.csv read: 3 rows, 4 columns. All 3 individuals found.";
+
+describe("IP5 D1 the states of the Individuals step in the stepper", () => {
+  test("with no metadata file Individuals is Optional whatever the grouping, with its reason", () => {
+    expect(stepOf(state({}), "individuals")).toEqual({
+      status: "optional",
+      reason: OPTIONAL_REASON,
+    });
+    for (const grouping of [NO_COLUMN, BY_POP, ONE_POPULATION_GROUPING]) {
+      const p = project({ variants: variants(READ), grouping });
+      expect(stepOf(state({ project: p }), "individuals")).toEqual({
+        status: "optional",
+        reason: OPTIONAL_REASON,
+      });
+    }
+  });
+
+  test("a file read and no column chosen is To do, with the words of the one population", () => {
+    const p = project({
+      variants: variants(READ),
+      individuals: individuals(TABLE_READ),
+      grouping: NO_COLUMN,
+    });
+    expect(stepOf(state({ project: p }), "individuals")).toEqual({
+      status: "todo",
+      reason:
+        "Choose the column that defines the populations, or all individuals in one population, in the Individuals step.",
+    });
+  });
+
+  test("a file notGiven is To do, with the reason of individualsNeeds", () => {
+    const p = project({
+      variants: variants(READ),
+      individuals: individuals(NOT_GIVEN),
+      grouping: BY_POP,
+    });
+    expect(stepOf(state({ project: p }), "individuals")).toEqual({
+      status: "todo",
+      reason:
+        "pops.csv was not read when this project was saved, so the project file does not hold it. Load pops.csv again in the Individuals step.",
+    });
+  });
+
+  test("a file read that holds every individual, with the one population, is Done", () => {
+    const p = project({
+      variants: variants(READ),
+      individuals: individuals(TABLE_READ),
+      grouping: ONE_POPULATION_GROUPING,
+    });
+    expect(stepOf(state({ project: p }), "individuals")).toEqual({
+      status: "done",
+      reason: null,
+    });
+  });
+});
+
+describe("IP5 D1 the summary line of stage 4", () => {
+  test("the first project: no metadata file, one population", () => {
+    expect(plainLine(firstProject("popgen"))).toBe(
+      "No variants file · 1 filter · no metadata file: one population",
+    );
+  });
+
+  test("a file read and no column chosen: populations not chosen", () => {
+    const p = project({
+      variants: variants(READ),
+      individuals: individuals(TABLE_READ),
+      grouping: NO_COLUMN,
+    });
+    expect(plainLine(p)).toBe(
+      "panel.nei · 3 individuals · 1 filter · populations not chosen",
+    );
+  });
+
+  test("a file read with the one population: one population", () => {
+    const p = project({
+      variants: variants(READ),
+      individuals: individuals(TABLE_READ),
+      grouping: ONE_POPULATION_GROUPING,
+    });
+    expect(plainLine(p)).toBe(
+      "panel.nei · 3 individuals · 1 filter · one population",
+    );
+  });
+
+  test("a file notGiven: pops.csv not loaded", () => {
+    const p = project({
+      variants: variants(READ),
+      individuals: individuals(NOT_GIVEN),
+      grouping: BY_POP,
+    });
+    expect(plainLine(p)).toBe(
+      "panel.nei · 3 individuals · 1 filter · pops.csv not loaded",
+    );
+  });
+});
+
+describe("IP5 D1 the end of a read of the metadata file", () => {
+  test("a read that brings nothing up says the read and the check alone", () => {
+    expect(readEnded(SCORED_PLAIN)).toEqual([READ_WORDS]);
+  });
+
+  test("a character not decoded", () => {
+    const read = typedRead(
+      SCORED_TABLE,
+      [IDENTIFIER, CATEGORICAL, CATEGORICAL, CATEGORICAL],
+      3,
+    );
+    expect(readEnded(read)).toEqual([
+      `${READ_WORDS} Warning: line 3 of pops.csv has bytes that could not be read.`,
+    ]);
+  });
+
+  test("a column of few whole numbers, and two of them", () => {
+    const one = typedRead(SCORED_TABLE, [
+      IDENTIFIER,
+      CATEGORICAL,
+      CONTINUOUS,
+      CATEGORICAL,
+    ]);
+    expect(readEnded(one)).toEqual([
+      `${READ_WORDS} Warning: score may hold codes and is taken as a measurement.`,
+    ]);
+    const two = typedRead(SCORED_TABLE, [
+      IDENTIFIER,
+      CATEGORICAL,
+      CONTINUOUS,
+      CONTINUOUS,
+    ]);
+    expect(readEnded(two)).toEqual([
+      `${READ_WORDS} Warning: 2 columns may hold codes and are taken as measurements.`,
+    ]);
+  });
+
+  test("the column of the populations not in the file", () => {
+    expect(
+      readEnded(SCORED_PLAIN, { kind: "populations", column: "popcat" }),
+    ).toEqual([
+      `${READ_WORDS} pops.csv has no column popcat, from which the populations were taken. Choose the column that defines the populations, or all individuals in one population.`,
+    ]);
+  });
+
+  test("the types set and not applied, one column and two", () => {
+    expect(
+      readEnded(SCORED_PLAIN, BY_POP, [["status", STATUS_BINARY]]),
+    ).toEqual([`${READ_WORDS} status does not have the type you set.`]);
+    expect(
+      readEnded(SCORED_PLAIN, BY_POP, [
+        ["status", STATUS_BINARY],
+        ["region", CATEGORICAL],
+      ]),
+    ).toEqual([`${READ_WORDS} 2 columns do not have the type you set.`]);
+  });
+
+  test("all four, in their order", () => {
+    const read = typedRead(
+      SCORED_TABLE,
+      [IDENTIFIER, CATEGORICAL, CONTINUOUS, CATEGORICAL],
+      7,
+    );
+    expect(
+      readEnded(read, { kind: "populations", column: "popcat" }, [
+        ["status", STATUS_BINARY],
+      ]),
+    ).toEqual([
+      `${READ_WORDS} Warning: line 7 of pops.csv has bytes that could not be read. Warning: score may hold codes and is taken as a measurement. pops.csv has no column popcat, from which the populations were taken. Choose the column that defines the populations, or all individuals in one population. status does not have the type you set.`,
+    ]);
+  });
+
+  test("the names of the columns are escaped", () => {
+    const table: IndividualsTable = {
+      columns: ["id", "pop", "sc‮ore"],
+      rows: [["i1", "p0", "1"]],
+    };
+    const read = typedRead(table, [IDENTIFIER, CATEGORICAL, CONTINUOUS]);
+    const said = readEnded(read, BY_POP, [["st‮atus", STATUS_BINARY]]);
+    expect(said).toHaveLength(1);
+    expect(said[0]).toContain(
+      "Warning: sc\\u202eore may hold codes and is taken as a measurement.",
+    );
+    expect(said[0]).toContain("st\\u202eatus does not have the type you set.");
   });
 });

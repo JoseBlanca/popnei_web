@@ -1,9 +1,11 @@
 /**
  * The Individuals step (docs/specs/steps/individuals.md): the user picks
- * the metadata file, a CSV or a TSV, sees how it was read and can change
+ * the metadata file, a CSV or a TSV, or goes on without one, every
+ * individual then in one population; sees how it was read and can change
  * it, sees its columns with the types the reader inferred, chooses the
- * column that defines the populations, and learns whether every
- * individual of the variants file is in it. The step reads the project
+ * column that defines the populations or all individuals in one
+ * population, and learns whether every individual of the variants file
+ * is in it. The step reads the project
  * from the store and sends it commands; what it holds itself is the
  * message of a file it did not load.
  */
@@ -45,8 +47,8 @@ import type { StepCommand } from "../variants/commands.ts";
 import {
   REMOVE_COMMAND,
   csvOptionCommand,
-  groupingCommand,
   pickCommand,
+  populationItemCommand,
 } from "./commands.ts";
 import styles from "./IndividualsStep.module.css";
 import {
@@ -55,12 +57,14 @@ import {
   NO_FILE,
   OPTIONS_HELP,
   PICKER_ENDINGS,
+  POPULATIONS_HELP,
   SEVERAL_DROPPED,
   TEXT_DROPPED,
   TYPES_LINE,
   UTF16_TEXT,
   allFoundText,
   checkHeading,
+  chosenPopulationItem,
   decimalItems,
   detectedText,
   encodingItems,
@@ -71,6 +75,7 @@ import {
   missingLabel,
   noPopulationLine,
   otherNameText,
+  populationItems,
   populationLine,
   separatorItems,
   sizeText,
@@ -86,10 +91,6 @@ const NOT_FILES_WORDS = {
   text: TEXT_DROPPED,
   several: SEVERAL_DROPPED,
 } as const;
-
-/** The line under the column of the populations. */
-const COLUMN_DESCRIPTION =
-  "Any column can define the populations, whatever its type.";
 
 /** The Individuals step, in the `<main>` of the shell. */
 export function IndividualsStep(): React.JSX.Element {
@@ -213,7 +214,9 @@ export function IndividualsStep(): React.JSX.Element {
           {message !== null && <Problem>{message}</Problem>}
         </section>
 
-        {individuals !== null && csv !== null && (
+        {/* A file notGiven is loaded again rather than read with other
+            options, so it has none. */}
+        {individuals !== null && csv !== null && read?.kind !== "notGiven" && (
           <section
             aria-labelledby={optionsHeading}
             className={classOf(styles, "section")}
@@ -458,23 +461,20 @@ interface PopulationsProps {
   readonly send: (step: StepCommand) => void;
 }
 
-/** The column that defines the populations, and the populations, once
-    every individual of the variants file is found. */
+/** The select of what defines the populations, "All individuals in one
+    population" or a column, and the populations, once every individual
+    of the variants file is found. */
 function Populations({ table, send }: PopulationsProps): React.JSX.Element {
   const heading = useId();
   const grouping = useAppState((s) => s.project.grouping);
   const check = useAppState((s) => individualsCheck(s.project));
   const toRun = useAppState((s) => populationsToRun(s.project));
-  // Two primitives, since populationsNeeds gives a new object each call.
-  // The reason of no column chosen is the placeholder of the select.
-  const columnReason = useAppState((s) => {
-    const need = populationsNeeds(s.project);
-    return need === null || need.kind === "noColumn" ? null : need.reason;
-  });
-
-  const choosable = table.columns.slice(1);
-  const column = grouping.kind === "populations" ? grouping.column : null;
-  const chosen = column !== null && choosable.includes(column) ? column : null;
+  // Primitives, since populationsNeeds gives a new object each call. The
+  // reasons are those of the step, `inStep`, without its place. No column
+  // chosen yet is not a problem of the choice made, so its reason is read
+  // with the line under the select; the others are problems of it.
+  const needKind = useAppState((s) => populationsNeeds(s.project)?.kind);
+  const needText = useAppState((s) => populationsNeeds(s.project)?.inStep);
 
   return (
     <section aria-labelledby={heading} className={classOf(styles, "section")}>
@@ -483,13 +483,19 @@ function Populations({ table, send }: PopulationsProps): React.JSX.Element {
       </h2>
       <Select
         label="Column that defines the populations"
-        items={choosable.map((name) => ({ id: name, label: escaped(name) }))}
-        value={chosen}
+        items={populationItems(table.columns)}
+        value={chosenPopulationItem(grouping, table.columns)}
         placeholder="Choose a column"
-        description={COLUMN_DESCRIPTION}
-        {...(columnReason !== null && { problem: columnReason })}
-        onChange={(name) => {
-          send(groupingCommand(name));
+        description={
+          needKind === "noColumn" && needText !== undefined
+            ? `${needText} ${POPULATIONS_HELP}`
+            : POPULATIONS_HELP
+        }
+        {...(needKind !== undefined &&
+          needKind !== "noColumn" &&
+          needText !== undefined && { problem: needText })}
+        onChange={(id) => {
+          send(populationItemCommand(id));
         }}
       />
       {check !== null && check.missing.length === 0 && toRun !== null && (

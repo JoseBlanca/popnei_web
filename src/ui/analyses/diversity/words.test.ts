@@ -61,16 +61,20 @@ describe("the words of the panel of the diversity", () => {
       ["p2", s(50)],
       ["p1", s(37)],
     ] as const;
-    expect(readyLines({ pops, emptied: [] }, false)).toEqual([
+    expect(readyLines({ pops, emptied: [] }, false, "populations")).toEqual([
       "3 populations: p0, 32 individuals; p2, 50 individuals; p1, 37 individuals",
     ]);
     expect(
-      readyLines({ pops: [["p0", s(48)]], emptied: ["p9"] }, false),
+      readyLines(
+        { pops: [["p0", s(48)]], emptied: ["p9"] },
+        false,
+        "populations",
+      ),
     ).toEqual([
       "1 population: p0, 48 individuals",
       "p9 has no individual left after the filters of individuals, and is left out. Loosen the filters of individuals in the Variants step to keep it.",
     ]);
-    expect(readyLines({ pops, emptied: [] }, true)).toEqual([
+    expect(readyLines({ pops, emptied: [] }, true, "populations")).toEqual([
       "3 populations: p0, 32 individuals; p2, 50 individuals; p1, 37 individuals",
       "Run calculates the statistics of each individual first, and the populations may lose individuals to the thresholds.",
     ]);
@@ -114,5 +118,30 @@ describe("the words of the panel of the diversity", () => {
     expect(csvName("Panel.VCF.GZ")).toBe("Panel.diversity.csv");
     expect(csvName("panel.vcf.bgz")).toBe("panel.vcf.bgz.diversity.csv");
     expect(csvName(".nei")).toBe("project.diversity.csv");
+  });
+
+  test("IP5 D3 the lines of the ready state on the one population, with and without a metadata file", () => {
+    const s = (count: number): string[] =>
+      Array.from({ length: count }, (_, i) => `s${String(i)}`);
+    const all = { pops: [["All individuals", s(200)]], emptied: [] } as const;
+    expect(readyLines(all, false, "noFile")).toEqual([
+      "1 population, All individuals: 200 individuals",
+      "No metadata file: every individual is in one population.",
+    ]);
+    expect(readyLines(all, false, "onePopulation")).toEqual([
+      "1 population, All individuals: 200 individuals",
+    ]);
+    expect(readyLines(all, true, "noFile")).toEqual([
+      "1 population, All individuals: 200 individuals",
+      "No metadata file: every individual is in one population.",
+      "Run calculates the statistics of each individual first, and the populations may lose individuals to the thresholds.",
+    ]);
+    expect(
+      readyLines(
+        { pops: [["All individuals", s(1)]], emptied: [] },
+        false,
+        "onePopulation",
+      ),
+    ).toEqual(["1 population, All individuals: 1 individual"]);
   });
 });

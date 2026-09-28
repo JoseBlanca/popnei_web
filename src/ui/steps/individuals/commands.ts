@@ -12,10 +12,11 @@ import {
   setCsvOptions,
   setGrouping,
 } from "../../../core/project.ts";
+import type { Project } from "../../../core/project.ts";
 import type { CsvOptions } from "../../../worker/protocol.ts";
 import type { StepCommand } from "../variants/commands.ts";
-import type { CsvOption } from "./words.ts";
-import { AUTO_CSV } from "./words.ts";
+import type { CsvOption, PopulationItemId } from "./words.ts";
+import { AUTO_CSV, groupingOfItem } from "./words.ts";
 
 /** A file picked or dropped, a new load read with every option found
     by the reader. */
@@ -52,6 +53,21 @@ export function groupingCommand(column: string): StepCommand {
     description: "the column of the populations changed",
     command: (p) => setGrouping(p, { kind: "populations", column }),
   };
+}
+
+/** "All individuals in one population" chosen. */
+export const ONE_POPULATION_COMMAND: StepCommand = Object.freeze({
+  description: "every individual was put in one population",
+  command: (p: Project) => setGrouping(p, { kind: "onePopulation" }),
+});
+
+/** The item `id` of the select of the populations chosen: the one
+    population, or a column. */
+export function populationItemCommand(id: PopulationItemId): StepCommand {
+  const grouping = groupingOfItem(id);
+  return grouping.kind === "populations" && grouping.column !== null
+    ? groupingCommand(grouping.column)
+    : ONE_POPULATION_COMMAND;
 }
 
 /** The metadata file removed. */

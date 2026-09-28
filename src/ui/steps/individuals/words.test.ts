@@ -3,7 +3,10 @@ import { describe, expect, test } from "vitest";
 import type { IndividualsTable } from "../../../worker/protocol.ts";
 import {
   allFoundText,
+  NO_FILE,
+  ONE_POPULATION_ITEM,
   checkHeading,
+  chosenPopulationItem,
   detectedText,
   excelText,
   firstValuesText,
@@ -12,6 +15,7 @@ import {
   missingLabel,
   noPopulationLine,
   otherNameText,
+  populationItems,
   populationLine,
   sizeText,
   typeText,
@@ -147,6 +151,70 @@ describe("the words of the Individuals step", () => {
     expect(noPopulationLine(4)).toEqual({
       shown: "No population · 4, left out of the analyses per population",
       read: "No population, 4 individuals, left out of the analyses per population",
+    });
+  });
+});
+
+describe("IP5 D2 the file and the populations of stage 4", () => {
+  test("the line of no file says what the analyses run on", () => {
+    expect(NO_FILE).toBe(
+      "No metadata file: every individual is in one population.",
+    );
+  });
+
+  test("the items of the select of the populations: the one population first, then every column but the first, escaped", () => {
+    expect(populationItems(["IID", "popcat", "reg\u202eion"])).toEqual([
+      { id: "one", label: "All individuals in one population" },
+      { id: "column:popcat", label: "popcat" },
+      { id: "column:reg\u202eion", label: "reg\\u202eion" },
+    ]);
+    expect(populationItems(["IID"])).toEqual([
+      { id: "one", label: ONE_POPULATION_ITEM },
+    ]);
+  });
+
+  test("a column named one, or as the item of the one population, is a column", () => {
+    const columns = ["IID", "one", ONE_POPULATION_ITEM];
+    expect(populationItems(columns).map((item) => item.id)).toEqual([
+      "one",
+      "column:one",
+      `column:${ONE_POPULATION_ITEM}`,
+    ]);
+    expect(
+      chosenPopulationItem({ kind: "populations", column: "one" }, columns),
+    ).toBe("column:one");
+    expect(
+      chosenPopulationItem(
+        { kind: "populations", column: ONE_POPULATION_ITEM },
+        columns,
+      ),
+    ).toBe(`column:${ONE_POPULATION_ITEM}`);
+  });
+
+  test("the item shown as chosen: the one population, a column of the table, or none", () => {
+    const columns = ["IID", "popcat"];
+    expect(chosenPopulationItem({ kind: "onePopulation" }, columns)).toBe(
+      "one",
+    );
+    expect(
+      chosenPopulationItem({ kind: "populations", column: "popcat" }, columns),
+    ).toBe("column:popcat");
+    expect(
+      chosenPopulationItem({ kind: "populations", column: null }, columns),
+    ).toBeNull();
+    expect(
+      chosenPopulationItem({ kind: "populations", column: "region" }, columns),
+    ).toBeNull();
+    // The first column names the individuals and is not offered.
+    expect(
+      chosenPopulationItem({ kind: "populations", column: "IID" }, columns),
+    ).toBeNull();
+  });
+
+  test("the line of the one population", () => {
+    expect(populationLine("All individuals", 342)).toEqual({
+      shown: "All individuals · 342",
+      read: "All individuals, 342 individuals",
     });
   });
 });

@@ -30,6 +30,6 @@ test("WS7 D2 the links of the stepper do not move when the step changes", async 
   // the name in bold drawn for its width.
   const links = steps.getByRole("link");
   await expect(links.nth(0)).toHaveAccessibleName("Variants, To do");
-  await expect(links.nth(1)).toHaveAccessibleName("Individuals, To do");
+  await expect(links.nth(1)).toHaveAccessibleName("Individuals, Optional");
   await expect(links.nth(2)).toHaveAccessibleName("Analyses, Locked");
 });

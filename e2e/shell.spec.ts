@@ -146,16 +146,21 @@ test("WS9 D3 the shell empty: Undo and Redo disabled, each step To do or Locked 
   await expect(redoButton(page)).toBeDisabled();
   const links = steps(page).getByRole("link");
   await expect(links.nth(0)).toHaveAccessibleName("Variants, To do");
-  await expect(links.nth(1)).toHaveAccessibleName("Individuals, To do");
+  await expect(links.nth(1)).toHaveAccessibleName("Individuals, Optional");
   await expect(links.nth(2)).toHaveAccessibleName("Analyses, Locked");
   await expect(links.nth(0)).toHaveAccessibleDescription(
     "Load a variants file in the Variants step.",
   );
-  await expect(links.nth(1)).toHaveAccessibleDescription("");
+  await expect(links.nth(1)).toHaveAccessibleDescription(
+    "Without it, every individual is in one population.",
+  );
   await expect(links.nth(2)).toHaveAccessibleDescription(
     "Load a variants file in the Variants step.",
   );
-  await expectSummary(page, "No variants file · 1 filter · no metadata file");
+  await expectSummary(
+    page,
+    "No variants file · 1 filter · no metadata file: one population",
+  );
   await expectNoViolations(makeAxeBuilder);
 
   // The reason shown as a tooltip when the keyboard reaches the link.
@@ -264,7 +269,10 @@ test("WS9 D3 Undo pressed with the mouse until nothing is left puts the focus on
   );
 
   await undoButton(page).click();
-  await expectSummary(page, "No variants file · 1 filter · no metadata file");
+  await expectSummary(
+    page,
+    "No variants file · 1 filter · no metadata file: one population",
+  );
   await expect(undoButton(page)).toBeDisabled();
   await expect(redoButton(page)).toBeFocused();
 

@@ -6,10 +6,12 @@ import type { Store } from "../../../core/store.ts";
 import type { Job, JobResult } from "../../../worker/protocol.ts";
 import type { StepCommand } from "../variants/commands.ts";
 import {
+  ONE_POPULATION_COMMAND,
   REMOVE_COMMAND,
   csvOptionCommand,
   groupingCommand,
   pickCommand,
+  populationItemCommand,
 } from "./commands.ts";
 
 /** The store of the page, with the analyses of the application and a
@@ -102,5 +104,45 @@ describe("the commands of the Individuals step", () => {
     });
     store.undo();
     expect(store.getState().project.individuals?.name).toBe("pops.csv");
+  });
+
+  test("IP5 D2 All individuals in one population chosen puts every individual in one population, one step of undo", () => {
+    const store = realStore();
+    apply(store, pickCommand(FILE_ID, "pops.csv"));
+    apply(store, groupingCommand("popcat"));
+    apply(store, populationItemCommand("one"));
+    expect(store.getState().undo).toBe(
+      "every individual was put in one population",
+    );
+    expect(store.getState().project.grouping).toEqual({
+      kind: "onePopulation",
+    });
+    store.undo();
+    expect(store.getState().project.grouping).toEqual({
+      kind: "populations",
+      column: "popcat",
+    });
+  });
+
+  test("IP5 D2 the item of a column chooses that column, a column named one among them", () => {
+    expect(populationItemCommand("column:popcat").description).toBe(
+      "the column of the populations changed",
+    );
+    const store = realStore();
+    apply(store, pickCommand(FILE_ID, "pops.csv"));
+    apply(store, populationItemCommand("column:one"));
+    expect(store.getState().project.grouping).toEqual({
+      kind: "populations",
+      column: "one",
+    });
+    apply(
+      store,
+      populationItemCommand("column:All individuals in one population"),
+    );
+    expect(store.getState().project.grouping).toEqual({
+      kind: "populations",
+      column: "All individuals in one population",
+    });
+    expect(populationItemCommand("one")).toBe(ONE_POPULATION_COMMAND);
   });
 });

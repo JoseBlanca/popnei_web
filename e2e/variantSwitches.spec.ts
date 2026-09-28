@@ -204,7 +204,7 @@ test("IP3 D3 the LD pruning turned on: the distance empty with its reason beside
   // are not counted yet, before any pass.
   await expect(
     page.getByText(
-      "panel.nei · 200 individuals · 2 filters · no metadata file",
+      "panel.nei · 200 individuals · 2 filters · no metadata file: one population",
       {
         exact: true,
       },

@@ -144,7 +144,7 @@ test("WS8 D1 panel_pops.csv is read with the three options found, its columns an
   await expect(fileButton(page)).toHaveText("Choose a metadata file…");
   await expect(
     zone(page).getByText(
-      "No metadata file. The analyses per population need one.",
+      "No metadata file: every individual is in one population.",
     ),
   ).toBeVisible();
   await expectNoViolations(makeAxeBuilder);
@@ -169,12 +169,19 @@ test("WS8 D1 panel_pops.csv is read with the three options found, its columns an
       { exact: true },
     ),
   ).toBeVisible();
+  // No column chosen: the reason of the step, at the select and read
+  // with it, before the line under it.
   await expect(
     page.getByText(
-      "Any column can define the populations, whatever its type.",
+      "Choose the column that defines the populations, or all individuals in one population. Any column can define the populations, whatever its type. An individual with an empty cell in it is in no population.",
       { exact: true },
     ),
   ).toBeVisible();
+  await expect(
+    select(page, "Column that defines the populations"),
+  ).toHaveAccessibleDescription(
+    "Choose the column that defines the populations, or all individuals in one population. Any column can define the populations, whatever its type. An individual with an empty cell in it is in no population.",
+  );
 
   const table = page.getByRole("table", { name: "Columns" });
   await expect(table.getByRole("row")).toHaveText([
@@ -224,9 +231,13 @@ test("WS8 D1 the column popcat chosen lists the populations p0, p2 and p1 with t
   );
   await expectNoViolations(makeAxeBuilder);
 
-  // Every column but the first, which names the individuals, is offered.
+  // The one population, then every column but the first, which names the
+  // individuals.
   await select(page, "Column that defines the populations").click();
-  await expect(page.getByRole("option")).toHaveText(["popcat"]);
+  await expect(page.getByRole("option")).toHaveText([
+    "All individuals in one population",
+    "popcat",
+  ]);
   await page.getByRole("option", { name: "popcat" }).click();
 
   await expect(select(page, "Column that defines the populations")).toHaveText(
@@ -415,7 +426,7 @@ test("WS8 D1 Remove takes the step back to no file, with the focus on the file b
   await expect(fileButton(page)).toBeFocused();
   await expect(
     zone(page).getByText(
-      "No metadata file. The analyses per population need one.",
+      "No metadata file: every individual is in one population.",
     ),
   ).toBeVisible();
   await expect(zone(page).getByRole("button", { name: /^Remove/ })).toHaveCount(
@@ -460,7 +471,7 @@ test("WS8 D1 a column of the populations not in a new file is named at the selec
   const column = select(page, "Column that defines the populations");
   await expect(column).toHaveText("Choose a column");
   const reason =
-    "regions.csv has no column popcat, from which the populations were taken. Choose the column that defines the populations, or all individuals in one population, in the Individuals step.";
+    "regions.csv has no column popcat, from which the populations were taken. Choose the column that defines the populations, or all individuals in one population.";
   await expect(
     page.getByRole("main").getByText(reason, { exact: true }),
   ).toBeVisible();
@@ -574,6 +585,11 @@ test("WS8 D1 the keyboard goes through the step in the order of the spec", async
   await page.keyboard.press("Tab");
   await expect(order[5] ?? fileButton(page)).toBeFocused();
   await page.keyboard.press("Enter");
+  // The list opens on its first item, the one population.
+  await expect(
+    page.getByRole("option", { name: "All individuals in one population" }),
+  ).toBeFocused();
+  await page.keyboard.press("ArrowDown");
   await expect(page.getByRole("option", { name: "popcat" })).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(select(page, "Column that defines the populations")).toHaveText(
@@ -947,7 +963,7 @@ test("WS8 D1 a column empty for every individual of the variants file gives its 
   await choose(page, "Column that defines the populations", "region");
 
   const reason =
-    "No individual of panel.nei has a population in the column region of pops.csv. Fill in the column and load the file again, or choose another column, in the Individuals step.";
+    "No individual of panel.nei has a population in the column region of pops.csv. Fill in the column and load the file again, or choose another column.";
   await expect(
     page.getByRole("main").getByText(reason, { exact: true }),
   ).toBeVisible();

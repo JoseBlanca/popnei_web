@@ -6,8 +6,11 @@
  * test in node checks them; the step draws them.
  */
 
-import type { IndividualsCheck } from "../../../core/project.ts";
-import type { AppId } from "../../../core/project.ts";
+import type {
+  AppId,
+  Grouping,
+  IndividualsCheck,
+} from "../../../core/project.ts";
 import {
   counted,
   escaped,
@@ -94,9 +97,10 @@ export const FOLDER_DROPPED =
 export const TEXT_DROPPED =
   "Load a metadata file, a CSV or a TSV, not a piece of text.";
 
-/** The line of the zone with no file. */
+/** The line of the zone with no file, which says what the analyses per
+    population run on, as the owner decided on 25 September 2026. */
 export const NO_FILE =
-  "No metadata file. The analyses per population need one.";
+  "No metadata file: every individual is in one population.";
 
 /** The line of the size of a table read: "360 rows, 5 columns". */
 export function sizeText(table: IndividualsTable): string {
@@ -337,4 +341,66 @@ export function noPopulationLine(size: number): PopulationLine {
     shown: `No population · ${grouped(size)}, ${left}`,
     read: `No population, ${counted(size, "individual")}, ${left}`,
   };
+}
+
+/** The line under the select of the populations. */
+export const POPULATIONS_HELP =
+  "Any column can define the populations, whatever its type. An individual with an empty cell in it is in no population.";
+
+/** The item of the select of the populations that puts every individual
+    in one population. */
+export const ONE_POPULATION_ITEM = "All individuals in one population";
+
+/** The id of an item of the select of the populations: `one`, the one
+    population, or `column:` and the name of a column, so that a column
+    named "one", or "All individuals in one population", is not taken for
+    the one population. */
+export type PopulationItemId = "one" | `column:${string}`;
+
+/** The id of the item of the column `column`. */
+function columnItem(column: string): PopulationItemId {
+  return `column:${column}`;
+}
+
+/** The items of the select of the populations of a table of the columns
+    `columns`: the one population first, then every column but the first,
+    which names the individuals, whatever its type, escaped. */
+export function populationItems(
+  columns: readonly string[],
+): readonly OptionItem<PopulationItemId>[] {
+  return [
+    { id: "one", label: ONE_POPULATION_ITEM },
+    ...columns
+      .slice(1)
+      .map((name) => ({ id: columnItem(name), label: escaped(name) })),
+  ];
+}
+
+/** The item the select of the populations shows as chosen for the
+    grouping `grouping` of a table of the columns `columns`: the one
+    population, the column chosen when the table has it, or `null`,
+    "Choose a column", for no column or one the table does not have. */
+export function chosenPopulationItem(
+  grouping: Grouping,
+  columns: readonly string[],
+): PopulationItemId | null {
+  switch (grouping.kind) {
+    case "onePopulation":
+      return "one";
+    case "populations": {
+      const column = grouping.column;
+      return column !== null && columns.slice(1).includes(column)
+        ? columnItem(column)
+        : null;
+    }
+    case "roles":
+      return null;
+  }
+}
+
+/** The grouping an item of the select of the populations stands for. */
+export function groupingOfItem(id: PopulationItemId): Grouping {
+  return id === "one"
+    ? { kind: "onePopulation" }
+    : { kind: "populations", column: id.slice("column:".length) };
 }

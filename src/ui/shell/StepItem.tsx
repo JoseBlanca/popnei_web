@@ -20,6 +20,7 @@ import type { StepStatus } from "./words.ts";
 const STATUS_SHOWN: Readonly<
   Record<StepStatus, { readonly word: string; readonly symbol: string }>
 > = {
+  optional: { word: "Optional", symbol: "◌" },
   todo: { word: "To do", symbol: "○" },
   reading: { word: "Reading", symbol: "◔" },
   problem: { word: "Problem", symbol: "!" },

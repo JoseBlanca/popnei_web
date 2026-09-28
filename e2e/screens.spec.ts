@@ -1091,6 +1091,80 @@ for (const theme of ["light", "dark"] as const) {
       await save(page, `popgen-individuals-read-${theme}`);
     });
 
+    test("the Individuals step, a file read and no column chosen", async ({
+      page,
+    }) => {
+      await pickVariants(page, "panel.nei");
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      await goTo(page, "Individuals");
+      await pickIndividuals(page, "panel_pops.csv");
+      await expect(
+        page.getByText("All 200 individuals of panel.nei found"),
+      ).toBeVisible();
+      await save(page, `popgen-individuals-no-column-${theme}`);
+    });
+
+    test("the Individuals step, all individuals in one population", async ({
+      page,
+    }) => {
+      await pickVariants(page, "panel.nei");
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      await goTo(page, "Individuals");
+      await pickIndividuals(page, "panel_pops.csv");
+      await choose(
+        page,
+        "Column that defines the populations",
+        "All individuals in one population",
+      );
+      await expect(
+        page.getByRole("main").getByText("All individuals, 200 individuals"),
+      ).toBeAttached();
+      await save(page, `popgen-individuals-one-population-${theme}`);
+    });
+
+    test("the Individuals step, a metadata file not read when the project was saved", async ({
+      page,
+    }) => {
+      const chooser = page.waitForEvent("filechooser");
+      await page.getByRole("button", { name: "Open project…" }).click();
+      await (
+        await chooser
+      ).setFiles(
+        join(
+          import.meta.dirname,
+          "..",
+          "src",
+          "core",
+          "fixtures",
+          "projectFile",
+          "v1-metadata-not-read.popnei.json",
+        ),
+      );
+      await goTo(page, "Individuals");
+      await expect(
+        page
+          .getByRole("main")
+          .getByText(/^pops\.csv was not read when this project was saved/),
+      ).toBeVisible();
+      await save(page, `popgen-individuals-not-given-${theme}`);
+    });
+
+    test("the diversity ready with no metadata file", async ({ page }) => {
+      await pickVariants(page, "panel.nei");
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      await goTo(page, "Analyses");
+      await expect(
+        page.getByText("1 population, All individuals: 200 individuals"),
+      ).toBeVisible();
+      await save(page, `popgen-diversity-one-population-ready-${theme}`);
+    });
+
     test("the Individuals step, a file refused", async ({ page }) => {
       await goTo(page, "Individuals");
       await pickIndividuals(page, {

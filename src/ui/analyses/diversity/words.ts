@@ -10,7 +10,13 @@
 import type { DiversityRow } from "../../../core/analyses/diversity.ts";
 import { loosenText } from "../../../core/analyses/diversity.ts";
 import { variantsStem } from "../../../core/fileNames.ts";
-import { counted, escaped, grouped, namesOf } from "../../../core/project.ts";
+import {
+  ONE_POPULATION,
+  counted,
+  escaped,
+  grouped,
+  namesOf,
+} from "../../../core/project.ts";
 import type { PopulationsKept } from "../../../core/project.ts";
 import type { Pops } from "../../../worker/protocol.ts";
 
@@ -86,20 +92,45 @@ export function emptiedText(emptied: readonly string[]): string {
   return `${namesOf(emptied)} ${one ? "has" : "have"} no individual left after the filters of individuals, and ${one ? "is" : "are"} left out. ${loosenText(one)}`;
 }
 
+/** The one population a run will take, "All individuals", with its
+    size: "1 population, All individuals: 200 individuals". */
+export function onePopulationText(size: number): string {
+  return `1 population, ${ONE_POPULATION}: ${counted(size, "individual")}`;
+}
+
+/** The line of the ready state without a metadata file, the words of
+    the Individuals step, so that a user who meant to load one learns it
+    here. */
+export const NO_METADATA_TEXT =
+  "No metadata file: every individual is in one population.";
+
+/** What the populations of a run are: every individual in one
+    population, without a metadata file or with one, or populations. */
+export type PopulationsKind = "noFile" | "onePopulation" | "populations";
+
 /**
  * The lines of the ready state, and of the state of a result removed:
- * the populations a run will take with their sizes, when any is left;
- * the populations the filters of individuals leave empty, when any; and,
- * when `waitsForStatistics`, a threshold on the individuals waiting for
- * the statistics of each individual, the line that says Run calculates
- * them first, `kept` being then the populations before the thresholds.
+ * the populations a run will take with their sizes, when any is left, or
+ * the one population, `kind` saying which, with the line of no metadata
+ * file after it when there is none; the populations the filters of
+ * individuals leave empty, when any; and, when `waitsForStatistics`, a
+ * threshold on the individuals waiting for the statistics of each
+ * individual, the line that says Run calculates them first, `kept` being
+ * then the populations before the thresholds.
  */
 export function readyLines(
   kept: PopulationsKept,
   waitsForStatistics: boolean,
+  kind: PopulationsKind,
 ): readonly string[] {
+  const [one] = kept.pops;
   return [
-    ...(kept.pops.length > 0 ? [populationsText(kept.pops)] : []),
+    ...(kind !== "populations" && one !== undefined
+      ? [onePopulationText(one[1].length)]
+      : kept.pops.length > 0
+        ? [populationsText(kept.pops)]
+        : []),
+    ...(kind === "noFile" ? [NO_METADATA_TEXT] : []),
     ...(kept.emptied.length > 0 ? [emptiedText(kept.emptied)] : []),
     ...(waitsForStatistics ? [WAITS_FOR_STATISTICS_TEXT] : []),
   ];

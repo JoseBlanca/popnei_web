@@ -35,10 +35,12 @@ import {
   populationsToRun,
   projectNeeds,
   shown,
+  typesLost,
   variantFilterNeeds,
 } from "../../core/project.ts";
 import type {
   AnalysisId,
+  IndividualsRead,
   IndividualsSource,
   Project,
   VariantSource,
@@ -57,6 +59,7 @@ import type {
   Warning,
 } from "../../core/store.ts";
 import { sizeText } from "../../core/writeEstimate.ts";
+import { columnWarnings } from "../../worker/individuals/columnTypes.ts";
 import type { CsvOptions } from "../../worker/protocol.ts";
 import { capitalized, undoneOrRedone } from "../sentences.ts";
 import { sizeText as tableSizeText } from "../steps/individuals/words.ts";
@@ -65,8 +68,10 @@ import { STEP_NAMES } from "./steps.ts";
 
 /** The state of a step in the stepper: the first four are those of
     Variants and Individuals, the others, with done, those of Analyses;
-    from stage 3 Variants takes running, removed and failed too. */
+    from stage 3 Variants takes running, removed and failed too, and from
+    stage 4 Individuals is optional without a metadata file. */
 export type StepStatus =
+  | "optional"
   | "todo"
   | "reading"
   | "problem"
@@ -223,10 +228,20 @@ function variantsState<R>(s: AppState<R, unknown>, w: ShellWords<R>): Status {
   return { status: "done", reason: null };
 }
 
+/** The reason of the Individuals step at Optional, without a metadata
+    file. */
+const OPTIONAL_REASON = "Without it, every individual is in one population.";
+
 /** The state of the Individuals step, of a project of population
-    genetics. */
+    genetics: Optional without a metadata file, whatever the grouping,
+    since the analyses run on one population; To do for a file an opened
+    project names and does not hold, `notGiven`, which only a new pick
+    or Remove mends. */
 function individualsState(p: Project): Status {
   if (p.individuals === null) {
+    return { status: "optional", reason: OPTIONAL_REASON };
+  }
+  if (p.individuals.read.kind === "notGiven") {
     return { status: "todo", reason: individualsNeeds(p) };
   }
   if (p.individuals.read.kind === "pending") {
@@ -373,7 +388,7 @@ function filtersPart(p: Project): string {
 function metadataPart(p: Project, kept: IndividualsKept | null): string {
   const individuals: IndividualsSource | null = p.individuals;
   if (individuals === null) {
-    return "no metadata file";
+    return "no metadata file: one population";
   }
   const name = escaped(individuals.name);
   switch (individuals.read.kind) {
@@ -390,9 +405,14 @@ function metadataPart(p: Project, kept: IndividualsKept | null): string {
   if (missing > 0) {
     return `${counted(missing, "individual")} missing from ${name}`;
   }
-  const column = p.grouping.kind === "populations" ? p.grouping.column : null;
-  if (column === null) {
+  if (p.grouping.kind !== "populations") {
     return "one population";
+  }
+  const column = p.grouping.column;
+  if (column === null) {
+    // With a file, the analyses per population are locked until the user
+    // chooses what defines them.
+    return "populations not chosen";
   }
   // With the table read and a column chosen, populationsOf is null only
   // when the table has no column of that name, and never "all".
@@ -919,7 +939,64 @@ function individualsReadAnnouncements(
     case "read": {
       const text = `${escaped(now.name)} read: ${tableSizeText(read.table)}.`;
       const check = checkSentence(after);
-      return [check === null ? text : `${text} ${check}`];
+      return [
+        [
+          text,
+          ...(check === null ? [] : [check]),
+          ...broughtUp(after, now, read),
+        ].join(" "),
+      ];
     }
   }
+}
+
+/**
+ * What the end of a read of the metadata file brings up on the
+ * Individuals step, in short, in this order and each when it holds, since
+ * a user of a screen reader would otherwise not reach it until they moved
+ * through the table (docs/specs/shell.md, "The status region"): a
+ * character not decoded; the columns of few whole numbers; the column of
+ * the populations not in the file, in the words of the step; and the
+ * types set and not applied.
+ */
+function broughtUp(
+  p: Project,
+  source: IndividualsSource,
+  read: Extract<IndividualsRead, { readonly kind: "read" }>,
+): readonly string[] {
+  const sentences: string[] = [];
+  const name = escaped(source.name);
+  const undecodedLine = read.found?.undecodedLine ?? null;
+  if (undecodedLine !== null) {
+    sentences.push(
+      `Warning: line ${String(undecodedLine)} of ${name} has bytes that could not be read.`,
+    );
+  }
+  const warnings = columnWarnings(
+    read.table,
+    read.columns,
+    read.found?.decimal ?? ".",
+  );
+  const [onlyWarning] = warnings;
+  if (onlyWarning !== undefined) {
+    sentences.push(
+      warnings.length === 1
+        ? `Warning: ${escaped(onlyWarning.column)} may hold codes and is taken as a measurement.`
+        : `Warning: ${counted(warnings.length, "column")} may hold codes and are taken as measurements.`,
+    );
+  }
+  const need = populationsNeeds(p);
+  if (need?.kind === "noSuchColumn") {
+    sentences.push(need.inStep);
+  }
+  const lost = typesLost(source);
+  const [onlyLost] = lost;
+  if (onlyLost !== undefined) {
+    sentences.push(
+      lost.length === 1
+        ? `${escaped(onlyLost[0])} does not have the type you set.`
+        : `${counted(lost.length, "column")} do not have the type you set.`,
+    );
+  }
+  return sentences;
 }

@@ -56,7 +56,7 @@ test("WS7 D2 the page opens with the frame at Variants and no error bar, and axe
   await expect(header).toContainText("Population genetics");
   const links = steps(page).getByRole("link");
   await expect(links.nth(0)).toHaveAccessibleName("Variants, To do");
-  await expect(links.nth(1)).toHaveAccessibleName("Individuals, To do");
+  await expect(links.nth(1)).toHaveAccessibleName("Individuals, Optional");
   await expect(links.nth(2)).toHaveAccessibleName("Analyses, Locked");
   await expect(links.first()).toHaveAttribute("aria-current", "step");
   await expect(links.nth(1)).not.toHaveAttribute("aria-current");

@@ -23,7 +23,7 @@ import {
 } from "../../core/analyses/diversity.ts";
 import type { Failure } from "../../core/analyses/individualChecks.ts";
 import type { IndividualsKept } from "../../core/individualsKept.ts";
-import { populationsBeforeRun } from "../../core/project.ts";
+import { populationsBeforeRun, populationsOf } from "../../core/project.ts";
 import type { AnalysisId, Project } from "../../core/project.ts";
 import type { AnalysisError } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
@@ -96,7 +96,13 @@ const DIVERSITY: AnalysisUi = Object.freeze({
     // lists keep, before it.
     const waits = kept.list.kind === "needsStatistics";
     const pops = populationsBeforeRun(p, kept);
-    return pops === null ? [] : readyLines(pops, waits);
+    const kind =
+      populationsOf(p) !== "all"
+        ? "populations"
+        : p.individuals === null
+          ? "noFile"
+          : "onePopulation";
+    return pops === null ? [] : readyLines(pops, waits, kind);
   },
   refusalText,
   statisticsFailedText,
