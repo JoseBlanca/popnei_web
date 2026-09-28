@@ -9,7 +9,10 @@
  * `onGone`, for the part that holds it to move the focus: a panel
  * or the block of the histograms to its heading, the Count to the line
  * of the total or to the words of its error; so that a user of the
- * keyboard is not sent to the top of the page (WCAG 2.4.3).
+ * keyboard is not sent to the top of the page (WCAG 2.4.3). A part that
+ * gives `reasonRef` can move the focus to the reason of a disabled Run;
+ * the Run then calls `onGone` too when it leaves the page with the focus
+ * on its reason.
  */
 import { useLayoutEffect, useRef } from "react";
 
@@ -28,9 +31,16 @@ export interface RunButtonProps {
   readonly onRun: () => void;
   /** Stops the calculation. */
   readonly onStop: () => void;
-  /** Called when the button leaves the page while it has the focus, to
-      move the focus where the part that holds it says. */
+  /** Called when the button leaves the page while it, or its reason
+      given `reasonRef`, has the focus, to move the focus where the part
+      that holds it says. */
   readonly onGone: () => void;
+  /** Called with the element of the button shown, and `null` when it
+      goes, for the part to move the focus to it. */
+  readonly onButton?: (node: HTMLButtonElement | null) => void;
+  /** Given the element of the reason of a disabled Run, which then takes
+      the focus from a script. */
+  readonly reasonRef?: React.RefObject<HTMLSpanElement | null>;
 }
 
 /** Run or Stop, one button in one place. */
@@ -49,8 +59,14 @@ function OneButton({
   onRun,
   onStop,
   onGone,
+  onButton,
+  reasonRef,
 }: RunButtonProps): React.JSX.Element {
   const element = useRef<HTMLButtonElement>(null);
+  const setElement = (node: HTMLButtonElement | null): void => {
+    element.current = node;
+    onButton?.(node);
+  };
   // The latest onGone, for the cleanup below, which runs once.
   const gone = useRef(onGone);
   useLayoutEffect(() => {
@@ -58,25 +74,34 @@ function OneButton({
   });
   useLayoutEffect(() => {
     const node = element.current;
+    const reason = reasonRef?.current ?? null;
     return () => {
       // The cleanup of a layout effect runs while the button is still in
       // the page, so the focus is still on it when it had it.
-      if (node !== null && document.activeElement === node) {
+      const active = document.activeElement;
+      if (
+        (node !== null && active === node) ||
+        (reason !== null && active === reason)
+      ) {
         gone.current();
       }
     };
-  }, []);
+    // The ref of the reason is the part's, the same object at every
+    // drawing, so the effect runs once, at the mount of this button.
+  }, [reasonRef]);
 
   if (button.kind === "stop") {
-    return <Button label="Stop" onPress={onStop} ref={element} />;
+    return <Button label="Stop" onPress={onStop} ref={setElement} />;
   }
   return (
     <Button
       label={runLabel}
       onPress={onRun}
-      ref={element}
+      ref={setElement}
       isDisabled={button.reason !== null}
       {...(button.reason !== null && { description: button.reason })}
+      {...(button.reason !== null &&
+        reasonRef !== undefined && { descriptionRef: reasonRef })}
     />
   );
 }

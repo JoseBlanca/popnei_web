@@ -464,15 +464,16 @@ test("IP2 D3 the statistics a Calculate of the histograms or a Count waited for,
   await expectNoViolations(makeAxeBuilder);
 });
 
-/** The part of the Count locked, which holds the disabled Count and its
-    reason and takes the focus when the Count leaves the page with it. */
-function lockedCount(page: Page): Locator {
-  return variants(page)
-    .locator("[tabindex='-1']")
-    .filter({ has: page.getByRole("button", { name: COUNT, exact: true }) });
+/** The reason beside the disabled Count, the last of the two that stand
+    beside the disabled buttons of the section, the histograms' first. */
+function countReason(page: Page): Locator {
+  return variants(page).getByText(NONE_KEPT, { exact: true }).last();
 }
 
-test("IP2 D3 a Count that waited for the statistics, locked by thresholds that keep nobody, leaves the focus on the part of its disabled button, with its reason", async ({
+const UNDO = process.platform === "darwin" ? "Meta+z" : "Control+z";
+const REDO = process.platform === "darwin" ? "Meta+Shift+z" : "Control+Shift+z";
+
+test("IP2 D3 a Count that waited for the statistics, locked by thresholds that keep nobody, leaves the focus on the reason beside its disabled button", async ({
   page,
 }) => {
   await panelRead(page);
@@ -482,11 +483,13 @@ test("IP2 D3 a Count that waited for the statistics, locked by thresholds that k
   await button(variants(page), COUNT).focus();
   await page.keyboard.press("Enter");
   await expect(button(variants(page), COUNT)).toBeDisabled();
-  await expect(lockedCount(page)).toBeFocused();
-  await expect(lockedCount(page)).toContainText(NONE_KEPT);
+  await expect(countReason(page)).toBeFocused();
+  await expect(button(variants(page), COUNT)).toHaveAccessibleDescription(
+    NONE_KEPT,
+  );
 });
 
-test("IP2 D3 an Undo to thresholds that keep nobody, with the focus on the Count, leaves the focus on the part of its disabled button", async ({
+test("IP2 D3 an Undo to thresholds that keep nobody, with the focus on the Count, leaves the focus on its reason, and a Redo gives it back to the Count", async ({
   page,
 }) => {
   await panelRead(page);
@@ -497,9 +500,12 @@ test("IP2 D3 an Undo to thresholds that keep nobody, with the focus on the Count
   await obsHet.press("Enter");
   await expect(button(variants(page), COUNT)).toBeEnabled();
   await button(variants(page), COUNT).focus();
-  await page.keyboard.press(
-    process.platform === "darwin" ? "Meta+z" : "Control+z",
-  );
+  await page.keyboard.press(UNDO);
   await expect(obsHet).toHaveValue("0.1");
-  await expect(lockedCount(page)).toBeFocused();
+  await expect(countReason(page)).toBeFocused();
+
+  await page.keyboard.press(REDO);
+  await expect(obsHet).toHaveValue("0.5");
+  await expect(button(variants(page), COUNT)).toBeEnabled();
+  await expect(button(variants(page), COUNT)).toBeFocused();
 });

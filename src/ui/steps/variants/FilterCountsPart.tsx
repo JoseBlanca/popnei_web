@@ -81,7 +81,11 @@ export function FilterCountsPart(): React.JSX.Element {
   const total = useRef<HTMLParagraphElement>(null);
   const empty = useRef<HTMLDivElement>(null);
   const failed = useRef<HTMLDivElement>(null);
-  const locked = useRef<HTMLDivElement>(null);
+  // The Count, which takes the focus back when it can be pressed again,
+  // and the reason beside it disabled, which takes it when the Count is
+  // locked (the spec, "Accessibility").
+  const countButton = useRef<HTMLButtonElement>(null);
+  const reason = useRef<HTMLSpanElement>(null);
   // Set when the button goes with the focus on it. The line or the words
   // that take the focus come in the same commit as the button goes, and
   // are in the page only once it is done, so the focus is moved after it.
@@ -89,11 +93,13 @@ export function FilterCountsPart(): React.JSX.Element {
   useLayoutEffect(() => {
     if (!focusLost.current) return;
     focusLost.current = false;
+    const shown = countButton.current;
     (
+      (shown !== null && !shown.disabled ? shown : null) ??
       total.current ??
       empty.current ??
       failed.current ??
-      locked.current
+      reason.current
     )?.focus();
   });
 
@@ -112,6 +118,10 @@ export function FilterCountsPart(): React.JSX.Element {
       onGone={() => {
         focusLost.current = true;
       }}
+      onButton={(node) => {
+        countButton.current = node;
+      }}
+      reasonRef={reason}
     />
   );
 
@@ -134,17 +144,7 @@ export function FilterCountsPart(): React.JSX.Element {
           />
         </div>
       )}
-      {button !== null &&
-        (status.kind === "locked" ? (
-          // The disabled Count and its reason, which take the focus when
-          // the Count leaves the page with it, since a disabled button
-          // cannot hold it; not in the order of the Tab key.
-          <div ref={locked} tabIndex={-1}>
-            {runButton(button)}
-          </div>
-        ) : (
-          runButton(button)
-        ))}
+      {button !== null && runButton(button)}
       {status.kind === "running" && (
         // A new run is a new clock.
         <Running

@@ -45,6 +45,11 @@ export interface ButtonProps {
   readonly hint?: string | null;
   /** The element of the button, for a screen that moves the focus to it. */
   readonly ref?: React.Ref<HTMLButtonElement>;
+  /** The element of the description, for a screen that moves the focus
+      to it, as to the reason of a disabled button; given, the
+      description takes the focus from a script and is not a stop of the
+      Tab key. */
+  readonly descriptionRef?: React.Ref<HTMLSpanElement>;
   /** Whether it sends the form it is in, as Enter in a field of the form
       does; false when absent. */
   readonly isSubmit?: boolean;
@@ -62,6 +67,7 @@ export function Button({
   descriptionId: givenId,
   hint = null,
   ref,
+  descriptionRef,
   isSubmit = false,
   autoFocus = false,
 }: ButtonProps): React.JSX.Element {
@@ -99,7 +105,14 @@ export function Button({
     <span className={classOf(styles, "described")}>
       {button}
       {description !== undefined && (
-        <span id={descriptionId} className={classOf(styles, "description")}>
+        <span
+          id={descriptionId}
+          className={classOf(styles, "description")}
+          {...(descriptionRef !== undefined && {
+            ref: descriptionRef,
+            tabIndex: -1,
+          })}
+        >
           {description}
         </span>
       )}
