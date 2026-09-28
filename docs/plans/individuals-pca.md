@@ -896,7 +896,7 @@ browsers is measured.
 
 **Tasks:**
 
-- [ ] 6.1 The job and the result of the principal components in
+- [x] 6.1 The job and the result of the principal components in
   `protocol.ts` and their checks in `messages.ts` (`protocol.md` and
   `messages.md`, their parts of the PCA); `runner.ts`, "The principal
   components" of `runner.md`, the calls of popnei with only its keys, the
