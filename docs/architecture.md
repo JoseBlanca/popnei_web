@@ -1834,8 +1834,11 @@ the same numbers for everything else but the size of a written file.
   its limit is the PCA's, since the edge is one allocation that does not
   fit. popnei refuses with its message, and points to a program outside
   the browser, popnei in Python among them; the application locks the
-  analysis before its Run instead, with words of its own that say the
-  same (`docs/specs/analyses/pca.md`, "Why it cannot run"). For the PCA
+  analysis instead, with words of its own that say the same
+  (`docs/specs/analyses/pca.md`, "Why it cannot run"): before its Run,
+  and, for a PCoA whose threshold on the individuals waits for their
+  statistics, after the Run has calculated them and before anything is
+  sent to popnei. For the PCA
   popnei counts the individuals of the file and not those the filters of
   individuals keep, in `js-v0.1.0-dev.2` and `js-v0.1.0-dev.3`, so a file
   of more than 9381 individuals cannot be analysed on a part of them by
