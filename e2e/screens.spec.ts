@@ -2248,6 +2248,90 @@ for (const theme of ["light", "dark"] as const) {
       });
     });
 
+    /** Saves the section of the filters of the variants as `name`. */
+    async function saveVariantFilters(page: Page, name: string): Promise<void> {
+      await variantFilters(page).screenshot({
+        path: join(SCREENS, `${name}-${theme}.png`),
+      });
+    }
+    const CALCULATE_HISTOGRAMS = "Calculate the histograms of the variants";
+
+    test("the histograms of the variants removed by a change of a filter of individuals, with the notice", async ({
+      page,
+    }) => {
+      await thresholdsAt(page, "0.03", "0.38");
+      await variantFilters(page)
+        .getByRole("button", { name: CALCULATE_HISTOGRAMS })
+        .click();
+      await expect(
+        page.getByRole("group", { name: /^Major allele frequency, / }),
+      ).toBeVisible();
+      const missing = individualLists(page).getByLabel(
+        "Maximum proportion of missing genotypes of an individual, from 0 to 1",
+        { exact: true },
+      );
+      await missing.fill("0.04");
+      await missing.press("Enter");
+      await expect(
+        variantFilters(page).getByText(/for the settings as they are now\.$/),
+      ).toBeVisible();
+      await saveVariantFilters(
+        page,
+        "popgen-variants-histograms-removed-individuals",
+      );
+      await save(
+        page,
+        `popgen-variants-histograms-removed-individuals-notice-${theme}`,
+        { fullPage: false },
+      );
+    });
+
+    test("the histograms of the variants done over the individuals kept", async ({
+      page,
+    }) => {
+      await thresholdsAt(page, "0.03", "0.38");
+      await variantFilters(page)
+        .getByRole("button", { name: CALCULATE_HISTOGRAMS })
+        .click();
+      await expect(
+        variantFilters(page).getByText(
+          /and the 111 individuals the filters of individuals keep/,
+        ),
+      ).toBeVisible();
+      await saveVariantFilters(page, "popgen-variants-histograms-kept");
+    });
+
+    test("the Count waiting for the statistics of each individual", async ({
+      page,
+    }) => {
+      await pickPanel(page);
+      await individualLists(page)
+        .getByText("Filter the individuals by missing data", { exact: true })
+        .click();
+      await holdResults(page);
+      await variantFilters(page)
+        .getByRole("button", { name: "Count the variants each filter keeps" })
+        .click();
+      await expect(
+        variantFilters(page).getByText(
+          /^Calculating the statistics of each individual, which the thresholds of the individuals need · \d+% · 0:0\d$/,
+        ),
+      ).toBeVisible();
+      await saveVariantFilters(page, "popgen-variants-count-waits");
+    });
+
+    test("the section of the variants, the Count and the histograms locked by thresholds that keep nobody", async ({
+      page,
+    }) => {
+      await thresholdsAt(page, "0.03", "0.1");
+      await expect(
+        variantFilters(page).getByRole("button", {
+          name: "Count the variants each filter keeps",
+        }),
+      ).toBeDisabled();
+      await saveVariantFilters(page, "popgen-variants-kept-none");
+    });
+
     test("the thresholds of the individuals that keep none", async ({
       page,
     }) => {
