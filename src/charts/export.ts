@@ -4,7 +4,9 @@
  * and the exported file" and "PNG"). The file is the plot as it is on the
  * screen, in the colours of the light theme whatever the screen shows,
  * since it goes to papers and to print, on a rectangle of the background
- * colour, and with no overlay.
+ * colour, with no overlay and no mark of the point under the pointer, and
+ * with what the screen draws beside the plot, the legend of the scatter,
+ * drawn into it by the plot.
  */
 
 import { MAX_CANVAS_SIDE } from "./limits.ts";
@@ -56,6 +58,7 @@ const INLINED_PROPERTIES = [
   "stroke",
   "stroke-width",
   "stroke-dasharray",
+  "stroke-linejoin",
   "stroke-opacity",
   "opacity",
   "color",
@@ -75,8 +78,12 @@ const FONT_STACK = 'system-ui, "Helvetica", "Arial", sans-serif';
 /** The class of the rectangle of the background, the first thing drawn. */
 const BACKGROUND_CLASS = "chart-background";
 
-/** The class of the rectangle that takes the pointer events. */
-const OVERLAY_CLASS = "chart-overlay";
+/**
+ * The classes of what is not part of the plot, left out of the file: the
+ * rectangle that takes the pointer events, and the mark of the point
+ * under the pointer.
+ */
+const LEFT_OUT_CLASSES = ["chart-overlay", "chart-hover"] as const;
 
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 
@@ -93,25 +100,36 @@ function inlineStyle(element: Element): void {
 /**
  * The SVG of a plot as a file that stands alone: a copy of `svg` whose
  * elements carry the colours of the light theme, and the rest of the
- * properties the page's CSS gives them, with no `var(` left; a first
- * rectangle of the background colour of `size`; no `chart-overlay`; the
- * fonts as a generic stack. `svg` itself is not changed.
+ * properties the page's CSS gives them, `stroke-linejoin` among them, with
+ * no `var(` left; a first rectangle of the background colour of `size`;
+ * no `chart-overlay` and no `chart-hover`; the fonts as a generic stack.
+ * `drawBeside`, when given, draws into the copy what the screen shows
+ * beside the SVG, once those two are removed and before the colours are
+ * written, so that what it draws gets its colours as the rest does. `svg`
+ * itself is not changed.
  *
  * The copy is resolved inside a hidden element with `data-theme="light"`,
  * added to the page and removed before this returns, so that the tokens
  * of src/ui/tokens.css give it their light values while the page is
  * dark.
  */
-export function exportSvg(svg: SVGSVGElement, size: ExportSize): string {
+export function exportSvg(
+  svg: SVGSVGElement,
+  size: ExportSize,
+  drawBeside?: (copy: SVGSVGElement) => void,
+): string {
   const copy = svg.cloneNode(true);
   if (!(copy instanceof SVGSVGElement)) {
     throw new Error(
       "popnei_web defect: the copy of the SVG of a plot is not an SVG.",
     );
   }
-  for (const overlay of copy.querySelectorAll(`.${OVERLAY_CLASS}`)) {
-    overlay.remove();
+  for (const leftOut of LEFT_OUT_CLASSES) {
+    for (const element of copy.querySelectorAll(`.${leftOut}`)) {
+      element.remove();
+    }
   }
+  drawBeside?.(copy);
   const background = document.createElementNS(SVG_NAMESPACE, "rect");
   background.setAttribute("class", BACKGROUND_CLASS);
   background.setAttribute("width", String(size.width));

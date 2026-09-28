@@ -4,13 +4,16 @@
  * the size of the element, draws the axes from the plot's scales, writes
  * the title and the description a screen reader reads, and gives the
  * handle with its `update`, its `destroy` and its export, made by
- * export.ts; a kind of plot gives it a definition and draws only its
- * marks, its annotations and its legend.
+ * export.ts; for a plot that takes the pointer, it makes the overlay and
+ * gives the plot the position of the pointer, and for one that shows
+ * something beside its SVG, it has the plot draw it into the exported
+ * file. A kind of plot gives it a definition and draws only its marks,
+ * its annotations and its legend.
  */
 
 import { axisBottom, axisLeft } from "d3-axis";
 import type { ScaleContinuousNumeric } from "d3-scale";
-import { select } from "d3-selection";
+import { pointer, select } from "d3-selection";
 import type { Selection } from "d3-selection";
 import "./charts.css";
 import { exportPng, exportSvg } from "./export.ts";
@@ -84,6 +87,35 @@ export interface Frame {
   ): void;
 }
 
+/** The frame of the last draw, for what is drawn into the exported copy. */
+export interface ExportFrame {
+  /** The width of the frame at the last draw. */
+  readonly innerWidth: number;
+  /** The height of the frame at the last draw. */
+  readonly innerHeight: number;
+  /** The margins around the frame at the last draw. */
+  readonly margin: Margin;
+}
+
+/**
+ * The calls of the pointer over the overlay, for a plot that takes it,
+ * in the pixels of the frame.
+ */
+export interface Plot2dPointer {
+  /**
+   * The pointer moved to (x, y), or a finger or a pen touched the plot
+   * there, which moves no pointer before it.
+   */
+  readonly move: (x: number, y: number) => void;
+  /**
+   * A mouse or a pen left the overlay onto `to`, the element it went
+   * onto, the event's relatedTarget; null when it left the page, and for
+   * the base's own call when the frame has no area. A finger lifted from
+   * the screen is no leave.
+   */
+  readonly leave: (to: EventTarget | null) => void;
+}
+
 /** What a kind of plot gives the base. */
 export interface Plot2dDefinition<Data extends PlotText> {
   /** The name in the class of the SVG, chart-‹kind›: "histogram". */
@@ -94,6 +126,17 @@ export interface Plot2dDefinition<Data extends PlotText> {
   readonly margin: (data: Data) => Margin;
   /** Draws the whole plot; called any number of times with the same arguments. */
   readonly draw: (frame: Frame, data: Data) => void;
+  /**
+   * For a plot that takes the pointer: the base makes the overlay,
+   * `rect.chart-overlay`, and calls these.
+   */
+  readonly pointer?: Plot2dPointer;
+  /**
+   * For a plot that shows something beside its SVG, the legend of the
+   * scatter: draws it into `legend`, the `chart-legend` group of the
+   * exported copy, with the frame and the data of the last draw.
+   */
+  readonly drawExport?: (legend: Group, frame: ExportFrame, data: Data) => void;
 }
 
 /** About one tick of the horizontal axis for this many pixels of the frame. */
@@ -142,7 +185,11 @@ export function tableNumber(value: number): number {
  */
 type Drawing =
   | { readonly kind: "none" }
-  | { readonly kind: "drawn"; readonly size: ExportSize }
+  | {
+      readonly kind: "drawn";
+      readonly size: ExportSize;
+      readonly frame: ExportFrame;
+    }
   | { readonly kind: "noArea"; readonly size: ExportSize };
 
 /**
@@ -183,6 +230,13 @@ function contentBoxOf(element: HTMLElement): ExportSize {
  * never drawn, and of one whose element is not larger than its margins,
  * which gets an empty frame and an SVG of 0 by 0; `toPNG` rejects with
  * it in the same cases.
+ *
+ * A definition with `pointer` gets the overlay, the last child of the
+ * frame, of the size of the frame at each draw and of 0 by 0 when the
+ * frame has no area, when `pointer.leave(null)` is called. The overlay's
+ * `pointermove` and `pointerdown` call `pointer.move` with the position in
+ * the pixels of the frame, and its `pointerleave` from a mouse or a pen
+ * calls `pointer.leave` with the element the pointer went onto.
  */
 export function createPlot2d<Data extends PlotText>(
   element: HTMLElement,
@@ -223,6 +277,15 @@ export function createPlot2d<Data extends PlotText>(
   const yLabel = frameGroup
     .append("text")
     .attr("class", "chart-axis-label chart-axis-label-y");
+  // Over everything drawn in the frame, so that it takes the pointer.
+  const overlay =
+    definition.pointer === undefined
+      ? null
+      : frameGroup
+          .append("rect")
+          .attr("class", "chart-overlay")
+          .attr("width", 0)
+          .attr("height", 0);
   const legend = svg.append("g").attr("class", "chart-legend");
   const svgElement = svg.node();
   if (svgElement === null) {
@@ -250,6 +313,11 @@ export function createPlot2d<Data extends PlotText>(
       group.selectAll("*").remove();
     }
     svg.attr("width", 0).attr("height", 0).attr("viewBox", null);
+    if (overlay !== null) {
+      overlay.attr("width", 0).attr("height", 0);
+      // No tooltip stays over an empty frame.
+      definition.pointer?.leave(null);
+    }
   }
 
   /**
@@ -264,7 +332,11 @@ export function createPlot2d<Data extends PlotText>(
       emptyAt(size);
       return;
     }
-    drawing = { kind: "drawn", size };
+    drawing = {
+      kind: "drawn",
+      size,
+      frame: { innerWidth, innerHeight, margin },
+    };
 
     svg
       .attr("width", size.width)
@@ -275,6 +347,7 @@ export function createPlot2d<Data extends PlotText>(
       `translate(${String(margin.left)},${String(margin.top)})`,
     );
     clip.attr("width", innerWidth).attr("height", innerHeight);
+    overlay?.attr("width", innerWidth).attr("height", innerHeight);
     xAxisGroup.attr("transform", `translate(0,${String(innerHeight)})`);
     xLabel
       .attr("x", innerWidth / 2)
@@ -339,7 +412,30 @@ export function createPlot2d<Data extends PlotText>(
     waitingFrame ??= requestAnimationFrame(onFrame);
   });
 
-  function drawnSize(call: string): ExportSize {
+  if (overlay !== null && definition.pointer !== undefined) {
+    const { move, leave } = definition.pointer;
+    const overlayElement = overlay.node();
+    // The position in the pixels of the overlay, which are the frame's.
+    const onMove = (event: PointerEvent): void => {
+      const [x, y] = pointer(event, overlayElement);
+      move(x, y);
+    };
+    overlay
+      .on("pointermove", onMove)
+      .on("pointerdown", onMove)
+      .on("pointerleave", (event: PointerEvent) => {
+        // A finger lifted from the screen leaves the overlay too; the
+        // tooltip of a tap stays until the next tap on the plot.
+        if (event.pointerType === "touch") return;
+        leave(event.relatedTarget);
+      });
+  }
+
+  /** The size and the frame of the last draw, for the export. */
+  function lastDraw(call: string): {
+    readonly size: ExportSize;
+    readonly frame: ExportFrame;
+  } {
     if (destroyed) {
       throw new Error(
         `popnei_web defect: ${call} of a plot after its destroy.`,
@@ -355,8 +451,32 @@ export function createPlot2d<Data extends PlotText>(
           `popnei_web defect: ${call} of a plot whose frame has no area, its element of ${String(drawing.size.width)} by ${String(drawing.size.height)} pixels being no larger than its margins.`,
         );
       case "drawn":
-        return drawing.size;
+        return { size: drawing.size, frame: drawing.frame };
     }
+  }
+
+  /**
+   * What `exportSvg` draws beside the SVG, for a definition with
+   * `drawExport`: the legend, with the frame and the data of the last
+   * draw, into the `chart-legend` group of the copy.
+   */
+  function besideOf(
+    frame: ExportFrame,
+    drawn: Data,
+  ): ((copy: SVGSVGElement) => void) | undefined {
+    const { drawExport } = definition;
+    if (drawExport === undefined) return undefined;
+    return (copy) => {
+      const copyLegend = copy.querySelector<SVGGElement>(
+        ":scope > g.chart-legend",
+      );
+      if (copyLegend === null) {
+        throw new Error(
+          "popnei_web defect: the copy of the SVG of a plot has no chart-legend group.",
+        );
+      }
+      drawExport(select(copyLegend), frame, drawn);
+    };
   }
 
   writeText();
@@ -380,19 +500,25 @@ export function createPlot2d<Data extends PlotText>(
       if (destroyed) return;
       destroyed = true;
       observer.disconnect();
+      overlay
+        ?.on("pointermove", null)
+        .on("pointerdown", null)
+        .on("pointerleave", null);
       if (waitingFrame !== null) cancelAnimationFrame(waitingFrame);
       waitingFrame = null;
       pending = null;
       svg.remove();
     },
     toSVG() {
-      return exportSvg(svgElement, drawnSize("toSVG"));
+      const { size, frame } = lastDraw("toSVG");
+      return exportSvg(svgElement, size, besideOf(frame, current));
     },
     // async, so that a defect of the caller rejects the promise, as every
     // other failure of toPNG does, and is not thrown before it exists.
     async toPNG(scale) {
-      const size = drawnSize("toPNG");
-      return exportPng(() => exportSvg(svgElement, size), size, scale);
+      const { size, frame } = lastDraw("toPNG");
+      const beside = besideOf(frame, current);
+      return exportPng(() => exportSvg(svgElement, size, beside), size, scale);
     },
   };
 }

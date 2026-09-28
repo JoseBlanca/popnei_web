@@ -8,10 +8,12 @@
 
 import { scaleLinear } from "d3-scale";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { exportSvg } from "./export.ts";
 import {
   createPlot2d,
   tableNumber,
   wholeNumberTicks,
+  type ExportFrame,
   type Margin,
   type Plot2dDefinition,
   type PlotText,
@@ -580,5 +582,259 @@ describe("VS4 D1 the base of the 2D plots, its axes and its handle", () => {
       destroyedPng = handle.toPNG(2);
     }).not.toThrow();
     await expect(destroyedPng).rejects.toThrow("after its destroy");
+  });
+});
+
+/** A pointer event of `type` from `pointerType`, at (clientX, clientY). */
+function pointerEvent(
+  type: string,
+  pointerType: string,
+  clientX = 0,
+  clientY = 0,
+  relatedTarget: EventTarget | null = null,
+): PointerEvent {
+  return new PointerEvent(type, {
+    pointerType,
+    clientX,
+    clientY,
+    relatedTarget,
+    bubbles: type !== "pointerleave",
+  });
+}
+
+/** The bars with an overlay, which record the calls of the pointer. */
+function pointerBars(): {
+  readonly definition: Plot2dDefinition<Bars>;
+  readonly moves: [number, number][];
+  readonly leaves: (EventTarget | null)[];
+} {
+  const moves: [number, number][] = [];
+  const leaves: (EventTarget | null)[] = [];
+  return {
+    definition: {
+      ...bars,
+      pointer: {
+        move(x, y) {
+          moves.push([x, y]);
+        },
+        leave(to) {
+          leaves.push(to);
+        },
+      },
+    },
+    moves,
+    leaves,
+  };
+}
+
+function overlayOf(element: HTMLElement): SVGRectElement {
+  const overlay = element.querySelector<SVGRectElement>("rect.chart-overlay");
+  if (overlay === null) throw new Error("no overlay");
+  return overlay;
+}
+
+describe("IP7 D2 the base of the 2D plots, its overlay and the calls of the pointer", () => {
+  test("a definition with pointer gets the overlay, the last child of the frame, of the size of the frame after a draw and a resize; one without gets none", () => {
+    const element = sizedElement(400, 300);
+    createPlot2d(element, barsOf([1, 2]), pointerBars().definition);
+    const overlay = overlayOf(element);
+    expect(element.querySelector("g.chart-frame")?.lastElementChild).toBe(
+      overlay,
+    );
+    expect([
+      overlay.getAttribute("width"),
+      overlay.getAttribute("height"),
+    ]).toEqual(["340", "260"]);
+    observerOf(0).resize(640, 400);
+    runFrames();
+    expect([
+      overlay.getAttribute("width"),
+      overlay.getAttribute("height"),
+    ]).toEqual(["580", "360"]);
+    const plain = sizedElement(400, 300);
+    createPlot2d(plain, barsOf([1, 2]), bars);
+    expect(plain.querySelector(".chart-overlay")).toBeNull();
+  });
+
+  test("a frame with no area gives the overlay a size of 0 and calls leave with null", () => {
+    const element = sizedElement(400, 300);
+    const { definition, leaves } = pointerBars();
+    createPlot2d(element, barsOf([1, 2]), definition);
+    expect(leaves).toEqual([]);
+    observerOf(0).resize(400, 40);
+    runFrames();
+    const overlay = overlayOf(element);
+    expect([
+      overlay.getAttribute("width"),
+      overlay.getAttribute("height"),
+    ]).toEqual(["0", "0"]);
+    expect(leaves).toEqual([null]);
+  });
+
+  test("a move of the pointer and a touch call move with the position in the pixels of the overlay", () => {
+    const element = sizedElement(400, 300);
+    const { definition, moves } = pointerBars();
+    createPlot2d(element, barsOf([1, 2]), definition);
+    const overlay = overlayOf(element);
+    // jsdom lays nothing out: the overlay is placed here where a browser
+    // would put the frame, 40 pixels right and 10 down.
+    vi.spyOn(overlay, "getBoundingClientRect").mockReturnValue({
+      left: 40,
+      top: 10,
+    } as DOMRect);
+    overlay.dispatchEvent(pointerEvent("pointermove", "mouse", 140, 60));
+    overlay.dispatchEvent(pointerEvent("pointerdown", "touch", 45, 12));
+    expect(moves).toEqual([
+      [100, 50],
+      [5, 2],
+    ]);
+  });
+
+  test("a mouse or a pen that leaves calls leave with the element it went onto; a finger lifted does not", () => {
+    const element = sizedElement(400, 300);
+    const { definition, leaves } = pointerBars();
+    const handle = createPlot2d(element, barsOf([1, 2]), definition);
+    const overlay = overlayOf(element);
+    const onto = document.createElement("div");
+    document.body.append(onto);
+    overlay.dispatchEvent(pointerEvent("pointerleave", "touch", 0, 0, onto));
+    expect(leaves).toEqual([]);
+    overlay.dispatchEvent(pointerEvent("pointerleave", "mouse", 0, 0, onto));
+    overlay.dispatchEvent(pointerEvent("pointerleave", "pen", 0, 0, null));
+    expect(leaves).toEqual([onto, null]);
+    handle.destroy();
+    overlay.dispatchEvent(pointerEvent("pointerleave", "mouse", 0, 0, onto));
+    overlay.dispatchEvent(pointerEvent("pointermove", "mouse", 5, 5));
+    expect(leaves).toHaveLength(2);
+  });
+});
+
+/** The bars that draw a rect in the legend of the exported copy, and record its frames. */
+function exportedBars(): {
+  readonly definition: Plot2dDefinition<Bars>;
+  readonly frames: ExportFrame[];
+} {
+  const exportFrames: ExportFrame[] = [];
+  return {
+    definition: {
+      ...pointerBars().definition,
+      draw(frame, data) {
+        bars.draw(frame, data);
+        // A mark of the point under the pointer, which the file leaves out.
+        frame.annotations
+          .selectAll("path.chart-hover")
+          .data([0])
+          .join("path")
+          .attr("class", "chart-hover");
+      },
+      drawExport(legend, frame, data) {
+        exportFrames.push(frame);
+        legend
+          .append("rect")
+          .attr("class", "beside")
+          .attr("width", data.values.length);
+      },
+    },
+    frames: exportFrames,
+  };
+}
+
+describe("IP7 D2 the base of the 2D plots, what the export draws beside the SVG", () => {
+  test("toSVG holds in chart-legend what drawExport drew, with the frame and the data of the last draw, and the plot on the screen is not changed", () => {
+    const element = sizedElement(400, 300);
+    const { definition, frames: exportFrames } = exportedBars();
+    const handle = createPlot2d(element, barsOf([1, 2]), definition);
+    observerOf(0).resize(640, 400);
+    runFrames();
+    handle.update(barsOf([1, 2, 3]));
+    const file = new DOMParser().parseFromString(
+      handle.toSVG(),
+      "image/svg+xml",
+    );
+    const beside = file.querySelector("svg > g.chart-legend > rect.beside");
+    expect(beside?.getAttribute("width")).toBe("3");
+    expect(exportFrames).toEqual([
+      { innerWidth: 580, innerHeight: 360, margin: MARGIN },
+    ]);
+    expect(element.querySelector("g.chart-legend")?.childNodes).toHaveLength(0);
+    expect(element.querySelector("path.chart-hover")).not.toBeNull();
+    expect(element.querySelector("rect.chart-overlay")).not.toBeNull();
+  });
+
+  test("the file has no overlay and no mark of the point under the pointer", () => {
+    const element = sizedElement(400, 300);
+    const handle = createPlot2d(
+      element,
+      barsOf([1, 2]),
+      exportedBars().definition,
+    );
+    const file = handle.toSVG();
+    expect(file).not.toContain("chart-overlay");
+    expect(file).not.toContain("chart-hover");
+    expect(file).toContain("beside");
+  });
+
+  test("toPNG draws its PNG from an SVG that holds what drawExport drew", async () => {
+    const element = sizedElement(400, 300);
+    const handle = createPlot2d(
+      element,
+      barsOf([1, 2]),
+      exportedBars().definition,
+    );
+    // jsdom has no fonts and decodes no image: the SVG given to the image
+    // is caught here, and the PNG is then refused with notMade.
+    Object.defineProperty(document, "fonts", {
+      configurable: true,
+      value: { ready: Promise.resolve() },
+    });
+    const blobs: Blob[] = [];
+    vi.spyOn(URL, "createObjectURL").mockImplementation((blob) => {
+      if (blob instanceof Blob) blobs.push(blob);
+      return "blob:plot";
+    });
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    await expect(handle.toPNG(2)).rejects.toMatchObject({ kind: "notMade" });
+    Reflect.deleteProperty(document, "fonts");
+    const [svg] = blobs;
+    expect(svg).toBeDefined();
+    const text = (await svg?.text()) ?? "";
+    expect(text).toContain('class="beside"');
+    expect(text).not.toContain("chart-hover");
+  });
+
+  test("exportSvg calls drawBeside once the overlay and the mark of the point under the pointer are removed, and writes the styles on what it drew, stroke-linejoin among them", () => {
+    const style = document.createElement("style");
+    style.textContent =
+      ".chart-points { stroke-linejoin: round; fill: rgb(230, 159, 0); }";
+    document.head.append(style);
+    const element = sizedElement(400, 300);
+    const handle = createPlot2d(
+      element,
+      barsOf([1, 2]),
+      exportedBars().definition,
+    );
+    const svg = svgOf(element);
+    let seen: { overlay: boolean; hover: boolean } | null = null;
+    const file = exportSvg(svg, { width: 400, height: 300 }, (copy) => {
+      seen = {
+        overlay: copy.querySelector(".chart-overlay") !== null,
+        hover: copy.querySelector(".chart-hover") !== null,
+      };
+      const path = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "path",
+      );
+      path.setAttribute("class", "chart-points");
+      copy.append(path);
+    });
+    expect(seen).toEqual({ overlay: false, hover: false });
+    const drawn = new DOMParser()
+      .parseFromString(file, "image/svg+xml")
+      .querySelector("svg > path.chart-points");
+    const written = drawn?.getAttribute("style") ?? "";
+    expect(written).toContain("stroke-linejoin: round");
+    expect(written).toContain("fill: rgb(230, 159, 0)");
+    handle.destroy();
+    style.remove();
   });
 });
