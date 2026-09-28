@@ -28,6 +28,12 @@ the Count says the filters keep no variant, and after a Count that
 popnei refused; the warning says that phones and tablets fail with far
 smaller files; once saved, the part gives the size written alone; and
 its words leave out "in the Variants step", the step they are shown in.
+Revised on 28 September 2026 for the owner's decision that day that the
+LD filter of the Variants step starts with no distance: while it has
+none, the store locks the writing with the reason of `variantFilterNeeds` of
+`docs/specs/core/project.md`, and the job takes its filters from
+`jobFilters`. This changes the code of stage 3, and the plan of stage 4
+carries the change.
 
 **It is not an analysis** in the sense of section 4 of the architecture,
 and it is under `docs/specs/analyses/` only because the architecture names
@@ -70,7 +76,7 @@ analysis does:
 {
   format: "nei",
   fileId: p.variants.fileId,
-  filters: p.filters,
+  filters: jobFilters(p.filters),
   individuals: readonly string[] | null, // the individuals kept, as the store
                                          // hands them to every analysis; null
                                          // when the filters remove nobody
@@ -377,6 +383,13 @@ GB". It is the same function for the estimate and for the written file.
 
 ## The cases
 
+- **The LD filter with no distance.** The write is locked by the store
+  with the reason of `variantFilterNeeds` of
+  `docs/specs/core/project.md`, which the step shows without its end
+  "in the Variants step" beside the button and beside the empty field
+  of the distance; the
+  statistics of each individual and the Count are locked with it, and
+  the histograms of the variants are not.
 - **A list of individuals popnei would refuse**, a list to keep that
   names an individual not in the file. The write is locked by the store
   with the reason of `individualListNeeds` of
@@ -441,7 +454,7 @@ notice and the status region is "Writing the file".
 | state | what the user sees | what they can do |
 |---|---|---|
 | empty | cannot happen: while the variants file is not read the part is not drawn, and the step shows the line of a file not read in its place (`docs/specs/steps/variants.md`, "What it does") | |
-| locked | the reason of `individualListNeeds` of `docs/specs/core/project.md`, or of the filters keeping no individual, beside the disabled button. While the variants file is not read, when the store locks it with the reason of `projectNeeds`, the part is not drawn, as for empty | what the reason says |
+| locked | the reason of `variantFilterNeeds` of `docs/specs/core/project.md`, the LD filter with no distance, or of `individualListNeeds` of the same spec, or of the filters keeping no individual, beside the disabled button. While the variants file is not read, when the store locks it with the reason of `projectNeeds`, the part is not drawn, as for empty | what the reason says |
 | ready | the button, and the estimate: "About 20.8 MB: 20,000 variants of 1,000 individuals."; disabled, with its reason, for a file too large, a bound too large before a Count, filters that keep no variant, or a Count refused (above, "The size, before the write") | Write; what the reason says |
 | waiting for the statistics | "Calculating the statistics of each individual, which the thresholds of the individuals need · 35% · 0:12" | Stop |
 | writing | "Writing panel.filtered.nei · 35% · 0:12", the bar of the diversity | Stop |

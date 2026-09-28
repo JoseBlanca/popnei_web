@@ -43,7 +43,12 @@ shown without its backquotes, as the PCA's is. Revised on 28 September
 September 2026, moves to `project.ts` with the other functions of the
 populations, and `keptNeeds`, the lock the owner decided at stop B on 27
 September 2026 when the individuals kept leave no population, gives
-nothing for the one population.
+nothing for the one population. Revised on 28 September 2026 for the owner's decision that day that the
+LD filter of the Variants step starts with no distance: while it has
+none, the store locks the diversity with the reason of `variantFilterNeeds` of
+`docs/specs/core/project.md`, and the job takes its filters from
+`jobFilters`. This changes the code of stage 3, and the plan of stage 4
+carries the change.
 The code of stage 2 is in
 `src/core/analyses/diversity.ts`. This spec gives the first analysis of the population genetics
 application, in its form for the walking skeleton: the module
@@ -321,8 +326,14 @@ The store asks `projectNeeds` of `docs/specs/core/project.md` first,
 which gives the reasons every analysis shares: no variants file, "Load a
 variants file in the Variants step."; the file being read, "Reading
 panel.nei."; the file refused or not read. Then, since the diversity
-reads the filters of individuals, `individualListNeeds` of the same
-spec, the lists of individuals that popnei would refuse. Then `needs` of this module gives the first of
+reads the filters of the variants, `variantFilterNeeds` of the same
+spec, the LD filter of the Variants step with no distance, "The LD
+filter of the Variants step needs the distance within which variants
+are compared. It has no default, because it depends on how far linkage
+disequilibrium extends in the genome of your species. Type a distance
+in base pairs, or turn off the LD filter, in the Variants step."; and,
+since it reads the filters of individuals, `individualListNeeds`, the
+lists of individuals that popnei would refuse. Then `needs` of this module gives the first of
 these, in the words the panel shows beside its Run button:
 
 | the project | the reason |
@@ -415,7 +426,7 @@ it only when `needs` gives `null`, so the variants file is read.
 {
   analysis: "diversity",
   fileId: p.variants.fileId,
-  filters: p.filters,
+  filters: jobFilters(p.filters), // the project's, whose LD filter has its distance
   individuals: c.individuals, // the individuals kept, in the order of the variants
                               // file; null when the filters remove nobody
   pops,                     // populationsKept(p, c.individuals).pops: the populations

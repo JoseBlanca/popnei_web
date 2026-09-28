@@ -27,6 +27,13 @@ individuals that pass are left out. Revised on 27 September 2026 for
 stage 4, not yet approved: the words of a file whose read stopped
 because the calculations could not start, which now say to save the
 project before the reload (`docs/specs/core/project.md`, Open 4).
+Revised on 28 September 2026 for the owner's decision that day that the
+LD pruning starts with no distance when it is turned on, "just like
+PCA's pruning", where it started at 10000 base pairs: the field of the
+distance empty, the reason beside it, and what the step locks until a
+distance is typed (below, "The distance of the LD pruning"). This
+changes the step as built in stage 3, and the plan of stage 4 carries
+the change.
 
 The screen spec of the first step of both applications. In stage 2 the
 user picks the variants file, a VCF or a `.nei` file, sets how a VCF is
@@ -289,7 +296,7 @@ which come after them (`docs/architecture.md`, section 2).
 | Filter the variants by missing data | Maximum proportion of missing genotypes, from 0 to 1 | 0.1, and on in a new project | `filterByMissingData(maxAllowedMissingRate)` |
 | Filter the variants by observed heterozygosity | Maximum observed heterozygosity, from 0 to 1 | 0.5 (**Open 1**) | `filterByObsHet(maxAllowedObsHet)` |
 | Filter the variants by major allele frequency (MAF) | Maximum major allele frequency, from 0 to 1 | 0.95, the default of `docs/functionality.md`, section 3 | `filterByMaf(maxAllowedMaf)` |
-| Prune the variants by linkage disequilibrium (LD) | Maximum r² with a variant kept before it, from 0 to 1; Distance within which variants are compared, in base pairs, from 1 | 0.3 and 10000 (**Open 1**) | `filterByLd(maxAllowedR2, maxDist)` |
+| Prune the variants by linkage disequilibrium (LD) | Maximum r² with a variant kept before it, from 0 to 1; Distance within which variants are compared, in base pairs, from 1 | 0.3 (**Open 1**), and no distance: the field is empty until the user types one, as the owner decided on 28 September 2026 (below) | `filterByLd(maxAllowedR2, maxDist)` |
 
 In a new project only the missing data filter of the variants is on,
 at 0.1, as the owner decided on 26 September 2026: the filter by
@@ -329,6 +336,47 @@ alone would mislead:
   one that comes first, and compares a variant with those already kept
   on its chromosome within the distance.
 
+**The distance of the LD pruning.** The owner decided on 28 September
+2026 that the distance of the LD pruning has no default, "just like
+PCA's pruning", for the reason they gave for the PCA on 27 September
+2026: how far linkage disequilibrium extends depends on the genome of
+the species, so the user chooses it (`docs/specs/analyses/pca.md`, "Its
+options"). Until then it started at 10000 base pairs, the example of
+popnei's doc comment of the filters, which the owner had left so on 26
+September 2026 (`docs/specs/stage-3-open-points.md`, point F). The r²
+still starts at 0.3.
+
+So the switch turned on sends `setVariantFilter` of `{ kind: "ld",
+maxAllowedR2: 0.3, maxDist: null }`: the filter is in the project with
+no distance, and the field of the distance is empty. It is given `NaN`
+for the `null` distance, which React Aria's `NumberField` shows as
+empty, and not `undefined`, which would let it keep a number the project
+no longer has after an Undo, as the PCA's field is. The distance typed
+is a second command, "the LD pruning changed", and an Undo of it gives
+back the empty field. The r² can be changed while the distance is
+empty. Turned off, the filter leaves the project, as every filter of
+the step does, and turned on again it starts with no distance, where
+the PCA's pruning keeps the distance typed, since its option stays in
+the project while it is off.
+
+While the distance is empty, popnei cannot be given the filter, and
+`variantFilterNeeds` of `docs/specs/core/project.md` gives its reason,
+which locks what reads the filters of the variants: in this step, the
+Count and the statistics of each individual, each showing the reason
+beside its disabled button, and the writing of the filtered variants;
+in the Analyses step, the diversity and the PCA. The histograms of the
+variants read no filter, and can still be calculated, so that the user
+can look at the data while choosing. The reason stands beside the field
+of the distance, without the end "in the Variants step", as the reasons
+of the lists do (below, "Its words"), and says why there is no default
+and what to do. Turning the filter on takes off the screen the results
+that read the filters, as any change of a filter does, and the notice
+says so with its Undo; they are locked, not ready, until the distance
+is typed. The option not taken, the switch on and the field empty as
+state of the step alone, with no command until a distance is typed, is
+said in `docs/specs/core/project.md`, "What an analysis needs of every
+project": the step would show a filter on that no analysis applies.
+
 The missing data filter is on from the start, with a threshold of 0.1,
 plink's default for `--geno`, the same filter on the same proportion,
 as the owner decided on 25 September 2026 (functionality's open point
@@ -355,6 +403,7 @@ threshold, the maximum r², the distance or the ploidy:
 | 1.5 in the maximum r² | "1.5 is more than 1; the maximum r² stays 0.3." |
 | 0 in the distance | "0 is less than 1; the distance stays 10000." |
 | 2.5 in the distance | "2.5 is not a whole number; the distance stays 10000." |
+| 0 in the distance while it is empty | "0 is less than 1; the distance is still to be typed." |
 | 300 in the ploidy | "300 is more than 255; the ploidy stays 2." |
 | 0 in the ploidy | "0 is less than 1; the ploidy stays 2." |
 | 2.5 in the ploidy | "2.5 is not a whole number; the ploidy stays 2." |
@@ -400,11 +449,14 @@ at once, and what is kept:
 | a minus sign, or a letter, in a threshold | "‘-’ cannot be typed in the threshold, which is written with digits and a point, as 0.05; the threshold stays 0.1." |
 | 10,000 in the distance | "Write the distance as a whole number of base pairs, 10000 and not 10,000; the distance stays 10000." |
 | a minus sign, or a letter, in the distance | "‘-’ cannot be typed in the distance, which is a whole number of base pairs, as 10000; the distance stays 10000." |
+| 10,000, or a minus sign, in the distance while it is empty | the same lines, ending "the distance is still to be typed." |
 | 2,0 in the ploidy | "Write the ploidy as a whole number, 4 and not 4,0; the ploidy stays 2." |
 | a minus sign, or a letter, in the ploidy | "‘-’ cannot be typed in the ploidy, which is a whole number, as 4; the ploidy stays 2." |
 
 The example of the comma is always 0.1, 10000 or 4, and the number kept
-the value the field had. A comma anywhere in what was typed gives the
+the value the field had, or, for the distance while it is empty, "the
+distance is still to be typed". The 10000 of the examples shows how a
+distance is written, and is not a value the field starts at. A comma anywhere in what was typed gives the
 line of the comma, as when 0,05 is pasted into the field; otherwise the
 line names the first character thrown away, between ‘ and ’, a space as
 "A space", with its control characters escaped. The next commit of the
@@ -423,9 +475,15 @@ a field of whole numbers, the ploidy and the distance, for the keypad of
 digits alone.
 
 A field left empty sends nothing and shows again the value it had, with
-no line, since nothing was typed that could be taken for another number;
-the same holds for the ploidy, which then keeps its value for the next
-pick. Turned off and on, a filter goes back to its place in the fixed
+no line, since nothing was typed that could be taken for another number,
+or stays empty while the LD pruning has no distance. In that empty field
+no key that steps a number sends anything, the arrow keys, Page Up, Page
+Down, Home and End: React Aria moves an empty field to the least or the
+largest number of its range, so Home and the Up arrow would send a
+distance of 1 base pair, and End and the Down arrow one of
+9007199254740991, that the user never typed. The number field of `src/ui/widgets/` makes this rule for
+every field given `NaN`, the PCA's distance as well. A ploidy left
+empty sends nothing too, and keeps its value for the next pick. Turned off and on, a filter goes back to its place in the fixed
 order, since nothing moves a filter (`docs/specs/core/project.md`, "One
 filter of each kind, in a fixed order").
 
@@ -588,7 +646,12 @@ the total while the Count is ready, beside its button, and nothing beside
 the filters; while it runs, and in error, the bar or the words of the
 error stand there instead, since the line asks for a Count that is under
 way, or that has no button after popnei refused it (`filterCounts.md`,
-"The states"). A change of any filter of the
+"The states"). While the LD pruning has no distance, the Count is
+locked, with the reason of `variantFilterNeeds` beside its disabled
+button in place of that line, and nothing is shown beside the filters,
+the ones above the LD pruning included: no count is made for filters
+that cannot all be given to popnei, and counts of other filters would
+be read as those of these. A change of any filter of the
 variants takes every count off at once, and is in no notice
 (`docs/architecture.md`, section 4, "The notice leaves the counts out");
 an undo, or any calculation over the same filters, brings them back.
@@ -823,7 +886,7 @@ step as a whole:
 | state | what the user sees | what they can do |
 |---|---|---|
 | empty | cannot happen: with no file, the step offers the pick and the filters, which is the ready state | — |
-| locked | cannot happen for the step: nothing has to be done before a file is picked. A file picked before the calculation worker has started is read once it has. The writing is locked when `individualListNeeds` gives a reason, with the reason beside its button, or when the filters keep no individual; the three checks read no filter of individuals and are never locked once the file is read | fix the list, or loosen the thresholds |
+| locked | cannot happen for the step: nothing has to be done before a file is picked. A file picked before the calculation worker has started is read once it has. While the LD pruning has no distance, the Count, the statistics of each individual and the writing are locked, each with the reason of `variantFilterNeeds` beside its button, and the reason stands beside the empty field; the histograms of the variants are not. The writing is locked too when `individualListNeeds` gives a reason, with the reason beside its button, or when the filters keep no individual; the three checks read no filter of individuals, and no list locks them | type the distance, or turn the LD pruning off; fix the list, or loosen the thresholds |
 | ready | no file: the zone, "Choose a variants file…", the options of a VCF, the filters, and in place of the checks the line of a file not read. With an opened project file, the file it was made with, below. With a file read: every part, each check with its button | pick a file; set the filters; calculate a check; count; write |
 | running | the read: the card with its name, format and size, "Reading panel.nei." and the seconds since the step saw the read start, which the step keeps and loses when it is left; no progress bar, since the read is of the header of a VCF, or the end of a `.nei` file, which popnei tells to nobody (`js/popnei/src/variant.ts`, `onProgress`). A check, the Count or the writing: its bar and its clock in its own part, the rest of the step as it was | during the read: pick another file, which replaces this one; Undo; set the filters. During a calculation: Stop it; set the filters, which leaves it behind, as the notice says |
 | done | the card with the individuals, the ploidy of a `.nei` file, the number of variants once counted, how a VCF was read; each check done beside its filters, the counts, the Save button | replace the file; set the filters; sort and download the table; download the bins of a histogram as CSV; save the file |
@@ -850,9 +913,10 @@ It reads, of the state of the store, `project.variants`,
 `individualsKept`; `write`; the status of `variantChecks`,
 `filterCounts` and `individualChecks` among `analyses`, and the
 calculations in flight that the store lists, `runs`, for their progress;
-`variantsStepNeeds` and `individualListNeeds` of the
+`variantsStepNeeds`, `variantFilterNeeds` and `individualListNeeds` of the
 project, the functions of core that give, in words, the reason of a
-variants file being read or not read and of a list of individuals that
+variants file being read or not read, of the LD pruning with no
+distance, and of a list of individuals that
 popnei would refuse, with the list it is about; and `writtenName`,
 `writeEstimate` and `sizeText` of `docs/specs/analyses/writeVariants.md`,
 "The functions of core", for the name and the sizes of the file. It sends:
@@ -863,7 +927,7 @@ popnei would refuse, with the list it is about; and `writtenName`,
 | Read ‹name› again | `loadVariants` of the same `File` under a new load id, with the options of the step | "the variants file was read again with other options" |
 | a threshold of the variants committed, on Enter, an arrow key or when the field loses the focus | `setVariantFilter(p, filter)`, the filter of its kind with its fields | "the filter of the variants by missing data changed", "the filter of the variants by observed heterozygosity changed", "the MAF filter changed", "the LD pruning changed", with the names of `docs/specs/analyses/filterCounts.md` |
 | its switch turned off | `removeVariantFilter(p, kind)` | "the filter of the variants by missing data was turned off", and so for each |
-| its switch turned on | `setVariantFilter(p, filter)`, with the values of the table of the filters | "the filter of the variants by missing data was turned on", and so for each |
+| its switch turned on | `setVariantFilter(p, filter)`, with the values of the table of the filters, the LD pruning with `maxDist` `null` | "the filter of the variants by missing data was turned on", and so for each |
 | Apply the list to keep, or to remove | `setIndividualFilter(p, { kind: "keep", individuals })`, or `removeIndividualFilter(p, "keep")` for no name | "the list of individuals to keep changed", "the list of individuals to remove changed" |
 | Clear the list | `removeIndividualFilter(p, kind)` | "the list of individuals to keep was cleared", "… to remove was cleared" |
 | a threshold of the individuals committed, turned off, turned on | `setIndividualFilter` or `removeIndividualFilter` of `missing_data` or `obs_het` | "the filter of individuals by missing data changed", "… was turned off", "… was turned on"; "the filter of individuals by observed heterozygosity changed", and so on |
@@ -935,6 +999,18 @@ in their sections. The rest:
 - **No variants file read**, in place of the checks: "The histograms,
   the counts and the statistics of each individual are calculated once a
   variants file is read."
+- **The LD pruning with no distance**, beside the empty field of the
+  distance: "The LD filter of the Variants step needs the distance
+  within which variants are compared. It has no default, because it
+  depends on how far linkage disequilibrium extends in the genome of
+  your species. Type a distance in base pairs, or turn off the LD
+  filter.", the reason of `variantFilterNeeds` without its end "in the
+  Variants step", and so beside the disabled buttons of the Count, of
+  the statistics and of the writing, as every reason this step shows;
+  in the Analyses step and the stepper it is shown whole. The name "the
+  LD filter of the Variants step" is the one the refusal of a file not
+  sorted already gives it (`docs/specs/analyses/diversity.md`, "Its
+  words").
 - **The lines under the filters, the lists and the counts**: in their
   sections, above.
 - **The line under the ploidy**, and the button that reads the VCF
@@ -984,7 +1060,11 @@ read, with what a wrong one gives; that only the variants with PASS or
 `.` in the FILTER column are read by default, a `.` saying that no
 filter was applied to that variant; what each filter keeps, in their
 fixed order, over every individual of the file, and that the MAF is of
-the major allele; that the histograms of the variants are over the file
+the major allele; that the distance of the LD pruning has no default,
+because how far linkage disequilibrium extends differs from one
+species, and one genome, to another, and that the LD decay of stage 5,
+once it exists, is the way to choose it, as the help of the PCA says of
+its own pruning; that the histograms of the variants are over the file
 as read, and the statistics of each individual over the variants the
 filters keep; that the file is read from the disk at every analysis, and
 not copied into the browser, so a file of any size opens, a large
@@ -1032,7 +1112,9 @@ nothing on the screen says the things the lines above do not.
   "Kept 1,152 of the 1,200 variants it was given.", then by the line
   under its switch, so that a user who moves to a field hears what it
   kept before the advice; a threshold of the individuals, by the
-  reason of no individual kept after its count, when there is one. The switch is described by that line too,
+  reason of no individual kept after its count, when there is one; the
+  empty field of the distance, by the reason of the LD pruning with no
+  distance, after the line of a number refused. The switch is described by that line too,
   so that a user who moves to a filter that is off hears what it
   filters on before turning it on. The line under the ploidy, 190 characters, is
   the last part of the ploidy's description, after the line of a number
@@ -1041,8 +1123,12 @@ nothing on the screen says the things the lines above do not.
 - Announced without moving the focus, through the function the shell
   gives the screens (`docs/specs/shell.md`, "The status region"): the
   messages of a file not loaded, the line of a number a field
-  refused or of a character it threw away, and the reason of a list of
-  individuals that an Apply or a Clear makes appear. Announced by the shell from
+  refused or of a character it threw away, the reason of a list of
+  individuals that an Apply or a Clear makes appear, and the reason of
+  the LD pruning with no distance when the switch turned on makes it
+  appear, since the focus stays on the switch and a user of a screen
+  reader would not otherwise learn that the analyses are locked until
+  they type the distance. Announced by the shell from
   the state of the store, and not by this step, which may not be on the
   screen when they happen: the end of a read; the start, the end and the
   stop of each check, of the Count and of the writing; and the warning
@@ -1076,7 +1162,8 @@ nothing on the screen says the things the lines above do not.
   MAF filter: 0.95", and what each bin keeps is a word of the table,
   never the fill of a bar alone (1.4.1). The column Kept of the table of
   the individuals is a word, "kept" or "removed".
-- The disabled button of the writing, locked by a list of individuals
+- The disabled button of the writing, locked by the LD pruning with no
+  distance, by a list of individuals
   or by the individuals kept, or refused for its size, for filters that
   keep no variant or after a Count refused
   (`docs/specs/analyses/writeVariants.md`), is described by its reason, which is text beside it, since a disabled button is not a stop
@@ -1142,6 +1229,20 @@ release `js-v0.1.0-dev.2` gave in node on 26 September 2026:
   Variants step; the list
   cleared, and the reason gone; a list typed and not applied, with its
   line, and an Undo putting the text back to the list applied;
+- from stage 4, the LD pruning turned on with the missing data filter
+  at 0.05: the field of the distance empty, and the reason beside it,
+  announced and read as the description of the field; the Count, the
+  statistics of each individual and the writing disabled, the reason
+  beside each, and the histograms of the variants still calculated; an
+  arrow key, Home, End, then the Tab key, in the empty field sending
+  nothing; 0
+  typed, and "0 is less than 1; the distance is still to be typed.";
+  50000 typed, the reason gone and the Count giving a count beside the
+  LD pruning; an Undo giving back the empty field and the lock; the
+  filter turned off and on again, the field empty. In node,
+  `turnedOnFilter("ld")` of `src/ui/steps/variants/commands.ts` gives
+  `{ kind: "ld", maxAllowedR2: 0.3, maxDist: null }`, and the constant
+  of 10000 goes;
 - with the thresholds at 0.03 and 0.38, Write, Save, and the download
   read: `panel.filtered.nei`, 170,042 bytes, and 170,122 from stage 4,
   with popnei's `js-v0.1.0-dev.3` (`writeVariants.md`);
@@ -1200,7 +1301,8 @@ screen is set by the measurement of `individualChecks.md`.
   it has none.
 - `docs/specs/core/project.md`: the four filters of the variants and of
   the individuals in their fixed order, the commands that set and remove
-  them, and the reasons of `individualListNeeds` for a list, with the
+  them, the LD filter held with `maxDist` `null` and the reason of
+  `variantFilterNeeds` for it, and the reasons of `individualListNeeds` for a list, with the
   list each is about.
 - `docs/specs/core/individualsKept.md` and `docs/specs/core/store.md`:
   `individualsKept` in the state, with the counts of each filter of
@@ -1235,10 +1337,12 @@ which the owner answered in part on 26 September 2026:
    missing data filter of the individuals starts at 0.1 when it is
    turned on. The values at which the three others start, which the
    owner left as they are on 26 September 2026: the observed heterozygosity
-   of the variants at 0.5, the LD pruning at an r² of 0.3 over 10000
-   base pairs, and the observed heterozygosity of the individuals at
+   of the variants at 0.5, the LD pruning at an r² of 0.3, and the
+   observed heterozygosity of the individuals at
    0.5. popnei gives no default for any of them. Point F has the
-   options.
+   options. The distance of the LD pruning, which started at 10000 base
+   pairs, starts with none since the owner's decision of 28 September
+   2026 (above, "The distance of the LD pruning").
 
 The other points of stage 3 that this spec meets were decided by the
 owner on 26 September 2026, and are written above as decided: point C,

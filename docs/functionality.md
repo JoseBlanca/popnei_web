@@ -76,7 +76,7 @@ gives already.
 | major allele frequency (MAF) | the frequency of its commonest allele is at most a threshold | on for the PCA and the GWAS, 0.95; off otherwise |
 | observed heterozygosity | its observed heterozygosity is at most a threshold | off |
 | genomic regions | it falls inside a region of a BED file; the filter is popnei's, decided by the owner on 26 September 2026 | off |
-| linkage disequilibrium (LD pruning) | it is not in LD above a threshold with a variant already kept | off as a filter of the dataset, where it serves to thin a large one; on inside the PCA (section 5) |
+| linkage disequilibrium (LD pruning) | it is not in LD above a threshold with a variant already kept within a distance in base pairs | off as a filter of the dataset, where it serves to thin a large one, and turned on at an r² of 0.3 with no distance, which the user types; on inside the PCA (section 5) |
 
 The thresholds are popnei's, and each filter keeps what is at most its
 threshold, as popnei's filters do; the number the user types is the one
@@ -86,6 +86,15 @@ not the minor allele frequency: for a variant with two alleles, a major
 allele frequency of at most 0.95 is a minor one of at least 0.05, but for
 a variant with three or more alleles it is not, since the other alleles
 share the rest, and a variant with alleles at 0.90, 0.06 and 0.04 is kept.
+
+The distance of the LD pruning of the dataset has no default, as the
+owner decided on 28 September 2026, "just like PCA's pruning", for the
+reason given in section 5: how far linkage disequilibrium extends
+depends on the genome of the species. Until the user types one, nothing
+that reads the filters runs, with the reason said beside the field and
+beside each Run button; the histograms of the variants, which read no
+filter, still do. The option not taken, a start at 10,000 base pairs,
+was the application's from 26 September 2026 until then.
 
 ### The filters of individuals
 
@@ -203,7 +212,8 @@ give the principal components that go into the GWAS as covariates.
   the owner on 27 September 2026; the option not taken, a default of
   50,000 base pairs. The LD decay of section 6, once it exists, is the
   way to choose it. When the filters of the dataset have pruned already,
-  the PCA does not prune again, and asks for no distance. Each PCA
+  the PCA does not prune again, and asks for no distance; the LD filter
+  of the dataset has no default distance either (section 3). Each PCA
   prunes again inside its one pass over the file: popnei has no way to
   keep the variants a pruning left and to give them to the next PCA, and
   a PCA reads the whole file anyway, so keeping them would spare only
@@ -498,8 +508,10 @@ and popnei's release `js-v0.1.0-dev.3` of 28 September 2026 has them.
    PCA's pruning is on at an r² of 0.1 with no default distance, which
    the user types, as the owner decided on 27 September 2026 (section 5).
    The LD filter of the dataset is another thing, which starts at r² 0.3
-   within 10,000 base pairs when the user turns it on, as the owner left
-   it on 26 September 2026 (`docs/specs/stage-3-open-points.md`).
+   when the user turns it on, as the owner left it on 26 September 2026
+   (`docs/specs/stage-3-open-points.md`), and with no distance, which
+   the user types, as the owner decided on 28 September 2026 (section 3);
+   until then it started within 10,000 base pairs.
 5. The number of principal components offered as covariates by default.
 6. The schema of the project file, field by field, and which numbers of
    each result it keeps to check a new run against.

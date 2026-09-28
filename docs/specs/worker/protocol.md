@@ -22,6 +22,10 @@ PCA's own MAF filter says how it is given to popnei, as
 written beside it, the seven refusals of an xlsx join
 `IndividualsFileError`, and the two values of a binary column are texts
 (`docs/specs/worker/individuals.md`, "The types of the columns").
+Revised on 28 September 2026 for the owner's decision that day that the
+LD filter of the Variants step starts with no distance: `VariantFilter`
+does not change, and says that a job never carries an LD filter without
+its distance, which the project may hold.
 
 This spec gives the part of `src/worker/protocol.ts` that core
 names: the filters of the variants and of the individuals, the table of
@@ -193,6 +197,17 @@ export type VariantFilter =
 
 export type VariantFilterKind = VariantFilter["kind"];
 ```
+
+A job always carries the distance of its LD filter. The project may
+hold an LD filter whose distance the user has not typed yet, which is
+core's `ProjectVariantFilter` and not this type; core locks every
+analysis that reads the filters of the variants while it does, and
+builds the filters of a job with `jobFilters`, which gives a
+`VariantFilter` list (`docs/specs/core/project.md`, "What an analysis
+needs of every project"). So the worker never checks for a missing
+distance, and a `null` that reached it would be refused by the check of
+the message as any value of another type is
+(`docs/specs/worker/messages.md`).
 
 The `kind` of each is the name popnei gives the filter in the counts of a
 pass (`Step.kind` in `js/popnei/src/filters.ts`), so what each filter

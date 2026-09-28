@@ -265,6 +265,14 @@ it changes:
   wasm are downloaded when first needed, and a page opened before a
   deploy then asks for a file of the build it came from, which the
   deploy removed (section 11, point 10 of section 13).
+- **The LD filter of the dataset may have no distance**, from 28
+  September 2026, when the owner decided that it starts with none, as
+  the PCA's pruning does. The project holds it with its distance `null`
+  (section 2), a job never does, and a reason of its own locks what
+  reads the filters of the variants until the distance is typed, as a
+  list of individuals popnei would refuse locks what reads the filters
+  of individuals (section 4). It changes the code of stage 3
+  (`docs/specs/stage-4-open-points.md`, point 16).
 
 Stage 4 builds on popnei's release `js-v0.1.0-dev.3` of 28 September
 2026, which `package.json` names from its plan: it has the PCoA, which
@@ -290,7 +298,9 @@ every change the user makes is a command that gives a new one.
 interface Project {
   app: "popgen" | "gwas";
   variants: VariantSource | null;     // the load of the file and its identity
-  filters: VariantFilter[];           // in the fixed order of their kinds, with parameters
+  filters: ProjectVariantFilter[];    // in the fixed order of their kinds, with parameters;
+                                      // the LD filter's distance null until the user
+                                      // types one, which locks what reads these filters
   individualFilters: IndividualFilter[]; // the same
   regions: RegionsSource | null;      // the BED file, whole once read (section 6)
   individuals: IndividualsSource | null; // the metadata or traits file
@@ -694,7 +704,11 @@ or dropped without touching the others.
 `needs` is what locks an analysis with its reason: "reading the file"
 while the variant file or the individuals file is being read (section 6),
 "the individuals file lacks 12 individuals of the variants", a trait not
-chosen.
+chosen. Before it, the store asks what every analysis needs of the
+project (`docs/specs/core/project.md`): a variants file read; for an
+analysis that reads the filters of the variants, an LD filter with its
+distance, from 28 September 2026; and for one that reads the filters of
+individuals, lists popnei accepts.
 
 An application is a list of steps and a list of analyses. The two
 applications share the steps of the variants and the analysis of the PCA.

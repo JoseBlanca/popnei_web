@@ -35,7 +35,10 @@ notice and the status region name it; and again the same day for a
 metadata file named by an opened project and not read when it was saved,
 `notGiven` (`docs/specs/core/project.md`, "The project of an opened
 project file"), which the stepper, the summary line and the opening
-tell. The screen
+tell; and on 28 September 2026 for the owner's decision that the LD
+filter of the variants starts with no distance: the Variants step is
+at "Problem" while it has none, with the reason of `variantFilterNeeds`.
+The screen
 spec of what surrounds every step of the population genetics
 application, first built in the walking skeleton of stage 2 (`docs/build-order.md`),
 the smallest application that goes through every part once: the header,
@@ -62,7 +65,10 @@ is its number of variants, `null` until the first calculation has read
 the whole file and counted them. `projectNeeds(p)` and
 `individualsNeeds(p)` of `src/core/project.ts` give, as a sentence, the
 reason no analysis can run because of the variants file or of the
-individuals file, or `null`; `individualListNeeds(p)`, the reason of a
+individuals file, or `null`; `variantFilterNeeds(p)`, the reason of
+the LD filter of the variants turned on with no distance, which locks
+only what reads the filters of the variants, or `null`;
+`individualListNeeds(p)`, the reason of a
 list of individuals popnei would refuse, which locks only what reads the
 filters of individuals, with the list it is about, or `null`. The **reference** of a project opened from
 a project file is what that file said of the variants file it was made
@@ -174,11 +180,11 @@ the link has the pointer or the focus.
 |---|---|---|---|
 | Variants | To do | no variants file | for an opened project, the text of `askedFileText` of `projectFile.ts` (`docs/specs/core/projectFile.md`, "Opening"); otherwise the reason `projectNeeds` gives, "Load a variants file in the Variants step." |
 | | Reading | its read is pending | the reason `projectNeeds` gives, "Reading panel.nei." |
-| | Problem | its read failed, or `projectNeeds` gives another reason; or the file is read and `individualListNeeds` gives a reason, a list of individuals that popnei would refuse; or the individuals kept are known and the filters keep none, as the owner decided on 26 September 2026 (point J of `docs/specs/stage-3-open-points.md`) | the reason `projectNeeds` gives, the `reason` of `individualListNeeds`, or that of `keptNoneReason`, "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them in the Variants step." |
+| | Problem | its read failed, or `projectNeeds` gives another reason; or the file is read and `variantFilterNeeds` gives a reason, the LD filter with no distance, or `individualListNeeds` gives one, a list of individuals that popnei would refuse; or the individuals kept are known and the filters keep none, as the owner decided on 26 September 2026 (point J of `docs/specs/stage-3-open-points.md`) | the reason `projectNeeds` gives, that of `variantFilterNeeds`, the `reason` of `individualListNeeds`, or that of `keptNoneReason`, "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them in the Variants step." |
 | | Running | a check or the writing is running, or waits for the statistics of each individual | — |
 | | Results removed | the notice lists a check among the results removed | — |
 | | Failed | a check is in the state `error`, or the writing is | "Statistics of each individual could not be calculated.", "The file could not be written.", the first in the order of the step: the checks in the order of the analyses of `apps.ts`, then the writing |
-| | Done | read, neither `projectNeeds` nor `individualListNeeds` gives a reason, and the filters of individuals do not keep none | — |
+| | Done | read, none of `projectNeeds`, `variantFilterNeeds` and `individualListNeeds` gives a reason, and the filters of individuals do not keep none | — |
 | Individuals | Optional | no metadata file | "Without it, every individual is in one population." |
 | | To do | the metadata file of an opened project, not read when the project was saved, `notGiven` | the reason `individualsNeeds` gives, "pops.csv was not read when this project was saved, so the project file does not hold it. Load pops.csv again in the Individuals step." |
 | | Reading | its read is pending | "Reading pops.csv.", from `individualsNeeds` |
@@ -486,6 +492,7 @@ the shell gives the screens:
 | a project opened | "Opened panel.popnei.json." followed by the text of `askedFileText` when it gives one (below, "Opening"), and, from stage 4, by the reason `individualsNeeds` gives a metadata file `notGiven` |
 | a file that a step did not load, several dropped at once | the text the step shows for it, whose words are the step's (`docs/specs/steps/variants.md` and `individuals.md`, "Its words") |
 | from stage 3, Apply or Clear of a list of individuals in the Variants step, after which `individualListNeeds` gives a reason it did not give before | the reason as the step shows it under the list, without the end "in the Variants step": "The list of individuals to keep names 1 individual that is not in panel.nei: ind_900. Change the list, or remove the filter." (`docs/specs/steps/variants.md`, "The two lists"); nothing for a list popnei accepts |
+| from stage 4, the switch of the LD pruning turned on in the Variants step, after which `variantFilterNeeds` gives its reason | the reason as the step shows it beside the empty field of the distance, without the end "in the Variants step": "The LD filter of the Variants step needs the distance within which variants are compared. … Type a distance in base pairs, or turn off the LD filter." (`docs/specs/steps/variants.md`, "The distance of the LD pruning") |
 
 Without the first, a user of a screen reader who pressed Ctrl+Z would
 hear nothing. An undo or a redo is said before what its change
@@ -907,7 +914,9 @@ with the analyses of `TEST_DEFS` of `src/core/testSupport.ts`:
   Variants step whose list of individuals names an individual not in the
   file is at Problem before a check running, and so is one whose
   thresholds of the individuals keep none, with the words of
-  `keptNoneReason`; from stage 4, Individuals Optional with no metadata
+  `keptNoneReason`; from stage 4, a Variants step whose LD filter has
+  no distance at Problem, before a check running, with the words of
+  `variantFilterNeeds`; Individuals Optional with no metadata
   file, whatever the grouping, To do with a file read and no column,
   with the words of the one population, To do with a file `notGiven`,
   with its words, and Done with a file read and `onePopulation`.

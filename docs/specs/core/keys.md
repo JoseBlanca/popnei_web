@@ -81,8 +81,9 @@ a value for every project, a locked one included, since the fingerprint
 of an opened project is made from it with no variants file loaded, and a
 function that throws on some projects would be a defect waiting for one.
 The store itself makes the key of an analysis only when none of
-`projectNeeds`, `individualListNeeds` and the analysis's `needs` gives a
-reason (`docs/specs/core/store.md`, "The state of an analysis").
+`projectNeeds`, `variantFilterNeeds`, `individualListNeeds` and the
+analysis's `needs` gives a reason, so no key is made for the filters of
+a project whose LD filter has no distance yet (`docs/specs/core/store.md`, "The state of an analysis").
 
 ### The canonical form
 

@@ -18,6 +18,12 @@ with them, and on `docs/specs/charts/histogram.md`, the plot; what it relies on 
 them is listed at the end. It also gives the bins of its two histograms,
 the module `src/core/histogram.ts`, which the architecture puts in core
 (section 7) and `project.md` leaves to this spec.
+Revised on 28 September 2026 for the owner's decision that day that the
+LD filter of the Variants step starts with no distance: while it has
+none, the store locks the statistics with the reason of `variantFilterNeeds` of
+`docs/specs/core/project.md`, and the job takes its filters from
+`jobFilters`. This changes the code of stage 3, and the plan of stage 4
+carries the change.
 
 The words of the documents used here, as `docs/specs/analyses/diversity.md`
 defines them: the **key** of a result, a hash of everything it was
@@ -89,9 +95,11 @@ The key version is 1.
 
 ### Why it cannot run
 
-`needs(p)` gives `null`: the reasons of `projectNeeds` of
-`docs/specs/core/project.md`, no variants file, the file being read, the
-file refused, are the only ones. A list of individuals that popnei would
+`needs(p)` gives `null`. The store locks it with the reasons of
+`projectNeeds` of `docs/specs/core/project.md`, no variants file, the
+file being read, the file refused, and, since it reads the filters of
+the variants, with that of `variantFilterNeeds` of the same spec, the
+LD filter with no distance. A list of individuals that popnei would
 refuse, `individualListNeeds` of the same spec, does not lock it, since
 it reads no filter of individuals. It needs no individuals file, so it runs
 in the association application before a file of traits is loaded, and in
@@ -102,7 +110,7 @@ the population genetics application before the metadata file.
 `run(p, c)` sends, through the client the store bound to its key:
 
 ```ts
-{ analysis: "individualChecks", fileId: p.variants.fileId, filters: p.filters }
+{ analysis: "individualChecks", fileId: p.variants.fileId, filters: jobFilters(p.filters) }
 ```
 
 The runner puts the filters on the open `Variants` in their order and
@@ -474,7 +482,7 @@ are calculated:
 | state | what the user sees | what they can do |
 |---|---|---|
 | empty | cannot happen: until the variants file is read the analysis is locked | |
-| locked | not drawn: while the store locks it, the variants file is not read, and the Variants step shows in place of its part the line "The histograms, the counts and the statistics of each individual are calculated once a variants file is read." (`docs/specs/steps/variants.md`, "What it does"). With the file read, `projectNeeds` gives no reason and a list of individuals popnei would refuse does not lock it, since it reads no filter of individuals, so the part is never drawn locked | load a file |
+| locked | not drawn: while the store locks it, the variants file is not read, and the Variants step shows in place of its part the line "The histograms, the counts and the statistics of each individual are calculated once a variants file is read." (`docs/specs/steps/variants.md`, "What it does"). With the file read, it is drawn locked only while the LD filter has no distance, with the reason of `variantFilterNeeds` beside the disabled button; a list of individuals popnei would refuse does not lock it, since it reads no filter of individuals | load a file; type the distance of the LD filter, or turn it off |
 | ready | the button | Calculate |
 | running | the bar and the clock of the diversity, "Calculating · 35% · 0:12"; after a stop, "Waiting for panel.nei to be opened again, then calculating · 0:12" | Stop |
 | done | the table, the histograms and the download; the warning above them | sort, download |

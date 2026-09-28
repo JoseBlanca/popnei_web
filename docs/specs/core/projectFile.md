@@ -34,6 +34,9 @@ the file again rather than run on one population; and after the
 review of the architecture, the same day: the types the user set
 written whole, those a read does not apply among them, and the project
 files of stages 2 and 3 that wrote a metadata file not read as none.
+Revised on 28 September 2026 for the owner's decision that day that the
+LD filter of the variants starts with no distance: a filter saved before
+its distance was typed is written with `"maxDist": null`, in version 1.
 There was no
 code yet; it will be `src/core/projectFile.ts`, the row `projectFile.ts`
 of section 9 of `docs/architecture.md`. The project file is the file
@@ -245,7 +248,9 @@ filters of the variants by missing data, observed heterozygosity, the
 major allele frequency and linkage disequilibrium, in that fixed order, and the four filters of individuals, the
 lists and the thresholds, in theirs (`docs/specs/core/project.md`). A
 filter is written as the project holds it, a threshold as the number the
-user typed. What the filters make is not written, since each is a
+user typed, and the LD filter whose distance the user has not typed yet
+with `"maxDist": null`, which opens into the same filter and the same
+lock (`variantFilterNeeds` of `docs/specs/core/project.md`). What the filters make is not written, since each is a
 result or is made from one: the list of the individuals the thresholds
 keep, the statistics of each individual, the histograms and the counts
 of the filters; of those, as of any analysis `done`, only the check
@@ -741,12 +746,14 @@ this spec makes precise:
   by field, and the fixtures of every earlier version, below, keep
   opening.
 - **Stage 4 does not raise it.** The grouping `onePopulation`, the
-  types the user set, `typesSet`, and the read `notGiven` join version
+  types the user set, `typesSet`, the read `notGiven`, and the LD filter
+  with `maxDist` `null`, join version
   1; a file of stages 2 and
   3, which has no `typesSet`, opens with none set
   (`docs/specs/core/project.md`, "The validation"), and a development
   version before stage 4 refuses a file that has any of them, as it refuses
-  every field it does not write. The
+  every field it does not write and a distance that is not a whole
+  number. The
   binary type holds texts, which is what every file of stages 2 and 3
   holds, since they read only CSV.
 - **Stage 3 does not raise it**, nor do the regions of a BED file when
@@ -976,7 +983,9 @@ the analyses `done`, `ready` or `removed`.
   individuals file, the missing data filter at 0.05 and the 4 check
   numbers of the one population, and `v1-metadata-not-read.popnei.json`,
   `pops.csv` `notGiven` with a type set and the grouping `pop`, no
-  check. Each
+  check, and `v1-ld-no-distance.popnei.json`, `panel.nei` with the
+  missing data filter at 0.1 and the LD filter at r² 0.3 with
+  `"maxDist": null`, no check. Each
   opens into a project written as a literal in its test, and, while
   `FORMAT_VERSION` is 1, the project written back from it, with no result
   and the header's versions and date, is the fixture byte for byte; but

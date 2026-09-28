@@ -12,7 +12,9 @@ points 1, 3, 8, 14 and 15 and approved the new dependencies but
 calamine, and the specs named with each were revised the same day. On
 28 September 2026 the specs were revised to popnei's release
 `js-v0.1.0-dev.3`, which has the PCoA (below, "popnei's release
-`js-v0.1.0-dev.3`").
+`js-v0.1.0-dev.3`"), and the owner decided point 16, the LD filter of
+the Variants step turned on with no distance, which changes the code of
+stage 3.
 
 The specs are, new: `docs/specs/analyses/pca.md`, the analysis and its
 panel; `docs/specs/charts/scatter.md`, the 2D plot, and `pca3d.md`, the
@@ -98,7 +100,9 @@ in the genome of your species. Type a distance in base pairs, or turn
 the pruning off." The help says the same, and points to the LD decay of
 stage 5, once it exists, as the way to choose the distance. When the
 dataset's own LD filter is on, the PCA does not prune again, asks for no
-distance and is not locked, since that filter has its own.
+distance and is not locked by its own pruning, since that filter has its
+own; while that filter's distance is not typed yet, the PCA is locked by
+it (point 16).
 
 In the specs, the option of the PCA's pruning holds whether it is on,
 its r² and its distance, the distance empty until the user types one.
@@ -112,9 +116,10 @@ the distance kept while it is off, which the result was not calculated
 from;
 and the Python script that the project gives, which calculates the same
 results with popnei in Python, has no lines for a PCA that cannot run. The LD filter of
-the Variants step, which starts at an r² of 0.3 within 10,000 base pairs
-when the user turns it on (stage 3), is a different thing and is not
-changed. Specs: `pca.md`, its options, "Why it cannot run", the panel
+the Variants step, which starts at an r² of 0.3 when the user turns it
+on, is a different thing, and this point did not change it; its
+distance, 10,000 base pairs in stage 3, starts empty since point 16.
+Specs: `pca.md`, its options, "Why it cannot run", the panel
 and the help; `runner.md`, whose test types the distance;
 `docs/functionality.md`, section 5 and open point 4.
 
@@ -153,6 +158,79 @@ that stage 3 did not, `d3-shape`, `d3-path` and `d3-scale-chromatic`,
 with their types; and Rust 1.98.0 and `wasm-bindgen-cli` 0.2.128 on
 every machine that builds the site, CI among them. calamine is not
 approved yet (below, "Asked of the owner to make or approve").
+
+## Decided by the owner on 28 September 2026
+
+### 16. The LD filter of the Variants step starts with no distance
+
+In stage 3 the LD filter of the dataset, turned on in the Variants
+step, started at an r² of 0.3 within 10,000 base pairs, the example of
+popnei's doc comment of the filters, as the owner left it on 26
+September 2026 (`docs/specs/stage-3-open-points.md`, point F). Decided
+by the owner: it starts with no distance, "just like PCA's pruning", for
+the reason of point 3: how far linkage disequilibrium extends depends on
+the genome of the species, so the application sets no default and the
+user chooses. Its r² still starts at 0.3. Not taken: the 10,000 base
+pairs of stage 3.
+
+What a user meets: turned on, the filter shows an empty field of the
+distance, and beside it "The LD filter of the Variants step needs the
+distance within which variants are compared. It has no default, because
+it depends on how far linkage disequilibrium extends in the genome of
+your species. Type a distance in base pairs, or turn off the LD
+filter." Until a distance is typed, what reads the filters of the
+variants is locked with the same words, ending "in the Variants step"
+where they are shown in another step: in the Variants step, the Count
+of what each filter kept, the statistics of each individual and the
+writing of the filtered variants; in the Analyses step, the diversity
+and the PCA. The histograms of the variants read no filter and can
+still be calculated. No count is shown beside the filters, and the
+stepper shows the Variants step with a problem. The PCA does not prune
+again when the dataset has an LD filter, with or without its distance,
+so it asks for no distance of its own and is locked by the dataset's
+filter until that distance is typed. The help says why there is no
+default and points to the LD decay of stage 5.
+
+Decided by the writers, the same day: the filter turned on is in the
+project, the settings the user has made, with its distance `null`, and
+is not held by the step alone until a distance is typed. So turning it
+on is a command and a step of Undo, as for every filter of the step. The
+results that read the filters leave the screen at once, with the notice
+of what was removed and its Undo. An Undo after the distance is typed
+gives back the empty field and the lock; a second one turns the filter
+off. A project file saved before the distance is typed keeps the
+filter, written with `"maxDist": null`; the format of the project file
+stays at its version 1, which the owner keeps until the first release of
+the application, and the project opens again with the field empty and
+the same lock. Turned off, the filter leaves the project as the others
+do, and turned on again starts empty, where the PCA's pruning keeps the
+distance typed.
+
+Not taken: the switch on and the field empty as the step's own state,
+with no command until a distance is typed. The step would then show a
+filter on that no analysis applies. The diversity could run, and a
+project be saved, with the switch on and no pruning made. And an Undo or
+a reload would lose the switch.
+
+The request each calculation sends to popnei, its job, never carries a
+filter with no distance: a new function of core, `jobFilters`, gives
+the filters of every job, and would stop with an error of the
+application if one had none, which the lock rules out. The Python
+script of stage 6, which does with popnei in Python what the project
+does, has no line for a filter with no distance; stage 6 says what it
+writes for such a project.
+
+This changes the code of stage 3, which is built: the constant of the
+distance of the step, its test and the type of the filters in the
+project, the locks of the store, the jobs of the Count, the statistics,
+the writing and the diversity, the field of the distance, and the
+validation of the project file. The plan of stage 4 carries the change.
+Specs: `steps/variants.md`, "The distance of the LD pruning";
+`project.md`, `variantFilterNeeds`, the reason of the lock, and
+`jobFilters`; `store.md`; `keys.md`; `projectFile.md`; `protocol.md`;
+`pca.md`; `filterCounts.md`, `individualChecks.md`, `writeVariants.md`
+and `diversity.md`; `shell.md`; `docs/functionality.md`, sections 3 and
+5 and open point 4; `docs/architecture.md`, sections 1, 2 and 4.
 
 ## Recommended on 27 September 2026, not yet answered
 

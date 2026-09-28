@@ -17,6 +17,12 @@ with the owner's decisions at stop A of `docs/plans/variants-step.md`:
 the line of no counts, the counts of a file with no variant, and the
 words of a refusal for a file with none. Revised on 27 September 2026
 for stage 4, in the row of the PCA: why its pass fills no counts.
+Revised on 28 September 2026 for the owner's decision that day that the
+LD filter of the Variants step starts with no distance: while it has
+none, the store locks the Count with the reason of `variantFilterNeeds` of
+`docs/specs/core/project.md`, and the job takes its filters from
+`jobFilters`. This changes the code of stage 3, and the plan of stage 4
+carries the change.
 
 ## The module
 
@@ -64,8 +70,12 @@ The key version is 1.
 
 ### Why it cannot run
 
-`needs(p)` gives `null`, and the reasons of `projectNeeds` are the only
-ones: a list of individuals that popnei would refuse,
+`needs(p)` gives `null`. The store locks it with the reasons of
+`projectNeeds` and, since it reads the filters of the variants, with
+that of `variantFilterNeeds` of `docs/specs/core/project.md`, the LD
+filter with no distance, "The LD filter of the Variants step needs the
+distance within which variants are compared. …": no count is made while
+the filters cannot all be given to popnei. A list of individuals that popnei would refuse,
 `individualListNeeds` of `docs/specs/core/project.md`, does not lock the
 Count, since it reads no filter of individuals. With no filter, Count
 gives the number of variants of the file.
@@ -73,7 +83,7 @@ gives the number of variants of the file.
 ### The request
 
 ```ts
-{ analysis: "filterCounts", fileId: p.variants.fileId, filters: p.filters }
+{ analysis: "filterCounts", fileId: p.variants.fileId, filters: jobFilters(p.filters) }
 ```
 
 The runner puts the filters on the `Variants` in their order, iterates
@@ -262,7 +272,7 @@ Analyses step was locked.
 | state | what the user sees | what they can do |
 |---|---|---|
 | empty | cannot happen: locked until the file is read | |
-| locked | not drawn: while the store locks it, the variants file is not read, and the Variants step shows in place of its part the line "The histograms, the counts and the statistics of each individual are calculated once a variants file is read." (`docs/specs/steps/variants.md`, "What it does"). With the file read, `projectNeeds` gives no reason and a list of individuals popnei would refuse does not lock it, since it reads no filter of individuals, so the part is never drawn locked | load a file |
+| locked | not drawn: while the store locks it, the variants file is not read, and the Variants step shows in place of its part the line "The histograms, the counts and the statistics of each individual are calculated once a variants file is read." (`docs/specs/steps/variants.md`, "What it does"). With the file read, it is drawn locked only while the LD filter has no distance: the reason of `variantFilterNeeds` beside the disabled button, in place of the line of no counts, and no count beside the filters. A list of individuals popnei would refuse does not lock it, since it reads no filter of individuals | load a file; type the distance of the LD filter, or turn it off |
 | ready | the button, and the line of no counts | Count |
 | running | the bar and the clock of the diversity, beside the button | Stop |
 | done | the counts beside the filters, and the warning | change a filter |

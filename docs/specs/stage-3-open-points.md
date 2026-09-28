@@ -80,6 +80,17 @@ Recommended: (a), with the owner's numbers where they know better; each
 is a constant of the step and its test (`docs/specs/steps/variants.md`,
 open point 1).
 
+On 28 September 2026 the owner changed the start value of the distance
+of the LD pruning: turned on, the filter starts with no distance, "just
+like PCA's pruning", because how far linkage disequilibrium extends
+depends on the genome of the species, and the user types it; until
+then, what reads the filters of the variants is locked, with the reason
+beside the empty field. Its r² still starts at 0.3. The 10,000 base
+pairs above were the value until that day. Specs:
+`docs/specs/steps/variants.md`, "The distance of the LD pruning", and
+point 16 of `docs/specs/stage-4-open-points.md`, which says that the
+plan of stage 4 changes the code of stage 3 for it.
+
 ## What the owner decided on 26 September 2026
 
 Points A, B, D, G, H, I and J as they were recommended; C, E and F as
@@ -176,7 +187,9 @@ the LD pruning, and both thresholds of the individuals are off until the
 user turns them on. The missing data filter of the individuals starts
 at 0.1 when it is turned on, plink's default for `--mind`, as the
 variants' 0.1 is its `--geno`. The values at which the other three start
-stay open, above. Spec: `steps/variants.md`.
+stay open, above. Spec: `steps/variants.md`. On 28 September 2026 the
+owner changed the start value of the distance of the LD pruning, from
+10,000 base pairs to none, typed by the user (above).
 
 ### G. A file written and not saved, which a change discards
 

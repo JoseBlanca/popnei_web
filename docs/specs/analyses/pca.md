@@ -31,7 +31,13 @@ memory and its numbers on `panel.nei`, where it differs from the draft
 this spec had followed ("The PCoA of popnei's release", at the end); and
 again that day after its review, the limit of the PCoA made a lock of the
 known list of the individuals kept, `keptNeeds`, so that a threshold on
-the individuals leads to a lock and not to a refusal after the Run.
+the individuals leads to a lock and not to a refusal after the Run;
+and again that day for the owner's decision that the LD filter of the
+Variants step starts with no distance, as the PCA's pruning does: while
+the dataset's filter has none, the PCA does not prune again and is
+locked by that filter, with the reason of `variantFilterNeeds` of
+`docs/specs/core/project.md`, until the distance is typed in the
+Variants step.
 There is no code of it yet. This spec gives
 the analysis that places the individuals of a dataset on a few axes, to
 see its structure and check the populations against it: the module
@@ -203,7 +209,11 @@ variants the PCA reads" in `docs/specs/stage-4-open-points.md`):
   heterozygosity.
 - **One LD pruning, last among the filters of the variants**: the
   dataset's when it has one, since `docs/functionality.md` section 5 has
-  the PCA not prune again then; otherwise the PCA's own when its pruning
+  the PCA not prune again then, whether or not the user has typed its
+  distance yet: the dataset's filter with no distance, `maxDist` `null`,
+  is copied as it is, and the store locks the PCA with the reason of
+  `variantFilterNeeds` of `docs/specs/core/project.md` before it asks
+  `needs`, so that list is never sent either; otherwise the PCA's own when its pruning
   is on and has a distance; otherwise none. A pruning of the PCA with no
   distance yet puts no LD filter in the list, since popnei's `filterByLd`
   needs one, and locks the analysis (below, "Why it cannot run"), so
@@ -234,6 +244,7 @@ were calculated with:
 | missing data 0.1, MAF 0.98 | defaults, 50,000 typed | missing data 0.1, MAF 0.95, LD r² 0.1 within 50,000 |
 | missing data 0.1, heterozygosity 0.9, LD r² 0.3 within 10,000 | defaults | missing data 0.1, heterozygosity 0.9, MAF 0.95, LD r² 0.3 within 10,000 |
 | missing data 0.1, MAF 0.9, LD r² 0.3 within 10,000 | defaults, 50,000 typed | missing data 0.1, MAF 0.9, LD r² 0.3 within 10,000 |
+| missing data 0.1, LD r² 0.3 with no distance | defaults, 50,000 typed | missing data 0.1, MAF 0.95, LD r² 0.3 with no distance; the PCA is locked until the distance is typed in the Variants step |
 | none | pruning off | MAF 0.95 |
 | missing data 0.1 | pruning off, 50,000 typed before | missing data 0.1, MAF 0.95 |
 | missing data 0.1 | MAF 1, pruning off | missing data 0.1, MAF 1 |
@@ -292,10 +303,13 @@ does not have to be typed again, nor the PCA be locked again for it. The
 writers decided so on 27 September 2026; the option not taken, the
 pruning `null` when off, lost both numbers at every turn off. When the dataset has
 an LD filter the PCA does not prune, so its distance is not asked for
-and nothing locks, since that filter has its own distance. The LD
-filter of the dataset, which starts at r² 0.3 within 10,000 base pairs
-(stage 3), is another thing, a thinning of the dataset, and is not
-changed by this decision. On `panel.nei` the pruning at r² 0.1 within
+and the PCA's pruning locks nothing, since that filter has its own
+distance. The LD filter of the dataset is another thing, a thinning of
+the dataset, which starts at r² 0.3 and, by the owner's decision of 28
+September 2026, with no distance either, "just like PCA's pruning"
+(`docs/specs/steps/variants.md`, "The distance of the LD pruning").
+While its distance is not typed, the PCA is locked by that filter, with
+the reason of `variantFilterNeeds`, and not by its own pruning. On `panel.nei` the pruning at r² 0.1 within
 50,000 base pairs keeps 535 of the 1,175 variants the MAF filter leaves
 (below, "How it is verified").
 
@@ -357,7 +371,8 @@ version, the version of popnei, the load and both lists of filters.
 the method; the filters popnei is given, which hold the PCA's MAF and
 pruning as they reach popnei; and the PCA's own pruning, its r² and its
 distance, `maxDist` `null` included, when it is on and the dataset has
-no LD filter, and `null` otherwise. The last is there so that the key
+no LD filter, and `null` otherwise; an LD filter of the dataset counts
+with or without its distance. The last is there so that the key
 holds the pruning as the user set it, as the owner's answer of 27
 September 2026 has it: the pruning with no distance puts no LD filter in
 the list, and without it would share the key of the pruning off, whether
@@ -414,7 +429,9 @@ the key before holds another number of components.
 
 ### Why it cannot run
 
-The store asks `projectNeeds` and, since the PCA reads the filters of
+The store asks `projectNeeds`, and, since the PCA reads the filters of
+the variants, `variantFilterNeeds`, the LD filter of the dataset with no
+distance, and, since it reads the filters of
 individuals, `individualListNeeds` of `docs/specs/core/project.md` first,
 and the two locks of the individuals kept, which read the cache
 (`docs/specs/core/store.md`, "The state of an analysis"): the filters
@@ -438,7 +455,12 @@ holds, and not only when it is the first reason, so that the empty
 field always says why it has to be filled (below, "What it shows"). While
 the pruning is off, `on` false, a distance still `null` locks nothing,
 since no pruning is made. While the dataset has an LD filter the PCA
-does not prune, and nothing locks. The words say why there is no
+does not prune, and its own pruning locks nothing; the dataset's
+filter with no distance locks it through `variantFilterNeeds`, asked
+before `needs`, in the words "The LD filter of the Variants step needs
+the distance within which variants are compared. It has no default, …
+Type a distance in base pairs, or turn off the LD filter, in the
+Variants step." The words say why there is no
 default and what to do; the help says how to choose the distance.
 
 **The limit on the individuals.** popnei refuses a PCA of more than
@@ -546,7 +568,7 @@ why (below, "Its words").
 {
   analysis: "pca",
   fileId: p.variants.fileId,
-  filters: pcaFilters(p.filters, pcaOptions(p)),
+  filters: jobFilters(pcaFilters(p.filters, pcaOptions(p))), // every LD filter with its distance
   individuals: c.individuals,   // the individuals kept; null when the filters remove nobody
   method: "pca",                // or "pcoa"
   numCompsKept: 10,             // PCA_NUM_COMPS_KEPT
@@ -967,7 +989,9 @@ export function pcaOptions(p: Project): PcaOptions;
 /** The filters of the job: the project's, with the stricter MAF and one
     LD pruning (above, "Which variants it reads"). The same frozen value
     for the same inputs. */
-export function pcaFilters(filters: readonly VariantFilter[], o: PcaOptions): readonly VariantFilter[];
+export function pcaFilters(
+  filters: readonly ProjectVariantFilter[], o: PcaOptions,
+): readonly ProjectVariantFilter[];   // run gives the job jobFilters of it
 
 /** How the individuals of a result are coloured (below, "The colours"):
     by groups, or by the numbers of a continuous column. The panel gives
@@ -1327,7 +1351,7 @@ same object, which the highlight of the legend is kept with.
 
 With Vitest, at the functions of the definition, on frozen projects:
 
-- **`pcaFilters`**, one test for each of the nine rows of the table of
+- **`pcaFilters`**, one test for each of the ten rows of the table of
   "Which variants it reads", in its order, as literals. The first two:
   the filters `[{ kind: "missing_data", maxAllowedMissingRate: 0.1 }]`
   and `PCA_DEFAULTS` give `[{ kind: "missing_data",
@@ -1335,7 +1359,11 @@ With Vitest, at the functions of the definition, on frozen projects:
   and with `maxDist` 50000 `[{ kind: "missing_data",
   maxAllowedMissingRate: 0.1 }, { kind: "maf", maxAllowedMaf: 0.95 }, {
   kind: "ld", maxAllowedR2: 0.1, maxDist: 50000 }]`. Then the same
-  frozen value twice for the same inputs.
+  frozen value twice for the same inputs. The row of the dataset's LD
+  filter with no distance: `pcaFilters` gives it with `maxDist` `null`
+  and none of the PCA's pruning, `pruningDistanceReason` gives `null`,
+  and the store, over the definition, locks the PCA with the reason of
+  `variantFilterNeeds`; with 20000 typed there, the PCA is ready.
 - **`run`**, with a fake client that records its job: the filters of
   `pcaFilters`, the method, `numCompsKept` 10, and `individuals` as the
   client gives it, `null` and a list.
@@ -1636,7 +1664,11 @@ method.
   is not in that project. When the dataset has an LD filter, the three are
   disabled, no distance is asked for, and a line says why: "The LD filter
   of the Variants step, r² at most 0.3 within 10,000 base pairs, is used,
-  and the PCA does not prune again."
+  and the PCA does not prune again."; while that filter has no distance,
+  "The LD filter of the Variants step, r² at most 0.3, is used, and the
+  PCA does not prune again; its distance is still to be typed in the
+  Variants step.", and the reason of `variantFilterNeeds` stands beside
+  the disabled Run button.
 
 The three number fields follow the rules of the fields of the Variants
 step, "A number the fields do not take" and "A character the fields do
@@ -1651,9 +1683,13 @@ sends nothing; a field left empty sends nothing and shows its value
 again, or stays empty while there is no distance. The field of the
 distance is given `NaN` for a `null` distance, which React Aria's
 `NumberField` shows as empty, and not `undefined`, which would let it
-keep a number the project no longer has after an undo; an arrow key in
-the empty field sends nothing, so that no distance of 1 base pair is
-sent that the user never typed. So every
+keep a number the project no longer has after an undo; in the empty
+field no key that steps a number sends anything, the arrow keys, Page
+Up, Page Down, Home and End, which React Aria would turn into a distance
+of 1 or of 9007199254740991 base pairs that the user never typed, the
+rule the number field of `src/ui/widgets/` makes for every field given
+`NaN` (`docs/specs/steps/variants.md`, "A number the fields do not
+take"). So every
 option the fields send is one `parseOptions` takes, whose ranges are
 these.
 - A line of what it will run on: "200 individuals of panel.nei", or "119
@@ -2082,7 +2118,10 @@ Of the specs written beside it for stage 4:
   as columns, the groups and a group to highlight, and has `rotate`,
   `viewAlong`, `zoom` and `resetView`.
 - `docs/specs/core/project.md`: `Grouping` gains `{ kind: "onePopulation" }`,
-  and `individualsNeeds` no longer locks on no file, from stage 4.
+  and `individualsNeeds` no longer locks on no file, from stage 4; the
+  filters of the project are `ProjectVariantFilter`s, whose LD filter
+  may have no distance, which `variantFilterNeeds` locks and
+  `jobFilters` never gives a job.
 - `docs/specs/steps/individuals.md`: the types of the columns as the
   user sets them, which decide between groups and values.
 - `docs/specs/worker/individuals.md`: `cellNumber`, pure, where core can
