@@ -142,3 +142,46 @@ gave the statistics no counts in `countsOf` (task 2.3's), and moved the
 flows of stage 3 to the new numbers without their tags (task 2.4's);
 2.2 took out the store's refusal of counts that read the filters of
 individuals (2.3's). The later task wrote the tests of each.
+
+### The review
+
+Ten reviewers: `spec`, `tests`, `stale`, `errors`, `api` with
+`architecture`, `react`, `accessibility`, `ux`, and a keyboard drive of
+the step in Chromium and WebKit. The tests reviewer broke the code in 30
+ways on a copy and each broke at least one test; the numbers 116, 111,
+1,117, 0.0283, 0.3654 and 0.7173 were recomputed with popnei's Python.
+What was found and fixed, in the commits ff832b5 to 7310abe:
+
+- After an Undo to a file whose statistics the cache had dropped, the
+  histograms of the variants gave way to the error bar, "The application
+  met an error of its own", until the user left the step. Five reviewers
+  found it; two reproduced it in Chromium and WebKit with a small cache.
+  The store's spec names that state, so the block now draws the caption
+  without the number of individuals.
+- A keyboard user who pressed Count while the thresholds kept nobody was
+  sent to the top of the page once the statistics came. The focus now
+  stays on the part of the Count; a sentence of `steps/variants.md`,
+  "Accessibility", says so (464dc7e).
+- When the statistics a Count or the histograms waited for failed, the
+  step said the histograms or the counts had failed. They now say "The
+  statistics of each individual, which the thresholds of the individuals
+  need, could not be calculated, so the histograms of the variants were
+  not calculated." (or "so the variants were not counted"), then the
+  words of the statistics; the specs gave only "'the diversity' replaced
+  by", which made "the histograms of the variants was not run", and now
+  give these words (3b9a459).
+- Which command removed the histograms was found by comparing its
+  English words with a copy of them; now named once.
+- Four new states had no screenshot; added, light and dark.
+- `runner.md`, `variantChecks.md`, `store.md` and six comments still
+  described the old order; corrected with no rule changed (bbea80b,
+  60f8951).
+- "Over the 1 variant … and the one individual" now "the one variant".
+
+Not taken: the words "Histograms of the variants was not run." of the
+status region, which `shell.md` gives as the title and " was not run.";
+for the owner, below.
+
+After the fixes, on 7310abe: `npm test` "Tests 2146 passed (2146)"; the
+browser check "640 passed (2.3m)"; `-g "IP2 D3"` "64 passed (28.8s)";
+`npm run screens` 258 passed (the writer's run).
