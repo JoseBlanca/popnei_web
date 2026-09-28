@@ -2549,3 +2549,25 @@ describe("IP6 D2 the runner's PCA", () => {
     ).toThrow(/^popnei_web defect: an array of a result is a view/);
   });
 });
+
+describe("IP4 D1 the diversity on one population", () => {
+  test('the 200 individuals of panel.nei as "All individuals", with the missing data filter at 0.05, give the first row of the table of diversity.md', () => {
+    const everyone = panelPops().flatMap(([, individuals]) => individuals);
+    expect(everyone.length).toBe(200);
+    const result = valueOf(
+      opened("panel.nei").run(
+        diversityJob([missingData(0.05)], [["All individuals", everyone]]),
+        ignore,
+      ),
+    );
+    expect(numbersOf(result)).toEqual({
+      pops: ["All individuals"],
+      numIndividuals: [200],
+      unbiasedExpHet: [0.37487834409014364],
+      obsHet: [0.3541409192154764],
+      polyRatio: [0.9791666666666666],
+      numVarsWithValue: [1152],
+      passStats: AT_0_05.passStats,
+    });
+  });
+});
