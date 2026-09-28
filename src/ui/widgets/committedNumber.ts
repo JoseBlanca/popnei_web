@@ -9,22 +9,26 @@
  */
 import type { Result } from "../../core/result.ts";
 
-/** Why a number was refused, with the number and the bound or the step
-    it failed, or the character thrown away as it was typed. */
+/** Why a number was refused, with the number as the user typed it and
+    the bound or the step it failed, or the character thrown away as it
+    was typed. */
 export type NumberRefusal =
   | {
       readonly kind: "aboveMax";
-      readonly typed: number;
+      /** The number, as `typedText` gives it. */
+      readonly typed: string;
       readonly maxValue: number;
     }
   | {
       readonly kind: "belowMin";
-      readonly typed: number;
+      /** The number, as `typedText` gives it. */
+      readonly typed: string;
       readonly minValue: number;
     }
   | {
       readonly kind: "offStep";
-      readonly typed: number;
+      /** The number, as `typedText` gives it. */
+      readonly typed: string;
       /** The decimals of the step: 0 for a step of 1, 2 for 0.01. */
       readonly decimals: number;
     }
@@ -82,7 +86,8 @@ const ON_STEP_TOLERANCE = 1e-9;
  * is the same as two decimals and for a step of 1 a whole number; with
  * them, the step is only what an arrow key moves by, so that a field of
  * four decimals takes 0.0312 with a step of 0.01
- * (docs/specs/steps/variants.md, "The two thresholds").
+ * (docs/specs/steps/variants.md, "The two thresholds"). A refusal names
+ * the number by `text`, what the field held, as `typedText` has it.
  */
 export function checkCommitted(
   value: number,
@@ -90,12 +95,14 @@ export function checkCommitted(
   maxValue: number,
   step: number,
   decimals?: number,
+  text?: string,
 ): Result<number, NumberRefusal> {
+  const typed = typedText(value, text);
   if (value > maxValue) {
-    return { ok: false, error: { kind: "aboveMax", typed: value, maxValue } };
+    return { ok: false, error: { kind: "aboveMax", typed, maxValue } };
   }
   if (value < minValue) {
-    return { ok: false, error: { kind: "belowMin", typed: value, minValue } };
+    return { ok: false, error: { kind: "belowMin", typed, minValue } };
   }
   const places = decimals ?? decimalsOf(step);
   const unit = 10 ** -places;
@@ -104,10 +111,24 @@ export function checkCommitted(
   if (Math.abs(onStep - value) > units * unit * ON_STEP_TOLERANCE) {
     return {
       ok: false,
-      error: { kind: "offStep", typed: value, decimals: places },
+      error: { kind: "offStep", typed, decimals: places },
     };
   }
   return { ok: true, value: onStep };
+}
+
+/**
+ * The number `value` as a refusal names it: `text`, the text of the field
+ * trimmed, when it is that number written with digits and a point, so
+ * that 9007199254740993, which a float holds as 9007199254740992, is named
+ * as the user typed it; otherwise `value` written out, for a number an
+ * arrow key stepped to, or a text read in another form.
+ */
+export function typedText(value: number, text: string | undefined): string {
+  const trimmed = text?.trim() ?? "";
+  return TYPED_NUMBER.test(trimmed) && Number(trimmed) === value
+    ? trimmed
+    : numberText(value);
 }
 
 /** A number as a field is typed with: digits with at most one point, and

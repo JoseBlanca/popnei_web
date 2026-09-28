@@ -28,39 +28,45 @@ describe("checkCommitted", () => {
   test("a number above the largest is refused, not moved to it: 10 for a threshold, 300 for a ploidy", () => {
     expect(checkCommitted(10, 0, 1, 0.01)).toEqual({
       ok: false,
-      error: { kind: "aboveMax", typed: 10, maxValue: 1 },
+      error: { kind: "aboveMax", typed: "10", maxValue: 1 },
     });
     expect(checkCommitted(300, 1, 255, 1)).toEqual({
       ok: false,
-      error: { kind: "aboveMax", typed: 300, maxValue: 255 },
+      error: { kind: "aboveMax", typed: "300", maxValue: 255 },
     });
     expect(checkCommitted(1.001, 0, 1, 0.01)).toEqual({
       ok: false,
-      error: { kind: "aboveMax", typed: 1.001, maxValue: 1 },
+      error: { kind: "aboveMax", typed: "1.001", maxValue: 1 },
     });
   });
 
   test("a number below the smallest is refused: 0 for a ploidy, -0.5 for a threshold", () => {
     expect(checkCommitted(0, 1, 255, 1)).toEqual({
       ok: false,
-      error: { kind: "belowMin", typed: 0, minValue: 1 },
+      error: { kind: "belowMin", typed: "0", minValue: 1 },
     });
     expect(checkCommitted(-0.5, 0, 1, 0.01)).toEqual({
       ok: false,
-      error: { kind: "belowMin", typed: -0.5, minValue: 0 },
+      error: { kind: "belowMin", typed: "-0.5", minValue: 0 },
     });
   });
 
   test("a number off the step is refused, not rounded: 0.125, 0.001 and 1e-7 for a threshold, 2.5 for a ploidy", () => {
-    for (const typed of [0.125, 0.001, 0.0049, 0.9949, 1e-7]) {
-      expect(checkCommitted(typed, 0, 1, 0.01)).toEqual({
+    for (const [value, typed] of [
+      [0.125, "0.125"],
+      [0.001, "0.001"],
+      [0.0049, "0.0049"],
+      [0.9949, "0.9949"],
+      [1e-7, "0.0000001"],
+    ] as const) {
+      expect(checkCommitted(value, 0, 1, 0.01)).toEqual({
         ok: false,
         error: { kind: "offStep", typed, decimals: 2 },
       });
     }
     expect(checkCommitted(2.5, 1, 255, 1)).toEqual({
       ok: false,
-      error: { kind: "offStep", typed: 2.5, decimals: 0 },
+      error: { kind: "offStep", typed: "2.5", decimals: 0 },
     });
   });
 });
@@ -116,22 +122,22 @@ describe("VS6 D1 the number field: decimals apart from the step, and the number 
   test("a field of four decimals refuses 0.12345, and its bounds before its decimals", () => {
     expect(checkCommitted(0.12345, 0, 1, 0.01, 4)).toEqual({
       ok: false,
-      error: { kind: "offStep", typed: 0.12345, decimals: 4 },
+      error: { kind: "offStep", typed: "0.12345", decimals: 4 },
     });
     expect(checkCommitted(1e-7, 0, 1, 0.01, 4)).toEqual({
       ok: false,
-      error: { kind: "offStep", typed: 1e-7, decimals: 4 },
+      error: { kind: "offStep", typed: "0.0000001", decimals: 4 },
     });
     expect(checkCommitted(1.00001, 0, 1, 0.01, 4)).toEqual({
       ok: false,
-      error: { kind: "aboveMax", typed: 1.00001, maxValue: 1 },
+      error: { kind: "aboveMax", typed: "1.00001", maxValue: 1 },
     });
   });
 
   test("a field of no decimals takes, as in stage 2, only a multiple of its step", () => {
     expect(checkCommitted(0.0312, 0, 1, 0.01)).toEqual({
       ok: false,
-      error: { kind: "offStep", typed: 0.0312, decimals: 2 },
+      error: { kind: "offStep", typed: "0.0312", decimals: 2 },
     });
     expect(checkCommitted(0.03, 0, 1, 0.01)).toEqual({
       ok: true,
@@ -167,5 +173,34 @@ describe("VS6 D1 the number field: decimals apart from the step, and the number 
     expect(typedNumber("0.12345", 0, 1, 0.01, 4)).toBeNull();
     expect(typedNumber("0", 1, Number.MAX_SAFE_INTEGER, 1)).toBeNull();
     expect(typedNumber("2.5", 1, Number.MAX_SAFE_INTEGER, 1)).toBeNull();
+  });
+});
+
+describe("IP3 the number a refusal names", () => {
+  test("a number past 2^53 − 1 is named as it was typed, not as the float it became", () => {
+    expect(
+      checkCommitted(
+        9007199254740992,
+        1,
+        Number.MAX_SAFE_INTEGER,
+        1,
+        undefined,
+        "9007199254740993",
+      ),
+    ).toEqual({
+      ok: false,
+      error: {
+        kind: "aboveMax",
+        typed: "9007199254740993",
+        maxValue: Number.MAX_SAFE_INTEGER,
+      },
+    });
+  });
+
+  test("a text that is not the number committed, as the one an arrow key stepped from, gives the number", () => {
+    expect(checkCommitted(256, 1, 255, 1, undefined, "255")).toEqual({
+      ok: false,
+      error: { kind: "aboveMax", typed: "256", maxValue: 255 },
+    });
   });
 });

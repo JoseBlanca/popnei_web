@@ -219,11 +219,11 @@ function notTakenWhy(text: string, words: NotTakenWords): string {
 function refusedWhy(refusal: NumberRefusal, notTaken: NotTakenWords): string {
   switch (refusal.kind) {
     case "aboveMax":
-      return `${numberText(refusal.typed)} is more than ${numberText(refusal.maxValue)}`;
+      return `${refusal.typed} is more than ${numberText(refusal.maxValue)}`;
     case "belowMin":
-      return `${numberText(refusal.typed)} is less than ${numberText(refusal.minValue)}`;
+      return `${refusal.typed} is less than ${numberText(refusal.minValue)}`;
     case "offStep": {
-      const typed = numberText(refusal.typed);
+      const typed = refusal.typed;
       if (refusal.decimals === 0) return `${typed} is not a whole number`;
       const count = DECIMAL_WORDS[refusal.decimals] ?? String(refusal.decimals);
       const noun = refusal.decimals === 1 ? "decimal" : "decimals";

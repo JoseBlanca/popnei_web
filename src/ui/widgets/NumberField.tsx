@@ -169,6 +169,9 @@ export function NumberField({
   const notTaken = useRef(false);
   // Whether the commit under way is the one refused for it.
   const refusing = useRef(false);
+  // The text of the input as the user last typed or pasted it, which a
+  // refusal names the number by (committedNumber.ts, typedText).
+  const lastText = useRef("");
   // Whether anything was typed, or thrown away, since the last commit:
   // Undo and Redo of the keyboard are then the field's, and otherwise the
   // project's (docs/specs/shell.md, "The header").
@@ -267,6 +270,7 @@ export function NumberField({
           maxValue,
           step,
           decimals,
+          lastText.current,
         );
         if (checked.ok) {
           setRefused(null);
@@ -299,6 +303,7 @@ export function NumberField({
         isTyped={() => typed.current}
         onRevert={revert}
         onText={(text) => {
+          lastText.current = text;
           typed.current = true;
           // After a character thrown away, and until a deletion mends the
           // text, what it holds is not what was typed: 0,1 shows as 01.

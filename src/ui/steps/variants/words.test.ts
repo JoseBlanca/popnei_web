@@ -80,16 +80,25 @@ describe("the words of the Variants step", () => {
 
   test("a number the threshold refused: why, and the threshold kept", () => {
     expect(
-      thresholdRefusedText({ kind: "aboveMax", typed: 10, maxValue: 1 }, 0.1),
+      thresholdRefusedText({ kind: "aboveMax", typed: "10", maxValue: 1 }, 0.1),
     ).toBe("10 is more than 1; the threshold stays 0.1.");
     expect(
-      thresholdRefusedText({ kind: "belowMin", typed: -0.5, minValue: 0 }, 0.1),
+      thresholdRefusedText(
+        { kind: "belowMin", typed: "-0.5", minValue: 0 },
+        0.1,
+      ),
     ).toBe("-0.5 is less than 0; the threshold stays 0.1.");
     expect(
-      thresholdRefusedText({ kind: "offStep", typed: 0.125, decimals: 2 }, 0.2),
+      thresholdRefusedText(
+        { kind: "offStep", typed: "0.125", decimals: 2 },
+        0.2,
+      ),
     ).toBe("0.125 has more than two decimals; the threshold stays 0.2.");
     expect(
-      thresholdRefusedText({ kind: "offStep", typed: 1e-7, decimals: 2 }, 0.1),
+      thresholdRefusedText(
+        { kind: "offStep", typed: "0.0000001", decimals: 2 },
+        0.1,
+      ),
     ).toBe("0.0000001 has more than two decimals; the threshold stays 0.1.");
   });
 
@@ -136,13 +145,13 @@ describe("the words of the Variants step", () => {
 
   test("a number the ploidy refused: why, and the ploidy kept", () => {
     expect(
-      ploidyRefusedText({ kind: "aboveMax", typed: 300, maxValue: 255 }, 2),
+      ploidyRefusedText({ kind: "aboveMax", typed: "300", maxValue: 255 }, 2),
     ).toBe("300 is more than 255; the ploidy stays 2.");
     expect(
-      ploidyRefusedText({ kind: "belowMin", typed: 0, minValue: 1 }, 4),
+      ploidyRefusedText({ kind: "belowMin", typed: "0", minValue: 1 }, 4),
     ).toBe("0 is less than 1; the ploidy stays 4.");
     expect(
-      ploidyRefusedText({ kind: "offStep", typed: 2.5, decimals: 0 }, 2),
+      ploidyRefusedText({ kind: "offStep", typed: "2.5", decimals: 0 }, 2),
     ).toBe("2.5 is not a whole number; the ploidy stays 2.");
   });
 
@@ -211,7 +220,7 @@ describe("VS6 D1 the line of a number of more decimals than a field of four take
   test("0.12345 in a threshold of four decimals is said to have more than four", () => {
     expect(
       thresholdRefusedText(
-        { kind: "offStep", typed: 0.12345, decimals: 4 },
+        { kind: "offStep", typed: "0.12345", decimals: 4 },
         0.03,
       ),
     ).toBe("0.12345 has more than four decimals; the threshold stays 0.03.");
@@ -221,10 +230,10 @@ describe("VS6 D1 the line of a number of more decimals than a field of four take
 describe("the lines of the fields of the LD pruning", () => {
   test("a number the maximum r² refused, and a character it threw away, with the r² kept", () => {
     expect(
-      r2RefusedText({ kind: "aboveMax", typed: 1.5, maxValue: 1 }, 0.3),
+      r2RefusedText({ kind: "aboveMax", typed: "1.5", maxValue: 1 }, 0.3),
     ).toBe("1.5 is more than 1; the maximum r² stays 0.3.");
     expect(
-      r2RefusedText({ kind: "offStep", typed: 0.125, decimals: 2 }, 0.3),
+      r2RefusedText({ kind: "offStep", typed: "0.125", decimals: 2 }, 0.3),
     ).toBe("0.125 has more than two decimals; the maximum r² stays 0.3.");
     expect(r2RefusedText({ kind: "notTaken", text: "," }, 0.3)).toBe(
       "Write the decimals with a point, 0.1 and not 0,1; the maximum r² stays 0.3.",
@@ -236,10 +245,13 @@ describe("the lines of the fields of the LD pruning", () => {
 
   test("a number the distance refused, and a character it threw away, with the distance kept", () => {
     expect(
-      distanceRefusedText({ kind: "belowMin", typed: 0, minValue: 1 }, 10000),
+      distanceRefusedText({ kind: "belowMin", typed: "0", minValue: 1 }, 10000),
     ).toBe("0 is less than 1; the distance stays 10000.");
     expect(
-      distanceRefusedText({ kind: "offStep", typed: 2.5, decimals: 0 }, 10000),
+      distanceRefusedText(
+        { kind: "offStep", typed: "2.5", decimals: 0 },
+        10000,
+      ),
     ).toBe("2.5 is not a whole number; the distance stays 10000.");
     expect(distanceRefusedText({ kind: "notTaken", text: "," }, 10000)).toBe(
       "Write the distance as a whole number of base pairs, 10000 and not 10,000; the distance stays 10000.",
@@ -254,7 +266,7 @@ describe("IP3 D3 the lines of the distance while it is empty", () => {
   test("a number refused, or a character thrown away, while the LD pruning has no distance: the distance is still to be typed", () => {
     expect(
       distanceRefusedText(
-        { kind: "belowMin", typed: 0, minValue: 1 },
+        { kind: "belowMin", typed: "0", minValue: 1 },
         Number.NaN,
       ),
     ).toBe("0 is less than 1; the distance is still to be typed.");

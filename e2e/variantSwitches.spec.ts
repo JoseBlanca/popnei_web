@@ -432,6 +432,23 @@ test("IP3 D3 the threshold of the individuals by observed heterozygosity at 0.38
   await expectNoViolations(makeAxeBuilder);
 });
 
+test("IP3 a distance above 2^53 − 1 is refused with the number as it was typed", async ({
+  page,
+}) => {
+  await ldTurnedOn(page);
+  await commit(page, DISTANCE_LABEL, "50000");
+  // 9007199254740993 is 9007199254740992 as a float.
+  const line =
+    "9007199254740993 is more than 9007199254740991; the distance stays 50000.";
+  await distance(page).fill("9007199254740993");
+  await distance(page).press("Enter");
+  await expect(distance(page)).toHaveValue("50000");
+  await expect(
+    page.getByRole("main").getByText(line, { exact: true }),
+  ).toBeVisible();
+  await expect(status(page)).toHaveText(endsWith(line));
+});
+
 test("IP3 D3 with a distance typed and not committed after a Count, one click on the switch turns the LD pruning off", async ({
   page,
   makeAxeBuilder,
