@@ -396,7 +396,7 @@ vars file.
   size of a written file (`runner.md`, "How it is verified", "The
   written file"; `writeVariants.md`, "How it is verified"), tagged
   `IP1 D1`. Serves 1, 2 and 4.
-- [ ] 1.2 The flows that read a written file, `e2e/writing.spec.ts` and
+- [x] 1.2 The flows that read a written file, `e2e/writing.spec.ts` and
   `e2e/individualThresholds.spec.ts`, at the new sizes, tagged `IP1
   D2` (`entry.md` and `writeVariants.md`, each "How it is verified");
   the words of the step that give the size, "251 KB", where a test reads
