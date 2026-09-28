@@ -83,8 +83,11 @@ the key, and takes off the counts of all of them; the step shows that beside the
 store leaves this analysis out of the notice of results removed, which
 would otherwise speak at every move of a threshold
 (`docs/architecture.md`, section 4, "The notice leaves the counts out").
-The key version is 2, raised on 28 September 2026: a project with a
-filter of individuals gives the same key and other counts.
+The key version is 2, raised on 28 September 2026 to mark that the
+counts are over the individuals kept; the key and the fingerprint of the
+settings of a project with a filter of individuals hold it now, so a
+result or a check number of version 1 is found or compared only for a
+project with none, whose counts are the same.
 
 ### Why it cannot run
 

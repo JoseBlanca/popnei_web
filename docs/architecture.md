@@ -373,7 +373,9 @@ project and no format of the project file changes; the key version of
 the analyses whose result changes for the same key is raised (section
 4). It changes the code of stage 3, which the plan of stage 4 carries
 (`docs/specs/stage-4-open-points.md`). The options weighed, their costs,
-and what would show the choice wrong are in section 2.
+and what would show the choice wrong are in section 2. Its architecture
+review left one point open, where the filter of the regions of a BED
+file goes once the application has it (section 13, point 15).
 
 ## 2. The project
 
@@ -571,7 +573,10 @@ holds the numbers of two sessions names the right versions for each
   change with the individuals removed. Each individual's statistics,
   from which the thresholds on the individuals are set, are counted over
   every variant of the file, before any filter (section 4), so the list
-  depends on no filter of the variants. Seen in node with popnei's
+  depends on no filter of the variants. Where the filter of the regions
+  of a BED file goes, once the application has it, before the list or
+  after it with the other filters of the variants, is open (section 13,
+  point 15). Seen in node with popnei's
   release `js-v0.1.0-dev.3` on 28 September 2026, on `panel.nei`: the
   111 individuals that the thresholds of 0.03 of missing genotypes and
   0.38 of observed heterozygosity keep, given to `filterIndividuals`
@@ -644,6 +649,15 @@ filter drops, a panel with some loci missing in most individuals, who
 would then set the threshold of missing genotypes of the individuals
 well above plink's 0.1 of `--mind` to keep them; that would argue for
 counting the statistics over the variants a missing data filter keeps.
+The same fault is sure for a file whose calls lie partly outside the
+regions the user studies, a VCF of an exome or of a capture with calls
+off the target: plink 1.9 removes the variants outside the regions
+(`--extract`, `--chr`, `--from`/`--to`) before `--mind`, and counted
+over every variant of the file an individual's missing rate would count
+the off-target calls no analysis reads. The filter of the regions keeps
+a variant by its position alone, so it can come before the statistics
+with no loop between the two; whether it does is point 15 of section
+13, since the application has no filter of the regions yet.
 The tests that tie the order to popnei's numbers are the runner's, with
 the counts above, and the store's property that no request of the
 statistics carries a filter (`docs/specs/core/store.md`, "How it is
@@ -1142,11 +1156,15 @@ fill the counts, and the order of the analyses there, the statistics of
 each individual first (`docs/specs/entry.md`); the runner, which puts the list before the filters
 (`docs/specs/worker/runner.md`); the lock of the LD filter with no
 distance, now of what reads the filters of the variants
-(`docs/specs/core/project.md`); the key versions of `individualChecks`,
-`variantChecks`, `filterCounts` and `diversity`, raised to 2, since the
-diversity and the counts give another result under the same key when
-the project has a filter of individuals, and a project file of stage 3
-would otherwise compare their check numbers as if the file had changed;
+(`docs/specs/core/project.md`); the key version of `diversity`, raised to
+2, since it gives another result under the same key when the project
+has a filter of individuals, and a project file of stage 3 would
+otherwise compare its check numbers as if the file had changed; and
+those of `individualChecks`, `variantChecks` and `filterCounts`, raised
+with it to mark the change, although their keys and the fingerprints
+of their settings (`settingsFingerprint` of `docs/specs/core/keys.md`)
+now hold other filters, so that a check number of stage 3 is compared
+only where the result is the same;
 the fixture of the statistics and its script; and the order of the
 Variants step, whose filters of the individuals now come before those
 of the variants (`docs/specs/steps/variants.md`). The option not taken
@@ -1279,7 +1297,13 @@ first filter hands on only those variants. The pruning counts over the
 individuals kept, since the filters of individuals come first (section
 2), so a change of the filters of individuals prunes other variants,
 and reusing them pays only for a PCA made again with the same filters
-of both kinds; until 28 September 2026 the pruning counted over every
+of both kinds. The change is large: on `panel.nei`, the missing data
+filter at 0.05 and the pruning at r² 0.1 within 50,000 base pairs keep
+532 variants over every individual and 298 over the 111 individuals of
+the thresholds of `docs/specs/core/individualsKept.md`, since r² is
+counted over fewer individuals (node, 28 September 2026, popnei
+`js-v0.1.0-dev.3`); so the variants a PCA reads move with the
+thresholds on the individuals. Until 28 September 2026 the pruning counted over every
 individual of the file, and a change of the filters of individuals kept
 the same pruned variants, which was when reusing them paid. What it
 costs, not weighed yet: a pass more the first time, the one filter of
@@ -2323,7 +2347,12 @@ the same numbers for everything else but the size of a written file.
   variants and the counts of the filters of the variants**, since both
   are counted over the individuals kept (section 4): the histograms need
   a pass again, the pass of a check, and the counts come back with the
-  next analysis or Count. The user sets the individuals first, in the
+  next analysis or Count. The pass of the histograms is one call of
+  `calcPerVarDistribs`, as the diversity's is, which took 248 ms in
+  Chromium 153 and 243 ms in WebKit 26.6 over a VCF of 80,692,954 bytes
+  on the owner's Mac (`docs/plans/variants-step.report.md`, "The Count
+  against the diversity"); the histograms themselves were not timed, and
+  over a gzipped VCF of gigabytes the pass takes minutes. The user sets the individuals first, in the
   order of the Variants step, and then reads the histograms of the
   variants to set the filters of the variants, which take nothing off.
 - **The thresholds are set in number fields**, and not by dragging a line
@@ -2525,3 +2554,23 @@ day; point 14 is not yet answered.
    zip written in TypeScript, or taken from a library of JavaScript such
    as fflate, of about 10 KB, a new dependency for what the files wasm
    would already hold. Decided with stage 6.
+
+Opened by the revision of 28 September 2026 for the order of the
+filters, after its architecture review, and not yet answered:
+
+15. **Where the filter of the regions of a BED file goes** in the order
+   of section 2, once the application has it; popnei's release
+   `js-v0.1.0-dev.3` has the filter, `filterByRegions`, and the
+   application has not built it. Recommended: first, before the list of
+   the individuals kept, so that each individual's statistics are
+   counted over the variants inside the regions, as plink 1.9 removes
+   the variants outside them before `--mind`. A user who loads a VCF of
+   a capture with calls off the target, and the BED of the target,
+   would otherwise see individuals removed by a threshold on their
+   missing genotypes for calls no analysis reads. What it costs: the key
+   of the statistics of each individual holds the hash of the regions,
+   so their pass is one per load and per BED file, and a new BED file
+   takes them off. Not taken: the regions after the list, with the other
+   filters of the variants, as the order of section 2 has them now, which
+   keeps the statistics one pass per load whatever the regions. Decided
+   with the filter of the regions.

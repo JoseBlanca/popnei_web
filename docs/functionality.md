@@ -130,7 +130,11 @@ individual's missing genotypes include those at the bad variants the
 missing data filter drops, which is the cost of this order. Among the
 filters of the variants the order is fixed: the genomic regions, missing
 data, observed heterozygosity, MAF, and the LD pruning last, since it
-keeps a variant according to those kept before it.
+keeps a variant according to those kept before it. Whether the genomic
+regions go instead before the filters of individuals, so that each
+individual's numbers are counted over the variants inside them, is
+open, and decided with that filter (`docs/architecture.md`, section 13,
+point 15).
 
 ## 4. The files of the individuals
 

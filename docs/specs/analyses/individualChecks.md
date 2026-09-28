@@ -103,11 +103,13 @@ and which would otherwise take it off the screen at every move
 | the individuals file, the column of the populations | same |
 | the key version, the version of popnei | changes |
 
-The key version is 2, raised on 28 September 2026: the key of version 1
-held the filters of the variants, and a result under it was counted over
-the variants they kept; a project file saved by stage 3 would otherwise
-compare its check numbers with those of another calculation as if its
-variants file had changed.
+The key version is 2, raised on 28 September 2026 to mark that the
+result is now over every variant of the file: the key of version 1 held
+the filters of the variants, and a result under it was counted over the
+variants they kept. The key and the fingerprint of the settings, which
+no longer hold the filters of the variants, would tell the two apart in
+any case, but for a project with no filter of the variants, whose result
+is the same in both.
 
 ### Why it cannot run
 

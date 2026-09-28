@@ -380,10 +380,32 @@ What a user meets:
   200 individuals kept · 1,096 of 1,200 variants kept · 5 filters · 3
   populations by pop". The command that gave them is `orderA.mjs` of
   `docs/specs/worker/runner.md`, "How it is verified".
-- A project file saved by stage 3 opens as before; its check numbers of
-  the statistics, the histograms, the counts and the diversity are
-  compared with a key version raised to 2, so a difference is said to
-  come from the application's calculation and not from the file.
+- A project file saved by stage 3 opens as before. The check numbers of
+  its diversity are compared with a key version raised to 2, so that,
+  with a filter of individuals, a difference is said to come from the
+  application's calculation and not from the file; those of the three
+  checks are compared only where their result is the same as stage 3's,
+  since their settings now hold other filters.
+
+The histograms of the variants over the individuals kept are the
+writers' reading of the owner's words, which the owner may overrule:
+the option not taken keeps them over every individual, one pass per
+load, and shows numbers the filters no longer count by. Each Calculate
+again after a change of a filter of individuals costs one pass, as a
+diversity's, 248 ms in Chromium 153 over a VCF of 80.7 MB on the
+owner's Mac, and minutes over a gzipped VCF of gigabytes.
+
+Left open by the architecture review of the same day, for the owner,
+and decided with the filter of the regions of a BED file, which the
+application has not built: whether that filter goes before the list of
+the individuals kept, so that each individual's statistics are counted
+over the variants inside the regions, as plink 1.9 removes the variants
+outside them before `--mind`. Recommended: before. Without it, a user
+who loads a VCF of a capture with calls off the target, and the BED of
+the target, would see individuals removed by a threshold on their
+missing genotypes for calls no analysis reads. What it costs: the
+statistics are one pass per load and per BED file.
+(`docs/architecture.md`, section 13, point 15.)
 
 The code of stage 3 that the plan of stage 4 changes, each with its
 spec:
