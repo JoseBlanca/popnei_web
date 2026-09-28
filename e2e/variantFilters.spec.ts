@@ -2,8 +2,9 @@
  * The filters of the variants on the built site
  * (docs/specs/steps/variants.md, "The filters of the variants" and "How
  * it is checked", stage 3): the line in place of the checks before a
- * file is read; the four filters, each turned on at its value of the
- * table of the filters, set, undone and turned off; the refusals of the
+ * file is read; the four filters, each turned on the first time at its
+ * value of the table of the filters, the LD pruning with no distance,
+ * set, undone and turned off; the refusals of the
  * maximum r² and of the distance, with their lines as the description of
  * the field and in the status region; the order of the keyboard; the
  * fields in a browser in Spanish; and axe at each state reached.
@@ -59,9 +60,10 @@ const FILTERS = [
     switch: "Prune the variants by linkage disequilibrium (LD)",
     fields: [
       ["Maximum r² with a variant kept before it, from 0 to 1", "0.3"],
+      // No distance: the field is empty until the user types one.
       [
         "Distance within which variants are compared, in base pairs, from 1",
-        "10000",
+        "",
       ],
     ],
     line: LD_LINE,
@@ -72,6 +74,10 @@ const FILTERS = [
 const R2_LABEL = "Maximum r² with a variant kept before it, from 0 to 1";
 const DISTANCE_LABEL =
   "Distance within which variants are compared, in base pairs, from 1";
+
+/** The reason of the LD pruning with no distance, as the step shows it. */
+const LD_REASON =
+  "The LD filter of the Variants step needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn off the LD filter.";
 
 async function openVariants(page: Page): Promise<void> {
   await page.goto("popgen.html#variants");
@@ -236,7 +242,10 @@ test("VS6 D2 each switch turned on starts its filter at its value of the table o
     );
     for (const [label, value] of filter.fields) {
       await expect(field(page, label)).toHaveValue(value);
-      await expect(field(page, label)).toHaveAccessibleDescription(filter.line);
+      // The empty distance is described by its reason first.
+      await expect(field(page, label)).toHaveAccessibleDescription(
+        value === "" ? `${LD_REASON} ${filter.line}` : filter.line,
+      );
     }
     await expectNoViolations(makeAxeBuilder);
 
@@ -287,6 +296,12 @@ test("VS6 D2 the maximum r² refuses 1.5, and the distance 0, 2.5 and 10,000, ea
   const r2 = field(page, R2_LABEL);
   const distance = field(page, DISTANCE_LABEL);
   const main = page.getByRole("main");
+  // The reason the switch made appear is announced first; then a distance,
+  // which the refusals below keep.
+  await expect(status(page)).toHaveText(LD_REASON);
+  await distance.fill("10000");
+  await distance.press("Enter");
+  await expect(distance).toHaveValue("10000");
 
   for (const [input, typed, kept, line] of [
     [r2, "1.5", "0.3", "1.5 is more than 1; the maximum r² stays 0.3."],
@@ -313,9 +328,9 @@ test("VS6 D2 the maximum r² refuses 1.5, and the distance 0, 2.5 and 10,000, ea
     await expect(status(page)).toHaveText(line);
     await expectNoViolations(makeAxeBuilder);
   }
-  // Nothing was committed: the last step of undo is the switch.
+  // Nothing was committed: the last step of undo is the distance.
   await expect(undoButton(page)).toHaveAccessibleDescription(
-    "Undo: the LD pruning was turned on",
+    "Undo: the LD pruning changed",
   );
 
   // A comma typed key by key is thrown away and said at once.

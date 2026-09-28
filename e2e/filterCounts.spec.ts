@@ -272,6 +272,9 @@ test("VS6 D2 the LD pruning alone counted: 1,187 of the 1,200 variants, beside i
   await pick(page, "panel.nei");
   await flip(page, MISSING_SWITCH);
   await flip(page, LD_SWITCH);
+  // The distance has no default; 10000 base pairs, the distance of these
+  // counts, which stage 3 turned the filter on at.
+  await setField(page, DISTANCE_LABEL, "10000");
   await count(page);
   const kept = "Kept 1,187 of the 1,200 variants it was given.";
   await expect(filters(page).getByText(/^Kept /)).toHaveText([kept]);
@@ -301,6 +304,7 @@ test("VS6 D2 the four filters counted, each removing some variants, give each co
   await flip(page, MAF_SWITCH);
   await setField(page, MAF_LABEL, "0.9");
   await flip(page, LD_SWITCH);
+  await setField(page, DISTANCE_LABEL, "10000");
   await count(page);
   await expect(
     filters(page).getByText(

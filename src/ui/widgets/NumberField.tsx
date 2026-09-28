@@ -13,6 +13,12 @@
  * written with the decimal mark of another language, 0,05 in English or
  * 0.05 in Spanish, is no number, and not 5.
  *
+ * In an empty field, one given `NaN` with nothing typed or one whose
+ * text the user deleted, the keys that step a number, the arrow keys,
+ * Page Up, Page Down, Home and End, do nothing, where React Aria would
+ * move it to a bound of its range; the field of the distance of the LD
+ * pruning is empty until a distance is typed.
+ *
  * A number committed has at most the decimals of the step, or, when the
  * field is given `decimals`, at most those, and the step is then only
  * what an arrow key moves by. At each key the field gives `onTyped` the
@@ -426,6 +432,8 @@ function FieldInput({
     !event.altKey &&
     !event.ctrlKey &&
     !event.metaKey;
+  const isStepKey = (event: React.KeyboardEvent): boolean =>
+    isCommitKey(event) && event.key !== "Enter";
 
   return (
     <Input
@@ -453,6 +461,17 @@ function FieldInput({
         onCommitEnds();
       }}
       onKeyDownCapture={(event) => {
+        // In an empty field React Aria moves the number to a bound of its
+        // range, Home and the Up arrow to the least, End and the Down
+        // arrow to the largest, a number the user never typed: the keys
+        // that step a number do nothing there (the spec, "A number the
+        // fields do not take"). Enter commits the empty field, which
+        // sends nothing.
+        if (isStepKey(event) && state?.inputValue.trim() === "") {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
         if (isCommitKey(event)) onCommitStarts();
       }}
       onKeyDown={(event) => {

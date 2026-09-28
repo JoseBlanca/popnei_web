@@ -250,6 +250,27 @@ describe("the lines of the fields of the LD pruning", () => {
   });
 });
 
+describe("IP3 D3 the lines of the distance while it is empty", () => {
+  test("a number refused, or a character thrown away, while the LD pruning has no distance: the distance is still to be typed", () => {
+    expect(
+      distanceRefusedText(
+        { kind: "belowMin", typed: 0, minValue: 1 },
+        Number.NaN,
+      ),
+    ).toBe("0 is less than 1; the distance is still to be typed.");
+    expect(
+      distanceRefusedText({ kind: "notTaken", text: "," }, Number.NaN),
+    ).toBe(
+      "Write the distance as a whole number of base pairs, 10000 and not 10,000; the distance is still to be typed.",
+    );
+    expect(
+      distanceRefusedText({ kind: "notTaken", text: "-" }, Number.NaN),
+    ).toBe(
+      "‘-’ cannot be typed in the distance, which is a whole number of base pairs, as 10000; the distance is still to be typed.",
+    );
+  });
+});
+
 describe("VS6 D2 the count beside a filter of the variants", () => {
   test("what a filter kept, of what it was given, with the thousands grouped and one variant in the singular", () => {
     expect(keptText(1200, 1152)).toBe(

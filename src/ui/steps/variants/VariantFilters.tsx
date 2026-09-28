@@ -3,9 +3,12 @@
  * (docs/specs/steps/variants.md, "The filters of the variants"): the four
  * filters in their fixed order, missing data, observed heterozygosity,
  * MAF and LD pruning, each a switch with the line of what popnei filters
- * on under it, and, while it is on, its number fields. Turned on, a
- * filter starts at the values of the table of the filters; each field
- * committed, and each switch, is one command.
+ * on under it, and, while it is on, its number fields. Turned off, a
+ * filter is kept with its values among the filters off, and turned on
+ * again it has them back; the first time, it starts at the values of the
+ * table of the filters, the LD pruning with no distance, whose field is
+ * then empty with the reason beside it. Each field committed, and each
+ * switch, is one command.
  *
  * Beside each filter that is on, once the filters as they are are
  * counted, what it kept of what it was given, which describes its fields;
@@ -28,8 +31,8 @@ import {
   variantsOfFile,
 } from "../../../core/analyses/filterCounts.ts";
 import type { VariantStatistic } from "../../../core/analyses/variantChecks.ts";
-import { MAX_LD_DIST } from "../../../core/project.ts";
-import type { ProjectVariantFilter } from "../../../core/project.ts";
+import { MAX_LD_DIST, variantFilterNeeds } from "../../../core/project.ts";
+import type { Project, ProjectVariantFilter } from "../../../core/project.ts";
 import type { VariantFilterKind } from "../../../worker/protocol.ts";
 import { resultOf, statusOf } from "../../analyses/status.ts";
 import { titleOf } from "../../analyses/titles.ts";
@@ -38,6 +41,7 @@ import { useAnnouncer } from "../../shell/announcer.tsx";
 import { ErrorBoundary } from "../../shell/ErrorBoundary.tsx";
 import { useAppState, useStore } from "../../store.tsx";
 import { NumberField } from "../../widgets/NumberField.tsx";
+import { Problem } from "../../widgets/Problem.tsx";
 import { filterCommand, filterSwitchCommand } from "./commands.ts";
 import { Filter } from "./Filter.tsx";
 import { FilterCountsPart } from "./FilterCountsPart.tsx";
@@ -66,6 +70,7 @@ import {
   keptText,
   r2RefusedText,
   thresholdRefusedText,
+  withoutTheStep,
 } from "./words.ts";
 
 /** The thresholds of the variants take two decimals, and an arrow key
@@ -113,6 +118,7 @@ export function VariantFilters(): React.JSX.Element {
   const [typedMaf, setTypedMaf] = useState<number | null>(null);
   const headingId = useId();
   const checksHeadingId = useId();
+  const ldReasonId = useId();
 
   const set = (filter: ProjectVariantFilter): void => {
     const step = filterCommand(filter);
@@ -130,6 +136,9 @@ export function VariantFilters(): React.JSX.Element {
   const obsHet = filterOf(filters, "obs_het");
   const maf = filterOf(filters, "maf");
   const ld = filterOf(filters, "ld");
+  // The reason of the LD pruning with no distance, beside the empty field
+  // of the distance, without the end "in the Variants step".
+  const ldReason = useAppState((s) => ldNoDistanceText(s.project));
 
   /** The histogram of `statistic` beside its filter, with `threshold`,
       once the histograms are calculated. */
@@ -270,44 +279,61 @@ export function VariantFilters(): React.JSX.Element {
           isOn={ld !== null}
           onSwitch={(on) => {
             turn("ld", on);
+            // The focus stays on the switch, so the reason that the
+            // switch made appear, and the lock it says, are announced.
+            const reason = on
+              ? ldNoDistanceText(store.getState().project)
+              : null;
+            if (reason !== null) announce(reason);
           }}
         >
           {(described) =>
             ld !== null && (
-              <div className={classOf(styles, "fields")}>
-                <NumberField
-                  label={R2_LABEL}
-                  value={ld.maxAllowedR2}
-                  minValue={0}
-                  maxValue={1}
-                  step={THRESHOLD_STEP}
-                  decimals={THRESHOLD_DECIMALS}
-                  {...described}
-                  refusedText={r2RefusedText}
-                  onRefused={announce}
-                  onChange={(maxAllowedR2) => {
-                    set({ ...ld, maxAllowedR2 });
-                  }}
-                />
-                <NumberField
-                  label={DISTANCE_LABEL}
-                  // No distance typed yet, which an opened project file
-                  // can hold: React Aria shows NaN as an empty field. Its
-                  // reason and its words are those of "The distance of
-                  // the LD pruning" of docs/specs/steps/variants.md, not
-                  // built yet.
-                  value={ld.maxDist ?? Number.NaN}
-                  minValue={1}
-                  maxValue={MAX_LD_DIST}
-                  step={1}
-                  {...described}
-                  refusedText={distanceRefusedText}
-                  onRefused={announce}
-                  onChange={(maxDist) => {
-                    set({ ...ld, maxDist });
-                  }}
-                />
-              </div>
+              <>
+                <div className={classOf(styles, "fields")}>
+                  <NumberField
+                    label={R2_LABEL}
+                    value={ld.maxAllowedR2}
+                    minValue={0}
+                    maxValue={1}
+                    step={THRESHOLD_STEP}
+                    decimals={THRESHOLD_DECIMALS}
+                    {...described}
+                    refusedText={r2RefusedText}
+                    onRefused={announce}
+                    onChange={(maxAllowedR2) => {
+                      set({ ...ld, maxAllowedR2 });
+                    }}
+                  />
+                  <NumberField
+                    label={DISTANCE_LABEL}
+                    // No distance typed yet: React Aria shows NaN as an
+                    // empty field, where undefined would let it keep the
+                    // number an Undo took out of the project.
+                    value={ld.maxDist ?? Number.NaN}
+                    minValue={1}
+                    maxValue={MAX_LD_DIST}
+                    step={1}
+                    // The reason after the line of a number refused, which
+                    // the field puts first, and before the count and the
+                    // line under the switch.
+                    describedBy={[
+                      ...(ldReason === null ? [] : [ldReasonId]),
+                      ...(described.describedBy === undefined
+                        ? []
+                        : [described.describedBy]),
+                    ].join(" ")}
+                    refusedText={distanceRefusedText}
+                    onRefused={announce}
+                    onChange={(maxDist) => {
+                      set({ ...ld, maxDist });
+                    }}
+                  />
+                </div>
+                {ldReason !== null && (
+                  <Problem id={ldReasonId}>{ldReason}</Problem>
+                )}
+              </>
             )
           }
         </Filter>
@@ -319,6 +345,14 @@ export function VariantFilters(): React.JSX.Element {
       )}
     </section>
   );
+}
+
+/** The reason of the LD pruning with no distance, as the step shows it,
+    without its end "in the Variants step", or `null` when the filters of
+    `p` give popnei all it needs. */
+function ldNoDistanceText(p: Project): string | null {
+  const reason = variantFilterNeeds(p);
+  return reason === null ? null : withoutTheStep(reason);
 }
 
 /** What the filter of the kind `kind` kept of what it was given, "Kept

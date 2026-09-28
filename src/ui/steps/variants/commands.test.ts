@@ -13,6 +13,7 @@ import {
   isBeside,
   pickCommand,
   readAgainCommand,
+  turnedOnFilter,
 } from "./commands.ts";
 import type { StepCommand } from "./commands.ts";
 import { createVcfOptions } from "./vcfOptions.ts";
@@ -115,11 +116,11 @@ describe("the four filters of the variants", () => {
       { kind: "missing_data", maxAllowedMissingRate: 0.1 },
       { kind: "obs_het", maxAllowedObsHet: 0.5 },
       { kind: "maf", maxAllowedMaf: 0.95 },
-      { kind: "ld", maxAllowedR2: 0.3, maxDist: 10000 },
+      { kind: "ld", maxAllowedR2: 0.3, maxDist: null },
     ]);
   });
 
-  test("a field committed changes its filter alone, with the description of the filter, and off removes it", () => {
+  test("a field committed changes its filter alone, with the description of the filter, and off takes it out of the filters", () => {
     const store = realStore();
     apply(store, filterSwitchCommand("ld", true));
     apply(
@@ -150,12 +151,75 @@ describe("the four filters of the variants", () => {
     expect(store.getState().project.filters).toEqual([
       { kind: "missing_data", maxAllowedMissingRate: 0.1 },
     ]);
+    expect(store.getState().project.filtersOff).toEqual([
+      { kind: "obs_het", maxAllowedObsHet: 0.4 },
+      { kind: "maf", maxAllowedMaf: 0.9 },
+      { kind: "ld", maxAllowedR2: 0.3, maxDist: 500 },
+    ]);
+  });
+
+  test("IP3 D3 each switch turned off and on again gives back the values of its filter, in the fixed order", () => {
+    const store = realStore();
+    apply(store, filterSwitchCommand("ld", true));
+    apply(
+      store,
+      filterCommand({ kind: "ld", maxAllowedR2: 0.2, maxDist: 50000 }),
+    );
+    apply(store, filterSwitchCommand("obs_het", true));
+    apply(store, filterCommand({ kind: "obs_het", maxAllowedObsHet: 0.4 }));
+    apply(store, filterSwitchCommand("maf", true));
+    apply(store, filterCommand({ kind: "maf", maxAllowedMaf: 0.9 }));
+    apply(store, missingData(0.05));
+    for (const kind of ["missing_data", "obs_het", "maf", "ld"] as const) {
+      apply(store, filterSwitchCommand(kind, false));
+    }
+    expect(store.getState().project.filters).toEqual([]);
+    for (const kind of ["ld", "maf", "obs_het", "missing_data"] as const) {
+      apply(store, filterSwitchCommand(kind, true));
+    }
+    expect(store.getState().project.filters).toEqual([
+      { kind: "missing_data", maxAllowedMissingRate: 0.05 },
+      { kind: "obs_het", maxAllowedObsHet: 0.4 },
+      { kind: "maf", maxAllowedMaf: 0.9 },
+      { kind: "ld", maxAllowedR2: 0.2, maxDist: 50000 },
+    ]);
+    expect(store.getState().project.filtersOff).toEqual([]);
+  });
+
+  test("IP3 D3 the LD pruning turned on, off and on again before a distance is typed has no distance", () => {
+    const store = realStore();
+    apply(store, filterSwitchCommand("ld", true));
+    apply(store, filterSwitchCommand("ld", false));
+    apply(store, filterSwitchCommand("ld", true));
+    expect(store.getState().project.filters).toEqual([
+      { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+      { kind: "ld", maxAllowedR2: 0.3, maxDist: null },
+    ]);
   });
 
   test("a new project has the missing data filter alone, at 0.1", () => {
     expect(realStore().getState().project.filters).toEqual([
       { kind: "missing_data", maxAllowedMissingRate: 0.1 },
     ]);
+  });
+});
+
+describe("IP3 D4 the filter a switch turned on gives", () => {
+  test('turnedOnFilter(p, "ld") of a project that has never had the LD pruning gives r² 0.3 and no distance', () => {
+    expect(turnedOnFilter(firstProject("popgen"), "ld")).toEqual({
+      kind: "ld",
+      maxAllowedR2: 0.3,
+      maxDist: null,
+    });
+  });
+
+  test('turnedOnFilter(p, "ld") of a project that keeps the LD pruning in filtersOff gives that filter', () => {
+    const kept = { kind: "ld", maxAllowedR2: 0.2, maxDist: 50000 } as const;
+    const p = {
+      ...firstProject("popgen"),
+      filtersOff: [{ kind: "maf", maxAllowedMaf: 0.9 } as const, kept],
+    };
+    expect(turnedOnFilter(p, "ld")).toBe(kept);
   });
 });
 

@@ -37,6 +37,7 @@ import {
   individualsNeeds,
   projectNeeds,
   shown,
+  variantFilterNeeds,
 } from "../../core/project.ts";
 import type {
   AnalysisId,
@@ -177,8 +178,8 @@ function analysesOfStep<R>(
 }
 
 /** The state of the Variants step: its file, then the list of the
-    individuals and the individuals kept, then the checks and the
-    writing. */
+    individuals, the LD filter with no distance and the individuals kept,
+    then the checks and the writing. */
 function variantsState<R>(s: AppState<R, unknown>, w: ShellWords<R>): Status {
   const p = s.project;
   if (p.variants === null) {
@@ -190,6 +191,7 @@ function variantsState<R>(s: AppState<R, unknown>, w: ShellWords<R>): Status {
   const reason =
     projectNeeds(p) ??
     individualListNeeds(p)?.reason ??
+    variantFilterNeeds(p) ??
     keptNoneReason(p, s.individualsKept);
   if (reason !== null) {
     return { status: "problem", reason };

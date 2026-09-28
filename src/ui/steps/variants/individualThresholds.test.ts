@@ -30,6 +30,7 @@ import {
   thresholdCommand,
   thresholdOf,
   thresholdSwitchCommand,
+  turnedOnThreshold,
 } from "./individualThresholds.ts";
 
 /** The project of the worked case with `filters`, and what the filters
@@ -102,6 +103,23 @@ describe("the commands of the thresholds", () => {
     expect(thresholdSwitchCommand("obs_het", false).description).toBe(
       "the filter of individuals by observed heterozygosity was turned off",
     );
+  });
+
+  test("IP3 D3 turned off at 0.38 and on again, the threshold of the heterozygosity is 0.38, and the other starts at 0.1", () => {
+    const p = fiveIndividualsProject([
+      { kind: "obs_het", maxAllowedObsHet: 0.38 },
+    ]);
+    const off = thresholdSwitchCommand("obs_het", false).command(deepFreeze(p));
+    expect(off.individualFilters).toEqual([]);
+    const on = thresholdSwitchCommand("obs_het", true).command(deepFreeze(off));
+    expect(on.individualFilters).toEqual([
+      { kind: "obs_het", maxAllowedObsHet: 0.38 },
+    ]);
+    expect(on.individualFiltersOff).toEqual([]);
+    expect(turnedOnThreshold(on, "missing_data")).toEqual({
+      kind: "missing_data",
+      maxAllowedMissingRate: 0.1,
+    });
   });
 
   test("the threshold of each kind, or null while its filter is off", () => {

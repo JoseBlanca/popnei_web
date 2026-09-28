@@ -445,13 +445,14 @@ test("WS7 D3 the threshold takes a number of two decimals from 0 to 1, and refus
   await expect(filter).toBeFocused();
   await expectNoViolations(makeAxeBuilder);
 
-  // Off, the field goes; on again, it has the default.
+  // Off, the field goes; on again, it has the value it had when it was
+  // turned off (docs/specs/core/project.md, "The filters turned off").
   await page.keyboard.press("Space");
   await expect(filter).not.toBeChecked();
   await expect(threshold).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
   await page.keyboard.press("Space");
-  await expect(threshold).toHaveValue("0.1");
+  await expect(threshold).toHaveValue("0.2");
 });
 
 test("WS7 D3 a comma typed key by key in the threshold is thrown away, and the field says so and keeps its value", async ({

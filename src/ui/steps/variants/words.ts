@@ -254,12 +254,17 @@ export function r2RefusedText(refusal: NumberRefusal, kept: number): string {
 
 /** The line under the distance of the LD pruning for a number it
     refused, or a character it threw away, with the distance kept: "0 is
-    less than 1; the distance stays 10000." */
+    less than 1; the distance stays 10000."; or, while the field is empty
+    and `kept` is `NaN`, "0 is less than 1; the distance is still to be
+    typed." */
 export function distanceRefusedText(
   refusal: NumberRefusal,
   kept: number,
 ): string {
-  return `${refusedWhy(refusal, DISTANCE_NOT_TAKEN)}; the distance stays ${numberText(kept)}.`;
+  const why = refusedWhy(refusal, DISTANCE_NOT_TAKEN);
+  return Number.isNaN(kept)
+    ? `${why}; the distance is still to be typed.`
+    : `${why}; the distance stays ${numberText(kept)}.`;
 }
 
 /** The line under the ploidy for a number it refused, or a character it

@@ -20,7 +20,6 @@ import type {
   VariantLoad,
 } from "../../../core/project.ts";
 import type {
-  VariantFilter,
   VariantFilterKind,
   VcfReadOptions,
 } from "../../../worker/protocol.ts";
@@ -80,14 +79,21 @@ export const MAF_TURNED_ON = 0.95;
     26 September 2026, as the observed heterozygosity's. */
 export const LD_R2_TURNED_ON = 0.3;
 
-/** The distance in base pairs the LD pruning starts at when it is
-    turned on, with its r². */
-export const LD_DIST_TURNED_ON = 10000;
-
-/** The filter of the kind `kind` with the values it starts at when its
-    switch is turned on (docs/specs/steps/variants.md, "The filters of the
-    variants"). */
-export function turnedOnFilter(kind: VariantFilterKind): VariantFilter {
+/**
+ * The filter of the kind `kind` a switch turned on gives `p`: the filter
+ * of that kind kept in `filtersOff`, with the values it had when it was
+ * turned off, or, when none is kept, the values of the table of the
+ * filters (docs/specs/steps/variants.md, "The filters of the variants").
+ * The LD pruning then has no distance, which the user types: how far
+ * linkage disequilibrium extends depends on the genome of the species,
+ * as the owner decided on 28 September 2026.
+ */
+export function turnedOnFilter(
+  p: Pick<Project, "filtersOff">,
+  kind: VariantFilterKind,
+): ProjectVariantFilter {
+  const kept = p.filtersOff.find((filter) => filter.kind === kind);
+  if (kept !== undefined) return kept;
   switch (kind) {
     case "missing_data":
       return { kind, maxAllowedMissingRate: DEFAULT_MAX_MISSING_RATE };
@@ -96,11 +102,7 @@ export function turnedOnFilter(kind: VariantFilterKind): VariantFilter {
     case "maf":
       return { kind, maxAllowedMaf: MAF_TURNED_ON };
     case "ld":
-      return {
-        kind,
-        maxAllowedR2: LD_R2_TURNED_ON,
-        maxDist: LD_DIST_TURNED_ON,
-      };
+      return { kind, maxAllowedR2: LD_R2_TURNED_ON, maxDist: null };
   }
 }
 
@@ -114,16 +116,16 @@ export function filterCommand(filter: ProjectVariantFilter): StepCommand {
 }
 
 /** The switch of the filter of the kind `kind` turned on, with the values
-    it starts at, or off. */
+    `turnedOnFilter` gives the project it is applied to, or off, which
+    keeps the filter with its values in `filtersOff`. */
 export function filterSwitchCommand(
   kind: VariantFilterKind,
   on: boolean,
 ): StepCommand {
   if (on) {
-    const filter = turnedOnFilter(kind);
     return {
       description: `${filterNameInSentence(kind)} was turned on`,
-      command: (p) => setVariantFilter(p, filter),
+      command: (p) => setVariantFilter(p, turnedOnFilter(p, kind)),
     };
   }
   return {

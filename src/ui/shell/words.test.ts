@@ -30,7 +30,7 @@ import { identityWarning } from "../../core/projectFile.ts";
 import { deepFreeze } from "../../core/testSupport.ts";
 import type { TestDefResult } from "../../core/testSupport.ts";
 import type { IndividualsKept } from "../../core/individualsKept.ts";
-import { individualListNeeds } from "../../core/project.ts";
+import { individualListNeeds, variantFilterNeeds } from "../../core/project.ts";
 import type { CsvOptions, IndividualsTable } from "../../worker/protocol.ts";
 import {
   announcementsOf,
@@ -2463,5 +2463,59 @@ describe("VS5 D2 the announcements of the writing, more", () => {
     expect(announcementsOf(started, noVariant, WORDS)).toEqual([
       "The filters kept none of the variants of pa\\u202enel.nei, so there is nothing to write.",
     ]);
+  });
+});
+
+/** panel.nei with the missing data filter at 0.1 and the LD filter on
+    with no distance. */
+const LD_NO_DISTANCE = project({
+  ...PANEL,
+  filters: [
+    { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+    { kind: "ld", maxAllowedR2: 0.3, maxDist: null },
+  ],
+});
+
+describe("IP3 D3 the stepper and the summary line with the switches of stage 4", () => {
+  test("an LD filter with no distance gives Variants Problem with the words of variantFilterNeeds, before a check running", () => {
+    const reason = variantFilterNeeds(LD_NO_DISTANCE);
+    expect(reason).toBe(
+      "The LD filter of the Variants step needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn off the LD filter, in the Variants step.",
+    );
+    const s = checksState({
+      project: LD_NO_DISTANCE,
+      statuses: { [STATISTICS]: running(KEY_B, 1) },
+    });
+    expect(stepStateOfState(s, "variants")).toEqual({
+      status: "problem",
+      reason,
+    });
+  });
+
+  test("the LD filter with no distance turned off locks nothing: Variants is Done", () => {
+    const off = project({
+      ...PANEL,
+      filtersOff: [{ kind: "ld", maxAllowedR2: 0.3, maxDist: null }],
+    });
+    expect(stepStateOfState(checksState({ project: off }), "variants")).toEqual(
+      { status: "done", reason: null },
+    );
+  });
+
+  test("the missing data filter and an LD filter with no distance are 2 filters, over the variants before the filters", () => {
+    expect(summaryLine(LD_NO_DISTANCE, null, null)).toBe(
+      "panel.nei · 200 individuals · 1,200 variants before the filters · 2 filters · 3 populations by pop",
+    );
+  });
+
+  test("the LD filter and a threshold turned off are not counted among the filters", () => {
+    const off = project({
+      ...PANEL,
+      filtersOff: [{ kind: "ld", maxAllowedR2: 0.3, maxDist: 50000 }],
+      individualFiltersOff: [{ kind: "obs_het", maxAllowedObsHet: 0.38 }],
+    });
+    expect(summaryLine(off, null, null)).toBe(
+      "panel.nei · 200 individuals · 1,200 variants before the filters · 1 filter · 3 populations by pop",
+    );
   });
 });

@@ -124,23 +124,37 @@ export function thresholdCommand(
   };
 }
 
-/** The switch of a threshold turned on, at the value it starts at, or
-    off: "the filter of individuals by missing data was turned on". */
+/** The filter of the kind `kind` a switch turned on gives `p`: the one
+    of that kind kept in `individualFiltersOff`, at the threshold it had
+    when it was turned off, or, when none is kept, at the value it starts
+    at (docs/specs/steps/variants.md, "What it sends and reads"). */
+export function turnedOnThreshold(
+  p: Pick<Project, "individualFiltersOff">,
+  kind: ThresholdKind,
+): IndividualFilter {
+  const kept = p.individualFiltersOff.find((filter) => filter.kind === kind);
+  if (kept !== undefined) return kept;
+  return thresholdFilter(
+    kind,
+    kind === "missing_data"
+      ? INDIVIDUAL_MISSING_TURNED_ON
+      : INDIVIDUAL_OBS_HET_TURNED_ON,
+  );
+}
+
+/** The switch of a threshold turned on, with the filter
+    `turnedOnThreshold` gives the project it is applied to, or off, which
+    keeps the filter in `individualFiltersOff`: "the filter of individuals
+    by missing data was turned on". */
 export function thresholdSwitchCommand(
   kind: ThresholdKind,
   on: boolean,
 ): StepCommand {
   const name = THRESHOLD_WORDS[kind].filterName;
   if (on) {
-    const filter = thresholdFilter(
-      kind,
-      kind === "missing_data"
-        ? INDIVIDUAL_MISSING_TURNED_ON
-        : INDIVIDUAL_OBS_HET_TURNED_ON,
-    );
     return {
       description: `${name} was turned on`,
-      command: (p) => setIndividualFilter(p, filter),
+      command: (p) => setIndividualFilter(p, turnedOnThreshold(p, kind)),
     };
   }
   return {

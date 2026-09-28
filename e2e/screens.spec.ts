@@ -914,9 +914,76 @@ for (const theme of ["light", "dark"] as const) {
       await expect(
         page
           .getByRole("main")
-          .getByText("2.5 is not a whole number; the distance stays 10000."),
+          .getByText(
+            "2.5 is not a whole number; the distance is still to be typed.",
+          ),
       ).toBeVisible();
       await save(page, `popgen-variants-distance-refused-${theme}`);
+    });
+
+    test("the Variants step, the LD pruning on with no distance and its locks", async ({
+      page,
+    }) => {
+      await pickVariants(page, "panel.nei");
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      await page
+        .getByText("Prune the variants by linkage disequilibrium (LD)", {
+          exact: true,
+        })
+        .click();
+      await expect(
+        page
+          .getByRole("button", { name: "Count the variants each filter keeps" })
+          .first(),
+      ).toBeDisabled();
+      await save(page, `popgen-variants-ld-no-distance-${theme}`);
+    });
+
+    test("the Variants step, the LD pruning with a distance, counted", async ({
+      page,
+    }) => {
+      await pickVariants(page, "panel.nei");
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      await page
+        .getByText("Prune the variants by linkage disequilibrium (LD)", {
+          exact: true,
+        })
+        .click();
+      const distance = page.getByLabel("Distance within which variants");
+      await distance.fill("50000");
+      await distance.press("Enter");
+      await page
+        .getByRole("button", { name: "Count the variants each filter keeps" })
+        .click();
+      await expect(
+        page
+          .getByRole("region", { name: "Filters of the variants" })
+          .getByText(/^Kept [\d,]+ of the [\d,]+ variants it was given\.$/)
+          .last(),
+      ).toBeVisible();
+      await save(page, `popgen-variants-ld-counted-${theme}`);
+    });
+
+    test("the Variants step, the MAF filter turned off at 0.9 and on again, with its value kept", async ({
+      page,
+    }) => {
+      const maf = "Filter the variants by major allele frequency (MAF)";
+      await page.getByText(maf, { exact: true }).click();
+      const threshold = page.getByLabel("Maximum major allele frequency", {
+        exact: false,
+      });
+      await threshold.fill("0.9");
+      await threshold.press("Enter");
+      await page.getByText(maf, { exact: true }).click();
+      await expect(threshold).toHaveCount(0);
+      await save(page, `popgen-variants-filter-kept-off-${theme}`);
+      await page.getByText(maf, { exact: true }).click();
+      await expect(threshold).toHaveValue("0.9");
+      await save(page, `popgen-variants-filter-kept-on-${theme}`);
     });
 
     test("the Variants step, the four filters on at 320 px", async ({
