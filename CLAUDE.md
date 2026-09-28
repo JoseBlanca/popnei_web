@@ -44,9 +44,14 @@ The application takes the wasm package of popnei from a GitHub Release of
 popnei, named by its URL in `package.json`, and a newer popnei is a new
 tag there and a new URL here (`docs/technology.md`, section 5). While the
 two are changed together, the application may use the local build of
-popnei, with `npm link` or `"popnei": "file:../popnei/js/popnei"`, which
-is never committed: what is committed, and what the site is built from, is
-always a release. A session that needs something popnei does not have
+popnei, packed with `npm pack` in `popnei/js/popnei` and installed with
+`npm install --no-save <absolute path of the .tgz>`, which changes neither
+`package.json` nor the lockfile and is never committed: what is committed,
+and what the site is built from, is always a release. A link, `npm link`
+or `"file:../popnei/js/popnei"`, does not do: the development server
+refuses to serve popnei's `.wasm` through it, "403 Forbidden", and
+`../popnei` names no folder from a worktree, as the specs of stage 4 found
+on 28 September 2026. The same holds for xlsx_rs. A session that needs something popnei does not have
 says so and does not work around it in the application, because the
 numbers of the applications are popnei's, verified there.
 
