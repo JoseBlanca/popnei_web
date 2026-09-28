@@ -34,7 +34,8 @@
 import { memo, useId, useMemo, useState } from "react";
 
 import type { IndividualStatistic } from "../../../core/analyses/individualChecks.ts";
-import { individualListNeeds } from "../../../core/project.ts";
+import { THRESHOLD_ORDER, individualListNeeds } from "../../../core/project.ts";
+import type { ThresholdKind } from "../../../core/project.ts";
 import { resultOf, statusOf } from "../../analyses/status.ts";
 import { titleOf } from "../../analyses/titles.ts";
 import { ErrorBoundary } from "../../shell/ErrorBoundary.tsx";
@@ -70,7 +71,6 @@ import { INDIVIDUAL_HISTOGRAMS, STATS_TABLE_NAME } from "./individualStats.ts";
 import {
   INDIVIDUAL_THRESHOLD_DECIMALS,
   INDIVIDUAL_THRESHOLD_STEP,
-  THRESHOLD_KINDS,
   THRESHOLD_WORDS,
   keptAnnouncement,
   individualCountText,
@@ -80,7 +80,6 @@ import {
   thresholdOf,
   thresholdSwitchCommand,
 } from "./individualThresholds.ts";
-import type { ThresholdKind } from "./individualThresholds.ts";
 import styles from "./VariantsStep.module.css";
 import { thresholdRefusedText } from "./words.ts";
 
@@ -206,7 +205,7 @@ export function IndividualFilters(): React.JSX.Element {
         </ErrorBoundary>
       )}
       <div className={classOf(styles, "filters")}>
-        {THRESHOLD_KINDS.map((kind) => {
+        {THRESHOLD_ORDER.map((kind) => {
           const words = THRESHOLD_WORDS[kind];
           const value = thresholdOf(project.individualFilters, kind);
           // The plot follows the number typed, while it is typed.

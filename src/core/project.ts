@@ -99,6 +99,9 @@ export type IndividualThreshold = Extract<
   { readonly kind: "missing_data" | "obs_het" }
 >;
 
+/** The kind of a threshold of the individuals: missing_data or obs_het. */
+export type ThresholdKind = IndividualThreshold["kind"];
+
 /** The variants file of one load. */
 export interface VariantSource {
   /** The load id: 16 random bytes as 32 lower case hexadecimal digits. */
@@ -359,14 +362,15 @@ export const INDIVIDUAL_FILTER_ORDER: readonly IndividualFilterKind[] = keysOf(
 
 /** The kinds of the thresholds of the individuals, which can be turned
     off and kept, in the order `individualFiltersOff` keeps them. */
-const THRESHOLD_KINDS: Kinds<IndividualThreshold["kind"]> = {
+const THRESHOLD_KINDS: Kinds<ThresholdKind> = {
   missing_data: INDIVIDUAL_FILTER_KINDS.missing_data,
   obs_het: INDIVIDUAL_FILTER_KINDS.obs_het,
 };
 
-/** The order of `individualFiltersOff`: missing_data, obs_het, as in
+/** The order of the thresholds of the individuals, and of
+    `individualFiltersOff`: missing_data, obs_het, as in
     `INDIVIDUAL_FILTER_ORDER`. */
-const THRESHOLD_ORDER: readonly IndividualThreshold["kind"][] =
+export const THRESHOLD_ORDER: readonly ThresholdKind[] =
   keysOf(THRESHOLD_KINDS);
 
 /** The largest ploidy of a VCF that popnei's `openVcf` accepts. */

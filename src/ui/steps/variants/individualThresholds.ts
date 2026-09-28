@@ -21,7 +21,11 @@ import {
   turnOffIndividualFilter,
   setIndividualFilter,
 } from "../../../core/project.ts";
-import type { Project } from "../../../core/project.ts";
+import type {
+  IndividualThreshold,
+  Project,
+  ThresholdKind,
+} from "../../../core/project.ts";
 import type {
   IndividualFilter,
   IndividualFilterKind,
@@ -29,12 +33,6 @@ import type {
 import type { StepCommand } from "./commands.ts";
 import { individualThreshold } from "./individualStats.ts";
 import { withoutTheStep } from "./words.ts";
-
-/** The two thresholds, in their fixed order. */
-export const THRESHOLD_KINDS = ["missing_data", "obs_het"] as const;
-
-/** One of the two thresholds. */
-export type ThresholdKind = (typeof THRESHOLD_KINDS)[number];
 
 /** An arrow key moves a threshold of the individuals by 0.01. */
 export const INDIVIDUAL_THRESHOLD_STEP = 0.01;
@@ -102,7 +100,10 @@ export function thresholdOf(
 }
 
 /** The filter of the kind `kind` at `value`. */
-function thresholdFilter(kind: ThresholdKind, value: number): IndividualFilter {
+function thresholdFilter(
+  kind: ThresholdKind,
+  value: number,
+): IndividualThreshold {
   switch (kind) {
     case "missing_data":
       return { kind, maxAllowedMissingRate: value };
@@ -131,7 +132,7 @@ export function thresholdCommand(
 export function turnedOnThreshold(
   p: Pick<Project, "individualFiltersOff">,
   kind: ThresholdKind,
-): IndividualFilter {
+): IndividualThreshold {
   const kept = p.individualFiltersOff.find((filter) => filter.kind === kind);
   if (kept !== undefined) return kept;
   return thresholdFilter(

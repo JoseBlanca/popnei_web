@@ -17,6 +17,7 @@
 import { useLayoutEffect, useRef } from "react";
 
 import { Button } from "../widgets/Button.tsx";
+import type { DescriptionFocus } from "../widgets/Button.tsx";
 import type { ButtonOf } from "./status.ts";
 
 /** What the button of a panel is drawn with. */
@@ -93,6 +94,15 @@ function OneButton({
   if (button.kind === "stop") {
     return <Button label="Stop" onPress={onStop} ref={setElement} />;
   }
+  // The reason of a disabled Run takes the focus when the part gives its
+  // element, named for this button.
+  const focus: DescriptionFocus =
+    button.reason !== null && reasonRef !== undefined
+      ? {
+          descriptionRef: reasonRef,
+          descriptionName: `${runLabel} is unavailable: `,
+        }
+      : {};
   return (
     <Button
       label={runLabel}
@@ -100,11 +110,7 @@ function OneButton({
       ref={setElement}
       isDisabled={button.reason !== null}
       {...(button.reason !== null && { description: button.reason })}
-      {...(button.reason !== null &&
-        reasonRef !== undefined && {
-          descriptionRef: reasonRef,
-          descriptionName: `${runLabel} is unavailable: `,
-        })}
+      {...focus}
     />
   );
 }

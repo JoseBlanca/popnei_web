@@ -22,8 +22,31 @@ import { classOf } from "../classOf.ts";
 import styles from "./Button.module.css";
 import { WithTooltip } from "./Tooltip.tsx";
 
+/** Whether the description takes the focus from a script: with its
+    element and the words that name the button, both or neither, so that
+    words given with no element to hold them do not compile. */
+export type DescriptionFocus =
+  | {
+      readonly descriptionRef?: never;
+      readonly descriptionName?: never;
+    }
+  | {
+      /** Given, the description takes the focus from a script, and is not
+          a stop of the Tab key, as the reason of a disabled button does:
+          its element, for the screen that moves the focus to it. */
+      readonly descriptionRef: React.Ref<HTMLSpanElement>;
+      /** Words hidden from the eye that a screen reader reads before the
+          description when it has the focus, which name the button, since
+          the same reason may stand beside several buttons. The
+          description the button is described by stays the words shown. */
+      readonly descriptionName: string;
+    };
+
 /** What a button is drawn with. */
-export interface ButtonProps {
+export type ButtonProps = ButtonBaseProps & DescriptionFocus;
+
+/** What every button is drawn with. */
+interface ButtonBaseProps {
   /** The words on the button, which are also its name for a screen
       reader. */
   readonly label: string;
@@ -45,15 +68,6 @@ export interface ButtonProps {
   readonly hint?: string | null;
   /** The element of the button, for a screen that moves the focus to it. */
   readonly ref?: React.Ref<HTMLButtonElement>;
-  /** Given, the description takes the focus from a script, and is not a
-      stop of the Tab key, as the reason of a disabled button does: its
-      element, for the screen that moves the focus to it. */
-  readonly descriptionRef?: React.Ref<HTMLSpanElement>;
-  /** With `descriptionRef`, words hidden from the eye that a screen reader
-      reads before the description when it has the focus, which name the
-      button, since the same reason may stand beside several buttons. The
-      description the button is described by stays the words shown. */
-  readonly descriptionName?: string;
   /** Whether it sends the form it is in, as Enter in a field of the form
       does; false when absent. */
   readonly isSubmit?: boolean;
