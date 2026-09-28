@@ -1187,9 +1187,18 @@ moves.
   so that a screen reader reads "p2, Observed heterozygosity, 0.3512".
   A screen reader moves through it by its own keys for tables; the Tab
   key does not stop at its cells, which hold no control. It sits in a
-  frame that scrolls sideways when the page is narrower than the table:
-  at 320 px the table is 1,012 px wide in a frame of 288 px, which shows
-  the populations and their individuals and no value. While the table is
+  frame that scrolls sideways when the page is narrower than the table.
+  The words of a header cell wrap between words when the table would
+  not fit otherwise, and the numbers never do: on one line the table is
+  1,012 px wide on the Mac and 1,186 px with DejaVu Sans, the sans-serif
+  font of Ubuntu, wider than its column of 1,024 px on a window of 1,280,
+  where it would scroll on Linux at every width. On the Mac the headers
+  stay on one line on a window of 1,050 px and wider, and wrap below. At
+  320 px, in Chromium 153 and WebKit 26.6 on the Mac, the table is 564
+  px wide in a frame of 288 px, its headers on up to four lines, and
+  the frame shows the populations and their individuals and no value.
+  The owner decided on 28 September 2026 that the headers wrap. While
+  the table is
   wider than its frame, and only then, three things say so and let it be
   scrolled. A line under the caption, "Scroll the table sideways to see
   all its columns."; a shadow on each edge of the frame toward which the
