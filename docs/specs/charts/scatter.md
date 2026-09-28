@@ -553,9 +553,17 @@ export function tooltipLines(
 ): string[];
 
 /**
+ * How the user hid a tooltip: by Escape, or by a mouse or a pen that
+ * left the plot's element from the tooltip itself.
+ */
+export type TooltipDismissal = "escape" | "leave";
+
+/**
  * The tooltip of a plot, a <div> in `element`, made at the first `show`:
- * kept while the pointer is on it, hidden by Escape, which then calls
- * `onDismiss`, as "The point under the pointer" says.
+ * kept while the pointer is on it; hidden by Escape, which then calls
+ * `onDismiss("escape")`, and by a mouse or a pen that leaves `element`
+ * from it, which calls `onDismiss("leave")`, as "The point under the
+ * pointer" says.
  */
 export interface Tooltip {
   /** Shows `lines` beside the point at (x, y), in the pixels of `element`. */
@@ -569,8 +577,19 @@ export interface Tooltip {
   destroy(): void;
 }
 
-export function createTooltip(element: HTMLElement, onDismiss: () => void): Tooltip;
+export function createTooltip(
+  element: HTMLElement,
+  onDismiss: (by: TooltipDismissal) => void,
+): Tooltip;
 ```
+
+`TooltipDismissal` was added on 28 September 2026, when the scatter was
+first tried in a browser: with one call for both, a pointer that left
+the plot from the tooltip and came back to the same point found the
+tooltip still hidden, as if Escape had hidden it, where "The point under
+the pointer" keeps a tooltip hidden that way only after Escape. After a
+leave, the pointer has left every point, and the tooltip shows again
+when it comes back.
 
 The scatter. Its texts are the screen's, with those of `PlotText`:
 `xLabel` "PC1 (3.55%)" and `yLabel` "PC2 (3.40%)".
