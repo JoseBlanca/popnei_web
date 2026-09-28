@@ -329,21 +329,25 @@ the frame; the plot finds the nearest point:
   for again once the pointer is beyond them.
 - **The tooltip** is one HTML `<div>`, `chart-tooltip`, that the plot
   adds to its element on the first hover and removes in `destroy`,
-  placed with its nearest corner 7 pixels right of and 7 pixels below
+  placed with its nearest corner 6 pixels right of and 6 pixels below
   the point, and on its left or above it where it would leave the
   element; where it fits on neither side, as in a plot narrower than
   twice the tooltip, it is placed against the left or the top edge of the
-  element, and may then cover the mark it names. That corner is 9.9 pixels from the point: inside the 10
-  pixels within which the point stays under the pointer, so that a
-  pointer that goes from the point straight to the tooltip never leaves
-  them and finds the tooltip still shown. That corner is square, the
-  other three rounded as the theme has them: rounded by 4 pixels, its
-  edge on the line from the point would be 11.6 pixels from it, and the
-  pointer found there no tooltip and the next point, as the flows saw on
-  28 September 2026. And every place of the
-  tooltip is at least 7 pixels right of and 7 below the point, so 9.9
-  pixels from it at least, beyond the 8.05 a mark reaches: the tooltip
-  covers no part of the mark it names. The option not taken, the tooltip further away and a
+  element, and may then cover the mark it names. That corner is 8.5
+  pixels from the point: inside the 10 pixels within which the point
+  stays under the pointer, so that a pointer that goes from the point
+  straight to the tooltip never leaves them and finds the tooltip still
+  shown. That corner is square, the other three rounded as the theme has
+  them: rounded by 4 pixels, its edge on the line from the point would be
+  10.1 pixels from it. Both were found by the flows on 28 September 2026,
+  in the clusters of the page of the plots: with the corner at 7 pixels,
+  9.9 from the point, or rounded, the browser, which finds the element
+  under the pointer at a whole pixel, gave the pointer to the overlay a
+  step before the tooltip, beyond the 10 pixels, and it showed the
+  tooltip of the next point. And every place of the tooltip is at least
+  6 pixels right of and 6 below the point, so 8.5 pixels from it at
+  least, beyond the 8.05 a mark reaches: the tooltip covers no part of
+  the mark it names. The option not taken, the tooltip further away and a
   wait of some 300 ms before it is hidden, adds a timer to every
   movement of the pointer and a wait to every test of it. It is HTML and not SVG, since it wraps text and is
   not part of the exported plot. Its lines are the name of the
