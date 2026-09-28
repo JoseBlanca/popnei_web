@@ -2,6 +2,7 @@ import fc from "fast-check";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
   createClient,
+  PCA_RESTART_INDIVIDUALS,
   WORKER_READY_TIMEOUT_MS,
   WRITE_RESTART_BYTES,
   type IndividualsAnswer,
@@ -18,6 +19,9 @@ import type {
   DiversityResult,
   JobResult,
   Outcome,
+  PcaJob,
+  PcaMethod,
+  PcaResult,
   Progress,
   WriteJob,
   Written,
@@ -2583,5 +2587,281 @@ describe("VS1 D5 the write of the client: the failures of a write", () => {
       },
     });
     expect(third.terminated).toBe(true);
+  });
+});
+
+/** Names of `count` individuals, s1 to s<count>. */
+function names(count: number): string[] {
+  return Array.from({ length: count }, (_, i) => `s${String(i + 1)}`);
+}
+
+function pcaJob(
+  individuals: readonly string[] | null,
+  method: PcaMethod = "pca",
+): PcaJob {
+  return {
+    analysis: "pca",
+    fileId: "A",
+    filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.05 }],
+    individuals,
+    method,
+    numCompsKept: 10,
+  };
+}
+
+/** A result of the principal components the check of a result takes; the
+    client reads nothing of it but its analysis. */
+function pcaResult(method: PcaMethod): PcaResult {
+  return {
+    analysis: "pca",
+    method,
+    individuals: ["s1", "s2"],
+    numComps: 1,
+    numCompsFound: 1,
+    projections: Float64Array.of(18.8, -18.8),
+    explainedVariancePercent: Float64Array.of(100),
+    numVarsUsed: method === "pca" ? 1152 : null,
+    lingoesConstant: method === "pca" ? null : 0,
+    negativeEigenvaluesPercent: method === "pca" ? null : 0,
+    passStats: RESULT.passStats,
+  };
+}
+
+/** Load A read with `numInFile` individuals, a run k1 of the principal
+    components of `job` running on the first worker, and a run k6 waiting. */
+function pcaAndRun(
+  numInFile: number,
+  pca: PcaJob,
+): ReturnType<typeof setUp> & {
+  readonly first: FakeWorker;
+  readonly k1: ReturnType<ReturnType<typeof createClient>["run"]>;
+  readonly k6: ReturnType<ReturnType<typeof createClient>["run"]>;
+} {
+  const env = setUp();
+  const first = last(env.calculation);
+  env.client.addFile("A", FILE_A);
+  env.client.openVariants({ fileId: "A", ...NEI });
+  emit(first, READY);
+  emit(first, {
+    kind: "opened",
+    id: lastSent(first).id,
+    individuals: names(numInFile),
+    ploidy: 2,
+  });
+  const k1 = env.client.run("k1", pca, noProgress);
+  const k6 = env.client.run("k6", job("A"), noProgress);
+  expect(lastSent(first)).toEqual({
+    kind: "run",
+    id: k1.id,
+    key: "k1",
+    job: pca,
+  });
+  return { ...env, first, k1, k6 };
+}
+
+/** The worker after a restart that follows a PCA: ended with no handler
+    left, and a new one that, once ready, is sent the open of A with its
+    File, announces the version when that open ends, and then runs k6. */
+function expectReopenedThenK6(env: ReturnType<typeof pcaAndRun>): void {
+  expect(env.first.terminated).toBe(true);
+  expect(env.first.endedWithHandlers).toBe(false);
+  expect(env.calculation).toHaveLength(2);
+  const second = last(env.calculation);
+  expect(second.posted).toEqual([]);
+  emit(second, READY);
+  const open = lastSent(second);
+  expect(open).toMatchObject({ kind: "open", fileId: "A" });
+  expect(open.kind === "open" && open.file).toBe(FILE_A);
+  expect(env.versions).toEqual(["0.1.0"]);
+  emit(second, opened(open.id));
+  expect(env.versions).toEqual(["0.1.0", "0.1.0"]);
+  expect(lastSent(second)).toMatchObject({
+    kind: "run",
+    id: env.k6.id,
+    key: "k6",
+  });
+  expect(second.posted).toHaveLength(2);
+}
+
+/** The worker was not ended, and was sent k6 after k1. */
+function expectK6OnTheSameWorker(env: ReturnType<typeof pcaAndRun>): void {
+  expect(env.first.terminated).toBe(false);
+  expect(env.calculation).toHaveLength(1);
+  expect(lastSent(env.first)).toMatchObject({
+    kind: "run",
+    id: env.k6.id,
+    key: "k6",
+  });
+}
+
+describe("IP6 D3 the restart after a large PCA", () => {
+  test("PCA_RESTART_INDIVIDUALS is 700, until the measurement of the PCA sets it", () => {
+    expect(PCA_RESTART_INDIVIDUALS).toBe(700);
+  });
+
+  test("a result of a PCA of 701 individuals of its list, a run waiting: the PCA is done, the worker ended, and a new one opens A again, then runs k6", async () => {
+    const env = pcaAndRun(800, pcaJob(names(PCA_RESTART_INDIVIDUALS + 1)));
+    emit(env.first, {
+      kind: "result",
+      id: env.k1.id,
+      key: "k1",
+      result: pcaResult("pca"),
+    });
+    expect(await now(env.k1.outcome)).toEqual({
+      kind: "done",
+      key: "k1",
+      result: pcaResult("pca"),
+    });
+    expectReopenedThenK6(env);
+  });
+
+  test("a PCA of 700 individuals of its list, over a load of 800, ends no worker, and k6 is sent to it", async () => {
+    const env = pcaAndRun(800, pcaJob(names(PCA_RESTART_INDIVIDUALS)));
+    emit(env.first, {
+      kind: "result",
+      id: env.k1.id,
+      key: "k1",
+      result: pcaResult("pca"),
+    });
+    expect(await now(env.k1.outcome)).toMatchObject({
+      kind: "done",
+      key: "k1",
+    });
+    expectK6OnTheSameWorker(env);
+  });
+
+  test("a PCoA with individuals null over a load whose opened gave 701 ends the worker, as a PCA does", async () => {
+    const env = pcaAndRun(PCA_RESTART_INDIVIDUALS + 1, pcaJob(null, "pcoa"));
+    emit(env.first, {
+      kind: "result",
+      id: env.k1.id,
+      key: "k1",
+      result: pcaResult("pcoa"),
+    });
+    expect(await now(env.k1.outcome)).toMatchObject({
+      kind: "done",
+      key: "k1",
+    });
+    expectReopenedThenK6(env);
+  });
+
+  test("a PCA with individuals null over a load of 700 ends no worker", async () => {
+    const env = pcaAndRun(PCA_RESTART_INDIVIDUALS, pcaJob(null));
+    emit(env.first, {
+      kind: "result",
+      id: env.k1.id,
+      key: "k1",
+      result: pcaResult("pca"),
+    });
+    expect(await now(env.k1.outcome)).toMatchObject({
+      kind: "done",
+      key: "k1",
+    });
+    expectK6OnTheSameWorker(env);
+  });
+
+  test("a PCA with individuals null over a load of 701 that popnei refused fails with its message, and the worker is started again", async () => {
+    const env = pcaAndRun(PCA_RESTART_INDIVIDUALS + 1, pcaJob(null));
+    emit(env.first, {
+      kind: "refused",
+      id: env.k1.id,
+      message: "no variant with variance",
+    });
+    expect(await now(env.k1.outcome)).toEqual({
+      kind: "failed",
+      error: { kind: "popnei", message: "no variant with variance" },
+    });
+    expectReopenedThenK6(env);
+  });
+
+  test("a PCA of 700 that popnei refused ends no worker", async () => {
+    const env = pcaAndRun(800, pcaJob(names(PCA_RESTART_INDIVIDUALS)));
+    emit(env.first, {
+      kind: "refused",
+      id: env.k1.id,
+      message: "no variant with variance",
+    });
+    expect(await now(env.k1.outcome)).toMatchObject({ kind: "failed" });
+    expectK6OnTheSameWorker(env);
+  });
+
+  test("a PCA of 701 that ends reopenFailed fails with it, and the worker is not ended", async () => {
+    const env = pcaAndRun(PCA_RESTART_INDIVIDUALS + 1, pcaJob(null));
+    emit(env.first, {
+      kind: "reopenFailed",
+      id: env.k1.id,
+      name: "panel.nei",
+      message: "the file could not be read",
+    });
+    expect(await now(env.k1.outcome)).toEqual({
+      kind: "failed",
+      error: {
+        kind: "reopenFailed",
+        name: "panel.nei",
+        message: "the file could not be read",
+      },
+    });
+    expectK6OnTheSameWorker(env);
+  });
+
+  test("a PCA of 700 of its list over a load of 701 ends no worker, the list and not the load counting; nor does a run of another analysis after it", async () => {
+    const env = pcaAndRun(
+      PCA_RESTART_INDIVIDUALS + 1,
+      pcaJob(names(PCA_RESTART_INDIVIDUALS)),
+    );
+    emit(env.first, {
+      kind: "result",
+      id: env.k1.id,
+      key: "k1",
+      result: pcaResult("pca"),
+    });
+    expect(await now(env.k1.outcome)).toMatchObject({ kind: "done" });
+    expectK6OnTheSameWorker(env);
+    emit(env.first, resultOf(env.k6.id, "k6"));
+    expect(await now(env.k6.outcome)).toMatchObject({
+      kind: "done",
+      key: "k6",
+    });
+    expect(env.first.terminated).toBe(false);
+    expect(env.calculation).toHaveLength(1);
+  });
+
+  test("the outcome of a large PCA is given before the restart: when no new worker can be made, the PCA is done and then k6 fails", async () => {
+    const calculation: FakeWorker[] = [];
+    const client = createClient({
+      calculation: () => {
+        if (calculation.length > 0) {
+          throw new Error("the script of the worker is not served");
+        }
+        const worker = fakeWorker();
+        calculation.push(worker);
+        return worker;
+      },
+      light: fakeWorker,
+      onPopneiReady: () => undefined,
+    });
+    const first = last(calculation);
+    client.addFile("A", FILE_A);
+    client.openVariants({ fileId: "A", ...NEI });
+    emit(first, READY);
+    emit(first, opened(lastSent(first).id));
+    const k1 = client.run(
+      "k1",
+      pcaJob(names(PCA_RESTART_INDIVIDUALS + 1)),
+      noProgress,
+    );
+    const k6 = client.run("k6", job("A"), noProgress);
+    const order: string[] = [];
+    void k1.outcome.then((outcome) => order.push(`k1 ${outcome.kind}`));
+    void k6.outcome.then((outcome) => order.push(`k6 ${outcome.kind}`));
+    emit(first, {
+      kind: "result",
+      id: k1.id,
+      key: "k1",
+      result: pcaResult("pca"),
+    });
+    await now(k6.outcome);
+    expect(first.terminated).toBe(true);
+    expect(order).toEqual(["k1 done", "k6 failed"]);
   });
 });

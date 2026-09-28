@@ -8,9 +8,10 @@
  * The calculation worker holds one load, the variants file of the one
  * `open` it received first; a request on another load ends it and starts
  * another, and so does a write of a file larger than
- * `WRITE_RESTART_BYTES`, or one that popnei refused, since the memory of
- * its wasm never shrinks. The light worker holds nothing between two
- * reads of the individuals file.
+ * `WRITE_RESTART_BYTES`, or one that popnei refused, and a PCA of more
+ * than `PCA_RESTART_INDIVIDUALS` individuals, done or refused, since the
+ * memory of its wasm never shrinks. The light worker holds nothing
+ * between two reads of the individuals file.
  */
 
 import {
@@ -59,6 +60,15 @@ export const WORKER_READY_TIMEOUT_MS = 30_000;
     25 MB leaves at most about 115 MB (writeVariants.md, "What was
     measured"). */
 export const WRITE_RESTART_BYTES = 25_000_000;
+
+/** Above it, in individuals, the calculation worker is started again after
+    a run of the principal components, done or refused by popnei, to give
+    back the memory of wasm its matrix of the individuals took (client.md,
+    "A large PCA, and the restart after it"). 700: a PCA or a PCoA of 700
+    individuals holds about 24 MB, 700 × 700 × 48.8 bytes by popnei's
+    count, about `WRITE_RESTART_BYTES`, so the two restarts come at the
+    same memory left behind (pca.md, "How it runs"). */
+export const PCA_RESTART_INDIVIDUALS = 700;
 
 /** The page's side of the two workers. */
 export interface Client {
@@ -203,6 +213,28 @@ export function createClient(config: {
     return calc.held !== null && calc.held.answer?.kind === "opened"
       ? calc.held.fileId
       : null;
+  }
+
+  /** Whether the request is a run of the principal components of more
+      than `PCA_RESTART_INDIVIDUALS` individuals: those of its job's list,
+      or, when the list is null, those the `opened` of the load the worker
+      holds gave. Asked while the request is the one running, whose load
+      the worker has opened. */
+  function isLargePca(request: JobRequest): boolean {
+    if (request.kind !== "run" || request.job.analysis !== "pca") {
+      return false;
+    }
+    const listed = request.job.individuals;
+    if (listed !== null) {
+      return listed.length > PCA_RESTART_INDIVIDUALS;
+    }
+    const answer = calc.held?.answer;
+    if (answer?.kind !== "opened") {
+      throw new Error(
+        "popnei_web defect: a run of the principal components ended on a worker that has not opened its load",
+      );
+    }
+    return answer.individuals.length > PCA_RESTART_INDIVIDUALS;
   }
 
   function enqueueCalculation(request: CalculationRequest): void {
@@ -398,6 +430,13 @@ export function createClient(config: {
           message.id === calc.running.id
         ) {
           const running = calc.running;
+          // popnei refuses a file the memory of the tab does not take, and
+          // a PCA that may have made its matrix, after its wasm grew by
+          // what it built: the worker is started again, after the refusal
+          // was given. A reopenFailed names the file, not the memory.
+          const restart =
+            message.kind === "refused" &&
+            (running.kind === "write" || isLargePca(running));
           calc.running = null;
           calc.life.failures = 0;
           finish(
@@ -416,10 +455,7 @@ export function createClient(config: {
                   },
                 },
           );
-          if (running.kind === "write" && message.kind === "refused") {
-            // popnei refuses a file the memory of the tab does not take,
-            // after its wasm grew by the part it built: the worker is
-            // started again, after the refusal was given.
+          if (restart) {
             restartCalculation(openedLoad());
             return;
           }
@@ -450,6 +486,9 @@ export function createClient(config: {
           );
           return;
         }
+        // A large PCA ends the worker, whose memory of wasm grew by its
+        // matrix of the individuals; the outcome first, as after a write.
+        const restart = isLargePca(run);
         calc.running = null;
         calc.life.failures = 0;
         run.answer.settle({
@@ -457,6 +496,10 @@ export function createClient(config: {
           key: message.key,
           result: message.result,
         });
+        if (restart) {
+          restartCalculation(openedLoad());
+          return;
+        }
         pumpCalculation();
         return;
       }
