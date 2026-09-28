@@ -127,6 +127,12 @@ describe("IP7 D1 the pieces of the scatter, viridis", () => {
     expect(viridisStep(6, -2, 6)).toBe(255);
   });
 
+  test("values near the largest number, whose difference would overflow, take their steps", () => {
+    expect(viridisStep(-1.7e308, -1.7e308, 1.7e308)).toBe(0);
+    expect(viridisStep(0, -1.7e308, 1.7e308)).toBe(128);
+    expect(viridisStep(1.7e308, -1.7e308, 1.7e308)).toBe(255);
+  });
+
   test("a value when the smallest and the largest are equal is step 128", () => {
     expect(viridisStep(3, 3, 3)).toBe(128);
   });

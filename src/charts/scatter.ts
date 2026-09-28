@@ -15,6 +15,7 @@ import type { ScaleLinear } from "d3-scale";
 import { createTooltip, nearestPoint, tooltipLines } from "./hover.ts";
 import { drawLegendSvg, legendOf } from "./legend.ts";
 import { MAX_SVG_POINTS } from "./limits.ts";
+import { tableNumber } from "./numbers.ts";
 import {
   checkPointColours,
   drawSymbolAt,
@@ -95,6 +96,15 @@ const SPAN_OF_ONE_PLACE = 2;
 /** The key of the path of the points in no group, or with no value. */
 const NONE_KEY = "none";
 
+/** The minus sign, U+2212, which the ticks of d3-axis write. */
+const MINUS = "−";
+
+/** Two scales, across and up. */
+interface Scales {
+  readonly x: ScaleLinear<number, number>;
+  readonly y: ScaleLinear<number, number>;
+}
+
 /**
  * The two scales of the scatter for a frame of `innerWidth` by
  * `innerHeight`, of the same pixels per unit: the largest at which every
@@ -107,10 +117,22 @@ export function scatterScales(
   data: ScatterData,
   innerWidth: number,
   innerHeight: number,
-): {
-  readonly x: ScaleLinear<number, number>;
-  readonly y: ScaleLinear<number, number>;
-} {
+): Scales {
+  return scalesAt(data, innerWidth, innerHeight, 1);
+}
+
+/**
+ * The scales of scatterScales over the coordinates times `factor`, a
+ * power of two, which multiplies exactly: at a half or a quarter, the
+ * ends and the widths of the domains of coordinates near ±1.8e308 are
+ * finite numbers where at 1 they are infinities.
+ */
+function scalesAt(
+  data: ScatterData,
+  innerWidth: number,
+  innerHeight: number,
+  factor: number,
+): Scales {
   let minX = Infinity;
   let maxX = -Infinity;
   let minY = Infinity;
@@ -120,10 +142,10 @@ export function scatterScales(
     if (y === undefined || !Number.isFinite(x) || !Number.isFinite(y)) {
       continue;
     }
-    minX = Math.min(minX, x);
-    maxX = Math.max(maxX, x);
-    minY = Math.min(minY, y);
-    maxY = Math.max(maxY, y);
+    minX = Math.min(minX, x * factor);
+    maxX = Math.max(maxX, x * factor);
+    minY = Math.min(minY, y * factor);
+    maxY = Math.max(maxY, y * factor);
   }
   if (minX > maxX) {
     // No finite point: the axes of one point at (0, 0).
@@ -132,15 +154,15 @@ export function scatterScales(
   let spanX = maxX - minX;
   let spanY = maxY - minY;
   if (spanX === 0 && spanY === 0) {
-    spanX = SPAN_OF_ONE_PLACE;
-    spanY = SPAN_OF_ONE_PLACE;
+    spanX = SPAN_OF_ONE_PLACE * factor;
+    spanY = SPAN_OF_ONE_PLACE * factor;
   }
   const perUnit = Math.min(
     spanX > 0 ? (innerWidth - 2 * FRAME_INSET) / spanX : Infinity,
     spanY > 0 ? (innerHeight - 2 * FRAME_INSET) / spanY : Infinity,
   );
-  const middleX = (minX + maxX) / 2;
-  const middleY = (minY + maxY) / 2;
+  const middleX = minX / 2 + maxX / 2;
+  const middleY = minY / 2 + maxY / 2;
   const halfX = innerWidth / (2 * perUnit);
   const halfY = innerHeight / (2 * perUnit);
   return {
@@ -151,6 +173,38 @@ export function scatterScales(
       .domain([middleY - halfY, middleY + halfY])
       .range([innerHeight, 0]),
   };
+}
+
+/** True when the ends and the width of the domain of `scale` are finite. */
+function finiteDomain(scale: ScaleLinear<number, number>): boolean {
+  const [start = Number.NaN, end = Number.NaN] = scale.domain();
+  return Number.isFinite(end - start);
+}
+
+/** The smallest factor tried, a 256th: enough for a frame 256 times wider than high. */
+const SMALLEST_FACTOR = 2 ** -8;
+
+/**
+ * The scales the scatter draws with, and the factor of the coordinates
+ * they are over: 1, the scales of scatterScales, but for coordinates near
+ * ±1.8e308, for which a half, a quarter or less, the first at which the
+ * domains are finite (scatter.md, "The cases").
+ */
+function drawingScales(
+  data: ScatterData,
+  innerWidth: number,
+  innerHeight: number,
+): Scales & { readonly factor: number } {
+  let factor = 1;
+  let scales = scalesAt(data, innerWidth, innerHeight, factor);
+  while (
+    !(finiteDomain(scales.x) && finiteDomain(scales.y)) &&
+    factor > SMALLEST_FACTOR
+  ) {
+    factor /= 2;
+    scales = scalesAt(data, innerWidth, innerHeight, factor);
+  }
+  return { ...scales, factor };
 }
 
 /**
@@ -389,11 +443,12 @@ export const createScatter: Chart<ScatterData, ScatterEvents> = (
   }
 
   function draw(frame: Frame, drawnData: ScatterData): void {
-    const scales = scatterScales(
+    const scales = drawingScales(
       drawnData,
       frame.innerWidth,
       frame.innerHeight,
     );
+    const { factor } = scales;
     const numPoints = drawnData.x.length;
     const positions = new Float32Array(2 * numPoints).fill(Number.NaN);
     for (const [index, x] of drawnData.x.entries()) {
@@ -401,8 +456,8 @@ export const createScatter: Chart<ScatterData, ScatterEvents> = (
       if (y === undefined || !Number.isFinite(x) || !Number.isFinite(y)) {
         continue;
       }
-      positions[2 * index] = scales.x(x);
-      positions[2 * index + 1] = scales.y(y);
+      positions[2 * index] = scales.x(x * factor);
+      positions[2 * index + 1] = scales.y(y * factor);
     }
     const { colours } = drawnData;
     let paths: PointsPath[];
@@ -430,7 +485,15 @@ export const createScatter: Chart<ScatterData, ScatterEvents> = (
       .attr("class", (path) => path.className)
       .attr("fill", (path) => path.fill)
       .attr("d", (path) => path.d);
-    frame.axes(scales.x, scales.y);
+    if (factor === 1) {
+      frame.axes(scales.x, scales.y);
+    } else {
+      // The labels at the size of the coordinates, which the ticks are a
+      // factor of.
+      const tick = (value: number): string =>
+        String(tableNumber(value / factor)).replaceAll("-", MINUS);
+      frame.axes(scales.x, scales.y, { xFormat: tick, yFormat: tick });
+    }
     // The point under the pointer may have moved: the next movement of
     // the pointer finds it again.
     dismissed = null;

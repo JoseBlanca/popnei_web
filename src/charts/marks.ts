@@ -215,7 +215,8 @@ export function viridisStep(value: number, min: number, max: number): number {
     );
   }
   if (min === max) return VIRIDIS_MIDDLE;
-  const place = (value - min) / (max - min);
+  // With halves, so that two ends near ±1.8e308 give no infinity.
+  const place = (value / 2 - min / 2) / (max / 2 - min / 2);
   return Math.min(VIRIDIS_STEPS - 1, Math.floor(place * VIRIDIS_STEPS));
 }
 

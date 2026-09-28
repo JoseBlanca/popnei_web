@@ -297,6 +297,39 @@ describe("IP7 D1 the pieces of the scatter, the defects of its data", () => {
 });
 
 describe("IP7 D2 the scatter under jsdom, its SVG", () => {
+  test("points and values near the largest number are drawn at their places, coloured at the two ends of viridis, and the axes have finite ticks", () => {
+    const element = sizedElement(400, 300);
+    createScatter(
+      element,
+      scatterOf(
+        [-1.7e308, 1.7e308],
+        [-1.7e308, 1.7e308],
+        values([-1.7e308, 1.7e308]),
+      ),
+    );
+    const paths = [...element.querySelectorAll("path.chart-points")];
+    expect(paths.map((path) => path.getAttribute("fill"))).toEqual([
+      viridisColour(0),
+      viridisColour(255),
+    ]);
+    // The first point at the left of the frame less its 10 pixels, the
+    // second at its right: circles of SYMBOL_AREA drawn there.
+    const at = (px: number, py: number): string => {
+      const path = pathRound(PATH_DIGITS);
+      drawSymbolAt(path, groupSymbol(NO_GROUP), SYMBOL_AREA, px, py);
+      return path.toString();
+    };
+    // The frame of 324 by 244 is set by its height: the points 10 pixels
+    // from its bottom and its top, and 112 pixels either side of its middle.
+    expect(paths.map((path) => path.getAttribute("d"))).toEqual([
+      at(FRAME_WIDTH / 2 - 112, FRAME_HEIGHT - 10),
+      at(FRAME_WIDTH / 2 + 112, 10),
+    ]);
+    const ticks = [...element.querySelectorAll(".chart-axis-x .tick")];
+    expect(ticks.length).toBeGreaterThan(2);
+    expect(element.innerHTML).not.toContain("NaN");
+  });
+
   test("the class chart chart-scatter, and the overlay the last child of the frame, of the size of the frame", () => {
     const element = sizedElement(400, 300);
     createScatter(element, six());
