@@ -1622,12 +1622,15 @@ September 2026 and written here as `docs/architecture.md` has them:
 - **`docs/specs/analyses/individualChecks.md`, `variantChecks.md`,
   `filterCounts.md` and `writeVariants.md`**: their jobs and results as
   the block of `docs/specs/worker/protocol.md` has them; the statistics of
-  each individual over the filters of the variants and every individual,
-  with their names in the result; the histograms of the variants over no
-  filter and every individual, with `minNumIndividuals` 0, the bins in
-  the job, and the MAF, Ho and the unbiased He; the counts over the
-  filters of the variants alone; a write over the filters and the list
-  of individuals, whose file of no variant the step does not offer.
+  each individual over no filter and every individual, with their names
+  in the result; the histograms of the variants over no filter of the
+  variants and the list of the individuals kept, with
+  `minNumIndividuals` 0, the bins in the job, and the MAF, Ho and the
+  unbiased He; the counts over the list of the individuals kept and the
+  filters of the variants after it; a write over the list and the
+  filters, whose file of no variant the step does not offer. The order,
+  the list of the individuals kept first, is the owner's decision of 28
+  September 2026 (`docs/specs/stage-4-open-points.md`, entry A).
 - **`docs/specs/core/individualsKept.md`**: the list of the
   individuals kept, in the order of the file, `null` when the filters
   remove nobody, and never empty in a job.

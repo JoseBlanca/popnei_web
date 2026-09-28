@@ -340,10 +340,12 @@ The option not taken was the two buttons on each histogram from stage 3.
 
 The words of the histograms removed are those of the diversity's table
 of results removed, for a result in the plural and a button whose words
-start with "Calculate", and they say "for the file loaded now", since
-only a change of the load removes them, a new file or the same file read
-again with other options, whose words end the sentence as the command
-gives them. They were written with the code
+start with "Calculate", and they say "for the file loaded now" after a
+change of the load, a new file or the same file read again with other
+options, whose words end the sentence as the command gives them; after
+a change of a filter of individuals, which removes them too since 28
+September 2026, they say "for the settings as they are now", as the row
+of results removed above has it. They were written with the code
 on 27 September 2026, and the owner accepted them the same day, at stop
 A of `docs/plans/variants-step.md`, where the screens are tried:
 

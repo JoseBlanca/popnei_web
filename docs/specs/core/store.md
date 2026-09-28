@@ -1260,9 +1260,9 @@ requests whose outcomes the test resolves by hand, whose `cancel()` it
 records, and which passes progress when the test asks; and two fake
 analyses: one that needs the individuals file and uses the populations,
 and one that needs only the variants file. From stage 3, three more
-fake definitions: statistics of each individual, reading the filters of
-the variants alone, whose result carries `IndividualStats`; counts,
-reading the filters of the variants alone; and the first fake analysis
+fake definitions: statistics of each individual, reading no filter since
+28 September 2026, whose result carries `IndividualStats`; counts,
+reading the filters of individuals and of the variants; and the first fake analysis
 reading the filters of individuals as well; with a `countsOf` that gives
 counts for every result of the first two fakes, and a fake `write.send`
 whose file is a text.
