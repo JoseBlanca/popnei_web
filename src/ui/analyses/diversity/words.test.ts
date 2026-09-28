@@ -9,7 +9,6 @@ import {
   optionsText,
   populationsText,
   readyLines,
-  versionsText,
 } from "./words.ts";
 
 describe("the words of the panel of the diversity", () => {
@@ -22,7 +21,9 @@ describe("the words of the panel of the diversity", () => {
         ["p2", s(84)],
         ["p1", s(68)],
       ]),
-    ).toBe("3 populations: p0, 48 individuals; p2, 84; p1, 68");
+    ).toBe(
+      "3 populations: p0, 48 individuals; p2, 84 individuals; p1, 68 individuals",
+    );
     expect(populationsText([["A", s(12)]])).toBe(
       "1 population: A, 12 individuals",
     );
@@ -39,16 +40,16 @@ describe("the words of the panel of the diversity", () => {
 
   test("VS7 D2 the populations the filters of individuals leave empty are named, one or several", () => {
     expect(emptiedText(["p9"])).toBe(
-      "p9 has no individual left after the filters of individuals, and is left out.",
+      "p9 has no individual left after the filters of individuals, and is left out. Loosen the filters of individuals in the Variants step to keep it.",
     );
     expect(emptiedText(["p1", "p2"])).toBe(
-      "p1 and p2 have no individual left after the filters of individuals, and are left out.",
+      "p1 and p2 have no individual left after the filters of individuals, and are left out. Loosen the filters of individuals in the Variants step to keep them.",
     );
     expect(emptiedText(["p1", "p2", "p3", "p4"])).toBe(
-      "p1, p2 and 2 more have no individual left after the filters of individuals, and are left out.",
+      "p1, p2 and 2 more have no individual left after the filters of individuals, and are left out. Loosen the filters of individuals in the Variants step to keep them.",
     );
     expect(emptiedText(["p1\u202e"])).toBe(
-      "p1\\u202e has no individual left after the filters of individuals, and is left out.",
+      "p1\\u202e has no individual left after the filters of individuals, and is left out. Loosen the filters of individuals in the Variants step to keep it.",
     );
   });
 
@@ -61,24 +62,17 @@ describe("the words of the panel of the diversity", () => {
       ["p1", s(37)],
     ] as const;
     expect(readyLines({ pops, emptied: [] }, false)).toEqual([
-      "3 populations: p0, 32 individuals; p2, 50; p1, 37",
+      "3 populations: p0, 32 individuals; p2, 50 individuals; p1, 37 individuals",
     ]);
     expect(
       readyLines({ pops: [["p0", s(48)]], emptied: ["p9"] }, false),
     ).toEqual([
       "1 population: p0, 48 individuals",
-      "p9 has no individual left after the filters of individuals, and is left out.",
+      "p9 has no individual left after the filters of individuals, and is left out. Loosen the filters of individuals in the Variants step to keep it.",
     ]);
     expect(readyLines({ pops, emptied: [] }, true)).toEqual([
-      "3 populations: p0, 32 individuals; p2, 50; p1, 37",
+      "3 populations: p0, 32 individuals; p2, 50 individuals; p1, 37 individuals",
       "Run calculates the statistics of each individual first, and the populations may lose individuals to the thresholds.",
-    ]);
-    // No population left: the line of the populations is left out, and
-    // the one of the empty ones names them all.
-    expect(
-      readyLines({ pops: [], emptied: ["p0", "p2", "p1"] }, false),
-    ).toEqual([
-      "p0, p2 and p1 have no individual left after the filters of individuals, and are left out.",
     ]);
   });
 
@@ -110,17 +104,6 @@ describe("the words of the panel of the diversity", () => {
   test("the line of the options", () => {
     expect(optionsText(20, 0.95)).toBe(
       "A variant counts in a population when at least 20 of its individuals have a called genotype there, and is polymorphic when its commonest allele is below 0.95.",
-    );
-  });
-
-  test("the line of the versions", () => {
-    expect(versionsText("0.1.0", "0.1.0")).toBe(
-      "Calculated with popnei 0.1.0, in version 0.1.0 of the application.",
-    );
-    // Two versions that differ, so that one in the place of the other
-    // shows.
-    expect(versionsText("0.1.0", "0.2.0")).toBe(
-      "Calculated with popnei 0.1.0, in version 0.2.0 of the application.",
     );
   });
 

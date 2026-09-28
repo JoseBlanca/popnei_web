@@ -4,7 +4,7 @@
  */
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { createAnnouncer } from "./status.ts";
+import { INDIVIDUALS_KEPT_KIND, createAnnouncer } from "./status.ts";
 
 describe("WS9 D1 the announcer", () => {
   beforeEach(() => {
@@ -34,6 +34,94 @@ describe("WS9 D1 the announcer", () => {
 
     expect(announcer.getState()).toBe("Diversity: done.");
     expect(seen).toEqual(["", "Diversity: done.", "", "Diversity: done."]);
+  });
+
+  test("a text that replaces its kind drops the one of that kind still waiting, and is written last", () => {
+    const announcer = createAnnouncer();
+    const total = { replaces: INDIVIDUALS_KEPT_KIND } as const;
+    announcer.announce("125 of the 200 pass.", total);
+    announcer.announce("Other words.");
+    announcer.announce("124 of the 200 pass.", total);
+    announcer.announce("123 of the 200 pass.", total);
+    vi.advanceTimersByTime(100);
+    expect(announcer.getState()).toBe("Other words. 123 of the 200 pass.");
+    // Once written, the next of the kind is a new announcement.
+    announcer.announce("122 of the 200 pass.", total);
+    vi.advanceTimersByTime(100);
+    expect(announcer.getState()).toBe("122 of the 200 pass.");
+  });
+
+  test("a text of a kind that replaces one waiting waits 100 ms again, so a held key writes only its last", () => {
+    const announcer = createAnnouncer();
+    const seen: string[] = [];
+    announcer.subscribe(() => {
+      seen.push(announcer.getState());
+    });
+    const total = { replaces: INDIVIDUALS_KEPT_KIND } as const;
+    for (let step = 1; step <= 5; step += 1) {
+      announcer.announce(`${String(step)} pass.`, total);
+      vi.advanceTimersByTime(60);
+    }
+    expect(announcer.getState()).toBe("");
+    vi.advanceTimersByTime(40);
+    expect(announcer.getState()).toBe("5 pass.");
+    expect(seen).toEqual(["", "5 pass."]);
+  });
+
+  test("a change of the history drops the texts of a kind still waiting, which it makes stale", () => {
+    const announcer = createAnnouncer();
+    const total = { replaces: INDIVIDUALS_KEPT_KIND } as const;
+    announcer.announce("Other words.");
+    announcer.announce("109 of the 200 pass.", total);
+    announcer.announceChange(() => "Undone: the filter changed.");
+    announcer.announce("After it.");
+    vi.advanceTimersByTime(100);
+    expect(announcer.getState()).toBe(
+      "Other words. Undone: the filter changed. After it.",
+    );
+  });
+
+  test("a kind alone, then a change within 100 ms: one timer, the change written once at the end of the first pause", () => {
+    const announcer = createAnnouncer();
+    const seen: string[] = [];
+    announcer.subscribe(() => {
+      seen.push(announcer.getState());
+    });
+    const total = { replaces: INDIVIDUALS_KEPT_KIND } as const;
+    announcer.announce("109 pass.", total);
+    vi.advanceTimersByTime(60);
+    announcer.announceChange(() => "Undone: the filter changed.");
+    vi.advanceTimersByTime(40);
+    expect(announcer.getState()).toBe("Undone: the filter changed.");
+    vi.advanceTimersByTime(200);
+    expect(announcer.getState()).toBe("Undone: the filter changed.");
+    expect(seen).toEqual(["", "Undone: the filter changed."]);
+  });
+
+  test("a kind, a change, a clear: the next announcement waits its full 100 ms", () => {
+    const announcer = createAnnouncer();
+    const total = { replaces: INDIVIDUALS_KEPT_KIND } as const;
+    announcer.announce("109 pass.", total);
+    vi.advanceTimersByTime(60);
+    announcer.announceChange(() => "Undone: the filter changed.");
+    announcer.clear();
+    announcer.announce("Later.");
+    vi.advanceTimersByTime(99);
+    expect(announcer.getState()).toBe("");
+    vi.advanceTimersByTime(1);
+    expect(announcer.getState()).toBe("Later.");
+  });
+
+  test("a held key holds the region back at most about 1 s", () => {
+    const announcer = createAnnouncer();
+    const total = { replaces: INDIVIDUALS_KEPT_KIND } as const;
+    announcer.announce("Other words.");
+    for (let step = 1; step <= 40; step += 1) {
+      announcer.announce(`${String(step)} pass.`, total);
+      vi.advanceTimersByTime(50);
+      if (announcer.getState() !== "") break;
+    }
+    expect(announcer.getState()).toMatch(/^Other words\. \d+ pass\.$/);
   });
 
   test("two texts announced within 100 ms are written together, joined by a space", () => {
@@ -72,11 +160,13 @@ describe("WS9 D1 the announcer", () => {
       "Diversity: done. Undone: a new variants file was loaded. Warning: the file differs. Redone: a new variants file was loaded.",
     );
 
-    announcer.announceChange(() => "Undone: the missing data filter changed.");
+    announcer.announceChange(
+      () => "Undone: the filter of the variants by missing data changed.",
+    );
     expect(announcer.getState()).toBe("");
     vi.advanceTimersByTime(100);
     expect(announcer.getState()).toBe(
-      "Undone: the missing data filter changed.",
+      "Undone: the filter of the variants by missing data changed.",
     );
   });
 

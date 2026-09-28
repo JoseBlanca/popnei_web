@@ -22,12 +22,11 @@
  *   the analyses draws it all the same, the button disabled with its
  *   reason.
  */
-import { useId, useRef } from "react";
+import { useRef } from "react";
 
 import { refusalText } from "../../../core/analyses/individualChecks.ts";
 import type { Notice } from "../../../core/store.ts";
 import { classOf } from "../../classOf.ts";
-import { versionsText } from "../../analyses/diversity/words.ts";
 import { Failed } from "../../analyses/Failed.tsx";
 import { RunButton } from "../../analyses/RunButton.tsx";
 import { Running } from "../../analyses/Running.tsx";
@@ -39,7 +38,7 @@ import {
 } from "../../analyses/status.ts";
 import { titleOf } from "../../analyses/titles.ts";
 import { Warnings } from "../../analyses/Warnings.tsx";
-import { stoppedText } from "../../analyses/words.ts";
+import { stoppedText, versionsText } from "../../analyses/words.ts";
 import { startAnalysis } from "../../runs.ts";
 import { useAppState, useStore } from "../../store.tsx";
 import {
@@ -50,17 +49,26 @@ import {
   statsRemovedText,
 } from "./individualStats.ts";
 import styles from "./VariantsStep.module.css";
+import { withoutTheStep } from "./words.ts";
 
 /** The id of the check. */
 const ID = "individualChecks";
 
 /** The block of the statistics of each individual. */
-export function IndividualChecksBlock(): React.JSX.Element {
+/** What the block is drawn with. */
+export interface IndividualChecksBlockProps {
+  /** The id of its heading, which the parts of its result drawn beside
+      the filters give the focus to when they leave the page with it. */
+  readonly headingId: string;
+}
+
+export function IndividualChecksBlock({
+  headingId,
+}: IndividualChecksBlockProps): React.JSX.Element {
   const store = useStore();
   const status = useAppState((s) => statusOf(s, ID));
   const result = resultOf(status, ID);
   const notice = useAppState((s) => s.notice);
-  const headingId = useId();
   const heading = useRef<HTMLHeadingElement>(null);
 
   const button = buttonOf(status);
@@ -92,6 +100,7 @@ export function IndividualChecksBlock(): React.JSX.Element {
           name={STATS_NAME}
           refusalText={refusalText}
           again={STATS_AGAIN}
+          asShown={withoutTheStep}
         />
       )}
       {button !== null && (

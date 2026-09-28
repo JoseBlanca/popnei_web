@@ -33,19 +33,24 @@ const STATS_CAPTION =
   "The statistics of the 200 individuals of panel.nei, over the 1,152 variants the filters kept.";
 const PASS_119 = "119 of the 200 individuals of panel.nei pass the filters.";
 
-const POPS_ALL = "3 populations: p0, 48 individuals; p2, 84; p1, 68";
-const POPS_119 = "3 populations: p0, 32 individuals; p2, 50; p1, 37";
+const POPS_ALL =
+  "3 populations: p0, 48 individuals; p2, 84 individuals; p1, 68 individuals";
+const POPS_119 =
+  "3 populations: p0, 32 individuals; p2, 50 individuals; p1, 37 individuals";
 const RUN_WAITS =
   "Run calculates the statistics of each individual first, and the populations may lose individuals to the thresholds.";
 const P1_LEFT_OUT =
-  "p1 has no individual left after the filters of individuals, and is left out.";
+  "p1 has no individual left after the filters of individuals, and is left out. Loosen the filters of individuals in the Variants step to keep it.";
 const WAIT_LINE =
-  /^Calculating the statistics of each individual, which the filters of individuals are set from · \d+% · \d:\d\d$/;
+  /^Calculating the statistics of each individual, which the thresholds of the individuals need · \d+% · \d:\d\d$/;
 const WAIT_BAR = "Calculating the statistics of each individual";
 const STATS_FAILED =
-  "The statistics of each individual, which the thresholds of the filters of individuals are applied to, could not be calculated, so the diversity was not run. At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 in the Variants step and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version.";
-const NO_POPULATION =
-  "The thresholds of the filters of individuals leave none of the individuals of panel.nei that have a population in popcat, so no population is left. Loosen the thresholds in the Variants step.";
+  "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the diversity was not run. At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 in the Variants step and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version.";
+/** The reason of the lock when the threshold of 0.36 on the observed
+    heterozygosity keeps 132 individuals of panel.nei at 0.05, s000, the
+    one with a population, p0, not among them. */
+const P0_EMPTIED =
+  "The 132 individuals kept have no population in popcat, so p0 has no individual left. Loosen the filters of individuals in the Variants step to keep it.";
 
 /** The twelve individuals of tetraploid.vcf.gz, in one population, A. */
 const TETRAPLOID_POPS = {
@@ -302,7 +307,7 @@ test("VS7 D2 the ready state lists the populations the filters keep, before the 
   // keeps, before them.
   await goTo(page, "Analyses");
   await expect(
-    line(page, "2 populations: p0, 48 individuals; p2, 84"),
+    line(page, "2 populations: p0, 48 individuals; p2, 84 individuals"),
   ).toBeVisible();
   await expect(line(page, P1_LEFT_OUT)).toBeVisible();
   await expect(line(page, RUN_WAITS)).toBeVisible();
@@ -312,7 +317,7 @@ test("VS7 D2 the ready state lists the populations the filters keep, before the 
   await calculateStatistics(page);
   await goTo(page, "Analyses");
   await expect(
-    line(page, "2 populations: p0, 32 individuals; p2, 50"),
+    line(page, "2 populations: p0, 32 individuals; p2, 50 individuals"),
   ).toBeVisible();
   await expect(line(page, P1_LEFT_OUT)).toBeVisible();
   await expect(line(page, RUN_WAITS)).toHaveCount(0);
@@ -337,7 +342,7 @@ test("VS7 D2 the ready state lists the populations the filters keep, before the 
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("VS7 D2 a Run whose statistics keep no individual is not run, says why beside the disabled Run, and announces it", async ({
+test("VS7 D2 a Run whose statistics keep no individual is not run, says why beside the disabled Run, announces it, and moves the focus to the heading", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -348,7 +353,8 @@ test("VS7 D2 a Run whose statistics keep no individual is not run, says why besi
   await threshold(page, MISSING_SWITCH, MISSING_LABEL, "0.03");
   await threshold(page, OBS_HET_SWITCH, OBS_HET_LABEL, "0.1");
   await goTo(page, "Analyses");
-  await panel(page).getByRole("button", { name: "Run" }).click();
+  await panel(page).getByRole("button", { name: "Run" }).focus();
+  await page.keyboard.press("Enter");
 
   await expect(status(page)).toHaveText(
     new RegExp(
@@ -358,6 +364,10 @@ test("VS7 D2 a Run whose statistics keep no individual is not run, says why besi
   const run = panel(page).getByRole("button", { name: "Run" });
   await expect(run).toBeDisabled();
   await expect(run).toHaveAccessibleDescription(reason);
+  // The disabled Run cannot hold the focus, which goes to the heading.
+  await expect(
+    panel(page).getByRole("heading", { level: 2, name: "Diversity" }),
+  ).toBeFocused();
   await expect(line(page, reason)).toBeVisible();
   await expect(
     page.getByText(/ · none of 3 populations by popcat$/),
@@ -421,7 +431,7 @@ test("VS7 D2 the statistics a Run waited for, refused by popnei, are told in the
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("VS7 D2 thresholds that keep only individuals with no population leave none, named before the Run and told after it, and axe", async ({
+test("VS7 D2 thresholds that keep only individuals with no population lock the diversity: a Run that waited for the statistics is not run, and the Run is disabled with the reason, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -443,20 +453,57 @@ test("VS7 D2 thresholds that keep only individuals with no population leave none
     "popcat",
     "0.05",
   );
-  await calculateStatistics(page);
   await threshold(page, OBS_HET_SWITCH, OBS_HET_LABEL, "0.36");
   await goTo(page, "Analyses");
-  await expect(
-    line(
-      page,
-      "p0 has no individual left after the filters of individuals, and is left out.",
-    ),
-  ).toBeVisible();
-  await expect(panel(page).getByText(/^\d+ populations?:/)).toHaveCount(0);
-  await expectNoViolations(makeAxeBuilder);
+  await expect(line(page, RUN_WAITS)).toBeVisible();
+  const run = panel(page).getByRole("button", { name: "Run" });
+  await run.focus();
+  await page.keyboard.press("Enter");
 
-  await panel(page).getByRole("button", { name: "Run" }).click();
-  await expect(line(page, NO_POPULATION)).toBeVisible();
-  await expect(panel(page).getByRole("button")).toHaveCount(0);
+  // The statistics calculated, the list leaves no population: nothing is
+  // sent, and the Run is disabled with the reason.
+  await expect(status(page)).toHaveText(
+    new RegExp(
+      `(^| )Diversity was not run\\. ${P0_EMPTIED.replaceAll(".", "\\.")}$`,
+    ),
+  );
+  await expect(run).toBeDisabled();
+  await expect(run).toHaveAccessibleDescription(P0_EMPTIED);
+  await expect(line(page, P0_EMPTIED)).toBeVisible();
+  await expect(panel(page).getByText(/^\d+ populations?:/)).toHaveCount(0);
+  await expect(
+    panel(page).getByRole("heading", { level: 2, name: "Diversity" }),
+  ).toBeFocused();
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("VS7 D2 a threshold that leaves both populations empty locks the diversity with the individuals kept and the column, and axe", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  // s000 in p0 and s001 in p1, the others with no population; at 0.05,
+  // their observed heterozygosity, 0.367 and 0.344, is above 0.34, which
+  // keeps 34 individuals.
+  const rows = Array.from({ length: 200 }, (_, index) => {
+    const name = `s${String(index).padStart(3, "0")}`;
+    return `${name},${index === 0 ? "p0" : index === 1 ? "p1" : "NA"}`;
+  });
+  await load(
+    page,
+    "panel.nei",
+    { name: "two_pops.csv", text: `IID,popcat\n${rows.join("\n")}\n` },
+    "popcat",
+    "0.05",
+  );
+  await calculateStatistics(page);
+  await threshold(page, OBS_HET_SWITCH, OBS_HET_LABEL, "0.34");
+  await goTo(page, "Analyses");
+  const reason =
+    "The 34 individuals kept have no population in popcat, so none of the 2 populations has an individual left. Loosen the filters of individuals in the Variants step to keep them.";
+  const run = panel(page).getByRole("button", { name: "Run" });
+  await expect(run).toBeDisabled();
+  await expect(run).toHaveAccessibleDescription(reason);
+  await expect(line(page, reason)).toBeVisible();
+  await expect(panel(page).getByText(/^\d+ populations?:/)).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
 });

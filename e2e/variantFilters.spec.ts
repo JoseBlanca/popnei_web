@@ -38,14 +38,14 @@ const FILTERS = [
     switch: "Filter the variants by missing data",
     fields: [["Maximum proportion of missing genotypes, from 0 to 1", "0.1"]],
     line: MISSING_DATA_LINE,
-    name: "the missing data filter",
+    name: "the filter of the variants by missing data",
   },
   {
     kind: "obs_het",
     switch: "Filter the variants by observed heterozygosity",
     fields: [["Maximum observed heterozygosity, from 0 to 1", "0.5"]],
     line: OBS_HET_LINE,
-    name: "the filter by observed heterozygosity",
+    name: "the filter of the variants by observed heterozygosity",
   },
   {
     kind: "maf",
@@ -222,7 +222,7 @@ test("VS6 D2 each switch turned on starts its filter at its value of the table o
   // The missing data filter, on in a new project, turned off first.
   await flip(page, FILTERS[0].switch);
   await expect(undoButton(page)).toHaveAccessibleDescription(
-    "Undo: the missing data filter was turned off",
+    "Undo: the filter of the variants by missing data was turned off",
   );
 
   for (const filter of FILTERS) {
@@ -376,7 +376,13 @@ for (const locale of ["en-US", "es-ES"] as const) {
       await openVariants(page);
       await flip(page, FILTERS[3].switch);
       const r2 = field(page, R2_LABEL);
-      await r2.fill("0,25");
+      // Typed key by key, as a user types it. Playwright's fill gives the text
+      // in Firefox as one composition, the way the input method of a
+      // language gives it, whose characters the field leaves to React Aria
+      // to check at the end, with no line of the comma (NumberField.tsx).
+      await r2.click();
+      await r2.press("ControlOrMeta+a");
+      await r2.pressSequentially("0,25");
       await r2.press("Enter");
       await expect(r2).toHaveValue("0.3");
       await expect(

@@ -14,6 +14,7 @@
  */
 
 import { individualsKept } from "../individualsKept.ts";
+import type { IndividualsKept } from "../individualsKept.ts";
 import type { JsonObject } from "../keys.ts";
 import {
   analysisOptions,
@@ -295,6 +296,72 @@ export function populationsKept(
   return narrowedKept;
 }
 
+/**
+ * The populations as they are known before a Run, which the ready state
+ * of the panel and the summary line of the shell list:
+ * `populationsKept(p, list)` with the list of `kept` when it is known,
+ * and, while a threshold on the individuals waits for the statistics of
+ * each individual, with `kept.byLists`, the individuals the lists to keep
+ * and to remove keep, since the thresholds can only remove more. `null`
+ * when `populationsToRun(p)` is `null`.
+ */
+export function populationsBeforeRun(
+  p: Project,
+  kept: IndividualsKept,
+): PopulationsKept | null {
+  return populationsKept(
+    p,
+    kept.list.kind === "known" ? kept.list.individuals : kept.byLists,
+  );
+}
+
+/** The reason of the lock of `keptNeeds`, when the `numKept`
+    individuals kept have no population in the column `column`, which
+    leaves every population, `emptied`, empty: "The 34 individuals kept
+    have no population in popcat, so none of the 2 populations has an
+    individual left. Loosen …", with one population by its name. */
+export function allEmptiedText(
+  numKept: number,
+  column: string,
+  emptied: readonly string[],
+): string {
+  const kept =
+    numKept === 1
+      ? "The one individual kept has"
+      : `The ${counted(numKept, "individual")} kept have`;
+  const [only] = emptied;
+  const left =
+    emptied.length === 1 && only !== undefined
+      ? `${escaped(only)} has no individual left. ${loosenText(true)}`
+      : `none of the ${counted(emptied.length, "population")} has an individual left. ${loosenText(false)}`;
+  return `${kept} no population in ${shown(column)}, so ${left}`;
+}
+
+/** What to do about populations left empty, of one or of several. */
+export function loosenText(one: boolean): string {
+  return `Loosen the filters of individuals in the Variants step to keep ${one ? "it" : "them"}.`;
+}
+
+/** The reason the diversity cannot run for the individuals kept: they
+    leave no population (docs/specs/analyses/diversity.md, "Why it
+    cannot run", decided by the owner at stop B on 27 September 2026);
+    `null` when some population keeps an individual. */
+function keptNeeds(p: Project, kept: IndividualsKept): string | null {
+  const list = kept.list.kind === "known" ? kept.list.individuals : null;
+  const left = populationsKept(p, list);
+  const column = populationsColumn(p);
+  if (
+    list === null ||
+    column === null ||
+    left === null ||
+    left.pops.length > 0 ||
+    left.emptied.length === 0
+  ) {
+    return null;
+  }
+  return allEmptiedText(list.length, column, left.emptied);
+}
+
 /** The reason about the column of the populations, and its kind. */
 export interface PopulationsNeed {
   /** No column chosen, "To do" in the stepper; a column the table does
@@ -470,6 +537,7 @@ export const diversity: AnalysisDef<Job, JobResult> = Object.freeze({
   parseOptions,
   keyInputs,
   needs,
+  keptNeeds,
   run,
   warnings,
   checkNumbers,

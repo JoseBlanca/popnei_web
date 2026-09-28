@@ -50,6 +50,7 @@ import { classOf } from "../../classOf.ts";
 import { startAnalysis } from "../../runs.ts";
 import { useAppState, useStore } from "../../store.tsx";
 import styles from "./VariantsStep.module.css";
+import { withoutTheStep } from "./words.ts";
 import {
   COUNT_AGAIN,
   COUNT_LABEL,
@@ -100,6 +101,7 @@ export function FilterCountsPart(): React.JSX.Element {
             name={COUNT_NAME}
             refusalText={refusalText}
             again={COUNT_AGAIN}
+            asShown={withoutTheStep}
           />
         </div>
       )}

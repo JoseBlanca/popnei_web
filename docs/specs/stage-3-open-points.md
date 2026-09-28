@@ -103,6 +103,8 @@ memory for as long as the filters stay. It is the choice of point K of
 
 ### B. Thresholds on the individuals that leave no population
 
+Changed at stop B, on 27 September 2026, to a lock of the diversity
+once the individuals kept are known (below). Decided first:
 popnei's refusal, after the Run. The Run calculates the statistics of
 each individual when they are not in the page, then sends the diversity
 with no population, which popnei refuses at once, before a second pass,
@@ -261,6 +263,28 @@ owner". Each is written in its spec as decided. What changes for a user:
   histograms in popnei's words (`variantChecks.md`), and the warning of
   a first filter that keeps no variant ending "Loosen it."
   (`filterCounts.md`).
+
+## What the owner decided on 27 September 2026, at stop B
+
+The owner tried the screens of the filters of the individuals and of
+the diversity of stage 3 in Firefox, accepted them, and decided five
+points:
+
+- **Thresholds that leave no population lock the diversity**, point B
+  above changed: once the individuals kept are known, the Run is
+  disabled with "The 34 individuals kept have no population in popcat, so none of the 2 populations has an individual left. Loosen the filters of individuals in the Variants step to keep them." beside it, in place of popnei's
+  refusal after the Run (`diversity.md`, `store.md`, `shell.md`).
+- **A variants file of one individual** reads "The filters of
+  individuals do not keep the one individual of one.vcf. …" in place
+  of "keep none of the 1 individuals" (`individualsKept.md`).
+- **The page frozen 0.1 to 0.4 s** by a change of the column Kept, a
+  sort or a threshold committed, with 10,000 individuals, is accepted
+  as measured (`docs/plans/variants-step.report.md`).
+- **The words that send the user to fix a list**, point D above, are
+  kept.
+- **"Known once the statistics of each individual are calculated for
+  these filters of the variants."** is kept as the words of a count
+  that waits for the statistics.
 
 ## Choices of a spec the owner may overrule
 

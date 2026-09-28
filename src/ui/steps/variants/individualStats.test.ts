@@ -23,6 +23,7 @@ import {
   statsCaption,
   statsCsvName,
   statsRemovedText,
+  tableRowsText,
 } from "./individualStats.ts";
 
 /** A row of the table. */
@@ -115,13 +116,13 @@ describe("VS7 D1 the words of the statistics of each individual", () => {
 
   test("the statistics removed by a command, an undo and a redo", () => {
     expect(statsRemovedText(notice("command"))).toBe(
-      "The statistics of each individual were removed because the MAF filter changed. Undo brings back the table as it was, with no calculation; Calculate makes a new one for the new settings.",
+      "The statistics of each individual were removed because the MAF filter changed. Undo brings back the table and the histograms as they were, without calculating again; Calculate makes new ones for the new settings.",
     );
     expect(statsRemovedText(notice("undo"))).toBe(
-      "Undone: the MAF filter changed. The statistics of each individual were removed; Redo brings back the table as it was, with no calculation, and Calculate makes a new one for the settings as they are now.",
+      "Undone: the MAF filter changed. The statistics of each individual were removed; Redo brings back the table and the histograms as they were, without calculating again, and Calculate makes new ones for the settings as they are now.",
     );
     expect(statsRemovedText(notice("redo"))).toBe(
-      "Redone: the MAF filter changed. The statistics of each individual were removed; Undo brings back the table as it was, with no calculation, and Calculate makes a new one for the settings as they are now.",
+      "Redone: the MAF filter changed. The statistics of each individual were removed; Undo brings back the table and the histograms as they were, without calculating again, and Calculate makes new ones for the settings as they are now.",
     );
   });
 
@@ -255,6 +256,24 @@ describe("VS7 D1 the order of the table", () => {
     ).toEqual(["b", "c", "d", "a"]);
   });
 
+  test("equal numbers keep the order of the file, not that of the names, in both directions", () => {
+    const rows = Object.freeze([
+      row("y", 0.1, 0.3),
+      row("x", 0.1, 0.3),
+      row("w", 0.2, 0.1),
+    ]);
+    for (const direction of ["ascending", "descending"] as const) {
+      const heterozygosity = names(
+        sortedRows(rows, { column: "observedHeterozygosity", direction }, null),
+      );
+      const missing = names(
+        sortedRows(rows, { column: "missingGenotypes", direction }, null),
+      );
+      expect(heterozygosity.filter((name) => name !== "w")).toEqual(["y", "x"]);
+      expect(missing.filter((name) => name !== "w")).toEqual(["y", "x"]);
+    }
+  });
+
   test("by the individual, as text in English", () => {
     expect(
       names(
@@ -277,17 +296,19 @@ describe("VS7 D1 the order of the table", () => {
   });
 
   test("by Kept, kept first going up and removed first going down, each in the order of the file", () => {
-    const isKept = (name: string): boolean => name === "d" || name === "a";
+    // b and a kept, d and c removed: in the order of the file, which is
+    // not that of their names.
+    const isKept = (name: string): boolean => name === "b" || name === "a";
     expect(
       names(
         sortedRows(ROWS, { column: "kept", direction: "ascending" }, isKept),
       ),
-    ).toEqual(["a", "d", "b", "c"]);
+    ).toEqual(["b", "a", "d", "c"]);
     expect(
       names(
         sortedRows(ROWS, { column: "kept", direction: "descending" }, isKept),
       ),
-    ).toEqual(["b", "c", "a", "d"]);
+    ).toEqual(["d", "c", "b", "a"]);
     expect(() =>
       sortedRows(ROWS, { column: "kept", direction: "ascending" }, null),
     ).toThrow(/^popnei_web defect: /);
@@ -312,6 +333,31 @@ describe("VS7 D1 the order of the table", () => {
     expect(first?.individual).toBe("s082");
     expect(first === undefined ? null : individualCells(first, null)[1]).toBe(
       "0.0434",
+    );
+  });
+});
+
+describe("the line before the table", () => {
+  test("the count of the individuals, and that the CSV holds them all, whatever the rows", () => {
+    expect(tableRowsText(200)).toBe("200 individuals; the CSV holds them all.");
+    expect(tableRowsText(10)).toBe("10 individuals; the CSV holds them all.");
+    expect(tableRowsText(3)).toBe("3 individuals; the CSV holds them all.");
+    expect(tableRowsText(1)).toBe("1 individual; the CSV holds it.");
+    expect(tableRowsText(11)).toBe("11 individuals; the CSV holds them all.");
+    expect(tableRowsText(10000)).toBe(
+      "10,000 individuals; the CSV holds them all.",
+    );
+  });
+});
+
+describe("the names of the user's files, escaped", () => {
+  test("an individual whose name holds a tab shows it escaped in its cell", () => {
+    expect(individualCells(row("s\t0", 0.5, 0.25), null)[0]).toBe("s\\t0");
+  });
+
+  test("a variants file whose name holds a tab shows it escaped in the caption", () => {
+    expect(statsCaption(2, "a\tb.vcf", 3)).toBe(
+      "The statistics of the 2 individuals of a\\tb.vcf, over the 3 variants the filters kept.",
     );
   });
 });

@@ -149,9 +149,12 @@ test("WS8 D2 at 0.05 the row p0 reads 48, 0.3527, 0.3567, 0.9288, and the focus 
   await setThreshold(page, "0.05");
   await goTo(page, "Analyses");
   await expect(
-    panel(page).getByText("3 populations: p0, 48 individuals; p2, 84; p1, 68", {
-      exact: true,
-    }),
+    panel(page).getByText(
+      "3 populations: p0, 48 individuals; p2, 84 individuals; p1, 68 individuals",
+      {
+        exact: true,
+      },
+    ),
   ).toBeVisible();
   // No calculation was stopped, so no line says one was.
   await expect(panel(page).getByText(/was stopped because/)).toHaveCount(0);
@@ -376,16 +379,19 @@ test("WS8 D2 the filter moved to 1 removes the table with the words of its notic
   await goTo(page, "Analyses");
   await expect(
     panel(page).getByText(
-      "The diversity was removed because the missing data filter changed. Undo brings back the table as it was, with no calculation; Run calculates a new one for the new settings.",
+      "The diversity was removed because the filter of the variants by missing data changed. Undo brings back the table as it was, with no calculation; Run calculates a new one for the new settings.",
       { exact: true },
     ),
   ).toBeVisible();
   await expect(panel(page).getByRole("table")).toHaveCount(0);
   // What Run will take, as in the state ready.
   await expect(
-    panel(page).getByText("3 populations: p0, 48 individuals; p2, 84; p1, 68", {
-      exact: true,
-    }),
+    panel(page).getByText(
+      "3 populations: p0, 48 individuals; p2, 84 individuals; p1, 68 individuals",
+      {
+        exact: true,
+      },
+    ),
   ).toBeVisible();
   await expectNoViolations(makeAxeBuilder);
 
@@ -458,9 +464,12 @@ test("WS8 D2 a population none of whose individuals is in the variants file gets
   );
   await goTo(page, "Analyses");
   await expect(
-    panel(page).getByText("3 populations: p0, 48 individuals; p2, 84; p1, 68", {
-      exact: true,
-    }),
+    panel(page).getByText(
+      "3 populations: p0, 48 individuals; p2, 84 individuals; p1, 68 individuals",
+      {
+        exact: true,
+      },
+    ),
   ).toBeVisible();
   await run(page);
   await expect(panel(page).getByRole("rowheader")).toHaveText([
@@ -1048,9 +1057,12 @@ test("WS8 D3 a Stop in the middle of a pass leaves the panel ready with no table
   await expect(bars).toHaveCount(0);
   await expect(table).toHaveCount(0);
   await expect(
-    panel(page).getByText("3 populations: a, 334 individuals; b, 333; c, 333", {
-      exact: true,
-    }),
+    panel(page).getByText(
+      "3 populations: a, 334 individuals; b, 333 individuals; c, 333 individuals",
+      {
+        exact: true,
+      },
+    ),
   ).toBeVisible();
   await expectNoViolations(makeAxeBuilder);
 

@@ -131,6 +131,30 @@ describe("VS2 D2 the worked case of five individuals", () => {
     ]);
   });
 
+  test("lists that keep none, with a threshold and no statistics, give the list known and empty, and the lock", () => {
+    const p = projectOf(FIVE, [
+      { kind: "remove", individuals: FIVE },
+      { kind: "missing_data", maxAllowedMissingRate: 0.2 },
+    ]);
+    const kept = individualsKept(p, null);
+    expect(kept?.list).toEqual({ kind: "known", individuals: [] });
+    expect(kept?.byLists).toEqual([]);
+    expect(kept?.counts).toEqual([
+      { kind: "remove", given: 5, kept: 0 },
+      { kind: "missing_data", given: 0, kept: 0 },
+    ]);
+    expect(keptNoneReason(p, kept ?? null)).toBe(
+      "The filters of individuals keep none of the 5 individuals of panel.nei. Loosen them in the Variants step.",
+    );
+  });
+
+  test("a file of one individual that the filters remove is named in the singular", () => {
+    const p = projectOf(["a"], [{ kind: "remove", individuals: ["a"] }]);
+    expect(keptNoneReason(p, individualsKept(p, null))).toBe(
+      "The filters of individuals do not keep the one individual of panel.nei. Loosen them in the Variants step.",
+    );
+  });
+
   test("statistics of the individuals in another order are a defect", () => {
     const reordered: IndividualStats = {
       ...FIVE_STATS,

@@ -37,7 +37,13 @@ lock before a Run, with or without a threshold; and when the specs of
 stage 4 were made to agree: the words of the LD filter of the Variants
 step over a file not sorted by position, made in one place for every
 panel with the PCA's, and popnei's message of a refusal no row foresees
-shown without its backquotes, as the PCA's is.
+shown without its backquotes, as the PCA's is. Revised on 28 September
+2026, when stage 3 was merged into the specs of stage 4:
+`populationsBeforeRun`, which stage 3 added to this module on 27
+September 2026, moves to `project.ts` with the other functions of the
+populations, and `keptNeeds`, the lock the owner decided at stop B on 27
+September 2026 when the individuals kept leave no population, gives
+nothing for the one population.
 The code of stage 2 is in
 `src/core/analyses/diversity.ts`. This spec gives the first analysis of the population genetics
 application, in its form for the walking skeleton: the module
@@ -225,10 +231,20 @@ holds them, from the project alone, those of the column or `"all"`;
 `populationsToRun(p)` narrows them to the individuals of the variants
 file, as the Individuals step lists them; and `populationsKept(p,
 kept)` narrows those to a list of individuals kept, and gives the
-populations it leaves empty apart, as `run` sends them and as the ready
-state of the panel lists them. The key holds the thresholds of the
-filters of individuals and not the list, which is made from a result in
-the cache (`docs/architecture.md`, section 3).
+populations it leaves empty apart, as `run` sends them.
+`populationsBeforeRun(p, kept)` of `project.ts` gives the populations as
+they are known before a Run, from the individuals kept of
+`individualsKept` (`docs/specs/core/individualsKept.md`):
+`populationsKept` with its list when the list is known, and, while a
+threshold on the individuals waits for the statistics of each
+individual, with `byLists`, the individuals the lists to keep and to
+remove keep, since the thresholds can only remove more; for the one
+population, "All individuals" narrowed in the same way. The ready state
+of the panel and the summary line of the shell both list them through
+it, so the two never disagree (`docs/specs/core/project.md`, "The
+populations"). The key holds the thresholds of the filters of
+individuals and not the list, which is made from a result in the cache
+(`docs/architecture.md`, section 3).
 
 ### What goes into its key
 
@@ -335,16 +351,28 @@ The lock of stage 2 on any filter of individuals, which the owner
 decided on 25 September 2026 while the filters of individuals did not
 exist, goes with stage 3. The last row is known from the lists, which the
 project holds; with a threshold on the individuals, which can only remove
-more, the list kept waits for the statistics of each individual, and
-when it leaves no population, popnei's refusal after the Run tells the
-user, as the owner decided on 26 September 2026 ("Open points", below,
-and "Its words"). Two
+more, the list kept waits for the statistics of each individual. Three
 locks are the store's and not of `needs`, since they read the cache
 (`docs/architecture.md`, section 4): a Run with a threshold whose
-statistics are not in the cache starts them first, and the filters
+statistics are not in the cache starts them first; the filters
 keeping no individual stop the Run, in the words of `keptNoneReason` of
 `docs/specs/core/individualsKept.md`, "The filters of individuals keep none of
-the 200 individuals of panel.nei. Loosen them in the Variants step."
+the 200 individuals of panel.nei. Loosen them in the Variants step.";
+and the individuals kept leaving no population lock the diversity, in
+the words of its `keptNeeds`, which say why with the number the
+filters keep and the column of the populations, "The 34 individuals kept have no population in popcat, so none of the 2 populations has an individual left. Loosen the filters of individuals in the Variants step to keep them.", or, of
+one individual kept, "The one individual kept has no population in
+popcat, …", and, with one population, "…, so p0 has no individual left.
+Loosen the filters of individuals in the Variants step to keep it.",
+as the owner decided at stop B on 27 September 2026, in
+place of popnei's refusal after the Run of their decision of 26
+September 2026: a Run that could only fail taught nothing the line of
+the ready state did not already say. While the list waits for the
+statistics, a Run calculates them first, and then ends locked with those
+words, the Run not sent (`docs/specs/shell.md`, "Diversity was not
+run"). For the one population, `keptNeeds` gives
+`null`: every individual kept is in it, and filters that keep none are
+locked first, with the words of `keptNoneReason`.
 
 The owner decided on 25 September 2026 that the metadata file, and a
 column of populations chosen in it, are required in stage 2, and
@@ -636,14 +664,15 @@ export interface DiversityResult {
 
 The module exports its definition, an `AnalysisDef` of
 `docs/specs/core/store.md`, the object of functions and constants by
-which the store knows an analysis (`keyInputs`, `needs`, `run`,
-`warnings`, `checkNumbers`, `numCheckNumbers`, `script`, `parseOptions`), which
-`src/core/apps.ts` lists for the population genetics application, and
-what the panel reads. `populationsOf`, `populationsToRun`,
-`populationsKept` and `populationsNeeds`, which it exported until stage
-4, are exported by `src/core/project.ts` from stage 4, with the same
-names (`docs/specs/core/project.md`, "What every analysis needs"); the
-module imports them, and the panel, the Individuals step and the shell
+which the store knows an analysis (`keyInputs`, `needs`, `keptNeeds`,
+`run`, `warnings`, `checkNumbers`, `numCheckNumbers`, `script`,
+`parseOptions`), which `src/core/apps.ts` lists for the population
+genetics application, and what the panel reads.
+`populationsOf`, `populationsToRun`, `populationsKept`,
+`populationsBeforeRun` and `populationsNeeds`, which it exported until
+stage 4, are exported by `src/core/project.ts` from stage 4, with the
+same names (`docs/specs/core/project.md`, "What every analysis
+needs"); the module imports them, and the panel, the Individuals step and the shell
 import them from there.
 
 ```ts
@@ -1062,9 +1091,9 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112
 | state | what the user sees | what they can do |
 |---|---|---|
 | empty | cannot happen: until the variants file is read the analysis is locked with a reason (`docs/specs/core/store.md`, "The state of an analysis") | |
-| locked | the reason the store gives, as text beside a Run button that is disabled and described by it: "Choose the column that defines the populations, or all individuals in one population, in the Individuals step."; or the store's, once the statistics are there, when the filters keep no individual, in its words (`docs/specs/core/store.md`) | go to the step the reason names |
-| ready | a Run button, and the populations it will run on with their sizes, "3 populations: p0, 48 individuals; p2, 84; p1, 68", from `populationsKept` with the individuals kept that the store gives; for the one population, "1 population, All individuals: 200 individuals", and, without a metadata file, the line "No metadata file: every individual is in one population.", the words of the Individuals step, so that a user who meant to load one learns it here; a population left empty is named after them, "p9 has no individual left after the filters of individuals, and is left out."; several populations left empty are named together, "p1 and p2 have no individual left after the filters of individuals, and are left out.", as `namesOf` of `project.ts` names them, and when the filters leave no population, the line of the populations is left out and that line names them all, since the error of no population comes after the Run (below, "Its words"); while a threshold on the individuals waits for the statistics of each individual, the populations the lists keep, before that threshold, and the line "Run calculates the statistics of each individual first, and the populations may lose individuals to the thresholds." | Run |
-| running | a progress bar, "Calculating · 35% · 0:12", from the last `progress` of its `RunView`, and the time since it started, counted every second; before the first `progress`, and while the request waits in the queue, the bar has no value and is drawn hatched over its whole length and still, since a bar that moved by itself through a long calculation would be motion the user cannot stop (WCAG 2.2.2), and the clock shows the calculation goes on, "Calculating · 0:12"; after a stop or a change of the load, when the store marks the request `afterStop`, "Waiting for panel.nei to be opened again, then calculating · 0:12"; while the statistics of each individual that it waits for are calculated, "Calculating the statistics of each individual, which the filters of individuals are set from · 35% · 0:12", with their progress, the bar labelled "Calculating the statistics of each individual", since its share is theirs, and after a stop "Waiting for panel.nei to be opened again, then calculating the statistics of each individual, which the filters of individuals are set from · 0:12"; the clock starts again at 0:00 when the statistics end and the request of the diversity is sent, with the words of its own calculation, as the part of the writing does (`docs/specs/analyses/writeVariants.md`) | Stop, which cancels it, and the statistics with it |
+| locked | the reason the store gives, as text beside a Run button that is disabled and described by it: "Choose the column that defines the populations, or all individuals in one population, in the Individuals step."; or the store's, once the individuals kept are known, when the filters keep no individual, or leave no population, in its words (`docs/specs/core/store.md`) | go to the step the reason names |
+| ready | a Run button, and the populations it will run on with their sizes, "3 populations: p0, 48 individuals; p2, 84 individuals; p1, 68 individuals", the noun with each count so that no number is read as another thing, from `populationsBeforeRun` of `project.ts` with the individuals kept that the store gives; for the one population, "1 population, All individuals: 200 individuals", and, without a metadata file, the line "No metadata file: every individual is in one population.", the words of the Individuals step, so that a user who meant to load one learns it here; a population left empty is named after them, with what to do, since the panel is in the Analyses step and the filters in the Variants step, "p9 has no individual left after the filters of individuals, and is left out. Loosen the filters of individuals in the Variants step to keep it."; several populations left empty are named together, "p1 and p2 have no individual left after the filters of individuals, and are left out. Loosen the filters of individuals in the Variants step to keep them.", as `namesOf` of `project.ts` names them; and when the filters leave no population the diversity is locked, with those words whole beside the disabled Run (above, "Why it cannot run"); while a threshold on the individuals waits for the statistics of each individual, the populations the lists keep, before that threshold, and the line "Run calculates the statistics of each individual first, and the populations may lose individuals to the thresholds." | Run |
+| running | a progress bar, "Calculating · 35% · 0:12", from the last `progress` of its `RunView`, and the time since it started, counted every second; before the first `progress`, and while the request waits in the queue, the bar has no value and is drawn hatched over its whole length and still, since a bar that moved by itself through a long calculation would be motion the user cannot stop (WCAG 2.2.2), and the clock shows the calculation goes on, "Calculating · 0:12"; after a stop or a change of the load, when the store marks the request `afterStop`, "Waiting for panel.nei to be opened again, then calculating · 0:12"; while the statistics of each individual that it waits for are calculated, "Calculating the statistics of each individual, which the thresholds of the individuals need · 35% · 0:12", with their progress, the bar labelled "Calculating the statistics of each individual", since its share is theirs, and after a stop "Waiting for panel.nei to be opened again, then calculating the statistics of each individual, which the thresholds of the individuals need · 0:12"; the clock starts again at 0:00 when the statistics end and the request of the diversity is sent, with the words of its own calculation, as the part of the writing does (`docs/specs/analyses/writeVariants.md`) | Stop, which cancels it, and the statistics with it |
 | done | the table and its download; the warnings above the table, each as a sentence, with their count on the heading, "2 warnings"; after an opened project file, the comparison with its check numbers under the table | download |
 | results removed | the words of the change that removed it, below, and, beside the Run button, the populations it will run on, as in the state ready | Run; the Undo or Redo of the notice or of the header |
 | error | what happened and what to do, below; a refusal of popnei stays for these settings, and Run is not offered, since popnei would refuse them again; nor after `reopenFailed`, a variants file the browser can no longer read, which fails again until it is loaded again | Run again after another failure; change the settings after a refusal; load the file again after `reopenFailed` |
@@ -1099,13 +1128,13 @@ are written from the change itself, the cause of the notice,
 not give the change undone as the reason, and after a new read of the
 same file they do not say that a new file was loaded; the owner decided
 so on 25 September 2026. The cause is a command, an undo or a redo, with
-the description of the command, "the missing data filter changed":
+the description of the command, "the filter of the variants by missing data changed":
 
 | the cause | results removed |
 |---|---|
-| a command | "The diversity was removed because the missing data filter changed. Undo brings back the table as it was, with no calculation; Run calculates a new one for the new settings." |
-| an undo | "Undone: the missing data filter changed. The diversity was removed; Redo brings back the table as it was, with no calculation, and Run calculates a new one for the settings as they are now." |
-| a redo | "Redone: the missing data filter changed. The diversity was removed; Undo brings back the table as it was, with no calculation, and Run calculates a new one for the settings as they are now." |
+| a command | "The diversity was removed because the filter of the variants by missing data changed. Undo brings back the table as it was, with no calculation; Run calculates a new one for the new settings." |
+| an undo | "Undone: the filter of the variants by missing data changed. The diversity was removed; Redo brings back the table as it was, with no calculation, and Run calculates a new one for the settings as they are now." |
+| a redo | "Redone: the filter of the variants by missing data changed. The diversity was removed; Undo brings back the table as it was, with no calculation, and Run calculates a new one for the settings as they are now." |
 
 The words say what each button gives, the table as it was, of the
 settings before the change, or a new one, of the settings now, since
@@ -1165,7 +1194,7 @@ state of the store (`.claude/skills/coding/react.md`, "Reading core"),
 the status of `diversity` among `state.analyses`, the `RunView` of its
 run, what the store says of a calculation under way, for `afterStop`,
 the notice,
-and the project for `populationsKept` and the name of the variants file,
+and the project for `populationsBeforeRun` of `project.ts` and the name of the variants file,
 and the individuals kept as the store gives them, or that they wait for
 the statistics of each individual (`docs/specs/core/store.md`);
 and the time the run started, `startedAt(runId)` of `src/ui/runs.ts`,
@@ -1184,7 +1213,7 @@ error state, by what the store gives:
 
 | the failure | the text |
 |---|---|
-| the statistics of each individual that a Run waited for were refused by popnei, or failed, which the store gives as the failure of the statistics, `ofStatistics` (`docs/specs/core/store.md`, "The state of an analysis") | "The statistics of each individual, which the thresholds of the filters of individuals are applied to, could not be calculated, so the diversity was not run. ", then the words the part of the statistics gives that failure, `refusalText` of `docs/specs/analyses/individualChecks.md` for a refusal of popnei: "… The filters kept none of the variants of panel.nei, so there is no variant to count each individual's genotypes over. Loosen the filters of the variants in the Variants step." The rows below are never given the message of the statistics, which would name the diversity for a calculation that was not its own |
+| the statistics of each individual that a Run waited for were refused by popnei, or failed, which the store gives as the failure of the statistics, `ofStatistics` (`docs/specs/core/store.md`, "The state of an analysis") | "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the diversity was not run. ", then the words the part of the statistics gives that failure, `refusalText` of `docs/specs/analyses/individualChecks.md` for a refusal of popnei: "… The filters kept none of the variants of panel.nei, so there is no variant to count each individual's genotypes over. Loosen the filters of the variants in the Variants step." The rows below are never given the message of the statistics, which would name the diversity for a calculation that was not its own |
 | popnei refused a pass over a variants file that holds no variant: its message starts with "the pass gave no variant and its source holds none", and the file is a `.nei` file or a VCF read with every variant | "empty.vcf has no variants, so there is no variant to calculate the diversity over. Load another variants file in the Variants step." |
 | the same refusal, of a VCF read with only the variants that passed its filters, `onlyPassed` | "failed.vcf has no variant with PASS or . in its FILTER column, and it was read with only those, so there is no variant to calculate the diversity over. Untick "Only the variants with PASS or . in the FILTER column" in the Variants step and read the file again." |
 | popnei refused an empty pass: its message starts with "the pass gave no variant:", with the colon, which the refusal of a source that holds none does not have at that place | "The filters kept none of the variants of panel.nei, so there is no variant to calculate the diversity over. Loosen the filters in the Variants step." |
@@ -1328,9 +1357,19 @@ moves.
   so that a screen reader reads "p2, Observed heterozygosity, 0.3512".
   A screen reader moves through it by its own keys for tables; the Tab
   key does not stop at its cells, which hold no control. It sits in a
-  frame that scrolls sideways when the page is narrower than the table:
-  at 320 px the table is 1,012 px wide in a frame of 288 px, which shows
-  the populations and their individuals and no value. While the table is
+  frame that scrolls sideways when the page is narrower than the table.
+  The words of a header cell wrap between words when the table would
+  not fit otherwise, and the numbers never do: on one line the table is
+  1,012 px wide on the Mac and 1,186 px with DejaVu Sans, the sans-serif
+  font of Ubuntu, wider than its column of 1,024 px on a window of 1,280,
+  where it would scroll on Linux at every width. On the Mac the headers
+  stay on one line on a window of 1,050 px and wider, and wrap below. At
+  320 px, in Chromium 153 and WebKit 26.6 on the Mac, the table is 564
+  px wide in a frame of 288 px, its headers on up to four lines, and
+  the frame shows the populations, their individuals and the start of
+  the expected heterozygosity.
+  The owner decided on 28 September 2026 that the headers wrap. While
+  the table is
   wider than its frame, and only then, three things say so and let it be
   scrolled. A line under the caption, "Scroll the table sideways to see
   all its columns."; a shadow on each edge of the frame toward which the
@@ -1373,8 +1412,11 @@ moves.
   place, so the focus stays on it when it changes. The button goes when
   the run ends done, ends refused by popnei, or ends with a variants
   file the browser can no longer read, since none of these states
-  offers Run; then, when the focus was on the button, it moves to the
-  heading of the panel, so that a user of the keyboard is not sent to the
+  offers Run; and Stop turns into a disabled Run when a Run that waited
+  for the statistics of each individual ends locked, the filters of
+  individuals keeping no one, and a disabled button cannot hold the
+  focus. Then, when the focus was on the button, it moves to the
+  heading of the panel, as the Write does in the same state, so that a user of the keyboard is not sent to the
   top of the page (2.4.3, which asks that the focus move in an order
   that keeps the meaning). When the focus was elsewhere, it stays where
   it is.
@@ -1428,8 +1470,8 @@ written with it, is in the second list.
   removed and of calculations stopped is the shell's, with its words; its
   stepper shows `populationsNeeds`.
 - `docs/specs/steps/variants.md`: the missing data filter can be set to
-  0.05 and to 1, and its command is described "the missing data filter
-  changed"; the step sends the user to this panel for a VCF refused at
+  0.05 and to 1, and its command is described "the filter of the variants
+  by missing data changed"; the step sends the user to this panel for a VCF refused at
   its first pass for its ploidy; its button "Read ‹name› again with
   ploidy N" is where the words of that refusal send the user.
 - `docs/specs/steps/individuals.md`: the step offers as the column of
@@ -1466,7 +1508,8 @@ What stage 4 asks, of specs revised or written beside this revision, 27
 September 2026:
 
 - `docs/specs/core/project.md`: `populationsOf`, `populationsToRun`,
-  `populationsKept` and `populationsNeeds` in `project.ts`, with `"all"`
+  `populationsKept`, `populationsBeforeRun` and `populationsNeeds` in
+  `project.ts`, with `"all"`
   and the one population "All individuals"; `individualsNeeds` giving no
   reason for no file in population genetics; the grouping
   `onePopulation`.

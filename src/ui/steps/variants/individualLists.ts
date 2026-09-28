@@ -4,7 +4,7 @@
  * "The two lists"): the names a text holds, one per line; the text a list
  * of the project starts at; whether a text is the list applied; the
  * commands of Apply and Clear; and their words. Pure, so that a test in
- * node applies the commands to the real store; `IndividualLists.tsx`
+ * node applies the commands to the real store; `IndividualFilters.tsx`
  * draws them.
  */
 
@@ -14,7 +14,7 @@ import {
 } from "../../../core/project.ts";
 import type { ListNeeds, Project } from "../../../core/project.ts";
 import type { StepCommand } from "./commands.ts";
-import { inTheStep } from "./writeWords.ts";
+import { withoutTheStep } from "./words.ts";
 
 /** The two lists, in their fixed order. */
 export const LIST_KINDS = ["keep", "remove"] as const;
@@ -62,12 +62,15 @@ export function notAppliedText(kind: ListKind): string {
 /** A line break of any system: CRLF, LF, or a CR alone. */
 const LINE_BREAK = /\r\n|\r|\n/u;
 
-/** The spaces and tabs at the ends of a line. */
-const ENDS = /^[ \t]+|[ \t]+$/gu;
+/** The white space at the ends of a line: spaces and tabs, and a
+    no-break space or a byte order mark, U+00A0 and U+FEFF, which a name
+    copied from a web page or a PDF may carry and which look like
+    nothing. */
+const ENDS = /^\s+|\s+$/gu;
 
 /**
  * The names of `text`, one per line, in the order written: each line with
- * the spaces and tabs at its ends taken off, and the empty lines dropped,
+ * the white space at its ends taken off, and the empty lines dropped,
  * so that a column copied from a spreadsheet, or the text of a file of
  * one name per line, can be pasted. Nothing else is taken off: a comma or
  * a tab inside a line is part of its name.
@@ -143,7 +146,7 @@ export function clearCommand(kind: ListKind): StepCommand {
 export interface TypedList {
   /** The text. */
   readonly text: string;
-  /** The moves of the history when it was typed (`historyMoves.ts`). */
+  /** The moves of the history when it was typed (`historyMoves` of the store). */
   readonly moves: number;
 }
 
@@ -167,7 +170,7 @@ export function shownText(
     is in, as the section of the writing shows its words (the spec, "The
     two lists"). */
 export function listReasonText(needs: ListNeeds): string {
-  return inTheStep(needs.reason);
+  return withoutTheStep(needs.reason);
 }
 
 /** What the step announces after an Apply or a Clear that changed the

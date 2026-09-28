@@ -176,6 +176,11 @@ test("VS7 D1 the statistics at 0.05: s000 0.0260 and 0.3672, the caption, the ve
     "0.0260",
     "0.3672",
   ]);
+  await expect(
+    section(page).getByText("200 individuals; the CSV holds them all.", {
+      exact: true,
+    }),
+  ).toBeVisible();
   // No filter of individuals: no column Kept.
   await expect(table(page).getByRole("columnheader")).toHaveText([
     /^Individual/,
@@ -196,6 +201,129 @@ test("VS7 D1 the statistics at 0.05: s000 0.0260 and 0.3672, the caption, the ve
   // No individual of panel.nei lacks a heterozygosity.
   await expect(section(page).getByText(/not in the histogram/)).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
+});
+
+/** The worked example of individualChecks.md, "How it is verified":
+    three individuals and four variants, i3 with no called genotype, i2
+    with ./. at the third variant and 0/. at the fourth. */
+const CALLS_VCF = [
+  "##fileformat=VCFv4.2",
+  "##contig=<ID=1>",
+  '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
+  "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\ti1\ti2\ti3",
+  "1\t10\t.\tA\tG\t.\tPASS\t.\tGT\t0/1\t0/0\t./.",
+  "1\t20\t.\tA\tG\t.\tPASS\t.\tGT\t1/1\t0/1\t./.",
+  "1\t30\t.\tA\tG\t.\tPASS\t.\tGT\t0/0\t./.\t./.",
+  "1\t40\t.\tA\tG\t.\tPASS\t.\tGT\t0/1\t0/.\t./.",
+  "",
+].join("\n");
+
+/** Picks the VCF `text` as calls.vcf, turns the filter of the variants by
+    missing data off, which would drop every variant of it, and
+    calculates the statistics. */
+async function calculatedCalls(page: Page, text: string): Promise<void> {
+  await openVariants(page);
+  const chooser = page.waitForEvent("filechooser");
+  await page
+    .getByRole("region", { name: "Variants file" })
+    .getByRole("button", { name: /^(Choose|Replace) .*…$/ })
+    .click();
+  await (
+    await chooser
+  ).setFiles({
+    name: "calls.vcf",
+    mimeType: "text/plain",
+    buffer: Buffer.from(text),
+  });
+  await expect(
+    page
+      .getByRole("region", { name: "Variants file" })
+      .getByText(/individuals$/),
+  ).toBeVisible();
+  await page
+    .getByRole("main")
+    .getByText("Filter the variants by missing data", { exact: true })
+    .click();
+  await block(page).getByRole("button", { name: CALCULATE }).click();
+  await expect(
+    block(page).getByText(/^The statistics of the 3 individuals of calls\.vcf/),
+  ).toBeVisible();
+}
+
+test("VS7 D1 an individual with no called genotype: the warning, no value sorted last both ways, the line under the histogram, and the filter by heterozygosity removes it", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await calculatedCalls(page, CALLS_VCF);
+  await expect(
+    block(page).getByText(
+      "i3 has no called genotype among the 4 variants the filters kept, so it has no observed heterozygosity. The filter of the individuals by observed heterozygosity removes it when it is on.",
+    ),
+  ).toBeVisible();
+  await expect(rowOf(page, "i3").getByRole("gridcell")).toHaveText([
+    "1.0000",
+    "no value",
+  ]);
+  await expect(
+    section(page).getByText(
+      "1 individual with no called genotype is not in the histogram.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  // Three rows: a box as high as they are, which does not scroll.
+  await expect(
+    section(page).getByText("3 individuals; the CSV holds them all.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  const box = await table(page).evaluate((grid) => ({
+    scroll: grid.scrollHeight,
+    client: grid.clientHeight,
+  }));
+  expect(box.scroll).toBeLessThanOrEqual(box.client);
+  expect(box.client).toBeLessThan(200);
+  const header = table(page).getByRole("columnheader", {
+    name: /^Observed heterozygosity/,
+  });
+  for (const direction of ["ascending", "descending"] as const) {
+    await header.click();
+    await expect(header).toHaveAttribute("aria-sort", direction);
+    await expect(
+      table(page).getByRole("row").last().getByRole("rowheader"),
+    ).toHaveText("i3");
+  }
+  await expectNoViolations(makeAxeBuilder);
+
+  // Turned on, the filter by heterozygosity removes i3 whatever its
+  // threshold.
+  await section(page)
+    .getByText("Filter the individuals by observed heterozygosity", {
+      exact: true,
+    })
+    .click();
+  await expect(
+    section(page).getByText("Kept 2 of the 3 individuals it was given.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(rowOf(page, "i3").getByRole("gridcell").last()).toHaveText(
+    "removed",
+  );
+});
+
+test("VS7 D1 no individual with a called genotype: no histogram of the heterozygosity, and the line alone in its place", async ({
+  page,
+}) => {
+  const uncalled = CALLS_VCF.replace(/\t(0|1)\/(0|1|\.)/g, "\t./.");
+  await calculatedCalls(page, uncalled);
+  await expect(
+    section(page).getByText(
+      "3 individuals with no called genotype are not in the histogram.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(histogram(page, OBS_HET_TITLE)).toHaveCount(0);
+  await expect(histogram(page, MISSING_TITLE)).toBeVisible();
 });
 
 test("VS7 D1 the table sorted with the keyboard alone: into the table, up to the headers, Enter twice, s082 first at 0.0434, each sort announced, and axe", async ({
@@ -225,6 +353,7 @@ test("VS7 D1 the table sorted with the keyboard alone: into the table, up to the
 
   await page.keyboard.press("Enter");
   await expect(header).toHaveAttribute("aria-sort", "ascending");
+  await expect(header).toBeFocused();
   await expect(
     page.locator("div[data-live-announcer]:not([role])"),
   ).toContainText(
@@ -232,6 +361,7 @@ test("VS7 D1 the table sorted with the keyboard alone: into the table, up to the
   );
   await page.keyboard.press("Enter");
   await expect(header).toHaveAttribute("aria-sort", "descending");
+  await expect(header).toBeFocused();
   await expect(
     page.locator("div[data-live-announcer]:not([role])"),
   ).toContainText(
@@ -242,6 +372,91 @@ test("VS7 D1 the table sorted with the keyboard alone: into the table, up to the
   await expect(first.getByRole("gridcell").first()).toHaveText("0.0434");
   expect(await focusedInTable()).toBe(true);
   await expectNoViolations(makeAxeBuilder);
+});
+
+test("VS7 D1 a row the Tab key enters the table on shows a ring around its cells", async ({
+  page,
+}) => {
+  await calculated(page);
+  await histogram(page, OBS_HET_TITLE)
+    .getByRole("button", { name: "Download the bins as CSV" })
+    .focus();
+  await page.keyboard.press("Tab");
+  const focused = page.locator(":focus");
+  await expect(focused).toHaveAttribute("role", "row");
+  // The row's own box has no height; the ring is drawn by its cells.
+  const shadows = await focused
+    .locator('[role="rowheader"], [role="gridcell"]')
+    .evaluateAll((cells) =>
+      cells.map((cell) => getComputedStyle(cell).boxShadow),
+    );
+  expect(shadows.length).toBeGreaterThan(0);
+  expect(shadows).not.toContain("none");
+
+  // Forced colours, as Windows' high contrast, erase the shadows: the
+  // cells then have an outline.
+  await page.emulateMedia({ forcedColors: "active" });
+  const outlines = await focused
+    .locator('[role="rowheader"], [role="gridcell"]')
+    .evaluateAll((cells) =>
+      cells.map((cell) => getComputedStyle(cell).outlineStyle),
+    );
+  expect(outlines).not.toContain("none");
+});
+
+test("VS7 D1 a row focused while moving up is not under the header, whose cells are opaque", async ({
+  page,
+}) => {
+  await calculated(page);
+  await rowOf(page, "s002").getByRole("rowheader").click();
+  for (let step = 0; step < 40; step += 1) {
+    await page.keyboard.press("ArrowDown");
+  }
+  for (let step = 0; step < 25; step += 1) {
+    await page.keyboard.press("ArrowUp");
+  }
+  const focused = page.locator(":focus");
+  await expect(focused).toHaveText("s017");
+  const headers = table(page).getByRole("columnheader");
+  const headerBottom = Math.max(
+    ...(await headers.evaluateAll((cells) =>
+      cells.map((cell) => cell.getBoundingClientRect().bottom),
+    )),
+  );
+  const focusedBox = await focused.boundingBox();
+  if (focusedBox === null) throw new Error("the focused cell has no box");
+  expect(focusedBox.y).toBeGreaterThanOrEqual(headerBottom - 0.5);
+  const backgrounds = await headers.evaluateAll((cells) =>
+    cells.map((cell) => getComputedStyle(cell).backgroundColor),
+  );
+  expect(backgrounds).not.toContain("rgba(0, 0, 0, 0)");
+});
+
+test("VS7 D1 at 320 pixels wide, with the column Kept, a row focused while moving up is not under the header of three lines", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  await calculated(page);
+  await applyList(page, REMOVE_LABEL, "Apply the list to remove", "s001");
+  await rowOf(page, "s002").getByRole("rowheader").click();
+  for (let step = 0; step < 40; step += 1) {
+    await page.keyboard.press("ArrowDown");
+  }
+  for (let step = 0; step < 25; step += 1) {
+    await page.keyboard.press("ArrowUp");
+  }
+  const focused = page.locator(":focus");
+  await expect(focused).toHaveText("s017");
+  const headerBottom = Math.max(
+    ...(await table(page)
+      .getByRole("columnheader")
+      .evaluateAll((cells) =>
+        cells.map((cell) => cell.getBoundingClientRect().bottom),
+      )),
+  );
+  const focusedBox = await focused.boundingBox();
+  if (focusedBox === null) throw new Error("the focused cell has no box");
+  expect(focusedBox.y).toBeGreaterThanOrEqual(headerBottom - 0.5);
 });
 
 test("VS7 D1 the CSV of the table: panel.individual_stats.csv, its header, 200 rows, and s000 with every digit", async ({
@@ -290,6 +505,56 @@ test("VS7 D1 the CSVs of the bins of the two histograms: their names, their head
   }
 });
 
+test("VS7 D1 the statistics removed by an Undo while the focus is in the table or on a CSV button of a histogram: the focus goes to the heading of the block", async ({
+  page,
+}) => {
+  const undo = process.platform === "darwin" ? "Meta+z" : "Control+z";
+  const heading = block(page).getByRole("heading", {
+    name: "Statistics of each individual",
+  });
+  await calculated(page);
+  await rowOf(page, "s000").getByRole("rowheader").click();
+  await page.keyboard.press(undo);
+  await expect(table(page)).toHaveCount(0);
+  await expect(heading).toBeFocused();
+
+  await banner(page, "Redo").click();
+  await expect(table(page)).toBeVisible();
+  await histogram(page, OBS_HET_TITLE)
+    .getByRole("button", { name: "Download the bins as CSV" })
+    .focus();
+  await page.keyboard.press(undo);
+  await expect(histogram(page, OBS_HET_TITLE)).toHaveCount(0);
+  await expect(heading).toBeFocused();
+});
+
+test("VS7 D1 an Undo of the load while the focus is in the table or on a tab of a histogram: the block goes with the file, and the focus goes to the heading of the section", async ({
+  page,
+}) => {
+  const undo = process.platform === "darwin" ? "Meta+z" : "Control+z";
+  const heading = section(page).getByRole("heading", {
+    level: 2,
+    name: "Filters of the individuals",
+  });
+  await openVariants(page);
+  await pick(page, "panel.nei");
+  await block(page).getByRole("button", { name: CALCULATE }).click();
+  await expect(table(page)).toBeVisible();
+  await rowOf(page, "s000").getByRole("rowheader").click();
+  await page.keyboard.press(undo);
+  await expect(table(page)).toHaveCount(0);
+  await expect(heading).toBeFocused();
+
+  await banner(page, "Redo").click();
+  await expect(table(page)).toBeVisible();
+  await histogram(page, OBS_HET_TITLE)
+    .getByRole("tab", { name: "Plot" })
+    .focus();
+  await page.keyboard.press(undo);
+  await expect(histogram(page, OBS_HET_TITLE)).toHaveCount(0);
+  await expect(heading).toBeFocused();
+});
+
 test("VS7 D1 the missing data filter of the variants moved: the statistics removed with the words of the change and the notice; an undo, and the statistics back with no calculation, and axe", async ({
   page,
   makeAxeBuilder,
@@ -298,7 +563,7 @@ test("VS7 D1 the missing data filter of the variants moved: the statistics remov
   await setMissing(page, "0.06");
   await expect(
     block(page).getByText(
-      "The statistics of each individual were removed because the missing data filter changed. Undo brings back the table as it was, with no calculation; Calculate makes a new one for the new settings.",
+      "The statistics of each individual were removed because the filter of the variants by missing data changed. Undo brings back the table and the histograms as they were, without calculating again; Calculate makes new ones for the new settings.",
       { exact: true },
     ),
   ).toBeVisible();
@@ -331,7 +596,7 @@ test("VS7 D1 the missing data filter of the variants moved: the statistics remov
   await banner(page, "Redo").click();
   await expect(
     block(page).getByText(
-      "Redone: the missing data filter changed. The statistics of each individual were removed; Undo brings back the table as it was, with no calculation, and Calculate makes a new one for the settings as they are now.",
+      "Redone: the filter of the variants by missing data changed. The statistics of each individual were removed; Undo brings back the table and the histograms as they were, without calculating again, and Calculate makes new ones for the settings as they are now.",
       { exact: true },
     ),
   ).toBeVisible();
@@ -374,7 +639,7 @@ test("VS7 D1 in error: the ploidy of tetraploid.vcf.gz refused, in the words of 
   await block(page).getByRole("button", { name: CALCULATE }).click();
   await expect(
     block(page).getByText(
-      "At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 in the Variants step and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version.",
+      "At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version.",
       { exact: true },
     ),
   ).toBeVisible();
@@ -417,7 +682,7 @@ test("VS7 D1 the column Kept: a list to remove applied marks s000 removed and s0
   await applyList(page, KEEP_LABEL, "Apply the list to keep", "ind_900");
   await expect(
     section(page).getByText(
-      "Which individuals are kept is shown once the lists of individuals above are corrected.",
+      "Which individuals are kept is shown once the lists of individuals to keep and to remove are corrected.",
       { exact: true },
     ),
   ).toBeVisible();
@@ -430,6 +695,18 @@ test("VS7 D1 the column Kept: a list to remove applied marks s000 removed and s0
     "0.3672",
   ]);
   await expectNoViolations(makeAxeBuilder);
+
+  // The sort by Kept went with its column: the column back is not
+  // sorted, and no other header is.
+  await section(page)
+    .getByRole("button", { name: "Clear the list to keep", exact: true })
+    .click();
+  await expect(
+    table(page).getByRole("columnheader", { name: /^Kept/ }),
+  ).toBeVisible();
+  await expect(
+    table(page).locator('[aria-sort="ascending"], [aria-sort="descending"]'),
+  ).toHaveCount(0);
 });
 
 test("VS7 D1 at 320 pixels wide, drawn wide first: no sideways scroll of the page, each plot within its panel, and the table within the page scrolling in its own box", async ({
@@ -470,7 +747,7 @@ test("VS7 D1 a new file loaded: the statistics removed with the words of the new
   await pick(page, "panel.nei");
   await expect(
     block(page).getByText(
-      "The statistics of each individual were removed because a new variants file was loaded. Undo brings back the table as it was, with no calculation; Calculate makes a new one for the new settings.",
+      "The statistics of each individual were removed because a new variants file was loaded. Undo brings back the table and the histograms as they were, without calculating again; Calculate makes new ones for the new settings.",
       { exact: true },
     ),
   ).toBeVisible();

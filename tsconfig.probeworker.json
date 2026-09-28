@@ -5,5 +5,9 @@
     "lib": ["ES2022", "ES2023.Array", "WebWorker"],
     "types": ["vite/client"]
   },
-  "include": ["src/probe/probeWorker.ts", "src/probe/messages.ts"]
+  "include": [
+    "src/probe/probeWorker.ts",
+    "src/probe/messages.ts",
+    "src/probe/wasmAddress.ts"
+  ]
 }

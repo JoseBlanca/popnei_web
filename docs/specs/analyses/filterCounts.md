@@ -124,9 +124,12 @@ result.
 | `filterKeptNone` | a filter kept no variant; the first such | "The MAF filter kept none of the 1,152 variants it was given, so the analyses and the statistics of each individual have no variant to calculate over, and a file written would hold none. Loosen it, or a filter before it.", and, when it is the first filter, which has none before it, "… Loosen it.", as the owner kept it on 27 September 2026 |
 | `noVariant` | the file gave no variant, `numVars` 0 with no filter or the first filter given 0 | the words of the diversity for a file with no variant, "empty.vcf has no variants. Load another variants file.", and, for a VCF read with only the variants that passed, "failed.vcf has no variant with PASS or . in its FILTER column, and it was read with only those. Untick …" |
 
-The names of the filters are those of the step's labels,
-"the missing data filter", "the filter by observed heterozygosity", "the
-MAF filter", "the LD pruning".
+The names of the filters are those of the step's labels, "the filter
+of the variants by missing data", "the filter of the variants by
+observed heterozygosity", "the MAF filter", "the LD pruning": the first
+two say "of the variants", as their switches "Filter the variants by …"
+do, since from stage 3 the individuals have filters by the same two
+numbers.
 
 ### The check numbers
 

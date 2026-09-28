@@ -196,7 +196,7 @@ test("VS6 D2 the histograms calculated: the button, the caption, the versions, t
   await field(page, MISSING_LABEL).fill("0.05");
   await field(page, MISSING_LABEL).press("Enter");
   await expect(banner(page, "Undo")).toHaveAccessibleDescription(
-    "Undo: the missing data filter changed",
+    "Undo: the filter of the variants by missing data changed",
   );
   await expect(histogram(page, MAF_TITLE)).toBeVisible();
   await expect(block(page).getByText(CAPTION, { exact: true })).toBeVisible();
@@ -219,7 +219,7 @@ test("VS6 D2 the histograms calculated: the button, the caption, the versions, t
   );
   await expect(
     histogram(page, OBS_HET_TITLE).getByText(
-      "Threshold of the filter by observed heterozygosity: 0.5, drawn over every variant of the file",
+      "Threshold of the filter of the variants by observed heterozygosity: 0.5, drawn over every variant of the file",
       { exact: true },
     ),
   ).toBeVisible();
@@ -396,7 +396,13 @@ test("VS6 D2 a comma thrown away, then Cmd+Z: the text and the line are back, th
   await maf.click();
   await maf.press("ControlOrMeta+a");
   await maf.pressSequentially("0,");
-  const refusal = page.getByText(/^Write the decimals with a point/);
+  // The line under the field, in the step; the status region, outside
+  // it, says the refusal 100 ms after it is made and keeps it, also
+  // after the Cmd+Z below, which WebKit reached before or after those
+  // 100 ms, so a search of the whole page found it there in 3 of 40 runs.
+  const refusal = page
+    .getByRole("main")
+    .getByText(/^Write the decimals with a point/);
   await expect(refusal).toBeVisible();
   await maf.press("ControlOrMeta+z");
   await expect(maf).toHaveValue("0.95");
@@ -484,13 +490,17 @@ test("VS6 D2 0.9 pasted over 0.8 typed in the MAF field is committed at once, an
   await maf.evaluate((input) => {
     const data = new DataTransfer();
     data.setData("text/plain", "0.9");
-    input.dispatchEvent(
-      new ClipboardEvent("paste", {
-        clipboardData: data,
-        bubbles: true,
-        cancelable: true,
-      }),
-    );
+    // Firefox takes the text of a paste made by a script from the
+    // members `dataType` and `data`, which only it knows, and not from
+    // `clipboardData`; the other two engines take `clipboardData`.
+    const init: ClipboardEventInit & { dataType: string; data: string } = {
+      clipboardData: data,
+      dataType: "text/plain",
+      data: "0.9",
+      bubbles: true,
+      cancelable: true,
+    };
+    input.dispatchEvent(new ClipboardEvent("paste", init));
   });
   await expect(banner(page, "Undo")).toHaveAccessibleDescription(
     "Undo: the MAF filter changed",
@@ -522,7 +532,7 @@ test("VS6 D2 the threshold line of the observed heterozygosity moves as 0.4 is t
   await expect(group.getByText("Maximum 0.4", { exact: true })).toBeAttached();
   await expect(
     group.getByText(
-      "Threshold of the filter by observed heterozygosity: 0.4, drawn over every variant of the file",
+      "Threshold of the filter of the variants by observed heterozygosity: 0.4, drawn over every variant of the file",
       {
         exact: true,
       },
@@ -531,7 +541,7 @@ test("VS6 D2 the threshold line of the observed heterozygosity moves as 0.4 is t
   expect(await lineX(group)).toBeLessThan(at5);
   // Not committed: no command yet.
   await expect(banner(page, "Undo")).toHaveAccessibleDescription(
-    "Undo: the filter by observed heterozygosity was turned on",
+    "Undo: the filter of the variants by observed heterozygosity was turned on",
   );
 });
 
@@ -606,7 +616,7 @@ test("VS6 D2 the filter by observed heterozygosity at 0.5 splits the bin from 0.
   await obsHet.press("Enter");
   await expect(
     group.getByText(
-      "Threshold of the filter by observed heterozygosity: 0.6, drawn over every variant of the file",
+      "Threshold of the filter of the variants by observed heterozygosity: 0.6, drawn over every variant of the file",
       {
         exact: true,
       },
@@ -959,7 +969,7 @@ test("VS6 D2 in error: the ploidy of tetraploid.vcf.gz refused, in the words of 
   await block(page).getByRole("button", { name: CALCULATE }).click();
   await expect(
     block(page).getByText(
-      "At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 in the Variants step and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version.",
+      "At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version.",
       { exact: true },
     ),
   ).toBeVisible();
@@ -1026,7 +1036,7 @@ test("VS6 D2 a calculation whose worker stopped asks to calculate them again, wi
   await block(page).getByRole("button", { name: CALCULATE }).click();
   await expect(
     block(page).getByText(
-      "The calculation stopped unexpectedly. Calculate them again. If it stops again, load panel.nei again in the Variants step.",
+      "The calculation stopped unexpectedly. Calculate them again. If it stops again, load panel.nei again.",
       { exact: true },
     ),
   ).toBeVisible();
@@ -1086,4 +1096,82 @@ test("VS6 D2 a variant with no called genotype gives the warning above the capti
     /The major allele frequency of 2 variants, in 40 bins/,
   );
   await expectNoViolations(makeAxeBuilder);
+});
+
+test("VS6 D2 a file none of whose variants has a called genotype: the histograms have no mean and no bar, and the warning says why", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openVariants(page);
+  const vcf = [
+    "##fileformat=VCFv4.2",
+    "##contig=<ID=1>",
+    '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
+    "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\ta\tb",
+    "1\t1\t.\tA\tT\t.\tPASS\t.\tGT\t./.\t./.",
+    "1\t2\t.\tA\tT\t.\tPASS\t.\tGT\t./.\t./.",
+    "",
+  ].join("\n");
+  const chooser = page.waitForEvent("filechooser");
+  await page
+    .getByRole("region", { name: "Variants file" })
+    .getByRole("button", { name: /^(Choose|Replace) .*…$/ })
+    .click();
+  await (
+    await chooser
+  ).setFiles({
+    name: "nocalls.vcf",
+    mimeType: "text/plain",
+    buffer: Buffer.from(vcf),
+  });
+  await block(page).getByRole("button", { name: CALCULATE }).click();
+  await expect(
+    block(page).getByText(
+      "2 of the 2 variants of nocalls.vcf have no called genotype, and are in none of the histograms.",
+    ),
+  ).toBeVisible();
+  const maf = histogram(page, "Major allele frequency, no mean");
+  await expect(maf).toBeVisible();
+  await expect(maf.locator("rect.chart-bar")).toHaveCount(0);
+  await expect(maf.locator("g.chart-axis-y g.tick")).toHaveText(["0", "1"]);
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("VS6 D2 the histograms removed by a redo while the focus is on a CSV button of theirs: the focus goes to the heading of the block", async ({
+  page,
+}) => {
+  await openVariants(page);
+  await pick(page, "panel.nei");
+  await calculate(page);
+  await pick(page, "panel.nei");
+  await banner(page, "Undo").click();
+  await expect(histogram(page, MAF_TITLE)).toBeVisible();
+  await histogram(page, MAF_TITLE)
+    .getByRole("button", { name: "Download the bins as CSV" })
+    .focus();
+  await page.keyboard.press(
+    process.platform === "darwin" ? "Meta+Shift+z" : "Control+Shift+z",
+  );
+  await expect(page.getByRole("group", { name: /, mean / })).toHaveCount(0);
+  await expect(
+    block(page).getByRole("heading", {
+      name: "Histograms of the variants",
+    }),
+  ).toBeFocused();
+});
+
+test("VS6 D2 an Undo of the load while the focus is on a tab of a histogram: the block goes with the file, and the focus goes to the heading of the section", async ({
+  page,
+}) => {
+  await openVariants(page);
+  await pick(page, "panel.nei");
+  await calculate(page);
+  await histogram(page, MAF_TITLE).getByRole("tab", { name: "Plot" }).focus();
+  await page.keyboard.press(
+    process.platform === "darwin" ? "Meta+z" : "Control+z",
+  );
+  await expect(page.getByRole("group", { name: /, mean / })).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Filters of the variants" }),
+  ).toBeFocused();
 });

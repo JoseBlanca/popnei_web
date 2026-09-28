@@ -168,6 +168,22 @@ into. React Aria's `Table` stays for the tables that are sorted or have
 thousands of rows, the individuals and the hits of a GWAS, and its
 select list stays, as the list of the column of the populations.
 
+The sortable table of the individuals, React Aria's `Table` with its
+`Virtualizer`, which draws only the rows in view, made the first script
+of `popgen.html` 188,958 bytes with `gzip -9` against 156,467 before
+it, 32,491 bytes more, on the site built at commits 9c513cc and
+0b13e8b on 27 September 2026: about 19 KB of the table and its grid,
+about 15 KB of the Virtualizer and its layouts, each module compressed
+alone, and about 9 KB of the application's own code; the bytes were
+given to their sources with the source map of the build. Nothing of
+React Aria can be imported narrower. Loading the table with `lazy()`,
+when the statistics of each individual are first shown, would take
+26,100 of those bytes out of the first script, 2.7% of the 977.7 KB of
+a first visit, 698,713 bytes of which are the wasm of popnei; not
+taken, as for the plots ("D3 for the 2D plots", below), for a second request and a moment of
+waiting before the table, against 26 KB, and it is measured again if
+the table grows.
+
 Not taken: component libraries with their own look, MUI, Chakra,
 Mantine, which bring a style we would fight and, for Chakra, a history of
 large rewrites; and Radix Primitives, whose maintenance slowed.

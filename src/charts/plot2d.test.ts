@@ -304,6 +304,16 @@ describe("VS4 D1 the base of the 2D plots, under jsdom", () => {
     expect(() => handle.toSVG()).toThrow("frame has no area");
   });
 
+  test("toPNG of an element not larger than the margins throws nothing, and its promise rejects saying the frame has no area", async () => {
+    const element = sizedElement(400, 40);
+    const handle = createPlot2d(element, barsOf([1, 2, 3]), bars);
+    let png: Promise<Blob> | null = null;
+    expect(() => {
+      png = handle.toPNG(2);
+    }).not.toThrow();
+    await expect(png).rejects.toThrow("frame has no area");
+  });
+
   test("an element whose size becomes 0 after a draw keeps its last drawing", () => {
     const element = sizedElement(400, 300);
     createPlot2d(element, barsOf([1, 2, 3]), bars);

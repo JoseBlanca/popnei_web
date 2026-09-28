@@ -44,6 +44,7 @@ import { filterCommand, filterSwitchCommand } from "./commands.ts";
 import { Filter } from "./Filter.tsx";
 import { FilterCountsPart } from "./FilterCountsPart.tsx";
 import { VARIANT_HISTOGRAMS } from "./histogramWords.ts";
+import { FocusOnLeave } from "./FocusOnLeave.tsx";
 import { VariantChecksBlock } from "./VariantChecksBlock.tsx";
 import { VariantHistogram } from "./VariantHistogram.tsx";
 import styles from "./VariantsStep.module.css";
@@ -113,6 +114,7 @@ export function VariantFilters(): React.JSX.Element {
   const [typedObsHet, setTypedObsHet] = useState<number | null>(null);
   const [typedMaf, setTypedMaf] = useState<number | null>(null);
   const headingId = useId();
+  const checksHeadingId = useId();
 
   const set = (filter: VariantFilter): void => {
     const step = filterCommand(filter);
@@ -139,18 +141,22 @@ export function VariantFilters(): React.JSX.Element {
   ): React.ReactNode =>
     histogramsDone && (
       <ErrorBoundary level={3} heading={VARIANT_HISTOGRAMS[statistic].name}>
-        <HistogramOf statistic={statistic} threshold={threshold} />
+        <FocusOnLeave sectionHeadingId={headingId} headingId={checksHeadingId}>
+          <HistogramOf statistic={statistic} threshold={threshold} />
+        </FocusOnLeave>
       </ErrorBoundary>
     );
 
   return (
     <section aria-labelledby={headingId} className={classOf(styles, "section")}>
-      <h2 id={headingId} className={classOf(styles, "heading")}>
+      {/* It takes the focus when a part of a check leaves the page with
+          its block, and is not in the order of the Tab key. */}
+      <h2 id={headingId} tabIndex={-1} className={classOf(styles, "heading")}>
         {FILTERS_HEADING}
       </h2>
       {read ? (
         <ErrorBoundary level={3} heading={titleOf("variantChecks")}>
-          <VariantChecksBlock />
+          <VariantChecksBlock headingId={checksHeadingId} />
         </ErrorBoundary>
       ) : (
         <p className={classOf(styles, "line")}>{NOT_READ_LINE}</p>

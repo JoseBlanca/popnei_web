@@ -90,6 +90,12 @@ export interface AnalysisDef<J, R> {
   /** The reason it cannot run beyond what every analysis needs, in the
       words the screen shows next to its Run button, or `null`. */
   needs(p: Project): string | null;
+  /** The reason it cannot run for the individuals kept, `kept`, whose
+      list is known and keeps some individual, in the words beside its
+      Run, or `null`; absent for an analysis with none. The diversity's:
+      the list leaves no population (store.md, "The state of an
+      analysis"). */
+  readonly keptNeeds?: (p: Project, kept: IndividualsKept) => string | null;
   /** Builds its request and sends it through `c`, which the store binds
       to its key, and returns the handle without waiting on it. */
   run(p: Project, c: WorkerClient<J, R>): Run<R>;
@@ -147,6 +153,11 @@ export interface AppState<R, F = never> {
   readonly undo: string | null;
   /** The description of what a redo would redo, or `null`. */
   readonly redo: string | null;
+  /** The undos, redos and openings so far, 0 when the store is made:
+      a screen that holds text of its own beside a part of the project
+      starts again at the project when it changes, since a command
+      cannot be told from an undo by the project alone. */
+  readonly historyMoves: number;
   /** The version of popnei the calculation worker gave, or `null` until
       it has started. */
   readonly popneiVersion: string | null;
@@ -179,7 +190,8 @@ export type AnalysisStatus<R> =
   /** It cannot run: `projectNeeds`, `individualListNeeds` for an
       analysis that reads the filters of individuals, or its `needs` gave
       `reason`; or it reads the filters of individuals and they keep
-      none, `keptNoneReason`. */
+      none, `keptNoneReason`, or its `keptNeeds` gives a reason for the
+      individuals they keep. */
   | { readonly kind: "locked"; readonly reason: string }
   /** The cache holds its result under its key, with the warnings of the
       result and the comparison with the check numbers of an opened
@@ -671,6 +683,8 @@ export function createStore<J, R, F = never>(
   }
   const memo = createKeyMemo();
   let history = startHistory(freezeProject(config.first), config.maxUndoSteps);
+  // The undos, redos and openings so far.
+  let historyMoves = 0;
   let popneiVersion: string | null = null;
   let cache: Cache<CachedResult<R>> = emptyCache(config.cacheMaxBytes);
   let keyed: Keyed | null = null;
@@ -1009,6 +1023,23 @@ export function createStore<J, R, F = never>(
     return null;
   };
 
+  /** The reason `def` cannot run for the individuals kept, `kept`, from
+      its `keptNeeds`, asked only of a list that is known and keeps some
+      individual; `null` otherwise. */
+  const keptNeedsOf = (
+    def: AnalysisDef<J, R>,
+    kept: IndividualsKept | null,
+  ): string | null => {
+    if (
+      def.keptNeeds === undefined ||
+      kept?.list.kind !== "known" ||
+      kept.list.individuals?.length === 0
+    ) {
+      return null;
+    }
+    return def.keptNeeds(history.present.project, kept);
+  };
+
   /** The state of an analysis that can run, under its key `keyed`, with
       the individuals the filters keep, `keptNow`, and the keys `keys`:
       the first of done, running, error, locked by the individuals kept,
@@ -1056,7 +1087,9 @@ export function createStore<J, R, F = never>(
       if (statsError !== undefined) {
         return { kind: "error", key, error: statsError, ofStatistics: true };
       }
-      const reason = keptNoneReason(history.present.project, keptNow);
+      const reason =
+        keptNoneReason(history.present.project, keptNow) ??
+        keptNeedsOf(def, keptNow);
       if (reason !== null) {
         return { kind: "locked", reason };
       }
@@ -1346,6 +1379,7 @@ export function createStore<J, R, F = never>(
       previous?.project === project &&
       previous.undo === undoText &&
       previous.redo === redoText &&
+      previous.historyMoves === historyMoves &&
       previous.popneiVersion === popneiVersion &&
       previous.analyses === analyses &&
       previous.runs === runs &&
@@ -1359,6 +1393,7 @@ export function createStore<J, R, F = never>(
       project,
       undo: undoText,
       redo: redoText,
+      historyMoves,
       popneiVersion,
       analyses,
       runs,
@@ -1947,7 +1982,8 @@ export function createStore<J, R, F = never>(
     const sent: Run<R | Written<F>>[] = [];
     for (const wait of waiting) {
       const keys = currentKeys();
-      const list = keptFor(history.present.project, keys)?.list;
+      const kept = keptFor(history.present.project, keys);
+      const list = kept?.list;
       const target = wait.target;
       const served =
         target.kind === "analysis"
@@ -1957,6 +1993,8 @@ export function createStore<J, R, F = never>(
         !waitIsCurrent(wait, keys) ||
         list?.kind !== "known" ||
         list.individuals?.length === 0 ||
+        (target.kind === "analysis" &&
+          keptNeedsOf(target.def, kept) !== null) ||
         served ||
         inFlightFor(indexOf(target), wait.key) !== null
       ) {
@@ -2145,13 +2183,17 @@ export function createStore<J, R, F = never>(
       }));
     },
     undo: () => {
-      changedByUser(undo(history), (before) => ({
+      const next = undo(history);
+      if (next !== history) historyMoves += 1;
+      changedByUser(next, (before) => ({
         kind: "undo",
         description: before.present.description,
       }));
     },
     redo: () => {
-      changedByUser(redo(history), (_before, after) => ({
+      const next = redo(history);
+      if (next !== history) historyMoves += 1;
+      changedByUser(next, (_before, after) => ({
         kind: "redo",
         description: after.present.description,
       }));
@@ -2165,6 +2207,7 @@ export function createStore<J, R, F = never>(
       written = null;
       dropped = false;
       history = opened;
+      historyMoves += 1;
       changed();
     },
     dismissNotice: () => {

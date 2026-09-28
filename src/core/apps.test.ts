@@ -68,6 +68,7 @@ function stateWith(
     project: firstProject("popgen"),
     undo: null,
     redo: null,
+    historyMoves: 0,
     popneiVersion: "0.1.0",
     analyses: views,
     runs: [],

@@ -20,6 +20,9 @@ import styles from "./VariantsStep.module.css";
     of its filter, while it is shown, of `describedAlso`, and of the line
     under its switch, in that order. */
 export interface Described {
+  /** Those ids, separated by spaces, as `aria-describedby` takes them;
+      absent when there is none, so that a field spread with it gets no
+      empty description. */
   readonly describedBy?: string;
 }
 

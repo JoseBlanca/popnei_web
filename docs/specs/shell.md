@@ -54,8 +54,8 @@ of the diversity among them. There is no code of it yet.
 
 The words of core used here: the **project** is everything the user has
 set; a **command** is a change of it that one Undo takes back, sent with
-a **description** that ends its notice, "the missing data filter
-changed"; a **load** is one pick of a file; a **source** is what the
+a **description** that ends its notice, "the filter of the variants
+by missing data changed"; a **load** is one pick of a file; a **source** is what the
 project holds of a loaded file, and its **read** what a worker read of
 it, pending until the worker answers; `numVars` of a read variants file
 is its number of variants, `null` until the first calculation has read
@@ -262,7 +262,7 @@ keep (node, 26 September 2026, popnei `js-v0.1.0-dev.2`). It is text, and is not
 | | read, no column chosen | "populations not chosen", from stage 4, where stage 2 said "one population", since with a file the analyses per population are then locked |
 | | read, the grouping `onePopulation` | "one population" |
 | | read, a column chosen | "3 populations by pop": the number of populations `populationsToRun` of `src/core/project.ts` gives, or `populationsOf` while the variants file is not read, the individuals with an empty cell in no population |
-| | the same, and the filters of individuals leave populations with no individual | "2 of 3 populations by pop", the populations `populationsKept` of `src/core/project.ts` gives with the individuals kept, of those of `populationsToRun`; "none of 3 populations by pop" when they leave none; while a threshold waits for the statistics of each individual, from the individuals the lists keep, as the panel of the diversity lists them |
+| | the same, and the filters of individuals leave populations with no individual | "2 of 3 populations by pop", the populations `populationsBeforeRun` of `src/core/project.ts` gives with the individuals kept, of those of `populationsToRun`; "none of 3 populations by pop" when they leave none; while a threshold waits for the statistics of each individual, from the individuals the lists keep, as the panel of the diversity lists them |
 
 The one population is not counted against the individuals kept: the
 part of the individuals says how many the filters keep, "114 of 200
@@ -353,13 +353,13 @@ upper case when nothing comes before it.
 
 | the cause | the notice |
 |---|---|
-| a command | "Diversity removed because the missing data filter changed · Undo" |
+| a command | "Diversity removed because the filter of the variants by missing data changed · Undo" |
 | a command that changes the load, with a calculation running and no result to remove | "The calculation of Diversity stopped because a new variants file was loaded · Undo" |
 | a command, with calculations stopped | "Diversity removed and the calculation of Diversity stopped because a new variants file was loaded · Undo" |
-| a command, with a calculation left behind and nothing removed | "The missing data filter changed. The ongoing calculation of Diversity will be stopped unless you undo the change · Undo" |
-| an undo | "Undone: the missing data filter changed. Diversity removed · Redo" |
+| a command, with a calculation left behind and nothing removed | "The filter of the variants by missing data changed. The ongoing calculation of Diversity will be stopped unless you undo the change · Undo" |
+| an undo | "Undone: the filter of the variants by missing data changed. Diversity removed · Redo" |
 | an undo that changes the load | "Undone: a new variants file was loaded. The calculation of Diversity stopped · Redo" |
-| a redo, with a calculation left behind | "Redone: the missing data filter changed. Diversity removed. The ongoing calculation of Diversity will be stopped unless you undo the change · Undo" |
+| a redo, with a calculation left behind | "Redone: the filter of the variants by missing data changed. Diversity removed. The ongoing calculation of Diversity will be stopped unless you undo the change · Undo" |
 | a command, from stage 3, with the statistics of each individual removed | "2 results removed because the MAF filter changed · Undo", the diversity and the statistics; alone, "Statistics of each individual removed because the MAF filter changed · Undo" |
 | a command, with the writing left behind | "The MAF filter changed. The writing of the file will be stopped unless you undo the change · Undo" |
 | a command that changes the load, with the writing and a calculation in flight | "Statistics of each individual removed, and the calculation of Diversity and the writing of the file stopped, because a new variants file was loaded · Undo" |
@@ -389,7 +389,12 @@ It is written by the **announcer**, `createAnnouncer()` of
 `src/ui/shell/status.ts`, which the entry makes once
 (`docs/specs/entry.md`) and the shell gives the screens. `announce(text)`
 empties the region at once and writes the text 100 ms later, with any
-other text announced in those 100 ms after it, joined by a space. The
+other text announced in those 100 ms after it, joined by a space.
+`announce(text, { replaces: kind })` names the kind of a text that only
+its latest holds, and drops a text of that kind still waiting: the line
+of the individuals that pass, after a threshold stepped six times with
+an arrow key within 100 ms, is said once, with the last count, and not
+three times in one text. The
 region is emptied first because a screen reader reads a text written
 again only if it changed, and the pause, because React draws two changes
 made in the same moment as one. 100 ms is decided here, to be checked
@@ -422,7 +427,8 @@ file its options of the CSV compared by their values:
 | a request of the writing that was current and not being stopped left `runs`, and `write` is `done` | "panel.filtered.nei is written, 19.2 MB; Save it in the Variants step." (`docs/specs/analyses/writeVariants.md`) |
 | the same, and `write` is `noVariant`, a file of no variant, which the store does not keep | "The filters kept none of the variants of panel.nei, so there is nothing to write."; when the pass was given no variant, a variants file with none or a VCF read with only the passed variants with none that passed, the words the Variants step shows for it (`docs/specs/analyses/writeVariants.md`, "Its words"): "panel.nei has no variants, so there is nothing to write. Load another variants file in the Variants step." |
 | the same, and `write` is in the state `error` | "The file could not be written. The Variants step says why." |
-| the request of the statistics of each individual that a Run of an analysis waited for left `runs`, not being stopped, and the analysis is `locked`: the filters of individuals keep no one, and it was not run | its title, " was not run. " and the reason of the lock, the words beside its disabled Run, `keptNoneReason`: "Diversity was not run. The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them in the Variants step.", after the end of the statistics, "Statistics of each individual: done." |
+| the request of the statistics of each individual that a Run of an analysis waited for left `runs`, not being stopped, and the analysis is `locked`: the filters of individuals keep no one, or, for the diversity, no population, and it was not run | its title, " was not run. " and the reason of the lock, the words beside its disabled Run, `keptNoneReason` or the analysis's `keptNeeds`: "Diversity was not run. The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them in the Variants step.", "Diversity was not run. The 34 individuals kept have no population in popcat, so none of the 2 populations has an individual left. Loosen the filters of individuals in the Variants step to keep them.", after the end of the statistics, "Statistics of each individual: done." |
+| the same, and the analysis is in the state `error` with `ofStatistics`: the statistics it waited for could not be calculated, and it was not run | its title and " was not run. The Analyses step says why.", with the step the analysis is shown in, after the failure of the statistics: "Statistics of each individual could not be calculated. The Variants step says why. Diversity was not run. The Analyses step says why." |
 | the request of the statistics of each individual that a write waited for left `runs`, not being stopped, and `write` is `locked`: the filters of individuals keep no one, and no file is written | "The file was not written. " and the reason of the lock, the words beside the disabled Write, `keptNoneReason`: "The file was not written. The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them in the Variants step." |
 | a request of the writing that was current and being stopped left `runs` | "Writing the file: stopped." |
 | `write` went from `done` to a state other than `done` and `saved`: the file written and not saved was discarded, by a change of the filters, a new load or an opening | nothing is said, and the region is emptied, with the texts waiting to be written into it, by `clear()` of the announcer: its words may be "panel.filtered.nei is written, 19.2 MB; Save it in the Variants step.", which no longer hold, and a user who reads the region later would follow them. The notice of the change, read out by itself, says the file was discarded |
@@ -474,7 +480,7 @@ the shell gives the screens:
 
 | what the user did | the announcement |
 |---|---|
-| an undo or a redo that makes no notice, with the button or the keyboard | "Undone: the missing data filter changed.", "Redone: the missing data filter changed." |
+| an undo or a redo that makes no notice, with the button or the keyboard | "Undone: the filter of the variants by missing data changed.", "Redone: the filter of the variants by missing data changed." |
 | Save of the dialog of Save project | "panel.popnei.json was handed to the browser to download." (below, "Saving") |
 | from stage 3, Save of a written file in the Variants step | "panel.filtered.nei was handed to the browser to save.", the name of the file; the button, which keeps the focus, turns into Write, and the line above it, which says the same, is behind the focus (`docs/specs/analyses/writeVariants.md`, "Accessibility") |
 | a project opened | "Opened panel.popnei.json." followed by the text of `askedFileText` when it gives one (below, "Opening"), and, from stage 4, by the reason `individualsNeeds` gives a metadata file `notGiven` |
@@ -735,8 +741,8 @@ selector, a function that picks one part of the state so that a
 component is drawn again only when that part changes (`react.md`,
 "Reading core"); `projectNeeds`, `individualsNeeds` and `askedFileText`
 of the project, and `populationsNeeds`, `populationsToRun`,
-`populationsOf` and `populationsKept`, of `src/core/project.ts` from
-stage 4 and of the diversity before; and the step from the hash, with `useStepHash` of
+`populationsOf` and `populationsBeforeRun`, of `src/core/project.ts`
+from stage 4 and of the diversity before; and the step from the hash, with `useStepHash` of
 `react.md`. It sends `store.undo()`, `store.redo()`,
 `store.dismissNotice()` and `store.open(project)`, and calls the saving
 of the entry. It holds, as state of the screen, whether a dialog is
@@ -1049,7 +1055,7 @@ What stage 4 asks, of the specs revised or written beside this
 revision, 27 September 2026:
 
 - `docs/specs/core/project.md`: `populationsNeeds`, `populationsToRun`,
-  `populationsOf` and `populationsKept` in `project.ts`, with the one
+  `populationsOf` and `populationsBeforeRun` in `project.ts`, with the one
   population; `individualsNeeds` giving no reason for no metadata file;
   the grouping `onePopulation`; `typesLost` of a source, worked out from
   the types set and the read; the read `notGiven` of an opened project,

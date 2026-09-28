@@ -5,7 +5,8 @@
  * refusal, or those of `failureText` for any other failure, with the
  * sentence that asks for the calculation again; or, for the failure of
  * the statistics of each individual that a Run waited for, the words the
- * analysis gives it.
+ * analysis gives it. The Variants step shows them without "in the
+ * Variants step", as the owner decided at stop A.
  */
 import type { Failure } from "../../core/analyses/individualChecks.ts";
 import type { Project } from "../../core/project.ts";
@@ -38,6 +39,10 @@ export interface FailedProps {
     p: Project,
     failureText: (failure: Failure) => string,
   ) => string;
+  /** What the step that shows the words makes of them: the Variants
+      step takes "in the Variants step" out of them, `withoutTheStep`;
+      left as they are when absent. */
+  readonly asShown?: (text: string) => string;
 }
 
 /** What went wrong, and what to do. */
@@ -47,6 +52,7 @@ export function Failed({
   refusalText,
   again,
   statisticsFailedText,
+  asShown,
 }: FailedProps): React.JSX.Element {
   const text = useAppState((s) => {
     const variants = s.project.variants;
@@ -66,5 +72,5 @@ export function Failed({
       ? refusalText(error.message, s.project)
       : failureText(error.error, variants.name, again);
   });
-  return <Problem>{text}</Problem>;
+  return <Problem>{asShown === undefined ? text : asShown(text)}</Problem>;
 }

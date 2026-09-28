@@ -1,9 +1,12 @@
 /**
  * Run or Stop, one button in one place, so the focus stays on it when it
  * changes (docs/specs/analyses/diversity.md, "Accessibility"). A disabled
- * Run is described by the reason it cannot run. When the button leaves
- * the page while it has the focus, the calculation done or refused, it
- * calls `onGone`, for the part that holds it to move the focus: a panel
+ * Run is described by the reason it cannot run, and is another button,
+ * since a disabled one cannot hold the focus. When the button leaves the
+ * page while it has the focus, the calculation done or refused, or a
+ * Stop turned into a disabled Run, a Run that waited for the statistics
+ * of each individual locked by filters that keep no one, it calls
+ * `onGone`, for the part that holds it to move the focus: a panel
  * or the block of the histograms to its heading, the Count to the line
  * of the total or to the words of its error; so that a user of the
  * keyboard is not sent to the top of the page (WCAG 2.4.3).
@@ -31,7 +34,16 @@ export interface RunButtonProps {
 }
 
 /** Run or Stop, one button in one place. */
-export function RunButton({
+export function RunButton(props: RunButtonProps): React.JSX.Element {
+  const disabled = props.button.kind === "run" && props.button.reason !== null;
+  // A disabled Run is another button, so that the cleanup of the one
+  // before it moves the focus when it had it.
+  return <OneButton key={disabled ? "disabled" : "enabled"} {...props} />;
+}
+
+/** The button: one element for an enabled Run and a Stop, and another
+    for a disabled Run. */
+function OneButton({
   button,
   runLabel,
   onRun,

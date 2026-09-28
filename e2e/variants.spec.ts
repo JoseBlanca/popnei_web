@@ -732,6 +732,31 @@ test("WS7 D3 the calculations that could not start are told in the words of the 
   ).toBeVisible();
 });
 
+test("WS7 D3 popnei's wasm not served: once the calculation worker is given up, nothing is shown before a file is picked", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  let wasmAsked = 0;
+  await page.route("**/*.wasm", (route) => {
+    wasmAsked += 1;
+    return route.fulfill({ status: 404 });
+  });
+  await openVariants(page);
+
+  // Two starts of the calculation worker, each asking for the wasm, and
+  // then no worker: the client has given it up.
+  await expect.poll(() => wasmAsked).toBeGreaterThanOrEqual(2);
+  await expect
+    .poll(() => page.workers().some((w) => w.url().includes("runnerWorker")))
+    .toBe(false);
+
+  await expect(page.getByRole("main").getByText(/could not/)).toHaveCount(0);
+  await expect(page.getByRole("alert")).toHaveText("");
+  await expect(fileButton(page)).toHaveText("Choose a variants file…");
+  await expectNoViolations(makeAxeBuilder);
+  expect(wasmAsked).toBe(2);
+});
+
 test("WS7 D3 a piece of text dropped on the zone loads nothing, and the step says what to drop", async ({
   page,
   makeAxeBuilder,
@@ -760,13 +785,17 @@ test("WS7 D3 a piece of text pasted into the zone's button loads nothing, and th
   await paste.evaluate((button) => {
     const transfer = new DataTransfer();
     transfer.setData("text/plain", "panel.nei");
-    button.dispatchEvent(
-      new ClipboardEvent("paste", {
-        clipboardData: transfer,
-        bubbles: true,
-        cancelable: true,
-      }),
-    );
+    // Firefox takes the text of a paste made by a script from the
+    // members `dataType` and `data`, which only it knows, and not from
+    // `clipboardData`; the other two engines take `clipboardData`.
+    const init: ClipboardEventInit & { dataType: string; data: string } = {
+      clipboardData: transfer,
+      dataType: "text/plain",
+      data: "panel.nei",
+      bubbles: true,
+      cancelable: true,
+    };
+    button.dispatchEvent(new ClipboardEvent("paste", init));
   });
 
   const message = "Load a VCF or a .nei file, not a piece of text.";
@@ -863,7 +892,13 @@ for (const locale of ["en-US", "es-ES"] as const) {
         "Maximum proportion of missing genotypes",
       );
       await expect(threshold).toHaveValue("0.1");
-      await threshold.fill("0,05");
+      // Typed key by key, as a user types it. Playwright's fill gives the text
+      // in Firefox as one composition, the way the input method of a
+      // language gives it, whose characters the field leaves to React Aria
+      // to check at the end, with no line of the comma (NumberField.tsx).
+      await threshold.click();
+      await threshold.press("ControlOrMeta+a");
+      await threshold.pressSequentially("0,05");
       await threshold.press("Enter");
       await expect(threshold).toHaveValue("0.1");
       await expect(
@@ -881,7 +916,9 @@ for (const locale of ["en-US", "es-ES"] as const) {
       ).toHaveCount(0);
 
       const ploidy = page.getByLabel("Ploidy of the VCF");
-      await ploidy.fill("2,5");
+      await ploidy.click();
+      await ploidy.press("ControlOrMeta+a");
+      await ploidy.pressSequentially("2,5");
       await ploidy.press("Enter");
       await expect(ploidy).toHaveValue("2");
       await expect(

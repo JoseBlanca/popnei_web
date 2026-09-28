@@ -31,7 +31,7 @@
  * its result inside it, so that a defect in drawing one leaves the lists
  * and the rest of the step (react.md, "Errors").
  */
-import { useId, useMemo, useState } from "react";
+import { memo, useId, useMemo, useState } from "react";
 
 import type { IndividualStatistic } from "../../../core/analyses/individualChecks.ts";
 import { individualListNeeds } from "../../../core/project.ts";
@@ -39,8 +39,8 @@ import { resultOf, statusOf } from "../../analyses/status.ts";
 import { titleOf } from "../../analyses/titles.ts";
 import { ErrorBoundary } from "../../shell/ErrorBoundary.tsx";
 import { classOf } from "../../classOf.ts";
-import { useHistoryMoves } from "../../historyMoves.ts";
 import { useAnnouncer } from "../../shell/announcer.tsx";
+import { INDIVIDUALS_KEPT_KIND } from "../../shell/status.ts";
 import { useAppState, useStore } from "../../store.tsx";
 import { Button } from "../../widgets/Button.tsx";
 import { NumberField } from "../../widgets/NumberField.tsx";
@@ -50,6 +50,7 @@ import type { StepCommand } from "./commands.ts";
 import { Filter } from "./Filter.tsx";
 import { IndividualChecksBlock } from "./IndividualChecksBlock.tsx";
 import { IndividualHistogram } from "./IndividualHistogram.tsx";
+import { FocusOnLeave } from "./FocusOnLeave.tsx";
 import { IndividualTable } from "./IndividualTable.tsx";
 import {
   INDIVIDUAL_FILTERS_HEADING,
@@ -71,7 +72,7 @@ import {
   INDIVIDUAL_THRESHOLD_STEP,
   THRESHOLD_KINDS,
   THRESHOLD_WORDS,
-  appearedKeptNone,
+  keptAnnouncement,
   individualCountText,
   individualThresholdText,
   keptTotal,
@@ -110,36 +111,47 @@ export function IndividualFilters(): React.JSX.Element {
   const announcer = useAnnouncer();
   const project = useAppState((s) => s.project);
   const kept = useAppState((s) => s.individualsKept);
-  const moves = useHistoryMoves();
+  const moves = useAppState((s) => s.historyMoves);
   const [typed, setTyped] = useState<TypedLists>(NOTHING_TYPED);
   const [clears, setClears] = useState<Clears>(NO_CLEAR);
   const [typedThresholds, setTypedThresholds] =
     useState<TypedThresholds>(NO_THRESHOLD_TYPED);
   const headingId = useId();
   const keptNoneId = useId();
+  const statsHeadingId = useId();
   const needs = useMemo(() => individualListNeeds(project), [project]);
   const total = keptTotal(project, kept);
   const read = project.variants?.read.kind === "read";
   const statsDone = useAppState(
     (s) => statusOf(s, "individualChecks").kind === "done",
   );
+  const statsFailed = useAppState(
+    (s) => statusOf(s, "individualChecks").kind === "error",
+  );
 
-  /** Sends a command of the section, and announces the reason of a list,
-      or of no individual kept, that it makes appear, since the focus
-      stays on the control that sent it. */
+  /** Sends a command of the section, and announces the reason of a list
+      that it makes appear, or else what the filters now keep, since the
+      focus stays on the control that sent it. */
   const send = (step: StepCommand): void => {
     const state = store.getState();
     const before = individualListNeeds(state.project);
     const totalBefore = keptTotal(state.project, state.individualsKept);
     store.apply(step.description, step.command);
     const after = store.getState();
-    const appeared =
-      appearedReason(before, individualListNeeds(after.project)) ??
-      appearedKeptNone(
-        totalBefore,
-        keptTotal(after.project, after.individualsKept),
-      );
-    if (appeared !== null) announcer.announce(appeared);
+    const reason = appearedReason(before, individualListNeeds(after.project));
+    if (reason !== null) {
+      announcer.announce(reason);
+      return;
+    }
+    const kept = keptAnnouncement(
+      totalBefore,
+      keptTotal(after.project, after.individualsKept),
+    );
+    // Only the latest of what the filters keep is said, when a
+    // threshold is stepped several times within the pause of the region.
+    if (kept !== null) {
+      announcer.announce(kept, { replaces: INDIVIDUALS_KEPT_KIND });
+    }
   };
   const type = (kind: ListKind, text: string): void => {
     setTyped((before) => ({ ...before, [kind]: { text, moves } }));
@@ -152,7 +164,9 @@ export function IndividualFilters(): React.JSX.Element {
 
   return (
     <section aria-labelledby={headingId} className={classOf(styles, "section")}>
-      <h2 id={headingId} className={classOf(styles, "heading")}>
+      {/* It takes the focus when a part of a check leaves the page with
+          its block, and is not in the order of the Tab key. */}
+      <h2 id={headingId} tabIndex={-1} className={classOf(styles, "heading")}>
         {INDIVIDUAL_FILTERS_HEADING}
       </h2>
       <div className={classOf(styles, "lists")}>
@@ -167,7 +181,7 @@ export function IndividualFilters(): React.JSX.Element {
               text={text}
               applied={isApplied(text, list)}
               reason={needs?.list === kind ? listReasonText(needs) : null}
-              count={individualCountText(kept, kind)}
+              count={individualCountText(kept, kind, statsFailed)}
               onType={(next) => {
                 type(kind, next);
               }}
@@ -188,7 +202,7 @@ export function IndividualFilters(): React.JSX.Element {
       </div>
       {read && (
         <ErrorBoundary level={3} heading={titleOf("individualChecks")}>
-          <IndividualChecksBlock />
+          <IndividualChecksBlock headingId={statsHeadingId} />
         </ErrorBoundary>
       )}
       <div className={classOf(styles, "filters")}>
@@ -204,7 +218,7 @@ export function IndividualFilters(): React.JSX.Element {
               label={words.switchLabel}
               line={words.line}
               isOn={value !== null}
-              count={individualCountText(kept, kind)}
+              count={individualCountText(kept, kind, statsFailed)}
               describedAlso={total.kind === "keptNone" ? keptNoneId : null}
               onSwitch={(on) => {
                 typeThreshold(kind, null);
@@ -217,15 +231,20 @@ export function IndividualFilters(): React.JSX.Element {
                     level={3}
                     heading={INDIVIDUAL_HISTOGRAMS[words.statistic].title}
                   >
-                    <HistogramOf
-                      statistic={words.statistic}
-                      threshold={shown}
-                      thresholdLine={
-                        shown === null
-                          ? null
-                          : individualThresholdText(kind, shown)
-                      }
-                    />
+                    <FocusOnLeave
+                      sectionHeadingId={headingId}
+                      headingId={statsHeadingId}
+                    >
+                      <HistogramOf
+                        statistic={words.statistic}
+                        threshold={shown}
+                        thresholdLine={
+                          shown === null
+                            ? null
+                            : individualThresholdText(kind, shown)
+                        }
+                      />
+                    </FocusOnLeave>
                   </ErrorBoundary>
                 )
               }
@@ -259,7 +278,9 @@ export function IndividualFilters(): React.JSX.Element {
       </div>
       {read && statsDone && (
         <ErrorBoundary level={3} heading={STATS_TABLE_NAME}>
-          <TableOf />
+          <FocusOnLeave sectionHeadingId={headingId} headingId={statsHeadingId}>
+            <TableOf />
+          </FocusOnLeave>
         </ErrorBoundary>
       )}
       {total.kind === "passed" && (
@@ -309,13 +330,18 @@ function HistogramOf({
 }
 
 /** The table of the individuals, from the statistics the store keeps,
-    once they are calculated. */
-function TableOf(): React.JSX.Element | null {
+    once they are calculated. It takes no props and reads the store
+    itself, and `memo` keeps it from being drawn again with the section,
+    at each key typed in a list or a threshold, whose text is the
+    section's state: with 10,000 individuals each key drew the table
+    again, 20 to 35 ms more a key in Chromium 153 and WebKit 26.6, on 27
+    September 2026. */
+const TableOf = memo(function TableOf(): React.JSX.Element | null {
   const { result, variantsName } = useStats();
   return result === null || variantsName === null ? null : (
     <IndividualTable result={result} variantsName={variantsName} />
   );
-}
+});
 
 /** What one list is drawn with. */
 interface IndividualListProps {

@@ -166,9 +166,12 @@ test("WS9 D4 panel.nei, filtered at 0.05 and grouped by the populations of panel
   await setThreshold(page, "0.05");
   await goTo(page, "Analyses");
   await expect(
-    panel(page).getByText("3 populations: p0, 48 individuals; p2, 84; p1, 68", {
-      exact: true,
-    }),
+    panel(page).getByText(
+      "3 populations: p0, 48 individuals; p2, 84 individuals; p1, 68 individuals",
+      {
+        exact: true,
+      },
+    ),
   ).toBeVisible();
 
   await run(page);
@@ -187,7 +190,7 @@ test("WS9 D4 panel.nei, filtered at 0.05 and grouped by the populations of panel
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("WS9 D4 the threshold set to 1 removes the diversity, with the notice Diversity removed because the missing data filter changed and its Undo, and axe", async ({
+test("WS9 D4 the threshold set to 1 removes the diversity, with the notice Diversity removed because the filter of the variants by missing data changed and its Undo, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -197,7 +200,7 @@ test("WS9 D4 the threshold set to 1 removes the diversity, with the notice Diver
 
   await expect(
     notice(page).getByRole("alertdialog", {
-      name: "Diversity removed because the missing data filter changed",
+      name: "Diversity removed because the filter of the variants by missing data changed",
     }),
   ).toBeVisible();
   await expect(

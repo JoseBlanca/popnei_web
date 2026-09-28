@@ -190,7 +190,7 @@ describe("VS3 D1 the counts of the filters: the rest of the module", () => {
     expect(filterCounts.warnings(r, project(filters))).toEqual([
       {
         code: "filterKeptNone",
-        text: "The missing data filter kept none of the 1,200 variants it was given, so the analyses and the statistics of each individual have no variant to calculate over, and a file written would hold none. Loosen it.",
+        text: "The filter of the variants by missing data kept none of the 1,200 variants it was given, so the analyses and the statistics of each individual have no variant to calculate over, and a file written would hold none. Loosen it.",
       },
     ]);
   });
@@ -206,7 +206,7 @@ describe("VS3 D1 the counts of the filters: the rest of the module", () => {
     expect(
       filterCounts.warnings(r, project(EMPTY_FILTERS)).map((w) => w.text),
     ).toEqual([
-      "The missing data filter kept none of the 1,200 variants it was given, so the analyses and the statistics of each individual have no variant to calculate over, and a file written would hold none. Loosen it.",
+      "The filter of the variants by missing data kept none of the 1,200 variants it was given, so the analyses and the statistics of each individual have no variant to calculate over, and a file written would hold none. Loosen it.",
     ]);
   });
 
@@ -299,10 +299,10 @@ describe("VS3 D1 the counts of the filters: the rest of the module", () => {
 describe("VS6 D2 the name of a filter of the variants inside a sentence", () => {
   test("each of the four, as the lines of the histograms and the descriptions of the commands name them", () => {
     expect(filterNameInSentence("missing_data")).toBe(
-      "the missing data filter",
+      "the filter of the variants by missing data",
     );
     expect(filterNameInSentence("obs_het")).toBe(
-      "the filter by observed heterozygosity",
+      "the filter of the variants by observed heterozygosity",
     );
     expect(filterNameInSentence("maf")).toBe("the MAF filter");
     expect(filterNameInSentence("ld")).toBe("the LD pruning");

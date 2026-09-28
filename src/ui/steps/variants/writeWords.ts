@@ -28,6 +28,7 @@ import {
   STATISTICS_WORDS,
 } from "../../analyses/words.ts";
 import { capitalized } from "../../sentences.ts";
+import { withoutTheStep } from "./words.ts";
 
 /** The heading of the part, and its title in the notice and the status
     region is "Writing the file" (docs/specs/shell.md). */
@@ -54,22 +55,6 @@ export const COUNTING_SIZE_TEXT =
     and would fail the same way. */
 export const COUNT_REFUSED_TEXT =
   "The variants could not be counted, so the file cannot be written either: the Count above says why.";
-
-/** " in the Variants step", and the comma before it, where it ends a
-    sentence or comes before "and": the end that the words of a failure
-    have elsewhere in the application, and that the part, in the Variants
-    step, leaves out. */
-const IN_THE_STEP = /,? in the Variants step(?=\.| and )/gu;
-
-/** `text` without "in the Variants step", as the part shows the words it
-    takes from the store and from the other parts of the application:
-    "Load another variants file in the Variants step." becomes "Load
-    another variants file.", and "Change the list, or remove the filter,
-    in the Variants step." becomes "Change the list, or remove the
-    filter." (writeVariants.md, "Its words"). */
-export function inTheStep(text: string): string {
-  return text.replace(IN_THE_STEP, "");
-}
 
 /** What the part says when a change of the filters dropped the file of
     the last write, which ended after it. */
@@ -127,7 +112,7 @@ export function mayBeTooLargeText(
 export function keptNoVariantText(p: Project): string {
   const read = p.variants?.read;
   if (read?.kind === "read" && read.numVars === 0) {
-    return inTheStep(emptySourceText(p, "there is nothing to write"));
+    return withoutTheStep(emptySourceText(p, "there is nothing to write"));
   }
   return `The filters keep none of the variants of ${variantsName(p)}, so there is nothing to write. Loosen the filters above.`;
 }
@@ -139,7 +124,7 @@ export function keptNoVariantText(p: Project): string {
     source; otherwise the filters kept none. */
 export function noVariantText(p: Project, pass: PassStats): string {
   if (variantsOfFile(pass) === 0) {
-    return inTheStep(emptySourceText(p, "there is nothing to write"));
+    return withoutTheStep(emptySourceText(p, "there is nothing to write"));
   }
   return `The filters kept none of the variants of ${variantsName(p)}, so there is nothing to write. Loosen the filters above.`;
 }
@@ -234,7 +219,7 @@ export function writeErrorText(
   p: Project,
   estimate: WriteEstimate | null,
 ): string {
-  return inTheStep(errorWords(error, ofStatistics, p, estimate));
+  return withoutTheStep(errorWords(error, ofStatistics, p, estimate));
 }
 
 /** The words of `writeErrorText`, as the rest of the application gives

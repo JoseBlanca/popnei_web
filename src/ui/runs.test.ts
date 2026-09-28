@@ -358,7 +358,105 @@ describe("VS3 D4 the defects of runEnded", () => {
   });
 });
 
+/** The store of the fake analyses with a write, and the five individuals
+    opened with the threshold of 0.2, whose `runEnded` throws for the
+    handles `throwsFor` names. */
+function setUpWriting(throwsFor: (runId: number) => boolean): {
+  readonly store: Store<TestResult, string>;
+  readonly sent: readonly SentRequest[];
+  readonly writes: ReturnType<typeof fakeSend>["writes"];
+} {
+  const { analyses, stats, counts } = fakeAnalyses();
+  const { send, sent, writeSend, writes } = fakeSend();
+  const real = createStore({
+    first: firstProject("popgen"),
+    analyses: [...analyses, stats, counts],
+    send,
+    countsOf: writeTestCountsOf,
+    counts: "counts",
+    statistics: FAKE_STATISTICS,
+    write: { send: writeSend, countsOf: fakeWriteCountsOf },
+    appVersion: "0.1.0",
+    cacheMaxBytes: CACHE_MAX_BYTES,
+    maxUndoSteps: MAX_UNDO_STEPS,
+  });
+  real.popneiReady("0.1.0");
+  real.open(
+    fiveIndividualsProject([
+      { kind: "missing_data", maxAllowedMissingRate: 0.2 },
+    ]),
+  );
+  const store: Store<TestResult, string> = {
+    ...real,
+    runEnded: (runId, outcome) => {
+      if (throwsFor(runId)) {
+        throw new Error(`popnei_web defect: runEnded of ${String(runId)}`);
+      }
+      return real.runEnded(runId, outcome);
+    },
+  };
+  return { store, sent, writes };
+}
+
 describe("VS3 D6 startWriting", () => {
+  test("a runEnded that throws for the write's own handle, which the statistics' runEnded gave back, rejects the promise", async () => {
+    const env = setUpWriting((runId) => runId === env.writes[0]?.run.id);
+
+    const started = startWriting(env.store, "nei");
+    const statsRequest = sentAt(env.sent, 0);
+    statsRequest.end({
+      kind: "done",
+      key: statsRequest.key,
+      result: fiveStats(),
+    });
+    // The callbacks already due run, and the store sends the write.
+    await new Promise((resolve) => {
+      setTimeout(resolve, 0);
+    });
+    const write = env.writes[0];
+    expect(write).toBeDefined();
+    write?.end({ kind: "cancelled" });
+
+    await expect(started).rejects.toThrow(
+      `popnei_web defect: runEnded of ${String(write?.run.id)}`,
+    );
+  });
+
+  test("two runEnded that throw for the handles of one write: the first rejects the promise, and the second is thrown on its own, out of the promise", async () => {
+    const { store } = setUpWriting(() => true);
+    const ends: ((outcome: Outcome<TestResult | Written<string>>) => void)[] =
+      [];
+    const handle = (id: number): Run<TestResult | Written<string>> => ({
+      id,
+      outcome: new Promise((resolve) => {
+        ends.push(resolve);
+      }),
+      cancel: () => undefined,
+    });
+    const twoHandles: Store<TestResult, string> = {
+      ...store,
+      startWrite: () => [handle(1), handle(2)],
+    };
+    const queued: (() => void)[] = [];
+    const queue = vi
+      .spyOn(globalThis, "queueMicrotask")
+      .mockImplementation((callback) => {
+        queued.push(callback);
+      });
+
+    try {
+      const started = startWriting(twoHandles, "nei");
+      ends[0]?.({ kind: "cancelled" });
+      ends[1]?.({ kind: "cancelled" });
+
+      await expect(started).rejects.toThrow("popnei_web defect: runEnded of 1");
+      expect(queued).toHaveLength(1);
+      expect(queued[0]).toThrow("popnei_web defect: runEnded of 2");
+    } finally {
+      queue.mockRestore();
+    }
+  });
+
   test("a write that waits for the statistics gives their handle; their outcome gives the write's own handle, awaited and given to runEnded too, and the promise settles after it; null when the store starts none", async () => {
     const { analyses, stats, counts } = fakeAnalyses();
     const { send, sent, writeSend, writes } = fakeSend();

@@ -156,6 +156,11 @@ async function thresholdsSet(page: Page): Promise<void> {
   await commit(page, MISSING_LABEL, "0.03");
   await flip(page, OBS_HET_SWITCH);
   await commit(page, OBS_HET_LABEL, "0.38");
+  // Heard as well as seen: the field's description changed under the
+  // focus, which a screen reader does not read again.
+  await expect(status(page)).toHaveText(
+    new RegExp(`(^| )${PASS_119.replaceAll(".", "\\.")}$`),
+  );
   await expect(
     section(page).getByText(PASS_119, { exact: true }),
   ).toBeVisible();
@@ -399,7 +404,7 @@ test("VS7 D1 the missing data filter of the variants moved: the statistics remov
   await variants.press("Enter");
   await expect(
     section(page).getByText(
-      /^The statistics of each individual were removed because the missing data filter changed\./,
+      /^The statistics of each individual were removed because the filter of the variants by missing data changed\./,
     ),
   ).toBeVisible();
   await expect(
@@ -433,6 +438,29 @@ test("VS7 D1 the missing data filter of the variants moved: the statistics remov
   ).toBeVisible();
   await expect(section(page).getByText(KNOWN_ONCE)).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
+});
+
+test("VS7 D1 an arrow key moves a threshold by 0.01, committed at once with its count", async ({
+  page,
+}) => {
+  await thresholdsSet(page);
+  await field(page, MISSING_LABEL).focus();
+  await page.keyboard.press("ArrowUp");
+  await expect(field(page, MISSING_LABEL)).toHaveValue("0.04");
+  await expect(section(page).getByText(KEPT_125, { exact: true })).toHaveCount(
+    0,
+  );
+  await expect(
+    section(page).getByText(/^Kept \d+ of the 200 individuals it was given\.$/),
+  ).toBeVisible();
+  // Stepped six times at once: what the filters keep is said once.
+  for (let press = 0; press < 6; press += 1) {
+    await page.keyboard.press("ArrowUp");
+  }
+  await expect(field(page, MISSING_LABEL)).toHaveValue("0.1");
+  await expect(status(page)).toHaveText(/pass the filters\.$/);
+  const said = (await status(page).textContent()) ?? "";
+  expect(said.match(/pass the filters/g)).toHaveLength(1);
 });
 
 test("VS7 D1 before the statistics, a threshold turned on says it is known once they are calculated, and a new file loaded says so again", async ({
@@ -501,6 +529,37 @@ test("VS7 D1 thresholds that keep none: the reason under the filters, announced 
   ).toBeVisible();
   await expect(stepLink(page)).toHaveAccessibleName("Variants, Done");
   await expect(writeButton(page)).toBeEnabled();
+});
+
+test("VS7 D1 a list to remove of every individual, then a threshold turned on: the reason at once, Kept 0 of the 0, Write disabled, with no statistics", async ({
+  page,
+}) => {
+  await panelAt005(page);
+  const everyone = Array.from(
+    { length: 200 },
+    (_, index) => `s${String(index).padStart(3, "0")}`,
+  );
+  await section(page)
+    .getByLabel("Individuals to remove, one name per line", { exact: true })
+    .fill(everyone.join("\n"));
+  await section(page)
+    .getByRole("button", { name: "Apply the list to remove" })
+    .click();
+  await expect(
+    section(page).getByText(NONE_KEPT, { exact: true }),
+  ).toBeVisible();
+  await flip(page, MISSING_SWITCH);
+  await expect(
+    section(page).getByText("Kept 0 of the 0 individuals it was given.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(section(page).getByText(KNOWN_ONCE)).toHaveCount(0);
+  await expect(
+    section(page).getByText(NONE_KEPT, { exact: true }),
+  ).toBeVisible();
+  await expect(writeButton(page)).toBeDisabled();
+  await expect(writeButton(page)).toHaveAccessibleDescription(NONE_KEPT);
 });
 
 test("VS7 D1 the keyboard goes from the button of the statistics through each threshold, its switch, its field and its histogram, to the table", async ({

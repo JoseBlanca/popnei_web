@@ -196,8 +196,12 @@ decimal mark shows. The dot and not a comma, as the owner decided on 25
 September 2026, because a column of the decimal comma would read "1,75,
 1,62, 1,80". The space before the dot does not break, so that a value
 keeps its dot on its line and a line never starts with a dot, which at
-320 px wide, where the values wrap, would read as the mark of a list. A
-number or a boolean of an xlsx is shown as the text JavaScript writes
+320 px wide, where the values wrap, would read as the mark of a list. At
+320 px the table fits the page, which does not scroll sideways: below
+480 px each cell keeps 4 px of space on each side and not 8, since with
+8 the table of stage 3, whose types were text, needed 300 px of the 288
+px the page gives it with DejaVu Sans, the sans-serif font of Ubuntu, as
+the owner decided on 28 September 2026. A number or a boolean of an xlsx is shown as the text JavaScript writes
 for it, `1.5`, and `TRUE` as `true`. The rows of the file are not
 drawn: the three values show what a wrong option does, and a file of
 10,000 rows would be a table of 10,000 lines to scroll past to reach

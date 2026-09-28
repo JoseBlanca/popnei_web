@@ -137,7 +137,7 @@ file:
 
 | code | when | the text |
 |---|---|---|
-| `individualsWithoutCalls` | an individual has NaN in `obsHetRate` | "3 individuals of panel.nei have no called genotype among the 1,152 variants the filters kept, so they have no observed heterozygosity: s001, s002 and s003. The filter by observed heterozygosity removes them when it is on." With one: "s001 has no called genotype among the 1,152 variants the filters kept, so it has no observed heterozygosity. …" |
+| `individualsWithoutCalls` | an individual has NaN in `obsHetRate` | "3 individuals of panel.nei have no called genotype among the 1,152 variants the filters kept, so they have no observed heterozygosity: s001, s002 and s003. The filter of the individuals by observed heterozygosity removes them when it is on." With one: "s001 has no called genotype among the 1,152 variants the filters kept, so it has no observed heterozygosity. …" |
 
 The individuals are listed as `project.md` lists them, three or fewer by
 name, more as the first two and how many more. The last sentence is the
@@ -400,7 +400,7 @@ are calculated:
   left out too while `individualsKept` is `null`, when a list of
   individuals names one twice or one not in the file, which popnei would
   refuse, and a line above the table says why: "Which individuals are
-  kept is shown once the lists of individuals above are corrected." Which
+  kept is shown once the lists of individuals to keep and to remove are corrected." Which
   filter removed an individual is read in its numbers beside it, and how
   many each filter removed beside the filter
   (`docs/specs/steps/variants.md`). The numbers to four decimals, NaN as "no value",
@@ -412,14 +412,19 @@ are calculated:
   with "no value" sorts after every number, in both directions, so that
   a sort by heterozygosity, from the highest, starts with the highest
   that were counted; Kept sorts "kept" before "removed", and "removed"
-  first the other way. Rows equal in the column sorted keep the order
+  first the other way; a sort by Kept goes with the column when it is
+  left out, the rows back in the order of the variants file, and the
+  column is not sorted when it comes back, since a filter turned on
+  again is not a request to sort. Rows equal in the column sorted keep the order
   of the variants file, and Individual sorts the names as the browser
   orders text in English. The table is named "Statistics of each
   individual", the heading of its block, since its caption stands in
   the block above the histograms (`docs/specs/steps/variants.md`), and
   it scrolls in a box of its own with its header in view, so that
-  10,000 rows do not make the step 10,000 lines long; how high the box
-  is, is left for the running application. Written with the code on 27
+  10,000 rows do not make the step 10,000 lines long; the box is as high
+  as its rows, and at most 28rem or 70% of the height of the window,
+  beyond which it scrolls, so that a table of a few rows stands in no
+  empty box. Written with the code on 27
   September 2026.
 - **Two histograms**, of the proportion of missing genotypes and of the
   observed heterozygosity, drawn by the histogram of
@@ -482,12 +487,16 @@ individuals started it, and a Stop of that analysis stops it
 
 ### Its words
 
-The results removed, by the cause of the notice, as the diversity's: "The
+The results removed, by the cause of the notice, as the diversity's,
+with the histograms named beside the table, since both go: "The
 statistics of each individual were removed because the MAF filter
-changed. Undo brings back the table as it was, with no calculation;
-Calculate makes a new one for the new settings.", and after an undo or
-a redo "Undone: the MAF filter changed. The statistics of each individual
-were removed; Redo brings back …". Its `resultName` is "the table".
+changed. Undo brings back the table and the histograms as they were,
+without calculating again; Calculate makes new ones for the new
+settings.", and after an undo or a redo "Undone: the MAF filter changed.
+The statistics of each individual were removed; Redo brings back the
+table and the histograms as they were, without calculating again, and
+Calculate makes new ones for the settings as they are now." Its
+`resultName` is "the table".
 
 The error state has the words of the diversity's table, "Its words", with
 "the diversity" replaced by "the statistics of each individual", "Run it

@@ -527,6 +527,24 @@ describe("WS7 D1 the outcomes of the reads", () => {
     });
   });
 
+  test("a reopenFailed of the first open is recorded as a failure of the worker, with the name and the browser's message", async () => {
+    const { store, fake } = setUp();
+    pickNei(store, PANEL_ID);
+
+    const error = {
+      kind: "reopenFailed",
+      name: "panel.nei",
+      message: "the file was changed on the disk",
+    } as const;
+    fake.variants[0]?.end({ kind: "failed", error });
+    await settle();
+
+    expect(variantsRead(store)).toEqual({
+      kind: "failed",
+      error: { kind: "worker", error },
+    });
+  });
+
   test("a workerFailed is recorded as a failure of the worker, and the file is not asked again", async () => {
     const { store, fake } = setUp();
     pickNei(store, PANEL_ID);

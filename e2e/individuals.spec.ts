@@ -836,13 +836,17 @@ test("WS8 D1 a piece of text dropped on the zone, or pasted into its button, loa
   await paste.evaluate((button) => {
     const transfer = new DataTransfer();
     transfer.setData("text/plain", "pops.csv");
-    button.dispatchEvent(
-      new ClipboardEvent("paste", {
-        clipboardData: transfer,
-        bubbles: true,
-        cancelable: true,
-      }),
-    );
+    // Firefox takes the text of a paste made by a script from the
+    // members `dataType` and `data`, which only it knows, and not from
+    // `clipboardData`; the other two engines take `clipboardData`.
+    const init: ClipboardEventInit & { dataType: string; data: string } = {
+      clipboardData: transfer,
+      dataType: "text/plain",
+      data: "pops.csv",
+      bubbles: true,
+      cancelable: true,
+    };
+    button.dispatchEvent(new ClipboardEvent("paste", init));
   });
   await expect(
     page.getByRole("main").getByText(message, { exact: true }),

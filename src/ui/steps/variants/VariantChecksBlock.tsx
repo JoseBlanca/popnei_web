@@ -23,12 +23,11 @@
  *
  * The block is drawn only once the variants file is read.
  */
-import { useId, useRef } from "react";
+import { useRef } from "react";
 
 import { refusalText } from "../../../core/analyses/variantChecks.ts";
 import type { Notice } from "../../../core/store.ts";
 import { classOf } from "../../classOf.ts";
-import { versionsText } from "../../analyses/diversity/words.ts";
 import { RunButton } from "../../analyses/RunButton.tsx";
 import { Running } from "../../analyses/Running.tsx";
 import { Failed } from "../../analyses/Failed.tsx";
@@ -39,7 +38,7 @@ import {
   stoppedNotice,
 } from "../../analyses/status.ts";
 import { Warnings } from "../../analyses/Warnings.tsx";
-import { stoppedText } from "../../analyses/words.ts";
+import { stoppedText, versionsText } from "../../analyses/words.ts";
 import { titleOf } from "../../analyses/titles.ts";
 import { startAnalysis } from "../../runs.ts";
 import { useAppState, useStore } from "../../store.tsx";
@@ -51,17 +50,26 @@ import {
   removedText,
 } from "./histogramWords.ts";
 import styles from "./VariantsStep.module.css";
+import { withoutTheStep } from "./words.ts";
 
 /** The id of the check. */
 const ID = "variantChecks";
 
 /** The block of the histograms of the variants. */
-export function VariantChecksBlock(): React.JSX.Element {
+/** What the block is drawn with. */
+export interface VariantChecksBlockProps {
+  /** The id of its heading, which the parts of its result drawn beside
+      the filters give the focus to when they leave the page with it. */
+  readonly headingId: string;
+}
+
+export function VariantChecksBlock({
+  headingId,
+}: VariantChecksBlockProps): React.JSX.Element {
   const store = useStore();
   const status = useAppState((s) => statusOf(s, ID));
   const result = resultOf(status, ID);
   const notice = useAppState((s) => s.notice);
-  const headingId = useId();
   const heading = useRef<HTMLHeadingElement>(null);
 
   const button = buttonOf(status);
@@ -93,6 +101,7 @@ export function VariantChecksBlock(): React.JSX.Element {
           name={CHECK_NAME}
           refusalText={refusalText}
           again={CALCULATE_AGAIN}
+          asShown={withoutTheStep}
         />
       )}
       {button !== null && (

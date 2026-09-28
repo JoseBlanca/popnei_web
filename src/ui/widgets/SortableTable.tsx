@@ -20,12 +20,13 @@
  *
  * It draws only the rows in view, and those just beyond, with React
  * Aria's `Virtualizer` and `TableLayout` (react.md, "Performance"): with
- * every row of 10,000 in the page, a change of the column Kept froze it
- * for 4.8 s in Chromium 153 and 2.4 s in WebKit 26.6, and a sort for 6.7
- * and 3.7 s, on the owner's Mac, an Apple M5 Pro, on 27 September 2026
- * (`VS7 D4` of e2e/measure.spec.ts); with the Virtualizer, 117 and 83
- * ms for the column Kept and 254 and 369 ms for a sort, the rows of the
- * individuals kept as the same objects across a sort. The heights of the rows and of the
+ * every row of 10,000 in the page, a change of the column Kept or a sort
+ * froze it for seconds in Chromium 153 and WebKit 26.6, and with the
+ * Virtualizer for tenths of a second; the times are in the work report
+ * of docs/plans/variants-step.md, "The table at 10,000 individuals",
+ * measured by `VS7 D4` of e2e/measure.spec.ts on 27 September 2026. The
+ * rows of the individuals are kept as the same objects across a sort.
+ * The heights of the rows and of the
  * header are measured, not fixed, so that text made larger is not cut;
  * each column is as wide as a share of the box, and not narrower than
  * its `minWidth`, beyond which the box scrolls sideways.
@@ -44,6 +45,7 @@ import type { SortDescriptor } from "react-aria-components";
 
 import { classOf } from "../classOf.ts";
 import styles from "./SortableTable.module.css";
+import type { TableSort } from "./tableSort.ts";
 
 /** A column of the table, whose id is of the union `Id`. */
 export interface SortableColumn<Id extends string> {
@@ -74,14 +76,6 @@ export interface SortableRow {
   readonly id: string;
   /** The text of its cells, one per column, in their order. */
   readonly cells: readonly string[];
-}
-
-/** Which column is sorted, and which way. */
-export interface TableSort<Id extends string> {
-  /** The column sorted. */
-  readonly column: Id;
-  /** Up or down. */
-  readonly direction: "ascending" | "descending";
 }
 
 /** What a sortable table is drawn with. */
@@ -124,7 +118,7 @@ export function SortableTable<Id extends string>({
         {...(sort !== null && { sortDescriptor: sort })}
         onSortChange={onSort}
       >
-        <TableHeader columns={columns} className={classOf(styles, "headerRow")}>
+        <TableHeader columns={columns}>
           {(column) => (
             <Column
               id={column.id}
@@ -155,7 +149,18 @@ export function SortableTable<Id extends string>({
             </Column>
           )}
         </TableHeader>
-        <TableBody items={rows} dependencies={[columns]}>
+        {/* Keyed by the sort, so that a sort draws the rows in view anew
+            rather than have React move every row of the collection to its
+            new place: with 10,000 rows, keyed, the median freeze of a sort
+            went from 279 to 149 ms in Chromium 153 and from 381 to 107 ms
+            in WebKit 26.6, on 27 September 2026 (VS7 D4 of
+            e2e/measure.spec.ts). The focus stays on the header sorted,
+            which is not in the body. */}
+        <TableBody
+          key={sort === null ? "unsorted" : `${sort.column} ${sort.direction}`}
+          items={rows}
+          dependencies={[columns]}
+        >
           {(row) => (
             <Row
               id={row.id}

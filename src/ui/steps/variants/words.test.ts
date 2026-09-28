@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import { emptyProject } from "../../../core/project.ts";
 import type { Project, VariantSource } from "../../../core/project.ts";
 import {
+  withoutTheStep,
   LD_LINE,
   NOT_COUNTED_LINE,
   OBS_HET_LINE,
@@ -270,6 +271,25 @@ describe("the lines the owner chose at stop A, on 27 September 2026", () => {
     );
     expect(NOT_COUNTED_LINE).toBe(
       "Not counted for these filters. Count to see what each filter keeps.",
+    );
+  });
+});
+
+describe("the words of the application without the Variants step", () => {
+  test("the end of a sentence, and the comma before it, go; elsewhere the words stay", () => {
+    expect(
+      withoutTheStep("Load another variants file in the Variants step."),
+    ).toBe("Load another variants file.");
+    expect(
+      withoutTheStep(
+        "Change the list, or remove the filter, in the Variants step.",
+      ),
+    ).toBe("Change the list, or remove the filter.");
+    expect(withoutTheStep("Loosen them in the Variants step and run.")).toBe(
+      "Loosen them and run.",
+    );
+    expect(withoutTheStep("The Variants step says why.")).toBe(
+      "The Variants step says why.",
     );
   });
 });

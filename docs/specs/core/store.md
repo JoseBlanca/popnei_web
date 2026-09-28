@@ -144,7 +144,7 @@ has the kind `removed` in the code.
 | done | the cache holds a result under its key | the result, its warnings, and the comparison with the check numbers of an opened project file |
 | running | a calculation of its key is in flight and is not being stopped, whether it waits in the queue of the worker or runs; or a Run of its key waits for the statistics of each individual (below) | its progress, the `Progress` of `docs/specs/worker/protocol.md`, popnei's four numbers of the pass as the worker gave them, passed on unchanged, `null` until the worker gives one; the request's id; and whether it waits for the statistics, whose request's progress and id it then holds |
 | error | popnei refused the calculation of its key, or the calculation failed since the last change; or it reads the filters of individuals and the statistics it waits for were refused, or failed since the last change (below) | popnei's message, or the failure, and whether it is the failure of the statistics, `ofStatistics`, so that the panel does not tell it as its own |
-| locked | it reads the filters of individuals, and the list they make keeps no individual, known from the statistics in the cache, or from the project alone when the lists to keep and to remove leave nobody | `keptNoneReason` of `docs/specs/core/individualsKept.md` |
+| locked | it reads the filters of individuals, and the list they make keeps no individual, known from the statistics in the cache, or from the project alone when the lists to keep and to remove leave nobody; or its `keptNeeds` gives a reason for that list, the diversity when the list leaves no population, as the owner decided at stop B on 27 September 2026 | `keptNoneReason` of `docs/specs/core/individualsKept.md`, or the reason of `keptNeeds` |
 | removed | the current notice lists it among the results removed | its key; it can run again |
 | ready | none of the above | its key |
 | empty | cannot happen | — |
@@ -185,6 +185,15 @@ are under keys, and a key names the load it was made from, so nothing of
 them is shown for the new project unless its keys give it. The
 calculations in flight are stopped at once, since the screen asked before
 opening; an opening makes no notice, and clears the one there was.
+
+The store counts its moves of the history, `historyMoves`, one more at
+each undo, redo and opening, and none at a command or an event. A
+screen that holds text of its own beside a part of the project, the
+text of a list of individuals typed and not applied, starts again at
+the project when the count changes, even when the step undone did not
+change that part (`docs/specs/steps/variants.md`, "The two lists"); a
+command cannot be told from an undo by the project alone. An undo or a
+redo with nothing to move, which changes nothing, counts nothing.
 
 The events come from the workers, through `src/ui/runs.ts` and the entry
 of the page, the code that starts when the page opens, makes the store and
@@ -561,7 +570,7 @@ the user presses Run once (`docs/architecture.md`, section 5):
   nothing and waits for it. The analysis is then `running`, waiting for
   the statistics, with the id and the progress of their request, and its
   panel says it waits, "Calculating the statistics of each individual,
-  which the filters of individuals are set from"
+  which the thresholds of the individuals need"
   (`docs/specs/analyses/diversity.md`).
 - When the statistics end `done`, they go into the cache as any result.
   For each Run that waited for them, when the project still gives both
@@ -762,6 +771,10 @@ export interface AnalysisDef<J, R> {
   parseOptions(options: unknown, formatVersion: number): Result<JsonObject, string>;
   keyInputs(p: Project): JsonValue;       // must not read p.variants; answers for any project
   needs(p: Project): string | null;
+  /** The reason it cannot run for the individuals kept, a known list that
+      keeps some individual, or null; absent for an analysis with none.
+      The diversity's: the list leaves no population. */
+  keptNeeds?(p: Project, kept: IndividualsKept): string | null;
   run(p: Project, c: WorkerClient<J, R>): Run<R>;
   warnings(r: R, p: Project): readonly Warning[];
   checkNumbers(r: R): readonly (number | null)[];
@@ -798,6 +811,8 @@ export interface AppState<R, F = never> {  // F: the type of a written file, Blo
   readonly project: Project;
   readonly undo: string | null;           // the description of what an undo would undo
   readonly redo: string | null;
+  /** The undos, redos and openings so far, 0 when the store is made. */
+  readonly historyMoves: number;
   readonly popneiVersion: string | null;
   readonly analyses: readonly AnalysisView<R>[];  // in the order of the definitions
   readonly runs: readonly RunView[];      // the calculations in flight

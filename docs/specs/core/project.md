@@ -47,7 +47,11 @@ plan; and the words after a worker that could not start, which say to
 save the project before the reload. Revised again the same day when the
 specs of stage 4 were made to agree: the validation of a project file
 accepts no failed read of the individuals file, which `projectFile.ts`
-refuses first; and what it asked of other documents, made.
+refuses first; and what it asked of other documents, made. Revised on
+28 September 2026, when stage 3 was merged into the specs of stage 4:
+`populationsBeforeRun`, the populations known before a Run, which stage
+3 added to the module of the diversity on 27 September 2026, joined the
+other functions of the populations here.
 
 The project is everything the user has set in one application: the
 variants file they loaded, the filters, the individuals file with the
@@ -465,13 +469,13 @@ spec gives the filters it reads, their order and their validation.
 Every analysis per population reads the populations the project
 defines: the diversity since stage 2, the analyses of stage 5, and,
 from stage 4, the PCA, which colours its points by them. From stage 4
-they are made here, by four functions that all of them share, and not
+they are made here, by five functions that all of them share, and not
 in the module of the diversity, where the walking skeleton put them;
 its report noted that the next analysis to need them would touch that
 module, and the PCA is that analysis. The Individuals step and the
-shell read the same four. The option not taken was a module of their
+shell read the same five. The option not taken was a module of their
 own in core, which would be a new row of section 9 of
-`docs/architecture.md` for four functions that read the project alone,
+`docs/architecture.md` for five functions that read the project alone,
 beside `individualsCheck`, which is here and which they follow.
 
 The populations are of one of two kinds:
@@ -523,7 +527,17 @@ one; for `"all"` it gives `[["All individuals", every individual of the
 variants file, in its order]]`. `populationsKept(p, kept)` narrows those
 to the individuals the filters of individuals keep, and gives apart the
 populations the list leaves empty, which are not sent and are named on
-the screen (`docs/specs/core/individualsKept.md`). `populationsNeeds(p)`
+the screen (`docs/specs/core/individualsKept.md`).
+`populationsBeforeRun(p, kept)` gives the populations as they are known
+before a Run, from the individuals kept of `individualsKept`:
+`populationsKept` with its list when the list is known, and, while a
+threshold on the individuals waits for the statistics of each
+individual, with `byLists`, the individuals the lists to keep and to
+remove keep, since the thresholds can only remove more; for the one
+population, "All individuals" narrowed to the individuals kept in the
+same way. The ready state of the panel of an analysis and the summary
+line of the shell both list the populations through it, so the two
+never disagree. `populationsNeeds(p)`
 gives the reasons about the column, each with its kind, so that the
 stepper of the shell, the Individuals step and the panel of every
 analysis show one text for one condition:
@@ -545,7 +559,7 @@ both, `reason` and `inStep`, so that one condition still has one text.
 `populationsNeeds` gives `null` without a file, with the
 grouping `onePopulation`, while the file is not read, and while a column
 of that name is chosen and the variants file is not read, since no
-population is looked for until it is. The four give `null` for a
+population is looked for until it is. The five give `null` for a
 project of association, which has roles and no populations.
 
 ### The types of the columns
@@ -679,6 +693,7 @@ export type Result<T, E> =
 ```ts
 import type { JsonObject } from "./keys.ts";
 import type { Result } from "./result.ts";
+import type { IndividualsKept } from "./individualsKept.ts";
 import type {
   VariantFilter, VariantFilterKind, IndividualFilter, IndividualFilterKind,
   IndividualsTable, ColumnType, CsvOptions, CsvFound, IndividualsFileError,
@@ -1153,6 +1168,16 @@ export function populationsToRun(p: Project): Pops | null;
 export function populationsKept(p: Project, kept: readonly string[] | null):
   { readonly pops: Pops; readonly emptied: readonly string[] } | null;
 
+/** The populations as known before a Run, for the ready state and the
+    summary line: populationsKept with the list of `kept` when it is
+    known, and with kept.byLists while a threshold waits for the
+    statistics of each individual; for the one population, "All
+    individuals" narrowed the same way; null when populationsToRun is
+    null. `IndividualsKept` is of docs/specs/core/individualsKept.md,
+    imported as a type only, since that module imports this one. */
+export function populationsBeforeRun(p: Project, kept: IndividualsKept):
+  { readonly pops: Pops; readonly emptied: readonly string[] } | null;
+
 /** The reason about the column of the populations, with its kind, and
     the same words without "in the Individuals step" for that step, inStep;
     null without a file, with onePopulation, while the file is not read,
@@ -1485,7 +1510,11 @@ project frozen deeply with `Object.freeze`, so that a write into it throws
   `"all"`; with the file and `column: null`, `populationsNeeds` of kind
   `noColumn`, with its words; a column of an xlsx whose cells are the
   number 1, the text `1` and the number 2 gives the populations `1` and
-  `2`; every function `null` for a project of association.
+  `2`; `populationsBeforeRun` the populations of the known list, and,
+while a threshold waits for the statistics, those of `byLists`, for a
+column and for the one population alike, as `populationsBeforeRun` was
+tested in the module of the diversity in stage 3; every function `null`
+for a project of association.
 - **`columnAllows`**, on the worked table of the diversity's spec,
   `i1` to `i4`, with a column `h` of `1,5`, `2`, `2` and a missing cell,
   read with the comma, and a column `st` of `yes`, `no`, `yes` and `no`:

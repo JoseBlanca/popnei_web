@@ -14,7 +14,7 @@
 
 import {
   populationsNeeds,
-  populationsKept,
+  populationsBeforeRun,
   populationsOf,
   populationsToRun,
 } from "../../core/analyses/diversity.ts";
@@ -399,17 +399,10 @@ function metadataPart(p: Project, kept: IndividualsKept | null): string {
     return `column ${shown(column)} not in ${name}`;
   }
   const all = `${counted(pops.length, "population")} by ${shown(column)}`;
-  // The individuals kept, or, while a threshold waits for the
-  // statistics, those the lists keep, as the panel of the diversity
-  // lists them.
-  const list = kept?.list;
+  // The populations as known before a Run, as the panel of the
+  // diversity lists them.
   const numEmptied =
-    list === undefined
-      ? 0
-      : (populationsKept(
-          p,
-          list.kind === "known" ? list.individuals : (kept?.byLists ?? null),
-        )?.emptied.length ?? 0);
+    kept === null ? 0 : (populationsBeforeRun(p, kept)?.emptied.length ?? 0);
   if (numEmptied === 0) {
     return all;
   }
@@ -467,7 +460,7 @@ function andTheWriting(
  * left behind, the writing among them, a sentence of their own that names
  * the action; and the written file discarded, a sentence after it. The
  * sentences are joined by a full stop, with none after the last:
- * "Diversity removed because the missing data filter changed", with the
+ * "Diversity removed because the filter of the variants by missing data changed", with the
  * action Undo.
  */
 export function noticeText(
@@ -724,10 +717,11 @@ function endedAnnouncements<R>(
 }
 
 /** The Runs of analyses that waited for the statistics of each
-    individual, whose request left `runs` not being stopped, and that are
-    then locked, the filters of individuals keeping no one: "Diversity
-    was not run. " and the reason of the lock, the words beside its
-    disabled Run. */
+    individual, whose request left `runs` not being stopped, and that
+    were then not run: locked, the filters of individuals keeping no one,
+    "Diversity was not run. " and the reason of the lock, the words
+    beside its disabled Run; or in error, the statistics having failed,
+    "Diversity was not run. The Analyses step says why." */
 function notRunAnnouncements<R>(
   before: AppState<R, unknown>,
   after: AppState<R, unknown>,
@@ -749,8 +743,12 @@ function notRunAnnouncements<R>(
       continue;
     }
     const now = after.analyses.find((a) => a.id === analysis.id)?.status;
+    const name = w.title(analysis.id);
     if (now?.kind === "locked") {
-      announcements.push(`${w.title(analysis.id)} was not run. ${now.reason}`);
+      announcements.push(`${name} was not run. ${now.reason}`);
+    } else if (now?.kind === "error" && now.ofStatistics) {
+      const step = STEP_NAMES[w.stepOf(analysis.id)];
+      announcements.push(`${name} was not run. The ${step} step says why.`);
     }
   }
   return announcements;

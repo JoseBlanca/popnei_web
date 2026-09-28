@@ -51,7 +51,7 @@ keep, which needs no calculation.
 The words of core used here: the **project** is everything the user has
 set; a **command** is a change of it that one Undo takes back, sent with
 a description that ends the notice of what it removed, "Diversity
-removed because the missing data filter changed · Undo"; a **load** is
+removed because the filter of the variants by missing data changed · Undo"; a **load** is
 one pick of a file, with an id of its own, new at every pick; the
 **source** is what the project holds of the loaded file, its name, size,
 format, read options, and what the calculation worker, the second thread
@@ -493,7 +493,12 @@ column, "From", "To", "Variants", or "Individuals" for the histograms of
 the individuals, and, with a threshold, "This filter", whose cells say
 "Kept", "Partly kept" or "Removed"; the line above it says that each bin
 runs from its lower edge up to its upper edge, not included, and that
-the last includes its upper edge. Which tab is selected is state of the
+the last includes its upper edge. At 320 pixels wide the table fits
+its four columns with no sideways scroll: below 480 pixels each cell
+keeps 4 pixels of space on each side and not 8, since with 8 the table
+was 311 pixels wide in a frame of 288 with DejaVu Sans, the sans-serif
+font of Ubuntu, as the owner decided on 28 September 2026. Which tab is
+selected is state of the
 screen, kept while the step is drawn. Under the two tabs, whichever is
 selected, one button, "Download the bins as CSV", since every table of
 the applications downloads as CSV (`docs/functionality.md`, section 9).
@@ -518,8 +523,9 @@ gives none, a file none of whose variants has a called genotype; the
 block is a group named by that title, so that a screen reader names the
 tabs and the button of the CSV with the histogram they belong to; under
 the title, while the filter is on, "Threshold of the MAF filter: 0.95,
-drawn over every variant of the file", or "Threshold of the filter by
-observed heterozygosity: 0.5, drawn over every variant of the file",
+drawn over every variant of the file", or "Threshold of the filter of
+the variants by observed heterozygosity: 0.5, drawn over every variant
+of the file",
 with the number the plot is given, the one typed while it is typed,
 since the histogram counts every variant of the file and the count
 beside the filter only those the filters above it kept, as the owner
@@ -615,9 +621,15 @@ text, React Aria's `TextField` with a `TextArea`, and two buttons:
 | Individuals to keep, one name per line | "Only the individuals of this list are kept. Leave it empty to keep every individual." | "Apply the list to keep", "Clear the list to keep" |
 | Individuals to remove, one name per line | "The individuals of this list are removed." | "Apply the list to remove", "Clear the list to remove" |
 
-Each line is a name, with the spaces and tabs at its ends taken off and
-the empty lines dropped, so that a column copied from a spreadsheet, or
-the text of a file of one name per line, can be pasted. Apply sends the
+Each line is a name, with the white space at its ends taken off, the
+spaces and tabs and also a no-break space or a byte order mark, U+00A0
+and U+FEFF, which a name copied from a web page or a PDF may carry and
+which look like nothing, and the empty lines dropped, so that a column
+copied from a spreadsheet, or the text of a file of one name per line,
+can be pasted. The text area checks no spelling and changes no letter:
+the names of individuals are not words, and a browser that checked them
+would underline each in red, and on a phone would capitalize or correct
+them. Apply sends the
 names in the order written, with `setIndividualFilter`, or, when there
 is none, `removeIndividualFilter`; Clear empties the area and sends
 `removeIndividualFilter`. So the screen never sends an empty list, and
@@ -711,18 +723,35 @@ words were written with the code on 27 September 2026, as the variants'
 were, for the owner to judge at stop B of `docs/plans/variants-step.md`.
 Before the statistics are calculated, or once
 a change of a filter of the variants has removed them, there is no
-histogram, and the line of the counts below says why.
+histogram; while the threshold's filter is on, its count says why,
+"Known once the statistics of each individual are calculated …", and
+while it is off nothing does, since the button of the statistics above
+the switches is then the only thing to do.
 
 **The table of the individuals** follows the thresholds, with its
 column Kept while any filter of individuals is set, and its download
-(`individualChecks.md`, "What it shows").
+(`individualChecks.md`, "What it shows"). A line before it says how
+many rows it has and that they are all there, since its box shows about
+a dozen and a user could take them for the whole: "200 individuals; the
+CSV holds them all.", the count of the individuals of the variants
+file, written as `counted` writes a count, and of one, "1 individual;
+the CSV holds it.". The line does not say
+whether the box scrolls, which depends on the height of the window and
+not only on the rows; the count tells a user that a box showing fewer
+rows holds more. The box is as high as its rows up to its limit
+(`individualChecks.md`). At 320 pixels wide the box scrolls sideways too, so the column Kept is
+reached by scrolling it.
 
 **What each filter of the individuals kept**, from `individualsKept`,
 with no pass. Beside each filter that is set, a list applied under its
 buttons and a threshold under its field: "Kept 125 of the 200
 individuals it was given." A threshold whose statistics are not in the
 page, and each filter after it, has instead "Known once the statistics
-of each individual are calculated for these filters of the variants."
+of each individual are calculated for these filters of the variants.",
+or, while the statistics are in their error state, refused by popnei
+or failed, "Not known:
+the statistics of each individual could not be calculated, and their
+block says why."
 Under the last filter, the individuals that pass them all: "119 of the
 200 individuals of panel.nei pass the filters.", or, when they keep
 none, the reason `keptNoneReason` gives, "The filters of individuals
@@ -736,7 +765,17 @@ stop A; the stepper shows it whole. The reason describes the field of
 each threshold that is on, after its count, and when a command of the
 section, an Apply, a Clear, a threshold committed or a switch, makes
 it appear, the step announces it, since the focus stays on the control
-that sent it. Nothing stands under the filters, and no count beside
+that sent it. After such a command, when the line of the individuals
+that pass stands under the filters, the step announces that line,
+"119 of the 200 individuals of panel.nei pass the filters.", since a
+screen reader does not read the description of a field again when it
+changes under the focus, and the user would not hear what the filters
+now keep; not when the reason of a list appears, which is announced in
+its place, nor while the individuals kept wait for the statistics, when
+the counts say "Known once …" and nothing is announced. Decided without
+the owner on 27 September 2026, in the line of the owner's rule at stop
+A that a reason is announced when it appears, for the owner to judge at
+stop B. Nothing stands under the filters, and no count beside
 them, while no filter of individuals is set, where "200 of the 200
 individuals of panel.nei pass the filters." would say only what the
 card of the file says; while the list or the file gives
@@ -822,9 +861,9 @@ popnei would refuse, with the list it is about; and `writtenName`,
 |---|---|---|
 | a file picked or dropped | `loadVariants(p, { fileId, name, size, format, readOptions })`, `readOptions` `{ ploidy, onlyPassed }` for a VCF and `null` for a `.nei` file | "a new variants file was loaded" |
 | Read ‹name› again | `loadVariants` of the same `File` under a new load id, with the options of the step | "the variants file was read again with other options" |
-| a threshold of the variants committed, on Enter, an arrow key or when the field loses the focus | `setVariantFilter(p, filter)`, the filter of its kind with its fields | "the missing data filter changed", "the filter by observed heterozygosity changed", "the MAF filter changed", "the LD pruning changed" |
-| its switch turned off | `removeVariantFilter(p, kind)` | "the missing data filter was turned off", and so for each |
-| its switch turned on | `setVariantFilter(p, filter)`, with the values of the table of the filters | "the missing data filter was turned on", and so for each |
+| a threshold of the variants committed, on Enter, an arrow key or when the field loses the focus | `setVariantFilter(p, filter)`, the filter of its kind with its fields | "the filter of the variants by missing data changed", "the filter of the variants by observed heterozygosity changed", "the MAF filter changed", "the LD pruning changed", with the names of `docs/specs/analyses/filterCounts.md` |
+| its switch turned off | `removeVariantFilter(p, kind)` | "the filter of the variants by missing data was turned off", and so for each |
+| its switch turned on | `setVariantFilter(p, filter)`, with the values of the table of the filters | "the filter of the variants by missing data was turned on", and so for each |
 | Apply the list to keep, or to remove | `setIndividualFilter(p, { kind: "keep", individuals })`, or `removeIndividualFilter(p, "keep")` for no name | "the list of individuals to keep changed", "the list of individuals to remove changed" |
 | Clear the list | `removeIndividualFilter(p, kind)` | "the list of individuals to keep was cleared", "… to remove was cleared" |
 | a threshold of the individuals committed, turned off, turned on | `setIndividualFilter` or `removeIndividualFilter` of `missing_data` or `obs_het` | "the filter of individuals by missing data changed", "… was turned off", "… was turned on"; "the filter of individuals by observed heterozygosity changed", and so on |
@@ -1024,7 +1063,12 @@ nothing on the screen says the things the lines above do not.
   button, popnei's refusal or a file the browser can no longer read, and
   the focus was on the button, the focus moves in the same way to the
   words of the error, since the Count has no heading of its own to take
-  it, as the block of a check does. The Save button takes the focus when a write ends
+  it, as the block of a check does. When the result of a check leaves
+  the page with the focus in it, on the table of the individuals, a tab,
+  the panel or a CSV button of a histogram, by an Undo or a change that
+  removes it, the focus moves to the heading of the block of that check,
+  the histograms of the variants or the statistics of each individual,
+  in the same way. The Save button takes the focus when a write ends
   with the focus on the button that asked for it (`writeVariants.md`).
 - Each histogram is an image with its title and description, and the
   table of its bins in the tab "Table of the bins", next to the tab of

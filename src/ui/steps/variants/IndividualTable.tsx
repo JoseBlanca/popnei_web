@@ -7,7 +7,8 @@
  * whether the filters keep it, from the individuals kept that the store
  * gives, with no pass; while the lists of individuals are refused, a
  * line above the table in place of that column. Which column is sorted,
- * and which way, is the table's own state, kept while it is drawn.
+ * and which way, is the table's own state, kept while it is drawn, but
+ * for a sort by Kept, which goes with its column.
  */
 import { useMemo, useState } from "react";
 
@@ -21,10 +22,8 @@ import { downloadText } from "../../download.ts";
 import { useAppState } from "../../store.tsx";
 import { Button } from "../../widgets/Button.tsx";
 import { SortableTable } from "../../widgets/SortableTable.tsx";
-import type {
-  SortableColumn,
-  TableSort,
-} from "../../widgets/SortableTable.tsx";
+import type { SortableColumn } from "../../widgets/SortableTable.tsx";
+import type { TableSort } from "../../widgets/tableSort.ts";
 import {
   INDIVIDUAL_COLUMNS,
   KEPT_NOT_KNOWN_LINE,
@@ -34,6 +33,7 @@ import {
   keptColumn,
   sortedRows,
   statsCsvName,
+  tableRowsText,
 } from "./individualStats.ts";
 import type { IndividualColumnId } from "./individualStats.ts";
 import styles from "./VariantsStep.module.css";
@@ -88,8 +88,15 @@ export function IndividualTable({
     [numFilters, kept],
   );
   const isKept = column.kind === "shown" ? column.isKept : null;
-  // A sort by Kept is dropped with the column.
-  const shownSort = sort?.column === "kept" && isKept === null ? null : sort;
+  // A sort by Kept goes with the column, so that the column back is not
+  // sorted (individualChecks.md, "What it shows"): set during the render,
+  // which React draws again at once, and not in an effect, which would
+  // draw the column back sorted for one frame.
+  const keptGone = sort?.column === "kept" && isKept === null;
+  if (keptGone) {
+    setSort(null);
+  }
+  const shownSort = keptGone ? null : sort;
   // The cells of each row, made again only when the result or the
   // individuals kept change, and the same objects in every order, so that
   // a sort only reorders them and React Aria keeps what it made of each:
@@ -135,6 +142,9 @@ export function IndividualTable({
 
   return (
     <div className={classOf(styles, "individualTable")}>
+      <p className={classOf(styles, "line")}>
+        {tableRowsText(result.individuals.length)}
+      </p>
       {column.kind === "notKnown" && (
         <p className={classOf(styles, "line")}>{KEPT_NOT_KNOWN_LINE}</p>
       )}

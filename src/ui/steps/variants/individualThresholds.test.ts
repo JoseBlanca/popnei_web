@@ -22,6 +22,7 @@ import {
   INDIVIDUAL_OBS_HET_TURNED_ON,
   KNOWN_ONCE_TEXT,
   appearedKeptNone,
+  keptAnnouncement,
   individualCountText,
   individualKeptText,
   individualThresholdText,
@@ -143,16 +144,16 @@ describe("the count beside each filter of individuals", () => {
       { kind: "missing_data", maxAllowedMissingRate: 0.2 },
       { kind: "obs_het", maxAllowedObsHet: 0.4 },
     ]);
-    expect(individualCountText(kept, "remove")).toBe(
+    expect(individualCountText(kept, "remove", false)).toBe(
       "Kept 4 of the 5 individuals it was given.",
     );
-    expect(individualCountText(kept, "missing_data")).toBe(
+    expect(individualCountText(kept, "missing_data", false)).toBe(
       "Kept 2 of the 4 individuals it was given.",
     );
-    expect(individualCountText(kept, "obs_het")).toBe(
+    expect(individualCountText(kept, "obs_het", false)).toBe(
       "Kept 2 of the 2 individuals it was given.",
     );
-    expect(individualCountText(kept, "keep")).toBeNull();
+    expect(individualCountText(kept, "keep", false)).toBeNull();
   });
 
   test("with no statistics, a list keeps its count and a threshold, and each filter after it, says it is known once they are calculated", () => {
@@ -164,20 +165,38 @@ describe("the count beside each filter of individuals", () => {
       ],
       false,
     );
-    expect(individualCountText(kept, "keep")).toBe(
+    expect(individualCountText(kept, "keep", false)).toBe(
       "Kept 3 of the 5 individuals it was given.",
     );
-    expect(individualCountText(kept, "missing_data")).toBe(KNOWN_ONCE_TEXT);
-    expect(individualCountText(kept, "obs_het")).toBe(KNOWN_ONCE_TEXT);
+    expect(individualCountText(kept, "missing_data", false)).toBe(
+      KNOWN_ONCE_TEXT,
+    );
+    expect(individualCountText(kept, "obs_het", false)).toBe(KNOWN_ONCE_TEXT);
     expect(KNOWN_ONCE_TEXT).toBe(
       "Known once the statistics of each individual are calculated for these filters of the variants.",
+    );
+  });
+
+  test("while the statistics could not be calculated, a count that needs them says so, and the lists keep their counts", () => {
+    const { kept } = worked(
+      [
+        { kind: "keep", individuals: ["a", "b", "c"] },
+        { kind: "missing_data", maxAllowedMissingRate: 0.2 },
+      ],
+      false,
+    );
+    expect(individualCountText(kept, "keep", true)).toBe(
+      "Kept 3 of the 5 individuals it was given.",
+    );
+    expect(individualCountText(kept, "missing_data", true)).toBe(
+      "Not known: the statistics of each individual could not be calculated, and their block says why.",
     );
   });
 
   test("no count while a list is refused", () => {
     const { kept } = worked([{ kind: "keep", individuals: ["a", "z"] }]);
     expect(kept).toBeNull();
-    expect(individualCountText(kept, "keep")).toBeNull();
+    expect(individualCountText(kept, "keep", false)).toBeNull();
   });
 });
 
@@ -191,6 +210,20 @@ describe("what stands under the filters of individuals", () => {
     expect(keptTotal(p, kept)).toEqual({
       kind: "passed",
       text: "2 of the 5 individuals of panel.nei pass the filters.",
+    });
+  });
+
+  test("a variants file whose name holds a tab is named escaped in the line of those that pass", () => {
+    const { p, kept } = worked([{ kind: "remove", individuals: ["b"] }]);
+    const variants = p.variants;
+    if (variants === null) throw new Error("the worked case has a file");
+    const tabbed: Project = {
+      ...p,
+      variants: { ...variants, name: "a\tb.nei" },
+    };
+    expect(keptTotal(tabbed, kept)).toEqual({
+      kind: "passed",
+      text: "4 of the 5 individuals of a\\tb.nei pass the filters.",
     });
   });
 
@@ -239,5 +272,23 @@ describe("what stands under the filters of individuals", () => {
     expect(
       appearedKeptNone(none, { kind: "keptNone", text: "Other words." }),
     ).toBe("Other words.");
+  });
+
+  test("after a command, the line of those that pass is announced; the reason of none kept when it appears; nothing while they wait", () => {
+    const none = {
+      kind: "keptNone",
+      text: "The filters of individuals keep none of the 5 individuals of panel.nei. Loosen them.",
+    } as const;
+    const passed = {
+      kind: "passed",
+      text: "2 of the 5 individuals of panel.nei pass the filters.",
+    } as const;
+    const nothing = { kind: "nothing" } as const;
+    expect(keptAnnouncement(nothing, passed)).toBe(passed.text);
+    expect(keptAnnouncement(passed, passed)).toBe(passed.text);
+    expect(keptAnnouncement(none, passed)).toBe(passed.text);
+    expect(keptAnnouncement(passed, none)).toBe(none.text);
+    expect(keptAnnouncement(none, none)).toBeNull();
+    expect(keptAnnouncement(passed, nothing)).toBeNull();
   });
 });

@@ -1574,7 +1574,7 @@ for (const theme of ["light", "dark"] as const) {
       await page.keyboard.press("ControlOrMeta+z");
       await expect(
         page.getByRole("region", { name: "Notice" }).getByRole("alertdialog", {
-          name: "Undone: the missing data filter changed. The ongoing calculation of Diversity will be stopped unless you redo the change",
+          name: "Undone: the filter of the variants by missing data changed. The ongoing calculation of Diversity will be stopped unless you redo the change",
         }),
       ).toBeVisible();
       await save(page, `popgen-shell-notice-longest-320-${theme}`, {
@@ -2084,6 +2084,33 @@ for (const theme of ["light", "dark"] as const) {
         .screenshot({
           path: join(SCREENS, `popgen-stats-table-sorted-${theme}.png`),
         });
+      // Scrolled with the arrow keys, down and back up: the rows under
+      // the header, and the cell focused below it.
+      const grid = individualLists(page).getByRole("grid", {
+        name: "Statistics of each individual",
+      });
+      await grid.getByRole("rowheader").first().click();
+      for (let step = 0; step < 30; step += 1) {
+        await page.keyboard.press("ArrowDown");
+      }
+      for (let step = 0; step < 12; step += 1) {
+        await page.keyboard.press("ArrowUp");
+      }
+      await grid.screenshot({
+        path: join(SCREENS, `popgen-stats-table-scrolled-${theme}.png`),
+      });
+      // A row with the focus: the Tab key back to the cell that had it,
+      // and the left arrow from the first cell to its row.
+      await individualLists(page)
+        .getByRole("button", { name: "Download the bins as CSV" })
+        .last()
+        .focus();
+      await page.keyboard.press("Tab");
+      await page.keyboard.press("ArrowLeft");
+      await expect(page.locator(":focus")).toHaveAttribute("role", "row");
+      await grid.screenshot({
+        path: join(SCREENS, `popgen-stats-row-focused-${theme}.png`),
+      });
       await page.setViewportSize({ width: 320, height: 900 });
       await saveIndividuals(page, "popgen-stats-320");
     });
@@ -2205,6 +2232,170 @@ for (const theme of ["light", "dark"] as const) {
       await saveIndividuals(page, "popgen-stats-error");
     });
 
+    /** The VCF `vcf`, of `numIndividuals` individuals, read with the
+        filter of the variants by missing data off, and its statistics
+        calculated. */
+    async function statisticsOfCalls(
+      page: Page,
+      vcf: string,
+      numIndividuals: number,
+    ): Promise<void> {
+      await pickVariants(page, { name: "calls.vcf", text: vcf });
+      await expect(
+        page
+          .getByRole("main")
+          .getByText(`${String(numIndividuals)} individuals`),
+      ).toBeVisible();
+      await page
+        .getByRole("main")
+        .getByText("Filter the variants by missing data", { exact: true })
+        .click();
+      await individualLists(page)
+        .getByRole("button", { name: CALCULATE_STATS })
+        .click();
+      await expect(
+        individualLists(page).getByText(
+          new RegExp(
+            `^The statistics of the ${String(numIndividuals)} individuals of calls\\.vcf`,
+          ),
+        ),
+      ).toBeVisible();
+    }
+
+    /** The lines of a VCF of four variants, its header and one line per
+        variant with the genotypes `gts` of its individuals `names`. */
+    function callsVcf(
+      names: readonly string[],
+      gts: readonly (readonly string[])[],
+    ): string {
+      return [
+        "##fileformat=VCFv4.2",
+        "##contig=<ID=1>",
+        '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
+        `#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t${names.join("\t")}`,
+        ...gts.map(
+          (row, index) =>
+            `1\t${String((index + 1) * 10)}\t.\tA\tG\t.\tPASS\t.\tGT\t${row.join("\t")}`,
+        ),
+        "",
+      ].join("\n");
+    }
+
+    test("the statistics of each individual, an individual with no called genotype", async ({
+      page,
+    }) => {
+      // The worked example of individualChecks.md: i3 calls nothing.
+      await statisticsOfCalls(
+        page,
+        callsVcf(
+          ["i1", "i2", "i3"],
+          [
+            ["0/1", "0/0", "./."],
+            ["1/1", "0/1", "./."],
+            ["0/0", "./.", "./."],
+            ["0/1", "0/.", "./."],
+          ],
+        ),
+        3,
+      );
+      await expect(
+        individualLists(page).getByText(
+          "1 individual with no called genotype is not in the histogram.",
+        ),
+      ).toBeVisible();
+      await saveIndividuals(page, "popgen-stats-no-called");
+    });
+
+    test("the statistics of each individual, no individual with a called genotype", async ({
+      page,
+    }) => {
+      await statisticsOfCalls(
+        page,
+        callsVcf(
+          ["i1", "i2", "i3"],
+          Array.from({ length: 4 }, () => ["./.", "./.", "./."]),
+        ),
+        3,
+      );
+      await expect(
+        individualLists(page).getByText(
+          "3 individuals with no called genotype are not in the histogram.",
+        ),
+      ).toBeVisible();
+      await saveIndividuals(page, "popgen-stats-none-called");
+    });
+
+    test("the statistics of each individual, the column Kept not known while a list is refused", async ({
+      page,
+    }) => {
+      await pickPanel(page);
+      await individualLists(page)
+        .getByRole("button", { name: CALCULATE_STATS })
+        .click();
+      await expect(
+        individualLists(page).getByText(STATS_CAPTION),
+      ).toBeVisible();
+      await listArea(page, "Individuals to keep, one name per line").fill(
+        "ind_900",
+      );
+      await individualLists(page)
+        .getByRole("button", { name: "Apply the list to keep" })
+        .click();
+      await expect(
+        individualLists(page).getByText(/^Which individuals are kept is shown/),
+      ).toBeVisible();
+      await saveIndividuals(page, "popgen-stats-kept-not-known");
+    });
+
+    test("the diversity locked, every population left empty by a threshold of the individuals", async ({
+      page,
+    }) => {
+      await pickVariants(page, "panel.nei");
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      await goTo(page, "Individuals");
+      const rows = Array.from({ length: 200 }, (_, index) => {
+        const name = `s${String(index).padStart(3, "0")}`;
+        return `${name},${index === 0 ? "p0" : index === 1 ? "p1" : "NA"}`;
+      });
+      await pickIndividuals(page, {
+        name: "two_pops.csv",
+        text: `IID,popcat\n${rows.join("\n")}\n`,
+      });
+      await choose(page, "Column that defines the populations", "popcat");
+      await goTo(page, "Variants");
+      // The lists cannot leave every population empty, which locks the
+      // diversity; a threshold can: at 0.05 of the variants, s000 and
+      // s001 have an observed heterozygosity of 0.367 and 0.344, above
+      // 0.34, and some individuals with no population lie below it.
+      const variants = page.getByLabel(
+        "Maximum proportion of missing genotypes, from 0 to 1",
+        { exact: true },
+      );
+      await variants.fill("0.05");
+      await variants.press("Enter");
+      await individualLists(page)
+        .getByRole("button", { name: CALCULATE_STATS })
+        .click();
+      await expect(
+        individualLists(page).getByText(STATS_CAPTION),
+      ).toBeVisible();
+      await individualThreshold(
+        page,
+        "Filter the individuals by observed heterozygosity",
+        "Maximum observed heterozygosity of an individual, from 0 to 1",
+        "0.34",
+      );
+      await goTo(page, "Analyses");
+      await expect(
+        page
+          .getByRole("main")
+          .getByText(/^The 34 individuals kept have no population in popcat/),
+      ).toBeVisible();
+      await save(page, `popgen-diversity-all-emptied-${theme}`);
+    });
+
     /** Turns the threshold of the individuals `name` on and commits
         `value` in its field `label`. */
     async function individualThreshold(
@@ -2278,7 +2469,7 @@ for (const theme of ["light", "dark"] as const) {
       await expect(
         page
           .getByRole("main")
-          .getByText("2 populations: p0, 32 individuals; p2, 50"),
+          .getByText("2 populations: p0, 32 individuals; p2, 50 individuals"),
       ).toBeVisible();
       await save(page, `popgen-diversity-kept-${theme}`);
     });
@@ -2305,7 +2496,7 @@ for (const theme of ["light", "dark"] as const) {
         page
           .getByRole("main")
           .getByText(
-            /^Calculating the statistics of each individual, which the filters of individuals are set from · \d+% · 0:01$/,
+            /^Calculating the statistics of each individual, which the thresholds of the individuals need · \d+% · 0:01$/,
           ),
       ).toBeVisible({ timeout: 3000 });
       await save(page, `popgen-diversity-waits-running-${theme}`);

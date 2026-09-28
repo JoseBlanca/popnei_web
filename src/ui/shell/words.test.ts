@@ -293,6 +293,7 @@ function state(
     project: firstProject("popgen"),
     undo: null,
     redo: null,
+    historyMoves: 0,
     popneiVersion: "0.1.0",
     analyses: [
       { id: DIVERSITY, status: statuses[0] },
@@ -308,7 +309,10 @@ function state(
 
 function notice(parts: Partial<Notice>): Notice {
   return {
-    cause: { kind: "command", description: "the missing data filter changed" },
+    cause: {
+      kind: "command",
+      description: "the filter of the variants by missing data changed",
+    },
     removed: [],
     leftBehind: [],
     stopped: [],
@@ -687,7 +691,7 @@ const NEW_FILE = "a new variants file was loaded";
 describe("WS9 D1 the words of the notice", () => {
   test("a command", () => {
     expect(noticeText(notice({ removed: [DIVERSITY] }), title)).toEqual({
-      text: "Diversity removed because the missing data filter changed",
+      text: "Diversity removed because the filter of the variants by missing data changed",
       action: "Undo",
       reverse: "undo",
     });
@@ -720,7 +724,7 @@ describe("WS9 D1 the words of the notice", () => {
 
   test("a command, with a calculation left behind and nothing removed", () => {
     expect(noticeText(notice({ leftBehind: [DIVERSITY] }), title)).toEqual({
-      text: "The missing data filter changed. The ongoing calculation of Diversity will be stopped unless you undo the change",
+      text: "The filter of the variants by missing data changed. The ongoing calculation of Diversity will be stopped unless you undo the change",
       action: "Undo",
       reverse: "undo",
     });
@@ -728,11 +732,14 @@ describe("WS9 D1 the words of the notice", () => {
 
   test("an undo", () => {
     const n = notice({
-      cause: { kind: "undo", description: "the missing data filter changed" },
+      cause: {
+        kind: "undo",
+        description: "the filter of the variants by missing data changed",
+      },
       removed: [DIVERSITY],
     });
     expect(noticeText(n, title)).toEqual({
-      text: "Undone: the missing data filter changed. Diversity removed",
+      text: "Undone: the filter of the variants by missing data changed. Diversity removed",
       action: "Redo",
       reverse: "redo",
     });
@@ -740,11 +747,14 @@ describe("WS9 D1 the words of the notice", () => {
 
   test("an undo, with a calculation left behind, names Redo", () => {
     const n = notice({
-      cause: { kind: "undo", description: "the missing data filter changed" },
+      cause: {
+        kind: "undo",
+        description: "the filter of the variants by missing data changed",
+      },
       leftBehind: [DIVERSITY],
     });
     expect(noticeText(n, title)).toEqual({
-      text: "Undone: the missing data filter changed. The ongoing calculation of Diversity will be stopped unless you redo the change",
+      text: "Undone: the filter of the variants by missing data changed. The ongoing calculation of Diversity will be stopped unless you redo the change",
       action: "Redo",
       reverse: "redo",
     });
@@ -764,12 +774,15 @@ describe("WS9 D1 the words of the notice", () => {
 
   test("a redo, with a calculation left behind", () => {
     const n = notice({
-      cause: { kind: "redo", description: "the missing data filter changed" },
+      cause: {
+        kind: "redo",
+        description: "the filter of the variants by missing data changed",
+      },
       removed: [DIVERSITY],
       leftBehind: [DIVERSITY],
     });
     expect(noticeText(n, title)).toEqual({
-      text: "Redone: the missing data filter changed. Diversity removed. The ongoing calculation of Diversity will be stopped unless you undo the change",
+      text: "Redone: the filter of the variants by missing data changed. Diversity removed. The ongoing calculation of Diversity will be stopped unless you undo the change",
       action: "Undo",
       reverse: "undo",
     });
@@ -787,11 +800,14 @@ describe("WS9 D1 the words of the notice", () => {
       reverse: "undo",
     });
     const undone = notice({
-      cause: { kind: "undo", description: "the missing data filter changed" },
+      cause: {
+        kind: "undo",
+        description: "the filter of the variants by missing data changed",
+      },
       leftBehind: [DIVERSITY, PCA],
     });
     expect(noticeText(undone, title)).toEqual({
-      text: "Undone: the missing data filter changed. The 2 ongoing calculations will be stopped unless you redo the change",
+      text: "Undone: the filter of the variants by missing data changed. The 2 ongoing calculations will be stopped unless you redo the change",
       action: "Redo",
       reverse: "redo",
     });
@@ -1134,7 +1150,7 @@ describe("WS9 D1 the announcements made from the state", () => {
     const after = state({
       project: READY,
       statuses: [done(KEY_A), LOCKED],
-      redo: "the missing data filter changed",
+      redo: "the filter of the variants by missing data changed",
     });
     expect(announcementsOf(before, after, WORDS)).toEqual([]);
   });
@@ -1363,6 +1379,7 @@ function checksState(
     project: PANEL,
     undo: null,
     redo: null,
+    historyMoves: 0,
     popneiVersion: "0.1.0",
     analyses: THE_ORDER.map((id) => ({
       id,
@@ -2298,6 +2315,39 @@ describe("VS5 D2 the announcements of the writing, more", () => {
     expect(announcementsOf(before, after, WORDS)).toEqual([
       "Statistics of each individual: done.",
       `The file was not written. ${reason}`,
+    ]);
+  });
+
+  test("a Run of the diversity whose statistics fail says, after their failure, that it was not run and where why is", () => {
+    const before = checksState({
+      project: THREE_FILTERS,
+      statuses: {
+        [STATISTICS]: running(KEY_S, 1),
+        [DIVERSITY]: {
+          kind: "running",
+          key: KEY_A,
+          runId: 1,
+          progress: null,
+          waitsForStatistics: true,
+        },
+      },
+      runs: [run(1, STATISTICS, KEY_S, CURRENT)],
+    });
+    const after = checksState({
+      project: THREE_FILTERS,
+      statuses: {
+        [STATISTICS]: failed(KEY_S),
+        [DIVERSITY]: {
+          kind: "error",
+          key: KEY_A,
+          error: { kind: "refused", message: "too few individuals" },
+          ofStatistics: true,
+        },
+      },
+    });
+    expect(announcementsOf(before, after, WORDS)).toEqual([
+      "Statistics of each individual could not be calculated. The Variants step says why.",
+      "Diversity was not run. The Analyses step says why.",
     ]);
   });
 

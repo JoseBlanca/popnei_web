@@ -267,7 +267,11 @@ describe("WP3 D1 the history", () => {
     let h = startHistory(noFile, 10);
     h = commit(h, loaded, "the variants file was loaded");
     h = commit(h, filtered, "the MAF filter changed");
-    h = commit(h, present, "the missing data filter changed");
+    h = commit(
+      h,
+      present,
+      "the filter of the variants by missing data changed",
+    );
     return deepFreeze(h);
   }
 

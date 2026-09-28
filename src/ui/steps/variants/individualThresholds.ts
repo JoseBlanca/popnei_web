@@ -28,7 +28,7 @@ import type {
 } from "../../../worker/protocol.ts";
 import type { StepCommand } from "./commands.ts";
 import { individualThreshold } from "./individualStats.ts";
-import { inTheStep } from "./writeWords.ts";
+import { withoutTheStep } from "./words.ts";
 
 /** The two thresholds, in their fixed order. */
 export const THRESHOLD_KINDS = ["missing_data", "obs_het"] as const;
@@ -166,6 +166,11 @@ export function individualThresholdText(
 export const KNOWN_ONCE_TEXT =
   "Known once the statistics of each individual are calculated for these filters of the variants.";
 
+/** What a filter of individuals says in place of its count while the
+    statistics of each individual are in their error state. */
+export const NOT_KNOWN_TEXT =
+  "Not known: the statistics of each individual could not be calculated, and their block says why.";
+
 /** What one filter of individuals kept: "Kept 125 of the 200 individuals
     it was given.", "Kept 1 of the 1 individual it was given." */
 export function individualKeptText(given: number, kept: number): string {
@@ -175,19 +180,23 @@ export function individualKeptText(given: number, kept: number): string {
 /**
  * The count beside the filter of individuals of the kind `kind`, from the
  * individuals kept the store gives: what it kept, or, when that needs
- * statistics the page does not have, the words that say so; `null` when
+ * statistics the page does not have, the words that say so, which say
+ * they could not be calculated when `statsFailed`, the statistics in
+ * their error state; `null` when
  * the filter is not set, or when `kept` is `null`, a list refused or a
  * variants file not read.
  */
 export function individualCountText(
   kept: IndividualsKept | null,
   kind: IndividualFilterKind,
+  statsFailed: boolean,
 ): string | null {
   const count = kept?.counts.find((c) => c.kind === kind);
   if (count === undefined) return null;
-  return count.given === null || count.kept === null
-    ? KNOWN_ONCE_TEXT
-    : individualKeptText(count.given, count.kept);
+  if (count.given !== null && count.kept !== null) {
+    return individualKeptText(count.given, count.kept);
+  }
+  return statsFailed ? NOT_KNOWN_TEXT : KNOWN_ONCE_TEXT;
 }
 
 /** What stands under the filters of individuals: nothing; the line of
@@ -212,7 +221,8 @@ const NOTHING: KeptTotal = Object.freeze({ kind: "nothing" });
 export function keptTotal(p: Project, kept: IndividualsKept | null): KeptTotal {
   if (kept === null || p.individualFilters.length === 0) return NOTHING;
   const reason = keptNoneReason(p, kept);
-  if (reason !== null) return { kind: "keptNone", text: inTheStep(reason) };
+  if (reason !== null)
+    return { kind: "keptNone", text: withoutTheStep(reason) };
   const list = kept.list;
   if (list.kind === "needsStatistics" || p.variants?.read.kind !== "read") {
     return NOTHING;
@@ -224,6 +234,19 @@ export function keptTotal(p: Project, kept: IndividualsKept | null): KeptTotal {
     kind: "passed",
     text: `${grouped(numKept)} of the ${counted(numIndividuals, "individual")} of ${escaped(p.variants.name)} ${verb} the filters.`,
   };
+}
+
+/** What the step announces after a command of the section: the line of
+    the individuals that pass when it stands under the filters after it,
+    since a screen reader does not read again a description that changes
+    under the focus; the reason of none kept when it appears,
+    `appearedKeptNone`; nothing while the individuals kept wait for the
+    statistics, or no filter is set. */
+export function keptAnnouncement(
+  before: KeptTotal,
+  after: KeptTotal,
+): string | null {
+  return after.kind === "passed" ? after.text : appearedKeptNone(before, after);
 }
 
 /** What the step announces after a command of the section that changed

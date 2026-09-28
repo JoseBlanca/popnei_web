@@ -3,8 +3,9 @@
  * (docs/specs/analyses/diversity.md, "The panel", its states and its
  * words): the line of a calculation under way, the words of a result
  * removed and of a calculation stopped, written from the change that
- * caused them, the count of the warnings, and a
- * failure that is not popnei's refusal. Pure, so that a test in node
+ * caused them, the count of the warnings, a
+ * failure that is not popnei's refusal, and the line of the versions
+ * beside a result. Pure, so that a test in node
  * checks them; `AnalysisPanel.tsx`, `Failed.tsx` and the parts of the
  * checks of the Variants step draw them.
  */
@@ -13,6 +14,15 @@ import { counted, escaped, saying } from "../../core/project.ts";
 import type { Notice } from "../../core/store.ts";
 import type { Progress, RunError } from "../../worker/protocol.ts";
 import { capitalized, undoneOrRedone } from "../sentences.ts";
+
+/** The line beside the download: "Calculated with popnei 0.1.0, in
+    version 0.1.0 of the application." */
+export function versionsText(
+  popneiVersion: string,
+  appVersion: string,
+): string {
+  return `Calculated with popnei ${escaped(popneiVersion)}, in version ${escaped(appVersion)} of the application.`;
+}
 
 /** The seconds of a minute, and of an hour. */
 const MINUTE = 60;
@@ -67,7 +77,7 @@ export interface RunningLine {
 /** The statistics of each individual, as the line of a Run that waits for
     them names them, and the line of a write that waits for them. */
 export const STATISTICS_WORDS =
-  "the statistics of each individual, which the filters of individuals are set from";
+  "the statistics of each individual, which the thresholds of the individuals need";
 
 /** The name of the bar of a Run that waits for the statistics of each
     individual, and of a write that waits for them: the share it shows is
@@ -113,7 +123,7 @@ export function runningText(line: RunningLine): string {
  * command, "The diversity was removed because the missing data filter
  * changed. Undo brings back the table as it was, with no calculation; Run
  * calculates a new one for the new settings."; after an undo, "Undone:
- * the missing data filter changed. The diversity was removed; Redo brings
+ * the filter of the variants by missing data changed. The diversity was removed; Redo brings
  * back the table as it was, with no calculation, and Run calculates a new
  * one for the settings as they are now.", and after a redo the same with
  * "Redone:" and Undo. `name` is the analysis in a sentence, "the

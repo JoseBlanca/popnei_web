@@ -1,9 +1,11 @@
 import { describe, expect, test } from "vitest";
 import {
   DIVERSITY_DEFAULTS,
+  allEmptiedText,
   diversity,
   diversityCsv,
   diversityRows,
+  populationsBeforeRun,
   populationsKept,
   populationsNeeds,
   populationsOf,
@@ -15,6 +17,7 @@ import { createKeyMemo, keyOf } from "../keys.ts";
 import type { Key, KeyedDef } from "../keys.ts";
 import { emptyProject, individualsNeeds } from "../project.ts";
 import type { Project, VariantSource } from "../project.ts";
+import type { IndividualsKept } from "../individualsKept.ts";
 import type { WorkerClient } from "../store.ts";
 import { deepFreeze } from "../testSupport.ts";
 import type {
@@ -821,6 +824,40 @@ describe("WS5 D2 the key", () => {
       individualFilters: [{ kind: "missing_data", maxAllowedMissingRate: 0.2 }],
     });
     expect(keyOfDiversity(filtered)).not.toBe(baseKey);
+  });
+
+  test("a filter of individuals removed, a name of its list changed, or its threshold moved to one that keeps the same individuals, changes the key", () => {
+    const filtered = deepFreeze<Project>({
+      ...base,
+      individualFilters: [
+        { kind: "remove", individuals: ["ind_900"] },
+        { kind: "missing_data", maxAllowedMissingRate: 0.2 },
+      ],
+    });
+    const changed = [
+      deepFreeze<Project>({
+        ...base,
+        individualFilters: [{ kind: "remove", individuals: ["ind_900"] }],
+      }),
+      deepFreeze<Project>({
+        ...base,
+        individualFilters: [
+          { kind: "remove", individuals: ["ind_901"] },
+          { kind: "missing_data", maxAllowedMissingRate: 0.2 },
+        ],
+      }),
+      // No individual of the table is named ind_900 or has statistics,
+      // so each threshold keeps the same individuals.
+      deepFreeze<Project>({
+        ...base,
+        individualFilters: [
+          { kind: "remove", individuals: ["ind_900"] },
+          { kind: "missing_data", maxAllowedMissingRate: 0.25 },
+        ],
+      }),
+    ];
+    const keys = [filtered, ...changed].map((p) => keyOfDiversity(p));
+    expect(new Set(keys).size).toBe(4);
   });
 
   test("another column of the populations that groups the individuals otherwise changes the key", () => {
@@ -1665,7 +1702,7 @@ describe("VS3 D3 the diversity of stage 3", () => {
         throw new Error("a refusal was given the words of a failure");
       }),
     ).toBe(
-      "The statistics of each individual, which the thresholds of the filters of individuals are applied to, could not be calculated, so the diversity was not run. The filters kept none of the variants of panel.nei, so there is no variant to count each individual's genotypes over. Loosen the filters of the variants in the Variants step.",
+      "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the diversity was not run. The filters kept none of the variants of panel.nei, so there is no variant to count each individual's genotypes over. Loosen the filters of the variants in the Variants step.",
     );
   });
 
@@ -1695,9 +1732,29 @@ describe("VS3 D3 the diversity of stage 3, at its bounds", () => {
         },
       ),
     ).toBe(
-      "The statistics of each individual, which the thresholds of the filters of individuals are applied to, could not be calculated, so the diversity was not run. The calculation stopped unexpectedly.",
+      "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the diversity was not run. The calculation stopped unexpectedly.",
     );
     expect(given).toEqual([failure]);
+  });
+
+  test("keptNeeds locks the diversity when the individuals kept leave no population, with the words of all left empty", () => {
+    const kept = (individuals: readonly string[]): IndividualsKept => ({
+      list: { kind: "known", individuals },
+      byLists: ["i1", "i2", "i3", "i4"],
+      counts: [],
+    });
+    const keptNeeds = diversity.keptNeeds;
+    if (keptNeeds === undefined) throw new Error("the diversity has keptNeeds");
+    expect(keptNeeds(project(), kept(["i4"]))).toBe(
+      "The one individual kept has no population in pop, so none of the 2 populations has an individual left. Loosen the filters of individuals in the Variants step to keep them.",
+    );
+    expect(keptNeeds(project(), kept(["i1", "i4"]))).toBeNull();
+    expect(allEmptiedText(34, "popcat", ["p0", "p1"])).toBe(
+      "The 34 individuals kept have no population in popcat, so none of the 2 populations has an individual left. Loosen the filters of individuals in the Variants step to keep them.",
+    );
+    expect(allEmptiedText(2, "pop\tcat", ["A"])).toBe(
+      "The 2 individuals kept have no population in pop\\tcat, so A has no individual left. Loosen the filters of individuals in the Variants step to keep it.",
+    );
   });
 
   test("with thresholds that leave no population, run sends no population, for popnei to refuse", () => {
@@ -1719,6 +1776,38 @@ describe("VS3 D3 the diversity of stage 3, at its bounds", () => {
       emptied: [],
     });
     expect(populationsKept(project({ column: null }), kept)).toBeNull();
+  });
+
+  test("populationsBeforeRun takes the known list, and the individuals the lists keep while a threshold waits for the statistics", () => {
+    const p = project();
+    expect(
+      populationsBeforeRun(p, {
+        list: { kind: "known", individuals: ["i1", "i3"] },
+        byLists: ["i1", "i2", "i3"],
+        counts: [],
+      }),
+    ).toEqual({ pops: [["A", ["i1", "i3"]]], emptied: ["B"] });
+    expect(
+      populationsBeforeRun(p, {
+        list: { kind: "known", individuals: null },
+        byLists: ["i2"],
+        counts: [],
+      }),
+    ).toBe(populationsKept(p, null));
+    expect(
+      populationsBeforeRun(p, {
+        list: { kind: "needsStatistics" },
+        byLists: ["i2"],
+        counts: [],
+      }),
+    ).toEqual({ pops: [["B", ["i2"]]], emptied: ["A"] });
+    expect(
+      populationsBeforeRun(project({ column: null }), {
+        list: { kind: "needsStatistics" },
+        byLists: ["i2"],
+        counts: [],
+      }),
+    ).toBeNull();
   });
 
   test("populationsKept follows a list changed in place, which it does not keep", () => {

@@ -2,7 +2,7 @@
  * An undo or a redo of the project, as the header's buttons, the keyboard
  * and the notice's action make it (docs/specs/shell.md, "The status
  * region"). One that makes no notice is announced in the status region,
- * "Undone: the missing data filter changed.", since without it a user of
+ * "Undone: the filter of the variants by missing data changed.", since without it a user of
  * a screen reader who pressed Ctrl+Z would hear nothing; one that makes a
  * notice is read out by the notice. It is said before what the change
  * announces from the state, the warning of a reopened project it brings
@@ -11,7 +11,6 @@
 import type { Store } from "../../core/store.ts";
 import type { Shortcut } from "./shortcuts.ts";
 import type { Announcer } from "./status.ts";
-import { historyMoved } from "../historyMoves.ts";
 import { undoneOrRedone } from "../sentences.ts";
 
 /** Undoes or redoes the project of `store`, as `which` says, and
@@ -25,7 +24,6 @@ export function undoOrRedo<R, F>(
   const description = store.getState()[which];
   if (description === null) return;
   announcer.announceChange(() => {
-    historyMoved(store);
     if (which === "undo") store.undo();
     else store.redo();
     if (store.getState().notice !== null) return null;

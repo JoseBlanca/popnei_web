@@ -134,6 +134,7 @@ function stateOf(project: Project): AppState<JobResult> {
     project,
     undo: null,
     redo: null,
+    historyMoves: 0,
     popneiVersion: "0.1.0",
     analyses: [
       {

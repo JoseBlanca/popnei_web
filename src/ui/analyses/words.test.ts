@@ -9,12 +9,13 @@ import {
   runningBarLabel,
   runningText,
   stoppedText,
+  versionsText,
   warningsHeading,
 } from "./words.ts";
 
 function notice(
   kind: Notice["cause"]["kind"],
-  description = "the missing data filter changed",
+  description = "the filter of the variants by missing data changed",
 ): Notice {
   return {
     cause: { kind, description },
@@ -81,13 +82,13 @@ describe("the words of the frame of an analysis panel", () => {
       waitsForStatistics: true,
     };
     expect(runningText(line)).toBe(
-      "Calculating the statistics of each individual, which the filters of individuals are set from · 35% · 0:12",
+      "Calculating the statistics of each individual, which the thresholds of the individuals need · 35% · 0:12",
     );
     expect(runningText({ ...line, share: null })).toBe(
-      "Calculating the statistics of each individual, which the filters of individuals are set from · 0:12",
+      "Calculating the statistics of each individual, which the thresholds of the individuals need · 0:12",
     );
     expect(runningText({ ...line, share: null, waitingFor: "panel.nei" })).toBe(
-      "Waiting for panel.nei to be opened again, then calculating the statistics of each individual, which the filters of individuals are set from · 0:12",
+      "Waiting for panel.nei to be opened again, then calculating the statistics of each individual, which the thresholds of the individuals need · 0:12",
     );
     expect(runningBarLabel("the diversity", true)).toBe(
       "Calculating the statistics of each individual",
@@ -96,13 +97,13 @@ describe("the words of the frame of an analysis panel", () => {
 
   test("WS8 D2 a result removed is told from the change: its cause after a command, the change undone or redone after an undo or a redo", () => {
     expect(removedText("the diversity", "the table", notice("command"))).toBe(
-      "The diversity was removed because the missing data filter changed. Undo brings back the table as it was, with no calculation; Run calculates a new one for the new settings.",
+      "The diversity was removed because the filter of the variants by missing data changed. Undo brings back the table as it was, with no calculation; Run calculates a new one for the new settings.",
     );
     expect(removedText("the diversity", "the table", notice("undo"))).toBe(
-      "Undone: the missing data filter changed. The diversity was removed; Redo brings back the table as it was, with no calculation, and Run calculates a new one for the settings as they are now.",
+      "Undone: the filter of the variants by missing data changed. The diversity was removed; Redo brings back the table as it was, with no calculation, and Run calculates a new one for the settings as they are now.",
     );
     expect(removedText("the diversity", "the table", notice("redo"))).toBe(
-      "Redone: the missing data filter changed. The diversity was removed; Undo brings back the table as it was, with no calculation, and Run calculates a new one for the settings as they are now.",
+      "Redone: the filter of the variants by missing data changed. The diversity was removed; Undo brings back the table as it was, with no calculation, and Run calculates a new one for the settings as they are now.",
     );
   });
 
@@ -182,5 +183,18 @@ describe("the words of the frame of an analysis panel", () => {
     expect(() =>
       failureText({ kind: "files", message: "zip" }, "panel.nei"),
     ).toThrow(/^popnei_web defect: /);
+  });
+});
+
+describe("the line of the versions", () => {
+  test("the line of the versions", () => {
+    expect(versionsText("0.1.0", "0.1.0")).toBe(
+      "Calculated with popnei 0.1.0, in version 0.1.0 of the application.",
+    );
+    // Two versions that differ, so that one in the place of the other
+    // shows.
+    expect(versionsText("0.1.0", "0.2.0")).toBe(
+      "Calculated with popnei 0.1.0, in version 0.2.0 of the application.",
+    );
   });
 });

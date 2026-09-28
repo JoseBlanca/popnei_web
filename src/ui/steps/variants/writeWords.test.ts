@@ -237,10 +237,10 @@ describe("VS5 D3 the words of the writing of the filtered variants", () => {
       waitingFor: null,
     };
     expect(writingText(line)).toBe(
-      "Calculating the statistics of each individual, which the filters of individuals are set from · 35% · 0:12",
+      "Calculating the statistics of each individual, which the thresholds of the individuals need · 35% · 0:12",
     );
     expect(writingText({ ...line, share: null, waitingFor: "panel.nei" })).toBe(
-      "Waiting for panel.nei to be opened again, then calculating the statistics of each individual, which the filters of individuals are set from · 0:12",
+      "Waiting for panel.nei to be opened again, then calculating the statistics of each individual, which the thresholds of the individuals need · 0:12",
     );
     expect(writingBarLabel("panel.filtered.nei", true)).toBe(
       "Calculating the statistics of each individual",
@@ -286,7 +286,7 @@ describe("VS5 D3 the words of the writing of the filtered variants", () => {
         GIGABYTE,
       ),
     ).toBe(
-      "The statistics of each individual, which the thresholds of the filters of individuals are applied to, could not be calculated, so the file was not written. The filters kept none of the variants of panel.nei, so there is no variant to count each individual's genotypes over. Loosen the filters of the variants.",
+      "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the file was not written. The filters kept none of the variants of panel.nei, so there is no variant to count each individual's genotypes over. Loosen the filters of the variants.",
     );
     expect(
       writeErrorText(
@@ -299,7 +299,7 @@ describe("VS5 D3 the words of the writing of the filtered variants", () => {
         GIGABYTE,
       ),
     ).toBe(
-      "The statistics of each individual, which the thresholds of the filters of individuals are applied to, could not be calculated, so the file was not written. The calculation stopped unexpectedly. Run it again. If it stops again, load panel.nei again.",
+      "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the file was not written. The calculation stopped unexpectedly. Run it again. If it stops again, load panel.nei again.",
     );
   });
 

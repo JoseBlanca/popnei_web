@@ -14,7 +14,7 @@ import { join } from "node:path";
 import { gunzipSync } from "node:zlib";
 
 import type { Locator, Page, Route } from "@playwright/test";
-import { init, openVars } from "popnei";
+import { init, openVars, writeVars } from "popnei";
 
 import { expect, test } from "./axe.ts";
 import { NUM_INDIVIDUALS, bigVcfPopsCsv, writeBigVcf } from "./bigVcf.ts";
@@ -37,7 +37,7 @@ const NO_SIZE =
 /** The words of the notice of the change of the threshold that discarded
     the file. */
 const DISCARDED =
-  "The missing data filter changed. The written file, not saved, was discarded, and Undo does not bring it back; write it again to save it";
+  "The filter of the variants by missing data changed. The written file, not saved, was discarded, and Undo does not bring it back; write it again to save it";
 
 async function expectNoViolations(
   makeAxeBuilder: () => { analyze(): Promise<{ violations: unknown[] }> },
@@ -154,12 +154,20 @@ async function holdWritten(page: Page): Promise<void> {
   });
 }
 
-/** Posts the files the calculation worker kept back. */
+/** Posts the files the calculation worker kept back, once the call
+    that asks for it has returned: a refusal of the write makes the page
+    start a new calculation worker at once, and WebKit ended the call to
+    the old one before it could answer, "Target page, context or browser
+    has been closed", in 10 of 20 runs of the flow of the refusal. */
 async function releaseWritten(page: Page): Promise<void> {
   const worker = page.workers().find((w) => w.url().includes("runnerWorker"));
   if (worker === undefined) throw new Error("no calculation worker");
   await worker.evaluate(() => {
-    (globalThis as unknown as { releaseWritten: () => void }).releaseWritten();
+    setTimeout(() => {
+      (
+        globalThis as unknown as { releaseWritten: () => void }
+      ).releaseWritten();
+    }, 0);
   });
 }
 
@@ -189,6 +197,15 @@ test("VS5 D3 panel.nei at 0.05 written and saved: the download panel.filtered.ne
   const path = testInfo.outputPath("panel.filtered.nei");
   await file.saveAs(path);
   expect((await stat(path)).size).toBe(WRITTEN_AT_005);
+  // The bytes popnei's writeVars gives in node for panel.nei at 0.05, as
+  // the runner's test has them, and not only a file of their size.
+  await init();
+  const variants = openVars(
+    new Uint8Array(await readFile(join(FIXTURES, "panel.nei"))),
+  );
+  variants.filterByMissingData(0.05);
+  const inNode = writeVars(variants).bytes;
+  expect(Buffer.compare(await readFile(path), inNode)).toBe(0);
   await expect(status(page)).toHaveText(
     "panel.filtered.nei was handed to the browser to save.",
   );

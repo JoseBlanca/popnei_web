@@ -1,8 +1,9 @@
 /**
  * The words of the panel of the diversity (docs/specs/analyses/diversity.md,
  * "The panel"): the populations it will run on, the caption of its table
- * and its cells, the line of its options, the line of the versions, and
- * the name of its download. Pure, so that a test in node checks them; the
+ * and its cells, the line of its options, and the name of its download;
+ * the line of the versions is in `../words.ts`, shared with the checks
+ * of the Variants step. Pure, so that a test in node checks them; the
  * panel draws them.
  */
 
@@ -10,6 +11,7 @@ import type {
   DiversityRow,
   PopulationsKept,
 } from "../../../core/analyses/diversity.ts";
+import { loosenText } from "../../../core/analyses/diversity.ts";
 import { variantsStem } from "../../../core/fileNames.ts";
 import { counted, escaped, grouped, namesOf } from "../../../core/project.ts";
 import type { Pops } from "../../../worker/protocol.ts";
@@ -17,13 +19,13 @@ import type { Pops } from "../../../worker/protocol.ts";
 /** The decimals of every number of the table. */
 const DECIMALS = 4;
 
-/** The populations a run will take, with their sizes: "3 populations:
-    p0, 48 individuals; p2, 84; p1, 68". */
+/** The populations a run will take, with their sizes, the noun with
+    each: "3 populations: p0, 48 individuals; p2, 84 individuals; p1, 68
+    individuals". */
 export function populationsText(pops: Pops): string {
-  const parts = pops.map(([pop, members], index) =>
-    index === 0
-      ? `${escaped(pop)}, ${counted(members.length, "individual")}`
-      : `${escaped(pop)}, ${grouped(members.length)}`,
+  const parts = pops.map(
+    ([pop, members]) =>
+      `${escaped(pop)}, ${counted(members.length, "individual")}`,
   );
   return `${counted(pops.length, "population")}: ${parts.join("; ")}`;
 }
@@ -63,15 +65,6 @@ export function optionsText(
   return `A variant counts in a population when at least ${grouped(minNumIndividuals)} of its individuals have a called genotype there, and is polymorphic when its commonest allele is below ${String(polyThreshold)}.`;
 }
 
-/** The line beside the download: "Calculated with popnei 0.1.0, in
-    version 0.1.0 of the application." */
-export function versionsText(
-  popneiVersion: string,
-  appVersion: string,
-): string {
-  return `Calculated with popnei ${escaped(popneiVersion)}, in version ${escaped(appVersion)} of the application.`;
-}
-
 /** The name of the download of the table: the stem of the variants
     file, `variantsStem`, then `.diversity.csv`; `panel.vcf.gz` gives
     `panel.diversity.csv`. */
@@ -85,12 +78,14 @@ export const WAITS_FOR_STATISTICS_TEXT =
   "Run calculates the statistics of each individual first, and the populations may lose individuals to the thresholds.";
 
 /** The populations the filters of individuals leave with no individual,
-    which a run leaves out: "p9 has no individual left after the filters
-    of individuals, and is left out."; "p1 and p2 have …, and are left
-    out.". */
+    which a run leaves out, and what to do, since the panel is in the
+    Analyses step: "p9 has no individual left after the filters of
+    individuals, and is left out. Loosen the filters of individuals in
+    the Variants step to keep it."; "p1 and p2 have …, and are left out.
+    Loosen … to keep them.". */
 export function emptiedText(emptied: readonly string[]): string {
   const one = emptied.length === 1;
-  return `${namesOf(emptied)} ${one ? "has" : "have"} no individual left after the filters of individuals, and ${one ? "is" : "are"} left out.`;
+  return `${namesOf(emptied)} ${one ? "has" : "have"} no individual left after the filters of individuals, and ${one ? "is" : "are"} left out. ${loosenText(one)}`;
 }
 
 /**

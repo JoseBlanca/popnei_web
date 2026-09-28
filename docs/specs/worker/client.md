@@ -715,20 +715,19 @@ walking skeleton, a diversity `Job` and a CSV.
   `cancel()` of a write waiting takes it out of the queue; of a write
   running, ends the worker.
 - **The restart after a large write**: a `written` with `numBytes`
-  25,000,001, one more than `WRITE_RESTART_BYTES`, and a run k5
-  waiting: the outcome of the write is `done`
-  before the worker is ended, then a new worker is made and, once
-  ready, sent the `open` of A, then k5; `onPopneiReady` is called when
-  that `open` ends. A `written` of exactly 25,000,000 bytes ends no
-  worker. A `refused` of a write, with a run waiting: the outcome is
-  `failed` of kind `popnei` before the worker is ended, then the same
-  restart. The `Blob`s are real ones, `new Blob([new
-  Uint8Array(25_000_001)])`, since the check of a
+  25,000,001, a byte above `WRITE_RESTART_BYTES`, and a run k5 waiting:
+  the outcome of the write is `done` before the worker is ended, then a
+  new worker is made and, once ready, sent the `open` of A, then k5;
+  `onPopneiReady` is called when that `open` ends. A `written` of
+  exactly `WRITE_RESTART_BYTES`, 25,000,000 bytes, ends no worker. A
+  `refused` of a write, with a run waiting: the outcome is `failed` of
+  kind `popnei` before the worker is ended, then the same restart. The
+  `Blob`s are real ones, `new Blob([new
+  Uint8Array(WRITE_RESTART_BYTES + 1)])`, 3 ms in node 26.8 on the
+  owner's Mac on 27 September 2026, since the check of a
   `written` message takes the file with `instanceof Blob` and compares
   `numBytes` with its `size` (`docs/specs/worker/messages.md`), which a
-  fake would fail; one of 100,000,001 bytes, the bound before its
-  measurement, took 12 ms to make in node 26.8 on the owner's Mac on 26
-  September 2026.
+  fake would fail.
 - **The restart after a large PCA**: a `result` of a `pca` job of 701
   individuals, of its list, with a run k6 waiting: the outcome is `done`
   before the worker is ended, then a new worker, the `open` of A, then

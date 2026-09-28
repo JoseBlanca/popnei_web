@@ -199,24 +199,57 @@ test("VS7 D1 the list cleared: the text emptied, the reason gone and Write given
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("VS7 D1 a list popnei accepts is applied with nothing announced, and a Clear that brings the reason of the other list announces it and describes that list, and axe", async ({
+test("VS7 D1 the text areas of the lists check no spelling and change no letter", async ({
+  page,
+}) => {
+  await openVariants(page);
+  await loadPanelNei(page);
+  for (const area of [keepArea(page), removeArea(page)]) {
+    await expect(area).toHaveAttribute("spellcheck", "false");
+    await expect(area).toHaveAttribute("autocapitalize", "off");
+    await expect(area).toHaveAttribute("autocorrect", "off");
+  }
+});
+
+test("VS7 D1 a list's text area is described in order: not applied, then the reason of the list applied, or its count", async ({
+  page,
+}) => {
+  await openVariants(page);
+  await loadPanelNei(page);
+  await typeInto(keepArea(page), "ind_900");
+  await button(page, "Apply the list to keep").click();
+  await typeInto(keepArea(page), "\ns000");
+  await expect(keepArea(page)).toHaveAccessibleDescription(
+    `${KEEP_NOT_APPLIED} ${IND_900}`,
+  );
+  await keepArea(page).fill("s000\ns001");
+  await button(page, "Apply the list to keep").click();
+  await typeInto(keepArea(page), "\ns002");
+  await expect(keepArea(page)).toHaveAccessibleDescription(
+    `${KEEP_NOT_APPLIED} Kept 2 of the 200 individuals it was given.`,
+  );
+});
+
+test("VS7 D1 a list popnei accepts is applied with what the filters keep announced, and a Clear that brings the reason of the other list announces it and describes that list, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {
   await openVariants(page);
   await loadPanelNei(page);
   await expect(status(page)).toHaveText(/panel\.nei read/u);
-  const read = await status(page).textContent();
   await typeInto(keepArea(page), "s000\ns001");
   await button(page, "Apply the list to keep").click();
   await expect(undoButton(page)).toHaveAccessibleDescription(
     "Undo: the list of individuals to keep changed",
   );
-  // Described by its count alone, which is not announced.
+  // Described by its count, which a screen reader does not read again
+  // under the focus; what the filters keep is announced instead.
   await expect(keepArea(page)).toHaveAccessibleDescription(
     "Kept 2 of the 200 individuals it was given.",
   );
-  await expect(status(page)).toHaveText(read ?? "");
+  await expect(status(page)).toHaveText(
+    "2 of the 200 individuals of panel.nei pass the filters.",
+  );
 
   // The list to keep is checked first, so a refused list to remove shows
   // its reason only once the list to keep is fine.
@@ -251,7 +284,7 @@ test("VS7 D1 a list typed and not applied has its line, and an Undo of another c
   await threshold(page).fill("0.05");
   await threshold(page).press("Enter");
   await expect(undoButton(page)).toHaveAccessibleDescription(
-    "Undo: the missing data filter changed",
+    "Undo: the filter of the variants by missing data changed",
   );
 
   await typeInto(keepArea(page), "\ns002");
@@ -498,4 +531,41 @@ test("VS7 D1 the Tab key goes from the Count through each list, its text area an
     await page.keyboard.press("Tab");
     await expect(next).toBeFocused();
   }
+});
+
+test("VS7 D1 a list to remove that names the one individual of a file says so in the singular", async ({
+  page,
+}) => {
+  await openVariants(page);
+  const vcf = [
+    "##fileformat=VCFv4.2",
+    "##contig=<ID=1>",
+    '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
+    "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tonly",
+    "1\t10\t.\tA\tG\t.\tPASS\t.\tGT\t0/1",
+    "",
+  ].join("\n");
+  const chooser = page.waitForEvent("filechooser");
+  await page
+    .getByRole("region", { name: "Variants file" })
+    .getByRole("button", { name: /^(Choose|Replace) .*…$/ })
+    .click();
+  await (
+    await chooser
+  ).setFiles({
+    name: "one.vcf",
+    mimeType: "text/plain",
+    buffer: Buffer.from(vcf),
+  });
+  await expect(page.getByRole("main").getByText("1 individual")).toBeVisible();
+  await typeInto(removeArea(page), "only");
+  await button(page, "Apply the list to remove").click();
+  await expect(
+    page
+      .getByRole("region", { name: "Filters of the individuals" })
+      .getByText(
+        "The filters of individuals do not keep the one individual of one.vcf. Loosen them.",
+        { exact: true },
+      ),
+  ).toBeVisible();
 });
