@@ -16,7 +16,10 @@ file, and what five presses of "Tilt down" show; and when the specs of stage
 `ZOOM_MAX`; and on 28 September 2026 for two decisions of the owner:
 the PCA opens on the 3D view, with the 2D plot drawn in its place when
 the browser cannot draw it, and the wheel zooms with the Ctrl key held,
-Open 1; not yet approved. There is no
+Open 1; and after the final review of stage 4, the same day: the
+listener of the wheel in the capture phase, the pinch in Safari, ⌘ and
+the zoom of macOS, the test of the wheel, and the file of three.js
+requested once the first result is drawn; not yet approved. There is no
 code of it yet. This spec gives the function of `src/charts/pca3d.ts`
 that draws the individuals on three principal components with three.js,
 the library of WebGL the applications take for it
@@ -204,7 +207,24 @@ Two settings of the controls are decided here:
   with buttons for a user who uses neither (2.5.1 asks a gesture of two
   fingers to have one of a single pointer). The wheel zooms with the
   Ctrl key held, and alone scrolls the page, as the owner decided on 28
-  September 2026 (**Open 1**, below).
+  September 2026 (**Open 1**, below). The plot does it with a listener
+  of the wheel of its own, on the element that holds the canvas, added
+  in the capture phase, so that it hears the wheel before the listener
+  of `OrbitControls` on the canvas: a wheel without Ctrl is stopped
+  there with `stopPropagation`, and never reaches the controls, and
+  `preventDefault` is not called, so the browser scrolls the page; a
+  wheel with Ctrl goes on to the controls, which zoom and call
+  `preventDefault`, so the browser does not enlarge the page. The
+  listener is passive, since it never calls `preventDefault`. A pinch
+  on a trackpad reaches the page in Chromium and Firefox as a wheel
+  with Ctrl, and zooms. Safari, and WebKit, send a pinch as events of
+  their own, `gesturestart`, `gesturechange` and `gestureend`, and no
+  wheel, and `OrbitControls` listens to none of them, so a pinch over
+  the plot in Safari may enlarge the page and not the plot. The plan
+  tries the pinch in Safari on a Mac and in WebKit; when it does not
+  zoom the plot there, the buttons "Zoom in" and "Zoom out", which work
+  in every browser, and Ctrl with the wheel of a mouse remain, and a
+  listener of those events is a few lines the plan can add then.
   The zoom runs from 0.25, the cloud a quarter of its starting size, to
   20, `ZOOM_MIN` and `ZOOM_MAX`, meanwhile, refined in the running application: the controls'
   `minZoom` and `maxZoom`, which bound the wheel and the pinch, and
@@ -255,9 +275,10 @@ another field, as it does in the owner's widget. Two listeners of the
 page remain, neither of which acts on a key the user types in a field.
 `OrbitControls` listens on the document to the Ctrl key going down and
 up (`OrbitControls.js` of three 0.186.1, lines 506 and 1944 to 1969),
-passively, only to tell a pinch on a trackpad, which the browser sends
-as a wheel with Ctrl, from the wheel turned with Ctrl held, and a pinch
-zooms ten times faster; it changes nothing else. And the tooltip is
+passively, only to tell a pinch on a trackpad, which Chromium and
+Firefox send as a wheel with Ctrl, from the wheel turned with Ctrl held
+(line 1541), and a pinch zooms ten times faster; it changes nothing
+else. And the tooltip is
 hidden by the Escape key while it is shown (`scatter.md`, "The point
 under the pointer").
 
@@ -749,7 +770,13 @@ scatter's 9,381 points with a third coordinate:
   `toPNG(3)` of a plot of
   600 by 450 is 1,800 by 1,350 pixels;
 - after `destroy`, no canvas is left in the element, and the context of
-  the old canvas reports itself lost.
+  the old canvas reports itself lost;
+- the wheel over the plot, sent by Playwright's `mouse.wheel` with the
+  pointer on the canvas: without Ctrl it scrolls the page, `scrollY`
+  grows, and leaves the points of `toSVG` where they were; with Ctrl
+  held it moves them apart and the page does not scroll. A pinch on a
+  trackpad cannot be sent by Playwright, and is tried by hand ("The
+  view", the zoom).
 
 **What the headless engines give for WebGL is not known.** `testing.md`
 says nothing of it, and Playwright runs the three engines headless,
@@ -763,13 +790,17 @@ reason, and not as passed, as `testing.md` asks of a check that could
 not be run; and the test of the words of "When the browser has no WebGL"
 runs there.
 
-**The file of its own**, in the flows of the PCA (`pca.md`): opening the
-PCA in 2D downloads no file of `pca3d`, and pressing 3D downloads one,
-as the requests of the page show in Playwright; and the first script of
-`popgen.html` in `dist/`, which imports `Pca3dError`, holds no text of
-three.js, such as "WebGLRenderer". And a download that arrives too late: with the file
-of `pca3d` held back by the routing of Playwright, 3D pressed and then
-2D, the file let through leaves no canvas in the panel.
+**The file of its own**, in the flows of the PCA (`pca.md`), which
+opens on the 3D view: no file of `pca3d` is requested before the first
+result of a PCA is drawn, the page opened, a variants file loaded and
+the panel of the PCA shown before its run, and one is requested after
+it, as the requests of the page show in Playwright; and the first
+script of `popgen.html` in `dist/`, which imports `Pca3dError`, holds
+no text of three.js, such as "WebGLRenderer". And a download that
+arrives too late: with the file of `pca3d` held back by the routing of
+Playwright, the result drawn while the panel says "Loading the 3D
+view…", 2D pressed, and then the file let through, no canvas is left
+in the panel.
 
 The 3D view, in both themes, with a group highlighted, is in the screens
 of `e2e/screens.spec.ts`, looked at as `testing.md` says, where the
@@ -861,17 +892,27 @@ the headless engines, which waits for the first work package.
    user who scrolled down the panel with the pointer over the plot would
    zoom the plot instead, until the pointer left it, and a plot 48rem
    wide, the largest, is most of the width of a laptop's window. The
-   wheel zooms with the Ctrl key held, as maps in a page do, and alone
-   scrolls the page. A pinch on the trackpad of a Mac reaches the page
-   as a wheel with Ctrl held, so it zooms too. A few lines of our own,
-   since `OrbitControls` has no such setting: a listener of the wheel on
-   the element, before the canvas, that stops a wheel without Ctrl from
-   reaching the controls. Ctrl and the wheel over the plot then no
-   longer enlarge the page, as they do elsewhere, and the user is told
-   of the key in the help. Not taken: the wheel alone, the zoom most
-   users of 3D plots expect, with the trap above; and the zoom by the
-   buttons and by pinching alone, with no trap and a press per step on
-   a computer.
+   wheel zooms with the Ctrl key held, as maps in a page do on Windows
+   and Linux, and alone scrolls the page. A few lines of our own, since
+   `OrbitControls` has no such setting: the listener of the wheel of
+   "The view", in the capture phase, on the element that holds the
+   canvas. Ctrl and the wheel over the plot then no longer enlarge the
+   page, as they do elsewhere, and the user is told of the key in the
+   help. Not taken: the wheel alone, the zoom most users of 3D plots
+   expect, with the trap above; and the zoom by the buttons and by
+   pinching alone, with no trap and a press per step on a computer.
+
+   Two things of a Mac, kept apart from the decision. Maps in a page,
+   Google Maps among them, zoom with ⌘ and the wheel on a Mac, and a
+   user of a Mac may try ⌘ first. And macOS can zoom the whole screen
+   with Ctrl and the scroll, a setting of its accessibility that is off
+   unless the user turned it on; for such a user Ctrl and the wheel
+   zoom the screen, and the plot never hears them. For both, the
+   buttons "Zoom in" and "Zoom out" work, and so does a pinch where the
+   browser sends it as a wheel ("The view"). The plan tries the zoom in
+   Safari and WebKit on a Mac, and when Ctrl clashes there, ⌘ on a Mac
+   is the alternative, one test more in the listener
+   (`stage-4-open-points.md`, the zoom's entry).
 
 ## Not in this spec
 

@@ -93,8 +93,8 @@ does not go through the key.
 - A result that arrives from the worker after the project changed, or
   from a worker that was ended by a cancel: is it shown only when the
   current project gives its key?
-- What the calculation worker keeps under keys of its own, the pruned variants, the
-  kinship, the principal components: the same questions.
+- What the calculation worker keeps under keys of its own, the
+  kinship from stage 7 and the principal components the GWAS reuses: the same questions.
 - A screen that keeps a copy of a result in its own state, a `useMemo`
   or a chart handle that is not given the new data, a warning computed
   with another project than the result's.

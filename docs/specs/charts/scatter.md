@@ -1006,8 +1006,9 @@ tries the PCA panel. Meanwhile, over the plot, as above (point 14 of
 The 50,000 points are the owner's decision of 26 September 2026, and
 the one decimal is decided above with the numbers of the walking
 skeleton. The points of `docs/specs/stage-4-open-points.md` this spec
-leans on are the PCA opening in 2D and the drawing options kept out of
-the key of the PCA (`pca.md`).
+leans on are the PCA opening on the 3D view, with this plot drawn in
+its place where the browser cannot draw 3D (point 5), and the drawing
+options kept out of the key of the PCA (`pca.md`).
 
 ## Not in this spec
 

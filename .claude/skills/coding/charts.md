@@ -663,7 +663,10 @@ placed at the projected ends of the axes after each render.
   reads; with an orthographic camera, looking down an axis shows exactly
   the 2D plot of the other two. The depth comes from turning it.
 - **`OrbitControls`**, the standard controls of three.js: drag to turn,
-  wheel and pinch to zoom. It keeps one axis up, which is less free than
+  the wheel with Ctrl held and the pinch to zoom, the wheel alone left to
+  scroll the page by a listener of our own in the capture phase, as the
+  owner decided on 28 September 2026 (`docs/specs/charts/pca3d.md`, "The
+  view"). It keeps one axis up, which is less free than
   `TrackballControls` and much less disorienting: the third component,
   set as the camera's `up` before the controls are made, since they read
   it once, in their constructor. The view along the third component,
