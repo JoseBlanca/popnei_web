@@ -753,7 +753,11 @@ for (const theme of ["light", "dark"] as const) {
       await page.reload();
       await pickVariants(page, "panel.nei");
       await expect(
-        page.getByRole("main").getByText(/Reload the page/),
+        page
+          .getByRole("main")
+          .getByText(
+            /Save the project, reload the page, open the project and choose panel\.nei again\.$/,
+          ),
       ).toBeVisible();
       await save(page, `popgen-variants-could-not-start-${theme}`);
     });
