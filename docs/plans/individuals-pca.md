@@ -514,7 +514,7 @@ keep 116 and 111 individuals, where they kept 125 and 119.
   first (`entry.md`, "`src/core/apps.ts`"); the comparison of the check
   numbers under the key versions raised (`projectFile.md`, "The
   comparisons after an opening"). Serves 2 and 5. Needs 2.2.
-- [ ] 2.4 The Variants step in the new order: the section of the
+- [x] 2.4 The Variants step in the new order: the section of the
   individuals before that of the variants, the words of the count that
   waits, of the missing data filter and of the caption of the
   histograms, and the locks beside the Count and the histograms, from
@@ -594,7 +594,7 @@ was typed, and the results of before come back from the cache.
 
 **Tasks:**
 
-- [ ] 3.1 The LD filter with no distance in core:
+- [x] 3.1 The LD filter with no distance in core:
   `ProjectVariantFilter`, `variantFilterNeeds` and `jobFilters` in
   `project.ts` (`project.md`, "What an analysis needs of every project"
   and "The validation"), the locks of the store and every job's filters
