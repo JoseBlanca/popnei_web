@@ -14,7 +14,9 @@ and when the specs of stage 4 were made to agree: the options of a CSV
 not shown for a file `notGiven`, and the help's Python reading the table
 from the `.xlsx` of the report; and on 28 September 2026 for two answers
 of the owner: the line of the sheet read, fixed and with no name of the
-sheet, and an error `#N/A` of an xlsx read as a missing value. The
+sheet, and an error `#N/A` of an xlsx read as a missing value; and later
+that day for a third, every other error of Excel in an xlsx read as a
+missing value as well. The
 code of stage 2 is in `src/ui/steps/individuals/`.
 
 The screen spec of the second step of the population genetics
@@ -652,12 +654,13 @@ individual of the variants file must be in it; that an xlsx is read
 from its first sheet, the first tab that is not hidden, which may not be
 the sheet Excel opens the file on; for a CSV, how the encoding, the
 separator and the decimal mark are detected, and when to change them;
-that missing values are an empty cell, `NA` or `-`, and, in an xlsx, the
-error `#N/A`, which Excel shows for a value not available, as a lookup
-gives it for a name it did not find; that the other errors of Excel,
-`#DIV/0!`, `#VALUE!` and the like, are read as their text, so that a
-broken formula shows among the values of its column, and are mended in
-the sheet; what the types mean, "identifier" the
+that missing values are an empty cell, `NA` or `-`, and, in an xlsx,
+every error of Excel: `#N/A`, which Excel shows for a value not
+available, as a lookup gives it for a name it did not find, and
+`#DIV/0!`, `#VALUE!` and the other errors of a formula that failed, so
+that a broken formula leaves its individual with no value in that
+column, with nothing in the column to show it, and is mended in the
+sheet; what the types mean, "identifier" the
 names of the individuals, "binary" a column of two values, "continuous"
 one of numbers, "categorical" any other, which types each column can
 be given and why, and that a binary column's value coded 1 is the case,

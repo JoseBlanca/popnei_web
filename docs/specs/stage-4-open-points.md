@@ -23,12 +23,18 @@ calamine, approved (below, "Decided by the owner on 28 September
 to 12, the last four of them each a line, and the specs say them as
 decided: the PCA has its own filters of missing data, MAF and LD, which
 follow the Variants step by default (point 2); the panel opens on the
-3D view (point 5); `#N/A` of an xlsx is a missing value (point 11),
-where the writers decided the other six errors of Excel stay text,
-which the owner may overrule; the sheet read is said in a fixed line
-(point 12); and points 4, 7, 9 and 10 as recommended. The owner's answer A of the same day puts the filters of
-individuals before those of the variants, which changes the code of
-stage 3 as well (point A).
+3D view (point 5); `#N/A` of an xlsx is a missing value (point 11);
+the sheet read is said in a fixed line (point 12); and points 4, 7, 9
+and 10 as recommended. The owner's answer A of the same day puts the
+filters of individuals before those of the variants, which changes the
+code of stage 3 as well (point A). Later again that day the owner
+answered four more, which the specs now say as decided: every error of
+Excel in an xlsx is a missing value, the six others as `#N/A` (point
+11); the filter of the regions of a BED file acts before the filters of
+individuals, once the application has it; the histograms of the
+variants count over the individuals kept; and the Variants step shows
+the section of the individuals before that of the variants (the last
+three under point A).
 
 The specs are, new: `docs/specs/analyses/pca.md`, the analysis and its
 panel; `docs/specs/charts/scatter.md`, the 2D plot, and `pca3d.md`, the
@@ -340,8 +346,9 @@ What a user meets:
 - The Variants step shows the filters of the individuals, the lists,
   the statistics of each individual and the two thresholds, before the
   filters of the variants, since the step shows the filters in the
-  order they act. Decided by the writers from the rule the step already
-  had.
+  order they act. Proposed by the writers from the rule the step already
+  had, and decided by the owner later on 28 September 2026. Not taken:
+  the section of the variants first, as in stage 3.
 - The statistics of each individual are calculated once for each file
   loaded; moving a filter of the variants leaves them, their table, the
   counts beside the thresholds and the individuals kept, with no
@@ -353,12 +360,12 @@ What a user meets:
   filter counts it; a change of a filter of individuals removes them,
   with the notice of the change and its Undo, and a Calculate draws them
   again; with a threshold on the individuals their Calculate first
-  calculates the statistics when they are not there. Decided by the
-  writers, as what the owner's words ask of the numbers the filters are
-  set from; the option not taken, the histograms over every individual,
-  would show on `panel.nei`, with the thresholds of the flow, 1,175
-  variants at a MAF up to 0.95 where the filter, over the 111
-  individuals kept, keeps 1,178.
+  calculates the statistics when they are not there. The writers' reading
+  of what the owner's words ask of the numbers the filters are set from,
+  confirmed by the owner later on 28 September 2026. Not taken: the
+  histograms over every individual, which would show on `panel.nei`,
+  with the thresholds of the flow, 1,175 variants at a MAF up to 0.95
+  where the filter, over the 111 individuals kept, keeps 1,178.
 - The counts beside the filters of the variants go at every change of a
   filter of individuals as well, and a Count waits for the statistics
   as the diversity does. A list of individuals that names someone not
@@ -387,25 +394,31 @@ What a user meets:
   checks are compared only where their result is the same as stage 3's,
   since their settings now hold other filters.
 
-The histograms of the variants over the individuals kept are the
-writers' reading of the owner's words, which the owner may overrule:
-the option not taken keeps them over every individual, one pass per
-load, and shows numbers the filters no longer count by. Each Calculate
-again after a change of a filter of individuals costs one pass, as a
-diversity's, 248 ms in Chromium 153 over a VCF of 80.7 MB on the
-owner's Mac, and minutes over a gzipped VCF of gigabytes.
+The histograms of the variants over the individuals kept, the writers'
+reading of the owner's words, were confirmed by the owner later on 28
+September 2026. The option not taken kept them over every individual,
+one pass per load, and showed numbers the filters no longer count by.
+Each Calculate again after a change of a filter of individuals costs
+one pass, as a diversity's, 248 ms in Chromium 153 over a VCF of 80.7 MB
+on the owner's Mac, and minutes over a gzipped VCF of gigabytes. Specs:
+`variantChecks.md`; `docs/architecture.md`, section 4.
 
-Left open by the architecture review of the same day, for the owner,
-and decided with the filter of the regions of a BED file, which the
-application has not built: whether that filter goes before the list of
-the individuals kept, so that each individual's statistics are counted
-over the variants inside the regions, as plink 1.9 removes the variants
-outside them before `--mind`. Recommended: before. Without it, a user
-who loads a VCF of a capture with calls off the target, and the BED of
-the target, would see individuals removed by a threshold on their
-missing genotypes for calls no analysis reads. What it costs: the
-statistics are one pass per load and per BED file.
-(`docs/architecture.md`, section 13, point 15.)
+Left open by the architecture review of the same day, and decided by
+the owner later that day, as recommended: the filter of the regions of
+a BED file, which the application has not built, acts before the
+filters of individuals. The order is the regions first, then each
+individual's statistics over the variants inside the regions, then the
+filters of individuals, then the other filters of the variants, as
+plink 1.9 removes the variants outside the regions before `--mind`.
+Otherwise a user who loads a VCF of a capture with calls off the
+target, and the BED of the target, would see individuals removed by a
+threshold on their missing genotypes for calls no analysis reads. What
+it costs: the statistics are one pass per load and per BED file. Not
+taken: the regions with the other filters of the variants, after the
+individuals, which kept the statistics one pass per load whatever the
+regions. Nothing is built for it in stage 4. `docs/architecture.md`,
+sections 1 and 2, and section 13, point 15; `docs/functionality.md`,
+section 3.
 
 The code of stage 3 that the plan of stage 4 changes, each with its
 spec:
@@ -598,7 +611,7 @@ a Mac's trackpad; the wheel alone scrolls the page, so a user who
 scrolls the panel with the pointer over the plot is not caught by it.
 Not taken: the wheel alone, and no wheel at all. `pca3d.md`, Open 1.
 
-### 11. An error cell of Excel: `#N/A` missing, the six others text
+### 11. An error cell of Excel: every error missing
 
 Recommended: `#N/A` read as the text `#N/A`, as in the CSV Excel saves
 from the same sheet. Decided by the owner instead: in an xlsx, `#N/A` is
@@ -607,18 +620,21 @@ a missing value, as Excel means it, "not available", and as a lookup,
 one `#N/A` stays continuous. The CSV Excel saves from the same sheet
 still writes `#N/A` as text, which is a value there, so the two files
 give two tables. xlsx_rs gives the text of the error, and popnei_web's
-reader makes `#N/A` missing, beside `NA` and `-`.
+reader makes it missing, beside `NA` and `-`.
 
-Decided by the writers the same day, and put to the owner: the other
-six errors calamine knows, `#DIV/0!`, `#NAME?`, `#NULL!`, `#NUM!`,
-`#REF!` and `#VALUE!`, stay text. The owner answered for `#N/A`, which
-says a value is not available; the six say that a formula went wrong.
-Read as missing, such a cell would leave its individual out of a
-population or a trait with nothing to show that a formula is broken;
-read as text, it makes its column categorical and shows the error among
-its values, for the user to mend in the sheet. The owner may make them
-missing as well, which changes one line of the reader and its tests.
-`files.md`, Open 1; `docs/specs/worker/individuals.md`, "The xlsx";
+The writers then kept the other six errors calamine knows, `#DIV/0!`,
+`#NAME?`, `#NULL!`, `#NUM!`, `#REF!` and `#VALUE!`, as text, and put it
+to the owner. Decided by the owner later on 28 September 2026: the six
+are missing as well, as `#N/A` is, in popnei_web's reader; xlsx_rs
+still gives the text of the error. Not taken: the six as text, so that
+a broken formula made its column categorical and showed among its
+values. What a user meets: a column of heights with one `#DIV/0!` stays
+continuous, that individual with no height, and nothing in the column
+shows that a formula of the sheet failed; the help says that every
+error of Excel is read as missing. An error calamine does not know,
+`#SPILL!` among them, still refuses the sheet, as `files.md` has it.
+`files.md`, the table of the cells, its tests and Open 1;
+`docs/specs/worker/individuals.md`, "The xlsx", its cases and tests;
 `steps/individuals.md`, its help; `docs/functionality.md`, section 4.
 
 ### 12. The sheet read, said in a fixed line

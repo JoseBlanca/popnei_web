@@ -138,7 +138,9 @@ The filters come in the order popnei applies them, so that what each
 kept reads down the page as a chain: each filter is given what the one
 above it kept. The filters of the individuals come before those of the
 variants for the same reason, since popnei's `filterIndividuals` comes
-before them, as the owner decided on 28 September 2026, and the filters
+before them, as the owner decided on 28 September 2026, and the owner
+decided the same day that the step shows them in that order; not taken,
+the section of the variants first, as in stage 3. The filters
 of the variants, their counts and the histograms beside them, are
 counted over the individuals the filters above keep
 (`docs/architecture.md`, section 13, points 3 and 8). The statistics of

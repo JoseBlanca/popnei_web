@@ -375,7 +375,9 @@ the analyses whose result changes for the same key is raised (section
 (`docs/specs/stage-4-open-points.md`). The options weighed, their costs,
 and what would show the choice wrong are in section 2. Its architecture
 review left one point open, where the filter of the regions of a BED
-file goes once the application has it (section 13, point 15).
+file goes once the application has it, which the owner decided the same
+day: first, before the statistics of each individual and the filters of
+individuals (section 13, point 15).
 
 ## 2. The project
 
@@ -548,13 +550,14 @@ holds the numbers of two sessions names the right versions for each
   of at most 254; the default is 2.
 - **The filters are in a fixed order**, and the user does not order them,
   as the owner decided on 26 September 2026, with the filters of
-  individuals first, as the owner decided on 28 September 2026: the one
-  list that the four filters of individuals make, which popnei's
-  `filterIndividuals` puts on the `Variants` before any other step
-  (section 4); then the filters of the variants, the regions of a BED
-  file, once popnei has that filter, missing data, observed
-  heterozygosity, the major allele frequency (MAF), and the LD pruning
-  last. The project holds each list in its order and refuses a project
+  individuals first, as the owner decided on 28 September 2026, and the
+  regions of a BED file before them, as the owner decided later that
+  day. The regions come first, once the application has that filter;
+  then the one list that the four filters of individuals make, which
+  popnei's `filterIndividuals` puts on the `Variants` after the regions
+  and before any other step (section 4); then the other filters of the
+  variants, missing data, observed heterozygosity, the major allele
+  frequency (MAF), and the LD pruning last. The project holds each list in its order and refuses a project
   file whose filters are out of it. The regions and the missing data,
   heterozygosity and MAF filters keep a variant by where it is or what
   it holds, so their order changes the counts of each filter and not the
@@ -572,11 +575,16 @@ holds the numbers of two sessions names the right versions for each
   plink 1.9 applies `--mind` before `--geno`, and the variants kept
   change with the individuals removed. Each individual's statistics,
   from which the thresholds on the individuals are set, are counted over
-  every variant of the file, before any filter (section 4), so the list
-  depends on no filter of the variants. Where the filter of the regions
-  of a BED file goes, once the application has it, before the list or
-  after it with the other filters of the variants, is open (section 13,
-  point 15). Seen in node with popnei's
+  every variant of the file, before any filter (section 4), or, with the
+  filter of the regions on, over the variants inside the regions and
+  before any other filter, so the list depends on no filter of the
+  variants but the regions, which keep a variant by its position alone.
+  The owner decided on 28 September 2026 that the regions go before the
+  statistics and the list, so that a VCF of a capture with calls off the
+  target, loaded with the BED of the target, has its individuals judged
+  on the calls the analyses read (section 13, point 15). Not taken: the
+  regions after the list, with the other filters of the variants. Seen
+  in node with popnei's
   release `js-v0.1.0-dev.3` on 28 September 2026, on `panel.nei`: the
   111 individuals that the thresholds of 0.03 of missing genotypes and
   0.38 of observed heterozygosity keep, given to `filterIndividuals`
@@ -656,8 +664,9 @@ off the target: plink 1.9 removes the variants outside the regions
 over every variant of the file an individual's missing rate would count
 the off-target calls no analysis reads. The filter of the regions keeps
 a variant by its position alone, so it can come before the statistics
-with no loop between the two; whether it does is point 15 of section
-13, since the application has no filter of the regions yet.
+with no loop between the two, and the owner decided on 28 September
+2026 that it does, once the application has that filter (section 13,
+point 15).
 The tests that tie the order to popnei's numbers are the runner's, with
 the counts above, and the store's property that no request of the
 statistics carries a filter (`docs/specs/core/store.md`, "How it is
@@ -947,10 +956,12 @@ section 4), and every analysis has to read the individuals they keep.
   called genotypes too, which its default of 20 called individuals would
   leave out, and which the missing data filter is there to find. popnei
   has no histogram of the missing rate of each variant in
-  `js-v0.1.0-dev.2`; it is asked of popnei (section 6). The option not
-  taken, the histograms over every individual of the file as until 28
-  September 2026, one pass per load, would show numbers the filters no
-  longer count by, and the user would set a threshold from them.
+  `js-v0.1.0-dev.2`; it is asked of popnei (section 6). Decided by the
+  owner on 28 September 2026, who confirmed this reading of their words
+  of the order of the filters. The option not taken, the histograms over
+  every individual of the file as until 28 September 2026, one pass per
+  load, would show numbers the filters no longer count by, and the user
+  would set a threshold from them.
 - **Core makes the list of the individuals kept**, from the result of
   `individualChecks` in the cache and the four filters of individuals, in
   their fixed order: the list to keep, the list to remove, the threshold
@@ -2446,7 +2457,9 @@ that day:
    filters of the variants count over the individuals it keeps, "All
    analyses should calculate the filters using the individuals kept"
    (section 2, where the options and their costs are). The order among
-   the filters of the variants is as it was.
+   the filters of the variants is as it was, but for the regions, which
+   go before the filter of individuals, as the owner decided later that
+   day (point 15).
 4. **An individual with no called genotype** is removed by the filter by
    heterozygosity (section 4). Not taken: keeping it, which a NaN would
    otherwise let through whatever the threshold.
@@ -2556,21 +2569,23 @@ day; point 14 is not yet answered.
    would already hold. Decided with stage 6.
 
 Opened by the revision of 28 September 2026 for the order of the
-filters, after its architecture review, and not yet answered:
+filters, after its architecture review, and decided by the owner that
+day:
 
-15. **Where the filter of the regions of a BED file goes** in the order
+15. **The filter of the regions of a BED file goes first** in the order
    of section 2, once the application has it; popnei's release
    `js-v0.1.0-dev.3` has the filter, `filterByRegions`, and the
-   application has not built it. Recommended: first, before the list of
-   the individuals kept, so that each individual's statistics are
-   counted over the variants inside the regions, as plink 1.9 removes
-   the variants outside them before `--mind`. A user who loads a VCF of
-   a capture with calls off the target, and the BED of the target,
-   would otherwise see individuals removed by a threshold on their
-   missing genotypes for calls no analysis reads. What it costs: the key
-   of the statistics of each individual holds the hash of the regions,
-   so their pass is one per load and per BED file, and a new BED file
-   takes them off. Not taken: the regions after the list, with the other
-   filters of the variants, as the order of section 2 has them now, which
-   keeps the statistics one pass per load whatever the regions. Decided
-   with the filter of the regions.
+   application has not built it. Decided by the owner, as recommended:
+   the regions first, then each individual's statistics over the
+   variants inside the regions, then the filters of individuals, then
+   the other filters of the variants, as plink 1.9 removes the variants
+   outside the regions before `--mind`. A user who loads a VCF of a
+   capture with calls off the target, and the BED of the target, would
+   otherwise see individuals removed by a threshold on their missing
+   genotypes for calls no analysis reads. What it costs: the key of the
+   statistics of each individual holds the hash of the regions, and
+   their job carries the filter of the regions and no other, so their
+   pass is one per load and per BED file, and a new BED file takes them
+   off. Not taken: the regions after the list, with the other filters of
+   the variants, which kept the statistics one pass per load whatever
+   the regions.

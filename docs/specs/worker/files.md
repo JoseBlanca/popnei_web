@@ -16,8 +16,9 @@ account and public, as popnei's is; that its releases are made by hand,
 as popnei's are, and later by a workflow shared with popnei; and
 approved calamine 0.36.1 as its dependency, and rust_xlsxwriter 0.99.1
 for its tests (`docs/architecture.md`, section 13, points 11 to 13).
-Revised again on 28 September 2026 for two more answers of the owner:
-an error `#N/A` of Excel is a missing value for popnei_web, Open 1,
+Revised again on 28 September 2026 for three more answers of the
+owner: an error `#N/A` of Excel is a missing value for popnei_web, and,
+by a later answer, so is every other error calamine knows, Open 1,
 which popnei_web's reader makes of the text xlsx_rs gives; and the
 Individuals step says that the first sheet was read without naming it.
 This is xlsx_rs's first spec. It is written here because the repository
@@ -149,7 +150,7 @@ boolean, an empty cell as `null`.
 | a format of date on a number below 0, or on a day after 31 December 9999, which Excel shows as `#######` | `DateTime`, with the parts of a wrong date | the number |
 | a duration, a format such as `[h]:mm:ss` | `DateTime` whose `ExcelDateTime` is a duration | hours, minutes and seconds, the hours not wrapped at 24: 1.5 days is `36:00:00`, and a negative one `-0:30:00` |
 | a date written as ISO 8601 text, a cell of the type `d`, which other programs than Excel may write | `DateTimeIso` | the text as it is |
-| an error: `#N/A`, `#DIV/0!`, `#NAME?`, `#NULL!`, `#NUM!`, `#REF!`, `#VALUE!` | `Error` | the text of the error as Excel writes it in English; popnei_web's reader takes `#N/A` as missing and the other six as text (**Open 1**, below, decided by the owner) |
+| an error: `#N/A`, `#DIV/0!`, `#NAME?`, `#NULL!`, `#NUM!`, `#REF!`, `#VALUE!` | `Error` | the text of the error as Excel writes it in English; popnei_web's reader takes each of the seven as missing (**Open 1**, below, decided by the owner) |
 | a formula | the value saved with it | the cell of that value, by the rows above |
 
 A date becomes text in ISO 8601, year, month, day, and not the number
@@ -263,7 +264,8 @@ and the light worker makes the refusal of it. In the order it looks:
    `#CALC!` among them, but whether they reach calamine as such is not
    known: Excel may save them as `#VALUE!`, with the real error in a
    part of the file calamine does not read, and then the cell is the
-   text `#VALUE!` and nothing is refused. So the refusal of `#SPILL!` in
+   text `#VALUE!`, which popnei_web reads as missing, and nothing is
+   refused. So the refusal of `#SPILL!` in
    this spec is unconfirmed until the owner's `spill.xlsx` is read
    (below, "Made by the owner").
 6. **A sheet too large**: `sheetTooLarge`, with the name of the sheet and
@@ -579,7 +581,7 @@ holds, and the literal cells it gives:
 | a number with the format `000` | `Number(1.0)` |
 | 45425 with the format `dd/mm/yyyy`; 45425.5 with `dd/mm/yyyy hh:mm:ss`, and with `dd/mm/yyyy`; 45425.9999999999 with `dd/mm/yyyy`; 0.604166666 with `hh:mm`; 1.5 with `[h]:mm:ss`; 60, 2958465 and 2958466 with `dd/mm/yyyy`; −3 with `dd/mm/yyyy` | `2024-05-13`; `2024-05-13 12:00:00` both times (**Open 2**, decided); `2024-05-14`; `14:30:00`, `36:00:00`, `1900-02-29`, `9999-12-31`, `Number(2958466.0)`, `Number(-3.0)`; all seen as dates by calamine in the trials |
 | xlsx_rs's function that makes the cell of a date, in its own module, with the 1904 system, which rust_xlsxwriter does not write: 2957003, 2957004, −3 and 0.5 | `9999-12-31`, `Number(2957004.0)`, `Number(-3.0)`, `12:00:00` |
-| a formula `=1+1` saved with the value 2, one with the text `x`, one with `TRUE`, one with `#N/A`, one with `#DIV/0!`, and `=1+2` with none | `Number(2.0)`, `Text("x")`, `Bool(true)`, `Text("#N/A")`, `Text("#DIV/0!")`, `Number(0.0)`; popnei_web's reader makes the first error missing, not xlsx_rs |
+| a formula `=1+1` saved with the value 2, one with the text `x`, one with `TRUE`, one with `#N/A`, one with `#DIV/0!`, and `=1+2` with none | `Number(2.0)`, `Text("x")`, `Bool(true)`, `Text("#N/A")`, `Text("#DIV/0!")`, `Number(0.0)`; popnei_web's reader makes both errors missing, not xlsx_rs |
 | `0.1 + 0.2` | `Number(0.30000000000000004)` |
 | a text `"  sp "` and a text with a line break | both as they are |
 | a text of several fonts, `write_rich_string` | the parts joined |
@@ -673,8 +675,8 @@ Of popnei_web, all made on 27 and 28 September 2026:
   owner's files have been read.
 - `docs/functionality.md`, section 4: "the first sheet" is the first that
   is not hidden, and merged cells take the value Excel shows over them;
-  and, since 28 September 2026, `#N/A` of an xlsx among the missing
-  values, the other errors of Excel read as their text.
+  and, since 28 September 2026, the errors of an xlsx, `#N/A` and the
+  six others calamine knows, among the missing values.
 
 Of xlsx_rs, when its repository is made: a `CLAUDE.md`, the skills of
 popnei adapted to it, among them the coding skill with these lints and
@@ -683,8 +685,8 @@ spec.
 
 ## Open points
 
-1. **An error cell of Excel, `#N/A` among them, decided by the owner on
-   28 September 2026: `#N/A` is missing.** A cell whose formula failed
+1. **An error cell of Excel, decided by the owner on 28 September 2026:
+   every error calamine knows is missing.** A cell whose formula failed
    holds an error, and xlsx_rs gives its text, `#N/A`, `#DIV/0!`, as
    Excel writes it in English, whatever the language of Excel. The owner
    decided that popnei_web reads `#N/A` as a missing value, as Excel
@@ -697,7 +699,7 @@ spec.
    the cell missing and the second with the text, which makes the
    column categorical there and shows the value to the user.
 
-   It is popnei_web's reader, and not xlsx_rs, that makes `#N/A`
+   It is popnei_web's reader, and not xlsx_rs, that makes an error
    missing, with its other missing values, `NA` and `-`
    (`docs/specs/worker/individuals.md`, "The xlsx"): xlsx_rs gives what
    the file holds, the text of the error, and what counts as missing is
@@ -706,17 +708,17 @@ spec.
    a second user of xlsx_rs could not tell an error from a blank.
 
    The other six errors, `#DIV/0!`, `#NAME?`, `#NULL!`, `#NUM!`,
-   `#REF!` and `#VALUE!`, stay text, decided by the writers on 28
-   September 2026 and put to the owner with it
-   (`docs/specs/stage-4-open-points.md`, point 11). The owner answered
-   for `#N/A`, which says that a value is not available; the six say
-   that a formula went wrong, a division by 0, a name or a reference
-   that does not exist, an argument of the wrong kind. Read as missing,
-   such a cell would leave its individual out of a population or a trait
-   with nothing on the screen to show that a formula of the sheet is
-   broken; read as text, it makes its column categorical and the user
-   sees the error among its values, and mends the formula. Not taken:
-   every one of the seven missing, as `#N/A` is.
+   `#REF!` and `#VALUE!`, are missing as well, decided by the owner
+   later on 28 September 2026 (`docs/specs/stage-4-open-points.md`,
+   point 11). They say that a formula went wrong, a division by 0, a
+   name or a reference that does not exist, an argument of the wrong
+   kind, and read as missing such a cell leaves its individual with no
+   value in that column, as `#N/A` does: a column of heights with one
+   `#DIV/0!` stays continuous. The option not taken, which the writers
+   had chosen: the six as their text, so that a broken formula made its
+   column categorical and showed among its values, for the user to mend
+   in the sheet. An error calamine does not know, `#SPILL!` among them,
+   still refuses the sheet (above, "The refusals", point 5).
 
 2. **A date whose time the format hides, decided by the owner on 27
    September 2026.** calamine does not give the

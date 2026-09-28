@@ -114,26 +114,39 @@ itself a finding.
 
 ### The order of the filters
 
-The filters of individuals act first, and the filters of the variants
-count over the individuals they keep, as the owner decided on 28
-September 2026, "All analyses should calculate the filters using the
-individuals kept", as plink 1.9 applies `--mind` before `--geno`. So the
-missing rate, the frequencies and the LD of a variant, which its filters
-keep it by, are those of the individuals the analyses read; the
-histograms of the variants are drawn over those individuals too, so that
-a threshold read on a histogram keeps what the histogram shows; and the
-Variants step shows the filters of the individuals before those of the
-variants. Each individual's proportion of missing genotypes and observed
-heterozygosity are counted over every variant of the file, before any
-filter of the variants, one calculation for each file loaded: an
-individual's missing genotypes include those at the bad variants the
-missing data filter drops, which is the cost of this order. Among the
-filters of the variants the order is fixed: the genomic regions, missing
-data, observed heterozygosity, MAF, and the LD pruning last, since it
-keeps a variant according to those kept before it. Whether the genomic
-regions go instead before the filters of individuals, so that each
-individual's numbers are counted over the variants inside them, is
-open, and decided with that filter (`docs/architecture.md`, section 13,
+The filters of individuals act before the other filters of the
+variants, which count over the individuals they keep, as the owner
+decided on 28 September 2026, "All analyses should calculate the filters
+using the individuals kept", as plink 1.9 applies `--mind` before
+`--geno`. So the missing rate, the frequencies and the LD of a variant,
+which its filters keep it by, are those of the individuals the analyses
+read; the histograms of the variants are drawn over those individuals
+too, so that a threshold read on a histogram keeps what the histogram
+shows; and the Variants step shows the filters of the individuals
+before those of the variants. The owner decided the last two the same
+day; not taken, the histograms over every individual of the file.
+
+The order is fixed, and the genomic regions come first, as the owner
+decided later on 28 September 2026, once the application has that
+filter:
+
+1. the genomic regions of a BED file;
+2. each individual's proportion of missing genotypes and observed
+   heterozygosity, counted over the variants inside the regions, or
+   over every variant of the file without that filter, one calculation
+   for each file loaded and each BED file;
+3. the filters of individuals;
+4. the other filters of the variants, missing data, observed
+   heterozygosity, MAF, and the LD pruning last, since it keeps a
+   variant according to those kept before it.
+
+So a VCF of a capture with calls off the target, loaded with the BED of
+the target, has each individual judged on the calls the analyses read,
+as plink 1.9 removes the variants outside the regions before `--mind`.
+Not taken: the regions after the filters of individuals, with the other
+filters of the variants. An individual's missing genotypes include
+those at the bad variants the missing data filter drops, which is the
+cost of this order (`docs/architecture.md`, section 2, and section 13,
 point 15).
 
 ## 4. The files of the individuals
@@ -198,12 +211,15 @@ and its encoding varies with the version. So:
   may have been cut short, as the owner decided on 25 September 2026,
   since a table read from it would lack its last rows without a word.
 - Missing values are an empty cell, `NA` or `-`, and in an `.xlsx` also
-  the error `#N/A`, which Excel shows for a value not available, as the
-  owner decided on 28 September 2026. The other errors of Excel,
-  `#DIV/0!`, `#NAME?`, `#NULL!`, `#NUM!`, `#REF!` and `#VALUE!`, are read
-  as their text, so that a broken formula shows among the values of its
-  column. The CSV that Excel saves from the same sheet writes `#N/A` as
-  text, which is read as a value there.
+  every error of Excel: `#N/A`, which Excel shows for a value not
+  available, and `#DIV/0!`, `#NAME?`, `#NULL!`, `#NUM!`, `#REF!` and
+  `#VALUE!`, which a formula that failed gives, as the owner decided on
+  28 September 2026. Not taken: those six read as their text, so that a
+  broken formula showed among the values of its column. The CSV that
+  Excel saves from the same sheet writes the errors as text, which is
+  read as a value there. An error of the newest Excel that the reader
+  does not know, `#SPILL!` among them, refuses the file, with words that
+  say how to find it in Excel.
 - The file is written as `.xlsx` for the user and as TSV for scripts and
   the Python API.
 

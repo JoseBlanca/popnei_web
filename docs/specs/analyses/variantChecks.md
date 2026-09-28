@@ -56,7 +56,9 @@ filters of the variants, as the owner decided on 26 September 2026, so
 that no threshold of the variants moved takes them off; and over the
 individuals kept, since 28 September 2026, when the owner put the
 filters of individuals first and the filters of the variants began to
-count over those individuals (`docs/architecture.md`, section 2). So
+count over those individuals (`docs/architecture.md`, section 2), and
+decided the same day that the histograms follow them, as the writers of
+this spec had read the owner's words. So
 each histogram shows the number its filter keeps a variant by, counted
 as the filter counts it, and a threshold read on it keeps what it
 shows. What it costs: a change of a filter of individuals takes them
