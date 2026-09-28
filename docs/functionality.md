@@ -73,10 +73,10 @@ gives already.
 | filter | keeps a variant when | default |
 |---|---|---|
 | missing data | its proportion of missing genotypes is at most a threshold | on, 0.1 |
-| major allele frequency (MAF) | the frequency of its commonest allele is at most a threshold | on for the PCA and the GWAS, 0.95; off otherwise |
+| major allele frequency (MAF) | the frequency of its commonest allele is at most a threshold | off; the PCA can have its own (section 5), and the GWAS has it on, at 0.95 |
 | observed heterozygosity | its observed heterozygosity is at most a threshold | off |
 | genomic regions | it falls inside a region of a BED file; the filter is popnei's, decided by the owner on 26 September 2026 | off |
-| linkage disequilibrium (LD pruning) | it is not in LD above a threshold with a variant already kept within a distance in base pairs | off as a filter of the dataset, where it serves to thin a large one, and turned on at an r² of 0.3 with no distance, which the user types; on inside the PCA (section 5) |
+| linkage disequilibrium (LD pruning) | it is not in LD above a threshold with a variant already kept within a distance in base pairs | off as a filter of the dataset, where it serves to thin a large one, and turned on at an r² of 0.3 with no distance, which the user types; the PCA can have its own, at an r² of 0.1 (section 5) |
 
 The thresholds are popnei's, and each filter keeps what is at most its
 threshold, as popnei's filters do; the number the user types is the one
@@ -169,7 +169,8 @@ French it separates the fields with `;` and writes decimals with a comma,
 and its encoding varies with the version. So:
 
 - `.xlsx` is read directly, the first sheet of the file in the order of
-  its tabs that is not hidden, a merged cell giving its value to every
+  its tabs that is not hidden, which the application says in a line
+  that names no sheet, as the owner decided on 28 September 2026, a merged cell giving its value to every
   cell of its range as Excel shows it, with calamine,
   which is pure Rust, in xlsx_rs, a small project of its own whose
   package the applications install as they install popnei's
@@ -192,7 +193,13 @@ and its encoding varies with the version. So:
   ends in the middle of a character is refused, with words that say it
   may have been cut short, as the owner decided on 25 September 2026,
   since a table read from it would lack its last rows without a word.
-- Missing values are an empty cell, `NA` or `-`.
+- Missing values are an empty cell, `NA` or `-`, and in an `.xlsx` also
+  the error `#N/A`, which Excel shows for a value not available, as the
+  owner decided on 28 September 2026. The other errors of Excel,
+  `#DIV/0!`, `#NAME?`, `#NULL!`, `#NUM!`, `#REF!` and `#VALUE!`, are read
+  as their text, so that a broken formula shows among the values of its
+  column. The CSV that Excel saves from the same sheet writes `#N/A` as
+  text, which is read as a value there.
 - The file is written as `.xlsx` for the user and as TSV for scripts and
   the Python API.
 
@@ -225,27 +232,38 @@ A principal component analysis of the individuals, to see the structure
 of the dataset, check the populations against it, and, in association,
 give the principal components that go into the GWAS as covariates.
 
-- The default is a PCA of the genotypes as 0, 1, 2 counts, after the MAF
-  filter at 0.95 and LD pruning, both applied for the PCA alone. The
-  pruning is on by default, at an r² of 0.1, and can be turned off, with
-  a warning on the result that linked regions can dominate the
-  components. Its distance, within which variants are compared, has no
-  default: it depends on how far linkage disequilibrium extends in the
+- The default is a PCA of the genotypes as 0, 1, 2 counts, over the
+  filters of the variants of the dataset. The PCA has its own filters of
+  missing data, MAF and LD, set on its page, since a PCA usually wants
+  stricter missing data and LD filters than the other analyses, as the
+  owner decided on 28 September 2026. By default each follows the
+  filter of that kind of the Variants step, and the page says so, "As in
+  the Variants step: 0.1"; set to a value of its own, it replaces the
+  dataset's filter of that kind for the PCA alone, and set back, it
+  keeps that value for the next time. With the filters of a new
+  project, which have no LD filter, the PCA does not prune, and its
+  result carries a warning that linked regions can dominate the
+  components, which says where to set an LD filter. The options not
+  taken: the PCA's own missing data and LD filters alone, and a filter
+  of its own for every filter of the variants. This replaces the MAF
+  filter at 0.95 and the LD pruning on by default, both for the PCA
+  alone, of 27 September 2026.
+- The PCA's own LD filter starts at an r² of 0.1 and has no default
+  distance: how far linkage disequilibrium extends depends on the
   genome of the species, so the user types it, and the PCA does not run
-  until the user has typed one or turned the pruning off, with the
-  reason said beside the field and beside the Run button. Decided by
-  the owner on 27 September 2026; the option not taken, a default of
-  50,000 base pairs. The LD decay of section 6, once it exists, is the
-  way to choose it. When the filters of the dataset have pruned already,
-  the PCA does not prune again, and asks for no distance; the LD filter
-  of the dataset has no default distance either (section 3). Each PCA
-  prunes again inside its one pass over the file: popnei has no way to
-  keep the variants a pruning left and to give them to the next PCA, and
-  a PCA reads the whole file anyway, so keeping them would spare only
-  the calculation of r². Decided by the owner on 27 September 2026; the
-  time of the pruning is measured in stage 4, and popnei is asked for a
-  way to keep them only if it is large
-  (`docs/specs/stage-4-open-points.md`).
+  until the user has typed one or set the filter back to that of the
+  Variants step, with the reason said beside the field and beside the
+  Run button. Decided by the owner on 27 September 2026 for the PCA's
+  pruning, and kept for its own LD filter; the option not taken, a
+  default of 50,000 base pairs. The LD decay of section 6, once it
+  exists, is the way to choose it. The LD filter of the dataset has no
+  default distance either (section 3). Each PCA prunes again inside its
+  one pass over the file: popnei has no way to keep the variants a
+  pruning left and to give them to the next PCA, and a PCA reads the
+  whole file anyway, so keeping them would spare only the calculation
+  of r². Decided by the owner on 27 September 2026; the time of the
+  pruning is measured in stage 4, and popnei is asked for a way to keep
+  them only if it is large (`docs/specs/stage-4-open-points.md`).
 - The alternative is a principal coordinate analysis (PCoA) of the Kosman
   distances between the individuals, for data with a lot of missing
   genotypes. The owner asked it of popnei on 27 September 2026, and
@@ -256,11 +274,11 @@ give the principal components that go into the GWAS as covariates.
 - It is shown in two dimensions, the first two components by default,
   and in three, drawn with WebGL, the first three by default, with the
   variance each one explains; the user chooses the components of each
-  axis. It opens in two, which needs no WebGL and whose description tells
-  a screen reader where each population lies, and three are one button
-  away,
-  recommended to the owner on 27 September 2026, meanwhile
-  (`docs/specs/stage-4-open-points.md`).
+  axis. It opens in three, and two are one button away, as the owner
+  decided on 28 September 2026. Where the browser has no WebGL 2, or the
+  code of the 3D view cannot be downloaded, it shows the two dimensions,
+  with the words that say why. The option not taken, which had been
+  recommended, opened in two, which needs no WebGL.
 - The points are coloured by any column of the file of the individuals
   but the first, the names: a population or a metadata column, or a trait
   in association; a column of groups, categorical or binary, of more
@@ -391,7 +409,7 @@ by Python. It holds:
 - **The filters of the dataset, in their order, with their parameters.**
 - **The options of each analysis**, those that were run and those that
   were set, with the preprocessing of the analysis itself, such as the
-  pruning of the PCA.
+  PCA's own filters.
 - **A few numbers of each result that was run**: for the diversity, the
   number of variants the filters kept, and the expected heterozygosity,
   the observed heterozygosity and the proportion of polymorphic variants
@@ -530,8 +548,10 @@ and popnei's release `js-v0.1.0-dev.3` of 28 September 2026 has them.
 4. The default thresholds of LD pruning and of the filters of
    individuals. The missing data filter is on at 0.1 by default, plink's
    default for `--geno`, as the owner decided on 25 September 2026. The
-   PCA's pruning is on at an r² of 0.1 with no default distance, which
-   the user types, as the owner decided on 27 September 2026 (section 5).
+   PCA's own LD filter starts at an r² of 0.1 with no default distance,
+   which the user types, as the owner decided on 27 September 2026 for
+   its pruning, which since 28 September 2026 follows the LD filter of
+   the dataset unless the user sets one for the PCA (section 5).
    The LD filter of the dataset is another thing, which starts at r² 0.3
    when the user turns it on, as the owner left it on 26 September 2026
    (`docs/specs/stage-3-open-points.md`), and with no distance, which

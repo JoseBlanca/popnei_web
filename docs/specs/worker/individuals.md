@@ -18,6 +18,10 @@ numbers, now that the user sets the types, the words of `notText`, now
 that an xlsx is read, and the two functions of the inference that core
 calls; and after the review of the specs of stage 4, the warning of a
 column of one number written in one way, which the user set continuous.
+Revised on 28 September 2026 for two answers of the owner: an error
+`#N/A` of an xlsx is a missing value, and the other errors of Excel are
+text ("The xlsx"); and the Individuals step says in a fixed line that
+the first sheet was read, without its name (Open 1, decided).
 And when the specs of stage 4 were made to agree: the validation of a
 project file accepts no failed read, which a project file writes as
 `notGiven`, and the refusal of a files wasm not downloaded ends with no
@@ -333,9 +337,17 @@ step makes it so for a file whose name ends in `.xlsx`
    code of those rules is one, for the rows of a CSV and of an xlsx.
 4. **A text cell** has its spaces and tabs at the ends removed, as a
    cell of a CSV outside quotes has, and is missing when it is then
-   empty, `NA` or `-`, exactly. A cell with an error of Excel, `#N/A`, is
-   its text and not missing (`docs/specs/worker/files.md`, **Open 1**
-   there).
+   empty, `NA`, `-` or `#N/A`, exactly. `#N/A` is the text xlsx_rs gives
+   for that error of Excel, which the owner decided on 28 September
+   2026 is a missing value in an xlsx, as Excel means it, "not
+   available" (`docs/specs/worker/files.md`, **Open 1** there). It is
+   missing in an xlsx alone: in a CSV the text `#N/A` is a value, as
+   before, so the CSV Excel saves from the same sheet gives the text
+   where the xlsx gives a missing cell. The other six errors of Excel,
+   `#DIV/0!`, `#NAME?`, `#NULL!`, `#NUM!`, `#REF!` and `#VALUE!`, are
+   their text, a value, so that a broken formula shows among the values
+   of its column (`files.md`, **Open 1**). In the first column, whose
+   cells are names, `#N/A` is a name, as `NA` and `-` are.
 5. **A number or a boolean** stays one in the table, but in the header
    and in the first column, whose cells are names and so text: there it
    is written as JavaScript's `String` writes it, `1`, `1.5`, `true`, so
@@ -946,8 +958,9 @@ of the plan.
   as text**: the numbers 0 and 1 and the texts `0` and `1` are two values
   by their text, so the column is binary, one `"1"`, zero `"0"`.
 - **An xlsx column of heights with one text `n.d.`**, or one error
-  `#N/A`: categorical, as in a CSV, and the user sees the value in the
-  column.
+  `#DIV/0!`: categorical, as in a CSV, and the user sees the value in the
+  column. With one error `#N/A` in its place: continuous, that individual
+  with no height.
 - **An xlsx column of dates**: text, `2024-05-13`, and so categorical,
   with as many values as dates. A year typed as a number is a number.
 - **An xlsx column of `TRUE` and `FALSE`**, booleans: binary, by the
@@ -1066,7 +1079,9 @@ gives, or the refusal. Among them:
 | `["id","pop"]`, `[null,"P1"]`, with `firstRow` 5 | `emptyIndividual`, 6, the row of the sheet |
 | `["id","pop"]`, `[1,"P1"]`, `["1","P2"]` | `duplicateIndividual`, `1` |
 | `["id","pop"]` | `empty` |
-| `["id","#N/A"]`, `["A","#N/A"]` | the cell `"#N/A"`, a value |
+| `["id","#N/A"]`, `["A","#N/A"]` | the column `#N/A`, and its cell `null`, missing |
+| `["id","h"]`, `["A","#DIV/0!"]`, `["B",1.5]` | the cell `"#DIV/0!"`, a value, and `h` categorical |
+| `["id","h"]`, `["#N/A",1.5]` | the individual `#N/A`, a name |
 
 At `readIndividualsFile`, with a source whose `csv` is `null` and a
 `readXlsx` of the test: the bytes given to it are those of the file; its
@@ -1259,24 +1274,25 @@ are, by their text ("The types of the columns"); `inferColumnTypes` of
 stage 2 compares the cells as they are, and is changed to compare their
 text. The open points of stage 4 are gathered in
 `docs/specs/stage-4-open-points.md`; one of the xlsx is in
-`docs/specs/worker/files.md`, whether an error cell `#N/A` is missing, and
-this one is new:
+`docs/specs/worker/files.md`, whether an error cell `#N/A` is missing,
+which the owner decided on 28 September 2026 that it is, and this one
+was new:
 
-1. **The name of the sheet read, shown beside the file.** `found` is
-   `null` for an xlsx, so the Individuals step can say only "Read from
-   the first sheet of pops.xlsx that is not hidden; the other sheets are
-   not read." (`docs/specs/steps/individuals.md`). The first sheet is the first
-   in the order of the tabs that is not hidden, and a user whose
-   workbook has a hidden sheet before the table, or whose Excel opens it
-   on another sheet, the one active when it was saved, may not know
-   which that is. The other option:
-   `found` for an xlsx gives the name of the sheet read and the number
-   of sheets, and the step shows "Read from the sheet Hoja1, the first of
-   3 not hidden". It changes the type of `found` in `protocol.ts` and
-   `project.ts`, the check of the answer in `messages.ts`, and the words
-   of the step. Recommendation: name the sheet. Meanwhile, `found` is
-   `null`, as `docs/specs/core/project.md` has it, and the step's line
-   stands.
+1. **The name of the sheet read, shown beside the file, decided by the
+   owner on 28 September 2026: a fixed line, no name.** `found` stays
+   `null` for an xlsx, as `docs/specs/core/project.md` has it, and the
+   Individuals step says "Read from the first sheet of pops.xlsx; any
+   other sheet is not read." (`docs/specs/steps/individuals.md`). The
+   first sheet is the first in the order of the tabs that is not
+   hidden (`files.md`, "The sheet read"). The option not taken, which
+   had been recommended: `found` for an xlsx gives the name of the sheet
+   read and the number of sheets, and the step shows "Read from the
+   sheet Hoja1, the first of 3 not hidden", for a user whose workbook
+   has a hidden sheet before the table, or whose Excel opens it on
+   another sheet, the one active when it was saved. It would have
+   changed the type of `found` in `protocol.ts` and `project.ts`, the
+   check of the answer in `messages.ts`, and the words of the step; none
+   of them changes.
 
 ## Not in this spec
 

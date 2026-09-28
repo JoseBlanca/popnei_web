@@ -13,7 +13,10 @@ a colouring by values as one object per step of viridis, `Pca3dError`
 in a file with no three.js, the bottom of the legend of the exported
 file, and what five presses of "Tilt down" show; and when the specs of stage
 4 were made to agree, the bounds of the zoom named, `ZOOM_MIN` and
-`ZOOM_MAX`; not yet approved. There is no
+`ZOOM_MAX`; and on 28 September 2026 for two decisions of the owner:
+the PCA opens on the 3D view, with the 2D plot drawn in its place when
+the browser cannot draw it, and the wheel zooms with the Ctrl key held,
+Open 1; not yet approved. There is no
 code of it yet. This spec gives the function of `src/charts/pca3d.ts`
 that draws the individuals on three principal components with three.js,
 the library of WebGL the applications take for it
@@ -58,9 +61,13 @@ panel shows it.
 
 ### What the user sees
 
-The PCA opens as the 2D scatter of its first two components, and 3D is
-one button away, in the bar of controls above the plot (meanwhile, "The
-PCA opens in 2D" in `docs/specs/stage-4-open-points.md`).
+The PCA opens on the 3D view, as the owner decided on 28 September
+2026, and the 2D scatter is one button away, in the bar of controls
+above the plot ("The PCA opens on the 3D view" in
+`docs/specs/stage-4-open-points.md`). When the browser has no WebGL 2,
+or three.js cannot be downloaded, the screen draws the 2D scatter in
+its place, with the words of `pca.md` that say why (below, "Loading
+three.js" and "When the browser has no WebGL").
 In 3D the individuals are shown on the three components of the axes,
 PC1, PC2 and PC3 by default (`pca.md`, the option `axes`), each with the
 colour and the shape of its group as in 2D, and the same legend over
@@ -69,7 +76,7 @@ pixels from the top of the element and `SCATTER_MARGIN.right` from its
 right (`scatter.md`), so that it does not move when the user switches.
 Three lines through the origin, one along each
 component over the range of its values, carry at their positive ends
-the labels "PC1 (3.54%)", "PC2 (3.44%)" and "PC3 (1.92%)". The user turns
+the labels "PC1 (3.55%)", "PC2 (3.40%)" and "PC3 (1.89%)". The user turns
 the view by dragging it, zooms it, and turns it with the buttons of the
 bar; the pointer over a point shows the tooltip of the scatter, with
 three coordinates.
@@ -183,8 +190,9 @@ documentation.
 The view starts turned, meanwhile 20° above the plane of PC1 and PC2,
 and turned by 30° about PC3 from the view along PC2, so that the three
 lines are seen at once; refined in the running application. The option
-not taken, starting along the third component, shows the 2D plot again,
-and a user who switched to 3D would see no change until they turned it.
+not taken, starting along the third component, shows the 2D plot of
+the first two, and a user would see no depth, and no third component,
+until they turned it.
 Two settings of the controls are decided here:
 
 - **No pan**, the moving of the view sideways that `OrbitControls`
@@ -194,8 +202,9 @@ Two settings of the controls are decided here:
   (success criterion 2.5.7). The zoom is about the centre.
 - **The zoom** by the wheel of the mouse and by two fingers pinching,
   with buttons for a user who uses neither (2.5.1 asks a gesture of two
-  fingers to have one of a single pointer). Whether the wheel
-  zooms alone or with the Ctrl key held is open (**Open 1**, below).
+  fingers to have one of a single pointer). The wheel zooms with the
+  Ctrl key held, and alone scrolls the page, as the owner decided on 28
+  September 2026 (**Open 1**, below).
   The zoom runs from 0.25, the cloud a quarter of its starting size, to
   20, `ZOOM_MIN` and `ZOOM_MAX`, meanwhile, refined in the running application: the controls'
   `minZoom` and `maxZoom`, which bound the wheel and the pinch, and
@@ -299,10 +308,13 @@ page, into a script file of its own that the browser downloads then
   slow mobile connection, the 134 KB take about 0.4 s; the browser keeps
   the file for the next time. The file of the built site is measured
   again when the plot is built.
-- **While it loads**, the screen shows in the place of the plot the
+- **When it loads.** The panel opens on the 3D view, so the file is
+  downloaded when the first result of a PCA is drawn in the tab, and not
+  when the page opens: a user who never runs a PCA never downloads it.
+  **While it loads**, the screen shows in the place of the plot the
   words of `pca.md` for it, "Loading the 3D view…", read by a screen
-  reader without moving the focus (WCAG 2.2, 4.1.3); the switch back to
-  2D works, and the buttons of the turns are shown once the plot is
+  reader without moving the focus (WCAG 2.2, 4.1.3); the switch to 2D
+  works, and the buttons of the turns are shown once the plot is
   drawn.
 - **When it arrives too late.** The download takes its time, and by
   the end the user may have switched back to 2D, closed the panel, or
@@ -319,9 +331,10 @@ page, into a script file of its own that the browser downloads then
   opened. A deploy to GitHub Pages replaces every file of the site, and
   the name of this file holds a hash of its content, so a page opened
   before a deploy asks for a file of the old build that is no longer
-  there. The screen says so, in the words of `pca.md`, "Its words",
-  with a button "Try again", which calls `import()` again, and the 2D
-  plot one press away. A browser may remember that the download of a
+  there. The screen draws the 2D scatter in the place of the 3D view,
+  and says so above it, in the words of `pca.md`, "Its words", with a
+  button "Try again", which calls `import()` again and, when the module
+  arrives, draws the 3D view in the place of the 2D plot. A browser may remember that the download of a
   module failed and give the same failure to every later `import()` of
   it without asking the network again (the standard leaves it open,
   whatwg/html issue 6768); which engines do is seen in each when the
@@ -364,12 +377,14 @@ own, `src/charts/pca3dError.ts`, which imports nothing, and `pca3d.ts`
 imports it from there: the screen tells the error apart with
 `instanceof Pca3dError`, so it imports the class with the page, and an
 import of it from `pca3d.ts` would put three.js in the first script of
-the page. The screen says that this
-browser cannot draw the 3D view, in the words of `pca.md`, "Its words".
-The 2D plot stays one press away. A project saved in 3D and opened on such a
-machine shows the same words; the screen does not switch the project to
-2D by itself, since that would be a change of the project the user did
-not make.
+the page. The screen draws the 2D scatter in its place, and says above
+it that this browser cannot draw the 3D view, in the words of `pca.md`,
+"Its words". Since the panel opens on 3D, a user of such a browser
+meets them at the first PCA, and at every one after it until they press
+"2D", which sets the view to 2D. A project saved in 3D and opened on
+such a machine shows the same; the screen does not switch the project
+to 2D by itself, since that would be a change of the project the user
+did not make.
 
 The option not taken: to test for WebGL 2 before downloading three.js,
 by asking a canvas for a context, which spares 134 KB on the machines
@@ -473,7 +488,7 @@ export interface Pca3dData {
   readonly z: Float64Array;
   /** The short names of the components, for the tooltip: "PC1", "PC2", "PC3". */
   readonly axisNames: readonly [string, string, string];
-  /** The labels at the ends of the lines: "PC1 (3.54%)". */
+  /** The labels at the ends of the lines: "PC1 (3.55%)". */
   readonly axisLabels: readonly [string, string, string];
   /** The name of each point, an individual, for the tooltip. */
   readonly pointNames: readonly string[];
@@ -838,32 +853,25 @@ the headless engines, which waits for the first work package.
 
 ## Open points
 
-1. **Whether the wheel of the mouse zooms the 3D view.** `OrbitControls`
-   zooms with the wheel and stops the page from scrolling while the
-   pointer is over the plot (`OrbitControls.js` of three 0.186.1, line
-   503, its listener of the wheel not passive). So a user who scrolls
-   down the panel with the pointer over the plot zooms the plot
-   instead, until the pointer leaves it, and a plot 48rem wide, the
-   largest, is most of the width of a laptop's window.
-   - Keep the wheel, as `charts.md` has it: the zoom most users of 3D
-     plots expect, and the trap above.
-   - Zoom by the buttons and by pinching alone, the wheel scrolling the
-     page: no trap, and a zoom that takes a press per step on a
-     computer.
-   - Zoom by the wheel with the Ctrl key held, as maps in a page do, the
-     wheel alone scrolling the page. A pinch on the trackpad of a Mac
-     reaches the page as a wheel with Ctrl held, so it zooms too. A few
-     lines of our own, since `OrbitControls` has no such setting: a
-     listener of the wheel on the element, before the canvas, that stops
-     a wheel without Ctrl from reaching the controls. Ctrl and the wheel
-     over the plot then no longer enlarge the page, as they do elsewhere,
-     and the user is told of the key in the help.
-
-   Recommended: the wheel with Ctrl, meanwhile, since the trap is met at
-   every scroll, and a zoom by the wheel and by the trackpad is kept.
-   `OrbitControls` turns off its wheel and its pinch together, with
-   `enableZoom`, so the second option is the same few lines, letting no
-   wheel through.
+1. **Whether the wheel of the mouse zooms the 3D view, decided by the
+   owner on 28 September 2026, as recommended: with the Ctrl key held.**
+   `OrbitControls` zooms with the wheel and stops the page from
+   scrolling while the pointer is over the plot (`OrbitControls.js` of
+   three 0.186.1, line 503, its listener of the wheel not passive). So a
+   user who scrolled down the panel with the pointer over the plot would
+   zoom the plot instead, until the pointer left it, and a plot 48rem
+   wide, the largest, is most of the width of a laptop's window. The
+   wheel zooms with the Ctrl key held, as maps in a page do, and alone
+   scrolls the page. A pinch on the trackpad of a Mac reaches the page
+   as a wheel with Ctrl held, so it zooms too. A few lines of our own,
+   since `OrbitControls` has no such setting: a listener of the wheel on
+   the element, before the canvas, that stops a wheel without Ctrl from
+   reaching the controls. Ctrl and the wheel over the plot then no
+   longer enlarge the page, as they do elsewhere, and the user is told
+   of the key in the help. Not taken: the wheel alone, the zoom most
+   users of 3D plots expect, with the trap above; and the zoom by the
+   buttons and by pinching alone, with no trap and a press per step on
+   a computer.
 
 ## Not in this spec
 

@@ -16,6 +16,10 @@ account and public, as popnei's is; that its releases are made by hand,
 as popnei's are, and later by a workflow shared with popnei; and
 approved calamine 0.36.1 as its dependency, and rust_xlsxwriter 0.99.1
 for its tests (`docs/architecture.md`, section 13, points 11 to 13).
+Revised again on 28 September 2026 for two more answers of the owner:
+an error `#N/A` of Excel is a missing value for popnei_web, Open 1,
+which popnei_web's reader makes of the text xlsx_rs gives; and the
+Individuals step says that the first sheet was read without naming it.
 This is xlsx_rs's first spec. It is written here because the repository
 of xlsx_rs does not exist yet, and it moves there, whole, when the
 owner makes it; until then it is part of the specs of stage 4, and
@@ -84,8 +88,9 @@ The first sheet is the first worksheet in the order of the tabs that is
 not hidden, the leftmost tab the user sees. It may not be the sheet
 Excel opens the file on, which is the one that was active when the file
 was saved; xlsx_rs does not read that one, since calamine 0.36.1 does
-not give it, and the Individuals step says that the first sheet was read
-(`docs/specs/worker/individuals.md`, **Open 1**). A hidden first sheet,
+not give it, and the Individuals step says that the first sheet was read,
+in a fixed line that names no sheet, as the owner decided on 28
+September 2026 (`docs/specs/worker/individuals.md`, **Open 1**). A hidden first sheet,
 which holds the lists of a form or old data, is passed over; the option
 not taken, the first sheet whether hidden or not, would read a table the
 user does not see. A chart sheet is not a worksheet and is
@@ -144,7 +149,7 @@ boolean, an empty cell as `null`.
 | a format of date on a number below 0, or on a day after 31 December 9999, which Excel shows as `#######` | `DateTime`, with the parts of a wrong date | the number |
 | a duration, a format such as `[h]:mm:ss` | `DateTime` whose `ExcelDateTime` is a duration | hours, minutes and seconds, the hours not wrapped at 24: 1.5 days is `36:00:00`, and a negative one `-0:30:00` |
 | a date written as ISO 8601 text, a cell of the type `d`, which other programs than Excel may write | `DateTimeIso` | the text as it is |
-| an error: `#N/A`, `#DIV/0!`, `#NAME?`, `#NULL!`, `#NUM!`, `#REF!`, `#VALUE!` | `Error` | the text of the error as Excel writes it in English (**Open 1**, below) |
+| an error: `#N/A`, `#DIV/0!`, `#NAME?`, `#NULL!`, `#NUM!`, `#REF!`, `#VALUE!` | `Error` | the text of the error as Excel writes it in English; popnei_web's reader takes `#N/A` as missing and the other six as text (**Open 1**, below, decided by the owner) |
 | a formula | the value saved with it | the cell of that value, by the rows above |
 
 A date becomes text in ISO 8601, year, month, day, and not the number
@@ -574,7 +579,7 @@ holds, and the literal cells it gives:
 | a number with the format `000` | `Number(1.0)` |
 | 45425 with the format `dd/mm/yyyy`; 45425.5 with `dd/mm/yyyy hh:mm:ss`, and with `dd/mm/yyyy`; 45425.9999999999 with `dd/mm/yyyy`; 0.604166666 with `hh:mm`; 1.5 with `[h]:mm:ss`; 60, 2958465 and 2958466 with `dd/mm/yyyy`; −3 with `dd/mm/yyyy` | `2024-05-13`; `2024-05-13 12:00:00` both times (**Open 2**, decided); `2024-05-14`; `14:30:00`, `36:00:00`, `1900-02-29`, `9999-12-31`, `Number(2958466.0)`, `Number(-3.0)`; all seen as dates by calamine in the trials |
 | xlsx_rs's function that makes the cell of a date, in its own module, with the 1904 system, which rust_xlsxwriter does not write: 2957003, 2957004, −3 and 0.5 | `9999-12-31`, `Number(2957004.0)`, `Number(-3.0)`, `12:00:00` |
-| a formula `=1+1` saved with the value 2, one with the text `x`, one with `TRUE`, one with `#N/A`, and `=1+2` with none | `Number(2.0)`, `Text("x")`, `Bool(true)`, `Text("#N/A")`, `Number(0.0)` |
+| a formula `=1+1` saved with the value 2, one with the text `x`, one with `TRUE`, one with `#N/A`, one with `#DIV/0!`, and `=1+2` with none | `Number(2.0)`, `Text("x")`, `Bool(true)`, `Text("#N/A")`, `Text("#DIV/0!")`, `Number(0.0)`; popnei_web's reader makes the first error missing, not xlsx_rs |
 | `0.1 + 0.2` | `Number(0.30000000000000004)` |
 | a text `"  sp "` and a text with a line break | both as they are |
 | a text of several fonts, `write_rich_string` | the parts joined |
@@ -667,7 +672,9 @@ Of popnei_web, all made on 27 and 28 September 2026:
   for the owner's `spill.xlsx`; and the answer to open point 1 when the
   owner's files have been read.
 - `docs/functionality.md`, section 4: "the first sheet" is the first that
-  is not hidden, and merged cells take the value Excel shows over them.
+  is not hidden, and merged cells take the value Excel shows over them;
+  and, since 28 September 2026, `#N/A` of an xlsx among the missing
+  values, the other errors of Excel read as their text.
 
 Of xlsx_rs, when its repository is made: a `CLAUDE.md`, the skills of
 popnei adapted to it, among them the coding skill with these lints and
@@ -676,19 +683,41 @@ spec.
 
 ## Open points
 
-1. **An error cell of Excel, `#N/A` among them.** A cell whose formula
-   failed is the text of its error, `#N/A`, `#DIV/0!`, so a column of
-   heights with one `#N/A` is categorical, and the user sees why in its
-   values and replaces it with `NA`. The other option: `#N/A` missing, as
-   Excel means it, "not available", and as a lookup, `VLOOKUP`, gives it
-   for an individual it did not find, with the other errors text. It
-   would spare the user those replacements, and would make the xlsx give
-   another table than the CSV Excel saves from the same sheet: there
-   `#N/A` is the text `#N/A`, which the reader of CSV takes as a value,
-   not as missing. Either answer changes only which cells of an xlsx are
-   missing, and so which individuals a trait or a population leaves out.
-   Recommendation: text, as in the CSV, since nothing is then left out
-   without the user seeing it. Meanwhile, text.
+1. **An error cell of Excel, `#N/A` among them, decided by the owner on
+   28 September 2026: `#N/A` is missing.** A cell whose formula failed
+   holds an error, and xlsx_rs gives its text, `#N/A`, `#DIV/0!`, as
+   Excel writes it in English, whatever the language of Excel. The owner
+   decided that popnei_web reads `#N/A` as a missing value, as Excel
+   means it, "not available", and as a lookup, `VLOOKUP`, gives it for
+   an individual it did not find: a column of heights with one `#N/A`
+   stays continuous, and that individual has no value in it. The option
+   not taken, which had been recommended, was to read it as the text
+   `#N/A`, as the reader of CSV reads it in the CSV Excel saves from the
+   same sheet; so an xlsx and that CSV give two tables, the first with
+   the cell missing and the second with the text, which makes the
+   column categorical there and shows the value to the user.
+
+   It is popnei_web's reader, and not xlsx_rs, that makes `#N/A`
+   missing, with its other missing values, `NA` and `-`
+   (`docs/specs/worker/individuals.md`, "The xlsx"): xlsx_rs gives what
+   the file holds, the text of the error, and what counts as missing is
+   the rule of the application, in one place. The option not taken, an
+   empty cell given by xlsx_rs, would put that rule in the library, and
+   a second user of xlsx_rs could not tell an error from a blank.
+
+   The other six errors, `#DIV/0!`, `#NAME?`, `#NULL!`, `#NUM!`,
+   `#REF!` and `#VALUE!`, stay text, decided by the writers on 28
+   September 2026 and put to the owner with it
+   (`docs/specs/stage-4-open-points.md`, point 11). The owner answered
+   for `#N/A`, which says that a value is not available; the six say
+   that a formula went wrong, a division by 0, a name or a reference
+   that does not exist, an argument of the wrong kind. Read as missing,
+   such a cell would leave its individual out of a population or a trait
+   with nothing on the screen to show that a formula of the sheet is
+   broken; read as text, it makes its column categorical and the user
+   sees the error among its values, and mends the formula. Not taken:
+   every one of the seven missing, as `#N/A` is.
+
 2. **A date whose time the format hides, decided by the owner on 27
    September 2026.** calamine does not give the
    format of a cell, only that it is one of a date or a time, so the

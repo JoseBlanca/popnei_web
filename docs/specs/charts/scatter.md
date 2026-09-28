@@ -14,7 +14,10 @@ when it has no point, the legend a vertical list, the numbers of the
 table as `pca.md` writes them, and the round joins kept in the exported
 file; and when the specs of stage 4 were made to agree, the legend over
 the plot as its **Open 1**; and with the owner's answer of 27 September
-2026 to that point, to judge it on the running screen; not yet approved. There is no
+2026 to that point, to judge it on the running screen; and on 28
+September 2026 for the owner's decision that the PCA opens on the 3D
+view, the scatter one button away and drawn in its place when the
+browser cannot draw 3D; not yet approved. There is no
 code of it yet; the base it is drawn on, `src/charts/plot2d.ts`, and the
 histogram exist from stage 3. This spec gives the function of
 `src/charts/scatter.ts` that draws the individuals on two principal
@@ -70,7 +73,7 @@ pointer.
 One mark per individual, at its projection on the two components of the
 axes, `axes[0]` across and `axes[1]` up (`pca.md`, the options),
 PC1 and PC2 by default. The labels of the axes say the component and the
-share of the variance it explains, "PC1 (3.54%)", which the screen
+share of the variance it explains, "PC1 (3.55%)", which the screen
 writes from `explainedVariancePercent` of the result. The marks of one
 population share a colour and a shape. Over the top right corner of the
 frame, the legend lists the populations with their marks and the number
@@ -563,7 +566,7 @@ export function createTooltip(element: HTMLElement, onDismiss: () => void): Tool
 ```
 
 The scatter. Its texts are the screen's, with those of `PlotText`:
-`xLabel` "PC1 (3.54%)" and `yLabel` "PC2 (3.44%)".
+`xLabel` "PC1 (3.55%)" and `yLabel` "PC2 (3.40%)".
 
 ```ts
 // src/charts/scatter.ts
@@ -668,12 +671,14 @@ the scatter adds:
   the two components and the variance each explains, and where each
   group lies, or the range of the values and how many have none, in the
   words of `pca.md`, "Accessibility", `pcaDescription`: "Principal
-  components of 200 individuals of panel.nei, PC1, 3.54% of the
-  variance, across, and PC2, 3.44%, up. Coloured by population: p0, 48
-  individuals, centred at …". It describes the 2D plot, the one the PCA
-  opens in, and the 3D view has a description of its own (`pca.md`,
-  "Accessibility"; meanwhile, "The PCA opens in 2D" in
-  `docs/specs/stage-4-open-points.md`).
+  components of 200 individuals of panel.nei, PC1, 3.55% of the
+  variance, across, and PC2, 3.40%, up. Coloured by population: p0, 48
+  individuals, centred at …". It describes the 2D plot; the 3D view,
+  which the PCA opens on since the owner's decision of 28 September
+  2026, has a description of its own (`pca.md`, "Accessibility"; "The
+  PCA opens on the 3D view" in `docs/specs/stage-4-open-points.md`).
+  The scatter is also what the panel draws in the place of the 3D view
+  when the browser cannot draw it, with the same description.
 - **A table of the individuals, drawn by the screen**, one row per
   individual with its name, its group or value and its coordinates on
   every component the result keeps, from `pcaRows` of core (`pca.md`),

@@ -19,7 +19,14 @@ specs now say as decided: the LD filter keeps its r² and its distance
 while it is off (point 16); Lingoes' correction of the PCoA has no
 switch; the repository of xlsx_rs and how it makes its releases; and
 calamine, approved (below, "Decided by the owner on 28 September
-2026"). The owner's answer A of the same day puts the filters of
+2026"). Later again that day the owner answered points 2, 4, 5, 7 and 9
+to 12, the last four of them each a line, and the specs say them as
+decided: the PCA has its own filters of missing data, MAF and LD, which
+follow the Variants step by default (point 2); the panel opens on the
+3D view (point 5); `#N/A` of an xlsx is a missing value (point 11),
+where the writers decided the other six errors of Excel stay text,
+which the owner may overrule; the sheet read is said in a fixed line
+(point 12); and points 4, 7, 9 and 10 as recommended. The owner's answer A of the same day puts the filters of
 individuals before those of the variants, which changes the code of
 stage 3 as well (point A).
 
@@ -59,10 +66,10 @@ back.
   such a matrix unless the correction is asked for, popnei_web asks for
   it by default, and warns its users that the distances were corrected.
   The Kosman distances of `e2e/fixtures/panel.nei`, 200 individuals,
-  with the PCA's filters and its pruning at r² 0.1 within 50,000 base
-  pairs, give 61 negative eigenvalues of 200, 7.94% of the variance, and
-  45 with the pruning off, so the correction is the common case and not
-  an exception (`pca.md`). Recorded in popnei's `docs/specs/pca.md`,
+  with the missing data filter at 0.1 of a new project, give 44
+  negative eigenvalues of 200, 2.98% of the variance, and 61, 7.87%, with
+  an LD filter at r² 0.1 within 50,000 base pairs as well, so the
+  correction is the common case and not an exception (`pca.md`). Recorded in popnei's `docs/specs/pca.md`,
   where `correctByLingoes` is false by default.
 
 The four numbered points below were put to the owner with a
@@ -132,6 +139,17 @@ Specs: `pca.md`, its options, "Why it cannot run", the panel
 and the help; `runner.md`, whose test types the distance;
 `docs/functionality.md`, section 5 and open point 4.
 
+Changed by the owner on 28 September 2026 (point 2, below): the PCA no
+longer has a pruning on by default. Its LD filter follows the Variants
+step, which has none in a new project, and the r² of 0.1 and the empty
+distance are where the PCA's own LD filter starts when the user sets
+one. So the PCA of a new project runs at once, with the warning that no
+LD filter was applied, and only a PCA whose own LD filter is set waits
+for its distance, with the words "The LD filter of the PCA needs the
+distance within which variants are compared. … Type a distance in base
+pairs, or set the LD filter of the PCA back to as in the Variants
+step."
+
 ### 8. The calculation worker started again after a PCA or a PCoA of more than 700 individuals
 
 A PCA grows the memory of the worker by about 49 bytes per pair of
@@ -195,7 +213,8 @@ filter." Until a distance is typed, what reads the filters is locked
 with the same words, ending "in the Variants step" where they are shown
 in another step: in the Variants step, the Count of what each filter
 kept, the statistics of each individual and the writing of the
-filtered variants; in the Analyses step, the diversity and the PCA. An
+filtered variants; in the Analyses step, the diversity, and the PCA
+while its LD filter follows the step's (point 2). An
 analysis that read only the filters of individuals would be locked
 too, since the individuals a threshold keeps come from the statistics
 of each individual; none does in stages 2 to 4. The histograms of the
@@ -206,10 +225,10 @@ histograms of the variants, which now read the filters of individuals
 alone. No count is shown
 beside the filters, and the stepper shows the Variants step with a
 problem. The summary line under the stepper counts the filter among
-the filters and says nothing of its distance. The PCA does not prune
-again when the dataset has an LD filter, with or without its distance,
-so it asks for no distance of its own and is locked by the dataset's
-filter until that distance is typed. The help says why there is no
+the filters and says nothing of its distance. The PCA, whose LD filter
+follows the dataset's by default, is locked by it until that distance
+is typed, unless the user has set an LD filter of the PCA's own, which
+it then uses (point 2). The help says why there is no
 default and points to the LD decay of stage 5.
 
 Decided by the writers, the same day: the filter turned on is in the
@@ -417,8 +436,8 @@ The PCoA always asks popnei for Lingoes' correction, and the warning
 were not taken: a switch that turns the correction off, which would
 only make popnei refuse, since its release `js-v0.1.0-dev.3` refuses the
 PCoA without the correction whenever an eigenvalue is negative, which
-on `panel.nei`, with the PCA's filters and its pruning at r² 0.1 within
-50,000 base pairs, is 61 of 200; and asking popnei for a PCoA of the
+on `panel.nei`, with the filters of a new project, is 44 of 200; and
+asking popnei for a PCoA of the
 distances uncorrected, which popnei does not make. What a user meets:
 the panel has no control of the correction, and its help says that the
 correction cannot be turned off. Spec: `pca.md`, "What it does", its
@@ -451,45 +470,151 @@ The xlsx of stage 4 now waits only for the repository and the first
 release of xlsx_rs. `docs/architecture.md`, section 13, point 12;
 `docs/technology.md`, section 2; `files.md`.
 
-## Recommended on 27 September 2026, not yet answered
+### 2. The PCA's own filters of missing data, MAF and LD
 
-Each was put to the owner in chat that day with its recommendation. The
-specs take the recommendation as the meanwhile; an answer that differs
-changes the spec named, and nothing else unless said.
+Recommended on 27 September 2026: the PCA reads the dataset's filters
+with its own MAF at 0.95, the stricter of the two taken, and one
+pruning, the dataset's or its own. Decided by the owner instead: "PCA
+is a bit special because usually we want stricter missing data and ld
+filters. I would put those widgets in the PCA/PCoA page, by default they
+follow what ever is set for the rest of the analyses, but the user can
+also set specific values for the PCA/PCoA there." The PCA has three
+filters of its own, missing data, MAF and LD. Each shows "As in the
+Variants step" with the step's value until the user sets a value for
+the PCA alone, which replaces the dataset's filter of that kind for the
+PCA, stricter or looser; popnei takes one filter of each kind. The
+filter of observed heterozygosity is always the dataset's. Not taken:
+missing data and LD alone, the PCA's MAF the dataset's; and a filter of
+its own for every filter of the variants. The order of the filters, the
+individuals first, is the owner's other decision of the same day, which
+holds for the PCA as for every analysis.
 
-### 2. Which variants the PCA reads
+What a user meets: with the filters of a new project, the PCA reads the
+variants the diversity reads, prunes nothing and gives the warning that
+no LD filter was applied, whose words say where to set one, in the
+PCA's options or in the Variants step. It no longer waits for a
+distance: it runs at once. On `e2e/fixtures/panel.nei` it uses 1,200
+variants, PC1 7.61% and PC2 5.56%, where the PCA of before, with its
+MAF at 0.95 and its pruning within 50,000 base pairs, used 535; with
+its own LD filter at r² 0.1 within 50,000, it uses 548, PC1 3.55% and
+PC2 3.40%. A filter set for the PCA starts at 0.1 for the missing data,
+0.95 for the MAF, and, for the LD, at r² 0.1 with no distance, which
+the user types before the PCA can run (point 3). A filter set back to
+"As in the Variants step" keeps its values for the next time, as a
+filter of the step turned off does (point 16). While the PCA has its
+own LD filter, the step's LD filter with no distance does not lock the
+PCA, which does not use it; the diversity stays locked.
 
-The PCA has a MAF filter of its own, at 0.95, and a pruning of its own,
-and popnei takes one filter of each kind on a file. Recommended: the
-PCA reads the dataset's filters with two changes, its MAF threshold the
-stricter of the dataset's and its own, and one pruning, the dataset's
-when it has one and otherwise its own; then the individuals the filters
-keep, last, as in every analysis. So the frequencies and the r² are
-counted over every individual of the file, as the dataset's filters are,
-and a PCA reads the same variants as every other analysis with the same
-filters, but for its MAF and its pruning. On `panel.nei`, with the
-missing data filter at 0.1, the PCA uses 535 variants with its pruning
-at r² 0.1 within 50,000 base pairs and 1,175 with its pruning off. Not taken: the individuals
-removed first for the PCA alone, so that its frequencies are those of the
-individuals kept. Spec: `pca.md`, "Which variants it reads".
+Decided by the writers the same day. Each filter is two radio buttons,
+"As in the Variants step: 0.1" and "For the PCA alone", with the number
+fields of the Variants step under the second, so that the page says
+what the PCA uses without opening the step; not taken, a switch "For
+the PCA alone", which would need a line of its own for what is used
+while it is off. In the project each filter is one object, whether it
+follows and its values; not taken, a form that drops the values when it
+follows. A filter set for the PCA starts at fixed values and not at the
+step's of the moment. A change of a filter of the step that the PCA has
+replaced with its own does not take the PCA off the screen, since it
+changes none of its numbers. `pca.md`, "Which variants it reads", its
+options, the key, "Why it cannot run", the warnings, the panel, the
+help and the numbers; `docs/functionality.md`, sections 3 and 5.
 
 ### 4. Variants of more than two alleles
 
-popnei's PCA refuses a file that has one, unless it is told to count
-every allele that is not the major one as the same. Recommended: count
-them so, and say so in the help; the user could not mend the file in the
-application, which has no filter of such variants. popnei does not say
-how many there were, so no warning counts them. Spec: `pca.md`.
+Decided by the owner, as recommended: popnei's PCA, which refuses a
+file that has one unless it is told to count every allele that is not
+the major one as the same, is told so, and the help says it; the user
+could not mend the file in the application, which has no filter of such
+variants. popnei does not say how many there were, so no warning counts
+them. `pca.md`.
 
-### 5. The PCA opens in 2D
+### 5. The PCA opens on the 3D view
 
-`docs/functionality.md` section 5 said the PCA is shown in 3D; the build
-order builds 2D first. Recommended: the panel opens on the 2D plot of the
-first two components, and 3D is one button away. The 2D plot is what the
-export and the report carry and what a screen reader's description says,
-and it needs no WebGL, no download of three.js and no rotation.
-`docs/functionality.md` is revised so, as the meanwhile. Specs: `pca.md`,
-`scatter.md`, `pca3d.md`.
+Recommended on 27 September 2026: the 2D plot first. Decided by the
+owner instead: the panel opens on the 3D view, and 2D is one button
+away. Where the browser has no WebGL 2, or three.js cannot be
+downloaded, the panel shows the 2D plot with the words that say why,
+above it. Not taken: 2D first, which needs no WebGL and no download, and
+is what the export and the report carry.
+
+What a user meets: three.js, 134 KB gzipped, is downloaded when the
+first result of a PCA is drawn, and "Loading the 3D view…" stands in
+the place of the plot meanwhile. A user whose browser cannot draw 3D
+sees the 2D plot with the words at every PCA until they press "2D",
+since the screen does not change the option by itself. The description
+a screen reader reads first is that of the 3D view, which gives the
+centre of each population on the three components. `pca.md`,
+`pca3d.md`, `scatter.md`; `docs/functionality.md`, section 5.
+
+### 7. The lasso out of stage 4
+
+Decided by the owner, as recommended: selecting points on the PCA to
+assign a population, which the owner's widget `any_scatter3d` does, is
+not in stage 4, since it needs a design of its own, an edit of the
+populations made on a plot changing the keys of every analysis that
+reads them, and a way for the keyboard. Stage 4 takes from the widget
+the legend that highlights a population, the legend over the plot, the
+individuals of no population in a mark of their own and counted, and
+the bar of buttons above the plot.
+
+### 9. The individuals with many missing genotypes
+
+Decided by the owner, as recommended: a note under the plot naming the
+individuals above 0.2 of missing genotypes, when the statistics of each
+individual are already calculated, and a warning kept with the result
+once popnei gives the counts. With the order of the filters decided the
+same day, the statistics of each individual are counted in one pass for
+each load, over every variant of the file, and the note says so. Not
+taken: a Run of the PCA that calculates those statistics first, a pass
+more. `pca.md`, Open 2.
+
+### 10. The wheel zooms the 3D view with Ctrl held
+
+Decided by the owner, as recommended: the wheel zooms the 3D view with
+the Ctrl key held, as maps in a page do, which also gives the pinch of
+a Mac's trackpad; the wheel alone scrolls the page, so a user who
+scrolls the panel with the pointer over the plot is not caught by it.
+Not taken: the wheel alone, and no wheel at all. `pca3d.md`, Open 1.
+
+### 11. An error cell of Excel: `#N/A` missing, the six others text
+
+Recommended: `#N/A` read as the text `#N/A`, as in the CSV Excel saves
+from the same sheet. Decided by the owner instead: in an xlsx, `#N/A` is
+a missing value, as Excel means it, "not available", and as a lookup,
+`VLOOKUP`, gives it for a name it did not find; a column of heights with
+one `#N/A` stays continuous. The CSV Excel saves from the same sheet
+still writes `#N/A` as text, which is a value there, so the two files
+give two tables. xlsx_rs gives the text of the error, and popnei_web's
+reader makes `#N/A` missing, beside `NA` and `-`.
+
+Decided by the writers the same day, and put to the owner: the other
+six errors calamine knows, `#DIV/0!`, `#NAME?`, `#NULL!`, `#NUM!`,
+`#REF!` and `#VALUE!`, stay text. The owner answered for `#N/A`, which
+says a value is not available; the six say that a formula went wrong.
+Read as missing, such a cell would leave its individual out of a
+population or a trait with nothing to show that a formula is broken;
+read as text, it makes its column categorical and shows the error among
+its values, for the user to mend in the sheet. The owner may make them
+missing as well, which changes one line of the reader and its tests.
+`files.md`, Open 1; `docs/specs/worker/individuals.md`, "The xlsx";
+`steps/individuals.md`, its help; `docs/functionality.md`, section 4.
+
+### 12. The sheet read, said in a fixed line
+
+Recommended: name the sheet read, "Read from the sheet Hoja1, the first
+of 3 not hidden". Decided by the owner instead: a fixed line, "Read from
+the first sheet of pops.xlsx; any other sheet is not read.", with no
+name of the sheet. What a read reports does not change. The first sheet
+is still the first in the order of the tabs that is not hidden, which
+the help says. `docs/specs/worker/individuals.md`, Open 1;
+`steps/individuals.md`.
+
+## Recommended on 27 September 2026, not yet answered
+
+Put to the owner in chat that day with its recommendation, which the
+specs take as the meanwhile; an answer that differs changes the specs
+named, and nothing else unless said. Points 2, 4, 5 and 7, put the same
+day, are answered above.
 
 ### 6. The types the user set, kept when the file is read again
 
@@ -508,45 +633,11 @@ read cannot apply, which a wrong separator, making the file one column,
 would do to every type set. Specs:
 `project.md`, `steps/individuals.md`.
 
-### 7. The lasso out of stage 4
-
-Selecting points on the PCA to assign a population, which the owner's
-widget `any_scatter3d` does. Recommended: not in stage 4, since it needs a
-design of its own, an edit of the populations made on a plot changing
-the keys of every analysis that reads them, and a way for the keyboard.
-Stage 4 takes from the widget the legend that highlights a population,
-the legend over the plot, the individuals of no population in a mark of
-their own and counted, and the bar of buttons above the plot.
-
 ## Opened by the specs
 
 Each with its options and its recommendation in the spec named, which is
-the meanwhile.
+the meanwhile. Points 9 to 12 are answered above.
 
-9. **The individuals with many missing genotypes.** The PCA gives a
-   missing genotype the mean of its variant, which pulls an individual
-   with many of them toward the centre of the plot. popnei's PCA does not
-   say how many genotypes each individual had. Recommended: a note under
-   the plot naming the individuals above 0.2 of missing genotypes, when
-   the statistics of each individual of the Variants step are already
-   calculated for the filters as they are, and a warning kept with the
-   result once popnei gives the counts. Not taken: a Run of the PCA that
-   calculates those statistics first, a pass more. `pca.md`, Open 2.
-10. **Whether the mouse wheel zooms the 3D view.** If it does, a user
-   who scrolls the panel with the pointer over the plot zooms the plot
-   instead. Recommended: the wheel zooms with the Ctrl key held, as maps
-   in a page do, which also gives the pinch of a Mac's trackpad; the
-   wheel alone scrolls the page. `pca3d.md`, Open 1.
-11. **An error cell of Excel, `#N/A`.** Recommended: read as the text
-   `#N/A`, as in the CSV Excel saves from the same sheet, so nothing is
-   left out without the user seeing it; the user replaces it with `NA`.
-   Not taken: read as missing, as Excel means it. `files.md`, Open 1.
-12. **The name of the sheet read from an xlsx, shown beside the file.**
-   The first sheet read is the first that is not hidden, which a user
-   may not know. Recommended: name it, "Read from the sheet Hoja1, the
-   first of 3 not hidden", which adds the sheet to what a read reports.
-   Meanwhile a line says only that the first sheet was read.
-   `docs/specs/worker/individuals.md`, Open 1.
 13. **A page opened before a new version of the site is deployed.** The
    files of the 3D view and of the reader of xlsx are downloaded the
    first time they are needed, and a deploy removes those of the old
@@ -575,8 +666,8 @@ meets.
 
 - **One analysis with the method as its option**, the PCA or the PCoA,
   and not two analyses: one panel, one plot, and the GWAS of stage 7
-  takes its components as covariates whichever the method. The MAF and
-  the pruning apply to both, so that the two read the same variants
+  takes its components as covariates whichever the method. The PCA's
+  own filters apply to both, so that the two read the same variants
   (`pca.md`).
 - **The PCA asks popnei for no weights of the variants**, so it reads the
   file once and not twice; the screen shows no weights (`pca.md`).
@@ -584,7 +675,7 @@ meets.
   component with variance, and at 9,381 individuals their projections
   would take 704 MB, above the 256 MB the cache of results holds
   (`pca.md`).
-- **The colour, the components on the axes, and 2D or 3D are options of
+- **The colour, the components on the axes, and 3D or 2D are options of
   the PCA left out of its key**: saved in the project file and undone by
   Undo, and a change of them calculates nothing
   (`docs/architecture.md`, section 4).
@@ -607,13 +698,14 @@ meets.
   its Run calculates them first and then locks when more than 9,381 are
   kept, as the diversity does when the individuals kept leave no
   population (`pca.md`, "Why it cannot run").
-- **The warnings of the PCA**: the pruning turned off; fewer variants
+- **The warnings of the PCA**: no LD filter applied, which a new
+  project gives since the owner's decision of point 2; fewer variants
   used than individuals; and, for the PCoA, a warning whenever the
   distances were corrected, whatever the size of the correction, with
-  its size in its words: on `panel.nei` with the pruning at r² 0.1
+  its size in its words: on `panel.nei` with an LD filter at r² 0.1
   within 50,000 base pairs, the correction adds to every squared
   distance 53% of their mean, and draws two individuals of the same
-  genotypes 0.22 apart; with the pruning off, 30% and 0.17. The share of
+  genotypes 0.22 apart; with no LD filter, 30% and 0.17. The share of
   the mean is worked out by the application from popnei's numbers,
   which popnei does not give as such (`pca.md`).
 - **A PCA that ends the calculation worker, when it needed 250 MB or

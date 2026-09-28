@@ -12,7 +12,9 @@ without it; and the item "All individuals in one population" among the
 choices of the populations; revised the same day after its reviews,
 and when the specs of stage 4 were made to agree: the options of a CSV
 not shown for a file `notGiven`, and the help's Python reading the table
-from the `.xlsx` of the report. The
+from the `.xlsx` of the report; and on 28 September 2026 for two answers
+of the owner: the line of the sheet read, fixed and with no name of the
+sheet, and an error `#N/A` of an xlsx read as a missing value. The
 code of stage 2 is in `src/ui/steps/individuals/`.
 
 The screen spec of the second step of the population genetics
@@ -105,11 +107,15 @@ analyses per population then run on one population, "All individuals"
 Once read, the card shows the name, "360 rows, 5 columns", and a button,
 "Remove pops.csv". The first column holds the names of the individuals
 (`docs/functionality.md`, section 4). For an xlsx the card adds "Read
-from the first sheet of pops.xlsx that is not hidden; the other sheets
-are not read.", since
+from the first sheet of pops.xlsx; any other sheet is not read.", since
 a workbook of several sheets is common and the user who kept the
 populations on the second would otherwise see columns they did not
-expect with no word why. When the read of a CSV met bytes that it
+expect with no word why. The line names no sheet, as the owner decided
+on 28 September 2026; the option not taken, which had been recommended,
+named it, "Read from the sheet Hoja1, the first of 3 not hidden"
+(`docs/specs/worker/individuals.md`, Open 1). The first sheet is the
+first in the order of the tabs that is not hidden, which the help
+says. When the read of a CSV met bytes that it
 could not decode in its encoding, and so shows as �, it gives the line
 of the first of them, `found.undecodedLine` of
 `docs/specs/worker/individuals.md`, and the card also shows the warning
@@ -495,8 +501,8 @@ The descriptions of the commands are in the table above. The rest:
   version", go.
 - **No metadata file**: "No metadata file: every individual is in one
   population.", as the owner decided on 25 September 2026.
-- **The first sheet**: "Read from the first sheet of pops.xlsx that is
-  not hidden; the other sheets are not read."
+- **The first sheet**: "Read from the first sheet of pops.xlsx; any
+  other sheet is not read."
 - **Reading**, **a refusal of the reader**, **a worker that failed**:
   the reason `individualsStepNeeds` gives, whole, "Reading pops.csv.",
   "pops.csv could not be read: line 7 has 3 cells where the header has
@@ -643,9 +649,15 @@ in one population, "All individuals", which can also be chosen with a
 file; that the rows of individuals not in the variants file are
 ignored, so one file serves several variants files; that every
 individual of the variants file must be in it; that an xlsx is read
-from its first sheet; for a CSV, how the encoding, the separator and the
-decimal mark are detected, and when to change them; that missing values
-are an empty cell, `NA` or `-`; what the types mean, "identifier" the
+from its first sheet, the first tab that is not hidden, which may not be
+the sheet Excel opens the file on; for a CSV, how the encoding, the
+separator and the decimal mark are detected, and when to change them;
+that missing values are an empty cell, `NA` or `-`, and, in an xlsx, the
+error `#N/A`, which Excel shows for a value not available, as a lookup
+gives it for a name it did not find; that the other errors of Excel,
+`#DIV/0!`, `#VALUE!` and the like, are read as their text, so that a
+broken formula shows among the values of its column, and are mended in
+the sheet; what the types mean, "identifier" the
 names of the individuals, "binary" a column of two values, "continuous"
 one of numbers, "categorical" any other, which types each column can
 be given and why, and that a binary column's value coded 1 is the case,
