@@ -19,7 +19,7 @@ import {
   viridisColour,
   type PointColours,
 } from "./marks.ts";
-import { tableNumber } from "./plot2d.ts";
+import { tableNumber } from "./numbers.ts";
 
 /** An entry of the legend of a colouring by groups. */
 export interface LegendGroup {

@@ -9,9 +9,9 @@
 import { scaleLinear } from "d3-scale";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { exportSvg } from "./export.ts";
+import { tableNumber } from "./numbers.ts";
 import {
   createPlot2d,
-  tableNumber,
   wholeNumberTicks,
   type ExportFrame,
   type Margin,

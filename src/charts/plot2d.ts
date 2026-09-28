@@ -169,14 +169,9 @@ export function wholeNumberTicks(
   return scale.ticks(count).filter((tick) => Number.isInteger(tick));
 }
 
-/**
- * A number of a table of a plot, to 12 significant digits, so that an
- * edge that popnei gives as 0.07500000000000001 reads 0.075. The rows and
- * the CSV keep every digit.
- */
-export function tableNumber(value: number): number {
-  return Number(value.toPrecision(12));
-}
+// tableNumber is numbers.ts's; given here too until the screen of the
+// histogram imports it from there, since src/ui is not this change's.
+export { tableNumber } from "./numbers.ts";
 
 /**
  * What the SVG shows: nothing yet, since the element never had a size; the

@@ -9,7 +9,7 @@
 
 import "./charts.css";
 import { MARK_RADIUS, NO_GROUP, type PointColours } from "./marks.ts";
-import { tableNumber } from "./plot2d.ts";
+import { tableNumber } from "./numbers.ts";
 
 /** The minus sign, U+2212, which the ticks of d3-axis write, where Intl.NumberFormat writes a hyphen. */
 const MINUS = "−";
