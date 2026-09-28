@@ -992,7 +992,7 @@ SVG and PNG with the legend in it, which no screen offers before stage
   `charts.css`, from `scatter.md`, "The marks of the groups", "The
   colours", "The legend, drawn by the screen", "The point under the
   pointer" and "The TypeScript interface". Serves 1 and 2.
-- [ ] 7.2 The revision of `plot2d.ts` and `export.ts` (`plot2d.md`, its
+- [x] 7.2 The revision of `plot2d.ts` and `export.ts` (`plot2d.md`, its
   parts dated 27 September 2026) and `scatter.ts` with `createScatter`
   (`scatter.md`, "What it does", "The SVG it builds", "The numbers
   without the picture", "The export" and "The size"). Serves 3. Needs
