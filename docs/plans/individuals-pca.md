@@ -1099,7 +1099,7 @@ and saves it as a CSV.
 
 **Tasks:**
 
-- [ ] 8.1 Which headless engines give WebGL 2 here, and the point size
+- [x] 8.1 Which headless engines give WebGL 2 here, and the point size
   of their graphics card, from a page of the tests with no three.js;
   written into `testing.md` and `pca3d.md` (`pca3d.md`, "How it is
   verified", "What the headless engines give for WebGL is not known",
