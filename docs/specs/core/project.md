@@ -1457,7 +1457,10 @@ kind in each list, and each list in its fixed order, the variants' as
 well since stage 3; the same of the two lists of the filters turned
 off, `individualFiltersOff` with thresholds alone, and no kind both in
 a list of the filters on and in its list of the filters off, which is
-refused as `twoFiltersOfAKind` at the path of the one off; the table as the
+refused as `twoFiltersOfAKind` at the path of the one off, while two
+filters of one kind in a list of the filters off are refused as
+`twoFiltersOfAKind` at the path of the `kind` of the second,
+`["filtersOff", 1, "kind"]`, so that the text tells the two apart; the table as the
 reader gives it: at least one column and one row, no name of the header
 twice, every row as long as its header, the first cell of each row the
 name of an individual, a text that is not empty, and no individual in two
@@ -1538,7 +1541,9 @@ or `null`.
     missing genotypes, and a project has at most one of each kind"; and,
     when one is on and the other off: "it has the filter of the variants
     by missing genotypes both on and turned off, and a filter is one or
-    the other";
+    the other"; and, when both are off: "it has two filters of the
+    variants turned off by missing genotypes, and a project has at most
+    one of each kind";
   - the filters of the individuals out of their order: "the filters of the
     individuals should be in the order individuals to keep, individuals to
     remove, missing genotypes, observed heterozygosity, and the second one
@@ -1550,6 +1555,10 @@ or `null`.
     whose filters of the variants are in another order, which the
     application of stage 2 could not write, since it had the missing data
     filter alone, is refused so (`docs/architecture.md`, section 2);
+    the lists of the filters turned off in the same words, with "turned
+    off" after "the filters of the variants" or "of the individuals",
+    the thresholds of the individuals in the order missing genotypes,
+    observed heterozygosity;
   - a value repeated: "the second analysis repeats the analysis
     diversity";
   - a table that does not agree with its types: "the type of the second
