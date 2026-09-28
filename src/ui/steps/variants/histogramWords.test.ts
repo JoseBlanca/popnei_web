@@ -107,8 +107,14 @@ describe("VS6 D2 the words of the histograms of the variants", () => {
     expect(
       histogramsCaption(1, "a\tb.vcf", { kind: "known", individuals: ["s0"] }),
     ).toBe(
-      "Over the 1 variant of a\\tb.vcf and the one individual the filters of individuals keep, before any filter of the variants.",
+      "Over the one variant of a\\tb.vcf and the one individual the filters of individuals keep, before any filter of the variants.",
     );
+  });
+
+  test("the caption of a file of one variant says the one variant, as it says the one individual", () => {
+    expect(
+      histogramsCaption(1, "one.vcf", { kind: "known", individuals: null }),
+    ).toBe("Over the one variant of one.vcf, before any filter.");
   });
 
   test("IP2 D3 the caption of histograms shown while the individuals kept wait for the statistics, after an undo to a load whose statistics the cache dropped, leaves out their number", () => {

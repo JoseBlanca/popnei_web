@@ -143,7 +143,8 @@ export function histogramsCaption(
   fileName: string,
   kept: KeptList,
 ): string {
-  const variants = `${counted(numVars, "variant")} of ${escaped(fileName)}`;
+  // "the one variant", as "the one individual" below.
+  const variants = `${numVars === 1 ? "one variant" : counted(numVars, "variant")} of ${escaped(fileName)}`;
   if (kept.kind === "known" && kept.individuals === null) {
     return `Over the ${variants}, before any filter.`;
   }
