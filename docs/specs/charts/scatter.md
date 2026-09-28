@@ -501,17 +501,24 @@ export function legendOf(
 
 /**
  * Draws `legend` into `group` of an exported SVG, its rows ending at
- * `right` and starting at `top`, in SVG pixels, and no row below
- * `bottom` (below, "The export"). For the scatter and the 3D plot.
+ * `right` and starting at `top`, in SVG pixels, no row below `bottom`,
+ * and its background no wider than from `left` to `right`, the edges of
+ * the frame (below, "The export"). For the scatter and the 3D plot.
  */
 export function drawLegendSvg(
   group: Selection<SVGGElement, unknown, null, undefined>,
   legend: Legend,
+  left: number,
   right: number,
   top: number,
   bottom: number,
 ): void;
 ```
+
+`left` was added on 28 September 2026, when the plot was built: the
+background of the legend is at most the width of the frame (below, "The
+export"), and without the left edge of the frame the function cannot
+cap it.
 
 The point under the pointer and its tooltip, shared with the 3D plot:
 
