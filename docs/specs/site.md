@@ -297,7 +297,15 @@ needs no action of the user.
   popnei's `init()` takes no address and gives none, so the worker looks
   for it in the browser's list of what the worker fetched,
   `performance.getEntriesByType("resource")`, the entry whose path ends
-  in `.wasm`, and sends null when there is none; the page then shows the
+  in `.wasm`. The browser may add that entry after `init()` has thrown:
+  Firefox 155, on GitHub's Ubuntu on 27 September 2026, did so for a
+  wasm that arrived and did not compile, and the page showed no address
+  on the first try of the test in each of two runs, and showed it on the
+  retry. So when the list has no such entry the worker
+  waits for one, up to one second, and sends null when none comes; the
+  owner decided on 28 September 2026 that the page waits. The wait
+  delays the message by that second when the wasm is not in the list at
+  all, as when the server answers 404. The page then shows the
   address under the label "Address tried:" when it has one, and the
   message always. What the user sees of the address, in Chromium 153 and
   WebKit 26.6 on 24 September 2026:
@@ -309,7 +317,7 @@ needs no action of the user.
   - the network fails: Chromium shows "Address tried:" with the address;
     WebKit shows no address, only its message "Load failed".
 
-  Firefox was not seen in these three failures. A later popnei whose
+  Firefox was not seen in the last two. A later popnei whose
   `init()` took the address, or gave it with the error, would let the
   page show the address in every case.
 - **The served file is not found**, a wrong address: the status is not
