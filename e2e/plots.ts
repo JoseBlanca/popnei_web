@@ -76,8 +76,10 @@ const MARKUP_NAME = '<img src=x onerror="window.plotsInjected = true">';
  * draws the same. Point 0, of P1, is alone at (0, 1.1), the top of the
  * data, 0.55 at least from every other point, 90 pixels at the scale of a
  * plot of 600 by 450; point 1, of P2, alone at (1.6, −1.1), the bottom
- * right corner, where its tooltip has no room on the right nor below.
- * The name of the fourth population is markup.
+ * right corner, where its tooltip has no room on the right nor below;
+ * point 2, in no population, alone at (−1.6, −1.1), the bottom left
+ * corner, a ring whose middle shows the background. The name of the
+ * fourth population is markup.
  */
 function scatterData(): ScatterData {
   let state = 12345;
@@ -110,6 +112,9 @@ function scatterData(): ScatterData {
   pointNames[0] = MARKUP_NAME;
   x[1] = 1.6;
   y[1] = -1.1;
+  x[2] = -1.6;
+  y[2] = -1.1;
+  group[2] = NO_GROUP;
   return {
     title: "Principal components",
     description: `Principal components of ${NUM_POINTS.toLocaleString("en-US")} individuals, for the tests.`,
@@ -180,11 +185,18 @@ function lastScatter(): Extract<Drawn, { kind: "scatter" }> {
 }
 
 /**
- * A new element of `width` by `height` CSS pixels, in place of the plot
- * drawn before, `position: relative` as the screen's CSS makes the
- * element of a scatter, so that its tooltip is placed inside it.
+ * The padding of the element of the scatter, so that the tests see the
+ * plot and its tooltip placed inside it.
  */
-function newElement(width: number, height: number): HTMLElement {
+const SCATTER_PADDING = 8;
+
+/**
+ * A new element whose content is `width` by `height` CSS pixels, with
+ * `padding` pixels around it, in place of the plot drawn before,
+ * `position: relative` as the screen's CSS makes the element of a
+ * scatter, so that its tooltip is placed inside it.
+ */
+function newElement(width: number, height: number, padding = 0): HTMLElement {
   if (drawn !== null) {
     drawn.handle.destroy();
     drawn.element.remove();
@@ -194,27 +206,43 @@ function newElement(width: number, height: number): HTMLElement {
   element.style.position = "relative";
   element.style.width = `${String(width)}px`;
   element.style.height = `${String(height)}px`;
+  element.style.padding = `${String(padding)}px`;
   plots.append(element);
   return element;
 }
 
 /**
  * Where each point of the scatter in `element` is in the viewport, x and
- * y, two per point: the corner of the element, the margin and the scales,
- * computed apart from what the plot computes from the pointer.
+ * y, two per point: the corner of the element, its padding, the margin
+ * and the scales, computed apart from what the plot computes from the
+ * pointer.
  */
 function viewportPixels(element: HTMLElement): Float64Array {
+  const style = getComputedStyle(element);
+  const padLeft = Number.parseFloat(style.paddingLeft);
+  const padTop = Number.parseFloat(style.paddingTop);
   const innerWidth =
-    element.clientWidth - SCATTER_MARGIN.left - SCATTER_MARGIN.right;
+    element.clientWidth -
+    padLeft -
+    Number.parseFloat(style.paddingRight) -
+    SCATTER_MARGIN.left -
+    SCATTER_MARGIN.right;
   const innerHeight =
-    element.clientHeight - SCATTER_MARGIN.top - SCATTER_MARGIN.bottom;
+    element.clientHeight -
+    padTop -
+    Number.parseFloat(style.paddingBottom) -
+    SCATTER_MARGIN.top -
+    SCATTER_MARGIN.bottom;
   const scales = scatterScales(SCATTER, innerWidth, innerHeight);
   const box = element.getBoundingClientRect();
   const pixels = new Float64Array(2 * NUM_POINTS);
   for (const [index, x] of SCATTER.x.entries()) {
-    pixels[2 * index] = box.left + SCATTER_MARGIN.left + scales.x(x);
+    pixels[2 * index] = box.left + padLeft + SCATTER_MARGIN.left + scales.x(x);
     pixels[2 * index + 1] =
-      box.top + SCATTER_MARGIN.top + scales.y(SCATTER.y[index] ?? Number.NaN);
+      box.top +
+      padTop +
+      SCATTER_MARGIN.top +
+      scales.y(SCATTER.y[index] ?? Number.NaN);
   }
   return pixels;
 }
@@ -241,7 +269,7 @@ const page: PlotsPage = {
     return handle;
   },
   drawScatter(width, height) {
-    const element = newElement(width, height);
+    const element = newElement(width, height, SCATTER_PADDING);
     hovers = [];
     const handle = createScatter(element, SCATTER, {
       onHover(point) {

@@ -757,15 +757,15 @@ describe("IP7 D2 the scatter under jsdom, the point under the pointer", () => {
     ring.moveTo(x + 9, y);
     ring.arc(x, y, 9, 0, 2 * Math.PI);
     expect(marks[0]?.getAttribute("d")).toBe(ring.toString());
-    // The tooltip 7 pixels right of and below the point, in the pixels of
+    // The tooltip 6 pixels right of and below the point, in the pixels of
     // the element, past the margins.
     const box = tooltipOf(element);
     expect(Number.parseFloat(box?.style.left ?? "")).toBeCloseTo(
-      SCATTER_MARGIN.left + x + 7,
+      SCATTER_MARGIN.left + x + 6,
       3,
     );
     expect(Number.parseFloat(box?.style.top ?? "")).toBeCloseTo(
-      SCATTER_MARGIN.top + y + 7,
+      SCATTER_MARGIN.top + y + 6,
       3,
     );
     moveTo(element, [x + 30, y - 30]);

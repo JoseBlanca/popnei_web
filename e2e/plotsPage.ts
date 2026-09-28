@@ -40,10 +40,12 @@ export interface PlotsPage {
   draw(width: number, height: number): ChartHandle<HistogramData>;
   /**
    * Draws the scatter of 9,381 points, in the populations P1, P2, P3 and
-   * `<b>P4</b>` and in none, in a new element of `width` by `height` CSS
-   * pixels, `position: relative`, in place of the plot drawn before, and
-   * returns its handle. Point 0, of P1, named with markup, is alone at the
-   * top of the data; point 1, of P2, alone at its bottom right corner.
+   * `<b>P4</b>` and in none, in a new element whose content is `width` by
+   * `height` CSS pixels, with a padding of 8, `position: relative`, in
+   * place of the plot drawn before, and returns its handle. Point 0, of
+   * P1, named with markup, is alone at the top of the data; point 1, of
+   * P2, alone at its bottom right corner; point 2, in no population, alone
+   * at its bottom left corner.
    */
   drawScatter(width: number, height: number): ChartHandle<ScatterData>;
   /** Draws the scatter again with `highlighted` as the legend's highlight. */

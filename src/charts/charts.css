@@ -165,6 +165,26 @@
   pointer-events: auto;
 }
 
+/* The corner of the tooltip nearest its point, 8.5 pixels from it, is
+   square: rounded, its edge on the line from the point would be 10.1
+   pixels away, beyond the 10 within which the point stays under the
+   pointer (scatter.md, "The point under the pointer"). */
+.chart-tooltip[data-near="top-left"] {
+  border-top-left-radius: 0;
+}
+
+.chart-tooltip[data-near="top-right"] {
+  border-top-right-radius: 0;
+}
+
+.chart-tooltip[data-near="bottom-left"] {
+  border-bottom-left-radius: 0;
+}
+
+.chart-tooltip[data-near="bottom-right"] {
+  border-bottom-right-radius: 0;
+}
+
 /* Behind the legend of an exported file, so that the points under it do
    not cross its text. */
 .chart-legend-background {

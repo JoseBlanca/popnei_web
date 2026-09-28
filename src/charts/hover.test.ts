@@ -151,13 +151,24 @@ describe("IP7 D1 the pieces of the scatter, the lines of the tooltip", () => {
   });
 });
 
-/** An element of 300 by 200 pixels, and a tooltip of 80 by 40, as a browser would lay them out. */
+/**
+ * A tooltip of 80.5 by 40.5 pixels, as a browser lays out its text, to the
+ * fraction of a pixel that offsetWidth and offsetHeight round away.
+ */
+function sizedTooltip(): void {
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(
+    DOMRect.fromRect({ width: 80.5, height: 40.5 }),
+  );
+  vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(81);
+  vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(41);
+}
+
+/** An element of 300 by 200 pixels, and a tooltip of 80.5 by 40.5, as a browser would lay them out. */
 function laidOut(): HTMLDivElement {
   const element = document.createElement("div");
   vi.spyOn(element, "clientWidth", "get").mockReturnValue(300);
   vi.spyOn(element, "clientHeight", "get").mockReturnValue(200);
-  vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(80);
-  vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(40);
+  sizedTooltip();
   document.body.append(element);
   return element;
 }
@@ -192,7 +203,7 @@ describe("IP7 D1 the pieces of the scatter, the tooltip", () => {
     tooltip.destroy();
   });
 
-  test("placed 7 pixels right of and below the point, and on its left or above where it would leave the element", () => {
+  test("placed 6 pixels right of and below the point, and on its left or above where it would leave the element", () => {
     const element = laidOut();
     const tooltip = createTooltip(
       element,
@@ -201,9 +212,17 @@ describe("IP7 D1 the pieces of the scatter, the tooltip", () => {
     );
     tooltip.show(["s0"], 100, 50);
     const box = tooltipOf(element);
-    expect([box?.style.left, box?.style.top]).toEqual(["107px", "57px"]);
+    expect([box?.style.left, box?.style.top]).toEqual(["106px", "56px"]);
+    expect(box?.dataset["near"]).toBe("top-left");
     tooltip.show(["s0"], 250, 170);
-    expect([box?.style.left, box?.style.top]).toEqual(["163px", "123px"]);
+    // Its corner 6 pixels from the point to the fraction of a pixel, so
+    // that a pointer going straight to it stays within 10 of the point.
+    expect([box?.style.left, box?.style.top]).toEqual(["163.5px", "123.5px"]);
+    expect(box?.dataset["near"]).toBe("bottom-right");
+    tooltip.show(["s0"], 250, 50);
+    expect(box?.dataset["near"]).toBe("top-right");
+    tooltip.show(["s0"], 100, 170);
+    expect(box?.dataset["near"]).toBe("bottom-left");
     tooltip.destroy();
   });
 
@@ -322,8 +341,7 @@ describe("IP7 D1 the pieces of the scatter, the tooltip", () => {
     const element = document.createElement("div");
     vi.spyOn(element, "clientWidth", "get").mockReturnValue(100);
     vi.spyOn(element, "clientHeight", "get").mockReturnValue(50);
-    vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(80);
-    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(40);
+    sizedTooltip();
     document.body.append(element);
     const tooltip = createTooltip(
       element,

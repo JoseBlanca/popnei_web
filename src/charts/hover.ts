@@ -16,10 +16,12 @@ const MINUS = "−";
 
 /**
  * From the point to the nearest corner of the tooltip, across and down,
- * in pixels: 9.9 pixels from the point, inside the 10 within which it
- * stays under the pointer and beyond the 8.05 a mark reaches.
+ * in pixels: 8.5 pixels from the point, inside the 10 within which it
+ * stays under the pointer, by more than the whole pixel at which the
+ * browser finds the element under the pointer, and beyond the 8.05 a
+ * mark reaches.
  */
-const TOOLTIP_OFFSET = 7;
+const TOOLTIP_OFFSET = 6;
 
 /** A coordinate of the tooltip, to three significant digits. */
 const coordinateFormat = new Intl.NumberFormat("en-US", {
@@ -245,22 +247,24 @@ export function createTooltip(
     );
     box.hidden = false;
     shown = true;
-    const width = box.offsetWidth;
-    const height = box.offsetHeight;
+    // To the fraction of a pixel, which offsetWidth rounds: on the left of
+    // the point, a width rounded up would leave the corner beyond 6 pixels.
+    const { width, height } = box.getBoundingClientRect();
     const right = x + TOOLTIP_OFFSET;
     const below = y + TOOLTIP_OFFSET;
     // On the left or above where it would leave the element, and against
     // its left or top edge where it fits on neither side.
-    const left =
-      right + width > element.clientWidth
-        ? Math.max(0, x - TOOLTIP_OFFSET - width)
-        : right;
-    const top =
-      below + height > element.clientHeight
-        ? Math.max(0, y - TOOLTIP_OFFSET - height)
-        : below;
+    const onLeft = right + width > element.clientWidth;
+    const above = below + height > element.clientHeight;
+    const left = onLeft ? Math.max(0, x - TOOLTIP_OFFSET - width) : right;
+    const top = above ? Math.max(0, y - TOOLTIP_OFFSET - height) : below;
     box.style.left = `${String(left)}px`;
     box.style.top = `${String(top)}px`;
+    // The corner nearest the point, which charts.css makes square: rounded,
+    // its edge would be beyond the 10 pixels within which the point stays
+    // under the pointer.
+    box.dataset["near"] =
+      `${above ? "bottom" : "top"}-${onLeft ? "right" : "left"}`;
     listen(true);
   }
 

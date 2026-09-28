@@ -748,7 +748,7 @@ test("VS4 D3 at 320 pixels wide the three rows of the legend lie inside the SVG"
 /** The name of point 0 of the page's scatter, markup shown as text. */
 const MARKUP_NAME = '<img src=x onerror="window.plotsInjected = true">';
 /** The distance of the tooltip's nearest corner from its point, across and down. */
-const TOOLTIP_OFFSET = 7;
+const TOOLTIP_OFFSET = 6;
 /** The colour of the first group, --chart-cat-1, #e69f00. */
 const FIRST_GROUP: readonly [number, number, number] = [230, 159, 0];
 /** The legend of the page's scatter: its title, then each group with its count. */
@@ -756,10 +756,22 @@ const SCATTER_LEGEND = [
   "Population",
   "P1 (1,877)",
   "P2 (1,876)",
-  "P3 (1,876)",
+  "P3 (1,875)",
   "<b>P4</b> (1,876)",
-  "No population (1,876)",
+  "No population (1,877)",
 ];
+/** The white of the background of the light theme, as channels. */
+const WHITE: readonly [number, number, number] = [255, 255, 255];
+
+/** True when each channel of `pixel` is within 8 of `colour`. */
+function near(
+  pixel: readonly number[],
+  colour: readonly [number, number, number],
+): boolean {
+  return colour.every(
+    (channel, index) => Math.abs((pixel[index] ?? -99) - channel) <= 8,
+  );
+}
 
 /** A point of the viewport, in CSS pixels. */
 interface At {
@@ -833,13 +845,19 @@ async function pointZeroAndAway(page: Page): Promise<{ zero: At; away: At }> {
   return { zero, away };
 }
 
-test("IP7 D3 the pointer at the pixel of point 0 shows its tooltip 7 pixels right of and below it, its name of markup as text, and calls onHover with 0; 30 pixels from every point the tooltip is hidden and onHover called with null", async ({
+test("IP7 D3 the pointer at the pixel of point 0 shows its tooltip 6 pixels right of and below it, its name of markup as text, and calls onHover with 0; 30 pixels from every point the tooltip is hidden and onHover called with null", async ({
   page,
 }) => {
   await openPlots(page);
   await drawScatter(page, 600, 450);
   const { zero, away } = await pointZeroAndAway(page);
   const tooltip = page.locator(".chart-tooltip");
+
+  // 11 pixels from point 0 is beyond the 10 within which it is under the
+  // pointer: nothing is shown.
+  await page.mouse.move(zero.x - 11, zero.y);
+  await expect(page.locator("#plots path.chart-hover")).toHaveCount(0);
+  expect(await hovers(page)).toEqual([]);
 
   await page.mouse.move(zero.x, zero.y);
   await expect(tooltip).toBeVisible();
@@ -850,6 +868,9 @@ test("IP7 D3 the pointer at the pixel of point 0 shows its tooltip 7 pixels righ
   ]);
   await expect(tooltip.locator("img")).toHaveCount(0);
   await expect(tooltip).toHaveAttribute("aria-hidden", "true");
+  // The corner nearest the point square, and the others rounded.
+  await expect(tooltip).toHaveCSS("border-top-left-radius", "0px");
+  await expect(tooltip).toHaveCSS("border-bottom-right-radius", "4px");
   await expect(page.locator("#plots path.chart-hover")).toHaveCount(1);
   expect(await hovers(page)).toEqual([0]);
   const box = await tooltip.boundingBox();
@@ -879,6 +900,8 @@ test("IP7 D3 the tooltip of a point at the bottom right corner of the frame lies
   await expect(tooltip).toBeVisible();
   await expect(tooltip.locator("div").first()).toHaveText("ind1");
   expect(await hovers(page)).toEqual([1]);
+  await expect(tooltip).toHaveCSS("border-bottom-right-radius", "0px");
+  await expect(tooltip).toHaveCSS("border-top-left-radius", "4px");
   const box = await tooltip.boundingBox();
   const plot = await page.locator("#plots > div").boundingBox();
   if (box === null || plot === null) throw new Error("Nothing is laid out.");
@@ -896,7 +919,7 @@ test("IP7 D3 the pointer moved from point 0 onto its tooltip in 10 steps keeps i
   const { zero, away } = await pointZeroAndAway(page);
   const tooltip = page.locator(".chart-tooltip");
   // 14 pixels right of and below point 0, inside the tooltip, whose
-  // corner is at 7 and 7: the line there passes through that corner, 9.9
+  // corner is at 6 and 6: the line there passes through that corner, 8.5
   // pixels from the point, as a hand going straight to the tooltip does.
   const onTooltip = { x: zero.x + 14, y: zero.y + 14 };
 
@@ -949,6 +972,85 @@ test("IP7 D3 the pointer moved from point 0 onto its tooltip in 10 steps keeps i
   expect(await hovers(page)).toEqual([0, null, 0, null, 0, null, 0]);
 });
 
+test("IP7 D3 the pointer that leaves the tooltip onto the margin above the frame hides it and calls onHover with null", async ({
+  page,
+}) => {
+  await openPlots(page);
+  await drawScatter(page, 600, 450);
+  const { zero } = await pointZeroAndAway(page);
+  const tooltip = page.locator(".chart-tooltip");
+  const plot = await page.locator("#plots > div").boundingBox();
+  if (plot === null) throw new Error("The plot is not laid out.");
+  const onTooltip = { x: zero.x + 14, y: zero.y + 14 };
+
+  await page.mouse.move(zero.x, zero.y);
+  await page.mouse.move(onTooltip.x, onTooltip.y, { steps: 10 });
+  await expect(tooltip).toBeVisible();
+  // Straight up from the tooltip into the margin, 4 pixels below the top
+  // of the plot's content, where neither the overlay nor the element
+  // hears a leave.
+  await page.mouse.move(onTooltip.x, plot.y + 8 + 4);
+  await expect(tooltip).toBeHidden();
+  await expect(page.locator("#plots path.chart-hover")).toHaveCount(0);
+  expect(await hovers(page)).toEqual([0, null]);
+});
+
+test("IP7 D3 in a plot 304 pixels wide, a tooltip that fits on neither side of its point lies inside the plot", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await openPlots(page);
+  await drawScatter(page, 288, 212);
+  const zero = await pointAt(page, 0);
+  const tooltip = page.locator(".chart-tooltip");
+  await page.mouse.move(zero.x, zero.y);
+  await expect(tooltip).toBeVisible();
+  const box = await tooltip.boundingBox();
+  const plot = await page.locator("#plots > div").boundingBox();
+  if (box === null || plot === null) throw new Error("Nothing is laid out.");
+  expect(plot.width).toBe(304);
+  expect(box.x).toBeGreaterThanOrEqual(plot.x);
+  expect(box.x + box.width).toBeLessThanOrEqual(plot.x + plot.width);
+  expect(box.y).toBeGreaterThanOrEqual(plot.y);
+});
+
+test("IP7 D3 in the clusters, the pointer reaches the tooltip of each of 20 points in 10 steps, and it is still that point's", async ({
+  page,
+}) => {
+  await openPlots(page);
+  await drawScatter(page, 600, 450);
+  const { away } = await pointZeroAndAway(page);
+  const tooltip = page.locator(".chart-tooltip");
+  // The first 20 points from point 3 on, of the four populations and
+  // none, in their clusters, with no other point within 2 pixels: the
+  // browser may round the pointer to the pixel, and a point nearer than
+  // that could then be the one under it.
+  let reached = 0;
+  for (let point = 3; reached < 20; point++) {
+    const at = await pointAt(page, point);
+    if ((await nearestDistance(page, at, point)) < 2) continue;
+    reached += 1;
+    await page.mouse.move(away.x, away.y);
+    await page.mouse.move(at.x, at.y);
+    await expect(tooltip.locator("div").first()).toHaveText(
+      `ind${String(point)}`,
+    );
+    const box = await tooltip.boundingBox();
+    if (box === null) throw new Error("The tooltip is not laid out.");
+    // 6 pixels inside the corner of the tooltip nearest the point, which
+    // is 6 pixels across and down from it on the side it lies.
+    const across = box.x > at.x ? 1 : -1;
+    const down = box.y > at.y ? 1 : -1;
+    await page.mouse.move(at.x + across * 12, at.y + down * 12, {
+      steps: 10,
+    });
+    await expect(tooltip).toBeVisible();
+    await expect(tooltip.locator("div").first()).toHaveText(
+      `ind${String(point)}`,
+    );
+  }
+});
+
 test.describe("on a screen of touch", () => {
   test.use({ hasTouch: true });
 
@@ -980,6 +1082,52 @@ test("IP7 D3 toSVG of the scatter has no overlay, no mark of the hover and no va
   const zero = await pointAt(page, 0);
   await page.mouse.move(zero.x, zero.y);
   await expect(page.locator("#plots path.chart-hover")).toHaveCount(1);
+
+  // The styles of charts.css as the browser computes them on the screen.
+  const screen = await page.evaluate(() => {
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    const element = plots.element();
+    const style = (selector: string): CSSStyleDeclaration => {
+      const found = element.querySelector(selector);
+      if (found === null) throw new Error(`No ${selector} on the screen.`);
+      return getComputedStyle(found);
+    };
+    const points = style("path.chart-points.chart-colour-0");
+    const none = style("path.chart-points-none");
+    const hover = style("path.chart-hover");
+    const read = {
+      stroke: points.stroke,
+      strokeWidth: points.strokeWidth,
+      join: points.strokeLinejoin,
+      fill: points.fill,
+      noneFill: none.fill,
+      noneStroke: none.stroke,
+      hoverFill: hover.fill,
+      hoverStroke: hover.stroke,
+      hoverWidth: hover.strokeWidth,
+      fadedOpacity: "",
+      highlightedOpacity: "",
+    };
+    plots.highlight(1);
+    read.fadedOpacity = style("path.chart-points-faded").opacity;
+    read.highlightedOpacity = style("path.chart-colour-1").opacity;
+    plots.highlight(null);
+    return read;
+  });
+  expect(screen).toEqual({
+    stroke: LIGHT_AXIS,
+    strokeWidth: "1px",
+    join: "round",
+    fill: "rgb(230, 159, 0)",
+    noneFill: "none",
+    noneStroke: LIGHT_AXIS,
+    hoverFill: "none",
+    hoverStroke: LIGHT_TEXT,
+    hoverWidth: "2px",
+    fadedOpacity: "0.25",
+    highlightedOpacity: "1",
+  });
 
   const found = await page.evaluate(async () => {
     const plots = window.plotsPage;
@@ -1029,6 +1177,13 @@ test("IP7 D3 toSVG of the scatter has no overlay, no mark of the hover and no va
     };
     const firstMarkClass = mark.getAttribute("class");
     holder.remove();
+    // The middle of the ring of point 2, in the pixels of the plot's SVG.
+    const ring = plots.pointPixel(2);
+    const content = plots.element().getBoundingClientRect();
+    const ringAt = {
+      x: ring.x - content.left - 8,
+      y: ring.y - content.top - 8,
+    };
 
     const blob = await plots.handle().toPNG(3);
     const image = await createImageBitmap(blob);
@@ -1038,15 +1193,15 @@ test("IP7 D3 toSVG of the scatter has no overlay, no mark of the hover and no va
     const context = canvas.getContext("2d");
     if (context === null) throw new Error("No context of a canvas.");
     context.drawImage(image, 0, 0);
-    const pixel = [
-      ...context.getImageData(
-        Math.round(3 * centre.x),
-        Math.round(3 * centre.y),
-        1,
-        1,
-      ).data,
+    const pixelAt = (x: number, y: number): number[] => [
+      ...context.getImageData(Math.round(3 * x), Math.round(3 * y), 1, 1).data,
     ];
+    const pixel = pixelAt(centre.x, centre.y);
+    const ringPixel = pixelAt(ringAt.x, ringAt.y);
     const file = new DOMParser().parseFromString(text, "image/svg+xml");
+    const backgroundStyle =
+      file.querySelector(".chart-legend-background")?.getAttribute("style") ??
+      "";
     return {
       text,
       screenLegend,
@@ -1059,7 +1214,8 @@ test("IP7 D3 toSVG of the scatter has no overlay, no mark of the hover and no va
       firstMarkClass,
       backgroundLeft,
       rows,
-      png: { width: image.width, height: image.height, pixel },
+      png: { width: image.width, height: image.height, pixel, ringPixel },
+      backgroundStyle,
     };
   });
 
@@ -1094,6 +1250,10 @@ test("IP7 D3 toSVG of the scatter has no overlay, no mark of the hover and no va
   expect(Math.abs((red ?? -99) - FIRST_GROUP[0])).toBeLessThanOrEqual(8);
   expect(Math.abs((green ?? -99) - FIRST_GROUP[1])).toBeLessThanOrEqual(8);
   expect(Math.abs((blue ?? -99) - FIRST_GROUP[2])).toBeLessThanOrEqual(8);
+  // A point in no population is a ring: its middle is the background.
+  expect(near(found.png.ringPixel, WHITE)).toBe(true);
+  expect(found.backgroundStyle).toContain("fill-opacity: 0.85");
+  expect(found.backgroundStyle).toContain(`fill: ${LIGHT_BACKGROUND}`);
 });
 
 /** The median of `xs`, which is not empty. */
