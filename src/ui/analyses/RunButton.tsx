@@ -101,7 +101,10 @@ function OneButton({
       isDisabled={button.reason !== null}
       {...(button.reason !== null && { description: button.reason })}
       {...(button.reason !== null &&
-        reasonRef !== undefined && { descriptionRef: reasonRef })}
+        reasonRef !== undefined && {
+          descriptionRef: reasonRef,
+          descriptionName: `${runLabel} is unavailable: `,
+        })}
     />
   );
 }

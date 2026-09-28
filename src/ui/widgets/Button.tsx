@@ -45,11 +45,15 @@ export interface ButtonProps {
   readonly hint?: string | null;
   /** The element of the button, for a screen that moves the focus to it. */
   readonly ref?: React.Ref<HTMLButtonElement>;
-  /** The element of the description, for a screen that moves the focus
-      to it, as to the reason of a disabled button; given, the
-      description takes the focus from a script and is not a stop of the
-      Tab key. */
+  /** Given, the description takes the focus from a script, and is not a
+      stop of the Tab key, as the reason of a disabled button does: its
+      element, for the screen that moves the focus to it. */
   readonly descriptionRef?: React.Ref<HTMLSpanElement>;
+  /** With `descriptionRef`, words hidden from the eye that a screen reader
+      reads before the description when it has the focus, which name the
+      button, since the same reason may stand beside several buttons. The
+      description the button is described by stays the words shown. */
+  readonly descriptionName?: string;
   /** Whether it sends the form it is in, as Enter in a field of the form
       does; false when absent. */
   readonly isSubmit?: boolean;
@@ -68,6 +72,7 @@ export function Button({
   hint = null,
   ref,
   descriptionRef,
+  descriptionName = "",
   isSubmit = false,
   autoFocus = false,
 }: ButtonProps): React.JSX.Element {
@@ -104,18 +109,23 @@ export function Button({
   return (
     <span className={classOf(styles, "described")}>
       {button}
-      {description !== undefined && (
-        <span
-          id={descriptionId}
-          className={classOf(styles, "description")}
-          {...(descriptionRef !== undefined && {
-            ref: descriptionRef,
-            tabIndex: -1,
-          })}
-        >
-          {description}
-        </span>
-      )}
+      {description !== undefined &&
+        (descriptionRef === undefined ? (
+          <span id={descriptionId} className={classOf(styles, "description")}>
+            {description}
+          </span>
+        ) : (
+          <span
+            ref={descriptionRef}
+            tabIndex={-1}
+            className={classOf(styles, "description")}
+          >
+            <span className={classOf(styles, "visuallyHidden")}>
+              {descriptionName}
+            </span>
+            <span id={descriptionId}>{description}</span>
+          </span>
+        ))}
     </span>
   );
 }

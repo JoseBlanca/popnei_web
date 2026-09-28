@@ -78,21 +78,28 @@ export function FilterCountsPart(): React.JSX.Element {
   // alone, or the words of an error, which take the
   // focus when the button goes while it had it, and are not in the order
   // of the Tab key.
-  const total = useRef<HTMLParagraphElement>(null);
-  const empty = useRef<HTMLDivElement>(null);
-  const failed = useRef<HTMLDivElement>(null);
+  const total = useRef<HTMLElement>(null);
+  const empty = useRef<HTMLElement>(null);
+  const failed = useRef<HTMLElement>(null);
   // The Count, which takes the focus back when it can be pressed again,
   // and the reason beside it disabled, which takes it when the Count is
   // locked (the spec, "Accessibility").
   const countButton = useRef<HTMLButtonElement>(null);
   const reason = useRef<HTMLSpanElement>(null);
-  // Set when the button goes with the focus on it. The line or the words
-  // that take the focus come in the same commit as the button goes, and
-  // are in the page only once it is done, so the focus is moved after it.
+  // Set when the button, its reason, the line of the total, the warning
+  // or the words of an error leave the page with the focus on them. What
+  // takes the focus comes in the same commit as they go, and is in the
+  // page only once it is done, so the focus is moved after it.
   const focusLost = useRef(false);
   useLayoutEffect(() => {
     if (!focusLost.current) return;
     focusLost.current = false;
+    // Only when the focus was really lost with what left the page: in
+    // development, React's StrictMode replays the cleanup of a part just
+    // drawn after the focus was moved onto it, which would otherwise
+    // leave the flag set and move the focus at the next drawing.
+    const active = document.activeElement;
+    if (active !== null && active !== document.body) return;
     const shown = countButton.current;
     (
       (shown !== null && !shown.disabled ? shown : null) ??
@@ -105,6 +112,9 @@ export function FilterCountsPart(): React.JSX.Element {
 
   const button = buttonInTheStep(buttonOf(status));
   const stoppedBy = stoppedNotice(status, notice, ID);
+  const lost = (): void => {
+    focusLost.current = true;
+  };
   const runButton = (shown: NonNullable<ButtonOf>): React.JSX.Element => (
     <RunButton
       button={shown}
@@ -133,7 +143,12 @@ export function FilterCountsPart(): React.JSX.Element {
         </p>
       )}
       {status.kind === "error" && (
-        <div ref={failed} tabIndex={-1}>
+        <FocusSpot
+          onNode={(node) => {
+            failed.current = node;
+          }}
+          onGone={lost}
+        >
           <Failed
             error={status.error}
             name={COUNT_NAME}
@@ -142,7 +157,7 @@ export function FilterCountsPart(): React.JSX.Element {
             asShown={withoutTheStep}
             {...(status.ofStatistics && { statisticsFailedText })}
           />
-        </div>
+        </FocusSpot>
       )}
       {button !== null && runButton(button)}
       {status.kind === "running" && (
@@ -156,7 +171,16 @@ export function FilterCountsPart(): React.JSX.Element {
         />
       )}
       {status.kind === "done" ? (
-        <Done status={status} totalRef={total} emptyRef={empty} />
+        <Done
+          status={status}
+          onTotal={(node) => {
+            total.current = node;
+          }}
+          onEmpty={(node) => {
+            empty.current = node;
+          }}
+          onGone={lost}
+        />
       ) : (
         <NotCounted status={status} />
       )}
@@ -188,16 +212,21 @@ function NotCounted({
     (filterCounts.md, "The cases"). */
 function Done({
   status,
-  totalRef,
-  emptyRef,
+  onTotal,
+  onEmpty,
+  onGone,
 }: {
   readonly status: Extract<
     AnalysisStatus<JobResult>,
     { readonly kind: "done" }
   >;
-  readonly totalRef: React.RefObject<HTMLParagraphElement | null>;
-  /** The warning of a file of no variant, shown alone. */
-  readonly emptyRef: React.RefObject<HTMLDivElement | null>;
+  /** Given the element of the line of the total. */
+  readonly onTotal: (node: HTMLElement | null) => void;
+  /** Given the element of the warning of a file of no variant, shown
+      alone. */
+  readonly onEmpty: (node: HTMLElement | null) => void;
+  /** Called when either leaves the page with the focus. */
+  readonly onGone: () => void;
 }): React.JSX.Element {
   const project = useAppState((s) => s.project);
   const result = resultOf(status, ID);
@@ -208,9 +237,9 @@ function Done({
   }
   if (variantsOfFile(result.passStats) === 0) {
     return (
-      <div ref={emptyRef} tabIndex={-1}>
+      <FocusSpot onNode={onEmpty} onGone={onGone}>
         <Warnings warnings={status.warnings} />
-      </div>
+      </FocusSpot>
     );
   }
   const text = filtersTotalText(project, result.passStats.numVars);
@@ -223,10 +252,65 @@ function Done({
   }
   return (
     <>
-      <p ref={totalRef} tabIndex={-1} className={classOf(styles, "line")}>
+      <FocusSpot line onNode={onTotal} onGone={onGone}>
         {text}
-      </p>
+      </FocusSpot>
       {status.warnings.length > 0 && <Warnings warnings={status.warnings} />}
     </>
+  );
+}
+
+/** What a part that takes the focus is drawn with. */
+interface FocusSpotProps {
+  /** Whether it is the line of the total, a paragraph, rather than a box
+      of words. */
+  readonly line?: boolean;
+  /** Given its element, and `null` when it goes. */
+  readonly onNode: (node: HTMLElement | null) => void;
+  /** Called when it leaves the page with the focus in it. */
+  readonly onGone: () => void;
+  /** What it holds. */
+  readonly children: React.ReactNode;
+}
+
+/** A part of the Count that takes the focus from a script and is not a
+    stop of the Tab key: the line of the total, the warning of a file of
+    no variant, or the words of an error. When it leaves the page with the
+    focus, it calls `onGone`, for the part to move the focus to what it
+    shows next (the spec, "Accessibility"). */
+function FocusSpot({
+  line = false,
+  onNode,
+  onGone,
+  children,
+}: FocusSpotProps): React.JSX.Element {
+  const own = useRef<HTMLElement | null>(null);
+  // The latest onGone, for the cleanup below, which runs once.
+  const gone = useRef(onGone);
+  useLayoutEffect(() => {
+    gone.current = onGone;
+  });
+  useLayoutEffect(() => {
+    const node = own.current;
+    return () => {
+      // The cleanup of a layout effect runs while the part is still in
+      // the page, so the focus is still in it when it had it.
+      if (node?.contains(document.activeElement) === true) {
+        gone.current();
+      }
+    };
+  }, []);
+  const setNode = (node: HTMLElement | null): void => {
+    own.current = node;
+    onNode(node);
+  };
+  return line ? (
+    <p ref={setNode} tabIndex={-1} className={classOf(styles, "line")}>
+      {children}
+    </p>
+  ) : (
+    <div ref={setNode} tabIndex={-1}>
+      {children}
+    </div>
   );
 }

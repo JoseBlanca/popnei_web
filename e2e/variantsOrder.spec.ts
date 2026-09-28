@@ -464,10 +464,17 @@ test("IP2 D3 the statistics a Calculate of the histograms or a Count waited for,
   await expectNoViolations(makeAxeBuilder);
 });
 
-/** The reason beside the disabled Count, the last of the two that stand
-    beside the disabled buttons of the section, the histograms' first. */
+/** The words a screen reader reads before the reason of a locked Count
+    when the reason has the focus, hidden from the eye. */
+const COUNT_UNAVAILABLE =
+  "Count the variants each filter keeps is unavailable: ";
+
+/** The reason beside the disabled Count that takes the focus, named for
+    the Count by words hidden from the eye. */
 function countReason(page: Page): Locator {
-  return variants(page).getByText(NONE_KEPT, { exact: true }).last();
+  return variants(page).locator("[tabindex='-1']", {
+    hasText: COUNT_UNAVAILABLE,
+  });
 }
 
 const UNDO = process.platform === "darwin" ? "Meta+z" : "Control+z";
@@ -484,6 +491,15 @@ test("IP2 D3 a Count that waited for the statistics, locked by thresholds that k
   await page.keyboard.press("Enter");
   await expect(button(variants(page), COUNT)).toBeDisabled();
   await expect(countReason(page)).toBeFocused();
+  // Named for the Count; the words seen, and the description of the
+  // button, are the reason alone.
+  await expect(countReason(page)).toHaveText(
+    `${COUNT_UNAVAILABLE}${NONE_KEPT}`,
+  );
+  await expect(countReason(page).getByText(COUNT_UNAVAILABLE.trim())).toHaveCSS(
+    "position",
+    "absolute",
+  );
   await expect(button(variants(page), COUNT)).toHaveAccessibleDescription(
     NONE_KEPT,
   );
@@ -508,4 +524,67 @@ test("IP2 D3 an Undo to thresholds that keep nobody, with the focus on the Count
   await expect(obsHet).toHaveValue("0.5");
   await expect(button(variants(page), COUNT)).toBeEnabled();
   await expect(button(variants(page), COUNT)).toBeFocused();
+
+  // The next change leaves the focus where the user put it.
+  const maf = variants(page).getByRole("switch", {
+    name: "Filter the variants by major allele frequency (MAF)",
+  });
+  await maf.focus();
+  await page.keyboard.press("Space");
+  await expect(maf).toBeChecked();
+  await expect(maf).toBeFocused();
+});
+
+for (const [before, next] of [
+  ["0.1", "the reason of the locked Count"],
+  ["0.6", "the Count"],
+] as const) {
+  test(`IP2 D3 an Undo to the threshold ${before} of the filters a Count counted, with the focus on the line of the total, gives the focus to ${next}`, async ({
+    page,
+  }) => {
+    await panelRead(page);
+    await statistics(page);
+    await threshold(page, OBS_HET_SWITCH, OBS_HET_LABEL, before);
+    const obsHet = individuals(page).getByLabel(OBS_HET_LABEL, {
+      exact: true,
+    });
+    await obsHet.fill("0.5");
+    await obsHet.press("Enter");
+    await button(variants(page), COUNT).focus();
+    await page.keyboard.press("Enter");
+    const total = variants(page).getByText(/pass the filters\.$/);
+    await expect(total).toBeFocused();
+    await page.keyboard.press(UNDO);
+    await expect(obsHet).toHaveValue(before);
+    await expect(total).toHaveCount(0);
+    await expect(
+      before === "0.1" ? countReason(page) : button(variants(page), COUNT),
+    ).toBeFocused();
+  });
+}
+
+test("IP2 D3 after the focus went to the reason of a locked Count, a threshold committed in its field keeps the focus there and counts nothing", async ({
+  page,
+}) => {
+  await panelRead(page);
+  await statistics(page);
+  await threshold(page, OBS_HET_SWITCH, OBS_HET_LABEL, "0.1");
+  const obsHet = individuals(page).getByLabel(OBS_HET_LABEL, { exact: true });
+  await obsHet.fill("0.5");
+  await obsHet.press("Enter");
+  await button(variants(page), COUNT).focus();
+  await page.keyboard.press(UNDO);
+  await expect(countReason(page)).toBeFocused();
+
+  await obsHet.focus();
+  await obsHet.fill("0.5");
+  await obsHet.press("Enter");
+  await expect(button(variants(page), COUNT)).toBeEnabled();
+  await expect(obsHet).toBeFocused();
+  await expect(
+    variants(page).getByText(NOT_COUNTED, { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("status").last()).not.toHaveText(
+    /Counts of the filters/,
+  );
 });
