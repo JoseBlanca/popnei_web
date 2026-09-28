@@ -903,7 +903,7 @@ browsers is measured.
   cut to `numCompsKept` and the refusals; `transferablesOf`. Serves 1
   and 2. Shares `protocol.ts` and `messages.ts` with task 4.2: the two
   do not run at the same time.
-- [ ] 6.2 The client's restart after a large PCA, `PCA_RESTART_INDIVIDUALS`
+- [x] 6.2 The client's restart after a large PCA, `PCA_RESTART_INDIVIDUALS`
   (`client.md`, "A large PCA, and the restart after it", and its rows of
   "Crashes, defects, and every read answered"). Serves 3. Needs 6.1.
 - [ ] 6.3 `src/core/analyses/pca.ts` but its key: "What it does", "Which
