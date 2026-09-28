@@ -20,7 +20,10 @@ agree with the specs written beside it: the read of an xlsx, whose
 request has no options of a CSV and whose answer no `found`, and the
 test of the restart after a write at the bound of 25 MB; and when the
 specs of stage 4 were made to agree, the restart after a large PCA
-among the exceptions of "Not in this spec". The worker client is the page's one door to the two workers, the threads of the tab
+among the exceptions of "Not in this spec"; and on 28 September 2026
+for popnei's release `js-v0.1.0-dev.3`, which `package.json` names from
+the plan of stage 4: the memory of a PCoA, and the wasm of that release,
+72 KB larger gzipped. The worker client is the page's one door to the two workers, the threads of the tab
 beside the page where the files are read and the calculations run
 (`docs/architecture.md`, section 1): it starts them, keeps the `File` of
 every file the user picked, sends each worker one request at a time and
@@ -100,7 +103,11 @@ rule below rules out one of them.
   (`docs/architecture.md`, section 11), have to arrive at about 190
   kbit/s or faster, with nothing left for compiling it; a user on a
   slower connection cannot start the calculations, and reloading the
-  page does not mend it.
+  page does not mend it. The wasm of `js-v0.1.0-dev.3`, which stage 4 builds on, is
+  larger: 2,389,518 bytes against 2,164,963, and 774,080 against 701,996
+  gzipped by `gzip` at its default level, 72 KB more (28 September
+  2026), so about 783 KB as Vite measures it, which the build of stage 4
+  measures, and about 210 kbit/s within the 30 seconds.
 - **A worker that fails twice with no answer between is given up** for
   the life of the page. A failure here is one before its `ready`: the
   timeout, a `crashed`, an `error` event, a `ready` that fails its check,
@@ -353,21 +360,22 @@ verified").
 
 A PCA holds in the memory of wasm the individuals × individuals matrix,
 its eigenvectors and the workspace of the decomposition, about 6.1 × 8
-bytes per pair of individuals, and a PCoA about 56.8 bytes per pair by
-popnei's draft; that memory never shrinks. In node, with popnei's
+bytes per pair of individuals, and a PCoA 44.4 bytes per pair at its
+peak, measured by popnei, which counts it at the PCA's 48.8 in its
+release `js-v0.1.0-dev.3`; that memory never shrinks. In node, with popnei's
 release, the process grew by 69 MB for a PCA of 1,000 individuals, 196
 MB for 2,000 and 662 MB for 4,000 (`docs/specs/analyses/pca.md`, "How it
 runs"). So the client starts the calculation worker again after a run of
 the analysis `pca` whose individuals are more than
 `PCA_RESTART_INDIVIDUALS`, 700: those of its job's list, or, when the
-list is `null`, those the `opened` of its load gave. At 700 a PCA's
-matrix is about 24 MB and a PCoA's 28 MB, the size of
+list is `null`, those the `opened` of its load gave. At 700 a PCA or a
+PCoA holds about 24 MB by popnei's count, the size of
 `WRITE_RESTART_BYTES`, the bound of a write, below which the worker is
 left as it is. It does so after an outcome `done`, and after a refusal
 of popnei, which may come after the matrix was made, a pass with no
 variant of variance among them; a refusal of more than 9,381
-individuals, which popnei gives before it makes anything, restarts it
-too, since the client does not tell refusals apart, and core's lock
+individuals, which popnei gives before it makes anything, of the file
+for the PCA and of the pass for the PCoA, restarts it too, since the client does not tell refusals apart, and core's lock
 keeps such a job from being sent. Not after `reopenFailed`, as for a
 write. The steps are those of a write, above:
 the outcome first, then the worker ended, then a new one, sent the

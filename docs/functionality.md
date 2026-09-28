@@ -213,8 +213,11 @@ give the principal components that go into the GWAS as covariates.
   (`docs/specs/stage-4-open-points.md`).
 - The alternative is a principal coordinate analysis (PCoA) of the Kosman
   distances between the individuals, for data with a lot of missing
-  genotypes. popnei gives the distances and not yet the PCoA, which the
-  owner asked of popnei on 27 September 2026 (section 11).
+  genotypes. The owner asked it of popnei on 27 September 2026, and
+  popnei gives it, `doPcoaFromVariants`, from its release
+  `js-v0.1.0-dev.3` of 28 September 2026, with Lingoes' correction of
+  distances that cannot all be drawn in one space (section 11;
+  `docs/specs/analyses/pca.md`).
 - It is shown in two dimensions, the first two components by default,
   and in three, drawn with WebGL, the first three by default, with the
   variance each one explains; the user chooses the components of each
@@ -467,9 +470,11 @@ has not decided:
   missing data filter (section 3).
 - The density of variants along each chromosome (section 3).
 
-The last four the owner decided on 26 September 2026 to add to popnei.
+The last four the owner decided on 26 September 2026 to add to popnei,
+and popnei's release `js-v0.1.0-dev.3` of 28 September 2026 has them.
 - The PCoA of the Kosman distances between the individuals (section 5),
-  asked of popnei by the owner on 27 September 2026.
+  asked of popnei by the owner on 27 September 2026, and in
+  `js-v0.1.0-dev.3`.
 - The GWAS with covariates, the λ, the pseudo heritability; the GWAS spec
   of popnei is not written yet.
 

@@ -9,7 +9,10 @@ decide, what they decided alone that a user meets, what the owner is
 asked to make or approve, and what is asked of popnei. None of the specs
 is reviewed or approved yet. On 27 September 2026 the owner answered
 points 1, 3, 8, 14 and 15 and approved the new dependencies but
-calamine, and the specs named with each were revised the same day.
+calamine, and the specs named with each were revised the same day. On
+28 September 2026 the specs were revised to popnei's release
+`js-v0.1.0-dev.3`, which has the PCoA (below, "popnei's release
+`js-v0.1.0-dev.3`").
 
 The specs are, new: `docs/specs/analyses/pca.md`, the analysis and its
 panel; `docs/specs/charts/scatter.md`, the 2D plot, and `pca3d.md`, the
@@ -29,8 +32,8 @@ changed.
 A few words are used throughout. The **PCA** is the principal component
 analysis of the genotypes, popnei's `doPcaFromVariants`; the **PCoA** is
 the principal coordinate analysis of the Kosman distances between the
-individuals, which popnei does not have yet and which the owner asked of
-popnei on 27 September 2026. **Pruning** is popnei's filter of linkage
+individuals, which the owner asked of popnei on 27 September 2026 and
+which popnei's release `js-v0.1.0-dev.3` of 28 September 2026 has. **Pruning** is popnei's filter of linkage
 disequilibrium, which keeps a variant when its r² with every variant
 already kept within a window of base pairs is at most a threshold. The
 **calculation worker** is the thread of the tab that runs popnei; its
@@ -40,16 +43,18 @@ back.
 ## Decided by the owner on 27 September 2026
 
 - **The PCoA is popnei's**, asked of popnei that day, and stage 4 builds
-  it last, against popnei's draft of it, whose names are provisional
-  until popnei's release.
+  it last. It was specified against popnei's draft of it, and is now in
+  popnei's release `js-v0.1.0-dev.3`, whose names are the draft's.
 - **The PCoA corrects a matrix that is not Euclidean by Lingoes'
-  method**, as popnei's draft records the owner decided: popnei refuses
+  method**, as the owner decided: popnei refuses
   such a matrix unless the correction is asked for, popnei_web asks for
   it by default, and warns its users that the distances were corrected.
-  The Kosman distances of popnei's own test panel of 200 individuals,
-  `tests/reference/dists/panel.vcf.gz`, give 44 negative eigenvalues, so
-  the correction is the common case and not an exception (`pca.md`).
-  Recorded at popnei's commit `2f7545f`, on its branch `spec/pcoa`.
+  The Kosman distances of `e2e/fixtures/panel.nei`, 200 individuals,
+  with the PCA's filters and its pruning at r² 0.1 within 50,000 base
+  pairs, give 61 negative eigenvalues of 200, 7.94% of the variance, and
+  45 with the pruning off, so the correction is the common case and not
+  an exception (`pca.md`). Recorded in popnei's `docs/specs/pca.md`,
+  where `correctByLingoes` is false by default.
 
 The four numbered points below were put to the owner with a
 recommendation, and keep their numbers, which the specs cite.
@@ -294,22 +299,23 @@ meets.
   group, "All individuals" (`pca.md`).
 - **More than 9,381 individuals locks the PCA before its Run**, with
   words that point to popnei in Python, and not a warning after a Run
-  that fails. They are counted on the variants file, not on the
-  individuals the filters keep, as popnei counts them now, so the words
-  do not suggest the filters of individuals (`pca.md`).
+  that fails. For the PCA they are counted on the variants file, not on
+  the individuals the filters keep, as popnei counts them, so the words
+  do not suggest the filters of individuals; for the PCoA, whose limit
+  popnei counts on the individuals of the pass, they are counted on
+  those the lists keep, and the words offer the filters of individuals
+  (`pca.md`).
 - **The warnings of the PCA**: the pruning turned off; fewer variants
   used than individuals; and, for the PCoA, a warning whenever the
   distances were corrected, whatever the size of the correction, with
-  its size in its words: on popnei's panel, the correction adds to every
-  squared distance 30% of their mean, and draws two individuals of the
-  same genotypes 0.17 apart. The share of the mean is worked out by the
-  application from popnei's numbers, which popnei does not give as such
-  (`pca.md`).
-- **The PCoA is locked before popnei's release has it**, with words, for
-  a project that asks for it, a project file among them; the method is
-  not offered otherwise until then (`pca.md`).
+  its size in its words: on `panel.nei` with the pruning at r² 0.1
+  within 50,000 base pairs, the correction adds to every squared
+  distance 53% of their mean, and draws two individuals of the same
+  genotypes 0.22 apart; with the pruning off, 30% and 0.17. The share of
+  the mean is worked out by the application from popnei's numbers,
+  which popnei does not give as such (`pca.md`).
 - **A PCA that ends the calculation worker, when it needed 250 MB or
-  more**, 2,264 individuals for the PCA, is told as the tab lacking
+  more**, 2,264 individuals for the PCA or the PCoA, is told as the tab lacking
   memory, with what to do: fewer individuals, other tabs closed, or
   popnei in Python. Where each browser really refuses is measured in the
   plan (`pca.md`).
@@ -458,20 +464,59 @@ meets.
 
 ## Asked of popnei
 
-Besides the PCoA, asked on 27 September 2026, the specs ask:
+The PCoA, asked on 27 September 2026, is in popnei's release
+`js-v0.1.0-dev.3` of 28 September 2026. Of the five other asks, that
+release gives none for the PCA, as checked that day in its code and in
+node, and they stay asked:
 
 - the limit of 9,381 individuals of the PCA counted on the individuals
   the filters keep, not on those of the file, so that a file of more can
-  be analysed on a part of them;
+  be analysed on a part of them; the release's PCoA counts them so, and
+  its PCA does not;
 - a progress while the PCA decomposes its matrix, which took 6.7 of the
   6.75 s of a PCA of 2,500 individuals in node, while the bar stood
-  full;
+  full; the release reports none for the PCA or the PCoA;
 - the words of the PCA when no variant is left, as popnei's other
-  calculations say it, with the counts of each filter;
+  calculations say it, with the counts of each filter; the release's
+  PCoA words it so, and its PCA still says "there are no variants to do
+  a PCA with";
 - the called genotypes of each individual with the PCA, for the warning
   of point 9;
 - a way to keep the variants a pruning left, only if point 1 measures
   its time as large.
+
+## popnei's release `js-v0.1.0-dev.3`
+
+Made on 28 September 2026 from popnei's `main` at `eae29a2`; the
+`package.json` of the application names it from the plan of stage 4,
+in the place of `js-v0.1.0-dev.2`. What stage 4 meets in it:
+
+- **The PCoA**, `doPcoaFromVariants`, with the names, the option and the
+  fields the specs had taken from popnei's draft. It differs from the
+  draft in its limit, 9,381 individuals and not 8,695, counted on the
+  individuals of the pass; in its memory, 44.4 bytes per cell of the
+  individuals × individuals matrix measured, counted at the PCA's 48.8
+  and not 56.8; and in the words of its refusals. The lock of a PCoA
+  that popnei did not have is gone from the specs. `pca.md`, "The PCoA
+  of popnei's release", has each difference.
+- **Every options object refuses a key it does not know**, where
+  `js-v0.1.0-dev.2` ignored it; the runner passes only popnei's keys
+  (`runner.md`).
+- **A written `.nei` file is larger**, 251,074 bytes for `panel.nei` at
+  the missing data filter at 0.05 against 250,994, since the release
+  writes version 1.1 of popnei's vars file; the tests and the flows that
+  read the size of a written file take the new sizes (`runner.md`,
+  `writeVariants.md`). The committed `e2e/fixtures/panel.nei` is read
+  with the same numbers by both releases and is not written again.
+- **The wasm is 72 KB larger gzipped**, 774,080 bytes against 701,996,
+  measured by `gzip`; the build of stage 4 measures it as Vite does
+  (`docs/architecture.md`, section 11).
+- **`version()` still gives "0.1.0"**, as the two releases before it
+  (`runner.md`).
+- **The four needs of stage 3 that popnei lacked** are in it:
+  `writeVcf`, `Variants.filterByRegions`, the histogram of the missing
+  rate of each variant and `calcVarDensity` (`docs/build-order.md`).
+  Stage 4 does not use them.
 
 ## Set by a measurement, not by the owner
 

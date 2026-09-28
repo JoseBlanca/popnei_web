@@ -1143,7 +1143,8 @@ release `js-v0.1.0-dev.2` gave in node on 26 September 2026:
   cleared, and the reason gone; a list typed and not applied, with its
   line, and an Undo putting the text back to the list applied;
 - with the thresholds at 0.03 and 0.38, Write, Save, and the download
-  read: `panel.filtered.nei`, 170,042 bytes (`writeVariants.md`);
+  read: `panel.filtered.nei`, 170,042 bytes, and 170,122 from stage 4,
+  with popnei's `js-v0.1.0-dev.3` (`writeVariants.md`);
 - no button that downloads a histogram as SVG or PNG on the step; the
   CSV of the bins of the MAF, `panel.variant_maf_bins.csv`, its header and 40
   rows, the 39th `0.9500000000000001,0.9750000000000001,22,` with no

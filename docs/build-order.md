@@ -92,7 +92,8 @@ order does not wait for what exists:
 - seven distances between populations, Hudson's Fst and Jost's D among
   them, with their standard errors; Kosman distances between individuals;
 - the PCA of the genotypes, and not yet the PCoA, which the owner asked
-  of popnei on 27 September 2026 (stage 4, below); the r² of
+  of popnei on 27 September 2026 and which is in popnei's release
+  `js-v0.1.0-dev.3` of 28 September 2026 (stage 4, below); the r² of
   Rogers and Huff; the kinship;
 - the GWAS of a continuous trait, linear and linear mixed, with
   covariates, its null model with the heritability; the logistic models
@@ -184,7 +185,10 @@ order does not wait for what exists:
   `js-v0.1.0-dev.2` has none of the four, as was checked on 26 September
   2026, and the owner decided that day to add them to popnei. The rest of
   the stage, the other filters, the statistics per individual, the other
-  histograms and the `.nei` writer, is in that release.
+  histograms and the `.nei` writer, is in that release. The release
+  `js-v0.1.0-dev.3` of 28 September 2026 has the four: `writeVcf`,
+  `Variants.filterByRegions`, the histogram of the missing rate of each
+  variant in `calcPerVarDistribs`, and `calcVarDensity`.
 
 ### Stage 4. The samples step and the PCA
 
@@ -200,9 +204,12 @@ order does not wait for what exists:
   the populations and the export, which the 3D one reuses.
 - **Needs of popnei:** the PCoA of the Kosman distances between the
   individuals, which popnei did not have on 27 September 2026, and which
-  the owner asked of popnei that day. The PCA, the Kosman distances and
-  the LD pruning are in the release `js-v0.1.0-dev.2`. The PCoA comes last
-  in the stage, so the stage does not wait for it.
+  the owner asked of popnei that day. It is `doPcoaFromVariants`, with
+  Lingoes' correction, in the release `js-v0.1.0-dev.3` of 28 September
+  2026, which the `package.json` of the application names from the plan
+  of this stage; the PCA, the Kosman distances and the LD pruning were
+  in `js-v0.1.0-dev.2` already. The PCoA comes last in the stage, after
+  the PCA it shares its panel with.
 
 ### Stage 5. The analyses of the populations
 
@@ -265,11 +272,11 @@ order does not wait for what exists:
 |---|---|---|
 | a release of the wasm package by a workflow | technology.md, section 5 | stage 0 |
 | reading a `File` by ranges, with progress: given by the release `js-v0.1.0-dev.2` of 25 September 2026 | popnei issue #1 | stage 2 |
-| a VCF writer: none in `js-v0.1.0-dev.2`; to be added, decided by the owner on 26 September 2026 | functionality.md, section 3 | stage 3 |
-| the filter by the regions of a BED file: none; to be added, decided on 26 September 2026 | functionality.md, section 3 | stage 3 |
-| the histogram of the proportion of missing genotypes per variant: none; to be added, decided on 26 September 2026 | functionality.md, section 3 | stage 3 |
-| the density of variants along each chromosome: none; to be added, decided on 26 September 2026 | functionality.md, section 3 | stage 3 |
-| the PCoA of the Kosman distances between the individuals: none; asked of popnei by the owner on 27 September 2026 | functionality.md, section 11 | stage 4 |
+| a VCF writer: none in `js-v0.1.0-dev.2`; added, decided by the owner on 26 September 2026: `writeVcf`, in the release `js-v0.1.0-dev.3` of 28 September 2026 | functionality.md, section 3 | stage 3 |
+| the filter by the regions of a BED file: decided on 26 September 2026; `Variants.filterByRegions`, in `js-v0.1.0-dev.3` | functionality.md, section 3 | stage 3 |
+| the histogram of the proportion of missing genotypes per variant: decided on 26 September 2026; the missing rate of `calcPerVarDistribs`, in `js-v0.1.0-dev.3` | functionality.md, section 3 | stage 3 |
+| the density of variants along each chromosome: decided on 26 September 2026; `calcVarDensity`, in `js-v0.1.0-dev.3` | functionality.md, section 3 | stage 3 |
+| the PCoA of the Kosman distances between the individuals: asked of popnei by the owner on 27 September 2026; `doPcoaFromVariants`, in `js-v0.1.0-dev.3` | functionality.md, section 11 | stage 4 |
 | the private alleles, the rarefaction, the folded SFS | functionality.md, section 11 | stage 5 |
 | the fall of r² with distance and the distance at which it falls to half: `LdDecay` in `js/popnei/src/ld.ts`, in the release `js-v0.1.0-dev.2` | functionality.md, section 11 | stage 5 |
 | the logistic models of the GWAS | popnei, being written | stage 7 |

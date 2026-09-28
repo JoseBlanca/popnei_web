@@ -590,7 +590,8 @@ beside the messages it versions, and not here: core has no use for it.
   (`docs/architecture.md`, section 4). Nor does a write: popnei's
   `writeVars` writes a file of no variant, 3,594 bytes for `panel.nei`
   with the missing data filter at 0.05 and a MAF filter at 0, seen in
-  node on 26 September 2026 with `js-v0.1.0-dev.2`; its `passStats.numVars`
+  node on 26 September 2026 with `js-v0.1.0-dev.2`, and 3,682 with
+  `js-v0.1.0-dev.3` on 28 September 2026; its `passStats.numVars`
   is 0, and what the step does with such a file is the spec of the write's
   (`docs/specs/analyses/writeVariants.md`).
 - **A variant with no called genotype** has no value of any statistic,
@@ -630,4 +631,5 @@ None.
   a text cell becomes a number with the decimal mark found:
   `docs/specs/worker/individuals.md`.
 - The filter of the regions of a BED file, and the writer of the VCF:
-  with popnei's release that has them.
+  with popnei's release that has them, `js-v0.1.0-dev.3` of 28 September
+  2026, which stage 4 builds on for its PCoA and does not use them for.

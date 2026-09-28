@@ -266,6 +266,10 @@ it changes:
   deploy then asks for a file of the build it came from, which the
   deploy removed (section 11, point 10 of section 13).
 
+Stage 4 builds on popnei's release `js-v0.1.0-dev.3` of 28 September
+2026, which `package.json` names from its plan: it has the PCoA, which
+the specs of stage 4 had followed in popnei's draft (section 11).
+
 The specs of stage 4 hold the rest: `docs/specs/analyses/pca.md`,
 `docs/specs/charts/scatter.md` and `pca3d.md`, `docs/specs/worker/files.md`,
 and the revised specs of the project, the reader of the individuals file
@@ -1797,7 +1801,9 @@ xlsx, and the light worker of the skeleton loads no wasm.
 ## 11. The limits and the costs of the web
 
 What a user of the applications would meet, with the numbers from popnei's
-code, the release `js-v0.1.0-dev.2`.
+code, the release `js-v0.1.0-dev.2`, and from stage 4 the release
+`js-v0.1.0-dev.3` of 28 September 2026, which adds the PCoA and gives
+the same numbers for everything else but the size of a written file.
 
 - **The size of the variant file** is limited by the time of a pass, and
   not by memory, since popnei reads the file by ranges and holds only a
@@ -1819,19 +1825,23 @@ code, the release `js-v0.1.0-dev.2`.
   pick does. That a browser refuses such a file is from the specification
   of the File API and has not been seen in a browser yet. The new pick is a new load with a new id, so every result
   is calculated again from what the file holds now (section 3).
-- **The PCA refuses more than 9381 individuals.** The matrix of the
-  individuals, its eigenvectors and the workspace of the
+- **The PCA and the PCoA refuse more than 9381 individuals.** The matrix
+  of the individuals, its eigenvectors and the workspace of the
   eigendecomposition take about 6.1 times 8 bytes per pair of
   individuals, which at 9382 is more than the 4 GB that wasm addresses
-  (`room_for_the_square_of` of `crates/popnei-js/src/pca.rs` of popnei); the PCoA of popnei's draft refuses more than
-  8,695. popnei refuses with its message, and points to a program outside
+  (`room_for_the_square_of` of `crates/popnei-js/src/pca.rs` of popnei).
+  The PCoA was measured by popnei at 44.4 bytes per pair at its peak, and
+  its limit is the PCA's, since the edge is one allocation that does not
+  fit. popnei refuses with its message, and points to a program outside
   the browser, popnei in Python among them; the application locks the
   analysis before its Run instead, with words of its own that say the
-  same (`docs/specs/analyses/pca.md`, "Why it cannot run"). popnei counts
-  the individuals of the file and not those the filters of individuals
-  keep, in `js-v0.1.0-dev.2` and on popnei's main of 27 September 2026, so
-  a file of more than 9381 individuals cannot be analysed on a part of
-  them; asked of popnei (`docs/specs/analyses/pca.md`).
+  same (`docs/specs/analyses/pca.md`, "Why it cannot run"). For the PCA
+  popnei counts the individuals of the file and not those the filters of
+  individuals keep, in `js-v0.1.0-dev.2` and `js-v0.1.0-dev.3`, so a file
+  of more than 9381 individuals cannot be analysed on a part of them by
+  the PCA, which is asked of popnei; for the PCoA, `js-v0.1.0-dev.3`
+  counts those of the pass, so such a file can be analysed by the PCoA
+  on at most 9381 of them (`docs/specs/analyses/pca.md`).
 - **The time and the memory of a PCA grow with the individuals**, and
   mostly not with the variants: in node 26.8.2 on the owner's Mac, with
   300 variants, 0.45 s and 69 MB more for 1,000 individuals, 3.0 s and 196
@@ -1841,7 +1851,8 @@ code, the release `js-v0.1.0-dev.2`.
   minutes, not measured. popnei reports no progress while it decomposes
   the matrix, so the bar stands full meanwhile, 6.7 of the 6.75 s of a
   PCA of 2,500 individuals; the panel says so, and popnei is asked for a
-  progress of the decomposition. The memory stays with wasm after the
+  progress of the decomposition, which `js-v0.1.0-dev.3` does not give
+  either, for the PCA or the PCoA. The memory stays with wasm after the
   PCA, which is why the worker is started again after a large one
   (section 13, point 9).
 - **The kinship takes n² × 8 bytes**, 800 MB at 10,000 individuals, and
@@ -1855,9 +1866,11 @@ code, the release `js-v0.1.0-dev.2`.
   owner settled on 26 September 2026 (section 13, point 2), but after a
   large written file and after a large PCA (points 5 and 9).
 - **The downloads**: the wasm package of popnei, 0.71 MB gzipped
-  (710.6 KB, release js-v0.1.0-dev.2, as Vite measures it), measured again
-  at the release that adds the writer of the VCF and the filter of the
-  regions, before anything runs, loaded by the calculation worker alone; the files wasm,
+  (710.6 KB, release js-v0.1.0-dev.2, as Vite measures it), and about
+  0.78 MB for `js-v0.1.0-dev.3`, the release that adds the PCoA, the
+  writer of the VCF and the filter of the regions, whose wasm `gzip`
+  makes 72 KB larger, 774,080 bytes against 701,996, and which the build
+  of stage 4 measures as Vite does, before anything runs, loaded by the calculation worker alone; the files wasm,
   0.30 MB gzipped while it only reads, in stage 4, and about 0.58 MB with
   the writing of the report from stage 6, by the light worker the first
   time an xlsx is read or a report is written (`docs/technology.md`,
@@ -2041,8 +2054,8 @@ day, as recommended, and point 10 recommended and not yet decided:
 9. **The calculation worker is started again after a PCA or a PCoA of
    more than 700 individuals**, `PCA_RESTART_INDIVIDUALS`, whose matrix
    of the individuals then takes about the 25 MB after which a written
-   file restarts it (point 5), 24 MB for a PCA of 700 and 28 MB for a
-   PCoA, so that the tab gets back the
+   file restarts it (point 5), 24 MB for a PCA or a PCoA of 700 by
+   popnei's count of 48.8 bytes a cell, so that the tab gets back the
    memory of wasm the analysis took: about 4.3 GB after a PCA of 9,381
    individuals. It is a second exception to point 2. What it costs in
    stage 4: reading the header of the variants file again, at most 49 ms,

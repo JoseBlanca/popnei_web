@@ -916,7 +916,8 @@ rules of accessibility that the tests run on the page:
   for a browser too old, and no error bar.
 - From stage 3, in the flow of the Variants step: the Save of a file
   written at 0.05 gives a download named `panel.filtered.nei` of 250,994
-  bytes in each engine, and the step then shows it handed to the
+  bytes in each engine, 251,074 from stage 4, whose popnei,
+  `js-v0.1.0-dev.3`, writes a larger file (`docs/specs/worker/runner.md`), and the step then shows it handed to the
   browser, with no second Save.
 - From stage 3: with the project saved and then a file written, a
   reload of the page raises the browser's question, and after the file

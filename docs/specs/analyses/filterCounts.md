@@ -198,8 +198,8 @@ message would get the words of any other refusal.
   `filterKeptNone`. Every analysis that reads the filters of the
   variants, and the statistics of each individual, is refused by popnei,
   each with its own words; the histograms of the variants, which read no
-  filter, still run; and a write gives a file of no variant, 3,594 bytes
-  on `panel.nei` with the missing data filter at 0.05 and the MAF filter
+  filter, still run; and a write gives a file of no variant, 3,594 bytes,
+  3,682 with popnei's `js-v0.1.0-dev.3`, on `panel.nei` with the missing data filter at 0.05 and the MAF filter
   at 0.4, which the step does not offer
   (`docs/specs/analyses/writeVariants.md`).
 - **The file holds no variant.** Count gives counts of zero, with

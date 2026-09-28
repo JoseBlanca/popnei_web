@@ -19,7 +19,11 @@ when the specs of stage 4 were made to agree, the restart after a PCoA
 as after a PCA; and with the owner's answers of 27 September 2026: the
 pruned variants not kept between two PCAs, decided, and the PCA's
 pruning, which has no distance by default, given one in the test of the
-PCA. The calculation
+PCA; and on 28 September 2026 to popnei's release `js-v0.1.0-dev.3`,
+which `package.json` names from the plan of stage 4: the call of the
+PCoA as that release has it, its refusals and numbers, the options
+objects that popnei now checks key by key, and the files `writeVars`
+writes, 80 bytes larger for `panel.nei`. The calculation
 worker is the thread of the browser tab, beside the page, that runs
 popnei, so that a calculation does not freeze the page
 (`docs/architecture.md`, section 1). Its runner is the code that answers
@@ -153,7 +157,12 @@ agreed on 25 September 2026 that popnei raises its version with every
 release, "0.1.0-dev.2" and on; it is asked of popnei
 (`docs/specs/stage-2-open-points.md`, "What is asked of popnei"), and
 until it is done the version in a key is only as good as the one
-`version()` gives.
+`version()` gives. `js-v0.1.0-dev.3` gives "0.1.0" too (node, 28 September 2026), so
+a check number saved with the application of stage 3 is compared with
+one of stage 4 as made by the same popnei. The numbers of the two
+scripts of "How it is verified", `numbers.mjs` and `numbers3.mjs`, and
+those of the PCA are the same with both releases, and only the size of
+a written file differs, which is no check number.
 
 ### Opening the load
 
@@ -527,19 +536,20 @@ file. After the steps are on the `Variants`, the runner:
    transformToBiallelic: true })` of `js/popnei/src/pca.ts`: no weights
    of the variants, which makes one pass instead of two, and every allele
    but the major one counted the same, so that a variant of more than two
-   alleles is not refused. Both keys are popnei's options in the release
-   and on `main`, where an unknown key is refused and the release ignores
-   it (`git diff js-v0.1.0-dev.2 main -- js/popnei/src/pca.ts`). For the
-   PCoA it calls `doPcoaFromVariants(variants, { correctByLingoes: true
-   })`, from popnei's release that has it, so that Kosman distances no
-   space holds are corrected by Lingoes' method rather than refused, as
-   the owner decided on 27 September 2026 (`pca.md`, "What it does"); its
-   name, its option and its fields are popnei's draft, provisional
-   (`pca.md`, "The names of popnei's PCoA, provisional"). Until the
-   release in `package.json` has that function, the runner has no call of
-   it, and answers a `pca` job of the method `"pcoa"` `badRequest`, "the
-   PCoA is not in this release of popnei", before any step; core's lock
-   on the method, `PCOA_IN_POPNEI` of `pca.md`, never sends one.
+   alleles is not refused. For the PCoA it calls
+   `doPcoaFromVariants(variants, { correctByLingoes: true })` of
+   `js/popnei/src/pcoa.ts`, so that Kosman distances no space holds are
+   corrected by Lingoes' method rather than refused, as the owner decided
+   on 27 September 2026 (`pca.md`, "What it does"); popnei's default of
+   `correctByLingoes` is false. Each options object is written with these
+   keys alone, and never made from the job: `js-v0.1.0-dev.3` refuses a
+   key it does not know, "popnei: `numCompsKept` is not an option of
+   `doPcoaFromVariants`, whose options are `minNumSnps` and
+   `correctByLingoes`", where `js-v0.1.0-dev.2` ignored it. The other
+   calls of the runner, `openVcf` with `ploidy` and `onlyPassed`,
+   `calcPerVarDistribs` with `pops`, `stats`, `minNumIndividuals`,
+   `polyThreshold` and `histKwargs` of `numBins` and `range`,
+   `iterBlocks` with `fields`, give only keys the release knows.
 3. Checks that popnei's `individuals` are those the pass was to give, the
    list of the job or, when it is `null`, those of the open, in the same
    order, and that `projections` holds `individuals.length × numComps`
@@ -570,18 +580,27 @@ the file holds none or the filters kept none; no variant with variance,
 with one individual kept; and, with an LD pruning among the filters, a
 file whose variants are not in the order of their positions, "the
 variant 2 of the ones the filter by linkage disequilibrium has read, …",
-at the pass. The PCoA, by popnei's draft, refuses fewer than two
-individuals and more than 8,695, before the pass; a pass that keeps no
-variant, with popnei's usual "the pass gave no variant …"; a pair of
-individuals with no variant called in both; and distances all 0. With
-the correction asked, it does not refuse distances that no space holds.
+at the pass. The PCoA refuses, before the pass, one individual, "there
+is 1 individual, and a principal coordinate analysis places 2 at least
+by the distance of each pair", and more than 9,381 individuals of the
+pass, "the principal coordinates of 9382 individuals hold about 5 GB,
+…", counted after the list of the job, so that a list of 100 of a file
+of 9,382 is analysed; and after it a pass that keeps no variant, with
+popnei's usual "the pass gave no variant …"; a pair of individuals with
+no variant called in both, "4 of the 10 pairs of individuals have no
+distance, …"; distances all 0, "every distance is 0, …"; and a file not
+sorted under an LD pruning, as the PCA. With the correction asked, it
+does not refuse distances that no space holds. Each was seen in node
+with `js-v0.1.0-dev.3` on 28 September 2026, and `pca.md`, "The
+request", gives them whole.
 The panel says each in the user's words (`pca.md`, "Its
 words").
 
 The PCA holds the individuals × individuals matrix in the memory of
 wasm, which grows to it and never shrinks: about 6.1 × 8 bytes per pair
 of individuals, 662 MB more in the process at 4,000 individuals in node
-(`pca.md`, "How it runs"). The client starts the worker again after a PCA
+(`pca.md`, "How it runs"). The PCoA was measured by popnei at 44.4 bytes
+per pair at its peak, and popnei counts it at the PCA's 48.8. The client starts the worker again after a PCA
 or a PCoA of more than 700 individuals (`docs/specs/worker/client.md`, "A large PCA,
 and the restart after it"). The runner keeps nothing of a
 PCA: in stage 4 the worker keeps no intermediate result, the variants
@@ -607,7 +626,15 @@ on the `Variants` (above), the runner:
    variants; with the list of 125 individuals of "The cases" after that
    filter, 176,098 bytes and 125 individuals; with no filter, 261,490
    bytes, the size of `panel.nei` itself; seen in node on 26 September
-   2026.
+   2026 with `js-v0.1.0-dev.2`. `js-v0.1.0-dev.3` writes version 1.1 of
+   popnei's vars file, whose key holds the lengths of the chromosomes
+   (popnei's commit `343bc4f`, one of the changes of its writer since
+   `js-v0.1.0-dev.2`), and its files are larger: 251,074,
+   176,122 and 261,570 bytes for the three, with the same variants and
+   individuals read back (node, 28 September 2026). It reads the files of
+   `js-v0.1.0-dev.2`, and `e2e/fixtures/panel.nei`, 261,490 bytes, is not
+   written again: every number the tests read from it, the progress
+   among them, is the same with both releases.
 2. Makes a `Blob` of the bytes, `new Blob([bytes])`, and keeps no
    reference to the array, so that the heap of the worker can give it
    back; whether the engine copies the array into the `Blob` is measured
@@ -619,7 +646,8 @@ on the `Variants` (above), the runner:
    (`docs/specs/worker/messages.md`).
 
 A file of no variant is written, not refused, since popnei's `writeVars`
-writes one, 3,594 bytes for the filters above with a MAF filter at 0, and
+writes one, 3,594 bytes for the filters above with a MAF filter at 0,
+3,682 with `js-v0.1.0-dev.3`, and
 the runner passes popnei's answer on; the step does not offer it
 (`docs/specs/analyses/writeVariants.md`). popnei refuses the write with a plain
 `Error` when the memory of the tab does not take the file, answered
@@ -674,12 +702,14 @@ of the diversity, seen in node on 26 and 27 September 2026. The runner
 does not ask `numPassesOf`: popnei's first call, at 0 bytes, comes before
 a byte is read, and carries the passes of the run. No run of stage 4
 makes two passes: the PCA asks for no weights of the variants, which
-would make it read the file twice, and popnei's draft of the PCoA reads
-it once. The PCA's last call of the progress, at the end of the run,
-comes after the decomposition of the matrix, which popnei does not
-report: over a VCF of 20,066,850 bytes and 2,500 individuals, the last
-range was told at 0.04 s and the end at 6.75 s, in node with the release
-on 27 September 2026, so the bar stays at the share of the last range
+would make it read the file twice, and the PCoA reads it once,
+`numPassesOf("doPcoaFromVariants")` 1, whose progress over `panel.nei`
+was the same two calls (node, `js-v0.1.0-dev.3`, 28 September 2026). The
+last call of the progress of either, at the end of the run, comes after
+the decomposition of the matrix, which popnei does not report, in
+`js-v0.1.0-dev.3` as before: over a VCF of 20,066,850 bytes and 2,500
+individuals, the last range of the PCA was told at 0.04 s and the end at
+6.75 s, in node with `js-v0.1.0-dev.2` on 27 September 2026, so the bar stays at the share of the last range
 meanwhile (`pca.md`, "How it runs").
 
 popnei tells no progress of `openVcf` and `openVars`, which read before
@@ -735,7 +765,7 @@ Which answer, by what was thrown:
 | a call to popnei threw any other plain `Error`, whose prototype is `Error.prototype` itself: a refusal of the data, filters that keep no variant, a list of individuals that names one twice, a file the memory of the tab does not take | `refused`, with the message as it is | `popnei` | goes on |
 | a call to popnei threw anything else: a `WebAssembly.RuntimeError`, a trap of the wasm, a panic of Rust among the causes; a `RangeError` of a memory that cannot grow | `crashed`, with its message | `workerFailed` | closes |
 | popnei refused the open of the file again, in a request whose steps changed or after an open again that failed, whatever its message | `reopenFailed`, with the name of the file and popnei's message; the runner holds no `Variants`, and the next run opens the file again | `reopenFailed` | goes on |
-| a request that failed `parseToRunner`; a second `open`; a `run` or a `write` before the `open`, of another load, or after an open that popnei refused; an empty list of individuals; two populations of one name; a PCoA before popnei's release has it | `badRequest`, what was wrong | `defect` | closes |
+| a request that failed `parseToRunner`; a second `open`; a `run` or a `write` before the `open`, of another load, or after an open that popnei refused; an empty list of individuals; two populations of one name | `badRequest`, what was wrong | `defect` | closes |
 | a throw of our own code anywhere else: what `told` threw, which popnei's call throws back (step 2 above), a `popnei_web defect:` of step 4 or of the counts of a pass among them | `crashed`, its message | `workerFailed` | closes |
 
 - **The file changed on the disk.** A `File` is a handle to the file as
@@ -1016,7 +1046,10 @@ worker holds, from popnei's README and its doc comments:
   matrix, its eigenvectors and the workspace of the decomposition, about
   6.1 × 8 bytes per pair of individuals, 4.3 GB at the 9,381 popnei
   allows, which the memory of wasm keeps after the PCA (above, "The
-  principal components").
+  principal components"). The PCoA holds the sums of its pass, 4 bytes
+  per pair, while it reads, and at its peak no more than the PCA, 44.4
+  bytes per pair measured by popnei, whose limit is the same 9,381
+  individuals, of the pass.
 
 The memory of wasm grows to the largest pass it has held and never
 shrinks, and a restart of the worker gives it back
@@ -1360,10 +1393,16 @@ result of its own `individualChecks` run, as core would. Each test at
   order, and with the list of 119, 170,042 bytes; at 0.05 with a MAF filter at 0, 3,594 bytes and
   `passStats.numVars` 0. The progress of each is the two calls of
   the diversity, and a `told` that throws makes `write` throw that
-  value, as for `run`.
+  value, as for `run`. These sizes are `js-v0.1.0-dev.2`'s; from the
+  commit of stage 4 that names `js-v0.1.0-dev.3` in `package.json` they
+  are 261,570, 251,074, 176,122, 170,122 and 3,682 bytes, with the same
+  counts and the same individuals read back (node, 28 September 2026, by
+  `numbers3.mjs` above run with each release, whose other numbers are the
+  same with both).
 
-The numbers of stage 4 were given by the same release on 27 September
-2026, by the script of `docs/specs/analyses/pca.md`, "How it is
+The numbers of the PCA were given by the same release on 27 September
+2026, and the same by `js-v0.1.0-dev.3` on 28 September 2026, which gave
+those of the PCoA, by the script of `docs/specs/analyses/pca.md`, "How it is
 verified", which gives the table they come from. Each test at `run` of a
 runner made by `createRunner`, after the open of `panel.nei`:
 
@@ -1392,12 +1431,21 @@ runner made by `createRunner`, after the open of `panel.nei`:
   individuals whose second variant is at position 10 after one at 30,
   with the LD pruning, the message of the LD filter, and without it a
   result.
-- **The PCoA**, once popnei's release has it: the job of the defaults
-  with the method `"pcoa"` gives the numbers `pca.md` records then, from
-  `doPcoaFromVariants(v, { correctByLingoes: true })` in node, its
-  `lingoesConstant` and `negativeEigenvaluesPercent` among them, and a
-  second run the same numbers to the last bit; `numVarsUsed` is `null`.
-  Until then, a job of the method `"pcoa"` is answered `badRequest`.
+- **The PCoA**, the job of the PCA with its pruning and the method
+  `"pcoa"`: `numCompsFound` 198, `numComps` 10, PC1, PC2 and PC3
+  3.629128255610693, 3.5432450063275183 and 1.9702183453707434, `s000`
+  on them −0.004011193561632288, 0.08244556083044303 and
+  −0.04528526265366679, `lingoesConstant` 0.024712635394468305,
+  `negativeEigenvaluesPercent` 7.94441216305067, `numVarsUsed` `null`,
+  the `passStats` of the PCA with its pruning, and the two calls of the
+  progress; a second run the same numbers to the last bit. The refusals,
+  as literals: the list `s000` alone, "there is 1 individual, and a
+  principal coordinate analysis places 2 at least by the distance of each
+  pair"; the missing data filter at 0.05 and a MAF filter at 0, "the pass
+  gave no variant: its source gave 1200 and the steps kept none of them,
+  …"; and a VCF written in the test of five individuals, the fifth
+  called only at a variant where the others are missing, "4 of the 10
+  pairs of individuals have no distance, …" (`pca.md`, "The request").
 - **The steps of a PCA**: after a diversity at 0.1, a PCA opens the file
   again, since its filters are not the diversity's, and a second PCA with
   the same job does not.

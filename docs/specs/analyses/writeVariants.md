@@ -386,7 +386,7 @@ GB". It is the same function for the estimate and for the written file.
 - **The filters keep no variant.** `writeVars` does not refuse: on
   `panel.nei` with the missing data filter at 0.05 and the MAF filter at
   0.4 it gave a file of 3,594 bytes and no variant (node, 26 September
-  2026). The store keeps nothing of a file whose `passStats.numVars` is
+  2026), and `js-v0.1.0-dev.3` one of 3,682 bytes. The store keeps nothing of a file whose `passStats.numVars` is
   0, and its state `write` is `noVariant` (`docs/specs/core/store.md`),
   so the step shows no Save button, and says so (below), and the page
   holds no file that nobody can save; its counts fill `filterCounts`, so
@@ -545,7 +545,9 @@ before the user asks.
 - **The runner, in node** with popnei: the job with the missing data
   filter at 0.05 on `panel.nei` answers a `Blob` of 250,994 bytes and
   `passStats` of 1,152 of 1,200; with the 119 individuals the thresholds
-  0.03 and 0.38 keep, 170,042 bytes; the file read back with `openVars`
+  0.03 and 0.38 keep, 170,042 bytes; from stage 4, whose popnei,
+  `js-v0.1.0-dev.3`, writes version 1.1 of its vars file, 251,074 and
+  170,122 bytes (`docs/specs/worker/runner.md`, "The written file"); the file read back with `openVars`
   has 1,152 variants and those individuals in that order. `Blob` exists
   in node, so the runner's test makes it there.
 - **The store, with Vitest** (`docs/specs/core/store.md`): a change of a
@@ -579,7 +581,8 @@ before the user asks.
   with none `panel.nei`; `PANEL.NEI` with a filter `PANEL.filtered.nei`.
 - **Playwright**, in Chromium, Firefox and WebKit: the flow writes
   `panel.nei` with the missing data filter at 0.05, presses Save, and
-  reads the download's name and size, 250,994 bytes; the variants of
+  reads the download's name and size, 250,994 bytes, and 251,074 from
+  stage 4; the variants of
   `panel.vcf.gz` with LowQual in place of PASS in every FILTER column,
   a VCF made by the flow, read with only the variants that passed and
   written, which gives the words of a VCF with none that passed; and

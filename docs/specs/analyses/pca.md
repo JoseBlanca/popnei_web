@@ -24,7 +24,12 @@ user types before the PCA can run, the pruned variants not kept between
 two PCAs, and the worker started again after a large PCA, Open 1; and
 again that day, the option of the pruning made to keep its r² and its
 distance while the pruning is off, so that turning it off and on again
-does not lose the distance typed. There is no code of it yet. This spec gives
+does not lose the distance typed; and on 28 September 2026 to popnei's
+release `js-v0.1.0-dev.3`, which has the PCoA: its names, its limit of
+9,381 individuals counted on those the lists keep, its refusals, its
+memory and its numbers on `panel.nei`, where it differs from the draft
+this spec had followed ("The PCoA of popnei's release", at the end).
+There is no code of it yet. This spec gives
 the analysis that places the individuals of a dataset on a few axes, to
 see its structure and check the populations against it: the module
 `src/core/analyses/pca.ts`, which says what the components are calculated
@@ -120,11 +125,12 @@ methods, which the user chooses:
   as nearly as a space can. Each pair is compared over its own variants,
   so an individual with many missing genotypes is not drawn toward the
   centre, which is what it is for (`docs/functionality.md`, section 5).
-  popnei gives it as `doPcoaFromVariants`, which the owner asked of
-  popnei on 27 September 2026 and which popnei's draft spec describes,
-  "The principal coordinates of distances" of `docs/specs/pca.md` on its
-  branch `spec/pcoa`; every name of it this spec uses is provisional, and
-  is listed in "The names of popnei's PCoA, provisional", below.
+  popnei gives it as `doPcoaFromVariants` of `js/popnei/src/pcoa.ts`,
+  which the owner asked of popnei on 27 September 2026 and which is in
+  popnei's release `js-v0.1.0-dev.3` of 28 September 2026; popnei's
+  `docs/specs/pca.md`, "The principal coordinates of distances", says
+  what it computes. The application builds on that release from stage 4
+  ("The PCoA of popnei's release", at the end).
 
 **The Kosman distances are corrected when no space holds them.** A PCoA
 places the individuals in a space where the straight line between two of
@@ -133,19 +139,25 @@ components is an eigenvalue of a matrix made of the distances. When no
 space has points at those distances, some eigenvalues are negative, a
 variance below 0 that no direction has. The Kosman distances of real
 data are often so, since each pair is compared over its own variants:
-popnei's panel of 200 individuals, with 3 genotypes in 100 missing, gives
-44 negative eigenvalues of 200, holding 2.98% of the variance of the
-distances, in popnei's draft. popnei refuses such distances unless it is
-asked to correct them, by Lingoes' method: with c the most negative
-eigenvalue in absolute value, it adds 2c to the square of the distance
-of every pair of different individuals, which raises the eigenvalues by
-c and makes every one of them 0 or above. The owner decided on 27 September 2026 that
-popnei_web asks for the correction always and warns its users that the
-distances were corrected (popnei's draft at its commit `2f7545f`, where
-the decision is recorded; `docs/specs/stage-4-open-points.md`). So the
-application calls `doPcoaFromVariants(variants, { correctByLingoes: true
-})`, and a PCoA it shows is of the corrected distances whenever they
-needed it (below, "The warnings").
+`e2e/fixtures/panel.nei`, 200 individuals, with the missing data filter
+at 0.1, the MAF filter at 0.95 and the pruning at r² 0.1 within 50,000
+base pairs, gives 61 negative eigenvalues of 200, holding 7.94% of the
+variance of the distances, and with the pruning off 45, holding 3.02%
+(popnei's refusal of the distances uncorrected, in node with
+`js-v0.1.0-dev.3` on 28 September 2026). popnei refuses such distances
+unless it is asked to correct them, by Lingoes' method: with c the most
+negative eigenvalue in absolute value, it adds 2c to the square of the
+distance of every pair of different individuals, which raises the
+eigenvalues by c and makes every one of them 0 or above. The owner
+decided on 27 September 2026 that popnei_web asks for the correction
+always and warns its users that the distances were corrected, and that
+in popnei the correction is not made unless it is asked for, so
+`correctByLingoes` is false by default there (popnei's
+`docs/specs/pca.md`, where the decision is recorded;
+`docs/specs/stage-4-open-points.md`). So the application calls
+`doPcoaFromVariants(variants, { correctByLingoes: true })`, and a PCoA
+it shows is of the corrected distances whenever they needed it (below,
+"The warnings").
 
 Both read the same variants, the dataset's filters with the PCA's own
 MAF filter and pruning, so that the two can be compared, and both give
@@ -307,10 +319,7 @@ the PCA was locked for it holds, or saved with the pruning off before a
 distance was typed; `colourBy` a
 text or `null`, not checked against the table, which a later file may
 change; `axes` three different whole numbers from 1 to 10,
-`PCA_NUM_COMPS_KEPT`; and `view` `"2d"` or `"3d"`. `"pcoa"` is taken
-before popnei's release has the PCoA, and the analysis is then locked
-(below, "Why it cannot run"), so that a project file of a later version
-of the application opens. The ranges are those of the fields of the
+`PCA_NUM_COMPS_KEPT`; and `view` `"2d"` or `"3d"`. The ranges are those of the fields of the
 panel, which take fewer numbers still (below, "What it shows"), so that
 no option the panel sends is refused here, which would be a defect of
 `setAnalysisOptions` (`docs/specs/core/project.md`). Anything else is
@@ -410,8 +419,8 @@ gives the first of these:
 
 | the project | the reason |
 |---|---|
-| the method `"pcoa"` while popnei's release in the application has no `doPcoaFromVariants`, `PCOA_IN_POPNEI` false | "This project asks for the PCoA of the Kosman distances, which this version of the application cannot calculate yet. Choose the PCA of the genotypes as the method." |
-| more individuals in the variants file than the method's limit, 9,381 for the PCA and 8,695 for the PCoA | "panel.nei has 12,000 individuals, and the principal components of more than 9,381 need more memory than a browser tab can hold. Calculate them with popnei in Python, outside the browser." For the PCoA, "…the principal coordinates of more than 8,695…" |
+| the PCA, and more than 9,381 individuals in the variants file, `PCA_MAX_INDIVIDUALS` | "panel.nei has 12,000 individuals, and the principal components of more than 9,381 need more memory than a browser tab can hold. Calculate them with popnei in Python, outside the browser." |
+| the PCoA, and more than 9,381 individuals kept by the lists of the filters of individuals, `byLists` of `individualsKept` | "panel.nei has 12,000 individuals, and the principal coordinates of more than 9,381 need more memory than a browser tab can hold. Keep at most 9,381 with the filters of individuals in the Variants step, or calculate them with popnei in Python, outside the browser." With a list that keeps some of them, "panel.nei has 12,000 individuals and the filters of individuals keep 10,000 of them, and the principal coordinates …" |
 | any reason of `individualsNeeds` of `project.md`: the metadata file being read, "Reading pops.csv."; its read refused or failed; a file named by an opened project and not read when the project was saved, `notGiven`, "pops.csv was not read when this project was saved, so the project file does not hold it. Load pops.csv again in the Individuals step."; individuals of the variants missing from it, "12 individuals of panel.nei are not in pops.csv: ind_031, ind_044 and 10 more. Add them to the file and load it again in the Individuals step." | its words |
 | the PCA's pruning on, `on` true, with no distance, `maxDist` `null`, and no LD filter in the dataset, `pruningDistanceReason` | "The LD pruning of the PCA needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn the pruning off." |
 
@@ -428,21 +437,6 @@ since no pruning is made. While the dataset has an LD filter the PCA
 does not prune, and nothing locks. The words say why there is no
 default and what to do; the help says how to choose the distance.
 
-**The PCoA before popnei's release has it.** `PCOA_IN_POPNEI`, a
-constant of the module, says whether the release of popnei the
-application is built on has `doPcoaFromVariants`; it is false until the
-commit that names that release in `package.json` sets it true, and a
-Vitest test, which may import popnei where core may not, asserts that it
-equals `typeof doPcoaFromVariants === "function"` of the installed
-package, so that the two cannot drift apart. While it is false a
-project whose options say `"pcoa"`, a file of a later version of the
-application or one written by hand, is locked with the words above, and
-the panel shows its two radio buttons of the method so that the user can
-choose the PCA; with the PCA chosen, the panel shows no method. So the
-store never sends a job of the PCoA, and the runner answers one as a
-request it cannot take
-(`docs/specs/worker/runner.md`, "The principal components").
-
 **The limit on the individuals.** popnei refuses a PCA of more than
 9,381 individuals, since the individuals × individuals matrix, its
 eigenvectors and the workspace of the decomposition take about 6.1 × 8
@@ -450,25 +444,32 @@ bytes per pair, more than the 4 GB wasm addresses at 9,382
 (`room_for_the_square_of` of `crates/popnei-js/src/pca.rs` of popnei;
 `docs/architecture.md`, section 11). It refuses before the pass, in 1 ms,
 and it counts the individuals of the file and not those the list of
-individuals keeps: in node, with the release, a VCF of 9,382 individuals
-with `filterIndividuals` of 100 of them was refused with the same
-message, "the principal components of 9382 individuals hold about 5 GB,
-…" (27 September 2026, `js-v0.1.0-dev.2`; the same code is on popnei's
-`main` at `2d2229c`). So the lock counts the individuals of the file,
-and its words do not offer the filters of individuals, which would not
-help. The user reads the application's words of the table above, before
-any Run, and never popnei's message. popnei is asked to count the individuals of the pass (below,
-"What this spec asks of popnei"); when it does, the lock counts the
-individuals the lists keep, `byLists` of `individualsKept`, and its words
-end "Keep at most 9,381 with the filters of individuals in the Variants
-step, or calculate them with popnei in Python, outside the browser.", and
-a threshold that leaves more is told by popnei's refusal after the Run,
-as the diversity's empty populations are. The PCoA's 8,695 is popnei's
-draft, worked out from its peak of 56.8 bytes for each cell of the
-individuals × individuals matrix and not yet measured; popnei's plan
-measures it under node through `doPcoaFromVariants` with the correction,
-and its draft says the limit may then be the PCA's 9,381
-(`PCOA_MAX_INDIVIDUALS`, provisional, checked against popnei's release).
+individuals keeps: in node, a VCF of 9,382 individuals with
+`filterIndividuals` of 100 of them was refused with the same message,
+"the principal components of 9382 individuals hold about 5 GB, …", with
+`js-v0.1.0-dev.2` on 27 September 2026 and again with `js-v0.1.0-dev.3`
+on 28 September 2026. So the lock of the PCA counts the individuals of
+the file, and its words do not offer the filters of individuals, which
+would not help. popnei is still asked to count the individuals of the
+PCA's pass (below, "What this spec asks of popnei").
+
+The PCoA takes the same limit, 9,381, and counts the individuals of its
+pass, after `filterIndividuals`: the same VCF of 9,382 individuals with
+a list of 100 gave a PCoA of 100 individuals, and without the list was
+refused before the pass, "the principal coordinates of 9382 individuals
+hold about 5 GB, …" (node, `js-v0.1.0-dev.3`, 28 September 2026;
+`room_for_the_principal_coordinates_of` of `crates/popnei-js/src/pca.rs`).
+popnei measured the PCoA under node at 44.4 bytes a cell of the
+individuals × individuals matrix, and counts the PCA's 48.8, since the
+edge is set by one allocation that does not fit and not by the memory
+the analysis holds (below, "How it runs"). So the lock of the PCoA
+counts the individuals the lists of the filters of individuals keep,
+`byLists` of `individualsKept`, which are known before any statistics,
+and its words offer those filters. A threshold on the individuals that
+leaves more than 9,381 is not known before its statistics, and is told
+by popnei's refusal after the Run, before the pass, in the words of the
+lock (below, "Its words"), as the diversity's empty populations are.
+The user reads the application's words, and never popnei's message.
 
 **The metadata file, which only colours.** The PCA locks while the
 individuals file is being read, when it could not be read, when an
@@ -524,7 +525,8 @@ variants, { correctByLingoes: true })`; and it keeps the first
 - **`numPrinComps: 0`** asks popnei for no weights of the variants, which
   makes one pass over the file instead of two:
   `numPassesOf("doPcaFromVariants", { numPrinComps: 0 })` is 1 and
-  without it 2, in node with the release on 27 September 2026. The screen
+  without it 2, in node with `js-v0.1.0-dev.2` on 27 September 2026 and
+  with `js-v0.1.0-dev.3` on 28 September 2026. The screen
   shows no weights, the writers' decision of 27 September 2026.
 - **`transformToBiallelic: true`** counts every allele that is not the
   major one the same, which gives a variant of more than two alleles a
@@ -537,9 +539,19 @@ variants, { correctByLingoes: true })`; and it keeps the first
 - **`correctByLingoes: true`** corrects the Kosman distances when no
   space holds them, as the owner decided (above, "What it does"), and
   changes nothing when a space does: the constant is then 0 and the
-  result that of the distances as they are. `minNumSnps` is left to
-  popnei's default, so a pair needs one variant called in both
-  individuals to have a distance.
+  result that of the distances as they are. It is written out because
+  popnei's default is false, and the distances would then be refused.
+  `minNumSnps` is left to popnei's default, 0, so a pair needs one
+  variant called in both individuals to have a distance.
+- **These keys and no other.** From `js-v0.1.0-dev.3` every options
+  object of popnei refuses a key it does not know, where
+  `js-v0.1.0-dev.2` ignored it: `{ correctByLingoes: true, numCompsKept:
+  10 }` is refused with "popnei: `numCompsKept` is not an option of
+  `doPcoaFromVariants`, whose options are `minNumSnps` and
+  `correctByLingoes`", and so is a key of the job given to
+  `doPcaFromVariants` (node, 28 September 2026). So the runner builds
+  each options object from these keys alone, and never spreads the job
+  into one.
 - **The first 10 components are kept**, `PCA_NUM_COMPS_KEPT`, the
   writers' decision of 27 September 2026. popnei gives every component
   with variance, the individuals less one at most, and the projections of
@@ -575,14 +587,17 @@ called genotypes all have one dosage has no variance and is left out.
 "PC1 to PC10 of 199".
 
 `lingoesConstant` and `negativeEigenvaluesPercent` are the two numbers
-popnei's draft adds to the PCoA's result: c, the most negative eigenvalue
-of the distances in absolute value, which the correction adds twice to
-every squared distance, and the share of the variance of the distances
-that lay in the negative eigenvalues before the correction, in percent,
-2.98 on popnei's panel. Both are 0 when the distances needed no
+popnei's `VariantsPcoaResult` adds to the fields a plot draws, which it
+names and shapes as `doPcaFromVariants` does: c, the most negative
+eigenvalue of the distances in absolute value, in the units of a squared
+distance, which the correction adds twice to every squared distance; and
+the share of the variance of the distances that lay in the negative
+eigenvalues before the correction, in percent, 7.94 on `panel.nei` with
+the pruning of the flow. Both are 0 when the distances needed no
 correction. The percentages of the components are of the distances as
 corrected, and add up to 100 over every component; a correction leaves at
-most the individuals less two components, 198 on popnei's panel of 200.
+most the individuals less two components, 198 on `panel.nei`, of 200
+individuals.
 
 popnei refuses the call, with a plain `Error`, in the cases its
 `@throws` lists; the module rules out those it can see (the limit on the
@@ -591,7 +606,8 @@ user as the panel's error words (below, "Its words"):
 
 - **No variant left**: "there are no variants to do a PCA with", with no
   counts, whether the file holds none or the filters kept none, seen in
-  node with the release on 27 September 2026 for a VCF of a header
+  node with `js-v0.1.0-dev.2` on 27 September 2026 and with
+  `js-v0.1.0-dev.3` on 28 September 2026, for a VCF of a header
   alone, with and without a MAF filter, and for `panel.nei` with the
   missing data filter at 0.05 and a MAF filter at 0. It is not the "the
   pass gave no variant: …" of the other calculations of popnei, which
@@ -612,18 +628,35 @@ user as the panel's error words (below, "Its words"):
   other analysis, since its pruning is on by default.
 - **A VCF of another ploidy, a line of a VCF popnei cannot read**, as for
   every analysis.
-- **The PCoA**, by popnei's draft, whose messages are provisional: a
-  pair of individuals with no variant called in both has no Kosman
-  distance, and the PCoA is refused, with a message that counts such
-  pairs, names the first and the individual in most of them; every
-  distance 0, "every distance is 0, so the individuals are all at one
-  point and there is nothing to do a PCoA with"; fewer than two
-  individuals, before the pass. A pass that keeps no variant is refused
-  with the words of popnei's other calculations, "the pass gave no
-  variant and its source holds none" or "the pass gave no variant: …"
-  with the counts of each filter, since the PCoA's pass is that of the
-  Kosman distances. A matrix that no space holds is not refused, since
-  the application asks for the correction.
+- **The PCoA**, in these messages of `js-v0.1.0-dev.3`, seen in node on
+  28 September 2026:
+  - a pair of individuals with no variant called in both has no Kosman
+    distance, and the PCoA is refused, "4 of the 10 pairs of
+    individuals have no distance, the first of them `a` and `e`, and `e`
+    is in 4 of them; those pairs were called together at no variant;
+    take that individual out with `filterIndividuals`, or run the PCA
+    of the variants, which gives every individual a projection", and
+    with one pair "1 of the 6 pairs of individuals has no distance, …";
+  - every distance 0, "every distance is 0, so the individuals are all
+    at one point and there is nothing to do a PCoA with";
+  - one individual, before the pass, "there is 1 individual, and a
+    principal coordinate analysis places 2 at least by the distance of
+    each pair";
+  - more than 9,381 individuals of the pass, before it, "the principal
+    coordinates of 9382 individuals hold about 5 GB, …", which the lock
+    prevents but for a threshold on the individuals (above, "Why it
+    cannot run");
+  - a pass that keeps no variant, in the words of popnei's other
+    calculations, "the pass gave no variant and its source holds none:
+    …" or "the pass gave no variant: its source gave 1200 and the steps
+    kept none of them, the `missing_data` filter was given 1200 and kept
+    1152, the `maf` filter was given 1152 and kept 0; …", since the
+    PCoA's pass is that of the Kosman distances;
+  - a file not sorted by position under an LD pruning, in the PCA's
+    message above.
+
+  A matrix that no space holds is not refused, since the application
+  asks for the correction.
 
 ### The warnings
 
@@ -635,7 +668,7 @@ its text.
 |---|---|---|
 | `pruningOff` | the job had no LD filter: the PCA's pruning off and none in the dataset | "The LD pruning is off, so a region of the genome counts once for each of its variants, and a region of many variants in linkage disequilibrium, such as an inversion, can make a component of its own that separates the individuals by that region rather than by their ancestry. Turn the pruning on, unless such regions are what you are looking for." |
 | `fewVariants` | fewer variants used than individuals: `numVarsUsed` for the PCA, `passStats.numVars` for the PCoA, below `individuals.length` | "The PCA used 150 variants that vary among its 200 individuals, fewer variants than individuals, so each component rests on few variants and can show chance differences as structure. If the dataset has more, loosen the filters in the Variants step, or the maximum major allele frequency or the LD pruning of the PCA." For the PCoA: "The PCoA used 150 variants for its 200 individuals, …" |
-| `lingoesCorrection` | the PCoA, `lingoesConstant` above 0 | "The Kosman distances between these individuals cannot all be drawn in one space: 2.98% of their variance lies in directions that no space has. So they were corrected, by Lingoes' method, which adds the same amount, here 0.028, to the square of the distance between every two individuals, 30% of the mean of those squares. This moves the closest individuals apart the most: two individuals of the same genotypes are drawn 0.17 apart, and groups look looser than their distances make them. The percentages of the components are of the corrected distances. Compare with the PCA of the genotypes, which needs no correction." |
+| `lingoesCorrection` | the PCoA, `lingoesConstant` above 0 | "The Kosman distances between these individuals cannot all be drawn in one space: 7.94% of their variance lies in directions that no space has. So they were corrected, by Lingoes' method, which adds the same amount, here 0.049, to the square of the distance between every two individuals, 53% of the mean of those squares. This moves the closest individuals apart the most: two individuals of the same genotypes are drawn 0.22 apart, and groups look looser than their distances make them. The percentages of the components are of the corrected distances. Compare with the PCA of the genotypes, which needs no correction." With the pruning off: "…3.02% of their variance…, here 0.029, …, 30% of the mean of those squares. … drawn 0.17 apart, …" |
 
 The warning of functionality section 5, that linked regions can dominate
 the components, is `pruningOff`. Its condition is the job's filters and
@@ -649,38 +682,49 @@ uses 535 variants for 200 individuals, and no warning.
 
 `lingoesCorrection` is given for every PCoA whose distances were
 corrected, as the owner asked that users be warned of it, whatever the
-size of the correction; no threshold is set, since popnei's draft leaves
-the values to warn at to the application and gives no rule, and the
-words say how large the correction was, for the user to judge. The three
-numbers of its words:
+size of the correction; no threshold is set, since popnei leaves the
+values to warn at to the application, "Which values a user should be
+warned at is the application's to decide" (the doc comment of
+`correctDistsByLingoes`), and the words say how large the correction
+was, for the user to judge. The three numbers of its words, on
+`panel.nei` with the filters of the flow, the pruning at r² 0.1 within
+50,000 base pairs:
 
 - **The share of the variance that lay in directions no space has**,
   `negativeEigenvaluesPercent`, to two decimals as the other
-  percentages, "2.98%".
+  percentages, "7.94%".
 - **The amount added to every squared distance**, 2c, twice
-  `lingoesConstant`, to two significant digits, "0.028", and **how large
+  `lingoesConstant`, to two significant digits, "0.049", and **how large
   it is beside the distances**, 2c over the mean of d² over the pairs of
-  individuals, d their Kosman distance, in whole percent, "30%". popnei's draft
-  measures the correction so: on its panel, 2c is 30 in 100 of the mean
-  of d², and the nearest pair goes from 0.137 to 0.217 while the farthest
-  goes from 0.358 to 0.396. The result does not hold the mean of d²,
+  individuals, d their Kosman distance, in whole percent, "53%". The
+  correction moves the nearest pairs the most: on `panel.nei` so pruned,
+  2c is 53 in 100 of the mean of d², and the nearest pair goes from
+  0.137 to 0.261 while the farthest goes from 0.361 to 0.424; with the
+  pruning off, 30 in 100, from 0.139 to 0.221 and from 0.364 to 0.403
+  (`correctDistsByLingoes` of `calcPairwiseKosmanDists`, node,
+  `js-v0.1.0-dev.3`, 28 September 2026). The result does not hold the mean of d²,
   which the module works out from popnei's numbers by additions,
   multiplications and divisions: the variance along PC1 is the sum of the
   squares of its projections, λ1; the variance of the corrected
   distances is 100 λ1 over the percentage of PC1; the correction raised
   n − 1 eigenvalues by c, n the individuals of the result, so the
   variance before it is that less c(n − 1); and the mean of d² over the
-  n(n − 1)/2 pairs is twice that over n − 1. On ape's projections of
-  popnei's panel this gives 0.0947419715584643, where the mean of the
-  squares of R's Kosman distances of that panel is 0.0947419715584647,
-  and a share of 0.299387868729125.
+  n(n − 1)/2 pairs is twice that over n − 1. On popnei's PCoA of
+  `panel.nei` so pruned this gives 0.09269508999401767, where the mean
+  of the squares of the 19,900 distances of `calcPairwiseKosmanDists`
+  with the same filters is 0.09269508999401738, and a share of
+  0.5332026841133269; with the pruning off, 0.09787338688464631 against
+  0.09787338688464597, and 0.3010160617346238.
 - **How far apart it draws two individuals of the same genotypes**, the
-  square root of 2c, to two decimals, "0.17": the correction puts two
-  such individuals at that distance (popnei's draft, "How it runs").
+  square root of 2c, to two decimals, "0.22", and "0.17" with the
+  pruning off: the correction puts two such individuals at that distance
+  (popnei's `docs/specs/pca.md`, "How it runs" of the principal
+  coordinates).
 
-The example of the table is popnei's panel, `tests/reference/dists/
-panel.vcf.gz` of popnei, and not `e2e/fixtures/panel.nei`, whose PCoA
-waits for popnei's release.
+The example of the table is `e2e/fixtures/panel.nei` with the filters of
+the flow, and its numbers are those of "How it is verified", below. The
+pruning, which keeps 535 of the 1,175 variants, raises the correction
+there from 30% to 53% of the mean squared distance.
 
 Two things that could have been warnings of the module are not:
 
@@ -717,10 +761,12 @@ store compares them exactly (`docs/specs/core/store.md`, "The comparison
 with the check numbers"), which holds for the PCA: the eigendecomposition
 is popnei's compiled Rust in the same wasm, and four runs of the PCA
 on `panel.nei`, pruned at r² 0.1 within 50,000 base pairs, in one process, one of them after a diversity, gave
-the same percentages and projections to the last bit (node, the release,
-27 September 2026). The PCoA decomposes with the same code and is
-expected to hold as well; it is run twice in the runner's test once
-popnei's release has it. A new release of popnei may give other last
+the same percentages and projections to the last bit (node,
+`js-v0.1.0-dev.2`, 27 September 2026), and `js-v0.1.0-dev.3` gave the
+same numbers the next day; two runs of the PCoA with the same filters,
+in one process, gave the same percentages, constant and projections to
+the last bit (node, `js-v0.1.0-dev.3`, 28 September 2026), and the
+runner's test runs it twice. A new release of popnei may give other last
 digits, and the comparison then names both versions, as for any
 analysis. The percentages of a PCoA are of the corrected distances, so
 they check the constant of the correction too.
@@ -779,8 +825,8 @@ individuals adds `pca_variants.filter_individuals(individuals_kept)`
 after the filters. The PCoA calls `pcoa = popnei.do_pcoa_from_variants(
 pca_variants, correct_by_lingoes=True)` in the place of
 `do_pca_from_variants`, and prints `pcoa.lingoes_constant` and
-`pcoa.negative_eigenvalues_percent` as well, with popnei's draft names,
-provisional. The argument is written out because in Python it is false
+`pcoa.negative_eigenvalues_percent` as well, the names of
+`python/popnei/pca.py` at the tag `js-v0.1.0-dev.3`. The argument is written out because in Python it is false
 by default, the owner's word that there the user decides, and popnei
 then refuses distances no space holds, with a message that names it. popnei names the components `PC0`, `PC1`, … in Python, with
 zeros on the left, `PC000` for 199, where the application writes PC1 to
@@ -790,7 +836,7 @@ These lines, with the missing data filter at 0.05 in the place of 0.1,
 were run with popnei's Python package, built natively from popnei's
 `main` at `2d2229c`, on 27 September 2026: PC1 to PC3 explained
 3.5791902392779886, 3.459168102873343 and 1.9063456362555027, where the
-wasm of the release gives 3.5791902392779953, 3.4591681028733494 and
+wasm of `js-v0.1.0-dev.2` gives 3.5791902392779953, 3.4591681028733494 and
 1.9063456362555034, the same to 13 significant digits. The native build
 decomposes with another library than the wasm, so the script gives the
 application's numbers to about 1e-14 and not to the last digit, and the
@@ -854,15 +900,10 @@ export interface PcaOptions {
 }
 export const PCA_DEFAULTS: PcaOptions;             // frozen, the table of "Its options"
 export const PCA_NUM_COMPS_KEPT = 10;
-export const PCA_MAX_INDIVIDUALS = 9381;           // popnei's limit
-export const PCOA_MAX_INDIVIDUALS = 8695;          // popnei's draft, provisional
-/** Whether popnei's release in package.json has doPcoaFromVariants; false
-    until the commit that names such a release, which a Vitest test ties to
-    the installed package (above, "Why it cannot run"). */
-export const PCOA_IN_POPNEI: boolean;
-/** The reason of the lock of a PCoA that popnei's release lacks, or null;
-    needs calls it with PCOA_IN_POPNEI, and the tests with both values. */
-export function pcoaLock(o: PcaOptions, inPopnei: boolean): string | null;
+/** popnei's limit, the same for both methods: the individuals of the file
+    for the PCA, those the lists keep for the PCoA (above, "Why it cannot
+    run"). */
+export const PCA_MAX_INDIVIDUALS = 9381;
 /** The reason of the lock of the PCA's pruning, on with no distance, while
     the dataset has no LD filter, or null; needs gives it, and the panel shows
     it beside the field of the distance (above, "Why it cannot run"). */
@@ -1072,12 +1113,15 @@ comes and goes with the statistics in the cache (**Open 2**).
 
 - **Two individuals.** One component has variance, PC1, 100%, with `s000`
   at 18.78829422805594 and `s001` its opposite, in node with the MAF
-  filter at 0.95 and the list of the two (27 September 2026, the
-  release). There is no plot: the panel shows the table and the line
+  filter at 0.95 and the list of the two (27 September 2026,
+  `js-v0.1.0-dev.2`, and the same with `js-v0.1.0-dev.3`). There is no plot: the panel shows the table and the line
   "Only one component has variance, since 2 individuals have one axis
   between them, so there is no plot; the table gives each individual's
   place on it." Three individuals give two components, a 2D plot and no
-  3D.
+  3D. The PCoA of the same two gives one component, 100%, `s000` at
+  0.0842440801457195, and a constant of 0, since two points are always
+  at their distance in a line, so no warning (node, `js-v0.1.0-dev.3`,
+  28 September 2026).
 - **The filters keep no variant, or the file holds none.** popnei refuses
   the PCA with "there are no variants to do a PCA with", and the PCoA
   with the words of its other calculations, which tell the two apart; the
@@ -1085,18 +1129,19 @@ comes and goes with the statistics in the cache (**Open 2**).
   calculation that failed").
 - **No variant varies among the individuals kept**, as with one
   individual: refused, above.
-- **More than 9,381 individuals** in the variants file, or 8,695 for the
-  PCoA: locked, above.
+- **More than 9,381 individuals** in the variants file for the PCA, or
+  kept by the lists for the PCoA: locked, above. A threshold on the
+  individuals that leaves the PCoA more than 9,381: refused by popnei
+  before the pass, in the words of the lock.
 - **Kosman distances that no space holds**, the common case: corrected,
   with the warning `lingoesCorrection`. Distances that a space holds, as
-  popnei's `four_alleles.vcf.gz` of 40 individuals gives, are not
-  changed, and there is no warning; the line under the explained variance
-  says they needed no correction.
+  popnei's `four_alleles.vcf.gz` of 40 individuals gives, with 39
+  components and a constant of 0 (node, `js-v0.1.0-dev.3`, 28 September
+  2026), are not changed, and there is no warning; the line under the
+  explained variance says they needed no correction.
 - **Two individuals with no variant called in both**, for the PCoA:
   refused, with the words that name the individual in most such pairs;
   the PCA places them.
-- **A project that asks for the PCoA before popnei's release has it**:
-  locked, above.
 - **A cancel** ends the worker wherever it is, the decomposition
   included, and the store keeps no result (`docs/architecture.md`, section
   5); a restart of the worker loses nothing of the PCA's, which keeps no
@@ -1153,17 +1198,19 @@ comes and goes with the statistics in the cache (**Open 2**).
 ### How it runs
 
 One pass over the file in the calculation worker, for either method,
-`numPassesOf` 1, then the decomposition, which gives no progress. popnei
+`numPassesOf` 1, `numPassesOf("doPcoaFromVariants")` among them (node,
+`js-v0.1.0-dev.3`, 28 September 2026), then the decomposition, which
+gives no progress in that release either. popnei
 calls `onProgress` at each range of 4 MiB it reads and once at the end of
 the run, and the end comes after the decomposition: over a VCF of
 20,066,850 bytes, 2,500 individuals and 2,000 variants, the last range
-was told at 0.04 s and the end at 6.75 s (node 26.8.2, the release, on the
+was told at 0.04 s and the end at 6.75 s (node 26.8.2, `js-v0.1.0-dev.2`, on the
 owner's Mac, an Apple M5 Pro, 27 September 2026). So the bar of the
 panel stops at the share of the last range and stays there while the
 components are calculated, which the running state says in words (below).
 
 The decomposition grows as the cube of the individuals, and its memory
-as their square. Measured the same day in node, with the release, on
+as their square. Measured the same day in node, with `js-v0.1.0-dev.2`, on
 VCFs of 300 variants: 1,000 individuals in 0.45 s, the memory of the
 process grown by 69 MB; 2,000 in 3.0 s and 196 MB; 4,000 in 21 s and 662
 MB, against popnei's estimate of 6.1 × 8 bytes per pair of individuals,
@@ -1171,12 +1218,19 @@ MB, against popnei's estimate of 6.1 × 8 bytes per pair of individuals,
 minutes and the estimate 4.3 GB. These are node's times; the browsers
 run the same wasm, and the plan measures them in Chromium and WebKit.
 Here a pair is a cell of the individuals × individuals matrix, n² of
-them. The PCoA holds, by popnei's draft, the sums of the Kosman
-distances while the pass runs, 4 bytes a cell, and at its peak at most
-56.8 bytes a cell, 8 more than the PCA, since it writes the projections
-of every component while the eigenvectors are held: 3.6 GB at 8,000
-individuals. The correction adds nothing to it, since popnei makes it
-from the eigenvalues it already has, with no second decomposition.
+them. The PCoA holds the sums of the Kosman distances while the pass
+runs, two counts of 4 bytes for each pair, 4 bytes a cell, and drops
+them before the decomposition. Its peak was measured by popnei under
+node at 45.6 bytes a cell at 3,000 individuals and 44.4 at 8,695 to
+9,413, less than the PCA's count, since it writes the projections once
+the workspace of the decomposition is given back; popnei counts the
+PCA's 48.8, since 9,414 individuals failed on one allocation that did
+not fit and not with the memory full, so the two methods share the
+limit of 9,381 (popnei's `docs/specs/pca.md`, "How it runs" of the
+principal coordinates, and the doc comment of `doPcoaFromVariants`).
+The correction adds nothing to it, since popnei makes it from the
+eigenvalues and eigenvectors it already has, with no second
+decomposition.
 
 The memory of wasm grows to the matrix and never shrinks
 (`docs/architecture.md`, section 11), so a worker that made a PCA of
@@ -1184,8 +1238,9 @@ The memory of wasm grows to the matrix and never shrinks
 client starts the calculation worker again after a PCA or a PCoA of more
 than `PCA_RESTART_INDIVIDUALS`, 700 individuals. The number is set by
 the memory the calculation leaves behind: at 700 individuals a PCA
-holds about 24 MB, 700 × 700 × 48.8 bytes, and a PCoA 28 MB, about the
-25 MB above which a written file restarts the worker too
+holds about 24 MB, 700 × 700 × 48.8 bytes, and a PCoA the same by
+popnei's count, about the 25 MB above which a written file restarts the
+worker too
 (`WRITE_RESTART_BYTES`, `docs/specs/worker/client.md`), so the two
 restarts come at the same memory left behind. In stage 4
 the restart costs the reading of the header of the file, at most 49 ms
@@ -1237,9 +1292,10 @@ With Vitest, at the functions of the definition, on frozen projects:
   project does not read `p.variants`, which the test makes a getter that
   throws.
 - **`needs`**: a variants file of 9,382 individuals locked with the words
-  above, of 9,381 not, and a PCoA of 8,696 locked; `pcoaLock` of the
-  method `"pcoa"` with `false` gives the words of a PCoA not yet in
-  popnei, and with `true`, or of the method `"pca"`, `null`; each reason of `individualsNeeds` comes through; with `PCA_DEFAULTS`
+  above for the PCA, whatever the lists keep, and of 9,381 not; for the
+  PCoA, the same file locked with the words that offer the filters of
+  individuals, and not locked with a list that keeps 9,381 of them or
+  with a list that keeps 100, and a file of 9,381 not locked; each reason of `individualsNeeds` comes through; with `PCA_DEFAULTS`
   and the filters of a first project, the words of the pruning with no
   distance, and none with `maxDist` 50000, with the pruning off, `on`
   false and `maxDist` `null`, or with an LD filter in the dataset;
@@ -1254,8 +1310,6 @@ With Vitest, at the functions of the definition, on frozen projects:
   off are not inputs of the result; turned on again with 50000, the key
   is that of the pruning on with 50000 typed, so the result of before
   comes back from the cache.
-- **`PCOA_IN_POPNEI`** equals `typeof doPcoaFromVariants === "function"`
-  of the popnei installed.
 - **`parseOptions`**: the defaults back, `maxDist` `null` among them,
   `maxDist` 50000, `method` `"pcoa"`, `ldPruning` `{ on: false,
   maxAllowedR2: 0.1, maxDist: 50000 }` and `{ on: false, maxAllowedR2:
@@ -1267,8 +1321,9 @@ With Vitest, at the functions of the definition, on frozen projects:
   and one of the dataset's LD filter none; `numVarsUsed` 150 for 200
   individuals gives `fewVariants` with the text above, 200 for 200 none.
   For `lingoesCorrection`, a result of the PCoA made in the test from the
-  worked example of popnei's draft, the ten distances of pyNei's
-  `test_pcoa` corrected: five individuals, PC1's projections
+  worked example of popnei's `js/popnei/test/pcoa.test.ts`, R's numbers
+  for the ten distances of pyNei's `test_pcoa` corrected, the same at
+  the tag `js-v0.1.0-dev.3`: five individuals, PC1's projections
   −0.431869046368213, −0.283479006142767, −0.269028184151739,
   0.492920681079785 and 0.491455555582935 and its percentage
   77.1278402980914, `lingoesConstant` 0.0640069399611263 and
@@ -1315,52 +1370,64 @@ With Vitest, at the functions of the definition, on frozen projects:
   of the LD filter over the VCF of three individuals whose second variant
   is at position 10 after one at 30, with the PCA's pruning and with the
   dataset's; the ploidy of `tetraploid.vcf.gz` read with ploidy 2; and,
-  for the PCoA, the messages of popnei's draft of the pairs with no
-  distance, of every distance 0, and "the pass gave no variant: …",
-  replaced by those of popnei's release when it has the PCoA.
+  for the PCoA, the messages of `js-v0.1.0-dev.3` of "The request": the
+  pairs with no distance, with four pairs and with one; one individual;
+  every distance 0; more than 9,381 individuals; and "the pass gave no
+  variant: …", with and without variants in the source.
 - **`crashText`**: a PCA of 4,000 individuals gives the words of memory
   with "about 0.8 GB", the gigabytes to one decimal; of 2,264 the same
-  words, and of 2,263 the diversity's; a PCoA of 2,098 the words of
-  memory and of 2,097 the diversity's.
+  words, and of 2,263 the diversity's; a PCoA the same at the same
+  numbers, with "the principal coordinates".
 - **`script`** of the project of the flow gives the lines above, as a
   literal.
 
 The numbers of the runner's test in node and of the Playwright flow, on
 `e2e/fixtures/panel.nei`, 1,200 variants of 200 diploid individuals, with
 the populations of `e2e/fixtures/panel_pops.csv`, p0 of 48, p2 of 84 and
-p1 of 68 individuals in the order they first appear, were given by the
-release the application builds on, `js-v0.1.0-dev.2`, as installed in
-`node_modules/popnei` of the main checkout of popnei_web, its
-`package-lock.json` resolving it to
-`https://github.com/JoseBlanca/popnei/releases/download/js-v0.1.0-dev.2/popnei-0.1.0.tgz`,
-on 27 September
-2026, in node 26.8.2, by this script, saved as `pca_numbers.mjs` in a
-folder whose `node_modules` is that one and run with
-`FIXTURES=‹the worktree›/e2e/fixtures node pca_numbers.mjs`:
+p1 of 68 individuals in the order they first appear, were given by
+popnei's release `js-v0.1.0-dev.3`, which the `package.json` of the
+application names from the plan of stage 4, installed on 28 September
+2026 in a folder of its own with `npm install
+https://github.com/JoseBlanca/popnei/releases/download/js-v0.1.0-dev.3/popnei-0.1.0.tgz`,
+in node 26.8.2, by this script, saved there as `pca_numbers.mjs` and
+run with `FIXTURES=‹the worktree›/e2e/fixtures node pca_numbers.mjs`.
+The numbers of the PCA are those `js-v0.1.0-dev.2` gave on 27 September
+2026 with the same calls: every projection and percentage, both runs,
+compared by a SHA-256 of their bytes, and the progress.
 
 ```js
 import { readFileSync } from "node:fs";
-import { init, openVars, doPcaFromVariants } from "popnei";
+import { init, openVars, doPcaFromVariants, doPcoaFromVariants, numPassesOf } from "popnei";
 await init();
 const runs = [
   ["pruned", (v) => { v.filterByMissingData(0.1); v.filterByMaf(0.95); v.filterByLd(0.1, 50000); }],
   ["pruning off", (v) => { v.filterByMissingData(0.1); v.filterByMaf(0.95); }],
 ];
+const bytes = new Uint8Array(readFileSync(`${process.env.FIXTURES}/panel.nei`));
 for (const [label, put] of runs) {
-  const v = openVars(new Uint8Array(readFileSync(`${process.env.FIXTURES}/panel.nei`)));
-  put(v);
-  const progress = [];
-  v.onProgress((p) => progress.push(p));
-  const r = doPcaFromVariants(v, { numPrinComps: 0, transformToBiallelic: true });
-  v.free();
-  const k = r.numComps;
-  console.log(label, k, r.usedVars.length, JSON.stringify(r.passStats),
-    JSON.stringify([...r.explainedVariancePercent.slice(0, 10)]),
-    r.individuals[0], JSON.stringify([...r.projections.slice(0, 3)]),
-    r.individuals[199], JSON.stringify([...r.projections.slice(199 * k, 199 * k + 3)]),
-    JSON.stringify(progress));
+  for (const method of ["pca", "pcoa", "pcoa"]) {
+    const v = openVars(bytes);
+    put(v);
+    const progress = [];
+    v.onProgress((p) => progress.push(p));
+    const r = method === "pca"
+      ? doPcaFromVariants(v, { numPrinComps: 0, transformToBiallelic: true })
+      : doPcoaFromVariants(v, { correctByLingoes: true });
+    v.free();
+    const k = r.numComps;
+    console.log(label, method, k, method === "pca" ? r.usedVars.length : "-",
+      JSON.stringify(r.passStats),
+      JSON.stringify([...r.explainedVariancePercent.slice(0, 10)]),
+      r.individuals[0], JSON.stringify([...r.projections.slice(0, 3)]),
+      r.individuals[199], JSON.stringify([...r.projections.slice(199 * k, 199 * k + 3)]),
+      method === "pcoa" ? JSON.stringify([r.lingoesConstant, r.negativeEigenvaluesPercent]) : "",
+      JSON.stringify(progress));
+  }
 }
+console.log(numPassesOf("doPcoaFromVariants"), numPassesOf("doPcaFromVariants", { numPrinComps: 0 }));
 ```
+
+The PCA:
 
 | | the pruning at r² 0.1 within 50,000 | the pruning off |
 |---|---|---|
@@ -1386,18 +1453,48 @@ pass: 1, numPasses: 1 }` and `{ bytesRead: 259376, … }`. The pruning
 halves the share of PC1 on this panel, which is simulated with weak
 structure; with it the first two components are 3.5% and 3.4%.
 
+The PCoA, `doPcoaFromVariants(v, { correctByLingoes: true })`, with the
+same filters:
+
+| | the pruning at r² 0.1 within 50,000 | the pruning off |
+|---|---|---|
+| `passStats` | as the PCA's: `numVars` 535 | as the PCA's: `numVars` 1,175 |
+| components found | 198 | 198 |
+| PC1, PC2, PC3, explained % | 3.629128255610693, 3.5432450063275183, 1.9702183453707434 | 9.651061556858927, 6.643065908158488, 1.7327187270392275 |
+| `s000` on PC1, PC2, PC3 | −0.004011193561632288, 0.08244556083044303, −0.04528526265366679 | 0.013492474242601561, 0.1056881549783377, −0.04601300308284516 |
+| `s199` on PC1, PC2, PC3 | −0.035795957404758466, 0.001197079706018701, −0.013979288853697569 | −0.07421817077250903, −0.01637873362167159, 0.009063729871672187 |
+| `lingoesConstant`, c | 0.024712635394468305 | 0.014730730734322706 |
+| `negativeEigenvaluesPercent` | 7.94441216305067 | 3.0196653159782363 |
+
+The ten percentages of the pruning: 3.629128255610693,
+3.5432450063275183, 1.9702183453707434, 1.8526180369926117,
+1.834216383044443, 1.7591658645208352, 1.7054465381930557,
+1.683786394657243, 1.6277308871503773, 1.6102271013905975. Of the
+pruning off, from the fourth: 1.6737836441788767, 1.6106824731585843,
+1.5698020647205237, 1.539824398398088, 1.5278494754599767,
+1.5001525686429757, 1.4913680449334203. The 198 percentages add up to
+100 within 1e-14. The second run of each gave the same numbers to the
+last bit; the progress was the PCA's two calls; `numPassesOf` is 1 for
+both calls. Without the correction the same distances are refused,
+"61 of the 200 eigenvalues of the matrix of the squared distances are
+negative, 7.94 percent of the sum of all of them, …", and with the
+pruning off "45 of the 200 …, 3.02 percent …". The numbers of the
+warning, worked out from these (above, "The warnings"): 2c 0.04942527078893661
+and 0.029461461468645412, the mean of d² 0.09269508999401767 and
+0.09787338688464631, the shares 0.5332026841133269 and
+0.3010160617346238, and the square root of 2c 0.2223179497677518 and
+0.17164341370598934, which the words write "0.049", "53%" and "0.22",
+and "0.029", "30%" and "0.17".
+
 The runner's test asserts these as literals, with the result cut to 10
-components: `numComps` 10, `numCompsFound` 199, `projections` of 2,000
-numbers, whose first three are `s000`'s above; and the two refusals of
-"The request", as literals. The PCoA's numbers on `panel.nei` are got by
-the same script with `doPcoaFromVariants(v, { correctByLingoes: true })`
-once popnei's release has it, and the runner's test asserts them then:
-`numCompsFound`, the first three percentages, `s000` on PC1 to PC3,
-`lingoesConstant` and `negativeEigenvaluesPercent`, and the same numbers
-from a second run, for the exact comparison of the check numbers.
-popnei's draft gives numbers for another panel,
-`tests/reference/dists/panel.vcf.gz` of popnei, which is not
-`e2e/fixtures/panel.vcf.gz` (their MD5 differ).
+components: for the PCA, `numComps` 10, `numCompsFound` 199,
+`projections` of 2,000 numbers, whose first three are `s000`'s above;
+for the PCoA with the pruning, `numComps` 10, `numCompsFound` 198, the
+first three percentages, `s000` on PC1 to PC3, `lingoesConstant` and
+`negativeEigenvaluesPercent`, `numVarsUsed` `null`, and the same numbers
+from a second run, for the exact comparison of the check numbers,
+`[535, 3.629128255610693, 3.5432450063275183, 1.9702183453707434]`; and
+the refusals of "The request", as literals.
 
 **The fixture with a column of numbers**, `e2e/fixtures/panel_meta.csv`,
 which the flow below needs to colour by values: the 200 individuals of
@@ -1427,10 +1524,11 @@ pruning off and reads 7.73% from the cache, turns it on again and reads
 opens the
 3D view, turns it with the buttons, and back to 2D; saves the table and
 reads its header and the row of `s000`; runs axe, the checker of
-accessibility, in each state it reaches. Once popnei's release has the
-PCoA, it chooses the PCoA, runs it, and reads the warning of the
-correction and the line under the explained variance with the numbers
-of the runner's test. What it cannot check, whether
+accessibility, in each state it reaches. Then it chooses the PCoA,
+with the pruning on and 50000, runs it, and reads "PC1 (3.63%)" and
+"PC2 (3.54%)" on the axes, the warning of the correction with "7.94%",
+"0.049", "53%" and "0.22", and the line under the explained variance
+with "0.049" and "198 components". What it cannot check, whether
 the 3D view and the plot read well, is seen by the owner in the running
 application.
 
@@ -1451,11 +1549,7 @@ method.
 
 - **Method**, two radio buttons of React Aria's `RadioGroup`: "PCA of
   the genotypes" and "PCoA of the Kosman distances, for data with many
-  missing genotypes". The PCoA is
-  offered once popnei's release has it, `PCOA_IN_POPNEI`; until then the
-  method is not shown, but for a project that asks for the PCoA, which
-  is locked and shows both so that the user can choose the PCA (above,
-  "Why it cannot run").
+  missing genotypes".
 - **Maximum major allele frequency**, a `NumberField`, React Aria's
   field of a number, 0.95, "from 0 to 1", as the MAF filter of the
   Variants step. When the dataset's MAF
@@ -1588,13 +1682,13 @@ these.
   each component, of the 199 components of the PCA.", and, for the PCoA,
   a line under it. When the distances were corrected: "The percentages
   are of the Kosman distances after Lingoes' correction, which added
-  0.028 to the square of every distance, as the warning says; over all
+  0.049 to the square of every distance, as the warning says; over all
   the 198 components of the PCoA they add up to 100." When they needed
   none: "The Kosman distances of these individuals can all be drawn in
   one space, so they were not corrected; over all the 39 components of
   the PCoA the percentages add up to 100." The numbers are those of
-  popnei's panel and of its `four_alleles.vcf.gz`, 2c as in the warning
-  and `numCompsFound`. Its
+  `panel.nei` with the pruning of the flow and of popnei's
+  `four_alleles.vcf.gz`, 2c as in the warning and `numCompsFound`. Its
   download, "Download the explained variance as CSV",
   `panel.pca_variance.csv`, or `panel.pcoa_variance.csv`, with the header
   `component,explained_variance_percent` and rows `PC1,3.543326238768707`.
@@ -1646,7 +1740,7 @@ the 3D view as it is turned (`charts.md`, "Export of the 3D plot").
 | state | what the user sees | what they can do |
 |---|---|---|
 | empty | cannot happen: until the variants file is read the analysis is locked with a reason | |
-| locked | the reason, as text beside a Run button that is disabled and described by it: "panel.nei has 12,000 individuals, and the principal components of more than 9,381 need more memory …", "This project asks for the PCoA of the Kosman distances, which this version of the application cannot calculate yet. …", "12 individuals of panel.nei are not in pops.csv: …", "Reading pops.csv.", "pops.csv was not read when this project was saved, so the project file does not hold it. …", "The LD pruning of the PCA needs the distance within which variants are compared. …", this one also beside the field of the distance; or the store's when the filters keep no individual. The options stay editable, since they are what the user may change | go to the step the reason names; type the distance or turn the pruning off; change the options |
+| locked | the reason, as text beside a Run button that is disabled and described by it: "panel.nei has 12,000 individuals, and the principal components of more than 9,381 need more memory …", for the PCoA "… the principal coordinates of more than 9,381 need more memory than a browser tab can hold. Keep at most 9,381 with the filters of individuals in the Variants step, …", "12 individuals of panel.nei are not in pops.csv: …", "Reading pops.csv.", "pops.csv was not read when this project was saved, so the project file does not hold it. …", "The LD pruning of the PCA needs the distance within which variants are compared. …", this one also beside the field of the distance; or the store's when the filters keep no individual. The options stay editable, since they are what the user may change | go to the step the reason names; type the distance or turn the pruning off; keep fewer individuals for the PCoA; change the options |
 | ready | the options, the line of the individuals it will run on, and Run | set the options; Run |
 | running | the bar and the clock of the diversity, "Calculating · 35% · 0:12", its words after a stop and while it waits for the statistics of each individual; and under them "The bar shows the reading of panel.nei. The components are calculated once it is read, and the bar does not move meanwhile: from under a second for 1,000 individuals to minutes for several thousand." The options stay editable, as in every analysis and in the Variants step: a change of the method, the MAF or the pruning that changes the key leaves the calculation behind, with the notice of the store, which says it will be stopped unless the change is undone (`docs/specs/core/store.md`, "The notice, and the calculations it stops"), and the panel shows the state of the new settings; a change of the colour, the axes or the view keeps the key and the calculation | Stop; change the options |
 | done | the bar of controls, the plot, the legend, the explained variance, the table and their downloads; the warnings above the plot, with their count on the heading, "2 warnings"; the notes; after an opened project file, the comparison with its check numbers under the table; and the options, whose change removes the result | draw, colour, turn, highlight, sort, download; change the options |
@@ -1714,13 +1808,14 @@ or "the PCoA":
 | a message that starts "the variant ‹n› of the ones the filter by linkage disequilibrium has read", the pruning the PCA's own | `ldOrderText` of `src/core/analyses/words.ts` (`docs/specs/analyses/diversity.md`, "Its words"), with the PCA's pruning: "The LD pruning of the PCA needs the variants of each chromosome together and in the order of their positions, and panel.vcf.gz does not have them so: on chromosome 1, a variant at position 10 comes after one at position 30. Sort the file, with bcftools sort for a VCF, and load it again, or turn the LD pruning of the PCA off." A variant of a chromosome that had already ended: "…: a variant of chromosome 1, at position 10, comes after a variant of another chromosome, though variants of chromosome 1 came before that one." |
 | the same, the pruning the dataset's | the diversity's row, with the LD filter of the Variants step: "The LD filter of the Variants step needs …, or turn off the LD filter in the Variants step." |
 | a genotype of another ploidy; a line of the VCF | the diversity's rows, `otherPloidyText` and the line of the VCF |
-| "the principal components of ‹n› individuals hold about", or of the PCoA "the principal coordinates of ‹n› individuals hold about", which the lock prevents | "panel.nei has 12,000 individuals, …", the words of the lock |
-| the PCoA's empty pass, "the pass gave no variant and its source holds none" or "the pass gave no variant: …" | the two rows of the empty pass above, with "the PCoA" |
-| the PCoA's refusal of the pairs with no distance, recognised by the start of popnei's message once its release words it (provisional) | "‹n› pairs of individuals of panel.nei have no variant called in both, so they have no Kosman distance and the PCoA cannot place them; s082 is in 17 of them. Remove the individuals with many missing genotypes with the filters of individuals in the Variants step, or use the PCA of the genotypes, which places every individual." |
-| the PCoA's refusal of fewer than two individuals (provisional), which the filters of individuals give when they keep one | "The filters of individuals keep one individual of panel.nei, and the PCoA needs two at least to place them. Keep more individuals with the filters of individuals in the Variants step." |
-| the PCoA's "every distance is 0" (provisional) | "Every two of the individuals kept have the same alleles at every variant both have called, so their Kosman distances are all 0 and the PCoA has nothing to place. Keep more individuals, or more variants, with the filters of the Variants step." |
+| "the principal components of ‹n› individuals hold about", which the lock prevents | "panel.nei has 12,000 individuals, …", the words of the lock of the PCA |
+| "the principal coordinates of ‹n› individuals hold about", which a threshold on the individuals reaches when it leaves more than 9,381 | the words of the lock of the PCoA, with ‹n› the individuals kept: "panel.nei has 12,000 individuals and the filters of individuals keep 9,500 of them, and the principal coordinates of more than 9,381 need more memory than a browser tab can hold. Keep at most 9,381 with the filters of individuals in the Variants step, or calculate them with popnei in Python, outside the browser." |
+| the PCoA's empty pass, "the pass gave no variant and its source holds none: …" or "the pass gave no variant: …" | the two rows of the empty pass above, with "the PCoA" |
+| the PCoA's refusal of the pairs with no distance, a message that matches "‹n› of the ‹m› pairs of individuals has no distance" or "… have no distance", then "the first of them ‹a› and ‹b›, and ‹c› is in ‹k› of them", each name between backquotes (above, "The request") | "4 pairs of individuals of panel.nei have no variant called in both, so they have no Kosman distance and the PCoA cannot place them; s082 is in 3 of them. Remove the individuals with many missing genotypes with the filters of individuals in the Variants step, or use the PCA of the genotypes, which places every individual." With one pair, "1 pair of individuals of panel.nei has no variant called in both, so it has no Kosman distance and the PCoA cannot place it; s082 is in it. …" |
+| the PCoA's "there is 1 individual, and a principal coordinate analysis places 2 at least", which the filters of individuals give when they keep one | "The filters of individuals keep one individual of panel.nei, and the PCoA needs two at least to place them. Keep more individuals with the filters of individuals in the Variants step." |
+| the PCoA's "every distance is 0" | "Every two of the individuals kept have the same alleles at every variant both have called, so their Kosman distances are all 0 and the PCoA has nothing to place. Keep more individuals, or more variants, with the filters of the Variants step." |
 | any other refusal | "popnei could not calculate the principal components: ‹its message›. Change the settings, or load the variants file again, to run it again." |
-| the worker stopped with no answer, `workerFailed`, with the memory the calculation needs estimated at `PCA_MEMORY_WORDS_BYTES`, 250 MB, or more: 48.8 bytes for the PCA, 56.8 for the PCoA, for each cell of the individuals × individuals matrix of the individuals it ran on, 2,264 individuals or more for the PCA | "The calculation stopped unexpectedly, perhaps because the principal components of 4,000 individuals, which need about 0.8 GB, did not fit in the memory of this tab; a phone or a tablet gives a tab far less than a computer. Keep fewer individuals with the filters of individuals in the Variants step, close other tabs and run it again, or calculate them with popnei in Python, outside the browser." |
+| the worker stopped with no answer, `workerFailed`, with the memory the calculation needs estimated at `PCA_MEMORY_WORDS_BYTES`, 250 MB, or more: 48.8 bytes for either method, popnei's count, for each cell of the individuals × individuals matrix of the individuals it ran on, 2,264 individuals or more; "the principal coordinates" for the PCoA | "The calculation stopped unexpectedly, perhaps because the principal components of 4,000 individuals, which need about 0.8 GB, did not fit in the memory of this tab; a phone or a tablet gives a tab far less than a computer. Keep fewer individuals with the filters of individuals in the Variants step, close other tabs and run it again, or calculate them with popnei in Python, outside the browser." |
 | `workerFailed` below that, `reopenFailed`, `defect`, `couldNotStart`, `protocolMismatch`, `files` | the diversity's rows |
 
 The words of the LD filter's refusal take from popnei's message only
@@ -1834,8 +1929,9 @@ The help, for the drawer of stage 8:
   base pairs, coloured by `popcat`,
   0.611 and 7.324, −4.497 and −1.937, 5.124 and −2.777 to three
   decimals, the means of the projections of the script of "How it is
-  verified" over the populations of `panel_pops.csv`, in node with the
-  release on 27 September 2026. Coloured by the values of a column, it
+  verified" over the populations of `panel_pops.csv`, in node with
+  `js-v0.1.0-dev.2` on 27 September 2026, whose projections
+  `js-v0.1.0-dev.3` gives again. Coloured by the values of a column, it
   says their range in place of the groups: "Coloured by altitude, from
   100 to 2060; 3 individuals have no value.", as `panel_meta.csv` gives.
   A description cannot hold 200 points; it
@@ -1976,52 +2072,117 @@ in `POPGEN_ANALYSES` of `src/core/apps.ts`, before the diversity, since
 the PCA is where the user checks the populations the diversity then uses
 (`docs/build-order.md`, stage 4), in the Analyses step.
 
+Revised on 28 September 2026 with this spec, for popnei's release
+`js-v0.1.0-dev.3`: `docs/specs/worker/runner.md` and `client.md`,
+`docs/specs/stage-4-open-points.md`, `docs/architecture.md`, sections 1,
+11 and 13, `docs/build-order.md` and `docs/functionality.md`; and the
+sizes of a written file, which that release changes, in
+`docs/specs/analyses/writeVariants.md`, `filterCounts.md`,
+`docs/specs/entry.md`, `docs/specs/steps/variants.md` and
+`docs/specs/worker/protocol.md`.
+
 ## What this spec asks of popnei
 
-- **The limit on the individuals counted on the individuals of the
-  pass**, after `filterIndividuals`, and not on those of the source:
-  `pca_of_variants` of `crates/popnei-js/src/vars.rs` and `vcf.rs` gives
-  `self.individuals.len()` to `room_for_the_analysis_of_the_variants`, on
-  the release and on `main` at `2d2229c`, so a file of 12,000 individuals
-  cannot be analysed through a list of 5,000. Until then the application
-  locks on the file's individuals.
+Checked against the release `js-v0.1.0-dev.3` on 28 September 2026, which
+gives the PCoA and none of the four others:
+
+- **The limit on the individuals of the PCA counted on the individuals of
+  the pass**, after `filterIndividuals`, and not on those of the source:
+  `pca_of_variants` of `crates/popnei-js/src/vars.rs` and `vcf.rs` still
+  gives `self.individuals.len()` to
+  `room_for_the_analysis_of_the_variants` at the tag, and a VCF of 9,382
+  individuals with a list of 100 is refused, so a file of 12,000
+  individuals cannot be analysed through a list of 5,000. Until then the
+  application locks the PCA on the file's individuals. The PCoA of the
+  release counts those of its pass, which is what is asked here.
 - **The refusal of the PCA's empty pass in the words of the other
   calculations**, "the pass gave no variant and its source holds none"
   or "the pass gave no variant: …" with the counts of each filter, in
-  the place of "there are no variants to do a PCA with", so that the user
-  is told which filter dropped them.
+  the place of "there are no variants to do a PCA with", which the
+  release still gives, so that the user is told which filter dropped
+  them. The PCoA of the release words it so.
 - **A call of `onProgress` when the reading of the pass ends**, before
   the decomposition, or a progress of the decomposition, so that the bar
-  says what is being done for the minutes of a large PCA.
+  says what is being done for the minutes of a large PCA or PCoA. The
+  release calls it as before: at 0 bytes, at each range, and at the end
+  of the run, after the decomposition.
 - **The called genotypes of each individual with the PCA**, one number
   per individual, which would make the note of the missing genotypes a
-  warning of the result.
-- **`doPcoaFromVariants` with `correctByLingoes`**, asked by the owner on
-  27 September 2026 and being built on popnei's branch `plan/pcoa`, in a
-  release of popnei's TypeScript package with a new version.
+  warning of the result. `VariantsPcaResult` of the release has no such
+  field.
 
-## The names of popnei's PCoA, provisional
+The variants a pruning kept are not asked yet: the owner decided on 27
+September 2026 to ask for a way to keep them only if the time of the
+pruning, measured in stage 4, is large ("The pruned variants are not
+kept between two PCAs" in `docs/specs/stage-4-open-points.md`). The
+release has no way to put a list of variants back on a `Variants`.
 
-From popnei's draft spec on its branch `spec/pcoa`, "The principal
-coordinates of distances" of `docs/specs/pca.md`, at commit `aa78e7e` of
-27 September 2026, whose plan, on the branch `plan/pcoa`, the owner
-approved and which is being built: the function
-`doPcoaFromVariants(variants, { minNumSnps, correctByLingoes })`, called
-with `correctByLingoes: true` and `minNumSnps` left out, so a pair needs
-one variant called in both; its result's `individuals`, `numComps`,
-`projections`, `explainedVariancePercent` and `passStats`, as those of
-`doPcaFromVariants`, with no `usedVars`, and the two numbers it adds,
-`lingoesConstant` and `negativeEigenvaluesPercent`;
-`numPassesOf("doPcoaFromVariants")` 1; the limit of 8,695 individuals,
-which popnei's plan measures; the refusals of the pairs with no
-distance, of every distance 0 and of fewer than two individuals, and
-their words; in Python `do_pcoa_from_variants`, `correct_by_lingoes`,
-`lingoes_constant` and `negative_eigenvalues_percent`. Each is checked
-against popnei's release that has the PCoA, and this spec corrected to
-it, before the code of the runner's call and before `PCOA_IN_POPNEI` is
-set true; the rest of the PCoA, its options, its key, its warning, its
-words and its panel, is written against these names with the PCA, and
-tested on results the tests build.
+## The PCoA of popnei's release
+
+The PCoA was written first against popnei's draft, "The principal
+coordinates of distances" of popnei's `docs/specs/pca.md` at its commit
+`aa78e7e` of 27 September 2026. It is in popnei's release
+`js-v0.1.0-dev.3`, made on 28 September 2026 from popnei's `main` at
+`eae29a2`, and this spec now follows the release: `package.json` names
+`https://github.com/JoseBlanca/popnei/releases/download/js-v0.1.0-dev.3/popnei-0.1.0.tgz`
+from the plan of stage 4, so the application never runs on a popnei
+without the PCoA, and the lock of a PCoA that popnei lacked,
+`PCOA_IN_POPNEI` with its test and its words, is gone.
+
+What the release has, from `js/popnei/src/pcoa.ts` and `passes.ts` at
+the tag and from running it in node: `doPcoaFromVariants(variants, {
+minNumSnps, correctByLingoes })`, both optional, `minNumSnps` 0 and
+`correctByLingoes` false when not given; its `VariantsPcoaResult` with
+`individuals`, `numComps`, `projections`, `explainedVariancePercent` and
+`passStats` of the names and shapes of `doPcaFromVariants`, which a
+check at compile time in popnei keeps so, and `lingoesConstant` and
+`negativeEigenvaluesPercent`, with no `usedVars`, `numPrinComps` or
+`princomps`; `numPassesOf("doPcoaFromVariants")` 1; and, in Python,
+`do_pcoa_from_variants(variants, min_num_snps=None,
+correct_by_lingoes=False)`, whose result has `lingoes_constant` and
+`negative_eigenvalues_percent`. The release also has `doPcoa`, the PCoA
+of a `Distances`, and `correctDistsByLingoes`, which the application
+does not call.
+
+Where the release differs from the draft this spec had followed, and
+what changed here for it:
+
+- **The limit is 9,381 individuals, not 8,695, and it counts the
+  individuals of the pass.** The draft worked 8,695 out from a peak of
+  56.8 bytes a cell and counted, in this spec, the individuals of the
+  file; the release measured 44.4 bytes a cell and counts the PCA's 48.8,
+  and asks the page for the individuals `filterIndividuals` leaves. So
+  `PCOA_MAX_INDIVIDUALS` is gone for `PCA_MAX_INDIVIDUALS`, the lock of
+  the PCoA counts the individuals the lists keep and offers the filters
+  of individuals, and the words of a crash of memory and the restart
+  after a large PCoA count 48.8 bytes a cell, as for the PCA ("Why it
+  cannot run", "How it runs", "Its words").
+- **The refusals have their final words**, given in "The request" and
+  recognised in "Its words": the pairs with no distance, "‹n› of the ‹m›
+  pairs of individuals has no distance" or "… have no distance", which
+  names the first pair and the individual in most of them, and says to
+  take it out with `filterIndividuals` or run the PCA; one individual,
+  "there is 1 individual, and a principal coordinate analysis places 2
+  at least by the distance of each pair"; and more than 9,381, "the
+  principal coordinates of ‹n› individuals hold about ‹g› GB, …". Every
+  distance 0 is worded as the draft had it.
+- **`correctByLingoes` is false by default in TypeScript as well as in
+  Python**, where this spec had said so of Python alone; the application
+  passes it as it did.
+- **An option that is not one of `minNumSnps` and `correctByLingoes` is
+  refused**, as every options object of the release refuses a key it
+  does not know ("The request").
+- **The numbers of the warnings and of the tests are those of
+  `panel.nei`**, where the draft gave only those of popnei's own panel,
+  `tests/reference/dists/panel.vcf.gz`, which is not
+  `e2e/fixtures/panel.vcf.gz` (their MD5 differ): 7.94%, "0.049", 53%
+  and "0.22" with the pruning of the flow, in the place of 2.98%,
+  "0.028", 30% and "0.17" of popnei's panel ("The warnings", "How it is
+  verified").
+
+The names, the option, the fields, the one pass and the correction made
+inside the analysis from the eigenvalues it has are as the draft had
+them.
 
 ## Open points
 
