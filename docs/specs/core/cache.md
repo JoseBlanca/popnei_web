@@ -77,10 +77,11 @@ the worker for it again, and again.
 
 - **The statistics of each individual**, the result of `individualChecks`,
   from which core makes the list of the individuals kept
-  (`docs/specs/core/store.md`, "The individuals kept"). They are under a
-  key the current project gives while its filters of the variants are
-  those they were counted over, whatever its thresholds, so the rule
-  above keeps them while they are used. Once dropped, the list is not
+  (`docs/specs/core/store.md`, "The individuals kept"). Their key holds
+  the load of the variants file and no filter, since 28 September 2026,
+  when the filters of individuals were put first, so the current project
+  gives it whatever its filters, until a new load, and the rule above
+  keeps them while they are used. Once dropped, the list is not
   known until they are calculated again, which a Run of an analysis that
   reads the filters of individuals does first. The cache counts them, by
   the rule above, at two numbers of 8 bytes per individual and 2 bytes

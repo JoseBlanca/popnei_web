@@ -281,7 +281,7 @@ filter turned off is given to no job:
 The words are those of the PCA's own LD filter with no distance
 (`pruningDistanceReason` of `docs/specs/analyses/pca.md`), with the end
 of the reasons that send the user to another step. The store locks with
-it, after `projectNeeds` and before `individualListNeeds`, what reads
+it, after `projectNeeds` and `individualListNeeds`, what reads
 the filters of the variants: the Count, the diversity and the writing
 of the filtered variants. The PCA, whose filters can be its own, is
 locked with the same reason by its own `needs`, and only while its LD

@@ -462,7 +462,7 @@ notice and the status region is "Writing the file".
 | state | what the user sees | what they can do |
 |---|---|---|
 | empty | cannot happen: while the variants file is not read the part is not drawn, and the step shows the line of a file not read in its place (`docs/specs/steps/variants.md`, "What it does") | |
-| locked | the reason of `variantFilterNeeds` of `docs/specs/core/project.md`, the LD filter with no distance, or of `individualListNeeds` of the same spec, or of the filters keeping no individual, beside the disabled button. While the variants file is not read, when the store locks it with the reason of `projectNeeds`, the part is not drawn, as for empty | what the reason says |
+| locked | the reason of `individualListNeeds` of `docs/specs/core/project.md`, or of `variantFilterNeeds` of the same spec, the LD filter with no distance, in that order, or of the filters keeping no individual, beside the disabled button. While the variants file is not read, when the store locks it with the reason of `projectNeeds`, the part is not drawn, as for empty | what the reason says |
 | ready | the button, and the estimate: "About 20.8 MB: 20,000 variants of 1,000 individuals."; disabled, with its reason, for a file too large, a bound too large before a Count, filters that keep no variant, or a Count refused (above, "The size, before the write") | Write; what the reason says |
 | waiting for the statistics | "Calculating the statistics of each individual, which the thresholds of the individuals need · 35% · 0:12" | Stop |
 | writing | "Writing panel.filtered.nei · 35% · 0:12", the bar of the diversity | Stop |

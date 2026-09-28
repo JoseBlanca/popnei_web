@@ -535,13 +535,17 @@ and the two locks of the individuals kept, which read the cache
 (`docs/specs/core/store.md`, "The state of an analysis"): the filters
 keeping no individual, and the analysis's own `keptNeeds`, which for
 the PCoA is its limit of 9,381 individuals (below, "The limit on the
-individuals"). Then `needs(p)` gives the first of these:
+individuals"). Then `needs(p)` gives the first of these, the step's LD
+filter first, at the place where the store asks `variantFilterNeeds` of
+the diversity, after the lists of individuals and before the other
+reasons, so that one project gives the two analyses the same reason
+(`docs/specs/core/store.md`, "The definition of an analysis"):
 
 | the project | the reason |
 |---|---|
+| the PCA's LD filter following the Variants step, `follow` true, and the step's LD filter on with no distance: the reason of `variantFilterNeeds` | "The LD filter of the Variants step needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn off the LD filter, in the Variants step." |
 | the PCA, and more than 9,381 individuals in the variants file, `PCA_MAX_INDIVIDUALS` | "panel.nei has 12,000 individuals, and the principal components of more than 9,381 need more memory than a browser tab can hold. Calculate them with popnei in Python, outside the browser." |
 | any reason of `individualsNeeds` of `project.md`: the metadata file being read, "Reading pops.csv."; its read refused or failed; a file named by an opened project and not read when the project was saved, `notGiven`, "pops.csv was not read when this project was saved, so the project file does not hold it. Load pops.csv again in the Individuals step."; individuals of the variants missing from it, "12 individuals of panel.nei are not in pops.csv: ind_031, ind_044 and 10 more. Add them to the file and load it again in the Individuals step." | its words |
-| the PCA's LD filter following the Variants step, `follow` true, and the step's LD filter on with no distance: the reason of `variantFilterNeeds` | "The LD filter of the Variants step needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn off the LD filter, in the Variants step." |
 | the PCA's own LD filter, `follow` false, with no distance, `maxDist` `null`, `pruningDistanceReason` | "The LD filter of the PCA needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or set the LD filter of the PCA back to as in the Variants step." |
 
 **The LD filter with no distance.** The distance of an LD filter has no
@@ -684,8 +688,9 @@ why (below, "Its words").
 ```
 
 What the runner does with it (`docs/specs/worker/runner.md`, "The
-principal components"): it puts the filters of the job on the open
-`Variants` in their order and the list after them, as for any job; for
+principal components"): it puts the list of the individuals kept on
+the open `Variants` first and the filters of the job after it, in their
+order, as for any job since the filters of individuals act first; for
 the PCA it calls `doPcaFromVariants(variants, { numPrinComps: 0,
 transformToBiallelic: true })`, and for the PCoA `doPcoaFromVariants(
 variants, { correctByLingoes: true })`; and it keeps the first
@@ -1306,14 +1311,16 @@ decided on 28 September 2026 (**Open 2**, below).
 ### The cases
 
 - **Two individuals.** One component has variance, PC1, 100%, with `s000`
-  at 18.78829422805594 and `s001` its opposite, in node with the MAF
-  filter at 0.95 and the list of the two (27 September 2026,
-  `js-v0.1.0-dev.2`, and the same with `js-v0.1.0-dev.3`). There is no plot: the panel shows the table and the line
+  at 18.841443681416774 and `s001` its opposite, from 355 variants used
+  of the 613 the pass kept, in node with the list of the two put first
+  and the MAF filter at 0.95 after it, which then counts over those two
+  and keeps 613 of the 1,200 (node, `js-v0.1.0-dev.3`, 28 September
+  2026; `docs/specs/worker/runner.md`, "How it is verified"). There is no plot: the panel shows the table and the line
   "Only one component has variance, since 2 individuals have one axis
   between them, so there is no plot; the table gives each individual's
   place on it." Three individuals give two components, a 2D plot and no
   3D. The PCoA of the same two gives one component, 100%, `s000` at
-  0.0842440801457195, and a constant of 0, since two points are always
+  0.1597938144329897, and a constant of 0, since two points are always
   at their distance in a line, so no warning (node, `js-v0.1.0-dev.3`,
   28 September 2026).
 - **The filters keep no variant, or the file holds none.** popnei refuses
@@ -1516,7 +1523,11 @@ With Vitest, at the functions of the definition, on frozen projects:
   same cases, also while another reason comes first; with the step's LD
   filter on with no distance, the reason of `variantFilterNeeds` while
   `ld` follows, none with the PCA's own LD filter at 50000, and none
-  once 20000 is typed in the step; and the store, over the definition,
+  once 20000 is typed in the step; with that filter and a variants file
+  of 9,382 individuals, or an individuals file being read, the reason of
+  `variantFilterNeeds`, which comes first; with that filter and a list
+  to keep that names an individual not in the file, the store gives the
+  PCA and the diversity the same reason, that of `individualListNeeds`; and the store, over the definition,
   asks no `variantFilterNeeds` of the PCA, whose `filtersRead.variants`
   is false, so a PCA with its own LD filter over a step's filter with no
   distance is ready while the diversity is locked; a project with no
@@ -1575,8 +1586,8 @@ With Vitest, at the functions of the definition, on frozen projects:
   `lingoesConstant` and `negativeEigenvaluesPercent` 0 gives none.
 - **`checkNumbers`**: the numbers of the flow below, the PCA with its
   own LD filter, `[548, 3.5476992895181616, 3.402040462155611,
-  1.8945553874570624]`; a result of one component, `[1175, 100, null,
-  null]`.
+  1.8945553874570624]`; a result of one component, the two individuals
+  above, `[613, 100, null, null]`.
 - **`pcaColours`**, on the worked table of the diversity's spec, `i1 A`,
   `i2 B`, `i3 A`, `i4` with no population, the column `pop`: the groups
   A and B, in that order, counts 2 and 1, and `i4` in `NO_COLOUR_GROUP`,
@@ -1773,9 +1784,11 @@ entry checked, an element of the role `radio` with
 `altitude`, sees the bar of its scale and "Coloured by altitude, from
 100 to 2060; 3 individuals have no value." in the description, and
 back to the populations, and sees no calculation and one step of Undo
-for each. It sets the LD filter back to as in the Variants step, sees
-the plot go with its notice, and reads 7.61% from the cache with no
-calculation; sets it for the PCA again and reads 50000 still in the
+for each. It sets the LD filter back to as in the Variants step, and
+reads 7.61% at once, from the cache with no calculation, with no notice,
+since the PCA was done before the change and is done after it
+(`docs/specs/core/store.md`, "The notice, and the calculations it
+stops"); sets it for the PCA again and reads 50000 still in the
 field of the distance and 3.55% with no calculation; switches to 3D,
 turns the view with the buttons, and back to 2D; saves the table and
 reads its header and the row of `s000`; runs axe, the checker of
@@ -1879,7 +1892,7 @@ that the user never typed, the rule the number field of
 (`docs/specs/steps/variants.md`, "A number the fields do not take"). So
 every option the fields send is one `parseOptions` takes, whose ranges
 are these.
-- A line of what it will run on: "200 individuals of panel.nei", or "119
+- A line of what it will run on: "200 individuals of panel.nei", or "111
   of the 200 individuals of panel.nei, those the filters of individuals
   keep", and, while a threshold on the individuals waits for their
   statistics, the diversity's line, "Run calculates the statistics of

@@ -882,8 +882,9 @@ hand and whose cancels it records.
   and the counts `{ analysis: "filterCounts", passStats }` of the same
   `passStats`; of a result of the histograms of the variants, `{
   numVars: 1200, filtering: {} }`, `numVarsRead` 1,200 and no counts; of
-  a result of the statistics of each individual and of `filterCounts`,
-  both; of a result of the PCA whose `passStats` has `missing_data` 1,200
+  a result of the statistics of each individual, whose pass has no
+  filter, `{ numVars: 1200, filtering: {} }`, `numVarsRead` 1,200 and no
+  counts; of a result of `filterCounts`, both; of a result of the PCA whose `passStats` has `missing_data` 1,200
   to 1,200 and `ld` 1,200 to 548, `numVarsRead` 1,200 and no counts; of
   one whose `passStats` has `missing_data` 1,200 to 1,200 alone, as the
   PCA that follows the filters of a new project gives, `numVarsRead`

@@ -98,63 +98,56 @@ when we use the application." Not taken: asking popnei now. Specs:
 `pca.md`, `runner.md`, `client.md`; `docs/functionality.md` and
 `docs/architecture.md`, section 5.
 
-### 3. The PCA's pruning: r² 0.1, and no default distance
+### 3. The PCA's own LD filter: r² 0.1, and no default distance
 
 popnei gives no default of either. On popnei's test file of LD, with a
 window of 50,000 base pairs, plink2 at an r² of 0.3 keeps 41 variants,
 and popnei keeps 46 at 0.15 and 35 at 0.1 (`docs/specs/filters.md` of
 popnei), so a threshold of popnei is lower than the same habit in plink.
-Decided: the pruning is on by default at an r² of 0.1, as recommended,
-and its distance has no default, in the owner's words because "the
-distance really depends on the LD/recombination of the regions, so I
-don't think we can set a default, the user should choose." Not taken: a
-default distance of 50,000 base pairs, which was recommended.
+Decided: an r² of 0.1, as recommended, and no default distance, in the
+owner's words because "the distance really depends on the
+LD/recombination of the regions, so I don't think we can set a default,
+the user should choose." Not taken: a default distance of 50,000 base
+pairs, which was recommended. On 27 September these were the values of
+a pruning on by default in every PCA; since point 2, decided on 28
+September 2026, they are where the PCA's own LD filter starts when the
+user sets one, and a PCA whose LD filter follows the Variants step, as
+in a new project, uses the step's.
 
-What a user meets: the PCA of a new project cannot run until the user
-types a distance or turns the pruning off, which gives the warning of
-the pruning off on the result. The reason is text beside the field of
-the distance and beside the disabled Run button: "The LD pruning of the
-PCA needs the distance within which variants are compared. It has no
-default, because it depends on how far linkage disequilibrium extends
-in the genome of your species. Type a distance in base pairs, or turn
-the pruning off." The help says the same, and points to the LD decay of
-stage 5, once it exists, as the way to choose the distance. When the
-dataset's own LD filter is on, the PCA does not prune again, asks for no
-distance and is not locked by its own pruning, since that filter has its
-own; while that filter's distance is not typed yet, the PCA is locked by
-it (point 16).
+What a user meets: the PCA of a new project runs at once, with the
+warning that no LD filter was applied. Once the user chooses "For the
+PCA alone" for the LD filter, its field of r² shows 0.1 and its field
+of the distance is empty, and the PCA cannot run until a distance is
+typed. The reason is text beside the field of the distance and beside
+the disabled Run button: "The LD filter of the PCA needs the distance
+within which variants are compared. It has no default, because it
+depends on how far linkage disequilibrium extends in the genome of your
+species. Type a distance in base pairs, or set the LD filter of the PCA
+back to as in the Variants step." The help says the same, and points to
+the LD decay of stage 5, once it exists, as the way to choose the
+distance. While the PCA's LD filter follows the Variants step, the
+step's LD filter with no distance locks the PCA with the step's words
+(point 16).
 
-In the specs, the option of the PCA's pruning holds whether it is on,
-its r² and its distance, the distance empty until the user types one.
-Turning the pruning off keeps the r² and the distance, so that turning
-it on again gives them back and a distance once typed is not asked for
-again, as the writers settled on 27 September 2026. A project file saved
-before the distance was typed opens with it still empty; the key of the
-result, the hash of what the result was calculated from, holds the
-pruning as the user set it while it is on, and leaves out the r² and
-the distance kept while it is off, which the result was not calculated
-from;
-and the Python script that the project gives, which calculates the same
-results with popnei in Python, has no lines for a PCA that cannot run. The LD filter of
-the Variants step, which starts at an r² of 0.3 when the user turns it
-on, is a different thing, and this point did not change it; its
-distance, 10,000 base pairs in stage 3, starts empty since point 16,
-and is kept while the filter is off, as the PCA's is, since the owner's
-decision of the same day.
-Specs: `pca.md`, its options, "Why it cannot run", the panel
-and the help; `runner.md`, whose test types the distance;
-`docs/functionality.md`, section 5 and open point 4.
-
-Changed by the owner on 28 September 2026 (point 2, below): the PCA no
-longer has a pruning on by default. Its LD filter follows the Variants
-step, which has none in a new project, and the r² of 0.1 and the empty
-distance are where the PCA's own LD filter starts when the user sets
-one. So the PCA of a new project runs at once, with the warning that no
-LD filter was applied, and only a PCA whose own LD filter is set waits
-for its distance, with the words "The LD filter of the PCA needs the
-distance within which variants are compared. … Type a distance in base
-pairs, or set the LD filter of the PCA back to as in the Variants
-step."
+In the specs, the option `ld` of the PCA holds whether it follows the
+step, `follow`, and its own r² and distance, the distance `null` until
+the user types one. Setting it back to follow the step keeps the r² and
+the distance, so that choosing "For the PCA alone" again gives them
+back and a distance once typed is not asked for again. A project file
+saved before the distance was typed opens with it still empty. The key
+of the result, the hash of what the result was calculated from, holds
+the filters the PCA's job carries: its own LD filter while it does not
+follow, and the step's while it does, never the values kept while it
+follows, which the result was not calculated from. The Python script
+that the project gives, which calculates the same results with popnei
+in Python, has no lines for a PCA that cannot run. The LD filter of the
+Variants step, which starts at an r² of 0.3 when the user turns it on,
+is a different thing, and this point did not change it; its distance,
+10,000 base pairs in stage 3, starts empty since point 16, and is kept
+while the filter is off, as the PCA's is while it follows. Specs:
+`pca.md`, its options, "Why it cannot run", the panel and the help;
+`runner.md`, whose test types the distance; `docs/functionality.md`,
+section 5 and open point 4.
 
 ### 8. The calculation worker started again after a PCA or a PCoA of more than 700 individuals
 
@@ -442,11 +435,7 @@ spec:
   and `POPGEN_ANALYSES` puts `individualChecks` first (`docs/specs/entry.md`).
 - `src/core/store.ts`: `createStore` refuses a definition of the
   statistics that reads any filter, and no longer refuses a definition
-  of the counts that reads the filters of individuals; the lock of the
-  LD filter with no distance only for what reads the filters of the
-  variants (`store.md`, `project.md`).
-- `src/core/project.ts`: `variantFilterNeeds` asked only of what reads
-  the filters of the variants, as its doc comment says (`project.md`).
+  of the counts that reads the filters of individuals (`store.md`).
 - `src/worker/protocol.ts` and `messages.ts`: the jobs of
   `individualChecks`, with `filters: readonly []`, and of `variantChecks`
   and `filterCounts`, with `individuals`, and their checks
@@ -458,6 +447,12 @@ spec:
   of the variants, the words of the count that waits, of the missing
   data filter and of the caption of the histograms, and the locks shown
   beside the Count and the histograms (`steps/variants.md`).
+- The lock of the LD filter with no distance is not a change of stage
+  3's code but an addition, with the rest of point 16, since stage 3
+  gave the filter 10,000 base pairs from its switch: `variantFilterNeeds`
+  of `src/core/project.ts`, which the store asks only of what reads the
+  filters of the variants, after the lists of individuals (`project.md`,
+  `store.md`).
 - The tests and fixtures: `e2e/fixtures/panel_individual_stats.json`,
   written again by `make_fixtures.mjs` with no filter; the numbers of
   the tests of core, of the runner and of the flow, the lists of 116 and
@@ -561,7 +556,8 @@ file that has one unless it is told to count every allele that is not
 the major one as the same, is told so, and the help says it; the user
 could not mend the file in the application, which has no filter of such
 variants. popnei does not say how many there were, so no warning counts
-them. `pca.md`.
+them. Not taken: leaving popnei's refusal, so that a file with such a
+variant had no PCA in the application at all. `pca.md`.
 
 ### 5. The PCA opens on the 3D view
 
@@ -590,7 +586,9 @@ populations made on a plot changing the keys of every analysis that
 reads them, and a way for the keyboard. Stage 4 takes from the widget
 the legend that highlights a population, the legend over the plot, the
 individuals of no population in a mark of their own and counted, and
-the bar of buttons above the plot.
+the bar of buttons above the plot. Not taken: the lasso in stage 4,
+which would have made the design of such an edit, and its way for the
+keyboard, part of this stage.
 
 ### 9. The individuals with many missing genotypes
 
@@ -606,10 +604,18 @@ more. `pca.md`, Open 2.
 ### 10. The wheel zooms the 3D view with Ctrl held
 
 Decided by the owner, as recommended: the wheel zooms the 3D view with
-the Ctrl key held, as maps in a page do, which also gives the pinch of
-a Mac's trackpad; the wheel alone scrolls the page, so a user who
+the Ctrl key held, as maps in a page do on Windows and Linux, which
+also gives the pinch of a trackpad in Chrome and Firefox; the wheel alone scrolls the page, so a user who
 scrolls the panel with the pointer over the plot is not caught by it.
 Not taken: the wheel alone, and no wheel at all. `pca3d.md`, Open 1.
+
+To be tried in the plan, in Safari and WebKit on a Mac: Safari sends a
+pinch of the trackpad as events of its own, and not as a wheel with
+Ctrl, so a pinch may not zoom the plot there; maps in a page zoom with
+⌘ and the wheel on a Mac; and macOS, when its zoom of accessibility is
+turned on, takes Ctrl and the scroll for itself. The buttons "Zoom in"
+and "Zoom out" work in every case. If Ctrl clashes on a Mac, ⌘ is the
+alternative there, and the plan brings it back to the owner.
 
 ### 11. An error cell of Excel: every error missing
 
@@ -784,10 +790,11 @@ meets.
   has no moving sideways, which a button could not do for a user who
   cannot drag. Switching to 2D and back starts the view again
   (`pca3d.md`).
-- **In the 3D view the third component is up**, so that looking straight
-  down it, five presses of "Tilt down" from the start, gives exactly the
-  2D plot of the first two; there, "Turn left" and "Turn right" spin the
-  plot in its plane. Not taken: the second component up, where the view
+- **In the 3D view the third component is up**, so that "View along
+  PC3", looking straight down it, gives exactly the 2D plot of the first
+  two; there, "Turn left" and "Turn right" spin the plot in its plane.
+  Five presses of "Tilt down" from the start also look straight down
+  PC3, but leave the plot turned by the 30° of the starting view. Not taken: the second component up, where the view
   along the second component falls where the controls of three.js
   cannot turn (`pca3d.md`).
 - **The tooltip** of a point stays while the pointer is on it, does not
@@ -801,11 +808,14 @@ meets.
   axis" and "Third axis, kept up", and not "Horizontal", "Vertical" and
   "Depth", since the view turns and only the third component keeps its
   direction (`pca.md`).
-- **A file not sorted by position under the LD filter of the Variants
-  step** is told in the same words by every calculation, the diversity,
-  the Count and the statistics of each individual as well as the PCA:
-  the chromosome and the two positions, and to sort the file or turn the
-  filter off (`diversity.md`, "Its words").
+- **A file not sorted by position under an LD filter** is told in the
+  same words by every calculation that applies one, the diversity, the
+  Count, to whose words the writing of the filtered variants sends the
+  user, and the PCA under the step's LD filter or its own: the chromosome and the two positions, and
+  to sort the file or turn the filter off, the PCA's own words sending
+  the user to the PCA's LD filter (`diversity.md`, "Its words";
+  `pca.md`). The statistics of each individual read no filter since
+  point A, and never meet it.
 - **A browser without WebGL 2** gets words that say so, and the 2D plot;
   three.js has needed WebGL 2 since its release r163 (`pca3d.md`).
 - **The one population is named "All individuals"**, and a project with

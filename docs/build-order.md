@@ -176,7 +176,13 @@ order does not wait for what exists:
   per variant and per individual, the first plot of `src/charts`; writing
   the filtered variants as `.nei` and as VCF, in the Variants step, as
   the owner decided on 25 September 2026, and not in a step of its own;
-  the regions of a BED file.
+  the regions of a BED file. Stage 3 was built on popnei's release
+  `js-v0.1.0-dev.2`, which had no filter of the regions, and so without
+  them; they wait for a stage that builds them on `js-v0.1.0-dev.3`,
+  which has `filterByRegions`, and stage 4 does not. The owner decided on
+  28 September 2026 that they act first, before the filters of
+  individuals and before each individual's statistics
+  (`docs/architecture.md`, section 13, point 15).
 - **Why here:** both applications share this step, and every analysis
   after it reads the variants it leaves. The histogram is the simplest
   plot, so the plot contract and its export are tried on it first.
@@ -200,6 +206,14 @@ order does not wait for what exists:
   where stage 2 requires one; the columns and their types, set by the
   user; the column that defines the populations; the PCA and the PCoA, first as a 2D scatter plot, then in 3D
   with three.js.
+- **What it changes of stage 3**, which is built, for the owner's
+  decisions of 28 September 2026 (`docs/specs/stage-4-open-points.md`,
+  points 16 and A): the filters of individuals act before those of the
+  variants, and each individual's statistics are counted over every
+  variant of the file; the LD filter of the Variants step starts with no
+  distance, and locks what reads it until one is typed; and a filter
+  turned off keeps its values, in the project's `filtersOff` and
+  `individualFiltersOff`.
 - **Why here:** the populations are what every analysis of the next stage
   groups by, and the PCA is where the user checks them. The 3D view comes
   after the 2D one, because the 2D plot tries the scatter, the colours of

@@ -102,9 +102,15 @@ a value for every project, a locked one included, since the fingerprint
 of an opened project is made from it with no variants file loaded, and a
 function that throws on some projects would be a defect waiting for one.
 The store itself makes the key of an analysis only when none of
-`projectNeeds`, `variantFilterNeeds`, `individualListNeeds` and the
-analysis's `needs` gives a reason, so no key is made for the filters of
-a project whose LD filter has no distance yet (`docs/specs/core/store.md`, "The state of an analysis").
+`projectNeeds`, `individualListNeeds` for an analysis that reads the
+filters of individuals, `variantFilterNeeds` for one that reads the
+filters of the variants, and the analysis's `needs` gives a reason
+(`docs/specs/core/store.md`, "The state of an analysis"). So no key is
+made, while the LD filter has no distance yet, for what reads the
+filters of the variants, the Count, the diversity and the PCA whose LD
+filter follows the step's, the last by its `needs`; the statistics of
+each individual and the histograms of the variants, which do not read
+them, keep their keys.
 
 ### The canonical form
 

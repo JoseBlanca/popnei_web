@@ -423,8 +423,11 @@ as the owner decided on 25 September 2026 (functionality's open point
 of an arrow key in a field is a commit, and so a command and a step of
 Undo, which is what a user who presses it five times has done.
 
-The filter of the regions of a BED file comes first among these, with
-popnei's release that has it (`docs/architecture.md`, section 6).
+The filter of the regions of a BED file, once the application builds
+it on popnei's release `js-v0.1.0-dev.3`, which has it, and stage 4 does
+not, comes first in the step, before the section of the individuals,
+since it acts before the filters of individuals, as the owner decided on
+28 September 2026 (`docs/architecture.md`, section 13, point 15).
 
 **A number the fields do not take.** The owner decided on 25 September
 2026 that a number field of this step never turns what was typed into
@@ -899,13 +902,16 @@ card of the file says; while the list or the file gives
 the reason of the list stands under it; and while the individuals kept
 wait for the statistics, since the counts of the thresholds say so.
 These choices were made with the code on 27 September 2026, for the
-owner to judge at stop B. With a threshold set and no statistics, a Run of an analysis
-that reads the filters of individuals calculates them first, and so
-does the writing of the file. The step says nothing more of it here,
-since what waits says so where the user pressed: the panel of the
-diversity in the Analyses step, or the part of the writing below, shows
-"Calculating the statistics of each individual, which the filters of
-individuals are set from" while they are calculated.
+owner to judge at stop B. With a threshold set and no statistics,
+whatever reads the filters of individuals calculates them first: a Run
+of an analysis of the Analyses step, the writing of the file, and,
+since the filters of individuals act first, the Count and the
+histograms of the variants of this step. The step says nothing more of
+it here, since what waits says so where the user pressed: the panel of
+the diversity in the Analyses step, or the part of the Count, of the
+histograms of the variants or of the writing below, shows "Calculating
+the statistics of each individual, which the thresholds of the
+individuals need" while they are calculated.
 
 ### Writing the filtered variants
 
@@ -952,12 +958,16 @@ started again for the next load, and starting it again ends the read of
 the old one, and every calculation of the step in flight
 (`docs/architecture.md`, section 5).
 
-The parts of the step do not wait for one another. Calculating the
-histograms of the variants, the counts and the statistics are three
-passes, which the one calculation worker makes one after the other when
-they are asked together; the statistics of each individual also fill the
-counts of the same filters (`filterCounts.md`, "Which results fill it"),
-so a user who calculates them needs no Count.
+The parts of the step do not wait for one another, but for the
+statistics of each individual, which the Count and the histograms of
+the variants wait for when a threshold on the individuals is set and
+they are not calculated (above). Calculating the histograms of the
+variants, the counts and the statistics are three passes, which the one
+calculation worker makes one after the other when they are asked
+together. The statistics of each individual read no filter since 28
+September 2026, and fill no counts of the filters; the counts come from
+a Count, or from a diversity of the same filters (`filterCounts.md`,
+"Which results fill it").
 
 ## What it sends and reads
 
@@ -1058,8 +1068,9 @@ in their sections. The rest:
   depends on how far linkage disequilibrium extends in the genome of
   your species. Type a distance in base pairs, or turn off the LD
   filter.", the reason of `variantFilterNeeds` without its end "in the
-  Variants step", and so beside the disabled buttons of the Count, of
-  the statistics and of the writing, as every reason this step shows;
+  Variants step", and so beside the disabled buttons of the Count and
+  of the writing, as every reason this step shows, and not beside those
+  of the statistics and of the histograms, which it does not lock;
   in the Analyses step and the stepper it is shown whole. The name "the
   LD filter of the Variants step" is the one the refusal of a file not
   sorted already gives it (`docs/specs/analyses/diversity.md`, "Its
@@ -1313,9 +1324,15 @@ node on 28 September 2026, the same with both releases:
   `{ kind: "ld", maxAllowedR2: 0.3, maxDist: null }` for a project that
   has never had the filter and the filter of `filtersOff` for one that
   keeps it, and the constant of 10000 goes;
-- with the thresholds at 0.03 and 0.38, Write, Save, and the download
-  read: `panel.filtered.nei`, 170,042 bytes, and 170,122 from stage 4,
-  with popnei's `js-v0.1.0-dev.3` (`writeVariants.md`);
+- with the missing data filter at 0.05, the LD filter off, and the
+  thresholds at 0.03 and 0.38, which keep 111 individuals, Write, Save,
+  and the download read: `panel.filtered.nei`, 156,818 bytes, 1,117
+  variants, with the individuals first and popnei's `js-v0.1.0-dev.3`
+  (`writeVariants.md`; `orderA.mjs` of `docs/specs/worker/runner.md`);
+  with the LD filter of the bullet above on as well, r² 0.3 within
+  50,000, 150,290 bytes and 1,067 variants (node, 28 September 2026).
+  The flow turns the LD filter off before the Write, so that the size is
+  the first;
 - no button that downloads a histogram as SVG or PNG on the step; the
   CSV of the bins of the MAF, `panel.variant_maf_bins.csv`, its header and 40
   rows, the 39th `0.9500000000000001,0.9750000000000001,22,` with no

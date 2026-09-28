@@ -993,8 +993,8 @@ section 4), and every analysis has to read the individuals they keep.
   of a project file, or the cache dropping them, a
   Run of such an analysis starts the calculation of the statistics first,
   and the analysis shows that it waits for them, "Calculating the
-  statistics of each individual, which the filters of individuals are set
-  from"; its own request is sent when they arrive, if the project still
+  statistics of each individual, which the thresholds of the individuals
+  need"; its own request is sent when they arrive, if the project still
   gives the same keys, and it ends with their failure if they fail or are
   stopped (section 5). An analysis cannot start when the filters keep no
   individual, which popnei would refuse, known once the statistics are
@@ -1166,9 +1166,7 @@ and now refuses an analysis of the statistics that reads any filter
 (`filterCounts.md`, `docs/specs/core/store.md`); `countsOf` of `src/core/apps.ts`, for which the statistics no longer
 fill the counts, and the order of the analyses there, the statistics of
 each individual first (`docs/specs/entry.md`); the runner, which puts the list before the filters
-(`docs/specs/worker/runner.md`); the lock of the LD filter with no
-distance, now of what reads the filters of the variants
-(`docs/specs/core/project.md`); the key version of `diversity`, raised to
+(`docs/specs/worker/runner.md`); the key version of `diversity`, raised to
 2, since it gives another result under the same key when the project
 has a filter of individuals, and a project file of stage 3 would
 otherwise compare its check numbers as if the file had changed; and
@@ -1181,7 +1179,10 @@ the fixture of the statistics and its script; and the order of the
 Variants step, whose filters of the individuals now come before those
 of the variants (`docs/specs/steps/variants.md`). The option not taken
 for the histograms of the variants, over every individual of the file,
-is above.
+is above. The lock of the LD filter with no distance is not a change of
+the code of stage 3, which gave the filter 10,000 base pairs from its
+switch: stage 4 adds it, for what reads the filters of the variants
+(`docs/specs/core/project.md`, `variantFilterNeeds`).
 
 ## 5. The workers and their messages
 

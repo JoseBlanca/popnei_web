@@ -1004,7 +1004,8 @@ the analyses `done`, `ready` or `removed`.
   missing data filter at 0.1 and the LD filter at r² 0.3 with
   `"maxDist": null`, no check, and `v1-filters-off.popnei.json`,
   `panel.nei` with the missing data filter at 0.1 on, in `filtersOff`
-  the LD filter at r² 0.2 within 50000 and the MAF filter at 0.9, and in
+  the MAF filter at 0.9 and the LD filter at r² 0.2 within 50000, in
+  that order, the fixed order of `VARIANT_FILTER_ORDER`, and in
   `individualFiltersOff` the threshold of observed heterozygosity at
   0.38, no check. Each
   opens into a project written as a literal in its test, and, while

@@ -104,9 +104,20 @@ tests in the tests.
   popnei would refuse (`individualListNeeds`), in the words the screen
   shows next to its Run button, or `null`. A reason from any of them
   locks the analysis; `projectNeeds` is asked first,
-  `variantFilterNeeds` second, only of an analysis that reads the
-  filters of the variants, `individualListNeeds` third, only of one that reads
-  the filters of individuals, and `needs` last.
+  `individualListNeeds` second, only of an analysis that reads the
+  filters of individuals, `variantFilterNeeds` third, only of one that
+  reads the filters of the variants, and `needs` last. The lists of
+  individuals come before the LD filter because the filters of
+  individuals act first (`docs/architecture.md`, section 2), and the
+  Variants step shows them first; and the PCA, which asks
+  `variantFilterNeeds` in its own `needs` while its LD filter follows
+  the step's, asks it before its other reasons, so that one project
+  gives the diversity and the PCA the same reason
+  (`docs/specs/analyses/pca.md`, "Why it cannot run"). Decided by the
+  writers on 28 September 2026; the order not taken, the LD filter
+  first, would have needed the store to ask the PCA's LD reason before
+  the lists, a hook of its own in the definition, since the PCA's is in
+  its `needs`, which the store asks last.
 - `filtersRead` says which of the two lists of filters the analysis
   reads, and `keyInputs` what else its key holds
   (`docs/specs/core/keys.md`).
@@ -174,7 +185,7 @@ has the kind `removed` in the code.
 
 | state | when | what it holds |
 |---|---|---|
-| locked | `projectNeeds` gives a reason; or the analysis reads the filters of the variants and `variantFilterNeeds` gives one; or it reads the filters of individuals and `individualListNeeds` gives one; or its `needs` does | the reason |
+| locked | `projectNeeds` gives a reason; or the analysis reads the filters of individuals and `individualListNeeds` gives one; or it reads the filters of the variants and `variantFilterNeeds` gives one; or its `needs` does | the first reason, in that order |
 | done | the cache holds a result under its key | the result, its warnings, and the comparison with the check numbers of an opened project file |
 | running | a calculation of its key is in flight and is not being stopped, whether it waits in the queue of the worker or runs; or a Run of its key waits for the statistics of each individual (below) | its progress, the `Progress` of `docs/specs/worker/protocol.md`, popnei's four numbers of the pass as the worker gave them, passed on unchanged, `null` until the worker gives one; the request's id; and whether it waits for the statistics, whose request's progress and id it then holds |
 | error | popnei refused the calculation of its key, or the calculation failed since the last change; or it reads the filters of individuals and the statistics it waits for were refused, or failed since the last change (below) | popnei's message, or the failure, and whether it is the failure of the statistics, `ofStatistics`, so that the panel does not tell it as its own |
@@ -184,8 +195,8 @@ has the kind `removed` in the code.
 | empty | cannot happen | — |
 
 The key of an analysis is made when none of `projectNeeds`,
-`variantFilterNeeds` for an analysis that reads the filters of the variants,
-`individualListNeeds` for one that reads the filters of individuals,
+`individualListNeeds` for an analysis that reads the filters of individuals,
+`variantFilterNeeds` for one that reads the filters of the variants,
 and its `needs` gives a reason, the first row, and whatever the second lock, the
 one of the individuals kept: the key holds the thresholds and not the
 list (`docs/specs/core/keys.md`), so it is known without the
@@ -737,7 +748,7 @@ with a state of its own, `write`:
 
 | state | when | what it holds |
 |---|---|---|
-| locked | `projectNeeds`, `variantFilterNeeds` or `individualListNeeds` gives a reason, or the list of the individuals kept is known and empty | the reason, the `reason` of `individualListNeeds` for the third, `keptNoneReason` for the fourth |
+| locked | `projectNeeds`, `individualListNeeds` or `variantFilterNeeds` gives a reason, asked in that order, or the list of the individuals kept is known and empty | the reason, the `reason` of `individualListNeeds` for the second, `keptNoneReason` for the fourth |
 | done | a write of its key ended done with at least one variant while the project gave that key, the file has not been handed to the browser, and no change has given the write another key since | what the worker gave, `Written` of `docs/specs/worker/protocol.md`: the file, its size and the counts of its pass |
 | noVariant | a write of its key ended done with no variant, `passStats.numVars` 0, and no change has given the write another key since | its key, and the size and the counts of the file, without the file, which nobody can save |
 | saved | the file of `done` was handed to the browser to save, `writeSaved`, and no change has given the write another key since | its key, and the size and the counts of the file, without the file |
@@ -1177,10 +1188,11 @@ the owner, on 24 September 2026:
   statistics end, the wait ends with nothing sent, the statistics are in
   the cache, and the analysis is `ready` for the new threshold, with its
   list known: a new Run sends at once.
-- **The statistics refused by popnei**, "the pass gave no variant" when
-  the filters of the variants keep none: every analysis that reads the
-  filters of individuals and is not done shows that refusal in `error`,
-  until a change gives the statistics another key.
+- **The statistics refused by popnei**, "the pass gave no variant",
+  which, since the statistics read no filter, comes only from a variants
+  file with no variant: every analysis that reads the filters of
+  individuals and is not done shows that refusal in `error`, until a
+  change gives the statistics another key, a new load.
 - **A write that ends after a change of the filters, before its stop.**
   Its file is dropped and the state `write` is `ready` for the new
   filters, with `dropped` true until the next change; its counts are in the cache under the key of the old filters,
@@ -1338,14 +1350,14 @@ whose file is a text.
   `individualListNeeds`; the statistics of each individual, which read
   none, are `ready`, and `individualsKept` is `null`.
 - **An LD filter with no distance**, `maxDist` `null`: the analysis that
-  reads the filters of the variants, one that reads only the filters of
-  individuals, with a threshold on the individuals and with none, the
-  counts of the filters, the statistics of each individual and the write
-  are `locked` with the reason of `variantFilterNeeds`,
-  before a list popnei would refuse, whose reason comes once the
-  distance is typed; an analysis that reads no filter is `ready`; and
-  `startRun` and `startWrite` of the locked ones give `null` and send
-  nothing. A result `done` before the filter was turned on is in the
+  reads the filters of the variants, the counts of the filters and the
+  write are `locked` with the reason of `variantFilterNeeds`; one that
+  reads only the filters of individuals, with a threshold on the
+  individuals and with none, the statistics of each individual, and an
+  analysis that reads no filter are `ready`. With a list popnei would
+  refuse as well, the locked ones give the reason of the list, and the
+  reason of `variantFilterNeeds` once the list is mended. `startRun` and
+  `startWrite` of the locked ones give `null` and send nothing. A result `done` before the filter was turned on is in the
   notice of that command, with its Undo, and `locked` after it. Turned
   off, the filter is kept in `filtersOff` with its `maxDist` `null`, and
   every analysis is as in a project with no LD filter, the result of

@@ -342,14 +342,17 @@ The store asks `projectNeeds` of `docs/specs/core/project.md` first,
 which gives the reasons every analysis shares: no variants file, "Load a
 variants file in the Variants step."; the file being read, "Reading
 panel.nei."; the file refused or not read. Then, since the diversity
-reads the filters of the variants, `variantFilterNeeds` of the same
-spec, the LD filter of the Variants step with no distance, "The LD
-filter of the Variants step needs the distance within which variants
-are compared. It has no default, because it depends on how far linkage
-disequilibrium extends in the genome of your species. Type a distance
-in base pairs, or turn off the LD filter, in the Variants step."; and,
-since it reads the filters of individuals, `individualListNeeds`, the
-lists of individuals that popnei would refuse. Then `needs` of this module gives the first of
+reads the filters of individuals, `individualListNeeds`, the lists of
+individuals that popnei would refuse; and, since it reads the filters
+of the variants, `variantFilterNeeds` of the same spec, the LD filter
+of the Variants step with no distance, "The LD filter of the Variants
+step needs the distance within which variants are compared. It has no
+default, because it depends on how far linkage disequilibrium extends
+in the genome of your species. Type a distance in base pairs, or turn
+off the LD filter, in the Variants step.", in the order in which the
+filters act, which the PCA's reasons follow too
+(`docs/specs/core/store.md`, "The definition of an analysis"). Then
+`needs` of this module gives the first of
 these, in the words the panel shows beside its Run button:
 
 | the project | the reason |
