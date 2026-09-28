@@ -1481,7 +1481,18 @@ as core would. Each test at `run` or `write` of a runner made by
   261,570, 251,074, 160,186, 156,818 and 3,682 bytes, with the same
   counts and the same individuals read back (node, 28 September 2026, by
   `numbers3.mjs` and `orderA.mjs` above run with each release, whose
-  other numbers are the same with both).
+  other numbers are the same with both). Until the list of the
+  individuals kept goes before the filters of the variants, in work
+  package 2 of the plan of stage 4 (`docs/plans/individuals-pca.md`),
+  the tests write in the order of stage 3, which judges the individuals
+  over the variants the filter at 0.05 keeps: at 0.05 with the list of
+  the 125 individuals whose missing rate there is at most 0.03, and with
+  the 119 of them whose observed heterozygosity is also at most 0.38,
+  the files are 176,098 and 170,042 bytes with `js-v0.1.0-dev.2` and
+  176,122 and 170,122 bytes with `js-v0.1.0-dev.3`, and open again with
+  those individuals in their order (node, 28 September 2026, by
+  `numbers3.mjs` above with those two lists). These two sizes leave this
+  spec with the order of stage 3.
 
 The numbers of the PCA and of the PCoA were given by `js-v0.1.0-dev.3`
 in node on 28 September 2026, by the script of
