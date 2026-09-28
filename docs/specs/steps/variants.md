@@ -1224,11 +1224,17 @@ nothing on the screen says the things the lines above do not.
   the statistics it waited for arrive, or by an Undo to such filters, the
   focus moves to the reason beside its disabled button, which takes the
   focus for that and is not a stop of the Tab key, as the words of an
-  error do, since a disabled button cannot hold the focus. When the Count
-  leaves that state while its reason has the focus, by a Redo or an Undo
-  among them, the focus moves to what the new state shows first: the
-  Count button when it can be pressed again, or else the line of the
-  total, the warning of a file of no variant or the words of an error. When the result of a check leaves
+  error do, since a disabled button cannot hold the focus. The same
+  reason stands beside the histograms, the Count and the Write, so the
+  one that takes the focus is named for the Count by words a screen
+  reader reads before it and the eye does not see, "Count the variants
+  each filter keeps is unavailable: ", and its visible words do not
+  change. When the line of the total, the warning of a file of no
+  variant, the words of an error or the reason leave the page while they
+  have the focus, by an Undo or a Redo among them, the focus moves to
+  what the new state shows first: the Count button when it can be
+  pressed, or else the line of the total, the warning of a file of no
+  variant, the words of an error, or the reason of a locked Count. When the result of a check leaves
   the page with the focus in it, on the table of the individuals, a tab,
   the panel or a CSV button of a histogram, by an Undo or a change that
   removes it, the focus moves to the heading of the block of that check,
