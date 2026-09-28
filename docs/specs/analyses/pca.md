@@ -249,10 +249,14 @@ its kind in the fixed order. The filter of observed heterozygosity is
 always the dataset's, and so will be the regions of a BED file once
 popnei has that filter. An LD filter with no distance, the dataset's or
 the PCA's own, is copied as it is: popnei's `filterByLd` cannot be given
-it, and `needs` locks the PCA before the store sends a job, with the
-reason of `variantFilterNeeds` of `docs/specs/core/project.md` for the
-dataset's, which the PCA follows, and with its own reason for the
-PCA's own (below, "Why it cannot run"), so such a list is never sent.
+it, and `needs`, the function of the module that says why it cannot
+run, locks the PCA before the store sends a job: for the dataset's,
+which the PCA follows, with the reason `variantFilterNeeds` of
+`docs/specs/core/project.md` gives while the LD filter of the Variants
+step is on with no distance; for the PCA's own, with the reason
+`pruningDistanceReason` of this module gives while the PCA's own LD
+filter has none (below, "Why it cannot run"). So such a list is never
+sent.
 
 Two options were not taken by the owner: the PCA's own missing data and
 LD alone, its MAF the dataset's; and a filter of its own for every
@@ -288,7 +292,7 @@ and "own" a filter the user set in the panel:
 | missing data 0.1, heterozygosity 0.9, LD r² 0.3 within 10,000 | defaults | missing data 0.1, heterozygosity 0.9, LD r² 0.3 within 10,000 |
 | missing data 0.1, heterozygosity 0.9, LD r² 0.3 within 10,000 | own missing data 0.02, own LD r² 0.1 within 50,000 | missing data 0.02, heterozygosity 0.9, LD r² 0.1 within 50,000 |
 | missing data 0.1, LD r² 0.3 with no distance | defaults | missing data 0.1, LD r² 0.3 with no distance; the PCA is locked until the distance is typed in the Variants step |
-| missing data 0.1, LD r² 0.3 with no distance | own LD r² 0.1 within 50,000 | missing data 0.1, LD r² 0.1 within 50,000; the PCA can run, though the diversity is locked until the distance is typed in the Variants step (below, "Why it cannot run") |
+| missing data 0.1, LD r² 0.3 with no distance | own LD r² 0.1 within 50,000 | missing data 0.1, LD r² 0.1 within 50,000; the PCA can run, since it does not use the step's LD filter (below, "Why it cannot run") |
 | none | own missing data 0.05 | missing data 0.05 |
 | missing data 0.1 | LD back to as in the Variants step, with r² 0.1 and 50,000 kept | missing data 0.1 |
 
@@ -441,7 +445,10 @@ yet. Every later version of the format reads version 1 so
 
 ### What goes into its key
 
-`filtersRead` is `{ variants: false, individuals: true }`. The filters of
+`filtersRead`, the part of the definition of an analysis that says
+which of the two lists of the project's filters its key holds, and so
+which of them the store locks it for (`docs/specs/core/store.md`, "The
+definition of an analysis"), is `{ variants: false, individuals: true }`. The filters of
 the individuals change the individuals the components are made of, and
 `keyOf` of `docs/specs/core/keys.md` puts them in the key, with the id
 `pca`, the key version, the version of popnei and the load. The filters
@@ -2132,12 +2139,14 @@ matrix is theirs.
 
 The notes of "What it shows" and of the module are its other words.
 
-The 3D view, which the panel opens on, in the place of the plot while
-it loads or while the browser has taken the drawing away, and above the
-2D plot drawn in its place when the browser cannot draw it, with the 2D
-button offered in each case (`docs/specs/charts/pca3d.md`, "Loading
-three.js", "When the browser has no WebGL" and "The WebGL context
-lost"):
+The words of the 3D view, which the panel opens on, with the 2D button
+offered in each case (`docs/specs/charts/pca3d.md`, "Loading three.js",
+"When the browser has no WebGL" and "The WebGL context lost"). While
+three.js loads, and while the browser has taken the drawing away, the
+words stand alone in the place of the plot, since the 3D view is about
+to be drawn or drawn again. When three.js could not be downloaded, or
+the browser has no WebGL 2, the 2D plot is drawn in the place of the 3D
+view, and the words stand above it:
 
 | when | the text |
 |---|---|
