@@ -6,6 +6,7 @@ import { createStore } from "../../../core/store.ts";
 import type { Store } from "../../../core/store.ts";
 import type { Job, JobResult } from "../../../worker/protocol.ts";
 import {
+  LOAD_DESCRIPTIONS,
   besideOf,
   filterCommand,
   filterSwitchCommand,
@@ -249,5 +250,15 @@ describe("the options of a VCF the Variants step shows", () => {
     stop();
     options.edit({ ploidy: 3, onlyPassed: true });
     expect(calls).toBe(2);
+  });
+});
+
+describe("the descriptions of the commands that change the load", () => {
+  test("the list the words of the histograms removed read is the descriptions of the pick and of the read again", () => {
+    const load = vcf("a", "a.vcf", 2);
+    expect(LOAD_DESCRIPTIONS).toEqual([
+      pickCommand(load).description,
+      readAgainCommand(load).description,
+    ]);
   });
 });

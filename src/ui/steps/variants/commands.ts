@@ -29,17 +29,24 @@ export interface StepCommand {
   readonly command: (p: Project) => Project;
 }
 
+/** The description of a new load, a file picked or dropped. */
+export const PICKED_DESCRIPTION = "a new variants file was loaded";
+
+/** The description of the same file read again with other options. */
+export const READ_AGAIN_DESCRIPTION =
+  "the variants file was read again with other options";
+
 /** The descriptions of the two commands that change the load of the
     variants file. */
 export const LOAD_DESCRIPTIONS: readonly string[] = Object.freeze([
-  "a new variants file was loaded",
-  "the variants file was read again with other options",
+  PICKED_DESCRIPTION,
+  READ_AGAIN_DESCRIPTION,
 ]);
 
 /** A file picked or dropped, a new load. */
 export function pickCommand(load: VariantLoad): StepCommand {
   return {
-    description: "a new variants file was loaded",
+    description: PICKED_DESCRIPTION,
     command: (p) => loadVariants(p, load),
   };
 }
@@ -47,7 +54,7 @@ export function pickCommand(load: VariantLoad): StepCommand {
 /** The same `File` loaded again under a new load id, with other options. */
 export function readAgainCommand(load: VariantLoad): StepCommand {
   return {
-    description: "the variants file was read again with other options",
+    description: READ_AGAIN_DESCRIPTION,
     command: (p) => loadVariants(p, load),
   };
 }
