@@ -842,11 +842,16 @@ is `position: relative`, so that the tooltip is placed inside it
   the 3D view in the scatter's place, unmarks it; a second call does
   nothing.
 - **Numbers near the largest a number of 64 bits holds**, ±1.8e308: the
-  ranges of the scales and of viridis are computed with halves, `max / 2
-  − min / 2`, so that no difference overflows to an infinity, and the
-  points are drawn and coloured as any others; when the axis itself runs
-  over more than 1.8e308, it is drawn from the halves too, with its
-  labels written doubled.
+  step of viridis is computed with halves, `(value / 2 − min / 2) / (max
+  / 2 − min / 2)`, so that no difference overflows to an infinity. The
+  axes of such coordinates run past 1.8e308, since the frame is wider
+  than the data along one of them: the scatter then draws its scales over
+  the coordinates times a half, a quarter, down to a 256th, the first at
+  which the ends of both axes are finite, which places every point where
+  it would be, since a power of two multiplies exactly, and writes the
+  labels of the ticks at the size of the coordinates. `scatterScales`
+  gives the scales at 1. The points are drawn and coloured as any
+  others.
 
 ## How it runs
 
