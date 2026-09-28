@@ -28,7 +28,6 @@ import {
   recordVariantsRead,
   removeIndividualFilter,
   removeIndividuals,
-  removeVariantFilter,
   setAnalysisOptions,
   setColumnType,
   setCsvOptions,
@@ -36,6 +35,8 @@ import {
   setIndividualFilter,
   setVariantFilter,
   shown,
+  turnOffIndividualFilter,
+  turnOffVariantFilter,
   variantFilterNeeds,
   variantsStepNeeds,
   individualsStepMissing,
@@ -52,6 +53,7 @@ import type {
   SourceRead,
 } from "./project.ts";
 import type { Result } from "./result.ts";
+import { MAX_UNDO_STEPS, commit, startHistory, undo } from "./history.ts";
 import type {
   ColumnType,
   IndividualsFileError,
@@ -75,7 +77,9 @@ const PROJECT_FIELDS: readonly (keyof Project)[] = [
   "app",
   "variants",
   "filters",
+  "filtersOff",
   "individualFilters",
+  "individualFiltersOff",
   "individuals",
   "grouping",
   "analyses",
@@ -169,14 +173,15 @@ describe("WP1 D3 the commands", () => {
       expectKept(p, q, ["filters"]);
     });
 
-    test("removeVariantFilter takes out the filter of its kind", () => {
+    test("turnOffVariantFilter takes the filter of its kind out of the filters on, into filtersOff", () => {
       const p = sampleProject();
-      const q = removeVariantFilter(p, "maf");
+      const q = turnOffVariantFilter(p, "maf");
       expect(q.filters).toEqual([
         { kind: "missing_data", maxAllowedMissingRate: 0.1 },
       ]);
       expect(q.filters[0]).toBe(p.filters[0]);
-      expectKept(p, q, ["filters"]);
+      expect(q.filtersOff).toEqual([{ kind: "maf", maxAllowedMaf: 0.95 }]);
+      expectKept(p, q, ["filters", "filtersOff"]);
     });
 
     test("setIndividualFilter puts a new kind in the fixed order", () => {
@@ -282,7 +287,9 @@ describe("WP1 D3 the commands", () => {
       app,
       variants: null,
       filters: [],
+      filtersOff: [],
       individualFilters: [],
+      individualFiltersOff: [],
       individuals: null,
       grouping,
       analyses: [],
@@ -318,12 +325,13 @@ describe("WP1 D3 the commands", () => {
       "setVariantFilter",
       (p) => setVariantFilter(p, { kind: "maf", maxAllowedMaf: 0.95 }),
     ],
-    ["removeVariantFilter", (p) => removeVariantFilter(p, "ld")],
+    ["turnOffVariantFilter", (p) => turnOffVariantFilter(p, "ld")],
     [
       "setIndividualFilter",
       (p) => setIndividualFilter(p, { kind: "remove", individuals: ["i4"] }),
     ],
     ["removeIndividualFilter", (p) => removeIndividualFilter(p, "keep")],
+    ["turnOffIndividualFilter", (p) => turnOffIndividualFilter(p, "obs_het")],
     [
       "loadIndividuals",
       (p) =>
@@ -438,14 +446,14 @@ describe("WP1 D3 the commands", () => {
   });
 
   describe("the rows of the table of the commands", () => {
-    test("removeVariantFilter of a kind not there gives the project itself", () => {
+    test("turnOffVariantFilter of a kind not on gives the project itself", () => {
       const p = deepFreeze(emptyProject("popgen"));
-      expect(removeVariantFilter(p, "maf")).toBe(p);
+      expect(turnOffVariantFilter(p, "maf")).toBe(p);
     });
 
     test("removeIndividualFilter of a kind not there gives the project itself", () => {
       const p = sampleProject();
-      expect(removeIndividualFilter(p, "obs_het")).toBe(p);
+      expect(removeIndividualFilter(p, "keep")).toBe(p);
     });
 
     test("removeIndividuals with no individuals file gives the project itself", () => {
@@ -4158,5 +4166,417 @@ describe("IP3 D1 the LD filter with no distance", () => {
     );
     // The drawn projects reach the filter with no distance.
     expect(noDistance).toBeGreaterThan(20);
+  });
+});
+
+/** The text of an error of a project file around the words of what is
+    wrong. */
+function openedText(what: string): string {
+  return `The project file cannot be opened: ${what}. The file was changed outside the application, or is damaged. Open a copy saved before the change, or make the project again.`;
+}
+
+describe("IP3 D1 the filters turned off", () => {
+  test("the worked case of the filters of the variants: two turned off with their values, one turned on again with the values kept, and an undo of each the project before it", () => {
+    let p = freezeProject(emptyProject("popgen"));
+    for (const filter of [
+      { kind: "maf", maxAllowedMaf: 0.95 },
+      { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+      { kind: "maf", maxAllowedMaf: 0.9 },
+      { kind: "ld", maxAllowedR2: 0.2, maxDist: 50000 },
+      { kind: "obs_het", maxAllowedObsHet: 0.6 },
+    ] as const) {
+      p = freezeProject(setVariantFilter(p, filter));
+    }
+    expect(p.filters.map((f) => f.kind)).toStrictEqual([
+      "missing_data",
+      "obs_het",
+      "maf",
+      "ld",
+    ]);
+    expect(p.filtersOff).toStrictEqual([]);
+
+    let h = startHistory(p, MAX_UNDO_STEPS);
+    const step = (command: (q: Project) => Project): Project => {
+      const next = freezeProject(command(h.present.project));
+      h = commit(h, next, "a switch");
+      return next;
+    };
+    const obsHetOff = step((q) => turnOffVariantFilter(q, "obs_het"));
+    const ldOff = step((q) => turnOffVariantFilter(q, "ld"));
+    expect(ldOff.filters).toStrictEqual([
+      { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+      { kind: "maf", maxAllowedMaf: 0.9 },
+    ]);
+    expect(ldOff.filtersOff).toStrictEqual([
+      { kind: "obs_het", maxAllowedObsHet: 0.6 },
+      { kind: "ld", maxAllowedR2: 0.2, maxDist: 50000 },
+    ]);
+    expect(ldOff.individualFilters).toBe(p.individualFilters);
+
+    const kept = ldOff.filtersOff[1];
+    if (kept === undefined) {
+      throw new Error("the LD filter is kept");
+    }
+    const ldOn = step((q) => setVariantFilter(q, kept));
+    expect(ldOn.filters).toStrictEqual([
+      { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+      { kind: "maf", maxAllowedMaf: 0.9 },
+      { kind: "ld", maxAllowedR2: 0.2, maxDist: 50000 },
+    ]);
+    expect(ldOn.filtersOff).toStrictEqual([
+      { kind: "obs_het", maxAllowedObsHet: 0.6 },
+    ]);
+
+    h = undo(h);
+    expect(h.present.project).toBe(ldOff);
+    h = undo(h);
+    expect(h.present.project).toBe(obsHetOff);
+    h = undo(h);
+    expect(h.present.project).toBe(p);
+  });
+
+  test("the worked case of the individuals: the threshold of observed heterozygosity at 0.38 turned off is kept, and turned on again leaves the list of those off", () => {
+    const p = sampleProject();
+    const on = freezeProject(
+      setIndividualFilter(p, { kind: "obs_het", maxAllowedObsHet: 0.38 }),
+    );
+    const off = freezeProject(turnOffIndividualFilter(on, "obs_het"));
+    expect(off.individualFilters).toStrictEqual(p.individualFilters);
+    expect(off.individualFiltersOff).toStrictEqual([
+      { kind: "obs_het", maxAllowedObsHet: 0.38 },
+    ]);
+    expect(off.filters).toBe(p.filters);
+    expect(off.filtersOff).toBe(p.filtersOff);
+
+    const kept = off.individualFiltersOff[0];
+    if (kept === undefined) {
+      throw new Error("the threshold is kept");
+    }
+    const back = setIndividualFilter(off, kept);
+    expect(back.individualFilters).toStrictEqual(on.individualFilters);
+    expect(back.individualFiltersOff).toStrictEqual([]);
+  });
+
+  test("turned off again, a filter replaces the one of its kind kept before, in its place", () => {
+    let p = sampleProject();
+    p = freezeProject(turnOffVariantFilter(p, "missing_data"));
+    p = freezeProject(turnOffVariantFilter(p, "maf"));
+    p = freezeProject(
+      setVariantFilter(p, { kind: "missing_data", maxAllowedMissingRate: 0.3 }),
+    );
+    p = freezeProject(turnOffVariantFilter(p, "missing_data"));
+    expect(p.filters).toStrictEqual([]);
+    expect(p.filtersOff).toStrictEqual([
+      { kind: "missing_data", maxAllowedMissingRate: 0.3 },
+      { kind: "maf", maxAllowedMaf: 0.95 },
+    ]);
+  });
+
+  test("setVariantFilter of a kind kept off with other values turns it on with them, the kind gone from filtersOff", () => {
+    const off = freezeProject(turnOffVariantFilter(sampleProject(), "maf"));
+    const on = setVariantFilter(off, { kind: "maf", maxAllowedMaf: 0.8 });
+    expect(on.filters).toStrictEqual([
+      { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+      { kind: "maf", maxAllowedMaf: 0.8 },
+    ]);
+    expect(on.filtersOff).toStrictEqual([]);
+  });
+
+  test("turnOffVariantFilter and turnOffIndividualFilter of a kind not on give the project itself, whatever the list of the filters off holds", () => {
+    const off = freezeProject(
+      turnOffIndividualFilter(
+        turnOffVariantFilter(sampleProject(), "maf"),
+        "missing_data",
+      ),
+    );
+    expect(off.filtersOff).toHaveLength(1);
+    expect(off.individualFiltersOff).toHaveLength(1);
+    expect(turnOffVariantFilter(off, "maf")).toBe(off);
+    expect(turnOffVariantFilter(off, "ld")).toBe(off);
+    expect(turnOffIndividualFilter(off, "missing_data")).toBe(off);
+    expect(turnOffIndividualFilter(off, "obs_het")).toBe(off);
+  });
+
+  test("the LD filter turned off before its distance was typed is kept with no distance, locks nothing, and turned on again locks again", () => {
+    const on = freezeProject(setVariantFilter(sampleProject(), LD_NO_DISTANCE));
+    expect(variantFilterNeeds(on)).toBe(LD_NO_DISTANCE_REASON);
+    const off = freezeProject(turnOffVariantFilter(on, "ld"));
+    expect(off.filtersOff).toStrictEqual([LD_NO_DISTANCE]);
+    expect(variantFilterNeeds(off)).toBeNull();
+    expect(jobFilters(off.filters)).toBe(off.filters);
+    const kept = off.filtersOff[0];
+    if (kept === undefined) {
+      throw new Error("the LD filter is kept");
+    }
+    expect(variantFilterNeeds(setVariantFilter(off, kept))).toBe(
+      LD_NO_DISTANCE_REASON,
+    );
+  });
+
+  test("parseProject of a project with neither list of the filters off opens it with both empty", () => {
+    const rest = Object.fromEntries(
+      Object.entries(sampleProject()).filter(
+        ([name]) => name !== "filtersOff" && name !== "individualFiltersOff",
+      ),
+    );
+    expect(parse(JSON.parse(JSON.stringify(rest)))).toStrictEqual({
+      ok: true,
+      value: { ...sampleProject(), filtersOff: [], individualFiltersOff: [] },
+    });
+  });
+
+  test("parseProject of the missing data filter both on and off refuses it at the one off, with its text", () => {
+    const result = parse(
+      fileWith({
+        filtersOff: [{ kind: "maf", maxAllowedMaf: 0.9 }],
+      }),
+    );
+    expect(result).toStrictEqual({
+      ok: false,
+      error: {
+        kind: "twoFiltersOfAKind",
+        path: ["filtersOff", 0],
+        filter: "maf",
+      },
+    });
+    const both = parse(
+      fileWith({
+        filtersOff: [{ kind: "missing_data", maxAllowedMissingRate: 0.3 }],
+      }),
+    );
+    expect(both).toStrictEqual({
+      ok: false,
+      error: {
+        kind: "twoFiltersOfAKind",
+        path: ["filtersOff", 0],
+        filter: "missing_data",
+      },
+    });
+    expect(projectErrorText(errorOf(both))).toBe(
+      openedText(
+        "it has the filter of the variants by missing genotypes both on and turned off, and a filter is one or the other",
+      ),
+    );
+  });
+
+  test("parseProject of a threshold of the individuals both on and off refuses it at the one off, with its text", () => {
+    const result = parse(
+      fileWith({
+        individualFiltersOff: [
+          { kind: "missing_data", maxAllowedMissingRate: 0.3 },
+        ],
+      }),
+    );
+    expect(result).toStrictEqual({
+      ok: false,
+      error: {
+        kind: "twoFiltersOfAKind",
+        path: ["individualFiltersOff", 0],
+        filter: "missing_data",
+      },
+    });
+    expect(projectErrorText(errorOf(result))).toBe(
+      openedText(
+        "it has the filter of the individuals by missing genotypes both on and turned off, and a filter is one or the other",
+      ),
+    );
+  });
+
+  test("parseProject of a list to keep in individualFiltersOff refuses it as a wrong kind", () => {
+    const result = parse(
+      fileWith({
+        individualFiltersOff: [{ kind: "keep", individuals: ["i1"] }],
+      }),
+    );
+    expect(result).toStrictEqual(
+      wrong(
+        ["individualFiltersOff", 0, "kind"],
+        "missing genotypes or observed heterozygosity",
+      ),
+    );
+    expect(projectErrorText(errorOf(result))).toBe(
+      openedText(
+        "the kind of the first filter of the individuals turned off should be missing genotypes or observed heterozygosity",
+      ),
+    );
+  });
+
+  test("parseProject of two filters of one kind turned off, of the filters off out of their order, and of a threshold off above 1, each with its text", () => {
+    const two = parse(
+      fileWith({
+        filters: [],
+        filtersOff: [
+          { kind: "maf", maxAllowedMaf: 0.9 },
+          { kind: "maf", maxAllowedMaf: 0.8 },
+        ],
+      }),
+    );
+    expect(two).toStrictEqual({
+      ok: false,
+      error: {
+        kind: "twoFiltersOfAKind",
+        path: ["filtersOff", 1, "kind"],
+        filter: "maf",
+      },
+    });
+    expect(projectErrorText(errorOf(two))).toBe(
+      openedText(
+        "it has two filters of the variants turned off by major allele frequency, and a project has at most one of each kind",
+      ),
+    );
+
+    const order = parse(
+      fileWith({
+        individualFilters: [],
+        individualFiltersOff: [
+          { kind: "obs_het", maxAllowedObsHet: 0.3 },
+          { kind: "missing_data", maxAllowedMissingRate: 0.3 },
+        ],
+      }),
+    );
+    expect(order).toStrictEqual({
+      ok: false,
+      error: { kind: "filterOutOfOrder", path: ["individualFiltersOff", 1] },
+    });
+    expect(projectErrorText(errorOf(order))).toBe(
+      openedText(
+        "the filters of the individuals turned off should be in the order missing genotypes, observed heterozygosity, and the second one is out of that order",
+      ),
+    );
+
+    const above = parse(
+      fileWith({
+        filters: [],
+        filtersOff: [{ kind: "missing_data", maxAllowedMissingRate: 1.5 }],
+      }),
+    );
+    expect(above).toStrictEqual(
+      wrong(["filtersOff", 0, "maxAllowedMissingRate"], "a number from 0 to 1"),
+    );
+    expect(projectErrorText(errorOf(above))).toBe(
+      openedText(
+        "the threshold of the first filter of the variants turned off should be a number from 0 to 1",
+      ),
+    );
+
+    const thresholdAbove = parse(
+      fileWith({
+        individualFilters: [],
+        individualFiltersOff: [{ kind: "obs_het", maxAllowedObsHet: 1.5 }],
+      }),
+    );
+    expect(thresholdAbove).toStrictEqual(
+      wrong(
+        ["individualFiltersOff", 0, "maxAllowedObsHet"],
+        "a number from 0 to 1",
+      ),
+    );
+    expect(projectErrorText(errorOf(thresholdAbove))).toBe(
+      openedText(
+        "the threshold of the first filter of the individuals turned off should be a number from 0 to 1",
+      ),
+    );
+  });
+
+  test("for every project, an LD filter with no distance in filtersOff locks nothing, and the project reads back from its JSON", () => {
+    let offWithNoDistance = 0;
+    fc.assert(
+      fc.property(wholeProject, (p) => {
+        const onNone = p.filters.some(
+          (f) => f.kind === "ld" && f.maxDist === null,
+        );
+        const offNone = p.filtersOff.some(
+          (f) => f.kind === "ld" && f.maxDist === null,
+        );
+        offWithNoDistance += offNone ? 1 : 0;
+        expect(variantFilterNeeds(p)).toBe(
+          onNone ? LD_NO_DISTANCE_REASON : null,
+        );
+        expect(
+          parseProject(JSON.parse(JSON.stringify(p)), p.app, 1, TEST_ANALYSES),
+        ).toStrictEqual({ ok: true, value: p });
+      }),
+      { numRuns: 300 },
+    );
+    // The drawn projects reach an LD filter with no distance turned off.
+    expect(offWithNoDistance).toBeGreaterThan(10);
+  });
+
+  test("for every sequence of commands, each of the four lists of filters has one filter of each kind at most, in its fixed order, no kind is both on and off, and a filter turned off then on again by the value kept gives the filters on of before", () => {
+    const rankIn =
+      <K extends string>(order: readonly K[]) =>
+      (filters: readonly { readonly kind: K }[]): number[] =>
+        filters.map((f) => order.indexOf(f.kind));
+    const strictlyRising = (ranks: readonly number[]): boolean =>
+      ranks.every((rank, at) => at === 0 || rank > (ranks[at - 1] ?? -1));
+    const variantRanks = rankIn(VARIANT_FILTER_ORDER);
+    const individualRanks = rankIn(INDIVIDUAL_FILTER_ORDER);
+    let turnedBack = 0;
+    let keptOff = 0;
+    fc.assert(
+      fc.property(fc.array(drawnCommand, { maxLength: 30 }), (commands) => {
+        let p = sampleProject();
+        for (const command of commands) {
+          const bound = command.bind(p);
+          if (bound === null) {
+            continue;
+          }
+          const before = p;
+          p = deepFreeze(bound(p));
+          for (const list of [p.filters, p.filtersOff]) {
+            expect(strictlyRising(variantRanks(list))).toBe(true);
+          }
+          for (const list of [p.individualFilters, p.individualFiltersOff]) {
+            expect(strictlyRising(individualRanks(list))).toBe(true);
+          }
+          expect(
+            p.filtersOff.filter((f) =>
+              p.filters.some((g) => g.kind === f.kind),
+            ),
+          ).toStrictEqual([]);
+          expect(
+            p.individualFiltersOff.filter((f) =>
+              p.individualFilters.some((g) => g.kind === f.kind),
+            ),
+          ).toStrictEqual([]);
+          keptOff +=
+            p.filtersOff.length + p.individualFiltersOff.length > 0 ? 1 : 0;
+
+          // Turned off, then on again by the value kept: the filters on
+          // of before.
+          for (const filter of before.filters) {
+            const off = deepFreeze(turnOffVariantFilter(before, filter.kind));
+            const kept = off.filtersOff.find((f) => f.kind === filter.kind);
+            if (kept === undefined) {
+              throw new Error("the filter turned off is kept");
+            }
+            expect(setVariantFilter(off, kept).filters).toStrictEqual(
+              before.filters,
+            );
+            turnedBack += 1;
+          }
+          for (const filter of before.individualFilters) {
+            if (filter.kind === "keep" || filter.kind === "remove") {
+              continue;
+            }
+            const off = deepFreeze(
+              turnOffIndividualFilter(before, filter.kind),
+            );
+            const kept = off.individualFiltersOff.find(
+              (f) => f.kind === filter.kind,
+            );
+            if (kept === undefined) {
+              throw new Error("the threshold turned off is kept");
+            }
+            expect(
+              setIndividualFilter(off, kept).individualFilters,
+            ).toStrictEqual(before.individualFilters);
+          }
+        }
+      }),
+      { numRuns: 200 },
+    );
+    expect(keptOff).toBeGreaterThan(100);
+    expect(turnedBack).toBeGreaterThan(100);
   });
 });

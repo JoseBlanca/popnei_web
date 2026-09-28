@@ -4,9 +4,9 @@
   "app": "popgen",
   "appVersion": "0.1.0",
   "popneiVersion": "0.1.0",
-  "saved": "2026-09-28T10:15:30.000Z",
+  "saved": "2026-09-28T16:40:05.000Z",
   "variants": {
-    "fileId": "c0c1c2c3c4c5c6c7c8c9cacbcccdcecf",
+    "fileId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
     "name": "panel.nei",
     "size": 261570,
     "format": "nei",
@@ -22,16 +22,26 @@
     {
       "kind": "missing_data",
       "maxAllowedMissingRate": 0.1
+    }
+  ],
+  "filtersOff": [
+    {
+      "kind": "maf",
+      "maxAllowedMaf": 0.9
     },
     {
       "kind": "ld",
-      "maxAllowedR2": 0.3,
-      "maxDist": null
+      "maxAllowedR2": 0.2,
+      "maxDist": 50000
     }
   ],
-  "filtersOff": [],
   "individualFilters": [],
-  "individualFiltersOff": [],
+  "individualFiltersOff": [
+    {
+      "kind": "obs_het",
+      "maxAllowedObsHet": 0.38
+    }
+  ],
   "individuals": null,
   "grouping": {
     "kind": "populations",

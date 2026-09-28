@@ -15,19 +15,21 @@ import {
   loadVariants,
   removeIndividualFilter,
   removeIndividuals,
-  removeVariantFilter,
   setAnalysisOptions,
   setColumnType,
   setCsvOptions,
   setGrouping,
   setIndividualFilter,
   setVariantFilter,
+  turnOffIndividualFilter,
+  turnOffVariantFilter,
 } from "./project.ts";
 import type {
   AnalysisId,
   AppId,
   Grouping,
   VariantLoad,
+  IndividualThreshold,
   IndividualsRead,
   IndividualsSource,
   ParsedAnalysis,
@@ -45,7 +47,6 @@ import type {
   CsvFound,
   CsvOptions,
   IndividualFilter,
-  IndividualFilterKind,
   IndividualsFileError,
   IndividualsTable,
   Outcome,
@@ -107,10 +108,12 @@ export function sampleProject(): Project {
       { kind: "missing_data", maxAllowedMissingRate: 0.1 },
       { kind: "maf", maxAllowedMaf: 0.95 },
     ],
+    filtersOff: [],
     individualFilters: [
       { kind: "remove", individuals: ["i4"] },
       { kind: "missing_data", maxAllowedMissingRate: 0.2 },
     ],
+    individualFiltersOff: [],
     individuals: {
       fileId: SAMPLE_INDIVIDUALS_ID,
       name: "pops.csv",
@@ -290,9 +293,11 @@ const individualFilter: fc.Arbitrary<IndividualFilter> = fc.oneof(
   })),
 );
 
-const individualFilterKind = fc.constantFrom<IndividualFilterKind>(
-  "keep",
-  "remove",
+/** The kinds of the lists of individuals, which have no switch. */
+const listKind = fc.constantFrom<"keep" | "remove">("keep", "remove");
+
+/** The kinds of the thresholds of the individuals, which have a switch. */
+const thresholdKind = fc.constantFrom<IndividualThreshold["kind"]>(
   "missing_data",
   "obs_het",
 );
@@ -325,9 +330,10 @@ function command(
 const seed = fc.nat();
 
 /**
- * Any of the twelve commands of the project spec, with arguments valid on
- * the project it is bound to, starting from `sampleProject`, a project of
- * population genetics.
+ * Any of the commands of the project spec, with arguments valid on the
+ * project it is bound to, starting from `sampleProject`, a project of
+ * population genetics; and the switch of a filter kept off turned on
+ * again, `setVariantFilter` or `setIndividualFilter` of the values kept.
  */
 export const drawnCommand: fc.Arbitrary<DrawnCommand> = fc.oneof(
   fc
@@ -359,16 +365,36 @@ export const drawnCommand: fc.Arbitrary<DrawnCommand> = fc.oneof(
     command("setVariantFilter", () => (p) => setVariantFilter(p, filter)),
   ),
   variantFilterKind.map((kind) =>
-    command("removeVariantFilter", () => (p) => removeVariantFilter(p, kind)),
+    command("turnOffVariantFilter", () => (p) => turnOffVariantFilter(p, kind)),
+  ),
+  // The switch turned on again, with the values kept while it was off.
+  seed.map((which) =>
+    command("setVariantFilter kept", (p) => {
+      const kept = p.filtersOff[which % Math.max(p.filtersOff.length, 1)];
+      return kept === undefined ? null : (q) => setVariantFilter(q, kept);
+    }),
   ),
   individualFilter.map((filter) =>
     command("setIndividualFilter", () => (p) => setIndividualFilter(p, filter)),
   ),
-  individualFilterKind.map((kind) =>
+  listKind.map((kind) =>
     command(
       "removeIndividualFilter",
       () => (p) => removeIndividualFilter(p, kind),
     ),
+  ),
+  thresholdKind.map((kind) =>
+    command(
+      "turnOffIndividualFilter",
+      () => (p) => turnOffIndividualFilter(p, kind),
+    ),
+  ),
+  seed.map((which) =>
+    command("setIndividualFilter kept", (p) => {
+      const off = p.individualFiltersOff;
+      const kept = off[which % Math.max(off.length, 1)];
+      return kept === undefined ? null : (q) => setIndividualFilter(q, kept);
+    }),
   ),
   fc
     .record({ fileId: loadId, csv: fc.option(csvOptions) })
@@ -489,6 +515,42 @@ export const individualFilters: fc.Arbitrary<readonly IndividualFilter[]> = fc
         INDIVIDUAL_FILTER_ORDER.indexOf(b.kind),
     ),
   );
+
+/** Any filters of the variants on and turned off: at most one of each
+    kind in the two lists together, each in the fixed order of the
+    project; about half of the filters drawn are off. */
+export const variantFiltersOnAndOff: fc.Arbitrary<
+  Pick<Project, "filters" | "filtersOff">
+> = fc
+  .tuple(variantFilters, fc.array(fc.boolean(), { minLength: 4, maxLength: 4 }))
+  .map(([filters, off]) => ({
+    filters: filters.filter((_, at) => off[at] !== true),
+    filtersOff: filters.filter((_, at) => off[at] === true),
+  }));
+
+function isThreshold(filter: IndividualFilter): filter is IndividualThreshold {
+  return filter.kind === "missing_data" || filter.kind === "obs_het";
+}
+
+/** Any filters of the individuals on and turned off: at most one of each
+    kind in the two lists together, each in the fixed order of the
+    project; about half of the thresholds drawn are off, and a list of
+    individuals is always on, since it has no switch. */
+export const individualFiltersOnAndOff: fc.Arbitrary<
+  Pick<Project, "individualFilters" | "individualFiltersOff">
+> = fc
+  .tuple(
+    individualFilters,
+    fc.array(fc.boolean(), { minLength: 4, maxLength: 4 }),
+  )
+  .map(([filters, off]) => ({
+    individualFilters: filters.filter(
+      (f, at) => !isThreshold(f) || off[at] !== true,
+    ),
+    individualFiltersOff: filters
+      .filter((_, at) => off[at] === true)
+      .filter(isThreshold),
+  }));
 
 /** Any state of the read of the variants file. */
 const sourceRead: fc.Arbitrary<SourceRead> = fc.oneof(
@@ -940,8 +1002,9 @@ const role = fc.constantFrom("trait", "covariate", "ignored");
  * Any valid project of either application: every part drawn, the reads
  * of both files in each of their states, tables whose rows are as long as
  * their header and whose binary columns have two values, the options of
- * the analyses of `TEST_ANALYSES`, and a reference with its checks. Frozen
- * deeply. Every number is one JSON writes back as itself.
+ * the analyses of `TEST_ANALYSES`, a reference with its checks, and
+ * filters turned off, with their values. Frozen deeply. Every number is
+ * one JSON writes back as itself.
  */
 export const wholeProject: fc.Arbitrary<Project> = fc
   .constantFrom<AppId>("popgen", "gwas")
@@ -950,8 +1013,8 @@ export const wholeProject: fc.Arbitrary<Project> = fc
       {
         app: fc.constant(app),
         variants: fc.option(anyVariantSource),
-        filters: variantFilters,
-        individualFilters,
+        variantLists: variantFiltersOnAndOff,
+        individualLists: individualFiltersOnAndOff,
         individuals: fc.option(individualsSource),
         grouping:
           app === "popgen"
@@ -1001,7 +1064,15 @@ export const wholeProject: fc.Arbitrary<Project> = fc
       PLAIN,
     ),
   )
-  .map((p) => deepFreeze<Project>(p));
+  .map(({ variantLists, individualLists, ...rest }) =>
+    deepFreeze<Project>({
+      ...rest,
+      filters: variantLists.filters,
+      filtersOff: variantLists.filtersOff,
+      individualFilters: individualLists.individualFilters,
+      individualFiltersOff: individualLists.individualFiltersOff,
+    }),
+  );
 
 // The fakes of the store spec's "How it is verified": a `send` whose
 // requests the test ends by hand, and two analyses, one that needs the
@@ -1513,7 +1584,9 @@ export function fiveIndividualsProject(
       },
     },
     filters: [],
+    filtersOff: [],
     individualFilters,
+    individualFiltersOff: [],
     individuals: {
       fileId: SAMPLE_INDIVIDUALS_ID,
       name: "pops.csv",

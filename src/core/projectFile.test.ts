@@ -3,7 +3,12 @@ import * as fc from "fast-check";
 import { describe, expect, test } from "vitest";
 import { POPGEN_ANALYSES, countsOf, individualStatsOf } from "./apps.ts";
 import { keyFromWire, settingsFingerprint } from "./keys.ts";
-import { emptyProject, variantFilterNeeds } from "./project.ts";
+import {
+  emptyProject,
+  freezeProject,
+  setVariantFilter,
+  variantFilterNeeds,
+} from "./project.ts";
 import type { Project, Reference, VariantSource } from "./project.ts";
 import {
   askedFileText,
@@ -414,7 +419,9 @@ describe("WS6 D1 what is written", () => {
       "saved",
       "variants",
       "filters",
+      "filtersOff",
       "individualFilters",
+      "individualFiltersOff",
       "individuals",
       "grouping",
       "analyses",
@@ -725,10 +732,12 @@ function forwardProject(): Project {
       { kind: "maf", maxAllowedMaf: 0.95 },
       { kind: "ld", maxAllowedR2: 0.5, maxDist: 1000 },
     ],
+    filtersOff: [],
     individualFilters: [
       { kind: "keep", individuals: ["i1", "i2"] },
       { kind: "obs_het", maxAllowedObsHet: 0.6 },
     ],
+    individualFiltersOff: [],
     individuals: {
       fileId: SAMPLE_INDIVIDUALS_ID,
       name: "pops.csv",
@@ -813,10 +822,12 @@ function reversedProject(): Project {
       name: "pops.csv",
       fileId: SAMPLE_INDIVIDUALS_ID,
     },
+    individualFiltersOff: [],
     individualFilters: [
       { individuals: ["i1", "i2"], kind: "keep" },
       { maxAllowedObsHet: 0.6, kind: "obs_het" },
     ],
+    filtersOff: [],
     filters: [
       { maxAllowedMaf: 0.95, kind: "maf" },
       { maxDist: 1000, maxAllowedR2: 0.5, kind: "ld" },
@@ -865,7 +876,9 @@ function reversedProject(): Project {
     analyses: p.analyses,
     grouping: p.grouping,
     individuals: p.individuals,
+    individualFiltersOff: p.individualFiltersOff,
     individualFilters: p.individualFilters,
+    filtersOff: p.filtersOff,
     filters: p.filters,
     variants: p.variants,
     app: p.app,
@@ -879,7 +892,9 @@ function neiDiversityProject(): Project {
     app: "popgen",
     variants: null,
     filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.1 }],
+    filtersOff: [],
     individualFilters: [],
+    individualFiltersOff: [],
     individuals: {
       fileId: "ffeeddccbbaa99887766554433221100",
       name: "pops.csv",
@@ -955,7 +970,9 @@ function vcfPendingProject(): Project {
       { kind: "missing_data", maxAllowedMissingRate: 0.2 },
       { kind: "maf", maxAllowedMaf: 0.95 },
     ],
+    filtersOff: [],
     individualFilters: [],
+    individualFiltersOff: [],
     individuals: null,
     grouping: { kind: "populations", column: "pop" },
     analyses: [],
@@ -1040,24 +1057,9 @@ const FIXTURES: readonly {
 ];
 
 describe("WS6 D2 the opening", () => {
+  // Each is written back with the lists of the filters turned off added,
+  // in "IP3 D2 the project file of the switches".
   for (const f of FIXTURES) {
-    test(`${f.file} is written back byte for byte from its project`, () => {
-      const project = opened(f.project());
-      const state = stateOf(
-        project,
-        Object.fromEntries(
-          POPGEN_DEFS.map((def) => [
-            def.id,
-            { kind: "locked", reason: "Load a variants file." },
-          ]),
-        ),
-        f.popneiVersion,
-      );
-      expect(writeProjectFile(state, POPGEN_DEFS, f.appVersion, f.saved)).toBe(
-        fixture(f.file),
-      );
-    });
-
     test(`${f.file} opens into its project`, () => {
       expect(readProjectFile(fixture(f.file), "popgen", POPGEN_DEFS)).toEqual({
         ok: true,
@@ -1605,12 +1607,14 @@ function everyFilterProject(): Project {
       { kind: "maf", maxAllowedMaf: 0.95 },
       { kind: "ld", maxAllowedR2: 0.2, maxDist: 100000 },
     ],
+    filtersOff: [],
     individualFilters: [
       { kind: "keep", individuals: individuals.slice(0, 5) },
       { kind: "remove", individuals: ["ind_002"] },
       { kind: "missing_data", maxAllowedMissingRate: 0.1 },
       { kind: "obs_het", maxAllowedObsHet: 0.5 },
     ],
+    individualFiltersOff: [],
     individuals: {
       fileId: "b0b1b2b3b4b5b6b7b8b9babbbcbdbebf",
       name: "pops.csv",
@@ -1666,21 +1670,6 @@ describe("VS3 D8 the project file of stage 3", () => {
       ok: true,
       value: opened(everyFilterProject()),
     });
-  });
-
-  test(`${FILE} is written back byte for byte from its project`, () => {
-    const state = stateOf(
-      opened(everyFilterProject()),
-      Object.fromEntries(
-        POPGEN_DEFS.map((def) => [
-          def.id,
-          { kind: "locked", reason: "Load a variants file." },
-        ]),
-      ),
-    );
-    expect(
-      writeProjectFile(state, POPGEN_DEFS, "0.1.0", "2026-09-26T11:20:45.000Z"),
-    ).toBe(fixture(FILE));
   });
 
   test("a file of version 1 whose filters of the variants are maf then missing_data is refused as filterOutOfOrder, with its text", () => {
@@ -2217,7 +2206,9 @@ const NAMED_FIELDS = new Set([
   "saved",
   "variants",
   "filters",
+  "filtersOff",
   "individualFilters",
+  "individualFiltersOff",
   "individuals",
   "grouping",
   "analyses",
@@ -2563,7 +2554,9 @@ function ldNoDistanceProject(): Project {
       { kind: "missing_data", maxAllowedMissingRate: 0.1 },
       { kind: "ld", maxAllowedR2: 0.3, maxDist: null },
     ],
+    filtersOff: [],
     individualFilters: [],
+    individualFiltersOff: [],
     individuals: null,
     grouping: { kind: "populations", column: null },
     analyses: [],
@@ -2615,5 +2608,177 @@ describe("IP3 D2 the project file of the switches", () => {
     );
     expect(text).toBe(fixture(FILE));
     expect(text).toContain('"maxDist": null');
+  });
+});
+
+/** The project of `v1-filters-off.popnei.json` once opened: panel.nei, no
+    metadata file, the missing data filter at 0.1 on, the MAF filter at
+    0.9 and the LD filter at r² 0.2 within 50000 turned off, the threshold
+    of observed heterozygosity at 0.38 turned off, and no check. */
+function filtersOffProject(): Project {
+  return {
+    app: "popgen",
+    variants: null,
+    filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.1 }],
+    filtersOff: [
+      { kind: "maf", maxAllowedMaf: 0.9 },
+      { kind: "ld", maxAllowedR2: 0.2, maxDist: 50000 },
+    ],
+    individualFilters: [],
+    individualFiltersOff: [{ kind: "obs_het", maxAllowedObsHet: 0.38 }],
+    individuals: null,
+    grouping: { kind: "populations", column: null },
+    analyses: [],
+    reference: {
+      variants: {
+        fileId: "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+        name: "panel.nei",
+        size: 261570,
+        format: "nei",
+        readOptions: null,
+        read: {
+          kind: "read",
+          individuals: ["ind_001", "ind_002", "ind_003", "ind_004"],
+          ploidy: 2,
+          numVars: 1200,
+        },
+      },
+      checks: [],
+    },
+  };
+}
+
+/**
+ * The text of a fixture saved before the filters turned off were kept, as
+ * this version writes it back: `"filtersOff": []` before its filters of
+ * the individuals and `"individualFiltersOff": []` before its individuals
+ * file, and nothing else changed.
+ */
+function withListsOff(text: string): string {
+  const once = (from: string, to: string, into: string): string => {
+    if (into.split(from).length !== 2) {
+      throw new Error(`the fixture does not have ${from} once`);
+    }
+    return into.replace(from, to);
+  };
+  return once(
+    '\n  "individuals": ',
+    '\n  "individualFiltersOff": [],\n  "individuals": ',
+    once(
+      '\n  "individualFilters": ',
+      '\n  "filtersOff": [],\n  "individualFilters": ',
+      text,
+    ),
+  );
+}
+
+describe("IP3 D2 the project file of the filters turned off", () => {
+  const FILE = "v1-filters-off.popnei.json";
+
+  test(`${FILE} opens into its project, the filters off with their values`, () => {
+    expect(readProjectFile(fixture(FILE), "popgen", POPGEN_DEFS)).toEqual({
+      ok: true,
+      value: opened(filtersOffProject()),
+    });
+  });
+
+  test(`${FILE} is written back byte for byte from its project`, () => {
+    const state = stateOf(
+      opened(filtersOffProject()),
+      Object.fromEntries(
+        POPGEN_DEFS.map((def) => [
+          def.id,
+          { kind: "locked", reason: "Load a variants file." },
+        ]),
+      ),
+    );
+    expect(
+      writeProjectFile(state, POPGEN_DEFS, "0.1.0", "2026-09-28T16:40:05.000Z"),
+    ).toBe(fixture(FILE));
+  });
+
+  test(`${FILE} opened, the LD filter turned on again with the values kept`, () => {
+    const read = readProjectFile(fixture(FILE), "popgen", POPGEN_DEFS);
+    if (!read.ok) {
+      throw new Error("the fixture opens");
+    }
+    const p = read.value;
+    const kept = p.filtersOff.find((f) => f.kind === "ld");
+    if (kept === undefined) {
+      throw new Error("the fixture keeps the LD filter");
+    }
+    const on = setVariantFilter(freezeProject(p), kept);
+    expect(on.filters).toStrictEqual([
+      { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+      { kind: "ld", maxAllowedR2: 0.2, maxDist: 50000 },
+    ]);
+    expect(on.filtersOff).toStrictEqual([{ kind: "maf", maxAllowedMaf: 0.9 }]);
+    expect(variantFilterNeeds(on)).toBeNull();
+  });
+
+  test.each([
+    ...FIXTURES,
+    {
+      file: "v1-every-filter.popnei.json",
+      project: everyFilterProject,
+      appVersion: "0.1.0",
+      popneiVersion: "0.1.0",
+      saved: "2026-09-26T11:20:45.000Z",
+    },
+  ])(
+    "$file, saved before the filters off were kept, is written back with the two lists empty added and nothing else changed",
+    (f) => {
+      const state = stateOf(
+        opened(f.project()),
+        Object.fromEntries(
+          POPGEN_DEFS.map((def) => [
+            def.id,
+            { kind: "locked", reason: "Load a variants file." },
+          ]),
+        ),
+        f.popneiVersion,
+      );
+      const text = writeProjectFile(state, POPGEN_DEFS, f.appVersion, f.saved);
+      expect(fixture(f.file)).not.toContain("filtersOff");
+      expect(fixture(f.file)).not.toContain("individualFiltersOff");
+      expect(text).toBe(withListsOff(fixture(f.file)));
+      expect(text).toContain('\n  "filtersOff": [],\n');
+      expect(text).toContain('\n  "individualFiltersOff": [],\n');
+    },
+  );
+
+  test("a file with one of the two lists and not the other opens, the other empty", () => {
+    const rest = Object.fromEntries(
+      Object.entries(fixtureJson(FILE)).filter(
+        ([name]) => name !== "individualFiltersOff",
+      ),
+    );
+    const read = readProjectFile(JSON.stringify(rest), "popgen", POPGEN_DEFS);
+    expect(read.ok && read.value.filtersOff).toStrictEqual(
+      filtersOffProject().filtersOff,
+    );
+    expect(read.ok && read.value.individualFiltersOff).toStrictEqual([]);
+  });
+
+  test("a file whose filters off hold a filter on is refused, with its text", () => {
+    const text = JSON.stringify({
+      ...fixtureJson(FILE),
+      filtersOff: [{ kind: "missing_data", maxAllowedMissingRate: 0.2 }],
+    });
+    const expected: ProjectFileError = {
+      kind: "project",
+      error: {
+        kind: "twoFiltersOfAKind",
+        path: ["filtersOff", 0],
+        filter: "missing_data",
+      },
+    };
+    expect(readProjectFile(text, "popgen", POPGEN_DEFS)).toEqual({
+      ok: false,
+      error: expected,
+    });
+    expect(projectFileErrorText(expected, "run1.popnei.json")).toBe(
+      "The project file cannot be opened: it has the filter of the variants by missing genotypes both on and turned off, and a filter is one or the other. The file was changed outside the application, or is damaged. Open a copy saved before the change, or make the project again.",
+    );
   });
 });

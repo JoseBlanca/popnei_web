@@ -10,7 +10,7 @@ import { filterNameInSentence } from "../../../core/analyses/filterCounts.ts";
 import { DEFAULT_MAX_MISSING_RATE } from "../../../core/apps.ts";
 import {
   loadVariants,
-  removeVariantFilter,
+  turnOffVariantFilter,
   setVariantFilter,
 } from "../../../core/project.ts";
 import type {
@@ -128,7 +128,7 @@ export function filterSwitchCommand(
   }
   return {
     description: `${filterNameInSentence(kind)} was turned off`,
-    command: (p) => removeVariantFilter(p, kind),
+    command: (p) => turnOffVariantFilter(p, kind),
   };
 }
 

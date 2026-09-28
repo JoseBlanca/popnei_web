@@ -69,7 +69,9 @@ function project(
       },
     },
     filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.1 }],
+    filtersOff: [],
     individualFilters: [],
+    individualFiltersOff: [],
     individuals: {
       fileId: INDIVIDUALS_ID,
       name: "pops.csv",

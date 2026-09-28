@@ -18,7 +18,7 @@ import {
   counted,
   escaped,
   grouped,
-  removeIndividualFilter,
+  turnOffIndividualFilter,
   setIndividualFilter,
 } from "../../../core/project.ts";
 import type { Project } from "../../../core/project.ts";
@@ -145,7 +145,7 @@ export function thresholdSwitchCommand(
   }
   return {
     description: `${name} was turned off`,
-    command: (p) => removeIndividualFilter(p, kind),
+    command: (p) => turnOffIndividualFilter(p, kind),
   };
 }
 

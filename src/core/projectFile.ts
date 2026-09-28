@@ -83,7 +83,9 @@ export function writeProjectFile<J, R>(
     ["saved", saved],
     ["variants", variants === null ? null : variantSourceOut(variants)],
     ["filters", p.filters.map(variantFilterOut)],
+    ["filtersOff", p.filtersOff.map(variantFilterOut)],
     ["individualFilters", p.individualFilters.map(individualFilterOut)],
+    ["individualFiltersOff", p.individualFiltersOff.map(individualFilterOut)],
     ["individuals", individuals === null ? null : individualsOut(individuals)],
     ["grouping", groupingOut(p.grouping)],
     ["analyses", p.analyses.map(analysisOptionsOut)],
@@ -541,12 +543,33 @@ const TOP_FIELDS = [
   "saved",
   "variants",
   "filters",
+  "filtersOff",
   "individualFilters",
+  "individualFiltersOff",
   "individuals",
   "grouping",
   "analyses",
   "checks",
 ] as const;
+
+/** The fields of the top a file may lack: the two lists of the filters
+    turned off, which a file saved before 28 September 2026, when they
+    were first kept, does not have; `parseProject` then reads each as
+    empty. */
+const OPTIONAL_TOP_FIELDS: readonly string[] = [
+  "filtersOff",
+  "individualFiltersOff",
+];
+
+/** The field `name` of `file` as an object of one field, or an object of
+    none when the file does not have it, so that `parseProject` sees the
+    field only when the file has it. */
+function present(
+  file: Readonly<Record<string, unknown>>,
+  name: string,
+): Readonly<Record<string, unknown>> {
+  return Object.hasOwn(file, name) ? { [name]: file[name] } : {};
+}
 
 /** The placeholder of the fingerprint of a check while the project is
     validated, replaced by the real one once it is. */
@@ -623,7 +646,7 @@ export function readProjectFile<J, R>(
     }
   }
   for (const name of TOP_FIELDS) {
-    if (!Object.hasOwn(file, name)) {
+    if (!Object.hasOwn(file, name) && !OPTIONAL_TOP_FIELDS.includes(name)) {
       return refused({ kind: "missingField", name });
     }
   }
@@ -658,7 +681,9 @@ export function readProjectFile<J, R>(
       app: fileApp,
       variants: null,
       filters: file["filters"],
+      ...present(file, "filtersOff"),
       individualFilters: file["individualFilters"],
+      ...present(file, "individualFiltersOff"),
       individuals: file["individuals"],
       grouping: file["grouping"],
       analyses: file["analyses"],

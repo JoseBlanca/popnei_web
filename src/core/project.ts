@@ -49,9 +49,19 @@ export interface Project {
       whatever the order the user added them in; the LD filter with no
       distance until the user types one. */
   readonly filters: readonly ProjectVariantFilter[];
+  /** The filters of the variants the user turned off, with the values
+      they had, for the switch that turns them on again; at most one of
+      each kind, in the same fixed order, and no kind both here and in
+      `filters`. No key, no job and no lock reads them. */
+  readonly filtersOff: readonly ProjectVariantFilter[];
   /** The filters of the individuals, at most one of each kind, in the
       fixed order keep, remove, missing_data, obs_het. */
   readonly individualFilters: readonly IndividualFilter[];
+  /** The thresholds of the individuals the user turned off, with their
+      values, in the order missing_data, obs_het, and no kind both here
+      and in `individualFilters`. The lists have no switch, and are never
+      kept here. */
+  readonly individualFiltersOff: readonly IndividualThreshold[];
   /** The individuals file, or `null` when there is none. */
   readonly individuals: IndividualsSource | null;
   /** The populations, or the roles of the columns in association. */
@@ -79,6 +89,13 @@ export type ProjectVariantFilter =
       readonly maxAllowedR2: number;
       readonly maxDist: number | null;
     };
+
+/** A filter of the individuals that has a switch in the Variants step,
+    and so can be turned off and kept: a threshold, not a list. */
+export type IndividualThreshold = Extract<
+  IndividualFilter,
+  { readonly kind: "missing_data" | "obs_het" }
+>;
 
 /** The variants file of one load. */
 export interface VariantSource {
@@ -334,6 +351,18 @@ export const INDIVIDUAL_FILTER_ORDER: readonly IndividualFilterKind[] = keysOf(
   INDIVIDUAL_FILTER_KINDS,
 );
 
+/** The kinds of the thresholds of the individuals, which can be turned
+    off and kept, in the order `individualFiltersOff` keeps them. */
+const THRESHOLD_KINDS: Kinds<IndividualThreshold["kind"]> = {
+  missing_data: INDIVIDUAL_FILTER_KINDS.missing_data,
+  obs_het: INDIVIDUAL_FILTER_KINDS.obs_het,
+};
+
+/** The order of `individualFiltersOff`: missing_data, obs_het, as in
+    `INDIVIDUAL_FILTER_ORDER`. */
+const THRESHOLD_ORDER: readonly IndividualThreshold["kind"][] =
+  keysOf(THRESHOLD_KINDS);
+
 /** The largest ploidy of a VCF that popnei's `openVcf` accepts. */
 export const MAX_PLOIDY = 255;
 
@@ -357,7 +386,9 @@ export function emptyProject(app: AppId): Project {
     app,
     variants: null,
     filters: [],
+    filtersOff: [],
     individualFilters: [],
+    individualFiltersOff: [],
     individuals: null,
     grouping:
       app === "popgen"
@@ -841,9 +872,10 @@ function placeOf<K extends string>(
   return { index, at: after === -1 ? filters.length : after };
 }
 
-/** Sets the filter of its kind, in the fixed order of the kinds,
-    missing_data, obs_het, maf, ld, in place of the one of its kind; the
-    LD filter may have no distance yet, `maxDist` `null`. */
+/** Sets the filter of its kind on, in the fixed order of the kinds,
+    missing_data, obs_het, maf, ld, in place of the one of its kind, and
+    drops the one of its kind from `filtersOff`; the LD filter may have no
+    distance yet, `maxDist` `null`. */
 export function setVariantFilter(
   p: Project,
   filter: ProjectVariantFilter,
@@ -852,7 +884,11 @@ export function setVariantFilter(
   refuse("setVariantFilter", variantFilterError(filter, ["filters", at]));
   const copy = copyVariantFilter(filter);
   if (index === -1) {
-    return { ...p, filters: p.filters.toSpliced(at, 0, copy) };
+    return {
+      ...p,
+      filters: p.filters.toSpliced(at, 0, copy),
+      filtersOff: withoutKind(p.filtersOff, filter.kind),
+    };
   }
   if (same(p.filters[index], copy)) {
     return p;
@@ -860,16 +896,48 @@ export function setVariantFilter(
   return { ...p, filters: p.filters.with(index, copy) };
 }
 
-/** Removes the filter of the variants of that kind; `p` itself when there
-    is none. */
-export function removeVariantFilter(
+/** Turns the filter of the variants of that kind off: it leaves
+    `filters` and is kept, with its values, in `filtersOff`, in the fixed
+    order, in place of one of its kind kept before. `p` itself when no
+    filter of that kind is on, whatever `filtersOff` holds. */
+export function turnOffVariantFilter(
   p: Project,
   kind: VariantFilterKind,
 ): Project {
-  if (!p.filters.some((f) => f.kind === kind)) {
+  const filter = p.filters.find((f) => f.kind === kind);
+  if (filter === undefined) {
     return p;
   }
-  return { ...p, filters: p.filters.filter((f) => f.kind !== kind) };
+  return {
+    ...p,
+    filters: withoutKind(p.filters, kind),
+    filtersOff: keptOff(p.filtersOff, VARIANT_FILTER_ORDER, filter),
+  };
+}
+
+/** The list without the filter of the kind `kind`; the list itself when
+    it has none, so that a part a command did not change keeps its
+    reference. */
+function withoutKind<F extends { readonly kind: string }>(
+  filters: readonly F[],
+  kind: string,
+): readonly F[] {
+  return filters.some((f) => f.kind === kind)
+    ? filters.filter((f) => f.kind !== kind)
+    : filters;
+}
+
+/** The list of the filters off with `filter` kept in it, in the order
+    `order`, in place of the one of its kind. */
+function keptOff<K extends string, F extends { readonly kind: K }>(
+  filtersOff: readonly F[],
+  order: readonly K[],
+  filter: F,
+): readonly F[] {
+  const { index, at } = placeOf(filtersOff, order, filter.kind);
+  return index === -1
+    ? filtersOff.toSpliced(at, 0, filter)
+    : filtersOff.with(index, filter);
 }
 
 function copyIndividualFilter(filter: IndividualFilter): IndividualFilter {
@@ -887,8 +955,9 @@ function copyIndividualFilter(filter: IndividualFilter): IndividualFilter {
   }
 }
 
-/** Sets the filter of its kind, in the fixed order of the kinds, keep,
-    remove, missing_data, obs_het. */
+/** Sets the filter of its kind on, in the fixed order of the kinds,
+    keep, remove, missing_data, obs_het, in place of the one of its kind;
+    a threshold drops the one of its kind from `individualFiltersOff`. */
 export function setIndividualFilter(
   p: Project,
   filter: IndividualFilter,
@@ -907,6 +976,7 @@ export function setIndividualFilter(
     return {
       ...p,
       individualFilters: p.individualFilters.toSpliced(at, 0, copy),
+      individualFiltersOff: withoutKind(p.individualFiltersOff, filter.kind),
     };
   }
   if (same(p.individualFilters[index], copy)) {
@@ -915,18 +985,41 @@ export function setIndividualFilter(
   return { ...p, individualFilters: p.individualFilters.with(index, copy) };
 }
 
-/** Removes the filter of the individuals of that kind; `p` itself when
-    there is none. */
+/** Removes the list of individuals of that kind, which is not kept, as
+    Clear empties a list; `p` itself when there is none. */
 export function removeIndividualFilter(
   p: Project,
-  kind: IndividualFilterKind,
+  kind: "keep" | "remove",
 ): Project {
   if (!p.individualFilters.some((f) => f.kind === kind)) {
     return p;
   }
+  return { ...p, individualFilters: withoutKind(p.individualFilters, kind) };
+}
+
+/** Turns the threshold of the individuals of that kind off: it leaves
+    `individualFilters` and is kept, with its value, in
+    `individualFiltersOff`, in place of one of its kind kept before. `p`
+    itself when no threshold of that kind is on, whatever
+    `individualFiltersOff` holds. */
+export function turnOffIndividualFilter(
+  p: Project,
+  kind: IndividualThreshold["kind"],
+): Project {
+  const threshold = p.individualFilters.find(
+    (f): f is IndividualThreshold => f.kind === kind,
+  );
+  if (threshold === undefined) {
+    return p;
+  }
   return {
     ...p,
-    individualFilters: p.individualFilters.filter((f) => f.kind !== kind),
+    individualFilters: withoutKind(p.individualFilters, kind),
+    individualFiltersOff: keptOff(
+      p.individualFiltersOff,
+      THRESHOLD_ORDER,
+      threshold,
+    ),
   };
 }
 
@@ -1891,7 +1984,7 @@ export function parseProject(
   if (found.value !== app) {
     return failure({ kind: "otherApp", found: found.value });
   }
-  const fields = readObject(data, [], PROJECT_FIELDS);
+  const fields = readObject(data, [], PROJECT_FIELDS, OPTIONAL_FIELDS);
   if (!fields.ok) {
     return fields;
   }
@@ -1908,11 +2001,39 @@ export function parseProject(
   if (!filters.ok) {
     return filters;
   }
+  // A project saved before the filters turned off were kept has neither
+  // list, and opens with nothing kept.
+  const filtersOff = Object.hasOwn(f, "filtersOff")
+    ? parseVariantFiltersOff(f["filtersOff"], ["filtersOff"])
+    : success([]);
+  if (!filtersOff.ok) {
+    return filtersOff;
+  }
+  const bothVariants = bothOnAndOff(filters.value, filtersOff.value, [
+    "filtersOff",
+  ]);
+  if (bothVariants !== null) {
+    return failure(bothVariants);
+  }
   const individualFilters = parseIndividualFilters(f["individualFilters"], [
     "individualFilters",
   ]);
   if (!individualFilters.ok) {
     return individualFilters;
+  }
+  const individualFiltersOff = Object.hasOwn(f, "individualFiltersOff")
+    ? parseThresholds(f["individualFiltersOff"], ["individualFiltersOff"])
+    : success([]);
+  if (!individualFiltersOff.ok) {
+    return individualFiltersOff;
+  }
+  const bothIndividuals = bothOnAndOff(
+    individualFilters.value,
+    individualFiltersOff.value,
+    ["individualFiltersOff"],
+  );
+  if (bothIndividuals !== null) {
+    return failure(bothIndividuals);
   }
   const individuals = parseNullable(
     f["individuals"],
@@ -1949,7 +2070,9 @@ export function parseProject(
     app,
     variants: variants.value,
     filters: filters.value,
+    filtersOff: filtersOff.value,
     individualFilters: individualFilters.value,
+    individualFiltersOff: individualFiltersOff.value,
     individuals: individuals.value,
     grouping: grouping.value,
     analyses: options.value,
@@ -1987,6 +2110,11 @@ const PROJECT_FIELDS = [
   "reference",
 ] as const;
 
+/** The fields of the project a file may lack: the two lists of the
+    filters turned off, which a file saved before 28 September 2026 does
+    not have. */
+const OPTIONAL_FIELDS = ["filtersOff", "individualFiltersOff"] as const;
+
 function isFields(value: unknown): value is Fields {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -1995,17 +2123,19 @@ function isList(value: unknown): value is readonly unknown[] {
   return Array.isArray(value);
 }
 
-/** An object with exactly the fields `names`. */
+/** An object with exactly the fields `names`, and any of the fields
+    `optional`. */
 function readObject(
   value: unknown,
   path: FieldPath,
   names: readonly string[],
+  optional: readonly string[] = [],
 ): Parsed<Fields> {
   if (!isFields(value)) {
     return failure(wrongValue(path, OBJECT));
   }
   for (const name of Object.keys(value)) {
-    if (!names.includes(name)) {
+    if (!names.includes(name) && !optional.includes(name)) {
       return failure({ kind: "unknownField", path, name });
     }
   }
@@ -2364,6 +2494,22 @@ function parseVariantFilters(
   return wrong === null ? filters : failure(wrong);
 }
 
+/** The list of the filters of the variants turned off: at most one of
+    each kind, in the fixed order. */
+function parseVariantFiltersOff(
+  value: unknown,
+  path: FieldPath,
+): Parsed<ProjectVariantFilter[]> {
+  const filters = parseList(value, path, parseVariantFilter);
+  if (!filters.ok) {
+    return filters;
+  }
+  const wrong =
+    secondOffOfAKind(filters.value, path) ??
+    outOfOrder(filters.value, VARIANT_FILTER_ORDER, path);
+  return wrong === null ? filters : failure(wrong);
+}
+
 /** The first filter whose kind comes before that of a filter before it,
     in the order `order`. */
 function outOfOrder<K extends string>(
@@ -2457,6 +2603,99 @@ function parseIndividualFilters(
     secondOfAKind(filters.value, path) ??
     outOfOrder(filters.value, INDIVIDUAL_FILTER_ORDER, path);
   return wrong === null ? filters : failure(wrong);
+}
+
+/** The list of the thresholds of the individuals turned off: a
+    threshold alone, at most one of each kind, in their order; a list of
+    individuals is refused by its kind. */
+function parseThresholds(
+  value: unknown,
+  path: FieldPath,
+): Parsed<IndividualThreshold[]> {
+  const thresholds = parseList(value, path, parseThreshold);
+  if (!thresholds.ok) {
+    return thresholds;
+  }
+  const wrong =
+    secondOffOfAKind(thresholds.value, path) ??
+    outOfOrder(thresholds.value, THRESHOLD_ORDER, path);
+  return wrong === null ? thresholds : failure(wrong);
+}
+
+/** A second filter of a kind already in a list of the filters off. Its
+    path ends in the `kind` of that filter, where a filter both on and
+    off is refused at the path of the filter off (`bothOnAndOff`), so that
+    the text tells the two apart. */
+function secondOffOfAKind(
+  filters: readonly {
+    readonly kind: VariantFilterKind | IndividualFilterKind;
+  }[],
+  path: FieldPath,
+): ProjectError | null {
+  for (const [index, filter] of filters.entries()) {
+    if (filters.findIndex((f) => f.kind === filter.kind) !== index) {
+      return {
+        kind: "twoFiltersOfAKind",
+        path: [...path, index, "kind"],
+        filter: filter.kind,
+      };
+    }
+  }
+  return null;
+}
+
+function parseThreshold(
+  value: unknown,
+  path: FieldPath,
+): Parsed<IndividualThreshold> {
+  const read = readKind(value, path, THRESHOLD_KINDS);
+  if (!read.ok) {
+    return read;
+  }
+  const { kind, fields } = read.value;
+  let threshold: IndividualThreshold;
+  switch (kind) {
+    case "missing_data": {
+      const rate = numberField(fields, path, "maxAllowedMissingRate");
+      if (!rate.ok) {
+        return rate;
+      }
+      threshold = { kind, maxAllowedMissingRate: rate.value };
+      break;
+    }
+    case "obs_het": {
+      const het = numberField(fields, path, "maxAllowedObsHet");
+      if (!het.ok) {
+        return het;
+      }
+      threshold = { kind, maxAllowedObsHet: het.value };
+      break;
+    }
+  }
+  return orFailure(threshold, individualFilterError(threshold, path));
+}
+
+/** The first filter of the list of the filters off, of the path
+    `pathOff`, whose kind is also on: a filter is one or the other. */
+function bothOnAndOff(
+  filters: readonly {
+    readonly kind: VariantFilterKind | IndividualFilterKind;
+  }[],
+  filtersOff: readonly {
+    readonly kind: VariantFilterKind | IndividualFilterKind;
+  }[],
+  pathOff: FieldPath,
+): ProjectError | null {
+  for (const [index, filter] of filtersOff.entries()) {
+    if (filters.some((f) => f.kind === filter.kind)) {
+      return {
+        kind: "twoFiltersOfAKind",
+        path: [...pathOff, index],
+        filter: filter.kind,
+      };
+    }
+  }
+  return null;
 }
 
 function parseVariantSource(
@@ -3251,20 +3490,23 @@ export function projectErrorText(error: ProjectError): string {
       return opened(
         `${fieldWords(error.path)} repeats the ${error.what} ${shown(error.value)}`,
       );
-    case "twoFiltersOfAKind":
+    case "twoFiltersOfAKind": {
+      const list = LISTS_OF_FILTERS[filtersListOf(error.path)];
+      // A filter off whose kind is on is refused at its own path; a second
+      // filter off of one kind at the path of its kind (secondOffOfAKind).
+      if (list.off && error.path.length === 2) {
+        return opened(
+          `it has the filter of the ${list.of} by ${FILTER_KIND_WORDS[error.filter]} both on and turned off, and a filter is one or the other`,
+        );
+      }
       return opened(
-        `it has ${twoOfAKind(error.path, error.filter)}, and a project has at most one of each kind`,
+        `it has ${twoOfAKind(list, error.filter)}, and a project has at most one of each kind`,
       );
+    }
     case "filterOutOfOrder": {
-      const [list, order]: readonly [
-        string,
-        readonly (VariantFilterKind | IndividualFilterKind)[],
-      ] =
-        error.path[0] === "filters"
-          ? ["variants", VARIANT_FILTER_ORDER]
-          : ["individuals", INDIVIDUAL_FILTER_ORDER];
+      const list = LISTS_OF_FILTERS[filtersListOf(error.path)];
       return opened(
-        `the filters of the ${list} should be in the order ${order.map((kind) => FILTER_KIND_WORDS[kind]).join(", ")}, and the ${ordinal(positionOf(error.path))} one is out of that order`,
+        `${list.words} should be in the order ${list.order.map((kind) => FILTER_KIND_WORDS[kind]).join(", ")}, and the ${ordinal(positionOf(error.path))} one is out of that order`,
       );
     }
   }
@@ -3295,18 +3537,71 @@ function opened(what: string): string {
   return `The project file cannot be opened: ${what}. ${DAMAGED}`;
 }
 
+/** The four lists of filters of a project. */
+type ListOfFilters =
+  "filters" | "filtersOff" | "individualFilters" | "individualFiltersOff";
+
+/** A list of filters as the texts name it: what it filters, whether it
+    holds the filters turned off, its words, and the order of its kinds. */
+interface ListWords {
+  readonly of: "variants" | "individuals";
+  readonly off: boolean;
+  readonly words: string;
+  readonly order: readonly (VariantFilterKind | IndividualFilterKind)[];
+}
+
+const LISTS_OF_FILTERS: Readonly<Record<ListOfFilters, ListWords>> = {
+  filters: {
+    of: "variants",
+    off: false,
+    words: "the filters of the variants",
+    order: VARIANT_FILTER_ORDER,
+  },
+  filtersOff: {
+    of: "variants",
+    off: true,
+    words: "the filters of the variants turned off",
+    order: VARIANT_FILTER_ORDER,
+  },
+  individualFilters: {
+    of: "individuals",
+    off: false,
+    words: "the filters of the individuals",
+    order: INDIVIDUAL_FILTER_ORDER,
+  },
+  individualFiltersOff: {
+    of: "individuals",
+    off: true,
+    words: "the filters of the individuals turned off",
+    order: THRESHOLD_ORDER,
+  },
+};
+
+const LIST_NAMES: readonly ListOfFilters[] = keysOf(LISTS_OF_FILTERS);
+
+/** The list of filters a path of an error of the filters starts in. */
+function filtersListOf(path: FieldPath): ListOfFilters {
+  const first = path[0];
+  const list = LIST_NAMES.find((name) => name === first);
+  if (list === undefined) {
+    throw defect(
+      `an error of the filters has a path that starts in ${String(first)}.`,
+    );
+  }
+  return list;
+}
+
 /** Two filters of one kind, in words: "two filters of the variants by
-    missing genotypes", "two lists of individuals to keep". */
+    missing genotypes", "two lists of individuals to keep", "two filters
+    of the variants turned off by missing genotypes". */
 function twoOfAKind(
-  path: FieldPath,
+  list: ListWords,
   kind: VariantFilterKind | IndividualFilterKind,
 ): string {
-  if (path[0] === "filters") {
-    return `two filters of the variants by ${FILTER_KIND_WORDS[kind]}`;
-  }
+  const off = list.off ? " turned off" : "";
   return kind === "keep" || kind === "remove"
     ? `two lists of ${FILTER_KIND_WORDS[kind]}`
-    : `two filters of the individuals by ${FILTER_KIND_WORDS[kind]}`;
+    : `two filters of the ${list.of}${off} by ${FILTER_KIND_WORDS[kind]}`;
 }
 
 /** The longest a value of the file is shown, in characters. */
@@ -3442,6 +3737,58 @@ function sourceFields(
   ];
 }
 
+/** The words of the fields of a list of filters of the variants, `list`,
+    whose words are `words`, and whose filters' words end in `off`. */
+function variantFilterFields(
+  list: string,
+  words: string,
+  off: string,
+): FieldWords[] {
+  const filter = (o: readonly string[]): string =>
+    `the ${nth(o, 0)} filter of the variants${off}`;
+  return [
+    [[list], () => words],
+    [[list, N], filter],
+    [[list, N, "kind"], (o) => `the kind of ${filter(o)}`],
+    ...[
+      "maxAllowedMissingRate",
+      "maxAllowedMaf",
+      "maxAllowedObsHet",
+      "maxAllowedR2",
+    ].map((name): FieldWords => [
+      [list, N, name],
+      (o) => `the threshold of ${filter(o)}`,
+    ]),
+    [[list, N, "maxDist"], (o) => `the distance of ${filter(o)}`],
+  ];
+}
+
+/** The words of the fields of a list of filters of the individuals,
+    `list`, whose words are `words`, and whose filters' words end in
+    `off`. */
+function individualFilterFields(
+  list: string,
+  words: string,
+  off: string,
+): FieldWords[] {
+  const filter = (o: readonly string[]): string =>
+    `the ${nth(o, 0)} filter of the individuals${off}`;
+  return [
+    [[list], () => words],
+    [[list, N], filter],
+    [[list, N, "kind"], (o) => `the kind of ${filter(o)}`],
+    [[list, N, "individuals"], (o) => `the list of ${filter(o)}`],
+    [
+      [list, N, "individuals", N],
+      (o) => `the ${nth(o, 1)} individual of the list of ${filter(o)}`,
+    ],
+    ...["maxAllowedMissingRate", "maxAllowedObsHet"].map((name): FieldWords => [
+      [list, N, name],
+      (o) => `the threshold of ${filter(o)}`,
+    ]),
+  ];
+}
+
 /**
  * The table of the fields of the project in words. A field is found by
  * the longest pattern that matches its path. Every field a project has is
@@ -3451,47 +3798,22 @@ function sourceFields(
 const FIELD_WORDS: readonly FieldWords[] = [
   [["app"], () => "the application"],
   ...sourceFields(["variants"], "the variants file"),
-  [["filters"], () => "the filters of the variants"],
-  [["filters", N], (o) => `the ${nth(o, 0)} filter of the variants`],
-  [
-    ["filters", N, "kind"],
-    (o) => `the kind of the ${nth(o, 0)} filter of the variants`,
-  ],
-  ...[
-    "maxAllowedMissingRate",
-    "maxAllowedMaf",
-    "maxAllowedObsHet",
-    "maxAllowedR2",
-  ].map((name): FieldWords => [
-    ["filters", N, name],
-    (o) => `the threshold of the ${nth(o, 0)} filter of the variants`,
-  ]),
-  [
-    ["filters", N, "maxDist"],
-    (o) => `the distance of the ${nth(o, 0)} filter of the variants`,
-  ],
-  [["individualFilters"], () => "the filters of the individuals"],
-  [
-    ["individualFilters", N],
-    (o) => `the ${nth(o, 0)} filter of the individuals`,
-  ],
-  [
-    ["individualFilters", N, "kind"],
-    (o) => `the kind of the ${nth(o, 0)} filter of the individuals`,
-  ],
-  [
-    ["individualFilters", N, "individuals"],
-    (o) => `the list of the ${nth(o, 0)} filter of the individuals`,
-  ],
-  [
-    ["individualFilters", N, "individuals", N],
-    (o) =>
-      `the ${nth(o, 1)} individual of the list of the ${nth(o, 0)} filter of the individuals`,
-  ],
-  ...["maxAllowedMissingRate", "maxAllowedObsHet"].map((name): FieldWords => [
-    ["individualFilters", N, name],
-    (o) => `the threshold of the ${nth(o, 0)} filter of the individuals`,
-  ]),
+  ...variantFilterFields("filters", "the filters of the variants", ""),
+  ...variantFilterFields(
+    "filtersOff",
+    "the filters of the variants turned off",
+    " turned off",
+  ),
+  ...individualFilterFields(
+    "individualFilters",
+    "the filters of the individuals",
+    "",
+  ),
+  ...individualFilterFields(
+    "individualFiltersOff",
+    "the filters of the individuals turned off",
+    " turned off",
+  ),
   [["individuals"], () => "the individuals file"],
   [["individuals", "fileId"], () => "the identifier of the individuals file"],
   [["individuals", "name"], () => "the name of the individuals file"],

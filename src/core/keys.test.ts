@@ -13,11 +13,13 @@ import {
 } from "./keys.ts";
 import type { JsonObject, JsonValue, KeyMemo, KeyedDef } from "./keys.ts";
 import type { VariantFilter } from "../worker/protocol.ts";
+import { VARIANT_FILTER_ORDER, turnOffVariantFilter } from "./project.ts";
 import type { Project, VariantSource } from "./project.ts";
 import {
   anyLoadId,
   deepFreeze,
   individualFilters,
+  individualFiltersOnAndOff,
   jsonValue,
   keyedDef,
   projectWithVariants,
@@ -1113,6 +1115,52 @@ describe("VS2 D3 the key of a write", () => {
     const p = { ...writeLiteralProject(), variants: null };
     expect(() => neiKeyOf(p)).toThrow(
       "popnei_web defect: writeKeyOf was given a project with no variants file; the store makes a key only for what can run, an analysis or a write.",
+    );
+  });
+});
+
+describe("IP3 D1 a filter turned off is in no key", () => {
+  test("any filters turned off keep the key, the key of an intermediate result, the fingerprint and the key of a write; a filter turned off gives the keys of the project without it", () => {
+    fc.assert(
+      fc.property(
+        setting,
+        variantFilters,
+        individualFiltersOnAndOff,
+        fc.constantFrom(...VARIANT_FILTER_ORDER),
+        (s, filtersOff, { individualFiltersOff }, kind) => {
+          const off: Setting = {
+            ...s,
+            p: deepFreeze<Project>({
+              ...s.p,
+              filtersOff,
+              individualFiltersOff,
+            }),
+          };
+          const memo = createKeyMemo();
+          expect(keyWith(off, memo)).toBe(keyWith(s, memo));
+          expect(intermediateKeyWith(off, memo)).toBe(
+            intermediateKeyWith(s, memo),
+          );
+          expect(fingerprintOf(off, memo)).toBe(fingerprintOf(s, memo));
+          expect(neiKeyOf(off.p, memo)).toBe(neiKeyOf(s.p, memo));
+
+          // Turned off, the filter is kept in filtersOff; the keys are
+          // those of the project that never had it.
+          const turnedOff: Setting = {
+            ...s,
+            p: deepFreeze(turnOffVariantFilter(s.p, kind)),
+          };
+          const without: Setting = {
+            ...s,
+            p: deepFreeze<Project>({
+              ...s.p,
+              filters: s.p.filters.filter((f) => f.kind !== kind),
+            }),
+          };
+          expect(keyWith(turnedOff, memo)).toBe(keyWith(without, memo));
+          expect(neiKeyOf(turnedOff.p, memo)).toBe(neiKeyOf(without.p, memo));
+        },
+      ),
     );
   });
 });

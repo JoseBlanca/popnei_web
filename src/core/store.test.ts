@@ -18,7 +18,7 @@ import {
   projectNeeds,
   removeIndividualFilter,
   removeIndividuals,
-  removeVariantFilter,
+  turnOffVariantFilter,
   setCsvOptions,
   setGrouping,
   setIndividualFilter,
@@ -79,6 +79,7 @@ import type {
   PassStats,
   Run,
   RunError,
+  VariantFilterKind,
   Written,
 } from "../worker/protocol.ts";
 
@@ -5978,7 +5979,7 @@ describe("IP3 D1 an LD filter with no distance in the store", () => {
     expect(analysisIn(store, "vars")).toMatchObject({ kind: "done", result });
   });
 
-  test("turned off, by removing the filter, the result of before is done again from the cache", () => {
+  test("turned off, it is kept with no distance, and the result of before is done again from the cache", () => {
     const { store, sent } = storeThatWrites();
     store.startRun("vars");
     const vars = sentAt(sent, 0);
@@ -5987,10 +5988,58 @@ describe("IP3 D1 an LD filter with no distance in the store", () => {
     store.apply("the LD filter was turned on", ldAt(null));
 
     store.apply("the LD filter was turned off", (p) =>
-      removeVariantFilter(p, "ld"),
+      turnOffVariantFilter(p, "ld"),
     );
+    expect(store.getState().project.filtersOff).toStrictEqual([
+      { kind: "ld", maxAllowedR2: 0.3, maxDist: null },
+    ]);
     expect(analysisIn(store, "vars")).toMatchObject({ kind: "done", result });
+    expect(writeIn(store).kind).toBe("ready");
     expect(sent).toHaveLength(1);
+  });
+
+  test("a filter turned off and on again: the LD filter at r² 0.2 within 50000, the result in the notice when it is turned off, no request carrying it, and the result done again with no request when it is turned on with the values kept", () => {
+    const { store, sent, analyses } = storeThatWrites();
+    const ld = { kind: "ld", maxAllowedR2: 0.2, maxDist: 50000 } as const;
+    store.apply("the LD filter was turned on", (p) => setVariantFilter(p, ld));
+    store.startRun("vars");
+    const first = sentAt(sent, 0);
+    const result = varsResult(1150);
+    store.runEnded(first.run.id, doneWith(first, result));
+
+    store.apply("the LD filter was turned off", (p) =>
+      turnOffVariantFilter(p, "ld"),
+    );
+    expect(store.getState().notice?.removed).toContain("vars");
+    const off = store.getState().project;
+    expect(off.filters).toStrictEqual([{ kind: "maf", maxAllowedMaf: 0.9 }]);
+    expect(off.filtersOff).toStrictEqual([ld]);
+
+    // A run while it is off has the key of the project that never had it.
+    store.startRun("vars");
+    const second = sentAt(sent, 1);
+    const def = analyses.find((a) => a.id === "vars");
+    if (def === undefined) {
+      throw new Error("the fake vars is there");
+    }
+    expect(second.key).toBe(
+      keyOf(def, { ...off, filtersOff: [] }, "0.1.0", createKeyMemo()),
+    );
+    expect(second.key).not.toBe(first.key);
+
+    const kept = off.filtersOff[0];
+    if (kept === undefined) {
+      throw new Error("the LD filter is kept");
+    }
+    store.apply("the LD filter was turned on", (p) =>
+      setVariantFilter(p, kept),
+    );
+    expect(store.getState().project.filters).toStrictEqual([
+      { kind: "maf", maxAllowedMaf: 0.9 },
+      ld,
+    ]);
+    expect(analysisIn(store, "vars")).toMatchObject({ kind: "done", result });
+    expect(sent).toHaveLength(2);
   });
 
   test("once the distance is typed, the write sends the filters of the project, the same array, with their distance", () => {
@@ -6007,19 +6056,34 @@ describe("IP3 D1 an LD filter with no distance in the store", () => {
     ]);
   });
 
-  test("for every sequence of commands, some of the LD filter with no distance, and the definitions reading any filters: no request carries an LD filter without its distance, no startRun or startWrite throws, and what reads the filters of the variants, and the write, is locked exactly while the filters hold one, and only then for its reason", () => {
-    // The runs whose sequence reached the lock of the LD filter.
+  test("for every sequence of commands, some of the LD filter with no distance and some turning filters off and on again, and the definitions reading any filters: no request carries an LD filter without its distance or a filter turned off, no startRun or startWrite throws, and what reads the filters of the variants, and the write, is locked exactly while the filters hold one, and only then for its reason", () => {
+    // The runs whose sequence reached the lock of the LD filter; the steps
+    // taken with a filter off; the requests made with one.
     let runsLocked = 0;
+    let offKept = 0;
+    let carriedWithOff = 0;
     fc.assert(
       fc.property(
-        fc.array(ldStep, { maxLength: 30 }),
+        // Of any length up to 30, and not the short ones fast-check draws
+        // by default, so that requests are made with filters kept off.
+        fc.array(ldStep, { maxLength: 30, size: "max" }),
         fc.tuple(anyFiltersRead, anyFiltersRead, anyFiltersRead),
-        (drawn, reads) => {
-          const { store, analyses, sent, writes, carried } = ldStore(reads);
+        fc.boolean(),
+        (drawn, reads, threshold) => {
+          const { store, analyses, sent, writes, carried } = ldStore(
+            reads,
+            threshold ? sampleProject() : sampleWithoutThreshold(),
+          );
           const ended = new Set<number>();
           let lockedByIt = 0;
           for (const s of drawn) {
+            const before = store.getState().project;
+            const numWrites = writes.length;
             runLdStep(store, s, sent, writes, ended);
+            for (const w of writes.slice(numWrites)) {
+              expect(holdsOff(w.job.filters, before.filtersOff)).toBe(false);
+            }
+            offKept += before.filtersOff.length > 0 ? 1 : 0;
             const state = store.getState();
             const noDistance = withNoDistance(state.project.filters);
             analyses.forEach((def, index) => {
@@ -6040,7 +6104,9 @@ describe("IP3 D1 an LD filter with no distance in the store", () => {
               expect(noDistance).toBe(true);
             }
           }
-          expect(carried.some(withNoDistance)).toBe(false);
+          expect(carried.some((c) => withNoDistance(c.filters))).toBe(false);
+          expect(carried.some((c) => holdsOff(c.filters, c.off))).toBe(false);
+          carriedWithOff += carried.filter((c) => c.off.length > 0).length;
           expect(writes.some((w) => withNoDistance(w.job.filters))).toBe(false);
           runsLocked += lockedByIt > 0 ? 1 : 0;
         },
@@ -6048,6 +6114,8 @@ describe("IP3 D1 an LD filter with no distance in the store", () => {
       { numRuns: 200 },
     );
     expect(runsLocked).toBeGreaterThan(20);
+    expect(offKept).toBeGreaterThan(300);
+    expect(carriedWithOff).toBeGreaterThan(20);
   });
 });
 
@@ -6056,6 +6124,8 @@ type LdStep =
   | { readonly kind: "command"; readonly command: DrawnCommand }
   | { readonly kind: "ld"; readonly maxDist: number | null }
   | { readonly kind: "ldOff" }
+  | { readonly kind: "off"; readonly filter: VariantFilterKind }
+  | { readonly kind: "onKept"; readonly which: number }
   | { readonly kind: "undo" }
   | { readonly kind: "redo" }
   | { readonly kind: "open"; readonly empty: boolean }
@@ -6081,6 +6151,16 @@ const ldStep: fc.Arbitrary<LdStep> = fc.oneof(
     weight: 3,
   },
   { arbitrary: fc.constant<LdStep>({ kind: "ldOff" }), weight: 1 },
+  {
+    arbitrary: fc
+      .constantFrom<VariantFilterKind>("missing_data", "obs_het", "maf", "ld")
+      .map((filter): LdStep => ({ kind: "off", filter })),
+    weight: 4,
+  },
+  {
+    arbitrary: fc.nat().map((which): LdStep => ({ kind: "onKept", which })),
+    weight: 2,
+  },
   { arbitrary: fc.constant<LdStep>({ kind: "undo" }), weight: 2 },
   { arbitrary: fc.constant<LdStep>({ kind: "redo" }), weight: 1 },
   {
@@ -6103,13 +6183,41 @@ const ldStep: fc.Arbitrary<LdStep> = fc.oneof(
   },
 );
 
+/** The filters of the variants a request carried, and the filters off of
+    the project it was made from. */
+interface Carried {
+  readonly filters: readonly ProjectVariantFilter[];
+  readonly off: readonly ProjectVariantFilter[];
+}
+
+/** Whether a list of filters holds a filter of a kind of `off`. */
+function holdsOff(
+  filters: readonly ProjectVariantFilter[],
+  off: readonly ProjectVariantFilter[],
+): boolean {
+  return filters.some((f) => off.some((o) => o.kind === f.kind));
+}
+
 /** Which filters a definition reads, any of the four. */
 const anyFiltersRead: fc.Arbitrary<
   AnalysisDef<TestJob, TestResult>["filtersRead"]
 > = fc.record({ variants: fc.boolean(), individuals: fc.boolean() });
 
+/** The sample project without its threshold on the individuals, so that
+    no analysis waits for the statistics of each individual; the store
+    freezes it when it opens it. */
+function sampleWithoutThreshold(): Project {
+  const p = sampleProject();
+  return {
+    ...p,
+    individualFilters: p.individualFilters.filter(
+      (f) => f.kind === "keep" || f.kind === "remove",
+    ),
+  };
+}
+
 /**
- * A store that writes, of popnei 0.1.0 with the sample project opened,
+ * A store that writes, of popnei 0.1.0 with the project `first` opened,
  * whose populations, variants and counts read the filters `reads`, and
  * the statistics none; each of the three records the filters of the
  * variants its request carries, `jobFilters` of its project when it
@@ -6122,15 +6230,16 @@ function ldStore(
     AnalysisDef<TestJob, TestResult>["filtersRead"],
     AnalysisDef<TestJob, TestResult>["filtersRead"],
   ],
+  first: Project,
 ): {
   readonly store: Store<TestResult, string>;
   readonly analyses: readonly AnalysisDef<TestJob, TestResult>[];
   readonly sent: readonly SentRequest[];
   readonly writes: readonly SentWrite[];
-  readonly carried: readonly (readonly ProjectVariantFilter[])[];
+  readonly carried: readonly Carried[];
 } {
   const { analyses: twoFakes, stats, counts } = fakeAnalyses();
-  const carried: (readonly ProjectVariantFilter[])[] = [];
+  const carried: Carried[] = [];
   const reading = (
     def: AnalysisDef<TestJob, TestResult> | undefined,
     read: AnalysisDef<TestJob, TestResult>["filtersRead"],
@@ -6142,7 +6251,10 @@ function ldStore(
       ...def,
       filtersRead: read,
       run: (p, c) => {
-        carried.push(read.variants ? jobFilters(p.filters) : []);
+        carried.push({
+          filters: read.variants ? jobFilters(p.filters) : [],
+          off: p.filtersOff,
+        });
         return def.run(p, c);
       },
     };
@@ -6178,7 +6290,7 @@ function ldStore(
     maxUndoSteps: 200,
   });
   store.popneiReady("0.1.0");
-  store.open(sampleProject());
+  store.open(first);
   return { store, analyses, sent, writes, carried };
 }
 
@@ -6205,9 +6317,22 @@ function runLdStep(
       return;
     case "ldOff":
       store.apply("the LD filter was turned off", (p) =>
-        removeVariantFilter(p, "ld"),
+        turnOffVariantFilter(p, "ld"),
       );
       return;
+    case "off":
+      store.apply("a filter was turned off", (p) =>
+        turnOffVariantFilter(p, s.filter),
+      );
+      return;
+    case "onKept": {
+      const kept =
+        before.filtersOff[s.which % Math.max(before.filtersOff.length, 1)];
+      if (kept !== undefined) {
+        store.apply("a filter was turned on", (p) => setVariantFilter(p, kept));
+      }
+      return;
+    }
     case "undo":
       store.undo();
       return;
