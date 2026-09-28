@@ -4,7 +4,7 @@ Written on 25 September 2026 for the walking skeleton, stage 2 of
 `docs/build-order.md`, approved by the owner the same day and revised
 with the owner's decisions of 25 and 26 September 2026 on the reviews of
 `docs/plans/walking-skeleton.md`. Rewritten on 27 September 2026 for
-stage 4, the step whole, not yet approved: the metadata file read from
+stage 4, the step whole, approved by the owner on 28 September 2026: the metadata file read from
 an xlsx as well as from a CSV or a TSV; the types of the columns, and
 the coding of a binary column, set by the user and kept when the file is
 read again; the file optional, with every individual in one population
@@ -808,9 +808,12 @@ the metadata file and a column required in stage 2, optional from stage
 4 (point A there), and each application's name for its file in the
 reasons of core (point P).
 
-Stage 4 opens none of its own. It takes as meanwhile the types set kept
-when the file is read again, and the name "All individuals", which are
-gathered in `docs/specs/stage-4-open-points.md`. These choices of the
+Stage 4 opens none of its own. The types set kept when the file is read
+again, waiting when a read cannot apply them, with the button "Forget
+these types", were decided by the owner on 28 September 2026 as
+recommended (point 6 of `docs/specs/stage-4-open-points.md`, where the
+option not taken is); the name "All individuals" is a choice of the
+writer gathered there. These choices of the
 writer change what a user meets, and the owner may overrule them on the
 screen: a new project with a file
 locked until the user chooses a column or the one population, rather

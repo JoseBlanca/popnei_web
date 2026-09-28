@@ -20,15 +20,16 @@ specified in `docs/specs/core/individualsKept.md`; and the reasons of
 a list of individuals given apart, by `individualListNeeds`, so that
 they lock only what reads the filters of individuals; this revision is
 approved by the owner on 26 September 2026. Revised on 27 September
-2026 for stage 4, the Individuals step whole, not yet approved: the
+2026 for stage 4, the Individuals step whole: the
 metadata file optional, as the owner decided on 25 September 2026, with
 one population, "All individuals", without it, and the grouping
 `onePopulation` for a project with a file; the populations every
 analysis per population reads, made here and no longer in the module of
 the diversity; the types of the columns set by the user, with the
 coding of a binary column; and those types kept when the file is read
-again, recommended to the owner on 27 September 2026 and taken
-meanwhile (`docs/specs/stage-4-open-points.md`), which answers Open 1.
+again, recommended to the owner on 27 September 2026 and decided by
+the owner as recommended on 28 September 2026
+(`docs/specs/stage-4-open-points.md`, point 6), which answers Open 1.
 Revised again the same day to agree with the specs written beside it:
 the types each column allows worked out by core from the table,
 `columnAllows`, and not given by the reader nor saved in the project
@@ -85,7 +86,7 @@ the PCA's own LD filter, and the PCA is locked by the LD filter of the
 step through its own `needs`, and only while its LD filter follows the
 step; and again that day for the owner's decision that the regions of
 a BED file, once the application has that filter, come before the
-filter of individuals. Not yet reviewed or approved; it changes the
+filter of individuals. The revisions for stage 4 are approved by the owner on 28 September 2026; they change the
 code of stage 3.
 
 The project is everything the user has set in one application: the
@@ -760,9 +761,9 @@ identifier, is the one it has, so setting it gives the project itself,
 and any other is a defect.
 
 **The types the user set are kept when the file is read again**, by
-the name of their column, where the new values allow them, as the owner
-was recommended on 27 September 2026 and as is taken meanwhile
-(`docs/specs/stage-4-open-points.md`). `loadIndividuals` copies
+the name of their column, where the new values allow them, as was
+recommended to the owner on 27 September 2026 and as the owner decided
+on 28 September 2026 (`docs/specs/stage-4-open-points.md`, point 6). `loadIndividuals` copies
 `typesSet` of the source it replaces and `setCsvOptions` keeps it, and
 the record of the new read puts each type set on the column of its
 name when the new read allows it: categorical on any column but the
@@ -1843,8 +1844,8 @@ for a project of association.
 ## Open points
 
 1. **The types the user set when the individuals file is read again.**
-   Answered on 27 September 2026 by a recommendation to the owner that
-   is taken meanwhile, gathered in `docs/specs/stage-4-open-points.md`:
+   Decided by the owner on 28 September 2026, as recommended on 27
+   September 2026 (`docs/specs/stage-4-open-points.md`, point 6):
    they are kept by the name of their column, and applied where the new
    values allow them; otherwise the column has its inferred type, the
    type set waits in `typesSet` for a read that allows it, and the
@@ -1853,8 +1854,8 @@ for a project of association.
    of stage 2, every type set lost at a new read, which made a user who
    changed the separator set every type again. That a type not applied
    waits, and is not dropped, was decided after the review of the
-   architecture on 27 September 2026. Another answer changes the record
-   of a read and the line of the step, and not the types of the project.
+   architecture on 27 September 2026, and so was the button "Forget
+   these types", which forgets the types that wait.
 
 The five that follow are the words of `projectNeeds`,
 `individualListNeeds` and `individualsNeeds` that the owner took as provisional on 24 September

@@ -17,7 +17,7 @@ the plot as its **Open 1**; and with the owner's answer of 27 September
 2026 to that point, to judge it on the running screen; and on 28
 September 2026 for the owner's decision that the PCA opens on the 3D
 view, the scatter one button away and drawn in its place when the
-browser cannot draw 3D; not yet approved. There is no
+browser cannot draw 3D; approved by the owner on 28 September 2026. There is no
 code of it yet; the base it is drawn on, `src/charts/plot2d.ts`, and the
 histogram exist from stage 3. This spec gives the function of
 `src/charts/scatter.ts` that draws the individuals on two principal

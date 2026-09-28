@@ -19,7 +19,7 @@ the browser cannot draw it, and the wheel zooms with the Ctrl key held,
 Open 1; and after the final review of stage 4, the same day: the
 listener of the wheel in the capture phase, the pinch in Safari, ⌘ and
 the zoom of macOS, the test of the wheel, and the file of three.js
-requested once the first result is drawn; not yet approved. There is no
+requested once the first result is drawn; approved by the owner on 28 September 2026. There is no
 code of it yet. This spec gives the function of `src/charts/pca3d.ts`
 that draws the individuals on three principal components with three.js,
 the library of WebGL the applications take for it
@@ -355,7 +355,13 @@ page, into a script file of its own that the browser downloads then
   there. The screen draws the 2D scatter in the place of the 3D view,
   and says so above it, in the words of `pca.md`, "Its words", with a
   button "Try again", which calls `import()` again and, when the module
-  arrives, draws the 3D view in the place of the 2D plot. A browser may remember that the download of a
+  arrives, draws the 3D view in the place of the 2D plot. These words,
+  which say that the site may have been updated and to save the
+  project, reload the page and open the project again, were decided by
+  the owner on 28 September 2026, as recommended (point 13 of
+  `docs/specs/stage-4-open-points.md`); not taken: downloading three.js
+  and the reader of xlsx soon after the page opens, 0.43 MB gzipped more
+  on every visit. A browser may remember that the download of a
   module failed and give the same failure to every later `import()` of
   it without asking the network again (the standard leaves it open,
   whatwg/html issue 6768); which engines do is seen in each when the

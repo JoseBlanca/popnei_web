@@ -17,8 +17,7 @@ owner's decision that day that the filters of individuals act first
 (`docs/architecture.md`, section 2): the statistics are counted over
 every variant of the file, their pass has no filter, the calculation
 worker puts the list before the filters of the variants, and popnei's
-numbers of `panel.nei` are those over every variant; not yet reviewed
-or approved. Built in `src/core/individualsKept.ts`, the row
+numbers of `panel.nei` are those over every variant. The revisions for stage 4 are approved by the owner on 28 September 2026. Built in `src/core/individualsKept.ts`, the row
 of section 9 of the architecture. It depends on
 `docs/specs/core/project.md`, for the project, its filters of
 individuals, `projectNeeds`, `individualListNeeds` and the rules by which a text names a value

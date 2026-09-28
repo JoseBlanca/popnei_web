@@ -29,8 +29,8 @@ words of its own. Revised on 28 September 2026, when the owner moved the
 reader of xlsx into a project of its own, xlsx_rs
 (`docs/architecture.md`, section 6): the light worker's part of
 `docs/specs/worker/files.md`, which becomes xlsx_rs's spec, moved here,
-"The package of xlsx_rs, loaded on first need". The revision is not
-approved yet. The reader turns
+"The package of xlsx_rs, loaded on first need". The revisions for
+stage 4 are approved by the owner on 28 September 2026. The reader turns
 the file of the individuals, a CSV, a TSV or an xlsx, the
 metadata file of population genetics or the traits file of association,
 into the table the project holds, and infers the type of each of its
@@ -822,7 +822,11 @@ pattern `filesWasm`), as `.claude/skills/coding/worker.md` gives it,
   the project, reload the page and open the project again" ("The
   refusals and their words"), the advice of the 3D view whose file is
   gone after a deploy (`docs/specs/analyses/pca.md`), since a reload
-  alone loses what the user has not saved. The worker goes on, and a CSV
+  alone loses what the user has not saved. The owner decided these words
+  on 28 September 2026, as recommended (point 13 of
+  `docs/specs/stage-4-open-points.md`); not taken: downloading the reader
+  of xlsx and three.js soon after the page opens, 0.43 MB gzipped more
+  on every visit. The worker goes on, and a CSV
   read after it is read. The option not taken was to end the worker, as
   a failure to load popnei ends the calculation worker: the user would
   be told that the reading stopped, and not to check their connection.

@@ -23,8 +23,8 @@ which popnei_web's reader makes of the text xlsx_rs gives; and the
 Individuals step says that the first sheet was read without naming it.
 This is xlsx_rs's first spec. It is written here because the repository
 of xlsx_rs does not exist yet, and it moves there, whole, when the
-owner makes it; until then it is part of the specs of stage 4, and
-none of them is approved. There is no code of it yet.
+owner makes it; until then it is part of the specs of stage 4, which
+were approved by the owner on 28 September 2026. There is no code of it yet.
 
 This spec gives the Rust library that reads the first sheet of an xlsx,
 the file Excel saves by default, into its cells, and the wasm package

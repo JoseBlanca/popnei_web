@@ -4,7 +4,7 @@ Written on 26 September 2026, for stage 3 of `docs/build-order.md`, the
 Variants step whole, after the owner asked that day that stage 3 make
 one piece for what every 2D plot has in common; approved by the owner on 26 September 2026. There is no code in `src/charts` yet.
 Revised on 27 September 2026 for the scatter plot of the PCA,
-`docs/specs/charts/scatter.md`, in stage 4, not yet approved: the
+`docs/specs/charts/scatter.md`, in stage 4, approved by the owner on 28 September 2026: the
 overlay and the calls of the pointer, the hook that draws the legend
 into the exported file, with the argument of `exportSvg` that carries
 it into the SVG and the PNG, and the mark of the point under the

@@ -51,8 +51,8 @@ owner's decision that the PCA has its own filters of missing data, MAF
 and LD, each following the Variants step by default: why the PCA still
 fills no counts; and the property that no request of the statistics
 carries a filter, which will allow the regions of a BED file once the
-application has that filter. Not yet reviewed or approved; it
-changes the code of stage 3. The store is the one object of core that
+application has that filter. The revisions for stage 4 are approved by the owner on 28 September 2026; they
+change the code of stage 3. The store is the one object of core that
 changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.

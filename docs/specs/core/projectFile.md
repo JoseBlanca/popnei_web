@@ -20,8 +20,7 @@ fixed order that the opening checks, and the version of the format,
 which stays 1 until the first release of the application, the regions
 of a BED file included, as the owner decided on 26 September 2026;
 this revision is approved by the owner on 26 September 2026. Revised on
-27 September 2026 for stage 4, the Individuals step whole, not yet
-approved: the grouping of one population and the types the user set,
+27 September 2026 for stage 4, the Individuals step whole: the grouping of one population and the types the user set,
 written in version 1, and a project with no metadata file, whose
 diversity has the check numbers of one population
 (`docs/specs/core/project.md`, "The populations" and "The types of the
@@ -40,7 +39,7 @@ its distance was typed is written with `"maxDist": null`, in version 1;
 and again that day for the owner's decision that the LD filter keeps its
 values while it is off: the filters turned off are written, with their
 values, in `filtersOff` and `individualFiltersOff`, in version 1, and a
-file saved without them opens with nothing kept.
+file saved without them opens with nothing kept. The revisions for stage 4 are approved by the owner on 28 September 2026.
 There was no
 code yet; it will be `src/core/projectFile.ts`, the row `projectFile.ts`
 of section 9 of `docs/architecture.md`. The project file is the file

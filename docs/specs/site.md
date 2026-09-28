@@ -10,8 +10,8 @@ Rust in the repository and in the workflow; and revised again on 28
 September 2026, when the owner moved that reader into a project of its
 own, xlsx_rs, whose wasm package the site installs from a release as it
 installs popnei's (`docs/architecture.md`, section 6): the Rust goes, and
-"xlsx_rs, from stage 4" below is what is left of it. Neither revision is
-approved yet.
+"xlsx_rs, from stage 4" below is what is left of it. Both revisions are
+approved by the owner on 28 September 2026.
 This spec is stage 0 of `docs/build-order.md`: the repository of the site
 set up, a workflow that checks it and publishes it on GitHub Pages, and
 one page, the probe, whose worker loads popnei's wasm package and opens a

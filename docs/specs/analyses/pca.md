@@ -56,7 +56,7 @@ the lasso left out of stage 4, the note of the missing genotypes, Open
 2, and the zoom of the 3D view by the wheel with Ctrl held. The filters,
 the PCA's among them, count over the individuals kept, as the owner
 decided the same day for every analysis (`docs/architecture.md`,
-section 2).
+section 2). Approved by the owner on 28 September 2026.
 There is no code of it yet. This spec gives
 the analysis that places the individuals of a dataset on a few axes, to
 see its structure and check the populations against it: the module

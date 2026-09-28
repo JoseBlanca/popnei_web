@@ -30,7 +30,7 @@ every variant of the file, their key holds the load and no filter, their
 job carries no filter, one pass per load gives them, and no reason of
 the filters locks them, the LD filter with no distance no longer among
 them; their key version is 2, and popnei's numbers of `panel.nei` are
-those with no filter. Not yet reviewed or approved; it changes the code
+those with no filter. The revisions for stage 4 are approved by the owner on 28 September 2026; they change the code
 of stage 3 too.
 
 The words of the documents used here, as `docs/specs/analyses/diversity.md`

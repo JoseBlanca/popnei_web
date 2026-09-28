@@ -22,7 +22,7 @@ status region says when a Run of an analysis that waited for the
 statistics of each individual was not run, the filters keeping no one,
 and the summary line counts the populations the filters of individuals
 leave with an individual. Revised on 27 September 2026 for stage 4, the
-Individuals step whole, not yet approved, only where it touches the
+Individuals step whole, only where it touches the
 shell: the Individuals step at "Optional" in the stepper without a
 metadata file, as the owner decided on 25 September 2026 (point A of
 `docs/specs/stage-2-open-points.md`); the summary line with one
@@ -46,8 +46,7 @@ alone; and again that day for the owner's decision that the filters of
 individuals act first (`docs/architecture.md`, section 2): the numbers
 of the summary line with the thresholds of the individuals are
 recomputed, and an LD filter with no distance no longer leaves the
-individuals kept unknown, since the statistics read no filter. Not yet
-reviewed or approved.
+individuals kept unknown, since the statistics read no filter. The revisions for stage 4 are approved by the owner on 28 September 2026.
 The screen
 spec of what surrounds every step of the population genetics
 application, first built in the walking skeleton of stage 2 (`docs/build-order.md`),

@@ -33,8 +33,7 @@ by `orderA.mjs` below; and again that day for the owner's decision that
 the PCA has its own filters of missing data, MAF and LD, which follow
 the Variants step by default (`docs/specs/analyses/pca.md`): the tests
 of the PCA made with the job of that spec's flow and its numbers, and
-the test of two individuals with the list before the MAF filter; not yet
-reviewed or approved. The calculation
+the test of two individuals with the list before the MAF filter. The revisions for stage 4 are approved by the owner on 28 September 2026. The calculation
 worker is the thread of the browser tab, beside the page, that runs
 popnei, so that a calculation does not freeze the page
 (`docs/architecture.md`, section 1). Its runner is the code that answers

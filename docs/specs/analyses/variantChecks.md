@@ -21,7 +21,7 @@ over the individuals kept, their key holds the filters of individuals,
 their job carries the list, a Run with a threshold on the individuals
 waits for the statistics of each individual, and a list popnei would
 refuse, or one that keeps nobody, locks them; their key version is 2.
-Not yet reviewed or approved; it changes the code of stage 3.
+This revision is approved by the owner on 28 September 2026; it changes the code of stage 3.
 
 ## The module
 

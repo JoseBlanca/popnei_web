@@ -26,7 +26,7 @@ failure to load stops a worker named as popnei's; and on 28 September
 (`docs/architecture.md`, section 2): the job of the statistics of each
 individual has no filter, and those of the histograms of the variants
 and of the counts carry the list of the individuals kept, checked as
-any job's; not approved yet. This spec gives
+any job's. The revisions for stage 4 are approved by the owner on 28 September 2026. This spec gives
 `src/worker/messages.ts`: the messages the page and each of the two
 workers send each other, from the walking skeleton, the smallest
 application that goes through every part once (stage 2), on, the

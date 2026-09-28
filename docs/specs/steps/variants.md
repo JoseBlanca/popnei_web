@@ -24,7 +24,7 @@ individuals, with the words the section had left to the code: the line
 of each threshold beside its histogram, the reason of no individual
 kept as the step shows it, and when the counts and the line of the
 individuals that pass are left out. Revised on 27 September 2026 for
-stage 4, not yet approved: the words of a file whose read stopped
+stage 4: the words of a file whose read stopped
 because the calculations could not start, which now say to save the
 project before the reload (`docs/specs/core/project.md`, Open 4).
 Revised on 28 September 2026 for the owner's decision that day that the
@@ -49,9 +49,9 @@ histograms of the variants and the counts of the filters of the
 variants are over the individuals kept, so a change of a filter of
 individuals takes them off, and a list popnei would refuse locks them;
 the LD pruning with no distance no longer locks the statistics; and the
-numbers of `panel.nei` with the thresholds are recomputed. Not yet
-reviewed or approved; it changes the step as built in stage 3, and the
-plan of stage 4 carries the change.
+numbers of `panel.nei` with the thresholds are recomputed. The revisions for stage 4 are approved by the owner on 28 September 2026; they
+change the step as built in stage 3, and the plan of stage 4 carries
+the change.
 
 The screen spec of the first step of both applications. In stage 2 the
 user picks the variants file, a VCF or a `.nei` file, sets how a VCF is

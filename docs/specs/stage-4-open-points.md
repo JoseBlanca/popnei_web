@@ -6,8 +6,8 @@ as well as a CSV, the file made optional, the types of its columns set by
 the user, and the principal components of the individuals, drawn in 2D
 and in 3D. This file gathers what the specs of stage 4 ask the owner to
 decide, what they decided alone that a user meets, what the owner is
-asked to make or approve, and what is asked of popnei. None of the specs
-is reviewed or approved yet. On 27 September 2026 the owner answered
+asked to make or approve, and what is asked of popnei. The specs were
+approved by the owner on 28 September 2026. On 27 September 2026 the owner answered
 points 1, 3, 8, 14 and 15 and approved the new dependencies but
 calamine, and the specs named with each were revised the same day. On
 28 September 2026 the specs were revised to popnei's release
@@ -34,7 +34,9 @@ Excel in an xlsx is a missing value, the six others as `#N/A` (point
 individuals, once the application has it; the histograms of the
 variants count over the individuals kept; and the Variants step shows
 the section of the individuals before that of the variants (the last
-three under point A).
+three under point A). Last that day the owner decided points 6 and 13,
+as recommended, and approved the specs and the revision of
+`docs/architecture.md`.
 
 The specs are, new: `docs/specs/analyses/pca.md`, the analysis and its
 panel; `docs/specs/charts/scatter.md`, the 2D plot, and `pca3d.md`, the
@@ -74,20 +76,17 @@ reads the page aloud to a user who cannot see it.
 
 ## What is still the owner's
 
-- **To approve the specs.** None is approved yet, and the plan of stage
-  4 is written from approved specs.
-- **To decide two points**, whose recommendations the specs follow
-  meanwhile, and which the plan can be written without: point 6, the types the user set, kept when the file is read
-  again; and point 13, what a page opened before a new version of the
-  site shows. Point 14, the legend over the plot, is judged on the
-  running screen, when the owner tries the PCA panel.
-- **To make or approve three things**, below, "Asked of the owner to
-  make or approve": the repository of xlsx_rs, where the zip of the
-  report is made (for stage 6), and eight xlsx files for the tests. None
-  of them stops the plan of stage 4 from being written: the xlsx comes
-  last in the stage, and waits for the repository and its first release.
-- **Possibly, the key of the zoom on a Mac**: if Ctrl clashes there when
-  the plan tries it, the plan asks whether ⌘ takes its place (point 10).
+- **To make three things**, below, "Asked of the owner to make or
+  approve": the repository of xlsx_rs, the eight xlsx files for the
+  tests of the reader, and the zip of the report, for stage 6, whose
+  place is recommended in xlsx_rs. None of them stops the plan of stage
+  4 from being written: the xlsx comes last in the stage, and waits for
+  the repository and its first release.
+- **To try the key of the zoom on a Mac**: the wheel zooms the 3D view
+  with Ctrl held, and if Ctrl clashes there when the plan tries it, the
+  plan asks whether ⌘ takes its place (point 10).
+- **To judge point 14, the legend over the plot**, on the running
+  screen, when the owner tries the PCA panel.
 
 ## Decided by the owner on 27 September 2026
 
@@ -687,42 +686,47 @@ is still the first in the order of the tabs that is not hidden, which
 the help says. `docs/specs/worker/individuals.md`, Open 1;
 `steps/individuals.md`.
 
-## Recommended on 27 September 2026, not yet answered
-
-Put to the owner in chat that day with its recommendation, which the
-specs take as the meanwhile; an answer that differs changes the specs
-named, and nothing else unless said. Points 2, 4, 5 and 7, put the same
-day, are answered above.
-
-### 6. The types the user set, kept when the file is read again
+### 6. The types the user set wait when a read cannot apply them
 
 From stage 4 the user sets the type of each column. Changing the
 separator of a CSV, or loading the file again, reads a new table, and
-until now brought back the inferred types, open point 1 of
-`docs/specs/core/project.md`. Recommended: each type set is kept by the
-name of its column when the new values allow it, a binary type when the
-column still has exactly those two values. A type the new read cannot
-apply is not dropped: it waits, the column shows its inferred type, the
-step says which types wait and why, and the type is applied again when a
-later read allows it, so that correcting a wrong separator brings every
-type back. A button beside that warning forgets the types that wait,
-added by the writer of the spec (below). Not taken: dropping a type the
-read cannot apply, which a wrong separator, making the file one column,
-would do to every type set. Specs:
-`project.md`, `steps/individuals.md`.
+until stage 4 brought back the inferred types, open point 1 of
+`docs/specs/core/project.md`. Decided by the owner, as recommended on
+27 September 2026: each type set is kept by the name of its column when
+the new values allow it, a binary type when the column still has
+exactly those two values. A type the new read cannot apply is not
+dropped: it waits, the column shows its inferred type, the step says
+which types wait and why, and the type is applied again when a later
+read allows it, so that correcting a wrong separator brings every type
+back. A button "Forget these types", beside that warning, forgets the
+types that wait, so that a type set on a column the file no longer has
+is not warned of at every read; without it, only removing the file,
+which loses every type set, would end the warning. Not taken: dropping
+a type the read cannot apply, which a wrong separator, making the file
+one column, would do to every type set. `project.md`, "The types of the
+columns" and Open 1; `steps/individuals.md`.
+
+### 13. A page opened before a new version of the site is deployed
+
+three.js, for the 3D view, 134 KB gzipped, and the reader of xlsx, 0.30
+MB, are downloaded the first time they are needed, and a deploy removes
+the files of the old version, so a page opened before a deploy fails to
+download them afterwards. Decided by the owner, as recommended: the
+screen says in words that the site may have been updated since the page
+was opened, and to save the project, reload the page and open the
+project again. Not taken: downloading three.js and the reader of xlsx
+soon after the page opens, so that a deploy afterwards finds them
+already in the page, at the cost of 0.43 MB gzipped more on every
+visit, which would not cover the script of a worker started again; and
+keeping the files of the last builds on the site for a while after a
+deploy, which GitHub Pages does not do by itself.
+`docs/architecture.md`, section 11 and section 13, point 10;
+`pca3d.md`; `docs/specs/worker/individuals.md`.
 
 ## Opened by the specs
 
-Each with its options and its recommendation in the spec named, which is
-the meanwhile. Points 9 to 12 are answered above.
-
-13. **A page opened before a new version of the site is deployed.** The
-   files of the 3D view and of the reader of xlsx are downloaded the
-   first time they are needed, and a deploy removes those of the old
-   version, so such a page fails to download them. Recommended: the
-   screen says so and what works, save the project, reload the page and
-   open it again. `docs/architecture.md`, section 11 and section 13,
-   point 10.
+With its options and its recommendation in the spec named, which is the
+meanwhile. Points 9 to 13 are answered above.
 
 14. **The legend over the plot hides the points under it.** The legend
    sits over the top right corner of the plot, as in the owner's widget,
@@ -895,11 +899,6 @@ meets.
   words that say so, since the first column is always the names of the
   individuals; it comes back if a later file puts the column elsewhere
   (`steps/individuals.md`).
-- **"Forget these types"**, a button beside the warning of the types
-  that wait, so that a type set on a column the file no longer has is
-  not warned of at every read; otherwise only removing the file, which
-  loses every type set, would end it (`project.md`,
-  `steps/individuals.md`).
 - **"Copy the 12 names"**, a button that copies the individuals missing
   from the metadata file, one a line, for a user of the keyboard alone,
   who cannot select text without a mouse (`steps/individuals.md`).

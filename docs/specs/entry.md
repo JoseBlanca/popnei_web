@@ -27,7 +27,7 @@ since their pass has no filter; and again that day for the owner's
 decision that the PCA has its own filters of missing data, MAF and LD,
 each following the Variants step by default: why the PCA still fills
 no counts, and the counts of its pass in the test of `countsOf`, those
-of `docs/specs/analyses/pca.md`; not yet reviewed or approved.
+of `docs/specs/analyses/pca.md`. The revisions for stage 4 are approved by the owner on 28 September 2026.
 This spec gives
 the page of the population genetics application, `popgen.html`, and its
 entry, the code that runs once when the page opens and keeps working for

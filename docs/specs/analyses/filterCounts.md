@@ -32,8 +32,8 @@ nobody locks it, the statistics of each individual no longer fill the
 counts, and the key version is 2. Revised again that day for the
 owner's decision that the PCA has its own filters of missing data, MAF
 and LD, each following the Variants step by default: why the PCA still
-fills no counts. Not yet reviewed or approved; it
-changes the code of stage 3.
+fills no counts. The revisions for stage 4 are approved by the owner on 28 September 2026; they
+change the code of stage 3.
 
 ## The module
 

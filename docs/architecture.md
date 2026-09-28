@@ -12,9 +12,10 @@ of the individuals file reports, as the owner decided that day
 approved by the owner on 26 September 2026 with the answers to its open
 points. On 28 September 2026 it was revised for the reader of xlsx,
 moved out of this repository into a project of its own, xlsx_rs, as the
-owner decided that day; a draft, not yet reviewed or approved; and the
+owner decided that day; and the
 same day for the order of the filters, the filters of individuals
-first, as the owner decided that day, a draft too. What was
+first, as the owner decided that day. The revisions for stage 4, of 27
+and 28 September 2026, are approved by the owner on 28 September 2026. What was
 revised each time is at the end
 of section 1. The document gives the parts of the web applications of
 popnei, what each one holds, and how a change made by the user reaches the
@@ -244,8 +245,8 @@ lists of 125 and 119, of 116 and 111 since 28 September 2026, since a test of th
 core (section 4, "What would show these choices wrong").
 
 What was revised on 27 September 2026, for stage 4 of
-`docs/build-order.md`, the Individuals step and the PCA; a draft, not yet
-reviewed or approved. Stage 4 fits the slots this document has: the PCA
+`docs/build-order.md`, the Individuals step and the PCA; approved by the owner on 28 September 2026.
+Stage 4 fits the slots this document has: the PCA
 is an analysis of the shape of section 4, its plots are functions of
 `src/charts`, and the reader of xlsx is the files wasm of section 6,
 since the revision below the package of xlsx_rs. What it changes:
@@ -323,8 +324,8 @@ and the revised specs of the project, the reader of the individuals file
 and the Individuals step. The decisions the owner is asked for are in
 `docs/specs/stage-4-open-points.md`.
 
-What was revised on 28 September 2026, a draft, not yet reviewed or
-approved: the reader of xlsx leaves this repository. The owner decided
+What was revised on 28 September 2026, approved by the owner on 28 September 2026:
+the reader of xlsx leaves this repository. The owner decided
 that day that it is a project of its own, **xlsx_rs**, with the
 conventions and the skills of popnei, and it answers what the owner had
 held against building it in popnei's repository on 24 September 2026. The
@@ -340,8 +341,8 @@ waits for the first release of xlsx_rs, and comes last in the stage
 when its repository is made; what of it stays in popnei_web joins
 `docs/specs/worker/individuals.md`.
 
-What was revised on 28 September 2026 for the order of the filters, a
-draft, not yet reviewed or approved. The owner decided that day, "All
+What was revised on 28 September 2026 for the order of the filters,
+approved by the owner on 28 September 2026. The owner decided that day, "All
 analyses should calculate the filters using the individuals kept", and
 so reversed the decision of 26 September 2026 that put the filter of
 individuals after every filter of the variants:
@@ -618,8 +619,8 @@ the owner chose the statistics over the variants kept (section 4). No
 project file the application wrote is refused by the fixed order: stage 2
 has the missing data filter alone.
 
-What was revised on 28 September 2026, a draft, not yet reviewed or
-approved. The version of 26 September 2026 put the filter of
+What was revised on 28 September 2026, approved by the owner on 28 September 2026.
+The version of 26 September 2026 put the filter of
 individuals after every filter of the variants, which counted over every
 individual of the file, and counted each individual's statistics over
 the variants those filters kept; the owner had chosen it so that an
@@ -1148,8 +1149,8 @@ core does not call popnei:
   counts of that filter over those individuals, 1,200 to 1,103 and 1,200
   to 1,117.
 
-What was revised on 28 September 2026, a draft, not yet reviewed or
-approved, for the owner's decision of that day to put the filters of
+What was revised on 28 September 2026, approved by the owner on 28 September 2026,
+for the owner's decision of that day to put the filters of
 individuals first (section 2). The statistics of each individual are
 counted over every variant of the file, the option the draft of 26
 September 2026 recommended and the owner then set aside, and the
@@ -1701,8 +1702,8 @@ there when its repository is made.
   crate of plain Rust tested natively, a crate of the binding to
   wasm-bindgen, and the package in `js/xlsx_rs/`.
 
-What was revised on 28 September 2026, a draft, not yet reviewed or
-approved. The version before, of 24 September 2026, built the files wasm
+What was revised on 28 September 2026, approved by the owner on 28 September 2026.
+The version before, of 24 September 2026, built the files wasm
 from a crate of this repository, `crates/files/`, by the site's own
 build: `cargo build` and `wasm-bindgen` into `crates/files/pkg/`, which
 git ignored, before every `vite build` and `vite dev`. It needed Rust
@@ -2504,7 +2505,7 @@ that day:
 
 Opened by the revision of 27 September 2026, for stage 4
 (`docs/specs/stage-4-open-points.md`); point 9 decided by the owner that
-day, as recommended, and point 10 recommended and not yet decided:
+day, as recommended, and point 10 on 28 September 2026, as recommended:
 
 9. **The calculation worker is started again after a PCA or a PCoA of
    more than 700 individuals**, `PCA_RESTART_INDIVIDUALS`, whose matrix
@@ -2521,9 +2522,11 @@ day, as recommended, and point 10 recommended and not yet decided:
    restart after a large PCA would drop: a kinship of 10,000 individuals
    is 800 MB and minutes to make again.
 10. **What a page opened before a deploy does when it later fetches a
-   file of the old build** (section 11). Recommended: say so in words,
-   with what works, save, reload and open the project again, as the
-   specs of stage 4 have it. Not taken: keeping the files of the last
+   file of the old build** (section 11). Decided by the owner on 28
+   September 2026, as recommended: the screen says in words that the
+   site may have been updated since the page was opened, and to save the
+   project, reload the page and open the project again, as the specs of
+   stage 4 have it. Not taken: keeping the files of the last
    builds on the site for a while after a deploy, which GitHub Pages,
    deploying the `dist/` folder of one build, does not do by itself; and
    downloading three.js and the files wasm when the page is idle, so that

@@ -23,7 +23,7 @@ specs of stage 4 were made to agree, the restart after a large PCA
 among the exceptions of "Not in this spec"; and on 28 September 2026
 for popnei's release `js-v0.1.0-dev.3`, which `package.json` names from
 the plan of stage 4: the memory of a PCoA, and the wasm of that release,
-72 KB larger gzipped. The worker client is the page's one door to the two workers, the threads of the tab
+72 KB larger gzipped. The revisions for stage 4 are approved by the owner on 28 September 2026. The worker client is the page's one door to the two workers, the threads of the tab
 beside the page where the files are read and the calculations run
 (`docs/architecture.md`, section 1): it starts them, keeps the `File` of
 every file the user picked, sends each worker one request at a time and

@@ -6,7 +6,7 @@ Variants step whole, as the revision of `docs/architecture.md` the owner
 approved that day has it: the list of the individuals kept is in no key,
 and a file of the filtered variants being written has a key of its own;
 this revision is approved by the owner on 26 September 2026. Revised on
-27 September 2026 for stage 4, not yet approved: the example of an
+27 September 2026 for stage 4: the example of an
 intermediate result is the kinship of stage 7, since the variants the
 pruning of the PCA keeps are not kept; and again the same day, when
 the specs of stage 4 were made to agree: the options that change only
@@ -23,7 +23,7 @@ of the Variants step read other filters; nothing of `keys.ts` changes.
 Revised again that day for the owner's decision that the PCA has its
 own filters of missing data, MAF and LD: the PCA reads all the filters
 through its own inputs, and not through the filters of its key; nothing
-of `keys.ts` changes.
+of `keys.ts` changes. The revisions for stage 4 are approved by the owner on 28 September 2026.
 A key is the name a result is stored under in the cache: a SHA-256
 hash of everything the result was calculated from, so that a result whose
 inputs changed is never shown, and a result whose inputs came back, by an

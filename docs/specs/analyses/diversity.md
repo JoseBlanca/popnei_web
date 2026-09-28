@@ -18,7 +18,7 @@ and on 27 September 2026, with the code of the panel, for the words of
 the ready state when several populations, or all, are left empty, and
 for the name of the bar and the clock while a Run waits for the
 statistics of each individual. Revised on 27 September 2026 for stage
-4, the Individuals step whole, not yet approved: without a metadata
+4, the Individuals step whole: without a metadata
 file, or with the grouping `onePopulation`, the diversity runs on one
 population of every individual, "All individuals", as the owner decided
 on 25 September 2026 (point A of `docs/specs/stage-2-open-points.md`);
@@ -57,8 +57,8 @@ per load, since they no longer read the filters of the variants; and
 the numbers with the thresholds of the flow are recomputed; and, for
 the owner's decision of the PCA's own filters, the refusal of a file not
 sorted, whose words no longer name the statistics of each individual
-and give the PCA's own LD filter in the place of its pruning. Not yet
-reviewed or approved; it changes the code of stage 3 too.
+and give the PCA's own LD filter in the place of its pruning. The revisions for stage 4 are approved by the owner on 28 September 2026;
+they change the code of stage 3 too.
 The code of stage 2 is in
 `src/core/analyses/diversity.ts`. This spec gives the first analysis of the population genetics
 application, in its form for the walking skeleton: the module

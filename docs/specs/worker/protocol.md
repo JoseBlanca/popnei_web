@@ -41,7 +41,7 @@ reads the filters of the variants while the LD filter has no distance.
 Revised again that day for the owner's decision that the PCA has its
 own filters of missing data, MAF and LD, which follow the Variants step
 by default: the passage on the filters of the PCA says how core gives
-them to popnei. Not yet reviewed or approved.
+them to popnei. The revisions for stage 4 are approved by the owner on 28 September 2026.
 
 This spec gives the part of `src/worker/protocol.ts` that core
 names: the filters of the variants and of the individuals, the table of

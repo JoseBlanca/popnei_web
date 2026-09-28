@@ -39,8 +39,8 @@ section 2): the runner puts the list of the individuals kept before the
 filters of the variants, which count over those individuals, so a file
 written with a filter of individuals holds other variants than before;
 the write waits for the statistics of each individual once per load; and
-the numbers with the thresholds are recomputed. Not yet reviewed or
-approved; it changes the code of stage 3.
+the numbers with the thresholds are recomputed. These revisions are
+approved by the owner on 28 September 2026; they change the code of stage 3.
 
 **It is not an analysis** in the sense of section 4 of the architecture,
 and it is under `docs/specs/analyses/` only because the architecture names
