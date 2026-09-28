@@ -151,9 +151,7 @@ test("WS9 D3 the shell empty: Undo and Redo disabled, each step To do or Locked 
   await expect(links.nth(0)).toHaveAccessibleDescription(
     "Load a variants file in the Variants step.",
   );
-  await expect(links.nth(1)).toHaveAccessibleDescription(
-    "Load a metadata file in the Individuals step.",
-  );
+  await expect(links.nth(1)).toHaveAccessibleDescription("");
   await expect(links.nth(2)).toHaveAccessibleDescription(
     "Load a variants file in the Variants step.",
   );

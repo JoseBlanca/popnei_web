@@ -18,12 +18,12 @@
 import type { ComponentType } from "react";
 
 import {
-  populationsBeforeRun,
   refusalText,
   statisticsFailedText,
 } from "../../core/analyses/diversity.ts";
 import type { Failure } from "../../core/analyses/individualChecks.ts";
 import type { IndividualsKept } from "../../core/individualsKept.ts";
+import { populationsBeforeRun } from "../../core/project.ts";
 import type { AnalysisId, Project } from "../../core/project.ts";
 import type { AnalysisError } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";

@@ -9,6 +9,7 @@
  * page gives each pick of a file, new at every pick.
  */
 
+import type { IndividualsKept } from "./individualsKept.ts";
 import { canonical } from "./keys.ts";
 import type { JsonObject, JsonValue } from "./keys.ts";
 import type { Result } from "./result.ts";
@@ -22,6 +23,7 @@ import type {
   IndividualsFileError,
   IndividualsTable,
   LoadFormat,
+  Pops,
   RunError,
   VariantFilter,
   VariantFilterKind,
@@ -191,8 +193,12 @@ export type IndividualsRead =
  */
 export type Grouping =
   /** Population genetics: the column that defines the populations, `null`
-      when every individual is in one population. */
+      until one is chosen; without an individuals file it is kept and not
+      looked at. */
   | { readonly kind: "populations"; readonly column: string | null }
+  /** Population genetics: every individual in one population, "All
+      individuals", which a project with an individuals file can choose. */
+  | { readonly kind: "onePopulation" }
   /** Association: the role of each column. */
   | {
       readonly kind: "roles";
@@ -621,9 +627,12 @@ function groupingError(
   path: FieldPath,
 ): ProjectError | null {
   if (app === "popgen") {
-    return grouping.kind === "populations"
+    return grouping.kind === "populations" || grouping.kind === "onePopulation"
       ? null
-      : wrongValue([...path, "kind"], "the column of the populations");
+      : wrongValue(
+          [...path, "kind"],
+          "the column of the populations or all individuals in one population",
+        );
   }
   if (grouping.kind !== "roles") {
     return wrongValue([...path, "kind"], "the roles of the columns");
@@ -1144,6 +1153,8 @@ function copyGrouping(grouping: Grouping): Grouping {
   switch (grouping.kind) {
     case "populations":
       return { kind: grouping.kind, column: grouping.column };
+    case "onePopulation":
+      return { kind: grouping.kind };
     case "roles":
       return {
         kind: grouping.kind,
@@ -1615,17 +1626,20 @@ function listNeeds(
 
 /**
  * The reason an analysis that uses the individuals file cannot run, or
- * `null`: the first of an individuals file missing, being read or
- * refused, then individuals of the variants file missing from it, with
- * the file named as the application of `p` names it, "a metadata file"
- * or "a traits file". The individuals of the variants are looked at only
- * when the variants file is read; until then `projectNeeds` gives its
- * reason (the project spec, "What an analysis needs of every project").
+ * `null`: the first of an individuals file being read or refused, then
+ * individuals of the variants file missing from it, with the file named
+ * as the application of `p` names it, "a metadata file" or "a traits
+ * file". No individuals file is a reason in association alone, whose
+ * GWAS needs a trait; in population genetics every analysis per
+ * population then runs on one population ("The populations", below).
+ * The individuals of the variants are looked at only when the variants
+ * file is read; until then `projectNeeds` gives its reason (the project
+ * spec, "What an analysis needs of every project").
  */
 export function individualsNeeds(p: Project): string | null {
   const individuals = p.individuals;
   if (individuals === null) {
-    return loadIndividualsText(p.app);
+    return p.app === "gwas" ? loadIndividualsText(p.app) : null;
   }
   if (individuals.read.kind !== "read") {
     const load = loadIndividualsText(p.app);
@@ -1831,6 +1845,352 @@ export function individualsCheck(p: Project): IndividualsCheck | null {
   };
   byVariants.set(variantsRead, check);
   return check;
+}
+
+// The populations (the project spec, "The populations").
+
+/** The name of the one population of every individual, "All
+    individuals": without an individuals file, and with the grouping
+    `onePopulation`. */
+export const ONE_POPULATION = "All individuals";
+
+/** The grouping of each table, by the name of its column, so that a
+    change of a threshold does not walk a table of 10,000 rows again. It
+    keeps only tables frozen with all they hold, as the memo of the keys
+    does, so that a table changed in place is walked again. */
+const GROUPED = new WeakMap<IndividualsTable, Map<string, Pops>>();
+
+/** The populations to run of each set of populations, by the read of the
+    variants file; only reads frozen with their individuals are kept. */
+const TO_RUN = new WeakMap<Pops, WeakMap<SourceRead, Pops>>();
+
+/** The one population to run, by the read of the variants file; only
+    reads frozen with their individuals are kept. */
+const ONE_TO_RUN = new WeakMap<SourceRead, Pops>();
+
+/** The populations to run narrowed to each frozen list of the individuals
+    kept, by the populations to run. */
+const KEPT = new WeakMap<Pops, WeakMap<readonly string[], PopulationsKept>>();
+
+/** The populations to run left whole, when the filters remove nobody. */
+const WHOLE = new WeakMap<Pops, PopulationsKept>();
+
+/**
+ * The populations as a key holds them, from the project alone: those of
+ * the column chosen, each named by the text of its cell, with every
+ * individual of the table that has it, in the order each first appears
+ * in the file, an individual whose cell is missing in none; `"all"` for
+ * the one population, without an individuals file whatever the
+ * grouping, and with a file read and the grouping `onePopulation`;
+ * `null` when neither can be given yet, a file not read, no column
+ * chosen or no column of that name, and for a project of association.
+ * Never reads `p.variants`. The same frozen value for the same frozen
+ * table and column.
+ */
+export function populationsOf(p: Project): Pops | "all" | null {
+  if (p.app !== "popgen") {
+    return null;
+  }
+  const individuals = p.individuals;
+  if (individuals === null) {
+    return "all";
+  }
+  const read = individuals.read;
+  if (read.kind !== "read") {
+    return null;
+  }
+  switch (p.grouping.kind) {
+    case "onePopulation":
+      return "all";
+    case "populations":
+      return p.grouping.column === null
+        ? null
+        : groupedBy(read.table, p.grouping.column);
+    case "roles":
+      return null;
+  }
+}
+
+/** The populations of `table` by its column `column`, as `populationsOf`
+    gives them; `null` when the table has no column of that name. */
+function groupedBy(table: IndividualsTable, column: string): Pops | null {
+  const kept = GROUPED.get(table)?.get(column);
+  if (kept !== undefined) {
+    return kept;
+  }
+  const index = table.columns.indexOf(column);
+  if (index === -1) {
+    return null;
+  }
+  const members = new Map<string, string[]>();
+  for (const row of table.rows) {
+    const cell = row[index];
+    if (cell === undefined) {
+      throw defect(`a row of the individuals table has no cell ${column}.`);
+    }
+    if (cell === null) {
+      continue;
+    }
+    const pop = String(cell);
+    const individuals = members.get(pop) ?? [];
+    members.set(pop, individuals);
+    individuals.push(identifierOf(row[0]));
+  }
+  const pops: Pops = Object.freeze(
+    [...members].map(([pop, individuals]) =>
+      Object.freeze([pop, Object.freeze(individuals)] as const),
+    ),
+  );
+  if (isTableFrozen(table)) {
+    const byColumn = GROUPED.get(table) ?? new Map<string, Pops>();
+    GROUPED.set(table, byColumn);
+    byColumn.set(column, pops);
+  }
+  return pops;
+}
+
+/** Whether a table is frozen with everything it holds, so that its
+    populations can be kept: its cells are texts, numbers, booleans or
+    null. */
+function isTableFrozen(table: IndividualsTable): boolean {
+  return (
+    Object.isFrozen(table) &&
+    Object.isFrozen(table.columns) &&
+    Object.isFrozen(table.rows) &&
+    table.rows.every((row) => Object.isFrozen(row))
+  );
+}
+
+/** The name of an individual, the cell of the first column. The reader
+    refuses a row with no name, so a missing one is a defect. */
+function identifierOf(cell: Cell | undefined): string {
+  if (cell === null || cell === undefined) {
+    throw defect("a row of the individuals table has no individual.");
+  }
+  return String(cell);
+}
+
+/** A read of the variants file. */
+type VariantsRead = Extract<SourceRead, { readonly kind: "read" }>;
+
+/** Whether a read and its individuals are frozen, so that what is made
+    of them can be kept by the read. */
+function isReadFrozen(read: VariantsRead): boolean {
+  return Object.isFrozen(read) && Object.isFrozen(read.individuals);
+}
+
+/**
+ * `populationsOf(p)` narrowed to the individuals of the variants file, the
+ * populations left empty dropped, since popnei refuses a population that
+ * names an individual it does not have and an empty one; `"all"` as
+ * `[["All individuals", every individual of the variants file, in its
+ * order]]`. What `populationsKept` narrows to the individuals kept, and
+ * what the Individuals step lists. `null` when `populationsOf` is `null`
+ * or the variants file is not read. The same frozen value for the same
+ * frozen table, column and read of the variants file.
+ */
+export function populationsToRun(p: Project): Pops | null {
+  const pops = populationsOf(p);
+  const variantsRead = p.variants?.read;
+  if (pops === null || variantsRead?.kind !== "read") {
+    return null;
+  }
+  return pops === "all"
+    ? onePopulationOf(variantsRead)
+    : narrowedToVariants(pops, variantsRead);
+}
+
+/** The one population of every individual of the variants file read
+    `variantsRead`, in its order. */
+function onePopulationOf(variantsRead: VariantsRead): Pops {
+  const kept = ONE_TO_RUN.get(variantsRead);
+  if (kept !== undefined) {
+    return kept;
+  }
+  const one: Pops = Object.freeze([
+    Object.freeze([
+      ONE_POPULATION,
+      Object.freeze([...variantsRead.individuals]),
+    ] as const),
+  ]);
+  if (isReadFrozen(variantsRead)) {
+    ONE_TO_RUN.set(variantsRead, one);
+  }
+  return one;
+}
+
+/** The populations `pops` narrowed to the individuals of the variants
+    file read `variantsRead`, those left empty dropped. */
+function narrowedToVariants(pops: Pops, variantsRead: VariantsRead): Pops {
+  const kept = TO_RUN.get(pops)?.get(variantsRead);
+  if (kept !== undefined) {
+    return kept;
+  }
+  const inVariants = new Set(variantsRead.individuals);
+  const toRun: Pops = Object.freeze(
+    pops
+      .map(([pop, individuals]) =>
+        Object.freeze([
+          pop,
+          Object.freeze(individuals.filter((i) => inVariants.has(i))),
+        ] as const),
+      )
+      .filter(([, individuals]) => individuals.length > 0),
+  );
+  if (isReadFrozen(variantsRead)) {
+    const byRead = TO_RUN.get(pops) ?? new WeakMap<SourceRead, Pops>();
+    TO_RUN.set(pops, byRead);
+    byRead.set(variantsRead, toRun);
+  }
+  return toRun;
+}
+
+/** The populations to run narrowed to the individuals kept. */
+export interface PopulationsKept {
+  /** The populations with an individual kept, each with the individuals
+      kept, in the order of `populationsToRun`. */
+  readonly pops: Pops;
+  /** The populations the list leaves with no individual, in the same
+      order, which are not in `pops`. */
+  readonly emptied: readonly string[];
+}
+
+/**
+ * `populationsToRun(p)` narrowed to the individuals kept, `kept`, or left
+ * whole when `kept` is `null`, the filters removing nobody; with the
+ * populations that the list leaves empty apart, in their order, which are
+ * not sent and are named on the screen. `null` when `populationsToRun` is
+ * `null`. The same frozen value for the same populations to run and the
+ * same frozen list.
+ */
+export function populationsKept(
+  p: Project,
+  kept: readonly string[] | null,
+): PopulationsKept | null {
+  const toRun = populationsToRun(p);
+  if (toRun === null) {
+    return null;
+  }
+  if (kept === null) {
+    const whole =
+      WHOLE.get(toRun) ??
+      Object.freeze({ pops: toRun, emptied: Object.freeze([]) });
+    WHOLE.set(toRun, whole);
+    return whole;
+  }
+  const found = KEPT.get(toRun)?.get(kept);
+  if (found !== undefined) {
+    return found;
+  }
+  const inKept = new Set(kept);
+  const narrowed = toRun.map(([pop, individuals]) =>
+    Object.freeze([
+      pop,
+      Object.freeze(individuals.filter((i) => inKept.has(i))),
+    ] as const),
+  );
+  const narrowedKept: PopulationsKept = Object.freeze({
+    pops: Object.freeze(
+      narrowed.filter(([, individuals]) => individuals.length > 0),
+    ),
+    emptied: Object.freeze(
+      narrowed
+        .filter(([, individuals]) => individuals.length === 0)
+        .map(([pop]) => pop),
+    ),
+  });
+  if (Object.isFrozen(kept)) {
+    const byList =
+      KEPT.get(toRun) ?? new WeakMap<readonly string[], PopulationsKept>();
+    KEPT.set(toRun, byList);
+    byList.set(kept, narrowedKept);
+  }
+  return narrowedKept;
+}
+
+/**
+ * The populations as they are known before a Run, which the ready state
+ * of the panel of an analysis and the summary line of the shell list, so
+ * that the two never disagree: `populationsKept(p, list)` with the list
+ * of `kept` when it is known, and, while a threshold on the individuals
+ * waits for the statistics of each individual, with `kept.byLists`, the
+ * individuals the lists to keep and to remove keep, since the thresholds
+ * can only remove more; for the one population, "All individuals"
+ * narrowed in the same way. `null` when `populationsToRun(p)` is `null`.
+ */
+export function populationsBeforeRun(
+  p: Project,
+  kept: IndividualsKept,
+): PopulationsKept | null {
+  return populationsKept(
+    p,
+    kept.list.kind === "known" ? kept.list.individuals : kept.byLists,
+  );
+}
+
+/** The reason about the column of the populations, and its kind. */
+export interface PopulationsNeed {
+  /** No column chosen, "To do" in the stepper; a column the table does
+      not have, or one that gives no individual of the variants file a
+      population, "Problem". */
+  readonly kind: "noColumn" | "noSuchColumn" | "noPopulation";
+  /** The words shown beside a Run button and in the shell, which name
+      the Individuals step. */
+  readonly reason: string;
+  /** The same words without "in the Individuals step", which that step
+      shows at its select. */
+  readonly inStep: string;
+}
+
+/** The choice a reason about the column of the populations asks for. */
+const CHOOSE_POPULATIONS =
+  "Choose the column that defines the populations, or all individuals in one population";
+
+/**
+ * The reason about the column of the populations, with its kind, in the
+ * words beside a Run button, `reason`, and in those of the Individuals
+ * step, `inStep`: a file read and no column chosen; no column of that
+ * name in the table; no individual of the variants file with a
+ * population in the column, looked at only once the variants file is
+ * read. `null` without an individuals file, with the grouping
+ * `onePopulation`, while the file is not read, when the column gives
+ * populations or while a column of that name is chosen and the variants
+ * file is not read, and for a project of association.
+ */
+export function populationsNeeds(p: Project): PopulationsNeed | null {
+  const individuals = p.individuals;
+  if (p.grouping.kind !== "populations" || individuals?.read.kind !== "read") {
+    return null;
+  }
+  const column = p.grouping.column;
+  if (column === null) {
+    return needOf("noColumn", CHOOSE_POPULATIONS);
+  }
+  const fileName = escaped(individuals.name);
+  if (populationsOf(p) === null) {
+    return needOf(
+      "noSuchColumn",
+      `${fileName} has no column ${shown(column)}, from which the populations were taken. ${CHOOSE_POPULATIONS}`,
+    );
+  }
+  const toRun = populationsToRun(p);
+  if (toRun !== null && toRun.length === 0 && p.variants !== null) {
+    return needOf(
+      "noPopulation",
+      `No individual of ${escaped(p.variants.name)} has a population in the column ${shown(column)} of ${fileName}. Fill in the column and load the file again, or choose another column`,
+    );
+  }
+  return null;
+}
+
+/** A reason about the column of the populations of the kind `kind`, its
+    words `words` followed by the end of each place. */
+function needOf(kind: PopulationsNeed["kind"], words: string): PopulationsNeed {
+  return {
+    kind,
+    reason: `${words}, in the Individuals step.`,
+    inStep: `${words}.`,
+  };
 }
 
 /** The separator a read used, as the Individuals step names it. */
@@ -2377,6 +2737,7 @@ const COLUMN_TYPE_KINDS: Kinds<ColumnType["kind"]> = {
 
 const GROUPING_KINDS: Kinds<Grouping["kind"]> = {
   populations: { fields: ["column"], words: "the column of the populations" },
+  onePopulation: { fields: [], words: "all individuals in one population" },
   roles: { fields: ["roles"], words: "the roles of the columns" },
 };
 
@@ -3277,6 +3638,8 @@ function parseGrouping(value: unknown, path: FieldPath): Parsed<Grouping> {
       );
       return column.ok ? success({ kind, column: column.value }) : column;
     }
+    case "onePopulation":
+      return success({ kind });
     case "roles": {
       const roles = parseList(fields["roles"], [...path, "roles"], parseRole);
       return roles.ok ? success({ kind, roles: roles.value }) : roles;

@@ -460,7 +460,7 @@ test("WS8 D1 a column of the populations not in a new file is named at the selec
   const column = select(page, "Column that defines the populations");
   await expect(column).toHaveText("Choose a column");
   const reason =
-    "regions.csv has no column popcat, from which the populations were taken. Choose the column that defines the populations in the Individuals step.";
+    "regions.csv has no column popcat, from which the populations were taken. Choose the column that defines the populations, or all individuals in one population, in the Individuals step.";
   await expect(
     page.getByRole("main").getByText(reason, { exact: true }),
   ).toBeVisible();

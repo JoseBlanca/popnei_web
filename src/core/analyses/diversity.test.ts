@@ -5,17 +5,19 @@ import {
   diversity,
   diversityCsv,
   diversityRows,
-  populationsBeforeRun,
-  populationsKept,
-  populationsNeeds,
-  populationsOf,
-  populationsToRun,
   refusalText,
   statisticsFailedText,
 } from "./diversity.ts";
 import { createKeyMemo, keyOf } from "../keys.ts";
 import type { Key, KeyedDef } from "../keys.ts";
-import { emptyProject, individualsNeeds } from "../project.ts";
+import {
+  emptyProject,
+  individualsNeeds,
+  populationsKept,
+  populationsNeeds,
+  populationsOf,
+  populationsToRun,
+} from "../project.ts";
 import type { Project, VariantSource } from "../project.ts";
 import type { IndividualsKept } from "../individualsKept.ts";
 import type { WorkerClient } from "../store.ts";
@@ -287,9 +289,7 @@ describe("WS5 D1 the example and the reasons", () => {
 
   test("needs gives each reason of individualsNeeds in its words", () => {
     const noFile = deepFreeze<Project>({ ...project(), individuals: null });
-    expect(diversity.needs(noFile)).toBe(
-      "Load a metadata file in the Individuals step.",
-    );
+    expect(diversity.needs(noFile)).toBeNull();
     const base = project();
     if (base.individuals === null) {
       throw new Error("the project of the test has an individuals file");
@@ -316,13 +316,13 @@ describe("WS5 D1 the example and the reasons", () => {
 
   test("needs asks for the column of the populations when none is chosen", () => {
     expect(diversity.needs(project({ column: null }))).toBe(
-      "Choose the column that defines the populations in the Individuals step.",
+      "Choose the column that defines the populations, or all individuals in one population, in the Individuals step.",
     );
   });
 
   test("needs says the table has no column of the name chosen", () => {
     expect(diversity.needs(project({ column: "popcat" }))).toBe(
-      "pops.csv has no column popcat, from which the populations were taken. Choose the column that defines the populations in the Individuals step.",
+      "pops.csv has no column popcat, from which the populations were taken. Choose the column that defines the populations, or all individuals in one population, in the Individuals step.",
     );
   });
 
@@ -341,6 +341,8 @@ describe("WS5 D1 the example and the reasons", () => {
     expect(populationsNeeds(p)).toEqual({
       kind: "noColumn",
       reason: diversity.needs(p),
+      inStep:
+        "Choose the column that defines the populations, or all individuals in one population.",
     });
   });
 
@@ -349,7 +351,9 @@ describe("WS5 D1 the example and the reasons", () => {
     expect(populationsNeeds(p)).toEqual({
       kind: "noSuchColumn",
       reason:
-        "pops.csv has no column popcat, from which the populations were taken. Choose the column that defines the populations in the Individuals step.",
+        "pops.csv has no column popcat, from which the populations were taken. Choose the column that defines the populations, or all individuals in one population, in the Individuals step.",
+      inStep:
+        "pops.csv has no column popcat, from which the populations were taken. Choose the column that defines the populations, or all individuals in one population.",
     });
   });
 
@@ -362,6 +366,8 @@ describe("WS5 D1 the example and the reasons", () => {
       kind: "noPopulation",
       reason:
         "No individual of panel.nei has a population in the column pop of pops.csv. Fill in the column and load the file again, or choose another column, in the Individuals step.",
+      inStep:
+        "No individual of panel.nei has a population in the column pop of pops.csv. Fill in the column and load the file again, or choose another column.",
     });
   });
 
@@ -987,10 +993,10 @@ describe("WS5 D2 the key", () => {
     expect(keyOfDiversity(base, "0.2.0")).not.toBe(baseKey);
   });
 
-  test("keyInputs of an empty project gives no populations and the defaults, without reading p.variants", () => {
+  test("keyInputs of an empty project gives the one population and the defaults, without reading p.variants", () => {
     const p = withVariantsUnreadable(emptyProject("popgen"));
     expect(diversity.keyInputs(p)).toEqual({
-      pops: null,
+      pops: "all",
       options: DIVERSITY_DEFAULTS,
     });
   });
@@ -1169,44 +1175,8 @@ describe("WS5 D3 the rest of the module, after its review", () => {
     ]);
   });
 
-  test("populationsOf keeps populations named with whole numbers in the order of the file", () => {
-    const p = project({
-      table: tableOf(["i1", "i2", "i3", "i4"], ["3", "1", "2", "10"]),
-    });
-    expect(populationsOf(p)).toEqual([
-      ["3", ["i1"]],
-      ["1", ["i2"]],
-      ["2", ["i3"]],
-      ["10", ["i4"]],
-    ]);
-  });
-
-  test("diversityRows and populationsToRun give back the same array each time", () => {
+  test("diversityRows gives back the same array each time", () => {
     expect(diversityRows(FLOW_RESULT)).toBe(diversityRows(FLOW_RESULT));
-    const p = project();
-    expect(populationsToRun(p)).toBe(populationsToRun(p));
-    expect(populationsToRun(p)).toEqual([
-      ["A", ["i1", "i3"]],
-      ["B", ["i2"]],
-    ]);
-  });
-
-  test("populationsToRun follows the individuals of a variants file changed in place, which it does not keep", () => {
-    const individuals = ["i1", "i2", "i3", "i4"];
-    const base = project();
-    const p: Project = {
-      ...base,
-      variants: {
-        ...variantsOf(base),
-        read: { kind: "read", individuals, ploidy: 2, numVars: null },
-      },
-    };
-    expect(populationsToRun(p)).toEqual([
-      ["A", ["i1", "i3"]],
-      ["B", ["i2"]],
-    ]);
-    individuals.splice(1, 1);
-    expect(populationsToRun(p)).toEqual([["A", ["i1", "i3"]]]);
   });
 
   test("refusalText of a gzipped VCF cut short tells to correct or fetch the file", () => {
@@ -1287,20 +1257,20 @@ describe("WS5 D1 the example and the reasons, with options set and reasons toget
   });
 
   test("needs gives a reason of individualsNeeds before the column, whatever the filters of individuals", () => {
-    const noFileNoColumn = deepFreeze<Project>({
-      ...project({ column: null }),
-      individuals: null,
+    const noColumn = project({ column: null });
+    if (noColumn.individuals === null) {
+      throw new Error("the project of the test has an individuals file");
+    }
+    const readingNoColumn = deepFreeze<Project>({
+      ...noColumn,
+      individuals: { ...noColumn.individuals, read: { kind: "pending" } },
     });
-    expect(diversity.needs(noFileNoColumn)).toBe(
-      "Load a metadata file in the Individuals step.",
-    );
+    expect(diversity.needs(readingNoColumn)).toBe("Reading pops.csv.");
     const filteredToo = deepFreeze<Project>({
-      ...noFileNoColumn,
+      ...readingNoColumn,
       individualFilters: [{ kind: "remove", individuals: ["i4"] }],
     });
-    expect(diversity.needs(filteredToo)).toBe(
-      "Load a metadata file in the Individuals step.",
-    );
+    expect(diversity.needs(filteredToo)).toBe("Reading pops.csv.");
     const missingAndNoColumn = project({
       column: null,
       individuals: ["i1", "i6"],
@@ -1400,29 +1370,6 @@ describe("WS5 D3 the rest of the module, its words at their bounds", () => {
       });
     }
   });
-
-  test("populationsOf follows a row changed in place in a frozen table whose rows are not frozen", () => {
-    const second: Cell[] = ["i2", "B", "y"];
-    const table: IndividualsTable = Object.freeze({
-      columns: Object.freeze(["name", "pop", "other"]),
-      rows: Object.freeze([["i1", "A", "x"], second]),
-    });
-    const base = project();
-    const individuals = base.individuals;
-    if (individuals?.read.kind !== "read") {
-      throw new Error("the project of the test has an individuals file read");
-    }
-    const p: Project = {
-      ...base,
-      individuals: { ...individuals, read: { ...individuals.read, table } },
-    };
-    expect(populationsOf(p)).toEqual([
-      ["A", ["i1"]],
-      ["B", ["i2"]],
-    ]);
-    second[1] = "A";
-    expect(populationsOf(p)).toEqual([["A", ["i1", "i2"]]]);
-  });
 });
 
 describe("WS5 D3 the count of the check numbers", () => {
@@ -1443,7 +1390,7 @@ describe("WS5 D3 the count of the check numbers", () => {
     ).toBe(4);
   });
 
-  test("null with a threshold on the individuals, with no column of the populations, with no individuals file, and with the variants file not read", () => {
+  test("null with a threshold on the individuals, with no column of the populations, and with the variants file not read; 4 with no individuals file", () => {
     const p = project();
     expect(
       diversity.numCheckNumbers(
@@ -1463,7 +1410,7 @@ describe("WS5 D3 the count of the check numbers", () => {
       diversity.numCheckNumbers(
         deepFreeze<Project>({ ...p, individuals: null }),
       ),
-    ).toBeNull();
+    ).toBe(4);
   });
 });
 
@@ -1769,58 +1716,6 @@ describe("VS3 D3 the diversity of stage 3, at its bounds", () => {
     expect(populationsKept(project(), ["i4"])?.emptied).toEqual(["A", "B"]);
   });
 
-  test("populationsKept gives the same value for the same frozen list, the populations to run whole for null, and null with no populations to run", () => {
-    const p = project();
-    const kept = Object.freeze(["i1", "i2"]);
-    expect(populationsKept(p, kept)).toBe(populationsKept(p, kept));
-    expect(populationsKept(p, null)).toBe(populationsKept(p, null));
-    expect(populationsKept(p, null)).toEqual({
-      pops: populationsToRun(p),
-      emptied: [],
-    });
-    expect(populationsKept(project({ column: null }), kept)).toBeNull();
-  });
-
-  test("populationsBeforeRun takes the known list, and the individuals the lists keep while a threshold waits for the statistics", () => {
-    const p = project();
-    expect(
-      populationsBeforeRun(p, {
-        list: { kind: "known", individuals: ["i1", "i3"] },
-        byLists: ["i1", "i2", "i3"],
-        counts: [],
-      }),
-    ).toEqual({ pops: [["A", ["i1", "i3"]]], emptied: ["B"] });
-    expect(
-      populationsBeforeRun(p, {
-        list: { kind: "known", individuals: null },
-        byLists: ["i2"],
-        counts: [],
-      }),
-    ).toBe(populationsKept(p, null));
-    expect(
-      populationsBeforeRun(p, {
-        list: { kind: "needsStatistics" },
-        byLists: ["i2"],
-        counts: [],
-      }),
-    ).toEqual({ pops: [["B", ["i2"]]], emptied: ["A"] });
-    expect(
-      populationsBeforeRun(project({ column: null }), {
-        list: { kind: "needsStatistics" },
-        byLists: ["i2"],
-        counts: [],
-      }),
-    ).toBeNull();
-  });
-
-  test("populationsKept follows a list changed in place, which it does not keep", () => {
-    const p = project();
-    const kept = ["i1", "i2"];
-    expect(populationsKept(p, kept)?.emptied).toEqual([]);
-    kept.pop();
-    expect(populationsKept(p, kept)?.emptied).toEqual(["B"]);
-  });
-
   test("the reason of the lists names the file escaped, and a list popnei would refuse is left to the store", () => {
     const p = deepFreeze<Project>({
       ...project({ variantsName: "a\tb.nei" }),
@@ -1857,5 +1752,210 @@ describe("IP3 D1 the filters of the job of the diversity", () => {
     const { client, jobs } = recordingClient();
     expect(() => diversity.run(p, client)).toThrow(/^popnei_web defect: /);
     expect(jobs).toStrictEqual([]);
+  });
+});
+
+/** The project of the worked example with no metadata file, the grouping
+    `pop` kept, frozen deeply. */
+function noFileProject(): Project {
+  return deepFreeze<Project>({ ...project(), individuals: null });
+}
+
+/** The project of the worked example with the grouping `onePopulation`. */
+function onePopulationProject(): Project {
+  return deepFreeze<Project>({
+    ...project(),
+    grouping: { kind: "onePopulation" },
+  });
+}
+
+/** The lines of the Python script of the one population, with the
+    defaults (the spec, "Its lines of the Python script"). */
+const ONE_POPULATION_SCRIPT = [
+  "# The diversity of every individual, as one population",
+  'pops = {"All individuals": list(variants.individuals)}',
+  "diversity = popnei.calc_per_var_distribs(",
+  "    variants, pops=pops, min_num_individuals=20, poly_threshold=0.95",
+  ")",
+  "print(pandas.DataFrame({",
+  '    "individuals": {pop: len(names) for pop, names in pops.items()},',
+  '    "expected_heterozygosity_unbiased": diversity.unbiased_exp_het.mean,',
+  '    "observed_heterozygosity": diversity.obs_het.mean,',
+  '    "proportion_polymorphic": diversity.poly_vars_ratio.poly_ratio,',
+  "}).to_string())",
+]
+  .map((line) => `${line}\n`)
+  .join("");
+
+describe("IP4 D1 the one population", () => {
+  test("with no metadata file and the grouping pop kept, needs is null, keyInputs the one population, run sends All individuals, narrowed to the individuals kept, and numCheckNumbers is 4", () => {
+    const p = noFileProject();
+    expect(diversity.needs(p)).toBeNull();
+    expect(diversity.keyInputs(p)).toEqual({
+      pops: "all",
+      options: DIVERSITY_DEFAULTS,
+    });
+    const whole = recordingClient();
+    diversity.run(p, whole.client);
+    expect(whole.jobs.map((job) => [job.individuals, job.pops])).toEqual([
+      [null, [["All individuals", ["i1", "i2", "i3", "i4"]]]],
+    ]);
+    const narrowed = keptClient(["i1", "i3"]);
+    diversity.run(p, narrowed.client);
+    expect(narrowed.jobs.map((job) => [job.individuals, job.pops])).toEqual([
+      [["i1", "i3"], [["All individuals", ["i1", "i3"]]]],
+    ]);
+    expect(diversity.numCheckNumbers(p)).toBe(4);
+  });
+
+  test("the key of the one population is the same with the file and onePopulation, and with neither the file nor a column; it differs from that of the column pop", () => {
+    const noFile = keyOfDiversity(noFileProject());
+    expect(keyOfDiversity(onePopulationProject())).toBe(noFile);
+    expect(
+      keyOfDiversity(
+        deepFreeze<Project>({
+          ...project({ column: null }),
+          individuals: null,
+        }),
+      ),
+    ).toBe(noFile);
+    expect(keyOfDiversity(project())).not.toBe(noFile);
+    expect(
+      keyOfDiversity(
+        deepFreeze<Project>({ ...onePopulationProject(), individuals: null }),
+      ),
+    ).toBe(noFile);
+  });
+
+  test("the one population with the file and onePopulation needs nothing, sends All individuals and has 4 check numbers", () => {
+    const p = onePopulationProject();
+    expect(diversity.needs(p)).toBeNull();
+    const { client, jobs } = recordingClient();
+    diversity.run(p, client);
+    expect(jobs.map((job) => job.pops)).toEqual([
+      [["All individuals", ["i1", "i2", "i3", "i4"]]],
+    ]);
+    expect(diversity.numCheckNumbers(p)).toBe(4);
+  });
+
+  test("a result of All individuals with 2 individuals gives tooFewIndividuals in the words of the one population, and no individualsWithoutPopulation", () => {
+    const r = result({
+      pops: ["All individuals"],
+      numIndividuals: [2],
+      numVarsWithValue: [0],
+      numVars: 1000,
+    });
+    const p = deepFreeze<Project>({
+      ...project({ individuals: ["i1", "i2"] }),
+      individuals: null,
+    });
+    expect(diversity.warnings(r, p)).toEqual([
+      {
+        code: "tooFewIndividuals",
+        text: "All individuals, the one population, has 2 individuals, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so it has no values. The minimum of 20 cannot be changed in this version.",
+      },
+    ]);
+    // With the file, whose i4 has no population in pop, and the one
+    // population chosen: i4 is in it.
+    const withFile = deepFreeze<Project>({
+      ...project({ individuals: ["i1", "i4"] }),
+      grouping: { kind: "onePopulation" },
+    });
+    expect(diversity.warnings(r, withFile).map((w) => w.code)).toEqual([
+      "tooFewIndividuals",
+    ]);
+  });
+
+  test("a result of All individuals that the filters of individuals took individuals from ends tooFewIndividuals with the filters", () => {
+    const r = result({
+      pops: ["All individuals"],
+      numIndividuals: [3],
+      numVarsWithValue: [0],
+      numVars: 1000,
+    });
+    expect(diversity.warnings(r, noFileProject())).toEqual([
+      {
+        code: "tooFewIndividuals",
+        text: "All individuals, the one population, has 3 individuals, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so it has no values. To have them, loosen the filters of individuals in the Variants step.",
+      },
+    ]);
+  });
+
+  test("a result without All individuals raises no populationNotInResult for the one population", () => {
+    const r = result({ pops: [], numIndividuals: [], numVars: 1000 });
+    expect(diversity.warnings(r, noFileProject())).toEqual([]);
+  });
+
+  test("lists that remove every individual leave needs null, the lock being the store's, and keptNeeds is null for the one population", () => {
+    const p = deepFreeze<Project>({
+      ...noFileProject(),
+      individualFilters: [
+        { kind: "remove", individuals: ["i1", "i2", "i3", "i4"] },
+      ],
+    });
+    expect(diversity.needs(p)).toBeNull();
+    const keptNeeds = diversity.keptNeeds;
+    if (keptNeeds === undefined) throw new Error("the diversity has keptNeeds");
+    expect(
+      keptNeeds(noFileProject(), {
+        list: { kind: "known", individuals: ["i4"] },
+        byLists: ["i1", "i2", "i3", "i4"],
+        counts: [],
+      }),
+    ).toBeNull();
+    // Filters that keep none leave no individual, which the store locks
+    // on first with the words of keptNoneReason; keptNeeds gives no
+    // second text for it.
+    for (const one of [noFileProject(), onePopulationProject()]) {
+      expect(
+        keptNeeds(one, {
+          list: { kind: "known", individuals: [] },
+          byLists: ["i1", "i2", "i3", "i4"],
+          counts: [],
+        }),
+      ).toBeNull();
+    }
+  });
+
+  test("script gives the lines of the one population, with no metadata file and with onePopulation", () => {
+    expect(diversity.script(noFileProject())).toBe(ONE_POPULATION_SCRIPT);
+    expect(diversity.script(onePopulationProject())).toBe(
+      ONE_POPULATION_SCRIPT,
+    );
+  });
+
+  test("a metadata file whose read is under way locks the one population, and one that lacks individuals of the variants too", () => {
+    const one = onePopulationProject();
+    if (one.individuals === null) {
+      throw new Error("the project of the test has an individuals file");
+    }
+    const reading = deepFreeze<Project>({
+      ...one,
+      individuals: { ...one.individuals, read: { kind: "pending" } },
+    });
+    expect(diversity.needs(reading)).toBe("Reading pops.csv.");
+    const lacking = deepFreeze<Project>({
+      ...project({ individuals: ["i1", "i6"] }),
+      grouping: { kind: "onePopulation" },
+    });
+    expect(diversity.needs(lacking)).toBe(
+      "1 individual of panel.nei is not in pops.csv: i6. Add it to the file and load the file again in the Individuals step.",
+    );
+  });
+
+  test("every individual with no population in the column, then the one population chosen: the lock of noPopulation goes", () => {
+    const p = project({
+      table: tableOf(["i1", "i2", "i3"], [null, null, null]),
+      individuals: ["i1", "i2", "i3"],
+    });
+    expect(populationsNeeds(p)?.kind).toBe("noPopulation");
+    const one = deepFreeze<Project>({
+      ...p,
+      grouping: { kind: "onePopulation" },
+    });
+    expect(diversity.needs(one)).toBeNull();
+    expect(populationsToRun(one)).toEqual([
+      ["All individuals", ["i1", "i2", "i3"]],
+    ]);
   });
 });

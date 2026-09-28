@@ -6405,3 +6405,107 @@ function fakeResultOf(job: TestJob): TestResult {
       };
   }
 }
+
+/** The read of `pops.csv` whose table lacks `i2`, an individual of the
+    variants file. */
+const INDIVIDUALS_READ_LACKING: IndividualsRead = {
+  ...INDIVIDUALS_READ,
+  table: { columns: ["id", "pop"], rows: [["i1", "P1"]] },
+};
+
+/** A store with the variants file read, no individuals file, every
+    individual in one population, and the analysis of the populations
+    done, in a cache of `cacheMaxBytes`. */
+function storeWithOnePopulationDone(
+  cacheMaxBytes?: number,
+): ReturnType<typeof newStore> & { readonly result: TestResult } {
+  const made = storeWithVariantsRead(cacheMaxBytes);
+  made.store.apply("all individuals in one population", (p) =>
+    setGrouping(p, { kind: "onePopulation" }),
+  );
+  made.store.startRun("pops");
+  const request = sentAt(made.sent, 0);
+  const result = popsResult();
+  made.store.runEnded(request.run.id, doneWith(request, result));
+  return { ...made, result };
+}
+
+describe("IP4 D1 a result given back by a read", () => {
+  test("a metadata file loaded with the one population removes the result while it is read, and its read gives it back from the cache and takes it out of the notice", () => {
+    const { store, sent, result } = storeWithOnePopulationDone();
+    expect(statuses(store)[0]?.kind).toBe("done");
+    store.apply("a new metadata file was loaded", loadPops);
+    expect(statuses(store)[0]).toStrictEqual({
+      kind: "locked",
+      reason: "Reading pops.csv.",
+    });
+    expect(store.getState().notice).toMatchObject({ removed: ["pops"] });
+    store.individualsRead(INDIVIDUALS_ID, CSV, INDIVIDUALS_READ);
+    const back = statuses(store)[0];
+    expect(back?.kind).toBe("done");
+    expect(back?.kind === "done" && back.result).toBe(result);
+    expect(sent).toHaveLength(1);
+    expect(store.getState().notice).toBeNull();
+  });
+
+  test("a result the cache dropped while the file was read stays among the results removed after the read", () => {
+    // Results of 800 bytes in a cache of 1,000: the result of the
+    // variants, put while the file is read, drops that of the populations.
+    const { store, sent } = storeWithOnePopulationDone(1000);
+    store.apply("a new metadata file was loaded", loadPops);
+    store.startRun("vars");
+    const vars = sentAt(sent, 1);
+    store.runEnded(vars.run.id, doneWith(vars, varsResult(null)));
+    store.individualsRead(INDIVIDUALS_ID, CSV, INDIVIDUALS_READ);
+    expect(statuses(store)[0]?.kind).toBe("removed");
+    expect(store.getState().notice).toMatchObject({ removed: ["pops"] });
+  });
+
+  test("a calculation left behind by the load whose key the read gives back goes on, out of the notice; one whose key a read lacking an individual does not give back stays in it, until an undo or the notice closed", () => {
+    const running = (): ReturnType<typeof newStore> & {
+      readonly request: SentRequest;
+    } => {
+      const made = storeWithVariantsRead();
+      made.store.apply("all individuals in one population", (p) =>
+        setGrouping(p, { kind: "onePopulation" }),
+      );
+      made.store.startRun("pops");
+      const request = sentAt(made.sent, 0);
+      made.store.apply("a new metadata file was loaded", loadPops);
+      expect(made.store.getState().notice).toMatchObject({
+        leftBehind: ["pops"],
+      });
+      return { ...made, request };
+    };
+
+    const given = running();
+    given.store.individualsRead(INDIVIDUALS_ID, CSV, INDIVIDUALS_READ);
+    expect(statuses(given.store)[0]?.kind).toBe("running");
+    expect(given.request.cancels()).toBe(0);
+    expect(given.store.getState().notice).toBeNull();
+
+    const lacking = running();
+    lacking.store.individualsRead(
+      INDIVIDUALS_ID,
+      CSV,
+      INDIVIDUALS_READ_LACKING,
+    );
+    expect(statuses(lacking.store)[0]).toStrictEqual({
+      kind: "locked",
+      reason:
+        "1 individual of panel.vcf is not in pops.csv: i2. Add it to the file and load the file again in the Individuals step.",
+    });
+    expect(lacking.request.cancels()).toBe(0);
+    expect(lacking.store.getState().notice).toMatchObject({
+      leftBehind: ["pops"],
+    });
+    lacking.store.undo();
+    expect(statuses(lacking.store)[0]?.kind).toBe("running");
+    expect(lacking.request.cancels()).toBe(0);
+
+    const closed = running();
+    closed.store.individualsRead(INDIVIDUALS_ID, CSV, INDIVIDUALS_READ_LACKING);
+    closed.store.dismissNotice();
+    expect(closed.request.cancels()).toBe(1);
+  });
+});

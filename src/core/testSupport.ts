@@ -1319,6 +1319,13 @@ export const MAF_WARNING = {
 export const NO_POPULATIONS =
   "Choose the column of the populations in the Individuals step.";
 
+/** The reason of the analysis of the populations with no individuals
+    file and a column: the fake keeps the lock of stage 2, which the
+    diversity dropped in stage 4, so that the tests of the store still
+    have an analysis locked by the individuals file. With the grouping
+    `onePopulation` it runs without the file, as the diversity does. */
+export const NO_METADATA_FILE = "Load a metadata file in the Individuals step.";
+
 /** The two fake analyses, the populations first, and the count of the
     calls of their `keyInputs`; and, apart from them, the fakes of stage
     3, the statistics of each individual, `stats`, which read no filter,
@@ -1353,6 +1360,11 @@ export function fakeAnalyses(): {
     parseOptions: (options) => jsonObjectOf(options),
     keyInputs: (p) => {
       calls.pops += 1;
+      if (p.grouping.kind === "onePopulation") {
+        // Every individual in one population, whatever the table, as the
+        // key of the diversity holds it ("all").
+        return { populations: "all", table: null };
+      }
       const read = p.individuals?.read;
       return {
         populations:
@@ -1365,8 +1377,12 @@ export function fakeAnalyses(): {
     },
     needs: (p) => {
       calls.needs += 1;
+      if (p.grouping.kind === "onePopulation") {
+        return individualsNeeds(p);
+      }
       return (
         individualsNeeds(p) ??
+        (p.individuals === null ? NO_METADATA_FILE : null) ??
         (p.grouping.kind === "populations" && p.grouping.column === null
           ? NO_POPULATIONS
           : null)

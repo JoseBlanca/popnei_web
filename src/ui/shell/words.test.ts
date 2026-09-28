@@ -339,11 +339,7 @@ describe("WS9 D1 the states of the steps", () => {
   test("the steps come in their order, each with its state", () => {
     expect(stepStates(state({}), WORDS)).toEqual([
       { id: "variants", status: "todo", reason: LOAD_VARIANTS },
-      {
-        id: "individuals",
-        status: "todo",
-        reason: "Load a metadata file in the Individuals step.",
-      },
+      { id: "individuals", status: "todo", reason: null },
       { id: "analyses", status: "locked", reason: LOAD_VARIANTS },
     ]);
   });
@@ -398,7 +394,7 @@ describe("WS9 D1 the states of the steps", () => {
     const p = project({ variants: variants(READ) });
     expect(stepOf(state({ project: p }), "individuals")).toEqual({
       status: "todo",
-      reason: "Load a metadata file in the Individuals step.",
+      reason: null,
     });
   });
 
@@ -437,7 +433,7 @@ describe("WS9 D1 the states of the steps", () => {
     expect(stepOf(state({ project: p }), "individuals")).toEqual({
       status: "todo",
       reason:
-        "Choose the column that defines the populations in the Individuals step.",
+        "Choose the column that defines the populations, or all individuals in one population, in the Individuals step.",
     });
   });
 
@@ -450,7 +446,7 @@ describe("WS9 D1 the states of the steps", () => {
     expect(stepOf(state({ project: noSuchColumn }), "individuals")).toEqual({
       status: "problem",
       reason:
-        "pops.csv has no column region, from which the populations were taken. Choose the column that defines the populations in the Individuals step.",
+        "pops.csv has no column region, from which the populations were taken. Choose the column that defines the populations, or all individuals in one population, in the Individuals step.",
     });
     const noPopulation = project({
       variants: variants(READ),

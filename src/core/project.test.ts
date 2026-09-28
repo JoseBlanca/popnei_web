@@ -41,10 +41,17 @@ import {
   variantsStepNeeds,
   individualsStepMissing,
   individualsStepNeeds,
+  ONE_POPULATION,
+  populationsBeforeRun,
+  populationsKept,
+  populationsNeeds,
+  populationsOf,
+  populationsToRun,
 } from "./project.ts";
 import type {
   AppId,
   FieldPath,
+  Grouping,
   IndividualsRead,
   ParsedAnalysis,
   Project,
@@ -55,6 +62,7 @@ import type {
 import type { Result } from "./result.ts";
 import { MAX_UNDO_STEPS, commit, startHistory, undo } from "./history.ts";
 import type {
+  Cell,
   ColumnType,
   IndividualsFileError,
   IndividualsTable,
@@ -1836,9 +1844,7 @@ describe("WP1 D4 the records and the needs", () => {
 
   describe("individualsNeeds", () => {
     test("no individuals file", () => {
-      expect(individualsNeeds(withoutIndividuals())).toBe(
-        "Load a metadata file in the Individuals step.",
-      );
+      expect(individualsNeeds(withoutIndividuals())).toBeNull();
     });
 
     test("a file with every individual of the variants, and one more, needs nothing", () => {
@@ -4578,5 +4584,574 @@ describe("IP3 D1 the filters turned off", () => {
     );
     expect(keptOff).toBeGreaterThan(100);
     expect(turnedBack).toBeGreaterThan(100);
+  });
+});
+
+/** The table of the worked example of docs/specs/analyses/diversity.md,
+    "How it is verified": `i4` has no population, and `i5` is not in the
+    variants file. */
+const POPS_TABLE: IndividualsTable = {
+  columns: ["name", "pop", "other"],
+  rows: [
+    ["i1", "A", "x"],
+    ["i2", "B", "y"],
+    ["i3", "A", "x"],
+    ["i4", null, "z"],
+    ["i5", "C", "y"],
+  ],
+};
+
+/** A table of the individuals `names`, each with its population in
+    `pops`, in a column `pop`. */
+function popsTableOf(
+  names: readonly string[],
+  pops: readonly Cell[],
+): IndividualsTable {
+  return {
+    columns: ["name", "pop"],
+    rows: names.map((name, i) => [name, pops[i] ?? null]),
+  };
+}
+
+/** A project of population genetics of the worked example, frozen
+    deeply: a `.nei` file `panel.nei` read with `individuals`, `i1` to
+    `i4` unless given, a CSV `pops.csv` read with `table`, or no
+    individuals file when `table` is `null`, and the grouping `grouping`,
+    the column `pop` unless given. */
+function popsProject(
+  options: {
+    readonly individuals?: readonly string[];
+    readonly table?: IndividualsTable | null;
+    readonly grouping?: Grouping;
+  } = {},
+): Project {
+  const table = options.table === undefined ? POPS_TABLE : options.table;
+  return deepFreeze<Project>({
+    ...emptyProject("popgen"),
+    variants: {
+      fileId: SAMPLE_VARIANTS_ID,
+      name: "panel.nei",
+      size: 261_490,
+      format: "nei",
+      readOptions: null,
+      read: {
+        kind: "read",
+        individuals: options.individuals ?? ["i1", "i2", "i3", "i4"],
+        ploidy: 2,
+        numVars: null,
+      },
+    },
+    individuals:
+      table === null
+        ? null
+        : {
+            fileId: SAMPLE_INDIVIDUALS_ID,
+            name: "pops.csv",
+            csv: { encoding: "auto", separator: "auto", decimal: "auto" },
+            read: {
+              kind: "read",
+              table,
+              columns: table.columns.map((_, i) =>
+                i === 0 ? { kind: "identifier" } : { kind: "categorical" },
+              ),
+              found: {
+                encoding: "utf-8",
+                separator: ",",
+                decimal: ".",
+                undecodedLine: null,
+              },
+            },
+          },
+    grouping: options.grouping ?? { kind: "populations", column: "pop" },
+  });
+}
+
+/** The project `p` with its individuals file pending. */
+function popsPending(p: Project): Project {
+  if (p.individuals === null) {
+    throw new Error("the project of the test has an individuals file");
+  }
+  return deepFreeze<Project>({
+    ...p,
+    individuals: { ...p.individuals, read: { kind: "pending" } },
+  });
+}
+
+/** The project `p` whose `variants` is a getter that throws, so that a
+    function that reads it fails the test. */
+function variantsUnread(p: Project): Project {
+  const copy = { ...p };
+  Object.defineProperty(copy, "variants", {
+    get: () => {
+      throw new Error("the variants file was read");
+    },
+    enumerable: true,
+  });
+  return Object.freeze(copy);
+}
+
+/** The groupings a project of population genetics can hold. */
+const EVERY_GROUPING: readonly Grouping[] = [
+  { kind: "populations", column: "pop" },
+  { kind: "populations", column: null },
+  { kind: "onePopulation" },
+];
+
+/** The words of the reasons about the column of the populations, beside
+    a Run button and in the Individuals step. */
+const NO_COLUMN = {
+  kind: "noColumn",
+  reason:
+    "Choose the column that defines the populations, or all individuals in one population, in the Individuals step.",
+  inStep:
+    "Choose the column that defines the populations, or all individuals in one population.",
+};
+
+describe("IP4 D1 the populations", () => {
+  test("without a metadata file, whatever the grouping, the one population of every individual of the variants file", () => {
+    for (const grouping of EVERY_GROUPING) {
+      const p = popsProject({ table: null, grouping });
+      expect(populationsOf(p)).toBe("all");
+      expect(populationsToRun(p)).toStrictEqual([
+        ["All individuals", ["i1", "i2", "i3", "i4"]],
+      ]);
+      expect(populationsKept(p, ["i1", "i3"])).toStrictEqual({
+        pops: [["All individuals", ["i1", "i3"]]],
+        emptied: [],
+      });
+      expect(populationsNeeds(p)).toBeNull();
+    }
+    expect(ONE_POPULATION).toBe("All individuals");
+  });
+
+  test("with a metadata file and the grouping onePopulation, the same one population", () => {
+    const p = popsProject({ grouping: { kind: "onePopulation" } });
+    expect(populationsOf(p)).toBe("all");
+    expect(populationsToRun(p)).toStrictEqual([
+      ["All individuals", ["i1", "i2", "i3", "i4"]],
+    ]);
+    expect(populationsKept(p, ["i1", "i3"])).toStrictEqual({
+      pops: [["All individuals", ["i1", "i3"]]],
+      emptied: [],
+    });
+    expect(populationsNeeds(p)).toBeNull();
+  });
+
+  test("populationsOf of the one population does not read the variants file, with no metadata file or with onePopulation", () => {
+    expect(populationsOf(variantsUnread(popsProject({ table: null })))).toBe(
+      "all",
+    );
+    expect(
+      populationsOf(
+        variantsUnread(popsProject({ grouping: { kind: "onePopulation" } })),
+      ),
+    ).toBe("all");
+    expect(populationsOf(variantsUnread(popsProject()))).toStrictEqual([
+      ["A", ["i1", "i3"]],
+      ["B", ["i2"]],
+      ["C", ["i5"]],
+    ]);
+  });
+
+  test("a metadata file read with no column chosen gives no populations, and populationsNeeds of the kind noColumn with its words", () => {
+    const p = popsProject({ grouping: { kind: "populations", column: null } });
+    expect(populationsOf(p)).toBeNull();
+    expect(populationsToRun(p)).toBeNull();
+    expect(populationsKept(p, null)).toBeNull();
+    expect(populationsNeeds(p)).toStrictEqual(NO_COLUMN);
+  });
+
+  test("a metadata file not read gives no populations and no reason, whatever the grouping, the one population included", () => {
+    for (const grouping of EVERY_GROUPING) {
+      const p = popsPending(popsProject({ grouping }));
+      expect(populationsOf(p)).toBeNull();
+      expect(populationsToRun(p)).toBeNull();
+      expect(populationsNeeds(p)).toBeNull();
+    }
+  });
+
+  test("the column of an xlsx whose cells are the number 1, the text 1 and the number 2 gives the populations 1 and 2", () => {
+    const table: IndividualsTable = {
+      columns: ["name", "pop"],
+      rows: [
+        ["i1", 1],
+        ["i2", "1"],
+        ["i3", 2],
+        ["i4", 2],
+      ],
+    };
+    const base = popsProject({ table });
+    if (base.individuals === null) {
+      throw new Error("the project of the test has an individuals file");
+    }
+    const xlsx = deepFreeze<Project>({
+      ...base,
+      individuals: { ...base.individuals, name: "pops.xlsx", csv: null },
+    });
+    expect(populationsOf(xlsx)).toStrictEqual([
+      ["1", ["i1", "i2"]],
+      ["2", ["i3", "i4"]],
+    ]);
+    expect(populationsToRun(xlsx)).toStrictEqual([
+      ["1", ["i1", "i2"]],
+      ["2", ["i3", "i4"]],
+    ]);
+  });
+
+  test("populationsBeforeRun of a column takes the known list, and the individuals the lists keep while a threshold waits for the statistics", () => {
+    const p = popsProject();
+    expect(
+      populationsBeforeRun(p, {
+        list: { kind: "known", individuals: ["i1", "i3"] },
+        byLists: ["i1", "i2", "i3"],
+        counts: [],
+      }),
+    ).toStrictEqual({ pops: [["A", ["i1", "i3"]]], emptied: ["B"] });
+    expect(
+      populationsBeforeRun(p, {
+        list: { kind: "needsStatistics" },
+        byLists: ["i2"],
+        counts: [],
+      }),
+    ).toStrictEqual({ pops: [["B", ["i2"]]], emptied: ["A"] });
+  });
+
+  test("populationsBeforeRun of the one population takes the known list, and the individuals the lists keep while a threshold waits for the statistics", () => {
+    for (const p of [
+      popsProject({ table: null }),
+      popsProject({ grouping: { kind: "onePopulation" } }),
+    ]) {
+      expect(
+        populationsBeforeRun(p, {
+          list: { kind: "known", individuals: ["i1", "i3"] },
+          byLists: ["i1", "i2", "i3"],
+          counts: [],
+        }),
+      ).toStrictEqual({
+        pops: [["All individuals", ["i1", "i3"]]],
+        emptied: [],
+      });
+      expect(
+        populationsBeforeRun(p, {
+          list: { kind: "needsStatistics" },
+          byLists: ["i2", "i4"],
+          counts: [],
+        }),
+      ).toStrictEqual({
+        pops: [["All individuals", ["i2", "i4"]]],
+        emptied: [],
+      });
+      expect(
+        populationsBeforeRun(p, {
+          list: { kind: "known", individuals: null },
+          byLists: ["i1", "i2", "i3", "i4"],
+          counts: [],
+        }),
+      ).toBe(populationsKept(p, null));
+    }
+  });
+
+  test("populationsToRun of the one population is the same array for the same read of the variants file, and follows a new read", () => {
+    const p = popsProject({ table: null });
+    expect(populationsToRun(p)).toBe(populationsToRun(p));
+    if (p.variants === null) {
+      throw new Error("the project of the test has a variants file");
+    }
+    const other = deepFreeze<Project>({
+      ...p,
+      variants: {
+        ...p.variants,
+        read: {
+          kind: "read",
+          individuals: ["i2", "i1"],
+          ploidy: 2,
+          numVars: null,
+        },
+      },
+    });
+    expect(populationsToRun(other)).toStrictEqual([
+      ["All individuals", ["i2", "i1"]],
+    ]);
+  });
+
+  test("every function of the populations is null for a project of association", () => {
+    const p = deepFreeze<Project>({
+      ...popsProject(),
+      app: "gwas",
+      grouping: { kind: "roles", roles: [] },
+    });
+    const noFile = deepFreeze<Project>({ ...p, individuals: null });
+    for (const project of [p, noFile]) {
+      expect(populationsOf(project)).toBeNull();
+      expect(populationsToRun(project)).toBeNull();
+      expect(populationsKept(project, null)).toBeNull();
+      expect(
+        populationsBeforeRun(project, {
+          list: { kind: "known", individuals: null },
+          byLists: ["i1"],
+          counts: [],
+        }),
+      ).toBeNull();
+      expect(populationsNeeds(project)).toBeNull();
+    }
+  });
+
+  test("populationsNeeds gives inStep, the words of reason without the Individuals step, for no column", () => {
+    expect(
+      populationsNeeds(
+        popsProject({ grouping: { kind: "populations", column: null } }),
+      ),
+    ).toStrictEqual(NO_COLUMN);
+  });
+
+  test("populationsNeeds gives inStep, the words of reason without the Individuals step, for no column of that name", () => {
+    expect(
+      populationsNeeds(
+        popsProject({ grouping: { kind: "populations", column: "popcat" } }),
+      ),
+    ).toStrictEqual({
+      kind: "noSuchColumn",
+      reason:
+        "pops.csv has no column popcat, from which the populations were taken. Choose the column that defines the populations, or all individuals in one population, in the Individuals step.",
+      inStep:
+        "pops.csv has no column popcat, from which the populations were taken. Choose the column that defines the populations, or all individuals in one population.",
+    });
+  });
+
+  test("populationsNeeds gives inStep, the words of reason without the Individuals step, for no individual with a population", () => {
+    expect(
+      populationsNeeds(
+        popsProject({
+          table: popsTableOf(["i1", "i2", "i3"], [null, null, null]),
+          individuals: ["i1", "i2", "i3"],
+        }),
+      ),
+    ).toStrictEqual({
+      kind: "noPopulation",
+      reason:
+        "No individual of panel.nei has a population in the column pop of pops.csv. Fill in the column and load the file again, or choose another column, in the Individuals step.",
+      inStep:
+        "No individual of panel.nei has a population in the column pop of pops.csv. Fill in the column and load the file again, or choose another column.",
+    });
+  });
+
+  test("individualsNeeds with no metadata file is null in population genetics, whatever the grouping", () => {
+    for (const grouping of EVERY_GROUPING) {
+      expect(
+        individualsNeeds(popsProject({ table: null, grouping })),
+      ).toBeNull();
+    }
+    expect(individualsNeeds(emptyProject("popgen"))).toBeNull();
+  });
+
+  test("individualsNeeds with no traits file gives its reason in association", () => {
+    expect(
+      individualsNeeds(
+        deepFreeze<Project>({
+          ...popsProject({ table: null }),
+          app: "gwas",
+          grouping: { kind: "roles", roles: [] },
+        }),
+      ),
+    ).toBe("Load a traits file in the Individuals step.");
+  });
+
+  test("the one population chosen, with a file that lacks individuals of the variants, is locked by individualsNeeds, and runs once the file is removed", () => {
+    const p = popsProject({
+      individuals: ["i1", "i2", "i6"],
+      grouping: { kind: "onePopulation" },
+    });
+    expect(individualsNeeds(p)).toBe(
+      "1 individual of panel.nei is not in pops.csv: i6. Add it to the file and load the file again in the Individuals step.",
+    );
+    const removed = removeIndividuals(p);
+    expect(individualsNeeds(removed)).toBeNull();
+    expect(populationsToRun(removed)).toStrictEqual([
+      ["All individuals", ["i1", "i2", "i6"]],
+    ]);
+  });
+
+  test("a column chosen, then the file removed: one population, the column kept, and found again by its name when the file is loaded again", () => {
+    const p = popsProject();
+    const removed = removeIndividuals(p);
+    expect(removed.grouping).toBe(p.grouping);
+    expect(populationsOf(removed)).toBe("all");
+    const loaded = loadIndividuals(removed, {
+      fileId: NEW_ID,
+      name: "pops.csv",
+      csv: { encoding: "auto", separator: "auto", decimal: "auto" },
+    });
+    const read = p.individuals?.read;
+    if (read?.kind !== "read") {
+      throw new Error("the project of the test has an individuals file read");
+    }
+    const again = recordIndividualsRead(
+      loaded,
+      NEW_ID,
+      { encoding: "auto", separator: "auto", decimal: "auto" },
+      read,
+    );
+    expect(populationsOf(again)).toStrictEqual(populationsOf(p));
+  });
+});
+
+describe("IP4 D1 the grouping onePopulation", () => {
+  test("setGrouping sets onePopulation in population genetics, and gives the project itself when it is set", () => {
+    const p = popsProject();
+    const one = setGrouping(p, { kind: "onePopulation" });
+    expect(one.grouping).toStrictEqual({ kind: "onePopulation" });
+    expect(one.individuals).toBe(p.individuals);
+    expect(one.variants).toBe(p.variants);
+    expect(setGrouping(deepFreeze(one), { kind: "onePopulation" })).toBe(one);
+  });
+
+  test("setGrouping of onePopulation in association is a defect", () => {
+    expect(() =>
+      setGrouping(emptyProject("gwas"), { kind: "onePopulation" }),
+    ).toThrow(/^popnei_web defect: /);
+  });
+
+  test("parseProject opens the grouping onePopulation in population genetics and refuses it in association", () => {
+    const p = popsProject({ grouping: { kind: "onePopulation" } });
+    const data: unknown = JSON.parse(JSON.stringify(p));
+    expect(
+      parseProject(data, "popgen", FORMAT_VERSION, TEST_ANALYSES),
+    ).toStrictEqual({ ok: true, value: p });
+    const gwas: unknown = JSON.parse(JSON.stringify({ ...p, app: "gwas" }));
+    expect(
+      parseProject(gwas, "gwas", FORMAT_VERSION, TEST_ANALYSES),
+    ).toMatchObject({
+      ok: false,
+      error: { kind: "wrongValue", path: ["grouping", "kind"] },
+    });
+  });
+});
+
+describe("WS5 D3 the populations, moved from the module of the diversity", () => {
+  test("populationsOf keeps populations named with whole numbers in the order of the file", () => {
+    const p = popsProject({
+      table: popsTableOf(["i1", "i2", "i3", "i4"], ["3", "1", "2", "10"]),
+    });
+    expect(populationsOf(p)).toEqual([
+      ["3", ["i1"]],
+      ["1", ["i2"]],
+      ["2", ["i3"]],
+      ["10", ["i4"]],
+    ]);
+  });
+
+  test("populationsToRun gives back the same array each time", () => {
+    const p = popsProject();
+    expect(populationsToRun(p)).toBe(populationsToRun(p));
+    expect(populationsToRun(p)).toEqual([
+      ["A", ["i1", "i3"]],
+      ["B", ["i2"]],
+    ]);
+  });
+
+  test("populationsToRun follows the individuals of a variants file changed in place, which it does not keep", () => {
+    const individuals = ["i1", "i2", "i3", "i4"];
+    const base = popsProject();
+    if (base.variants === null) {
+      throw new Error("the project of the test has a variants file");
+    }
+    const p: Project = {
+      ...base,
+      variants: {
+        ...base.variants,
+        read: { kind: "read", individuals, ploidy: 2, numVars: null },
+      },
+    };
+    expect(populationsToRun(p)).toEqual([
+      ["A", ["i1", "i3"]],
+      ["B", ["i2"]],
+    ]);
+    individuals.splice(1, 1);
+    expect(populationsToRun(p)).toEqual([["A", ["i1", "i3"]]]);
+  });
+
+  test("populationsOf follows a row changed in place in a frozen table whose rows are not frozen", () => {
+    const second: Cell[] = ["i2", "B", "y"];
+    const table: IndividualsTable = Object.freeze({
+      columns: Object.freeze(["name", "pop", "other"]),
+      rows: Object.freeze([["i1", "A", "x"], second]),
+    });
+    const base = popsProject();
+    const individuals = base.individuals;
+    if (individuals?.read.kind !== "read") {
+      throw new Error("the project of the test has an individuals file read");
+    }
+    const p: Project = {
+      ...base,
+      individuals: { ...individuals, read: { ...individuals.read, table } },
+    };
+    expect(populationsOf(p)).toEqual([
+      ["A", ["i1"]],
+      ["B", ["i2"]],
+    ]);
+    second[1] = "A";
+    expect(populationsOf(p)).toEqual([["A", ["i1", "i2"]]]);
+  });
+});
+
+describe("VS3 D3 the populations, moved from the module of the diversity", () => {
+  test("populationsKept gives the same value for the same frozen list, the populations to run whole for null, and null with no populations to run", () => {
+    const p = popsProject();
+    const kept = Object.freeze(["i1", "i2"]);
+    expect(populationsKept(p, kept)).toBe(populationsKept(p, kept));
+    expect(populationsKept(p, null)).toBe(populationsKept(p, null));
+    expect(populationsKept(p, null)).toEqual({
+      pops: populationsToRun(p),
+      emptied: [],
+    });
+    expect(
+      populationsKept(
+        popsProject({ grouping: { kind: "populations", column: null } }),
+        kept,
+      ),
+    ).toBeNull();
+  });
+
+  test("populationsBeforeRun takes the known list, and the individuals the lists keep while a threshold waits for the statistics", () => {
+    const p = popsProject();
+    expect(
+      populationsBeforeRun(p, {
+        list: { kind: "known", individuals: ["i1", "i3"] },
+        byLists: ["i1", "i2", "i3"],
+        counts: [],
+      }),
+    ).toEqual({ pops: [["A", ["i1", "i3"]]], emptied: ["B"] });
+    expect(
+      populationsBeforeRun(p, {
+        list: { kind: "known", individuals: null },
+        byLists: ["i2"],
+        counts: [],
+      }),
+    ).toBe(populationsKept(p, null));
+    expect(
+      populationsBeforeRun(p, {
+        list: { kind: "needsStatistics" },
+        byLists: ["i2"],
+        counts: [],
+      }),
+    ).toEqual({ pops: [["B", ["i2"]]], emptied: ["A"] });
+    expect(
+      populationsBeforeRun(
+        popsProject({ grouping: { kind: "populations", column: null } }),
+        {
+          list: { kind: "needsStatistics" },
+          byLists: ["i2"],
+          counts: [],
+        },
+      ),
+    ).toBeNull();
+  });
+
+  test("populationsKept follows a list changed in place, which it does not keep", () => {
+    const p = popsProject();
+    const kept = ["i1", "i2"];
+    expect(populationsKept(p, kept)?.emptied).toEqual([]);
+    kept.pop();
+    expect(populationsKept(p, kept)?.emptied).toEqual(["B"]);
   });
 });

@@ -13,12 +13,6 @@
  */
 
 import {
-  populationsNeeds,
-  populationsBeforeRun,
-  populationsOf,
-  populationsToRun,
-} from "../../core/analyses/diversity.ts";
-import {
   filterCounts,
   variantsOfFile,
 } from "../../core/analyses/filterCounts.ts";
@@ -35,6 +29,10 @@ import {
   individualListNeeds,
   individualsCheck,
   individualsNeeds,
+  populationsBeforeRun,
+  populationsNeeds,
+  populationsOf,
+  populationsToRun,
   projectNeeds,
   shown,
   variantFilterNeeds,
@@ -395,9 +393,9 @@ function metadataPart(p: Project, kept: IndividualsKept | null): string {
     return "one population";
   }
   // With the table read and a column chosen, populationsOf is null only
-  // when the table has no column of that name.
+  // when the table has no column of that name, and never "all".
   const pops = populationsToRun(p) ?? populationsOf(p);
-  if (pops === null) {
+  if (pops === null || pops === "all") {
     return `column ${shown(column)} not in ${name}`;
   }
   const all = `${counted(pops.length, "population")} by ${shown(column)}`;

@@ -127,11 +127,11 @@ test("WS8 D2 the diversity is locked until the column of the populations is chos
   const button = panel(page).getByRole("button", { name: "Run" });
   await expect(button).toBeDisabled();
   await expect(button).toHaveAccessibleDescription(
-    "Choose the column that defines the populations in the Individuals step.",
+    "Choose the column that defines the populations, or all individuals in one population, in the Individuals step.",
   );
   await expect(
     panel(page).getByText(
-      "Choose the column that defines the populations in the Individuals step.",
+      "Choose the column that defines the populations, or all individuals in one population, in the Individuals step.",
       { exact: true },
     ),
   ).toBeVisible();

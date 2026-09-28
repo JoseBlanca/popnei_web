@@ -7,13 +7,11 @@
  * panel draws them.
  */
 
-import type {
-  DiversityRow,
-  PopulationsKept,
-} from "../../../core/analyses/diversity.ts";
+import type { DiversityRow } from "../../../core/analyses/diversity.ts";
 import { loosenText } from "../../../core/analyses/diversity.ts";
 import { variantsStem } from "../../../core/fileNames.ts";
 import { counted, escaped, grouped, namesOf } from "../../../core/project.ts";
+import type { PopulationsKept } from "../../../core/project.ts";
 import type { Pops } from "../../../worker/protocol.ts";
 
 /** The decimals of every number of the table. */

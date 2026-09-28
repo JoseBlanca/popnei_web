@@ -10,14 +10,12 @@
 import { useId, useRef, useState } from "react";
 
 import {
-  populationsNeeds,
-  populationsToRun,
-} from "../../../core/analyses/diversity.ts";
-import {
   escaped,
   individualsCheck,
   individualsStepMissing,
   individualsStepNeeds,
+  populationsNeeds,
+  populationsToRun,
 } from "../../../core/project.ts";
 import type {
   IndividualsCheck,

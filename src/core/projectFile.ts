@@ -409,6 +409,8 @@ function groupingOut(grouping: Grouping): Fields {
         ["kind", grouping.kind],
         ["column", grouping.column],
       ]);
+    case "onePopulation":
+      return fields([["kind", grouping.kind]]);
     case "roles":
       return fields([
         ["kind", grouping.kind],
