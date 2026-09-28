@@ -804,7 +804,7 @@ reads in the stepper that the step is optional.
   one population, "1 population, All individuals: 200 individuals" and
   "No metadata file: every individual is in one population."
   (`diversity.md`).
-- [ ] 5.2 The columns: the table of HTML with a select of the type in
+- [x] 5.2 The columns: the table of HTML with a select of the type in
   every row but the first, the select of the value coded 1, the warning
   of the types that wait with "Forget these types", the check with
   "Copy the 12 names", the order of the Tab key, and the table at 320 px
