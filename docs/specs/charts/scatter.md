@@ -336,7 +336,11 @@ the frame; the plot finds the nearest point:
   element, and may then cover the mark it names. That corner is 9.9 pixels from the point: inside the 10
   pixels within which the point stays under the pointer, so that a
   pointer that goes from the point straight to the tooltip never leaves
-  them and finds the tooltip still shown. And every place of the
+  them and finds the tooltip still shown. That corner is square, the
+  other three rounded as the theme has them: rounded by 4 pixels, its
+  edge on the line from the point would be 11.6 pixels from it, and the
+  pointer found there no tooltip and the next point, as the flows saw on
+  28 September 2026. And every place of the
   tooltip is at least 7 pixels right of and 7 below the point, so 9.9
   pixels from it at least, beyond the 8.05 a mark reaches: the tooltip
   covers no part of the mark it names. The option not taken, the tooltip further away and a
