@@ -450,3 +450,58 @@ writing. Recommended: each spec takes what the code does.
 
 Opening a project with a table of 10,000 rows and 50 columns took 127
 ms in node, all on the page; task 5.3 measures it in the browsers.
+
+## 7. The 2D scatter
+
+The scatter of the individuals, its marks, colours, tooltip, legend
+and export, in the charts layer, with no screen of the application yet.
+Commits aecfa8a to bfd77d8, and the fixes of the review up to 2111d9f.
+
+### The deliverables
+
+1. `npm ls d3-shape d3-path d3-scale-chromatic` prints 3.2.0, 3.1.0
+   and 3.1.0; `package.json` pins the six packages exactly; the
+   lockfile added exactly those six and nothing else.
+2. `npx vitest run src/charts -t "IP7 D1"`: "Tests 62 passed" (at least
+   20).
+3. `-t "IP7 D2"`: "Tests 28 passed" (at least 10).
+4. The browser check with `-g "IP7 D3"`: 12 passed on bfd77d8, 18
+   after the fixes, half in each engine (at least 10).
+5. The times, in `scatter.md`, on an Apple M5 Pro with 64 GB and macOS
+   27.0, run alone: from `createScatter` to the next frame, 9,381
+   points, 17.0 ms in Chromium 153 and 19.0 ms in WebKit 26.6; an
+   update of the highlight 16.7 and 17.0 ms. The fixes changed the
+   drawing, so they are measured again when the machine is quiet.
+
+The three d3 packages reach no file of the site yet: the first script
+of `popgen.html` grew 0.48 kB gzipped, the base of the 2D plots.
+
+### The review
+
+`spec` with `api`, `tests`, `stale` with `errors` and `architecture`,
+and `browser` with `bundle` and `accessibility`. No browser or size
+problem. The tests reviewer broke the code 94 ways and 25 real changes
+passed every test, most in what jsdom cannot see. Fixed, with the
+commits 9f31144 to 2111d9f:
+
+- The tooltip stayed on screen after the pointer left it over the axes;
+  ran off the left edge of a narrow plot; and could not be reached in a
+  cluster, since another point's tooltip took its place on the way.
+- An exported PNG could carry the legend of before a change; with one
+  value its legend labelled yellow while every point was teal; its bar
+  ran over the axis on a short plot.
+- Values near ±10^308 made the plot report a defect of its own code.
+- Tests of the layout of the exported legend, of the style of the marks
+  in a browser, of infinite coordinates and of Escape.
+
+Changes to `scatter.md` made by the writers, for the owner at stop C:
+the legend of an export takes the left edge of the frame; the tooltip
+tells an Escape from a leave; it keeps its point while the pointer is
+within 10 pixels, and sits 6 pixels from it with its near corner square,
+where it sat 7, since browsers find what is under the pointer by whole
+pixels.
+
+For the owner at stop C: in dense clusters the grey outline of the
+marks covers their colours, so that at 600 by 450 pixels the four
+populations of the test page look like grey discs; see the section of
+stop C.
