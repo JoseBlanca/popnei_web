@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import * as fc from "fast-check";
 import { describe, expect, test } from "vitest";
-import { POPGEN_ANALYSES } from "./apps.ts";
+import { POPGEN_ANALYSES, countsOf, individualStatsOf } from "./apps.ts";
 import { keyFromWire, settingsFingerprint } from "./keys.ts";
 import { emptyProject } from "./project.ts";
 import type { Project, Reference, VariantSource } from "./project.ts";
@@ -18,7 +18,8 @@ import {
   writeProjectFile,
 } from "./projectFile.ts";
 import type { ProjectFileError } from "./projectFile.ts";
-import type { AnalysisStatus, AppState } from "./store.ts";
+import { createStore } from "./store.ts";
+import type { AnalysisStatus, AppState, CheckVerdict } from "./store.ts";
 import {
   SAMPLE_INDIVIDUALS_ID,
   SAMPLE_VARIANTS_ID,
@@ -28,7 +29,13 @@ import {
   wholeProject,
 } from "./testSupport.ts";
 import type { TestDefResult } from "./testSupport.ts";
-import type { DiversityResult, JobResult } from "../worker/protocol.ts";
+import type {
+  DiversityResult,
+  Job,
+  JobResult,
+  Outcome,
+  Run,
+} from "../worker/protocol.ts";
 
 // What the tests of the project file share: the definitions of the
 // application of population genetics, a state of the store built from a
@@ -2402,6 +2409,144 @@ describe("WS6 D4 the properties of the project file", () => {
         const parsed: unknown = JSON.parse(savedText(state));
         expect(unnamedFields(parsed)).toEqual([]);
       }),
+    );
+  });
+});
+
+// The key version of the diversity raised to 2 when the filters of
+// individuals came first (docs/specs/analyses/diversity.md, "What goes
+// into its key"; entry A of docs/specs/stage-4-open-points.md): a project
+// file saved by stage 3 compares its check numbers, and a difference
+// names the versions of the application as well as the variants file.
+
+/**
+ * The comparison the store of the application, with `POPGEN_ANALYSES` and
+ * the application's version `appVersion`, gives the diversity of the
+ * project of `v1-nei-diversity.popnei.json`, whose check was saved under
+ * key version 1, once the file's variants file is given again and read
+ * and the diversity ends with the numbers of `numbers`: numVars, then the
+ * expected and observed heterozygosity and the proportion polymorphic of
+ * north and of south.
+ */
+function diversityVerdictOfStage3(
+  numbers: readonly [number, number, number, number, number, number, number],
+  appVersion: string,
+): CheckVerdict | null {
+  const opened = readProjectFile(
+    fixture("v1-nei-diversity.popnei.json"),
+    "popgen",
+    POPGEN_ANALYSES,
+  );
+  if (!opened.ok) {
+    throw new Error("the fixture of stage 2 does not open");
+  }
+  const sent: { key: string; run: Run<JobResult> }[] = [];
+  const store = createStore<Job, JobResult>({
+    first: emptyProject("popgen"),
+    analyses: POPGEN_ANALYSES,
+    send: (key) => {
+      const run: Run<JobResult> = {
+        id: sent.length + 1,
+        outcome: new Promise<Outcome<JobResult>>(() => undefined),
+        cancel: () => undefined,
+      };
+      sent.push({ key, run });
+      return run;
+    },
+    countsOf,
+    counts: "filterCounts",
+    statistics: { analysis: "individualChecks", of: individualStatsOf },
+    write: null,
+    appVersion,
+    cacheMaxBytes: 1024 * 1024,
+    maxUndoSteps: 200,
+  });
+  store.popneiReady("0.1.0");
+  store.open(opened.value);
+  const reference = opened.value.reference;
+  if (reference === null) {
+    throw new Error("the fixture of stage 2 has no reference");
+  }
+  const { read, ...load } = reference.variants;
+  store.apply("a variants file was loaded", (p) => ({
+    ...p,
+    variants: {
+      ...load,
+      fileId: SAMPLE_VARIANTS_ID,
+      read: { kind: "pending" },
+    },
+  }));
+  if (read.kind !== "read") {
+    throw new Error("the fixture of stage 2 has no variants file read");
+  }
+  store.variantsRead(SAMPLE_VARIANTS_ID, read);
+  store.startRun("diversity");
+  const request = sent[0];
+  if (request === undefined) {
+    throw new Error("no request of the diversity was sent");
+  }
+  const [
+    numVars,
+    northExp,
+    northObs,
+    northPoly,
+    southExp,
+    southObs,
+    southPoly,
+  ] = numbers;
+  const result: DiversityResult = {
+    analysis: "diversity",
+    pops: ["north", "south"],
+    numIndividuals: Uint32Array.from([3, 3]),
+    unbiasedExpHet: Float64Array.from([northExp, southExp]),
+    obsHet: Float64Array.from([northObs, southObs]),
+    polyRatio: Float64Array.from([northPoly, southPoly]),
+    numVarsWithValue: Uint32Array.from([numVars, numVars]),
+    passStats: {
+      numVars,
+      filtering: {
+        missing_data: { varsProcessed: 1203554, varsKept: numVars },
+      },
+    },
+  };
+  store.runEnded(request.run.id, {
+    kind: "done",
+    key: request.key,
+    result,
+  });
+  const status = store
+    .getState()
+    .analyses.find((view) => view.id === "diversity")?.status;
+  if (status?.kind !== "done") {
+    throw new Error("the diversity is not done");
+  }
+  return status.check;
+}
+
+describe("IP2 D2 the check numbers of a project file of stage 3", () => {
+  test("the diversity of a file saved under key version 1 is compared under key version 2: the same numbers give same, and others name both versions of the application", () => {
+    const saved = [
+      1150112, 0.3120051, 0.3089214, 0.9124, 0.2987112, 0.2954871, 0.8977,
+    ] as const;
+    expect(
+      POPGEN_ANALYSES.find((def) => def.id === "diversity")?.keyVersion,
+    ).toBe(2);
+
+    expect(diversityVerdictOfStage3(saved, "0.2.0")).toStrictEqual({
+      kind: "same",
+    });
+
+    const other = [
+      1117, 0.3120051, 0.3089214, 0.9124, 0.2987112, 0.2954871, 0.8977,
+    ] as const;
+    const verdict = diversityVerdictOfStage3(other, "0.2.0");
+    expect(verdict).toStrictEqual({
+      kind: "differs",
+      popnei: null,
+      app: { saved: "0.1.0", now: "0.2.0" },
+    });
+    expect(verdict === null ? null : checkVerdictText(verdict)).toBe(
+      "Not the same numbers as in the project file. The variants file may not be the one the project was saved with, or it was changed since. The numbers were calculated by version 0.1.0 of the application, which calculated this analysis in another way than this version, 0.2.0.",
     );
   });
 });

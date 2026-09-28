@@ -627,10 +627,12 @@ const STATE_FORMAT: WriteFormat = "nei";
  * The store of a page, made once by its entry, with the first project,
  * frozen, as the history's only one. Throws a defect when two definitions
  * have one id, when `statistics` names no definition or one that reads
- * the filters of individuals, which would make it wait for itself, when
- * `counts` names no definition or one that reads the filters of
- * individuals, or when the bounds are not what `startHistory` and
- * `emptyCache` take.
+ * any filter, when `counts` names no definition, or when the bounds are
+ * not what `startHistory` and `emptyCache` take. The statistics read no
+ * filter: the filters of individuals would make them wait for
+ * themselves, and the filters of the variants, which count over the
+ * individuals they keep, would make them depend on those filters, which
+ * the owner decided on 28 September 2026 they do not.
  */
 export function createStore<J, R, F = never>(
   config: StoreConfig<J, R, F>,
@@ -662,6 +664,11 @@ export function createStore<J, R, F = never>(
     if (statsDef.filtersRead.individuals) {
       throw defect(
         `the analysis of the statistics ${JSON.stringify(statsDef.id)} reads the filters of individuals, which are set from its result, so it would wait for itself.`,
+      );
+    }
+    if (statsDef.filtersRead.variants) {
+      throw defect(
+        `the analysis of the statistics ${JSON.stringify(statsDef.id)} reads the filters of the variants; its numbers are over every variant of the file, and the filters of the variants count over the individuals those numbers keep.`,
       );
     }
   }

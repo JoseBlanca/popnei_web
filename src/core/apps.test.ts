@@ -88,13 +88,13 @@ describe("VS5 D1 apps.ts", () => {
     });
   });
 
-  test("the analyses of population genetics have distinct ids: the three checks of the Variants step in the order of its sections, then the diversity", () => {
+  test("the analyses of population genetics have distinct ids: the three checks of the Variants step in the order of its sections, the statistics of each individual first since 28 September 2026, then the diversity", () => {
     const ids = POPGEN_ANALYSES.map((def) => def.id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toEqual([
+      "individualChecks",
       "variantChecks",
       "filterCounts",
-      "individualChecks",
       "diversity",
     ]);
   });
@@ -170,14 +170,6 @@ describe("VS3 D5 countsOf, writeCountsOf and individualStatsOf", () => {
     expect(countsOf(result)).toStrictEqual({ numVarsRead: 1200, counts: null });
   });
 
-  test("countsOf of a result of the statistics of each individual, whose pass has no filter, gives the variants of the file and no counts", () => {
-    const pass: PassStats = { numVars: 1200, filtering: {} };
-    expect(countsOf(individualChecksResult(pass))).toStrictEqual({
-      numVarsRead: 1200,
-      counts: null,
-    });
-  });
-
   test("countsOf of a result of filterCounts gives both the variants of the file and the counts", () => {
     const counts = { analysis: "filterCounts", passStats: MISSING_PASS };
     expect(
@@ -215,5 +207,15 @@ describe("VS3 D5 countsOf, writeCountsOf and individualStatsOf", () => {
     expect(() => individualStatsOf(diversityResult(MISSING_PASS))).toThrow(
       /^popnei_web defect: the statistics of each individual were asked of a result of diversity/,
     );
+  });
+});
+
+describe("IP2 D2 countsOf in the order of 28 September 2026", () => {
+  test("countsOf of a result of the statistics of each individual, whose pass has no filter, gives the variants of the file and no counts", () => {
+    const pass: PassStats = { numVars: 1200, filtering: {} };
+    expect(countsOf(individualChecksResult(pass))).toStrictEqual({
+      numVarsRead: 1200,
+      counts: null,
+    });
   });
 });

@@ -10,9 +10,9 @@ import { SHELL_WORDS } from "./titles.ts";
 describe("VS5 D1 the words of the shell of the page", () => {
   test("each analysis is named by the title of its panel or of its part of the Variants step", () => {
     expect(POPGEN_ANALYSES.map((def) => SHELL_WORDS.title(def.id))).toEqual([
+      "Statistics of each individual",
       "Histograms of the variants",
       "Counts of the filters",
-      "Statistics of each individual",
       "Diversity",
     ]);
   });

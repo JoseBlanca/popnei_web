@@ -37,11 +37,13 @@ export const DEFAULT_ONLY_PASSED = true;
 
 /** The analyses of the population genetics application, in the order the
     screens show them: the three checks of the Variants step in the order
-    of its sections, the histograms of the variants and the counts of what
-    each filter kept, then the statistics of each individual; then the
-    diversity. The stepper names the first check in error in this order. */
+    of its sections, the statistics of each individual, whose section of
+    the individuals comes first since 28 September 2026, then the
+    histograms of the variants and the counts of what each filter kept;
+    then the diversity. The stepper names the first check in error in this
+    order. */
 export const POPGEN_ANALYSES: readonly AnalysisDef<Job, JobResult>[] =
-  Object.freeze([variantChecks, filterCounts, individualChecks, diversity]);
+  Object.freeze([individualChecks, variantChecks, filterCounts, diversity]);
 
 /** The steps of the population genetics application, by their ids, in
     their order. */

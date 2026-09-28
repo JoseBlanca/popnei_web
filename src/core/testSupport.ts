@@ -1238,8 +1238,10 @@ export const NO_POPULATIONS =
 
 /** The two fake analyses, the populations first, and the count of the
     calls of their `keyInputs`; and, apart from them, the fakes of stage
-    3, the statistics of each individual, `stats`, and the counts of the
-    filters, `counts`, each reading the filters of the variants alone. */
+    3, the statistics of each individual, `stats`, which read no filter,
+    and the counts of the filters, `counts`, which read the filters of the
+    variants and those of individuals, as in the order of 28 September
+    2026 (docs/specs/core/store.md, "The individuals kept"). */
 export function fakeAnalyses(): {
   readonly analyses: readonly AnalysisDef<TestJob, TestResult>[];
   readonly calls: Calls;
@@ -1327,18 +1329,19 @@ export function fakeAnalyses(): {
     numCheckNumbers: () => null,
     script: () => "",
   };
-  /** A fake of stage 3 of the id `id`, reading the filters of the
-      variants alone, whose check numbers are those `numbers` gives of a
-      result of its own shape. */
-  const variantsOnly = (
+  /** A fake of stage 3 of the id `id`, reading the filters `filtersRead`,
+      whose check numbers are those `numbers` gives of a result of its own
+      shape. */
+  const ofStage3 = (
     id: "stats" | "counts",
+    filtersRead: AnalysisDef<TestJob, TestResult>["filtersRead"],
     numbers: (r: TestResult) => readonly (number | null)[],
   ): AnalysisDef<TestJob, TestResult> => ({
     id,
     app: ["popgen"],
     defaults: {},
     keyVersion: 1,
-    filtersRead: { variants: true, individuals: false },
+    filtersRead,
     parseOptions: (options) => jsonObjectOf(options),
     keyInputs: () => null,
     needs: () => null,
@@ -1354,11 +1357,15 @@ export function fakeAnalyses(): {
     numCheckNumbers: () => null,
     script: () => "",
   });
-  const stats = variantsOnly("stats", (r) =>
-    r.kind === "stats" ? [...r.stats.missingGtRate] : [],
+  const stats = ofStage3(
+    "stats",
+    { variants: false, individuals: false },
+    (r) => (r.kind === "stats" ? [...r.stats.missingGtRate] : []),
   );
   const counts: AnalysisDef<TestJob, TestResult> = {
-    ...variantsOnly("counts", (r) => (r.kind === "counts" ? [r.numVars] : [])),
+    ...ofStage3("counts", { variants: true, individuals: true }, (r) =>
+      r.kind === "counts" ? [r.numVars] : [],
+    ),
     // As the warnings of filterCounts.ts read the rows of the project's
     // filters: the first filter of `p` that kept none of its variants,
     // and a defect when the result has no count for a filter of `p`.
@@ -1412,10 +1419,10 @@ export const FAKE_COUNTS_FILTERS = 100;
  * `countsOf` of the tests of the counts: of a result of the analysis of
  * the variants, its `numVars` as the variants of the file, and the counts
  * of the filters, a result of the fake `counts` of those variants; of a
- * result of the fake statistics, the counts alone, of no variant; of a
- * result of the fake counts, itself; of a result of the analysis of the
- * populations, nothing, as the PCA, which merges a filter of its own with
- * the project's.
+ * result of the fake counts, itself; of a result of the fake statistics,
+ * whose pass has no filter since 28 September 2026, and of the analysis
+ * of the populations, as of the PCA, whose filters can be its own,
+ * nothing.
  */
 export function fakeCountsOf(r: TestResult): PassFound<TestResult> {
   const madeOf = (numVars: number): CountsResult => ({
@@ -1429,10 +1436,9 @@ export function fakeCountsOf(r: TestResult): PassFound<TestResult> {
         numVarsRead: r.numVars,
         counts: r.numVars === null ? null : madeOf(r.numVars),
       };
-    case "stats":
-      return { numVarsRead: null, counts: madeOf(0) };
     case "counts":
       return { numVarsRead: null, counts: r };
+    case "stats":
     case "pops":
       return { numVarsRead: null, counts: null };
   }
