@@ -387,7 +387,7 @@ vars file.
 
 **Tasks:**
 
-- [ ] 1.1 In one commit, `package.json` and the lockfile to
+- [x] 1.1 In one commit, `package.json` and the lockfile to
   `js-v0.1.0-dev.3` (`docs/technology.md`, section 5; `.claude/skills/coding/SKILL.md`,
   "Dependencies": a newer popnei is a commit of its own that says what
   changed); before it, in a commit of its own, the two sizes of the
