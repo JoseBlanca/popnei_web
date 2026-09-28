@@ -117,7 +117,12 @@ comma would read "1,75, 1,62, 1,80"; the two values of a binary column
 are joined by the same dot, since "binary: 1,5, 2,5" would read no
 better. The space before the dot does not break, so that a value keeps
 its dot on its line and a line never starts with a dot, which at 320 px
-wide, where the values wrap, would read as the mark of a list. A line above the table: "The types are inferred
+wide, where the values wrap, would read as the mark of a list. At 320
+px the table fits the page, which does not scroll sideways: below 480
+px each cell keeps 4 px of space on each side and not 8, since with 8
+the table needed 300 px of the 288 px the page gives it with DejaVu
+Sans, the sans-serif font of Ubuntu, as the owner decided on 28
+September 2026. A line above the table: "The types are inferred
 from the values; changing them comes in a later version." The types
 serve the association and the colours of the PCA, which come later;
 here they only show the user how their file was read. The rows of the

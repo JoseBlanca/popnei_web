@@ -490,7 +490,12 @@ column, "From", "To", "Variants", or "Individuals" for the histograms of
 the individuals, and, with a threshold, "This filter", whose cells say
 "Kept", "Partly kept" or "Removed"; the line above it says that each bin
 runs from its lower edge up to its upper edge, not included, and that
-the last includes its upper edge. Which tab is selected is state of the
+the last includes its upper edge. At 320 pixels wide the table fits
+its four columns with no sideways scroll: below 480 pixels each cell
+keeps 4 pixels of space on each side and not 8, since with 8 the table
+was 311 pixels wide in a frame of 288 with DejaVu Sans, the sans-serif
+font of Ubuntu, as the owner decided on 28 September 2026. Which tab is
+selected is state of the
 screen, kept while the step is drawn. Under the two tabs, whichever is
 selected, one button, "Download the bins as CSV", since every table of
 the applications downloads as CSV (`docs/functionality.md`, section 9).
