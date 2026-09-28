@@ -304,18 +304,21 @@ needs no action of the user.
   retry. So when the list has no such entry the worker
   waits for one, up to one second, and sends null when none comes; the
   owner decided on 28 September 2026 that the page waits. The wait
-  delays the message by that second when the wasm is not in the list at
-  all, as when the server answers 404. The page then shows the
+  delays the message by that second when the wasm never comes into the
+  list, as when the network fails in WebKit. The page then shows the
   address under the label "Address tried:" when it has one, and the
   message always. What the user sees of the address, in Chromium 153 and
-  WebKit 26.6 on 24 September 2026:
+  WebKit 26.6 on 28 September 2026, with the wait:
   - the wasm arrives and does not compile: "Address tried:" with the
     address, in both engines;
-  - the server answers 404: no "Address tried:", since the list does not
-    have the wasm; the address is only inside popnei's message, "failed
-    to fetch Wasm: 404 Not Found fetching '…'", in both engines;
+  - the server answers 404: "Address tried:" with the address, in both
+    engines, and the address inside popnei's message too, "failed to
+    fetch Wasm: 404 Not Found fetching '…'". Before the wait, on 24
+    September 2026, the list did not yet have the wasm when the worker
+    read it, and no "Address tried:" was shown;
   - the network fails: Chromium shows "Address tried:" with the address;
-    WebKit shows no address, only its message "Load failed".
+    WebKit shows no address, only its message "Load failed", after the
+    second of the wait.
 
   Firefox was not seen in the last two. A later popnei whose
   `init()` took the address, or gave it with the error, would let the
