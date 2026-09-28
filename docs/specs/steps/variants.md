@@ -1222,9 +1222,13 @@ nothing on the screen says the things the lines above do not.
   it, as the block of a check does. When the Count becomes locked with
   the focus on it, by filters of individuals found to keep nobody once
   the statistics it waited for arrive, or by an Undo to such filters, the
-  focus moves to the part that holds its disabled button and the reason
-  beside it, which takes the focus for that and is not a stop of the Tab
-  key, since a disabled button cannot hold the focus. When the result of a check leaves
+  focus moves to the reason beside its disabled button, which takes the
+  focus for that and is not a stop of the Tab key, as the words of an
+  error do, since a disabled button cannot hold the focus. When the Count
+  leaves that state while its reason has the focus, by a Redo or an Undo
+  among them, the focus moves to what the new state shows first: the
+  Count button when it can be pressed again, or else the line of the
+  total, the warning of a file of no variant or the words of an error. When the result of a check leaves
   the page with the focus in it, on the table of the individuals, a tab,
   the panel or a CSV button of a histogram, by an Undo or a change that
   removes it, the focus moves to the heading of the block of that check,
