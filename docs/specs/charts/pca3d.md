@@ -702,10 +702,13 @@ of about 150,000 multiplications, under a millisecond.
 
 A point of 18 CSS pixels is 36 pixels of the screen at a pixel ratio of
 2. WebGL 2 promises points of 1 pixel only, and a graphics card gives
-its largest size in `ALIASED_POINT_SIZE_RANGE`; the first work package
-reads it in each engine, on the Mac and on CI, and writes it here, and
-the plot is drawn with smaller squares, and smaller marks, where it is
-below 36 pixels.
+its largest size in `ALIASED_POINT_SIZE_RANGE`, and the plot is drawn
+with smaller squares, and smaller marks, where it is below 36 pixels.
+On the owner's Mac on 28 September 2026, with Playwright 1.63.0, the
+headless Chromium 153 gave 1 to 1,023 pixels and the headless WebKit
+26.6 gave 1 to 511, so both draw the squares at their full 36 pixels
+(below, "Which headless engines give WebGL"). GitHub's runners have not
+been seen.
 
 ## How it is verified
 
@@ -786,17 +789,33 @@ scatter's 9,381 points with a third coordinate:
   trackpad cannot be sent by Playwright, and is tried by hand ("The
   view", the zoom).
 
-**What the headless engines give for WebGL is not known.** `testing.md`
-says nothing of it, and Playwright runs the three engines headless,
-with no screen, on the owner's Mac and on the Linux of GitHub's runners,
-where there is no graphics card and WebGL, when it is given, is drawn by
-the processor. The first work package of the plot runs the tests above
-in each engine, on the Mac and on CI when `main` is pushed, and writes
-into this spec and into `testing.md` which engines give WebGL where. In
-an engine that gives none, those tests are reported as not run for that
-reason, and not as passed, as `testing.md` asks of a check that could
-not be run; and the test of the words of "When the browser has no WebGL"
-runs there.
+**Which headless engines give WebGL.** Playwright runs the engines
+headless, with no window, on the owner's Mac and on the Linux of
+GitHub's runners, where there is no graphics card and WebGL, when it is
+given, is drawn by the processor. The page of the tests
+`e2e/webgl.html` asks for a WebGL 2 context with the attributes above,
+with no three.js, and `e2e/webgl.spec.ts` prints what it got. On the
+owner's Mac on 28 September 2026, with Playwright 1.63.0 and the built
+site:
+
+- Chromium 153.0.8010.12, of the projects `chromium` and `screens`,
+  gives WebGL 2, drawn by SwiftShader on the processor and not by the
+  Mac's graphics card; points of 1 to 1,023 pixels, textures of 8,192
+  pixels at most.
+- WebKit 26.6, of the project `webkit`, gives WebGL 2, drawn by the
+  Mac's graphics card, "Apple GPU"; points of 1 to 511 pixels, textures
+  of 16,384 pixels at most.
+- Firefox was not seen: Playwright cannot launch it on this Mac
+  (`testing.md`, "Against the built site").
+- GitHub's runners were not seen: the branches of the plans are never
+  pushed, and the first push of `main` after the merge of stage 4 shows
+  them in the output of that test.
+
+So the tests above run in Chromium and WebKit on the Mac, and the 3D
+view is in the screens. In an engine that gives none, those tests are
+reported as not run for that reason, and not as passed, as `testing.md`
+asks of a check that could not be run; and the test of the words of
+"When the browser has no WebGL" runs there.
 
 **The file of its own**, in the flows of the PCA (`pca.md`), which
 opens on the 3D view: no file of `pca3d` is requested before the first
@@ -887,8 +906,10 @@ group, and the outlines drawn with round joins.
 
 Each of these was made in its document on 27 September 2026, when the
 specs of stage 4 were made to agree, `docs/architecture.md` among them
-(its sections 9, 11 and 13, point 10), but the line of `testing.md` on
-the headless engines, which waits for the first work package.
+(its sections 9, 11 and 13, point 10), but the lines of `testing.md` on
+the headless engines, made on 28 September 2026 for the owner's Mac;
+those of GitHub's runners wait for the first push of `main` after the
+merge of stage 4.
 
 ## Open points
 

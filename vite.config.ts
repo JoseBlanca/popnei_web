@@ -76,12 +76,13 @@ export default defineConfig(({ mode }) => {
       testPagesBuild(),
     ],
     // A page is added here with its stage: the build fails on a page that
-    // does not exist. The page of the tests of the plots is built only for
-    // the tests, when POPNEI_TEST_PAGES is set, by the second build, to
-    // dist/e2e/plots.html, so that the site users open does not carry it
-    // (testing.md, "Against the built site").
+    // does not exist. The pages of the tests, of the plots and of WebGL,
+    // are built only for the tests, when POPNEI_TEST_PAGES is set, by the
+    // second build, to dist/e2e/plots.html and dist/e2e/webgl.html, so
+    // that the site users open does not carry them (testing.md, "Against
+    // the built site").
     input: testPagesOnly
-      ? { plots: page("e2e/plots") }
+      ? { plots: page("e2e/plots"), webgl: page("e2e/webgl") }
       : {
           index: page("index"),
           probe: page("probe"),

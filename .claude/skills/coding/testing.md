@@ -329,12 +329,12 @@ export default defineConfig({
   stage 6 offers it on the screens (`docs/specs/charts/plot2d.md`,
   decided on 26 September 2026); from stage 4 it draws the scatter of
   the PCA and its 3D plot too, for their pointer, their export and the
-  3D plot's WebGL (`docs/specs/charts/scatter.md` and `pca3d.md`). Which
-  of the headless engines give WebGL, on the owner's Mac and on
-  GitHub's runners, has not been seen; the first work package of the 3D
-  plot writes it here, and in an engine that gives none the tests of the
-  3D plot are reported as not run for that reason, and not as passed. A build without the variable, such as
-  the one of `screens`, leaves the page out, and its tests then fail,
+  3D plot's WebGL (`docs/specs/charts/scatter.md` and `pca3d.md`). From
+  stage 4 there is a second, `e2e/webgl.html`, which asks the browser
+  for a WebGL 2 context with no three.js, and whose test,
+  `e2e/webgl.spec.ts`, prints what the engine gave on a line that starts
+  with `webgl`. A build without the variable, such as
+  the one of `screens`, leaves the pages out, and their tests then fail,
   the page not found, until the next build with it.
 
 The scripts:
@@ -359,6 +359,30 @@ POPNEI_TEST_PAGES=1 npm run build && npx playwright test --project=chromium --pr
 with `-g "<tag>"` to select the tests of a deliverable, and Firefox runs
 on GitHub when `main` is pushed (`docs/plans/variants-step.md`, "The
 browsers").
+
+The 3D plot of the PCA draws with WebGL 2 (`docs/specs/charts/pca3d.md`),
+and Playwright runs its engines headless, with no window. What each
+gave on the owner's Mac on 28 September 2026, Playwright 1.63.0 and the
+built site, by `e2e/webgl.spec.ts`:
+
+| engine | WebGL 2 | drawn by | point sizes, `ALIASED_POINT_SIZE_RANGE` | `MAX_TEXTURE_SIZE` |
+|---|---|---|---|---|
+| Chromium 153.0.8010.12, projects `chromium` and `screens` | given | SwiftShader, which draws on the processor, not the graphics card | 1 to 1,023 pixels | 8,192 |
+| WebKit 26.6, project `webkit` | given | the Mac's graphics card, "Apple GPU" | 1 to 511 pixels | 16,384 |
+| Firefox | not seen: Playwright cannot launch it on this Mac | | | |
+
+Both engines report "WebKit WebGL" as the renderer and give the name of
+what draws only through the extension `WEBGL_debug_renderer_info`. So the
+tests of the 3D plot run in Chromium and WebKit here, and the 3D view is
+in the screens. Chromium's headless shell draws with SwiftShader and not
+with the Mac's graphics card, which a Chrome with a window uses; a
+defect of the card's driver is out of its reach. On GitHub's runners,
+Linux with no graphics card, no engine has been seen: the plan's
+branches are never pushed, and the first push of `main` after the merge
+of stage 4 shows it in the output of that test. In an engine that gives
+no WebGL 2, the tests of the 3D plot are reported as not run for that
+reason, and not as passed, and the test of the words of a browser with
+no WebGL runs there instead.
 
 ### The measurements
 
