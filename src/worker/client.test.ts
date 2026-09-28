@@ -171,7 +171,9 @@ function writeJob(fileId: string): WriteJob {
 
 /** Files as the runner makes them, real Blobs, since the check of a
     written compares its numBytes with the size of its file: one of the
-    3,594 bytes of the smallest file of writeVariants.md, and one a byte
+    3,594 bytes client.md gives, the smallest file of writeVariants.md
+    with popnei's js-v0.1.0-dev.2 (3,682 with js-v0.1.0-dev.3, a size
+    the client never reads), and one a byte
     larger than WRITE_RESTART_BYTES, about 3 ms to make in node. */
 const SMALL_FILE = new Blob([new Uint8Array(3_594)]);
 const LARGE_FILE = new Blob([new Uint8Array(WRITE_RESTART_BYTES + 1)]);
