@@ -689,7 +689,7 @@ in its version 1.
 
 **Tasks:**
 
-- [ ] 4.1 The populations: `Grouping` with `onePopulation`, "All
+- [x] 4.1 The populations: `Grouping` with `onePopulation`, "All
   individuals", and `populationsOf`, `populationsToRun`,
   `populationsKept`, `populationsNeeds` and `populationsBeforeRun` moved
   into `project.ts` from `diversity.ts` (`project.md`, "The
@@ -799,7 +799,11 @@ reads in the stepper that the step is optional.
   status region"); the Individuals step with no file and its choice of
   "All individuals in one population", and the flow of D3
   (`steps/individuals.md`, "The file" and "The populations"). Serves 1,
-  3 and 5.
+  3 and 5. Added on 28 September 2026, since no task named them (found
+  by task 4.1): the panel's lines of the diversity when it is ready on
+  one population, "1 population, All individuals: 200 individuals" and
+  "No metadata file: every individual is in one population."
+  (`diversity.md`).
 - [ ] 5.2 The columns: the table of HTML with a select of the type in
   every row but the first, the select of the value coded 1, the warning
   of the types that wait with "Forget these types", the check with
@@ -910,7 +914,9 @@ browsers is measured.
   its opening dates 28 September 2026 for the PCoA); `countsOf` of a
   result of the PCA in `apps.ts` (`entry.md`). The PCA is not in
   `POPGEN_ANALYSES` until task 8.3. Serves 4. Needs 6.1; 4.1 for the two
-  cases of `needs`.
+  cases of `needs`. Added on 28 September 2026 (found by task 4.1): `ldOrderText`
+  of `src/core/analyses/words.ts` with the PCA's LD filter (`diversity.md`,
+  "Its words"; `pca.md`, its row of the refusals).
 - [ ] 6.4 The key of the PCA, `keyInputs`, and its tests, in a commit of
   its own (`pca.md`, "What goes into its key"): a key that missed the
   PCA's own filters, or put the colour or the view into it, would show a
@@ -981,7 +987,7 @@ SVG and PNG with the legend in it, which no screen offers before stage
 
 **Tasks:**
 
-- [ ] 7.1 The dependencies, in a commit of their own; `marks.ts`,
+- [x] 7.1 The dependencies, in a commit of their own; `marks.ts`,
   `legend.ts` and `hover.ts` in `src/charts`, the classes of
   `charts.css`, from `scatter.md`, "The marks of the groups", "The
   colours", "The legend, drawn by the screen", "The point under the
