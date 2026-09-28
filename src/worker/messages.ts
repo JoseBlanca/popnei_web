@@ -33,6 +33,9 @@ import type {
   LoadFormat,
   Opened,
   PassStats,
+  PcaJob,
+  PcaMethod,
+  PcaResult,
   Separator,
   VariantChecksJob,
   VariantChecksResult,
@@ -844,12 +847,18 @@ const JOB_ANALYSES: Readonly<Record<Job["analysis"], true>> = {
   individualChecks: true,
   variantChecks: true,
   filterCounts: true,
+  pca: true,
 };
 const RESULT_ANALYSES: Readonly<Record<JobResult["analysis"], true>> = {
   diversity: true,
   individualChecks: true,
   variantChecks: true,
   filterCounts: true,
+  pca: true,
+};
+const PCA_METHODS: Readonly<Record<PcaMethod, true>> = {
+  pca: true,
+  pcoa: true,
 };
 const VARIANT_FILTER_KINDS: Readonly<Record<VariantFilterKind, true>> = {
   missing_data: true,
@@ -1010,6 +1019,8 @@ function checkJob(value: unknown, place: Place): Checked<Job> {
       return checkFilterCountsJob(record, place);
     case "variantChecks":
       return checkVariantChecksJob(record, place);
+    case "pca":
+      return checkPcaJob(record, place);
   }
 }
 
@@ -1193,6 +1204,53 @@ function checkVariantChecksJob(
   });
 }
 
+/** The fields of the request of the principal components,
+    docs/specs/analyses/pca.md: its pass, the load, the filters of the
+    variants and the list of the individuals kept, its method and the
+    components it keeps, a whole number. That they are 1 or more is the
+    runner's to keep, as a range. */
+function checkPcaJob(record: object, place: Place): Checked<PcaJob> {
+  const wrong = exactFields(record, place, [
+    "analysis",
+    "fileId",
+    "filters",
+    "individuals",
+    "method",
+    "numCompsKept",
+  ]);
+  if (wrong !== null) {
+    return wrong;
+  }
+  const fileId = field(record, "fileId", place, isText);
+  if (!fileId.ok) {
+    return fileId;
+  }
+  const filters = field(record, "filters", place, listOf(checkVariantFilter));
+  if (!filters.ok) {
+    return filters;
+  }
+  const individuals = field(record, "individuals", place, isTextsOrNull);
+  if (!individuals.ok) {
+    return individuals;
+  }
+  const method = field(record, "method", place, oneOf(PCA_METHODS));
+  if (!method.ok) {
+    return method;
+  }
+  const numCompsKept = field(record, "numCompsKept", place, isWhole);
+  if (!numCompsKept.ok) {
+    return numCompsKept;
+  }
+  return accepted({
+    analysis: "pca",
+    fileId: fileId.value,
+    filters: filters.value,
+    individuals: individuals.value,
+    method: method.value,
+    numCompsKept: numCompsKept.value,
+  });
+}
+
 /** The request of a written file: its format, its pass and the list of
     the individuals kept. */
 function checkWriteJob(value: unknown, place: Place): Checked<WriteJob> {
@@ -1362,6 +1420,8 @@ function checkJobResult(value: unknown, place: Place): Checked<JobResult> {
       return checkVariantChecksResult(record, place);
     case "filterCounts":
       return checkFilterCountsResult(record, place);
+    case "pca":
+      return checkPcaResult(record, place);
   }
 }
 
@@ -2017,6 +2077,112 @@ function checkFileError(
   }
 }
 
+/**
+ * The fields of the principal components, docs/specs/analyses/pca.md:
+ * `projections` as long as the individuals times `numComps`, and
+ * `explainedVariancePercent` as `numComps`, two whole numbers; of the PCA,
+ * `numVarsUsed` a number and the two numbers of the PCoA `null`, and of the
+ * PCoA the other way round. That `numComps` is at most `numCompsFound` is
+ * the runner's to keep, as a range.
+ */
+function checkPcaResult(record: object, place: Place): Checked<PcaResult> {
+  const wrong = exactFields(record, place, [
+    "analysis",
+    "method",
+    "individuals",
+    "numComps",
+    "numCompsFound",
+    "projections",
+    "explainedVariancePercent",
+    "numVarsUsed",
+    "lingoesConstant",
+    "negativeEigenvaluesPercent",
+    "passStats",
+  ]);
+  if (wrong !== null) {
+    return wrong;
+  }
+  const method = field(record, "method", place, oneOf(PCA_METHODS));
+  if (!method.ok) {
+    return method;
+  }
+  const individuals = field(record, "individuals", place, listOf(isText));
+  if (!individuals.ok) {
+    return individuals;
+  }
+  const numComps = field(record, "numComps", place, isWhole);
+  if (!numComps.ok) {
+    return numComps;
+  }
+  const numCompsFound = field(record, "numCompsFound", place, isWhole);
+  if (!numCompsFound.ok) {
+    return numCompsFound;
+  }
+  const projections = field(
+    record,
+    "projections",
+    place,
+    float64Array(individuals.value.length * numComps.value),
+  );
+  if (!projections.ok) {
+    return projections;
+  }
+  const explainedVariancePercent = field(
+    record,
+    "explainedVariancePercent",
+    place,
+    float64Array(numComps.value),
+  );
+  if (!explainedVariancePercent.ok) {
+    return explainedVariancePercent;
+  }
+  const ofPca = method.value === "pca";
+  const numVarsUsed = field(
+    record,
+    "numVarsUsed",
+    place,
+    ofPca ? isNumber : isNull("the PCoA"),
+  );
+  if (!numVarsUsed.ok) {
+    return numVarsUsed;
+  }
+  const lingoesConstant = field(
+    record,
+    "lingoesConstant",
+    place,
+    ofPca ? isNull("the PCA") : isNumber,
+  );
+  if (!lingoesConstant.ok) {
+    return lingoesConstant;
+  }
+  const negativeEigenvaluesPercent = field(
+    record,
+    "negativeEigenvaluesPercent",
+    place,
+    ofPca ? isNull("the PCA") : isNumber,
+  );
+  if (!negativeEigenvaluesPercent.ok) {
+    return negativeEigenvaluesPercent;
+  }
+  const passStats = field(record, "passStats", place, checkPassStats);
+  if (!passStats.ok) {
+    return passStats;
+  }
+  return accepted({
+    analysis: "pca",
+    method: method.value,
+    individuals: individuals.value,
+    numComps: numComps.value,
+    numCompsFound: numCompsFound.value,
+    projections: projections.value,
+    explainedVariancePercent: explainedVariancePercent.value,
+    numVarsUsed: numVarsUsed.value,
+    lingoesConstant: lingoesConstant.value,
+    negativeEigenvaluesPercent: negativeEigenvaluesPercent.value,
+    passStats: passStats.value,
+  });
+}
+
 /** The one field of an object besides its `kind`, checked by `check`,
     when the object has these two fields and no other. */
 function onlyField<T>(
@@ -2210,6 +2376,15 @@ const isWhole: Check<number> = (value, place) =>
 /** A whole number, or null, as the line of a character not decoded. */
 const isWholeOrNull: Check<number | null> = (value, place) =>
   value === null ? accepted(null) : isWhole(value, place);
+
+/** A check of `null`, the field of a method that does not have it; `of`
+    names the method, for the words of the refusal. */
+function isNull(of: string): Check<null> {
+  return (value, place) =>
+    value === null
+      ? accepted(null)
+      : wrongType(place, `null, since ${of} does not have it`, value);
+}
 
 /** A boolean. */
 const isBoolean: Check<boolean> = (value, place) =>

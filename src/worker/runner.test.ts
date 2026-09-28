@@ -30,6 +30,9 @@ import type {
   IndividualChecksJob,
   IndividualChecksResult,
   JobResult,
+  PassStats,
+  PcaJob,
+  PcaResult,
   Pops,
   Progress,
   VariantChecksJob,
@@ -2148,5 +2151,401 @@ describe("VS1 D4 the written file of the runner: a file that no longer reads", (
       name: "panel.nei",
       message: `${PANEL_NOT_GIVEN}the file changed`,
     });
+  });
+});
+
+// The principal components, a PCA or a PCoA, on panel.nei, with the numbers
+// of docs/specs/analyses/pca.md, "How it is verified", given by
+// js-v0.1.0-dev.3 in node on 28 September 2026 (docs/specs/worker/runner.md,
+// "How it is verified").
+
+/** The LD filter the PCA has of its own in the flow of pca.md, r² 0.1
+    within 50,000 base pairs. */
+const OWN_LD: VariantFilter = { kind: "ld", maxAllowedR2: 0.1, maxDist: 50000 };
+
+/** The filters of the PCA with its own LD filter: the missing data filter
+    of a new project, which it follows, and its LD filter. */
+const WITH_OWN_LD: readonly VariantFilter[] = [missingData(0.1), OWN_LD];
+
+/** A job of the principal components of every individual, the PCA and 10
+    components unless `overrides` says otherwise. */
+function pcaJob(
+  filters: readonly VariantFilter[],
+  overrides: Partial<
+    Pick<PcaJob, "individuals" | "method" | "numCompsKept">
+  > = {},
+): PcaJob {
+  return {
+    analysis: "pca",
+    fileId: FILE_ID,
+    filters,
+    individuals: null,
+    method: "pca",
+    numCompsKept: 10,
+    ...overrides,
+  };
+}
+
+/** The first three numbers of the row of the individual at `row`. */
+function rowOf(result: PcaResult, row: number): number[] {
+  const start = row * result.numComps;
+  return [...result.projections.slice(start, start + 3)];
+}
+
+/** The counts of the pass of the PCA with its own LD filter, in the order
+    of its filters. */
+const OWN_LD_COUNTS: PassStats = {
+  numVars: 548,
+  filtering: {
+    missing_data: { varsProcessed: 1200, varsKept: 1200 },
+    ld: { varsProcessed: 1200, varsKept: 548 },
+  },
+};
+
+/** The header of a VCF of the individuals `names`, for the files the
+    tests write. */
+function vcfHeader(names: readonly string[]): string {
+  return (
+    '##fileformat=VCFv4.2\n##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n' +
+    `#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t${names.join("\t")}\n`
+  );
+}
+
+/** A runner with the VCF of the text `vcf` opened. */
+function openedVcf(name: string, vcf: string): Runner {
+  const runner = createRunner();
+  const open = runner.open(VCF, {
+    name,
+    source: new TextEncoder().encode(vcf),
+  });
+  expect(open.kind).toBe("ok");
+  return runner;
+}
+
+/** Three individuals whose second variant is at position 10 after one at
+    30, which popnei's LD filter refuses. */
+const UNSORTED_VCF =
+  vcfHeader(["a", "b", "c"]) +
+  "1\t30\t.\tA\tG\t.\tPASS\t.\tGT\t0/0\t0/1\t1/1\n" +
+  "1\t10\t.\tC\tT\t.\tPASS\t.\tGT\t0/1\t0/0\t1/1\n" +
+  "1\t50\t.\tG\tA\t.\tPASS\t.\tGT\t1/1\t0/1\t0/0\n";
+
+const LD_NOT_SORTED =
+  "the variant 2 of the ones the filter by linkage disequilibrium has read, on the chromosome 1, does not come after the one before it, and that filter compares a variant with the ones it kept behind it on its chromosome: it is at the position 10 of its chromosome and the variant before it at the position 30 of the same chromosome; give it a source whose variants come with each chromosome together and in the order of their positions, which `bcftools sort` writes";
+
+describe("IP6 D2 the runner's PCA", () => {
+  test("the PCA with its own LD filter: popnei's numbers cut to 10 components, 548 variants used, the counts of its two filters in their order, and the two calls of the progress", () => {
+    const told: Progress[] = [];
+    const result = resultOf(
+      opened("panel.nei").run(pcaJob(WITH_OWN_LD), (progress) => {
+        told.push(progress);
+      }),
+      "pca",
+    );
+    expect(result.method).toBe("pca");
+    expect(result.individuals.length).toBe(200);
+    expect(result.individuals[0]).toBe("s000");
+    expect(result.numCompsFound).toBe(199);
+    expect(result.numComps).toBe(10);
+    expect(result.projections.length).toBe(2000);
+    expect(rowOf(result, 0)).toEqual([
+      -0.7138853335304419, 7.676473141448964, -4.384383801903496,
+    ]);
+    expect(rowOf(result, 199)).toEqual([
+      -2.395576470232154, -0.7377179681081428, -2.345958102269474,
+    ]);
+    expect([...result.explainedVariancePercent]).toEqual([
+      3.5476992895181616, 3.402040462155611, 1.8945553874570624,
+      1.8450769825884152, 1.758262625226421, 1.7485467724341495,
+      1.708007168008476, 1.686458089265927, 1.6382789728126605,
+      1.6282559875034457,
+    ]);
+    expect(result.numVarsUsed).toBe(548);
+    expect(result.lingoesConstant).toBeNull();
+    expect(result.negativeEigenvaluesPercent).toBeNull();
+    expect(result.passStats).toEqual(OWN_LD_COUNTS);
+    expect(Object.keys(result.passStats.filtering)).toEqual([
+      "missing_data",
+      "ld",
+    ]);
+    expect(told).toEqual(PANEL_PROGRESS);
+  });
+
+  test("the PCA with the filters of a new project: PC1 7.61% and PC2 5.56%, s000 at 1.573 on PC1, and the 1,200 variants used", () => {
+    const result = resultOf(
+      opened("panel.nei").run(pcaJob([missingData(0.1)]), ignore),
+      "pca",
+    );
+    expect(result.numComps).toBe(10);
+    expect(result.numCompsFound).toBe(199);
+    expect([...result.explainedVariancePercent]).toEqual([
+      7.605779109441194, 5.555518021523858, 1.5660537372523171,
+      1.524724130017964, 1.5009086368595066, 1.4889112799690014,
+      1.470027654529171, 1.4483203636207653, 1.4166200151078203,
+      1.382667451283622,
+    ]);
+    expect(rowOf(result, 0)).toEqual([
+      1.5730359180131923, 12.900303725888635, -5.079684984380475,
+    ]);
+    expect(result.numVarsUsed).toBe(1200);
+    expect(result.passStats).toEqual({
+      numVars: 1200,
+      filtering: { missing_data: { varsProcessed: 1200, varsKept: 1200 } },
+    });
+  });
+
+  test("a job with numCompsKept 3 keeps 3 components, each row the first three of popnei's", () => {
+    const runner = opened("panel.nei");
+    const ten = resultOf(runner.run(pcaJob(WITH_OWN_LD), ignore), "pca");
+    const three = resultOf(
+      runner.run(pcaJob(WITH_OWN_LD, { numCompsKept: 3 }), ignore),
+      "pca",
+    );
+    expect(three.numComps).toBe(3);
+    expect(three.numCompsFound).toBe(199);
+    expect(three.projections.length).toBe(600);
+    expect([...three.explainedVariancePercent]).toEqual([
+      3.5476992895181616, 3.402040462155611, 1.8945553874570624,
+    ]);
+    for (let row = 0; row < 200; row += 1) {
+      expect([...three.projections.slice(row * 3, row * 3 + 3)]).toEqual(
+        rowOf(ten, row),
+      );
+    }
+  });
+
+  test("two individuals, the list before the MAF filter at 0.95, which counts over them: one component of 100%", () => {
+    const result = resultOf(
+      opened("panel.nei").run(
+        pcaJob([{ kind: "maf", maxAllowedMaf: 0.95 }], {
+          individuals: ["s000", "s001"],
+        }),
+        ignore,
+      ),
+      "pca",
+    );
+    expect(result.individuals).toEqual(["s000", "s001"]);
+    expect(result.numComps).toBe(1);
+    expect(result.numCompsFound).toBe(1);
+    expect([...result.explainedVariancePercent]).toEqual([100]);
+    expect(result.projections[0]).toBe(18.841443681416774);
+    expect(result.numVarsUsed).toBe(355);
+    expect(result.passStats).toEqual({
+      numVars: 613,
+      filtering: { maf: { varsProcessed: 1200, varsKept: 613 } },
+    });
+  });
+
+  test("filters that keep no variant are refused with popnei's words of the PCA", () => {
+    expect(opened("panel.nei").run(pcaJob(NO_VARIANT_KEPT), ignore)).toEqual({
+      kind: "refused",
+      message: "there are no variants to do a PCA with",
+    });
+  });
+
+  test("one individual is refused, since no variant varies", () => {
+    expect(
+      opened("panel.nei").run(
+        pcaJob([{ kind: "maf", maxAllowedMaf: 0.95 }], {
+          individuals: ["s000"],
+        }),
+        ignore,
+      ),
+    ).toEqual({
+      kind: "refused",
+      message:
+        "no variant has more than one dosage among its called genotypes, so none of them varies and there is nothing to do a PCA with",
+    });
+  });
+
+  test("a VCF whose second variant comes before the first is refused under an LD filter, and gives a result without it", () => {
+    const runner = openedVcf("unsorted.vcf", UNSORTED_VCF);
+    expect(runner.run(pcaJob([OWN_LD]), ignore)).toEqual({
+      kind: "refused",
+      message: LD_NOT_SORTED,
+    });
+    const result = resultOf(runner.run(pcaJob([]), ignore), "pca");
+    expect(result.individuals).toEqual(["a", "b", "c"]);
+    expect(result.numComps).toBe(2);
+  });
+
+  test("a variant of three alleles is not refused: every allele but the major one counts the same", () => {
+    const vcf =
+      vcfHeader(["a", "b", "c", "d"]) +
+      "1\t10\t.\tA\tG,T\t.\tPASS\t.\tGT\t0/0\t0/1\t1/2\t2/2\n" +
+      "1\t20\t.\tC\tT\t.\tPASS\t.\tGT\t0/1\t0/0\t1/1\t0/1\n";
+    const result = resultOf(
+      openedVcf("alleles.vcf", vcf).run(pcaJob([]), ignore),
+      "pca",
+    );
+    expect(result.individuals).toEqual(["a", "b", "c", "d"]);
+    expect(result.numVarsUsed).toBe(2);
+  });
+
+  test("the PCoA with the PCA's own LD filter: popnei's numbers of the corrected distances cut to 10 components, and a second run the same to the last bit", () => {
+    const runner = opened("panel.nei");
+    const told: Progress[] = [];
+    const job = pcaJob(WITH_OWN_LD, { method: "pcoa" });
+    const result = resultOf(
+      runner.run(job, (progress) => {
+        told.push(progress);
+      }),
+      "pca",
+    );
+    expect(result.method).toBe("pcoa");
+    expect(result.individuals.length).toBe(200);
+    expect(result.numCompsFound).toBe(198);
+    expect(result.numComps).toBe(10);
+    expect(result.projections.length).toBe(2000);
+    expect([...result.explainedVariancePercent]).toEqual([
+      3.679886264523731, 3.5413304853438237, 1.9573102613242979,
+      1.8471127804041167, 1.8315661674388577, 1.7562462600666455,
+      1.7027784245122337, 1.6731238565502609, 1.6316941256138073,
+      1.6111863636656447,
+    ]);
+    expect(rowOf(result, 0)).toEqual([
+      -0.0030332529765406636, 0.08117502269333857, 0.03633252913562992,
+    ]);
+    expect(rowOf(result, 199)).toEqual([
+      -0.03392775490492186, -0.0011194016192959228, 0.012970339016726626,
+    ]);
+    expect(result.lingoesConstant).toBe(0.023674522901958598);
+    expect(result.negativeEigenvaluesPercent).toBe(7.87126617431627);
+    expect(result.numVarsUsed).toBeNull();
+    expect(result.passStats).toEqual(OWN_LD_COUNTS);
+    expect(told).toEqual(PANEL_PROGRESS);
+    const again = resultOf(runner.run(job, ignore), "pca");
+    expect(again).toEqual(result);
+    expect(new Uint8Array(again.projections.buffer)).toEqual(
+      new Uint8Array(result.projections.buffer),
+    );
+    expect(new Uint8Array(again.explainedVariancePercent.buffer)).toEqual(
+      new Uint8Array(result.explainedVariancePercent.buffer),
+    );
+    expect(again.lingoesConstant).toBe(result.lingoesConstant);
+    expect(again.negativeEigenvaluesPercent).toBe(
+      result.negativeEigenvaluesPercent,
+    );
+  });
+
+  test("the PCoA of the filters of a new project: PC1 9.62%, c 0.0142 and 2.98% of negative eigenvalues", () => {
+    const result = resultOf(
+      opened("panel.nei").run(
+        pcaJob([missingData(0.1)], { method: "pcoa" }),
+        ignore,
+      ),
+      "pca",
+    );
+    expect([...result.explainedVariancePercent.slice(0, 3)]).toEqual([
+      9.624071140419273, 6.651014052013717, 1.7358089994362516,
+    ]);
+    expect(rowOf(result, 0)).toEqual([
+      0.013100992356696437, 0.10359303419094794, -0.046161057061637055,
+    ]);
+    expect(result.lingoesConstant).toBe(0.014182298472042042);
+    expect(result.negativeEigenvaluesPercent).toBe(2.983436163735554);
+  });
+
+  test("the PCoA of one individual is refused before the pass", () => {
+    expect(
+      opened("panel.nei").run(
+        pcaJob([missingData(0.1)], { method: "pcoa", individuals: ["s000"] }),
+        ignore,
+      ),
+    ).toEqual({
+      kind: "refused",
+      message:
+        "there is 1 individual, and a principal coordinate analysis places 2 at least by the distance of each pair",
+    });
+  });
+
+  test("the PCoA of filters that keep no variant is refused with the words of popnei's other calculations", () => {
+    expect(
+      opened("panel.nei").run(
+        pcaJob(NO_VARIANT_KEPT, { method: "pcoa" }),
+        ignore,
+      ),
+    ).toEqual({
+      kind: "refused",
+      message:
+        "the pass gave no variant: its source gave 1200 and the steps kept none of them, the `missing_data` filter was given 1200 and kept 1152, the `maf` filter was given 1152 and kept 0; a statistic of a pass is calculated over the variants it gives",
+    });
+  });
+
+  test("the PCoA of five individuals, the fifth called only where the others are missing, is refused for the pairs with no distance", () => {
+    const vcf =
+      vcfHeader(["a", "b", "c", "d", "e"]) +
+      "1\t10\t.\tA\tG\t.\tPASS\t.\tGT\t0/0\t0/1\t1/1\t0/1\t./.\n" +
+      "1\t20\t.\tC\tT\t.\tPASS\t.\tGT\t0/1\t0/0\t1/1\t1/1\t./.\n" +
+      "1\t30\t.\tG\tA\t.\tPASS\t.\tGT\t./.\t./.\t./.\t./.\t0/1\n";
+    expect(
+      openedVcf("five.vcf", vcf).run(pcaJob([], { method: "pcoa" }), ignore),
+    ).toEqual({
+      kind: "refused",
+      message:
+        "4 of the 10 pairs of individuals have no distance, the first of them `a` and `e`, and `e` is in 4 of them; those pairs were called together at no variant; take that individual out with `filterIndividuals`, or run the PCA of the variants, which gives every individual a projection",
+    });
+  });
+
+  test("the PCoA under an LD filter of a VCF not sorted is refused as the PCA is", () => {
+    expect(
+      openedVcf("unsorted.vcf", UNSORTED_VCF).run(
+        pcaJob([OWN_LD], { method: "pcoa" }),
+        ignore,
+      ),
+    ).toEqual({ kind: "refused", message: LD_NOT_SORTED });
+  });
+
+  test("the steps of a PCA: after a diversity at 0.1, the PCA with its own LD filter opens the file again, and a second PCA of the same job does not", () => {
+    const { file, reads } = countedPanel();
+    const runner = createRunner();
+    expect(runner.open(NEI, file).kind).toBe("ok");
+    valueOf(runner.run(diversityJob([missingData(0.1)]), ignore));
+    expect(reads()).toBe(1);
+    const first = resultOf(runner.run(pcaJob(WITH_OWN_LD), ignore), "pca");
+    expect(reads()).toBe(2);
+    const second = resultOf(runner.run(pcaJob(WITH_OWN_LD), ignore), "pca");
+    expect(reads()).toBe(2);
+    expect(second).toEqual(first);
+  });
+
+  test("a PCA whose numCompsKept is 0 is a badRequest, before any step", () => {
+    const { file, reads } = countedPanel();
+    const runner = createRunner();
+    expect(runner.open(NEI, file).kind).toBe("ok");
+    expect(
+      runner.run(pcaJob(WITH_OWN_LD, { numCompsKept: 0 }), ignore),
+    ).toEqual({
+      kind: "badRequest",
+      message: "numCompsKept 0: the principal components keep 1 at least",
+    });
+    expect(reads()).toBe(1);
+  });
+
+  test("a PCA with an empty list of individuals is a badRequest", () => {
+    expect(
+      opened("panel.nei").run(pcaJob(WITH_OWN_LD, { individuals: [] }), ignore),
+    ).toEqual({ kind: "badRequest", message: "an empty list of individuals" });
+  });
+
+  test("transferablesOf of a result of the PCA: the buffers of its projections and of its percentages, each once, and a view of part of a buffer throws", () => {
+    const result = resultOf(
+      opened("panel.nei").run(pcaJob(WITH_OWN_LD, { numCompsKept: 3 }), ignore),
+      "pca",
+    );
+    expect(transferablesOf(result)).toEqual([
+      result.projections.buffer,
+      result.explainedVariancePercent.buffer,
+    ]);
+    expect(
+      transferablesOf({
+        ...result,
+        explainedVariancePercent: result.projections,
+      }),
+    ).toEqual([result.projections.buffer]);
+    const view = new Float64Array(new ArrayBuffer(8 * 4), 8, 3);
+    expect(() =>
+      transferablesOf({ ...result, explainedVariancePercent: view }),
+    ).toThrow(/^popnei_web defect: an array of a result is a view/);
   });
 });

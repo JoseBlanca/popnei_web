@@ -455,10 +455,76 @@ export interface FilterCountsResult {
   readonly passStats: PassStats;
 }
 
+/** The method of the principal components: a PCA of the genotypes, or a
+    PCoA of the Kosman distances, corrected by Lingoes' method when no
+    space holds them. */
+export type PcaMethod = "pca" | "pcoa";
+
+/** The request of the principal components of the individuals kept, over
+    the filters `pcaFilters` of core gives, the first `numCompsKept`
+    components of what popnei gives (docs/specs/analyses/pca.md). */
+export interface PcaJob {
+  /** The analysis the request is of. */
+  readonly analysis: "pca";
+  /** The load id of the variants file it reads. */
+  readonly fileId: string;
+  /** The dataset's filters of the variants, with the PCA's own in the place
+      of those of their kind, in the fixed order, one of each kind. */
+  readonly filters: readonly VariantFilter[];
+  /** The individuals kept, in the order of the variants file, which the
+      runner puts before the filters; `null` when the filters of the
+      individuals remove nobody, and never empty. */
+  readonly individuals: readonly string[] | null;
+  /** The PCA of the genotypes or the PCoA of the Kosman distances. */
+  readonly method: PcaMethod;
+  /** How many components the result keeps, 10, `PCA_NUM_COMPS_KEPT` of
+      core; a whole number of 1 or more. */
+  readonly numCompsKept: number;
+}
+
+/** The principal components of the individuals of a pass, cut to the
+    components the job keeps. */
+export interface PcaResult {
+  /** The analysis the result is of. */
+  readonly analysis: "pca";
+  /** The method of the job. */
+  readonly method: PcaMethod;
+  /** The individuals of the pass, in the order of the file, which is the
+      order of the rows of `projections`. */
+  readonly individuals: readonly string[];
+  /** The components kept: the smaller of `numCompsKept` and
+      `numCompsFound`. */
+  readonly numComps: number;
+  /** Every component with variance that popnei gave. */
+  readonly numCompsFound: number;
+  /** Where each individual falls on each component kept, the individuals
+      × `numComps`, row after row. */
+  readonly projections: Float64Array;
+  /** The share of each component kept, in percent of the variance of every
+      component, `numComps` numbers. */
+  readonly explainedVariancePercent: Float64Array;
+  /** The PCA's variants with variance that it used, popnei's
+      `usedVars.length`; `null` for the PCoA. */
+  readonly numVarsUsed: number | null;
+  /** The PCoA's constant of Lingoes' correction, in the units of a squared
+      distance, 0 when none was needed; `null` for the PCA. */
+  readonly lingoesConstant: number | null;
+  /** The PCoA's share of the variance of the distances that lay in
+      negative eigenvalues before the correction, in percent; `null` for
+      the PCA. */
+  readonly negativeEigenvaluesPercent: number | null;
+  /** The counts of the pass, of filters that may not be the project's. */
+  readonly passStats: PassStats;
+}
+
 /** The request of a calculation, one member per analysis, tagged by
     `analysis`. */
 export type Job =
-  DiversityJob | IndividualChecksJob | VariantChecksJob | FilterCountsJob;
+  | DiversityJob
+  | IndividualChecksJob
+  | VariantChecksJob
+  | FilterCountsJob
+  | PcaJob;
 
 /** The result of a calculation, one member per analysis, tagged by
     `analysis` as its request. */
@@ -466,7 +532,8 @@ export type JobResult =
   | DiversityResult
   | IndividualChecksResult
   | VariantChecksResult
-  | FilterCountsResult;
+  | FilterCountsResult
+  | PcaResult;
 
 /**
  * The request of a file of the filtered variants

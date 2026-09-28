@@ -8,6 +8,8 @@ import type {
   IndividualChecksJob,
   IndividualChecksResult,
   PassStats,
+  PcaJob,
+  PcaResult,
   VariantChecksJob,
   VariantChecksResult,
   VariantDistrib,
@@ -1249,11 +1251,34 @@ const filterCountsResult: fc.Arbitrary<FilterCountsResult> = fc.record({
   analysis: fc.constant("filterCounts" as const),
   passStats,
 });
+const pcaResult: fc.Arbitrary<PcaResult> = fc
+  .record({
+    individuals: fc.array(text, { maxLength: 5 }),
+    numComps: fc.nat({ max: 4 }),
+    numCompsFound: fc.nat({ max: 10 }),
+    method: fc.constantFrom("pca" as const, "pcoa" as const),
+  })
+  .chain(({ individuals, numComps, numCompsFound, method }) =>
+    fc.record({
+      analysis: fc.constant("pca" as const),
+      method: fc.constant(method),
+      individuals: fc.constant(individuals),
+      numComps: fc.constant(numComps),
+      numCompsFound: fc.constant(numCompsFound),
+      projections: float64s(individuals.length * numComps),
+      explainedVariancePercent: float64s(numComps),
+      numVarsUsed: method === "pca" ? number : fc.constant(null),
+      lingoesConstant: method === "pca" ? fc.constant(null) : number,
+      negativeEigenvaluesPercent: method === "pca" ? fc.constant(null) : number,
+      passStats,
+    }),
+  );
 const jobResult = fc.oneof(
   diversityResult,
   individualChecksResult,
   variantChecksResult,
   filterCountsResult,
+  pcaResult,
 );
 const written = fc.nat({ max: 64 }).chain((numBytes) =>
   fc.record({
@@ -1453,6 +1478,14 @@ const filterCountsJob = fc.record({
   filters,
   individuals: individualsKept,
 });
+const pcaJob = fc.record({
+  analysis: fc.constant("pca" as const),
+  fileId: text,
+  filters,
+  individuals: individualsKept,
+  method: fc.constantFrom("pca" as const, "pcoa" as const),
+  numCompsKept: fc.integer(),
+});
 const writeJob = fc.record({
   format: fc.constant("nei" as const),
   fileId: text,
@@ -1485,6 +1518,7 @@ const toRunnerMessage = fc.oneof(
       individualChecksJob,
       variantChecksJob,
       filterCountsJob,
+      pcaJob,
     ),
   }),
   fc.record({
@@ -1700,5 +1734,290 @@ describe("messageOf", () => {
     ).toBe("unreachable executed");
     expect(messageOf("a text, not an Error")).toBe("a text, not an Error");
     expect(messageOf(undefined)).toBe("undefined");
+  });
+});
+
+// The job and the result of the principal components, stage 4
+// (docs/specs/worker/messages.md, "How it is verified").
+
+const PCA_JOB: PcaJob = {
+  analysis: "pca",
+  fileId: "load-a",
+  filters: [
+    { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+    { kind: "ld", maxAllowedR2: 0.1, maxDist: 50000 },
+  ],
+  individuals: null,
+  method: "pca",
+  numCompsKept: 10,
+};
+
+const PCA_PASS: PassStats = {
+  numVars: 548,
+  filtering: {
+    missing_data: { varsProcessed: 1200, varsKept: 1200 },
+    ld: { varsProcessed: 1200, varsKept: 548 },
+  },
+};
+
+/** A result of the PCA of 200 individuals and 10 components. */
+const PCA_RESULT: PcaResult = {
+  analysis: "pca",
+  method: "pca",
+  individuals: Array.from({ length: 200 }, (_, i) => `s${String(i)}`),
+  numComps: 10,
+  numCompsFound: 199,
+  projections: Float64Array.from({ length: 2000 }, (_, i) => i / 100 - 10),
+  explainedVariancePercent: Float64Array.from(
+    { length: 10 },
+    (_, i) => 3.5 - i / 10,
+  ),
+  numVarsUsed: 548,
+  lingoesConstant: null,
+  negativeEigenvaluesPercent: null,
+  passStats: PCA_PASS,
+};
+
+/** The same, of the PCoA. */
+const PCOA_RESULT: PcaResult = {
+  ...PCA_RESULT,
+  method: "pcoa",
+  numCompsFound: 198,
+  numVarsUsed: null,
+  lingoesConstant: 0.023674522901958598,
+  negativeEigenvaluesPercent: 7.87126617431627,
+};
+
+describe("IP6 D1 the messages of the PCA", () => {
+  test.each([
+    ["the PCA over every individual", PCA_JOB],
+    ["the PCoA over every individual", { ...PCA_JOB, method: "pcoa" }],
+    [
+      "the PCA with a list of individuals",
+      { ...PCA_JOB, individuals: [...LIST_OF_THREE] },
+    ],
+    [
+      "the PCoA with a list of individuals",
+      { ...PCA_JOB, method: "pcoa", individuals: [...LIST_OF_THREE] },
+    ],
+  ])("parseToRunner accepts a run of %s", (_name, job) => {
+    const run = { ...RUN, job };
+    expect(parseToRunner(run)).toEqual({ ok: true, value: run });
+  });
+
+  test.each([
+    ["the PCA", PCA_RESULT],
+    ["the PCoA", PCOA_RESULT],
+    [
+      "one component of two individuals",
+      {
+        ...PCA_RESULT,
+        individuals: ["s000", "s001"],
+        numComps: 1,
+        numCompsFound: 1,
+        projections: Float64Array.of(18.841443681416774, -18.841443681416774),
+        explainedVariancePercent: Float64Array.of(100),
+      },
+    ],
+  ])("parseFromRunner accepts a result of %s", (_name, result) => {
+    const message = resultMessage(result);
+    expect(parseFromRunner(message)).toEqual({ ok: true, value: message });
+  });
+
+  test("parseFromRunner accepts the progress of a PCA", () => {
+    const progress = { ...PROGRESS, id: 3 };
+    expect(parseFromRunner(progress)).toEqual({ ok: true, value: progress });
+  });
+
+  test('a pca job whose method is "tsne" is unknownValue', () => {
+    const job = { ...PCA_JOB, method: "tsne" };
+    expect(parseToRunner({ ...RUN, job })).toEqual({
+      ok: false,
+      error: {
+        kind: "unknownValue",
+        messageKind: "run",
+        path: "job.method",
+        found: "tsne",
+        expected: ["pca", "pcoa"],
+      },
+    });
+  });
+
+  test("a pca job whose numCompsKept is 1.5 is wrongType", () => {
+    const job = { ...PCA_JOB, numCompsKept: 1.5 };
+    expect(parseToRunner({ ...RUN, job })).toMatchObject({
+      ok: false,
+      error: {
+        kind: "wrongType",
+        path: "job.numCompsKept",
+        expected: "a whole number",
+        found: "number",
+      },
+    });
+  });
+
+  test("a pca job without its method is missingFields, and one with the options of popnei is extraFields", () => {
+    const without = Object.fromEntries(
+      Object.entries(PCA_JOB).filter(([name]) => name !== "method"),
+    );
+    expect(parseToRunner({ ...RUN, job: without })).toEqual({
+      ok: false,
+      error: {
+        kind: "missingFields",
+        messageKind: "run",
+        path: "job",
+        fields: ["method"],
+      },
+    });
+    const job = { ...PCA_JOB, correctByLingoes: true };
+    expect(parseToRunner({ ...RUN, job })).toEqual({
+      ok: false,
+      error: {
+        kind: "extraFields",
+        messageKind: "run",
+        path: "job",
+        fields: ["correctByLingoes"],
+      },
+    });
+  });
+
+  test("a result whose projections are a list of numbers is wrongType", () => {
+    const result = { ...PCA_RESULT, projections: [...PCA_RESULT.projections] };
+    expect(parseFromRunner(resultMessage(result))).toMatchObject({
+      ok: false,
+      error: {
+        kind: "wrongType",
+        path: "result.projections",
+        expected: "a Float64Array",
+        found: "array",
+      },
+    });
+  });
+
+  test("a result of 1,999 projections for 200 individuals and 10 components is wrongLength", () => {
+    const result = {
+      ...PCA_RESULT,
+      projections: PCA_RESULT.projections.slice(0, 1999),
+    };
+    expect(parseFromRunner(resultMessage(result))).toEqual({
+      ok: false,
+      error: {
+        kind: "wrongLength",
+        messageKind: "result",
+        path: "result.projections",
+        expected: 2000,
+        found: 1999,
+      },
+    });
+  });
+
+  test("a result of 9 percentages for 10 components is wrongLength", () => {
+    const result = {
+      ...PCA_RESULT,
+      explainedVariancePercent: PCA_RESULT.explainedVariancePercent.slice(0, 9),
+    };
+    expect(parseFromRunner(resultMessage(result))).toEqual({
+      ok: false,
+      error: {
+        kind: "wrongLength",
+        messageKind: "result",
+        path: "result.explainedVariancePercent",
+        expected: 10,
+        found: 9,
+      },
+    });
+  });
+
+  test("a result of the PCA whose numVarsUsed is null is wrongType", () => {
+    const result = { ...PCA_RESULT, numVarsUsed: null };
+    expect(parseFromRunner(resultMessage(result))).toMatchObject({
+      ok: false,
+      error: { kind: "wrongType", path: "result.numVarsUsed", found: "null" },
+    });
+  });
+
+  test("a result of the PCoA whose lingoesConstant is null is wrongType", () => {
+    const result = { ...PCOA_RESULT, lingoesConstant: null };
+    expect(parseFromRunner(resultMessage(result))).toMatchObject({
+      ok: false,
+      error: {
+        kind: "wrongType",
+        path: "result.lingoesConstant",
+        found: "null",
+      },
+    });
+  });
+
+  test("a result of the PCA with the numbers of the PCoA, and one of the PCoA with numVarsUsed, are wrongType", () => {
+    const withConstant = { ...PCA_RESULT, lingoesConstant: 0 };
+    expect(parseFromRunner(resultMessage(withConstant))).toMatchObject({
+      ok: false,
+      error: {
+        kind: "wrongType",
+        path: "result.lingoesConstant",
+        found: "number",
+      },
+    });
+    const withPercent = { ...PCA_RESULT, negativeEigenvaluesPercent: 0 };
+    expect(parseFromRunner(resultMessage(withPercent))).toMatchObject({
+      ok: false,
+      error: {
+        kind: "wrongType",
+        path: "result.negativeEigenvaluesPercent",
+        found: "number",
+      },
+    });
+    const withUsed = { ...PCOA_RESULT, numVarsUsed: 548 };
+    expect(parseFromRunner(resultMessage(withUsed))).toMatchObject({
+      ok: false,
+      error: { kind: "wrongType", path: "result.numVarsUsed", found: "number" },
+    });
+  });
+
+  test("a result whose numComps is 1.5, or whose method is not one of the two, is refused", () => {
+    expect(
+      parseFromRunner(resultMessage({ ...PCA_RESULT, numComps: 1.5 })),
+    ).toMatchObject({
+      ok: false,
+      error: { kind: "wrongType", path: "result.numComps" },
+    });
+    expect(
+      parseFromRunner(resultMessage({ ...PCA_RESULT, method: "tsne" })),
+    ).toMatchObject({
+      ok: false,
+      error: { kind: "unknownValue", path: "result.method" },
+    });
+  });
+
+  test("parseFromRunner accepts the structured clone of any result of the principal components, and parseToRunner any run of them", () => {
+    fc.assert(
+      fc.property(
+        fc.record({
+          kind: fc.constant("result" as const),
+          id: whole,
+          key: text,
+          result: pcaResult,
+        }),
+        (message) => {
+          expect(parseFromRunner(structuredClone(message))).toEqual({
+            ok: true,
+            value: message,
+          });
+        },
+      ),
+    );
+    fc.assert(
+      fc.property(
+        fc.record({
+          kind: fc.constant("run" as const),
+          id: whole,
+          key: text,
+          job: pcaJob,
+        }),
+        (message) => {
+          expect(parseToRunner(message)).toEqual({ ok: true, value: message });
+        },
+      ),
+    );
   });
 });

@@ -85,7 +85,9 @@ export function firstProject(app: "popgen"): Project {
  * the analysis of the result: the diversity and `filterCounts` itself,
  * and not the statistics of each individual, whose pass has no filter,
  * nor the histograms of the variants, whose pass has the list and no
- * filter of the variants (docs/architecture.md, section 4).
+ * filter of the variants, nor the PCA, whose filters of missing data, MAF
+ * and LD can be its own in the place of the project's
+ * (docs/architecture.md, section 4; docs/specs/entry.md).
  */
 export function countsOf(r: JobResult): PassFound<JobResult> {
   const numVarsRead = variantsOfFile(r.passStats);
@@ -95,6 +97,7 @@ export function countsOf(r: JobResult): PassFound<JobResult> {
       return { numVarsRead, counts: writeCountsOf(r.passStats) };
     case "individualChecks":
     case "variantChecks":
+    case "pca":
       return { numVarsRead, counts: null };
   }
 }

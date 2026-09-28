@@ -3,9 +3,9 @@
  * file of the one load its worker holds, puts on it the list of the
  * individuals kept and then the filters of the variants of each request,
  * which count over the individuals of the list, runs the
- * diversity and the three analyses of the Variants step, the statistics of
+ * diversity, the three analyses of the Variants step, the statistics of
  * each individual, the histograms of the variants and the counts of the
- * filters, writes the filtered variants as a `.nei` file, and says what to
+ * filters, and the principal components, a PCA or a PCoA, writes the filtered variants as a `.nei` file, and says what to
  * answer when popnei refuses or something breaks
  * (docs/specs/worker/runner.md).
  *
@@ -17,6 +17,8 @@
 import {
   calcPerIndividualStats,
   calcPerVarDistribs,
+  doPcaFromVariants,
+  doPcoaFromVariants,
   init,
   openVars,
   openVcf,
@@ -29,6 +31,8 @@ import type {
   StatsDistrib,
   Step,
   Variants,
+  VariantsPcaResult,
+  VariantsPcoaResult,
 } from "popnei";
 
 import type { Result } from "../core/result.ts";
@@ -47,6 +51,8 @@ import type {
   LoadFormat,
   Opened,
   PassStats,
+  PcaJob,
+  PcaResult,
   Progress,
   VariantChecksJob,
   VariantChecksResult,
@@ -231,6 +237,8 @@ function arraysOf(result: JobResult): readonly (Float64Array | Uint32Array)[] {
       ];
     case "filterCounts":
       return [];
+    case "pca":
+      return [result.projections, result.explainedVariancePercent];
   }
 }
 
@@ -388,6 +396,8 @@ export function createRunner(): Runner {
         return runVariantChecks(pass, job);
       case "filterCounts":
         return runFilterCounts(pass, job);
+      case "pca":
+        return runPca(pass, job, individuals);
     }
   }
 
@@ -427,6 +437,7 @@ function stepsOf(job: Job): Steps {
     case "diversity":
     case "variantChecks":
     case "filterCounts":
+    case "pca":
       return { individuals: job.individuals, filters: job.filters };
   }
 }
@@ -521,24 +532,37 @@ function putFilter(variants: Variants, filter: VariantFilter): void {
   }
 }
 
-/** Why the runner cannot run a job, or `null` when it can, both defects of
+/** Why the runner cannot run a job, or `null` when it can, all defects of
     the page, checked before any step is put: an empty list of individuals,
     which core never sends, since an analysis cannot start when the filters
-    keep no individual; and, of a diversity, two populations of one name,
-    of which popnei would keep the last. */
+    keep no individual; of a diversity, two populations of one name,
+    of which popnei would keep the last; and of the principal components,
+    fewer than 1 component to keep. */
 function whyNotToRun(job: Job): string | null {
   const why = whyNotTheList(stepsOf(job).individuals);
-  if (why !== null || job.analysis !== "diversity") {
+  if (why !== null) {
     return why;
   }
-  const names = new Set<string>();
-  for (const [name] of job.pops) {
-    if (names.has(name)) {
-      return `two populations named ${JSON.stringify(name)}`;
+  switch (job.analysis) {
+    case "diversity": {
+      const names = new Set<string>();
+      for (const [name] of job.pops) {
+        if (names.has(name)) {
+          return `two populations named ${JSON.stringify(name)}`;
+        }
+        names.add(name);
+      }
+      return null;
     }
-    names.add(name);
+    case "pca":
+      return job.numCompsKept < 1
+        ? `numCompsKept ${String(job.numCompsKept)}: the principal components keep 1 at least`
+        : null;
+    case "individualChecks":
+    case "variantChecks":
+    case "filterCounts":
+      return null;
   }
-  return null;
 }
 
 /** Why the runner cannot write a job, or `null` when it can: an empty
@@ -726,6 +750,120 @@ function runFilterCounts(pass: Pass, job: FilterCountsJob): Answer<JobResult> {
     passStats: passStatsOf(answer.value, job.filters),
   };
   return { kind: "ok", value: result };
+}
+
+/**
+ * Runs the principal components of the job's method over the pass and
+ * keeps the first `numCompsKept` components. Each options object of popnei
+ * is written with its keys alone, and never made from the job: popnei
+ * refuses a key it does not know. The PCA asks for no weights of the
+ * variants, which makes one pass, and counts every allele but the major one
+ * the same, so that a variant of more than two alleles is not refused; the
+ * PCoA asks for Lingoes' correction, which popnei does not make by default,
+ * as the owner decided on 27 September 2026.
+ */
+function runPca(
+  pass: Pass,
+  job: PcaJob,
+  individuals: readonly string[],
+): Answer<JobResult> {
+  switch (job.method) {
+    case "pca": {
+      const answer = passOf(pass, (variants) =>
+        doPcaFromVariants(variants, {
+          numPrinComps: 0,
+          transformToBiallelic: true,
+        }),
+      );
+      if (answer.kind !== "ok") {
+        return answer;
+      }
+      return {
+        kind: "ok",
+        value: pcaResultOf(answer.value, job, individuals, {
+          numVarsUsed: answer.value.usedVars.length,
+          lingoesConstant: null,
+          negativeEigenvaluesPercent: null,
+        }),
+      };
+    }
+    case "pcoa": {
+      const answer = passOf(pass, (variants) =>
+        doPcoaFromVariants(variants, { correctByLingoes: true }),
+      );
+      if (answer.kind !== "ok") {
+        return answer;
+      }
+      return {
+        kind: "ok",
+        value: pcaResultOf(answer.value, job, individuals, {
+          numVarsUsed: null,
+          lingoesConstant: answer.value.lingoesConstant,
+          negativeEigenvaluesPercent: answer.value.negativeEigenvaluesPercent,
+        }),
+      };
+    }
+  }
+}
+
+/** The fields of a `PcaResult` that one method has and the other gives as
+    `null`. */
+type OfTheMethod = Pick<
+  PcaResult,
+  "numVarsUsed" | "lingoesConstant" | "negativeEigenvaluesPercent"
+>;
+
+/**
+ * The `PcaResult` of popnei's, cut to the first `numCompsKept` components:
+ * new arrays of the projections, each row the first `numComps` numbers of
+ * popnei's row, and of the first `numComps` percentages. Throws a defect
+ * when popnei's individuals are not those the pass was to give, the job's
+ * list or, when it has none, those of the open, in their order, or when its
+ * projections are not the individuals × its components, since the numbers
+ * would then be read under other names.
+ */
+function pcaResultOf(
+  found: VariantsPcaResult | VariantsPcoaResult,
+  job: PcaJob,
+  ofTheOpen: readonly string[],
+  ofTheMethod: OfTheMethod,
+): PcaResult {
+  const expected = job.individuals ?? ofTheOpen;
+  const { individuals, numComps: numCompsFound } = found;
+  if (
+    individuals.length !== expected.length ||
+    individuals.some((name, index) => name !== expected[index])
+  ) {
+    throw new Error(
+      "popnei_web defect: the principal components are not of the individuals the pass was to give, in their order",
+    );
+  }
+  const numIndividuals = individuals.length;
+  if (found.projections.length !== numIndividuals * numCompsFound) {
+    throw new Error(
+      `popnei_web defect: popnei gave ${String(found.projections.length)} projections for ${String(numIndividuals)} individuals and ${String(numCompsFound)} components`,
+    );
+  }
+  const numComps = Math.min(job.numCompsKept, numCompsFound);
+  const projections = new Float64Array(numIndividuals * numComps);
+  for (let row = 0; row < numIndividuals; row += 1) {
+    const start = row * numCompsFound;
+    projections.set(
+      found.projections.subarray(start, start + numComps),
+      row * numComps,
+    );
+  }
+  return {
+    analysis: "pca",
+    method: job.method,
+    individuals,
+    numComps,
+    numCompsFound,
+    projections,
+    explainedVariancePercent: found.explainedVariancePercent.slice(0, numComps),
+    ...ofTheMethod,
+    passStats: passStatsOf(found.passStats, job.filters),
+  };
 }
 
 /**
