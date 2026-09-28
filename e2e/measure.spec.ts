@@ -53,6 +53,12 @@
  * and the .nei file of 19,161,178 bytes, each on a new page just after
  * the load, and the ratio of their medians.
  *
+ * And the time of columnAllows (IP5 D4, docs/specs/core/project.md, "How
+ * it runs"), in both engines: the page frozen by a metadata file of
+ * 10,000 rows and 50 columns read, and by a project file that holds its
+ * read opened, each MEASURE_REPEATS times on a new page, as the longest
+ * time between two frames and, in Chromium, the longest task.
+ *
  * The time to write and read a project file, and to make a key, is
  * measured in node, by e2e/measure/projectFile.ts.
  *
@@ -2306,6 +2312,272 @@ test("VS7 D4 the table at 10,000 individuals: the page frozen when the column Ke
       ["the column Kept changed by a list", ...stats(changed, ms)],
       ["a header sorts the rows", ...stats(sorted, ms)],
       ["a threshold of the individuals committed", ...stats(moved, ms)],
+    ],
+  );
+});
+
+// ---------------------------------------------------------------------
+// The time of columnAllows, a metadata file of 10,000 rows and 50
+// columns (IP5 D4).
+
+/** The rows and the columns of the metadata file of IP5 D4. */
+const ALLOWS_ROWS = 10_000;
+const ALLOWS_COLUMNS = 50;
+
+/**
+ * A CSV of `ALLOWS_ROWS` rows and `ALLOWS_COLUMNS` columns whose names are
+ * those of the VCF of `tableVcf`, s0000 to s9999, the largest table the
+ * architecture plans for. After the name and a column of 7 populations,
+ * the columns go by fours, so that `columnAllows` walks most of them to
+ * the end: decimal numbers with a missing cell in every 50, integers,
+ * texts of 13 levels, and two values, yes and no.
+ */
+function allowsCsv(): string {
+  const head = [
+    "IID",
+    "pop",
+    ...Array.from(
+      { length: ALLOWS_COLUMNS - 2 },
+      (_, j) => `c${String(j).padStart(2, "0")}`,
+    ),
+  ];
+  const cell = (i: number, j: number): string => {
+    switch (j % 4) {
+      case 0:
+        return (i + j) % 50 === 0 ? "" : `${String((i * (j + 3)) % 997)}.25`;
+      case 1:
+        return String((i * (j + 7)) % 1009);
+      case 2:
+        return `level${String((i + j) % 13)}`;
+      default:
+        return (i + j) % 3 === 0 ? "yes" : "no";
+    }
+  };
+  const rows = Array.from({ length: ALLOWS_ROWS }, (_, i) =>
+    [
+      `s${String(i).padStart(4, "0")}`,
+      `p${String(i % 7)}`,
+      ...Array.from({ length: ALLOWS_COLUMNS - 2 }, (_, j) => cell(i, j)),
+    ].join(","),
+  );
+  return `${head.join(",")}\n${rows.join("\n")}\n`;
+}
+
+/** What `watchFrames` keeps in the page. */
+interface Watched {
+  /** `performance.now()` at each frame, in its callback. */
+  readonly frames: number[];
+  /** The tasks over 50 ms, in Chromium, which reports them. */
+  readonly longTasks: { readonly start: number; readonly duration: number }[];
+  /** The time of the last change of an input, null until one. */
+  change: number | null;
+}
+
+/** Put in the page before its scripts: the time of every frame, the
+    long tasks where the engine reports them, and the last change of an
+    input, the pick of a file. */
+function watchFrames(): void {
+  const watched: Watched = { frames: [], longTasks: [], change: null };
+  Object.assign(globalThis, { measureWatched: watched });
+  const tick = (): void => {
+    watched.frames.push(performance.now());
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+  document.addEventListener(
+    "change",
+    () => {
+      watched.change = performance.now();
+    },
+    true,
+  );
+  if (PerformanceObserver.supportedEntryTypes.includes("longtask")) {
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        watched.longTasks.push({
+          start: entry.startTime,
+          duration: entry.duration,
+        });
+      }
+    }).observe({ type: "longtask" });
+  }
+}
+
+/** What the page was frozen by, from the last change of an input to now. */
+interface Frozen {
+  /** From the change to the end, the work of the worker included. */
+  readonly total: number;
+  /** The longest time between two frames after the change: the longest
+      task of the page with the frame that follows it. */
+  readonly gap: number;
+  /** The longest task over 50 ms after the change, where the engine
+      reports them: 0 when none was, null in an engine that does not. */
+  readonly longTask: number | null;
+}
+
+/** Waits for two frames and 300 ms more, then gives what froze the page
+    since the last change of an input. */
+async function frozenSinceChange(page: Page): Promise<Frozen> {
+  return page.evaluate(async () => {
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setTimeout(resolve, 300);
+        });
+      });
+    });
+    const end = performance.now();
+    const watched = (globalThis as unknown as { measureWatched: Watched })
+      .measureWatched;
+    const start = watched.change;
+    if (start === null) throw new Error("no input changed");
+    const { frames } = watched;
+    let gap = 0;
+    for (let k = 1; k < frames.length; k++) {
+      const before = frames[k - 1] ?? 0;
+      const after = frames[k] ?? 0;
+      if (after >= start && before <= end) gap = Math.max(gap, after - before);
+    }
+    const reports =
+      PerformanceObserver.supportedEntryTypes.includes("longtask");
+    const tasks = watched.longTasks
+      .filter((t) => t.start + t.duration >= start)
+      .map((t) => t.duration);
+    return {
+      total: end - start,
+      gap,
+      longTask: reports ? Math.max(0, ...tasks) : null,
+    };
+  });
+}
+
+/**
+ * The time the page is frozen by `columnAllows` (docs/specs/core/project.md,
+ * "How it runs"; the plan of stage 4, IP5 D4): a metadata file of 10,000
+ * rows and 50 columns read in the Individuals step, with the VCF of its
+ * 10,000 individuals loaded, and a project file that holds its read
+ * opened, each on a new page `REPEATS` times; and the Individuals step
+ * shown after the opening, which finds the answer kept. The CSV is
+ * written into MEASURE_DIR, and the project saved there by the first run.
+ */
+test("IP5 D4 the time of columnAllows: the page frozen by a metadata file of 10,000 rows and 50 columns read, and by a project that holds it opened", async ({
+  browser,
+  browserName,
+}) => {
+  test.setTimeout(900_000);
+  const vcf = await tableVcf();
+  const csv = join(MEASURE_DIR, "allows_10000x50.csv");
+  const text = allowsCsv();
+  await writeFile(csv, text);
+  const size = `${ALLOWS_ROWS.toLocaleString("en-US")} rows, ${String(ALLOWS_COLUMNS)} columns`;
+  const project = join(MEASURE_DIR, `allows_${browserName}.popnei.json`);
+
+  const reads: Frozen[] = [];
+  for (let k = 0; k < REPEATS; k++) {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await page.addInitScript(watchFrames);
+    await page.goto("popgen.html#variants");
+    await pick(page, "Variants file", vcf);
+    await expect(
+      page
+        .getByRole("region", { name: "Variants file" })
+        .getByText(`${TABLE_INDIVIDUALS.toLocaleString("en-US")} individuals`),
+    ).toBeVisible({ timeout: 120_000 });
+    await goTo(page, "Individuals");
+    await pick(page, "Metadata file", csv);
+    await expect(page.getByText(size)).toBeVisible({ timeout: 60_000 });
+    reads.push(await frozenSinceChange(page));
+    if (k === 0) {
+      await page
+        .getByRole("banner")
+        .getByRole("button", { name: "Save project" })
+        .click();
+      const dialog = page.getByRole("dialog", { name: "Save the project" });
+      const download = page.waitForEvent("download");
+      await dialog.getByRole("button", { name: "Save", exact: true }).click();
+      await (await download).saveAs(project);
+    }
+    await context.close();
+  }
+
+  const opens: Frozen[] = [];
+  const shown: number[] = [];
+  for (let k = 0; k < REPEATS; k++) {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await page.addInitScript(watchFrames);
+    await page.goto("popgen.html#variants");
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    const chooser = page.waitForEvent("filechooser");
+    await page
+      .getByRole("banner")
+      .getByRole("button", { name: "Open project…" })
+      .click();
+    await (await chooser).setFiles(project);
+    await expect(page.getByRole("status").last()).toHaveText(/^Opened /, {
+      timeout: 60_000,
+    });
+    opens.push(await frozenSinceChange(page));
+    shown.push(
+      await frozenBy(
+        page
+          .getByRole("navigation", { name: "Steps" })
+          .getByRole("link", { name: /^Individuals/ }),
+      ),
+    );
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Individuals" }),
+    ).toBeVisible();
+    await expect(page.getByText(size)).toBeVisible();
+    await context.close();
+  }
+
+  const longest = (xs: readonly Frozen[]): [string, string] => {
+    const tasks = xs.map((x) => x.longTask);
+    return tasks.every((t): t is number => t !== null)
+      ? stats(tasks, ms)
+      : ["not reported by the engine", ""];
+  };
+  report(
+    `The time of columnAllows: a metadata file of ${size}, ${(text.length / 1e6).toFixed(2)} MB, and a project file of ${(statSync(project).size / 1e6).toFixed(2)} MB that holds its read`,
+    `${machine(browser, browserName)}; the VCF of ${TABLE_INDIVIDUALS.toLocaleString("en-US")} individuals and ${String(TABLE_VARIANTS)} variants loaded before the read; each on a new page, ${String(REPEATS)} times; the gap is the longest time between two frames after the pick, the longest task with the frame after it`,
+    ["what", "median", "range"],
+    [
+      [
+        "read: the pick to the columns shown and 2 frames and 300 ms more, the worker's read included",
+        ...stats(
+          reads.map((x) => x.total),
+          ms,
+        ),
+      ],
+      [
+        "read: the longest gap between two frames",
+        ...stats(
+          reads.map((x) => x.gap),
+          ms,
+        ),
+      ],
+      ["read: the longest task over 50 ms", ...longest(reads)],
+      [
+        "opening: the pick to Opened and 2 frames and 300 ms more",
+        ...stats(
+          opens.map((x) => x.total),
+          ms,
+        ),
+      ],
+      [
+        "opening: the longest gap between two frames",
+        ...stats(
+          opens.map((x) => x.gap),
+          ms,
+        ),
+      ],
+      ["opening: the longest task over 50 ms", ...longest(opens)],
+      [
+        "the Individuals step shown after the opening, the click to the task after the next frame",
+        ...stats(shown, ms),
+      ],
     ],
   );
 });
