@@ -1219,7 +1219,12 @@ nothing on the screen says the things the lines above do not.
   button, popnei's refusal or a file the browser can no longer read, and
   the focus was on the button, the focus moves in the same way to the
   words of the error, since the Count has no heading of its own to take
-  it, as the block of a check does. When the result of a check leaves
+  it, as the block of a check does. When the Count becomes locked with
+  the focus on it, by filters of individuals found to keep nobody once
+  the statistics it waited for arrive, or by an Undo to such filters, the
+  focus moves to the part that holds its disabled button and the reason
+  beside it, which takes the focus for that and is not a stop of the Tab
+  key, since a disabled button cannot hold the focus. When the result of a check leaves
   the page with the focus in it, on the table of the individuals, a tab,
   the panel or a CSV button of a histogram, by an Undo or a change that
   removes it, the focus moves to the heading of the block of that check,
