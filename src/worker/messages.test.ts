@@ -16,6 +16,7 @@ import type {
 import {
   describeMessageError,
   messageOf,
+  PROTOCOL_VERSION,
   parseFromFilesRunner,
   parseFromRunner,
   parseToFilesRunner,
@@ -135,7 +136,7 @@ describe("WS2 D1 the messages accepted", () => {
   test.each([
     [
       "the ready of the calculation worker",
-      { kind: "ready", protocol: 2, popneiVersion: "0.1.0" },
+      { kind: "ready", protocol: 3, popneiVersion: "0.1.0" },
     ],
     ["opened", { kind: "opened", id: 1, individuals: ["i1", "i2"], ploidy: 2 }],
     ["the progress of a run", PROGRESS],
@@ -173,7 +174,7 @@ describe("WS2 D1 the messages accepted", () => {
   });
 
   test.each([
-    ["the ready of the light worker", { kind: "ready", protocol: 2 }],
+    ["the ready of the light worker", { kind: "ready", protocol: 3 }],
     ["an individuals file read", INDIVIDUALS_READ],
     [
       "an individuals file refused",
@@ -479,7 +480,7 @@ describe("WS2 D2 the messages refused", () => {
     expect(
       parseFromFilesRunner({
         kind: "ready",
-        protocol: 2,
+        protocol: 3,
         popneiVersion: "0.1.0",
       }),
     ).toEqual({
@@ -494,7 +495,7 @@ describe("WS2 D2 the messages refused", () => {
   });
 
   test("a ready of the calculation worker without a popnei version", () => {
-    expect(parseFromRunner({ kind: "ready", protocol: 2 })).toEqual({
+    expect(parseFromRunner({ kind: "ready", protocol: 3 })).toEqual({
       ok: false,
       error: {
         kind: "missingFields",
@@ -552,17 +553,17 @@ describe("WS2 D2 the messages refused", () => {
 });
 
 describe("WS2 D2 the messages refused: the version", () => {
-  test("a ready of protocol 3 with no other field, from the calculation worker", () => {
-    expect(parseFromRunner({ kind: "ready", protocol: 3 })).toEqual({
+  test("a ready of protocol 4 with no other field, from the calculation worker", () => {
+    expect(parseFromRunner({ kind: "ready", protocol: 4 })).toEqual({
       ok: false,
-      error: { kind: "otherProtocol", found: 3 },
+      error: { kind: "otherProtocol", found: 4 },
     });
   });
 
-  test("a ready of protocol 3 with no other field, from the light worker", () => {
-    expect(parseFromFilesRunner({ kind: "ready", protocol: 3 })).toEqual({
+  test("a ready of protocol 4 with no other field, from the light worker", () => {
+    expect(parseFromFilesRunner({ kind: "ready", protocol: 4 })).toEqual({
       ok: false,
-      error: { kind: "otherProtocol", found: 3 },
+      error: { kind: "otherProtocol", found: 4 },
     });
   });
 
@@ -570,18 +571,18 @@ describe("WS2 D2 the messages refused: the version", () => {
     ["calculation", parseFromRunner],
     ["light", parseFromFilesRunner],
   ])(
-    "a ready of protocol 3 with fields of its own, from the %s worker, is otherProtocol and not a refusal of its fields",
+    "a ready of protocol 4 with fields of its own, from the %s worker, is otherProtocol and not a refusal of its fields",
     (_name, parse) => {
       expect(
         parse({
           kind: "ready",
-          protocol: 3,
+          protocol: 4,
           popneiVersion: 3,
           features: ["pca"],
         }),
       ).toEqual({
         ok: false,
-        error: { kind: "otherProtocol", found: 3 },
+        error: { kind: "otherProtocol", found: 4 },
       });
     },
   );
@@ -630,12 +631,13 @@ const FILTERS_AT_0_05 = [
 const INDIVIDUAL_CHECKS_JOB: IndividualChecksJob = {
   analysis: "individualChecks",
   fileId: "load-a",
-  filters: FILTERS_AT_0_05,
+  filters: [],
 };
 const VARIANT_CHECKS_JOB: VariantChecksJob = {
   analysis: "variantChecks",
   fileId: "load-a",
   filters: [],
+  individuals: null,
   minNumIndividuals: 0,
   numBins: 40,
   range: [0, 1],
@@ -648,6 +650,7 @@ const FILTER_COUNTS_JOB: FilterCountsJob = {
     { kind: "obs_het", maxAllowedObsHet: 0.9 },
     { kind: "maf", maxAllowedMaf: 0.95 },
   ],
+  individuals: null,
 };
 const WRITE_JOB: WriteJob = {
   format: "nei",
@@ -1076,21 +1079,100 @@ describe("VS1 D2 the messages of stage 3 refused: the version", () => {
   test.each([
     ["calculation", parseFromRunner],
     ["light", parseFromFilesRunner],
-  ])("a ready of protocol 3, from the %s worker", (_name, parse) => {
-    expect(parse({ kind: "ready", protocol: 3 })).toEqual({
+  ])('a ready of protocol "3", from the %s worker', (_name, parse) => {
+    expect(parse({ kind: "ready", protocol: "3" })).toMatchObject({
       ok: false,
-      error: { kind: "otherProtocol", found: 3 },
+      error: { kind: "wrongType", path: "protocol", found: "string" },
+    });
+  });
+});
+
+// The jobs of the three checks of the Variants step in the order of 28
+// September 2026, the individuals first (docs/specs/worker/messages.md,
+// "How it is verified").
+
+const LIST_OF_THREE = ["s000", "s003", "s004"] as const;
+
+describe("IP2 D1 the worker in the new order: the messages", () => {
+  test("an individualChecks job with a filter is refused", () => {
+    const job = { ...INDIVIDUAL_CHECKS_JOB, filters: FILTERS_AT_0_05 };
+    expect(parseToRunner({ ...RUN, job })).toEqual({
+      ok: false,
+      error: {
+        kind: "wrongLength",
+        messageKind: "run",
+        path: "job.filters",
+        expected: 0,
+        found: 1,
+      },
+    });
+  });
+
+  test("an individualChecks job with a list of individuals is refused", () => {
+    const job = { ...INDIVIDUAL_CHECKS_JOB, individuals: [...LIST_OF_THREE] };
+    expect(parseToRunner({ ...RUN, job })).toEqual({
+      ok: false,
+      error: {
+        kind: "extraFields",
+        messageKind: "run",
+        path: "job",
+        fields: ["individuals"],
+      },
+    });
+  });
+
+  test.each([
+    ["the histograms of the variants", VARIANT_CHECKS_JOB],
+    ["the counts of the filters", FILTER_COUNTS_JOB],
+  ])("a job of %s with a list of individuals is accepted", (_name, job) => {
+    const run = { ...RUN, job: { ...job, individuals: [...LIST_OF_THREE] } };
+    expect(parseToRunner(run)).toEqual({ ok: true, value: run });
+  });
+
+  test.each([
+    ["variantChecks", VARIANT_CHECKS_JOB],
+    ["filterCounts", FILTER_COUNTS_JOB],
+  ])("a %s job without individuals is refused", (_name, job) => {
+    const without = Object.fromEntries(
+      Object.entries(job).filter(([name]) => name !== "individuals"),
+    );
+    expect(parseToRunner({ ...RUN, job: without })).toEqual({
+      ok: false,
+      error: {
+        kind: "missingFields",
+        messageKind: "run",
+        path: "job",
+        fields: ["individuals"],
+      },
+    });
+  });
+
+  test.each([
+    ["variantChecks", VARIANT_CHECKS_JOB],
+    ["filterCounts", FILTER_COUNTS_JOB],
+  ])("a %s job whose individuals are one text is refused", (_name, job) => {
+    const run = { ...RUN, job: { ...job, individuals: "s000" } };
+    expect(parseToRunner(run)).toMatchObject({
+      ok: false,
+      error: { kind: "wrongType", path: "job.individuals" },
     });
   });
 
   test.each([
     ["calculation", parseFromRunner],
     ["light", parseFromFilesRunner],
-  ])('a ready of protocol "2", from the %s worker', (_name, parse) => {
-    expect(parse({ kind: "ready", protocol: "2" })).toMatchObject({
-      ok: false,
-      error: { kind: "wrongType", path: "protocol", found: "string" },
-    });
+  ])(
+    "a ready of protocol 2, stage 3's, with no other field, from the %s worker",
+    (_name, parse) => {
+      expect(parse({ kind: "ready", protocol: 2 })).toEqual({
+        ok: false,
+        error: { kind: "otherProtocol", found: 2 },
+      });
+    },
+  );
+
+  test("the version of the messages is 3", () => {
+    expect(PROTOCOL_VERSION).toBe(3);
   });
 });
 
@@ -1190,7 +1272,7 @@ const workerStop = fc.oneof(
 const fromRunnerMessage = fc.oneof(
   fc.record({
     kind: fc.constant("ready" as const),
-    protocol: fc.constant(2),
+    protocol: fc.constant(3),
     popneiVersion: text,
   }),
   fc.record({
@@ -1309,7 +1391,7 @@ const fileRead = fc.oneof(
 );
 
 const fromFilesRunnerMessage = fc.oneof(
-  fc.record({ kind: fc.constant("ready" as const), protocol: fc.constant(2) }),
+  fc.record({ kind: fc.constant("ready" as const), protocol: fc.constant(3) }),
   fc.record({
     kind: fc.constant("individuals" as const),
     id: whole,
@@ -1354,12 +1436,13 @@ const diversityJob = fc.record({
 const individualChecksJob = fc.record({
   analysis: fc.constant("individualChecks" as const),
   fileId: text,
-  filters,
+  filters: fc.constant([] as const),
 });
 const variantChecksJob = fc.record({
   analysis: fc.constant("variantChecks" as const),
   fileId: text,
   filters: fc.constant([] as const),
+  individuals: individualsKept,
   minNumIndividuals: number,
   numBins: number,
   range: fc.tuple(number, number),
@@ -1368,6 +1451,7 @@ const filterCountsJob = fc.record({
   analysis: fc.constant("filterCounts" as const),
   fileId: text,
   filters,
+  individuals: individualsKept,
 });
 const writeJob = fc.record({
   format: fc.constant("nei" as const),

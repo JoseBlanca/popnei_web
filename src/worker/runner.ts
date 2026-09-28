@@ -1,7 +1,8 @@
 /**
  * The runner of the calculation worker: it loads popnei, opens the variants
- * file of the one load its worker holds, puts on it the filters of the
- * variants and the list of the individuals kept of each request, runs the
+ * file of the one load its worker holds, puts on it the list of the
+ * individuals kept and then the filters of the variants of each request,
+ * which count over the individuals of the list, runs the
  * diversity and the three analyses of the Variants step, the statistics of
  * each individual, the histograms of the variants and the counts of the
  * filters, writes the filtered variants as a `.nei` file, and says what to
@@ -104,8 +105,8 @@ export interface Runner {
   open(load: LoadToOpen, file: LoadFile): Answer<Opened>;
   /**
    * Runs the job over the load opened, first opening the file again when
-   * the steps of the `Variants` are not the job's, its filters of the
-   * variants and then its list of individuals, and gives `told` each
+   * the steps of the `Variants` are not the job's, its list of individuals
+   * and then its filters of the variants, and gives `told` each
    * `Progress` of popnei as it comes. `badRequest` for a run before the
    * open or of another load, an empty list of individuals and two
    * populations of one name. Throws what `told` throws, and a defect of
@@ -247,12 +248,13 @@ type Held =
       readonly individuals: readonly string[];
     };
 
-/** The steps a request asks of the `Variants`: its filters of the
-    variants, in their order, and then the list of the individuals kept,
-    `null` for every individual. */
+/** The steps a request asks of the `Variants`: the list of the
+    individuals kept, `null` for every individual, and then its filters of
+    the variants, in their order, which count over the individuals of the
+    list. */
 interface Steps {
-  readonly filters: readonly VariantFilter[];
   readonly individuals: readonly string[] | null;
+  readonly filters: readonly VariantFilter[];
 }
 
 /** A runner holding nothing; `loadPopnei` has to have given `ok`. */
@@ -288,8 +290,8 @@ export function createRunner(): Runner {
    * The `Variants` of the load with the steps of the request on it: as it
    * is when its steps are those; with them put on it when it holds no
    * step; otherwise freed and the file opened again, the steps put on the
-   * new one. The list of individuals goes after the filters, so that they
-   * count over every individual of the file.
+   * new one. The list of individuals goes first, so that the filters of
+   * the variants count over the individuals it keeps.
    */
   function variantsWithSteps(
     load: LoadToOpen,
@@ -313,16 +315,16 @@ export function createRunner(): Runner {
         return answerOfOpenAgain(thrown, file.name);
       }
     }
-    for (const filter of wanted.filters) {
+    if (wanted.individuals !== null) {
       try {
-        putFilter(variants, filter);
+        variants.filterIndividuals(wanted.individuals);
       } catch (thrown: unknown) {
         return answerOfPopnei(thrown, file.name);
       }
     }
-    if (wanted.individuals !== null) {
+    for (const filter of wanted.filters) {
       try {
-        variants.filterIndividuals(wanted.individuals);
+        putFilter(variants, filter);
       } catch (thrown: unknown) {
         return answerOfPopnei(thrown, file.name);
       }
@@ -403,8 +405,8 @@ export function createRunner(): Runner {
       return { kind: "badRequest", message: why };
     }
     const withSteps = variantsWithSteps(load, file, {
-      filters: job.filters,
       individuals: job.individuals,
+      filters: job.filters,
     });
     if (withSteps.kind !== "ok") {
       return withSteps;
@@ -415,16 +417,17 @@ export function createRunner(): Runner {
   return { open, run, write };
 }
 
-/** The steps a job asks for: its filters, and the list of individuals of
-    the diversity, the one job that carries one. */
+/** The steps a job asks for: its list of individuals, of every job but
+    the statistics of each individual, which read every individual, and
+    its filters of the variants. */
 function stepsOf(job: Job): Steps {
   switch (job.analysis) {
-    case "diversity":
-      return { filters: job.filters, individuals: job.individuals };
     case "individualChecks":
+      return { individuals: null, filters: job.filters };
+    case "diversity":
     case "variantChecks":
     case "filterCounts":
-      return { filters: job.filters, individuals: null };
+      return { individuals: job.individuals, filters: job.filters };
   }
 }
 
@@ -442,25 +445,27 @@ function openSource(load: LoadToOpen, file: LoadFile): Variants {
   }
 }
 
-/** Whether popnei's steps are those wanted: the filters, the same kinds in
-    the same order, each argument of a step `===` to the field of that name
-    of its filter; and then, when a list is wanted, the step of the
-    individuals naming the same individuals in the same order. */
+/** Whether popnei's steps are those wanted: first, when a list is wanted,
+    the step of the individuals naming the same individuals in the same
+    order; then the filters, the same kinds in the same order, each
+    argument of a step `===` to the field of that name of its filter. */
 function stepsAre(steps: readonly Step[], wanted: Steps): boolean {
-  const numSteps =
-    wanted.filters.length + (wanted.individuals === null ? 0 : 1);
-  if (steps.length !== numSteps) {
+  const numListSteps = wanted.individuals === null ? 0 : 1;
+  if (steps.length !== numListSteps + wanted.filters.length) {
     return false;
   }
   return steps.every((step, index) => {
-    const filter = wanted.filters[index];
-    if (filter !== undefined) {
-      return stepIsFilter(step, filter);
+    if (index < numListSteps) {
+      if (wanted.individuals === null) {
+        throw new Error("popnei_web defect: a step of a list not wanted");
+      }
+      return stepIsIndividuals(step, wanted.individuals);
     }
-    if (wanted.individuals === null) {
+    const filter = wanted.filters[index - numListSteps];
+    if (filter === undefined) {
       throw new Error("popnei_web defect: a step beyond those wanted");
     }
-    return stepIsIndividuals(step, wanted.individuals);
+    return stepIsFilter(step, filter);
   });
 }
 
@@ -654,7 +659,8 @@ function runIndividualChecks(
 }
 
 /**
- * Runs `calcPerVarDistribs` over every individual as one population, with
+ * Runs `calcPerVarDistribs` over the individuals of the pass, those of the
+ * job's list when it has one, as one population, with
  * the bins of the job, and gives one copy of the edges, which popnei's
  * three distributions share, and of each distribution its mean and its
  * counts.

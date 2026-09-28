@@ -12,8 +12,8 @@
 // header `IID,popcat`, which the flows give to the individuals file input
 // (docs/specs/worker/runner.md and docs/specs/analyses/diversity.md, "How it
 // is verified"). From panel.nei it writes the statistics of each
-// individual that popnei's calcPerIndividualStats gives with the missing
-// data filter of the variants at 0.05, to
+// individual that popnei's calcPerIndividualStats gives over every variant
+// of the file, with no filter, to
 // e2e/fixtures/panel_individual_stats.json, which the tests of core read,
 // since they may not call popnei (docs/specs/core/individualsKept.md, "How
 // it is verified").
@@ -100,16 +100,16 @@ console.log(
   `${pops} and panel_pops.csv: ${String(csv.trim().split("\n").length)} lines`,
 );
 
-// The statistics of each individual of panel.nei at 0.05: the individuals,
-// their missingGtRate and their obsHetRate, in the order of the file.
-// JSON.stringify writes each double as the shortest text that reads back
-// as the same double, and a NaN, an individual with no called genotype,
-// as null, which the tests read back as NaN.
-const MISSING_DATA_THRESHOLD = 0.05;
+// The statistics of each individual of panel.nei, over every variant of
+// the file with no filter, as the application calculates them from 28
+// September 2026: the individuals, their missingGtRate and their
+// obsHetRate, in the order of the file. `filters` is the filters they were
+// calculated with, none. JSON.stringify writes each double as the shortest
+// text that reads back as the same double, and a NaN, an individual with
+// no called genotype, as null, which the tests read back as NaN.
 const panel = openVars(readFileSync(join(fixtures, "panel.nei")));
 let individualStats;
 try {
-  panel.filterByMissingData(MISSING_DATA_THRESHOLD);
   individualStats = calcPerIndividualStats(panel);
 } finally {
   panel.free();
@@ -119,7 +119,7 @@ writeFileSync(
   statsPath,
   `${JSON.stringify(
     {
-      maxAllowedMissingRate: MISSING_DATA_THRESHOLD,
+      filters: [],
       individuals: individualStats.individuals,
       missingGtRate: [...individualStats.missingGtRate],
       obsHetRate: [...individualStats.obsHetRate],

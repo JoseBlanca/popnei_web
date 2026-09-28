@@ -294,9 +294,10 @@ describe("VS2 D2 the other cases of the spec", () => {
   });
 });
 
-/** The statistics of panel.nei at 0.05 that make_fixtures.mjs wrote with
-    popnei, a NaN written as null read back as NaN. */
-function panelStats(): IndividualStats & { readonly threshold: number } {
+/** The statistics of panel.nei over every variant, with no filter, that
+    make_fixtures.mjs wrote with popnei, a NaN written as null read back as
+    NaN. */
+function panelStats(): IndividualStats & { readonly numFilters: number } {
   const parsed: unknown = JSON.parse(
     readFileSync(
       new URL(
@@ -309,15 +310,14 @@ function panelStats(): IndividualStats & { readonly threshold: number } {
   if (
     typeof parsed !== "object" ||
     parsed === null ||
-    !("maxAllowedMissingRate" in parsed) ||
+    !("filters" in parsed) ||
     !("individuals" in parsed) ||
     !("missingGtRate" in parsed) ||
     !("obsHetRate" in parsed)
   ) {
     throw new Error("panel_individual_stats.json lacks a field");
   }
-  const { maxAllowedMissingRate, individuals, missingGtRate, obsHetRate } =
-    parsed;
+  const { filters, individuals, missingGtRate, obsHetRate } = parsed;
   const strings = (value: unknown): string[] =>
     Array.isArray(value) && value.every((v) => typeof v === "string")
       ? value.map(String)
@@ -326,11 +326,11 @@ function panelStats(): IndividualStats & { readonly threshold: number } {
     Float64Array.from(Array.isArray(value) ? value : [], (v: unknown) =>
       typeof v === "number" ? v : NaN,
     );
-  if (typeof maxAllowedMissingRate !== "number") {
-    throw new Error("panel_individual_stats.json has no threshold");
+  if (!Array.isArray(filters)) {
+    throw new Error("panel_individual_stats.json has no list of filters");
   }
   return {
-    threshold: maxAllowedMissingRate,
+    numFilters: filters.length,
     individuals: strings(individuals),
     missingGtRate: numbers(missingGtRate),
     obsHetRate: numbers(obsHetRate),
@@ -338,9 +338,9 @@ function panelStats(): IndividualStats & { readonly threshold: number } {
 }
 
 describe("VS2 D2 popnei's numbers of panel.nei", () => {
-  test("popnei's statistics at 0.05 give 125 individuals at a missing rate of 0.03, and 48 or 119 of them at a heterozygosity of 0.35 or 0.38", () => {
+  test("popnei's statistics with no filter give 116 individuals at a missing rate of 0.03, and 42 or 111 of them at a heterozygosity of 0.35 or 0.38", () => {
     const stats = panelStats();
-    expect(stats.threshold).toBe(0.05);
+    expect(stats.numFilters).toBe(0);
     expect(stats.individuals).toHaveLength(200);
     const run = (filters: readonly IndividualFilter[]): IndividualsKept => {
       const kept = individualsKept(
@@ -356,14 +356,14 @@ describe("VS2 D2 popnei's numbers of panel.nei", () => {
       kind: "missing_data",
       maxAllowedMissingRate: 0.03,
     };
-    const of125 = run([missing]);
-    expect(of125.counts).toEqual([
-      { kind: "missing_data", given: 200, kept: 125 },
+    const of116 = run([missing]);
+    expect(of116.counts).toEqual([
+      { kind: "missing_data", given: 200, kept: 116 },
     ]);
-    if (of125.list.kind !== "known" || of125.list.individuals === null) {
-      throw new Error("the list of 125 is not a list");
+    if (of116.list.kind !== "known" || of116.list.individuals === null) {
+      throw new Error("the list of 116 is not a list");
     }
-    expect(of125.list.individuals.slice(0, 3)).toEqual([
+    expect(of116.list.individuals.slice(0, 3)).toEqual([
       "s000",
       "s003",
       "s004",
@@ -371,14 +371,14 @@ describe("VS2 D2 popnei's numbers of panel.nei", () => {
     expect(
       run([missing, { kind: "obs_het", maxAllowedObsHet: 0.35 }]).counts,
     ).toEqual([
-      { kind: "missing_data", given: 200, kept: 125 },
-      { kind: "obs_het", given: 125, kept: 48 },
+      { kind: "missing_data", given: 200, kept: 116 },
+      { kind: "obs_het", given: 116, kept: 42 },
     ]);
     expect(
       run([missing, { kind: "obs_het", maxAllowedObsHet: 0.38 }]).counts,
     ).toEqual([
-      { kind: "missing_data", given: 200, kept: 125 },
-      { kind: "obs_het", given: 125, kept: 119 },
+      { kind: "missing_data", given: 200, kept: 116 },
+      { kind: "obs_het", given: 116, kept: 111 },
     ]);
   });
 });

@@ -1,7 +1,8 @@
 /**
  * The tests of the bins of the statistics of each individual, from
  * docs/specs/analyses/individualChecks.md, "The bins of its histograms":
- * popnei's statistics of panel.nei at 0.05, read from the fixture that
+ * popnei's statistics of panel.nei over every variant, with no filter,
+ * read from the fixture that
  * e2e/fixtures/make_fixtures.mjs writes with popnei, against the counts
  * and the edges that numpy 2.5.3 gave for `numpy.histogram(values,
  * bins=20)` on the same values, and the rules of a bin on small lists.
@@ -13,8 +14,8 @@ import { INDIVIDUAL_BINS, binValues } from "./histogram.ts";
 import type { Bins } from "./histogram.ts";
 
 /** The proportions of missing genotypes and the observed heterozygosity
-    of each individual of panel.nei at 0.05, a null of the JSON read back
-    as NaN. */
+    of each individual of panel.nei over every variant, with no filter, a
+    null of the JSON read back as NaN. */
 function panelStats(): {
   readonly missingGtRate: Float64Array;
   readonly obsHetRate: Float64Array;
@@ -31,12 +32,13 @@ function panelStats(): {
   if (
     typeof parsed !== "object" ||
     parsed === null ||
-    !("maxAllowedMissingRate" in parsed) ||
-    parsed.maxAllowedMissingRate !== 0.05 ||
+    !("filters" in parsed) ||
+    !Array.isArray(parsed.filters) ||
+    parsed.filters.length !== 0 ||
     !("missingGtRate" in parsed) ||
     !("obsHetRate" in parsed)
   ) {
-    throw new Error("panel_individual_stats.json is not of the filter at 0.05");
+    throw new Error("panel_individual_stats.json is not of no filter");
   }
   const numbers = (value: unknown): Float64Array =>
     Float64Array.from(Array.isArray(value) ? value : [], (v: unknown) =>
@@ -58,43 +60,42 @@ function binsOf(values: readonly number[], numBins = INDIVIDUAL_BINS): Bins {
 }
 
 describe("VS2 D4 the bins of the statistics of each individual", () => {
-  test("the proportions of missing genotypes of panel.nei at 0.05 give numpy's counts and edges", () => {
+  test("the proportions of missing genotypes of panel.nei with no filter give numpy's counts and edges", () => {
     const stats = panelStats();
     expect(stats.missingGtRate).toHaveLength(200);
     const bins = binValues(stats.missingGtRate, INDIVIDUAL_BINS);
     expect(bins).not.toBeNull();
     expect(Array.from(bins?.counts ?? [])).toEqual([
-      3, 4, 2, 7, 8, 20, 17, 27, 17, 20, 23, 12, 15, 6, 12, 1, 1, 3, 0, 2,
+      4, 0, 7, 5, 12, 10, 20, 19, 27, 12, 24, 15, 13, 10, 12, 1, 5, 1, 2, 1,
     ]);
     // The same doubles, compared exactly.
     expect(Array.from(bins?.edges ?? [])).toEqual([
-      0.016493055555555556, 0.017838541666666666, 0.01918402777777778,
-      0.02052951388888889, 0.021875, 0.023220486111111112, 0.02456597222222222,
-      0.02591145833333333, 0.027256944444444445, 0.028602430555555558,
-      0.029947916666666668, 0.03129340277777778, 0.032638888888888884,
-      0.033984375, 0.03532986111111111, 0.036675347222222224,
-      0.03802083333333334, 0.03936631944444444, 0.04071180555555556,
-      0.04205729166666666, 0.043402777777777776,
+      0.0175, 0.018833333333333334, 0.02016666666666667, 0.021500000000000002,
+      0.022833333333333334, 0.02416666666666667, 0.025500000000000002,
+      0.026833333333333334, 0.028166666666666666, 0.029500000000000002,
+      0.030833333333333334, 0.03216666666666667, 0.0335, 0.034833333333333334,
+      0.036166666666666666, 0.037500000000000006, 0.03883333333333333,
+      0.04016666666666667, 0.0415, 0.042833333333333334, 0.04416666666666667,
     ]);
     expect(bins?.numNaN).toBe(0);
   });
 
-  test("the observed heterozygosities of panel.nei at 0.05 give numpy's counts and edges", () => {
+  test("the observed heterozygosities of panel.nei with no filter give numpy's counts and edges", () => {
     const stats = panelStats();
     expect(stats.obsHetRate).toHaveLength(200);
     const bins = binValues(stats.obsHetRate, INDIVIDUAL_BINS);
     expect(bins).not.toBeNull();
     expect(Array.from(bins?.counts ?? [])).toEqual([
-      3, 3, 3, 10, 8, 13, 18, 18, 22, 19, 22, 18, 16, 8, 8, 3, 2, 4, 0, 2,
+      4, 5, 4, 8, 10, 10, 16, 16, 23, 21, 20, 14, 17, 11, 5, 7, 3, 3, 1, 2,
     ]);
     expect(Array.from(bins?.edges ?? [])).toEqual([
-      0.3176991150442478, 0.3216796301440534, 0.3256601452438589,
-      0.32964066034366446, 0.33362117544347, 0.33760169054327555,
-      0.3415822056430811, 0.34556272074288663, 0.3495432358426922,
-      0.3535237509424977, 0.3575042660423033, 0.3614847811421088,
-      0.3654652962419144, 0.36944581134171994, 0.37342632644152546,
-      0.37740684154133103, 0.38138735664113654, 0.3853678717409421,
-      0.3893483868407477, 0.3933289019405532, 0.39730941704035877,
+      0.32112436115843274, 0.3247233155143042, 0.32832226987017565,
+      0.33192122422604714, 0.3355201785819186, 0.33911913293779006,
+      0.34271808729366154, 0.34631704164953303, 0.34991599600540446,
+      0.35351495036127595, 0.35711390471714743, 0.36071285907301887,
+      0.36431181342889035, 0.3679107677847618, 0.37150972214063327,
+      0.37510867649650476, 0.3787076308523762, 0.3823065852082477,
+      0.38590553956411916, 0.3895044939199906, 0.3931034482758621,
     ]);
     expect(bins?.numNaN).toBe(0);
   });

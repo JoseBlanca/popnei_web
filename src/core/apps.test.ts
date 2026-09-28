@@ -170,12 +170,16 @@ describe("VS3 D5 countsOf, writeCountsOf and individualStatsOf", () => {
     expect(countsOf(result)).toStrictEqual({ numVarsRead: 1200, counts: null });
   });
 
-  test("countsOf of a result of the statistics of each individual and of filterCounts gives both the variants of the file and the counts", () => {
-    const counts = { analysis: "filterCounts", passStats: MISSING_PASS };
-    expect(countsOf(individualChecksResult(MISSING_PASS))).toStrictEqual({
+  test("countsOf of a result of the statistics of each individual, whose pass has no filter, gives the variants of the file and no counts", () => {
+    const pass: PassStats = { numVars: 1200, filtering: {} };
+    expect(countsOf(individualChecksResult(pass))).toStrictEqual({
       numVarsRead: 1200,
-      counts,
+      counts: null,
     });
+  });
+
+  test("countsOf of a result of filterCounts gives both the variants of the file and the counts", () => {
+    const counts = { analysis: "filterCounts", passStats: MISSING_PASS };
     expect(
       countsOf({ analysis: "filterCounts", passStats: MISSING_PASS }),
     ).toStrictEqual({ numVarsRead: 1200, counts });

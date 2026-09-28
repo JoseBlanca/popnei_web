@@ -154,6 +154,7 @@ describe("VS3 D1 the counts of the filters: the rest of the module", () => {
       analysis: "filterCounts",
       fileId: VARIANTS_ID,
       filters: THREE_FILTERS,
+      individuals: null,
     };
     expect(jobs).toEqual([expected]);
   });

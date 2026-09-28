@@ -221,14 +221,14 @@ function needs(): null {
   return null;
 }
 
-/** Builds the request, the filters of the variants of the project in
-    their order, and sends it through `c`. Throws a defect when the project
-    has no variants file, which `projectNeeds` rules out. */
+/** Builds the request, with no filter, since the statistics are over
+    every variant of the file, and sends it through `c`. Throws a defect
+    when the project has no variants file, which `projectNeeds` rules out. */
 function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
   if (p.variants === null) {
     throw defect("the statistics of each individual were run with no file.");
   }
-  return c.run({ analysis: ID, fileId: p.variants.fileId, filters: p.filters });
+  return c.run({ analysis: ID, fileId: p.variants.fileId, filters: [] });
 }
 
 /** The warnings of a result, given the project its request was made from:

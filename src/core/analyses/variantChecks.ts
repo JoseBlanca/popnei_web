@@ -158,9 +158,9 @@ function needs(): null {
   return null;
 }
 
-/** Builds the request, with no filter, and sends it through `c`. Throws a
-    defect when the project has no variants file, which `projectNeeds`
-    rules out. */
+/** Builds the request, with no filter and no list of individuals, and
+    sends it through `c`. Throws a defect when the project has no variants
+    file, which `projectNeeds` rules out. */
 function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
   if (p.variants === null) {
     throw defect("the histograms of the variants were run with no file.");
@@ -169,6 +169,7 @@ function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
     analysis: ID,
     fileId: p.variants.fileId,
     filters: [],
+    individuals: null,
     minNumIndividuals: VARIANT_MIN_NUM_INDIVIDUALS,
     numBins: VARIANT_BINS,
     range: VARIANT_RANGE,

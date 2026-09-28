@@ -6,9 +6,10 @@
  * 0.05 and panel_pops.csv, the column popcat: the ready state with the
  * populations kept, and with those left empty; a Run with the thresholds
  * at 0.03 and 0.38 and no statistics of each individual, which says it
- * waits for them and then gives p0 with 32 individuals, 0.3524, 0.3566
- * and 0.9089, the numbers popnei's release js-v0.1.0-dev.2 gave in node
- * on 26 September 2026; a Stop during the wait; the statistics refused,
+ * waits for them and then gives p0 with 29 individuals, 0.3537, 0.3587
+ * and 0.9311, the numbers popnei's release js-v0.1.0-dev.3 gave in node
+ * on 28 September 2026 with the list of the individuals kept before the
+ * filter of the variants; a Stop during the wait; the statistics refused,
  * in their words; and no population left. axe at each state reached.
  */
 import { readFile } from "node:fs/promises";
@@ -30,13 +31,13 @@ const OBS_HET_LABEL =
   "Maximum observed heterozygosity of an individual, from 0 to 1";
 const CALCULATE = "Calculate the statistics of each individual";
 const STATS_CAPTION =
-  "The statistics of the 200 individuals of panel.nei, over the 1,152 variants the filters kept.";
-const PASS_119 = "119 of the 200 individuals of panel.nei pass the filters.";
+  "The statistics of the 200 individuals of panel.nei, over the 1,200 variants the filters kept.";
+const PASS_111 = "111 of the 200 individuals of panel.nei pass the filters.";
 
 const POPS_ALL =
   "3 populations: p0, 48 individuals; p2, 84 individuals; p1, 68 individuals";
-const POPS_119 =
-  "3 populations: p0, 32 individuals; p2, 50 individuals; p1, 37 individuals";
+const POPS_111 =
+  "3 populations: p0, 29 individuals; p2, 48 individuals; p1, 34 individuals";
 const RUN_WAITS =
   "Run calculates the statistics of each individual first, and the populations may lose individuals to the thresholds.";
 const P1_LEFT_OUT =
@@ -47,10 +48,10 @@ const WAIT_BAR = "Calculating the statistics of each individual";
 const STATS_FAILED =
   "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the diversity was not run. At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 in the Variants step and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version.";
 /** The reason of the lock when the threshold of 0.36 on the observed
-    heterozygosity keeps 132 individuals of panel.nei at 0.05, s000, the
-    one with a population, p0, not among them. */
+    heterozygosity keeps 134 individuals of panel.nei, s000, the one with a
+    population, p0, not among them. */
 const P0_EMPTIED =
-  "The 132 individuals kept have no population in popcat, so p0 has no individual left. Loosen the filters of individuals in the Variants step to keep it.";
+  "The 134 individuals kept have no population in popcat, so p0 has no individual left. Loosen the filters of individuals in the Variants step to keep it.";
 
 /** The twelve individuals of tetraploid.vcf.gz, in one population, A. */
 const TETRAPLOID_POPS = {
@@ -224,7 +225,7 @@ async function holdResults(worker: Worker): Promise<void> {
   });
 }
 
-test("VS7 D2 a Run with the thresholds at 0.03 and 0.38 and no statistics says it waits for them, then gives p0 with 32 individuals, 0.3524, 0.3566 and 0.9089, and axe", async ({
+test("VS7 D2 a Run with the thresholds at 0.03 and 0.38 and no statistics says it waits for them, then gives p0 with 29 individuals, 0.3537, 0.3587 and 0.9311, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -257,22 +258,22 @@ test("VS7 D2 a Run with the thresholds at 0.03 and 0.38 and no statistics says i
     (globalThis as unknown as { __release: () => void }).__release();
   });
   await expect(row(page, "p0")).toHaveText([
-    "32",
-    "0.3524",
-    "0.3566",
-    "0.9089",
+    "29",
+    "0.3537",
+    "0.3587",
+    "0.9311",
   ]);
   await expect(row(page, "p2")).toHaveText([
-    "50",
-    "0.3433",
-    "0.3491",
-    "0.9054",
+    "48",
+    "0.3429",
+    "0.3480",
+    "0.9015",
   ]);
   await expect(row(page, "p1")).toHaveText([
-    "37",
-    "0.3495",
-    "0.3542",
-    "0.9132",
+    "34",
+    "0.3508",
+    "0.3547",
+    "0.9015",
   ]);
   await expect(panel(page).getByText(WAIT_LINE)).toHaveCount(0);
   // Stop kept the focus from the statistics to the diversity, and gave it
@@ -317,7 +318,7 @@ test("VS7 D2 the ready state lists the populations the filters keep, before the 
   await calculateStatistics(page);
   await goTo(page, "Analyses");
   await expect(
-    line(page, "2 populations: p0, 32 individuals; p2, 50 individuals"),
+    line(page, "2 populations: p0, 29 individuals; p2, 48 individuals"),
   ).toBeVisible();
   await expect(line(page, P1_LEFT_OUT)).toBeVisible();
   await expect(line(page, RUN_WAITS)).toHaveCount(0);
@@ -332,10 +333,10 @@ test("VS7 D2 the ready state lists the populations the filters keep, before the 
     .getByRole("button", { name: "Clear the list to remove", exact: true })
     .click();
   await expect(
-    individuals(page).getByText(PASS_119, { exact: true }),
+    individuals(page).getByText(PASS_111, { exact: true }),
   ).toBeVisible();
   await goTo(page, "Analyses");
-  await expect(line(page, POPS_119)).toBeVisible();
+  await expect(line(page, POPS_111)).toBeVisible();
   await expect(line(page, P1_LEFT_OUT)).toHaveCount(0);
   await expect(line(page, RUN_WAITS)).toHaveCount(0);
   await expect(page.getByText(/ · 3 populations by popcat$/)).toBeVisible();
@@ -435,7 +436,7 @@ test("VS7 D2 thresholds that keep only individuals with no population lock the d
   page,
   makeAxeBuilder,
 }) => {
-  // s000 alone has a population; its observed heterozygosity, 0.3672, is
+  // s000 alone has a population; its observed heterozygosity, 0.3654, is
   // above the threshold of 0.36, which keeps others.
   const pops = await readFile(join(FIXTURES, "panel_pops.csv"), "utf8");
   const text = pops
@@ -481,9 +482,9 @@ test("VS7 D2 a threshold that leaves both populations empty locks the diversity 
   page,
   makeAxeBuilder,
 }) => {
-  // s000 in p0 and s001 in p1, the others with no population; at 0.05,
-  // their observed heterozygosity, 0.367 and 0.344, is above 0.34, which
-  // keeps 34 individuals.
+  // s000 in p0 and s001 in p1, the others with no population; their
+  // observed heterozygosity, 0.365 and 0.343, is above 0.34, which keeps
+  // 35 individuals.
   const rows = Array.from({ length: 200 }, (_, index) => {
     const name = `s${String(index).padStart(3, "0")}`;
     return `${name},${index === 0 ? "p0" : index === 1 ? "p1" : "NA"}`;
@@ -499,7 +500,7 @@ test("VS7 D2 a threshold that leaves both populations empty locks the diversity 
   await threshold(page, OBS_HET_SWITCH, OBS_HET_LABEL, "0.34");
   await goTo(page, "Analyses");
   const reason =
-    "The 34 individuals kept have no population in popcat, so none of the 2 populations has an individual left. Loosen the filters of individuals in the Variants step to keep them.";
+    "The 35 individuals kept have no population in popcat, so none of the 2 populations has an individual left. Loosen the filters of individuals in the Variants step to keep them.";
   const run = panel(page).getByRole("button", { name: "Run" });
   await expect(run).toBeDisabled();
   await expect(run).toHaveAccessibleDescription(reason);

@@ -317,8 +317,9 @@ export interface DiversityJob {
   /** The filters of the variants, in their order. */
   readonly filters: readonly VariantFilter[];
   /** The individuals kept by the filters of the individuals, in the order
-      of the variants file, which the runner puts after the filters of the
-      variants; `null` when the filters remove nobody, and never empty. */
+      of the variants file, which the runner puts before the filters of the
+      variants, so that they count over them; `null` when the filters
+      remove nobody, and never empty. */
   readonly individuals: readonly string[] | null;
   /** The populations, each with the individuals kept of the variants file
       it holds, none empty. */
@@ -356,15 +357,15 @@ export interface DiversityResult {
 }
 
 /** The request of the statistics of each individual, popnei's
-    `calcPerIndividualStats`, over the variants the filters keep and every
-    individual of the file (docs/specs/analyses/individualChecks.md). */
+    `calcPerIndividualStats`, over every variant and every individual of
+    the file, with no filter (docs/specs/analyses/individualChecks.md). */
 export interface IndividualChecksJob {
   /** The analysis the request is of. */
   readonly analysis: "individualChecks";
   /** The load id of the variants file it reads. */
   readonly fileId: string;
-  /** The filters of the variants, in their order. */
-  readonly filters: readonly VariantFilter[];
+  /** No filter: the statistics are over every variant of the file. */
+  readonly filters: readonly [];
 }
 
 /** The statistics of each individual, one number per individual of the
@@ -385,8 +386,8 @@ export interface IndividualChecksResult {
 }
 
 /** The request of the histograms of the variants, popnei's
-    `calcPerVarDistribs` over every variant and every individual of the
-    file as one population (docs/specs/analyses/variantChecks.md). */
+    `calcPerVarDistribs` over every variant of the file and the individuals
+    kept, as one population (docs/specs/analyses/variantChecks.md). */
 export interface VariantChecksJob {
   /** The analysis the request is of. */
   readonly analysis: "variantChecks";
@@ -394,6 +395,10 @@ export interface VariantChecksJob {
   readonly fileId: string;
   /** No filter: the histograms are of every variant of the file. */
   readonly filters: readonly [];
+  /** The individuals kept, in the order of the variants file, which the
+      runner puts on the variants; `null` when the filters of the
+      individuals remove nobody, and never empty. */
+  readonly individuals: readonly string[] | null;
   /** popnei's `minNumIndividuals`, 0, so that popnei bins the variants
       with few called genotypes too. */
   readonly minNumIndividuals: number;
@@ -436,6 +441,10 @@ export interface FilterCountsJob {
   readonly fileId: string;
   /** The filters of the variants, in their order. */
   readonly filters: readonly VariantFilter[];
+  /** The individuals kept, in the order of the variants file, which the
+      runner puts before the filters, so that they count over them; `null`
+      when the filters of the individuals remove nobody, and never empty. */
+  readonly individuals: readonly string[] | null;
 }
 
 /** The counts of the filters of the variants. */

@@ -4,7 +4,7 @@
  * worked example of three individuals and four variants, whose numbers
  * popnei gave in node; the request; the CSV; the words of each refusal of
  * popnei; and the description of the histogram of the proportion of
- * missing genotypes of panel.nei at 0.05, from the fixture that
+ * missing genotypes of panel.nei with no filter, from the fixture that
  * e2e/fixtures/make_fixtures.mjs writes with popnei. The tests of the key
  * are elsewhere.
  */
@@ -119,7 +119,7 @@ function recordingClient(): {
 }
 
 /** The proportions of missing genotypes of each individual of panel.nei
-    at 0.05, from the fixture. */
+    over every variant, with no filter, from the fixture. */
 function panelMissingGtRate(): Float64Array {
   const parsed: unknown = JSON.parse(
     readFileSync(
@@ -133,20 +133,21 @@ function panelMissingGtRate(): Float64Array {
   if (
     typeof parsed !== "object" ||
     parsed === null ||
-    !("maxAllowedMissingRate" in parsed) ||
-    parsed.maxAllowedMissingRate !== 0.05 ||
+    !("filters" in parsed) ||
+    !Array.isArray(parsed.filters) ||
+    parsed.filters.length !== 0 ||
     !("missingGtRate" in parsed) ||
     !Array.isArray(parsed.missingGtRate)
   ) {
-    throw new Error("panel_individual_stats.json is not of the filter at 0.05");
+    throw new Error("panel_individual_stats.json is not of no filter");
   }
   return Float64Array.from(parsed.missingGtRate, (v: unknown) =>
     typeof v === "number" ? v : NaN,
   );
 }
 
-/** The statistics of each individual of panel.nei at 0.05, from the
-    fixture, as a result of the 1,152 variants that filter keeps. */
+/** The statistics of each individual of panel.nei, from the fixture, as a
+    result of the 1,200 variants of the file. */
 function panelResult(): IndividualChecksResult {
   const parsed: unknown = JSON.parse(
     readFileSync(
@@ -173,7 +174,7 @@ function panelResult(): IndividualChecksResult {
     obsHetRate: parsed.obsHetRate.map((v: unknown) =>
       typeof v === "number" ? v : NaN,
     ),
-    numVars: 1152,
+    numVars: 1200,
   });
 }
 
@@ -222,15 +223,15 @@ describe("VS3 D1 the statistics of each individual: the worked example", () => {
     expect(individualChecks.numCheckNumbers(project())).toBe(3);
   });
 
-  test("checkNumbers of the statistics of panel.nei at 0.05 gives the check numbers of the spec", () => {
+  test("checkNumbers of the statistics of panel.nei gives the check numbers of the spec", () => {
     // Exact: a project file compares its check numbers exactly, so a
     // mean summed in another order would differ from a saved one.
     expect(individualChecks.checkNumbers(panelResult())).toEqual([
-      1152, 0.028472222222222204, 0.3541326613885106,
+      1200, 0.0297, 0.3542891741075382,
     ]);
   });
 
-  test("run sends the job with the filters of the project in their order", () => {
+  test("run sends the job with no filter, whatever the project's", () => {
     const filters: readonly VariantFilter[] = [
       { kind: "missing_data", maxAllowedMissingRate: 0.05 },
       { kind: "obs_het", maxAllowedObsHet: 0.9 },
@@ -241,7 +242,7 @@ describe("VS3 D1 the statistics of each individual: the worked example", () => {
     const expected: IndividualChecksJob = {
       analysis: "individualChecks",
       fileId: VARIANTS_ID,
-      filters,
+      filters: [],
     };
     expect(jobs).toEqual([expected]);
   });
@@ -447,22 +448,22 @@ describe("VS3 D1 the statistics of each individual: refusalText", () => {
 });
 
 describe("VS3 D1 the statistics of each individual: the descriptions", () => {
-  test("the proportion of missing genotypes of panel.nei at 0.05, with the threshold 0.03", () => {
+  test("the proportion of missing genotypes of panel.nei, with the threshold 0.03", () => {
     const bins = binValues(panelMissingGtRate(), INDIVIDUAL_BINS);
     if (bins === null) {
       throw new Error("panel.nei gave no bins");
     }
     // The bin the threshold 0.03 splits.
-    expect(bins.edges[10]).toBe(0.029947916666666668);
-    expect(bins.edges[11]).toBe(0.03129340277777778);
+    expect(bins.edges[9]).toBe(0.029500000000000002);
+    expect(bins.edges[10]).toBe(0.030833333333333334);
     expect(
       individualHistogramDescription(
         "missingGenotypes",
-        binsAround(bins.edges, bins.counts, 10),
+        binsAround(bins.edges, bins.counts, 9),
         0.03,
       ),
     ).toBe(
-      "The proportion of missing genotypes of 200 individuals, in 20 bins from 0.0165 to 0.0434. The threshold 0.03 keeps the 10 bins up to it, 125 individuals, splits the bin from 0.0299 to 0.0313, 23 individuals, and removes the 9 bins above it, 52 individuals.",
+      "The proportion of missing genotypes of 200 individuals, in 20 bins from 0.0175 to 0.0442. The threshold 0.03 keeps the 9 bins up to it, 104 individuals, splits the bin from 0.0295 to 0.0308, 12 individuals, and removes the 10 bins above it, 84 individuals.",
     );
   });
 
@@ -478,7 +479,7 @@ describe("VS3 D1 the statistics of each individual: the descriptions", () => {
     expect(
       individualHistogramDescription("observedHeterozygosity", rows, null),
     ).toBe(
-      "The observed heterozygosity of 200 individuals, in 20 bins from 0.0165 to 0.0434.",
+      "The observed heterozygosity of 200 individuals, in 20 bins from 0.0175 to 0.0442.",
     );
   });
 

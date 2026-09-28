@@ -48,7 +48,7 @@ import type {
  * is raised with any change to a message, to `Job` or `JobResult`, or to a
  * type of protocol.ts that a message carries.
  */
-export const PROTOCOL_VERSION = 2;
+export const PROTOCOL_VERSION = 3;
 
 /** A request of the page to the calculation worker. */
 export type ToRunner =
@@ -1005,8 +1005,9 @@ function checkJob(value: unknown, place: Place): Checked<Job> {
     case "diversity":
       return checkDiversityJob(record, place);
     case "individualChecks":
+      return checkIndividualChecksJob(record, place);
     case "filterCounts":
-      return checkFiltersJob(record, place, tag);
+      return checkFilterCountsJob(record, place);
     case "variantChecks":
       return checkVariantChecksJob(record, place);
   }
@@ -1064,15 +1065,13 @@ function checkDiversityJob(
   });
 }
 
-/** The fields of a request that holds its pass alone, the load and the
-    filters of the variants: the statistics of each individual,
-    docs/specs/analyses/individualChecks.md, and the counts of the filters,
-    filterCounts.md. */
-function checkFiltersJob(
+/** The fields of the request of the statistics of each individual,
+    docs/specs/analyses/individualChecks.md: the load alone, whose filters
+    are none. */
+function checkIndividualChecksJob(
   record: object,
   place: Place,
-  analysis: "individualChecks" | "filterCounts",
-): Checked<IndividualChecksJob | FilterCountsJob> {
+): Checked<IndividualChecksJob> {
   const wrong = exactFields(record, place, ["analysis", "fileId", "filters"]);
   if (wrong !== null) {
     return wrong;
@@ -1081,26 +1080,29 @@ function checkFiltersJob(
   if (!fileId.ok) {
     return fileId;
   }
-  const filters = field(record, "filters", place, listOf(checkVariantFilter));
+  const filters = field(record, "filters", place, noFilters);
   if (!filters.ok) {
     return filters;
   }
-  return accepted({ analysis, fileId: fileId.value, filters: filters.value });
+  return accepted({
+    analysis: "individualChecks",
+    fileId: fileId.value,
+    filters: filters.value,
+  });
 }
 
-/** The fields of the request of the histograms of the variants,
-    docs/specs/analyses/variantChecks.md, whose filters are none. */
-function checkVariantChecksJob(
+/** The fields of the request of the counts of the filters,
+    docs/specs/analyses/filterCounts.md: its pass alone, the load, the
+    filters of the variants and the list of the individuals kept. */
+function checkFilterCountsJob(
   record: object,
   place: Place,
-): Checked<VariantChecksJob> {
+): Checked<FilterCountsJob> {
   const wrong = exactFields(record, place, [
     "analysis",
     "fileId",
     "filters",
-    "minNumIndividuals",
-    "numBins",
-    "range",
+    "individuals",
   ]);
   if (wrong !== null) {
     return wrong;
@@ -1113,8 +1115,60 @@ function checkVariantChecksJob(
   if (!filters.ok) {
     return filters;
   }
+  const individuals = field(record, "individuals", place, isTextsOrNull);
+  if (!individuals.ok) {
+    return individuals;
+  }
+  return accepted({
+    analysis: "filterCounts",
+    fileId: fileId.value,
+    filters: filters.value,
+    individuals: individuals.value,
+  });
+}
+
+/** The filters of a job that reads none: a list of filters, and empty. */
+function noFilters(value: unknown, place: Place): Checked<readonly []> {
+  const filters = listOf(checkVariantFilter)(value, place);
+  if (!filters.ok) {
+    return filters;
+  }
   if (filters.value.length !== 0) {
-    return wrongLength(inner(place, "filters"), 0, filters.value.length);
+    return wrongLength(place, 0, filters.value.length);
+  }
+  return accepted([]);
+}
+
+/** The fields of the request of the histograms of the variants,
+    docs/specs/analyses/variantChecks.md, whose filters are none, with the
+    list of the individuals kept. */
+function checkVariantChecksJob(
+  record: object,
+  place: Place,
+): Checked<VariantChecksJob> {
+  const wrong = exactFields(record, place, [
+    "analysis",
+    "fileId",
+    "filters",
+    "individuals",
+    "minNumIndividuals",
+    "numBins",
+    "range",
+  ]);
+  if (wrong !== null) {
+    return wrong;
+  }
+  const fileId = field(record, "fileId", place, isText);
+  if (!fileId.ok) {
+    return fileId;
+  }
+  const filters = field(record, "filters", place, noFilters);
+  if (!filters.ok) {
+    return filters;
+  }
+  const individuals = field(record, "individuals", place, isTextsOrNull);
+  if (!individuals.ok) {
+    return individuals;
   }
   const minNumIndividuals = field(record, "minNumIndividuals", place, isNumber);
   if (!minNumIndividuals.ok) {
@@ -1131,7 +1185,8 @@ function checkVariantChecksJob(
   return accepted({
     analysis: "variantChecks",
     fileId: fileId.value,
-    filters: [],
+    filters: filters.value,
+    individuals: individuals.value,
     minNumIndividuals: minNumIndividuals.value,
     numBins: numBins.value,
     range: range.value,

@@ -4,10 +4,11 @@
  * "How it is verified"; docs/specs/steps/variants.md, "The statistics of
  * each individual" and "How it is checked", stage 3), on
  * e2e/fixtures/panel.nei, 1,200 variants of 200 individuals, with the
- * numbers popnei's release js-v0.1.0-dev.2 gave in node on 26 September
- * 2026: the statistics at 0.05, s000 0.0260 and 0.3672, and its two
- * histograms; the table sorted with the keyboard alone, s082 first at
- * 0.0434, and the sort announced; the CSV of the table and of the bins
+ * numbers popnei's release js-v0.1.0-dev.3 gave in node on 28 September
+ * 2026: the statistics over every variant of the file, with no filter
+ * from that day, s000 0.0283 and 0.3654, and its two histograms; the
+ * table sorted with the keyboard alone, s082 first at 0.0442, and the
+ * sort announced; the CSV of the table and of the bins
  * of each histogram; the column Kept of a list applied, and the line in
  * its place for a list refused; the missing data filter of the variants
  * moved, the statistics removed with the words of the change, and back
@@ -27,7 +28,7 @@ const FIXTURES = join(import.meta.dirname, "fixtures");
 const CALCULATE = "Calculate the statistics of each individual";
 const MISSING_LABEL = "Maximum proportion of missing genotypes, from 0 to 1";
 const CAPTION =
-  "The statistics of the 200 individuals of panel.nei, over the 1,152 variants the filters kept.";
+  "The statistics of the 200 individuals of panel.nei, over the 1,200 variants the filters kept.";
 const MISSING_TITLE = "Proportion of missing genotypes of each individual";
 const OBS_HET_TITLE = "Observed heterozygosity of each individual";
 const REMOVE_LABEL = "Individuals to remove, one name per line";
@@ -150,7 +151,7 @@ async function applyList(
   await expect(section(page).getByText(/is not applied yet/)).toHaveCount(0);
 }
 
-test("VS7 D1 the statistics at 0.05: s000 0.0260 and 0.3672, the caption, the versions, the focus on the heading, the two histograms, and axe", async ({
+test("VS7 D1 the statistics of panel.nei: s000 0.0283 and 0.3654, the caption, the versions, the focus on the heading, the two histograms, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -173,8 +174,8 @@ test("VS7 D1 the statistics at 0.05: s000 0.0260 and 0.3672, the caption, the ve
     ),
   ).toBeVisible();
   await expect(rowOf(page, "s000").getByRole("gridcell")).toHaveText([
-    "0.0260",
-    "0.3672",
+    "0.0283",
+    "0.3654",
   ]);
   await expect(
     section(page).getByText("200 individuals; the CSV holds them all.", {
@@ -196,7 +197,7 @@ test("VS7 D1 the statistics at 0.05: s000 0.0260 and 0.3672, the caption, the ve
   await expect(
     histogram(page, MISSING_TITLE).locator("svg.chart"),
   ).toHaveAccessibleName(
-    /The proportion of missing genotypes of 200 individuals, in 20 bins from 0\.0165 to 0\.0434\./,
+    /The proportion of missing genotypes of 200 individuals, in 20 bins from 0\.0175 to 0\.0442\./,
   );
   // No individual of panel.nei lacks a heterozygosity.
   await expect(section(page).getByText(/not in the histogram/)).toHaveCount(0);
@@ -326,7 +327,7 @@ test("VS7 D1 no individual with a called genotype: no histogram of the heterozyg
   await expect(histogram(page, MISSING_TITLE)).toBeVisible();
 });
 
-test("VS7 D1 the table sorted with the keyboard alone: into the table, up to the headers, Enter twice, s082 first at 0.0434, each sort announced, and axe", async ({
+test("VS7 D1 the table sorted with the keyboard alone: into the table, up to the headers, Enter twice, s082 first at 0.0442, each sort announced, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -369,7 +370,7 @@ test("VS7 D1 the table sorted with the keyboard alone: into the table, up to the
   );
   const first = table(page).getByRole("row").nth(1);
   await expect(first.getByRole("rowheader")).toHaveText("s082");
-  await expect(first.getByRole("gridcell").first()).toHaveText("0.0434");
+  await expect(first.getByRole("gridcell").first()).toHaveText("0.0442");
   expect(await focusedInTable()).toBe(true);
   await expectNoViolations(makeAxeBuilder);
 });
@@ -473,7 +474,7 @@ test("VS7 D1 the CSV of the table: panel.individual_stats.csv, its header, 200 r
   expect(lines[0]).toBe("individual,missing_genotypes,observed_heterozygosity");
   expect(lines).toHaveLength(202);
   expect(lines.at(-1)).toBe("");
-  expect(lines[1]).toBe("s000,0.026041666666666668,0.3672014260249554");
+  expect(lines[1]).toBe("s000,0.028333333333333332,0.3653516295025729");
 });
 
 test("VS7 D1 the CSVs of the bins of the two histograms: their names, their headers, 20 rows, and the first bin of each", async ({
@@ -484,12 +485,12 @@ test("VS7 D1 the CSVs of the bins of the two histograms: their names, their head
     [
       MISSING_TITLE,
       "panel.individual_missing_rate_bins.csv",
-      /^0\.016493055555555556,0\.017838541666666666,3,$/,
+      /^0\.0175,0\.018833333333333334,4,$/,
     ],
     [
       OBS_HET_TITLE,
       "panel.individual_obs_het_bins.csv",
-      /^0\.3176991150442478,[\d.]+,3,$/,
+      /^0\.32112436115843274,[\d.]+,4,$/,
     ],
   ] as const) {
     const downloading = page.waitForEvent("download");
@@ -583,8 +584,8 @@ test("VS7 D1 the missing data filter of the variants moved: the statistics remov
   await banner(page, "Undo").click();
   await expect(block(page).getByText(CAPTION, { exact: true })).toBeVisible();
   await expect(rowOf(page, "s000").getByRole("gridcell")).toHaveText([
-    "0.0260",
-    "0.3672",
+    "0.0283",
+    "0.3654",
   ]);
   // No calculation: no bar, no button, and no words of the removal.
   await expect(block(page).getByRole("progressbar")).toHaveCount(0);
@@ -691,8 +692,8 @@ test("VS7 D1 the column Kept: a list to remove applied marks s000 removed and s0
   ).toHaveCount(0);
   // The statistics read no filter of individuals, and stay.
   await expect(rowOf(page, "s000").getByRole("gridcell")).toHaveText([
-    "0.0260",
-    "0.3672",
+    "0.0283",
+    "0.3654",
   ]);
   await expectNoViolations(makeAxeBuilder);
 

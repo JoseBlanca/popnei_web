@@ -140,13 +140,19 @@ function needs(): null {
 }
 
 /** Builds the request of the Count, the filters of the variants of the
-    project in their order, and sends it through `c`. Throws a defect when
-    the project has no variants file, which `projectNeeds` rules out. */
+    project in their order and no list of individuals, and sends it through
+    `c`. Throws a defect when the project has no variants file, which
+    `projectNeeds` rules out. */
 function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
   if (p.variants === null) {
     throw defect("the counts of the filters were run with no file.");
   }
-  return c.run({ analysis: ID, fileId: p.variants.fileId, filters: p.filters });
+  return c.run({
+    analysis: ID,
+    fileId: p.variants.fileId,
+    filters: p.filters,
+    individuals: null,
+  });
 }
 
 /**

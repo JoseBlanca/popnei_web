@@ -2188,7 +2188,7 @@ for (const theme of ["light", "dark"] as const) {
       await thresholdsAt(page, "0.03", "0.38");
       await expect(
         individualLists(page).getByText(
-          "119 of the 200 individuals of panel.nei pass the filters.",
+          "111 of the 200 individuals of panel.nei pass the filters.",
         ),
       ).toBeVisible();
       await saveIndividuals(page, "popgen-thresholds-counts");
@@ -2469,7 +2469,7 @@ for (const theme of ["light", "dark"] as const) {
       await expect(
         page
           .getByRole("main")
-          .getByText("2 populations: p0, 32 individuals; p2, 50 individuals"),
+          .getByText("2 populations: p0, 29 individuals; p2, 48 individuals"),
       ).toBeVisible();
       await save(page, `popgen-diversity-kept-${theme}`);
     });

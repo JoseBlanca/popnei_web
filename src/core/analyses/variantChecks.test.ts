@@ -194,6 +194,7 @@ describe("VS3 D1 the histograms of the variants", () => {
       analysis: "variantChecks",
       fileId: VARIANTS_ID,
       filters: [],
+      individuals: null,
       minNumIndividuals: 0,
       numBins: 40,
       range: [0, 1],

@@ -4,8 +4,8 @@
  * caption, the words of the statistics removed, the column Kept and its
  * words, the order of each column sorted with no value after every number
  * in both directions, the names of the CSV files, and the line of the
- * individuals with no heterozygosity. The order of panel.nei at 0.05 is
- * read from the fixture e2e/fixtures/make_fixtures.mjs wrote with popnei.
+ * individuals with no heterozygosity. The order of panel.nei, over every
+ * variant of the file, is read from the fixture e2e/fixtures/make_fixtures.mjs wrote with popnei.
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
@@ -68,7 +68,7 @@ function kept(individuals: readonly string[] | null): IndividualsKept {
   };
 }
 
-/** The rows of panel.nei with the missing data filter at 0.05. */
+/** The rows of panel.nei over every variant of the file, with no filter. */
 function panelRows(): readonly IndividualRow[] {
   const parsed: unknown = JSON.parse(
     readFileSync(
@@ -82,8 +82,9 @@ function panelRows(): readonly IndividualRow[] {
   if (
     typeof parsed !== "object" ||
     parsed === null ||
-    !("maxAllowedMissingRate" in parsed) ||
-    parsed.maxAllowedMissingRate !== 0.05 ||
+    !("filters" in parsed) ||
+    !Array.isArray(parsed.filters) ||
+    parsed.filters.length !== 0 ||
     !("individuals" in parsed) ||
     !Array.isArray(parsed.individuals) ||
     !("missingGtRate" in parsed) ||
@@ -91,7 +92,7 @@ function panelRows(): readonly IndividualRow[] {
     !("obsHetRate" in parsed) ||
     !Array.isArray(parsed.obsHetRate)
   ) {
-    throw new Error("panel_individual_stats.json is not of the filter at 0.05");
+    throw new Error("panel_individual_stats.json is not of no filter");
   }
   const { individuals, missingGtRate, obsHetRate } = parsed;
   return individuals.map((name: unknown, i) => {
@@ -324,7 +325,7 @@ describe("VS7 D1 the order of the table", () => {
     expect(names(rows)).toEqual(["b", "a", "d", "c"]);
   });
 
-  test("panel.nei at 0.05 sorted down by the proportion of missing genotypes puts s082 first, 0.0434", () => {
+  test("panel.nei sorted down by the proportion of missing genotypes puts s082 first, 0.0442", () => {
     const [first] = sortedRows(
       panelRows(),
       { column: "missingGenotypes", direction: "descending" },
@@ -332,7 +333,7 @@ describe("VS7 D1 the order of the table", () => {
     );
     expect(first?.individual).toBe("s082");
     expect(first === undefined ? null : individualCells(first, null)[1]).toBe(
-      "0.0434",
+      "0.0442",
     );
   });
 });

@@ -80,16 +80,16 @@ export function firstProject(app: "popgen"): Project {
  * gave when it had no filter; and the counts of its filters, a result of
  * `filterCounts`, for a result whose pass had the filters of the variants
  * of its request's project, told by the analysis of the result: the
- * diversity, the statistics of each individual and `filterCounts` itself,
- * and not the histograms of the variants, whose pass has no filter.
+ * diversity and `filterCounts` itself, and not the statistics of each
+ * individual nor the histograms of the variants, whose pass has no filter.
  */
 export function countsOf(r: JobResult): PassFound<JobResult> {
   const numVarsRead = variantsOfFile(r.passStats);
   switch (r.analysis) {
     case "diversity":
-    case "individualChecks":
     case "filterCounts":
       return { numVarsRead, counts: writeCountsOf(r.passStats) };
+    case "individualChecks":
     case "variantChecks":
       return { numVarsRead, counts: null };
   }

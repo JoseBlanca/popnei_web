@@ -4,12 +4,14 @@
  * (docs/specs/steps/variants.md, "The two thresholds", "What each filter
  * of the individuals kept" and "How it is checked", stage 3), on
  * e2e/fixtures/panel.nei, 1,200 variants of 200 individuals, with the
- * numbers popnei's release js-v0.1.0-dev.2 gave in node on 26 September
- * 2026 (docs/specs/core/individualsKept.md): with the missing data filter
- * of the variants at 0.05, a threshold of 0.03 on the missing rate keeps
- * 125 of the 200 individuals, and one of 0.38 on the heterozygosity 119 of
- * those 125; written, they give panel.filtered.nei of 170,122 bytes with
- * js-v0.1.0-dev.3 (runner.md, "How it is verified", "The written file").
+ * numbers popnei's release js-v0.1.0-dev.3 gave in node on 28 September
+ * 2026 (docs/specs/core/individualsKept.md): over every variant of the
+ * file, the statistics of each individual having no filter from that day,
+ * a threshold of 0.03 on the missing rate keeps 116 of the 200
+ * individuals, and one of 0.38 on the heterozygosity 111 of those 116;
+ * written before the missing data filter of the variants at 0.05, they
+ * give panel.filtered.nei of 156,818 bytes (runner.md, "How it is
+ * verified", "The written file").
  * axe at each state reached.
  */
 import { stat } from "node:fs/promises";
@@ -33,10 +35,10 @@ const OBS_HET_LINE =
   "An individual with no called genotype has no observed heterozygosity, and this filter removes it.";
 const CALCULATE = "Calculate the statistics of each individual";
 const CAPTION =
-  "The statistics of the 200 individuals of panel.nei, over the 1,152 variants the filters kept.";
-const KEPT_125 = "Kept 125 of the 200 individuals it was given.";
-const KEPT_119 = "Kept 119 of the 125 individuals it was given.";
-const PASS_119 = "119 of the 200 individuals of panel.nei pass the filters.";
+  "The statistics of the 200 individuals of panel.nei, over the 1,200 variants the filters kept.";
+const KEPT_116 = "Kept 116 of the 200 individuals it was given.";
+const KEPT_111 = "Kept 111 of the 116 individuals it was given.";
+const PASS_111 = "111 of the 200 individuals of panel.nei pass the filters.";
 const KNOWN_ONCE =
   "Known once the statistics of each individual are calculated for these filters of the variants.";
 const NONE_KEPT =
@@ -46,11 +48,11 @@ const NONE_KEPT_WHOLE =
 const MISSING_TITLE = "Proportion of missing genotypes of each individual";
 const OBS_HET_TITLE = "Observed heterozygosity of each individual";
 
-/** The size of panel.nei written with the missing data filter at 0.05
-    and the thresholds of the individuals at 0.03 and 0.38, which the
-    writeVars of popnei's js-v0.1.0-dev.3 gave in node (runner.md, "How it
-    is verified", "The written file"). */
-const WRITTEN_119 = 170_122;
+/** The size of panel.nei written with the individuals the thresholds at
+    0.03 and 0.38 keep, before the missing data filter of the variants at
+    0.05, which the writeVars of popnei's js-v0.1.0-dev.3 gave in node
+    (runner.md, "How it is verified", "The written file"). */
+const WRITTEN_111 = 156_818;
 
 /** The modifier of the keyboard's Undo on this engine's platform. */
 const UNDO = process.platform === "darwin" ? "Meta+z" : "Control+z";
@@ -161,14 +163,14 @@ async function thresholdsSet(page: Page): Promise<void> {
   // Heard as well as seen: the field's description changed under the
   // focus, which a screen reader does not read again.
   await expect(status(page)).toHaveText(
-    new RegExp(`(^| )${PASS_119.replaceAll(".", "\\.")}$`),
+    new RegExp(`(^| )${PASS_111.replaceAll(".", "\\.")}$`),
   );
   await expect(
-    section(page).getByText(PASS_119, { exact: true }),
+    section(page).getByText(PASS_111, { exact: true }),
   ).toBeVisible();
 }
 
-test("VS7 D1 the thresholds at 0.03 and 0.38: Kept 125 of the 200, then 119 of 125, the line of the individuals that pass, the column Kept, the lines beside the histograms and the summary line, and axe", async ({
+test("VS7 D1 the thresholds at 0.03 and 0.38: Kept 116 of the 200, then 111 of 116, the line of the individuals that pass, the column Kept, the lines beside the histograms and the summary line, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -190,14 +192,14 @@ test("VS7 D1 the thresholds at 0.03 and 0.38: Kept 125 of the 200, then 119 of 1
   );
   await commit(page, MISSING_LABEL, "0.03");
   await expect(field(page, MISSING_LABEL)).toHaveAccessibleDescription(
-    KEPT_125,
+    KEPT_116,
   );
   await expect(
-    section(page).getByText(KEPT_125, { exact: true }),
+    section(page).getByText(KEPT_116, { exact: true }),
   ).toBeVisible();
   await expect(
     section(page).getByText(
-      "125 of the 200 individuals of panel.nei pass the filters.",
+      "116 of the 200 individuals of panel.nei pass the filters.",
       { exact: true },
     ),
   ).toBeVisible();
@@ -209,14 +211,14 @@ test("VS7 D1 the thresholds at 0.03 and 0.38: Kept 125 of the 200, then 119 of 1
   ).toBeVisible();
   await expect(
     histogram(page, MISSING_TITLE).getByText(
-      "The threshold 0.03 splits the bin from 0.0299 to 0.0313, 23 individuals: the filter keeps those of its individuals at most 0.03 and removes the others.",
+      "The threshold 0.03 splits the bin from 0.0295 to 0.0308, 12 individuals: the filter keeps those of its individuals at most 0.03 and removes the others.",
       { exact: true },
     ),
   ).toBeVisible();
   await expect(
     histogram(page, MISSING_TITLE).locator("svg.chart"),
   ).toHaveAccessibleName(
-    /The threshold 0\.03 keeps the 10 bins up to it, 125 individuals, splits the bin from 0\.0299 to 0\.0313, 23 individuals, and removes the 9 bins above it, 52 individuals\./,
+    /The threshold 0\.03 keeps the 9 bins up to it, 104 individuals, splits the bin from 0\.0295 to 0\.0308, 12 individuals, and removes the 10 bins above it, 84 individuals\./,
   );
   await expectNoViolations(makeAxeBuilder);
 
@@ -225,10 +227,10 @@ test("VS7 D1 the thresholds at 0.03 and 0.38: Kept 125 of the 200, then 119 of 1
   await expect(field(page, OBS_HET_LABEL)).toHaveValue("0.5");
   await commit(page, OBS_HET_LABEL, "0.38");
   await expect(field(page, OBS_HET_LABEL)).toHaveAccessibleDescription(
-    `${KEPT_119} ${OBS_HET_LINE}`,
+    `${KEPT_111} ${OBS_HET_LINE}`,
   );
   await expect(
-    section(page).getByText(PASS_119, { exact: true }),
+    section(page).getByText(PASS_111, { exact: true }),
   ).toBeVisible();
   await expect(
     histogram(page, OBS_HET_TITLE).getByText(
@@ -239,14 +241,14 @@ test("VS7 D1 the thresholds at 0.03 and 0.38: Kept 125 of the 200, then 119 of 1
   await expect(banner(page, "Undo")).toHaveAccessibleDescription(
     "Undo: the filter of individuals by observed heterozygosity changed",
   );
-  // The column Kept: s000, 0.0260 and 0.3672, kept; s001, 0.0365,
+  // The column Kept: s000, 0.0283 and 0.3654, kept; s001, 0.0367,
   // removed by the missing rate.
   await expect(table(page).getByRole("columnheader").last()).toHaveText(
     /^Kept/,
   );
   await expect(keptCellOf(page, "s000")).toHaveText("kept");
   await expect(keptCellOf(page, "s001")).toHaveText("removed");
-  await expect(page.getByText(/119 of 200 individuals kept/)).toBeVisible();
+  await expect(page.getByText(/111 of 200 individuals kept/)).toBeVisible();
   await expectNoViolations(makeAxeBuilder);
 });
 
@@ -269,14 +271,14 @@ test("VS7 D1 a list applied has its count beside it, which describes its text ar
   ).toBeVisible();
   await expect(remove).toHaveAccessibleDescription(listCount);
   await expect(field(page, MISSING_LABEL)).toHaveAccessibleDescription(
-    "Kept 124 of the 198 individuals it was given.",
+    "Kept 115 of the 198 individuals it was given.",
   );
   await expect(field(page, OBS_HET_LABEL)).toHaveAccessibleDescription(
-    `Kept 118 of the 124 individuals it was given. ${OBS_HET_LINE}`,
+    `Kept 110 of the 115 individuals it was given. ${OBS_HET_LINE}`,
   );
   await expect(
     section(page).getByText(
-      "118 of the 200 individuals of panel.nei pass the filters.",
+      "110 of the 200 individuals of panel.nei pass the filters.",
       { exact: true },
     ),
   ).toBeVisible();
@@ -296,10 +298,10 @@ test("VS7 D1 0.12345 refused: the line under the field, announced and describing
   await expect(section(page).getByText(refused, { exact: true })).toBeVisible();
   await expect(status(page)).toHaveText(refused);
   await expect(field(page, MISSING_LABEL)).toHaveAccessibleDescription(
-    `${refused} ${KEPT_125}`,
+    `${refused} ${KEPT_116}`,
   );
   await expect(
-    section(page).getByText(PASS_119, { exact: true }),
+    section(page).getByText(PASS_111, { exact: true }),
   ).toBeVisible();
   await expect(banner(page, "Undo")).toHaveAccessibleDescription(
     "Undo: the filter of individuals by observed heterozygosity changed",
@@ -328,7 +330,7 @@ test("VS7 D1 a threshold typed and not committed moves its line and its plot, an
     histogram(page, OBS_HET_TITLE).locator("svg.chart"),
   ).toHaveAccessibleName(/The threshold 0\.36 /);
   await expect(
-    section(page).getByText(KEPT_119, { exact: true }),
+    section(page).getByText(KEPT_111, { exact: true }),
   ).toBeVisible();
   // Something typed: Cmd+Z puts 0.38 back, and leaves the project.
   await obsHet.press(UNDO);
@@ -351,7 +353,7 @@ test("VS7 D1 a threshold typed and not committed moves its line and its plot, an
   await missing.press("Enter");
   await expect(missing).toHaveValue("0.03");
   await expect(
-    section(page).getByText(KEPT_125, { exact: true }),
+    section(page).getByText(KEPT_116, { exact: true }),
   ).toBeVisible();
 
   // Nothing typed: Cmd+Z is the project's Undo, of 0.38.
@@ -359,7 +361,7 @@ test("VS7 D1 a threshold typed and not committed moves its line and its plot, an
   await obsHet.press(UNDO);
   await expect(obsHet).toHaveValue("0.5");
   await expect(
-    section(page).getByText("Kept 125 of the 125 individuals it was given.", {
+    section(page).getByText("Kept 116 of the 116 individuals it was given.", {
       exact: true,
     }),
   ).toBeVisible();
@@ -380,13 +382,13 @@ test("VS7 D1 an Undo of the header and a switch turned off take the threshold, i
 
   await flip(page, OBS_HET_SWITCH);
   await expect(field(page, OBS_HET_LABEL)).toHaveCount(0);
-  await expect(section(page).getByText(KEPT_119)).toHaveCount(0);
+  await expect(section(page).getByText(KEPT_111)).toHaveCount(0);
   await expect(
     histogram(page, OBS_HET_TITLE).getByText(/^Threshold of /),
   ).toHaveCount(0);
   await expect(
     section(page).getByText(
-      "125 of the 200 individuals of panel.nei pass the filters.",
+      "116 of the 200 individuals of panel.nei pass the filters.",
       { exact: true },
     ),
   ).toBeVisible();
@@ -433,10 +435,10 @@ test("VS7 D1 the missing data filter of the variants moved: the statistics remov
   await banner(page, "Undo").click();
   await expect(variants).toHaveValue("0.05");
   await expect(
-    section(page).getByText(PASS_119, { exact: true }),
+    section(page).getByText(PASS_111, { exact: true }),
   ).toBeVisible();
   await expect(
-    section(page).getByText(KEPT_119, { exact: true }),
+    section(page).getByText(KEPT_111, { exact: true }),
   ).toBeVisible();
   await expect(section(page).getByText(KNOWN_ONCE)).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
@@ -449,7 +451,7 @@ test("VS7 D1 an arrow key moves a threshold by 0.01, committed at once with its 
   await field(page, MISSING_LABEL).focus();
   await page.keyboard.press("ArrowUp");
   await expect(field(page, MISSING_LABEL)).toHaveValue("0.04");
-  await expect(section(page).getByText(KEPT_125, { exact: true })).toHaveCount(
+  await expect(section(page).getByText(KEPT_116, { exact: true })).toHaveCount(
     0,
   );
   await expect(
@@ -504,15 +506,15 @@ test("VS7 D1 thresholds that keep none: the reason under the filters, announced 
   ).toBeVisible();
   await expect(status(page)).toHaveText(NONE_KEPT);
   await expect(
-    section(page).getByText("Kept 0 of the 125 individuals it was given.", {
+    section(page).getByText("Kept 0 of the 116 individuals it was given.", {
       exact: true,
     }),
   ).toBeVisible();
   await expect(field(page, MISSING_LABEL)).toHaveAccessibleDescription(
-    `${KEPT_125} ${NONE_KEPT}`,
+    `${KEPT_116} ${NONE_KEPT}`,
   );
   await expect(field(page, OBS_HET_LABEL)).toHaveAccessibleDescription(
-    `Kept 0 of the 125 individuals it was given. ${NONE_KEPT} ${OBS_HET_LINE}`,
+    `Kept 0 of the 116 individuals it was given. ${NONE_KEPT} ${OBS_HET_LINE}`,
   );
   await expect(section(page).getByText(/pass the filters\.$/)).toHaveCount(0);
   await expect(section(page).getByText("Variants step")).toHaveCount(0);
@@ -527,7 +529,7 @@ test("VS7 D1 thresholds that keep none: the reason under the filters, announced 
   await commit(page, OBS_HET_LABEL, "0.38");
   await expect(section(page).getByText(NONE_KEPT)).toHaveCount(0);
   await expect(
-    section(page).getByText(PASS_119, { exact: true }),
+    section(page).getByText(PASS_111, { exact: true }),
   ).toBeVisible();
   await expect(stepLink(page)).toHaveAccessibleName("Variants, Done");
   await expect(writeButton(page)).toBeEnabled();
@@ -602,7 +604,7 @@ test("VS7 D1 the keyboard goes from the button of the statistics through each th
   await expect(field(page, MISSING_LABEL)).toHaveCount(0);
 });
 
-test("IP1 D2 the written files of dev.3 on the screen, VS7 D3 the write of the individuals kept: with the thresholds at 0.03 and 0.38, Write and Save give panel.filtered.nei of 170,122 bytes", async ({
+test("IP1 D2 the written files of dev.3 on the screen, VS7 D3 the write of the individuals kept: with the thresholds at 0.03 and 0.38, Write and Save give panel.filtered.nei of 156,818 bytes", async ({
   page,
 }, testInfo) => {
   await thresholdsSet(page);
@@ -617,5 +619,5 @@ test("IP1 D2 the written files of dev.3 on the screen, VS7 D3 the write of the i
   expect(file.suggestedFilename()).toBe("panel.filtered.nei");
   const path = testInfo.outputPath("panel.filtered.nei");
   await file.saveAs(path);
-  expect((await stat(path)).size).toBe(WRITTEN_119);
+  expect((await stat(path)).size).toBe(WRITTEN_111);
 });
