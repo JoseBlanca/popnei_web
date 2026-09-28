@@ -1512,7 +1512,7 @@ describe("WP1 D4 the records and the needs", () => {
       };
       const p = deepFreeze(recordVariantsRead(pendingProject(), NEW_ID, read));
       expect(projectNeeds(p)).toBe(
-        "panel.vcf could not be read: the application could not start its calculations. Reload the page and load it again.",
+        "panel.vcf could not be read: the application could not start its calculations. Save the project, reload the page, open the project and load panel.vcf again.",
       );
     });
 
@@ -1531,11 +1531,11 @@ describe("WP1 D4 the records and the needs", () => {
       ],
       [
         { kind: "couldNotStart", reason: "no ready message, twice" },
-        "the application could not start its calculations. Reload the page and load it again.",
+        "the application could not start its calculations. Save the project, reload the page, open the project and load panel.nei again.",
       ],
       [
         { kind: "protocolMismatch" },
-        "the page is out of date. Reload the page and load it again.",
+        "the page is out of date. Save the project, reload the page, open the project and load panel.nei again.",
       ],
     ] as const)(
       "the worker failed with %o: what happened, and what to do",
@@ -1930,7 +1930,7 @@ describe("WP1 D4 the records and the needs", () => {
     test.each([
       [
         { kind: "couldNotStart", reason: "no ready message, twice" },
-        "the application could not start its calculations. Reload the page and load it again.",
+        "the application could not start its calculations. Save the project, reload the page, open the project and load pops.csv again.",
       ],
       [
         { kind: "workerFailed", message: "out of memory" },
@@ -1946,7 +1946,7 @@ describe("WP1 D4 the records and the needs", () => {
       ],
       [
         { kind: "protocolMismatch" },
-        "the page is out of date. Reload the page and load it again.",
+        "the page is out of date. Save the project, reload the page, open the project and load pops.csv again.",
       ],
     ] as const)(
       "the worker failed with %o: what happened, and what to do",
@@ -3535,11 +3535,11 @@ describe("WS1 D3 the additions to project.ts", () => {
       ],
       [
         { kind: "couldNotStart", reason: "no ready message, twice" },
-        "the application could not start its calculations. Reload the page and choose it again.",
+        "the application could not start its calculations. Save the project, reload the page, open the project and choose pops.csv again.",
       ],
       [
         { kind: "protocolMismatch" },
-        "the page is out of date. Reload the page and choose it again.",
+        "the page is out of date. Save the project, reload the page, open the project and choose pops.csv again.",
       ],
     ] as const)(
       "the light worker failed with %o: what happened, and what to do there",
@@ -3642,11 +3642,11 @@ describe("WS1 D3 the additions to project.ts", () => {
       ],
       [
         { kind: "couldNotStart", reason: "no ready message, twice" },
-        "the application could not start its calculations. Reload the page and choose it again.",
+        "the application could not start its calculations. Save the project, reload the page, open the project and choose panel.nei again.",
       ],
       [
         { kind: "protocolMismatch" },
-        "the page is out of date. Reload the page and choose it again.",
+        "the page is out of date. Save the project, reload the page, open the project and choose panel.nei again.",
       ],
     ] as const)(
       "the worker failed with %o: what happened, and what to do there",
@@ -5778,6 +5778,208 @@ describe("IP4 D2 the types of the columns: parseProject of a read with a type se
     expect(error).toMatchObject(inconsistent([...READ_PATH, "columns", 1]));
     expect(projectErrorText(error)).toBe(
       "The project file cannot be opened: the type of the second column of the individuals file cannot be continuous: its values are not all numbers. The file was changed outside the application, or is damaged. Open a copy saved before the change, or make the project again.",
+    );
+  });
+});
+
+/** The project of the populations with its metadata file `pops.csv`
+    named by an opened project and not read when it was saved, with the
+    grouping `grouping` and a type set on `pop`. */
+function notGivenProject(
+  grouping: Grouping = { kind: "populations", column: "pop" },
+): Project {
+  const p = popsProject({ grouping });
+  return deepFreeze<Project>({
+    ...p,
+    individuals: {
+      ...individualsOf(p),
+      typesSet: [["pop", { kind: "categorical" }]],
+      read: { kind: "notGiven" },
+    },
+  });
+}
+
+/** The table read of the project of the populations. */
+function popsTableRead(): IndividualsReadGiven {
+  const read = individualsOf(popsProject()).read;
+  if (read.kind !== "read") {
+    throw new Error("popnei_web defect: the test expected a table read.");
+  }
+  return read;
+}
+
+const NOT_GIVEN_REASON =
+  "pops.csv was not read when this project was saved, so the project file does not hold it. Load pops.csv again in the Individuals step.";
+const NOT_GIVEN_STEP_REASON =
+  "pops.csv was not read when this project was saved, so the project file does not hold it. Choose it again.";
+
+describe("IP4 D3 a metadata file not given", () => {
+  test.each(EVERY_GROUPING)(
+    "individualsNeeds and individualsStepNeeds give their words, whatever the grouping, %o",
+    (grouping) => {
+      const p = notGivenProject(grouping);
+      expect(individualsNeeds(p)).toBe(NOT_GIVEN_REASON);
+      expect(individualsStepNeeds(p)).toBe(NOT_GIVEN_STEP_REASON);
+      expect(individualsStepMissing(p)).toBeNull();
+    },
+  );
+
+  test("individualsNeeds gives the same words in association, where the file is a traits file", () => {
+    const gwas = deepFreeze<Project>({
+      ...notGivenProject(),
+      app: "gwas",
+      grouping: { kind: "roles", roles: [] },
+    });
+    expect(individualsNeeds(gwas)).toBe(NOT_GIVEN_REASON);
+    expect(individualsStepNeeds(gwas)).toBe(NOT_GIVEN_STEP_REASON);
+  });
+
+  test("the name of the file is escaped, as every reason of a file shows it", () => {
+    const p = notGivenProject();
+    const odd = deepFreeze<Project>({
+      ...p,
+      individuals: { ...individualsOf(p), name: "pops\n.csv" },
+    });
+    expect(individualsNeeds(odd)).toBe(
+      "pops\\n.csv was not read when this project was saved, so the project file does not hold it. Load pops\\n.csv again in the Individuals step.",
+    );
+  });
+
+  test("populationsOf, populationsToRun, populationsNeeds, individualsCheck and typesLost give what they give for a file not read", () => {
+    for (const grouping of EVERY_GROUPING) {
+      const p = notGivenProject(grouping);
+      expect(populationsOf(p)).toBeNull();
+      expect(populationsToRun(p)).toBeNull();
+      expect(populationsNeeds(p)).toBeNull();
+      expect(individualsCheck(p)).toBeNull();
+      expect(typesLost(individualsOf(p))).toStrictEqual([]);
+    }
+  });
+
+  test("setCsvOptions is a defect, since the page holds no copy of the file", () => {
+    expect(() =>
+      setCsvOptions(notGivenProject(), {
+        encoding: "utf-8",
+        separator: ";",
+        decimal: ",",
+      }),
+    ).toThrow(DEFECT);
+  });
+
+  test("setColumnType is a defect and forgetTypesLost gives the project itself, as for a file not read", () => {
+    const p = notGivenProject();
+    expect(() => setColumnType(p, "pop", { kind: "categorical" })).toThrow(
+      DEFECT,
+    );
+    expect(forgetTypesLost(p)).toBe(p);
+  });
+
+  test("recordIndividualsRead of its load id gives the project itself, for a read and for a failure of the worker", () => {
+    const p = notGivenProject();
+    const csv = individualsOf(p).csv;
+    expect(
+      recordIndividualsRead(p, SAMPLE_INDIVIDUALS_ID, csv, popsTableRead()),
+    ).toBe(p);
+    expect(
+      recordIndividualsRead(p, SAMPLE_INDIVIDUALS_ID, csv, {
+        kind: "failed",
+        error: { kind: "worker", error: { kind: "workerFailed", message: "" } },
+      }),
+    ).toBe(p);
+  });
+
+  test("loadIndividuals after it gives a pending read with its typesSet, and the grouping finds its column", () => {
+    const p = notGivenProject();
+    const q = loadIndividuals(p, {
+      fileId: NEW_ID,
+      name: "pops.csv",
+      csv: CSV,
+    });
+    expect(q.individuals).toStrictEqual({
+      fileId: NEW_ID,
+      name: "pops.csv",
+      csv: CSV,
+      typesSet: [["pop", { kind: "categorical" }]],
+      read: { kind: "pending" },
+    });
+    expect(q.grouping).toBe(p.grouping);
+    expect(individualsNeeds(q)).toBe("Reading pops.csv.");
+    const r = recordIndividualsRead(q, NEW_ID, CSV, popsTableRead());
+    expect(individualsNeeds(r)).toBeNull();
+    expect(populationsOf(r)).toStrictEqual(populationsOf(popsProject()));
+  });
+
+  test("removeIndividuals removes it, and the analyses per population run on one population", () => {
+    const p = removeIndividuals(notGivenProject());
+    expect(p.individuals).toBeNull();
+    expect(individualsNeeds(p)).toBeNull();
+    expect(populationsOf(p)).toBe("all");
+  });
+
+  test("parseProject opens a source notGiven, and refuses one with another field in its read", () => {
+    const p = notGivenProject();
+    expect(parse(JSON.parse(JSON.stringify(p)))).toStrictEqual({
+      ok: true,
+      value: p,
+    });
+    const data = fileWith({
+      individuals: {
+        ...individualsOf(p),
+        read: { kind: "notGiven", table: null },
+      },
+    });
+    expect(errorOf(parse(data))).toMatchObject({
+      kind: "unknownField",
+      path: ["individuals", "read"],
+      name: "table",
+    });
+  });
+
+  test("a read of a kind not known is refused, with the words of the four kinds", () => {
+    const data = fileWith({
+      individuals: {
+        ...individualsOf(sampleProject()),
+        read: { kind: "given" },
+      },
+    });
+    expect(parse(data)).toStrictEqual(
+      wrong(
+        ["individuals", "read", "kind"],
+        "not yet read, read, not readable or not read when the project was saved",
+      ),
+    );
+  });
+});
+
+describe("IP4 D3 the words after a worker that could not start", () => {
+  test("say to save the project, reload the page, open the project and give the file again, beside a Run button and in its step", () => {
+    const notStarted = {
+      kind: "worker",
+      error: { kind: "couldNotStart", reason: "no ready message, twice" },
+    } as const;
+    const variants = withVariantsRead({ kind: "failed", error: notStarted });
+    expect(projectNeeds(variants)).toBe(
+      "panel.nei could not be read: the application could not start its calculations. Save the project, reload the page, open the project and load panel.nei again.",
+    );
+    expect(variantsStepNeeds(variants)).toBe(
+      "panel.nei could not be read: the application could not start its calculations. Save the project, reload the page, open the project and choose panel.nei again.",
+    );
+    const individuals = withIndividualsRead({
+      kind: "failed",
+      error: notStarted,
+    });
+    expect(individualsNeeds(individuals)).toBe(
+      "pops.csv could not be read: the application could not start its calculations. Save the project, reload the page, open the project and load pops.csv again.",
+    );
+    expect(individualsStepNeeds(individuals)).toBe(
+      "pops.csv could not be read: the application could not start its calculations. Save the project, reload the page, open the project and choose pops.csv again.",
+    );
+    const outOfDate = withVariantsRead({
+      kind: "failed",
+      error: { kind: "worker", error: { kind: "protocolMismatch" } },
+    });
+    expect(projectNeeds(outOfDate)).toBe(
+      "panel.nei could not be read: the page is out of date. Save the project, reload the page, open the project and load panel.nei again.",
     );
   });
 });

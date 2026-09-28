@@ -198,7 +198,13 @@ export type IndividualsRead =
                 IndividualsFileError, never a failure of the worker. */
             readonly error: Exclude<RunError, { readonly kind: "files" }>;
           };
-    };
+    }
+  /** Named by an opened project, not read when the project was saved, so
+      the project file holds no table of it and the page no copy of the
+      file: no read is asked, and what uses the file is locked until the
+      user loads it again or removes it. Made only by the opening of a
+      project file. */
+  | { readonly kind: "notGiven" };
 
 /** A read as the light worker gives it, to be recorded; the record puts
     on its columns the types of `typesSet` that it allows. */
@@ -1309,12 +1315,19 @@ export function loadIndividuals(
 
 /** Sets how the CSV is read, and puts its read back to pending; the types
     the user set are kept, for the new read to apply. Throws a defect when
-    there is no individuals file, or it is an xlsx. */
+    there is no individuals file, it is an xlsx, or it is `notGiven`, a
+    file the page holds no copy of and so cannot read with other
+    options. */
 export function setCsvOptions(p: Project, csv: CsvOptions): Project {
   const individuals = p.individuals;
   const current = individuals?.csv ?? null;
   if (individuals === null || current === null) {
     throw defect("setCsvOptions was given a project with no CSV file.");
+  }
+  if (individuals.read.kind === "notGiven") {
+    throw defect(
+      "setCsvOptions was given a project whose CSV file was not read when it was saved, which the page cannot read.",
+    );
   }
   const copy = copyCsvOptions(csv);
   if (same(current, copy)) {
@@ -1649,8 +1662,20 @@ interface ReasonEnds {
   readonly refused: string;
   /** After a failure that a new load of the file mends. */
   readonly again: string;
-  /** After a failure that only a new page mends. */
-  readonly reload: string;
+  /** After a failure that only a new page mends, for the file of the
+      name `fileName`, as shown. */
+  readonly reload: (fileName: string) => string;
+}
+
+/** What to do after a failure that only a new page mends, a worker that
+    could not start or a page out of date, for the file of the name
+    `fileName`: save the project first, since a new version of the site
+    deployed while the page was open is one cause and a reload would lose
+    the project; then give the file again, which the project file does
+    not hold, loaded beside a Run button and chosen in its step (the
+    project spec, Open 4, decided on 27 September 2026). */
+function reloadText(verb: "load" | "choose", fileName: string): string {
+  return `Save the project, reload the page, open the project and ${verb} ${fileName} again.`;
 }
 
 /** The ends of a reason of the variants file beside a Run button, and of
@@ -1659,7 +1684,7 @@ function endsIn(step: "Variants" | "Individuals", refused: string): ReasonEnds {
   return {
     refused,
     again: `Load it again in the ${step} step.`,
-    reload: "Reload the page and load it again.",
+    reload: (fileName) => reloadText("load", fileName),
   };
 }
 
@@ -1668,7 +1693,12 @@ function endsIn(step: "Variants" | "Individuals", refused: string): ReasonEnds {
     file picker: the same in the Variants and the Individuals steps (the
     project spec, "What an analysis needs of every project"). */
 const STEP_AGAIN = "Choose it again.";
-const STEP_RELOAD = "Reload the page and choose it again.";
+
+/** The end of a reason, in the step of the file of the name `fileName`,
+    after a failure that only a new page mends. */
+function stepReload(fileName: string): string {
+  return reloadText("choose", fileName);
+}
 
 /** The ends of a reason of the variants file in the Variants step, beside
     its button "Replace panel.nei…", as the owner decided on 25 September
@@ -1676,7 +1706,7 @@ const STEP_RELOAD = "Reload the page and choose it again.";
 const VARIANTS_STEP_ENDS: ReasonEnds = {
   refused: "Choose another file.",
   again: STEP_AGAIN,
-  reload: STEP_RELOAD,
+  reload: stepReload,
 };
 
 /** The kinds of failure of a worker that only a new page mends: it could
@@ -1697,7 +1727,7 @@ function workerFailedText(
   kind: RunError["kind"],
   ends: Pick<ReasonEnds, "again" | "reload">,
 ): string {
-  const next = MENDED_BY_RELOAD.has(kind) ? ends.reload : ends.again;
+  const next = MENDED_BY_RELOAD.has(kind) ? ends.reload(fileName) : ends.again;
   return `${fileName} could not be read: ${WHAT_HAPPENED[kind]}. ${next}`;
 }
 
@@ -1930,6 +1960,8 @@ export function individualsNeeds(p: Project): string | null {
     return individualsReadNeeds(individuals, p.app, {
       ...endsIn("Individuals", load),
       refusedEnd: () => load,
+      notGivenEnd: (fileName) =>
+        `Load ${fileName} again in the Individuals step.`,
     });
   }
   return missingText(p, {
@@ -1964,10 +1996,21 @@ function missingText(p: Project, ends: MissingEnds): string | null {
 }
 
 /** The ends of a reason of the individuals file: after a refusal of its
-    reader, by the refusal, and after a failure of the worker. */
+    reader, by the refusal, after a failure of the worker, and for a file
+    an opened project names and does not hold. */
 interface IndividualsEnds extends Pick<ReasonEnds, "again" | "reload"> {
   /** What the user can do after the refusal `error`. */
   readonly refusedEnd: (error: IndividualsFileError) => string;
+  /** What the user can do about a file `notGiven` of the name
+      `fileName`, as shown. */
+  readonly notGivenEnd: (fileName: string) => string;
+}
+
+/** Why an opened project does not hold its individuals file of the name
+    `fileName`, as shown: its read was not done when the project was
+    saved (the project spec, "The project of an opened project file"). */
+function notGivenText(fileName: string): string {
+  return `${fileName} was not read when this project was saved, so the project file does not hold it.`;
 }
 
 /** The reason of an individuals file of the application `app` being read
@@ -1986,6 +2029,8 @@ function individualsReadNeeds(
       return read.error.kind === "worker"
         ? workerFailedText(name, read.error.error.kind, ends)
         : `${name} could not be read${saying(individualsFileRefusalWords(read.error, app))}. ${ends.refusedEnd(read.error)}`;
+    case "notGiven":
+      return `${notGivenText(name)} ${ends.notGivenEnd(name)}`;
     case "read":
       return null;
   }
@@ -2053,8 +2098,9 @@ export function individualsStepNeeds(p: Project): string | null {
   }
   return individualsReadNeeds(individuals, p.app, {
     refusedEnd: (error) => stepRefusedEnd(error, p.app),
+    notGivenEnd: () => STEP_AGAIN,
     again: STEP_AGAIN,
-    reload: STEP_RELOAD,
+    reload: stepReload,
   });
 }
 
@@ -2974,6 +3020,7 @@ const INDIVIDUALS_READ_KINDS: Kinds<IndividualsRead["kind"]> = {
   pending: { fields: [], words: "not yet read" },
   read: { fields: ["table", "columns", "found"], words: "read" },
   failed: { fields: ["error"], words: "not readable" },
+  notGiven: { fields: [], words: "not read when the project was saved" },
 };
 
 const INDIVIDUALS_ERROR_KINDS: Kinds<IndividualsFileError["kind"] | "worker"> =
@@ -3769,6 +3816,8 @@ function parseIndividualsRead(
       const error = parseIndividualsError(fields["error"], [...path, "error"]);
       return error.ok ? success({ kind, error: error.value }) : error;
     }
+    case "notGiven":
+      return success({ kind });
   }
 }
 

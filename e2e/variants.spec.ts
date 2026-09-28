@@ -726,7 +726,7 @@ test("WS7 D3 the calculations that could not start are told in the words of the 
 
   await expect(
     zone(page).getByText(
-      "panel.nei could not be read: the application could not start its calculations. Reload the page and choose it again.",
+      "panel.nei could not be read: the application could not start its calculations. Save the project, reload the page, open the project and choose panel.nei again.",
     ),
   ).toBeVisible();
 });

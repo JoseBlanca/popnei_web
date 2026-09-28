@@ -381,6 +381,8 @@ function metadataPart(p: Project, kept: IndividualsKept | null): string {
       return `reading ${name}`;
     case "failed":
       return `${name} could not be read`;
+    case "notGiven":
+      return `${name} not loaded`;
     case "read":
       break;
   }
@@ -907,7 +909,10 @@ function individualsReadAnnouncements(
   }
   const read = now.read;
   switch (read.kind) {
+    // Only the opening of a project file makes a read notGiven, never
+    // the end of a read.
     case "pending":
+    case "notGiven":
       return [];
     case "failed":
       return reasonOf(individualsNeeds(after));
