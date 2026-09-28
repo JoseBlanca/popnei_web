@@ -21,7 +21,7 @@ const PLOIDY_LINE =
 /** The line under the switch of the missing data filter, the last part
     of the description of its field. */
 const MISSING_DATA_LINE =
-  "A genotype is missing when any of its alleles is, 0/. among them; the proportion is over every individual of the file.";
+  "A genotype is missing when any of its alleles is, 0/. among them; the proportion is over the individuals the filters of individuals keep.";
 
 async function openVariants(page: Page): Promise<void> {
   await page.goto("popgen.html#variants");
@@ -596,7 +596,7 @@ test("WS7 D3 a file picked before popnei has loaded is shown as being read", asy
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("WS7 D3 the keyboard goes through the step in the order of the spec", async ({
+test("IP2 D3, WS7 D3 the keyboard goes through the step in the order of the spec, the lists of individuals after the options of a VCF", async ({
   page,
 }) => {
   await openVariants(page);
@@ -609,11 +609,9 @@ test("WS7 D3 the keyboard goes through the step in the order of the spec", async
     page.getByRole("checkbox", {
       name: "Only the variants with PASS or . in the FILTER column",
     }),
-    page.getByRole("button", {
-      name: "Calculate the histograms of the variants",
+    page.getByRole("textbox", {
+      name: "Individuals to keep, one name per line",
     }),
-    page.getByRole("switch", { name: "Filter the variants by missing data" }),
-    page.getByLabel("Maximum proportion of missing genotypes"),
   ];
   for (const next of order) {
     await page.keyboard.press("Tab");

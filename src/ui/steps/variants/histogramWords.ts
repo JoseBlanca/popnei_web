@@ -19,6 +19,7 @@ import type {
 } from "../../../charts/histogram.ts";
 import { tableNumber } from "../../../charts/plot2d.ts";
 import { capitalized, undoneOrRedone } from "../../sentences.ts";
+import { LOAD_DESCRIPTIONS } from "./commands.ts";
 
 /** The words of the button of the block. */
 export const CALCULATE_LABEL = "Calculate the histograms of the variants";
@@ -129,10 +130,26 @@ export function thresholdText(filterName: string, value: number): string {
   return `Threshold of ${filterName}: ${String(value)}, drawn over every variant of the file`;
 }
 
-/** The caption of the three histograms: "Over the 1,200 variants of
-    panel.nei, before any filter." */
-export function histogramsCaption(numVars: number, fileName: string): string {
-  return `Over the ${counted(numVars, "variant")} of ${escaped(fileName)}, before any filter.`;
+/** The caption of the three histograms, over every variant of the file
+    and the individuals the filters of individuals keep, `numKept`, or
+    `null` when they remove none: "Over the 1,200 variants of panel.nei,
+    before any filter.", or "Over the 1,200 variants of panel.nei and the
+    111 individuals the filters of individuals keep, before any filter of
+    the variants." */
+export function histogramsCaption(
+  numVars: number,
+  fileName: string,
+  numKept: number | null,
+): string {
+  const variants = `${counted(numVars, "variant")} of ${escaped(fileName)}`;
+  if (numKept === null) {
+    return `Over the ${variants}, before any filter.`;
+  }
+  const individuals =
+    numKept === 1
+      ? "the one individual"
+      : `the ${counted(numKept, "individual")}`;
+  return `Over the ${variants} and ${individuals} the filters of individuals keep, before any filter of the variants.`;
 }
 
 /** The words of what the threshold does to a bin, in the table. */
@@ -163,14 +180,19 @@ export function binCells(row: HistogramRow): readonly string[] {
  * calculation; Calculate makes them anew for the file loaded now."; after
  * an undo, "Undone: … The histograms of the variants were removed; Redo
  * brings them back …, and Calculate makes them anew for the file loaded
- * now.", and after a redo the same with "Redone:" and Undo.
+ * now.", and after a redo the same with "Redone:" and Undo. A change of a
+ * filter of individuals, which removes them too since 28 September 2026,
+ * ends "for the settings as they are now", as the diversity's words do.
  */
 export function removedText(notice: Notice): string {
   const cause = notice.cause;
   const start = undoneOrRedone(cause);
   const name = capitalized(CHECK_NAME);
   const back = "brings them back as they were, with no calculation";
-  const anew = "Calculate makes them anew for the file loaded now";
+  const now = LOAD_DESCRIPTIONS.includes(cause.description)
+    ? "the file loaded now"
+    : "the settings as they are now";
+  const anew = `Calculate makes them anew for ${now}`;
   if (start === null) {
     return `${name} were removed because ${cause.description}. Undo ${back}; ${anew}.`;
   }

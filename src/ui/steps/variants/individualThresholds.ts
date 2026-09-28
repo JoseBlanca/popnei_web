@@ -162,16 +162,16 @@ export function individualThresholdText(
 }
 
 /** What a filter of individuals says in place of its count while it
-    waits for the statistics of each individual. */
+    waits for the statistics of each individual, which read no filter. */
 export const KNOWN_ONCE_TEXT =
-  "Known once the statistics of each individual are calculated for these filters of the variants.";
+  "Known once the statistics of each individual are calculated.";
 
 /** What a filter of individuals says in place of its count while the
     statistics of each individual are in their error state. */
 export const NOT_KNOWN_TEXT =
   "Not known: the statistics of each individual could not be calculated, and their block says why.";
 
-/** What one filter of individuals kept: "Kept 125 of the 200 individuals
+/** What one filter of individuals kept: "Kept 116 of the 200 individuals
     it was given.", "Kept 1 of the 1 individual it was given." */
 export function individualKeptText(given: number, kept: number): string {
   return `Kept ${grouped(kept)} of the ${counted(given, "individual")} it was given.`;
@@ -210,7 +210,7 @@ const NOTHING: KeptTotal = Object.freeze({ kind: "nothing" });
 
 /**
  * What stands under the filters of individuals of `p`, from the
- * individuals kept the store gives: "119 of the 200 individuals of
+ * individuals kept the store gives: "111 of the 200 individuals of
  * panel.nei pass the filters."; when they keep none, the reason
  * `keptNoneReason` gives without its end "in the Variants step", "The
  * filters of individuals keep none of the 200 individuals of panel.nei.

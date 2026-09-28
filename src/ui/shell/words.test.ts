@@ -1621,14 +1621,14 @@ const THREE_FILTERS = project({
 
 describe("VS5 D2 the summary line of stage 3", () => {
   test("the example of the spec, with the individuals and the variants the filters keep", () => {
-    expect(summaryLine(FIVE_FILTERS, keptFirst(114), 1128)).toBe(
-      "panel.nei · 114 of 200 individuals kept · 1,128 of 1,200 variants kept · 5 filters · 3 populations by pop",
+    expect(summaryLine(FIVE_FILTERS, keptFirst(111), 1096)).toBe(
+      "panel.nei · 111 of 200 individuals kept · 1,096 of 1,200 variants kept · 5 filters · 3 populations by pop",
     );
   });
 
   test("the thresholds of the individuals with their statistics, and the counts", () => {
-    expect(summaryLine(THREE_FILTERS, keptFirst(119), 1152)).toBe(
-      "panel.nei · 119 of 200 individuals kept · 1,152 of 1,200 variants kept · 3 filters · 3 populations by pop",
+    expect(summaryLine(THREE_FILTERS, keptFirst(111), 1117)).toBe(
+      "panel.nei · 111 of 200 individuals kept · 1,117 of 1,200 variants kept · 3 filters · 3 populations by pop",
     );
   });
 
@@ -1719,8 +1719,8 @@ describe("VS5 D2 the summary line of stage 3", () => {
   });
 
   test("variants counted with no counts of the filters as they are give the variants of the file, and say the filters are not counted", () => {
-    expect(summaryLine(FIVE_FILTERS, keptFirst(114), null)).toBe(
-      "panel.nei · 114 of 200 individuals kept · 1,200 variants before the filters · 5 filters · 3 populations by pop",
+    expect(summaryLine(FIVE_FILTERS, keptFirst(111), null)).toBe(
+      "panel.nei · 111 of 200 individuals kept · 1,200 variants before the filters · 5 filters · 3 populations by pop",
     );
   });
 
@@ -1730,8 +1730,8 @@ describe("VS5 D2 the summary line of stage 3", () => {
       filters: [],
       individualFilters: THRESHOLDS,
     });
-    expect(summaryLine(thresholdsAlone, keptFirst(119), null)).toBe(
-      "panel.nei · 119 of 200 individuals kept · 1,200 variants · 2 filters · 3 populations by pop",
+    expect(summaryLine(thresholdsAlone, keptFirst(111), null)).toBe(
+      "panel.nei · 111 of 200 individuals kept · 1,200 variants · 2 filters · 3 populations by pop",
     );
   });
 
@@ -2396,7 +2396,7 @@ describe("VS5 D2 the announcements of the writing, more", () => {
         [STATISTICS]: done(KEY_S),
         [DIVERSITY]: running(KEY_A, 2),
       },
-      individualsKept: keptFirst(119),
+      individualsKept: keptFirst(111),
       runs: [run(2, DIVERSITY, KEY_A, CURRENT)],
     });
     expect(announcementsOf(before, sent, WORDS)).toEqual([

@@ -22,7 +22,7 @@ const NOT_READ =
 
 /** The lines under the switches. */
 const MISSING_DATA_LINE =
-  "A genotype is missing when any of its alleles is, 0/. among them; the proportion is over every individual of the file.";
+  "A genotype is missing when any of its alleles is, 0/. among them; the proportion is over the individuals the filters of individuals keep.";
 const OBS_HET_LINE =
   "The proportion of the individuals with a called genotype that are heterozygous; a high one often marks duplicated regions read as one.";
 const MAF_LINE =

@@ -31,7 +31,7 @@ const OBS_HET_LABEL =
   "Maximum observed heterozygosity of an individual, from 0 to 1";
 const CALCULATE = "Calculate the statistics of each individual";
 const STATS_CAPTION =
-  "The statistics of the 200 individuals of panel.nei, over the 1,200 variants the filters kept.";
+  "The statistics of the 200 individuals of panel.nei, over its 1,200 variants, before any filter of the variants.";
 const PASS_111 = "111 of the 200 individuals of panel.nei pass the filters.";
 
 const POPS_ALL =
@@ -225,7 +225,7 @@ async function holdResults(worker: Worker): Promise<void> {
   });
 }
 
-test("VS7 D2 a Run with the thresholds at 0.03 and 0.38 and no statistics says it waits for them, then gives p0 with 29 individuals, 0.3537, 0.3587 and 0.9311, and axe", async ({
+test("IP2 D3, VS7 D2 a Run with the thresholds at 0.03 and 0.38 and no statistics says it waits for them, then gives p0 with 29 individuals, 0.3537, 0.3587 and 0.9311, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -284,7 +284,7 @@ test("VS7 D2 a Run with the thresholds at 0.03 and 0.38 and no statistics says i
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("VS7 D2 the ready state lists the populations the filters keep, before the thresholds while they wait for the statistics, and names those a list leaves empty, and axe", async ({
+test("IP2 D3, VS7 D2 the ready state lists the populations the filters keep, before the thresholds while they wait for the statistics, and names those a list leaves empty, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -432,7 +432,7 @@ test("VS7 D2 the statistics a Run waited for, refused by popnei, are told in the
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("VS7 D2 thresholds that keep only individuals with no population lock the diversity: a Run that waited for the statistics is not run, and the Run is disabled with the reason, and axe", async ({
+test("IP2 D3, VS7 D2 thresholds that keep only individuals with no population lock the diversity: a Run that waited for the statistics is not run, and the Run is disabled with the reason, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -478,7 +478,7 @@ test("VS7 D2 thresholds that keep only individuals with no population lock the d
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("VS7 D2 a threshold that leaves both populations empty locks the diversity with the individuals kept and the column, and axe", async ({
+test("IP2 D3, VS7 D2 a threshold that leaves both populations empty locks the diversity with the individuals kept and the column, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {

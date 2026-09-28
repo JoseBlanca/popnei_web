@@ -18,7 +18,7 @@ import {
 } from "./project.ts";
 import type { Project } from "./project.ts";
 
-/** The statistics of each individual, over the variants the filters keep. */
+/** The statistics of each individual, over every variant of the file. */
 export interface IndividualStats {
   /** Every individual of the variants file, in its order. */
   readonly individuals: readonly string[];

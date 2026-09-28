@@ -35,12 +35,12 @@ const OBS_HET_LINE =
   "An individual with no called genotype has no observed heterozygosity, and this filter removes it.";
 const CALCULATE = "Calculate the statistics of each individual";
 const CAPTION =
-  "The statistics of the 200 individuals of panel.nei, over the 1,200 variants the filters kept.";
+  "The statistics of the 200 individuals of panel.nei, over its 1,200 variants, before any filter of the variants.";
 const KEPT_116 = "Kept 116 of the 200 individuals it was given.";
 const KEPT_111 = "Kept 111 of the 116 individuals it was given.";
 const PASS_111 = "111 of the 200 individuals of panel.nei pass the filters.";
 const KNOWN_ONCE =
-  "Known once the statistics of each individual are calculated for these filters of the variants.";
+  "Known once the statistics of each individual are calculated.";
 const NONE_KEPT =
   "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them.";
 const NONE_KEPT_WHOLE =
@@ -170,7 +170,7 @@ async function thresholdsSet(page: Page): Promise<void> {
   ).toBeVisible();
 }
 
-test("VS7 D1 the thresholds at 0.03 and 0.38: Kept 116 of the 200, then 111 of 116, the line of the individuals that pass, the column Kept, the lines beside the histograms and the summary line, and axe", async ({
+test("IP2 D3, VS7 D1 the thresholds at 0.03 and 0.38: Kept 116 of the 200, then 111 of 116, the line of the individuals that pass, the column Kept, the lines beside the histograms and the summary line, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -252,7 +252,7 @@ test("VS7 D1 the thresholds at 0.03 and 0.38: Kept 116 of the 200, then 111 of 1
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("VS7 D1 a list applied has its count beside it, which describes its text area, and the thresholds count from what it kept, and axe", async ({
+test("IP2 D3, VS7 D1 a list applied has its count beside it, which describes its text area, and the thresholds count from what it kept, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -285,7 +285,7 @@ test("VS7 D1 a list applied has its count beside it, which describes its text ar
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("VS7 D1 0.12345 refused: the line under the field, announced and describing it, the threshold kept at 0.03, and the counts as they were, and axe", async ({
+test("IP2 D3, VS7 D1 0.12345 refused: the line under the field, announced and describing it, the threshold kept at 0.03, and the counts as they were, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -316,7 +316,7 @@ test("VS7 D1 0.12345 refused: the line under the field, announced and describing
   );
 });
 
-test("VS7 D1 a threshold typed and not committed moves its line and its plot, and not the counts; 0,03 typed key by key keeps 0.03 with the line of the comma; Cmd+Z puts the number committed back", async ({
+test("IP2 D3, VS7 D1 a threshold typed and not committed moves its line and its plot, and not the counts; 0,03 typed key by key keeps 0.03 with the line of the comma; Cmd+Z puts the number committed back", async ({
   page,
 }) => {
   await thresholdsSet(page);
@@ -367,7 +367,7 @@ test("VS7 D1 a threshold typed and not committed moves its line and its plot, an
   ).toBeVisible();
 });
 
-test("VS7 D1 an Undo of the header and a switch turned off take the threshold, its count and its line back, and axe", async ({
+test("IP2 D3, VS7 D1 an Undo of the header and a switch turned off take the threshold, its count and its line back, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -398,7 +398,7 @@ test("VS7 D1 an Undo of the header and a switch turned off take the threshold, i
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("VS7 D1 the missing data filter of the variants moved: the statistics and the counts of the thresholds stay, with no notice, and axe", async ({
+test("IP2 D3, VS7 D1 the missing data filter of the variants moved: the statistics and the counts of the thresholds stay, with no notice, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -418,6 +418,12 @@ test("VS7 D1 the missing data filter of the variants moved: the statistics and t
   ).toBeVisible();
   await expect(section(page).getByText(KNOWN_ONCE)).toHaveCount(0);
   await expect(section(page).getByText(/were removed/)).toHaveCount(0);
+  // No calculation: no bar, and no button of the statistics.
+  await expect(section(page).getByRole("progressbar")).toHaveCount(0);
+  await expect(
+    section(page).getByRole("button", { name: CALCULATE }),
+  ).toHaveCount(0);
+  await expect(section(page).getByText(CAPTION, { exact: true })).toBeVisible();
   await expect(
     page
       .getByRole("region", { name: "Notice" })
@@ -484,7 +490,7 @@ test("VS7 D1 before the statistics, a threshold turned on says it is known once 
   ).toBeVisible();
 });
 
-test("VS7 D1 thresholds that keep none: the reason under the filters, announced and describing each field, Write disabled, and the Variants step at Problem in the stepper with the whole words, and axe", async ({
+test("IP2 D3, VS7 D1 thresholds that keep none: the reason under the filters, announced and describing each field, Write disabled, and the Variants step at Problem in the stepper with the whole words, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -594,7 +600,7 @@ test("VS7 D1 the keyboard goes from the button of the statistics through each th
   await expect(field(page, MISSING_LABEL)).toHaveCount(0);
 });
 
-test("IP1 D2 the written files of dev.3 on the screen, VS7 D3 the write of the individuals kept: with the thresholds at 0.03 and 0.38, Write and Save give panel.filtered.nei of 156,818 bytes", async ({
+test("IP2 D3, IP1 D2 the written files of dev.3 on the screen, VS7 D3 the write of the individuals kept: with the thresholds at 0.03 and 0.38, Write and Save give panel.filtered.nei of 156,818 bytes", async ({
   page,
 }, testInfo) => {
   await thresholdsSet(page);

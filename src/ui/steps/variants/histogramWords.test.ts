@@ -88,9 +88,15 @@ describe("VS6 D2 the words of the histograms of the variants", () => {
     expect(VARIANT_HISTOGRAMS.unbiasedExpHet.filterName).toBeNull();
   });
 
-  test("the caption of the three", () => {
-    expect(histogramsCaption(1200, "panel.nei")).toBe(
+  test("the caption of the three, over every individual, over the individuals the filters of individuals keep, and over one", () => {
+    expect(histogramsCaption(1200, "panel.nei", null)).toBe(
       "Over the 1,200 variants of panel.nei, before any filter.",
+    );
+    expect(histogramsCaption(1200, "panel.nei", 111)).toBe(
+      "Over the 1,200 variants of panel.nei and the 111 individuals the filters of individuals keep, before any filter of the variants.",
+    );
+    expect(histogramsCaption(1, "a\tb.vcf", 1)).toBe(
+      "Over the 1 variant of a\\tb.vcf and the one individual the filters of individuals keep, before any filter of the variants.",
     );
   });
 
@@ -161,6 +167,16 @@ describe("VS6 D2 the words of the histograms of the variants", () => {
     );
     expect(removedText(notice("undo", description))).toBe(
       "Undone: the variants file was read again with other options. The histograms of the variants were removed; Redo brings them back as they were, with no calculation, and Calculate makes them anew for the file loaded now.",
+    );
+  });
+
+  test("the words of the histograms removed by a change of a filter of individuals end with the settings as they are now", () => {
+    const description = "the filter of individuals by missing data changed";
+    expect(removedText(notice("command", description))).toBe(
+      "The histograms of the variants were removed because the filter of individuals by missing data changed. Undo brings them back as they were, with no calculation; Calculate makes them anew for the settings as they are now.",
+    );
+    expect(removedText(notice("undo", description))).toBe(
+      "Undone: the filter of individuals by missing data changed. The histograms of the variants were removed; Redo brings them back as they were, with no calculation, and Calculate makes them anew for the settings as they are now.",
     );
   });
 

@@ -503,13 +503,15 @@ test("VS7 D1 an opening puts the text of each list back to the lists of the proj
   await expect(lists(page).getByText(/not applied yet/)).toHaveCount(0);
 });
 
-test("VS7 D1 the Tab key goes from the Count through each list, its text area and its two buttons, the button of the statistics of each individual and the switch of each threshold, to Write", async ({
+test("IP2 D3 the Tab key goes from the options of a VCF through each list, its text area and its two buttons, the button of the statistics of each individual and the switch of each threshold, to the button of the histograms of the variants", async ({
   page,
 }) => {
   await openVariants(page);
   await loadPanelNei(page);
   await page
-    .getByRole("button", { name: "Count the variants each filter keeps" })
+    .getByRole("checkbox", {
+      name: "Only the variants with PASS or . in the FILTER column",
+    })
     .focus();
   const order = [
     keepArea(page),
@@ -525,7 +527,11 @@ test("VS7 D1 the Tab key goes from the Count through each list, its text area an
     lists(page).getByRole("switch", {
       name: "Filter the individuals by observed heterozygosity",
     }),
-    writeButton(page),
+    page
+      .getByRole("region", { name: "Filters of the variants" })
+      .getByRole("button", {
+        name: "Calculate the histograms of the variants",
+      }),
   ];
   for (const next of order) {
     await page.keyboard.press("Tab");

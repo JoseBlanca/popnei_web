@@ -235,14 +235,12 @@ test("VS5 D3 with the focus on Write, the write ends with the focus on Save, the
   await setThreshold(page, "0.05");
   await holdWritten(page);
 
-  // The keyboard alone: from the threshold, the switches of the three
-  // filters that are off, the Count, each list of individuals with its
-  // two buttons, the button of the statistics of each individual, the
-  // switches of the two thresholds of the individuals, and then Write.
-  await threshold(page).focus();
-  for (let press = 0; press < 14; press++) {
-    await page.keyboard.press("Tab");
-  }
+  // The keyboard alone: from the Count, the last stop of the filters of
+  // the variants, the Tab key reaches Write.
+  await page
+    .getByRole("button", { name: "Count the variants each filter keeps" })
+    .focus();
+  await page.keyboard.press("Tab");
   await expect(writeButton(page)).toBeFocused();
   await page.keyboard.press("Enter");
 

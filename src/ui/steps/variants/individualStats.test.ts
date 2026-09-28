@@ -106,12 +106,12 @@ function panelRows(): readonly IndividualRow[] {
 }
 
 describe("VS7 D1 the words of the statistics of each individual", () => {
-  test("the caption of panel.nei at 0.05, and of one individual and one variant", () => {
-    expect(statsCaption(200, "panel.nei", 1152)).toBe(
-      "The statistics of the 200 individuals of panel.nei, over the 1,152 variants the filters kept.",
+  test("the caption of panel.nei, over every variant of the file, and of one individual and one variant", () => {
+    expect(statsCaption(200, "panel.nei", 1200)).toBe(
+      "The statistics of the 200 individuals of panel.nei, over its 1,200 variants, before any filter of the variants.",
     );
     expect(statsCaption(1, "one.vcf", 1)).toBe(
-      "The statistics of the one individual of one.vcf, over the one variant the filters kept.",
+      "The statistics of the one individual of one.vcf, over its one variant, before any filter of the variants.",
     );
   });
 
@@ -358,7 +358,7 @@ describe("the names of the user's files, escaped", () => {
 
   test("a variants file whose name holds a tab shows it escaped in the caption", () => {
     expect(statsCaption(2, "a\tb.vcf", 3)).toBe(
-      "The statistics of the 2 individuals of a\\tb.vcf, over the 3 variants the filters kept.",
+      "The statistics of the 2 individuals of a\\tb.vcf, over its 3 variants, before any filter of the variants.",
     );
   });
 });

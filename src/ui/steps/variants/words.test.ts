@@ -3,8 +3,10 @@ import { describe, expect, test } from "vitest";
 import { emptyProject } from "../../../core/project.ts";
 import type { Project, VariantSource } from "../../../core/project.ts";
 import {
+  buttonInTheStep,
   withoutTheStep,
   LD_LINE,
+  MISSING_DATA_LINE,
   NOT_COUNTED_LINE,
   OBS_HET_LINE,
   distanceRefusedText,
@@ -275,6 +277,14 @@ describe("the lines the owner chose at stop A, on 27 September 2026", () => {
   });
 });
 
+describe("the line of the missing data filter of the variants, which counts over the individuals kept since 28 September 2026", () => {
+  test("the proportion is over the individuals the filters of individuals keep", () => {
+    expect(MISSING_DATA_LINE).toBe(
+      "A genotype is missing when any of its alleles is, 0/. among them; the proportion is over the individuals the filters of individuals keep.",
+    );
+  });
+});
+
 describe("the words of the application without the Variants step", () => {
   test("the end of a sentence, and the comma before it, go; elsewhere the words stay", () => {
     expect(
@@ -291,5 +301,24 @@ describe("the words of the application without the Variants step", () => {
     expect(withoutTheStep("The Variants step says why.")).toBe(
       "The Variants step says why.",
     );
+  });
+
+  test("the reason of a disabled Calculate or Count loses its end, and an enabled Run, a Stop and no button stay as they are", () => {
+    expect(
+      buttonInTheStep({
+        kind: "run",
+        reason:
+          "The list of individuals to keep names 1 individual that is not in panel.nei: ind_900. Change the list, or remove the filter, in the Variants step.",
+      }),
+    ).toEqual({
+      kind: "run",
+      reason:
+        "The list of individuals to keep names 1 individual that is not in panel.nei: ind_900. Change the list, or remove the filter.",
+    });
+    const enabled = { kind: "run", reason: null } as const;
+    expect(buttonInTheStep(enabled)).toBe(enabled);
+    const stop = { kind: "stop" } as const;
+    expect(buttonInTheStep(stop)).toBe(stop);
+    expect(buttonInTheStep(null)).toBeNull();
   });
 });

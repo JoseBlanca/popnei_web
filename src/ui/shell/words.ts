@@ -277,8 +277,8 @@ function analysesState<R>(s: AppState<R, unknown>, w: ShellWords<R>): Status {
 /**
  * The summary line, what the analyses would be run on: the variants file
  * with the individuals and the variants the filters keep, the filters and
- * the metadata file, joined by " · ", "panel.nei · 114 of 200 individuals
- * kept · 1,128 of 1,200 variants kept · 5 filters · 3 populations by pop".
+ * the metadata file, joined by " · ", "panel.nei · 111 of 200 individuals
+ * kept · 1,096 of 1,200 variants kept · 5 filters · 3 populations by pop".
  * `kept` is `individualsKept` of the state; `variantsKept` the variants
  * the Counts of the filters as they are found to pass them, or `null`
  * when the filters are not counted, and the line then gives the variants

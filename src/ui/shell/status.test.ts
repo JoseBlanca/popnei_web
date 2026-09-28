@@ -39,7 +39,7 @@ describe("WS9 D1 the announcer", () => {
   test("a text that replaces its kind drops the one of that kind still waiting, and is written last", () => {
     const announcer = createAnnouncer();
     const total = { replaces: INDIVIDUALS_KEPT_KIND } as const;
-    announcer.announce("125 of the 200 pass.", total);
+    announcer.announce("116 of the 200 pass.", total);
     announcer.announce("Other words.");
     announcer.announce("124 of the 200 pass.", total);
     announcer.announce("123 of the 200 pass.", total);

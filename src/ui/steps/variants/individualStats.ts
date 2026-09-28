@@ -200,23 +200,22 @@ export function sortedRows(
   }
 }
 
-/** The caption of the table and the histograms: "The statistics of the
-    200 individuals of panel.nei, over the 1,152 variants the filters
-    kept." */
+/** The caption of the table and the histograms, which are over every
+    variant of the file: "The statistics of the 200 individuals of
+    panel.nei, over its 1,200 variants, before any filter of the
+    variants." */
 export function statsCaption(
   numIndividuals: number,
   variantsName: string,
   numVars: number,
 ): string {
   const variants =
-    numVars === 1
-      ? "the one variant the filters kept"
-      : `the ${counted(numVars, "variant")} the filters kept`;
+    numVars === 1 ? "its one variant" : `its ${counted(numVars, "variant")}`;
   const individuals =
     numIndividuals === 1
       ? "the one individual"
       : `the ${counted(numIndividuals, "individual")}`;
-  return `The statistics of ${individuals} of ${escaped(variantsName)}, over ${variants}.`;
+  return `The statistics of ${individuals} of ${escaped(variantsName)}, over ${variants}, before any filter of the variants.`;
 }
 
 /**

@@ -8,20 +8,24 @@
  *
  * - ready: the button "Calculate the histograms of the variants";
  * - running: Stop, the bar, and the line with the time since it started;
- * - done: the warning, the caption of the three, and the line of the
- *   versions; the button goes, and the focus, when it was on it, moves
- *   to the heading of the block;
- * - removed: the words of the change of the load that removed them, and
- *   the button;
+ * - done: the warning, the caption of the three, which names the
+ *   individuals the filters of individuals keep when they remove some,
+ *   and the line of the versions; the button goes, and the focus, when
+ *   it was on it, moves to the heading of the block;
+ * - removed: the words of the change that removed them, a new load or a
+ *   change of a filter of individuals, and the button;
  * - error: what happened and what to do, with the button after a failure
  *   that is neither popnei's refusal nor a file the browser can no longer
  *   read;
- * - locked: never drawn, since the step draws the block only once the
- *   variants file is read, when nothing locks it; drawn as the frame of
- *   the analyses draws it all the same, the button disabled with its
- *   reason.
+ * - locked, by a list of individuals popnei would refuse or by filters
+ *   of individuals that keep nobody, since the histograms are drawn over
+ *   the individuals kept: the button disabled, with the reason beside it
+ *   without its end "in the Variants step".
  *
- * The block is drawn only once the variants file is read.
+ * With a threshold on the individuals and no statistics of each
+ * individual, a Calculate calculates them first, and the block shows the
+ * bar of their calculation. The block is drawn only once the variants
+ * file is read.
  */
 import { useRef } from "react";
 
@@ -50,7 +54,7 @@ import {
   removedText,
 } from "./histogramWords.ts";
 import styles from "./VariantsStep.module.css";
-import { withoutTheStep } from "./words.ts";
+import { buttonInTheStep, withoutTheStep } from "./words.ts";
 
 /** The id of the check. */
 const ID = "variantChecks";
@@ -72,7 +76,7 @@ export function VariantChecksBlock({
   const notice = useAppState((s) => s.notice);
   const heading = useRef<HTMLHeadingElement>(null);
 
-  const button = buttonOf(status);
+  const button = buttonInTheStep(buttonOf(status));
   const stoppedBy = stoppedNotice(status, notice, ID);
 
   return (
@@ -157,6 +161,14 @@ function removedWords(notice: Notice | null): string {
 function Done({ numVars }: { readonly numVars: number }): React.JSX.Element {
   const variantsName = useAppState((s) => s.project.variants?.name ?? null);
   const popneiVersion = useAppState((s) => s.popneiVersion);
+  const kept = useAppState((s) => s.individualsKept?.list ?? null);
+  // A result is shown only under the key of the individuals kept, so the
+  // list is known: the histograms of a threshold wait for the statistics.
+  if (kept?.kind !== "known") {
+    throw new Error(
+      "popnei_web defect: the histograms of the variants are shown with the individuals kept not known.",
+    );
+  }
   // A result is shown only under the key of the project's variants file
   // and of the popnei that made it, so both are known.
   if (variantsName === null || popneiVersion === null) {
@@ -167,7 +179,11 @@ function Done({ numVars }: { readonly numVars: number }): React.JSX.Element {
   return (
     <>
       <p className={classOf(styles, "line")}>
-        {histogramsCaption(numVars, variantsName)}
+        {histogramsCaption(
+          numVars,
+          variantsName,
+          kept.individuals === null ? null : kept.individuals.length,
+        )}
       </p>
       <p className={classOf(styles, "muted")}>
         {versionsText(popneiVersion, APP_VERSION)}

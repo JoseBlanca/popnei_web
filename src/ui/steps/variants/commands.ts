@@ -29,6 +29,13 @@ export interface StepCommand {
   readonly command: (p: Project) => Project;
 }
 
+/** The descriptions of the two commands that change the load of the
+    variants file. */
+export const LOAD_DESCRIPTIONS: readonly string[] = Object.freeze([
+  "a new variants file was loaded",
+  "the variants file was read again with other options",
+]);
+
 /** A file picked or dropped, a new load. */
 export function pickCommand(load: VariantLoad): StepCommand {
   return {

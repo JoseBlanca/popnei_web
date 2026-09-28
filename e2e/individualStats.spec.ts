@@ -28,7 +28,7 @@ const FIXTURES = join(import.meta.dirname, "fixtures");
 const CALCULATE = "Calculate the statistics of each individual";
 const MISSING_LABEL = "Maximum proportion of missing genotypes, from 0 to 1";
 const CAPTION =
-  "The statistics of the 200 individuals of panel.nei, over the 1,200 variants the filters kept.";
+  "The statistics of the 200 individuals of panel.nei, over its 1,200 variants, before any filter of the variants.";
 const MISSING_TITLE = "Proportion of missing genotypes of each individual";
 const OBS_HET_TITLE = "Observed heterozygosity of each individual";
 const REMOVE_LABEL = "Individuals to remove, one name per line";
@@ -151,7 +151,7 @@ async function applyList(
   await expect(section(page).getByText(/is not applied yet/)).toHaveCount(0);
 }
 
-test("VS7 D1 the statistics of panel.nei: s000 0.0283 and 0.3654, the caption, the versions, the focus on the heading, the two histograms, and axe", async ({
+test("IP2 D3, VS7 D1 the statistics of panel.nei: s000 0.0283 and 0.3654, the caption, the versions, the focus on the heading, the two histograms, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -327,7 +327,7 @@ test("VS7 D1 no individual with a called genotype: no histogram of the heterozyg
   await expect(histogram(page, MISSING_TITLE)).toBeVisible();
 });
 
-test("VS7 D1 the table sorted with the keyboard alone: into the table, up to the headers, Enter twice, s082 first at 0.0442, each sort announced, and axe", async ({
+test("IP2 D3, VS7 D1 the table sorted with the keyboard alone: into the table, up to the headers, Enter twice, s082 first at 0.0442, each sort announced, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -460,7 +460,7 @@ test("VS7 D1 at 320 pixels wide, with the column Kept, a row focused while movin
   expect(focusedBox.y).toBeGreaterThanOrEqual(headerBottom - 0.5);
 });
 
-test("VS7 D1 the CSV of the table: panel.individual_stats.csv, its header, 200 rows, and s000 with every digit", async ({
+test("IP2 D3, VS7 D1 the CSV of the table: panel.individual_stats.csv, its header, 200 rows, and s000 with every digit", async ({
   page,
 }) => {
   await calculated(page);
@@ -477,7 +477,7 @@ test("VS7 D1 the CSV of the table: panel.individual_stats.csv, its header, 200 r
   expect(lines[1]).toBe("s000,0.028333333333333332,0.3653516295025729");
 });
 
-test("VS7 D1 the CSVs of the bins of the two histograms: their names, their headers, 20 rows, and the first bin of each", async ({
+test("IP2 D3, VS7 D1 the CSVs of the bins of the two histograms: their names, their headers, 20 rows, and the first bin of each", async ({
   page,
 }) => {
   await calculated(page);
@@ -506,7 +506,7 @@ test("VS7 D1 the CSVs of the bins of the two histograms: their names, their head
   }
 });
 
-test("VS7 D1 the statistics removed by an Undo while the focus is in the table or on a CSV button of a histogram: the focus goes to the heading of the block", async ({
+test("IP2 D3, VS7 D1 the statistics removed by an Undo while the focus is in the table or on a CSV button of a histogram: the focus goes to the heading of the block", async ({
   page,
 }) => {
   const undo = process.platform === "darwin" ? "Meta+z" : "Control+z";
@@ -570,7 +570,7 @@ test("VS7 D1 an Undo of the load while the focus is in the table or on a tab of 
   await expect(heading).toBeFocused();
 });
 
-test("VS7 D1 the missing data filter of the variants moved: the statistics stay, with no notice and no calculation, and axe", async ({
+test("IP2 D3, VS7 D1 the missing data filter of the variants moved: the statistics stay, with no notice and no calculation, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -652,7 +652,7 @@ test("VS7 D1 in error: the ploidy of tetraploid.vcf.gz refused, in the words of 
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("VS7 D1 the column Kept: a list to remove applied marks s000 removed and s001 kept with no calculation; a list naming ind_900 puts the line in its place, and axe", async ({
+test("IP2 D3, VS7 D1 the column Kept: a list to remove applied marks s000 removed and s001 kept with no calculation; a list naming ind_900 puts the line in its place, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {

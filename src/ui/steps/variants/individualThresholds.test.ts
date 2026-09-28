@@ -125,8 +125,8 @@ describe("the words beside a threshold and its histogram", () => {
   });
 
   test("what a filter kept, with a comma between thousands and one individual in the singular", () => {
-    expect(individualKeptText(200, 125)).toBe(
-      "Kept 125 of the 200 individuals it was given.",
+    expect(individualKeptText(200, 116)).toBe(
+      "Kept 116 of the 200 individuals it was given.",
     );
     expect(individualKeptText(10000, 9999)).toBe(
       "Kept 9,999 of the 10,000 individuals it was given.",
@@ -173,7 +173,7 @@ describe("the count beside each filter of individuals", () => {
     );
     expect(individualCountText(kept, "obs_het", false)).toBe(KNOWN_ONCE_TEXT);
     expect(KNOWN_ONCE_TEXT).toBe(
-      "Known once the statistics of each individual are calculated for these filters of the variants.",
+      "Known once the statistics of each individual are calculated.",
     );
   });
 

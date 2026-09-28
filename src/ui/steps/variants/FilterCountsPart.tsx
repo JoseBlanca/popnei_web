@@ -18,14 +18,17 @@
  *   read; with no button, the focus, when it was on it, moves to those
  *   words;
  * - removed: never, since the counts are in no notice;
- * - locked: never drawn, since the step draws the part only once the
- *   variants file is read, when nothing locks it; drawn as the frame of
- *   the analyses draws it all the same, the button disabled with its
- *   reason.
+ * - locked, by a list of individuals popnei would refuse or by filters
+ *   of individuals that keep nobody, since the filters of the variants
+ *   count over the individuals kept: the button disabled, with the reason
+ *   beside it, without its end "in the Variants step", in place of the
+ *   line of no counts, and no count beside the filters.
  *
- * A change of any filter of the variants takes the counts off, and the
- * part is then ready with the line of no counts; an undo brings them
- * back from the cache.
+ * With a threshold on the individuals and no statistics of each
+ * individual, a Count calculates them first, and the part shows the bar
+ * of their calculation. A change of any filter of the variants or of the
+ * individuals takes the counts off, and the part is then ready with the
+ * line of no counts; an undo brings them back from the cache.
  */
 import { useLayoutEffect, useRef } from "react";
 
@@ -50,7 +53,7 @@ import { classOf } from "../../classOf.ts";
 import { startAnalysis } from "../../runs.ts";
 import { useAppState, useStore } from "../../store.tsx";
 import styles from "./VariantsStep.module.css";
-import { withoutTheStep } from "./words.ts";
+import { buttonInTheStep, withoutTheStep } from "./words.ts";
 import {
   COUNT_AGAIN,
   COUNT_LABEL,
@@ -84,7 +87,7 @@ export function FilterCountsPart(): React.JSX.Element {
     (total.current ?? empty.current ?? failed.current)?.focus();
   });
 
-  const button = buttonOf(status);
+  const button = buttonInTheStep(buttonOf(status));
   const stoppedBy = stoppedNotice(status, notice, ID);
 
   return (

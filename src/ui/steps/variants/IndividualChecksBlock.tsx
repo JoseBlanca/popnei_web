@@ -159,7 +159,8 @@ function removedWords(notice: Notice | null): string {
 interface DoneProps {
   /** The individuals of the variants file. */
   readonly numIndividuals: number;
-  /** The variants the filters kept. */
+  /** The variants of the file, over which the statistics are, before
+      any filter. */
   readonly numVars: number;
 }
 

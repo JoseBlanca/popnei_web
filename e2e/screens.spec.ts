@@ -2115,7 +2115,7 @@ for (const theme of ["light", "dark"] as const) {
       await saveIndividuals(page, "popgen-stats-320");
     });
 
-    test("the statistics of each individual, removed by the missing data filter, with the notice", async ({
+    test("the statistics of each individual, removed by a new load, with the notice", async ({
       page,
     }) => {
       await pickPanel(page);
@@ -2125,12 +2125,8 @@ for (const theme of ["light", "dark"] as const) {
       await expect(
         individualLists(page).getByText(STATS_CAPTION),
       ).toBeVisible();
-      const threshold = page.getByLabel(
-        "Maximum proportion of missing genotypes, from 0 to 1",
-        { exact: true },
-      );
-      await threshold.fill("0.05");
-      await threshold.press("Enter");
+      // Only a new load removes them, since they read no filter.
+      await pickVariants(page, "panel.nei");
       await expect(
         individualLists(page).getByText(
           /^The statistics of each individual were removed because/,
@@ -2182,7 +2178,7 @@ for (const theme of ["light", "dark"] as const) {
       }
     }
 
-    test("the thresholds of the individuals at 0.03 and 0.38, with their counts, and then Known once … after the missing data filter of the variants moved", async ({
+    test("the thresholds of the individuals at 0.03 and 0.38, with their counts, and Known once … before the statistics", async ({
       page,
     }) => {
       await thresholdsAt(page, "0.03", "0.38");
@@ -2192,16 +2188,64 @@ for (const theme of ["light", "dark"] as const) {
         ),
       ).toBeVisible();
       await saveIndividuals(page, "popgen-thresholds-counts");
-      const variants = page.getByLabel(
-        "Maximum proportion of missing genotypes, from 0 to 1",
-        { exact: true },
-      );
-      await variants.fill("0.06");
-      await variants.press("Enter");
+      // A new load: the statistics are of the old one, and the counts of
+      // the thresholds wait for them.
+      await pickVariants(page, "panel.nei");
       await expect(
         individualLists(page).getByText(/^Known once the statistics/),
       ).toHaveCount(2);
       await saveIndividuals(page, "popgen-thresholds-known-once");
+    });
+
+    /** The section of the filters of the variants. */
+    function variantFilters(page: Page): Locator {
+      return page.getByRole("region", { name: "Filters of the variants" });
+    }
+
+    test("the Variants step in its order, the individuals first, before any calculation", async ({
+      page,
+    }) => {
+      await pickPanel(page);
+      await expect(
+        individualLists(page).getByRole("button", { name: CALCULATE_STATS }),
+      ).toBeVisible();
+      await save(page, `popgen-variants-order-ready-${theme}`);
+    });
+
+    test("the Variants step in its order, with the statistics and the thresholds", async ({
+      page,
+    }) => {
+      await thresholdsAt(page, "0.03", "0.38");
+      await expect(
+        individualLists(page).getByText(
+          "111 of the 200 individuals of panel.nei pass the filters.",
+        ),
+      ).toBeVisible();
+      await save(page, `popgen-variants-order-thresholds-${theme}`);
+    });
+
+    test("the Variants step in its order, the Count and the histograms locked by a list naming someone not in the file", async ({
+      page,
+    }) => {
+      await pickPanel(page);
+      await listArea(page, "Individuals to keep, one name per line").fill(
+        "s000\nind_900",
+      );
+      await individualLists(page)
+        .getByRole("button", { name: "Apply the list to keep" })
+        .click();
+      await expect(
+        variantFilters(page).getByRole("button", {
+          name: "Count the variants each filter keeps",
+        }),
+      ).toBeDisabled();
+      await save(page, `popgen-variants-order-list-locked-${theme}`);
+      await variantFilters(page).screenshot({
+        path: join(
+          SCREENS,
+          `popgen-variants-order-list-locked-variants-${theme}.png`,
+        ),
+      });
     });
 
     test("the thresholds of the individuals that keep none", async ({
@@ -2366,9 +2410,10 @@ for (const theme of ["light", "dark"] as const) {
       await choose(page, "Column that defines the populations", "popcat");
       await goTo(page, "Variants");
       // The lists cannot leave every population empty, which locks the
-      // diversity; a threshold can: at 0.05 of the variants, s000 and
-      // s001 have an observed heterozygosity of 0.367 and 0.344, above
-      // 0.34, and some individuals with no population lie below it.
+      // diversity; a threshold can: s000 and s001 have an observed
+      // heterozygosity of 0.365 and 0.343, over every variant of the
+      // file, above 0.34, and 35 individuals with no population lie below
+      // it.
       const variants = page.getByLabel(
         "Maximum proportion of missing genotypes, from 0 to 1",
         { exact: true },
@@ -2391,7 +2436,7 @@ for (const theme of ["light", "dark"] as const) {
       await expect(
         page
           .getByRole("main")
-          .getByText(/^The 34 individuals kept have no population in popcat/),
+          .getByText(/^The 35 individuals kept have no population in popcat/),
       ).toBeVisible();
       await save(page, `popgen-diversity-all-emptied-${theme}`);
     });

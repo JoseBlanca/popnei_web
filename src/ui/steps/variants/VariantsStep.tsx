@@ -1,11 +1,15 @@
 /**
  * The Variants step (docs/specs/steps/variants.md): the user picks the
  * variants file, a VCF or a `.nei` file, sets how a VCF is read, sees
- * what the file holds, sets the filters of the variants with their
- * histograms (VariantFilters.tsx), sets the filters of the individuals,
- * the two lists and the two thresholds, with the statistics of each
- * individual (IndividualFilters.tsx), and writes the filtered variants
- * (WriteSection.tsx). The step reads
+ * what the file holds, sets the filters of the individuals, the two lists
+ * and the two thresholds, with the statistics of each individual
+ * (IndividualFilters.tsx), then the filters of the variants with their
+ * histograms (VariantFilters.tsx), and writes the filtered variants
+ * (WriteSection.tsx). The filters of the individuals come first, in the
+ * order of the headings and of the Tab key, since they act first and the
+ * filters of the variants count over the individuals they keep, as the
+ * owner decided on 28 September 2026 (the spec, "The parts, in their
+ * order"). The step reads
  * the project from the store and sends it commands; what it holds itself
  * is the options of the next VCF, until the pick writes them into the
  * project, and the message of a file it did not load.
@@ -271,9 +275,9 @@ export function VariantsStep(): React.JSX.Element {
         </section>
       </div>
 
-      <VariantFilters />
-
       <IndividualFilters />
+
+      <VariantFilters />
 
       <WriteSection />
     </div>

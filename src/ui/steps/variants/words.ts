@@ -10,6 +10,7 @@ import { DEFAULT_ONLY_PASSED, DEFAULT_PLOIDY } from "../../../core/apps.ts";
 import { counted, escaped, grouped } from "../../../core/project.ts";
 import type { Project, VariantSource } from "../../../core/project.ts";
 import type { VcfReadOptions } from "../../../worker/protocol.ts";
+import type { ButtonOf } from "../../analyses/status.ts";
 import { numberText } from "../../widgets/committedNumber.ts";
 import type { NumberRefusal } from "../../widgets/committedNumber.ts";
 
@@ -27,6 +28,15 @@ const IN_THE_STEP = /,? in the Variants step(?=\.| and )/gu;
     or remove the filter." (writeVariants.md, "Its words"). */
 export function withoutTheStep(text: string): string {
   return text.replace(IN_THE_STEP, "");
+}
+
+/** The button of a check of the step, `button`, with the reason of a
+    disabled Calculate or Count without "in the Variants step", as the
+    step shows it beside the button (variants.md, "Its words"). */
+export function buttonInTheStep(button: ButtonOf): ButtonOf {
+  return button?.kind === "run" && button.reason !== null
+    ? { kind: "run", reason: withoutTheStep(button.reason) }
+    : button;
 }
 
 /** The options of a VCF with nothing loaded and no reference. */
@@ -100,9 +110,10 @@ export const THRESHOLD_LABEL =
   "Maximum proportion of missing genotypes, from 0 to 1";
 
 /** The line under the switch of the missing data filter: what popnei
-    counts as missing, and over which individuals. */
+    counts as missing, and over which individuals, those the filters of
+    individuals keep, which act first. */
 export const MISSING_DATA_LINE =
-  "A genotype is missing when any of its alleles is, 0/. among them; the proportion is over every individual of the file.";
+  "A genotype is missing when any of its alleles is, 0/. among them; the proportion is over the individuals the filters of individuals keep.";
 
 /** The switch of the filter by observed heterozygosity. */
 export const OBS_HET_SWITCH = "Filter the variants by observed heterozygosity";
