@@ -455,6 +455,19 @@ function FieldInput({
         }
         onText(event.currentTarget.value);
       }}
+      onPasteCapture={(event) => {
+        // Before React Aria's handler: a text pasted over the whole field
+        // is committed by it at once, and React Aria parses "-5" as a
+        // number, which the field would refuse with a line of its own
+        // beside the line of the character. The commit of a text the
+        // field does not take is refused, so that one line is shown and
+        // announced, the character's.
+        if (state === null) return;
+        const pasted = event.clipboardData.getData("text/plain").trim();
+        if (state.validate(pasted)) return;
+        onNotTakenPending();
+        onCommitStarts();
+      }}
       onPaste={(event) => {
         // A text pasted over the whole field is committed by React Aria at
         // once, and a text that is no number leaves the field as it was.

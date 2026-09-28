@@ -449,6 +449,38 @@ test("IP3 a distance above 2^53 − 1 is refused with the number as it was typed
   await expect(status(page)).toHaveText(endsWith(line));
 });
 
+test("IP3 -5 pasted over the distance of 50000 gives one line, the character's, shown and announced", async ({
+  page,
+}) => {
+  await ldTurnedOn(page);
+  await commit(page, DISTANCE_LABEL, "50000");
+  await distance(page).focus();
+  await distance(page).selectText();
+  await distance(page).evaluate((input) => {
+    const transfer = new DataTransfer();
+    transfer.setData("text/plain", "-5");
+    input.dispatchEvent(
+      new ClipboardEvent("paste", {
+        clipboardData: transfer,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+  });
+  const line =
+    "‘-’ cannot be typed in the distance, which is a whole number of base pairs, as 10000; the distance stays 50000.";
+  await expect(
+    page.getByRole("main").getByText(line, { exact: true }),
+  ).toBeVisible();
+  await expect(distance(page)).toHaveValue("50000");
+  // Announced alone, and not after a line of -5 refused.
+  await expect(status(page)).toHaveText(endsWith(line));
+  await expect(status(page)).not.toContainText("is less than 1");
+  await expect(page.getByRole("main").getByText(/is less than 1/)).toHaveCount(
+    0,
+  );
+});
+
 test("IP3 D3 with a distance typed and not committed after a Count, one click on the switch turns the LD pruning off", async ({
   page,
   makeAxeBuilder,
