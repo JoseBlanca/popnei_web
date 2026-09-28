@@ -16,7 +16,10 @@ from the `.xlsx` of the report; and on 28 September 2026 for two answers
 of the owner: the line of the sheet read, fixed and with no name of the
 sheet, and an error `#N/A` of an xlsx read as a missing value; and later
 that day for a third, every other error of Excel in an xlsx read as a
-missing value as well. The
+missing value as well; and on 28 September 2026 with the section "How
+it is checked", written from the parts of this spec and the checks of
+`docs/specs/shell.md`, which adds no behaviour (task 5.1 of
+`docs/plans/individuals-pca.md`). The
 code of stage 2 is in `src/ui/steps/individuals/`.
 
 The screen spec of the second step of the population genetics
@@ -739,6 +742,158 @@ hidden sheets of the user's file (`docs/architecture.md`, section 8;
   shows the new value, and a screen reader reads it.
 - An error, a warning and the line of the check say what they are in
   words, and not by their colour alone (1.4.1).
+
+## How it is checked
+
+The step is checked in two places. In node, with Vitest, the runner of
+the tests that need no browser, the functions that make its words and
+its commands, which need no page. In the
+browser, with the flows: the steps a user takes, done by Playwright, the
+program that drives Chromium, Firefox and WebKit, the engines of Chrome,
+Firefox and Safari, against the built site
+(`.claude/skills/coding/testing.md`). The flows read the fixtures of
+the walking skeleton: `e2e/fixtures/panel.nei`, 1,200 variants of 200
+individuals, and `panel_pops.csv`, its populations, 200 rows of two
+columns, `IID` and `popcat`, whose populations are `p0`, `p2` and `p1`
+in the order of the file, of 48, 84 and 68 individuals. The files a
+check needs and the fixtures lack are written by the flow from their
+text: a copy of `panel_pops.csv` without 12 of its individuals; and a
+file with a binary column and a column of a few whole numbers.
+
+In node:
+
+- **The words of the step**, each asserted whole: what the end of a name
+  tells, for each ending of the table of "The file", in capitals as
+  well, `pops.CSV`, and `panel.vcf.gz` a variants file; the six texts of
+  a file not loaded; the line of no file, "No metadata file: every
+  individual is in one population."; the words of a type, a binary one
+  with its coding; the warning of the types set and not applied, for
+  each of the three reasons of `typeLostReason` and for more than one,
+  in the order of `typesLost`, with the file named as the source names
+  it; the line of a population, "P1 · 48" and "P1, 48 individuals", and
+  of the one population, "All individuals · 342" and "All individuals,
+  342 individuals"; the button of the copy, "Copy the 12 names" and "Copy
+  the name", and its three announcements.
+- **The items of the select of the populations**: "All individuals in
+  one population" first, of the key `one`, then each column but the
+  first, of the key `column:` and its name; the item shown as chosen for
+  the grouping `onePopulation`, for a column of the table, and none,
+  "Choose a column", for no column or one the table does not have; and a
+  column named `one`, or "All individuals in one population", chosen
+  and shown as that column and not as the one population.
+- **The commands**, each row of the table of "What it sends and reads"
+  applied to the store of core with its description: a type, a coding
+  and the types forgotten each make one step of undo and no notice, and
+  an undo of each is said "Undone: the type of score changed." and so
+  on; "All individuals in one population" chosen while the diversity by
+  a column is done removes it, with the notice "Diversity removed
+  because every individual was put in one population".
+- **The shell**, as `docs/specs/shell.md`, "How it is checked", lists
+  its checks of this step: `stepStates` with Individuals Optional with
+  no metadata file whatever the grouping, To do with a file read and no
+  column, To do with a file `notGiven`, Done with a file read and
+  `onePopulation`; `summaryLine` with no metadata file, a file read and
+  no column, `onePopulation` and `notGiven`; and `announcementsOf` at the
+  end of a read, with each of its four sentences after the check, all
+  four in their order, and none.
+
+In the flows, on `panel.nei` loaded first unless the item says
+otherwise:
+
+- **Ready, no file**: the zone with "Choose a metadata file…" and "No
+  metadata file: every individual is in one population.", no check and
+  no part of the populations, and the stepper's Individuals at Optional,
+  "Without it, every individual is in one population." as the
+  description of its link. The diversity then runs with the missing data
+  filter at its default of 0.1, beside Run "1 population, All
+  individuals: 200 individuals" and "No metadata file: every individual
+  is in one population.", and its row "All individuals" reads 200
+  individuals, an expected heterozygosity of 0.3755, an observed one of
+  0.3543 and 0.9792 of the variants polymorphic
+  (`docs/specs/analyses/diversity.md`, "How it is verified").
+- **Running**: the read held back, the card with "Reading
+  panel_pops.csv.", the three options of the reader with "Detected", and
+  no table.
+- **Done**: `panel_pops.csv` read, the card with "200 rows, 2 columns",
+  the focus still on "Replace panel_pops.csv…", the three options with
+  what the reader detected, the table of the columns, "All 200
+  individuals of panel.nei found", and the select at "Choose a column"
+  with "Choose the column that defines the populations, or all
+  individuals in one population." read with it; the diversity locked
+  with the reason that names the step. `popcat` chosen: the list "p0 ·
+  48", "p2 · 84", "p1 · 68", read "p0, 48 individuals" and copied as
+  the lines shown, and Individuals at Done.
+- **The one population chosen**: "All individuals in one population"
+  chosen with the diversity by `popcat` done, the table gone and the
+  notice "Diversity removed because every individual was put in one
+  population · Undo"; the list "All individuals · 200"; the diversity
+  run, and its row "All individuals" as with no file; Undo, the column
+  `popcat` chosen again and its table back with no calculation. Then,
+  with the one population, `panel_pops.csv` picked again: the table
+  leaves the panel while the file is read, and comes back with no Run
+  once it is read, the notice no longer naming it.
+- **The types**: in the file with a binary column and one of a few
+  whole numbers, the type of a column changed and the value coded 1 of
+  the binary one chosen, each one step of Undo with no notice; the
+  warning of the few whole numbers gone once that column is set
+  categorical; the separator set to the semicolon, which reads the file
+  as one column, the warning of the types set and not applied naming
+  them, with "Forget these types"; the separator set back, every type
+  applied again and the warning gone; the semicolon again, "Forget these
+  types" pressed, the warning gone, and, the table having only its first
+  column, the focus on the file button; and with a table that has
+  others, the focus on the first select of a type.
+- **Errors**: a file with a row one cell short refused in the words that
+  name the separator, the options still there, and a separator chosen
+  reading it again; the copy without 12 individuals, "188 rows, 2
+  columns", the reason `individualsStepMissing` gives, the disclosure
+  "The 12 individuals missing" opening the 12 names, "Copy the 12 names"
+  putting them on the clipboard one a line and the status region saying
+  "12 names copied.", and in a page without the clipboard "The names
+  could not be copied. Select them in the list."; no list of the
+  populations while individuals are missing; a new file without the
+  column chosen, the select at "Choose a column" with the reason of kind
+  `noSuchColumn`; a column empty for every individual of `panel.nei`,
+  with the reason of kind `noPopulation`; a project file opened whose
+  metadata file was not read when it was saved, `notGiven`: the card with
+  the name, "Replace pops.csv…", "Remove pops.csv" and its reason, no
+  options, no table, and Individuals at To do.
+- **Files not loaded**: an `.xls` file, several files dropped at once, a
+  folder, a piece of text dropped and one pasted into the zone's button,
+  a variants file told by its name, and a file of another name, each
+  with its words, announced, and the focus still on the file button; a
+  VCF picked under the name of a CSV refused as a variants file by the
+  reader.
+- **Remove**: the card, the options and the table gone, the line of no
+  file back, Individuals at Optional, and the focus on "Choose a
+  metadata file…".
+- **The reads announced**: the text of the status region after a read,
+  with the check once `panel.nei` is read, and after a read again for
+  a change of an option.
+- **The keyboard**: the order of the Tab key of "Accessibility", with a
+  file with a binary column, the types that wait and individuals
+  missing, the disclosure open; each select of a type named "Type of
+  score" and each select of the coding "Coded 1, the case, in status".
+- **The width**: at 320 px wide, in the three engines, the table of the
+  columns fits, no word of the table, of a warning or of a problem is
+  cut, and the page does not scroll sideways.
+- **An xlsx**, with files of the tests of xlsx_rs: read from its first
+  sheet with the line that says so and no options of the reader, and
+  each refusal of "Its words" given in its words.
+
+The check of axe, the program that finds the failures of accessibility
+a program can see, in each state of the table of the states that the
+flows reach. A screen reader, VoiceOver with Safari at least, is tried
+on the table of the columns with its selects, the select of the coding,
+the warning of the types that wait with its button, and the disclosure
+of the individuals missing with its copy, which are new in stage 4
+(`.claude/skills/coding/react.md`, "Accessibility review"). The screen
+is seen in the three engines, at 320 px wide and on a wide screen. The
+script of the pictures, `e2e/screens.spec.ts`, which takes the page
+through its states and writes a picture of each, takes each state of
+the table of the states, the types that wait and the check with
+individuals missing, on a wide screen in the light and the dark theme,
+and the table of the columns at 320 px wide.
 
 ## Left for the running application
 
