@@ -46,8 +46,9 @@ export interface Project {
   readonly variants: VariantSource | null;
   /** The filters of the variants, at most one of each kind, in the fixed
       order missing_data, obs_het, maf, ld of `VARIANT_FILTER_ORDER`,
-      whatever the order the user added them in. */
-  readonly filters: readonly VariantFilter[];
+      whatever the order the user added them in; the LD filter with no
+      distance until the user types one. */
+  readonly filters: readonly ProjectVariantFilter[];
   /** The filters of the individuals, at most one of each kind, in the
       fixed order keep, remove, missing_data, obs_het. */
   readonly individualFilters: readonly IndividualFilter[];
@@ -62,6 +63,22 @@ export interface Project {
       with and of its results, or `null`. */
   readonly reference: Reference | null;
 }
+
+/**
+ * A filter of the variants as the project holds it: a `VariantFilter` of
+ * the protocol, but that the LD filter's `maxDist` is `null` from the
+ * moment its switch is turned on until the user types a distance, which
+ * has no default (the project spec, "What an analysis needs of every
+ * project"). A job never carries a `null` distance: `jobFilters` gives
+ * the filters of every job.
+ */
+export type ProjectVariantFilter =
+  | Exclude<VariantFilter, { readonly kind: "ld" }>
+  | {
+      readonly kind: "ld";
+      readonly maxAllowedR2: number;
+      readonly maxDist: number | null;
+    };
 
 /** The variants file of one load. */
 export interface VariantSource {
@@ -438,10 +455,39 @@ function wholeNumberError(
       );
 }
 
+/** The error of a value that may also be `null`, which the text calls
+    nothing: "a whole number, 1 or more, or nothing". */
+function orNothing(error: ProjectError): ProjectError {
+  if (error.kind !== "wrongValue") {
+    return error;
+  }
+  const expected = error.expected;
+  return wrongValue(
+    error.path,
+    expected.includes(",")
+      ? `${expected}, or nothing`
+      : `${expected} or nothing`,
+  );
+}
+
+/** Checks the `maxDist` of the LD filter: `null`, a distance not typed
+    yet, or a whole number from 1 to 2^53 − 1. */
+function ldDistError(
+  maxDist: number | null,
+  path: FieldPath,
+): ProjectError | null {
+  if (maxDist === null) {
+    return null;
+  }
+  const error = wholeNumberError(maxDist, 1, MAX_LD_DIST, path);
+  return error === null ? null : orNothing(error);
+}
+
 /** Checks the thresholds of a filter of the variants, from 0 to 1, and
-    its `maxDist`, a whole number from 1 to 2^53 − 1. */
+    its `maxDist`, a whole number from 1 to 2^53 − 1 or `null`, a
+    distance not typed yet. */
 function variantFilterError(
-  filter: VariantFilter,
+  filter: ProjectVariantFilter,
   path: FieldPath,
 ): ProjectError | null {
   switch (filter.kind) {
@@ -460,7 +506,7 @@ function variantFilterError(
     case "ld":
       return (
         thresholdError(filter.maxAllowedR2, [...path, "maxAllowedR2"]) ??
-        wholeNumberError(filter.maxDist, 1, MAX_LD_DIST, [...path, "maxDist"])
+        ldDistError(filter.maxDist, [...path, "maxDist"])
       );
   }
 }
@@ -757,7 +803,7 @@ function copyVariantLoad(source: VariantLoad): VariantLoad {
   };
 }
 
-function copyVariantFilter(filter: VariantFilter): VariantFilter {
+function copyVariantFilter(filter: ProjectVariantFilter): ProjectVariantFilter {
   switch (filter.kind) {
     case "missing_data":
       return {
@@ -796,8 +842,12 @@ function placeOf<K extends string>(
 }
 
 /** Sets the filter of its kind, in the fixed order of the kinds,
-    missing_data, obs_het, maf, ld, in place of the one of its kind. */
-export function setVariantFilter(p: Project, filter: VariantFilter): Project {
+    missing_data, obs_het, maf, ld, in place of the one of its kind; the
+    LD filter may have no distance yet, `maxDist` `null`. */
+export function setVariantFilter(
+  p: Project,
+  filter: ProjectVariantFilter,
+): Project {
   const { index, at } = placeOf(p.filters, VARIANT_FILTER_ORDER, filter.kind);
   refuse("setVariantFilter", variantFilterError(filter, ["filters", at]));
   const copy = copyVariantFilter(filter);
@@ -1346,6 +1396,49 @@ export function projectNeeds(p: Project): string | null {
   return variants.read.kind === "read"
     ? null
     : variantsReadNeeds(variants, VARIANTS_ENDS);
+}
+
+/** The reason of the LD filter of the variants on with no distance
+    (the project spec, "What an analysis needs of every project"). */
+const LD_NO_DISTANCE =
+  "The LD filter of the Variants step needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn off the LD filter, in the Variants step.";
+
+/**
+ * The reason of the LD filter of the variants on with no distance, whose
+ * `maxDist` is `null` until the user types one, or `null`; whatever the
+ * variants file, since the filter does not depend on it. The store locks
+ * with it what reads the filters of the variants, and nothing else (the
+ * project spec, "What an analysis needs of every project").
+ */
+export function variantFilterNeeds(p: Project): string | null {
+  return hasDistances(p.filters) ? null : LD_NO_DISTANCE;
+}
+
+/**
+ * The filters of the variants as a job carries them to popnei: `filters`
+ * itself, the same array, once every filter has what popnei needs. Each
+ * analysis and the writing build the filters of their job with it.
+ * Throws a defect when the LD filter has no distance, which the lock of
+ * `variantFilterNeeds` keeps from every job: popnei's `filterByLd` cannot
+ * be given it.
+ */
+export function jobFilters(
+  filters: readonly ProjectVariantFilter[],
+): readonly VariantFilter[] {
+  if (!hasDistances(filters)) {
+    throw defect(
+      "a job was given the LD filter with no distance, which variantFilterNeeds locks.",
+    );
+  }
+  return filters;
+}
+
+/** Whether every filter has what popnei needs: the LD filter its
+    distance. */
+function hasDistances(
+  filters: readonly ProjectVariantFilter[],
+): filters is readonly VariantFilter[] {
+  return filters.every((f) => f.kind !== "ld" || f.maxDist !== null);
 }
 
 /** A list of individuals popnei would refuse: which of the two it is,
@@ -2038,18 +2131,7 @@ function parseOrNothing<T>(
   parse: Parser<T>,
 ): Parsed<T | null> {
   const parsed = parseNullable(value, path, parse);
-  if (parsed.ok || parsed.error.kind !== "wrongValue") {
-    return parsed;
-  }
-  const expected = parsed.error.expected;
-  return failure(
-    wrongValue(
-      parsed.error.path,
-      expected.includes(",")
-        ? `${expected}, or nothing`
-        : `${expected} or nothing`,
-    ),
-  );
+  return parsed.ok ? parsed : failure(orNothing(parsed.error));
 }
 
 function parseList<T>(
@@ -2216,13 +2298,13 @@ const FOUND_DECIMAL_WORDS: Readonly<Record<CsvFound["decimal"], string>> = {
 function parseVariantFilter(
   value: unknown,
   path: FieldPath,
-): Parsed<VariantFilter> {
+): Parsed<ProjectVariantFilter> {
   const read = readKind(value, path, VARIANT_FILTER_KINDS);
   if (!read.ok) {
     return read;
   }
   const { kind, fields } = read.value;
-  let filter: VariantFilter;
+  let filter: ProjectVariantFilter;
   switch (kind) {
     case "missing_data": {
       const rate = numberField(fields, path, "maxAllowedMissingRate");
@@ -2253,7 +2335,11 @@ function parseVariantFilter(
       if (!r2.ok) {
         return r2;
       }
-      const dist = numberField(fields, path, "maxDist");
+      const dist = parseOrNothing(
+        fields["maxDist"],
+        [...path, "maxDist"],
+        parseNumber,
+      );
       if (!dist.ok) {
         return dist;
       }
@@ -2267,7 +2353,7 @@ function parseVariantFilter(
 function parseVariantFilters(
   value: unknown,
   path: FieldPath,
-): Parsed<VariantFilter[]> {
+): Parsed<ProjectVariantFilter[]> {
   const filters = parseList(value, path, parseVariantFilter);
   if (!filters.ok) {
     return filters;

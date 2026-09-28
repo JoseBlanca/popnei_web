@@ -12,18 +12,23 @@ import {
   analysisOptions,
   emptyProject,
   individualListNeeds,
+  jobFilters,
   loadIndividuals,
   loadVariants,
   projectNeeds,
+  removeIndividualFilter,
   removeIndividuals,
+  removeVariantFilter,
   setCsvOptions,
   setGrouping,
   setIndividualFilter,
   setVariantFilter,
+  variantFilterNeeds,
 } from "./project.ts";
 import type {
   IndividualsRead,
   Project,
+  ProjectVariantFilter,
   SourceRead,
   VariantSource,
 } from "./project.ts";
@@ -3275,8 +3280,9 @@ const MODEL_INDIVIDUALS: readonly string[] = ["i1", "i2", "i3", "i4"];
 /** The key the current project of `store` gives the analysis `analysis`
     of the modelled store, by the keys spec, whatever the lock by the
     individuals kept; `null` when `projectNeeds`, `individualListNeeds`
-    for an analysis that reads the filters of individuals, or its `needs`
-    gives a reason. */
+    for an analysis that reads the filters of individuals,
+    `variantFilterNeeds` for one that reads the filters of the variants,
+    or its `needs` gives a reason. */
 function keyGiven(
   store: Store<TestResult>,
   analyses: readonly AnalysisDef<TestJob, TestResult>[],
@@ -3291,7 +3297,11 @@ function keyGiven(
   const listReason = def.filtersRead.individuals
     ? (individualListNeeds(project)?.reason ?? null)
     : null;
-  const reason = projectNeeds(project) ?? listReason ?? def.needs(project);
+  const filterReason = def.filtersRead.variants
+    ? variantFilterNeeds(project)
+    : null;
+  const reason =
+    projectNeeds(project) ?? listReason ?? filterReason ?? def.needs(project);
   return reason === null
     ? keyOf(def, project, state.popneiVersion ?? "", createKeyMemo())
     : null;
@@ -3334,11 +3344,13 @@ describe("WP4 D5 the properties of the store", () => {
           const project = state.project;
           const common = projectNeeds(project);
           const listReason = individualListNeeds(project)?.reason ?? null;
+          const filterReason = variantFilterNeeds(project);
           analyses.forEach((def, index) => {
             const status = state.analyses[index]?.status;
             const reason =
               common ??
               (def.filtersRead.individuals ? listReason : null) ??
+              (def.filtersRead.variants ? filterReason : null) ??
               def.needs(project);
             if (reason !== null) {
               expect(status).toStrictEqual({ kind: "locked", reason });
@@ -5830,3 +5842,441 @@ describe("VS3 D7 the properties of the write", () => {
     );
   });
 });
+
+// The LD filter of the variants with no distance: store.md, "The state of
+// an analysis", "The writing of the filtered variants", and "How it is
+// verified", "An LD filter with no distance" and the properties.
+
+/** The reason of `variantFilterNeeds`, as the project gives it. */
+const LD_REASON = variantFilterNeeds(
+  setVariantFilter(emptyProject("popgen"), {
+    kind: "ld",
+    maxAllowedR2: 0.3,
+    maxDist: null,
+  }),
+);
+
+/** The command that turns the LD filter on at r² 0.3 with the distance
+    `maxDist`, `null` for none typed. */
+function ldAt(maxDist: number | null): (p: Project) => Project {
+  return (p) => setVariantFilter(p, { kind: "ld", maxAllowedR2: 0.3, maxDist });
+}
+
+/** Whether a list of filters holds the LD filter with no distance. */
+function withNoDistance(filters: readonly ProjectVariantFilter[]): boolean {
+  return filters.some((f) => f.kind === "ld" && f.maxDist === null);
+}
+
+describe("IP3 D1 an LD filter with no distance in the store", () => {
+  test("the reason is the spec's", () => {
+    expect(LD_REASON).toBe(
+      "The LD filter of the Variants step needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn off the LD filter, in the Variants step.",
+    );
+  });
+
+  test("what reads the filters of the variants, the counts and the write are locked with its reason, the statistics ready, and nothing is sent", () => {
+    const { store, sent, writes } = storeThatWrites();
+    store.apply("the LD filter was turned on", ldAt(null));
+
+    for (const id of ["pops", "vars", "counts"]) {
+      expect(analysisIn(store, id)).toStrictEqual({
+        kind: "locked",
+        reason: LD_REASON,
+      });
+      expect(store.startRun(id)).toBeNull();
+    }
+    expect(analysisIn(store, "stats").kind).toBe("ready");
+    expect(writeIn(store)).toStrictEqual({ kind: "locked", reason: LD_REASON });
+    expect(store.startWrite("nei")).toBeNull();
+    expect(sent).toStrictEqual([]);
+    expect(writes).toStrictEqual([]);
+  });
+
+  test.each([
+    ["with a threshold on the individuals", [MISSING_AT_02]],
+    ["with no filter of individuals", []],
+  ] as const)(
+    "an analysis that reads only the filters of individuals is ready, %s, and the statistics too",
+    (_, filters) => {
+      const { store } = storeOfFiveWithCounts(filters, {
+        variants: false,
+        individuals: true,
+      });
+      store.apply("the LD filter was turned on", ldAt(null));
+
+      expect(statusIn(store, "vars").kind).toBe("ready");
+      expect(statusIn(store, "stats").kind).toBe("ready");
+      for (const id of ["pops", "counts"]) {
+        expect(statusIn(store, id)).toStrictEqual({
+          kind: "locked",
+          reason: LD_REASON,
+        });
+      }
+      expect(store.startRun("vars")).not.toBeNull();
+    },
+  );
+
+  test("with a list popnei would refuse as well, the locked ones give the reason of the list, and that of the LD filter once the list is mended", () => {
+    const { store } = storeThatWrites([{ kind: "keep", individuals: ["z"] }]);
+    store.apply("the LD filter was turned on", ldAt(null));
+    const listReason = individualListNeeds(store.getState().project)?.reason;
+    expect(listReason).toMatch(/^The list of individuals to keep names/);
+
+    // The populations, the counts and the write read the filters of
+    // individuals; the variants read those of the variants alone.
+    for (const id of ["pops", "counts"]) {
+      expect(analysisIn(store, id)).toStrictEqual({
+        kind: "locked",
+        reason: listReason,
+      });
+    }
+    expect(writeIn(store)).toStrictEqual({
+      kind: "locked",
+      reason: listReason,
+    });
+    expect(analysisIn(store, "vars")).toStrictEqual({
+      kind: "locked",
+      reason: LD_REASON,
+    });
+
+    store.apply("the list to keep was cleared", (p) =>
+      removeIndividualFilter(p, "keep"),
+    );
+    for (const id of ["pops", "vars", "counts"]) {
+      expect(analysisIn(store, id)).toStrictEqual({
+        kind: "locked",
+        reason: LD_REASON,
+      });
+    }
+    expect(writeIn(store)).toStrictEqual({ kind: "locked", reason: LD_REASON });
+  });
+
+  test("a result done before the filter was turned on is in the notice of that command and locked after it; a distance typed gives another key; undos give back the lock, then the result", () => {
+    const { store, sent } = storeThatWrites();
+    store.startRun("vars");
+    const vars = sentAt(sent, 0);
+    const result = varsResult(1150);
+    store.runEnded(vars.run.id, doneWith(vars, result));
+    expect(analysisIn(store, "vars")).toMatchObject({ kind: "done", result });
+
+    store.apply("the LD filter was turned on", ldAt(null));
+    expect(store.getState().notice?.removed).toContain("vars");
+    expect(analysisIn(store, "vars")).toStrictEqual({
+      kind: "locked",
+      reason: LD_REASON,
+    });
+
+    store.apply("the distance of the LD filter changed", ldAt(50000));
+    expect(analysisIn(store, "vars").kind).toBe("ready");
+
+    store.undo();
+    expect(analysisIn(store, "vars")).toStrictEqual({
+      kind: "locked",
+      reason: LD_REASON,
+    });
+    store.undo();
+    expect(analysisIn(store, "vars")).toMatchObject({ kind: "done", result });
+  });
+
+  test("turned off, by removing the filter, the result of before is done again from the cache", () => {
+    const { store, sent } = storeThatWrites();
+    store.startRun("vars");
+    const vars = sentAt(sent, 0);
+    const result = varsResult(1150);
+    store.runEnded(vars.run.id, doneWith(vars, result));
+    store.apply("the LD filter was turned on", ldAt(null));
+
+    store.apply("the LD filter was turned off", (p) =>
+      removeVariantFilter(p, "ld"),
+    );
+    expect(analysisIn(store, "vars")).toMatchObject({ kind: "done", result });
+    expect(sent).toHaveLength(1);
+  });
+
+  test("once the distance is typed, the write sends the filters of the project, the same array, with their distance", () => {
+    const { store, writes } = storeThatWrites();
+    store.apply("the LD filter was turned on", ldAt(null));
+    store.apply("the distance of the LD filter changed", ldAt(50000));
+
+    store.startWrite("nei");
+    const project = store.getState().project;
+    expect(writeAt(writes, 0).job.filters).toBe(project.filters);
+    expect(project.filters).toStrictEqual([
+      { kind: "maf", maxAllowedMaf: 0.9 },
+      { kind: "ld", maxAllowedR2: 0.3, maxDist: 50000 },
+    ]);
+  });
+
+  test("for every sequence of commands, some of the LD filter with no distance, and the definitions reading any filters: no request carries an LD filter without its distance, no startRun or startWrite throws, and what reads the filters of the variants, and the write, is locked exactly while the filters hold one, and only then for its reason", () => {
+    // The runs whose sequence reached the lock of the LD filter.
+    let runsLocked = 0;
+    fc.assert(
+      fc.property(
+        fc.array(ldStep, { maxLength: 30 }),
+        fc.tuple(anyFiltersRead, anyFiltersRead, anyFiltersRead),
+        (drawn, reads) => {
+          const { store, analyses, sent, writes, carried } = ldStore(reads);
+          const ended = new Set<number>();
+          let lockedByIt = 0;
+          for (const s of drawn) {
+            runLdStep(store, s, sent, writes, ended);
+            const state = store.getState();
+            const noDistance = withNoDistance(state.project.filters);
+            analyses.forEach((def, index) => {
+              const status = state.analyses[index]?.status;
+              if (def.filtersRead.variants && noDistance) {
+                expect(status?.kind).toBe("locked");
+              }
+              if (status?.kind === "locked" && status.reason === LD_REASON) {
+                lockedByIt += 1;
+                expect(def.filtersRead.variants && noDistance).toBe(true);
+              }
+            });
+            const write = state.write;
+            if (noDistance) {
+              expect(write?.kind).toBe("locked");
+            }
+            if (write?.kind === "locked" && write.reason === LD_REASON) {
+              expect(noDistance).toBe(true);
+            }
+          }
+          expect(carried.some(withNoDistance)).toBe(false);
+          expect(writes.some((w) => withNoDistance(w.job.filters))).toBe(false);
+          runsLocked += lockedByIt > 0 ? 1 : 0;
+        },
+      ),
+      { numRuns: 200 },
+    );
+    expect(runsLocked).toBeGreaterThan(20);
+  });
+});
+
+/** A step of the property of the LD filter with no distance. */
+type LdStep =
+  | { readonly kind: "command"; readonly command: DrawnCommand }
+  | { readonly kind: "ld"; readonly maxDist: number | null }
+  | { readonly kind: "ldOff" }
+  | { readonly kind: "undo" }
+  | { readonly kind: "redo" }
+  | { readonly kind: "open"; readonly empty: boolean }
+  | { readonly kind: "read" }
+  | { readonly kind: "startRun"; readonly analysis: string }
+  | { readonly kind: "startWrite" }
+  | { readonly kind: "end"; readonly which: number; readonly ok: boolean };
+
+/** The steps, the LD filter turned on with and without a distance drawn
+    as often as any command of the project. */
+const ldStep: fc.Arbitrary<LdStep> = fc.oneof(
+  {
+    arbitrary: drawnCommand.map((command): LdStep => ({
+      kind: "command",
+      command,
+    })),
+    weight: 3,
+  },
+  {
+    arbitrary: fc
+      .option(fc.constantFrom(1000, 50000), { freq: 2 })
+      .map((maxDist): LdStep => ({ kind: "ld", maxDist })),
+    weight: 3,
+  },
+  { arbitrary: fc.constant<LdStep>({ kind: "ldOff" }), weight: 1 },
+  { arbitrary: fc.constant<LdStep>({ kind: "undo" }), weight: 2 },
+  { arbitrary: fc.constant<LdStep>({ kind: "redo" }), weight: 1 },
+  {
+    arbitrary: fc.boolean().map((empty): LdStep => ({ kind: "open", empty })),
+    weight: 1,
+  },
+  { arbitrary: fc.constant<LdStep>({ kind: "read" }), weight: 2 },
+  {
+    arbitrary: fc
+      .constantFrom("pops", "vars", "stats", "counts")
+      .map((analysis): LdStep => ({ kind: "startRun", analysis })),
+    weight: 4,
+  },
+  { arbitrary: fc.constant<LdStep>({ kind: "startWrite" }), weight: 2 },
+  {
+    arbitrary: fc
+      .record({ which: fc.nat(), ok: fc.boolean() })
+      .map(({ which, ok }): LdStep => ({ kind: "end", which, ok })),
+    weight: 4,
+  },
+);
+
+/** Which filters a definition reads, any of the four. */
+const anyFiltersRead: fc.Arbitrary<
+  AnalysisDef<TestJob, TestResult>["filtersRead"]
+> = fc.record({ variants: fc.boolean(), individuals: fc.boolean() });
+
+/**
+ * A store that writes, of popnei 0.1.0 with the sample project opened,
+ * whose populations, variants and counts read the filters `reads`, and
+ * the statistics none; each of the three records the filters of the
+ * variants its request carries, `jobFilters` of its project when it
+ * reads them and none otherwise, as the analyses of the application
+ * build them.
+ */
+function ldStore(
+  reads: readonly [
+    AnalysisDef<TestJob, TestResult>["filtersRead"],
+    AnalysisDef<TestJob, TestResult>["filtersRead"],
+    AnalysisDef<TestJob, TestResult>["filtersRead"],
+  ],
+): {
+  readonly store: Store<TestResult, string>;
+  readonly analyses: readonly AnalysisDef<TestJob, TestResult>[];
+  readonly sent: readonly SentRequest[];
+  readonly writes: readonly SentWrite[];
+  readonly carried: readonly (readonly ProjectVariantFilter[])[];
+} {
+  const { analyses: twoFakes, stats, counts } = fakeAnalyses();
+  const carried: (readonly ProjectVariantFilter[])[] = [];
+  const reading = (
+    def: AnalysisDef<TestJob, TestResult> | undefined,
+    read: AnalysisDef<TestJob, TestResult>["filtersRead"],
+  ): AnalysisDef<TestJob, TestResult> => {
+    if (def === undefined) {
+      throw new Error("popnei_web defect: no fake analysis");
+    }
+    return {
+      ...def,
+      filtersRead: read,
+      run: (p, c) => {
+        carried.push(read.variants ? jobFilters(p.filters) : []);
+        return def.run(p, c);
+      },
+    };
+  };
+  const [popsRead, varsRead, countsRead] = reads;
+  const analyses = [
+    reading(twoFakes[0], popsRead),
+    reading(twoFakes[1], varsRead),
+    stats,
+    reading(counts, countsRead),
+  ];
+  const { send, sent, writeSend, writes } = fakeSend();
+  const store = createStore({
+    first: emptyProject("popgen"),
+    analyses,
+    send,
+    countsOf: (r) =>
+      r.kind === "counts"
+        ? { numVarsRead: null, counts: r }
+        : { numVarsRead: r.kind === "vars" ? r.numVars : null, counts: null },
+    counts: "counts",
+    statistics: FAKE_STATISTICS,
+    write: {
+      send: writeSend,
+      countsOf: (pass): TestResult => ({
+        kind: "counts",
+        numVars: pass.numVars,
+        kept: new Uint32Array(4).fill(pass.numVars),
+      }),
+    },
+    appVersion: "0.1.0",
+    cacheMaxBytes: 1024 * 1024,
+    maxUndoSteps: 200,
+  });
+  store.popneiReady("0.1.0");
+  store.open(sampleProject());
+  return { store, analyses, sent, writes, carried };
+}
+
+/** Carries out the step `s` on `store`; `ended` holds the ids of the
+    requests and writes already ended. */
+function runLdStep(
+  store: Store<TestResult, string>,
+  s: LdStep,
+  sent: readonly SentRequest[],
+  writes: readonly SentWrite[],
+  ended: Set<number>,
+): void {
+  const before = store.getState().project;
+  switch (s.kind) {
+    case "command": {
+      const command = s.command.bind(before);
+      if (command !== null) {
+        store.apply(s.command.name, command);
+      }
+      return;
+    }
+    case "ld":
+      store.apply("the LD filter changed", ldAt(s.maxDist));
+      return;
+    case "ldOff":
+      store.apply("the LD filter was turned off", (p) =>
+        removeVariantFilter(p, "ld"),
+      );
+      return;
+    case "undo":
+      store.undo();
+      return;
+    case "redo":
+      store.redo();
+      return;
+    case "open":
+      store.open(s.empty ? emptyProject("popgen") : sampleProject());
+      return;
+    case "read": {
+      const variants = before.variants;
+      if (variants?.read.kind === "pending") {
+        store.variantsRead(variants.fileId, {
+          kind: "read",
+          individuals: [...MODEL_INDIVIDUALS],
+          ploidy: variants.readOptions?.ploidy ?? 2,
+          numVars: null,
+        });
+      }
+      return;
+    }
+    case "startRun":
+      store.startRun(s.analysis);
+      return;
+    case "startWrite":
+      store.startWrite("nei");
+      return;
+    case "end": {
+      const open = [
+        ...sent.map((r) => ({ id: r.run.id, key: r.key, job: r.job })),
+        ...writes.map((w) => ({ id: w.run.id, key: w.key, job: null })),
+      ].filter((r) => !ended.has(r.id));
+      const r = open[s.which % Math.max(open.length, 1)];
+      if (r === undefined) {
+        return;
+      }
+      ended.add(r.id);
+      if (!s.ok) {
+        store.runEnded(r.id, { kind: "cancelled" });
+        return;
+      }
+      store.runEnded(r.id, {
+        kind: "done",
+        key: r.key,
+        result: r.job === null ? writtenFile(1150, 1200) : fakeResultOf(r.job),
+      });
+      return;
+    }
+  }
+}
+
+/** A result of the fake analysis of the request `job`. */
+function fakeResultOf(job: TestJob): TestResult {
+  switch (job.analysis) {
+    case "pops":
+      return popsResult();
+    case "vars":
+      return varsResult(1200);
+    case "stats":
+      return statsResult(
+        MODEL_INDIVIDUALS,
+        [0.1, 0.2, 0.3, 0.4],
+        [0.3, 0.3, Number.NaN, 0.4],
+      );
+    case "counts":
+      return {
+        kind: "counts",
+        numVars: 1150,
+        kept: new Uint32Array(4).fill(1150),
+      };
+  }
+}

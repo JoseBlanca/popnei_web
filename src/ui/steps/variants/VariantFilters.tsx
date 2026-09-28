@@ -29,10 +29,8 @@ import {
 } from "../../../core/analyses/filterCounts.ts";
 import type { VariantStatistic } from "../../../core/analyses/variantChecks.ts";
 import { MAX_LD_DIST } from "../../../core/project.ts";
-import type {
-  VariantFilter,
-  VariantFilterKind,
-} from "../../../worker/protocol.ts";
+import type { ProjectVariantFilter } from "../../../core/project.ts";
+import type { VariantFilterKind } from "../../../worker/protocol.ts";
 import { resultOf, statusOf } from "../../analyses/status.ts";
 import { titleOf } from "../../analyses/titles.ts";
 import { classOf } from "../../classOf.ts";
@@ -79,12 +77,12 @@ const THRESHOLD_DECIMALS = 2;
 /** The filter of the kind `kind` among `filters`, or `null` when it is
     off. */
 function filterOf<K extends VariantFilterKind>(
-  filters: readonly VariantFilter[],
+  filters: readonly ProjectVariantFilter[],
   kind: K,
-): Extract<VariantFilter, { readonly kind: K }> | null {
+): Extract<ProjectVariantFilter, { readonly kind: K }> | null {
   const isKind = (
-    filter: VariantFilter,
-  ): filter is Extract<VariantFilter, { readonly kind: K }> =>
+    filter: ProjectVariantFilter,
+  ): filter is Extract<ProjectVariantFilter, { readonly kind: K }> =>
     filter.kind === kind;
   return filters.find(isKind) ?? null;
 }
@@ -116,7 +114,7 @@ export function VariantFilters(): React.JSX.Element {
   const headingId = useId();
   const checksHeadingId = useId();
 
-  const set = (filter: VariantFilter): void => {
+  const set = (filter: ProjectVariantFilter): void => {
     const step = filterCommand(filter);
     store.apply(step.description, step.command);
   };
@@ -293,7 +291,12 @@ export function VariantFilters(): React.JSX.Element {
                 />
                 <NumberField
                   label={DISTANCE_LABEL}
-                  value={ld.maxDist}
+                  // No distance typed yet, which an opened project file
+                  // can hold: React Aria shows NaN as an empty field. Its
+                  // reason and its words are those of "The distance of
+                  // the LD pruning" of docs/specs/steps/variants.md, not
+                  // built yet.
+                  value={ld.maxDist ?? Number.NaN}
                   minValue={1}
                   maxValue={MAX_LD_DIST}
                   step={1}

@@ -22,6 +22,7 @@ import {
   escaped,
   grouped,
   individualsNeeds,
+  jobFilters,
   namesOf,
   shown,
 } from "../project.ts";
@@ -646,7 +647,7 @@ function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
   return c.run({
     analysis: ID,
     fileId: p.variants.fileId,
-    filters: p.filters,
+    filters: jobFilters(p.filters),
     individuals: c.individuals,
     pops: kept.pops,
     minNumIndividuals: options.minNumIndividuals,

@@ -32,6 +32,7 @@ import type {
   IndividualsSource,
   ParsedAnalysis,
   Project,
+  ProjectVariantFilter,
   SourceRead,
   VariantSource,
 } from "./project.ts";
@@ -52,7 +53,6 @@ import type {
   Run,
   PassStats,
   RunError,
-  VariantFilter,
   VariantFilterKind,
   WriteJob,
   Written,
@@ -233,19 +233,29 @@ const PLAIN = { noNullPrototype: true } as const;
 
 const threshold = fc.double({ min: 0, max: 1, noNaN: true });
 
-const variantFilter: fc.Arbitrary<VariantFilter> = fc.oneof(
-  threshold.map((t): VariantFilter => ({
+/** Any filter of the variants as the project holds it; the LD filter
+    has no distance, `maxDist` `null`, in about half of the draws. */
+const variantFilter: fc.Arbitrary<ProjectVariantFilter> = fc.oneof(
+  threshold.map((t): ProjectVariantFilter => ({
     kind: "missing_data",
     maxAllowedMissingRate: t,
   })),
-  threshold.map((t): VariantFilter => ({ kind: "maf", maxAllowedMaf: t })),
-  threshold.map((t): VariantFilter => ({
+  threshold.map((t): ProjectVariantFilter => ({
+    kind: "maf",
+    maxAllowedMaf: t,
+  })),
+  threshold.map((t): ProjectVariantFilter => ({
     kind: "obs_het",
     maxAllowedObsHet: t,
   })),
   fc
-    .tuple(threshold, fc.integer({ min: 1, max: Number.MAX_SAFE_INTEGER }))
-    .map(([r2, dist]): VariantFilter => ({
+    .tuple(
+      threshold,
+      fc.option(fc.integer({ min: 1, max: Number.MAX_SAFE_INTEGER }), {
+        freq: 2,
+      }),
+    )
+    .map(([r2, dist]): ProjectVariantFilter => ({
       kind: "ld",
       maxAllowedR2: r2,
       maxDist: dist,
@@ -456,8 +466,9 @@ export const anyLoadId: fc.Arbitrary<string> =
   fc.stringMatching(/^[0-9a-f]{32}$/);
 
 /** Any list of filters of the variants, at most one of each kind, in the
-    fixed order of the project. */
-export const variantFilters: fc.Arbitrary<readonly VariantFilter[]> = fc
+    fixed order of the project; the LD filter with no distance in about
+    half of the lists that have it. */
+export const variantFilters: fc.Arbitrary<readonly ProjectVariantFilter[]> = fc
   .uniqueArray(variantFilter, { selector: (f) => f.kind, maxLength: 4 })
   .map((filters) =>
     filters.toSorted(

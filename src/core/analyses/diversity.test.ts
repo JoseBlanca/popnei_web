@@ -1832,3 +1832,28 @@ describe("VS3 D3 the diversity of stage 3, at its bounds", () => {
     ).toBeNull();
   });
 });
+
+describe("IP3 D1 the filters of the job of the diversity", () => {
+  test("run sends the filters of the project, the same array, the LD filter with its distance", () => {
+    const p = deepFreeze<Project>({
+      ...project(),
+      filters: [
+        { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+        { kind: "ld", maxAllowedR2: 0.3, maxDist: 50000 },
+      ],
+    });
+    const { client, jobs } = recordingClient();
+    diversity.run(p, client);
+    expect(jobs[0]?.filters).toBe(p.filters);
+  });
+
+  test("run of a project whose LD filter has no distance is a defect, and sends nothing", () => {
+    const p = deepFreeze<Project>({
+      ...project(),
+      filters: [{ kind: "ld", maxAllowedR2: 0.3, maxDist: null }],
+    });
+    const { client, jobs } = recordingClient();
+    expect(() => diversity.run(p, client)).toThrow(/^popnei_web defect: /);
+    expect(jobs).toStrictEqual([]);
+  });
+});

@@ -15,7 +15,12 @@
  * its filters of the variants (`countsOf` of src/core/apps.ts).
  */
 
-import { VARIANT_FILTER_ORDER, escaped, grouped } from "../project.ts";
+import {
+  VARIANT_FILTER_ORDER,
+  escaped,
+  grouped,
+  jobFilters,
+} from "../project.ts";
 import type { Project } from "../project.ts";
 import type {
   AnalysisDef,
@@ -182,7 +187,7 @@ function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
   return c.run({
     analysis: ID,
     fileId: p.variants.fileId,
-    filters: p.filters,
+    filters: jobFilters(p.filters),
     individuals: c.individuals,
   });
 }

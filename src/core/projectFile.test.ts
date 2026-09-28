@@ -3,7 +3,7 @@ import * as fc from "fast-check";
 import { describe, expect, test } from "vitest";
 import { POPGEN_ANALYSES, countsOf, individualStatsOf } from "./apps.ts";
 import { keyFromWire, settingsFingerprint } from "./keys.ts";
-import { emptyProject } from "./project.ts";
+import { emptyProject, variantFilterNeeds } from "./project.ts";
 import type { Project, Reference, VariantSource } from "./project.ts";
 import {
   askedFileText,
@@ -2548,5 +2548,72 @@ describe("IP2 D2 the check numbers of a project file of stage 3", () => {
     expect(verdict === null ? null : checkVerdictText(verdict)).toBe(
       "Not the same numbers as in the project file. The variants file may not be the one the project was saved with, or it was changed since. The numbers were calculated by version 0.1.0 of the application, which calculated this analysis in another way than this version, 0.2.0.",
     );
+  });
+});
+
+/** The project of `v1-ld-no-distance.popnei.json` once opened: panel.nei,
+    no metadata file, the missing data filter at 0.1 and the LD filter at
+    r² 0.3 whose distance was not typed when the project was saved, and
+    no check. */
+function ldNoDistanceProject(): Project {
+  return {
+    app: "popgen",
+    variants: null,
+    filters: [
+      { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+      { kind: "ld", maxAllowedR2: 0.3, maxDist: null },
+    ],
+    individualFilters: [],
+    individuals: null,
+    grouping: { kind: "populations", column: null },
+    analyses: [],
+    reference: {
+      variants: {
+        fileId: "c0c1c2c3c4c5c6c7c8c9cacbcccdcecf",
+        name: "panel.nei",
+        size: 261570,
+        format: "nei",
+        readOptions: null,
+        read: {
+          kind: "read",
+          individuals: ["ind_001", "ind_002", "ind_003", "ind_004"],
+          ploidy: 2,
+          numVars: 1200,
+        },
+      },
+      checks: [],
+    },
+  };
+}
+
+describe("IP3 D2 the project file of the switches", () => {
+  const FILE = "v1-ld-no-distance.popnei.json";
+
+  test(`${FILE} opens into its project, the LD filter with no distance and its lock`, () => {
+    const read = readProjectFile(fixture(FILE), "popgen", POPGEN_DEFS);
+    expect(read).toEqual({ ok: true, value: opened(ldNoDistanceProject()) });
+    expect(read.ok && variantFilterNeeds(read.value)).toBe(
+      "The LD filter of the Variants step needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn off the LD filter, in the Variants step.",
+    );
+  });
+
+  test(`${FILE} is written back byte for byte from its project, with "maxDist": null`, () => {
+    const state = stateOf(
+      opened(ldNoDistanceProject()),
+      Object.fromEntries(
+        POPGEN_DEFS.map((def) => [
+          def.id,
+          { kind: "locked", reason: "Load a variants file." },
+        ]),
+      ),
+    );
+    const text = writeProjectFile(
+      state,
+      POPGEN_DEFS,
+      "0.1.0",
+      "2026-09-28T10:15:30.000Z",
+    );
+    expect(text).toBe(fixture(FILE));
+    expect(text).toContain('"maxDist": null');
   });
 });

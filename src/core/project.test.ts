@@ -15,6 +15,7 @@ import {
   individualListNeeds,
   individualsCheck,
   individualsNeeds,
+  jobFilters,
   loadIndividuals,
   loadVariants,
   namesOf,
@@ -35,6 +36,7 @@ import {
   setIndividualFilter,
   setVariantFilter,
   shown,
+  variantFilterNeeds,
   variantsStepNeeds,
   individualsStepMissing,
   individualsStepNeeds,
@@ -2893,7 +2895,7 @@ describe("WP1 D5 the validation", () => {
       const filters = [{ kind: "ld", maxAllowedR2: 0.5, maxDist: 0.5 }];
       expect(textOf(fileWith({ filters }))).toBe(
         opened(
-          "the distance of the first filter of the variants should be a whole number, 1 or more",
+          "the distance of the first filter of the variants should be a whole number, 1 or more, or nothing",
         ),
       );
     });
@@ -3990,5 +3992,171 @@ describe("VS2 D1 the filters of a project", () => {
       const result = parse(fileWith({ filters }));
       expect(result.ok && result.value.filters).toEqual(filters);
     });
+  });
+});
+
+// The LD filter of the variants with no distance: the project spec, "What
+// an analysis needs of every project", "The validation" and "How it is
+// verified", `variantFilterNeeds` and `jobFilters`.
+
+/** The reason of the LD filter with no distance, in the spec's words. */
+const LD_NO_DISTANCE_REASON =
+  "The LD filter of the Variants step needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn off the LD filter, in the Variants step.";
+
+/** The LD filter as its switch turns it on, with no distance. */
+const LD_NO_DISTANCE = {
+  kind: "ld",
+  maxAllowedR2: 0.3,
+  maxDist: null,
+} as const;
+
+describe("IP3 D1 the LD filter with no distance", () => {
+  test("variantFilterNeeds gives its reason with no variants file", () => {
+    const p = setVariantFilter(
+      freezeProject(emptyProject("popgen")),
+      LD_NO_DISTANCE,
+    );
+    expect(p.variants).toBeNull();
+    expect(variantFilterNeeds(p)).toBe(LD_NO_DISTANCE_REASON);
+  });
+
+  test("variantFilterNeeds gives its reason with a variants file read", () => {
+    const p = setVariantFilter(sampleProject(), LD_NO_DISTANCE);
+    expect(projectNeeds(p)).toBeNull();
+    expect(variantFilterNeeds(p)).toBe(LD_NO_DISTANCE_REASON);
+  });
+
+  test("variantFilterNeeds gives null with a distance, with no LD filter, and for an empty project", () => {
+    expect(
+      variantFilterNeeds(
+        setVariantFilter(sampleProject(), { ...LD_NO_DISTANCE, maxDist: 1 }),
+      ),
+    ).toBeNull();
+    expect(sampleProject().filters.some((f) => f.kind === "ld")).toBe(false);
+    expect(variantFilterNeeds(sampleProject())).toBeNull();
+    expect(
+      variantFilterNeeds(freezeProject(emptyProject("popgen"))),
+    ).toBeNull();
+  });
+
+  test("setVariantFilter of the LD filter with no distance is accepted, in the place of its kind, and of 0 and 2.5 a defect", () => {
+    const p = setVariantFilter(sampleProject(), LD_NO_DISTANCE);
+    expect(p.filters).toStrictEqual([
+      ...sampleProject().filters,
+      LD_NO_DISTANCE,
+    ]);
+    for (const maxDist of [0, 2.5]) {
+      expect(() =>
+        setVariantFilter(sampleProject(), { ...LD_NO_DISTANCE, maxDist }),
+      ).toThrow(DEFECT);
+    }
+  });
+
+  test("jobFilters gives the filters of a project with a distance, the same array", () => {
+    const p = setVariantFilter(sampleProject(), {
+      ...LD_NO_DISTANCE,
+      maxDist: 50000,
+    });
+    expect(jobFilters(p.filters)).toBe(p.filters);
+    const sample = sampleProject().filters;
+    expect(jobFilters(sample)).toBe(sample);
+    const none = freezeProject(emptyProject("popgen")).filters;
+    expect(jobFilters(none)).toBe(none);
+  });
+
+  test("jobFilters of a list with the LD filter with no distance is a defect", () => {
+    const p = setVariantFilter(sampleProject(), LD_NO_DISTANCE);
+    expect(() => jobFilters(p.filters)).toThrow(DEFECT);
+  });
+
+  test("parseProject of the LD filter with no distance accepts it", () => {
+    const filters = [
+      { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+      LD_NO_DISTANCE,
+    ];
+    const result = parse(fileWith({ filters }));
+    expect(result.ok && result.value.filters).toStrictEqual(filters);
+    expect(result.ok && variantFilterNeeds(result.value)).toBe(
+      LD_NO_DISTANCE_REASON,
+    );
+  });
+
+  test("parseProject of a maxDist of 0 refuses it, a whole number, 1 or more, or nothing", () => {
+    expect(
+      parse(fileWith({ filters: [{ ...LD_NO_DISTANCE, maxDist: 0 }] })),
+    ).toStrictEqual(
+      wrong(["filters", 0, "maxDist"], "a whole number, 1 or more, or nothing"),
+    );
+  });
+
+  test('parseProject of a maxDist of "1000" refuses it, a number or nothing', () => {
+    expect(
+      parse(fileWith({ filters: [{ ...LD_NO_DISTANCE, maxDist: "1000" }] })),
+    ).toStrictEqual(wrong(["filters", 0, "maxDist"], "a number or nothing"));
+  });
+
+  test("the LD filter turned on, its r² changed, then its distance typed: two commands, the reason until the second", () => {
+    const off = freezeProject(emptyProject("popgen"));
+    const on = freezeProject(setVariantFilter(off, LD_NO_DISTANCE));
+    expect(on).not.toBe(off);
+    expect(variantFilterNeeds(on)).toBe(LD_NO_DISTANCE_REASON);
+    const r2 = freezeProject(
+      setVariantFilter(on, { ...LD_NO_DISTANCE, maxAllowedR2: 0.2 }),
+    );
+    expect(r2.filters).toStrictEqual([
+      { ...LD_NO_DISTANCE, maxAllowedR2: 0.2 },
+    ]);
+    expect(variantFilterNeeds(r2)).toBe(LD_NO_DISTANCE_REASON);
+    expect(setVariantFilter(r2, { ...LD_NO_DISTANCE, maxAllowedR2: 0.2 })).toBe(
+      r2,
+    );
+    const typed = setVariantFilter(r2, {
+      kind: "ld",
+      maxAllowedR2: 0.2,
+      maxDist: 50000,
+    });
+    expect(variantFilterNeeds(typed)).toBeNull();
+    expect(typed.individualFilters).toBe(r2.individualFilters);
+  });
+
+  test("for every project, variantFilterNeeds gives a reason exactly when the LD filter has no distance, jobFilters throws exactly then, and the project reads back from its JSON", () => {
+    /** Projects with the LD filter with no distance in about half. */
+    const withLd = fc
+      .tuple(
+        wholeProject,
+        fc.double({ min: 0, max: 1, noNaN: true }),
+        fc.option(fc.integer({ min: 1, max: Number.MAX_SAFE_INTEGER }), {
+          freq: 2,
+        }),
+        fc.boolean(),
+      )
+      .map(([p, r2, maxDist, add]) =>
+        add
+          ? freezeProject(
+              setVariantFilter(p, { kind: "ld", maxAllowedR2: r2, maxDist }),
+            )
+          : p,
+      );
+    let noDistance = 0;
+    fc.assert(
+      fc.property(withLd, (p) => {
+        const none = p.filters.some(
+          (f) => f.kind === "ld" && f.maxDist === null,
+        );
+        noDistance += none ? 1 : 0;
+        expect(variantFilterNeeds(p)).toBe(none ? LD_NO_DISTANCE_REASON : null);
+        if (none) {
+          expect(() => jobFilters(p.filters)).toThrow(DEFECT);
+        } else {
+          expect(jobFilters(p.filters)).toBe(p.filters);
+        }
+        expect(
+          parseProject(JSON.parse(JSON.stringify(p)), p.app, 1, TEST_ANALYSES),
+        ).toStrictEqual({ ok: true, value: p });
+      }),
+      { numRuns: 200 },
+    );
+    // The drawn projects reach the filter with no distance.
+    expect(noDistance).toBeGreaterThan(20);
   });
 });

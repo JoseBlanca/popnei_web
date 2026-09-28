@@ -17,7 +17,7 @@ import {
   statisticsFailedText,
 } from "./filterCounts.ts";
 import { emptyProject } from "../project.ts";
-import type { Project } from "../project.ts";
+import type { Project, ProjectVariantFilter } from "../project.ts";
 import type { WorkerClient } from "../store.ts";
 import { deepFreeze } from "../testSupport.ts";
 import type {
@@ -36,7 +36,7 @@ const VARIANTS_ID = "00112233445566778899aabbccddeeff";
     `name` read and the filters `filters`; a VCF read with ploidy 2 and
     `onlyPassed` when `onlyPassed` is given. */
 function project(
-  filters: readonly VariantFilter[],
+  filters: readonly ProjectVariantFilter[],
   options: { readonly name?: string; readonly onlyPassed?: boolean } = {},
 ): Project {
   return deepFreeze<Project>({
@@ -403,5 +403,27 @@ describe("IP2 D3 the words of the statistics of each individual that a Calculate
     ).toBe(
       "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the variants were not counted. The calculation stopped unexpectedly.",
     );
+  });
+});
+
+describe("IP3 D1 the filters of the job of the counts", () => {
+  test("run sends the filters of the project, the same array, the LD filter with its distance", () => {
+    const p = project([
+      ...THREE_FILTERS,
+      { kind: "ld", maxAllowedR2: 0.3, maxDist: 50000 },
+    ]);
+    const { client, jobs } = recordingClient(null);
+    filterCounts.run(p, client);
+    expect(jobs[0]?.filters).toBe(p.filters);
+  });
+
+  test("run of a project whose LD filter has no distance is a defect, and sends nothing", () => {
+    const p = project([
+      ...THREE_FILTERS,
+      { kind: "ld", maxAllowedR2: 0.3, maxDist: null },
+    ]);
+    const { client, jobs } = recordingClient(null);
+    expect(() => filterCounts.run(p, client)).toThrow(/^popnei_web defect: /);
+    expect(jobs).toStrictEqual([]);
   });
 });

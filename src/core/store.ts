@@ -26,10 +26,12 @@ import type { IndividualStats, IndividualsKept } from "./individualsKept.ts";
 import {
   freezeProject,
   individualListNeeds,
+  jobFilters,
   projectNeeds,
   recordIndividualsRead,
   recordVariantsCounted,
   recordVariantsRead,
+  variantFilterNeeds,
 } from "./project.ts";
 import type {
   AnalysisId,
@@ -741,7 +743,9 @@ export function createStore<J, R, F = never>(
       individuals walks every individual of the variants file.
       `projectNeeds` is asked first, `individualListNeeds` second, only of
       an analysis that reads the filters of individuals and of the
-      writing, and the `needs` of an analysis last. */
+      writing, `variantFilterNeeds` third, only of an analysis that reads
+      the filters of the variants and of the writing, and the `needs` of
+      an analysis last. */
   const reasonsOf = (
     p: Project,
   ): {
@@ -754,13 +758,19 @@ export function createStore<J, R, F = never>(
     const common = projectNeeds(p);
     const listReason =
       common === null ? (individualListNeeds(p)?.reason ?? null) : null;
+    const filterReason = common === null ? variantFilterNeeds(p) : null;
     const reasons = defs.map(
       (def) =>
         common ??
         (def.filtersRead.individuals ? listReason : null) ??
+        (def.filtersRead.variants ? filterReason : null) ??
         def.needs(p),
     );
-    locks = { project: p, reasons, writeReason: common ?? listReason };
+    locks = {
+      project: p,
+      reasons,
+      writeReason: common ?? listReason ?? filterReason,
+    };
     return locks;
   };
 
@@ -1733,7 +1743,7 @@ export function createStore<J, R, F = never>(
     const job: WriteJob = {
       format,
       fileId,
-      filters: project.filters,
+      filters: jobFilters(project.filters),
       individuals,
     };
     const afterStop = beforeSend();

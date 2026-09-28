@@ -13,7 +13,12 @@ import {
   removeVariantFilter,
   setVariantFilter,
 } from "../../../core/project.ts";
-import type { Project, Reference, VariantLoad } from "../../../core/project.ts";
+import type {
+  Project,
+  ProjectVariantFilter,
+  Reference,
+  VariantLoad,
+} from "../../../core/project.ts";
 import type {
   VariantFilter,
   VariantFilterKind,
@@ -101,7 +106,7 @@ export function turnedOnFilter(kind: VariantFilterKind): VariantFilter {
 
 /** A field of a filter of the variants committed: the filter with its
     fields, "the MAF filter changed". */
-export function filterCommand(filter: VariantFilter): StepCommand {
+export function filterCommand(filter: ProjectVariantFilter): StepCommand {
   return {
     description: `${filterNameInSentence(filter.kind)} changed`,
     command: (p) => setVariantFilter(p, filter),

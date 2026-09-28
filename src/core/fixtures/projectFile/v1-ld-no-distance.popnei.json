@@ -1,0 +1,40 @@
+{
+  "format": "popnei_web project",
+  "formatVersion": 1,
+  "app": "popgen",
+  "appVersion": "0.1.0",
+  "popneiVersion": "0.1.0",
+  "saved": "2026-09-28T10:15:30.000Z",
+  "variants": {
+    "fileId": "c0c1c2c3c4c5c6c7c8c9cacbcccdcecf",
+    "name": "panel.nei",
+    "size": 261570,
+    "format": "nei",
+    "readOptions": null,
+    "read": {
+      "kind": "read",
+      "individuals": ["ind_001", "ind_002", "ind_003", "ind_004"],
+      "ploidy": 2,
+      "numVars": 1200
+    }
+  },
+  "filters": [
+    {
+      "kind": "missing_data",
+      "maxAllowedMissingRate": 0.1
+    },
+    {
+      "kind": "ld",
+      "maxAllowedR2": 0.3,
+      "maxDist": null
+    }
+  ],
+  "individualFilters": [],
+  "individuals": null,
+  "grouping": {
+    "kind": "populations",
+    "column": null
+  },
+  "analyses": [],
+  "checks": []
+}

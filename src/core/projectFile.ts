@@ -29,17 +29,14 @@ import type {
   Grouping,
   IndividualsSource,
   Project,
+  ProjectVariantFilter,
   SourceRead,
   VariantSource,
 } from "./project.ts";
 import type { Result } from "./result.ts";
 import type { AnalysisDef, AppState, CheckVerdict } from "./store.ts";
 import { settingsFingerprint } from "./keys.ts";
-import type {
-  ColumnType,
-  IndividualFilter,
-  VariantFilter,
-} from "../worker/protocol.ts";
+import type { ColumnType, IndividualFilter } from "../worker/protocol.ts";
 
 /** The text of the field `format`, which tells a project file from any
     other JSON file. */
@@ -293,7 +290,7 @@ function sourceReadOut(read: SourceRead): Fields {
   }
 }
 
-function variantFilterOut(filter: VariantFilter): Fields {
+function variantFilterOut(filter: ProjectVariantFilter): Fields {
   switch (filter.kind) {
     case "missing_data":
       return fields([
