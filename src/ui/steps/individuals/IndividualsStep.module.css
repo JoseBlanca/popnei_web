@@ -85,6 +85,18 @@
   font-weight: 600;
 }
 
+/* On a narrow page, 4 pixels on each side of a cell and not 8, so that
+   the table fits 320 pixels also with DejaVu Sans, the sans-serif font
+   of Ubuntu, with which it needed 300 pixels of the 288 the page gives
+   it (docs/specs/steps/individuals.md, "The columns"). 30em is the width
+   of src/ui/widgets/Table.module.css. */
+@media (width < 30em) {
+  .cell,
+  .nameCell {
+    padding-inline: var(--space-1);
+  }
+}
+
 /* The warning of a column, under its type, in the size of a note. */
 .columnWarning {
   display: block;
