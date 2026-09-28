@@ -604,7 +604,7 @@ was typed, and the results of before come back from the cache.
   no distance would be refused by popnei only as a defect, and a lock
   that missed an analysis would run it unpruned with no word, so this is
   a task of its own, guarded by the store's property. Serves 1 and 2.
-- [ ] 3.2 The filters turned off: `filtersOff` and
+- [x] 3.2 The filters turned off: `filtersOff` and
   `individualFiltersOff`, `turnOffVariantFilter` and
   `turnOffIndividualFilter` in the place of the commands that removed a
   filter turned off (`project.md`, "The filters turned off"), their
