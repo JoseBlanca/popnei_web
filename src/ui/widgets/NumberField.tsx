@@ -302,6 +302,9 @@ export function NumberField({
         committedText={numberText(value)}
         isTyped={() => typed.current}
         onRevert={revert}
+        onPasted={(text) => {
+          lastText.current = text;
+        }}
         onText={(text) => {
           lastText.current = text;
           typed.current = true;
@@ -356,6 +359,9 @@ interface FieldInputProps {
   readonly isTyped: () => boolean;
   /** Called when Ctrl+Z puts the number of the field back. */
   readonly onRevert: () => void;
+  /** Called with a text pasted over the whole field, before React Aria
+      commits it. */
+  readonly onPasted: (text: string) => void;
 }
 
 /** The input of the field, which reads React Aria's state of it: to
@@ -374,6 +380,7 @@ function FieldInput({
   committedText,
   isTyped,
   onRevert,
+  onPasted,
 }: FieldInputProps): React.JSX.Element {
   const state = useContext(NumberFieldStateContext);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -456,14 +463,22 @@ function FieldInput({
         onText(event.currentTarget.value);
       }}
       onPasteCapture={(event) => {
-        // Before React Aria's handler: a text pasted over the whole field
-        // is committed by it at once, and React Aria parses "-5" as a
+        // Before React Aria's handler, and only for a text pasted over the
+        // whole field, which React Aria commits at once; a paste at the
+        // caret is the browser's, and a character it would put in that the
+        // field does not take is caught as one typed. The text pasted is
+        // what a refusal names the number by. React Aria parses "-5" as a
         // number, which the field would refuse with a line of its own
-        // beside the line of the character. The commit of a text the
-        // field does not take is refused, so that one line is shown and
-        // announced, the character's.
+        // beside the line of the character: the commit of a text the field
+        // does not take is refused, so that one line is shown and
+        // announced, the character's. The paste handler below ends it.
         if (state === null) return;
+        const input = event.currentTarget;
+        const selected =
+          (input.selectionEnd ?? 0) - (input.selectionStart ?? 0);
+        if (selected !== input.value.length) return;
         const pasted = event.clipboardData.getData("text/plain").trim();
+        onPasted(pasted);
         if (state.validate(pasted)) return;
         onNotTakenPending();
         onCommitStarts();
