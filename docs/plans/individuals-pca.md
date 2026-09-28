@@ -713,7 +713,7 @@ in its version 1.
   or group the diversity wrongly with no word, so this is a task of its
   own. Serves 2 and 5. Needs 4.1. Shares `protocol.ts` and
   `messages.ts` with task 6.1: the two do not run at the same time.
-- [ ] 4.3 The metadata file not given: the read `notGiven` of an opened
+- [x] 4.3 The metadata file not given: the read `notGiven` of an opened
   project, `individualsNeeds` and `individualsStepNeeds` with its words,
   and the words after a worker that could not start (`project.md`, "The
   project of an opened project file" and Open 4). Serves 3 and 5. Needs
