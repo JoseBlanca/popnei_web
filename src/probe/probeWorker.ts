@@ -20,9 +20,32 @@ import {
   validateToProbe,
 } from "./messages.ts";
 import type { FileSource, FromProbe, ToProbe } from "./messages.ts";
+import { WASM_ADDRESS_WAIT_MS, wasmAddress } from "./wasmAddress.ts";
+import type { FetchedList } from "./wasmAddress.ts";
 
 /** What the worker says when a file is asked for and popnei is not loaded. */
 const POPNEI_NOT_LOADED = "popnei is not loaded, so no file can be opened";
+
+/** The browser's list of what this worker fetched, and its clock. */
+const FETCHED: FetchedList = {
+  addresses: () =>
+    performance.getEntriesByType("resource").map((entry) => entry.name),
+  watch: (listener) => {
+    const observer = new PerformanceObserver((entries) => {
+      listener(entries.getEntries().map((entry) => entry.name));
+    });
+    observer.observe({ type: "resource" });
+    return () => {
+      observer.disconnect();
+    };
+  },
+  after: (ms, callback) => {
+    const timer = setTimeout(callback, ms);
+    return () => {
+      clearTimeout(timer);
+    };
+  },
+};
 
 /**
  * True once popnei can be called, false when it could not be loaded. It is
@@ -47,7 +70,7 @@ async function loadPopnei(): Promise<boolean> {
     post({
       kind: "failed",
       stage: "init",
-      address: wasmAddress(),
+      address: await wasmAddress(FETCHED, WASM_ADDRESS_WAIT_MS),
       message: messageOf(error),
     });
     return false;
@@ -196,21 +219,6 @@ function failed(
 function stop(error: WebAssembly.RuntimeError): void {
   reportError(error);
   close();
-}
-
-/**
- * The address of popnei's wasm, from the list of what this worker fetched,
- * or null when the list has no `.wasm`: popnei's message names the address
- * only when the server answered with an error status.
- */
-function wasmAddress(): string | null {
-  const fetched = performance
-    .getEntriesByType("resource")
-    .map((entry) => entry.name);
-  return (
-    fetched.find((address) => new URL(address).pathname.endsWith(".wasm")) ??
-    null
-  );
 }
 
 /** The message of what was thrown, as it came. */
