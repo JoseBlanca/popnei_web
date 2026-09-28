@@ -1083,7 +1083,9 @@ export function loadVariants(p: Project, source: VariantLoad): Project;
     drops the one of its kind from filtersOff. */
 export function setVariantFilter(p: Project, filter: ProjectVariantFilter): Project;
 /** Turns the filter of that kind off: it leaves filters and is kept, with
-    its values, in filtersOff, in place of one of its kind kept before. */
+    its values, in filtersOff, in the fixed order. filtersOff holds no
+    filter of its kind then, since turning one on took it out, and one
+    there is a defect. */
 export function turnOffVariantFilter(p: Project, kind: VariantFilterKind): Project;
 
 /** Sets the filter of its kind on, in the fixed order of the kinds; a
