@@ -10,7 +10,10 @@ of the individuals file reports, as the owner decided that day
 (`docs/specs/worker/protocol.md`, `CsvFound`); and, on 26 September
 2026, for stage 3 of `docs/build-order.md`, the Variants step whole,
 approved by the owner on 26 September 2026 with the answers to its open
-points. What was revised each time is at the end
+points. On 28 September 2026 it was revised for the reader of xlsx,
+moved out of this repository into a project of its own, xlsx_rs, as the
+owner decided that day; a draft, not yet reviewed or approved. What was
+revised each time is at the end
 of section 1. The document gives the parts of the web applications of
 popnei, what each one holds, and how a change made by the user reaches the
 results on the screen. What the applications
@@ -54,7 +57,8 @@ it only through messages.
   individuals file, writing an xlsx, zipping the report. It holds no
   popnei. It reads a CSV or a TSV with a reader of ours in TypeScript, and
   an xlsx, or writes one and the zip, with the files wasm, a second wasm
-  module built from a small Rust crate of this repository, which it loads
+  module, the package of xlsx_rs, a project of its own that popnei_web
+  installs from a release as it installs popnei, which the worker loads
   the first time it needs it (section 6, `docs/technology.md`). It exists
   so that these jobs of a second do not wait behind a GWAS of minutes
   (section 5).
@@ -102,7 +106,8 @@ in; the owner approved it the same day.
   file with pandas (sections 6 and 8).
 - **The files wasm is a crate of this repository**, `crates/files/`, built
   by the site's own build, and not a module released by popnei (section
-  6).
+  6). Revised on 28 September 2026: it is the package of xlsx_rs, a
+  project of its own (below).
 
 With them, after the architecture review of this revision: the
 calculation worker is restarted whenever the load of the variant file
@@ -237,8 +242,8 @@ What was revised on 27 September 2026, for stage 4 of
 `docs/build-order.md`, the Individuals step and the PCA; a draft, not yet
 reviewed or approved. Stage 4 fits the slots this document has: the PCA
 is an analysis of the shape of section 4, its plots are functions of
-`src/charts`, and the reader of xlsx is the files crate of section 6. What
-it changes:
+`src/charts`, and the reader of xlsx is the files wasm of section 6,
+since the revision below the package of xlsx_rs. What it changes:
 
 - **The calculation worker keeps no intermediate result before stage
   7.** popnei cannot hold the variants its LD pruning keeps, so each PCA
@@ -283,6 +288,23 @@ The specs of stage 4 hold the rest: `docs/specs/analyses/pca.md`,
 and the revised specs of the project, the reader of the individuals file
 and the Individuals step. The decisions the owner is asked for are in
 `docs/specs/stage-4-open-points.md`.
+
+What was revised on 28 September 2026, a draft, not yet reviewed or
+approved: the reader of xlsx leaves this repository. The owner decided
+that day that it is a project of its own, **xlsx_rs**, with the
+conventions and the skills of popnei, and it answers what the owner had
+held against building it in popnei's repository on 24 September 2026. The
+files wasm is now the wasm package xlsx_rs releases, which `package.json`
+names by the URL of a release, as it names popnei's, and which the light
+worker imports on first need as before; the site no longer needs Rust,
+which the owner had approved for it on 27 September 2026. Section 6, "The
+files wasm, the package of xlsx_rs", has the change, the options weighed
+and their costs; sections 9, 10, 11 and 13 follow it. The xlsx of stage 4
+waits for the first release of xlsx_rs, and comes last in the stage
+(`docs/build-order.md`). The spec of the reader,
+`docs/specs/worker/files.md`, is xlsx_rs's first spec, and moves there
+when its repository is made; what of it stays in popnei_web joins
+`docs/specs/worker/individuals.md`.
 
 ## 2. The project
 
@@ -1224,8 +1246,9 @@ core and the reader describe it in one way.
   tested with Vitest in node, on files of the cases that Excel writes in
   English and in Spanish, and it is checked by the compiler with no
   globals, as core is (`.claude/skills/coding/configs.md`).
-- **An xlsx** is read by calamine in the files wasm, loaded on first need
-  (below), and its cells go through the same inference.
+- **An xlsx** is read by calamine in the files wasm, the package of
+  xlsx_rs, loaded on first need (below), and its cells go through the
+  same inference.
 - **Every individual of the variants must be in the file.** Core checks
   it, in the `needs` of each analysis that uses the file, against the
   individuals the calculation worker read from the variant file, and the
@@ -1343,43 +1366,179 @@ bound of the reader refuses. What would show the choice wrong: the test
 of the keys, two BED files of the same regions giving one key and two of
 other regions two keys; and users who bring such masks.
 
-### The files wasm, a crate of this repository
+### The files wasm, the package of xlsx_rs
 
-The xlsx and the zip are made by a small Rust crate of popnei_web,
-`crates/files/`: a `cdylib` with wasm-bindgen, calamine to read an xlsx,
-rust_xlsxwriter to write one and zip for the report, the three that
-`docs/technology.md` measured, 0.58 MB gzipped together. It exports three
-functions, reading the first sheet of an xlsx into cells, writing a table
-as an xlsx, and zipping files, and only the light worker's runner calls
-them. It is not part of popnei and nothing of popnei is in it.
+An xlsx is read, and from stage 6 written, by **xlsx_rs**, a project of
+its own in a repository of its own, as the owner decided on 28 September
+2026: a small Rust library over calamine, built with wasm-bindgen into a
+wasm package, which it releases as popnei releases its own. The **files
+wasm** is the name this document and the specs keep for that package as
+the light worker loads it, the second wasm module of the site, apart from
+popnei's. Nothing of popnei is in it, and it knows nothing of popnei_web:
+it takes the bytes of an xlsx and gives the cells of its first sheet that
+is not hidden, or a refusal with what its words need. Its spec,
+`docs/specs/worker/files.md`, is xlsx_rs's first, written here and moved
+there when its repository is made.
 
-- **It is built by the site's own build**: `cargo build --target
-  wasm32-unknown-unknown --release`, then `wasm-bindgen --target web` into
-  `crates/files/pkg/`, which the light worker imports with a dynamic
-  `import()` that Vite makes a chunk of its own
-  (`.claude/skills/coding/configs.md` has the script, `build:files`, which
-  runs before `vite build` and `vite dev`).
-- **Its output is not committed**: `crates/files/pkg/` is ignored by git
-  and built by the continuous integration, as the site is. A wasm file in
-  git is a binary that a review cannot tell was built from the source
-  beside it, and that changes in every commit that touches the crate. The
-  option not taken, committing it, would let a machine without Rust build
-  the site.
-- **What it costs**: every machine that builds the site or runs its
-  development server needs a Rust toolchain with the target
-  `wasm32-unknown-unknown`, and `wasm-bindgen-cli` at the exact version of
-  the `wasm-bindgen` crate, which the crate pins with `=`, since the two
-  refuse to work together when their versions differ; 0.2.128, the one
-  popnei pins, so that one command line installed builds both. The GitHub
-  Actions workflow of the site installs them, and builds the crate before
-  the site, times that have not been measured. The owner programs in Rust
-  and has the toolchain. And the crate is ours to keep, a few hundred
-  lines around the three libraries, an estimate.
-- **Considered and not taken: a JavaScript library of xlsx.** SheetJS
-  left npm in 2023, and the version there, 0.18.5, has known
-  vulnerabilities; ExcelJS has had few releases since 2023; and a reader
-  of our own over fflate would be ours to write with its hard cases
-  (`docs/technology.md`, section 2).
+- **popnei_web takes it from a GitHub Release of xlsx_rs**, the files
+  GitHub keeps for a tag of a repository, as it takes popnei
+  (`docs/technology.md`, section 5): `package.json` names the packed
+  package of a tag by its URL,
+  `https://github.com/JoseBlanca/xlsx_rs/releases/download/js-v0.1.0-dev.1/xlsx_rs-0.1.0.tgz`
+  for the first, and the lockfile keeps its hash. A newer xlsx_rs is a new
+  tag there and a new URL here. While the two are changed together, the
+  local build is packed in xlsx_rs, `npm pack` in `js/xlsx_rs`, and
+  installed here by its absolute path without being saved, `npm install
+  --no-save /Users/jose/devel/xlsx_rs/js/xlsx_rs/xlsx_rs-0.1.0.tgz`
+  when the checkout is beside popnei's, which copies it into
+  `node_modules/` and changes neither `package.json` nor the lockfile,
+  so nothing of it is committed, and the next `npm ci` puts the release
+  back. It is not linked, with `npm link` or `"file:../xlsx_rs/js/xlsx_rs"`:
+  npm installs a link as a symbolic link to a folder outside the
+  repository, and the development server refuses to serve the `.wasm`
+  from there, "403 Forbidden", as the architecture review of 28
+  September 2026 saw with popnei's package linked so, while the build
+  succeeds; and from a worktree under `.claude/worktrees/`, `../xlsx_rs`
+  names no folder. The repository, at
+  `github.com/JoseBlanca/xlsx_rs` and public as popnei's is, so that
+  `npm ci` needs no token, is assumed until the owner confirms its name
+  and its place (section 13, point 11).
+- **The light worker imports it by name, on first need**: `filesRunner.ts`
+  runs `await import("xlsx_rs")`, a dynamic import, the first time an
+  xlsx is read, and awaits the `init()` that wasm-bindgen generates, which
+  fetches the `.wasm` from beside its JavaScript, `new
+  URL("xlsx_rs_bg.wasm", import.meta.url)`, as popnei's loader fetches
+  its own (`.claude/skills/coding/worker.md`, "The files wasm, on first
+  need"). Tried on 28 September 2026, in a project of trial thrown away
+  after, with Vite 8.3.0 and the workers built as modules, as the site
+  builds them: a module worker that imported popnei's release
+  `js-v0.1.0-dev.2` only through a dynamic `import()`, popnei's package
+  standing in for xlsx_rs's, which does not exist yet, since both are
+  what `wasm-bindgen --target web` makes. The build made the
+  package's JavaScript a file of its own, 75 KB, downloaded only when the
+  import runs, beside a first file of the worker of 269 bytes, and wrote
+  its `.wasm` among the files of the site with a hash in its name and
+  its address rewritten under `/popnei_web/assets/`. The page loaded it
+  from the built site, served by `vite preview`, and from the development
+  server, in Chromium and WebKit driven by Playwright 1.63.0 on the
+  owner's Mac; Firefox was not tried. The development server serves the
+  `.wasm` from `node_modules/`, which is inside the folder of the
+  repository.
+- **The site needs no Rust.** Its build, its development server and its
+  continuous integration install xlsx_rs with `npm ci`, as they install
+  popnei. The Rust toolchain, wasm-bindgen's command line and calamine
+  are xlsx_rs's.
+- **The `.wasm` is served by the site**, copied into `dist/` by the build,
+  and not fetched from GitHub when the page runs: the release is
+  downloaded by `npm ci`, and every file the page loads comes from the
+  site's own address (`docs/technology.md`, section 4).
+- **What stays in popnei_web** is what the light worker does with the
+  package: the import on first need and its failure, the refusal
+  `xlsxReaderNotLoaded`; and `readXlsxCells` of `src/worker/xlsxCells.ts`,
+  which makes of what the package returns the cells, or a refusal of
+  `IndividualsFileError`, and frees what the wasm holds
+  (`docs/specs/worker/individuals.md`, "The package of xlsx_rs, loaded on
+  first need"). Its tests stay too: `readXlsxCells` under Vitest in node,
+  with an object of the test in the place of the package, and the flow of
+  the Individuals step in the three engines, with a few xlsx files copied
+  from xlsx_rs into `e2e/fixtures/`. What goes to xlsx_rs: the Rust, its
+  tests of each kind of cell, and the files the owner makes in Excel,
+  LibreOffice and Google Sheets to check that calamine reads what they
+  write (`docs/technology.md`, open point 1).
+- **Its conventions are popnei's**: a `CLAUDE.md`, the skills and the
+  subagents of popnei adapted to it, `docs/` with its architecture and
+  its specs, the lints of popnei's `lints.toml`, and its wasm package
+  released as a pre-release on a tag `js-v…`. popnei makes its releases
+  by hand, `npm run build` and `npm pack` in `js/popnei` and the `.tgz`
+  attached to the tag, as the notes of `js-v0.1.0-dev.3` say; it has no
+  workflow for them yet (section 13, point 13). The layout of xlsx_rs is
+  decided in its own architecture; popnei's is the one to start from, a
+  crate of plain Rust tested natively, a crate of the binding to
+  wasm-bindgen, and the package in `js/xlsx_rs/`.
+
+What was revised on 28 September 2026, a draft, not yet reviewed or
+approved. The version before, of 24 September 2026, built the files wasm
+from a crate of this repository, `crates/files/`, by the site's own
+build: `cargo build` and `wasm-bindgen` into `crates/files/pkg/`, which
+git ignored, before every `vite build` and `vite dev`. It needed Rust
+1.98.0 and `wasm-bindgen-cli` 0.2.128 on every machine that builds the
+site, the three jobs of its continuous integration among them, which the
+owner approved on 27 September 2026; calamine was not yet approved,
+since the owner was weighing a project of its own. The owner decided on
+28 September 2026: "xlsx read should be a separate project following
+the same conventions and skills that popnei follows. we could call it
+xlsx_rs". It answers what the owner had held against the module in
+popnei's repository on 24 September 2026, that a release of popnei would
+carry a package of the applications, and a change to how they read an
+xlsx would wait for a tag of popnei: it waits now for a tag of a project
+whose only business is the xlsx.
+
+The three options weighed, each in the same units:
+
+| | (a) xlsx_rs, a package released on GitHub and named by URL | (b) the crate in popnei_web, built by the site | (c) a crate of xlsx_rs on crates.io, built by the site |
+|---|---|---|---|
+| what a user downloads the first time an xlsx is read | 0.30 MB gzipped | the same | the same |
+| Rust on a machine that builds the site, the runners of CI among them | none | Rust 1.98.0 and `wasm-bindgen-cli` 0.2.128 | as (b) |
+| each of the three jobs of CI | as now | a cache, the toolchain installed, and wasm-bindgen's command line compiled when the cache is empty; not measured | as (b) |
+| `npm run dev` and `npm run build` on the owner's Mac | as now, Vite alone | about 1 s more with the crate built, 5.2 s the first time | as (b) |
+| a change of how an xlsx is read | a commit and a tag in xlsx_rs, a release by hand, about ten minutes by the estimate of `docs/specs/site.md`, and a new URL here | a commit here | a commit, a version published on crates.io, a new version here |
+| what is kept | two repositories, xlsx_rs with its own docs and skills | one | two, and a crate of the site that wraps the published one to build the wasm |
+| that the wasm the site serves was built from the source its version names | checked by nothing while releases are made by hand on the owner's Mac; a workflow that builds the package on the tag would check it (section 13, point 13) | the continuous integration builds it from the commit | the site builds it from the source crates.io keeps |
+| the name | `xlsx_rs`, free on npm on 28 September 2026 | none needed | another: `xlsx-rs`, which crates.io takes as the same name, is a crate of another author, of 2021 |
+
+(a) was taken because it takes Rust out of every build of the site, its
+development server included, and out of the three jobs of its
+continuous integration, and costs a user nothing, since the same wasm is
+downloaded when an xlsx is first read. What it costs is the release that
+a fix of the reader waits for, about ten minutes by hand, an estimate,
+and a second repository to keep; and, while releases are made by hand,
+what (b) had and the version of 24 September 2026 gave as its reason not
+to commit the wasm: a review can tie the file the site serves to its
+source. The hash the lockfile keeps says only that the file of a URL
+never changed, not that it was built from the tagged commit; a workflow
+that builds the package on the tag gives it back (section 13, point
+13). (b) would win if the reader
+changed often, together with the screens, so that each change waited
+for a release; its interface is one function that takes bytes and gives
+cells, so its changes are expected to be few and apart from the
+screens'. (c) keeps every cost of (b), Rust in the site, and adds the
+wait of (a). A JavaScript library of xlsx, not taken on 24 September
+2026, was not weighed again (`docs/technology.md`, section 2).
+
+No invariant of this document changes: the light worker still runs one
+request at a time, the files wasm has one thread, and no key, no part of
+the project and no layer changes. What changes is what the site depends
+on, a second package named by the URL of a release, and one line of
+`filesRunner.ts`, which imports the package by its name in the place of
+a path, which the rules of the lint that keep the files wasm in the
+light worker refuse in any other file (`.claude/skills/coding/configs.md`). The writer of xlsx of stage 6 joins
+xlsx_rs, whose name it fits; the zip of the report is recommended there
+too, and decided with stage 6 (section 13, point 14).
+
+What the choice costs a user of the site, in the memory of the tab, a
+frozen page, the download, the browsers and a page open across a deploy,
+is what the crate it replaces cost. The download is the same wasm,
+295,475 to 295,521 bytes gzipped as measured in two crates of trial,
+each a little different, with calamine alone on 27 September 2026,
+0.30 MB, and about
+3 KB of its JavaScript, downloaded the first time an xlsx is read; the
+memory it holds while it reads is that of `docs/specs/worker/files.md`,
+"How it runs"; nothing of it runs on the page; a dynamic `import()` in a
+module worker is within the floor of the browsers, from Chrome 80,
+Firefox 114 and Safari 15; a worker started again imports it again from
+the cache of the browser; and a page open across a deploy fails to
+fetch it as it failed with the crate (section 11). Two things would show
+the choice wrong. The first is the Playwright test of the Individuals
+step: it fails if the build put the package into the worker's first
+file or the `.wasm` is not found, since it checks that the network log
+has no request for the files wasm before the first xlsx, one for its
+JavaScript and one for its `.wasm` after, and none with a CSV, and that
+GitHub Pages serves the `.wasm` as `application/wasm`. The second is
+fixes of the reader that keep coming with the work on the screens, each
+waiting for a release. What is hard to undo is the name,
+which every URL of a release and the import of the light worker hold,
+and a name on npm if xlsx_rs is ever published there: a later name is a
+new URL in `package.json` and a new line in `filesRunner.ts`.
 
 ### The files written
 
@@ -1430,7 +1589,8 @@ them. It is not part of popnei and nothing of popnei is in it.
   VCF takes several bytes per genotype, `0/1` and its tab, where the
   `.nei` file takes about one.
 - **The xlsx and the zip of the report** are made in the light worker, by
-  the files wasm, and offered as a download in the same way.
+  the files wasm, the zip as section 13 decides (point 14), and offered
+  as a download in the same way.
 
 What was revised on 26 September 2026, approved by the owner that day.
 The version before said that the file was offered as a download, and
@@ -1691,7 +1851,8 @@ src/worker/
   filesRunner.ts    the light worker, with no popnei: the individuals file,
                     the files wasm, xlsx and zip
   xlsxCells.ts      the cells of an xlsx or its refusal, from what the files
-                    wasm gives, with no wasm in it (docs/specs/worker/files.md)
+                    wasm gives, with no wasm in it
+                    (docs/specs/worker/individuals.md)
   individualsFile.ts
                     the bytes of the individuals file, read and decoded,
                     for filesRunner.ts
@@ -1763,10 +1924,12 @@ src/probe/          the probe of stage 0, a page of its own outside the
 index.html popgen.html gwas.html probe.html
                     the pages, at the root of the repository, so that the
                     build writes them to the root of dist/
-crates/files/       the files wasm, in Rust: xlsx read and written, the zip;
-                    built into crates/files/pkg/, which git ignores
 docs/
 ```
+
+The files wasm is not in the repository: it is the package of xlsx_rs,
+installed into `node_modules/` from its release, as popnei is (section
+6).
 
 `core` has no DOM and no React, and is tested with Vitest alone. Nothing
 in `core` imports from `ui` or `charts`, and nothing in `charts` imports
@@ -1808,9 +1971,8 @@ It reads the variant file by ranges, with popnei's release
 `js-v0.1.0-dev.2` (section 6), and not whole, as popnei 0.1.0 did, and it
 needs nothing from popnei that this release does not have. Its individuals file
 is a CSV, read by our reader in the light worker, so it does not need the
-files crate either: the crate, its build and the Rust of the continuous
-integration come after it, with the first work package that reads an
-xlsx, and the light worker of the skeleton loads no wasm.
+files wasm either, which comes after it, with the first work package that
+reads an xlsx, and the light worker of the skeleton loads no wasm.
 
 ## 11. The limits and the costs of the web
 
@@ -1888,10 +2050,12 @@ the same numbers for everything else but the size of a written file.
   writer of the VCF and the filter of the regions, whose wasm `gzip`
   makes 72 KB larger, 774,080 bytes against 701,996, and which the build
   of stage 4 measures as Vite does, before anything runs, loaded by the calculation worker alone; the files wasm,
+  the package of xlsx_rs,
   0.30 MB gzipped while it only reads, in stage 4, and about 0.58 MB with
   the writing of the report from stage 6, by the light worker the first
   time an xlsx is read or a report is written (`docs/technology.md`,
-  section 2).
+  section 2), measured again from the site built with its first
+  release.
 - **Picking a file again calculates everything again.** Each load of the
   variant file has a new id, so the results of an earlier load of the same
   file are not found (section 3): the user waits the time of each analysis
@@ -2092,3 +2256,39 @@ day, as recommended, and point 10 recommended and not yet decided:
    a deploy afterwards finds them already in the page, at the cost of
    their 0.43 MB gzipped for every visit, and which would not cover the
    script of a worker started again.
+
+Opened by the revision of 28 September 2026, which moves the reader of
+xlsx to xlsx_rs (section 6), and not yet answered:
+
+11. **The name and the place of xlsx_rs**: `github.com/JoseBlanca/xlsx_rs`,
+   public, as popnei is, so that `npm ci` downloads its releases with no
+   token, is assumed. The name was free on npm and the repository did
+   not exist on 28 September 2026. For the owner to confirm, and to
+   create the repository, which no session of popnei_web creates.
+12. **calamine 0.36.1 as a dependency of xlsx_rs**, and rust_xlsxwriter
+   0.99.1 for its tests alone, the owner's to approve, as every
+   dependency is; calamine was left unapproved on 27 September 2026 while
+   the owner weighed this move. The xlsx of stage 4 waits for it, and for
+   the first release of xlsx_rs. Rust 1.98.0 and `wasm-bindgen-cli`
+   0.2.128, approved for the site on 27 September 2026, are no longer
+   needed by it; they are xlsx_rs's.
+13. **How xlsx_rs makes its releases.** Recommended: by hand, `npm run
+   build` and `npm pack` and the `.tgz` attached to a pre-release of the
+   tag, as popnei makes its three so far, `js-v0.1.0-dev.1` to
+   `js-v0.1.0-dev.3`, about ten minutes each by the estimate of
+   `docs/specs/site.md`; and a workflow of GitHub Actions for both when
+   popnei has one, so that the two are made the same way. What it costs:
+   until then nothing checks that a release was built from its tag, as
+   nothing checks it for popnei's (section 6). Not taken: a workflow for
+   xlsx_rs first, some forty lines tried on a tag, hours of work, not
+   estimated more closely; it would win if the owner wants every release
+   tied to its source from the first.
+14. **Where the zip of the report is made**, in stage 6. Recommended: in
+   xlsx_rs, whose writer of xlsx brings the `zip` crate and its
+   compression already, since an xlsx is a zip of XML files, so that a
+   function that zips the report adds little to the 0.58 MB of the three
+   libraries measured together (`docs/technology.md`, section 2); the
+   name then covers one function that is not about xlsx. Not taken: the
+   zip written in TypeScript, or taken from a library of JavaScript such
+   as fflate, of about 10 KB, a new dependency for what the files wasm
+   would already hold. Decided with stage 6.

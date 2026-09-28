@@ -523,10 +523,74 @@ meets.
   deployed since the page was opened is one cause (`project.md`, Open
   4).
 
+## The reader of xlsx in a project of its own, decided by the owner on 28 September 2026
+
+The owner decided: "xlsx read should be a separate project following the
+same conventions and skills that popnei follows. we could call it
+xlsx_rs". So the reader of xlsx, which the specs of 27 September had as
+a Rust crate of this repository built by the site, is **xlsx_rs**, a
+project in a repository of its own, with popnei's `CLAUDE.md`, skills and
+docs adapted to it, which releases its wasm package as popnei releases
+its own. The site names a release by its URL in `package.json` and
+installs it with `npm ci`, and the light worker imports it the first
+time an xlsx is read, as before; a project of trial checked on 28
+September 2026 that Vite builds a package imported so into a file of its
+own and finds its `.wasm`. What a user meets does not change: the same
+0.30 MB downloaded the first time an xlsx is read, the same cells and
+the same refusals.
+
+What it changes for the owner and for stage 4:
+
+- **The site needs no Rust.** Rust 1.98.0 and `wasm-bindgen-cli`
+  0.2.128, approved on 27 September 2026 for every machine that builds
+  the site (above, "The new dependencies of stage 4, but calamine"), are
+  no longer needed by it, nor the Rust setup of its workflow; they are
+  needed only where xlsx_rs is built, on the owner's Mac.
+- **A change of how an xlsx is read waits for a release of xlsx_rs**, a
+  tag and the package built and packed by hand, about ten minutes, an
+  estimate, and a new URL in the site.
+- **The xlsx comes last in stage 4**, as the PCoA did while it waited
+  for popnei: it waits for the repository of xlsx_rs and its first
+  release (`docs/build-order.md`).
+- **`files.md` is the first spec of xlsx_rs**, which moves there when
+  its repository is made; what stays here, the light worker's import of
+  the package, the refusal when it cannot be downloaded, and
+  `readXlsxCells`, moved into `docs/specs/worker/individuals.md`, "The
+  package of xlsx_rs, loaded on first need".
+
+Considered and not taken: the crate in this repository, built by the
+site, which needs Rust on every machine that builds the site and in
+each of the three jobs of its workflow, and makes `npm run dev` about
+1 s slower, 5.2 s the first time; and a crate of xlsx_rs published on
+crates.io and built by the site, which keeps those costs and adds the
+wait of a release, under another name, since `xlsx-rs`, which crates.io
+takes as the same, belongs to another author. `docs/architecture.md`,
+section 6, "The files wasm, the package of xlsx_rs", has the comparison;
+section 13, points 11 to 14, the questions it opens, which are below.
+Revised with it: `files.md`, `docs/specs/worker/individuals.md` and
+`site.md`; `docs/technology.md`, sections 2, 3, 4, 5 and 7, and
+`docs/build-order.md`, stage 4; and the skills `coding` (`SKILL.md`,
+`configs.md`, `worker.md`, `testing.md`), `code-review` and
+`writing-plans`.
+
 ## Asked of the owner to make or approve
 
+- **The repository of xlsx_rs**: to confirm its name and its place,
+  `github.com/JoseBlanca/xlsx_rs`, public as popnei is, which the specs
+  assume, and to create it. The name was free on npm on 28 September
+  2026. No session of popnei_web creates it (`docs/architecture.md`,
+  section 13, point 11).
+- **How xlsx_rs makes its releases.** Recommended: by hand, as popnei
+  makes its own, a tag `js-v0.1.0-dev.1` and the packed package attached
+  to a pre-release, and a workflow for both projects when popnei has
+  one. Not taken: a workflow for xlsx_rs first, hours of work
+  (`docs/architecture.md`, section 13, point 13).
+- **Where the zip of the report is made**, for stage 6. Recommended: in
+  xlsx_rs, whose writer of xlsx brings the `zip` crate already. Not
+  taken: in TypeScript, or with a library of JavaScript, a new
+  dependency (`docs/architecture.md`, section 13, point 14).
 - **Eight xlsx files for the tests of the reader**, in
-  `crates/files/tests/data/`, which a test cannot write: a small
+  `tests/data/` of xlsx_rs, which a test cannot write: a small
   metadata sheet with a date column and a column of decimals, saved from
   Excel in Spanish and in English, from LibreOffice, in Excel's date
   system of 1904, with a password, as an old `.xls`, with a cell of
@@ -534,13 +598,17 @@ meets.
   settles whether the newest errors of Excel are refused by name or read
   as the text `#VALUE!`, which the specs cannot tell before it. `files.md` says what
   each holds. Until they exist, their tests are skipped and say so.
-- **calamine 0.36.1 in the crate**, 0.30 MB gzipped, downloaded the
+  Three of them, `excel_en.xlsx`, `encrypted.xlsx` and the sheet of
+  10,000 rows a test of xlsx_rs writes, are copied into `e2e/fixtures/`
+  of this repository for the flow of the Individuals step.
+- **calamine 0.36.1 in xlsx_rs**, 0.30 MB gzipped, downloaded the
   first time an xlsx is read, and `rust_xlsxwriter` 0.99.1 for its tests
   alone. Not approved yet: on 27 September 2026 the owner was weighing
-  making the reader of xlsx a project of its own. The specs of the
-  reader, `files.md` and `docs/specs/worker/individuals.md`, are left as
-  they are until the owner decides. The other new dependencies were
-  approved that day (above). `d3-delaunay`, which
+  making the reader of xlsx a project of its own, which the owner decided
+  on 28 September 2026 (above). It is the owner's to approve, now as a
+  dependency of xlsx_rs; its first release waits for it
+  (`docs/architecture.md`, section 13, point 12). The other new
+  dependencies were approved on 27 September 2026 (above). `d3-delaunay`, which
   `.claude/skills/coding/charts.md` listed for finding the point under the
   pointer, is not needed: a plain loop over 50,000 points took 0.027 ms
   in node.
@@ -628,10 +696,10 @@ meets it measures it:
 - which of the headless engines of the tests, on the owner's Mac and on
   GitHub's machines, give WebGL, without which the tests of the 3D view
   are reported as not run (`pca3d.md`);
-- the time of the Rust build and of the tests in CI, cold and with its
-  cache, which set the timeouts of the workflow (`site.md`);
 - the size of the files of three.js and of the reader of xlsx in the
-  built site.
+  built site, the second with the first release of xlsx_rs. The time of
+  a Rust build in CI, which was to set the timeouts of the workflow, is
+  no longer measured: the site builds no Rust since 28 September 2026.
 
 ## Not repeated here
 

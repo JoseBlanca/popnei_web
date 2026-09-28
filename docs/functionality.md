@@ -147,7 +147,8 @@ and its encoding varies with the version. So:
 - `.xlsx` is read directly, the first sheet of the file in the order of
   its tabs that is not hidden, a merged cell giving its value to every
   cell of its range as Excel shows it, with calamine,
-  which is pure Rust, in a small Rust crate of the applications
+  which is pure Rust, in xlsx_rs, a small project of its own whose
+  package the applications install as they install popnei's
   (`docs/architecture.md`, section 6; `docs/technology.md`).
 - CSV and TSV are read by the applications, in TypeScript, and a BOM at
   the start of the file is removed.
@@ -496,9 +497,9 @@ and popnei's release `js-v0.1.0-dev.3` of 28 September 2026 has them.
 2. Where the reader of the files of the individuals lives. Settled by
    the owner on 24 September 2026, because reading these files is not
    popnei's business: CSV and TSV, and the inference of the types of the
-   columns, are read by the applications in TypeScript, and xlsx by a
-   small Rust crate of the applications (`docs/architecture.md`, section
-   6). Nothing of it is asked of popnei. The Python script reads the file
+   columns, are read by the applications in TypeScript, and xlsx by
+   xlsx_rs, a small Rust project of its own, since 28 September 2026
+   (`docs/architecture.md`, section 6). Nothing of it is asked of popnei. The Python script reads the file
    with pandas (section 9).
 3. Whether the unfolded SFS, with the ancestral allele given by the user,
    is in the 95%.

@@ -1,4 +1,4 @@
-# The files crate: an xlsx read into cells
+# xlsx_rs: an xlsx read into cells
 
 Written on 27 September 2026, for stage 4 of `docs/build-order.md`, the
 Individuals step and the PCA, and revised the same day to agree with the
@@ -6,38 +6,52 @@ specs written beside it, and after two reviews of its claims against the
 source of calamine 0.36.1 and two crates of trial; and when the specs
 of stage 4 were made to agree, the last column of a sheet too large
 given in Excel's letters, "XFD"; and with the owner's answer of 27
-September 2026 to Open 2, the date whose time the format hides. There
-is no code of it yet. This spec gives
-the Rust crate `crates/files/`, which reads the first sheet of an xlsx,
-the file Excel saves by default, into its cells, and the few lines of the
-light worker that load it and call it. The light worker is the second
-thread of the tab, beside the page, that reads the files of the user and
-holds no popnei (`docs/architecture.md`, section 1). The crate is built
-into a second wasm module, apart from popnei's, the **files wasm**, which
-the light worker downloads the first time the user loads an xlsx, so that
-a user of CSV files never downloads it. In stage 4 it only reads; writing
-an xlsx and zipping the report come with stage 6. It develops section 6
-of `docs/architecture.md`, "The files wasm, a crate of this repository",
-and section 2 of `docs/technology.md`, "xlsx and zip in Rust", with the
-row `crates/files/` of section 9 of the architecture. What the cells
-become, the table of the project with the types of its columns, is
-`docs/specs/worker/individuals.md`, revised beside this spec; the messages
-that carry a read are `docs/specs/worker/messages.md`; the configuration
-files, `rust-toolchain.toml`, the crate's `Cargo.toml` and the scripts
-`build:files` and `test:files`, are `.claude/skills/coding/configs.md`'s;
-the workflow that builds the crate is `docs/specs/site.md`'s.
+September 2026 to Open 2, the date whose time the format hides.
+Revised on 28 September 2026, when the owner decided that the reader of
+xlsx is a project of its own, **xlsx_rs**, with the conventions and the
+skills of popnei (`docs/architecture.md`, section 6, "The files wasm,
+the package of xlsx_rs"). This is xlsx_rs's first spec. It is written
+here because the repository of xlsx_rs does not exist yet, and it moves
+there, whole, when the owner makes it; until then it is part of the
+specs of stage 4, and none of them is approved. There is no code of it
+yet.
+
+This spec gives the Rust library that reads the first sheet of an xlsx,
+the file Excel saves by default, into its cells, and the wasm package
+xlsx_rs builds of it and releases, which popnei_web installs from the
+URL of a release and calls the **files wasm**: the second wasm module of
+its light worker, the thread of the tab that reads the files of the user
+and holds no popnei, which downloads the package the first time the user
+loads an xlsx. In stage 4 it only reads; writing an xlsx, and the zip of
+the report, come with stage 6 of popnei_web. The documents it names,
+`docs/...` and `.claude/...`, are popnei_web's, its first user, and they
+are named so when the spec moves.
+
+What stays in popnei_web, and was moved out of this spec on 28 September
+2026 into `docs/specs/worker/individuals.md`, "The package of xlsx_rs,
+loaded on first need", the spec of the light worker's reading of the
+individuals file, which already held the function it is given to: the
+light worker's import of the package on first need, the refusal
+`xlsxReaderNotLoaded` when it cannot be downloaded, and what the user
+sees meanwhile; `readXlsxCells` of `src/worker/xlsxCells.ts`, which
+calls the package's `readXlsx` and makes of what it returns the cells,
+or a refusal of `IndividualsFileError`, the union of every way a file of
+the individuals is refused; and their tests, under Vitest and in the
+flow of the Individuals step in the browser. What the cells become, the
+table of the project with the types of its columns, is that spec's too;
+the messages that carry a read are `docs/specs/worker/messages.md`'s.
 
 calamine, the Rust library that reads the file, gives each cell, as its
 reader of the cells one by one gives them, as one of the values of its
-type `DataRef`, which is what the crate matches on: empty, a number, a
+type `DataRef`, which is what xlsx_rs matches on: empty, a number, a
 text of the workbook's table of texts, which an xlsx keeps once for all
 the cells that hold it (`SharedString`), a text the cell holds itself
 (`String`), a boolean, a date or a time, a date written in ISO 8601, or
 an error such as `#N/A`. `DataRef` also has a whole number and a
 duration in ISO 8601, which calamine's reader of an xlsx never gives,
-and which the crate turns into a number and a text all the same. calamine's
+and which xlsx_rs turns into a number and a text all the same. calamine's
 other type of value, `Data`, is what it gives when it reads a whole
-sheet at once, which the crate does not do (below). The crate turns each
+sheet at once, which xlsx_rs does not do (below). xlsx_rs turns each
 value into one of the four kinds of cell the table holds (`Cell`,
 `docs/specs/worker/protocol.md`): empty, text, number or boolean. The
 rules below are read from the source of calamine 0.36.1, the version
@@ -48,7 +62,7 @@ crates of trial built from them on the owner's Mac, with Rust 1.98.0.
 
 A user loads `pops.xlsx` in the Individuals step and sees the table of
 its first sheet, as they see it in Excel. What goes wrong because of the
-crate is seen there, or is not seen at all:
+reader is seen there, or is not seen at all:
 
 - a date read as a number shows `45425` where Excel shows `13/05/2024`;
 - an identifier `001` that Excel shows with a format of three digits is
@@ -64,7 +78,7 @@ crate is seen there, or is not seen at all:
 The first sheet is the first worksheet in the order of the tabs that is
 not hidden, the leftmost tab the user sees. It may not be the sheet
 Excel opens the file on, which is the one that was active when the file
-was saved; the crate does not read that one, since calamine 0.36.1 does
+was saved; xlsx_rs does not read that one, since calamine 0.36.1 does
 not give it, and the Individuals step says that the first sheet was read
 (`docs/specs/worker/individuals.md`, **Open 1**). A hidden first sheet,
 which holds the lists of a form or old data, is passed over; the option
@@ -73,10 +87,10 @@ user does not see. A chart sheet is not a worksheet and is
 passed over too. Every row and column of the sheet is read, those hidden
 or filtered out included, since a hidden row still holds an individual.
 
-The crate reads the cells one by one, in the order of the file, with
+xlsx_rs reads the cells one by one, in the order of the file, with
 calamine's `Xlsx::worksheet_cells_reader`, and not with its
 `worksheet_range`, which builds the whole rectangle of the sheet in
-memory before the crate can look at its size. The cells it keeps are those with a
+memory before xlsx_rs can look at its size. The cells it keeps are those with a
 value. The rectangle it gives runs from the first row and the first
 column that hold a value to the last ones, so a sheet whose table starts
 at C3 gives the table and not two empty rows and columns before it; the
@@ -87,17 +101,17 @@ and a column as the user finds them in Excel
 from the file, as a sparse row leaves them, is empty.
 
 A sheet whose rectangle has more than 2,000,000 cells, rows times
-columns, is refused, as `sheetTooLarge`. The crate keeps the rectangle
+columns, is refused, as `sheetTooLarge`. xlsx_rs keeps the rectangle
 of the values it has read so far as it goes, and refuses the sheet at
 the first cell that makes it larger than the limit, without reading
 further: a note in column XFD, the last of Excel, at row 200, over a
 table at A1, is refused when the note is read, and not after the rest of
-the sheet. So the crate never holds more than 2,000,000 cells with a
+the sheet. So xlsx_rs never holds more than 2,000,000 cells with a
 value, and the refusal names the last row and the last column the
 rectangle had reached, where the user looks for the values outside the
 table. The limit is `MAX_SHEET_CELLS` of
-`docs/specs/worker/individuals.md`, which the light worker gives the
-crate with each read, so that the number is written in one place. A CSV
+`docs/specs/worker/individuals.md`, which the light worker gives
+xlsx_rs with each read, so that the number is written in one place. A CSV
 of 20 MB, the limit of a file of the individuals, holds about 1,800,000
 cells of ten characters, each with its separator, eleven bytes: the
 limit of an xlsx lets it hold a table as large as a CSV can, and a
@@ -136,13 +150,13 @@ and a year is a number and not a date.
 
 calamine gives no format of a cell, only that the format is one of a
 date or a time, or one of a duration, the `ExcelDateTime` that `DateTime`
-holds. So the crate cannot tell a date shown with its time from one
+holds. So xlsx_rs cannot tell a date shown with its time from one
 shown without it, and decides by the number: a number with no time, as a
 date typed by hand has, gives the date alone, and a number with a time
 gives both, whatever Excel shows, as the owner decided on 27 September
 2026 (**Open 2**, below).
 
-The crate first rounds the number to a whole number of milliseconds, and
+xlsx_rs first rounds the number to a whole number of milliseconds, and
 splits that into its days and the milliseconds of its last day, with the
 arithmetic of whole numbers. 45425.9999999999, a hundredth of a
 millisecond before midnight, is then 14 May 2024 at 0:00, where
@@ -150,7 +164,7 @@ calamine's parts of the number as it is give 13 May at hour 24, as the
 second trial saw. The parts of the day come from calamine, an
 `ExcelDateTime::new` of the days in the date system of the workbook,
 `Xlsx::has_1904_epoch`, and its `to_ymd_hms_milli`, with no library of
-dates: the crate takes calamine without its feature `chrono`. The date
+dates: xlsx_rs takes calamine without its feature `chrono`. The date
 system is the 1900 one or the 1904 one of old Excel for Mac, so the same
 date shown in Excel gives the same text in both, and calamine reproduces
 Excel's 29 February 1900, a day that did not exist, as Excel does: 60
@@ -161,10 +175,10 @@ the end of 9999. It turns the days into a whole number with no sign, so
 a number below 0 gives 31 December 1899 in the 1900 system and 1 January
 1904 in the other; and a day after 9999 gives the year 10000 or later,
 from 2,958,466 in the 1900 system and from 2,957,004 in the 1904 one, as
-the second trial saw. So the crate gives the number itself for a number
+the second trial saw. So xlsx_rs gives the number itself for a number
 below 0 and for a year after 9999 in the parts, a rule that holds in both
 systems. A time alone, a number that rounds to less than a day, is also
-a date for calamine, of 31 December 1899 or 1 January 1904; the crate
+a date for calamine, of 31 December 1899 or 1 January 1904; xlsx_rs
 writes the time only. A duration is written from its whole number of
 milliseconds, since calamine gives its parts as a date of January 1900.
 
@@ -184,7 +198,7 @@ file is read with those values, and the user sees them in the table.
 
 A range of merged cells holds its value in its first cell, the one at its
 top left, and the others are empty in the file; Excel shows the value
-over the whole range. So the crate gives every cell of a merged range the
+over the whole range. So xlsx_rs gives every cell of a merged range the
 value of its first cell, within the rectangle of the values, with
 calamine's `Xlsx::merge_cells_by_sheet_name`: a population merged over
 ten rows is the population of the ten individuals, which is what the user
@@ -196,10 +210,10 @@ name, which the reader refuses, "two columns are named Origen".
 
 ### The refusals
 
-A file the crate cannot read as an xlsx is refused with the kind of
+A file xlsx_rs cannot read as an xlsx is refused with the kind of
 `IndividualsFileError` that says why, so that the user is told what to do
 with it; the kinds and their words are `docs/specs/worker/individuals.md`'s,
-"The refusals and their words". The crate says which it is by a code,
+"The refusals and their words". xlsx_rs says which it is by a code,
 and the light worker makes the refusal of it. In the order it looks:
 
 1. **An older file of Office**, whose bytes start with the mark of a
@@ -209,7 +223,7 @@ and the light worker makes the refusal of it. In the order it looks:
    gives `XlsxError::Password`; any other is a workbook of Excel 97–2003,
    an `.xls` whose name was changed, or another file of the old Office,
    and is `oldExcel`. An `.xls` whose name ends in `.xls` never reaches
-   the crate: the Individuals step does not load it
+   xlsx_rs: the Individuals step does not load it
    (`docs/specs/steps/individuals.md`).
 2. **Not a zip file**, whose bytes do not start with `PK` and the bytes 3
    and 4, as every xlsx does, since an xlsx is a zip of XML files:
@@ -225,16 +239,16 @@ and the light worker makes the refusal of it. In the order it looks:
    Zip archive: Could not find EOCD", the record that ends every zip, for
    the first 500 bytes of an xlsx, in the trial.
 4. **No worksheet that is not hidden**, which Excel does not let a user
-   save: `files`, with the crate's own message, "no visible worksheet",
+   save: `files`, with xlsx_rs's own message, "no visible worksheet",
    as `ReadError::Unreadable`.
 5. **A cell with an error calamine does not know**: calamine 0.36.1 knows
    the seven errors of the table above, and refuses the whole sheet at
    any other, with `XlsxError::CellError`, whose text is the error.
    rust_xlsxwriter writes `#GETTING_DATA`, which the trial refused with
-   "Unsupported cell error value '#GETTING_DATA'". The crate gives it as
+   "Unsupported cell error value '#GETTING_DATA'". xlsx_rs gives it as
    `cellError`, with the text of the error, so that the user is told
    which formula to mend; calamine does not say which cell, and neither
-   can the crate, so the words say how to find the cells with an error in
+   can xlsx_rs, so the words say how to find the cells with an error in
    Excel. The newest versions of Excel have other errors, `#SPILL!` and
    `#CALC!` among them, but whether they reach calamine as such is not
    known: Excel may save them as `#VALUE!`, with the real error in a
@@ -253,23 +267,23 @@ and the light worker makes the refusal of it. In the order it looks:
    is read.
 
 A sheet whose rows are all blank but its header, or whose values are
-all spaces, is not refused here: the crate gives its cells, and the
+all spaces, is not refused here: xlsx_rs gives its cells, and the
 reader refuses it as a CSV of the same rows, `empty`.
 
-A panic of the crate, or of calamine inside it, is a trap of the wasm,
+A panic of xlsx_rs, or of calamine inside it, is a trap of the wasm,
 which ends the light worker (`.claude/skills/coding/worker.md`, "Errors
-are values"); the lints of the crate deny what panics in its own code
-(`.claude/skills/coding/SKILL.md`, "The files crate"), and calamine
+are values"); the lints of xlsx_rs, popnei's, deny what panics in its own code, and
+calamine
 cannot be read line by line for it. A sheet so large in memory that the
 wasm cannot grow, within 20 MB of zip, ends the same way. The read then
 fails because its worker failed (`docs/specs/worker/messages.md`).
 
 ## The Rust interface
 
-The plain functions, which `cargo test` calls natively, in
-`crates/files/src/xlsx.rs`, and the exported one, a thin wrapper over
-them, in `crates/files/src/lib.rs`, as the coding skill has it: the
-functions wasm-bindgen generates cannot run natively.
+The plain functions, which `cargo test` calls natively, in the library
+crate of xlsx_rs, and the exported one, a thin wrapper over them, in its
+crate of the binding to wasm-bindgen, as popnei has `popnei` and
+`popnei-js`: the functions wasm-bindgen generates cannot run natively.
 
 A cell as it crosses to JavaScript, and the sheet read:
 
@@ -295,7 +309,7 @@ pub struct Sheet {
 }
 ```
 
-What the crate refuses, each with what its words need, and a file that
+What xlsx_rs refuses, each with what its words need, and a file that
 calamine cannot read, with calamine's message:
 
 ```rust
@@ -328,7 +342,7 @@ pub fn read_first_sheet(bytes: &[u8], max_cells: u32) -> Result<Sheet, ReadError
 ```
 
 The exported function. It returns the sheet or the refusal as a value,
-and throws only for a file calamine cannot read, as the coding skill has
+and throws only for a file calamine cannot read, as popnei's coding skill has
 every exported function do, with a `Result` whose error wasm-bindgen
 turns into a JavaScript `Error` with its message
 (`.claude/skills/coding/worker.md`, "Errors are values"). The refusals
@@ -365,8 +379,9 @@ pub struct XlsxRead {
 pub fn read_xlsx(bytes: &[u8], max_cells: u32) -> Result<XlsxRead, JsError>;
 ```
 
-What wasm-bindgen declares of it in `crates/files/pkg/files.d.ts`, which
-the light worker's TypeScript reads. A second crate of trial, of 27
+What wasm-bindgen declares of it in the package, `wasm/xlsx_rs.d.ts`,
+which the TypeScript of popnei_web's light worker reads: this is the
+contract between the two projects. A second crate of trial, of 27
 September 2026, with this struct and this function, generated these
 lines, the fields in the order of their names, with wasm-bindgen 0.2.128
 (the comments are added here):
@@ -389,7 +404,7 @@ export class XlsxRead {
 /** Throws an Error with calamine's message for a file it cannot read. */
 export function readXlsx(bytes: Uint8Array, max_cells: number): XlsxRead;
 
-/** Fetches and compiles files_bg.wasm, from beside files.js when it is
+/** Fetches and compiles xlsx_rs_bg.wasm, from beside xlsx_rs.js when it is
     called with no argument, as the light worker calls it. */
 export default function __wbg_init (module_or_path?: { module_or_path: InitInput | Promise<InitInput> } | InitInput | Promise<InitInput>): Promise<InitOutput>;
 ```
@@ -402,25 +417,73 @@ wasm-bindgen copies the bytes of the `Uint8Array` into the memory of the
 wasm, 20 MB at most, and `cells` makes a JavaScript array of the values
 each time it is read, so the light worker reads it once.
 
-## The crate's Cargo.toml
+## The package
 
-`.claude/skills/coding/configs.md` gives the file whole but its
-dependencies, which are, for stage 4:
+What xlsx_rs releases, as popnei releases its own
+(`/Users/jose/devel/popnei/js/popnei/package.json`): a package named
+`xlsx_rs`, in `js/xlsx_rs/` of its repository, of `"type": "module"`,
+whose `exports` give `./wasm/xlsx_rs.js` with its declarations
+`./wasm/xlsx_rs.d.ts`, and whose `files` hold `wasm/`, the README and
+the license. Its `build` compiles the binding crate with `cargo build
+--release --target wasm32-unknown-unknown`, then runs `wasm-bindgen
+--target web --remove-name-section --out-dir wasm --out-name xlsx_rs`
+over it, which writes the JavaScript, its declarations and
+`xlsx_rs_bg.wasm`. The package is packed with `npm pack`, and the
+`.tgz`, `xlsx_rs-0.1.0.tgz`, is attached to a pre-release of a tag
+`js-v0.1.0-dev.1`, then `dev.2` and on, each used once and never moved,
+since popnei_web's lockfile keeps the hash of the file of each URL. The
+release is made by hand, as popnei's are, until the two have a workflow
+(`docs/architecture.md`, section 13, point 13). The package is its
+wasm-bindgen output, with no TypeScript of its own around it: popnei_web
+calls one function and the `init` that loads the wasm.
+
+A change of the declarations above is a change of the contract: it is a
+new tag, and a change of `readXlsxCells` in popnei_web in the same work,
+with a new URL in its `package.json`.
+
+### Its size
+
+The download is the wasm and its JavaScript, measured in the two crates
+of trial of 27 September 2026, which have calamine alone and little code
+of their own, each a little different, built with the profile below and
+wasm-bindgen as above, with Rust 1.98.0 on the owner's Mac, gzipped with
+`gzip -9`; their files were named `files` and not `xlsx_rs`, which
+changes nothing of their size:
+
+| file | raw | gzipped |
+|---|---|---|
+| the `.wasm`, calamine and wasm-bindgen | 533,415 and 533,519 bytes | 295,475 and 295,521 bytes |
+| the JavaScript wasm-bindgen generates, in the crate with the struct `XlsxRead` above | 11,892 bytes | 2,962 bytes |
+| popnei's wasm package, for comparison (`docs/technology.md`, section 2) | 2.16 MB | 0.71 MB |
+
+So 0.30 MB, the reader's own code a few hundred bytes of it, which
+agrees with the 0.29 MB `docs/technology.md` measured for calamine
+inside the crate of the three libraries, and is less than half of
+popnei's wasm, which every user of popnei_web downloads. The sizes are
+measured again from each release, and in popnei_web from the site built
+with it.
+
+## Its dependencies
+
+The manifests of xlsx_rs are its own, and take the lints of popnei's
+`/Users/jose/devel/popnei/.claude/skills/coding/lints.toml`, as popnei's
+`Cargo.toml` does. What they depend on, for stage 4:
 
 ```toml
 [dependencies]
-# Pinned to the command line, which refuses a crate of another version;
-# the version popnei pins, so one command line builds both.
+# Pinned to the command line of wasm-bindgen, which refuses a crate of
+# another version; the version popnei pins, so that the one command line
+# on the owner's Mac builds both. The binding crate alone.
 wasm-bindgen = "=0.2.128"
 # The version docs/technology.md measured. Its default features are none;
 # chrono, for dates as chrono's types, and picture, for the images of a
-# workbook, are left off: the crate writes a date from calamine's own
-# parts of it.
+# workbook, are left off: xlsx_rs writes a date from calamine's own
+# parts of it. The library crate.
 calamine = { version = "=0.36.1", default-features = false }
 
 [dev-dependencies]
 # The xlsx files of the tests are written in memory; the library the
-# report will write with in stage 6, in the tests only until then.
+# writer of stage 6 will write with, in the tests only until then.
 rust_xlsxwriter = { version = "=0.99.1", default-features = false }
 
 [profile.release]
@@ -431,150 +494,17 @@ codegen-units = 1
 ```
 
 calamine brings zip, with its compression in Rust, and quick-xml; none
-has C, and the trial built them for `wasm32-unknown-unknown`.
-rust_xlsxwriter is a dependency the owner decided on 24 September 2026
-(`docs/technology.md`, section 2), taken here as a development
-dependency, which does not reach the wasm: the dependencies of the tests
-are the owner's decision as the others are
-(`.claude/skills/coding/SKILL.md`, "Dependencies"), and this one is the
-one already decided for the crate. `crates/files/Cargo.lock` is
-committed. `rust-toolchain.toml` names Rust 1.98.0, the stable release of
-18 August 2026, current on 27 September 2026 and the one on the owner's
-Mac; calamine 0.36.1 needs 1.88 at least.
-
-## How the light worker loads it
-
-The light worker's script, `src/worker/filesRunner.ts`, is the one file
-that imports the files wasm (`.claude/skills/coding/configs.md`, the
-pattern `filesWasm`), as `.claude/skills/coding/worker.md` gives it, "The
-files wasm, on first need":
-
-- **On the first xlsx**, and not when the worker starts. It keeps one
-  promise, `filesReady ??= loadFiles()`, where `loadFiles` imports
-  `crates/files/pkg/files.js` with a dynamic `import()`, which Vite, the
-  tool that builds the site, makes a file of its own, downloaded only
-  when the line runs, and awaits its `init()`, which fetches
-  `files_bg.wasm` from beside it. A second xlsx awaits the same promise
-  and downloads nothing.
-- **When the download fails**, a network that drops or a page left open
-  across a deploy of the site, whose files are no longer there, the
-  promise is forgotten, `filesReady = null`, so that the next xlsx tries
-  again, and the read fails as `xlsxReaderNotLoaded`, with the browser's
-  message for the console. The user reads "pops.xlsx could not be read:
-  the part of the application that reads Excel files could not be
-  downloaded; check the connection and load the file again; if it fails
-  again, the site may have been updated since this page was opened: save
-  the project, reload the page and open the project again"
-  (`docs/specs/worker/individuals.md`), the advice of the 3D view whose
-  file is gone after a deploy (`docs/specs/analyses/pca.md`), since a
-  reload alone loses what the user has not saved. The worker goes on,
-  and a CSV read after it is read. The option not taken was to end the
-  worker, as a failure to load popnei ends the calculation worker: the
-  user would be told that the reading stopped, and not to check their
-  connection.
-- **A try again that may fail at once.** A failed `init()` leaves
-  nothing of the wasm behind, and the next one fetches `files_bg.wasm`
-  again. A failed `import()` may not: the HTML standard, which the
-  browsers follow, keeps a module whose download failed as failed, for
-  the life of the worker, so that the next `import()` of the same
-  address fails again with no request. Whether it should is asked in
-  the standard's issue 6768 on GitHub, `whatwg/html`, and what each
-  engine does on 27 September 2026 is not known here. In an engine that keeps it,
-  "load the file again" fails again after the JavaScript of the files
-  wasm failed to download, even with the connection back, and the second
-  half of the words, save the project, reload the page and open it
-  again, is what mends it, since a reload starts a new worker. The
-  Playwright case below finds which engines keep it, and the report of
-  the plan says so. The options not taken: an `import()` of a new
-  address at each try, which Vite cannot give, since it names the file
-  it makes of the files wasm's JavaScript when it builds the site; and the JavaScript imported with the worker's
-  own file, so that only the `.wasm` could fail to download, at 2,962
-  bytes gzipped more for every user of the light worker, CSV users
-  included. The second is the one to take if an engine keeps the failure
-  and the owner wants a connection that dropped mended without a
-  reload.
-- **The read** calls `readXlsx` with the bytes and `MAX_SHEET_CELLS`,
-  and makes of what it gives a plain value, the cells or a refusal of
-  `IndividualsFileError`, with `readXlsxCells` below, which also frees
-  the `XlsxRead`. A code in `refusal` that is not one of the six, or
-  `cells` not as long as `numRows × numColumns`, is a defect of ours and
-  throws; the read of the individuals file then rejects, and the worker
-  ends with `crashed`, the message with which a worker says it cannot go
-  on before it closes itself (`docs/specs/worker/messages.md`, "A worker
-  that cannot go on"). An `Error` thrown by `readXlsx` is the refusal
-  `files`, with its message.
-
-`readXlsxCells`, in `src/worker/xlsxCells.ts`, is the part of this that
-has no wasm in it, so that Vitest checks it in node with an object of
-the test in the place of the files wasm. It names no import of the
-files wasm, and so does not break the rule that only `filesRunner.ts`
-imports it: the struct `XlsxRead` of `files.d.ts` has every field of
-`XlsxReadFields`, and `filesRunner.ts` passes the files wasm's
-`readXlsx` itself.
-
-```ts
-/** The fields of the files wasm's XlsxRead that the light worker reads. */
-export interface XlsxReadFields {
-  readonly refusal: string;
-  readonly detail: string;
-  readonly sheet: string;
-  readonly firstRow: number;
-  readonly firstColumn: number;
-  readonly numRows: number;
-  readonly numColumns: number;
-  readonly cells: unknown[];
-  free(): void;
-}
-
-/** The cells of an xlsx or its refusal: calls `readXlsx` with `bytes`
-    and MAX_SHEET_CELLS, gives an Error it throws as the refusal "files"
-    with its message, and frees what it returns. Throws a defect for a
-    code of refusal it does not know or cells of the wrong length. */
-export function readXlsxCells(
-  readXlsx: (bytes: Uint8Array, maxCells: number) => XlsxReadFields,
-  bytes: Uint8Array,
-): SheetCellsRead;
-```
-
-A `sheetTooLarge` gives its last row and column, `firstRow + numRows −
-1` and `firstColumn + numColumns − 1`, the column written in Excel's
-letters, 16,384 as "XFD", since that is where the words send the user (`docs/specs/worker/individuals.md`, "The refusals and
-their words"). `SheetCellsRead`, the cells of the sheet or a refusal of
-`IndividualsFileError`, the union of every way a file of the individuals
-is refused, are `docs/specs/worker/individuals.md`'s.
-
-The loading and `readXlsxCells` together are the function given to
-`readIndividualsFile`, which
-calls it for a source with no options of a CSV, an xlsx
-(`docs/specs/worker/individuals.md`, "The TypeScript interface"). So
-`readIndividualsFile` runs in node under Vitest, the runner of the
-tests that need no browser, with a function of the test in its place,
-and the files wasm is tried in the browser.
-
-### What the user sees while it downloads
-
-The Individuals step shows the file as being read, as it does for a CSV
-(`docs/specs/steps/individuals.md`), from the pick until the table
-arrives, the download included; no state of its own says that something
-is downloading. The download is the wasm and its JavaScript, measured
-in the two crates of trial of 27 September 2026, which have calamine
-alone and little code of their own, each a little different, built as
-`build:files` builds it, with Rust 1.98.0 on the owner's Mac, gzipped
-with `gzip -9`:
-
-| file | raw | gzipped |
-|---|---|---|
-| `files_bg.wasm`, calamine and wasm-bindgen | 533,415 and 533,519 bytes | 295,475 and 295,521 bytes |
-| `files.js`, what wasm-bindgen generates, in the crate with the struct `XlsxRead` above | 11,892 bytes | 2,962 bytes |
-| popnei's wasm package, for comparison (`docs/technology.md`, section 2) | 2.16 MB | 0.71 MB |
-
-So 0.30 MB, the crate's own code a few hundred bytes of it, which agrees with the 0.29 MB `docs/technology.md` measured
-for calamine inside the crate of the three libraries, and is less than
-half of popnei's wasm, which every user downloads. At 10 Mbit/s it takes
-about a quarter of a second, and at 1.6 Mbit/s about 1.5 s, by
-arithmetic, not measured. The browser keeps it after that, and a later
-visit asks GitHub Pages whether it changed. The numbers are measured
-again from the build of the stage, and written in the report of its plan.
+has C, and the trial built them for `wasm32-unknown-unknown`. calamine
+and rust_xlsxwriter are dependencies the owner has to approve, as every
+dependency is; calamine was left unapproved on 27 September 2026 while
+the owner weighed this project (`docs/architecture.md`, section 13, point
+12). `Cargo.lock` is committed, and `rust-toolchain.toml` names Rust
+1.98.0, the stable release of 18 August 2026, current on 27 September
+2026 and the one on the owner's Mac, with the target
+`wasm32-unknown-unknown`; calamine 0.36.1 needs 1.88 at least. A panic
+is a trap of the wasm, which ends popnei_web's light worker, so the
+lints that deny `unwrap`, `expect`, `panic!` and indexing with `[]` hold
+outside the tests, and the library has `#![forbid(unsafe_code)]`.
 
 ## The cases
 
@@ -603,11 +533,6 @@ again from the build of the stage, and written in the report of its plan.
   numbers, as Excel shows them in the CSV, `1,8` rounded to its format,
   and as it stores them in the xlsx, 1.75, and the booleans, the text
   `VERDADERO` in a CSV of Spanish Excel and a boolean in the xlsx.
-- **The files wasm, downloaded, then the light worker restarted** after
-  a crash or a cancel: the new worker imports it again, which the
-  browser's cache serves. A new worker also starts with no module
-  kept as failed, so a restart mends a failed `import()` as a reload
-  does.
 
 ## How it runs
 
@@ -620,14 +545,15 @@ made of them; and the JavaScript array of the cells, 2,000,000 at
 most. The memory of a wasm grows and never shrinks, so the worker keeps
 the largest a read has needed until it is ended. None of it is measured;
 the Playwright test of the Individuals step measures the time of a sheet
-of 10,000 rows and 20 columns (below, "In the browser").
+of 10,000 rows and 20 columns in popnei_web
+(`docs/specs/worker/individuals.md`, "How it is verified").
 
 ## How it is verified
 
 ### With cargo test, natively
 
-At `read_first_sheet`, with `npm run test:files`, which also runs `cargo
-fmt --check` and clippy with the lints of the crate. Two sets of files.
+At `read_first_sheet`, with the checks of xlsx_rs, which run `cargo fmt
+--check`, clippy with its lints, and `cargo test`. Two sets of files.
 
 **Written by the tests, in memory**, with rust_xlsxwriter's
 `Workbook::save_to_buffer`, each case a few lines that say what the file
@@ -640,7 +566,7 @@ holds, and the literal cells it gives:
 | a row with its second cell not written | `Empty` there |
 | a number with the format `000` | `Number(1.0)` |
 | 45425 with the format `dd/mm/yyyy`; 45425.5 with `dd/mm/yyyy hh:mm:ss`, and with `dd/mm/yyyy`; 45425.9999999999 with `dd/mm/yyyy`; 0.604166666 with `hh:mm`; 1.5 with `[h]:mm:ss`; 60, 2958465 and 2958466 with `dd/mm/yyyy`; −3 with `dd/mm/yyyy` | `2024-05-13`; `2024-05-13 12:00:00` both times (**Open 2**, decided); `2024-05-14`; `14:30:00`, `36:00:00`, `1900-02-29`, `9999-12-31`, `Number(2958466.0)`, `Number(-3.0)`; all seen as dates by calamine in the trials |
-| the crate's function that makes the cell of a date, in its own module, with the 1904 system, which rust_xlsxwriter does not write: 2957003, 2957004, −3 and 0.5 | `9999-12-31`, `Number(2957004.0)`, `Number(-3.0)`, `12:00:00` |
+| xlsx_rs's function that makes the cell of a date, in its own module, with the 1904 system, which rust_xlsxwriter does not write: 2957003, 2957004, −3 and 0.5 | `9999-12-31`, `Number(2957004.0)`, `Number(-3.0)`, `12:00:00` |
 | a formula `=1+1` saved with the value 2, one with the text `x`, one with `TRUE`, one with `#N/A`, and `=1+2` with none | `Number(2.0)`, `Text("x")`, `Bool(true)`, `Text("#N/A")`, `Number(0.0)` |
 | `0.1 + 0.2` | `Number(0.30000000000000004)` |
 | a text `"  sp "` and a text with a line break | both as they are |
@@ -661,7 +587,7 @@ text; those come from the owner's files.
 
 **Made by the owner**, since `docs/technology.md` asks, in its open point
 1, whether calamine reads right the files that users make. They are kept
-in `crates/files/tests/data/`, and their tests assert the cells the owner
+in `tests/data/` of xlsx_rs, and their tests assert the cells the owner
 says the file shows in Excel, as literals. Each is small, a header and
 five rows, typed by hand as a user would:
 
@@ -697,86 +623,49 @@ which ran. What each gives that this spec does not expect, a date read
 as a number, a cell missing, is a finding for this spec and not a test
 to be bent.
 
-### With Vitest, in node
+### The package, built
 
-At `readXlsxCells`, with a function of the test in the place of
-`readXlsx` that returns an object of the fields, or throws, and counts
-the calls of its `free()`:
+A test under node of the package as it is released, which gives its
+`init` the bytes of the `.wasm`, as `init({ module_or_path: bytes })`,
+since wasm-bindgen 0.2 warns when the bytes are given bare, and since node's `fetch` does not read the
+file beside its JavaScript, as a browser does, and reads
+`excel_en.xlsx` and `encrypted.xlsx`: the cells the Rust tests give, and
+the refusal `encrypted`. It is what checks a release before it is
+tagged, as popnei's `npm test` checks its package.
 
-| the object | gives |
-|---|---|
-| `refusal` "", the sheet `Hoja1` at row 3 and column 2, 2 rows of 2 columns, cells `["id", "pop", "a", 1]` | the cells, with the same numbers; `free()` called once |
-| `refusal` "encrypted"; "emptySheet" with its sheet; "cellError" with `detail` `#GETTING_DATA` | those refusals, with their fields |
-| `refusal` "sheetTooLarge", from row 1 and column 1, 123 rows of 16,384 columns | `sheetTooLarge`, `lastRow` 123 and `lastColumn` "XFD", with the sheet and `max` `MAX_SHEET_CELLS` |
-| a function that throws `Error("Zip error")` | the refusal `files`, with that message |
-| `refusal` "other", and cells 3 long for 2 × 2 | a throw each, with `free()` still called once |
+### In popnei_web
 
-### In the browser
-
-With Playwright, which drives the three engines of the browsers from a
-test, in the flow of the Individuals step
-(`.claude/skills/coding/testing.md`), in Chromium, Firefox and WebKit:
-
-- `excel_en.xlsx`, copied to `e2e/fixtures/`, loaded through the page:
-  the table shown, with its date as `2024-05-13`; the network log has one
-  request for the files wasm's JavaScript and one for its `.wasm`, and
-  none before the pick; a second xlsx loaded after it adds none; a CSV
-  loaded first, none at all;
-- the `.wasm` answered with an error by the test, which Playwright can
-  put in the place of the site's answer: the
-  words of `xlsxReaderNotLoaded`; the route removed and the file loaded
-  again: the table;
-- the JavaScript of the files wasm answered with an error, the same way:
-  the words of `xlsxReaderNotLoaded`; the route removed and the file
-  loaded again: the table in an engine that tries the `import()` again,
-  or the same words in one that keeps the failure (above, "How the light
-  worker loads it"). The test records which, for each engine, and asserts
-  only that one of the two is shown; the report of the plan names the
-  engines that keep it;
-- `encrypted.xlsx`: its words;
-- a sheet of 10,000 rows and 20 columns, `e2e/fixtures/individuals_10000.xlsx`,
-  written by a test of the crate marked `#[ignore]` and run by hand, as
-  `make_fixtures.mjs` is, and committed: the time from the pick to the
-  table, with and without the download, in Chrome on the owner's Mac,
-  written in the report of the plan.
-
-The size of `files_bg.wasm` and `files.js`, raw and gzipped, is measured
-from the build and written in the same report, beside the numbers above.
+`readXlsxCells` under Vitest, with an object of the test in the place of
+the package, and the flow of the Individuals step in Chromium, Firefox
+and WebKit, with `excel_en.xlsx`, `encrypted.xlsx` and a sheet of 10,000
+rows and 20 columns, `individuals_10000.xlsx`, which a test of xlsx_rs
+marked `#[ignore]` writes when it is run by hand, copied into its
+`e2e/fixtures/`: `docs/specs/worker/individuals.md`, "How it is
+verified". A finding there about the cells is a finding for
+this spec, fixed here and released.
 
 ## What this spec asks of other documents
 
-- `docs/specs/worker/individuals.md`, revised beside this spec: the
-  refusals `notXlsx`, `oldExcel`, `encrypted`, `emptySheet`, `cellError`,
-  `sheetTooLarge` and `xlsxReaderNotLoaded` and their words, and
-  `MAX_SHEET_CELLS`. From the second review: `sheetTooLarge` carries the
-  last row and the last column the rectangle reached, `lastRow` and
-  `lastColumn`, in place of its rows and columns, and its words name
-  them; the words of `cellError` say how to find the cell in Excel; a
-  CSV of 20 MB holds about 1,800,000 cells; and `XlsxReader` rejects for
-  a defect of ours. The same fields go into `docs/specs/worker/protocol.md`
-  and the words into `docs/specs/steps/individuals.md`.
-- `docs/specs/worker/messages.md`, revised beside this spec: the request
-  of an xlsx, and the load of the files wasm that fails.
+Of popnei_web, all made on 27 and 28 September 2026:
+
+- `docs/specs/worker/individuals.md`: the refusals `notXlsx`,
+  `oldExcel`, `encrypted`, `emptySheet`, `cellError`, `sheetTooLarge` and
+  `xlsxReaderNotLoaded` and their words, `MAX_SHEET_CELLS`, and, since 28
+  September 2026, the light worker's part of this spec, above.
+- `docs/specs/worker/messages.md`: the request of an xlsx, and the load
+  of the files wasm that fails.
 - `docs/technology.md`, section 2 and open point 1: the measure of
-  calamine alone, 295,475 to 295,521 bytes gzipped in two crates of
-  trial; that calamine 0.36.1 refuses a whole sheet at an error it does
-  not know, and that whether `#SPILL!` reaches it as such waits for the
-  owner's `spill.xlsx`; and the answer to open point 1 when the owner's
-  files have been read.
-- `.claude/skills/coding/worker.md`, "The files wasm, on first need":
-  "about 0.5 MB gzipped" is 0.30 MB while the crate only reads; a failed
-  load forgets the promise and is the refusal `xlsxReaderNotLoaded`, and
-  the worker goes on; and, in "Errors are values", the refusals of the
-  crate are values of its result, and only a file calamine cannot read
-  throws, `files`.
-- `.claude/skills/coding/configs.md`: the dependencies above, the
-  development dependency on rust_xlsxwriter, `channel = "1.98.0"`, and
-  the line `//!` each file of the crate's tests opens with, without
-  which `missing_docs = "deny"` stops it compiling.
-- `.claude/skills/coding/SKILL.md`, "The files crate": its tests over
-  files written by rust_xlsxwriter in memory as well as the owner's.
+  calamine alone; that calamine 0.36.1 refuses a whole sheet at an error
+  it does not know, and that whether `#SPILL!` reaches it as such waits
+  for the owner's `spill.xlsx`; and the answer to open point 1 when the
+  owner's files have been read.
 - `docs/functionality.md`, section 4: "the first sheet" is the first that
   is not hidden, and merged cells take the value Excel shows over them.
+
+Of xlsx_rs, when its repository is made: a `CLAUDE.md`, the skills of
+popnei adapted to it, among them the coding skill with these lints and
+the thin exported functions, and `docs/` with its architecture and this
+spec.
 
 ## Open points
 
@@ -811,21 +700,24 @@ from the build and written in the same report, beside the numbers above.
    depends on the number, but adds a time of midnight to every date,
    the common case, to spare the rare one. A third, reading the format
    from the file itself, is not in calamine 0.36.1, and would be a
-   reader of the styles of the workbook written for the crate, and was
+   reader of the styles of the workbook written for xlsx_rs, and was
    not taken either.
 
 ## Not in this spec
 
 - What the cells become in the table, the header, the first column, the
-  spaces, the missing values, the types, and the words of the refusals:
-  `docs/specs/worker/individuals.md`.
+  spaces, the missing values, the types, and the words of the refusals;
+  and how popnei_web's light worker loads the package and what the user
+  sees while it downloads: `docs/specs/worker/individuals.md`.
 - Which files the Individuals step loads as an xlsx, by their name, and
   what it shows while one is read: `docs/specs/steps/individuals.md`.
-- Writing an xlsx and zipping the report, rust_xlsxwriter and zip in the
-  wasm, and what they add to its download: stage 6.
+- Writing an xlsx and zipping the report, and what they add to the
+  download: stage 6 of popnei_web, and a spec of xlsx_rs then
+  (`docs/architecture.md`, section 13, point 14).
 - Whether pandas, reading the xlsx the report writes, gives a number as
   the same text as the application, `1` and not `1.0`: stage 6, with the
   report (`docs/specs/analyses/diversity.md`, "Not in this spec").
-- The workflow that installs Rust and builds the crate: `docs/specs/site.md`.
+- A workflow that builds and releases the package: section 13, point 13,
+  of `docs/architecture.md`.
 - `.xlsm`, a workbook with macros, which calamine reads as an xlsx, and
   `.ods`: whether the step loads them is the step's.

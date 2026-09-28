@@ -174,10 +174,11 @@ finding: a name you would choose differently that says the same.
   from nowhere else; popnei is imported by the calculation worker's runner
   alone, never by the light worker or the reader of
   `src/worker/individuals/`.
-- `crates/files/`: no `unsafe`, no `unwrap`, `expect` or indexing outside
-  the tests, and every exported function returns a `Result` whose error
-  becomes a JavaScript `Error`, as "The files crate" of the `coding`
-  skill says. A panic there is a trap that ends the light worker.
+- The files wasm is the package of xlsx_rs, named in `package.json` by
+  the URL of a release, never by a `file:` path, and imported by its name
+  with `import()` in `filesRunner.ts` alone. How it reads an xlsx is
+  reviewed in xlsx_rs, not here; a fix of it worked around in the light
+  worker is a finding.
 - Adding an analysis added its module and its panel and changed nothing
   else, as section 4 says; a change outside is a finding or a reason
   the plan gave.

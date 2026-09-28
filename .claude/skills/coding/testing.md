@@ -29,8 +29,7 @@ timing, and when it fails says only that something on the path broke.
 |---|---|---|---|
 | `src/core` | Vitest | node | the project and its commands, the keys, undo, the cache, the project file, the script; examples and properties |
 | `src/worker` | Vitest | node | the protocol, the client's queues, progress, cancelling and restart against fake workers, and the reader of CSV and TSV with the inference of the types of the columns |
-| `crates/files` | `cargo test` | native | reading and writing an xlsx, and the zip, through the plain Rust functions under the exported ones |
-| the light worker with the files wasm | Playwright | browser | an xlsx read and a report written through the real wasm, loaded on first need |
+| the light worker with the files wasm | Playwright | browser | an xlsx read, and from stage 6 a report written, through the real package of xlsx_rs, loaded on first need |
 | `src/charts`, 2D | Vitest | jsdom | the SVG each plot function builds, its update and its removal |
 | `src/charts/pca3d.ts`, the PNG export | Playwright | browser | what needs WebGL or a canvas, which jsdom does not have |
 | `src/ui` | Playwright | browser | the screens, as part of the flows |
@@ -105,9 +104,12 @@ tested in node. The tests give popnei the bytes of a fixture, a
 flow (`docs/specs/worker/runner.md`). The reader of the
 individuals file, `src/worker/individuals/`, is pure TypeScript and is
 tested in node over the text of CSV and TSV files, as `worker.md` lists.
-What the light worker does with the files wasm, an xlsx and the zip, is
-tested twice: the Rust by `cargo test` in the crate, natively, and the
-wasm in the worker by Playwright. What node does not have is the
+What the light worker does with the files wasm, the package of xlsx_rs,
+is tested here twice: `readXlsxCells`, which makes of what the package
+returns the cells or a refusal, under Vitest with an object of the test
+in its place, and the real package in the worker by Playwright. How it
+reads each kind of cell is tested in xlsx_rs, with `cargo test` and the
+owner's files (`docs/specs/worker/files.md`). What node does not have is the
 browser's `FileReaderSync`, so the reading of a user's `File` and the real
 passing of messages between two threads are tested only by Playwright, in
 the flows.
@@ -598,12 +600,11 @@ For the testing part of the hub's list:
 A sketch, to be written as a workflow in `.github/workflows/site.yml` with
 the walking skeleton. On every push and pull request:
 
-- **check**: the Rust setup below, `npm ci`, `npm run test:files`, `npm
-  run build:files`, then the lint and the types of the hub, which read the
-  declarations `build:files` generates, and `npm test`.
-- **e2e**: the Rust setup, `npm ci`, `npx playwright install --with-deps`,
+- **check**: `npm ci`, the format, the lint and the types of the hub,
+  and `npm test`.
+- **e2e**: `npm ci`, `npx playwright install --with-deps`,
   which also installs the libraries the browsers need on Linux, and `npm
-  run test:e2e`, whose build builds the crate; the HTML report and
+  run test:e2e`; the HTML report and
   `test-results/` uploaded as an artifact after every run not cancelled,
   kept 14 days, so the traces can be read, those of a test that passed
   only on its retry included. It is three jobs side by side, one for
@@ -616,7 +617,7 @@ the walking skeleton. On every push and pull request:
 
 On a push to `main`, when both passed:
 
-- **deploy**: the Rust setup, `npm run build`, then
+- **deploy**: `npm run build`, then
   `actions/configure-pages`, `actions/upload-pages-artifact` with `dist/`,
   and `actions/deploy-pages`, with the permissions `contents: read`,
   `pages: write` and `id-token: write`, as Vite's guide to GitHub Pages
@@ -628,41 +629,19 @@ runs of a branch go one at a time in the order of the pushes, so an older
 run whose e2e finishes later cannot publish over a newer one. Each job
 has a `timeout-minutes`, 20 for e2e and 10 for the others, so that a
 browser that hangs stops the run instead of holding a runner for six
-hours; from stage 4, 30 for e2e and 20 for the others, since a run whose
-cache of Rust is empty compiles the command line of wasm-bindgen and the
-crate, until the first runs are timed and the timeouts set to about
-twice the time of a run with the cache empty (`docs/specs/site.md`).
+hours.
 
-The Rust setup, in each job that builds the files crate, after
-`actions/checkout` and before `npm ci`, in three steps
-(`docs/specs/site.md`, "Rust in the workflow, from stage 4"):
+The workflow needs no Rust at any stage: the reader of xlsx, from stage
+4, is the package of xlsx_rs, a project of its own, which `npm ci`
+installs from its release as it installs popnei's (`docs/architecture.md`,
+section 6). A Rust setup, with its cache, its toolchain and wasm-bindgen's
+command line, was specified for a crate of this repository from 27 to 28
+September 2026 and taken out when the owner moved the reader to xlsx_rs.
 
-1. `actions/cache` over `~/.cargo/registry/index/`,
-   `~/.cargo/registry/cache/`, `crates/files/target/`, and the three
-   programs of wasm-bindgen's command line in `~/.cargo/bin/`,
-   `wasm-bindgen`, `wasm-bindgen-test-runner` and `wasm2es6js`, keyed by
-   `rust-toolchain.toml` and `crates/files/Cargo.lock`, with a
-   `restore-keys` of the same prefix so that a new key starts from the
-   last cache. Not the rest of `~/.cargo/bin/`, rustup's own programs,
-   which the runner brings, and not `~/.rustup/`, some hundreds of MB.
-2. `rustup toolchain install`, which with no name installs the toolchain
-   `rust-toolchain.toml` names, with its target and components (rustup
-   1.28 and later), explicit so that a failure to install shows as this
-   step and not inside the first `cargo`.
-3. `wasm-bindgen --version | grep -qx 'wasm-bindgen 0.2.128' || cargo
-   install wasm-bindgen-cli --version 0.2.128 --locked`: the command line
-   at the version the crate pins, compiled only when the cache did not
-   bring it, since `cargo install` alone compiles it again whenever its
-   own record of what it installed, which is not cached, is missing.
-
-How long a run takes with and without the cache has not been measured;
-the report of the plan of stage 4 writes it. The Rust setup and
-`build:files` come with the crate, in stage 4 (`configs.md`); the
-workflow before it needs no Rust.
-
-`npm ci` installs the wasm package of popnei from its GitHub Release, by
-the URL and the hash of the lockfile (`docs/technology.md`, section 5), so
-the workflow needs no token and no checkout of popnei.
+`npm ci` installs the wasm packages of popnei and, from stage 4, of
+xlsx_rs from their GitHub Releases, by the URL and the hash of the
+lockfile (`docs/technology.md`, section 5), so the workflow needs no
+token and no checkout of either.
 
 ## The dependencies of the tests
 

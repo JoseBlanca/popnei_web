@@ -1,6 +1,6 @@
 ---
 name: coding
-description: How code is written in popnei_web, the static web applications of popnei, in TypeScript with React, D3, three.js and two web workers, one that runs the wasm package of popnei and a light one for the files of the user, and in Rust for the small crate of xlsx and zip. Use it before writing or changing any code or test of popnei_web. It covers the layers and what each may import, the order of the work, the core layer, dependencies and the checks to run before the work is called done, and it points to typescript.md, the rules of the language and of errors that every session reads with it, and to the topic file of each layer, react.md, css.md, charts.md, worker.md and testing.md, beside it.
+description: How code is written in popnei_web, the static web applications of popnei, in TypeScript with React, D3, three.js and two web workers, one that runs the wasm package of popnei and a light one for the files of the user, which loads the wasm package of xlsx_rs for an xlsx. Use it before writing or changing any code or test of popnei_web. It covers the layers and what each may import, the order of the work, the core layer, dependencies and the checks to run before the work is called done, and it points to typescript.md, the rules of the language and of errors that every session reads with it, and to the topic file of each layer, react.md, css.md, charts.md, worker.md and testing.md, beside it.
 ---
 
 # Coding
@@ -11,9 +11,11 @@ the results, the cache, undo and the analyses live; `src/worker`, the two
 web workers, the calculation worker that runs popnei and the light worker
 that reads the individuals file and writes the xlsx and the zip, and the
 messages the page and they exchange; `src/charts`, the plots, functions
-over D3 and three.js; and `src/ui`, the React screens. Beside them,
-`crates/files/` is a small Rust crate, built to the files wasm, that reads
-and writes xlsx and makes the zip for the light worker. What the applications do is in `docs/functionality.md`, and
+over D3 and three.js; and `src/ui`, the React screens. There is no Rust
+here: the two wasm modules the workers load come as packages from their
+releases, popnei's, and xlsx_rs's, the project of its own that reads, and
+from stage 6 writes, an xlsx for the light worker, which calls it the
+files wasm (`docs/architecture.md`, section 6). What the applications do is in `docs/functionality.md`, and
 what they are built with, and why, in `docs/technology.md`.
 
 `src/core` is where a mistake gives a wrong result: a stale number shown
@@ -37,7 +39,6 @@ the topic file of the layer the change is in:
 |---|---|
 | `src/core` | none more: the core layer is in this file, below |
 | `src/worker` | `worker.md`: the protocol, the two runners, popnei and the wasm, the reader of the individuals file |
-| `crates/files/` | the section "The files crate" below, and popnei's Rust coding skill it points to |
 | `src/charts` | `charts.md`: D3, three.js, the handle of a plot, export |
 | `src/ui` | `react.md` and `css.md`: React, React Aria, the styles, accessibility |
 | any test, or running the app | `testing.md`: Vitest, Playwright, the dev server |
@@ -53,8 +54,7 @@ import:
 | layer | may import | must not import |
 |---|---|---|
 | `src/core` | itself; the types of `src/worker/protocol.ts`; from stage 4, `src/worker/individuals/columnTypes.ts`, the reader's pure functions of the numbers and the types of a column, for `columnAllows` and the colours of the PCA (`configs.md`); the types of `popnei` | `src/ui`, `src/charts`, `src/worker/client.ts`, `src/worker/messages.ts`, `src/worker/start.ts`, `src/worker/runner.ts`, `src/worker/filesRunner.ts`, React, D3, three.js, a value of `popnei` |
-| `src/worker` | itself; `popnei`, in `runner.ts` only; the files wasm, in `filesRunner.ts` only; the types of `src/core/result.ts` | anything else of `src/core`, `src/ui`, `src/charts`, React, D3, three.js |
-| `crates/files/` (Rust) | its crates, wasm-bindgen, calamine, rust_xlsxwriter and zip | popnei; it is called only by `src/worker/filesRunner.ts` |
+| `src/worker` | itself; `popnei`, in `runner.ts` only; `xlsx_rs`, the files wasm, in `filesRunner.ts` only; the types of `src/core/result.ts` | anything else of `src/core`, `src/ui`, `src/charts`, React, D3, three.js |
 | `src/charts` | itself; D3; three.js | `src/core`, `src/ui`, `src/worker`, React, a value of `popnei` |
 | `src/ui` | everything above; React; React Aria | `src/worker/runner.ts`, `src/worker/filesRunner.ts`, D3, three.js, a value of `popnei` |
 
@@ -272,48 +272,6 @@ The key of a result is what makes undo, staleness and the cache work
   any arithmetic, and becomes `null` before it goes into JSON, which
   would write it as `null` anyway, and back as `null`, not as NaN.
 
-## The files crate
-
-`crates/files/` is Rust, and is written by the rules of popnei's coding
-skill, `/Users/jose/devel/popnei/.claude/skills/coding/SKILL.md`, as the
-model: its sections on errors without panics, integers, and the lints of
-its `lints.toml`, which `configs.md` takes into the crate's `Cargo.toml`.
-What matters most here:
-
-- **`#![forbid(unsafe_code)]`** in `lib.rs`: the crate reads files and
-  has no reason for `unsafe`.
-- **No panic crosses the boundary.** A panic in wasm is a trap, which is
-  fatal for the light worker, restarted as after a cancel (`worker.md`).
-  So no `unwrap`, `expect`, `panic!` or indexing with `[]`, which the lints
-  deny outside the tests, and every function the crate exports returns
-  `Result<T, JsError>`: wasm-bindgen turns the error into a JavaScript
-  `Error` with its message, which the runner catches at the call and
-  sends to the page (`worker.md`, "Errors are values"). A refusal the
-  user can mend, a password, an empty first sheet, is not that error but
-  a value of the result, with the fields its words need
-  (`docs/specs/worker/files.md`, "The Rust interface").
-- **The exported functions are thin.** Each one converts its arguments,
-  calls a plain Rust function that does the work and returns a `Result`
-  of the crate's own error type, and maps that error to `JsError`. The
-  functions wasm-bindgen generates are stubs that panic when called
-  natively, so the plain functions are what `cargo test` calls.
-- **Its tests**: `cargo test`, natively, over two sets of files. Files
-  the tests write in memory with rust_xlsxwriter, `save_to_buffer`, each
-  case a few lines that say what the file holds, for what a program can
-  write: dates of every format, formulas, merged cells, a hidden sheet, a
-  sheet too large. And xlsx files kept in the crate,
-  `crates/files/tests/data/`, made by the owner with Excel, LibreOffice
-  and Google Sheets, with dates, sparse rows and a sheet in Spanish among
-  them, for what only those programs write: the date system of 1904, a
-  password, an old `.xls`, the errors of the newest Excel
-  (`docs/technology.md`, open point 1; `docs/specs/worker/files.md`, "How
-  it is verified"). And the light worker's tests in Playwright, which
-  read an xlsx, and from stage 6 write a report, through the real wasm
-  (`testing.md`). The tests in memory were added on 27 September 2026
-  with the specs of stage 4.
-- **Its dependencies** are the owner's decision as npm's are, with exact
-  versions, and `crates/files/Cargo.lock` is committed.
-
 ## Dependencies
 
 `docs/technology.md` decided the libraries, and its rule stands: a library
@@ -351,6 +309,20 @@ possible break and a possible abandonment.
   "file:../popnei/js/popnei"`, and that is never committed: the last check
   below fails on it. A newer popnei is a new tag there and a new URL here,
   in a commit of its own that says what changed in popnei.
+- **xlsx_rs comes from a GitHub Release too**, in the same way, as
+  section 5 of `docs/technology.md` has it since 28 September 2026: a URL
+  of the `.tgz` of a tag of xlsx_rs in `package.json`, and a newer
+  xlsx_rs in a commit of its own. For work on both at once, the local
+  build is packed with `npm pack` in xlsx_rs and installed with `npm
+  install --no-save` and the absolute path of the `.tgz`, which copies it
+  into `node_modules/` and changes neither `package.json` nor the
+  lockfile. Not a link, `npm link` or a `file:` path: the development
+  server refuses to serve a `.wasm` whose real folder is outside the
+  repository, "403 Forbidden", and `../xlsx_rs` names no folder from a
+  worktree (`docs/architecture.md`, section 6). The link of popnei above
+  meets the same 403 in the development server. A fix of how an
+  xlsx is read is made in xlsx_rs, by its own skills, and not worked
+  around in the light worker.
 
 ## Tools
 
@@ -364,34 +336,30 @@ check is a command of its own.
 
 ```
 npm run format:check
-npm run test:files
-npm run build:files
 npm run typecheck
 npm run lint
 npm test
 npm run build
 npm run test:e2e
 npm pkg get dependencies.popnei
+npm pkg get dependencies.xlsx_rs
 ```
 
-The scripts are those of `configs.md`: `prettier --check .`; for the
-files crate, `cargo fmt --check`, clippy and `cargo test`, then its build
-to wasm; `tsc -b`, `eslint --max-warnings=0 .`, `vitest run`, `vite
+The scripts are those of `configs.md`: `prettier --check .`; `tsc -b`, `eslint --max-warnings=0 .`, `vitest run`, `vite
 build`, and the build followed by `playwright test` in the three engines.
 All of them run for every change to the code; a change to documents alone
-needs none. `build:files` comes before the type check and the lint
-because they read the declarations it generates for the files wasm, which
-git does not hold. Until the crate exists, after the walking skeleton,
-the two scripts of the crate are reported as not there. The
+needs none. The
 build is in the list because it is what finds a worker, a wasm file or a
 page that the bundler cannot resolve, which neither the type check nor
 the unit tests load. The tests in a browser, `test:e2e`, run for a change
 to `src/core` too, because core reaches the screens through the store;
 `testing.md` says how.
 
-The last one prints the dependency on popnei, which has to be a URL of
-`https://github.com/JoseBlanca/popnei/releases/download/`. A `file:` path
-or a link is the local build, and is not committed.
+The last two print the dependencies on popnei and on xlsx_rs, which have
+to be URLs of `https://github.com/JoseBlanca/popnei/releases/download/`
+and `https://github.com/JoseBlanca/xlsx_rs/releases/download/`; until
+stage 4 adds xlsx_rs, the second prints nothing. A `file:` path or a
+link is the local build, and is not committed.
 
 A layer or a script that does not exist yet is reported as not there, not
 as passed. Report what each command printed when it failed and that it

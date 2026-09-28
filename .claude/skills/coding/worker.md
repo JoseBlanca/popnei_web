@@ -25,9 +25,12 @@ src/worker/filesRunner.ts  the light worker, with no popnei: the individuals
                            file, the files wasm, xlsx and zip
 src/worker/individuals/    the reader of CSV and TSV and the inference of the
                            types of the columns, pure, called by filesRunner.ts
-crates/files/              the files wasm, in Rust, which only filesRunner.ts
-                           calls
+src/worker/xlsxCells.ts    the cells of an xlsx or its refusal, from what the
+                           files wasm returns, with no wasm in it
 ```
+
+The files wasm is the package `xlsx_rs`, installed from a release of
+xlsx_rs, a project of its own, and imported only by `filesRunner.ts`.
 
 `protocol.ts` and `messages.ts` are apart because core imports the types
 of the first and is checked with no DOM (`configs.md`), while a message
@@ -54,9 +57,10 @@ package does not have yet.
   for, while a GWAS of minutes runs does not wait the rest of the GWAS for
   a job of a second (`docs/architecture.md`, section 5).
 - **The light worker holds no popnei.** CSV and TSV, and the inference of
-  the types of the columns, are TypeScript of ours, and xlsx and zip are
-  the files wasm, a crate of this repository, as the owner decided on 24
-  September 2026 (`docs/architecture.md`, section 6). So it neither
+  the types of the columns, are TypeScript of ours, as the owner decided
+  on 24 September 2026, and the xlsx is the files wasm, the package of
+  xlsx_rs, a project of its own, as the owner decided on 28 September
+  2026 (`docs/architecture.md`, section 6). So it neither
   imports popnei nor compiles its wasm, and the lint keeps popnei out of
   it (`configs.md`).
 - **Not a pool of calculation workers**, which would run two analyses at
@@ -299,7 +303,7 @@ export function createClient(make: {
   was picked. Load it again in the Variants step." The runner tells it
   from a refusal of the data by popnei's message
   (`docs/specs/worker/runner.md`).
-- **A refusal of the files wasm is a value too.** A file the crate
+- **A refusal of the files wasm is a value too.** A file xlsx_rs
   refuses for a reason the user can mend, not a zip, an old `.xls`, a
   password, an empty first sheet, an error cell calamine does not know,
   a sheet too large, is a code in the struct `readXlsx` returns, with
@@ -308,7 +312,8 @@ export function createClient(make: {
   throws, a `Result` whose error wasm-bindgen turns into a JavaScript
   `Error` with calamine's message, which `filesRunner.ts` catches at the
   call and gives as the refusal `files` with that message
-  (`docs/specs/worker/files.md`, "The Rust interface"). Either way the
+  (`docs/specs/worker/files.md`, xlsx_rs's spec, "The Rust
+  interface"). Either way the
   read answers `individuals` with a failed read, and the worker goes on.
   A file that the reader of CSV and TSV refuses is not an error of the
   run either: the reader returns a `Result`, and the job gives it back as
@@ -456,24 +461,28 @@ const ready = init().then(() => {
 
 ### The files wasm, on first need
 
-The second wasm module, xlsx and zip, is built from the crate
-`crates/files/` of this repository into `crates/files/pkg/` by `npm run
-build:files` (`configs.md`; `docs/architecture.md`, section 6). It is
-loaded the first time a request needs it, so that a user of CSV files
-never downloads it.
+The second wasm module, the reader of xlsx, is the package of xlsx_rs, a
+project of its own that releases it as popnei releases its own;
+`package.json` names a release by its URL, and `npm ci` installs it into
+`node_modules/` (`docs/architecture.md`, section 6; `docs/technology.md`,
+section 5). It is loaded the first time a request needs it, so that a
+user of CSV files never downloads it.
 
 - **Both its JavaScript and its wasm are loaded on first need**, in the
   light worker only. The worker is built as a module worker (section "How
   Vite builds the workers"), whose bundle Vite splits, so `filesRunner.ts`
-  imports what wasm-bindgen generated with a dynamic `await
-  import("../../crates/files/pkg/files.js")`, which Vite makes a chunk of
-  its own, and calls its default export, the `init` that `--target web`
-  generates, which fetches the `.wasm` from `new URL("files_bg.wasm",
-  import.meta.url)` as popnei's loader does.
-  What weighs is the `.wasm`, 0.30 MB gzipped while the crate only reads,
+  imports the package with a dynamic `await import("xlsx_rs")`, which
+  Vite makes a chunk of its own, and calls its default export, the `init`
+  that `wasm-bindgen --target web` generates, which fetches the `.wasm`
+  from `new URL("xlsx_rs_bg.wasm", import.meta.url)` as popnei's loader
+  does. That Vite 8.3.0 does so for a package of `node_modules/`, and
+  finds its `.wasm` in the build and in the development server, was tried
+  on 28 September 2026 with popnei's package in its place, in Chromium
+  and WebKit (`docs/architecture.md`, section 6).
+  What weighs is the `.wasm`, 0.30 MB gzipped while it only reads,
   calamine alone, 295,475 and 295,521 bytes with `gzip -9` in the two
   crates of trial of 27 September 2026 (`docs/specs/worker/files.md`), and about 0.58 MB once
-  rust_xlsxwriter and zip join it for the report in stage 6
+  the writer joins it for the report in stage 6
   (`docs/technology.md`, section 2); the JavaScript that wasm-bindgen
   generates is 2,962 bytes gzipped in that trial, and it no longer rides
   in the worker's first file. A static `import` of it would put that
@@ -493,19 +502,20 @@ never downloads it.
   no wasm behind and a CSV can still be read. It is not
   `crashed`, which a popnei that does not load is for the calculation
   worker, which can do nothing without it (`docs/specs/worker/files.md`,
-  "How the light worker loads it"; decided on 27 September 2026).
+  `docs/specs/worker/individuals.md`, "The package of xlsx_rs, loaded on
+  first need"; decided on 27 September 2026).
   A browser may keep an `import()` whose download failed as failed for
   the life of the worker, as the HTML standard has it, so that the next
   try fails with no request; the words of `xlsxReaderNotLoaded` then
   tell the user to save the project and reload, and a Playwright test
-  finds which engines do it (`docs/specs/worker/files.md`).
+  finds which engines do it (`docs/specs/worker/individuals.md`).
 - **What the files wasm returns is made a plain value outside the
   runner**, by `readXlsxCells` of `src/worker/xlsxCells.ts`, which takes
   the files wasm's `readXlsx` as an argument and so runs under Vitest with
   an object of the test in its place: the codes of refusal, the `Error`
   that is `files`, the `free()` in a `finally`, and the defects it
-  throws for (`docs/specs/worker/files.md`, "How the light worker loads
-  it").
+  throws for (`docs/specs/worker/individuals.md`, "The package of
+  xlsx_rs, loaded on first need").
 
 ### The reader of the individuals file
 
@@ -789,19 +799,16 @@ the release `js-v0.1.0-dev.2` of 25 September 2026.
   missing values, quoted fields, and over cells as the files wasm gives
   them, for the inference. That the result helper copies an array that
   does not own its buffer, and transfers one that does, is a test too.
-- **With `cargo test`, natively**: the Rust of `crates/files/`, reading
-  and writing an xlsx and zipping, over files kept in the crate and over
-  files the tests write in memory with rust_xlsxwriter. The
-  functions that wasm-bindgen exports are stubs that panic when called
-  natively, so they are thin wrappers over plain Rust functions, and the
-  tests call those (`SKILL.md`, "The files crate").
+- **In xlsx_rs, not here**: the Rust of the reader, with `cargo test`
+  over files its tests write and the files the owner makes, and its
+  package as built (`docs/specs/worker/files.md`, "How it is verified").
 - **Only in a browser, with Playwright**: the real workers, `FileReaderSync`,
   the fetch of the wasm by Vite's rewritten address inside a module
   worker, transfer, a cancel that ends a calculation in the middle, and
   the files wasm loaded on first need, seen in the network log as one
   request for its chunk of JavaScript and one for its `.wasm`, and none
-  for either before; an xlsx read and a report written through it, which
-  are the tests of the crate's exported functions; and, with a CSV, no
+  for either before; an xlsx read, and from stage 6 a report written,
+  through the package of the release `package.json` names; and, with a CSV, no
   request from the light worker for any wasm.
 - **The floor is not tested by Playwright**, which runs recent browsers.
   What stands for it is `build.target`, for the syntax, and, for every
@@ -850,5 +857,7 @@ that a `File` posted to a worker is read there; that a cancel ends a
 calculation and the next request runs on the new worker; and the value
 of `WORKER_READY_TIMEOUT_MS`. The first work package that reads an xlsx
 checks that the files wasm is a chunk of its own, fetched on first need,
-and that its loader finds its `.wasm` in the worker as popnei's does.
+and that its loader finds its `.wasm` in the worker as popnei's does,
+which a project of trial saw on 28 September 2026 with popnei's package
+in the place of xlsx_rs's.
 What they find is corrected here.

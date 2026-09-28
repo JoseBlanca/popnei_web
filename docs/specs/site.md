@@ -5,9 +5,13 @@ changed it the same day, after the review of work package 1 of the plan:
 a request the worker does not know has a failure of its own, a failure
 to open a file names the file, and only the probe's worker calls popnei.
 Revised on 27 September 2026 for stage 4 of `docs/build-order.md`, which
-brings the files crate, the small Rust crate that reads an xlsx
-(`docs/specs/worker/files.md`): Rust in the repository and in the
-workflow, "The files crate" and "The workflow" below; not approved yet.
+brought the files crate, the small Rust crate that reads an xlsx, with
+Rust in the repository and in the workflow; and revised again on 28
+September 2026, when the owner moved that reader into a project of its
+own, xlsx_rs, whose wasm package the site installs from a release as it
+installs popnei's (`docs/architecture.md`, section 6): the Rust goes, and
+"xlsx_rs, from stage 4" below is what is left of it. Neither revision is
+approved yet.
 This spec is stage 0 of `docs/build-order.md`: the repository of the site
 set up, a workflow that checks it and publishes it on GitHub Pages, and
 one page, the probe, whose worker loads popnei's wasm package and opens a
@@ -47,10 +51,10 @@ every push.
 The files of `.claude/skills/coding/configs.md`, as that file has them,
 with these differences at this stage:
 
-- **No files crate until stage 4.** The files crate is the small Rust
-  crate that reads an xlsx, and later writes one (`docs/architecture.md`,
-  section 6). Until stage 4 `dev` is `vite` and `build` is `vite build`,
-  as `configs.md` says; from it, below, "The files crate".
+- **No Rust.** The reader of xlsx, from stage 4, is the wasm package of
+  xlsx_rs, a project of its own, installed by `npm ci` as popnei is
+  (`docs/architecture.md`, section 6; below, "xlsx_rs, from stage 4"), so
+  `dev` is `vite` and `build` is `vite build`, as `configs.md` says.
 - **The pages are HTML files at the root of the repository**, not in
   `pages/`, so that the build writes them to the root of `dist/` and they
   are served at `/popnei_web/probe.html`, the addresses of
@@ -229,46 +233,28 @@ checkout of popnei, and the script is run again only when popnei's format
 of vars files changes. `e2e/fixtures/bad.vcf` is a line of plain text, for
 the case of a file popnei refuses.
 
-### The files crate, from stage 4
+### xlsx_rs, from stage 4
 
-Stage 4 adds to the repository what `configs.md` gives for the crate:
-
-- `rust-toolchain.toml` at the root, which names Rust 1.98.0, the stable
-  release current on 27 September 2026, with the target
-  `wasm32-unknown-unknown` and the components `rustfmt` and `clippy`.
-  rustup reads it from any command run in the repository and installs
-  what it names.
-- `crates/files/`, with its `Cargo.toml`, `Cargo.lock`, `clippy.toml` and
-  sources, as `docs/specs/worker/files.md` gives them. `crates/files/target/`
-  and `crates/files/pkg/`, what cargo and wasm-bindgen write, are in
-  `.gitignore` already, and so outside Prettier, which reads it, and
-  outside ESLint, which ignores `crates/`.
-- In `package.json`, the scripts `build:files` and `test:files`, and
-  `npm run build:files && ` before `vite` in `dev` and before `vite build`
-  in `build`, so that the development server and the build never use a
-  files wasm older than the crate. `test:e2e` and `screens` run `build`,
-  and so build the crate too.
-
-What it costs on a machine that builds the site, measured in a crate of
-trial with calamine alone on 27 September 2026, on the owner's Mac, an
-Apple M5 Pro, with Rust 1.98.0: the release build with LTO took 5.2 s
-from nothing, its dependencies included, and 1.1 s with nothing changed;
-wasm-bindgen, under 0.1 s. So `npm run dev` starts about a second later
-than before. A machine without Rust stops at `build:files` with the
-shell's "cargo: command not found", and one without the command line of
-wasm-bindgen, or with another version of it, with wasm-bindgen's own
-message, which names both versions; `docs/technology.md`, section 2,
-took that cost, and the owner approved on 27 September 2026 Rust 1.98.0
-and `wasm-bindgen-cli` 0.2.128 on every machine that builds the site,
-CI among them; calamine, which the crate builds, is not yet approved
-(`docs/specs/stage-4-open-points.md`). The owner's Mac has Rust 1.98.0,
-rustup 1.29.0, and `wasm-bindgen` 0.2.128.
+Stage 4 adds one line to `package.json`, the dependency on the package
+of xlsx_rs by the URL of its first release, as popnei's is named,
+`"xlsx_rs":
+"https://github.com/JoseBlanca/xlsx_rs/releases/download/js-v0.1.0-dev.1/xlsx_rs-0.1.0.tgz"`,
+with its hash in `package-lock.json` (`docs/technology.md`, section 5).
+It waits for that release, which xlsx_rs makes, and for the owner to
+confirm the name and the place of its repository
+(`docs/architecture.md`, section 13, points 11 to 13); meanwhile the
+implementer installs the local build of xlsx_rs, packed, with `npm
+install --no-save` and its absolute path, as section 6 of the
+architecture says, and nothing of it is committed.
+Nothing else of the repository changes for it: no toolchain, no script
+and no folder of Rust, and the workflow below installs it with `npm ci`,
+with no step of its own and no token, since the repository of xlsx_rs
+is public as popnei's is.
 
 ### The workflow
 
-`.github/workflows/site.yml`, the continuous integration of `testing.md`.
-Until stage 4, without its Rust setup, as below; from stage 4, with it
-(next section).
+`.github/workflows/site.yml`, the continuous integration of `testing.md`,
+which needs no Rust at any stage.
 
 - **check**, on every push and pull request: `npm ci`, `npm run
   format:check`, `npm run typecheck`, `npm run lint`, `npm test`;
@@ -279,61 +265,6 @@ Until stage 4, without its Rust setup, as below; from stage 4, with it
   `actions/upload-pages-artifact` with `dist/`, `actions/deploy-pages`,
   with the permissions `contents: read`, `pages: write` and `id-token:
   write`, as `testing.md` gives them.
-
-### Rust in the workflow, from stage 4
-
-Each of the three jobs builds the files crate, check and e2e for their
-tests and deploy for the site, so each gets the Rust setup, after
-`actions/checkout` and before `npm ci`, in three steps:
-
-1. **The cache**, `actions/cache` at its latest major version on the day
-   the workflow is written, as the other actions are pinned, over
-   `~/.cargo/registry/index/`, `~/.cargo/registry/cache/`,
-   `crates/files/target/` and the three programs `cargo install` puts in
-   `~/.cargo/bin/` for wasm-bindgen, `wasm-bindgen`,
-   `wasm-bindgen-test-runner` and `wasm2es6js`, with the key
-   `rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml',
-   'crates/files/Cargo.lock') }}`, and `restore-keys:
-   rust-${{ runner.os }}-`, so that a new version of Rust or of a crate,
-   a new key, starts from the last cache and rebuilds only what changed. The
-   rest of `~/.cargo/bin/`, rustup's own programs, which the runner
-   brings, is not cached, so that a cache of an older runner does not put
-   an older rustup over the one installed. The toolchain itself,
-   `~/.rustup/`, is not cached either: it is some hundreds of MB, which
-   the cache would download on every run, as rustup does.
-2. **The toolchain**: `rustup toolchain install`, which with no name
-   installs the toolchain `rust-toolchain.toml` names, with its target
-   and components (rustup 1.28 and later). rustup is on GitHub's Ubuntu
-   runners. The step is explicit and not left to the first `cargo`, so
-   that a failure to install shows as this step.
-3. **wasm-bindgen's command line**, at the version the crate pins, only
-   when the cache did not bring it: `wasm-bindgen --version | grep -qx
-   'wasm-bindgen 0.2.128' || cargo install wasm-bindgen-cli --version
-   0.2.128 --locked`, which compiles it. `cargo install` alone would
-   compile it again whenever its own record of what it installed, which
-   is not cached, is missing.
-
-Then, in the jobs:
-
-- **check**: `npm ci`, `npm run test:files`, the format, clippy and
-  tests of the crate; `npm run build:files`, since the type check and the
-  lint read the declarations wasm-bindgen writes into `crates/files/pkg/`,
-  which `src/worker/filesRunner.ts` imports; then the format, the type
-  check, the lint and `npm test`, as before;
-- **e2e**: as before, its `npm run test:e2e` building the crate with the
-  site;
-- **deploy**: as before, its `npm run build` building the crate with the
-  site.
-
-`timeout-minutes` goes from 10 to 20 for check and deploy, and from 20
-to 30 for e2e: a run whose cache is empty compiles wasm-bindgen's command
-line and the crate, which have not been timed on GitHub's runners. The
-report of the plan writes the time of the Rust setup and of the whole of
-each job on the first run, with the cache empty, and on a second, with
-it full, and the timeouts are then set to about twice the first. The
-comment at the head of `site.yml`, "without the Rust setup, which comes
-with the files crate", is replaced by one that says what the Rust setup
-is for.
 
 ## The messages of the probe
 
@@ -520,14 +451,11 @@ needs no action of the user.
 4. **The measurements**, the `initMs` and `openMs` of each engine on the
    deployed site, on the owner's machine, are written in the work report
    of the plan (`following-plans`).
-5. **From stage 4, the Rust in the workflow**: the first run of the
-   branch, with the cache empty, and a second with it full, both pass,
-   and the second installs nothing with `cargo install`, which its log
-   shows; their times are written in the report of the plan, as above.
-   After the first deploy of stage 4, the files wasm is on the site, its
-   `.wasm` served as `application/wasm` (`curl -sI`), and
-   `crates/files/pkg/` is in no commit (`git ls-files crates/files/pkg`
-   gives nothing).
+5. **From stage 4, xlsx_rs**: `npm pkg get dependencies.xlsx_rs` gives
+   a URL of `https://github.com/JoseBlanca/xlsx_rs/releases/download/`,
+   not a `file:` path; and after the first deploy of stage 4 the files
+   wasm, the `.wasm` of xlsx_rs, is on the site, served as
+   `application/wasm` (`curl -sI`).
 
 What cannot be checked: Playwright runs the current version of each
 engine, not Firefox 115 or Safari 16.4, the oldest the applications
@@ -566,8 +494,8 @@ syntax for them, and by the compatibility tables of MDN
 
 - The protocol, the client, the runners and the queue of the two workers,
   and `src/worker/start.ts`: their specs, for stage 2.
-- The files crate itself, what it reads and how the light worker loads
-  it: `docs/specs/worker/files.md`.
+- xlsx_rs itself, what it reads: `docs/specs/worker/files.md`, its
+  spec; how the light worker loads it: `docs/specs/worker/individuals.md`.
 - The design tokens, the widgets and the shell of the applications: with
   the walking skeleton. The probe uses plain elements and the browser's
   default look.

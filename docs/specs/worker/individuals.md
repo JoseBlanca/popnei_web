@@ -8,7 +8,7 @@ at its end: the empty cells at the end of a header, a variants file
 picked by mistake, the byte order mark of UTF-8 with a bad byte, a
 UTF-16 file cut short, and a column with no name whose cells are all
 missing. Revised on 27 September 2026 for stage 4 of
-`docs/build-order.md`: the xlsx, whose cells the files crate reads
+`docs/build-order.md`: the xlsx, whose cells the files wasm reads
 (`docs/specs/worker/files.md`) and this reader makes into the table, with
 its refusals; the types inferred from the cells compared as text, which
 settles the last open point of this spec; and `readIndividualsFile`,
@@ -21,7 +21,12 @@ column of one number written in one way, which the user set continuous.
 And when the specs of stage 4 were made to agree: the validation of a
 project file accepts no failed read, which a project file writes as
 `notGiven`, and the refusal of a files wasm not downloaded ends with no
-words of its own. The revision is not approved yet. The reader turns
+words of its own. Revised on 28 September 2026, when the owner moved the
+reader of xlsx into a project of its own, xlsx_rs
+(`docs/architecture.md`, section 6): the light worker's part of
+`docs/specs/worker/files.md`, which becomes xlsx_rs's spec, moved here,
+"The package of xlsx_rs, loaded on first need". The revision is not
+approved yet. The reader turns
 the file of the individuals, a CSV, a TSV or an xlsx, the
 metadata file of population genetics or the traits file of association,
 into the table the project holds, and infers the type of each of its
@@ -34,9 +39,12 @@ worker that reads the bytes of the file and decodes them,
 `src/worker/filesRunner.ts`, the code of the worker that answers the
 page: CSV and TSV from the walking skeleton, stage 2 of
 `docs/build-order.md`, the smallest application that goes through every
-part once, and the xlsx from stage 4. The files crate, the small Rust
-module that reads the cells of an xlsx, and how the light worker loads
-it, are `docs/specs/worker/files.md`. It
+part once, and the xlsx from stage 4. The cells of an xlsx are read by
+the **files wasm**, the wasm package of xlsx_rs, a project of its own
+whose spec is `docs/specs/worker/files.md` until its repository is made;
+how the light worker loads that package on first need, and makes of what
+it returns the cells or a refusal, is this spec's, with
+`src/worker/xlsxCells.ts`. It
 develops the rows `individuals/` and `filesRunner.ts` of section 9 of
 `docs/architecture.md` and its section 6, "The individuals file", and
 depends on `docs/specs/worker/protocol.md`, for the table, the types of
@@ -306,7 +314,7 @@ step makes it so for a file whose name ends in `.xlsx`
    encoding", with the same 20 MB, and the bytes are read as there, point
    2. An xlsx is compressed, so 20 MB of it is a larger table than 20 MB
    of CSV; the size of the table is bounded by the next point.
-2. The files crate reads the cells of the first sheet that is not hidden,
+2. The files wasm reads the cells of the first sheet that is not hidden,
    the rectangle from its first to its last row and column with a value,
    each cell empty, text, number or boolean, dates and errors made text
    (`docs/specs/worker/files.md`, "Each cell"), or refuses the file. A
@@ -575,7 +583,7 @@ export function readCsv(
 ```
 
 The reader of the cells of an xlsx, in `src/worker/individuals/sheet.ts`,
-pure as `csv.ts` is: it takes the rectangle the files crate gave and
+pure as `csv.ts` is: it takes the rectangle the files wasm gave and
 makes the table, by the rules of "The xlsx", with the rules of the rows
 that it shares with `readCsv`.
 
@@ -591,7 +599,7 @@ export interface SheetCells {
 }
 
 /** What the light worker gets of an xlsx: its cells, or a refusal of the
-    crate or of the download of the files wasm. */
+    files wasm or of its download. */
 export type SheetCellsRead =
   | { kind: "cells"; cells: SheetCells }
   | { kind: "failed"; error: IndividualsFileError };
@@ -648,7 +656,7 @@ The read of a file, in `src/worker/individualsFile.ts`, which
 `filesRunner.ts` calls with the `File`, the options of its CSV, `null`
 for an xlsx, and the function that reads the cells of an xlsx with the
 files wasm, which only `filesRunner.ts` may import
-(`docs/specs/worker/files.md`, "How the light worker loads it"). It
+(below, "The package of xlsx_rs, loaded on first need"). It
 rejects only when that function rejects, for a defect of ours, and then
 the worker ends with `crashed`; a file it cannot read, or cannot
 download the files wasm for, is a failed read. It is apart
@@ -672,7 +680,7 @@ export interface BytesSource { size: number; arrayBuffer(): Promise<ArrayBuffer>
 /** Reads the cells of an xlsx; a refusal, a file calamine cannot open and
     a files wasm that could not be downloaded are a failed read; rejects
     only for a defect of ours, a result of the files wasm that breaks its
-    contract (docs/specs/worker/files.md, readXlsxCells). */
+    contract (readXlsxCells, below). */
 export type XlsxReader = (bytes: Uint8Array) => Promise<SheetCellsRead>;
 
 export function readIndividualsFile(
@@ -749,7 +757,7 @@ The runner, `src/worker/filesRunner.ts`: it posts its
 calling `readIndividualsFile` with the `File` and the options the
 request carries, and posting what it gives. It holds nothing between two
 reads but, from stage 4, the files wasm once an xlsx has loaded it
-(`docs/specs/worker/files.md`), and imports no popnei. The messages, and
+(below), and imports no popnei. The messages, and
 what the worker does with a request that fails its check, are those of
 `docs/specs/worker/messages.md`, "A worker that cannot go on": each
 request is handled inside one `try`, a throw posts `crashed` and the
@@ -758,6 +766,134 @@ worker closes itself, and the worker's own `error` and
 `event.preventDefault()`, so that the browser does not pass the error on
 to the page's window and its error bar (`docs/specs/entry.md`, "The
 errors nothing else shows").
+
+### The package of xlsx_rs, loaded on first need
+
+Moved here on 28 September 2026 from `docs/specs/worker/files.md`, which
+became the spec of xlsx_rs. The files wasm is the package of xlsx_rs,
+which `package.json` names by the URL of a release of xlsx_rs, as it
+names popnei's, and which `npm ci` installs into `node_modules/`
+(`docs/architecture.md`, section 6). What it declares, `readXlsx`, the
+struct `XlsxRead` it returns and the `init` that loads its wasm, is in
+`docs/specs/worker/files.md`, "The Rust interface". `filesRunner.ts` is
+the one file that imports it (`.claude/skills/coding/configs.md`, the
+pattern `filesWasm`), as `.claude/skills/coding/worker.md` gives it,
+"The files wasm, on first need":
+
+- **On the first xlsx**, and not when the worker starts. It keeps one
+  promise, `filesReady ??= loadFiles()`, where `loadFiles` imports the
+  package, `await import("xlsx_rs")`, a dynamic import, which Vite, the
+  tool that builds the site, makes a file of its own, downloaded only
+  when the line runs, and awaits its `init()`, which fetches
+  `xlsx_rs_bg.wasm` from beside it. A second xlsx awaits the same promise
+  and downloads nothing. That Vite 8.3.0 builds a package of
+  `node_modules/` imported so into a file of its own, and that its
+  `.wasm` is found, was tried on 28 September 2026 with popnei's package
+  in its place (`docs/architecture.md`, section 6).
+- **When the download fails**, a network that drops or a page left open
+  across a deploy of the site, whose files are no longer there, the
+  promise is forgotten, `filesReady = null`, so that the next xlsx tries
+  again, and the read fails as `xlsxReaderNotLoaded`, with the browser's
+  message for the console. The user reads "pops.xlsx could not be read:
+  the part of the application that reads Excel files could not be
+  downloaded; check the connection and load the file again; if it fails
+  again, the site may have been updated since this page was opened: save
+  the project, reload the page and open the project again" ("The
+  refusals and their words"), the advice of the 3D view whose file is
+  gone after a deploy (`docs/specs/analyses/pca.md`), since a reload
+  alone loses what the user has not saved. The worker goes on, and a CSV
+  read after it is read. The option not taken was to end the worker, as
+  a failure to load popnei ends the calculation worker: the user would
+  be told that the reading stopped, and not to check their connection.
+- **A try again that may fail at once.** A failed `init()` leaves
+  nothing of the wasm behind, and the next one fetches `xlsx_rs_bg.wasm`
+  again. A failed `import()` may not: the HTML standard, which the
+  browsers follow, keeps a module whose download failed as failed, for
+  the life of the worker, so that the next `import()` of the same
+  address fails again with no request. Whether it should is asked in
+  the standard's issue 6768 on GitHub, `whatwg/html`, and what each
+  engine does on 27 September 2026 is not known here. In an engine that
+  keeps it, "load the file again" fails again after the JavaScript of the
+  files wasm failed to download, even with the connection back, and the
+  second half of the words, save the project, reload the page and open it
+  again, is what mends it, since a reload starts a new worker. The
+  Playwright case below finds which engines keep it, and the report of
+  the plan says so. The options not taken: an `import()` of a new
+  address at each try, which Vite cannot give, since it names the file
+  it makes of the package's JavaScript when it builds the site; and the
+  JavaScript imported with the worker's own file, so that only the
+  `.wasm` could fail to download, at about 3 KB gzipped more for every
+  user of the light worker, CSV users included. The second is the one to
+  take if an engine keeps the failure and the owner wants a connection
+  that dropped mended without a reload.
+- **The read** calls `readXlsx` with the bytes and `MAX_SHEET_CELLS`,
+  and makes of what it gives a plain value, the cells or a refusal of
+  `IndividualsFileError`, with `readXlsxCells` below, which also frees
+  the `XlsxRead`. A code in `refusal` that is not one of the six, or
+  `cells` not as long as `numRows × numColumns`, is a defect of ours and
+  throws; the read of the individuals file then rejects, and the worker
+  ends with `crashed`, the message with which a worker says it cannot go
+  on before it closes itself (`docs/specs/worker/messages.md`, "A worker
+  that cannot go on"). An `Error` thrown by `readXlsx` is the refusal
+  `files`, with its message.
+
+`readXlsxCells`, in `src/worker/xlsxCells.ts`, is the part of this that
+has no wasm in it, so that Vitest checks it in node with an object of
+the test in the place of the package. It names no import of the
+package, and so does not break the rule that only `filesRunner.ts`
+imports it: the struct `XlsxRead` the package declares has every field
+of `XlsxReadFields`, and `filesRunner.ts` passes the package's
+`readXlsx` itself. A new release of xlsx_rs whose declarations no longer
+have those fields fails the type check of `filesRunner.ts`.
+
+```ts
+/** The fields of the files wasm's XlsxRead that the light worker reads. */
+export interface XlsxReadFields {
+  readonly refusal: string;
+  readonly detail: string;
+  readonly sheet: string;
+  readonly firstRow: number;
+  readonly firstColumn: number;
+  readonly numRows: number;
+  readonly numColumns: number;
+  readonly cells: unknown[];
+  free(): void;
+}
+
+/** The cells of an xlsx or its refusal: calls `readXlsx` with `bytes`
+    and MAX_SHEET_CELLS, gives an Error it throws as the refusal "files"
+    with its message, and frees what it returns. Throws a defect for a
+    code of refusal it does not know or cells of the wrong length. */
+export function readXlsxCells(
+  readXlsx: (bytes: Uint8Array, maxCells: number) => XlsxReadFields,
+  bytes: Uint8Array,
+): SheetCellsRead;
+```
+
+A `sheetTooLarge` gives its last row and column, `firstRow + numRows −
+1` and `firstColumn + numColumns − 1`, the column written in Excel's
+letters, 16,384 as "XFD", since that is where the words send the user
+("The refusals and their words"). `SheetCellsRead` is the cells of the
+sheet or a refusal of `IndividualsFileError`.
+
+The loading and `readXlsxCells` together are the `XlsxReader` given to
+`readIndividualsFile`, which calls it for a source with no options of a
+CSV, an xlsx (above). So `readIndividualsFile` runs in node under
+Vitest, the runner of the tests that need no browser, with a function
+of the test in its place, and the files wasm is tried in the browser.
+
+The Individuals step shows the file as being read, as it does for a CSV
+(`docs/specs/steps/individuals.md`), from the pick until the table
+arrives, the download included; no state of its own says that something
+is downloading. The download is 0.30 MB gzipped, the `.wasm` and about 3
+KB of its JavaScript, as measured in crates of trial on 27 September
+2026 (`docs/specs/worker/files.md`, "Its size"), less than half of
+popnei's wasm, which every user downloads. At 10 Mbit/s it takes about a
+quarter of a second, and at 1.6 Mbit/s about 1.5 s, by arithmetic, not
+measured. The browser keeps it after that, and a later visit asks
+GitHub Pages whether it changed. The numbers are measured again from the
+site built with the first release of xlsx_rs, and written in the report
+of the plan.
 
 ## The cases
 
@@ -821,6 +957,11 @@ errors nothing else shows").
 - **An xlsx that is a CSV renamed**: `notXlsx`, whose words say to give
   it a name that ends in `.csv`; the reader does not try it as a CSV,
   since the source has no options of a CSV to read it with.
+- **The files wasm, downloaded, then the light worker restarted** after
+  a crash or a cancel: the new worker imports it again, which the
+  browser's cache serves. A new worker also starts with no module
+  kept as failed, so a restart mends a failed `import()` as a reload
+  does.
 
 ## How it runs
 
@@ -845,7 +986,7 @@ columns").
 With a CSV or TSV, the light worker loads no wasm at all
 (`docs/architecture.md`, section 6). With an xlsx it loads the files
 wasm the first time, and the read holds the bytes, the rectangle of
-cells, 2,000,000 at most, as the crate gives them, and the table
+cells, 2,000,000 at most, as the files wasm gives them, and the table
 (`docs/specs/worker/files.md`, "How it runs"); a table of 10,000 rows
 and 20 columns from an xlsx is timed in the flow of stage 4, as the CSV
 of stage 2 was.
@@ -853,10 +994,11 @@ of stage 2 was.
 ## How it is verified
 
 With Vitest in node, at `readCsv`, `readSheet`, `cellText`,
-`cellNumber`, `inferColumnTypes`, `columnWarnings` and
-`readIndividualsFile`, the highest functions that run without a worker,
-and in the browser with Playwright. The files crate has its own tests,
-with `cargo test` (`docs/specs/worker/files.md`).
+`cellNumber`, `inferColumnTypes`, `columnWarnings`,
+`readIndividualsFile` and `readXlsxCells`, the highest functions that
+run without a worker; and in the browser with Playwright. xlsx_rs has
+its own tests, of each kind of cell and over the owner's files, in its
+repository (`docs/specs/worker/files.md`, "How it is verified").
 
 A table of cases at `readCsv`, each a literal text and the literal table,
 types and options it gives, or the refusal. Among them, with `\n` for a
@@ -987,8 +1129,49 @@ With Playwright, in the flow of stage 2: a CSV loaded through the page,
 the table and "Read as" shown, and no request for any wasm from the light
 worker in the network log (`.claude/skills/coding/worker.md`, "What is
 tested where"); and the measurement of the file of 10,000 rows, above.
-From stage 4, an xlsx loaded through the page, as
-`docs/specs/worker/files.md` says, "In the browser". That a file changed
+
+At `readXlsxCells`, with a function of the test in the place of the
+package's `readXlsx` that returns an object of the fields, or throws, and
+counts the calls of its `free()`:
+
+| the object | gives |
+|---|---|
+| `refusal` "", the sheet `Hoja1` at row 3 and column 2, 2 rows of 2 columns, cells `["id", "pop", "a", 1]` | the cells, with the same numbers; `free()` called once |
+| `refusal` "encrypted"; "emptySheet" with its sheet; "cellError" with `detail` `#GETTING_DATA` | those refusals, with their fields |
+| `refusal` "sheetTooLarge", from row 1 and column 1, 123 rows of 16,384 columns | `sheetTooLarge`, `lastRow` 123 and `lastColumn` "XFD", with the sheet and `max` `MAX_SHEET_CELLS` |
+| a function that throws `Error("Zip error")` | the refusal `files`, with that message |
+| `refusal` "other", and cells 3 long for 2 × 2 | a throw each, with `free()` still called once |
+
+With Playwright, from stage 4, in the flow of the Individuals step
+(`.claude/skills/coding/testing.md`), in Chromium, Firefox and WebKit,
+with the package of the release `package.json` names and three xlsx
+files made in xlsx_rs and copied into `e2e/fixtures/`:
+
+- `excel_en.xlsx` loaded through the page: the table shown, with its
+  date as `2024-05-13`; the network log has one request for the
+  package's JavaScript and one for its `.wasm`, and none before the
+  pick; a second xlsx loaded after it adds none; a CSV loaded first,
+  none at all;
+- the `.wasm` answered with an error by the test, which Playwright can
+  put in the place of the site's answer: the words of
+  `xlsxReaderNotLoaded`; the route removed and the file loaded again: the
+  table;
+- the package's JavaScript answered with an error, the same way: the
+  words of `xlsxReaderNotLoaded`; the route removed and the file loaded
+  again: the table in an engine that tries the `import()` again, or the
+  same words in one that keeps the failure (above, "The package of
+  xlsx_rs, loaded on first need"). The test records which, for each
+  engine, and asserts only that one of the two is shown; the report of
+  the plan names the engines that keep it;
+- `encrypted.xlsx`: its words;
+- `individuals_10000.xlsx`, a sheet of 10,000 rows and 20 columns: the
+  time from the pick to the table, with and without the download, in
+  Chrome on the owner's Mac, written in the report of the plan.
+
+The size of the package's `.wasm` and JavaScript in the built site, raw
+and gzipped, is measured and written in the same report.
+
+That a file changed
 on the disk gives `unreadable` is checked by hand in
 Chrome, Firefox and Safari, since a test cannot change a file the page
 has picked, and what each browser did is written in the report of the
@@ -1001,10 +1184,12 @@ plan.
   "readIndividuals", id, file, csv }`, with no other message that gives
   the worker a file, and its answer is an `IndividualsFileRead`, the
   union that spec declares, whose `found` is `null` for an xlsx.
-- `docs/specs/worker/files.md`: the files crate gives the rectangle of
-  the first sheet that is not hidden, its cells finite numbers, text,
-  booleans or empty, dates and errors made text, or one of the refusals
-  of the xlsx above.
+- `docs/specs/worker/files.md`, xlsx_rs's spec: its package gives the
+  rectangle of the first sheet that is not hidden, its cells finite
+  numbers, text, booleans or empty, dates and errors made text, or one
+  of the refusals of the xlsx above, through the declarations of "The
+  Rust interface" there; and a release of it is named by its URL in
+  `package.json` (`docs/architecture.md`, section 6).
 - `docs/specs/worker/client.md`: the client sends that request to the
   light worker, gives a refusal of the reader as `refused` and a crash
   of the worker as `failed`, and the entry records the second as `{ kind:
@@ -1096,8 +1281,7 @@ this one is new:
 ## Not in this spec
 
 - How an xlsx is read into cells, its dates, errors, merged cells and
-  the sheet chosen, and the files wasm loaded on first need:
-  `docs/specs/worker/files.md`.
+  the sheet chosen: `docs/specs/worker/files.md`, xlsx_rs's spec.
 - The types changed by the user, the coding of a binary column, and the
   roles of the traits file: `setColumnType` of
   `docs/specs/core/project.md`, and the screens of stages 4 and 7.

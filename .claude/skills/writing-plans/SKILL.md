@@ -151,9 +151,9 @@ Each work package has:
   in place outside the plan, a release of popnei with the function the
   analysis calls among them. The walking skeleton stands on nothing that
   popnei 0.1.0 lacks, and it reads its individuals file as a CSV, so it
-  does not need the files crate either; the crate, and the Rust of its
-  build, come with the first work package that reads an xlsx
-  (`docs/architecture.md`, section 10).
+  does not need the files wasm either, which comes with the first work
+  package that reads an xlsx, and stands on a release of xlsx_rs
+  (`docs/architecture.md`, sections 6 and 10).
 - **Its tasks.**
 - **What could go wrong**, when something is known: the part of the spec
   that is thinnest, the API that WebKit may lack, the file that may be

@@ -42,10 +42,10 @@ the file into a table and infers the type of each column, in the light
 worker, the thread of the tab that reads the files of the individuals:
 the reader of CSV and TSV, `docs/specs/worker/individuals.md`, and the
 reader of xlsx, `docs/specs/worker/files.md`, which runs the **files
-wasm**, the small program of this repository, in Rust compiled to run
-in the browser, that the page downloads the first time an xlsx is read,
-0.30 MB gzipped (`docs/specs/worker/files.md`, "What the user sees
-while it downloads"). "Auto", for an
+wasm**, the package of xlsx_rs, a small project of its own in Rust
+compiled to run in the browser, that the page downloads the first time
+an xlsx is read, 0.30 MB gzipped (`docs/specs/worker/individuals.md`,
+"The package of xlsx_rs, loaded on first need"). "Auto", for an
 option of the reader of CSV, means that the reader detects it. The
 **types** are those of `docs/functionality.md`, section 4: identifier,
 binary, continuous and categorical.

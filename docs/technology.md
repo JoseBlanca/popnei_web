@@ -35,15 +35,15 @@ the applications do is in `docs/functionality.md`.
 | 3D plot | three.js, with `@types/three` |
 | calls to the worker | a small typed message layer of our own |
 | documentation and in-app help | Markdown, rendered with markdown-it |
-| xlsx, zip | in Rust, in `crates/files/`, a crate of this repository built to a second wasm module loaded when needed: calamine, rust_xlsxwriter, zip |
+| xlsx, zip | in Rust, in xlsx_rs, a project of its own whose wasm package the site installs from a GitHub Release and loads when needed (section 5): calamine, and rust_xlsxwriter from stage 6 |
 | CSV and TSV of the individuals | read in TypeScript, by code of ours, with the inference of the types of the columns |
-| building the files crate | a Rust toolchain with the target `wasm32-unknown-unknown`, and `wasm-bindgen-cli` at the version the crate pins |
-| tests | Vitest, Playwright, `cargo test` for the files crate; for development only jsdom, @axe-core/playwright and fast-check |
+| tests | Vitest, Playwright; for development only jsdom, @axe-core/playwright and fast-check |
 | lint and format | ESLint with @eslint/js, typescript-eslint and eslint-plugin-react-hooks, Prettier |
 | types of node | @types/node, for development only |
 | package manager | npm |
 | host | GitHub Pages |
 | popnei itself | its wasm package, from a GitHub Release of popnei (section 5) |
+| the reader of xlsx | the wasm package of xlsx_rs, from a GitHub Release of xlsx_rs, as popnei's (section 5) |
 
 ### TypeScript
 
@@ -307,12 +307,17 @@ The documentation pages and the help drawer of the applications
 (`docs/interface.md`, to be written) come from the same Markdown files,
 rendered by markdown-it, which has been maintained since 2014.
 
-### xlsx and zip in Rust
+### xlsx and zip in Rust, in xlsx_rs
 
-An xlsx file of the individuals is read with calamine and written with
-rust_xlsxwriter, and the report is zipped with the `zip` crate, all pure
-Rust, in a small crate of this repository, `crates/files/`, which is not
-part of popnei (`docs/architecture.md`, section 6). A CSV or TSV file of
+An xlsx file of the individuals is read with calamine, and from stage 6
+written with rust_xlsxwriter, all pure Rust, in **xlsx_rs**, a project of
+its own in a repository of its own, which is not part of popnei and
+releases a wasm package that the site installs as it installs popnei's
+(section 5; `docs/architecture.md`, section 6). The owner decided it on
+28 September 2026; until then it was a crate of this repository,
+`crates/files/`. Where the report is zipped, with the `zip` crate in
+xlsx_rs or otherwise, is decided with stage 6 (`docs/architecture.md`,
+section 13, point 14). A CSV or TSV file of
 the individuals, and the inference of the types of the columns of either,
 are not in this module but in TypeScript of ours (below), so that a user
 whose file is a CSV never downloads it.
@@ -339,14 +344,14 @@ to a wasm module:
 The trial showed that they build and what they weigh, not yet that they
 read the files of real users right.
 
-In stage 4 the crate only reads, so it holds calamine alone, and
-rust_xlsxwriter and zip join it with the report, in stage 6. Measured on
+In stage 4 xlsx_rs only reads, so it holds calamine alone, and
+rust_xlsxwriter joins it with the report, in stage 6. Measured on
 27 September 2026 in a crate of trial with calamine 0.36.1 alone, built
-as `build:files` builds it, with Rust 1.98.0 on the owner's Mac, and
+with the profile above and `wasm-bindgen --target web`, with Rust 1.98.0
+on the owner's Mac, and
 gzipped with `gzip -9`: `files_bg.wasm` is 533,415 to 533,519 bytes raw
 and 295,475 to 295,521 gzipped in two builds, 0.30 MB, and the JavaScript wasm-bindgen generates beside it
-11,892 and 2,962 (`docs/specs/worker/files.md`, "What the user sees
-while it downloads"). That agrees with the 0.29 MB of calamine in the
+11,892 and 2,962 (`docs/specs/worker/files.md`, "Its size"). That agrees with the 0.29 MB of calamine in the
 table above.
 
 calamine 0.36.1 refuses a whole sheet at an error cell it does not
@@ -359,7 +364,7 @@ instead store as `#VALUE!` with the real error elsewhere in the file,
 unconfirmed until the owner's `spill.xlsx` is read
 (`docs/specs/worker/files.md`); and `#GETTING_DATA`, which
 rust_xlsxwriter writes and which the trial refused with "Unsupported
-cell error value '#GETTING_DATA'". The crate gives such a sheet as a
+cell error value '#GETTING_DATA'". xlsx_rs gives such a sheet as a
 refusal that names the error, so that the user is told which formula to
 mend (`docs/specs/worker/files.md`, "The refusals").
 
@@ -368,39 +373,51 @@ runs. So they are a second wasm module, apart from the wasm package of
 popnei, which the application loads the first time it is asked to read an
 xlsx or to write the report, and which the browser keeps after that. A
 user whose file is a CSV never downloads it. The owner decided it on 24
-September 2026, and decided the same day that the module is popnei_web's
-own crate and not a module built and released beside popnei, because
-reading and writing these files is not popnei's business.
+September 2026, and decided the same day that the module is not built
+and released beside popnei, because reading and writing these files is
+not popnei's business; on 28 September 2026, that it is a project of its
+own, xlsx_rs.
 
-The crate is built by the site's own build: `cargo build --target
-wasm32-unknown-unknown --release`, then `wasm-bindgen --target web` into
-`crates/files/pkg/`, which the light worker imports and git ignores
-(`.claude/skills/coding/configs.md`, the script `build:files`). What that
-costs:
+The site takes xlsx_rs's package from a GitHub Release, by its URL in
+`package.json`, as it takes popnei's (section 5), and so needs no Rust:
+no toolchain, no `wasm-bindgen-cli` and no build of a crate on the
+owner's machine, a contributor's or the runners of the continuous
+integration. What xlsx_rs costs instead:
 
-- **Rust on every machine that builds the site**, the owner's, a
-  contributor's and the continuous integration's: a toolchain with the
-  target `wasm32-unknown-unknown`, named in `rust-toolchain.toml` at the
-  root of the repository, and `wasm-bindgen-cli` at the exact version of
-  the `wasm-bindgen` crate, since the two refuse to work together when
-  their versions differ. The crate pins `wasm-bindgen = "=0.2.128"`, the
-  version popnei pins, so that one command line installed builds both.
-  The owner approved this cost, Rust 1.98.0 and `wasm-bindgen-cli`
-  0.2.128, on 27 September 2026; calamine itself is not yet approved,
-  since the owner is weighing making the reader of xlsx a project of its
-  own (`docs/specs/stage-4-open-points.md`).
-- **Time in the continuous integration**: installing the toolchain and
-  `wasm-bindgen-cli`, which `cargo install` compiles, and a release build
-  of the crate with LTO before every build of the site. Neither has been
-  measured; both are cached between runs (`.claude/skills/coding/testing.md`).
-- **A crate to keep**: a few hundred lines around the three libraries, an
-  estimate, with its own tests, `cargo test`, and upgrades of calamine,
-  rust_xlsxwriter and zip as commits of their own.
+- **A second repository to keep**, with the conventions and the skills
+  of popnei, as the owner asked: its `CLAUDE.md`, its docs, its tests,
+  `cargo test` natively and a test of the built package, and the
+  upgrades of calamine and rust_xlsxwriter as commits of their own. The
+  library is a few hundred lines around them, an estimate.
+- **A release for every change the site is to see**: a tag, the package
+  built and packed by hand as popnei's are, about ten minutes by the
+  estimate of `docs/specs/site.md`, and a new URL in the site's
+  `package.json`. While the two are changed together, the site links the
+  local build, never committed.
+- **A release that nothing ties to its source** while releases are made
+  by hand: the lockfile's hash says the file of a URL never changed, not
+  that it was built from the tagged commit, as popnei's releases are made
+  today; a workflow that builds on the tag answers it
+  (`docs/architecture.md`, section 13, point 13).
+- **Rust on the machine that makes a release**, the owner's, which has
+  Rust 1.98.0 and `wasm-bindgen-cli` 0.2.128, approved for the site on
+  27 September 2026 and no longer needed by it.
 
-Its output is not committed. A wasm file in git is a binary that a review
-cannot tell was built from the source beside it, and it changes with
-every commit that touches the crate; the option not taken, committing it,
-would have let a machine without Rust build the site.
+Considered and not taken on 28 September 2026 (`docs/architecture.md`,
+section 6, has the comparison):
+
+- **The crate in this repository, built by the site**, as it was from 24
+  to 28 September 2026: `cargo build` and `wasm-bindgen` into
+  `crates/files/pkg/` before every `vite build` and `vite dev`, with Rust
+  and `wasm-bindgen-cli` on every machine that builds the site and in
+  each of the three jobs of its continuous integration, times never
+  measured, and `npm run dev` about 1 s slower, 5.2 s the first time, on
+  the owner's Mac. A change of the reader would wait for no release. It
+  would win if the reader changed often, together with the screens.
+- **A crate of xlsx_rs published on crates.io and built by the site**:
+  every cost of the one before, Rust in the site, with the wait of a
+  release as well; and the name `xlsx-rs`, which crates.io takes as the
+  same as `xlsx_rs`, is a crate of another author, of 2021.
 
 Considered and not taken:
 
@@ -423,7 +440,8 @@ Considered and not taken:
   from a release as it does popnei (section 5); but a release of popnei
   would carry a package of the applications, and a change to how they
   read an xlsx would wait for a tag of popnei. The owner decided against
-  it that day.
+  it that day. xlsx_rs keeps what it gave, no Rust in the site, without
+  what it cost: its releases are its own.
 
 ### CSV and TSV in TypeScript
 
@@ -495,14 +513,13 @@ src/charts/    D3 and three.js. Each plot is a function that takes an
                element and the data and returns a handle to update or
                remove it. No React.
 src/ui/        React: the screens and the widgets, reading src/core.
-crates/files/  Rust: the files wasm, xlsx read and written and the zip,
-               called only by the light worker.
 docs/          these documents, and the Markdown of the help.
 ```
 
 `src/core` is where a mistake would give a wrong result, a stale number
 shown as current or a project that does not restore, so it is the part
-tested most.
+tested most. There is no Rust in the repository: the two wasm modules,
+popnei's and xlsx_rs's, come as packages from their releases (section 5).
 
 ## 4. The site
 
@@ -513,8 +530,8 @@ tested most.
 - **The step of an application is in the URL hash**, `popgen.html#analyses`,
   so that the back button of the browser moves between steps.
 - **The host is GitHub Pages**, decided by the owner on 24 September
-  2026, deployed by a GitHub Actions workflow that builds the files crate
-  with Rust, then the site with Vite, and publishes the `dist/` folder. Its limits, 1 GB for a site and a
+  2026, deployed by a GitHub Actions workflow that builds the site with
+  Vite and publishes the `dist/` folder. Its limits, 1 GB for a site and a
   soft 100 GB a month of traffic, are far above what the applications,
   the wasm package and the example datasets need.
 - **GitHub Pages cannot set HTTP headers, and threads in wasm need two.**
@@ -535,26 +552,31 @@ tested most.
   possible; and a site that promises that the data never leaves the
   browser should make no request to anyone else.
 
-## 5. How the application gets popnei
+## 5. How the application gets popnei, and xlsx_rs
 
-Decided by the owner on 24 September 2026, while both are developed.
+Decided by the owner on 24 September 2026, while both are developed; and
+on 28 September 2026 for xlsx_rs, the project of the reader of xlsx,
+whose package is taken in the same way (below).
 
 The wasm package cannot be installed from the git repository of popnei
 directly. It is in a folder of the repository, `js/popnei`, and npm
 installs from git only a package at the root of a repository; and its
 built files, `dist/` from TypeScript and `wasm/` from cargo and
 wasm-bindgen, are not in git, so an install from git would have to build
-them. The site needs Rust anyway, for its own files crate (section 2), so
-the toolchain is no longer what a release spares; what it spares is a
-checkout and a release build of the whole of popnei in every build of the
-site, and it means that what the site runs is a popnei that was tagged
-and built by popnei's own workflow, with its hash in the lockfile.
+them. A release spares the site a Rust toolchain, a checkout and a
+release build of the whole of popnei in every build of the site, and it
+means that what the site runs is a popnei that was tagged and built in
+popnei, with its hash in the lockfile.
 
 So the package is taken from a GitHub Release of popnei:
 
-1. In popnei, a GitHub Actions workflow, started by a tag such as
-   `js-v0.1.0-dev.3`, builds the package with `npm run build`, packs it
-   with `npm pack`, and attaches the `.tgz` to a pre-release of that tag.
+1. In popnei, a tag such as `js-v0.1.0-dev.3`; the package built with
+   `npm run build`, packed with `npm pack`, and the `.tgz` attached to a
+   pre-release of that tag. popnei has made its three releases so far,
+   `js-v0.1.0-dev.1` to `js-v0.1.0-dev.3`, by hand, as the notes of the
+   last say; a GitHub Actions workflow that does it on a tag was the
+   recommendation of `docs/specs/site.md`, open point 2, and is not
+   written yet.
 2. The `package.json` of the application names that file by its URL,
    `"popnei": "https://github.com/JoseBlanca/popnei/releases/download/js-v0.1.0-dev.3/popnei-0.1.0.tgz"`,
    and the lockfile keeps its hash.
@@ -570,6 +592,19 @@ While popnei and the application are changed together, the application
 uses the local build of popnei, with `npm link` or
 `"popnei": "file:../popnei/js/popnei"`, which is never committed. What is
 committed, and what the site is built from, is always a release.
+
+xlsx_rs is taken in the same way, from its own releases, on tags
+`js-v…` of its repository, assumed to be `github.com/JoseBlanca/xlsx_rs`
+until the owner confirms it: `"xlsx_rs":
+"https://github.com/JoseBlanca/xlsx_rs/releases/download/js-v0.1.0-dev.1/xlsx_rs-0.1.0.tgz"`
+for the first, a new tag and a new URL for each newer one. While the two
+are changed together, the local build is packed with `npm pack` in
+xlsx_rs and installed here by its absolute path with `npm install
+--no-save`, which copies it into `node_modules/` and saves nothing to
+commit; a link, `npm link` or a `file:` path, is a symbolic link whose
+`.wasm` the development server refuses to serve, and the review of 28
+September 2026 saw the same with popnei's link
+(`docs/architecture.md`, section 6). So the site needs no Rust at all.
 
 ## 6. The browsers
 
@@ -596,11 +631,14 @@ worker, is in `.claude/skills/coding/typescript.md`, `css.md` and
    and a trial with `#GETTING_DATA`, showed that it refuses a whole
    sheet at an error cell it does not know, `#GETTING_DATA` among them;
    whether `#SPILL!` of the newest Excel is one is unconfirmed
-   (section 2, "xlsx and zip in Rust"); the
-   files the owner makes for the tests of the crate,
-   `docs/specs/worker/files.md`, "How it is verified", answer the rest.
+   (section 2, "xlsx and zip in Rust, in xlsx_rs"); the
+   files the owner makes for the tests of xlsx_rs, kept in its
+   repository, `docs/specs/worker/files.md`, "How it is verified",
+   answer the rest.
 2. How the second wasm module is built and published. Settled by the
-   owner on 24 September 2026: it is a crate of this repository,
-   `crates/files/`, built by the site's own build (section 2).
+   owner on 24 September 2026: a crate of this repository,
+   `crates/files/`, built by the site's own build; settled again on 28
+   September 2026: xlsx_rs, a project of its own, released as popnei is
+   and installed from its release (sections 2 and 5).
 3. The threshold and the method of thinning the points of the Manhattan
    plot.

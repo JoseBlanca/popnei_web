@@ -35,8 +35,9 @@ before: what the first stages teach changes the later ones.
   the project, the settings of the user, and the results, each stored
   under a **key**, a hash of everything it was calculated from, so that a
   result whose inputs changed is never shown; the **store** is the one
-  place the screens read the project and the results from. `crates/files/`
-  is the small Rust crate that reads and writes xlsx.
+  place the screens read the project and the results from. **xlsx_rs**
+  is the small Rust project of its own that reads and writes xlsx, whose
+  wasm package the site installs from a release, as it installs popnei's.
 - **The screen**: the **stepper** is the row of steps at the top of an
   application, the **summary line** the one below it that says what
   dataset is in use, and a **notice** a short message such as "3 results
@@ -192,8 +193,9 @@ order does not wait for what exists:
 
 ### Stage 4. The samples step and the PCA
 
-- **What:** the metadata file in xlsx, which brings the Rust crate
-  `crates/files/` and Rust in CI (`docs/architecture.md`, section 6); the
+- **What:** the metadata file in xlsx, read by the wasm package of
+  xlsx_rs, a project of its own that the site installs from a release, as
+  it installs popnei (`docs/architecture.md`, section 6); the
   metadata file made optional, a project with none run as one population,
   where stage 2 requires one; the columns and their types, set by the
   user; the column that defines the populations; the PCA and the PCoA, first as a 2D scatter plot, then in 3D
@@ -208,8 +210,18 @@ order does not wait for what exists:
   Lingoes' correction, in the release `js-v0.1.0-dev.3` of 28 September
   2026, which the `package.json` of the application names from the plan
   of this stage; the PCA, the Kosman distances and the LD pruning were
-  in `js-v0.1.0-dev.2` already. The PCoA comes last in the stage, after
-  the PCA it shares its panel with.
+  in `js-v0.1.0-dev.2` already. The PCoA comes after the PCA it shares
+  its panel with.
+- **Needs of xlsx_rs:** its repository, which the owner creates, and its
+  first release, `js-v0.1.0-dev.1`, which reads the first sheet of an
+  xlsx into cells (`docs/specs/worker/files.md`), with calamine approved
+  by the owner (`docs/architecture.md`, section 13, points 11 to 13). The
+  xlsx comes last in the stage, as the PCoA did while it waited for
+  popnei: the Individuals step, its types and its populations, and the
+  PCA and the PCoA, are built first with CSV files, and the xlsx joins
+  when the release exists. Until then its work installs the local build
+  of xlsx_rs, packed, without saving it (`docs/architecture.md`, section
+  6), and nothing of it is committed.
 
 ### Stage 5. The analyses of the populations
 

@@ -119,14 +119,14 @@ received it is ended (below):
   spec owns and extends, a file it cannot read among them.
 - **A files wasm that could not be downloaded is an answer**, the failed
   read `xlsxReaderNotLoaded`, with the browser's message for the console,
-  and the light worker goes on (`docs/specs/worker/files.md`, "How the
-  light worker loads it"). It is not `crashed`, which would end a worker
+  and the light worker goes on (`docs/specs/worker/individuals.md`, "The
+  package of xlsx_rs, loaded on first need"). It is not `crashed`, which would end a worker
   that can still read a CSV, and would tell the user that the reading
   stopped where the words of the refusal tell them to check their
   connection; a failed `import()` or `init()` leaves no wasm behind,
   though a browser may keep a failed `import()` as failed until the
-  worker ends, so that trying again fails too (`files.md`, "How the
-  light worker loads it"). The option not taken is `crashed`, as a popnei that does not
+  worker ends, so that trying again fails too (`individuals.md`, the
+  same). The option not taken is `crashed`, as a popnei that does not
   load ends the calculation worker, which without popnei can do nothing.
   A file calamine cannot open is the refusal `files`, with calamine's
   message; a panic of the files wasm is a trap, and `crashed`.
