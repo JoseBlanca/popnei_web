@@ -17,7 +17,14 @@
 
 import { VARIANT_FILTER_ORDER, escaped, grouped } from "../project.ts";
 import type { Project } from "../project.ts";
-import type { AnalysisDef, Warning, WorkerClient } from "../store.ts";
+import type {
+  AnalysisDef,
+  AnalysisError,
+  Warning,
+  WorkerClient,
+} from "../store.ts";
+import { statisticsFailedWords } from "./individualChecks.ts";
+import type { Failure } from "./individualChecks.ts";
 import type {
   FilterCountsResult,
   Job,
@@ -108,6 +115,27 @@ export const filterCounts: AnalysisDef<Job, JobResult> = Object.freeze({
   numCheckNumbers,
   script,
 });
+
+/**
+ * The words of the error state of the Count when the statistics of each
+ * individual that it waited for were refused or failed, the store's
+ * error with `ofStatistics`: `statisticsFailedWords` of the statistics,
+ * with "the variants were not counted", as the diversity's error table has
+ * them for "the diversity was not run" (docs/specs/analyses/diversity.md,
+ * "Its words").
+ */
+export function statisticsFailedText(
+  error: AnalysisError,
+  p: Project,
+  failureText: (failure: Failure) => string,
+): string {
+  return statisticsFailedWords(
+    error,
+    p,
+    failureText,
+    "the variants were not counted",
+  );
+}
 
 /**
  * The words of a refusal of popnei, for the error state of the Count

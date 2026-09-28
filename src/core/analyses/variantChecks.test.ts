@@ -12,6 +12,7 @@ import { describe, expect, test } from "vitest";
 import {
   binsCsvName,
   refusalText,
+  statisticsFailedText,
   variantChecks,
   variantHistogramDescription,
 } from "./variantChecks.ts";
@@ -492,6 +493,36 @@ describe("VS6 D2 the CSV of the bins of a histogram and its name", () => {
     );
     expect(binsCsvName("panel.nei", "unbiasedExpHet")).toBe(
       "panel.variant_exp_het_bins.csv",
+    );
+  });
+});
+
+describe("IP2 D3 the words of the statistics of each individual that a Calculate or a Count waited for, refused or failed", () => {
+  test("popnei's refusal of the statistics is told in their words, and not in the words of this part", () => {
+    expect(
+      statisticsFailedText(
+        { kind: "refused", message: "memory could not grow" },
+        project(),
+        () => {
+          throw new Error("a refusal was given the words of a failure");
+        },
+      ),
+    ).toBe(
+      "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the histograms of the variants were not calculated. popnei could not calculate the statistics of each individual: memory could not grow. Change the settings, or load the variants file again, to calculate them again.",
+    );
+  });
+
+  test("another failure of the statistics is told in the words the frame gives it", () => {
+    const failure = { kind: "workerFailed", message: "a trap" } as const;
+    expect(
+      statisticsFailedText(
+        { kind: "failed", error: failure },
+        project(),
+        (f) =>
+          f === failure ? "The calculation stopped unexpectedly." : "wrong",
+      ),
+    ).toBe(
+      "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the histograms of the variants were not calculated. The calculation stopped unexpectedly.",
     );
   });
 });

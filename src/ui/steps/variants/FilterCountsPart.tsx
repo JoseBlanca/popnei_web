@@ -36,6 +36,7 @@ import { useLayoutEffect, useRef } from "react";
 
 import {
   refusalText,
+  statisticsFailedText,
   variantsOfFile,
 } from "../../../core/analyses/filterCounts.ts";
 import type { AnalysisStatus } from "../../../core/store.ts";
@@ -129,6 +130,7 @@ export function FilterCountsPart(): React.JSX.Element {
             refusalText={refusalText}
             again={COUNT_AGAIN}
             asShown={withoutTheStep}
+            {...(status.ofStatistics && { statisticsFailedText })}
           />
         </div>
       )}

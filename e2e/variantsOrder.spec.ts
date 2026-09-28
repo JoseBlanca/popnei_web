@@ -423,6 +423,47 @@ test("IP2 D3 thresholds that keep nobody lock the Count and the histograms of th
   await expectNoViolations(makeAxeBuilder);
 });
 
+/** The words of the statistics refused for the genotypes of ploidy 4 of
+    tetraploid.vcf.gz read with ploidy 2, after the start that names what
+    was not done, as the step shows them. */
+const TETRAPLOID_STATS =
+  "At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version.";
+
+test("IP2 D3 the statistics a Calculate of the histograms or a Count waited for, refused by popnei, are told in their words and not in those of the histograms or of the Count, and axe", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await page.goto("popgen.html#variants");
+  const chooser = page.waitForEvent("filechooser");
+  await page
+    .getByRole("region", { name: "Variants file" })
+    .getByRole("button", { name: /^(Choose|Replace) .*…$/ })
+    .click();
+  await (await chooser).setFiles(join(FIXTURES, "tetraploid.vcf.gz"));
+  await expect(
+    page.getByRole("main").getByText("12 individuals"),
+  ).toBeVisible();
+  await threshold(page, MISSING_SWITCH, MISSING_LABEL, "0.5");
+
+  await button(variants(page), HISTOGRAMS).click();
+  await expect(
+    variants(page).getByText(
+      `The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the histograms of the variants were not calculated. ${TETRAPLOID_STATS}`,
+      { exact: true },
+    ),
+  ).toBeVisible();
+  // The Count would wait for the same statistics, and is in error with
+  // them, in its own words and with no button.
+  await expect(button(variants(page), COUNT)).toHaveCount(0);
+  await expect(
+    variants(page).getByText(
+      `The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the variants were not counted. ${TETRAPLOID_STATS}`,
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expectNoViolations(makeAxeBuilder);
+});
+
 /** The part of the Count locked, which holds the disabled Count and its
     reason and takes the focus when the Count leaves the page with it. */
 function lockedCount(page: Page): Locator {

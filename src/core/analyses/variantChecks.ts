@@ -18,7 +18,14 @@
 import { variantsStem } from "../fileNames.ts";
 import { counted, escaped, grouped } from "../project.ts";
 import type { Project } from "../project.ts";
-import type { AnalysisDef, Warning, WorkerClient } from "../store.ts";
+import type {
+  AnalysisDef,
+  AnalysisError,
+  Warning,
+  WorkerClient,
+} from "../store.ts";
+import { statisticsFailedWords } from "./individualChecks.ts";
+import type { Failure } from "./individualChecks.ts";
 import type {
   Job,
   JobResult,
@@ -51,6 +58,27 @@ export const VARIANT_RANGE: readonly [number, number] = Object.freeze([
     would leave out the variants the missing data filter is there to
     find. */
 export const VARIANT_MIN_NUM_INDIVIDUALS = 0;
+
+/**
+ * The words of the error state of the histograms of the variants when the statistics of each
+ * individual that it waited for were refused or failed, the store's
+ * error with `ofStatistics`: `statisticsFailedWords` of the statistics,
+ * with "the histograms of the variants were not calculated", as the diversity's error table has
+ * them for "the diversity was not run" (docs/specs/analyses/diversity.md,
+ * "Its words").
+ */
+export function statisticsFailedText(
+  error: AnalysisError,
+  p: Project,
+  failureText: (failure: Failure) => string,
+): string {
+  return statisticsFailedWords(
+    error,
+    p,
+    failureText,
+    "the histograms of the variants were not calculated",
+  );
+}
 
 /**
  * The words of a refusal of popnei, for the error state of the panel, by

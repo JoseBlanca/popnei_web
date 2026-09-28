@@ -29,7 +29,10 @@
  */
 import { useRef } from "react";
 
-import { refusalText } from "../../../core/analyses/variantChecks.ts";
+import {
+  refusalText,
+  statisticsFailedText,
+} from "../../../core/analyses/variantChecks.ts";
 import type { Notice } from "../../../core/store.ts";
 import { classOf } from "../../classOf.ts";
 import { RunButton } from "../../analyses/RunButton.tsx";
@@ -106,6 +109,7 @@ export function VariantChecksBlock({
           refusalText={refusalText}
           again={CALCULATE_AGAIN}
           asShown={withoutTheStep}
+          {...(status.ofStatistics && { statisticsFailedText })}
         />
       )}
       {button !== null && (

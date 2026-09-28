@@ -14,6 +14,7 @@ import {
   filterCounts,
   filterNameInSentence,
   refusalText,
+  statisticsFailedText,
 } from "./filterCounts.ts";
 import { emptyProject } from "../project.ts";
 import type { Project } from "../project.ts";
@@ -371,6 +372,36 @@ describe("VS3 D1 the counts of the filters: refusalText", () => {
       ),
     ).toBe(
       "popnei could not count the variants: the pass gave no variant: the filters kept none of the 1200 variants. Change the settings, or load the variants file again, to count again.",
+    );
+  });
+});
+
+describe("IP2 D3 the words of the statistics of each individual that a Calculate or a Count waited for, refused or failed", () => {
+  test("popnei's refusal of the statistics is told in their words, and not in the words of this part", () => {
+    expect(
+      statisticsFailedText(
+        { kind: "refused", message: "memory could not grow" },
+        project([]),
+        () => {
+          throw new Error("a refusal was given the words of a failure");
+        },
+      ),
+    ).toBe(
+      "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the variants were not counted. popnei could not calculate the statistics of each individual: memory could not grow. Change the settings, or load the variants file again, to calculate them again.",
+    );
+  });
+
+  test("another failure of the statistics is told in the words the frame gives it", () => {
+    const failure = { kind: "workerFailed", message: "a trap" } as const;
+    expect(
+      statisticsFailedText(
+        { kind: "failed", error: failure },
+        project([]),
+        (f) =>
+          f === failure ? "The calculation stopped unexpectedly." : "wrong",
+      ),
+    ).toBe(
+      "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the variants were not counted. The calculation stopped unexpectedly.",
     );
   });
 });
