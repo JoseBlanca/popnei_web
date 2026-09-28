@@ -165,7 +165,7 @@ test("WS8 D1 panel_pops.csv is read with the three options found, its columns an
   ).toBeVisible();
   await expect(
     page.getByText(
-      "The types are inferred from the values; changing them comes in a later version.",
+      "The types are inferred from the values. Change one where the inference is wrong: a column of numbered populations, 1 to 12, is inferred continuous and is categorical. The populations are the values of their column, whatever its type.",
       { exact: true },
     ),
   ).toBeVisible();
@@ -184,12 +184,22 @@ test("WS8 D1 panel_pops.csv is read with the three options found, its columns an
   );
 
   const table = page.getByRole("table", { name: "Columns" });
-  await expect(table.getByRole("row")).toHaveText([
-    "ColumnTypeFirst values",
-    "IIDidentifiers000 · s001 · s002",
-    "popcatcategoricalp0 · p2 · p1",
+  await expect(table.getByRole("columnheader")).toHaveText([
+    "Column",
+    "Type",
+    "First values",
   ]);
   await expect(table.getByRole("rowheader")).toHaveText(["IID", "popcat"]);
+  // The type of the first column as text, of the others in a select.
+  await expect(table.getByRole("cell")).toHaveText([
+    "identifier",
+    "s000 · s001 · s002",
+    /categorical/,
+    "p0 · p2 · p1",
+  ]);
+  await expect(
+    table.getByRole("button", { name: /Type of popcat$/ }),
+  ).toHaveText("categorical");
   await expect(
     page.getByText(
       "The individuals are checked against the variants file once it is read.",
@@ -500,13 +510,41 @@ test("WS8 D1 the types of the columns, the warning of a few whole numbers, and a
   await expect(select(page, "Separator")).toHaveText("Detected: semicolon");
   await expect(select(page, "Decimal mark")).toHaveText("Detected: comma");
   const table = page.getByRole("table", { name: "Columns" });
-  await expect(table.getByRole("row")).toHaveText([
-    "ColumnTypeFirst values",
-    "Individuoidentifieri1 · i2 · i3",
-    "PaíscategoricalEspaña · Italia · Perú",
-    /^Sanobinary: (sí\s·\sno|no\s·\ssí)sí\s·\sno$/,
-    "Alturacontinuous1,75 · 1,62 · 1,80",
-    "scorecontinuousWarning: score holds only 4 different whole numbers, from 1 to 5, and is taken as a measurement. If they are codes, such as numbered populations, set its type to categorical.1 · 2 · 3",
+  await expect(table.getByRole("rowheader")).toHaveText([
+    "Individuo",
+    "País",
+    "Sano",
+    "Altura",
+    "score",
+  ]);
+  await expect(table.getByRole("cell").first()).toHaveText("identifier");
+  await expect(table.getByRole("button", { name: / Type of / })).toHaveText([
+    "categorical",
+    "binary",
+    "continuous",
+    "continuous",
+  ]);
+  // sí coded 1, as the reader proposes.
+  await expect(
+    table.getByRole("button", { name: / Coded 1, the case, in Sano$/ }),
+  ).toHaveText("sí");
+  await expect(
+    table.getByText("no is coded 0.", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    table.getByText(
+      "Warning: score holds only 4 different whole numbers, from 1 to 5, and is taken as a measurement. If they are codes, such as numbered populations, set its type to categorical.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(
+    table.getByRole("row").getByRole("cell").filter({ hasText: /·/ }),
+  ).toHaveText([
+    "i1 · i2 · i3",
+    "España · Italia · Perú",
+    "sí · no",
+    "1,75 · 1,62 · 1,80",
+    "1 · 2 · 3",
   ]);
   await expectNoViolations(makeAxeBuilder);
 
@@ -565,6 +603,7 @@ test("WS8 D1 the keyboard goes through the step in the order of the spec", async
     select(page, "Encoding"),
     select(page, "Separator"),
     select(page, "Decimal mark"),
+    select(page, "Type of popcat"),
     page.getByRole("button", { name: "The 12 individuals missing" }),
     select(page, "Column that defines the populations"),
   ];
@@ -573,17 +612,23 @@ test("WS8 D1 the keyboard goes through the step in the order of the spec", async
     await expect(next).toBeFocused();
   }
 
-  // The disclosure opens with the keyboard, and the column is chosen with
-  // it.
+  // The disclosure opens with the keyboard, then the button that copies
+  // the names, and the column is chosen with the keyboard.
+  const disclosure = page.getByRole("button", {
+    name: "The 12 individuals missing",
+  });
   await page.keyboard.press("Shift+Tab");
-  await expect(order[4] ?? fileButton(page)).toBeFocused();
+  await expect(disclosure).toBeFocused();
   await page.keyboard.press("Enter");
-  await expect(order[4] ?? fileButton(page)).toHaveAttribute(
-    "aria-expanded",
-    "true",
-  );
+  await expect(disclosure).toHaveAttribute("aria-expanded", "true");
   await page.keyboard.press("Tab");
-  await expect(order[5] ?? fileButton(page)).toBeFocused();
+  await expect(
+    page.getByRole("button", { name: "Copy the 12 names" }),
+  ).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(
+    select(page, "Column that defines the populations"),
+  ).toBeFocused();
   await page.keyboard.press("Enter");
   // The list opens on its first item, the one population.
   await expect(
@@ -1083,9 +1128,10 @@ test("WS8 D1 a file of UTF-8 with its mark and a bad byte is read as UTF-8, with
     ),
   ).toBeVisible();
   const table = page.getByRole("table", { name: "Columns" });
-  await expect(table.getByRole("row").nth(2)).toHaveText(
-    "PaíscategoricalEspaña · Ita�lia · Perú",
-  );
+  await expect(table.getByRole("rowheader").nth(1)).toHaveText("País");
+  await expect(
+    table.getByRole("row").nth(2).getByRole("cell").last(),
+  ).toHaveText("España · Ita�lia · Perú");
   await expectNoViolations(makeAxeBuilder);
 });
 

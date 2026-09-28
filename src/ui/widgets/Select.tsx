@@ -52,6 +52,24 @@ export interface SelectProps<T extends string> {
   readonly problem?: string;
   /** Called with the id of the item the user chose. */
   readonly onChange: (id: T) => void;
+  /** Whether the label is hidden from the eye and read by a screen reader
+      alone, for a select whose purpose the page shows otherwise, as the
+      header "Type" of a column of a table does for the select of each
+      row; false when absent. */
+  readonly isLabelHidden?: boolean;
+  /** The words shown as the label, when the label, its name, says more
+      than the eye needs: what the eye takes from where the select is, the
+      row of a table, and a screen reader does not. They are the start of
+      the label, so that a user who drives the page by voice and says the
+      words they see reaches the select (WCAG 2.2, 2.5.3); the label is
+      then hidden from the eye, and these words from a screen reader,
+      which reads the label. One text and not the label with its end
+      hidden, since a browser may put a space before a part hidden from
+      the eye as it makes the name. */
+  readonly shownLabel?: string;
+  /** The element of the button, for a screen that moves the focus to
+      it. */
+  readonly buttonRef?: React.Ref<HTMLButtonElement>;
 }
 
 /** A select with its label. */
@@ -63,6 +81,9 @@ export function Select<T extends string>({
   description,
   problem,
   onChange,
+  isLabelHidden = false,
+  shownLabel,
+  buttonRef,
 }: SelectProps<T>): React.JSX.Element {
   const chosen = (key: Key | null): void => {
     const item = items.find((one) => one.id === key);
@@ -79,8 +100,24 @@ export function Select<T extends string>({
       validationBehavior="aria"
       {...(placeholder !== undefined && { placeholder })}
     >
-      <Label className={classOf(styles, "label")}>{label}</Label>
-      <Button className={classOf(styles, "button")}>
+      {shownLabel !== undefined && (
+        <span aria-hidden="true" className={classOf(styles, "label")}>
+          {shownLabel}
+        </span>
+      )}
+      <Label
+        className={
+          isLabelHidden || shownLabel !== undefined
+            ? classOf(styles, "visuallyHidden")
+            : classOf(styles, "label")
+        }
+      >
+        {label}
+      </Label>
+      <Button
+        className={classOf(styles, "button")}
+        {...(buttonRef !== undefined && { ref: buttonRef })}
+      >
         <SelectValue className={classOf(styles, "value")} />
         <svg
           className={classOf(styles, "chevron")}

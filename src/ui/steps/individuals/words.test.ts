@@ -18,7 +18,21 @@ import {
   populationItems,
   populationLine,
   sizeText,
-  typeText,
+  CODING_LABEL,
+  NOT_COPIED,
+  TYPES_LINE,
+  codedZeroText,
+  codingItems,
+  codingLabel,
+  copiedNames,
+  copiedText,
+  copyLabel,
+  forgetLabel,
+  typeItems,
+  typeLabel,
+  typeOfItem,
+  typeWords,
+  typesLostWords,
   undecodedText,
   variantsNameText,
 } from "./words.ts";
@@ -100,13 +114,7 @@ describe("the words of the Individuals step", () => {
     expect(sizeText({ columns: ["id"], rows: [["a"]] })).toBe(
       "1 row, 1 column",
     );
-    expect(typeText({ kind: "identifier" })).toBe("identifier");
     // The values joined by a dot, after a space that does not break.
-    expect(typeText({ kind: "binary", one: "yes", zero: "no" })).toBe(
-      "binary: yes\u00a0· no",
-    );
-    expect(typeText({ kind: "continuous" })).toBe("continuous");
-    expect(typeText({ kind: "categorical" })).toBe("categorical");
     expect(firstValuesText(TABLE, 1)).toBe("España\u00a0· Italia\u00a0· Perú");
     expect(firstValuesText(TABLE, 2)).toBe("1,75\u00a0· 1,62\u00a0· 1,80");
     expect(
@@ -216,5 +224,169 @@ describe("IP5 D2 the file and the populations of stage 4", () => {
       shown: "All individuals · 342",
       read: "All individuals, 342 individuals",
     });
+  });
+});
+
+/** A read of pops.csv: the names, a binary column status coded yes, a
+    column of numbers score, and a column of words code. */
+const READ = {
+  kind: "read",
+  table: {
+    columns: ["IID", "status", "score", "code"],
+    rows: [
+      ["i1", "yes", "1", "a"],
+      ["i2", "no", "2", "b"],
+      ["i3", "yes", "3", "c"],
+    ],
+  },
+  columns: [
+    { kind: "identifier" },
+    { kind: "binary", one: "yes", zero: "no" },
+    { kind: "continuous" },
+    { kind: "categorical" },
+  ],
+  found: { ...FOUND, separator: ",", decimal: "." },
+} as const;
+
+const BINARY_YES = { kind: "binary", one: "yes", zero: "no" } as const;
+
+describe("IP5 D2 the words of the columns and their types", () => {
+  test("the line above the table says the types can be changed and do not make the populations", () => {
+    expect(TYPES_LINE).toBe(
+      "The types are inferred from the values. Change one where the inference is wrong: a column of numbered populations, 1 to 12, is inferred continuous and is categorical. The populations are the values of their column, whatever its type.",
+    );
+  });
+
+  test("a type in words, a binary one with its coding, escaped", () => {
+    expect(typeWords({ kind: "identifier" })).toBe("identifier");
+    expect(typeWords({ kind: "categorical" })).toBe("categorical");
+    expect(typeWords({ kind: "continuous" })).toBe("continuous");
+    expect(typeWords(BINARY_YES)).toBe("binary with yes coded 1");
+    expect(typeWords({ kind: "binary", one: "y\ne", zero: "n" })).toBe(
+      "binary with y\\ne coded 1",
+    );
+  });
+
+  test("the items of the type are categorical always, binary for two values, continuous for numbers", () => {
+    const ids = (allows: Parameters<typeof typeItems>[0]): string[] =>
+      typeItems(allows).map((item) => item.id);
+    expect(ids({ continuous: false, binary: null })).toEqual(["categorical"]);
+    expect(ids({ continuous: true, binary: null })).toEqual([
+      "categorical",
+      "continuous",
+    ]);
+    expect(ids({ continuous: false, binary: BINARY_YES })).toEqual([
+      "categorical",
+      "binary",
+    ]);
+    expect(
+      typeItems({
+        continuous: true,
+        binary: { kind: "binary", one: "2", zero: "1" },
+      }),
+    ).toEqual([
+      { id: "categorical", label: "categorical" },
+      { id: "binary", label: "binary" },
+      { id: "continuous", label: "continuous" },
+    ]);
+  });
+
+  test("binary chosen is the coding the reader proposes, and a type not allowed is a defect", () => {
+    const allows = { continuous: false, binary: BINARY_YES };
+    expect(typeOfItem("binary", allows)).toEqual(BINARY_YES);
+    expect(typeOfItem("categorical", allows)).toEqual({ kind: "categorical" });
+    expect(() => typeOfItem("continuous", allows)).toThrow(
+      /^popnei_web defect: /,
+    );
+    expect(() =>
+      typeOfItem("binary", { continuous: true, binary: null }),
+    ).toThrow(/^popnei_web defect: /);
+    expect(
+      typeOfItem("continuous", { continuous: true, binary: null }),
+    ).toEqual({ kind: "continuous" });
+  });
+
+  test("the names of the selects of a row: the type and the value coded 1, the column escaped", () => {
+    expect(typeLabel("score")).toBe("Type of score");
+    expect(typeLabel("sc‮ore")).toBe("Type of sc\\u202eore");
+    expect(CODING_LABEL).toBe("Coded 1, the case");
+    expect(codingLabel("status")).toBe("Coded 1, the case, in status");
+    expect(codingLabel("st\natus")).toBe("Coded 1, the case, in st\\natus");
+    expect(codedZeroText("no")).toBe("no is coded 0.");
+    expect(codedZeroText("n\to")).toBe("n\\to is coded 0.");
+  });
+
+  test("the items of the value coded 1 are the two values, in the order of the reader's proposal, escaped", () => {
+    expect(codingItems({ one: "yes", zero: "n\no" })).toEqual([
+      { id: "yes", label: "yes" },
+      { id: "n\no", label: "n\\no" },
+    ]);
+  });
+
+  test("the warning of one type not applied, by each of the three reasons, names the file", () => {
+    // Its values: status set continuous where it is binary.
+    expect(
+      typesLostWords("pops.csv", READ, [["status", { kind: "continuous" }]]),
+    ).toEqual({
+      kind: "one",
+      text: "status does not have the type you set, continuous, since its values in pops.csv do not allow it; it is binary with yes coded 1, as its values give it. The type you set comes back when the file is read with values that allow it.",
+    });
+    expect(
+      typesLostWords("pops.csv", READ, [
+        ["code", { kind: "binary", one: "yes", zero: "no" }],
+      ]),
+    ).toEqual({
+      kind: "one",
+      text: "code does not have the type you set, binary with yes coded 1, since its values in pops.csv do not allow it; it is categorical, as its values give it. The type you set comes back when the file is read with values that allow it.",
+    });
+    expect(
+      typesLostWords("new.csv", READ, [["region", { kind: "categorical" }]]),
+    ).toEqual({
+      kind: "one",
+      text: "new.csv has no column region, whose type you set as categorical. The type comes back when the file is read with a column of that name.",
+    });
+    expect(typesLostWords("pops.csv", READ, [["IID", BINARY_YES]])).toEqual({
+      kind: "one",
+      text: "IID is the first column of pops.csv, whose cells are the names of the individuals, so it does not have the type you set, binary with yes coded 1. If it should not be first, correct the file and load it again; the type you set then comes back.",
+    });
+    expect(typesLostWords("pops.csv", READ, [])).toBeNull();
+  });
+
+  test("the warning of several types not applied is a sentence and a line for each, in the order of typesLost", () => {
+    expect(
+      typesLostWords("po\nps.csv", READ, [
+        ["code", BINARY_YES],
+        ["region", { kind: "categorical" }],
+        ["IID", { kind: "categorical" }],
+      ]),
+    ).toEqual({
+      kind: "several",
+      opening: "3 columns do not have the type you set:",
+      lines: [
+        "code: binary with yes coded 1; its values do not allow it, and it is categorical",
+        "region: categorical; po\\nps.csv has no column region",
+        "IID: categorical; it is the first column, the names of the individuals",
+      ],
+      closing:
+        "Each type you set comes back when the file is read with a column that allows it.",
+    });
+  });
+
+  test("the button that forgets the types, for one and for several", () => {
+    expect(forgetLabel(1)).toBe("Forget this type");
+    expect(forgetLabel(2)).toBe("Forget these types");
+  });
+
+  test("the button of the copy of the names missing, and its three announcements", () => {
+    expect(copyLabel(12)).toBe("Copy the 12 names");
+    expect(copyLabel(1)).toBe("Copy the name");
+    expect(copyLabel(1200)).toBe("Copy the 1,200 names");
+    expect(copiedText(12)).toBe("12 names copied.");
+    expect(copiedText(1)).toBe("The name was copied.");
+    expect(NOT_COPIED).toBe(
+      "The names could not be copied. Select them in the list.",
+    );
+    expect(copiedNames(["s031", "s044"])).toBe("s031\ns044");
+    expect(copiedNames(["s031"])).toBe("s031");
   });
 });

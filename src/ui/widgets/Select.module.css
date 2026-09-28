@@ -10,6 +10,18 @@
   font-weight: 600;
 }
 
+/* Read by a screen reader and not shown: a label whose purpose the page
+   shows otherwise, or one that says more than the words shown in its
+   place. Out of the flow of the grid, so it leaves no gap. */
+.visuallyHidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .button {
   display: inline-flex;
   align-items: center;
@@ -40,8 +52,14 @@
   outline-offset: var(--focus-offset);
 }
 
+/* A word of the value is cut only when it is longer than the button can
+   be; break-word, unlike anywhere, counts its words in the narrowest
+   width of the button, so that a table sizing its columns gives the
+   column of a select of a type room for "continuous" at 320 px rather
+   than cutting it. */
 .value {
-  overflow-wrap: anywhere;
+  min-inline-size: 0;
+  overflow-wrap: break-word;
 }
 
 .value[data-placeholder] {

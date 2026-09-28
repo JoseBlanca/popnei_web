@@ -48,12 +48,33 @@
   color: var(--color-text-muted);
 }
 
-/* The columns: read, not operated. The widths of the columns are what
-   they would like, so that a long warning does not squeeze the other
-   columns; the cells wrap between words rather than scroll, so the table
-   fits the width it has, and a word is cut only when it is longer than
-   the whole column can be, which break-word, unlike anywhere, leaves out
-   of the narrowest width of a column (WCAG 1.4.10, at 320 px). */
+/* The warning of the types set and not applied, with the button that
+   forgets them under it. */
+.typesLost {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
+
+.lostWords {
+  display: grid;
+  gap: var(--space-1);
+}
+
+/* A line for each type not applied, under the sentence of the warning,
+   level with its words and not with its mark. */
+.lostList {
+  margin: 0;
+  padding-inline-start: calc(var(--space-4) + var(--space-2) + var(--space-4));
+  overflow-wrap: break-word;
+}
+
+/* The columns. The widths of the columns are what they would like, so
+   that a long warning does not squeeze the other columns; the cells wrap
+   between words rather than scroll, so the table fits the width it has,
+   and a word is cut only when it is longer than the whole column can be,
+   which break-word, unlike anywhere, leaves out of the narrowest width of
+   a column (WCAG 1.4.10, at 320 px). */
 .table {
   border-collapse: collapse;
   inline-size: 100%;
@@ -97,6 +118,14 @@
   }
 }
 
+/* The select of the type, and under it, for a binary column, the select
+   of the value coded 1 and the line of the value coded 0. */
+.typeSelects {
+  display: grid;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
 /* The warning of a column, under its type, in the size of a note. */
 .columnWarning {
   display: block;
@@ -107,6 +136,13 @@
 .missing {
   display: grid;
   gap: var(--space-2);
+}
+
+/* The list of the names missing, and the button that copies them. */
+.missingList {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
 }
 
 /* The names of the individuals missing, one a line, to select and copy. */

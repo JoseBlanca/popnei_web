@@ -7,13 +7,15 @@
 
 import {
   escaped,
+  forgetTypesLost,
   loadIndividuals,
   removeIndividuals,
+  setColumnType,
   setCsvOptions,
   setGrouping,
 } from "../../../core/project.ts";
 import type { Project } from "../../../core/project.ts";
-import type { CsvOptions } from "../../../worker/protocol.ts";
+import type { ColumnType, CsvOptions } from "../../../worker/protocol.ts";
 import type { StepCommand } from "../variants/commands.ts";
 import type { CsvOption, PopulationItemId } from "./words.ts";
 import { AUTO_CSV, groupingOfItem } from "./words.ts";
@@ -69,6 +71,35 @@ export function populationItemCommand(id: PopulationItemId): StepCommand {
     ? groupingCommand(grouping.column)
     : ONE_POPULATION_COMMAND;
 }
+
+/** The type `type` chosen for the column `column`; a binary type as
+    `columnAllows` gives it, with the coding the reader proposes. */
+export function typeCommand(column: string, type: ColumnType): StepCommand {
+  return {
+    description: `the type of ${escaped(column)} changed`,
+    command: (p) => setColumnType(p, column, type),
+  };
+}
+
+/** The value `one` chosen as the value coded 1 of the binary column
+    `column`, whose other value, `zero`, is coded 0. */
+export function codingCommand(
+  column: string,
+  one: string,
+  zero: string,
+): StepCommand {
+  return {
+    description: `the value coded 1 in ${escaped(column)} changed`,
+    command: (p) => setColumnType(p, column, { kind: "binary", one, zero }),
+  };
+}
+
+/** "Forget these types", or "Forget this type": the types set that the
+    read does not apply dropped. */
+export const FORGET_TYPES_COMMAND: StepCommand = Object.freeze({
+  description: "the types set and not applied were forgotten",
+  command: forgetTypesLost,
+});
 
 /** The metadata file removed. */
 export const REMOVE_COMMAND: StepCommand = Object.freeze({

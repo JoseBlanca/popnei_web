@@ -1271,6 +1271,44 @@ for (const theme of ["light", "dark"] as const) {
       await save(page, `popgen-individuals-types-${theme}`);
     });
 
+    for (const width of [null, 320] as const) {
+      test(`the Individuals step, the types that wait${width === null ? "" : `, at ${String(width)} px`}`, async ({
+        page,
+      }) => {
+        if (width !== null) {
+          await page.setViewportSize({ width, height: 900 });
+        }
+        await goTo(page, "Individuals");
+        await pickIndividuals(page, {
+          name: "types.csv",
+          text:
+            "IID,status,score,height,region\n" +
+            "s000,yes,1,1.75,north\n" +
+            "s001,no,2,1.62,south\n" +
+            "s002,yes,3,1.80,east\n" +
+            "s003,no,5,1.70,north\n",
+        });
+        await choose(page, "Type of score", "categorical");
+        await choose(page, "Coded 1, the case, in status", "no");
+        // The next file has no score, and a third value of status.
+        await pickIndividuals(page, {
+          name: "types.csv",
+          text:
+            "IID,status,height,region\n" +
+            "s000,yes,1.75,north\n" +
+            "s001,no,1.62,south\n" +
+            "s002,maybe,1.80,east\n",
+        });
+        await expect(
+          page.getByRole("button", { name: "Forget these types" }),
+        ).toBeVisible();
+        await save(
+          page,
+          `popgen-individuals-types-waiting${width === null ? "" : `-${String(width)}`}-${theme}`,
+        );
+      });
+    }
+
     test("the Individuals step, an Excel file not loaded", async ({ page }) => {
       await goTo(page, "Individuals");
       await pickIndividuals(page, { name: "pops.xlsx", text: "PK" });

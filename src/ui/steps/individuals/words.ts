@@ -8,14 +8,18 @@
 
 import type {
   AppId,
+  ColumnAllows,
+  ColumnTypeOf,
   Grouping,
   IndividualsCheck,
+  IndividualsRead,
 } from "../../../core/project.ts";
 import {
   counted,
   escaped,
   grouped,
   individualsStepRefusal,
+  typeLostReason,
 } from "../../../core/project.ts";
 import type {
   Cell,
@@ -213,7 +217,7 @@ export function loadAgainText(name: string): string {
 
 /** The line above the table of the columns. */
 export const TYPES_LINE =
-  "The types are inferred from the values; changing them comes in a later version.";
+  "The types are inferred from the values. Change one where the inference is wrong: a column of numbered populations, 1 to 12, is inferred continuous and is categorical. The populations are the values of their column, whatever its type.";
 
 /** A value of the user's file as the screen shows it, escaped and not
     cut. */
@@ -232,17 +236,191 @@ const FIRST_VALUES = 3;
     with a dot, which would read as the mark of a list. */
 const VALUES_JOIN = "\u00a0· ";
 
-/** The type of a column in words: "identifier", "binary: yes · no",
-    "continuous", "categorical". */
-export function typeText(type: ColumnType): string {
+/** The type of a column in words: "identifier", "continuous",
+    "categorical", and a binary one with its coding, "binary with yes
+    coded 1". */
+export function typeWords(type: ColumnType): string {
   switch (type.kind) {
     case "identifier":
     case "continuous":
     case "categorical":
       return type.kind;
     case "binary":
-      return `binary: ${valueText(type.one)}${VALUES_JOIN}${valueText(type.zero)}`;
+      return `binary with ${valueText(type.one)} coded 1`;
   }
+}
+
+/** A type the select of a column offers, by its kind; a binary column
+    takes its coding from the second select of its row. */
+export type TypeItemId = Exclude<ColumnType["kind"], "identifier">;
+
+/** The items of the select of the type of a column that allows
+    `allows`: categorical, always; binary, for a column of exactly two
+    values; continuous, for a column of numbers. */
+export function typeItems(
+  allows: ColumnAllows,
+): readonly OptionItem<TypeItemId>[] {
+  const items: OptionItem<TypeItemId>[] = [
+    { id: "categorical", label: "categorical" },
+  ];
+  if (allows.binary !== null) items.push({ id: "binary", label: "binary" });
+  if (allows.continuous) items.push({ id: "continuous", label: "continuous" });
+  return items;
+}
+
+/** The type the item `id` of the select of a column that allows `allows`
+    stands for: binary with the coding the reader proposes, from
+    `columnAllows`. Throws a defect for an item the column does not
+    allow, which its select does not offer. */
+export function typeOfItem(id: TypeItemId, allows: ColumnAllows): ColumnType {
+  switch (id) {
+    case "categorical":
+      return { kind: "categorical" };
+    case "continuous":
+      if (!allows.continuous) {
+        throw new Error(
+          "popnei_web defect: continuous was chosen for a column that is not all numbers.",
+        );
+      }
+      return { kind: "continuous" };
+    case "binary":
+      if (allows.binary === null) {
+        throw new Error(
+          "popnei_web defect: binary was chosen for a column that has not exactly two values.",
+        );
+      }
+      return allows.binary;
+  }
+}
+
+/** The name of the select of the type of the column `column`, its label,
+    hidden from the eye, since the header of the table says "Type" for
+    every row: "Type of score". */
+export function typeLabel(column: string): string {
+  return `Type of ${escaped(column)}`;
+}
+
+/** The label shown of the select of the value coded 1 of a binary
+    column. */
+export const CODING_LABEL = "Coded 1, the case";
+
+/** The name of the select of the value coded 1 of the column `column`:
+    its label shown first, so that a user who says the words they see
+    reaches it, and then the column, which the eye takes from the row and
+    a screen reader does not: "Coded 1, the case, in status". */
+export function codingLabel(column: string): string {
+  return `${CODING_LABEL}, in ${escaped(column)}`;
+}
+
+/** The items of the select of the value coded 1 of a binary column of
+    the two values `binary`, in the order of the reader's proposal, so
+    that they keep their place when the user changes the coding; each is
+    the value, escaped. */
+export function codingItems(binary: {
+  readonly one: string;
+  readonly zero: string;
+}): readonly OptionItem<string>[] {
+  return [
+    { id: binary.one, label: valueText(binary.one) },
+    { id: binary.zero, label: valueText(binary.zero) },
+  ];
+}
+
+/** The line beside the value coded 1, which names the other: "no is
+    coded 0.". */
+export function codedZeroText(zero: string): string {
+  return `${valueText(zero)} is coded 0.`;
+}
+
+/** The warning of the types the user set that a read does not apply,
+    after the "Warning: " of the screen: one sentence for one column,
+    and for several an opening, a line for each column in the order of
+    `typesLost`, and a closing. */
+export type TypesLostWords =
+  | { readonly kind: "one"; readonly text: string }
+  | {
+      readonly kind: "several";
+      readonly opening: string;
+      readonly lines: readonly string[];
+      readonly closing: string;
+    };
+
+/** A read of a table of the metadata file. */
+type TableRead = Extract<IndividualsRead, { readonly kind: "read" }>;
+
+/**
+ * The words of the types set that the read `read` of the file `name`
+ * does not apply, `lost`, the `typesLost` of its source, each by the
+ * reason `typeLostReason` gives; `null` when there is none. The file is
+ * named as the source names it, so after a new load, the new file. The
+ * words do not say that the file was just read, since a project opened
+ * from a project file shows the same warning.
+ */
+export function typesLostWords(
+  name: string,
+  read: TableRead,
+  lost: readonly ColumnTypeOf[],
+): TypesLostWords | null {
+  const file = escaped(name);
+  const [only] = lost;
+  if (only === undefined) return null;
+  if (lost.length === 1) {
+    const [column, type] = only;
+    const col = escaped(column);
+    const set = typeWords(type);
+    switch (typeLostReason(read, column)) {
+      case "values":
+        return {
+          kind: "one",
+          text: `${col} does not have the type you set, ${set}, since its values in ${file} do not allow it; it is ${typeWords(typeNow(read, column))}, as its values give it. The type you set comes back when the file is read with values that allow it.`,
+        };
+      case "gone":
+        return {
+          kind: "one",
+          text: `${file} has no column ${col}, whose type you set as ${set}. The type comes back when the file is read with a column of that name.`,
+        };
+      case "firstColumn":
+        return {
+          kind: "one",
+          text: `${col} is the first column of ${file}, whose cells are the names of the individuals, so it does not have the type you set, ${set}. If it should not be first, correct the file and load it again; the type you set then comes back.`,
+        };
+    }
+  }
+  return {
+    kind: "several",
+    opening: `${counted(lost.length, "column")} do not have the type you set:`,
+    lines: lost.map(([column, type]) => {
+      const col = escaped(column);
+      const start = `${col}: ${typeWords(type)}`;
+      switch (typeLostReason(read, column)) {
+        case "values":
+          return `${start}; its values do not allow it, and it is ${typeWords(typeNow(read, column))}`;
+        case "gone":
+          return `${start}; ${file} has no column ${col}`;
+        case "firstColumn":
+          return `${start}; it is the first column, the names of the individuals`;
+      }
+    }),
+    closing:
+      "Each type you set comes back when the file is read with a column that allows it.",
+  };
+}
+
+/** The type the read gives its column `column`. */
+function typeNow(read: TableRead, column: string): ColumnType {
+  const type = read.columns[read.table.columns.indexOf(column)];
+  if (type === undefined) {
+    throw new Error(
+      `popnei_web defect: the column ${column} of the read has no type.`,
+    );
+  }
+  return type;
+}
+
+/** The button beside the warning of the types set and not applied, for
+    `count` of them. */
+export function forgetLabel(count: number): string {
+  return count === 1 ? "Forget this type" : "Forget these types";
 }
 
 /** The first three distinct values of the column at `index` that are
@@ -313,6 +491,34 @@ export function allFoundText(
     individuals missing". */
 export function missingLabel(numMissing: number): string {
   return `The ${counted(numMissing, "individual")} missing`;
+}
+
+/** The button under the list of the individuals missing, which copies
+    their names: "Copy the 12 names", or "Copy the name" for one. */
+export function copyLabel(numMissing: number): string {
+  return numMissing === 1
+    ? "Copy the name"
+    : `Copy the ${counted(numMissing, "name")}`;
+}
+
+/** What the status region says once the names of `numMissing`
+    individuals missing are on the clipboard. */
+export function copiedText(numMissing: number): string {
+  return numMissing === 1
+    ? "The name was copied."
+    : `${counted(numMissing, "name")} copied.`;
+}
+
+/** What the status region says when the page has no clipboard, which the
+    browser gives only to a page served over HTTPS or from the machine
+    itself, or the browser refused the copy. */
+export const NOT_COPIED =
+  "The names could not be copied. Select them in the list.";
+
+/** The text the copy puts on the clipboard: the names as the variants
+    file has them, one a line, to paste into a sheet. */
+export function copiedNames(names: readonly string[]): string {
+  return names.join("\n");
 }
 
 /** A population of the list, its name and its number of individuals of

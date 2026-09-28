@@ -5,13 +5,17 @@ import { createStore } from "../../../core/store.ts";
 import type { Store } from "../../../core/store.ts";
 import type { Job, JobResult } from "../../../worker/protocol.ts";
 import type { StepCommand } from "../variants/commands.ts";
+import { undoneOrRedone } from "../../sentences.ts";
 import {
+  FORGET_TYPES_COMMAND,
   ONE_POPULATION_COMMAND,
   REMOVE_COMMAND,
+  codingCommand,
   csvOptionCommand,
   groupingCommand,
   pickCommand,
   populationItemCommand,
+  typeCommand,
 } from "./commands.ts";
 
 /** The store of the page, with the analyses of the application and a
@@ -144,5 +148,126 @@ describe("the commands of the Individuals step", () => {
       column: "All individuals in one population",
     });
     expect(populationItemCommand("one")).toBe(ONE_POPULATION_COMMAND);
+  });
+});
+
+const AUTO = { encoding: "auto", separator: "auto", decimal: "auto" } as const;
+
+/** pops.csv read with the comma: the names, status of two values,
+    score of numbers. */
+function readPops(store: Store<JobResult>, columns: readonly string[]): void {
+  const rows = [
+    ["i1", "yes", "1"],
+    ["i2", "no", "2"],
+    ["i3", "yes", "3"],
+  ].map((row) => row.slice(0, columns.length));
+  store.individualsRead(FILE_ID, AUTO, {
+    kind: "read",
+    table: { columns, rows },
+    columns: (
+      [
+        { kind: "identifier" },
+        { kind: "binary", one: "yes", zero: "no" },
+        { kind: "continuous" },
+      ] as const
+    ).slice(0, columns.length),
+    found: {
+      encoding: "utf-8",
+      separator: ",",
+      decimal: ".",
+      undecodedLine: null,
+    },
+  });
+}
+
+/** The type the read gives the column `column`. */
+function typeOf(store: Store<JobResult>, column: string): unknown {
+  const read = store.getState().project.individuals?.read;
+  if (read?.kind !== "read") return null;
+  return read.columns[read.table.columns.indexOf(column)];
+}
+
+describe("IP5 D2 the commands of the types of the columns", () => {
+  test("a type chosen sets it, one step of undo with no notice, and an undo is said with its description", () => {
+    const store = realStore();
+    apply(store, pickCommand(FILE_ID, "pops.csv"));
+    readPops(store, ["IID", "status", "score"]);
+    apply(store, typeCommand("score", { kind: "categorical" }));
+    expect(store.getState().undo).toBe("the type of score changed");
+    expect(store.getState().notice).toBeNull();
+    expect(typeOf(store, "score")).toEqual({ kind: "categorical" });
+    expect(store.getState().project.individuals?.typesSet).toEqual([
+      ["score", { kind: "categorical" }],
+    ]);
+    expect(
+      undoneOrRedone({
+        kind: "undo",
+        description: "the type of score changed",
+      }),
+    ).toBe("Undone: the type of score changed");
+    store.undo();
+    expect(typeOf(store, "score")).toEqual({ kind: "continuous" });
+    expect(typeCommand("sc\nore", { kind: "categorical" }).description).toBe(
+      "the type of sc\\nore changed",
+    );
+  });
+
+  test("the value coded 1 chosen sets the binary type with the other value coded 0, one step of undo with no notice", () => {
+    const store = realStore();
+    apply(store, pickCommand(FILE_ID, "pops.csv"));
+    readPops(store, ["IID", "status", "score"]);
+    apply(store, codingCommand("status", "no", "yes"));
+    expect(store.getState().undo).toBe("the value coded 1 in status changed");
+    expect(store.getState().notice).toBeNull();
+    expect(typeOf(store, "status")).toEqual({
+      kind: "binary",
+      one: "no",
+      zero: "yes",
+    });
+    store.undo();
+    expect(typeOf(store, "status")).toEqual({
+      kind: "binary",
+      one: "yes",
+      zero: "no",
+    });
+  });
+
+  test("the types forgotten drop those not applied and keep the others, one step of undo with no notice", () => {
+    const store = realStore();
+    apply(store, pickCommand(FILE_ID, "pops.csv"));
+    readPops(store, ["IID", "status", "score"]);
+    apply(store, typeCommand("score", { kind: "categorical" }));
+    apply(store, codingCommand("status", "no", "yes"));
+    // Read again with the semicolon: one column, no type applied.
+    apply(
+      store,
+      csvOptionCommand("separator", "pops.csv", { ...AUTO, separator: ";" }),
+    );
+    store.individualsRead(
+      FILE_ID,
+      { ...AUTO, separator: ";" },
+      {
+        kind: "read",
+        table: { columns: ["IID,status,score"], rows: [["i1,yes,1"]] },
+        columns: [{ kind: "identifier" }],
+        found: {
+          encoding: "utf-8",
+          separator: ";",
+          decimal: ".",
+          undecodedLine: null,
+        },
+      },
+    );
+    apply(store, FORGET_TYPES_COMMAND);
+    expect(store.getState().undo).toBe(
+      "the types set and not applied were forgotten",
+    );
+    expect(store.getState().notice).toBeNull();
+    expect(store.getState().project.individuals?.typesSet).toEqual([]);
+    store.undo();
+    expect(store.getState().project.individuals?.typesSet).toEqual([
+      ["score", { kind: "categorical" }],
+      ["status", { kind: "binary", one: "no", zero: "yes" }],
+    ]);
   });
 });
