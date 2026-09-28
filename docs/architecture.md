@@ -291,6 +291,18 @@ since the revision below the package of xlsx_rs. What it changes:
   of filters is locked while the project holds one
   (`docs/specs/core/store.md`, "How it is verified"). It changes the
   code of stage 3 (`docs/specs/stage-4-open-points.md`, point 16).
+- **A filter turned off keeps its values**, from 28 September 2026, when
+  the owner decided that the LD filter keeps its r² and its distance
+  while it is off, as the PCA's pruning does; the writers made it the
+  rule of every switch of the Variants step. The project gains two
+  lists, `filtersOff` and `individualFiltersOff`, where a filter turned
+  off waits with its values (section 2); no key, job or lock reads them,
+  and `filters` and `individualFilters` keep their meaning, the filters
+  applied. The option not taken was a field `on` in each filter, the
+  form of the PCA's option: every module that reads the filters would
+  then have to skip those off, and one that missed it would apply a
+  filter the user had turned off, with nothing on the screen to show it
+  (`docs/specs/core/project.md`, "The filters turned off").
 
 Stage 4 builds on popnei's release `js-v0.1.0-dev.3` of 28 September
 2026, which `package.json` names from its plan: it has the PCoA, which
@@ -336,7 +348,10 @@ interface Project {
   filters: ProjectVariantFilter[];    // in the fixed order of their kinds, with parameters;
                                       // the LD filter's distance null until the user
                                       // types one, which locks what reads these filters
+  filtersOff: ProjectVariantFilter[]; // those turned off, with their values, for the
+                                      // switch that turns them on again; in no key or job
   individualFilters: IndividualFilter[]; // the same
+  individualFiltersOff: IndividualThreshold[]; // the thresholds turned off, the same
   regions: RegionsSource | null;      // the BED file, whole once read (section 6)
   individuals: IndividualsSource | null; // the metadata or traits file
   // popgen: the column that defines the populations, or every
@@ -513,6 +528,12 @@ holds the numbers of two sessions names the right versions for each
   which `steps` then lists last, left the counts those filters give with
   every individual, 1,200 to 1,152 to 1,152 to 1,128 variants; put first,
   the same list gave 1,200 to 1,004 to 1,004 to 963.
+- **A filter turned off is kept apart**, with its values, in
+  `filtersOff` or `individualFiltersOff`, so that turning it on again
+  gives back what the user typed, a distance of the LD filter above all,
+  which has no default. `filters` and `individualFilters` hold the
+  filters applied and nothing else, so that what reads them, the keys
+  and the jobs among them, never meets a filter the user turned off.
 
 What was revised on 26 September 2026, approved by the owner that day.
 The filters of the variants were in the order the user gave, with a
@@ -542,7 +563,8 @@ every key are:
   of the file goes in: not its name, size or date of last change, and no
   hash of what it holds;
 - the filters of variants and the filters of individuals that the
-  analysis reads, in their order, with their parameters: all of them for
+  analysis reads, in their order, with their parameters, those that are
+  on and not those kept while off (section 2): all of them for
   every analysis of sections 5 to 8 of `docs/functionality.md`, and not
   the filters that the checks per variant and per individual of its
   section 3 serve to set, whose histograms would otherwise be removed at
@@ -1415,10 +1437,10 @@ there when its repository is made.
   from there, "403 Forbidden", as the architecture review of 28
   September 2026 saw with popnei's package linked so, while the build
   succeeds; and from a worktree under `.claude/worktrees/`, `../xlsx_rs`
-  names no folder. The repository, at
-  `github.com/JoseBlanca/xlsx_rs` and public as popnei's is, so that
-  `npm ci` needs no token, is assumed until the owner confirms its name
-  and its place (section 13, point 11).
+  names no folder. The repository is `github.com/JoseBlanca/xlsx_rs`,
+  under the owner's account and public as popnei's is, so that `npm ci`
+  needs no token, as the owner decided on 28 September 2026 (section 13,
+  point 11).
 - **The light worker imports it by name, on first need**: `filesRunner.ts`
   runs `await import("xlsx_rs")`, a dynamic import, the first time an
   xlsx is read, and awaits the `init()` that wasm-bindgen generates, which
@@ -1467,7 +1489,9 @@ there when its repository is made.
   released as a pre-release on a tag `js-v…`. popnei makes its releases
   by hand, `npm run build` and `npm pack` in `js/popnei` and the `.tgz`
   attached to the tag, as the notes of `js-v0.1.0-dev.3` say; it has no
-  workflow for them yet (section 13, point 13). The layout of xlsx_rs is
+  workflow for them yet. xlsx_rs makes its releases by hand in the same
+  way, and a workflow shared with popnei comes later, as the owner
+  decided on 28 September 2026 (section 13, point 13). The layout of xlsx_rs is
   decided in its own architecture; popnei's is the one to start from, a
   crate of plain Rust tested natively, a crate of the binding to
   wasm-bindgen, and the package in `js/xlsx_rs/`.
@@ -1480,7 +1504,8 @@ git ignored, before every `vite build` and `vite dev`. It needed Rust
 1.98.0 and `wasm-bindgen-cli` 0.2.128 on every machine that builds the
 site, the three jobs of its continuous integration among them, which the
 owner approved on 27 September 2026; calamine was not yet approved,
-since the owner was weighing a project of its own. The owner decided on
+since the owner was weighing a project of its own, and was approved on
+28 September 2026 as a dependency of xlsx_rs (section 13, point 12). The owner decided on
 28 September 2026: "xlsx read should be a separate project following
 the same conventions and skills that popnei follows. we could call it
 xlsx_rs". It answers what the owner had held against the module in
@@ -2274,31 +2299,34 @@ day, as recommended, and point 10 recommended and not yet decided:
    script of a worker started again.
 
 Opened by the revision of 28 September 2026, which moves the reader of
-xlsx to xlsx_rs (section 6), and not yet answered:
+xlsx to xlsx_rs (section 6). The owner decided points 11 to 13 the same
+day; point 14 is not yet answered.
 
-11. **The name and the place of xlsx_rs**: `github.com/JoseBlanca/xlsx_rs`,
-   public, as popnei is, so that `npm ci` downloads its releases with no
-   token, is assumed. The name was free on npm and the repository did
-   not exist on 28 September 2026. For the owner to confirm, and to
-   create the repository, which no session of popnei_web creates.
+11. **The name and the place of xlsx_rs, decided by the owner on 28
+   September 2026**: `github.com/JoseBlanca/xlsx_rs`, under the owner's
+   account as popnei is, and public, so that `npm ci` downloads its
+   releases with no token. The name was free on npm on 28 September
+   2026, and the repository did not exist yet that day; the owner
+   creates it, and no session of popnei_web does. Not taken: another
+   name or another account, which nothing had proposed.
 12. **calamine 0.36.1 as a dependency of xlsx_rs**, and rust_xlsxwriter
-   0.99.1 for its tests alone, the owner's to approve, as every
-   dependency is; calamine was left unapproved on 27 September 2026 while
-   the owner weighed this move. The xlsx of stage 4 waits for it, and for
-   the first release of xlsx_rs. Rust 1.98.0 and `wasm-bindgen-cli`
-   0.2.128, approved for the site on 27 September 2026, are no longer
-   needed by it; they are xlsx_rs's.
-13. **How xlsx_rs makes its releases.** Recommended: by hand, `npm run
-   build` and `npm pack` and the `.tgz` attached to a pre-release of the
-   tag, as popnei makes its three so far, `js-v0.1.0-dev.1` to
-   `js-v0.1.0-dev.3`, about ten minutes each by the estimate of
-   `docs/specs/site.md`; and a workflow of GitHub Actions for both when
-   popnei has one, so that the two are made the same way. What it costs:
-   until then nothing checks that a release was built from its tag, as
-   nothing checks it for popnei's (section 6). Not taken: a workflow for
-   xlsx_rs first, some forty lines tried on a tag, hours of work, not
-   estimated more closely; it would win if the owner wants every release
-   tied to its source from the first.
+   0.99.1 for its tests alone, **approved by the owner on 28 September
+   2026**; calamine had been left unapproved on 27 September 2026 while
+   the owner weighed this move. The xlsx of stage 4 now waits only for
+   the repository and the first release of xlsx_rs. Rust 1.98.0 and
+   `wasm-bindgen-cli` 0.2.128, approved for the site on 27 September
+   2026, are no longer needed by it; they are xlsx_rs's.
+13. **How xlsx_rs makes its releases, decided by the owner on 28
+   September 2026**, as recommended: by hand, `npm run build` and `npm
+   pack` and the `.tgz` attached to a pre-release of the tag, as popnei
+   makes its three so far, `js-v0.1.0-dev.1` to `js-v0.1.0-dev.3`, about
+   ten minutes each by the estimate of `docs/specs/site.md`; and later a
+   workflow of GitHub Actions shared with popnei, so that the two are
+   made the same way. What it costs: until then nothing checks that a
+   release was built from its tag, as nothing checks it for popnei's
+   (section 6). Not taken: a workflow for xlsx_rs first, some forty lines
+   tried on a tag, hours of work, not estimated more closely, which would
+   have tied every release to its source from the first.
 14. **Where the zip of the report is made**, in stage 6. Recommended: in
    xlsx_rs, whose writer of xlsx brings the `zip` crate and its
    compression already, since an xlsx is a zip of XML files, so that a

@@ -10,11 +10,16 @@ September 2026 to Open 2, the date whose time the format hides.
 Revised on 28 September 2026, when the owner decided that the reader of
 xlsx is a project of its own, **xlsx_rs**, with the conventions and the
 skills of popnei (`docs/architecture.md`, section 6, "The files wasm,
-the package of xlsx_rs"). This is xlsx_rs's first spec. It is written
-here because the repository of xlsx_rs does not exist yet, and it moves
-there, whole, when the owner makes it; until then it is part of the
-specs of stage 4, and none of them is approved. There is no code of it
-yet.
+the package of xlsx_rs"). The owner decided the same day that its
+repository is `github.com/JoseBlanca/xlsx_rs`, under the owner's
+account and public, as popnei's is; that its releases are made by hand,
+as popnei's are, and later by a workflow shared with popnei; and
+approved calamine 0.36.1 as its dependency, and rust_xlsxwriter 0.99.1
+for its tests (`docs/architecture.md`, section 13, points 11 to 13).
+This is xlsx_rs's first spec. It is written here because the repository
+of xlsx_rs does not exist yet, and it moves there, whole, when the
+owner makes it; until then it is part of the specs of stage 4, and
+none of them is approved. There is no code of it yet.
 
 This spec gives the Rust library that reads the first sheet of an xlsx,
 the file Excel saves by default, into its cells, and the wasm package
@@ -433,6 +438,7 @@ over it, which writes the JavaScript, its declarations and
 `js-v0.1.0-dev.1`, then `dev.2` and on, each used once and never moved,
 since popnei_web's lockfile keeps the hash of the file of each URL. The
 release is made by hand, as popnei's are, until the two have a workflow
+they share, as the owner decided on 28 September 2026
 (`docs/architecture.md`, section 13, point 13). The package is its
 wasm-bindgen output, with no TypeScript of its own around it: popnei_web
 calls one function and the `init` that loads the wasm.
@@ -494,11 +500,12 @@ codegen-units = 1
 ```
 
 calamine brings zip, with its compression in Rust, and quick-xml; none
-has C, and the trial built them for `wasm32-unknown-unknown`. calamine
-and rust_xlsxwriter are dependencies the owner has to approve, as every
-dependency is; calamine was left unapproved on 27 September 2026 while
-the owner weighed this project (`docs/architecture.md`, section 13, point
-12). `Cargo.lock` is committed, and `rust-toolchain.toml` names Rust
+has C, and the trial built them for `wasm32-unknown-unknown`. The owner
+approved calamine 0.36.1 and rust_xlsxwriter 0.99.1 on 28 September
+2026, as dependencies of xlsx_rs, the second for its tests alone until
+stage 6; calamine had been left unapproved on 27 September 2026 while
+the owner weighed this project (`docs/architecture.md`, section 13,
+point 12). `Cargo.lock` is committed, and `rust-toolchain.toml` names Rust
 1.98.0, the stable release of 18 August 2026, current on 27 September
 2026 and the one on the owner's Mac, with the target
 `wasm32-unknown-unknown`; calamine 0.36.1 needs 1.88 at least. A panic
@@ -717,7 +724,8 @@ spec.
 - Whether pandas, reading the xlsx the report writes, gives a number as
   the same text as the application, `1` and not `1.0`: stage 6, with the
   report (`docs/specs/analyses/diversity.md`, "Not in this spec").
-- A workflow that builds and releases the package: section 13, point 13,
-  of `docs/architecture.md`.
+- A workflow that builds and releases the package, shared with popnei
+  later, as the owner decided on 28 September 2026: section 13, point
+  13, of `docs/architecture.md`.
 - `.xlsm`, a workbook with macros, which calamine reads as an xlsx, and
   `.ods`: whether the step loads them is the step's.

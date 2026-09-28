@@ -28,7 +28,10 @@ does not change, and says that a job never carries an LD filter without
 its distance, which the project may hold; and again that day, after
 the review of that change, core locks what reads either list of filters
 while the distance is missing, and the files wasm is the package of
-xlsx_rs, since the reader of xlsx left this repository.
+xlsx_rs, since the reader of xlsx left this repository. The owner's
+decision of the same day that a filter turned off keeps its values in
+the project changes no job: a job carries the filters that are on, as
+before.
 
 This spec gives the part of `src/worker/protocol.ts` that core
 names: the filters of the variants and of the individuals, the table of
@@ -210,7 +213,9 @@ builds the filters of a job with `jobFilters`, which gives a
 needs of every project"). So the worker never checks for a missing
 distance, and a `null` that reached it would be refused by the check of
 the message as any value of another type is
-(`docs/specs/worker/messages.md`).
+(`docs/specs/worker/messages.md`). The filters the project keeps while
+they are off, `filtersOff` and `individualFiltersOff` of core, are in no
+job: a job carries the filters that are on.
 
 The `kind` of each is the name popnei gives the filter in the counts of a
 pass (`Step.kind` in `js/popnei/src/filters.ts`), so what each filter

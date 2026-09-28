@@ -36,7 +36,11 @@ written whole, those a read does not apply among them, and the project
 files of stages 2 and 3 that wrote a metadata file not read as none.
 Revised on 28 September 2026 for the owner's decision that day that the
 LD filter of the variants starts with no distance: a filter saved before
-its distance was typed is written with `"maxDist": null`, in version 1.
+its distance was typed is written with `"maxDist": null`, in version 1;
+and again that day for the owner's decision that the LD filter keeps its
+values while it is off: the filters turned off are written, with their
+values, in `filtersOff` and `individualFiltersOff`, in version 1, and a
+file saved without them opens with nothing kept.
 There was no
 code yet; it will be `src/core/projectFile.ts`, the row `projectFile.ts`
 of section 9 of `docs/architecture.md`. The project file is the file
@@ -126,7 +130,9 @@ written as below, the rows of the table shortened here to two:
       "maxAllowedMissingRate": 0.1
     }
   ],
+  "filtersOff": [],
   "individualFilters": [],
+  "individualFiltersOff": [],
   "individuals": {
     "fileId": "ffeeddccbbaa99887766554433221100",
     "name": "pops.csv",
@@ -250,7 +256,12 @@ lists and the thresholds, in theirs (`docs/specs/core/project.md`). A
 filter is written as the project holds it, a threshold as the number the
 user typed, and the LD filter whose distance the user has not typed yet
 with `"maxDist": null`, which opens into the same filter and the same
-lock (`variantFilterNeeds` of `docs/specs/core/project.md`). What the filters make is not written, since each is a
+lock (`variantFilterNeeds` of `docs/specs/core/project.md`). The filters
+the user turned off are written apart, each with its values, in
+`filtersOff` and `individualFiltersOff`, so that a project opened
+again gives them back when a switch is turned on
+(`docs/specs/core/project.md`, "The filters turned off"); no check
+number depends on them. What the filters make is not written, since each is a
 result or is made from one: the list of the individuals the thresholds
 keep, the statistics of each individual, the histograms and the counts
 of the filters; of those, as of any analysis `done`, only the check
@@ -483,7 +494,10 @@ that the reason given is the one the user can act on:
    `docs/specs/core/project.md` refuses one inside the project, and a
    field missing as `missingField`, both with the name of the field.
    `appVersion` and `saved` must be texts, and `popneiVersion` a text or
-   `null`, or they are refused as `header`.
+   `null`, or they are refused as `header`. `filtersOff` and
+   `individualFiltersOff` may be missing, in a file saved before 28
+   September 2026, when the filters turned off were first kept, and
+   `parseProject` then reads each as empty.
 6. **The checks, before the project**: `checks` must be a list of
    objects, none with a field `settings`, which this version never writes;
    and it must be empty when `variants` is `null`, since no result is made
@@ -505,7 +519,8 @@ that the reason given is the one the user can act on:
    it this object, built from the fields of the file:
 
    ```ts
-   { app, variants: null, filters, individualFilters, individuals, grouping, analyses,
+   { app, variants: null, filters, filtersOff, individualFilters, individualFiltersOff,
+     individuals, grouping, analyses,     // filtersOff and individualFiltersOff only when the file has them
      reference: variants === null ? null
        : { variants, checks: checks.map((c) => ({ ...c, settings: "0".repeat(64) })) } }
    ```
@@ -746,10 +761,12 @@ this spec makes precise:
   by field, and the fixtures of every earlier version, below, keep
   opening.
 - **Stage 4 does not raise it.** The grouping `onePopulation`, the
-  types the user set, `typesSet`, the read `notGiven`, and the LD filter
-  with `maxDist` `null`, join version
+  types the user set, `typesSet`, the read `notGiven`, the LD filter
+  with `maxDist` `null`, and the filters turned off, `filtersOff` and
+  `individualFiltersOff`, join version
   1; a file of stages 2 and
-  3, which has no `typesSet`, opens with none set
+  3, which has no `typesSet`, opens with none set, and a file with no
+  filters turned off opens with none kept
   (`docs/specs/core/project.md`, "The validation"), and a development
   version before stage 4 refuses a file that has any of them, as it refuses
   every field it does not write and a distance that is not a whole
@@ -985,13 +1002,19 @@ the analyses `done`, `ready` or `removed`.
   `pops.csv` `notGiven` with a type set and the grouping `pop`, no
   check, and `v1-ld-no-distance.popnei.json`, `panel.nei` with the
   missing data filter at 0.1 and the LD filter at r² 0.3 with
-  `"maxDist": null`, no check. Each
+  `"maxDist": null`, no check, and `v1-filters-off.popnei.json`,
+  `panel.nei` with the missing data filter at 0.1 on, in `filtersOff`
+  the LD filter at r² 0.2 within 50000 and the MAF filter at 0.9, and in
+  `individualFiltersOff` the threshold of observed heterozygosity at
+  0.38, no check. Each
   opens into a project written as a literal in its test, and, while
   `FORMAT_VERSION` is 1, the project written back from it, with no result
   and the header's versions and date, is the fixture byte for byte; but
-  `v1-nei-diversity.popnei.json`, written before stage 4, which is
-  written back with `typesSet` added to its individuals file, empty,
-  and nothing else changed, the test asserting that text. Once
+  the four fixtures written before stage 4, which are written back with
+  `"filtersOff": []` and `"individualFiltersOff": []` added, and
+  `v1-nei-diversity.popnei.json` with `typesSet` added to its
+  individuals file as well, empty, and nothing else changed, the test
+  asserting each text. Once
   a version of the site that writes a format is deployed, its fixtures are
   never edited: a later version adds its own and keeps the tests that open
   the old ones, changing only the project they are expected to give when

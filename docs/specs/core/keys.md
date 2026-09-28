@@ -12,7 +12,9 @@ pruning of the PCA keeps are not kept; and again the same day, when
 the specs of stage 4 were made to agree: the options that change only
 how a result is drawn are in no key; and again that day, the reason
 `keyInputs` answers for a locked project corrected: the fingerprint of
-an opened project needs it, and the store does not. A key is the name a result is stored under in the cache: a SHA-256
+an opened project needs it, and the store does not; and on 28 September
+2026, when the filters the user turns off were kept in the project with
+their values: they are in no key. A key is the name a result is stored under in the cache: a SHA-256
 hash of everything the result was calculated from, so that a result whose
 inputs changed is never shown, and a result whose inputs came back, by an
 undo or by a value set back, is found again with no calculation
@@ -48,7 +50,7 @@ depend on:
 | `keyVersion` | a number its module raises when what the result means changes for the same inputs | its definition |
 | `popneiVersion` | the version of popnei, from the calculation worker when it starts | the store |
 | `load` | the load id of the variants file, new at every pick, and its read options | the project |
-| `filters`, `individualFilters` | the filters the analysis reads, in their fixed order, with their parameters: the thresholds on the individuals, and not the list of the individuals they keep | the project, and the definition's `filtersRead` |
+| `filters`, `individualFilters` | the filters the analysis reads, in their fixed order, with their parameters: the thresholds on the individuals, and not the list of the individuals they keep; the filters on alone, and not those the project keeps while they are off, `filtersOff` and `individualFiltersOff` | the project, and the definition's `filtersRead` |
 | `inputs` | what else the analysis depends on: the columns of the individuals table and the grouping it uses, its options but those that change only how the result is drawn, as the colour, the axes and the view of the PCA (`docs/architecture.md`, section 4; `docs/specs/analyses/pca.md`) | its `keyInputs` |
 
 Every analysis of sections 5 to 8 of `docs/functionality.md` reads all the
@@ -412,7 +414,8 @@ hash with node's `crypto` to compare with ours; the code is checked with
   are not named `__proto__`, which the example above covers. For any two
   projects that differ in one part of the table of the parts, the keys
   differ; for two that differ in a part the table does not hold, the name
-  of the variants file or its read, the keys are the same. For any
+  of the variants file or its read, or the filters turned off, the keys
+  are the same, those of `writeKeyOf` among them. For any
   project, the fingerprint does not change when the load id, the key
   version or the version of popnei does, and changes when the filters, the
   read options or the inputs do.

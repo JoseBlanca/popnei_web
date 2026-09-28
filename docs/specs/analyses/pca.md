@@ -37,7 +37,11 @@ Variants step starts with no distance, as the PCA's pruning does: while
 the dataset's filter has none, the PCA does not prune again and is
 locked by that filter, with the reason of `variantFilterNeeds` of
 `docs/specs/core/project.md`, until the distance is typed in the
-Variants step.
+Variants step; and again that day for two decisions of the owner of 28
+September 2026: Lingoes' correction has no switch, the PCoA always asks
+popnei for it; and the LD filter of the Variants step keeps its values
+while it is off, as this analysis's pruning does, so that neither
+analysis nor step loses a distance typed.
 There is no code of it yet. This spec gives
 the analysis that places the individuals of a dataset on a few axes, to
 see its structure and check the populations against it: the module
@@ -168,6 +172,16 @@ in popnei the correction is not made unless it is asked for, so
 it shows is of the corrected distances whenever they needed it (below,
 "The warnings").
 
+The correction has no switch, as the owner decided on 28 September
+2026: the PCoA always asks popnei for it, and its warning gives how
+large it was. Two options were not taken. A switch that turned the
+correction off would only make popnei refuse: its release
+`js-v0.1.0-dev.3` refuses the PCoA without the correction whenever an
+eigenvalue is negative, which on `panel.nei` so filtered is 61 of 200.
+And asking popnei for a PCoA of the distances uncorrected, which
+popnei does not make, would be a new calculation asked of popnei, and a
+second kind of result for the panel to draw and explain.
+
 Both read the same variants, the dataset's filters with the PCA's own
 MAF filter and pruning, so that the two can be compared, and both give
 the same shape of result, so that one panel and one plot draw either.
@@ -250,7 +264,10 @@ were calculated with:
 | missing data 0.1 | MAF 1, pruning off | missing data 0.1, MAF 1 |
 
 A pruning that is off puts no LD filter in the list, whatever r² and
-distance it keeps for when it is turned on again.
+distance it keeps for when it is turned on again. An LD filter of the
+Variants step that is off is not the dataset's either: the project keeps
+it among the filters off, `filtersOff` of `docs/specs/core/project.md`,
+which `pcaFilters` does not read, and the PCA prunes with its own.
 
 A MAF of 1 keeps every variant; the MAF filter is always in the job, so
 that the user's number is always the one popnei is given
@@ -346,8 +363,11 @@ number from 0 to 1; the LD pruning, whether it is on, true or false,
 its maximum r², a number from 0 to 1, and its window, a whole number of
 base pairs from 1 to 9,007,199,254,740,991 or null; the column that colours the points, a text or
 null; three different components from 1 to 10 for the axes; and the
-view, "2d" or "3d"; and nothing else". Every later version of the format
-reads version 1 so (`docs/architecture.md`, section 12).
+view, "2d" or "3d"; and nothing else". No option is of Lingoes'
+correction, which the PCoA always asks for (above, "What it does"), so
+a field `correctByLingoes` is a field more and is refused. Every later
+version of the format reads version 1 so (`docs/architecture.md`,
+section 12).
 
 ### What goes into its key
 
@@ -1404,7 +1424,7 @@ With Vitest, at the functions of the definition, on frozen projects:
   `maxDist` 50000, `method` `"pcoa"`, `ldPruning` `{ on: false,
   maxAllowedR2: 0.1, maxDist: 50000 }` and `{ on: false, maxAllowedR2:
   0.1, maxDist: null }`, `axes` `[10, 9, 1]`; a missing field, a field
-  more, a method `"tsne"`, `maxAllowedMaf` 1.5, `ldPruning` `null`
+  more, `correctByLingoes` `false` among them, a method `"tsne"`, `maxAllowedMaf` 1.5, `ldPruning` `null`
   or without `on`, `on` `1`, `maxDist`
   0 or 2.5, `axes` `[1, 1, 2]` or `[1, 2, 11]`, `view` `"4d"`, refused.
 - **`warnings`**: a result whose job had no LD filter gives `pruningOff`,
@@ -1640,7 +1660,9 @@ method.
 
 - **Method**, two radio buttons of React Aria's `RadioGroup`: "PCA of
   the genotypes" and "PCoA of the Kosman distances, for data with many
-  missing genotypes".
+  missing genotypes". The PCoA has no control of its own: its
+  correction is made whenever the distances need it, and nothing turns
+  it off (above, "What it does").
 - **Maximum major allele frequency**, a `NumberField`, React Aria's
   field of a number, 0.95, "from 0 to 1", as the MAF filter of the
   Variants step. When the dataset's MAF
@@ -1659,9 +1681,8 @@ method.
   distance as they are. Unchecked, the two fields go, as the fields of a
   filter turned off go in the Variants step, so that no field is shown
   for a number that is not used; checked again, they come back with the
-  numbers the project kept, where a filter of the Variants step turned on
-  again starts from the values of its table, since a filter that is off
-  is not in that project. When the dataset has an LD filter, the three are
+  numbers the project kept, as a filter of the Variants step turned on
+  again does. When the dataset has an LD filter, the three are
   disabled, no distance is asked for, and a line says why: "The LD filter
   of the Variants step, r² at most 0.3 within 10,000 base pairs, is used,
   and the PCA does not prune again."; while that filter has no distance,
@@ -1990,7 +2011,8 @@ The help, for the drawer of stage 8:
   tight groups look looser and two individuals of the same genotypes are
   drawn apart; its warning gives how much was added beside the mean of
   the squared distances, and the PCA of the genotypes, which needs no
-  correction, is the one to compare with.
+  correction, is the one to compare with. The correction cannot be
+  turned off, since popnei does not draw such distances without it.
 - How to use the plots: Escape hides the tooltip of a point; the 3D
   view turns by dragging or with the buttons, and zooms with the wheel
   while the Ctrl key is held, by pinching, or with the buttons
@@ -2297,7 +2319,8 @@ them.
 The points of `docs/specs/stage-4-open-points.md` this spec rests on
 are listed there once. Decided by the owner on 27 September 2026: the
 pruned variants not kept between two PCAs, and its default pruning, r²
-0.1 with no distance. Recommended and not yet answered, which this spec
+0.1 with no distance. Decided by the owner on 28 September 2026:
+Lingoes' correction with no switch. Recommended and not yet answered, which this spec
 follows until they are: which variants the PCA reads, the variants of
 more than two alleles, and the PCA opening in 2D. Of the two that
 follow, this spec's own, the owner decided the first on 27 September

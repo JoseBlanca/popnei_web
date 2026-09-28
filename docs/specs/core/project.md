@@ -64,7 +64,13 @@ change: `variantFilterNeeds` locks what reads the filters of
 individuals as well as what reads those of the variants, since the
 individuals kept by a threshold come from the statistics of each
 individual, which it locks; and the projects the properties draw hold
-an LD filter with no distance.
+an LD filter with no distance. Revised again that day for the owner's
+decision that the LD filter keeps its r² and its distance while it is
+off, as the PCA's pruning does, so that turning it on again gives back
+what was typed: a filter turned off with a switch of the Variants step,
+of the variants or a threshold of the individuals, moves with its
+values to `filtersOff` or `individualFiltersOff`, which no key, no job
+and no lock reads (below, "The filters turned off").
 
 The project is everything the user has set in one application: the
 variants file they loaded, the filters, the individuals file with the
@@ -166,6 +172,56 @@ first load, since its table, and not its load, goes into the keys; and a
 project file with a field this version does not know is refused, decided
 here, below.
 
+### The filters turned off
+
+A filter of the Variants step that has a switch keeps its values while
+it is off, so that turning it on again gives back what the user typed.
+The owner decided it on 28 September 2026 for the LD filter, whose
+distance has no default and would otherwise be typed again at every
+turn on, as the PCA's pruning keeps its own (`ldPruning` of
+`docs/specs/analyses/pca.md`). The writers made it the rule of every
+filter with a switch the same day, the four filters of the variants and
+the two thresholds of the individuals, so that the switches of one step
+behave alike; the form below costs no more for six filters than for
+one. The two lists of individuals have no switch: Clear empties a list
+and keeps nothing, as its text area shows.
+
+The filters on stay in `filters` and `individualFilters`, as until now.
+A filter turned off moves, with its values, to `filtersOff` or
+`individualFiltersOff`, in the same fixed order, and a filter turned on
+leaves them. A kind of filter is in one of the two lists, or in neither
+while it has never been turned on. Three things read the lists of the
+filters off: the switch of the Variants step, which turns a filter on
+with the values kept (`docs/specs/steps/variants.md`), the project file,
+which writes them, and the validation, which reads them back. So what reads the filters applied, the keys,
+the jobs, the locks of `variantFilterNeeds` and `individualListNeeds`,
+the individuals kept, the Count, the summary line of the shell and the
+Python script of stage 6, reads `filters` and `individualFilters` as it
+did, and never meets a filter turned off. The values kept while off are
+in no key, since no result is calculated from them. An LD filter turned
+off before its distance was typed keeps its `maxDist` `null`, locks
+nothing, and is locked again when it is turned on with no distance.
+
+Turning a filter off or on is one command, and one step of Undo, that
+changes both lists at once; an Undo gives back the project before it.
+The project file writes the two lists of the filters off
+(`docs/specs/core/projectFile.md`), and the format stays at its version
+1; a file saved before them has neither, and opens with nothing kept
+(below, "The validation").
+
+The option not taken: a field `on` in every filter of `filters`, the
+form of the PCA's `ldPruning`. The PCA's pruning is one option of one
+analysis, which its own `keyInputs` reads in one place. The filters are
+read in many: in the code of stage 3, `keys.ts`, `individualsKept.ts`,
+the summary line of the shell, the words of the Variants step and the
+writing read `filters` or `individualFilters` as the filters applied,
+their length among them. With a field `on`, each of those, and each
+written later, would have to skip the filters off, and one that missed
+it would apply or count a filter the user had turned off, a wrong
+number on the screen with nothing to show it. The keys would also need
+the filters off taken out before the hash, where now they hash the list
+as it is.
+
 ### What an analysis needs of every project
 
 Before an analysis looks at what it needs of its own, every one of them
@@ -191,7 +247,8 @@ filters of the variants"). Turned on, it is in the project with
 `maxDist` `null` until the user types a distance, and popnei's
 `filterByLd` cannot be given it. `variantFilterNeeds` gives then this
 reason, and `null` otherwise, whatever the variants file, since the
-filter does not depend on it:
+filter does not depend on it, and whatever `filtersOff` holds, since a
+filter turned off is given to no job:
 
 | the project | the reason |
 |---|---|
@@ -778,8 +835,10 @@ export type AnalysisId = string;
 export interface Project {
   app: AppId;
   variants: VariantSource | null;
-  filters: ProjectVariantFilter[];          // missing_data, obs_het, maf, ld
-  individualFilters: IndividualFilter[];    // keep, remove, missing_data, obs_het
+  filters: ProjectVariantFilter[];          // on: missing_data, obs_het, maf, ld
+  filtersOff: ProjectVariantFilter[];       // turned off, with their values; the same order
+  individualFilters: IndividualFilter[];    // on: keep, remove, missing_data, obs_het
+  individualFiltersOff: IndividualThreshold[]; // turned off, with their values: missing_data, obs_het
   individuals: IndividualsSource | null;
   grouping: Grouping;
   analyses: AnalysisOptions[];              // one per analysis the user set
@@ -793,7 +852,17 @@ export interface Project {
 export type ProjectVariantFilter =
   | Exclude<VariantFilter, { kind: "ld" }>
   | { readonly kind: "ld"; readonly maxAllowedR2: number; readonly maxDist: number | null };
+
+/** A filter of individuals that has a switch in the Variants step, and
+    so can be turned off and kept: a threshold, not a list. */
+export type IndividualThreshold = Extract<IndividualFilter, { kind: "missing_data" | "obs_het" }>;
 ```
+
+`filtersOff` and `individualFiltersOff` hold the filters the user turned
+off, with the values they had, for the switch that turns them on again
+(above, "The filters turned off"). No kind is in both a list of filters
+on and its list of filters off, and each is in the fixed order of its
+kinds.
 
 The variants file. The load id is 16 random bytes written as 32 lower
 case hexadecimal digits, made by the page when the user picks the file
@@ -926,7 +995,8 @@ A new, empty project of one application.
 
 ```ts
 export function emptyProject(app: AppId): Project;
-// { app, variants: null, filters: [], individualFilters: [], individuals: null,
+// { app, variants: null, filters: [], filtersOff: [], individualFilters: [],
+//   individualFiltersOff: [], individuals: null,
 //   grouping: app === "popgen" ? { kind: "populations", column: null }
 //                              : { kind: "roles", roles: [] },
 //   analyses: [], reference: null }
@@ -985,13 +1055,20 @@ functions of `project.ts` that no other module imports.
 /** Puts a new load of the variants file, pending. Everything else is kept. */
 export function loadVariants(p: Project, source: VariantLoad): Project;
 
-/** Sets the filter of its kind, in the fixed order of the kinds. */
+/** Sets the filter of its kind on, in the fixed order of the kinds, and
+    drops the one of its kind from filtersOff. */
 export function setVariantFilter(p: Project, filter: ProjectVariantFilter): Project;
-export function removeVariantFilter(p: Project, kind: VariantFilterKind): Project;
+/** Turns the filter of that kind off: it leaves filters and is kept, with
+    its values, in filtersOff, in place of one of its kind kept before. */
+export function turnOffVariantFilter(p: Project, kind: VariantFilterKind): Project;
 
-/** Sets the filter of its kind, in the fixed order of the kinds. */
+/** Sets the filter of its kind on, in the fixed order of the kinds; a
+    threshold drops the one of its kind from individualFiltersOff. */
 export function setIndividualFilter(p: Project, filter: IndividualFilter): Project;
-export function removeIndividualFilter(p: Project, kind: IndividualFilterKind): Project;
+/** Removes a list of individuals, which is not kept. */
+export function removeIndividualFilter(p: Project, kind: "keep" | "remove"): Project;
+/** Turns a threshold off: it is kept, with its value, in individualFiltersOff. */
+export function turnOffIndividualFilter(p: Project, kind: IndividualThreshold["kind"]): Project;
 
 /** Puts a new load of the individuals file, pending; `csv` is null for an xlsx. */
 export function loadIndividuals(p: Project, source: {
@@ -1020,7 +1097,8 @@ What each does where a reader could doubt it:
 |---|---|---|
 | any, every row below included | the value equals the one there: the same filter, the same options of the CSV, the same type, the same grouping, the same options of an analysis, a load with the load id already there and the same other fields | `p` itself |
 | any | a value `parseProject` would refuse in its place | a defect |
-| `removeVariantFilter`, `removeIndividualFilter` | no filter of that kind | `p` itself |
+| `turnOffVariantFilter`, `removeIndividualFilter`, `turnOffIndividualFilter` | no filter of that kind on | `p` itself, whatever the list of the filters off holds |
+| `setVariantFilter`, `setIndividualFilter` | a filter of a kind kept off, with the values kept or others | the filter on in its place, and the kind gone from the list of the filters off; the step sends the values kept, so that the filter comes back as it was |
 | `removeIndividuals` | no individuals file | `p` itself |
 | `forgetTypesLost` | no file, a file not read, or `typesLost` empty | `p` itself |
 | `setCsvOptions` | no individuals file, an xlsx, or a file `notGiven`, whose read the page could not make | a defect |
@@ -1032,7 +1110,7 @@ What each does where a reader could doubt it:
 | `setAnalysisOptions` | options its `parseOptions` refuses, of `FORMAT_VERSION`, or nested deeper than `MAX_OPTIONS_DEPTH` levels | a defect |
 | `setAnalysisOptions` | no entry for the analysis | a new entry, last, also when the options are the defaults |
 | `loadVariants`, `loadIndividuals` | the load id already there, with another field different | a defect: a new read of a file is a new load, with a new load id |
-| `loadVariants` | a new load id | the filters, the individuals file, the grouping, the options and the reference kept |
+| `loadVariants` | a new load id | the filters, on and off, the individuals file, the grouping, the options and the reference kept |
 | `loadIndividuals`, `setCsvOptions` | a new load id, or other options | the read pending; the grouping kept by the name of its column; `typesSet` of the source before kept, `[]` when there was none, a source `notGiven` included |
 
 Two values are compared as the command keeps them, the fields its type
@@ -1352,7 +1430,10 @@ ploidy a whole number from 1 to 255, as popnei accepts; the size of a
 variants file and its number of variants whole numbers of at least 0; a
 load id of 32 lower case hexadecimal digits; at most one filter of each
 kind in each list, and each list in its fixed order, the variants' as
-well since stage 3; the table as the
+well since stage 3; the same of the two lists of the filters turned
+off, `individualFiltersOff` with thresholds alone, and no kind both in
+a list of the filters on and in its list of the filters off, which is
+refused as `twoFiltersOfAKind` at the path of the one off; the table as the
 reader gives it: at least one column and one row, no name of the header
 twice, every row as long as its header, the first cell of each row the
 name of an individual, a text that is not empty, and no individual in two
@@ -1405,6 +1486,12 @@ or `null`.
   `columnAllows` works them out from the table. The option not taken was
   to refuse it, which version 1 allows before the first release; those
   files were written by the application, and nothing in them is wrong.
+- **A project saved before the filters turned off were kept**, by
+  stages 2 and 3 or by a development version of stage 4 before 28
+  September 2026, has neither `filtersOff` nor `individualFiltersOff`,
+  and each is read as empty: such a project opens with the filters it
+  had on, and nothing kept of those off, which those versions did not
+  keep. The option not taken was to refuse it, as for `typesSet` above.
 - **A field the type does not have**, in a file whose version this
   application knows, is refused, as `unknownField`: such a file was
   changed by hand or damaged, since this version would not have written
@@ -1424,7 +1511,10 @@ or `null`.
   - a field missing: "the threshold of the second filter of the variants
     is missing";
   - two filters of one kind: "it has two filters of the variants by
-    missing genotypes, and a project has at most one of each kind";
+    missing genotypes, and a project has at most one of each kind"; and,
+    when one is on and the other off: "it has the filter of the variants
+    by missing genotypes both on and turned off, and a filter is one or
+    the other";
   - the filters of the individuals out of their order: "the filters of the
     individuals should be in the order individuals to keep, individuals to
     remove, missing genotypes, observed heterozygosity, and the second one
@@ -1444,7 +1534,11 @@ or `null`.
     individuals file cannot be continuous: its values are not all
     numbers"; and, of the new field of stage 4, named "the types set by
     the user", "the second of the types set by the user names the column
-    score, which the individuals file does not have".
+    score, which the individuals file does not have"; and, of the two
+    lists of the filters off, named "the filters of the variants turned
+    off" and "the filters of the individuals turned off", "the threshold
+    of the first filter of the variants turned off should be a number
+    from 0 to 1".
 
   The last sentence of these texts and of the one above, what the user
   can do, the owner decided on 24 September 2026; the option not taken
@@ -1537,6 +1631,15 @@ or `null`.
   undo gives back the filter with no distance and its lock, a second the
   filter off. A project file saved in between holds the `null`
   (`docs/specs/core/projectFile.md`) and opens with the same lock.
+- **The LD filter turned off and on again.** Turned off with r² 0.2
+  and 50000 typed, it is in `filtersOff` with both, `filters` no longer
+  has it, and every key that reads the filters is that of the project
+  without it; turned on again, the step sends the filter kept, and the
+  keys are those of before, so the results come back from the cache
+  while it holds them. Turned off before a distance was typed, it is
+  kept with `maxDist` `null`, locks nothing, and, turned on again, is
+  locked again with the same reason. The same holds for every other
+  filter with a switch, a threshold of the individuals among them.
 
 ## How it runs
 
@@ -1579,8 +1682,15 @@ project frozen deeply with `Object.freeze`, so that a write into it throws
   replaced in its place; `setVariantFilter` of `{ kind: "ld", … }` then
   of `{ kind: "obs_het", … }` gives `[missing_data, obs_het, maf, ld]`;
   `setVariantFilter` of a new object `{ kind: "missing_data",
-  maxAllowedMissingRate: 0.1 }` returns the project itself. Each row of
-  the table of the commands, with its defect or its `p`.
+  maxAllowedMissingRate: 0.1 }` returns the project itself. Then
+  `turnOffVariantFilter` of `obs_het` and of `ld` gives the filters
+  `[missing_data, maf]` and `filtersOff` `[obs_het, ld]`, with their
+  values; `setVariantFilter` of the `ld` kept gives back the filters
+  `[missing_data, maf, ld]` and `filtersOff` `[obs_het]`; an undo of
+  each is the project before it, by `toBe`. `turnOffIndividualFilter` of
+  `obs_het` at 0.38 keeps it in `individualFiltersOff`, and
+  `setIndividualFilter` of it takes it out. Each row of the table of the
+  commands, with its defect or its `p`.
 - **Each record**: recorded into the source of its id; the project itself
   for another id, for a read already recorded, and, for the individuals
   file, for other `csv` options.
@@ -1593,7 +1703,8 @@ project frozen deeply with `Object.freeze`, so that a write into it throws
   association.
 - **`variantFilterNeeds`** and **`jobFilters`**: the reason for the LD
   filter with `maxDist` `null`, with no variants file and with one read,
-  and `null` with a distance, with no LD filter and for an empty project;
+  and `null` with a distance, with no LD filter, with an LD filter with
+  `maxDist` `null` in `filtersOff`, and for an empty project;
   `setVariantFilter` of the LD filter with `maxDist` `null` accepted, and
   of 0 and 2.5 a defect, as before; `jobFilters` of the filters of a
   project with a distance, the same array by `toBe`, and of a list with
@@ -1677,7 +1788,11 @@ for a project of association.
   variants" and not `filters`; the filters of the variants `[maf,
   missing_data]` refused as `filterOutOfOrder` at `["filters", 1]`, with
   the text above; an individuals file of stage 2, with no `typesSet`,
-  opens with none set; the grouping `onePopulation` opens in population
+  opens with none set; a project with neither `filtersOff` nor
+  `individualFiltersOff` opens with both empty; the missing data filter
+  both in `filters` and in `filtersOff` refused as `twoFiltersOfAKind`
+  at `["filtersOff", 0]`, and a list to keep in `individualFiltersOff`
+  refused as `wrongValue`; the grouping `onePopulation` opens in population
   genetics and is refused in association; a `continuous` type on a
   column of which one value is not a number, refused, with its text.
 - **Properties, with fast-check**, which draws random projects and
@@ -1689,13 +1804,18 @@ for a project of association.
   with `maxDist` `null`: the filter of the variants that file draws, for
   the projects and for the command `setVariantFilter` of the sequences,
   is a `ProjectVariantFilter`, whose LD filter has no distance in about
-  half of the draws. For every such project, `variantFilterNeeds` gives
-  a reason exactly when the LD filter has no distance, and `jobFilters`
-  of its filters throws exactly then. For every sequence of commands,
-  each list has
-  at most one filter of each kind and both lists are in their fixed
-  order; and a command applied twice with the same arguments
-  returns, the second time, the project it was given.
+  half of the draws; and filters turned off, which `wholeProject` draws
+  in `filtersOff` and `individualFiltersOff` and the sequences draw with
+  `turnOffVariantFilter` and `turnOffIndividualFilter`. For every such
+  project, `variantFilterNeeds` gives
+  a reason exactly when the LD filter of `filters` has no distance, and
+  `jobFilters` of its filters throws exactly then. For every sequence of
+  commands, each of the four lists of filters has
+  at most one filter of each kind and is in its fixed order, no kind is
+  both on and off, and a filter turned off then on again by the value
+  kept gives the filters on of before; and a command applied twice with
+  the same arguments returns, the second time, the project it was
+  given.
 
 ## Open points
 
@@ -1852,3 +1972,13 @@ only a pending one is), and in the documents below the same day:
 - `docs/specs/analyses/pca.md`: `populationsNeeds` gives `inStep` beside
   `reason`, and the PCA, which locks on `individualsNeeds`, locks on a
   source `notGiven` too.
+
+For the filters turned off, 28 September 2026, made in each document the
+same day: `docs/architecture.md`, section 2, the two lists in
+`Project`; `docs/specs/core/projectFile.md`, the two lists written, and
+a file without them read as empty; `docs/specs/core/keys.md`, the
+filters off in no key; `docs/specs/core/store.md`, a filter off locks
+nothing; `docs/specs/shell.md`, the summary line counts the filters on;
+`docs/specs/steps/variants.md`, the switch turned on sends the filter
+kept; and `docs/specs/worker/protocol.md`, a job carries the filters on
+alone, as before.

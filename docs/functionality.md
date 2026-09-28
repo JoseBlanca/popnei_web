@@ -94,7 +94,11 @@ depends on the genome of the species. Until the user types one, nothing
 that reads the filters runs, with the reason said beside the field and
 beside each Run button; the histograms of the variants, which read no
 filter, still do. The option not taken, a start at 10,000 base pairs,
-was the application's from 26 September 2026 until then.
+was the application's from 26 September 2026 until then. A filter
+turned off keeps what the user typed, and turned on again has it back,
+so that a distance once typed is not asked for again, as the owner
+decided the same day for the LD pruning; every filter of the step with
+a switch does the same.
 
 ### The filters of individuals
 

@@ -89,7 +89,14 @@ beside the empty field. Its r² still starts at 0.3. The 10,000 base
 pairs above were the value until that day. Specs:
 `docs/specs/steps/variants.md`, "The distance of the LD pruning", and
 point 16 of `docs/specs/stage-4-open-points.md`, which says that the
-plan of stage 4 changes the code of stage 3 for it.
+plan of stage 4 changes the code of stage 3 for it. The owner decided
+the same day that the LD filter keeps its r² and its distance while it
+is off, as the PCA's pruning does, and the writers made it the rule of
+every switch of the Variants step: a filter turned off keeps its
+values, and turned on again has them back. So the values above are
+those of the first time a filter is turned on; until then, a filter
+turned off left the project, and started again from them. Specs:
+`docs/specs/core/project.md`, "The filters turned off", and point 16.
 
 ## What the owner decided on 26 September 2026
 
@@ -189,7 +196,9 @@ at 0.1 when it is turned on, plink's default for `--mind`, as the
 variants' 0.1 is its `--geno`. The values at which the other three start
 stay open, above. Spec: `steps/variants.md`. On 28 September 2026 the
 owner changed the start value of the distance of the LD pruning, from
-10,000 base pairs to none, typed by the user (above).
+10,000 base pairs to none, typed by the user, and decided that a filter
+turned off keeps its values, so that the start values are those of the
+first time a filter is turned on (above).
 
 ### G. A file written and not saved, which a change discards
 

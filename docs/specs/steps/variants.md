@@ -33,7 +33,12 @@ PCA's pruning", where it started at 10000 base pairs: the field of the
 distance empty, the reason beside it, and what the step locks until a
 distance is typed (below, "The distance of the LD pruning"). This
 changes the step as built in stage 3, and the plan of stage 4 carries
-the change.
+the change. Revised again that day for the owner's decision that the LD
+filter keeps its r² and its distance while it is off, as the PCA's
+pruning does: every switch of the step, of the four filters of the
+variants and of the two thresholds of the individuals, turned off keeps
+the values of its filter in the project, and turned on again gives them
+back (`docs/specs/core/project.md`, "The filters turned off").
 
 The screen spec of the first step of both applications. In stage 2 the
 user picks the variants file, a VCF or a `.nei` file, sets how a VCF is
@@ -283,15 +288,22 @@ set back to those of the file.
 ### The filters of the variants
 
 Each filter is a switch, and, while it is on, its number fields under
-it; turned off, the fields go, and turned on again, they have the value
-of the table below. A filter that is off is not in the project. Each
+it. Turned off, the fields go, and the project keeps the filter with its
+values among the filters off, which nothing calculated reads; turned on
+again, the fields come back with those values, so that a filter turned
+off and on is the filter the user had. The first time a filter is turned
+on, it has the values of the table below. The owner decided so for the
+LD pruning on 28 September 2026, whose distance would otherwise be typed
+again at every turn on; the writers made it the rule of every switch of
+the step the same day (`docs/specs/core/project.md`, "The filters
+turned off"). Each
 field holds the number popnei is given, as typed, and not converted
 from another number (`docs/specs/worker/protocol.md`): every filter keeps
 what is at most its threshold, as popnei's do. The filters count over
 every individual of the file, whatever the filters of the individuals,
 which come after them (`docs/architecture.md`, section 2).
 
-| switch | its fields | turned on at | popnei |
+| switch | its fields | turned on the first time at | popnei |
 |---|---|---|---|
 | Filter the variants by missing data | Maximum proportion of missing genotypes, from 0 to 1 | 0.1, and on in a new project | `filterByMissingData(maxAllowedMissingRate)` |
 | Filter the variants by observed heterozygosity | Maximum observed heterozygosity, from 0 to 1 | 0.5 (**Open 1**) | `filterByObsHet(maxAllowedObsHet)` |
@@ -346,18 +358,20 @@ popnei's doc comment of the filters, which the owner had left so on 26
 September 2026 (`docs/specs/stage-3-open-points.md`, point F). The r²
 still starts at 0.3.
 
-So the switch turned on sends `setVariantFilter` of `{ kind: "ld",
-maxAllowedR2: 0.3, maxDist: null }`: the filter is in the project with
-no distance, and the field of the distance is empty. It is given `NaN`
+So the switch turned on for the first time sends `setVariantFilter` of
+`{ kind: "ld", maxAllowedR2: 0.3, maxDist: null }`: the filter is in
+the project with no distance, and the field of the distance is empty. It is given `NaN`
 for the `null` distance, which React Aria's `NumberField` shows as
 empty, and not `undefined`, which would let it keep a number the project
 no longer has after an Undo, as the PCA's field is. The distance typed
 is a second command, "the LD pruning changed", and an Undo of it gives
 back the empty field. The r² can be changed while the distance is
-empty. Turned off, the filter leaves the project, as every filter of
-the step does, and turned on again it starts with no distance, where
-the PCA's pruning keeps the distance typed, since its option stays in
-the project while it is off.
+empty. Turned off, the filter keeps its r² and its distance, typed or
+still empty, as the PCA's pruning keeps its own, and turned on again it
+has them back, so that a distance once typed is not asked for again.
+The owner decided it on 28 September 2026; the option not taken, the
+filter out of the project while off and starting again with no
+distance, made the user type the distance at every turn on.
 
 While the distance is empty, popnei cannot be given the filter, and
 `variantFilterNeeds` of `docs/specs/core/project.md` gives its reason,
@@ -741,9 +755,10 @@ Once they are calculated, its two histograms are drawn beside the two
 thresholds, below, and its table and its download after them.
 
 **The two thresholds.** As the filters of the variants, a switch and a
-number field, with the refusals above:
+number field, with the refusals above, and the threshold kept while the
+switch is off:
 
-| switch | its field | turned on at |
+| switch | its field | turned on the first time at |
 |---|---|---|
 | Filter the individuals by missing data | Maximum proportion of missing genotypes of an individual, from 0 to 1 | 0.1, plink's default for `--mind`, as the owner decided on 26 September 2026 |
 | Filter the individuals by observed heterozygosity | Maximum observed heterozygosity of an individual, from 0 to 1 | 0.5 (**Open 1**) |
@@ -926,11 +941,11 @@ popnei would refuse, with the list it is about; and `writtenName`,
 | a file picked or dropped | `loadVariants(p, { fileId, name, size, format, readOptions })`, `readOptions` `{ ploidy, onlyPassed }` for a VCF and `null` for a `.nei` file | "a new variants file was loaded" |
 | Read ‹name› again | `loadVariants` of the same `File` under a new load id, with the options of the step | "the variants file was read again with other options" |
 | a threshold of the variants committed, on Enter, an arrow key or when the field loses the focus | `setVariantFilter(p, filter)`, the filter of its kind with its fields | "the filter of the variants by missing data changed", "the filter of the variants by observed heterozygosity changed", "the MAF filter changed", "the LD pruning changed", with the names of `docs/specs/analyses/filterCounts.md` |
-| its switch turned off | `removeVariantFilter(p, kind)` | "the filter of the variants by missing data was turned off", and so for each |
-| its switch turned on | `setVariantFilter(p, filter)`, with the values of the table of the filters, the LD pruning with `maxDist` `null` | "the filter of the variants by missing data was turned on", and so for each |
+| its switch turned off | `turnOffVariantFilter(p, kind)`, which keeps the filter in `filtersOff` | "the filter of the variants by missing data was turned off", and so for each |
+| its switch turned on | `setVariantFilter(p, filter)`, with the filter of its kind in `filtersOff`, or, when none is kept, the values of the table of the filters, the LD pruning with `maxDist` `null` | "the filter of the variants by missing data was turned on", and so for each |
 | Apply the list to keep, or to remove | `setIndividualFilter(p, { kind: "keep", individuals })`, or `removeIndividualFilter(p, "keep")` for no name | "the list of individuals to keep changed", "the list of individuals to remove changed" |
 | Clear the list | `removeIndividualFilter(p, kind)` | "the list of individuals to keep was cleared", "… to remove was cleared" |
-| a threshold of the individuals committed, turned off, turned on | `setIndividualFilter` or `removeIndividualFilter` of `missing_data` or `obs_het` | "the filter of individuals by missing data changed", "… was turned off", "… was turned on"; "the filter of individuals by observed heterozygosity changed", and so on |
+| a threshold of the individuals committed, turned off, turned on | `setIndividualFilter`, or `turnOffIndividualFilter`, of `missing_data` or `obs_het`; turned on, with the threshold of its kind in `individualFiltersOff`, or, when none is kept, the value of the table of the thresholds | "the filter of individuals by missing data changed", "… was turned off", "… was turned on"; "the filter of individuals by observed heterozygosity changed", and so on |
 | Calculate, of a check; Count | `startAnalysis(store, id)` of `src/ui/runs.ts`, with `variantChecks`, `individualChecks` or `filterCounts` | — |
 | Stop, of a check or the Count | `store.cancelRun(id)` | — |
 | Write the filtered variants | `startWriting(store, "nei")` of `src/ui/runs.ts` | — |
@@ -1238,11 +1253,17 @@ release `js-v0.1.0-dev.2` gave in node on 26 September 2026:
   nothing; 0
   typed, and "0 is less than 1; the distance is still to be typed.";
   50000 typed, the reason gone and the Count giving a count beside the
-  LD pruning; an Undo giving back the empty field and the lock; the
-  filter turned off and on again, the field empty. In node,
-  `turnedOnFilter("ld")` of `src/ui/steps/variants/commands.ts` gives
-  `{ kind: "ld", maxAllowedR2: 0.3, maxDist: null }`, and the constant
-  of 10000 goes;
+  LD pruning; an Undo giving back the empty field and the lock, and a
+  Redo 50000; the filter turned off and on again, the field holding
+  50000 and the count back beside the filter with no calculation; in a
+  new project, the filter turned on, off and on again before a distance
+  is typed, the field empty and the lock back; the threshold of the
+  individuals by observed heterozygosity at 0.38, turned off and on, at
+  0.38. In node,
+  `turnedOnFilter(p, "ld")` of `src/ui/steps/variants/commands.ts` gives
+  `{ kind: "ld", maxAllowedR2: 0.3, maxDist: null }` for a project that
+  has never had the filter and the filter of `filtersOff` for one that
+  keeps it, and the constant of 10000 goes;
 - with the thresholds at 0.03 and 0.38, Write, Save, and the download
   read: `panel.filtered.nei`, 170,042 bytes, and 170,122 from stage 4,
   with popnei's `js-v0.1.0-dev.3` (`writeVariants.md`);
@@ -1342,7 +1363,9 @@ which the owner answered in part on 26 September 2026:
    0.5. popnei gives no default for any of them. Point F has the
    options. The distance of the LD pruning, which started at 10000 base
    pairs, starts with none since the owner's decision of 28 September
-   2026 (above, "The distance of the LD pruning").
+   2026 (above, "The distance of the LD pruning"). Since the owner's
+   decision of the same day that a filter turned off keeps its values,
+   these are the values of the first time a filter is turned on.
 
 The other points of stage 3 that this spec meets were decided by the
 owner on 26 September 2026, and are written above as decided: point C,

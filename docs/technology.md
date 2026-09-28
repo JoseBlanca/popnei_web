@@ -345,7 +345,10 @@ The trial showed that they build and what they weigh, not yet that they
 read the files of real users right.
 
 In stage 4 xlsx_rs only reads, so it holds calamine alone, and
-rust_xlsxwriter joins it with the report, in stage 6. Measured on
+rust_xlsxwriter joins it with the report, in stage 6. The owner
+approved calamine 0.36.1 as a dependency of xlsx_rs, and
+rust_xlsxwriter 0.99.1 for its tests until then, on 28 September 2026
+(`docs/architecture.md`, section 13, point 12). Measured on
 27 September 2026 in a crate of trial with calamine 0.36.1 alone, built
 with the profile above and `wasm-bindgen --target web`, with Rust 1.98.0
 on the owner's Mac, and
@@ -392,7 +395,9 @@ integration. What xlsx_rs costs instead:
 - **A release for every change the site is to see**: a tag, the package
   built and packed by hand as popnei's are, about ten minutes by the
   estimate of `docs/specs/site.md`, and a new URL in the site's
-  `package.json`. While the two are changed together, the site links the
+  `package.json`. The owner decided on 28 September 2026 that the
+  releases are made by hand, and later by a workflow shared with
+  popnei. While the two are changed together, the site links the
   local build, never committed.
 - **A release that nothing ties to its source** while releases are made
   by hand: the lockfile's hash says the file of a URL never changed, not
@@ -594,8 +599,9 @@ uses the local build of popnei, with `npm link` or
 committed, and what the site is built from, is always a release.
 
 xlsx_rs is taken in the same way, from its own releases, on tags
-`js-v…` of its repository, assumed to be `github.com/JoseBlanca/xlsx_rs`
-until the owner confirms it: `"xlsx_rs":
+`js-v…` of its repository, `github.com/JoseBlanca/xlsx_rs`, under the
+owner's account and public as popnei's is, as the owner decided on 28
+September 2026 (`docs/architecture.md`, section 13, point 11): `"xlsx_rs":
 "https://github.com/JoseBlanca/xlsx_rs/releases/download/js-v0.1.0-dev.1/xlsx_rs-0.1.0.tgz"`
 for the first, a new tag and a new URL for each newer one. While the two
 are changed together, the local build is packed with `npm pack` in
@@ -639,6 +645,8 @@ worker, is in `.claude/skills/coding/typescript.md`, `css.md` and
    owner on 24 September 2026: a crate of this repository,
    `crates/files/`, built by the site's own build; settled again on 28
    September 2026: xlsx_rs, a project of its own, released as popnei is
-   and installed from its release (sections 2 and 5).
+   and installed from its release (sections 2 and 5); its releases made
+   by hand, as popnei's are, and a workflow shared with popnei later,
+   also decided by the owner that day.
 3. The threshold and the method of thinning the points of the Manhattan
    plot.

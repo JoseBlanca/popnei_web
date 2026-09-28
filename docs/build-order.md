@@ -212,10 +212,12 @@ order does not wait for what exists:
   of this stage; the PCA, the Kosman distances and the LD pruning were
   in `js-v0.1.0-dev.2` already. The PCoA comes after the PCA it shares
   its panel with.
-- **Needs of xlsx_rs:** its repository, which the owner creates, and its
-  first release, `js-v0.1.0-dev.1`, which reads the first sheet of an
-  xlsx into cells (`docs/specs/worker/files.md`), with calamine approved
-  by the owner (`docs/architecture.md`, section 13, points 11 to 13). The
+- **Needs of xlsx_rs:** its repository, `github.com/JoseBlanca/xlsx_rs`,
+  which the owner creates, and its first release, `js-v0.1.0-dev.1`,
+  made by hand, which reads the first sheet of an xlsx into cells with
+  calamine 0.36.1 (`docs/specs/worker/files.md`); the owner decided the
+  repository and the releases, and approved calamine, on 28 September
+  2026 (`docs/architecture.md`, section 13, points 11 to 13). The
   xlsx comes last in the stage, as the PCoA did while it waited for
   popnei: the Individuals step, its types and its populations, and the
   PCA and the PCoA, are built first with CSV files, and the xlsx joins

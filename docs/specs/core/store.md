@@ -34,7 +34,11 @@ variants, and the writing, until the distance is typed, and the jobs
 take their filters from `jobFilters`; and again that day after the
 review of that change: it locks what reads the filters of individuals
 too, whose list needs the statistics it locks, and a property draws the
-filter with no distance. The store is the one object of core that
+filter with no distance; and again that day for the owner's decision
+that a filter turned off keeps its values in the project, in
+`filtersOff` or `individualFiltersOff` of `docs/specs/core/project.md`:
+such a filter locks nothing and is in no request, and turning it on
+again finds the results of before in the cache. The store is the one object of core that
 changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.
@@ -1320,7 +1324,15 @@ whose file is a text.
   distance is typed; an analysis that reads no filter is `ready`; and
   `startRun` and `startWrite` of the locked ones give `null` and send
   nothing. A result `done` before the filter was turned on is in the
-  notice of that command, with its Undo, and `locked` after it.
+  notice of that command, with its Undo, and `locked` after it. Turned
+  off, the filter is kept in `filtersOff` with its `maxDist` `null`, and
+  every analysis is as in a project with no LD filter, the result of
+  before `done` again from the cache.
+- **A filter turned off and on again**, the LD filter at r² 0.2 within
+  50000 with the diversity `done`: turned off, the diversity is in the
+  notice of that command, and no request carries the filter; turned on
+  again with the filter kept, the diversity is `done` with the same
+  result and no request sent, since its key is the one of before.
 - **The key whatever the lock, and the lock from the cache**: with the
   analysis done under a threshold, a command that changes the filter of
   the variants, a result of the other analysis whose put drops the
@@ -1413,12 +1425,14 @@ whose file is a text.
   statistics under the key that project gives them; a write whose result
   arrives when the project gives another key leaves no file in the
   state; and, with the commands drawing an LD filter with no distance
-  (`docs/specs/core/project.md`, "How it is verified") and the
+  and filters turned off, an LD filter with no distance among these
+  (`docs/specs/core/project.md`, "How it is verified"), and the
   definitions drawing any `filtersRead`, no request, the jobs of the
   statistics and of the write among them, carries an LD filter without
-  its distance, no `startRun` or `startWrite` throws, and every
-  definition that reads either list of filters, and the writing, is
-  `locked` while the project holds one.
+  its distance or a filter turned off, no `startRun` or `startWrite`
+  throws, and every definition that reads either list of filters, and
+  the writing, is `locked` while the filters on hold an LD filter with
+  no distance, and only then for that reason.
 
 The tests in the browser, of the walking skeleton, check the same through
 the screens, since core reaches them through the store

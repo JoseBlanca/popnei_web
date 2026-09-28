@@ -14,7 +14,12 @@ calamine, and the specs named with each were revised the same day. On
 `js-v0.1.0-dev.3`, which has the PCoA (below, "popnei's release
 `js-v0.1.0-dev.3`"), and the owner decided point 16, the LD filter of
 the Variants step turned on with no distance, which changes the code of
-stage 3.
+stage 3. Later that day the owner gave four more answers, which the
+specs now say as decided: the LD filter keeps its r² and its distance
+while it is off (point 16); Lingoes' correction of the PCoA has no
+switch; the repository of xlsx_rs and how it makes its releases; and
+calamine, approved (below, "Decided by the owner on 28 September
+2026").
 
 The specs are, new: `docs/specs/analyses/pca.md`, the analysis and its
 panel; `docs/specs/charts/scatter.md`, the 2D plot, and `pca3d.md`, the
@@ -118,7 +123,9 @@ and the Python script that the project gives, which calculates the same
 results with popnei in Python, has no lines for a PCA that cannot run. The LD filter of
 the Variants step, which starts at an r² of 0.3 when the user turns it
 on, is a different thing, and this point did not change it; its
-distance, 10,000 base pairs in stage 3, starts empty since point 16.
+distance, 10,000 base pairs in stage 3, starts empty since point 16,
+and is kept while the filter is off, as the PCA's is, since the owner's
+decision of the same day.
 Specs: `pca.md`, its options, "Why it cannot run", the panel
 and the help; `runner.md`, whose test types the distance;
 `docs/functionality.md`, section 5 and open point 4.
@@ -156,12 +163,16 @@ development, with the six packages they bring, which never reach the
 site, one of them 7.5 MB unpacked; the modules of D3 the scatter uses
 that stage 3 did not, `d3-shape`, `d3-path` and `d3-scale-chromatic`,
 with their types; and Rust 1.98.0 and `wasm-bindgen-cli` 0.2.128 on
-every machine that builds the site, CI among them. calamine is not
-approved yet (below, "Asked of the owner to make or approve").
+every machine that builds the site, CI among them. calamine was not
+approved that day, and was approved on 28 September 2026 (below,
+"calamine and rust_xlsxwriter in xlsx_rs"). `d3-delaunay`, which
+`.claude/skills/coding/charts.md` listed for finding the point under the
+pointer, is not needed: a plain loop over 50,000 points took 0.027 ms
+in node.
 
 ## Decided by the owner on 28 September 2026
 
-### 16. The LD filter of the Variants step starts with no distance
+### 16. The LD filter of the Variants step starts with no distance, and keeps it while off
 
 In stage 3 the LD filter of the dataset, turned on in the Variants
 step, started at an r² of 0.3 within 10,000 base pairs, the example of
@@ -206,9 +217,7 @@ off. A project file saved before the distance is typed keeps the
 filter, written with `"maxDist": null`; the format of the project file
 stays at its version 1, which the owner keeps until the first release of
 the application, and the project opens again with the field empty and
-the same lock. Turned off, the filter leaves the project as the others
-do, and turned on again starts empty, where the PCA's pruning keeps the
-distance typed.
+the same lock.
 
 Not taken: the switch on and the field empty as the step's own state,
 with no command until a distance is typed. The step would then show a
@@ -224,20 +233,100 @@ script of stage 6, which does with popnei in Python what the project
 does, has no line for a filter with no distance; stage 6 says what it
 writes for such a project.
 
+Decided by the owner later the same day: the filter keeps its r² and its
+distance while it is off, as the PCA's pruning does, so that turning it
+on again gives back what was typed, and a distance once typed is not
+asked for again. Not taken: the filter out of the project while off,
+starting again with no distance at every turn on, as the specs had it
+until then. The writers made it the rule of every switch of the
+Variants step, the four filters of the variants, by missing data, by
+observed heterozygosity, by MAF and by LD, and the two thresholds of
+the individuals, by missing data and by observed heterozygosity, so that the switches of one step behave alike; the
+two lists of individuals have no switch, and Clear keeps nothing.
+
+What a user meets: a filter turned off and on again is the filter they
+had, its fields holding what they typed; the first time a filter is
+turned on, it has the values of the table of the Variants step, the LD
+filter with an empty distance. The results of before come back from the
+cache while it holds them, since the keys are those of before.
+
+Decided by the writers, the same day, the form: the filters on stay in
+the project's `filters` and `individualFilters`, and a filter turned
+off moves, with its values, to two new lists, `filtersOff` and
+`individualFiltersOff`, in the same fixed order. Turning a filter off
+or on is one command and one step of Undo. The values kept while off
+are in no key, no job and no lock, since no result is calculated from
+them, and an LD filter turned off with no distance locks nothing. The
+project file writes the two lists, still in version 1, and a file saved
+without them opens with nothing kept. Not taken: a field `on` in every
+filter, the form of the PCA's option `ldPruning`. The code of stage 3
+reads `filters` and `individualFilters` as the filters applied in at
+least five places, the keys, the individuals kept, the summary line,
+the words of the step and the writing; with a field `on` each would
+have to skip the filters off, and one that missed it would apply or
+count a filter the user had turned off, with nothing on the screen to
+show it.
+
 This changes the code of stage 3, which is built: `LD_DIST_TURNED_ON`,
 the 10,000 base pairs the switch starts at in
 `src/ui/steps/variants/commands.ts`, which the plan of stage 4 removes
-with its test, so that `turnedOnFilter("ld")` gives the filter with
-`maxDist` `null`; the type of the filters in the project, the locks of
-the store, the jobs of the Count, the statistics, the writing and the
-diversity, the field of the distance, and the validation of the
-project file. The plan of stage 4 carries the change.
-Specs: `steps/variants.md`, "The distance of the LD pruning";
-`project.md`, `variantFilterNeeds`, the reason of the lock, and
-`jobFilters`; `store.md`; `keys.md`; `projectFile.md`; `protocol.md`;
+with its test, so that `turnedOnFilter(p, "ld")` gives the filter kept
+while off, or, when none is, the filter with `maxDist` `null`; the type
+of the filters in the project and its two lists of the filters off,
+with `turnOffVariantFilter` and `turnOffIndividualFilter` in the place
+of the commands that removed a filter turned off; the locks of the
+store, the jobs of the Count, the statistics, the writing and the
+diversity, the field of the distance, and the validation and the
+fixtures of the project file. The plan of stage 4 carries the change.
+Specs: `steps/variants.md`, "The distance of the LD pruning" and "The
+filters of the variants";
+`project.md`, "The filters turned off", `variantFilterNeeds`, the reason
+of the lock, and `jobFilters`; `store.md`; `keys.md`; `projectFile.md`;
+`protocol.md`; `docs/specs/stage-3-open-points.md`, point F;
 `pca.md`; `filterCounts.md`, `individualChecks.md`, `writeVariants.md`
 and `diversity.md`; `shell.md`; `docs/functionality.md`, sections 3 and
-5 and open point 4; `docs/architecture.md`, sections 1, 2 and 4.
+5 and open point 4; `docs/architecture.md`, sections 1, 2, 3 and 4.
+
+### Lingoes' correction has no switch
+
+The PCoA always asks popnei for Lingoes' correction, and the warning
+`lingoesCorrection` gives its size, as the owner decided. Two options
+were not taken: a switch that turns the correction off, which would
+only make popnei refuse, since its release `js-v0.1.0-dev.3` refuses the
+PCoA without the correction whenever an eigenvalue is negative, which
+on `panel.nei`, with the PCA's filters and its pruning at r² 0.1 within
+50,000 base pairs, is 61 of 200; and asking popnei for a PCoA of the
+distances uncorrected, which popnei does not make. What a user meets:
+the panel has no control of the correction, and its help says that the
+correction cannot be turned off. Spec: `pca.md`, "What it does", its
+options, `parseOptions`, the panel and the help.
+
+### The repository of xlsx_rs and its releases
+
+xlsx_rs is the project of its own that reads an xlsx for the
+application (below, "The reader of xlsx in a project of its own"). Its
+repository is `github.com/JoseBlanca/xlsx_rs`, public,
+under the owner's account as popnei's is, so that `npm ci` downloads
+its releases with no token. Its releases are made by hand, as popnei's
+are, a tag `js-v0.1.0-dev.1` and the packed package attached to a
+pre-release, and later by a workflow of GitHub Actions shared with
+popnei. Not taken: a workflow for xlsx_rs first, hours of work, which
+would have tied every release to its source from the first; until the
+shared workflow, nothing checks that a release was built from its tag,
+as nothing checks it for popnei's. The repository did not exist on 28
+September 2026, and the owner creates it (below, "Asked of the owner to
+make or approve"). `docs/architecture.md`, section 13, points 11 and
+13; `docs/technology.md`, sections 2, 5 and 7; `files.md`; `site.md`;
+`docs/build-order.md`.
+
+### calamine and rust_xlsxwriter in xlsx_rs
+
+Approved by the owner: calamine 0.36.1 as a dependency of xlsx_rs, 0.30
+MB gzipped, downloaded the first time an xlsx is read, and
+rust_xlsxwriter 0.99.1 for its tests alone until the writer of stage 6.
+The xlsx of stage 4 now waits only for the repository and the first
+release of xlsx_rs. `docs/architecture.md`, section 13, point 12;
+`docs/technology.md`, section 2; `files.md`.
 
 ## Recommended on 27 September 2026, not yet answered
 
@@ -573,7 +662,8 @@ crates.io and built by the site, which keeps those costs and adds the
 wait of a release, under another name, since `xlsx-rs`, which crates.io
 takes as the same, belongs to another author. `docs/architecture.md`,
 section 6, "The files wasm, the package of xlsx_rs", has the comparison;
-section 13, points 11 to 14, the questions it opens, which are below.
+section 13, points 11 to 14, the questions it opens: the owner decided
+11 to 13 on 28 September 2026 (above), and 14 is below.
 Revised with it: `files.md`, `docs/specs/worker/individuals.md` and
 `site.md`; `docs/technology.md`, sections 2, 3, 4, 5 and 7, and
 `docs/build-order.md`, stage 4; and the skills `coding` (`SKILL.md`,
@@ -582,16 +672,10 @@ Revised with it: `files.md`, `docs/specs/worker/individuals.md` and
 
 ## Asked of the owner to make or approve
 
-- **The repository of xlsx_rs**: to confirm its name and its place,
-  `github.com/JoseBlanca/xlsx_rs`, public as popnei is, which the specs
-  assume, and to create it. The name was free on npm on 28 September
-  2026. No session of popnei_web creates it (`docs/architecture.md`,
+- **The repository of xlsx_rs**, `github.com/JoseBlanca/xlsx_rs`, to
+  create, as decided on 28 September 2026 (above). It did not exist that
+  day, and no session of popnei_web creates it (`docs/architecture.md`,
   section 13, point 11).
-- **How xlsx_rs makes its releases.** Recommended: by hand, as popnei
-  makes its own, a tag `js-v0.1.0-dev.1` and the packed package attached
-  to a pre-release, and a workflow for both projects when popnei has
-  one. Not taken: a workflow for xlsx_rs first, hours of work
-  (`docs/architecture.md`, section 13, point 13).
 - **Where the zip of the report is made**, for stage 6. Recommended: in
   xlsx_rs, whose writer of xlsx brings the `zip` crate already. Not
   taken: in TypeScript, or with a library of JavaScript, a new
@@ -608,17 +692,6 @@ Revised with it: `files.md`, `docs/specs/worker/individuals.md` and
   Three of them, `excel_en.xlsx`, `encrypted.xlsx` and the sheet of
   10,000 rows a test of xlsx_rs writes, are copied into `e2e/fixtures/`
   of this repository for the flow of the Individuals step.
-- **calamine 0.36.1 in xlsx_rs**, 0.30 MB gzipped, downloaded the
-  first time an xlsx is read, and `rust_xlsxwriter` 0.99.1 for its tests
-  alone. Not approved yet: on 27 September 2026 the owner was weighing
-  making the reader of xlsx a project of its own, which the owner decided
-  on 28 September 2026 (above). It is the owner's to approve, now as a
-  dependency of xlsx_rs; its first release waits for it
-  (`docs/architecture.md`, section 13, point 12). The other new
-  dependencies were approved on 27 September 2026 (above). `d3-delaunay`, which
-  `.claude/skills/coding/charts.md` listed for finding the point under the
-  pointer, is not needed: a plain loop over 50,000 points took 0.027 ms
-  in node.
 
 ## Asked of popnei
 

@@ -39,7 +39,10 @@ tell; and on 28 September 2026 for the owner's decision that the LD
 filter of the variants starts with no distance: the Variants step is
 at "Problem" while it has none, with the reason of `variantFilterNeeds`;
 and again that day after the review of that change: the summary line
-counts that filter among the filters and says nothing of its distance.
+counts that filter among the filters and says nothing of its distance;
+and again that day for the owner's decision that a filter turned off
+keeps its values in the project: the summary line counts the filters on
+alone.
 The screen
 spec of what surrounds every step of the population genetics
 application, first built in the walking skeleton of stage 2 (`docs/build-order.md`),
@@ -262,7 +265,7 @@ keep (node, 26 September 2026, popnei `js-v0.1.0-dev.2`). It is text, and is not
 | | counted, and no filter of the variants | "1,200 variants", `numVars` of the source |
 | | counted, a filter of the variants, and no counts of the filters as they are | "1,200 variants before the filters" |
 | | the counts of the filters as they are, `filterCounts` done | "1,128 of 1,200 variants kept": `passStats.numVars` of the counts, of the `numVars` of the source |
-| the filters | | "no filter", "1 filter", "2 filters": the filters of the variants and of the individuals |
+| the filters | | "no filter", "1 filter", "2 filters": the filters of the variants and of the individuals that are on, `filters` and `individualFilters`; not those the project keeps while they are off |
 | the metadata file | none | "no metadata file: one population", from stage 4, whatever the grouping |
 | | being read | "reading pops.csv" |
 | | named by an opened project and not read, `notGiven` | "pops.csv not loaded", from stage 4 |
@@ -954,7 +957,8 @@ with the analyses of `TEST_DEFS` of `src/core/testSupport.ts`:
   individuals · 1,200 variants before the filters · 2 filters · 3
   populations by pop";
   with the thresholds alone, no filter of the variants, "… · 1,200
-  variants · 2 filters · …"; with the thresholds at 0.03 and 0.38 and
+  variants · 2 filters · …"; the missing data filter on and the LD
+  filter and a threshold turned off, "… · 1 filter · …"; with the thresholds at 0.03 and 0.38 and
   a list to remove that holds every individual of p1, "… · 2 of 3
   populations by pop"; a case for each row of its table.
 - **`openQuestion`**: with calculations, with the writing, with both,

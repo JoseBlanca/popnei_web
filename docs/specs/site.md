@@ -240,9 +240,10 @@ of xlsx_rs by the URL of its first release, as popnei's is named,
 `"xlsx_rs":
 "https://github.com/JoseBlanca/xlsx_rs/releases/download/js-v0.1.0-dev.1/xlsx_rs-0.1.0.tgz"`,
 with its hash in `package-lock.json` (`docs/technology.md`, section 5).
-It waits for that release, which xlsx_rs makes, and for the owner to
-confirm the name and the place of its repository
-(`docs/architecture.md`, section 13, points 11 to 13); meanwhile the
+It waits for that release, which xlsx_rs makes by hand, and for its
+repository, `github.com/JoseBlanca/xlsx_rs`, which the owner creates,
+both decided by the owner on 28 September 2026 (`docs/architecture.md`,
+section 13, points 11 to 13); meanwhile the
 implementer installs the local build of xlsx_rs, packed, with `npm
 install --no-save` and its absolute path, as section 6 of the
 architecture says, and nothing of it is committed.
