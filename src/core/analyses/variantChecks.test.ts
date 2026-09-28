@@ -308,13 +308,13 @@ describe("VS3 D1 the histograms of the variants: the rest of the module", () => 
     );
   });
 
-  test("the definition reads no filter, and has no key input, no reason and no option", () => {
+  test("the definition reads the filters of individuals alone, and has no key input, no reason and no option", () => {
     expect(variantChecks.id).toBe("variantChecks");
     expect(variantChecks.app).toEqual(["popgen", "gwas"]);
-    expect(variantChecks.keyVersion).toBe(1);
+    expect(variantChecks.keyVersion).toBe(2);
     expect(variantChecks.filtersRead).toEqual({
       variants: false,
-      individuals: false,
+      individuals: true,
     });
     expect(variantChecks.defaults).toEqual({});
     expect(variantChecks.keyInputs(project())).toBeNull();

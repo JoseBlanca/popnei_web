@@ -676,11 +676,6 @@ export function createStore<J, R, F = never>(
       `createStore was given the analysis of the counts ${JSON.stringify(countsId)}, which no definition has.`,
     );
   }
-  if (countsDef?.filtersRead.individuals === true) {
-    throw defect(
-      `the analysis of the counts ${JSON.stringify(countsDef.id)} reads the filters of individuals, which change no count of the filters of the variants.`,
-    );
-  }
   const memo = createKeyMemo();
   let history = startHistory(freezeProject(config.first), config.maxUndoSteps);
   // The undos, redos and openings so far.

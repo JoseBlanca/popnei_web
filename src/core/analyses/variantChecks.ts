@@ -134,8 +134,8 @@ export const variantChecks: AnalysisDef<Job, JobResult> = Object.freeze({
   id: ID,
   app: Object.freeze(["popgen", "gwas"] as const),
   defaults: Object.freeze({}),
-  keyVersion: 1,
-  filtersRead: Object.freeze({ variants: false, individuals: false }),
+  keyVersion: 2,
+  filtersRead: Object.freeze({ variants: false, individuals: true }),
   parseOptions: parseNoOptions,
   keyInputs,
   needs,
@@ -146,9 +146,9 @@ export const variantChecks: AnalysisDef<Job, JobResult> = Object.freeze({
   script,
 });
 
-/** Nothing beyond the load: it reads no filter, so only a new load, the
-    read options of a VCF, the key version and the version of popnei
-    change its key. */
+/** Nothing beyond the load and the filters of individuals, which
+    `filtersRead` puts in the key: no filter of the variants, which the
+    pass does not have, and no individuals file. */
 function keyInputs(): null {
   return null;
 }

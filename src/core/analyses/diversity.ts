@@ -532,7 +532,7 @@ export const diversity: AnalysisDef<Job, JobResult> = Object.freeze({
   id: ID,
   app: Object.freeze(["popgen"] as const),
   defaults: DIVERSITY_DEFAULTS,
-  keyVersion: 1,
+  keyVersion: 2,
   filtersRead: Object.freeze({ variants: true, individuals: true }),
   parseOptions,
   keyInputs,

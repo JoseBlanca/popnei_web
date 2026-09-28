@@ -95,8 +95,8 @@ export const filterCounts: AnalysisDef<Job, JobResult> = Object.freeze({
   id: ID,
   app: Object.freeze(["popgen", "gwas"] as const),
   defaults: Object.freeze({}),
-  keyVersion: 1,
-  filtersRead: Object.freeze({ variants: true, individuals: false }),
+  keyVersion: 2,
+  filtersRead: Object.freeze({ variants: true, individuals: true }),
   parseOptions: parseNoOptions,
   keyInputs,
   needs,
@@ -127,9 +127,10 @@ export function refusalText(message: string, p: Project): string {
   });
 }
 
-/** Nothing beyond the load and the filters of the variants: the filter of
-    individuals comes after every filter of the variants, and changes none
-    of their counts. */
+/** Nothing beyond the load and the two lists of filters, which
+    `filtersRead` puts in the key: the filters of the variants, and those
+    of individuals, whose list comes before them and changes what they
+    count over. */
 function keyInputs(): null {
   return null;
 }

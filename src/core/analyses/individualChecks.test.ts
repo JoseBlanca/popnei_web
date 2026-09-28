@@ -305,12 +305,12 @@ describe("VS3 D1 the statistics of each individual: the rest of the module", () 
     expect(individualChecks.checkNumbers(r)).toEqual([4, 1, null]);
   });
 
-  test("the definition reads the filters of the variants alone, and has no key input, no reason and no option", () => {
+  test("the definition reads no filter, and has no key input, no reason and no option", () => {
     expect(individualChecks.id).toBe("individualChecks");
     expect(individualChecks.app).toEqual(["popgen", "gwas"]);
-    expect(individualChecks.keyVersion).toBe(1);
+    expect(individualChecks.keyVersion).toBe(2);
     expect(individualChecks.filtersRead).toEqual({
-      variants: true,
+      variants: false,
       individuals: false,
     });
     expect(individualChecks.defaults).toEqual({});

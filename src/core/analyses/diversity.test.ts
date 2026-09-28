@@ -978,9 +978,10 @@ describe("WS5 D2 the key", () => {
     expect(keyOfDiversity(referenced)).toBe(baseKey);
   });
 
-  test("the key version, or the version of popnei, changes the key", () => {
-    const raised: KeyedDef = { ...diversity, keyVersion: 2 };
-    expect(keyOfDiversity(base, "0.1.0", raised)).not.toBe(baseKey);
+  test("the key version, 2, or the version of popnei, changes the key", () => {
+    expect(diversity.keyVersion).toBe(2);
+    const earlier: KeyedDef = { ...diversity, keyVersion: 1 };
+    expect(keyOfDiversity(base, "0.1.0", earlier)).not.toBe(baseKey);
     expect(keyOfDiversity(base, "0.2.0")).not.toBe(baseKey);
   });
 

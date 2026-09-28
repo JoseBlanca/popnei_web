@@ -196,8 +196,8 @@ export const individualChecks: AnalysisDef<Job, JobResult> = Object.freeze({
   id: ID,
   app: Object.freeze(["popgen", "gwas"] as const),
   defaults: Object.freeze({}),
-  keyVersion: 1,
-  filtersRead: Object.freeze({ variants: true, individuals: false }),
+  keyVersion: 2,
+  filtersRead: Object.freeze({ variants: false, individuals: false }),
   parseOptions: parseNoOptions,
   keyInputs,
   needs,
@@ -208,9 +208,10 @@ export const individualChecks: AnalysisDef<Job, JobResult> = Object.freeze({
   script,
 });
 
-/** Nothing beyond the load and the filters of the variants: not the
-    individuals file, which the numbers do not read, nor the filters of
-    individuals, whose thresholds are moved while this result is read. */
+/** Nothing beyond the load: not the filters of the variants, which the
+    pass does not have; not the individuals file, which the numbers do not
+    read; nor the filters of individuals, whose thresholds are moved while
+    this result is read. */
 function keyInputs(): null {
   return null;
 }

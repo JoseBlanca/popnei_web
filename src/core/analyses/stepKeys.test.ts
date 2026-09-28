@@ -2,11 +2,14 @@
  * The tests of the keys of the three analyses of the Variants step, from
  * the table "What goes into its key" of
  * docs/specs/analyses/individualChecks.md and the "How it is verified" of
- * variantChecks.md and filterCounts.md: for each row, two projects that
- * differ in it, and `keyOf` equal or not as the row says. A key of the
- * statistics of each individual that missed a filter of the variants
- * would show the statistics of other filters as current, and every
- * analysis after a threshold would run on the wrong individuals. Each
+ * variantChecks.md and filterCounts.md, as they read the filters from 28
+ * September 2026, the filters of individuals first: for each row, two
+ * projects that differ in it, and `keyOf` equal or not as the row says.
+ * The statistics of each individual read no filter; the histograms of the
+ * variants read the filters of individuals alone, and a key that missed
+ * one would show the histograms of other individuals as current; the
+ * counts read both, since the filters of the variants count over the
+ * individuals kept. Each
  * `keyInputs` is also given the empty project and a project whose reads
  * are pending, as docs/specs/core/keys.md asks of every analysis.
  */
@@ -225,7 +228,7 @@ function pendingUnreadable(): Project {
   );
 }
 
-describe("VS3 D2 the key of the statistics of each individual", () => {
+describe("IP2 D2 the key of the statistics of each individual", () => {
   const base = project();
   const baseKey = keyFor(individualChecks, base);
 
@@ -240,12 +243,10 @@ describe("VS3 D2 the key of the statistics of each individual", () => {
     );
   });
 
-  test("a filter of the variants added or removed, or its threshold, changes the key", () => {
-    const keys = [
-      baseKey,
-      ...variantFilterChanges().map((p) => keyFor(individualChecks, p)),
-    ];
-    expect(new Set(keys).size).toBe(keys.length);
+  test("a filter of the variants added or removed, or its threshold, leaves the key the same", () => {
+    for (const p of variantFilterChanges()) {
+      expect(keyFor(individualChecks, p)).toBe(baseKey);
+    }
   });
 
   test("a filter of individuals, a list or a threshold, leaves the key the same", () => {
@@ -260,10 +261,10 @@ describe("VS3 D2 the key of the statistics of each individual", () => {
     }
   });
 
-  test("the key version, 1, or the version of popnei, changes the key", () => {
-    expect(individualChecks.keyVersion).toBe(1);
-    const raised: KeyedDef = { ...individualChecks, keyVersion: 2 };
-    expect(keyFor(raised, base)).not.toBe(baseKey);
+  test("the key version, 2, or the version of popnei, changes the key", () => {
+    expect(individualChecks.keyVersion).toBe(2);
+    const earlier: KeyedDef = { ...individualChecks, keyVersion: 1 };
+    expect(keyFor(earlier, base)).not.toBe(baseKey);
     expect(keyFor(individualChecks, base, "0.2.0")).not.toBe(baseKey);
   });
 
@@ -277,22 +278,31 @@ describe("VS3 D2 the key of the statistics of each individual", () => {
   });
 });
 
-describe("VS3 D2 the key of the histograms of the variants", () => {
+describe("IP2 D2 the key of the histograms of the variants", () => {
   const base = project();
   const baseKey = keyFor(variantChecks, base);
 
-  test("no filter, of the variants or of the individuals, and no individuals file changes the key", () => {
-    const others = [
-      ...variantFilterChanges(),
-      ...individualFilterChanges(),
-      ...individualsFileChanges(),
-    ];
-    for (const p of others) {
+  test("a filter of the variants added or removed, or its threshold, leaves the key the same", () => {
+    for (const p of variantFilterChanges()) {
       expect(keyFor(variantChecks, p)).toBe(baseKey);
     }
   });
 
-  test("a new load, the read options of a VCF, the key version, 1, and the version of popnei change the key", () => {
+  test("a filter of individuals, a list or a threshold, changes the key", () => {
+    const keys = [
+      baseKey,
+      ...individualFilterChanges().map((p) => keyFor(variantChecks, p)),
+    ];
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  test("the individuals file, or the column of the populations, leaves the key the same", () => {
+    for (const p of individualsFileChanges()) {
+      expect(keyFor(variantChecks, p)).toBe(baseKey);
+    }
+  });
+
+  test("a new load, the read options of a VCF, the key version, 2, and the version of popnei change the key", () => {
     const vcf = asVcf(base, 2, false);
     expect(keyFor(variantChecks, reloaded(base))).not.toBe(baseKey);
     expect(keyFor(variantChecks, asVcf(base, 4, false))).not.toBe(
@@ -301,9 +311,9 @@ describe("VS3 D2 the key of the histograms of the variants", () => {
     expect(keyFor(variantChecks, asVcf(base, 2, true))).not.toBe(
       keyFor(variantChecks, vcf),
     );
-    expect(variantChecks.keyVersion).toBe(1);
-    const raised: KeyedDef = { ...variantChecks, keyVersion: 2 };
-    expect(keyFor(raised, base)).not.toBe(baseKey);
+    expect(variantChecks.keyVersion).toBe(2);
+    const earlier: KeyedDef = { ...variantChecks, keyVersion: 1 };
+    expect(keyFor(earlier, base)).not.toBe(baseKey);
     expect(keyFor(variantChecks, base, "0.2.0")).not.toBe(baseKey);
   });
 
@@ -315,29 +325,37 @@ describe("VS3 D2 the key of the histograms of the variants", () => {
   });
 });
 
-describe("VS3 D2 the key of the counts of the filters", () => {
+describe("IP2 D2 the key of the counts of the filters", () => {
   const base = project();
   const baseKey = keyFor(filterCounts, base);
 
-  test("a filter of individuals, or the individuals file, leaves the key the same", () => {
-    for (const p of [
-      ...individualFilterChanges(),
-      ...individualsFileChanges(),
-    ]) {
-      expect(keyFor(filterCounts, p)).toBe(baseKey);
-    }
-  });
-
-  test("any filter of the variants, a new load, the key version, 1, or the version of popnei changes the key", () => {
+  test("any filter of the variants changes the key", () => {
     const keys = [
       baseKey,
       ...variantFilterChanges().map((p) => keyFor(filterCounts, p)),
     ];
     expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  test("any filter of individuals, a list or a threshold, changes the key", () => {
+    const keys = [
+      baseKey,
+      ...individualFilterChanges().map((p) => keyFor(filterCounts, p)),
+    ];
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  test("the individuals file, or the column of the populations, leaves the key the same", () => {
+    for (const p of individualsFileChanges()) {
+      expect(keyFor(filterCounts, p)).toBe(baseKey);
+    }
+  });
+
+  test("a new load, the key version, 2, or the version of popnei changes the key", () => {
     expect(keyFor(filterCounts, reloaded(base))).not.toBe(baseKey);
-    expect(filterCounts.keyVersion).toBe(1);
-    const raised: KeyedDef = { ...filterCounts, keyVersion: 2 };
-    expect(keyFor(raised, base)).not.toBe(baseKey);
+    expect(filterCounts.keyVersion).toBe(2);
+    const earlier: KeyedDef = { ...filterCounts, keyVersion: 1 };
+    expect(keyFor(earlier, base)).not.toBe(baseKey);
     expect(keyFor(filterCounts, base, "0.2.0")).not.toBe(baseKey);
   });
 

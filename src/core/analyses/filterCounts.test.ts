@@ -268,13 +268,13 @@ describe("VS3 D1 the counts of the filters: the rest of the module", () => {
     expect(filterCounts.numCheckNumbers(project([]))).toBe(1);
   });
 
-  test("the definition reads the filters of the variants alone, and has no key input, no reason and no option", () => {
+  test("the definition reads both lists of filters, and has no key input, no reason and no option", () => {
     expect(filterCounts.id).toBe("filterCounts");
     expect(filterCounts.app).toEqual(["popgen", "gwas"]);
-    expect(filterCounts.keyVersion).toBe(1);
+    expect(filterCounts.keyVersion).toBe(2);
     expect(filterCounts.filtersRead).toEqual({
       variants: true,
-      individuals: false,
+      individuals: true,
     });
     expect(filterCounts.defaults).toEqual({});
     expect(filterCounts.keyInputs(project([]))).toBeNull();

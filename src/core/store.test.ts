@@ -4782,8 +4782,8 @@ describe("VS3 D5 the counts filled", () => {
     });
   });
 
-  test("createStore throws on counts of no definition, and on a definition of the counts that reads the filters of individuals", () => {
-    const { analyses, counts } = fakeAnalyses();
+  test("createStore throws on counts of no definition", () => {
+    const { analyses } = fakeAnalyses();
     const { send } = fakeSend();
     const config = {
       first: emptyProject("popgen"),
@@ -4799,18 +4799,6 @@ describe("VS3 D5 the counts filled", () => {
       createStore({ ...config, analyses, counts: "counts" }),
     ).toThrow(
       /^popnei_web defect: createStore was given the analysis of the counts "counts"/,
-    );
-    expect(() =>
-      createStore({
-        ...config,
-        analyses: [
-          ...analyses,
-          { ...counts, filtersRead: { variants: true, individuals: true } },
-        ],
-        counts: "counts",
-      }),
-    ).toThrow(
-      /^popnei_web defect: the analysis of the counts "counts" reads the filters of individuals/,
     );
   });
 });

@@ -513,7 +513,21 @@ test("VS7 D1 the statistics removed by an Undo while the focus is in the table o
   const heading = block(page).getByRole("heading", {
     name: "Statistics of each individual",
   });
-  await calculated(page);
+  // Only a new load, or the file read again with other options, removes
+  // the statistics, which read no filter: the file is read again, so that
+  // an Undo removes them and leaves the block.
+  await openVariants(page);
+  await pick(page, "panel.vcf.gz");
+  await page
+    .getByText("Only the variants with PASS or . in the FILTER column", {
+      exact: true,
+    })
+    .click();
+  await page
+    .getByRole("button", { name: /^Read panel\.vcf\.gz again/ })
+    .click();
+  await block(page).getByRole("button", { name: CALCULATE }).click();
+  await expect(table(page)).toBeVisible();
   await rowOf(page, "s000").getByRole("rowheader").click();
   await page.keyboard.press(undo);
   await expect(table(page)).toHaveCount(0);
@@ -556,52 +570,37 @@ test("VS7 D1 an Undo of the load while the focus is in the table or on a tab of 
   await expect(heading).toBeFocused();
 });
 
-test("VS7 D1 the missing data filter of the variants moved: the statistics removed with the words of the change and the notice; an undo, and the statistics back with no calculation, and axe", async ({
+test("VS7 D1 the missing data filter of the variants moved: the statistics stay, with no notice and no calculation, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {
   await calculated(page);
   await setMissing(page, "0.06");
-  await expect(
-    block(page).getByText(
-      "The statistics of each individual were removed because the filter of the variants by missing data changed. Undo brings back the table and the histograms as they were, without calculating again; Calculate makes new ones for the new settings.",
-      { exact: true },
-    ),
-  ).toBeVisible();
-  await expect(
-    page
-      .getByRole("region", { name: "Notice" })
-      .getByText(/Statistics of each individual removed/),
-  ).toBeVisible();
-  await expect(
-    block(page).getByRole("button", { name: CALCULATE }),
-  ).toBeVisible();
-  await expect(table(page)).toHaveCount(0);
-  await expect(histogram(page, MISSING_TITLE)).toHaveCount(0);
-  await expect(histogram(page, OBS_HET_TITLE)).toHaveCount(0);
-  await expectNoViolations(makeAxeBuilder);
-
-  await banner(page, "Undo").click();
   await expect(block(page).getByText(CAPTION, { exact: true })).toBeVisible();
   await expect(rowOf(page, "s000").getByRole("gridcell")).toHaveText([
     "0.0283",
     "0.3654",
   ]);
-  // No calculation: no bar, no button, and no words of the removal.
+  // No calculation: no bar, no button, and no words of a removal.
   await expect(block(page).getByRole("progressbar")).toHaveCount(0);
-  await expect(block(page).getByRole("button")).toHaveCount(0);
+  await expect(
+    block(page).getByRole("button", { name: CALCULATE }),
+  ).toHaveCount(0);
   await expect(block(page).getByText(/were removed/)).toHaveCount(0);
+  await expect(
+    page
+      .getByRole("region", { name: "Notice" })
+      .getByText(/Statistics of each individual/),
+  ).toHaveCount(0);
   await expect(histogram(page, MISSING_TITLE)).toBeVisible();
   await expectNoViolations(makeAxeBuilder);
 
-  await banner(page, "Redo").click();
-  await expect(
-    block(page).getByText(
-      "Redone: the filter of the variants by missing data changed. The statistics of each individual were removed; Undo brings back the table and the histograms as they were, without calculating again, and Calculate makes new ones for the settings as they are now.",
-      { exact: true },
-    ),
-  ).toBeVisible();
-  await expect(table(page)).toHaveCount(0);
+  await banner(page, "Undo").click();
+  await expect(rowOf(page, "s000").getByRole("gridcell")).toHaveText([
+    "0.0283",
+    "0.3654",
+  ]);
+  await expect(block(page).getByRole("progressbar")).toHaveCount(0);
 });
 
 test("VS7 D1 running: Stop, the bar and its line; stopped, the button back and no table, and axe", async ({

@@ -398,7 +398,7 @@ test("VS7 D1 an Undo of the header and a switch turned off take the threshold, i
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("VS7 D1 the missing data filter of the variants moved: the statistics removed with their notice, the counts of the thresholds Known once …, and an undo brings them back, and axe", async ({
+test("VS7 D1 the missing data filter of the variants moved: the statistics and the counts of the thresholds stay, with no notice, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -406,30 +406,24 @@ test("VS7 D1 the missing data filter of the variants moved: the statistics remov
   const variants = page.getByLabel(VARIANTS_MISSING_LABEL, { exact: true });
   await variants.fill("0.06");
   await variants.press("Enter");
+  await expect(variants).toHaveValue("0.06");
   await expect(
-    section(page).getByText(
-      /^The statistics of each individual were removed because the filter of the variants by missing data changed\./,
-    ),
+    section(page).getByText(PASS_111, { exact: true }),
   ).toBeVisible();
+  await expect(
+    section(page).getByText(KEPT_116, { exact: true }),
+  ).toBeVisible();
+  await expect(
+    section(page).getByText(KEPT_111, { exact: true }),
+  ).toBeVisible();
+  await expect(section(page).getByText(KNOWN_ONCE)).toHaveCount(0);
+  await expect(section(page).getByText(/were removed/)).toHaveCount(0);
   await expect(
     page
       .getByRole("region", { name: "Notice" })
       .getByText(/Statistics of each individual/),
-  ).toBeVisible();
-  await expect(
-    section(page).getByText(KNOWN_ONCE, { exact: true }),
-  ).toHaveCount(2);
-  await expect(field(page, MISSING_LABEL)).toHaveAccessibleDescription(
-    KNOWN_ONCE,
-  );
-  await expect(field(page, OBS_HET_LABEL)).toHaveAccessibleDescription(
-    `${KNOWN_ONCE} ${OBS_HET_LINE}`,
-  );
-  await expect(histogram(page, MISSING_TITLE)).toHaveCount(0);
-  await expect(section(page).getByText(/pass the filters\.$/)).toHaveCount(0);
-  await expect(
-    page.getByText(/200 individuals, how many kept not yet known/),
-  ).toBeVisible();
+  ).toHaveCount(0);
+  await expect(histogram(page, MISSING_TITLE)).toBeVisible();
   await expectNoViolations(makeAxeBuilder);
 
   await banner(page, "Undo").click();
@@ -437,11 +431,7 @@ test("VS7 D1 the missing data filter of the variants moved: the statistics remov
   await expect(
     section(page).getByText(PASS_111, { exact: true }),
   ).toBeVisible();
-  await expect(
-    section(page).getByText(KEPT_111, { exact: true }),
-  ).toBeVisible();
   await expect(section(page).getByText(KNOWN_ONCE)).toHaveCount(0);
-  await expectNoViolations(makeAxeBuilder);
 });
 
 test("VS7 D1 an arrow key moves a threshold by 0.01, committed at once with its count", async ({
