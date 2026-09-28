@@ -496,7 +496,7 @@ keep 116 and 111 individuals, where they kept 125 and 119.
   counts over the wrong individuals with no error, so the tests of the
   counts with the list are part of this task. Serves 1 and 5. Needs
   work package 1.
-- [ ] 2.2 The three checks and the diversity in core: `filtersRead`,
+- [x] 2.2 The three checks and the diversity in core: `filtersRead`,
   the jobs, the key version 2 and the words of `individualChecks.ts`,
   `variantChecks.ts`, `filterCounts.ts`, and the key version 2 of
   `diversity.ts`, from entry A of the open-points file, "The code of
