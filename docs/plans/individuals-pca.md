@@ -482,7 +482,7 @@ keep 116 and 111 individuals, where they kept 125 and 119.
 
 **Tasks:**
 
-- [ ] 2.1 The worker side: `protocol.ts` and `messages.ts` for the jobs
+- [x] 2.1 The worker side: `protocol.ts` and `messages.ts` for the jobs
   of the three checks and `PROTOCOL_VERSION` 3 (`protocol.md` and
   `messages.md`, the parts their openings date 28 September 2026); the
   list put first in `runner.ts`, in `stepsOf`, `stepsAre` and the steps
