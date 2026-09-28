@@ -75,3 +75,100 @@
   fill: var(--color-background);
   stroke: none;
 }
+
+/* The points of the scatter and the 3D plot (docs/specs/charts/scatter.md,
+   "The marks of the groups"): the outline in --chart-axis gives each mark
+   the contrast its fill may not have, three of the seven colours being
+   below 3:1 on the light background, and its round joins keep the tips of
+   the star within 8.05 pixels of the point, where mitred joins reach 9.2.
+   A colouring by values writes the colour of viridis as the fill of its
+   path, the same in both themes. */
+.chart-points {
+  stroke: var(--chart-axis);
+  stroke-width: 1px;
+  stroke-linejoin: round;
+}
+
+/* The colour of group i is i % 7, of Okabe and Ito. */
+.chart-colour-0 {
+  fill: var(--chart-cat-1);
+}
+
+.chart-colour-1 {
+  fill: var(--chart-cat-2);
+}
+
+.chart-colour-2 {
+  fill: var(--chart-cat-3);
+}
+
+.chart-colour-3 {
+  fill: var(--chart-cat-4);
+}
+
+.chart-colour-4 {
+  fill: var(--chart-cat-5);
+}
+
+.chart-colour-5 {
+  fill: var(--chart-cat-6);
+}
+
+.chart-colour-6 {
+  fill: var(--chart-cat-7);
+}
+
+/* A point in no group, or with no value, is a ring: a mark with no colour
+   of its own. */
+.chart-points-none {
+  fill: none;
+}
+
+/* The groups that are not highlighted while another is, and their marks
+   in the legend of the file; 0.25 meanwhile, refined in the running
+   application. */
+.chart-points-faded,
+.chart-legend-faded {
+  opacity: 0.25;
+}
+
+/* The ring around the point under the pointer, drawn over the marks. */
+.chart-hover {
+  fill: none;
+  stroke: var(--color-text);
+  stroke-width: 2px;
+}
+
+/* Transparent, and takes the pointer over the whole frame. */
+.chart-overlay {
+  fill: none;
+  pointer-events: all;
+}
+
+/* The tooltip of the point under the pointer, placed by hover.ts in the
+   plot's element, which is position: relative. It takes the pointer, so
+   that a user who reads with the screen enlarged can move onto it (WCAG
+   2.2, 1.4.13). Its widest is 16rem, meanwhile, refined in the running
+   application; a longer name wraps. */
+.chart-tooltip {
+  position: absolute;
+  max-width: calc(var(--space-8) * 8);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  overflow-wrap: anywhere;
+  pointer-events: auto;
+}
+
+/* Behind the legend of an exported file, so that the points under it do
+   not cross its text. */
+.chart-legend-background {
+  fill: var(--color-background);
+  fill-opacity: 0.85;
+  stroke: none;
+}

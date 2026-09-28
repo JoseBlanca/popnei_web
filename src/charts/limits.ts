@@ -17,3 +17,22 @@ export const MAX_CANVAS_SIDE = 4096;
  * (docs/specs/charts/histogram.md, "The TypeScript interface").
  */
 export const MAX_HISTOGRAM_BINS = 1000;
+
+/**
+ * The most points a 2D plot draws. The walking skeleton measured an SVG of
+ * 50,000 points, one path per group, at 3.1 MB with one decimal, and the
+ * owner took that bound on 26 September 2026
+ * (docs/plans/walking-skeleton.report.md, "The points an SVG plot can
+ * hold"); more is a defect of the caller (docs/specs/charts/scatter.md,
+ * "The points: one path per group, drawn by a loop").
+ */
+export const MAX_SVG_POINTS = 50_000;
+
+/**
+ * The most groups the points of a plot are coloured by. Each group is a
+ * path and an entry of the legend, and a thousand are still drawn; more is
+ * a column of names, which the screen does not offer for colouring, so
+ * more is a defect of the caller (docs/specs/charts/scatter.md, "The
+ * TypeScript interface").
+ */
+export const MAX_POINT_GROUPS = 1000;
