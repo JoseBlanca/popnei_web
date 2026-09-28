@@ -340,7 +340,11 @@ step makes it so for a file whose name ends in `.xlsx`
    empty, `NA` or `-`, exactly, and **an error cell** of Excel is
    missing. xlsx_rs gives an error cell as its text, and the seven
    errors calamine knows are `#N/A`, `#DIV/0!`, `#NAME?`, `#NULL!`,
-   `#NUM!`, `#REF!` and `#VALUE!`. The owner decided on 28 September
+   `#NUM!`, `#REF!` and `#VALUE!`. So the rule the reader applies is
+   that a text cell of an xlsx equal to one of the seven, exactly, is
+   missing; a cell where the user typed the text `#N/A` is missing too,
+   since the cells xlsx_rs gives cannot tell it from an error, and that
+   is taken as it is: such a text means the same to the user. The owner decided on 28 September
    2026 that `#N/A` is a missing value in an xlsx, as Excel means it,
    "not available", and later that day that the six others are missing
    as well (`docs/specs/worker/files.md`, **Open 1** there). The option
@@ -964,8 +968,8 @@ of the plan.
   by their text, so the column is binary, one `"1"`, zero `"0"`.
 - **An xlsx column of heights with one text `n.d.`**: categorical, as
   in a CSV, and the user sees the value in the column. With one error
-  `#N/A` or `#DIV/0!` in its place: continuous, that individual with no
-  height.
+  `#N/A` or `#DIV/0!` in its place, an error or the same text typed:
+  continuous, that individual with no height.
 - **An xlsx column of dates**: text, `2024-05-13`, and so categorical,
   with as many values as dates. A year typed as a number is a number.
 - **An xlsx column of `TRUE` and `FALSE`**, booleans: binary, by the

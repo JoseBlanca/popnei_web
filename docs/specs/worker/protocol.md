@@ -254,7 +254,9 @@ export type IndividualFilterKind = IndividualFilter["kind"];
 
 The table of the individuals file, as the light worker read it. A cell is
 text, a number, a boolean, or `null` when it is missing: an empty cell,
-`NA` or `-` (`docs/functionality.md`, section 4). The cells of a CSV or
+`NA` or `-`, and, in an xlsx, a text equal to one of the seven errors
+of Excel, `#N/A`, `#DIV/0!`, `#NAME?`, `#NULL!`, `#NUM!`, `#REF!` and
+`#VALUE!` (`docs/functionality.md`, section 4). The cells of a CSV or
 TSV are text, as written in the file; numbers and booleans come only from
 an xlsx, as the files wasm, the wasm package of xlsx_rs that reads
 xlsx (`docs/architecture.md`, section 6), gives them. The first column

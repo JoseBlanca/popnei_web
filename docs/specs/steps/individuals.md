@@ -657,10 +657,10 @@ separator and the decimal mark are detected, and when to change them;
 that missing values are an empty cell, `NA` or `-`, and, in an xlsx,
 every error of Excel: `#N/A`, which Excel shows for a value not
 available, as a lookup gives it for a name it did not find, and
-`#DIV/0!`, `#VALUE!` and the other errors of a formula that failed, so
-that a broken formula leaves its individual with no value in that
-column, with nothing in the column to show it, and is mended in the
-sheet; what the types mean, "identifier" the
+`#DIV/0!`, `#VALUE!` and the other errors of a formula that failed, and
+the same words typed as text in a cell, so that a broken formula leaves
+its individual with no value in that column, with nothing in the column
+to show it, and is mended in the sheet; what the types mean, "identifier" the
 names of the individuals, "binary" a column of two values, "continuous"
 one of numbers, "categorical" any other, which types each column can
 be given and why, and that a binary column's value coded 1 is the case,

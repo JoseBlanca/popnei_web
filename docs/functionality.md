@@ -214,7 +214,8 @@ and its encoding varies with the version. So:
   every error of Excel: `#N/A`, which Excel shows for a value not
   available, and `#DIV/0!`, `#NAME?`, `#NULL!`, `#NUM!`, `#REF!` and
   `#VALUE!`, which a formula that failed gives, as the owner decided on
-  28 September 2026. Not taken: those six read as their text, so that a
+  28 September 2026. The reader of the xlsx receives an error as its
+  text, so the same text typed in a cell of an xlsx is missing too. Not taken: those six read as their text, so that a
   broken formula showed among the values of its column. The CSV that
   Excel saves from the same sheet writes the errors as text, which is
   read as a value there. An error of the newest Excel that the reader

@@ -150,7 +150,7 @@ boolean, an empty cell as `null`.
 | a format of date on a number below 0, or on a day after 31 December 9999, which Excel shows as `#######` | `DateTime`, with the parts of a wrong date | the number |
 | a duration, a format such as `[h]:mm:ss` | `DateTime` whose `ExcelDateTime` is a duration | hours, minutes and seconds, the hours not wrapped at 24: 1.5 days is `36:00:00`, and a negative one `-0:30:00` |
 | a date written as ISO 8601 text, a cell of the type `d`, which other programs than Excel may write | `DateTimeIso` | the text as it is |
-| an error: `#N/A`, `#DIV/0!`, `#NAME?`, `#NULL!`, `#NUM!`, `#REF!`, `#VALUE!` | `Error` | the text of the error as Excel writes it in English; popnei_web's reader takes each of the seven as missing (**Open 1**, below, decided by the owner) |
+| an error: `#N/A`, `#DIV/0!`, `#NAME?`, `#NULL!`, `#NUM!`, `#REF!`, `#VALUE!` | `Error` | the text of the error as Excel writes it in English; popnei_web's reader takes a text equal to one of the seven as missing, and so also the same text typed in a cell, which it cannot tell from an error (**Open 1**, below, decided by the owner) |
 | a formula | the value saved with it | the cell of that value, by the rows above |
 
 A date becomes text in ISO 8601, year, month, day, and not the number
@@ -703,7 +703,9 @@ spec.
    missing, with its other missing values, `NA` and `-`
    (`docs/specs/worker/individuals.md`, "The xlsx"): xlsx_rs gives what
    the file holds, the text of the error, and what counts as missing is
-   the rule of the application, in one place. The option not taken, an
+   the rule of the application, in one place. Since the cell reaches the
+   reader as text, the rule is a text equal to one of the seven errors,
+   and a cell where the user typed `#N/A` as text is missing too. The option not taken, an
    empty cell given by xlsx_rs, would put that rule in the library, and
    a second user of xlsx_rs could not tell an error from a blank.
 
