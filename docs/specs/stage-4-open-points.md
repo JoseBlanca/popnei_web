@@ -60,7 +60,31 @@ disequilibrium, which keeps a variant when its r² with every variant
 already kept within a window of base pairs is at most a threshold. The
 **calculation worker** is the thread of the tab that runs popnei; its
 memory grows and never shrinks, and starting it again gives the memory
-back.
+back. The **light worker** is a second thread, which reads the files of
+the user, the metadata file among them. **three.js** is the library that
+draws the 3D view, with **WebGL**, the part of the browser that draws
+with the graphics card; three.js needs its version 2. The **store** is
+the part of the page that holds the project, the results and what locks
+each analysis, and the **stepper** is the row of the steps at the top of
+the page, each marked done, to do or with a problem. A **screen reader**
+reads the page aloud to a user who cannot see it.
+
+## What is still the owner's
+
+- **To approve the specs.** None is approved yet, and the plan of stage
+  4 is written from approved specs.
+- **To decide two points**, whose recommendations the specs follow
+  meanwhile: point 6, the types the user set, kept when the file is read
+  again; and point 13, what a page opened before a new version of the
+  site shows. Point 14, the legend over the plot, is judged on the
+  running screen, when the owner tries the PCA panel.
+- **To make or approve three things**, below, "Asked of the owner to
+  make or approve": the repository of xlsx_rs, where the zip of the
+  report is made (for stage 6), and eight xlsx files for the tests. None
+  of them stops the plan of stage 4 from being written: the xlsx comes
+  last in the stage, and waits for the repository and its first release.
+- **Possibly, the key of the zoom on a Mac**: if Ctrl clashes there when
+  the plan tries it, the plan asks whether ⌘ takes its place (point 10).
 
 ## Decided by the owner on 27 September 2026
 
@@ -319,7 +343,10 @@ individual's proportion of missing genotypes and observed
 heterozygosity were counted over the variants those filters kept, as
 the owner decided on 26 September 2026 (`docs/architecture.md`, section
 13, points 3 and 8). Decided by the owner on 28 September 2026: "All
-analyses should calculate the filters using the individuals kept." The
+analyses should calculate the filters using the individuals kept", so
+that each filter of the variants counts over the individuals the
+analyses read, and not over individuals a filter of individuals
+removed. The
 list of the individuals kept, which the two lists and the two
 thresholds make, is put on the variants first, and the filters of the
 variants count over the individuals it keeps, as plink 1.9 applies
@@ -327,10 +354,14 @@ variants count over the individuals it keeps, as plink 1.9 applies
 every variant of the file, one calculation per file loaded. What it
 costs, said to the owner: an individual's missing genotypes include
 those at the bad variants the missing data filter would drop; and the
-code of stage 3, which is built, changes. Not taken: the lists first and
-the thresholds last, which popnei's one list per pass does not allow
-without counting the filters of the variants over other individuals
-than the statistics were counted with; and the order of stage 3 kept.
+code of stage 3, which is built, changes. Two options were not taken.
+One put the lists of individuals first and the thresholds last, with
+the statistics counted over the variants the filters keep among the
+individuals of the lists. popnei takes one list of individuals per
+pass, so the analyses would be given the final list first, and the
+thresholds would have been set from statistics of other individuals
+than those the filters of the variants then count over. The other kept
+the order of stage 3.
 `docs/architecture.md`, sections 1, 2, 3, 4, 5, 8, 11 and 13, has the
 options and what would show the choice wrong.
 
@@ -356,9 +387,11 @@ What a user meets:
   calculates the statistics when they are not there. The writers' reading
   of what the owner's words ask of the numbers the filters are set from,
   confirmed by the owner later on 28 September 2026. Not taken: the
-  histograms over every individual, which would show on `panel.nei`,
-  with the thresholds of the flow, 1,175 variants at a MAF up to 0.95
-  where the filter, over the 111 individuals kept, keeps 1,178.
+  histograms over every individual. On `panel.nei`, with the thresholds
+  of the flow, the MAF filter at 0.95 counts over the 111 individuals
+  kept and keeps 1,178 variants; histograms over all 200 individuals
+  would show 1,175 at a MAF up to 0.95, a number the filter does not
+  keep by.
 - The counts beside the filters of the variants go at every change of a
   filter of individuals as well, and a Count waits for the statistics
   as the diversity does. A list of individuals that names someone not
@@ -378,8 +411,8 @@ What a user meets:
   missing data filter at 0.05, the filter by heterozygosity at 0.9, the
   MAF filter at 0.95 and the two thresholds reads "panel.nei · 111 of
   200 individuals kept · 1,096 of 1,200 variants kept · 5 filters · 3
-  populations by pop". The command that gave them is `orderA.mjs` of
-  `docs/specs/worker/runner.md`, "How it is verified".
+  populations by pop". They were given by popnei in node, by the script
+  `orderA.mjs` of `docs/specs/worker/runner.md`, "How it is verified".
 - A project file saved by stage 3 opens as before. The check numbers of
   its diversity are compared with a key version raised to 2, so that,
   with a filter of individuals, a difference is said to come from the
@@ -407,9 +440,9 @@ Otherwise a user who loads a VCF of a capture with calls off the
 target, and the BED of the target, would see individuals removed by a
 threshold on their missing genotypes for calls no analysis reads. What
 it costs: the statistics are one pass per load and per BED file. Not
-taken: the regions with the other filters of the variants, after the
-individuals, which kept the statistics one pass per load whatever the
-regions. Nothing is built for it in stage 4. `docs/architecture.md`,
+taken: the regions among the other filters of the variants, after the
+individuals; the statistics would then have stayed one pass per load,
+whatever the regions. Nothing is built for it in stage 4. `docs/architecture.md`,
 sections 1 and 2, and section 13, point 15; `docs/functionality.md`,
 section 3.
 
@@ -1034,7 +1067,7 @@ meets it measures it:
   9,381 individuals, and whether 700 individuals is the right bound of
   point 8;
 - the time to draw 9,381 points of 64 square pixels in WebKit, the
-  slowest engine of the walking skeleton, against the 100 ms within
+  engine of Safari, the slowest in the measurements of stage 2, against the 100 ms within
   which a redraw feels immediate (`scatter.md`);
 - which of the headless engines of the tests, on the owner's Mac and on
   GitHub's machines, give WebGL, without which the tests of the 3D view
