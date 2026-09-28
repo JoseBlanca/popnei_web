@@ -33,6 +33,7 @@ import type {
   VariantSource,
 } from "./project.ts";
 import { individualsKept, keptNoneReason } from "./individualsKept.ts";
+import { POPGEN_ANALYSES, countsOf, individualStatsOf } from "./apps.ts";
 import { createStore } from "./store.ts";
 import type {
   AnalysisDef,
@@ -73,7 +74,10 @@ import type {
 } from "./testSupport.ts";
 import type {
   CsvOptions,
+  DiversityResult,
   IndividualFilter,
+  Job,
+  JobResult,
   Outcome,
   Progress,
   PassStats,
@@ -6507,5 +6511,73 @@ describe("IP4 D1 a result given back by a read", () => {
     closed.store.individualsRead(INDIVIDUALS_ID, CSV, INDIVIDUALS_READ_LACKING);
     closed.store.dismissNotice();
     expect(closed.request.cancels()).toBe(1);
+  });
+});
+
+describe("IP4 D1 a result given back by a read, with the diversity of the application", () => {
+  test("the diversity of one population is removed while a metadata file is read, whose key it has none of, and comes back from the cache when the read gives its key again, the notice gone", () => {
+    const sent: { key: string; run: Run<JobResult> }[] = [];
+    const store = createStore<Job, JobResult>({
+      first: emptyProject("popgen"),
+      analyses: POPGEN_ANALYSES,
+      send: (key) => {
+        const run: Run<JobResult> = {
+          id: sent.length + 1,
+          outcome: new Promise<Outcome<JobResult>>(() => undefined),
+          cancel: () => undefined,
+        };
+        sent.push({ key, run });
+        return run;
+      },
+      countsOf,
+      counts: "filterCounts",
+      statistics: { analysis: "individualChecks", of: individualStatsOf },
+      write: null,
+      appVersion: "0.1.0",
+      cacheMaxBytes: 1024 * 1024,
+      maxUndoSteps: 200,
+    });
+    const diversity = (): AnalysisStatus<JobResult> | undefined =>
+      store.getState().analyses.find((view) => view.id === "diversity")?.status;
+    store.popneiReady("0.1.0");
+    store.apply("a variants file was loaded", loadPanel(VARIANTS_ID));
+    store.variantsRead(VARIANTS_ID, VARIANTS_READ);
+    store.apply("all individuals in one population", (p) =>
+      setGrouping(p, { kind: "onePopulation" }),
+    );
+    store.startRun("diversity");
+    const request = sent.at(-1);
+    if (request === undefined) {
+      throw new Error("no request of the diversity was sent");
+    }
+    const result: DiversityResult = {
+      analysis: "diversity",
+      pops: ["All individuals"],
+      numIndividuals: Uint32Array.from([2]),
+      unbiasedExpHet: Float64Array.from([0.3]),
+      obsHet: Float64Array.from([0.2]),
+      polyRatio: Float64Array.from([0.9]),
+      numVarsWithValue: Uint32Array.from([100]),
+      passStats: { numVars: 100, filtering: {} },
+    };
+    store.runEnded(request.run.id, { kind: "done", key: request.key, result });
+    expect(diversity()?.kind).toBe("done");
+    const numSent = sent.length;
+
+    store.apply("a new metadata file was loaded", loadPops);
+    expect(diversity()).toStrictEqual({
+      kind: "locked",
+      reason: "Reading pops.csv.",
+    });
+    expect(store.getState().notice).toMatchObject({
+      removed: ["diversity"],
+    });
+
+    store.individualsRead(INDIVIDUALS_ID, CSV, INDIVIDUALS_READ);
+    const back = diversity();
+    expect(back?.kind).toBe("done");
+    expect(back?.kind === "done" && back.result).toBe(result);
+    expect(sent).toHaveLength(numSent);
+    expect(store.getState().notice).toBeNull();
   });
 });
