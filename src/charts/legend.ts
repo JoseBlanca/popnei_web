@@ -17,6 +17,7 @@ import {
   NO_GROUP,
   symbolPath,
   viridisColour,
+  viridisStep,
   type PointColours,
 } from "./marks.ts";
 import { tableNumber } from "./numbers.ts";
@@ -168,6 +169,11 @@ const CHARACTER_WIDTH = 7.2;
 const BAR_BANDS = 32;
 /** The height of the bar of a colouring by values. */
 const BAR_HEIGHT = 96;
+/**
+ * The height below which the bar is left out, in a frame too low for it:
+ * one pixel per band.
+ */
+const MIN_BAR_HEIGHT = 32;
 /** The width of the bar of a colouring by values, centred on the marks. */
 const BAR_WIDTH = 10;
 /** The steps of viridis a band of the bar stands for, 256 / 32. */
@@ -239,9 +245,12 @@ function groupRows(
  * 7.2 pixels per character, with the mark and 4 pixels on each side. When
  * the rows would pass `bottom`, the last row that fits says "and 12 more".
  * For values, a bar of 32 bands of viridis, 96 pixels high, the largest
- * value at its top and the smallest at its bottom, one value when they
- * are the same, and then the ring and "No value (3)" when some points
- * have none. The texts are set as text, never as markup.
+ * value at its top and the smallest at its bottom, or, when they are the
+ * same, one band of step 128, 16 pixels high, with that value at its
+ * middle; and then the ring and "No value (3)" when some points have
+ * none. Where the bar does not fit above `bottom` it is shorter, down to
+ * 32 pixels, and below that left out, as is a row that does not fit. The
+ * texts are set as text, never as markup.
  */
 export function drawLegendSvg(
   group: Selection<SVGGElement, unknown, null, undefined>,
@@ -297,53 +306,29 @@ export function drawLegendSvg(
       break;
     }
     case "values": {
+      // The rows fit between the paddings, the title first, then the bar,
+      // then "No value (3)"; the bar is made shorter, down to
+      // MIN_BAR_HEIGHT, or left out, so that none passes `bottom`.
+      const room = bottom - top - 2 * LEGEND_PADDING;
+      if (room < LEGEND_ROW) break;
       drawRow({ text: legend.title, group: null, faded: false }, firstMiddle);
       height = LEGEND_ROW;
+      const noneRow = legend.noneCount > 0 ? LEGEND_ROW : 0;
       if (legend.min !== null && legend.max !== null) {
-        const barTop = top + LEGEND_PADDING + LEGEND_ROW;
-        const bandHeight = BAR_HEIGHT / BAR_BANDS;
-        const bar = group
-          .append("g")
-          .attr("class", "chart-legend-bar")
-          .attr(
-            "transform",
-            `translate(${String(rowsRight - (LEGEND_MARK + BAR_WIDTH) / 2)},${String(barTop)})`,
+        const barRoom = room - height - noneRow;
+        const one = legend.min === legend.max;
+        const barHeight = one ? LEGEND_ROW : Math.min(BAR_HEIGHT, barRoom);
+        if (barHeight <= barRoom && (one || barHeight >= MIN_BAR_HEIGHT)) {
+          drawBar(
+            legend.min,
+            legend.max,
+            top + LEGEND_PADDING + height,
+            barHeight,
           );
-        // Band 0, at the bottom, stands for the first 8 steps of viridis,
-        // and is the colour of their middle.
-        for (let band = 0; band < BAR_BANDS; band++) {
-          bar
-            .append("rect")
-            .attr("class", "chart-legend-band")
-            .attr("x", 0)
-            .attr("y", BAR_HEIGHT - (band + 1) * bandHeight)
-            .attr("width", BAR_WIDTH)
-            .attr("height", bandHeight)
-            .attr(
-              "fill",
-              viridisColour(band * STEPS_PER_BAND + STEPS_PER_BAND / 2),
-            );
+          height += barHeight;
         }
-        const labels: [number, number][] = [
-          [legend.max, barTop + LEGEND_ROW / 2],
-        ];
-        if (legend.min !== legend.max) {
-          labels.push([legend.min, barTop + BAR_HEIGHT - LEGEND_ROW / 2]);
-        }
-        for (const [value, middle] of labels) {
-          const text = valueText(value);
-          group
-            .append("text")
-            .attr("class", "chart-legend-text chart-legend-value")
-            .attr("x", rowsRight + textEnd)
-            .attr("y", middle)
-            .attr("dy", "0.35em")
-            .text(text);
-          texts.push(text);
-        }
-        height += BAR_HEIGHT;
       }
-      if (legend.noneCount > 0) {
+      if (noneRow > 0 && height + noneRow <= room) {
         drawRow(
           {
             text: entryText(legend.noneName, legend.noneCount),
@@ -355,6 +340,62 @@ export function drawLegendSvg(
         height += LEGEND_ROW;
       }
       break;
+    }
+  }
+
+  /**
+   * The bar of viridis from `barTop`, `barHeight` high: the largest value
+   * at its top and the smallest at its bottom, 32 bands; when they are
+   * the same, one band of step 128, the colour of every point, with that
+   * value at its middle.
+   */
+  function drawBar(
+    min: number,
+    max: number,
+    barTop: number,
+    barHeight: number,
+  ): void {
+    const bar = group
+      .append("g")
+      .attr("class", "chart-legend-bar")
+      .attr(
+        "transform",
+        `translate(${String(rowsRight - (LEGEND_MARK + BAR_WIDTH) / 2)},${String(barTop)})`,
+      );
+    const bands: [number, number][] =
+      min === max
+        ? [[0, viridisStep(min, min, max)]]
+        : Array.from({ length: BAR_BANDS }, (_band, band) => [
+            band,
+            // Band 0, at the bottom, stands for the first 8 steps of
+            // viridis, and is the colour of their middle.
+            band * STEPS_PER_BAND + STEPS_PER_BAND / 2,
+          ]);
+    const bandHeight = barHeight / bands.length;
+    for (const [band, step] of bands) {
+      bar
+        .append("rect")
+        .attr("class", "chart-legend-band")
+        .attr("x", 0)
+        .attr("y", barHeight - (band + 1) * bandHeight)
+        .attr("width", BAR_WIDTH)
+        .attr("height", bandHeight)
+        .attr("fill", viridisColour(step));
+    }
+    const labels: [number, number][] = [[max, barTop + LEGEND_ROW / 2]];
+    if (min !== max) {
+      labels.push([min, barTop + barHeight - LEGEND_ROW / 2]);
+    }
+    for (const [value, middle] of labels) {
+      const text = valueText(value);
+      group
+        .append("text")
+        .attr("class", "chart-legend-text chart-legend-value")
+        .attr("x", rowsRight + textEnd)
+        .attr("y", middle)
+        .attr("dy", "0.35em")
+        .text(text);
+      texts.push(text);
     }
   }
 

@@ -606,6 +606,115 @@ describe("IP7 D2 the scatter under jsdom, the legend of the exported file", () =
   });
 });
 
+describe("IP7 D2 the scatter under jsdom, where the legend of the exported file lies", () => {
+  // An element of 400 by 300: the frame from 60 to 384 across and from 12
+  // to 256 down. The rows end 4 pixels inside its right edge, at 380, and
+  // start 4 pixels below its top, the middle of the first at 24.
+
+  /** The translation of `element` of the file, as "x,y". */
+  const moved = (element: Element | null | undefined): string | undefined =>
+    /translate\(([^)]*)\)/.exec(element?.getAttribute("transform") ?? "")?.[1];
+
+  test("each row of groups ends at 380, 16 pixels below the one before, its mark centred 8 pixels left of that and its text ending 22 pixels left of it, a third of an em down", () => {
+    const element = sizedElement(400, 300);
+    const file = fileOf(createScatter(element, six()).toSVG());
+    const rows = [...file.querySelectorAll("g.chart-legend-row")];
+    expect(rows.map(moved)).toEqual([
+      "380,24",
+      "380,40",
+      "380,56",
+      "380,72",
+      "380,88",
+      "380,104",
+    ]);
+    for (const mark of file.querySelectorAll("g.chart-legend-row path")) {
+      expect(moved(mark)).toBe("-8,0");
+    }
+    for (const text of file.querySelectorAll("g.chart-legend-row text")) {
+      expect(text.getAttribute("x")).toBe("-22");
+      expect(text.getAttribute("dy")).toBe("0.35em");
+    }
+  });
+
+  test("values: the bar 13 pixels left of 380 from 32 down, the largest value at 40, the smallest at 120, and No value below the bar at 136", () => {
+    const element = sizedElement(400, 300);
+    const file = fileOf(
+      createScatter(
+        element,
+        scatterOf([0, 1, 2], [0, 1, 2], values([-1.5, Number.NaN, 2019])),
+      ).toSVG(),
+    );
+    expect(moved(file.querySelector("g.chart-legend-bar"))).toBe("367,32");
+    const bands = [...file.querySelectorAll("rect.chart-legend-band")];
+    expect(bands).toHaveLength(32);
+    expect(bands.map((band) => Number(band.getAttribute("height")))).toEqual(
+      new Array<number>(32).fill(3),
+    );
+    const labels = [...file.querySelectorAll("text.chart-legend-value")];
+    expect(
+      labels.map((label) => [
+        label.textContent,
+        label.getAttribute("x"),
+        label.getAttribute("y"),
+      ]),
+    ).toEqual([
+      ["2019", "358", "40"],
+      ["−1.5", "358", "120"],
+    ]);
+    const rows = [...file.querySelectorAll("g.chart-legend-row")];
+    expect(rows.map(moved)).toEqual(["380,24", "380,136"]);
+    const background = file.querySelector("rect.chart-legend-background");
+    expect(background?.getAttribute("height")).toBe(String(16 + 96 + 16 + 8));
+  });
+
+  test("values all the same: one band of step 128, 16 pixels high, and the value written once at its middle", () => {
+    const element = sizedElement(400, 300);
+    const file = fileOf(
+      createScatter(element, scatterOf([0, 1], [0, 1], values([5, 5]))).toSVG(),
+    );
+    const bands = [...file.querySelectorAll("rect.chart-legend-band")];
+    expect(
+      bands.map((band) => [
+        band.getAttribute("fill"),
+        band.getAttribute("y"),
+        band.getAttribute("height"),
+      ]),
+    ).toEqual([[viridisColour(128), "0", "16"]]);
+    const labels = [...file.querySelectorAll("text.chart-legend-value")];
+    expect(
+      labels.map((label) => [label.textContent, label.getAttribute("y")]),
+    ).toEqual([["5", "40"]]);
+  });
+
+  test("values in a low frame: the bar is shorter so that no row passes the frame, and left out below 32 pixels", () => {
+    // An element 150 high, a frame of 94 down to 106: 54 pixels for the
+    // bar between the title and No value.
+    const data = scatterOf([0, 1, 2], [0, 1, 2], values([-1.5, Number.NaN, 2]));
+    const low = fileOf(createScatter(sizedElement(400, 150), data).toSVG());
+    const bands = [...low.querySelectorAll("rect.chart-legend-band")];
+    expect(bands).toHaveLength(32);
+    expect(
+      bands.reduce((sum, band) => sum + Number(band.getAttribute("height")), 0),
+    ).toBeCloseTo(54, 9);
+    expect(
+      [...low.querySelectorAll("text.chart-legend-value")].map((label) =>
+        label.getAttribute("y"),
+      ),
+    ).toEqual(["40", "78"]);
+    expect([...low.querySelectorAll("g.chart-legend-row")].map(moved)).toEqual([
+      "380,24",
+      "380,94",
+    ]);
+    // An element 110 high, a frame of 54: no room for a bar of 32.
+    const lower = fileOf(createScatter(sizedElement(400, 110), data).toSVG());
+    expect(lower.querySelectorAll("g.chart-legend-bar")).toHaveLength(0);
+    expect(legendTexts(lower)).toEqual(["Height", "No value (1)"]);
+    // An element 80 high, a frame of 24: the title alone.
+    const lowest = fileOf(createScatter(sizedElement(400, 80), data).toSVG());
+    expect(legendTexts(lowest)).toEqual(["Height"]);
+  });
+});
+
 describe("IP7 D2 the scatter under jsdom, the point under the pointer", () => {
   test("a pointer at a point shows its tooltip and its mark and calls onHover once; away from every point hides them and calls it with null", () => {
     const element = sizedElement(400, 300);
