@@ -2294,12 +2294,14 @@ the same numbers for everything else but the size of a written file.
   changes (section 5); it is not restarted between requests, as the
   owner settled on 26 September 2026 (section 13, point 2), but after a
   large written file and after a large PCA (points 5 and 9).
-- **The downloads**: the wasm package of popnei, 0.71 MB gzipped
-  (710.6 KB, release js-v0.1.0-dev.2, as Vite measures it), and about
-  0.78 MB for `js-v0.1.0-dev.3`, the release that adds the PCoA, the
-  writer of the VCF and the filter of the regions, whose wasm `gzip`
-  makes 72 KB larger, 774,080 bytes against 701,996, and which the build
-  of stage 4 measures as Vite does, before anything runs, loaded by the calculation worker alone; the files wasm,
+- **The downloads**: the wasm package of popnei, 0.79 MB gzipped
+  (785.16 KB, release `js-v0.1.0-dev.3`, as Vite measures it in the
+  build of the site, 28 September 2026), against 0.71 MB (710.6 KB) for
+  `js-v0.1.0-dev.2`: the release that adds the PCoA, the writer of the
+  VCF and the filter of the regions made it 74.5 KB larger, and `gzip`
+  72 KB, 774,080 bytes against 701,996. It is loaded by the calculation
+  worker alone, before anything runs; the page's first script is 191.81
+  KB gzipped with either release. The files wasm,
   the package of xlsx_rs,
   0.30 MB gzipped while it only reads, in stage 4, and about 0.58 MB with
   the writing of the report from stage 6, by the light worker the first

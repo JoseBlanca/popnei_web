@@ -602,7 +602,7 @@ test("VS7 D1 the keyboard goes from the button of the statistics through each th
   await expect(field(page, MISSING_LABEL)).toHaveCount(0);
 });
 
-test("VS7 D3 the write of the individuals kept: with the thresholds at 0.03 and 0.38, Write and Save give panel.filtered.nei of 170,122 bytes", async ({
+test("IP1 D2 the written files of dev.3 on the screen, VS7 D3 the write of the individuals kept: with the thresholds at 0.03 and 0.38, Write and Save give panel.filtered.nei of 170,122 bytes", async ({
   page,
 }, testInfo) => {
   await thresholdsSet(page);
