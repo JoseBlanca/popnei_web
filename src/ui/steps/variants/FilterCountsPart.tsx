@@ -22,7 +22,9 @@
  *   of individuals that keep nobody, since the filters of the variants
  *   count over the individuals kept: the button disabled, with the reason
  *   beside it, without its end "in the Variants step", in place of the
- *   line of no counts, and no count beside the filters.
+ *   line of no counts, and no count beside the filters; when the Count
+ *   leaves the page with the focus and the part is locked, the focus
+ *   moves to the part that holds the disabled button and its reason.
  *
  * With a threshold on the individuals and no statistics of each
  * individual, a Count calculates them first, and the part shows the bar
@@ -47,6 +49,7 @@ import {
   statusOf,
   stoppedNotice,
 } from "../../analyses/status.ts";
+import type { ButtonOf } from "../../analyses/status.ts";
 import { Warnings } from "../../analyses/Warnings.tsx";
 import { stoppedText } from "../../analyses/words.ts";
 import { classOf } from "../../classOf.ts";
@@ -77,6 +80,7 @@ export function FilterCountsPart(): React.JSX.Element {
   const total = useRef<HTMLParagraphElement>(null);
   const empty = useRef<HTMLDivElement>(null);
   const failed = useRef<HTMLDivElement>(null);
+  const locked = useRef<HTMLDivElement>(null);
   // Set when the button goes with the focus on it. The line or the words
   // that take the focus come in the same commit as the button goes, and
   // are in the page only once it is done, so the focus is moved after it.
@@ -84,11 +88,31 @@ export function FilterCountsPart(): React.JSX.Element {
   useLayoutEffect(() => {
     if (!focusLost.current) return;
     focusLost.current = false;
-    (total.current ?? empty.current ?? failed.current)?.focus();
+    (
+      total.current ??
+      empty.current ??
+      failed.current ??
+      locked.current
+    )?.focus();
   });
 
   const button = buttonInTheStep(buttonOf(status));
   const stoppedBy = stoppedNotice(status, notice, ID);
+  const runButton = (shown: NonNullable<ButtonOf>): React.JSX.Element => (
+    <RunButton
+      button={shown}
+      runLabel={COUNT_LABEL}
+      onRun={() => {
+        void startAnalysis(store, ID);
+      }}
+      onStop={() => {
+        store.cancelRun(ID);
+      }}
+      onGone={() => {
+        focusLost.current = true;
+      }}
+    />
+  );
 
   return (
     <div className={classOf(styles, "check")}>
@@ -108,21 +132,17 @@ export function FilterCountsPart(): React.JSX.Element {
           />
         </div>
       )}
-      {button !== null && (
-        <RunButton
-          button={button}
-          runLabel={COUNT_LABEL}
-          onRun={() => {
-            void startAnalysis(store, ID);
-          }}
-          onStop={() => {
-            store.cancelRun(ID);
-          }}
-          onGone={() => {
-            focusLost.current = true;
-          }}
-        />
-      )}
+      {button !== null &&
+        (status.kind === "locked" ? (
+          // The disabled Count and its reason, which take the focus when
+          // the Count leaves the page with it, since a disabled button
+          // cannot hold it; not in the order of the Tab key.
+          <div ref={locked} tabIndex={-1}>
+            {runButton(button)}
+          </div>
+        ) : (
+          runButton(button)
+        ))}
       {status.kind === "running" && (
         // A new run is a new clock.
         <Running
