@@ -288,11 +288,23 @@ describe("IP7 D1 the pieces of the scatter, the defects of its data", () => {
     expect(() => createScatter(element, many(MAX_SVG_POINTS + 1))).toThrow(
       "more than the 50000",
     );
+    expect(() => createScatter(element, six(1.5))).toThrow(
+      "neither null nor a whole number from 0",
+    );
+    expect(() => createScatter(element, six(-1))).toThrow(
+      "neither null nor a whole number from 0",
+    );
+    expect(element.childNodes).toHaveLength(0);
     const handle = createScatter(element, many(MAX_SVG_POINTS));
     expect(() => {
       handle.update(scatterOf([0, 1], [0, 1], colours, ["s0"]));
     }).toThrow("popnei_web defect");
     handle.destroy();
+    const drawn = createScatter(element, six());
+    expect(() => {
+      drawn.update(six(0.5));
+    }).toThrow("neither null nor a whole number from 0");
+    drawn.destroy();
   });
 });
 
