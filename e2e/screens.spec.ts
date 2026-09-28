@@ -968,6 +968,58 @@ for (const theme of ["light", "dark"] as const) {
       await save(page, `popgen-variants-ld-counted-${theme}`);
     });
 
+    test("the Variants step, the missing data filter turned off and on again after a Count, its count back from the cache", async ({
+      page,
+    }) => {
+      await pickVariants(page, "panel.nei");
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      const filters = page.getByRole("region", {
+        name: "Filters of the variants",
+      });
+      await filters
+        .getByRole("button", { name: "Count the variants each filter keeps" })
+        .click();
+      await expect(filters.getByText(/^Kept /)).toHaveCount(1);
+      const missing = "Filter the variants by missing data";
+      await filters.getByText(missing, { exact: true }).click();
+      await expect(filters.getByText(/^Kept /)).toHaveCount(0);
+      await filters.getByText(missing, { exact: true }).click();
+      await expect(filters.getByText(/^Kept /)).toHaveText([
+        "Kept 1,200 of the 1,200 variants it was given.",
+      ]);
+      await save(page, `popgen-variants-count-back-${theme}`);
+    });
+
+    test("the Variants step, the LD pruning turned on after a Count: the counts gone and the Count locked", async ({
+      page,
+    }) => {
+      await pickVariants(page, "panel.nei");
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      const filters = page.getByRole("region", {
+        name: "Filters of the variants",
+      });
+      await filters
+        .getByRole("button", { name: "Count the variants each filter keeps" })
+        .click();
+      await expect(filters.getByText(/^Kept /)).toHaveCount(1);
+      await filters
+        .getByText("Prune the variants by linkage disequilibrium (LD)", {
+          exact: true,
+        })
+        .click();
+      await expect(filters.getByText(/^Kept /)).toHaveCount(0);
+      await expect(
+        filters.getByRole("button", {
+          name: "Count the variants each filter keeps",
+        }),
+      ).toBeDisabled();
+      await save(page, `popgen-variants-ld-after-count-${theme}`);
+    });
+
     test("the Variants step, the MAF filter turned off at 0.9 and on again, with its value kept", async ({
       page,
     }) => {
