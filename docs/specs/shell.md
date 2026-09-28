@@ -37,7 +37,9 @@ metadata file named by an opened project and not read when it was saved,
 project file"), which the stepper, the summary line and the opening
 tell; and on 28 September 2026 for the owner's decision that the LD
 filter of the variants starts with no distance: the Variants step is
-at "Problem" while it has none, with the reason of `variantFilterNeeds`.
+at "Problem" while it has none, with the reason of `variantFilterNeeds`;
+and again that day after the review of that change: the summary line
+counts that filter among the filters and says nothing of its distance.
 The screen
 spec of what surrounds every step of the population genetics
 application, first built in the walking skeleton of stage 2 (`docs/build-order.md`),
@@ -67,7 +69,7 @@ the whole file and counted them. `projectNeeds(p)` and
 reason no analysis can run because of the variants file or of the
 individuals file, or `null`; `variantFilterNeeds(p)`, the reason of
 the LD filter of the variants turned on with no distance, which locks
-only what reads the filters of the variants, or `null`;
+only what reads either list of filters, or `null`;
 `individualListNeeds(p)`, the reason of a
 list of individuals popnei would refuse, which locks only what reads the
 filters of individuals, with the list it is about, or `null`. The **reference** of a project opened from
@@ -269,6 +271,18 @@ keep (node, 26 September 2026, popnei `js-v0.1.0-dev.2`). It is text, and is not
 | | read, the grouping `onePopulation` | "one population" |
 | | read, a column chosen | "3 populations by pop": the number of populations `populationsToRun` of `src/core/project.ts` gives, or `populationsOf` while the variants file is not read, the individuals with an empty cell in no population |
 | | the same, and the filters of individuals leave populations with no individual | "2 of 3 populations by pop", the populations `populationsBeforeRun` of `src/core/project.ts` gives with the individuals kept, of those of `populationsToRun`; "none of 3 populations by pop" when they leave none; while a threshold waits for the statistics of each individual, from the individuals the lists keep, as the panel of the diversity lists them |
+
+An LD filter turned on with no distance yet is counted among the
+filters, "2 filters" with the missing data filter, and the line says
+nothing of its distance. The Variants step shows the filter on, and a
+count that left it out would say "1 filter" beside it and change when
+the distance is typed, though no filter was added. The reason is the
+stepper's, where the Variants step is at Problem with the words of
+`variantFilterNeeds`, and the line holds no reason of any step. Nothing
+in it reads as a filter applied: the Count is locked, so its variants
+are "1,200 variants before the filters", and with a threshold on the
+individuals the statistics of each individual are locked too, so its
+individuals are "200 individuals, how many kept not yet known".
 
 The one population is not counted against the individuals kept: the
 part of the individuals says how many the filters keep, "114 of 200
@@ -935,7 +949,10 @@ with the analyses of `TEST_DEFS` of `src/core/testSupport.ts`:
   counts and no statistics "panel.nei · 200 individuals, how many kept
   not yet known · 1,200 variants before the filters · 3 filters · …";
   a file of no variant "nopass.vcf · 200 individuals · no variant · 1
-  filter · …";
+  filter · …"; from stage 4, the missing data filter and an LD filter
+  with no distance, 1,200 variants counted, "panel.nei · 200
+  individuals · 1,200 variants before the filters · 2 filters · 3
+  populations by pop";
   with the thresholds alone, no filter of the variants, "… · 1,200
   variants · 2 filters · …"; with the thresholds at 0.03 and 0.38 and
   a list to remove that holds every individual of p1, "… · 2 of 3

@@ -31,7 +31,11 @@ again that day for the owner's decision that the LD filter of the
 variants starts with no distance: `variantFilterNeeds` of
 `docs/specs/core/project.md` locks what reads the filters of the
 variants, and the writing, until the distance is typed, and the jobs
-take their filters from `jobFilters`. The store is the one object of core that changes: it holds the
+take their filters from `jobFilters`; and again that day after the
+review of that change: it locks what reads the filters of individuals
+too, whose list needs the statistics it locks, and a property draws the
+filter with no distance. The store is the one object of core that
+changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.
 From them it gives the screens one state to read, in which each analysis
@@ -75,15 +79,16 @@ tests in the tests.
 
 - `needs` gives the reason the analysis cannot run beyond what every
   analysis needs (`docs/specs/core/project.md`, `projectNeeds`), beyond,
-  for an analysis whose `filtersRead.variants` is true, an LD filter
-  with no distance (`variantFilterNeeds` of the same spec), and, for an
-  analysis whose `filtersRead.individuals` is true, beyond the
-  lists of individuals popnei would refuse (`individualListNeeds`), in
-  the words the screen shows next to its Run button, or
-  `null`. A reason from any of them locks the analysis; `projectNeeds` is
-  asked first, `variantFilterNeeds` second, only of an analysis that
-  reads the filters of the variants, `individualListNeeds` third, only
-  of one that reads the filters of individuals, and `needs` last.
+  for an analysis whose `filtersRead.variants` or
+  `filtersRead.individuals` is true, an LD filter with no distance
+  (`variantFilterNeeds` of the same spec), and, for an analysis whose
+  `filtersRead.individuals` is true, beyond the lists of individuals
+  popnei would refuse (`individualListNeeds`), in the words the screen
+  shows next to its Run button, or `null`. A reason from any of them
+  locks the analysis; `projectNeeds` is asked first,
+  `variantFilterNeeds` second, only of an analysis that reads either
+  list of filters, `individualListNeeds` third, only of one that reads
+  the filters of individuals, and `needs` last.
 - `filtersRead` says which of the two lists of filters the analysis
   reads, and `keyInputs` what else its key holds
   (`docs/specs/core/keys.md`).
@@ -151,7 +156,7 @@ has the kind `removed` in the code.
 
 | state | when | what it holds |
 |---|---|---|
-| locked | `projectNeeds` gives a reason; or the analysis reads the filters of the variants and `variantFilterNeeds` gives one; or it reads the filters of individuals and `individualListNeeds` gives one; or its `needs` does | the reason |
+| locked | `projectNeeds` gives a reason; or the analysis reads either list of filters and `variantFilterNeeds` gives one; or it reads the filters of individuals and `individualListNeeds` gives one; or its `needs` does | the reason |
 | done | the cache holds a result under its key | the result, its warnings, and the comparison with the check numbers of an opened project file |
 | running | a calculation of its key is in flight and is not being stopped, whether it waits in the queue of the worker or runs; or a Run of its key waits for the statistics of each individual (below) | its progress, the `Progress` of `docs/specs/worker/protocol.md`, popnei's four numbers of the pass as the worker gave them, passed on unchanged, `null` until the worker gives one; the request's id; and whether it waits for the statistics, whose request's progress and id it then holds |
 | error | popnei refused the calculation of its key, or the calculation failed since the last change; or it reads the filters of individuals and the statistics it waits for were refused, or failed since the last change (below) | popnei's message, or the failure, and whether it is the failure of the statistics, `ofStatistics`, so that the panel does not tell it as its own |
@@ -161,9 +166,9 @@ has the kind `removed` in the code.
 | empty | cannot happen | — |
 
 The key of an analysis is made when none of `projectNeeds`,
-`variantFilterNeeds` for an analysis that reads the filters of the
-variants, `individualListNeeds` for one that reads the filters of
-individuals, and its `needs` gives a reason, the first row, and whatever the second lock, the
+`variantFilterNeeds` for an analysis that reads either list of filters,
+`individualListNeeds` for one that reads the filters of individuals,
+and its `needs` gives a reason, the first row, and whatever the second lock, the
 one of the individuals kept: the key holds the thresholds and not the
 list (`docs/specs/core/keys.md`), so it is known without the
 statistics. That lock depends on the cache, not on the project alone,
@@ -172,6 +177,26 @@ the cache holds of the statistics. After an undo to earlier filters whose
 statistics the cache has dropped, a diversity still in the cache is
 `done`, as section 3 of the architecture asks, and only a new Run waits
 for the statistics. The lock stops a Run and nothing else.
+
+`variantFilterNeeds` locks an analysis that reads only the filters of
+individuals, although the LD filter is not among them, because a Run of
+it can need the statistics of each individual, which read the filters
+of the variants and are locked by the same reason. With a threshold on
+the individuals, the list of the individuals kept waits for the
+statistics, and `startRun` then sends them under the key the project
+gives them; while they are locked the project gives them none, and
+`startRun` throws a defect rather than send the Run with no list. With
+this lock no path reaches that defect: `startRun` and `startWrite` give
+`null` in `locked` before they look at the list; a Run that waited for
+the statistics from before the LD filter was turned on is no longer
+current once they are locked, since the project gives them no key and
+so not the one it waits for, and it ends with nothing sent; and
+the statistics of each individual have no reason of their own, `needs`
+gives `null` (`docs/specs/analyses/individualChecks.md`), so they are
+locked only by `projectNeeds` and `variantFilterNeeds`, which lock every
+analysis that reads the filters of individuals as well. No analysis of
+stages 2 to 4 reads the filters of individuals alone; the rule is for
+one that will, and for the definitions the properties draw.
 
 `empty`, nothing to show and nothing the user can do, cannot happen: an
 analysis is locked until its variants file is read, and only a
@@ -1287,8 +1312,10 @@ whose file is a text.
   `individualListNeeds`; the statistics of each individual, which read
   none, are `ready`, and `individualsKept` is `null`.
 - **An LD filter with no distance**, `maxDist` `null`: the analysis that
-  reads the filters of the variants, the counts of the filters, the
-  statistics of each individual and the write are `locked` with the reason of `variantFilterNeeds`,
+  reads the filters of the variants, one that reads only the filters of
+  individuals, with a threshold on the individuals and with none, the
+  counts of the filters, the statistics of each individual and the write
+  are `locked` with the reason of `variantFilterNeeds`,
   before a list popnei would refuse, whose reason comes once the
   distance is typed; an analysis that reads no filter is `ready`; and
   `startRun` and `startWrite` of the locked ones give `null` and send
@@ -1385,7 +1412,13 @@ whose file is a text.
   given to a request is `individualsKept` of its project and of the
   statistics under the key that project gives them; a write whose result
   arrives when the project gives another key leaves no file in the
-  state.
+  state; and, with the commands drawing an LD filter with no distance
+  (`docs/specs/core/project.md`, "How it is verified") and the
+  definitions drawing any `filtersRead`, no request, the jobs of the
+  statistics and of the write among them, carries an LD filter without
+  its distance, no `startRun` or `startWrite` throws, and every
+  definition that reads either list of filters, and the writing, is
+  `locked` while the project holds one.
 
 The tests in the browser, of the walking skeleton, check the same through
 the screens, since core reaches them through the store

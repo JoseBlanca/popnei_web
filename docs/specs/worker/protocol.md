@@ -25,7 +25,10 @@ written beside it, the seven refusals of an xlsx join
 Revised on 28 September 2026 for the owner's decision that day that the
 LD filter of the Variants step starts with no distance: `VariantFilter`
 does not change, and says that a job never carries an LD filter without
-its distance, which the project may hold.
+its distance, which the project may hold; and again that day, after
+the review of that change, core locks what reads either list of filters
+while the distance is missing, and the files wasm is the package of
+xlsx_rs, since the reader of xlsx left this repository.
 
 This spec gives the part of `src/worker/protocol.ts` that core
 names: the filters of the variants and of the individuals, the table of
@@ -201,7 +204,7 @@ export type VariantFilterKind = VariantFilter["kind"];
 A job always carries the distance of its LD filter. The project may
 hold an LD filter whose distance the user has not typed yet, which is
 core's `ProjectVariantFilter` and not this type; core locks every
-analysis that reads the filters of the variants while it does, and
+analysis that reads either list of filters while it does, and
 builds the filters of a job with `jobFilters`, which gives a
 `VariantFilter` list (`docs/specs/core/project.md`, "What an analysis
 needs of every project"). So the worker never checks for a missing
@@ -230,9 +233,9 @@ The table of the individuals file, as the light worker read it. A cell is
 text, a number, a boolean, or `null` when it is missing: an empty cell,
 `NA` or `-` (`docs/functionality.md`, section 4). The cells of a CSV or
 TSV are text, as written in the file; numbers and booleans come only from
-an xlsx, as the files wasm, the small module of ours that reads xlsx,
-gives them. The first column names the individuals. Every row is as long
-as the header.
+an xlsx, as the files wasm, the wasm package of xlsx_rs that reads
+xlsx (`docs/architecture.md`, section 6), gives them. The first column
+names the individuals. Every row is as long as the header.
 
 ```ts
 export type Cell = string | number | boolean | null;

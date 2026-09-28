@@ -56,10 +56,15 @@ other functions of the populations here. Revised again on 28 September
 variants starts with no distance when the user turns it on, as the
 PCA's pruning does: the project holds it with `maxDist` `null` until
 the user types one, `ProjectVariantFilter`; `variantFilterNeeds` gives
-the reason that locks what reads the filters of the variants meanwhile;
-and `jobFilters` gives the filters a job carries, which always have
-their distance. This changes the code of stage 3, and the plan of stage
-4 carries the change.
+the reason that locks what reads the filters meanwhile; and
+`jobFilters` gives the filters a job carries, which always have their
+distance. This changes the code of stage 3, and the plan of stage 4
+carries the change. Revised again that day after the review of that
+change: `variantFilterNeeds` locks what reads the filters of
+individuals as well as what reads those of the variants, since the
+individuals kept by a threshold come from the statistics of each
+individual, which it locks; and the projects the properties draw hold
+an LD filter with no distance.
 
 The project is everything the user has set in one application: the
 variants file they loaded, the filters, the individuals file with the
@@ -164,13 +169,12 @@ here, below.
 ### What an analysis needs of every project
 
 Before an analysis looks at what it needs of its own, every one of them
-needs a variants file that was read; one that reads the filters of the
-variants, `filtersRead.variants` of its definition
-(`docs/specs/core/store.md`), needs filters that popnei can be given;
-and one that reads the filters of individuals, `filtersRead.individuals`,
-needs lists of individuals that popnei
-will accept. `projectNeeds` gives the first thing missing of the file,
-in the words the screen shows beside the Run button, or `null`:
+needs a variants file that was read; one that reads either list of
+filters, `filtersRead.variants` or `filtersRead.individuals` of its
+definition (`docs/specs/core/store.md`), needs filters of the variants
+that popnei can be given; and one that reads the filters of
+individuals needs lists of individuals that popnei will accept.
+`projectNeeds` gives the first thing missing of the file, in the words the screen shows beside the Run button, or `null`:
 
 | the project | the reason |
 |---|---|
@@ -197,13 +201,29 @@ The words are those of the PCA's own pruning with no distance
 (`pruningDistanceReason` of `docs/specs/analyses/pca.md`), with the end
 of the reasons that send the user to another step. The store locks with
 it, after `projectNeeds` and before `individualListNeeds`, the order of
-the filters in the step, only what reads the filters of the variants:
-the Count, the statistics of each individual, the diversity, the PCA,
-and the writing of the filtered variants. The histograms of the
-variants read no filter and stay unlocked, so that the user can look at
-the data while choosing the distance. The Variants step shows the reason
-beside the field of the distance, without the end "in the Variants
-step", as it shows the reasons of the lists.
+the filters in the step, what reads either list of filters: the Count,
+the statistics of each individual, the diversity, the PCA, and the
+writing of the filtered variants. The histograms of the variants read
+no filter and stay unlocked, so that the user can look at the data
+while choosing the distance. The Variants step shows the reason beside
+the field of the distance, without the end "in the Variants step", as
+it shows the reasons of the lists.
+
+What reads only the filters of individuals is locked too, although
+the LD filter is not among what it reads. A threshold on the
+individuals keeps those whose statistics are at most it, and the
+statistics of each individual read the filters of the variants, so
+they are locked by this reason and are never calculated while it
+holds. An analysis that read only the filters of individuals would
+then be `ready`, and its Run would wait for statistics the store
+cannot send, which `startRun` of `src/core/store.ts` treats as a defect
+and throws. No analysis of stages 2 to 4 reads the filters of
+individuals alone, and the rule is for one that will; the lock is the
+store's (`docs/specs/core/store.md`, "The state of an analysis"). The
+option not taken, locking such an analysis only when the project also
+has a threshold on the individuals, would lock it one way or another
+according to a filter that has nothing to do with the LD filter, for
+the same missing distance.
 
 The option not taken was to keep the filter out of the project until a
 distance is typed, the switch on and the field empty as state of the
@@ -772,7 +792,7 @@ export interface Project {
     carries a null distance (jobFilters, below). */
 export type ProjectVariantFilter =
   | Exclude<VariantFilter, { kind: "ld" }>
-  | { kind: "ld"; maxAllowedR2: number; maxDist: number | null };
+  | { readonly kind: "ld"; readonly maxAllowedR2: number; readonly maxDist: number | null };
 ```
 
 The variants file. The load id is 16 random bytes written as 32 lower
@@ -1120,8 +1140,8 @@ again, and a command on another column of it would throw.
 export function projectNeeds(p: Project): string | null;
 
 /** The reason of the LD filter of the variants on with no distance, or
-    null; the table of the LD filter above. The store locks with it only
-    what reads the filters of the variants. */
+    null; the table of the LD filter above. The store locks with it
+    what reads either list of filters, and nothing else. */
 export function variantFilterNeeds(p: Project): string | null;
 
 /** The filters of the variants as a job carries them to popnei:
@@ -1665,7 +1685,14 @@ for a project of association.
   every project, `parseProject(JSON.parse(JSON.stringify(p)), …)` is ok
   and deeply equal to `p`; the projects drawn hold the fields of stage
   4, `typesSet` with pairs applied and not, `onePopulation` and a read `notGiven`, which
-  `wholeProject` of `src/core/testSupport.ts` draws. For every sequence of commands, each list has
+  `wholeProject` of `src/core/testSupport.ts` draws, and an LD filter
+  with `maxDist` `null`: the filter of the variants that file draws, for
+  the projects and for the command `setVariantFilter` of the sequences,
+  is a `ProjectVariantFilter`, whose LD filter has no distance in about
+  half of the draws. For every such project, `variantFilterNeeds` gives
+  a reason exactly when the LD filter has no distance, and `jobFilters`
+  of its filters throws exactly then. For every sequence of commands,
+  each list has
   at most one filter of each kind and both lists are in their fixed
   order; and a command applied twice with the same arguments
   returns, the second time, the project it was given.

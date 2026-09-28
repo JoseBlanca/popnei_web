@@ -274,10 +274,23 @@ since the revision below the package of xlsx_rs. What it changes:
   September 2026, when the owner decided that it starts with none, as
   the PCA's pruning does. The project holds it with its distance `null`
   (section 2), a job never does, and a reason of its own locks what
-  reads the filters of the variants until the distance is typed, as a
-  list of individuals popnei would refuse locks what reads the filters
-  of individuals (section 4). It changes the code of stage 3
-  (`docs/specs/stage-4-open-points.md`, point 16).
+  reads either list of filters until the distance is typed, as a list
+  of individuals popnei would refuse locks what reads the filters of
+  individuals (section 4). What reads only the filters of individuals
+  is locked too, since a threshold on the individuals needs the
+  statistics of each individual, which read the filters of the variants.
+  The option not taken was to hold the filter turned on and its empty
+  field in the screen of the Variants step alone, out of the project
+  until a distance is typed: the step would show a filter on that no
+  analysis applies, the diversity could run and a project be saved with
+  no pruning made, and an Undo or a reload would lose the switch. What
+  would show the choice wrong: the store's property, over commands that
+  draw an LD filter with no distance and definitions that read any of
+  the two lists of filters, that no request carries such a filter, that
+  no Run or write throws, and that every definition that reads a list
+  of filters is locked while the project holds one
+  (`docs/specs/core/store.md`, "How it is verified"). It changes the
+  code of stage 3 (`docs/specs/stage-4-open-points.md`, point 16).
 
 Stage 4 builds on popnei's release `js-v0.1.0-dev.3` of 28 September
 2026, which `package.json` names from its plan: it has the PCoA, which
@@ -728,9 +741,12 @@ while the variant file or the individuals file is being read (section 6),
 "the individuals file lacks 12 individuals of the variants", a trait not
 chosen. Before it, the store asks what every analysis needs of the
 project (`docs/specs/core/project.md`): a variants file read; for an
-analysis that reads the filters of the variants, an LD filter with its
+analysis that reads either list of filters, an LD filter with its
 distance, from 28 September 2026; and for one that reads the filters of
-individuals, lists popnei accepts.
+individuals, lists popnei accepts. `run` gives its job the filters of
+the variants through `jobFilters` of the same spec, which gives them as
+popnei takes them, every LD filter with its distance, and throws a
+defect for one without, which that lock keeps from every `run`.
 
 An application is a list of steps and a list of analyses. The two
 applications share the steps of the variants and the analysis of the PCA.

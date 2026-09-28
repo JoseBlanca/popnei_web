@@ -178,14 +178,18 @@ distance, and beside it "The LD filter of the Variants step needs the
 distance within which variants are compared. It has no default, because
 it depends on how far linkage disequilibrium extends in the genome of
 your species. Type a distance in base pairs, or turn off the LD
-filter." Until a distance is typed, what reads the filters of the
-variants is locked with the same words, ending "in the Variants step"
-where they are shown in another step: in the Variants step, the Count
-of what each filter kept, the statistics of each individual and the
-writing of the filtered variants; in the Analyses step, the diversity
-and the PCA. The histograms of the variants read no filter and can
-still be calculated. No count is shown beside the filters, and the
-stepper shows the Variants step with a problem. The PCA does not prune
+filter." Until a distance is typed, what reads the filters is locked
+with the same words, ending "in the Variants step" where they are shown
+in another step: in the Variants step, the Count of what each filter
+kept, the statistics of each individual and the writing of the
+filtered variants; in the Analyses step, the diversity and the PCA. An
+analysis that read only the filters of individuals would be locked
+too, since the individuals a threshold keeps come from the statistics
+of each individual; none does in stages 2 to 4. The histograms of the
+variants read no filter and can still be calculated. No count is shown
+beside the filters, and the stepper shows the Variants step with a
+problem. The summary line under the stepper counts the filter among
+the filters and says nothing of its distance. The PCA does not prune
 again when the dataset has an LD filter, with or without its distance,
 so it asks for no distance of its own and is locked by the dataset's
 filter until that distance is typed. The help says why there is no
@@ -220,11 +224,14 @@ script of stage 6, which does with popnei in Python what the project
 does, has no line for a filter with no distance; stage 6 says what it
 writes for such a project.
 
-This changes the code of stage 3, which is built: the constant of the
-distance of the step, its test and the type of the filters in the
-project, the locks of the store, the jobs of the Count, the statistics,
-the writing and the diversity, the field of the distance, and the
-validation of the project file. The plan of stage 4 carries the change.
+This changes the code of stage 3, which is built: `LD_DIST_TURNED_ON`,
+the 10,000 base pairs the switch starts at in
+`src/ui/steps/variants/commands.ts`, which the plan of stage 4 removes
+with its test, so that `turnedOnFilter("ld")` gives the filter with
+`maxDist` `null`; the type of the filters in the project, the locks of
+the store, the jobs of the Count, the statistics, the writing and the
+diversity, the field of the distance, and the validation of the
+project file. The plan of stage 4 carries the change.
 Specs: `steps/variants.md`, "The distance of the LD pruning";
 `project.md`, `variantFilterNeeds`, the reason of the lock, and
 `jobFilters`; `store.md`; `keys.md`; `projectFile.md`; `protocol.md`;
