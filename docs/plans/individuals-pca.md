@@ -1,6 +1,6 @@
 # Plan: the Individuals step and the PCA
 
-28 September 2026, approved by the owner the same day. It builds stage 4
+28 September 2026, approved by the owner the same day; under way from 28 September 2026 on the branch `plan/individuals-pca`. It builds stage 4
 of `docs/build-order.md`: the changes to the Variants step of stage 3
 that the owner decided on 28 September 2026, the individuals filtered
 first and the filters that keep their values while off; the Individuals
