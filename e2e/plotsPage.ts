@@ -1,15 +1,35 @@
 /**
  * What the page of the tests of the plots, e2e/plots.html, gives the
- * tests of e2e/plots.spec.ts, as `window.plotsPage`: a histogram drawn at
- * the size a test sets, and its handle, which a test calls through
- * `page.evaluate` (docs/specs/charts/plot2d.md, "How it is verified").
+ * tests of e2e/plots.spec.ts, as `window.plotsPage`: a histogram or a
+ * scatter drawn at the size a test sets, and its handle, which a test
+ * calls through `page.evaluate` (docs/specs/charts/plot2d.md and
+ * scatter.md, "How it is verified").
  */
 
 import type { PngErrorKind } from "../src/charts/export.ts";
 import type { HistogramData } from "../src/charts/histogram.ts";
+import type { ScatterData } from "../src/charts/scatter.ts";
 import type { ChartHandle } from "../src/charts/types.ts";
 
-/** The histogram of the page, and what a test reads of it. */
+/** A point of the page, in CSS pixels from the corner of the viewport. */
+export interface ViewportPoint {
+  readonly x: number;
+  readonly y: number;
+}
+
+/** The times of the scatter, in milliseconds of `performance.now()`. */
+export interface ScatterTimes {
+  /** From `createScatter` to the next frame drawn, one per repetition. */
+  readonly create: readonly number[];
+  /** The call of `createScatter` alone, which draws before it returns. */
+  readonly createCall: readonly number[];
+  /** From an `update` that only changes the highlight to the next frame drawn. */
+  readonly highlight: readonly number[];
+  /** The call of that `update` alone. */
+  readonly highlightCall: readonly number[];
+}
+
+/** The plots of the page, and what a test reads of them. */
 export interface PlotsPage {
   /**
    * Draws the histogram of the MAF of e2e/fixtures/panel.nei, with the
@@ -18,10 +38,45 @@ export interface PlotsPage {
    * its handle.
    */
   draw(width: number, height: number): ChartHandle<HistogramData>;
+  /**
+   * Draws the scatter of 9,381 points, in the populations P1, P2, P3 and
+   * `<b>P4</b>` and in none, in a new element of `width` by `height` CSS
+   * pixels, `position: relative`, in place of the plot drawn before, and
+   * returns its handle. Point 0, of P1, named with markup, is alone at the
+   * top of the data; point 1, of P2, alone at its bottom right corner.
+   */
+  drawScatter(width: number, height: number): ChartHandle<ScatterData>;
+  /** Draws the scatter again with `highlighted` as the legend's highlight. */
+  highlight(highlighted: number | null): void;
+  /**
+   * Where point `index` of the scatter is in the viewport, computed by the
+   * page with `scatterScales`, apart from the plot.
+   */
+  pointPixel(index: number): ViewportPoint;
+  /**
+   * The distance in CSS pixels from (x, y) of the viewport to the nearest
+   * point of the scatter, leaving out point `except` when it is given.
+   */
+  nearestDistance(x: number, y: number, except?: number): number;
+  /** The calls of the scatter's `onHover` since it was drawn, in order. */
+  hovers(): (number | null)[];
+  /** True once the markup of a name has run, which it never should. */
+  markupRan(): boolean;
+  /**
+   * Draws the scatter `repeats` times, after one drawing not counted, in
+   * an element of `width` by `height`, and times each drawing and an
+   * update of its highlight to the next frame drawn; the element is
+   * removed after.
+   */
+  timeScatter(
+    width: number,
+    height: number,
+    repeats: number,
+  ): Promise<ScatterTimes>;
   /** The element of the plot drawn last; throws when none was drawn. */
   element(): HTMLElement;
   /** The handle of the plot drawn last; throws when none was drawn. */
-  handle(): ChartHandle<HistogramData>;
+  handle(): ChartHandle<HistogramData> | ChartHandle<ScatterData>;
   /** The `kind` of `error` when it is a PngError, and null when it is not. */
   pngErrorKind(error: unknown): PngErrorKind | null;
 }

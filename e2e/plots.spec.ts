@@ -7,6 +7,7 @@
  * the tests call the handle through `page.evaluate`.
  */
 
+import { cpus, totalmem } from "node:os";
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import type { PngScale } from "../src/charts/types.ts";
@@ -736,4 +737,405 @@ test("VS4 D3 at 320 pixels wide the three rows of the legend lie inside the SVG"
     expect(row.right).toBeLessThanOrEqual(320);
     expect(row.bottom).toBeLessThanOrEqual(200);
   }
+});
+
+// ---------------------------------------------------------------------
+// The scatter of the PCA (docs/specs/charts/scatter.md, "How it is
+// verified", "In Playwright"): what jsdom cannot see, where the browser
+// puts the pointer, where the tooltip lands and what the pointer does on
+// it, a tap, the colours of the file, its PNG and the times.
+
+/** The name of point 0 of the page's scatter, markup shown as text. */
+const MARKUP_NAME = '<img src=x onerror="window.plotsInjected = true">';
+/** The distance of the tooltip's nearest corner from its point, across and down. */
+const TOOLTIP_OFFSET = 7;
+/** The colour of the first group, --chart-cat-1, #e69f00. */
+const FIRST_GROUP: readonly [number, number, number] = [230, 159, 0];
+/** The legend of the page's scatter: its title, then each group with its count. */
+const SCATTER_LEGEND = [
+  "Population",
+  "P1 (1,877)",
+  "P2 (1,876)",
+  "P3 (1,876)",
+  "<b>P4</b> (1,876)",
+  "No population (1,876)",
+];
+
+/** A point of the viewport, in CSS pixels. */
+interface At {
+  readonly x: number;
+  readonly y: number;
+}
+
+/** Draws the scatter of 9,381 points in an element of `width` by `height`. */
+async function drawScatter(
+  page: Page,
+  width: number,
+  height: number,
+): Promise<void> {
+  await page.evaluate(
+    ([w, h]) => {
+      const plots = window.plotsPage;
+      if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+      plots.drawScatter(w, h);
+    },
+    [width, height] as const,
+  );
+}
+
+/** Where point `index` of the scatter is in the viewport, as the page computes it. */
+async function pointAt(page: Page, index: number): Promise<At> {
+  return page.evaluate((point) => {
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    return plots.pointPixel(point);
+  }, index);
+}
+
+/** The distance from `at` to the nearest point of the scatter but `except`. */
+async function nearestDistance(
+  page: Page,
+  at: At,
+  except?: number,
+): Promise<number> {
+  return page.evaluate(
+    ([x, y, leftOut]) => {
+      const plots = window.plotsPage;
+      if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+      return leftOut === null
+        ? plots.nearestDistance(x, y)
+        : plots.nearestDistance(x, y, leftOut);
+    },
+    [at.x, at.y, except ?? null] as const,
+  );
+}
+
+/** The calls of onHover since the scatter was drawn. */
+async function hovers(page: Page): Promise<(number | null)[]> {
+  return page.evaluate(() => {
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    return plots.hovers();
+  });
+}
+
+/**
+ * Point 0 of the scatter, and a place 60 pixels left of it and 14 below,
+ * which the test checks is 30 pixels from every point; a pointer that
+ * goes there from the tooltip of point 0, which lies right of and below
+ * it, passes no nearer than 14 pixels to point 0.
+ */
+async function pointZeroAndAway(page: Page): Promise<{ zero: At; away: At }> {
+  const zero = await pointAt(page, 0);
+  const away = { x: zero.x - 60, y: zero.y + 14 };
+  expect(await nearestDistance(page, zero, 0)).toBeGreaterThanOrEqual(30);
+  expect(await nearestDistance(page, away)).toBeGreaterThanOrEqual(30);
+  return { zero, away };
+}
+
+test("IP7 D3 the pointer at the pixel of point 0 shows its tooltip 7 pixels right of and below it, its name of markup as text, and calls onHover with 0; 30 pixels from every point the tooltip is hidden and onHover called with null", async ({
+  page,
+}) => {
+  await openPlots(page);
+  await drawScatter(page, 600, 450);
+  const { zero, away } = await pointZeroAndAway(page);
+  const tooltip = page.locator(".chart-tooltip");
+
+  await page.mouse.move(zero.x, zero.y);
+  await expect(tooltip).toBeVisible();
+  await expect(tooltip.locator("div")).toHaveText([
+    MARKUP_NAME,
+    "Population: P1",
+    "PC1 0, PC2 1.1",
+  ]);
+  await expect(tooltip.locator("img")).toHaveCount(0);
+  await expect(tooltip).toHaveAttribute("aria-hidden", "true");
+  await expect(page.locator("#plots path.chart-hover")).toHaveCount(1);
+  expect(await hovers(page)).toEqual([0]);
+  const box = await tooltip.boundingBox();
+  if (box === null) throw new Error("The tooltip is not laid out.");
+  expect(box.x).toBeCloseTo(zero.x + TOOLTIP_OFFSET, 0);
+  expect(box.y).toBeCloseTo(zero.y + TOOLTIP_OFFSET, 0);
+
+  await page.mouse.move(away.x, away.y);
+  await expect(tooltip).toBeHidden();
+  await expect(page.locator("#plots path.chart-hover")).toHaveCount(0);
+  expect(await hovers(page)).toEqual([0, null]);
+  expect(await page.evaluate(() => window.plotsPage?.markupRan() ?? true)).toBe(
+    false,
+  );
+});
+
+test("IP7 D3 the tooltip of a point at the bottom right corner of the frame lies left of and above it, inside the plot", async ({
+  page,
+}) => {
+  await openPlots(page);
+  await drawScatter(page, 600, 450);
+  const corner = await pointAt(page, 1);
+  expect(await nearestDistance(page, corner, 1)).toBeGreaterThanOrEqual(30);
+  const tooltip = page.locator(".chart-tooltip");
+
+  await page.mouse.move(corner.x, corner.y);
+  await expect(tooltip).toBeVisible();
+  await expect(tooltip.locator("div").first()).toHaveText("ind1");
+  expect(await hovers(page)).toEqual([1]);
+  const box = await tooltip.boundingBox();
+  const plot = await page.locator("#plots > div").boundingBox();
+  if (box === null || plot === null) throw new Error("Nothing is laid out.");
+  expect(box.x + box.width).toBeCloseTo(corner.x - TOOLTIP_OFFSET, 0);
+  expect(box.y + box.height).toBeCloseTo(corner.y - TOOLTIP_OFFSET, 0);
+  expect(box.x).toBeGreaterThanOrEqual(plot.x);
+  expect(box.y).toBeGreaterThanOrEqual(plot.y);
+});
+
+test("IP7 D3 the pointer moved from point 0 onto its tooltip in 10 steps keeps it, off it away from every point or out of the plot hides it, and Escape with the focus in a text field hides it and leaves the field its focus and text", async ({
+  page,
+}) => {
+  await openPlots(page);
+  await drawScatter(page, 600, 450);
+  const { zero, away } = await pointZeroAndAway(page);
+  const tooltip = page.locator(".chart-tooltip");
+  // 14 pixels right of and below point 0, inside the tooltip, whose
+  // corner is at 7 and 7: the line there passes through that corner, 9.9
+  // pixels from the point, as a hand going straight to the tooltip does.
+  const onTooltip = { x: zero.x + 14, y: zero.y + 14 };
+
+  await page.mouse.move(zero.x, zero.y);
+  await expect(tooltip).toBeVisible();
+  await page.mouse.move(onTooltip.x, onTooltip.y, { steps: 10 });
+  await expect(tooltip).toBeVisible();
+  expect(await hovers(page)).toEqual([0]);
+
+  await page.mouse.move(away.x, away.y, { steps: 10 });
+  await expect(tooltip).toBeHidden();
+  expect(await hovers(page)).toEqual([0, null]);
+
+  // From the tooltip out of the plot's element in one movement, so that
+  // the overlay never hears the pointer leave.
+  const plot = await page.locator("#plots > div").boundingBox();
+  if (plot === null) throw new Error("The plot is not laid out.");
+  await page.mouse.move(zero.x, zero.y);
+  await page.mouse.move(onTooltip.x, onTooltip.y, { steps: 10 });
+  await expect(tooltip).toBeVisible();
+  await page.mouse.move(plot.x + plot.width + 100, onTooltip.y);
+  await expect(tooltip).toBeHidden();
+  expect(await hovers(page)).toEqual([0, null, 0, null]);
+
+  // Escape, with the focus in a text field of the page.
+  await page.evaluate(() => {
+    const field = document.createElement("input");
+    field.type = "text";
+    field.setAttribute("aria-label", "A field of the page");
+    document.body.append(field);
+  });
+  const field = page.getByLabel("A field of the page");
+  await field.focus();
+  await page.keyboard.type("P1, 0.5");
+  await page.mouse.move(zero.x, zero.y);
+  await expect(tooltip).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(tooltip).toBeHidden();
+  await expect(page.locator("#plots path.chart-hover")).toHaveCount(0);
+  await expect(field).toBeFocused();
+  await expect(field).toHaveValue("P1, 0.5");
+  expect(await hovers(page)).toEqual([0, null, 0, null, 0, null]);
+  // It stays hidden while the pointer stays near the point, and comes
+  // back once the pointer has left every point.
+  await page.mouse.move(zero.x + 2, zero.y + 1);
+  await expect(tooltip).toBeHidden();
+  await page.mouse.move(away.x, away.y);
+  await page.mouse.move(zero.x, zero.y);
+  await expect(tooltip).toBeVisible();
+  expect(await hovers(page)).toEqual([0, null, 0, null, 0, null, 0]);
+});
+
+test.describe("on a screen of touch", () => {
+  test.use({ hasTouch: true });
+
+  test("IP7 D3 a tap on point 0 shows its tooltip, and a tap on the plot away from every point hides it", async ({
+    page,
+  }) => {
+    await openPlots(page);
+    await drawScatter(page, 600, 450);
+    const { zero, away } = await pointZeroAndAway(page);
+    const tooltip = page.locator(".chart-tooltip");
+
+    await page.touchscreen.tap(zero.x, zero.y);
+    await expect(tooltip).toBeVisible();
+    await expect(tooltip.locator("div").first()).toHaveText(MARKUP_NAME);
+    expect(await hovers(page)).toEqual([0]);
+
+    await page.touchscreen.tap(away.x, away.y);
+    await expect(tooltip).toBeHidden();
+    expect(await hovers(page)).toEqual([0, null]);
+  });
+});
+
+test("IP7 D3 toSVG of the scatter has no overlay, no mark of the hover and no var(, holds the legend as text with round joins, and its PNG at 3 times has the colour of the first group at the centre of its mark", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await openPlots(page);
+  await drawScatter(page, 600, 450);
+  const zero = await pointAt(page, 0);
+  await page.mouse.move(zero.x, zero.y);
+  await expect(page.locator("#plots path.chart-hover")).toHaveCount(1);
+
+  const found = await page.evaluate(async () => {
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    const text = plots.handle().toSVG();
+    const screenLegend = plots
+      .element()
+      .querySelectorAll(".chart-legend *").length;
+    // The file laid out in the page, apart from the plot, to measure its
+    // texts and find its marks.
+    const holder = document.createElement("div");
+    holder.innerHTML = text;
+    document.body.append(holder);
+    const root = holder.querySelector("svg");
+    if (root === null) throw new Error("The file holds no svg.");
+    const background = root.querySelector(".chart-legend-background");
+    if (background === null) throw new Error("The legend has no background.");
+    const backgroundLeft = Number(background.getAttribute("x"));
+    const rowElements = [
+      ...root.querySelectorAll<SVGGElement>(".chart-legend-row"),
+    ];
+    const rows = rowElements.map((row) => {
+      const label = row.querySelector<SVGTextElement>("text");
+      if (label === null) throw new Error("A row of the legend has no text.");
+      const move = row.transform.baseVal.consolidate()?.matrix;
+      const box = label.getBBox();
+      const words = label.textContent;
+      return {
+        text: words,
+        left: box.x + (move?.e ?? 0),
+        width: label.getComputedTextLength(),
+        characters: words.length,
+      };
+    });
+    // The centre of the mark of the first entry, the row after the title:
+    // the row's translation and its mark's, whose symbol is centred on 0.
+    const firstRow = rowElements[1];
+    const mark = firstRow?.querySelector<SVGPathElement>("path") ?? null;
+    if (firstRow === undefined || mark === null) {
+      throw new Error("The first entry of the legend has no mark.");
+    }
+    const rowMove = firstRow.transform.baseVal.consolidate()?.matrix;
+    const markMove = mark.transform.baseVal.consolidate()?.matrix;
+    const centre = {
+      x: (rowMove?.e ?? 0) + (markMove?.e ?? 0),
+      y: (rowMove?.f ?? 0) + (markMove?.f ?? 0),
+    };
+    const firstMarkClass = mark.getAttribute("class");
+    holder.remove();
+
+    const blob = await plots.handle().toPNG(3);
+    const image = await createImageBitmap(blob);
+    const canvas = document.createElement("canvas");
+    canvas.width = image.width;
+    canvas.height = image.height;
+    const context = canvas.getContext("2d");
+    if (context === null) throw new Error("No context of a canvas.");
+    context.drawImage(image, 0, 0);
+    const pixel = [
+      ...context.getImageData(
+        Math.round(3 * centre.x),
+        Math.round(3 * centre.y),
+        1,
+        1,
+      ).data,
+    ];
+    const file = new DOMParser().parseFromString(text, "image/svg+xml");
+    return {
+      text,
+      screenLegend,
+      overlays: file.querySelectorAll(".chart-overlay").length,
+      hovers: file.querySelectorAll(".chart-hover").length,
+      markup: file.querySelectorAll("b, img").length,
+      pointStyles: [...file.querySelectorAll("path.chart-points")].map(
+        (path) => path.getAttribute("style") ?? "",
+      ),
+      firstMarkClass,
+      backgroundLeft,
+      rows,
+      png: { width: image.width, height: image.height, pixel },
+    };
+  });
+
+  expect(found.text).not.toContain("var(");
+  expect(found.overlays).toBe(0);
+  expect(found.hovers).toBe(0);
+  expect(found.markup).toBe(0);
+  expect(found.screenLegend).toBe(0);
+  expect(found.rows.map((row) => row.text)).toEqual(SCATTER_LEGEND);
+  // Five paths of the plot and five marks of the legend.
+  expect(found.pointStyles).toHaveLength(10);
+  for (const style of found.pointStyles) {
+    expect(style).toContain("stroke-linejoin: round");
+  }
+  // Every text of the legend starts right of the left edge of its
+  // background, reckoned at 7.2 pixels per character.
+  for (const row of found.rows) {
+    expect(row.left).toBeGreaterThanOrEqual(found.backgroundLeft);
+  }
+  process.stdout.write(
+    `The legend of the scatter's file, text of 12 pixels, in ${test.info().project.name}: ${found.rows
+      .map(
+        (row) =>
+          `"${row.text}" ${row.width.toFixed(1)} px, ${(row.width / row.characters).toFixed(2)} per character`,
+      )
+      .join("; ")}\n`,
+  );
+
+  expect(found.firstMarkClass).toContain("chart-colour-0");
+  expect([found.png.width, found.png.height]).toEqual([1800, 1350]);
+  const [red, green, blue] = found.png.pixel;
+  expect(Math.abs((red ?? -99) - FIRST_GROUP[0])).toBeLessThanOrEqual(8);
+  expect(Math.abs((green ?? -99) - FIRST_GROUP[1])).toBeLessThanOrEqual(8);
+  expect(Math.abs((blue ?? -99) - FIRST_GROUP[2])).toBeLessThanOrEqual(8);
+});
+
+/** The median of `xs`, which is not empty. */
+function median(xs: readonly number[]): number {
+  const sorted = xs.toSorted((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  const upper = sorted[middle] ?? Number.NaN;
+  return sorted.length % 2 === 1
+    ? upper
+    : ((sorted[middle - 1] ?? Number.NaN) + upper) / 2;
+}
+
+test("IP7 D3 the times of the scatter of 9,381 points: from createScatter to the next frame, and of an update of the highlight, five times each", async ({
+  page,
+  browser,
+  browserName,
+}) => {
+  test.setTimeout(60_000);
+  await openPlots(page);
+  const repeats = 5;
+  const times = await page.evaluate(async (count) => {
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    return plots.timeScatter(600, 450, count);
+  }, repeats);
+  expect(times.create).toHaveLength(repeats);
+  expect(times.highlight).toHaveLength(repeats);
+  for (const each of [...times.create, ...times.highlight]) {
+    expect(each).toBeGreaterThan(0);
+  }
+  const ms = (xs: readonly number[]): string =>
+    `median ${median(xs).toFixed(1)} ms (${xs.map((x) => x.toFixed(1)).join(", ")})`;
+  const cpu = cpus()[0]?.model ?? "unknown";
+  const memory = `${String(Math.round(totalmem() / 2 ** 30))} GB`;
+  process.stdout.write(
+    [
+      `The scatter of 9,381 points in 5 groups, 600 by 450 pixels; ${browserName} ${browser.version()}, Playwright ${test.info().config.version}, ${cpu}, ${memory}; ${String(repeats)} times after one not counted`,
+      `  createScatter to the next frame: ${ms(times.create)}`,
+      `  the call of createScatter alone: ${ms(times.createCall)}`,
+      `  update of the highlight to the next frame: ${ms(times.highlight)}`,
+      `  the call of that update alone: ${ms(times.highlightCall)}`,
+      "",
+    ].join("\n"),
+  );
 });

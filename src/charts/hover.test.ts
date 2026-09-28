@@ -194,7 +194,7 @@ describe("IP7 D1 the pieces of the scatter, the tooltip", () => {
     tooltip.destroy();
   });
 
-  test("Escape hides it and calls onDismiss, and neither stops nor prevents the key", () => {
+  test('Escape hides it and calls onDismiss with "escape", and neither stops nor prevents the key', () => {
     const element = laidOut();
     const onDismiss = vi.fn();
     const tooltip = createTooltip(element, onDismiss);
@@ -223,6 +223,7 @@ describe("IP7 D1 the pieces of the scatter, the tooltip", () => {
     field.dispatchEvent(escape);
     expect(tooltipOf(element)?.hidden).toBe(true);
     expect(onDismiss).toHaveBeenCalledTimes(1);
+    expect(onDismiss).toHaveBeenCalledWith("escape");
     expect(escape.defaultPrevented).toBe(false);
     expect(heard).toHaveBeenCalledTimes(6);
     document.removeEventListener("keydown", heard);
@@ -266,7 +267,7 @@ describe("IP7 D1 the pieces of the scatter, the tooltip", () => {
     tooltip.destroy();
   });
 
-  test("a mouse that leaves the element while it is shown hides it and calls onDismiss; a touch does not", () => {
+  test('a mouse that leaves the element while it is shown hides it and calls onDismiss with "leave"; a touch does not', () => {
     const element = laidOut();
     const onDismiss = vi.fn();
     const tooltip = createTooltip(element, onDismiss);
@@ -289,6 +290,7 @@ describe("IP7 D1 the pieces of the scatter, the tooltip", () => {
     leave("mouse", document.body);
     expect(tooltipOf(element)?.hidden).toBe(true);
     expect(onDismiss).toHaveBeenCalledTimes(1);
+    expect(onDismiss).toHaveBeenCalledWith("leave");
     tooltip.destroy();
   });
 

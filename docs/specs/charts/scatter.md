@@ -791,9 +791,9 @@ is `position: relative`, so that the tooltip is placed inside it
   another column: the paths are joined by their keys, those of the
   groups or of the steps, in the same SVG; the tooltip is hidden.
 - **An `update` that only changes the highlight** redraws the paths with
-  their classes and order. How long it takes for the 9,381 points of the
-  largest PCA is not known, and is measured when the plot is built (below,
-  "How it is verified").
+  their classes and order. For the 9,381 points of the largest PCA it is
+  drawn within the next frame, 17 ms in WebKit and in Chromium on the
+  owner's Mac (below, "How it is verified").
 - **A resize** draws again at the new size, with new scales and new
   pixel positions, and hides the tooltip.
 - **A name with markup in it**, of an individual, a population or a
@@ -915,6 +915,24 @@ size the test sets:
   each, printed with the engine and the machine, as the walking skeleton
   measured it; no bound fails the test, and the times are written into
   this spec with their engines.
+
+The times, measured on 28 September 2026 on the owner's Apple M5 Pro
+with 64 GB, macOS 27.0, Playwright 1.63.0, by the last of those flows
+run alone, `--workers=1`, on a plot of 600 by 450 pixels; five times
+each after one not counted, the median and the range:
+
+| | Chromium 153.0.8010.12 | WebKit 26.6 |
+|---|---|---|
+| `createScatter` to the next frame drawn | 17.0 ms (16.4 to 17.1) | 19.0 ms (17 to 19) |
+| the call of `createScatter` alone | 9.4 ms (7.2 to 11.5) | 11.0 ms (10 to 11) |
+| an `update` of the highlight to the next frame drawn | 16.7 ms (16.6 to 17.4) | 17.0 ms (15 to 18) |
+| the call of that `update` alone | 8.3 ms (7.7 to 11.2) | 11.0 ms (11 to 11) |
+
+The call draws the plot before it returns, and the time to the next
+frame holds the wait for it, a frame every 16.7 ms: in both engines the
+scatter of the largest PCA is drawn, and its highlight changed, within
+the frame after the call. WebKit gives `performance.now()` to the
+millisecond. Two more runs gave the same to within 2 ms.
 
 The PCA panel in both themes, with the legend over the plot and a group
 highlighted, is in the screens of `e2e/screens.spec.ts`, looked at as

@@ -146,9 +146,17 @@ function colourLine(colours: PointColours, index: number): string {
 }
 
 /**
+ * How the user hid a tooltip: by Escape, or by a mouse or a pen that
+ * left the plot's element from the tooltip itself.
+ */
+export type TooltipDismissal = "escape" | "leave";
+
+/**
  * The tooltip of a plot, a <div> in `element`, made at the first `show`:
- * kept while the pointer is on it, hidden by Escape, which then calls
- * `onDismiss`, as "The point under the pointer" says.
+ * kept while the pointer is on it; hidden by Escape, which then calls
+ * `onDismiss("escape")`, and by a mouse or a pen that leaves `element`
+ * from it, which calls `onDismiss("leave")`, as "The point under the
+ * pointer" says.
  */
 export interface Tooltip {
   /** Shows `lines` beside the point at (x, y), in the pixels of `element`. */
@@ -167,11 +175,13 @@ export interface Tooltip {
  * relative`. `onDismiss` is called when the user hides the tooltip: by
  * Escape, and by a mouse or a pen that leaves `element` from the tooltip,
  * which the plot's own leave, on its overlay or its canvas, does not
- * hear. The plot then forgets its point and calls its `onHover(null)`.
+ * hear. The plot then forgets its point and calls its `onHover(null)`;
+ * after Escape it keeps that point's tooltip hidden until the pointer
+ * leaves every point, which a leave of `element` already is.
  */
 export function createTooltip(
   element: HTMLElement,
-  onDismiss: () => void,
+  onDismiss: (by: TooltipDismissal) => void,
 ): Tooltip {
   let div: HTMLDivElement | null = null;
   let shown = false;
@@ -184,7 +194,7 @@ export function createTooltip(
     // gets the key as before.
     if (event.key !== "Escape" || !shown) return;
     hide();
-    onDismiss();
+    onDismiss("escape");
   };
 
   const onPointerEnter = (): void => {
@@ -202,7 +212,7 @@ export function createTooltip(
     if (event.pointerType === "touch" || !shown) return;
     if (holdsNode(element, event.relatedTarget)) return;
     hide();
-    onDismiss();
+    onDismiss("leave");
   };
 
   function listen(on: boolean): void {

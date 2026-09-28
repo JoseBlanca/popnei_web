@@ -628,6 +628,27 @@ describe("IP7 D2 the scatter under jsdom, the point under the pointer", () => {
     expect(onHover.mock.calls).toEqual([[1], [null]]);
   });
 
+  test("a mouse that leaves the plot from the tooltip hides it and calls onHover with null, and back at the same point the tooltip shows again", () => {
+    const element = sizedElement(400, 300);
+    const onHover = vi.fn();
+    createScatter(element, six(), { onHover });
+    moveTo(element, pixelOf(six(), 1));
+    const box = tooltipOf(element);
+    leave(element, "mouse", box?.firstChild ?? null);
+    element.dispatchEvent(
+      Object.defineProperties(new Event("pointerleave"), {
+        pointerType: { value: "mouse" },
+        relatedTarget: { value: document.body },
+      }),
+    );
+    expect(tooltipText(element)).toBeNull();
+    expect(element.querySelector("path.chart-hover")).toBeNull();
+    expect(onHover.mock.calls).toEqual([[1], [null]]);
+    moveTo(element, pixelOf(six(), 1));
+    expect(tooltipText(element)).not.toBeNull();
+    expect(onHover.mock.calls).toEqual([[1], [null], [1]]);
+  });
+
   test("Escape hides the tooltip and calls onHover with null; it stays hidden near that point, and a point near another shows again", () => {
     const element = sizedElement(400, 300);
     const onHover = vi.fn();

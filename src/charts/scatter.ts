@@ -337,11 +337,12 @@ export const createScatter: Chart<ScatterData, ScatterEvents> = (
     events.onHover?.(null);
   }
 
-  const tooltip = createTooltip(element, () => {
+  const tooltip = createTooltip(element, (by) => {
     // Escape, or the pointer gone from the tooltip out of the plot: the
-    // tooltip is hidden already.
+    // tooltip is hidden already. After a leave the pointer has left every
+    // point, and the tooltip shows again when it comes back.
     if (hovered === null) return;
-    dismissed = hovered;
+    dismissed = by === "escape" ? hovered : null;
     hovered = null;
     last?.annotations.selectAll("path.chart-hover").remove();
     events.onHover?.(null);
