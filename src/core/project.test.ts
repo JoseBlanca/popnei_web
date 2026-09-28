@@ -5405,6 +5405,32 @@ describe("IP4 D2 the types of the columns: columnAllows", () => {
     ]);
   });
 
+  test("the answer kept for a table is kept by the decimal mark: 1,5, 2 and 3 are not all numbers with the point, and are with the comma", () => {
+    const table: IndividualsTable = deepFreeze({
+      columns: ["id", "h"],
+      rows: [
+        ["i1", "1,5"],
+        ["i2", "2"],
+        ["i3", "3"],
+      ],
+    });
+    const readWithMark = (decimal: "." | ","): TableReadOf =>
+      deepFreeze<TableReadOf>({
+        kind: "read",
+        table,
+        columns: inferColumnTypes(table, decimal),
+        found: {
+          encoding: "utf-8",
+          separator: ";",
+          decimal,
+          undecodedLine: null,
+        },
+      });
+    expect(columnAllows(readWithMark("."))[1]?.continuous).toBe(false);
+    expect(columnAllows(readWithMark(","))[1]?.continuous).toBe(true);
+    expect(columnAllows(readWithMark("."))[1]?.continuous).toBe(false);
+  });
+
   test("the same array for the same read, and for a read of the same table whose types changed", () => {
     const read = workedRead();
     const allows = columnAllows(read);
@@ -5794,6 +5820,19 @@ describe("IP4 D2 the types of the columns: parseProject of a read with a type se
       kind: "wrongValue",
       path: ["individuals", "typesSet", 0, 1],
     });
+    expect(
+      parse(
+        withTypesSet([
+          ["breed", CATEGORICAL],
+          ["status", { kind: "binary", one: "no", zero: "no" }],
+        ]),
+      ),
+    ).toStrictEqual(
+      wrong(
+        ["individuals", "typesSet", 1, 1],
+        "binary with two different values",
+      ),
+    );
   });
 
   test("a continuous type on a column of which one value is not a number is refused, with its text", () => {
