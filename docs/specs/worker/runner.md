@@ -29,7 +29,12 @@ owner's decision that the filters of individuals act first
 the first step put on the `Variants`, the job of the statistics of each
 individual has no filter, those of the histograms of the variants and of
 the counts carry the list, and the numbers with a list are recomputed,
-by `orderA.mjs` below; not yet reviewed or approved. The calculation
+by `orderA.mjs` below; and again that day for the owner's decision that
+the PCA has its own filters of missing data, MAF and LD, which follow
+the Variants step by default (`docs/specs/analyses/pca.md`): the tests
+of the PCA made with the job of that spec's flow and its numbers, and
+the test of two individuals with the list before the MAF filter; not yet
+reviewed or approved. The calculation
 worker is the thread of the browser tab, beside the page, that runs
 popnei, so that a calculation does not freeze the page
 (`docs/architecture.md`, section 1). Its runner is the code that answers
@@ -538,13 +543,14 @@ a call.
 A `pca` job holds its pass, the load id, the filters and the list of the
 individuals kept, and two fields of its own, `method`, `"pca"` or
 `"pcoa"`, and `numCompsKept`, 10 (`docs/specs/analyses/pca.md`,
-`PcaJob`). Its filters are not the project's: core has put the PCA's own
-MAF filter and LD pruning into the list, in the fixed order, one of each
-kind (`pcaFilters`), so the runner puts them as it puts any job's, with
-the list of individuals before them, and merges nothing. Since they differ
-from the project's, the `Variants` of the analysis before or after a PCA
-is opened again by the rule of "The steps", which reads a range of the
-file. After the steps are on the `Variants`, the runner:
+`PcaJob`). Its filters can differ from the project's: core has put the
+PCA's own filters of missing data, MAF and LD, those the user set in its
+panel, in the place of the project's of the same kind, in the fixed
+order, one of each kind (`pcaFilters`), so the runner puts them as it
+puts any job's, with the list of individuals before them, and merges
+nothing. When they differ from the project's, the `Variants` of the
+analysis before or after a PCA is opened again by the rule of "The
+steps", which reads a range of the file. After the steps are on the `Variants`, the runner:
 
 1. Sets the function of the progress, as for the diversity.
 2. Calls, for the PCA, `doPcaFromVariants(variants, { numPrinComps: 0,
@@ -592,7 +598,7 @@ file and not on the list the job puts, seen in node with the release on
 run"); no variant left, "there are no variants to do a PCA with", whether
 the file holds none or the filters kept none; no variant with variance,
 "no variant has more than one dosage among its called genotypes, …",
-with one individual kept; and, with an LD pruning among the filters, a
+with one individual kept; and, with an LD filter among the filters, a
 file whose variants are not in the order of their positions, "the
 variant 2 of the ones the filter by linkage disequilibrium has read, …",
 at the pass. The PCoA refuses, before the pass, one individual, "there
@@ -606,7 +612,7 @@ it cannot run"); and after it a pass that keeps no variant, with
 popnei's usual "the pass gave no variant …"; a pair of individuals with
 no variant called in both, "4 of the 10 pairs of individuals have no
 distance, …"; distances all 0, "every distance is 0, …"; and a file not
-sorted under an LD pruning, as the PCA. With the correction asked, it
+sorted under an LD filter, as the PCA. With the correction asked, it
 does not refuse distances that no space holds. Each was seen in node
 with `js-v0.1.0-dev.3` on 28 September 2026, and `pca.md`, "The
 request", gives them whole.
@@ -624,10 +630,10 @@ September 2026, and popnei counts it at the PCA's 48.8. The client starts the wo
 or a PCoA of more than 700 individuals (`docs/specs/worker/client.md`, "A large PCA,
 and the restart after it"). The runner keeps nothing of a
 PCA: in stage 4 the worker keeps no intermediate result, the variants
-the pruning kept included, which popnei has no way to hold and give back
-(decided by the owner on 27 September 2026, "The pruned variants are
-not kept between two PCAs" in `docs/specs/stage-4-open-points.md`), so
-each PCA prunes again inside its one pass.
+the LD filter kept included, which popnei has no way to hold and give
+back (decided by the owner on 27 September 2026, "The pruned variants
+are not kept between two PCAs" in `docs/specs/stage-4-open-points.md`),
+so each PCA with an LD filter prunes again inside its one pass.
 
 ### The written file
 
@@ -1107,7 +1113,7 @@ new worker pays before its first request:
   (`docs/plans/walking-skeleton.report.md`).
 - **What the old worker held is lost**: its `Variants` with its filters.
   Nothing else before stage 7: the worker keeps no intermediate result in
-  stage 4, the variants the pruning of the PCA kept among them
+  stage 4, the variants the LD filter of a PCA kept among them
   (decided by the owner on 27 September 2026, "The pruned variants are
   not kept between two PCAs" in `docs/specs/stage-4-open-points.md`), and the
   kinship, the first, comes with the GWAS.
@@ -1478,44 +1484,53 @@ as core would. Each test at `run` or `write` of a runner made by
   `numbers3.mjs` and `orderA.mjs` above run with each release, whose
   other numbers are the same with both).
 
-The numbers of the PCA were given by the same release on 27 September
-2026, and the same by `js-v0.1.0-dev.3` on 28 September 2026, which gave
-those of the PCoA, by the script of `docs/specs/analyses/pca.md`, "How it is
-verified", which gives the table they come from. Each test at `run` of a
-runner made by `createRunner`, after the open of `panel.nei`:
+The numbers of the PCA and of the PCoA were given by `js-v0.1.0-dev.3`
+in node on 28 September 2026, by the script of
+`docs/specs/analyses/pca.md`, "How it is verified", which gives the
+table they come from, but for those of two individuals, given the same
+day by the same release. A job with a list puts it before its filters,
+as every job does (above, "The steps"). Each test at `run` of a runner
+made by `createRunner`, after the open of `panel.nei`:
 
-- **The PCA with its pruning**, a job of the filters of a first project
-  and the PCA's, the missing data filter at 0.1, the MAF filter at 0.95
-  and the LD pruning at r² 0.1 within 50,000 base pairs, a distance the
-  user types, since the PCA's pruning has none by default, and no list:
+- **The PCA with its own LD filter**, the job of the flow of `pca.md`
+  with the PCA's own LD filter: the missing data filter at 0.1 of a new
+  project, which the PCA follows, and the LD filter at r² 0.1 within
+  50,000 base pairs, a distance the user types, and no list:
   `numCompsFound` 199, `numComps` 10, `projections` of 2,000 numbers,
-  those of `s000` −0.7546702846382134, 7.577178941266335 and
-  −4.924745039386669 first, the ten percentages of that spec,
-  `numVarsUsed` 535, `lingoesConstant` and `negativeEigenvaluesPercent` `null`, and `passStats`
-  `missing_data` 1,200 to 1,200, `maf` 1,200 to 1,175 and `ld` 1,175 to
-  535, in that order; and the two calls of the progress of the diversity.
-- **The PCA with the pruning off**: PC1 7.7259798956433725, `s000` on
-  PC1 1.5339065839147532, `numVarsUsed` 1,175.
+  those of `s000` −0.7138853335304419, 7.676473141448964 and
+  −4.384383801903496 first, the ten percentages of that spec,
+  `numVarsUsed` 548, `lingoesConstant` and `negativeEigenvaluesPercent`
+  `null`, and `passStats` `missing_data` 1,200 to 1,200 and `ld` 1,200
+  to 548, in that order; and the two calls of the progress of the
+  diversity.
+- **The PCA with the filters of a new project**, the missing data filter
+  at 0.1 alone, as the PCA has them when it follows the Variants step and
+  the step has no LD filter: PC1 7.605779109441194, `s000` on PC1
+  1.5730359180131923, `numVarsUsed` 1,200.
 - **A job with `numCompsKept` 3** keeps 3 components, `projections` of
   600 numbers, each row the first three of popnei's.
-- **Two individuals**, the MAF filter at 0.95 and the list `s000`,
-  `s001`: `numComps` and `numCompsFound` 1, `explainedVariancePercent`
-  `[100]`, `s000` at 18.78829422805594.
+- **Two individuals**, the list `s000`, `s001` and then the MAF filter
+  at 0.95, which counts over those two: `numComps` and `numCompsFound`
+  1, `explainedVariancePercent` `[100]`, `s000` at 18.841443681416774,
+  `numVarsUsed` 355, and `passStats` `maf` 1,200 to 613. With the list
+  last, the order before 28 September 2026, the MAF filter kept 1,175
+  and `s000` was at 18.78829422805594 (`js-v0.1.0-dev.3` in node on 28
+  September 2026).
 - **The refusals**, `refused` with popnei's messages as literals: the
   missing data filter at 0.05 and a MAF filter at 0, "there are no
   variants to do a PCA with"; one individual, "no variant has more than
   one dosage among its called genotypes, so none of them varies and there
   is nothing to do a PCA with"; a VCF written in the test, of three
   individuals whose second variant is at position 10 after one at 30,
-  with the LD pruning, the message of the LD filter, and without it a
+  with an LD filter, the message of the LD filter, and without it a
   result.
-- **The PCoA**, the job of the PCA with its pruning and the method
+- **The PCoA**, the job of the PCA with its own LD filter and the method
   `"pcoa"`: `numCompsFound` 198, `numComps` 10, PC1, PC2 and PC3
-  3.629128255610693, 3.5432450063275183 and 1.9702183453707434, `s000`
-  on them −0.004011193561632288, 0.08244556083044303 and
-  −0.04528526265366679, `lingoesConstant` 0.024712635394468305,
-  `negativeEigenvaluesPercent` 7.94441216305067, `numVarsUsed` `null`,
-  the `passStats` of the PCA with its pruning, and the two calls of the
+  3.679886264523731, 3.5413304853438237 and 1.9573102613242979, `s000`
+  on them −0.0030332529765406636, 0.08117502269333857 and
+  0.03633252913562992, `lingoesConstant` 0.023674522901958598,
+  `negativeEigenvaluesPercent` 7.87126617431627, `numVarsUsed` `null`,
+  the `passStats` of the PCA with its own LD filter, and the two calls of the
   progress; a second run the same numbers to the last bit. The refusals,
   as literals: the list `s000` alone, "there is 1 individual, and a
   principal coordinate analysis places 2 at least by the distance of each
@@ -1524,9 +1539,9 @@ runner made by `createRunner`, after the open of `panel.nei`:
   …"; and a VCF written in the test of five individuals, the fifth
   called only at a variant where the others are missing, "4 of the 10
   pairs of individuals have no distance, …" (`pca.md`, "The request").
-- **The steps of a PCA**: after a diversity at 0.1, a PCA opens the file
-  again, since its filters are not the diversity's, and a second PCA with
-  the same job does not.
+- **The steps of a PCA**: after a diversity at 0.1, the PCA with its own
+  LD filter opens the file again, since its filters are not the
+  diversity's, and a second PCA with the same job does not.
 
 ### In the browser
 
@@ -1649,11 +1664,11 @@ these things change; each is corrected when the owner approves it.
   `js-v0.1.0-dev.2` as before, so a change of the filters frees the
   `Variants` and opens the `File` again, which reads its first range,
   and of a `.nei` file its footer, and not the rest of the variants.
-- The PCA's MAF filter given as one filter, which
-  `docs/specs/worker/protocol.md` gave to the tests of stage 2, is core's
-  from stage 4: `pcaFilters` puts it in the job's filters, and the runner
-  puts them as any job's (`docs/specs/analyses/pca.md`); its test is
-  core's.
+- The PCA's filters given as one of each kind, which
+  `docs/specs/worker/protocol.md` gave to the tests of stage 2, are
+  core's from stage 4: `pcaFilters` puts the PCA's own in the place of
+  the project's of their kind, and the runner puts them as any job's
+  (`docs/specs/analyses/pca.md`); its test is core's.
 - From stage 3, a written file crosses as a `Blob` the runner made, and
   not as a `Uint8Array` transferred, as `worker.md`, "Reading the files
   of the user", has it (`docs/specs/worker/messages.md`, "Where this
@@ -1687,7 +1702,8 @@ that spec says otherwise.
 - The filter of the regions of a BED file, the histogram of the missing
   rate of each variant, and the writer of the VCF: with popnei's release
   that has them.
-- The filters of the PCA's job, the stricter MAF and one LD pruning:
+- The filters of the PCA's job, the project's with the PCA's own
+  filters of missing data, MAF and LD in their place:
   `pcaFilters` of `docs/specs/analyses/pca.md`. The intermediate results
   the worker keeps under their keys: none before the kinship of stage 7.
 - What the step does with a written file, its Save, its warning above a

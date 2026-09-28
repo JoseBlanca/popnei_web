@@ -23,7 +23,11 @@ Revised on 28 September 2026 for the owner's decision that day that the
 filters of individuals act first (`docs/architecture.md`, section 2):
 the statistics of each individual come first among the analyses, as
 their section now comes first in the Variants step, and fill no counts,
-since their pass has no filter; not yet reviewed or approved.
+since their pass has no filter; and again that day for the owner's
+decision that the PCA has its own filters of missing data, MAF and LD,
+each following the Variants step by default: why the PCA still fills
+no counts, and the counts of its pass in the test of `countsOf`, those
+of `docs/specs/analyses/pca.md`; not yet reviewed or approved.
 This spec gives
 the page of the population genetics application, `popgen.html`, and its
 entry, the code that runs once when the page opens and keeps working for
@@ -301,10 +305,12 @@ population genetics application alone until stage 7:
     for the statistics of each individual, whose pass has no filter
     since 28 September 2026, for the histograms of the variants, whose
     pass has no filter of the variants, and,
-    from stage 4, for the PCA, whose pass has filters of its own, the
-    stricter of its MAF filter and the project's and its LD pruning
-    (`docs/specs/analyses/pca.md`, "Which variants it reads";
-    `docs/specs/analyses/filterCounts.md`, "Which results fill it");
+    from stage 4, for the PCA, whose filters of missing data, MAF and LD
+    can be its own in the place of the project's; when they all follow
+    the Variants step they are the project's, but telling which is the
+    case is not worth its code (`docs/specs/analyses/pca.md`, "Which
+    variants it reads"; `docs/specs/analyses/filterCounts.md`, "Which
+    results fill it");
 - **`writeCountsOf`**, the store's `write.countsOf`: the result of
   `filterCounts` made of the `passStats` of a written file, whose pass
   always had the filters of its project;
@@ -878,8 +884,10 @@ hand and whose cancels it records.
   numVars: 1200, filtering: {} }`, `numVarsRead` 1,200 and no counts; of
   a result of the statistics of each individual and of `filterCounts`,
   both; of a result of the PCA whose `passStats` has `missing_data` 1,200
-  to 1,200, `maf` 1,200 to 1,175 and `ld` 1,175 to 535, `numVarsRead`
-  1,200 and no counts. `writeCountsOf` of those counts gives the same result of
+  to 1,200 and `ld` 1,200 to 548, `numVarsRead` 1,200 and no counts; of
+  one whose `passStats` has `missing_data` 1,200 to 1,200 alone, as the
+  PCA that follows the filters of a new project gives, `numVarsRead`
+  1,200 and no counts as well. `writeCountsOf` of those counts gives the same result of
   `filterCounts`. `individualStatsOf` of a result of `individualChecks`
   gives its three fields, and of a diversity result throws.
 - **`saveWritten`**, with a fake `downloadFile`: in `done`, the fake is

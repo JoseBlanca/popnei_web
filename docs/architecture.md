@@ -252,7 +252,7 @@ since the revision below the package of xlsx_rs. What it changes:
 
 - **The calculation worker keeps no intermediate result before stage
   7.** popnei cannot hold the variants its LD pruning keeps, so each PCA
-  prunes inside its own pass (section 5), as the owner decided on 27
+  with an LD filter prunes inside its own pass (section 5), as the owner decided on 27
   September 2026.
 - **An option that changes only how a result is drawn is left out of the
   key**: the column that colours the PCA, its components on the axes, 2D
@@ -277,7 +277,7 @@ since the revision below the package of xlsx_rs. What it changes:
   deploy removed (section 11, point 10 of section 13).
 - **The LD filter of the dataset may have no distance**, from 28
   September 2026, when the owner decided that it starts with none, as
-  the PCA's pruning does. The project holds it with its distance `null`
+  the PCA's own LD filter does. The project holds it with its distance `null`
   (section 2), a job never does, and a reason of its own locks what
   reads either list of filters until the distance is typed, as a list
   of individuals popnei would refuse locks what reads the filters of
@@ -301,13 +301,14 @@ since the revision below the package of xlsx_rs. What it changes:
   code of stage 3 (`docs/specs/stage-4-open-points.md`, point 16).
 - **A filter turned off keeps its values**, from 28 September 2026, when
   the owner decided that the LD filter keeps its r² and its distance
-  while it is off, as the PCA's pruning does; the writers made it the
+  while it is off, as the PCA's own LD filter keeps them while it
+  follows the Variants step; the writers made it the
   rule of every switch of the Variants step. The project gains two
   lists, `filtersOff` and `individualFiltersOff`, where a filter turned
   off waits with its values (section 2); no key, job or lock reads them,
   and `filters` and `individualFilters` keep their meaning, the filters
-  applied. The option not taken was a field `on` in each filter, the
-  form of the PCA's option: every module that reads the filters would
+  applied. The option not taken was a flag in each filter, the form of
+  the PCA's own filters, each with its `follow`: every module that reads the filters would
   then have to skip those off, and one that missed it would apply a
   filter the user had turned off, with nothing on the screen to show it
   (`docs/specs/core/project.md`, "The filters turned off").
@@ -1297,7 +1298,7 @@ popnei's pruning, `filterByLd` of `js/popnei/src/variant.ts`, is a step of
 a `Variants` made again at every pass, and popnei has no way to hold the
 variants it kept. Writing the pruned variants as a `.nei` file in memory
 and opening it again holds the whole file in the memory of wasm, which
-never shrinks. So each PCA prunes inside its own pass, which it makes in
+never shrinks. So each PCA with an LD filter prunes inside its own pass, which it makes in
 any case; what keeping them would spare is the calculation of r², whose
 time is measured in stage 4. If it is large, the option to weigh first
 is one popnei's main has had since 27 September 2026, after the release

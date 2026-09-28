@@ -308,8 +308,11 @@ MAF of 1, which keeps every variant, is a MAF filter at 1.
 
 The Variants step shows beside each filter how many variants it kept,
 counted by the pass of an analysis. The pass of the PCA can have other
-filters than the project's, so its counts are not shown there, whether
-or not it has them. The one number taken from it is the number of
+filters than the project's, so its counts are not shown there. A PCA
+whose three filters follow the Variants step has the project's, and its
+counts are not shown either, since telling which PCAs have the
+project's filters is not worth its code, and the Count or the diversity
+fill them. The one number taken from it is the number of
 variants of the file, `varsProcessed` of its first filter, which is the
 whole file whatever the filter: `countsOf` of `src/core/apps.ts` gives
 `null` counts for the PCA and that number
@@ -2410,8 +2413,8 @@ opens in 2D, and their examples, "PC1 (3.55%)";
 `docs/specs/stage-4-open-points.md`; `docs/functionality.md`, sections 3
 and 5 and open point 4; `docs/architecture.md`, section 4, "What each
 filter kept"; and `docs/specs/steps/variants.md`, where it said the MAF
-filter is on at 0.95 inside the PCA. Asked of the specs revised the same
-day for the order of the filters, and to be made with them:
+filter is on at 0.95 inside the PCA. Made the same day in the specs
+revised for the order of the filters, after them:
 
 - `docs/specs/worker/protocol.md`: the PCA's job carries the dataset's
   filters with the PCA's own of each kind in their place, and not the

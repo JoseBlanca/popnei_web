@@ -29,7 +29,10 @@ kept, so the key of the counts holds the filters of individuals, the
 job carries the list, a Count with a threshold on the individuals waits
 for their statistics, a list popnei would refuse or one that keeps
 nobody locks it, the statistics of each individual no longer fill the
-counts, and the key version is 2. Not yet reviewed or approved; it
+counts, and the key version is 2. Revised again that day for the
+owner's decision that the PCA has its own filters of missing data, MAF
+and LD, each following the Variants step by default: why the PCA still
+fills no counts. Not yet reviewed or approved; it
 changes the code of stage 3.
 
 ## The module
@@ -156,7 +159,7 @@ of its request, by the `analysis` of the result:
 | the diversity, the written file, this analysis | given: each pass has the project's list of the individuals kept and its filters of the variants, in that order |
 | the statistics of each individual | not given, from 28 September 2026: their pass has no filter and no list, whatever the project's; until then it had the project's filters of the variants and gave them |
 | the histograms of the variants | not given: their pass has the list and no filter of the variants, whatever the project's; with no filter of the variants in the project their counts would be those of a Count, and they are not given then either, so that one rule, by the analysis, decides |
-| the principal components, stage 4 | not given: its pass has filters of its own, the stricter of its MAF filter and the project's and its LD pruning, whose counts are not those beside the filters (`pcaFilters` of `docs/specs/analyses/pca.md`); the number of variants of the file is given, `varsProcessed` of its first filter |
+| the principal components, stage 4 | not given: its filters of missing data, MAF and LD can be its own in the place of the project's, and then its counts are not those beside the filters (`pcaFilters` of `docs/specs/analyses/pca.md`); a PCA whose filters all follow the Variants step has the project's, and its counts are not given either, since telling which PCAs have the project's filters is not worth its code; the number of variants of the file is given, `varsProcessed` of its first filter |
 
 The store makes of the counts the result `{ analysis: "filterCounts",
 passStats }` and puts it under the key of this analysis for the request's

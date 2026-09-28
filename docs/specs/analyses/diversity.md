@@ -54,7 +54,10 @@ section 2): the runner puts the list of the individuals kept before the
 filters of the variants, which count over those individuals; the key
 version is 2; a Run waits for the statistics of each individual once
 per load, since they no longer read the filters of the variants; and
-the numbers with the thresholds of the flow are recomputed. Not yet
+the numbers with the thresholds of the flow are recomputed; and, for
+the owner's decision of the PCA's own filters, the refusal of a file not
+sorted, whose words no longer name the statistics of each individual
+and give the PCA's own LD filter in the place of its pruning. Not yet
 reviewed or approved; it changes the code of stage 3 too.
 The code of stage 2 is in
 `src/core/analyses/diversity.ts`. This spec gives the first analysis of the population genetics
@@ -1307,9 +1310,11 @@ between backquotes, neither of which a user of the application can use.
 The words are made in one place, `ldOrderText` of
 `src/core/analyses/words.ts`, from stage 4, given the filter's name and
 how to turn it off; `refusalWords` gives them with the LD filter of the
-Variants step, so the Count and the statistics of each individual, whose
-words are this table's, give them too, and the PCA gives them with its
-own pruning as well (`docs/specs/analyses/pca.md`, "Its words").
+Variants step, so the Count, whose words are this table's, gives them
+too, and the PCA gives them with its own LD filter as well
+(`docs/specs/analyses/pca.md`, "Its words"). The statistics of each
+individual, which read no filter since 28 September 2026, never meet
+this refusal.
 
 ```ts
 /** The words of popnei's refusal of a variant out of the order of its

@@ -277,8 +277,8 @@ give the principal components that go into the GWAS as covariates.
   pruning, and kept for its own LD filter; the option not taken, a
   default of 50,000 base pairs. The LD decay of section 6, once it
   exists, is the way to choose it. The LD filter of the dataset has no
-  default distance either (section 3). Each PCA prunes again inside its
-  one pass over the file: popnei has no way to keep the variants a
+  default distance either (section 3). Each PCA with an LD filter
+  prunes again inside its one pass over the file: popnei has no way to keep the variants a
   pruning left and to give them to the next PCA, and a PCA reads the
   whole file anyway, so keeping them would spare only the calculation
   of r². Decided by the owner on 27 September 2026; the time of the

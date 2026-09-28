@@ -54,7 +54,7 @@ refuses first; and what it asked of other documents, made. Revised on
 other functions of the populations here. Revised again on 28 September
 2026 for the owner's decision that day that the LD filter of the
 variants starts with no distance when the user turns it on, as the
-PCA's pruning does: the project holds it with `maxDist` `null` until
+PCA's pruning then did: the project holds it with `maxDist` `null` until
 the user types one, `ProjectVariantFilter`; `variantFilterNeeds` gives
 the reason that locks what reads the filters meanwhile; and
 `jobFilters` gives the filters a job carries, which always have their
@@ -66,7 +66,7 @@ individuals kept by a threshold come from the statistics of each
 individual, which it locks; and the projects the properties draw hold
 an LD filter with no distance. Revised again that day for the owner's
 decision that the LD filter keeps its r² and its distance while it is
-off, as the PCA's pruning does, so that turning it on again gives back
+off, as the PCA's pruning then did, so that turning it on again gives back
 what was typed: a filter turned off with a switch of the Variants step,
 of the variants or a threshold of the individuals, moves with its
 values to `filtersOff` or `individualFiltersOff`, which no key, no job
@@ -77,8 +77,13 @@ kept comes before the filters of the variants, which count over it; and
 `variantFilterNeeds` locks only what reads the filters of the variants,
 since the statistics of each individual read no filter, while
 `individualListNeeds` locks the Count and the histograms of the
-variants, which now read the filters of individuals. Not yet reviewed
-or approved; it changes the code of stage 3.
+variants, which now read the filters of individuals. Revised again
+that day for the owner's decision that the PCA has its own filters of
+missing data, MAF and LD, each following the Variants step by default
+(`docs/specs/analyses/pca.md`): what said the PCA's pruning now says
+the PCA's own LD filter, and the PCA is locked by the LD filter of the
+step through its own `needs`, and only while its LD filter follows the
+step. Not yet reviewed or approved; it changes the code of stage 3.
 
 The project is everything the user has set in one application: the
 variants file they loaded, the filters, the individuals file with the
@@ -188,8 +193,9 @@ A filter of the Variants step that has a switch keeps its values while
 it is off, so that turning it on again gives back what the user typed.
 The owner decided it on 28 September 2026 for the LD filter, whose
 distance has no default and would otherwise be typed again at every
-turn on, as the PCA's pruning keeps its own (`ldPruning` of
-`docs/specs/analyses/pca.md`). The writers made it the rule of every
+turn on, as the PCA's own LD filter keeps its values while it follows
+the Variants step (`ld` of `docs/specs/analyses/pca.md`, with its flag
+`follow`). The writers made it the rule of every
 filter with a switch the same day, the four filters of the variants and
 the two thresholds of the individuals, so that the switches of one step
 behave alike; the form below costs no more for six filters than for
@@ -219,9 +225,10 @@ The project file writes the two lists of the filters off
 1; a file saved before them has neither, and opens with nothing kept
 (below, "The validation").
 
-The option not taken: a field `on` in every filter of `filters`, the
-form of the PCA's `ldPruning`. The PCA's pruning is one option of one
-analysis, which its own `keyInputs` reads in one place. The filters are
+The option not taken: a flag in every filter of `filters`, the form of
+the PCA's own filters, each with its `follow`. The PCA's own filters
+are options of one analysis, which `pcaFilters` alone reads, in one
+place. The filters are
 read in many: in the code of stage 3, `keys.ts`, `individualsKept.ts`,
 the summary line of the shell, the words of the Variants step and the
 writing read `filters` or `individualFilters` as the filters applied,
@@ -264,12 +271,15 @@ filter turned off is given to no job:
 |---|---|
 | the LD filter of the variants on, with no distance | "The LD filter of the Variants step needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn off the LD filter, in the Variants step." |
 
-The words are those of the PCA's own pruning with no distance
+The words are those of the PCA's own LD filter with no distance
 (`pruningDistanceReason` of `docs/specs/analyses/pca.md`), with the end
 of the reasons that send the user to another step. The store locks with
 it, after `projectNeeds` and before `individualListNeeds`, what reads
-the filters of the variants: the Count, the diversity, the PCA, and the
-writing of the filtered variants. The statistics of each individual,
+the filters of the variants: the Count, the diversity and the writing
+of the filtered variants. The PCA, whose filters can be its own, is
+locked with the same reason by its own `needs`, and only while its LD
+filter follows the Variants step (`docs/specs/analyses/pca.md`, "Why it
+cannot run"). The statistics of each individual,
 which read no filter, and the histograms of the variants, which read
 the filters of individuals alone, stay unlocked, so that the user can
 look at the data while choosing the distance. The Variants step shows the reason beside

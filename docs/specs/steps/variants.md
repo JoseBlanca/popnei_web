@@ -390,7 +390,8 @@ no longer has after an Undo, as the PCA's field is. The distance typed
 is a second command, "the LD pruning changed", and an Undo of it gives
 back the empty field. The r² can be changed while the distance is
 empty. Turned off, the filter keeps its r² and its distance, typed or
-still empty, as the PCA's pruning keeps its own, and turned on again it
+still empty, as the PCA's own LD filter keeps its values while it
+follows the step, and turned on again it
 has them back, so that a distance once typed is not asked for again.
 The owner decided it on 28 September 2026; the option not taken, the
 filter out of the project while off and starting again with no

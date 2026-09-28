@@ -660,8 +660,8 @@ The calculation worker keeps what is costly to make and used by several analyses
 the kinship and the principal components the GWAS takes as covariates,
 from stage 7 (`docs/architecture.md`, section 5). It keeps nothing
 before: the variants the LD pruning of the PCA keeps are not kept, since
-popnei cannot put a list of variants back on a file, and each PCA prunes
-again inside its one pass ("The pruned variants are not kept between two
+popnei cannot put a list of variants back on a file, and each PCA with
+an LD filter prunes again inside its one pass ("The pruned variants are not kept between two
 PCAs" in `docs/specs/stage-4-open-points.md`, 27 September 2026).
 
 - **Under keys, made as the page makes its keys**, a hash of everything

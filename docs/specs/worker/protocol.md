@@ -38,7 +38,10 @@ the variants, which count over it; the job of the statistics of each
 individual carries no filter; the jobs of the histograms of the
 variants and of the counts carry the list; and core locks only what
 reads the filters of the variants while the LD filter has no distance.
-Not yet reviewed or approved.
+Revised again that day for the owner's decision that the PCA has its
+own filters of missing data, MAF and LD, which follow the Variants step
+by default: the passage on the filters of the PCA says how core gives
+them to popnei. Not yet reviewed or approved.
 
 This spec gives the part of `src/worker/protocol.ts` that core
 names: the filters of the variants and of the individuals, the table of
@@ -99,22 +102,24 @@ project holds the numbers popnei is given, as section 3 of
   that order, and a job carries them so; the runner puts them on the
   `Variants` in the order of the job, and does not sort them.
 
-The PCA's own MAF filter and LD pruning, of section 5 of
-`docs/functionality.md`, meet the rule of one filter of each kind when
-the dataset has its own. Core gives the job of the PCA one list of
-filters in the fixed order: the dataset's, with the stricter of the two
-MAF filters in the MAF's place and one LD pruning last, the dataset's
-when it has one and otherwise the PCA's own when it is on
-(`pcaFilters` of `docs/specs/analyses/pca.md`, "Which variants it
-reads"; meanwhile, "Which variants the PCA reads" in
-`docs/specs/stage-4-open-points.md`). The
-list of individuals comes before them, as for every job. So the runner
-puts the filters of a PCA as it puts any job's, and never merges two.
+The PCA has its own filters of missing data, MAF and LD, as the owner
+decided on 28 September 2026, each following the Variants step until the
+user sets a value of its own in the PCA's panel; they meet the rule of
+one filter of each kind when the dataset has a filter of the same kind.
+Core gives the job of the PCA one list of filters in the fixed order:
+the dataset's, with each filter the PCA has of its own in the place of
+the dataset's of that kind, or in the place of its kind when the dataset
+has none (`pcaFilters` of `docs/specs/analyses/pca.md`, "Which variants
+it reads"). The list of individuals comes before them, as for every
+job. So the runner puts the filters of a PCA as it puts any job's, and
+never merges two.
 The rule this spec held until stage 3, which merged the two MAF filters
 only when the dataset had no LD pruning and the job kept every
 individual, goes: it left the PCA with no MAF filter of its own whenever
 a filter of individuals was set (`docs/specs/stage-3-open-points.md`,
-"For stage 4").
+"For stage 4"). So does the rule of the first specs of stage 4, the
+stricter of the PCA's MAF filter and the dataset's, replaced on 28
+September 2026 by the PCA's own filter in the place of the dataset's.
 
 The number the user types is the number popnei is given, with no
 arithmetic between them. A conversion would move the boundary: 1 − 0.9 is
@@ -526,7 +531,7 @@ export interface FilterCountsResult {
 export interface PcaJob {
   analysis: "pca";
   fileId: string;
-  filters: readonly VariantFilter[];       // the dataset's, with the PCA's MAF and pruning
+  filters: readonly VariantFilter[];       // the dataset's, with the PCA's own in their place
   individuals: readonly string[] | null;
   method: "pca" | "pcoa";
   numCompsKept: number;                    // 10, PCA_NUM_COMPS_KEPT of core

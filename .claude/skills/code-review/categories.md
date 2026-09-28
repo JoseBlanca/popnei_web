@@ -23,7 +23,8 @@ Does the code do what the module spec, the screen spec and
   being true. A statement with no code, or with code and no test, is a
   finding.
 - The defaults. Every default the spec gives, a threshold, a model, the
-  pruning on inside the PCA, reaches popnei as the spec says. A default
+  filters of the PCA following those of the Variants step, reaches
+  popnei as the spec says. A default
   that the application passes wrongly gives a sound looking wrong
   result, which is the worst defect it can have.
 - Run the cases. The worked example of the spec and two or three of your

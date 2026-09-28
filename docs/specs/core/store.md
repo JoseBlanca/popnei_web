@@ -46,7 +46,10 @@ them once per load; the counts of the filters read the filters of
 individuals, which `createStore` no longer refuses, and the statistics
 fill no counts; the LD filter with no distance locks only what reads the
 filters of the variants; and `createStore` refuses a definition of the
-statistics that reads any filter. Not yet reviewed or approved; it
+statistics that reads any filter. Revised again that day for the
+owner's decision that the PCA has its own filters of missing data, MAF
+and LD, each following the Variants step by default: why the PCA still
+fills no counts. Not yet reviewed or approved; it
 changes the code of stage 3. The store is the one object of core that
 changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
@@ -683,9 +686,12 @@ written always had them, and `write.countsOf` makes its result of
 `filterCounts` from the counts of its pass. It is `null` for the
 statistics of each individual, whose pass has no filter since 28
 September 2026, for the histograms of the variants, which read no filter
-of the variants, and for the PCA, whose pass has filters
-of its own, the stricter of its MAF filter and the project's and its LD
-pruning (`pcaFilters` of `docs/specs/analyses/pca.md`); its number of
+of the variants, and for the PCA, whose filters of missing data, MAF
+and LD can be its own in the place of the project's (`pcaFilters` of
+`docs/specs/analyses/pca.md`); a PCA whose filters all follow the
+Variants step has the project's, but its counts are not given either,
+since telling which PCAs have the project's filters is not worth its
+code. Its number of
 variants of the file is given, `varsProcessed` of its first filter, which
 is the whole file whatever the filter.
 

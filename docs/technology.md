@@ -290,8 +290,11 @@ its own, so `@types/three`, from DefinitelyTyped, is taken with it for
 development; the owner approved both, three 0.186.1 and `@types/three`
 0.186.0, on 27 September 2026. It is loaded with `import()` when the 3D PCA is first
 drawn, into a chunk of its own, a script the browser downloads then, so
-that a user who never opens the 3D plot never downloads it, unlike the
-2D plots above.
+that a user who never runs a PCA never downloads it, unlike the 2D plots
+above. The panel of the PCA opens on the 3D view, as the owner decided
+on 28 September 2026, so three.js, 134 KB gzipped, is downloaded when
+the first result of a PCA is drawn, and not only when a user asks for
+the 3D view (`docs/specs/analyses/pca.md`, "Its options").
 
 ### The calls to the worker
 

@@ -20,6 +20,10 @@ decision that the filters of individuals act first
 made from the load, the version of popnei and the filters of
 individuals, no longer from the filters of the variants, and the checks
 of the Variants step read other filters; nothing of `keys.ts` changes.
+Revised again that day for the owner's decision that the PCA has its
+own filters of missing data, MAF and LD: the PCA reads all the filters
+through its own inputs, and not through the filters of its key; nothing
+of `keys.ts` changes.
 A key is the name a result is stored under in the cache: a SHA-256
 hash of everything the result was calculated from, so that a result whose
 inputs changed is never shown, and a result whose inputs came back, by an
@@ -69,7 +73,12 @@ no filter, and the histograms of the variants the filters of
 individuals alone, which act before the filters of the variants they
 serve to set (`docs/architecture.md`, section 4). So the definition of an analysis says which of the two lists of
 filters it reads (`docs/specs/core/store.md`), and `keyOf` puts in the key
-only those, as an empty list for one it does not read.
+only those, as an empty list for one it does not read. The PCA reads
+all the filters too, but its filters of missing data, MAF and LD can be
+its own in the place of the project's, so its definition reads the
+filters of individuals alone, and its `keyInputs` gives the filters of
+the variants its job carries (`docs/specs/analyses/pca.md`, "What goes
+into its key").
 
 The list of the individuals the filters keep, which core makes from the
 statistics of each individual (`docs/specs/core/individualsKept.md`), is in no key, as the owner approved on
@@ -172,7 +181,7 @@ The calculation worker keeps what several analyses reuse, the kinship
 of stage 7 the first, under keys made as the keys of the results are
 (`.claude/skills/coding/worker.md`, "The intermediate caches"). The
 variants the LD pruning of the PCA keeps, the example of this section
-until stage 4, are not kept: each PCA prunes again inside its one pass
+until stage 4, are not kept: each PCA with an LD filter prunes again inside its one pass
 ("The pruned variants are not kept between two PCAs" in
 `docs/specs/stage-4-open-points.md`), so no analysis of stage 4 asks for
 the key of an intermediate result. The worker does not make keys, so the
