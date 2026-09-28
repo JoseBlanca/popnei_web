@@ -32,7 +32,7 @@
  * individuals takes the counts off, and the part is then ready with the
  * line of no counts; an undo brings them back from the cache.
  */
-import { useLayoutEffect, useRef } from "react";
+import { useRef } from "react";
 
 import {
   refusalText,
@@ -56,6 +56,7 @@ import { stoppedText } from "../../analyses/words.ts";
 import { classOf } from "../../classOf.ts";
 import { startAnalysis } from "../../runs.ts";
 import { useAppState, useStore } from "../../store.tsx";
+import { FocusSpot, useFocusAfterLoss } from "./FocusSpot.tsx";
 import styles from "./VariantsStep.module.css";
 import { buttonInTheStep, withoutTheStep } from "./words.ts";
 import {
@@ -86,35 +87,23 @@ export function FilterCountsPart(): React.JSX.Element {
   // locked (the spec, "Accessibility").
   const countButton = useRef<HTMLButtonElement>(null);
   const reason = useRef<HTMLSpanElement>(null);
-  // Set when the button, its reason, the line of the total, the warning
-  // or the words of an error leave the page with the focus on them. What
-  // takes the focus comes in the same commit as they go, and is in the
-  // page only once it is done, so the focus is moved after it.
-  const focusLost = useRef(false);
-  useLayoutEffect(() => {
-    if (!focusLost.current) return;
-    focusLost.current = false;
-    // Only when the focus was really lost with what left the page: in
-    // development, React's StrictMode replays the cleanup of a part just
-    // drawn after the focus was moved onto it, which would otherwise
-    // leave the flag set and move the focus at the next drawing.
-    const active = document.activeElement;
-    if (active !== null && active !== document.body) return;
+  // Called when the button, its reason, the line of the total, the
+  // warning or the words of an error leave the page with the focus on
+  // them. What takes the focus comes in the same commit as they go, and is
+  // in the page only once it is done, so the focus is moved after it.
+  const lost = useFocusAfterLoss(() => {
     const shown = countButton.current;
-    (
+    return (
       (shown !== null && !shown.disabled ? shown : null) ??
       total.current ??
       empty.current ??
       failed.current ??
       reason.current
-    )?.focus();
+    );
   });
 
   const button = buttonInTheStep(buttonOf(status));
   const stoppedBy = stoppedNotice(status, notice, ID);
-  const lost = (): void => {
-    focusLost.current = true;
-  };
   const runButton = (shown: NonNullable<ButtonOf>): React.JSX.Element => (
     <RunButton
       button={shown}
@@ -125,9 +114,7 @@ export function FilterCountsPart(): React.JSX.Element {
       onStop={() => {
         store.cancelRun(ID);
       }}
-      onGone={() => {
-        focusLost.current = true;
-      }}
+      onGone={lost}
       onButton={(node) => {
         countButton.current = node;
       }}
@@ -257,60 +244,5 @@ function Done({
       </FocusSpot>
       {status.warnings.length > 0 && <Warnings warnings={status.warnings} />}
     </>
-  );
-}
-
-/** What a part that takes the focus is drawn with. */
-interface FocusSpotProps {
-  /** Whether it is the line of the total, a paragraph, rather than a box
-      of words. */
-  readonly line?: boolean;
-  /** Given its element, and `null` when it goes. */
-  readonly onNode: (node: HTMLElement | null) => void;
-  /** Called when it leaves the page with the focus in it. */
-  readonly onGone: () => void;
-  /** What it holds. */
-  readonly children: React.ReactNode;
-}
-
-/** A part of the Count that takes the focus from a script and is not a
-    stop of the Tab key: the line of the total, the warning of a file of
-    no variant, or the words of an error. When it leaves the page with the
-    focus, it calls `onGone`, for the part to move the focus to what it
-    shows next (the spec, "Accessibility"). */
-function FocusSpot({
-  line = false,
-  onNode,
-  onGone,
-  children,
-}: FocusSpotProps): React.JSX.Element {
-  const own = useRef<HTMLElement | null>(null);
-  // The latest onGone, for the cleanup below, which runs once.
-  const gone = useRef(onGone);
-  useLayoutEffect(() => {
-    gone.current = onGone;
-  });
-  useLayoutEffect(() => {
-    const node = own.current;
-    return () => {
-      // The cleanup of a layout effect runs while the part is still in
-      // the page, so the focus is still in it when it had it.
-      if (node?.contains(document.activeElement) === true) {
-        gone.current();
-      }
-    };
-  }, []);
-  const setNode = (node: HTMLElement | null): void => {
-    own.current = node;
-    onNode(node);
-  };
-  return line ? (
-    <p ref={setNode} tabIndex={-1} className={classOf(styles, "line")}>
-      {children}
-    </p>
-  ) : (
-    <div ref={setNode} tabIndex={-1}>
-      {children}
-    </div>
   );
 }
