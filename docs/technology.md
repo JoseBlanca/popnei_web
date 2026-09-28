@@ -400,8 +400,8 @@ integration. What xlsx_rs costs instead:
   estimate of `docs/specs/site.md`, and a new URL in the site's
   `package.json`. The owner decided on 28 September 2026 that the
   releases are made by hand, and later by a workflow shared with
-  popnei. While the two are changed together, the site links the
-  local build, never committed.
+  popnei. While the two are changed together, the site installs the
+  local build packed, as section 5 says, never committed.
 - **A release that nothing ties to its source** while releases are made
   by hand: the lockfile's hash says the file of a URL never changed, not
   that it was built from the tagged commit, as popnei's releases are made
@@ -597,9 +597,17 @@ popnei is public, so the release is downloaded with no token. When popnei
 is published to npm, only the URL changes, to a version.
 
 While popnei and the application are changed together, the application
-uses the local build of popnei, with `npm link` or
-`"popnei": "file:../popnei/js/popnei"`, which is never committed. What is
-committed, and what the site is built from, is always a release.
+uses the local build of popnei, packed with `npm pack` in
+`popnei/js/popnei` and installed here by the absolute path of the
+`.tgz` with `npm install --no-save`, which copies it into
+`node_modules/` and changes neither `package.json` nor the lockfile, so
+nothing of it is committed. Not a link, `npm link` or a `file:` path: a
+link is a symbolic link whose `.wasm` the development server refuses to
+serve, "403 Forbidden", as the review of 28 September 2026 saw with
+popnei's link, and a relative path such as `../popnei` names no folder
+from a worktree under `.claude/worktrees/` (`docs/architecture.md`,
+section 6). What is committed, and what the site is built from, is
+always a release.
 
 xlsx_rs is taken in the same way, from its own releases, on tags
 `js-v…` of its repository, `github.com/JoseBlanca/xlsx_rs`, under the
@@ -607,13 +615,9 @@ owner's account and public as popnei's is, as the owner decided on 28
 September 2026 (`docs/architecture.md`, section 13, point 11): `"xlsx_rs":
 "https://github.com/JoseBlanca/xlsx_rs/releases/download/js-v0.1.0-dev.1/xlsx_rs-0.1.0.tgz"`
 for the first, a new tag and a new URL for each newer one. While the two
-are changed together, the local build is packed with `npm pack` in
-xlsx_rs and installed here by its absolute path with `npm install
---no-save`, which copies it into `node_modules/` and saves nothing to
-commit; a link, `npm link` or a `file:` path, is a symbolic link whose
-`.wasm` the development server refuses to serve, and the review of 28
-September 2026 saw the same with popnei's link
-(`docs/architecture.md`, section 6). So the site needs no Rust at all.
+are changed together, its local build is packed and installed as
+popnei's is, above, and never linked, for the same reasons. So the site
+needs no Rust at all.
 
 ## 6. The browsers
 

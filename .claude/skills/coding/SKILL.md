@@ -305,10 +305,12 @@ possible break and a possible abandonment.
 - **popnei comes from a GitHub Release**, as section 5 of
   `docs/technology.md` has it: `package.json` names the `.tgz` of a tag by
   its URL, and the lockfile keeps its hash. For work on both at once, the
-  local build is linked with `npm link` or `"popnei":
-  "file:../popnei/js/popnei"`, and that is never committed: the last check
-  below fails on it. A newer popnei is a new tag there and a new URL here,
-  in a commit of its own that says what changed in popnei.
+  local build is packed with `npm pack` in `popnei/js/popnei` and
+  installed with `npm install --no-save` and the absolute path of the
+  `.tgz`, which copies it into `node_modules/` and changes neither
+  `package.json` nor the lockfile; never linked, for the reasons given
+  under xlsx_rs below. A newer popnei is a new tag there and a new URL
+  here, in a commit of its own that says what changed in popnei.
 - **xlsx_rs comes from a GitHub Release too**, in the same way, as
   section 5 of `docs/technology.md` has it since 28 September 2026: a URL
   of the `.tgz` of a tag of xlsx_rs in `package.json`, and a newer
@@ -319,8 +321,8 @@ possible break and a possible abandonment.
   lockfile. Not a link, `npm link` or a `file:` path: the development
   server refuses to serve a `.wasm` whose real folder is outside the
   repository, "403 Forbidden", and `../xlsx_rs` names no folder from a
-  worktree (`docs/architecture.md`, section 6). The link of popnei above
-  meets the same 403 in the development server. A fix of how an
+  worktree (`docs/architecture.md`, section 6). A link of popnei meets
+  the same 403 in the development server. A fix of how an
   xlsx is read is made in xlsx_rs, by its own skills, and not worked
   around in the light worker.
 
@@ -358,8 +360,10 @@ to `src/core` too, because core reaches the screens through the store;
 The last two print the dependencies on popnei and on xlsx_rs, which have
 to be URLs of `https://github.com/JoseBlanca/popnei/releases/download/`
 and `https://github.com/JoseBlanca/xlsx_rs/releases/download/`; until
-stage 4 adds xlsx_rs, the second prints nothing. A `file:` path or a
-link is the local build, and is not committed.
+stage 4 adds xlsx_rs, the second prints nothing. A local build installed
+with `npm install --no-save` leaves the URL in place, so the check
+passes over it; a `file:` path or a link printed there is a local build
+that must not be committed.
 
 A layer or a script that does not exist yet is reported as not there, not
 as passed. Report what each command printed when it failed and that it
