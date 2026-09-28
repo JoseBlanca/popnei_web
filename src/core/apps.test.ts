@@ -9,14 +9,20 @@ import {
   variantsKept,
   writeCountsOf,
 } from "./apps.ts";
+import { resultBytes } from "./cache.ts";
 import { keyFromWire } from "./keys.ts";
 import { emptyProject } from "./project.ts";
-import type { AnalysisView, AppState } from "./store.ts";
+import { createStore } from "./store.ts";
+import type { AnalysisView, AppState, Store } from "./store.ts";
+import { FIVE_INDIVIDUALS, fiveIndividualsProject } from "./testSupport.ts";
 import type {
   DiversityResult,
   IndividualChecksResult,
+  Job,
   JobResult,
+  Outcome,
   PassStats,
+  Run,
   VariantChecksResult,
   VariantDistrib,
 } from "../worker/protocol.ts";
@@ -217,5 +223,115 @@ describe("IP2 D2 countsOf in the order of 28 September 2026", () => {
       numVarsRead: 1200,
       counts: null,
     });
+  });
+});
+
+/** A request the store sent, with the id of its run. */
+interface Sent {
+  readonly id: number;
+  readonly key: string;
+  readonly job: Job;
+}
+
+/** A store of the analyses of the page, as src/ui/popgenStore.ts makes
+    it, with a cache of `cacheMaxBytes` and a `send` whose requests the
+    test ends by hand. */
+function popgenStoreOf(cacheMaxBytes: number): {
+  readonly store: Store<JobResult>;
+  readonly sent: Sent[];
+} {
+  const sent: Sent[] = [];
+  const store = createStore<Job, JobResult>({
+    first: firstProject("popgen"),
+    analyses: POPGEN_ANALYSES,
+    send: (key, job): Run<JobResult> => {
+      const id = sent.length + 1;
+      sent.push({ id, key, job });
+      return {
+        id,
+        outcome: new Promise<Outcome<JobResult>>(() => undefined),
+        cancel: () => undefined,
+      };
+    },
+    countsOf,
+    counts: "filterCounts",
+    statistics: { analysis: "individualChecks", of: individualStatsOf },
+    write: null,
+    appVersion: "0.1.0",
+    cacheMaxBytes,
+    maxUndoSteps: 100,
+  });
+  store.popneiReady("0.1.0");
+  return { store, sent };
+}
+
+/** The statistics of the five individuals of the worked case. */
+const FIVE_STATS: IndividualChecksResult = {
+  analysis: "individualChecks",
+  individuals: FIVE_INDIVIDUALS,
+  missingGtRate: Float64Array.from([0.2, 0.1, 0.3, 0.05, 1]),
+  obsHetRate: Float64Array.from([0.3, 0.5, 0.2, 0.4, Number.NaN]),
+  passStats: { numVars: 1200, filtering: {} },
+};
+
+/** Histograms of the variants over 1,200 variants. */
+const HISTOGRAMS: VariantChecksResult = {
+  analysis: "variantChecks",
+  binEdges: Float64Array.from([0, 1]),
+  maf: distrib(),
+  obsHet: distrib(),
+  unbiasedExpHet: distrib(),
+  passStats: { numVars: 1200, filtering: {} },
+};
+
+/** Ends the request `request` with `result`. */
+function end(
+  store: Store<JobResult>,
+  request: Sent | undefined,
+  result: JobResult,
+): void {
+  expect(request?.job.analysis).toBe(result.analysis);
+  if (request === undefined) return;
+  store.runEnded(request.id, { kind: "done", key: request.key, result });
+}
+
+describe("IP2 D3 the histograms of the variants after an undo to a load whose statistics the cache dropped", () => {
+  test("the histograms still in the cache are done while the individuals kept are not known (store.md, 'The state of an analysis')", () => {
+    // Room for the histograms of two loads and the statistics of one, so
+    // that the statistics of the first load, used longest ago, go first.
+    const bound =
+      2 * resultBytes(HISTOGRAMS) + Math.floor(1.5 * resultBytes(FIVE_STATS));
+    const { store, sent } = popgenStoreOf(bound);
+    store.open(
+      fiveIndividualsProject([
+        { kind: "missing_data", maxAllowedMissingRate: 0.2 },
+      ]),
+    );
+    // A Calculate of the histograms calculates the statistics first.
+    const calculate = (): void => {
+      store.startRun("variantChecks");
+      end(store, sent.at(-1), FIVE_STATS);
+      end(store, sent.at(-1), HISTOGRAMS);
+    };
+    calculate();
+    store.apply("a new variants file was loaded", (p) =>
+      p.variants === null
+        ? p
+        : {
+            ...p,
+            variants: {
+              ...p.variants,
+              fileId: "0123456789abcdef0123456789abcdef",
+            },
+          },
+    );
+    calculate();
+
+    store.undo();
+
+    const state = store.getState();
+    const histograms = state.analyses.find((a) => a.id === "variantChecks");
+    expect(histograms?.status.kind).toBe("done");
+    expect(state.individualsKept?.list.kind).toBe("needsStatistics");
   });
 });

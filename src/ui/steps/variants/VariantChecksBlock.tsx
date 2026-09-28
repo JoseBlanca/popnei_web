@@ -162,11 +162,13 @@ function Done({ numVars }: { readonly numVars: number }): React.JSX.Element {
   const variantsName = useAppState((s) => s.project.variants?.name ?? null);
   const popneiVersion = useAppState((s) => s.popneiVersion);
   const kept = useAppState((s) => s.individualsKept?.list ?? null);
-  // A result is shown only under the key of the individuals kept, so the
-  // list is known: the histograms of a threshold wait for the statistics.
-  if (kept?.kind !== "known") {
+  // A result is shown only for a project whose lists popnei accepts, so
+  // the individuals kept are made; the list may wait for the statistics,
+  // after an undo to a load whose statistics the cache dropped (store.md,
+  // "The state of an analysis").
+  if (kept === null) {
     throw new Error(
-      "popnei_web defect: the histograms of the variants are shown with the individuals kept not known.",
+      "popnei_web defect: the histograms of the variants are shown with no individuals kept.",
     );
   }
   // A result is shown only under the key of the project's variants file
@@ -179,11 +181,7 @@ function Done({ numVars }: { readonly numVars: number }): React.JSX.Element {
   return (
     <>
       <p className={classOf(styles, "line")}>
-        {histogramsCaption(
-          numVars,
-          variantsName,
-          kept.individuals === null ? null : kept.individuals.length,
-        )}
+        {histogramsCaption(numVars, variantsName, kept)}
       </p>
       <p className={classOf(styles, "muted")}>
         {versionsText(popneiVersion, APP_VERSION)}

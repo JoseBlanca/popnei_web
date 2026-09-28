@@ -89,14 +89,33 @@ describe("VS6 D2 the words of the histograms of the variants", () => {
   });
 
   test("the caption of the three, over every individual, over the individuals the filters of individuals keep, and over one", () => {
-    expect(histogramsCaption(1200, "panel.nei", null)).toBe(
-      "Over the 1,200 variants of panel.nei, before any filter.",
-    );
-    expect(histogramsCaption(1200, "panel.nei", 111)).toBe(
+    expect(
+      histogramsCaption(1200, "panel.nei", {
+        kind: "known",
+        individuals: null,
+      }),
+    ).toBe("Over the 1,200 variants of panel.nei, before any filter.");
+    const kept111 = Array.from({ length: 111 }, (_, i) => `s${String(i)}`);
+    expect(
+      histogramsCaption(1200, "panel.nei", {
+        kind: "known",
+        individuals: kept111,
+      }),
+    ).toBe(
       "Over the 1,200 variants of panel.nei and the 111 individuals the filters of individuals keep, before any filter of the variants.",
     );
-    expect(histogramsCaption(1, "a\tb.vcf", 1)).toBe(
+    expect(
+      histogramsCaption(1, "a\tb.vcf", { kind: "known", individuals: ["s0"] }),
+    ).toBe(
       "Over the 1 variant of a\\tb.vcf and the one individual the filters of individuals keep, before any filter of the variants.",
+    );
+  });
+
+  test("IP2 D3 the caption of histograms shown while the individuals kept wait for the statistics, after an undo to a load whose statistics the cache dropped, leaves out their number", () => {
+    expect(
+      histogramsCaption(1200, "panel.nei", { kind: "needsStatistics" }),
+    ).toBe(
+      "Over the 1,200 variants of panel.nei and the individuals the filters of individuals keep, before any filter of the variants.",
     );
   });
 

@@ -10,6 +10,7 @@
 
 import { filterNameInSentence } from "../../../core/analyses/filterCounts.ts";
 import type { VariantStatistic } from "../../../core/analyses/variantChecks.ts";
+import type { KeptList } from "../../../core/individualsKept.ts";
 import { counted, escaped, grouped } from "../../../core/project.ts";
 import type { Notice } from "../../../core/store.ts";
 import type {
@@ -131,24 +132,35 @@ export function thresholdText(filterName: string, value: number): string {
 }
 
 /** The caption of the three histograms, over every variant of the file
-    and the individuals the filters of individuals keep, `numKept`, or
-    `null` when they remove none: "Over the 1,200 variants of panel.nei,
-    before any filter.", or "Over the 1,200 variants of panel.nei and the
-    111 individuals the filters of individuals keep, before any filter of
-    the variants." */
+    and the individuals the filters of individuals keep, `kept`: "Over the
+    1,200 variants of panel.nei, before any filter." when they remove
+    none, "Over the 1,200 variants of panel.nei and the 111 individuals
+    the filters of individuals keep, before any filter of the variants."
+    when they remove some, and "… and the individuals the filters of
+    individuals keep, …" while the list waits for the statistics. */
 export function histogramsCaption(
   numVars: number,
   fileName: string,
-  numKept: number | null,
+  kept: KeptList,
 ): string {
   const variants = `${counted(numVars, "variant")} of ${escaped(fileName)}`;
-  if (numKept === null) {
+  if (kept.kind === "known" && kept.individuals === null) {
     return `Over the ${variants}, before any filter.`;
   }
+  // After an undo to a load whose statistics the cache dropped, the
+  // histograms still in the cache are shown while the individuals kept
+  // wait for the statistics (store.md, "The state of an analysis"), and
+  // their number is not known.
+  const numKept =
+    kept.kind === "known" && kept.individuals !== null
+      ? kept.individuals.length
+      : null;
   const individuals =
-    numKept === 1
-      ? "the one individual"
-      : `the ${counted(numKept, "individual")}`;
+    numKept === null
+      ? "the individuals"
+      : numKept === 1
+        ? "the one individual"
+        : `the ${counted(numKept, "individual")}`;
   return `Over the ${variants} and ${individuals} the filters of individuals keep, before any filter of the variants.`;
 }
 
