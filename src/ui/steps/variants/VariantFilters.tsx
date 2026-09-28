@@ -172,6 +172,7 @@ export function VariantFilters(): React.JSX.Element {
         <Filter
           label={MISSING_DATA_SWITCH}
           count={counted ? <KeptCount kind="missing_data" /> : null}
+          countCanCome={read}
           line={MISSING_DATA_LINE}
           isOn={missingData !== null}
           onSwitch={(on) => {
@@ -200,6 +201,7 @@ export function VariantFilters(): React.JSX.Element {
         <Filter
           label={OBS_HET_SWITCH}
           count={counted ? <KeptCount kind="obs_het" /> : null}
+          countCanCome={read}
           line={OBS_HET_LINE}
           isOn={obsHet !== null}
           onSwitch={(on) => {
@@ -241,6 +243,7 @@ export function VariantFilters(): React.JSX.Element {
         <Filter
           label={MAF_SWITCH}
           count={counted ? <KeptCount kind="maf" /> : null}
+          countCanCome={read}
           line={MAF_LINE}
           isOn={maf !== null}
           onSwitch={(on) => {
@@ -275,6 +278,7 @@ export function VariantFilters(): React.JSX.Element {
         <Filter
           label={LD_SWITCH}
           count={counted ? <KeptCount kind="ld" /> : null}
+          countCanCome={read}
           line={LD_LINE}
           isOn={ld !== null}
           onSwitch={(on) => {

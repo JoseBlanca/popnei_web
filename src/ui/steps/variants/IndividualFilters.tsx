@@ -214,6 +214,7 @@ export function IndividualFilters(): React.JSX.Element {
           return (
             <Filter
               key={kind}
+              countCanCome={read}
               label={words.switchLabel}
               line={words.line}
               isOn={value !== null}

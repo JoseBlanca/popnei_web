@@ -39,6 +39,10 @@ export interface FilterProps {
       drawn inside an error boundary of its own, or `null` while it has
       no count. */
   readonly count: React.ReactNode;
+  /** Whether a count can come beside the filter, a variants file being
+      read: the line of the count then stands while the filter is on,
+      empty when there is none. */
+  readonly countCanCome: boolean;
   /** The ids of elements elsewhere that describe the fields after the
       count, separated by spaces, or `null` for none. */
   readonly describedAlso?: string | null;
@@ -59,6 +63,7 @@ export function Filter({
   line,
   isOn,
   count,
+  countCanCome,
   describedAlso = null,
   onSwitch,
   children,
@@ -88,9 +93,9 @@ export function Filter({
         </p>
       )}
       {children(described)}
-      {isOn && (
-        // The line of the count stands while the filter is on, empty when
-        // there is no count, so that the counts taken off by a change,
+      {isOn && (countCanCome || shown) && (
+        // The line of the count stands while the filter is on and a count
+        // can come, empty when there is none, so that the counts taken off by a change,
         // the distance committed as the focus leaves it for a switch
         // below, move nothing under the pointer: the switch pressed stays
         // where it was, and the click reaches it. With a count, the line
