@@ -172,8 +172,8 @@ export interface WritingLine {
 }
 
 /** The line beside the bar: "Writing panel.filtered.nei · 35% · 0:12",
-    "Calculating the statistics of each individual, which the filters of
-    individuals are set from · 35% · 0:12"; with no share before the first
+    "Calculating the statistics of each individual, which the thresholds
+    of the individuals need · 35% · 0:12"; with no share before the first
     progress; and "Waiting for panel.nei to be opened again, then writing
     panel.filtered.nei · 0:12" after a stop, until the first progress. */
 export function writingText(line: WritingLine): string {

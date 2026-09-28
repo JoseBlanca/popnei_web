@@ -997,8 +997,9 @@ export const wholeProject: fc.Arbitrary<Project> = fc
 // individuals file and uses the populations, and one that needs only the
 // variants file. Their results differ in shape, so that a result given
 // to the other analysis's functions shows. From stage 3, two more: the
-// statistics of each individual and the counts of the filters, each
-// reading the filters of the variants alone.
+// statistics of each individual, reading no filter since 28 September
+// 2026, and the counts of the filters, reading the filters of
+// individuals and of the variants.
 
 /** A request of the fake analyses. */
 export interface TestJob {

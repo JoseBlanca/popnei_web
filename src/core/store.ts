@@ -1527,8 +1527,9 @@ export function createStore<J, R, F = never>(
       const waitsBehind = waitsBehindNow(keys);
       endWaits([...notice.waits].filter((waitId) => waitsBehind.has(waitId)));
     }
-    // The counts are left out: a change of any filter of the variants
-    // takes them off, which the user sees beside the filters.
+    // The counts are left out: a change of any filter of the variants or
+    // of the individuals takes them off, which the user sees beside the
+    // filters.
     const removed = defs
       .filter(
         (def, index) =>

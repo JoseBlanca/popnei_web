@@ -101,7 +101,7 @@ export function runningBarLabel(
     again, then calculating · 0:12" after a stop, until the first
     progress; and, while a Run waits for the statistics of each
     individual, "Calculating the statistics of each individual, which the
-    filters of individuals are set from · 35% · 0:12", and the same for
+    thresholds of the individuals need · 35% · 0:12", and the same for
     the other two. */
 export function runningText(line: RunningLine): string {
   const clock = clockText(line.seconds);

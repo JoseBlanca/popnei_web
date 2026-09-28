@@ -220,11 +220,12 @@ export function statsCaption(
 
 /**
  * The words of the statistics removed, from the change of the notice that
- * lists them (individualChecks.md, "Its words"): after a command, "The
- * statistics of each individual were removed because the MAF filter
- * changed. Undo brings back the table and the histograms as they were,
+ * lists them (individualChecks.md, "Its words"), which only a change of
+ * the load gives since they read no filter: after a command, "The
+ * statistics of each individual were removed because a new variants file
+ * was loaded. Undo brings back the table and the histograms as they were,
  * without calculating again; Calculate makes new ones for the new
- * settings."; after an undo, "Undone: the MAF filter changed. The
+ * settings."; after an undo, "Undone: a new variants file was loaded. The
  * statistics of each individual were removed; Redo brings back …, and
  * Calculate makes new ones for the settings as they are now.", and after
  * a redo the same with "Redone:" and Undo.

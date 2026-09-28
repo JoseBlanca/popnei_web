@@ -80,10 +80,12 @@ export function firstProject(app: "popgen"): Project {
  * variants of the file, which the store records into the variants file of
  * its load, what the first filter of the pass was given, or what the pass
  * gave when it had no filter; and the counts of its filters, a result of
- * `filterCounts`, for a result whose pass had the filters of the variants
- * of its request's project, told by the analysis of the result: the
- * diversity and `filterCounts` itself, and not the statistics of each
- * individual nor the histograms of the variants, whose pass has no filter.
+ * `filterCounts`, for a result whose pass had the list of the individuals
+ * kept and the filters of the variants of its request's project, told by
+ * the analysis of the result: the diversity and `filterCounts` itself,
+ * and not the statistics of each individual, whose pass has no filter,
+ * nor the histograms of the variants, whose pass has the list and no
+ * filter of the variants (docs/architecture.md, section 4).
  */
 export function countsOf(r: JobResult): PassFound<JobResult> {
   const numVarsRead = variantsOfFile(r.passStats);
