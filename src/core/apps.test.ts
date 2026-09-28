@@ -22,6 +22,7 @@ import type {
   JobResult,
   Outcome,
   PassStats,
+  PcaResult,
   Run,
   VariantChecksResult,
   VariantDistrib,
@@ -220,6 +221,50 @@ describe("IP2 D2 countsOf in the order of 28 September 2026", () => {
   test("countsOf of a result of the statistics of each individual, whose pass has no filter, gives the variants of the file and no counts", () => {
     const pass: PassStats = { numVars: 1200, filtering: {} };
     expect(countsOf(individualChecksResult(pass))).toStrictEqual({
+      numVarsRead: 1200,
+      counts: null,
+    });
+  });
+});
+
+/** A result of the PCA of two individuals with the counts `pass`. */
+function pcaResult(pass: PassStats): PcaResult {
+  return {
+    analysis: "pca",
+    method: "pca",
+    individuals: ["s000", "s001"],
+    numComps: 1,
+    numCompsFound: 1,
+    projections: Float64Array.from([1, -1]),
+    explainedVariancePercent: Float64Array.from([100]),
+    numVarsUsed: pass.numVars,
+    lingoesConstant: null,
+    negativeEigenvaluesPercent: null,
+    passStats: pass,
+  };
+}
+
+describe("IP6 D4 countsOf of a result of the PCA", () => {
+  test("a PCA with its own LD filter, missing data 1,200 to 1,200 and LD 1,200 to 548: the variants of the file and no counts", () => {
+    const pass: PassStats = {
+      numVars: 548,
+      filtering: {
+        missing_data: { varsProcessed: 1200, varsKept: 1200 },
+        ld: { varsProcessed: 1200, varsKept: 548 },
+      },
+    };
+    expect(countsOf(pcaResult(pass))).toStrictEqual({
+      numVarsRead: 1200,
+      counts: null,
+    });
+  });
+
+  test("a PCA that follows the filters of a new project, missing data 1,200 to 1,200 alone: the variants of the file and no counts as well", () => {
+    const pass: PassStats = {
+      numVars: 1200,
+      filtering: { missing_data: { varsProcessed: 1200, varsKept: 1200 } },
+    };
+    expect(countsOf(pcaResult(pass))).toStrictEqual({
       numVarsRead: 1200,
       counts: null,
     });

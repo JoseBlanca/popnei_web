@@ -66,6 +66,10 @@ export interface RefusalWords {
       escaped; `null` for a calculation whose pass has no filter, whose
       empty pass then gets the words of any other refusal. */
   readonly emptyPass: ((fileName: string) => string) | null;
+  /** Whether the words of any other refusal leave out the backquotes of
+      popnei's message, as the PCA's do (docs/specs/analyses/pca.md, "Its
+      words"); kept when absent. */
+  readonly withoutBackquotes?: true;
 }
 
 /**
@@ -75,9 +79,12 @@ export interface RefusalWords {
  * file holds no variant, or, for a VCF read with only the passed variants,
  * none that passed; the filters kept none, when `words.emptyPass` is
  * given; a genotype of another ploidy than the one the VCF was read with;
- * a line of the VCF popnei cannot read, or a gzipped file damaged or cut
- * short; any other, with popnei's message without its full stop. Throws a
- * defect on a project with no variants file.
+ * a variant out of the order of its chromosome, refused by the LD filter
+ * of the Variants step, `ldOrderText`; a line of the VCF popnei cannot
+ * read, or a gzipped file damaged or cut short; any other, with popnei's
+ * message without its full stop, and without its backquotes when
+ * `words.withoutBackquotes`. Throws a defect on a project with no
+ * variants file.
  */
 export function refusalWords(
   message: string,
@@ -98,12 +105,104 @@ export function refusalWords(
   if (ploidy !== null) {
     return ploidy;
   }
+  const order = ldOrderText(message, p, STEP_LD_FILTER);
+  if (order !== null) {
+    return order;
+  }
   const isVcfLine =
     /^line \d+ of the VCF/u.test(message) || message.startsWith(BGZIP_REFUSAL);
   if (isVcfLine) {
     return `popnei could not read ${fileName}${saying(message)}. Correct the file, or fetch it again, and load it in the Variants step.`;
   }
-  return `popnei could not ${words.calculate}${saying(message)}. ${words.change}, ${words.again}.`;
+  const shownMessage =
+    words.withoutBackquotes === true ? message.replaceAll("`", "") : message;
+  return `popnei could not ${words.calculate}${saying(shownMessage)}. ${words.change}, ${words.again}.`;
+}
+
+/** How the words of a refusal of an LD filter name the filter and say how
+    to turn it off. */
+export interface LdFilterWords {
+  /** The filter, at the start of a sentence: "The LD filter of the
+      Variants step". */
+  readonly name: string;
+  /** How to turn it off, after "or": "turn off the LD filter in the
+      Variants step". */
+  readonly turnOff: string;
+}
+
+/** The LD filter of the Variants step, in the words of a refusal. */
+export const STEP_LD_FILTER: LdFilterWords = Object.freeze({
+  name: "The LD filter of the Variants step",
+  turnOff: "turn off the LD filter in the Variants step",
+});
+
+/** The start of popnei's refusal of a variant out of the order of its
+    chromosome by an LD filter. */
+const LD_ORDER =
+  /^the variant \d+ of the ones the filter by linkage disequilibrium has read/u;
+
+/** The chromosome and the two positions of that refusal, when popnei names
+    the chromosome and the position falls below the one before it on the
+    same chromosome. */
+const LD_POSITION_FALLS =
+  /, on the chromosome (.*?), does not come after the one before it, and that filter compares a variant with the ones it kept behind it on its chromosome: it is at the position (\d+) of its chromosome and the variant before it at the position (\d+) of the same chromosome;/su;
+
+/** The same, when the variant is on a chromosome that had already
+    ended. */
+const LD_CHROMOSOME_CAME_BACK =
+  /, on the chromosome (.*?), does not come after the one before it, and that filter compares a variant with the ones it kept behind it on its chromosome: it is at the position (\d+) of a chromosome that had already ended, and the variant before it at the position (\d+) of another chromosome;/su;
+
+/** How popnei names a chromosome by its number in the table of a reader,
+    which is not a name a user finds in the file. */
+const NUMBERED_CHROMOSOME = /^numbered \d+ in the table of the reader$/u;
+
+/**
+ * The words of popnei's refusal of a variant out of the order of its
+ * chromosome by an LD filter, `filter` naming the filter and how to turn
+ * it off (docs/specs/analyses/diversity.md, "Its words"): "The LD filter
+ * of the Variants step needs the variants of each chromosome together and
+ * in the order of their positions, and panel.vcf.gz does not have them
+ * so: on chromosome 1, a variant at position 10 comes after one at
+ * position 30. Sort the file, …". Only the chromosome and the two
+ * positions are taken from popnei's message; a message they cannot be
+ * read from, or one that names the chromosome by its number, gives the
+ * words without the place. `null` when `message` is not that refusal.
+ * Throws a defect on a project with no variants file.
+ */
+export function ldOrderText(
+  message: string,
+  p: Project,
+  filter: LdFilterWords,
+): string | null {
+  if (p.variants === null) {
+    throw defect("a refusal was given a project with no variants file.");
+  }
+  if (!LD_ORDER.test(message)) {
+    return null;
+  }
+  const fileName = escaped(p.variants.name);
+  return `${filter.name} needs the variants of each chromosome together and in the order of their positions, and ${fileName} does not have them so${ldPlace(message)}. Sort the file, with bcftools sort for a VCF, and load it again, or ${filter.turnOff}.`;
+}
+
+/** The place of the variant out of order, after a colon, or nothing when
+    the message does not give it. */
+function ldPlace(message: string): string {
+  const falls = LD_POSITION_FALLS.exec(message);
+  if (falls !== null) {
+    const [, chromosome = "", position = "", before = ""] = falls;
+    if (!NUMBERED_CHROMOSOME.test(chromosome)) {
+      return `: on chromosome ${shown(chromosome)}, a variant at position ${position} comes after one at position ${before}`;
+    }
+  }
+  const cameBack = LD_CHROMOSOME_CAME_BACK.exec(message);
+  if (cameBack !== null) {
+    const [, chromosome = "", position = ""] = cameBack;
+    if (!NUMBERED_CHROMOSOME.test(chromosome)) {
+      const name = shown(chromosome);
+      return `: a variant of chromosome ${name}, at position ${position}, comes after a variant of another chromosome, though variants of chromosome ${name} came before that one`;
+    }
+  }
+  return "";
 }
 
 /**
