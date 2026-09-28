@@ -107,3 +107,38 @@ One subagent did both tasks, 121,268 tokens; the review, three
 reviewers, 225,110 tokens, about twice the work. The tests reviewer
 installed each release in turn to see the tests fail, which is what
 made its "no findings" worth having.
+
+## 2. The individuals first
+
+The worker, core, the store and the Variants step now filter the
+individuals before the variants, in the commits 96287d6, 9628a60,
+a98196a, ddbf8a3, b1c4305 and f45ca69.
+
+### The deliverables, on f45ca69
+
+1. `npx vitest run src/worker -t "IP2 D1"`: "Tests 25 passed" (at least
+   14 asked); `grep -c "PROTOCOL_VERSION = 3" src/worker/messages.ts`: 1.
+2. `npx vitest run src/core -t "IP2 D2"`: "Tests 33 passed" (at least 14
+   asked). One test of the list is not written: the check numbers of the
+   three checks of a stage-3 project file compared "only where their
+   result is stage 3's", which the code cannot tell (below, for the
+   owner).
+3. The browser check with `-g "IP2 D3"`: "58 passed (33.0s)", 29 in each
+   engine (at least 12 asked).
+4. The screenshots, light and dark, in `screens/`:
+   `popgen-variants-order-ready-*`, `popgen-variants-order-thresholds-*`,
+   `popgen-variants-order-list-locked-*` and
+   `popgen-variants-order-list-locked-variants-*`; the orchestrator
+   looked at the thresholds in light and the list locked in dark.
+5. `npm test`: "Tests 2138 passed (2138)"; the browser check: "634
+   passed (2.8m)"; `grep -rnE "\b(125|119) (of|individuals)" e2e src
+   --include='*.ts'` prints nothing.
+
+### What was changed in the plan
+
+Each task of 2.1 to 2.3 changed more than its own layer, so that its
+commit passed every check: 2.1 made core send the jobs of protocol 3 and
+gave the statistics no counts in `countsOf` (task 2.3's), and moved the
+flows of stage 3 to the new numbers without their tags (task 2.4's);
+2.2 took out the store's refusal of counts that read the filters of
+individuals (2.3's). The later task wrote the tests of each.
