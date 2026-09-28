@@ -23,7 +23,10 @@ set applied by the record of `project.ts`; and again the same day after
 the review of those specs: a result that a read gives back leaves the
 notice, and so does a calculation whose key a read gives back, while one
 the notice names and a read keeps locked stays in it; and a list of individuals that keeps nobody locks without the
-statistics. The store is the one object of core that changes: it holds the
+statistics; and on 28 September 2026, for popnei's release
+`js-v0.1.0-dev.3`: the PCoA's limit of 9,381 individuals is its
+`keptNeeds`, and a Run that waited for the statistics sends nothing when
+`keptNeeds` gives a reason, as the code of stage 3 already does. The store is the one object of core that changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.
 From them it gives the screens one state to read, in which each analysis
@@ -144,7 +147,7 @@ has the kind `removed` in the code.
 | done | the cache holds a result under its key | the result, its warnings, and the comparison with the check numbers of an opened project file |
 | running | a calculation of its key is in flight and is not being stopped, whether it waits in the queue of the worker or runs; or a Run of its key waits for the statistics of each individual (below) | its progress, the `Progress` of `docs/specs/worker/protocol.md`, popnei's four numbers of the pass as the worker gave them, passed on unchanged, `null` until the worker gives one; the request's id; and whether it waits for the statistics, whose request's progress and id it then holds |
 | error | popnei refused the calculation of its key, or the calculation failed since the last change; or it reads the filters of individuals and the statistics it waits for were refused, or failed since the last change (below) | popnei's message, or the failure, and whether it is the failure of the statistics, `ofStatistics`, so that the panel does not tell it as its own |
-| locked | it reads the filters of individuals, and the list they make keeps no individual, known from the statistics in the cache, or from the project alone when the lists to keep and to remove leave nobody; or its `keptNeeds` gives a reason for that list, the diversity when the list leaves no population, as the owner decided at stop B on 27 September 2026 | `keptNoneReason` of `docs/specs/core/individualsKept.md`, or the reason of `keptNeeds` |
+| locked | it reads the filters of individuals, and the list they make keeps no individual, known from the statistics in the cache, or from the project alone when the lists to keep and to remove leave nobody; or its `keptNeeds` gives a reason for that list, the diversity when the list leaves no population, as the owner decided at stop B on 27 September 2026, and the PCoA when it keeps more than 9,381 individuals (`docs/specs/analyses/pca.md`, "Why it cannot run") | `keptNoneReason` of `docs/specs/core/individualsKept.md`, or the reason of `keptNeeds` |
 | removed | the current notice lists it among the results removed | its key; it can run again |
 | ready | none of the above | its key |
 | empty | cannot happen | — |
@@ -578,8 +581,9 @@ the user presses Run once (`docs/architecture.md`, section 5):
   own request with it, through the `run` of its definition, as
   `startRun` does. `runEnded` returns the handles it sent, which
   `src/ui/runs.ts` awaits as it awaits those `startRun` returns
-  (`docs/specs/entry.md`). When the list keeps no individual, nothing is
-  sent, and the analysis is `locked` by the individuals kept.
+  (`docs/specs/entry.md`). When the list keeps no individual, or the
+  analysis's `keptNeeds` gives a reason for it, nothing is sent, and the
+  analysis is `locked` by the individuals kept.
 - A Run that waits is a calculation. A change that gives the analysis
   another key, or the statistics another one, leaves it behind, and the
   notice names it in `leftBehind` as any calculation; an undo while the
@@ -773,7 +777,8 @@ export interface AnalysisDef<J, R> {
   needs(p: Project): string | null;
   /** The reason it cannot run for the individuals kept, a known list that
       keeps some individual, or null; absent for an analysis with none.
-      The diversity's: the list leaves no population. */
+      The diversity's: the list leaves no population; the PCoA's: it
+      keeps more than 9,381 individuals. */
   keptNeeds?(p: Project, kept: IndividualsKept): string | null;
   run(p: Project, c: WorkerClient<J, R>): Run<R>;
   warnings(r: R, p: Project): readonly Warning[];

@@ -23,7 +23,7 @@ PCA; and on 28 September 2026 to popnei's release `js-v0.1.0-dev.3`,
 which `package.json` names from the plan of stage 4: the call of the
 PCoA as that release has it, its refusals and numbers, the options
 objects that popnei now checks key by key, and the files `writeVars`
-writes, 80 bytes larger for `panel.nei`. The calculation
+writes, 24 to 88 bytes larger, by file. The calculation
 worker is the thread of the browser tab, beside the page, that runs
 popnei, so that a calculation does not freeze the page
 (`docs/architecture.md`, section 1). Its runner is the code that answers
@@ -585,7 +585,9 @@ is 1 individual, and a principal coordinate analysis places 2 at least
 by the distance of each pair", and more than 9,381 individuals of the
 pass, "the principal coordinates of 9382 individuals hold about 5 GB,
 …", counted after the list of the job, so that a list of 100 of a file
-of 9,382 is analysed; and after it a pass that keeps no variant, with
+of 9,382 is analysed, and which core's lock prevents, since a job of the
+PCoA always carries a list of 9,381 individuals or fewer (`pca.md`, "Why
+it cannot run"); and after it a pass that keeps no variant, with
 popnei's usual "the pass gave no variant …"; a pair of individuals with
 no variant called in both, "4 of the 10 pairs of individuals have no
 distance, …"; distances all 0, "every distance is 0, …"; and a file not
@@ -599,8 +601,11 @@ words").
 The PCA holds the individuals × individuals matrix in the memory of
 wasm, which grows to it and never shrinks: about 6.1 × 8 bytes per pair
 of individuals, 662 MB more in the process at 4,000 individuals in node
-(`pca.md`, "How it runs"). The PCoA was measured by popnei at 44.4 bytes
-per pair at its peak, and popnei counts it at the PCA's 48.8. The client starts the worker again after a PCA
+(`pca.md`, "How it runs"). The PCoA holds the matrix it decomposes, 8
+bytes a cell, from before its pass, and the sums of the pass beside it, 4
+bytes a cell, about 12 during the pass; its peak was measured by popnei
+at 44.4 bytes a cell, under node 26.8.2 on an Apple M5 Pro on 27
+September 2026, and popnei counts it at the PCA's 48.8. The client starts the worker again after a PCA
 or a PCoA of more than 700 individuals (`docs/specs/worker/client.md`, "A large PCA,
 and the restart after it"). The runner keeps nothing of a
 PCA: in stage 4 the worker keeps no intermediate result, the variants
@@ -1046,10 +1051,12 @@ worker holds, from popnei's README and its doc comments:
   matrix, its eigenvectors and the workspace of the decomposition, about
   6.1 × 8 bytes per pair of individuals, 4.3 GB at the 9,381 popnei
   allows, which the memory of wasm keeps after the PCA (above, "The
-  principal components"). The PCoA holds the sums of its pass, 4 bytes
-  per pair, while it reads, and at its peak no more than the PCA, 44.4
-  bytes per pair measured by popnei, whose limit is the same 9,381
-  individuals, of the pass.
+  principal components"). The PCoA holds the matrix it decomposes, 8
+  bytes a cell of the individuals × individuals matrix, from before its
+  pass, and the sums of the pass beside it, 4 bytes a cell, about 12
+  bytes a cell while it reads; at its peak no more than the PCA, 44.4
+  bytes a cell measured by popnei (`pca.md`, "How it runs"), whose limit
+  is the same 9,381 individuals, of the pass.
 
 The memory of wasm grows to the largest pass it has held and never
 shrinks, and a restart of the worker gives it back

@@ -26,9 +26,12 @@ again that day, the option of the pruning made to keep its r² and its
 distance while the pruning is off, so that turning it off and on again
 does not lose the distance typed; and on 28 September 2026 to popnei's
 release `js-v0.1.0-dev.3`, which has the PCoA: its names, its limit of
-9,381 individuals counted on those the lists keep, its refusals, its
+9,381 individuals counted on those the filters keep, its refusals, its
 memory and its numbers on `panel.nei`, where it differs from the draft
-this spec had followed ("The PCoA of popnei's release", at the end).
+this spec had followed ("The PCoA of popnei's release", at the end); and
+again that day after its review, the limit of the PCoA made a lock of the
+known list of the individuals kept, `keptNeeds`, so that a threshold on
+the individuals leads to a lock and not to a refusal after the Run.
 There is no code of it yet. This spec gives
 the analysis that places the individuals of a dataset on a few axes, to
 see its structure and check the populations against it: the module
@@ -414,13 +417,14 @@ the key before holds another number of components.
 The store asks `projectNeeds` and, since the PCA reads the filters of
 individuals, `individualListNeeds` of `docs/specs/core/project.md` first,
 and the two locks of the individuals kept, which read the cache
-(`docs/specs/core/store.md`, "The state of an analysis"). Then `needs(p)`
-gives the first of these:
+(`docs/specs/core/store.md`, "The state of an analysis"): the filters
+keeping no individual, and the analysis's own `keptNeeds`, which for
+the PCoA is its limit of 9,381 individuals (below, "The limit on the
+individuals"). Then `needs(p)` gives the first of these:
 
 | the project | the reason |
 |---|---|
 | the PCA, and more than 9,381 individuals in the variants file, `PCA_MAX_INDIVIDUALS` | "panel.nei has 12,000 individuals, and the principal components of more than 9,381 need more memory than a browser tab can hold. Calculate them with popnei in Python, outside the browser." |
-| the PCoA, and more than 9,381 individuals kept by the lists of the filters of individuals, `byLists` of `individualsKept` | "panel.nei has 12,000 individuals, and the principal coordinates of more than 9,381 need more memory than a browser tab can hold. Keep at most 9,381 with the filters of individuals in the Variants step, or calculate them with popnei in Python, outside the browser." With a list that keeps some of them, "panel.nei has 12,000 individuals and the filters of individuals keep 10,000 of them, and the principal coordinates …" |
 | any reason of `individualsNeeds` of `project.md`: the metadata file being read, "Reading pops.csv."; its read refused or failed; a file named by an opened project and not read when the project was saved, `notGiven`, "pops.csv was not read when this project was saved, so the project file does not hold it. Load pops.csv again in the Individuals step."; individuals of the variants missing from it, "12 individuals of panel.nei are not in pops.csv: ind_031, ind_044 and 10 more. Add them to the file and load it again in the Individuals step." | its words |
 | the PCA's pruning on, `on` true, with no distance, `maxDist` `null`, and no LD filter in the dataset, `pruningDistanceReason` | "The LD pruning of the PCA needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn the pruning off." |
 
@@ -459,17 +463,52 @@ a list of 100 gave a PCoA of 100 individuals, and without the list was
 refused before the pass, "the principal coordinates of 9382 individuals
 hold about 5 GB, …" (node, `js-v0.1.0-dev.3`, 28 September 2026;
 `room_for_the_principal_coordinates_of` of `crates/popnei-js/src/pca.rs`).
-popnei measured the PCoA under node at 44.4 bytes a cell of the
+popnei measured the peak of the PCoA at 44.4 bytes a cell of the
 individuals × individuals matrix, and counts the PCA's 48.8, since the
 edge is set by one allocation that does not fit and not by the memory
-the analysis holds (below, "How it runs"). So the lock of the PCoA
-counts the individuals the lists of the filters of individuals keep,
-`byLists` of `individualsKept`, which are known before any statistics,
-and its words offer those filters. A threshold on the individuals that
-leaves more than 9,381 is not known before its statistics, and is told
-by popnei's refusal after the Run, before the pass, in the words of the
-lock (below, "Its words"), as the diversity's empty populations are.
-The user reads the application's words, and never popnei's message.
+the analysis holds (below, "How it runs", which says what it was
+measured on). So the lock of the PCoA counts the individuals the
+filters of individuals keep, and its words offer those filters.
+
+That count is the list of the individuals kept, `individualsKept` of
+`docs/specs/core/individualsKept.md`, which is known from the project
+alone when the filters are lists, the individuals the lists keep,
+`byLists`, and every individual of the file with no filter; and, with a
+threshold, only once the statistics of each individual the threshold
+needs are in the cache. So the lock is the PCoA's `keptNeeds`, which the
+store asks only when the list is known and keeps some individual, and
+not a row of `needs`, which sees the project and not the cache; it is written as the diversity's `keptNeeds`
+is, and the store asks it in the same place (`docs/specs/core/store.md`,
+"The state of an analysis"). `keptNeeds(p, kept)` gives, for the PCoA,
+when the known list, or every individual of the file when the list is
+`null` because the filters remove none, holds more than 9,381:
+
+- "panel.nei has 12,000 individuals, and the principal coordinates of
+  more than 9,381 need more memory than a browser tab can hold. Keep at
+  most 9,381 with the filters of individuals in the Variants step, or
+  calculate them with popnei in Python, outside the browser.", when the
+  filters remove none;
+- "panel.nei has 12,000 individuals and the filters of individuals keep
+  10,000 of them, and the principal coordinates of more than 9,381 need
+  …", the rest the same, when they remove some;
+
+and `null` for the PCA, whose limit is a row of `needs` above, and for a
+PCoA of 9,381 or fewer.
+
+While a threshold waits for its statistics, the list is not known, and
+the PCoA is not locked by its limit, even when `byLists` keeps more than
+9,381: the threshold may remove enough. A Run then calculates the
+statistics first, as the diversity's does (`docs/specs/core/store.md`,
+"A Run that waits for the statistics"), and once they are in the cache
+the lock applies to the list: when it keeps more than 9,381, the Run
+ends with nothing sent, the panel is locked with the words above, and
+the shell announces "Principal components was not run. " and the same
+words, as it does for the diversity (`docs/specs/shell.md`, the
+announcements, "Diversity was not run"). So the number the
+words give as kept is always that of a known list, and the request of a
+PCoA always carries 9,381 individuals or fewer: popnei's refusal of
+more is never reached, and "Its words" has no row for it. The user
+reads the application's words, and never popnei's message.
 
 **The metadata file, which only colours.** The PCA locks while the
 individuals file is being read, when it could not be read, when an
@@ -644,7 +683,8 @@ user as the panel's error words (below, "Its words"):
     each pair";
   - more than 9,381 individuals of the pass, before it, "the principal
     coordinates of 9382 individuals hold about 5 GB, …", which the lock
-    prevents but for a threshold on the individuals (above, "Why it
+    of `keptNeeds` prevents, a threshold on the individuals included,
+    since a request is sent only with a known list (above, "Why it
     cannot run");
   - a pass that keeps no variant, in the words of popnei's other
     calculations, "the pass gave no variant and its source holds none:
@@ -728,8 +768,10 @@ there from 30% to 53% of the mean squared distance.
 
 Two things that could have been warnings of the module are not:
 
-- **More than 9,381 individuals** is a lock before the Run, above, and
-  not a warning after it, since popnei refuses it before any pass.
+- **More than 9,381 individuals** is a lock, above, and not a warning
+  after the Run, since popnei refuses it before any pass: before the Run,
+  or, with a threshold whose statistics are not in the cache, once a Run
+  has calculated them, and then nothing is sent.
 - **Individuals with many missing genotypes**, which the PCA draws toward
   the centre, since a missing genotype takes the mean dosage: an
   individual missing everywhere is drawn at 0 on every component, seen in
@@ -884,7 +926,8 @@ both applications, and what the panel reads:
 ```ts
 export const pca: AnalysisDef<Job, JobResult>;
 // id "pca"; app ["popgen", "gwas"]; keyVersion 1;
-// filtersRead { variants: true, individuals: true }; defaults PCA_DEFAULTS
+// filtersRead { variants: true, individuals: true }; defaults PCA_DEFAULTS;
+// keptNeeds, the PCoA's limit on the known list (above, "Why it cannot run")
 
 export interface PcaOptions {
   readonly method: "pca" | "pcoa";
@@ -901,8 +944,8 @@ export interface PcaOptions {
 export const PCA_DEFAULTS: PcaOptions;             // frozen, the table of "Its options"
 export const PCA_NUM_COMPS_KEPT = 10;
 /** popnei's limit, the same for both methods: the individuals of the file
-    for the PCA, those the lists keep for the PCoA (above, "Why it cannot
-    run"). */
+    for the PCA, those of the known list of the individuals kept for the
+    PCoA (above, "Why it cannot run"). */
 export const PCA_MAX_INDIVIDUALS = 9381;
 /** The reason of the lock of the PCA's pruning, on with no distance, while
     the dataset has no LD filter, or null; needs gives it, and the panel shows
@@ -1130,9 +1173,10 @@ comes and goes with the statistics in the cache (**Open 2**).
 - **No variant varies among the individuals kept**, as with one
   individual: refused, above.
 - **More than 9,381 individuals** in the variants file for the PCA, or
-  kept by the lists for the PCoA: locked, above. A threshold on the
-  individuals that leaves the PCoA more than 9,381: refused by popnei
-  before the pass, in the words of the lock.
+  in the known list of the individuals kept for the PCoA: locked, above.
+  A threshold on the individuals whose statistics are not in the cache
+  leaves the PCoA ready; its Run calculates them, and ends locked, with
+  nothing sent, when the list keeps more than 9,381.
 - **Kosman distances that no space holds**, the common case: corrected,
   with the warning `lingoesCorrection`. Distances that a space holds, as
   popnei's `four_alleles.vcf.gz` of 40 individuals gives, with 39
@@ -1218,11 +1262,19 @@ MB, against popnei's estimate of 6.1 × 8 bytes per pair of individuals,
 minutes and the estimate 4.3 GB. These are node's times; the browsers
 run the same wasm, and the plan measures them in Chromium and WebKit.
 Here a pair is a cell of the individuals × individuals matrix, n² of
-them. The PCoA holds the sums of the Kosman distances while the pass
-runs, two counts of 4 bytes for each pair, 4 bytes a cell, and drops
-them before the decomposition. Its peak was measured by popnei under
-node at 45.6 bytes a cell at 3,000 individuals and 44.4 at 8,695 to
-9,413, less than the PCA's count, since it writes the projections once
+them. The PCoA asks for the matrix it decomposes, 8 bytes a cell,
+before the pass, and holds beside it, while the pass runs, the sums of
+the Kosman distances, two counts of 4 bytes for each pair, 4 bytes a
+cell: about 12 bytes a cell during the pass, 1.1 GB at 9,381
+individuals. It drops the sums before the decomposition
+(`pcoa_of_variants` of `crates/popnei/src/pca/pcoa.rs` of popnei, the
+PCoA of the variants in its Rust core, at the tag). Its peak was
+measured by popnei under node 26.8.2 on the owner's Apple M5 Pro on 27
+September 2026, by popnei's `js/popnei/bench/memory_of_pcoa.mjs`, on
+VCFs of diploid individuals and 300 variants with 2 in 100 genotypes
+missing, with the correction: the memory of wasm grew by 45.6 bytes a
+cell at 3,000 individuals and 44.4 at 8,695 to 9,413, less than the
+PCA's count, since it writes the projections once
 the workspace of the decomposition is given back; popnei counts the
 PCA's 48.8, since 9,414 individuals failed on one allocation that did
 not fit and not with the memory full, so the two methods share the
@@ -1293,9 +1345,7 @@ With Vitest, at the functions of the definition, on frozen projects:
   throws.
 - **`needs`**: a variants file of 9,382 individuals locked with the words
   above for the PCA, whatever the lists keep, and of 9,381 not; for the
-  PCoA, the same file locked with the words that offer the filters of
-  individuals, and not locked with a list that keeps 9,381 of them or
-  with a list that keeps 100, and a file of 9,381 not locked; each reason of `individualsNeeds` comes through; with `PCA_DEFAULTS`
+  PCoA, the same file not locked by `needs`, whatever its filters; each reason of `individualsNeeds` comes through; with `PCA_DEFAULTS`
   and the filters of a first project, the words of the pruning with no
   distance, and none with `maxDist` 50000, with the pruning off, `on`
   false and `maxDist` `null`, or with an LD filter in the dataset;
@@ -1303,6 +1353,18 @@ With Vitest, at the functions of the definition, on frozen projects:
   words in the same cases, also while another reason comes first; a
   project with no metadata file, and one with a file and no column
   chosen, each with a distance typed, are not locked.
+- **`keptNeeds`**, over the `IndividualsKept` that `individualsKept` of
+  `src/core/individualsKept.ts` makes: for the PCoA of a variants file of
+  9,382 individuals with no filter, the list `null`, the words that say
+  the file has 9,382 and offer the filters of individuals; with a list
+  that keeps 9,381, `null`; for a file of 9,400 with a threshold on the
+  missing data and statistics under which it keeps 9,390, "big.vcf has
+  9,400 individuals and the filters of individuals keep 9,390 of them,
+  …", and under which it keeps 100, `null`; for the PCA, `null` in each
+  of these. The Run that waits for the statistics and then ends with
+  nothing sent is the store's, and so is its test, "keptNeeds of the
+  analysis locks it for the individuals kept, and a Run that waited for
+  them ends with nothing sent" (`docs/specs/core/store.md`).
 - **The key**, beside its table: `PCA_DEFAULTS`, with no distance, and
   the pruning off give different keys, though `pcaFilters` gives both
   the same list. The pruning off with `maxDist` `null`, with 50000, and
@@ -1372,7 +1434,7 @@ With Vitest, at the functions of the definition, on frozen projects:
   dataset's; the ploidy of `tetraploid.vcf.gz` read with ploidy 2; and,
   for the PCoA, the messages of `js-v0.1.0-dev.3` of "The request": the
   pairs with no distance, with four pairs and with one; one individual;
-  every distance 0; more than 9,381 individuals; and "the pass gave no
+  every distance 0; and "the pass gave no
   variant: …", with and without variants in the source.
 - **`crashText`**: a PCA of 4,000 individuals gives the words of memory
   with "about 0.8 GB", the gigabytes to one decimal; of 2,264 the same
@@ -1389,8 +1451,9 @@ popnei's release `js-v0.1.0-dev.3`, which the `package.json` of the
 application names from the plan of stage 4, installed on 28 September
 2026 in a folder of its own with `npm install
 https://github.com/JoseBlanca/popnei/releases/download/js-v0.1.0-dev.3/popnei-0.1.0.tgz`,
-in node 26.8.2, by this script, saved there as `pca_numbers.mjs` and
-run with `FIXTURES=‹the worktree›/e2e/fixtures node pca_numbers.mjs`.
+in node 26.8.2, by the script below, saved in that folder and run there
+with `FIXTURES=‹the worktree›/e2e/fixtures` and `node` followed by the
+path of the script.
 The numbers of the PCA are those `js-v0.1.0-dev.2` gave on 27 September
 2026 with the same calls: every projection and percentage, both runs,
 compared by a SHA-256 of their bytes, and the progress.
@@ -1473,7 +1536,7 @@ The ten percentages of the pruning: 3.629128255610693,
 pruning off, from the fourth: 1.6737836441788767, 1.6106824731585843,
 1.5698020647205237, 1.539824398398088, 1.5278494754599767,
 1.5001525686429757, 1.4913680449334203. The 198 percentages add up to
-100 within 1e-14. The second run of each gave the same numbers to the
+100 within 2e-14, 99.99999999999999 in both. The second run of each gave the same numbers to the
 last bit; the progress was the PCA's two calls; `numPassesOf` is 1 for
 both calls. Without the correction the same distances are refused,
 "61 of the 200 eigenvalues of the matrix of the squared distances are
@@ -1740,7 +1803,7 @@ the 3D view as it is turned (`charts.md`, "Export of the 3D plot").
 | state | what the user sees | what they can do |
 |---|---|---|
 | empty | cannot happen: until the variants file is read the analysis is locked with a reason | |
-| locked | the reason, as text beside a Run button that is disabled and described by it: "panel.nei has 12,000 individuals, and the principal components of more than 9,381 need more memory …", for the PCoA "… the principal coordinates of more than 9,381 need more memory than a browser tab can hold. Keep at most 9,381 with the filters of individuals in the Variants step, …", "12 individuals of panel.nei are not in pops.csv: …", "Reading pops.csv.", "pops.csv was not read when this project was saved, so the project file does not hold it. …", "The LD pruning of the PCA needs the distance within which variants are compared. …", this one also beside the field of the distance; or the store's when the filters keep no individual. The options stay editable, since they are what the user may change | go to the step the reason names; type the distance or turn the pruning off; keep fewer individuals for the PCoA; change the options |
+| locked | the reason, as text beside a Run button that is disabled and described by it: "panel.nei has 12,000 individuals, and the principal components of more than 9,381 need more memory …", for the PCoA, once the list of the individuals kept is known, "… the principal coordinates of more than 9,381 need more memory than a browser tab can hold. Keep at most 9,381 with the filters of individuals in the Variants step, …", "12 individuals of panel.nei are not in pops.csv: …", "Reading pops.csv.", "pops.csv was not read when this project was saved, so the project file does not hold it. …", "The LD pruning of the PCA needs the distance within which variants are compared. …", this one also beside the field of the distance; or the store's when the filters keep no individual. The options stay editable, since they are what the user may change | go to the step the reason names; type the distance or turn the pruning off; keep fewer individuals for the PCoA; change the options |
 | ready | the options, the line of the individuals it will run on, and Run | set the options; Run |
 | running | the bar and the clock of the diversity, "Calculating · 35% · 0:12", its words after a stop and while it waits for the statistics of each individual; and under them "The bar shows the reading of panel.nei. The components are calculated once it is read, and the bar does not move meanwhile: from under a second for 1,000 individuals to minutes for several thousand." The options stay editable, as in every analysis and in the Variants step: a change of the method, the MAF or the pruning that changes the key leaves the calculation behind, with the notice of the store, which says it will be stopped unless the change is undone (`docs/specs/core/store.md`, "The notice, and the calculations it stops"), and the panel shows the state of the new settings; a change of the colour, the axes or the view keeps the key and the calculation | Stop; change the options |
 | done | the bar of controls, the plot, the legend, the explained variance, the table and their downloads; the warnings above the plot, with their count on the heading, "2 warnings"; the notes; after an opened project file, the comparison with its check numbers under the table; and the options, whose change removes the result | draw, colour, turn, highlight, sort, download; change the options |
@@ -1809,7 +1872,6 @@ or "the PCoA":
 | the same, the pruning the dataset's | the diversity's row, with the LD filter of the Variants step: "The LD filter of the Variants step needs …, or turn off the LD filter in the Variants step." |
 | a genotype of another ploidy; a line of the VCF | the diversity's rows, `otherPloidyText` and the line of the VCF |
 | "the principal components of ‹n› individuals hold about", which the lock prevents | "panel.nei has 12,000 individuals, …", the words of the lock of the PCA |
-| "the principal coordinates of ‹n› individuals hold about", which a threshold on the individuals reaches when it leaves more than 9,381 | the words of the lock of the PCoA, with ‹n› the individuals kept: "panel.nei has 12,000 individuals and the filters of individuals keep 9,500 of them, and the principal coordinates of more than 9,381 need more memory than a browser tab can hold. Keep at most 9,381 with the filters of individuals in the Variants step, or calculate them with popnei in Python, outside the browser." |
 | the PCoA's empty pass, "the pass gave no variant and its source holds none: …" or "the pass gave no variant: …" | the two rows of the empty pass above, with "the PCoA" |
 | the PCoA's refusal of the pairs with no distance, a message that matches "‹n› of the ‹m› pairs of individuals has no distance" or "… have no distance", then "the first of them ‹a› and ‹b›, and ‹c› is in ‹k› of them", each name between backquotes (above, "The request") | "4 pairs of individuals of panel.nei have no variant called in both, so they have no Kosman distance and the PCoA cannot place them; s082 is in 3 of them. Remove the individuals with many missing genotypes with the filters of individuals in the Variants step, or use the PCA of the genotypes, which places every individual." With one pair, "1 pair of individuals of panel.nei has no variant called in both, so it has no Kosman distance and the PCoA cannot place it; s082 is in it. …" |
 | the PCoA's "there is 1 individual, and a principal coordinate analysis places 2 at least", which the filters of individuals give when they keep one | "The filters of individuals keep one individual of panel.nei, and the PCoA needs two at least to place them. Keep more individuals with the filters of individuals in the Variants step." |
@@ -2088,10 +2150,11 @@ gives the PCoA and none of the four others:
 
 - **The limit on the individuals of the PCA counted on the individuals of
   the pass**, after `filterIndividuals`, and not on those of the source:
-  `pca_of_variants` of `crates/popnei-js/src/vars.rs` and `vcf.rs` still
-  gives `self.individuals.len()` to
-  `room_for_the_analysis_of_the_variants` at the tag, and a VCF of 9,382
-  individuals with a list of 100 is refused, so a file of 12,000
+  at the tag, the Rust function behind `doPcaFromVariants`, in
+  `crates/popnei-js/src/vars.rs` for a `.nei` file and `vcf.rs` for a
+  VCF, still gives the individuals of the source to the check of the
+  limit, `room_for_the_analysis_of_the_variants` of `pca.rs`, and a VCF
+  of 9,382 individuals with a list of 100 is refused, so a file of 12,000
   individuals cannot be analysed through a list of 5,000. Until then the
   application locks the PCA on the file's individuals. The PCoA of the
   release counts those of its pass, which is what is asked here.
@@ -2149,12 +2212,18 @@ what changed here for it:
 
 - **The limit is 9,381 individuals, not 8,695, and it counts the
   individuals of the pass.** The draft worked 8,695 out from a peak of
-  56.8 bytes a cell and counted, in this spec, the individuals of the
-  file; the release measured 44.4 bytes a cell and counts the PCA's 48.8,
-  and asks the page for the individuals `filterIndividuals` leaves. So
-  `PCOA_MAX_INDIVIDUALS` is gone for `PCA_MAX_INDIVIDUALS`, the lock of
-  the PCoA counts the individuals the lists keep and offers the filters
-  of individuals, and the words of a crash of memory and the restart
+  56.8 bytes a cell, which popnei's spec counted and did not measure: the
+  PCA's 48.8, measured, and 8 for the projections written while the
+  eigenvectors are held (popnei's `docs/specs/pca.md`, "How it runs" of
+  the principal coordinates, 27 September 2026); and this spec counted
+  the individuals of the file. The release measured 44.4 bytes a cell,
+  under node 26.8.2 on the owner's Apple M5 Pro on 27 September 2026,
+  on VCFs of 300 variants and 8,695 to 9,413 diploid individuals (below,
+  "How it runs"), counts the PCA's 48.8, and asks the page for the
+  individuals `filterIndividuals` leaves. So `PCOA_MAX_INDIVIDUALS` is
+  gone for `PCA_MAX_INDIVIDUALS`, the lock of the PCoA counts the known
+  list of the individuals kept and offers the filters of individuals,
+  and the words of a crash of memory and the restart
   after a large PCoA count 48.8 bytes a cell, as for the PCA ("Why it
   cannot run", "How it runs", "Its words").
 - **The refusals have their final words**, given in "The request" and

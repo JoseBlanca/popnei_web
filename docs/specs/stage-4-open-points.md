@@ -303,8 +303,13 @@ meets.
   the individuals the filters keep, as popnei counts them, so the words
   do not suggest the filters of individuals; for the PCoA, whose limit
   popnei counts on the individuals of the pass, they are counted on
-  those the lists keep, and the words offer the filters of individuals
-  (`pca.md`).
+  the list of the individuals the filters keep, and the words offer the
+  filters of individuals. That list is known from the project when the
+  filters are lists, and, with a threshold, once the statistics of each
+  individual are calculated; while they are not, the PCoA can run, and
+  its Run calculates them first and then locks when more than 9,381 are
+  kept, as the diversity does when the individuals kept leave no
+  population (`pca.md`, "Why it cannot run").
 - **The warnings of the PCA**: the pruning turned off; fewer variants
   used than individuals; and, for the PCoA, a warning whenever the
   distances were corrected, whatever the size of the correction, with
@@ -465,7 +470,7 @@ meets.
 ## Asked of popnei
 
 The PCoA, asked on 27 September 2026, is in popnei's release
-`js-v0.1.0-dev.3` of 28 September 2026. Of the five other asks, that
+`js-v0.1.0-dev.3` of 28 September 2026. Of the four other asks, that
 release gives none for the PCA, as checked that day in its code and in
 node, and they stay asked:
 
@@ -481,9 +486,13 @@ node, and they stay asked:
   PCoA words it so, and its PCA still says "there are no variants to do
   a PCA with";
 - the called genotypes of each individual with the PCA, for the warning
-  of point 9;
-- a way to keep the variants a pruning left, only if point 1 measures
-  its time as large.
+  of point 9, "The individuals with many missing genotypes".
+
+A fifth, a way to keep the variants a pruning left so that a second PCA
+does not prune again, is not asked yet: the owner decided on 27
+September 2026 to ask for it only if the time of the pruning, measured in
+stage 4, is large (above, "1. The pruned variants are not kept between
+two PCAs").
 
 ## popnei's release `js-v0.1.0-dev.3`
 
@@ -494,9 +503,12 @@ in the place of `js-v0.1.0-dev.2`. What stage 4 meets in it:
 - **The PCoA**, `doPcoaFromVariants`, with the names, the option and the
   fields the specs had taken from popnei's draft. It differs from the
   draft in its limit, 9,381 individuals and not 8,695, counted on the
-  individuals of the pass; in its memory, 44.4 bytes per cell of the
-  individuals × individuals matrix measured, counted at the PCA's 48.8
-  and not 56.8; and in the words of its refusals. The lock of a PCoA
+  individuals of the pass; in its memory, where the draft counted a peak
+  of 56.8 bytes per cell of the individuals × individuals matrix, the
+  PCA's 48.8 and 8 for the projections, and the release measured 44.4,
+  under node 26.8.2 on the owner's Apple M5 Pro on 27 September 2026, on
+  VCFs of 300 variants and 8,695 to 9,413 diploid individuals, and counts
+  the PCA's 48.8; and in the words of its refusals. The lock of a PCoA
   that popnei did not have is gone from the specs. `pca.md`, "The PCoA
   of popnei's release", has each difference.
 - **Every options object refuses a key it does not know**, where
@@ -513,9 +525,11 @@ in the place of `js-v0.1.0-dev.2`. What stage 4 meets in it:
   (`docs/architecture.md`, section 11).
 - **`version()` still gives "0.1.0"**, as the two releases before it
   (`runner.md`).
-- **The four needs of stage 3 that popnei lacked** are in it:
-  `writeVcf`, `Variants.filterByRegions`, the histogram of the missing
-  rate of each variant and `calcVarDensity` (`docs/build-order.md`).
+- **The four needs of stage 3 that popnei lacked** are in it: the
+  writer of the variants kept as a VCF, `writeVcf`; the filter by the
+  regions of a BED file, `Variants.filterByRegions`; the histogram of the
+  missing rate of each variant; and the density of variants along the
+  chromosomes, `calcVarDensity` (`docs/build-order.md`).
   Stage 4 does not use them.
 
 ## Set by a measurement, not by the owner
@@ -524,7 +538,9 @@ Each has a value in its spec meanwhile, and the first work package that
 meets it measures it:
 
 - the time of the pruning inside a PCA, on `panel.nei` and on the files
-  of 20,000 variants, for point 1;
+  of 20,000 variants, which decides whether popnei is asked to keep the
+  pruned variants (point 1, "The pruned variants are not kept between two
+  PCAs");
 - the time and the memory of a PCA in the three engines, at 1,000 to
   9,381 individuals, and whether 700 individuals is the right bound of
   point 8;
