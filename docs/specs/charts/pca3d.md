@@ -478,7 +478,9 @@ chart-pca3d`, its title and description, the three lines and their
 labels as text, the points, and the legend of `drawLegendSvg`
 (`scatter.md`) at the place it has on the screen, its rows ending
 `SCATTER_MARGIN.right` pixels from the right and starting
-`SCATTER_MARGIN.top` from the top, over its background, and no row below
+`SCATTER_MARGIN.top` from the top, over its background no wider than
+from `SCATTER_MARGIN.left` pixels from the left, the `left` of
+`drawLegendSvg`, where the frame of the scatter starts, and no row below
 the height of the SVG less `SCATTER_MARGIN.bottom`, the `bottom` of
 `drawLegendSvg`, so that its "and 12 more" comes where the scatter's
 does. The plot draws

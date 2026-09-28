@@ -203,11 +203,13 @@ it needs what it shows in words and the numbers behind its marks
   draws the table, writes its CSV and writes the description, so that
   the table and the plot never disagree. The scatter of the PCA gives
   none: its table, of every component kept, is the PCA's, from the same
-  result as the plot's data (`scatter.md`). The base gives the one rule the
-  tables of the plots share, `tableNumber(x)`, a number shown to 12
-  significant digits, `Number(x.toPrecision(12))`, so that an edge that
-  popnei gives as 0.07500000000000001 reads 0.075; the rows and the CSV
-  keep every digit.
+  result as the plot's data (`scatter.md`). The one rule the tables of
+  the plots share is `tableNumber(x)`, a number shown to 12 significant
+  digits, `Number(x.toPrecision(12))`, so that an edge that popnei gives
+  as 0.07500000000000001 reads 0.075; the rows and the CSV keep every
+  digit. It is in `src/charts/numbers.ts`, a module of its own, so that
+  the tooltip and the legend, which the 3D view loads too, do not bring
+  the base and its D3 with them.
 - The marks are not stops of the Tab key: the table is the way in for
   the keyboard, and a few thousand tab stops would be of no use.
 
@@ -293,6 +295,10 @@ export is checked by its tests (below, "How it is verified").
   of a plot or of its export measures text: its file is the same before
   and after the fonts are loaded. The work that gives the applications
   a typeface of their own makes `toSVG` wait for it too.
+  The SVG of the PNG is written when `toPNG` is called, before the wait,
+  so that the PNG is the plot as it was then, legend and marks alike,
+  even when an `update` comes before the fonts are ready (found by the
+  review of the scatter, 28 September 2026).
 - **The canvas of a PNG** is emptied, to a width and a height of 0, once
   the PNG is made or refused. WebKit counts the memory of the canvases
   of a page until they are collected, and Safari on iOS then gives no
@@ -408,7 +414,10 @@ export function createPlot2d<Data extends PlotText>(
   data: Data,
   definition: Plot2dDefinition<Data>,
 ): ChartHandle<Data>;
+```
 
+```ts
+// src/charts/numbers.ts
 /** A number of a table of a plot, to 12 significant digits. */
 export function tableNumber(value: number): number;
 ```

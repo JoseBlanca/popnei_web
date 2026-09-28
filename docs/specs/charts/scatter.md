@@ -320,13 +320,20 @@ the frame; the plot finds the nearest point:
   frame; not taken. The 3D plot finds its point by the same loop over
   its projected points, with their depth: among the points whose mark
   covers the pointer, within `MARK_RADIUS` pixels, the one nearest the
-  camera (`pca3d.md`). A faded point can be under the pointer too:
-  fading draws it pale, and it is still a point.
+  camera (`pca3d.md`). Of points at the same distance, the first in the
+  order of the data is taken. A faded point can be under the pointer too:
+  fading draws it pale, and it is still a point. While a point's tooltip
+  is shown, that point stays the one under the pointer as long as the
+  pointer is within 10 pixels of it, even where another point is nearer,
+  as the next bullets have the tooltip stay; the nearest point is looked
+  for again once the pointer is beyond them.
 - **The tooltip** is one HTML `<div>`, `chart-tooltip`, that the plot
   adds to its element on the first hover and removes in `destroy`,
   placed with its nearest corner 7 pixels right of and 7 pixels below
   the point, and on its left or above it where it would leave the
-  element. That corner is 9.9 pixels from the point: inside the 10
+  element; where it fits on neither side, as in a plot narrower than
+  twice the tooltip, it is placed against the left or the top edge of the
+  element, and may then cover the mark it names. That corner is 9.9 pixels from the point: inside the 10
   pixels within which the point stays under the pointer, so that a
   pointer that goes from the point straight to the tooltip never leaves
   them and finds the tooltip still shown. And every place of the
@@ -342,7 +349,7 @@ the frame; the plot finds the nearest point:
   coordinate is written to three significant digits,
   `Intl.NumberFormat("en-US", { maximumSignificantDigits: 3 })`, since
   its digits beyond those mean nothing on a plot; a value of a column is
-  written as `tableNumber` gives it (`plot2d.md`), up to 12 significant
+  written as `tableNumber` of `numbers.ts` gives it (`plot2d.md`), up to 12 significant
   digits, since three would write a year of 2019 as "2,020". A negative
   number is written with the minus sign, U+2212, "−0.0231", as the
   labels of the ticks of `d3-axis` write it, where `Intl.NumberFormat`
@@ -358,7 +365,10 @@ the frame; the plot finds the nearest point:
   of its point, and while the pointer is on the tooltip itself, which
   takes the pointer for that, so that a user who reads with the screen
   enlarged can move onto it; the pointer that leaves the tooltip hides
-  it, or shows the tooltip of the point it lands near. The tooltip is
+  it, or shows the tooltip of the point it lands near: onto the overlay,
+  the plot finds the point under it; onto anything else, an axis, the
+  margin or the page outside the plot, the tooltip hides itself and
+  tells the plot, which calls `onHover(null)`. The tooltip is
   not inside the overlay, so a pointer that goes onto it leaves the
   overlay, and the base gives `pointer.leave` the element the pointer
   went onto, the `relatedTarget` of the browser's event (`plot2d.md`,
@@ -444,6 +454,18 @@ export function viridisStep(value: number, min: number, max: number): number;
 
 /** The colour of a step of viridis, "#440154" for 0 and "#fde725" for 255. */
 export function viridisColour(step: number): string;
+
+/**
+ * The group drawn highlighted: `highlighted`, or null when it is null or
+ * a whole number at or above names.length that is not NO_GROUP.
+ */
+export function highlightedGroup(colours: GroupColours): number | null;
+
+/**
+ * Throws an Error, a defect of the caller, for the colours of `numPoints`
+ * points that the plots refuse (below, the defects of `createScatter`).
+ */
+export function checkPointColours(colours: PointColours, numPoints: number): void;
 
 /** The area of a mark in square pixels. */
 export const SYMBOL_AREA = 64;
@@ -561,16 +583,15 @@ export type TooltipDismissal = "escape" | "leave";
 /**
  * The tooltip of a plot, a <div> in `element`, made at the first `show`:
  * kept while the pointer is on it; hidden by Escape, which then calls
- * `onDismiss("escape")`, and by a mouse or a pen that leaves `element`
- * from it, which calls `onDismiss("leave")`, as "The point under the
- * pointer" says.
+ * `onDismiss("escape")`, and by a mouse or a pen that leaves it onto
+ * anything but the element that takes the pointer for the plot, for
+ * which `takesPointer` is true, which calls `onDismiss("leave")`, as "The
+ * point under the pointer" says.
  */
 export interface Tooltip {
   /** Shows `lines` beside the point at (x, y), in the pixels of `element`. */
   show(lines: readonly string[], x: number, y: number): void;
   hide(): void;
-  /** True while the pointer is on the tooltip. */
-  readonly hovered: boolean;
   /** True when `target` is the tooltip or inside it: a leave of the plot onto it is none. */
   holds(target: EventTarget | null): boolean;
   /** Removes the <div> and the listener of Escape; safe to call twice. */
@@ -580,6 +601,8 @@ export interface Tooltip {
 export function createTooltip(
   element: HTMLElement,
   onDismiss: (by: TooltipDismissal) => void,
+  /** True for the element that takes the pointer for the plot: the overlay of the scatter, the canvas of the 3D plot. */
+  takesPointer: (target: EventTarget | null) => boolean,
 ): Tooltip;
 ```
 
@@ -589,7 +612,12 @@ the plot from the tooltip and came back to the same point found the
 tooltip still hidden, as if Escape had hidden it, where "The point under
 the pointer" keeps a tooltip hidden that way only after Escape. After a
 leave, the pointer has left every point, and the tooltip shows again
-when it comes back.
+when it comes back. `takesPointer` was added and `hovered` taken out the
+same day, after the review of the plot: a pointer that left the tooltip
+onto an axis or the margin, where neither the overlay nor the element
+hears a leave, found the tooltip still shown far from its point, and
+nothing read `hovered`. `highlightedGroup` and `checkPointColours`,
+which the 3D plot uses, were written here then too.
 
 The scatter. Its texts are the screen's, with those of `PlotText`:
 `xLabel` "PC1 (3.55%)" and `yLabel` "PC2 (3.40%)".
@@ -751,7 +779,13 @@ screen draws it:
 - for values, a bar of 32 bands of viridis, 96 pixels high, the largest
   value at its top and the smallest at its bottom, each band a
   rectangle with its `fill`, which needs no gradient and so no id of its
-  own; then the ring and "No value (3)" when there are some;
+  own; then the ring and "No value (3)" when there are some. When every
+  value is the same, the bar is one band of step 128, 16 pixels high,
+  the colour of every point, with that value at its middle. In a frame
+  too low for the bar, it is shorter, so that no row passes the bottom
+  of the frame, down to 32 pixels, one per band; below that the bar and
+  its values are left out, and a row that does not fit, "No value (3)"
+  or the title, is left out too;
 - when the rows would pass the bottom of the frame, the last row that
   fits says "and 12 more", since the file cannot scroll; the table,
   downloaded beside it as CSV, has every group.
@@ -803,7 +837,16 @@ is `position: relative`, so that the tooltip is placed inside it
   the light theme all the same.
 - **`destroy`, a size of 0, a frame with no area and data the plot
   refuses** are the base's cases (`plot2d.md`, "The cases"); `destroy`
-  also removes the tooltip, and a second call does nothing.
+  also removes the tooltip, and calls `onHover(null)` when a point was
+  under the pointer, so that a screen that marked its row, and draws
+  the 3D view in the scatter's place, unmarks it; a second call does
+  nothing.
+- **Numbers near the largest a number of 64 bits holds**, ±1.8e308: the
+  ranges of the scales and of viridis are computed with halves, `max / 2
+  − min / 2`, so that no difference overflows to an infinity, and the
+  points are drawn and coloured as any others; when the axis itself runs
+  over more than 1.8e308, it is drawn from the halves too, with its
+  labels written doubled.
 
 ## How it runs
 
