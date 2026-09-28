@@ -19,7 +19,8 @@ import { STEP_LD_FILTER, ldOrderText } from "./words.ts";
 import { countsOf, individualStatsOf } from "../apps.ts";
 import { individualsKept } from "../individualsKept.ts";
 import type { IndividualStats, IndividualsKept } from "../individualsKept.ts";
-import type { JsonObject } from "../keys.ts";
+import { createKeyMemo, keyOf } from "../keys.ts";
+import type { JsonObject, Key, KeyedDef } from "../keys.ts";
 import {
   emptyProject,
   individualsNeeds,
@@ -1373,5 +1374,375 @@ describe("IP6 D4 the definition", () => {
     expect(pca.app).toEqual(["popgen", "gwas"]);
     expect(pca.keyVersion).toBe(1);
     expect(pca.filtersRead).toEqual({ variants: false, individuals: true });
+  });
+});
+
+/** The key of the PCA for `p`, with popnei 0.1.0 unless another version
+    is given. */
+function keyOfPca(
+  p: Project,
+  popneiVersion = "0.1.0",
+  def: KeyedDef = pca,
+): Key {
+  return keyOf(def, p, popneiVersion, createKeyMemo());
+}
+
+/** `p` with its fields changed by `change`, frozen deeply. */
+function changed(p: Project, change: Partial<Project>): Project {
+  return deepFreeze<Project>({ ...p, ...change });
+}
+
+/** A copy of `p` whose `variants` is a getter that throws, so that a test
+    sees any read of it. */
+function withVariantsUnreadable(p: Project): Project {
+  const copy: Project = { ...p };
+  Object.defineProperty(copy, "variants", {
+    get(): never {
+      throw new Error("keyInputs read p.variants");
+    },
+  });
+  return copy;
+}
+
+/** The MAF filter of the Variants step at `maxAllowedMaf`. */
+function maf(maxAllowedMaf: number): ProjectVariantFilter {
+  return { kind: "maf", maxAllowedMaf };
+}
+
+/** The missing data filter of the Variants step at `rate`. */
+function missing(rate: number): ProjectVariantFilter {
+  return { kind: "missing_data", maxAllowedMissingRate: rate };
+}
+
+/** The observed heterozygosity filter of the Variants step at `max`. */
+function obsHet(max: number): ProjectVariantFilter {
+  return { kind: "obs_het", maxAllowedObsHet: max };
+}
+
+/** The PCA's options with every filter its own: missing data 0.02, MAF
+    0.98, LD r² 0.1 within 50,000. */
+const ALL_OWN: Partial<PcaOptions> = {
+  missingData: { follow: false, maxAllowedMissingRate: 0.02 },
+  maf: { follow: false, maxAllowedMaf: 0.98 },
+  ld: { follow: false, maxAllowedR2: 0.1, maxDist: 50_000 },
+};
+
+describe("IP6 D5 the key, the rows of 'What goes into its key'", () => {
+  const base = project();
+  const baseKey = keyOfPca(base);
+
+  test("a new load of the variants file, the same file included, changes the key", () => {
+    const variants = base.variants;
+    if (variants === null) {
+      throw new Error("the project of the test has a variants file");
+    }
+    const reloaded = changed(base, {
+      variants: { ...variants, fileId: "0123456789abcdef0123456789abcdef" },
+    });
+    expect(keyOfPca(reloaded)).not.toBe(baseKey);
+  });
+
+  test("the ploidy or onlyPassed of a VCF changes the key", () => {
+    const vcf = project({ readOptions: { ploidy: 2, onlyPassed: false } });
+    const ploidy4 = project({ readOptions: { ploidy: 4, onlyPassed: false } });
+    const onlyPassed = project({
+      readOptions: { ploidy: 2, onlyPassed: true },
+    });
+    expect(keyOfPca(ploidy4)).not.toBe(keyOfPca(vcf));
+    expect(keyOfPca(onlyPassed)).not.toBe(keyOfPca(vcf));
+  });
+
+  test("a filter of the Variants step of a kind the PCA follows, turned on or off, or its threshold, a distance typed included, changes the key", () => {
+    const keys = [
+      baseKey,
+      keyOfPca(project({ filters: [] })),
+      keyOfPca(project({ filters: [missing(0.05)] })),
+      keyOfPca(project({ filters: [MISSING_01, maf(0.95)] })),
+      keyOfPca(project({ filters: [MISSING_01, maf(0.9)] })),
+      keyOfPca(project({ filters: [MISSING_01, ld(0.3, null)] })),
+      keyOfPca(project({ filters: [MISSING_01, ld(0.3, 20_000)] })),
+      keyOfPca(project({ filters: [MISSING_01, ld(0.2, 20_000)] })),
+    ];
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  test("the observed heterozygosity filter of the Variants step changes the key, with every filter of the PCA its own", () => {
+    const keys = [
+      project({ options: ALL_OWN }),
+      project({ options: ALL_OWN, filters: [MISSING_01, obsHet(0.9)] }),
+      project({ options: ALL_OWN, filters: [MISSING_01, obsHet(0.8)] }),
+    ].map((p) => keyOfPca(p));
+    expect(new Set(keys).size).toBe(3);
+  });
+
+  test("a filter of individuals, a list or a threshold, changes the key, whether or not it keeps other individuals", () => {
+    const keys = [
+      baseKey,
+      keyOfPca(
+        project({
+          individualFilters: [
+            { kind: "missing_data", maxAllowedMissingRate: 0.2 },
+          ],
+        }),
+      ),
+      // With no statistics given, a threshold of 0.25 keeps what 0.2 does.
+      keyOfPca(
+        project({
+          individualFilters: [
+            { kind: "missing_data", maxAllowedMissingRate: 0.25 },
+          ],
+        }),
+      ),
+      // No individual of the panel is named ind_900, so the list keeps
+      // every individual.
+      keyOfPca(
+        project({
+          individualFilters: [{ kind: "remove", individuals: ["ind_900"] }],
+        }),
+      ),
+    ];
+    expect(new Set(keys).size).toBe(4);
+  });
+
+  test("the method changes the key", () => {
+    expect(keyOfPca(project({ options: { method: "pcoa" } }))).not.toBe(
+      baseKey,
+    );
+  });
+
+  test("a filter of the PCA's own set, or set back to as in the Variants step, changes the key when the filters of the job differ", () => {
+    const ownLd50 = keyOfPca(project({ options: ownLd(50_000) }));
+    const keys = [
+      baseKey,
+      keyOfPca(
+        project({
+          options: {
+            missingData: { follow: false, maxAllowedMissingRate: 0.05 },
+          },
+        }),
+      ),
+      keyOfPca(
+        project({ options: { maf: { follow: false, maxAllowedMaf: 0.95 } } }),
+      ),
+      ownLd50,
+    ];
+    expect(new Set(keys).size).toBe(4);
+    const setBack = project({
+      options: { ld: { follow: true, maxAllowedR2: 0.1, maxDist: 50_000 } },
+    });
+    expect(keyOfPca(setBack)).not.toBe(ownLd50);
+    expect(keyOfPca(setBack)).toBe(baseKey);
+  });
+
+  test("the value of a filter of the PCA's own, or its r² or distance, changes the key while it is set", () => {
+    const keys = [
+      ALL_OWN,
+      {
+        ...ALL_OWN,
+        missingData: { follow: false, maxAllowedMissingRate: 0.03 },
+      },
+      { ...ALL_OWN, maf: { follow: false, maxAllowedMaf: 0.97 } },
+      {
+        ...ALL_OWN,
+        ld: { follow: false, maxAllowedR2: 0.2, maxDist: 50_000 },
+      },
+      {
+        ...ALL_OWN,
+        ld: { follow: false, maxAllowedR2: 0.1, maxDist: 20_000 },
+      },
+    ].map((options) => keyOfPca(project({ options })));
+    expect(new Set(keys).size).toBe(5);
+  });
+
+  test("a filter of the Variants step of a kind the PCA has of its own leaves the key the same", () => {
+    const own = keyOfPca(project({ options: ALL_OWN }));
+    const stepFilters = [
+      [],
+      [missing(0.05)],
+      [MISSING_01, maf(0.9)],
+      [MISSING_01, ld(0.3, 10_000)],
+      [MISSING_01, ld(0.3, null)],
+    ];
+    for (const filters of stepFilters) {
+      expect(keyOfPca(project({ options: ALL_OWN, filters }))).toBe(own);
+    }
+  });
+
+  test("the values of missingData, maf or ld while they follow the Variants step leave the key the same", () => {
+    const kept: Partial<PcaOptions>[] = [
+      { missingData: { follow: true, maxAllowedMissingRate: 0.02 } },
+      { maf: { follow: true, maxAllowedMaf: 0.5 } },
+      { ld: { follow: true, maxAllowedR2: 0.3, maxDist: 50_000 } },
+    ];
+    for (const options of kept) {
+      expect(keyOfPca(project({ options }))).toBe(baseKey);
+    }
+  });
+
+  test("a filter of the PCA's own set to the value the dataset's already has leaves the key the same", () => {
+    const step = [MISSING_01, maf(0.9), ld(0.3, 10_000)];
+    const sameValues = project({
+      filters: step,
+      options: {
+        missingData: { follow: false, maxAllowedMissingRate: 0.1 },
+        maf: { follow: false, maxAllowedMaf: 0.9 },
+        ld: { follow: false, maxAllowedR2: 0.3, maxDist: 10_000 },
+      },
+    });
+    expect(keyOfPca(sameValues)).toBe(keyOfPca(project({ filters: step })));
+  });
+
+  test("colourBy, the axes and the view leave the key the same", () => {
+    const drawn: Partial<PcaOptions>[] = [
+      { colourBy: "pop" },
+      { axes: [2, 3, 1] },
+      { view: "2d" },
+      { colourBy: "pop", axes: [10, 9, 1], view: "2d" },
+    ];
+    for (const options of drawn) {
+      expect(keyOfPca(project({ options }))).toBe(baseKey);
+    }
+  });
+
+  test("the individuals file, its types and the grouping leave the key the same", () => {
+    const individuals = base.individuals;
+    if (individuals?.read.kind !== "read") {
+      throw new Error("the project of the test has an individuals file read");
+    }
+    const retyped = changed(base, {
+      individuals: {
+        ...individuals,
+        read: {
+          ...individuals.read,
+          columns: [{ kind: "identifier" }, { kind: "continuous" }],
+        },
+      },
+    });
+    const others = [
+      project({ individualsFile: "none", column: null }),
+      project({ individualsFile: "pending" }),
+      project({ column: null }),
+      project({
+        individualsFile: {
+          columns: ["IID", "pop"],
+          rows: individualsOf(200).map((name) => [name, "p9"]),
+        },
+      }),
+      retyped,
+    ];
+    for (const p of others) {
+      expect(keyOfPca(p)).toBe(baseKey);
+    }
+  });
+
+  test("the options of another analysis, or the reference, leave the key the same", () => {
+    const variants = base.variants;
+    if (variants === null) {
+      throw new Error("the project of the test has a variants file");
+    }
+    const otherOptions = changed(base, {
+      analyses: [
+        {
+          analysis: "diversity",
+          options: { minNumIndividuals: 10, polyThreshold: 0.9 },
+        },
+      ],
+    });
+    const referenced = changed(base, {
+      reference: {
+        variants,
+        checks: [
+          {
+            analysis: "pca",
+            numbers: [0.0283, 0.3654],
+            keyVersion: 1,
+            popneiVersion: "0.1.0",
+            appVersion: "0.1.0",
+            settings: "0".repeat(64),
+          },
+        ],
+      },
+    });
+    expect(keyOfPca(otherOptions)).toBe(baseKey);
+    expect(keyOfPca(referenced)).toBe(baseKey);
+  });
+
+  test("the key version, 1, or the version of popnei, changes the key", () => {
+    expect(pca.keyVersion).toBe(1);
+    const later: KeyedDef = { ...pca, keyVersion: 2 };
+    expect(keyOfPca(base, "0.1.0", later)).not.toBe(baseKey);
+    expect(keyOfPca(base, "0.2.0")).not.toBe(baseKey);
+  });
+});
+
+describe("IP6 D5 the key, the cases of 'How it is verified'", () => {
+  test("keyInputs of an empty project gives the method and no filter, without reading p.variants", () => {
+    const p = withVariantsUnreadable(emptyProject("popgen"));
+    expect(pca.keyInputs(p)).toEqual({ method: "pca", filters: [] });
+  });
+
+  test("keyInputs gives the method and the filters of the job, the PCA's own LD filter with no distance included, without reading p.variants", () => {
+    const p = withVariantsUnreadable(project({ options: ownLd(null) }));
+    expect(pca.keyInputs(p)).toEqual({
+      method: "pca",
+      filters: [MISSING_01, ld(0.1, null)],
+    });
+  });
+
+  test("a filter of the Variants step that the PCA replaces is not in keyInputs, and the PCA's own is, in the place of its kind", () => {
+    const p = project({
+      options: ownLd(50_000),
+      filters: [MISSING_01, obsHet(0.9), ld(0.3, 10_000)],
+    });
+    expect(pca.keyInputs(p)).toEqual({
+      method: "pca",
+      filters: [MISSING_01, obsHet(0.9), ld(0.1, 50_000)],
+    });
+  });
+
+  test("the PCA's own LD filter with no distance and the LD filter following a dataset that has none give different keys", () => {
+    expect(keyOfPca(project({ options: ownLd(null) }))).not.toBe(
+      keyOfPca(project()),
+    );
+  });
+
+  test("the LD filter following the step with no distance, with 50,000, and with 50,000 and r² 0.3 gives one key", () => {
+    const keys = [
+      { follow: true, maxAllowedR2: 0.1, maxDist: null },
+      { follow: true, maxAllowedR2: 0.1, maxDist: 50_000 },
+      { follow: true, maxAllowedR2: 0.3, maxDist: 50_000 },
+    ].map((ldOption) => keyOfPca(project({ options: { ld: ldOption } })));
+    expect(new Set(keys).size).toBe(1);
+  });
+
+  test("the LD filter set for the PCA again with 50,000 gives the key of the PCA's own LD filter with 50,000 typed, so its result comes back from the cache", () => {
+    const typed = keyOfPca(project({ options: ownLd(50_000) }));
+    const following = project({
+      options: { ld: { follow: true, maxAllowedR2: 0.1, maxDist: 50_000 } },
+    });
+    const setAgain = changed(following, {
+      analyses: [{ analysis: "pca", options: optionsJson(ownLd(50_000)) }],
+    });
+    expect(keyOfPca(following)).not.toBe(typed);
+    expect(keyOfPca(setAgain)).toBe(typed);
+  });
+
+  test("the missing data filter of the step changed from 0.1 to 0.05 keeps the key while the PCA has its own at 0.02, and changes it while the PCA follows", () => {
+    const own: Partial<PcaOptions> = {
+      missingData: { follow: false, maxAllowedMissingRate: 0.02 },
+    };
+    expect(keyOfPca(project({ options: own, filters: [missing(0.05)] }))).toBe(
+      keyOfPca(project({ options: own, filters: [missing(0.1)] })),
+    );
+    expect(keyOfPca(project({ filters: [missing(0.05)] }))).not.toBe(
+      keyOfPca(project({ filters: [missing(0.1)] })),
+    );
+  });
+
+  test("the PCA's own missing data at 0.1 over the step's 0.1 gives the key of the PCA that follows", () => {
+    const own = project({
+      options: { missingData: { follow: false, maxAllowedMissingRate: 0.1 } },
+    });
+    expect(keyOfPca(own)).toBe(keyOfPca(project()));
   });
 });

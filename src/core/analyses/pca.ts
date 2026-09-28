@@ -498,15 +498,18 @@ function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
 }
 
 /**
- * What the key holds beyond the load and the filters of individuals.
- * A stub until the key of the PCA, task 6.4 of
- * docs/plans/individuals-pca.md: it holds the method alone, and not yet
- * the filters of the job (docs/specs/analyses/pca.md, "What goes into its
- * key"), so it is not in `POPGEN_ANALYSES`. Reads nothing of
- * `p.variants`.
+ * What the key holds beyond the load and the filters of individuals: the
+ * method, and the filters of the variants the job carries, as
+ * `pcaFilters` gives them, an LD filter with no distance included
+ * (docs/specs/analyses/pca.md, "What goes into its key"). A filter of the
+ * Variants step that the PCA replaces with its own is not in it, nor the
+ * values a filter of the PCA's own keeps while it follows the step, nor
+ * the colour, the axes and the view, which only draw the result. Reads
+ * nothing of `p.variants`, so it answers for any project.
  */
 function keyInputs(p: Project): JsonObject {
-  return { method: pcaOptions(p).method };
+  const o = pcaOptions(p);
+  return { method: o.method, filters: pcaFilters(p.filters, o) };
 }
 
 /** The name of a method in the words of the panel. */
