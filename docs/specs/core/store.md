@@ -38,7 +38,16 @@ filter with no distance; and again that day for the owner's decision
 that a filter turned off keeps its values in the project, in
 `filtersOff` or `individualFiltersOff` of `docs/specs/core/project.md`:
 such a filter locks nothing and is in no request, and turning it on
-again finds the results of before in the cache. The store is the one object of core that
+again finds the results of before in the cache; and again that day for
+the owner's decision that the filters of individuals act first
+(`docs/architecture.md`, section 2): the statistics of each individual
+read no filter, so their key is of the load alone and a Run waits for
+them once per load; the counts of the filters read the filters of
+individuals, which `createStore` no longer refuses, and the statistics
+fill no counts; the LD filter with no distance locks only what reads the
+filters of the variants; and `createStore` refuses a definition of the
+statistics that reads any filter. Not yet reviewed or approved; it
+changes the code of stage 3. The store is the one object of core that
 changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.
@@ -83,15 +92,15 @@ tests in the tests.
 
 - `needs` gives the reason the analysis cannot run beyond what every
   analysis needs (`docs/specs/core/project.md`, `projectNeeds`), beyond,
-  for an analysis whose `filtersRead.variants` or
-  `filtersRead.individuals` is true, an LD filter with no distance
-  (`variantFilterNeeds` of the same spec), and, for an analysis whose
+  for an analysis whose `filtersRead.variants` is true, an LD filter
+  with no distance (`variantFilterNeeds` of the same spec), and, for an
+  analysis whose
   `filtersRead.individuals` is true, beyond the lists of individuals
   popnei would refuse (`individualListNeeds`), in the words the screen
   shows next to its Run button, or `null`. A reason from any of them
   locks the analysis; `projectNeeds` is asked first,
-  `variantFilterNeeds` second, only of an analysis that reads either
-  list of filters, `individualListNeeds` third, only of one that reads
+  `variantFilterNeeds` second, only of an analysis that reads the
+  filters of the variants, `individualListNeeds` third, only of one that reads
   the filters of individuals, and `needs` last.
 - `filtersRead` says which of the two lists of filters the analysis
   reads, and `keyInputs` what else its key holds
@@ -160,7 +169,7 @@ has the kind `removed` in the code.
 
 | state | when | what it holds |
 |---|---|---|
-| locked | `projectNeeds` gives a reason; or the analysis reads either list of filters and `variantFilterNeeds` gives one; or it reads the filters of individuals and `individualListNeeds` gives one; or its `needs` does | the reason |
+| locked | `projectNeeds` gives a reason; or the analysis reads the filters of the variants and `variantFilterNeeds` gives one; or it reads the filters of individuals and `individualListNeeds` gives one; or its `needs` does | the reason |
 | done | the cache holds a result under its key | the result, its warnings, and the comparison with the check numbers of an opened project file |
 | running | a calculation of its key is in flight and is not being stopped, whether it waits in the queue of the worker or runs; or a Run of its key waits for the statistics of each individual (below) | its progress, the `Progress` of `docs/specs/worker/protocol.md`, popnei's four numbers of the pass as the worker gave them, passed on unchanged, `null` until the worker gives one; the request's id; and whether it waits for the statistics, whose request's progress and id it then holds |
 | error | popnei refused the calculation of its key, or the calculation failed since the last change; or it reads the filters of individuals and the statistics it waits for were refused, or failed since the last change (below) | popnei's message, or the failure, and whether it is the failure of the statistics, `ofStatistics`, so that the panel does not tell it as its own |
@@ -170,37 +179,31 @@ has the kind `removed` in the code.
 | empty | cannot happen | — |
 
 The key of an analysis is made when none of `projectNeeds`,
-`variantFilterNeeds` for an analysis that reads either list of filters,
+`variantFilterNeeds` for an analysis that reads the filters of the variants,
 `individualListNeeds` for one that reads the filters of individuals,
 and its `needs` gives a reason, the first row, and whatever the second lock, the
 one of the individuals kept: the key holds the thresholds and not the
 list (`docs/specs/core/keys.md`), so it is known without the
 statistics. That lock depends on the cache, not on the project alone,
 and so it comes after `done`: a result under the key is shown, whatever
-the cache holds of the statistics. After an undo to earlier filters whose
+the cache holds of the statistics. After an undo to an earlier load whose
 statistics the cache has dropped, a diversity still in the cache is
 `done`, as section 3 of the architecture asks, and only a new Run waits
 for the statistics. The lock stops a Run and nothing else.
 
-`variantFilterNeeds` locks an analysis that reads only the filters of
-individuals, although the LD filter is not among them, because a Run of
-it can need the statistics of each individual, which read the filters
-of the variants and are locked by the same reason. With a threshold on
-the individuals, the list of the individuals kept waits for the
-statistics, and `startRun` then sends them under the key the project
-gives them; while they are locked the project gives them none, and
-`startRun` throws a defect rather than send the Run with no list. With
-this lock no path reaches that defect: `startRun` and `startWrite` give
-`null` in `locked` before they look at the list; a Run that waited for
-the statistics from before the LD filter was turned on is no longer
-current once they are locked, since the project gives them no key and
-so not the one it waits for, and it ends with nothing sent; and
-the statistics of each individual have no reason of their own, `needs`
-gives `null` (`docs/specs/analyses/individualChecks.md`), so they are
-locked only by `projectNeeds` and `variantFilterNeeds`, which lock every
-analysis that reads the filters of individuals as well. No analysis of
-stages 2 to 4 reads the filters of individuals alone; the rule is for
-one that will, and for the definitions the properties draw.
+`variantFilterNeeds` does not lock an analysis that reads only the
+filters of individuals, the histograms of the variants, since 28
+September 2026. Until then it did, because such a Run could need the
+statistics of each individual, which read the filters of the variants
+and were locked by the same reason, and `startRun` throws a defect
+rather than send a Run with no list when the project gives the
+statistics no key. The statistics now read no filter and have no reason
+of their own, `needs` gives `null`
+(`docs/specs/analyses/individualChecks.md`), so they are locked only by
+`projectNeeds`, which locks every analysis; whenever an analysis that
+reads the filters of individuals can run, the project gives the
+statistics a key, and no path reaches that defect. The store's property
+of "How it is verified" draws such definitions.
 
 `empty`, nothing to show and nothing the user can do, cannot happen: an
 analysis is locked until its variants file is read, and only a
@@ -578,8 +581,9 @@ The filters of individuals by a threshold need the statistics of each
 individual, its proportion of missing genotypes and its observed
 heterozygosity, which are the result of an analysis of the Variants
 step, `individualChecks` (`docs/specs/analyses/individualChecks.md`),
-whose key holds the filters of the variants and not those of the
-individuals. Core makes the list of the individuals kept from them,
+whose key holds the load and no filter, since their pass has none, as
+the owner decided on 28 September 2026: one pass per load gives them,
+and no change of a filter takes them off. Core makes the list of the individuals kept from them,
 `individualsKept` of `docs/specs/core/individualsKept.md`. The store is given which of its analyses that is, and a
 function that finds the statistics in its result (`statistics` of
 `createStore`, below).
@@ -656,7 +660,9 @@ from the project alone, and a Run sends its request at once.
 How many variants each filter of the variants was given and kept is the
 result of an analysis of its own, `filterCounts`
 (`docs/specs/analyses/filterCounts.md`), whose key holds the filters of
-the variants and nothing else of the project; the Count button of the
+the variants and those of the individuals, and nothing else of the
+project, since the list of the individuals kept comes before the filters
+of the variants and they count over it; the Count button of the
 Variants step runs it (`docs/architecture.md`, section 4, "What each
 filter kept"). Every pass over the filters of the project fills it too,
 so the counts are there after a diversity with no Count.
@@ -669,12 +675,15 @@ into the variants file of the request's load as before
 (`docs/architecture.md`, section 6, step 5); and a result of
 `filterCounts` made of the counts of its pass, `PassStats` of
 `docs/specs/worker/protocol.md`, popnei's `passStats`, when the analysis
-of the result is one whose pass has the filters of the variants of its
-request's project and none of its own, or `null`; `countsOf` tells it by
+of the result is one whose pass has the list of the individuals kept
+and the filters of the variants of its request's project and none of
+its own, the diversity and `filterCounts`, or `null`; `countsOf` tells it by
 the analysis of the result, and not by comparing filters. A file
 written always had them, and `write.countsOf` makes its result of
-`filterCounts` from the counts of its pass. It is `null` for the histograms of the
-variants, which read no filter, and for the PCA, whose pass has filters
+`filterCounts` from the counts of its pass. It is `null` for the
+statistics of each individual, whose pass has no filter since 28
+September 2026, for the histograms of the variants, which read no filter
+of the variants, and for the PCA, whose pass has filters
 of its own, the stricter of its MAF filter and the project's and its LD
 pruning (`pcaFilters` of `docs/specs/analyses/pca.md`); its number of
 variants of the file is given, `varsProcessed` of its first filter, which
@@ -690,7 +699,8 @@ is the whole file whatever the filter.
   arrives late fills the counts of its own project, for an undo. A Count
   in flight for the same key goes on, and its result replaces them.
 - **The counts are left out of the notice's results removed.** Their key
-  holds every filter of the variants, so a change of any takes off the
+  holds every filter of the variants and of the individuals, so a change
+  of any takes off the
   counts of all, which the user sees beside the filters as they change
   one; a notice at every move of a threshold would say only that. A
   Count in flight that a change leaves behind is named in `leftBehind`
@@ -979,9 +989,13 @@ export interface PassFound<R> {
 ```
 
 `createStore` throws a defect when `counts` or `statistics.analysis` is
-not the id of one of the definitions, when the definition of the
-statistics reads the filters of individuals, which would make it wait for
-itself, and when the definition of the counts reads them. `IndividualStats`
+not the id of one of the definitions, and when the definition of the
+statistics reads any filter: the filters of individuals would make it
+wait for itself, and the filters of the variants, which count over the
+individuals it keeps, would make its numbers depend on them, which the
+owner decided on 28 September 2026 they do not. The definition of the
+counts, which until then could not read the filters of individuals,
+reads them. `IndividualStats`
 and `IndividualsKept` are those of `docs/specs/core/individualsKept.md`, and `WriteFormat`, `"nei"` in stage 3, is
 `WriteJob["format"]`. The handles the store gives back are of either
 kind of request, `Run<R | Written<F>>`, and `runEnded` takes the outcome
@@ -1334,9 +1348,9 @@ whose file is a text.
   again with the filter kept, the diversity is `done` with the same
   result and no request sent, since its key is the one of before.
 - **The key whatever the lock, and the lock from the cache**: with the
-  analysis done under a threshold, a command that changes the filter of
-  the variants, a result of the other analysis whose put drops the
-  statistics of the old filters, their sizes and the bound of the cache
+  analysis done under a threshold, a command that loads the variants
+  file again, a result under the new load whose put drops the
+  statistics of the first load, their sizes and the bound of the cache
   chosen so, and an undo: the analysis is `done` again with the same
   result, its key is `keyOf` of the project, and the list is
   `needsStatistics`. The lock worked out again from the cache: with a
@@ -1351,8 +1365,8 @@ whose file is a text.
   needs only the variants file puts into the cache, under the key of
   the counts for its request's project, the counts `countsOf` gave;
   the counts are `done` with no Count; a command that changes the filter
-  of the variants does not name them in the notice's results removed,
-  and its undo shows them `done` again. With a cache whose bound holds
+  of the variants, or a threshold of the individuals, does not name them
+  in the notice's results removed, and its undo shows them `done` again. With a cache whose bound holds
   one result, the result put before the counts is not dropped by their
   put.
 - **The write**: `startWrite("nei")` sends a `WriteJob` with the load
@@ -1430,9 +1444,13 @@ whose file is a text.
   definitions drawing any `filtersRead`, no request, the jobs of the
   statistics and of the write among them, carries an LD filter without
   its distance or a filter turned off, no `startRun` or `startWrite`
-  throws, and every definition that reads either list of filters, and
-  the writing, is `locked` while the filters on hold an LD filter with
-  no distance, and only then for that reason.
+  throws, and every definition that reads the filters of the variants,
+  and the writing, is `locked` while the filters on hold an LD filter
+  with no distance, and only then for that reason, and no definition
+  that reads only the filters of individuals is locked for it; and no
+  request of the statistics carries a filter or a list, whatever the
+  project (`docs/architecture.md`, section 2, "What would show the
+  choice wrong").
 
 The tests in the browser, of the walking skeleton, check the same through
 the screens, since core reaches them through the store

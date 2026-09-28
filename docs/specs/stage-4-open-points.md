@@ -19,7 +19,9 @@ specs now say as decided: the LD filter keeps its r² and its distance
 while it is off (point 16); Lingoes' correction of the PCoA has no
 switch; the repository of xlsx_rs and how it makes its releases; and
 calamine, approved (below, "Decided by the owner on 28 September
-2026").
+2026"). The owner's answer A of the same day puts the filters of
+individuals before those of the variants, which changes the code of
+stage 3 as well (point A).
 
 The specs are, new: `docs/specs/analyses/pca.md`, the analysis and its
 panel; `docs/specs/charts/scatter.md`, the 2D plot, and `pca3d.md`, the
@@ -197,7 +199,11 @@ filtered variants; in the Analyses step, the diversity and the PCA. An
 analysis that read only the filters of individuals would be locked
 too, since the individuals a threshold keeps come from the statistics
 of each individual; none does in stages 2 to 4. The histograms of the
-variants read no filter and can still be calculated. No count is shown
+variants read no filter and can still be calculated. Revised with point
+A, below, the same day: the statistics of each individual read no
+filter, so the LD filter with no distance locks neither them nor the
+histograms of the variants, which now read the filters of individuals
+alone. No count is shown
 beside the filters, and the stepper shows the Variants step with a
 problem. The summary line under the stepper counts the filter among
 the filters and says nothing of its distance. The PCA does not prune
@@ -286,6 +292,123 @@ of the lock, and `jobFilters`; `store.md`; `keys.md`; `projectFile.md`;
 `pca.md`; `filterCounts.md`, `individualChecks.md`, `writeVariants.md`
 and `diversity.md`; `shell.md`; `docs/functionality.md`, sections 3 and
 5 and open point 4; `docs/architecture.md`, sections 1, 2, 3 and 4.
+
+### A. The filters of individuals act first
+
+In stage 3 the filter of individuals came after every filter of the
+variants, which counted over every individual of the file, and each
+individual's proportion of missing genotypes and observed
+heterozygosity were counted over the variants those filters kept, as
+the owner decided on 26 September 2026 (`docs/architecture.md`, section
+13, points 3 and 8). Decided by the owner on 28 September 2026: "All
+analyses should calculate the filters using the individuals kept." The
+list of the individuals kept, which the two lists and the two
+thresholds make, is put on the variants first, and the filters of the
+variants count over the individuals it keeps, as plink 1.9 applies
+`--mind` before `--geno`; each individual's two numbers are counted over
+every variant of the file, one calculation per file loaded. What it
+costs, said to the owner: an individual's missing genotypes include
+those at the bad variants the missing data filter would drop; and the
+code of stage 3, which is built, changes. Not taken: the lists first and
+the thresholds last, which popnei's one list per pass does not allow
+without counting the filters of the variants over other individuals
+than the statistics were counted with; and the order of stage 3 kept.
+`docs/architecture.md`, sections 1, 2, 3, 4, 5, 8, 11 and 13, has the
+options and what would show the choice wrong.
+
+What a user meets:
+
+- The Variants step shows the filters of the individuals, the lists,
+  the statistics of each individual and the two thresholds, before the
+  filters of the variants, since the step shows the filters in the
+  order they act. Decided by the writers from the rule the step already
+  had.
+- The statistics of each individual are calculated once for each file
+  loaded; moving a filter of the variants leaves them, their table, the
+  counts beside the thresholds and the individuals kept, with no
+  calculation. The count of a threshold that waits for them reads
+  "Known once the statistics of each individual are calculated.", no
+  longer "… for these filters of the variants".
+- The histograms of the variants are drawn over the individuals kept,
+  so that each shows the number its filter keeps a variant by, as the
+  filter counts it; a change of a filter of individuals removes them,
+  with the notice of the change and its Undo, and a Calculate draws them
+  again; with a threshold on the individuals their Calculate first
+  calculates the statistics when they are not there. Decided by the
+  writers, as what the owner's words ask of the numbers the filters are
+  set from; the option not taken, the histograms over every individual,
+  would show on `panel.nei`, with the thresholds of the flow, 1,175
+  variants at a MAF up to 0.95 where the filter, over the 111
+  individuals kept, keeps 1,178.
+- The counts beside the filters of the variants go at every change of a
+  filter of individuals as well, and a Count waits for the statistics
+  as the diversity does. A list of individuals that names someone not
+  in the file, or filters of individuals that keep nobody, lock the
+  Count and the histograms of the variants, with the reason beside
+  their buttons; the statistics of each individual stay unlocked.
+- The LD filter with no distance locks the Count, the writing, the
+  diversity and the PCA, and no longer the statistics of each
+  individual (point 16, above, revised).
+- The line under the missing data filter of the variants reads "the
+  proportion is over the individuals the filters of individuals keep."
+  where it read "over every individual of the file."
+- The numbers of `panel.nei`: the thresholds of 0.03 and 0.38 keep 116
+  and 111 individuals, where they kept 125 and 119; the missing data
+  filter at 0.05 keeps 1,117 of the 1,200 variants over those 111, where
+  it keeps 1,152 over every individual; the summary line with the
+  missing data filter at 0.05, the filter by heterozygosity at 0.9, the
+  MAF filter at 0.95 and the two thresholds reads "panel.nei · 111 of
+  200 individuals kept · 1,096 of 1,200 variants kept · 5 filters · 3
+  populations by pop". The command that gave them is `orderA.mjs` of
+  `docs/specs/worker/runner.md`, "How it is verified".
+- A project file saved by stage 3 opens as before; its check numbers of
+  the statistics, the histograms, the counts and the diversity are
+  compared with a key version raised to 2, so a difference is said to
+  come from the application's calculation and not from the file.
+
+The code of stage 3 that the plan of stage 4 changes, each with its
+spec:
+
+- `src/core/analyses/individualChecks.ts`: `filtersRead` `{ variants:
+  false, individuals: false }`, the job with `filters: []`, the key
+  version 2, the words of its warning ("among the 1,200 variants of
+  panel.nei") and of its results removed, and no row of filters that
+  keep no variant (`individualChecks.md`).
+- `src/core/analyses/variantChecks.ts`: `filtersRead` `{ variants: false,
+  individuals: true }`, the job with `individuals` from the bound
+  client, the key version 2, the caption and the warning with the
+  individuals kept, the script with `filter_individuals`
+  (`variantChecks.md`).
+- `src/core/analyses/filterCounts.ts`: `filtersRead` `{ variants: true,
+  individuals: true }`, the job with `individuals`, the key version 2,
+  the warning `filterKeptNone` without "and the statistics of each
+  individual" (`filterCounts.md`).
+- `src/core/analyses/diversity.ts`: the key version 2 (`diversity.md`).
+- `src/core/apps.ts`: `countsOf` gives no counts for `individualChecks`,
+  and `POPGEN_ANALYSES` puts `individualChecks` first (`docs/specs/entry.md`).
+- `src/core/store.ts`: `createStore` refuses a definition of the
+  statistics that reads any filter, and no longer refuses a definition
+  of the counts that reads the filters of individuals; the lock of the
+  LD filter with no distance only for what reads the filters of the
+  variants (`store.md`, `project.md`).
+- `src/core/project.ts`: `variantFilterNeeds` asked only of what reads
+  the filters of the variants, as its doc comment says (`project.md`).
+- `src/worker/protocol.ts` and `messages.ts`: the jobs of
+  `individualChecks`, with `filters: readonly []`, and of `variantChecks`
+  and `filterCounts`, with `individuals`, and their checks
+  (`protocol.md`, `messages.md`).
+- `src/worker/runner.ts`: the list put before the filters, in `stepsOf`,
+  `stepsAre` and the steps put on the `Variants`, and the list of the
+  jobs of `variantChecks` and `filterCounts` (`runner.md`).
+- `src/ui/steps/variants/`: the section of the individuals before that
+  of the variants, the words of the count that waits, of the missing
+  data filter and of the caption of the histograms, and the locks shown
+  beside the Count and the histograms (`steps/variants.md`).
+- The tests and fixtures: `e2e/fixtures/panel_individual_stats.json`,
+  written again by `make_fixtures.mjs` with no filter; the numbers of
+  the tests of core, of the runner and of the flow, the lists of 116 and
+  111 in the place of 125 and 119 (`individualsKept.md`, `runner.md`,
+  `diversity.md`, `writeVariants.md`, `shell.md`).
 
 ### Lingoes' correction has no switch
 

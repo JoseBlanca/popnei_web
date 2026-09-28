@@ -42,7 +42,12 @@ and again that day after the review of that change: the summary line
 counts that filter among the filters and says nothing of its distance;
 and again that day for the owner's decision that a filter turned off
 keeps its values in the project: the summary line counts the filters on
-alone.
+alone; and again that day for the owner's decision that the filters of
+individuals act first (`docs/architecture.md`, section 2): the numbers
+of the summary line with the thresholds of the individuals are
+recomputed, and an LD filter with no distance no longer leaves the
+individuals kept unknown, since the statistics read no filter. Not yet
+reviewed or approved.
 The screen
 spec of what surrounds every step of the population genetics
 application, first built in the walking skeleton of stage 2 (`docs/build-order.md`),
@@ -72,7 +77,7 @@ the whole file and counted them. `projectNeeds(p)` and
 reason no analysis can run because of the variants file or of the
 individuals file, or `null`; `variantFilterNeeds(p)`, the reason of
 the LD filter of the variants turned on with no distance, which locks
-only what reads either list of filters, or `null`;
+only what reads the filters of the variants, or `null`;
 `individualListNeeds(p)`, the reason of a
 list of individuals popnei would refuse, which locks only what reads the
 filters of individuals, with the list it is about, or `null`. The **reference** of a project opened from
@@ -244,12 +249,13 @@ and the history of the browser say where the user is (2.4.2).
 ### The summary line
 
 One line under the stepper that says what the analyses would be run on,
-made of the parts below joined by " · ": "panel.nei · 114 of 200
-individuals kept · 1,128 of 1,200 variants kept · 5 filters · 3
-populations by pop", with the missing data filter at 0.05, the filter
-by heterozygosity at 0.9, the MAF filter at 0.95, and the thresholds of
-the individuals at 0.03 and 0.38, over the 1,128 variants those filters
-keep (node, 26 September 2026, popnei `js-v0.1.0-dev.2`). It is text, and is not announced when it changes.
+made of the parts below joined by " · ": "panel.nei · 111 of 200
+individuals kept · 1,096 of 1,200 variants kept · 5 filters · 3
+populations by pop", with the thresholds of the individuals at 0.03 and
+0.38, over every variant of the file, and, over the 111 individuals they
+keep, the missing data filter at 0.05, the filter by heterozygosity at
+0.9 and the MAF filter at 0.95 (node, 28 September 2026, popnei
+`js-v0.1.0-dev.3`, `orderA.mjs` of `docs/specs/worker/runner.md`). It is text, and is not announced when it changes.
 
 | part | the project | the words |
 |---|---|---|
@@ -258,13 +264,13 @@ keep (node, 26 September 2026, popnei `js-v0.1.0-dev.2`). It is text, and is not
 | | read failed | "panel.nei could not be read" |
 | | read | "panel.nei", then its individuals and its variants, below |
 | its individuals | no filter of individuals, or filters that remove none | "200 individuals", the individuals of the file |
-| | the individuals kept known | "114 of 200 individuals kept", from `individualsKept`; "none of 200 individuals kept" when they keep none |
+| | the individuals kept known | "111 of 200 individuals kept", from `individualsKept`; "none of 200 individuals kept" when they keep none |
 | | a threshold waiting for the statistics of each individual | "200 individuals, how many kept not yet known" |
 | its variants | not counted yet (`numVars` of the source `null`) | nothing |
 | | counted, and the file holds none (`numVars` 0) | "no variant", with or without counts, where "0 of 0 variants kept" would say nothing more, as the Variants step shows a file of no variant (`docs/specs/steps/variants.md`) |
 | | counted, and no filter of the variants | "1,200 variants", `numVars` of the source |
 | | counted, a filter of the variants, and no counts of the filters as they are | "1,200 variants before the filters" |
-| | the counts of the filters as they are, `filterCounts` done | "1,128 of 1,200 variants kept": `passStats.numVars` of the counts, of the `numVars` of the source |
+| | the counts of the filters as they are, `filterCounts` done | "1,096 of 1,200 variants kept": `passStats.numVars` of the counts, of the `numVars` of the source |
 | the filters | | "no filter", "1 filter", "2 filters": the filters of the variants and of the individuals that are on, `filters` and `individualFilters`; not those the project keeps while they are off |
 | the metadata file | none | "no metadata file: one population", from stage 4, whatever the grouping |
 | | being read | "reading pops.csv" |
@@ -283,12 +289,13 @@ the distance is typed, though no filter was added. The reason is the
 stepper's, where the Variants step is at Problem with the words of
 `variantFilterNeeds`, and the line holds no reason of any step. Nothing
 in it reads as a filter applied: the Count is locked, so its variants
-are "1,200 variants before the filters", and with a threshold on the
-individuals the statistics of each individual are locked too, so its
-individuals are "200 individuals, how many kept not yet known".
+are "1,200 variants before the filters". The individuals kept are known
+as with any other filter, since the statistics of each individual read
+no filter from 28 September 2026; until then they were locked too, and
+the individuals were "200 individuals, how many kept not yet known".
 
 The one population is not counted against the individuals kept: the
-part of the individuals says how many the filters keep, "114 of 200
+part of the individuals says how many the filters keep, "111 of 200
 individuals kept", and filters that keep none lock every analysis, so
 "one population" is the whole of what the line needs to say of it.
 
@@ -947,7 +954,7 @@ with the analyses of `TEST_DEFS` of `src/core/testSupport.ts`:
   populations by pop"; with the thresholds of the individuals at 0.03
   and 0.38 and the missing data filter at 0.05 on `panel.nei`, whose
   numbers are those of `docs/specs/core/individualsKept.md` and
-  `filterCounts.md`, "panel.nei · 119 of 200 individuals kept · 1,152 of
+  `filterCounts.md`, "panel.nei · 111 of 200 individuals kept · 1,117 of
   1,200 variants kept · 3 filters · 3 populations by pop", and with no
   counts and no statistics "panel.nei · 200 individuals, how many kept
   not yet known · 1,200 variants before the filters · 3 filters · …";
@@ -1124,8 +1131,8 @@ above. One stayed, and stage 3 answered it:
    The walking skeleton did not know it, and the owner left the line as
    it was on 25 September 2026, with the kept count to join it in stage 3
    (point L of `docs/specs/stage-2-open-points.md`). Stage 3 writes it
-   so, "1,128 of 1,200 variants kept", with the individuals kept beside
-   it, "114 of 200 individuals kept", and the count of the filters as
+   so, "1,096 of 1,200 variants kept", with the individuals kept beside
+   it, "111 of 200 individuals kept", and the count of the filters as
    its own part, "5 filters", as the other parts of the line are, rather
    than in brackets (above, "The summary line"). The variants kept are
    shown only while the counts of the filters as they are are in the

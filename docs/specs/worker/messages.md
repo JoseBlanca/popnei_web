@@ -21,7 +21,12 @@ checks of the job and the result of the principal components
 (`docs/specs/analyses/pca.md`), which make one pass, the two values of
 a binary type checked as texts, and no intermediate result before stage
 7; and when the specs of stage 4 were made to agree, the wasm whose
-failure to load stops a worker named as popnei's; not approved yet. This spec gives
+failure to load stops a worker named as popnei's; and on 28 September
+2026 for the owner's decision that the filters of individuals act first
+(`docs/architecture.md`, section 2): the job of the statistics of each
+individual has no filter, and those of the histograms of the variants
+and of the counts carry the list of the individuals kept, checked as
+any job's; not approved yet. This spec gives
 `src/worker/messages.ts`: the messages the page and each of the two
 workers send each other, from the walking skeleton, the smallest
 application that goes through every part once (stage 2), on, the
@@ -352,7 +357,8 @@ and of `.claude/skills/coding/worker.md`, "Validation at the boundary":
   population of a `Job` is a pair, its name and its individuals;
   `individuals` of a job is `null` or a list of texts; the fields of
   `passStats.filtering` are kinds of `VariantFilter`; `filters` of a
-  `variantChecks` job is empty; for the principal components, from
+  `variantChecks` or an `individualChecks` job is empty, the second from
+  28 September 2026; for the principal components, from
   stage 4, the `method` of a job and of a result is `"pca"` or
   `"pcoa"`, `numCompsKept` of a job, `numComps` and `numCompsFound` of a
   result are whole numbers, `projections` is as long as `individuals`

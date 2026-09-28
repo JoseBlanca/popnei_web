@@ -12,7 +12,9 @@ of the individuals file reports, as the owner decided that day
 approved by the owner on 26 September 2026 with the answers to its open
 points. On 28 September 2026 it was revised for the reader of xlsx,
 moved out of this repository into a project of its own, xlsx_rs, as the
-owner decided that day; a draft, not yet reviewed or approved. What was
+owner decided that day; a draft, not yet reviewed or approved; and the
+same day for the order of the filters, the filters of individuals
+first, as the owner decided that day, a draft too. What was
 revised each time is at the end
 of section 1. The document gives the parts of the web applications of
 popnei, what each one holds, and how a change made by the user reaches the
@@ -204,7 +206,10 @@ last, and the filter of individuals after all of them (section 2); each
 individual's statistics counted over the variants the filters keep, and
 the histograms of the variants over every variant and every individual
 of the file (section 4); and the histograms of the individuals binned in
-core, which corrects `.claude/skills/coding/charts.md` (section 7).
+core, which corrects `.claude/skills/coding/charts.md` (section 7). The
+place of the filter of individuals, the statistics of each individual
+and the histograms of the variants were revised on 28 September 2026
+(below).
 
 The interfaces between the parts that change are the client through
 which an analysis sends its request, which gains the individuals kept;
@@ -235,7 +240,7 @@ Revised again on 26 September 2026, after the review of the code of stage
 3: the runner test that the list core makes gives popnei's numbers is
 three tests, one of core over a fixture of popnei's statistics, one of
 the runner that the fixture is popnei's, and the runner's tests with the
-lists of 125 and 119, since a test of the worker imports no function of
+lists of 125 and 119, of 116 and 111 since 28 September 2026, since a test of the worker imports no function of
 core (section 4, "What would show these choices wrong").
 
 What was revised on 27 September 2026, for stage 4 of
@@ -278,7 +283,10 @@ since the revision below the package of xlsx_rs. What it changes:
   of individuals popnei would refuse locks what reads the filters of
   individuals (section 4). What reads only the filters of individuals
   is locked too, since a threshold on the individuals needs the
-  statistics of each individual, which read the filters of the variants.
+  statistics of each individual, which read the filters of the variants;
+  revised the same day, with the filters of individuals first (below):
+  the statistics read no filter, and the LD filter with no distance
+  locks only what reads the filters of the variants.
   The option not taken was to hold the filter turned on and its empty
   field in the screen of the Variants step alone, out of the project
   until a distance is typed: the step would show a filter on that no
@@ -330,6 +338,42 @@ waits for the first release of xlsx_rs, and comes last in the stage
 `docs/specs/worker/files.md`, is xlsx_rs's first spec, and moves there
 when its repository is made; what of it stays in popnei_web joins
 `docs/specs/worker/individuals.md`.
+
+What was revised on 28 September 2026 for the order of the filters, a
+draft, not yet reviewed or approved. The owner decided that day, "All
+analyses should calculate the filters using the individuals kept", and
+so reversed the decision of 26 September 2026 that put the filter of
+individuals after every filter of the variants:
+
+- **The filters of individuals act first.** The one list of the
+  individuals kept is put on popnei's `Variants` before any filter of
+  the variants, and those filters count over the individuals it keeps:
+  the missing rate, the frequencies and the dosages of the LD of a
+  variant are over those individuals, as plink 1.9 applies `--mind`
+  before `--geno` (section 2).
+- **Each individual's statistics are counted over every variant of the
+  file**, before any filter, one pass per load; a change of a filter of
+  the variants no longer takes them off, and the thresholds on the
+  individuals no longer wait for a pass after one (section 4).
+- **The analyses of the Variants step that read the filters change**:
+  the histograms of the variants are over the individuals kept, and the
+  counts of the filters of the variants hold the filters of individuals
+  in their key, since those counts now depend on the individuals kept
+  (section 4, "The checks of the Variants step" and "What each filter
+  kept").
+- **The LD filter with no distance locks only what reads the filters of
+  the variants**, since the statistics read none (section 4).
+
+The interfaces that change are the jobs of the histograms of the
+variants and of the counts, which carry the list of individuals, and
+that of the statistics, which carries no filter; the runner, which puts
+the list first; and the store, which no longer refuses an analysis of
+the counts that reads the filters of individuals. No part of the
+project and no format of the project file changes; the key version of
+the analyses whose result changes for the same key is raised (section
+4). It changes the code of stage 3, which the plan of stage 4 carries
+(`docs/specs/stage-4-open-points.md`). The options weighed, their costs,
+and what would show the choice wrong are in section 2.
 
 ## 2. The project
 
@@ -501,33 +545,42 @@ holds the numbers of two sessions names the right versions for each
   the file. popnei reads a ploidy of 1 to 255, and its kinship and PCA one
   of at most 254; the default is 2.
 - **The filters are in a fixed order**, and the user does not order them,
-  as the owner decided on 26 September 2026: the filters of the variants
-  first, the regions of a BED file, once popnei has that filter, then
-  missing data, observed heterozygosity, the major allele frequency (MAF),
-  and the LD pruning last; then the filter of individuals, which popnei's
-  `filterIndividuals` applies after all of them, with the one list that
-  the four filters of individuals make (section 4). The project holds each
-  list in its order and refuses a project file whose filters are out of
-  it. The regions and the missing data, heterozygosity and MAF filters keep
-  a variant by where it is or what it holds, so their order changes the
-  counts of each filter and not the variants kept; the missing data filter
-  comes before the MAF, whose frequency asks for no minimum of called data
-  (`filterByMaf` of `js/popnei/src/variant.ts`); and the LD pruning comes
-  last among them, because it keeps a variant according to the variants
-  kept before it on its chromosome, so a filter after it would drop
-  variants it kept in place of others. The filters of the variants,
-  before the filter of individuals, count over every individual of the
-  file: the missing rate of a variant is its missing genotypes over all
-  the individuals, and so are the frequencies and the dosages of the LD.
-  So the variants kept do not depend on which individuals are removed,
-  and each individual's statistics can be counted over those variants,
-  which are the ones the analyses read. Seen in node with popnei's
-  release `js-v0.1.0-dev.2` on 26 September 2026: on `panel.nei`,
-  `filterIndividuals` of 9 individuals put after the missing data filter
-  at 0.05, the heterozygosity filter at 0.9 and the MAF filter at 0.95,
-  which `steps` then lists last, left the counts those filters give with
-  every individual, 1,200 to 1,152 to 1,152 to 1,128 variants; put first,
-  the same list gave 1,200 to 1,004 to 1,004 to 963.
+  as the owner decided on 26 September 2026, with the filters of
+  individuals first, as the owner decided on 28 September 2026: the one
+  list that the four filters of individuals make, which popnei's
+  `filterIndividuals` puts on the `Variants` before any other step
+  (section 4); then the filters of the variants, the regions of a BED
+  file, once popnei has that filter, missing data, observed
+  heterozygosity, the major allele frequency (MAF), and the LD pruning
+  last. The project holds each list in its order and refuses a project
+  file whose filters are out of it. The regions and the missing data,
+  heterozygosity and MAF filters keep a variant by where it is or what
+  it holds, so their order changes the counts of each filter and not the
+  variants kept; the missing data filter comes before the MAF, whose
+  frequency asks for no minimum of called data (`filterByMaf` of
+  `js/popnei/src/variant.ts`); and the LD pruning comes last among them,
+  because it keeps a variant according to the variants kept before it on
+  its chromosome, so a filter after it would drop variants it kept in
+  place of others. The filters of the variants, after the list, count
+  over the individuals it keeps, as `filterIndividuals` of
+  `js/popnei/src/variant.ts` says of every step after it: the missing
+  rate of a variant is its missing genotypes over those individuals, and
+  so are the frequencies and the dosages of the LD. So the variants the
+  analyses read are judged over the individuals the analyses read, as
+  plink 1.9 applies `--mind` before `--geno`, and the variants kept
+  change with the individuals removed. Each individual's statistics,
+  from which the thresholds on the individuals are set, are counted over
+  every variant of the file, before any filter (section 4), so the list
+  depends on no filter of the variants. Seen in node with popnei's
+  release `js-v0.1.0-dev.3` on 28 September 2026, on `panel.nei`: the
+  111 individuals that the thresholds of 0.03 of missing genotypes and
+  0.38 of observed heterozygosity keep, given to `filterIndividuals`
+  before the missing data filter at 0.05, the heterozygosity filter at
+  0.9 and the MAF filter at 0.95, gave 1,200 to 1,117 to 1,117 to 1,096
+  variants; put after them, the order of 26 September 2026, the same
+  list left the counts those filters give with every individual, 1,200
+  to 1,152 to 1,152 to 1,128 (`docs/specs/worker/runner.md`, "How it is
+  verified", has the script).
 - **A filter turned off is kept apart**, with its values, in
   `filtersOff` or `individualFiltersOff`, so that turning it on again
   gives back what the user typed, a distance of the LD filter above all,
@@ -551,6 +604,51 @@ the owner chose the statistics over the variants kept (section 4). No
 project file the application wrote is refused by the fixed order: stage 2
 has the missing data filter alone.
 
+What was revised on 28 September 2026, a draft, not yet reviewed or
+approved. The version of 26 September 2026 put the filter of
+individuals after every filter of the variants, which counted over every
+individual of the file, and counted each individual's statistics over
+the variants those filters kept; the owner had chosen it so that an
+individual's missing genotypes were counted among the variants analysed
+(section 13, point 8). The owner reversed it on 28 September 2026, "All
+analyses should calculate the filters using the individuals kept", and
+took the first of three options:
+
+- **The filters of individuals first, their statistics over every
+  variant of the file**, taken. The statistics need one pass per load,
+  and no change of a filter of the variants takes them off, so the
+  thresholds on the individuals never wait for a pass after one. What it
+  costs: an individual's missing rate counts the bad variants that the
+  missing data filter would drop, so an individual is judged over
+  variants the analyses do not read; the variants kept, their counts and
+  the histograms of the variants change with every change of a filter of
+  individuals, and need a pass again after one; and the code of stage 3
+  changes (section 4).
+- **The lists first and the thresholds last**, the statistics counted
+  over the variants the filters keep among the individuals the lists
+  keep. popnei takes one `filterIndividuals` on a `Variants` and refuses
+  a second, so the analyses would be given the final list first and
+  their filters of the variants would count over fewer individuals than
+  those the statistics were counted with: the thresholds would be set
+  from numbers of other variants than the analyses read, the fault this
+  order was to mend, and the statistics would still need a pass after
+  every change of a filter of the variants.
+- **The order of stage 3 kept**, which changes no code. The filters of
+  the variants would go on counting over individuals the analyses do not
+  read, so that a variant missing in the individuals the thresholds
+  remove is dropped for them, which the owner judged the worse fault.
+
+What would show the choice wrong: users whose thresholds on the
+individuals remove individuals only for the variants the missing data
+filter drops, a panel with some loci missing in most individuals, who
+would then set the threshold of missing genotypes of the individuals
+well above plink's 0.1 of `--mind` to keep them; that would argue for
+counting the statistics over the variants a missing data filter keeps.
+The tests that tie the order to popnei's numbers are the runner's, with
+the counts above, and the store's property that no request of the
+statistics carries a filter (`docs/specs/core/store.md`, "How it is
+verified").
+
 ## 3. Results, and how they go stale
 
 A result is never stored in the project. It is stored in a cache, under
@@ -568,13 +666,17 @@ every key are:
   every analysis of sections 5 to 8 of `docs/functionality.md`, and not
   the filters that the checks per variant and per individual of its
   section 3 serve to set, whose histograms would otherwise be removed at
-  every move of a threshold (section 4, `filtersRead`). The filter of the
+  every move of a threshold: the statistics of each individual read no
+  filter, and the histograms of the variants the filters of individuals
+  alone, which act before the filters of the variants they serve to set
+  (section 4, `filtersRead`). The filter of the
   regions of a BED file enters the key with the hash of the regions, which
   `keys.ts` takes from the project's regions when the filter is on, so
   the hash is held in one place; and the list of the individuals that the filters
   of individuals keep is in no key, since it is made from the load, the
-  version of popnei, the filters of the variants and those of the
-  individuals, which are (section 4);
+  version of popnei and the filters of the individuals, which are
+  (section 4), and, until 28 September 2026, the filters of the
+  variants, over which the statistics of each individual were counted;
 - the parts of the individuals table and of the grouping that the analysis
   uses;
 - its own options;
@@ -763,9 +865,10 @@ while the variant file or the individuals file is being read (section 6),
 "the individuals file lacks 12 individuals of the variants", a trait not
 chosen. Before it, the store asks what every analysis needs of the
 project (`docs/specs/core/project.md`): a variants file read; for an
-analysis that reads either list of filters, an LD filter with its
-distance, from 28 September 2026; and for one that reads the filters of
-individuals, lists popnei accepts. `run` gives its job the filters of
+analysis that reads the filters of the variants, an LD filter with its
+distance, from 28 September 2026, which locked what reads either list of
+filters until the filters of individuals came first that day; and for
+one that reads the filters of individuals, lists popnei accepts. `run` gives its job the filters of
 the variants through `jobFilters` of the same spec, which gives them as
 popnei takes them, every LD filter with its distance, and throws a
 defect for one without, which that lock keeps from every `run`.
@@ -806,34 +909,44 @@ section 4), and every analysis has to read the individuals they keep.
   presses its button, as every calculation does
   (`docs/specs/core/store.md`), with the states, the progress, the stop and
   the undo of any analysis.
-- **The statistics of each individual are over the variants the filters
-  keep**, as the owner decided on 26 September 2026: `filtersRead` is `{
-  variants: true, individuals: false }`, and their pass has the filters of
-  the variants and no filter of individuals. So an individual's missing
-  rate and heterozygosity are those of the variants the analyses read.
-  What it costs: a change of any filter of the variants takes them off,
-  and they need a pass again before the individuals kept are known; the
-  analyses that read the filters of individuals wait for that pass
-  (below).
-- **The histograms of the variants are over every variant and every
-  individual of the file**, before any filter: `filtersRead` is `{
-  variants: false, individuals: false }`, so one pass per load gives them
-  and no threshold moved takes them off. Each shows the number its filter
-  keeps a variant by, since the filters of the variants count over every
-  individual (section 2). They are of one population of every individual,
+- **The statistics of each individual are over every variant of the
+  file**, before any filter, as the owner decided on 28 September 2026
+  (section 2): `filtersRead` is `{ variants: false, individuals: false
+  }`, and their pass has no filter. So one pass per load gives them, no
+  change of a filter takes them off, and once they are calculated the
+  individuals kept are known whatever the filters of the variants. What
+  it costs: an individual's missing rate counts the variants the missing
+  data filter drops (section 2).
+- **The histograms of the variants are over the individuals kept**, and
+  every variant of the file: `filtersRead` is `{ variants: false,
+  individuals: true }`, and their pass has the list of the individuals
+  kept and no filter of the variants. Each shows the number its filter
+  keeps a variant by, counted as that filter counts it, over the
+  individuals kept (section 2), so a threshold read on a histogram keeps
+  what the histogram shows. No threshold of the variants moved takes
+  them off; a change of a filter of individuals does, as it changes the
+  numbers they show, and they need a pass again, which is the cost; with
+  a threshold on the individuals, their Run waits for the statistics of
+  each individual as any analysis that reads the filters of individuals
+  does (below). They are of one population of the individuals kept,
   with `minNumIndividuals` 0, so that popnei counts the variants with few
   called genotypes too, which its default of 20 called individuals would
   leave out, and which the missing data filter is there to find. popnei
   has no histogram of the missing rate of each variant in
-  `js-v0.1.0-dev.2`; it is asked of popnei (section 6).
+  `js-v0.1.0-dev.2`; it is asked of popnei (section 6). The option not
+  taken, the histograms over every individual of the file as until 28
+  September 2026, one pass per load, would show numbers the filters no
+  longer count by, and the user would set a threshold from them.
 - **Core makes the list of the individuals kept**, from the result of
   `individualChecks` in the cache and the four filters of individuals, in
   their fixed order: the list to keep, the list to remove, the threshold
   on the missing rate, and the threshold on the observed heterozygosity,
   each keeping an individual whose number is at most its threshold, as
   popnei's filters of the variants do. An individual with no called
-  genotype among those variants has no heterozygosity, and the filter by
-  heterozygosity removes it, as the owner decided on 26 September 2026.
+  genotype has no heterozygosity, and the filter by
+  heterozygosity removes it, as the owner decided on 26 September 2026;
+  since 28 September 2026 that is an individual with no called genotype
+  in the whole file.
   It gives the list in the order of
   the variants file, and how many individuals each filter was given and
   kept, which the step shows beside each filter as it is set, with no
@@ -841,14 +954,17 @@ section 4), and every analysis has to read the individuals they keep.
   keys, and hands it to an analysis through the client bound to its key,
   the object the analysis sends its request through, as a field of it,
   `individuals`, which is `null` when the filters remove nobody; the
-  job carries it, and the runner puts it on the `Variants` after the
-  filters of the variants, as its `filterIndividuals`. The result of
+  job carries it, and the runner puts it on the `Variants` before the
+  filters of the variants, as its `filterIndividuals`, from 28 September
+  2026 (section 2). The result of
   `individualChecks` is under a key that the current project gives, so
   the cache does not drop it while the project gives that key
   (`docs/specs/core/cache.md`).
 - **An analysis that reads the filters of individuals waits for their
   statistics.** While the project has a threshold on the individuals and
-  `individualChecks` has no result under the key the project gives it, a
+  `individualChecks` has no result under the key the project gives it,
+  which holds the load and no filter, so after a new load, the opening
+  of a project file, or the cache dropping them, a
   Run of such an analysis starts the calculation of the statistics first,
   and the analysis shows that it waits for them, "Calculating the
   statistics of each individual, which the filters of individuals are set
@@ -859,8 +975,8 @@ section 4), and every analysis has to read the individuals they keep.
   there. This lock stops the Run and nothing else. It depends on the cache and
   not on the project alone, so the key of the analysis is made whatever
   the lock, since it holds the thresholds and not the list (section 3),
-  and a result in the cache under that key is shown: after an undo to
-  earlier filters whose statistics the cache has dropped, a diversity still
+  and a result in the cache under that key is shown: once the cache has
+  dropped the statistics, a diversity still
   in the cache is `done`, as section 3 asks, and only a new Run waits for
   the statistics. The store works these locks out again when the cache
   changes, a result of `individualChecks` put in or dropped, and not only
@@ -888,9 +1004,13 @@ individuals has no entry there, since it drops no variant. The step shows
 those counts beside each filter, in the order of section 2.
 
 - **The counts are the result of an analysis of their own,
-  `filterCounts`**, whose key holds the filters of the variants and
-  nothing else: the filter of individuals comes after them, so it changes
-  none of their counts. The Count button of the step runs its
+  `filterCounts`**, whose key holds the filters of the variants and those
+  of the individuals: the list of the individuals kept comes before the
+  filters of the variants, which count over it (section 2), so a change
+  of a filter of individuals changes their counts. Its `filtersRead` is
+  `{ variants: true, individuals: true }` from 28 September 2026, and a
+  Count with a threshold on the individuals waits for their statistics,
+  as any analysis that reads the filters of individuals. The Count button of the step runs its
   pass, with `iterBlocks`, whose `passStats` give the counts when the
   filters keep no variant too, which is when the user most needs to see
   which filter dropped them all. `calcPerIndividualStats`, which copies
@@ -912,15 +1032,18 @@ those counts beside each filter, in the order of section 2.
   and `numVarsRead` (`docs/specs/worker/protocol.md`). It gives, of any
   result, the number of variants of the file, the variants its first
   filter was given, and the counts of its filters only when its pass had
-  the filters of its project. So the diversity, or a file written, fills
-  the counts, and so do the statistics of each individual, whose pass has
-  the filters of the variants; an undo brings them back as it brings any
-  result; the histograms of the variants, which read no filter, and the
-  PCA, whose pass has its own MAF filter and pruning with the dataset's
-  (`pcaFilters` of `docs/specs/analyses/pca.md`), do not.
+  the filters of its project, both lists of them. So the diversity, or a
+  file written, fills the counts, since its pass has the list of the
+  individuals kept and the filters of the variants of its project; an
+  undo brings them back as it brings any result; the statistics of each
+  individual, whose pass has no filter since 28 September 2026, the
+  histograms of the variants, which read no filter of the variants, and
+  the PCA, whose pass can have filters of missing data, MAF and LD of
+  its own in the place of the dataset's (`pcaFilters` of
+  `docs/specs/analyses/pca.md`), do not.
 - **The notice leaves the counts out.** Their key holds every filter of
-  the variants, so a change of any of them takes off the counts of all of
-  them, which the
+  the variants and of the individuals, so a change of any of them takes
+  off the counts of all of them, which the
   user sees beside the filters as they change one, and a notice at every
   move of a threshold would say only that.
 - **The counts of the filters of individuals are core's**, above, and need
@@ -969,28 +1092,66 @@ not taken:
 
 What would show these choices wrong: a runner test in node, on
 `panel.nei`, that the counts filled from a diversity are those of a Count
-pass with the same filters; three tests in node, which together tie the
-list core makes to popnei's numbers; and, on the screens of stage 3, users who wait often for the statistics
-after moving a threshold of the variants, which would argue for counting
-them over every variant of the file.
+pass with the same filters and the same list; and three tests in node,
+which together tie the list core makes to popnei's numbers. Users who
+waited often for the statistics after moving a threshold of the
+variants, which the version of 26 September 2026 named here as what
+would argue for counting them over every variant of the file, are no
+longer possible: the owner decided so on 28 September 2026 (below).
 
 The three tests of the list are split between core and the runner,
 since a test of the worker imports no function of core, and a test of
 core does not call popnei:
 
 - **A test of core**, that the list `individualsKept` makes from popnei's
-  statistics of each individual of `panel.nei` with the missing data
-  filter at 0.05 holds the 125, 48 and 119 individuals of
-  `docs/specs/core/individualsKept.md`. It reads those statistics from
+  statistics of each individual of `panel.nei`, over its every variant,
+  holds the 116, 42 and 111 individuals of
+  `docs/specs/core/individualsKept.md`, where the statistics over the
+  variants the missing data filter at 0.05 kept gave 125, 48 and 119
+  until 28 September 2026. It reads those statistics from
   `e2e/fixtures/panel_individual_stats.json`, which
   `e2e/fixtures/make_fixtures.mjs` writes with popnei.
 - **A runner test**, that the fixture holds the statistics the runner
-  gets from popnei's release at 0.05, exactly, so that a release that
+  gets from popnei's release with no filter, exactly, so that a release that
   gives others fails there and the fixture is written again.
-- **The runner's tests with the lists of 125 and of 119**, each made in
+- **The runner's tests with the lists of 116 and of 111**, each made in
   the test from the runner's own statistics as core makes it, that the
-  diversity of popnei over the individuals of the list gives the numbers
-  of `docs/specs/analyses/diversity.md`, "How it is verified".
+  diversity of popnei over the individuals of the list, put before the
+  missing data filter at 0.05, gives the numbers of
+  `docs/specs/analyses/diversity.md`, "How it is verified", and the
+  counts of that filter over those individuals, 1,200 to 1,103 and 1,200
+  to 1,117.
+
+What was revised on 28 September 2026, a draft, not yet reviewed or
+approved, for the owner's decision of that day to put the filters of
+individuals first (section 2). The statistics of each individual are
+counted over every variant of the file, the option the draft of 26
+September 2026 recommended and the owner then set aside, and the
+histograms of the variants and the counts of the filters read the
+filters of individuals. What changes in the code of stage 3, each with
+its spec: the `filtersRead` of `individualChecks`, `{ variants: false,
+individuals: false }`, whose job carries no filter
+(`docs/specs/analyses/individualChecks.md`); that of `variantChecks`,
+`{ variants: false, individuals: true }`, whose job carries the list
+(`variantChecks.md`); that of `filterCounts`, `{ variants: true,
+individuals: true }`, whose job carries the list, and the store, which
+refused an analysis of the counts that read the filters of individuals
+and now refuses an analysis of the statistics that reads any filter
+(`filterCounts.md`, `docs/specs/core/store.md`); `countsOf` of `src/core/apps.ts`, for which the statistics no longer
+fill the counts, and the order of the analyses there, the statistics of
+each individual first (`docs/specs/entry.md`); the runner, which puts the list before the filters
+(`docs/specs/worker/runner.md`); the lock of the LD filter with no
+distance, now of what reads the filters of the variants
+(`docs/specs/core/project.md`); the key versions of `individualChecks`,
+`variantChecks`, `filterCounts` and `diversity`, raised to 2, since the
+diversity and the counts give another result under the same key when
+the project has a filter of individuals, and a project file of stage 3
+would otherwise compare their check numbers as if the file had changed;
+the fixture of the statistics and its script; and the order of the
+Variants step, whose filters of the individuals now come before those
+of the variants (`docs/specs/steps/variants.md`). The option not taken
+for the histograms of the variants, over every individual of the file,
+is above.
 
 ## 5. The workers and their messages
 
@@ -1086,8 +1247,11 @@ The page and each worker talk through typed messages
   queue of the one calculation worker.
 - **A request can wait for the statistics of each individual.** A Run of
   an analysis that reads the filters of individuals, while a threshold is
-  set and the statistics for the current filters of the variants are not
-  in the cache, starts their calculation first (section 4). The store
+  set and the statistics of the current load are not in the cache,
+  starts their calculation first (section 4): once per load, since 28
+  September 2026, when they stopped reading the filters of the variants,
+  and again only after the opening of a project file or when the cache
+  has dropped them. The store
   sends the analysis's own request when they arrive, if the project still
   gives both keys; until then the analysis is running, with the progress
   of the statistics, and a Stop stops both. A change of the project that
@@ -1111,9 +1275,13 @@ is one popnei's main has had since 27 September 2026, after the release
 `js-v0.1.0-dev.2`: the chromosome and the position of each variant the
 pruning kept, from a pass of `iterBlocks`, given back as regions of one
 base pair to `filterByRegions` (`js/popnei/src/variant.ts`), which as the
-first filter hands on only those variants. Since the pruning counts over
-every individual of the file, a change of the filters of individuals
-keeps the same pruned variants, which is when reusing them pays. What it
+first filter hands on only those variants. The pruning counts over the
+individuals kept, since the filters of individuals come first (section
+2), so a change of the filters of individuals prunes other variants,
+and reusing them pays only for a PCA made again with the same filters
+of both kinds; until 28 September 2026 the pruning counted over every
+individual of the file, and a change of the filters of individuals kept
+the same pruned variants, which was when reusing them paid. What it
 costs, not weighed yet: a pass more the first time, the one filter of
 the regions that a `Variants` takes, which the dataset's BED file may
 already hold, and two variants at one position, which regions cannot
@@ -1826,7 +1994,10 @@ for the smallest part of it.
   with popnei's reader in Python and gives its regions to popnei's filter
   of the regions; and
   it makes the list of the individuals kept as core makes it, from
-  popnei's statistics of each individual and the same thresholds. It
+  popnei's statistics of each individual and the same thresholds, and
+  puts the filters in the order of section 2: the statistics of the
+  variants as opened, with no filter, then `filter_individuals` of that
+  list, then the filters of the variants. It
   reads the individuals file
   from the `.xlsx` of the report with pandas, `pandas.read_excel`, which
   needs openpyxl, and builds the dict of the populations itself, in plain
@@ -2140,20 +2311,27 @@ the same numbers for everything else but the size of a written file.
   in the three engines, at 10,000 individuals: the time the page is
   frozen after a change of a threshold. If it is longer than a keystroke
   can wait, about 100 ms, the table draws only the rows on the screen.
-- **A threshold on the individuals costs a pass after every change of a
-  filter of the variants**, the pass of their statistics, which a Run of
-  an analysis that reads the filters of individuals starts and waits for,
-  before its own: over a gzipped VCF of gigabytes, minutes before the
-  analysis starts. Their result is in the cache of the page, two numbers
+- **A threshold on the individuals costs one pass per load**, the pass
+  of their statistics, which a Run of an analysis that reads the filters
+  of individuals starts and waits for, before its own, the first time:
+  over a gzipped VCF of gigabytes, minutes before the analysis starts.
+  Until 28 September 2026 it cost that pass after every change of a
+  filter of the variants (section 2). Their result is in the cache of the page, two numbers
   of 8 bytes and the name of each individual, 24 bytes for `s000` as the
-  cache counts it, so a restart of the calculation worker does not lose it, and
-  an undo to filters already calculated finds it.
+  cache counts it, so a restart of the calculation worker does not lose it.
+- **A change of a filter of individuals takes off the histograms of the
+  variants and the counts of the filters of the variants**, since both
+  are counted over the individuals kept (section 4): the histograms need
+  a pass again, the pass of a check, and the counts come back with the
+  next analysis or Count. The user sets the individuals first, in the
+  order of the Variants step, and then reads the histograms of the
+  variants to set the filters of the variants, which take nothing off.
 - **The thresholds are set in number fields**, and not by dragging a line
   on a histogram, so no drag needs a way for the keyboard (WCAG 2.2,
   success criterion 2.5.7). The histograms are drawn with the D3 modules
   `docs/technology.md` chose, and add no dependency.
 - **The counts of the filters cost a pass** only when no analysis has made
-  one with the same filters. The pass is `iterBlocks`, which copies every
+  one with the same filters, of the variants and of the individuals. The pass is `iterBlocks`, which copies every
   block of genotypes out of wasm (section 4); its time against a pass of
   the diversity is measured in the work package of the Count, on the same
   two files, and if it is much longer popnei is asked for a function that
@@ -2234,7 +2412,12 @@ that day:
 3. **The order of the filters** is fixed: the regions, once popnei has
    that filter, missing data, observed heterozygosity, MAF and the LD
    pruning last, and the filter of individuals after them (section 2).
-   Not taken: an order set by the user.
+   Not taken: an order set by the user. Revised by the owner on 28
+   September 2026: the filter of individuals comes first, and the
+   filters of the variants count over the individuals it keeps, "All
+   analyses should calculate the filters using the individuals kept"
+   (section 2, where the options and their costs are). The order among
+   the filters of the variants is as it was.
 4. **An individual with no called genotype** is removed by the filter by
    heterozygosity (section 4). Not taken: keeping it, which a NaN would
    otherwise let through whatever the threshold.
@@ -2267,7 +2450,13 @@ that day:
    that read the filters of individuals wait for. Not taken: the
    statistics over every variant of the file, one pass per load, which
    counts among an individual's missing genotypes the bad variants the
-   missing data filter drops.
+   missing data filter drops. Reversed by the owner on 28 September
+   2026 with point 3: the statistics are counted over every variant of
+   the file, one pass per load, and the individuals under the
+   thresholds are removed first, by `filterIndividuals` before the
+   filters of the variants; the cost the option not taken had named is
+   the one accepted (sections 2 and 4). Not taken that day: the lists
+   first and the thresholds last, and the order of stage 3 kept.
 
 Opened by the revision of 27 September 2026, for stage 4
 (`docs/specs/stage-4-open-points.md`); point 9 decided by the owner that

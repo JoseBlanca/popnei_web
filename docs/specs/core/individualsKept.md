@@ -12,7 +12,13 @@ tested in core, from a fixture of popnei's statistics, and not among the
 runner's tests, since a test of the worker imports no function of core
 ("How it is verified"). Revised on 27 September 2026, after the review
 of the specs of stage 4: the list known and empty, with no statistics,
-when the lists alone leave nobody. Built in `src/core/individualsKept.ts`, the row
+when the lists alone leave nobody. Revised on 28 September 2026 for the
+owner's decision that day that the filters of individuals act first
+(`docs/architecture.md`, section 2): the statistics are counted over
+every variant of the file, their pass has no filter, the calculation
+worker puts the list before the filters of the variants, and popnei's
+numbers of `panel.nei` are those over every variant; not yet reviewed
+or approved. Built in `src/core/individualsKept.ts`, the row
 of section 9 of the architecture. It depends on
 `docs/specs/core/project.md`, for the project, its filters of
 individuals, `projectNeeds`, `individualListNeeds` and the rules by which a text names a value
@@ -31,8 +37,8 @@ a threshold on each of those two numbers, are the application's
 arithmetic on them (`docs/build-order.md`, section 4). Core makes, from
 the project and those statistics, the one list of the individuals kept,
 which every analysis that reads the filters of individuals is given and
-the calculation worker puts on the `Variants` after the filters of the
-variants. The function is `individualsKept`, pure, which reads nothing
+the calculation worker puts on the `Variants` before the filters of the
+variants, which then count over the individuals it keeps. The function is `individualsKept`, pure, which reads nothing
 but the project and a result.
 
 What a user would see go wrong if this module were wrong: an analysis
@@ -43,11 +49,12 @@ individuals that do not match what the analyses read.
 The statistics are the result of the analysis of the statistics of each
 individual, `individualChecks`, under the key the project gives it, which
 the store finds in its cache (`docs/specs/core/store.md`, "The
-individuals kept"). Its pass has the filters of the variants of the
-project and no filter of individuals, as the owner decided on 26
+individuals kept"). Its pass has no filter, as the owner decided on 28
 September 2026, so every individual of the variants file is in it, in
-the order of the file, and its numbers are counted over the variants the
-analyses read.
+the order of the file, and its numbers are counted over every variant of
+the file: one pass for each load, which no change of a filter takes
+off. Until then the pass had the filters of the variants, and a change
+of one needed a pass again before the list was known.
 
 The filters are applied in their fixed order, keep, remove, missing
 data, observed heterozygosity (`docs/specs/core/project.md`, "One filter
@@ -112,16 +119,21 @@ filters of individuals do not keep the one individual of one.vcf.
 Loosen them in the Variants step.", in place of "keep none of the 1
 individuals", as the owner decided at stop B on 27 September 2026.
 
-Seen in node 26.8.2, with popnei's release `js-v0.1.0-dev.2`, on 26
-September 2026, on `e2e/fixtures/panel.nei`, 200 individuals and 1,200
-variants: with the missing data filter of the variants at 0.05,
-`calcPerIndividualStats` gave a `missingGtRate` from 0.0165 to 0.0434
-and an `obsHetRate` from 0.318 to 0.397, none NaN; a threshold of 0.03 on
-the missing rate kept 125 of the 200 individuals, and one of 0.35 on the
-heterozygosity 48 of those 125, or one of 0.38 119 of them; and
-`filterIndividuals` of those 48 after the missing data filter gave 48
-individuals and the counts of the variants the filter gives with every
-individual, 1,200 to 1,152.
+Seen in node, with popnei's release `js-v0.1.0-dev.3`, on 28 September
+2026, on `e2e/fixtures/panel.nei`, 200 individuals and 1,200 variants,
+by the script of `docs/specs/worker/runner.md`, "How it is verified",
+`orderA.mjs`: with no filter, `calcPerIndividualStats` gave a
+`missingGtRate` from 0.0175 to 0.0442 and an `obsHetRate` from 0.321 to
+0.393, none NaN, with `passStats.numVars` 1,200; a threshold of 0.03 on
+the missing rate kept 116 of the 200 individuals, and one of 0.35 on the
+heterozygosity 42 of those 116, or one of 0.38 111 of them, removing
+s023, s042, s086, s168 and s183; and `filterIndividuals` of those 111
+before the missing data filter of the variants at 0.05 gave 111
+individuals and 1,200 to 1,117 variants, where that filter keeps 1,152
+with every individual. `js-v0.1.0-dev.2` gives the same statistics.
+Over the 1,152 variants the missing data filter at 0.05 kept, the
+statistics of the order of 26 September 2026, the same thresholds kept
+125, 48 and 119.
 
 ## The TypeScript interface
 
@@ -135,7 +147,7 @@ that this module names no type of an analysis.
 import type { IndividualFilterKind } from "../worker/protocol.ts";
 import type { Project } from "./project.ts";
 
-/** The statistics of each individual, over the variants the filters keep. */
+/** The statistics of each individual, over every variant of the file. */
 export interface IndividualStats {
   readonly individuals: readonly string[];  // every individual of the variants file, in its order
   readonly missingGtRate: Float64Array;
@@ -184,8 +196,8 @@ file.
   individual, a threshold above every value. The list is `null`, as with
   no filter, and the counts say so, each filter given and kept the same
   number.
-- **Every individual without a called genotype** among the variants the
-  filters keep, with a filter by heterozygosity: none is kept, whatever
+- **Every individual without a called genotype** in the file, with a
+  filter by heterozygosity: none is kept, whatever
   its threshold, and `keptNoneReason` gives the lock. Without that
   filter, they are kept.
 - **Lists that keep no individual, with a threshold and no
@@ -195,9 +207,10 @@ file.
   the threshold would read "Known once the statistics are calculated",
   the writing would be offered, and a press would spend a pass of the
   statistics before it was refused.
-- **A filter of the variants changed.** The statistics of the old
-  filters are under another key, so the list is `needsStatistics` again
-  until a new pass; the lists' counts stay known.
+- **A filter of the variants changed.** The statistics are under the
+  same key, which holds the load and no filter, so the list stays known
+  and needs no pass; only a new load, an opened project, or the cache
+  dropping the statistics make it `needsStatistics` again.
 
 ## How it runs
 
@@ -232,8 +245,8 @@ With Vitest, at the two functions, on frozen projects:
   data 0 to 0, and `keptNoneReason` the words above; statistics of
   another order of the individuals, a defect.
 - **popnei's numbers**: the same function, given the statistics that
-  popnei's release gives on `panel.nei` with the missing data filter at
-  0.05, gives the 125, 48 and 119 individuals above, which the
+  popnei's release gives on `panel.nei` with no filter, gives the 116,
+  42 and 111 individuals above, which the
   architecture asks for (`docs/architecture.md`, section 4, "What would
   show these choices wrong"). The test is in core, in node, and reads
   those statistics from `e2e/fixtures/panel_individual_stats.json`, the

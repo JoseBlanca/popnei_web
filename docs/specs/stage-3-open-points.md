@@ -36,9 +36,10 @@ A few words are used throughout. A **pass** is one reading of the
 variants file from its start, which a calculation of popnei makes; over
 a gzipped VCF of gigabytes it takes minutes. The **statistics of each
 individual** are its proportion of missing genotypes and its observed
-heterozygosity, which popnei gives over the variants the filters keep
-and from which the thresholds of the filters of individuals keep or
-remove it. A **threshold on the individuals** is one of those two
+heterozygosity, which popnei gave over the variants the filters keep
+until 28 September 2026, and over every variant of the file since
+(below, "Revised on 28 September 2026"), and from which the thresholds
+of the filters of individuals keep or remove it. A **threshold on the individuals** is one of those two
 filters of individuals; the two others are a list to keep and a list to
 remove.
 
@@ -306,7 +307,9 @@ points:
   kept.
 - **"Known once the statistics of each individual are calculated for
   these filters of the variants."** is kept as the words of a count
-  that waits for the statistics.
+  that waits for the statistics. On 28 September 2026 it ends at
+  "calculated.", since the statistics no longer read the filters of
+  the variants (below).
 
 ## Choices of a spec the owner may overrule
 
@@ -341,7 +344,9 @@ line said there:
   the variants two, as the owner decided for the missing data filter on
   25 September 2026: the proportions of missing genotypes of the
   individuals of `panel.nei` lie from 0.0165 to 0.0434, where two
-  decimals would give three thresholds (`steps/variants.md`).
+  decimals would give three thresholds (`steps/variants.md`); over
+  every variant of the file, as they are counted from 28 September
+  2026, from 0.0175 to 0.0442, which leaves the reason as it was.
 - **A list of individuals is typed or pasted, one name per line, and
   applied with a button**, not at each key, since each change is a step
   of Undo and a list half typed would lock every analysis that reads the
@@ -356,7 +361,9 @@ line said there:
   expected heterozygosity beside the observed one, and the three checks
   keep their own buttons; the summary line gives "1,128 of 1,200
   variants kept" and "114 of 200 individuals kept" only while they are
-  known for the filters as they are (`shell.md`, open point 1).
+  known for the filters as they are (`shell.md`, open point 1); with the
+  filters of individuals first, from 28 September 2026, the same filters
+  give "1,096 of 1,200 variants kept" and "111 of 200 individuals kept".
 
 ## Set by a measurement, not by the owner
 
@@ -405,6 +412,25 @@ meanwhile: the job of the PCA carries the dataset's filters with the
 stricter of the two MAF filters in the MAF's place and one LD pruning
 last, then the individuals kept ("Which variants the PCA reads" in
 `docs/specs/stage-4-open-points.md`).
+
+## Revised on 28 September 2026
+
+The owner reversed on 28 September 2026 the order decided on 26
+September 2026 (`docs/architecture.md`, section 13, points 3 and 8):
+"All analyses should calculate the filters using the individuals kept."
+The filters of individuals now act first, and the filters of the
+variants count over the individuals they keep; each individual's
+statistics are counted over every variant of the file, one pass per
+load; the histograms of the variants are over the individuals kept, and
+the counts of the filters of the variants hold the filters of
+individuals in their key. The Variants step shows the filters of the
+individuals before those of the variants. The specs of stage 3 that
+this changes are revised with the date, and the code of stage 3 changes
+with the plan of stage 4 (`docs/specs/stage-4-open-points.md`). The
+numbers of `panel.nei` with the thresholds of the flow, 0.03 and 0.38,
+are 116 and 111 individuals where they were 125 and 119, and the
+missing data filter at 0.05 keeps 1,117 variants over those 111
+individuals, where it kept 1,152 over every individual.
 
 ## Not repeated here
 

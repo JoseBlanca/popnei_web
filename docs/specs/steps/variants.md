@@ -39,15 +39,29 @@ pruning does: every switch of the step, of the four filters of the
 variants and of the two thresholds of the individuals, turned off keeps
 the values of its filter in the project, and turned on again gives them
 back (`docs/specs/core/project.md`, "The filters turned off").
+Revised again that day for the owner's decision that the filters of
+individuals act first, and the filters of the variants count over the
+individuals they keep (`docs/architecture.md`, section 2): the section
+of the filters of the individuals comes before that of the variants;
+the statistics of each individual are over every variant of the file
+and no change of a filter of the variants takes them off; the
+histograms of the variants and the counts of the filters of the
+variants are over the individuals kept, so a change of a filter of
+individuals takes them off, and a list popnei would refuse locks them;
+the LD pruning with no distance no longer locks the statistics; and the
+numbers of `panel.nei` with the thresholds are recomputed. Not yet
+reviewed or approved; it changes the step as built in stage 3, and the
+plan of stage 4 carries the change.
 
 The screen spec of the first step of both applications. In stage 2 the
 user picks the variants file, a VCF or a `.nei` file, sets how a VCF is
 read, sees what the file holds, and sets the missing data filter. Stage
-3 adds, in this order down the step: the other filters of the variants,
-each with what it kept and with the histogram of the number it keeps a
-variant by; the filters of the individuals, the two lists and the two
-thresholds, with the statistics of each individual as a table and as
-histograms beside the thresholds; and the writing of the variants and
+3 adds, in this order down the step since 28 September 2026: the
+filters of the individuals, the two lists and the two thresholds, with
+the statistics of each individual as a table and as histograms beside
+the thresholds; the other filters of the variants, each with what it
+kept and with the histogram of the number it keeps a variant by; and
+the writing of the variants and
 the individuals the filters keep as a `.nei` file, in this step and not
 in an Export step, as the owner decided on 25 September 2026. It shows
 section 3 of `docs/functionality.md`, and reads the project and its
@@ -106,27 +120,31 @@ third, an `<h3>`; a screen reader lists the headings, and jumps between
 them:
 
 1. **Variants file**: the file, how a VCF is read, what the file holds.
-2. **Filters of the variants**: the button of the histograms of the
+2. **Filters of the individuals**: the list to keep and the list to
+   remove; the statistics of each individual, with its button; the two
+   thresholds, of the proportion of missing genotypes and of the observed
+   heterozygosity, each beside its histogram; the table of the
+   individuals; and the individuals that pass every filter.
+3. **Filters of the variants**: the button of the histograms of the
    variants; the four filters in their fixed order, missing data,
    observed heterozygosity, MAF and LD pruning (`docs/architecture.md`,
    section 2), each with the histogram of its number beside it when
    there is one, and what it kept; the Count button, and the variants
    that pass every filter.
-3. **Filters of the individuals**: the list to keep and the list to
-   remove; the statistics of each individual, with its button; the two
-   thresholds, of the proportion of missing genotypes and of the observed
-   heterozygosity, each beside its histogram; the table of the
-   individuals; and the individuals that pass every filter.
 4. **Writing the filtered variants**: the button, the size expected, its
    warning, and the Save button once the file is written.
 
 The filters come in the order popnei applies them, so that what each
 kept reads down the page as a chain: each filter is given what the one
-above it kept. The filters of the individuals come after those of the
+above it kept. The filters of the individuals come before those of the
 variants for the same reason, since popnei's `filterIndividuals` comes
-after them, and the statistics of each individual are counted over the
-variants the filters above keep (`docs/architecture.md`, section 13,
-point 8).
+before them, as the owner decided on 28 September 2026, and the filters
+of the variants, their counts and the histograms beside them, are
+counted over the individuals the filters above keep
+(`docs/architecture.md`, section 13, points 3 and 8). The statistics of
+each individual are counted over every variant of the file, before any
+filter of the variants, so nothing below them changes them. Until that
+day the filters of the variants came first.
 
 The three checks, the Count and the writing are not drawn while the
 variants file is not read, no file, a file being read or a file that
@@ -300,8 +318,8 @@ turned off"). Each
 field holds the number popnei is given, as typed, and not converted
 from another number (`docs/specs/worker/protocol.md`): every filter keeps
 what is at most its threshold, as popnei's do. The filters count over
-every individual of the file, whatever the filters of the individuals,
-which come after them (`docs/architecture.md`, section 2).
+the individuals the filters of the individuals keep, which come before
+them (`docs/architecture.md`, section 2).
 
 | switch | its fields | turned on the first time at | popnei |
 |---|---|---|---|
@@ -314,9 +332,11 @@ In a new project only the missing data filter of the variants is on,
 at 0.1, as the owner decided on 26 September 2026: the filter by
 observed heterozygosity and the LD pruning are off, and so are the two
 thresholds of the individuals, below, until the user turns them on. The
-MAF filter is off in a new project of population genetics, and on at
-0.95 for the PCA and the GWAS alone, inside them, from stage 4
-(`docs/functionality.md`, section 3). The
+MAF filter is off in a new project of population genetics; the PCA can
+set its own, with its own missing data and LD filters, which follow
+these until the user sets them in its panel, from stage 4
+(`docs/functionality.md`, sections 3 and 5), and the GWAS has it on at
+0.95. The
 threshold fields take numbers of two decimals, with a step of 0.01, as
 the owner decided for the missing data filter on 25 September 2026, and
 no buttons of their own to step them; the distance, a whole number from 1 to 9007199254740991, the range of
@@ -327,7 +347,8 @@ Under each switch, a line says what popnei filters on, since a label
 alone would mislead:
 
 - missing data: "A genotype is missing when any of its alleles is, 0/.
-  among them; the proportion is over every individual of the file." A
+  among them; the proportion is over the individuals the filters of
+  individuals keep." A
   genotype is missing when any of its alleles is, so `0/.` counts as
   missing (`js/popnei/src/variant.ts`).
 - observed heterozygosity: "The proportion of the individuals with a
@@ -376,11 +397,12 @@ distance, made the user type the distance at every turn on.
 While the distance is empty, popnei cannot be given the filter, and
 `variantFilterNeeds` of `docs/specs/core/project.md` gives its reason,
 which locks what reads the filters of the variants: in this step, the
-Count and the statistics of each individual, each showing the reason
-beside its disabled button, and the writing of the filtered variants;
-in the Analyses step, the diversity and the PCA. The histograms of the
-variants read no filter, and can still be calculated, so that the user
-can look at the data while choosing. The reason stands beside the field
+Count, showing the reason beside its disabled button, and the writing
+of the filtered variants; in the Analyses step, the diversity and the
+PCA. The statistics of each individual, which read no filter, and the
+histograms of the variants, which read the filters of individuals alone,
+can still be calculated, so that the user can look at the data while
+choosing; until 28 September 2026 the statistics were locked too. The reason stands beside the field
 of the distance, without the end "in the Variants step", as the reasons
 of the lists do (below, "Its words"), and says why there is no default
 and what to do. Turning the filter on takes off the screen the results
@@ -523,7 +545,12 @@ block, headed "Histograms of the variants", an `<h3>`, is the first thing
 under the heading of the filters of the variants: the button "Calculate
 the histograms of the variants", its running, removed and error states,
 its warning, the caption "Over the 1,200 variants of panel.nei, before
-any filter." and the line of the versions. Once they are calculated,
+any filter.", or, when the filters of individuals remove some, "Over the
+1,200 variants of panel.nei and the 111 individuals the filters of
+individuals keep, before any filter of the variants.", and the line of
+the versions. A change of a filter of individuals removes them, with the
+notice of the change, since they are drawn over the individuals kept
+(`docs/specs/analyses/variantChecks.md`). Once they are calculated,
 each histogram is drawn beside the filter it helps set, with that
 filter's threshold marked when the filter is on
 (`docs/specs/charts/histogram.md`):
@@ -665,8 +692,13 @@ locked, with the reason of `variantFilterNeeds` beside its disabled
 button in place of that line, and nothing is shown beside the filters,
 the ones above the LD pruning included: no count is made for filters
 that cannot all be given to popnei, and counts of other filters would
-be read as those of these. A change of any filter of the
-variants takes every count off at once, and is in no notice
+be read as those of these. The Count is locked in the same way, and
+nothing shown beside the filters, while a list of individuals is
+refused or the filters of individuals keep nobody, since the filters of
+the variants count over the individuals kept; with a threshold on the
+individuals and no statistics, a Count calculates them first. A change
+of any filter of the variants, or of the individuals, takes every count
+off at once, and is in no notice
 (`docs/architecture.md`, section 4, "The notice leaves the counts out");
 an undo, or any calculation over the same filters, brings them back.
 With no filter on, the Count gives the variants of the file, and the
@@ -727,8 +759,9 @@ A list with a name repeated, or a name that is not in the variants file,
 is applied as written, and `individualListNeeds` gives its reason,
 with the list it is about, `keep` or `remove`, which locks every
 analysis that reads the filters of individuals, the diversity among
-them, and the writing of the file, and not the three checks of this
-step, which read none (`docs/specs/core/project.md`, "What an analysis
+them, the histograms of the variants and the Count of this step, and
+the writing of the file, and not the statistics of each individual,
+which read no filter (`docs/specs/core/project.md`, "What an analysis
 needs of every project"): "The list of individuals to keep names 2
 individuals that are not in panel.nei: ind_900 and ind_901. Change the
 list, or remove the filter, in the Variants step." The step shows that
@@ -766,8 +799,8 @@ switch is off:
 Both are off in a new project, as the owner decided on 26 September
 2026. Their fields take numbers of four decimals, with a step of 0.01 for the
 arrow keys: the proportions of missing genotypes of the individuals of
-`panel.nei` lie from 0.0165 to 0.0434 with the missing data filter at
-0.05 (`docs/specs/core/individualsKept.md`), where two decimals would
+`panel.nei` lie from 0.0175 to 0.0442, over every variant of the file
+(`docs/specs/core/individualsKept.md`), where two decimals would
 give three thresholds, and the table shows four. The number field of the
 widgets of stage 2 takes a number committed only when it is a multiple of
 its step, so 0.0312 would be refused by a step of 0.01; it is given a
@@ -791,16 +824,16 @@ file", or "Threshold of the filter of individuals by observed
 heterozygosity: 0.38, drawn over every individual of the file", with
 the number the plot is given, the one typed while it is typed. The
 histogram counts every individual of the file, since the statistics are
-calculated with no filter of individuals, and the count beside the
+calculated with no filter, and the count beside the
 filter only those the filters above it kept, the lists and, for the
 heterozygosity, the missing data. The line under a plot that names the
 bin a threshold splits is the variants' as well, "The threshold 0.03
-splits the bin from 0.0299 to 0.0313, 23 individuals: the filter keeps
+splits the bin from 0.0295 to 0.0308, 12 individuals: the filter keeps
 those of its individuals at most 0.03 and removes the others." These
 words were written with the code on 27 September 2026, as the variants'
 were, for the owner to judge at stop B of `docs/plans/variants-step.md`.
 Before the statistics are calculated, or once
-a change of a filter of the variants has removed them, there is no
+a new load has removed them, there is no
 histogram; while the threshold's filter is on, its count says why,
 "Known once the statistics of each individual are calculated …", and
 while it is off nothing does, since the button of the statistics above
@@ -822,15 +855,17 @@ reached by scrolling it.
 
 **What each filter of the individuals kept**, from `individualsKept`,
 with no pass. Beside each filter that is set, a list applied under its
-buttons and a threshold under its field: "Kept 125 of the 200
+buttons and a threshold under its field: "Kept 116 of the 200
 individuals it was given." A threshold whose statistics are not in the
 page, and each filter after it, has instead "Known once the statistics
-of each individual are calculated for these filters of the variants.",
+of each individual are calculated.", which ended "for these filters of
+the variants" until 28 September 2026, when the statistics stopped
+reading them,
 or, while the statistics are in their error state, refused by popnei
 or failed, "Not known:
 the statistics of each individual could not be calculated, and their
 block says why."
-Under the last filter, the individuals that pass them all: "119 of the
+Under the last filter, the individuals that pass them all: "111 of the
 200 individuals of panel.nei pass the filters.", or, when they keep
 none, the reason `keptNoneReason` gives, "The filters of individuals
 keep none of the 200 individuals of panel.nei. Loosen them in the
@@ -845,7 +880,7 @@ section, an Apply, a Clear, a threshold committed or a switch, makes
 it appear, the step announces it, since the focus stays on the control
 that sent it. After such a command, when the line of the individuals
 that pass stands under the filters, the step announces that line,
-"119 of the 200 individuals of panel.nei pass the filters.", since a
+"111 of the 200 individuals of panel.nei pass the filters.", since a
 screen reader does not read the description of a field again when it
 changes under the focus, and the user would not hear what the filters
 now keep; not when the reason of a list appears, which is announced in
@@ -901,11 +936,11 @@ step as a whole:
 | state | what the user sees | what they can do |
 |---|---|---|
 | empty | cannot happen: with no file, the step offers the pick and the filters, which is the ready state | — |
-| locked | cannot happen for the step: nothing has to be done before a file is picked. A file picked before the calculation worker has started is read once it has. While the LD pruning has no distance, the Count, the statistics of each individual and the writing are locked, each with the reason of `variantFilterNeeds` beside its button, and the reason stands beside the empty field; the histograms of the variants are not. The writing is locked too when `individualListNeeds` gives a reason, with the reason beside its button, or when the filters keep no individual; the three checks read no filter of individuals, and no list locks them | type the distance, or turn the LD pruning off; fix the list, or loosen the thresholds |
+| locked | cannot happen for the step: nothing has to be done before a file is picked. A file picked before the calculation worker has started is read once it has. While the LD pruning has no distance, the Count and the writing are locked, each with the reason of `variantFilterNeeds` beside its button, and the reason stands beside the empty field; the histograms of the variants and the statistics of each individual are not. The writing, the Count and the histograms of the variants are locked too when `individualListNeeds` gives a reason, with the reason beside each button, or when the filters keep no individual; the statistics of each individual read no filter, and nothing but the file locks them | type the distance, or turn the LD pruning off; fix the list, or loosen the thresholds |
 | ready | no file: the zone, "Choose a variants file…", the options of a VCF, the filters, and in place of the checks the line of a file not read. With an opened project file, the file it was made with, below. With a file read: every part, each check with its button | pick a file; set the filters; calculate a check; count; write |
 | running | the read: the card with its name, format and size, "Reading panel.nei." and the seconds since the step saw the read start, which the step keeps and loses when it is left; no progress bar, since the read is of the header of a VCF, or the end of a `.nei` file, which popnei tells to nobody (`js/popnei/src/variant.ts`, `onProgress`). A check, the Count or the writing: its bar and its clock in its own part, the rest of the step as it was | during the read: pick another file, which replaces this one; Undo; set the filters. During a calculation: Stop it; set the filters, which leaves it behind, as the notice says |
 | done | the card with the individuals, the ploidy of a `.nei` file, the number of variants once counted, how a VCF was read; each check done beside its filters, the counts, the Save button | replace the file; set the filters; sort and download the table; download the bins of a histogram as CSV; save the file |
-| results removed | the words of the change in the block of the check removed; its histograms, or its table, gone. A change of a filter of the variants removes the statistics of each individual, and the notice of the shell says so; the counts are never in the notice, and show the line of no counts | Calculate again; the Undo or Redo of the notice |
+| results removed | the words of the change in the block of the check removed; its histograms, or its table, gone. A change of a filter of individuals removes the histograms of the variants, and the notice of the shell says so; a change of a filter of the variants removes neither the histograms nor the statistics of each individual, which only a new load removes; the counts are never in the notice, and show the line of no counts | Calculate again; the Undo or Redo of the notice |
 | error | the card with the reason the file was not read, below; or a check or the writing failed, with its words in its part | what the reason says: pick a file, or, when the calculations could not start or the page is out of date, reload the page; loosen the filters when they kept no variant |
 
 A read that takes long cannot be cancelled with a button. Picking
@@ -1074,14 +1109,18 @@ step reads, a VCF or a `.nei` file; that a VCF's ploidy is given and not
 read, with what a wrong one gives; that only the variants with PASS or
 `.` in the FILTER column are read by default, a `.` saying that no
 filter was applied to that variant; what each filter keeps, in their
-fixed order, over every individual of the file, and that the MAF is of
+fixed order, over the individuals the filters of individuals keep,
+which act first, and that the MAF is of
 the major allele; that the distance of the LD pruning has no default,
 because how far linkage disequilibrium extends differs from one
 species, and one genome, to another, and that the LD decay of stage 5,
 once it exists, is the way to choose it, as the help of the PCA says of
-its own pruning; that the histograms of the variants are over the file
-as read, and the statistics of each individual over the variants the
-filters keep; that the file is read from the disk at every analysis, and
+its own LD filter; that the PCA follows these filters unless its own
+are set in its panel; that the histograms of the variants are over every
+variant of the file and the individuals kept, and the statistics of
+each individual over every variant of the file, before any filter, so
+that an individual's missing genotypes include those at the variants
+the missing data filter drops; that the file is read from the disk at every analysis, and
 not copied into the browser, so a file of any size opens, a large
 gzipped VCF is slow to read at each analysis, which writing it once as a
 `.nei` file mends, and a file changed on the disk after it was picked
@@ -1097,27 +1136,29 @@ nothing on the screen says the things the lines above do not.
 - The keyboard goes through the step in the order of its parts: the
   zone's hidden button that takes a pasted file, the file button, the
   ploidy, the checkbox of the passed variants, the button that reads the
-  VCF again when it is there; the button of the histograms of the
+  VCF again when it is there; each list, its text area and its two
+  buttons; the button of the statistics; each threshold, its switch,
+  its field and its histogram: the row of its two tabs, one stop of the
+  Tab key, whose arrow keys move between "Plot" and "Table of the bins";
+  then the panel of the tab selected, the plot or the table of the bins,
+  one stop each: React Aria makes a panel with nothing to focus a stop,
+  as the WAI-ARIA guidance for tabs advises, so that a user of the
+  keyboard reaches what the tab shows, and the owner kept it so on 27
+  September 2026; then its button of the CSV of the bins; the table of
+  the individuals, which the Tab key enters once, as React Aria's
+  `Table`, a table moved through with the arrow keys, whose headers sort
+  it with Enter; its download; the button of the histograms of the
   variants; each filter of the variants, its switch, its fields, and its
-  histogram: the row of its two tabs, one stop of the Tab key, whose
-  arrow keys move between "Plot" and "Table of the bins"; then the panel
-  of the tab selected, the plot or the table of the bins, one stop each:
-  React Aria makes a panel with nothing to focus a stop, as the WAI-ARIA
-  guidance for tabs advises, so that a user of the keyboard reaches what
-  the tab shows, and the owner kept it so on 27 September 2026; then its button of the CSV of the bins; the Count button;
-  each list, its text area and its two buttons; the button of the
-  statistics; each threshold, its switch, its field and its histogram,
-  in the same order; the table of the individuals, which the Tab key
-  enters once, as React Aria's `Table`, a table moved through with the
-  arrow keys, whose headers sort it with Enter; its download; the button
-  to write, and Save. When the button that reads the VCF again goes, after it was
+  histogram, in the same order; the Count button; the button to write,
+  and Save; the order of the two sections of filters since 28 September
+  2026. When the button that reads the VCF again goes, after it was
   pressed, the focus moves to the file button, which is in every state.
 - A warning or an error sits in the order of the text beside what it is
   about, and is text, "Warning:", as well as its colour and its icon
   (WCAG 2.2, success criterion 1.4.1).
 - Each section is a region named by its heading, so that a screen reader
-  jumps between the file, the filters of the variants, the filters of
-  the individuals and the writing. The drop zone is in the region
+  jumps between the file, the filters of the individuals, the filters of
+  the variants and the writing. The drop zone is in the region
   "Variants file", which holds the zone and the message of a file not
   loaded; the button in the zone is the way to pick without dragging
   (2.1.1).
@@ -1216,7 +1257,9 @@ in node as well.
 
 Of stage 3, on `e2e/fixtures/panel.nei`, 1,200 variants of 200 diploid
 individuals, with the numbers of the module specs, which popnei's
-release `js-v0.1.0-dev.2` gave in node on 26 September 2026:
+release `js-v0.1.0-dev.2` gave in node on 26 September 2026, and those
+with the filters of individuals first, which `js-v0.1.0-dev.3` gave in
+node on 28 September 2026, the same with both releases:
 
 - before a file, the line in place of the checks, and the filters
   settable; the histograms of the variants calculated, the mean of the
@@ -1231,13 +1274,16 @@ release `js-v0.1.0-dev.2` gave in node on 26 September 2026:
   "1,128 of the 1,200 variants of panel.nei pass the filters."; an undo
   bringing back the counts of the filter before, with no calculation;
 - the filters back to the missing data filter at 0.05 alone, the
-  statistics of each individual calculated, `s000` read as 0.0260 and
-  0.3672; the thresholds of the individuals at 0.03 and 0.38, "Kept 125
-  of the 200 individuals it was given.", then 119 of 125, "119 of the
+  statistics of each individual calculated, `s000` read as 0.0283 and
+  0.3654; the thresholds of the individuals at 0.03 and 0.38, "Kept 116
+  of the 200 individuals it was given.", then 111 of 116, "111 of the
   200 individuals of panel.nei pass the filters.", the column Kept, and
-  0.12345 refused with its line; the missing data filter of the variants
-  moved, the statistics removed with the notice, and the counts of the
-  thresholds "Known once …"; an undo, and the statistics back;
+  0.12345 refused with its line; the histograms of the variants removed
+  by the thresholds, with the notice, and calculated again, the mean of
+  the MAF read as 0.7173; Count: "Kept 1,117 of the 1,200 variants it
+  was given."; the missing data filter of the variants moved, and the
+  statistics, their table and the counts of the thresholds staying,
+  with no notice and no calculation;
 - a list to keep with `ind_900` applied, and the reason of a name not in
   the file under the lists, describing the text area and announced, and
   beside each disabled button, with no text under a list that names the
@@ -1246,9 +1292,9 @@ release `js-v0.1.0-dev.2` gave in node on 26 September 2026:
   line, and an Undo putting the text back to the list applied;
 - from stage 4, the LD pruning turned on with the missing data filter
   at 0.05: the field of the distance empty, and the reason beside it,
-  announced and read as the description of the field; the Count, the
-  statistics of each individual and the writing disabled, the reason
-  beside each, and the histograms of the variants still calculated; an
+  announced and read as the description of the field; the Count and
+  the writing disabled, the reason beside each, and the histograms of
+  the variants and the statistics of each individual still calculated; an
   arrow key, Home, End, then the Tab key, in the empty field sending
   nothing; 0
   typed, and "0 is less than 1; the distance is still to be typed.";

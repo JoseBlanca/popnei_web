@@ -13,14 +13,23 @@ individuals they keep". It depends on the specs of stage 2 revised for
 stage 3, `docs/specs/core/keys.md`, `store.md`, `project.md` and
 `docs/specs/worker/protocol.md`, and on `docs/specs/charts/histogram.md`,
 written beside it. The words key, load, pass, check numbers and the
-filters are those of `docs/specs/analyses/individualChecks.md`.
+filters are those of `docs/specs/analyses/individualChecks.md`. Revised
+on 28 September 2026 for the owner's decision that day that the filters
+of individuals act first, and the filters of the variants count over the
+individuals kept (`docs/architecture.md`, section 2): the histograms are
+over the individuals kept, their key holds the filters of individuals,
+their job carries the list, a Run with a threshold on the individuals
+waits for the statistics of each individual, and a list popnei would
+refuse, or one that keeps nobody, locks them; their key version is 2.
+Not yet reviewed or approved; it changes the code of stage 3.
 
 ## The module
 
 ### What it does
 
-It gives, over **every variant and every individual of the file**, before
-any filter, three histograms of 40 bins over 0 to 1, each with its mean:
+It gives, over **every variant of the file and the individuals the
+filters of individuals keep**, before any filter of the variants, three
+histograms of 40 bins over 0 to 1, each with its mean:
 
 - **the major allele frequency (MAF)**, the frequency of the commonest
   allele among the called alleles, which the MAF filter keeps a variant
@@ -33,7 +42,8 @@ any filter, three histograms of 40 bins over 0 to 1, each with its mean:
 
 All come from one call of popnei's `calcPerVarDistribs` of
 `js/popnei/src/stats.ts`, with no `pops`, which gives one population,
-`pop`, of every individual, and `minNumIndividuals` 0, so that a variant
+`pop`, of every individual the pass gives, those of the list of the
+individuals kept, and `minNumIndividuals` 0, so that a variant
 with few called genotypes has a value too, where popnei's default of 20
 would leave out exactly the variants the missing data filter is there to
 find (`docs/architecture.md`, section 4). A variant with no called
@@ -41,11 +51,22 @@ genotype at all still has no value, and is in no bin: popnei counted 5 of
 the 6 variants of a VCF whose fifth is `./.` in every individual (node,
 26 September 2026, `js-v0.1.0-dev.2`).
 
-The histograms are over the file as read, and not after the filters, as
-the owner decided on 26 September 2026: the filters of the variants count
-over every individual of the file (`docs/architecture.md`, section 2), so
-each histogram shows the number its filter keeps a variant by, and one
-pass per load gives them, with no threshold moved taking them off.
+The histograms are over every variant of the file, and not after the
+filters of the variants, as the owner decided on 26 September 2026, so
+that no threshold of the variants moved takes them off; and over the
+individuals kept, since 28 September 2026, when the owner put the
+filters of individuals first and the filters of the variants began to
+count over those individuals (`docs/architecture.md`, section 2). So
+each histogram shows the number its filter keeps a variant by, counted
+as the filter counts it, and a threshold read on it keeps what it
+shows. What it costs: a change of a filter of individuals takes them
+off, and they need a pass again. The option not taken, the histograms
+over every individual as until then, one pass per load, would show a
+MAF or a heterozygosity other than the one the filter keeps a variant
+by: on `panel.nei`, with the 111 individuals of the thresholds of the
+flow, the mean MAF is 0.7173 where every individual gives 0.7163, and the
+histogram of the MAF holds 1,178 variants in its bins up to 0.95 where
+that of every individual holds 1,175.
 
 The expected heterozygosity is the unbiased one, decided here, since the
 diversity shows the unbiased one and a user who compares the two should
@@ -63,26 +84,41 @@ it (`docs/architecture.md`, section 6, "What this asks of popnei", item
 
 ### What goes into its key
 
-`filtersRead` is `{ variants: false, individuals: false }`, and
-`keyInputs(p)` gives `null`. So only a new load, the read options of a
-VCF, the key version and the version of popnei change it; no filter and
-no individuals file does. The key version is 1.
+`filtersRead` is `{ variants: false, individuals: true }`, and
+`keyInputs(p)` gives `null`. So a new load, the read options of a VCF, a
+filter of individuals, a list or a threshold, the key version and the
+version of popnei change it; no filter of the variants and no
+individuals file does. The key holds the thresholds of the individuals
+and not the list they keep (`docs/specs/core/keys.md`), so two
+thresholds that keep the same individuals give two keys. The key
+version is 2, raised on 28 September 2026 when the key began to hold
+the filters of individuals.
 
 ### Why it cannot run
 
-`needs(p)` gives `null`; the reasons of `projectNeeds` are the only ones.
-A list of individuals that popnei would refuse, `individualListNeeds` of
-`docs/specs/core/project.md`, does not lock it, since it reads no filter
-of individuals.
+`needs(p)` gives `null`. The store locks it with the reasons of
+`projectNeeds`, and, since it reads the filters of individuals, with a
+list of individuals that popnei would refuse, `individualListNeeds` of
+`docs/specs/core/project.md`, and with the filters of individuals that
+keep nobody, `keptNoneReason` of `docs/specs/core/individualsKept.md`.
+It reads no filter of the variants, so the LD filter with no distance,
+`variantFilterNeeds`, does not lock it, and the user can read the
+histograms while choosing the distance. With a threshold on the
+individuals and no statistics of each individual for the load, its Run
+calculates them first (`docs/specs/core/store.md`, "A Run that waits for
+the statistics").
 
 ### The request
 
 ```ts
 { analysis: "variantChecks", fileId: p.variants.fileId, filters: [],
-  minNumIndividuals: 0, numBins: 40, range: [0, 1] }
+  individuals: c.individuals, minNumIndividuals: 0, numBins: 40, range: [0, 1] }
 ```
 
-The job carries `filters: []` so that the runner, which puts the job's
+`individuals` is the list of the individuals kept that the client bound
+to its key gives, `null` when the filters remove nobody; the runner puts
+it on the `Variants` with `filterIndividuals`. The job carries
+`filters: []` so that the runner, which puts the job's
 filters on its `Variants` and opens the file again when they differ from
 those it holds (`docs/architecture.md`, section 6), treats it as it
 treats every job. It calls
@@ -121,7 +157,7 @@ stop A of `docs/plans/variants-step.md`.
 
 | code | when | the text |
 |---|---|---|
-| `variantsWithoutCalls` | the counts of a histogram sum to fewer than `numVars` | "12 of the 1,200 variants of panel.nei have no called genotype, and are in none of the histograms. The filter by observed heterozygosity, the MAF filter and the LD pruning remove them at any threshold, and the missing data filter at any threshold below 1." |
+| `variantsWithoutCalls` | the counts of a histogram sum to fewer than `numVars` | "12 of the 1,200 variants of panel.nei have no called genotype, and are in none of the histograms.", with "among the individuals kept" after "genotype" when the filters of individuals remove some, as the job's `individuals` not `null` says: "12 of the 1,200 variants of panel.nei have no called genotype among the individuals kept, and are in none of the histograms. The filter by observed heterozygosity, the MAF filter and the LD pruning remove them at any threshold, and the missing data filter at any threshold below 1." |
 
 Every value is from 0 to 1, inside the range of the bins, so a variant
 missing from the counts is one with no value. The warning reads the
@@ -140,14 +176,15 @@ LD pruning at an r² of 1, each dropped it.
 
 `checkNumbers(r)` gives `passStats.numVars` and the three means, in the
 order above, `null` for a NaN: four numbers of popnei's, with no
-arithmetic, over the whole file, and so a strong check that a reopened
-project was given the same file. `numCheckNumbers(p)` gives 4.
+arithmetic, over the whole file and the individuals kept, and so a
+strong check that a reopened project was given the same file. `numCheckNumbers(p)` gives 4.
 
 ### Its lines of the Python script
 
 ```python
-# The histograms of the variants, over every variant and individual of the file
+# The histograms of the variants, over every variant of the file and the individuals kept
 variants_as_read = popnei.open_vars("panel.nei")
+variants_as_read.filter_individuals(individuals_kept)
 variant_distribs = popnei.calc_per_var_distribs(
     variants_as_read,
     stats=[popnei.PerVarStat.MAF, popnei.PerVarStat.OBS_HET, popnei.PerVarStat.UNBIASED_EXP_HET],
@@ -157,8 +194,11 @@ variant_distribs = popnei.calc_per_var_distribs(
 ```
 
 The file is opened again with no filter, as `script.ts` of stage 6 opens
-it, `popnei.open_vcf` with the read options for a VCF; a `Variants` takes
-no filter off.
+it, `popnei.open_vcf` with the read options for a VCF, since a
+`Variants` takes no filter off, and given the list of the individuals
+kept, `individuals_kept`, which `script.ts` makes before any filter; the
+line of `filter_individuals` is left out when the filters of
+individuals remove nobody.
 
 ### The TypeScript interface
 
@@ -167,6 +207,7 @@ export interface VariantChecksJob {
   readonly analysis: "variantChecks";
   readonly fileId: string;
   readonly filters: readonly [];
+  readonly individuals: readonly string[] | null; // the individuals kept; null for all
   readonly minNumIndividuals: number;
   readonly numBins: number;
   readonly range: readonly [number, number];
@@ -184,8 +225,8 @@ export interface VariantChecksResult {
 }
 
 export const variantChecks: AnalysisDef<Job, JobResult>;
-// id "variantChecks"; app ["popgen", "gwas"]; keyVersion 1;
-// filtersRead { variants: false, individuals: false }; defaults {}
+// id "variantChecks"; app ["popgen", "gwas"]; keyVersion 2;
+// filtersRead { variants: false, individuals: true }; defaults {}
 
 /** The words of a refusal of popnei, for the error state of the panel. */
 export function refusalText(message: string, p: Project): string;
@@ -196,7 +237,12 @@ that of `individualChecks`.
 
 ### The cases
 
-- **A filter moved.** Nothing: the key does not hold the filters.
+- **A filter of the variants moved.** Nothing: the key does not hold
+  the filters of the variants.
+- **A filter of individuals changed**, a list applied or a threshold
+  moved. The key changes: the histograms go, with the notice of the
+  change, and a Calculate makes them over the individuals now kept; an
+  undo brings them back with no calculation.
 - **A VCF read again with another ploidy.** A new key, a new pass.
 - **A variant of three alleles** is in the MAF histogram below 0.5; a
   variant with one allele called in the whole file has a MAF of 1.
@@ -208,8 +254,10 @@ the size of the file.
 
 ### How it is verified
 
-With Vitest: the key does not change with any filter, and changes with a
-new load; `run` sends the job above; `warnings` of a result whose MAF
+With Vitest: the key does not change with a filter of the variants, and
+changes with a filter of individuals and with a new load; `run` sends
+the job above, with the `individuals` of a fake client that gives a
+list, and with `null`; `warnings` of a result whose MAF
 counts sum to 5 of `numVars` 6 gives `variantsWithoutCalls` with "1 of
 the 6 variants"; `checkNumbers` of the result below gives its four
 numbers.
@@ -231,6 +279,19 @@ asserted whole with Vitest. The flow reads the mean of the MAF on the screen to
 four decimals, 0.7163, and sees it stay when the missing data filter
 changes.
 
+With the list of the 111 individuals that the thresholds of the flow of
+the Variants step keep, 0.03 of missing genotypes and 0.38 of observed
+heterozygosity (`docs/specs/core/individualsKept.md`), popnei gave in
+node on 28 September 2026 with `js-v0.1.0-dev.3`, by `orderA.mjs` of
+`docs/specs/worker/runner.md`, "How it is verified": `numVars` 1,200;
+the means 0.7173150249650765, 0.3528596566999348 and 0.3749397114515978;
+the MAF counts twenty zeros and then `58, 86, 64, 73, 66, 61, 71, 80,
+80, 63, 69, 70, 63, 73, 54, 62, 52, 33, 16, 6`, summing to 1,200; the
+check numbers `[1200, 0.7173150249650765, 0.3528596566999348,
+0.3749397114515978]`. The runner's test asserts them, and the flow,
+after the two thresholds are set, sees the histograms go and, calculated
+again, reads the mean of the MAF 0.7173.
+
 ## The panel
 
 Its part of the Variants step (`docs/specs/steps/variants.md`), headed
@@ -242,7 +303,10 @@ A button, "Calculate the histograms of the variants", and, once they are
 calculated, the three histograms of `docs/specs/charts/histogram.md`,
 each titled with its statistic and its mean, "Major allele frequency,
 mean 0.7163", and a caption for the three: "Over the 1,200 variants of
-panel.nei, before any filter." The threshold of the MAF filter and of the
+panel.nei, before any filter.", or, when the filters of individuals
+remove some, "Over the 1,200 variants of panel.nei and the 111
+individuals the filters of individuals keep, before any filter of the
+variants." The threshold of the MAF filter and of the
 filter by heterozygosity is marked on its histogram when the filter is
 on. Each has the table of its bins in the tab "Table of the bins", next
 to the tab of the plot, from `histogramRows`, a
@@ -265,12 +329,12 @@ The option not taken was the two buttons on each histogram from stage 3.
 | state | what the user sees | what they can do |
 |---|---|---|
 | empty | cannot happen: locked until the file is read | |
-| locked | not drawn: while the store locks it, the variants file is not read, and the Variants step shows in place of its part the line "The histograms, the counts and the statistics of each individual are calculated once a variants file is read." (`docs/specs/steps/variants.md`, "What it does"). With the file read, `projectNeeds` gives no reason and a list of individuals popnei would refuse does not lock it, since it reads no filter of individuals, so the part is never drawn locked | load a file |
+| locked | not drawn while the variants file is not read: the Variants step shows in place of its part the line "The histograms, the counts and the statistics of each individual are calculated once a variants file is read." (`docs/specs/steps/variants.md`, "What it does"). With the file read, drawn locked beside its disabled button while a list of individuals names one twice or one not in the file, with the reason of `individualListNeeds`, or while the filters of individuals keep nobody, with that of `keptNoneReason` | load a file; correct the list, or loosen the filters of individuals |
 | ready | the button | Calculate |
 | running | the bar and the clock, as the diversity's | Stop |
 | done | the three histograms, the warning above them | download |
-| results removed | only a new load, or its undo or redo, removes them, in the words of the table below | Calculate; Undo or Redo |
-| error | the words of the diversity's error table, "the diversity" replaced by "the histograms of the variants", and "Run it again" and "to run it again" by "Calculate them again" and "to calculate them again", since this part has a Calculate button and no Run; and, when popnei refused for another reason, "Change the settings, or load the variants file again" by "Load the variants file again, or read it again with other options", since the histograms depend on the load alone and no change of a filter gives the button back: "popnei could not calculate the histograms of the variants: ‹its message›. Load the variants file again, or read it again with other options, to calculate them again." | as in the diversity |
+| results removed | a new load, or its undo or redo, removes them, in the words of the table below, and, from 28 September 2026, a change of a filter of individuals, in the words of the diversity's table with "the histograms of the variants" and "for the settings as they are now" | Calculate; Undo or Redo |
+| error | the words of the diversity's error table, "the diversity" replaced by "the histograms of the variants", and "Run it again" and "to run it again" by "Calculate them again" and "to calculate them again", since this part has a Calculate button and no Run; and, when popnei refused for another reason, "Change the settings, or load the variants file again" by "Load the variants file again, or read it again with other options", since what popnei refused is the file, which no change of a filter mends: "popnei could not calculate the histograms of the variants: ‹its message›. Load the variants file again, or read it again with other options, to calculate them again." | as in the diversity |
 
 The words of the histograms removed are those of the diversity's table
 of results removed, for a result in the plural and a button whose words
@@ -297,7 +361,8 @@ while the notice that says so is up.
 
 The warning and the words of the states are above. The help, for the
 drawer of stage 8: what each statistic is; that the histograms are over
-the file as read, so that each shows what its filter reads; that a
+every variant of the file and the individuals kept, so that each shows
+what its filter reads, as it reads it; that a
 variant is counted with any number of called genotypes, and one called
 only in half genotypes, `0/.`, has no observed heterozygosity; and
 `popnei.calc_per_var_distribs(variants, min_num_individuals=0)` in

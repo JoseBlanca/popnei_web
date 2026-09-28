@@ -33,7 +33,14 @@ LD filter of the Variants step starts with no distance: while it has
 none, the store locks the writing with the reason of `variantFilterNeeds` of
 `docs/specs/core/project.md`, and the job takes its filters from
 `jobFilters`. This changes the code of stage 3, and the plan of stage 4
-carries the change.
+carries the change. Revised again that day for the owner's decision
+that the filters of individuals act first (`docs/architecture.md`,
+section 2): the runner puts the list of the individuals kept before the
+filters of the variants, which count over those individuals, so a file
+written with a filter of individuals holds other variants than before;
+the write waits for the statistics of each individual once per load; and
+the numbers with the thresholds are recomputed. Not yet reviewed or
+approved; it changes the code of stage 3.
 
 **It is not an analysis** in the sense of section 4 of the architecture,
 and it is under `docs/specs/analyses/` only because the architecture names
@@ -86,8 +93,9 @@ analysis does:
 This is `WriteJob` of `docs/specs/worker/protocol.md`, tagged by its
 `format` and not by an `analysis`, since it is no member of `Job`.
 
-The runner puts the filters on the `Variants` in their order, then
-`filterIndividuals(individuals)` when the list is not `null`, and calls
+The runner puts `filterIndividuals(individuals)` on the `Variants` when
+the list is not `null`, then the filters in their order, which count
+over the individuals kept, and calls
 `writeVars(variants)` with popnei's size of batch. popnei builds the
 whole file in the memory of wasm and copies it out, piece by piece, into
 one `Uint8Array`, with the counts of its pass. The worker makes of the
@@ -128,7 +136,7 @@ the list of the individuals kept is in no key, the thresholds are. So:
 - a calculation asked for while a file is written waits behind it, in the
   queue of the one calculation worker;
 - with a threshold on the individuals and no statistics of each individual
-  for the current filters of the variants in the cache, the write starts
+  for the current load in the cache, the write starts
   their calculation first, and its own request is sent when they arrive,
   as a Run of an analysis that reads the filters of individuals does;
 - its answer is never put in the cache, but its counts are, under the
@@ -387,9 +395,9 @@ GB". It is the same function for the estimate and for the written file.
   with the reason of `variantFilterNeeds` of
   `docs/specs/core/project.md`, which the step shows without its end
   "in the Variants step" beside the button and beside the empty field
-  of the distance; the
-  statistics of each individual and the Count are locked with it, and
-  the histograms of the variants are not.
+  of the distance; the Count is locked with it, and the statistics of
+  each individual and the histograms of the variants, which read no
+  filter of the variants, are not.
 - **A list of individuals popnei would refuse**, a list to keep that
   names an individual not in the file. The write is locked by the store
   with the reason of `individualListNeeds` of
@@ -504,7 +512,7 @@ specs, below, are given as the part shows them.
 | the worker stopped with no answer, a trap of the wasm or a memory that could not grow, `workerFailed` | "The writing stopped unexpectedly, perhaps because the file, of about 1.0 GB, did not fit in the memory of this tab. Remove variants or individuals with the filters and write it again, or write the file with popnei in Python." |
 | popnei refused the write for a genotype of another ploidy than the VCF was read with, its message "line ‹n› of the VCF, the column of ‹individual›: its genotype is of the ploidy ‹found› and the reader was asked for the ploidy ‹given›" | "panel.filtered.nei could not be written. ", then the words the analyses give that refusal (`docs/specs/analyses/diversity.md`, "Its words"): "At line 12 of panel.vcf.gz, the genotype of ind_3 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version." |
 | popnei refused the write otherwise, for a memory that does not take the file or for a line of the VCF it cannot read, which its message alone tells apart | "panel.filtered.nei could not be written: popnei stopped with "‹its message›". A file of about 1.0 GB may not fit in the memory of this tab: remove variants or individuals with the filters and write it again, or write the file with popnei in Python. If the message names a line of the VCF, correct the file, or fetch it again, and load it again." |
-| the statistics of each individual it waited for failed | "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the file was not written. ", then the words the statistics' own part gives that failure (`docs/specs/analyses/individualChecks.md`, "Its words"): "… The filters kept none of the variants of panel.nei, so there is no variant to count each individual's genotypes over. Loosen the filters of the variants." |
+| the statistics of each individual it waited for failed | "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the file was not written. ", then the words the statistics' own part gives that failure (`docs/specs/analyses/individualChecks.md`, "Its words"): "… popnei could not read panel.vcf.gz: ‹its message›. Correct the file, or fetch it again, and load it again."; their pass has no filter since 28 September 2026, so filters that keep no variant are not among their failures |
 | the browser can no longer read the variants file, `reopenFailed` | the diversity's words, "panel.nei could not be read again; it may have changed on the disk since it was picked. Load it again." |
 | the calculations could not start, `couldNotStart`, or the page is out of date after a new version of the site, `protocolMismatch` | the diversity's words, "The application could not start its calculations. Save the project, reload the page, and open the project again." and "The page is out of date. Save the project, reload the page, and open the project again." |
 | an error of the application's own code, `defect` | "The application met an error of its own: ‹message›. Write the file again." |
@@ -557,11 +565,14 @@ before the user asks.
 
 - **The runner, in node** with popnei: the job with the missing data
   filter at 0.05 on `panel.nei` answers a `Blob` of 250,994 bytes and
-  `passStats` of 1,152 of 1,200; with the 119 individuals the thresholds
-  0.03 and 0.38 keep, 170,042 bytes; from stage 4, whose popnei,
-  `js-v0.1.0-dev.3`, writes version 1.1 of its vars file, 251,074 and
-  170,122 bytes (`docs/specs/worker/runner.md`, "The written file"); the file read back with `openVars`
-  has 1,152 variants and those individuals in that order. `Blob` exists
+  `passStats` of 1,152 of 1,200; with the 111 individuals the thresholds
+  0.03 and 0.38 keep, put before the filter, 156,802 bytes and
+  `passStats` of 1,117 of 1,200, since the filter counts over those 111;
+  from stage 4, whose popnei, `js-v0.1.0-dev.3`, writes version 1.1 of
+  its vars file, 251,074 and 156,818 bytes (`docs/specs/worker/runner.md`,
+  "The written file", `orderA.mjs`); the file read back with `openVars`
+  has 1,152 variants and 200 individuals, and 1,117 variants and those
+  111 individuals in their order. `Blob` exists
   in node, so the runner's test makes it there.
 - **The store, with Vitest** (`docs/specs/core/store.md`): a change of a
   filter during a write leaves it behind with the words above; a

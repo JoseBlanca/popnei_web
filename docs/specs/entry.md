@@ -19,6 +19,11 @@ threw it as a defect; and after the review of those specs, a source
 after a worker that could not start, which say to save the project
 first; and when the specs of stage 4 were made to agree, a read of the
 individuals file reports the options of a CSV it used, set or found.
+Revised on 28 September 2026 for the owner's decision that day that the
+filters of individuals act first (`docs/architecture.md`, section 2):
+the statistics of each individual come first among the analyses, as
+their section now comes first in the Variants step, and fill no counts,
+since their pass has no filter; not yet reviewed or approved.
 This spec gives
 the page of the population genetics application, `popgen.html`, and its
 entry, the code that runs once when the page opens and keeps working for
@@ -253,12 +258,13 @@ population genetics application alone until stage 7:
 - **the definitions of its analyses**, in the order the screens show
   them: from stage 3 the three checks of the Variants step in the order
   of its sections (`docs/specs/steps/variants.md`, "What it does"), the
-  histograms of the variants, `variantChecks`
-  (`docs/specs/analyses/variantChecks.md`), and the counts of what each
+  statistics of each individual, `individualChecks`
+  (`docs/specs/analyses/individualChecks.md`), in the section of the
+  filters of the individuals, then the histograms of the variants,
+  `variantChecks` (`variantChecks.md`), and the counts of what each
   filter kept, `filterCounts` (`filterCounts.md`), both in the section
-  of the filters of the variants, then the statistics of each
-  individual, `individualChecks` (`individualChecks.md`), in the section
-  of the filters of the individuals; then the diversity
+  of the filters of the variants, the order of 28 September 2026, when
+  the section of the individuals came first; then the diversity
   (`diversity.md`). The stepper names the first check in error in this
   order (`docs/specs/shell.md`, "The stepper"), and the notice, the
   status region and the check numbers of a project file list the
@@ -289,10 +295,12 @@ population genetics application alone until stage 7:
     `passStats.filtering`, the variants the first filter was given, or
     `passStats.numVars` when the pass had no filter, for every result;
   - the counts of the filters, a result of `filterCounts`, `{ analysis:
-    "filterCounts", passStats }`, for a result whose pass had the
-    filters of the variants of its request's project: the diversity,
-    the statistics of each individual and `filterCounts` itself; `null`
-    for the histograms of the variants, whose pass has no filter, and,
+    "filterCounts", passStats }`, for a result whose pass had the list
+    of the individuals kept and the filters of the variants of its
+    request's project: the diversity and `filterCounts` itself; `null`
+    for the statistics of each individual, whose pass has no filter
+    since 28 September 2026, for the histograms of the variants, whose
+    pass has no filter of the variants, and,
     from stage 4, for the PCA, whose pass has filters of its own, the
     stricter of its MAF filter and the project's and its LD pruning
     (`docs/specs/analyses/pca.md`, "Which variants it reads";

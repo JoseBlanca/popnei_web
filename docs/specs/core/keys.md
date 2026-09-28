@@ -14,7 +14,13 @@ how a result is drawn are in no key; and again that day, the reason
 `keyInputs` answers for a locked project corrected: the fingerprint of
 an opened project needs it, and the store does not; and on 28 September
 2026, when the filters the user turns off were kept in the project with
-their values: they are in no key. A key is the name a result is stored under in the cache: a SHA-256
+their values: they are in no key; and again that day for the owner's
+decision that the filters of individuals act first
+(`docs/architecture.md`, section 2): the list of the individuals kept is
+made from the load, the version of popnei and the filters of
+individuals, no longer from the filters of the variants, and the checks
+of the Variants step read other filters; nothing of `keys.ts` changes.
+A key is the name a result is stored under in the cache: a SHA-256
 hash of everything the result was calculated from, so that a result whose
 inputs changed is never shown, and a result whose inputs came back, by an
 undo or by a value set back, is found again with no calculation
@@ -58,16 +64,20 @@ filters. The checks per variant and per individual of its section 3,
 whose histograms the user reads to choose the thresholds, do not read the
 filters those thresholds set: a key that held them would take the
 histogram off the screen at every move of the threshold it serves to
-choose. So the definition of an analysis says which of the two lists of
+choose. From 28 September 2026 the statistics of each individual read
+no filter, and the histograms of the variants the filters of
+individuals alone, which act before the filters of the variants they
+serve to set (`docs/architecture.md`, section 4). So the definition of an analysis says which of the two lists of
 filters it reads (`docs/specs/core/store.md`), and `keyOf` puts in the key
 only those, as an empty list for one it does not read.
 
 The list of the individuals the filters keep, which core makes from the
 statistics of each individual (`docs/specs/core/individualsKept.md`), is in no key, as the owner approved on
 26 September 2026 (`docs/architecture.md`, section 3). It is made from
-the load, the version of popnei, the filters of the variants and those
-of the individuals, which the key holds, so a key of the thresholds
-names one list. A key that held the list would let two thresholds that
+the load, the version of popnei and the filters of the individuals,
+which the key holds, so a key of the thresholds names one list; until
+28 September 2026 it was made from the filters of the variants too, over
+which the statistics were counted. A key that held the list would let two thresholds that
 keep the same individuals share their results, and would be made from a
 result in the cache and not from the project alone: no key could be made
 before the statistics were calculated, and the key of an analysis would

@@ -70,7 +70,15 @@ off, as the PCA's pruning does, so that turning it on again gives back
 what was typed: a filter turned off with a switch of the Variants step,
 of the variants or a threshold of the individuals, moves with its
 values to `filtersOff` or `individualFiltersOff`, which no key, no job
-and no lock reads (below, "The filters turned off").
+and no lock reads (below, "The filters turned off"). Revised again
+that day for the owner's decision that the filters of individuals act
+first (`docs/architecture.md`, section 2): the list of the individuals
+kept comes before the filters of the variants, which count over it; and
+`variantFilterNeeds` locks only what reads the filters of the variants,
+since the statistics of each individual read no filter, while
+`individualListNeeds` locks the Count and the histograms of the
+variants, which now read the filters of individuals. Not yet reviewed
+or approved; it changes the code of stage 3.
 
 The project is everything the user has set in one application: the
 variants file they loaded, the filters, the individuals file with the
@@ -149,9 +157,11 @@ The rules, which every function below keeps:
   missing data, observed heterozygosity, the major allele frequency
   (MAF) and the LD pruning, in that order, the regions of a BED file first once popnei has that filter;
   the individuals' keep, remove, missing data, observed heterozygosity.
-  The filter of individuals comes after every filter of the variants, as
-  popnei's `filterIndividuals` put last on the `Variants`, so the
-  variants kept do not depend on which individuals are removed. Setting
+  The filter of individuals comes before every filter of the variants,
+  as popnei's `filterIndividuals` put first on the `Variants`, so the
+  filters of the variants count over the individuals kept, as the owner
+  decided on 28 September 2026; until then it came after them, and they
+  counted over every individual of the file. Setting
   a filter puts it in the place of its kind, and replaces the one of its
   kind that is there; nothing moves a filter. `moveVariantFilter`, which
   moved one in the order the user gave until stage 2, is gone.
@@ -225,10 +235,10 @@ as it is.
 ### What an analysis needs of every project
 
 Before an analysis looks at what it needs of its own, every one of them
-needs a variants file that was read; one that reads either list of
-filters, `filtersRead.variants` or `filtersRead.individuals` of its
-definition (`docs/specs/core/store.md`), needs filters of the variants
-that popnei can be given; and one that reads the filters of
+needs a variants file that was read; one that reads the filters of the
+variants, `filtersRead.variants` of its definition
+(`docs/specs/core/store.md`), needs filters of the variants that popnei
+can be given; and one that reads the filters of
 individuals needs lists of individuals that popnei will accept.
 `projectNeeds` gives the first thing missing of the file, in the words the screen shows beside the Run button, or `null`:
 
@@ -257,30 +267,26 @@ filter turned off is given to no job:
 The words are those of the PCA's own pruning with no distance
 (`pruningDistanceReason` of `docs/specs/analyses/pca.md`), with the end
 of the reasons that send the user to another step. The store locks with
-it, after `projectNeeds` and before `individualListNeeds`, the order of
-the filters in the step, what reads either list of filters: the Count,
-the statistics of each individual, the diversity, the PCA, and the
-writing of the filtered variants. The histograms of the variants read
-no filter and stay unlocked, so that the user can look at the data
-while choosing the distance. The Variants step shows the reason beside
+it, after `projectNeeds` and before `individualListNeeds`, what reads
+the filters of the variants: the Count, the diversity, the PCA, and the
+writing of the filtered variants. The statistics of each individual,
+which read no filter, and the histograms of the variants, which read
+the filters of individuals alone, stay unlocked, so that the user can
+look at the data while choosing the distance. The Variants step shows the reason beside
 the field of the distance, without the end "in the Variants step", as
 it shows the reasons of the lists.
 
-What reads only the filters of individuals is locked too, although
-the LD filter is not among what it reads. A threshold on the
-individuals keeps those whose statistics are at most it, and the
-statistics of each individual read the filters of the variants, so
-they are locked by this reason and are never calculated while it
-holds. An analysis that read only the filters of individuals would
-then be `ready`, and its Run would wait for statistics the store
-cannot send, which `startRun` of `src/core/store.ts` treats as a defect
-and throws. No analysis of stages 2 to 4 reads the filters of
-individuals alone, and the rule is for one that will; the lock is the
-store's (`docs/specs/core/store.md`, "The state of an analysis"). The
-option not taken, locking such an analysis only when the project also
-has a threshold on the individuals, would lock it one way or another
-according to a filter that has nothing to do with the LD filter, for
-the same missing distance.
+What reads only the filters of individuals, the histograms of the
+variants, is not locked by it, from 28 September 2026. Until then it
+was, although the LD filter is not among what it reads, because a
+threshold on the individuals keeps those whose statistics are at most
+it, and the statistics of each individual read the filters of the
+variants and were locked by this reason: an analysis that read only the
+filters of individuals would then have been `ready`, and its Run would
+have waited for statistics the store could not send, which `startRun`
+of `src/core/store.ts` treats as a defect and throws. The statistics
+now read no filter, so the store can always send them when a variants
+file is read (`docs/specs/core/store.md`, "The state of an analysis").
 
 The option not taken was to keep the filter out of the project until a
 distance is typed, the switch on and the field empty as state of the
@@ -298,12 +304,12 @@ about, `keep` or `remove`, so that the Variants step puts the reason
 beside that list; or `null`, and `null` too while `projectNeeds` gives a
 reason, since a list is checked against the individuals of the file.
 The store locks with it only what reads the filters of individuals: the
-analyses whose `filtersRead.individuals` is true, the diversity among
-them, and the writing of the filtered variants. The three checks of the
-Variants step read no filter of individuals, the statistics of each
-individual, the histograms of the variants and the Count, and stay
-unlocked with a list popnei would refuse, so that the user can still
-look at the data while correcting the list.
+analyses whose `filtersRead.individuals` is true, the diversity, the
+PCA, and, from 28 September 2026, the Count and the histograms of the
+variants, which count over the individuals kept; and the writing of the
+filtered variants. The statistics of each individual read no filter and
+stay unlocked with a list popnei would refuse, so that the user can
+still look at them while correcting the list.
 
 | the list | its `list` | the reason |
 |---|---|---|
@@ -1219,7 +1225,7 @@ export function projectNeeds(p: Project): string | null;
 
 /** The reason of the LD filter of the variants on with no distance, or
     null; the table of the LD filter above. The store locks with it
-    what reads either list of filters, and nothing else. */
+    what reads the filters of the variants, and nothing else. */
 export function variantFilterNeeds(p: Project): string | null;
 
 /** The filters of the variants as a job carries them to popnei:

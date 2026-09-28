@@ -31,7 +31,14 @@ while the distance is missing, and the files wasm is the package of
 xlsx_rs, since the reader of xlsx left this repository. The owner's
 decision of the same day that a filter turned off keeps its values in
 the project changes no job: a job carries the filters that are on, as
-before.
+before. Revised again that day for the owner's decision that the
+filters of individuals act first (`docs/architecture.md`, section 2):
+the runner puts the list of the individuals kept before the filters of
+the variants, which count over it; the job of the statistics of each
+individual carries no filter; the jobs of the histograms of the
+variants and of the counts carry the list; and core locks only what
+reads the filters of the variants while the LD filter has no distance.
+Not yet reviewed or approved.
 
 This spec gives the part of `src/worker/protocol.ts` that core
 names: the filters of the variants and of the individuals, the table of
@@ -101,7 +108,7 @@ when it has one and otherwise the PCA's own when it is on
 (`pcaFilters` of `docs/specs/analyses/pca.md`, "Which variants it
 reads"; meanwhile, "Which variants the PCA reads" in
 `docs/specs/stage-4-open-points.md`). The
-list of individuals comes after them, as for every job. So the runner
+list of individuals comes before them, as for every job. So the runner
 puts the filters of a PCA as it puts any job's, and never merges two.
 The rule this spec held until stage 3, which merged the two MAF filters
 only when the dataset had no LD pruning and the job kept every
@@ -145,11 +152,17 @@ Variants step"; `src/core/individualsKept.ts`), and an analysis that
 reads the filters of individuals puts it in its job, as the store puts
 it in the job of a write, `individuals`, which is `null` when the
 filters remove nobody. The calculation worker never sees the filters of individuals:
-the runner puts the list it is given on the `Variants` after every filter
-of the variants, with `filterIndividuals`. So the filters of the variants
-count over every individual of the file, and the list changes none of
-their counts; popnei's step of individuals has no entry in the counts of
-a pass (`Step.kind` of `js/popnei/src/filters.ts`). The option not taken,
+the runner puts the list it is given on the `Variants` before any filter
+of the variants, with `filterIndividuals`, as the owner decided on 28
+September 2026 (`docs/architecture.md`, section 2). So the filters of
+the variants count over the individuals kept, and the list changes
+their counts: on `panel.nei`, the missing data filter at 0.05 keeps
+1,152 of the 1,200 variants with every individual and 1,117 with the 111
+individuals of the thresholds of `docs/specs/core/individualsKept.md`.
+popnei's step of individuals has no entry in the counts of a pass
+(`Step.kind` of `js/popnei/src/filters.ts`). Until 28 September 2026 the
+runner put the list after every filter of the variants, which then
+counted over every individual of the file. The option not taken,
 the list made in the calculation worker, which this spec had until the
 revision of the architecture of 26 September 2026, is in section 4 of
 the architecture.
@@ -207,7 +220,7 @@ export type VariantFilterKind = VariantFilter["kind"];
 A job always carries the distance of its LD filter. The project may
 hold an LD filter whose distance the user has not typed yet, which is
 core's `ProjectVariantFilter` and not this type; core locks every
-analysis that reads either list of filters while it does, and
+analysis that reads the filters of the variants while it does, and
 builds the filters of a job with `jobFilters`, which gives a
 `VariantFilter` list (`docs/specs/core/project.md`, "What an analysis
 needs of every project"). So the worker never checks for a missing
@@ -409,7 +422,8 @@ and its spec gives the fields. What every member keeps, decided here:
   every individual and never empty, in a job of an analysis that reads
   the filters of individuals and in a write. A job without the field
   reads every individual (`docs/architecture.md`, section 4,
-  `filtersRead`). Core builds each job so, and the runner applies what
+  `filtersRead`). The runner puts the list first and the filters after
+  it, in their order. Core builds each job so, and the runner applies what
   the job says.
 - **Every result holds `passStats`.**
 
@@ -449,12 +463,12 @@ export interface DiversityResult {
   passStats: PassStats;                    // in the place of numVars and numVarsRead of stage 2
 }
 
-// The statistics of each individual, calcPerIndividualStats, over the
-// variants the filters keep and every individual of the file.
+// The statistics of each individual, calcPerIndividualStats, over every
+// variant and every individual of the file.
 export interface IndividualChecksJob {
   analysis: "individualChecks";
   fileId: string;
-  filters: readonly VariantFilter[];
+  filters: readonly [];                    // none
 }
 
 export interface IndividualChecksResult {
@@ -466,11 +480,12 @@ export interface IndividualChecksResult {
 }
 
 // The histograms of the variants, calcPerVarDistribs over every variant
-// and every individual of the file, as one population.
+// of the file and the individuals kept, as one population.
 export interface VariantChecksJob {
   analysis: "variantChecks";
   fileId: string;
   filters: readonly [];                    // none
+  individuals: readonly string[] | null;   // the individuals kept, before any filter
   minNumIndividuals: number;               // 0, so that popnei bins the variants with few called genotypes
   numBins: number;                         // popnei's histKwargs
   range: readonly [number, number];
@@ -496,6 +511,7 @@ export interface FilterCountsJob {
   analysis: "filterCounts";
   fileId: string;
   filters: readonly VariantFilter[];
+  individuals: readonly string[] | null;   // the individuals kept, whose filters count over them
 }
 
 export interface FilterCountsResult {
@@ -633,8 +649,8 @@ of the browser, which is why `Written` is generic in its file. That the
 fields of the filters are popnei's arguments, and the boundary above, at
 0.05, are checked by the tests of the runner (`docs/specs/worker/runner.md`);
 so are the counts of a pass in the order of the job, and the list of
-individuals put after the filters of the variants, which leaves their
-counts as they are with every individual.
+individuals put before the filters of the variants, which then count
+over the individuals it keeps.
 
 ## Open points
 

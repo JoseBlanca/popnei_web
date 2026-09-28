@@ -22,7 +22,15 @@ LD filter of the Variants step starts with no distance: while it has
 none, the store locks the Count with the reason of `variantFilterNeeds` of
 `docs/specs/core/project.md`, and the job takes its filters from
 `jobFilters`. This changes the code of stage 3, and the plan of stage 4
-carries the change.
+carries the change. Revised again that day for the owner's decision
+that the filters of individuals act first (`docs/architecture.md`,
+section 2): the filters of the variants count over the individuals
+kept, so the key of the counts holds the filters of individuals, the
+job carries the list, a Count with a threshold on the individuals waits
+for their statistics, a list popnei would refuse or one that keeps
+nobody locks it, the statistics of each individual no longer fill the
+counts, and the key version is 2. Not yet reviewed or approved; it
+changes the code of stage 3.
 
 ## The module
 
@@ -34,21 +42,24 @@ every filter, and `filtering`, for each filter of the variants in the
 order of the steps and under its kind, `missing_data`, `obs_het`, `maf`
 or `ld`, the variants it was given, `varsProcessed`, and kept,
 `varsKept`. The first filter was given every variant of the file. The
-filter of individuals has no entry, since it drops no variant.
+filter of individuals has no entry, since it drops no variant; it comes
+first, since 28 September 2026, and every filter of the variants counts
+over the individuals it keeps (`docs/architecture.md`, section 2).
 
 The result of this analysis is those counts, for the filters of the
 project, and it reaches the cache in two ways, with the same shape
 (`docs/architecture.md`, section 4):
 
-- **The Count button** runs its own pass, over the filters of the
-  variants and nothing else. It is the way to see the counts before any
+- **The Count button** runs its own pass, over the list of the
+  individuals kept and the filters of the variants, and nothing else. It is the way to see the counts before any
   analysis, while the thresholds are being set, and when the filters
   keep no variant, which is when a user most needs to see which filter
   dropped them all: every calculation of popnei refuses an empty pass,
   and gives no counts then.
 - **Every other pass over the project's filters fills it.** When a result
-  arrives of an analysis whose pass puts on the `Variants` the filters of
-  the variants of its project, and none of its own, the store puts its
+  arrives of an analysis whose pass puts on the `Variants` the list of
+  the individuals kept and the filters of the variants of its project,
+  and none of its own, the store puts its
   counts into the cache under this analysis's key for that project, as a
   result of this analysis. So after a diversity, the counts of its
   filters are there with no Count. Which results those are is told by the
@@ -57,16 +68,23 @@ project, and it reaches the cache in two ways, with the same shape
 
 ### What goes into its key
 
-`filtersRead` is `{ variants: true, individuals: false }`, and
-`keyInputs(p)` gives `null`. The filter of individuals is left out
-because popnei puts it after every filter of the variants
-(`docs/architecture.md`, section 2), so it changes none of their counts.
-A change of any filter of the variants changes the key, and takes off the
-counts of all of them; the step shows that beside the filters, so the
+`filtersRead` is `{ variants: true, individuals: true }`, and
+`keyInputs(p)` gives `null`. The filters of individuals are in, since
+28 September 2026, because popnei is given their list before every
+filter of the variants (`docs/architecture.md`, section 2), and those
+filters count over the individuals it keeps: on `panel.nei` the missing
+data filter at 0.05 keeps 1,152 of the 1,200 variants over every
+individual and 1,117 over the 111 individuals of the thresholds of
+`docs/specs/core/individualsKept.md`. Until then they were left out,
+since the list came after the filters and changed none of their counts.
+The key holds the thresholds and not the list (`docs/specs/core/keys.md`).
+A change of any filter, of the variants or of the individuals, changes
+the key, and takes off the counts of all of them; the step shows that beside the filters, so the
 store leaves this analysis out of the notice of results removed, which
 would otherwise speak at every move of a threshold
 (`docs/architecture.md`, section 4, "The notice leaves the counts out").
-The key version is 1.
+The key version is 2, raised on 28 September 2026: a project with a
+filter of individuals gives the same key and other counts.
 
 ### Why it cannot run
 
@@ -75,18 +93,27 @@ The key version is 1.
 that of `variantFilterNeeds` of `docs/specs/core/project.md`, the LD
 filter with no distance, "The LD filter of the Variants step needs the
 distance within which variants are compared. …": no count is made while
-the filters cannot all be given to popnei. A list of individuals that popnei would refuse,
-`individualListNeeds` of `docs/specs/core/project.md`, does not lock the
-Count, since it reads no filter of individuals. With no filter, Count
-gives the number of variants of the file.
+the filters cannot all be given to popnei. Since it reads the filters
+of individuals, the store also locks it with a list of individuals that
+popnei would refuse, `individualListNeeds` of
+`docs/specs/core/project.md`, and when the filters of individuals keep
+nobody, `keptNoneReason` of `docs/specs/core/individualsKept.md`; and,
+with a threshold on the individuals and no statistics of each individual
+for the load, a Count calculates them first, as any analysis that reads
+the filters of individuals (`docs/specs/core/store.md`, "A Run that
+waits for the statistics"). With no filter, Count gives the number of
+variants of the file.
 
 ### The request
 
 ```ts
-{ analysis: "filterCounts", fileId: p.variants.fileId, filters: jobFilters(p.filters) }
+{ analysis: "filterCounts", fileId: p.variants.fileId, filters: jobFilters(p.filters),
+  individuals: c.individuals }
 ```
 
-The runner puts the filters on the `Variants` in their order, iterates
+`individuals` is the list of the individuals kept that the client bound
+to its key gives, `null` when the filters remove nobody. The runner puts
+the list on the `Variants`, and then the filters in their order, iterates
 `variants.iterBlocks({ fields: [] })` to its end, and answers the
 `passStats` of the blocks:
 
@@ -101,7 +128,12 @@ carries, so the chromosomes and positions are not parsed. On
 missing_data: { varsProcessed: 1200, varsKept: 1152 }, maf: {
 varsProcessed: 1152, varsKept: 0 } } }`, where `calcPerIndividualStats`
 of the same filters threw "the pass gave no variant: …" (node, 26
-September 2026, `js-v0.1.0-dev.2`). `numPassesOf("iterBlocks")` is 1. A
+September 2026, `js-v0.1.0-dev.2`). With the list of the 111
+individuals before the missing data filter at 0.05, the filter by
+heterozygosity at 0.9 and the MAF filter at 0.95, the counts are
+`missing_data` 1,200 to 1,117, `obs_het` 1,117 to 1,117 and `maf` 1,117
+to 1,096, `numVars` 1,096 (node, 28 September 2026, `js-v0.1.0-dev.3`,
+`orderA.mjs` of `docs/specs/worker/runner.md`). `numPassesOf("iterBlocks")` is 1. A
 pass of `iterBlocks` copies every block of genotypes out of wasm; its
 time against a pass of the diversity is measured in the work package of
 the Count (`docs/architecture.md`, section 11), and popnei is asked for a
@@ -112,14 +144,15 @@ function that only counts if it is much longer.
 `countsOf` of `src/core/apps.ts`, which replaces `numVarsOf`
 (`docs/specs/entry.md`), gives, of a result, the number of variants of
 the file, `varsProcessed` of its first filter or `numVars` when it has
-none, and its counts when its analysis is one whose pass has the filters
-of the variants of the project of its request, by the `analysis` of the
-result:
+none, and its counts when its analysis is one whose pass has the list
+of the individuals kept and the filters of the variants of the project
+of its request, by the `analysis` of the result:
 
 | the result | the counts |
 |---|---|
-| the diversity, the statistics of each individual, the written file, this analysis | given: each pass has the project's filters of the variants; the filter of individuals of the diversity and of the file changes no count |
-| the histograms of the variants | not given: their pass has no filter, whatever the project's; with no filter of the variants in the project their counts would be those of a Count, and they are not given then either, so that one rule, by the analysis, decides |
+| the diversity, the written file, this analysis | given: each pass has the project's list of the individuals kept and its filters of the variants, in that order |
+| the statistics of each individual | not given, from 28 September 2026: their pass has no filter and no list, whatever the project's; until then it had the project's filters of the variants and gave them |
+| the histograms of the variants | not given: their pass has the list and no filter of the variants, whatever the project's; with no filter of the variants in the project their counts would be those of a Count, and they are not given then either, so that one rule, by the analysis, decides |
 | the principal components, stage 4 | not given: its pass has filters of its own, the stricter of its MAF filter and the project's and its LD pruning, whose counts are not those beside the filters (`pcaFilters` of `docs/specs/analyses/pca.md`); the number of variants of the file is given, `varsProcessed` of its first filter |
 
 The store makes of the counts the result `{ analysis: "filterCounts",
@@ -131,7 +164,7 @@ result.
 
 | code | when | the text |
 |---|---|---|
-| `filterKeptNone` | a filter kept no variant; the first such | "The MAF filter kept none of the 1,152 variants it was given, so the analyses and the statistics of each individual have no variant to calculate over, and a file written would hold none. Loosen it, or a filter before it.", and, when it is the first filter, which has none before it, "… Loosen it.", as the owner kept it on 27 September 2026 |
+| `filterKeptNone` | a filter kept no variant; the first such | "The MAF filter kept none of the 1,152 variants it was given, so the analyses have no variant to calculate over, and a file written would hold none. Loosen it, or a filter before it.", without "and the statistics of each individual", which stage 3 had, since their pass has no filter from 28 September 2026; and, when it is the first filter, which has none before it, "… Loosen it.", as the owner kept it on 27 September 2026 |
 | `noVariant` | the file gave no variant, `numVars` 0 with no filter or the first filter given 0 | the words of the diversity for a file with no variant, "empty.vcf has no variants. Load another variants file.", and, for a VCF read with only the variants that passed, "failed.vcf has no variant with PASS or . in its FILTER column, and it was read with only those. Untick …" |
 
 The names of the filters are those of the step's labels, "the filter
@@ -159,8 +192,9 @@ for _ in blocks:
 print(blocks.pass_stats)
 ```
 
-after the lines of `script.ts`, stage 6, that put the filters on
-`variants`; its filter of individuals changes no count.
+after the lines of `script.ts`, stage 6, that put on `variants` the
+filter of individuals and then the filters of the variants, which count
+over the individuals it keeps.
 
 ### The TypeScript interface
 
@@ -169,6 +203,7 @@ export interface FilterCountsJob {
   readonly analysis: "filterCounts";
   readonly fileId: string;
   readonly filters: readonly VariantFilter[];
+  readonly individuals: readonly string[] | null; // the individuals kept; null for all
 }
 
 export interface FilterCountsResult {
@@ -177,8 +212,8 @@ export interface FilterCountsResult {
 }
 
 export const filterCounts: AnalysisDef<Job, JobResult>;
-// id "filterCounts"; app ["popgen", "gwas"]; keyVersion 1;
-// filtersRead { variants: true, individuals: false }; defaults {}
+// id "filterCounts"; app ["popgen", "gwas"]; keyVersion 2;
+// filtersRead { variants: true, individuals: true }; defaults {}
 
 /** What one filter of the variants was given and kept. */
 export interface FilterCountRow {
@@ -206,9 +241,9 @@ message would get the words of any other refusal.
 
 - **The filters keep no variant.** Count gives the counts, with
   `filterKeptNone`. Every analysis that reads the filters of the
-  variants, and the statistics of each individual, is refused by popnei,
-  each with its own words; the histograms of the variants, which read no
-  filter, still run; and a write gives a file of no variant, 3,594 bytes,
+  variants is refused by popnei, each with its own words; the statistics
+  of each individual, which read no filter, and the histograms of the
+  variants, which read no filter of the variants, still run; and a write gives a file of no variant, 3,594 bytes,
   3,682 with popnei's `js-v0.1.0-dev.3`, on `panel.nei` with the missing data filter at 0.05 and the MAF filter
   at 0.4, which the step does not offer
   (`docs/specs/analyses/writeVariants.md`).
@@ -227,8 +262,10 @@ message would get the words of any other refusal.
   would say nothing the warning does not, as the owner decided on 27
   September 2026; the shell announces the warning at the end of the
   Count in place of the line of the total.
-- **A threshold moved.** The counts of every filter go, since their key
-  holds all of them, and come back with an undo or the next pass.
+- **A threshold moved**, of the variants or of the individuals, or a
+  list of individuals applied. The counts of every filter go, since
+  their key holds all of them, and come back with an undo or the next
+  pass.
 - **A threshold moved back.** The key of the earlier filters, and their
   counts, come back from the cache with no pass.
 - **The filter of regions of a BED file** comes with popnei's release
@@ -236,15 +273,18 @@ message would get the words of any other refusal.
 
 ### How it is verified
 
-With Vitest: the key the same when a filter of individuals changes and
-different when any filter of the variants does; `filterCountRows` of the
+With Vitest: the key different when any filter of the variants or of the
+individuals changes; `run` sends the `individuals` the fake client
+gives; `filterCountRows` of the
 counts above; `warnings` of the counts of the empty pass above gives
 `filterKeptNone` naming the MAF filter; `checkNumbers` as above;
 `refusalText` of the row of a genotype of another ploidy, and of the row
 of any other refusal, as literals. The test
 of the runner, in node on `panel.nei`, asserts the counts of the empty
 pass above and, for the three filters above, `numVars` 1,128 with 1,200
-to 1,152, 1,152 to 1,152 and 1,152 to 1,128, as literals. The store's
+to 1,152, 1,152 to 1,152 and 1,152 to 1,128, and with the list of 111
+before them `numVars` 1,096 with 1,200 to 1,117, 1,117 to 1,117 and
+1,117 to 1,096, as literals. The store's
 test that a diversity fills the counts is `docs/specs/core/store.md`'s;
 the architecture's check that the counts filled from a diversity are
 those of a Count with the same filters is the runner's
@@ -272,9 +312,9 @@ Analyses step was locked.
 | state | what the user sees | what they can do |
 |---|---|---|
 | empty | cannot happen: locked until the file is read | |
-| locked | not drawn: while the store locks it, the variants file is not read, and the Variants step shows in place of its part the line "The histograms, the counts and the statistics of each individual are calculated once a variants file is read." (`docs/specs/steps/variants.md`, "What it does"). With the file read, it is drawn locked only while the LD filter has no distance: the reason of `variantFilterNeeds` beside the disabled button, in place of the line of no counts, and no count beside the filters. A list of individuals popnei would refuse does not lock it, since it reads no filter of individuals | load a file; type the distance of the LD filter, or turn it off |
+| locked | not drawn: while the store locks it, the variants file is not read, and the Variants step shows in place of its part the line "The histograms, the counts and the statistics of each individual are calculated once a variants file is read." (`docs/specs/steps/variants.md`, "What it does"). With the file read, it is drawn locked while the LD filter has no distance, while a list of individuals names one twice or one not in the file, and while the filters of individuals keep nobody: the reason of `variantFilterNeeds`, `individualListNeeds` or `keptNoneReason` beside the disabled button, in place of the line of no counts, and no count beside the filters | load a file; type the distance of the LD filter, or turn it off; correct the list, or loosen the filters of individuals |
 | ready | the button, and the line of no counts | Count |
-| running | the bar and the clock of the diversity, beside the button | Stop |
+| running | the bar and the clock of the diversity, beside the button; while the statistics of each individual that a Count with a threshold on the individuals waits for are calculated, their words and progress, as the diversity's | Stop |
 | done | the counts beside the filters, and the warning | change a filter |
 | results removed | cannot happen: the counts are in no notice; a change shows the line of no counts | |
 | error | the words of the diversity's error table, "calculate the diversity" replaced by "count the variants", and "Run it again" and "to run it again" by "Count again" and "to count again", since this part has a Count button and no Run; but for a file with no variant, "there is no variant to count", "empty.vcf has no variants, so there is no variant to count. Load another variants file in the Variants step.", and not "there is no variant to count the variants over", as the owner decided on 27 September 2026 | as in the diversity |

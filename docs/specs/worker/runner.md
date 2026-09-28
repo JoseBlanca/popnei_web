@@ -23,7 +23,13 @@ PCA; and on 28 September 2026 to popnei's release `js-v0.1.0-dev.3`,
 which `package.json` names from the plan of stage 4: the call of the
 PCoA as that release has it, its refusals and numbers, the options
 objects that popnei now checks key by key, and the files `writeVars`
-writes, 24 to 88 bytes larger, by file. The calculation
+writes, 24 to 88 bytes larger, by file; and again that day for the
+owner's decision that the filters of individuals act first
+(`docs/architecture.md`, section 2): the list of the individuals kept is
+the first step put on the `Variants`, the job of the statistics of each
+individual has no filter, those of the histograms of the variants and of
+the counts carry the list, and the numbers with a list are recomputed,
+by `orderA.mjs` below; not yet reviewed or approved. The calculation
 worker is the thread of the browser tab, beside the page, that runs
 popnei, so that a calculation does not freeze the page
 (`docs/architecture.md`, section 1). Its runner is the code that answers
@@ -75,7 +81,7 @@ The words used here:
   carries, `individuals`, `null` for every individual, in the jobs of the
   analyses that read the filters of individuals and in a write
   (`docs/specs/worker/protocol.md`). The runner puts it on the
-  `Variants` last, with popnei's `filterIndividuals`, which popnei lists
+  `Variants` first, with popnei's `filterIndividuals`, which popnei lists
   among the steps with the kind `"individuals"`.
 - The **key** of a result is the text the page makes from everything the
   result was calculated from; the page sends it with each request and
@@ -160,7 +166,8 @@ until it is done the version in a key is only as good as the one
 `version()` gives. `js-v0.1.0-dev.3` gives "0.1.0" too (node, 28 September 2026), so
 a check number saved with the application of stage 3 is compared with
 one of stage 4 as made by the same popnei. The numbers of the two
-scripts of "How it is verified", `numbers.mjs` and `numbers3.mjs`, and
+scripts of "How it is verified", `numbers.mjs`, `numbers3.mjs` and
+`orderA.mjs`, and
 those of the PCA are the same with both releases, and only the size of
 a written file differs, which is no check number.
 
@@ -239,24 +246,26 @@ diversity, after the user moved the threshold, would be refused with
 the variants that the stricter of the two keeps alone", as the release
 gave in node on 25 September 2026.
 
-The steps a job asks for are its filters of the variants, in their
-order, and then, when the job has `individuals` and it is a list, the
-step of the individuals with that list; a job without the field, or with
-`null`, keeps every individual (`docs/specs/worker/protocol.md`, "Job and
-JobResult").
-The list comes last, so the filters of the variants count over every
-individual of the file, as the owner decided on 26 September 2026
+The steps a job asks for are, when the job has `individuals` and it is
+a list, the step of the individuals with that list, and then its
+filters of the variants, in their order; a job without the field, or
+with `null`, keeps every individual (`docs/specs/worker/protocol.md`,
+"Job and JobResult").
+The list comes first, so the filters of the variants count over the
+individuals it keeps, as the owner decided on 28 September 2026
 (`docs/architecture.md`, section 2): popnei's `filterByMissingData` put
-after `filterIndividuals` would divide by the individuals kept
-(`js/popnei/src/variant.ts`). Every request over the variants, a `run`
+after `filterIndividuals` divides by the individuals kept, and so do the
+frequencies of the MAF and the dosages of the LD
+(`js/popnei/src/variant.ts`). Until then the list came last, and the
+filters counted over every individual of the file. Every request over the variants, a `run`
 of any analysis and a `write`, goes through the same rule. For each, the
 runner reads the steps its `Variants` holds from popnei's `steps`, and:
 
 - **When those steps are the job's**, the same kinds in the same order,
-  each argument of a filter's step equal with `===` to the field of the
-  same name of the filter, and the step of the individuals, when there is
-  one, naming the same individuals in the same order, compared name by
-  name, it runs on that `Variants` as it is.
+  the step of the individuals, when there is one, first and naming the
+  same individuals in the same order, compared name by name, and each
+  argument of a filter's step equal with `===` to the field of the same
+  name of the filter, it runs on that `Variants` as it is.
 - **When the `Variants` holds no step**, as it does after the open, it
   puts the job's steps on it, in their order, and runs. Without this
   rule the first run of every load with a filter would open the file a
@@ -267,16 +276,17 @@ runner reads the steps its `Variants` holds from popnei's `steps`, and:
   and read options, as at the open, and puts the job's steps on the new
   one, in their order.
 
-So a `Variants` whose steps are the job's filters of the variants, and a
-job that adds the list of individuals after them, is opened again, and
-not given the list at its end: the rule of stage 2, below, spares the
+So a `Variants` whose steps are the job's list of individuals, and a job
+that adds a filter of the variants after it, is opened again, and not
+given the filter at its end: the rule of stage 2, below, spares the
 reading of one range for the `Variants` just opened alone, and a rule of
 prefixes would be one more way for the steps and the job to disagree.
-Seen in node on 26 September 2026 with `js-v0.1.0-dev.2`: after
-`filterByMissingData(0.05)` and `filterIndividuals` of 125 individuals,
-`steps` is `[{ kind: "missing_data", args: { maxAllowedMissingRate: 0.05
-} }, { kind: "individuals", args: { individuals: ["s000", "s003", …] }
-}]`, the names in the order they were given.
+Seen in node on 28 September 2026 with `js-v0.1.0-dev.3`: after
+`filterIndividuals` of `s000`, `s003` and `s004` and
+`filterByMissingData(0.05)`, `steps` is `[{ kind: "individuals", args: {
+individuals: ["s000", "s003", "s004"] } }, { kind: "missing_data", args:
+{ maxAllowedMissingRate: 0.05 } }]`, the names in the order they were
+given.
 
 Opening the file again reads what the open read, the first range of 4
 MiB, and of a `.nei` file its last ten bytes and its footer, and not the
@@ -327,14 +337,14 @@ it builds, so what the `free()` keeps from
 piling up is smaller; it has not been measured with a `File`, which only
 a browser can open.
 
-The runner puts each filter with its method, `filterByMissingData`,
-`filterByMaf`, `filterByObsHet`, `filterByLd`, with the numbers of the
-job as they are, in the order of the job, which is the fixed order of
-the project; the runner does not sort them. The number the user typed is
-the number popnei is given, so a variant with a missing rate at the
-threshold is kept (`docs/specs/worker/protocol.md`). Then it puts the
-list of the individuals, when the job has one, with
-`filterIndividuals(job.individuals)`. An empty list is a defect of the
+The runner puts first the list of the individuals, when the job has
+one, with `filterIndividuals(job.individuals)`; then each filter with
+its method, `filterByMissingData`, `filterByMaf`, `filterByObsHet`,
+`filterByLd`, with the numbers of the job as they are, in the order of
+the job, which is the fixed order of the project; the runner does not
+sort them. The number the user typed is the number popnei is given, so a
+variant with a missing rate at the threshold is kept
+(`docs/specs/worker/protocol.md`). An empty list is a defect of the
 page, answered `badRequest` before any step is put: core never sends one,
 since an analysis cannot start when the filters keep no individual
 (`docs/architecture.md`, section 4). A list that names an individual
@@ -435,9 +445,11 @@ filters from any pass that had the project's filters. Seen in node on 26
 September 2026 with `js-v0.1.0-dev.2`, on `panel.nei` with the missing
 data filter at 0.05, the heterozygosity filter at 0.9 and the MAF filter
 at 0.95, the counts were `missing_data` 1,200 to 1,152, `obs_het` 1,152
-to 1,152 and `maf` 1,152 to 1,128, `numVars` 1,128, whether or not a
-list of individuals came after them, as section 2 of the architecture
-measured it.
+to 1,152 and `maf` 1,152 to 1,128, `numVars` 1,128, with no list; with
+the list of 111 of "How it is verified" before them, 1,200 to 1,117,
+1,117 to 1,117 and 1,117 to 1,096, `numVars` 1,096, seen in node on 28
+September 2026 with `js-v0.1.0-dev.3`, as section 2 of the architecture
+has it.
 
 Every request over the variants sets the function of the progress and
 tells a throw of `told` from popnei's refusal as step 2 of the diversity
@@ -451,11 +463,12 @@ key it was asked for
 
 ### The statistics of each individual
 
-An `individualChecks` job holds its pass alone, the filters of the
-variants of the project and no list of individuals, since the statistics of
-each individual are counted over the variants the filters keep and over
-every individual, as the owner decided on 26 September 2026
-(`docs/architecture.md`, section 4; `docs/specs/analyses/individualChecks.md`).
+An `individualChecks` job holds its pass alone, with no filter and no
+list of individuals, since the statistics of each individual are counted
+over every variant and every individual of the file, as the owner
+decided on 28 September 2026 (`docs/architecture.md`, section 4;
+`docs/specs/analyses/individualChecks.md`); until then the job had the
+filters of the variants of the project.
 The runner calls `calcPerIndividualStats(variants)` of
 `js/popnei/src/stats.ts` and gives back popnei's `individuals`,
 `missingGtRate` and `obsHetRate`, one name and two numbers per
@@ -468,7 +481,7 @@ order, and a difference is a defect of ours, thrown, since the numbers
 would then be read under other names. popnei's arrays are its own copies out of the memory of wasm
 (`calcPerIndividualStats`), so the runner posts them as they are.
 
-An individual with no called genotype among the variants of the pass has
+An individual with no called genotype in the file has
 a missing rate of 1 and a heterozygosity of NaN, which crosses as it is;
 the filter by heterozygosity of core removes it (`docs/architecture.md`,
 section 13, point 4). Seen in node on a VCF of two individuals and two
@@ -477,15 +490,16 @@ variants, one individual missing at both: `missingGtRate` `[0, 1]`,
 
 ### The histograms of the variants
 
-A `variantChecks` job holds a pass with no filter and no list of
-individuals, since the histograms are of every variant and every
-individual of the file (`docs/architecture.md`, section 4), and three
+A `variantChecks` job holds a pass with no filter of the variants and
+the list of the individuals kept, since the histograms are of every
+variant of the file over the individuals kept, as the owner decided on
+28 September 2026 (`docs/architecture.md`, section 4), and three
 options, `minNumIndividuals`, 0, and the bins, `numBins` and `range`
 (`docs/specs/analyses/variantChecks.md`). The runner calls
 `calcPerVarDistribs(variants, { stats: ["maf", "obs_het",
 "unbiased_exp_het"], minNumIndividuals, histKwargs: { numBins, range }
 })` with no `pops`, which popnei takes as one population, `pop`, of every
-individual the pass gives. It gives back `binEdges`, one copy of popnei's
+individual the pass gives, those of the list when the job has one. It gives back `binEdges`, one copy of popnei's
 `histBinEdges`, which popnei's three distributions share as one array
 read only; and, of each of the three, `mean`, the one number of popnei's
 `mean`, and `counts`, popnei's `histCounts`, `numBins` numbers for the
@@ -501,8 +515,9 @@ it.
 ### The counts of the filters
 
 A `filterCounts` job holds its pass, the filters of the variants of
-the project and no list of individuals, since the list comes after them
-and changes none of their counts. The runner iterates popnei's
+the project and the list of the individuals kept, since the list comes
+before them and they count over it (`docs/architecture.md`, section 4,
+"What each filter kept"); until 28 September 2026 it had no list. The runner iterates popnei's
 `variants.iterBlocks({ fields: [] })` of `js/popnei/src/variant.ts` to
 its end, keeping nothing of the blocks, and gives back `passStats` from the
 `passStats` of the iteration, read after it. The architecture, approved by the owner on 26 September 2026, chose it
@@ -526,7 +541,7 @@ individuals kept, and two fields of its own, `method`, `"pca"` or
 `PcaJob`). Its filters are not the project's: core has put the PCA's own
 MAF filter and LD pruning into the list, in the fixed order, one of each
 kind (`pcaFilters`), so the runner puts them as it puts any job's, with
-the list of individuals after them, and merges nothing. Since they differ
+the list of individuals before them, and merges nothing. Since they differ
 from the project's, the `Variants` of the analysis before or after a PCA
 is opened again by the rule of "The steps", which reads a range of the
 file. After the steps are on the `Variants`, the runner:
@@ -628,14 +643,16 @@ on the `Variants` (above), the runner:
    file holds the variants the steps keep, and only the individuals of
    the list: on `panel.nei` with the missing data filter at 0.05, 250,994
    bytes, which `openVars` opened again with 200 individuals and 1,152
-   variants; with the list of 125 individuals of "The cases" after that
-   filter, 176,098 bytes and 125 individuals; with no filter, 261,490
+   variants; with the list of 116 individuals of "How it is verified"
+   before that filter, 160,162 bytes, 116 individuals and 1,103
+   variants; with no filter, 261,490
    bytes, the size of `panel.nei` itself; seen in node on 26 September
-   2026 with `js-v0.1.0-dev.2`. `js-v0.1.0-dev.3` writes version 1.1 of
+   2026 with `js-v0.1.0-dev.2`, and the file with the list on 28
+   September 2026. `js-v0.1.0-dev.3` writes version 1.1 of
    popnei's vars file, whose key holds the lengths of the chromosomes
    (popnei's commit `343bc4f`, one of the changes of its writer since
    `js-v0.1.0-dev.2`), and its files are larger: 251,074,
-   176,122 and 261,570 bytes for the three, with the same variants and
+   160,186 and 261,570 bytes for the three, with the same variants and
    individuals read back (node, 28 September 2026). It reads the files of
    `js-v0.1.0-dev.2`, and `e2e/fixtures/panel.nei`, 261,490 bytes, is not
    written again: every number the tests read from it, the progress
@@ -1009,11 +1026,12 @@ export function transferablesOf(result: JobResult): ArrayBuffer[];
 - **The filters keep no individual.** Core sends no job then; an empty
   list that reached the runner would be `badRequest`, before any step is
   put.
-- **A list of individuals after a threshold of the variants.** The
-  counts of the filters of the variants are those they give with every
-  individual, since the list comes after them: on `panel.nei` at 0.05,
-  with the 125 individuals whose missing rate over those 1,152 variants
-  is at most 0.03, the counts are 1,200 to 1,152, as with no list.
+- **A list of individuals before a threshold of the variants.** The
+  counts of the filters of the variants are those over the individuals
+  kept, since the list comes before them: on `panel.nei` at 0.05, with
+  the 116 individuals whose missing rate over the 1,200 variants of the
+  file is at most 0.03, the counts are 1,200 to 1,103, where with no
+  list they are 1,200 to 1,152.
 - **An individual with no called genotype** among the variants of the
   pass has the statistics 1 and NaN (above), and is in the list of core
   only if no threshold of heterozygosity is set.
@@ -1335,77 +1353,130 @@ for (const [label, put] of [["none", () => {}], ["0.05", (x) => x.filterByMissin
 }
 ```
 
-The list of the tests below calls it **the list of 125**: the 125
-individuals of `panel.nei` whose missing rate over the 1,152 variants the
-missing data filter at 0.05 keeps is at most 0.03, in the order of the
-file, `s000`, `s003`, `s004` and on, which the test makes from the
-result of its own `individualChecks` run, as core would. Each test at
-`run` or `write` of a runner made by `createRunner`, after the open of
-`panel.nei`:
+The numbers of the order of 28 September 2026, the list of the
+individuals kept before the filters of the variants and the statistics
+of each individual with no filter, were given by `js-v0.1.0-dev.3` in
+node on 28 September 2026, in a folder of their own with the release
+installed, by `orderA.mjs`, run as `numbers.mjs` is, with `FIXTURES`
+naming `e2e/fixtures`; `js-v0.1.0-dev.2` gave the same numbers but the
+sizes of the files written:
 
-- **The statistics of each individual**, at 0.05: 200 individuals, the
-  first three with `missingGtRate` 0.026041666666666668,
-  0.036458333333333336 and 0.03211805555555555 and `obsHetRate`
-  0.3672014260249554, 0.3441441441441441 and 0.37309417040358744, no NaN,
-  and `passStats` `{ numVars: 1152, filtering: { missing_data: {
-  varsProcessed: 1200, varsKept: 1152 } } }`. The same 200 names and
-  statistics are those of `e2e/fixtures/panel_individual_stats.json`,
-  compared exactly, with a NaN held there as `null`: the tests of core
-  read popnei's statistics from that file, since they do not call popnei,
-  and this test fails when the release of popnei gives others
-  (`docs/architecture.md`, section 4, "What would show these choices
-  wrong"). A VCF written in the test, two individuals and two variants,
-  the second individual missing at both, gives `missingGtRate` `[0, 1]`
-  and `obsHetRate` `[0.5, NaN]`.
-- **The diversity with the list of 125** after the filter at 0.05: the
-  populations p0, p2 and p1 with 32, 54 and 39 individuals, He
-  0.35235226528316066, 0.34398672129705354 and 0.34990422931551174, Ho
-  0.3565861820201193, 0.3519488909232355 and 0.35589376321324523, the
-  polymorphic share 0.9088541666666666, 0.9019097222222222 and
-  0.9192708333333334, and `passStats` 1,152 of 1,200, as without the
-  list.
-- **The diversity with the list of 119**, the individuals of the list of
-  125 whose observed heterozygosity is also at most 0.38, the two
-  thresholds of the flow of the Variants step: p0, p2 and p1 with 32, 50
-  and 37 individuals, and the numbers of the table of
-  `docs/specs/analyses/diversity.md`, "How it is verified", He
-  0.35235226528316066, 0.34326346030608246 and 0.34948537601203733, as
-  literals; and the file written with that list, 170,042 bytes
-  (`docs/specs/analyses/writeVariants.md`). Seen in node on 26 September
-  2026 with the release.
+```js
+import { readFileSync } from "node:fs";
+import { init, openVars, calcPerIndividualStats, calcPerVarDistribs, writeVars } from "popnei";
+await init();
+const bytes = () => new Uint8Array(readFileSync(`${process.env.FIXTURES}/panel.nei`));
+const pops = {};
+for (const line of readFileSync(`${process.env.FIXTURES}/panel_pops.txt`, "utf8").trim().split("\n").slice(1)) {
+  const [ind, pop] = line.split("\t"); (pops[pop] ??= []).push(ind);
+}
+let v = openVars(bytes());
+const s = calcPerIndividualStats(v); v.free();
+const all = [...s.individuals], miss = [...s.missingGtRate], het = [...s.obsHetRate];
+console.log(JSON.stringify(s.passStats), miss.slice(0, 3), het.slice(0, 3));
+const at = (n) => all.indexOf(n);
+const list116 = all.filter((_, i) => miss[i] <= 0.03);
+const list42 = list116.filter((n) => het[at(n)] <= 0.35);
+const list111 = list116.filter((n) => het[at(n)] <= 0.38);
+console.log(list116.length, list42.length, list111.length);
+const popsOf = (list) => Object.fromEntries(Object.entries(pops).map(([p, is]) => [p, is.filter((i) => list.includes(i))]));
+for (const [name, list] of [["116", list116], ["111", list111]]) {
+  const three = (x) => { x.filterIndividuals(list); x.filterByMissingData(0.05); x.filterByObsHet(0.9); x.filterByMaf(0.95); };
+  v = openVars(bytes()); three(v);
+  const b = v.iterBlocks({ fields: [] }); for (const _ of b); console.log("counts", name, JSON.stringify(b.passStats)); v.free();
+  v = openVars(bytes()); v.filterIndividuals(list); v.filterByMissingData(0.05);
+  const p = popsOf(list);
+  const d = calcPerVarDistribs(v, { pops: p, stats: ["obs_het", "unbiased_exp_het", "poly_vars_ratio"] }); v.free();
+  console.log("diversity", name, d.pops, Object.values(p).map((is) => is.length), [...d.unbiasedExpHet.mean],
+    [...d.obsHet.mean], [...d.polyVarsRatio.polyRatio], JSON.stringify(d.passStats));
+  v = openVars(bytes()); v.filterIndividuals(list); v.filterByMissingData(0.05);
+  const w = writeVars(v); v.free();
+  const back = openVars(w.bytes); console.log("write", name, w.bytes.length, JSON.stringify(w.passStats), back.individuals.length); back.free();
+  v = openVars(bytes()); v.filterIndividuals(list);
+  const h = calcPerVarDistribs(v, { stats: ["maf", "obs_het", "unbiased_exp_het"], minNumIndividuals: 0 }); v.free();
+  console.log("histograms", name, h.maf.mean[0], h.obsHet.mean[0], h.unbiasedExpHet.mean[0], [...h.maf.histCounts].reduce((a, c) => a + c));
+}
+```
+
+The list of the tests below calls them **the list of 116** and **the
+list of 111**: the 116 individuals of `panel.nei` whose missing rate
+over the 1,200 variants of the file is at most 0.03, in the order of the
+file, `s000`, `s003`, `s004` and on, and the 111 of them whose observed
+heterozygosity is also at most 0.38, the two thresholds of the flow of
+the Variants step, which leaves out s023, s042, s086, s168 and s183.
+Each test makes them from the result of its own `individualChecks` run,
+as core would. Each test at `run` or `write` of a runner made by
+`createRunner`, after the open of `panel.nei`:
+
+- **The statistics of each individual**, with no filter: 200
+  individuals, the first three with `missingGtRate` 0.028333333333333332,
+  0.03666666666666667 and 0.03333333333333333 and `obsHetRate`
+  0.3653516295025729, 0.34342560553633217 and 0.3724137931034483, no
+  NaN, and `passStats` `{ numVars: 1200, filtering: {} }`. The same 200
+  names and statistics are those of
+  `e2e/fixtures/panel_individual_stats.json`, compared exactly, with a
+  NaN held there as `null`: the tests of core read popnei's statistics
+  from that file, since they do not call popnei, and this test fails
+  when the release of popnei gives others (`docs/architecture.md`,
+  section 4, "What would show these choices wrong"). The fixture, which
+  held the statistics at 0.05 until 28 September 2026, is written again
+  by `e2e/fixtures/make_fixtures.mjs` with no filter. A VCF written in
+  the test, two individuals and two variants, the second individual
+  missing at both, gives `missingGtRate` `[0, 1]` and `obsHetRate`
+  `[0.5, NaN]`.
+- **The diversity with the list of 116** before the filter at 0.05: the
+  populations p0, p2 and p1 with 29, 51 and 36 individuals, He
+  0.3533112768773785, 0.343162019844528 and 0.35122154846050563, Ho
+  0.35890535785555633, 0.3500736606408556 and 0.35645096138403165, the
+  polymorphic share 0.9310970081595649, 0.8975521305530372 and
+  0.9084315503173164, and `passStats` 1,103 of 1,200, where the filter
+  keeps 1,152 with every individual.
+- **The diversity with the list of 111** before the filter at 0.05: p0,
+  p2 and p1 with 29, 48 and 34 individuals, and the numbers of the table
+  of `docs/specs/analyses/diversity.md`, "How it is verified", He
+  0.3536745729996746, 0.34293262196030005 and 0.3508361148330853, as
+  literals, and `passStats` 1,117 of 1,200; and the file written with
+  that list, 156,802 bytes with `js-v0.1.0-dev.2`
+  (`docs/specs/analyses/writeVariants.md`).
 - **The steps with the list**: after that diversity, a run with the same
   filter and no list opens the file again, as does a run with the same
   list of other order; a run with the same filter and the same list does
   not. The test counts the reads of the source as the test of an open
   again that popnei refuses does.
-- **The histograms of the variants**, with no filter, `minNumIndividuals`
-  0, 40 bins and the range 0 to 1, popnei's defaults: `binEdges` of 41
-  numbers from 0 to 1, over a buffer of its own; the means
-  0.7163445463101891 of the MAF, 0.35429523451520484 of Ho and
-  0.3754712450806149 of He; 40 counts in each, which add up to 1,200, the
-  counts of the MAF 0 in its first 20 bins, and every count as the
-  literal arrays `numbers3.mjs` gave.
+- **The histograms of the variants**, with no filter and no list,
+  `minNumIndividuals` 0, 40 bins and the range 0 to 1, popnei's
+  defaults: `binEdges` of 41 numbers from 0 to 1, over a buffer of its
+  own; the means 0.7163445463101891 of the MAF, 0.35429523451520484 of Ho
+  and 0.3754712450806149 of He; 40 counts in each, which add up to 1,200,
+  the counts of the MAF 0 in its first 20 bins, and every count as the
+  literal arrays `numbers3.mjs` gave. With the list of 111 and no filter
+  of the variants, the means 0.7173150249650765, 0.3528596566999348 and
+  0.3749397114515978, and counts that add up to 1,200 in each.
 - **The counts of the filters**: with the missing data filter at 0.05,
-  the heterozygosity filter at 0.9 and the MAF filter at 0.95,
-  `passStats` is `numVars` 1,128 and `filtering` `missing_data` 1,200 to
-  1,152, `obs_het` 1,152 to 1,152 and `maf` 1,152 to 1,128, its fields in
-  that order; a diversity with the same filters and the list of 125
-  gives the same `passStats`; with the missing data filter at 0.05 and a
-  MAF filter at 0, `numVars` 0 and the counts 1,200 to 1,152 and 1,152
-  to 0, a result and not a refusal.
+  the heterozygosity filter at 0.9 and the MAF filter at 0.95 and no
+  list, `passStats` is `numVars` 1,128 and `filtering` `missing_data`
+  1,200 to 1,152, `obs_het` 1,152 to 1,152 and `maf` 1,152 to 1,128, its
+  fields in that order; with the list of 111 before the same filters,
+  `numVars` 1,096 and `missing_data` 1,200 to 1,117, `obs_het` 1,117 to
+  1,117 and `maf` 1,117 to 1,096, and a diversity with the same filters
+  and the same list gives the same `passStats`; with the missing data
+  filter at 0.05 and a MAF filter at 0, `numVars` 0 and the counts 1,200
+  to 1,152 and 1,152 to 0, a result and not a refusal.
 - **The written file**: with no filter, a `Blob` of 261,490 bytes,
-  `numBytes` 261,490, whose bytes open again with `openVars` with 200 individuals; at 0.05,
-  250,994 bytes and `passStats` 1,152 of 1,200; at 0.05 with the list of
-  125, 176,098 bytes that open again with those 125 individuals in their
-  order, and with the list of 119, 170,042 bytes; at 0.05 with a MAF filter at 0, 3,594 bytes and
-  `passStats.numVars` 0. The progress of each is the two calls of
-  the diversity, and a `told` that throws makes `write` throw that
-  value, as for `run`. These sizes are `js-v0.1.0-dev.2`'s; from the
-  commit of stage 4 that names `js-v0.1.0-dev.3` in `package.json` they
-  are 261,570, 251,074, 176,122, 170,122 and 3,682 bytes, with the same
+  `numBytes` 261,490, whose bytes open again with `openVars` with 200
+  individuals; at 0.05, 250,994 bytes and `passStats` 1,152 of 1,200;
+  with the list of 116 before the filter at 0.05, 160,162 bytes and
+  `passStats` 1,103 of 1,200, that open again with those 116 individuals
+  in their order, and with the list of 111, 156,802 bytes and 1,117 of
+  1,200; at 0.05 with a MAF filter at 0, 3,594 bytes and
+  `passStats.numVars` 0. The progress of each is the two calls of the
+  diversity, and a `told` that throws makes `write` throw that value, as
+  for `run`. These sizes are `js-v0.1.0-dev.2`'s; from the commit of
+  stage 4 that names `js-v0.1.0-dev.3` in `package.json` they are
+  261,570, 251,074, 160,186, 156,818 and 3,682 bytes, with the same
   counts and the same individuals read back (node, 28 September 2026, by
-  `numbers3.mjs` above run with each release, whose other numbers are the
-  same with both).
+  `numbers3.mjs` and `orderA.mjs` above run with each release, whose
+  other numbers are the same with both).
 
 The numbers of the PCA were given by the same release on 27 September
 2026, and the same by `js-v0.1.0-dev.3` on 28 September 2026, which gave

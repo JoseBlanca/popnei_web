@@ -48,7 +48,14 @@ LD filter of the Variants step starts with no distance: while it has
 none, the store locks the diversity with the reason of `variantFilterNeeds` of
 `docs/specs/core/project.md`, and the job takes its filters from
 `jobFilters`. This changes the code of stage 3, and the plan of stage 4
-carries the change.
+carries the change. Revised again that day for the owner's decision
+that the filters of individuals act first (`docs/architecture.md`,
+section 2): the runner puts the list of the individuals kept before the
+filters of the variants, which count over those individuals; the key
+version is 2; a Run waits for the statistics of each individual once
+per load, since they no longer read the filters of the variants; and
+the numbers with the thresholds of the flow are recomputed. Not yet
+reviewed or approved; it changes the code of stage 3 too.
 The code of stage 2 is in
 `src/core/analyses/diversity.ts`. This spec gives the first analysis of the population genetics
 application, in its form for the walking skeleton: the module
@@ -293,9 +300,15 @@ when the table they give is the same (`docs/specs/core/keys.md`, "The
 cases"); the options of the other analyses; the reference of an opened
 project file; anything of the screen, the sort of the table, a colour.
 
-The key version is 1. It is raised when what the result means changes
+The key version is 2. It is raised when what the result means changes
 for the same inputs: another popnei function, another statistic asked,
-a new field in the result.
+a new field in the result. It was raised to 2 on 28 September 2026,
+when the filters of individuals came before those of the variants: a
+project with a filter of individuals gives the same key and another
+result, since the filters of the variants now count over the
+individuals kept, and a project file saved by stage 3 would otherwise
+compare its check numbers with the new ones as if its variants file
+had changed.
 
 What changes the key, which the test of the key checks row by row
 (`.claude/skills/coding/SKILL.md`, "Keys"):
@@ -443,11 +456,11 @@ job that reads the filters of individuals carry it (`docs/architecture.md`,
 section 4).
 
 What the runner does with it, as
-`docs/specs/worker/runner.md`: it puts the filters of the variants on the
-open `Variants` in their order, then `filterIndividuals(individuals)`
-when the list is not `null`, after them, so that the filters of the
-variants count over every individual of the file (`docs/architecture.md`,
-section 2); it calls
+`docs/specs/worker/runner.md`: it puts `filterIndividuals(individuals)`
+on the open `Variants` when the list is not `null`, and then the filters
+of the variants in their order, after it, so that the filters of the
+variants count over the individuals kept, as the owner decided on 28
+September 2026 (`docs/architecture.md`, section 2); it calls
 `calcPerVarDistribs(variants, { pops: Object.fromEntries(pops), stats:
 ["obs_het", "unbiased_exp_het", "poly_vars_ratio"], minNumIndividuals,
 polyThreshold })`, which asks popnei for the three statistics shown and
@@ -688,7 +701,7 @@ import them from there.
 
 ```ts
 export const diversity: AnalysisDef<Job, JobResult>;
-// id "diversity"; app ["popgen"]; keyVersion 1;
+// id "diversity"; app ["popgen"]; keyVersion 2;
 // filtersRead { variants: true, individuals: true };
 // defaults DIVERSITY_DEFAULTS
 
@@ -967,24 +980,30 @@ Every population has a value at every variant kept, 1,152 and 1,200, so
 neither set raises a warning. The filter at 1 keeps every variant, and
 gives the numbers of no filter under another key.
 
-With the filters of individuals of stage 3, over the missing data filter
-at 0.05: the thresholds of at most 0.03 of missing genotypes and at most
-0.38 of observed heterozygosity, on the statistics of
-`docs/specs/analyses/individualChecks.md`, keep 125 individuals by the
-first and 119 by both, the second removing s023, s042, s086, s168, s181
-and s183; given to `filterIndividuals` after the filter of the variants,
-in the order of the file, popnei gave (node, 26 September 2026,
-`js-v0.1.0-dev.2`):
+With the filters of individuals, before the missing data filter at 0.05,
+as the owner decided on 28 September 2026: the thresholds of at most
+0.03 of missing genotypes and at most 0.38 of observed heterozygosity,
+on the statistics over every variant of
+`docs/specs/analyses/individualChecks.md`, keep 116 individuals by the
+first and 111 by both, the second removing s023, s042, s086, s168 and
+s183; given to `filterIndividuals` before the filter of the variants,
+in the order of the file, popnei gave (node, 28 September 2026,
+`js-v0.1.0-dev.3`, and the same with `js-v0.1.0-dev.2`, by `orderA.mjs`
+of `docs/specs/worker/runner.md`, "How it is verified"):
 
 | population | individuals | expected heterozygosity | observed heterozygosity | polymorphic |
 |---|---|---|---|---|
-| p0 | 32 | 0.35235226528316066 | 0.3565861820201193 | 0.9088541666666666 |
-| p2 | 50 | 0.34326346030608246 | 0.34913198555512975 | 0.9053819444444444 |
-| p1 | 37 | 0.34948537601203733 | 0.3542306276815314 | 0.9131944444444444 |
+| p0 | 29 | 0.3536745729996746 | 0.35866753886603864 | 0.9310653536257834 |
+| p2 | 48 | 0.34293262196030005 | 0.3480322658477853 | 0.9015219337511191 |
+| p1 | 34 | 0.3508361148330853 | 0.35471161450059036 | 0.9015219337511191 |
 
-over 1,152 variants, at each of which every population has a value; the
-counts of the pass are those of the filter of the variants alone, 1,152
-of 1,200, as without the filter of individuals.
+over 1,117 variants, at each of which every population has a value; the
+counts of the pass are those of the filter of the variants over the 111
+individuals, 1,117 of 1,200, where it keeps 1,152 over every
+individual. Until that day the list came after the filter, over the
+statistics of the 1,152 variants it kept, and the same thresholds kept
+125 and 119 individuals, p0, p2 and p1 with 32, 50 and 37, over 1,152
+variants.
 
 With the one population of stage 4, the 200 individuals of `panel.nei`
 as "All individuals", popnei gave (node 26.8.2, 27 September 2026,
@@ -1025,9 +1044,9 @@ state it reaches
 The flow of stage 3 adds, with the filter at 0.05: the two thresholds on
 the individuals set in the Variants step; a Run of the diversity, which
 calculates the statistics of each individual first and then the table,
-p0 with 32 individuals, 0.3524, 0.3566, 0.9089; and the test of the
+p0 with 29 individuals, 0.3537, 0.3587, 0.9311; and the test of the
 runner asserts the table above, from a job whose `individuals` are the
-119 kept.
+111 kept.
 
 ## The panel
 
@@ -1224,7 +1243,7 @@ error state, by what the store gives:
 
 | the failure | the text |
 |---|---|
-| the statistics of each individual that a Run waited for were refused by popnei, or failed, which the store gives as the failure of the statistics, `ofStatistics` (`docs/specs/core/store.md`, "The state of an analysis") | "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the diversity was not run. ", then the words the part of the statistics gives that failure, `refusalText` of `docs/specs/analyses/individualChecks.md` for a refusal of popnei: "… The filters kept none of the variants of panel.nei, so there is no variant to count each individual's genotypes over. Loosen the filters of the variants in the Variants step." The rows below are never given the message of the statistics, which would name the diversity for a calculation that was not its own |
+| the statistics of each individual that a Run waited for were refused by popnei, or failed, which the store gives as the failure of the statistics, `ofStatistics` (`docs/specs/core/store.md`, "The state of an analysis") | "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the diversity was not run. ", then the words the part of the statistics gives that failure, `refusalText` of `docs/specs/analyses/individualChecks.md` for a refusal of popnei: "… popnei could not read panel.vcf.gz: ‹its message›. Correct the file, or fetch it again, and load it in the Variants step."; since 28 September 2026 their pass has no filter, so filters that keep no variant are no longer among their failures. The rows below are never given the message of the statistics, which would name the diversity for a calculation that was not its own |
 | popnei refused a pass over a variants file that holds no variant: its message starts with "the pass gave no variant and its source holds none", and the file is a `.nei` file or a VCF read with every variant | "empty.vcf has no variants, so there is no variant to calculate the diversity over. Load another variants file in the Variants step." |
 | the same refusal, of a VCF read with only the variants that passed its filters, `onlyPassed` | "failed.vcf has no variant with PASS or . in its FILTER column, and it was read with only those, so there is no variant to calculate the diversity over. Untick "Only the variants with PASS or . in the FILTER column" in the Variants step and read the file again." |
 | popnei refused an empty pass: its message starts with "the pass gave no variant:", with the colon, which the refusal of a source that holds none does not have at that place | "The filters kept none of the variants of panel.nei, so there is no variant to calculate the diversity over. Loosen the filters in the Variants step." |
@@ -1499,7 +1518,8 @@ What stage 3 asks, of specs revised or written beside this revision:
 
 - `docs/specs/worker/protocol.md`, `messages.md` and `runner.md`: the
   job with `individuals` in place of `individualFilters`, put on the
-  `Variants` with `filterIndividuals` after the filters of the variants;
+  `Variants` with `filterIndividuals` before the filters of the variants,
+  since 28 September 2026;
   the result with `passStats` in place of `numVars` and `numVarsRead`;
   the runner's test asserts the table with the thresholds, above.
 - `docs/specs/core/store.md`: `c.individuals` of the bound client; the

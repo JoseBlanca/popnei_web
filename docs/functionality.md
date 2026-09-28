@@ -93,7 +93,7 @@ reason given in section 5: how far linkage disequilibrium extends
 depends on the genome of the species. Until the user types one, nothing
 that reads the filters runs, with the reason said beside the field and
 beside each Run button; the histograms of the variants, which read no
-filter, still do. The option not taken, a start at 10,000 base pairs,
+filter of the variants, still do. The option not taken, a start at 10,000 base pairs,
 was the application's from 26 September 2026 until then. A filter
 turned off keeps what the user typed, and turned on again has it back,
 so that a distance once typed is not asked for again, as the owner
@@ -111,6 +111,26 @@ For each individual, its proportion of missing genotypes and its observed
 heterozygosity are shown, as a table and as histograms, before the
 thresholds are chosen. A high heterozygosity in a selfing species is
 itself a finding.
+
+### The order of the filters
+
+The filters of individuals act first, and the filters of the variants
+count over the individuals they keep, as the owner decided on 28
+September 2026, "All analyses should calculate the filters using the
+individuals kept", as plink 1.9 applies `--mind` before `--geno`. So the
+missing rate, the frequencies and the LD of a variant, which its filters
+keep it by, are those of the individuals the analyses read; the
+histograms of the variants are drawn over those individuals too, so that
+a threshold read on a histogram keeps what the histogram shows; and the
+Variants step shows the filters of the individuals before those of the
+variants. Each individual's proportion of missing genotypes and observed
+heterozygosity are counted over every variant of the file, before any
+filter of the variants, one calculation for each file loaded: an
+individual's missing genotypes include those at the bad variants the
+missing data filter drops, which is the cost of this order. Among the
+filters of the variants the order is fixed: the genomic regions, missing
+data, observed heterozygosity, MAF, and the LD pruning last, since it
+keeps a variant according to those kept before it.
 
 ## 4. The files of the individuals
 
