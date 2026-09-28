@@ -291,3 +291,90 @@ dev`, 200 passed.
 - A reviewer that reached a preview server started by another found its
   own results on someone else's build; reviewers now each get a
   directory and a port of their own.
+
+## Stop A: the Variants step, for the owner
+
+### How to try it
+
+In a terminal, in `.claude/worktrees/individuals-pca`: `npm run dev`,
+then open the address it prints, followed by `popgen.html`. Load
+`e2e/fixtures/panel.nei` of the worktree. In Firefox and Safari by hand;
+Playwright saw only Chromium and WebKit.
+
+What to judge: the section of the individuals now before that of the
+variants; the LD pruning turned on with an empty distance, its reason
+and the locked Count and Write; a filter turned off and on again with
+its values and its count back; and the choices below.
+
+### The screenshots, in `screens/` of the worktree, light and dark
+
+- `popgen-variants-order-ready-*`: the step before any calculation.
+- `popgen-variants-order-thresholds-*`: the thresholds 0.03 and 0.38,
+  116 and then 111 individuals kept.
+- `popgen-variants-order-list-locked-*`: a list that names someone not
+  in the file locks the histograms, the Count and the Write.
+- `popgen-variants-ld-no-distance-*`, `popgen-variants-ld-after-count-*`:
+  the LD pruning with no distance.
+- `popgen-variants-ld-counted-*`: 50000 typed, 1,187 of 1,200 kept.
+- `popgen-variants-count-back-*`: a filter off and on, its count back.
+- `popgen-variants-histograms-kept-*`, `-count-waits-*`, `-kept-none-*`.
+
+### Decisions, each with the recommendation
+
+1. The LD pruning's reason says "turn off the LD filter", while its
+   switch reads "Prune the variants by linkage disequilibrium (LD)" and
+   Undo says "the LD pruning". Recommended: say "the LD pruning" on the
+   Variants step.
+2. That reason, 45 words, stands three times: under the field, beside
+   the Count and beside the Write. Recommended: whole under the field, a
+   short line beside the buttons, "Locked until the distance of the LD
+   pruning is typed, above."
+3. An Undo that brings the empty distance back tells a screen reader
+   only "Undone: the LD pruning changed". Recommended: add the reason
+   after it.
+4. Number fields. An empty field ignores the arrow keys, Page Up and
+   Down, Home and End, a cleared threshold too; recommended: keep. In a
+   field that holds a number, End and Home jump to its limit, as React
+   Aria does, so End in the distance makes it 9,007,199,254,740,991 base
+   pairs; recommended: End and Home move the caret only.
+5. The line of each count keeps its place, empty before a Count, so that
+   a click on a switch is not lost when a field above it commits. It
+   shows as a small gap under each filter that is on. Judge on the
+   screen.
+6. The status region says "Histograms of the variants was not run.",
+   as `shell.md` gives the sentence. Recommended: "were" for a plural
+   title.
+7. A project file saved by stage 3: entry A of the open-points file
+   says the check numbers of the three checks are compared "only where
+   their result is stage 3's", which the file cannot tell. The code
+   compares them always, and a difference is said to come from the new
+   version of the application. Recommended: correct that sentence of
+   entry A and of the three specs.
+8. The warning of the variants with no called genotype says "among the
+   individuals kept" when the project has a filter of individuals; the
+   spec says when the filter removes someone. They differ only for a
+   filter that removes nobody, where the sentence is still true.
+   Recommended: the spec takes the code's rule.
+9. A refusal of popnei that names an option it does not know can only
+   be a defect of the application, and the user would read "Change the
+   settings". No call sends one. Recommended: show it as a defect.
+
+Known and not fixed: a number refused under a field above a switch adds
+its line when the field loses the focus, and moves the switch from
+under the pointer, so that click is lost; it was so in stage 3.
+Recommended: leave it unless you meet it.
+
+### Changes made to the specs during the work, for you to accept
+
+- `steps/variants.md`, "Accessibility": where the focus goes when the
+  Count locks and unlocks, and when its words leave; hidden words before
+  the reason, "Count the variants each filter keeps is unavailable: ".
+- `variantChecks.md` and `filterCounts.md`: "The statistics of each
+  individual, which the thresholds of the individuals need, could not be
+  calculated, so the histograms of the variants were not calculated."
+- `project.md`, "The validation": the words for two filters of one kind
+  both off, and for the lists of filters off out of order.
+- `runner.md`, `variantChecks.md`, `store.md`: sentences of the old
+  order corrected to the new, with no rule changed.
+- `scatter.md`: the legend of an exported plot takes the left edge of
+  the frame.
