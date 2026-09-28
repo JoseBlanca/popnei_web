@@ -378,3 +378,75 @@ Recommended: leave it unless you meet it.
   order corrected to the new, with no rule changed.
 - `scatter.md`: the legend of an exported plot takes the left edge of
   the frame.
+
+## 4. The project of stage 4, in core
+
+A project with no metadata file, or whose user chose one population,
+runs on "All individuals"; the types the user sets on the columns are
+kept, wait, come back and can be forgotten; a project saved while its
+metadata file was not read asks for it again; the project file holds
+all of it. Commits dd53623, 50b6cbd, b6c5e8b and e438862.
+
+### The deliverables, on e438862
+
+1. `npx vitest run src/core -t "IP4 D1"`: "Tests 33 passed" (at least
+   16); `grep -n "export function populationsToRun"
+   src/core/analyses/diversity.ts` prints nothing.
+2. `npx vitest run src/core src/worker/individuals -t "IP4 D2"`: "Tests
+   47 passed" (at least 22). The lint rule, tried with `eslint --stdin`
+   as a core file: `columnTypes.ts` accepted, `csv.ts` refused; after
+   the review, `columnTypes.test.ts` refused too.
+3. `npx vitest run src/core -t "IP4 D3"`: "Tests 14 passed" (at least
+   6).
+4. `npx vitest run src/core/projectFile.test.ts -t "IP4 D4"`: "Tests 6
+   passed" (at least 4); the property of stage 4 passes and counts that
+   each new field is drawn. The three fixtures, written by hand from the
+   spec, matched the writer byte for byte on the first run.
+5. `npm test` "Tests 2575 passed (2575)"; the browser check "686
+   passed". A project with no metadata file runs the diversity: the row
+   "All individuals" reads 200, 0.3755, 0.3543, 0.9792 in Chromium and
+   WebKit, as `diversity.md` gives.
+
+### What was changed in the plan
+
+- Added to task 5.1: the lines of the diversity when it is ready on one
+  population, which no task named.
+- Added to task 6.3: `ldOrderText` with the PCA's LD filter.
+- Moved from task 4.2 to task 9.1: the words of a metadata file that is
+  not text, which tell the user to name it `.xlsx`.
+
+### The review
+
+`spec` with `stale`, `tests`, and `errors` with `api` and
+`architecture`. No stale result: the reviewer ran the real store
+through a type set, one population and a file not given. The tests
+reviewer broke the code 70 times; 66 failed a test, and two of the
+other four were gaps. Fixed, in 00e316f to 9ae123b:
+
+- A refusal of a binary type asked for the two values of a column that
+  had three; two refusals listed values the opening then refused.
+- The lint rule let core import files of the reader other than
+  `columnTypes.ts`.
+- No test got the numbers of the one population from popnei itself;
+  now the runner's test does, and popnei gives them exactly.
+- Tests of the real store for a result given back by a read, of a
+  binary type whose two values are the same, and of `columnAllows` kept
+  by decimal mark.
+
+After the fixes: `npm test` "Tests 2583 passed (2583)"; the browser
+check "698 passed (2.0m)".
+
+### For the owner, not urgent
+
+Specs that contradict each other, where the code follows one of them,
+each with the line that would settle it: `diversity.md`, "The key", says
+the populations of a new project are none, `project.md` says "all";
+`store.md` says the store keeps the key of each result removed, where
+it drops it once the result is back; `project.md`, "The validation", has
+an example refusal that its own rule no longer gives, and says a read
+pending is never accepted where its cases accept one; the example of
+`typesSet` in `projectFile.md` is laid out otherwise than its rule of
+writing. Recommended: each spec takes what the code does.
+
+Opening a project with a table of 10,000 rows and 50 columns took 127
+ms in node, all on the page; task 5.3 measures it in the browsers.
