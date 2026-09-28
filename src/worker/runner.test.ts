@@ -3,7 +3,8 @@
  * e2e/fixtures/ given as bytes (docs/specs/worker/runner.md, "How it is
  * verified"). The numbers are popnei's of the release js-v0.1.0-dev.2, as
  * the spec's table has them, compared exactly: the runner passes them on
- * with no arithmetic.
+ * with no arithmetic. js-v0.1.0-dev.3 gives the same numbers but the sizes
+ * of the files written, which are its own.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -1801,14 +1802,14 @@ const NO_VARIANT_KEPT: readonly VariantFilter[] = [
 ];
 
 describe("VS1 D4 the written file of the runner: the five files", () => {
-  test("with no filter, a Blob of 261,490 bytes, numBytes 261,490, that openVars opens again with the 200 individuals and 1,200 variants", async () => {
+  test("with no filter, a Blob of 261,570 bytes, numBytes 261,570, that openVars opens again with the 200 individuals and 1,200 variants", async () => {
     const { written, bytes } = await writtenOf(
       opened("panel.nei").write(writeJob([]), ignore),
     );
     expect(written.format).toBe("nei");
-    expect(written.file.size).toBe(261490);
-    expect(written.numBytes).toBe(261490);
-    expect(bytes.length).toBe(261490);
+    expect(written.file.size).toBe(261570);
+    expect(written.numBytes).toBe(261570);
+    expect(bytes.length).toBe(261570);
     expect(written.passStats).toEqual({ numVars: 1200, filtering: {} });
     const back = readBack(bytes);
     expect(back.individuals.length).toBe(200);
@@ -1816,49 +1817,49 @@ describe("VS1 D4 the written file of the runner: the five files", () => {
     expect(back.numVars).toBe(1200);
   });
 
-  test("at 0.05, 250,994 bytes and the counts 1,152 of 1,200, that open again with 200 individuals and 1,152 variants", async () => {
+  test("at 0.05, 251,074 bytes and the counts 1,152 of 1,200, that open again with 200 individuals and 1,152 variants", async () => {
     const { written, bytes } = await writtenOf(
       opened("panel.nei").write(writeJob([missingData(0.05)]), ignore),
     );
-    expect(written.file.size).toBe(250994);
-    expect(written.numBytes).toBe(250994);
+    expect(written.file.size).toBe(251074);
+    expect(written.numBytes).toBe(251074);
     expect(written.passStats).toEqual(COUNTS_AT_0_05);
     const back = readBack(bytes);
     expect(back.individuals.length).toBe(200);
     expect(back.numVars).toBe(1152);
   });
 
-  test("at 0.05 with the list of 125, 176,098 bytes that open again with those 125 individuals in their order", async () => {
+  test("at 0.05 with the list of 125, 176,122 bytes that open again with those 125 individuals in their order", async () => {
     const { of125 } = lists();
     expect(of125.length).toBe(125);
     const { written, bytes } = await writtenOf(
       opened("panel.nei").write(writeJob([missingData(0.05)], of125), ignore),
     );
-    expect(written.file.size).toBe(176098);
-    expect(written.numBytes).toBe(176098);
+    expect(written.file.size).toBe(176122);
+    expect(written.numBytes).toBe(176122);
     expect(written.passStats).toEqual(COUNTS_AT_0_05);
     const back = readBack(bytes);
     expect(back.individuals).toEqual(of125);
     expect(back.numVars).toBe(1152);
   });
 
-  test("at 0.05 with the list of 119, 170,042 bytes that open again with those 119 individuals", async () => {
+  test("at 0.05 with the list of 119, 170,122 bytes that open again with those 119 individuals", async () => {
     const { of119 } = lists();
     expect(of119.length).toBe(119);
     const { written, bytes } = await writtenOf(
       opened("panel.nei").write(writeJob([missingData(0.05)], of119), ignore),
     );
-    expect(written.file.size).toBe(170042);
-    expect(written.numBytes).toBe(170042);
+    expect(written.file.size).toBe(170122);
+    expect(written.numBytes).toBe(170122);
     expect(readBack(bytes).individuals).toEqual(of119);
   });
 
-  test("at 0.05 with a MAF filter at 0, a file of no variant, 3,594 bytes, written and not refused", async () => {
+  test("at 0.05 with a MAF filter at 0, a file of no variant, 3,682 bytes, written and not refused", async () => {
     const { written, bytes } = await writtenOf(
       opened("panel.nei").write(writeJob(NO_VARIANT_KEPT), ignore),
     );
-    expect(written.file.size).toBe(3594);
-    expect(written.numBytes).toBe(3594);
+    expect(written.file.size).toBe(3682);
+    expect(written.numBytes).toBe(3682);
     expect(written.passStats).toEqual({
       numVars: 0,
       filtering: {

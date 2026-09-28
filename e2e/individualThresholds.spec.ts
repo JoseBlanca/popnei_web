@@ -8,8 +8,9 @@
  * 2026 (docs/specs/core/individualsKept.md): with the missing data filter
  * of the variants at 0.05, a threshold of 0.03 on the missing rate keeps
  * 125 of the 200 individuals, and one of 0.38 on the heterozygosity 119 of
- * those 125; written, they give panel.filtered.nei of 170,042 bytes
- * (writeVariants.md). axe at each state reached.
+ * those 125; written, they give panel.filtered.nei of 170,122 bytes with
+ * js-v0.1.0-dev.3 (runner.md, "How it is verified", "The written file").
+ * axe at each state reached.
  */
 import { stat } from "node:fs/promises";
 import { join } from "node:path";
@@ -46,9 +47,10 @@ const MISSING_TITLE = "Proportion of missing genotypes of each individual";
 const OBS_HET_TITLE = "Observed heterozygosity of each individual";
 
 /** The size of panel.nei written with the missing data filter at 0.05
-    and the thresholds of the individuals at 0.03 and 0.38, which popnei's
-    writeVars gave in node (writeVariants.md). */
-const WRITTEN_119 = 170_042;
+    and the thresholds of the individuals at 0.03 and 0.38, which the
+    writeVars of popnei's js-v0.1.0-dev.3 gave in node (runner.md, "How it
+    is verified", "The written file"). */
+const WRITTEN_119 = 170_122;
 
 /** The modifier of the keyboard's Undo on this engine's platform. */
 const UNDO = process.platform === "darwin" ? "Meta+z" : "Control+z";
@@ -600,7 +602,7 @@ test("VS7 D1 the keyboard goes from the button of the statistics through each th
   await expect(field(page, MISSING_LABEL)).toHaveCount(0);
 });
 
-test("VS7 D3 the write of the individuals kept: with the thresholds at 0.03 and 0.38, Write and Save give panel.filtered.nei of 170,042 bytes", async ({
+test("VS7 D3 the write of the individuals kept: with the thresholds at 0.03 and 0.38, Write and Save give panel.filtered.nei of 170,122 bytes", async ({
   page,
 }, testInfo) => {
   await thresholdsSet(page);

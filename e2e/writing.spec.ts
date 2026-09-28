@@ -26,8 +26,9 @@ const FIXTURES = join(import.meta.dirname, "fixtures");
 const STOP_VCF_VARIANTS = 200_000;
 
 /** The size of panel.nei written with the missing data filter at 0.05,
-    which popnei's writeVars gave in node (writeVariants.md). */
-const WRITTEN_AT_005 = 250_994;
+    which the writeVars of popnei's js-v0.1.0-dev.3 gave in node
+    (writeVariants.md, runner.md). */
+const WRITTEN_AT_005 = 251_074;
 
 /** What the step says in place of the size of panel.nei, whose variants
     no pass has counted. */
@@ -171,7 +172,7 @@ async function releaseWritten(page: Page): Promise<void> {
   });
 }
 
-test("VS5 D3 panel.nei at 0.05 written and saved: the download panel.filtered.nei of 250,994 bytes, and the step then says it was handed to the browser, with no second Save, and axe", async ({
+test("VS5 D3 panel.nei at 0.05 written and saved: the download panel.filtered.nei of 251,074 bytes, and the step then says it was handed to the browser, with no second Save, and axe", async ({
   page,
   makeAxeBuilder,
 }, testInfo) => {
