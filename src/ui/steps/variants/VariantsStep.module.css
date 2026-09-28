@@ -114,9 +114,20 @@
 }
 
 /* What a filter of the variants kept, under its fields. */
+/* The line of the count keeps its height while it is empty (Filter.tsx):
+   one line, and two on a narrow screen, where "Kept 1,152 of the 1,200
+   variants it was given." takes two at 320 px in Chromium and WebKit.
+   The unit lh is newer than Firefox 115. */
 .count {
   margin: 0;
+  min-block-size: calc(1em * var(--leading-body));
   font-variant-numeric: tabular-nums;
+}
+
+@media (width < 40em) {
+  .count {
+    min-block-size: calc(2em * var(--leading-body));
+  }
 }
 
 /* The two lists of individuals, side by side when there is room. */

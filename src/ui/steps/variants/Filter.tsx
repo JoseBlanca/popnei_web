@@ -88,11 +88,16 @@ export function Filter({
         </p>
       )}
       {children(described)}
-      {shown && (
-        // The line is there whatever its count gives, so that the fields
-        // it describes name only what is on the page.
-        <p id={countId} className={classOf(styles, "count")}>
-          <ErrorBoundary heading={null}>{count}</ErrorBoundary>
+      {isOn && (
+        // The line of the count stands while the filter is on, empty when
+        // there is no count, so that the counts taken off by a change,
+        // the distance committed as the focus leaves it for a switch
+        // below, move nothing under the pointer: the switch pressed stays
+        // where it was, and the click reaches it. With a count, the line
+        // is there whatever its count gives, so that the fields it
+        // describes name only what is on the page.
+        <p {...(shown && { id: countId })} className={classOf(styles, "count")}>
+          {shown && <ErrorBoundary heading={null}>{count}</ErrorBoundary>}
         </p>
       )}
       {after}

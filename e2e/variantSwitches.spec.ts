@@ -449,6 +449,57 @@ test("IP3 a distance above 2^53 − 1 is refused with the number as it was typed
   await expect(status(page)).toHaveText(endsWith(line));
 });
 
+/** Pastes `text` into `input` where its selection is, as the browser's
+    paste event carries it. A script's paste inserts no text by itself:
+    what the field does is the page's. */
+async function paste(input: Locator, text: string): Promise<void> {
+  await input.evaluate((element, pasted) => {
+    const transfer = new DataTransfer();
+    transfer.setData("text/plain", pasted);
+    element.dispatchEvent(
+      new ClipboardEvent("paste", {
+        clipboardData: transfer,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+  }, text);
+}
+
+test("IP3 a paste at the caret that the field does not take leaves the next commit to be taken: 60000 pasted over 50000, then the Tab key", async ({
+  page,
+}) => {
+  await ldTurnedOn(page);
+  await commit(page, DISTANCE_LABEL, "50000");
+  await distance(page).focus();
+  await distance(page).press("End");
+  await paste(distance(page), "-");
+  await distance(page).selectText();
+  await paste(distance(page), "60000");
+  await distance(page).press("Tab");
+  await expect(distance(page)).toHaveValue("60000");
+  await expect(banner(page, "Undo")).toHaveAccessibleDescription(
+    "Undo: the LD pruning changed",
+  );
+});
+
+test("IP3 a distance above 2^53 − 1 pasted over the field is refused with the number as it was pasted", async ({
+  page,
+}) => {
+  await ldTurnedOn(page);
+  await commit(page, DISTANCE_LABEL, "50000");
+  await distance(page).focus();
+  await distance(page).selectText();
+  await paste(distance(page), "9007199254740993");
+  const line =
+    "9007199254740993 is more than 9007199254740991; the distance stays 50000.";
+  await expect(
+    page.getByRole("main").getByText(line, { exact: true }),
+  ).toBeVisible();
+  await expect(distance(page)).toHaveValue("50000");
+  await expect(status(page)).toHaveText(endsWith(line));
+});
+
 test("IP3 -5 pasted over the distance of 50000 gives one line, the character's, shown and announced", async ({
   page,
 }) => {
@@ -456,17 +507,7 @@ test("IP3 -5 pasted over the distance of 50000 gives one line, the character's, 
   await commit(page, DISTANCE_LABEL, "50000");
   await distance(page).focus();
   await distance(page).selectText();
-  await distance(page).evaluate((input) => {
-    const transfer = new DataTransfer();
-    transfer.setData("text/plain", "-5");
-    input.dispatchEvent(
-      new ClipboardEvent("paste", {
-        clipboardData: transfer,
-        bubbles: true,
-        cancelable: true,
-      }),
-    );
-  });
+  await paste(distance(page), "-5");
   const line =
     "‘-’ cannot be typed in the distance, which is a whole number of base pairs, as 10000; the distance stays 50000.";
   await expect(
@@ -481,22 +522,82 @@ test("IP3 -5 pasted over the distance of 50000 gives one line, the character's, 
   );
 });
 
-test("IP3 D3 with a distance typed and not committed after a Count, one click on the switch turns the LD pruning off", async ({
-  page,
-  makeAxeBuilder,
-}) => {
+/** After a Count, 60000 typed in the distance of 50000 and not
+    committed: the press on the switch takes the focus from the field,
+    which commits 60000 and takes the counts off the page. */
+async function typedAfterCount(page: Page): Promise<void> {
   await ldTurnedOn(page);
   await commit(page, DISTANCE_LABEL, "50000");
   await count(page);
   await expect(ldCount(page)).toHaveText(LD_KEPT);
-  // Typed, and not committed: the press takes the focus from the field,
-  // which commits 60000 and takes the counts above the switch away.
   await distance(page).fill("60000");
-  await flip(filters(page), LD_SWITCH);
+}
+
+/** Where the words of the LD switch are pressed: 3 px above their
+    bottom, so that a line taken off above them, which would move them up
+    by its height, leaves the pointer under them when it is let go. */
+async function nearTheBottom(
+  page: Page,
+): Promise<{ readonly x: number; readonly y: number }> {
+  const box = await filters(page)
+    .getByText(LD_SWITCH, { exact: true })
+    .boundingBox();
+  if (box === null) throw new Error("the words of the LD switch are not drawn");
+  return { x: 10, y: box.height - 3 };
+}
+
+/** The LD pruning turned off by the one press, with the distance kept. */
+async function expectTurnedOff(page: Page): Promise<void> {
   await expect(page.getByRole("switch", { name: LD_SWITCH })).not.toBeChecked();
   await expect(distance(page)).toHaveCount(0);
   await expect(banner(page, "Undo")).toHaveAccessibleDescription(
     "Undo: the LD pruning was turned off",
   );
-  await expectNoViolations(makeAxeBuilder);
-});
+}
+
+for (const [width, height] of [
+  [1280, 720],
+  [1280, 2000],
+  [320, 720],
+] as const) {
+  test.describe(`a window ${String(width)} by ${String(height)} px`, () => {
+    test.use({ viewport: { width, height } });
+
+    test(`IP3 D3 with a distance typed and not committed after a Count, one click of the mouse on the switch turns the LD pruning off, at ${String(width)} by ${String(height)} px`, async ({
+      page,
+      makeAxeBuilder,
+    }) => {
+      await typedAfterCount(page);
+      // The page as high as it goes, where it could not scroll up to
+      // follow a switch that moved.
+      if (height === 2000) {
+        await page.evaluate(() => {
+          window.scrollTo(0, 0);
+        });
+        expect(await page.evaluate(() => window.scrollY)).toBe(0);
+      }
+      await filters(page)
+        .getByText(LD_SWITCH, { exact: true })
+        .click({ position: await nearTheBottom(page) });
+      await expectTurnedOff(page);
+      await expectNoViolations(makeAxeBuilder);
+    });
+  });
+}
+
+// A phone as wide as 320 px, where each count takes two lines, as well.
+for (const width of [1280, 320]) {
+  test.describe(`a touch screen ${String(width)} px wide`, () => {
+    test.use({ hasTouch: true, viewport: { width, height: 720 } });
+
+    test(`IP3 D3 with a distance typed and not committed after a Count, one tap on the switch turns the LD pruning off, ${String(width)} px wide`, async ({
+      page,
+    }) => {
+      await typedAfterCount(page);
+      await filters(page)
+        .getByText(LD_SWITCH, { exact: true })
+        .tap({ position: await nearTheBottom(page) });
+      await expectTurnedOff(page);
+    });
+  });
+}
