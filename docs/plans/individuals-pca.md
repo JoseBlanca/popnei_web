@@ -791,7 +791,7 @@ reads in the stepper that the step is optional.
 
 **Tasks:**
 
-- [ ] 5.1 First, in a commit of its own, the section "How it is checked"
+- [x] 5.1 First, in a commit of its own, the section "How it is checked"
   of `steps/individuals.md` (above, "Where the specs are thin"). Then
   the shell of stage 4: the stepper's Optional, the summary line with
   one population and a file not loaded, and the announcements of the end
