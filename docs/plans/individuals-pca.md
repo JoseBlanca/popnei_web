@@ -505,7 +505,7 @@ keep 116 and 111 individuals, where they kept 125 and 119.
   since a key that missed a filter of individuals would show the
   histograms of other individuals as current; `individualsKept.test.ts`
   at 116, 42 and 111. Serves 2 and 5. Needs 2.1.
-- [ ] 2.3 The store, `apps.ts` and the project file of the new order:
+- [x] 2.3 The store, `apps.ts` and the project file of the new order:
   `createStore` refusing a statistics that reads a filter and accepting
   counts that read the filters of individuals, the Run of the counts
   and of the histograms that waits for the statistics (`store.md`, "The
