@@ -917,7 +917,7 @@ browsers is measured.
   cases of `needs`. Added on 28 September 2026 (found by task 4.1): `ldOrderText`
   of `src/core/analyses/words.ts` with the PCA's LD filter (`diversity.md`,
   "Its words"; `pca.md`, its row of the refusals).
-- [ ] 6.4 The key of the PCA, `keyInputs`, and its tests, in a commit of
+- [x] 6.4 The key of the PCA, `keyInputs`, and its tests, in a commit of
   its own (`pca.md`, "What goes into its key"): a key that missed the
   PCA's own filters, or put the colour or the view into it, would show a
   PCA of other variants as current, or calculate again for a change of
