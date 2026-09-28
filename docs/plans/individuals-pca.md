@@ -718,7 +718,7 @@ in its version 1.
   and the words after a worker that could not start (`project.md`, "The
   project of an opened project file" and Open 4). Serves 3 and 5. Needs
   4.2.
-- [ ] 4.4 The project file of stage 4: `onePopulation`, `typesSet` and
+- [x] 4.4 The project file of stage 4: `onePopulation`, `typesSet` and
   `notGiven` written and read in version 1, the fixtures of
   `projectFile.md`, "How it is verified", written by hand from the
   spec; `wholeProject` of `src/core/testSupport.ts` drawing the fields of

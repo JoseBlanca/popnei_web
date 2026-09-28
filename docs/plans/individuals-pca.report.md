@@ -240,3 +240,54 @@ dev` as well, 47 passed in Chromium.
   on it, and the hidden words before the reason.
 - `variantChecks.md` and `filterCounts.md` (3b9a459): the words of the
   statistics a Count or the histograms waited for, which failed.
+
+### The review
+
+Seven reviewers: `spec` with `stale`, `tests`, `errors` with `api`,
+`react`, `accessibility` with a drive of the keyboard, and `ux`. Spec
+and stale found nothing: undoing and redoing through two counts never
+showed a stale one. The fixes took three rounds, each looked at again by
+`react` and `accessibility`:
+
+- One click on the LD switch, with a distance typed and not committed,
+  only committed the distance: the counts above left and moved the
+  switch from under the pointer. The line of each count now keeps its
+  place while its filter is on and a variants file is read, empty before
+  a Count, so one click or tap turns the switch off at 1280 and 320
+  pixels wide (ab57834, 1ba21ef, 5e536db). A first fix that scrolled the
+  page failed on a touch screen and on a tall window.
+- Pastes into the distance: a valid number pasted after a refused
+  character was dropped with no word; a pasted number above 2^53 was
+  named rounded; "-5" pasted announced two contradictory lines (69a39dc,
+  c47077a, 2518875).
+- Under `npm run dev`, a Count moved the focus a second time on a later
+  Undo; a test under React's StrictMode now runs in `npm test`
+  (7cadc3a).
+- The Count's words and the warning of a file of no variant, taken off
+  by an Undo with the focus on them, left the focus at the top of the
+  page; tests of the order of the stepper's reasons; a number refused
+  named as typed; one type of the kinds of threshold (4c61cc3, 04a05af,
+  983654a).
+
+Not fixed, for the owner: a refused number's line, added under a field
+above a switch when the field loses the focus, still moves the switch
+from under the pointer, as it did in stage 3.
+
+After the fixes, on e438862: `npm test` "Tests 2575 passed (2575)"; the
+browser check "686 passed (3.1m)"; `-g "IP3 D3"` "24 passed"; `npm run
+screens` 268 passed (the fixer's run); the step's flows against `npm run
+dev`, 200 passed.
+
+### How the work of 2 and 3 went, for whoever revises a skill or a plan
+
+- The focus of one part, the Count, took five rounds of review, and
+  three of its defects appeared only under `npm run dev`, where React
+  runs each effect twice. The checks run against the built site, so
+  `testing.md` should ask for a test under `<StrictMode>` in jsdom for
+  any effect that moves the focus.
+- Each task of 2.1 to 2.3 had to change the layers of the next task to
+  keep its commit green; a plan that changes an order across layers is
+  better cut by what each commit keeps working than by layer.
+- A reviewer that reached a preview server started by another found its
+  own results on someone else's build; reviewers now each get a
+  directory and a port of their own.
