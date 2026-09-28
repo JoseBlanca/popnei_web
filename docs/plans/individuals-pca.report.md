@@ -185,3 +185,58 @@ for the owner, below.
 After the fixes, on 7310abe: `npm test` "Tests 2146 passed (2146)"; the
 browser check "640 passed (2.3m)"; `-g "IP2 D3"` "64 passed (28.8s)";
 `npm run screens` 258 passed (the writer's run).
+
+After this section was written, the fix of the focus of the Count had
+two more rounds, both from reviewers of `react` and `accessibility`
+run again, and both about focus alone:
+
+- Coming out of the locked state, by a Redo, the focus fell to the top
+  of the page, and the part that took the focus was read by a screen
+  reader as the button's words without saying it was unavailable. The
+  focus now goes to the reason alone, with hidden words before it,
+  "Count the variants each filter keeps is unavailable: ", and back to
+  the Count when it unlocks (2b1b034, 8b73a04, 8f62b9f, 4e13b2b).
+- An Undo after a Count sent the focus to the top of the page, since
+  stage 3; now the focus goes to what the step shows next.
+- Under `npm run dev`, where React runs each effect twice, the fix of
+  the focus moved it a second time: after the Count locked and the user
+  typed a threshold, Enter ran a Count the user had not asked for. The
+  built site never did this. It is fixed; its flows were run against
+  the development server by hand, and no check runs them there (below).
+
+## 3. The switches of the Variants step
+
+The LD filter of the Variants step has no default distance, and every
+switch keeps its values while off, in the commits 63f6016, 2e121ce,
+295e982 and 6778949.
+
+### The deliverables, on 6778949
+
+1. `npx vitest run src/core -t "IP3 D1"`: "Tests 39 passed" (at least
+   20 asked).
+2. `npx vitest run src/core/projectFile.test.ts -t "IP3 D2"`: "Tests 11
+   passed" (at least 3).
+3. The browser check with `-g "IP3 D3"`: "14 passed (11.7s)", 7 in each
+   engine (at least 12); `npx vitest run src/ui/shell -t "IP3 D3"`: 4
+   passed, the stepper and the summary line.
+4. `grep -rn LD_DIST_TURNED_ON src` prints nothing; `npx vitest run
+   src/ui/steps/variants -t "IP3 D4"`: 2 passed.
+5. The screenshots, light and dark: `popgen-variants-ld-no-distance-*`,
+   `popgen-variants-ld-counted-*`, `popgen-variants-filter-kept-off-*`
+   and `-kept-on-*`; the orchestrator looked at the first in light.
+6. Stop A: waiting for the owner.
+
+`npm test` "Tests 2203 passed (2203)"; the browser check "660 passed
+(2.1m)". The writer ran the flows of the switches against `npm run
+dev` as well, 47 passed in Chromium.
+
+### What was changed in the specs, for the owner to see at stop A
+
+- `project.md`, "The validation" (2e121ce): two filters of one kind
+  both turned off are refused with their own words, and a list of the
+  filters off out of its order; the spec did not say.
+- `steps/variants.md`, "Accessibility" (464dc7e, 2b1b034, 8f62b9f):
+  where the focus goes when the Count locks or unlocks with the focus
+  on it, and the hidden words before the reason.
+- `variantChecks.md` and `filterCounts.md` (3b9a459): the words of the
+  statistics a Count or the histograms waited for, which failed.
