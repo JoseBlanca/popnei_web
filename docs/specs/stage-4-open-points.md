@@ -58,7 +58,10 @@ individuals, which the owner asked of popnei on 27 September 2026 and
 which popnei's release `js-v0.1.0-dev.3` of 28 September 2026 has. **Pruning** is popnei's filter of linkage
 disequilibrium, which keeps a variant when its r² with every variant
 already kept within a window of base pairs is at most a threshold. The
-**calculation worker** is the thread of the tab that runs popnei; its
+**xlsx_rs** is a project of the owner's, in a repository of its own,
+that reads an xlsx for the application with **calamine**, a Rust library
+that reads the cells of Excel files (below, "The reader of xlsx in a
+project of its own"). The **calculation worker** is the thread of the tab that runs popnei; its
 memory grows and never shrinks, and starting it again gives the memory
 back. The **light worker** is a second thread, which reads the files of
 the user, the metadata file among them. **three.js** is the library that
@@ -74,7 +77,7 @@ reads the page aloud to a user who cannot see it.
 - **To approve the specs.** None is approved yet, and the plan of stage
   4 is written from approved specs.
 - **To decide two points**, whose recommendations the specs follow
-  meanwhile: point 6, the types the user set, kept when the file is read
+  meanwhile, and which the plan can be written without: point 6, the types the user set, kept when the file is read
   again; and point 13, what a page opened before a new version of the
   site shows. Point 14, the legend over the plot, is judged on the
   running screen, when the owner tries the PCA panel.
@@ -159,10 +162,11 @@ the user types one. Setting it back to follow the step keeps the r² and
 the distance, so that choosing "For the PCA alone" again gives them
 back and a distance once typed is not asked for again. A project file
 saved before the distance was typed opens with it still empty. The key
-of the result, the hash of what the result was calculated from, holds
-the filters the PCA's job carries: its own LD filter while it does not
-follow, and the step's while it does, never the values kept while it
-follows, which the result was not calculated from. The Python script
+of the result is the hash of what the result was calculated from. So
+it holds the LD filter the PCA applies: the PCA's own while the user
+has set one, and the step's while the PCA follows the step. The values
+of its own filter, kept while the PCA follows the step, are not in the
+key, since the result was not calculated from them. The Python script
 that the project gives, which calculates the same results with popnei
 in Python, has no lines for a PCA that cannot run. The LD filter of the
 Variants step, which starts at an r² of 0.3 when the user turns it on,
@@ -203,7 +207,8 @@ date. `files.md`, Open 2.
 Approved by the owner: three.js 0.186.1, loaded only when the 3D view is
 first shown, 134 KB gzipped, and its types, `@types/three` 0.186.0, for
 development, with the six packages they bring, which never reach the
-site, one of them 7.5 MB unpacked; the modules of D3 the scatter uses
+site, one of them 7.5 MB unpacked; the modules of D3, the library of
+the 2D plots, that the scatter uses
 that stage 3 did not, `d3-shape`, `d3-path` and `d3-scale-chromatic`,
 with their types; and Rust 1.98.0 and `wasm-bindgen-cli` 0.2.128 on
 every machine that builds the site, CI among them. calamine was not
@@ -232,26 +237,18 @@ distance, and beside it "The LD filter of the Variants step needs the
 distance within which variants are compared. It has no default, because
 it depends on how far linkage disequilibrium extends in the genome of
 your species. Type a distance in base pairs, or turn off the LD
-filter." Until a distance is typed, what reads the filters is locked
-with the same words, ending "in the Variants step" where they are shown
-in another step: in the Variants step, the Count of what each filter
-kept, the statistics of each individual and the writing of the
-filtered variants; in the Analyses step, the diversity, and the PCA
-while its LD filter follows the step's (point 2). An
-analysis that read only the filters of individuals would be locked
-too, since the individuals a threshold keeps come from the statistics
-of each individual; none does in stages 2 to 4. The histograms of the
-variants read no filter and can still be calculated. Revised with point
-A, below, the same day: the statistics of each individual read no
-filter, so the LD filter with no distance locks neither them nor the
-histograms of the variants, which now read the filters of individuals
-alone. No count is shown
+filter." Until a distance is typed, what reads the filters of the
+variants is locked with the same words, ending "in the Variants step"
+where they are shown in another step: in the Variants step, the Count
+of what each filter kept and the writing of the filtered variants; in
+the Analyses step, the diversity, and the PCA while its LD filter
+follows the step's (point 2). The statistics of each individual, which
+read no filter since point A, below, and the histograms of the
+variants, which read only the filters of individuals, are not locked
+and can still be calculated. No count is shown
 beside the filters, and the stepper shows the Variants step with a
 problem. The summary line under the stepper counts the filter among
-the filters and says nothing of its distance. The PCA, whose LD filter
-follows the dataset's by default, is locked by it until that distance
-is typed, unless the user has set an LD filter of the PCA's own, which
-it then uses (point 2). The help says why there is no
+the filters and says nothing of its distance. The help says why there is no
 default and points to the LD decay of stage 5.
 
 Decided by the writers, the same day: the filter turned on is in the
@@ -447,7 +444,9 @@ sections 1 and 2, and section 13, point 15; `docs/functionality.md`,
 section 3.
 
 The code of stage 3 that the plan of stage 4 changes, each with its
-spec:
+spec. `filtersRead` is what each analysis declares it reads of the
+filters, those of the variants and those of individuals, which decides
+what goes into its key and what locks it:
 
 - `src/core/analyses/individualChecks.ts`: `filtersRead` `{ variants:
   false, individuals: false }`, the job with `filters: []`, the key
@@ -511,7 +510,8 @@ options, `parseOptions`, the panel and the help.
 xlsx_rs is the project of its own that reads an xlsx for the
 application (below, "The reader of xlsx in a project of its own"). Its
 repository is `github.com/JoseBlanca/xlsx_rs`, public,
-under the owner's account as popnei's is, so that `npm ci` downloads
+under the owner's account as popnei's is, so that `npm ci`, the command
+that installs the site's dependencies, downloads
 its releases with no token. Its releases are made by hand, as popnei's
 are, a tag `js-v0.1.0-dev.1` and the packed package attached to a
 pre-release, and later by a workflow of GitHub Actions shared with
@@ -528,7 +528,8 @@ make or approve"). `docs/architecture.md`, section 13, points 11 and
 
 Approved by the owner: calamine 0.36.1 as a dependency of xlsx_rs, 0.30
 MB gzipped, downloaded the first time an xlsx is read, and
-rust_xlsxwriter 0.99.1 for its tests alone until the writer of stage 6.
+rust_xlsxwriter 0.99.1, a Rust library that writes xlsx files, for its
+tests alone until the writer of stage 6.
 The xlsx of stage 4 now waits only for the repository and the first
 release of xlsx_rs. `docs/architecture.md`, section 13, point 12;
 `docs/technology.md`, section 2; `files.md`.
@@ -926,8 +927,9 @@ docs adapted to it, which releases its wasm package as popnei releases
 its own. The site names a release by its URL in `package.json` and
 installs it with `npm ci`, and the light worker imports it the first
 time an xlsx is read, as before; a project of trial checked on 28
-September 2026 that Vite builds a package imported so into a file of its
-own and finds its `.wasm`. What a user meets does not change: the same
+September 2026 that Vite, the tool that builds the site, puts a package
+imported so, on first need, into a file of its own and finds its
+`.wasm`. What a user meets does not change: the same
 0.30 MB downloaded the first time an xlsx is read, the same cells and
 the same refusals.
 
