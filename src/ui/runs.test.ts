@@ -47,6 +47,7 @@ const READY: Project = {
     fileId: "00000000000000000000000000000001",
     name: "pops.csv",
     csv: { encoding: "auto", separator: "auto", decimal: "auto" },
+    typesSet: [],
     read: {
       kind: "read",
       table: {

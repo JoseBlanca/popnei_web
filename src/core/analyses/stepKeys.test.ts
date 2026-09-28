@@ -76,6 +76,7 @@ function project(
       fileId: INDIVIDUALS_ID,
       name: "pops.csv",
       csv: { encoding: "auto", separator: "auto", decimal: "auto" },
+      typesSet: [],
       read: {
         kind: "read",
         table,

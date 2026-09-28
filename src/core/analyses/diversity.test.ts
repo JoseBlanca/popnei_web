@@ -83,6 +83,7 @@ function project(
       fileId: INDIVIDUALS_ID,
       name: "pops.csv",
       csv: { encoding: "auto", separator: "auto", decimal: "auto" },
+      typesSet: [],
       read: {
         kind: "read",
         table,
@@ -932,6 +933,7 @@ describe("WS5 D2 the key", () => {
         fileId: "fedcba9876543210fedcba9876543210",
         name: "populations.tsv",
         csv: { encoding: "windows-1252", separator: "\t", decimal: "," },
+        typesSet: [],
         read: {
           ...individuals.read,
           found: {

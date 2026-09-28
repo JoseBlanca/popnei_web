@@ -9,6 +9,7 @@ import type { JsonObject, JsonValue, KeyedDef } from "./keys.ts";
 import {
   INDIVIDUAL_FILTER_ORDER,
   VARIANT_FILTER_ORDER,
+  columnAllows,
   analysisOptions,
   individualsNeeds,
   loadIndividuals,
@@ -27,6 +28,7 @@ import {
 import type {
   AnalysisId,
   AppId,
+  ColumnAllows,
   Grouping,
   VariantLoad,
   IndividualThreshold,
@@ -118,6 +120,7 @@ export function sampleProject(): Project {
       fileId: SAMPLE_INDIVIDUALS_ID,
       name: "pops.csv",
       csv: { encoding: "auto", separator: "auto", decimal: "auto" },
+      typesSet: [],
       read: {
         kind: "read",
         table: {
@@ -426,12 +429,7 @@ export const drawnCommand: fc.Arbitrary<DrawnCommand> = fc.oneof(
       if (column === undefined) {
         return null;
       }
-      const type = columnTypeFor(
-        index,
-        read.table.rows.map((row) => row[index] ?? null),
-        kind,
-        flip,
-      );
+      const type = columnTypeFor(columnAllows(read)[index], index, kind, flip);
       return (q) => setColumnType(q, column, type);
     }),
   ),
@@ -454,36 +452,32 @@ export const drawnCommand: fc.Arbitrary<DrawnCommand> = fc.oneof(
     ),
 );
 
-/** A type valid for a column: `identifier` for the first, and for another
-    continuous, categorical, or binary when it has two values. */
+/** A type the values of a column allow, by `columnAllows`: `identifier`
+    for the first, and for another categorical, continuous when it is all
+    numbers, or binary, in either coding, when it has two values. */
 function columnTypeFor(
+  allows: ColumnAllows | undefined,
   index: number,
-  cells: readonly (string | number | boolean | null)[],
   kind: number,
   flip: boolean,
 ): ColumnType {
-  if (index === 0) {
+  if (index === 0 || allows === undefined) {
     return { kind: "identifier" };
   }
-  const values: (string | number | boolean)[] = [];
-  for (const cell of cells) {
-    if (cell !== null && !values.includes(cell)) {
-      values.push(cell);
-    }
-  }
-  const [first, second] = values;
   switch (kind % 3) {
     case 0:
-      return { kind: "continuous" };
+      return allows.continuous
+        ? { kind: "continuous" }
+        : { kind: "categorical" };
     case 1:
       return { kind: "categorical" };
     default:
-      if (values.length !== 2 || first === undefined || second === undefined) {
+      if (allows.binary === null) {
         return { kind: "categorical" };
       }
       return flip
-        ? { kind: "binary", one: first, zero: second }
-        : { kind: "binary", one: second, zero: first };
+        ? { kind: "binary", one: allows.binary.zero, zero: allows.binary.one }
+        : { kind: "binary", one: allows.binary.one, zero: allows.binary.zero };
   }
 }
 
@@ -700,6 +694,13 @@ const cellValue = fc.oneof(fc.string(), fileNumber, fc.boolean());
 /** Any cell of a table. */
 const cell: fc.Arbitrary<Cell> = fc.oneof(fc.constant(null), cellValue);
 
+/** A cell that is a number with either decimal mark: a whole number as
+    text, or a number of an xlsx, whose text String writes with a point. */
+const numberCell: fc.Arbitrary<Cell> = fc.oneof(
+  fc.integer({ min: -1000, max: 1000 }).map(String),
+  fc.integer({ min: -1000, max: 1000 }),
+);
+
 type TypeKind = "binary" | "continuous" | "categorical";
 
 /** A column of `numRows` cells and a type valid for it; a binary column
@@ -720,15 +721,26 @@ function column(
         })
         .map((c) => ({ type: { kind }, cells: c }));
     case "continuous":
+      // Numbers with either decimal mark, whole numbers as text or numbers
+      // of an xlsx, and one at least, so that the values allow the type.
+      return fc
+        .tuple(
+          numberCell,
+          cells(fc.oneof(fc.constant(null), numberCell), numRows - 1),
+        )
+        .map(([first, rest]) => ({ type: { kind }, cells: [first, ...rest] }));
     case "categorical":
       return cells(cell, numRows).map((c) => ({ type: { kind }, cells: c }));
     case "binary":
+      // Two values of different texts, compared as the types compare them.
       return fc
         .tuple(cellValue, cellValue, fc.boolean())
-        .filter(([a, b]) => a !== b)
+        .filter(([a, b]) => String(a) !== String(b))
         .chain(([a, b, flip]) =>
           cells(fc.constantFrom<Cell>(a, b, null), numRows - 2).map((rest) => ({
-            type: flip ? { kind, one: a, zero: b } : { kind, one: b, zero: a },
+            type: flip
+              ? { kind, one: String(a), zero: String(b) }
+              : { kind, one: String(b), zero: String(a) },
             cells: [a, b, ...rest],
           })),
         );
@@ -872,6 +884,7 @@ const individualsSource: fc.Arbitrary<IndividualsSource> = fc
       fileId: anyLoadId,
       name: fc.string(),
       csv: fc.option(csvOptions),
+      typesSet: fc.constant([]),
       read: individualsRead,
     },
     PLAIN,
@@ -1607,6 +1620,7 @@ export function fiveIndividualsProject(
       fileId: SAMPLE_INDIVIDUALS_ID,
       name: "pops.csv",
       csv: { encoding: "auto", separator: "auto", decimal: "auto" },
+      typesSet: [],
       read: {
         kind: "read",
         table: {

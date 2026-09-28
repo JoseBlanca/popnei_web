@@ -649,6 +649,7 @@ describe("WS7 D1 wantedReads", () => {
         fileId: POPS_ID,
         name: "pops.xlsx",
         csv: null,
+        typesSet: [],
         read: { kind: "pending" },
       },
     };

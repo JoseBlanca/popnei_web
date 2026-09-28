@@ -2,12 +2,14 @@
  * The numbers of the cells of the individuals file and the type of each of
  * its columns, as the reader infers them (docs/specs/worker/individuals.md,
  * "The decimal mark and the numbers" and "The types of the columns"). The
- * reader of CSV and TSV calls it, and the reader of xlsx of stage 4 will.
+ * reader of CSV and TSV calls it, and the reader of xlsx will; core calls
+ * `cellNumber` and `inferColumnTypes` for the types each column allows
+ * (docs/specs/core/project.md, `columnAllows`), so every function here is
+ * pure.
  *
- * The types are shown and not changed in stage 2, and no analysis of stage
- * 2 reads them, so a type inferred wrong changes nothing stage 2
- * calculates; the user can still choose any column but the first as the
- * column of the populations.
+ * The values of a column are compared as text: a text as it is, a number
+ * or a boolean of an xlsx as `String` writes it, so that a number 1 and a
+ * text "1" of one column are one value.
  */
 
 import type { Cell, ColumnType, IndividualsTable } from "../protocol.ts";
@@ -29,6 +31,12 @@ const NUMBER_WITH_COMMA = /^[+-]?(?:\d+,?\d*|,\d+)(?:[eE][+-]?\d+)?$/;
 
 /** A whole number: an optional sign and digits, no mark, no exponent. */
 const WHOLE_NUMBER = /^[+-]?\d+$/;
+
+/** The text of a cell by which the types compare it: a text as it is, a
+    number or a boolean as `String` writes it; null for a missing cell. */
+export function cellText(cell: Cell): string | null {
+  return cell === null ? null : String(cell);
+}
 
 /**
  * The number a cell holds, or null: a missing cell, a text that is not a
@@ -55,14 +63,11 @@ function finiteOrNull(value: number): number | null {
 
 /**
  * The type of each column of `table`, in its order, from the values of the
- * column, its cells that are not missing, compared as cells: two texts
- * are one value when they are the same text, and a text and a number of an
- * xlsx are two values even when written alike, which the reader spec
- * leaves open for stage 4. The first
- * column is identifier; a column of exactly two distinct values is binary;
- * of three or more, every one a number read with `decimal`, continuous;
- * any other, one value, none, or three with one not a number, categorical.
- * A row not as long as the columns is a defect, and throws.
+ * column, the texts of its cells that are not missing (`cellText`). The
+ * first column is identifier; a column of exactly two distinct values is
+ * binary; of three or more, every one a number read with `decimal`,
+ * continuous; any other, one value, none, or three with one not a number,
+ * categorical. A row not as long as the columns is a defect, and throws.
  */
 export function inferColumnTypes(
   table: IndividualsTable,
@@ -72,7 +77,7 @@ export function inferColumnTypes(
   return table.columns.map((_, index) =>
     index === 0
       ? { kind: "identifier" }
-      : typeOfValues(distinctValues(table, index), decimal),
+      : typeOfValues(distinctTexts(table, index), decimal),
   );
 }
 
@@ -100,22 +105,19 @@ function cellAt(row: readonly Cell[], index: number): Cell {
   return cell;
 }
 
-/** The distinct values of the column at `index`, in the order of the
+/** The distinct texts of the column at `index`, in the order of the
     rows. */
-function distinctValues(
-  table: IndividualsTable,
-  index: number,
-): (string | number | boolean)[] {
-  const values = new Set<string | number | boolean>();
+function distinctTexts(table: IndividualsTable, index: number): string[] {
+  const texts = new Set<string>();
   for (const row of table.rows) {
-    const cell = cellAt(row, index);
-    if (cell !== null) values.add(cell);
+    const text = cellText(cellAt(row, index));
+    if (text !== null) texts.add(text);
   }
-  return [...values];
+  return [...texts];
 }
 
 function typeOfValues(
-  values: readonly (string | number | boolean)[],
+  values: readonly string[],
   decimal: "." | ",",
 ): ColumnType {
   if (values.length === 2) {
@@ -154,16 +156,12 @@ const KNOWN_PAIRS: readonly (readonly [one: string, zero: string])[] = [
 ];
 
 /**
- * The binary type of the two values `a` and `b`, with the one coded 1: of
+ * The binary type of the two texts `a` and `b`, with the one coded 1: of
  * two numbers of different value the larger; of a known pair of words the
  * case; otherwise the one that comes second compared by code units. The
  * result does not depend on which of the two came first in the file.
  */
-function binaryOf(
-  a: string | number | boolean,
-  b: string | number | boolean,
-  decimal: "." | ",",
-): ColumnType {
+function binaryOf(a: string, b: string, decimal: "." | ","): ColumnType {
   const numberA = cellNumber(a, decimal);
   const numberB = cellNumber(b, decimal);
   if (numberA !== null && numberB !== null && numberA !== numberB) {
@@ -171,40 +169,29 @@ function binaryOf(
       ? { kind: "binary", one: a, zero: b }
       : { kind: "binary", one: b, zero: a };
   }
-  const wordA = String(a).toLowerCase();
-  const wordB = String(b).toLowerCase();
+  const wordA = a.toLowerCase();
+  const wordB = b.toLowerCase();
   for (const [one, zero] of KNOWN_PAIRS) {
     if (wordA === one && wordB === zero)
       return { kind: "binary", one: a, zero: b };
     if (wordB === one && wordA === zero)
       return { kind: "binary", one: b, zero: a };
   }
-  return comesSecond(a, b)
+  return a > b
     ? { kind: "binary", one: a, zero: b }
     : { kind: "binary", one: b, zero: a };
 }
 
-/** Whether `a` comes after `b` by the code units of their text, and, for
-    a text and a number of an xlsx written alike, by the name of their
-    type, so that the order is the same whatever the order of the rows. */
-function comesSecond(
-  a: string | number | boolean,
-  b: string | number | boolean,
-): boolean {
-  const textA = String(a);
-  const textB = String(b);
-  if (textA !== textB) return textA > textB;
-  return typeof a > typeof b;
-}
-
 /** A column taken as continuous whose values may be codes. */
 export interface ColumnWarning {
-  /** The one kind of warning of stage 2: few whole numbers. */
+  /** The one kind of warning: few whole numbers. */
   readonly kind: "fewWholeLevels";
   /** The name of the column. */
   readonly column: string;
   /** Its distinct numbers, counted by value, 1 to `MAX_FEW_WHOLE_LEVELS`. */
   readonly numLevels: number;
+  /** Its distinct texts, compared as text; at least `numLevels`. */
+  readonly numTexts: number;
   /** The smallest of them. */
   readonly min: number;
   /** The largest of them. */
@@ -213,7 +200,7 @@ export interface ColumnWarning {
 
 /**
  * The warnings of the columns, in the order of the table: one for each
- * column typed continuous whose values are all whole numbers, written as
+ * column typed continuous, by the reader or by the user, whose values are all whole numbers, written as
  * digits with an optional sign and no decimal mark or exponent, and that
  * has at most `MAX_FEW_WHOLE_LEVELS` distinct numbers counted by value,
  * since such a column is often a code or an ordinal score. It is not
@@ -241,15 +228,16 @@ export function columnWarnings(
         `popnei_web defect: the table has no column ${String(index)}`,
       );
     }
-    const levels = wholeLevels(table, index, decimal);
-    if (levels === null || levels.size === 0) continue;
-    if (levels.size > MAX_FEW_WHOLE_LEVELS) continue;
+    const whole = wholeLevels(table, index, decimal);
+    if (whole === null || whole.levels.size === 0) continue;
+    if (whole.levels.size > MAX_FEW_WHOLE_LEVELS) continue;
     warnings.push({
       kind: "fewWholeLevels",
       column: name,
-      numLevels: levels.size,
-      min: Math.min(...levels),
-      max: Math.max(...levels),
+      numLevels: whole.levels.size,
+      numTexts: whole.numTexts,
+      min: Math.min(...whole.levels),
+      max: Math.max(...whole.levels),
     });
   }
   return warnings;
@@ -263,21 +251,22 @@ export function columnWarnings(
  */
 export function columnWarningText(warning: ColumnWarning): string {
   const measurement = "and is taken as a measurement.";
-  const choice = "it can still be chosen as the column of the populations.";
   if (warning.numLevels === 1) {
-    return `${warning.column} holds only one whole number, ${String(warning.min)}, written in different ways, ${measurement} If it is a code, such as a numbered population, ${choice}`;
+    const ways = warning.numTexts > 1 ? ", written in different ways," : ",";
+    return `${warning.column} holds only one whole number, ${String(warning.min)}${ways} ${measurement} If it is a code, such as a numbered population, set its type to categorical.`;
   }
-  return `${warning.column} holds only ${String(warning.numLevels)} different whole numbers, from ${String(warning.min)} to ${String(warning.max)}, ${measurement} If they are codes, such as numbered populations, ${choice}`;
+  return `${warning.column} holds only ${String(warning.numLevels)} different whole numbers, from ${String(warning.min)} to ${String(warning.max)}, ${measurement} If they are codes, such as numbered populations, set its type to categorical.`;
 }
 
-/** The distinct numbers of the column at `index`, or null when one of its
-    values is not a whole number. */
+/** The distinct numbers of the column at `index`, with the number of its
+    distinct texts, or null when one of its values is not a whole number. */
 function wholeLevels(
   table: IndividualsTable,
   index: number,
   decimal: "." | ",",
-): Set<number> | null {
+): { levels: Set<number>; numTexts: number } | null {
   const levels = new Set<number>();
+  const texts = new Set<string>();
   for (const row of table.rows) {
     const cell = cellAt(row, index);
     if (cell === null) continue;
@@ -288,6 +277,7 @@ function wholeLevels(
     const value = cellNumber(cell, decimal);
     if (!isWhole || value === null) return null;
     levels.add(value);
+    texts.add(String(cell));
   }
-  return levels;
+  return { levels, numTexts: texts.size };
 }

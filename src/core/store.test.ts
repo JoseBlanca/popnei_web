@@ -26,7 +26,7 @@ import {
   variantFilterNeeds,
 } from "./project.ts";
 import type {
-  IndividualsRead,
+  IndividualsReadGiven,
   Project,
   ProjectVariantFilter,
   SourceRead,
@@ -100,7 +100,7 @@ const CSV: CsvOptions = {
   decimal: "auto",
 };
 
-const INDIVIDUALS_READ: IndividualsRead = {
+const INDIVIDUALS_READ: IndividualsReadGiven = {
   kind: "read",
   table: {
     columns: ["id", "pop"],
@@ -6408,7 +6408,7 @@ function fakeResultOf(job: TestJob): TestResult {
 
 /** The read of `pops.csv` whose table lacks `i2`, an individual of the
     variants file. */
-const INDIVIDUALS_READ_LACKING: IndividualsRead = {
+const INDIVIDUALS_READ_LACKING: IndividualsReadGiven = {
   ...INDIVIDUALS_READ,
   table: { columns: ["id", "pop"], rows: [["i1", "P1"]] },
 };

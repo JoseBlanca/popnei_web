@@ -77,6 +77,7 @@ const individuals: Project["individuals"] = {
   fileId: "ffeeddccbbaa99887766554433221100",
   name: "rows10000.csv",
   csv: { encoding: "auto", separator: "auto", decimal: "auto" },
+  typesSet: [],
   read: {
     kind: "read",
     table: {

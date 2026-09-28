@@ -742,6 +742,7 @@ function forwardProject(): Project {
       fileId: SAMPLE_INDIVIDUALS_ID,
       name: "pops.csv",
       csv: { encoding: "utf-8", separator: ";", decimal: "," },
+      typesSet: [],
       read: {
         kind: "read",
         table: {
@@ -818,6 +819,7 @@ function reversedProject(): Project {
         },
         kind: "read",
       },
+      typesSet: [],
       csv: { decimal: ",", separator: ";", encoding: "utf-8" },
       name: "pops.csv",
       fileId: SAMPLE_INDIVIDUALS_ID,
@@ -899,6 +901,7 @@ function neiDiversityProject(): Project {
       fileId: "ffeeddccbbaa99887766554433221100",
       name: "pops.csv",
       csv: { encoding: "auto", separator: "auto", decimal: "auto" },
+      typesSet: [],
       read: {
         kind: "read",
         table: {
@@ -1358,6 +1361,7 @@ describe("WS6 D2 the opening", () => {
           fileId: "ffeeddccbbaa99887766554433221100",
           name: "pops.csv",
           csv: { encoding: "auto", separator: "auto", decimal: "auto" },
+          typesSet: [],
           read: { kind: "pending" },
         },
       })),
@@ -1619,6 +1623,7 @@ function everyFilterProject(): Project {
       fileId: "b0b1b2b3b4b5b6b7b8b9babbbcbdbebf",
       name: "pops.csv",
       csv: { encoding: "auto", separator: "auto", decimal: "auto" },
+      typesSet: [],
       read: {
         kind: "read",
         table: {

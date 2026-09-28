@@ -1347,8 +1347,8 @@ const columnType = fc.oneof(
   fc.constant({ kind: "identifier" as const }),
   fc.record({
     kind: fc.constant("binary" as const),
-    one: cellValue,
-    zero: cellValue,
+    one: text,
+    zero: text,
   }),
   fc.constant({ kind: "continuous" as const }),
   fc.constant({ kind: "categorical" as const }),
@@ -2019,5 +2019,43 @@ describe("IP6 D1 the messages of the PCA", () => {
         },
       ),
     );
+  });
+});
+
+describe("IP4 D2 the binary type of the messages holds texts", () => {
+  test("a binary type whose one is the number 1 is refused", () => {
+    const read = {
+      ...INDIVIDUALS_READ.read,
+      columns: [
+        ...INDIVIDUALS_READ.read.columns.slice(0, 3),
+        { kind: "binary", one: 1, zero: "no" },
+      ],
+    };
+    expect(
+      parseFromFilesRunner({ kind: "individuals", id: 4, read }),
+    ).toMatchObject({
+      ok: false,
+      error: {
+        kind: "wrongType",
+        messageKind: "individuals",
+        path: "read.columns.3.one",
+      },
+    });
+  });
+
+  test("a binary type whose zero is the boolean false is refused", () => {
+    const read = {
+      ...INDIVIDUALS_READ.read,
+      columns: [
+        ...INDIVIDUALS_READ.read.columns.slice(0, 3),
+        { kind: "binary", one: "yes", zero: false },
+      ],
+    };
+    expect(
+      parseFromFilesRunner({ kind: "individuals", id: 4, read }),
+    ).toMatchObject({
+      ok: false,
+      error: { kind: "wrongType", path: "read.columns.3.zero" },
+    });
   });
 });

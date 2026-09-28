@@ -7,7 +7,11 @@ import {
   INDIVIDUAL_FILTER_ORDER,
   VARIANT_FILTER_ORDER,
   analysisOptions,
+  columnAllows,
   emptyProject,
+  forgetTypesLost,
+  typeLostReason,
+  typesLost,
   freezeProject,
   counted,
   escaped,
@@ -50,9 +54,11 @@ import {
 } from "./project.ts";
 import type {
   AppId,
+  ColumnTypeOf,
   FieldPath,
   Grouping,
   IndividualsRead,
+  IndividualsReadGiven,
   ParsedAnalysis,
   Project,
   ProjectError,
@@ -64,9 +70,11 @@ import { MAX_UNDO_STEPS, commit, startHistory, undo } from "./history.ts";
 import type {
   Cell,
   ColumnType,
+  CsvOptions,
   IndividualsFileError,
   IndividualsTable,
 } from "../worker/protocol.ts";
+import { inferColumnTypes } from "../worker/individuals/columnTypes.ts";
 import {
   SAMPLE_INDIVIDUALS_ID,
   SAMPLE_VARIANTS_ID,
@@ -226,6 +234,7 @@ describe("WP1 D3 the commands", () => {
         fileId: NEW_ID,
         name: "pops.xlsx",
         csv: null,
+        typesSet: [],
         read: { kind: "pending" },
       });
       expectKept(p, q, ["individuals"]);
@@ -239,6 +248,7 @@ describe("WP1 D3 the commands", () => {
         fileId: SAMPLE_INDIVIDUALS_ID,
         name: "pops.csv",
         csv,
+        typesSet: [],
         read: { kind: "pending" },
       });
       expectKept(p, q, ["individuals"]);
@@ -246,14 +256,14 @@ describe("WP1 D3 the commands", () => {
 
     test("setColumnType sets the type of one column", () => {
       const p = sampleProject();
-      const q = setColumnType(p, "pop", { kind: "continuous" });
+      const q = setColumnType(p, "height", { kind: "categorical" });
       const before = individualsOf(p).read;
       const after = individualsOf(q).read;
       if (before.kind !== "read" || after.kind !== "read") {
         throw new Error("popnei_web defect: the test expected a table read.");
       }
-      expect(after.columns[1]).toEqual({ kind: "continuous" });
-      for (const index of [0, 2, 3]) {
+      expect(after.columns[3]).toEqual({ kind: "categorical" });
+      for (const index of [0, 1, 2]) {
         expect(after.columns[index]).toBe(before.columns[index]);
       }
       expect(after.table).toBe(before.table);
@@ -942,12 +952,12 @@ describe("WP1 D3 the commands", () => {
     ).toThrow(DEFECT);
   });
 
-  test("setColumnType reads a few cells of a binary column of many values, not all", () => {
+  test("setColumnType walks the cells of a table once, whatever the number of types set on it", () => {
     let reads = 0;
     const rows = Array.from(
       { length: 1000 },
       (_, row) =>
-        new Proxy(["i" + String(row), "P1", String(row), null], {
+        new Proxy(["i" + String(row), "P1", String(row), "1.5"], {
           get(target, key, receiver): unknown {
             if (key === "2") {
               reads += 1;
@@ -968,7 +978,7 @@ describe("WP1 D3 the commands", () => {
           columns: [
             { kind: "identifier" },
             { kind: "categorical" },
-            { kind: "categorical" },
+            { kind: "continuous" },
             { kind: "continuous" },
           ],
           found: null,
@@ -978,7 +988,11 @@ describe("WP1 D3 the commands", () => {
     expect(() =>
       setColumnType(p, "sex", { kind: "binary", one: "1", zero: "0" }),
     ).toThrow(DEFECT);
-    expect(reads).toBeLessThan(10);
+    const first = reads;
+    expect(first).toBeGreaterThanOrEqual(1000);
+    const q = setColumnType(p, "sex", { kind: "categorical" });
+    setColumnType(q, "height", { kind: "categorical" });
+    expect(reads).toBe(first);
   });
 
   test.each([
@@ -2338,12 +2352,23 @@ describe("WP1 D5 the validation", () => {
     test.each([
       ["values not of the column", "2", "3"],
       ["one equal to zero", "1", "1"],
-      ["the number 1 where the column holds the text", 1, "2"],
     ])("a binary type with %s", (_what, one, zero) => {
       const columns = SAMPLE_TYPES.with(2, { kind: "binary", one, zero });
       expect(errorOf(parse(readWith({ columns })))).toMatchObject(
         inconsistent([...READ_PATH, "columns", 2]),
       );
+    });
+
+    test("a binary type whose value is the number 1, not a text", () => {
+      const columns = [
+        ...SAMPLE_TYPES.slice(0, 2),
+        { kind: "binary", one: 1, zero: "2" },
+        ...SAMPLE_TYPES.slice(3),
+      ];
+      expect(errorOf(parse(readWith({ columns })))).toMatchObject({
+        kind: "wrongValue",
+        path: [...READ_PATH, "columns", 2, "one"],
+      });
     });
 
     test("an analysis not of those given", () => {
@@ -2923,7 +2948,7 @@ describe("WP1 D5 the validation", () => {
       ];
       expect(textOf(readWith({ columns }))).toBe(
         opened(
-          "the value coded 0 of the third column of the individuals file should be a text, a number, true or false",
+          "the value coded 0 of the third column of the individuals file should be a text",
         ),
       );
     });
@@ -4669,6 +4694,7 @@ function popsProject(
             fileId: SAMPLE_INDIVIDUALS_ID,
             name: "pops.csv",
             csv: { encoding: "auto", separator: "auto", decimal: "auto" },
+            typesSet: [],
             read: {
               kind: "read",
               table,
@@ -5174,5 +5200,584 @@ describe("VS3 D3 the populations, moved from the module of the diversity", () =>
     expect(populationsKept(p, kept)?.emptied).toEqual([]);
     kept.pop();
     expect(populationsKept(p, kept)?.emptied).toEqual(["B"]);
+  });
+});
+
+// The types of the columns (the project spec, "The types of the columns",
+// "How it is verified").
+
+const TYPES_ID = "abcdefabcdefabcdefabcdefabcdefab";
+const TYPES_CSV = {
+  encoding: "auto",
+  separator: "auto",
+  decimal: "auto",
+} as const;
+
+type TableReadOf = Extract<IndividualsRead, { kind: "read" }>;
+
+/** A read of `columns` over `rows`, with the types the reader infers and
+    the decimal mark `decimal`; `null` for an xlsx, read with the point. */
+function readOf(
+  columns: readonly string[],
+  rows: readonly (readonly Cell[])[],
+  decimal: "." | "," | null = ".",
+): TableReadOf {
+  const table: IndividualsTable = { columns, rows };
+  return deepFreeze<TableReadOf>({
+    kind: "read",
+    table,
+    columns: inferColumnTypes(table, decimal ?? "."),
+    found:
+      decimal === null
+        ? null
+        : { encoding: "utf-8", separator: ";", decimal, undecodedLine: null },
+  });
+}
+
+/** The worked table of the diversity's spec, i1 to i4, with a column `h`
+    of 1,5, 2, 2 and a missing cell and a column `st` of yes and no. */
+function workedRead(decimal: "." | "," = ","): TableReadOf {
+  return readOf(
+    ["id", "pop", "h", "st"],
+    [
+      ["i1", "A", "1,5", "yes"],
+      ["i2", "B", "2", "no"],
+      ["i3", "A", "2", "yes"],
+      ["i4", null, null, "no"],
+    ],
+    decimal,
+  );
+}
+
+/** A project of an empty project and an individuals file of `read` with
+    the types set `typesSet`, frozen. */
+function projectOf(
+  typesSet: readonly ColumnTypeOf[],
+  read: IndividualsRead,
+  csv: CsvOptions | null = TYPES_CSV,
+): Project {
+  return deepFreeze<Project>({
+    ...emptyProject("popgen"),
+    individuals: { fileId: TYPES_ID, name: "pops.csv", csv, typesSet, read },
+  });
+}
+
+/** The project of `recordIndividualsRead` of `read` into a pending file
+    whose types set are `typesSet`. */
+function recordedWith(
+  typesSet: readonly ColumnTypeOf[],
+  read: IndividualsReadGiven,
+): Project {
+  return recordIndividualsRead(
+    projectOf(typesSet, { kind: "pending" }),
+    TYPES_ID,
+    TYPES_CSV,
+    read,
+  );
+}
+
+/** The read of the individuals file of `p`, which the test expects read. */
+function tableReadOf(p: Project): TableReadOf {
+  const read = p.individuals?.read;
+  if (read?.kind !== "read") {
+    throw new Error("popnei_web defect: the test expected a table read.");
+  }
+  return read;
+}
+
+/** The types of the columns of the read of `p`, by name. */
+function typesOf(p: Project): Record<string, ColumnType | undefined> {
+  const read = tableReadOf(p);
+  return Object.fromEntries(
+    read.table.columns.map((name, index) => [name, read.columns[index]]),
+  );
+}
+
+const CATEGORICAL: ColumnType = { kind: "categorical" };
+const CONTINUOUS: ColumnType = { kind: "continuous" };
+const STATUS_YES: ColumnType = { kind: "binary", one: "yes", zero: "no" };
+
+describe("IP4 D2 the types of the columns: columnAllows", () => {
+  test("the first column allows neither continuous nor binary, also when its names are numbers", () => {
+    expect(columnAllows(workedRead())[0]).toEqual({
+      continuous: false,
+      binary: null,
+    });
+    const numbered = readOf(
+      ["id", "pop"],
+      [
+        ["1", "A"],
+        ["2", "B"],
+      ],
+    );
+    expect(columnAllows(numbered)[0]).toEqual({
+      continuous: false,
+      binary: null,
+    });
+  });
+
+  test("pop, of A and B and a missing cell, is binary with B coded 1 by the code units, and not continuous", () => {
+    expect(columnAllows(workedRead())[1]).toEqual({
+      continuous: false,
+      binary: { kind: "binary", one: "B", zero: "A" },
+    });
+  });
+
+  test("h of 1,5, 2, 2 and a missing cell, read with the comma, is continuous and binary with 2 coded 1", () => {
+    expect(columnAllows(workedRead(","))[2]).toEqual({
+      continuous: true,
+      binary: { kind: "binary", one: "2", zero: "1,5" },
+    });
+  });
+
+  test("st of yes and no is binary with yes coded 1, and not continuous", () => {
+    expect(columnAllows(workedRead())[3]).toEqual({
+      continuous: false,
+      binary: { kind: "binary", one: "yes", zero: "no" },
+    });
+  });
+
+  test("h read with the point: 1,5 is text, so binary and not continuous", () => {
+    const allows = columnAllows(workedRead("."))[2];
+    expect(allows?.continuous).toBe(false);
+    expect(allows?.binary).not.toBeNull();
+  });
+
+  test("in the table of an xlsx, a column of the number 1, the text 1 and the number 0 is binary with 1 coded 1, and all numbers", () => {
+    const read = readOf(
+      ["id", "g"],
+      [
+        ["i1", 1],
+        ["i2", "1"],
+        ["i3", 0],
+      ],
+      null,
+    );
+    expect(columnAllows(read)[1]).toEqual({
+      continuous: true,
+      binary: { kind: "binary", one: "1", zero: "0" },
+    });
+  });
+
+  test("a column of three numbers is continuous and not binary, and a column all missing is neither", () => {
+    const read = readOf(
+      ["id", "n", "empty"],
+      [
+        ["i1", "1", null],
+        ["i2", "2", null],
+        ["i3", "3", null],
+      ],
+    );
+    expect(columnAllows(read).slice(1)).toEqual([
+      { continuous: true, binary: null },
+      { continuous: false, binary: null },
+    ]);
+  });
+
+  test("the same array for the same read, and for a read of the same table whose types changed", () => {
+    const read = workedRead();
+    const allows = columnAllows(read);
+    expect(columnAllows(read)).toBe(allows);
+    const p = setColumnType(projectOf([], read), "pop", CATEGORICAL);
+    expect(columnAllows(tableReadOf(p))).toBe(allows);
+  });
+});
+
+describe("IP4 D2 the types of the columns: the types", () => {
+  test("setColumnType of each type a column may have: categorical, continuous, and binary in either coding", () => {
+    const p = projectOf([], workedRead());
+    expect(typesOf(setColumnType(p, "pop", CATEGORICAL))["pop"]).toEqual(
+      CATEGORICAL,
+    );
+    expect(typesOf(setColumnType(p, "h", CONTINUOUS))["h"]).toEqual(CONTINUOUS);
+    const other = { kind: "binary", one: "1,5", zero: "2" } as const;
+    const q = setColumnType(p, "h", other);
+    expect(typesOf(q)["h"]).toEqual(other);
+    expect(q.individuals?.typesSet).toEqual([["h", other]]);
+    const r = setColumnType(p, "st", {
+      kind: "binary",
+      one: "no",
+      zero: "yes",
+    });
+    expect(typesOf(r)["st"]).toEqual({
+      kind: "binary",
+      one: "no",
+      zero: "yes",
+    });
+  });
+
+  test.each<[string, string, ColumnType]>([
+    ["continuous on a column not all numbers", "pop", CONTINUOUS],
+    ["continuous on h read with the point", "h", CONTINUOUS],
+    [
+      "binary of values not the column's",
+      "st",
+      { kind: "binary", one: "yes", zero: "maybe" },
+    ],
+    [
+      "binary of one value coded twice",
+      "st",
+      { kind: "binary", one: "yes", zero: "yes" },
+    ],
+    ["identifier on a column not the first", "pop", { kind: "identifier" }],
+    ["another type on the first column", "id", CATEGORICAL],
+  ])("setColumnType of %s is a defect", (_what, column, type) => {
+    const p = projectOf([], workedRead("."));
+    expect(() => setColumnType(p, column, type)).toThrow(DEFECT);
+  });
+
+  test("setColumnType of binary on a column of three values is a defect", () => {
+    const read = readOf(
+      ["id", "s"],
+      [
+        ["i1", "a"],
+        ["i2", "b"],
+        ["i3", "c"],
+      ],
+    );
+    expect(() =>
+      setColumnType(projectOf([], read), "s", {
+        kind: "binary",
+        one: "a",
+        zero: "b",
+      }),
+    ).toThrow(DEFECT);
+  });
+
+  test("setColumnType of the first column with identifier gives the project itself", () => {
+    const p = projectOf([], workedRead());
+    expect(setColumnType(p, "id", { kind: "identifier" })).toBe(p);
+  });
+
+  test("setColumnType of the first column with identifier gives the project itself when typesSet names it from before", () => {
+    const p = projectOf([["id", CATEGORICAL]], workedRead());
+    expect(setColumnType(p, "id", { kind: "identifier" })).toBe(p);
+  });
+
+  test("a read whose types set change none of its types is recorded as it is given", () => {
+    const read = workedRead();
+    const p = recordedWith([["st", STATUS_YES]], read);
+    expect(p.individuals?.read).toBe(read);
+  });
+
+  test("typesSet holds each pair, replaced in its place when its column is set again", () => {
+    const p = projectOf([], workedRead());
+    const q = setColumnType(
+      setColumnType(p, "pop", CATEGORICAL),
+      "h",
+      CONTINUOUS,
+    );
+    expect(q.individuals?.typesSet).toEqual([
+      ["pop", CATEGORICAL],
+      ["h", CONTINUOUS],
+    ]);
+    const back = { kind: "binary", one: "A", zero: "B" } as const;
+    const r = setColumnType(q, "pop", back);
+    expect(r.individuals?.typesSet).toEqual([
+      ["pop", back],
+      ["h", CONTINUOUS],
+    ]);
+    expect(setColumnType(r, "pop", { ...back })).toBe(r);
+  });
+
+  test("a type set not applied is replaced in its place, and its column leaves typesLost", () => {
+    const p = recordedWith(
+      [
+        ["st", CONTINUOUS],
+        ["pop", CATEGORICAL],
+      ],
+      workedRead(),
+    );
+    const individuals = p.individuals;
+    if (individuals === null) throw new Error("no file");
+    expect(typesLost(individuals)).toEqual([["st", CONTINUOUS]]);
+    // The column shows the inferred type, which the user now sets.
+    expect(typesOf(p)["st"]).toEqual(STATUS_YES);
+    const q = setColumnType(p, "st", STATUS_YES);
+    expect(q.individuals?.typesSet).toEqual([
+      ["st", STATUS_YES],
+      ["pop", CATEGORICAL],
+    ]);
+    const after = q.individuals;
+    if (after === null) throw new Error("no file");
+    expect(typesLost(after)).toEqual([]);
+  });
+
+  test("the record of the example: score applied, status not, typesSet unchanged, typesLost status", () => {
+    const typesSet: readonly ColumnTypeOf[] = [
+      ["score", CATEGORICAL],
+      ["status", STATUS_YES],
+    ];
+    const read = readOf(
+      ["id", "score", "status"],
+      [
+        ["i1", "1", "yes"],
+        ["i2", "2", "no"],
+        ["i3", "3", "n.d."],
+      ],
+    );
+    const p = recordedWith(typesSet, read);
+    expect(typesOf(p)).toEqual({
+      id: { kind: "identifier" },
+      score: CATEGORICAL,
+      status: CATEGORICAL,
+    });
+    expect(p.individuals?.typesSet).toBe(typesSet);
+    const individuals = p.individuals;
+    if (individuals === null) throw new Error("no file");
+    expect(typesLost(individuals)).toEqual([["status", STATUS_YES]]);
+    expect(typeLostReason(tableReadOf(p), "status")).toBe("values");
+  });
+
+  test("the file read again without n.d.: status binary with yes coded 1, and nothing lost", () => {
+    const typesSet: readonly ColumnTypeOf[] = [
+      ["score", CATEGORICAL],
+      ["status", { kind: "binary", one: "yes", zero: "no" }],
+    ];
+    const read = readOf(
+      ["id", "score", "status"],
+      [
+        ["i1", "1", "yes"],
+        ["i2", "2", "no"],
+        ["i3", "3", null],
+      ],
+    );
+    const p = recordedWith(typesSet, read);
+    expect(typesOf(p)["status"]).toEqual(STATUS_YES);
+    const individuals = p.individuals;
+    if (individuals === null) throw new Error("no file");
+    expect(typesLost(individuals)).toEqual([]);
+  });
+
+  test("a type set continuous on a column whose new values are not all numbers is not applied", () => {
+    const read = readOf(
+      ["id", "h"],
+      [
+        ["i1", "1.5"],
+        ["i2", "n.d."],
+        ["i3", "2"],
+      ],
+    );
+    const p = recordedWith([["h", CONTINUOUS]], read);
+    expect(typesOf(p)["h"]).toEqual(CATEGORICAL);
+    const individuals = p.individuals;
+    if (individuals === null) throw new Error("no file");
+    expect(typesLost(individuals)).toEqual([["h", CONTINUOUS]]);
+    expect(typeLostReason(tableReadOf(p), "h")).toBe("values");
+  });
+
+  test("a binary type is applied with the user's coding to the same two values in another order of the rows, and not to other two", () => {
+    const users = { kind: "binary", one: "no", zero: "yes" } as const;
+    const same = readOf(
+      ["id", "st"],
+      [
+        ["i1", "no"],
+        ["i2", "yes"],
+        ["i3", "yes"],
+      ],
+    );
+    expect(typesOf(recordedWith([["st", users]], same))["st"]).toEqual(users);
+    const other = readOf(
+      ["id", "st"],
+      [
+        ["i1", "sí"],
+        ["i2", "no"],
+      ],
+    );
+    const p = recordedWith([["st", users]], other);
+    expect(typesOf(p)["st"]).toEqual({ kind: "binary", one: "sí", zero: "no" });
+    const individuals = p.individuals;
+    if (individuals === null) throw new Error("no file");
+    expect(typesLost(individuals)).toEqual([["st", users]]);
+  });
+
+  test("a type set on a column the new table does not have is not applied, and is gone", () => {
+    const p = recordedWith([["breed", CATEGORICAL]], workedRead());
+    const individuals = p.individuals;
+    if (individuals === null) throw new Error("no file");
+    expect(typesLost(individuals)).toEqual([["breed", CATEGORICAL]]);
+    expect(tableReadOf(p).columns).toEqual(workedRead().columns);
+    expect(typeLostReason(tableReadOf(p), "breed")).toBe("gone");
+  });
+
+  test("a type set on status, which the new table has first, is not applied: the first column names the individuals", () => {
+    const read = readOf(
+      ["status", "pop"],
+      [
+        ["yes", "A"],
+        ["no", "B"],
+      ],
+    );
+    const p = recordedWith([["status", STATUS_YES]], read);
+    expect(typesOf(p)["status"]).toEqual({ kind: "identifier" });
+    const individuals = p.individuals;
+    if (individuals === null) throw new Error("no file");
+    expect(typesLost(individuals)).toEqual([["status", STATUS_YES]]);
+    expect(typeLostReason(tableReadOf(p), "status")).toBe("firstColumn");
+  });
+
+  test("a file read as one column applies no type set, and the same file read with the right separator applies them all", () => {
+    const typesSet: readonly ColumnTypeOf[] = [
+      ["pop", CATEGORICAL],
+      ["h", CONTINUOUS],
+      ["st", { kind: "binary", one: "no", zero: "yes" }],
+    ];
+    const oneColumn = readOf(
+      ["id;pop;h;st"],
+      [["i1;A;1,5;yes"], ["i2;B;2;no"], ["i3;A;2;yes"], ["i4;;;no"]],
+    );
+    const wrong = recordedWith(typesSet, oneColumn);
+    const lost = wrong.individuals;
+    if (lost === null) throw new Error("no file");
+    expect(typesLost(lost)).toEqual(typesSet);
+    const again = setCsvOptions(wrong, { ...TYPES_CSV, separator: ";" });
+    expect(again.individuals?.typesSet).toBe(wrong.individuals?.typesSet);
+    const right = recordIndividualsRead(
+      again,
+      TYPES_ID,
+      { ...TYPES_CSV, separator: ";" },
+      workedRead(","),
+    );
+    expect(typesOf(right)).toEqual({
+      id: { kind: "identifier" },
+      pop: CATEGORICAL,
+      h: CONTINUOUS,
+      st: { kind: "binary", one: "no", zero: "yes" },
+    });
+    const individuals = right.individuals;
+    if (individuals === null) throw new Error("no file");
+    expect(typesLost(individuals)).toEqual([]);
+  });
+
+  test("a failed read keeps typesSet as it is", () => {
+    const typesSet: readonly ColumnTypeOf[] = [["st", STATUS_YES]];
+    const p = recordedWith(typesSet, {
+      kind: "failed",
+      error: { kind: "empty" },
+    });
+    expect(p.individuals?.read.kind).toBe("failed");
+    expect(p.individuals?.typesSet).toBe(typesSet);
+  });
+
+  test("typesLost is the same array for the same source, and [] for a source not read", () => {
+    const p = recordedWith([["breed", CATEGORICAL]], workedRead());
+    const individuals = p.individuals;
+    if (individuals === null) throw new Error("no file");
+    expect(typesLost(individuals)).toBe(typesLost(individuals));
+    const pending = projectOf([["breed", CATEGORICAL]], { kind: "pending" });
+    expect(typesLost(individualsOf(pending))).toEqual([]);
+  });
+
+  test("forgetTypesLost keeps in typesSet the pairs applied alone, and gives the project itself when none is lost", () => {
+    const p = recordedWith(
+      [
+        ["breed", CATEGORICAL],
+        ["pop", CATEGORICAL],
+        ["st", CONTINUOUS],
+      ],
+      workedRead(),
+    );
+    const q = forgetTypesLost(p);
+    expect(q.individuals?.typesSet).toEqual([["pop", CATEGORICAL]]);
+    expect(q.individuals?.read).toBe(p.individuals?.read);
+    expect(forgetTypesLost(q)).toBe(q);
+    const none = deepFreeze({ ...p, individuals: null });
+    expect(forgetTypesLost(none)).toBe(none);
+    const pending = projectOf([["breed", CATEGORICAL]], { kind: "pending" });
+    expect(forgetTypesLost(pending)).toBe(pending);
+  });
+
+  test("loadIndividuals after setColumnType carries typesSet; removeIndividuals then loadIndividuals does not", () => {
+    const p = setColumnType(projectOf([], workedRead()), "h", CONTINUOUS);
+    const typesSet = p.individuals?.typesSet;
+    const load = { fileId: NEW_ID, name: "pops.csv", csv: TYPES_CSV };
+    const again = loadIndividuals(p, load);
+    expect(again.individuals?.typesSet).toBe(typesSet);
+    expect(again.individuals?.read).toEqual({ kind: "pending" });
+    const fresh = loadIndividuals(removeIndividuals(p), load);
+    expect(fresh.individuals?.typesSet).toEqual([]);
+  });
+});
+
+describe("IP4 D2 the types of the columns: parseProject of a read with a type set not applied", () => {
+  /** The sample project's individuals file with `typesSet`, as JSON. */
+  function withTypesSet(typesSet: unknown): unknown {
+    const p = sampleProject();
+    return fileWith({
+      individuals: { ...individualsOf(p), typesSet },
+    });
+  }
+
+  test("a source whose typesSet holds sex binary with values its table does not have opens, and typesLost gives it", () => {
+    const pair = ["sex", { kind: "binary", one: "yes", zero: "no" }];
+    const parsed = parse(withTypesSet([pair]));
+    if (!parsed.ok) throw new Error(JSON.stringify(parsed.error));
+    expect(typesLost(individualsOf(parsed.value))).toEqual([pair]);
+  });
+
+  test("a pair the read allows whose column has another type is refused", () => {
+    // height is continuous in the table, and allows categorical.
+    expect(
+      errorOf(
+        parse(
+          withTypesSet([
+            ["pop", CATEGORICAL],
+            ["height", CATEGORICAL],
+          ]),
+        ),
+      ),
+    ).toMatchObject(inconsistent(["individuals", "typesSet", 1]));
+  });
+
+  test("the text of that refusal", () => {
+    const result = parse(withTypesSet([["height", CATEGORICAL]]));
+    expect(result.ok ? "" : projectErrorText(result.error)).toBe(
+      "The project file cannot be opened: the first of the types set by the user names the column height, whose values allow the type set, but that column has another type. The file was changed outside the application, or is damaged. Open a copy saved before the change, or make the project again.",
+    );
+  });
+
+  test("an individuals file with no typesSet, of stages 2 and 3, opens with none set", () => {
+    const { fileId, name, csv, read } = individualsOf(sampleProject());
+    const stage3 = { fileId, name, csv, read };
+    const parsed = parse(fileWith({ individuals: stage3 }));
+    expect(parsed.ok && parsed.value.individuals?.typesSet).toEqual([]);
+  });
+
+  test("a column named twice in typesSet, and an identifier in it, are refused", () => {
+    expect(
+      errorOf(
+        parse(
+          withTypesSet([
+            ["breed", CATEGORICAL],
+            ["breed", CONTINUOUS],
+          ]),
+        ),
+      ),
+    ).toMatchObject({
+      kind: "repeated",
+      path: ["individuals", "typesSet", 1, 0],
+    });
+    expect(
+      errorOf(parse(withTypesSet([["breed", { kind: "identifier" }]]))),
+    ).toMatchObject({
+      kind: "wrongValue",
+      path: ["individuals", "typesSet", 0, 1],
+    });
+  });
+
+  test("a continuous type on a column of which one value is not a number is refused, with its text", () => {
+    const individuals = individualsOf(sampleProject());
+    const read = tableReadOf(sampleProject());
+    const data = fileWith({
+      individuals: {
+        ...individuals,
+        read: { ...read, columns: read.columns.with(1, CONTINUOUS) },
+      },
+    });
+    const error = errorOf(parse(data));
+    expect(error).toMatchObject(inconsistent([...READ_PATH, "columns", 1]));
+    expect(projectErrorText(error)).toBe(
+      "The project file cannot be opened: the type of the second column of the individuals file cannot be continuous: its values are not all numbers. The file was changed outside the application, or is damaged. Open a copy saved before the change, or make the project again.",
+    );
   });
 });

@@ -3,6 +3,7 @@ import type { Cell, ColumnType, IndividualsTable } from "../protocol.ts";
 import {
   MAX_FEW_WHOLE_LEVELS,
   cellNumber,
+  cellText,
   columnWarningText,
   columnWarnings,
   inferColumnTypes,
@@ -200,15 +201,11 @@ describe("WS4 D2 the numbers and the types", () => {
         zero: "1",
       });
     });
-    // Two rules of the code are for the cells of an xlsx, stage 4: a text
-    // and a number written alike ordered by the name of their type, and a
-    // number cell whole by Number.isInteger. The reader spec leaves the
-    // xlsx to stage 4 ("Not in this spec"), so they are tested there.
     test("the booleans of an xlsx are a known pair, true over false", () => {
       expect(typeOf([false, true])).toEqual({
         kind: "binary",
-        one: true,
-        zero: false,
+        one: "true",
+        zero: "false",
       });
     });
   });
@@ -221,7 +218,14 @@ describe("WS4 D2 the numbers and the types", () => {
       const table = tableOf(["1", "2", "3", "5"]);
       const columns = inferColumnTypes(table, ".");
       expect(columnWarnings(table, columns, ".")).toEqual([
-        { kind: "fewWholeLevels", column: "x", numLevels: 4, min: 1, max: 5 },
+        {
+          kind: "fewWholeLevels",
+          column: "x",
+          numLevels: 4,
+          numTexts: 4,
+          min: 1,
+          max: 5,
+        },
       ]);
     });
     test("1, 01 and 001 are one level, and -3 and +3 are whole", () => {
@@ -229,7 +233,14 @@ describe("WS4 D2 the numbers and the types", () => {
       const columns = inferColumnTypes(table, ".");
       expect(columns[1]).toEqual({ kind: "continuous" });
       expect(columnWarnings(table, columns, ".")).toEqual([
-        { kind: "fewWholeLevels", column: "x", numLevels: 3, min: -3, max: 3 },
+        {
+          kind: "fewWholeLevels",
+          column: "x",
+          numLevels: 3,
+          numTexts: 5,
+          min: -3,
+          max: 3,
+        },
       ]);
     });
     test("20 whole levels are warned of, 21 are not", () => {
@@ -239,7 +250,14 @@ describe("WS4 D2 the numbers and the types", () => {
       expect(
         columnWarnings(twenty, inferColumnTypes(twenty, "."), "."),
       ).toEqual([
-        { kind: "fewWholeLevels", column: "x", numLevels: 20, min: 1, max: 20 },
+        {
+          kind: "fewWholeLevels",
+          column: "x",
+          numLevels: 20,
+          numTexts: 20,
+          min: 1,
+          max: 20,
+        },
       ]);
       const twentyOne = tableOf(
         Array.from({ length: 21 }, (_, index) => String(index + 1)),
@@ -273,8 +291,22 @@ describe("WS4 D2 the numbers and the types", () => {
         { kind: "continuous" },
       ];
       expect(columnWarnings(table, columns, ".")).toEqual([
-        { kind: "fewWholeLevels", column: "a", numLevels: 3, min: 7, max: 9 },
-        { kind: "fewWholeLevels", column: "b", numLevels: 2, min: 1, max: 4 },
+        {
+          kind: "fewWholeLevels",
+          column: "a",
+          numLevels: 3,
+          numTexts: 3,
+          min: 7,
+          max: 9,
+        },
+        {
+          kind: "fewWholeLevels",
+          column: "b",
+          numLevels: 2,
+          numTexts: 2,
+          min: 1,
+          max: 4,
+        },
       ]);
     });
   });
@@ -286,11 +318,12 @@ describe("WS4 D2 the numbers and the types", () => {
           kind: "fewWholeLevels",
           column: "score",
           numLevels: 5,
+          numTexts: 5,
           min: 1,
           max: 5,
         }),
       ).toBe(
-        "score holds only 5 different whole numbers, from 1 to 5, and is taken as a measurement. If they are codes, such as numbered populations, it can still be chosen as the column of the populations.",
+        "score holds only 5 different whole numbers, from 1 to 5, and is taken as a measurement. If they are codes, such as numbered populations, set its type to categorical.",
       );
     });
     test("the words for one number written in several ways", () => {
@@ -299,11 +332,12 @@ describe("WS4 D2 the numbers and the types", () => {
           kind: "fewWholeLevels",
           column: "score",
           numLevels: 1,
+          numTexts: 3,
           min: 1,
           max: 1,
         }),
       ).toBe(
-        "score holds only one whole number, 1, written in different ways, and is taken as a measurement. If it is a code, such as a numbered population, it can still be chosen as the column of the populations.",
+        "score holds only one whole number, 1, written in different ways, and is taken as a measurement. If it is a code, such as a numbered population, set its type to categorical.",
       );
     });
     test("a negative and a large number are written as JavaScript writes them", () => {
@@ -312,11 +346,12 @@ describe("WS4 D2 the numbers and the types", () => {
           kind: "fewWholeLevels",
           column: "year code",
           numLevels: 2,
+          numTexts: 2,
           min: -3,
           max: 12000,
         }),
       ).toBe(
-        "year code holds only 2 different whole numbers, from -3 to 12000, and is taken as a measurement. If they are codes, such as numbered populations, it can still be chosen as the column of the populations.",
+        "year code holds only 2 different whole numbers, from -3 to 12000, and is taken as a measurement. If they are codes, such as numbered populations, set its type to categorical.",
       );
     });
   });
@@ -355,5 +390,80 @@ describe("WS4 D2 the numbers and the types", () => {
         /^popnei_web defect: 1 types were given for a table of 2 columns$/,
       );
     });
+  });
+});
+
+describe("IP4 D2 the types compared as text", () => {
+  test("cellText: a number and a boolean as String writes them, a text as it is, a missing cell null", () => {
+    expect(cellText(1)).toBe("1");
+    expect(cellText(0.1 + 0.2)).toBe("0.30000000000000004");
+    expect(cellText(true)).toBe("true");
+    expect(cellText("001")).toBe("001");
+    expect(cellText(null)).toBeNull();
+  });
+
+  test("an xlsx column of the number 1, the text 1 and the number 0 is binary, 1 coded 1", () => {
+    expect(typeOf([1, "1", 0])).toEqual({
+      kind: "binary",
+      one: "1",
+      zero: "0",
+    });
+  });
+
+  test("an xlsx column of numbers and a text number is continuous", () => {
+    expect(typeOf([1.75, "1.8", 1.69])).toEqual({ kind: "continuous" });
+  });
+
+  test("a text 1,75 of an xlsx, read with the point, makes the column categorical", () => {
+    expect(typeOf(["1,75", 1.8, 1.7])).toEqual({ kind: "categorical" });
+  });
+
+  test("the binary coding does not depend on the order of the rows, for a number and a text alike", () => {
+    expect(typeOf([0, "1", 1])).toEqual(typeOf(["1", 1, 0]));
+  });
+
+  test('a column of one number written in one way, set continuous, has the warning without "written in different ways"', () => {
+    const table = tableOf(["1", "1"]);
+    expect(inferColumnTypes(table, ".")[1]).toEqual({ kind: "categorical" });
+    const warnings = columnWarnings(
+      table,
+      [{ kind: "identifier" }, { kind: "continuous" }],
+      ".",
+    );
+    expect(warnings).toEqual([
+      {
+        kind: "fewWholeLevels",
+        column: "x",
+        numLevels: 1,
+        numTexts: 1,
+        min: 1,
+        max: 1,
+      },
+    ]);
+    const [warning] = warnings;
+    if (warning === undefined) throw new Error("no warning");
+    expect(columnWarningText({ ...warning, column: "score" })).toBe(
+      "score holds only one whole number, 1, and is taken as a measurement. If it is a code, such as a numbered population, set its type to categorical.",
+    );
+  });
+
+  test("1, 01 and 001 give one level of three texts, and the sentence of different ways", () => {
+    const table = tableOf(["1", "01", "001"]);
+    const warnings = columnWarnings(table, inferColumnTypes(table, "."), ".");
+    expect(warnings).toMatchObject([{ numLevels: 1, numTexts: 3 }]);
+    const [warning] = warnings;
+    if (warning === undefined) throw new Error("no warning");
+    expect(columnWarningText(warning)).toContain("written in different ways");
+  });
+
+  test("a number cell of an xlsx and its text are one text for the warning", () => {
+    const table = tableOf([1, "1", 2]);
+    expect(
+      columnWarnings(
+        table,
+        [{ kind: "identifier" }, { kind: "continuous" }],
+        ".",
+      ),
+    ).toMatchObject([{ numLevels: 2, numTexts: 2 }]);
   });
 });

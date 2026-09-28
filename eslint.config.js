@@ -59,9 +59,13 @@ const scriptsButRunner = {
   message:
     "runnerWorker.ts imports runner.ts as a module, and no other worker's script.",
 };
+// Core may import columnTypes.ts alone, its pure functions of the
+// numbers and the types of a column (docs/specs/core/project.md,
+// columnAllows).
 const individualsReader = {
-  group: ["**/worker/individuals/**"],
-  message: "src/core does not import the reader; the light worker runs it.",
+  group: ["**/worker/individuals/**", "!**/worker/individuals/columnTypes*"],
+  message:
+    "src/core imports only columnTypes.ts of the reader; the light worker reads the file.",
 };
 // individualsFile.ts decodes the bytes of a File and reads it by ranges,
 // for filesRunner.ts alone; the screens may still import the reader of

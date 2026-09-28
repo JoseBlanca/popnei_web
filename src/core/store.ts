@@ -37,7 +37,7 @@ import type {
   AnalysisId,
   AppId,
   Check,
-  IndividualsRead,
+  IndividualsReadGiven,
   IndividualsSource,
   Project,
   SourceRead,
@@ -484,11 +484,12 @@ export interface Store<R, F = never> {
   variantsRead(fileId: string, read: SourceRead): void;
   /** What the light worker read of the individuals file of the load
       `fileId` with the options `csv`, recorded into every project of the
-      history that holds it pending with those options. */
+      history that holds it pending with those options, with the types the
+      user set that it allows. */
   individualsRead(
     fileId: string,
     csv: CsvOptions | null,
-    read: IndividualsRead,
+    read: IndividualsReadGiven,
   ): void;
   /** How the request `runId` ended. Gives the handles it sent because of
       this end: the requests of the Runs that waited for these

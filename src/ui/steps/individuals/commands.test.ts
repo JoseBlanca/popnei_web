@@ -46,6 +46,7 @@ describe("the commands of the Individuals step", () => {
       fileId: FILE_ID,
       name: "pops.csv",
       csv: { encoding: "auto", separator: "auto", decimal: "auto" },
+      typesSet: [],
       read: { kind: "pending" },
     });
   });

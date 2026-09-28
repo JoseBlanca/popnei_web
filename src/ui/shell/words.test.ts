@@ -178,7 +178,7 @@ function individuals(
   read: IndividualsRead,
   csv: CsvOptions = AUTO,
 ): IndividualsSource {
-  return { fileId: INDIVIDUALS_ID, name: "pops.csv", csv, read };
+  return { fileId: INDIVIDUALS_ID, name: "pops.csv", csv, typesSet: [], read };
 }
 
 const BY_POP = { kind: "populations", column: "pop" } as const;

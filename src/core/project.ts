@@ -29,6 +29,10 @@ import type {
   VariantFilterKind,
   VcfReadOptions,
 } from "../worker/protocol.ts";
+import {
+  cellNumber,
+  inferColumnTypes,
+} from "../worker/individuals/columnTypes.ts";
 
 /** The two applications, population genetics and association. */
 export type AppId = "popgen" | "gwas";
@@ -150,6 +154,9 @@ export type SourceError =
       readonly error: Exclude<RunError, { readonly kind: "popnei" }>;
     };
 
+/** A column's name, with a type. */
+export type ColumnTypeOf = readonly [column: string, type: ColumnType];
+
 /** The individuals file of one load. */
 export interface IndividualsSource {
   /** The load id: 16 random bytes as 32 lower case hexadecimal digits. */
@@ -158,6 +165,10 @@ export interface IndividualsSource {
   readonly name: string;
   /** How a CSV or TSV is read; `null` for an xlsx. */
   readonly csv: CsvOptions | null;
+  /** The types the user set, each by the name of its column, applied by
+      the read or waiting for a read that allows them (`typesLost`); never
+      identifier, and no column twice. */
+  readonly typesSet: readonly ColumnTypeOf[];
   /** What the light worker read of the file. */
   readonly read: IndividualsRead;
 }
@@ -188,6 +199,13 @@ export type IndividualsRead =
             readonly error: Exclude<RunError, { readonly kind: "files" }>;
           };
     };
+
+/** A read as the light worker gives it, to be recorded; the record puts
+    on its columns the types of `typesSet` that it allows. */
+export type IndividualsReadGiven = Extract<
+  IndividualsRead,
+  { readonly kind: "read" | "failed" }
+>;
 
 /**
  * The grouping of the individuals. A column is named by its name in the
@@ -670,7 +688,7 @@ function individualsReadError(
       "none, since the individuals file is an xlsx file",
     );
   }
-  return tableError(read.table, read.columns, path);
+  return tableError(read, path);
 }
 
 /**
@@ -679,15 +697,13 @@ function individualsReadError(
  * one row, no name of the header twice, every row as long as the header,
  * the first cell of each row the name of an individual, a text that is not
  * empty, no individual in two rows; one type per column, the first
- * `identifier` and no other, and a binary type whose `one` and `zero` are
- * the two distinct values of its column that are not missing. `path` is
- * that of the read that holds them.
+ * `identifier` and no other, and each other type one its values allow, by
+ * `columnAllows`: a binary type with the two texts of the column's values,
+ * in either coding, and a continuous type only on a column of numbers.
+ * `path` is that of the read.
  */
-function tableError(
-  table: IndividualsTable,
-  columns: readonly ColumnType[],
-  path: FieldPath,
-): ProjectError | null {
+function tableError(read: TableRead, path: FieldPath): ProjectError | null {
+  const { table, columns } = read;
   const tablePath = [...path, "table"];
   if (table.columns.length === 0) {
     return inconsistentTable([...tablePath, "columns"], "has no column");
@@ -728,66 +744,260 @@ function tableError(
       `are ${String(columns.length)}, where the header has ${String(table.columns.length)} columns`,
     );
   }
+  const allows = columnAllows(read);
   for (const [index, type] of columns.entries()) {
-    const typePath = [...path, "columns", index];
-    if (index === 0 && type.kind !== "identifier") {
-      return inconsistentTable(
-        typePath,
-        "should be identifier, since the first column names the individuals",
-      );
-    }
-    if (index !== 0 && type.kind === "identifier") {
-      return inconsistentTable(
-        typePath,
-        "cannot be identifier: only the first column can have that type",
-      );
-    }
-    if (
-      type.kind === "binary" &&
-      !isBinaryOf(type, valuesOfColumn(table, index))
-    ) {
-      return inconsistentTable(
-        typePath,
-        "should be binary, with the two values found in the column coded 1 and 0",
-      );
+    const wrong = typeError(allows, index, type);
+    if (wrong !== null) {
+      return inconsistentTable([...path, "columns", index], wrong);
     }
   }
   return null;
 }
 
-/** The distinct cells of a column that are not missing, compared
-    exactly, up to three: a binary column has two, so a third is enough to
-    refuse it, and the rows after it are not read. */
-function valuesOfColumn(
-  table: IndividualsTable,
+/** What is wrong with `type` on the column at `index` of a table whose
+    columns allow `allows`, the end of a sentence whose subject is the
+    type; null when the column may have it. */
+function typeError(
+  allows: readonly ColumnAllows[],
   index: number,
-): (string | number | boolean)[] {
-  const values: (string | number | boolean)[] = [];
-  for (const row of table.rows) {
-    const cell: Cell | undefined = row[index];
-    if (cell !== undefined && cell !== null && !values.includes(cell)) {
-      values.push(cell);
-      if (values.length > 2) {
-        return values;
-      }
-    }
+  type: ColumnType,
+): string | null {
+  if (index === 0) {
+    return type.kind === "identifier"
+      ? null
+      : "should be identifier, since the first column names the individuals";
   }
-  return values;
+  const allowed = allows[index];
+  if (allowed === undefined) {
+    throw defect(
+      `a table has no types allowed for its column ${String(index)}.`,
+    );
+  }
+  switch (type.kind) {
+    case "identifier":
+      return "cannot be identifier: only the first column can have that type";
+    case "categorical":
+      return null;
+    case "continuous":
+      return allowed.continuous
+        ? null
+        : "cannot be continuous: its values are not all numbers";
+    case "binary":
+      return allowed.binary !== null && sameValues(type, allowed.binary)
+        ? null
+        : "should be binary, with the two values found in the column coded 1 and 0";
+  }
 }
 
-function isBinaryOf(
-  type: {
-    readonly one: string | number | boolean;
-    readonly zero: string | number | boolean;
-  },
-  values: readonly (string | number | boolean)[],
+/** Whether a binary type holds the same two values as `allowed`, in
+    either coding; `allowed` has two different ones, so one coded twice
+    does not. */
+function sameValues(
+  type: { readonly one: string; readonly zero: string },
+  allowed: { readonly one: string; readonly zero: string },
 ): boolean {
   return (
-    values.length === 2 &&
-    type.one !== type.zero &&
-    values.includes(type.one) &&
-    values.includes(type.zero)
+    (type.one === allowed.one && type.zero === allowed.zero) ||
+    (type.one === allowed.zero && type.zero === allowed.one)
   );
+}
+
+// The types of the columns: which each column allows, worked out from the
+// table, and the types the user set that a read does not apply.
+
+/** A read of a table of the individuals file. */
+type TableRead = Extract<IndividualsRead, { readonly kind: "read" }>;
+
+/** The types the values of one column allow, besides categorical, which
+    any column but the first allows. */
+export interface ColumnAllows {
+  /** Whether every value of the column that is not missing is a number,
+      with the decimal mark of the read, and there is one at least. */
+  readonly continuous: boolean;
+  /** The binary type of a column of exactly two values, compared as
+      text, with the reader's coding; null for any other column. */
+  readonly binary: {
+    readonly kind: "binary";
+    readonly one: string;
+    readonly zero: string;
+  } | null;
+}
+
+/** The answers of `columnAllows`, by the table and the decimal mark, so
+    that every read of one table, whatever its types, finds them. */
+const ALLOWS = new WeakMap<
+  IndividualsTable,
+  Map<"." | ",", readonly ColumnAllows[]>
+>();
+
+/**
+ * The types each column of a read allows, one per column in the order of
+ * its table, from its values and the decimal mark of the read,
+ * `found.decimal`, or the point for an xlsx, whose `found` is null. The
+ * first column allows neither. A cell is a number by the reader's rule,
+ * and a binary column has the reader's coding, since both come from the
+ * reader's own functions. The same array for the same table and mark, so
+ * that a table of 10,000 rows is walked once. Throws a defect when a row
+ * is not as long as the header, which the checks of a read refuse first.
+ */
+export function columnAllows(read: TableRead): readonly ColumnAllows[] {
+  const decimal = read.found?.decimal ?? ".";
+  let byDecimal = ALLOWS.get(read.table);
+  if (byDecimal === undefined) {
+    byDecimal = new Map();
+    ALLOWS.set(read.table, byDecimal);
+  }
+  const kept = byDecimal.get(decimal);
+  if (kept !== undefined) {
+    return kept;
+  }
+  const inferred = inferColumnTypes(read.table, decimal);
+  const allows = inferred.map((type, index): ColumnAllows => {
+    if (index === 0) {
+      return { continuous: false, binary: null };
+    }
+    return {
+      continuous: allNumbers(read.table, index, decimal),
+      binary:
+        type.kind === "binary"
+          ? { kind: "binary", one: type.one, zero: type.zero }
+          : null,
+    };
+  });
+  byDecimal.set(decimal, allows);
+  return allows;
+}
+
+/** Whether every cell of the column at `index` that is not missing is a
+    number read with `decimal`, and one is at least. */
+function allNumbers(
+  table: IndividualsTable,
+  index: number,
+  decimal: "." | ",",
+): boolean {
+  let found = false;
+  for (const row of table.rows) {
+    const cell: Cell | undefined = row[index];
+    if (cell === undefined || cell === null) {
+      continue;
+    }
+    if (cellNumber(cell, decimal) === null) {
+      return false;
+    }
+    found = true;
+  }
+  return found;
+}
+
+/** Whether a read allows the type set `type` on `column`: a column of its
+    table that is not the first, whose values allow the type. */
+function applies(read: TableRead, [column, type]: ColumnTypeOf): boolean {
+  const index = read.table.columns.indexOf(column);
+  return index > 0 && typeError(columnAllows(read), index, type) === null;
+}
+
+/** The answers of `typesLost`, by the source. */
+const LOST = new WeakMap<IndividualsSource, readonly ColumnTypeOf[]>();
+
+/** Nothing lost, for a source not read. */
+const NONE_LOST: readonly ColumnTypeOf[] = Object.freeze([]);
+
+/**
+ * The types of `source.typesSet` that its read does not apply, in the
+ * order of `typesSet`: their column is gone, is now the first, which names
+ * the individuals, or has values that do not allow the type. `[]` for a
+ * source not read. The same array for the same source, so that a screen
+ * that compares it is not drawn again.
+ */
+export function typesLost(source: IndividualsSource): readonly ColumnTypeOf[] {
+  const read = source.read;
+  if (read.kind !== "read") {
+    return NONE_LOST;
+  }
+  const kept = LOST.get(source);
+  if (kept !== undefined) {
+    return kept;
+  }
+  const lost = source.typesSet.filter((pair) => !applies(read, pair));
+  LOST.set(source, lost);
+  return lost;
+}
+
+/**
+ * Why a read does not apply a type the user set on `column`, one of
+ * `typesLost` of its source: `"gone"`, its table has no such column;
+ * `"firstColumn"`, the column is its first, which names the individuals;
+ * `"values"`, the values of the column do not allow the type.
+ */
+export function typeLostReason(
+  read: TableRead,
+  column: string,
+): "gone" | "firstColumn" | "values" {
+  const index = read.table.columns.indexOf(column);
+  if (index === -1) {
+    return "gone";
+  }
+  return index === 0 ? "firstColumn" : "values";
+}
+
+/** The columns of a read with each type of `typesSet` that it allows put
+    on its column, in the order of `typesSet`; `read.columns` itself when
+    none changes a type. */
+function withTypesSet(
+  read: TableRead,
+  typesSet: readonly ColumnTypeOf[],
+): readonly ColumnType[] {
+  let columns = read.columns;
+  for (const [column, type] of typesSet) {
+    const index = read.table.columns.indexOf(column);
+    if (applies(read, [column, type]) && !same(columns[index], type)) {
+      columns = columns.with(index, type);
+    }
+  }
+  return columns;
+}
+
+/**
+ * Checks the types the user set of a source: no column named twice, no
+ * identifier, a binary type of two different values; and, in a source
+ * read, each type the read allows the type of its column, since the
+ * record put it there. `path` is that of `typesSet`.
+ */
+function typesSetError(
+  typesSet: readonly ColumnTypeOf[],
+  read: IndividualsRead,
+  path: FieldPath,
+): ProjectError | null {
+  const named = new Set<string>();
+  for (const [index, [column, type]] of typesSet.entries()) {
+    if (named.has(column)) {
+      return repeated([...path, index, 0], "column", column);
+    }
+    named.add(column);
+    if (type.kind === "identifier") {
+      return wrongValue(
+        [...path, index, 1],
+        "categorical, binary or continuous, since only the first column is the identifier",
+      );
+    }
+    if (type.kind === "binary" && type.one === type.zero) {
+      return wrongValue(
+        [...path, index, 1],
+        "binary with two different values",
+      );
+    }
+    if (read.kind !== "read" || !applies(read, [column, type])) {
+      continue;
+    }
+    const there = read.columns[read.table.columns.indexOf(column)];
+    if (!same(there, type)) {
+      return inconsistentTable(
+        [...path, index],
+        `names the column ${shown(column)}, whose values allow the type set, but that column has another type`,
+      );
+    }
+  }
+  return null;
 }
 
 // The commands.
@@ -1052,10 +1262,10 @@ function copyCsvOptions(csv: CsvOptions): CsvOptions {
 }
 
 /** Puts a new load of the individuals file, pending; `csv` is null for an
-    xlsx. The grouping is kept, by the name of its column; the types of
-    the columns come with the new read, and those the user set are lost
-    (the project spec, Open 1). A load whose id is already there gives `p`
-    itself. */
+    xlsx. The grouping is kept, by the name of its column, and so are the
+    types the user set, `typesSet` of the source it replaces, which the
+    record of the new read applies where its values allow them. A load
+    whose id is already there gives `p` itself. */
 export function loadIndividuals(
   p: Project,
   source: {
@@ -1087,12 +1297,19 @@ export function loadIndividuals(
     "loadIndividuals",
     loadIdError(load.fileId, ["individuals", "fileId"]),
   );
-  return { ...p, individuals: { ...load, read: { kind: "pending" } } };
+  return {
+    ...p,
+    individuals: {
+      ...load,
+      typesSet: individuals?.typesSet ?? [],
+      read: { kind: "pending" },
+    },
+  };
 }
 
-/** Sets how the CSV is read, and puts its read back to pending, so the
-    types of the columns the user set are lost. Throws a defect when there
-    is no individuals file, or it is an xlsx. */
+/** Sets how the CSV is read, and puts its read back to pending; the types
+    the user set are kept, for the new read to apply. Throws a defect when
+    there is no individuals file, or it is an xlsx. */
 export function setCsvOptions(p: Project, csv: CsvOptions): Project {
   const individuals = p.individuals;
   const current = individuals?.csv ?? null;
@@ -1120,9 +1337,17 @@ function copyColumnType(type: ColumnType): ColumnType {
   }
 }
 
-/** Sets the type of a column of the table read. Throws a defect when the
-    file is not read, the column is not in the table, or the type is not
-    one `tableError` accepts for that column. */
+/**
+ * Sets the type of a column of the table read, and records it in
+ * `typesSet`, in the place of the column's pair, applied or not, or last;
+ * so the column is no longer in `typesLost`. The first column has one
+ * type, identifier: setting it gives `p` itself, and it never enters
+ * `typesSet`. The type the column has, when the user set no other on it,
+ * gives `p` itself. Throws a defect when the file is not read, the column
+ * is not in the table, or its values do not allow the type, by
+ * `columnAllows`: a binary type of other values than the column's two, in
+ * either coding, or continuous on a column that is not all numbers.
+ */
 export function setColumnType(
   p: Project,
   column: string,
@@ -1140,22 +1365,61 @@ export function setColumnType(
     );
   }
   const copy = copyColumnType(type);
-  if (same(read.columns[index], copy)) {
+  const wrong = typeError(columnAllows(read), index, copy);
+  if (wrong !== null) {
+    refuse(
+      "setColumnType",
+      inconsistentTable(["individuals", "read", "columns", index], wrong),
+    );
+  }
+  if (index === 0) {
     return p;
   }
-  const columns = read.columns.with(index, copy);
-  refuse(
-    "setColumnType",
-    tableError(read.table, columns, ["individuals", "read"]),
-  );
+  const at = individuals.typesSet.findIndex(([name]) => name === column);
+  const setBefore = individuals.typesSet[at];
+  if (
+    same(read.columns[index], copy) &&
+    (setBefore === undefined || same(setBefore[1], copy))
+  ) {
+    return p;
+  }
+  const pair: ColumnTypeOf = [column, copy];
   return {
     ...p,
-    individuals: { ...individuals, read: { ...read, columns } },
+    individuals: {
+      ...individuals,
+      typesSet:
+        at === -1
+          ? [...individuals.typesSet, pair]
+          : individuals.typesSet.with(at, pair),
+      read: { ...read, columns: read.columns.with(index, copy) },
+    },
   };
 }
 
-/** Removes the individuals file; `p` itself when there is none. The
-    grouping is kept. */
+/** Drops from `typesSet` the types the read does not apply, `typesLost`,
+    and keeps those it applies. `p` itself with no file, a file not read,
+    or none lost. */
+export function forgetTypesLost(p: Project): Project {
+  const individuals = p.individuals;
+  if (individuals === null) {
+    return p;
+  }
+  const lost = typesLost(individuals);
+  if (lost.length === 0) {
+    return p;
+  }
+  return {
+    ...p,
+    individuals: {
+      ...individuals,
+      typesSet: individuals.typesSet.filter((pair) => !lost.includes(pair)),
+    },
+  };
+}
+
+/** Removes the individuals file, with the types the user set; `p` itself
+    when there is none. The grouping is kept. */
 export function removeIndividuals(p: Project): Project {
   return p.individuals === null ? p : { ...p, individuals: null };
 }
@@ -1305,14 +1569,16 @@ export function recordVariantsCounted(
     `fileId`, with the options `csv` it was read with; recorded only while
     that source's read is pending, or failed because its worker failed,
     and its options are those, so a read of options since changed is
-    dropped. The types of the columns are those
-    of the read: a type the user set before is lost (the project spec,
-    Open 1). */
+    dropped. A read of a table gets the types the reader inferred, then,
+    for each type of the source's `typesSet` in its order, the type set in
+    place of the inferred one where the read allows it; the others wait in
+    `typesSet`, which is kept whole, and are those of `typesLost`. A failed
+    read keeps `typesSet` too. */
 export function recordIndividualsRead(
   p: Project,
   fileId: string,
   csv: CsvOptions | null,
-  read: IndividualsRead,
+  read: IndividualsReadGiven,
 ): Project {
   const individuals = p.individuals;
   if (
@@ -1327,7 +1593,14 @@ export function recordIndividualsRead(
     "read",
   ]);
   if (error === null) {
-    return { ...p, individuals: { ...individuals, read } };
+    const columns =
+      read.kind === "read" ? withTypesSet(read, individuals.typesSet) : null;
+    // The read itself when no type set changes its columns.
+    const recorded =
+      read.kind === "read" && columns !== null && columns !== read.columns
+        ? { ...read, columns }
+        : read;
+    return { ...p, individuals: { ...individuals, read: recorded } };
   }
   // The reader is our code: a table the project cannot hold is its defect.
   const message = `the reader gave a read the project cannot hold: ${JSON.stringify(error)}`;
@@ -3282,7 +3555,13 @@ function parseIndividualsSource(
   value: unknown,
   path: FieldPath,
 ): Parsed<IndividualsSource> {
-  const fields = readObject(value, path, ["fileId", "name", "csv", "read"]);
+  // A file of stages 2 and 3 has no typesSet, and is read as none set.
+  const fields = readObject(
+    value,
+    path,
+    ["fileId", "name", "csv", "read"],
+    ["typesSet"],
+  );
   if (!fields.ok) {
     return fields;
   }
@@ -3303,19 +3582,51 @@ function parseIndividualsSource(
   if (!csv.ok) {
     return csv;
   }
+  const typesSet = Object.hasOwn(f, "typesSet")
+    ? parseList(f["typesSet"], [...path, "typesSet"], parseColumnTypeOf)
+    : success([]);
+  if (!typesSet.ok) {
+    return typesSet;
+  }
   const read = parseIndividualsRead(f["read"], [...path, "read"]);
   if (!read.ok) {
     return read;
+  }
+  const readWrong = individualsReadError(csv.value, read.value, [
+    ...path,
+    "read",
+  ]);
+  if (readWrong !== null) {
+    return failure(readWrong);
   }
   return orFailure(
     {
       fileId: fileId.value,
       name: name.value,
       csv: csv.value,
+      typesSet: typesSet.value,
       read: read.value,
     },
-    individualsReadError(csv.value, read.value, [...path, "read"]),
+    typesSetError(typesSet.value, read.value, [...path, "typesSet"]),
   );
+}
+
+/** A type the user set: a pair of the name of a column and its type. */
+function parseColumnTypeOf(
+  value: unknown,
+  path: FieldPath,
+): Parsed<ColumnTypeOf> {
+  if (!isList(value) || value.length !== 2) {
+    return failure(
+      wrongValue(path, "a pair of the name of a column and its type"),
+    );
+  }
+  const column = parseText(value[0], [...path, 0]);
+  if (!column.ok) {
+    return column;
+  }
+  const type = parseColumnType(value[1], [...path, 1]);
+  return type.ok ? success([column.value, type.value]) : type;
 }
 
 function parseCsvOptions(value: unknown, path: FieldPath): Parsed<CsvOptions> {
@@ -3595,20 +3906,8 @@ function parseCell(value: unknown, path: FieldPath): Parsed<Cell> {
     : failure(wrongValue(path, "a text, a number, true, false, or empty"));
 }
 
-function parseValue(
-  value: unknown,
-  path: FieldPath,
-): Parsed<string | number | boolean> {
-  if (
-    typeof value === "string" ||
-    typeof value === "boolean" ||
-    (typeof value === "number" && Number.isFinite(value))
-  ) {
-    return success(value);
-  }
-  return failure(wrongValue(path, "a text, a number, true or false"));
-}
-
+/** A type of a column; the two values of a binary type are texts, those
+    of the cells of its column as `String` writes them. */
 function parseColumnType(value: unknown, path: FieldPath): Parsed<ColumnType> {
   const read = readKind(value, path, COLUMN_TYPE_KINDS);
   if (!read.ok) {
@@ -3617,11 +3916,11 @@ function parseColumnType(value: unknown, path: FieldPath): Parsed<ColumnType> {
   const { kind, fields } = read.value;
   switch (kind) {
     case "binary": {
-      const one = parseValue(fields["one"], [...path, "one"]);
+      const one = parseText(fields["one"], [...path, "one"]);
       if (!one.ok) {
         return one;
       }
-      const zero = parseValue(fields["zero"], [...path, "zero"]);
+      const zero = parseText(fields["zero"], [...path, "zero"]);
       if (!zero.ok) {
         return zero;
       }
@@ -4260,6 +4559,27 @@ const FIELD_WORDS: readonly FieldWords[] = [
     ["individuals", "read", "columns", N, "zero"],
     (o) =>
       `the value coded 0 of the ${nth(o, 0)} column of the individuals file`,
+  ],
+  [["individuals", "typesSet"], () => "the types set by the user"],
+  [
+    ["individuals", "typesSet", N],
+    (o) => `the ${nth(o, 0)} of the types set by the user`,
+  ],
+  [
+    ["individuals", "typesSet", N, 0],
+    (o) => `the column of the ${nth(o, 0)} of the types set by the user`,
+  ],
+  [
+    ["individuals", "typesSet", N, 1, REST],
+    (o) => `the type of the ${nth(o, 0)} of the types set by the user`,
+  ],
+  [
+    ["individuals", "typesSet", N, 1, "one"],
+    (o) => `the value coded 1 of the ${nth(o, 0)} of the types set by the user`,
+  ],
+  [
+    ["individuals", "typesSet", N, 1, "zero"],
+    (o) => `the value coded 0 of the ${nth(o, 0)} of the types set by the user`,
   ],
   [
     ["individuals", "read", "found"],

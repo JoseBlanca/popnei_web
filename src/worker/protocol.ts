@@ -80,18 +80,20 @@ export interface IndividualsTable {
 
 /**
  * The type of a column of the individuals file, as the reader inferred it
- * and the user set it. A binary column holds its two values, two distinct
- * cells of the column, a text and a number being distinct even when
- * written alike, and which of them is coded 1; a missing cell is neither.
+ * and the user set it. A binary column holds its two values and which of
+ * them is coded 1. They are the texts of two cells of the column, compared
+ * exactly: a text as it is, a number or a boolean of an xlsx as `String`
+ * writes it, so that a number 1 and a text "1" of one column are one
+ * value. A missing cell is neither.
  */
 export type ColumnType =
   /** The first column, which names the individuals, and no other. */
   | { readonly kind: "identifier" }
-  /** Two values, `one` coded 1 and `zero` coded 0. */
+  /** Two values, the text `one` coded 1 and the text `zero` coded 0. */
   | {
       readonly kind: "binary";
-      readonly one: string | number | boolean;
-      readonly zero: string | number | boolean;
+      readonly one: string;
+      readonly zero: string;
     }
   /** Numbers. */
   | { readonly kind: "continuous" }

@@ -1,7 +1,7 @@
 import * as fc from "fast-check";
 import { describe, expect, test } from "vitest";
 import type { Cell, IndividualsTable, Separator } from "../protocol.ts";
-import { inferColumnTypes } from "./columnTypes.ts";
+import { cellText, inferColumnTypes } from "./columnTypes.ts";
 import { readCsv } from "./csv.ts";
 
 const SEPARATORS: readonly Separator[] = [",", ";", "\t"];
@@ -202,12 +202,70 @@ describe("WS4 D4 the properties of the reader", () => {
             if (type.kind !== "binary") continue;
             const values = new Set(
               table.rows
-                .map((row) => row[index])
-                .filter((cell) => cell !== null),
+                .map((row) => cellText(row[index] ?? null))
+                .filter((text) => text !== null),
             );
             expect(values).toEqual(new Set([type.one, type.zero]));
             expect(type.one).not.toBe(type.zero);
           }
+        },
+      ),
+    );
+  });
+});
+
+describe("IP4 D2 the types of an xlsx are those of its text", () => {
+  /** A cell of an xlsx: missing, a number, a boolean or a text, among
+      them texts and numbers written alike. */
+  const xlsxCell = fc.constantFrom<Cell>(
+    null,
+    1,
+    "1",
+    0,
+    "0",
+    2,
+    1.5,
+    "1.5",
+    true,
+    "true",
+    false,
+    "P1",
+  );
+
+  test("inferColumnTypes of a table of an xlsx equals that of its texts", () => {
+    fc.assert(
+      fc.property(
+        fc
+          .integer({ min: 1, max: 3 })
+          .chain((numOther) =>
+            fc.array(
+              fc.array(xlsxCell, { minLength: numOther, maxLength: numOther }),
+              { minLength: 1, maxLength: 8 },
+            ),
+          ),
+        (cells) => {
+          const numOther = cells[0]?.length ?? 0;
+          const columns = [
+            "id",
+            ...Array.from(
+              { length: numOther },
+              (_, index) => `c${String(index)}`,
+            ),
+          ];
+          const table: IndividualsTable = {
+            columns,
+            rows: cells.map((row, index): Cell[] => [
+              `i${String(index)}`,
+              ...row,
+            ]),
+          };
+          const texts: IndividualsTable = {
+            columns,
+            rows: table.rows.map((row) => row.map((cell) => cellText(cell))),
+          };
+          expect(inferColumnTypes(table, ".")).toEqual(
+            inferColumnTypes(texts, "."),
+          );
         },
       ),
     );

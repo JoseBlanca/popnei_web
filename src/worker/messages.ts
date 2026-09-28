@@ -1946,11 +1946,12 @@ function checkColumnType(value: unknown, place: Place): Checked<ColumnType> {
       if (wrong !== null) {
         return wrong;
       }
-      const one = field(record, "one", place, isCellValue);
+      // The texts of the two values, from stage 4 (protocol.ts).
+      const one = field(record, "one", place, isText);
       if (!one.ok) {
         return one;
       }
-      const zero = field(record, "zero", place, isCellValue);
+      const zero = field(record, "zero", place, isText);
       if (!zero.ok) {
         return zero;
       }
@@ -2408,8 +2409,7 @@ const isBlob: Check<Blob> = (value, place) =>
 const isFile: Check<File> = (value, place) =>
   value instanceof File ? accepted(value) : wrongType(place, "a File", value);
 
-/** A value of a cell that is not missing, as the two values of a binary
-    column are. */
+/** A value of a cell that is not missing. */
 const isCellValue: Check<string | number | boolean> = (value, place) =>
   typeof value === "string" ||
   typeof value === "number" ||

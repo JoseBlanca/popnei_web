@@ -495,7 +495,7 @@ test("WS8 D1 the types of the columns, the warning of a few whole numbers, and a
     "PaíscategoricalEspaña · Italia · Perú",
     /^Sanobinary: (sí\s·\sno|no\s·\ssí)sí\s·\sno$/,
     "Alturacontinuous1,75 · 1,62 · 1,80",
-    "scorecontinuousWarning: score holds only 4 different whole numbers, from 1 to 5, and is taken as a measurement. If they are codes, such as numbered populations, it can still be chosen as the column of the populations.1 · 2 · 3",
+    "scorecontinuousWarning: score holds only 4 different whole numbers, from 1 to 5, and is taken as a measurement. If they are codes, such as numbered populations, set its type to categorical.1 · 2 · 3",
   ]);
   await expectNoViolations(makeAxeBuilder);
 
