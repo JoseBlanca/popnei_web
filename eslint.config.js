@@ -85,7 +85,7 @@ const testOnly = {
   message: "Only the tests import testSupport.ts, fast-check and Vitest.",
 };
 const filesWasm = {
-  group: ["**/crates/files/**"],
+  group: ["xlsx_rs", "xlsx_rs/*"],
   message: "Only src/worker/filesRunner.ts calls the files wasm.",
 };
 const client = {
@@ -125,13 +125,26 @@ const workerLoaded = {
   selector: "ImportDeclaration[source.value=/[?]worker$/]",
   message: "Only src/worker/start.ts loads a worker's script, with ?worker.",
 };
+// The same for the files wasm, which filesRunner.ts alone loads, and only
+// with import() (worker.md, "The files wasm, on first need").
+const filesWasmImportCall = {
+  selector: "ImportExpression[source.value='xlsx_rs']",
+  message: "Only src/worker/filesRunner.ts loads the files wasm, xlsx_rs.",
+};
 const noPopneiImportCall = [
+  "error",
+  popneiImportCall,
+  filesWasmImportCall,
+  workerMade,
+  workerLoaded,
+];
+const noWorkerMade = ["error", filesWasmImportCall, workerMade, workerLoaded];
+const noPopneiImportCallButFiles = [
   "error",
   popneiImportCall,
   workerMade,
   workerLoaded,
 ];
-const noWorkerMade = ["error", workerMade, workerLoaded];
 // The probe is a page of its own, outside the layers: nothing imports it.
 const probe = {
   group: ["**/probe/**"],
@@ -154,13 +167,7 @@ const probePopneiValues = {
 };
 
 export default defineConfig(
-  globalIgnores([
-    "dist/",
-    "playwright-report/",
-    "test-results/",
-    "screens/",
-    "crates/",
-  ]),
+  globalIgnores(["dist/", "playwright-report/", "test-results/", "screens/"]),
   {
     files: ["**/*.{ts,tsx}"],
     extends: [
@@ -317,6 +324,7 @@ export default defineConfig(
     // and only its runner calls the files wasm.
     files: ["src/worker/filesRunner.ts"],
     rules: {
+      "no-restricted-syntax": noPopneiImportCallButFiles,
       "@typescript-eslint/no-restricted-imports": [
         "error",
         {
@@ -428,7 +436,7 @@ export default defineConfig(
     // The lines that make the two workers from their scripts.
     files: ["src/worker/start.ts"],
     rules: {
-      "no-restricted-syntax": ["error", popneiImportCall],
+      "no-restricted-syntax": ["error", popneiImportCall, filesWasmImportCall],
       "@typescript-eslint/no-restricted-imports": [
         "error",
         {
@@ -539,7 +547,12 @@ export default defineConfig(
         { patterns: [outOfProbe, drawing, filesWasm, probePopneiValues] },
       ],
       // The page makes its worker from its own script, with ?worker.
-      "no-restricted-syntax": ["error", popneiImportCall, workerMade],
+      "no-restricted-syntax": [
+        "error",
+        popneiImportCall,
+        filesWasmImportCall,
+        workerMade,
+      ],
     },
   },
   {

@@ -194,8 +194,8 @@ export interface ToFilesRunner {
   readonly id: number;
   /** The file the user picked. */
   readonly file: File;
-  /** How the CSV or TSV is read. */
-  readonly csv: CsvOptions;
+  /** How the CSV or TSV is read; `null` for an xlsx, from stage 4. */
+  readonly csv: CsvOptions | null;
 }
 
 /** A message of the light worker to the page. */
@@ -230,8 +230,9 @@ export type IndividualsFileRead =
       readonly table: IndividualsTable;
       /** The type of each column, one per column of the header. */
       readonly columns: readonly ColumnType[];
-      /** The three options of the CSV the read used. */
-      readonly found: CsvFound;
+      /** The three options of the CSV the read used; `null` for an
+          xlsx, which has none. */
+      readonly found: CsvFound | null;
     }
   /** The reader refused the file. */
   | {
@@ -696,7 +697,7 @@ export function parseToFilesRunner(
   if (!file.ok) {
     return file;
   }
-  const csv = field(record, "csv", place, checkCsvOptions);
+  const csv = field(record, "csv", place, orNull(checkCsvOptions));
   if (!csv.ok) {
     return csv;
   }
@@ -890,6 +891,13 @@ const FILE_ERROR_KINDS: Readonly<Record<IndividualsFileError["kind"], true>> = {
   notText: true,
   variantsFile: true,
   cutShort: true,
+  notXlsx: true,
+  oldExcel: true,
+  encrypted: true,
+  emptySheet: true,
+  cellError: true,
+  sheetTooLarge: true,
+  xlsxReaderNotLoaded: true,
 };
 const SEPARATORS: Readonly<Record<Separator, true>> = {
   ",": true,
@@ -1869,7 +1877,7 @@ function checkFileRead(
           columns.value.length,
         );
       }
-      const found = field(record, "found", place, checkCsvFound);
+      const found = field(record, "found", place, orNull(checkCsvFound));
       if (!found.ok) {
         return found;
       }
@@ -1975,7 +1983,59 @@ function checkFileError(
     case "notText":
     case "variantsFile":
     case "cutShort":
+    case "notXlsx":
+    case "oldExcel":
+    case "encrypted":
       return exactFields(record, place, ["kind"]) ?? accepted({ kind: tag });
+    case "emptySheet": {
+      const sheet = onlyField(record, place, "sheet", isText);
+      if (!sheet.ok) {
+        return sheet;
+      }
+      return accepted({ kind: tag, sheet: sheet.value });
+    }
+    case "cellError": {
+      const error = onlyField(record, place, "error", isText);
+      if (!error.ok) {
+        return error;
+      }
+      return accepted({ kind: tag, error: error.value });
+    }
+    case "sheetTooLarge": {
+      const wrong = exactFields(record, place, [
+        "kind",
+        "sheet",
+        "lastRow",
+        "lastColumn",
+        "max",
+      ]);
+      if (wrong !== null) {
+        return wrong;
+      }
+      const sheet = field(record, "sheet", place, isText);
+      if (!sheet.ok) {
+        return sheet;
+      }
+      const lastRow = field(record, "lastRow", place, isNumber);
+      if (!lastRow.ok) {
+        return lastRow;
+      }
+      const lastColumn = field(record, "lastColumn", place, isText);
+      if (!lastColumn.ok) {
+        return lastColumn;
+      }
+      const max = field(record, "max", place, isNumber);
+      if (!max.ok) {
+        return max;
+      }
+      return accepted({
+        kind: tag,
+        sheet: sheet.value,
+        lastRow: lastRow.value,
+        lastColumn: lastColumn.value,
+        max: max.value,
+      });
+    }
     case "duplicateColumn":
     case "duplicateIndividual": {
       const name = onlyField(record, place, "name", isText);
@@ -1985,7 +2045,8 @@ function checkFileError(
       return accepted({ kind: tag, name: name.value });
     }
     case "files":
-    case "unreadable": {
+    case "unreadable":
+    case "xlsxReaderNotLoaded": {
       const message = onlyField(record, place, "message", isText);
       if (!message.ok) {
         return message;
@@ -2377,6 +2438,13 @@ const isWhole: Check<number> = (value, place) =>
 /** A whole number, or null, as the line of a character not decoded. */
 const isWholeOrNull: Check<number | null> = (value, place) =>
   value === null ? accepted(null) : isWhole(value, place);
+
+/** A check of `null`, or of what `check` accepts: the options of a CSV
+    and what was found of them, `null` for an xlsx. */
+function orNull<T>(check: Check<T>): Check<T | null> {
+  return (value, place) =>
+    value === null ? accepted(null) : check(value, place);
+}
 
 /** A check of `null`, the field of a method that does not have it; `of`
     names the method, for the words of the refusal. */

@@ -106,8 +106,6 @@ export default defineConfig(({ mode }) => {
     },
     // A module worker, not the default, "iife" (worker.md).
     worker: { format: "es" },
-    // What cargo writes while it builds the files crate is not watched.
-    server: { watch: { ignored: ["**/crates/files/target/**"] } },
     test: {
       projects: [
         {

@@ -10,7 +10,6 @@
 
 import type { Result } from "../../core/result.ts";
 import type {
-  Cell,
   ColumnType,
   CsvOptions,
   IndividualsFileError,
@@ -18,6 +17,8 @@ import type {
   Separator,
 } from "../protocol.ts";
 import { cellNumber, inferColumnTypes } from "./columnTypes.ts";
+import { countedColumns, fitsHeader, tableOfRows } from "./rows.ts";
+import type { ScannedRow } from "./rows.ts";
 
 /** What a read of a CSV or TSV gives. */
 export interface CsvRead {
@@ -98,63 +99,33 @@ export function readCsv(
       separator,
     });
   }
-  const rows = scanned.rows.filter((row) => !row.cells.every(isEmptyText));
-  const [header, ...individuals] = rows;
-  if (header === undefined || individuals.length === 0) {
-    return fail({ kind: "empty" });
-  }
-  const numColumns = countedColumns(
-    header.cells,
-    individuals,
-    isEmptyText,
-    isMissingText,
-  );
-  const unnamedAtEnd = unnamedPastNames(header.cells, numColumns, individuals);
-  if (unnamedAtEnd !== null) {
-    return fail({ kind: "unnamedColumn", column: unnamedAtEnd });
-  }
-  for (const row of individuals) {
-    if (!fitsHeader(row.cells, numColumns, header.cells.length, isEmptyText)) {
-      return fail({
-        kind: "raggedRow",
-        line: row.line,
-        expected: numColumns,
-        found: row.cells.length,
-        separator,
-      });
-    }
-  }
-  const kept = keptColumns(header.cells.slice(0, numColumns), individuals);
-  if (!kept.ok) return kept;
-  const columns = kept.value.map((index) => cellAt(header.cells, index));
-  const duplicate = firstRepeated(columns);
-  if (duplicate !== null)
-    return fail({ kind: "duplicateColumn", name: duplicate });
-
-  const tableRows: Cell[][] = [];
-  const seen = new Set<string>();
-  for (const row of individuals) {
-    const name = cellAt(row.cells, 0);
-    if (name === "") return fail({ kind: "emptyIndividual", line: row.line });
-    if (seen.has(name)) return fail({ kind: "duplicateIndividual", name });
-    seen.add(name);
-    tableRows.push(
-      kept.value.map((index, position) => {
-        const cell = cellAt(row.cells, index);
-        return position === 0 || !isMissingText(cell) ? cell : null;
-      }),
-    );
-  }
-  const table: IndividualsTable = { columns, rows: tableRows };
+  const table = tableOfRows(scanned.rows, {
+    isEmpty: isEmptyText,
+    isMissing: isMissingText,
+    nameOf: (cell) => cell,
+    valueOf: (cell) => cell,
+    columnNumber: (index) => index + 1,
+    misfit: (row, numColumns, headerLength) =>
+      fitsHeader(row.cells, numColumns, headerLength, isEmptyText)
+        ? null
+        : {
+            kind: "raggedRow",
+            line: row.line,
+            expected: numColumns,
+            found: row.cells.length,
+            separator,
+          },
+  });
+  if (!table.ok) return table;
   const decimal =
     options.decimal === "auto"
-      ? findDecimal(table, separator)
+      ? findDecimal(table.value, separator)
       : options.decimal;
   return {
     ok: true,
     value: {
-      table,
-      columns: inferColumnTypes(table, decimal),
+      table: table.value,
+      columns: inferColumnTypes(table.value, decimal),
       separator,
       decimal,
     },
@@ -167,125 +138,12 @@ function fail(
   return { ok: false, error };
 }
 
-/** The cell at `index` of a scanned row, which the checks before made
-    sure of: every row is at least as long as the header, and a row has a
-    first cell. */
-function cellAt(cells: readonly string[], index: number): string {
-  const cell = cells[index];
-  if (cell === undefined) {
-    throw new Error(
-      `popnei_web defect: a row of ${String(cells.length)} cells has no cell ${String(index)}`,
-    );
-  }
-  return cell;
-}
-
 function isEmptyText(cell: string): boolean {
   return cell === "";
 }
 
 function isMissingText(cell: string): boolean {
   return MISSING_TEXTS.includes(cell);
-}
-
-/**
- * The number of cells of the header without the run of empty ones at its
- * end whose columns hold no value in any row, as the owner decided on 25
- * September 2026: `id;pop;;` over rows of two cells is a header of two, as
- * Excel shows it. A column holds no value in a row when the row lacks its
- * cell or the cell `holdsNoValue`. The first cell is always counted.
- */
-function countedColumns<C>(
-  header: readonly C[],
-  rows: readonly ScannedRow<C>[],
-  isEmpty: (cell: C) => boolean,
-  holdsNoValue: (cell: C) => boolean,
-): number {
-  let count = header.length;
-  while (count > 1) {
-    const index = count - 1;
-    const name = header[index];
-    if (name === undefined || !isEmpty(name)) break;
-    const hasValue = rows.some((row) => {
-      const cell = row.cells[index];
-      return cell !== undefined && !holdsNoValue(cell);
-    });
-    if (hasValue) break;
-    count -= 1;
-  }
-  return count;
-}
-
-/**
- * The number, counted from 1, of the first column of the run of empty
- * cells at the end of the header, among the first `numColumns`, that
- * holds a value in some row, or `null`. The run is kept by
- * `countedColumns` only when such a column exists, and the user sees no
- * name there, so it is refused as a column with values and no name
- * before a row is measured against a header that counts it.
- */
-function unnamedPastNames(
-  header: readonly string[],
-  numColumns: number,
-  rows: readonly ScannedRow<string>[],
-): number | null {
-  let named = numColumns;
-  while (named > 1 && header[named - 1] === "") named -= 1;
-  for (let index = named; index < numColumns; index += 1) {
-    const hasValue = rows.some((row) => {
-      const cell = row.cells[index];
-      return cell !== undefined && !isMissingText(cell);
-    });
-    if (hasValue) return index + 1;
-  }
-  return null;
-}
-
-/** Whether a row of these cells fits a header counted as `numColumns`
-    cells and written with `headerLength`: at least `numColumns` cells,
-    and those past the whole header all empty. The cells between the two
-    hold no value, by the count. */
-function fitsHeader<C>(
-  cells: readonly C[],
-  numColumns: number,
-  headerLength: number,
-  isEmpty: (cell: C) => boolean,
-): boolean {
-  if (cells.length < numColumns) return false;
-  return cells.slice(headerLength).every(isEmpty);
-}
-
-/**
- * The indices of the columns kept, in the order of the file: the first
- * always, one with a name, and none with an empty name whose cells are all
- * missing, empty, `NA` or `-`: the columns Excel adds with a trailing
- * separator, and, as the owner decided on 25 September 2026, a column of
- * missing markers alone, which has no values either. A column with an
- * empty name and a value is refused, with its number counted from 1.
- */
-function keptColumns(
-  names: readonly string[],
-  rows: readonly ScannedRow<string>[],
-): Result<number[], IndividualsFileError> {
-  const kept: number[] = [];
-  for (const [index, name] of names.entries()) {
-    if (index === 0 || name !== "") {
-      kept.push(index);
-    } else if (rows.some((row) => !isMissingText(cellAt(row.cells, index)))) {
-      return fail({ kind: "unnamedColumn", column: index + 1 });
-    }
-  }
-  return { ok: true, value: kept };
-}
-
-/** The first name that appears a second time, or null. */
-function firstRepeated(names: readonly string[]): string | null {
-  const seen = new Set<string>();
-  for (const name of names) {
-    if (seen.has(name)) return name;
-    seen.add(name);
-  }
-  return null;
 }
 
 /**
@@ -363,13 +221,6 @@ function findDecimal(table: IndividualsTable, separator: Separator): "." | "," {
     }
   }
   return withComma > withPoint ? "," : ".";
-}
-
-/** A row as the scanner found it: the line of the file where it starts,
-    counted from 1, and its cells. */
-interface ScannedRow<C> {
-  readonly line: number;
-  readonly cells: C[];
 }
 
 /** The rows of a text, and the line of the cell whose quote is never

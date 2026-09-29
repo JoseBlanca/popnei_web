@@ -5,7 +5,8 @@ import {
   MAX_INDIVIDUALS_FILE_BYTES,
   readIndividualsFile,
 } from "./individualsFile.ts";
-import type { BytesSource } from "./individualsFile.ts";
+import type { BytesSource, XlsxReader } from "./individualsFile.ts";
+import type { SheetCellsRead } from "./individuals/sheet.ts";
 
 const AUTO: CsvOptions = {
   encoding: "auto",
@@ -51,7 +52,9 @@ const SPANISH_READ: IndividualsFileRead = {
 function spanishRead(
   encoding: "utf-8" | "windows-1252" | "utf-16",
 ): IndividualsFileRead {
-  if (SPANISH_READ.kind !== "read") throw new Error("not a read");
+  if (SPANISH_READ.kind !== "read" || SPANISH_READ.found === null) {
+    throw new Error("not a read of a CSV");
+  }
   return { ...SPANISH_READ, found: { ...SPANISH_READ.found, encoding } };
 }
 
@@ -77,6 +80,19 @@ function doubleBytes(text: string, littleEndian: boolean): number[] {
 
 const SPANISH_TEXT = SPANISH_LINES.join("\r\n") + "\r\n";
 
+/** A reader of the cells of an xlsx that a read of a CSV never calls. */
+const NO_XLSX: XlsxReader = () => {
+  throw new Error("readXlsx was called for a CSV");
+};
+
+/** The read of `file` as a CSV with the options `csv`. */
+function readCsvFile(
+  file: BytesSource,
+  csv: CsvOptions,
+): Promise<IndividualsFileRead> {
+  return readIndividualsFile(file, csv, NO_XLSX);
+}
+
 function blobOf(bytes: readonly number[]): Blob {
   return new Blob([new Uint8Array(bytes)]);
 }
@@ -87,40 +103,38 @@ describe("WS4 D3 the bytes", () => {
     // ó of Población is the byte F3, and ñ of España F1.
     expect(bytes[17]).toBe(0xf3);
     expect(bytes).toContain(0xf1);
-    expect(await readIndividualsFile(blobOf(bytes), AUTO)).toEqual(
-      SPANISH_READ,
-    );
+    expect(await readCsvFile(blobOf(bytes), AUTO)).toEqual(SPANISH_READ);
   });
 
   test("the same file in UTF-8 with its BOM is found UTF-8, the same table", async () => {
     const bytes = [0xef, 0xbb, 0xbf, ...new TextEncoder().encode(SPANISH_TEXT)];
-    expect(await readIndividualsFile(blobOf(bytes), AUTO)).toEqual(
+    expect(await readCsvFile(blobOf(bytes), AUTO)).toEqual(
       spanishRead("utf-8"),
     );
   });
 
   test("the Windows-1252 file with the encoding set to UTF-8 has the replacement character", async () => {
-    const read = await readIndividualsFile(blobOf(singleBytes(SPANISH_TEXT)), {
+    const read = await readCsvFile(blobOf(singleBytes(SPANISH_TEXT)), {
       ...AUTO,
       encoding: "utf-8",
     });
     if (read.kind !== "read") throw new Error("the read failed");
-    expect(read.found.encoding).toBe("utf-8");
+    expect(read.found?.encoding).toBe("utf-8");
     expect(read.table.columns).toEqual(["Individuo", "Poblaci�n", "Altura"]);
     expect(read.table.rows[0]).toEqual(["ind_001", "Espa�a", "1,75"]);
-    expect(read.found.undecodedLine).toBe(1);
+    expect(read.found?.undecodedLine).toBe(1);
   });
 
   test("the file in UTF-16 little endian, FF FE, is found UTF-16, the same table", async () => {
     const bytes = [0xff, 0xfe, ...doubleBytes(SPANISH_TEXT, true)];
-    expect(await readIndividualsFile(blobOf(bytes), AUTO)).toEqual(
+    expect(await readCsvFile(blobOf(bytes), AUTO)).toEqual(
       spanishRead("utf-16"),
     );
   });
 
   test("the file in UTF-16 big endian, FE FF, is found UTF-16, the same table", async () => {
     const bytes = [0xfe, 0xff, ...doubleBytes(SPANISH_TEXT, false)];
-    expect(await readIndividualsFile(blobOf(bytes), AUTO)).toEqual(
+    expect(await readCsvFile(blobOf(bytes), AUTO)).toEqual(
       spanishRead("utf-16"),
     );
   });
@@ -128,7 +142,7 @@ describe("WS4 D3 the bytes", () => {
   test("UTF-16 little endian is read so with the encoding set to Windows-1252", async () => {
     const bytes = [0xff, 0xfe, ...doubleBytes(SPANISH_TEXT, true)];
     expect(
-      await readIndividualsFile(blobOf(bytes), {
+      await readCsvFile(blobOf(bytes), {
         ...AUTO,
         encoding: "windows-1252",
       }),
@@ -138,7 +152,7 @@ describe("WS4 D3 the bytes", () => {
   test("UTF-16 big endian is read so with the encoding set to Windows-1252", async () => {
     const bytes = [0xfe, 0xff, ...doubleBytes(SPANISH_TEXT, false)];
     expect(
-      await readIndividualsFile(blobOf(bytes), {
+      await readCsvFile(blobOf(bytes), {
         ...AUTO,
         encoding: "windows-1252",
       }),
@@ -147,7 +161,7 @@ describe("WS4 D3 the bytes", () => {
 
   test("the start of a zip, an xlsx, PK 03 04 with a byte 0, is notText", async () => {
     const bytes = [0x50, 0x4b, 0x03, 0x04, 0x14, 0x00, 0x06, 0x00];
-    expect(await readIndividualsFile(blobOf(bytes), AUTO)).toEqual({
+    expect(await readCsvFile(blobOf(bytes), AUTO)).toEqual({
       kind: "failed",
       error: { kind: "notText" },
     });
@@ -155,7 +169,7 @@ describe("WS4 D3 the bytes", () => {
 
   test("a text with one byte 0 near its end is notText", async () => {
     const bytes = [...singleBytes("id,pop\nA,P1\nB,P2"), 0x00, 0x0a];
-    expect(await readIndividualsFile(blobOf(bytes), AUTO)).toEqual({
+    expect(await readCsvFile(blobOf(bytes), AUTO)).toEqual({
       kind: "failed",
       error: { kind: "notText" },
     });
@@ -170,7 +184,7 @@ describe("WS4 D3 the bytes", () => {
         return Promise.resolve(new ArrayBuffer(0));
       },
     };
-    expect(await readIndividualsFile(source, AUTO)).toEqual({
+    expect(await readCsvFile(source, AUTO)).toEqual({
       kind: "failed",
       error: { kind: "tooLarge", size: 20_000_001, max: 20_000_000 },
     });
@@ -186,7 +200,7 @@ describe("WS4 D3 the bytes", () => {
           new DOMException("the file changed", "NotReadableError"),
         ),
     };
-    expect(await readIndividualsFile(source, AUTO)).toEqual({
+    expect(await readCsvFile(source, AUTO)).toEqual({
       kind: "failed",
       error: {
         kind: "unreadable",
@@ -201,7 +215,7 @@ describe("WS4 D3 the bytes", () => {
       arrayBuffer: () =>
         Promise.reject(new DOMException("", "NotReadableError")),
     };
-    expect(await readIndividualsFile(source, AUTO)).toEqual({
+    expect(await readCsvFile(source, AUTO)).toEqual({
       kind: "failed",
       error: { kind: "unreadable", message: "NotReadableError" },
     });
@@ -213,7 +227,7 @@ describe("WS4 D3 the bytes", () => {
       arrayBuffer: () =>
         Promise.reject(new DOMException("gone", "NotFoundError")),
     };
-    expect(await readIndividualsFile(source, AUTO)).toEqual({
+    expect(await readCsvFile(source, AUTO)).toEqual({
       kind: "failed",
       error: { kind: "unreadable", message: "NotFoundError: gone" },
     });
@@ -225,15 +239,12 @@ describe("WS4 D3 the bytes", () => {
       arrayBuffer: () =>
         Promise.resolve(new Uint8Array(singleBytes("id,pop\nA,P1\n")).buffer),
     };
-    const read = await readIndividualsFile(source, AUTO);
+    const read = await readCsvFile(source, AUTO);
     expect(read.kind).toBe("read");
   });
 
   test("a file of ASCII alone is found UTF-8", async () => {
-    const read = await readIndividualsFile(
-      blobOf(singleBytes("id,pop\nA,P1\n")),
-      AUTO,
-    );
+    const read = await readCsvFile(blobOf(singleBytes("id,pop\nA,P1\n")), AUTO);
     expect(read).toEqual({
       kind: "read",
       table: { columns: ["id", "pop"], rows: [["A", "P1"]] },
@@ -249,7 +260,7 @@ describe("WS4 D3 the bytes", () => {
 
   test("the BOM of UTF-8 is removed with the encoding set to Windows-1252", async () => {
     const bytes = [0xef, 0xbb, 0xbf, ...singleBytes("id,pop\nA,P1\n")];
-    const read = await readIndividualsFile(blobOf(bytes), {
+    const read = await readCsvFile(blobOf(bytes), {
       encoding: "windows-1252",
       separator: ",",
       decimal: ".",
@@ -265,28 +276,29 @@ describe("WS4 D3 the bytes", () => {
   });
 
   test("a refusal of the reader of the text is the failed read", async () => {
-    expect(
-      await readIndividualsFile(blobOf(singleBytes("id,pop\n")), AUTO),
-    ).toEqual({ kind: "failed", error: { kind: "empty" } });
+    expect(await readCsvFile(blobOf(singleBytes("id,pop\n")), AUTO)).toEqual({
+      kind: "failed",
+      error: { kind: "empty" },
+    });
   });
 
   test("a byte 0 after the first 10,000 bytes is notText", async () => {
     const text = "id,pop\n" + "A,P1\n".repeat(2_500);
     const bytes = [...singleBytes(text), 0x00, 0x0a];
     expect(bytes.length).toBeGreaterThan(10_000);
-    expect(await readIndividualsFile(blobOf(bytes), AUTO)).toEqual({
+    expect(await readCsvFile(blobOf(bytes), AUTO)).toEqual({
       kind: "failed",
       error: { kind: "notText" },
     });
   });
 
   test("a first byte EF that is not the BOM of UTF-8 is kept, as the ï of Windows-1252", async () => {
-    const read = await readIndividualsFile(
+    const read = await readCsvFile(
       blobOf(singleBytes("ïdent,pop\nA,P1\n")),
       AUTO,
     );
     if (read.kind !== "read") throw new Error("the read failed");
-    expect(read.found.encoding).toBe("windows-1252");
+    expect(read.found?.encoding).toBe("windows-1252");
     expect(read.table.columns).toEqual(["ïdent", "pop"]);
   });
 });
@@ -307,7 +319,7 @@ describe("WS4 D3 the owner's decisions of 25 September on the bytes", () => {
       0xff,
       ...encode("lia;1,82\r\nind_003;Perú;1,69\r\nind_004;España;1,71\r\n"),
     ];
-    const read = await readIndividualsFile(blobOf(bytes), AUTO);
+    const read = await readCsvFile(blobOf(bytes), AUTO);
     if (read.kind !== "read") throw new Error("the read failed");
     expect(read.found).toEqual({
       encoding: "utf-8",
@@ -325,12 +337,12 @@ describe("WS4 D3 the owner's decisions of 25 September on the bytes", () => {
       0xff,
       ...singleBytes("2\n"),
     ];
-    const read = await readIndividualsFile(blobOf(bytes), {
+    const read = await readCsvFile(blobOf(bytes), {
       ...AUTO,
       encoding: "utf-8",
     });
     if (read.kind !== "read") throw new Error("the read failed");
-    expect(read.found.undecodedLine).toBe(4);
+    expect(read.found?.undecodedLine).toBe(4);
   });
 
   test("half of a character of UTF-16 in the middle of the file is not decoded, on its line", async () => {
@@ -342,17 +354,17 @@ describe("WS4 D3 the owner's decisions of 25 September on the bytes", () => {
       0xd8,
       ...doubleBytes("B,P2\r\n", true),
     ];
-    const read = await readIndividualsFile(blobOf(bytes), AUTO);
+    const read = await readCsvFile(blobOf(bytes), AUTO);
     if (read.kind !== "read") throw new Error("the read failed");
-    expect(read.found.encoding).toBe("utf-16");
-    expect(read.found.undecodedLine).toBe(3);
+    expect(read.found?.encoding).toBe("utf-16");
+    expect(read.found?.undecodedLine).toBe(3);
   });
 
   test("a UTF-16 file with one byte more is cutShort, little and big endian", async () => {
     const little = [0xff, 0xfe, ...doubleBytes(SPANISH_TEXT, true), 0x41];
     const big = [0xfe, 0xff, ...doubleBytes(SPANISH_TEXT, false), 0x00];
     for (const bytes of [little, big]) {
-      expect(await readIndividualsFile(blobOf(bytes), AUTO)).toEqual({
+      expect(await readCsvFile(blobOf(bytes), AUTO)).toEqual({
         kind: "failed",
         error: { kind: "cutShort" },
       });
@@ -363,10 +375,146 @@ describe("WS4 D3 the owner's decisions of 25 September on the bytes", () => {
     const little = [0xff, 0xfe, ...doubleBytes(SPANISH_TEXT, true), 0x3d, 0xd8];
     const big = [0xfe, 0xff, ...doubleBytes(SPANISH_TEXT, false), 0xd8, 0x3d];
     for (const bytes of [little, big]) {
-      expect(await readIndividualsFile(blobOf(bytes), AUTO)).toEqual({
+      expect(await readCsvFile(blobOf(bytes), AUTO)).toEqual({
         kind: "failed",
         error: { kind: "cutShort" },
       });
     }
+  });
+});
+
+/** A reader of the cells of an xlsx of the test: it gives `read`, and
+    keeps the bytes of each call. */
+function xlsxReader(read: SheetCellsRead): {
+  readonly readXlsx: XlsxReader;
+  readonly calls: Uint8Array[];
+} {
+  const calls: Uint8Array[] = [];
+  return {
+    readXlsx: (bytes) => {
+      calls.push(bytes);
+      return Promise.resolve(read);
+    },
+    calls,
+  };
+}
+
+const XLSX_CELLS: SheetCellsRead = {
+  kind: "cells",
+  cells: {
+    sheet: "Hoja1",
+    firstRow: 1,
+    firstColumn: 1,
+    numColumns: 3,
+    cells: ["id", "pop", "h", 1, "P1", 1.75, 2, "P2", "#N/A"],
+  },
+};
+
+describe("IP9 D1 the xlsx in node: readIndividualsFile", () => {
+  test("an xlsx gives its bytes to readXlsx, and its cells the table of readSheet with found null", async () => {
+    const bytes = [0x50, 0x4b, 0x03, 0x04, 0x00, 0x01];
+    const { readXlsx, calls } = xlsxReader(XLSX_CELLS);
+
+    expect(await readIndividualsFile(blobOf(bytes), null, readXlsx)).toEqual({
+      kind: "read",
+      table: {
+        columns: ["id", "pop", "h"],
+        rows: [
+          ["1", "P1", 1.75],
+          ["2", "P2", null],
+        ],
+      },
+      columns: [
+        { kind: "identifier" },
+        { kind: "binary", one: "P2", zero: "P1" },
+        { kind: "categorical" },
+      ],
+      found: null,
+    });
+    expect(calls.map((call) => [...call])).toEqual([bytes]);
+  });
+
+  test("a refusal of readSheet is the failed read", async () => {
+    const { readXlsx } = xlsxReader({
+      kind: "cells",
+      cells: {
+        sheet: "Hoja1",
+        firstRow: 1,
+        firstColumn: 1,
+        numColumns: 3,
+        cells: ["id", "pop", "h"],
+      },
+    });
+    expect(await readIndividualsFile(blobOf([0x50]), null, readXlsx)).toEqual({
+      kind: "failed",
+      error: { kind: "empty" },
+    });
+  });
+
+  test.each([
+    [{ kind: "notXlsx" }],
+    [{ kind: "oldExcel" }],
+    [{ kind: "encrypted" }],
+    [{ kind: "emptySheet", sheet: "Hoja1" }],
+    [{ kind: "cellError", error: "#SPILL!" }],
+    [
+      {
+        kind: "sheetTooLarge",
+        sheet: "Hoja1",
+        lastRow: 123,
+        lastColumn: "XFD",
+        max: 2_000_000,
+      },
+    ],
+    [{ kind: "xlsxReaderNotLoaded", message: "Failed to fetch" }],
+    [{ kind: "files", message: "Zip error" }],
+  ] as const)(
+    "the refusal %o of the files wasm is the failed read",
+    async (error) => {
+      const { readXlsx } = xlsxReader({ kind: "failed", error });
+      expect(await readIndividualsFile(blobOf([0x50]), null, readXlsx)).toEqual(
+        {
+          kind: "failed",
+          error,
+        },
+      );
+    },
+  );
+
+  test("an xlsx of 20,000,001 bytes is tooLarge, and readXlsx is never called", async () => {
+    const { readXlsx, calls } = xlsxReader(XLSX_CELLS);
+    let reads = 0;
+    const file: BytesSource = {
+      size: MAX_INDIVIDUALS_FILE_BYTES + 1,
+      arrayBuffer: () => {
+        reads += 1;
+        return Promise.resolve(new ArrayBuffer(0));
+      },
+    };
+    expect(await readIndividualsFile(file, null, readXlsx)).toEqual({
+      kind: "failed",
+      error: { kind: "tooLarge", size: 20_000_001, max: 20_000_000 },
+    });
+    expect(reads).toBe(0);
+    expect(calls).toHaveLength(0);
+  });
+
+  test("a file with the options of a CSV never calls readXlsx, whatever its bytes", async () => {
+    const { readXlsx, calls } = xlsxReader(XLSX_CELLS);
+    const read = await readIndividualsFile(
+      blobOf([...new TextEncoder().encode("id,pop\nA,P1\n")]),
+      AUTO,
+      readXlsx,
+    );
+    expect(read.kind).toBe("read");
+    expect(calls).toHaveLength(0);
+  });
+
+  test("a readXlsx that rejects, a defect of ours, makes the read reject", async () => {
+    const readXlsx: XlsxReader = () =>
+      Promise.reject(new Error("popnei_web defect: xlsx_rs gave 3 cells"));
+    await expect(
+      readIndividualsFile(blobOf([0x50]), null, readXlsx),
+    ).rejects.toThrow(/^popnei_web defect: /);
   });
 });

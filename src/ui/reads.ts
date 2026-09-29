@@ -22,11 +22,11 @@ export type WantedRead =
       options of a VCF. */
   | ({ readonly kind: "variants"; readonly fileId: string } & LoadFormat)
   /** The individuals file of the load `fileId`, with the options of its
-      CSV. */
+      CSV, `null` for an xlsx. */
   | {
       readonly kind: "individuals";
       readonly fileId: string;
-      readonly csv: CsvOptions;
+      readonly csv: CsvOptions | null;
     };
 
 /** The part of the worker client that reads. */
@@ -40,9 +40,10 @@ export type ReadStore = Pick<
 
 /**
  * The reads the project waits for: its sources whose read is pending, the
- * variants file first. Throws a defect on an individuals source pending
- * with no CSV options, an xlsx, which stage 2 cannot read, and on a
- * variants source whose read options do not go with its format.
+ * variants file first, and the individuals file with the options of its
+ * CSV, `null` for an xlsx (docs/specs/entry.md, "Who asks for a read").
+ * Throws a defect on a variants source whose read options do not go with
+ * its format.
  */
 export function wantedReads(p: Project): readonly WantedRead[] {
   const wanted: WantedRead[] = [];
@@ -61,11 +62,6 @@ export function wantedReads(p: Project): readonly WantedRead[] {
   }
   const individuals = p.individuals;
   if (individuals?.read.kind === "pending") {
-    if (individuals.csv === null) {
-      throw new Error(
-        `popnei_web defect: the individuals file ${individuals.fileId} waits for a read with no options of a CSV, an xlsx, which the page cannot read.`,
-      );
-    }
     wanted.push({
       kind: "individuals",
       fileId: individuals.fileId,
@@ -86,7 +82,10 @@ type UnderWay =
       readonly read: Read<IndividualsAnswer>;
     };
 
-function sameCsv(a: CsvOptions, b: CsvOptions): boolean {
+/** Whether two options of a CSV have the same values; `null`, an xlsx,
+    is the same only as `null`. */
+function sameCsv(a: CsvOptions | null, b: CsvOptions | null): boolean {
+  if (a === null || b === null) return a === b;
   return (
     a.encoding === b.encoding &&
     a.separator === b.separator &&
@@ -156,7 +155,7 @@ export function createReads(deps: {
 
   function recordIndividuals(
     fileId: string,
-    csv: CsvOptions,
+    csv: CsvOptions | null,
     outcome: IndividualsAnswer,
   ): void {
     switch (outcome.kind) {

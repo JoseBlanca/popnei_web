@@ -84,8 +84,12 @@ export interface Client {
     load: { readonly fileId: string } & LoadFormat,
   ): Read<VariantsOpened>;
 
-  /** Reads the individuals file of a load on the light worker. */
-  readIndividuals(fileId: string, csv: CsvOptions): Read<IndividualsAnswer>;
+  /** Reads the individuals file of a load on the light worker, a CSV or
+      a TSV with the options `csv`, or an xlsx when `csv` is `null`. */
+  readIndividuals(
+    fileId: string,
+    csv: CsvOptions | null,
+  ): Read<IndividualsAnswer>;
 
   /** Sends a calculation, under its key; the store's `send`. */
   run(key: string, job: Job, onProgress: (p: Progress) => void): Run<JobResult>;
@@ -1193,7 +1197,7 @@ type CalculationRequest = VariantsRequest | JobRequest;
 interface IndividualsRequest {
   readonly id: number;
   readonly file: File;
-  readonly csv: CsvOptions;
+  readonly csv: CsvOptions | null;
   readonly answer: Settler<IndividualsAnswer>;
 }
 

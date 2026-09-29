@@ -1381,6 +1381,22 @@ const fileError = fc.oneof(
   fc.constant({ kind: "notText" as const }),
   fc.constant({ kind: "variantsFile" as const }),
   fc.constant({ kind: "cutShort" as const }),
+  fc.constant({ kind: "notXlsx" as const }),
+  fc.constant({ kind: "oldExcel" as const }),
+  fc.constant({ kind: "encrypted" as const }),
+  fc.record({ kind: fc.constant("emptySheet" as const), sheet: text }),
+  fc.record({ kind: fc.constant("cellError" as const), error: text }),
+  fc.record({
+    kind: fc.constant("sheetTooLarge" as const),
+    sheet: text,
+    lastRow: number,
+    lastColumn: text,
+    max: number,
+  }),
+  fc.record({
+    kind: fc.constant("xlsxReaderNotLoaded" as const),
+    message: text,
+  }),
 );
 const fileRead = fc.oneof(
   fc.integer({ min: 0, max: 5 }).chain((numColumns) =>
@@ -1402,14 +1418,18 @@ const fileRead = fc.oneof(
         minLength: numColumns,
         maxLength: numColumns,
       }),
-      found: fc.record({
-        encoding: fc.constantFrom("utf-8", "windows-1252", "utf-16"),
-        separator,
-        decimal: fc.constantFrom(".", ","),
-        undecodedLine: fc.option(fc.integer({ min: 1, max: 100_000 }), {
-          nil: null,
+      // null for an xlsx.
+      found: fc.option(
+        fc.record({
+          encoding: fc.constantFrom("utf-8", "windows-1252", "utf-16"),
+          separator,
+          decimal: fc.constantFrom(".", ","),
+          undecodedLine: fc.option(fc.integer({ min: 1, max: 100_000 }), {
+            nil: null,
+          }),
         }),
-      }),
+        { nil: null },
+      ),
     }),
   ),
   fc.record({ kind: fc.constant("failed" as const), error: fileError }),
@@ -1635,8 +1655,15 @@ function corrupt(
     case "addBeside":
       return Object.fromEntries([...entries, ["extra", 1]]);
     case "wrongType":
+      // An object is of the wrong type for every leaf but a null that
+      // stands for an object, as the options of a CSV of an xlsx, whose
+      // check then names the fields missing: a symbol is of no type any
+      // message holds.
       return Object.fromEntries(
-        entries.map(([name, child]) => [name, name === head ? {} : child]),
+        entries.map(([name, child]) => [
+          name,
+          name !== head ? child : child === null ? Symbol("wrong") : {},
+        ]),
       );
   }
 }
@@ -1720,6 +1747,165 @@ describe("WS2 D2 the messages refused: any leaf corrupted", () => {
     ).toMatchObject({
       ok: false,
       error: { kind: "wrongType", path: "id", expected: "a whole number" },
+    });
+  });
+});
+
+describe("IP9 D1 the messages of an xlsx", () => {
+  const XLSX_FILE = new File(["PK"], "pops.xlsx");
+  const READ_XLSX = {
+    kind: "readIndividuals",
+    id: 5,
+    file: XLSX_FILE,
+    csv: null,
+  };
+  const XLSX_READ = {
+    kind: "individuals",
+    id: 5,
+    read: {
+      kind: "read",
+      table: {
+        columns: ["id", "h", "ok"],
+        rows: [
+          ["1", 1.75, true],
+          ["2", "1.8", null],
+        ],
+      },
+      columns: [
+        { kind: "identifier" },
+        { kind: "categorical" },
+        { kind: "categorical" },
+      ],
+      found: null,
+    },
+  };
+
+  test("parseToFilesRunner accepts a readIndividuals of an xlsx, whose csv is null", () => {
+    expect(parseToFilesRunner(READ_XLSX)).toEqual({
+      ok: true,
+      value: READ_XLSX,
+    });
+  });
+
+  test("parseFromFilesRunner accepts a read of an xlsx, whose found is null, with its numbers and booleans", () => {
+    expect(parseFromFilesRunner(XLSX_READ)).toEqual({
+      ok: true,
+      value: XLSX_READ,
+    });
+  });
+
+  test.each([
+    [{ kind: "notXlsx" }],
+    [{ kind: "oldExcel" }],
+    [{ kind: "encrypted" }],
+    [{ kind: "emptySheet", sheet: "Hoja1" }],
+    [{ kind: "cellError", error: "#SPILL!" }],
+    [
+      {
+        kind: "sheetTooLarge",
+        sheet: "Hoja1",
+        lastRow: 123,
+        lastColumn: "XFD",
+        max: 2_000_000,
+      },
+    ],
+    [{ kind: "xlsxReaderNotLoaded", message: "Failed to fetch" }],
+  ])("parseFromFilesRunner accepts the refusal %o", (error) => {
+    const message = {
+      kind: "individuals",
+      id: 5,
+      read: { kind: "failed", error },
+    };
+    expect(parseFromFilesRunner(message)).toEqual({
+      ok: true,
+      value: message,
+    });
+  });
+
+  test("a readIndividuals whose csv is {} is missingFields", () => {
+    expect(parseToFilesRunner({ ...READ_XLSX, csv: {} })).toEqual({
+      ok: false,
+      error: {
+        kind: "missingFields",
+        messageKind: "readIndividuals",
+        path: "csv",
+        fields: ["encoding", "separator", "decimal"],
+      },
+    });
+  });
+
+  test("a binary type whose one is the number 1 is wrongType", () => {
+    const message = {
+      ...XLSX_READ,
+      read: {
+        ...XLSX_READ.read,
+        columns: [
+          { kind: "identifier" },
+          { kind: "binary", one: 1, zero: "0" },
+          { kind: "categorical" },
+        ],
+      },
+    };
+    expect(parseFromFilesRunner(message)).toMatchObject({
+      ok: false,
+      error: { kind: "wrongType", path: "read.columns.1.one" },
+    });
+  });
+
+  test("a found of an xlsx with the fields of a CsvFound but undecodedLine is missingFields", () => {
+    const message = {
+      ...XLSX_READ,
+      read: {
+        ...XLSX_READ.read,
+        found: { encoding: "utf-8", separator: ",", decimal: "." },
+      },
+    };
+    expect(parseFromFilesRunner(message)).toEqual({
+      ok: false,
+      error: {
+        kind: "missingFields",
+        messageKind: "individuals",
+        path: "read.found",
+        fields: ["undecodedLine"],
+      },
+    });
+  });
+
+  test("an emptySheet without its sheet is missingFields", () => {
+    const message = {
+      kind: "individuals",
+      id: 5,
+      read: { kind: "failed", error: { kind: "emptySheet" } },
+    };
+    expect(parseFromFilesRunner(message)).toEqual({
+      ok: false,
+      error: {
+        kind: "missingFields",
+        messageKind: "individuals",
+        path: "read.error",
+        fields: ["sheet"],
+      },
+    });
+  });
+
+  test("a sheetTooLarge whose lastRow is a text is wrongType", () => {
+    const message = {
+      kind: "individuals",
+      id: 5,
+      read: {
+        kind: "failed",
+        error: {
+          kind: "sheetTooLarge",
+          sheet: "Hoja1",
+          lastRow: "123",
+          lastColumn: "XFD",
+          max: 2_000_000,
+        },
+      },
+    };
+    expect(parseFromFilesRunner(message)).toMatchObject({
+      ok: false,
+      error: { kind: "wrongType", path: "read.error.lastRow" },
     });
   });
 });

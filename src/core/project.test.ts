@@ -1883,17 +1883,22 @@ describe("WP1 D4 the records and the needs", () => {
       },
     );
 
-    test("an empty message of the files wasm is left out with its colon", () => {
-      expect(
-        individualsNeeds(
-          withIndividualsRead({
-            kind: "failed",
-            error: { kind: "files", message: "" },
-          }),
-        ),
-      ).toBe(
-        "pops.csv could not be read. Load a metadata file in the Individuals step.",
-      );
+    test("the message of the files wasm, empty or not, is not shown: files has the words of the reader's spec", () => {
+      for (const message of ["", "Zip error"]) {
+        expect(
+          individualsNeeds(
+            withIndividualsRead({
+              kind: "failed",
+              error: { kind: "files", message },
+            }),
+          ),
+        ).toBe(
+          "pops.csv could not be read: %s. Load a metadata file in the Individuals step.".replace(
+            "%s",
+            "it could not be read as an Excel workbook and may be damaged; open it in Excel and save it again",
+          ),
+        );
+      }
     });
   });
 
@@ -1911,7 +1916,7 @@ describe("WP1 D4 the records and the needs", () => {
       expect(individualsNeeds(pendingProject())).toBe("Reading pops.csv.");
     });
 
-    test("the files wasm refused the file: its message, and load an individuals file", () => {
+    test("the files wasm could not open the file: the words of files, and load an individuals file", () => {
       expect(
         individualsNeeds(
           withIndividualsRead({
@@ -1920,7 +1925,7 @@ describe("WP1 D4 the records and the needs", () => {
           }),
         ),
       ).toBe(
-        "pops.csv could not be read: the file is not an xlsx file. Load a metadata file in the Individuals step.",
+        "pops.csv could not be read: it could not be read as an Excel workbook and may be damaged; open it in Excel and save it again. Load a metadata file in the Individuals step.",
       );
     });
 
@@ -3208,7 +3213,7 @@ const NEW_REFUSALS: readonly (readonly [IndividualsFileError, string])[] = [
   ],
   [
     { kind: "notText" },
-    "it is not a text file; in Excel, save the sheet as CSV",
+    "it is not a text file; if it is an Excel workbook, give it a name that ends in .xlsx",
   ],
   [
     { kind: "variantsFile" },
@@ -3566,7 +3571,7 @@ describe("WS1 D3 the additions to project.ts", () => {
       ],
       [
         { kind: "notText" },
-        "it is not a text file; in Excel, save the sheet as CSV. Load a corrected file.",
+        "it is not a text file; if it is an Excel workbook, give it a name that ends in .xlsx. Load a corrected file.",
       ],
       [
         { kind: "cutShort" },
@@ -3574,7 +3579,7 @@ describe("WS1 D3 the additions to project.ts", () => {
       ],
       [
         { kind: "files", message: "the file is not an xlsx file." },
-        "the file is not an xlsx file. Load a corrected file.",
+        "it could not be read as an Excel workbook and may be damaged; open it in Excel and save it again. Load a corrected file.",
       ],
     ] as const)(
       "the reader refused the file, %o: what it found, and what mends it there",
@@ -6337,5 +6342,190 @@ describe("IP5 D2 columnWarningsOf and firstValues", () => {
       [],
     ]);
     expect(firstValues(table)).toBe(values);
+  });
+});
+
+/** The sample project with its individuals file, an xlsx, refused as
+    `error`. */
+function xlsxRefusedWith(
+  error: IndividualsFileError,
+  app: AppId = "popgen",
+): Project {
+  const p = xlsxProject();
+  return deepFreeze({
+    ...p,
+    app,
+    grouping: app === "gwas" ? { kind: "roles", roles: [] } : p.grouping,
+    individuals: { ...individualsOf(p), read: { kind: "failed", error } },
+  });
+}
+
+/** The refusals of an xlsx, each with the words after "could not be
+    read:" (docs/specs/worker/individuals.md, "The refusals and their
+    words"). */
+const XLSX_REFUSALS: readonly (readonly [IndividualsFileError, string])[] = [
+  [
+    { kind: "notXlsx" },
+    "it is not an Excel workbook, although its name ends in .xlsx; if it is a CSV or a TSV, give it a name that ends in .csv",
+  ],
+  [
+    { kind: "oldExcel" },
+    "it is a workbook of Excel 97–2003, although its name ends in .xlsx; in Excel, save it as Excel Workbook (.xlsx)",
+  ],
+  [
+    { kind: "encrypted" },
+    "it is protected by a password; in Excel, save a copy without the password",
+  ],
+  [
+    { kind: "emptySheet", sheet: "Hoja1" },
+    "its first sheet, Hoja1, is empty, and only the first sheet is read; put the table in the first sheet",
+  ],
+  [
+    { kind: "cellError", error: "#SPILL!" },
+    "a cell holds the error #SPILL!, which cannot be read; in Excel, find the cells with an error with Find & Select › Go To Special › Formulas › Errors, and correct the formula or replace it with its value",
+  ],
+  [
+    {
+      kind: "sheetTooLarge",
+      sheet: "Hoja1",
+      lastRow: 123,
+      lastColumn: "XFD",
+      max: 2_000_000,
+    },
+    "its first sheet, Hoja1, has values as far as row 123 and column XFD, more than the 2,000,000 cells a metadata file can have; delete the values outside the table",
+  ],
+  [
+    { kind: "files", message: "invalid Zip archive: Could not find EOCD" },
+    "it could not be read as an Excel workbook and may be damaged; open it in Excel and save it again",
+  ],
+  [
+    { kind: "unnamedColumn", column: 4 },
+    "column D has values but no name in the header",
+  ],
+  [
+    { kind: "emptyIndividual", line: 7 },
+    "row 7 has no name of an individual in its first column",
+  ],
+];
+
+const XLSX_NOT_LOADED =
+  "pops.xlsx could not be read: the part of the application that reads Excel files could not be downloaded; check the connection and load the file again; if it fails again, the site may have been updated since this page was opened: save the project, reload the page and open the project again.";
+
+describe("IP9 the words of an xlsx refused", () => {
+  test.each(XLSX_REFUSALS)(
+    "individualsNeeds gives the words of %o, and the end of a refusal",
+    (error, words) => {
+      expect(individualsNeeds(xlsxRefusedWith(error))).toBe(
+        `pops.xlsx could not be read: ${words}. Load a metadata file in the Individuals step.`,
+      );
+    },
+  );
+
+  test.each(XLSX_REFUSALS)(
+    "individualsStepNeeds gives the words of %o, and Load a corrected file.",
+    (error, words) => {
+      expect(individualsStepNeeds(xlsxRefusedWith(error))).toBe(
+        `pops.xlsx could not be read: ${words}. Load a corrected file.`,
+      );
+    },
+  );
+
+  test("the reader of xlsx files not downloaded takes no end, beside a Run button and in the step", () => {
+    const p = xlsxRefusedWith({
+      kind: "xlsxReaderNotLoaded",
+      message: "Failed to fetch dynamically imported module",
+    });
+    expect(individualsNeeds(p)).toBe(XLSX_NOT_LOADED);
+    expect(individualsStepNeeds(p)).toBe(XLSX_NOT_LOADED);
+  });
+
+  test("a column of an xlsx is written with the letters of Excel, AA and XFD among them, and a CSV's by its number", () => {
+    expect(
+      individualsStepNeeds(
+        xlsxRefusedWith({ kind: "unnamedColumn", column: 27 }),
+      ),
+    ).toBe(
+      "pops.xlsx could not be read: column AA has values but no name in the header. Load a corrected file.",
+    );
+    expect(
+      individualsStepNeeds(
+        xlsxRefusedWith({ kind: "unnamedColumn", column: 16_384 }),
+      ),
+    ).toMatch(/^pops\.xlsx could not be read: column XFD has values/);
+    expect(
+      individualsStepNeeds(refusedWith({ kind: "unnamedColumn", column: 27 })),
+    ).toMatch(/^pops\.csv could not be read: column 27 has values/);
+    expect(
+      individualsStepNeeds(refusedWith({ kind: "emptyIndividual", line: 7 })),
+    ).toMatch(/^pops\.csv could not be read: line 7 has no name/);
+  });
+
+  test("a sheet too large in association names a traits file", () => {
+    expect(
+      individualsNeeds(
+        xlsxRefusedWith(
+          {
+            kind: "sheetTooLarge",
+            sheet: "Hoja1",
+            lastRow: 123,
+            lastColumn: "XFD",
+            max: 2_000_000,
+          },
+          "gwas",
+        ),
+      ),
+    ).toBe(
+      "pops.xlsx could not be read: its first sheet, Hoja1, has values as far as row 123 and column XFD, more than the 2,000,000 cells a traits file can have; delete the values outside the table. Load a traits file in the Individuals step.",
+    );
+  });
+
+  test("the name of a sheet is shown escaped and cut, as a value of the user's file", () => {
+    expect(
+      individualsStepNeeds(
+        xlsxRefusedWith({
+          kind: "emptySheet",
+          sheet: `Ho\nja${"1".repeat(45)}`,
+        }),
+      ),
+    ).toBe(
+      `pops.xlsx could not be read: its first sheet, Ho\\nja${"1".repeat(35)}…, is empty, and only the first sheet is read; put the table in the first sheet. Load a corrected file.`,
+    );
+  });
+
+  test.each([
+    ...XLSX_REFUSALS,
+    [{ kind: "xlsxReaderNotLoaded", message: "Failed to fetch" }, ""],
+  ] as const)(
+    "the validation of a project file takes a failed read of %o with its fields",
+    (error) => {
+      expect(parsedRefusal(error)).toStrictEqual({
+        ok: true,
+        value: refusedWith(error),
+      });
+    },
+  );
+
+  test("the validation refuses a sheetTooLarge whose lastRow is a text, at its path", () => {
+    const refusal = {
+      kind: "sheetTooLarge",
+      sheet: "Hoja1",
+      lastRow: "123",
+      lastColumn: "XFD",
+      max: 2_000_000,
+    };
+    const p = sampleProject();
+    const data: unknown = JSON.parse(
+      JSON.stringify({
+        ...p,
+        individuals: {
+          ...individualsOf(p),
+          read: { kind: "failed", error: refusal },
+        },
+      }),
+    );
+    expect(parse(data)).toMatchObject({
+      ok: false,
+      error: { path: ["individuals", "read", "error", "lastRow"] },
+    });
   });
 });

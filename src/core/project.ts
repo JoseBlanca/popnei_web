@@ -31,6 +31,7 @@ import type {
 } from "../worker/protocol.ts";
 import {
   cellNumber,
+  columnLetters,
   columnWarnings,
   inferColumnTypes,
 } from "../worker/individuals/columnTypes.ts";
@@ -2142,10 +2143,17 @@ function individualsReadNeeds(
   switch (read.kind) {
     case "pending":
       return `Reading ${name}.`;
-    case "failed":
-      return read.error.kind === "worker"
-        ? workerFailedText(name, read.error.error.kind, ends)
-        : `${name} could not be read${saying(individualsFileRefusalWords(read.error, app))}. ${ends.refusedEnd(read.error)}`;
+    case "failed": {
+      const error = read.error;
+      if (error.kind === "worker") {
+        return workerFailedText(name, error.error.kind, ends);
+      }
+      const words = `${name} could not be read${saying(individualsFileRefusalWords(error, app, individuals.csv === null))}.`;
+      // Its words say what to do, and take no end.
+      return error.kind === "xlsxReaderNotLoaded"
+        ? words
+        : `${words} ${ends.refusedEnd(error)}`;
+    }
     case "notGiven":
       return `${notGivenText(name)} ${ends.notGivenEnd(name)}`;
     case "read":
@@ -2154,18 +2162,18 @@ function individualsReadNeeds(
 }
 
 /**
- * What follows the colon of a refusal of the reader in the Individuals
- * step of the application `app`: its words and its end, "it is a variants
- * file, which the Variants step takes. Load a metadata file.". It takes
- * any refusal but one of the files wasm, whose message can be empty. The
- * step says a variants file told by its name in these words.
+ * What follows the colon of a refusal of the reader of a CSV in the
+ * Individuals step of the application `app`: its words and its end, "it
+ * is a variants file, which the Variants step takes. Load a metadata
+ * file.". The step says a variants file told by its name in these words.
  */
 export function individualsStepRefusal(
-  error: Exclude<IndividualsFileError, { readonly kind: "files" }>,
+  error: IndividualsFileError,
   app: AppId,
 ): string {
-  const words = saying(individualsFileRefusalWords(error, app));
-  return `${words.slice(2)}. ${stepRefusedEnd(error, app)}`;
+  const words = saying(individualsFileRefusalWords(error, app, false));
+  const end = stepRefusedEnd(error, app);
+  return end === "" ? `${words.slice(2)}.` : `${words.slice(2)}. ${end}`;
 }
 
 /** The end of a refusal of the reader shown in the Individuals step, as
@@ -2174,7 +2182,8 @@ export function individualsStepRefusal(
     others; and, the writer's, another file for a variants file, which is
     not corrected but replaced, and the file chosen again, in the words of
     the Variants step, for a file the browser could not read, by no fault
-    of its own. */
+    of its own; none for the reader of xlsx files not downloaded, whose
+    words say what to do. */
 function stepRefusedEnd(error: IndividualsFileError, app: AppId): string {
   switch (error.kind) {
     case "raggedRow":
@@ -2193,7 +2202,15 @@ function stepRefusedEnd(error: IndividualsFileError, app: AppId): string {
     case "tooLarge":
     case "notText":
     case "cutShort":
+    case "notXlsx":
+    case "oldExcel":
+    case "encrypted":
+    case "emptySheet":
+    case "cellError":
+    case "sheetTooLarge":
       return "Load a corrected file.";
+    case "xlsxReaderNotLoaded":
+      return "";
   }
 }
 
@@ -2662,11 +2679,13 @@ function megabytes(size: number): string {
 
 /** What the reader of the individuals file found wrong with it, in the
     words of docs/specs/worker/individuals.md, "The refusals and their
-    words", with the file named as the application `app` names it; or the
-    message of the files wasm, which may be empty. */
+    words", with the file named as the application `app` names it, and, for
+    an xlsx, `xlsx`, a row and a column named as Excel names them, "row 7"
+    and "column D". */
 function individualsFileRefusalWords(
   error: IndividualsFileError,
   app: AppId,
+  xlsx: boolean,
 ): string {
   switch (error.kind) {
     case "empty":
@@ -2682,9 +2701,9 @@ function individualsFileRefusalWords(
     case "raggedRow":
       return `line ${String(error.line)} has ${counted(error.found, "cell")} where the header has ${grouped(error.expected)}, read with ${SEPARATOR_NAMES[error.separator]} as the separator`;
     case "unnamedColumn":
-      return `column ${String(error.column)} has values but no name in the header`;
+      return `column ${xlsx ? columnLetters(error.column) : String(error.column)} has values but no name in the header`;
     case "emptyIndividual":
-      return `line ${String(error.line)} has no name of an individual in its first column`;
+      return `${xlsx ? "row" : "line"} ${String(error.line)} has no name of an individual in its first column`;
     case "unclosedQuote":
       return `the quote that opens a cell on line ${String(error.line)} is never closed, read with ${SEPARATOR_NAMES[error.separator]} as the separator`;
     case "tooLarge":
@@ -2692,13 +2711,27 @@ function individualsFileRefusalWords(
     case "unreadable":
       return "the browser could not read it; it may have been changed, moved or deleted since it was picked";
     case "notText":
-      return "it is not a text file; in Excel, save the sheet as CSV";
+      return "it is not a text file; if it is an Excel workbook, give it a name that ends in .xlsx";
     case "variantsFile":
       return "it is a variants file, which the Variants step takes";
     case "cutShort":
       return "it ends in the middle of a character and may have been cut short";
     case "files":
-      return error.message;
+      return "it could not be read as an Excel workbook and may be damaged; open it in Excel and save it again";
+    case "notXlsx":
+      return "it is not an Excel workbook, although its name ends in .xlsx; if it is a CSV or a TSV, give it a name that ends in .csv";
+    case "oldExcel":
+      return "it is a workbook of Excel 97–2003, although its name ends in .xlsx; in Excel, save it as Excel Workbook (.xlsx)";
+    case "encrypted":
+      return "it is protected by a password; in Excel, save a copy without the password";
+    case "emptySheet":
+      return `its first sheet, ${shown(error.sheet)}, is empty, and only the first sheet is read; put the table in the first sheet`;
+    case "cellError":
+      return `a cell holds the error ${shown(error.error)}, which cannot be read; in Excel, find the cells with an error with Find & Select › Go To Special › Formulas › Errors, and correct the formula or replace it with its value`;
+    case "sheetTooLarge":
+      return `its first sheet, ${shown(error.sheet)}, has values as far as row ${grouped(error.lastRow)} and column ${error.lastColumn}, more than the ${grouped(error.max)} cells a ${FILE_WORDS[app]} can have; delete the values outside the table`;
+    case "xlsxReaderNotLoaded":
+      return "the part of the application that reads Excel files could not be downloaded; check the connection and load the file again; if it fails again, the site may have been updated since this page was opened: save the project, reload the page and open the project again";
   }
 }
 
@@ -3179,6 +3212,19 @@ const INDIVIDUALS_ERROR_KINDS: Kinds<IndividualsFileError["kind"] | "worker"> =
     notText: { fields: [], words: "a file that is not text" },
     variantsFile: { fields: [], words: "a variants file" },
     cutShort: { fields: [], words: "a file cut short" },
+    notXlsx: { fields: [], words: "an xlsx that is not a workbook" },
+    oldExcel: { fields: [], words: "a workbook of Excel 97–2003" },
+    encrypted: { fields: [], words: "a workbook protected by a password" },
+    emptySheet: { fields: ["sheet"], words: "an empty first sheet" },
+    cellError: { fields: ["error"], words: "a cell with an error" },
+    sheetTooLarge: {
+      fields: ["sheet", "lastRow", "lastColumn", "max"],
+      words: "a sheet too large",
+    },
+    xlsxReaderNotLoaded: {
+      fields: ["message"],
+      words: "the reader of xlsx files not downloaded",
+    },
     worker: { fields: ["error"], words: "a failure of the application" },
   };
 
@@ -4029,11 +4075,50 @@ function parseIndividualsError(
     case "notText":
     case "variantsFile":
     case "cutShort":
+    case "notXlsx":
+    case "oldExcel":
+    case "encrypted":
       return success({ kind });
     case "files":
-    case "unreadable": {
+    case "unreadable":
+    case "xlsxReaderNotLoaded": {
       const message = parseText(fields["message"], [...path, "message"]);
       return message.ok ? success({ kind, message: message.value }) : message;
+    }
+    case "emptySheet": {
+      const sheet = parseText(fields["sheet"], [...path, "sheet"]);
+      return sheet.ok ? success({ kind, sheet: sheet.value }) : sheet;
+    }
+    case "cellError": {
+      const error = parseText(fields["error"], [...path, "error"]);
+      return error.ok ? success({ kind, error: error.value }) : error;
+    }
+    case "sheetTooLarge": {
+      const sheet = parseText(fields["sheet"], [...path, "sheet"]);
+      if (!sheet.ok) {
+        return sheet;
+      }
+      const lastRow = numberField(fields, path, "lastRow");
+      if (!lastRow.ok) {
+        return lastRow;
+      }
+      const lastColumn = parseText(fields["lastColumn"], [
+        ...path,
+        "lastColumn",
+      ]);
+      if (!lastColumn.ok) {
+        return lastColumn;
+      }
+      const max = numberField(fields, path, "max");
+      return max.ok
+        ? success({
+            kind,
+            sheet: sheet.value,
+            lastRow: lastRow.value,
+            lastColumn: lastColumn.value,
+            max: max.value,
+          })
+        : max;
     }
     case "worker": {
       const error = parseRunError(fields["error"], [...path, "error"]);

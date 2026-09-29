@@ -154,14 +154,15 @@ export type IndividualsFileError =
       readonly found: number;
       readonly separator: Separator;
     }
-  /** The reader of xlsx, the files wasm, refused the file, with its
-      message. */
+  /** The files wasm, xlsx_rs, could not open an xlsx as a workbook: a
+      file cut short, damaged or of another format; its message, for the
+      console. */
   | { readonly kind: "files"; readonly message: string }
   /** Values in a column with no name in the header; `column` is counted
-      from 1. */
+      from 1, and for an xlsx is the column of the sheet, A being 1. */
   | { readonly kind: "unnamedColumn"; readonly column: number }
   /** A row with no name of an individual in its first column, on the
-      line `line` of the file. */
+      line `line` of the file, or for an xlsx the row of the sheet. */
   | { readonly kind: "emptyIndividual"; readonly line: number }
   /** A quote that opens a cell on the line `line` and is never closed,
       read with `separator`. */
@@ -183,7 +184,31 @@ export type IndividualsFileError =
   | { readonly kind: "variantsFile" }
   /** A UTF-16 file that ends in the middle of a character, and may have
       been cut short. */
-  | { readonly kind: "cutShort" };
+  | { readonly kind: "cutShort" }
+  // From stage 4, an xlsx (docs/specs/worker/files.md, "The refusals"):
+  /** Not a zip file, as every xlsx is: most often a CSV named .xlsx. */
+  | { readonly kind: "notXlsx" }
+  /** A workbook of Excel 97–2003, or another file of the old Office. */
+  | { readonly kind: "oldExcel" }
+  /** An xlsx saved with a password. */
+  | { readonly kind: "encrypted" }
+  /** The first sheet that is not hidden, named `sheet`, has no value. */
+  | { readonly kind: "emptySheet"; readonly sheet: string }
+  /** A cell holds an error calamine does not know, `error`, "#SPILL!". */
+  | { readonly kind: "cellError"; readonly error: string }
+  /** The first sheet, `sheet`, has values as far as the row `lastRow`,
+      counted from 1, and the column `lastColumn`, in the letters of
+      Excel, "XFD": a rectangle of more than `max` cells. */
+  | {
+      readonly kind: "sheetTooLarge";
+      readonly sheet: string;
+      readonly lastRow: number;
+      readonly lastColumn: string;
+      readonly max: number;
+    }
+  /** The files wasm could not be downloaded; the browser's message, for
+      the console. */
+  | { readonly kind: "xlsxReaderNotLoaded"; readonly message: string };
 
 /**
  * How far a run has gone: the four numbers popnei's `Variants.onProgress`

@@ -1,14 +1,19 @@
 /**
  * The read of the individuals file in the light worker: its size checked,
- * its bytes read and decoded, and the text given to the reader of CSV and
- * TSV (docs/specs/worker/individuals.md, "The bytes and the encoding").
- * It is apart from filesRunner.ts so that it runs under Vitest in node,
- * where a `Blob` and `TextDecoder` exist and a worker does not.
+ * its bytes read, and then, for a CSV or a TSV, decoded and given to the
+ * reader of the text, or, for an xlsx, given to the files wasm and its
+ * cells to the reader of the cells (docs/specs/worker/individuals.md,
+ * "The bytes and the encoding" and "The xlsx"). It is apart from
+ * filesRunner.ts so that it runs under Vitest in node, where a `Blob` and
+ * `TextDecoder` exist and a worker does not, with a function of the test
+ * in the place of the files wasm.
  */
 
 import type { IndividualsFileRead } from "./messages.ts";
 import type { CsvFound, CsvOptions } from "./protocol.ts";
 import { readCsv } from "./individuals/csv.ts";
+import { readSheet } from "./individuals/sheet.ts";
+import type { SheetCellsRead } from "./individuals/sheet.ts";
 
 /**
  * The largest individuals file read, in bytes: 20 MB. A table of 10,000
@@ -27,9 +32,17 @@ export interface BytesSource {
   arrayBuffer(): Promise<ArrayBuffer>;
 }
 
+/** Reads the cells of an xlsx with the files wasm: a refusal, a file
+    calamine cannot open and a files wasm that could not be downloaded are
+    a failed read; rejects only for a defect of ours, a result of the files
+    wasm that breaks its contract (readXlsxCells of xlsxCells.ts). */
+export type XlsxReader = (bytes: Uint8Array) => Promise<SheetCellsRead>;
+
 /**
- * Reads the individuals file `file` with the options `csv`, and never
- * rejects. It refuses a file of more than `MAX_INDIVIDUALS_FILE_BYTES`,
+ * Reads the individuals file `file`, a CSV or a TSV with the options
+ * `csv`, or an xlsx when `csv` is `null`, whose cells `readXlsx` reads.
+ * It rejects only when `readXlsx` rejects, for a defect of ours. It
+ * refuses a file of more than `MAX_INDIVIDUALS_FILE_BYTES`,
  * `tooLarge`, without reading it; one the browser cannot read,
  * `unreadable`; one with a byte 0 that does not start with the mark of
  * UTF-16, `notText`; and one with that mark that ends in the middle of a
@@ -43,7 +56,8 @@ export interface BytesSource {
  */
 export async function readIndividualsFile(
   file: BytesSource,
-  csv: CsvOptions,
+  csv: CsvOptions | null,
+  readXlsx: XlsxReader,
 ): Promise<IndividualsFileRead> {
   if (file.size > MAX_INDIVIDUALS_FILE_BYTES) {
     return {
@@ -67,6 +81,7 @@ export async function readIndividualsFile(
       },
     };
   }
+  if (csv === null) return readXlsxFile(new Uint8Array(buffer), readXlsx);
   const decoded = decode(new Uint8Array(buffer), csv.encoding);
   if (decoded === "notText" || decoded === "cutShort") {
     return { kind: "failed", error: { kind: decoded } };
@@ -86,6 +101,26 @@ export async function readIndividualsFile(
       decimal: read.value.decimal,
       undecodedLine: undecodedLine(decoded.text),
     },
+  };
+}
+
+/** The read of the bytes of an xlsx: its cells, given by `readXlsx`, made
+    the table by `readSheet`, with `found` `null`, since an xlsx has no
+    encoding, separator or decimal mark to report; or the refusal of
+    either. */
+async function readXlsxFile(
+  bytes: Uint8Array,
+  readXlsx: XlsxReader,
+): Promise<IndividualsFileRead> {
+  const cells = await readXlsx(bytes);
+  if (cells.kind === "failed") return cells;
+  const read = readSheet(cells.cells);
+  if (!read.ok) return { kind: "failed", error: read.error };
+  return {
+    kind: "read",
+    table: read.value.table,
+    columns: read.value.columns,
+    found: null,
   };
 }
 

@@ -73,12 +73,12 @@ function fakeClient(): {
   readonly client: ReadClient;
   readonly variants: Asked<VariantsOpened>[];
   readonly individuals: (Asked<IndividualsAnswer> & {
-    readonly csv: CsvOptions;
+    readonly csv: CsvOptions | null;
   })[];
 } {
   const variants: Asked<VariantsOpened>[] = [];
   const individuals: (Asked<IndividualsAnswer> & {
-    readonly csv: CsvOptions;
+    readonly csv: CsvOptions | null;
   })[] = [];
   return {
     client: {
@@ -191,6 +191,7 @@ function readsOf(
 ): readonly Asked<IndividualsAnswer>[] {
   return fake.individuals.filter(
     (asked) =>
+      asked.csv !== null &&
       asked.csv.encoding === csv.encoding &&
       asked.csv.separator === csv.separator &&
       asked.csv.decimal === csv.decimal,
@@ -641,8 +642,8 @@ describe("WS7 D1 the outcomes of the reads", () => {
   });
 });
 
-describe("WS7 D1 wantedReads", () => {
-  test("an individuals source pending with no options of a CSV, an xlsx, is a defect", () => {
+describe("IP9 the reads of an xlsx", () => {
+  test("an individuals source pending with no options of a CSV, an xlsx, is asked for with csv null", () => {
     const project: Project = {
       ...emptyProject("popgen"),
       individuals: {
@@ -654,6 +655,56 @@ describe("WS7 D1 wantedReads", () => {
       },
     };
 
-    expect(() => wantedReads(project)).toThrow(/^popnei_web defect: /);
+    expect(wantedReads(project)).toEqual([
+      { kind: "individuals", fileId: POPS_ID, csv: null },
+    ]);
+  });
+
+  test("an xlsx picked is read with csv null, its read recorded under null with found null, and asked once", async () => {
+    const { store, fake } = setUp();
+    store.apply("the individuals file changed", (p) =>
+      loadIndividuals(p, { fileId: POPS_ID, name: "pops.xlsx", csv: null }),
+    );
+
+    expect(fake.individuals.map((asked) => asked.csv)).toEqual([null]);
+    fake.individuals[0]?.end({ ...TABLE_READ, found: null });
+    await settle();
+
+    expect(individualsRead(store)).toEqual({
+      kind: "read",
+      table: { columns: ["name", "pop"], rows: [["s000", "p0"]] },
+      columns: [{ kind: "identifier" }, { kind: "categorical" }],
+      found: null,
+    });
+    expect(fake.individuals).toHaveLength(1);
+  });
+
+  test("an xlsx under way is kept, and not asked again, when another change of the project comes first", () => {
+    const { store, fake } = setUp();
+    store.apply("the individuals file changed", (p) =>
+      loadIndividuals(p, { fileId: POPS_ID, name: "pops.xlsx", csv: null }),
+    );
+    pickNei(store, PANEL_ID);
+
+    expect(fake.individuals).toHaveLength(1);
+    expect(fake.individuals[0]?.cancels()).toBe(0);
+  });
+
+  test("a refusal of an xlsx, the reader of xlsx files not downloaded, is recorded as failed", async () => {
+    const { store, fake } = setUp();
+    store.apply("the individuals file changed", (p) =>
+      loadIndividuals(p, { fileId: POPS_ID, name: "pops.xlsx", csv: null }),
+    );
+
+    fake.individuals[0]?.end({
+      kind: "refused",
+      error: { kind: "xlsxReaderNotLoaded", message: "Failed to fetch" },
+    });
+    await settle();
+
+    expect(individualsRead(store)).toEqual({
+      kind: "failed",
+      error: { kind: "xlsxReaderNotLoaded", message: "Failed to fetch" },
+    });
   });
 });

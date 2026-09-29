@@ -2,10 +2,10 @@
  * The numbers of the cells of the individuals file and the type of each of
  * its columns, as the reader infers them (docs/specs/worker/individuals.md,
  * "The decimal mark and the numbers" and "The types of the columns"). The
- * reader of CSV and TSV calls it, and the reader of xlsx will; core calls
+ * readers of CSV and TSV and of the cells of an xlsx call it; core calls
  * `cellNumber` and `inferColumnTypes` for the types each column allows
- * (docs/specs/core/project.md, `columnAllows`), so every function here is
- * pure.
+ * (docs/specs/core/project.md, `columnAllows`), and `columnLetters` for
+ * the words of a refusal of an xlsx, so every function here is pure.
  *
  * The values of a column are compared as text: a text as it is, a number
  * or a boolean of an xlsx as `String` writes it, so that a number 1 and a
@@ -31,6 +31,26 @@ const NUMBER_WITH_COMMA = /^[+-]?(?:\d+,?\d*|,\d+)(?:[eE][+-]?\d+)?$/;
 
 /** A whole number: an optional sign and digits, no mark, no exponent. */
 const WHOLE_NUMBER = /^[+-]?\d+$/;
+
+/** The letters by which Excel names the column `column`, counted from 1:
+    1 is "A", 27 "AA" and 16,384, the last of a sheet, "XFD"
+    (docs/specs/worker/individuals.md, "The xlsx"). A column below 1, or
+    not whole, is a defect, and throws. */
+export function columnLetters(column: number): string {
+  if (!Number.isInteger(column) || column < 1) {
+    throw new Error(
+      `popnei_web defect: ${String(column)} is not the number of a column of a sheet`,
+    );
+  }
+  let letters = "";
+  let rest = column;
+  while (rest > 0) {
+    const letter = (rest - 1) % 26;
+    letters = String.fromCharCode(65 + letter) + letters;
+    rest = (rest - 1 - letter) / 26;
+  }
+  return letters;
+}
 
 /** The text of a cell by which the types compare it: a text as it is, a
     number or a boolean as `String` writes it; null for a missing cell. */
