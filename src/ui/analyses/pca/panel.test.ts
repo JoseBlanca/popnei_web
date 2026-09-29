@@ -26,6 +26,7 @@ import {
   ownValueCommand,
   viewCommand,
 } from "./commands.ts";
+import { failedAddressOf } from "./load3d.ts";
 import { notesAppeared, notesOf } from "./notes.ts";
 import {
   componentColumn,
@@ -421,5 +422,27 @@ describe("IP8 panel: the notes", () => {
     expect(notesOf(r, beyond, null)).toEqual([
       "The axes chosen, PC4, PC5 and PC6, are beyond the 3 components of this result, so PC1, PC2 and PC3 are drawn.",
     ]);
+  });
+});
+
+describe("IP8 panel: the address a retry of the 3D view asks for", () => {
+  test("the first address of http or https in the message of a failure, whatever its words, and none when it names none", () => {
+    expect(
+      failedAddressOf(
+        new TypeError(
+          "Failed to fetch dynamically imported module: http://localhost:4173/popnei_web/assets/pca3d-OokKI9tC.js",
+        ),
+      ),
+    ).toBe("http://localhost:4173/popnei_web/assets/pca3d-OokKI9tC.js");
+    expect(
+      failedAddressOf(
+        new Error(
+          "error loading dynamically imported module: https://example.org/a/pca3d-x.js?retry=1",
+        ),
+      ),
+    ).toBe("https://example.org/a/pca3d-x.js?retry=1");
+    expect(
+      failedAddressOf(new TypeError("Importing a module script failed.")),
+    ).toBeNull();
   });
 });

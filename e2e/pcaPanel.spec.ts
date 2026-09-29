@@ -233,18 +233,13 @@ test("three.js not downloaded: the 2D plot with its words and Try again, which d
   await expectNoViolations(makeAxeBuilder);
   await page.unroute("**/pca3d-*.js");
   await panel.getByRole("button", { name: "Try again" }).click();
-  // A browser may keep the failed download for the life of the page, and
-  // give the words again (docs/specs/charts/pca3d.md, "Loading three.js"):
-  // either is an answer, and the test says which.
-  const drawn = panel.getByRole("img", {
-    name: "Principal components, PC1, PC2 and PC3",
-  });
-  await expect(drawn.or(panel.getByText(LOAD_FAILED))).toBeVisible();
-  test.info().annotations.push({
-    type: "Try again",
-    description:
-      (await drawn.count()) > 0 ? "drew the 3D view" : "failed again",
-  });
+  // Drawn in every engine: Chromium, which keeps the failed download for
+  // the life of the page, is asked the same file at another address.
+  await expect(
+    panel.getByRole("img", { name: "Principal components, PC1, PC2 and PC3" }),
+  ).toBeVisible();
+  await expect(panel.locator("canvas")).toHaveCount(1);
+  await expect(panel.getByText(LOAD_FAILED)).toHaveCount(0);
 });
 
 test("a worker that stopped with no answer after a PCA of 2,300 individuals: the words of memory, counted on the individuals it ran on", async ({
