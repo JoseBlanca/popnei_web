@@ -1254,7 +1254,7 @@ specs of stage 4 matched to a test.
 
 **Tasks:**
 
-- [ ] 10.1 The documents, and the final checks. Serves 1 and 2. Needs
+- [x] 10.1 The documents, and the final checks. Serves 1 and 2. Needs
   work package 8, and 9 when it was run.
 - [ ] 10.2 The map of the cases, and the tests it finds missing. Serves
   3. Needs 10.1.
