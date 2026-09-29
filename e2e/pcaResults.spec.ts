@@ -719,14 +719,20 @@ test.describe("IP10 D3 the table of the individuals", () => {
     });
     const rows = table.getByRole("row");
     await expect(rows.last().getByRole("rowheader")).toBeVisible();
-    const last = await rows.evaluateAll((all) =>
-      all
-        .slice(-3)
-        .map(
-          (row) => row.querySelector('[role="gridcell"]')?.textContent ?? "",
+    // Polled: the table draws only the rows in view, and draws the last
+    // ones a frame or more after the scroll, later on a loaded machine.
+    await expect
+      .poll(() =>
+        rows.evaluateAll((all) =>
+          all
+            .slice(-3)
+            .map(
+              (row) =>
+                row.querySelector('[role="gridcell"]')?.textContent ?? "",
+            ),
         ),
-    );
-    expect(last).toEqual(["No value", "No value", "No value"]);
+      )
+      .toEqual(["No value", "No value", "No value"]);
   });
 });
 
