@@ -238,7 +238,7 @@ function valueText(value: string | number | boolean): string {
     1,62, 1,80". The space before the dot does not break, so that a value
     keeps its dot on its line, and a line of a narrow page never starts
     with a dot, which would read as the mark of a list. */
-const VALUES_JOIN = "\u00a0· ";
+const VALUES_DOT = "\u00a0·";
 
 /** The type of a column in words: "identifier", "continuous",
     "categorical", and a binary one with its coding, "binary with yes
@@ -432,13 +432,26 @@ export function firstValuesText(
   table: IndividualsTable,
   index: number,
 ): string {
+  return firstValuesParts(table, index).join(" ");
+}
+
+/** The same values as the parts the step draws each on one line, each
+    but the last with its dot: "España\u00a0·", "Italia\u00a0·", "Perú".
+    Joined by a space, they are `firstValuesText`. */
+export function firstValuesParts(
+  table: IndividualsTable,
+  index: number,
+): string[] {
   const values = firstValues(table)[index];
   if (values === undefined) {
     throw new Error(
       `popnei_web defect: the table has no column ${String(index)}.`,
     );
   }
-  return values.map(escaped).join(VALUES_JOIN);
+  const last = values.length - 1;
+  return values.map((value, at) =>
+    at < last ? `${escaped(value)}${VALUES_DOT}` : escaped(value),
+  );
 }
 
 /** The heading of the check of the individuals of the variants file

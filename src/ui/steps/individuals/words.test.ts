@@ -8,6 +8,7 @@ import {
   checkHeading,
   chosenPopulationItem,
   detectedText,
+  firstValuesParts,
   firstValuesText,
   kindOfName,
   loadAgainText,
@@ -136,6 +137,12 @@ describe("the words of the Individuals step", () => {
     // The values joined by a dot, after a space that does not break.
     expect(firstValuesText(TABLE, 1)).toBe("España\u00a0· Italia\u00a0· Perú");
     expect(firstValuesText(TABLE, 2)).toBe("1,75\u00a0· 1,62\u00a0· 1,80");
+    // Each value with its dot, drawn on one line; joined, the text.
+    expect(firstValuesParts(TABLE, 1)).toEqual([
+      "España\u00a0·",
+      "Italia\u00a0·",
+      "Perú",
+    ]);
     expect(
       firstValuesText({ columns: ["id", "x"], rows: [["a", "b\n"]] }, 1),
     ).toBe("b\\n");

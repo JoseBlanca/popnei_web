@@ -6,10 +6,11 @@
  * and "How the file was read"). The three xlsx files are those of the
  * tests of xlsx_rs, tests/data/ at 4a29ee7, copied into e2e/fixtures/.
  *
- * What an engine does on a second try after the JavaScript of the
- * reader failed to download is recorded as an annotation of the test,
- * "second try", and written to the output, since the HTML standard lets
- * an engine keep a failed import() as failed for the life of the worker.
+ * The HTML standard lets an engine keep a failed import() as failed for
+ * the life of the worker, as Chromium 153 does, so a second try after
+ * the JavaScript of the reader failed to download asks for it at
+ * another address; the flow checks that the file is read in both
+ * engines.
  */
 import { join } from "node:path";
 import { readFile } from "node:fs/promises";
@@ -189,9 +190,8 @@ test("IP9 D2 the wasm of the reader answered with an error: the words of a reade
   expect(requests.wasm()).toBe(2);
 });
 
-test("IP9 D2 the JavaScript of the reader answered with an error: the words of a reader not downloaded, and what a second try gives in this engine", async ({
+test("IP9 D2 the JavaScript of the reader answered with an error: the words of a reader not downloaded, and the file loaded again is read, at another address where the engine keeps the failure", async ({
   page,
-  browserName,
 }) => {
   const requests = xlsxRequests(page);
   await page.route(XLSX_JS, (route) =>
@@ -206,18 +206,48 @@ test("IP9 D2 the JavaScript of the reader answered with an error: the words of a
 
   await page.unroute(XLSX_JS);
   await pick(page, { name: "again.xlsx", fixture: "excel_en.xlsx" });
-  const table = zone(page).getByText("5 rows, 7 columns");
-  const words = zone(page).getByText(notLoadedText("again.xlsx"), {
-    exact: true,
+  await expectExcelEn(page, "again.xlsx");
+  expect(requests.js()).toBe(2);
+  expect(requests.wasm()).toBe(1);
+
+  // A third xlsx downloads nothing more.
+  await pick(page, { name: "third.xlsx", fixture: "excel_en.xlsx" });
+  await expectExcelEn(page, "third.xlsx");
+  expect(requests.js()).toBe(2);
+  expect(requests.wasm()).toBe(1);
+});
+
+test("IP9 D2 each of the first values of a column stays on one line: the dates of excel_en.xlsx do not break at their hyphens", async ({
+  page,
+}) => {
+  await openIndividuals(page);
+  await pick(page, "excel_en.xlsx");
+  await expectExcelEn(page, "excel_en.xlsx");
+  const cell = page
+    .getByRole("table", { name: "Columns" })
+    .getByRole("cell", { name: /^2024-05-13/ });
+  // The lines each value is drawn on, from the boxes of its characters.
+  const lines = await cell.evaluate((element) => {
+    const text = element.textContent;
+    const node = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    const nodes: Text[] = [];
+    while (node.nextNode()) nodes.push(node.currentNode as Text);
+    return ["2024-05-13", "2024-05-14", "2024-05-15"].map((value) => {
+      for (const textNode of nodes) {
+        const at = textNode.data.indexOf(value);
+        if (at === -1) continue;
+        const range = document.createRange();
+        range.setStart(textNode, at);
+        range.setEnd(textNode, at + value.length);
+        const tops = new Set(
+          [...range.getClientRects()].map((rect) => Math.round(rect.top)),
+        );
+        return tops.size;
+      }
+      throw new Error(`${value} is not in ${text}`);
+    });
   });
-  await expect(table.or(words)).toBeVisible();
-  const read = await table.isVisible();
-  if (read) await expectExcelEn(page, "again.xlsx");
-  const secondTry = read
-    ? `${browserName} tries the import() again: the table, the JavaScript asked for ${String(requests.js())} times`
-    : `${browserName} keeps the failed import(): the same words, the JavaScript asked for ${String(requests.js())} times`;
-  test.info().annotations.push({ type: "second try", description: secondTry });
-  console.warn(`IP9 D2 second try: ${secondTry}`);
+  expect(lines).toEqual([1, 1, 1]);
 });
 
 test("IP9 D2 encrypted.xlsx is refused with its words", async ({

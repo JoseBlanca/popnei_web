@@ -122,6 +122,15 @@
   display: block;
 }
 
+/* A first value with its dot, which breaks as a whole to the next line,
+   so that a date, 2024-05-15, is not cut at its hyphen; only a value
+   wider than its column breaks inside, by the overflow-wrap of the
+   cell. */
+.value {
+  display: inline-block;
+  max-inline-size: 100%;
+}
+
 /* On a narrow page, 4 pixels on each side of a cell and not 8, so that
    the table fits 320 pixels also with DejaVu Sans, the sans-serif font
    of Ubuntu, with which it needed 300 pixels of the 288 the page gives

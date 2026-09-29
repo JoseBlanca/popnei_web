@@ -83,7 +83,7 @@ import {
   detectedText,
   encodingItems,
   firstSheetText,
-  firstValuesText,
+  firstValuesParts,
   forgetLabel,
   kindOfName,
   loadAgainText,
@@ -544,7 +544,15 @@ function Columns({
                     )}
                   >
                     <span className={classOf(styles, "cellText")}>
-                      {firstValuesText(table, index)}
+                      {firstValuesParts(table, index).map((part, at) => (
+                        // The values are distinct, and so are their parts.
+                        <Fragment key={part}>
+                          {at > 0 && " "}
+                          <span className={classOf(styles, "value")}>
+                            {part}
+                          </span>
+                        </Fragment>
+                      ))}
                     </span>
                   </td>
                 </tr>
