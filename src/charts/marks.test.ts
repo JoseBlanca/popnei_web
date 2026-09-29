@@ -13,6 +13,7 @@ import {
   groupColourClass,
   groupMark,
   groupSymbol,
+  isOutlined,
   MARK_RADIUS,
   NO_GROUP,
   PATH_DIGITS,
@@ -166,5 +167,23 @@ describe("IP7 D1 the pieces of the scatter, viridis", () => {
     expect(() => viridisColour(256)).toThrow(/popnei_web defect/);
     expect(() => viridisColour(-1)).toThrow(/popnei_web defect/);
     expect(() => viridisColour(1.5)).toThrow(/popnei_web defect/);
+  });
+});
+
+describe("stop C 2 the outline only on the three light colours", () => {
+  test("a mark of orange, sky blue or yellow, colours 0, 1 and 3, is outlined, and a mark of the other four is not; the ring of no group is", () => {
+    expect([0, 1, 2, 3, 4, 5, 6].map(isOutlined)).toEqual([
+      true,
+      true,
+      false,
+      true,
+      false,
+      false,
+      false,
+    ]);
+    // Group 7 has colour 0, group 9 colour 2.
+    expect(isOutlined(7)).toBe(true);
+    expect(isOutlined(9)).toBe(false);
+    expect(isOutlined(NO_GROUP)).toBe(true);
   });
 });

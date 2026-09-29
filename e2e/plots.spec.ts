@@ -1097,6 +1097,10 @@ test("IP7 D3 toSVG of the scatter has no overlay, no mark of the hover and no va
     const none = style("path.chart-points-none");
     const hover = style("path.chart-hover");
     const read = {
+      // Green, colour 2, has no outline, and yellow, colour 3, has one
+      // (stop C 2).
+      greenStroke: style("path.chart-points.chart-colour-2").stroke,
+      yellowStroke: style("path.chart-points.chart-colour-3").stroke,
       stroke: points.stroke,
       strokeWidth: points.strokeWidth,
       join: points.strokeLinejoin,
@@ -1116,6 +1120,8 @@ test("IP7 D3 toSVG of the scatter has no overlay, no mark of the hover and no va
     return read;
   });
   expect(screen).toEqual({
+    greenStroke: "none",
+    yellowStroke: LIGHT_AXIS,
     stroke: LIGHT_AXIS,
     strokeWidth: "1px",
     join: "round",
@@ -1304,6 +1310,9 @@ test("IP10 D3 a change of theme while the scatter is on the screen draws nothing
       exported: [
         ...file.querySelectorAll(".chart-marks path.chart-colour-0"),
       ].map((path) => path.getAttribute("style") ?? ""),
+      exportedGreen: [
+        ...file.querySelectorAll(".chart-marks path.chart-colour-2"),
+      ].map((path) => path.getAttribute("style") ?? ""),
     };
   });
   // The outline of the marks is --chart-axis, which the dark theme changes.
@@ -1314,6 +1323,11 @@ test("IP10 D3 a change of theme while the scatter is on the screen draws nothing
   for (const style of found.exported) {
     expect(style).toContain(`fill: rgb(${FIRST_GROUP.join(", ")})`);
     expect(style).toContain(`stroke: ${LIGHT_AXIS}`);
+  }
+  // Green, colour 2, is exported with no outline, as on the screen.
+  expect(found.exportedGreen).toHaveLength(1);
+  for (const style of found.exportedGreen) {
+    expect(style).toContain("stroke: none");
   }
 });
 

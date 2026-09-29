@@ -36,6 +36,7 @@ import { MAX_SVG_POINTS } from "./limits.ts";
 import {
   drawSymbolAt,
   groupColourClass,
+  isOutlined,
   groupMark,
   groupSymbol,
   highlightedGroup,
@@ -565,12 +566,13 @@ function lineEnds(positions: Float32Array): Float32Array {
  * Draws the mark `d`, a path of SYMBOL_AREA centred on 0,0, on a texture
  * of TEXTURE_SIDE pixels, which the square of a point holds: filled with
  * `fill`, or not filled for a ring, and outlined with `outline` in 1 CSS
- * pixel with round joins, as in 2D.
+ * pixel with round joins, as in 2D, or not outlined when `outline` is
+ * null, a mark of one of the four colours that carry their own contrast.
  */
 function markTexture(
   d: string,
   fill: string | null,
-  outline: string,
+  outline: string | null,
 ): CanvasTexture {
   const canvas = document.createElement("canvas");
   canvas.width = TEXTURE_SIDE;
@@ -588,10 +590,12 @@ function markTexture(
     context.fillStyle = fill;
     context.fill(path);
   }
-  context.lineWidth = 1;
-  context.lineJoin = "round";
-  context.strokeStyle = outline;
-  context.stroke(path);
+  if (outline !== null) {
+    context.lineWidth = 1;
+    context.lineJoin = "round";
+    context.strokeStyle = outline;
+    context.stroke(path);
+  }
   const texture = new CanvasTexture(canvas);
   texture.colorSpace = SRGBColorSpace;
   return texture;
@@ -728,6 +732,7 @@ export function createPca3d(
     const textureOf = (path: number): CanvasTexture => {
       let key: string;
       let fill: string | null;
+      let edge: string | null = outline;
       if (path === NO_GROUP) {
         key = "none";
         fill = null;
@@ -735,6 +740,8 @@ export function createPca3d(
         const mark = groupMark(path);
         key = `mark-${String(mark.colour)}-${String(mark.symbol)}`;
         fill = tokenOf(element, `--chart-cat-${String(mark.colour + 1)}`);
+        // The outline on the three light colours alone, as in 2D.
+        edge = isOutlined(path) ? outline : null;
       } else {
         key = `step-${String(path)}`;
         fill = viridisColour(path);
@@ -743,7 +750,7 @@ export function createPca3d(
       if (found !== undefined) return found;
       const d =
         colours.kind === "groups" ? symbolPath(path) : symbolPath(NO_GROUP);
-      const texture = markTexture(d, fill, outline);
+      const texture = markTexture(d, fill, edge);
       textures.set(key, texture);
       disposables.push(texture);
       return texture;

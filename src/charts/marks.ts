@@ -114,6 +114,25 @@ export function groupSymbol(group: number): SymbolType {
 }
 
 /**
+ * Whether the mark of `group` has an outline: the ring of NO_GROUP, and
+ * the marks of the three light colours of the palette, orange, sky blue
+ * and yellow, below 3:1 on the light background; not the other four,
+ * whose fill carries the 3:1 in both themes (docs/specs/charts/scatter.md,
+ * "The marks of the groups", stop C 2). charts.css takes the outline off
+ * the classes of those four. Throws an `Error`, a defect of the caller, as
+ * groupMark does.
+ */
+export function isOutlined(group: number): boolean {
+  return (
+    group === NO_GROUP || OUTLINED_COLOURS.includes(groupMark(group).colour)
+  );
+}
+
+/** The colours `i % 7` whose marks are outlined: orange, sky blue and
+    yellow, `--chart-cat-1`, `--chart-cat-2` and `--chart-cat-4`. */
+const OUTLINED_COLOURS: readonly number[] = [0, 1, 3];
+
+/**
  * The class of the colour of `group` on its path, `chart-colour-‹0 to 6›`,
  * or `chart-points-none` for the ring of NO_GROUP.
  */

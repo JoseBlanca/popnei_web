@@ -11,6 +11,8 @@ import { join } from "node:path";
 
 import { describe, expect, test } from "vitest";
 
+import { isOutlined } from "../charts/marks.ts";
+
 const CSS = readFileSync(join(import.meta.dirname, "tokens.css"), {
   encoding: "utf8",
 });
@@ -112,6 +114,14 @@ const PAIRS: readonly (readonly [string, string, number])[] = [
   ["--chart-bar", "--color-background", 3],
   ["--chart-axis", "--color-background", 3],
   ["--chart-threshold", "--color-background", 3],
+  // The fill of a mark with no outline carries the 3:1 of a mark itself
+  // (docs/specs/charts/scatter.md, "The marks of the groups", stop C 2).
+  ...[0, 1, 2, 3, 4, 5, 6]
+    .filter((colour) => !isOutlined(colour))
+    .map(
+      (colour) =>
+        [`--chart-cat-${String(colour + 1)}`, "--color-background", 3] as const,
+    ),
 ];
 
 describe("the tokens", () => {
@@ -132,4 +142,25 @@ describe("the tokens", () => {
       });
     }
   }
+});
+
+describe("stop C 2 the outline of the marks in charts.css", () => {
+  test("charts.css takes the outline off the classes of the four colours that are not outlined, and off no other", () => {
+    const css = readFileSync(
+      join(import.meta.dirname, "..", "charts", "charts.css"),
+      {
+        encoding: "utf8",
+      },
+    );
+    const rule = /((?:\.chart-colour-\d,?\s*)+)\{\s*stroke:\s*none;\s*\}/.exec(
+      css,
+    );
+    expect(rule).not.toBeNull();
+    const classes = [...(rule?.[1] ?? "").matchAll(/chart-colour-(\d)/g)].map(
+      (match) => Number(match[1]),
+    );
+    expect(classes).toEqual(
+      [0, 1, 2, 3, 4, 5, 6].filter((colour) => !isOutlined(colour)),
+    );
+  });
 });

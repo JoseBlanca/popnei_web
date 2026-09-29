@@ -77,9 +77,10 @@
 }
 
 /* The points of the scatter and the 3D plot (docs/specs/charts/scatter.md,
-   "The marks of the groups"): the outline in --chart-axis gives each mark
+   "The marks of the groups"): the outline in --chart-axis gives a mark
    the contrast its fill may not have, three of the seven colours being
-   below 3:1 on the light background, and its round joins keep the tips of
+   below 3:1 on the light background (the other four have none, below),
+   and its round joins keep the tips of
    the star within 8.05 pixels of the point, where mitred joins reach 9.2.
    A colouring by values writes the colour of viridis as the fill of its
    path, the same in both themes. */
@@ -89,7 +90,12 @@
   stroke-linejoin: round;
 }
 
-/* The colour of group i is i % 7, of Okabe and Ito. */
+/* The colour of group i is i % 7, of Okabe and Ito. Only the three light
+   colours, orange, sky blue and yellow, 0, 1 and 3, keep the outline of
+   .chart-points: the other four are 3:1 or more on the background of
+   both themes, and an outline on every mark covered the colours of a
+   dense cluster in grey (scatter.md, "The marks of the groups", stop C 2;
+   isOutlined of marks.ts). */
 .chart-colour-0 {
   fill: var(--chart-cat-1);
 }
@@ -116,6 +122,13 @@
 
 .chart-colour-6 {
   fill: var(--chart-cat-7);
+}
+
+.chart-colour-2,
+.chart-colour-4,
+.chart-colour-5,
+.chart-colour-6 {
+  stroke: none;
 }
 
 /* A point in no group, or with no value, is a ring: a mark with no colour

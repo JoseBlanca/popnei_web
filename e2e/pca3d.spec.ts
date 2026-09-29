@@ -980,6 +980,85 @@ function differing(a: readonly number[], b: readonly number[]): number {
   return a.filter((value, at) => value !== b[at]).length;
 }
 
+/**
+ * How many pixels of a square of `half` CSS pixels each side of each of
+ * `points` are within `within` of `colour` in each channel, from a
+ * screenshot of the canvas.
+ */
+async function pixelsNear(
+  page: Page,
+  points: readonly ViewportPoint[],
+  half: number,
+  colour: readonly number[],
+  within: number,
+): Promise<number[]> {
+  const canvas = page.locator("#plots canvas");
+  const box = await canvas.boundingBox();
+  if (box === null) throw new Error("The canvas is not laid out.");
+  const png = (await canvas.screenshot()).toString("base64");
+  return page.evaluate(
+    async ([data, at, left, top, side, wanted, tolerance]) => {
+      const bytes = Uint8Array.from(atob(data), (c) => c.charCodeAt(0));
+      const image = await createImageBitmap(
+        new Blob([bytes], { type: "image/png" }),
+      );
+      const ratio = devicePixelRatio;
+      const canvas = document.createElement("canvas");
+      canvas.width = image.width;
+      canvas.height = image.height;
+      const context = canvas.getContext("2d");
+      if (context === null) throw new Error("No context of a canvas.");
+      context.drawImage(image, 0, 0);
+      const span = Math.round(2 * side * ratio);
+      return at.map((point) => {
+        const pixels = context.getImageData(
+          Math.round((point.x - left - side) * ratio),
+          Math.round((point.y - top - side) * ratio),
+          span,
+          span,
+        ).data;
+        let count = 0;
+        for (let i = 0; i < pixels.length; i += 4) {
+          if (
+            wanted.every(
+              (value, channel) =>
+                Math.abs((pixels[i + channel] ?? -999) - value) <= tolerance,
+            )
+          ) {
+            count += 1;
+          }
+        }
+        return count;
+      });
+    },
+    [png, points, box.x, box.y, half, colour, within] as const,
+  );
+}
+
+test("stop C 2 in 3D the marks of orange, sky blue and yellow have the grey outline, and those of green and blue none", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await openPlots(page);
+  await drawPca3d(page, 600, 450, "five");
+  await turn(page, "viewAlong", 2);
+  const places = await Promise.all(
+    [0, 1, 2, 3, 4].map((point) => pointAt(page, point, 2)),
+  );
+  // --chart-axis of the light theme, #555d68.
+  // Within 40 in each channel, since Chromium's drawing on the processor
+  // blends the outline of 1 pixel with what is beside it; no blend of
+  // green or blue with the white background comes that near.
+  const grey = await pixelsNear(page, places, 6, [85, 93, 104], 40);
+  // P1 orange, P2 sky blue and P4 yellow, outlined; P3 green and P5
+  // blue, not.
+  expect(grey[0]).toBeGreaterThan(0);
+  expect(grey[1]).toBeGreaterThan(0);
+  expect(grey[3]).toBeGreaterThan(0);
+  expect(grey[2]).toBe(0);
+  expect(grey[4]).toBe(0);
+});
+
 /** The viridis colour of the smallest value, #440154, and of the largest, #fde725. */
 const VIRIDIS_MIN = [68, 1, 84] as const;
 const VIRIDIS_MAX = [253, 231, 37] as const;
