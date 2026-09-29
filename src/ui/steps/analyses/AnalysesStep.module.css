@@ -6,3 +6,13 @@
   /* A line of a message stays short enough to read. */
   max-inline-size: 64rem;
 }
+
+/* The links to the analyses, in a row that wraps at a narrow width. */
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

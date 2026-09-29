@@ -736,3 +736,72 @@ test.describe("IP10 D3 the options, the warnings and the results removed", () =>
     expect(await runsPosted(page)).toBe(posted);
   });
 });
+
+test.describe("stop C 3 the links to the analyses under the heading of the Analyses step", () => {
+  test("stop C 3 one link per analysis in the order of the panels; a click and Enter each put the focus on the heading of its panel, with the step and the address kept; at 320 pixels the list fits", async ({
+    page,
+    makeAxeBuilder,
+  }) => {
+    const panel = await openPanel(page);
+    await run(panel);
+    const list = page.getByRole("navigation", {
+      name: "Analyses of this step",
+    });
+    const links = list.getByRole("link");
+    await expect(links).toHaveText(["Principal components", "Diversity"]);
+    const pcaHeading = panel.getByRole("heading", {
+      level: 2,
+      name: "Principal components",
+    });
+    const diversityHeading = page
+      .getByRole("region", { name: "Diversity", exact: true })
+      .getByRole("heading", { level: 2, name: "Diversity" });
+
+    // The mouse.
+    await list.getByRole("link", { name: "Diversity" }).click();
+    await expect(diversityHeading).toBeFocused();
+    await expect(diversityHeading).toBeInViewport();
+    expect(new URL(page.url()).hash).toBe("#analyses");
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Analyses" }),
+    ).toBeVisible();
+    await expectNoViolations(makeAxeBuilder);
+
+    // The keyboard: from the heading of the step, the two links in order,
+    // Enter on each, and the next Tab goes on inside its panel.
+    await page.getByRole("heading", { level: 1, name: "Analyses" }).focus();
+    await page.keyboard.press("Tab");
+    await expect(
+      list.getByRole("link", { name: "Principal components" }),
+    ).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(list.getByRole("link", { name: "Diversity" })).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(diversityHeading).toBeFocused();
+    await page.keyboard.press("Tab");
+    expect(
+      await page
+        .getByRole("region", { name: "Diversity", exact: true })
+        .evaluate((region) => region.contains(document.activeElement)),
+    ).toBe(true);
+    await page.getByRole("heading", { level: 1, name: "Analyses" }).focus();
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Enter");
+    await expect(pcaHeading).toBeFocused();
+    expect(new URL(page.url()).hash).toBe("#analyses");
+
+    // At 320 pixels wide, the list fits and the page does not scroll
+    // sideways.
+    await page.setViewportSize({ width: 320, height: 800 });
+    await expect(links).toHaveCount(2);
+    for (const link of await links.all()) {
+      const box = await link.boundingBox();
+      expect(box).not.toBeNull();
+      expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(320);
+    }
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(320);
+    await expectNoViolations(makeAxeBuilder);
+  });
+});
