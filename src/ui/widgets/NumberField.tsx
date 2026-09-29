@@ -15,9 +15,13 @@
  *
  * In an empty field, one given `NaN` with nothing typed or one whose
  * text the user deleted, the keys that step a number, the arrow keys,
- * Page Up, Page Down, Home and End, do nothing, where React Aria would
- * move it to a bound of its range; the field of the distance of the LD
- * pruning is empty until a distance is typed.
+ * Page Up and Page Down, do nothing, where React Aria would move it to a
+ * bound of its range; the field of the distance of the LD pruning is
+ * empty until a distance is typed. End and Home, in any field, move the
+ * caret only, as in a field of text, where React Aria would move the
+ * number to the largest or the least of its range, 9007199254740991 base
+ * pairs for End in the distance (stop A 4 (b), decided by the owner on
+ * 29 September 2026).
  *
  * A number committed has at most the decimals of the step, or, when the
  * field is given `decimals`, at most those, and the step is then only
@@ -77,16 +81,38 @@ const FORMAT_OPTIONS: Intl.NumberFormatOptions = Object.freeze({
 });
 
 /** The keys React Aria commits the field at: Enter, and those of its
-    spin button, which move the value by the step or to a bound. */
+    spin button that the field leaves to it, which move the value by the
+    step. */
 const COMMIT_KEYS: ReadonlySet<string> = new Set([
   "Enter",
   "ArrowUp",
   "ArrowDown",
   "PageUp",
   "PageDown",
-  "Home",
-  "End",
 ]);
+
+/** The keys of React Aria's spin button that move the value to a bound
+    of its range, which the field keeps from it and makes move the caret
+    to the start or the end of the text. */
+const CARET_KEYS: ReadonlySet<string> = new Set(["Home", "End"]);
+
+/** Moves the caret of `input` to the start of its text, for Home, or to
+    its end, for End; with Shift, selects from where the selection starts
+    to there, as a field of text does on Windows. A field of text on a Mac
+    moves no caret at Home and End, so the field moves it itself, in
+    every browser alike. */
+function moveCaret(input: HTMLInputElement, key: string, shift: boolean): void {
+  const length = input.value.length;
+  const start = input.selectionStart ?? 0;
+  const end = input.selectionEnd ?? start;
+  if (key === "Home") {
+    if (shift) input.setSelectionRange(0, end, "backward");
+    else input.setSelectionRange(0, 0);
+    return;
+  }
+  if (shift) input.setSelectionRange(start, length, "forward");
+  else input.setSelectionRange(length, length);
+}
 
 /** What a number field is drawn with. */
 export interface NumberFieldProps {
@@ -521,11 +547,24 @@ function FieldInput({
         onCommitEnds();
       }}
       onKeyDownCapture={(event) => {
+        // End and Home move the caret: React Aria would move the number
+        // to a bound of its range, a number the user never typed. Stopped
+        // before React Aria's handler, and the caret moved here, since a
+        // browser on a Mac moves none at these keys (the spec, "A number
+        // the fields do not take"). With Ctrl, Alt or ⌘ they are left to
+        // the browser.
+        if (CARET_KEYS.has(event.key)) {
+          event.stopPropagation();
+          if (!event.altKey && !event.ctrlKey && !event.metaKey) {
+            event.preventDefault();
+            moveCaret(event.currentTarget, event.key, event.shiftKey);
+          }
+          return;
+        }
         // In an empty field React Aria moves the number to a bound of its
-        // range, Home and the Up arrow to the least, End and the Down
-        // arrow to the largest, a number the user never typed: the keys
-        // that step a number do nothing there (the spec, "A number the
-        // fields do not take"). Enter commits the empty field, which
+        // range, the Up arrow to the least, the Down arrow to the
+        // largest, a number the user never typed: the keys that step a
+        // number do nothing there. Enter commits the empty field, which
         // sends nothing.
         if (isStepKey(event) && state?.inputValue.trim() === "") {
           event.preventDefault();

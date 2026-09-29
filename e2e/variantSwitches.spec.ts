@@ -279,6 +279,44 @@ test("IP3 D3 in the empty distance the arrow keys, Page Up, Page Down, Home and 
   await expectNoViolations(makeAxeBuilder);
 });
 
+test("stop A 4 (b) in the distance holding 50000, End and Home move the caret and send nothing: 1 typed after End gives 500001, after Home 1500001", async ({
+  page,
+}) => {
+  await ldTurnedOn(page);
+  await commit(page, DISTANCE_LABEL, "50000");
+  const input = distance(page);
+  await input.focus();
+  await page.keyboard.press("End");
+  await expect(input).toHaveValue("50000");
+  // Nothing was sent: the last step of undo is still the distance.
+  await expect(banner(page, "Undo")).toHaveAccessibleDescription(
+    "Undo: the LD pruning changed",
+  );
+  await page.keyboard.type("1");
+  await expect(input).toHaveValue("500001");
+  await page.keyboard.press("Home");
+  await expect(input).toHaveValue("500001");
+  await page.keyboard.type("1");
+  await expect(input).toHaveValue("1500001");
+  await page.keyboard.press("Enter");
+  await expect(input).toHaveValue("1500001");
+  // With Shift, Home selects to the start, and what is typed replaces it.
+  await page.keyboard.press("End");
+  await page.keyboard.press("Shift+Home");
+  await page.keyboard.type("7");
+  await expect(input).toHaveValue("7");
+  await page.keyboard.press("Enter");
+  await expect(input).toHaveValue("7");
+
+  // A threshold, whose bound is 1: End at the end of 0.05 leaves it.
+  const missing = field(page, MISSING_LABEL);
+  await missing.focus();
+  await page.keyboard.press("End");
+  await page.keyboard.press("Home");
+  await page.keyboard.press("Tab");
+  await expect(missing).toHaveValue("0.05");
+});
+
 test("IP3 D3 0 typed in the empty distance is refused, and so is a comma typed key by key, each with its line, and the field stays empty", async ({
   page,
   makeAxeBuilder,
