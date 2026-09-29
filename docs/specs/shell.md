@@ -761,7 +761,7 @@ of the steps and of the store. Its states:
 | locked | cannot happen for the shell as a whole: it waits for nothing. What cannot be done yet says why in words: a step that cannot go on, with its reason; Undo or Redo with nothing to take back, disabled with no reason needed | — |
 | ready | files loaded: the stepper with the state of each step; the summary with the file, its individuals, the filters and the populations | move between steps, undo, redo, save, open |
 | running | a read or a calculation: Reading on its step, or Running on Analyses; the summary "Reading panel.nei"; its start and end in the status region | all of the above; opening asks and says the calculations will stop |
-| done | a result on screen: Analyses Done | all of the above |
+| done | a result on screen: Analyses Done once every analysis that is not locked is done, Ready while one waits for its Run, as the table of the stepper above gives | all of the above |
 | results removed | the notice, with its words and Undo or Redo; Analyses at Results removed | reverse the change, close the notice |
 | error | the error bar; a step at Problem, or Analyses at Failed, with the reason; a project file that could not be opened, in its dialog | save, copy the details, close the bar; fix what the reason says |
 

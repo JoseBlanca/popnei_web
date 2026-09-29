@@ -254,7 +254,7 @@ export function r2RefusedText(refusal: NumberRefusal, kept: number): string {
 
 /** The line under the distance of the LD pruning for a number it
     refused, or a character it threw away, with the distance kept: "0 is
-    less than 1; the distance stays 10000."; or, while the field is empty
+    less than 1; the distance stays 50000."; or, while the field is empty
     and `kept` is `NaN`, "0 is less than 1; the distance is still to be
     typed." */
 export function distanceRefusedText(

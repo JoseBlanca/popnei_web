@@ -1023,9 +1023,12 @@ export function transferablesOf(result: JobResult): ArrayBuffer[];
   when the rewrite put the file's time of change back, as `rsync -t`
   does (`docs/plans/walking-skeleton.report.md`, "Point R"); Firefox is
   measured by the owner.
-- **The filters keep no variant.** The diversity and the statistics of
-  each individual are `refused` with popnei's "the pass gave no variant:
-  …", above; the counts of the filters are a result, since `iterBlocks`
+- **The filters keep no variant.** The diversity is `refused` with
+  popnei's "the pass gave no variant: …", above. The statistics of each
+  individual take no filter, so they meet no variant only in a file that
+  gives none, and are then refused with popnei's message of a source
+  that holds none (`docs/specs/worker/protocol.md`, "The cases"). The
+  counts of the filters are a result, since `iterBlocks`
   gives them then; and a write gives a file of no variant, whose
   `passStats.numVars` is 0 (above, "The written file").
 - **The filters keep no individual.** Core sends no job then; an empty

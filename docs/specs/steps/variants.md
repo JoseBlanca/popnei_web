@@ -443,8 +443,8 @@ threshold, the maximum r², the distance or the ploidy:
 | 0.125, or 0.001, in a threshold of the variants | "0.125 has more than two decimals; the threshold stays 0.1." |
 | 0.12345 in a threshold of the individuals | "0.12345 has more than four decimals; the threshold stays 0.03." |
 | 1.5 in the maximum r² | "1.5 is more than 1; the maximum r² stays 0.3." |
-| 0 in the distance | "0 is less than 1; the distance stays 10000." |
-| 2.5 in the distance | "2.5 is not a whole number; the distance stays 10000." |
+| 0 in the distance | "0 is less than 1; the distance stays 50000." |
+| 2.5 in the distance | "2.5 is not a whole number; the distance stays 50000." |
 | 0 in the distance while it is empty | "0 is less than 1; the distance is still to be typed." |
 | 300 in the ploidy | "300 is more than 255; the ploidy stays 2." |
 | 0 in the ploidy | "0 is less than 1; the ploidy stays 2." |
@@ -492,8 +492,8 @@ at once, and what is kept:
 |---|---|
 | 0,1 in a threshold | "Write the decimals with a point, 0.1 and not 0,1; the threshold stays 0.1." |
 | a minus sign, or a letter, in a threshold | "‘-’ cannot be typed in the threshold, which is written with digits and a point, as 0.05; the threshold stays 0.1." |
-| 10,000 in the distance | "Write the distance as a whole number of base pairs, 10000 and not 10,000; the distance stays 10000." |
-| a minus sign, or a letter, in the distance | "‘-’ cannot be typed in the distance, which is a whole number of base pairs, as 10000; the distance stays 10000." |
+| 10,000 in the distance | "Write the distance as a whole number of base pairs, 10000 and not 10,000; the distance stays 50000." |
+| a minus sign, or a letter, in the distance | "‘-’ cannot be typed in the distance, which is a whole number of base pairs, as 10000; the distance stays 50000." |
 | 10,000, or a minus sign, in the distance while it is empty | the same lines, ending "the distance is still to be typed." |
 | 2,0 in the ploidy | "Write the ploidy as a whole number, 4 and not 4,0; the ploidy stays 2." |
 | a minus sign, or a letter, in the ploidy | "‘-’ cannot be typed in the ploidy, which is a whole number, as 4; the ploidy stays 2." |

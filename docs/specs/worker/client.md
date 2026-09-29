@@ -768,11 +768,9 @@ walking skeleton, a diversity `Job` and a CSV.
   is made, while the light worker still reads. An answer between the two
   failures sets the count back: a failure after it starts a worker again.
   A worker that crashes idle after each `ready`, twice: given up. A
-  `ready` of protocol 3, another than `PROTOCOL_VERSION`, 2 from stage
-  3: every request fails with `protocolMismatch`, and no other worker is
-  made. The test of stage 2 that sends protocol 2,
-  `src/worker/client.test.ts` at line 925, is changed so by the plan,
-  since protocol 2 is now the page's own.
+  `ready` of protocol 2, another than `PROTOCOL_VERSION`, which is 3
+  from stage 4: every request fails with `protocolMismatch`, and no
+  other worker is made.
 - **Properties, with fast-check**, which draws sequences of reads, runs,
   cancels, answers, crashes and timeouts in any order and shrinks a
   failure to the smallest: every request gets its answer or outcome

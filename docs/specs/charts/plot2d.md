@@ -577,9 +577,10 @@ export will run in.
 - the SVG of `toSVG` holds no `var(` and no `chart-overlay`, has a first
   background rectangle, and has the light colours when the page is dark:
   the fill of a kept bar is `rgb(0, 114, 178)`; and `exportSvg` with a
-  `drawBeside` that adds a rect of the classes `chart-points
-  chart-colour-0` gives that rect a fill of `rgb(230, 159, 0)` written
-  on it, as the colours of the plot are;
+  `drawBeside` that adds a mark of the classes `chart-points
+  chart-colour-0`, a path or any other element, since `exportSvg` treats
+  them alike, gives that mark a fill of `rgb(230, 159, 0)` written on
+  it, as the colours of the plot are;
 - `toPNG(3)` of a plot of 600 by 375 pixels is a PNG of 1,800 by 1,125
   pixels; of a plot 1,400 pixels wide it rejects with `tooLarge`, and
   `toPNG(2)` gives 2,800 pixels; `toPNG(2)` of a plot above 2,048 pixels
@@ -599,12 +600,13 @@ export will run in.
   read from the pixels of the PNG (`scatter.md`).
 
 **The dependencies it adds**, all approved by the owner on 24 September
-2026 (`docs/technology.md`, section 2) and none yet in `package.json`:
-`d3-selection` 3.0.0, `d3-scale` 4.0.2 and `d3-axis` 3.0.0, with
-`@types/d3-selection` 3.0.12, `@types/d3-scale` 4.0.9 and `@types/d3-axis`
-3.0.6 for development; and `jsdom` 30.1.1 for development, with the
-project `charts` of `vite.config.ts` (`testing.md`, "Vitest"). The
-versions are those of `npm view` on 26 September 2026.
+2026 (`docs/technology.md`, section 2), and in `package.json` at these
+versions since stage 3: `d3-selection` 3.0.0, `d3-scale` 4.0.2 and
+`d3-axis` 3.0.0, with `@types/d3-selection` 3.0.12, `@types/d3-scale`
+4.0.9 and `@types/d3-axis` 3.0.6 for development; and `jsdom` 30.1.1 for
+development, with the project `charts` of `vite.config.ts`
+(`testing.md`, "Vitest"). The versions are those of `npm view` on 26
+September 2026.
 
 ## What this spec asks of other documents
 

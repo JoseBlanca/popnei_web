@@ -625,8 +625,12 @@ beside the messages it versions, and not here: core has no use for it.
   project file (`docs/specs/core/project.md`), before popnei would refuse
   it; a command is never given one.
 - **Filters that keep no variant.** Every calculation of popnei refuses
-  its pass then, "the pass gave no variant: …", so the diversity and the
-  statistics of each individual end `popnei` with that message; the PCA
+  its pass then, "the pass gave no variant: …", so the diversity ends
+  `popnei` with that message. The statistics of each individual take no
+  filter since the owner's decision of 28 September 2026
+  (`docs/specs/analyses/individualChecks.md`), so they are refused only
+  when the file itself gives no variant: a file that holds none, or a
+  VCF none of whose variants passed, read with only those. The PCA
   of the release words it "there are no variants to do a PCA with",
   whether the file holds none or the filters kept none
   (`docs/specs/analyses/pca.md`, "The request"). The

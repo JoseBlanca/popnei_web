@@ -849,17 +849,18 @@ is `position: relative`, so that the tooltip is placed inside it
   under the pointer, so that a screen that marked its row, and draws
   the 3D view in the scatter's place, unmarks it; a second call does
   nothing.
-- **Numbers near the largest a number of 64 bits holds**, ±1.8e308: the
-  step of viridis is computed with halves, `(value / 2 − min / 2) / (max
-  / 2 − min / 2)`, so that no difference overflows to an infinity. The
-  axes of such coordinates run past 1.8e308, since the frame is wider
-  than the data along one of them: the scatter then draws its scales over
-  the coordinates times a half, a quarter, down to a 256th, the first at
-  which the ends of both axes are finite, which places every point where
-  it would be, since a power of two multiplies exactly, and writes the
-  labels of the ticks at the size of the coordinates. `scatterScales`
-  gives the scales at 1. The points are drawn and coloured as any
-  others.
+- **Numbers near the largest a number of 64 bits holds**, about
+  1.797e308, such as the ±1.7e308 of the tests (1.8e308 is past it, and
+  is Infinity in JavaScript): the step of viridis is computed with
+  halves, `(value / 2 − min / 2) / (max / 2 − min / 2)`, so that no
+  difference overflows to an infinity. The axes of such coordinates run
+  past the largest number, since the frame is wider than the data along
+  one of them: the scatter then draws its scales over the coordinates
+  times a half, a quarter, down to a 256th, the first at which the ends
+  of both axes are finite, which places every point where it would be,
+  since a power of two multiplies exactly, and writes the labels of the
+  ticks at the size of the coordinates. `scatterScales` gives the scales
+  at 1. The points are drawn and coloured as any others.
 
 ## How it runs
 
@@ -931,10 +932,13 @@ calls, as `plot2d.md` does:
   element, with no path of the other colouring left;
 - `toSVG` holds the legend in `chart-legend`: first its
   `rect.chart-legend-background`, then one row per entry with its text,
-  "No population (1)" last, and "and 12 more" when the frame holds fewer
-  rows than the entries; with P2 highlighted, the class
-  `chart-legend-faded` on the marks of the other entries and on no
-  text; `chart-legend` of the plot on the screen stays empty after it;
+  "No population (1)" last, and "and ‹n› more" when the frame holds
+  fewer rows than the entries: 20 groups of one point each in an element
+  400 by 150 pixels, whose frame of 94 pixels holds five rows, give the
+  title "Population", "P1 (1)" to "P3 (1)" and "and 17 more"; with P2
+  highlighted, the class `chart-legend-faded` on the marks of the other
+  entries and on no text; `chart-legend` of the plot on the screen stays
+  empty after it;
 - `destroy` after a hover leaves the element with no child, the tooltip
   gone.
 
@@ -1000,19 +1004,19 @@ The PCA panel in both themes, with the legend over the plot and a group
 highlighted, is in the screens of `e2e/screens.spec.ts`, looked at as
 `testing.md` says, and axe runs on it (`pca.md`).
 
-**The dependencies it adds**, none yet in `package.json`, the versions
-those of `npm view` on 27 September 2026: `d3-shape` 3.2.0, which
-brings `d3-path`, and `d3-path` 3.1.0, imported for `pathRound`;
-`d3-scale-chromatic` 3.1.0, which brings `d3-color` and
-`d3-interpolate`, already brought by `d3-scale`; for development,
-`@types/d3-shape` 3.2.0, `@types/d3-path` 3.1.1 and
+**The dependencies it adds**, in `package.json` at these versions since
+work package 7 of stage 4, the versions those of `npm view` on 27
+September 2026: `d3-shape` 3.2.0, which brings `d3-path`, and `d3-path`
+3.1.0, imported for `pathRound`; `d3-scale-chromatic` 3.1.0, which
+brings `d3-color` and `d3-interpolate`, already brought by `d3-scale`;
+for development, `@types/d3-shape` 3.2.0, `@types/d3-path` 3.1.1 and
 `@types/d3-scale-chromatic` 3.1.0. The owner took these modules on 24
 September 2026 (`docs/technology.md`, section 2), and approved them at
-these versions on 27 September 2026. `d3-delaunay` is not
-added (above, "The point under the pointer"), and `d3-format`,
-`d3-array` and `d3-zoom` neither: the numbers of the tooltip are
-formatted by `Intl.NumberFormat`, the ranges by a loop, and the scatter
-has no zoom in stage 4.
+these versions on 27 September 2026. `d3-delaunay` is not added (above,
+"The point under the pointer"), and `d3-format`, `d3-array` and
+`d3-zoom` neither: the numbers of the tooltip are formatted by
+`Intl.NumberFormat`, the ranges by a loop, and the scatter has no zoom
+in stage 4.
 
 ## What this spec assumes of other specs
 

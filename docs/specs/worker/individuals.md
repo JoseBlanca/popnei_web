@@ -843,22 +843,29 @@ pattern `filesWasm`), as `.claude/skills/coding/worker.md` gives it,
   again. A failed `import()` may not: the HTML standard, which the
   browsers follow, keeps a module whose download failed as failed, for
   the life of the worker, so that the next `import()` of the same
-  address fails again with no request. Whether it should is asked in
-  the standard's issue 6768 on GitHub, `whatwg/html`, and what each
-  engine does on 27 September 2026 is not known here. In an engine that
-  keeps it, "load the file again" fails again after the JavaScript of the
-  files wasm failed to download, even with the connection back, and the
-  second half of the words, save the project, reload the page and open it
-  again, is what mends it, since a reload starts a new worker. The
-  Playwright case below finds which engines keep it, and the report of
-  the plan says so. The options not taken: an `import()` of a new
-  address at each try, which Vite cannot give, since it names the file
-  it makes of the package's JavaScript when it builds the site; and the
-  JavaScript imported with the worker's own file, so that only the
-  `.wasm` could fail to download, at about 3 KB gzipped more for every
-  user of the light worker, CSV users included. The second is the one to
-  take if an engine keeps the failure and the owner wants a connection
-  that dropped mended without a reload.
+  address fails again with no request. Whether it should is asked in the
+  standard's issue 6768 on GitHub, `whatwg/html`. Chromium 153 keeps it,
+  and WebKit 26.6 asks the network again, as the Playwright case below
+  found on 29 September 2026. So a try again after a failed download
+  asks for the same file at another address, as the "Try again" of the
+  3D view does for three.js (`src/ui/analyses/pca/load3d.ts`): the
+  address of the package's JavaScript, taken from the message of the
+  failure, "Failed to fetch dynamically imported module: ‹address›" in
+  Chromium, with `?retry=‹n›` after it, `n` counting the tries of the
+  worker. When the message names no address, as WebKit's does, the try
+  again is the plain `import()`, which that engine sends to the network.
+  The wasm is found from the address of the JavaScript, whatever its
+  query. So "load the file again" reads the file once the connection is
+  back, in both engines, with no reload. This was made in the review of
+  work package 9 of the plan of stage 4, on 29 September 2026 (commit
+  4ad209e), after its flow found that Chromium kept the failure. The
+  options not taken: the plain `import()` at each try, which leaves a
+  user of Chromium with a reader that fails until the page is reloaded,
+  and the words' second half, save the project, reload the page and open
+  it again, as the only mend; and the JavaScript imported with the
+  worker's own file, so that only the `.wasm` could fail to download, at
+  about 3 KB gzipped more for every user of the light worker, CSV users
+  included.
 - **The read** calls `readXlsx` with the bytes and `MAX_SHEET_CELLS`,
   and makes of what it gives a plain value, the cells or a refusal of
   `IndividualsFileError`, with `readXlsxCells` below, which also frees
@@ -1194,12 +1201,11 @@ files made in xlsx_rs and copied into `e2e/fixtures/`:
   `xlsxReaderNotLoaded`; the route removed and the file loaded again: the
   table;
 - the package's JavaScript answered with an error, the same way: the
-  words of `xlsxReaderNotLoaded`; the route removed and the file loaded
-  again: the table in an engine that tries the `import()` again, or the
-  same words in one that keeps the failure (above, "The package of
-  xlsx_rs, loaded on first need"). The test records which, for each
-  engine, and asserts only that one of the two is shown; the report of
-  the plan names the engines that keep it;
+  words of `xlsxReaderNotLoaded`, and no request of the `.wasm`; the
+  route removed and the file loaded again: the table, in each engine,
+  with a second request of the JavaScript, at another address in an
+  engine that keeps the failure (above, "A try again that may fail at
+  once"), and one of the `.wasm`; a third xlsx asks for nothing more;
 - `encrypted.xlsx`: its words;
 - `individuals_10000.xlsx`, a sheet of 10,000 rows and 20 columns: the
   time from the pick to the table, with and without the download, in

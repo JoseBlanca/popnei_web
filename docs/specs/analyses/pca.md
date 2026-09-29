@@ -2009,10 +2009,11 @@ are these.
   With one component there is no plot: the panel shows the line of "The
   cases", the explained variance and the table, whose second column
   still follows "Colour the points by", the one control of the bar left.
-  With two, the 3D button is disabled and a line says why: "The 3D view
-  needs three components, and this result has 2."; a project whose
-  `view` is `"3d"`, opened or undone to, draws the 2D plot with the same
-  line, and the option stays as it was. The panel makes the data of both
+  With two, the 3D button is disabled and a note says why, one of the
+  notes under the plot below, "Note: The 3D view needs three components,
+  and this result has 2."; a project whose `view` is `"3d"`, opened or
+  undone to, draws the 2D plot with the same note, and the option stays
+  as it was. The panel makes the data of both
   plots with one function of its own, from the result, `pcaColours` and
   the axes shown: the components taken out of the projections as
   columns, `x`, `y` and, in 3D, `z`, and the colours as the

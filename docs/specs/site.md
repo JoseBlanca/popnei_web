@@ -382,12 +382,15 @@ needs no action of the user.
   answered", and the file input is disabled, with its text saying so.
   When the input had the focus, the page moves it to the heading of the
   defects, so that a user of the keyboard is not left on nothing.
-- **A file popnei refuses**, the text in `bad.vcf`, a truncated gzip, a
-  vars file of another version: `failed` with stage `open`, the source
-  `file`, the name of the file and popnei's message, "the source is not a
-  VCF: it starts with …" for the first (run under node, 24 September
-  2026). The page shows it beside the file input, the served result stays
-  where it was, and the page stays usable for another file.
+- **A file popnei refuses**, the text in `bad.vcf`, a VCF gzipped and
+  cut inside its header, a vars file of another version: `failed` with
+  stage `open`, the source `file`, the name of the file and popnei's
+  message, "the source is not a VCF: it starts with …" for the first
+  (run under node, 24 September 2026). The page shows it beside the file
+  input, the served result stays where it was, and the page stays usable
+  for another file. popnei opens a VCF by its header, so a gzip cut after
+  the header opens: `panel.vcf.gz` cut at 20,000 of its 87,304 bytes
+  opened with its 200 individuals under node on 29 September 2026.
 - **A request the worker does not recognise**, a `ToProbe` that fails its
   validator, which only a defect of the page can send: `failed` with stage
   `message` and what was wrong with the request. The page shows "A defect
@@ -447,7 +450,9 @@ needs no action of the user.
    - every request the page makes is to the origin of the site: no font,
      script or file from another domain (`docs/technology.md`, section 4).
 3. **The deployed site.** After the first deploy, the same test run
-   against the address on GitHub Pages, with `BASE_URL` set as
+   against the address of the site, `https://jblanca.net/popnei_web/`,
+   to which GitHub's `https://joseblanca.github.io/popnei_web/` answers
+   with a redirect, with `BASE_URL` set as
    `testing.md` says, passes in the three engines; and `curl -sI` on the
    `.wasm` file shows `Content-Type: application/wasm`, without which
    popnei's loader falls back to a slower way of compiling and says so in
