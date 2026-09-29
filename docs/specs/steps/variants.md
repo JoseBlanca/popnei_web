@@ -531,7 +531,20 @@ Down, Home and End: React Aria moves an empty field to the least or the
 largest number of its range, so Home and the Up arrow would send a
 distance of 1 base pair, and End and the Down arrow one of
 9007199254740991, that the user never typed. The number field of `src/ui/widgets/` makes this rule for
-every field given `NaN`, the PCA's distance as well. A ploidy left
+every field given `NaN`, the PCA's distance as well. In a field that
+holds a number, End and Home move the caret to the end or the start of
+the number, and with Shift select to there, as a field of text does on
+Windows, and change nothing; the field moves the caret itself, since a
+browser on a Mac moves none at these keys, and with Ctrl, Alt or ⌘
+leaves them to the browser. React Aria
+would move the number to the largest or the least of its range, so that
+End in the field of the distance made it 9,007,199,254,740,991 base
+pairs, a number the user never typed, and End pressed to reach the end
+of 0.05 made the threshold 1. The owner decided it on 29 September 2026,
+for every number field of the applications (stop A 4 (b) of
+`docs/specs/stage-4-open-points.md`); the arrow keys, Page Up and Page
+Down still step the number, which is what they do in a number field
+and nothing else. A ploidy left
 empty sends nothing too, and keeps its value for the next pick. Turned off and on, a filter goes back to its place in the fixed
 order, since nothing moves a filter (`docs/specs/core/project.md`, "One
 filter of each kind, in a fixed order").
@@ -1359,7 +1372,9 @@ node on 28 September 2026, the same with both releases:
   reason once on the step, and the histograms of
   the variants and the statistics of each individual still calculated; an
   arrow key, Home, End, then the Tab key, in the empty field sending
-  nothing; 0
+  nothing; in the field holding 50000, End, then 1 typed and committed,
+  giving 500001, and Home, then 1 typed, giving 1500001, End and Home
+  sending nothing, in Chromium and WebKit; 0
   typed, and "0 is less than 1; the distance is still to be typed.";
   50000 typed, the reason gone and the Count giving a count beside the
   LD pruning; an Undo giving back the empty field and the lock, with

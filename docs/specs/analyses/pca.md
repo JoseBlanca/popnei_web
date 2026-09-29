@@ -1956,8 +1956,11 @@ after an undo; in the empty field no key that steps a number sends
 anything, the arrow keys, Page Up, Page Down, Home and End, which React
 Aria would turn into a distance of 1 or of 9007199254740991 base pairs
 that the user never typed, the rule the number field of
-`src/ui/widgets/` makes for every field given `NaN`
-(`docs/specs/steps/variants.md`, "A number the fields do not take"). So
+`src/ui/widgets/` makes for every field given `NaN`; and in a field
+that holds a number End and Home move the caret only, and never the
+number to a bound of its range, as the number field makes it for every
+field (`docs/specs/steps/variants.md`, "A number the fields do not
+take", decided by the owner on 29 September 2026). So
 every option the fields send is one `parseOptions` takes, whose ranges
 are these.
 - A line of what it will run on: "200 individuals of panel.nei", or "111
