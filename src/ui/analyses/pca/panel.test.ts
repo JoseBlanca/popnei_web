@@ -351,13 +351,17 @@ describe("IP8 panel: the explained variance and the table", () => {
     const rows = pcaRows(r, pcaColours(r, sampleProject()));
     const second = rows[1];
     if (second === undefined) throw new Error("no second row");
-    expect(rowCells(second)).toEqual([
+    expect(rowCells(second, "No population")).toEqual([
       "i2",
       "P1",
       "−1.2346",
       "0.5000",
       "6.0000",
     ]);
+    // An individual in no group is named as the legend names it.
+    expect(rowCells({ ...second, colour: null }, "No value")[1]).toBe(
+      "No value",
+    );
   });
 
   test("the rows sorted by a component, by the colour with none last, and not sorted", () => {

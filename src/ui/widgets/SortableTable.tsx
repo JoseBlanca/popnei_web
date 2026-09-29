@@ -31,6 +31,7 @@
  * each column is as wide as a share of the box, and not narrower than
  * its `minWidth`, beyond which the box scrolls sideways.
  */
+import { useMemo } from "react";
 import {
   Cell,
   Column,
@@ -62,13 +63,14 @@ export interface SortableColumn<Id extends string> {
   readonly minWidth: number;
 }
 
-/** The heights a row and the header are drawn at before they are
-    measured, in CSS pixels: a line of text of 16 pixels and its padding,
-    and three lines for the header, whose words wrap. */
-const LAYOUT_OPTIONS = {
-  estimatedRowHeight: 33,
-  estimatedHeadingHeight: 81,
-} as const;
+/** The height a row is drawn at before it is measured, in CSS pixels: a
+    line of text of 16 pixels and its padding. */
+const ESTIMATED_ROW_HEIGHT = 33;
+
+/** The height of a line of words of the header and of its padding, in CSS
+    pixels, by which the header is drawn before it is measured. */
+const HEADING_LINE = 24;
+const HEADING_PADDING = 9;
 
 /** A row of the table. */
 export interface SortableRow {
@@ -90,6 +92,13 @@ export interface SortableTableProps<Id extends string> {
   readonly sort: TableSort<Id> | null;
   /** Called when a header asks for another sort. */
   readonly onSortChange: (sort: TableSort<Id>) => void;
+  /** The lines of words the header is drawn with before it is measured:
+      3, the default, for headers of several words that wrap on a narrow
+      page, as the statistics of each individual have; 1 for headers of a
+      word each. React Aria's Virtualizer keeps this height where it does
+      not measure the header, as it did not on a page 320 pixels wide in
+      Chromium 153, which left the header of one line 81 pixels high. */
+  readonly headingLines?: number;
 }
 
 /** A table sorted by any of its columns, in a box that scrolls. */
@@ -99,7 +108,17 @@ export function SortableTable<Id extends string>({
   rows,
   sort,
   onSortChange,
+  headingLines = 3,
 }: SortableTableProps<Id>): React.JSX.Element {
+  // The same object while the lines are the same, since the Virtualizer
+  // lays the table out again for other options.
+  const layoutOptions = useMemo(
+    () => ({
+      estimatedRowHeight: ESTIMATED_ROW_HEIGHT,
+      estimatedHeadingHeight: HEADING_LINE * headingLines + HEADING_PADDING,
+    }),
+    [headingLines],
+  );
   const onSort = (descriptor: SortDescriptor): void => {
     const column = columns.find((c) => c.id === descriptor.column);
     if (column === undefined) {
@@ -111,7 +130,7 @@ export function SortableTable<Id extends string>({
   };
   const indexOf = new Map(columns.map((column, index) => [column.id, index]));
   return (
-    <Virtualizer layout={TableLayout} layoutOptions={LAYOUT_OPTIONS}>
+    <Virtualizer layout={TableLayout} layoutOptions={layoutOptions}>
       <AriaTable
         aria-label={label}
         className={classOf(styles, "table")}

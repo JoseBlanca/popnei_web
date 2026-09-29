@@ -160,6 +160,7 @@ function PcaResultOf({ result, check }: PcaResultOfProps): React.JSX.Element {
   const [handle, setHandle] = useState<Pca3dHandle | null>(null);
   const [sort, setSort] = useState<TableSort<PcaColumnId> | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
+  const why2dRef = useRef<HTMLDivElement>(null);
 
   const numComps = result.numComps;
   const plot: "none" | "2d" | "3d" =
@@ -214,9 +215,12 @@ function PcaResultOf({ result, check }: PcaResultOfProps): React.JSX.Element {
   const cellsOf = useMemo(
     () =>
       new Map(
-        rows.map((row) => [row, { id: row.individual, cells: rowCells(row) }]),
+        rows.map((row) => [
+          row,
+          { id: row.individual, cells: rowCells(row, colours.noneName) },
+        ]),
       ),
-    [rows],
+    [rows, colours.noneName],
   );
   const tableRows = useMemo(
     () =>
@@ -239,7 +243,13 @@ function PcaResultOf({ result, check }: PcaResultOfProps): React.JSX.Element {
         isRowHeader: true,
         minWidth: INDIVIDUAL_WIDTH,
       },
-      { id: "colour", label: shown(colours.title), minWidth: COLOUR_WIDTH },
+      {
+        id: "colour",
+        label: shown(colours.title),
+        // A column of numbers, right-aligned as the components are.
+        isNumeric: colours.kind === "values",
+        minWidth: COLOUR_WIDTH,
+      },
       ...Array.from({ length: numComps }, (_, i) => ({
         id: `pc${String(i + 1)}` as const,
         label: pcName(i + 1),
@@ -247,7 +257,7 @@ function PcaResultOf({ result, check }: PcaResultOfProps): React.JSX.Element {
         minWidth: COMPONENT_WIDTH,
       })),
     ],
-    [colours.title, numComps],
+    [colours.title, colours.kind, numComps],
   );
 
   if (variants === null || popneiVersion === null) {
@@ -393,7 +403,7 @@ function PcaResultOf({ result, check }: PcaResultOfProps): React.JSX.Element {
         )}
       </div>
       {plot === "3d" && failure3d !== null && (
-        <div className={classOf(styles, "why2d")}>
+        <div ref={why2dRef} className={classOf(styles, "why2d")}>
           <p className={classOf(styles, "line")}>
             {failure3d === "load" ? LOAD_FAILED_3D : NO_WEBGL}
           </p>
@@ -401,6 +411,13 @@ function PcaResultOf({ result, check }: PcaResultOfProps): React.JSX.Element {
             <Button
               label={TRY_AGAIN}
               onPress={() => {
+                // The button goes with the words: the focus moves to the
+                // heading of the panel, as when Run or Stop goes, and not
+                // to the start of the page (WCAG 2.4.3).
+                why2dRef.current
+                  ?.closest("section")
+                  ?.querySelector<HTMLElement>("h2")
+                  ?.focus();
                 setFailure3d(null);
               }}
             />
@@ -492,6 +509,7 @@ function PcaResultOf({ result, check }: PcaResultOfProps): React.JSX.Element {
             rows={tableRows}
             sort={sort}
             onSortChange={setSort}
+            headingLines={1}
           />
         </div>
         {check !== null && <p className={classOf(styles, "line")}>{check}</p>}

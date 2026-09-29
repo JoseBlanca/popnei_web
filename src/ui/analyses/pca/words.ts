@@ -335,12 +335,13 @@ export function valueText(value: number): string {
 
 /** The cells of a row of the table of the individuals: the individual as
     a text shows a name of the user's files, its group or value, or
-    "none", and its coordinates. */
-export function rowCells(row: PcaRow): readonly string[] {
+    `noneName`, "No population" or "No value", as the legend names the
+    individuals in no group, and its coordinates. */
+export function rowCells(row: PcaRow, noneName: string): readonly string[] {
   return [
     escaped(row.individual),
     row.colour === null
-      ? "none"
+      ? noneName
       : typeof row.colour === "number"
         ? valueText(row.colour)
         : escaped(row.colour),

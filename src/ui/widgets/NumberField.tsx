@@ -26,6 +26,10 @@
  * otherwise and at each commit, for a screen that follows the number as
  * it is typed (the spec, "The threshold typed and not yet committed").
  *
+ * The Tab key commits what is typed before the focus moves, so that the
+ * next stop of the Tab key is the button the number makes enabled, the
+ * Run of an analysis locked for the distance of its LD filter.
+ *
  * React Aria throws away, with no word, a character typed that cannot
  * start a number of the range, a comma among them, so that 0,1 typed key
  * by key would show as 01 and be committed as 1. The field catches it as
@@ -169,6 +173,11 @@ export function NumberField({
   const notTaken = useRef(false);
   // Whether the commit under way is the one refused for it.
   const refusing = useRef(false);
+  // Whether the Tab key committed what was typed, and the focus is
+  // leaving the field: its commit at the blur, of the same number or of
+  // the number kept, is not a commit of the user, and leaves the line of
+  // a refusal as it is.
+  const tabbed = useRef(false);
   // The text of the input as the user last typed or pasted it, which a
   // refusal names the number by (committedNumber.ts, typedText).
   const lastText = useRef("");
@@ -213,6 +222,7 @@ export function NumberField({
   /** Before a commit: the line goes, unless the commit is to be refused
       for a character thrown away, whose line then stays. */
   const commitStarts = (): void => {
+    if (tabbed.current) return;
     refusing.current = notTaken.current;
     notTaken.current = false;
     if (!refusing.current) setRefused(null);
@@ -260,8 +270,9 @@ export function NumberField({
       onChange={(committed) => {
         // What the field showed was not what was typed: nothing is sent,
         // and the line of the character stays. React Aria then shows the
-        // value it was given again.
-        if (refusing.current) return;
+        // value it was given again. After the Tab key, the blur commits
+        // again what that key committed.
+        if (refusing.current || tabbed.current) return;
         // An empty field gives NaN, which sends nothing.
         if (!Number.isFinite(committed)) return;
         const checked = checkCommitted(
@@ -297,6 +308,9 @@ export function NumberField({
         }}
         onCommitStarts={commitStarts}
         onCommitEnds={commitEnds}
+        onTabbed={(leaving) => {
+          tabbed.current = leaving;
+        }}
         onCommitReady={onCommitReady}
         inputMode={takesDecimals ? "text" : "numeric"}
         committedText={numberText(value)}
@@ -340,6 +354,9 @@ interface FieldInputProps {
   /** Called before React Aria commits, and after. */
   readonly onCommitStarts: () => void;
   readonly onCommitEnds: () => void;
+  /** Called with true once the Tab key has committed, and with false once
+      the blur that follows it has. */
+  readonly onTabbed: (leaving: boolean) => void;
   /** As the field's. */
   readonly onCommitReady: NumberFieldProps["onCommitReady"];
   /** Called with the text of the input at each change of it that React
@@ -374,6 +391,7 @@ function FieldInput({
   onMended,
   onCommitStarts,
   onCommitEnds,
+  onTabbed,
   onCommitReady,
   onText,
   inputMode,
@@ -517,6 +535,27 @@ function FieldInput({
       }}
       onKeyDown={(event) => {
         if (isCommitKey(event)) onCommitEnds();
+        // The Tab key commits what is typed before the browser moves the
+        // focus, as Enter would, so that the next stop is the one the
+        // number makes: a Run the distance of an LD filter unlocks, which
+        // would otherwise be enabled only once the focus had passed it
+        // (docs/specs/analyses/pca.md, "Accessibility"). React draws the
+        // change of the project within this event, before the browser
+        // moves the focus. The commit at the blur that follows commits
+        // the same number, no change.
+        if (
+          event.key === "Tab" &&
+          !event.altKey &&
+          !event.ctrlKey &&
+          !event.metaKey &&
+          state !== null &&
+          isTyped()
+        ) {
+          onCommitStarts();
+          state.commit();
+          onCommitEnds();
+          onTabbed(true);
+        }
         // Undo and Redo are never the browser's here (docs/specs/shell.md,
         // "The header"): with something typed, Ctrl+Z puts the number back
         // and redo does nothing; with nothing typed, the shell takes them
@@ -530,7 +569,10 @@ function FieldInput({
         }
       }}
       onBlurCapture={onCommitStarts}
-      onBlur={onCommitEnds}
+      onBlur={() => {
+        onCommitEnds();
+        onTabbed(false);
+      }}
     />
   );
 }

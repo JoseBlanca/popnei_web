@@ -335,3 +335,176 @@ test("a highlight is not given to the colouring of a new metadata file nor of an
     new RegExp(`Note: ${note}`),
   );
 });
+
+/** Makes every WebGL 2 context the page asks for lost at once, as a
+    browser that has taken the graphics card away from the page gives
+    it. */
+function contextsLost(): void {
+  // eslint-disable-next-line @typescript-eslint/unbound-method -- called below with its canvas
+  const getContext = HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext = function (
+    this: HTMLCanvasElement,
+    id: string,
+    ...rest: unknown[]
+  ) {
+    const context = (getContext as (...args: unknown[]) => unknown).call(
+      this,
+      id,
+      ...rest,
+    );
+    if (id === "webgl2" && context instanceof WebGL2RenderingContext) {
+      context.getExtension("WEBGL_lose_context")?.loseContext();
+    }
+    return context;
+  } as typeof getContext;
+}
+
+test("a WebGL context lost at its creation, while three.js downloads and once it is in hand: the words of no WebGL and the 2D plot, and no error", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await page.addInitScript(contextsLost);
+  const panel = await openPanel(page);
+  await panel.getByRole("button", { name: "Run", exact: true }).click();
+  await expect(panel.getByText(NO_WEBGL)).toBeVisible({
+    timeout: RESULT_TIMEOUT,
+  });
+  await expect(
+    panel.getByRole("img", { name: "Principal components, PC1 and PC2" }),
+  ).toBeVisible();
+  // Three.js in hand: 2D, then 3D, which draws at once.
+  await panel.getByRole("radio", { name: "2D", exact: true }).click();
+  await expect(panel.getByText(NO_WEBGL)).toHaveCount(0);
+  await panel.getByRole("radio", { name: "3D", exact: true }).click();
+  await expect(panel.getByText(NO_WEBGL)).toBeVisible();
+  await expect(
+    panel.getByRole("img", { name: "Principal components, PC1 and PC2" }),
+  ).toBeVisible();
+  await expect(panel.getByRole("radiogroup", { name: "Method" })).toBeVisible();
+  await expect(
+    page.getByText(/The application met an error of its own/),
+  ).toHaveCount(0);
+  await expectNoViolations(makeAxeBuilder);
+});
+
+for (const width of [320, 1280]) {
+  test(`zoomed in four times at ${String(width)} px, the labels of the 3D view stay in the plot and the page does not scroll sideways`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const panel = await openPanel(page);
+    await run(panel);
+    const canvas = panel.getByRole("img", {
+      name: "Principal components, PC1, PC2 and PC3",
+    });
+    await expect(canvas).toBeVisible();
+    for (let press = 0; press < 4; press++) {
+      await panel.getByRole("button", { name: "Zoom in", exact: true }).click();
+    }
+    const outside = await canvas.evaluate((element) => {
+      const plot = element.parentElement;
+      if (plot === null) return ["no element"];
+      const box = plot.getBoundingClientRect();
+      const page = document.documentElement;
+      const found: string[] = [];
+      if (page.scrollWidth > page.clientWidth) {
+        found.push(
+          `page ${String(page.scrollWidth)} of ${String(page.clientWidth)}`,
+        );
+      }
+      for (const label of plot.querySelectorAll<HTMLElement>(
+        ".chart-pca3d-label",
+      )) {
+        if (label.hidden === true) continue;
+        const at = label.getBoundingClientRect();
+        // The label is drawn up from its anchor, at its bottom left.
+        if (
+          at.left < box.left ||
+          at.left > box.right ||
+          at.bottom < box.top ||
+          at.bottom > box.bottom
+        ) {
+          found.push(label.textContent);
+        }
+      }
+      if (getComputedStyle(plot).overflow !== "hidden") {
+        found.push("the plot does not clip");
+      }
+      return found;
+    });
+    expect(outside).toEqual([]);
+  });
+}
+
+test("the table of the individuals at 320 px: a header of one line, and a column of numbers aligned as the components", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  const panel = await openPanel(page);
+  await run(panel);
+  const table = panel.getByRole("grid", { name: /^The place of each/ });
+  const header = table.getByRole("columnheader", { name: "Population" });
+  const heights = await header.evaluate((cell) => [
+    cell.getBoundingClientRect().height,
+    cell.firstElementChild?.getBoundingClientRect().height ?? 0,
+  ]);
+  // The header no higher than its line of words and its padding.
+  expect(heights[0] ?? 0).toBeLessThanOrEqual((heights[1] ?? 0) + 10);
+  await panel.getByRole("button", { name: "Colour the points by" }).click();
+  await page.getByRole("option", { name: "altitude", exact: true }).click();
+  const row = table.getByRole("row", { name: /^s000/ });
+  const aligns = await row
+    .getByRole("gridcell")
+    .evaluateAll((cells) =>
+      cells.map((cell) => getComputedStyle(cell).justifyContent),
+    );
+  expect(aligns[0]).toBe(aligns[1]);
+});
+
+test("from the keyboard alone, the LD filter set for the PCA, 50000 typed in its distance, and Tab then Enter run the PCA and not the diversity", async ({
+  page,
+}) => {
+  const panel = await openPanel(page);
+  await filterGroup(panel, LD_GROUP)
+    .getByRole("radio", { name: "As in the Variants step: off" })
+    .focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(
+    filterGroup(panel, LD_GROUP).getByRole("radio", {
+      name: "For the PCA alone",
+    }),
+  ).toBeChecked();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  await expect(panel.getByLabel(DISTANCE)).toBeFocused();
+  await page.keyboard.type("50000");
+  await page.keyboard.press("Tab");
+  await expect(
+    panel.getByRole("button", { name: "Run", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(panel.getByText(/^The place of each of the 200/)).toBeVisible({
+    timeout: RESULT_TIMEOUT,
+  });
+  await expect(
+    page
+      .getByRole("region", { name: "Diversity" })
+      .getByRole("button", { name: "Run", exact: true }),
+  ).toBeVisible();
+});
+
+test("Try again pressed with the keyboard moves the focus to the heading of the panel, and not to the page", async ({
+  page,
+}) => {
+  await page.route(/\/pca3d-[^/]*\.js$/, (route) =>
+    route.fulfill({ status: 404 }),
+  );
+  const panel = await openPanel(page);
+  await run(panel);
+  const again = panel.getByRole("button", { name: "Try again" });
+  await again.focus();
+  await page.keyboard.press("Enter");
+  await expect(
+    panel.getByRole("heading", { level: 2, name: "Principal components" }),
+  ).toBeFocused();
+});
