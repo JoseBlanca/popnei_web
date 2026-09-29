@@ -87,7 +87,10 @@ step through its own `needs`, and only while its LD filter follows the
 step; and again that day for the owner's decision that the regions of
 a BED file, once the application has that filter, come before the
 filter of individuals. The revisions for stage 4 are approved by the owner on 28 September 2026; they change the
-code of stage 3.
+code of stage 3. Revised on 29 September 2026 after the review of work
+package 5 of `docs/plans/individuals-pca.md`: the first column, the
+names of the individuals, is never the column of the populations, as
+the owner is shown at stop B of that plan.
 
 The project is everything the user has set in one application: the
 variants file they loaded, the filters, the individuals file with the
@@ -627,7 +630,8 @@ beside `individualsCheck`, which is here and which they follow.
 The populations are of one of two kinds:
 
 - **By a column**, with the grouping `{ kind: "populations", column }`
-  and a metadata file read that has a column of that name. A population
+  and a metadata file read that has a column of that name, other than
+  its first. A population
   is named by the text of its cell, whatever the type of the column; a
   number or a boolean of an xlsx is written as `String` writes it,
   `1.5`, `true`, so that a number 1 and a text `1` of one column are one
@@ -659,6 +663,15 @@ Without a file the grouping is not looked at, and it is kept: a column
 chosen before the file was removed is found again, by its name, by an
 undo or by a new load of the file.
 
+The first column, the names of the individuals, is never the column of
+the populations: a grouping whose column is read as the first of the
+table, as when a new file puts the column chosen first, is as a column
+the table does not have, and gives `noSuchColumn` (below). Grouped by
+it, every individual would be a population of one, while the select of
+the Individuals step, which does not offer the first column, showed
+"Choose a column". Found by the review of work package 5 of
+`docs/plans/individuals-pca.md` on 29 September 2026.
+
 `populationsOf(p)` gives the populations as a key holds them, from the
 project alone: those of the column, each with every individual of the
 table that has it, including those not in the variants file; or
@@ -666,7 +679,7 @@ table that has it, including those not in the variants file; or
 of the variants file, which every key holds already, so that no key
 reads `p.variants` (`docs/specs/core/keys.md`); or `null` when neither
 can be given yet: a file not read, no column chosen, or no column of
-that name. `populationsToRun(p)` narrows them to the individuals of the
+that name but the first. `populationsToRun(p)` narrows them to the individuals of the
 variants file and drops the populations left empty, since popnei refuses
 a population that names an individual it does not have and an empty
 one; for `"all"` it gives `[["All individuals", every individual of the
@@ -691,7 +704,7 @@ analysis show one text for one condition:
 | the project | its kind | the reason |
 |---|---|---|
 | a file read, and no column chosen | `noColumn` | "Choose the column that defines the populations, or all individuals in one population, in the Individuals step." |
-| no column of that name in the table, after a new load of the file | `noSuchColumn` | "pops.csv has no column popcat, from which the populations were taken. Choose the column that defines the populations, or all individuals in one population, in the Individuals step." |
+| no column of that name in the table, or only its first column, after a new load of the file | `noSuchColumn` | "pops.csv has no column popcat, from which the populations were taken. Choose the column that defines the populations, or all individuals in one population, in the Individuals step." |
 | no individual of the variants file has a population in the column | `noPopulation` | "No individual of panel.nei has a population in the column popcat of pops.csv. Fill in the column and load the file again, or choose another column, in the Individuals step." |
 
 They are the words of stage 2, with the one population named where the

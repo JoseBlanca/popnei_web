@@ -19,7 +19,10 @@ that day for a third, every other error of Excel in an xlsx read as a
 missing value as well; and on 28 September 2026 with the section "How
 it is checked", written from the parts of this spec and the checks of
 `docs/specs/shell.md`, which adds no behaviour (task 5.1 of
-`docs/plans/individuals-pca.md`). The
+`docs/plans/individuals-pca.md`); and on 29 September 2026 after the
+review of work package 5 of that plan: the name of the select of the
+coding as React Aria makes it, and a column of the populations that a
+new file puts first. The
 code of stage 2 is in `src/ui/steps/individuals/`.
 
 The screen spec of the second step of the population genetics
@@ -637,7 +640,9 @@ The descriptions of the commands are in the table above. The rest:
   has no column popcat, from which the populations were taken. Choose
   the column that defines the populations, or all individuals in one
   population." (`docs/specs/core/project.md`, "The populations"). The
-  select shows "Choose a column".
+  select shows "Choose a column". A column chosen that a new file puts
+  first, where it names the individuals, is not the column of the
+  populations either, and has the same words.
 - **A column that gives no population**, every individual of the
   variants file empty in it: at the select, the `inStep` of kind
   `noPopulation`, "No individual of panel.nei has a population in the
@@ -702,12 +707,20 @@ hidden sheets of the user's file (`docs/architecture.md`, section 8;
   select of a type has its own name, "Type of score", given as its
   label, hidden from the eye, since the header of the column says "Type"
   for every row and a screen reader that reaches the select by Tab does
-  not read the header. Each select of the coding has the name "Coded 1,
-  the case, in status": its visible label first, so that a user who
-  drives the page by voice and says the words they see, "Coded 1, the
-  case", reaches it (WCAG 2.2, success criterion 2.5.3, the visible
-  label part of the name), and the column after, which the eye takes
-  from the row and a screen reader does not.
+  not read the header. Each select of the coding has the label "Coded
+  1, the case, in status": the words the eye sees, "Coded 1, the case",
+  and the column after them, which the eye takes from the row and a
+  screen reader does not. React Aria names the button of a select by
+  its value and then its label, "yes Coded 1, the case, in status", so
+  the visible words are inside the name and not at its start; WCAG 2.2,
+  success criterion 2.5.3, asks that the name hold the words of the
+  visible label, and a user who drives the page by voice and says
+  "Coded 1, the case" reaches it. The name of the select of a type is
+  made the same way, "categorical Type of score". Written so on 29
+  September 2026, after the review of work package 5 of
+  `docs/plans/individuals-pca.md` found that the name did not start with
+  the visible label, as this sentence had said; the owner is shown it at
+  stop B.
 - The populations are a list, and a screen reader reads each item as
   its name and its number in words, "P1, 48 individuals", and not a
   number alone. Each item holds two texts: the line the eye sees, "P1 ·
@@ -853,7 +866,8 @@ otherwise:
   could not be copied. Select them in the list."; no list of the
   populations while individuals are missing; a new file without the
   column chosen, the select at "Choose a column" with the reason of kind
-  `noSuchColumn`; a column empty for every individual of `panel.nei`,
+  `noSuchColumn`, and the same for a copy of `panel_pops.csv` whose
+  header is `popcat,IID`, which puts the column chosen first; a column empty for every individual of `panel.nei`,
   with the reason of kind `noPopulation`; a project file opened whose
   metadata file was not read when it was saved, `notGiven`: the card with
   the name, "Replace pops.csv…", "Remove pops.csv" and its reason, no
